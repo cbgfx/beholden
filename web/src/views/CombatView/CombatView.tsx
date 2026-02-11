@@ -10,7 +10,7 @@ import { CombatantDetailsPanel } from "./panels/CombatantDetailsPanel/CombatantD
 
 import { useEncounterCombatants } from "./hooks/useEncounterCombatants";
 import { useIsNarrow } from "./hooks/useIsNarrow";
-import { usePersistedCombatState } from "./hooks/usePersistedCombatState";
+import { useServerCombatState } from "./hooks/useServerCombatState";
 import { useMonsterDetailsCache } from "./hooks/useMonsterDetailsCache";
 import { useSpellModal } from "./hooks/useSpellModal";
 import { useCombatNavigation } from "./hooks/useCombatNavigation";
@@ -63,8 +63,17 @@ export function CombatView() {
 
   const { combatants, refresh } = useEncounterCombatants(encounterId, dispatch);
 
-  const { round, setRound, activeId, setActiveId, targetId, setTargetId, clearPersisted } =
-    usePersistedCombatState(encounterId);
+  const {
+    loaded: combatStateLoaded,
+    round,
+    setRound,
+    activeId,
+    setActiveId,
+    started,
+    persist: persistCombatState,
+  } = useServerCombatState(encounterId);
+
+  const [targetId, setTargetId] = React.useState<string | null>(null);
 
   const [delta, setDelta] = React.useState<string>("");
   const isNarrow = useIsNarrow();
@@ -83,13 +92,22 @@ export function CombatView() {
     return m;
   }, [state.players]);
 
+  const inpcsById = React.useMemo(() => {
+    const m: Record<string, any> = {};
+    for (const i of (state as any).inpcs ?? []) m[i.id] = i;
+    return m;
+  }, [(state as any).inpcs]);
+
   const { active, nextTurn, prevTurn } = useCombatNavigation({
     encounterId,
     orderedCombatants,
     canNavigate,
+    started,
+    round,
     activeId,
     setActiveId,
-    setRound
+    setRound,
+    persistCombatState
   });
 
   React.useEffect(() => {
@@ -128,13 +146,14 @@ export function CombatView() {
     setActiveId,
     setTargetId,
     setRound,
+    persistCombatState,
+    inpcsById,
     delta,
     setDelta,
     target: (target as Combatant | null) ?? null,
     refresh,
     monsterCache,
     setMonsterCache,
-    clearPersisted,
     dispatch
   });
 
@@ -255,6 +274,7 @@ export function CombatView() {
           activeId={activeId}
           targetId={(target as any)?.id ?? null}
           onSelectTarget={(id) => setTargetId(id)}
+          onSetInitiative={(id, initiative) => updateCombatant(id, { initiative })}
         />
 
         <CombatantDetailsPanel roleTitle="Target" role="target" combatant={target ?? null} ctx={targetCtx} />

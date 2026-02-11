@@ -5,6 +5,46 @@ import { Panel } from "../../../components/ui/Panel";
 import { IconINPC, IconMonster, IconPlayer, IconSkull } from "../../../components/icons";
 import { PlayerRow, type PlayerVM } from "../../CampaignView/components/PlayerRow";
 
+function InitiativeInput({
+  value,
+  onCommit
+}: {
+  value: number | null | undefined;
+  onCommit: (n: number) => void;
+}) {
+  const [v, setV] = React.useState(() => (value && value > 0 ? String(value) : ""));
+
+  React.useEffect(() => {
+    setV(value && value > 0 ? String(value) : "");
+  }, [value]);
+
+  return (
+    <input
+      value={v}
+      onChange={(e) => setV(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+      }}
+      onBlur={() => {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return;
+        onCommit(Math.max(0, Math.floor(n)));
+      }}
+      placeholder="–"
+      style={{
+        width: 48,
+        padding: "4px 6px",
+        borderRadius: 6,
+        border: `1px solid ${theme.colors.line}`,
+        background: theme.colors.panel,
+        color: theme.colors.text,
+        textAlign: "center",
+        fontSize: "var(--fs-pill)"
+      }}
+    />
+  );
+}
+
 export function CombatOrderPanel(props: {
   combatants: Combatant[];
   playersById: Record<string, { playerName: string; characterName: string; class: string; species: string; level: number; ac: number; hpMax: number; hpCurrent: number }>;
@@ -12,6 +52,7 @@ export function CombatOrderPanel(props: {
   activeId: string | null;
   targetId: string | null;
   onSelectTarget: (id: string) => void;
+  onSetInitiative: (id: string, initiative: number) => void;
 }) {
 
 const activeIndex = React.useMemo(() => {
@@ -117,10 +158,28 @@ const wrapped = React.useMemo(() => props.combatants.slice(0, activeIndex), [pro
                     icon={icon}
                     variant="combatList"
                     subtitle={
-                      <span style={{ fontSize: "var(--fs-medium)", fontWeight: 900, color: theme.colors.muted }}>
+                      <span
+                        style={{
+                          fontSize: "var(--fs-medium)",
+                          fontWeight: 900,
+                          color: theme.colors.muted,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6
+                        }}
+                      >
+                        <span>Init</span>
                         {(() => {
                           const init = Number((c as any).initiative);
-                          return `Init ${Number.isFinite(init) && init !== 0 ? init : "—"}`;
+                          if (!Number.isFinite(init) || init === 0) {
+                            return (
+                              <InitiativeInput
+                                value={null}
+                                onCommit={(n) => props.onSetInitiative(c.id, n)}
+                              />
+                            );
+                          }
+                          return <span>{init}</span>;
                         })()}
                       </span>
                     }
@@ -223,11 +282,30 @@ const wrapped = React.useMemo(() => props.combatants.slice(0, activeIndex), [pro
                     icon={icon}
                     variant="combatList"
                     subtitle={
-                      <span style={{ fontSize: "var(--fs-medium)", fontWeight: 900, color: theme.colors.muted }}>
-                        {(() => {
-                          const init = Number((c as any).initiative);
-                          return `Init ${Number.isFinite(init) && init !== 0 ? init : "—"}`;
-                        })()}
+                      <span
+                        style={{
+                          fontSize: "var(--fs-medium)",
+                          fontWeight: 900,
+                          color: theme.colors.muted,
+                          display: "inline-flex",
+                          gap: 6,
+                          alignItems: "center"
+                        }}
+                      >
+                        {Number((c as any).initiative) === 0 ? (
+                          <>
+                            <span>Init</span>
+                            <InitiativeInput
+                              value={null}
+                              onCommit={(n) => props.onSetInitiative((c as any).id, n)}
+                            />
+                          </>
+                        ) : (
+                          (() => {
+                            const init = Number((c as any).initiative);
+                            return `Init ${Number.isFinite(init) && init !== 0 ? init : "—"}`;
+                          })()
+                        )}
                       </span>
                     }
                     actions={null}

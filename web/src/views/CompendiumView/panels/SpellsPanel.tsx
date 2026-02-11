@@ -62,8 +62,9 @@ export function SpellsPanel() {
     <Panel
       title="Spells"
       actions={<div style={{ color: theme.colors.muted, fontSize: 12 }}>{busy ? "Loading…" : `${filtered.length}`}</div>}
-      style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
-      bodyStyle={{ display: "flex", flexDirection: "column", minHeight: 0 }}
+      // Keep this panel a sane size even if the parent layout doesn't provide a bounded height.
+      style={{ display: "flex", flexDirection: "column", minWidth: 0 }}
+      bodyStyle={{ display: "flex", flexDirection: "column" }}
     >
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
         <input
@@ -108,9 +109,9 @@ export function SpellsPanel() {
 
       <div
         style={{
-          flex: 1,
-          minHeight: 0,
-          overflow: "auto",
+          // Bounded, scrollable list (avoid "page becomes 3000px tall")
+          maxHeight: "60vh",
+          overflowY: "auto",
           border: `1px solid ${theme.colors.panelBorder}`,
           borderRadius: 12,
         }}

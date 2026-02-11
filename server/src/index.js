@@ -529,7 +529,15 @@ function searchCompendium(q, filters, limit){
 
 function ensureCombat(encounterId){
   if(!userData.combats[encounterId]){
-    userData.combats[encounterId] = { encounterId, round: 1, activeIndex: 0, createdAt: now(), updatedAt: now(), combatants: [] };
+    userData.combats[encounterId] = {
+      encounterId,
+      round: 1,
+      activeIndex: 0,
+      activeCombatantId: null,
+      createdAt: now(),
+      updatedAt: now(),
+      combatants: []
+    };
   }
   return userData.combats[encounterId];
 }
@@ -1266,6 +1274,37 @@ app.get("/api/encounters/:encounterId/combatants", (req,res)=>{
   });
 
   res.json(merged);
+});
+
+// Persisted combat state (round + active combatant)
+app.get("/api/encounters/:encounterId/combatState", (req,res)=>{
+  const { encounterId } = req.params;
+  const combat = ensureCombat(encounterId);
+  res.json({
+    round: Number(combat.round ?? 1) || 1,
+    activeCombatantId: combat.activeCombatantId ?? null
+  });
+});
+
+app.put("/api/encounters/:encounterId/combatState", (req,res)=>{
+  const { encounterId } = req.params;
+  const combat = ensureCombat(encounterId);
+  const round = Number(req.body?.round);
+  const activeCombatantId = req.body?.activeCombatantId != null ? String(req.body.activeCombatantId) : null;
+
+  if(Number.isFinite(round) && round >= 1) combat.round = round;
+  combat.activeCombatantId = activeCombatantId;
+
+  // Maintain activeIndex for backwards compatibility/debugging.
+  if(activeCombatantId){
+    const idx = combat.combatants.findIndex(c=>c.id===activeCombatantId);
+    if(idx >= 0) combat.activeIndex = idx;
+  }
+
+  combat.updatedAt = now();
+  scheduleSave();
+  broadcast("encounter:combatStateChanged", { encounterId });
+  res.json({ ok:true, round: combat.round, activeCombatantId: combat.activeCombatantId });
 });
 
 app.post("/api/encounters/:encounterId/combatants/addPlayers", (req,res)=>{

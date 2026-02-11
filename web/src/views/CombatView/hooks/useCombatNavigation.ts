@@ -6,18 +6,24 @@ type Args = {
   encounterId: string | undefined;
   orderedCombatants: Combatant[];
   canNavigate: boolean;
+  started: boolean;
+  round: number;
   activeId: string | null;
   setActiveId: (id: string | null) => void;
   setRound: (n: number | ((prev: number) => number)) => void;
+  persistCombatState: (next: { round: number; activeId: string | null }) => Promise<void>;
 };
 
 export function useCombatNavigation({
   encounterId,
   orderedCombatants,
   canNavigate,
+  started,
+  round,
   activeId,
   setActiveId,
-  setRound
+  setRound,
+  persistCombatState
 }: Args) {
   // Keep activeId valid whenever roster changes.
   React.useEffect(() => {
@@ -40,37 +46,75 @@ export function useCombatNavigation({
 
   const active = (orderedCombatants as any)[activeIndex] ?? null;
 
+  const isAlive = React.useCallback((c: any) => {
+    const hp = Number(c?.hpCurrent ?? 0);
+    return !Number.isNaN(hp) && hp > 0;
+  }, []);
+
   const nextTurn = React.useCallback(() => {
     if (!orderedCombatants.length) return;
     if (!canNavigate) return;
-    const n = activeIndex + 1;
-    if (n >= orderedCombatants.length) {
-      setActiveId((orderedCombatants as any)[0]?.id ?? null);
-      setRound((r) => (typeof r === "number" ? r + 1 : (r as any) + 1));
-    } else {
-      setActiveId((orderedCombatants as any)[n]?.id ?? null);
+
+    let nextIdx = activeIndex;
+    let nextRound = round;
+    let nextId: string | null = null;
+
+    for (let i = 0; i < orderedCombatants.length; i++) {
+      nextIdx += 1;
+      if (nextIdx >= orderedCombatants.length) {
+        nextIdx = 0;
+        nextRound += 1;
+      }
+      const c: any = (orderedCombatants as any)[nextIdx];
+      if (isAlive(c)) {
+        nextId = c?.id ?? null;
+        break;
+      }
     }
-  }, [orderedCombatants, canNavigate, activeIndex, setActiveId, setRound]);
+
+    if (!nextId) return;
+    setActiveId(nextId);
+    if (nextRound !== round) setRound(nextRound);
+    void persistCombatState({ round: nextRound, activeId: nextId });
+  }, [orderedCombatants, canNavigate, activeIndex, round, setActiveId, setRound, persistCombatState, isAlive]);
 
   const prevTurn = React.useCallback(() => {
     if (!orderedCombatants.length) return;
     if (!canNavigate) return;
-    const n = activeIndex - 1;
-    if (n < 0) {
-      const last = Math.max(0, orderedCombatants.length - 1);
-      setActiveId((orderedCombatants as any)[last]?.id ?? null);
-      setRound((r) => (typeof r === "number" ? Math.max(1, r - 1) : r));
-    } else {
-      setActiveId((orderedCombatants as any)[n]?.id ?? null);
-    }
-  }, [orderedCombatants, canNavigate, activeIndex, setActiveId, setRound]);
 
-  // When initiative becomes fully set (combat "starts"), snap to Round 1, first in order.
+    let nextIdx = activeIndex;
+    let nextRound = round;
+    let nextId: string | null = null;
+
+    for (let i = 0; i < orderedCombatants.length; i++) {
+      nextIdx -= 1;
+      if (nextIdx < 0) {
+        nextIdx = Math.max(0, orderedCombatants.length - 1);
+        nextRound = Math.max(1, nextRound - 1);
+      }
+      const c: any = (orderedCombatants as any)[nextIdx];
+      if (isAlive(c)) {
+        nextId = c?.id ?? null;
+        break;
+      }
+    }
+
+    if (!nextId) return;
+    setActiveId(nextId);
+    if (nextRound !== round) setRound(nextRound);
+    void persistCombatState({ round: nextRound, activeId: nextId });
+  }, [orderedCombatants, canNavigate, activeIndex, round, setActiveId, setRound, persistCombatState, isAlive]);
+
+  // When initiative becomes fully set (combat "starts"), initialize persisted combat state once.
   const prevCanNavigateRef = React.useRef(false);
   React.useEffect(() => {
-    if (!prevCanNavigateRef.current && canNavigate) {
+    if (!prevCanNavigateRef.current && canNavigate && !started) {
+      const firstAlive = (orderedCombatants as any).find((c: any) => Number(c?.hpCurrent ?? 0) > 0)?.id ??
+        (orderedCombatants as any)[0]?.id ??
+        null;
       setRound(1);
-      setActiveId((orderedCombatants as any)[0]?.id ?? null);
+      setActiveId(firstAlive);
+      persistCombatState({ round: 1, activeId: firstAlive });
       if (encounterId) {
         (async () => {
           try {
@@ -86,7 +130,7 @@ export function useCombatNavigation({
       }
     }
     prevCanNavigateRef.current = canNavigate;
-  }, [canNavigate, encounterId, orderedCombatants, setActiveId, setRound]);
+  }, [canNavigate, encounterId, orderedCombatants, persistCombatState, setActiveId, setRound, started]);
 
   // Keyboard shortcuts: n/p for next/prev. Ignore when focus is in a text input.
   React.useEffect(() => {

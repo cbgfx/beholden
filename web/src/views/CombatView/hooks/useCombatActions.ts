@@ -13,13 +13,14 @@ type Args = {
   setActiveId: (id: string | null) => void;
   setTargetId: (id: string | null) => void;
   setRound: (n: number | ((prev: number) => number)) => void;
+  persistCombatState: (next: { round: number; activeId: string | null }) => Promise<void>;
+  inpcsById: Record<string, { monsterId?: string } | undefined>;
   delta: string;
   setDelta: (v: string) => void;
   target: Combatant | null;
   refresh: () => Promise<void>;
   monsterCache: Record<string, MonsterDetail>;
   setMonsterCache: (next: Record<string, MonsterDetail>) => void;
-  clearPersisted: () => void;
   dispatch: StoreDispatch;
 };
 
@@ -29,13 +30,14 @@ export function useCombatActions({
   setActiveId,
   setTargetId,
   setRound,
+  persistCombatState,
+  inpcsById,
   delta,
   setDelta,
   target,
   refresh,
   monsterCache,
   setMonsterCache,
-  clearPersisted,
   dispatch
 }: Args) {
   const navigate = useNavigate();
@@ -103,9 +105,9 @@ export function useCombatActions({
 
   const rollInitiativeForMonsters = React.useCallback(async () => {
     if (!encounterId) return;
-    // Roll initiative for monsters only; treat 0 as missing.
+    // Roll initiative for monsters + iNPCs; treat 0 as missing.
     const targets = orderedCombatants.filter((c: any) => {
-      if (c?.baseType !== "monster") return false;
+      if (c?.baseType !== "monster" && c?.baseType !== "inpc") return false;
       const init = Number(c?.initiative);
       return !Number.isFinite(init) || init === 0;
     }) as any[];
@@ -114,10 +116,12 @@ export function useCombatActions({
     // Ensure monster details are available (for Dex mod).
     const localCache: Record<string, MonsterDetail> = { ...monsterCache };
     for (const c of targets) {
-      if (!localCache[c.baseId]) {
+      const monsterId = c.baseType === "inpc" ? (inpcsById[c.baseId]?.monsterId ?? null) : c.baseId;
+      if (!monsterId) continue;
+      if (!localCache[monsterId]) {
         try {
-          const d = await api<MonsterDetail>(`/api/compendium/monsters/${c.baseId}`);
-          localCache[c.baseId] = d;
+          const d = await api<MonsterDetail>(`/api/compendium/monsters/${monsterId}`);
+          localCache[monsterId] = d;
         } catch {
           // ignore
         }
@@ -127,7 +131,8 @@ export function useCombatActions({
 
     // Apply initiative.
     for (const c of targets) {
-      const d = localCache[c.baseId] ?? null;
+      const monsterId = c.baseType === "inpc" ? (inpcsById[c.baseId]?.monsterId ?? null) : c.baseId;
+      const d = monsterId ? localCache[monsterId] ?? null : null;
       const mod = dexModFromMonster(d);
       const roll = 1 + Math.floor(Math.random() * 20);
       const init = roll + mod;
@@ -138,7 +143,7 @@ export function useCombatActions({
       });
     }
     await refresh();
-  }, [encounterId, orderedCombatants, monsterCache, setMonsterCache, refresh]);
+  }, [encounterId, orderedCombatants, monsterCache, setMonsterCache, refresh, inpcsById]);
 
   const resetFight = React.useCallback(async () => {
     if (!encounterId) return;
@@ -170,9 +175,15 @@ export function useCombatActions({
     }
     await refresh();
     setRound(1);
-    setActiveId((orderedCombatants as any)[0]?.id ?? null);
-    setTargetId((orderedCombatants as any)[0]?.id ?? null);
-  }, [encounterId, orderedCombatants, refresh, setRound, setActiveId, setTargetId]);
+    const firstId = (orderedCombatants as any)[0]?.id ?? null;
+    setActiveId(firstId);
+    setTargetId(firstId);
+    try {
+      await persistCombatState({ round: 1, activeId: firstId });
+    } catch {
+      // ignore
+    }
+  }, [encounterId, orderedCombatants, refresh, setRound, setActiveId, setTargetId, persistCombatState]);
 
   const endCombat = React.useCallback(async () => {
     if (!encounterId) return;
@@ -186,7 +197,11 @@ export function useCombatActions({
       // ignore
     }
 
-    clearPersisted();
+    try {
+      await persistCombatState({ round: 1, activeId: null });
+    } catch {
+      // ignore
+    }
 
     // Give immediate feedback by returning to the campaign view.
     try {
@@ -195,7 +210,7 @@ export function useCombatActions({
       // ignore
     }
     navigate("/");
-  }, [encounterId, clearPersisted, refresh, navigate]);
+  }, [encounterId, persistCombatState, refresh, navigate]);
 
   // Convenience wrappers for panel props
   const onOpenOverrides = React.useCallback(
