@@ -8,6 +8,14 @@ body {
   color: white;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   font-size: var(--fs-large);
+  height: 100%;
+  /* Allow normal page scrolling. Individual panels can still own scroll via .bh-scroll.
+     Modals temporarily disable body scroll while open. */
+  overflow: auto;
+}
+
+#root {
+  height: 100%;
 }
 
 * {
@@ -69,4 +77,26 @@ a {
 /* Utility: preserve line breaks from compendium XML text. */
 .bh-prewrap {
   white-space: pre-wrap;
+}
+
+/* --- Compendium 3-column layout --- */
+
+.compendiumGrid {
+  margin-top: var(--gap-10);
+  height: calc(100vh - 160px);
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 6fr) minmax(0, 4fr);
+  gap: var(--gap-6);
+}
+
+.compendiumCol {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-6);
+}
+
+.bh-scroll {
+  min-height: 0;
+  overflow: auto;
 }

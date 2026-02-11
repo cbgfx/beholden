@@ -3,19 +3,19 @@ import { Panel } from "@/components/ui/Panel";
 import { theme } from "@/app/theme/theme";
 import { api } from "@/app/services/api";
 import { titleCase } from "@/lib/format/titleCase";
+import { useStore } from "@/app/store";
 
 type SpellRow = {
   id: string;
-  name: string;
+  name: any;
   level: number | null;
   school: string | null;
   time: string | null;
 };
 
-export function SpellsPanel(props: {
-  selectedSpellId: string;
-  onSelectSpell: (id: string) => void;
-}) {
+export function SpellsPanel() {
+  const { dispatch } = useStore();
+  const [activeId, setActiveId] = React.useState<string>("");
   const [q, setQ] = React.useState("");
   const [level, setLevel] = React.useState<string>("all");
   const [rows, setRows] = React.useState<SpellRow[]>([]);
@@ -27,9 +27,19 @@ export function SpellsPanel(props: {
     const run = async () => {
       setBusy(true);
       try {
-        const res = await api<SpellRow[]>(`/api/spells/search?q=${encodeURIComponent(q)}&limit=200`);
+        const lv = level === "all" ? "" : `&level=${encodeURIComponent(level)}`;
+        const res = await api<SpellRow[]>(`/api/spells/search?q=${encodeURIComponent(q)}&limit=500${lv}`);
         if (cancelled) return;
-        setRows(Array.isArray(res) ? res : []);
+        const cleaned = (Array.isArray(res) ? res : [])
+          .map((r: any) => ({
+            id: typeof r?.id === "string" ? r.id : "",
+            name: typeof r?.name === "string" ? r.name : (r?.name != null ? String(r.name) : ""),
+            level: r?.level == null ? null : Number(r.level),
+            school: r?.school == null ? null : String(r.school),
+            time: r?.time == null ? null : String(r.time)
+          }))
+          .filter((r) => r.id && r.name);
+        setRows(cleaned);
       } catch {
         if (!cancelled) setRows([]);
       } finally {
@@ -43,16 +53,18 @@ export function SpellsPanel(props: {
       cancelled = true;
       window.clearTimeout(t);
     };
-  }, [q]);
+  }, [q, level]);
 
-  const filtered = React.useMemo(() => {
-    const lv = level === "all" ? null : Number(level);
-    if (lv == null || !Number.isFinite(lv)) return rows;
-    return rows.filter((r) => Number(r.level ?? -1) === lv);
-  }, [rows, level]);
+  // Note: when a level is selected we ask the server to filter as well.
+  const filtered = rows;
 
   return (
-    <Panel title="Spells" actions={<div style={{ color: theme.colors.muted, fontSize: 12 }}>{busy ? "Loading…" : `${filtered.length}`}</div>}>
+    <Panel
+      title="Spells"
+      actions={<div style={{ color: theme.colors.muted, fontSize: 12 }}>{busy ? "Loading…" : `${filtered.length}`}</div>}
+      style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+      bodyStyle={{ display: "flex", flexDirection: "column", minHeight: 0 }}
+    >
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
         <input
           value={q}
@@ -96,19 +108,27 @@ export function SpellsPanel(props: {
 
       <div
         style={{
-          height: "calc(100vh - 320px)",
+          flex: 1,
+          minHeight: 0,
           overflow: "auto",
           border: `1px solid ${theme.colors.panelBorder}`,
           borderRadius: 12,
         }}
       >
         {filtered.map((s) => {
-          const active = s.id === props.selectedSpellId;
+          const active = s.id === activeId;
           const lvl = s.level == null ? "?" : s.level === 0 ? "0" : String(s.level);
+          const safeName = typeof (s as any).name === "string" ? (s as any).name : String((s as any).name ?? "");
           return (
             <button
               key={s.id}
-              onClick={() => props.onSelectSpell(s.id)}
+              onClick={() => {
+                setActiveId(s.id);
+                dispatch({
+                  type: "openDrawer",
+                  drawer: { type: "viewSpell", spellId: s.id, title: safeName }
+                });
+              }}
               style={{
                 width: "100%",
                 textAlign: "left",
@@ -120,8 +140,17 @@ export function SpellsPanel(props: {
                 cursor: "pointer",
               }}
             >
-              <div style={{ fontWeight: 700, lineHeight: 1.1 }}>{s.name}</div>
-              <div style={{ color: theme.colors.muted, fontSize: 12, marginTop: 2 }}>
+              <div style={{ fontWeight: 700, lineHeight: 1.1 }}>{safeName}</div>
+              <div
+                style={{
+                  color: theme.colors.muted,
+                  fontSize: 12,
+                  marginTop: 2,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
                 L{lvl} • {s.school ? titleCase(String(s.school)) : ""}
                 {s.time ? ` • ${s.time}` : ""}
               </div>

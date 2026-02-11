@@ -10,6 +10,7 @@ import { CombatantDrawer } from "@/app/drawers/drawers/CombatantDrawer";
 import { CombatantOverridesDrawer } from "@/app/drawers/drawers/CombatantOverridesDrawer";
 import { CombatantConditionsDrawer } from "@/app/drawers/drawers/CombatantConditionsDrawer";
 import { TreasureDrawer } from "@/app/drawers/drawers/TreasureDrawer";
+import { SpellDrawer } from "@/app/drawers/drawers/SpellDrawer";
 import type { DrawerContent } from "@/app/drawers/types";
 import type { DrawerState } from "@/app/store";
 
@@ -207,6 +208,24 @@ export function DrawerHost(props: HostProps) {
           {...props}
           getContent={() =>
             TreasureDrawer({
+              drawer: d as any,
+              close
+            })
+          }
+        />
+      );
+    }
+
+    case "viewSpell": {
+      return (
+        <DrawerWrapper
+          key={d.type + d.spellId}
+          drawer={d}
+          title={title}
+          close={close}
+          {...props}
+          getContent={() =>
+            SpellDrawer({
               drawer: d as any,
               close
             })

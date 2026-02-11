@@ -5,15 +5,11 @@ import { theme } from "../../app/theme/theme";
 import { api } from "../../app/services/api";
 
 import { SpellsPanel } from "./panels/SpellsPanel";
-import { SpellDetailPanel } from "./panels/SpellDetailPanel";
 import { RulesReferencePanel } from "./panels/RulesReferencePanel";
 
 type CampaignRow = { id: string; name: string };
 
 export function CompendiumView() {
-  // --- LEFT: spells ---
-  const [selectedSpellId, setSelectedSpellId] = React.useState<string>("");
-
   // --- RIGHT: existing import/export tools ---
   const [file, setFile] = React.useState<File | null>(null);
   const [busy, setBusy] = React.useState(false);
@@ -102,7 +98,7 @@ export function CompendiumView() {
   }
 
   return (
-    <div style={{ height: "calc(100vh - 120px)", paddingTop: 12 }}>
+    <div style={{ height: "100%", padding: 12, boxSizing: "border-box" }}>
       <div
         style={{
           height: "100%",
@@ -110,21 +106,21 @@ export function CompendiumView() {
           gridTemplateColumns: "340px 1fr 420px",
           gap: 14,
           alignItems: "stretch",
+          minHeight: 0,
         }}
       >
         {/* LEFT */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
-          <SpellsPanel selectedSpellId={selectedSpellId} onSelectSpell={setSelectedSpellId} />
-          <SpellDetailPanel spellId={selectedSpellId} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0, minHeight: 0 }}>
+          <SpellsPanel />
         </div>
 
         {/* MIDDLE */}
-        <div style={{ minWidth: 0 }}>
+        <div style={{ minWidth: 0, minHeight: 0 }}>
           <RulesReferencePanel />
         </div>
 
         {/* RIGHT (existing tool panels) */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0, minHeight: 0, overflow: "auto" }}>
           <Panel title="Compendium import (XML)">
             <div style={{ color: theme.colors.muted, lineHeight: 1.4 }}>
               Upload a Fight Club–style compendium XML. The server converts it to JSON and stores it in{" "}

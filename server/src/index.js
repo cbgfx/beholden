@@ -44,6 +44,20 @@ const defaultUserData = {
 function now(){ return Date.now(); }
 function uid(){ return crypto.randomUUID(); }
 function normalizeKey(s){ return (s ?? "").toString().trim().toLowerCase().replace(/\s+/g," "); }
+
+function asText(v){
+  if(v == null) return "";
+  if(typeof v === "string" || typeof v === "number" || typeof v === "boolean") return String(v);
+  if(Array.isArray(v)) return asText(v[0]);
+  if(typeof v === "object"){
+    // Common XML parser shapes
+    if(Object.prototype.hasOwnProperty.call(v, "#text")) return asText(v["#text"]);
+    if(Object.prototype.hasOwnProperty.call(v, "_")) return asText(v["_"]);
+    if(Object.prototype.hasOwnProperty.call(v, "text")) return asText(v["text"]);
+    if(Object.prototype.hasOwnProperty.call(v, "value")) return asText(v["value"]);
+  }
+  return "";
+}
 function asArray(v){ if(!v) return []; return Array.isArray(v) ? v : [v]; }
 
 // Challenge Rating parsing must support fractional CRs from XML like "1/2" and "1/4".
@@ -442,8 +456,8 @@ compendiumState.spells = (raw.spells ?? []).map((s) => {
     // Spell identity must NOT collapse variants like "Aid" vs "Aid [2024]".
     // Use the full display name for id/nameKey. The bracket-stripped name is stored separately
     // for loose searching only.
-    const displayName = (s?.name ?? "Unknown").toString().trim();
-    const fullKey = normalizeKey(s?.name_key ?? s?.nameKey ?? displayName);
+    const displayName = (asText(s?.name) || "Unknown").trim();
+    const fullKey = normalizeKey(asText(s?.name_key ?? s?.nameKey) || displayName);
     const id = s?.id ?? `s_${fullKey.replace(/\s/g,"_")}`;
 
     const baseName = displayName.replace(/\s*\[[^\]]+\]\s*$/,"").trim() || displayName;
@@ -1660,19 +1674,28 @@ app.get("/api/compendium/search", (req,res)=>{
 app.get("/api/spells/search", (req,res)=>{
   const qRaw = String(req.query.q ?? "").trim();
   const q = qRaw.toLowerCase();
-  const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "50"),10) || 50, 1), 200);
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "50"),10) || 50, 1), 500);
+  const levelRaw = String(req.query.level ?? "").trim();
+  const level = levelRaw === "" ? null : (Number(levelRaw));
 
   const out = [];
   for(const s of compendiumState.spells){
+    if (level != null && Number.isFinite(level)) {
+      if (Number(s?.level ?? -999) !== level) continue;
+    }
+
     if(q){
       const hay = `${s.name} ${s.baseName ?? ""}`.toLowerCase();
       const keyHay = `${s.nameKey ?? ""} ${s.baseKey ?? ""}`;
       if(!hay.includes(q) && !String(keyHay).includes(q)) continue;
     }
+
     out.push({ id: s.id, name: s.name, level: s.level, school: s.school, time: s.time });
-    if(out.length >= limit) break;
   }
-  res.json(out);
+
+  // Stable ordering for predictable scrolling / filtering.
+  out.sort((a,b)=> String(a.name).localeCompare(String(b.name)));
+  res.json(out.slice(0, limit));
 });
 
 app.get("/api/spells/:spellId", (req,res)=>{

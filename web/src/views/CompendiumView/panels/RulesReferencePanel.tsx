@@ -95,6 +95,16 @@ const CONDITIONS: Array<{ name: string; bullets: string[] }> = [
   },
 ];
 
+// 2024 PHB style exhaustion (quick ref). Keep this short and table-friendly.
+const EXHAUSTION_2024: Array<{ level: number; effect: string }> = Array.from({ length: 10 }).map((_, i) => {
+  const lvl = i + 1;
+  const penalty = lvl * 2;
+  return {
+    level: lvl,
+    effect: lvl === 10 ? "Death" : `-${penalty} to d20 Tests` // ability checks, attack rolls, saving throws
+  };
+});
+
 const TRAVEL_PACE = [
   { pace: "Slow", mph: 2, perDay: 18, notes: "Can use Stealth." },
   { pace: "Normal", mph: 3, perDay: 24, notes: "" },
@@ -182,26 +192,16 @@ export function RulesReferencePanel() {
         title: "Conditions",
         body: (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {CONDITIONS.map((c) => (
-              <div
-                key={c.name}
-                style={{
-                  border: `1px solid ${theme.colors.panelBorder}`,
-                  borderRadius: 12,
-                  padding: "10px 12px",
-                  background: theme.colors.panelBg,
-                }}
-              >
-                <div style={{ fontWeight: 900 }}>{c.name}</div>
-                <ul style={{ margin: "6px 0 0 18px", color: theme.colors.text }}>
-                  {c.bullets.map((b) => (
-                    <li key={b} style={{ marginBottom: 4, color: theme.colors.muted }}>
-                      {b}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            <MiniTable
+              cols={["Condition", "Definition"]}
+              rows={CONDITIONS.map((c) => [c.name, c.bullets.join(" • ")])}
+            />
+            <div style={{ color: theme.colors.muted, fontSize: 12 }}>
+              Note: This is a quick reference for play speed, not full rules text.
+            </div>
+
+            <div style={{ marginTop: 8, fontWeight: 900 }}>Exhaustion (2024)</div>
+            <MiniTable cols={["Level", "Effect"]} rows={EXHAUSTION_2024.map((e) => [e.level, e.effect])} />
           </div>
         ),
       },
@@ -258,14 +258,15 @@ export function RulesReferencePanel() {
   );
 
   return (
-    <Panel title="Rules Reference">
+    <Panel title="Rules Reference" style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }} bodyStyle={{ flex: 1, minHeight: 0 }}>
       <div
         style={{
-          height: "calc(100vh - 160px)",
+          height: "100%",
           overflow: "auto",
           display: "flex",
           flexDirection: "column",
           gap: 12,
+          paddingBottom: 2,
         }}
       >
         {sections.map((s) => (

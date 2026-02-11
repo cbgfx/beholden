@@ -34,6 +34,8 @@ export function getDrawerTitle(d: DrawerState): string {
       return "Conditions";
     case "viewTreasure":
       return d.title;
+    case "viewSpell":
+      return d.title;
     default:
       return "Edit";
   }

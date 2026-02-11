@@ -5,6 +5,8 @@ export function Panel(props: {
   title: React.ReactNode;
   actions?: React.ReactNode;
   children: React.ReactNode;
+  style?: React.CSSProperties;
+  bodyStyle?: React.CSSProperties;
 }) {
   return (
     <div
@@ -12,7 +14,8 @@ export function Panel(props: {
         border: `1px solid ${theme.colors.panelBorder}`,
         borderRadius: theme.radius.panel,
         padding: 6,
-        background: theme.colors.panelBg
+        background: theme.colors.panelBg,
+        ...props.style
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
@@ -34,7 +37,7 @@ export function Panel(props: {
         {props.actions ? <div style={{ display: "flex", alignItems: "center", gap: 5 }}>{props.actions}</div> : null}
       </div>
 
-      <div style={{ marginTop: 5 }}>{props.children}</div>
+      <div style={{ marginTop: 5, ...props.bodyStyle }}>{props.children}</div>
     </div>
   );
 }
