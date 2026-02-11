@@ -218,86 +218,85 @@ export function CombatRosterView() {
 
       <div className="campaignGrid">
         <div className="campaignCol">
-        <PlayersPanel
-          players={state.players}
-          combatants={combatants}
-          selectedEncounterId={encounterId ?? null}
-          onFullRest={async () => {
-            if (!state.selectedCampaignId) return;
-            await api(`/api/campaigns/${state.selectedCampaignId}/fullRest`, { method: "POST" });
-            // keep roster in sync
-            await refresh();
-          }}
-          onCreatePlayer={() => dispatch({ type: "openDrawer", drawer: { type: "createPlayer", campaignId: state.selectedCampaignId } })}
-          onEditPlayer={(playerId) => dispatch({ type: "openDrawer", drawer: { type: "editPlayer", playerId } })}
-          onAddPlayerToEncounter={addPlayerToEncounter}
-        />
+          <PlayersPanel
+            players={state.players}
+            combatants={combatants}
+            selectedEncounterId={encounterId ?? null}
+            onFullRest={async () => {
+              if (!state.selectedCampaignId) return;
+              await api(`/api/campaigns/${state.selectedCampaignId}/fullRest`, { method: "POST" });
+              // keep roster in sync
+              await refresh();
+            }}
+            onCreatePlayer={() => dispatch({ type: "openDrawer", drawer: { type: "createPlayer", campaignId: state.selectedCampaignId } })}
+            onEditPlayer={(playerId) => dispatch({ type: "openDrawer", drawer: { type: "editPlayer", playerId } })}
+            onAddPlayerToEncounter={addPlayerToEncounter}
+          />
 
-        <INpcsPanel
-          inpcs={state.inpcs}
-          selectedCampaignId={state.selectedCampaignId ?? ""}
-          selectedEncounterId={encounterId ?? null}
-          compQ={compQ}
-          onChangeCompQ={setCompQ}
-          // Let the iNPC panel reuse the MonsterPickerModal's internal compendium
-          // loading via its fallback hook.
-          compRows={[]}
-          onAddINpcFromMonster={async (monsterId, qty, opts) => {
-            if (!state.selectedCampaignId) return;
-            await api(`/api/campaigns/${state.selectedCampaignId}/inpcs`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                monsterId,
-                qty,
-                friendly: Boolean(opts?.friendly ?? true),
-                label: opts?.labelBase ?? null,
-                ac: opts?.ac ?? null,
-                acDetails: opts?.acDetail ?? null,
-                hpMax: opts?.hpMax ?? null,
-                hpDetails: opts?.hpDetail ?? null
-              })
-            });
-            // refresh campaign lists
-            const cid = state.selectedCampaignId;
-            const inpcs = await api<INpc[]>(`/api/campaigns/${cid}/inpcs`);
-            dispatch({ type: "setINpcs", inpcs });
-          }}
-          onEditINpc={(inpcId) => dispatch({ type: "openDrawer", drawer: { type: "editINpc", inpcId } })}
-          onDeleteINpc={async (inpcId) => {
-            const ok = window.confirm("Delete this iNPC?");
-            if (!ok) return;
-            await api(`/api/inpcs/${inpcId}`, { method: "DELETE" });
-            const cid = state.selectedCampaignId;
-            if (cid) dispatch({ type: "setINpcs", inpcs: await api<INpc[]>(`/api/campaigns/${cid}/inpcs`) });
-          }}
-          onAddINpcToEncounter={addINpcToEncounter}
-        />
+          <INpcsPanel
+            inpcs={state.inpcs}
+            selectedCampaignId={state.selectedCampaignId ?? ""}
+            selectedEncounterId={encounterId ?? null}
+            compQ={compQ}
+            onChangeCompQ={setCompQ}
+            // Let the iNPC panel reuse the MonsterPickerModal's internal compendium
+            // loading via its fallback hook.
+            compRows={[]}
+            onAddINpcFromMonster={async (monsterId, qty, opts) => {
+              if (!state.selectedCampaignId) return;
+              await api(`/api/campaigns/${state.selectedCampaignId}/inpcs`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  monsterId,
+                  qty,
+                  friendly: Boolean(opts?.friendly ?? true),
+                  label: opts?.labelBase ?? null,
+                  ac: opts?.ac ?? null,
+                  acDetails: opts?.acDetail ?? null,
+                  hpMax: opts?.hpMax ?? null,
+                  hpDetails: opts?.hpDetail ?? null
+                })
+              });
+              // refresh campaign lists
+              const cid = state.selectedCampaignId;
+              const inpcs = await api<INpc[]>(`/api/campaigns/${cid}/inpcs`);
+              dispatch({ type: "setINpcs", inpcs });
+            }}
+            onEditINpc={(inpcId) => dispatch({ type: "openDrawer", drawer: { type: "editINpc", inpcId } })}
+            onDeleteINpc={async (inpcId) => {
+              const ok = window.confirm("Delete this iNPC?");
+              if (!ok) return;
+              await api(`/api/inpcs/${inpcId}`, { method: "DELETE" });
+              const cid = state.selectedCampaignId;
+              if (cid) dispatch({ type: "setINpcs", inpcs: await api<INpc[]>(`/api/campaigns/${cid}/inpcs`) });
+            }}
+            onAddINpcToEncounter={addINpcToEncounter}
+          />
         </div>
 
-        <div className="campaignCol">
-        <div style={{ display: "grid", gap: 10, alignContent: "start" }}>
-        <EncounterRosterPanel
-          selectedEncounter={encounter ? { id: encounter.id, name: encounter.name } : null}
-          combatants={combatants}
-          xpByCombatantId={xpByCombatantId}
-          compQ={compQ}
-          onChangeCompQ={setCompQ}
-          // Let the MonsterPickerModal fetch its own index when needed.
-          compRows={[]}
-          onAddMonster={addMonster}
-          onAddAllPlayers={addAllPlayers}
-          onOpenCombat={() => encounterId && nav(`/combat/${encounterId}`)}
-          onEditCombatant={(combatantId) =>
-            encounterId ? dispatch({ type: "openDrawer", drawer: { type: "editCombatant", encounterId, combatantId } }) : undefined
-          }
-          onRemoveCombatant={removeCombatant}
-        />
-        {encounterId ? <TreasurePanel encounterId={encounterId} /> : null}
-        </div>
+        <div className="campaignCol" style={{ display: "grid", gap: 10, alignContent: "start" }}>
+          <EncounterRosterPanel
+            selectedEncounter={encounter ? { id: encounter.id, name: encounter.name } : null}
+            combatants={combatants}
+            xpByCombatantId={xpByCombatantId}
+            compQ={compQ}
+            onChangeCompQ={setCompQ}
+            // Let the MonsterPickerModal fetch its own index when needed.
+            compRows={[]}
+            onAddMonster={addMonster}
+            onAddAllPlayers={addAllPlayers}
+            onOpenCombat={() => encounterId && nav(`/combat/${encounterId}`)}
+            onEditCombatant={(combatantId) =>
+              encounterId ? dispatch({ type: "openDrawer", drawer: { type: "editCombatant", encounterId, combatantId } }) : undefined
+            }
+            onRemoveCombatant={removeCombatant}
+          />
         </div>
 
-        <div className="campaignCol" />
+        <div className="campaignCol" style={{ display: "grid", gap: 10, alignContent: "start" }}>
+          {encounterId ? <TreasurePanel encounterId={encounterId} /> : null}
+        </div>
       </div>
     </div>
   );

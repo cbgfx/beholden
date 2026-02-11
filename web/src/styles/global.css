@@ -65,3 +65,8 @@ a {
     justify-content: flex-start !important;
   }
 }
+
+/* Utility: preserve line breaks from compendium XML text. */
+.bh-prewrap {
+  white-space: pre-wrap;
+}

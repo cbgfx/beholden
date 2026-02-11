@@ -17,12 +17,6 @@ function uniqSorted(xs: string[]) {
   return Array.from(new Set(xs.filter(Boolean))).sort((a, b) => a.localeCompare(b));
 }
 
-function formatMetaPart(v: string | null | undefined): string | null {
-  const s = String(v ?? "").trim();
-  if (!s) return null;
-  return titleCase(s);
-}
-
 export function ItemPickerModal(props: {
   isOpen: boolean;
   onClose: () => void;
@@ -217,7 +211,7 @@ export function ItemPickerModal(props: {
                     >
                       <div style={{ fontWeight: 900 }}>{r.name}</div>
                       <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
-                        {[formatMetaPart(r.rarity), formatMetaPart(r.type), r.attunement ? "Attunement" : null]
+                        {[r.rarity ? titleCase(r.rarity) : null, r.type ? titleCase(r.type) : null, r.attunement ? "Attunement" : null]
                           .filter(Boolean)
                           .join(" • ")}
                       </div>
@@ -281,17 +275,17 @@ export function ItemPickerModal(props: {
           ) : detail ? (
             <div style={{ display: "grid", gap: 10 }}>
               <div style={{ color: theme.colors.muted }}>
-                {[formatMetaPart(detail.rarity), formatMetaPart(detail.type), detail.attunement ? "Requires Attunement" : null]
+                {[detail.rarity ? titleCase(detail.rarity) : null, detail.type ? titleCase(detail.type) : null, detail.attunement ? "Requires Attunement" : null]
                   .filter(Boolean)
                   .join(" • ")}
               </div>
               <div
+                className="bh-prewrap"
                 style={{
                   padding: 10,
                   borderRadius: 10,
                   border: `1px solid ${theme.colors.panelBorder}`,
                   background: "rgba(0,0,0,0.14)",
-                  whiteSpace: "pre-wrap",
                   maxHeight: 420,
                   overflowY: "auto"
                 }}

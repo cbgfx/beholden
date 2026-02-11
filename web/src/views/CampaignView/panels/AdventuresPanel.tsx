@@ -3,7 +3,7 @@ import { Panel } from "../../../components/ui/Panel";
 import { IconButton } from "../../../components/ui/IconButton";
 import { DraggableList } from "../../../components/drag/DraggableList";
 import { theme } from "../../../app/theme/theme";
-import { IconAdventure, IconPencil, IconPlus, IconTrash } from "../../../components/icons";
+import { IconChest, IconPencil, IconPlus, IconTrash } from "../../../components/icons";
 
 export function AdventuresPanel(props: {
   adventures: { id: string; name: string }[];
@@ -20,7 +20,7 @@ export function AdventuresPanel(props: {
     <Panel
       title={
         <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-          <IconAdventure /> Adventures ({adventures.length})
+          <IconChest /> Adventures ({adventures.length})
         </span>
       }
       actions={

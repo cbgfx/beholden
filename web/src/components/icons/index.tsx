@@ -40,6 +40,7 @@ export const IconShield = make("shield");
 export const IconEncounter = make("crossed-swords");
 export const IconNotes = make("notebook");
 export const IconAdventure = make("treasure-map");
+export const IconChest = make("chest");
 export const IconPerson = make("barbute");
 export const IconMonster = make("double-dragon");
 export const IconDragon = IconMonster;
