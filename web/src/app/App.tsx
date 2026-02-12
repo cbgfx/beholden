@@ -1,13 +1,13 @@
 
 import React, { useCallback, useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { ShellLayout } from "./layout/ShellLayout";
 import { TopBar } from "./layout/TopBar";
 import { StoreProvider, useStore } from "@/app/store";
 import { api, jsonInit } from "./services/api";
 import { useWs } from "./services/ws";
 import type { Adventure, Campaign, Combatant, Encounter, INpc, Meta, Note, Player, AddMonsterOptions, TreasureEntry } from "./types/domain";
-import { HomeEmptyView } from "../views/HomeEmptyView";
+import { HomeView } from "../views/HomeView";
 import { CompendiumView } from "../views/CompendiumView/CompendiumView";
 import { CampaignView } from "../views/CampaignView/CampaignView";
 import { CombatView } from "../views/CombatView/CombatView";
@@ -16,6 +16,7 @@ import { DrawerHost } from "./DrawerHost";
 
 function AppInner() {
   const { state, dispatch } = useStore();
+  const navigate = useNavigate();
   const [compQ, setCompQ] = useState("");
   const [compendiumIndex, setCompendiumIndex] = useState<any[]>([]);
   const [compRows, setCompRows] = useState<any[]>([]);
@@ -276,13 +277,27 @@ function AppInner() {
 
       <DrawerHost refreshAll={refreshAll} refreshCampaign={refreshCampaign} refreshAdventure={refreshAdventure} refreshEncounter={refreshEncounter} />
 
-      {!hasCampaigns ? (
-        <HomeEmptyView onCreate={() => dispatch({ type: "openDrawer", drawer: { type: "createCampaign" } })} />
-      ) : (
-        <Routes>
-          <Route
-            path="/"
-            element={
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <HomeView
+              campaigns={state.campaigns.map((c) => ({ id: c.id, name: c.name }))}
+              onCreateCampaign={() => dispatch({ type: "openDrawer", drawer: { type: "createCampaign" } })}
+              onOpenCampaign={(campaignId) => {
+                dispatch({ type: "selectCampaign", campaignId });
+                navigate("/campaign");
+              }}
+            />
+          }
+        />
+
+        <Route
+          path="/campaign"
+          element={
+            !hasCampaigns ? (
+              <Navigate to="/" replace />
+            ) : (
               <CampaignView
                 onCreateAdventure={() => dispatch({ type: "openDrawer", drawer: { type: "createAdventure", campaignId: state.selectedCampaignId } })}
                 onCreateEncounter={() => {
@@ -334,14 +349,13 @@ function AppInner() {
                 setCompQ={setCompQ}
                 compRows={compRows}
               />
-            }
+  )}
           />
           <Route path="/roster/:encounterId" element={<CombatRosterView />} />
           <Route path="/combat/:encounterId" element={<CombatView />} />
           <Route path="/compendium" element={<CompendiumView />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      )}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </ShellLayout>
   );
 }

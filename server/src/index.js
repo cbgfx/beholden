@@ -1357,9 +1357,11 @@ app.post("/api/encounters/:encounterId/combatants/addMonster", (req,res)=>{
 
   const labelBaseRaw = req.body?.labelBase;
   const labelBase = labelBaseRaw != null ? String(labelBaseRaw).trim() : "";
-  const acOverride = req.body?.ac != null ? Number(req.body.ac) : null;
+  const acOverrideRaw = req.body?.ac != null ? Number(req.body.ac) : NaN;
+  const acOverride = Number.isFinite(acOverrideRaw) ? acOverrideRaw : null;
   const acDetail = req.body?.acDetail != null ? String(req.body.acDetail) : null;
-  const hpMaxOverride = req.body?.hpMax != null ? Number(req.body.hpMax) : null;
+  const hpMaxOverrideRaw = req.body?.hpMax != null ? Number(req.body.hpMax) : NaN;
+  const hpMaxOverride = Number.isFinite(hpMaxOverrideRaw) ? hpMaxOverrideRaw : null;
   const hpDetail = req.body?.hpDetail != null ? String(req.body.hpDetail) : null;
   const attackOverrides = req.body?.attackOverrides && typeof req.body.attackOverrides === "object" ? req.body.attackOverrides : null;
 
@@ -1367,8 +1369,27 @@ app.post("/api/encounters/:encounterId/combatants/addMonster", (req,res)=>{
   if(!m) return res.status(404).json({ ok:false, message:"Monster not found in compendium" });
 
   const r = m;
-  const defaultAc = r?.ac ?? null;
-  const defaultHp = (r?.hp?.average ?? r?.hp) ?? null;
+  // Compendium values vary across sources/versions. Be defensive.
+  const leadingNumber = (v) => {
+    if (v == null) return null;
+    if (typeof v === "number") return Number.isFinite(v) ? v : null;
+    if (typeof v === "string") {
+      const m = v.match(/\d+/);
+      return m ? Number(m[0]) : null;
+    }
+    if (typeof v === "object") {
+      // common shapes: { value, note }, { ac, note }, etc.
+      const candidates = [v.value, v.ac, v.armorClass, v.average, v.hp, v.max];
+      for (const c of candidates) {
+        const n = leadingNumber(c);
+        if (n != null) return n;
+      }
+    }
+    return null;
+  };
+
+  const defaultAc = leadingNumber(r?.ac);
+  const defaultHp = leadingNumber(r?.hp?.average ?? r?.hp);
   const defaultAcDetail = (r?.ac?.note ?? r?.ac?.type ?? null);
   const defaultHpDetail = (r?.hp?.formula ?? r?.hp?.roll ?? null);
 
@@ -1382,8 +1403,8 @@ app.post("/api/encounters/:encounterId/combatants/addMonster", (req,res)=>{
   const created = [];
   for(let i=0;i<qty;i++){
     const label = qty === 1 ? effectiveLabelBase : `${effectiveLabelBase} ${n++}`;
-    const hpMax = (hpMaxOverride != null && Number.isFinite(hpMaxOverride)) ? hpMaxOverride : (defaultHp != null ? Number(defaultHp) : null);
-    const ac = (acOverride != null && Number.isFinite(acOverride)) ? acOverride : (defaultAc != null ? Number(defaultAc) : null);
+    const hpMax = (hpMaxOverride != null && Number.isFinite(hpMaxOverride)) ? hpMaxOverride : (defaultHp != null ? defaultHp : null);
+    const ac = (acOverride != null && Number.isFinite(acOverride)) ? acOverride : (defaultAc != null ? defaultAc : null);
 
     const c = {
       id: uid(),
@@ -1769,7 +1790,8 @@ app.post("/api/compendium/import/xml", upload.single("file"), (req,res)=>{
 
   const incoming = [];
   for (const m of monsters){
-    const name = String(m?.name ?? "Unknown").trim();
+    // Fight Club XML sometimes emits nested objects/arrays for fields; normalize to plain text.
+    const name = (asText(m?.name) || "Unknown").trim();
     const nameKey = normalizeKey(name);
     const typeFull = m?.type != null ? String(m.type) : null;
     const typeKey = typeFull ? (String(typeFull).trim().match(/^([a-zA-Z]+)/)?.[1]?.toLowerCase() ?? null) : null;
@@ -1821,7 +1843,7 @@ app.post("/api/compendium/import/xml", upload.single("file"), (req,res)=>{
 
   const incomingSpells = [];
   for (const s of spells){
-  const displayName = String(s?.name ?? "Unknown").trim();
+  const displayName = (asText(s?.name) || "Unknown").trim();
   // Identity is based on the full display name so we don't collapse variants like "Aid" vs "Aid [2024]".
   const fullKey = normalizeKey(displayName);
   const normalizedName = displayName.replace(/\s*\[[^\]]+\]\s*$/,"").trim() || displayName;

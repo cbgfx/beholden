@@ -110,6 +110,13 @@ export function CombatView() {
     persistCombatState
   });
 
+  const secondsInRound = React.useMemo(() => {
+    const alive = orderedCombatants.filter((c: any) => !(c as any).isDead);
+    if (!activeId) return null;
+    const idx = alive.findIndex((c: any) => (c as any).id === activeId);
+    return idx >= 0 ? idx * 6 : null;
+  }, [orderedCombatants, activeId]);
+
   React.useEffect(() => {
     // Keep target valid when combatants change.
     setTargetId((prev) => {
@@ -246,6 +253,7 @@ export function CombatView() {
       <CombatantHeader
         title={(encounter as any)?.name ?? "Combat"}
         round={round}
+        seconds={secondsInRound}
         canNavigate={canNavigate}
         rollLabel={canNavigate ? "Reset Fight" : "Roll Monsters"}
         onRollOrReset={canNavigate ? resetFight : rollInitiativeForMonsters}

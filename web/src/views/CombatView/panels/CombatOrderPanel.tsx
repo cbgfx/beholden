@@ -140,7 +140,8 @@ const wrapped = React.useMemo(() => props.combatants.slice(0, activeIndex), [pro
                       position: "absolute",
                       inset: 0,
                       borderRadius: 14,
-                      boxShadow: `0 0 0 2px ${theme.colors.accent} inset`
+                      boxShadow: `0 0 0 2px ${theme.colors.accent} inset`,
+                      pointerEvents: "none"
                     }}
                   />
                 ) : null}

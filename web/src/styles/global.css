@@ -22,6 +22,30 @@ body {
   box-sizing: border-box;
 }
 
+/* Native form controls: keep them readable on the dark theme */
+select,
+input,
+textarea {
+  color: rgba(245, 247, 250, 0.95);
+}
+
+select {
+  background: rgba(47, 62, 82, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+select option {
+  background: rgba(33, 44, 60, 1);
+  color: rgba(245, 247, 250, 0.95);
+}
+
+select:focus,
+input:focus,
+textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(245, 160, 0, 0.4);
+}
+
 a {
   color: inherit;
 }

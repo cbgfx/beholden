@@ -55,7 +55,7 @@ export function TopBar(props: { onCreateCampaign: () => void; onSelectCampaign: 
       )}
 
       <div style={{ marginLeft: "auto", color: theme.colors.muted, fontSize: "var(--fs-medium)" }}>
-              <NavLink to="/" label="Campaign" />
+              <NavLink to="/campaign" label="Campaign" />
       <NavLink to="/compendium" label="Compendium" />
         {meta?.ips?.length ? <> {meta.ips.map((ip) => <code key={ip} style={{ marginLeft: 6 }}>{ip}</code>)}:5173</> : null}
       </div>

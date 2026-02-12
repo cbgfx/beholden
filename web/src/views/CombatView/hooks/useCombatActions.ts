@@ -152,7 +152,8 @@ export function useCombatActions({
       const overrides = c.overrides ?? { tempHp: 0, acBonus: 0, hpMaxOverride: null };
       const patch: any = {
         conditions: [],
-        overrides: { ...overrides, tempHp: 0 }
+        overrides: { ...overrides, tempHp: 0 },
+        initiative: 0
       };
       if (c.baseType === "monster") {
         const max = overrides?.hpMaxOverride != null ? Number(overrides.hpMaxOverride) : Number(c.hpMax);
@@ -168,18 +169,18 @@ export function useCombatActions({
       await api(`/api/encounters/${encounterId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "In Progress" })
+        body: JSON.stringify({ status: "Open" })
       });
     } catch {
       // ignore
     }
     await refresh();
     setRound(1);
-    const firstId = (orderedCombatants as any)[0]?.id ?? null;
-    setActiveId(firstId);
-    setTargetId(firstId);
+    // With initiatives cleared, there is no active combatant until initiatives are entered/rolled.
+    setActiveId(null);
+    setTargetId(null);
     try {
-      await persistCombatState({ round: 1, activeId: firstId });
+      await persistCombatState({ round: 1, activeId: null });
     } catch {
       // ignore
     }

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 type Props = {
   title: string;
   round: number;
+  seconds?: number | null;
   canNavigate: boolean;
   rollLabel: string;
   onRollOrReset: () => void;
@@ -23,7 +24,7 @@ type Props = {
  * which caused a runtime crash when the CombatView passed header props.)
  */
 export function CombatantHeader(props: Props) {
-  const { title, round, canNavigate, rollLabel } = props;
+  const { title, round, seconds, canNavigate, rollLabel } = props;
   const navigate = useNavigate();
 
   return (
@@ -50,6 +51,21 @@ export function CombatantHeader(props: Props) {
           >
             Round {round}
           </span>
+          {typeof seconds === "number" && (
+            <span
+              style={{
+                fontSize: "var(--fs-pill)",
+                fontWeight: 900,
+                color: theme.colors.muted,
+                border: `1px solid ${theme.colors.panelBorder}`,
+                background: theme.colors.panelBg,
+                padding: "4px 8px",
+                borderRadius: 999
+              }}
+            >
+              {seconds}s
+            </span>
+          )}
         </div>
       }
       actions={

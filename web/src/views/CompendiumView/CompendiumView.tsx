@@ -166,6 +166,7 @@ export function CompendiumView() {
                 value={selectedCampaignId}
                 onChange={(e) => setSelectedCampaignId(e.target.value)}
                 style={{
+                  colorScheme: "dark",
                   background: theme.colors.panelBg,
                   color: theme.colors.text,
                   border: `1px solid ${theme.colors.panelBorder}`,

@@ -97,8 +97,8 @@ export function CompendiumAdminPanel() {
     <div style={{ display: "grid", gap: 12, minHeight: 0 }}>
       <Panel title="Compendium import (XML)">
         <div style={{ color: theme.colors.muted, lineHeight: 1.4 }}>
-          Upload a Fight Club–style compendium XML. The server converts it to JSON and stores it in{" "}
-          <code>server/data/compendium.json</code>.
+          Upload a Fight Club–style compendium XML. The server converts it to JSON and stores it as{" "}
+          <code>compendium.json</code> in Beholden’s data directory.
           <div style={{ marginTop: 6 }}>
             <code>
               I recommend: {" "}

@@ -38,7 +38,8 @@ export function SpellsPanel() {
             school: r?.school == null ? null : String(r.school),
             time: r?.time == null ? null : String(r.time)
           }))
-          .filter((r) => r.id && r.name);
+          // Defensive: some imports can yield a literal "[object Object]" name.
+          .filter((r) => r.id && r.name && r.name !== "[object Object]");
         setRows(cleaned);
       } catch {
         if (!cancelled) setRows([]);
