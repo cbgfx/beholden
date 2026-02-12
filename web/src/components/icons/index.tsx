@@ -78,6 +78,8 @@ export const IconHP = IconHeart;
 export const IconLooseEncounter = make("shard-sword");
 export const IconRest = make("campfire");
 export const IconCompendium = make("book-pile");
+export const IconSpells = make("spells");
+export const IconCompendiumAlt = make("compendium");
 
 export const IconEncounterRoster = make("three-friends");
 

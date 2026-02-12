@@ -1,10 +1,10 @@
 import React from "react";
 import { Panel } from "@/components/ui/Panel";
+import { IconSpells } from "@/components/icons";
 import { theme } from "@/app/theme/theme";
 import { api } from "@/app/services/api";
 import { titleCase } from "@/lib/format/titleCase";
 import { useStore } from "@/app/store";
-import { Select } from "@/components/ui/Select";
 
 type SpellRow = {
   id: string;
@@ -62,7 +62,7 @@ export function SpellsPanel() {
 
   return (
     <Panel
-      title="Spells"
+      title={<span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: "var(--fs-large)" }}><IconSpells size={36} title="Spells" /><span>Spells</span></span>}
       actions={<div style={{ color: theme.colors.muted, fontSize: 12 }}>{busy ? "Loading…" : `${filtered.length}`}</div>}
       // Keep this panel a sane size even if the parent layout doesn't provide a bounded height.
       style={{ display: "flex", flexDirection: "column", minWidth: 0 }}
@@ -83,14 +83,19 @@ export function SpellsPanel() {
             outline: "none",
           }}
         />
-        <Select value={level} onChange={(e) => setLevel((e.target as any).value)} style={{
+        <select
+          value={level}
+          onChange={(e) => setLevel(e.target.value)}
+          style={{
             background: theme.colors.panelBg,
             color: theme.colors.text,
             border: `1px solid ${theme.colors.panelBorder}`,
             borderRadius: 10,
             padding: "8px 10px",
             minWidth: 110,
-          }} title="Filter by level">
+          }}
+          title="Filter by level"
+        >
           <option value="all">All levels</option>
           <option value="0">0 (Cantrip)</option>
           {Array.from({ length: 9 }).map((_, i) => {
@@ -101,7 +106,7 @@ export function SpellsPanel() {
               </option>
             );
           })}
-        </Select>
+        </select>
       </div>
 
       <div
@@ -133,7 +138,7 @@ export function SpellsPanel() {
                 padding: "10px 10px",
                 border: "none",
                 borderBottom: `1px solid ${theme.colors.panelBorder}`,
-                background: active ? theme.colors.inputBg : "transparent",
+                background: active ? theme.colors.panelBg : "transparent",
                 color: theme.colors.text,
                 cursor: "pointer",
               }}

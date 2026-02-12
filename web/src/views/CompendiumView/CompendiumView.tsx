@@ -1,9 +1,9 @@
 import React from "react";
 import { Panel } from "../../components/ui/Panel";
 import { Button } from "../../components/ui/Button";
+import { IconCompendiumAlt } from "../../components/icons";
 import { theme } from "../../app/theme/theme";
 import { api } from "../../app/services/api";
-import { Select } from "../../components/ui/Select";
 
 import { SpellsPanel } from "./panels/SpellsPanel";
 import { RulesReferencePanel } from "./panels/RulesReferencePanel";
@@ -122,7 +122,7 @@ export function CompendiumView() {
 
         {/* RIGHT (existing tool panels) */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0, minHeight: 0, overflow: "auto" }}>
-          <Panel title="Compendium import (XML)">
+          <Panel title={<span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: "var(--fs-large)" }}><IconCompendiumAlt size={36} title="Compendium" /><span>Compendium import (XML)</span></span>}>
             <div style={{ color: theme.colors.muted, lineHeight: 1.4 }}>
               Upload a Fight Club–style compendium XML. The server converts it to JSON and stores it in{" "}
               <code>server/data/compendium.json</code>. Re-importing a monster or spell with the same name (case-insensitive, ignoring trailing
@@ -163,7 +163,10 @@ export function CompendiumView() {
             </div>
 
             <div style={{ marginTop: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-              <Select value={selectedCampaignId} onChange={(e) => setSelectedCampaignId((e.target as any).value)} style={{
+              <select
+                value={selectedCampaignId}
+                onChange={(e) => setSelectedCampaignId(e.target.value)}
+                style={{
                   colorScheme: "dark",
                   background: theme.colors.panelBg,
                   color: theme.colors.text,
@@ -171,13 +174,14 @@ export function CompendiumView() {
                   borderRadius: 10,
                   padding: "8px 10px",
                   minWidth: 260,
-                }}>
+                }}
+              >
                 {campaigns.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
                 ))}
-              </Select>
+              </select>
 
               <Button onClick={exportCampaign} disabled={!selectedCampaignId}>
                 Export
