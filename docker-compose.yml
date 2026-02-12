@@ -1,0 +1,15 @@
+services:
+  beholden:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "5174:5174"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5174
+      - BEHOLDEN_DATA_DIR=/data
+    volumes:
+      - ./beholden-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp

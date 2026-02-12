@@ -7,7 +7,7 @@ PC runs Node server + JSON DB. Open from any browser on your LAN.
 2) `npm run dev`
 
 Web: http://localhost:5173  
-API: http://localhost:3000  
+API: http://localhost:5174  
 
 LAN:
 - Find PC IP: `ipconfig`

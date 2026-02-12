@@ -1,16 +1,29 @@
 {
-  "name": "@dmtool/server",
+  "name": "beholden-server",
   "private": true,
+  "version": "1.0.0",
   "type": "module",
+  "main": "dist/main.js",
   "scripts": {
-    "dev": "node --watch src/index.js",
-    "start": "node src/index.js"
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
-    "multer": "^1.4.5-lts.1",
+    "fast-xml-parser": "^5.0.0",
+    "multer": "^2.0.2",
     "ws": "^8.18.0",
-    "fast-xml-parser": "^5.3.4"
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^20.11.30",
+    "@types/ws": "^8.5.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
   }
 }
