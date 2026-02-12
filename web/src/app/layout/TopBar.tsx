@@ -43,8 +43,24 @@ export function TopBar(props: { onCreateCampaign: () => void; onSelectCampaign: 
 
       {campaigns.length ? (
         <>
-          <Select value={selectedCampaignId} onChange={(e) => props.onSelectCampaign(e.target.value)} style={{ minWidth: 220 }}>
-            {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          <Select value={selectedCampaignId} onChange={(e) => props.onSelectCampaign(e.target.value)} style={{ minWidth: 220,     background: theme.colors.panelBg,
+    color: theme.colors.text,
+    border: `2px solid ${theme.colors.accent}`,
+    borderRadius: 8,
+    padding: "6px 10px",
+    fontWeight: 700,
+    cursor: "pointer" }}>
+            {campaigns.map(c => <option key={c.id} value={c.id} style={{
+        background:
+          c.id === state.selectedCampaignId
+            ? theme.colors.accent
+            : theme.colors.panelBg,
+        color:
+          c.id === state.selectedCampaignId
+            ? "#000"
+            : theme.colors.text,
+        fontWeight: c.id === state.selectedCampaignId ? 800 : 500
+      }}>{c.name}</option>)}
           </Select>
           <Button onClick={props.onCreateCampaign}>+ Campaign</Button>
         <IconButton onClick={() => props.onEditCampaign(selectedCampaignId)} title="edit"><IconPencil /></IconButton>
