@@ -35,8 +35,8 @@ function InitiativeInput({
         width: 48,
         padding: "4px 6px",
         borderRadius: 6,
-        border: `1px solid ${theme.colors.line}`,
-        background: theme.colors.panel,
+        border: `1px solid ${theme.colors.panelBg}`,
+        background: theme.colors.panelBg,
         color: theme.colors.text,
         textAlign: "center",
         fontSize: "var(--fs-pill)"
