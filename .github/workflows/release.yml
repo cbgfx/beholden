@@ -1,0 +1,84 @@
+name: Release (tag)
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # If you use a root package.json that installs everything, keep this.
+      # If you don't, see the "Monorepo split" section below.
+      - name: Install (root)
+        run: npm ci
+
+      - name: Build (root)
+        run: npm run build --if-present
+
+      # If you have separate web/server builds, these will run if the scripts exist.
+      - name: Build web
+        run: |
+          if [ -f web/package.json ]; then
+            cd web
+            npm ci
+            npm run build --if-present
+          fi
+
+      - name: Build server
+        run: |
+          if [ -f server/package.json ]; then
+            cd server
+            npm ci
+            npm run build --if-present
+          fi
+
+      - name: Create release package zip
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+
+          mkdir -p release_package
+
+          # Include server (source + built output if present)
+          if [ -d "server" ]; then
+            mkdir -p release_package/server
+            rsync -a --exclude=node_modules server/ release_package/server/
+          fi
+
+          # Include web build output + minimal web files
+          if [ -d "web" ]; then
+            mkdir -p release_package/web
+            rsync -a --exclude=node_modules web/ release_package/web/
+
+            # If you want ONLY built assets for web, uncomment this block:
+            # rm -rf release_package/web/src release_package/web/node_modules
+          fi
+
+          # Include root docs/config if you want
+          for f in README.md LICENSE package.json package-lock.json; do
+            if [ -f "$f" ]; then cp "$f" release_package/; fi
+          done
+
+          ZIP_NAME="beholden-${VERSION}.zip"
+          (cd release_package && zip -r "../${ZIP_NAME}" .)
+          echo "ZIP_NAME=${ZIP_NAME}" >> $GITHUB_ENV
+
+      - name: Create GitHub Release + Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ZIP_NAME }}
+          generate_release_notes: true

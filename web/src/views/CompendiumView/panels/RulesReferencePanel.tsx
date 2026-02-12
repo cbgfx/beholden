@@ -199,9 +199,21 @@ export function RulesReferencePanel() {
             <div style={{ color: theme.colors.muted, fontSize: 12 }}>
               Note: This is a quick reference for play speed, not full rules text.
             </div>
-
-            <div style={{ marginTop: 8, fontWeight: 900 }}>Exhaustion (2024)</div>
-            <MiniTable cols={["Level", "Effect"]} rows={EXHAUSTION_2024.map((e) => [e.level, e.effect])} />
+          </div>
+        ),
+      },
+      {
+        id: "exhaustion",
+        title: "Exhaustion (2024 PHB)",
+        body: (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <MiniTable
+              cols={["Level", "Effect"]}
+              rows={EXHAUSTION_2024.map((e) => [e.level, e.effect])}
+            />
+            <div style={{ color: theme.colors.muted, fontSize: 12 }}>
+              This is the updated exhaustion rules from the 2024 PHB. The main change is that exhaustion now imposes a flat penalty to all d20 rolls, rather than specific mechanical effects at each level.
+            </div>
           </div>
         ),
       },
@@ -235,20 +247,6 @@ export function RulesReferencePanel() {
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ fontWeight: 900 }}>Food, drink, and lodging</div>
               <MiniTable cols={["Item", "Cost"]} rows={FOOD_LODGING.map((r) => [r.item, r.cost])} />
-            </div>
-
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 12 }}>
-              <a style={{ color: theme.colors.accent }} target="_blank" rel="noreferrer" href="https://roll20.net/compendium/dnd5e/Expenses">
-                Roll20: Expenses
-              </a>
-              <a
-                style={{ color: theme.colors.accent }}
-                target="_blank"
-                rel="noreferrer"
-                href="https://roll20.net/compendium/dnd5e/Rules%3AFood%2C%20Drink%2C%20and%20Lodging"
-              >
-                Roll20: Food, Drink, and Lodging
-              </a>
             </div>
           </div>
         ),
