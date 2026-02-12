@@ -8,6 +8,7 @@ import { dexModFromMonster, parsePositiveInt } from "../utils/combat";
 type StoreDispatch = (action: any) => void;
 
 type Args = {
+  campaignId?: string;
   encounterId: string | undefined;
   orderedCombatants: Combatant[];
   setActiveId: (id: string | null) => void;
@@ -25,6 +26,7 @@ type Args = {
 };
 
 export function useCombatActions({
+  campaignId,
   encounterId,
   orderedCombatants,
   setActiveId,
@@ -54,7 +56,13 @@ export function useCombatActions({
       const cur = targetAny.hpCurrent;
       const overrides = targetAny.overrides || null;
       const rawMax = targetAny.hpMax;
-      const max = overrides?.hpMaxOverride != null ? overrides.hpMaxOverride : rawMax;
+      const maxOverride = (() => {
+        const v = overrides?.hpMaxOverride;
+        if (v == null) return null;
+        const n = Number(v);
+        return Number.isFinite(n) && n > 0 ? n : null;
+      })();
+      const max = maxOverride ?? rawMax;
       const tempHp = Math.max(0, Number(overrides?.tempHp ?? 0) || 0);
       if (cur == null) return;
 
@@ -210,8 +218,9 @@ export function useCombatActions({
     } catch {
       // ignore
     }
-    navigate("/");
-  }, [encounterId, persistCombatState, refresh, navigate]);
+    if (campaignId) navigate(`/campaign/${campaignId}`);
+    else navigate("/");
+  }, [campaignId, encounterId, persistCombatState, refresh, navigate]);
 
   // Convenience wrappers for panel props
   const onOpenOverrides = React.useCallback(

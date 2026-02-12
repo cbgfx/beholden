@@ -149,17 +149,20 @@ export function CombatantDetailsPanel(props: Props) {
     const c: any = selected;
     const overrides = (c.overrides ?? null) as any;
 
-    const acBonus = c.baseType === "player" ? Number(overrides?.acBonus ?? 0) || 0 : 0;
+    const acBonus = Number(overrides?.acBonus ?? 0) || 0;
 
-    const hpMaxRaw =
-      c.baseType === "player"
-        ? overrides?.hpMaxOverride != null
-          ? Number(overrides.hpMaxOverride)
-          : Number(c.hpMax ?? 1)
-        : Number(c.hpMax ?? 1);
+    const hpMaxOverride = (() => {
+      const v = overrides?.hpMaxOverride;
+      if (v == null) return null;
+      const n = Number(v);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    })();
+
+    const hpMaxRaw = hpMaxOverride != null ? hpMaxOverride : Number(c.hpMax ?? 1);
 
     const hpMax = toFinite(hpMaxRaw, 0);
     const hpCur = toFinite(c.hpCurrent ?? 0, 0);
+    const tempHp = Math.max(0, Number(overrides?.tempHp ?? 0) || 0);
     const ac = Math.max(0, toFinite(c.ac ?? 10, 10) + acBonus);
 
     const detail: any = ctx.selectedMonster?.raw_json ?? {};
@@ -298,6 +301,7 @@ export function CombatantDetailsPanel(props: Props) {
       ac,
       hpCur,
       hpMax,
+      tempHp,
       speed: speedVal,
       abilities,
       saves,

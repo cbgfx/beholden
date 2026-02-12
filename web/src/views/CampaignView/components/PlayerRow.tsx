@@ -14,6 +14,8 @@ export type PlayerVM = {
   ac: number;
   hpMax: number;
   hpCurrent: number;
+  tempHp?: number;
+  acBonus?: number;
 };
 
 export function PlayerRow(props: {
@@ -39,8 +41,93 @@ export function PlayerRow(props: {
   const cur = Math.max(0, Number(p.hpCurrent) || 0);
   const pct = Math.max(0, Math.min(1, cur / max));
   const isDead = cur <= 0;
+  const showDeathSaves = cur === 0 && Boolean(p.playerName);
   const isBloody = pct <= 0.5 && pct > 0.25;
   const isQuarter = pct <= 0.25;
+
+  // Death saves: local UI state per row. This persists while the row remains mounted.
+  // Only shown when HP is 0 (dying). Reset automatically when HP rises above 0.
+  const [deathSaves, setDeathSaves] = React.useState<{ s: number; f: number }>({ s: 0, f: 0 });
+
+  React.useEffect(() => {
+    if (cur > 0) setDeathSaves({ s: 0, f: 0 });
+  }, [cur]);
+
+  const DeathSavesRow = (
+    <div style={{ display: "grid", gridTemplateColumns: "auto auto", gap: 10, alignItems: "center" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: "var(--fs-small)", fontWeight: 900, color: theme.colors.health }}>S</span>
+        <div style={{ display: "flex", gap: 6 }}>
+          {[0, 1, 2].map((i) => {
+            const on = i < deathSaves.s;
+            return (
+              <button
+                key={`s-${i}`}
+                type="button"
+                title={on ? "Remove success" : "Add success"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeathSaves((prev) => ({ ...prev, s: Math.max(0, Math.min(3, on ? i : i + 1)) }));
+                }}
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 6,
+                  border: `1px solid ${theme.colors.panelBorder}`,
+                  background: on ? theme.colors.health : theme.colors.panelBg,
+                  color: theme.colors.text,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 900,
+                  lineHeight: 1
+                }}
+              >
+                {on ? "✓" : ""}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "flex-end" }}>
+        <div style={{ display: "flex", gap: 6 }}>
+          {[0, 1, 2].map((i) => {
+            const on = i < deathSaves.f;
+            return (
+              <button
+                key={`f-${i}`}
+                type="button"
+                title={on ? "Remove failure" : "Add failure"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeathSaves((prev) => ({ ...prev, f: Math.max(0, Math.min(3, on ? i : i + 1)) }));
+                }}
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 6,
+                  border: `1px solid ${theme.colors.panelBorder}`,
+                  background: on ? theme.colors.danger : theme.colors.panelBg,
+                  color: theme.colors.text,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 900,
+                  lineHeight: 1
+                }}
+              >
+                {on ? "✕" : ""}
+              </button>
+            );
+          })}
+        </div>
+        <span style={{ fontSize: "var(--fs-small)", fontWeight: 900, color: theme.colors.danger }}>F</span>
+      </div>
+    </div>
+  );
 
   const metaRight =
     props.subtitle ??
@@ -49,16 +136,24 @@ export function PlayerRow(props: {
         Lvl {p.level} {p.species} {p.class}
       </>
     ));
-const vitalsRight = (
+const acBonus = Number((p as any).acBonus ?? 0) || 0;
+  const tempHp = Math.max(0, Number((p as any).tempHp ?? 0) || 0);
+  const acTotal = Number(p.ac ?? 0) + acBonus;
+
+  const vitalsRight = (
     <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
       <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
         <IconShield size={14} />
-        <span style={{ fontVariantNumeric: "tabular-nums" }}>{p.ac}</span>
+        <span style={{ fontVariantNumeric: "tabular-nums" }}>
+          {acTotal}
+          {acBonus ? <span style={{ color: theme.colors.muted, fontWeight: 900 }}>{` (+${acBonus})`}</span> : null}
+        </span>
       </span>
       <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
         <IconHeart size={14} />
         <span style={{ fontVariantNumeric: "tabular-nums" }}>
           {cur}/{max}
+          {tempHp ? <span style={{ color: theme.colors.muted, fontWeight: 900 }}>{` (+${tempHp}t)`}</span> : null}
         </span>
       </span>
     </div>
@@ -142,7 +237,7 @@ const vitalsRight = (
 
         {/* Bottom row: full-width bar + right-side vitals */}
         <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr auto", alignItems: "center", gap: 10 }}>
-          <HPBar cur={cur} max={max} ac={p.ac} variant="compact" showText={false} />
+          {showDeathSaves ? <div style={{ padding: "2px 0" }}>{DeathSavesRow}</div> : <HPBar cur={cur} max={max} ac={p.ac} variant="compact" showText={false} /> }
           <div style={{ fontSize: "var(--fs-small)", color: theme.colors.text, opacity: 0.9, whiteSpace: "nowrap" }}>{vitalsRight}</div>
         </div>
       </div>
@@ -210,7 +305,7 @@ const vitalsRight = (
 
       {/* Bottom row: full-width bar + right-side vitals */}
       <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr auto", alignItems: "center", gap: 10 }}>
-        <HPBar cur={cur} max={max} ac={p.ac} showText={false} />
+        {showDeathSaves ? <div style={{ padding: "2px 0" }}>{DeathSavesRow}</div> : <HPBar cur={cur} max={max} ac={p.ac} showText={false} /> }
         <div style={{ fontSize: "var(--fs-small)", color: theme.colors.text, opacity: 0.9, whiteSpace: "nowrap" }}>{vitalsRight}</div>
       </div>
     </div>

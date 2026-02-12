@@ -5,6 +5,8 @@ import { Panel } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 
 type Props = {
+  backTo: string;
+  backTitle?: string;
   title: string;
   round: number;
   seconds?: number | null;
@@ -32,8 +34,8 @@ export function CombatantHeader(props: Props) {
       title={
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <Button
-            onClick={() => navigate("/")}
-            title="Back to Campaign"
+            onClick={() => navigate(props.backTo)}
+            title={props.backTitle ?? "Back"}
           >
             Back
           </Button>

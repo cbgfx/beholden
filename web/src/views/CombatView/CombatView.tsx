@@ -148,6 +148,7 @@ export function CombatView() {
     onOpenOverrides,
     onOpenConditions
   } = useCombatActions({
+    campaignId: campaignId as any,
     encounterId,
     orderedCombatants,
     setActiveId,
@@ -251,6 +252,8 @@ export function CombatView() {
   return (
     <div style={{ padding: "var(--space-page)" }}>
       <CombatantHeader
+        backTo={campaignId && encounterId ? `/campaign/${campaignId}/roster/${encounterId}` : (campaignId ? `/campaign/${campaignId}` : "/")}
+        backTitle="Back to Roster"
         title={(encounter as any)?.name ?? "Combat"}
         round={round}
         seconds={secondsInRound}

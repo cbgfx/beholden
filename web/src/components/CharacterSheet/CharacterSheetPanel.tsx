@@ -8,6 +8,7 @@ export type CharacterSheetStats = {
   ac: number;
   hpCur: number;
   hpMax: number;
+  tempHp?: number;
   speed: number | null;
   abilities: Record<AbilityKey, number>;
   saves?: Partial<Record<AbilityKey, number>>;
@@ -134,7 +135,7 @@ export function CharacterSheetPanel(props: {
           label="HIT POINTS"
           value={
             Number.isFinite(s.hpCur) && Number.isFinite(s.hpMax) && s.hpMax > 0
-              ? `${s.hpCur} / ${s.hpMax}`
+              ? `${s.hpCur} / ${s.hpMax}${(Number(s.tempHp ?? 0) || 0) ? ` (+${Number(s.tempHp ?? 0) || 0}t)` : ``}`
               : "—"
           }
         />

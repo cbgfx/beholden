@@ -100,7 +100,9 @@ const wrapped = React.useMemo(() => props.combatants.slice(0, activeIndex), [pro
             level: 0,
             ac,
             hpMax,
-            hpCurrent
+            hpCurrent,
+            tempHp: Math.max(0, Number(overrides?.tempHp ?? 0) || 0),
+            acBonus: Number(overrides?.acBonus ?? 0) || 0
           };
 
           const playerRec = c.baseType === "player" ? props.playersById[c.baseId] : undefined;
@@ -218,7 +220,9 @@ const wrapped = React.useMemo(() => props.combatants.slice(0, activeIndex), [pro
             level: 0,
             ac,
             hpMax,
-            hpCurrent
+            hpCurrent,
+            tempHp: Math.max(0, Number(overrides?.tempHp ?? 0) || 0),
+            acBonus: Number(overrides?.acBonus ?? 0) || 0
           };
 
           const playerRec = c.baseType === "player" ? props.playersById[c.baseId] : undefined;

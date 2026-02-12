@@ -46,7 +46,11 @@ export function useCombatNavigation({
 
   const active = (orderedCombatants as any)[activeIndex] ?? null;
 
-  const isAlive = React.useCallback((c: any) => {
+  const isSelectable = React.useCallback((c: any) => {
+    // Monsters and iNPCs at 0 HP are dead and should be skipped.
+    // Players at 0 HP are making death saves and must remain in turn order.
+    const baseType = (c as any)?.baseType;
+    if (baseType === "player") return true;
     const hp = Number(c?.hpCurrent ?? 0);
     return !Number.isNaN(hp) && hp > 0;
   }, []);
@@ -66,7 +70,7 @@ export function useCombatNavigation({
         nextRound += 1;
       }
       const c: any = (orderedCombatants as any)[nextIdx];
-      if (isAlive(c)) {
+      if (isSelectable(c)) {
         nextId = c?.id ?? null;
         break;
       }
@@ -76,7 +80,7 @@ export function useCombatNavigation({
     setActiveId(nextId);
     if (nextRound !== round) setRound(nextRound);
     void persistCombatState({ round: nextRound, activeId: nextId });
-  }, [orderedCombatants, canNavigate, activeIndex, round, setActiveId, setRound, persistCombatState, isAlive]);
+  }, [orderedCombatants, canNavigate, activeIndex, round, setActiveId, setRound, persistCombatState, isSelectable]);
 
   const prevTurn = React.useCallback(() => {
     if (!orderedCombatants.length) return;
@@ -93,7 +97,7 @@ export function useCombatNavigation({
         nextRound = Math.max(1, nextRound - 1);
       }
       const c: any = (orderedCombatants as any)[nextIdx];
-      if (isAlive(c)) {
+      if (isSelectable(c)) {
         nextId = c?.id ?? null;
         break;
       }
@@ -103,18 +107,23 @@ export function useCombatNavigation({
     setActiveId(nextId);
     if (nextRound !== round) setRound(nextRound);
     void persistCombatState({ round: nextRound, activeId: nextId });
-  }, [orderedCombatants, canNavigate, activeIndex, round, setActiveId, setRound, persistCombatState, isAlive]);
+  }, [orderedCombatants, canNavigate, activeIndex, round, setActiveId, setRound, persistCombatState, isSelectable]);
 
   // When initiative becomes fully set (combat "starts"), initialize persisted combat state once.
   const prevCanNavigateRef = React.useRef(false);
   React.useEffect(() => {
     if (!prevCanNavigateRef.current && canNavigate && !started) {
-      const firstAlive = (orderedCombatants as any).find((c: any) => Number(c?.hpCurrent ?? 0) > 0)?.id ??
+            const firstSelectable =
+        (orderedCombatants as any).find((c: any) => {
+          const baseType = (c as any)?.baseType;
+          if (baseType === "player") return true;
+          return Number(c?.hpCurrent ?? 0) > 0;
+        })?.id ??
         (orderedCombatants as any)[0]?.id ??
         null;
       setRound(1);
-      setActiveId(firstAlive);
-      persistCombatState({ round: 1, activeId: firstAlive });
+      setActiveId(firstSelectable);
+      persistCombatState({ round: 1, activeId: firstSelectable });
       if (encounterId) {
         (async () => {
           try {
