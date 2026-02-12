@@ -8,6 +8,7 @@ import { IconClose, IconPlus } from "@/components/icons";
 import { Modal } from "@/components/overlay/Modal";
 import type { CompendiumItemDetail, CompendiumItemRow } from "@/app/types/compendium";
 import { titleCase } from "@/lib/format/titleCase";
+import { Select } from "@/components/ui/Select";
 
 export type AddItemPayload =
   | { source: "compendium"; itemId: string }
@@ -159,22 +160,22 @@ export function ItemPickerModal(props: {
             />
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <select value={rarity} onChange={(e) => setRarity(e.target.value)}>
+              <Select value={rarity} onChange={(e) => setRarity((e.target as any).value)}>
                 <option value="">All rarities</option>
                 {rarityOptions.map((r) => (
                   <option key={r} value={r}>
                     {titleCase(r)}
                   </option>
                 ))}
-              </select>
-              <select value={type} onChange={(e) => setType(e.target.value)}>
+              </Select>
+              <Select value={type} onChange={(e) => setType((e.target as any).value)}>
                 <option value="">All types</option>
                 {typeOptions.map((t) => (
                   <option key={t} value={t}>
                     {titleCase(t)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div

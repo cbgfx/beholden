@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { theme } from "../app/theme/theme";
 import { Button } from "../components/ui/Button";
+import { Select } from "../components/ui/Select";
 
 type CampaignSummary = {
   id: string;
@@ -83,13 +84,13 @@ export function HomeView({ campaigns, onCreateCampaign, onOpenCampaign }: Props)
 
         <div style={{ height: 12 }} />
 
-        <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)} style={selectStyle}>
+        <Select value={selectedId} onChange={(e) => setSelectedId((e.target as any).value)} style={selectStyle}>
           {sorted.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>
           ))}
-        </select>
+        </Select>
 
         <div style={{ height: 12 }} />
 

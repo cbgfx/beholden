@@ -85,7 +85,7 @@ export function SpellDrawer(props: { drawer: SpellDrawerState; close: () => void
           style={{
             color: theme.colors.text,
             lineHeight: 1.4,
-            background: theme.colors.panel2,
+            background: theme.colors.panelBg,
             border: `1px solid ${theme.colors.panelBorder}`,
             borderRadius: 12,
             padding: 12

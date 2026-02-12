@@ -3,6 +3,7 @@ import { Panel } from "../../components/ui/Panel";
 import { Button } from "../../components/ui/Button";
 import { theme } from "../../app/theme/theme";
 import { api } from "../../app/services/api";
+import { Select } from "../../components/ui/Select";
 
 import { SpellsPanel } from "./panels/SpellsPanel";
 import { RulesReferencePanel } from "./panels/RulesReferencePanel";
@@ -162,10 +163,7 @@ export function CompendiumView() {
             </div>
 
             <div style={{ marginTop: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-              <select
-                value={selectedCampaignId}
-                onChange={(e) => setSelectedCampaignId(e.target.value)}
-                style={{
+              <Select value={selectedCampaignId} onChange={(e) => setSelectedCampaignId((e.target as any).value)} style={{
                   colorScheme: "dark",
                   background: theme.colors.panelBg,
                   color: theme.colors.text,
@@ -173,14 +171,13 @@ export function CompendiumView() {
                   borderRadius: 10,
                   padding: "8px 10px",
                   minWidth: 260,
-                }}
-              >
+                }}>
                 {campaigns.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
                 ))}
-              </select>
+              </Select>
 
               <Button onClick={exportCampaign} disabled={!selectedCampaignId}>
                 Export

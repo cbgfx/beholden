@@ -4,6 +4,7 @@ import { theme } from "@/app/theme/theme";
 import { api } from "@/app/services/api";
 import { titleCase } from "@/lib/format/titleCase";
 import { useStore } from "@/app/store";
+import { Select } from "@/components/ui/Select";
 
 type SpellRow = {
   id: string;
@@ -82,19 +83,14 @@ export function SpellsPanel() {
             outline: "none",
           }}
         />
-        <select
-          value={level}
-          onChange={(e) => setLevel(e.target.value)}
-          style={{
+        <Select value={level} onChange={(e) => setLevel((e.target as any).value)} style={{
             background: theme.colors.panelBg,
             color: theme.colors.text,
             border: `1px solid ${theme.colors.panelBorder}`,
             borderRadius: 10,
             padding: "8px 10px",
             minWidth: 110,
-          }}
-          title="Filter by level"
-        >
+          }} title="Filter by level">
           <option value="all">All levels</option>
           <option value="0">0 (Cantrip)</option>
           {Array.from({ length: 9 }).map((_, i) => {
@@ -105,7 +101,7 @@ export function SpellsPanel() {
               </option>
             );
           })}
-        </select>
+        </Select>
       </div>
 
       <div
@@ -137,7 +133,7 @@ export function SpellsPanel() {
                 padding: "10px 10px",
                 border: "none",
                 borderBottom: `1px solid ${theme.colors.panelBorder}`,
-                background: active ? theme.colors.pillActiveBg : "transparent",
+                background: active ? theme.colors.inputBg : "transparent",
                 color: theme.colors.text,
                 cursor: "pointer",
               }}

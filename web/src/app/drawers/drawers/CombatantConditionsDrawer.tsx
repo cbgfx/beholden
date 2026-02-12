@@ -6,6 +6,7 @@ import { useStore, type DrawerState } from "@/app/store";
 import type { DrawerContent } from "@/app/drawers/types";
 import { CONDITION_DEFS } from "@/app/drawers/drawers/combatant/conditions";
 import { conditionIconByKey } from "@/components/icons/conditions";
+import { Select } from "@/components/ui/Select";
 
 type ConditionsDrawerState = Exclude<Extract<DrawerState, { type: "combatantConditions" }>, null>;
 
@@ -142,28 +143,14 @@ export function CombatantConditionsDrawer(props: {
                       <span>{def?.name ?? c.key}</span>
                     </div>
 
-                    {needsCaster ? (
-                      <select
-                        value={c.casterId ?? ""}
-                        onChange={(e) => setCasterForIndex(idx, e.target.value || null)}
-                        style={{
-                          width: "100%",
-                          padding: "8px 10px",
-                          borderRadius: 12,
-                          border: `1px solid ${theme.colors.panelBorder}`,
-                          background: "rgba(0,0,0,0.14)",
-                          color: theme.colors.text
-                        }}
-                      >
+          <Select value={c.casterId ?? ""} onChange={(e) => setCasterForIndex(idx, (e.target as any).value || null)} style={{ width: "100%" }}>
                         <option value="">— caster —</option>
                         {state.combatants.map((r: any) => (
                           <option key={r.id} value={r.id}>
                             {String(r.name || r.label || "Combatant")}
                           </option>
                         ))}
-                      </select>
-                    ) : null}
-
+                      </Select>
                     <Button variant="ghost" onClick={() => removeAt(idx)} title={needsCaster ? `Remove (caster: ${casterLabel})` : "Remove"}>
                       ✕
                     </Button>
