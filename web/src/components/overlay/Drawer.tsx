@@ -22,7 +22,11 @@ export function Drawer(props: {
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 50 }}>
-      <div onClick={props.onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)" }} />
+      {/* Backdrop (explicitly behind the drawer so it can't intercept clicks) */}
+      <div
+        onClick={props.onClose}
+        style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 0 }}
+      />
       <div
         style={{
           position: "absolute",
@@ -33,7 +37,8 @@ export function Drawer(props: {
           background: "#152233",
           borderLeft: `1px solid ${theme.colors.panelBorder}`,
           display: "flex",
-          flexDirection: "column"
+          flexDirection: "column",
+          zIndex: 1
         }}
       >
         <div style={{ padding: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>

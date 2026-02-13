@@ -1,0 +1,9 @@
+/*
+  Global stylesheet entrypoint.
+  Load order is explicit and deterministic:
+  1) tokens (CSS variables)
+  2) global rules (base + components + views)
+*/
+
+@import "./tokens.css";
+@import "./global.css";

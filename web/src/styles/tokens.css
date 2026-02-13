@@ -1,4 +1,22 @@
 :root {
+  /*
+    Global color tokens.
+    These power the few places that rely on CSS variables (eg. ConfirmDialog + some CombatView pills).
+    Keep these in sync with `src/app/theme/theme.ts` (which is used by inline styles).
+  */
+  --bg: #2e4057;
+  --text: #ffffff;
+  --muted: rgba(255, 255, 255, 0.72);
+  --accent-600: #eca72c;
+  --danger: #ff5d5d;
+  --bloody: #ff9e4a;
+  --health: #7dc56d;
+
+  /* Surfaces */
+  --bg-panel: rgba(255, 255, 255, 0.06);
+  --bg-raised: rgba(0, 0, 0, 0.25);
+  --border: rgba(255, 255, 255, 0.14);
+
   /* Typography tokens. Prefer these over hard-coded fontSize numbers. */
   --fs-hero: 30px;      /* App title / hero */
   --fs-stat: 16px;      /* Big numeric stats (AC/HP/Speed) */
@@ -10,6 +28,7 @@
   --fs-small: 14px;     /* Tiny metadata */
   --fs-tiny: 10px;      /* Micro text (rare) */
   --fs-body: 16px;
+  --fs-base: var(--fs-large);
   --fs-h3: 18px;
 
   /* Density */
