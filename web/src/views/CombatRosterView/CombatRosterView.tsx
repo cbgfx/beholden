@@ -5,16 +5,16 @@ import { api } from "@/services/api";
 import type { AddMonsterOptions, INpc } from "@/domain/types/domain";
 import { useConfirm } from "@/confirm/ConfirmContext";
 
-import { PlayersPanel } from "@/views/CampaignView/panels/PlayersPanel";
-import { INpcsPanel } from "@/views/CampaignView/panels/INpcsPanel";
-import { EncounterRosterPanel } from "@/views/CampaignView/panels/EncounterRosterPanel";
-import { TreasurePanel } from "@/views/CombatRosterView/components/TreasurePanel";
-
 import { CombatRosterHeader } from "@/views/CombatRosterView/components/CombatRosterHeader";
 
 import { useEncounterCombatants } from "@/views/CombatView/hooks/useEncounterCombatants";
-import { getMonsterXp } from "@/domain/utils/xp";
-import { calcEncounterDifficulty, estimateMonsterDpr } from "@/domain/utils/difficulty";
+
+import { CombatRosterLeftColumn } from "@/views/CombatRosterView/components/CombatRosterLeftColumn";
+import { CombatRosterCenterColumn } from "@/views/CombatRosterView/components/CombatRosterCenterColumn";
+import { CombatRosterRightColumn } from "@/views/CombatRosterView/components/CombatRosterRightColumn";
+
+import { useEnsureRosterMonsterDetails } from "@/views/CombatRosterView/hooks/useEnsureRosterMonsterDetails";
+import { useRosterMetrics } from "@/views/CombatRosterView/hooks/useRosterMetrics";
 
 export function CombatRosterView() {
   const { campaignId, encounterId } = useParams();
@@ -29,103 +29,14 @@ export function CombatRosterView() {
     return (state as any).encounters?.find((e: any) => e.id === encounterId) ?? null;
   }, [encounterId, state.encounters]);
 
-  // Ensure we have monster details for the roster's monsters so we can display XP.
-  React.useEffect(() => {
-    let cancelled = false;
-    const run = async () => {
-      const cs: any[] = combatants ?? [];
+  useEnsureRosterMonsterDetails({ combatants, inpcs: state.inpcs, monsterDetails: state.monsterDetails, dispatch });
 
-      // Collect monster ids referenced by combatants.
-      const monsterIds = new Set<string>();
-      for (const c of cs) {
-        if (c?.baseType === "monster" && c.baseId != null) monsterIds.add(String(c.baseId));
-        if (c?.baseType === "inpc" && c.baseId != null) {
-          const inpcId = String(c.baseId);
-          const inpc = (state.inpcs ?? []).find((x: any) => String(x.id) === inpcId);
-          if (inpc?.monsterId != null) monsterIds.add(String(inpc.monsterId));
-        }
-      }
-
-      const missing = Array.from(monsterIds).filter((id) => !(state.monsterDetails && (state.monsterDetails as any)[id]));
-      if (!missing.length) return;
-
-      const patch: Record<string, any> = {};
-      for (const id of missing) {
-        try {
-          patch[id] = await api(`/api/compendium/monsters/${id}`);
-        } catch {
-          // ignore fetch failures; XP will just be unavailable
-        }
-      }
-
-      if (cancelled) return;
-      if (Object.keys(patch).length) dispatch({ type: "mergeMonsterDetails", patch });
-    };
-
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [combatants, dispatch, state.inpcs, state.monsterDetails]);
-
-  const xpByCombatantId = React.useMemo(() => {
-    const map: Record<string, number> = {};
-    const cs: any[] = combatants ?? [];
-    for (const c of cs) {
-      if (!c?.id) continue;
-      let monsterId: string | null = null;
-      if (c.baseType === "monster") monsterId = c.baseId != null ? String(c.baseId) : null;
-      if (c.baseType === "inpc") {
-        const inpcId = c.baseId != null ? String(c.baseId) : null;
-        const inpc = inpcId ? (state.inpcs ?? []).find((x: any) => String(x.id) === inpcId) : null;
-        monsterId = inpc?.monsterId != null ? String(inpc.monsterId) : null;
-      }
-      if (!monsterId) continue;
-      const xp = getMonsterXp((state.monsterDetails as any)?.[monsterId]);
-      if (xp != null) map[String(c.id)] = xp;
-    }
-    return map;
-  }, [combatants, state.inpcs, state.monsterDetails]);
-
-  const totalXp = React.useMemo(() => {
-    let total = 0;
-    const cs: any[] = combatants ?? [];
-    for (const c of cs) {
-      if (c?.baseType === "player") continue;
-      if (c?.friendly) continue; // Friendly monsters do not count.
-      const xp = xpByCombatantId[String(c.id)];
-      if (typeof xp === "number" && Number.isFinite(xp)) total += xp;
-    }
-    return total;
-  }, [combatants, xpByCombatantId]);
-
-  const difficulty = React.useMemo(() => {
-    const partyHpMax = (state.players ?? []).reduce((sum: number, p: any) => sum + (typeof p?.hpMax === "number" ? p.hpMax : 0), 0);
-
-    let hostileDpr = 0;
-    let burstFactor = 1.0;
-    const cs: any[] = combatants ?? [];
-
-    for (const c of cs) {
-      if (c?.baseType === "player") continue;
-      if (c?.friendly) continue;
-
-      let monsterId: string | null = null;
-      if (c.baseType === "monster") monsterId = c.baseId != null ? String(c.baseId) : null;
-      if (c.baseType === "inpc") {
-        const inpcId = c.baseId != null ? String(c.baseId) : null;
-        const inpc = inpcId ? (state.inpcs ?? []).find((x: any) => String(x.id) === inpcId) : null;
-        monsterId = inpc?.monsterId != null ? String(inpc.monsterId) : null;
-      }
-      if (!monsterId) continue;
-
-      const est = estimateMonsterDpr((state.monsterDetails as any)?.[monsterId]);
-      if (est?.dpr != null && Number.isFinite(est.dpr)) hostileDpr += Math.max(0, est.dpr);
-      if (est?.burstFactor != null && Number.isFinite(est.burstFactor)) burstFactor = Math.max(burstFactor, est.burstFactor);
-    }
-
-    return calcEncounterDifficulty({ partyHpMax, hostileDpr, burstFactor });
-  }, [combatants, state.inpcs, state.monsterDetails, state.players]);
+  const { xpByCombatantId, totalXp, difficulty } = useRosterMetrics({
+    combatants,
+    inpcs: state.inpcs,
+    monsterDetails: state.monsterDetails,
+    players: state.players
+  });
 
   // Keep roster view resilient: the MonsterPickerModal can fetch its own index
   // (and handles errors). We only track the search string here so iNPC creation
@@ -220,85 +131,69 @@ export function CombatRosterView() {
       />
 
       <div className="campaignGrid">
-        <div className="campaignCol">
-          <PlayersPanel
-            players={state.players}
-            combatants={combatants}
-            selectedEncounterId={encounterId ?? null}
-            onFullRest={async () => {
-              if (!state.selectedCampaignId) return;
-              await api(`/api/campaigns/${state.selectedCampaignId}/fullRest`, { method: "POST" });
-              // keep roster in sync
-              await refresh();
-            }}
-            onCreatePlayer={() => dispatch({ type: "openDrawer", drawer: { type: "createPlayer", campaignId: state.selectedCampaignId } })}
-            onEditPlayer={(playerId) => dispatch({ type: "openDrawer", drawer: { type: "editPlayer", playerId } })}
-            onAddPlayerToEncounter={addPlayerToEncounter}
-          />
+        <CombatRosterLeftColumn
+          players={state.players}
+          combatants={combatants}
+          inpcs={state.inpcs}
+          selectedCampaignId={state.selectedCampaignId ?? ""}
+          selectedEncounterId={encounterId ?? null}
+          compQ={compQ}
+          onChangeCompQ={setCompQ}
+          onFullRest={async () => {
+            if (!state.selectedCampaignId) return;
+            await api(`/api/campaigns/${state.selectedCampaignId}/fullRest`, { method: "POST" });
+            await refresh();
+          }}
+          onCreatePlayer={() => dispatch({ type: "openDrawer", drawer: { type: "createPlayer", campaignId: state.selectedCampaignId } })}
+          onEditPlayer={(playerId) => dispatch({ type: "openDrawer", drawer: { type: "editPlayer", playerId } })}
+          onAddPlayerToEncounter={addPlayerToEncounter}
+          onAddINpcFromMonster={async (monsterId, qty, opts) => {
+            if (!state.selectedCampaignId) return;
+            await api(`/api/campaigns/${state.selectedCampaignId}/inpcs`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                monsterId,
+                qty,
+                friendly: Boolean(opts?.friendly ?? true),
+                label: opts?.labelBase ?? null,
+                ac: opts?.ac ?? null,
+                acDetails: opts?.acDetail ?? null,
+                hpMax: opts?.hpMax ?? null,
+                hpDetails: opts?.hpDetail ?? null
+              })
+            });
+            const cid = state.selectedCampaignId;
+            const inpcs = await api<INpc[]>(`/api/campaigns/${cid}/inpcs`);
+            dispatch({ type: "setINpcs", inpcs });
+          }}
+          onEditINpc={(inpcId) => dispatch({ type: "openDrawer", drawer: { type: "editINpc", inpcId } })}
+          onDeleteINpc={async (inpcId) => {
+            if (!(await confirm({ title: "Delete iNPC", message: "Delete this iNPC?", intent: "danger" }))) return;
+            await api(`/api/inpcs/${inpcId}`, { method: "DELETE" });
+            const cid = state.selectedCampaignId;
+            if (cid) dispatch({ type: "setINpcs", inpcs: await api<INpc[]>(`/api/campaigns/${cid}/inpcs`) });
+          }}
+          onAddINpcToEncounter={addINpcToEncounter}
+        />
 
-          <INpcsPanel
-            inpcs={state.inpcs}
-            selectedCampaignId={state.selectedCampaignId ?? ""}
-            selectedEncounterId={encounterId ?? null}
-            compQ={compQ}
-            onChangeCompQ={setCompQ}
-            // Let the iNPC panel reuse the MonsterPickerModal's internal compendium
-            // loading via its fallback hook.
-            compRows={[]}
-            onAddINpcFromMonster={async (monsterId, qty, opts) => {
-              if (!state.selectedCampaignId) return;
-              await api(`/api/campaigns/${state.selectedCampaignId}/inpcs`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  monsterId,
-                  qty,
-                  friendly: Boolean(opts?.friendly ?? true),
-                  label: opts?.labelBase ?? null,
-                  ac: opts?.ac ?? null,
-                  acDetails: opts?.acDetail ?? null,
-                  hpMax: opts?.hpMax ?? null,
-                  hpDetails: opts?.hpDetail ?? null
-                })
-              });
-              // refresh campaign lists
-              const cid = state.selectedCampaignId;
-              const inpcs = await api<INpc[]>(`/api/campaigns/${cid}/inpcs`);
-              dispatch({ type: "setINpcs", inpcs });
-            }}
-            onEditINpc={(inpcId) => dispatch({ type: "openDrawer", drawer: { type: "editINpc", inpcId } })}
-            onDeleteINpc={async (inpcId) => {
-              if (!(await confirm({ title: "Delete iNPC", message: "Delete this iNPC?", intent: "danger" }))) return;
-              await api(`/api/inpcs/${inpcId}`, { method: "DELETE" });
-              const cid = state.selectedCampaignId;
-              if (cid) dispatch({ type: "setINpcs", inpcs: await api<INpc[]>(`/api/campaigns/${cid}/inpcs`) });
-            }}
-            onAddINpcToEncounter={addINpcToEncounter}
-          />
-        </div>
+        <CombatRosterCenterColumn
+          selectedEncounter={encounter ? { id: encounter.id, name: encounter.name } : null}
+          combatants={combatants}
+          xpByCombatantId={xpByCombatantId}
+          compQ={compQ}
+          onChangeCompQ={setCompQ}
+          compRows={[]}
+          onAddMonster={addMonster}
+          onAddAllPlayers={addAllPlayers}
+          onOpenCombat={() => encounterId && nav(campaignId ? `/campaign/${campaignId}/combat/${encounterId}` : `/combat/${encounterId}`)}
+          onEditCombatant={(combatantId) =>
+            encounterId ? dispatch({ type: "openDrawer", drawer: { type: "editCombatant", encounterId, combatantId } }) : undefined
+          }
+          onRemoveCombatant={removeCombatant}
+        />
 
-        <div className="campaignCol" style={{ display: "grid", gap: 10, alignContent: "start" }}>
-          <EncounterRosterPanel
-            selectedEncounter={encounter ? { id: encounter.id, name: encounter.name } : null}
-            combatants={combatants}
-            xpByCombatantId={xpByCombatantId}
-            compQ={compQ}
-            onChangeCompQ={setCompQ}
-            // Let the MonsterPickerModal fetch its own index when needed.
-            compRows={[]}
-            onAddMonster={addMonster}
-            onAddAllPlayers={addAllPlayers}
-            onOpenCombat={() => encounterId && nav(campaignId ? `/campaign/${campaignId}/combat/${encounterId}` : `/combat/${encounterId}`)}
-            onEditCombatant={(combatantId) =>
-              encounterId ? dispatch({ type: "openDrawer", drawer: { type: "editCombatant", encounterId, combatantId } }) : undefined
-            }
-            onRemoveCombatant={removeCombatant}
-          />
-        </div>
-
-        <div className="campaignCol" style={{ display: "grid", gap: 10, alignContent: "start" }}>
-          {encounterId ? <TreasurePanel encounterId={encounterId} /> : null}
-        </div>
+        <CombatRosterRightColumn encounterId={encounterId ?? null} />
       </div>
     </div>
   );

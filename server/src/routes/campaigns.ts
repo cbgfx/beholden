@@ -80,7 +80,14 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
 
     const players = Object.values(userData.players).filter((p: any) => p.campaignId === campaignId);
     for (const p of players) {
-      userData.players[p.id] = { ...p, hpCurrent: p.hpMax, updatedAt: t };
+      userData.players[p.id] = {
+        ...p,
+        hpCurrent: p.hpMax,
+        // A full rest clears player-wide combat state.
+        overrides: { tempHp: 0, acBonus: 0, hpMaxOverride: null },
+        conditions: [],
+        updatedAt: t
+      };
     }
 
     const encounters = Object.values(userData.encounters).filter((e) => e.campaignId === campaignId);

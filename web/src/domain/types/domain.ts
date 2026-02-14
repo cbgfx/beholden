@@ -15,6 +15,10 @@ export type Player = {
   hpCurrent: number;
   ac: number;
   color: string;
+  // Player-wide combat state that must persist across encounters.
+  // Stored server-side on the player record; merged onto player combatants.
+  overrides?: CombatantOverrides | null;
+  conditions?: Array<{ key: string; casterId?: string | null }>;
   // Ability scores (optional for legacy data; default to 10 when absent).
   str?: number;
   dex?: number;

@@ -1,8 +1,7 @@
 import React from "react";
-
-import { SpellsPanel } from "@/views/CompendiumView/panels/SpellsPanel";
-import { RulesReferencePanel } from "@/views/CompendiumView/panels/RulesReferencePanel";
-import { CompendiumAdminPanel } from "@/views/CompendiumView/panels/CompendiumAdminPanel";
+import { CompendiumLeftColumn } from "@/views/CompendiumView/components/CompendiumLeftColumn";
+import { CompendiumCenterColumn } from "@/views/CompendiumView/components/CompendiumCenterColumn";
+import { CompendiumRightColumn } from "@/views/CompendiumView/components/CompendiumRightColumn";
 
 export function CompendiumView() {
   return (
@@ -17,18 +16,9 @@ export function CompendiumView() {
           minHeight: 0,
         }}
       >
-        {/* LEFT */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0, minHeight: 0 }}>
-          <SpellsPanel />
-        </div>
-
-        {/* MIDDLE */}
-        <div style={{ minWidth: 0, minHeight: 0 }}>
-          <RulesReferencePanel />
-        </div>
-
-        {/* RIGHT */}
-        <CompendiumAdminPanel />
+        <CompendiumLeftColumn />
+        <CompendiumCenterColumn />
+        <CompendiumRightColumn />
       </div>
     </div>
   );

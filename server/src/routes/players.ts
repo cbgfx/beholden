@@ -26,6 +26,9 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
       hpMax: Number(p.hpMax ?? 10),
       hpCurrent: Number(p.hpCurrent ?? p.hpMax ?? 10),
       ac: Number(p.ac ?? 10),
+      // Persisted combat state for the player across encounters.
+      overrides: { tempHp: 0, acBonus: 0, hpMaxOverride: null },
+      conditions: [],
       str: Number(p.str ?? 10),
       dex: Number(p.dex ?? 10),
       con: Number(p.con ?? 10),

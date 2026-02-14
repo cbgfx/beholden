@@ -14,7 +14,22 @@ export function PlayersPanel(props: {
   onAddPlayerToEncounter: (playerId: string) => void;
   onFullRest: () => void;
 }) {
-  const players = props.players;
+  // Players are campaign-persistent. Player combatants in encounters are merged from the
+  // player record server-side, so the CampaignView should display the same effective stats.
+  const players = React.useMemo(() => {
+    return (props.players ?? []).map((p: any) => {
+      const ov = p?.overrides ?? null;
+      const hpMaxOverrideRaw = ov?.hpMaxOverride;
+      const hpMaxOverride = hpMaxOverrideRaw == null ? null : Number(hpMaxOverrideRaw);
+      const effectiveHpMax = Number.isFinite(hpMaxOverride) && hpMaxOverride > 0 ? hpMaxOverride : Number(p.hpMax ?? 0);
+      return {
+        ...p,
+        hpMax: effectiveHpMax,
+        tempHp: Math.max(0, Number(ov?.tempHp ?? 0) || 0),
+        acBonus: Number(ov?.acBonus ?? 0) || 0,
+      };
+    });
+  }, [props.players]);
 
 
   const playerIdsInEncounter = React.useMemo(() => {
