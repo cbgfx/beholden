@@ -2,11 +2,11 @@
 FROM node:20-alpine AS web-build
 WORKDIR /app/web
 
-# install deps
-COPY web/package*.json ./
+# Copy only package.json (works even without lockfile)
+COPY web/package.json ./
 RUN npm install
 
-# build
+# Build
 COPY web/ ./
 RUN npm run build
 
@@ -15,45 +15,32 @@ RUN npm run build
 FROM node:20-alpine AS server-build
 WORKDIR /app/server
 
-COPY server/package*.json ./
+COPY server/package.json ./
 RUN npm install
 
 COPY server/ ./
 RUN npm run build
 
-# If your server is TS and has a build step, keep this.
-# If it is plain JS, this should still be harmless if build script exists.
-RUN npm run build
-
 
 # ===== 3) Runtime =====
 FROM node:20-alpine AS runtime
-WORKDIR /app
+WORKDIR /app/server
 
 ENV NODE_ENV=production
 ENV PORT=2385
 ENV HOST=0.0.0.0
 
-# Server production deps only
-COPY --from=server-build /app/server/package*.json ./server/
-WORKDIR /app/server
-RUN npm ci --omit=dev
+# Install runtime deps (no lockfile required)
+COPY server/package.json ./
+RUN npm install --omit=dev
 
-# Server build output + runtime files
+# Copy built server output
 COPY --from=server-build /app/server/dist ./dist
-COPY --from=server-build /app/server/src ./src
-COPY --from=server-build /app/server/server.js ./server.js
-COPY --from=server-build /app/server/server.ts ./server.ts
-COPY --from=server-build /app/server/data ./data
 
-# Web build output gets served statically by the server (recommended)
-# This assumes your server serves ../web/dist (we’ll wire that if needed).
-WORKDIR /app
-COPY --from=web-build /app/web/dist ./web/dist
+# Copy static web build
+COPY --from=web-build /app/web/dist ../web/dist
 
-WORKDIR /app/server
 EXPOSE 2385
 
-# Prefer dist entry if present; fallback to server.js if that’s what you use.
-# Adjust this line to match your real runtime entry:
+# Most common Beholden server entry
 CMD ["node", "dist/index.js"]
