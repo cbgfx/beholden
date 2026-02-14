@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../shared/validate.js";
+import fs from "node:fs";
 
 const CampaignUpsertBody = z.object({
   name: z.string().trim().optional(),
@@ -64,6 +65,18 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     for (const cond of Object.values(userData.conditions)) if (cond.campaignId === campaignId) delete userData.conditions[cond.id];
 
     delete userData.campaigns[campaignId];
+
+    // Campaigns are persisted per-campaign. Removing from memory updates the index on next save,
+    // but the campaign JSON file must be explicitly deleted.
+    const fp = ctx.helpers.campaignFilePath(campaignId);
+    for (const suffix of ["", ".tmp", ".bak"]) {
+      try {
+        const p = fp + suffix;
+        if (fs.existsSync(p)) fs.unlinkSync(p);
+      } catch {
+        // best-effort: keep API delete working even if FS cleanup fails
+      }
+    }
 
     ctx.scheduleSave();
     ctx.broadcast("campaigns:changed", { campaignId });
