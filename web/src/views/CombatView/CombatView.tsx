@@ -28,6 +28,8 @@ import {
   IconSkull,
   IconTargeted
 } from "@/icons";
+import { conditionIconByKey } from "@/icons/conditions";
+import { CONDITION_DEFS } from "@/drawers/drawers/combatant/conditions";
 
 function clamp01(n: number) {
   if (!Number.isFinite(n)) return 0;
@@ -64,6 +66,10 @@ function getHudHp(c: any) {
   const hpMax = hpMaxOverride > 0 ? hpMaxOverride : baseHpMax;
   const tempHp = Math.max(0, Number(c?.overrides?.tempHp ?? 0) || 0);
   return { hpCurrent, hpMax: Math.max(1, hpMax || 1), tempHp };
+}
+
+function conditionLabel(key: string) {
+  return CONDITION_DEFS.find((d) => d.key === key)?.name ?? key;
 }
 
 export function CombatView() {
@@ -222,6 +228,11 @@ export function CombatView() {
       const names = getHudNames(c, playersById);
       const { hpCurrent, hpMax, tempHp } = getHudHp(c);
 
+      const rawConditions = Array.isArray((c as any)?.conditions) ? ((c as any).conditions as any[]) : [];
+      const maxHudConditions = 6;
+      const shownConditions = rawConditions.slice(0, maxHudConditions);
+      const extraConditions = Math.max(0, rawConditions.length - shownConditions.length);
+
       const hpPct = clamp01(hpCurrent / hpMax);
       const tempPct = clamp01(tempHp / hpMax);
 
@@ -249,6 +260,13 @@ export function CombatView() {
       // Fighting-game style: HP + optional temp overlay segment.
       const tempLeft = clamp01(hpPct);
       const tempWidth = clamp01(Math.min(tempPct, 1 - tempLeft));
+
+      const openHudConditions = () => {
+        const id = (c as any)?.id ? String((c as any).id) : null;
+        if (!id) return;
+        const casterId = role === "active" ? id : (activeAny?.id ? String(activeAny.id) : null);
+        onOpenConditions(id, role, casterId);
+      };
 
       return (
         <div
@@ -411,10 +429,77 @@ export function CombatView() {
               ) : null}
             </div>
           </div>
+
+          {rawConditions.length ? (
+            <button
+              type="button"
+              onClick={openHudConditions}
+              title="Edit conditions"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flexWrap: "wrap",
+                padding: "4px 6px",
+                marginTop: -2,
+                borderRadius: 10,
+                border: `1px solid ${theme.colors.panelBorder}`,
+                background: theme.colors.bg,
+                cursor: "pointer"
+              }}
+            >
+              {shownConditions.map((cond: any, idx: number) => {
+                const key = String(cond?.key ?? "");
+                const CondIcon = conditionIconByKey[key];
+                if (!CondIcon) return null;
+                return (
+                  <span
+                    key={`${key}-${cond?.casterId ?? ""}-${idx}`}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 22,
+                      height: 22,
+                      borderRadius: 999,
+                      border: `1px solid ${theme.colors.panelBorder}`,
+                      background: theme.colors.panelBg,
+                      boxShadow: `0 6px 16px rgba(0,0,0,0.20)`
+                    }}
+                    title={conditionLabel(key)}
+                  >
+                    <CondIcon size={14} style={{ opacity: 0.92, color: theme.colors.text }} />
+                  </span>
+                );
+              })}
+
+              {extraConditions > 0 ? (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: 22,
+                    padding: "0 8px",
+                    borderRadius: 999,
+                    border: `1px solid ${theme.colors.panelBorder}`,
+                    background: theme.colors.panelBg,
+                    color: theme.colors.muted,
+                    fontWeight: 900,
+                    fontSize: "var(--fs-tiny)",
+                    boxShadow: `0 6px 16px rgba(0,0,0,0.20)`
+                  }}
+                  title={`${extraConditions} more condition${extraConditions === 1 ? "" : "s"}`}
+                >
+                  +{extraConditions}
+                </span>
+              ) : null}
+            </button>
+          ) : null}
         </div>
       );
     },
-    [playersById, renderCombatantIcon, theme, activeAny?.id, targetAny?.id]
+    [playersById, renderCombatantIcon, theme, activeAny?.id, targetAny?.id, onOpenConditions]
   );
 
   const activeCtx = React.useMemo(
