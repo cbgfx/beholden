@@ -20,7 +20,7 @@
   /* Typography tokens. Prefer these over hard-coded fontSize numbers. */
   --fs-hero: 30px;      /* App title / hero */
   --fs-stat: 16px;      /* Big numeric stats (AC/HP/Speed) */
-  --fs-title: 17px;     /* Panel titles / section headers */
+  --fs-title: 20px;     /* Panel titles / section headers */
   --fs-large: 15px;     /* Body text */
   --fs-subtitle: 13px;  /* Secondary headings / compact titles */
   --fs-medium: 15px;    /* Labels / metadata */

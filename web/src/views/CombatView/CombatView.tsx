@@ -29,6 +29,43 @@ import {
   IconTargeted
 } from "@/icons";
 
+function clamp01(n: number) {
+  if (!Number.isFinite(n)) return 0;
+  if (n < 0) return 0;
+  if (n > 1) return 1;
+  return n;
+}
+
+function getHudNames(c: any, playersById: Record<string, any>) {
+  if (!c) return { primary: "—", secondary: null as string | null };
+
+  const baseType = String(c.baseType ?? c.type ?? "");
+  const baseName = (c.name ?? "").toString().trim();
+  const label = (c.label ?? baseName ?? "").toString().trim();
+
+  if (baseType === "player") {
+    const p = playersById?.[c.baseId];
+    const playerName = (p?.playerName ?? "").toString().trim();
+    return { primary: label || "—", secondary: playerName ? `(${playerName})` : null };
+  }
+
+  // Monster / iNPC: show Label (BaseName) when label differs from base name
+  if (baseName && label && baseName.toLowerCase() !== label.toLowerCase()) {
+    return { primary: label, secondary: `(${baseName})` };
+  }
+
+  return { primary: label || baseName || "—", secondary: null };
+}
+
+function getHudHp(c: any) {
+  const hpCurrent = Number(c?.hpCurrent ?? 0) || 0;
+  const baseHpMax = Number(c?.hpMax ?? 0) || 0;
+  const hpMaxOverride = Number(c?.overrides?.hpMaxOverride ?? 0) || 0;
+  const hpMax = hpMaxOverride > 0 ? hpMaxOverride : baseHpMax;
+  const tempHp = Math.max(0, Number(c?.overrides?.tempHp ?? 0) || 0);
+  return { hpCurrent, hpMax: Math.max(1, hpMax || 1), tempHp };
+}
+
 export function CombatView() {
   const { campaignId, encounterId } = useParams();
   const { state, dispatch } = useStore();
@@ -180,6 +217,144 @@ export function CombatView() {
     onOpenConditions(targetAny.id, role, activeAny.id);
   }, [activeAny?.id, targetAny?.id, onOpenConditions]);
 
+  const renderHudFighter = React.useCallback(
+    (c: any) => {
+      const names = getHudNames(c, playersById);
+      const { hpCurrent, hpMax, tempHp } = getHudHp(c);
+
+      const hpPct = clamp01(hpCurrent / hpMax);
+      const tempPct = clamp01(tempHp / hpMax);
+
+      // Fighting-game style: HP + optional temp overlay segment.
+      const tempLeft = clamp01(hpPct);
+      const tempWidth = clamp01(Math.min(tempPct, 1 - tempLeft));
+
+      return (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            padding: "12px 14px",
+            borderRadius: 16,
+            border: `1px solid ${theme.colors.panelBorder}`,
+            background: theme.colors.panelBg,
+            minWidth: 360
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+            {/* Icon: make bigger without refactoring renderCombatantIcon */}
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flex: "0 0 auto",
+                transform: "scale(2.0)",
+                transformOrigin: "center"
+              }}
+            >
+              {renderCombatantIcon(c)}
+            </div>
+
+            <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+              <div
+                title={names.primary}
+                style={{
+                  color: theme.colors.text,
+                  fontWeight: 900,
+                  fontSize: "var(--fs-title)",
+                  lineHeight: "34px",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  maxWidth: 420
+                }}
+              >
+                {names.primary}              
+                {names.secondary ? (
+                <span
+                  title={names.secondary}
+                  style={{
+                    color: theme.colors.muted,
+                    fontWeight: 900,
+                    fontSize: "var(--fs-base)",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    maxWidth: 420
+                  }}
+                >
+                  {names.secondary}
+                </span>
+              ) : null}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div
+              style={{
+                position: "relative",
+                height: 10,
+                borderRadius: 8,
+                background: theme.colors.panelBorder,
+                overflow: "hidden",
+                flex: 1
+              }}
+              aria-label="HP"
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: `${Math.round(hpPct * 100)}%`,
+                  background: theme.colors.health,
+                  transition: "width 150ms ease"
+                }}
+              />
+
+              {tempWidth > 0 ? (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: `${Math.round(tempLeft * 100)}%`,
+                    top: 0,
+                    bottom: 0,
+                    width: `${Math.round(tempWidth * 100)}%`,
+                    background: theme.colors.accent,
+                    opacity: 0.55,
+                    transition: "left 150ms ease, width 150ms ease"
+                  }}
+                  aria-label="Temp HP"
+                />
+              ) : null}
+            </div>
+
+            <div
+              style={{
+                color: theme.colors.muted,
+                fontWeight: 900,
+                fontSize: "var(--fs-base)",
+                whiteSpace: "nowrap"
+              }}
+            >
+              {Math.max(0, Math.floor(hpCurrent))} / {Math.max(1, Math.floor(hpMax))}
+              {tempHp > 0 ? (
+                <span style={{ color: theme.colors.accent, marginLeft: 6 }}>+{Math.floor(tempHp)}</span>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      );
+    },
+    [playersById, renderCombatantIcon]
+  );
+
   const activeCtx = React.useMemo(
     () => ({
       isNarrow,
@@ -283,42 +458,13 @@ export function CombatView() {
             style={{
               gridColumn: "1 / -1",
               display: "grid",
-              gridTemplateColumns: "minmax(0, 6fr) minmax(0, 5fr) minmax(0, 6fr)",
-              gap: 14,
+              gridTemplateColumns: "max-content max-content max-content",
+              justifyContent: "center",
+              gap: 18,
               alignItems: "center"
             }}
           >
-            <div
-              style={{
-                justifySelf: "end",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "10px 12px",
-                borderRadius: 14,
-                border: `1px solid ${theme.colors.panelBorder}`,
-                background: theme.colors.panelBg,
-                minWidth: 320
-              }}
-            >
-              {renderCombatantIcon(activeAny)}
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ color: theme.colors.muted, fontWeight: 900 }}>Active</span>
-                <span
-                  style={{
-                    color: theme.colors.text,
-                    fontWeight: 900,
-                    fontSize: "var(--fs-large)",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    maxWidth: 260
-                  }}
-                >
-                  {activeAny?.label ?? "—"}
-                </span>
-              </div>
-            </div>
+            {renderHudFighter(activeAny)}
 
             <div style={{ justifySelf: "center" }}>
               <CombatDeltaControls
@@ -332,42 +478,7 @@ export function CombatView() {
               />
             </div>
 
-            <div
-              style={{
-                justifySelf: "start",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "10px 12px",
-                borderRadius: 14,
-                border: `1px solid ${theme.colors.panelBorder}`,
-                background: theme.colors.panelBg,
-                minWidth: 320
-              }}
-            >
-              {renderCombatantIcon(targetAny)}
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ color: theme.colors.muted, fontWeight: 900 }}>Target</span>
-                <span
-                  style={{
-                    color: theme.colors.text,
-                    fontWeight: 900,
-                    fontSize: "var(--fs-large)",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    maxWidth: 260
-                  }}
-                >
-                  {targetAny?.label ?? "—"}
-                </span>
-                {targetAny?.id ? (
-                  <span style={{ display: "inline-flex", alignItems: "center" }} title="Targeted">
-                    <IconTargeted size={16} />
-                  </span>
-                ) : null}
-              </div>
-            </div>
+            {renderHudFighter(targetAny)}
           </div>
         ) : null}
 
