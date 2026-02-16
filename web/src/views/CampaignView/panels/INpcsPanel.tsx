@@ -80,7 +80,7 @@ export function INpcsPanel(props: Props) {
                   hpCurrent: i.hpCurrent,
                   ac: i.ac
                 }}
-                icon={i.friendly? (<span style={{ color: theme.colors.health }}><IconINPC /></span>): (<span style={{ color: theme.colors.danger }}><IconINPC /></span>)}
+                icon={i.friendly? (<span style={{ color: theme.colors.green }}><IconINPC /></span>): (<span style={{ color: theme.colors.red }}><IconINPC /></span>)}
                 subtitle={subtitle}
                 actions={
                   <>

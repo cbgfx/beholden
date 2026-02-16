@@ -18,10 +18,10 @@ export function EncounterRosterList(props: {
         const isINpc = c.baseType === "inpc";
 
         const iconColor = isPlayer
-          ? theme.colors.player
+          ? theme.colors.blue
           : c.friendly
-            ? theme.colors.health
-            : theme.colors.danger;
+            ? theme.colors.green
+            : theme.colors.red;
 
         const icon = isPlayer ? <IconPlayer /> : isINpc ? <IconINPC /> : <IconMonster />;
         const meta = formatCombatantMeta(c);

@@ -138,8 +138,8 @@ const wrapped = React.useMemo(() => props.combatants.slice(0, activeIndex), [pro
     if (isActive && isTarget) {
       return `
         0 0 0 2px ${theme.colors.accent} inset,
-        0 0 0 4px ${theme.colors.player} inset,
-        0 0 18px ${theme.colors.player} inset,
+        0 0 0 4px ${theme.colors.blue} inset,
+        0 0 18px ${theme.colors.blue} inset,
         0 6px 18px rgba(0,0,0,0.18)
       `;
     }
@@ -148,7 +148,7 @@ const wrapped = React.useMemo(() => props.combatants.slice(0, activeIndex), [pro
     }
     if (isTarget) {
       // Inset-only to avoid scrollbars in the initiative list.
-      return `0 0 0 2px ${theme.colors.player} inset, 0 0 18px ${theme.colors.player} inset`;
+      return `0 0 0 2px ${theme.colors.blue} inset, 0 0 18px ${theme.colors.blue} inset`;
     }
     return "none";
   };
@@ -164,7 +164,7 @@ const wrapped = React.useMemo(() => props.combatants.slice(0, activeIndex), [pro
       <style>
         {`@keyframes beholdenTargetPulse {
             0% { filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
-            50% { filter: drop-shadow(0 0 14px ${theme.colors.player}80); }
+            50% { filter: drop-shadow(0 0 14px ${theme.colors.blue}80); }
             100% { filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
           }`}
       </style>
@@ -210,7 +210,7 @@ const wrapped = React.useMemo(() => props.combatants.slice(0, activeIndex), [pro
 
           const iconColor = isDead
             ? theme.colors.muted
-            : (c.baseType === "player" ? theme.colors.player : (c.color || (friendly ? theme.colors.health : theme.colors.danger)));
+            : (c.baseType === "player" ? theme.colors.blue : (c.color || (friendly ? theme.colors.green : theme.colors.red)));
           const badge = <TurnBadge active={isActive} targeted={isTarget} />;
           const icon = getCombatantIcon({ baseType: c.baseType, isDead, iconColor, badge });
 
@@ -268,13 +268,13 @@ const wrapped = React.useMemo(() => props.combatants.slice(0, activeIndex), [pro
                               letterSpacing: 0.6,
                               textTransform: "uppercase",
                               color: theme.colors.text,
-                              border: `1px solid ${isActive && isTarget ? theme.colors.accent : isActive ? theme.colors.accent : theme.colors.player}`,
+                              border: `1px solid ${isActive && isTarget ? theme.colors.accent : isActive ? theme.colors.accent : theme.colors.blue}`,
                               background:
                                 isActive && isTarget
-                                  ? `linear-gradient(90deg, ${theme.colors.accent}33, ${theme.colors.player}33)`
+                                  ? `linear-gradient(90deg, ${theme.colors.accent}33, ${theme.colors.blue}33)`
                                   : isActive
                                     ? `${theme.colors.accent}22`
-                                    : `${theme.colors.player}22`
+                                    : `${theme.colors.blue}22`
                             }}
                             title={
                               isActive && isTarget
@@ -353,8 +353,8 @@ const wrapped = React.useMemo(() => props.combatants.slice(0, activeIndex), [pro
           const iconColor = isDead
             ? theme.colors.muted
             : c.baseType === "player"
-              ? theme.colors.player
-              : c.color || (friendly ? theme.colors.health : theme.colors.danger);
+              ? theme.colors.blue
+              : c.color || (friendly ? theme.colors.green : theme.colors.red);
 
           const badge = <TurnBadge active={isActive} targeted={isTarget} />;
           const icon = getCombatantIcon({ baseType: c.baseType, isDead, iconColor, badge });

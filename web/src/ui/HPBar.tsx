@@ -19,7 +19,7 @@ export function HPBar(props: {
   const isDead = curHP <= 0;
   const isBloody = ((curHP / max <= 0.5) && (curHP / max > 0.25));
   const isQuarter = curHP / max <= 0.25;
-  const barColor = isDead ? theme.colors.danger : isBloody ? theme.colors.bloody : isQuarter? theme.colors.danger : theme.colors.health;
+  const barColor = isDead ? theme.colors.red : isBloody ? theme.colors.bloody : isQuarter? theme.colors.red : theme.colors.green;
 
   const variant = props.variant ?? "default";
   const showText = props.showText ?? true;

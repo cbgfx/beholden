@@ -19,8 +19,8 @@ export function Button({ variant = "primary", style, ...rest }: Props) {
   const variants: Record<string, React.CSSProperties> = {
     primary: { background: theme.colors.accent, color: "#0b0f14", border: "1px solid rgba(0,0,0,0.2)" },
     ghost: { background: "transparent" },
-    danger: { background: theme.colors.danger, color: "rgb(255, 255, 255)", border: "1px solid rgba(0,0,0,0.2)" },
-    health: { background: theme.colors.health, color: "#ffffff", border: "1px solid rgba(0,0,0,0.2)" },
+    danger: { background: theme.colors.red, color: "rgb(255, 255, 255)", border: "1px solid rgba(0,0,0,0.2)" },
+    health: { background: theme.colors.green, color: "#ffffff", border: "1px solid rgba(0,0,0,0.2)" },
     bloody: { background: theme.colors.bloody, color: "#050505", border: "1px solid rgba(0,0,0,0.2)" },
   };
 

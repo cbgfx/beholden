@@ -579,7 +579,7 @@ export function MonsterStatblock(props: { monster: any | null; hideSummary?: boo
               {spellLoading ? (
                 <div style={{ color: theme.colors.muted }}>Loading spell…</div>
               ) : spellError ? (
-                <div style={{ color: theme.colors.danger, fontWeight: 800 }}>{spellError}</div>
+                <div style={{ color: theme.colors.red, fontWeight: 800 }}>{spellError}</div>
               ) : spellDetail ? (
                 <div style={{ display: "grid", gap: 4 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 5, alignItems: "baseline" }}>

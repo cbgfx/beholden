@@ -23,7 +23,7 @@ export function SpellDetailCard(props: {
       {props.loading ? (
         <div style={{ color: theme.colors.muted }}>Loading spell…</div>
       ) : props.error ? (
-        <div style={{ color: theme.colors.danger, fontWeight: 800 }}>{props.error}</div>
+        <div style={{ color: theme.colors.red, fontWeight: 800 }}>{props.error}</div>
       ) : props.detail ? (
         <div style={{ display: "grid", gap: 4 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>

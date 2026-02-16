@@ -38,7 +38,7 @@ export class ErrorBoundary extends React.Component<
             padding: 18
           }}
         >
-          <div style={{ fontWeight: 900, color: theme.colors.danger, fontSize: 18, marginBottom: 10 }}>
+          <div style={{ fontWeight: 900, color: theme.colors.red, fontSize: 18, marginBottom: 10 }}>
             Something crashed.
           </div>
           <div style={{ color: theme.colors.text, opacity: 0.9, marginBottom: 10 }}>

@@ -131,7 +131,7 @@ export function MonsterPickerListPane(props: {
         {props.loadingIndex ? (
           <div style={{ color: theme.colors.muted }}>Loading compendium…</div>
         ) : props.indexError ? (
-          <div style={{ color: theme.colors.danger, fontWeight: 700 }}>Failed to load compendium: {props.indexError}</div>
+          <div style={{ color: theme.colors.red, fontWeight: 700 }}>Failed to load compendium: {props.indexError}</div>
         ) : !props.rows.length ? (
           <div style={{ color: theme.colors.muted }}>No results.</div>
         ) : null}

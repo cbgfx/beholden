@@ -9,11 +9,11 @@ export const theme = {
     panelBg: "rgba(255,255,255,0.06)",
     panelBorder: "rgba(255,255,255,0.14)",
     inputBg: "rgba(0,0,0,0.25)",
-    danger: "#ff5d5d",
+    red: "#ff5d5d",
     bloody: "#ff9e4a",
-    health: "#7dc56d",
+    green: "#7dc56d",
     // Combat list defaults (eventually user-editable like Shield Maiden)
-    player: "#4aa3ff",
+    blue: "#4aa3ff",
   },
   radius: { panel: 14, control: 10 },
   // Default spacing is compact; small-screen overrides happen via CSS where possible.

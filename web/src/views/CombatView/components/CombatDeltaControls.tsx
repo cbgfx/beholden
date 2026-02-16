@@ -38,9 +38,9 @@ function HexButton({
 }) {
   const bg =
     variant === "damage"
-      ? theme.colors.danger
+      ? theme.colors.red
       : variant === "heal"
-        ? theme.colors.health
+        ? theme.colors.green
         : theme.colors.accent;
   const fg = theme.colors.text;
 

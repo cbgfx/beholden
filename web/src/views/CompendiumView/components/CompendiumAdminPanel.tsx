@@ -125,7 +125,7 @@ export function CompendiumAdminPanel() {
         </div>
 
         {msg ? (
-          <div style={{ marginTop: 10, color: msg.toLowerCase().includes("fail") ? theme.colors.danger : theme.colors.text }}>{msg}</div>
+          <div style={{ marginTop: 10, color: msg.toLowerCase().includes("fail") ? theme.colors.red : theme.colors.text }}>{msg}</div>
         ) : null}
       </Panel>
 
@@ -166,7 +166,7 @@ export function CompendiumAdminPanel() {
               marginTop: 10,
               color:
                 campaignMsg.toLowerCase().includes("fail") || campaignMsg.toLowerCase().includes("missing")
-                  ? theme.colors.danger
+                  ? theme.colors.red
                   : theme.colors.text
             }}
           >

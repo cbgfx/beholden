@@ -226,7 +226,7 @@ export function CombatView() {
       const tempPct = clamp01(tempHp / hpMax);
 
       // HUD HP color cues: green -> orange (<= 1/2) -> red (<= 1/4)
-      const hpFill = hpPct <= 0.25 ? theme.colors.danger : hpPct <= 0.5 ? theme.colors.bloody : theme.colors.health;
+      const hpFill = hpPct <= 0.25 ? theme.colors.red : hpPct <= 0.5 ? theme.colors.bloody : theme.colors.green;
 
       const isSelfTarget =
         role === "target" &&
@@ -234,7 +234,7 @@ export function CombatView() {
         activeAny?.id != null &&
         String(targetAny.id) === String(activeAny.id);
 
-      const roleAccent = role === "active" ? theme.colors.accent : theme.colors.player;
+      const roleAccent = role === "active" ? theme.colors.accent : theme.colors.blue;
       const roleLabel = isSelfTarget ? "SELF" : role === "active" ? "ACTIVE" : "TARGET";
 
       // Accent used for the HUD portrait hex backing (match PlayerRow / combat icon coloring).
@@ -243,8 +243,8 @@ export function CombatView() {
         : c.isDead
           ? theme.colors.muted
           : c.baseType === "player"
-            ? theme.colors.player
-            : (c.color || (c.friendly ? theme.colors.health : theme.colors.danger));
+            ? theme.colors.blue
+            : (c.color || (c.friendly ? theme.colors.green : theme.colors.red));
 
       // Fighting-game style: HP + optional temp overlay segment.
       const tempLeft = clamp01(hpPct);

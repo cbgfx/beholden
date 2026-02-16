@@ -56,7 +56,7 @@ export function PlayerRow(props: {
   const DeathSavesRow = (
     <div style={{ display: "grid", gridTemplateColumns: "auto auto", gap: 10, alignItems: "center" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ fontSize: "var(--fs-small)", fontWeight: 900, color: theme.colors.health }}>S</span>
+        <span style={{ fontSize: "var(--fs-small)", fontWeight: 900, color: theme.colors.green }}>S</span>
         <div style={{ display: "flex", gap: 6 }}>
           {[0, 1, 2].map((i) => {
             const on = i < deathSaves.s;
@@ -74,7 +74,7 @@ export function PlayerRow(props: {
                   height: 18,
                   borderRadius: 6,
                   border: `1px solid ${theme.colors.panelBorder}`,
-                  background: on ? theme.colors.health : theme.colors.panelBg,
+                  background: on ? theme.colors.green : theme.colors.panelBg,
                   color: theme.colors.text,
                   cursor: "pointer",
                   display: "inline-flex",
@@ -109,7 +109,7 @@ export function PlayerRow(props: {
                   height: 18,
                   borderRadius: 6,
                   border: `1px solid ${theme.colors.panelBorder}`,
-                  background: on ? theme.colors.danger : theme.colors.panelBg,
+                  background: on ? theme.colors.red : theme.colors.panelBg,
                   color: theme.colors.text,
                   cursor: "pointer",
                   display: "inline-flex",
@@ -124,7 +124,7 @@ export function PlayerRow(props: {
             );
           })}
         </div>
-        <span style={{ fontSize: "var(--fs-small)", fontWeight: 900, color: theme.colors.danger }}>F</span>
+        <span style={{ fontSize: "var(--fs-small)", fontWeight: 900, color: theme.colors.red }}>F</span>
       </div>
     </div>
   );
