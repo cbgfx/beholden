@@ -237,6 +237,15 @@ export function CombatView() {
       const roleAccent = role === "active" ? theme.colors.accent : theme.colors.player;
       const roleLabel = isSelfTarget ? "SELF" : role === "active" ? "ACTIVE" : "TARGET";
 
+      // Accent used for the HUD portrait hex backing (match PlayerRow / combat icon coloring).
+      const portraitAccent = !c
+        ? theme.colors.muted
+        : c.isDead
+          ? theme.colors.muted
+          : c.baseType === "player"
+            ? theme.colors.player
+            : (c.color || (c.friendly ? theme.colors.health : theme.colors.danger));
+
       // Fighting-game style: HP + optional temp overlay segment.
       const tempLeft = clamp01(hpPct);
       const tempWidth = clamp01(Math.min(tempPct, 1 - tempLeft));
@@ -256,20 +265,42 @@ export function CombatView() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-            {/* Icon: make bigger without refactoring renderCombatantIcon */}
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flex: "0 0 auto",
-                transform: "scale(2.2)",
-                transformOrigin: "center"
-              }}
-            >
-              {renderCombatantIcon(c)}
+            {/* Icon + hex backing for extra oomph */}
+            <div style={{ position: "relative", width: 48, height: 48, flex: "0 0 auto" }}>
+              <svg
+                width={48}
+                height={48}
+                viewBox="0 0 100 100"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  filter: `drop-shadow(0 2px 6px rgba(0,0,0,0.35)) drop-shadow(0 0 12px ${portraitAccent}22)`
+                }}
+                aria-hidden
+              >
+                <polygon
+                  points="50 4, 91 27, 91 73, 50 96, 9 73, 9 27"
+                  fill={`${portraitAccent}22`}
+                  stroke={`${portraitAccent}CC`}
+                  strokeWidth="5"
+                  strokeLinejoin="round"
+                />
+              </svg>
+
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transform: "scale(2.15)",
+                  transformOrigin: "center",
+                  color: portraitAccent
+                }}
+              >
+                {renderCombatantIcon(c)}
+              </div>
             </div>
 
             <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
@@ -304,7 +335,7 @@ export function CombatView() {
                   maxWidth: 420
                 }}
               >
-                {names.primary} &nbsp;             
+                {names.primary} &nbsp;        
                 {names.secondary ? (
                 <span
                   title={names.secondary}
