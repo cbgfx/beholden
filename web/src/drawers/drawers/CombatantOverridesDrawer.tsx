@@ -93,7 +93,7 @@ export function CombatantOverridesDrawer(props: {
               </div>
             </div>
             <div>
-              <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Color label</div>
+              <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Color Label</div>
               <ColorChips value={color} onChange={setColor} />
             </div>
           </div>
@@ -128,7 +128,7 @@ export function CombatantOverridesDrawer(props: {
 }
 
 function ColorChips(props: { value: string; onChange: (v: string) => void }) {
-  const options = ["#4aa3ff", "#26c6da", "#7dc56d", "#ff5d5d", "#f4d35e", "#ff9e4a", "#c77dff", "#ffffff"];
+  const options = ["#26c6da", "#7dc56d", "#ff5d5d", "#f4d35e", "#ff9e4a", "#c77dff", "#ffffff"];
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
       {options.map((c) => (
