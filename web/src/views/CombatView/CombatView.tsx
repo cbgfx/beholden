@@ -5,8 +5,6 @@ import type { Combatant } from "@/domain/types/domain";
 
 import { CombatHeader } from "@/views/CombatView/components/CombatHeader";
 import { CombatDeltaControls } from "@/views/CombatView/components/CombatDeltaControls";
-import { conditionIconByKey } from "@/icons/conditions";
-import { CONDITION_DEFS } from "@/drawers/drawers/combatant/conditions";
 import { SpellDetailModal } from "@/views/CombatView/components/SpellDetailModal";
 import { InitiativePanel } from "@/views/CombatView/panels/InitiativePanel";
 import { CombatantDetailsPanel } from "@/views/CombatView/panels/CombatantDetailsPanel/CombatantDetailsPanel";
@@ -220,37 +218,24 @@ export function CombatView() {
   }, [activeAny?.id, targetAny?.id, onOpenConditions]);
 
   const renderHudFighter = React.useCallback(
-    (c: any) => {
+    (c: any, role: "active" | "target") => {
       const names = getHudNames(c, playersById);
       const { hpCurrent, hpMax, tempHp } = getHudHp(c);
 
-      const condEntries: Array<{ key: string; name: string; count: number }> = (() => {
-        const raw: Array<{ key: string }> = Array.isArray(c?.conditions) ? c.conditions : [];
-        if (!raw.length) return [];
-
-        const nameByKey = new Map<string, string>(CONDITION_DEFS.map((d) => [d.key, d.name]));
-        // Some keys exist in icons but not defs yet.
-        if (!nameByKey.has("exhaustion")) nameByKey.set("exhaustion", "Exhaustion");
-
-        const counts = new Map<string, number>();
-        for (const it of raw) {
-          const key = String((it as any)?.key ?? "").trim();
-          if (!key) continue;
-          counts.set(key, (counts.get(key) ?? 0) + 1);
-        }
-
-        const items = Array.from(counts.entries()).map(([key, count]) => {
-          const name = nameByKey.get(key) ?? key.charAt(0).toUpperCase() + key.slice(1);
-          return { key, name, count };
-        });
-
-        // Keep the HUD stable: deterministic ordering by name.
-        items.sort((a, b) => a.name.localeCompare(b.name));
-        return items;
-      })();
-
       const hpPct = clamp01(hpCurrent / hpMax);
       const tempPct = clamp01(tempHp / hpMax);
+
+      // HUD HP color cues: green -> orange (<= 1/2) -> red (<= 1/4)
+      const hpFill = hpPct <= 0.25 ? theme.colors.danger : hpPct <= 0.5 ? theme.colors.bloody : theme.colors.health;
+
+      const isSelfTarget =
+        role === "target" &&
+        targetAny?.id != null &&
+        activeAny?.id != null &&
+        String(targetAny.id) === String(activeAny.id);
+
+      const roleAccent = role === "active" ? theme.colors.accent : theme.colors.player;
+      const roleLabel = isSelfTarget ? "SELF" : role === "active" ? "ACTIVE" : "TARGET";
 
       // Fighting-game style: HP + optional temp overlay segment.
       const tempLeft = clamp01(hpPct);
@@ -264,8 +249,9 @@ export function CombatView() {
             gap: 8,
             padding: "12px 14px",
             borderRadius: 16,
-            border: `1px solid ${theme.colors.panelBorder}`,
+            border: `1px solid ${roleAccent}`,
             background: theme.colors.panelBg,
+            boxShadow: `0 0 0 2px rgba(0,0,0,0.18), 0 10px 26px rgba(0,0,0,0.30)`,
             minWidth: 360
           }}
         >
@@ -273,13 +259,13 @@ export function CombatView() {
             {/* Icon: make bigger without refactoring renderCombatantIcon */}
             <div
               style={{
-                width: 36,
-                height: 36,
+                width: 44,
+                height: 44,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 flex: "0 0 auto",
-                transform: "scale(2.0)",
+                transform: "scale(2.2)",
                 transformOrigin: "center"
               }}
             >
@@ -287,12 +273,30 @@ export function CombatView() {
             </div>
 
             <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span
+                  style={{
+                    padding: "2px 8px",
+                    borderRadius: 999,
+                    fontWeight: 900,
+                    letterSpacing: 0.6,
+                    fontSize: "var(--fs-xs)",
+                    color: "#0b0e13",
+                    background: roleAccent,
+                    border: `1px solid rgba(0,0,0,0.35)`,
+                    boxShadow: `0 8px 18px rgba(0,0,0,0.35)`
+                  }}
+                  title={role === "active" ? "Active" : isSelfTarget ? "Self target" : "Target"}
+                >
+                  {roleLabel}
+                </span>
+              </div>
               <div
                 title={names.primary}
                 style={{
                   color: theme.colors.text,
                   fontWeight: 900,
-                  fontSize: "var(--fs-title)",
+                  fontSize: "calc(var(--fs-title) + 8px)",
                   lineHeight: "34px",
                   whiteSpace: "nowrap",
                   overflow: "hidden",
@@ -340,7 +344,7 @@ export function CombatView() {
                   top: 0,
                   bottom: 0,
                   width: `${Math.round(hpPct * 100)}%`,
-                  background: theme.colors.health,
+                  background: hpFill,
                   transition: "width 150ms ease"
                 }}
               />
@@ -376,86 +380,10 @@ export function CombatView() {
               ) : null}
             </div>
           </div>
-
-          {/* B: Status icons row (fighting-game debuff badges) */}
-          {condEntries.length ? (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                flexWrap: "nowrap",
-                overflow: "hidden"
-              }}
-              aria-label="Conditions"
-            >
-              {condEntries.slice(0, 6).map((it) => {
-                const Icon = conditionIconByKey[it.key];
-                if (!Icon) return null;
-                return (
-                  <div
-                    key={it.key}
-                    title={it.count > 1 ? `${it.name} (x${it.count})` : it.name}
-                    style={{
-                      position: "relative",
-                      width: 22,
-                      height: 22,
-                      borderRadius: 8,
-                      border: `1px solid ${theme.colors.panelBorder}`,
-                      background: theme.colors.panelBg,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flex: "0 0 auto"
-                    }}
-                  >
-                    <Icon size={16} />
-                    {it.count > 1 ? (
-                      <span
-                        style={{
-                          position: "absolute",
-                          right: -4,
-                          top: -6,
-                          fontSize: 10,
-                          fontWeight: 900,
-                          color: theme.colors.text,
-                          background: theme.colors.panelBg,
-                          border: `1px solid ${theme.colors.panelBorder}`,
-                          borderRadius: 999,
-                          padding: "0 5px",
-                          lineHeight: "16px"
-                        }}
-                      >
-                        {it.count}
-                      </span>
-                    ) : null}
-                  </div>
-                );
-              })}
-
-              {condEntries.length > 6 ? (
-                <span
-                  title={condEntries
-                    .slice(6)
-                    .map((c) => (c.count > 1 ? `${c.name} (x${c.count})` : c.name))
-                    .join(", ")}
-                  style={{
-                    color: theme.colors.muted,
-                    fontWeight: 900,
-                    fontSize: "var(--fs-pill)",
-                    whiteSpace: "nowrap",
-                    flex: "0 0 auto"
-                  }}
-                >
-                  +{condEntries.length - 6}
-                </span>
-              ) : null}
-            </div>
-          ) : null}
         </div>
       );
     },
-    [playersById, renderCombatantIcon]
+    [playersById, renderCombatantIcon, theme, activeAny?.id, targetAny?.id]
   );
 
   const activeCtx = React.useMemo(
@@ -567,7 +495,7 @@ export function CombatView() {
               alignItems: "center"
             }}
           >
-            {renderHudFighter(activeAny)}
+            {renderHudFighter(activeAny, "active")}
 
             <div style={{ justifySelf: "center" }}>
               <CombatDeltaControls
@@ -581,7 +509,7 @@ export function CombatView() {
               />
             </div>
 
-            {renderHudFighter(targetAny)}
+            {renderHudFighter(targetAny, "target")}
           </div>
         ) : null}
 
