@@ -4,6 +4,8 @@ import { theme } from "@/theme/theme";
 import { HudConditionsStrip } from "@/views/CombatView/components/HudConditionsStrip";
 import { clamp01, getHudHp, getHudHpFill, getHudNames } from "@/views/CombatView/utils/hud";
 
+import "@/views/CombatView/combatView.css";
+
 type Role = "active" | "target";
 
 type Props = {
@@ -62,30 +64,33 @@ export function HudFighterCard(props: Props) {
 
   return (
     <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-        padding: "12px 14px",
-        borderRadius: 16,
-        border: `1px solid ${roleAccent}`,
-        background: theme.colors.panelBg,
-        boxShadow: `0 0 0 2px rgba(0,0,0,0.18), 0 10px 26px rgba(0,0,0,0.30)`,
-        minWidth: 360
-      }}
+      className="cvHudCard"
+      style={
+        {
+          "--cv-roleAccent": roleAccent,
+          "--cv-panelBg": theme.colors.panelBg,
+          "--cv-panelBorder": theme.colors.panelBorder,
+          "--cv-bg": theme.colors.bg,
+          "--cv-text": theme.colors.text,
+          "--cv-muted": theme.colors.muted,
+          "--cv-accent": theme.colors.accent,
+          "--cv-portraitAccent": portraitAccent,
+          "--cv-portraitAccentGlow": `${portraitAccent}22`,
+          "--cv-hpFill": hpFill,
+          "--cv-hpPct": `${Math.round(hpPct * 100)}%`,
+          "--cv-tempLeft": `${Math.round(tempLeft * 100)}%`,
+          "--cv-tempWidth": `${Math.round(tempWidth * 100)}%`
+        } as React.CSSProperties
+      }
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+      <div className="cvHudTopRow">
         {/* Icon + hex backing for extra oomph */}
-        <div style={{ position: "relative", width: 48, height: 48, flex: "0 0 auto" }}>
+        <div className="cvHudPortraitWrap">
           <svg
             width={48}
             height={48}
             viewBox="0 0 100 100"
-            style={{
-              position: "absolute",
-              inset: 0,
-              filter: `drop-shadow(0 2px 6px rgba(0,0,0,0.35)) drop-shadow(0 0 12px ${portraitAccent}22)`
-            }}
+            className="cvHudPortraitHex"
             aria-hidden
           >
             <polygon
@@ -97,36 +102,15 @@ export function HudFighterCard(props: Props) {
             />
           </svg>
 
-          <div
-            style={{
-              width: 48,
-              height: 48,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transform: "scale(2.15)",
-              transformOrigin: "center",
-              color: portraitAccent
-            }}
-          >
+          <div className="cvHudPortraitIcon">
             {props.renderCombatantIcon(c)}
           </div>
         </div>
 
-        <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="cvHudNames">
+          <div className="cvHudBadgeRow">
             <span
-              style={{
-                padding: "2px 8px",
-                borderRadius: 999,
-                fontWeight: 900,
-                letterSpacing: 0.6,
-                fontSize: "var(--fs-tiny)",
-                color: "#0b0e13",
-                background: roleAccent,
-                border: `1px solid rgba(0,0,0,0.35)`,
-                boxShadow: `0 8px 18px rgba(0,0,0,0.35)`
-              }}
+              className="cvHudBadge"
               title={props.role === "active" ? "Active" : isSelfTarget ? "Self target" : "Target"}
             >
               {roleLabel}
@@ -135,30 +119,13 @@ export function HudFighterCard(props: Props) {
 
           <div
             title={names.primary}
-            style={{
-              color: theme.colors.text,
-              fontWeight: 900,
-              fontSize: "calc(var(--fs-title) + 8px)",
-              lineHeight: "34px",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              maxWidth: 420
-            }}
+            className="cvHudPrimaryName"
           >
             {names.primary} &nbsp;
             {names.secondary ? (
               <span
                 title={names.secondary}
-                style={{
-                  color: theme.colors.muted,
-                  fontWeight: 900,
-                  fontSize: "var(--fs-base)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  maxWidth: 420
-                }}
+                className="cvHudSecondaryName"
               >
                 {names.secondary}
               </span>
@@ -167,58 +134,19 @@ export function HudFighterCard(props: Props) {
         </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div
-          style={{
-            position: "relative",
-            height: 10,
-            borderRadius: 8,
-            background: theme.colors.panelBorder,
-            overflow: "hidden",
-            flex: 1
-          }}
-          aria-label="HP"
-        >
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: `${Math.round(hpPct * 100)}%`,
-              background: hpFill,
-              transition: "width 150ms ease"
-            }}
-          />
+      <div className="cvHudHpRow">
+        <div className="cvHudHpTrack" aria-label="HP">
+          <div className="cvHudHpFill" />
 
           {tempWidth > 0 ? (
-            <div
-              style={{
-                position: "absolute",
-                left: `${Math.round(tempLeft * 100)}%`,
-                top: 0,
-                bottom: 0,
-                width: `${Math.round(tempWidth * 100)}%`,
-                background: theme.colors.accent,
-                opacity: 0.55,
-                transition: "left 150ms ease, width 150ms ease"
-              }}
-              aria-label="Temp HP"
-            />
+            <div className="cvHudTempFill" aria-label="Temp HP" />
           ) : null}
         </div>
 
-        <div
-          style={{
-            color: theme.colors.muted,
-            fontWeight: 900,
-            fontSize: "var(--fs-base)",
-            whiteSpace: "nowrap"
-          }}
-        >
+        <div className="cvHudHpText">
           {Math.max(0, Math.floor(hpCurrent))} / {Math.max(1, Math.floor(hpMax))}
           {tempHp > 0 ? (
-            <span style={{ color: theme.colors.accent, marginLeft: 6 }}>+{Math.floor(tempHp)}</span>
+            <span className="cvHudTempText">+{Math.floor(tempHp)}</span>
           ) : null}
         </div>
       </div>

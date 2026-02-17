@@ -4,6 +4,8 @@ import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
 import { CombatDeltaControls } from "@/views/CombatView/components/CombatDeltaControls";
 
+import "@/views/CombatView/combatView.css";
+
 type Props = {
   isNarrow: boolean;
   activeLabel: string;
@@ -33,76 +35,42 @@ export function CombatHudBar(props: Props) {
 
   return (
     <div
+      className="cvHudBar"
       style={{
-        marginTop: 14,
-        borderRadius: 14,
-        border: `1px solid ${theme.colors.panelBorder}`,
-        background: theme.colors.panelBg,
-        padding: 10,
-        display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)",
-        gap: 10,
-        alignItems: "center"
+        ["--cv-panelBorder" as any]: theme.colors.panelBorder,
+        ["--cv-panelBg" as any]: theme.colors.panelBg,
+        ["--cv-bg" as any]: theme.colors.bg,
+        ["--cv-text" as any]: theme.colors.text,
+        ["--cv-muted" as any]: theme.colors.muted,
+        ["--cv-accent" as any]: theme.colors.accent
       }}
     >
       {/* Active */}
       <div
-        style={{
-          minWidth: 0,
-          borderRadius: 12,
-          border: `1px solid ${theme.colors.panelBorder}`,
-          background: theme.colors.panelBg,
-          padding: "8px 10px",
-          display: "flex",
-          alignItems: "center",
-          gap: 8
-        }}
+        className="cvHudBarSide cvHudBarActive"
       >
-        <span style={{ fontSize: "var(--fs-pill)", fontWeight: 900, color: theme.colors.accent }}>
+        <span className="cvHudBarLabel">
           Active
         </span>
         <span
           title={props.activeLabel}
-          style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            fontSize: "var(--fs-base)",
-            fontWeight: 800,
-            color: theme.colors.text
-          }}
+          className="cvHudBarName"
         >
           {props.activeLabel}
         </span>
       </div>
 
       {/* Center: Round / Prev / Next + Delta */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+      <div className="cvHudBarCenter">
+        <div className="cvHudBarTopRow">
           <span
-            style={{
-              fontSize: "var(--fs-pill)",
-              fontWeight: 900,
-              color: theme.colors.muted,
-              border: `1px solid ${theme.colors.panelBorder}`,
-              background: theme.colors.panelBg,
-              padding: "4px 8px",
-              borderRadius: 999
-            }}
+            className="cvHudBarChip"
           >
             Round {props.round}
           </span>
           {typeof props.seconds === "number" && (
             <span
-              style={{
-                fontSize: "var(--fs-pill)",
-                fontWeight: 900,
-                color: theme.colors.muted,
-                border: `1px solid ${theme.colors.panelBorder}`,
-                background: theme.colors.panelBg,
-                padding: "4px 8px",
-                borderRadius: 999
-              }}
+              className="cvHudBarChip"
             >
               {props.seconds}s
             </span>
@@ -116,7 +84,7 @@ export function CombatHudBar(props: Props) {
           </Button>
         </div>
 
-        <div style={{ width: "100%", maxWidth: 520 }}>
+        <div className="cvHudBarDeltaWrap">
           <CombatDeltaControls
             value={props.delta}
             targetId={props.targetId}
@@ -130,32 +98,15 @@ export function CombatHudBar(props: Props) {
 
       {/* Target */}
       <div
-        style={{
-          minWidth: 0,
-          borderRadius: 12,
-          border: `1px solid ${theme.colors.panelBorder}`,
-          background: theme.colors.panelBg,
-          padding: "8px 10px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-end",
-          gap: 8
-        }}
+        className="cvHudBarSide cvHudBarTarget"
       >
         <span
           title={props.targetLabel}
-          style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            fontSize: "var(--fs-base)",
-            fontWeight: 800,
-            color: theme.colors.text
-          }}
+          className="cvHudBarName"
         >
           {props.targetLabel}
         </span>
-        <span style={{ fontSize: "var(--fs-pill)", fontWeight: 900, color: theme.colors.accent }}>
+        <span className="cvHudBarLabel">
           Target
         </span>
       </div>

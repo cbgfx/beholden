@@ -1,0 +1,263 @@
+/* CombatView shared styles
+   Keep this file scoped to CombatView-only UI pieces.
+   Theme-driven values are provided via CSS variables set inline in components.
+*/
+
+/* ---------- HUD Fighter Card ---------- */
+
+.cvHudCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--cv-roleAccent);
+  background: var(--cv-panelBg);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.18), 0 10px 26px rgba(0, 0, 0, 0.30);
+  min-width: 360px;
+}
+
+.cvHudTopRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.cvHudPortraitWrap {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+}
+
+.cvHudPortraitHex {
+  position: absolute;
+  inset: 0;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.35)) drop-shadow(0 0 12px var(--cv-portraitAccentGlow));
+}
+
+.cvHudPortraitIcon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: scale(2.15);
+  transform-origin: center;
+  color: var(--cv-portraitAccent);
+}
+
+.cvHudNames {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cvHudBadgeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cvHudBadge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  font-size: var(--fs-tiny);
+  color: #0b0e13;
+  background: var(--cv-roleAccent);
+  border: 1px solid rgba(0,0,0,0.35);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+}
+
+.cvHudPrimaryName {
+  color: var(--cv-text);
+  font-weight: 900;
+  font-size: calc(var(--fs-title) + 8px);
+  line-height: 34px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 420px;
+}
+
+.cvHudSecondaryName {
+  color: var(--cv-muted);
+  font-weight: 900;
+  font-size: var(--fs-base);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 420px;
+}
+
+.cvHudHpRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cvHudHpTrack {
+  position: relative;
+  height: 10px;
+  border-radius: 8px;
+  background: var(--cv-panelBorder);
+  overflow: hidden;
+  flex: 1;
+}
+
+.cvHudHpFill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--cv-hpPct);
+  background: var(--cv-hpFill);
+  transition: width 150ms ease;
+}
+
+.cvHudTempFill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--cv-tempLeft);
+  width: var(--cv-tempWidth);
+  background: var(--cv-accent);
+  opacity: 0.55;
+  transition: left 150ms ease, width 150ms ease;
+}
+
+.cvHudHpText {
+  color: var(--cv-muted);
+  font-weight: 900;
+  font-size: var(--fs-base);
+  white-space: nowrap;
+}
+
+.cvHudTempText {
+  color: var(--cv-accent);
+  margin-left: 6px;
+}
+
+/* ---------- HUD Conditions Strip ---------- */
+
+.cvCondStrip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 4px 6px;
+  margin-top: -2px;
+  border-radius: 10px;
+  border: 1px solid var(--cv-panelBorder);
+  background: var(--cv-bg);
+  cursor: pointer;
+}
+
+.cvCondChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--cv-panelBorder);
+  background: var(--cv-panelBg);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.20);
+  color: var(--cv-condIconColor);
+}
+
+.cvCondMore {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--cv-panelBorder);
+  background: var(--cv-panelBg);
+  color: var(--cv-muted);
+  font-weight: 900;
+  font-size: var(--fs-tiny);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.20);
+}
+
+/* ---------- Combat HUD Bar ---------- */
+
+.cvHudBar {
+  margin-top: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--cv-panelBorder);
+  background: var(--cv-panelBg);
+  padding: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.cvHudBarSide {
+  min-width: 0;
+  border-radius: 12px;
+  border: 1px solid var(--cv-panelBorder);
+  background: var(--cv-panelBg);
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cvHudBarTarget {
+  justify-content: flex-end;
+}
+
+.cvHudBarLabel {
+  font-size: var(--fs-pill);
+  font-weight: 900;
+  color: var(--cv-accent);
+  white-space: nowrap;
+}
+
+.cvHudBarName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-base);
+  font-weight: 800;
+  color: var(--cv-text);
+  min-width: 0;
+}
+
+.cvHudBarCenter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.cvHudBarTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cvHudBarChip {
+  font-size: var(--fs-pill);
+  font-weight: 900;
+  color: var(--cv-muted);
+  border: 1px solid var(--cv-panelBorder);
+  background: var(--cv-panelBg);
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.cvHudBarDeltaWrap {
+  width: 100%;
+  max-width: 520px;
+}

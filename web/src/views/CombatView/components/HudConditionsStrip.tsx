@@ -4,6 +4,8 @@ import { theme } from "@/theme/theme";
 import { conditionIconByKey } from "@/icons/conditions";
 import { CONDITION_DEFS } from "@/drawers/drawers/combatant/conditions";
 
+import "@/views/CombatView/combatView.css";
+
 function conditionLabel(key: string) {
   return CONDITION_DEFS.find((d) => d.key === key)?.name ?? key;
 }
@@ -33,18 +35,16 @@ export function HudConditionsStrip(props: Props) {
       type="button"
       onClick={props.onClick}
       title="Edit conditions"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        flexWrap: "wrap",
-        padding: "4px 6px",
-        marginTop: -2,
-        borderRadius: 10,
-        border: `1px solid ${theme.colors.panelBorder}`,
-        background: theme.colors.bg,
-        cursor: "pointer"
-      }}
+      className="cvCondStrip"
+      style={
+        {
+          "--cv-panelBorder": theme.colors.panelBorder,
+          "--cv-panelBg": theme.colors.panelBg,
+          "--cv-bg": theme.colors.bg,
+          "--cv-muted": theme.colors.muted,
+          "--cv-condIconColor": props.iconColor ?? theme.colors.text
+        } as React.CSSProperties
+      }
     >
       {shown.map((cond: any, idx: number) => {
         const key = String(cond?.key ?? "");
@@ -54,43 +54,17 @@ export function HudConditionsStrip(props: Props) {
         return (
           <span
             key={`${key}-${cond?.casterId ?? ""}-${idx}`}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 22,
-              height: 22,
-              borderRadius: 999,
-              border: `1px solid ${theme.colors.panelBorder}`,
-              background: theme.colors.panelBg,
-              boxShadow: `0 6px 16px rgba(0,0,0,0.20)`
-            }}
+            className="cvCondChip"
             title={conditionLabel(key)}
           >
-            <CondIcon
-              size={14}
-              style={{ opacity: 0.92, color: props.iconColor ?? theme.colors.text }}
-            />
+            <CondIcon size={14} style={{ opacity: 0.92 }} />
           </span>
         );
       })}
 
       {extra > 0 ? (
         <span
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            height: 22,
-            padding: "0 8px",
-            borderRadius: 999,
-            border: `1px solid ${theme.colors.panelBorder}`,
-            background: theme.colors.panelBg,
-            color: theme.colors.muted,
-            fontWeight: 900,
-            fontSize: "var(--fs-tiny)",
-            boxShadow: `0 6px 16px rgba(0,0,0,0.20)`
-          }}
+          className="cvCondMore"
           title={`${extra} more condition${extra === 1 ? "" : "s"}`}
         >
           +{extra}
