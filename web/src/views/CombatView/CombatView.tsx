@@ -20,8 +20,7 @@ import { useCombatNavigation } from "@/views/CombatView/hooks/useCombatNavigatio
 import { useCombatActions } from "@/views/CombatView/hooks/useCombatActions";
 import { useCombatantDetailsCtx } from "@/views/CombatView/hooks/useCombatantDetailsCtx";
 import { useEncounterCombatants } from "@/views/CombatView/hooks/useEncounterCombatants";
-import { useRosterMaps } from "@/views/CombatView/hooks/useRosterMaps";
-import { allHaveInitiative, orderCombatants } from "@/views/CombatView/utils/combat";
+import { useCombatViewModel } from "@/views/CombatView/hooks/useCombatViewModel";
 import { applyMonsterAttackOverrides } from "@/views/CombatView/utils/monsterOverrides";
 import { getSecondsInRound } from "@/views/CombatView/utils/roundTime";
 
@@ -29,14 +28,13 @@ export function CombatView() {
   const { campaignId, encounterId } = useParams();
   const { state, dispatch } = useStore();
 
-  const encounter = React.useMemo(() => {
-    if (!encounterId) return null as any;
-    return (state as any).encounters?.find((e: any) => e.id === encounterId) ?? null;
-  }, [encounterId, (state as any).encounters]);
+  const [targetId, setTargetId] = React.useState<string | null>(null);
 
-  // Combat View should use the store as the single source of truth.
-  // (This fixes drawers updating store state but not a local duplicate roster.)
-  const combatants = (state.combatants ?? []) as Combatant[];
+  const { encounter, combatants, orderedCombatants, canNavigate, target, playersById, inpcsById } = useCombatViewModel({
+    encounterId,
+    state: state as any,
+    targetId
+  });
 
   const { refresh } = useEncounterCombatants(encounterId, dispatch);
 
@@ -49,23 +47,11 @@ export function CombatView() {
     persist: persistCombatState,
   } = useServerCombatState(encounterId);
 
-  const [targetId, setTargetId] = React.useState<string | null>(null);
-
   // Stable callbacks so initiative rows can be memoized without thrashing.
   const handleSelectTarget = React.useCallback((id: string) => setTargetId(id), []);
 
   const [delta, setDelta] = React.useState<string>("");
   const isNarrow = useIsNarrow();
-
-  const orderedCombatants = React.useMemo(() => orderCombatants(combatants), [combatants]);
-  const canNavigate = React.useMemo(() => allHaveInitiative(combatants), [combatants]);
-
-  const target = React.useMemo(
-    () => combatants.find((c: any) => (c as any).id === targetId) ?? null,
-    [combatants, targetId]
-  );
-
-  const { playersById, inpcsById } = useRosterMaps(state.players, (state as any).inpcs);
 
   const { active, nextTurn, prevTurn } = useCombatNavigation({
     encounterId,

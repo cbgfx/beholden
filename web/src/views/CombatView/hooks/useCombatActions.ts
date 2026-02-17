@@ -1,9 +1,11 @@
-import * as React from "react";
-import { useNavigate } from "react-router-dom";
-import { api } from "@/services/api";
 import type { Combatant } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
-import { dexModFromMonster, parsePositiveInt } from "@/views/CombatView/utils/combat";
+
+import { useCombatHpActions } from "@/views/CombatView/hooks/actions/useCombatHpActions";
+import { useCombatantPatchActions } from "@/views/CombatView/hooks/actions/useCombatantPatchActions";
+import { useCombatInitiativeActions } from "@/views/CombatView/hooks/actions/useCombatInitiativeActions";
+import { useCombatFightActions } from "@/views/CombatView/hooks/actions/useCombatFightActions";
+import { useCombatDrawerActions } from "@/views/CombatView/hooks/actions/useCombatDrawerActions";
 
 type StoreDispatch = (action: any) => void;
 
@@ -25,6 +27,8 @@ type Args = {
   dispatch: StoreDispatch;
 };
 
+// Convenience aggregator for combat actions.
+// NOTE: This is intentionally kept as a thin wrapper over smaller hooks.
 export function useCombatActions({
   campaignId,
   encounterId,
@@ -42,225 +46,27 @@ export function useCombatActions({
   setMonsterCache,
   dispatch
 }: Args) {
-  const navigate = useNavigate();
-
-  const parseSignedDelta = React.useCallback(
-    (
-      input: string,
-      defaultKind: "damage" | "heal"
-    ): { kind: "damage" | "heal"; amount: number } => {
-      const raw = String(input ?? "").trim();
-      if (!raw) return { kind: defaultKind, amount: 0 };
-
-      // Sign override rules:
-      //  - "+10" => heal 10
-      //  - "-10" => damage 10
-      //  - "10" => defaultKind 10
-      const first = raw[0];
-      const hasPlus = first === "+";
-      const hasMinus = first === "-";
-      const digits = hasPlus || hasMinus ? raw.slice(1) : raw;
-      const amount = parsePositiveInt(digits);
-      if (amount <= 0) return { kind: defaultKind, amount: 0 };
-      if (hasPlus) return { kind: "heal", amount };
-      if (hasMinus) return { kind: "damage", amount };
-      return { kind: defaultKind, amount };
-    },
-    []
-  );
-
-  const targetAny: any = target as any;
-
-  const applyHpDelta = React.useCallback(
-    async (defaultKind: "damage" | "heal") => {
-      if (!encounterId || !targetAny) return;
-      const { kind, amount } = parseSignedDelta(delta, defaultKind);
-      if (amount <= 0) return;
-
-      const cur = targetAny.hpCurrent;
-      const overrides = targetAny.overrides || null;
-      const rawMax = targetAny.hpMax;
-      const maxOverride = (() => {
-        const v = overrides?.hpMaxOverride;
-        if (v == null) return null;
-        const n = Number(v);
-        return Number.isFinite(n) && n > 0 ? n : null;
-      })();
-      const max = maxOverride ?? rawMax;
-      const tempHp = Math.max(0, Number(overrides?.tempHp ?? 0) || 0);
-      if (cur == null) return;
-
-      let nextHp = cur;
-      let nextTemp = tempHp;
-
-      if (kind === "damage") {
-        // Damage consumes temp HP first.
-        const fromTemp = Math.min(nextTemp, amount);
-        nextTemp -= fromTemp;
-        const remaining = amount - fromTemp;
-        nextHp = Math.max(0, nextHp - remaining);
-      }
-      if (kind === "heal") {
-        if (max != null) nextHp = Math.min(max, nextHp + amount);
-        else nextHp = nextHp + amount;
-      }
-
-      await api(`/api/encounters/${encounterId}/combatants/${targetAny.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          hpCurrent: nextHp,
-          overrides: {
-            ...(overrides ?? { tempHp: 0, acBonus: 0, hpMaxOverride: null }),
-            tempHp: nextTemp
-          }
-        })
-      });
-      await refresh();
-      setDelta("");
-    },
-    [encounterId, targetAny, delta, parseSignedDelta, refresh, setDelta]
-  );
-
-  const updateCombatant = React.useCallback(
-    async (id: string, patch: any) => {
-      if (!encounterId) return;
-      await api(`/api/encounters/${encounterId}/combatants/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch)
-      });
-      await refresh();
-    },
-    [encounterId, refresh]
-  );
-
-  const rollInitiativeForMonsters = React.useCallback(async () => {
-    if (!encounterId) return;
-    // Roll initiative for monsters + iNPCs; treat 0 as missing.
-    const targets = orderedCombatants.filter((c: any) => {
-      if (c?.baseType !== "monster" && c?.baseType !== "inpc") return false;
-      const init = Number(c?.initiative);
-      return !Number.isFinite(init) || init === 0;
-    }) as any[];
-    if (!targets.length) return;
-
-    // Ensure monster details are available (for Dex mod).
-    const localCache: Record<string, MonsterDetail> = { ...monsterCache };
-    for (const c of targets) {
-      const monsterId = c.baseType === "inpc" ? (inpcsById[c.baseId]?.monsterId ?? null) : c.baseId;
-      if (!monsterId) continue;
-      if (!localCache[monsterId]) {
-        try {
-          const d = await api<MonsterDetail>(`/api/compendium/monsters/${monsterId}`);
-          localCache[monsterId] = d;
-        } catch {
-          // ignore
-        }
-      }
-    }
-    setMonsterCache(localCache);
-
-    // Apply initiative.
-    for (const c of targets) {
-      const monsterId = c.baseType === "inpc" ? (inpcsById[c.baseId]?.monsterId ?? null) : c.baseId;
-      const d = monsterId ? localCache[monsterId] ?? null : null;
-      const mod = dexModFromMonster(d);
-      const roll = 1 + Math.floor(Math.random() * 20);
-      const init = roll + mod;
-      await api(`/api/encounters/${encounterId}/combatants/${c.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initiative: init })
-      });
-    }
-    await refresh();
-  }, [encounterId, orderedCombatants, monsterCache, setMonsterCache, refresh, inpcsById]);
-
-  const resetFight = React.useCallback(async () => {
-    if (!encounterId) return;
-    const rows = orderedCombatants as any[];
-    for (const c of rows) {
-      const patch: any = {
-        conditions: [],
-        initiative: 0
-      };
-      if (c.baseType === "monster") {
-        const overrides = c.overrides ?? null;
-        const max = overrides?.hpMaxOverride != null ? Number(overrides.hpMaxOverride) : Number(c.hpMax);
-        patch.hpCurrent = Number.isFinite(max) ? max : Number(c.hpCurrent ?? 0);
-      }
-      await api(`/api/encounters/${encounterId}/combatants/${c.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch)
-      });
-    }
-    try {
-      await api(`/api/encounters/${encounterId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Open" })
-      });
-    } catch {
-      // ignore
-    }
-    await refresh();
-    setRound(1);
-    // With initiatives cleared, there is no active combatant until initiatives are entered/rolled.
-    setActiveId(null);
-    setTargetId(null);
-    try {
-      await persistCombatState({ round: 1, activeId: null });
-    } catch {
-      // ignore
-    }
-  }, [encounterId, orderedCombatants, refresh, setRound, setActiveId, setTargetId, persistCombatState]);
-
-  const endCombat = React.useCallback(async () => {
-    if (!encounterId) return;
-    try {
-      await api(`/api/encounters/${encounterId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Complete" })
-      });
-    } catch {
-      // ignore
-    }
-
-    try {
-      await persistCombatState({ round: 1, activeId: null });
-    } catch {
-      // ignore
-    }
-
-    // Give immediate feedback by returning to the campaign view.
-    try {
-      await refresh();
-    } catch {
-      // ignore
-    }
-    if (campaignId) navigate(`/campaign/${campaignId}`);
-    else navigate("/");
-  }, [campaignId, encounterId, persistCombatState, refresh, navigate]);
-
-  // Convenience wrappers for panel props
-  const onOpenOverrides = React.useCallback(
-    (combatantId: string | null) =>
-      combatantId ? dispatch({ type: "openDrawer", drawer: { type: "combatantOverrides", encounterId, combatantId } }) : void 0,
-    [dispatch, encounterId]
-  );
-  const onOpenConditions = React.useCallback(
-    (combatantId: string | null, role: "active" | "target", activeIdForCaster: string | null) =>
-      combatantId
-        ? dispatch({
-            type: "openDrawer",
-            drawer: { type: "combatantConditions", encounterId, combatantId, role, activeIdForCaster }
-          })
-        : void 0,
-    [dispatch, encounterId]
-  );
+  const { applyHpDelta } = useCombatHpActions({ encounterId, delta, setDelta, target, refresh });
+  const { updateCombatant } = useCombatantPatchActions({ encounterId, refresh });
+  const { rollInitiativeForMonsters } = useCombatInitiativeActions({
+    encounterId,
+    orderedCombatants,
+    inpcsById,
+    monsterCache,
+    setMonsterCache,
+    refresh
+  });
+  const { resetFight, endCombat } = useCombatFightActions({
+    campaignId,
+    encounterId,
+    orderedCombatants,
+    refresh,
+    setRound,
+    setActiveId,
+    setTargetId,
+    persistCombatState
+  });
+  const { onOpenOverrides, onOpenConditions } = useCombatDrawerActions({ encounterId, dispatch });
 
   return {
     applyHpDelta,
