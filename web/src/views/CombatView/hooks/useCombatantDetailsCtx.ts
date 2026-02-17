@@ -13,7 +13,9 @@ type Args = {
   playersById: Record<string, any>;
 
   spellNames: string[];
-  spellLevels: Record<string, number>;
+// spell levels are resolved async; unknown levels may be null until fetched
+spellLevels: Record<string, number | null>;
+
   roster: Combatant[];
   activeForCaster: Combatant | null;
 
