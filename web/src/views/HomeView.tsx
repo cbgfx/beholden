@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
 import { IconPencil, IconTrash, IconPlus } from "@/icons";
@@ -17,6 +17,16 @@ type Props = {
   onRefresh: () => Promise<void> | void;
 };
 
+function IconDownload() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
 export function HomeView({
   campaigns,
   onCreateCampaign,
@@ -32,6 +42,7 @@ export function HomeView({
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importBusy, setImportBusy] = useState(false);
   const [importMsg, setImportMsg] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function importCampaign() {
     if (!importFile) return;
@@ -58,142 +69,286 @@ export function HomeView({
     window.location.href = `/api/campaigns/${id}/export`;
   }
 
+  // ── Layout ──────────────────────────────────────────────────────────
   const page: React.CSSProperties = {
     width: "100%",
-    height: "100%",
+    minHeight: "100%",
     display: "grid",
     justifyItems: "center",
     alignContent: "start",
-    padding: 28,
-    gap: 14,
+    padding: "32px 24px 60px",
+    gap: 28,
   };
 
-  const titleWrap: React.CSSProperties = {
-    width: 900,
-    maxWidth: "100%",
+  const inner: React.CSSProperties = {
+    width: "100%",
+    maxWidth: 960,
+    display: "grid",
+    gap: 24,
   };
 
-  const h1: React.CSSProperties = { fontSize: 24, fontWeight: 900, margin: 0, color: theme.colors.text };
-  const sub: React.CSSProperties = { marginTop: 6, color: theme.colors.muted };
+  const h1: React.CSSProperties = {
+    fontSize: 24,
+    fontWeight: 900,
+    margin: 0,
+    color: theme.colors.text,
+  };
 
-  const rail: React.CSSProperties = {
-    width: 900,
-    maxWidth: "100%",
+  const sub: React.CSSProperties = {
+    marginTop: 6,
+    color: theme.colors.muted,
+    fontSize: 14,
+  };
+
+  // ── Action bar ───────────────────────────────────────────────────────
+  const actionBar: React.CSSProperties = {
     display: "flex",
-    gap: 14,
-    overflowX: "auto",
-    paddingBottom: 10,
-    scrollSnapType: "x mandatory",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
   };
 
-  const cardBase: React.CSSProperties = {
-    flex: "0 0 260px",
-    minHeight: 220,
+  const divider: React.CSSProperties = {
+    width: 1,
+    height: 24,
+    background: theme.colors.panelBorder,
+    margin: "0 4px",
+  };
+
+  const fileLabel: React.CSSProperties = {
+    padding: "7px 12px",
+    borderRadius: theme.radius.control,
+    border: `1px solid ${theme.colors.panelBorder}`,
+    background: theme.colors.inputBg,
+    color: importFile ? theme.colors.text : theme.colors.muted,
+    fontSize: 13,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    maxWidth: 200,
+    textOverflow: "ellipsis",
+    display: "block",
+  };
+
+  const msgColor = importMsg.toLowerCase().includes("fail") || importMsg.toLowerCase().includes("error")
+    ? theme.colors.red
+    : theme.colors.muted;
+
+  // ── Campaign grid ────────────────────────────────────────────────────
+  const grid: React.CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+    gap: 16,
+  };
+
+  // ── Campaign card ────────────────────────────────────────────────────
+  const card: React.CSSProperties = {
     background: theme.colors.panelBg,
     border: `1px solid ${theme.colors.panelBorder}`,
     borderRadius: theme.radius.panel,
-    padding: 14,
-    boxShadow: "0 18px 50px rgba(0,0,0,0.25)",
-    scrollSnapAlign: "start",
+    overflow: "hidden",
     display: "grid",
-    gap: 10,
+    gridTemplateRows: "72px 1fr auto",
+    boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
+    transition: "border-color 0.15s",
   };
 
-  const cardTitle: React.CSSProperties = { fontSize: 16, fontWeight: 900, color: theme.colors.text };
+  const cardBanner: React.CSSProperties = {
+    background: "linear-gradient(135deg, rgba(240,165,0,0.18) 0%, rgba(240,165,0,0.04) 100%)",
+    borderBottom: `1px solid ${theme.colors.panelBorder}`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    overflow: "hidden",
+  };
+
+  const cardBody: React.CSSProperties = {
+    padding: "12px 14px 8px",
+    display: "grid",
+    gap: 3,
+  };
+
+  const cardTitle: React.CSSProperties = {
+    fontSize: 15,
+    fontWeight: 800,
+    color: theme.colors.text,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  };
+
+  const cardId: React.CSSProperties = {
+    fontSize: 11,
+    color: theme.colors.muted,
+    fontFamily: "monospace",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  };
+
+  const cardFooter: React.CSSProperties = {
+    padding: "0 10px 10px",
+    display: "flex",
+    gap: 6,
+    alignItems: "center",
+  };
 
   const iconBtn: React.CSSProperties = {
-    width: 30,
-    height: 30,
+    width: 32,
+    height: 32,
+    flexShrink: 0,
     borderRadius: 8,
     border: `1px solid ${theme.colors.panelBorder}`,
-    background: theme.colors.panelBg,
-    color: theme.colors.text,
+    background: "transparent",
+    color: theme.colors.muted,
     display: "inline-grid",
     placeItems: "center",
     cursor: "pointer",
+    transition: "color 0.12s, border-color 0.12s",
+  };
+
+  const iconBtnDanger: React.CSSProperties = {
+    ...iconBtn,
+    color: theme.colors.red,
+    borderColor: "rgba(255,93,93,0.25)",
   };
 
   return (
     <div style={page}>
-      <div style={titleWrap}>
-        <div style={h1}>Campaigns</div>
-        <div style={sub}>Create a new campaign, import one, or jump back into an existing world.</div>
-      </div>
+      <div style={inner}>
+        {/* Header */}
+        <div>
+          <div style={h1}>Campaigns</div>
+          <div style={sub}>Jump back into an existing world, or start a new one.</div>
+        </div>
 
-      <div style={rail}>
-        {/* Create / Import card */}
-        <div style={cardBase}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-            <div style={cardTitle}>Create / Import</div>
-          </div>
+        {/* Action bar */}
+        <div style={actionBar}>
+          <Button onClick={onCreateCampaign} title="Create a new campaign">
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+              <IconPlus size={14} />
+              New Campaign
+            </span>
+          </Button>
 
-          <div style={{ color: theme.colors.muted, lineHeight: 1.35, fontSize: 13 }}>
-            Campaigns are stored as separate JSON files on disk for smaller saves and easy backups.
-          </div>
+          <div style={divider} />
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <Button onClick={onCreateCampaign} title="Create campaign">
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                <IconPlus />
-                Campaign
-              </span>
-            </Button>
-          </div>
-
-          <div style={{ display: "grid", gap: 8 }}>
+          <label
+            style={fileLabel}
+            title={importFile ? importFile.name : "Choose a campaign JSON file"}
+          >
             <input
+              ref={fileInputRef}
               type="file"
               accept=".json,application/json"
               onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
-              style={{ color: theme.colors.text }}
+              style={{ display: "none" }}
             />
+            {importFile ? importFile.name : "Choose file…"}
+          </label>
 
-            <Button onClick={importCampaign} disabled={!importFile || importBusy} title="Import campaign">
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                {importBusy ? "Importing…" : "Import"}
-              </span>
-            </Button>
+          <Button
+            variant="ghost"
+            onClick={importCampaign}
+            disabled={!importFile || importBusy}
+            title="Import selected campaign file"
+          >
+            {importBusy ? "Importing…" : "Import"}
+          </Button>
 
-            {importMsg ? (
-              <div style={{ fontSize: 12, color: importMsg.toLowerCase().includes("fail") ? theme.colors.red : theme.colors.muted }}>
-                {importMsg}
-              </div>
-            ) : null}
-          </div>
+          {importMsg ? (
+            <span style={{ fontSize: 12, color: msgColor }}>{importMsg}</span>
+          ) : null}
         </div>
 
-        {/* Campaign cards */}
-        {sorted.map((c) => (
-          <div key={c.id} style={cardBase}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 10 }}>
-              <div style={{ display: "grid", gap: 4 }}>
-                <div style={cardTitle}>{c.name}</div>
-                <div style={{ fontSize: 11, color: theme.colors.muted, wordBreak: "break-all" }}>Campaign ID: {c.id}</div>
-              </div>
+        {/* Campaign grid */}
+        {sorted.length > 0 ? (
+          <div style={grid}>
+            {sorted.map((c) => {
+              const initials = c.name
+                .split(/\s+/)
+                .slice(0, 2)
+                .map((w) => w[0] ?? "")
+                .join("")
+                .toUpperCase();
 
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => onEditCampaign(c.id)} style={iconBtn} title="Edit campaign" aria-label="Edit campaign">
-                  <IconPencil />
-                </button>
-                <button onClick={() => onDeleteCampaign(c.id)} style={iconBtn} title="Delete campaign" aria-label="Delete campaign">
-                  <IconTrash />
-                </button>
-              </div>
-            </div>
+              return (
+                <div key={c.id} style={card}>
+                  {/* Banner */}
+                  <div style={cardBanner}>
+                    <span
+                      style={{
+                        fontSize: 28,
+                        fontWeight: 900,
+                        color: "rgba(240,165,0,0.35)",
+                        letterSpacing: 2,
+                        userSelect: "none",
+                      }}
+                    >
+                      {initials}
+                    </span>
+                  </div>
 
-            <div style={{ display: "grid", gap: 10, alignContent: "start" }}>
-              <Button onClick={() => onOpenCampaign(c.id)} title="Open campaign">
-                Open
-              </Button>
+                  {/* Body */}
+                  <div style={cardBody}>
+                    <div style={cardTitle}>{c.name}</div>
+                    <div style={cardId}>{c.id}</div>
+                  </div>
 
-              <Button onClick={() => exportCampaign(c.id)} title="Export campaign JSON">
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                  Export
-                </span>
-              </Button>
-            </div>
+                  {/* Footer */}
+                  <div style={cardFooter}>
+                    <Button
+                      onClick={() => onOpenCampaign(c.id)}
+                      title="Open campaign"
+                      style={{ flex: 1, minWidth: 0 }}
+                    >
+                      Open
+                    </Button>
+
+                    <button
+                      onClick={() => exportCampaign(c.id)}
+                      style={iconBtn}
+                      title="Export campaign JSON"
+                      aria-label="Export campaign"
+                    >
+                      <IconDownload />
+                    </button>
+
+                    <button
+                      onClick={() => onEditCampaign(c.id)}
+                      style={iconBtn}
+                      title="Rename campaign"
+                      aria-label="Edit campaign"
+                    >
+                      <IconPencil size={14} />
+                    </button>
+
+                    <button
+                      onClick={() => onDeleteCampaign(c.id)}
+                      style={iconBtnDanger}
+                      title="Delete campaign"
+                      aria-label="Delete campaign"
+                    >
+                      <IconTrash size={14} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        ))}
+        ) : (
+          <div
+            style={{
+              color: theme.colors.muted,
+              fontSize: 14,
+              padding: "40px 0",
+              textAlign: "center",
+            }}
+          >
+            No campaigns yet — create one above to get started.
+          </div>
+        )}
       </div>
     </div>
   );
