@@ -111,6 +111,8 @@ export interface Combatant {
   conditions: ConditionInstance[];
   deathSaves?: DeathSaves | null;
   usedReaction?: boolean;
+  /** How many legendary actions have been spent this round. */
+  usedLegendaryActions?: number;
 
   createdAt?: number;
   updatedAt?: number;

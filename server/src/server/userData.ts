@@ -164,6 +164,8 @@ export interface StoredCombatant extends Timestamps {
   deathSaves?: StoredDeathSaves;
   /** Whether this combatant has used their reaction this turn. Resets at the start of their next turn. */
   usedReaction?: boolean;
+  /** How many legendary actions have been spent this round. Resets at the start of this combatant's turn. */
+  usedLegendaryActions?: number;
   sort?: number;
 }
 

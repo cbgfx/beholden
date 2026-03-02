@@ -426,6 +426,9 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         usedReaction: req.body?.usedReaction !== undefined
           ? Boolean(req.body.usedReaction)
           : (existing.usedReaction ?? false),
+        usedLegendaryActions: req.body?.usedLegendaryActions !== undefined
+          ? Math.max(0, Number(req.body.usedLegendaryActions) || 0)
+          : (existing.usedLegendaryActions ?? 0),
         updatedAt: t,
       };
 

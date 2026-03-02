@@ -122,12 +122,14 @@ export function CombatantDetailsPanel(props: Props) {
           />
 
           {ctx.selectedMonster ? (
-  <MonsterActions
-    monster={ctx.selectedMonster}
-    attackOverrides={combatant?.attackOverrides as Record<string, AttackOverride> | null | undefined}
-    onChangeAttack={ctx.onChangeAttack}
-  />
-) : null}
+            <MonsterActions
+              monster={ctx.selectedMonster}
+              attackOverrides={combatant?.attackOverrides as Record<string, AttackOverride> | null | undefined}
+              onChangeAttack={ctx.onChangeAttack}
+              usedLegendaryActions={combatant?.usedLegendaryActions ?? 0}
+              onChangeLegendaryUsed={(n) => ctx.onUpdate({ usedLegendaryActions: n })}
+            />
+          ) : null}
 
           {ctx.selectedMonster ? (
             <MonsterSpells spellNames={ctx.spellNames} spellLevels={ctx.spellLevels} onOpenSpell={ctx.onOpenSpell} />
