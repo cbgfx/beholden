@@ -58,8 +58,8 @@ export function loadAllCampaignFiles(paths: Paths): UserData {
   const campaignIds = Object.keys(idx.campaigns ?? {});
   for (const campaignId of campaignIds) {
     const fp = campaignFilePath(paths, campaignId);
-    const doc = loadJson<CampaignFile>(fp, null);
-    if (!doc) continue;
+    if (!fs.existsSync(fp)) continue;
+    const doc = loadJson<CampaignFile>(fp, {});
 
     ud.campaigns[campaignId] = (doc["campaign"] ?? idx.campaigns[campaignId]) as StoredCampaign;
 

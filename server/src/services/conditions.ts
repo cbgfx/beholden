@@ -3,7 +3,7 @@ import { normalizeKey } from "../lib/text.js";
 import type { UserData } from "../server/context.js";
 
 export function seedDefaultConditions(userData: UserData, campaignId: string): void {
-  const defaults = [
+  const defaults: Array<[string, "condition" | "spell" | "marker"]> = [
     ["Blinded", "condition"],
     ["Charmed", "condition"],
     ["Deafened", "condition"],
