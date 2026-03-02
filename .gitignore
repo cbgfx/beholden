@@ -33,7 +33,6 @@ coverage/
 # ===== Misc =====
 *.zip
 
-# ===== Beholden generated data (do not ship) =====
-server/data/compendium.json
-server/data/campaigns/
-server/data/index.json
+# ===== Claude -------
+.claude/
+claude/
