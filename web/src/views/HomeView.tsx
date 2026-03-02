@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from "react";
-import { theme } from "@/theme/theme";
+import { theme, withAlpha } from "@/theme/theme";
 import { Button } from "@/ui/Button";
-import { Select } from "@/ui/Select";
+import { IconButton } from "@/ui/IconButton";
+import { IconPencil, IconTrash } from "@/icons";
 
 type CampaignSummary = {
   id: string;
@@ -12,92 +13,183 @@ type Props = {
   campaigns: CampaignSummary[];
   onCreateCampaign: () => void;
   onOpenCampaign: (campaignId: string) => void;
+  onEditCampaign: (campaignId: string) => void;
+  onDeleteCampaign: (campaignId: string) => void;
+  onExportCampaign: (campaignId: string) => void;
+  onImportCampaign: (file: File) => Promise<void>;
 };
 
-export function HomeView({ campaigns, onCreateCampaign, onOpenCampaign }: Props) {
+function CardShell(props: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <div
+      style={{
+        width: 320,
+        minWidth: 320,
+        maxWidth: 320,
+        background: withAlpha(theme.colors.panelBg, 0.9),
+        border: `1px solid ${theme.colors.panelBorder}`,
+        borderRadius: 16,
+        padding: 14,
+        boxShadow: "0 24px 60px rgba(0,0,0,0.25)",
+        ...props.style,
+      }}
+    >
+      {props.children}
+    </div>
+  );
+}
+
+export function HomeView(props: Props) {
   const sorted = useMemo(() => {
-    return [...campaigns].sort((a, b) => a.name.localeCompare(b.name));
-  }, [campaigns]);
+    return [...props.campaigns].sort((a, b) => a.name.localeCompare(b.name));
+  }, [props.campaigns]);
 
-  const [selectedId, setSelectedId] = useState<string>(sorted[0]?.id ?? "");
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importMsg, setImportMsg] = useState<string>("");
 
-  React.useEffect(() => {
-    // Keep selection stable when campaigns update
-    if (!selectedId && sorted[0]?.id) setSelectedId(sorted[0].id);
-    if (selectedId && !sorted.some((c) => c.id === selectedId)) setSelectedId(sorted[0]?.id ?? "");
-  }, [sorted, selectedId]);
+  async function doImport() {
+    if (!importFile || importBusy) return;
+    setImportBusy(true);
+    setImportMsg("");
+    try {
+      await props.onImportCampaign(importFile);
+      setImportMsg("Campaign imported.");
+      setImportFile(null);
+    } catch (e: any) {
+      setImportMsg(String(e?.message ?? e));
+    } finally {
+      setImportBusy(false);
+    }
+  }
 
   const shell: React.CSSProperties = {
     width: "100%",
     height: "100%",
+    padding: 24,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: 24,
   };
 
-  const card: React.CSSProperties = {
-    width: 560,
-    maxWidth: "100%",
-    background: theme.colors.panelBg,
-    border: `1px solid ${theme.colors.panelBorder}`,
-    borderRadius: theme.radius.panel,
-    padding: 16,
-    boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+  const rail: React.CSSProperties = {
+    width: "min(1180px, 100%)",
+    display: "flex",
+    flexDirection: "column",
+    gap: 14,
   };
 
-  const selectStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "10px 12px",
-    borderRadius: theme.radius.control,
-    border: `1px solid ${theme.colors.panelBorder}`,
-    background: theme.colors.panelBg,
-    color: theme.colors.text,
-    outline: "none",
-    fontWeight: 700,
+  const header: React.CSSProperties = {
+    display: "flex",
+    alignItems: "end",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
   };
 
-  if (sorted.length === 0) {
-    return (
-      <div style={shell}>
-        <div style={card}>
-          <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>No campaigns yet</div>
-          <div style={{ color: theme.colors.muted, marginBottom: 16 }}>
-            Create your first campaign to get started.
-          </div>
-          <Button onClick={onCreateCampaign}>+ Create campaign</Button>
-        </div>
-      </div>
-    );
-  }
+  const carousel: React.CSSProperties = {
+    display: "flex",
+    gap: 14,
+    overflowX: "auto",
+    paddingBottom: 10,
+    scrollbarWidth: "thin",
+  };
+
+  const muted = theme.colors.muted;
+  const accent = theme.colors.accentPrimary;
 
   return (
     <div style={shell}>
-      <div style={card}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+      <div style={rail}>
+        <div style={header}>
           <div>
-            <div style={{ fontSize: 22, fontWeight: 800 }}>Choose a campaign</div>
-            <div style={{ color: theme.colors.muted, marginTop: 4 }}>Open an existing campaign or create a new one.</div>
+            <div style={{ fontSize: 26, fontWeight: 950, color: theme.colors.text }}>Campaigns</div>
+            <div style={{ color: muted, marginTop: 6 }}>
+              Create a new campaign, import one, or jump back into an existing world.
+            </div>
           </div>
-          <Button onClick={onCreateCampaign}>+ Campaign</Button>
         </div>
 
-        <div style={{ height: 12 }} />
+        <div style={carousel}>
+          {/* Create / Import card */}
+          <CardShell style={{ border: `1px dashed ${withAlpha(accent, 0.7)}` }}>
+            <div style={{ fontSize: 18, fontWeight: 950, color: theme.colors.panelBg }}>Create / Import</div>
+            <div style={{ color: muted, marginTop: 6, lineHeight: 1.35 }}>
+              Campaigns are stored as separate JSON files on disk. Import restores (overwrites) a campaign with the same <code>campaign.id</code>.
+            </div>
 
-        <Select value={selectedId} onChange={(e) => setSelectedId((e.target as any).value)} style={selectStyle}>
+            <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <Button onClick={props.onCreateCampaign}>+ Campaign</Button>
+            </div>
+
+            <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+              <input
+                type="file"
+                accept=".json,application/json"
+                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                style={{ color: theme.colors.text }}
+              />
+              <Button onClick={doImport} disabled={!importFile || importBusy}>
+                {importBusy ? "Importing…" : "Import"}
+              </Button>
+            </div>
+
+            {importMsg ? (
+              <div
+                style={{
+                  marginTop: 10,
+                  color:
+                    importMsg.toLowerCase().includes("fail") || importMsg.toLowerCase().includes("missing")
+                      ? theme.colors.red
+                      : theme.colors.text,
+                }}
+              >
+                {importMsg}
+              </div>
+            ) : null}
+          </CardShell>
+
+          {/* Campaign cards */}
           {sorted.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
+            <CardShell key={c.id}>
+              <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: 10 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 950,
+                      color: theme.colors.panelBg,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                    title={c.name}
+                  >
+                    {c.name}
+                  </div>
+                  <div style={{ color: muted, marginTop: 6, fontSize: 12 }}>Campaign ID: <code>{c.id}</code></div>
+                </div>
+
+                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                  <IconButton onClick={() => props.onEditCampaign(c.id)} title="Edit">
+                    <IconPencil />
+                  </IconButton>
+                  <IconButton onClick={() => props.onDeleteCampaign(c.id)} title="Delete">
+                    <IconTrash />
+                  </IconButton>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <Button variant="ghost" onClick={() => props.onOpenCampaign(c.id)}>
+                  Open
+                </Button>
+                <Button variant="ghost" onClick={() => props.onExportCampaign(c.id)}>
+                  Export
+                </Button>
+              </div>
+            </CardShell>
           ))}
-        </Select>
-
-        <div style={{ height: 12 }} />
-
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <Button variant="ghost" onClick={() => onOpenCampaign(selectedId)} disabled={!selectedId}>
-            Open
-          </Button>
         </div>
       </div>
     </div>

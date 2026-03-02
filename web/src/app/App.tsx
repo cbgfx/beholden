@@ -272,21 +272,7 @@ const refreshCampaign = useCallback(async (cid: string) => {
 
   return (
     <ShellLayout>
-      <TopBar
-        onCreateCampaign={() => dispatch({ type: "openDrawer", drawer: { type: "createCampaign" } })}
-        onSelectCampaign={(id) => dispatch({ type: "selectCampaign", campaignId: id })}
-        onEditCampaign={(id) => dispatch({ type: "openDrawer", drawer: { type: "editCampaign", campaignId: id } })}
-        onDeleteCampaign={async (id) => {
-          if (!id) return;
-          if (!(await confirm({
-            title: "Delete campaign",
-            message: "Delete this campaign? This will delete ALL its adventures, encounters, players, notes, etc.",
-            intent: "danger"
-          }))) return;
-          await api(`/api/campaigns/${id}`, { method: "DELETE" });
-          await refreshAll();
-        }}
-      />
+      <TopBar />
 
       <DrawerHost refreshAll={refreshAll} refreshCampaign={refreshCampaign} refreshAdventure={refreshAdventure} refreshEncounter={refreshEncounter} />
 
@@ -300,6 +286,29 @@ const refreshCampaign = useCallback(async (cid: string) => {
               onOpenCampaign={(campaignId) => {
                 dispatch({ type: "selectCampaign", campaignId });
                 navigate(`/campaign/${campaignId}`);
+              }}
+              onEditCampaign={(campaignId) => dispatch({ type: "openDrawer", drawer: { type: "editCampaign", campaignId } })}
+              onDeleteCampaign={async (campaignId) => {
+                if (!campaignId) return;
+                if (!(await confirm({
+                  title: "Delete campaign",
+                  message: "Delete this campaign? This will delete ALL its adventures, encounters, players, notes, etc.",
+                  intent: "danger"
+                }))) return;
+                await api(`/api/campaigns/${campaignId}`, { method: "DELETE" });
+                await refreshAll();
+              }}
+              onExportCampaign={(campaignId) => {
+                if (!campaignId) return;
+                window.location.href = `/api/campaigns/${campaignId}/export`;
+              }}
+              onImportCampaign={async (file) => {
+                const fd = new FormData();
+                fd.append("file", file);
+                const res = await fetch("/api/campaigns/import", { method: "POST", body: fd });
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error((json as any)?.message ?? "Import failed");
+                await refreshAll();
               }}
             />
           }

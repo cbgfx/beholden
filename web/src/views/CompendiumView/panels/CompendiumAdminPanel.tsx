@@ -1,12 +1,9 @@
 import React from "react";
 import { Panel } from "@/ui/Panel";
 import { Button } from "@/ui/Button";
-import { Select } from "@/ui/Select";
 import { IconCompendiumAlt } from "@/icons";
 import { theme } from "@/theme/theme";
 import { api } from "@/services/api";
-
-type CampaignRow = { id: string; name: string };
 
 /**
  * Right sidebar tools for the Compendium view.
@@ -16,26 +13,6 @@ export function CompendiumAdminPanel() {
   const [file, setFile] = React.useState<File | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState<string>("");
-
-  const [campaigns, setCampaigns] = React.useState<CampaignRow[]>([]);
-  const [selectedCampaignId, setSelectedCampaignId] = React.useState<string>("");
-
-  const [campaignImportFile, setCampaignImportFile] = React.useState<File | null>(null);
-  const [campaignBusy, setCampaignBusy] = React.useState(false);
-  const [campaignMsg, setCampaignMsg] = React.useState<string>("");
-
-  React.useEffect(() => {
-    (async () => {
-      try {
-        const rows = await api<CampaignRow[]>("/api/campaigns");
-        setCampaigns(rows);
-        if (!selectedCampaignId && rows.length) setSelectedCampaignId(rows[0].id);
-      } catch {
-        // ignore
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   async function uploadCompendium() {
     if (!file) return;
@@ -69,33 +46,6 @@ export function CompendiumAdminPanel() {
       setMsg(String(e?.message ?? e));
     } finally {
       setBusy(false);
-    }
-  }
-
-  function exportCampaign() {
-    if (!selectedCampaignId) return;
-    window.location.href = `/api/campaigns/${selectedCampaignId}/export`;
-  }
-
-  async function importCampaign() {
-    if (!campaignImportFile) return;
-    setCampaignBusy(true);
-    setCampaignMsg("");
-    try {
-      const fd = new FormData();
-      fd.append("file", campaignImportFile);
-      const res = await fetch("/api/campaigns/import", { method: "POST", body: fd });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.message ?? "Import failed");
-      setCampaignMsg("Campaign imported.");
-      const rows = await api<CampaignRow[]>("/api/campaigns");
-      setCampaigns(rows);
-
-      if (json?.campaignId) setSelectedCampaignId(String(json.campaignId));
-    } catch (e: any) {
-      setCampaignMsg(String(e?.message ?? e));
-    } finally {
-      setCampaignBusy(false);
     }
   }
 
@@ -139,58 +89,6 @@ export function CompendiumAdminPanel() {
 
         {msg ? (
           <div style={{ marginTop: 12, color: msg.toLowerCase().includes("fail") ? theme.colors.red : theme.colors.text }}>{msg}</div>
-        ) : null}
-      </Panel>
-
-      <Panel title="Import / Export Campaign">
-        <div style={{ color: theme.colors.muted, lineHeight: 1.4 }}>
-          Campaigns are stored as separate JSON files on disk for smaller saves and easy backups. Export downloads a single campaign JSON.
-          Import restores (overwrites) a campaign with the same <code>campaign.id</code>.
-        </div>
-
-        <div style={{ marginTop: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <Select
-            value={selectedCampaignId}
-            onChange={(e) => setSelectedCampaignId(e.target.value)}
-            style={{ minWidth: 260 }}
-            title="Select campaign"
-          >
-            {campaigns.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
-
-          <Button onClick={exportCampaign} disabled={!selectedCampaignId}>
-            Export
-          </Button>
-        </div>
-
-        <div style={{ marginTop: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <input
-            type="file"
-            accept=".json,application/json"
-            onChange={(e) => setCampaignImportFile(e.target.files?.[0] ?? null)}
-            style={{ color: theme.colors.text }}
-          />
-          <Button onClick={importCampaign} disabled={!campaignImportFile || campaignBusy}>
-            {campaignBusy ? "Importing…" : "Import"}
-          </Button>
-        </div>
-
-        {campaignMsg ? (
-          <div
-            style={{
-              marginTop: 12,
-              color:
-                campaignMsg.toLowerCase().includes("fail") || campaignMsg.toLowerCase().includes("missing")
-                  ? theme.colors.red
-                  : theme.colors.text,
-            }}
-          >
-            {campaignMsg}
-          </div>
         ) : null}
       </Panel>
     </div>

@@ -2,26 +2,38 @@ import React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import type { GroupedSpell } from "./useMonsterSpells";
 
-type Props = {
+type MonsterSpells = {
   spellNames: string[];
   groupedSpells: GroupedSpell[];
+  openSpellByName: (name: string) => Promise<void> | void;
   spellOpen: boolean;
   spellLoading: boolean;
   spellError: string | null;
   spellDetail: any | null;
-  onOpenSpell: (name: string) => void;
 };
 
-export function MonsterSpellPanel({
-  spellNames,
-  groupedSpells,
-  spellOpen,
-  spellLoading,
-  spellError,
-  spellDetail,
-  onOpenSpell,
-}: Props) {
+type Props = {
+  /**
+   * The output of useMonsterSpells(monster).
+   * Kept as a single prop to avoid prop drift during refactors.
+   */
+  spells: MonsterSpells;
+};
+
+export function MonsterSpellPanel({ spells }: Props) {
+  const spellNames = spells.spellNames ?? [];
+  const groupedSpells = spells.groupedSpells ?? [];
+  const spellOpen = spells.spellOpen;
+  const spellLoading = spells.spellLoading;
+  const spellError = spells.spellError;
+  const spellDetail = spells.spellDetail;
+  const onOpenSpell = (name: string) => spells.openSpellByName(name);
+
   if (!spellNames.length) return null;
+
+  const fallback = Array.from(
+    new Set(spellNames.map((s) => String(s ?? "").trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
 
   return (
     <div style={{ display: "grid", gap: 5 }}>
@@ -58,7 +70,31 @@ export function MonsterSpellPanel({
             </div>
           ))}
         </div>
-      ) : null}
+      ) : (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+          {fallback.map((name) => (
+            <button
+              key={name}
+              type="button"
+              onClick={() => onOpenSpell(name)}
+              style={
+                {
+                  border: `1px solid ${theme.colors.panelBorder}`,
+                  background: withAlpha(theme.colors.shadowColor, 0.14),
+                  color: theme.colors.text,
+                  padding: "6px 10px",
+                  borderRadius: 999,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                } as const
+              }
+              title="Open spell"
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {spellOpen ? (
         <div
