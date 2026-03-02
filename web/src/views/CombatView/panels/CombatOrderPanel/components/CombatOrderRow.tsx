@@ -85,9 +85,9 @@ export function CombatOrderRow(props: {
   const isDead = hpCurrent <= 0;
   const dim = isDead && c.baseType !== "player";
 
-  const iconColor = isDead ? theme.colors.muted
-    : c.baseType === "player" ? theme.colors.blue
-    : c.color || (friendly ? theme.colors.green : theme.colors.red);
+   const iconColor = isDead ? theme.colors.muted
+   : c.baseType === "player" ? theme.colors.blue
+   : friendly ? theme.colors.green : theme.colors.red;
 
   const pct = hpMax > 0 ? Math.max(0, Math.min(1, hpCurrent / hpMax)) : 0;
   const barColor = isDead ? theme.colors.red
