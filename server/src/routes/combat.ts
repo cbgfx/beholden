@@ -429,6 +429,9 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         usedLegendaryActions: req.body?.usedLegendaryActions !== undefined
           ? Math.max(0, Number(req.body.usedLegendaryActions) || 0)
           : (existing.usedLegendaryActions ?? 0),
+        usedSpellSlots: req.body?.usedSpellSlots !== undefined
+          ? (req.body.usedSpellSlots as Record<string, number>)
+          : (existing.usedSpellSlots ?? {}),
         updatedAt: t,
       };
 

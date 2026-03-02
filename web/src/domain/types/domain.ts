@@ -113,6 +113,8 @@ export interface Combatant {
   usedReaction?: boolean;
   /** How many legendary actions have been spent this round. */
   usedLegendaryActions?: number;
+  /** Spell slots spent per level. Keys are spell level ("1"–"9"), values are count of used slots. */
+  usedSpellSlots?: Record<string, number>;
 
   createdAt?: number;
   updatedAt?: number;

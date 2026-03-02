@@ -166,6 +166,8 @@ export interface StoredCombatant extends Timestamps {
   usedReaction?: boolean;
   /** How many legendary actions have been spent this round. Resets at the start of this combatant's turn. */
   usedLegendaryActions?: number;
+  /** Spell slots spent per level. Keys are spell level as string ("1"–"9"), values are count of used slots. */
+  usedSpellSlots?: Record<string, number>;
   sort?: number;
 }
 
