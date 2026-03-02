@@ -2,6 +2,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useStore } from "@/store";
+import { useWsStatus } from "@/services/ws";
 import { theme, withAlpha } from "@/theme/theme";
 
 
@@ -28,6 +29,7 @@ function NavLink(props: { to: string; label: string }) {
 
 export function TopBar() {
   const { state } = useStore();
+  const connected = useWsStatus();
   const { campaigns, selectedCampaignId } = state;
   const selectedName = campaigns.find((c) => c.id === selectedCampaignId)?.name ?? "";
 
@@ -70,9 +72,18 @@ export function TopBar() {
         ) : null}
       </div>
 
-      <div style={{ marginLeft: "auto", color: theme.colors.muted, fontSize: "var(--fs-medium)" }}>
+      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, color: theme.colors.muted, fontSize: "var(--fs-medium)" }}>
         {selectedCampaignId ? <NavLink to={`/campaign/${selectedCampaignId}`} label="Campaign" /> : <NavLink to="/" label="Campaign" />}
         <NavLink to="/compendium" label="Compendium" />
+        <div
+          title={connected ? "Server connected" : "Server disconnected"}
+          style={{
+            width: 10, height: 10, borderRadius: "50%", flexShrink: 0,
+            background: connected ? theme.colors.green : theme.colors.red,
+            boxShadow: connected ? `0 0 6px ${theme.colors.green}` : `0 0 6px ${theme.colors.red}`,
+            transition: "background 400ms ease, box-shadow 400ms ease",
+          }}
+        />
       </div>
     </div>
   );

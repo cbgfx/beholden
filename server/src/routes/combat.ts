@@ -423,6 +423,9 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
           ? req.body.conditions
           : (existing.conditions ?? []),
         deathSaves,
+        usedReaction: req.body?.usedReaction !== undefined
+          ? Boolean(req.body.usedReaction)
+          : (existing.usedReaction ?? false),
         updatedAt: t,
       };
 

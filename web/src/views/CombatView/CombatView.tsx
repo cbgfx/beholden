@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useStore } from "@/store";
 import type { Combatant } from "@/domain/types/domain";
 import type { State } from "@/store/state";
+import { theme } from "@/theme/theme";
 
 import { CombatantHeader } from "@/views/CombatView/components/CombatantHeader";
 import { CombatDeltaControls } from "@/views/CombatView/components/CombatDeltaControls";
@@ -106,6 +107,8 @@ export function CombatView() {
 
   const {
     applyHpDelta,
+    concentrationAlert,
+    dismissConcentrationAlert,
     updateCombatant,
     rollInitiativeForMonsters,
     resetFight,
@@ -134,6 +137,23 @@ export function CombatView() {
     (id: string, initiative: number) => updateCombatant(id, { initiative }),
     [updateCombatant]
   );
+
+  const handleToggleReaction = React.useCallback(
+    (id: string) => {
+      const c = orderedCombatants.find(x => x.id === id);
+      if (!c) return;
+      void updateCombatant(id, { usedReaction: !c.usedReaction });
+    },
+    [orderedCombatants, updateCombatant]
+  );
+
+  // Reset reaction for the incoming active combatant each time the turn changes.
+  const prevActiveIdRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!activeId || activeId === prevActiveIdRef.current) return;
+    prevActiveIdRef.current = activeId;
+    void updateCombatant(activeId, { usedReaction: false });
+  }, [activeId, updateCombatant]);
 
  const renderCombatantIcon = React.useCallback((c: Combatant | null) => <CombatantTypeIcon combatant={c ?? undefined} />, []);
 
@@ -178,6 +198,24 @@ export function CombatView() {
 
   return (
     <div style={{ padding: "var(--space-page)" }}>
+      {concentrationAlert && (
+        <div style={{
+          marginBottom: 10, padding: "10px 14px", borderRadius: 10,
+          background: "rgba(255, 140, 66, 0.15)", border: `1px solid ${theme.colors.accentWarning}`,
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+        }}>
+          <span style={{ color: theme.colors.text, fontWeight: 700 }}>
+            ⚠️ <strong>{concentrationAlert.name}</strong> is Concentrating — CON Save DC <strong>{concentrationAlert.dc}</strong>
+          </span>
+          <button
+            onClick={dismissConcentrationAlert}
+            style={{ all: "unset", cursor: "pointer", color: theme.colors.muted, fontWeight: 900, fontSize: 18, lineHeight: 1 }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <CombatantHeader
         backTo={campaignId && encounterId ? `/campaign/${campaignId}/roster/${encounterId}` : (campaignId ? `/campaign/${campaignId}` : "/")}
         backTitle="Back to Roster"
@@ -279,6 +317,7 @@ export function CombatView() {
             targetId={target?.id ?? null}
             onSelectTarget={handleSelectTarget}
             onSetInitiative={handleSetInitiative}
+            onToggleReaction={handleToggleReaction}
           />
         </div>
 

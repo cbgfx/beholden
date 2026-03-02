@@ -38,6 +38,7 @@ function wsUrl5174() {
 
 type WsCtx = {
   subscribe: (handler: Handler) => () => void;
+  connected: boolean;
 };
 
 const WsContext = createContext<WsCtx | null>(null);
@@ -48,6 +49,7 @@ const WsContext = createContext<WsCtx | null>(null);
 
 export function WsProvider({ children }: { children: React.ReactNode }) {
   const subscribers = useRef<Set<Handler>>(new Set());
+  const [connected, setConnected] = React.useState(false);
 
   // Stable subscribe function — never changes identity.
   const subscribe = React.useCallback((handler: Handler) => {
@@ -78,6 +80,7 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
       ws.onopen = () => {
         settled = true;
         window.clearTimeout(failTimer);
+        setConnected(true);
       };
 
       ws.onmessage = (ev) => {
@@ -98,6 +101,7 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
 
       ws.onclose = () => {
         window.clearTimeout(failTimer);
+        setConnected(false);
         // Reconnect after a short backoff unless the provider is unmounting.
         if (!dead) {
           window.setTimeout(() => {
@@ -122,7 +126,7 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
     };
   }, []); // runs once — no dependencies
 
-  const ctx = React.useMemo(() => ({ subscribe }), [subscribe]);
+  const ctx = React.useMemo(() => ({ subscribe, connected }), [subscribe, connected]);
 
   return <WsContext.Provider value={ctx}>{children}</WsContext.Provider>;
 }
@@ -130,6 +134,11 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
 // ---------------------------------------------------------------------------
 // useWs — subscribe to messages. Handler identity doesn't matter.
 // ---------------------------------------------------------------------------
+
+export function useWsStatus(): boolean {
+  const ctx = useContext(WsContext);
+  return ctx?.connected ?? false;
+}
 
 export function useWs(onMessage: Handler) {
   const ctx = useContext(WsContext);

@@ -118,3 +118,5 @@ export const IconHeal = make("heal");
 export const IconDead = make("dead");
 
 export const IconExhaustion = make("exhaustion");
+
+export const IconDice = make("dice");

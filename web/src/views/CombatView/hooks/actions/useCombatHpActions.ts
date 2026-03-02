@@ -1,7 +1,7 @@
 import * as React from "react";
 import { api } from "@/services/api";
 import type { Combatant } from "@/domain/types/domain";
-import { parsePositiveInt } from "@/views/CombatView/utils/combat";
+import { rollDiceExpr } from "@/views/CombatView/utils/dice";
 
 function parseSignedDelta(
   input: string,
@@ -10,15 +10,17 @@ function parseSignedDelta(
   const raw = String(input ?? "").trim();
   if (!raw) return { kind: defaultKind, amount: 0 };
 
-  // Sign override rules:
-  //  - "+10" => heal 10
-  //  - "-10" => damage 10
-  //  - "10" => defaultKind 10
+  // Sign override rules (leading sign only; the rest is a dice expression):
+  //  - "+2d6"  => heal (roll 2d6)
+  //  - "-2d6"  => damage (roll 2d6)
+  //  - "2d6"   => defaultKind (roll 2d6)
+  //  - "+10"   => heal 10
+  //  - "10"    => defaultKind 10
   const first = raw[0];
   const hasPlus = first === "+";
   const hasMinus = first === "-";
-  const digits = hasPlus || hasMinus ? raw.slice(1) : raw;
-  const amount = parsePositiveInt(digits);
+  const expr = hasPlus || hasMinus ? raw.slice(1) : raw;
+  const amount = rollDiceExpr(expr);
   if (amount <= 0) return { kind: defaultKind, amount: 0 };
   if (hasPlus) return { kind: "heal", amount };
   if (hasMinus) return { kind: "damage", amount };
@@ -40,6 +42,8 @@ type Args = {
 };
 
 export function useCombatHpActions({ encounterId, delta, setDelta, target, refresh }: Args) {
+  const [concentrationAlert, setConcentrationAlert] = React.useState<{ name: string; dc: number } | null>(null);
+
   const applyHpDelta = React.useCallback(
     async (defaultKind: "damage" | "heal") => {
       if (!encounterId || !target) return;
@@ -83,9 +87,19 @@ export function useCombatHpActions({ encounterId, delta, setDelta, target, refre
       });
       await refresh();
       setDelta("");
+
+      // Concentration check: if damage was dealt to a concentrating combatant, fire a reminder.
+      if (kind === "damage" && amount > 0 && target.conditions?.some(c => c.key === "concentration")) {
+        const dc = Math.max(10, Math.floor(amount / 2));
+        setConcentrationAlert({ name: target.label || target.name, dc });
+      }
     },
     [encounterId, target, delta, refresh, setDelta]
   );
 
-  return { applyHpDelta };
+  return {
+    applyHpDelta,
+    concentrationAlert,
+    dismissConcentrationAlert: () => setConcentrationAlert(null),
+  };
 }

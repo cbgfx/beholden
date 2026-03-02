@@ -162,6 +162,8 @@ export interface StoredCombatant extends Timestamps {
   conditions: StoredConditionInstance[];
   /** Encounter-scoped death save tracking for player combatants (success/fail). */
   deathSaves?: StoredDeathSaves;
+  /** Whether this combatant has used their reaction this turn. Resets at the start of their next turn. */
+  usedReaction?: boolean;
   sort?: number;
 }
 

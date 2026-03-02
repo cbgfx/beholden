@@ -110,6 +110,7 @@ export interface Combatant {
   attackOverrides: unknown | null;
   conditions: ConditionInstance[];
   deathSaves?: DeathSaves | null;
+  usedReaction?: boolean;
 
   createdAt?: number;
   updatedAt?: number;

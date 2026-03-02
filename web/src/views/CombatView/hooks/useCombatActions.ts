@@ -45,7 +45,7 @@ export function useCombatActions({
   setMonsterCache,
   dispatch
 }: Args) {
-  const { applyHpDelta } = useCombatHpActions({ encounterId, delta, setDelta, target, refresh });
+  const { applyHpDelta, concentrationAlert, dismissConcentrationAlert } = useCombatHpActions({ encounterId, delta, setDelta, target, refresh });
   const { updateCombatant } = useCombatantPatchActions({ encounterId, refresh });
   const { rollInitiativeForMonsters } = useCombatInitiativeActions({
     encounterId,
@@ -69,6 +69,8 @@ export function useCombatActions({
 
   return {
     applyHpDelta,
+    concentrationAlert,
+    dismissConcentrationAlert,
     updateCombatant,
     rollInitiativeForMonsters,
     resetFight,

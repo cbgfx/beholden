@@ -28,6 +28,7 @@ export function CombatOrderPanel(props: {
   targetId: string | null;
   onSelectTarget: (id: string) => void;
   onSetInitiative: (id: string, initiative: number) => void;
+  onToggleReaction: (id: string) => void;
 }) {
   const { upcoming, wrapped } = useCombatOrderModel({ combatants: props.combatants, activeId: props.activeId });
 
@@ -79,6 +80,7 @@ export function CombatOrderPanel(props: {
             targetId={props.targetId}
             onSelectTarget={props.onSelectTarget}
             onSetInitiative={props.onSetInitiative}
+            onToggleReaction={props.onToggleReaction}
             getRowShadow={getRowShadow}
           />
         ))}
@@ -99,6 +101,7 @@ export function CombatOrderPanel(props: {
             targetId={props.targetId}
             onSelectTarget={props.onSelectTarget}
             onSetInitiative={props.onSetInitiative}
+            onToggleReaction={props.onToggleReaction}
             getRowShadow={getRowShadow}
           />
         ))}

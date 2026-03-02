@@ -64,6 +64,7 @@ export function CombatOrderRow(props: {
   targetId: string | null;
   onSelectTarget: (id: string) => void;
   onSetInitiative: (id: string, initiative: number) => void;
+  onToggleReaction: (id: string) => void;
   getRowShadow: (isActive: boolean, isTarget: boolean) => string;
 }) {
   const c = props.combatant;
@@ -149,6 +150,22 @@ export function CombatOrderRow(props: {
               </span>
               {playerName && <span style={{ fontSize: "var(--fs-small)", color: theme.colors.muted }}>({playerName})</span>}
               {statusBadge}
+              <button
+                title={c.usedReaction ? "Reaction used — click to restore" : "Reaction available — click to mark used"}
+                onClick={(e) => { e.stopPropagation(); props.onToggleReaction(c.id); }}
+                style={{
+                  all: "unset", cursor: "pointer",
+                  padding: "1px 6px", borderRadius: 999,
+                  fontSize: "var(--fs-tiny)", fontWeight: 900,
+                  border: `1px solid ${c.usedReaction ? theme.colors.muted : theme.colors.accentWarning}`,
+                  color: c.usedReaction ? theme.colors.muted : theme.colors.accentWarning,
+                  background: c.usedReaction ? "transparent" : `${theme.colors.accentWarning}18`,
+                  opacity: c.usedReaction ? 0.5 : 1,
+                  transition: "all 150ms ease",
+                }}
+              >
+                ⚡R
+              </button>
             </div>
             <div style={{ marginTop: 2 }}>{initDisplay}</div>
           </div>
