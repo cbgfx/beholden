@@ -35,7 +35,10 @@ export function useCharacterSheetStats(args: {
     const ac = Math.max(0, toFinite(combatant.ac ?? 10, 10) + acBonus);
 
     const isMonster = combatant.baseType === "monster" || combatant.baseType === "inpc";
-    const detail = (selectedMonster?.raw_json as Record<string, unknown>) ?? {};
+
+    // Fall back to selectedMonster itself if raw_json is absent —
+    // mirrors MonsterStatblock's `m.raw_json ?? m` pattern.
+    const detail = (selectedMonster?.raw_json ?? selectedMonster ?? {}) as Record<string, unknown>;
     const rawSpeed = detail["speed"] ?? selectedMonster?.speed;
 
     const speed = isMonster
@@ -64,10 +67,7 @@ export function useCharacterSheetStats(args: {
           cha: Number(player?.cha ?? 10),
         } as const;
 
-    const saves = isMonster
-      ? parseSaves(detail["save"] ?? detail["saves"])
-      : undefined;
-
+    const saves = isMonster ? parseSaves(detail["save"] ?? detail["saves"]) : undefined;
     const infoLines = isMonster ? buildMonsterInfoLines(detail) : [];
 
     return { ac, hpCur, hpMax, tempHp, speed, speedDisplay, abilities, saves, infoLines };

@@ -13,9 +13,9 @@ export function Panel(props: {
       style={{
         border: `1px solid ${theme.colors.panelBorder}`,
         borderRadius: theme.radius.panel,
-        padding: 6,
+        padding: "8px 10px",
         background: theme.colors.panelBg,
-        ...props.style
+        ...props.style,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
@@ -24,20 +24,24 @@ export function Panel(props: {
             margin: 0,
             color: theme.colors.text,
             fontWeight: 900,
-            fontSize: "var(--fs-medium)",
+            fontSize: "var(--fs-title)",   // was --fs-medium (14px) — now 18px
             display: "flex",
             alignItems: "center",
-            gap: 5,
-            textDecoration: "none"
+            gap: 6,
+            textDecoration: "none",
           }}
         >
           {props.title}
         </div>
 
-        {props.actions ? <div style={{ display: "flex", alignItems: "center", gap: 5 }}>{props.actions}</div> : null}
+        {props.actions ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            {props.actions}
+          </div>
+        ) : null}
       </div>
 
-      <div style={{ marginTop: 5, ...props.bodyStyle }}>{props.children}</div>
+      <div style={{ marginTop: 8, ...props.bodyStyle }}>{props.children}</div>
     </div>
   );
 }

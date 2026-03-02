@@ -1,41 +1,52 @@
+// web/src/views/CombatView/panels/CombatOrderPanel/components/CombatOrderRow.tsx
+
 import React from "react";
 import type { Combatant } from "@/domain/types/domain";
-import { theme } from "@/theme/theme";
+import { theme, withAlpha } from "@/theme/theme";
 import { IconINPC, IconMonster, IconPlayer, IconSkull, IconInitiative } from "@/icons";
-import { PlayerRow, type PlayerVM } from "@/views/CampaignView/components/PlayerRow";
 import { InitiativeInput } from "@/views/CombatView/panels/CombatOrderPanel/components/InitiativeInput";
 import { TurnBadge } from "@/views/CombatView/panels/CombatOrderPanel/components/TurnBadge";
 
-function getCombatantIcon(args: {
+function CombatantAvatar(props: {
   baseType: Combatant["baseType"];
   isDead: boolean;
   iconColor: string;
-  badge: React.ReactNode;
+  isActive: boolean;
+  isTarget: boolean;
 }) {
-  const { baseType, isDead, iconColor, badge } = args;
+  const { baseType, isDead, iconColor, isActive, isTarget } = props;
 
-  const actualIcon = isDead ? (
-    <span style={{ color: iconColor }}>
-      <IconSkull size={28} />
-    </span>
-  ) : baseType === "player" ? (
-    <span style={{ color: iconColor }}>
-      <IconPlayer size={28} />
-    </span>
-  ) : baseType === "inpc" ? (
-    <span style={{ color: iconColor }}>
-      <IconINPC size={28} />
-    </span>
-  ) : (
-    <span style={{ color: iconColor }}>
-      <IconMonster size={28} />
-    </span>
-  );
+  const borderColor = isActive
+    ? theme.colors.accentHighlight
+    : isTarget ? theme.colors.blue
+    : withAlpha(iconColor, 0.40);
+
+  // Explicit JSX — don't use dynamic component variables with these icon types
+  const iconEl = isDead ? <IconSkull size={22} />
+    : baseType === "player" ? <IconPlayer size={22} />
+    : baseType === "inpc" ? <IconINPC size={22} />
+    : <IconMonster size={22} />;
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      {badge}
-      {actualIcon}
+    <div style={{ position: "relative", flex: "0 0 auto", width: 36, height: 36 }}>
+      <div style={{
+        width: 36, height: 36, borderRadius: 8,
+        background: withAlpha(iconColor, 0.12),
+        border: `1px solid ${borderColor}`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: iconColor,
+        boxShadow: isActive ? `0 0 0 2px ${theme.colors.accentHighlight}`
+          : isTarget ? `0 0 0 2px ${theme.colors.blue}` : "none",
+      }}>
+        <span style={{ color: iconColor, display: "inline-flex", alignItems: "center" }}>
+          {iconEl}
+        </span>
+      </div>
+      {(isActive || isTarget) && (
+        <div style={{ position: "absolute", bottom: -4, right: -4, zIndex: 1 }}>
+          <TurnBadge active={isActive} targeted={isTarget} />
+        </div>
+      )}
     </div>
   );
 }
@@ -43,20 +54,12 @@ function getCombatantIcon(args: {
 export function CombatOrderRow(props: {
   combatant: Combatant;
   section: "upcoming" | "wrapped";
-  playersById: Record<
-    string,
-    {
-      playerName: string;
-      characterName: string;
-      class: string;
-      species: string;
-      level: number;
-      ac: number;
-      hpMax: number;
-      hpCurrent: number;
-      deathSaves?: { success: number; fail: number };
-    }
-  >;
+  playersById: Record<string, {
+    playerName: string; characterName: string; class: string;
+    species: string; level: number; ac: number;
+    hpMax: number; hpCurrent: number;
+    deathSaves?: { success: number; fail: number };
+  }>;
   activeId: string | null;
   targetId: string | null;
   onSelectTarget: (id: string) => void;
@@ -69,172 +72,110 @@ export function CombatOrderRow(props: {
 
   const hpCurrent = Number(c.hpCurrent ?? 0);
   const rawHpMax = Number(c.hpMax ?? 1);
-const acBonus = Number(c.overrides?.acBonus ?? 0) || 0;
- const hpMod = (() => {
-   const v = c.overrides?.hpMaxOverride;
-   if (v == null) return 0;
-   const n = Number(v);
-   return Number.isFinite(n) ? n : 0;
- })();
- const hpMax = Math.max(1, (rawHpMax || 1) + hpMod);
- const ac = Math.max(0, Number(c.ac ?? 0) + acBonus);
-
-  const displayName = (c.label || "(Unnamed)").trim() || "(Unnamed)";
+  const acBonus = Number(c.overrides?.acBonus ?? 0) || 0;
+  const hpMod = (() => {
+    const v = c.overrides?.hpMaxOverride;
+    if (v == null) return 0;
+    const n = Number(v); return Number.isFinite(n) ? n : 0;
+  })();
+  const hpMax = Math.max(1, (rawHpMax || 1) + hpMod);
+  const ac = Math.max(0, Number(c.ac ?? 0) + acBonus);
+  const displayName = (c.label || "(Unnamed)").trim();
   const friendly = Boolean(c.friendly);
-  const isDead = Number(hpCurrent) <= 0;
+  const isDead = hpCurrent <= 0;
   const dim = isDead && c.baseType !== "player";
 
-  const vm: PlayerVM = {
-    id: c.id,
-    playerId: c.baseType === "player" ? c.baseId : undefined,
-    encounterId: c.encounterId,
-    playerName: "",
-    characterName: displayName,
-    class: "",
-    species: "",
-    level: 0,
-    ac,
-    hpMax,
-    hpCurrent,
-    tempHp: Math.max(0, Number(c.overrides?.tempHp ?? 0) || 0),
-    acBonus: 0,  // ac is already the effective total; don't let HPBar add it again
-    deathSaves: c.deathSaves ?? undefined,
-    conditions: Array.isArray(c.conditions) ? c.conditions : [],
-  };
+  const iconColor = isDead ? theme.colors.muted
+    : c.baseType === "player" ? theme.colors.blue
+    : c.color || (friendly ? theme.colors.green : theme.colors.red);
 
-  const playerRec = c.baseType === "player" ? props.playersById[c.baseId] : undefined;
-  if (playerRec) {
-    vm.playerName = playerRec.playerName;
-    vm.class = playerRec.class;
-    vm.species = playerRec.species;
-    vm.level = Number(playerRec.level ?? 0) || 0;
-  }
+  const pct = hpMax > 0 ? Math.max(0, Math.min(1, hpCurrent / hpMax)) : 0;
+  const barColor = isDead ? theme.colors.red
+    : pct <= 0.25 ? theme.colors.red
+    : pct <= 0.5 ? theme.colors.bloody
+    : theme.colors.green;
 
-  const iconColor = isDead
-    ? theme.colors.muted
-    : c.baseType === "player"
-      ? theme.colors.blue
-      : c.color || (friendly ? theme.colors.green : theme.colors.red);
+  const tempHp = Math.max(0, Number(c.overrides?.tempHp ?? 0) || 0);
+  const playerName = c.baseType === "player" ? (props.playersById[c.baseId]?.playerName ?? "") : "";
+  const init = Number(c.initiative);
+  const hasInit = Number.isFinite(init) && init !== 0;
 
-  const badge = <TurnBadge active={isActive} targeted={isTarget} />;
-  const icon = getCombatantIcon({ baseType: c.baseType, isDead, iconColor, badge });
+  const statusBadge = (isActive || isTarget) && (
+    <span style={{
+      padding: "1px 7px", borderRadius: 999,
+      fontSize: "var(--fs-tiny)", fontWeight: 900, letterSpacing: 0.6,
+      textTransform: "uppercase" as const, color: theme.colors.text,
+      border: `1px solid ${isActive ? theme.colors.accentHighlight : theme.colors.blue}`,
+      background: isActive ? `${theme.colors.accentHighlight}22` : `${theme.colors.blue}22`,
+    }}>
+      {isActive && isTarget ? "Self" : isActive ? "Active" : "Target"}
+    </span>
+  );
 
-  const initSubtitle = (() => {
-    const init = Number(c.initiative);
-    if (!Number.isFinite(init) || init === 0) {
-      // Both sections allow setting initiative.
-      return (
-        <span
-          style={{
-            fontSize: "var(--fs-medium)",
-            fontWeight: 900,
-            color: theme.colors.muted,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6
-          }}
-        >
-          <IconInitiative size={14} title="Initiative" />
-          {(isActive || isTarget) && (
-            <span
-              style={{
-                marginLeft: 2,
-                padding: "2px 8px",
-                borderRadius: 999,
-                fontSize: "var(--fs-tiny)",
-                fontWeight: 900,
-                letterSpacing: 0.6,
-                textTransform: "uppercase",
-                color: theme.colors.text,
-                border: `1px solid ${isActive && isTarget ? theme.colors.accentHighlight : isActive ? theme.colors.accentHighlight : theme.colors.blue}`,
-                background:
-                  isActive && isTarget
-                    ? `linear-gradient(90deg, ${theme.colors.accentPrimary}33, ${theme.colors.blue}33)`
-                    : isActive
-                      ? `${theme.colors.accentHighlight}22`
-                      : `${theme.colors.blue}22`
-              }}
-              title={isActive && isTarget ? "Active (self-target)" : isActive ? "Active" : "Target"}
-            >
-              {isActive && isTarget ? "Self" : isActive ? "Active" : "Target"}
-            </span>
-          )}
-          <span>Init</span>
-          <InitiativeInput value={null} onCommit={(n) => props.onSetInitiative(c.id, n)} />
-        </span>
-      );
-    }
-
-    if (props.section === "wrapped") {
-      // Wrapped list previously rendered as plain text.
-      return (
-        <span style={{ fontSize: "var(--fs-medium)", fontWeight: 900, color: theme.colors.muted }}>
-          {`Init ${init}`}
-        </span>
-      );
-    }
-
-    return (
-      <span
-        style={{
-          fontSize: "var(--fs-medium)",
-          fontWeight: 900,
-          color: theme.colors.muted,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6
-        }}
-      >
-        <IconInitiative size={14} title="Initiative" />
-        {(isActive || isTarget) && (
-          <span
-            style={{
-              marginLeft: 2,
-              padding: "2px 8px",
-              borderRadius: 999,
-              fontSize: "var(--fs-tiny)",
-              fontWeight: 900,
-              letterSpacing: 0.6,
-              textTransform: "uppercase",
-              color: theme.colors.text,
-              border: `1px solid ${isActive && isTarget ? theme.colors.accentHighlight : isActive ? theme.colors.accentHighlight : theme.colors.blue}`,
-              background:
-                isActive && isTarget
-                  ? `linear-gradient(90deg, ${theme.colors.accentPrimary}33, ${theme.colors.blue}33)`
-                  : isActive
-                    ? `${theme.colors.accentHighlight}22`
-                    : `${theme.colors.blue}22`
-            }}
-            title={isActive && isTarget ? "Active (self-target)" : isActive ? "Active" : "Target"}
-          >
-            {isActive && isTarget ? "Self" : isActive ? "Active" : "Target"}
-          </span>
-        )}
-        <span>Init</span>
-        <span>{init}</span>
-      </span>
-    );
-  })();
+  const initDisplay = !hasInit ? (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
+      <IconInitiative size={11} />
+      <InitiativeInput value={null} onCommit={(n) => props.onSetInitiative(c.id, n)} />
+    </span>
+  ) : (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
+      <IconInitiative size={11} />
+      <span style={{ fontWeight: 900 }}>Init {init}</span>
+    </span>
+  );
 
   return (
-    <button key={c.id} onClick={() => props.onSelectTarget(c.id)} style={{ all: "unset", cursor: "pointer", display: "block" }}>
-      <div style={{ position: "relative" }}>
-        <div
-          style={{
-            borderRadius: 14,
-            padding: 0,
-            background: "transparent",
-            border: `1px solid ${theme.colors.panelBorder}`,
-            overflow: "hidden",
-            boxShadow: props.getRowShadow(isActive, isTarget),
-            animation: isTarget ? "beholdenTargetPulse 1.8s ease-in-out infinite" : undefined,
-            transform: isActive ? "translateY(-1px)" : "none",
-            transition: "transform 80ms ease",
-            opacity: dim ? 0.45 : 1,
-            filter: dim ? "grayscale(0.85)" : "none"
-          }}
-        >
-          <PlayerRow p={vm} icon={icon} variant="combatList" subtitle={initSubtitle} actions={null} />
+    <button onClick={() => props.onSelectTarget(c.id)} style={{ all: "unset", cursor: "pointer", display: "block" }}>
+      <div style={{
+        borderRadius: 12, border: `1px solid ${theme.colors.panelBorder}`,
+        overflow: "hidden", boxShadow: props.getRowShadow(isActive, isTarget),
+        animation: isTarget ? "beholdenTargetPulse 1.8s ease-in-out infinite" : undefined,
+        transform: isActive ? "translateY(-1px)" : "none", transition: "transform 80ms ease",
+        opacity: dim ? 0.45 : 1, filter: dim ? "grayscale(0.85)" : "none",
+      }}>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px" }}>
+          <CombatantAvatar baseType={c.baseType} isDead={isDead} iconColor={iconColor} isActive={isActive} isTarget={isTarget} />
+
+          <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
+              <span style={{
+                fontWeight: 900, fontSize: "var(--fs-large)",
+                color: isDead ? theme.colors.muted : theme.colors.text,
+                textDecoration: isDead ? "line-through" : "none",
+                whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis",
+              }}>
+                {displayName}
+              </span>
+              {playerName && <span style={{ fontSize: "var(--fs-small)", color: theme.colors.muted }}>({playerName})</span>}
+              {statusBadge}
+            </div>
+            <div style={{ marginTop: 2 }}>{initDisplay}</div>
+          </div>
+
+          {/* AC + HP — --fs-body for readability */}
+          <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <span style={{ opacity: 0.5, fontSize: 12 }}>🛡</span>
+              <span style={{ fontWeight: 900, fontSize: "var(--fs-body)", color: theme.colors.text, fontVariantNumeric: "tabular-nums" }}>{ac}</span>
+            </span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <span style={{ opacity: 0.5, fontSize: 12 }}>♥</span>
+              <span style={{ fontWeight: 900, fontSize: "var(--fs-body)", color: theme.colors.text, fontVariantNumeric: "tabular-nums" }}>{hpCurrent}/{hpMax}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* HP bar — flush at bottom of row */}
+        <div style={{ height: 4, background: withAlpha(theme.colors.shadowColor, 0.5), position: "relative" }}>
+          <div style={{ position: "absolute", inset: 0, width: `${pct * 100}%`, background: barColor, transition: "width 150ms ease" }} />
+          {tempHp > 0 && (
+            <div style={{
+              position: "absolute", top: 0, bottom: 0,
+              left: `${pct * 100}%`, width: `${Math.min(1 - pct, tempHp / hpMax) * 100}%`,
+              background: theme.colors.accentHighlight, opacity: 0.8,
+            }} />
+          )}
         </div>
       </div>
     </button>

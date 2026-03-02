@@ -2,7 +2,7 @@ import React from "react";
 import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";
 import { theme } from "@/theme/theme";
-import { IconPlayer, IconPlus, IconSkull, IconRest, IconPencil } from "@/icons";
+import { IconPlayer, IconPlus, IconSkull, IconRest } from "@/icons";
 import { PlayerRow } from "@/views/CampaignView/components/PlayerRow";
 import type { Combatant, Player } from "@/domain/types/domain";
 
@@ -71,24 +71,22 @@ export function PlayersPanel(props: {
                 key={p.id}
                 p={p}
                 icon={p.hpCurrent > 0 ? <IconPlayer /> : <IconSkull />}
-                subtitle={<>Lvl {p.level} {p.species} {p.class}</>}
-                onEdit={() => props.onEditPlayer(p.id)}
-                actions={
+                primaryAction={
                   props.selectedEncounterId ? (
-                    <>
-                      <IconButton title="Edit" onClick={(e) => (e.stopPropagation(), props.onEditPlayer(p.id))}>
-                        <IconPencil />
-                      </IconButton>
-                      <IconButton
-                        title={alreadyIn ? "Already in encounter" : "Add to encounter"}
-                        onClick={(e) => (e.stopPropagation(), alreadyIn ? null : props.onAddPlayerToEncounter(p.id))}
-                        disabled={alreadyIn}
-                      >
-                        <IconPlus />
-                      </IconButton>
-                    </>
-                  ) : undefined
+                    <IconButton
+                      title={alreadyIn ? "Already in encounter" : "Add to encounter"}
+                      onClick={(e) => (e.stopPropagation(), alreadyIn ? null : props.onAddPlayerToEncounter(p.id))}
+                      disabled={alreadyIn}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      <IconPlus />
+                    </IconButton>
+                  ) : null
                 }
+                menuItems={[
+                  { label: "Edit player", onClick: () => props.onEditPlayer(p.id) },
+                ]}
               />
             );
           })}

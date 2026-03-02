@@ -41,7 +41,6 @@ export const IconEncounter = make("encounter");
 export const IconNotes = make("notes");
 export const IconAdventure = make("adventure");
 export const IconChest = make("chest");
-export const IconPerson = make("person");
 export const IconMonster = make("monster");
 export const IconDragon = IconMonster;
 export const IconSkull = make("dead");

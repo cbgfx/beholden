@@ -1,6 +1,6 @@
 import * as React from "react";
 import { parseLeadingNumber } from "@/lib/parse/statDetails";
-import { theme, withAlpha } from "@/theme/theme";
+import { theme } from "@/theme/theme";
 import { Input } from "@/ui/Input";
 import { CharacterSheetPanel, type CharacterSheetStats } from "@/components/CharacterSheet";
 import { formatCr } from "@/views/CampaignView/monsterPicker/utils";
@@ -47,25 +47,17 @@ function TextBlock({ items, title }: { items: any[]; title: string }) {
   );
 }
 
-function AttackOverrideInputs({
-  name,
-  override,
-  onChange,
-}: {
+function AttackOverrideInputs({ name, override, onChange }: {
   name: string;
   override: AttackOverride | undefined;
   onChange: (name: string, patch: AttackOverride) => void;
 }) {
-  const toHitVal = override?.toHit != null ? String(override.toHit) : "";
-  const dmgVal = override?.damage ?? "";
-  const dmgTypeVal = override?.damageType ?? "";
-
   return (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-small)" }}>To Hit</div>
         <Input
-          value={toHitVal}
+          value={override?.toHit != null ? String(override.toHit) : ""}
           onChange={(e) => {
             const v = e.target.value.replace(/[^0-9-]/g, "");
             onChange(name, { toHit: v ? Number(v) : undefined });
@@ -76,11 +68,11 @@ function AttackOverrideInputs({
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-small)" }}>Damage</div>
-        <Input value={dmgVal} onChange={(e) => onChange(name, { damage: e.target.value })} placeholder="1d6+2" style={{ width: 92 }} />
+        <Input value={override?.damage ?? ""} onChange={(e) => onChange(name, { damage: e.target.value })} placeholder="1d6+2" style={{ width: 92 }} />
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-small)" }}>Type</div>
-        <Input value={dmgTypeVal} onChange={(e) => onChange(name, { damageType: e.target.value })} placeholder="piercing" style={{ width: 92 }} />
+        <Input value={override?.damageType ?? ""} onChange={(e) => onChange(name, { damageType: e.target.value })} placeholder="piercing" style={{ width: 92 }} />
       </div>
     </div>
   );
@@ -93,22 +85,44 @@ export function MonsterStatblock(props: {
   onChangeAttack?: (actionName: string, patch: AttackOverride) => void;
 }) {
   const m = props.monster;
+
+  // ALL hooks must be called unconditionally before any early return
   const spells = useMonsterSpells(m);
 
-  if (!m) return <div style={{ color: theme.colors.muted }}>Select a monster to preview its stats.</div>;
+  const sheetStats: CharacterSheetStats | null = React.useMemo(() => {
+    if (!m) return null;
+    const ac = m.ac?.value ?? m.ac ?? m.armor_class;
+    const hp = m.hp?.average ?? m.hp ?? m.hit_points;
+    const raw: Record<string, unknown> = (m.raw_json ?? m) as Record<string, unknown>;
+    return {
+      ac: readNumber(ac) ?? NaN,
+      hpCur: readNumber(hp) ?? NaN,
+      hpMax: readNumber(hp) ?? NaN,
+      speed: parseSpeedVal(raw["speed"] ?? m.speed),
+      speedDisplay: parseSpeedDisplay(raw["speed"] ?? m.speed),
+      abilities: {
+        str: readNumber(m.str) ?? 10,
+        dex: readNumber(m.dex) ?? 10,
+        con: readNumber(m.con) ?? 10,
+        int: readNumber(m.int) ?? 10,
+        wis: readNumber(m.wis) ?? 10,
+        cha: readNumber(m.cha) ?? 10,
+      },
+      saves: undefined,
+      infoLines: buildMonsterInfoLines(raw),
+    };
+  }, [m]);
+
+  // Early return AFTER all hooks
+  if (!m) {
+    return <div style={{ color: theme.colors.muted }}>Select a monster to preview its stats.</div>;
+  }
 
   const ac = m.ac?.value ?? m.ac ?? m.armor_class;
   const hp = m.hp?.average ?? m.hp ?? m.hit_points;
   const type = m.type?.type ?? m.type;
   const alignment = m.alignment;
-
-  const abil = m.abilities ?? m.abilityScores ?? m.ability_scores ?? {};
-  const str = m.str ?? abil.str;
-  const dex = m.dex ?? abil.dex;
-  const con = m.con ?? abil.con;
-  const intl = m.int ?? abil.int;
-  const wis = m.wis ?? abil.wis;
-  const cha = m.cha ?? abil.cha;
+  const cr = formatCr(m.cr ?? m.challenge_rating);
 
   const traitArr: any[] = Array.isArray(m.traits ?? m.trait) ? (m.traits ?? m.trait) : [];
   const actionArr: any[] = Array.isArray(m.actions ?? m.action) ? (m.actions ?? m.action) : [];
@@ -117,85 +131,44 @@ export function MonsterStatblock(props: {
   const nonSpellTraits = traitArr.filter((t) => !isSpellSection(t?.name ?? t?.title));
   const nonSpellActions = actionArr.filter((a) => !isSpellSection(a?.name ?? a?.title));
 
-  const sheetStats: CharacterSheetStats = React.useMemo(() => {
-    const raw: Record<string, unknown> = (m.raw_json ?? m) as Record<string, unknown>;
-    const xp = (raw["xp"] ?? raw["experience"]) as number | null | undefined;
-    return {
-      ac: readNumber(ac) ?? NaN,
-      hpCur: readNumber(hp) ?? NaN,
-      hpMax: readNumber(hp) ?? NaN,
-      speed: parseSpeedVal(m.speed),
-      speedDisplay: parseSpeedDisplay(m.speed),
-      abilities: {
-        str: Number(str ?? 10),
-        dex: Number(dex ?? 10),
-        con: Number(con ?? 10),
-        int: Number(intl ?? 10),
-        wis: Number(wis ?? 10),
-        cha: Number(cha ?? 10),
-      },
-      infoLines: [
-        { label: "Speed", value: parseSpeedDisplay(m.speed) || "—" },
-        ...buildMonsterInfoLines(raw, xp ?? null),
-      ],
-    };
-  }, [m, ac, hp, str, dex, con, intl, wis, cha]);
-
   return (
-    <div style={{ display: "grid", gap: 6 }}>
+    <div style={{ display: "grid", gap: 14 }}>
       {!props.hideSummary && (
-        <>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 5 }}>
-            <div style={{ fontSize: "var(--fs-large)", fontWeight: 900, color: theme.colors.text }}>{m.name}</div>
-            <div style={{ color: theme.colors.muted, fontWeight: 700 }}>CR {formatCr(m.cr ?? (m as any).challenge_rating)}</div>
+        <div>
+          <div style={{ fontWeight: 900, fontSize: "var(--fs-title)", color: theme.colors.text }}>{m.name}</div>
+          <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
+            {[type, alignment, cr ? `CR ${cr}` : null].filter(Boolean).join(" · ")}
           </div>
-          <div style={{ color: theme.colors.muted }}>{[type, alignment].filter(Boolean).join(" • ")}</div>
-        </>
+        </div>
       )}
 
-      <div style={{ padding: 12, borderRadius: 14, border: `1px solid ${theme.colors.panelBorder}`, background: withAlpha(theme.colors.shadowColor, 0.14) }}>
-        <CharacterSheetPanel stats={sheetStats} />
-      </div>
+      {sheetStats && <CharacterSheetPanel stats={sheetStats} />}
 
-      <MonsterSpellPanel
-        spellNames={spells.spellNames}
-        groupedSpells={spells.groupedSpells}
-        spellOpen={spells.spellOpen}
-        spellLoading={spells.spellLoading}
-        spellError={spells.spellError}
-        spellDetail={spells.spellDetail}
-        onOpenSpell={spells.openSpellByName}
-      />
+      {spells.groupedSpells.length > 0 && <MonsterSpellPanel spells={spells} />}
 
-      <TextBlock title="Traits" items={nonSpellTraits} />
+      <TextBlock items={nonSpellTraits} title="Traits" />
 
-      {nonSpellActions.length ? (
-        <div style={{ display: "grid", gap: 5 }}>
+      {nonSpellActions.length > 0 && (
+        <div style={{ display: "grid", gap: 8 }}>
           <div style={{ color: theme.colors.accentPrimary, fontWeight: 900 }}>Actions</div>
-          {nonSpellActions.map((t: any, i: number) => {
-            const name = t.name ?? t.title ?? "";
+          {nonSpellActions.map((a: any, i: number) => {
+            const name = a.name ?? a.title ?? "";
             return (
-              <div key={i} style={{ display: "grid", gap: 2 }}>
-                <div style={{ fontWeight: 900, display: "flex", alignItems: "center", gap: 8 }}>
-                  {name}
-                  {props.onChangeAttack && t.attack ? (
-                    <AttackOverrideInputs
-                      name={name}
-                      override={props.attackOverrides?.[name]}
-                      onChange={props.onChangeAttack}
-                    />
-                  ) : null}
-                </div>
+              <div key={i} style={{ display: "grid", gap: 4 }}>
+                <div style={{ fontWeight: 900 }}>{name}</div>
                 <div style={{ color: theme.colors.muted, whiteSpace: "pre-wrap", fontSize: "var(--fs-subtitle)" }}>
-                  {t.text ?? t.description ?? ""}
+                  {a.text ?? a.description ?? ""}
                 </div>
+                {props.onChangeAttack && (
+                  <AttackOverrideInputs name={name} override={props.attackOverrides?.[name]} onChange={props.onChangeAttack} />
+                )}
               </div>
             );
           })}
         </div>
-      ) : null}
+      )}
 
-      <TextBlock title="Legendary Actions" items={legendary} />
+      <TextBlock items={legendary} title="Legendary Actions" />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { IconPlayer, IconMonster, IconPerson, IconSkull } from "@/icons";
+import { IconPlayer, IconMonster, IconINPC, IconSkull } from "@/icons";
 import type { Combatant } from "@/domain/types/domain";
 
 type Props = {
@@ -13,6 +13,6 @@ export function CombatantTypeIcon({ combatant }: Props) {
   if (isDead) return <IconSkull size={16} title="Dead" />;
 
   if (combatant.baseType === "player") return <IconPlayer size={16} title="Player" />;
-  if (combatant.baseType === "inpc") return <IconPerson size={16} title="Important NPC" />;
+  if (combatant.baseType === "inpc") return <IconINPC size={16} title="Important NPC" />;
   return <IconMonster size={16} title="Monster" />;
 }

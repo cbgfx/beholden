@@ -1,17 +1,14 @@
 import React from "react";
 import { theme, withAlpha } from "@/theme/theme";
-import { IconButton } from "@/ui/IconButton";
-import { IconPencil, IconPlayer, IconHeart, IconShield } from "@/icons";
-import { HPBar } from "@/ui/HPBar";
+import { IconPlayer, IconHeart, IconShield } from "@/icons";
 import { PlayerDeathSaves } from "./PlayerDeathSaves";
 import { PlayerConditions } from "./PlayerConditions";
+import type { RowMenuItem } from "@/ui/RowMenu";
+import { RowMenu } from "@/ui/RowMenu";
 
 export type PlayerVM = {
   id: string;
-  // When rendered in a combat list, `id` is the combatant id.
-  // `playerId` is the canonical player id (used for persisted fields).
   playerId?: string;
-  // When rendered in a combat list, we also need the encounter id to persist encounter-scoped fields.
   encounterId?: string;
   playerName?: string;
   characterName: string;
@@ -29,145 +26,155 @@ export type PlayerVM = {
 
 export function PlayerRow(props: {
   p: PlayerVM;
-  onEdit?: () => void;
+  // Primary inline action(s) — keep to 1-2 max
+  // null = suppress action area entirely (combat list: clicking the row IS the action)
+  primaryAction?: React.ReactNode | null;
+  // Items for the … overflow menu. Hidden if empty/undefined.
+  menuItems?: RowMenuItem[];
   subtitle?: React.ReactNode;
   icon?: React.ReactNode;
+  // Legacy compat — renders directly instead of menu
   actions?: React.ReactNode | null;
+  onEdit?: () => void;
   variant?: "campaign" | "combatList";
 }) {
   const p = props.p;
   const variant = props.variant ?? "campaign";
-
-  // Some rows (e.g. iNPCs) provide custom action rails with 2+ buttons.
-  // Fixed widths cause the meta/subtitle column to overlap and steal pointer events.
-  // Use `auto` for custom actions so the action rail sizes to its content.
-  const actionsWidth: 0 | 46 | "auto" =
-    props.actions === null ? 0 : props.actions === undefined ? 46 : "auto";
-
-  const padding = variant === "combatList" ? "6px 8px" : "8px 10px";
-  const background = variant === "combatList" ? "transparent" : withAlpha(theme.colors.shadowColor, 0.14);
-  const border = variant === "combatList" ? "none" : `1px solid ${theme.colors.panelBorder}`;
-  const borderRadius = variant === "combatList" ? 0 : 14;
+  const isCombatList = variant === "combatList";
 
   const max = Math.max(1, Number(p.hpMax) || 1);
   const cur = Math.max(0, Number(p.hpCurrent) || 0);
-  const showDeathSaves = cur === 0 && Boolean(p.playerName);
+  const pct = cur / max;
+  const isDead = cur <= 0;
+  const showDeathSaves = isDead && Boolean(p.playerName);
 
-  const acBonus = Number((p as any).acBonus ?? 0) || 0;
   const tempHp = Math.max(0, Number((p as any).tempHp ?? 0) || 0);
-  const acTotal = Number(p.ac ?? 0) + acBonus;
+  const acTotal = Number(p.ac ?? 0) + (Number((p as any).acBonus ?? 0) || 0);
 
-  const gridCols =
-    actionsWidth === 0 ? "1fr" :
-    actionsWidth === "auto" ? "1fr auto" :
-    `1fr ${actionsWidth}px`;
+  const barColor = isDead
+    ? theme.colors.red
+    : pct <= 0.25
+      ? theme.colors.red
+      : pct <= 0.5
+        ? theme.colors.bloody
+        : theme.colors.green;
 
-  const metaRight =
-    props.subtitle ??
-    (variant === "combatList" ? null : (
-      <>Lvl {p.level} {p.species} {p.class}</>
-    ));
+  const iconColor = isDead ? theme.colors.muted : theme.colors.blue;
 
-  const vitalsRight = (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-        <IconShield size={14} />
-        <span style={{ fontVariantNumeric: "tabular-nums" }}>{acTotal}</span>
-      </span>
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-        <IconHeart size={14} />
-        <span style={{ fontVariantNumeric: "tabular-nums" }}>
-          {cur}/{max}
-          {tempHp ? (
-            <span style={{ color: theme.colors.muted, fontWeight: 900 }}>{` (+${tempHp}t)`}</span>
-          ) : null}
-        </span>
-      </span>
-    </div>
+  const bg = isCombatList ? "transparent" : withAlpha(theme.colors.shadowColor, 0.18);
+  const border = isCombatList ? "none" : `1px solid ${theme.colors.panelBorder}`;
+  const borderRadius = isCombatList ? 0 : 12;
+  const padding = isCombatList ? "8px 10px" : "10px 12px";
+
+  const hasLegacyActions = props.actions !== undefined;
+  const showMenu = !hasLegacyActions && Boolean(props.menuItems?.length);
+
+  const metaLine = props.subtitle ?? (
+    p.level || p.species || p.class
+      ? <>{p.level ? `Lvl ${p.level} ` : ""}{p.species} {p.class}</>
+      : null
   );
 
-  const hpBar = showDeathSaves ? (
-    <div style={{ padding: "2px 0" }}>
-      <PlayerDeathSaves
-        playerId={p.playerId}
-        encounterId={p.encounterId}
-        combatantId={p.id}
-        variant={variant}
-        persisted={p.deathSaves}
-        hpCurrent={cur}
-      />
-    </div>
-  ) : (
-    <HPBar cur={cur} max={max} ac={p.ac} variant="compact" showText={false} />
-  );
+  return (
+    <div style={{ padding, borderRadius, background: bg, border, display: "flex", flexDirection: "column", gap: 6 }}>
 
-  const identity = (iconSize: number) => (
-    <div style={{ display: "flex", gap: 6, alignItems: "center", minWidth: 0, flex: "1 1 auto" }}>
-      <span style={{ display: "inline-flex", opacity: 0.95, flex: "0 0 auto" }}>
-        {props.icon ?? <IconPlayer size={iconSize} />}
-      </span>
-      <div style={{ fontWeight: 900, color: theme.colors.text, fontSize: "var(--fs-medium)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-        {p.characterName}{" "}
-        {p.playerName ? (
-          <span style={{ fontWeight: 700, opacity: 0.85 }}>({p.playerName})</span>
-        ) : null}
-      </div>
-    </div>
-  );
+      {/* Top row: avatar · name/meta · stats · actions */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
 
-  const actions = (
-    <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, alignItems: "center" }}>
-      {props.actions === undefined ? (
-        <IconButton title="Edit" onClick={(e) => (e.stopPropagation(), props.onEdit?.())} disabled={!props.onEdit}>
-          <IconPencil />
-        </IconButton>
-      ) : (
-        props.actions
-      )}
-    </div>
-  );
+        {/* Avatar */}
+        <div style={{
+          flex: "0 0 auto", width: 36, height: 36, borderRadius: 8,
+          background: withAlpha(iconColor, 0.15),
+          border: `1px solid ${withAlpha(iconColor, 0.35)}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: iconColor,
+        }}>
+          {props.icon ?? <IconPlayer size={20} />}
+        </div>
 
-  const bottomRow = (
-    <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr auto", alignItems: "center", gap: 10 }}>
-      {hpBar}
-      <div style={{ fontSize: "var(--fs-small)", color: theme.colors.text, opacity: 0.9, whiteSpace: "nowrap" }}>
-        {vitalsRight}
-      </div>
-    </div>
-  );
-
-  // combatList variant: compact, no subtitle column
-  if (variant === "combatList") {
-    return (
-      <div style={{ display: "grid", gridTemplateColumns: gridCols, gridTemplateRows: "auto auto", gap: 6, padding, borderRadius, background, border }}>
-        <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 10 }}>
-          {identity(28)}
-          {metaRight ? (
-            <div style={{ fontSize: "var(--fs-small)", color: theme.colors.muted, whiteSpace: "nowrap", textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: "0 1 auto" }}>
-              {metaRight}
+        {/* Name + meta */}
+        <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+          <div style={{
+            fontWeight: 900, fontSize: "var(--fs-large)",
+            color: isDead ? theme.colors.muted : theme.colors.text,
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            lineHeight: 1.25,
+            textDecoration: isDead ? "line-through" : "none",
+          }}>
+            {p.characterName}
+            {p.playerName ? (
+              <span style={{ fontWeight: 600, fontSize: "var(--fs-small)", color: theme.colors.muted, marginLeft: 6 }}>
+                ({p.playerName})
+              </span>
+            ) : null}
+          </div>
+          {metaLine ? (
+            <div style={{ fontSize: "var(--fs-small)", color: theme.colors.muted, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {metaLine}
             </div>
           ) : null}
         </div>
-        {actions}
-        {bottomRow}
-        <PlayerConditions conditions={p.conditions ?? []} />
-      </div>
-    );
-  }
 
-  // campaign variant: full layout with subtitle
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: gridCols, gridTemplateRows: "auto auto", gap: 6, padding, borderRadius, background, border }}>
-      <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 10 }}>
-        {identity(24)}
-        {metaRight ? (
-          <div style={{ fontSize: "var(--fs-small)", color: theme.colors.muted, whiteSpace: "nowrap", textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: "0 1 auto" }}>
-            {metaRight}
+        {/* AC + HP */}
+        <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <IconShield size={12} style={{ opacity: 0.55, color: theme.colors.muted }} />
+            <span style={{ fontWeight: 900, fontSize: "var(--fs-medium)", color: theme.colors.text, fontVariantNumeric: "tabular-nums" }}>
+              {acTotal}
+            </span>
+          </span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <IconHeart size={12} style={{ opacity: 0.55, color: theme.colors.muted }} />
+            <span style={{ fontWeight: 900, fontSize: "var(--fs-medium)", color: theme.colors.text, fontVariantNumeric: "tabular-nums" }}>
+              {cur}/{max}
+              {tempHp ? <span style={{ color: theme.colors.accentHighlight, marginLeft: 3, fontSize: "var(--fs-small)" }}>+{tempHp}</span> : null}
+            </span>
+          </span>
+        </div>
+
+        {/* Action area */}
+        {props.actions !== null && (
+          <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 4 }} onClick={(e) => e.stopPropagation()}>
+            {hasLegacyActions ? props.actions : null}
+            {!hasLegacyActions && props.primaryAction != null ? props.primaryAction : null}
+            {showMenu ? <RowMenu items={props.menuItems!} /> : null}
           </div>
-        ) : null}
+        )}
       </div>
-      {actions}
-      {bottomRow}
+
+      {/* HP bar — full width, indented to align with name */}
+      <div style={{ paddingLeft: 46 }}>
+        {showDeathSaves ? (
+          <PlayerDeathSaves
+            playerId={p.playerId}
+            encounterId={p.encounterId}
+            combatantId={p.id}
+            variant={variant}
+            persisted={p.deathSaves}
+            hpCurrent={cur}
+          />
+        ) : (
+          <div style={{ position: "relative", height: 6, borderRadius: 999, background: withAlpha(theme.colors.shadowColor, 0.4), overflow: "hidden" }}>
+            <div style={{
+              position: "absolute", inset: 0,
+              width: `${Math.max(0, Math.min(1, pct)) * 100}%`,
+              background: barColor, borderRadius: 999,
+              transition: "width 150ms ease",
+            }} />
+            {tempHp > 0 && (
+              <div style={{
+                position: "absolute", top: 0, bottom: 0,
+                left: `${Math.min(1, pct) * 100}%`,
+                width: `${Math.min(1 - pct, tempHp / max) * 100}%`,
+                background: theme.colors.accentHighlight,
+                opacity: 0.8, borderRadius: 999,
+              }} />
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Conditions */}
       <PlayerConditions conditions={p.conditions ?? []} />
     </div>
   );
