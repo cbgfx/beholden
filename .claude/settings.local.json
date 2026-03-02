@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(xargs grep -l \"HomeView\\\\|campaign\")",
-      "Bash(find /c/Users/cellu/Desktop/Projects/beholden/web/src -name \"*.tsx\" -exec wc -l {} +)"
-    ]
-  }
-}
