@@ -1,7 +1,8 @@
 import * as React from "react";
 import { api } from "@/services/api";
 import { splitLeadingNumberAndDetail } from "@/lib/parse/statDetails";
-import type { AddMonsterOptions, MonsterDetail } from "@/domain/types/domain";
+import type { AddMonsterOptions } from "@/domain/types/domain";
+import type { MonsterDetail } from "@/domain/types/compendium";
 import type { AttackOverridesByMonsterId, CompendiumMonsterRow, SortMode } from "@/views/CampaignView/monsterPicker/types";
 import { useMonsterPickerRows } from "@/views/CampaignView/monsterPicker/hooks/useMonsterPickerRows";
 import { formatAcString, formatHpString } from "@/views/CampaignView/monsterPicker/utils/monsterFormat";

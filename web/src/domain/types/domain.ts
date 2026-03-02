@@ -148,6 +148,10 @@ export interface TreasureEntry {
   qty: number;
   notes?: string;
   order: number;
+  rarity?: string;
+  type?: string;
+  attunement?: boolean;
+  text?: string;
 }
 
 export type AttackOverride = {

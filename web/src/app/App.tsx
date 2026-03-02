@@ -276,23 +276,7 @@ const refreshCampaign = useCallback(async (cid: string) => {
 
   return (
     <ShellLayout>
-      <TopBar
-        onCreateCampaign={() => dispatch({ type: "openDrawer", drawer: { type: "createCampaign" } })}
-        onSelectCampaign={(id) => dispatch({ type: "selectCampaign", campaignId: id })}
-        onEditCampaign={(id) => dispatch({ type: "openDrawer", drawer: { type: "editCampaign", campaignId: id } })}
-        onDeleteCampaign={async (id) => {
-          if (!id) return;
-          if (!(await confirm({
-            title: "Delete campaign",
-            message: "Delete this campaign? This will delete ALL its adventures, encounters, players, notes, etc.",
-            intent: "danger"
-          }))) return;
-          try {
-            await api(`/api/campaigns/${id}`, { method: "DELETE" });
-            await refreshAll();
-          } catch (e) { apiErr(e); }
-        }}
-      />
+      <TopBar />
 
       <DrawerHost refreshAll={refreshAll} refreshCampaign={refreshCampaign} refreshAdventure={refreshAdventure} refreshEncounter={refreshEncounter} />
 

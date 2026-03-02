@@ -34,7 +34,7 @@ export function TreasureDrawer(props: { drawer: TreasureDrawerState; close: () =
           style={{
             color: theme.colors.text,
             lineHeight: 1.4,
-            background: theme.colors.panel2,
+            background: theme.colors.inputBg,
             border: `1px solid ${theme.colors.panelBorder}`,
             borderRadius: 12,
             padding: 12
