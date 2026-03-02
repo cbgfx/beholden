@@ -13,6 +13,9 @@ export interface Meta {
 export interface Campaign {
   id: Id;
   name: string;
+  updatedAt?: number;
+  playerCount?: number;
+  imageUrl?: string | null;
 }
 
 export interface Adventure {

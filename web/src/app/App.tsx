@@ -295,11 +295,12 @@ const refreshCampaign = useCallback(async (cid: string) => {
           path="/"
           element={
             <HomeView
-              campaigns={state.campaigns.map((c) => ({ id: c.id, name: c.name }))}
+              campaigns={state.campaigns.map((c) => ({ id: c.id, name: c.name, updatedAt: c.updatedAt, playerCount: c.playerCount, imageUrl: c.imageUrl }))}
               onCreateCampaign={() => dispatch({ type: "openDrawer", drawer: { type: "createCampaign" } })}
               onOpenCampaign={(campaignId) => {
                 dispatch({ type: "selectCampaign", campaignId });
                 navigate(`/campaign/${campaignId}`);
+                api(`/api/campaigns/${campaignId}/touch`, { method: "POST" }).catch(() => {});
               }}
               onEditCampaign={(campaignId) => dispatch({ type: "openDrawer", drawer: { type: "editCampaign", campaignId } })}
               onDeleteCampaign={async (campaignId) => {

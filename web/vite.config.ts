@@ -17,6 +17,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       "/api": `http://127.0.0.1:${SERVER_PORT}`,
+      "/campaign-images": `http://127.0.0.1:${SERVER_PORT}`,
       "/ws": {
         target: `http://127.0.0.1:${SERVER_PORT}`,
         ws: true,

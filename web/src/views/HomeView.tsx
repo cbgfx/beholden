@@ -1,11 +1,14 @@
 import React, { useMemo, useRef, useState } from "react";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
-import { IconPencil, IconTrash, IconPlus } from "@/icons";
+import { IconPencil, IconTrash, IconPlus, IconDownload, IconCamera, IconUsers } from "@/icons";
 
 type CampaignSummary = {
   id: string;
   name: string;
+  updatedAt?: number;
+  playerCount?: number;
+  imageUrl?: string | null;
 };
 
 type Props = {
@@ -17,16 +20,6 @@ type Props = {
   onRefresh: () => Promise<void> | void;
 };
 
-function IconDownload() {
-  return (
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  );
-}
-
 export function HomeView({
   campaigns,
   onCreateCampaign,
@@ -36,13 +29,22 @@ export function HomeView({
   onRefresh,
 }: Props) {
   const sorted = useMemo(() => {
-    return [...campaigns].sort((a, b) => a.name.localeCompare(b.name));
+    return [...campaigns].sort((a, b) => {
+      const ta = a.updatedAt ?? 0;
+      const tb = b.updatedAt ?? 0;
+      if (tb !== ta) return tb - ta;
+      return a.name.localeCompare(b.name);
+    });
   }, [campaigns]);
 
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importBusy, setImportBusy] = useState(false);
   const [importMsg, setImportMsg] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [uploadTargetId, setUploadTargetId] = useState<string | null>(null);
+  const [hoveredBannerId, setHoveredBannerId] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   async function importCampaign() {
     if (!importFile) return;
@@ -69,6 +71,37 @@ export function HomeView({
     window.location.href = `/api/campaigns/${id}/export`;
   }
 
+  function handleBannerClick(campaignId: string) {
+    setUploadTargetId(campaignId);
+    imageInputRef.current?.click();
+  }
+
+  async function handleImageSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    const targetId = uploadTargetId;
+    e.target.value = "";
+    setUploadTargetId(null);
+    if (!file || !targetId) return;
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      const res = await fetch(`/api/campaigns/${targetId}/image`, { method: "POST", body: fd });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error((json as any)?.message ?? "Upload failed");
+      }
+      await onRefresh();
+    } catch (err) {
+      console.error("Image upload failed:", err);
+    }
+  }
+
+  async function handleRemoveImage(campaignId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    await fetch(`/api/campaigns/${campaignId}/image`, { method: "DELETE" });
+    await onRefresh();
+  }
+
   // ── Layout ──────────────────────────────────────────────────────────
   const page: React.CSSProperties = {
     width: "100%",
@@ -76,19 +109,19 @@ export function HomeView({
     display: "grid",
     justifyItems: "center",
     alignContent: "start",
-    padding: "32px 24px 60px",
-    gap: 28,
+    padding: "36px 28px 60px",
+    gap: 32,
   };
 
   const inner: React.CSSProperties = {
     width: "100%",
-    maxWidth: 960,
+    maxWidth: 1040,
     display: "grid",
-    gap: 24,
+    gap: 28,
   };
 
   const h1: React.CSSProperties = {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 900,
     margin: 0,
     color: theme.colors.text,
@@ -97,10 +130,9 @@ export function HomeView({
   const sub: React.CSSProperties = {
     marginTop: 6,
     color: theme.colors.muted,
-    fontSize: 14,
+    fontSize: 15,
   };
 
-  // ── Action bar ───────────────────────────────────────────────────────
   const actionBar: React.CSSProperties = {
     display: "flex",
     alignItems: "center",
@@ -116,7 +148,7 @@ export function HomeView({
   };
 
   const fileLabel: React.CSSProperties = {
-    padding: "7px 12px",
+    padding: "7px 14px",
     borderRadius: theme.radius.control,
     border: `1px solid ${theme.colors.panelBorder}`,
     background: theme.colors.inputBg,
@@ -137,8 +169,8 @@ export function HomeView({
   // ── Campaign grid ────────────────────────────────────────────────────
   const grid: React.CSSProperties = {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-    gap: 16,
+    gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))",
+    gap: 20,
   };
 
   // ── Campaign card ────────────────────────────────────────────────────
@@ -148,39 +180,45 @@ export function HomeView({
     borderRadius: theme.radius.panel,
     overflow: "hidden",
     display: "grid",
-    gridTemplateRows: "72px 1fr auto",
-    boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
-    transition: "border-color 0.15s",
-  };
-
-  const cardBanner: React.CSSProperties = {
-    background: "linear-gradient(135deg, rgba(240,165,0,0.18) 0%, rgba(240,165,0,0.04) 100%)",
-    borderBottom: `1px solid ${theme.colors.panelBorder}`,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    overflow: "hidden",
+    gridTemplateRows: "170px 1fr auto",
+    boxShadow: "0 4px 28px rgba(0,0,0,0.4)",
+    transition: "border-color 0.15s, box-shadow 0.15s",
   };
 
   const cardBody: React.CSSProperties = {
-    padding: "12px 14px 8px",
+    padding: "16px 18px 10px",
     display: "grid",
-    gap: 3,
+    gap: 8,
   };
 
   const cardTitle: React.CSSProperties = {
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: 800,
     color: theme.colors.text,
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
+    letterSpacing: -0.3,
+  };
+
+  const cardMeta: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    flexWrap: "wrap",
+  };
+
+  const cardPlayerCount: React.CSSProperties = {
+    fontSize: 14,
+    color: theme.colors.muted,
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
   };
 
   const cardId: React.CSSProperties = {
     fontSize: 11,
-    color: theme.colors.muted,
+    color: "rgba(160,180,220,0.45)",
     fontFamily: "monospace",
     overflow: "hidden",
     textOverflow: "ellipsis",
@@ -188,34 +226,44 @@ export function HomeView({
   };
 
   const cardFooter: React.CSSProperties = {
-    padding: "0 10px 10px",
+    padding: "0 12px 12px",
     display: "flex",
-    gap: 6,
+    gap: 8,
     alignItems: "center",
   };
 
   const iconBtn: React.CSSProperties = {
-    width: 32,
-    height: 32,
+    width: 38,
+    height: 38,
     flexShrink: 0,
-    borderRadius: 8,
+    borderRadius: 9,
     border: `1px solid ${theme.colors.panelBorder}`,
-    background: "transparent",
-    color: theme.colors.muted,
+    background: "rgba(255,255,255,0.07)",
+    color: theme.colors.text,
     display: "inline-grid",
     placeItems: "center",
     cursor: "pointer",
-    transition: "color 0.12s, border-color 0.12s",
+    transition: "background 0.12s, border-color 0.12s",
   };
 
   const iconBtnDanger: React.CSSProperties = {
     ...iconBtn,
     color: theme.colors.red,
-    borderColor: "rgba(255,93,93,0.25)",
+    background: "rgba(255,93,93,0.1)",
+    borderColor: "rgba(255,93,93,0.35)",
   };
 
   return (
     <div style={page}>
+      {/* Hidden file input for image uploads */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/gif,image/webp"
+        onChange={handleImageSelected}
+        style={{ display: "none" }}
+      />
+
       <div style={inner}>
         {/* Header */}
         <div>
@@ -273,30 +321,131 @@ export function HomeView({
                 .join("")
                 .toUpperCase();
 
+              const isHovered = hoveredBannerId === c.id;
+              const hasImage = Boolean(c.imageUrl);
+
               return (
                 <div key={c.id} style={card}>
-                  {/* Banner */}
-                  <div style={cardBanner}>
-                    <span
+                  {/* ── Banner ── */}
+                  <div
+                    style={{
+                      position: "relative",
+                      height: 170,
+                      overflow: "hidden",
+                      borderBottom: `1px solid ${theme.colors.panelBorder}`,
+                      cursor: "pointer",
+                      background: hasImage
+                        ? "#000"
+                        : "linear-gradient(135deg, rgba(240,165,0,0.20) 0%, rgba(240,165,0,0.05) 100%)",
+                    }}
+                    onClick={() => handleBannerClick(c.id)}
+                    onMouseEnter={() => setHoveredBannerId(c.id)}
+                    onMouseLeave={() => setHoveredBannerId(null)}
+                    title="Click to set banner image"
+                  >
+                    {/* Background image */}
+                    {hasImage && (
+                      <img
+                        src={`${c.imageUrl}?v=${c.updatedAt ?? 0}`}
+                        alt=""
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          display: "block",
+                          opacity: isHovered ? 0.7 : 1,
+                          transition: "opacity 0.15s",
+                        }}
+                      />
+                    )}
+
+                    {/* Initials watermark — no-image fallback */}
+                    {!hasImage && (
+                      <span
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 52,
+                          fontWeight: 900,
+                          color: "rgba(240,165,0,0.22)",
+                          letterSpacing: 4,
+                          userSelect: "none",
+                        }}
+                      >
+                        {initials}
+                      </span>
+                    )}
+
+                    {/* Camera overlay — always subtly visible, strong on hover */}
+                    <div
                       style={{
-                        fontSize: 28,
-                        fontWeight: 900,
-                        color: "rgba(240,165,0,0.35)",
-                        letterSpacing: 2,
-                        userSelect: "none",
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 8,
+                        color: isHovered ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.25)",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        transition: "color 0.15s",
+                        pointerEvents: "none",
                       }}
                     >
-                      {initials}
-                    </span>
+                      <IconCamera size={20} />
+                      {isHovered ? (hasImage ? "Change image" : "Add image") : null}
+                    </div>
+
+                    {/* Remove image button (top-right corner when hovered) */}
+                    {hasImage && isHovered && (
+                      <button
+                        onClick={(e) => handleRemoveImage(c.id, e)}
+                        title="Remove banner image"
+                        style={{
+                          position: "absolute",
+                          top: 10,
+                          right: 10,
+                          width: 28,
+                          height: 28,
+                          borderRadius: 7,
+                          border: "1px solid rgba(255,93,93,0.55)",
+                          background: "rgba(0,0,0,0.7)",
+                          color: theme.colors.red,
+                          cursor: "pointer",
+                          display: "grid",
+                          placeItems: "center",
+                          fontSize: 18,
+                          lineHeight: 1,
+                          zIndex: 10,
+                        }}
+                      >
+                        ×
+                      </button>
+                    )}
                   </div>
 
-                  {/* Body */}
+                  {/* ── Body ── */}
                   <div style={cardBody}>
                     <div style={cardTitle}>{c.name}</div>
+                    <div style={cardMeta}>
+                      {c.playerCount !== undefined && (
+                        <div style={cardPlayerCount}>
+                          <IconUsers size={14} />
+                          {c.playerCount === 1 ? "1 Player" : `${c.playerCount} Players`}
+                        </div>
+                      )}
+                    </div>
                     <div style={cardId}>{c.id}</div>
                   </div>
 
-                  {/* Footer */}
+                  {/* ── Footer ── */}
                   <div style={cardFooter}>
                     <Button
                       onClick={() => onOpenCampaign(c.id)}
@@ -312,7 +461,7 @@ export function HomeView({
                       title="Export campaign JSON"
                       aria-label="Export campaign"
                     >
-                      <IconDownload />
+                      <IconDownload size={17} />
                     </button>
 
                     <button
@@ -321,7 +470,7 @@ export function HomeView({
                       title="Rename campaign"
                       aria-label="Edit campaign"
                     >
-                      <IconPencil size={14} />
+                      <IconPencil size={16} />
                     </button>
 
                     <button
@@ -330,7 +479,7 @@ export function HomeView({
                       title="Delete campaign"
                       aria-label="Delete campaign"
                     >
-                      <IconTrash size={14} />
+                      <IconTrash size={16} />
                     </button>
                   </div>
                 </div>
@@ -341,8 +490,8 @@ export function HomeView({
           <div
             style={{
               color: theme.colors.muted,
-              fontSize: 14,
-              padding: "40px 0",
+              fontSize: 15,
+              padding: "48px 0",
               textAlign: "center",
             }}
           >

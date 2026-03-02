@@ -140,6 +140,11 @@ export function createServer() {
     },
   };
 
+  // --- campaign images (static) --------------------------------------------
+  const campaignImagesDir = path.join(paths.dataDir, "campaign-images");
+  fs.mkdirSync(campaignImagesDir, { recursive: true });
+  app.use("/campaign-images", express.static(campaignImagesDir));
+
   // --- routes ---------------------------------------------------------------
   registerHealthRoutes(app, ctx);
   registerMetaRoutes(app, ctx);

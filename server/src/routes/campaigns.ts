@@ -14,7 +14,10 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   const { now, uid, bySortThenUpdatedDesc } = ctx.helpers;
 
   app.get("/api/campaigns", (_req, res) => {
-    const rows = Object.values(userData.campaigns).sort(bySortThenUpdatedDesc);
+    const rows = Object.values(userData.campaigns).sort(bySortThenUpdatedDesc).map((c) => ({
+      ...c,
+      playerCount: Object.values(userData.players).filter((p) => p.campaignId === c.id).length,
+    }));
     res.json(rows);
   });
 
@@ -145,5 +148,69 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     }
 
     res.json({ ok: true, playersUpdated: players.length, encountersUpdated: updatedEncounterIds.length });
+  });
+
+  // Touch — update updatedAt to track last-accessed ordering.
+  app.post("/api/campaigns/:campaignId/touch", (req, res) => {
+    const { campaignId } = req.params;
+    const c = userData.campaigns[campaignId];
+    if (!c) return res.status(404).json({ ok: false });
+    userData.campaigns[campaignId] = { ...c, updatedAt: now() };
+    ctx.scheduleSave();
+    ctx.broadcast("campaigns:changed", { campaignId });
+    res.json({ ok: true });
+  });
+
+  // Upload campaign banner image.
+  app.post("/api/campaigns/:campaignId/image", ctx.upload.single("image"), (req, res) => {
+    const { campaignId } = req.params;
+    const c = userData.campaigns[campaignId];
+    if (!c) return res.status(404).json({ ok: false, message: "Not found" });
+    if (!req.file) return res.status(400).json({ ok: false, message: "No file" });
+
+    const extMap: Record<string, string> = {
+      "image/png": "png",
+      "image/jpeg": "jpg",
+      "image/gif": "gif",
+      "image/webp": "webp",
+    };
+    const ext = extMap[req.file.mimetype];
+    if (!ext) return res.status(400).json({ ok: false, message: "Unsupported image type" });
+
+    const imagesDir = ctx.path.join(ctx.paths.dataDir, "campaign-images");
+    ctx.fs.mkdirSync(imagesDir, { recursive: true });
+
+    // Remove stale image files for this campaign before writing the new one.
+    for (const oldExt of ["png", "jpg", "gif", "webp"]) {
+      const oldPath = ctx.path.join(imagesDir, `${campaignId}.${oldExt}`);
+      try { if (ctx.fs.existsSync(oldPath)) ctx.fs.unlinkSync(oldPath); } catch { /* best-effort */ }
+    }
+
+    const filename = `${campaignId}.${ext}`;
+    ctx.fs.writeFileSync(ctx.path.join(imagesDir, filename), req.file.buffer);
+
+    const imageUrl = `/campaign-images/${filename}`;
+    userData.campaigns[campaignId] = { ...c, imageUrl, updatedAt: now() };
+    ctx.scheduleSave();
+    ctx.broadcast("campaigns:changed", { campaignId });
+    res.json({ ok: true, imageUrl });
+  });
+
+  // Remove campaign banner image.
+  app.delete("/api/campaigns/:campaignId/image", (req, res) => {
+    const { campaignId } = req.params;
+    const c = userData.campaigns[campaignId];
+    if (!c) return res.status(404).json({ ok: false });
+
+    const imagesDir = ctx.path.join(ctx.paths.dataDir, "campaign-images");
+    for (const ext of ["png", "jpg", "gif", "webp"]) {
+      const p = ctx.path.join(imagesDir, `${campaignId}.${ext}`);
+      try { if (ctx.fs.existsSync(p)) ctx.fs.unlinkSync(p); } catch { /* best-effort */ }
+    }
+
+    userData.campaigns[campaignId] = { ...c, imageUrl: null, updatedAt: now() };
+    ctx.scheduleSave();
+    ctx.broadcast("campaigns:changed", { campaignId });
+    res.json({ ok: true });
   });
 }
