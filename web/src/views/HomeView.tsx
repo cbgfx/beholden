@@ -267,7 +267,14 @@ export function HomeView({
       <div style={inner}>
         {/* Header */}
         <div>
-          <div style={h1}>Campaigns</div>
+          <div style={h1}>
+            Campaigns
+            {campaigns.length > 0 && (
+              <span style={{ marginLeft: 10, fontSize: "0.6em", fontWeight: 600, color: theme.colors.muted, verticalAlign: "middle" }}>
+                ({campaigns.length})
+              </span>
+            )}
+          </div>
           <div style={sub}>Jump back into an existing world, or start a new one.</div>
         </div>
 
