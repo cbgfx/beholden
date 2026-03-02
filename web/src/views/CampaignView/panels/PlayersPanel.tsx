@@ -15,28 +15,25 @@ export function PlayersPanel(props: {
   onAddPlayerToEncounter: (playerId: string) => void;
   onFullRest: () => void;
 }) {
-  // Players are campaign-persistent. Player combatants in encounters are merged from the
-  // player record server-side, so the CampaignView should display the same effective stats.
   const players = React.useMemo(() => {
-   return props.players.map((p) => {
-     const acBonus = Number(p.overrides?.acBonus ?? 0) || 0;
-     const hpMod = (() => {
-       const v = p.overrides?.hpMaxOverride;
-       const n = Number(v);
-       return Number.isFinite(n) ? n : 0;
-     })();
-     return {
-       ...p,
-       playerId: p.id,
-       ac: Math.max(0, p.ac + acBonus),
-       acBonus: 0,
-       hpMax: Math.max(1, p.hpMax + hpMod),
-       tempHp: Math.max(0, Number(p.overrides?.tempHp ?? 0) || 0),
-       conditions: p.conditions ?? [],
-     };
-   });
-  }, [props.players, props.combatants, props.selectedEncounterId]);
-
+    return props.players.map((p) => {
+      const acBonus = Number(p.overrides?.acBonus ?? 0) || 0;
+      const hpMod = (() => {
+        const v = p.overrides?.hpMaxOverride;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 0;
+      })();
+      return {
+        ...p,
+        playerId: p.id,
+        ac: Math.max(0, p.ac + acBonus),
+        acBonus: 0,
+        hpMax: Math.max(1, p.hpMax + hpMod),
+        tempHp: Math.max(0, Number(p.overrides?.tempHp ?? 0) || 0),
+        conditions: p.conditions ?? [],
+      };
+    });
+  }, [props.players]);
 
   const playerIdsInEncounter = React.useMemo(() => {
     if (!props.selectedEncounterId) return new Set<string>();
@@ -51,7 +48,7 @@ export function PlayersPanel(props: {
     <Panel
       title={
         <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-          <IconPlayer /> Players ({players.length}) <span style={{ color: theme.colors.muted, fontWeight: 600 }}></span>
+          <IconPlayer /> Players ({players.length})
         </span>
       }
       actions={
@@ -59,7 +56,6 @@ export function PlayersPanel(props: {
           <IconButton title="Full Rest" onClick={props.onFullRest}>
             <IconRest />
           </IconButton>
-
           <IconButton onClick={props.onCreatePlayer} title="Add player">
             <IconPlus />
           </IconButton>
@@ -67,26 +63,15 @@ export function PlayersPanel(props: {
       }
     >
       {players.length ? (
-        <div
-          style={{
-            display: "grid",
-            gap: 5,
-            gridTemplateColumns: "1fr",
-          }}
-        >
+        <div style={{ display: "grid", gap: 5, gridTemplateColumns: "1fr" }}>
           {players.map((p) => {
             const alreadyIn = props.selectedEncounterId ? playerIdsInEncounter.has(p.id) : false;
-
             return (
               <PlayerRow
                 key={p.id}
                 p={p}
                 icon={p.hpCurrent > 0 ? <IconPlayer /> : <IconSkull />}
-                subtitle={
-                  <>
-                    Lvl {p.level} {p.species} {p.class}
-                  </>
-                }
+                subtitle={<>Lvl {p.level} {p.species} {p.class}</>}
                 onEdit={() => props.onEditPlayer(p.id)}
                 actions={
                   props.selectedEncounterId ? (
@@ -95,7 +80,7 @@ export function PlayersPanel(props: {
                         <IconPencil />
                       </IconButton>
                       <IconButton
-                        title={alreadyIn ? "Already in encounter" : "Add to Encounter"}
+                        title={alreadyIn ? "Already in encounter" : "Add to encounter"}
                         onClick={(e) => (e.stopPropagation(), alreadyIn ? null : props.onAddPlayerToEncounter(p.id))}
                         disabled={alreadyIn}
                       >
