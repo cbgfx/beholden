@@ -13,6 +13,16 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   const { userData } = ctx;
   const { now, uid, bySortThenUpdatedDesc } = ctx.helpers;
 
+  function requireParam(req: any, res: any, key: string): string | null {
+    const v = (req.params as Record<string, string | undefined>)[key];
+    if (!v) {
+      res.status(400).json({ ok: false, message: `${key} required` });
+      return null;
+    }
+    return v;
+  }
+
+
   app.get("/api/campaigns", (_req, res) => {
     const rows = Object.values(userData.campaigns).sort(bySortThenUpdatedDesc).map((c) => ({
       ...c,
@@ -34,7 +44,8 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.put("/api/campaigns/:campaignId", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     const c = userData.campaigns[campaignId];
     if (!c) return res.status(404).json({ ok: false, message: "Campaign not found" });
     const body = parseBody(CampaignUpsertBody.passthrough(), req);
@@ -47,7 +58,8 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.delete("/api/campaigns/:campaignId", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     const c = userData.campaigns[campaignId];
     if (!c) return res.status(404).json({ ok: false, message: "Campaign not found" });
 
@@ -90,7 +102,8 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
 
   // Full rest: heal players + clear player combatant conditions/temp hp
   app.post("/api/campaigns/:campaignId/fullRest", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     const campaign = userData.campaigns[campaignId];
     if (!campaign) return res.status(404).json({ ok: false, message: "Campaign not found" });
 
@@ -152,7 +165,8 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
 
   // Touch — update updatedAt to track last-accessed ordering.
   app.post("/api/campaigns/:campaignId/touch", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     const c = userData.campaigns[campaignId];
     if (!c) return res.status(404).json({ ok: false });
     userData.campaigns[campaignId] = { ...c, updatedAt: now() };
@@ -163,7 +177,8 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
 
   // Upload campaign banner image.
   app.post("/api/campaigns/:campaignId/image", ctx.upload.single("image"), (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     const c = userData.campaigns[campaignId];
     if (!c) return res.status(404).json({ ok: false, message: "Not found" });
     if (!req.file) return res.status(400).json({ ok: false, message: "No file" });
@@ -198,7 +213,8 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
 
   // Remove campaign banner image.
   app.delete("/api/campaigns/:campaignId/image", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     const c = userData.campaigns[campaignId];
     if (!c) return res.status(404).json({ ok: false });
 
