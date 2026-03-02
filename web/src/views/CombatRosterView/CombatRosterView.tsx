@@ -167,7 +167,7 @@ export function CombatRosterView() {
                 monsterId,
                 qty,
                 friendly: Boolean(opts?.friendly ?? true),
-                label: opts?.labelBase ?? null,
+                name: opts?.labelBase ?? null,
                 ac: opts?.ac ?? null,
                 acDetails: opts?.acDetails ?? null,
                 hpMax: opts?.hpMax ?? null,

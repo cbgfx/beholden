@@ -44,8 +44,6 @@ export function CombatRosterLeftColumn(props: Props) {
         selectedEncounterId={props.selectedEncounterId}
         compQ={props.compQ}
         onChangeCompQ={props.onChangeCompQ}
-        // Let the iNPC panel reuse the MonsterPickerModal's internal compendium loading.
-        compRows={[]}
         onAddINpcFromMonster={props.onAddINpcFromMonster}
         onEditINpc={props.onEditINpc}
         onDeleteINpc={props.onDeleteINpc}

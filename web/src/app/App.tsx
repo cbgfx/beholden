@@ -27,6 +27,10 @@ function AppInner() {
   const [compendiumIndex, setCompendiumIndex] = useState<CompendiumMonsterRow[]>([]);
   const [compRows, setCompRows] = useState<CompendiumMonsterRow[]>([]);
 
+  function apiErr(e: unknown) {
+    alert(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+  }
+
 // refreshAll — remove state.selectedCampaignId from deps
 const refreshAll = useCallback(async () => {
   const [m, c] = await Promise.all([api<Meta>("/api/meta"), api<Campaign[]>("/api/campaigns")]);
@@ -148,104 +152,89 @@ const refreshCampaign = useCallback(async (cid: string) => {
 
   async function addAllPlayers() {
     if (!state.selectedEncounterId) return;
-    await api(`/api/encounters/${state.selectedEncounterId}/combatants/addPlayers`, { method: "POST" });
-    await refreshEncounter(state.selectedEncounterId);
+    try {
+      await api(`/api/encounters/${state.selectedEncounterId}/combatants/addPlayers`, { method: "POST" });
+      await refreshEncounter(state.selectedEncounterId);
+    } catch (e) { apiErr(e); }
   }
-
 
   async function addPlayerToEncounter(playerId: string) {
     if (!state.selectedEncounterId) return;
-    await api(`/api/encounters/${state.selectedEncounterId}/combatants/addPlayer`, jsonInit("POST", { playerId }));
-    await refreshEncounter(state.selectedEncounterId);
+    try {
+      await api(`/api/encounters/${state.selectedEncounterId}/combatants/addPlayer`, jsonInit("POST", { playerId }));
+      await refreshEncounter(state.selectedEncounterId);
+    } catch (e) { apiErr(e); }
   }
 
-  
   async function fullRestPlayers() {
     if (!state.selectedCampaignId) return;
-    await api(`/api/campaigns/${state.selectedCampaignId}/fullRest`, { method: "POST" });
-    await refreshCampaign(state.selectedCampaignId);
-    // If a combat roster is currently loaded, refresh it so HP/conditions snap immediately.
-    if (state.selectedEncounterId) await refreshEncounter(state.selectedEncounterId);
+    try {
+      await api(`/api/campaigns/${state.selectedCampaignId}/fullRest`, { method: "POST" });
+      await refreshCampaign(state.selectedCampaignId);
+      if (state.selectedEncounterId) await refreshEncounter(state.selectedEncounterId);
+    } catch (e) { apiErr(e); }
   }
 
   
-  async function reorderAdventures(ids: string[]) {
+  async function reorder(url: string, ids: string[], refresh: () => Promise<void>) {
+    try {
+      await api(url, jsonInit("POST", { ids }));
+      await refresh();
+    } catch (e) { apiErr(e); }
+  }
+
+  function reorderAdventures(ids: string[]) {
     if (!state.selectedCampaignId) return;
-    await api(`/api/campaigns/${state.selectedCampaignId}/adventures/reorder`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids })
-    });
-    await refreshCampaign(state.selectedCampaignId);
+    return reorder(`/api/campaigns/${state.selectedCampaignId}/adventures/reorder`, ids, () => refreshCampaign(state.selectedCampaignId));
   }
 
-  async function reorderEncounters(ids: string[]) {
+  function reorderEncounters(ids: string[]) {
     if (!state.selectedAdventureId) return;
-    await api(`/api/adventures/${state.selectedAdventureId}/encounters/reorder`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids })
-    });
-    await refreshAdventure(state.selectedAdventureId);
+    return reorder(`/api/adventures/${state.selectedAdventureId}/encounters/reorder`, ids, () => refreshAdventure(state.selectedAdventureId));
   }
 
-  async function reorderCampaignNotes(ids: string[]) {
+  function reorderCampaignNotes(ids: string[]) {
     if (!state.selectedCampaignId) return;
-    await api(`/api/campaigns/${state.selectedCampaignId}/notes/reorder`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids })
-    });
-    await refreshCampaign(state.selectedCampaignId);
+    return reorder(`/api/campaigns/${state.selectedCampaignId}/notes/reorder`, ids, () => refreshCampaign(state.selectedCampaignId));
   }
 
-  async function reorderAdventureNotes(ids: string[]) {
+  function reorderAdventureNotes(ids: string[]) {
     if (!state.selectedAdventureId) return;
-    await api(`/api/adventures/${state.selectedAdventureId}/notes/reorder`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids })
-    });
-    await refreshAdventure(state.selectedAdventureId);
+    return reorder(`/api/adventures/${state.selectedAdventureId}/notes/reorder`, ids, () => refreshAdventure(state.selectedAdventureId));
   }
 
-  async function addMonster(
-    monsterId: string,
-    qty: number,
-    opts?: AddMonsterOptions
-  ) {
+  async function addMonster(monsterId: string, qty: number, opts?: AddMonsterOptions) {
     if (!state.selectedEncounterId) return;
-    const labelBase = opts?.labelBase;
-    await api(`/api/encounters/${state.selectedEncounterId}/combatants/addMonster`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    try {
+      await api(`/api/encounters/${state.selectedEncounterId}/combatants/addMonster`, jsonInit("POST", {
         monsterId,
         qty,
         friendly: Boolean(opts?.friendly ?? false),
-        labelBase: labelBase?.trim() || undefined,
+        labelBase: opts?.labelBase?.trim() || undefined,
         ac: opts?.ac,
         acDetail: opts?.acDetails ?? undefined,
         hpMax: opts?.hpMax,
         hpDetail: opts?.hpDetails ?? undefined,
         attackOverrides: opts?.attackOverrides ?? null
-      })
-    });
-    await refreshEncounter(state.selectedEncounterId);
+      }));
+      await refreshEncounter(state.selectedEncounterId);
+    } catch (e) { apiErr(e); }
   }
 
   async function removeCombatant(combatantId: string) {
     if (!state.selectedEncounterId) return;
-    await api(`/api/encounters/${state.selectedEncounterId}/combatants/${combatantId}`, { method: "DELETE" });
-    await refreshEncounter(state.selectedEncounterId);
+    try {
+      await api(`/api/encounters/${state.selectedEncounterId}/combatants/${combatantId}`, { method: "DELETE" });
+      await refreshEncounter(state.selectedEncounterId);
+    } catch (e) { apiErr(e); }
   }
 
   const hasCampaigns = state.campaigns.length > 0;
 
   async function addINpcFromMonster(monsterId: string, qty: number, opts?: AddMonsterOptions) {
     if (!state.selectedCampaignId) return;
-    await api(`/api/campaigns/${state.selectedCampaignId}/inpcs`,
-      jsonInit("POST", {
+    try {
+      await api(`/api/campaigns/${state.selectedCampaignId}/inpcs`, jsonInit("POST", {
         monsterId,
         qty,
         name: opts?.labelBase ?? null,
@@ -254,29 +243,35 @@ const refreshCampaign = useCallback(async (cid: string) => {
         acDetails: opts?.acDetails ?? null,
         hpMax: opts?.hpMax ?? null,
         hpDetails: opts?.hpDetails ?? null
-      })
-    );
-    await refreshCampaign(state.selectedCampaignId);
+      }));
+      await refreshCampaign(state.selectedCampaignId);
+    } catch (e) { apiErr(e); }
   }
 
   async function deletePlayer(playerId: string) {
     if (!state.selectedCampaignId) return;
     if (!(await confirm({ title: "Delete Player", message: "Delete this player? This cannot be undone.", intent: "danger" }))) return;
-    await api(`/api/players/${playerId}`, { method: "DELETE" });
-    await refreshCampaign(state.selectedCampaignId);
+    try {
+      await api(`/api/players/${playerId}`, { method: "DELETE" });
+      await refreshCampaign(state.selectedCampaignId);
+    } catch (e) { apiErr(e); }
   }
 
   async function deleteINpc(inpcId: string) {
     if (!state.selectedCampaignId) return;
     if (!(await confirm({ title: "Delete iNPC", message: "Delete this iNPC?", intent: "danger" }))) return;
-    await api(`/api/inpcs/${inpcId}`, { method: "DELETE" });
-    await refreshCampaign(state.selectedCampaignId);
+    try {
+      await api(`/api/inpcs/${inpcId}`, { method: "DELETE" });
+      await refreshCampaign(state.selectedCampaignId);
+    } catch (e) { apiErr(e); }
   }
 
   async function addINpcToEncounter(inpcId: string) {
     if (!state.selectedEncounterId) return;
-    await api(`/api/encounters/${state.selectedEncounterId}/combatants/addInpc`, jsonInit("POST", { inpcId }));
-    await refreshEncounter(state.selectedEncounterId);
+    try {
+      await api(`/api/encounters/${state.selectedEncounterId}/combatants/addInpc`, jsonInit("POST", { inpcId }));
+      await refreshEncounter(state.selectedEncounterId);
+    } catch (e) { apiErr(e); }
   }
 
   return (
@@ -292,8 +287,10 @@ const refreshCampaign = useCallback(async (cid: string) => {
             message: "Delete this campaign? This will delete ALL its adventures, encounters, players, notes, etc.",
             intent: "danger"
           }))) return;
-          await api(`/api/campaigns/${id}`, { method: "DELETE" });
-          await refreshAll();
+          try {
+            await api(`/api/campaigns/${id}`, { method: "DELETE" });
+            await refreshAll();
+          } catch (e) { apiErr(e); }
         }}
       />
 
@@ -316,11 +313,13 @@ const refreshCampaign = useCallback(async (cid: string) => {
                 if (!campaignId) return;
                 if (!(await confirm({
                   title: "Delete campaign",
-                  message: "Delete this campaign? This deletes the campaign file on disk.",
+                  message: "Delete this campaign? This will delete ALL its adventures, encounters, players, notes, etc.",
                   intent: "danger"
                 }))) return;
-                await api(`/api/campaigns/${campaignId}`, { method: "DELETE" });
-                await refreshAll();
+                try {
+                  await api(`/api/campaigns/${campaignId}`, { method: "DELETE" });
+                  await refreshAll();
+                } catch (e) { apiErr(e); }
               }}
               onRefresh={refreshAll}
             />}
@@ -345,30 +344,38 @@ const refreshCampaign = useCallback(async (cid: string) => {
                     message: "Delete this adventure? This will also delete its encounters and notes.",
                     intent: "danger"
                   }))) return;
-                  await api(`/api/adventures/${adventureId}`, { method: "DELETE" });
-                  await refreshCampaign(state.selectedCampaignId);
-                  await refreshAdventure(state.selectedAdventureId);
+                  try {
+                    await api(`/api/adventures/${adventureId}`, { method: "DELETE" });
+                    await refreshCampaign(state.selectedCampaignId);
+                    await refreshAdventure(state.selectedAdventureId);
+                  } catch (e) { apiErr(e); }
                 }}
                 onEditEncounter={(encounterId) => dispatch({ type: "openDrawer", drawer: { type: "editEncounter", encounterId } })}
                 onDeleteEncounter={async (encounterId) => {
                   if (!(await confirm({ title: "Delete encounter", message: "Delete this encounter?", intent: "danger" }))) return;
-                  await api(`/api/encounters/${encounterId}`, { method: "DELETE" });
-                  await refreshAdventure(state.selectedAdventureId);
-                  await refreshCampaign(state.selectedCampaignId);
+                  try {
+                    await api(`/api/encounters/${encounterId}`, { method: "DELETE" });
+                    await refreshAdventure(state.selectedAdventureId);
+                    await refreshCampaign(state.selectedCampaignId);
+                  } catch (e) { apiErr(e); }
                 }}
                 onAddCampaignNote={() => dispatch({ type: "openDrawer", drawer: { type: "note", scope: "campaign", campaignId: state.selectedCampaignId } })}
                 onEditCampaignNote={(noteId) => dispatch({ type: "openDrawer", drawer: { type: "editNote", noteId } })}
                 onDeleteCampaignNote={async (noteId) => {
                   if (!(await confirm({ title: "Delete note", message: "Delete this note?", intent: "danger" }))) return;
-                  await api(`/api/notes/${noteId}`, { method: "DELETE" });
-                  await refreshCampaign(state.selectedCampaignId);
+                  try {
+                    await api(`/api/notes/${noteId}`, { method: "DELETE" });
+                    await refreshCampaign(state.selectedCampaignId);
+                  } catch (e) { apiErr(e); }
                 }}
                 onAddAdventureNote={() => state.selectedAdventureId ? dispatch({ type: "openDrawer", drawer: { type: "note", scope: "adventure", campaignId: state.selectedCampaignId, adventureId: state.selectedAdventureId } }) : undefined}
                 onEditAdventureNote={(noteId) => dispatch({ type: "openDrawer", drawer: { type: "editNote", noteId } })}
                 onDeleteAdventureNote={async (noteId) => {
                   if (!(await confirm({ title: "Delete note", message: "Delete this note?", intent: "danger" }))) return;
-                  await api(`/api/notes/${noteId}`, { method: "DELETE" });
-                  await refreshAdventure(state.selectedAdventureId);
+                  try {
+                    await api(`/api/notes/${noteId}`, { method: "DELETE" });
+                    await refreshAdventure(state.selectedAdventureId);
+                  } catch (e) { apiErr(e); }
                 }}
                 onFullRest={fullRestPlayers}
                 onCreatePlayer={() => dispatch({ type: "openDrawer", drawer: { type: "createPlayer", campaignId: state.selectedCampaignId } })}

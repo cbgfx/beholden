@@ -16,7 +16,7 @@ type Props = {
 
   compQ: string;
   onChangeCompQ: (q: string) => void;
-  compRows: CompendiumMonsterRow[];
+  compRows?: CompendiumMonsterRow[];
 
   onAddINpcFromMonster: (monsterId: string, qty: number, opts?: AddMonsterOptions) => void;
   onEditINpc: (inpcId: string) => void;
@@ -115,7 +115,7 @@ export function INpcsPanel(props: Props) {
         onClose={() => setIsPickerOpen(false)}
         compQ={props.compQ}
         onChangeCompQ={props.onChangeCompQ}
-        compRows={props.compRows as any}
+        compRows={(props.compRows ?? []) as any}
         onAddMonster={(monsterId, qty, opts) => {
           props.onAddINpcFromMonster(monsterId, qty, opts);
           setIsPickerOpen(false);
