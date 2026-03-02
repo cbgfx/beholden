@@ -39,7 +39,7 @@ export function FaqView() {
         </Q>
 
         <Q q="Can my players...?">
-          No. This is DM Facing. This is for a table where the DM has a laptop or tablet open to manage combat and NPCs, while players use their own character sheets and dice. I think when players have access to the same tool, it can pull focus away from the game and onto the app. I want Beholden to stay out of the way and let you focus on the game.
+          No. This is DM Facing. This is for a table where the DM has a laptop or tablet open to manage combat and NPCs, while players use their own character sheets and dice. There are lots of tools that "do it all", but I just want a DM tool. I want Beholden to stay out of the way and not try to be a VTT or character sheet manager. If you want to share info with players, use words.
         </Q>
 
         <Q q="When do updates come out?">
@@ -47,7 +47,7 @@ export function FaqView() {
         </Q>
 
         <Q q="Why should I support you?">
-          You don't have to. The code is at your disposal, feel free to remove the button. It's in ShellLayout.tsx. I won't lose sleep over it. I use this app myself, and I'll keep improving it whether people support me or not. 
+          You don't have to. The code is at your disposal, feel free to remove the button. I won't lose sleep over it. I use this app myself, and I'll keep improving it whether people support me or not. 
           But if you want to give me the fuzzies and help me feel validated, I'd appreciate it.
         </Q>
 

@@ -2,7 +2,7 @@ import React from "react";
 import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";
 import { theme } from "@/theme/theme";
-import { IconINPC, IconPlus, IconPencil, IconTrash, IconEncounter } from "@/icons";
+import { IconINPC, IconPlus } from "@/icons";
 import { PlayerRow } from "@/views/CampaignView/components/PlayerRow";
 import { MonsterPickerModal } from "@/views/CampaignView/monsterPicker/MonsterPickerModal";
 import type { AddMonsterOptions, INpc } from "@/domain/types/domain";
@@ -27,15 +27,18 @@ type Props = {
 export function INpcsPanel(props: Props) {
   const [isPickerOpen, setIsPickerOpen] = React.useState(false);
 
+  const sorted = React.useMemo(
+    () => [...props.inpcs].sort((a, b) => a.name.localeCompare(b.name)),
+    [props.inpcs]
+  );
+
   const getMonsterKeyLabel = React.useCallback((monsterId?: string | null) => {
     if (!monsterId) return "";
-    // Compendium ids are typically "m_<name_key>". Showing the raw id is noisy.
-    // Prefer the name_key portion when possible.
     const key = monsterId.startsWith("m_") ? monsterId.slice(2) : monsterId;
     return titleCase(key.replace(/[_-]+/g, " ").trim());
   }, []);
 
-  const useTwoColumn = Boolean(props.selectedEncounterId) && props.inpcs.length > 4;
+  const useTwoColumn = Boolean(props.selectedEncounterId) && sorted.length > 4;
 
   return (
     <Panel
@@ -50,7 +53,7 @@ export function INpcsPanel(props: Props) {
         </IconButton>
       }
     >
-      {props.inpcs.length ? (
+      {sorted.length ? (
         <div
           style={{
             display: "grid",
@@ -58,15 +61,11 @@ export function INpcsPanel(props: Props) {
             gridTemplateColumns: useTwoColumn ? "repeat(2, minmax(0, 1fr))" : "1fr"
           }}
         >
-          {props.inpcs.map((i) => {
+          {sorted.map((i) => {
             const monsterKeyLabel = getMonsterKeyLabel(i.monsterId);
-            const subtitle = (
-              <>
-                {monsterKeyLabel ? <span style={{ opacity: 0.7 }}>{monsterKeyLabel}</span> : null}
-              </>
-            );
-
-            const alreadyIn = false; // iNPCs can be added multiple times; each click makes a new combatant
+            const subtitle = monsterKeyLabel
+              ? <span style={{ opacity: 0.7 }}>{monsterKeyLabel}</span>
+              : undefined;
 
             return (
               <PlayerRow
@@ -81,26 +80,28 @@ export function INpcsPanel(props: Props) {
                   hpCurrent: i.hpCurrent,
                   ac: i.ac
                 }}
-                icon={i.friendly? (<span style={{ color: theme.colors.green }}><IconINPC /></span>): (<span style={{ color: theme.colors.red }}><IconINPC /></span>)}
-                subtitle={subtitle}
-                actions={
-                  <>
-                    <IconButton title="Edit" onClick={(e) => (e.stopPropagation(), props.onEditINpc(i.id))}>
-                      <IconPencil />
-                    </IconButton>
-                    {props.selectedEncounterId ? (
-                      <IconButton
-                        title={alreadyIn ? "Already in encounter" : "Add to Encounter"}
-                        onClick={(e) => (e.stopPropagation(), props.onAddINpcToEncounter(i.id))}
-                      >
-                        <IconPlus />
-                      </IconButton>
-                    ) : null}
-                    <IconButton title="Delete" onClick={(e) => (e.stopPropagation(), props.onDeleteINpc(i.id))}>
-                      <IconTrash />
-                    </IconButton>
-                  </>
+                icon={
+                  i.friendly
+                    ? <span style={{ color: theme.colors.green }}><IconINPC /></span>
+                    : <span style={{ color: theme.colors.red }}><IconINPC /></span>
                 }
+                subtitle={subtitle}
+                primaryAction={
+                  props.selectedEncounterId ? (
+                    <IconButton
+                      title="Add to Encounter"
+                      onClick={(e) => (e.stopPropagation(), props.onAddINpcToEncounter(i.id))}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      <IconPlus />
+                    </IconButton>
+                  ) : null
+                }
+                menuItems={[
+                  { label: "Edit iNPC", onClick: () => props.onEditINpc(i.id) },
+                  { label: "Delete iNPC", danger: true, onClick: () => props.onDeleteINpc(i.id) },
+                ]}
               />
             );
           })}

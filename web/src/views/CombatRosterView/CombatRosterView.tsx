@@ -2,9 +2,8 @@ import * as React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useStore } from "@/store";
 import { api } from "@/services/api";
-import type { AddMonsterOptions, INpc } from "@/domain/types/domain";
+import type { AddMonsterOptions, INpc, Player } from "@/domain/types/domain";
 import { useConfirm } from "@/confirm/ConfirmContext";
-
 import { CombatRosterHeader } from "@/views/CombatRosterView/components/CombatRosterHeader";
 
 import { useEncounterCombatants } from "@/views/CombatView/hooks/useEncounterCombatants";
@@ -21,7 +20,6 @@ export function CombatRosterView() {
   const nav = useNavigate();
   const { state, dispatch } = useStore();
   const confirm = useConfirm();
-
   // This hook only orchestrates fetching + store updates.
   const { refresh } = useEncounterCombatants(encounterId, dispatch);
 
@@ -153,6 +151,12 @@ export function CombatRosterView() {
           }}
           onCreatePlayer={() => dispatch({ type: "openDrawer", drawer: { type: "createPlayer", campaignId: state.selectedCampaignId } })}
           onEditPlayer={(playerId) => dispatch({ type: "openDrawer", drawer: { type: "editPlayer", playerId } })}
+          onDeletePlayer={async (playerId) => {
+            if (!(await confirm({ title: "Delete Player", message: "Delete this player? This cannot be undone.", intent: "danger" }))) return;
+            await api(`/api/players/${playerId}`, { method: "DELETE" });
+            const cid = state.selectedCampaignId;
+            if (cid) dispatch({ type: "setPlayers", players: await api<Player[]>(`/api/campaigns/${cid}/players`) });
+          }}
           onAddPlayerToEncounter={addPlayerToEncounter}
           onAddINpcFromMonster={async (monsterId, qty, opts) => {
             if (!state.selectedCampaignId) return;

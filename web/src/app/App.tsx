@@ -45,10 +45,12 @@ const refreshCampaign = useCallback(async (cid: string) => {
   api<Note[]>(`/api/campaigns/${cid}/notes`),
   api<TreasureEntry[]>(`/api/campaigns/${cid}/treasure`)
 ]);
-  dispatch({ type: "setAdventures", adventures: adv }); // ← reducer now handles deselection
+  dispatch({ type: "setAdventures", adventures: adv });
   dispatch({ type: "setPlayers", players: pls });
-  // ... rest unchanged, remove the manual selectAdventure null dispatch at the end
-}, [dispatch]); // ← removed state.selectedAdventureId
+  dispatch({ type: "setINpcs", inpcs });
+  dispatch({ type: "setCampaignNotes", notes });
+  dispatch({ type: "setCampaignTreasure", treasure });
+}, [dispatch]);
 
   const refreshAdventure = useCallback(async (adventureId: string | null) => {
     if (!adventureId) {
@@ -257,6 +259,13 @@ const refreshCampaign = useCallback(async (cid: string) => {
     await refreshCampaign(state.selectedCampaignId);
   }
 
+  async function deletePlayer(playerId: string) {
+    if (!state.selectedCampaignId) return;
+    if (!(await confirm({ title: "Delete Player", message: "Delete this player? This cannot be undone.", intent: "danger" }))) return;
+    await api(`/api/players/${playerId}`, { method: "DELETE" });
+    await refreshCampaign(state.selectedCampaignId);
+  }
+
   async function deleteINpc(inpcId: string) {
     if (!state.selectedCampaignId) return;
     if (!(await confirm({ title: "Delete iNPC", message: "Delete this iNPC?", intent: "danger" }))) return;
@@ -364,6 +373,7 @@ const refreshCampaign = useCallback(async (cid: string) => {
                 onFullRest={fullRestPlayers}
                 onCreatePlayer={() => dispatch({ type: "openDrawer", drawer: { type: "createPlayer", campaignId: state.selectedCampaignId } })}
                 onEditPlayer={(playerId) => dispatch({ type: "openDrawer", drawer: { type: "editPlayer", playerId } })}
+                onDeletePlayer={deletePlayer}
                 onAddPlayerToEncounter={addPlayerToEncounter}
 
                 onAddINpcFromMonster={addINpcFromMonster}

@@ -12,11 +12,12 @@ export function PlayersPanel(props: {
   selectedEncounterId: string | null;
   onCreatePlayer: () => void;
   onEditPlayer: (playerId: string) => void;
+  onDeletePlayer: (playerId: string) => void;
   onAddPlayerToEncounter: (playerId: string) => void;
   onFullRest: () => void;
 }) {
   const players = React.useMemo(() => {
-    return props.players.map((p) => {
+    return [...props.players].sort((a, b) => a.characterName.localeCompare(b.characterName)).map((p) => {
       const acBonus = Number(p.overrides?.acBonus ?? 0) || 0;
       const hpMod = (() => {
         const v = p.overrides?.hpMaxOverride;
@@ -85,7 +86,8 @@ export function PlayersPanel(props: {
                   ) : null
                 }
                 menuItems={[
-                  { label: "Edit player", onClick: () => props.onEditPlayer(p.id) },
+                  { label: "Edit Player", onClick: () => props.onEditPlayer(p.id) },
+                  { label: "Delete Player", danger: true, onClick: () => props.onDeletePlayer(p.id) },
                 ]}
               />
             );

@@ -268,9 +268,9 @@ export function HomeView({
         {/* Header */}
         <div>
           <div style={h1}>
-            Campaigns
+            Campaigns&nbsp;
             {campaigns.length > 0 && (
-              <span style={{ marginLeft: 10, fontSize: "0.6em", fontWeight: 600, color: theme.colors.muted, verticalAlign: "middle" }}>
+              <span style={{ color: theme.colors.muted}}>
                 ({campaigns.length})
               </span>
             )}

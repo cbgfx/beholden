@@ -16,10 +16,11 @@ type Props = {
   onFullRest: () => Promise<void>;
   onCreatePlayer: () => void;
   onEditPlayer: (playerId: string) => void;
+  onDeletePlayer: (playerId: string) => void;
   onAddPlayerToEncounter: (playerId: string) => Promise<void>;
   onAddINpcFromMonster: (monsterId: string, qty: number, opts?: AddMonsterOptions) => Promise<void>;
   onEditINpc: (inpcId: string) => void;
-  onDeleteINpc: (inpcId: string) => Promise<void>;
+  onDeleteINpc: (inpcId: string) => void;
   onAddINpcToEncounter: (inpcId: string) => Promise<void>;
 };
 
@@ -33,6 +34,7 @@ export function CombatRosterLeftColumn(props: Props) {
         onFullRest={props.onFullRest}
         onCreatePlayer={props.onCreatePlayer}
         onEditPlayer={props.onEditPlayer}
+        onDeletePlayer={props.onDeletePlayer}
         onAddPlayerToEncounter={props.onAddPlayerToEncounter}
       />
 

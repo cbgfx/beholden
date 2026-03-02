@@ -27,6 +27,7 @@ export function CampaignView(props: {
   onFullRest: () => void;
   onCreatePlayer: () => void;
   onEditPlayer: (playerId: string) => void;
+  onDeletePlayer: (playerId: string) => void;
   onAddPlayerToEncounter: (playerId: string) => void;
 
   onAddINpcFromMonster: (monsterId: string, qty: number, opts?: AddMonsterOptions) => void;
@@ -114,6 +115,7 @@ export function CampaignView(props: {
         onFullRest={props.onFullRest}
         onCreatePlayer={props.onCreatePlayer}
         onEditPlayer={props.onEditPlayer}
+        onDeletePlayer={props.onDeletePlayer}
         onAddPlayerToEncounter={props.onAddPlayerToEncounter}
         inpcs={inpcs}
         selectedCampaignId={state.selectedCampaignId}

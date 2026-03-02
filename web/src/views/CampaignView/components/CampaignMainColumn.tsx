@@ -15,6 +15,7 @@ export function CampaignMainColumn(props: {
   onFullRest: () => void;
   onCreatePlayer: () => void;
   onEditPlayer: (playerId: string) => void;
+  onDeletePlayer: (playerId: string) => void;
   onAddPlayerToEncounter: (playerId: string) => void;
   selectedCampaignId: string | null;
   compQ: string;
@@ -33,6 +34,7 @@ export function CampaignMainColumn(props: {
         onFullRest={props.onFullRest}
         onCreatePlayer={props.onCreatePlayer}
         onEditPlayer={props.onEditPlayer}
+        onDeletePlayer={props.onDeletePlayer}
         onAddPlayerToEncounter={props.onAddPlayerToEncounter}
       />
 
