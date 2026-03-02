@@ -11,6 +11,11 @@ export function registerMetaRoutes(app: Express, ctx: ServerContext) {
       }
     }
 
+    // Parse BEHOLDEN_SUPPORT with a forgiving boolean parser.
+    // Accepts: true/false, 1/0, yes/no, on/off (case-insensitive).
+    const supportEnv = String(process.env.BEHOLDEN_SUPPORT ?? "").trim().toLowerCase();
+    const support = ["true", "1", "yes", "y", "on"].includes(supportEnv);
+
     res.json({
       ok: true,
       host: ctx.runtime.host,
@@ -18,7 +23,7 @@ export function registerMetaRoutes(app: Express, ctx: ServerContext) {
       ips,
       dataDir: ctx.paths.dataDir,
       hasCompendium: ctx.fs.existsSync(ctx.paths.compendiumPath),
-      support: process.env.BEHOLDEN_SUPPORT === "true",
+      support,
     });
   });
 }

@@ -47,7 +47,7 @@ export function FaqView() {
         </Q>
 
         <Q q="Why should I support you?">
-          You don't have to. The code is at your disposal, feel free to remove the button. I won't lose sleep over it. I use this app myself, and I'll keep improving it whether people support me or not. 
+          You don't have to. The code is at your disposal, feel free to remove the button using the ".env" file and setting SUPPORT=false (you'll have to restart the server). I won't lose sleep over it. I use this app myself, and I'll keep improving it whether people support me or not. 
           But if you want to give me the fuzzies and help me feel validated, I'd appreciate it.
         </Q>
 

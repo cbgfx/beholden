@@ -18,7 +18,9 @@ import { createServer } from "./server/createServer.js";
   ];
 
   const found = candidates.find((p) => fs.existsSync(p));
-  if (found) dotenv.config({ path: found });
+  // Allow repo-local .env to override machine/user environment variables.
+  // This keeps dev toggles (like BEHOLDEN_SUPPORT=false) predictable.
+  if (found) dotenv.config({ path: found, override: true });
 })();
 
 createServer();
