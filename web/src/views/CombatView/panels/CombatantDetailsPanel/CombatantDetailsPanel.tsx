@@ -132,7 +132,18 @@ export function CombatantDetailsPanel(props: Props) {
           ) : null}
 
           {ctx.selectedMonster ? (
-            <MonsterSpells spellNames={ctx.spellNames} spellLevels={ctx.spellLevels} onOpenSpell={ctx.onOpenSpell} />
+            <MonsterSpells
+              spellNames={ctx.spellNames}
+              spellLevels={ctx.spellLevels}
+              onOpenSpell={ctx.onOpenSpell}
+              slots={(ctx.selectedMonster as any).slots}
+              usedSpellSlots={combatant?.usedSpellSlots}
+              onChangeSpellSlots={(level, used) =>
+                ctx.onUpdate({
+                  usedSpellSlots: { ...(combatant?.usedSpellSlots ?? {}), [String(level)]: used },
+                })
+              }
+            />
           ) : null}
 
           {ctx.selectedMonster ? <MonsterTraits monster={ctx.selectedMonster} /> : null}
