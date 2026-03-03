@@ -133,6 +133,43 @@ export const FOOD_LODGING = [
   { item: "Fine wine (bottle)", cost: "10 gp" },
 ];
 
+export const SIGHT_TYPES: Array<{ name: string; range: string; bullets: string[] }> = [
+  {
+    name: "Darkvision",
+    range: "Typically 30–120 ft",
+    bullets: [
+      "Can see in dim light as if it were bright light, and in darkness as if dim light.",
+      "Cannot discern color in darkness, only shades of gray.",
+    ],
+  },
+  {
+    name: "Blindsight",
+    range: "Typically 10–60 ft",
+    bullets: [
+      "Can perceive surroundings without relying on sight (sound, vibration, scent, etc.).",
+      "Can detect invisible creatures and objects within range.",
+    ],
+  },
+  {
+    name: "Truesight",
+    range: "Typically 30–120 ft",
+    bullets: [
+      "Sees in normal and magical darkness, and sees invisible creatures/objects.",
+      "Automatically detects visual illusions and succeeds on saves against them.",
+      "Perceives the original form of shapechangers or creatures altered by magic.",
+      "Sees into the Ethereal Plane.",
+    ],
+  },
+  {
+    name: "Tremorsense",
+    range: "Typically 10–60 ft",
+    bullets: [
+      "Detects and pinpoints vibrations in contact with the same ground or liquid.",
+      "Does not detect flying or incorporeal creatures.",
+    ],
+  },
+];
+
 export const SCHOOLS_OF_MAGIC: Array<{ name: string; bullets: string[]; examples: string[] }> = [
   {
     name: "Abjuration",

@@ -10,12 +10,21 @@ import { Select } from "@/ui/Select";
 
 type ConditionsDrawerState = Exclude<Extract<DrawerState, { type: "combatantConditions" }>, null>;
 
-type ConditionInstance = { key: string; casterId?: string | null };
+type ConditionInstance = { key: string; casterId?: string | null; expiresAtRound?: number | null };
 
 // Only these conditions require a caster association.
 const NEEDS_CASTER_KEYS = new Set(["hexed", "marked"]);
 function needsCasterForKey(key: string) {
   return NEEDS_CASTER_KEYS.has(String(key ?? "").trim().toLowerCase());
+}
+
+/** Cycle the expiry round: null → cr+1 → cr+2 → cr+3 → cr+4 → null */
+function cycleExpiry(current: number | null | undefined, cr: number): number | null {
+  if (current == null) return cr + 1;
+  const remaining = current - cr;
+  if (remaining <= 0) return cr + 1;   // was expired — reset to +1
+  if (remaining >= 4) return null;      // at max — clear
+  return cr + remaining + 1;
 }
 
 export function CombatantConditionsDrawer(props: {
@@ -27,6 +36,11 @@ export function CombatantConditionsDrawer(props: {
   const [conds, setConds] = React.useState<ConditionInstance[]>([]);
   const debounceRef = React.useRef<number | null>(null);
   const skipNextCommitRef = React.useRef<boolean>(true);
+  // Refs to latest values — used in the unmount flush below (initialized after commit is declared).
+  const condsRef = React.useRef<ConditionInstance[]>(conds);
+  const commitRef = React.useRef<(c: ConditionInstance[]) => Promise<void>>(async () => { /* populated below */ });
+
+  const currentRound = props.drawer.currentRound ?? 0;
 
   const combatant = React.useMemo(
     () => state.combatants.find((x) => x.id === props.drawer.combatantId),
@@ -37,13 +51,21 @@ export function CombatantConditionsDrawer(props: {
     if (!combatant) { setConds([]); return; }
     const raw = Array.isArray(combatant.conditions) ? combatant.conditions : [];
     skipNextCommitRef.current = true;
-    setConds(raw.map((x) => ({ key: String(x.key ?? ""), casterId: x.casterId ?? null })));
+    setConds(raw.map((x) => ({
+      key: String(x.key ?? ""),
+      casterId: x.casterId ?? null,
+      expiresAtRound: x.expiresAtRound != null ? Number(x.expiresAtRound) : null,
+    })));
   }, [combatant]);
 
   const commit = React.useCallback(
     async (nextConds: ConditionInstance[]) => {
       const d = props.drawer;
-      const next = nextConds.map((c) => ({ key: c.key, casterId: c.casterId ?? null }));
+      const next = nextConds.map((c) => ({
+        key: c.key,
+        casterId: c.casterId ?? null,
+        expiresAtRound: c.expiresAtRound ?? null,
+      }));
       try {
         await api(`/api/encounters/${d.encounterId}/combatants/${d.combatantId}`, jsonInit("PUT", { conditions: next }));
         await props.refreshEncounter(d.encounterId);
@@ -52,13 +74,31 @@ export function CombatantConditionsDrawer(props: {
     [props.drawer, props.refreshEncounter]
   );
 
+  // Keep latest-value refs in sync (needed for the unmount flush).
+  React.useEffect(() => { condsRef.current = conds; });
+  React.useEffect(() => { commitRef.current = commit; }, [commit]);
+
   // Debounced auto-save on any condition change.
   React.useEffect(() => {
     if (skipNextCommitRef.current) { skipNextCommitRef.current = false; return; }
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
-    debounceRef.current = window.setTimeout(() => void commit(conds), 250);
+    debounceRef.current = window.setTimeout(() => {
+      debounceRef.current = null;
+      void commitRef.current(condsRef.current);
+    }, 250);
     return () => { if (debounceRef.current) window.clearTimeout(debounceRef.current); };
-  }, [conds, commit]);
+  }, [conds]);
+
+  // Flush any pending debounced save when the drawer unmounts (e.g. user presses "End" mid-edit).
+  React.useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        window.clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+        void commitRef.current(condsRef.current);
+      }
+    };
+  }, []); // intentionally empty — runs only on unmount
 
   const allowedKeys = React.useMemo(() => {
     if (props.drawer.role === "active") return new Set<string>(["concentration", "invisible"]);
@@ -82,6 +122,10 @@ export function CombatantConditionsDrawer(props: {
 
   const setCasterForIndex = React.useCallback((idx: number, casterId: string | null) => {
     setConds((prev) => { const next = [...prev]; next[idx] = { ...next[idx], casterId }; return next; });
+  }, []);
+
+  const setExpiryForIndex = React.useCallback((idx: number, expiresAtRound: number | null) => {
+    setConds((prev) => { const next = [...prev]; next[idx] = { ...next[idx], expiresAtRound }; return next; });
   }, []);
 
   const removeAt = React.useCallback((idx: number) => {
@@ -154,6 +198,17 @@ export function CombatantConditionsDrawer(props: {
                 const CondIcon = conditionIconByKey[c.key];
                 const caster = c.casterId ? state.combatants.find((x) => x.id === c.casterId) : undefined;
 
+                const hasTimer = c.expiresAtRound != null;
+                const isExpired = hasTimer && c.expiresAtRound! <= currentRound;
+                const remaining = hasTimer ? c.expiresAtRound! - currentRound : null;
+
+                const chipBorderColor = isExpired
+                  ? theme.colors.accentWarning
+                  : withAlpha(theme.colors.accentPrimary, 0.4);
+                const chipBg = isExpired
+                  ? "rgba(255, 140, 66, 0.12)"
+                  : withAlpha(theme.colors.accentPrimary, 0.12);
+
                 return (
                   <div key={`${c.key}_${idx}`} style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
 
@@ -164,8 +219,8 @@ export function CombatantConditionsDrawer(props: {
                       gap: 6,
                       padding: "5px 8px 5px 10px",
                       borderRadius: 999,
-                      border: `1px solid ${withAlpha(theme.colors.accentPrimary, 0.4)}`,
-                      background: withAlpha(theme.colors.accentPrimary, 0.12),
+                      border: `1px solid ${chipBorderColor}`,
+                      background: chipBg,
                       color: theme.colors.text,
                       fontSize: "var(--fs-pill)",
                       fontWeight: 800,
@@ -177,6 +232,47 @@ export function CombatantConditionsDrawer(props: {
                           · {caster.label ?? "Caster"}
                         </span>
                       )}
+
+                      {/* Timer cycle button */}
+                      <button
+                        onClick={() => setExpiryForIndex(idx, cycleExpiry(c.expiresAtRound, currentRound))}
+                        title={
+                          !hasTimer
+                            ? "Set expiry timer"
+                            : isExpired
+                            ? "Expired — click to reset"
+                            : `Expires in ${remaining} round${remaining === 1 ? "" : "s"} — click to adjust`
+                        }
+                        style={{
+                          all: "unset",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          minWidth: 22,
+                          height: 20,
+                          padding: "0 4px",
+                          borderRadius: 999,
+                          border: hasTimer
+                            ? `1px solid ${isExpired ? theme.colors.accentWarning : theme.colors.accentWarning}`
+                            : `1px solid ${theme.colors.panelBorder}`,
+                          background: hasTimer
+                            ? isExpired
+                              ? theme.colors.accentWarning
+                              : "rgba(255, 140, 66, 0.15)"
+                            : "transparent",
+                          color: hasTimer
+                            ? isExpired ? "#000" : theme.colors.accentWarning
+                            : theme.colors.muted,
+                          fontSize: "var(--fs-tiny)",
+                          fontWeight: 900,
+                          lineHeight: 1,
+                          transition: "border-color 120ms, background 120ms, color 120ms",
+                        }}
+                      >
+                        {!hasTimer ? "⏱" : isExpired ? "exp" : `${remaining}R`}
+                      </button>
+
                       <button
                         onClick={() => removeAt(idx)}
                         title="Remove"

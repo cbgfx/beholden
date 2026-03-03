@@ -91,13 +91,14 @@ export function registerCompendiumRoutes(app: Express, ctx: ServerContext) {
       type: it.type ?? null,
       typeKey: it.typeKey ?? null,
       attunement: Boolean(it.attunement),
+      magic: Boolean(it.magic),
     }));
     res.json(rows);
   });
 
   app.get("/api/compendium/items/:itemId", (req, res) => {
     const { itemId } = req.params;
-    const it = ctx.compendium.state.items.find((x: any) => x.id === itemId);
+    const it = ctx.compendium.state.items.find((x) => x.id === itemId);
     if (!it) return res.status(404).json({ ok: false, message: "Item not found in compendium" });
     res.json({
       id: it.id,
@@ -107,6 +108,7 @@ export function registerCompendiumRoutes(app: Express, ctx: ServerContext) {
       type: it.type ?? null,
       typeKey: it.typeKey ?? null,
       attunement: Boolean(it.attunement),
+      magic: Boolean(it.magic),
       text: it.text ?? "",
     });
   });

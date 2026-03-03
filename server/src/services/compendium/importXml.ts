@@ -139,6 +139,8 @@ function xmlItemToJson(it: any): any | null {
   const typeCode = it?.type ?? null;
   const { type, typeKey } = mapItemType(typeCode);
   const { rarity, attunement } = parseItemDetail(it?.detail);
+  // <magic>1</magic> means magical item; absent or 0 means mundane.
+  const magic = it?.magic != null ? Number(String(it.magic).trim()) === 1 : false;
   const text = String(it?.text ?? "").trim();
 
   return {
@@ -149,6 +151,7 @@ function xmlItemToJson(it: any): any | null {
     type,
     type_key: typeKey,
     attunement,
+    magic,
     text,
   };
 }
@@ -171,18 +174,22 @@ function parseItemDetail(detailRaw: unknown): { rarity: string | null; attunemen
 function mapItemType(codeRaw: unknown): { type: string; typeKey: string } {
   const code = String(codeRaw ?? "").trim().toUpperCase();
   const map: Record<string, string> = {
-    M: "Weapon",
-    R: "Weapon",
-    A: "Armor",
+    LA: "Light Armor",
+    MA: "Medium Armor",
+    HA: "Heavy Armor",
     S: "Shield",
-    ST: "Staff",
-    RD: "Rod",
-    WD: "Wand",
-    RG: "Ring",
-    SC: "Scroll",
+    M: "Melee Weapon",
+    R: "Ranged Weapon",
+    A: "Ammo",
+    $: "Currency",
+    G: "Adventuring Gear",
     P: "Potion",
+    SC: "Scroll",
     W: "Wondrous",
-    G: "Gear",
+    WD: "Wand",
+    RD: "Rod",
+    ST: "Staff",
+    RG: "Ring",
   };
   const type = map[code] ?? "Other";
   return { type, typeKey: normalizeKey(type) };

@@ -12,10 +12,32 @@ import { Select } from "@/ui/Select";
 
 export type AddItemPayload =
   | { source: "compendium"; itemId: string }
-  | { source: "custom"; custom: { name: string; rarity: string | null; type: string | null; attunement: boolean; text: string } };
+  | { source: "custom"; custom: { name: string; rarity: string | null; type: string | null; attunement: boolean; magic: boolean; text: string } };
 
 function uniqSorted(xs: string[]) {
   return Array.from(new Set(xs.filter(Boolean))).sort((a, b) => a.localeCompare(b));
+}
+
+function MagicBadge() {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 3,
+        fontSize: "var(--fs-small)",
+        fontWeight: 700,
+        color: "#6ea8fe",
+        border: "1px solid #3d6db0",
+        borderRadius: 6,
+        padding: "1px 6px",
+        lineHeight: 1.4,
+        whiteSpace: "nowrap",
+      }}
+    >
+      ✦ Magic
+    </span>
+  );
 }
 
 export function ItemPickerModal(props: {
@@ -29,6 +51,7 @@ export function ItemPickerModal(props: {
   const [q, setQ] = React.useState("");
   const [rarity, setRarity] = React.useState<string>("");
   const [type, setType] = React.useState<string>("");
+  const [magicFilter, setMagicFilter] = React.useState<"" | "magic" | "nonmagic">("");
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [detail, setDetail] = React.useState<CompendiumItemDetail | null>(null);
 
@@ -37,6 +60,7 @@ export function ItemPickerModal(props: {
   const [customRarity, setCustomRarity] = React.useState<string>("");
   const [customType, setCustomType] = React.useState<string>("");
   const [customAttune, setCustomAttune] = React.useState(false);
+  const [customMagic, setCustomMagic] = React.useState(false);
   const [customText, setCustomText] = React.useState("");
 
   // Load index on open (keeps App lightweight).
@@ -64,6 +88,7 @@ export function ItemPickerModal(props: {
     setQ("");
     setRarity("");
     setType("");
+    setMagicFilter("");
     setSelectedId(null);
     setDetail(null);
     setCreateMode(false);
@@ -71,6 +96,7 @@ export function ItemPickerModal(props: {
     setCustomRarity("");
     setCustomType("");
     setCustomAttune(false);
+    setCustomMagic(false);
     setCustomText("");
   }, [props.isOpen]);
 
@@ -108,9 +134,15 @@ export function ItemPickerModal(props: {
     return rows
       .filter((r) => (!rarity ? true : String(r.rarity ?? "") === rarity))
       .filter((r) => (!type ? true : String(r.type ?? "") === type))
+      .filter((r) => {
+        if (!magicFilter) return true;
+        if (magicFilter === "magic") return Boolean(r.magic);
+        if (magicFilter === "nonmagic") return !r.magic;
+        return true;
+      })
       .filter((r) => (!ql ? true : String(r.name ?? "").toLowerCase().includes(ql)))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [rows, q, rarity, type]);
+  }, [rows, q, rarity, type, magicFilter]);
 
   function addSelected() {
     if (!selectedId) return;
@@ -127,6 +159,7 @@ export function ItemPickerModal(props: {
         rarity: customRarity.trim() ? customRarity.trim() : null,
         type: customType.trim() ? customType.trim() : null,
         attunement: Boolean(customAttune),
+        magic: Boolean(customMagic),
         text: customText
       }
     });
@@ -155,8 +188,7 @@ export function ItemPickerModal(props: {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search"
-              style={{ width: "100%", background: theme.colors.panelBg,
-                      color: theme.colors.text }}
+              style={{ width: "100%", padding: "10px 12px", background: theme.colors.panelBg, color: theme.colors.text }}
             />
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -178,15 +210,24 @@ export function ItemPickerModal(props: {
               </Select>
             </div>
 
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 700, whiteSpace: "nowrap" }}>✦ Magic</span>
+              <Select style={{ flex: 1 } as any} value={magicFilter} onChange={(e) => setMagicFilter((e.target as any).value as "" | "magic" | "nonmagic")}>
+                <option value="">All items</option>
+                <option value="magic">Magic only</option>
+                <option value="nonmagic">Non-magic only</option>
+              </Select>
+            </div>
+
             <div
               style={{
                 border: `1px solid ${theme.colors.panelBorder}`,
                 borderRadius: 10,
                 overflow: "hidden",
-                maxHeight: 380
+                maxHeight: 320
               }}
             >
-              <div style={{ overflowY: "auto", maxHeight: 380 }}>
+              <div style={{ overflowY: "auto", maxHeight: 320 }}>
                 {loading ? <div style={{ padding: 10, color: theme.colors.muted }}>Loading...</div> : null}
                 {!loading && filtered.length === 0 ? (
                   <div style={{ padding: 10, color: theme.colors.muted }}>No items found.</div>
@@ -211,7 +252,10 @@ export function ItemPickerModal(props: {
                         color: theme.colors.text
                       }}
                     >
-                      <div style={{ fontWeight: 900 }}>{r.name}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontWeight: 900 }}>{r.name}</span>
+                        {r.magic ? <MagicBadge /> : null}
+                      </div>
                       <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
                         {[r.rarity ? titleCase(r.rarity) : null, r.type ? titleCase(r.type) : null, r.attunement ? "Attunement" : null]
                           .filter(Boolean)
@@ -266,20 +310,28 @@ export function ItemPickerModal(props: {
                 Requires attunement
               </label>
 
+              <label style={{ display: "flex", alignItems: "center", gap: 8, color: theme.colors.muted }}>
+                <input type="checkbox" checked={customMagic} onChange={(e) => setCustomMagic(e.target.checked)} />
+                ✦ Magical item
+              </label>
+
               <textarea
                 value={customText}
                 onChange={(e) => setCustomText(e.target.value)}
                 placeholder="Description / notes"
-                rows={14}
+                rows={12}
                 style={{ resize: "vertical" }}
               />
             </div>
           ) : detail ? (
             <div style={{ display: "grid", gap: 10 }}>
-              <div style={{ color: theme.colors.muted }}>
-                {[detail.rarity ? titleCase(detail.rarity) : null, detail.type ? titleCase(detail.type) : null, detail.attunement ? "Requires Attunement" : null]
-                  .filter(Boolean)
-                  .join(" • ")}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ color: theme.colors.muted }}>
+                  {[detail.rarity ? titleCase(detail.rarity) : null, detail.type ? titleCase(detail.type) : null, detail.attunement ? "Requires Attunement" : null]
+                    .filter(Boolean)
+                    .join(" • ")}
+                </span>
+                {detail.magic ? <MagicBadge /> : null}
               </div>
               <div
                 className="bh-prewrap"

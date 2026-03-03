@@ -118,6 +118,7 @@ export function CombatView() {
   } = useCombatActions({
     campaignId,
     encounterId,
+    round,
     orderedCombatants,
     setActiveId,
     setTargetId,
@@ -173,6 +174,7 @@ export function CombatView() {
     spellLevels: spellLevelCache,
     roster: orderedCombatants,
     activeForCaster: (active as Combatant | null) ?? null,
+    currentRound: round,
     updateCombatant,
     onOpenOverrides,
     onOpenConditions,
@@ -189,6 +191,7 @@ export function CombatView() {
     spellLevels: spellLevelCache,
     roster: orderedCombatants,
     activeForCaster: (active as Combatant | null) ?? null,
+    currentRound: round,
     updateCombatant,
     onOpenOverrides,
     onOpenConditions,

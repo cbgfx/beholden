@@ -88,6 +88,7 @@ export interface StoredTreasure extends Timestamps {
   type: string | null;
   type_key: string | null;
   attunement: boolean;
+  magic: boolean;
   text: string;
   sort: number;
 }

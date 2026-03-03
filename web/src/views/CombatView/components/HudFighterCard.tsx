@@ -145,11 +145,31 @@ export function HudFighterCard(props: Props) {
           ) : null}
         </div>
 
-        <div className="cvHudHpText">
-          {Math.max(0, Math.floor(hpCurrent))} / {Math.max(1, Math.floor(hpMax))}
-          {tempHp > 0 ? (
-            <span className="cvHudTempText">+{Math.floor(tempHp)}</span>
+        <div className="cvHudHpText" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* AC chip */}
+          {c ? (
+            <span
+              title="Armor Class"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 3,
+                fontWeight: 900,
+                color: theme.colors.muted,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              <span style={{ opacity: 0.7, fontSize: 11 }}>🛡</span>
+              {Math.max(0, Number(c.ac ?? 0) + Number(c.overrides?.acBonus ?? 0))}
+            </span>
           ) : null}
+          {/* HP */}
+          <span style={{ fontVariantNumeric: "tabular-nums" }}>
+            {Math.max(0, Math.floor(hpCurrent))} / {Math.max(1, Math.floor(hpMax))}
+            {tempHp > 0 ? (
+              <span className="cvHudTempText">+{Math.floor(tempHp)}</span>
+            ) : null}
+          </span>
         </div>
       </div>
 

@@ -10,6 +10,7 @@ import {
   LIFESTYLE,
   FOOD_LODGING,
   SCHOOLS_OF_MAGIC,
+  SIGHT_TYPES,
 } from "@/views/CompendiumView/data/rulesReference";
 
 type Section = { id: string; title: string; body: React.ReactNode };
@@ -30,6 +31,16 @@ export function RulesReferencePanel() {
               Note: This is a quick reference for play speed, not full rules text.
             </div>
           </div>
+        ),
+      },
+      {
+        id: "sights",
+        title: "Sight Types",
+        body: (
+          <MiniTable
+            cols={["Sense", "Range", "Notes"]}
+            rows={SIGHT_TYPES.map((s) => [s.name, s.range, s.bullets.join(" • ")])}
+          />
         ),
       },
       {

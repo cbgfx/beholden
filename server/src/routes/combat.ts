@@ -217,6 +217,14 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         const m = v.match(/\d+/);
         return m ? Number(m[0]) : null;
       }
+      // Arrays: XML parsers may produce arrays when a tag appears multiple times.
+      if (Array.isArray(v)) {
+        for (const item of v) {
+          const n = leadingNumber(item);
+          if (n != null) return n;
+        }
+        return null;
+      }
       if (typeof v === "object") {
         const obj = v as any;
         const candidates = [
@@ -226,6 +234,9 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
           obj.average,
           obj.hp,
           obj.max,
+          // fast-xml-parser puts text content in "#text" when mixed with attributes
+          obj["#text"],
+          obj._text,
         ];
         for (const c of candidates) {
           const n = leadingNumber(c);
@@ -235,11 +246,32 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
       return null;
     };
 
+    /** Extract the armour note from formats like "14 (natural armor)" or object .note/.type */
+    const extractAcDetails = (v: unknown): string | null => {
+      if (v == null) return null;
+      if (typeof v === "string") {
+        const m = v.match(/\(([^)]+)\)/);
+        return m && m[1] ? m[1].trim() : null;
+      }
+      if (Array.isArray(v)) {
+        for (const item of v) {
+          const d = extractAcDetails(item);
+          if (d) return d;
+        }
+        return null;
+      }
+      if (v && typeof v === "object") {
+        const obj = v as any;
+        return obj.note ?? obj.type ?? obj.detail ?? obj.details ?? null;
+      }
+      return null;
+    };
+
     const mHp = m?.hp as any;
     const mAc = m?.ac as any;
     const defaultAc = leadingNumber(mAc);
     const defaultHp = leadingNumber(mHp?.average ?? mHp);
-    const defaultAcDetails = mAc?.note ?? mAc?.type ?? null;
+    const defaultAcDetails = extractAcDetails(mAc);
     const defaultHpDetails = mHp?.formula ?? mHp?.roll ?? null;
 
     const combat = ctx.helpers.ensureCombat(encounterId);

@@ -12,6 +12,7 @@ import { CombatantConditionsDrawer } from "@/drawers/drawers/CombatantConditions
 import { TreasureDrawer } from "@/drawers/drawers/TreasureDrawer";
 import { SpellDrawer } from "@/drawers/drawers/SpellDrawer";
 import { SpellBookDrawer } from "@/drawers/drawers/SpellBookDrawer";
+import { AdventureNotesDrawer } from "@/drawers/drawers/AdventureNotesDrawer";
 
 export type DrawerHostProps = {
   refreshAll: () => Promise<void>;
@@ -144,6 +145,15 @@ export function getDrawerRegistration(
         key: drawer.type,
         getContent: () =>
           SpellBookDrawer({
+            close
+          })
+      };
+
+    case "adventureNotes":
+      return {
+        key: drawer.type,
+        getContent: () =>
+          AdventureNotesDrawer({
             close
           })
       };

@@ -86,6 +86,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     let type: string | null = null;
     let typeKey: string | null = null;
     let attunement = false;
+    let magic = false;
     let text = "";
 
     if (source === "compendium") {
@@ -96,6 +97,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
       type = it.type ?? null;
       typeKey = it.typeKey ?? null;
       attunement = Boolean(it.attunement);
+      magic = Boolean(it.magic);
       text = it.text ?? "";
     } else {
       const c = custom as Record<string, unknown> ?? {};
@@ -104,6 +106,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
       type = c.type != null ? String(c.type).trim() : null;
       typeKey = type ? normalizeKey(type) : null;
       attunement = Boolean(c.attunement);
+      magic = Boolean(c.magic);
       text = c.text != null ? String(c.text) : "";
     }
 
@@ -123,6 +126,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
       type,
       type_key: typeKey,
       attunement,
+      magic,
       text,
       sort,
       createdAt: t,

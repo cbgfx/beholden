@@ -13,6 +13,7 @@ import type { Player } from "@/domain/types/domain";
 
 import { CombatantConditionsSection } from "@/views/CombatView/panels/CombatantDetailsPanel/components/CombatantConditionsSection";
 import { useCharacterSheetStats } from "@/views/CombatView/panels/CombatantDetailsPanel/hooks/useCharacterSheetStats";
+import { PlayerDeathSaves } from "@/views/CampaignView/components/PlayerDeathSaves";
 
 export type CombatantDetailsCtx = {
   isNarrow: boolean;
@@ -23,6 +24,7 @@ export type CombatantDetailsCtx = {
   spellLevels: Record<string, number | null>;
   roster: Combatant[];
   activeForCaster: Combatant | null;
+  currentRound: number;
   showHpActions: boolean;
   onChangeAttack: (actionName: string, patch: AttackOverride) => void;
   onUpdate: (patch: Record<string, unknown>) => void;
@@ -114,10 +116,34 @@ export function CombatantDetailsPanel(props: Props) {
             <div style={{ marginTop: 10 }}>{sheetStats ? <CharacterSheetPanel stats={sheetStats} /> : null}</div>
           </div>
 
+          {/* Death saves — only for player combatants at 0 HP */}
+          {isPlayer && (selected.hpCurrent ?? 1) <= 0 ? (
+            <div
+              style={{
+                padding: 12,
+                borderRadius: 12,
+                background: theme.colors.panelBg,
+                border: `1px solid ${theme.colors.panelBorder}`,
+              }}
+            >
+              <div style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)", fontWeight: 900, marginBottom: 10 }}>
+                Death Saves
+              </div>
+              <PlayerDeathSaves
+                encounterId={String(selected.encounterId)}
+                combatantId={String(selected.id)}
+                variant="combatList"
+                persisted={selected.deathSaves ?? undefined}
+                hpCurrent={selected.hpCurrent ?? 0}
+              />
+            </div>
+          ) : null}
+
           <CombatantConditionsSection
             selected={selected}
             role={role}
             roster={ctx.roster ?? []}
+            currentRound={ctx.currentRound}
             onCommit={(next) => ctx.onUpdate({ conditions: next })}
           />
 

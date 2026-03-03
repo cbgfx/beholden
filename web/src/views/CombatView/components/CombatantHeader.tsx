@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { theme } from "@/theme/theme";
 import { Panel } from "@/ui/Panel";
 import { Button } from "@/ui/Button";
-import { IconSpells } from "@/icons";
+import { IconNotes, IconSpells } from "@/icons";
 
 type Props = {
   backTo: string;
@@ -16,6 +16,7 @@ type Props = {
   onRollOrReset: () => void;
   onEndCombat: () => void;
   onOpenSpellBook: () => void;
+  onOpenAdventureNotes: () => void;
   onPrev: () => void;
   onNext: () => void;
 };

@@ -121,7 +121,14 @@ export function TreasurePanel(_props: { encounterId?: string } = {}) {
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: 900 }}>{t.name}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 900 }}>
+                    {t.name}
+                    {t.magic ? (
+                      <span style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: "#6ea8fe", border: "1px solid #3d6db0", borderRadius: 6, padding: "1px 6px", lineHeight: 1.4 }}>
+                        ✦ Magic
+                      </span>
+                    ) : null}
+                  </div>
                   <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
                     {[t.rarity, t.type, t.attunement ? "attunement" : null].filter(Boolean).join(" • ")}
                   </div>

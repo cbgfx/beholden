@@ -39,6 +39,7 @@ export type CompendiumItemRow = {
   type: string | null;
   typeKey: string | null;
   attunement: boolean;
+  magic: boolean;
 };
 
 export type CompendiumItemDetail = CompendiumItemRow & {

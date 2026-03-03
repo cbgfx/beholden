@@ -49,6 +49,7 @@ export interface CompendiumItem {
   type: string | null;
   typeKey: string | null;
   attunement: boolean;
+  magic: boolean;
   text: string;
 }
 

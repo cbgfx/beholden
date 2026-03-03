@@ -15,10 +15,11 @@ export type DrawerState =
   | { type: "editINpc"; inpcId: string }
   | { type: "editCombatant"; encounterId: string; combatantId: string }
   | { type: "combatantOverrides"; encounterId: string; combatantId: string }
-  | { type: "combatantConditions"; encounterId: string; combatantId: string; role: "active" | "target"; activeIdForCaster?: string | null }
+  | { type: "combatantConditions"; encounterId: string; combatantId: string; role: "active" | "target"; activeIdForCaster?: string | null; currentRound?: number }
   | { type: "viewTreasure"; treasureId: string; title: string }
   | { type: "viewSpell"; spellId: string; title: string }
   | { type: "spellbook" }
+  | { type: "adventureNotes" }
   | null;
 
 export type State = {

@@ -11,6 +11,7 @@ import type { StoreDispatch } from "@/views/CombatView/hooks/actions/types";
 type Args = {
   campaignId?: string;
   encounterId: string | undefined;
+  round: number;
   orderedCombatants: Combatant[];
   setActiveId: (id: string | null) => void;
   setTargetId: (id: string | null) => void;
@@ -31,6 +32,7 @@ type Args = {
 export function useCombatActions({
   campaignId,
   encounterId,
+  round,
   orderedCombatants,
   setActiveId,
   setTargetId,
@@ -65,7 +67,7 @@ export function useCombatActions({
     setTargetId,
     persistCombatState
   });
-  const { onOpenOverrides, onOpenConditions } = useCombatDrawerActions({ encounterId, dispatch });
+  const { onOpenOverrides, onOpenConditions } = useCombatDrawerActions({ encounterId, round, dispatch });
 
   return {
     applyHpDelta,

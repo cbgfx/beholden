@@ -4,6 +4,8 @@ export type ConditionDef = { key: string; name: string; needsCaster?: boolean };
 export type ConditionInstance = {
   key: string;
   casterId?: string | null;
+  /** Combat round at which this condition expires (inclusive). null = no timer. */
+  expiresAtRound?: number | null;
 };
 
 export const CONDITION_DEFS: ConditionDef[] = [

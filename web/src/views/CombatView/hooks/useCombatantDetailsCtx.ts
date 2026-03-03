@@ -17,6 +17,7 @@ spellLevels: Record<string, number | null>;
 
   roster: Combatant[];
   activeForCaster: Combatant | null;
+  currentRound: number;
 
   updateCombatant: (id: string, patch: Record<string, unknown>) => void;
   onOpenOverrides: (combatantId: string | null) => void;
@@ -47,6 +48,7 @@ export function useCombatantDetailsCtx(args: Args) {
       spellLevels: args.spellLevels,
       roster: args.roster,
       activeForCaster: args.activeForCaster,
+      currentRound: args.currentRound,
       showHpActions: false,
 
       onUpdate: (patch: Record<string, unknown>) => (args.combatant?.id ? args.updateCombatant(args.combatant.id, patch) : void 0),
@@ -75,6 +77,7 @@ export function useCombatantDetailsCtx(args: Args) {
       args.spellLevels,
       args.roster,
       args.activeForCaster,
+      args.currentRound,
       args.combatant?.id,
       args.updateCombatant,
       args.onOpenOverrides,

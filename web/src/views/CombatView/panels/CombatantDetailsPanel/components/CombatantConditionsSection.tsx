@@ -14,15 +14,17 @@ export function CombatantConditionsSection(props: {
   selected: Combatant;
   role: "active" | "target";
   roster: Combatant[];
+  currentRound?: number;
   onCommit: (next: ConditionInstance[]) => void;
 }) {
-const selectedConditions = React.useMemo(() => {
-      const raw = props.selected.conditions ?? [];
+  const selectedConditions = React.useMemo(() => {
+    const raw = props.selected.conditions ?? [];
     return raw.map((c) => ({
       key: String(c.key),
-      casterId: c?.casterId != null ? String(c.casterId) : null
+      casterId: c?.casterId != null ? String(c.casterId) : null,
+      expiresAtRound: c?.expiresAtRound != null ? Number(c.expiresAtRound) : null,
     }));
- }, [props.selected.id, props.selected.conditions]);
+  }, [props.selected.id, props.selected.conditions]);
 
   const rosterById = React.useMemo(() => buildRosterById(props.roster ?? []), [props.roster]);
 
@@ -63,8 +65,23 @@ const selectedConditions = React.useMemo(() => {
             const caster = c.casterId ? rosterById[c.casterId] : null;
             const casterLabel = caster ? displayName(caster) : "";
 
+            const cr = props.currentRound ?? 0;
+            const hasTimer = c.expiresAtRound != null;
+            const isExpired = hasTimer && c.expiresAtRound! <= cr;
+            const remaining = hasTimer ? c.expiresAtRound! - cr : null;
+
+            const chipBorder = isExpired
+              ? `1px solid ${theme.colors.accentWarning}`
+              : pillStyle.border;
+            const chipBg = isExpired
+              ? "rgba(255, 140, 66, 0.08)"
+              : pillStyle.background;
+
             return (
-              <span key={`${c.key}:${c.casterId ?? ""}:${idx}`} style={pillStyle}>
+              <span
+                key={`${c.key}:${c.casterId ?? ""}:${idx}`}
+                style={{ ...pillStyle, border: chipBorder, background: chipBg }}
+              >
                 {(() => {
                   const CondIcon = conditionIconByKey[c.key as keyof typeof conditionIconByKey];
                   return CondIcon ? (
@@ -75,6 +92,25 @@ const selectedConditions = React.useMemo(() => {
                 {needsCaster && casterLabel ? (
                   <span style={{ color: theme.colors.muted, fontWeight: 900 }}>({casterLabel})</span>
                 ) : null}
+
+                {/* Expiry badge */}
+                {hasTimer && (
+                  <span
+                    title={isExpired ? "Expired" : `Expires in ${remaining} round${remaining === 1 ? "" : "s"}`}
+                    style={{
+                      fontSize: "var(--fs-tiny)",
+                      fontWeight: 900,
+                      padding: "1px 5px",
+                      borderRadius: 999,
+                      background: isExpired ? theme.colors.accentWarning : "rgba(255,255,255,0.08)",
+                      color: isExpired ? "#000" : theme.colors.accentWarning,
+                      border: isExpired ? "none" : `1px solid ${theme.colors.accentWarning}`,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {isExpired ? "exp" : `${remaining}R`}
+                  </span>
+                )}
 
                 <button
                   type="button"

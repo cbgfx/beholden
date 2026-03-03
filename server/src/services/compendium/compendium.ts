@@ -186,6 +186,7 @@ export function createCompendium({ compendiumPath }: { compendiumPath: string })
         type: it?.type ?? null,
         typeKey: it?.type_key ?? it?.typeKey ?? null,
         attunement: Boolean(it?.attunement ?? false),
+        magic: Boolean(it?.magic ?? false),
         text: it?.text != null ? String(it.text) : "",
       };
     });

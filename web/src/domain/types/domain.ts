@@ -156,6 +156,7 @@ export interface TreasureEntry {
   rarity?: string;
   type?: string;
   attunement?: boolean;
+  magic?: boolean;
   text?: string;
 }
 

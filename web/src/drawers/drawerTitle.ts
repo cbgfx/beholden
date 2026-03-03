@@ -38,6 +38,8 @@ export function getDrawerTitle(d: DrawerState): string {
       return d.title;
     case "spellbook":
       return "Spell Book";
+    case "adventureNotes":
+      return "Adventure Notes";
     default:
       return "Edit";
   }
