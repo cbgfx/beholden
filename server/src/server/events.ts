@@ -37,6 +37,9 @@ export type EncounterCombatantsChangedPayload = { encounterId: Id };
 
 export type EncounterCombatStateChangedPayload = { encounterId: Id };
 
+export type SavePendingPayload = Record<string, never>;
+export type SaveCompletePayload = Record<string, never>;
+
 export interface ServerEventMap {
   hello: HelloPayload;
 
@@ -51,6 +54,9 @@ export interface ServerEventMap {
 
   "encounter:combatantsChanged": EncounterCombatantsChangedPayload;
   "encounter:combatStateChanged": EncounterCombatStateChangedPayload;
+
+  "save:pending": SavePendingPayload;
+  "save:complete": SaveCompletePayload;
 }
 
 export type ServerEventType = keyof ServerEventMap;

@@ -2,8 +2,27 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useStore } from "@/store";
-import { useWsStatus } from "@/services/ws";
+import { useWs, useWsStatus } from "@/services/ws";
 import { theme, withAlpha } from "@/theme/theme";
+
+function useSaveStatus(): "idle" | "saving" | "saved" {
+  const [status, setStatus] = React.useState<"idle" | "saving" | "saved">("idle");
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useWs(
+    React.useCallback((msg) => {
+      if (msg.type === "save:pending") {
+        if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+        setStatus("saving");
+      } else if (msg.type === "save:complete") {
+        setStatus("saved");
+        timerRef.current = setTimeout(() => setStatus("idle"), 2000);
+      }
+    }, [])
+  );
+
+  return status;
+}
 
 
 function NavLink(props: { to: string; label: string }) {
@@ -30,6 +49,7 @@ function NavLink(props: { to: string; label: string }) {
 export function TopBar() {
   const { state } = useStore();
   const connected = useWsStatus();
+  const saveStatus = useSaveStatus();
   const { campaigns, selectedCampaignId } = state;
   const selectedName = campaigns.find((c) => c.id === selectedCampaignId)?.name ?? "";
 
@@ -75,6 +95,15 @@ export function TopBar() {
       <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, color: theme.colors.muted, fontSize: "var(--fs-medium)" }}>
         {selectedCampaignId ? <NavLink to={`/campaign/${selectedCampaignId}`} label="Campaign" /> : <NavLink to="/" label="Campaign" />}
         <NavLink to="/compendium" label="Compendium" />
+        {saveStatus !== "idle" && (
+          <span style={{
+            fontSize: "var(--fs-medium)",
+            color: saveStatus === "saved" ? theme.colors.green : theme.colors.muted,
+            transition: "color 300ms ease",
+          }}>
+            {saveStatus === "saving" ? "Saving…" : "Saved ✓"}
+          </span>
+        )}
         <div
           title={connected ? "Server connected" : "Server disconnected"}
           style={{

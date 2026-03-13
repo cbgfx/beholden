@@ -64,7 +64,13 @@ export function createServer() {
   const userData = loadAllCampaignFiles(paths);
 
   // --- persistence ----------------------------------------------------------
-  const { scheduleSave } = createSaveScheduler(paths, userData);
+  const noopBroadcast: BroadcastFn = (() => { /* noop */ }) as BroadcastFn;
+  let broadcast: BroadcastFn = noopBroadcast;
+
+  const { scheduleSave } = createSaveScheduler(paths, userData, {
+    onPending: () => broadcast("save:pending", {}),
+    onSaved:   () => broadcast("save:complete", {}),
+  });
 
   // --- compendium -----------------------------------------------------------
   const compendium = createCompendium({ compendiumPath: paths.compendiumPath });
@@ -108,9 +114,6 @@ export function createServer() {
   }
 
   // --- context --------------------------------------------------------------
-  const noopBroadcast: BroadcastFn = (() => { /* noop */ }) as BroadcastFn;
-  let broadcast: BroadcastFn = noopBroadcast;
-
   const ctx: ServerContext = {
     runtime,
     paths,

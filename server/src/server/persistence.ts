@@ -8,7 +8,11 @@
 import type { Paths, UserData } from "./context.js";
 import { persistCampaignStorageFromUserData } from "../services/campaignStorage.js";
 
-export function createSaveScheduler(paths: Paths, userData: UserData) {
+export function createSaveScheduler(
+  paths: Paths,
+  userData: UserData,
+  callbacks?: { onPending?: () => void; onSaved?: () => void }
+) {
   let saveTimer: NodeJS.Timeout | null = null;
   let dirty = false;
   let saving = false;
@@ -27,6 +31,7 @@ export function createSaveScheduler(paths: Paths, userData: UserData) {
     saving = true;
     try {
       persistCampaignStorageFromUserData(paths, userData);
+      callbacks?.onSaved?.();
     } finally {
       saving = false;
     }
@@ -41,6 +46,7 @@ export function createSaveScheduler(paths: Paths, userData: UserData) {
   function scheduleSave() {
     dirty = true;
     if (saveTimer) return;
+    callbacks?.onPending?.();
     saveTimer = setTimeout(flushSave, 150);
   }
 
