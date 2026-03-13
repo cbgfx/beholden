@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../shared/validate.js";
+import { requireParam } from "../lib/routeHelpers.js";
 
 const NoteCreateBody = z.object({
   title: z.string().trim().optional(),
@@ -18,7 +19,8 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
   const { uid, now, bySortThenUpdatedDesc, nextSort } = ctx.helpers;
 
   app.get("/api/campaigns/:campaignId/notes", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     const rows = Object.values(userData.notes)
       .filter((n) => n.campaignId === campaignId && !n.adventureId)
       .sort(bySortThenUpdatedDesc);
@@ -26,7 +28,8 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.get("/api/adventures/:adventureId/notes", (req, res) => {
-    const { adventureId } = req.params;
+    const adventureId = requireParam(req, res, "adventureId");
+    if (!adventureId) return;
     const rows = Object.values(userData.notes)
       .filter((n) => n.adventureId === adventureId)
       .sort(bySortThenUpdatedDesc);
@@ -34,7 +37,8 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.post("/api/campaigns/:campaignId/notes", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     const body = parseBody(NoteCreateBody, req);
     const title = body.title || "Note";
     const text = body.text ?? "";
@@ -59,7 +63,8 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.post("/api/adventures/:adventureId/notes", (req, res) => {
-    const { adventureId } = req.params;
+    const adventureId = requireParam(req, res, "adventureId");
+    if (!adventureId) return;
     const adv = userData.adventures[adventureId];
     if (!adv) return res.status(404).json({ ok: false, message: "Adventure not found" });
 
@@ -84,7 +89,8 @@ userData.notes[id] = {
   });
 
   app.put("/api/notes/:noteId", (req, res) => {
-    const { noteId } = req.params;
+    const noteId = requireParam(req, res, "noteId");
+    if (!noteId) return;
     const n = userData.notes[noteId];
     if (!n) return res.status(404).json({ ok: false, message: "Note not found" });
 
@@ -99,7 +105,8 @@ userData.notes[id] = {
   });
 
   app.delete("/api/notes/:noteId", (req, res) => {
-    const { noteId } = req.params;
+    const noteId = requireParam(req, res, "noteId");
+    if (!noteId) return;
     const n = userData.notes[noteId];
     if (!n) return res.status(404).json({ ok: false, message: "Note not found" });
     delete userData.notes[noteId];

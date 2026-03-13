@@ -17,11 +17,23 @@ const SAME_ORIGIN_IS_DIRECT_PORT = (() => {
   }
 })();
 
+/** Try to pull a human-readable message out of a non-OK response body. */
+async function apiError(res: Response): Promise<Error> {
+  try {
+    const body = await res.json() as unknown;
+    const msg = (body as Record<string, unknown>)?.message ?? (body as Record<string, unknown>)?.error;
+    if (msg) return new Error(String(msg));
+  } catch {
+    // ignore JSON parse errors — fall through to status text
+  }
+  return new Error(`${res.status} ${res.statusText}`);
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   // Non-API paths: just fetch as-is.
   if (!path.startsWith("/api")) {
     const res = await fetch(path, init);
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    if (!res.ok) throw await apiError(res);
     return (await res.json()) as T;
   }
 
@@ -32,7 +44,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
     // Client errors (4xx) are real — don't retry.
     if (res.ok) return (await res.json()) as T;
-    if (res.status < 500) throw new Error(`${res.status} ${res.statusText}`);
+    if (res.status < 500) throw await apiError(res);
 
     proxyError = new Error(`proxy ${res.status}`);
   } catch (e) {
@@ -48,7 +60,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
   // Fallback: direct server port (dev split-port mode only).
   const res2 = await fetch(directServerUrl(path), init);
-  if (!res2.ok) throw new Error(`${res2.status} ${res2.statusText}`);
+  if (!res2.ok) throw await apiError(res2);
   return (await res2.json()) as T;
 }
 

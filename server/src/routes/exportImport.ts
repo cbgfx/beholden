@@ -1,13 +1,15 @@
 // server/src/routes/exportImport.ts
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
+import { requireParam } from "../lib/routeHelpers.js";
 
 export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
   const { userData } = ctx;
 
   // Export / Import Campaign
   app.get("/api/campaigns/:campaignId/export", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     const c = userData.campaigns[campaignId];
     if (!c) return res.status(404).json({ ok: false, message: "Campaign not found" });
 

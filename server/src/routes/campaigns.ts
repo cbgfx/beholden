@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../shared/validate.js";
+import { requireParam } from "../lib/routeHelpers.js";
 import fs from "node:fs";
 
 const CampaignUpsertBody = z.object({
@@ -12,16 +13,6 @@ const CampaignUpsertBody = z.object({
 export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   const { userData } = ctx;
   const { now, uid, bySortThenUpdatedDesc } = ctx.helpers;
-
-  function requireParam(req: any, res: any, key: string): string | null {
-    const v = (req.params as Record<string, string | undefined>)[key];
-    if (!v) {
-      res.status(400).json({ ok: false, message: `${key} required` });
-      return null;
-    }
-    return v;
-  }
-
 
   app.get("/api/campaigns", (_req, res) => {
     const rows = Object.values(userData.campaigns).sort(bySortThenUpdatedDesc).map((c) => ({

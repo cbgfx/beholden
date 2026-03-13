@@ -3,6 +3,7 @@ import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../shared/validate.js";
 import { StoredEncounter } from "../server/userData.js";
+import { requireParam } from "../lib/routeHelpers.js";
 
 const EncounterCreateBody = z.object({
   name: z.string().trim().optional(),
@@ -19,7 +20,8 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
   const { uid, now, bySortThenUpdatedDesc } = ctx.helpers;
 
   app.get("/api/adventures/:adventureId/encounters", (req, res) => {
-    const { adventureId } = req.params;
+    const adventureId = requireParam(req, res, "adventureId");
+    if (!adventureId) return;
     const rows = Object.values(userData.encounters)
       .filter((e) => e.adventureId === adventureId)
       .sort(bySortThenUpdatedDesc);
@@ -27,7 +29,8 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.post("/api/adventures/:adventureId/encounters", (req, res) => {
-    const { adventureId } = req.params;
+    const adventureId = requireParam(req, res, "adventureId");
+    if (!adventureId) return;
     const adv = userData.adventures[adventureId];
     if (!adv)
       return res
@@ -58,7 +61,8 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
   // NOTE: "Loose" encounters (campaign-level encounters without an adventure) are intentionally removed.
 
   app.put("/api/encounters/:encounterId", (req, res) => {
-    const { encounterId } = req.params;
+    const encounterId = requireParam(req, res, "encounterId");
+    if (!encounterId) return;
     const e = userData.encounters[encounterId];
     if (!e)
       return res
@@ -81,7 +85,8 @@ userData.encounters[encounterId] = next;
   });
 
   app.delete("/api/encounters/:encounterId", (req, res) => {
-    const { encounterId } = req.params;
+    const encounterId = requireParam(req, res, "encounterId");
+    if (!encounterId) return;
     const e = userData.encounters[encounterId];
     if (!e)
       return res

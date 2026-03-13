@@ -11,13 +11,28 @@ export function InitiativeInput(props: { value: number | null | undefined; onCom
 
   return (
     <input
+      data-initiative-input
       value={v}
       onChange={(e) => setV(e.target.value)}
       onKeyDown={(e) => {
         const k = String(e.key || "").toLowerCase();
         const allowHotkey = !e.altKey && !e.ctrlKey && !e.metaKey && (k === "n" || k === "p");
         if (!allowHotkey) e.stopPropagation();
-        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        if (e.key === "Enter") {
+          const current = e.target as HTMLInputElement;
+          // Find the next empty initiative input in DOM order
+          const all = Array.from(document.querySelectorAll<HTMLInputElement>("[data-initiative-input]"));
+          const idx = all.indexOf(current);
+          const nextEmpty = all.slice(idx + 1).find((el) => el.value === "");
+          current.blur(); // triggers onBlur → onCommit
+          if (nextEmpty) {
+            // Wait one frame for React to re-render after commit, then focus
+            requestAnimationFrame(() => {
+              nextEmpty.focus();
+              nextEmpty.select();
+            });
+          }
+        }
       }}
       onBlur={() => {
         const n = Number(v);

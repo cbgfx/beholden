@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
+import { api } from "@/services/api";
 
 export function useCompendiumIndexFallback(args: {
   isOpen: boolean;
@@ -20,9 +21,7 @@ export function useCompendiumIndexFallback(args: {
 
     (async () => {
       try {
-        const res = await fetch("/api/compendium/monsters");
-        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-        const rows = (await res.json()) as CompendiumMonsterRow[];
+        const rows = await api<CompendiumMonsterRow[]>("/api/compendium/monsters");
         if (!alive) return;
         setFallbackRows(rows);
       } catch (e) {

@@ -1,13 +1,15 @@
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import type { StoredTreasure } from "../server/userData.js";
+import { requireParam } from "../lib/routeHelpers.js";
 
 export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
   const { userData, compendium } = ctx;
   const { uid, now, bySortThenUpdatedDesc, nextSort, normalizeKey } = ctx.helpers;
 
   app.get("/api/campaigns/:campaignId/treasure", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     const c = userData.campaigns[campaignId];
     if (!c) return res.status(404).json({ ok: false, message: "Campaign not found" });
     const rows = Object.values(userData.treasure)
@@ -17,7 +19,8 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.get("/api/adventures/:adventureId/treasure", (req, res) => {
-    const { adventureId } = req.params;
+    const adventureId = requireParam(req, res, "adventureId");
+    if (!adventureId) return;
     const a = userData.adventures[adventureId];
     if (!a) return res.status(404).json({ ok: false, message: "Adventure not found" });
     const rows = Object.values(userData.treasure)
@@ -27,7 +30,8 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.post("/api/campaigns/:campaignId/treasure", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     const c = userData.campaigns[campaignId];
     if (!c) return res.status(404).json({ ok: false, message: "Campaign not found" });
     const source = String(req.body?.source ?? "compendium") as "compendium" | "custom";
@@ -39,7 +43,8 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.post("/api/adventures/:adventureId/treasure", (req, res) => {
-    const { adventureId } = req.params;
+    const adventureId = requireParam(req, res, "adventureId");
+    if (!adventureId) return;
     const a = userData.adventures[adventureId];
     if (!a) return res.status(404).json({ ok: false, message: "Adventure not found" });
     const source = String(req.body?.source ?? "compendium") as "compendium" | "custom";
@@ -51,7 +56,8 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.delete("/api/treasure/:treasureId", (req, res) => {
-    const { treasureId } = req.params;
+    const treasureId = requireParam(req, res, "treasureId");
+    if (!treasureId) return;
     const t = userData.treasure[treasureId];
     if (!t) return res.status(404).json({ ok: false, message: "Treasure not found" });
     const campaignId = t.campaignId;

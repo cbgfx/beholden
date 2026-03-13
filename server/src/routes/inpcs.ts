@@ -1,19 +1,22 @@
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
+import { requireParam } from "../lib/routeHelpers.js";
 
 export function registerInpcRoutes(app: Express, ctx: ServerContext) {
   const { userData } = ctx;
   const { uid, now, parseLeadingInt } = ctx.helpers;
 
   app.get("/api/campaigns/:campaignId/inpcs", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     res.json(
       Object.values(userData.inpcs).filter((i) => i.campaignId === campaignId),
     );
   });
 
   app.post("/api/campaigns/:campaignId/inpcs", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     const b = req.body ?? {};
     const monsterId = String(b.monsterId ?? "").trim();
     const qty = Math.min(Math.max(Number(b.qty ?? 1), 1), 20);
@@ -107,7 +110,8 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.put("/api/inpcs/:inpcId", (req, res) => {
-    const { inpcId } = req.params;
+    const inpcId = requireParam(req, res, "inpcId");
+    if (!inpcId) return;
     const existing = userData.inpcs[inpcId];
     if (!existing)
       return res.status(404).json({ ok: false, message: "Not found" });
@@ -141,7 +145,8 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.delete("/api/inpcs/:inpcId", (req, res) => {
-    const { inpcId } = req.params;
+    const inpcId = requireParam(req, res, "inpcId");
+    if (!inpcId) return;
     const existing = userData.inpcs[inpcId];
     if (!existing)
       return res.status(404).json({ ok: false, message: "Not found" });

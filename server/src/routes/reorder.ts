@@ -1,12 +1,14 @@
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
+import { requireParam } from "../lib/routeHelpers.js";
 
 export function registerReorderRoutes(app: Express, ctx: ServerContext) {
   const { userData } = ctx;
   const { now } = ctx.helpers;
 
   app.post("/api/campaigns/:campaignId/adventures/reorder", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     const ids: string[] = Array.isArray(req.body?.ids) ? req.body.ids.map(String) : [];
     ids.forEach((id: string, i: number) => {
       const a = userData.adventures[id];
@@ -21,7 +23,8 @@ export function registerReorderRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.post("/api/adventures/:adventureId/encounters/reorder", (req, res) => {
-    const { adventureId } = req.params;
+    const adventureId = requireParam(req, res, "adventureId");
+    if (!adventureId) return;
     const a = userData.adventures[adventureId];
     if (!a) return res.status(404).json({ ok: false, message: "Adventure not found" });
     const ids: string[] = Array.isArray(req.body?.ids) ? req.body.ids.map(String) : [];
@@ -38,7 +41,8 @@ export function registerReorderRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.post("/api/campaigns/:campaignId/notes/reorder", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     const ids: string[] = Array.isArray(req.body?.ids) ? req.body.ids.map(String) : [];
     ids.forEach((id: string, i: number) => {
       const n = userData.notes[id];
@@ -53,7 +57,8 @@ export function registerReorderRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.post("/api/adventures/:adventureId/notes/reorder", (req, res) => {
-    const { adventureId } = req.params;
+    const adventureId = requireParam(req, res, "adventureId");
+    if (!adventureId) return;
     const a = userData.adventures[adventureId];
     if (!a) return res.status(404).json({ ok: false, message: "Adventure not found" });
     const ids: string[] = Array.isArray(req.body?.ids) ? req.body.ids.map(String) : [];

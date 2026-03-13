@@ -1,10 +1,12 @@
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
+import { requireParam } from "../lib/routeHelpers.js";
 
 export function registerCompendiumRoutes(app: Express, ctx: ServerContext) {
   // --- Monsters ------------------------------------------------------------
   app.get("/api/compendium/monsters/:monsterId", (req, res) => {
-    const { monsterId } = req.params;
+    const monsterId = requireParam(req, res, "monsterId");
+    if (!monsterId) return;
     const m = ctx.compendium.state.monsters.find((x) => x.id === monsterId)
     if (!m) return res.status(404).json({ ok: false, message: "Monster not found in compendium" });
 
@@ -97,7 +99,8 @@ export function registerCompendiumRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.get("/api/compendium/items/:itemId", (req, res) => {
-    const { itemId } = req.params;
+    const itemId = requireParam(req, res, "itemId");
+    if (!itemId) return;
     const it = ctx.compendium.state.items.find((x) => x.id === itemId);
     if (!it) return res.status(404).json({ ok: false, message: "Item not found in compendium" });
     res.json({
@@ -155,7 +158,8 @@ export function registerCompendiumRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.get("/api/spells/:spellId", (req, res) => {
-    const { spellId } = req.params;
+    const spellId = requireParam(req, res, "spellId");
+    if (!spellId) return;
     const s = ctx.compendium.state.spells.find((x: any) => x.id === spellId);
     if (!s) return res.status(404).json({ ok: false, message: "Spell not found in compendium" });
     res.json(s);

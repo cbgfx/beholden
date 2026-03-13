@@ -21,9 +21,7 @@ export function CompendiumAdminPanel() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/compendium/import/xml", { method: "POST", body: fd });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.message ?? "Import failed");
+      await api<unknown>("/api/compendium/import/xml", { method: "POST", body: fd });
       setMsg(`Imported.`);
       await api<unknown>("/api/meta");
     } catch (e: any) {
@@ -37,9 +35,7 @@ export function CompendiumAdminPanel() {
     setBusy(true);
     setMsg("");
     try {
-      const res = await fetch("/api/compendium", { method: "DELETE" });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.message ?? "Delete failed");
+      await api<unknown>("/api/compendium", { method: "DELETE" });
       setMsg("Compendium deleted.");
       await api<unknown>("/api/meta");
     } catch (e: any) {

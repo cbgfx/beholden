@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from "react";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
 import { IconPencil, IconTrash, IconPlus, IconDownload, IconCamera, IconUsers } from "@/icons";
+import { api } from "@/services/api";
 
 type CampaignSummary = {
   id: string;
@@ -53,9 +54,7 @@ export function HomeView({
     try {
       const fd = new FormData();
       fd.append("file", importFile);
-      const res = await fetch("/api/campaigns/import", { method: "POST", body: fd });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.message ?? "Import failed");
+      await api<unknown>("/api/campaigns/import", { method: "POST", body: fd });
       setImportMsg("Campaign imported.");
       setImportFile(null);
       await onRefresh();
@@ -85,11 +84,7 @@ export function HomeView({
     try {
       const fd = new FormData();
       fd.append("image", file);
-      const res = await fetch(`/api/campaigns/${targetId}/image`, { method: "POST", body: fd });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error((json as any)?.message ?? "Upload failed");
-      }
+      await api<unknown>(`/api/campaigns/${targetId}/image`, { method: "POST", body: fd });
       await onRefresh();
     } catch (err) {
       console.error("Image upload failed:", err);
@@ -98,7 +93,11 @@ export function HomeView({
 
   async function handleRemoveImage(campaignId: string, e: React.MouseEvent) {
     e.stopPropagation();
-    await fetch(`/api/campaigns/${campaignId}/image`, { method: "DELETE" });
+    try {
+      await api<unknown>(`/api/campaigns/${campaignId}/image`, { method: "DELETE" });
+    } catch (err) {
+      console.error("Image delete failed:", err);
+    }
     await onRefresh();
   }
 

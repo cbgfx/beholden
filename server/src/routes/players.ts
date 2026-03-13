@@ -2,18 +2,21 @@
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import type { StoredConditionInstance, StoredPlayerOverrides, StoredDeathSaves } from "../server/userData.js";
+import { requireParam } from "../lib/routeHelpers.js";
 
 export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
   const { userData } = ctx;
   const { uid, now } = ctx.helpers;
 
   app.get("/api/campaigns/:campaignId/players", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     res.json(Object.values(userData.players).filter((p) => p.campaignId === campaignId));
   });
 
   app.post("/api/campaigns/:campaignId/players", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     const p = req.body ?? {};
     const id = uid();
     const t = now();
@@ -47,7 +50,8 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.put("/api/players/:playerId", (req, res) => {
-    const { playerId } = req.params;
+    const playerId = requireParam(req, res, "playerId");
+    if (!playerId) return;
     const existing = userData.players[playerId];
     if (!existing) return res.status(404).json({ ok: false, message: "Not found" });
     const p = req.body ?? {};
@@ -115,7 +119,8 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.delete("/api/players/:playerId", (req, res) => {
-    const { playerId } = req.params;
+    const playerId = requireParam(req, res, "playerId");
+    if (!playerId) return;
     const existing = userData.players[playerId];
     if (!existing) return res.status(404).json({ ok: false, message: "Not found" });
 

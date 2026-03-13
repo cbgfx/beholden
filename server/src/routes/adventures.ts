@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../shared/validate.js";
+import { requireParam } from "../lib/routeHelpers.js";
 
 const AdventureCreateBody = z.object({
   name: z.string().trim().optional(),
@@ -16,7 +17,8 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
   const { uid, now, bySortThenUpdatedDesc, nextSort } = ctx.helpers;
 
   app.get("/api/campaigns/:campaignId/adventures", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     const rows = Object.values(userData.adventures)
       .filter((a) => a.campaignId === campaignId)
       .sort(bySortThenUpdatedDesc);
@@ -24,7 +26,8 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.post("/api/campaigns/:campaignId/adventures", (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
     const body = parseBody(AdventureCreateBody, req);
     const name = body.name || "New Adventure";
     const id = uid();
@@ -44,7 +47,8 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.put("/api/adventures/:adventureId", (req, res) => {
-    const { adventureId } = req.params;
+    const adventureId = requireParam(req, res, "adventureId");
+    if (!adventureId) return;
     const a = userData.adventures[adventureId];
     if (!a) return res.status(404).json({ ok: false, message: "Adventure not found" });
     const body = parseBody(AdventureUpdateBody, req);
@@ -57,7 +61,8 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.delete("/api/adventures/:adventureId", (req, res) => {
-    const { adventureId } = req.params;
+    const adventureId = requireParam(req, res, "adventureId");
+    if (!adventureId) return;
     const a = userData.adventures[adventureId];
     if (!a) return res.status(404).json({ ok: false, message: "Adventure not found" });
 

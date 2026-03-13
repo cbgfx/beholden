@@ -4,6 +4,7 @@ import {
   StoredCombatant,
   StoredCombatantOverrides,
 } from "../server/userData.js";
+import { requireParam } from "../lib/routeHelpers.js";
 
 export function registerCombatRoutes(app: Express, ctx: ServerContext) {
   const { userData, compendium } = ctx;
@@ -11,7 +12,8 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
 
   // Encounter combatants (merged view)
   app.get("/api/encounters/:encounterId/combatants", (req, res) => {
-    const { encounterId } = req.params;
+    const encounterId = requireParam(req, res, "encounterId");
+    if (!encounterId) return;
     const combat = ctx.helpers.ensureCombat(encounterId);
 
     const merged = (combat.combatants ?? []).map((c) => {
@@ -38,7 +40,8 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
 
   // Persisted combat state (round + active combatant)
   app.get("/api/encounters/:encounterId/combatState", (req, res) => {
-    const { encounterId } = req.params;
+    const encounterId = requireParam(req, res, "encounterId");
+    if (!encounterId) return;
     const combat = ctx.helpers.ensureCombat(encounterId);
 
     // Mirror state onto the encounter record (when present) so navigation survives
@@ -63,7 +66,8 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.put("/api/encounters/:encounterId/combatState", (req, res) => {
-    const { encounterId } = req.params;
+    const encounterId = requireParam(req, res, "encounterId");
+    if (!encounterId) return;
     const combat = ctx.helpers.ensureCombat(encounterId);
     const enc = userData.encounters[encounterId] as any;
     const round = Number(req.body?.round);
@@ -103,7 +107,8 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.post("/api/encounters/:encounterId/combatants/addPlayers", (req, res) => {
-    const { encounterId } = req.params;
+    const encounterId = requireParam(req, res, "encounterId");
+    if (!encounterId) return;
     const encounter = userData.encounters[encounterId];
     if (!encounter)
       return res
@@ -134,7 +139,8 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.post("/api/encounters/:encounterId/combatants/addPlayer", (req, res) => {
-    const { encounterId } = req.params;
+    const encounterId = requireParam(req, res, "encounterId");
+    if (!encounterId) return;
     const encounter = userData.encounters[encounterId];
     if (!encounter)
       return res
@@ -167,7 +173,8 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.post("/api/encounters/:encounterId/combatants/addMonster", (req, res) => {
-    const { encounterId } = req.params;
+    const encounterId = requireParam(req, res, "encounterId");
+    if (!encounterId) return;
     const encounter = userData.encounters[encounterId];
     if (!encounter)
       return res
@@ -339,7 +346,8 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.post("/api/encounters/:encounterId/combatants/addInpc", (req, res) => {
-    const { encounterId } = req.params;
+    const encounterId = requireParam(req, res, "encounterId");
+    if (!encounterId) return;
     const encounter = userData.encounters[encounterId];
     if (!encounter)
       return res
@@ -386,7 +394,10 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
   app.put(
     "/api/encounters/:encounterId/combatants/:combatantId",
     (req, res) => {
-      const { encounterId, combatantId } = req.params;
+      const encounterId = requireParam(req, res, "encounterId");
+      if (!encounterId) return;
+      const combatantId = requireParam(req, res, "combatantId");
+      if (!combatantId) return;
       const combat = ctx.helpers.ensureCombat(encounterId);
       const idx = (combat.combatants ?? []).findIndex(
         (c) => c.id === combatantId,
@@ -493,7 +504,10 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
   app.delete(
     "/api/encounters/:encounterId/combatants/:combatantId",
     (req, res) => {
-      const { encounterId, combatantId } = req.params;
+      const encounterId = requireParam(req, res, "encounterId");
+      if (!encounterId) return;
+      const combatantId = requireParam(req, res, "combatantId");
+      if (!combatantId) return;
       const combat = ctx.helpers.ensureCombat(encounterId);
       const idx = combat.combatants.findIndex((x) => x.id === combatantId);
       if (idx < 0)
