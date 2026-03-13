@@ -15,12 +15,15 @@ export function CampaignLeftSidebar(props: {
   onEditAdventure: (adventureId: string) => void;
   onDeleteAdventure: (adventureId: string) => void;
   onReorderAdventures: (ids: string[]) => void;
+  onExportAdventure: (adventureId: string) => void;
+  onImportAdventure: () => void;
 
   onSelectEncounter: (id: string) => void;
   onBuildEncounter: (encounterId: string) => void;
   onPlayEncounter: (encounterId: string) => void;
   onCreateEncounter: () => void;
   onEditEncounter: (encounterId: string) => void;
+  onDuplicateEncounter: (encounterId: string) => void;
   onDeleteEncounter: (encounterId: string) => void;
   onReorderEncounters: (ids: string[]) => void;
 }) {
@@ -34,6 +37,8 @@ export function CampaignLeftSidebar(props: {
         onEdit={props.onEditAdventure}
         onDelete={props.onDeleteAdventure}
         onReorder={props.onReorderAdventures}
+        onExport={props.onExportAdventure}
+        onImport={props.onImportAdventure}
       />
 
       <EncountersPanel
@@ -45,6 +50,7 @@ export function CampaignLeftSidebar(props: {
         onPlay={props.onPlayEncounter}
         onCreate={props.onCreateEncounter}
         onEdit={props.onEditEncounter}
+        onDuplicate={props.onDuplicateEncounter}
         onDelete={props.onDeleteEncounter}
         onReorder={props.onReorderEncounters}
       />

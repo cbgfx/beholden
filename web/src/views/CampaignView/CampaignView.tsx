@@ -16,6 +16,7 @@ export function CampaignView(props: {
   onDeleteAdventure: (adventureId: string) => void;
 
   onEditEncounter: (encounterId: string) => void;
+  onDuplicateEncounter: (encounterId: string) => void;
   onDeleteEncounter: (encounterId: string) => void;
 
   onAddCampaignNote: () => void;
@@ -36,6 +37,8 @@ export function CampaignView(props: {
   onAddINpcToEncounter: (inpcId: string) => void;
   onReorderAdventures: (ids: string[]) => void;
   onReorderEncounters: (ids: string[]) => void;
+  onExportAdventure: (adventureId: string) => void;
+  onImportAdventure: () => void;
   onReorderCampaignNotes: (ids: string[]) => void;
   onReorderAdventureNotes: (ids: string[]) => void;
 
@@ -89,6 +92,8 @@ export function CampaignView(props: {
         onEditAdventure={props.onEditAdventure}
         onDeleteAdventure={props.onDeleteAdventure}
         onReorderAdventures={props.onReorderAdventures}
+        onExportAdventure={props.onExportAdventure}
+        onImportAdventure={props.onImportAdventure}
         onSelectEncounter={(id) =>
           dispatch({
             type: "selectEncounter",
@@ -103,6 +108,7 @@ export function CampaignView(props: {
         }
         onCreateEncounter={props.onCreateEncounter}
         onEditEncounter={props.onEditEncounter}
+        onDuplicateEncounter={props.onDuplicateEncounter}
         onDeleteEncounter={props.onDeleteEncounter}
         onReorderEncounters={props.onReorderEncounters}
       />

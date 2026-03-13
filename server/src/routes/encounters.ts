@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../shared/validate.js";
-import { StoredEncounter } from "../server/userData.js";
+import { StoredEncounter, StoredCombatant } from "../server/userData.js";
 import { requireParam } from "../lib/routeHelpers.js";
 
 const EncounterCreateBody = z.object({
@@ -17,7 +17,7 @@ const EncounterUpdateBody = z.object({
 
 export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
   const { userData } = ctx;
-  const { uid, now, bySortThenUpdatedDesc } = ctx.helpers;
+  const { uid, now, bySortThenUpdatedDesc, nextSort } = ctx.helpers;
 
   app.get("/api/adventures/:adventureId/encounters", (req, res) => {
     const adventureId = requireParam(req, res, "adventureId");
@@ -97,5 +97,69 @@ userData.encounters[encounterId] = next;
     ctx.scheduleSave();
     ctx.broadcast("encounters:changed", { encounterId });
     res.json({ ok: true });
+  });
+
+  // Duplicate an encounter — copies the roster with fresh HP/initiative/conditions.
+  app.post("/api/encounters/:encounterId/duplicate", (req, res) => {
+    const encounterId = requireParam(req, res, "encounterId");
+    if (!encounterId) return;
+    const enc = userData.encounters[encounterId];
+    if (!enc) return res.status(404).json({ ok: false, message: "Encounter not found" });
+
+    const t = now();
+    const newId = uid();
+
+    // Place the copy at the end of the adventure's encounter list.
+    const adventureEncs = Object.values(userData.encounters).filter(
+      (e) => e.adventureId === enc.adventureId
+    );
+    const sort = nextSort(adventureEncs);
+
+    const newEnc: StoredEncounter = {
+      id: newId,
+      campaignId: enc.campaignId,
+      adventureId: enc.adventureId,
+      name: `${enc.name} (copy)`,
+      status: "Open",
+      sort,
+      createdAt: t,
+      updatedAt: t,
+    };
+    userData.encounters[newId] = newEnc;
+
+    // Deep-copy the combatant roster — reset combat state to fresh.
+    const origCombat = userData.combats[encounterId];
+    const combatants: StoredCombatant[] = (origCombat?.combatants ?? []).map((c) => ({
+      ...c,
+      id: uid(),
+      encounterId: newId,
+      initiative: null,
+      conditions: [],
+      hpCurrent: c.hpMax,
+      overrides: { tempHp: 0, acBonus: 0, hpMaxOverride: null },
+      deathSaves: { success: 0, fail: 0 },
+      usedReaction: false,
+      usedLegendaryActions: 0,
+      usedSpellSlots: {},
+      createdAt: t,
+      updatedAt: t,
+    }));
+
+    userData.combats[newId] = {
+      encounterId: newId,
+      round: 1,
+      activeIndex: 0,
+      activeCombatantId: null,
+      combatants,
+      createdAt: t,
+      updatedAt: t,
+    };
+
+    ctx.scheduleSave();
+    ctx.broadcast("encounters:changed", {
+      campaignId: enc.campaignId,
+      adventureId: enc.adventureId,
+    });
+    res.json(newEnc);
   });
 }

@@ -3,7 +3,8 @@ import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";
 import { DraggableList } from "@/components/drag/DraggableList";
 import { theme } from "@/theme/theme";
-import { IconChest, IconPencil, IconPlus, IconTrash } from "@/icons";
+import { IconChest, IconPencil, IconPlus, IconTrash, IconDownload, IconImport } from "@/icons";
+import { RowMenu } from "@/ui/RowMenu";
 
 export function AdventuresPanel(props: {
   adventures: { id: string; name: string }[];
@@ -13,6 +14,8 @@ export function AdventuresPanel(props: {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onReorder: (ids: string[]) => void;
+  onExport: (id: string) => void;
+  onImport: () => void;
 }) {
   const { adventures, selectedAdventureId } = props;
 
@@ -24,9 +27,14 @@ export function AdventuresPanel(props: {
         </span>
       }
       actions={
-        <IconButton onClick={props.onCreate} title="Add adventure" variant="solid">
-          <IconPlus />
-        </IconButton>
+        <div style={{ display: "inline-flex", gap: 4 }}>
+          <IconButton onClick={props.onImport} title="Import adventure">
+            <IconImport />
+          </IconButton>
+          <IconButton onClick={props.onCreate} title="Add adventure" variant="solid">
+            <IconPlus />
+          </IconButton>
+        </div>
       }
     >
       {adventures.length ? (
@@ -38,28 +46,13 @@ export function AdventuresPanel(props: {
           renderItem={(it) => (
             <div style={{ padding: 8, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
               <div style={{ fontWeight: 900, color: theme.colors.text }}>{it.title ?? it.id}</div>
-              <div style={{ display: "flex", gap: 6 }}>
-                <IconButton
-                  title="Edit"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    props.onEdit(it.id);
-                  }}
-                >
-                  <IconPencil />
-                </IconButton>
-                <IconButton
-                  title="Delete"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    props.onDelete(it.id);
-                  }}
-                >
-                  <IconTrash />
-                </IconButton>
-              </div>
+              <RowMenu
+                items={[
+                  { label: "Edit", icon: <IconPencil size={14} />, onClick: () => props.onEdit(it.id) },
+                  { label: "Export", icon: <IconDownload size={14} />, onClick: () => props.onExport(it.id) },
+                  { label: "Delete", icon: <IconTrash size={14} />, danger: true, onClick: () => props.onDelete(it.id) },
+                ]}
+              />
             </div>
           )}
         />

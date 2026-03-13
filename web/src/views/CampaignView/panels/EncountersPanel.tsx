@@ -3,7 +3,8 @@ import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";
 import { DraggableList } from "@/components/drag/DraggableList";
 import { theme } from "@/theme/theme";
-import { IconEncounter, IconPencil, IconPlus, IconTrash, IconPlay, IconBuild } from "@/icons";
+import { IconEncounter, IconPencil, IconPlus, IconTrash, IconPlay, IconBuild, IconCopy } from "@/icons";
+import { RowMenu } from "@/ui/RowMenu";
 
 export function EncountersPanel(props: {
   encounters: { id: string; name: string; status?: string | null }[];
@@ -14,6 +15,7 @@ export function EncountersPanel(props: {
   onBuild: (id: string) => void;
   onCreate: () => void;
   onEdit: (id: string) => void;
+  onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
   onReorder: (ids: string[]) => void;
 }) {
@@ -64,24 +66,13 @@ export function EncountersPanel(props: {
                   >
                     <IconPlay />
                   </IconButton>
-                  <IconButton
-                    title="Edit"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      props.onEdit(it.id);
-                    }}
-                  >
-                    <IconPencil />
-                  </IconButton>
-                  <IconButton
-                    title="Delete"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      props.onDelete(it.id);
-                    }}
-                  >
-                    <IconTrash />
-                  </IconButton>
+                  <RowMenu
+                    items={[
+                      { label: "Edit", icon: <IconPencil size={14} />, onClick: () => props.onEdit(it.id) },
+                      { label: "Duplicate", icon: <IconCopy size={14} />, onClick: () => props.onDuplicate(it.id) },
+                      { label: "Delete", icon: <IconTrash size={14} />, danger: true, onClick: () => props.onDelete(it.id) },
+                    ]}
+                  />
                 </div>
               </div>
             )}

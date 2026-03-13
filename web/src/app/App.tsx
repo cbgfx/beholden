@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { ShellLayout } from "@/layout/ShellLayout";
 import { TopBar } from "@/layout/TopBar";
@@ -26,6 +26,7 @@ function AppInner() {
   const [compQ, setCompQ] = useState("");
   const [compendiumIndex, setCompendiumIndex] = useState<CompendiumMonsterRow[]>([]);
   const [compRows, setCompRows] = useState<CompendiumMonsterRow[]>([]);
+  const importAdventureFileRef = useRef<HTMLInputElement>(null);
 
   function apiErr(e: unknown) {
     alert(e instanceof Error ? e.message : "Something went wrong. Please try again.");
@@ -266,6 +267,46 @@ const refreshCampaign = useCallback(async (cid: string) => {
     } catch (e) { apiErr(e); }
   }
 
+  async function exportAdventure(adventureId: string) {
+    try {
+      const data = await api<unknown>(`/api/adventures/${adventureId}/export`);
+      const adv = state.adventures.find((a) => a.id === adventureId);
+      const slug = (adv?.name ?? "adventure")
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "");
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${slug}.adventure.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { apiErr(e); }
+  }
+
+  async function handleImportAdventureFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !state.selectedCampaignId) return;
+    e.target.value = "";
+    let data: unknown;
+    try { data = JSON.parse(await file.text()); }
+    catch { alert("Invalid adventure file."); return; }
+    if (typeof data !== "object" || data === null || !("version" in data)) {
+      alert("Invalid adventure file."); return;
+    }
+    if ((data as { version: unknown }).version !== 1) {
+      alert("Adventure file version not supported."); return;
+    }
+    try {
+      await api(
+        `/api/campaigns/${state.selectedCampaignId}/adventures/import`,
+        jsonInit("POST", data)
+      );
+      await refreshCampaign(state.selectedCampaignId);
+    } catch (e) { apiErr(e); }
+  }
+
   async function addINpcToEncounter(inpcId: string) {
     if (!state.selectedEncounterId) return;
     try {
@@ -279,6 +320,13 @@ const refreshCampaign = useCallback(async (cid: string) => {
       <TopBar />
 
       <DrawerHost refreshAll={refreshAll} refreshCampaign={refreshCampaign} refreshAdventure={refreshAdventure} refreshEncounter={refreshEncounter} />
+      <input
+        ref={importAdventureFileRef}
+        type="file"
+        accept=".json,application/json"
+        style={{ display: "none" }}
+        onChange={handleImportAdventureFile}
+      />
 
       <Routes>
         <Route
@@ -335,6 +383,12 @@ const refreshCampaign = useCallback(async (cid: string) => {
                   } catch (e) { apiErr(e); }
                 }}
                 onEditEncounter={(encounterId) => dispatch({ type: "openDrawer", drawer: { type: "editEncounter", encounterId } })}
+                onDuplicateEncounter={async (encounterId) => {
+                  try {
+                    await api(`/api/encounters/${encounterId}/duplicate`, { method: "POST" });
+                    await refreshAdventure(state.selectedAdventureId);
+                  } catch (e) { apiErr(e); }
+                }}
                 onDeleteEncounter={async (encounterId) => {
                   if (!(await confirm({ title: "Delete encounter", message: "Delete this encounter?", intent: "danger" }))) return;
                   try {
@@ -371,6 +425,8 @@ const refreshCampaign = useCallback(async (cid: string) => {
                 onEditINpc={(inpcId) => dispatch({ type: "openDrawer", drawer: { type: "editINpc", inpcId } })}
                 onDeleteINpc={deleteINpc}
                 onAddINpcToEncounter={addINpcToEncounter}
+                onExportAdventure={exportAdventure}
+                onImportAdventure={() => importAdventureFileRef.current?.click()}
                 onReorderAdventures={reorderAdventures}
                 onReorderEncounters={reorderEncounters}
                 onReorderCampaignNotes={reorderCampaignNotes}
