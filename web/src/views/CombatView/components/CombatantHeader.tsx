@@ -58,6 +58,13 @@ export function CombatantHeader(props: Props) {
             </span>
           </Button>
 
+          <Button variant="ghost" onClick={props.onOpenAdventureNotes} title="Adventure Notes">
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <IconNotes size={18} title="Adventure Notes" />
+              Notes
+            </span>
+          </Button>
+
           <Button variant="danger" onClick={props.onEndCombat}>
             End
           </Button>
