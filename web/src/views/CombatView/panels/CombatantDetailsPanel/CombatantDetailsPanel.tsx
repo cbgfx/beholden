@@ -40,6 +40,44 @@ type Props = {
   ctx: CombatantDetailsCtx;
 };
 
+function buildCreatureTypeLine(monster: MonsterDetail | null): string | null {
+  if (!monster) return null;
+  const raw = (monster.raw_json ?? monster) as Record<string, unknown>;
+
+  const sizeMap: Record<string, string> = {
+    T: "Tiny", S: "Small", M: "Medium", L: "Large", H: "Huge", G: "Gargantuan",
+  };
+  const sizeRaw = String(raw.size ?? "").trim();
+  const size = sizeMap[sizeRaw] ?? sizeRaw;
+
+  const type = (() => {
+    const t = raw.type;
+    if (!t) return "";
+    if (typeof t === "string") return t;
+    if (typeof t === "object" && t !== null) {
+      const o = t as Record<string, unknown>;
+      const base = typeof o.type === "string" ? o.type : "";
+      const tags = Array.isArray(o.tags) ? (o.tags as unknown[]).map(String).join(", ") : "";
+      return tags ? `${base} (${tags})` : base;
+    }
+    return "";
+  })();
+
+  const align = (() => {
+    const alignMap: Record<string, string> = {
+      L: "lawful", N: "neutral", C: "chaotic", G: "good", E: "evil", U: "unaligned", A: "any",
+    };
+    const a = raw.alignment;
+    if (!a) return "";
+    if (typeof a === "string") return a;
+    if (Array.isArray(a)) return a.map((x: unknown) => alignMap[String(x)] ?? String(x).toLowerCase()).join(" ");
+    return "";
+  })();
+
+  const creature = [size, type].filter(Boolean).join(" ");
+  return [creature, align].filter(Boolean).join(", ") || null;
+}
+
 export function CombatantDetailsPanel(props: Props) {
   const { roleTitle, role, combatant, ctx } = props;
 
@@ -51,6 +89,8 @@ export function CombatantDetailsPanel(props: Props) {
   const showMonsterBaseName = isMonster && monsterBaseName &&
     monsterBaseName.toLowerCase() !== titleMain.toLowerCase();
 
+  const creatureTypeLine = isMonster ? buildCreatureTypeLine(ctx.selectedMonster) : null;
+
   const sheetStats: CharacterSheetStats | null = useCharacterSheetStats({
     combatant: selected,
     selectedMonster: ctx.selectedMonster,
@@ -59,31 +99,30 @@ export function CombatantDetailsPanel(props: Props) {
 
   return (
     <Panel
+      style={{ padding: "12px 14px" }}
       title={
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            fontSize: "var(--fs-title)",
-            justifyContent: "space-between",
-            width: "100%"
-          }}
-        >
-          <span>
-            {roleTitle ? <span style={{ color: theme.colors.accentPrimary }}>{roleTitle}: </span> : null}
-            {titleMain} &nbsp;
-          </span>
-
-          {selected ? (
-            isMonster ? (
-              showMonsterBaseName ? (
-                <span style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)", fontWeight: 900 }}>({monsterBaseName})</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, width: "100%", minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
+            <span style={{ fontSize: "var(--fs-title)", fontWeight: 900 }}>
+              {roleTitle ? <span style={{ color: theme.colors.accentPrimary }}>{roleTitle}: </span> : null}
+              {titleMain}
+            </span>
+            {selected ? (
+              isMonster ? (
+                showMonsterBaseName ? (
+                  <span style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)", fontWeight: 900, flexShrink: 0 }}>({monsterBaseName})</span>
+                ) : null
+              ) : isPlayer ? (
+                <span style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)", fontWeight: 900, flexShrink: 0 }}>
+                  ({ctx.playerName || "Player"})
+                </span>
               ) : null
-            ) : isPlayer ? (
-              <span style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)", fontWeight: 900 }}>
-                ({ctx.playerName || "Player"})
-              </span>
-            ) : null
+            ) : null}
+          </div>
+          {creatureTypeLine ? (
+            <span style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 600, letterSpacing: 0.2 }}>
+              {creatureTypeLine}
+            </span>
           ) : null}
         </div>
       }
@@ -105,16 +144,7 @@ export function CombatantDetailsPanel(props: Props) {
         <div style={{ color: theme.colors.muted }}>Select a combatant.</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div
-            style={{
-              padding: 12,
-              borderRadius: 12,
-              background: theme.colors.panelBg,
-              border: `1px solid ${theme.colors.panelBorder}`
-            }}
-          >
-            <div style={{ marginTop: 10 }}>{sheetStats ? <CharacterSheetPanel stats={sheetStats} /> : null}</div>
-          </div>
+          {sheetStats ? <CharacterSheetPanel stats={sheetStats} /> : null}
 
           {/* Death saves — only for player combatants at 0 HP */}
           {isPlayer && (selected.hpCurrent ?? 1) <= 0 ? (

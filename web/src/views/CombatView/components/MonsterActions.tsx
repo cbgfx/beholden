@@ -138,9 +138,12 @@ export function MonsterActions(props: {
   const Section = (p: { title: string; items: any[]; editable?: boolean }) => {
     if (!p.items?.length) return null;
     return (
-      <div style={{ marginTop: 12 }}>
-        <div style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)", fontWeight: 900, marginBottom: 8 }}>
-          {p.title}
+      <div style={{ marginTop: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+          <span style={{ color: theme.colors.accentPrimary, fontSize: "var(--fs-title)", fontWeight: 900, whiteSpace: "nowrap" }}>
+            {p.title.toUpperCase()}
+          </span>
+          <div style={{ flex: 1, height: 1, background: theme.colors.panelBorder }} />
         </div>
         <div style={{ display: "grid", gap: 8 }}>
           {p.items.map((a: any, i: number) => {
@@ -188,12 +191,12 @@ export function MonsterActions(props: {
       <Section title="Reactions" items={reactions} />
 
       {showLegendary ? (
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 16 }}>
           {/* Header + dots on same row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-            <div style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)", fontWeight: 900 }}>
-              Legendary
-            </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            <span style={{ color: theme.colors.accentPrimary, fontSize: "var(--fs-title)", fontWeight: 900, whiteSpace: "nowrap" }}>
+              LEGENDARY
+            </span>
             {props.onChangeLegendaryUsed ? (
               <LegendaryDots
                 total={legendaryCount}
@@ -201,6 +204,7 @@ export function MonsterActions(props: {
                 onChange={props.onChangeLegendaryUsed}
               />
             ) : null}
+            <div style={{ flex: 1, height: 1, background: theme.colors.panelBorder }} />
           </div>
 
           {legendaryIntro ? (

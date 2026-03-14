@@ -48,17 +48,15 @@ export function CombatantConditionsSection(props: {
   }
 
   return (
-    <div
-      style={{
-        padding: 12,
-        borderRadius: 12,
-        background: theme.colors.panelBg,
-        border: `1px solid ${theme.colors.panelBorder}`
-      }}
-    >
-      <div style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)", fontWeight: 900 }}>Conditions</div>
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+        <span style={{ color: theme.colors.accentPrimary, fontSize: "var(--fs-title)", fontWeight: 900, whiteSpace: "nowrap" }}>
+          CONDITIONS
+        </span>
+        <div style={{ flex: 1, height: 1, background: theme.colors.panelBorder }} />
+      </div>
 
-      <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 6 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
         {selectedConditions.length ? (
           selectedConditions.map((c, idx) => {
             const needsCaster = c.key === "hexed" || c.key === "marked";

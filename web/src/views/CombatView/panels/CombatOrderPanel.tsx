@@ -69,7 +69,7 @@ export function CombatOrderPanel(props: {
           }`}
       </style>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "70vh", overflow: "auto" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {upcoming.map((c) => (
           <CombatOrderRow
             key={c.id}

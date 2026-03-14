@@ -135,7 +135,7 @@ export function CombatOrderRow(props: {
         opacity: dim ? 0.45 : 1, filter: dim ? "grayscale(0.85)" : "none",
       }}>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px" }}>
           <CombatantAvatar baseType={c.baseType} isDead={isDead} iconColor={iconColor} isActive={isActive} isTarget={isTarget} />
 
           <div style={{ flex: "1 1 auto", minWidth: 0 }}>
