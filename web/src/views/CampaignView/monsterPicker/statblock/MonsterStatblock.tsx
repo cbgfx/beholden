@@ -30,6 +30,30 @@ function isSpellSection(name: unknown): boolean {
   return /spellcasting/i.test(s) || /innate spellcasting/i.test(s);
 }
 
+function isAttackAction(a: any): boolean {
+  if (a?.attack) return true;
+  const text = Array.isArray(a?.text) ? a.text.map(String).join(" ") : String(a?.text ?? "");
+  return /\bto\s+hit\b/i.test(text);
+}
+
+type ParsedAttackDefaults = { toHit: number | undefined; damage: string | undefined; damageType: string | undefined };
+
+function parseAttackDefaults(a: any): ParsedAttackDefaults {
+  const text = Array.isArray(a?.text) ? a.text.map(String).join(" ") : String(a?.text ?? "");
+  const hitMatch = text.match(/([+-]?\d+)\s+to\s+hit/i);
+  const toHit = hitMatch ? parseInt(hitMatch[1], 10) : undefined;
+  const dmgMatch = text.match(/\bHit:\s+\d+\s*\(([^)]+)\)/i);
+  const damage = dmgMatch ? dmgMatch[1].replace(/\s+/g, "") : undefined;
+  const typeMatch = text.match(/\b(piercing|bludgeoning|slashing|fire|cold|lightning|acid|poison|necrotic|radiant|psychic|thunder|force)\b/i);
+  const damageType = typeMatch ? typeMatch[1].toLowerCase() : undefined;
+  return { toHit: Number.isFinite(toHit) ? toHit : undefined, damage, damageType };
+}
+
+function fmtToHit(n: number | undefined): string {
+  if (n == null) return "";
+  return n >= 0 ? `+${n}` : String(n);
+}
+
 function TextBlock({ items, title }: { items: any[]; title: string }) {
   if (!items.length) return null;
   return (
@@ -47,32 +71,36 @@ function TextBlock({ items, title }: { items: any[]; title: string }) {
   );
 }
 
-function AttackOverrideInputs({ name, override, onChange }: {
+function AttackOverrideInputs({ name, override, defaults, onChange }: {
   name: string;
   override: AttackOverride | undefined;
+  defaults: ParsedAttackDefaults;
   onChange: (name: string, patch: AttackOverride) => void;
 }) {
+  const toHitDisplay = override?.toHit != null ? fmtToHit(override.toHit) : fmtToHit(defaults.toHit);
+  const damageDisplay = override?.damage ?? defaults.damage ?? "";
+  const typeDisplay = override?.damageType ?? defaults.damageType ?? "";
+
   return (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-small)" }}>To Hit</div>
         <Input
-          value={override?.toHit != null ? String(override.toHit) : ""}
+          value={toHitDisplay}
           onChange={(e) => {
-            const v = e.target.value.replace(/[^0-9-]/g, "");
+            const v = e.target.value.replace(/[^0-9+-]/g, "");
             onChange(name, { toHit: v ? Number(v) : undefined });
           }}
-          placeholder="+0"
           style={{ width: 60 }}
         />
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-small)" }}>Damage</div>
-        <Input value={override?.damage ?? ""} onChange={(e) => onChange(name, { damage: e.target.value })} placeholder="1d6+2" style={{ width: 92 }} />
+        <Input value={damageDisplay} onChange={(e) => onChange(name, { damage: e.target.value })} style={{ width: 92 }} />
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-small)" }}>Type</div>
-        <Input value={override?.damageType ?? ""} onChange={(e) => onChange(name, { damageType: e.target.value })} placeholder="piercing" style={{ width: 92 }} />
+        <Input value={typeDisplay} onChange={(e) => onChange(name, { damageType: e.target.value })} style={{ width: 92 }} />
       </div>
     </div>
   );
@@ -159,8 +187,13 @@ export function MonsterStatblock(props: {
                 <div style={{ color: theme.colors.muted, whiteSpace: "pre-wrap", fontSize: "var(--fs-subtitle)" }}>
                   {a.text ?? a.description ?? ""}
                 </div>
-                {props.onChangeAttack && (
-                  <AttackOverrideInputs name={name} override={props.attackOverrides?.[name]} onChange={props.onChangeAttack} />
+                {props.onChangeAttack && isAttackAction(a) && (
+                  <AttackOverrideInputs
+                    name={name}
+                    override={props.attackOverrides?.[name]}
+                    defaults={parseAttackDefaults(a)}
+                    onChange={props.onChangeAttack}
+                  />
                 )}
               </div>
             );

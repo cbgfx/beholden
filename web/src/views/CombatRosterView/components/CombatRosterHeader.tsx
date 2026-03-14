@@ -16,6 +16,7 @@ type Props = {
     partyHpMax: number;
     hostileDpr: number;
     burstFactor: number;
+    adjustedXp?: number;
   };
 };
 
@@ -36,6 +37,7 @@ export function CombatRosterHeader(props: Props) {
   const hostileDpr = diff && Number.isFinite(diff.hostileDpr) ? diff.hostileDpr : null;
   const burst = diff && Number.isFinite(diff.burstFactor) ? diff.burstFactor : null;
   const partyHpMax = diff && Number.isFinite(diff.partyHpMax) ? diff.partyHpMax : null;
+  const adjustedXp = diff?.adjustedXp != null && Number.isFinite(diff.adjustedXp) ? diff.adjustedXp : null;
 
   return (
     <Panel
@@ -59,7 +61,7 @@ export function CombatRosterHeader(props: Props) {
                 padding: "2px 6px",
                 borderRadius: 999
               }}
-              title="Total XP (hostile monsters only)"
+              title="Total raw XP (hostile monsters only)"
             >
               {xp.toLocaleString()} XP
             </span>
@@ -76,11 +78,12 @@ export function CombatRosterHeader(props: Props) {
                 borderRadius: 999
               }}
               title={
-                `Planning difficulty (HP Max).\n` +
+                `Difficulty (Adj. XP + CR ceiling + DPR)\n` +
+                (adjustedXp != null ? `Adjusted XP: ${Math.round(adjustedXp).toLocaleString()}\n` : "") +
                 (partyHpMax != null ? `Party HP: ${Math.round(partyHpMax).toLocaleString()}\n` : "") +
                 (hostileDpr != null ? `Hostile DPR: ${Math.round(hostileDpr).toLocaleString()}\n` : "") +
                 (burst != null && burst > 1 ? `Burst factor: ×${burst.toFixed(2)}\n` : "") +
-                (rtk != null ? `Rounds-to-TPK: ${rtk.toFixed(1)}` : "")
+                (rtk != null && Number.isFinite(rtk) ? `Rounds to TPK: ${rtk.toFixed(1)}` : "∞ rounds to TPK")
               }
             >
               {diffLabel}

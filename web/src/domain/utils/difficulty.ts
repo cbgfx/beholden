@@ -2,12 +2,96 @@ import type { MonsterDetail } from "@/domain/types/compendium";
 
 type DifficultyLabel = "Too Easy" | "Easy" | "Medium" | "Hard" | "Deadly" | "TPK";
 
+// ── 5e XP thresholds by character level (DMG p.82) ───────────────────────────
+// [easy, medium, hard, deadly]
+const XP_THRESHOLDS: Record<number, [number, number, number, number]> = {
+  1:  [25,   50,    75,    100  ],
+  2:  [50,   100,   150,   200  ],
+  3:  [75,   150,   225,   400  ],
+  4:  [125,  250,   375,   500  ],
+  5:  [250,  500,   750,   1100 ],
+  6:  [300,  600,   900,   1400 ],
+  7:  [350,  750,   1100,  1700 ],
+  8:  [450,  900,   1400,  2100 ],
+  9:  [550,  1100,  1600,  2400 ],
+  10: [600,  1200,  1900,  2800 ],
+  11: [800,  1600,  2400,  3600 ],
+  12: [1000, 2000,  3000,  4500 ],
+  13: [1100, 2200,  3400,  5100 ],
+  14: [1250, 2500,  3800,  5700 ],
+  15: [1400, 2800,  4300,  6400 ],
+  16: [1600, 3200,  4800,  7200 ],
+  17: [2000, 3900,  5900,  8800 ],
+  18: [2100, 4200,  6300,  9500 ],
+  19: [2400, 4900,  7300,  10900],
+  20: [2800, 5700,  8500,  12700],
+};
+
+const DIFFICULTY_ORDER: DifficultyLabel[] = ["Too Easy", "Easy", "Medium", "Hard", "Deadly", "TPK"];
+
+// ── DMG monster-count action economy multipliers ──────────────────────────────
+const MONSTER_COUNT_MULTIPLIERS: Array<[number, number]> = [
+  [1,  1.0],
+  [2,  1.5],
+  [6,  2.0],
+  [10, 2.5],
+  [14, 3.0],
+  [Infinity, 4.0],
+];
+
+function monsterCountMultiplier(count: number): number {
+  if (count <= 0) return 1.0;
+  for (const [max, mult] of MONSTER_COUNT_MULTIPLIERS) {
+    if (count <= max) return mult;
+  }
+  return 4.0;
+}
+
+function xpDifficultyLabel(totalXp: number, playerLevels: number[]): DifficultyLabel {
+  if (!playerLevels.length || totalXp <= 0) return "Too Easy";
+  let easy = 0, medium = 0, hard = 0, deadly = 0;
+  for (const lvl of playerLevels) {
+    const clamped = Math.min(20, Math.max(1, Math.round(lvl)));
+    const t = XP_THRESHOLDS[clamped] ?? XP_THRESHOLDS[1];
+    easy   += t[0];
+    medium += t[1];
+    hard   += t[2];
+    deadly += t[3];
+  }
+  if (totalXp >= deadly * 2) return "TPK";
+  if (totalXp >= deadly)     return "Deadly";
+  if (totalXp >= hard)       return "Hard";
+  if (totalXp >= medium)     return "Medium";
+  if (totalXp >= easy)       return "Easy";
+  return "Too Easy";
+}
+
+function worseDifficulty(a: DifficultyLabel, b: DifficultyLabel): DifficultyLabel {
+  return DIFFICULTY_ORDER.indexOf(a) >= DIFFICULTY_ORDER.indexOf(b) ? a : b;
+}
+
+/**
+ * CR ceiling check — catches glass-ceiling scenarios like CR 20 vs level 6 party.
+ * Compares the single highest CR hostile monster against the average party level.
+ */
+function crCeilingLabel(maxCr: number, avgPartyLevel: number): DifficultyLabel {
+  if (avgPartyLevel <= 0 || maxCr <= 0) return "Too Easy";
+  const ratio = maxCr / avgPartyLevel;
+  if (ratio >= 5.0) return "TPK";
+  if (ratio >= 3.0) return "Deadly";
+  if (ratio >= 2.0) return "Hard";
+  if (ratio >= 1.5) return "Medium";
+  if (ratio >= 1.0) return "Easy";
+  return "Too Easy";
+}
+
 export type EncounterDifficulty = {
   label: DifficultyLabel;
   roundsToTpk: number; // partyHP / hostileDPR
   partyHpMax: number;
   hostileDpr: number;
   burstFactor: number;
+  adjustedXp: number;
 };
 
 const toNumberOrNull = (v: any): number | null => {
@@ -127,6 +211,31 @@ const crToFallbackDpr = (cr: unknown): number | null => {
   return typeof snapped === "number" ? snapped : null;
 };
 
+/**
+ * Normalize action text — handles string, string[], or object[].
+ * Some compendium formats store action.text as an array of objects with a .text or .description field.
+ */
+const normalizeActionText = (raw: unknown): string => {
+  if (raw == null) return "";
+  if (typeof raw === "string") return raw;
+  if (Array.isArray(raw)) {
+    return raw
+      .map((entry) => {
+        if (entry == null) return "";
+        if (typeof entry === "string") return entry;
+        if (typeof entry === "object") {
+          const obj = entry as Record<string, unknown>;
+          const inner = obj.text ?? obj.description ?? obj.content ?? obj.value;
+          if (inner != null) return String(inner);
+          return ""; // skip [object Object] noise
+        }
+        return String(entry);
+      })
+      .join(" ");
+  }
+  return String(raw);
+};
+
 const parseAvgDamageFromActionText = (text: string): number | null => {
   const t = String(text ?? "");
 
@@ -152,6 +261,10 @@ export function estimateMonsterDpr(detail: MonsterDetail | null | undefined): { 
   if (!detail) return null;
   const actions: any[] = Array.isArray((detail as any).action) ? (detail as any).action : [];
 
+  // CR-based fallback DPR — used as a floor to prevent silent parse failures.
+  const cr = (detail as any).cr ?? (detail as any).raw_json?.cr ?? (detail as any).raw_json?.challenge_rating;
+  const crFallback = crToFallbackDpr(cr);
+
   // Collect attack-like actions (exclude Multiattack itself).
   const attackByName: Record<string, number> = {};
   let bestSingle = 0;
@@ -159,7 +272,7 @@ export function estimateMonsterDpr(detail: MonsterDetail | null | undefined): { 
 
   for (const a of actions) {
     const name = String(a?.name ?? "").trim();
-    const text = String(a?.text ?? "");
+    const text = normalizeActionText(a?.text);
     if (!name) continue;
 
     burstFactor = Math.max(burstFactor, getBurstFactorFromText(text));
@@ -174,7 +287,7 @@ export function estimateMonsterDpr(detail: MonsterDetail | null | undefined): { 
   // Multiattack parsing (best effort).
   const multi = actions.find((a) => /^multiattack$/i.test(String(a?.name ?? "").trim()));
   if (multi?.text) {
-    const mt = String(multi.text);
+    const mt = normalizeActionText(multi.text);
     const countMatch = mt.match(/makes\s+([a-z0-9]+)\s+attacks?/i);
     const count = countMatch?.[1] ? wordToNumber(countMatch[1]) : null;
 
@@ -185,7 +298,7 @@ export function estimateMonsterDpr(detail: MonsterDetail | null | undefined): { 
       const lowerMt = mt.toLowerCase();
       for (const [n, dmg] of Object.entries(attackByName)) {
         // Require whole-word-ish match to reduce false positives.
-        const re = new RegExp(`\\b${n.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\b`, "i");
+        const re = new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
         if (re.test(lowerMt)) {
           matchedSum += dmg;
           matchedCount += 1;
@@ -195,21 +308,29 @@ export function estimateMonsterDpr(detail: MonsterDetail | null | undefined): { 
       if (matchedCount > 0) {
         // If fewer attacks were explicitly named than the count, pad with the best single attack.
         const padded = matchedSum + Math.max(0, count - matchedCount) * bestSingle;
-        return { dpr: Math.max(0, padded), burstFactor };
+        const parsedDpr = Math.max(0, padded);
+        // CR floor: if parse result is less than 50% of the CR heuristic, use the CR heuristic.
+        const finalDpr = crFallback != null && parsedDpr < crFallback * 0.5 ? crFallback : parsedDpr;
+        return { dpr: finalDpr, burstFactor };
       }
 
       // Otherwise, assume it repeats its best attack.
-      if (bestSingle > 0) return { dpr: bestSingle * count, burstFactor };
+      if (bestSingle > 0) {
+        const parsedDpr = bestSingle * count;
+        const finalDpr = crFallback != null && parsedDpr < crFallback * 0.5 ? crFallback : parsedDpr;
+        return { dpr: finalDpr, burstFactor };
+      }
     }
   }
 
   // No usable multiattack: assume the monster uses its best attack each round.
-  if (bestSingle > 0) return { dpr: bestSingle, burstFactor };
+  if (bestSingle > 0) {
+    const finalDpr = crFallback != null && bestSingle < crFallback * 0.5 ? crFallback : bestSingle;
+    return { dpr: finalDpr, burstFactor };
+  }
 
   // Last resort: CR fallback.
-  const cr = (detail as any).cr ?? (detail as any).raw_json?.cr ?? (detail as any).raw_json?.challenge_rating;
-  const fallback = crToFallbackDpr(cr);
-  if (fallback != null) return { dpr: fallback, burstFactor };
+  if (crFallback != null) return { dpr: crFallback, burstFactor };
 
   return null;
 }
@@ -228,6 +349,10 @@ export function calcEncounterDifficulty(args: {
   partyHpMax: number;
   hostileDpr: number;
   burstFactor?: number;
+  totalXp?: number;
+  playerLevels?: number[];
+  monsterCount?: number;
+  maxMonsterCr?: number;
 }): EncounterDifficulty {
   const partyHpMax = Math.max(0, Math.round(args.partyHpMax ?? 0));
   const hostileDprRaw = typeof args.hostileDpr === "number" && Number.isFinite(args.hostileDpr) ? Math.max(0, args.hostileDpr) : 0;
@@ -235,7 +360,27 @@ export function calcEncounterDifficulty(args: {
 
   const hostileDpr = hostileDprRaw * burstFactor;
   const roundsToTpk = hostileDpr > 0 ? partyHpMax / hostileDpr : Number.POSITIVE_INFINITY;
-  const label = labelForRoundsToTpk(roundsToTpk);
+
+  // Signal 1 — Adjusted XP with DMG monster-count multiplier.
+  const rawXp = typeof args.totalXp === "number" && Number.isFinite(args.totalXp) ? Math.max(0, args.totalXp) : 0;
+  const mult = monsterCountMultiplier(args.monsterCount ?? 0);
+  const adjustedXp = Math.round(rawXp * mult);
+  const adjustedXpLabel = (adjustedXp > 0 && args.playerLevels?.length)
+    ? xpDifficultyLabel(adjustedXp, args.playerLevels)
+    : "Too Easy";
+
+  // Signal 2 — CR ceiling check.
+  const avgPartyLevel = args.playerLevels?.length
+    ? args.playerLevels.reduce((s, l) => s + l, 0) / args.playerLevels.length
+    : 0;
+  const maxCr = typeof args.maxMonsterCr === "number" && Number.isFinite(args.maxMonsterCr) ? args.maxMonsterCr : 0;
+  const crLabel = crCeilingLabel(maxCr, avgPartyLevel);
+
+  // Signal 3 — DPR survivability model.
+  const dprLabel = labelForRoundsToTpk(roundsToTpk);
+
+  // Take the worst of all three signals.
+  const label = worseDifficulty(worseDifficulty(adjustedXpLabel, crLabel), dprLabel);
 
   return {
     label,
@@ -243,5 +388,6 @@ export function calcEncounterDifficulty(args: {
     partyHpMax,
     hostileDpr: hostileDprRaw,
     burstFactor,
+    adjustedXp,
   };
 }
