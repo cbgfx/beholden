@@ -78,7 +78,13 @@ export function registerCompendiumRoutes(app: Express, ctx: ServerContext) {
         return "";
       })();
 
-      return { id: m.id, name: m.name, cr, type, environment: env };
+      const size = (() => {
+        const v = raw?.size ?? m?.size;
+        if (typeof v === "string") return v.trim();
+        return "";
+      })();
+
+      return { id: m.id, name: m.name, cr, type, environment: env, size };
     });
 
     res.json(rows);

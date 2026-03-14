@@ -126,10 +126,19 @@ export function parseSaves(
 // Info lines (Skills / Senses / Languages / CR / resistances etc.)
 // ---------------------------------------------------------------------------
 
+const SIZE_CODE_TO_LABEL: Record<string, string> = {
+  T: "Tiny", S: "Small", M: "Medium", L: "Large", H: "Huge", G: "Gargantuan",
+};
+
 export function buildMonsterInfoLines(
   detail: Record<string, unknown>,
   xp?: number | null
 ): Array<{ label: string; value: string }> {
+  const sizeStr = (() => {
+    const raw = String(detail["size"] ?? "").trim().toUpperCase();
+    return SIZE_CODE_TO_LABEL[raw] ?? (raw || "");
+  })();
+
   const skillsStr = (() => {
     const raw = detail["skill"] ?? detail["skills"] ?? null;
     if (typeof raw === "string") return raw;
@@ -155,6 +164,7 @@ export function buildMonsterInfoLines(
   );
 
   return [
+    ...(sizeStr ? [{ label: "Size", value: sizeStr }] : []),
     { label: "Skills", value: skillsStr || "—" },
     { label: "Senses", value: sensesStr || "—" },
     { label: "Languages", value: langsStr || "—" },

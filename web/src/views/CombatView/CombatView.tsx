@@ -230,8 +230,9 @@ export function CombatView() {
         round={round}
         seconds={secondsInRound}
         canNavigate={canNavigate}
-        rollLabel={canNavigate ? "Reset Fight" : "Roll Monsters"}
-        onRollOrReset={canNavigate ? resetFight : rollInitiativeForMonsters}
+        rollLabel="Roll Monsters"
+        onRollOrReset={rollInitiativeForMonsters}
+        onResetFight={resetFight}
         onOpenSpellBook={openSpellBook}
         onOpenAdventureNotes={openAdventureNotes}
         onEndCombat={endCombat}

@@ -30,6 +30,7 @@ const XP_THRESHOLDS: Record<number, [number, number, number, number]> = {
 const DIFFICULTY_ORDER: DifficultyLabel[] = ["Too Easy", "Easy", "Medium", "Hard", "Deadly", "TPK"];
 
 // ── DMG monster-count action economy multipliers ──────────────────────────────
+const MONSTER_COUNT_MULTIPLIER_TIERS: number[] = [1.0, 1.5, 2.0, 2.5, 3.0, 4.0];
 const MONSTER_COUNT_MULTIPLIERS: Array<[number, number]> = [
   [1,  1.0],
   [2,  1.5],
@@ -39,12 +40,22 @@ const MONSTER_COUNT_MULTIPLIERS: Array<[number, number]> = [
   [Infinity, 4.0],
 ];
 
-function monsterCountMultiplier(count: number): number {
+/**
+ * DMG monster-count multiplier, adjusted for party size.
+ * Small parties (1–2) get one tier up; large parties (6+) get one tier down.
+ */
+function monsterCountMultiplier(count: number, partySize: number): number {
   if (count <= 0) return 1.0;
+  let base = 4.0;
   for (const [max, mult] of MONSTER_COUNT_MULTIPLIERS) {
-    if (count <= max) return mult;
+    if (count <= max) { base = mult; break; }
   }
-  return 4.0;
+  const tiers = MONSTER_COUNT_MULTIPLIER_TIERS;
+  let idx = tiers.indexOf(base);
+  if (idx === -1) idx = tiers.length - 1;
+  if (partySize <= 2) idx = Math.min(idx + 1, tiers.length - 1); // small party → harder
+  if (partySize >= 6) idx = Math.max(idx - 1, 0);                // large party → easier
+  return tiers[idx];
 }
 
 function xpDifficultyLabel(totalXp: number, playerLevels: number[]): DifficultyLabel {
@@ -261,6 +272,10 @@ export function estimateMonsterDpr(detail: MonsterDetail | null | undefined): { 
   if (!detail) return null;
   const actions: any[] = Array.isArray((detail as any).action) ? (detail as any).action : [];
 
+  // Legendary monsters get extra actions every round — bump DPR by 25%.
+  const legendaryRaw = (detail as any).legendary ?? (detail as any).legendaryActions ?? (detail as any).legendary_actions;
+  const hasLegendaryActions = Array.isArray(legendaryRaw) && legendaryRaw.length > 0;
+
   // CR-based fallback DPR — used as a floor to prevent silent parse failures.
   const cr = (detail as any).cr ?? (detail as any).raw_json?.cr ?? (detail as any).raw_json?.challenge_rating;
   const crFallback = crToFallbackDpr(cr);
@@ -310,27 +325,27 @@ export function estimateMonsterDpr(detail: MonsterDetail | null | undefined): { 
         const padded = matchedSum + Math.max(0, count - matchedCount) * bestSingle;
         const parsedDpr = Math.max(0, padded);
         // CR floor: if parse result is less than 50% of the CR heuristic, use the CR heuristic.
-        const finalDpr = crFallback != null && parsedDpr < crFallback * 0.5 ? crFallback : parsedDpr;
-        return { dpr: finalDpr, burstFactor };
+        const baseDpr = crFallback != null && parsedDpr < crFallback * 0.5 ? crFallback : parsedDpr;
+        return { dpr: baseDpr * (hasLegendaryActions ? 1.25 : 1), burstFactor };
       }
 
       // Otherwise, assume it repeats its best attack.
       if (bestSingle > 0) {
         const parsedDpr = bestSingle * count;
-        const finalDpr = crFallback != null && parsedDpr < crFallback * 0.5 ? crFallback : parsedDpr;
-        return { dpr: finalDpr, burstFactor };
+        const baseDpr = crFallback != null && parsedDpr < crFallback * 0.5 ? crFallback : parsedDpr;
+        return { dpr: baseDpr * (hasLegendaryActions ? 1.25 : 1), burstFactor };
       }
     }
   }
 
   // No usable multiattack: assume the monster uses its best attack each round.
   if (bestSingle > 0) {
-    const finalDpr = crFallback != null && bestSingle < crFallback * 0.5 ? crFallback : bestSingle;
-    return { dpr: finalDpr, burstFactor };
+    const baseDpr = crFallback != null && bestSingle < crFallback * 0.5 ? crFallback : bestSingle;
+    return { dpr: baseDpr * (hasLegendaryActions ? 1.25 : 1), burstFactor };
   }
 
   // Last resort: CR fallback.
-  if (crFallback != null) return { dpr: crFallback, burstFactor };
+  if (crFallback != null) return { dpr: crFallback * (hasLegendaryActions ? 1.25 : 1), burstFactor };
 
   return null;
 }
@@ -361,9 +376,10 @@ export function calcEncounterDifficulty(args: {
   const hostileDpr = hostileDprRaw * burstFactor;
   const roundsToTpk = hostileDpr > 0 ? partyHpMax / hostileDpr : Number.POSITIVE_INFINITY;
 
-  // Signal 1 — Adjusted XP with DMG monster-count multiplier.
+  // Signal 1 — Adjusted XP with DMG monster-count multiplier (party-size adjusted).
   const rawXp = typeof args.totalXp === "number" && Number.isFinite(args.totalXp) ? Math.max(0, args.totalXp) : 0;
-  const mult = monsterCountMultiplier(args.monsterCount ?? 0);
+  const partySize = args.playerLevels?.length ?? 0;
+  const mult = monsterCountMultiplier(args.monsterCount ?? 0, partySize);
   const adjustedXp = Math.round(rawXp * mult);
   const adjustedXpLabel = (adjustedXp > 0 && args.playerLevels?.length)
     ? xpDifficultyLabel(adjustedXp, args.playerLevels)

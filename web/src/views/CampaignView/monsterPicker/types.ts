@@ -6,6 +6,7 @@ export type CompendiumMonsterRow = {
   cr?: number | string;
   type?: string;
   environment?: string;
+  size?: string; // raw single-letter code: T S M L H G
 };
 
 export type PreparedMonsterRow = CompendiumMonsterRow & {
@@ -14,6 +15,7 @@ export type PreparedMonsterRow = CompendiumMonsterRow & {
   envPartsLower: string[];
   crNum: number | null;
   firstLetter: string; // "A".."Z" or "#"
+  sizeLabel: string;   // e.g. "Medium", "Large" — empty string if unknown
 };
 
 export type SortMode = "az" | "crAsc" | "crDesc";

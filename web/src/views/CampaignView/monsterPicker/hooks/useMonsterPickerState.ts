@@ -34,14 +34,16 @@ export function useMonsterPickerState(args: {
   // List filter/sort controls
   const [sortMode, setSortMode] = React.useState<SortMode>("az");
   const [envFilter, setEnvFilter] = React.useState<string>("all");
+  const [sizeFilter, setSizeFilter] = React.useState<string>("all");
   const [crMin, setCrMin] = React.useState<string>("");
   const [crMax, setCrMax] = React.useState<string>("");
 
-  const { filteredRows, envOptions, lettersInList, letterFirstIndex } = useMonsterPickerRows({
+  const { filteredRows, envOptions, sizeOptions, lettersInList, letterFirstIndex } = useMonsterPickerRows({
     rows: baseRows,
     compQ,
     sortMode,
     envFilter,
+    sizeFilter,
     crMin,
     crMax,
   });
@@ -214,6 +216,8 @@ export function useMonsterPickerState(args: {
     sortMode, setSortMode,
     envFilter, setEnvFilter,
     envOptions,
+    sizeFilter, setSizeFilter,
+    sizeOptions,
     crMin, setCrMin,
     crMax, setCrMax,
     filteredRows,
@@ -231,6 +235,6 @@ export function useMonsterPickerState(args: {
 
     // Actions
     handleAddMonster,
-    clearFilters: () => { setEnvFilter("all"); setCrMin(""); setCrMax(""); setSortMode("az"); },
+    clearFilters: () => { setEnvFilter("all"); setSizeFilter("all"); setCrMin(""); setCrMax(""); setSortMode("az"); },
   };
 }

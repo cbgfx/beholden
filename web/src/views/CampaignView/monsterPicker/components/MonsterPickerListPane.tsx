@@ -17,6 +17,9 @@ export function MonsterPickerListPane(props: {
   envFilter: string;
   onChangeEnvFilter: (e: string) => void;
   envOptions: string[];
+  sizeFilter: string;
+  onChangeSizeFilter: (s: string) => void;
+  sizeOptions: string[];
   crMin: string;
   crMax: string;
   onChangeCrMin: (v: string) => void;
@@ -113,6 +116,9 @@ export function MonsterPickerListPane(props: {
         envFilter={props.envFilter}
         onChangeEnvFilter={props.onChangeEnvFilter}
         envOptions={props.envOptions}
+        sizeFilter={props.sizeFilter}
+        onChangeSizeFilter={props.onChangeSizeFilter}
+        sizeOptions={props.sizeOptions}
         crMin={props.crMin}
         crMax={props.crMax}
         onChangeCrMin={props.onChangeCrMin}

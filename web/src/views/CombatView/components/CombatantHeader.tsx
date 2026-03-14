@@ -14,6 +14,7 @@ type Props = {
   canNavigate: boolean;
   rollLabel: string;
   onRollOrReset: () => void;
+  onResetFight?: () => void;
   onEndCombat: () => void;
   onOpenSpellBook: () => void;
   onOpenAdventureNotes: () => void;
@@ -29,7 +30,7 @@ type Props = {
  * which caused a runtime crash when the CombatView passed header props.)
  */
 export function CombatantHeader(props: Props) {
-  const { title, canNavigate, rollLabel } = props;
+  const { title, rollLabel } = props;
   const navigate = useNavigate();
 
   return (
@@ -50,6 +51,12 @@ export function CombatantHeader(props: Props) {
           <Button variant="primary" onClick={props.onRollOrReset}>
             {rollLabel}
           </Button>
+
+          {props.onResetFight && (
+            <Button variant="ghost" onClick={props.onResetFight} title="Reset monsters HP and conditions to full">
+              Reset Fight
+            </Button>
+          )}
 
           <Button variant="ghost" onClick={props.onOpenSpellBook} title="Spell Book">
             <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>

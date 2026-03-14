@@ -12,6 +12,9 @@ export function MonsterPickerFilters(props: {
   envFilter: string;
   onChangeEnvFilter: (e: string) => void;
   envOptions: string[];
+  sizeFilter: string;
+  onChangeSizeFilter: (s: string) => void;
+  sizeOptions: string[];
   crMin: string;
   crMax: string;
   onChangeCrMin: (v: string) => void;
@@ -38,6 +41,14 @@ export function MonsterPickerFilters(props: {
           ))}
         </Select>
       </div>
+
+      <Select value={props.sizeFilter} onChange={(e) => props.onChangeSizeFilter(e.target.value)}>
+        {props.sizeOptions.map((s) => (
+          <option key={s} value={s}>
+            {s === "all" ? "All sizes" : s}
+          </option>
+        ))}
+      </Select>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
         <Input value={props.crMin} onChange={(e) => props.onChangeCrMin(e.target.value)} placeholder="CR min (e.g. 3 or 1/4)" />

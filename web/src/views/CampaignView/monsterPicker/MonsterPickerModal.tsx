@@ -58,6 +58,9 @@ export function MonsterPickerModal(props: {
             envFilter={s.envFilter}
             onChangeEnvFilter={s.setEnvFilter}
             envOptions={s.envOptions}
+            sizeFilter={s.sizeFilter}
+            onChangeSizeFilter={s.setSizeFilter}
+            sizeOptions={s.sizeOptions}
             crMin={s.crMin}
             crMax={s.crMax}
             onChangeCrMin={s.setCrMin}

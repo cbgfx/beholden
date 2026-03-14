@@ -2,6 +2,31 @@ import * as React from "react";
 import type { CompendiumMonsterRow, PreparedMonsterRow, SortMode } from "@/views/CampaignView/monsterPicker/types";
 import { parseCrNumber } from "@/views/CampaignView/monsterPicker/utils";
 
+// Canonical size order for the dropdown.
+export const SIZE_LABELS = ["Tiny", "Small", "Medium", "Large", "Huge", "Gargantuan"] as const;
+
+const SIZE_CODE_MAP: Record<string, string> = {
+  T: "Tiny",
+  S: "Small",
+  M: "Medium",
+  L: "Large",
+  H: "Huge",
+  G: "Gargantuan",
+};
+
+function resolveSizeLabel(raw: string | undefined): string {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+  // Single-letter code (most common from compendium data).
+  if (SIZE_CODE_MAP[trimmed.toUpperCase()]) return SIZE_CODE_MAP[trimmed.toUpperCase()];
+  // Already a full name — normalise capitalisation.
+  const lower = trimmed.toLowerCase();
+  for (const label of SIZE_LABELS) {
+    if (label.toLowerCase() === lower) return label;
+  }
+  return trimmed; // Unknown — pass through as-is.
+}
+
 export function useMonsterPickerRows(args: {
   rows: CompendiumMonsterRow[];
   compQ: string;
@@ -9,6 +34,7 @@ export function useMonsterPickerRows(args: {
   envFilter: string;
   crMin: string;
   crMax: string;
+  sizeFilter: string;
 }) {
   const deferredCompQ = React.useDeferredValue(args.compQ);
 
@@ -32,7 +58,8 @@ export function useMonsterPickerRows(args: {
         envParts,
         envPartsLower: envParts.map((e) => e.toLowerCase()),
         crNum: parseCrNumber(m.cr),
-        firstLetter
+        firstLetter,
+        sizeLabel: resolveSizeLabel(m.size),
       };
     });
   }, [args.rows]);
@@ -69,9 +96,19 @@ export function useMonsterPickerRows(args: {
     return ["all", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
   }, [preparedRows]);
 
+  // Size options: fixed canonical order, only include sizes present in the list.
+  const sizeOptions = React.useMemo(() => {
+    const present = new Set<string>();
+    for (const m of preparedRows) {
+      if (m.sizeLabel) present.add(m.sizeLabel);
+    }
+    return ["all", ...SIZE_LABELS.filter((s) => present.has(s))];
+  }, [preparedRows]);
+
   const filteredRows = React.useMemo(() => {
     const q = deferredCompQ.trim().toLowerCase();
     const envLower = args.envFilter.toLowerCase();
+    const sizeActive = args.sizeFilter !== "all";
 
     const min = args.crMin.trim() ? parseCrNumber(args.crMin.trim()) : NaN;
     const max = args.crMax.trim() ? parseCrNumber(args.crMax.trim()) : NaN;
@@ -82,7 +119,7 @@ export function useMonsterPickerRows(args: {
     const hasEnv = args.envFilter !== "all";
     const hasCr = Number.isFinite(min) || Number.isFinite(max);
 
-    if (!hasQ && !hasEnv && !hasCr) return baseSorted;
+    if (!hasQ && !hasEnv && !hasCr && !sizeActive) return baseSorted;
 
     return baseSorted.filter((m) => {
       if (hasQ && !m.nameLower.includes(q)) return false;
@@ -105,9 +142,11 @@ export function useMonsterPickerRows(args: {
         if (Number.isFinite(max) && v > max) return false;
       }
 
+      if (sizeActive && m.sizeLabel !== args.sizeFilter) return false;
+
       return true;
     });
-  }, [rowsAz, rowsCrAsc, rowsCrDesc, args.sortMode, args.envFilter, args.crMin, args.crMax, deferredCompQ]);
+  }, [rowsAz, rowsCrAsc, rowsCrDesc, args.sortMode, args.envFilter, args.crMin, args.crMax, args.sizeFilter, deferredCompQ]);
 
   const lettersInList = React.useMemo(() => {
     const set = new Set<string>();
@@ -131,6 +170,7 @@ export function useMonsterPickerRows(args: {
     deferredCompQ,
     preparedRows,
     envOptions,
+    sizeOptions,
     filteredRows,
     lettersInList,
     letterFirstIndex
