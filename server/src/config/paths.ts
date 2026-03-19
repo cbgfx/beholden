@@ -18,11 +18,19 @@ export function getPaths({ dataDir, dbPath: dbPathOverride }: { dataDir: string;
 
   const hasWebDist = fs.existsSync(path.join(webDistDir, "index.html"));
 
+  const webPlayerDistDir = process.env.BEHOLDEN_WEB_PLAYER_DIST
+    ? path.resolve(process.env.BEHOLDEN_WEB_PLAYER_DIST)
+    : path.join(repoRootDir, "web-player", "dist");
+
+  const hasWebPlayerDist = fs.existsSync(path.join(webPlayerDistDir, "index.html"));
+
   return {
     dataDir,
     dbPath,
     webDistDir,
     hasWebDist,
+    webPlayerDistDir,
+    hasWebPlayerDist,
     repoRootDir,
   };
 }

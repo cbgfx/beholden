@@ -265,6 +265,12 @@ function AuthGate() {
 
   if (!user) return <LoginView />;
 
+  // Pure players (no admin, no DM role) belong in the player app.
+  if (!user.hasDmAccess) {
+    window.location.replace("/player/");
+    return null;
+  }
+
   return (
     <Routes>
       {/* Admin panel — admins only */}

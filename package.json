@@ -3,13 +3,17 @@
   "private": true,
   "workspaces": [
     "server",
-    "web-dm"
+    "web-dm",
+    "web-player"
   ],
   "scripts": {
-    "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:web-dm\"",
+    "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:web-dm\" \"npm:dev:web-player\"",
     "dev:server": "npm -w server run dev",
     "dev:web-dm": "npm -w web-dm run dev",
-    "build": "npm -w web-dm run build",
+    "dev:web-player": "npm -w web-player run dev",
+    "build": "npm -w web-dm run build && npm -w web-player run build",
+    "build:web-dm": "npm -w web-dm run build",
+    "build:web-player": "npm -w web-player run build",
     "start": "npm -w server run dev"
   },
   "devDependencies": {

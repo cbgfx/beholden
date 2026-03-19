@@ -1,5 +1,5 @@
-// web-dm/src/contexts/AuthContext.tsx
-// Manages JWT auth state. Token is persisted in localStorage.
+// web-player/src/contexts/AuthContext.tsx
+// Manages JWT auth state. Token is shared with web-dm via localStorage.
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { apiRaw } from "@/services/api";
@@ -35,7 +35,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
-  // On mount (or when token changes), verify token by calling /api/auth/me.
   useEffect(() => {
     if (!token) {
       setIsLoading(false);

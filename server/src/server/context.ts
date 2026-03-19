@@ -22,6 +22,8 @@ export interface Paths {
   dbPath: string;
   webDistDir: string;
   hasWebDist: boolean;
+  webPlayerDistDir: string;
+  hasWebPlayerDist: boolean;
   repoRootDir: string;
 }
 

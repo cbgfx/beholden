@@ -17,6 +17,13 @@ const LoginBody = z.object({
 export function registerAuthRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
 
+  function hasDmAccess(userId: string): boolean {
+    const row = db
+      .prepare("SELECT id FROM campaign_membership WHERE user_id = ? AND role = 'dm' LIMIT 1")
+      .get(userId);
+    return Boolean(row);
+  }
+
   app.post("/api/auth/login", (req, res) => {
     const body = parseBody(LoginBody, req);
     const row = db
@@ -33,13 +40,15 @@ export function registerAuthRoutes(app: Express, ctx: ServerContext) {
       isAdmin: Boolean(row.is_admin),
     });
 
+    const isAdmin = Boolean(row.is_admin);
     res.json({
       token,
       user: {
         id: row.id,
         username: row.username,
         name: row.name,
-        isAdmin: Boolean(row.is_admin),
+        isAdmin,
+        hasDmAccess: isAdmin || hasDmAccess(row.id as string),
       },
     });
   });
@@ -49,11 +58,13 @@ export function registerAuthRoutes(app: Express, ctx: ServerContext) {
       .prepare("SELECT id, username, name, is_admin FROM users WHERE id = ?")
       .get(req.user!.userId) as Record<string, unknown> | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "User not found" });
+    const isAdmin = Boolean(row.is_admin);
     res.json({
       id: row.id,
       username: row.username,
       name: row.name,
-      isAdmin: Boolean(row.is_admin),
+      isAdmin,
+      hasDmAccess: isAdmin || hasDmAccess(row.id as string),
     });
   });
 }
