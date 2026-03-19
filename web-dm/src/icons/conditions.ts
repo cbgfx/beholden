@@ -1,0 +1,45 @@
+import type { ComponentType, CSSProperties } from "react";
+import {
+  IconBlinded,
+  IconCharmed,
+  IconDeafened,
+  IconFrightened,
+  IconGrappled,
+  IconIncapacitated,
+  IconInvisible,
+  IconParalyzed,
+  IconPetrified,
+  IconPoisoned,
+  IconProne,
+  IconRestrained,
+  IconStunned,
+  IconUnconscious,
+  IconConcentration,
+  IconHex,
+  IconMarked,
+  IconExhaustion,
+} from "@/icons/index";
+
+type IconComp = ComponentType<{ size?: number; title?: string; style?: CSSProperties }>;
+
+export const conditionIconByKey: Record<string, IconComp> = {
+  blinded: IconBlinded,
+  charmed: IconCharmed,
+  deafened: IconDeafened,
+  frightened: IconFrightened,
+  grappled: IconGrappled,
+  incapacitated: IconIncapacitated,
+  invisible: IconInvisible,
+  paralyzed: IconParalyzed,
+  petrified: IconPetrified,
+  poisoned: IconPoisoned,
+  prone: IconProne,
+  restrained: IconRestrained,
+  stunned: IconStunned,
+  unconscious: IconUnconscious,
+  concentration: IconConcentration,
+  hexed: IconHex,
+  marked: IconMarked,
+  exhaustion: IconExhaustion,
+  hex: IconHex,
+};

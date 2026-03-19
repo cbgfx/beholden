@@ -1,0 +1,21 @@
+{
+  "name": "beholden",
+  "private": true,
+  "workspaces": [
+    "server",
+    "web-dm"
+  ],
+  "scripts": {
+    "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:web-dm\"",
+    "dev:server": "npm -w server run dev",
+    "dev:web-dm": "npm -w web-dm run dev",
+    "build": "npm -w web-dm run build",
+    "start": "npm -w server run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1"
+  }
+}
