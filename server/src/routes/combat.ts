@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
-import type { StoredCombatant, StoredCombatState, StoredConditionInstance } from "../server/userData.js";
+import type { StoredCombatant, StoredCombatState, StoredConditionInstance, StoredOverrides } from "../server/userData.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
@@ -410,7 +410,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         ac: body.ac ?? existing.ac,
         acDetails: body.acDetails !== undefined ? body.acDetails : existing.acDetails,
         attackOverrides: body.attackOverrides !== undefined ? (body.attackOverrides as unknown | null) : existing.attackOverrides,
-        overrides: body.overrides ?? existing.overrides,
+        overrides: (body.overrides ?? existing.overrides) as StoredOverrides,
         conditions: (body.conditions ?? existing.conditions ?? []) as StoredConditionInstance[],
         ...(deathSaves !== undefined ? { deathSaves } : {}),
         usedReaction: body.usedReaction ?? existing.usedReaction ?? false,
