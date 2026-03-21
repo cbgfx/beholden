@@ -4,6 +4,7 @@ import { api } from "@/services/api";
 import { theme, withAlpha } from "@/theme/theme";
 import { SpellDetailCard } from "@/drawers/drawers/combatant/SpellDetailCard";
 import { ordinal } from "@/lib/format/ordinal";
+import { SectionTitle } from "@/ui/SectionTitle";
 
 export function MonsterSpellSection(props: { monster: any }) {
   const baseMonster = props.monster;
@@ -117,7 +118,7 @@ export function MonsterSpellSection(props: { monster: any }) {
 
   return (
     <div style={{ display: "grid", gap: 6 }}>
-      <div style={{ color: theme.colors.accentPrimary, fontWeight: 900 }}>Spells</div>
+      <SectionTitle>Spells</SectionTitle>
 
       {grouped.length ? (
         <div style={{ display: "grid", gap: 8 }}>

@@ -3,11 +3,13 @@ import { theme } from "@/theme/theme";
 
 export function Panel(props: {
   title: React.ReactNode;
+  titleColor?: string;
   actions?: React.ReactNode;
   children: React.ReactNode;
   style?: React.CSSProperties;
   bodyStyle?: React.CSSProperties;
 }) {
+  const color = props.titleColor ?? theme.colors.accentPrimary;
   return (
     <div
       style={{
@@ -18,33 +20,31 @@ export function Panel(props: {
         ...props.style,
       }}
     >
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
         <div
           style={{
-            flex: "1 1 220px",
-            minWidth: 0,
-            margin: 0,
-            color: theme.colors.text,
+            fontSize: "var(--fs-tiny)",
             fontWeight: 900,
-            fontSize: "var(--fs-title)",   // was --fs-medium (14px) — now 18px
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color,
+            whiteSpace: "nowrap",
             display: "flex",
             alignItems: "center",
-            flexWrap: "wrap",
             gap: 6,
-            textDecoration: "none",
           }}
         >
           {props.title}
         </div>
-
+        <div style={{ flex: 1, height: 1, background: `${color}40` }} />
         {props.actions ? (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 5, flexWrap: "wrap", maxWidth: "100%" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
             {props.actions}
           </div>
         ) : null}
       </div>
 
-      <div style={{ marginTop: 8, ...props.bodyStyle }}>{props.children}</div>
+      <div style={{ ...props.bodyStyle }}>{props.children}</div>
     </div>
   );
 }

@@ -1,11 +1,12 @@
 import React from "react";
 import { theme, withAlpha } from "@/theme/theme";
+import { SectionTitle } from "@/ui/SectionTitle";
 
 export function MonsterTextSection(props: { title: string; blocks: any[] }) {
   if (!props.blocks?.length) return null;
   return (
     <div style={{ display: "grid", gap: 6 }}>
-      <div style={{ color: theme.colors.accentPrimary, fontWeight: 900 }}>{props.title}</div>
+      <SectionTitle>{props.title}</SectionTitle>
       <div style={{ display: "grid", gap: 6 }}>
         {props.blocks.map((t: any, idx: number) => (
           <div

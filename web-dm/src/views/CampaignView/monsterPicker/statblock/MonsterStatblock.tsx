@@ -7,6 +7,7 @@ import { formatCr } from "@/views/CampaignView/monsterPicker/utils";
 import { parseSpeedVal, parseSpeedDisplay, buildMonsterInfoLines } from "@/utils/compendiumFormat";
 import { useMonsterSpells } from "./useMonsterSpells";
 import { MonsterSpellPanel } from "./MonsterSpellPanel";
+import { SectionTitle } from "@/ui/SectionTitle";
 
 type AttackOverride = { toHit?: number; damage?: string; damageType?: string };
 
@@ -58,7 +59,7 @@ function TextBlock({ items, title }: { items: any[]; title: string }) {
   if (!items.length) return null;
   return (
     <div style={{ display: "grid", gap: 5 }}>
-      <div style={{ color: theme.colors.accentPrimary, fontWeight: 900 }}>{title}</div>
+      <SectionTitle>{title}</SectionTitle>
       {items.map((t: any, i: number) => (
         <div key={i} style={{ display: "grid", gap: 2 }}>
           <div style={{ fontWeight: 900 }}>{t.name ?? t.title}</div>
@@ -178,7 +179,7 @@ export function MonsterStatblock(props: {
 
       {nonSpellActions.length > 0 && (
         <div style={{ display: "grid", gap: 8 }}>
-          <div style={{ color: theme.colors.accentPrimary, fontWeight: 900 }}>Actions</div>
+          <SectionTitle>Actions</SectionTitle>
           {nonSpellActions.map((a: any, i: number) => {
             const name = a.name ?? a.title ?? "";
             return (

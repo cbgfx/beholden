@@ -18,6 +18,14 @@
   --bg-raised:  rgba(0, 0, 0, 0.30);
   --border:     rgba(255, 255, 255, 0.13);
 
+  /* Backward-compatible aliases used by inline-styled views */
+  --accent:       var(--accent-600);
+  --red:          var(--danger);
+  --panel-bg:     var(--bg-panel);
+  --panel-border: var(--border);
+  --radius-panel: 14px;
+  --radius-ctrl:  10px;
+
   /* ── Typography ─────────────────────────────────────────────────── */
   /*
     Old scale had --fs-large, --fs-medium, --fs-small all at 14-15px —
