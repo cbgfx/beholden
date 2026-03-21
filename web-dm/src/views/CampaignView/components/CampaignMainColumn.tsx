@@ -26,7 +26,7 @@ export function CampaignMainColumn(props: {
   onAddINpcToEncounter: (inpcId: string) => void;
 }) {
   return (
-    <div className="campaignCol">
+    <div className="campaignCol campaignColMain">
       <PlayersPanel
         players={props.players}
         combatants={props.combatants}

@@ -48,7 +48,8 @@ export function CharacterSheetPanel(props: {
       {/* ── Stat bar (AC / HP / Speed) ── */}
       <div
         style={{
-          display: "flex",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
           borderRadius: 12,
           border: `1px solid ${theme.colors.panelBorder}`,
           background: theme.colors.panelBg,
@@ -56,7 +57,6 @@ export function CharacterSheetPanel(props: {
         }}
       >
         <StatBar icon={<IconAC size={14} />} label="Armor Class" value={Number.isFinite(s.ac) ? s.ac : "—"} />
-        <div style={{ width: 1, background: theme.colors.panelBorder }} />
         <StatBar
           icon={<IconHP size={14} />}
           label="Hit Points"
@@ -70,9 +70,7 @@ export function CharacterSheetPanel(props: {
               )}
             </>
           }
-          flex={1.4}
         />
-        <div style={{ width: 1, background: theme.colors.panelBorder }} />
         <StatBar icon={<IconSpeed size={14} />} label="Speed" value={speedText} />
       </div>
 

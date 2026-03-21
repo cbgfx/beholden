@@ -80,7 +80,7 @@ export function PlayerRow(props: {
     <div style={{ padding, borderRadius, background: bg, border, display: "flex", flexDirection: "column", gap: 6 }}>
 
       {/* Top row: avatar · name/meta · stats · actions */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flexWrap: "wrap" }}>
 
         {/* Avatar */}
         <div style={{
@@ -120,7 +120,7 @@ export function PlayerRow(props: {
         </div>
 
         {/* AC + HP */}
-        <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ flex: "0 1 auto", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginLeft: "auto" }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
             <IconShield size={12} style={{ opacity: 0.55, color: theme.colors.muted }} />
             <span style={{ fontWeight: 900, fontSize: "var(--fs-medium)", color: theme.colors.text, fontVariantNumeric: "tabular-nums" }}>
@@ -138,7 +138,7 @@ export function PlayerRow(props: {
 
         {/* Action area */}
         {props.actions !== null && (
-          <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 4 }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 4, marginLeft: "auto" }} onClick={(e) => e.stopPropagation()}>
             {hasLegacyActions ? props.actions : null}
             {!hasLegacyActions && props.primaryAction != null ? props.primaryAction : null}
             {showMenu ? <RowMenu items={props.menuItems!} /> : null}

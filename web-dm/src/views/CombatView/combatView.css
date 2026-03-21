@@ -14,7 +14,6 @@
   border: 1px solid var(--cv-roleAccent);
   background: var(--cv-panelBg);
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.18), 0 10px 26px rgba(0, 0, 0, 0.30);
-  flex: 0 1 400px;
   min-width: 0;
 }
 

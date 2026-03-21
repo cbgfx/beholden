@@ -262,11 +262,10 @@ export function CombatView() {
           <div
             style={{
               gridColumn: "1 / -1",
-              display: "flex",
-              justifyContent: "center",
+              display: "grid",
+              gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
               gap: 18,
               alignItems: "center",
-              minWidth: 0,
             }}
           >
             <HudFighterCard
@@ -279,7 +278,7 @@ export function CombatView() {
               onOpenConditions={onOpenConditions}
             />
 
-            <div style={{ flexShrink: 0 }}>
+            <div>
               <CombatDeltaControls
                 value={delta}
                 targetId={target?.id ?? null}
@@ -306,7 +305,9 @@ export function CombatView() {
           </div>
         ) : null}
 
-        <CombatantDetailsPanel roleTitle="Active" role="active" combatant={active ?? null} ctx={activeCtx} />
+        <div>
+          <CombatantDetailsPanel roleTitle="Active" role="active" combatant={active ?? null} ctx={activeCtx} />
+        </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {/* Center-stage turn controls: Round + Prev/Next live above delta controls */}
@@ -348,7 +349,9 @@ export function CombatView() {
           />
         </div>
 
-        <CombatantDetailsPanel roleTitle="Target" role="target" combatant={target ?? null} ctx={targetCtx} />
+        <div>
+          <CombatantDetailsPanel roleTitle="Target" role="target" combatant={target ?? null} ctx={targetCtx} />
+        </div>
       </div>
 
       <SpellDetailModal

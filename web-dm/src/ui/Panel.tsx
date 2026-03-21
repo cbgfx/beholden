@@ -18,15 +18,18 @@ export function Panel(props: {
         ...props.style,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
         <div
           style={{
+            flex: "1 1 220px",
+            minWidth: 0,
             margin: 0,
             color: theme.colors.text,
             fontWeight: 900,
             fontSize: "var(--fs-title)",   // was --fs-medium (14px) — now 18px
             display: "flex",
             alignItems: "center",
+            flexWrap: "wrap",
             gap: 6,
             textDecoration: "none",
           }}
@@ -35,7 +38,7 @@ export function Panel(props: {
         </div>
 
         {props.actions ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 5, flexWrap: "wrap", maxWidth: "100%" }}>
             {props.actions}
           </div>
         ) : null}

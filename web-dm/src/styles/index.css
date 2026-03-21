@@ -35,8 +35,32 @@
   gap: var(--gap-6);
 }
 
+@media (max-width: 1440px) {
+  .campaignGrid {
+    grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.25fr);
+  }
+
+  .campaignColLeft {
+    grid-column: 1;
+  }
+
+  .campaignColMain {
+    grid-column: 2;
+  }
+
+  .campaignColRight {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
 @media (max-width: 1024px) {
   .campaignGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .campaignColRight {
     grid-template-columns: 1fr;
   }
 }

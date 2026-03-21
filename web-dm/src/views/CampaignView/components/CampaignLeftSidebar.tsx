@@ -28,7 +28,7 @@ export function CampaignLeftSidebar(props: {
   onReorderEncounters: (ids: string[]) => void;
 }) {
   return (
-    <div className="campaignCol">
+    <div className="campaignCol campaignColLeft">
       <AdventuresPanel
         adventures={props.adventures}
         selectedAdventureId={props.selectedAdventureId}

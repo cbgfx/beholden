@@ -44,7 +44,7 @@ const labelStyle: React.CSSProperties = {
 
 function AbilityGroup({ keys, abilities, saves }: { keys: AbilityKey[]; abilities: CharacterSheetStats["abilities"]; saves?: CharacterSheetStats["saves"] }) {
   return (
-    <div style={{ flex: 1, minWidth: 0 }}>
+    <div style={{ minWidth: 0 }}>
       <div style={{ display: "grid", gridTemplateColumns: cols, gap: 6, marginBottom: 6 }}>
         <div />
         <div style={headerStyle}>Score</div>
@@ -74,9 +74,8 @@ export function AbilityTable({ stats }: { stats: CharacterSheetStats }) {
   const left: AbilityKey[] = ["str", "dex", "con"];
   const right: AbilityKey[] = ["int", "wis", "cha"];
   return (
-    <div style={{ display: "flex", gap: 16, padding: "10px 2px" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, padding: "10px 2px" }}>
       <AbilityGroup keys={left} abilities={stats.abilities} saves={stats.saves} />
-      <div style={{ width: 1, background: theme.colors.panelBorder, alignSelf: "stretch" }} />
       <AbilityGroup keys={right} abilities={stats.abilities} saves={stats.saves} />
     </div>
   );
