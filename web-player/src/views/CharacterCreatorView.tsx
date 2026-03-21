@@ -200,9 +200,13 @@ function getClassFeatureTable(cls: ClassDetail, keyword: string, level: number):
   return [];
 }
 
-/** Parse proficiency string into a skill list. */
+const ABILITY_SCORE_NAMES = new Set([
+  "Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma",
+]);
+
+/** Parse proficiency string into a skill list, excluding ability score names (those become saving throws). */
 function parseSkillList(proficiency: string): string[] {
-  return proficiency.split(/[,;]/).map(s => s.trim()).filter(Boolean);
+  return proficiency.split(/[,;]/).map(s => s.trim()).filter(s => s && !ABILITY_SCORE_NAMES.has(s));
 }
 
 /**
@@ -323,9 +327,8 @@ function buildProficiencyMap(
 
     // Saving throws — primary source: ability score names in <proficiency> field
     // e.g. "Wisdom, Charisma, History, Insight" → Wisdom + Charisma are saves
-    const ABILITY_NAMES = new Set(["Strength","Dexterity","Constitution","Intelligence","Wisdom","Charisma"]);
     splitComma(classDetail.proficiency)
-      .filter(n => ABILITY_NAMES.has(n))
+      .filter(n => ABILITY_SCORE_NAMES.has(n))
       .forEach(n => saves.push({ name: n, source: className }));
 
     // Fallback: some older XMLs encode saves in feature text "Saving Throw Proficiencies: X and Y"
@@ -430,15 +433,21 @@ function buildProficiencyMap(
   return { skills, saves, armor, weapons, tools, languages, spells, invocations };
 }
 
-/** Group optional non-subclass features by level, up to `level`. */
+/** Group optional non-subclass features by level, up to `level`.
+ *  Multiple autolevel entries at the same level are merged into one group. */
 function getOptionalGroups(cls: ClassDetail, level: number): { level: number; features: { name: string; text: string }[] }[] {
-  const groups: { level: number; features: { name: string; text: string }[] }[] = [];
+  const map = new Map<number, { name: string; text: string }[]>();
   for (const al of cls.autolevels) {
     if (al.level == null || al.level > level) continue;
     const opts = al.features.filter((f) => f.optional && !/subclass/i.test(f.name) && !/^Becoming\b/i.test(f.name));
-    if (opts.length > 0) groups.push({ level: al.level, features: opts });
+    if (opts.length > 0) {
+      const existing = map.get(al.level) ?? [];
+      map.set(al.level, [...existing, ...opts]);
+    }
   }
-  return groups;
+  return Array.from(map.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([lvl, features]) => ({ level: lvl, features }));
 }
 
 function pointBuySpent(scores: Record<string, number>): number {

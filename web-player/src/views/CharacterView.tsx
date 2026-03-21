@@ -3,7 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api, jsonInit } from "@/services/api";
 import { C } from "@/lib/theme";
 import { titleCase } from "@/lib/format/titleCase";
-import { IconPlayer, IconShield, IconSpeed, IconHeart, IconInitiative, IconConditions, IconAttack, IconHeal } from "@/icons";
+import { IconPlayer, IconShield, IconSpeed, IconHeart, IconInitiative, IconConditions, IconAttack, IconHeal, IconConditionByKey } from "@/icons";
+import { rollDiceExpr, hasDiceTerm } from "@/lib/dice";
 import { useWs } from "@/services/ws";
 import { Select } from "@/ui/Select";
 import { useItemSearch } from "@/views/CompendiumView/hooks/useItemSearch";
@@ -112,6 +113,7 @@ interface Character {
   campaigns: CharacterCampaign[];
   conditions?: ConditionInstance[];
   overrides?: { tempHp: number; acBonus: number; hpMaxBonus: number };
+  deathSaves?: { success: number; fail: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -200,8 +202,13 @@ export function CharacterView() {
   const [error, setError] = useState<string | null>(null);
   const [hpAmount, setHpAmount] = useState("");
   const [hpSaving, setHpSaving] = useState(false);
+  const [hpError, setHpError] = useState<string | null>(null);
+  const [lastRoll, setLastRoll] = useState<number | null>(null);
+  const flashRef = useRef<number | null>(null);
+  const hpInputRef = useRef<HTMLInputElement>(null);
   const [condPickerOpen, setCondPickerOpen] = useState(false);
   const [condSaving, setCondSaving] = useState(false);
+  const [dsSaving, setDsSaving] = useState(false);
 
   const fetchChar = useCallback(() => {
     if (!id) return;
@@ -249,9 +256,26 @@ export function CharacterView() {
   const passivePerc = 10 + mod(char.wisScore) + (prof && isProficientIn(prof.skills, "Perception") ? pb : 0);
   const passiveInv  = 10 + mod(char.intScore) + (prof && isProficientIn(prof.skills, "Investigation") ? pb : 0);
 
-  async function applyHp(kind: "damage" | "heal") {
-    const amt = parseInt(hpAmount, 10);
-    if (!amt || amt <= 0 || !char) return;
+  function rollAndFlash(): number {
+    const result = rollDiceExpr(hpAmount.trim());
+    if (hasDiceTerm(hpAmount)) {
+      setHpAmount(String(result));
+      setLastRoll(result);
+      if (flashRef.current) window.clearTimeout(flashRef.current);
+      flashRef.current = window.setTimeout(() => setLastRoll(null), 1600);
+      hpInputRef.current?.focus();
+    }
+    return result;
+  }
+
+  async function applyHp(kind: "damage" | "heal", resolvedAmt?: number) {
+    const amt = resolvedAmt ?? rollDiceExpr(hpAmount.trim());
+    if (amt <= 0) {
+      setHpError("Enter a number > 0  (e.g. 8, 2d6+3, +5)");
+      return;
+    }
+    if (!char) return;
+    setHpError(null);
     const newHp = kind === "heal"
       ? Math.min(char.hpCurrent + amt, effectiveHpMax)
       : Math.max(0, char.hpCurrent - amt);
@@ -260,7 +284,44 @@ export function CharacterView() {
       await api(`/api/me/characters/${char.id}`, jsonInit("PUT", { hpCurrent: newHp }));
       setChar((prev) => prev ? { ...prev, hpCurrent: newHp } : prev);
       setHpAmount("");
-    } finally { setHpSaving(false); }
+      setLastRoll(null);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setHpError(`Failed: ${msg}`);
+      console.error("HP update failed:", e);
+    } finally {
+      setHpSaving(false);
+    }
+  }
+
+  /** If the expression starts with '+', auto-treat as heal. */
+  function resolveKind(explicit: "damage" | "heal"): "damage" | "heal" {
+    if (hpAmount.trim().startsWith("+")) return "heal";
+    return explicit;
+  }
+
+  function handleApplyHp(explicit: "damage" | "heal") {
+    const kind = resolveKind(explicit);
+    if (hasDiceTerm(hpAmount)) {
+      const rolled = rollAndFlash();
+      // apply on next tick so the rolled value flashes first
+      setTimeout(() => applyHp(kind, rolled), 0);
+    } else {
+      applyHp(kind);
+    }
+  }
+
+  async function saveDeathSaves(next: { success: number; fail: number }) {
+    if (!char) return;
+    setDsSaving(true);
+    try {
+      await api(`/api/me/characters/${char.id}/deathSaves`, jsonInit("PATCH", next));
+      setChar((prev) => prev ? { ...prev, deathSaves: next } : prev);
+    } catch (e) {
+      console.error("Death saves update failed:", e);
+    } finally {
+      setDsSaving(false);
+    }
   }
 
   async function toggleCondition(key: string) {
@@ -272,7 +333,6 @@ export function CharacterView() {
     try {
       await api(`/api/me/characters/${char.id}/conditions`, jsonInit("PATCH", { conditions: next }));
       setChar((prev) => prev ? { ...prev, conditions: next } : prev);
-      if (!has) setCondPickerOpen(false);
     } finally { setCondSaving(false); }
   }
 
@@ -347,50 +407,80 @@ export function CharacterView() {
           </div>
         </div>
 
-        {/* HP actions — hex-button HUD */}
+        {/* HP actions — Combat HUD */}
         <style>{`
           @keyframes playerHexPulse {
             0%   { filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
             50%  { filter: drop-shadow(0 0 10px rgba(255,255,255,0.10)); }
             100% { filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
           }
+          @keyframes playerRollFlash {
+            0%   { color: #fbbf24; transform: scale(1.1); }
+            60%  { color: #fbbf24; transform: scale(1.1); }
+            100% { color: inherit; transform: scale(1); }
+          }
         `}</style>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "10px 8px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)", marginBottom: 14 }}>
-          {/* Damage hex */}
-          <HexBtn variant="damage" title="Apply damage" disabled={hpSaving || !hpAmount} onClick={() => applyHp("damage")}>
-            <IconAttack size={22} />
-          </HexBtn>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "10px 8px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }}>
+            {/* Damage hex */}
+            <HexBtn variant="damage" title="Apply damage (Enter)" disabled={hpSaving} onClick={() => handleApplyHp("damage")}>
+              <IconAttack size={22} />
+            </HexBtn>
 
-          {/* Amount input */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-            <input
-              value={hpAmount}
-              onChange={(e) => setHpAmount(e.target.value.replace(/[^0-9]/g, ""))}
-              onKeyDown={(e) => { if (e.key === "Enter") applyHp("heal"); if (e.key === "Escape") setHpAmount(""); }}
-              placeholder="1d6+2/+10"
-              inputMode="numeric"
-              style={{
-                width: 130, textAlign: "center",
-                padding: "10px 12px", borderRadius: 12,
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: "rgba(255,255,255,0.05)",
-                color: C.text, fontWeight: 900, fontSize: 17, outline: "none",
-              }}
-            />
-            {hd !== null && (
-              <span style={{ fontSize: 10, color: C.muted }}>HD: {char.level}d{hd}</span>
-            )}
+            {/* Amount input */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+              <input
+                ref={hpInputRef}
+                value={hpAmount}
+                onChange={(e) => {
+                  setHpError(null);
+                  setLastRoll(null);
+                  setHpAmount(e.target.value.replace(/[^0-9dD+\-]/g, ""));
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleApplyHp(e.shiftKey ? "heal" : "damage");
+                  }
+                  if (e.key === "Escape") { setHpAmount(""); setHpError(null); setLastRoll(null); }
+                }}
+                placeholder="1d6+2 / +10"
+                inputMode="text"
+                style={{
+                  width: 120, textAlign: "center",
+                  padding: "10px 12px", borderRadius: 12,
+                  border: `1px solid ${hpError ? C.red + "88" : "rgba(255,255,255,0.1)"}`,
+                  background: "rgba(255,255,255,0.05)",
+                  color: C.text, fontWeight: 900, fontSize: 17, outline: "none",
+                  animation: lastRoll !== null ? "playerRollFlash 1.6s ease forwards" : "none",
+                }}
+              />
+              <span style={{ fontSize: 10, color: C.muted, minHeight: 14 }}>
+                {lastRoll !== null
+                  ? `rolled ${lastRoll}`
+                  : hd !== null
+                    ? `HD: ${char.level}d${hd}`
+                    : ""}
+              </span>
+            </div>
+
+            {/* Heal hex */}
+            <HexBtn variant="heal" title="Apply heal (Shift+Enter)" disabled={hpSaving} onClick={() => handleApplyHp("heal")}>
+              <IconHeal size={22} />
+            </HexBtn>
+
+            {/* Conditions hex */}
+            <HexBtn variant="conditions" title="Add / remove conditions" disabled={false} onClick={() => setCondPickerOpen((o) => !o)}>
+              <IconConditions size={22} />
+            </HexBtn>
           </div>
 
-          {/* Heal hex */}
-          <HexBtn variant="heal" title="Apply heal" disabled={hpSaving || !hpAmount} onClick={() => applyHp("heal")}>
-            <IconHeal size={22} />
-          </HexBtn>
-
-          {/* Conditions hex */}
-          <HexBtn variant="conditions" title="Add / remove conditions" disabled={false} onClick={() => setCondPickerOpen((o) => !o)}>
-            <IconConditions size={22} />
-          </HexBtn>
+          {/* Error / saving feedback */}
+          {(hpError || hpSaving) && (
+            <div style={{ textAlign: "center", fontSize: 11, color: hpError ? C.red : C.muted }}>
+              {hpError ?? "Saving…"}
+            </div>
+          )}
         </div>
 
         {/* Mini stats */}
@@ -407,63 +497,207 @@ export function CharacterView() {
           <MiniStat label="Passive Inv." value={String(passiveInv)} />
         </div>
 
-        {/* Conditions */}
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: C.red, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
-            <IconConditions size={10} /> Conditions
-            {condSaving && <span style={{ color: C.muted, fontWeight: 400, textTransform: "none", fontSize: 9 }}>saving…</span>}
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-            {(char.conditions ?? []).map((cond, i) => (
-              <span key={i} style={{
-                fontSize: 12, fontWeight: 700, padding: "4px 6px 4px 10px", borderRadius: 6,
-                background: `${C.red}18`, border: `1px solid ${C.red}44`, color: C.red,
-                textTransform: "capitalize", display: "inline-flex", alignItems: "center", gap: 5,
-              }}>
-                {cond.key.replace(/-/g, " ")}
-                <button onClick={() => toggleCondition(cond.key)} style={{
-                  border: "none", background: "transparent", color: C.red,
-                  cursor: "pointer", fontSize: 15, lineHeight: 1, padding: 0,
-                  display: "inline-flex", alignItems: "center",
-                }}>×</button>
+        {/* Death Saving Throws — only when at 0 HP */}
+        {char.hpCurrent === 0 && (
+          <div style={{
+            margin: "4px 0 10px",
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "rgba(220,38,38,0.08)",
+            border: "1px solid rgba(220,38,38,0.35)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <span style={{ fontSize: 10, fontWeight: 900, color: C.red, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                Death Saving Throws
               </span>
-            ))}
-            {/* Add condition picker */}
-            <div style={{ position: "relative" }}>
-              <button onClick={() => setCondPickerOpen((o) => !o)} style={{
-                fontSize: 12, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
-                background: "rgba(255,255,255,0.05)", border: "1px dashed rgba(255,255,255,0.2)",
-                color: C.muted, cursor: "pointer",
-              }}>+ Add</button>
-              {condPickerOpen && (
-                <div style={{
-                  position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 50,
-                  background: "#1a1f2e", border: "1px solid rgba(255,255,255,0.15)",
-                  borderRadius: 10, padding: 6, minWidth: 170,
-                  display: "flex", flexDirection: "column", gap: 1,
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-                }}>
-                  {CONDITIONS
-                    .filter((cd) => !(char.conditions ?? []).some((c) => c.key === cd.key))
-                    .map((cd) => (
-                      <button key={cd.key} onClick={() => toggleCondition(cd.key)} style={{
-                        background: "transparent", border: "none", color: C.text,
-                        textAlign: "left", fontSize: 13, padding: "5px 8px",
-                        borderRadius: 5, cursor: "pointer", fontWeight: 600,
-                      }}>{cd.name}</button>
-                    ))}
-                  {CONDITIONS.filter((cd) => !(char.conditions ?? []).some((c) => c.key === cd.key)).length === 0 && (
-                    <div style={{ fontSize: 12, color: C.muted, padding: "4px 8px" }}>All conditions applied</div>
-                  )}
-                </div>
-              )}
+              {dsSaving && <span style={{ fontSize: 9, color: C.muted }}>saving…</span>}
             </div>
-            {(char.conditions ?? []).length === 0 && !condPickerOpen && (
-              <span style={{ fontSize: 12, color: "rgba(160,180,220,0.3)", fontStyle: "italic" }}>None</span>
+            <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+              {/* Successes */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                <span style={{ fontSize: 9, fontWeight: 700, color: "#4ade80", textTransform: "uppercase", letterSpacing: "0.06em" }}>Success</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[0, 1, 2].map((i) => {
+                    const filled = i < (char.deathSaves?.success ?? 0);
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        disabled={dsSaving}
+                        onClick={() => {
+                          const cur = char.deathSaves?.success ?? 0;
+                          const next = cur > i ? i : i + 1;
+                          saveDeathSaves({ success: Math.min(3, next), fail: char.deathSaves?.fail ?? 0 });
+                        }}
+                        style={{
+                          width: 22, height: 22, borderRadius: "50%",
+                          border: `2px solid ${filled ? "#4ade80" : "rgba(74,222,128,0.3)"}`,
+                          background: filled ? "#4ade80" : "transparent",
+                          cursor: dsSaving ? "default" : "pointer",
+                          padding: 0,
+                          transition: "all 120ms",
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Skull divider */}
+              <span style={{ fontSize: 18, opacity: 0.4 }}>💀</span>
+
+              {/* Failures */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                <span style={{ fontSize: 9, fontWeight: 700, color: C.red, textTransform: "uppercase", letterSpacing: "0.06em" }}>Failure</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[0, 1, 2].map((i) => {
+                    const filled = i < (char.deathSaves?.fail ?? 0);
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        disabled={dsSaving}
+                        onClick={() => {
+                          const cur = char.deathSaves?.fail ?? 0;
+                          const next = cur > i ? i : i + 1;
+                          saveDeathSaves({ success: char.deathSaves?.success ?? 0, fail: Math.min(3, next) });
+                        }}
+                        style={{
+                          width: 22, height: 22, borderRadius: "50%",
+                          border: `2px solid ${filled ? C.red : "rgba(220,38,38,0.3)"}`,
+                          background: filled ? C.red : "transparent",
+                          cursor: dsSaving ? "default" : "pointer",
+                          padding: 0,
+                          transition: "all 120ms",
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Status line */}
+            {(char.deathSaves?.success ?? 0) >= 3 && (
+              <div style={{ marginTop: 8, fontSize: 11, fontWeight: 700, color: "#4ade80", textAlign: "center" }}>
+                ✦ Stable — character has stabilised
+              </div>
+            )}
+            {(char.deathSaves?.fail ?? 0) >= 3 && (
+              <div style={{ marginTop: 8, fontSize: 11, fontWeight: 700, color: C.red, textAlign: "center" }}>
+                ✦ Dead
+              </div>
             )}
           </div>
-        </div>
+        )}
+
+        {/* Active conditions — hidden when none */}
+        {(char.conditions ?? []).length > 0 && (
+          <div style={{ marginTop: 2 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: C.red, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
+              <IconConditions size={10} /> Conditions
+              {condSaving && <span style={{ color: C.muted, fontWeight: 400, textTransform: "none", fontSize: 9 }}>saving…</span>}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {(char.conditions ?? []).map((cond, i) => (
+                <span key={i} style={{
+                  fontSize: 12, fontWeight: 700, padding: "4px 6px 4px 8px", borderRadius: 6,
+                  background: `${C.red}18`, border: `1px solid ${C.red}44`, color: C.red,
+                  textTransform: "capitalize", display: "inline-flex", alignItems: "center", gap: 5,
+                }}>
+                  <IconConditionByKey condKey={cond.key} size={12} style={{ opacity: 0.85, flexShrink: 0 }} />
+                  {CONDITIONS.find((c) => c.key === cond.key)?.name ?? cond.key}
+                  <button onClick={() => toggleCondition(cond.key)} style={{
+                    border: "none", background: "transparent", color: C.red,
+                    cursor: "pointer", fontSize: 15, lineHeight: 1, padding: 0,
+                    display: "inline-flex", alignItems: "center",
+                  }}>×</button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
+
+      {/* ── Condition picker drawer (fixed overlay) ───────────────────────── */}
+      {condPickerOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setCondPickerOpen(false)}
+            style={{ position: "fixed", inset: 0, zIndex: 900, background: "rgba(0,0,0,0.45)" }}
+          />
+          {/* Drawer panel */}
+          <div style={{
+            position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 901,
+            width: "min(340px, 90vw)",
+            background: "#0e1220",
+            borderLeft: "1px solid rgba(255,255,255,0.12)",
+            display: "flex", flexDirection: "column",
+            boxShadow: "-8px 0 30px rgba(0,0,0,0.5)",
+          }}>
+            {/* Drawer header */}
+            <div style={{
+              padding: "18px 20px 14px",
+              borderBottom: "1px solid rgba(255,255,255,0.08)",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <IconConditions size={16} style={{ color: "#f59e0b" }} />
+                <span style={{ fontWeight: 900, fontSize: 13, letterSpacing: "0.08em", textTransform: "uppercase", color: "#f59e0b" }}>
+                  Conditions
+                </span>
+                {condSaving && <span style={{ fontSize: 10, color: C.muted }}>saving…</span>}
+              </div>
+              <button
+                onClick={() => setCondPickerOpen(false)}
+                style={{
+                  background: "transparent", border: "1px solid rgba(255,255,255,0.16)",
+                  borderRadius: 6, color: C.muted, cursor: "pointer",
+                  padding: "4px 10px", fontSize: 12, fontWeight: 700,
+                }}
+              >
+                Close
+              </button>
+            </div>
+
+            {/* Condition grid */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px 14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                {CONDITIONS.map((cd) => {
+                  const active = (char.conditions ?? []).some((c) => c.key === cd.key);
+                  return (
+                    <button
+                      key={cd.key}
+                      onClick={() => toggleCondition(cd.key)}
+                      disabled={condSaving}
+                      style={{
+                        display: "flex", flexDirection: "column", alignItems: "center", gap: 5,
+                        padding: "10px 6px", borderRadius: 8,
+                        background: active ? `${C.red}22` : "rgba(255,255,255,0.04)",
+                        border: `1px solid ${active ? C.red + "77" : "rgba(255,255,255,0.10)"}`,
+                        color: active ? C.red : C.muted,
+                        cursor: condSaving ? "wait" : "pointer",
+                        transition: "all 120ms",
+                        outline: "none",
+                      }}
+                    >
+                      <IconConditionByKey condKey={cd.key} size={22} style={{ opacity: active ? 1 : 0.5 }} />
+                      <span style={{ fontSize: 10, fontWeight: 700, textAlign: "center", lineHeight: 1.2 }}>
+                        {cd.name}
+                      </span>
+                      {active && (
+                        <span style={{ fontSize: 9, color: C.red, fontWeight: 900, letterSpacing: "0.04em" }}>ACTIVE</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ── Two-column body ──────────────────────────────────────────── */}
       <div style={{ display: "flex", gap: 18, alignItems: "flex-start", flexWrap: "wrap" }}>

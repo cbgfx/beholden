@@ -40,7 +40,8 @@ export const PLAYER_COLS =
 export const USER_CHARACTER_COLS =
   "id, user_id, name, player_name, class_name, species, level, " +
   "hp_max, hp_current, ac, speed, str_score, dex_score, con_score, " +
-  "int_score, wis_score, cha_score, color, image_url, character_data_json, created_at, updated_at";
+  "int_score, wis_score, cha_score, color, image_url, character_data_json, " +
+  "death_saves_json, created_at, updated_at";
 
 export const INPC_COLS =
   "id, campaign_id, monster_id, name, label, friendly, " +
@@ -478,6 +479,15 @@ function runMigrations(db: Db): void {
   if (!ucharCols.includes("image_url")) {
     db.exec("ALTER TABLE user_characters ADD COLUMN image_url TEXT");
   }
+  if (!ucharCols.includes("death_saves_json")) {
+    db.exec("ALTER TABLE user_characters ADD COLUMN death_saves_json TEXT");
+  }
+
+  // Add death_saves_json to players if missing.
+  const playerCols3 = (db.pragma("table_info(players)") as { name: string }[]).map((c) => c.name);
+  if (!playerCols3.includes("death_saves_json")) {
+    db.exec("ALTER TABLE players ADD COLUMN death_saves_json TEXT");
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -619,6 +629,9 @@ export function rowToUserCharacter(row: Record<string, unknown>): StoredUserChar
     color: (row.color as string | null) ?? null,
     imageUrl: (row.image_url as string | null) ?? null,
     characterData: parseJson(row.character_data_json, null),
+    ...(row.death_saves_json
+      ? { deathSaves: parseJson(row.death_saves_json, DEFAULT_DEATH_SAVES) }
+      : {}),
     createdAt: row.created_at as number,
     updatedAt: row.updated_at as number,
   };

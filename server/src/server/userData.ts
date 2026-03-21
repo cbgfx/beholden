@@ -172,6 +172,7 @@ export interface StoredUserCharacter extends Timestamps {
   color: string | null;
   imageUrl: string | null;
   characterData: Record<string, unknown> | null;
+  deathSaves?: StoredDeathSaves;
 }
 
 export interface StoredCharacterCampaign {

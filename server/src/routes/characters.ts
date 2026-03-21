@@ -11,8 +11,8 @@ import { requireAuth } from "../middleware/auth.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
 import { ACCEPTED_IMAGE_TYPES, resizeToWebP } from "../lib/imageHelpers.js";
 
-const CharacterBody = z.object({
-  name: z.string().trim().min(1),
+const CharacterBodyBase = z.object({
+  name: z.string().trim().min(1).optional(),
   playerName: z.string().trim().optional(),
   className: z.string().trim().optional(),
   species: z.string().trim().optional(),
@@ -30,6 +30,10 @@ const CharacterBody = z.object({
   color: z.string().optional(),
   characterData: z.record(z.unknown()).nullable().optional(),
 });
+
+// For create: name is required; for update: name is optional (patch semantics)
+const CharacterCreateBody = CharacterBodyBase.extend({ name: z.string().trim().min(1) });
+const CharacterUpdateBody = CharacterBodyBase;
 
 const AssignBody = z.object({
   campaignIds: z.array(z.string()).min(1),
@@ -144,7 +148,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   // Create a new user-owned character (no campaign required)
   app.post("/api/me/characters", requireAuth, (req, res) => {
     const userId = (req as any).user.userId;
-    const p = parseBody(CharacterBody, req);
+    const p = parseBody(CharacterCreateBody, req);
     const id = uid();
     const t = now();
 
@@ -187,7 +191,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       .get(charId, userId) as Record<string, unknown> | undefined;
     if (!existing) return res.status(404).json({ ok: false, message: "Not found" });
 
-    const p = parseBody(CharacterBody, req);
+    const p = parseBody(CharacterUpdateBody, req);
     const t = now();
     const ex = rowToUserCharacter(existing);
 
@@ -282,6 +286,40 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     }
 
     res.json({ ok: true, conditions });
+  });
+
+  // Player self-updates death saves (writes to both user_characters + players rows, broadcasts)
+  app.patch("/api/me/characters/:id/deathSaves", requireAuth, (req, res) => {
+    const charId = requireParam(req, res, "id");
+    if (!charId) return;
+    const userId = (req as any).user.userId;
+    const existing = db
+      .prepare("SELECT id FROM user_characters WHERE id = ? AND user_id = ?")
+      .get(charId, userId) as { id: string } | undefined;
+    if (!existing) return res.status(404).json({ ok: false, message: "Not found" });
+
+    const { success = 0, fail = 0 } = (req.body ?? {}) as { success?: number; fail?: number };
+    const deathSaves = {
+      success: Math.min(3, Math.max(0, Math.floor(Number(success) || 0))),
+      fail:    Math.min(3, Math.max(0, Math.floor(Number(fail)    || 0))),
+    };
+    const deathSavesJson = JSON.stringify(deathSaves);
+    const t = now();
+
+    db.prepare("UPDATE user_characters SET death_saves_json=?, updated_at=? WHERE id=?")
+      .run(deathSavesJson, t, charId);
+
+    const assignments = db
+      .prepare("SELECT player_id, campaign_id FROM character_campaigns WHERE character_id = ? AND player_id IS NOT NULL")
+      .all(charId) as { player_id: string; campaign_id: string }[];
+
+    for (const { player_id, campaign_id } of assignments) {
+      db.prepare("UPDATE players SET death_saves_json=?, updated_at=? WHERE id=?")
+        .run(deathSavesJson, t, player_id);
+      ctx.broadcast("players:changed", { campaignId: campaign_id });
+    }
+
+    res.json({ ok: true, deathSaves });
   });
 
   // Delete a user-owned character (cascades to character_campaigns)
