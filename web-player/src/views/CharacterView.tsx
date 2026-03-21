@@ -87,6 +87,9 @@ interface CharacterData {
 
 interface ConditionInstance {
   key: string;
+  casterId?: string | null;
+  casterName?: string | null;
+  sourceName?: string | null;
   [k: string]: unknown;
 }
 
@@ -168,6 +171,8 @@ const CONDITIONS = [
   { key: "stunned",       name: "Stunned" },
   { key: "unconscious",   name: "Unconscious" },
   { key: "concentration", name: "Concentration" },
+  { key: "hexed",         name: "Hexed", needsCaster: true },
+  { key: "marked",        name: "Marked", needsCaster: true },
 ];
 
 // ---------------------------------------------------------------------------
@@ -188,6 +193,18 @@ function isProficientIn(list: TaggedItem[], name: string): boolean {
 }
 function uid(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function conditionDisplayLabel(cond: ConditionInstance): string {
+  const def = CONDITIONS.find((c) => c.key === cond.key);
+  const base = def?.name ?? titleCase(cond.key);
+  if (!def?.needsCaster) return base;
+
+  const source =
+    (typeof cond.casterName === "string" && cond.casterName.trim()) ||
+    (typeof cond.sourceName === "string" && cond.sourceName.trim());
+
+  return source ? `${base} (${source})` : base;
 }
 
 // ---------------------------------------------------------------------------
@@ -606,7 +623,7 @@ export function CharacterView() {
                   textTransform: "capitalize", display: "inline-flex", alignItems: "center", gap: 5,
                 }}>
                   <IconConditionByKey condKey={cond.key} size={12} style={{ opacity: 0.85, flexShrink: 0 }} />
-                  {CONDITIONS.find((c) => c.key === cond.key)?.name ?? cond.key}
+                  {conditionDisplayLabel(cond)}
                   <button onClick={() => toggleCondition(cond.key)} style={{
                     border: "none", background: "transparent", color: C.red,
                     cursor: "pointer", fontSize: 15, lineHeight: 1, padding: 0,

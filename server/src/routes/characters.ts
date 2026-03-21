@@ -77,6 +77,44 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
         conditions_json: string; overrides_json: string; death_saves_json: string | null;
       } | undefined;
     if (!liveRow) return char;
+    const liveConditions = JSON.parse(liveRow.conditions_json || "[]") as Array<{
+      key: string;
+      casterId?: string | null;
+      casterName?: string | null;
+      sourceName?: string | null;
+      [k: string]: unknown;
+    }>;
+    const casterIds = [...new Set(
+      liveConditions
+        .map((cond) => (typeof cond.casterId === "string" && cond.casterId.trim() ? cond.casterId.trim() : ""))
+        .filter(Boolean)
+    )];
+    const casterNameById: Record<string, string> = {};
+    if (casterIds.length > 0) {
+      const combatantRows = db.prepare(
+        `SELECT c.id,
+                COALESCE(NULLIF(c.label, ''), NULLIF(p.character_name, ''), NULLIF(c.name, ''), NULLIF(c.base_type, ''), 'Combatant') AS display_name
+         FROM combatants c
+         LEFT JOIN players p ON c.base_type = 'player' AND p.id = c.base_id
+         WHERE c.id IN (${casterIds.map(() => "?").join(",")})`
+      ).all(...casterIds) as { id: string; display_name: string }[];
+      for (const row of combatantRows) {
+        casterNameById[row.id] = row.display_name;
+      }
+
+      const unresolvedCasterIds = casterIds.filter((id) => !casterNameById[id]);
+      if (unresolvedCasterIds.length > 0) {
+        const playerRows = db.prepare(
+          `SELECT id, character_name
+           FROM players
+           WHERE id IN (${unresolvedCasterIds.map(() => "?").join(",")})`
+        ).all(...unresolvedCasterIds) as { id: string; character_name: string }[];
+        for (const row of playerRows) {
+          casterNameById[row.id] = row.character_name;
+        }
+      }
+    }
+
     return {
       ...char,
       playerName:  liveRow.player_name,
@@ -96,7 +134,16 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       chaScore:    liveRow.cha ?? char.chaScore,
       color:       liveRow.color ?? char.color,
       imageUrl:    liveRow.image_url ?? char.imageUrl,
-      conditions:  JSON.parse(liveRow.conditions_json || "[]") as { key: string }[],
+      conditions:  liveConditions.map((cond) => {
+        const casterId = typeof cond.casterId === "string" ? cond.casterId : null;
+        const resolvedCasterName = casterId ? casterNameById[casterId] : null;
+        if (!resolvedCasterName) return cond;
+        return {
+          ...cond,
+          casterName: resolvedCasterName,
+          sourceName: resolvedCasterName,
+        };
+      }),
       overrides:   JSON.parse(liveRow.overrides_json || '{"tempHp":0,"acBonus":0,"hpMaxBonus":0}') as {
         tempHp: number; acBonus: number; hpMaxBonus: number;
       },
@@ -276,6 +323,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
         t, player_id
       );
       ctx.broadcast("players:changed", { campaignId: campaign_id });
+      broadcastPlayerCombatantChanges(player_id);
     }
 
     const updated = db.prepare(`SELECT ${USER_CHARACTER_COLS} FROM user_characters WHERE id = ?`).get(charId) as Record<string, unknown>;
