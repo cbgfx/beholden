@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, jsonInit } from "@/services/api";
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
 import { titleCase } from "@/lib/format/titleCase";
 import { IconPlayer, IconShield, IconSpeed, IconHeart, IconInitiative, IconConditions, IconAttack, IconHeal, IconConditionByKey } from "@/icons";
 import { rollDiceExpr, hasDiceTerm } from "@/lib/dice";
 import { useWs } from "@/services/ws";
 import { Select } from "@/ui/Select";
+import { useVirtualList } from "@/lib/monsterPicker/useVirtualList";
 import { useItemSearch } from "@/views/CompendiumView/hooks/useItemSearch";
 
 // ---------------------------------------------------------------------------
@@ -92,6 +93,8 @@ interface ConditionInstance {
   sourceName?: string | null;
   [k: string]: unknown;
 }
+
+const INVENTORY_PICKER_ROW_HEIGHT = 52;
 
 interface Character {
   id: string;
@@ -1225,8 +1228,10 @@ function InventoryItemPickerModal(props: {
     filterAttunement, setFilterAttunement,
     filterMagic, setFilterMagic,
     hasActiveFilters, clearFilters,
-    rows, busy,
+    rows, busy, error, totalCount, refresh,
   } = useItemSearch();
+  const vl = useVirtualList({ isEnabled: true, rowHeight: INVENTORY_PICKER_ROW_HEIGHT, overscan: 8 });
+  const { start, end, padTop, padBottom } = vl.getRange(rows.length);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<CompendiumItemDetail | null>(null);
@@ -1238,6 +1243,15 @@ function InventoryItemPickerModal(props: {
   const [customAttunement, setCustomAttunement] = useState(false);
   const [customMagic, setCustomMagic] = useState(false);
   const [customDescription, setCustomDescription] = useState("");
+
+  useEffect(() => {
+    if (props.isOpen) refresh();
+  }, [props.isOpen, refresh]);
+
+  useEffect(() => {
+    const el = vl.scrollRef.current;
+    if (el) el.scrollTop = 0;
+  }, [q, rarityFilter, typeFilter, filterAttunement, filterMagic, createMode, props.isOpen]);
 
   useEffect(() => {
     if (!props.isOpen) return;
@@ -1300,7 +1314,7 @@ function InventoryItemPickerModal(props: {
       <div
         style={{
           width: "min(980px, 100%)",
-          maxHeight: "min(760px, calc(100vh - 40px))",
+          height: "min(680px, calc(100vh - 40px))",
           background: C.bg,
           border: `1px solid ${C.panelBorder}`,
           borderRadius: 16,
@@ -1309,6 +1323,7 @@ function InventoryItemPickerModal(props: {
           gridTemplateColumns: "minmax(320px, 380px) minmax(0, 1fr)",
           gap: 12,
           padding: 12,
+          overflow: "hidden",
         }}
       >
         <div style={inventoryPickerColumnStyle}>
@@ -1341,7 +1356,7 @@ function InventoryItemPickerModal(props: {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search items..."
-            style={inputStyle}
+            style={{ ...inputStyle, flex: "0 0 auto", width: "100%" }}
           />
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -1372,14 +1387,18 @@ function InventoryItemPickerModal(props: {
           </div>
 
           <div style={{ fontSize: 12, color: C.muted }}>
-            {busy ? "Loading..." : `${rows.length} items`}
+            {busy ? "Loading..." : error ? error : totalCount === rows.length ? `${rows.length} items` : `${rows.length} of ${totalCount}`}
           </div>
 
-          <div style={inventoryPickerListStyle}>
+          <div ref={vl.scrollRef} onScroll={vl.onScroll} style={inventoryPickerListStyle}>
+            <div style={{ height: padTop }} />
+            {!busy && error && (
+              <div style={{ padding: 12, color: C.red }}>{error}</div>
+            )}
             {!busy && rows.length === 0 && (
               <div style={{ padding: 12, color: C.muted }}>No items found.</div>
             )}
-            {rows.map((item) => {
+            {rows.slice(start, end).map((item) => {
               const active = item.id === selectedId;
               return (
                 <button
@@ -1393,20 +1412,36 @@ function InventoryItemPickerModal(props: {
                     width: "100%",
                     border: "none",
                     borderBottom: `1px solid ${C.panelBorder}`,
-                    background: active ? `${props.accentColor}18` : "transparent",
+                    background: active ? withAlpha(C.accentHl, 0.15) : "transparent",
                     color: C.text,
                     textAlign: "left",
-                    padding: "10px 12px",
+                    padding: "0 16px",
                     cursor: "pointer",
+                    minHeight: INVENTORY_PICKER_ROW_HEIGHT,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    {item.rarity && <span style={{ width: 7, height: 7, borderRadius: "50%", background: inventoryRarityColor(item.rarity), flexShrink: 0 }} />}
-                    <span style={{ fontWeight: 700, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {item.rarity && <span style={{ width: 9, height: 9, borderRadius: "50%", background: inventoryRarityColor(item.rarity), flexShrink: 0 }} />}
+                    <span style={{ fontWeight: 800, fontSize: 13, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {item.name}
                     </span>
                     {item.magic && (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "#a78bfa" }}>Magic</span>
+                      <span style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 3,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: "#a78bfa",
+                        border: "1px solid #6d28d966",
+                        borderRadius: 6,
+                        padding: "1px 6px",
+                        lineHeight: 1.4,
+                        whiteSpace: "nowrap",
+                      }}>Magic</span>
                     )}
                   </div>
                   <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
@@ -1415,6 +1450,7 @@ function InventoryItemPickerModal(props: {
                 </button>
               );
             })}
+            <div style={{ height: padBottom }} />
           </div>
         </div>
 
@@ -1482,20 +1518,20 @@ function InventoryItemPickerModal(props: {
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
                 placeholder="Item name"
-                style={inputStyle}
+                style={{ ...inputStyle, flex: "0 0 auto", width: "100%" }}
               />
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 <input
                   value={customRarity}
                   onChange={(e) => setCustomRarity(e.target.value)}
                   placeholder="Rarity"
-                  style={inputStyle}
+                  style={{ ...inputStyle, flex: "0 0 auto", width: "100%" }}
                 />
                 <input
                   value={customType}
                   onChange={(e) => setCustomType(e.target.value)}
                   placeholder="Type"
-                  style={inputStyle}
+                  style={{ ...inputStyle, flex: "0 0 auto", width: "100%" }}
                 />
               </div>
               <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
@@ -1513,7 +1549,7 @@ function InventoryItemPickerModal(props: {
                 onChange={(e) => setCustomDescription(e.target.value)}
                 placeholder="Description or notes..."
                 rows={12}
-                style={{ ...inputStyle, resize: "vertical", minHeight: 220, fontFamily: "inherit", lineHeight: 1.5 }}
+                style={{ ...inputStyle, flex: "0 0 auto", width: "100%", resize: "vertical", minHeight: 220, fontFamily: "inherit", lineHeight: 1.5 }}
               />
             </>
           ) : detail ? (

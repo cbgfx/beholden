@@ -16,6 +16,7 @@ const RARITY_ORDER = ["common", "uncommon", "rare", "very rare", "legendary", "a
 export function useItemSearch() {
   const [allRows, setAllRows] = React.useState<ItemSearchRow[]>([]);
   const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   const [refreshKey, setRefreshKey] = React.useState(0);
 
   const [q, setQ] = React.useState("");
@@ -27,9 +28,15 @@ export function useItemSearch() {
   React.useEffect(() => {
     let cancelled = false;
     setBusy(true);
+    setError(null);
     api<ItemSearchRow[]>("/api/compendium/items")
       .then((data) => { if (!cancelled) setAllRows(data ?? []); })
-      .catch(() => { if (!cancelled) setAllRows([]); })
+      .catch((err) => {
+        if (!cancelled) {
+          setAllRows([]);
+          setError(err instanceof Error ? err.message : "Failed to load items");
+        }
+      })
       .finally(() => { if (!cancelled) setBusy(false); });
     return () => { cancelled = true; };
   }, [refreshKey]);
@@ -67,6 +74,10 @@ export function useItemSearch() {
     setFilterAttunement(false); setFilterMagic(false);
   }
 
+  const refresh = React.useCallback(() => {
+    setRefreshKey((k) => k + 1);
+  }, []);
+
   return {
     q, setQ,
     rarityFilter, setRarityFilter, rarityOptions,
@@ -74,7 +85,7 @@ export function useItemSearch() {
     filterAttunement, setFilterAttunement,
     filterMagic, setFilterMagic,
     hasActiveFilters, clearFilters,
-    rows, busy,
-    refresh: () => setRefreshKey((k) => k + 1),
+    rows, busy, error, totalCount: allRows.length,
+    refresh,
   };
 }
