@@ -16,6 +16,13 @@ export default defineConfig({
   base: "/player/",
   build: {
     outDir: "dist",
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-router": ["react-router-dom"],
+        },
+      },
+    },
   },
   server: {
     host: true,

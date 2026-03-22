@@ -4,6 +4,7 @@ import { asArray, asText, normalizeKey, parseCrValue } from "../../lib/text.js";
 import { parseAttackFromText } from "../../lib/attacks.js";
 import { normalizeHp } from "./normalizeHp.js";
 import { parseBackgroundProficiencies } from "../../lib/proficiencyConstants.js";
+import { parseFeat } from "../../lib/featParser.js";
 
 export function importCompendiumXml(args: {
   xml: string;
@@ -356,15 +357,32 @@ export function importCompendiumXml(args: {
       const nameKey = normalizeKey(name);
       const id = `f_${nameKey.replace(/\s/g, "_")}`;
 
-      const modifiers = asArray(ft?.modifier).map((m: any) =>
-        typeof m === "string" ? m : (m?.["#text"] ?? asText(m) ?? "")
-      );
+      const modifierDetails = asArray(ft?.modifier).map((m: any) =>
+        typeof m === "string"
+          ? { category: "", text: m }
+          : { category: m?.["@_category"] ?? "", text: m?.["#text"] ?? asText(m) ?? "" }
+      ).filter((m: { text: string }) => m.text.length > 0);
+      const modifiers = modifierDetails.map((m) => m.text);
+      const prerequisite = asText(ft?.prerequisite) || null;
+      const proficiency = asText(ft?.proficiency) || null;
+      const special = asText(ft?.special) || null;
+      const parsed = parseFeat({
+        name,
+        text: asText(ft?.text) || "",
+        prerequisite,
+        proficiency,
+        modifiers: modifierDetails,
+      });
 
       const data = {
         id, name, nameKey, name_key: nameKey,
         text: asText(ft?.text) || "",
-        prerequisite: asText(ft?.prerequisite) || null,
+        prerequisite,
+        proficiency,
+        special,
         modifiers,
+        modifierDetails,
+        parsed,
       };
 
       featStmt.run(id, name, nameKey, JSON.stringify(data));

@@ -6,6 +6,8 @@
  * always compares lower-case so casing in source XML doesn't matter.
  */
 
+import { parseFeat, type ParsedFeat } from "./featParser.js";
+
 export const ALL_SKILLS = [
   "Acrobatics", "Animal Handling", "Arcana", "Athletics", "Deception",
   "History", "Insight", "Intimidation", "Investigation", "Medicine",
@@ -67,7 +69,7 @@ export interface StructuredBgProficiencies {
   skills: ProficiencyChoice;
   tools: ProficiencyChoice;
   languages: ProficiencyChoice;
-  feats: string[];           // feats granted by background
+  feats: Array<{ name: string; parsed: ParsedFeat }>;
   abilityScores: string[];   // the 3 ability scores player can choose from
 }
 
@@ -203,10 +205,16 @@ export function parseBackgroundProficiencies(bg: {
   const langTrait = traits.find(t => /language/i.test(t.name));
 
   // Feats — "Feat: X" in trait name
-  const feats: string[] = [];
+  const feats: Array<{ name: string; parsed: ParsedFeat }> = [];
   for (const t of traits) {
     const m = t.name.match(/^Feat:\s*(.+)$/i);
-    if (m?.[1]) feats.push(m[1].trim());
+    if (m?.[1]) {
+      const featName = m[1].trim();
+      feats.push({
+        name: featName,
+        parsed: parseFeat({ name: featName, text: t.text }),
+      });
+    }
   }
 
   // Ability scores — "Ability Scores: Str, Dex, Con" in trait name

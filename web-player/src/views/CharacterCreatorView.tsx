@@ -26,6 +26,14 @@ interface ClassDetail {
   }[];
 }
 interface SpellSummary { id: string; name: string; level: number | null; school: string | null; classes: string | null; text: string | null }
+interface ItemSummary {
+  id: string;
+  name: string;
+  type: string | null;
+  rarity?: string | null;
+  magic?: boolean;
+  attunement?: boolean;
+}
 interface RaceSummary { id: string; name: string; size: string | null; speed: number | null }
 interface RaceDetail {
   id: string; name: string; size: string | null; speed: number | null;
@@ -39,11 +47,49 @@ interface ProficiencyChoice {
   choose: number;
   from: string[] | null;  // null = "any"
 }
+interface ParsedFeatChoice {
+  id: string;
+  type: "proficiency" | "expertise" | "ability_score" | "spell" | "spell_list" | "weapon_mastery" | "damage_type";
+  count: number;
+  options: string[] | null;
+  anyOf?: string[];
+  amount?: number | null;
+  level?: number | null;
+  linkedTo?: string | null;
+  distinct?: boolean;
+  note?: string | null;
+}
+interface ParsedFeatGrants {
+  skills: string[];
+  tools: string[];
+  languages: string[];
+  armor: string[];
+  weapons: string[];
+  savingThrows: string[];
+  spells: string[];
+  cantrips: string[];
+  abilityIncreases: Record<string, number>;
+  bonuses: Array<{ target: string; value: number }>;
+}
+interface ParsedFeat {
+  category: string | null;
+  baseName: string;
+  variant: string | null;
+  prerequisite: string | null;
+  repeatable: boolean;
+  source: string | null;
+  grants: ParsedFeatGrants;
+  choices: ParsedFeatChoice[];
+}
+interface BackgroundFeat {
+  name: string;
+  parsed: ParsedFeat;
+}
 interface StructuredBgProficiencies {
   skills: ProficiencyChoice;
   tools: ProficiencyChoice;
   languages: ProficiencyChoice;
-  feats: string[];
+  feats: BackgroundFeat[];
   abilityScores: string[];
 }
 interface BgDetail {
@@ -72,11 +118,24 @@ const ALL_TOOLS = [
   "Bagpipes","Drum","Dulcimer","Flute","Lute","Lyre","Horn","Pan Flute","Shawm","Viol",
   "Land Vehicles","Water Vehicles","Sea Vehicles",
 ];
+const ALL_SKILLS = [
+  "Acrobatics","Animal Handling","Arcana","Athletics","Deception",
+  "History","Insight","Intimidation","Investigation","Medicine",
+  "Nature","Perception","Performance","Persuasion","Religion",
+  "Sleight of Hand","Stealth","Survival",
+];
 const ALL_LANGUAGES = [
   "Common","Dwarvish","Elvish","Giant","Gnomish","Goblin","Halfling","Orcish",
   "Abyssal","Celestial","Draconic","Deep Speech","Infernal","Primordial","Sylvan","Undercommon",
   "Sign Language","Thieves' Cant",
 ];
+const WEAPON_MASTERY_KINDS = [
+  "Battleaxe","Blowgun","Club","Dagger","Dart","Flail","Glaive","Greataxe","Greatclub","Greatsword",
+  "Halberd","Hand Crossbow","Handaxe","Heavy Crossbow","Javelin","Lance","Light Crossbow","Light Hammer",
+  "Longbow","Longsword","Mace","Maul","Morningstar","Musket","Pike","Pistol","Quarterstaff","Rapier",
+  "Scimitar","Shortbow","Shortsword","Sickle","Sling","Spear","Trident","War Pick","Warhammer","Whip",
+] as const;
+const WEAPON_MASTERY_KIND_SET = new Set<string>(WEAPON_MASTERY_KINDS);
 interface Campaign { id: string; name: string }
 
 // ---------------------------------------------------------------------------
@@ -237,6 +296,7 @@ export interface ProficiencyMap {
   weapons: TaggedItem[];
   tools: TaggedItem[];
   languages: TaggedItem[];
+  masteries: TaggedItem[];
   spells: TaggedItem[];        // cantrips + prepared spells
   invocations: TaggedItem[];
 }
@@ -252,6 +312,11 @@ interface FeatureGrants {
   tools: string[];
   skills: string[];
   languages: string[];
+}
+
+interface WeaponMasteryChoice {
+  source: string;
+  count: number;
 }
 
 function toTitleCase(s: string): string {
@@ -300,6 +365,90 @@ function parseFeatureGrants(text: string): FeatureGrants {
   return result;
 }
 
+function wordOrNumberToInt(value: string): number | null {
+  const lowered = value.trim().toLowerCase();
+  const numeric = Number.parseInt(lowered, 10);
+  if (Number.isFinite(numeric)) return numeric;
+  const words: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6 };
+  return words[lowered] ?? null;
+}
+
+function baseWeaponKind(name: string): string {
+  return name.replace(/\s*\[[^\]]+\]\s*$/u, "").trim();
+}
+
+function getWeaponMasteryOptions(items: ItemSummary[]): string[] {
+  const kinds = new Set<string>();
+  for (const item of items) {
+    if (!/weapon/i.test(item.type ?? "")) continue;
+    if (item.magic || item.attunement || item.rarity) continue;
+    const kind = baseWeaponKind(item.name);
+    if (!WEAPON_MASTERY_KIND_SET.has(kind)) continue;
+    kinds.add(kind);
+  }
+  return [...kinds].sort((a, b) => a.localeCompare(b));
+}
+
+interface BackgroundFeatChoiceEntry {
+  featName: string;
+  feat: ParsedFeat;
+  choice: ParsedFeatChoice;
+  key: string;
+}
+
+function getBackgroundFeatChoices(bgDetail: BgDetail | null): BackgroundFeatChoiceEntry[] {
+  const feats = bgDetail?.proficiencies?.feats ?? [];
+  return feats.flatMap((feat) =>
+    feat.parsed.choices
+      .filter((choice) => choice.type === "proficiency" || choice.type === "weapon_mastery")
+      .map((choice) => ({
+        featName: feat.name,
+        feat: feat.parsed,
+        choice,
+        key: `bg:${feat.name}:${choice.id}`,
+      }))
+  );
+}
+
+function getFeatChoiceOptions(choice: ParsedFeatChoice): string[] {
+  if (choice.type === "weapon_mastery") return [...WEAPON_MASTERY_KINDS];
+  if (choice.options && choice.options.length > 0) return [...choice.options].sort((a, b) => a.localeCompare(b));
+  const combined = new Set<string>();
+  for (const kind of choice.anyOf ?? []) {
+    if (kind === "skill") ALL_SKILLS.forEach((item) => combined.add(item));
+    if (kind === "tool") ALL_TOOLS.forEach((item) => combined.add(item));
+    if (kind === "language") ALL_LANGUAGES.forEach((item) => combined.add(item));
+  }
+  return [...combined].sort((a, b) => a.localeCompare(b));
+}
+
+function classifyFeatSelection(choice: ParsedFeatChoice, value: string): "skill" | "tool" | "language" | "weapon_mastery" | null {
+  if (choice.type === "weapon_mastery") return "weapon_mastery";
+  if (choice.anyOf?.length === 1) {
+    const only = choice.anyOf[0];
+    if (only === "skill" || only === "tool" || only === "language") return only;
+  }
+  if (ALL_SKILLS.includes(value)) return "skill";
+  if (ALL_TOOLS.includes(value)) return "tool";
+  if (ALL_LANGUAGES.includes(value)) return "language";
+  if (WEAPON_MASTERY_KIND_SET.has(value)) return "weapon_mastery";
+  return null;
+}
+
+function getWeaponMasteryChoice(classDetail: ClassDetail | null, level: number): WeaponMasteryChoice | null {
+  if (!classDetail) return null;
+  for (const al of classDetail.autolevels) {
+    if (al.level == null || al.level > level) continue;
+    for (const f of al.features) {
+      if (!/weapon mastery/i.test(f.name)) continue;
+      const m = f.text.match(/mastery properties of\s+(\w+)\s+kinds?\s+of\s+weapons?\s+of\s+your\s+choice/i);
+      const count = m ? wordOrNumberToInt(m[1]) : null;
+      if (count && count > 0) return { source: f.name, count };
+    }
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 
 function buildProficiencyMap(
@@ -323,6 +472,7 @@ function buildProficiencyMap(
   const weapons:     TaggedItem[] = [];
   const tools:       TaggedItem[] = [];
   const languages:   TaggedItem[] = [];
+  const masteries:   TaggedItem[] = [];
   const spells:      TaggedItem[] = [];
   const invocations: TaggedItem[] = [];
 
@@ -351,8 +501,12 @@ function buildProficiencyMap(
         }
       }
     }
-    // Skill choices made in Step 5
+    // Skill choices made in the Skills step
     form.chosenSkills.forEach(n => skills.push({ name: n, source: className }));
+    const masteryChoice = getWeaponMasteryChoice(classDetail, form.level);
+    if (masteryChoice) {
+      form.chosenWeaponMasteries.forEach((name) => masteries.push({ name, source: masteryChoice.source }));
+    }
 
     // ── Chosen optional features (Step 4 picks) ──────────────────────────────
     // Build a flat map of feature name → text so we can parse grants
@@ -392,6 +546,26 @@ function buildProficiencyMap(
       for (const t of bgDetail.traits) {
         if (/tool/i.test(t.name)) splitComma(t.text).forEach(n => tools.push({ name: n, source: bgName }));
         else if (/language/i.test(t.name)) splitComma(t.text).forEach(n => languages.push({ name: n, source: bgName }));
+      }
+    }
+    for (const feat of prof?.feats ?? []) {
+      feat.parsed.grants.skills.forEach((name) => skills.push({ name, source: feat.name }));
+      feat.parsed.grants.tools.forEach((name) => tools.push({ name, source: feat.name }));
+      feat.parsed.grants.languages.forEach((name) => languages.push({ name, source: feat.name }));
+      feat.parsed.grants.armor.forEach((name) => armor.push({ name, source: feat.name }));
+      feat.parsed.grants.weapons.forEach((name) => weapons.push({ name, source: feat.name }));
+      feat.parsed.grants.savingThrows.forEach((name) => saves.push({ name, source: feat.name }));
+
+      for (const choice of feat.parsed.choices) {
+        if (choice.type !== "proficiency" && choice.type !== "weapon_mastery") continue;
+        const selected = form.chosenFeatOptions[`bg:${feat.name}:${choice.id}`] ?? [];
+        for (const name of selected) {
+          const kind = classifyFeatSelection(choice, name);
+          if (kind === "skill") skills.push({ name, source: feat.name });
+          else if (kind === "tool") tools.push({ name, source: feat.name });
+          else if (kind === "language") languages.push({ name, source: feat.name });
+          else if (kind === "weapon_mastery") masteries.push({ name, source: feat.name });
+        }
       }
     }
   }
@@ -436,7 +610,7 @@ function buildProficiencyMap(
     if (sp) invocations.push({ name: sp.name, source: className });
   });
 
-  return { skills, saves, armor, weapons, tools, languages, spells, invocations };
+  return { skills, saves, armor, weapons, tools, languages, masteries, spells, invocations };
 }
 
 /** Group optional non-subclass features by level, up to `level`.
@@ -468,7 +642,7 @@ function pointBuySpent(scores: Record<string, number>): number {
 // ---------------------------------------------------------------------------
 
 type AbilityMethod = "standard" | "pointbuy" | "manual";
-type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
 interface FormState {
   classId: string;
@@ -480,10 +654,12 @@ interface FormState {
   // Background tool / language / ability choices (Step 3)
   chosenBgTools: string[];
   chosenBgLanguages: string[];
+  chosenFeatOptions: Record<string, string[]>;
   bgAbilityMode: "split" | "even";
   bgAbilityBonuses: Record<string, number>; // e.g. { str: 2, dex: 1 } or { str:1, dex:1, con:1 }
   // Skill proficiency selections (up to numSkills)
   chosenSkills: string[];
+  chosenWeaponMasteries: string[];
   // Spellcasting selections
   chosenCantrips: string[];    // spell IDs
   chosenSpells: string[];      // spell IDs (prepared)
@@ -497,6 +673,13 @@ interface FormState {
   speed: string;
   characterName: string;
   playerName: string;
+  alignment: string;
+  hair: string;
+  skin: string;
+  heightText: string;
+  age: string;
+  weight: string;
+  gender: string;
   color: string;
   campaignIds: string[];
 }
@@ -508,14 +691,16 @@ function initForm(user: { name?: string } | null, params: URLSearchParams): Form
   return {
     classId: "", raceId: "", bgId: "",
     level: 1, subclass: "", chosenOptionals: [],
-    chosenBgTools: [], chosenBgLanguages: [], bgAbilityMode: "split", bgAbilityBonuses: {},
-    chosenSkills: [], chosenCantrips: [], chosenSpells: [], chosenInvocations: [],
+    chosenBgTools: [], chosenBgLanguages: [], chosenFeatOptions: {}, bgAbilityMode: "split", bgAbilityBonuses: {},
+    chosenSkills: [], chosenWeaponMasteries: [], chosenCantrips: [], chosenSpells: [], chosenInvocations: [],
     abilityMethod: "standard",
     standardAssign: { str: -1, dex: -1, con: -1, int: -1, wis: -1, cha: -1 },
     pbScores: { ...DEFAULT_SCORES },
     manualScores: { ...DEFAULT_SCORES },
     hpMax: "", ac: "10", speed: "30",
     characterName: "", playerName: user?.name ?? "",
+    alignment: "", hair: "", skin: "", heightText: "",
+    age: "", weight: "", gender: "",
     color: "#38b6ff",
     campaignIds: preselectedCampaign ? [preselectedCampaign] : [],
   };
@@ -557,7 +742,7 @@ function getPrimaryAbilityKeys(classDetail: ClassDetail | null): string[] {
 // ---------------------------------------------------------------------------
 
 function StepHeader({ current, onStepClick }: { current: Step; onStepClick: (s: Step) => void }) {
-  const STEPS = ["Class", "Species", "Background", "Level", "Spells", "Ability Scores", "Stats", "Identity", "Assign"];
+  const STEPS = ["Class", "Species", "Background", "Level", "Skills", "Spells", "Ability Scores", "Stats", "Identity", "Assign"];
   return (
     <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 28 }}>
       {STEPS.map((label, i) => {
@@ -666,6 +851,7 @@ export function CharacterCreatorView() {
   const [bgs, setBgs] = React.useState<BgSummary[]>([]);
   const [bgDetail, setBgDetail] = React.useState<BgDetail | null>(null);
   const [campaigns, setCampaigns] = React.useState<Campaign[]>([]);
+  const [items, setItems] = React.useState<ItemSummary[]>([]);
   // Spell lists (loaded when class is selected)
   const [classCantrips, setClassCantrips] = React.useState<SpellSummary[]>([]);
   const [classSpells, setClassSpells] = React.useState<SpellSummary[]>([]);
@@ -690,6 +876,7 @@ export function CharacterCreatorView() {
     api<RaceSummary[]>("/api/compendium/races").then(setRaces).catch(() => {});
     api<BgSummary[]>("/api/compendium/backgrounds").then(setBgs).catch(() => {});
     api<Campaign[]>("/api/campaigns").then(setCampaigns).catch(() => {});
+    api<ItemSummary[]>("/api/compendium/items").then(setItems).catch(() => {});
   }, []);
 
   // Load existing character when editing
@@ -707,6 +894,8 @@ export function CharacterCreatorView() {
           subclass: cd.subclass ?? "",
           chosenOptionals: cd.chosenOptionals ?? [],
           chosenSkills: cd.chosenSkills ?? [],
+          chosenFeatOptions: cd.chosenFeatOptions ?? {},
+          chosenWeaponMasteries: cd.chosenWeaponMasteries ?? [],
           chosenCantrips: cd.chosenCantrips ?? [],
           chosenSpells: cd.chosenSpells ?? [],
           chosenInvocations: cd.chosenInvocations ?? [],
@@ -719,7 +908,14 @@ export function CharacterCreatorView() {
           ac: String(ch.ac ?? 10),
           speed: String(ch.speed ?? 30),
           characterName: ch.name ?? "",
-          playerName: ch.playerName ?? "",
+          playerName: ch.playerName ?? f.playerName,
+          alignment: typeof cd.alignment === "string" ? cd.alignment : "",
+          hair: typeof cd.hair === "string" ? cd.hair : "",
+          skin: typeof cd.skin === "string" ? cd.skin : "",
+          heightText: typeof cd.height === "string" ? cd.height : "",
+          age: typeof cd.age === "string" ? cd.age : "",
+          weight: typeof cd.weight === "string" ? cd.weight : "",
+          gender: typeof cd.gender === "string" ? cd.gender : "",
           color: ch.color ?? "#38b6ff",
           campaignIds: (ch.campaigns ?? []).map((c: any) => c.campaignId),
         }));
@@ -774,7 +970,7 @@ export function CharacterCreatorView() {
   // Load bg detail when selected
   React.useEffect(() => {
     if (!form.bgId) { setBgDetail(null); return; }
-    setForm(f => ({ ...f, chosenBgTools: [], chosenBgLanguages: [], bgAbilityMode: "split", bgAbilityBonuses: {} }));
+    setForm(f => ({ ...f, chosenBgTools: [], chosenBgLanguages: [], chosenFeatOptions: {}, bgAbilityMode: "split", bgAbilityBonuses: {} }));
     api<BgDetail>(`/api/compendium/backgrounds/${form.bgId}`).then(setBgDetail).catch(() => {});
   }, [form.bgId]);
 
@@ -790,6 +986,10 @@ export function CharacterCreatorView() {
 
   function set<K extends keyof FormState>(key: K, val: FormState[K]) {
     setForm((f) => ({ ...f, [key]: val }));
+  }
+
+  function optionalText(value: string | undefined) {
+    return (value ?? "").trim();
   }
 
   async function handleSubmit() {
@@ -819,7 +1019,7 @@ export function CharacterCreatorView() {
       })();
       const body = {
         name: form.characterName.trim(),
-        playerName: form.playerName.trim(),
+        playerName: optionalText(form.playerName),
         className: classDetail?.name ?? form.characterName,
         species: raceDetail?.name ?? "",
         level: form.level,
@@ -833,10 +1033,19 @@ export function CharacterCreatorView() {
         characterData: {
           classId: form.classId, raceId: form.raceId, bgId: form.bgId,
           subclass: form.subclass || null, abilityMethod: form.abilityMethod,
+          alignment: optionalText(form.alignment),
+          hair: optionalText(form.hair),
+          skin: optionalText(form.skin),
+          height: optionalText(form.heightText),
+          age: optionalText(form.age),
+          weight: optionalText(form.weight),
+          gender: optionalText(form.gender),
           hd: classDetail?.hd ?? null,
           chosenOptionals: form.chosenOptionals,
           classFeatures,
           chosenSkills: form.chosenSkills,
+          chosenFeatOptions: form.chosenFeatOptions,
+          chosenWeaponMasteries: form.chosenWeaponMasteries,
           chosenCantrips: form.chosenCantrips,
           chosenSpells: form.chosenSpells,
           chosenInvocations: form.chosenInvocations,
@@ -894,11 +1103,12 @@ export function CharacterCreatorView() {
       case 2: return StepSpecies();
       case 3: return StepBackground();
       case 4: return StepLevel();
-      case 5: return StepSpells();
-      case 6: return StepAbilityScores();
-      case 7: return StepDerivedStats();
-      case 8: return StepIdentity();
-      case 9: return StepCampaigns();
+      case 5: return StepSkills();
+      case 6: return StepSpells();
+      case 7: return StepAbilityScores();
+      case 8: return StepDerivedStats();
+      case 9: return StepIdentity();
+      case 10: return StepCampaigns();
     }
   }
 
@@ -1263,10 +1473,16 @@ export function CharacterCreatorView() {
                 label: "Tools", choice: tools, formKey: "chosenBgTools", canonical: ALL_TOOLS,
               })}
 
-              {/* Languages */}
-              {(langs.fixed.length > 0 || langs.choose > 0) && ProfPicker({
-                label: "Languages", choice: langs, formKey: "chosenBgLanguages", canonical: ALL_LANGUAGES,
-              })}
+              {/* Languages are chosen in the Skills step so all player picks live together */}
+              {langs.fixed.length > 0 && (
+                <div style={{ marginBottom: 10 }}>
+                  <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>Languages </span>
+                  <span style={sourceTagStyle}>{bgDetail.name}</span>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5 }}>
+                    {langs.fixed.map(n => <span key={n} style={profChipStyle}>{n}</span>)}
+                  </div>
+                </div>
+              )}
 
               {/* Granted feat */}
               {prof?.feats && prof.feats.length > 0 && (
@@ -1274,8 +1490,8 @@ export function CharacterCreatorView() {
                   <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>Feat </span>
                   <span style={sourceTagStyle}>{bgDetail.name}</span>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5 }}>
-                    {prof.feats.map(f => (
-                      <span key={f} style={{ ...profChipStyle, background: "rgba(251,146,60,0.15)", border: "1px solid rgba(251,146,60,0.4)", color: "#fb923c" }}>{f}</span>
+                    {prof.feats.map((feat) => (
+                      <span key={feat.name} style={{ ...profChipStyle, background: "rgba(251,146,60,0.15)", border: "1px solid rgba(251,146,60,0.4)", color: "#fb923c" }}>{feat.name}</span>
                     ))}
                   </div>
                 </div>
@@ -1529,38 +1745,65 @@ export function CharacterCreatorView() {
     );
   }
 
-  // Step 5: Spells & Invocations
-  function StepSpells() {
-    const cantripCount = classDetail ? getCantripCount(classDetail, form.level) : 0;
-    const maxSlotLvl   = classDetail ? getMaxSlotLevel(classDetail, form.level) : 0;
-    const isCaster = classDetail ? isSpellcaster(classDetail) : false;
-
-    // Invocations: parse known count from the Eldritch Invocations feature text
-    const invocTable = classDetail ? getClassFeatureTable(classDetail, "Invocation", 1) : [];
-    const invocCount = invocTable.length > 0 ? tableValueAtLevel(invocTable, form.level) : 0;
-
-    // Prepared spells: parse count from Pact Magic / Spellcasting feature text
-    const prepTable = classDetail ? getClassFeatureTable(classDetail, "Pact Magic|Spellcasting", 1) : [];
-    const prepCount = prepTable.length > 0 ? tableValueAtLevel(prepTable, form.level) : 0;
-
+  // Step 5: Skills, languages, and feature-based picks
+  function StepSkills() {
     const skillList = classDetail ? parseSkillList(classDetail.proficiency) : [];
     const numSkills = classDetail?.numSkills ?? 0;
+    const bgLangChoice = bgDetail?.proficiencies?.languages ?? { fixed: [], choose: 0, from: null };
+    const bgFeatChoices = getBackgroundFeatChoices(bgDetail);
+    const weaponMasteryChoice = getWeaponMasteryChoice(classDetail, form.level);
+    const weaponOptions = getWeaponMasteryOptions(items);
+    const hasAnything = numSkills > 0 || bgLangChoice.fixed.length > 0 || bgLangChoice.choose > 0 || bgFeatChoices.length > 0 || Boolean(weaponMasteryChoice);
 
-    function toggleSpell(id: string, listKey: "chosenCantrips" | "chosenSpells" | "chosenInvocations", max: number) {
+    function toggleLanguage(language: string) {
       setForm((f) => {
-        const current = f[listKey];
-        const next = current.includes(id)
-          ? current.filter((x) => x !== id)
-          : current.length < max ? [...current, id] : current;
-        return { ...f, [listKey]: next };
+        const sel = f.chosenBgLanguages.includes(language);
+        return {
+          ...f,
+          chosenBgLanguages: sel
+            ? f.chosenBgLanguages.filter((name) => name !== language)
+            : f.chosenBgLanguages.length < bgLangChoice.choose
+              ? [...f.chosenBgLanguages, language]
+              : f.chosenBgLanguages,
+        };
       });
     }
 
-    const hasAnything = isCaster || numSkills > 0 || invocCount > 0;
+    function toggleWeaponMastery(weapon: string) {
+      if (!weaponMasteryChoice) return;
+      setForm((f) => {
+        const sel = f.chosenWeaponMasteries.includes(weapon);
+        return {
+          ...f,
+          chosenWeaponMasteries: sel
+            ? f.chosenWeaponMasteries.filter((name) => name !== weapon)
+            : f.chosenWeaponMasteries.length < weaponMasteryChoice.count
+              ? [...f.chosenWeaponMasteries, weapon]
+              : f.chosenWeaponMasteries,
+        };
+      });
+    }
+
+    function toggleFeatChoice(choiceKey: string, option: string, max: number) {
+      setForm((f) => {
+        const current = f.chosenFeatOptions[choiceKey] ?? [];
+        const selected = current.includes(option);
+        const next = selected
+          ? current.filter((value) => value !== option)
+          : current.length < max ? [...current, option] : current;
+        return {
+          ...f,
+          chosenFeatOptions: {
+            ...f.chosenFeatOptions,
+            [choiceKey]: next,
+          },
+        };
+      });
+    }
 
     return (
       <div>
-        <h2 style={headingStyle}>Spells &amp; Skills</h2>
+        <h2 style={headingStyle}>Skills &amp; Proficiencies</h2>
 
         {/* Skill proficiencies */}
         {numSkills > 0 && skillList.length > 0 && (
@@ -1601,7 +1844,171 @@ export function CharacterCreatorView() {
           </div>
         )}
 
-        {/* Cantrips */}
+        {(bgLangChoice.fixed.length > 0 || bgLangChoice.choose > 0) && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+              <div style={{ ...labelStyle, margin: 0 }}>
+                Languages{" "}
+                {bgDetail && <span style={sourceTagStyle}>from {bgDetail.name}</span>}
+              </div>
+              {bgLangChoice.choose > 0 && (
+                <span style={{ fontSize: 12, color: form.chosenBgLanguages.length >= bgLangChoice.choose ? C.accentHl : C.muted }}>
+                  {form.chosenBgLanguages.length} / {bgLangChoice.choose}
+                </span>
+              )}
+            </div>
+            {bgLangChoice.fixed.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: bgLangChoice.choose > 0 ? 10 : 0 }}>
+                {bgLangChoice.fixed.map((language) => (
+                  <span key={language} style={profChipStyle}>{language}</span>
+                ))}
+              </div>
+            )}
+            {bgLangChoice.choose > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {(bgLangChoice.from ?? ALL_LANGUAGES).map((language) => {
+                  const sel = form.chosenBgLanguages.includes(language);
+                  const locked = !sel && form.chosenBgLanguages.length >= bgLangChoice.choose;
+                  return (
+                    <button key={language} type="button" disabled={locked}
+                      onClick={() => toggleLanguage(language)}
+                      style={{
+                        padding: "6px 14px", borderRadius: 6, fontSize: 13, cursor: locked ? "default" : "pointer",
+                        border: `1px solid ${sel ? C.accentHl : "rgba(255,255,255,0.12)"}`,
+                        background: sel ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
+                        color: sel ? C.accentHl : locked ? "rgba(160,180,220,0.35)" : C.text,
+                        fontWeight: sel ? 700 : 400,
+                      }}>
+                      {language}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {bgFeatChoices.map(({ featName, feat, choice, key }) => {
+          const options = getFeatChoiceOptions(choice);
+          const selected = form.chosenFeatOptions[key] ?? [];
+          const fixedGrants = [
+            ...feat.grants.skills,
+            ...feat.grants.tools,
+            ...feat.grants.languages,
+            ...feat.grants.weapons,
+            ...feat.grants.armor,
+          ];
+          return (
+            <div key={key} style={{ marginBottom: 24 }}>
+              <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+                <div style={{ ...labelStyle, margin: 0 }}>
+                  {featName} <span style={sourceTagStyle}>{bgDetail?.name}</span>
+                </div>
+                <span style={{ fontSize: 12, color: selected.length >= choice.count ? C.accentHl : C.muted }}>
+                  {selected.length} / {choice.count}
+                </span>
+              </div>
+              {fixedGrants.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                  {fixedGrants.map((grant) => (
+                    <span key={`${key}:${grant}`} style={profChipStyle}>{grant}</span>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 220, overflowY: "auto", padding: "2px 0" }}>
+                {options.map((option) => {
+                  const sel = selected.includes(option);
+                  const locked = !sel && selected.length >= choice.count;
+                  return (
+                    <button key={option} type="button" disabled={locked}
+                      onClick={() => toggleFeatChoice(key, option, choice.count)}
+                      style={{
+                        padding: "6px 14px", borderRadius: 6, fontSize: 13, cursor: locked ? "default" : "pointer",
+                        border: `1px solid ${sel ? C.accentHl : "rgba(255,255,255,0.12)"}`,
+                        background: sel ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
+                        color: sel ? C.accentHl : locked ? "rgba(160,180,220,0.35)" : C.text,
+                        fontWeight: sel ? 700 : 400,
+                      }}>
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+              {choice.note && <div style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>{choice.note}</div>}
+            </div>
+          );
+        })}
+
+        {/* Weapon Mastery */}
+        {weaponMasteryChoice && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+              <div style={{ ...labelStyle, margin: 0 }}>
+                Weapon Mastery <span style={sourceTagStyle}>{weaponMasteryChoice.source}</span>
+              </div>
+              <span style={{ fontSize: 12, color: form.chosenWeaponMasteries.length >= weaponMasteryChoice.count ? C.accentHl : C.muted }}>
+                {form.chosenWeaponMasteries.length} / {weaponMasteryChoice.count}
+              </span>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 200, overflowY: "auto", padding: "2px 0" }}>
+              {weaponOptions.map((weapon) => {
+                const sel = form.chosenWeaponMasteries.includes(weapon);
+                const locked = !sel && form.chosenWeaponMasteries.length >= weaponMasteryChoice.count;
+                return (
+                  <button key={weapon} type="button" disabled={locked}
+                    onClick={() => toggleWeaponMastery(weapon)}
+                    style={{
+                      padding: "6px 14px", borderRadius: 6, fontSize: 13, cursor: locked ? "default" : "pointer",
+                      border: `1px solid ${sel ? C.accentHl : "rgba(255,255,255,0.12)"}`,
+                      background: sel ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
+                      color: sel ? C.accentHl : locked ? "rgba(160,180,220,0.35)" : C.text,
+                      fontWeight: sel ? 700 : 400,
+                    }}>
+                    {weapon}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {!hasAnything && (
+          <p style={{ color: C.muted, fontSize: 14 }}>There are no skill, language, or mastery choices at this level.</p>
+        )}
+
+        <NavButtons step={step} onBack={() => setStep(4)} onNext={() => setStep(6)} />
+      </div>
+    );
+  }
+
+  // Step 6: Spells & Invocations
+  function StepSpells() {
+    const cantripCount = classDetail ? getCantripCount(classDetail, form.level) : 0;
+    const maxSlotLvl   = classDetail ? getMaxSlotLevel(classDetail, form.level) : 0;
+    const isCaster = classDetail ? isSpellcaster(classDetail) : false;
+
+    const invocTable = classDetail ? getClassFeatureTable(classDetail, "Invocation", 1) : [];
+    const invocCount = invocTable.length > 0 ? tableValueAtLevel(invocTable, form.level) : 0;
+
+    const prepTable = classDetail ? getClassFeatureTable(classDetail, "Pact Magic|Spellcasting", 1) : [];
+    const prepCount = prepTable.length > 0 ? tableValueAtLevel(prepTable, form.level) : 0;
+
+    function toggleSpell(id: string, listKey: "chosenCantrips" | "chosenSpells" | "chosenInvocations", max: number) {
+      setForm((f) => {
+        const current = f[listKey];
+        const next = current.includes(id)
+          ? current.filter((x) => x !== id)
+          : current.length < max ? [...current, id] : current;
+        return { ...f, [listKey]: next };
+      });
+    }
+
+    const hasAnything = isCaster || invocCount > 0;
+
+    return (
+      <div>
+        <h2 style={headingStyle}>Spells</h2>
+
         {isCaster && cantripCount > 0 && (
           <SpellPicker
             title="Cantrips" spells={classCantrips} chosen={form.chosenCantrips}
@@ -1610,7 +2017,6 @@ export function CharacterCreatorView() {
           />
         )}
 
-        {/* Eldritch Invocations — filtered to those whose level prerequisite is met */}
         {invocCount > 0 && classInvocations.length > 0 && (
           <SpellPicker
             title="Eldritch Invocations" chosen={form.chosenInvocations}
@@ -1622,7 +2028,6 @@ export function CharacterCreatorView() {
           />
         )}
 
-        {/* Prepared Spells */}
         {isCaster && prepCount > 0 && maxSlotLvl > 0 && (
           <SpellPicker
             title={`Prepared Spells (up to level ${maxSlotLvl})`}
@@ -1634,15 +2039,15 @@ export function CharacterCreatorView() {
         )}
 
         {!hasAnything && (
-          <p style={{ color: C.muted, fontSize: 14 }}>This class has no spellcasting or skill choices at this level.</p>
+          <p style={{ color: C.muted, fontSize: 14 }}>This class has no spellcasting choices at this level.</p>
         )}
 
-        <NavButtons step={step} onBack={() => setStep(4)} onNext={() => setStep(6)} />
+        <NavButtons step={step} onBack={() => setStep(5)} onNext={() => setStep(7)} />
       </div>
     );
   }
 
-  // Step 6: Ability Scores
+  // Step 7: Ability Scores
   function StepAbilityScores() {
     const usedIndices = Object.values(form.standardAssign).filter((v) => v >= 0);
     const spent = pointBuySpent(form.pbScores);
@@ -1812,12 +2217,12 @@ export function CharacterCreatorView() {
           </div>
         )}
 
-        <NavButtons step={step} onBack={() => setStep(5)} onNext={() => setStep(7)} />
+        <NavButtons step={step} onBack={() => setStep(6)} onNext={() => setStep(8)} />
       </div>
     );
   }
 
-  // Step 6: Derived Stats
+  // Step 8: Derived Stats
   function StepDerivedStats() {
     const scores = resolvedScores(form);
     const conMod = abilityMod(scores.con ?? 10);
@@ -1863,6 +2268,7 @@ export function CharacterCreatorView() {
             { label: "Weapons",     items: prof.weapons },
             { label: "Tools",       items: prof.tools },
             { label: "Languages",   items: prof.languages },
+            { label: "Weapon Masteries", items: prof.masteries },
             { label: "Spells",      items: prof.spells },
             { label: "Invocations", items: prof.invocations },
           ].filter((s) => s.items.length > 0);
@@ -1887,14 +2293,23 @@ export function CharacterCreatorView() {
           );
         })()}
 
-        <NavButtons step={step} onBack={() => setStep(6)} onNext={() => setStep(8)} />
+        <NavButtons step={step} onBack={() => setStep(7)} onNext={() => setStep(9)} />
       </div>
     );
   }
 
-  // Step 7: Identity
+  // Step 9: Identity
   function StepIdentity() {
     const COLORS = ["#38b6ff", "#5ecb6b", "#f0a500", "#ff5d5d", "#a78bfa", "#fb923c", "#e879f9", "#94a3b8"];
+    const detailFields: Array<{ key: keyof FormState; label: string; placeholder: string }> = [
+      { key: "alignment", label: "Alignment", placeholder: "Chaotic Good" },
+      { key: "hair", label: "Hair", placeholder: "Black, braided" },
+      { key: "skin", label: "Skin", placeholder: "Tan, scarred" },
+      { key: "heightText", label: "Height", placeholder: "6'2\"" },
+      { key: "age", label: "Age", placeholder: "32" },
+      { key: "weight", label: "Weight", placeholder: "190 lb" },
+      { key: "gender", label: "Gender", placeholder: "Non-binary" },
+    ];
 
     function handlePortraitChange(e: React.ChangeEvent<HTMLInputElement>) {
       const file = e.target.files?.[0];
@@ -1958,14 +2373,18 @@ export function CharacterCreatorView() {
                 style={{ ...inputStyle, width: "100%" }}
               />
             </div>
-            <div>
-              <label style={labelStyle}>Player Name</label>
-              <input
-                value={form.playerName}
-                onChange={(e) => set("playerName", e.target.value)}
-                placeholder="Your name"
-                style={{ ...inputStyle, width: "100%" }}
-              />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+              {detailFields.map(({ key, label, placeholder }) => (
+                <div key={key}>
+                  <label style={labelStyle}>{label}</label>
+                  <input
+                    value={form[key] ?? ""}
+                    onChange={(e) => set(key, e.target.value)}
+                    placeholder={placeholder}
+                    style={{ ...inputStyle, width: "100%" }}
+                  />
+                </div>
+              ))}
             </div>
             <div>
               <label style={labelStyle}>Color</label>
@@ -1982,13 +2401,13 @@ export function CharacterCreatorView() {
             </div>
           </div>
         </div>
-        <NavButtons step={step} onBack={() => setStep(7)} onNext={() => setStep(9)}
+        <NavButtons step={step} onBack={() => setStep(8)} onNext={() => setStep(10)}
           nextDisabled={!form.characterName.trim()} />
       </div>
     );
   }
 
-  // Step 8: Campaigns
+  // Step 10: Campaigns
   function StepCampaigns() {
     return (
       <div>
@@ -2023,7 +2442,7 @@ export function CharacterCreatorView() {
         {error && <div style={{ color: C.red, marginBottom: 10 }}>{error}</div>}
 
         <div style={{ display: "flex", gap: 10, justifyContent: "space-between" }}>
-          <button type="button" onClick={() => setStep(8)} style={btnStyle(false, false)}>← Back</button>
+          <button type="button" onClick={() => setStep(9)} style={btnStyle(false, false)}>← Back</button>
           <button type="button" onClick={handleSubmit} disabled={busy} style={btnStyle(true, busy)}>
             {busy ? "Saving…" : isEditing ? "Save Changes ✓" : "Create Character ✓"}
           </button>

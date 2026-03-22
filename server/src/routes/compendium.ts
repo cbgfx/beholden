@@ -4,6 +4,8 @@ import type { ServerContext } from "../server/context.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { requireAdmin, requireAnyDm, requireAuth } from "../middleware/auth.js";
+import { parseFeat } from "../lib/featParser.js";
+import { parseBackgroundProficiencies } from "../lib/proficiencyConstants.js";
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
@@ -542,13 +544,51 @@ export function registerCompendiumRoutes(app: Express, ctx: ServerContext) {
     if (!id) return;
     const row = db.prepare("SELECT data_json FROM compendium_backgrounds WHERE id = ?").get(id) as { data_json: string } | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Not found" });
-    res.json(JSON.parse(row.data_json));
+    const bg = JSON.parse(row.data_json);
+    const featEntries = Array.isArray(bg.proficiencies?.feats) ? bg.proficiencies.feats : [];
+    const needsBgParsing =
+      !bg.proficiencies ||
+      featEntries.some((feat: unknown) =>
+        typeof feat === "string" ||
+        !feat ||
+        typeof feat !== "object" ||
+        !("parsed" in feat)
+      );
+    if (needsBgParsing) {
+      bg.proficiencies = parseBackgroundProficiencies({
+        proficiency: bg.proficiency,
+        trait: bg.traits,
+      });
+    }
+    res.json(bg);
   });
 
   // --- Feats -----------------------------------------------------------------
   app.get("/api/compendium/feats", requireAuth, (_req, res) => {
     const rows = db.prepare("SELECT id, name FROM compendium_feats ORDER BY name COLLATE NOCASE").all() as { id: string; name: string }[];
     res.json(rows);
+  });
+
+  app.get("/api/compendium/feats/:featId", requireAuth, (req, res) => {
+    const featId = requireParam(req, res, "featId");
+    if (!featId) return;
+    const row = db.prepare("SELECT data_json FROM compendium_feats WHERE id = ?").get(featId) as { data_json: string } | undefined;
+    if (!row) return res.status(404).json({ ok: false, message: "Feat not found" });
+    const feat = JSON.parse(row.data_json);
+    if (!feat.parsed) {
+      feat.parsed = parseFeat({
+        name: String(feat.name ?? ""),
+        text: String(feat.text ?? ""),
+        prerequisite: typeof feat.prerequisite === "string" ? feat.prerequisite : null,
+        proficiency: typeof feat.proficiency === "string" ? feat.proficiency : null,
+        modifiers: Array.isArray(feat.modifierDetails)
+          ? feat.modifierDetails
+          : Array.isArray(feat.modifiers)
+            ? feat.modifiers.map((text: unknown) => ({ category: "", text: String(text ?? "") }))
+            : [],
+      });
+    }
+    res.json(feat);
   });
 
   // --- Admin / import -------------------------------------------------------

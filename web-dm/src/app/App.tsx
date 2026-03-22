@@ -9,20 +9,21 @@ import type { Adventure, Campaign, Combatant, Encounter, INpc, Meta, Note, Playe
 import { useAppWebSocket } from "@/app/useAppWebSocket";
 import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
 import { HomeView } from "@/views/HomeView";
-import { CompendiumView } from "@/views/CompendiumView/CompendiumView";
-import { CampaignView } from "@/views/CampaignView/CampaignView";
-import { CombatView } from "@/views/CombatView/CombatView";
-import { CombatRosterView } from "@/views/CombatRosterView/CombatRosterView";
-import { AboutView } from "@/views/Info/AboutView";
-import { FaqView } from "@/views/Info/FaqView";
-import { UpdatesView } from "@/views/Info/UpdatesView";
 import { DrawerHost } from "@/drawers/DrawerHost";
 import { ConfirmProvider, useConfirm } from "@/confirm/ConfirmContext";
 import { useCampaignActions } from "@/app/useCampaignActions";
 import type { State } from "@/store/state";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LoginView } from "@/views/LoginView";
-import { AdminView } from "@/views/AdminView/AdminView";
+
+const CompendiumView = React.lazy(() => import("@/views/CompendiumView/CompendiumView").then(m => ({ default: m.CompendiumView })));
+const CampaignView = React.lazy(() => import("@/views/CampaignView/CampaignView").then(m => ({ default: m.CampaignView })));
+const CombatView = React.lazy(() => import("@/views/CombatView/CombatView").then(m => ({ default: m.CombatView })));
+const CombatRosterView = React.lazy(() => import("@/views/CombatRosterView/CombatRosterView").then(m => ({ default: m.CombatRosterView })));
+const AboutView = React.lazy(() => import("@/views/Info/AboutView").then(m => ({ default: m.AboutView })));
+const FaqView = React.lazy(() => import("@/views/Info/FaqView").then(m => ({ default: m.FaqView })));
+const UpdatesView = React.lazy(() => import("@/views/Info/UpdatesView").then(m => ({ default: m.UpdatesView })));
+const AdminView = React.lazy(() => import("@/views/AdminView/AdminView").then(m => ({ default: m.AdminView })));
 
 function AppInner() {
   const { state, dispatch } = useStore();
@@ -166,6 +167,7 @@ function AppInner() {
         onChange={handleImportAdventureFile}
       />
 
+      <React.Suspense fallback={null}>
       <Routes>
         <Route
           path="/"
@@ -236,6 +238,7 @@ function AppInner() {
           <Route path="/updates" element={<UpdatesView />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </React.Suspense>
     </ShellLayout>
   );
 }
@@ -269,6 +272,7 @@ function AuthGate() {
   }
 
   return (
+    <React.Suspense fallback={null}>
     <Routes>
       {/* Admin panel — admins only */}
       <Route
@@ -287,6 +291,7 @@ function AuthGate() {
         }
       />
     </Routes>
+    </React.Suspense>
   );
 }
 

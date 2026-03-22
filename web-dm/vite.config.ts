@@ -11,6 +11,15 @@ export default defineConfig({
   define: {
     __SERVER_PORT__: SERVER_PORT,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-router": ["react-router-dom"],
+        },
+      },
+    },
+  },
   server: {
     host: true,
     port: WEB_PORT,
