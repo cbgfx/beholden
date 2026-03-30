@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { C, withAlpha } from "@/lib/theme";
 import { RightDrawer } from "@/ui/RightDrawer";
+import { SectionTitle as SharedSectionTitle, accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import type { ClassFeatureEntry, PlayerNote } from "@/views/character/CharacterSheetTypes";
 
@@ -59,17 +60,9 @@ export function Panel({ children }: { children: React.ReactNode }) {
 
 export function PanelTitle({ children, color, actions, style }: { children: React.ReactNode; color: string; actions?: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div style={{
-      fontSize: "var(--fs-tiny)", fontWeight: 700, textTransform: "uppercase",
-      letterSpacing: "0.1em", color,
-      marginBottom: 10,
-      display: "flex", alignItems: "center", gap: 8,
-      ...style,
-    }}>
-      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>{children}</span>
-      <div style={{ flex: 1, height: 1, background: `${color}30` }} />
-      {actions ? <div style={{ flexShrink: 0 }}>{actions}</div> : null}
-    </div>
+    <SharedSectionTitle color={color} actions={actions} style={style}>
+      {children}
+    </SharedSectionTitle>
   );
 }
 
@@ -242,10 +235,13 @@ export function addBtnStyle(accent: string): React.CSSProperties {
 }
 
 export const cancelBtnStyle: React.CSSProperties = {
-  background: "transparent",
-  border: "1px solid rgba(255,255,255,0.14)",
-  borderRadius: 7, padding: "6px 14px",
-  fontSize: "var(--fs-subtitle)", color: C.muted, cursor: "pointer",
+  ...ghostButtonStyle({
+    textColor: C.muted,
+    borderColor: "rgba(255,255,255,0.14)",
+    padding: "6px 14px",
+    fontSize: "var(--fs-subtitle)",
+    borderRadius: 7,
+  }),
 };
 
 export const inventoryCheckboxLabel: React.CSSProperties = {
@@ -552,10 +548,10 @@ export function NoteEditDrawer(props: {
             )}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={props.onClose} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 8, color: C.muted, cursor: "pointer", padding: "8px 16px", fontSize: "var(--fs-subtitle)" }}>
+            <button onClick={props.onClose} style={ghostButtonStyle({ textColor: C.muted, borderColor: "rgba(255,255,255,0.16)", padding: "8px 16px", fontSize: "var(--fs-subtitle)" })}>
               Cancel
             </button>
-            <button onClick={() => props.onSave(title.trim() || "Note", text)} style={{ background: `${color}22`, border: `1px solid ${color}55`, borderRadius: 8, color, cursor: "pointer", padding: "8px 16px", fontSize: "var(--fs-subtitle)", fontWeight: 700 }}>
+            <button onClick={() => props.onSave(title.trim() || "Note", text)} style={accentButtonStyle(color, { padding: "8px 16px", fontSize: "var(--fs-subtitle)" })}>
               Save
             </button>
           </div>

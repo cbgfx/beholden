@@ -79,12 +79,14 @@ function canUseDirectPortFallback() {
 
 type WsCtx = {
   subscribe: (handler: Handler) => () => void;
+  connected: boolean;
 };
 
 const WsContext = createContext<WsCtx | null>(null);
 
 export function WsProvider({ children }: { children: React.ReactNode }) {
   const subscribers = useRef<Set<Handler>>(new Set());
+  const [connected, setConnected] = React.useState(false);
 
   const subscribe = React.useCallback((handler: Handler) => {
     subscribers.current.add(handler);
@@ -120,6 +122,7 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
       ws.onopen = () => {
         settled = true;
         window.clearTimeout(failTimer);
+        setConnected(true);
       };
 
       ws.onmessage = (ev) => {
@@ -140,6 +143,7 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
 
       ws.onclose = () => {
         window.clearTimeout(failTimer);
+        setConnected(false);
 
         if (dead) return;
 
@@ -197,8 +201,13 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const ctx = React.useMemo(() => ({ subscribe }), [subscribe]);
+  const ctx = React.useMemo(() => ({ subscribe, connected }), [subscribe, connected]);
   return <WsContext.Provider value={ctx}>{children}</WsContext.Provider>;
+}
+
+export function useWsStatus(): boolean {
+  const ctx = useContext(WsContext);
+  return ctx?.connected ?? false;
 }
 
 export function useWs(onMessage: Handler) {

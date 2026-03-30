@@ -5,6 +5,7 @@ import { PlayerDeathSaves } from "./PlayerDeathSaves";
 import { PlayerConditions } from "./PlayerConditions";
 import type { RowMenuItem } from "@/ui/RowMenu";
 import { RowMenu } from "@/ui/RowMenu";
+import { HealthBar } from "@beholden/shared/ui";
 
 export type PlayerVM = {
   id: string;
@@ -157,23 +158,16 @@ export function PlayerRow(props: {
             hpCurrent={cur}
           />
         ) : (
-          <div style={{ position: "relative", height: 6, borderRadius: 999, background: withAlpha(theme.colors.shadowColor, 0.4), overflow: "hidden" }}>
-            <div style={{
-              position: "absolute", inset: 0,
-              width: `${Math.max(0, Math.min(1, pct)) * 100}%`,
-              background: barColor, borderRadius: 999,
-              transition: "width 150ms ease",
-            }} />
-            {tempHp > 0 && (
-              <div style={{
-                position: "absolute", top: 0, bottom: 0,
-                left: `${Math.min(1, pct) * 100}%`,
-                width: `${Math.min(1 - pct, tempHp / max) * 100}%`,
-                background: theme.colors.accentHighlight,
-                opacity: 0.8, borderRadius: 999,
-              }} />
-            )}
-          </div>
+          <HealthBar
+            current={cur}
+            max={max}
+            temp={tempHp}
+            height={6}
+            radius={999}
+            trackColor={withAlpha(theme.colors.shadowColor, 0.4)}
+            fillColor={barColor}
+            tempColor={theme.colors.accentHighlight}
+          />
         )}
       </div>
 

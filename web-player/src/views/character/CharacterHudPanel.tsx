@@ -3,6 +3,7 @@ import { C } from "@/lib/theme";
 import { RightDrawer } from "@/ui/RightDrawer";
 import { IconAttack, IconConditionByKey, IconConditions, IconHeal, IconHeart, IconInspiration, IconPlayer } from "@/icons";
 import { HexBtn, Panel } from "@/views/character/CharacterViewParts";
+import { HealthBar } from "@beholden/shared/ui";
 import type { CharacterCampaign, ConditionInstance, CharacterData } from "@/views/character/CharacterSheetTypes";
 
 interface CharacterHudLike {
@@ -394,16 +395,26 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
           </div>
         </div>
 
-        <div style={{ height: 32, borderRadius: 8, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", overflow: "hidden", position: "relative", marginBottom: 8 }}>
-          <div style={{ position: "absolute", inset: 0, right: `${(1 - hpPct) * 100}%`, background: hpPct > 0.5 ? C.green : hpPct > 0.25 ? "#f59e0b" : C.red, borderRadius: 8, transition: "right 0.3s, background 0.3s" }} />
-          {tempHp > 0 && tempPct > 0 && <div style={{ position: "absolute", top: 0, bottom: 0, left: `${hpPct * 100}%`, width: `${tempPct * 100}%`, background: "#f59e0b", opacity: 0.7 }} />}
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "var(--fs-body)", fontWeight: 800, color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.6)", gap: 4 }}>
-            <IconHeart size={11} style={{ opacity: 0.8 }} />
-            {char.hpCurrent} / {effectiveHpMax}
-            {tempHp > 0 && <span style={{ fontSize: "var(--fs-small)", color: "#fff", fontWeight: 700 }}>+{tempHp} temp</span>}
-            {hpMaxBonus !== 0 && <span style={{ fontSize: "var(--fs-tiny)", color: "#f59e0b" }}>(max {hpMaxBonus > 0 ? "+" : ""}{hpMaxBonus})</span>}
-          </div>
-        </div>
+        <HealthBar
+          current={char.hpCurrent}
+          max={effectiveHpMax}
+          temp={tempHp}
+          height={32}
+          radius={8}
+          trackColor="rgba(255,255,255,0.07)"
+          fillColor={hpPct > 0.5 ? C.green : hpPct > 0.25 ? "#f59e0b" : C.red}
+          tempColor="#f59e0b"
+          transition="width 0.3s ease, background 0.3s ease"
+          style={{ border: "1px solid rgba(255,255,255,0.12)", marginBottom: 8 }}
+          label={
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: "var(--fs-body)", fontWeight: 800, color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.6)", gap: 4 }}>
+              <IconHeart size={11} style={{ opacity: 0.8 }} />
+              {char.hpCurrent} / {effectiveHpMax}
+              {tempHp > 0 && <span style={{ fontSize: "var(--fs-small)", color: "#fff", fontWeight: 700 }}>+{tempHp} temp</span>}
+              {hpMaxBonus !== 0 && <span style={{ fontSize: "var(--fs-tiny)", color: "#f59e0b" }}>(max {hpMaxBonus > 0 ? "+" : ""}{hpMaxBonus})</span>}
+            </div>
+          }
+        />
 
         <style>{`
           @keyframes playerHexPulse {

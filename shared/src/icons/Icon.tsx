@@ -8,6 +8,10 @@ export type SvgIconProps = {
   style?: React.CSSProperties;
 };
 
+function escapeAttr(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function injectSizeAndA11y(svg: string, size: number, title?: string) {
   const hasWidth = /\swidth=/.test(svg);
   const hasHeight = /\sheight=/.test(svg);
@@ -26,10 +30,6 @@ function injectSizeAndA11y(svg: string, size: number, title?: string) {
   }
 
   return out;
-}
-
-function escapeAttr(s: string) {
-  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 export function Icon({ svg, size = 20, title, className, style }: SvgIconProps) {

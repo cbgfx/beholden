@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "@/services/api";
 import { C } from "@/lib/theme";
 import { IconPlayer } from "@/icons";
+import { HealthBar, accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
 
 const LS_KEY = "beholden:lastOpened";
 
@@ -96,7 +97,7 @@ export function PlayerHomeView() {
         {/* ── My Characters ── */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <h2 style={{ margin: 0, fontSize: "var(--fs-hero)", fontWeight: 800 }}>My Characters</h2>
-          <button style={accentBtn} onClick={() => navigate("/characters/new")}>
+          <button style={accentButtonStyle(C.accentHl, { textColor: C.textDark, borderColor: "transparent", padding: "8px 18px", fontSize: "var(--fs-subtitle)" })} onClick={() => navigate("/characters/new")}>
             + Create Character
           </button>
         </div>
@@ -247,9 +248,15 @@ function CharacterRow({ ch, onOpen, onRefresh }: {
           <span style={{ fontSize: "var(--fs-small)", color: hpColor, fontWeight: 700 }}>{hpLabel}</span>
           <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>{ch.hpCurrent} / {ch.hpMax}</span>
         </div>
-        <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
-          <div style={{ height: "100%", borderRadius: 3, width: `${hpPct}%`, background: hpColor, transition: "width 0.4s" }} />
-        </div>
+        <HealthBar
+          current={ch.hpCurrent}
+          max={ch.hpMax}
+          height={6}
+          radius={3}
+          trackColor="rgba(255,255,255,0.08)"
+          fillColor={hpColor}
+          transition="width 0.4s ease"
+        />
       </div>
 
       {/* Campaigns */}
@@ -271,19 +278,19 @@ function CharacterRow({ ch, onOpen, onRefresh }: {
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <span style={{ fontSize: "var(--fs-small)", color: C.colorPinkRed, flex: 1 }}>Delete this character?</span>
           <button disabled={deleting} onClick={handleDelete}
-            style={{ ...ghostBtn, color: C.colorPinkRed, borderColor: "rgba(248,113,113,0.45)", fontSize: "var(--fs-small)" }}>
+            style={{ ...ghostButtonStyle({ textColor: C.colorPinkRed, borderColor: "rgba(248,113,113,0.45)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}>
             {deleting ? "…" : "Yes, delete"}
           </button>
-          <button onClick={() => setConfirmDelete(false)} style={ghostBtn}>Cancel</button>
+          <button onClick={() => setConfirmDelete(false)} style={{ ...ghostButtonStyle({ textColor: C.muted, borderColor: "rgba(255,255,255,0.14)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}>Cancel</button>
         </div>
       ) : (
         <div style={{ display: "flex", gap: 6 }}>
-          <button style={{ ...ghostBtn, flex: 1 }} onClick={() => navigate(`/characters/${ch.id}/edit`)}>
+          <button style={{ ...ghostButtonStyle({ textColor: C.muted, borderColor: "rgba(255,255,255,0.14)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flex: 1, flexShrink: 0 }} onClick={() => navigate(`/characters/${ch.id}/edit`)}>
             Edit
           </button>
 
           <button
-            style={{ ...ghostBtn, flex: 1, color: "rgba(248,113,113,0.7)", borderColor: "rgba(248,113,113,0.25)" }}
+            style={{ ...ghostButtonStyle({ textColor: "rgba(248,113,113,0.7)", borderColor: "rgba(248,113,113,0.25)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flex: 1, flexShrink: 0 }}
             onClick={() => setConfirmDelete(true)}
           >
             Delete
@@ -380,13 +387,13 @@ function CampaignCard({ campaign: c, characters, onOpen }: {
       {/* Footer */}
       <div style={{ padding: "0 12px 14px", display: "flex", gap: 8 }}>
         <button
-          style={{ ...accentBtn, flex: 1 }}
+          style={{ ...accentButtonStyle(C.accentHl, { textColor: C.textDark, borderColor: "transparent", padding: "8px 18px", fontSize: "var(--fs-subtitle)" }), flex: 1 }}
           onClick={() => onOpen(c.id)}
         >
           Open
         </button>
         <button
-          style={{ ...ghostBtn, fontSize: "var(--fs-small)" }}
+          style={{ ...ghostButtonStyle({ textColor: C.muted, borderColor: "rgba(255,255,255,0.14)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}
           onClick={() => navigate(`/characters/new?campaign=${c.id}`)}
         >
           + Assign
@@ -398,24 +405,3 @@ function CampaignCard({ campaign: c, characters, onOpen }: {
 
 // ── Shared button styles ─────────────────────────────────────────────────────
 
-const accentBtn: React.CSSProperties = {
-  background: C.accentHl,
-  color: C.textDark,
-  border: "none",
-  borderRadius: 8,
-  padding: "8px 18px",
-  fontSize: "var(--fs-subtitle)",
-  fontWeight: 700,
-  cursor: "pointer",
-};
-
-const ghostBtn: React.CSSProperties = {
-  background: "transparent",
-  color: C.muted,
-  border: "1px solid rgba(255,255,255,0.14)",
-  borderRadius: 7,
-  padding: "6px 14px",
-  fontSize: "var(--fs-small)",
-  cursor: "pointer",
-  flexShrink: 0,
-};

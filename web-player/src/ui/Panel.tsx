@@ -1,5 +1,6 @@
 import React from "react";
 import { C } from "@/lib/theme";
+import { Panel as SharedPanel } from "@beholden/shared/ui";
 
 export function Panel(props: {
   title: React.ReactNode;
@@ -9,34 +10,20 @@ export function Panel(props: {
   bodyStyle?: React.CSSProperties;
 }) {
   return (
-    <div
-      style={{
-        border: `1px solid ${C.panelBorder}`,
-        borderRadius: 14,
-        padding: "8px 10px",
-        background: C.panelBg,
-        ...props.style,
-      }}
+    <SharedPanel
+      title={props.title}
+      actions={props.actions}
+      style={props.style}
+      bodyStyle={props.bodyStyle}
+      titleColor={C.text}
+      borderColor={C.panelBorder}
+      background={C.panelBg}
+      radius={14}
+      padding="8px 10px"
+      titleFontSize="var(--fs-body)"
+      titleFontWeight={900}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
-        <div
-          style={{
-            margin: 0,
-            color: C.text,
-            fontWeight: 900,
-            fontSize: "var(--fs-body)",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          {props.title}
-        </div>
-        {props.actions ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>{props.actions}</div>
-        ) : null}
-      </div>
-      <div style={{ marginTop: 8, ...props.bodyStyle }}>{props.children}</div>
-    </div>
+      {props.children}
+    </SharedPanel>
   );
 }

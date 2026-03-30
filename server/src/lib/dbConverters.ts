@@ -3,6 +3,7 @@
 
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "./defaults.js";
 import { absolutizePublicUrl } from "./publicUrl.js";
+import { normalizeCharacterData } from "./characterData.js";
 import type {
   StoredCampaign,
   StoredAdventure,
@@ -14,7 +15,6 @@ import type {
   StoredCondition,
   StoredCombatant,
   StoredCombatantBaseType,
-  StoredCharacter,
   StoredUserCharacter,
 } from "../server/userData.js";
 
@@ -23,57 +23,12 @@ export function parseJson<T>(s: unknown, fallback: T): T {
   try { return JSON.parse(s) as T; } catch { return fallback; }
 }
 
-function normalizeCharacterData(value: Record<string, unknown> | null): Record<string, unknown> | null {
-  if (!value || typeof value !== "object") return value;
-  const next = { ...value } as Record<string, unknown>;
-  const classFeatures = Array.isArray(next.classFeatures) ? next.classFeatures : [];
-  const selectedFeatureNames = Array.isArray(next.selectedFeatureNames) ? next.selectedFeatureNames : [];
-  if (selectedFeatureNames.length === 0 && classFeatures.length > 0) {
-    next.selectedFeatureNames = classFeatures
-      .map((feature) => {
-        if (feature && typeof feature === "object" && typeof (feature as { name?: unknown }).name === "string") {
-          return ((feature as { name: string }).name).trim();
-        }
-        return "";
-      })
-      .filter(Boolean);
-  }
-  delete next.classFeatures;
-  return next;
-}
-
 export function rowToUser(row: Record<string, unknown>) {
   return {
     id: row.id as string,
     username: row.username as string,
     name: row.name as string,
     isAdmin: Boolean(row.is_admin),
-    createdAt: row.created_at as number,
-    updatedAt: row.updated_at as number,
-  };
-}
-
-export function rowToCharacter(row: Record<string, unknown>): StoredCharacter {
-  return {
-    id: row.id as string,
-    userId: (row.user_id as string | null) ?? null,
-    campaignId: row.campaign_id as string,
-    name: row.name as string,
-    className: (row.class_name as string) ?? "",
-    species: (row.species as string) ?? "",
-    level: (row.level as number) ?? 1,
-    hpMax: (row.hp_max as number) ?? 1,
-    hpCurrent: (row.hp_current as number) ?? 1,
-    tempHp: (row.temp_hp as number) ?? 0,
-    ac: (row.ac as number) ?? 10,
-    speed: (row.speed as number) ?? 30,
-    strScore: (row.str_score as number) ?? 10,
-    dexScore: (row.dex_score as number) ?? 10,
-    conScore: (row.con_score as number) ?? 10,
-    intScore: (row.int_score as number) ?? 10,
-    wisScore: (row.wis_score as number) ?? 10,
-    chaScore: (row.cha_score as number) ?? 10,
-    notes: (row.notes as string) ?? "",
     createdAt: row.created_at as number,
     updatedAt: row.updated_at as number,
   };

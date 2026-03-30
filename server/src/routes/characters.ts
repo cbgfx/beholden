@@ -9,6 +9,7 @@ import { parseBody } from "../shared/validate.js";
 import { rowToUserCharacter, USER_CHARACTER_COLS } from "../lib/db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
+import { normalizeCharacterData } from "../lib/characterData.js";
 import {
   type Assignment,
   getAssignments,
@@ -57,25 +58,6 @@ const OverridesBody = z.object({
   acBonus: z.number().int(),
   hpMaxBonus: z.number().int(),
 });
-
-function normalizeCharacterData(value: Record<string, unknown> | null | undefined): Record<string, unknown> | null {
-  if (value == null) return null;
-  const next = { ...value } as Record<string, unknown>;
-  const classFeatures = Array.isArray(next.classFeatures) ? next.classFeatures : [];
-  const selectedFeatureNames = Array.isArray(next.selectedFeatureNames) ? next.selectedFeatureNames : [];
-  if (selectedFeatureNames.length === 0 && classFeatures.length > 0) {
-    next.selectedFeatureNames = classFeatures
-      .map((feature) => {
-        if (feature && typeof feature === "object" && typeof (feature as { name?: unknown }).name === "string") {
-          return ((feature as { name: string }).name).trim();
-        }
-        return "";
-      })
-      .filter(Boolean);
-  }
-  delete next.classFeatures;
-  return next;
-}
 
 export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;

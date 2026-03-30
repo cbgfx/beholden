@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
   name TEXT NOT NULL,
   color TEXT,
   image_url TEXT,
+  shared_notes TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -52,6 +53,7 @@ CREATE TABLE IF NOT EXISTS encounters (
 CREATE TABLE IF NOT EXISTS players (
   id TEXT PRIMARY KEY,
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+  user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
   player_name TEXT NOT NULL,
   character_name TEXT NOT NULL,
   class TEXT NOT NULL,
@@ -60,6 +62,7 @@ CREATE TABLE IF NOT EXISTS players (
   hp_max INTEGER NOT NULL,
   hp_current INTEGER NOT NULL,
   ac INTEGER NOT NULL,
+  speed INTEGER,
   str INTEGER,
   dex INTEGER,
   con INTEGER,
@@ -117,6 +120,7 @@ CREATE TABLE IF NOT EXISTS treasure (
   attunement INTEGER NOT NULL DEFAULT 0,
   magic INTEGER NOT NULL DEFAULT 0,
   text TEXT NOT NULL DEFAULT '',
+  qty INTEGER NOT NULL DEFAULT 1,
   sort INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
@@ -298,30 +302,6 @@ CREATE TABLE IF NOT EXISTS campaign_membership (
   UNIQUE(campaign_id, user_id)
 );
 
-CREATE TABLE IF NOT EXISTS characters (
-  id TEXT PRIMARY KEY,
-  user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
-  campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  class_name TEXT NOT NULL DEFAULT '',
-  species TEXT NOT NULL DEFAULT '',
-  level INTEGER NOT NULL DEFAULT 1,
-  hp_max INTEGER NOT NULL DEFAULT 1,
-  hp_current INTEGER NOT NULL DEFAULT 1,
-  temp_hp INTEGER NOT NULL DEFAULT 0,
-  ac INTEGER NOT NULL DEFAULT 10,
-  speed INTEGER NOT NULL DEFAULT 30,
-  str_score INTEGER NOT NULL DEFAULT 10,
-  dex_score INTEGER NOT NULL DEFAULT 10,
-  con_score INTEGER NOT NULL DEFAULT 10,
-  int_score INTEGER NOT NULL DEFAULT 10,
-  wis_score INTEGER NOT NULL DEFAULT 10,
-  cha_score INTEGER NOT NULL DEFAULT 10,
-  notes TEXT NOT NULL DEFAULT '',
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS party_inventory (
   id TEXT PRIMARY KEY,
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
@@ -347,9 +327,9 @@ CREATE INDEX IF NOT EXISTS idx_notes_campaign        ON notes(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_treasure_campaign     ON treasure(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_conditions_campaign   ON conditions(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_combatants_encounter  ON combatants(encounter_id);
-CREATE INDEX IF NOT EXISTS idx_characters_campaign   ON characters(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_membership_campaign   ON campaign_membership(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_membership_user       ON campaign_membership(user_id);
+CREATE INDEX IF NOT EXISTS idx_players_user          ON players(user_id);
 CREATE INDEX IF NOT EXISTS idx_compmon_name          ON compendium_monsters(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_compmon_typekey       ON compendium_monsters(type_key);
 CREATE INDEX IF NOT EXISTS idx_compmon_size          ON compendium_monsters(size);
@@ -376,94 +356,7 @@ export function openDb(dbPath: string): Db {
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   db.exec(SCHEMA_SQL);
-  runMigrations(db);
   return db;
-}
-
-function runMigrations(db: Db): void {
-  // Add image_url to players if missing (existing databases).
-  const playerCols = (db.pragma("table_info(players)") as { name: string }[]).map((c) => c.name);
-  if (!playerCols.includes("image_url")) {
-    db.exec("ALTER TABLE players ADD COLUMN image_url TEXT");
-  }
-
-  // Add new spell filter columns if missing (existing databases).
-  const spellCols = (db.pragma("table_info(compendium_spells)") as { name: string }[]).map((c) => c.name);
-  if (!spellCols.includes("ritual"))        db.exec("ALTER TABLE compendium_spells ADD COLUMN ritual INTEGER NOT NULL DEFAULT 0");
-  if (!spellCols.includes("concentration")) db.exec("ALTER TABLE compendium_spells ADD COLUMN concentration INTEGER NOT NULL DEFAULT 0");
-  if (!spellCols.includes("components"))    db.exec("ALTER TABLE compendium_spells ADD COLUMN components TEXT");
-  if (!spellCols.includes("classes"))       db.exec("ALTER TABLE compendium_spells ADD COLUMN classes TEXT");
-
-  // Add qty to treasure if missing (existing databases).
-  const treasureCols = (db.pragma("table_info(treasure)") as { name: string }[]).map((c) => c.name);
-  if (!treasureCols.includes("qty")) db.exec("ALTER TABLE treasure ADD COLUMN qty INTEGER NOT NULL DEFAULT 1");
-
-  // Add used_legendary_resistances to combatants if missing (existing databases).
-  const combatantCols = (db.pragma("table_info(combatants)") as { name: string }[]).map((c) => c.name);
-  if (!combatantCols.includes("used_legendary_resistances")) {
-    db.exec("ALTER TABLE combatants ADD COLUMN used_legendary_resistances INTEGER NOT NULL DEFAULT 0");
-  }
-
-  // Add username to users if missing (older databases used a different schema).
-  const userCols = (db.pragma("table_info(users)") as { name: string }[]).map((c) => c.name);
-  if (!userCols.includes("username")) {
-    db.exec("ALTER TABLE users ADD COLUMN username TEXT");
-    // Backfill: use existing name column if present, otherwise fall back to id
-    if (userCols.includes("name")) {
-      db.exec("UPDATE users SET username = name WHERE username IS NULL");
-    } else {
-      db.exec("UPDATE users SET username = id WHERE username IS NULL");
-    }
-    db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)");
-  }
-
-  // Add user_id to characters (new user auth system).
-  const charCols = (db.pragma("table_info(characters)") as { name: string }[]).map((c) => c.name);
-  if (!charCols.includes("user_id")) {
-    db.exec("ALTER TABLE characters ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE SET NULL");
-    db.exec("CREATE INDEX IF NOT EXISTS idx_characters_user ON characters(user_id)");
-  }
-
-  // Add user_id and speed to players (character builder integration).
-  const playerCols2 = (db.pragma("table_info(players)") as { name: string }[]).map((c) => c.name);
-  if (!playerCols2.includes("user_id")) {
-    db.exec("ALTER TABLE players ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE SET NULL");
-    db.exec("CREATE INDEX IF NOT EXISTS idx_players_user ON players(user_id)");
-  }
-  if (!playerCols2.includes("speed")) {
-    db.exec("ALTER TABLE players ADD COLUMN speed INTEGER");
-  }
-
-  // Add image_url to user_characters (portrait upload).
-  const ucharCols = (db.pragma("table_info(user_characters)") as { name: string }[]).map((c) => c.name);
-  if (!ucharCols.includes("image_url")) {
-    db.exec("ALTER TABLE user_characters ADD COLUMN image_url TEXT");
-  }
-  if (!ucharCols.includes("death_saves_json")) {
-    db.exec("ALTER TABLE user_characters ADD COLUMN death_saves_json TEXT");
-  }
-
-  // Add death_saves_json to players if missing.
-  const playerCols3 = (db.pragma("table_info(players)") as { name: string }[]).map((c) => c.name);
-  if (!playerCols3.includes("death_saves_json")) {
-    db.exec("ALTER TABLE players ADD COLUMN death_saves_json TEXT");
-  }
-
-  // Add shared_notes to campaigns if missing (DM-created shared notes).
-  const campaignCols = (db.pragma("table_info(campaigns)") as { name: string }[]).map((c) => c.name);
-  if (!campaignCols.includes("shared_notes")) {
-    db.exec("ALTER TABLE campaigns ADD COLUMN shared_notes TEXT NOT NULL DEFAULT ''");
-  }
-
-  // Add shared_notes to players and user_characters if missing (character notes feature).
-  const playerCols4 = (db.pragma("table_info(players)") as { name: string }[]).map((c) => c.name);
-  if (!playerCols4.includes("shared_notes")) {
-    db.exec("ALTER TABLE players ADD COLUMN shared_notes TEXT NOT NULL DEFAULT ''");
-  }
-  const ucharCols2 = (db.pragma("table_info(user_characters)") as { name: string }[]).map((c) => c.name);
-  if (!ucharCols2.includes("shared_notes")) {
-    db.exec("ALTER TABLE user_characters ADD COLUMN shared_notes TEXT NOT NULL DEFAULT ''");
-  }
 }
 
 // ---------------------------------------------------------------------------

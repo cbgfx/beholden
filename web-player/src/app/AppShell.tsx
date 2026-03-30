@@ -3,6 +3,8 @@ import { NavLink, Link } from "react-router-dom";
 import { C, withAlpha } from "@/lib/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/services/api";
+import { useWsStatus } from "@/services/ws";
+import { StatusDot } from "@beholden/shared/ui";
 
 const NAV_LINKS = [
   { to: "/", label: "Home", end: true },
@@ -36,6 +38,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const meta = useServerMeta();
   const updateAvailable = useUpdateCheck();
   const showSupport = meta?.support === true;
+  const connected = useWsStatus();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: C.bg, color: C.text, fontFamily: "system-ui, Segoe UI, Arial, sans-serif" }}>
@@ -90,6 +93,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             Sign out
           </button>
+          <StatusDot
+            active={connected}
+            activeColor={C.green}
+            inactiveColor={C.red}
+            title={connected ? "Server connected" : "Server disconnected"}
+          />
         </div>
       </header>
 

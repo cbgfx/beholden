@@ -60,14 +60,6 @@ import { isToughFeat } from "@/views/character-creator/utils/CharacterCreatorFor
 import type { ItemSummary } from "@/views/character-creator/utils/CharacterCreatorTypes";
 import { titleCase } from "@/lib/format/titleCase";
 
-function normalizeCompendiumClassLookupName(name: string | null | undefined): string {
-  return String(name ?? "")
-    .replace(/\s*\[[^\]]+\]\s*$/u, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-}
-
 export function LevelUpView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -131,18 +123,7 @@ export function LevelUpView() {
           )
         );
         const classId = c.characterData?.classId;
-        if (classId) {
-          return api<ClassDetail>(`/api/compendium/classes/${classId}`);
-        }
-        if (c.className) {
-          return api<Array<{ id: string; name: string }>>(`/api/compendium/classes`)
-            .then((classes) => {
-              const target = normalizeCompendiumClassLookupName(c.className);
-              const match = classes.find((entry) => normalizeCompendiumClassLookupName(entry.name) === target);
-              return match ? api<ClassDetail>(`/api/compendium/classes/${match.id}`) : null;
-            });
-        }
-        return null;
+        return classId ? api<ClassDetail>(`/api/compendium/classes/${classId}`) : null;
       })
       .then((cd) => { if (cd) setClassDetail(cd); })
       .catch((e) => setError(String(e)))

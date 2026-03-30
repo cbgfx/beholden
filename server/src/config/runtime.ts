@@ -8,10 +8,11 @@ export function getRuntimeConfig() {
   // We must prioritize this for the health check to pass.
   const port = process.env.PORT ? Number(process.env.PORT) : 5174;
 
-  // In production/Railway, the host MUST be 0.0.0.0 to accept external traffic.
-  // 'localhost' or '127.0.0.1' will cause a 502 Bad Gateway.
+  // The server needs to be reachable from LAN clients during local development
+  // as well as in production deployments, so default to 0.0.0.0 unless a host
+  // is explicitly provided.
   const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_PROJECT_ID;
-  const host = process.env.HOST || (isProduction ? "0.0.0.0" : "localhost");
+  const host = process.env.HOST || "0.0.0.0";
 
   const dataDir = process.env.BEHOLDEN_DATA_DIR
     ? path.resolve(process.env.BEHOLDEN_DATA_DIR)

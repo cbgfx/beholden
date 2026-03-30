@@ -6,6 +6,7 @@ import { useWs, useWsStatus } from "@/services/ws";
 import { theme, withAlpha } from "@/theme/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsNarrow } from "@/views/CombatView/hooks/useIsNarrow";
+import { StatusDot } from "@beholden/shared/ui";
 
 function useSaveStatus(): "idle" | "saving" | "saved" {
   const [status, setStatus] = React.useState<"idle" | "saving" | "saved">("idle");
@@ -136,14 +137,11 @@ export function TopBar() {
             </button>
           </div>
         )}
-        <div
+        <StatusDot
+          active={connected}
+          activeColor={theme.colors.green}
+          inactiveColor={theme.colors.red}
           title={connected ? "Server connected" : "Server disconnected"}
-          style={{
-            width: 10, height: 10, borderRadius: "50%", flexShrink: 0,
-            background: connected ? theme.colors.green : theme.colors.red,
-            boxShadow: connected ? `0 0 6px ${theme.colors.green}` : `0 0 6px ${theme.colors.red}`,
-            transition: "background 400ms ease, box-shadow 400ms ease",
-          }}
         />
       </div>
     </div>

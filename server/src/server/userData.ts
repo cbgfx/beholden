@@ -21,9 +21,6 @@ export interface StoredOverrides {
   inspiration?: boolean;
 }
 
-// Alias kept for call-site compatibility.
-export type StoredCombatantOverrides = StoredOverrides;
-
 export interface StoredConditionInstance {
   key: string;
   casterId?: string | null;
@@ -44,28 +41,6 @@ export interface StoredUser extends Timestamps {
   username: string;
   name: string;
   isAdmin: boolean;
-}
-
-export interface StoredCharacter extends Timestamps {
-  id: Id;
-  userId: Id | null;
-  campaignId: Id;
-  name: string;
-  className: string;
-  species: string;
-  level: number;
-  hpMax: number;
-  hpCurrent: number;
-  tempHp: number;
-  ac: number;
-  speed: number;
-  strScore: number;
-  dexScore: number;
-  conScore: number;
-  intScore: number;
-  wisScore: number;
-  chaScore: number;
-  notes: string;
 }
 
 export interface StoredCampaign extends Timestamps {
@@ -177,13 +152,6 @@ export interface StoredUserCharacter extends Timestamps {
   characterData: Record<string, unknown> | null;
   deathSaves?: StoredDeathSaves;
   sharedNotes: string;
-}
-
-export interface StoredCharacterCampaign {
-  id: Id;
-  characterId: Id;
-  campaignId: Id;
-  playerId: Id | null;
 }
 
 export interface StoredINpc extends Timestamps {

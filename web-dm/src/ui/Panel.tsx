@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 import { theme } from "@/theme/theme";
-import { SectionTitle } from "@/ui/SectionTitle";
+import { Panel as SharedPanel } from "@beholden/shared/ui";
 
 export function Panel(props: {
   title: React.ReactNode;
@@ -11,45 +11,22 @@ export function Panel(props: {
   bodyStyle?: React.CSSProperties;
   storageKey?: string;
 }) {
-  const [open, setOpen] = useState(() => {
-    if (!props.storageKey) return true;
-    try {
-      const v = localStorage.getItem(`panel:${props.storageKey}`);
-      if (v !== null) return v !== "0";
-    } catch { /* ignore */ }
-    return true;
-  });
-
-  const isCollapsible = Boolean(props.storageKey);
-
-  const toggle = () => {
-    if (!isCollapsible) return;
-    setOpen((prev) => {
-      const next = !prev;
-      try { localStorage.setItem(`panel:${props.storageKey}`, next ? "1" : "0"); } catch { /* ignore */ }
-      return next;
-    });
-  };
-
   return (
-    <div
-      style={{
-        border: "1px solid rgba(255,255,255,0.09)",
-        borderRadius: theme.radius.panel,
-        padding: "12px 14px",
-        background: "rgba(255,255,255,0.035)",
-        ...props.style,
-      }}
+    <SharedPanel
+      title={props.title}
+      actions={props.actions}
+      style={props.style}
+      bodyStyle={props.bodyStyle}
+      storageKey={props.storageKey}
+      titleColor={props.titleColor ?? theme.colors.accentPrimary}
+      borderColor="rgba(255,255,255,0.09)"
+      background="rgba(255,255,255,0.035)"
+      radius={theme.radius.panel}
+      padding="12px 14px"
+      titleFontSize="var(--fs-tiny)"
+      titleFontWeight={700}
     >
-      <SectionTitle
-        color={props.titleColor}
-        actions={props.actions}
-        collapsed={isCollapsible ? !open : undefined}
-        onToggle={isCollapsible ? toggle : undefined}
-      >
-        {props.title}
-      </SectionTitle>
-      {open && <div style={{ ...props.bodyStyle }}>{props.children}</div>}
-    </div>
+      {props.children}
+    </SharedPanel>
   );
 }

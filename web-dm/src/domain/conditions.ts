@@ -40,15 +40,10 @@ export function buildRosterById<T extends { id: string }>(roster: T[]): Record<s
   return out;
 }
 
-/**
- * UI display name for a combatant.
- * Combatants are expected to carry a `label` (preferred); some legacy rows may have `name`.
- */
+/** UI display name for a combatant. */
 export function displayName(c: { label?: unknown; name?: unknown; type?: unknown } | null | undefined): string {
   const label = String(c?.label ?? "").trim();
   if (label) return label;
-  const name = String(c?.name ?? "").trim();
-  if (name) return name;
   const type = String(c?.type ?? "").trim();
   return type ? type.toUpperCase() : "COMBATANT";
 }

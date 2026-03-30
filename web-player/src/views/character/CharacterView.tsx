@@ -594,26 +594,16 @@ export function CharacterView() {
 
   useEffect(() => {
     const classId = char?.characterData?.classId;
-    const className = char?.className;
-    if (!classId && !className) {
+    if (!classId) {
       setClassDetail(null);
       return;
     }
     let alive = true;
-    const loadDetail = classId
-      ? api<ClassRestDetail>(`/api/compendium/classes/${classId}`)
-      : api<Array<{ id: string; name: string }>>(`/api/compendium/classes`)
-          .then((classes) => {
-            const target = normalizeCompendiumClassLookupName(className);
-            const match = classes.find((entry) => normalizeCompendiumClassLookupName(entry.name) === target);
-            if (!match) return null;
-            return api<ClassRestDetail>(`/api/compendium/classes/${match.id}`);
-          });
-    loadDetail
+    api<ClassRestDetail>(`/api/compendium/classes/${classId}`)
       .then((detail) => { if (alive) setClassDetail(detail ?? null); })
       .catch(() => { if (alive) setClassDetail(null); });
     return () => { alive = false; };
-  }, [char?.characterData?.classId, char?.className]);
+  }, [char?.characterData?.classId]);
 
   useEffect(() => {
     const condition = getPolymorphConditionData(char?.conditions);
