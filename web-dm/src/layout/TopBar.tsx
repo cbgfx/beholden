@@ -1,0 +1,151 @@
+
+import React from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useStore } from "@/store";
+import { useWs, useWsStatus } from "@/services/ws";
+import { theme, withAlpha } from "@/theme/theme";
+import { useAuth } from "@/contexts/AuthContext";
+import { useIsNarrow } from "@/views/CombatView/hooks/useIsNarrow";
+
+function useSaveStatus(): "idle" | "saving" | "saved" {
+  const [status, setStatus] = React.useState<"idle" | "saving" | "saved">("idle");
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useWs(
+    React.useCallback((msg) => {
+      if (msg.type === "save:pending") {
+        if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+        setStatus("saving");
+      } else if (msg.type === "save:complete") {
+        setStatus("saved");
+        timerRef.current = setTimeout(() => setStatus("idle"), 2000);
+      }
+    }, [])
+  );
+
+  return status;
+}
+
+
+function NavLink(props: { to: string; label: string }) {
+  const loc = useLocation();
+  const active = loc.pathname === props.to || (props.to !== "/" && loc.pathname.startsWith(props.to + "/")) || (props.to === "/" && loc.pathname === "/");
+  return (
+    <Link
+      to={props.to}
+      style={{
+        textDecoration: "none",
+        color: active ? theme.colors.accentHighlight : theme.colors.muted,
+        background: active ? withAlpha(theme.colors.accentHighlight, 0.12) : "transparent",
+        padding: "5px 12px",
+        borderRadius: theme.radius.control,
+        fontWeight: active ? 700 : 500,
+      }}
+    >
+      {props.label}
+    </Link>
+  );
+}
+
+export function TopBar() {
+  const { state } = useStore();
+  const { user, logout } = useAuth();
+  const connected = useWsStatus();
+  const saveStatus = useSaveStatus();
+  const isPhone = useIsNarrow("(max-width: 640px)");
+  const { campaigns, selectedCampaignId } = state;
+  const selectedName = campaigns.find((c) => c.id === selectedCampaignId)?.name ?? "";
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <img src="/beholden_logo.png" alt="Beholden" style={{ width: isPhone ? 36 : 50, height: isPhone ? 36 : 50 }} />
+        {!isPhone && (
+          <Link
+            to="/"
+            style={{
+              fontSize: "var(--fs-hero)",
+              fontWeight: 900,
+              color: theme.colors.text,
+              textDecoration: "none",
+            }}
+            title="Home"
+          >
+            Beholden
+          </Link>
+        )}
+
+        {selectedCampaignId && selectedName ? (
+          <div
+            style={{
+              marginLeft: isPhone ? 0 : 8,
+              padding: isPhone ? "4px 8px" : "5px 14px",
+              borderRadius: theme.radius.control,
+              border: `1px solid ${withAlpha(theme.colors.accentHighlight, 0.35)}`,
+              background: withAlpha(theme.colors.accentHighlight, 0.10),
+              color: theme.colors.accentHighlight,
+              fontWeight: 700,
+              fontSize: "var(--fs-medium)",
+              maxWidth: isPhone ? 120 : 360,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+            title={selectedName}
+          >
+            {selectedName}
+          </div>
+        ) : null}
+      </div>
+
+      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, color: theme.colors.muted, fontSize: "var(--fs-medium)" }}>
+        {selectedCampaignId ? <NavLink to={`/campaign/${selectedCampaignId}`} label="Campaign" /> : <NavLink to="/" label="Campaign" />}
+        <NavLink to="/compendium" label="Compendium" />
+        {user?.isAdmin && <NavLink to="/admin" label="Admin" />}
+        {saveStatus !== "idle" && (
+          <span style={{
+            fontSize: "var(--fs-medium)",
+            color: saveStatus === "saved" ? theme.colors.green : theme.colors.muted,
+            transition: "color 300ms ease",
+          }}>
+            {saveStatus === "saving" ? "Saving…" : "Saved ✓"}
+          </span>
+        )}
+        {user && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "var(--fs-medium)" }}>
+            {!isPhone && (
+              <Link to="/profile" style={{ color: theme.colors.muted, textDecoration: "none" }}
+                title="Account settings">
+                {user.name}
+              </Link>
+            )}
+            <button
+              onClick={logout}
+              title={isPhone ? `Sign out (${user.name})` : undefined}
+              style={{
+                background: "transparent",
+                border: `1px solid ${theme.colors.panelBorder}`,
+                borderRadius: theme.radius.control,
+                color: theme.colors.muted,
+                cursor: "pointer",
+                padding: "4px 8px",
+                fontSize: "inherit",
+              }}
+            >
+              Sign out
+            </button>
+          </div>
+        )}
+        <div
+          title={connected ? "Server connected" : "Server disconnected"}
+          style={{
+            width: 10, height: 10, borderRadius: "50%", flexShrink: 0,
+            background: connected ? theme.colors.green : theme.colors.red,
+            boxShadow: connected ? `0 0 6px ${theme.colors.green}` : `0 0 6px ${theme.colors.red}`,
+            transition: "background 400ms ease, box-shadow 400ms ease",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
