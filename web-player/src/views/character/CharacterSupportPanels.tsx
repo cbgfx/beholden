@@ -104,7 +104,7 @@ export function CharacterSupportPanels(props: {
               width: 34,
               height: 34,
               padding: 0,
-              borderRadius: 999,
+              borderRadius: 8,
             }}
           >
             <IconWerewolf size={18} />

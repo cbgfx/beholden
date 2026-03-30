@@ -1643,7 +1643,7 @@ export function CharacterView() {
         </div>
       )}
       {/* ── 4-column layout ──────────────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(300px, 1fr))", gap: 16, alignItems: "flex-start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(420px, 1fr))", gap: 16, alignItems: "flex-start" }}>
 
         {/* ── COL 1: HUD + Abilities & Saves + Skills + Proficiencies ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>

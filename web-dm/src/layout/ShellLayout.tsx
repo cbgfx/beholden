@@ -4,6 +4,7 @@ import { theme, withAlpha } from "@/theme/theme";
 import { useStore } from "@/store";
 import { TopBar } from "@/layout/TopBar";
 import { api } from "@/services/api";
+import { FooterGrid } from "@beholden/shared/ui";
 
 function useUpdateCheck() {
   const [updateAvailable, setUpdateAvailable] = React.useState(false);
@@ -64,69 +65,63 @@ export function ShellLayout(props: { children: React.ReactNode }) {
         {props.children}
       </div>
 
-      <footer
-        className="footerGrid"
-        style={{
-          borderTop: `1px solid ${theme.colors.panelBorder}`,
-          padding: "10px 16px",
-          color: theme.colors.muted,
-          fontSize: "var(--fs-medium)",
-          background: withAlpha(theme.colors.panelBg, 0.12),
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ minWidth: 0, justifySelf: "start" }}>
-          <div>© {new Date().getFullYear()} Beholden. All rights reserved.</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-            <span>Icons made by</span>
-            <a target="_blank" rel="noreferrer" href="https://game-icons.net" style={{ color: theme.colors.muted }}>
-              https://game-icons.net
-            </a>
-          </div>
-        </div>
-
-        <div style={{ justifySelf: "center", display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
-          <Link to="/about" style={{ color: theme.colors.accentPrimary, textDecoration: "none" }}>About</Link>
-          <Link to="/faq" style={{ color: theme.colors.accentPrimary, textDecoration: "none" }}>FAQ</Link>
-          <Link to="/updates" style={{ color: theme.colors.accentPrimary, textDecoration: "none" }}>Future Updates</Link>
-        </div>
-
-        <div style={{ justifySelf: "center", display: "flex", justifyContent: "center" }}>
-          {showSupport ? (
-            <a href="https://www.buymeacoffee.com/beholden" target="_blank" rel="noreferrer" title="Buy me a pizza" style={{ display: "inline-flex", alignItems: "center" }}>
-              <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a pizza" style={{ height: 44, width: "auto" }} />
-            </a>
-          ) : null}
-        </div>
-
-        <div className="footerIps">
-          {updateAvailable && (
-            <a
-              href="https://github.com/cbgfx/beholden"
-              target="_blank"
-              rel="noreferrer"
-              style={{ color: theme.colors.accentPrimary, textDecoration: "none", fontWeight: 600, fontSize: "var(--fs-medium)" }}
-            >
-              Update available →
-            </a>
-          )}
-          {primaryIp && (
-            <div style={{ display: "grid", gap: 6, justifyItems: "end" }}>
-              <code>http://{primaryIp}:{state.meta?.port}</code>
-              {otherIps.length > 0 && (
-                <details>
-                  <summary style={{ cursor: "pointer", userSelect: "none" }}>more</summary>
-                  <div style={{ marginTop: 6, display: "grid", gap: 4, justifyItems: "end" }}>
-                    {otherIps.map((ip) => (
-                      <code key={ip}>http://{ip}:{state.meta?.port}</code>
-                    ))}
-                  </div>
-                </details>
-              )}
+      <FooterGrid
+        borderColor={theme.colors.panelBorder}
+        background={withAlpha(theme.colors.panelBg, 0.12)}
+        color={theme.colors.muted}
+        left={
+          <>
+            <div>© {new Date().getFullYear()} Beholden. All rights reserved.</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+              <span>Icons made by</span>
+              <a target="_blank" rel="noreferrer" href="https://game-icons.net" style={{ color: theme.colors.muted }}>
+                https://game-icons.net
+              </a>
             </div>
-          )}
-        </div>
-      </footer>
+          </>
+        }
+        centerLeft={
+          <>
+            <Link to="/about" style={{ color: theme.colors.accentPrimary, textDecoration: "none" }}>About</Link>
+            <Link to="/faq" style={{ color: theme.colors.accentPrimary, textDecoration: "none" }}>FAQ</Link>
+            <Link to="/updates" style={{ color: theme.colors.accentPrimary, textDecoration: "none" }}>Future Updates</Link>
+          </>
+        }
+        centerRight={showSupport ? (
+          <a href="https://www.buymeacoffee.com/beholden" target="_blank" rel="noreferrer" title="Buy me a pizza" style={{ display: "inline-flex", alignItems: "center" }}>
+            <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a pizza" style={{ height: 44, width: "auto" }} />
+          </a>
+        ) : null}
+        right={
+          <>
+            {updateAvailable && (
+              <a
+                href="https://github.com/cbgfx/beholden"
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: theme.colors.accentPrimary, textDecoration: "none", fontWeight: 600, fontSize: "var(--fs-medium)" }}
+              >
+                Update available →
+              </a>
+            )}
+            {primaryIp && (
+              <div style={{ display: "grid", gap: 6, justifyItems: "end" }}>
+                <code>http://{primaryIp}:{state.meta?.port}</code>
+                {otherIps.length > 0 && (
+                  <details>
+                    <summary style={{ cursor: "pointer", userSelect: "none" }}>more</summary>
+                    <div style={{ marginTop: 6, display: "grid", gap: 4, justifyItems: "end" }}>
+                      {otherIps.map((ip) => (
+                        <code key={ip}>http://{ip}:{state.meta?.port}</code>
+                      ))}
+                    </div>
+                  </details>
+                )}
+              </div>
+            )}
+          </>
+        }
+      />
     </div>
   );
 }

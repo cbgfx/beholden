@@ -37,7 +37,9 @@ function sendFile(res, filePath) {
 }
 
 function safeResolve(urlPath) {
-  const rawPath = decodeURIComponent((urlPath || "/").split("?")[0]);
+  const stripped = (urlPath || "/").split("?")[0];
+  let rawPath;
+  try { rawPath = decodeURIComponent(stripped); } catch { rawPath = stripped; }
   const relativePath = rawPath === "/" ? "index.html" : rawPath.replace(/^\/+/, "");
   const resolved = path.resolve(distDir, relativePath);
   return resolved.startsWith(distDir) ? resolved : indexPath;

@@ -41,7 +41,7 @@ export function Tooltip({ text, children, multiline }: { text: string; children:
 export function Wrap({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
   return (
     <div style={{ height: "100%", overflowY: "auto", overflowX: wide ? "auto" : "hidden", background: C.bg, color: C.text }}>
-      <div style={{ maxWidth: wide ? "none" : 1060, minWidth: wide ? 1260 : "auto", margin: "0 auto", padding: wide ? "16px" : "28px 20px" }}>
+      <div style={{ maxWidth: wide ? "none" : 1060, minWidth: wide ? 1760 : "auto", margin: "0 auto", padding: wide ? "16px" : "28px 20px" }}>
         {children}
       </div>
     </div>

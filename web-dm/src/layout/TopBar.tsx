@@ -6,7 +6,7 @@ import { useWs, useWsStatus } from "@/services/ws";
 import { theme, withAlpha } from "@/theme/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsNarrow } from "@/views/CombatView/hooks/useIsNarrow";
-import { StatusDot } from "@beholden/shared/ui";
+import { StatusDot, navLinkStyle } from "@beholden/shared/ui";
 
 function useSaveStatus(): "idle" | "saving" | "saved" {
   const [status, setStatus] = React.useState<"idle" | "saving" | "saved">("idle");
@@ -34,14 +34,7 @@ function NavLink(props: { to: string; label: string }) {
   return (
     <Link
       to={props.to}
-      style={{
-        textDecoration: "none",
-        color: active ? theme.colors.accentHighlight : theme.colors.muted,
-        background: active ? withAlpha(theme.colors.accentHighlight, 0.12) : "transparent",
-        padding: "5px 12px",
-        borderRadius: theme.radius.control,
-        fontWeight: active ? 700 : 500,
-      }}
+      style={navLinkStyle(active, theme.colors.accentHighlight, theme.colors.muted, { borderRadius: theme.radius.control })}
     >
       {props.label}
     </Link>

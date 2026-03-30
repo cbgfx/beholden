@@ -1,5 +1,23 @@
 import type React from "react";
 
+export function navLinkStyle(
+  isActive: boolean,
+  accentColor: string,
+  mutedColor: string,
+  opts?: { borderRadius?: number }
+): React.CSSProperties {
+  return {
+    padding: "5px 12px",
+    borderRadius: opts?.borderRadius ?? 8,
+    textDecoration: "none",
+    fontSize: "var(--fs-medium)",
+    fontWeight: isActive ? 700 : 500,
+    color: isActive ? accentColor : mutedColor,
+    background: isActive ? `${accentColor}18` : "transparent",
+  };
+}
+
+
 export function accentButtonStyle(
   accentColor: string,
   opts?: {

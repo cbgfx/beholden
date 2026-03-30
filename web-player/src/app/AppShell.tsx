@@ -4,7 +4,7 @@ import { C, withAlpha } from "@/lib/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/services/api";
 import { useWsStatus } from "@/services/ws";
-import { StatusDot } from "@beholden/shared/ui";
+import { StatusDot, FooterGrid, navLinkStyle } from "@beholden/shared/ui";
 
 const NAV_LINKS = [
   { to: "/", label: "Home", end: true },
@@ -58,15 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {NAV_LINKS.map(({ to, label, end }) => (
             <NavLink
               key={to} to={to} end={end}
-              style={({ isActive }) => ({
-                padding: "5px 12px",
-                borderRadius: 8,
-                textDecoration: "none",
-                fontSize: "var(--fs-medium)",
-                fontWeight: isActive ? 700 : 500,
-                color: isActive ? C.accentHl : C.muted,
-                background: isActive ? `${C.accentHl}18` : "transparent",
-              })}
+              style={({ isActive }) => navLinkStyle(isActive, C.accentHl, C.muted)}
             >
               {label}
             </NavLink>
@@ -106,71 +98,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      <footer
-        style={{
-          borderTop: `1px solid ${C.panelBorder}`,
-          padding: "10px 16px",
-          color: C.muted,
-          fontSize: "var(--fs-medium)",
-          background: withAlpha(C.panelBg, 0.12),
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) auto auto minmax(0, 1fr)",
-          alignItems: "center",
-          gap: 16,
-          flexShrink: 0,
-        }}
-      >
-        {/* Column 1 — Left */}
-        <div style={{ minWidth: 0, justifySelf: "start" }}>
-          <div>© {new Date().getFullYear()} Beholden. All rights reserved.</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-            <span>Icons made by</span>
-            <a target="_blank" rel="noreferrer" href="https://game-icons.net" style={{ color: C.muted }}>
-              https://game-icons.net
-            </a>
-          </div>
-        </div>
-
-        {/* Column 2 — Center Left */}
-        <div style={{ justifySelf: "center", display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
-          <Link to="/about" style={{ color: C.accent, textDecoration: "none" }}>About</Link>
-          <Link to="/faq" style={{ color: C.accent, textDecoration: "none" }}>FAQ</Link>
-          <Link to="/updates" style={{ color: C.accent, textDecoration: "none" }}>Future Updates</Link>
-        </div>
-
-        {/* Column 3 — Center Right */}
-        <div style={{ justifySelf: "center", display: "flex", justifyContent: "center" }}>
-          {showSupport ? (
-            <a
-              href="https://www.buymeacoffee.com/beholden"
-              target="_blank"
-              rel="noreferrer"
-              title="Buy me a pizza"
-              style={{ display: "inline-flex", alignItems: "center" }}
-            >
-              <img
-                src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
-                alt="Buy me a pizza"
-                style={{ height: 44, width: "auto" }}
-              />
-            </a>
-          ) : null}
-        </div>
-
-        {/* Column 4 — Right */}
-        <div style={{ justifySelf: "end", textAlign: "right", fontSize: "var(--fs-small)" }}>
-          {updateAvailable && (
-            <a
-              href="https://github.com/cbgfx/beholden"
-              target="_blank"
-              rel="noreferrer"
-              style={{ color: C.accent, textDecoration: "none", fontWeight: 600 }}
-            >
-              Update available →
-            </a>
-          )}
-        </div>
-      </footer>
+      <FooterGrid
+        borderColor={C.panelBorder}
+        background={withAlpha(C.panelBg, 0.12)}
+        color={C.muted}
+        left={
+          <>
+            <div>© {new Date().getFullYear()} Beholden. All rights reserved.</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+              <span>Icons made by</span>
+              <a target="_blank" rel="noreferrer" href="https://game-icons.net" style={{ color: C.muted }}>
+                https://game-icons.net
+              </a>
+            </div>
+          </>
+        }
+        centerLeft={
+          <>
+            <Link to="/about" style={{ color: C.accent, textDecoration: "none" }}>About</Link>
+            <Link to="/faq" style={{ color: C.accent, textDecoration: "none" }}>FAQ</Link>
+            <Link to="/updates" style={{ color: C.accent, textDecoration: "none" }}>Future Updates</Link>
+          </>
+        }
+        centerRight={showSupport ? (
+          <a href="https://www.buymeacoffee.com/beholden" target="_blank" rel="noreferrer" title="Buy me a pizza" style={{ display: "inline-flex", alignItems: "center" }}>
+            <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a pizza" style={{ height: 44, width: "auto" }} />
+          </a>
+        ) : null}
+        right={updateAvailable ? (
+          <a href="https://github.com/cbgfx/beholden" target="_blank" rel="noreferrer" style={{ color: C.accent, textDecoration: "none", fontWeight: 600 }}>
+            Update available →
+          </a>
+        ) : null}
+      />
     </div>
   );
 }
