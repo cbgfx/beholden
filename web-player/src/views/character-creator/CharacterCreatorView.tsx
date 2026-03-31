@@ -434,7 +434,7 @@ export function CharacterCreatorView() {
     [classDetail, form.level]
   );
   const availableLevelUpFeats = React.useMemo(
-    () => featSummaries.filter((feat) => !/^origin:/i.test(feat.name) && (form.level >= 19 || !/^boon of\b/i.test(feat.name)) && matchesRuleset(feat, selectedRuleset)),
+    () => featSummaries.filter((feat) => (form.level >= 19 || !/^boon of\b/i.test(feat.name)) && matchesRuleset(feat, selectedRuleset)),
     [featSummaries, form.level]
   );
   const levelUpFeatConflict = React.useMemo(() => {

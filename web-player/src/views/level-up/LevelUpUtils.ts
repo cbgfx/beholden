@@ -241,7 +241,7 @@ export function deriveLevelUpValidation(args: DeriveLevelUpValidationArgs) {
   } = args;
 
   const availableFeatSummaries = featSummaries.filter(
-    (feat) => !/^origin:/i.test(feat.name) && (nextLevel >= 19 || !/^boon of\b/i.test(feat.name))
+    (feat) => nextLevel >= 19 || !/^boon of\b/i.test(feat.name)
   );
   const needle = featSearch.trim().toLowerCase();
   const filteredFeatSummaries = !needle
