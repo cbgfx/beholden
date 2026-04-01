@@ -551,6 +551,22 @@ export function CharacterView() {
   const [polymorphTypeFilter, setPolymorphTypeFilter] = useState("beast");
   const [polymorphCrMax, setPolymorphCrMax] = useState("");
   const [polymorphApplyingId, setPolymorphApplyingId] = useState<string | null>(null);
+  const [portraitUploading, setPortraitUploading] = useState(false);
+  const portraitFileRef = useRef<HTMLInputElement>(null);
+
+  const handlePortraitSelected = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !id) return;
+    setPortraitUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      const result = await api<{ ok: boolean; imageUrl: string }>(`/api/me/characters/${id}/image`, { method: "POST", body: fd });
+      setChar((prev) => prev ? { ...prev, imageUrl: result.imageUrl } : prev);
+    } catch (err) { console.error(err); }
+    finally { setPortraitUploading(false); }
+  }, [id]);
 
   const fetchChar = useCallback(() => {
     if (!id) return;
@@ -1625,6 +1641,13 @@ export function CharacterView() {
 
   return (
     <Wrap wide>
+      <input
+        ref={portraitFileRef}
+        type="file"
+        accept="image/*"
+        style={{ display: "none" }}
+        onChange={handlePortraitSelected}
+      />
       {concentrationAlert && (
         <div style={{
           marginBottom: 10, padding: "10px 14px", borderRadius: 10,
@@ -1660,6 +1683,8 @@ export function CharacterView() {
           onOpenInfo={() => setInfoDrawerOpen(true)}
           onLevelUp={() => navigate(`/characters/${char.id}/levelup`)}
           onEdit={() => navigate(`/characters/${char.id}/edit`)}
+          onPortraitClick={() => portraitFileRef.current?.click()}
+          portraitUploading={portraitUploading}
           effectiveHpMax={effectiveHpMax}
           tempHp={tempHp}
           hpPct={hpPct}

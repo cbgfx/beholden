@@ -50,8 +50,8 @@ export function importCompendiumXml(args: {
   `);
   const itemStmt = db.prepare(`
     INSERT OR REPLACE INTO compendium_items
-      (id, name, name_key, rarity, type, type_key, attunement, magic, data_json)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, name, name_key, rarity, type, type_key, attunement, magic, equippable, data_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const classStmt = db.prepare(`
     INSERT OR REPLACE INTO compendium_classes (id, name, name_key, hd, data_json)
@@ -225,6 +225,7 @@ export function importCompendiumXml(args: {
         data.type_key,
         data.attunement ? 1 : 0,
         data.magic ? 1 : 0,
+        data.equippable ? 1 : 0,
         JSON.stringify(data)
       );
     }
@@ -469,6 +470,9 @@ function xmlItemToJson(it: any): any | null {
     )
     .filter((m: any) => m.text.length > 0);
 
+  const fullText = text.join("\n");
+  const equippable = inferItemEquippable(type, fullText);
+
   return {
     id,
     name,
@@ -481,6 +485,7 @@ function xmlItemToJson(it: any): any | null {
     typeKey,
     attunement,
     magic,
+    equippable,
     weight: Number.isFinite(weight) ? weight : null,
     value: Number.isFinite(value) ? value : null,
     ac: Number.isFinite(ac) ? ac : null,
@@ -542,6 +547,14 @@ function parseItemDetail(detailRaw: unknown, nameRaw?: unknown, textRaw?: unknow
   }
 
   return { rarity, attunement, inferredMagic };
+}
+
+function inferItemEquippable(type: string, fullText: string): boolean {
+  // Always equippable by type
+  if (/^(ring|rod|wand|wondrous)$/i.test(type)) return true;
+  // Text signals equippable usage
+  if (/while (?:you (?:are )?)?(?:wear(?:ing)?|hold(?:ing)?|wield(?:ing)?)/i.test(fullText)) return true;
+  return false;
 }
 
 function mapItemType(codeRaw: unknown): { type: string; typeKey: string } {

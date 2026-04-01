@@ -309,6 +309,7 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
       attuned: next.attuned ?? false,
       magic: next.magic ?? false,
       silvered: next.silvered ?? false,
+      equippable: next.equippable ?? false,
       weight: next.weight ?? null,
       value: next.value ?? null,
       ac: next.ac ?? null,

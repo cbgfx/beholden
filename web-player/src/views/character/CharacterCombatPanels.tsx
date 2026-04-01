@@ -11,6 +11,7 @@ import {
   formatItemDamageType,
   formatItemProperties,
   getEquipState,
+  getWeaponMasteryName,
   hasArmorProficiency,
   hasItemProperty,
   hasWeaponMastery,
@@ -18,6 +19,7 @@ import {
   isRangedWeapon,
   isShieldItem,
   isWeaponItem,
+  parseMagicBonus,
   parseWeaponMastery,
   weaponAbilityMod,
   weaponDamageDice,
@@ -200,14 +202,16 @@ export function CharacterCombatPanels({
             const proficient = hasWeaponProficiency(it, prof ?? undefined);
             const mastery = parseWeaponMastery(it);
             const masteryKnown = hasWeaponMastery(it, prof ?? undefined);
-            const toHit = ability + (proficient ? pb : 0);
+            const masteryName = masteryKnown ? (mastery?.name ?? getWeaponMasteryName(it)) : null;
+            const magicBonus = parseMagicBonus(it);
+            const toHit = ability + (proficient ? pb : 0) + magicBonus;
             const damageAbility = attackState === "offhand" && !addsAbilityModToOffhandDamage(it, parsedFeatureEffects) ? 0 : ability;
             const rageBonus = rageActive && weaponUsesStrength(it) ? rageDamageBonus : 0;
             const damageType = formatItemDamageType(it.dmgType);
             const props = formatItemProperties(it.properties);
             const isReach = hasItemProperty(it, "R");
             const rangeLabel = isRangedWeapon(it) ? (it.properties?.find((p) => /^\d/.test(p)) ?? "Range") : `${isReach ? "10" : "5"} ft.`;
-            const totalFlatBonus = damageAbility + rageBonus;
+            const totalFlatBonus = damageAbility + rageBonus + magicBonus;
             const dmgText = dmg ? `${dmg}${totalFlatBonus === 0 ? "" : `${totalFlatBonus >= 0 ? "+" : ""}${totalFlatBonus}`}${damageType ? ` ${damageType}` : ""}` : "-";
             const modeLabel = attackState === "mainhand-2h" ? "2H" : attackState === "offhand" ? "Offhand" : null;
 
@@ -217,7 +221,7 @@ export function CharacterCombatPanels({
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     <span style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.name}</span>
                     {modeLabel && <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: accentColor, border: `1px solid ${accentColor}44`, background: `${accentColor}18`, borderRadius: 999, padding: "1px 5px" }}>{modeLabel}</span>}
-                    {masteryKnown && mastery && <Tooltip text={mastery.text} multiline><span style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.colorGold, border: "1px solid rgba(251,191,36,0.35)", background: "rgba(251,191,36,0.12)", borderRadius: 999, padding: "1px 5px", cursor: "help" }}>{mastery.name}</span></Tooltip>}
+                    {masteryName && <Tooltip text={mastery?.text ?? `Weapon Mastery: ${masteryName}`} multiline><span style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.colorGold, border: "1px solid rgba(251,191,36,0.35)", background: "rgba(251,191,36,0.12)", borderRadius: 999, padding: "1px 5px", cursor: "help" }}>{masteryName}</span></Tooltip>}
                     {!proficient && <span style={{ fontSize: "var(--fs-tiny)", color: C.red, fontWeight: 700 }}>No proficiency</span>}
                     {attackDisadvantage && <span style={{ fontSize: "var(--fs-tiny)", color: C.colorPinkRed, fontWeight: 700 }}>D</span>}
                   </div>

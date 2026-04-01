@@ -32,6 +32,7 @@ export interface InventoryItem {
   attuned?: boolean;
   magic?: boolean;
   silvered?: boolean;
+  equippable?: boolean;
   weight?: number | null;
   value?: number | null;
   ac?: number | null;
@@ -62,6 +63,7 @@ export interface InventoryPickerPayload {
   attuned?: boolean;
   magic?: boolean;
   silvered?: boolean;
+  equippable?: boolean;
   weight?: number | null;
   value?: number | null;
   ac?: number | null;
@@ -80,6 +82,7 @@ export interface CompendiumItemDetail {
   type: string | null;
   attunement: boolean;
   magic: boolean;
+  equippable?: boolean;
   weight: number | null;
   value: number | null;
   ac: number | null;
@@ -171,6 +174,47 @@ export interface WeaponMasteryInfo {
   text: string;
 }
 
+// D&D 2024 weapon mastery property map (weapon name → mastery name)
+const WEAPON_MASTERY_BY_WEAPON: Record<string, string> = {
+  // Cleave
+  greataxe: "Cleave", halberd: "Cleave",
+  // Graze
+  glaive: "Graze", greatsword: "Graze",
+  // Nick
+  club: "Nick", dagger: "Nick", "light hammer": "Nick", scimitar: "Nick",
+  // Push
+  greatclub: "Push", "heavy crossbow": "Push", pike: "Push", warhammer: "Push",
+  // Sap
+  flail: "Sap", longsword: "Sap", mace: "Sap", morningstar: "Sap", "war pick": "Sap", spear: "Sap",
+  // Slow
+  javelin: "Slow", "light crossbow": "Slow", longbow: "Slow", musket: "Slow", shortbow: "Slow", sling: "Slow",
+  // Topple
+  battleaxe: "Topple", lance: "Topple", maul: "Topple", quarterstaff: "Topple", trident: "Topple",
+  // Vex
+  blowgun: "Vex", dart: "Vex", "hand crossbow": "Vex", rapier: "Vex", shortsword: "Vex",
+};
+
+/** Returns the mastery property name for a weapon (e.g. "Sap" for Mace), checking description first then static map. */
+export function getWeaponMasteryName(item: Pick<InventoryItem, "name" | "description"> | null | undefined): string | null {
+  const fromDesc = parseWeaponMastery(item);
+  if (fromDesc) return fromDesc.name;
+  const key = stripMagicBonusFromName(String(item?.name ?? "")).toLowerCase();
+  return WEAPON_MASTERY_BY_WEAPON[key] ?? null;
+}
+
+/** Returns the numeric magic bonus (+1/+2/+3) from an item name or description, or 0. */
+export function parseMagicBonus(item: Pick<InventoryItem, "name" | "description"> | null | undefined): number {
+  const nameMatch = String(item?.name ?? "").match(/[+](\d+)/);
+  if (nameMatch) return parseInt(nameMatch[1], 10);
+  const descMatch = String(item?.description ?? "").match(/[+](\d+)\s+bonus\s+to\s+attack\s+and\s+damage/i);
+  if (descMatch) return parseInt(descMatch[1], 10);
+  return 0;
+}
+
+function stripMagicBonusFromName(name: string): string {
+  return name.replace(/\s*[+]\d+\s*$/, "").replace(/^[+]\d+\s+/, "").trim();
+}
+
 export function parseWeaponMastery(item: Pick<InventoryItem, "description"> | null | undefined): WeaponMasteryInfo | null {
   const raw = String(item?.description ?? "").trim();
   if (!raw) return null;
@@ -187,9 +231,9 @@ export function parseWeaponMastery(item: Pick<InventoryItem, "description"> | nu
 }
 
 export function hasWeaponMastery(item: Pick<InventoryItem, "description" | "name"> | null | undefined, prof: ProficiencyMapLike | undefined): boolean {
-  const itemName = String(item?.name ?? "").trim().toLowerCase();
+  const itemName = stripMagicBonusFromName(String(item?.name ?? "").trim()).toLowerCase();
   if (!itemName) return false;
-  return (prof?.masteries ?? []).some((entry) => String(entry.name ?? "").trim().toLowerCase() === itemName);
+  return (prof?.masteries ?? []).some((entry) => stripMagicBonusFromName(String(entry.name ?? "").trim()).toLowerCase() === itemName);
 }
 
 export function isShieldOrTorch(item: InventoryItem): boolean {
@@ -263,6 +307,7 @@ export function getEquipState(item: InventoryItem): EquipState {
   if (item.equipState) return item.equipState;
   if (item.equipped) {
     if (isArmorItem(item)) return "worn";
+    if (isWearableItem(item)) return "worn";
     if (requiresTwoHands(item)) return "mainhand-2h";
     if (!item.dmg1 && item.dmg2) return "mainhand-2h";
     return "mainhand-1h";
@@ -272,6 +317,13 @@ export function getEquipState(item: InventoryItem): EquipState {
 
 export function isWeaponItem(item: InventoryItem): boolean {
   return Boolean(item.dmg1) || /weapon/i.test(item.type ?? "") || /\bstaff\b/i.test(item.type ?? "");
+}
+
+/** Items that are worn/held as wondrous gear (rings, rods, wands, amulets, etc.) but are not weapons or armor. */
+export function isWearableItem(item: InventoryItem): boolean {
+  if (isWeaponItem(item) || isArmorItem(item) || isShieldItem(item)) return false;
+  if (item.equippable) return true;
+  return /^(ring|rod|wand)$/i.test(item.type ?? "");
 }
 
 export function parseItemSpells(text: string): ParsedItemSpell[] {

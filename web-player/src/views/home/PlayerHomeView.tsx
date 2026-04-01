@@ -97,7 +97,7 @@ export function PlayerHomeView() {
         {/* ── My Characters ── */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <h2 style={{ margin: 0, fontSize: "var(--fs-hero)", fontWeight: 800 }}>My Characters</h2>
-          <button style={accentButtonStyle(C.accentHl, { textColor: C.textDark, borderColor: "transparent", padding: "8px 18px", fontSize: "var(--fs-subtitle)" })} onClick={() => navigate("/characters/new")}>
+          <button style={{ ...accentButtonStyle(C.colorGold, { textColor: C.textDark, borderColor: "transparent", padding: "8px 18px", fontSize: "var(--fs-subtitle)" }), background: C.colorGold }} onClick={() => navigate("/characters/new")}>
             + Create Character
           </button>
         </div>
@@ -281,11 +281,11 @@ function CharacterRow({ ch, onOpen, onRefresh }: {
             style={{ ...ghostButtonStyle({ textColor: C.colorPinkRed, borderColor: "rgba(248,113,113,0.45)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}>
             {deleting ? "…" : "Yes, delete"}
           </button>
-          <button onClick={() => setConfirmDelete(false)} style={{ ...ghostButtonStyle({ textColor: C.muted, borderColor: "rgba(255,255,255,0.14)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}>Cancel</button>
+          <button onClick={() => setConfirmDelete(false)} style={{ ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}>Cancel</button>
         </div>
       ) : (
         <div style={{ display: "flex", gap: 6 }}>
-          <button style={{ ...ghostButtonStyle({ textColor: C.muted, borderColor: "rgba(255,255,255,0.14)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flex: 1, flexShrink: 0 }} onClick={() => navigate(`/characters/${ch.id}/edit`)}>
+          <button style={{ ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flex: 1, flexShrink: 0 }} onClick={() => navigate(`/characters/${ch.id}/edit`)}>
             Edit
           </button>
 
@@ -387,13 +387,13 @@ function CampaignCard({ campaign: c, characters, onOpen }: {
       {/* Footer */}
       <div style={{ padding: "0 12px 14px", display: "flex", gap: 8 }}>
         <button
-          style={{ ...accentButtonStyle(C.accentHl, { textColor: C.textDark, borderColor: "transparent", padding: "8px 18px", fontSize: "var(--fs-subtitle)" }), flex: 1 }}
+          style={{ ...accentButtonStyle(C.colorGold, { textColor: C.textDark, borderColor: "transparent", padding: "8px 18px", fontSize: "var(--fs-subtitle)" }), background: C.colorGold, flex: 1 }}
           onClick={() => onOpen(c.id)}
         >
           Open
         </button>
         <button
-          style={{ ...ghostButtonStyle({ textColor: C.muted, borderColor: "rgba(255,255,255,0.14)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}
+          style={{ ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}
           onClick={() => navigate(`/characters/new?campaign=${c.id}`)}
         >
           + Assign

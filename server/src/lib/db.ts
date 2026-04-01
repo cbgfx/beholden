@@ -356,6 +356,8 @@ export function openDb(dbPath: string): Db {
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   db.exec(SCHEMA_SQL);
+  // Additive migrations — safe to re-run, ignored if column already exists
+  try { db.exec("ALTER TABLE compendium_items ADD COLUMN equippable INTEGER NOT NULL DEFAULT 0"); } catch { /* already exists */ }
   return db;
 }
 

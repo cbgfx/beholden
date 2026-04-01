@@ -56,7 +56,6 @@ import {
   getSubclassLevel,
   getSubclassList,
   normalizeChoiceKey,
-  getWeaponMasteryOptions,
   isSpellcaster,
   parseRaceChoices,
   parseSkillList,
@@ -279,11 +278,12 @@ export function CharacterCreatorView() {
   const step5ClassLanguageChoice = getClassLanguageChoiceFromRules(classDetail, form.level, ALL_LANGUAGES);
   const step5ClassExpertiseChoices = getClassExpertiseChoices(classDetail, form.level);
   const step5WeaponMasteryChoice = getWeaponMasteryChoiceFromUtils(classDetail, form.level);
-  const step5WeaponOptions = getWeaponMasteryOptions(items);
+  const step5WeaponOptions = React.useMemo(() => [...WEAPON_MASTERY_KINDS].sort((a, b) => a.localeCompare(b)), []);
   const step5ChoiceState = React.useMemo(() => getStep5ChoiceState({
     form,
     bgDetail,
     raceDetailName: raceDetail?.name,
+    bgOriginFeatDetail,
     bgSkillFixed: step5BgSkillFixed,
     bgToolFixed: step5BgToolFixed,
     classFeatChoices: step5ClassFeatChoices,
@@ -295,7 +295,7 @@ export function CharacterCreatorView() {
     classExpertiseChoices: step5ClassExpertiseChoices,
     weaponMasteryChoice: step5WeaponMasteryChoice,
     weaponOptions: step5WeaponOptions,
-  }), [form, bgDetail, raceDetail, classFeatDetails, raceFeatDetail, levelUpFeatDetails, classDetail, featSummaries, items]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [form, bgDetail, raceDetail, bgOriginFeatDetail, classFeatDetails, raceFeatDetail, levelUpFeatDetails, classDetail, featSummaries, items]); // eslint-disable-line react-hooks/exhaustive-deps
   const step6FeatSpellListChoices = React.useMemo<CreatorSpellListChoiceEntry[]>(
     () => step5ChoiceState.allFeatChoices
       .filter(({ choice }) => choice.type === "spell_list")

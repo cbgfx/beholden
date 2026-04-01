@@ -86,8 +86,8 @@ export function PlayersPanel(props: {
                   ) : null
                 }
                 menuItems={[
-                  { label: "Edit Player", onClick: () => props.onEditPlayer(p.id) },
-                  { label: "Delete Player", danger: true, onClick: () => props.onDeletePlayer(p.id) },
+                  { label: "Edit Character", onClick: () => props.onEditPlayer(p.id) },
+                  { label: p.userId ? "Remove from Campaign" : "Delete Character", danger: true, onClick: () => props.onDeletePlayer(p.id) },
                 ]}
               />
             );

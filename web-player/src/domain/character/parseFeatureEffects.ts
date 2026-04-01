@@ -1244,7 +1244,7 @@ function parseAbilityScoreEffects(source: FeatureEffectSource, text: string, eff
 }
 
 function parseHitPointBonusEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
-  if (/hit point maximum increases by twice your (?:character )?level/i.test(text)) {
+  if (/hit point maximum increases by (?:an amount equal to )?twice your (?:character )?level/i.test(text)) {
     effects.push({
       id: createFeatureEffectId(source, "hit_points", effects.length),
       type: "hit_points", source, mode: "max_bonus",

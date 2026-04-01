@@ -100,9 +100,11 @@ export function CharacterAbilitiesPanels({
                 <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: isProfSave ? accentColor : C.muted }}>
                   {ABILITY_LABELS[k]}
                 </div>
-                <div style={{ padding: "6px 2px", borderRadius: 7, background: "rgba(255,255,255,0.06)", border: `1px solid ${isProfSave ? accentColor + "55" : "rgba(255,255,255,0.10)"}`, textAlign: "center", fontSize: "var(--fs-subtitle)", fontWeight: 900, color: isProfSave ? accentColor : C.text }}>
-                  {score ?? "-"}
-                </div>
+                <Tooltip text={score != null ? `${ABILITY_FULL[k]}: ${score} → modifier ⌊(${score} − 10) / 2⌋ = ${fmtMod(m)}` : `${ABILITY_FULL[k]}: not set`}>
+                  <div style={{ padding: "6px 2px", borderRadius: 7, background: "rgba(255,255,255,0.06)", border: `1px solid ${isProfSave ? accentColor + "55" : "rgba(255,255,255,0.10)"}`, textAlign: "center", fontSize: "var(--fs-subtitle)", fontWeight: 900, color: isProfSave ? accentColor : C.text, cursor: "help", width: "100%" }}>
+                    {score ?? "-"}
+                  </div>
+                </Tooltip>
                 <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, textAlign: "center", color: abilityCheckState === "disadvantage" ? C.colorPinkRed : abilityCheckState === "advantage" ? accentColor : C.text, display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}>
                   <span>{fmtMod(m)}</span>
                   <StateBadge
@@ -112,9 +114,9 @@ export function CharacterAbilitiesPanels({
                   />
                 </div>
                 <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, textAlign: "center", color: saveState === "disadvantage" ? C.colorPinkRed : saveState === "advantage" ? accentColor : isProfSave ? accentColor : C.text, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}>
-                  <span title={armorSaveDisadvantage ? "Armor or shield without proficiency imposes disadvantage on Strength and Dexterity saves" : undefined}>
-                    {fmtMod(save)}
-                  </span>
+                  <Tooltip text={isProfSave ? `${fmtMod(m)} (mod) + ${pb} (prof) = ${fmtMod(save)}${armorSaveDisadvantage ? " • Disadvantage from armor" : ""}` : `${fmtMod(m)} (mod, not proficient)${armorSaveDisadvantage ? " • Disadvantage from armor" : ""}`}>
+                    <span style={{ cursor: "help" }}>{fmtMod(save)}</span>
+                  </Tooltip>
                   <StateBadge
                     state={saveState}
                     accentColor={accentColor}

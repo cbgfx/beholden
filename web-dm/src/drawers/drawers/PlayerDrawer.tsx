@@ -162,10 +162,14 @@ export function PlayerDrawer(props: {
   const deletePlayer = React.useCallback(async () => {
     const d = props.drawer;
     if (d.type !== "editPlayer") return;
+    const player = state.players.find((p) => p.id === d.playerId);
+    const isWebPlayer = Boolean(player?.userId);
     if (
       !(await confirm({
-        title: "Delete player",
-        message: "Delete this player? This cannot be undone.",
+        title: isWebPlayer ? "Remove from Campaign" : "Delete Character",
+        message: isWebPlayer
+          ? "Remove this character from the campaign? They can re-join later."
+          : "Delete this character? This cannot be undone.",
         intent: "danger"
       }))
     )

@@ -138,12 +138,18 @@ export function useCampaignActions(
 
   const deletePlayer = React.useCallback(async (playerId: string) => {
     if (!state.selectedCampaignId) return;
-    if (!(await confirm({ title: "Delete Player", message: "Delete this player? This cannot be undone.", intent: "danger" }))) return;
+    const player = state.players.find((p) => p.id === playerId);
+    const isWebPlayer = Boolean(player?.userId);
+    const title = isWebPlayer ? "Remove from Campaign" : "Delete Character";
+    const message = isWebPlayer
+      ? "Remove this character from the campaign? They can re-join later."
+      : "Delete this character? This cannot be undone.";
+    if (!(await confirm({ title, message, intent: "danger" }))) return;
     try {
       await api(`/api/players/${playerId}`, { method: "DELETE" });
       await refreshCampaign(state.selectedCampaignId);
     } catch (e) { apiErr(e); }
-  }, [state.selectedCampaignId, confirm, refreshCampaign]);
+  }, [state.selectedCampaignId, state.players, confirm, refreshCampaign]);
 
   const deleteINpc = React.useCallback(async (inpcId: string) => {
     if (!state.selectedCampaignId) return;

@@ -40,6 +40,7 @@ export interface Encounter {
 export interface Player {
   id: Id;
   campaignId: Id;
+  userId?: string | null;
   playerName: string;
   characterName: string;
   class: string;

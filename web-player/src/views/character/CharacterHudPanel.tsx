@@ -85,6 +85,8 @@ export interface CharacterHudPanelProps {
   onOpenInfo: () => void;
   onLevelUp: () => void;
   onEdit: () => void;
+  onPortraitClick: () => void;
+  portraitUploading?: boolean;
   effectiveHpMax: number;
   tempHp: number;
   hpPct: number;
@@ -124,6 +126,8 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
     onOpenInfo,
     onLevelUp,
     onEdit,
+    onPortraitClick,
+    portraitUploading,
     effectiveHpMax,
     tempHp,
     hpPct,
@@ -172,6 +176,8 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
       <Panel>
         <div style={{ display: "flex", gap: 14, alignItems: "flex-start", marginBottom: 14 }}>
           <div
+            onClick={onPortraitClick}
+            title="Click to change portrait"
             style={{
               width: 72,
               height: 72,
@@ -183,9 +189,14 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              cursor: "pointer",
+              position: "relative",
             }}
           >
             {char.imageUrl ? <img src={char.imageUrl} alt={char.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <IconPlayer size={36} style={{ opacity: 0.35 }} />}
+            {portraitUploading && (
+              <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "var(--fs-tiny)", color: "#fff" }}>…</div>
+            )}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ margin: "0 0 2px", fontSize: "var(--fs-hero)", fontWeight: 900, letterSpacing: -0.5, color: C.text }}>{char.name}</h1>

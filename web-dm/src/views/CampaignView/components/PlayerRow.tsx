@@ -49,6 +49,8 @@ export function PlayerRow(props: {
   const pct = cur / max;
   const isDead = cur <= 0;
   const showDeathSaves = isDead && Boolean(p.playerName);
+  const [imgError, setImgError] = React.useState(false);
+  React.useEffect(() => { setImgError(false); }, [p.imageUrl]);
 
   const tempHp = Math.max(0, Number((p as any).tempHp ?? 0) || 0);
   const acTotal = Number(p.ac ?? 0) + (Number((p as any).acBonus ?? 0) || 0);
@@ -90,8 +92,8 @@ export function PlayerRow(props: {
           display: "flex", alignItems: "center", justifyContent: "center",
           color: iconColor, overflow: "hidden",
         }}>
-          {p.imageUrl
-            ? <img src={p.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          {p.imageUrl && !imgError
+            ? <img src={p.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={() => setImgError(true)} />
             : (props.icon ?? <IconPlayer size={20} />)
           }
         </div>

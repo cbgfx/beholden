@@ -12,6 +12,7 @@ export function IconButton(props: {
   textColor: string;
   textDarkColor: string;
   hoverBackground?: string;
+  ghostBackground?: string;
 }) {
   const [hovered, setHovered] = React.useState(false);
   const size = props.size ?? "md";
@@ -31,7 +32,7 @@ export function IconButton(props: {
           : `${props.accentColor}2e`
         : hovered
           ? hoverBackground
-          : `${props.borderColor}1f`;
+          : (props.ghostBackground ?? `${props.borderColor}1f`);
 
   const border = variant === "accent" ? `${props.accentColor}61` : props.borderColor;
   const color =

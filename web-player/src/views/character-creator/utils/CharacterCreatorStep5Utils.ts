@@ -55,6 +55,7 @@ export interface Step5ChoiceStateArgs {
   form: Step5FormLike;
   bgDetail: { name?: string | null; proficiencies?: { languages?: Step5LanguageChoiceLike } } | null;
   raceDetailName?: string | null;
+  bgOriginFeatDetail?: Step5BackgroundFeatLike | null;
   bgSkillFixed: string[];
   bgToolFixed: string[];
   classFeatChoices: Step5ClassFeatChoiceLike[];
@@ -119,6 +120,7 @@ export function getStep5ChoiceState(args: Step5ChoiceStateArgs): Step5ChoiceStat
   const {
     form,
     bgDetail,
+    bgOriginFeatDetail,
     bgSkillFixed,
     bgToolFixed,
     classFeatChoices,
@@ -161,10 +163,30 @@ export function getStep5ChoiceState(args: Step5ChoiceStateArgs): Step5ChoiceStat
       }))
   );
 
-  const bgFeatChoices = getBackgroundFeatChoices(bgDetail as never).map((entry) => ({
-    ...entry,
-    feat: entry.feat as Step5ParsedFeatLike,
-  }));
+  const bgOriginFeatChoices: Step5EntryWithChoice[] = bgOriginFeatDetail
+    ? bgOriginFeatDetail.parsed.choices
+        .filter((choice) =>
+          choice.type === "proficiency" ||
+          choice.type === "weapon_mastery" ||
+          choice.type === "expertise" ||
+          choice.type === "ability_score" ||
+          choice.type === "spell" ||
+          choice.type === "spell_list"
+        )
+        .map((choice) => ({
+          featName: bgOriginFeatDetail.name,
+          feat: bgOriginFeatDetail.parsed as Step5ParsedFeatLike,
+          choice,
+          key: `bg:${bgOriginFeatDetail.name}:${choice.id}`,
+        }))
+    : [];
+  const bgFeatChoices = [
+    ...getBackgroundFeatChoices(bgDetail as never).map((entry) => ({
+      ...entry,
+      feat: entry.feat as Step5ParsedFeatLike,
+    })),
+    ...bgOriginFeatChoices,
+  ];
   const raceFeatChoices: Step5EntryWithChoice[] = raceFeatDetail
     ? raceFeatDetail.parsed.choices
         .filter((choice) =>

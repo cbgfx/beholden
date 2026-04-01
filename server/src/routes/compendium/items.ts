@@ -11,8 +11,8 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
 
   app.get("/api/compendium/items", (_req, res) => {
     const rawRows = db
-      .prepare("SELECT id, name, rarity, type, type_key, attunement, magic, data_json FROM compendium_items ORDER BY name COLLATE NOCASE")
-      .all() as { id: string; name: string; rarity: string | null; type: string | null; type_key: string | null; attunement: number; magic: number; data_json: string; }[];
+      .prepare("SELECT id, name, rarity, type, type_key, attunement, magic, equippable, data_json FROM compendium_items ORDER BY name COLLATE NOCASE")
+      .all() as { id: string; name: string; rarity: string | null; type: string | null; type_key: string | null; attunement: number; magic: number; equippable: number; data_json: string; }[];
     const rarityByBaseName = new Map<string, string>();
     for (const row of rawRows) {
       const bn = baseItemName(row.name);
@@ -25,7 +25,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
         id: r.id, name: r.name,
         rarity: r.rarity ?? (bn ? rarityByBaseName.get(bn) ?? null : null),
         type: r.type ?? null, typeKey: r.type_key ?? null,
-        attunement: Boolean(r.attunement), magic: Boolean(r.magic),
+        attunement: Boolean(r.attunement), magic: Boolean(r.magic), equippable: Boolean(r.equippable),
         weight: data.weight ?? null,
         value: data.value ?? null,
         ac: data.ac ?? null,
@@ -42,7 +42,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     const itemId = requireParam(req, res, "itemId");
     if (!itemId) return;
     const row = db
-      .prepare("SELECT id, name, name_key, rarity, type, type_key, attunement, magic, data_json FROM compendium_items WHERE id = ?")
+      .prepare("SELECT id, name, name_key, rarity, type, type_key, attunement, magic, equippable, data_json FROM compendium_items WHERE id = ?")
       .get(itemId) as Record<string, unknown> | undefined;
     if (!row)
       return res.status(404).json({ ok: false, message: "Item not found in compendium" });
@@ -54,7 +54,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     res.json({
       id: row.id, name: row.name, nameKey: row.name_key ?? null,
       rarity: row.rarity ?? fallbackRarity, type: row.type ?? null, typeKey: row.type_key ?? null,
-      attunement: Boolean(row.attunement), magic: Boolean(row.magic),
+      attunement: Boolean(row.attunement), magic: Boolean(row.magic), equippable: Boolean(row.equippable),
       weight: it.weight ?? null,
       value: it.value ?? null,
       ac: it.ac ?? null,

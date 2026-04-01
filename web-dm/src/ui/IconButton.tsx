@@ -22,6 +22,7 @@ export function IconButton(props: {
       textColor={theme.colors.text}
       textDarkColor={theme.colors.textDark}
       hoverBackground={withAlpha(theme.colors.panelBorder, 0.30)}
+      ghostBackground={withAlpha(theme.colors.panelBorder, 0.12)}
     >
       {props.children}
     </SharedIconButton>

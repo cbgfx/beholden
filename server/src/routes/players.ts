@@ -60,7 +60,18 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
     const rows = db
-      .prepare(`SELECT ${PLAYER_COLS} FROM players WHERE campaign_id = ?`)
+      .prepare(`
+        SELECT p.id, p.campaign_id, p.user_id, p.player_name, p.character_name,
+               p.class, p.species, p.level, p.hp_max, p.hp_current, p.ac, p.speed,
+               p.str, p.dex, p.con, p.int, p.wis, p.cha, p.color,
+               COALESCE(p.image_url, uc.image_url) AS image_url,
+               p.overrides_json, p.conditions_json, p.death_saves_json,
+               p.shared_notes, p.created_at, p.updated_at
+        FROM players p
+        LEFT JOIN character_campaigns cc ON cc.player_id = p.id AND cc.campaign_id = p.campaign_id
+        LEFT JOIN user_characters uc ON uc.id = cc.character_id
+        WHERE p.campaign_id = ?
+      `)
       .all(campaignId) as Record<string, unknown>[];
     res.json(rows.map(rowToPlayer));
   });
@@ -74,10 +85,11 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
       SELECT p.id, p.user_id, p.player_name, p.character_name, p.class, p.species,
              p.level, p.hp_max, p.hp_current, p.ac, p.speed,
              p.str, p.dex, p.con, p.int, p.wis, p.cha,
-             p.color, p.image_url, p.overrides_json, p.conditions_json,
+             p.color, COALESCE(p.image_url, uc.image_url) AS image_url,
+             p.overrides_json, p.conditions_json,
              uc.character_data_json
       FROM players p
-      LEFT JOIN character_campaigns cc ON cc.player_id = p.id
+      LEFT JOIN character_campaigns cc ON cc.player_id = p.id AND cc.campaign_id = p.campaign_id
       LEFT JOIN user_characters uc ON uc.id = cc.character_id
       WHERE p.campaign_id = ?
     `).all(campaignId) as Record<string, unknown>[];
@@ -248,6 +260,10 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     }
 
     db.prepare("DELETE FROM players WHERE id = ?").run(playerId);
+
+    // If this was a web-player character, clear the character_campaigns link so
+    // the player can re-join the campaign later without issues.
+    db.prepare("DELETE FROM character_campaigns WHERE player_id = ?").run(playerId);
 
     // Best-effort removal of player image.
     const imagesDir = ctx.path.join(ctx.paths.dataDir, "player-images");
