@@ -4,11 +4,11 @@ import { IconButton } from "@/ui/IconButton";
 import { theme } from "@/theme/theme";
 import { IconPlayer, IconPlus, IconSkull, IconRest } from "@/icons";
 import { PlayerRow } from "@/views/CampaignView/components/PlayerRow";
-import type { Combatant, Player } from "@/domain/types/domain";
+import type { EncounterActor, CampaignCharacter } from "@/domain/types/domain";
 
 export function PlayersPanel(props: {
-  players: Player[];
-  combatants: Combatant[];
+  players: CampaignCharacter[];
+  combatants: EncounterActor[];
   selectedEncounterId: string | null;
   onCreatePlayer: () => void;
   onEditPlayer: (playerId: string) => void;

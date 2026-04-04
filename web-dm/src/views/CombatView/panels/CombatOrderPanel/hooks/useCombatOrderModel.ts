@@ -1,7 +1,7 @@
 import React from "react";
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 
-export function useCombatOrderModel(args: { combatants: Combatant[]; activeId: string | null }) {
+export function useCombatOrderModel(args: { combatants: EncounterActor[]; activeId: string | null }) {
   const { combatants, activeId } = args;
 
   const activeIndex = React.useMemo(() => {

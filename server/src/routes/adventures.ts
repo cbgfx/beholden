@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
-import type { StoredCombatant, StoredConditionInstance } from "../server/userData.js";
+import type { StoredEncounterActor, StoredConditionInstance } from "../server/userData.js";
 import { parseBody } from "../shared/validate.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
@@ -9,12 +9,12 @@ import {
   rowToAdventure,
   rowToEncounter,
   rowToNote,
-  rowToCombatant,
+  rowToEncounterActor,
   nextSortFor,
   ADVENTURE_COLS,
   ENCOUNTER_COLS,
   NOTE_COLS,
-  COMBATANT_COLS,
+  ENCOUNTER_ACTOR_COLS,
 } from "../lib/db.js";
 import { ensureCombat, insertCombatant } from "../services/combat.js";
 import {
@@ -23,6 +23,7 @@ import {
   OverridesSchema,
 } from "../lib/schemas.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
+import type { StoredNoteState } from "../server/userData.js";
 
 const AdventureCreateBody = z.object({
   name: z.string().trim().optional(),
@@ -81,6 +82,7 @@ const AdventureImportBody = z.object({
 export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
+  const serializeNoteState = (note: StoredNoteState) => JSON.stringify(note);
 
   app.get("/api/campaigns/:campaignId/adventures", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
@@ -128,11 +130,14 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
         `SELECT ${NOTE_COLS} FROM notes WHERE adventure_id = ? ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC`
       )
       .all(adventureId) as Record<string, unknown>[];
-    const notes = noteRows.map((n) => ({
-      title: n.title as string,
-      text: n.text as string,
-      sort: n.sort as number,
-    }));
+    const notes = noteRows.map((n) => {
+      const note = rowToNote(n);
+      return {
+        title: note.title,
+        text: note.text,
+        sort: note.sort,
+      };
+    });
 
     const encRows = db
       .prepare(
@@ -143,7 +148,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
     // Fetch all combatants for all encounters in one query, group by encounter.
     const allCombatantRows = db
       .prepare(
-        `SELECT ${COMBATANT_COLS}
+        `SELECT ${ENCOUNTER_ACTOR_COLS}
          FROM combatants
          WHERE encounter_id IN (SELECT id FROM encounters WHERE adventure_id = ?)
          ORDER BY encounter_id, COALESCE(sort, 9999), created_at`
@@ -159,7 +164,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
     const encounters = encRows.map((encRow) => {
       const enc = rowToEncounter(encRow);
       const combatants = (combatantsByEnc.get(enc.id) ?? []).map((c) => {
-        const combatant = rowToCombatant(c);
+        const combatant = rowToEncounterActor(c);
         return {
           baseType: combatant.baseType,
           baseId: combatant.baseId,
@@ -222,8 +227,16 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
 
       for (const [i, n] of imp.notes.entries()) {
         db.prepare(
-          "INSERT INTO notes (id, campaign_id, adventure_id, title, text, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-        ).run(uid(), campaignId, advId, n.title, n.text, n.sort ?? i + 1, t, t);
+          "INSERT INTO notes (id, campaign_id, adventure_id, note_json, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        ).run(
+          uid(),
+          campaignId,
+          advId,
+          serializeNoteState({ title: n.title, text: n.text }),
+          n.sort ?? i + 1,
+          t,
+          t
+        );
       }
 
       for (const [i, enc] of imp.encounters.entries()) {
@@ -235,7 +248,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
         ensureCombat(db, encId);
 
         for (const [ci, c] of enc.combatants.entries()) {
-          const combatant: StoredCombatant = {
+          const combatant: StoredEncounterActor = {
             id: uid(),
             encounterId: encId,
             baseType: c.baseType,

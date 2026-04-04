@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 import { api } from "@/services/api";
 import { rollDiceExpr } from "@/views/CombatView/utils/dice";
 import { resolveCombatantDamage } from "@/views/CombatView/utils/polymorphDamage";
@@ -8,7 +8,7 @@ type Props = {
   encounterId: string | undefined;
   delta: string;
   setDelta: (v: string) => void;
-  orderedCombatants: Combatant[];
+  orderedCombatants: EncounterActor[];
   refresh: () => Promise<void>;
 };
 

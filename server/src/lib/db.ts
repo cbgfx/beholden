@@ -54,26 +54,10 @@ CREATE TABLE IF NOT EXISTS players (
   id TEXT PRIMARY KEY,
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
   user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
-  player_name TEXT NOT NULL,
-  character_name TEXT NOT NULL,
-  class TEXT NOT NULL,
-  species TEXT NOT NULL,
-  level INTEGER NOT NULL,
-  hp_max INTEGER NOT NULL,
-  hp_current INTEGER NOT NULL,
-  ac INTEGER NOT NULL,
-  speed INTEGER,
-  str INTEGER,
-  dex INTEGER,
-  con INTEGER,
-  int INTEGER,
-  wis INTEGER,
-  cha INTEGER,
-  color TEXT,
+  character_id TEXT REFERENCES user_characters(id) ON DELETE SET NULL,
+  sheet_json TEXT NOT NULL,
+  live_json TEXT NOT NULL,
   image_url TEXT,
-  overrides_json TEXT NOT NULL DEFAULT '{"tempHp":0,"acBonus":0,"hpMaxBonus":0}',
-  conditions_json TEXT NOT NULL DEFAULT '[]',
-  death_saves_json TEXT,
   shared_notes TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
@@ -100,8 +84,7 @@ CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY,
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
   adventure_id TEXT,
-  title TEXT NOT NULL,
-  text TEXT NOT NULL DEFAULT '',
+  note_json TEXT NOT NULL,
   sort INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
@@ -111,16 +94,7 @@ CREATE TABLE IF NOT EXISTS treasure (
   id TEXT PRIMARY KEY,
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
   adventure_id TEXT,
-  source TEXT NOT NULL,
-  item_id TEXT,
-  name TEXT NOT NULL,
-  rarity TEXT,
-  type TEXT,
-  type_key TEXT,
-  attunement INTEGER NOT NULL DEFAULT 0,
-  magic INTEGER NOT NULL DEFAULT 0,
-  text TEXT NOT NULL DEFAULT '',
-  qty INTEGER NOT NULL DEFAULT 1,
+  entry_json TEXT NOT NULL,
   sort INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
@@ -151,25 +125,9 @@ CREATE TABLE IF NOT EXISTS combatants (
   encounter_id TEXT NOT NULL REFERENCES encounters(id) ON DELETE CASCADE,
   base_type TEXT NOT NULL,
   base_id TEXT NOT NULL,
-  name TEXT NOT NULL,
-  label TEXT NOT NULL DEFAULT '',
-  initiative INTEGER,
-  friendly INTEGER NOT NULL DEFAULT 0,
-  color TEXT NOT NULL DEFAULT '#cccccc',
-  hp_current INTEGER,
-  hp_max INTEGER,
-  hp_details TEXT,
-  ac INTEGER,
-  ac_details TEXT,
+  snapshot_json TEXT NOT NULL,
+  live_json TEXT NOT NULL,
   sort INTEGER,
-  used_reaction INTEGER NOT NULL DEFAULT 0,
-  used_legendary_actions INTEGER NOT NULL DEFAULT 0,
-  used_legendary_resistances INTEGER NOT NULL DEFAULT 0,
-  overrides_json TEXT NOT NULL DEFAULT '{"tempHp":0,"acBonus":0,"hpMaxBonus":0}',
-  conditions_json TEXT NOT NULL DEFAULT '[]',
-  death_saves_json TEXT,
-  used_spell_slots_json TEXT,
-  attack_overrides_json TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -198,6 +156,10 @@ CREATE TABLE IF NOT EXISTS compendium_items (
   type_key TEXT,
   attunement INTEGER NOT NULL DEFAULT 0,
   magic INTEGER NOT NULL DEFAULT 0,
+  equippable INTEGER NOT NULL DEFAULT 0,
+  weight REAL,
+  value REAL,
+  proficiency TEXT,
   data_json TEXT NOT NULL
 );
 
@@ -246,40 +208,15 @@ CREATE TABLE IF NOT EXISTS compendium_feats (
 );
 
 -- Campaign-agnostic player-owned characters (not bound to a campaign).
--- Assigned to campaigns via character_campaigns junction table.
 CREATE TABLE IF NOT EXISTS user_characters (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name TEXT NOT NULL DEFAULT '',
-  player_name TEXT NOT NULL DEFAULT '',
-  class_name TEXT NOT NULL DEFAULT '',
-  species TEXT NOT NULL DEFAULT '',
-  level INTEGER NOT NULL DEFAULT 1,
-  hp_max INTEGER NOT NULL DEFAULT 0,
-  hp_current INTEGER NOT NULL DEFAULT 0,
-  ac INTEGER NOT NULL DEFAULT 10,
-  speed INTEGER NOT NULL DEFAULT 30,
-  str_score INTEGER,
-  dex_score INTEGER,
-  con_score INTEGER,
-  int_score INTEGER,
-  wis_score INTEGER,
-  cha_score INTEGER,
-  color TEXT,
+  sheet_json TEXT NOT NULL,
   image_url TEXT,
   character_data_json TEXT,
-  death_saves_json TEXT,
   shared_notes TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS character_campaigns (
-  id TEXT PRIMARY KEY,
-  character_id TEXT NOT NULL REFERENCES user_characters(id) ON DELETE CASCADE,
-  campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
-  player_id TEXT,
-  UNIQUE(character_id, campaign_id)
 );
 
 CREATE TABLE IF NOT EXISTS users (
@@ -305,15 +242,7 @@ CREATE TABLE IF NOT EXISTS campaign_membership (
 CREATE TABLE IF NOT EXISTS party_inventory (
   id TEXT PRIMARY KEY,
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  quantity INTEGER NOT NULL DEFAULT 1,
-  weight REAL,
-  notes TEXT NOT NULL DEFAULT '',
-  source TEXT,
-  item_id TEXT,
-  rarity TEXT,
-  type TEXT,
-  description TEXT,
+  item_json TEXT NOT NULL,
   sort INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
@@ -330,6 +259,7 @@ CREATE INDEX IF NOT EXISTS idx_combatants_encounter  ON combatants(encounter_id)
 CREATE INDEX IF NOT EXISTS idx_membership_campaign   ON campaign_membership(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_membership_user       ON campaign_membership(user_id);
 CREATE INDEX IF NOT EXISTS idx_players_user          ON players(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_players_campaign_character ON players(campaign_id, character_id) WHERE character_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_compmon_name          ON compendium_monsters(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_compmon_typekey       ON compendium_monsters(type_key);
 CREATE INDEX IF NOT EXISTS idx_compmon_size          ON compendium_monsters(size);
@@ -342,8 +272,6 @@ CREATE INDEX IF NOT EXISTS idx_comprace_name         ON compendium_races(name CO
 CREATE INDEX IF NOT EXISTS idx_compbg_name           ON compendium_backgrounds(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_compfeat_name         ON compendium_feats(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_uchars_user           ON user_characters(user_id);
-CREATE INDEX IF NOT EXISTS idx_charcamps_char        ON character_campaigns(character_id);
-CREATE INDEX IF NOT EXISTS idx_charcamps_campaign    ON character_campaigns(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_party_inventory_campaign ON party_inventory(campaign_id);
 `;
 
@@ -355,9 +283,41 @@ export function openDb(dbPath: string): Db {
   const db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
+  const tableExists = (table: string) =>
+    Boolean(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(table));
+  const hasColumn = (table: string, column: string) =>
+    tableExists(table) &&
+    (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).some((r) => r.name === column);
+  const needsActorReset =
+    (tableExists("players") && (!hasColumn("players", "sheet_json") || !hasColumn("players", "live_json"))) ||
+    (tableExists("user_characters") && !hasColumn("user_characters", "sheet_json")) ||
+    (tableExists("combatants") && (!hasColumn("combatants", "snapshot_json") || !hasColumn("combatants", "live_json"))) ||
+    tableExists("character_campaigns");
+  const needsContentReset =
+    (tableExists("notes") && !hasColumn("notes", "note_json")) ||
+    (tableExists("treasure") && !hasColumn("treasure", "entry_json")) ||
+    (tableExists("party_inventory") && !hasColumn("party_inventory", "item_json"));
+  if (needsActorReset) {
+    db.exec(`
+      DROP TABLE IF EXISTS combatants;
+      DROP TABLE IF EXISTS character_campaigns;
+      DROP TABLE IF EXISTS players;
+      DROP TABLE IF EXISTS user_characters;
+    `);
+  }
+  if (needsContentReset) {
+    db.exec(`
+      DROP TABLE IF EXISTS notes;
+      DROP TABLE IF EXISTS treasure;
+      DROP TABLE IF EXISTS party_inventory;
+    `);
+  }
   db.exec(SCHEMA_SQL);
   // Additive migrations — safe to re-run, ignored if column already exists
   try { db.exec("ALTER TABLE compendium_items ADD COLUMN equippable INTEGER NOT NULL DEFAULT 0"); } catch { /* already exists */ }
+  try { db.exec("ALTER TABLE compendium_items ADD COLUMN weight REAL"); } catch { /* already exists */ }
+  try { db.exec("ALTER TABLE compendium_items ADD COLUMN value REAL"); } catch { /* already exists */ }
+  try { db.exec("ALTER TABLE compendium_items ADD COLUMN proficiency TEXT"); } catch { /* already exists */ }
   return db;
 }
 

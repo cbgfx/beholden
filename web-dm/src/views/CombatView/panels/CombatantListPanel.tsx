@@ -2,7 +2,7 @@ import { Panel } from "@/ui/Panel";
 import { Combatant } from "@/domain/types/domain";
 
 type Props = {
-  combatants: Combatant[];
+  combatants: EncounterActor[];
   activeCombatantId?: string;
   onSelect: (id: string) => void;
 };

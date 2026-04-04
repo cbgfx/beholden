@@ -37,7 +37,7 @@ export interface Encounter {
   order: number;
 }
 
-export interface Player {
+export interface CampaignCharacter {
   id: Id;
   campaignId: Id;
   userId?: string | null;
@@ -88,7 +88,7 @@ export interface DeathSaves {
   fail: number;
 }
 
-export interface Combatant {
+export interface EncounterActor {
   id: Id;
   encounterId: Id;
 

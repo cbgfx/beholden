@@ -2,7 +2,7 @@
 import type Database from "better-sqlite3";
 import type { Multer } from "multer";
 import type { BroadcastFn } from "./events.js";
-import type { StoredCombatant, StoredPlayer } from "./userData.js";
+import type { StoredEncounterActor, StoredCampaignCharacter } from "./userData.js";
 import type os from "node:os";
 import type fs from "node:fs";
 import type path from "node:path";
@@ -37,7 +37,7 @@ export interface Helpers {
   /** Ensures a combat record exists for the encounter; creates it if missing. */
   ensureCombat: (encounterId: string) => void;
   nextLabelNumber: (encounterId: string, baseName: string) => number;
-  createPlayerCombatant: (args: { encounterId: string; player: StoredPlayer; t?: number }) => StoredCombatant;
+  createPlayerCombatant: (args: { encounterId: string; player: StoredCampaignCharacter; t?: number }) => StoredEncounterActor;
   seedDefaultConditions: (campaignId: string) => void;
   importCompendiumXml: (args: { xml: string }) => {
     imported: number;

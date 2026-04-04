@@ -8,28 +8,38 @@ import {
   rowToCampaign,
   rowToAdventure,
   rowToEncounter,
-  rowToPlayer,
+  rowToCampaignCharacter,
   rowToINpc,
   rowToNote,
+  rowToPartyInventoryItem,
   rowToTreasure,
   rowToCondition,
-  rowToCombatant,
+  rowToEncounterActor,
   ADVENTURE_COLS,
   ENCOUNTER_COLS,
-  PLAYER_COLS,
+  CAMPAIGN_CHARACTER_COLS,
   INPC_COLS,
   NOTE_COLS,
+  PARTY_INVENTORY_COLS,
   TREASURE_COLS,
   CONDITION_COLS,
-  COMBATANT_COLS,
+  ENCOUNTER_ACTOR_COLS,
 } from "../lib/db.js";
 import { insertCombatant, ensureCombat } from "../services/combat.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
+import { serializeCampaignCharacterLive, serializeCampaignCharacterSheet } from "../services/characters.js";
 import { seedDefaultConditions } from "../services/conditions.js";
-import type { StoredCombatant } from "../server/userData.js";
+import type {
+  StoredEncounterActor,
+  StoredNoteState,
+  StoredTreasureState,
+} from "../server/userData.js";
 
 export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
+
+  const serializeNoteState = (note: StoredNoteState) => JSON.stringify(note);
+  const serializeTreasureState = (entry: StoredTreasureState) => JSON.stringify(entry);
 
   // ── Export campaign ───────────────────────────────────────────────────────
   app.get("/api/campaigns/:campaignId/export", memberOrAdmin(db), (req, res) => {
@@ -51,8 +61,8 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
         .map(rowToEncounter).map((e) => [e.id, e])
     );
     const players = Object.fromEntries(
-      (db.prepare(`SELECT ${PLAYER_COLS} FROM players WHERE campaign_id = ?`).all(campaignId) as Record<string, unknown>[])
-        .map(rowToPlayer).map((p) => [p.id, p])
+      (db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE campaign_id = ?`).all(campaignId) as Record<string, unknown>[])
+        .map(rowToCampaignCharacter).map((p) => [p.id, p])
     );
     const inpcs = Object.fromEntries(
       (db.prepare(`SELECT ${INPC_COLS} FROM inpcs WHERE campaign_id = ?`).all(campaignId) as Record<string, unknown>[])
@@ -66,6 +76,10 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
       (db.prepare(`SELECT ${TREASURE_COLS} FROM treasure WHERE campaign_id = ?`).all(campaignId) as Record<string, unknown>[])
         .map(rowToTreasure).map((t) => [t.id, t])
     );
+    const partyInventory = Object.fromEntries(
+      (db.prepare(`SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE campaign_id = ?`).all(campaignId) as Record<string, unknown>[])
+        .map(rowToPartyInventoryItem).map((item) => [item.id, item])
+    );
     const conditions = Object.fromEntries(
       (db.prepare(`SELECT ${CONDITION_COLS} FROM conditions WHERE campaign_id = ?`).all(campaignId) as Record<string, unknown>[])
         .map(rowToCondition).map((c) => [c.id, c])
@@ -73,16 +87,16 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
 
     // Build combats structure with nested combatants — bulk fetch, no per-encounter queries.
     // Round and activeCombatantId sourced from encounters (single source of truth).
-    const combatantsByEnc = new Map<string, ReturnType<typeof rowToCombatant>[]>();
+    const combatantsByEnc = new Map<string, ReturnType<typeof rowToEncounterActor>[]>();
     for (const row of db.prepare(
-      `SELECT ${COMBATANT_COLS}
+      `SELECT ${ENCOUNTER_ACTOR_COLS}
        FROM combatants
        WHERE encounter_id IN (SELECT id FROM encounters WHERE campaign_id = ?)
        ORDER BY encounter_id, COALESCE(sort, 9999), created_at`
     ).all(campaignId) as Record<string, unknown>[]) {
       const encId = row.encounter_id as string;
       if (!combatantsByEnc.has(encId)) combatantsByEnc.set(encId, []);
-      combatantsByEnc.get(encId)!.push(rowToCombatant(row));
+      combatantsByEnc.get(encId)!.push(rowToEncounterActor(row));
     }
 
     const combats: Record<string, unknown> = {};
@@ -108,6 +122,7 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
       players,
       inpcs,
       notes,
+      partyInventory,
       treasure,
       conditions,
       combats,
@@ -204,34 +219,40 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
       // Players
       const players = toArray(doc["players"]);
       for (const p of players) {
-        const overrides = (p["overrides"] as Record<string, unknown>) ?? {};
         db.prepare(`
           INSERT OR IGNORE INTO players
-            (id, campaign_id, player_name, character_name, class, species, level,
-             hp_max, hp_current, ac, str, dex, con, int, wis, cha, color,
-             overrides_json, conditions_json, death_saves_json, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, campaign_id, user_id, character_id, sheet_json, live_json, image_url, shared_notes, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           String(p["id"]),
           campaignId,
-          String(p["playerName"] ?? ""),
-          String(p["characterName"] ?? ""),
-          String(p["class"] ?? ""),
-          String(p["species"] ?? ""),
-          Number(p["level"] ?? 1),
-          Number(p["hpMax"] ?? 10),
-          Number(p["hpCurrent"] ?? 10),
-          Number(p["ac"] ?? 10),
-          p["str"] != null ? Number(p["str"]) : null,
-          p["dex"] != null ? Number(p["dex"]) : null,
-          p["con"] != null ? Number(p["con"]) : null,
-          p["int"] != null ? Number(p["int"]) : null,
-          p["wis"] != null ? Number(p["wis"]) : null,
-          p["cha"] != null ? Number(p["cha"]) : null,
-          (p["color"] as string | null) ?? null,
-          JSON.stringify(p["overrides"] ?? DEFAULT_OVERRIDES),
-          JSON.stringify(p["conditions"] ?? []),
-          p["deathSaves"] != null ? JSON.stringify(p["deathSaves"]) : null,
+          (p["userId"] as string | null) ?? null,
+          (p["characterId"] as string | null) ?? null,
+          serializeCampaignCharacterSheet({
+            playerName: String(p["playerName"] ?? ""),
+            characterName: String(p["characterName"] ?? ""),
+            class: String(p["class"] ?? ""),
+            species: String(p["species"] ?? ""),
+            level: Number(p["level"] ?? 1),
+            hpMax: Number(p["hpMax"] ?? 10),
+            ac: Number(p["ac"] ?? 10),
+            ...(p["speed"] != null ? { speed: Number(p["speed"]) } : {}),
+            ...(p["str"] != null ? { str: Number(p["str"]) } : {}),
+            ...(p["dex"] != null ? { dex: Number(p["dex"]) } : {}),
+            ...(p["con"] != null ? { con: Number(p["con"]) } : {}),
+            ...(p["int"] != null ? { int: Number(p["int"]) } : {}),
+            ...(p["wis"] != null ? { wis: Number(p["wis"]) } : {}),
+            ...(p["cha"] != null ? { cha: Number(p["cha"]) } : {}),
+            ...((p["color"] as string | null) != null ? { color: p["color"] as string } : {}),
+          }),
+          serializeCampaignCharacterLive({
+            hpCurrent: Number(p["hpCurrent"] ?? 10),
+            overrides: (p["overrides"] as any) ?? DEFAULT_OVERRIDES,
+            conditions: (p["conditions"] as any) ?? [],
+            ...(p["deathSaves"] != null ? { deathSaves: p["deathSaves"] as any } : {}),
+          }),
+          (p["imageUrl"] as string | null) ?? null,
+          String(p["sharedNotes"] ?? ""),
           Number(p["createdAt"] ?? Date.now()),
           Number(p["updatedAt"] ?? Date.now())
         );
@@ -267,14 +288,16 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
       const notes = toArray(doc["notes"]);
       for (const n of notes) {
         db.prepare(`
-          INSERT OR IGNORE INTO notes (id, campaign_id, adventure_id, title, text, sort, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT OR IGNORE INTO notes (id, campaign_id, adventure_id, note_json, sort, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
         `).run(
           String(n["id"]),
           campaignId,
           (n["adventureId"] as string | null) ?? null,
-          String(n["title"] ?? ""),
-          String(n["text"] ?? ""),
+          serializeNoteState({
+            title: String(n["title"] ?? ""),
+            text: String(n["text"] ?? ""),
+          }),
           Number(n["sort"] ?? 0),
           Number(n["createdAt"] ?? Date.now()),
           Number(n["updatedAt"] ?? Date.now())
@@ -286,25 +309,53 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
       for (const t of treasure) {
         db.prepare(`
           INSERT OR IGNORE INTO treasure
-            (id, campaign_id, adventure_id, source, item_id, name, rarity, type, type_key,
-             attunement, magic, text, sort, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, campaign_id, adventure_id, entry_json, sort, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
         `).run(
           String(t["id"]),
           campaignId,
           (t["adventureId"] as string | null) ?? null,
-          String(t["source"] ?? "custom"),
-          (t["itemId"] as string | null) ?? null,
-          String(t["name"] ?? ""),
-          (t["rarity"] as string | null) ?? null,
-          (t["type"] as string | null) ?? null,
-          (t["type_key"] as string | null) ?? null,
-          Boolean(t["attunement"]) ? 1 : 0,
-          Boolean(t["magic"]) ? 1 : 0,
-          String(t["text"] ?? ""),
+          serializeTreasureState({
+            source: t["source"] === "custom" ? "custom" : "compendium",
+            itemId: (t["itemId"] as string | null) ?? null,
+            name: String(t["name"] ?? ""),
+            rarity: (t["rarity"] as string | null) ?? null,
+            type: (t["type"] as string | null) ?? null,
+            type_key: (t["type_key"] as string | null) ?? null,
+            attunement: Boolean(t["attunement"]),
+            magic: Boolean(t["magic"]),
+            text: String(t["text"] ?? ""),
+            qty: Number(t["qty"] ?? 1),
+          }),
           Number(t["sort"] ?? 0),
           Number(t["createdAt"] ?? Date.now()),
           Number(t["updatedAt"] ?? Date.now())
+        );
+      }
+
+      const partyInventory = toArray(doc["partyInventory"]);
+      for (const item of partyInventory) {
+        db.prepare(`
+          INSERT OR IGNORE INTO party_inventory
+            (id, campaign_id, item_json, sort, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(
+          String(item["id"]),
+          campaignId,
+          JSON.stringify({
+            name: String(item["name"] ?? "New Item"),
+            quantity: Number(item["quantity"] ?? 1),
+            weight: item["weight"] != null ? Number(item["weight"]) : null,
+            notes: String(item["notes"] ?? ""),
+            source: (item["source"] as string | null) ?? null,
+            itemId: (item["itemId"] as string | null) ?? null,
+            rarity: (item["rarity"] as string | null) ?? null,
+            type: (item["type"] as string | null) ?? null,
+            description: (item["description"] as string | null) ?? null,
+          }),
+          Number(item["sort"] ?? 0),
+          Number(item["createdAt"] ?? Date.now()),
+          Number(item["updatedAt"] ?? Date.now())
         );
       }
 
@@ -345,7 +396,7 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
           ? (combat["combatants"] as Record<string, unknown>[])
           : [];
         for (const [ci, raw] of combatants.entries()) {
-          const c: StoredCombatant = {
+          const c: StoredEncounterActor = {
             id: String(raw["id"] ?? ctx.helpers.uid()),
             encounterId: encId,
             baseType: (raw["baseType"] as any) ?? "monster",

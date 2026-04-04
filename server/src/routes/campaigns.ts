@@ -4,8 +4,12 @@ import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../shared/validate.js";
 import { requireParam } from "../lib/routeHelpers.js";
-import { rowToCampaign, rowToPlayer } from "../lib/db.js";
+import { rowToCampaign, rowToCampaignCharacter, CAMPAIGN_CHARACTER_COLS } from "../lib/db.js";
 import { DEFAULT_OVERRIDES } from "../lib/defaults.js";
+import { serializeCampaignCharacterLive, updateCampaignCharacterLive } from "../services/characters.js";
+import { rowToEncounterActor } from "../lib/db.js";
+import { ENCOUNTER_ACTOR_COLS } from "../lib/db.js";
+import { buildEncounterActorLive, updateEncounterActor } from "../services/combat.js";
 import { ACCEPTED_IMAGE_TYPES, resizeToWebP, deleteImageFiles } from "../lib/imageHelpers.js";
 import { absolutizePublicUrl } from "../lib/publicUrl.js";
 import { requireAdmin } from "../middleware/auth.js";
@@ -115,33 +119,57 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     if (!campaignRow) return res.status(404).json({ ok: false, message: "Campaign not found" });
 
     const t = now();
-    const emptyOverrides = JSON.stringify(DEFAULT_OVERRIDES);
-
-    // Reset all players to full HP, clear conditions + overrides.
-    const playersResult = db.prepare(
-      `UPDATE players SET hp_current = hp_max, overrides_json = ?, conditions_json = '[]', updated_at = ?
-       WHERE campaign_id = ?`
-    ).run(emptyOverrides, t, campaignId);
+    const playerRows = db
+      .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE campaign_id = ?`)
+      .all(campaignId) as Record<string, unknown>[];
+    for (const row of playerRows) {
+      const player = rowToCampaignCharacter(row);
+      updateCampaignCharacterLive(
+        db,
+        player.id,
+        player,
+        {
+          hpCurrent: player.hpMax,
+          overrides: { ...DEFAULT_OVERRIDES },
+          conditions: [],
+        },
+        t,
+      );
+    }
+    const playersResult = { changes: playerRows.length };
 
     // Reset all player combatants across every encounter in the campaign.
-    db.prepare(
-      `UPDATE combatants SET
-         hp_current      = (SELECT p.hp_max FROM players p WHERE p.id = combatants.base_id),
-         hp_max          = (SELECT p.hp_max FROM players p WHERE p.id = combatants.base_id),
-         conditions_json = '[]',
-         overrides_json  = ?,
-         updated_at      = ?
+    const combatantRows = db.prepare(
+      `SELECT ${ENCOUNTER_ACTOR_COLS}
+       FROM combatants
        WHERE base_type = 'player'
          AND encounter_id IN (SELECT id FROM encounters WHERE campaign_id = ?)`
-    ).run(emptyOverrides, t, campaignId);
+    ).all(campaignId) as Record<string, unknown>[];
 
-    const updatedEncounterIds = (
-      db.prepare(
-        `SELECT DISTINCT encounter_id FROM combatants
-         WHERE base_type = 'player'
-           AND encounter_id IN (SELECT id FROM encounters WHERE campaign_id = ?)`
-      ).all(campaignId) as { encounter_id: string }[]
-    ).map((r) => r.encounter_id);
+    for (const row of combatantRows) {
+      const combatant = rowToEncounterActor(row);
+      const playerHpMax = db.prepare(
+        `SELECT json_extract(sheet_json, '$.hpMax') AS hp_max FROM players WHERE id = ?`
+      ).get(combatant.baseId) as { hp_max: number | null } | undefined;
+      updateEncounterActor(
+        db,
+        {
+          ...combatant,
+          ...buildEncounterActorLive(combatant, {
+            hpCurrent: playerHpMax?.hp_max ?? combatant.hpMax,
+            overrides: { ...DEFAULT_OVERRIDES },
+            conditions: [],
+            usedReaction: false,
+            usedLegendaryActions: 0,
+            usedSpellSlots: {},
+          }),
+          updatedAt: t,
+        },
+        t,
+      );
+    }
+
+    const updatedEncounterIds = [...new Set(combatantRows.map((row) => row.encounter_id as string))];
 
     ctx.broadcast("players:changed", { campaignId });
     for (const encounterId of updatedEncounterIds) {

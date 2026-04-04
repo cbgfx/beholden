@@ -7,9 +7,9 @@ type ById<T> = Record<string, T>;
  * Small derived-data helper for CombatView.
  * Keeps CombatView lean while making data-flow explicit.
  */
-export function useRosterMaps(players: Player[], inpcs: INpc[] | undefined) {
-  const playersById = React.useMemo<ById<Player>>(() => {
-    const m: ById<Player> = {};
+export function useRosterMaps(players: CampaignCharacter[], inpcs: INpc[] | undefined) {
+  const playersById = React.useMemo<ById<CampaignCharacter>>(() => {
+    const m: ById<CampaignCharacter> = {};
     for (const p of players ?? []) m[p.id] = p;
     return m;
   }, [players]);

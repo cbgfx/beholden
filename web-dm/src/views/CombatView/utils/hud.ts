@@ -1,6 +1,6 @@
 import { theme } from "@/theme/theme";
-import type { Combatant } from "@/domain/types/domain";
-import type { Player } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
+import type { CampaignCharacter } from "@/domain/types/domain";
 
 export function clamp01(n: number) {
   if (!Number.isFinite(n)) return 0;

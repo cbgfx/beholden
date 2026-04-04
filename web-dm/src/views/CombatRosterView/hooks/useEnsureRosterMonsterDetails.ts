@@ -1,11 +1,11 @@
 import * as React from "react";
 import { api } from "@/services/api";
-import type { Combatant, INpc } from "@/domain/types/domain";
+import type { EncounterActor, INpc } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
 import type { Action } from "@/store/actions";
 
 type Props = {
-  combatants: Combatant[];
+  combatants: EncounterActor[];
   inpcs: INpc[];
   monsterDetails: Record<string, MonsterDetail>;
   dispatch: (action: Action) => void;

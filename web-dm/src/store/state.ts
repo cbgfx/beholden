@@ -1,4 +1,4 @@
-import type { Adventure, Campaign, Combatant, Encounter, INpc, Meta, Note, Player, TreasureEntry } from "@/domain/types/domain";
+import type { Adventure, Campaign, CampaignCharacter, Encounter, EncounterActor, INpc, Meta, Note, TreasureEntry } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
 
 export type DrawerState =
@@ -31,9 +31,9 @@ export type State = {
   selectedAdventureId: string | null;
   encounters: Encounter[];
   selectedEncounterId: string | null;
-  players: Player[];
+  players: CampaignCharacter[];
   inpcs: INpc[];
-  combatants: Combatant[];
+  combatants: EncounterActor[];
   // Cached compendium monster details keyed by monster id.
   monsterDetails: Record<string, MonsterDetail>;
   campaignNotes: Note[];

@@ -1,4 +1,4 @@
-import type { Adventure, Campaign, Combatant, Encounter, INpc, Meta, Note, Player, TreasureEntry } from "@/domain/types/domain";
+import type { Adventure, Campaign, CampaignCharacter, Encounter, EncounterActor, INpc, Meta, Note, TreasureEntry } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
 import type { DrawerState } from "@/store/state";
 
@@ -13,9 +13,9 @@ export type Action =
   | { type: "selectAdventure"; adventureId: string | null }
   | { type: "setEncounters"; encounters: Encounter[] }
   | { type: "selectEncounter"; encounterId: string | null }
-  | { type: "setPlayers"; players: Player[] }
+  | { type: "setPlayers"; players: CampaignCharacter[] }
   | { type: "setINpcs"; inpcs: INpc[] }
-  | { type: "setCombatants"; combatants: Combatant[] }
+  | { type: "setCombatants"; combatants: EncounterActor[] }
   | { type: "mergeMonsterDetails"; patch: Record<string, MonsterDetail> }
   | { type: "setCampaignNotes"; notes: Note[] }
   | { type: "setAdventureNotes"; notes: Note[] }

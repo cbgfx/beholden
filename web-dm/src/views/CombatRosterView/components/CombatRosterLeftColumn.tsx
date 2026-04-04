@@ -1,13 +1,13 @@
 import * as React from "react";
-import type { Combatant, Player } from "@/domain/types/domain";
+import type { EncounterActor, CampaignCharacter } from "@/domain/types/domain";
 import type { AddMonsterOptions, INpc } from "@/domain/types/domain";
 
 import { PlayersPanel } from "@/views/CampaignView/panels/PlayersPanel";
 import { INpcsPanel } from "@/views/CampaignView/panels/INpcsPanel";
 
 type Props = {
-  players: Player[];
-  combatants: Combatant[];
+  players: CampaignCharacter[];
+  combatants: EncounterActor[];
   inpcs: INpc[];
   selectedCampaignId: string;
   selectedEncounterId: string | null;

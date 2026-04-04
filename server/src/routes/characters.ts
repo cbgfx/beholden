@@ -6,17 +6,26 @@ import type { Express, Response } from "express";
 import type { ServerContext } from "../server/context.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
-import { rowToUserCharacter, USER_CHARACTER_COLS } from "../lib/db.js";
+import { rowToCampaignCharacter, rowToCharacterSheet, CAMPAIGN_CHARACTER_COLS, CHARACTER_SHEET_COLS } from "../lib/db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
-import { normalizeCharacterData } from "../lib/characterData.js";
 import {
   type Assignment,
   getAssignments,
   assignmentsToJson,
   getAssignedPlayers,
   broadcastPlayerCombatantChanges,
+  buildCampaignCharacterLiveState,
+  buildCampaignCharacterLive,
+  buildCharacterSheetState,
+  buildMirroredPlayerSnapshot,
+  insertProjectedPlayerRow,
   mergeLiveStats,
+  serializeCampaignCharacterLive,
+  serializeCharacterSheetState,
+  syncAssignedPlayerRows,
+  updateProjectedPlayerRow,
+  updateCampaignCharacterLive,
 } from "../services/characters.js";
 import { ACCEPTED_IMAGE_TYPES, resizeToWebP } from "../lib/imageHelpers.js";
 import { absolutizePublicUrl } from "../lib/publicUrl.js";
@@ -75,11 +84,11 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   app.get("/api/me/characters", requireAuth, (req, res) => {
     const userId = (req as any).user.userId;
     const chars = db
-      .prepare(`SELECT ${USER_CHARACTER_COLS} FROM user_characters WHERE user_id = ? ORDER BY updated_at DESC`)
+      .prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE user_id = ? ORDER BY updated_at DESC`)
       .all(userId) as Record<string, unknown>[];
 
     const result = chars.map((c) => {
-      const char = rowToUserCharacter(c);
+      const char = rowToCharacterSheet(c);
       const assignments = getAssignments(db, char.id);
       return { ...mergeLiveStats(db, char, assignments), campaigns: assignmentsToJson(assignments) };
     });
@@ -93,11 +102,11 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     if (!charId) return;
     const userId = (req as any).user.userId;
     const row = db
-      .prepare(`SELECT ${USER_CHARACTER_COLS} FROM user_characters WHERE id = ? AND user_id = ?`)
+      .prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ? AND user_id = ?`)
       .get(charId, userId) as Record<string, unknown> | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Not found" });
 
-    const char = rowToUserCharacter(row);
+    const char = rowToCharacterSheet(row);
     const assignments = getAssignments(db, char.id);
     const merged = mergeLiveStats(db, char, assignments);
 
@@ -127,31 +136,34 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
 
     db.prepare(`
       INSERT INTO user_characters
-        (id, user_id, name, player_name, class_name, species, level,
-         hp_max, hp_current, ac, speed,
-         str_score, dex_score, con_score, int_score, wis_score, cha_score,
-         color, character_data_json, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (id, user_id, sheet_json, image_url, character_data_json, shared_notes, created_at, updated_at)
+      VALUES (?, ?, ?, NULL, ?, '', ?, ?)
     `).run(
       id, userId,
-      p.name,
-      p.playerName ?? "",
-      p.className ?? "",
-      p.species ?? "",
-      p.level ?? 1,
-      p.hpMax ?? 0,
-      p.hpCurrent ?? p.hpMax ?? 0,
-      p.ac ?? 10,
-      p.speed ?? 30,
-      p.strScore ?? null, p.dexScore ?? null, p.conScore ?? null,
-      p.intScore ?? null, p.wisScore ?? null, p.chaScore ?? null,
-      p.color ?? null,
-      p.characterData ? JSON.stringify(normalizeCharacterData(p.characterData)) : null,
-      t, t
+      serializeCharacterSheetState({
+        name: p.name,
+        playerName: p.playerName ?? "",
+        className: p.className ?? "",
+        species: p.species ?? "",
+        level: p.level ?? 1,
+        hpMax: p.hpMax ?? 0,
+        hpCurrent: p.hpCurrent ?? p.hpMax ?? 0,
+        ac: p.ac ?? 10,
+        speed: p.speed ?? 30,
+        strScore: p.strScore ?? null,
+        dexScore: p.dexScore ?? null,
+        conScore: p.conScore ?? null,
+        intScore: p.intScore ?? null,
+        wisScore: p.wisScore ?? null,
+        chaScore: p.chaScore ?? null,
+        color: p.color ?? null,
+      }),
+      p.characterData ? JSON.stringify(p.characterData) : null,
+      t, t,
     );
 
-    const row = db.prepare(`SELECT ${USER_CHARACTER_COLS} FROM user_characters WHERE id = ?`).get(id) as Record<string, unknown>;
-    res.json({ ...rowToUserCharacter(row), campaigns: [] });
+    const row = db.prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ?`).get(id) as Record<string, unknown>;
+    res.json({ ...rowToCharacterSheet(row), campaigns: [] });
   });
 
   // Update a user-owned character
@@ -160,94 +172,84 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     if (!charId) return;
     const userId = (req as any).user.userId;
     const existing = db
-      .prepare(`SELECT ${USER_CHARACTER_COLS} FROM user_characters WHERE id = ? AND user_id = ?`)
+      .prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ? AND user_id = ?`)
       .get(charId, userId) as Record<string, unknown> | undefined;
     if (!existing) return res.status(404).json({ ok: false, message: "Not found" });
 
     const p = parseBody(CharacterUpdateBody, req);
     const t = now();
-    const ex = rowToUserCharacter(existing);
+    const ex = rowToCharacterSheet(existing);
 
     db.prepare(`
       UPDATE user_characters SET
-        name=?, player_name=?, class_name=?, species=?, level=?,
-        hp_max=?, hp_current=?, ac=?, speed=?,
-        str_score=?, dex_score=?, con_score=?, int_score=?, wis_score=?, cha_score=?,
-        color=?, character_data_json=?, updated_at=?
+        sheet_json=?, character_data_json=?, updated_at=?
       WHERE id=? AND user_id=?
     `).run(
-      p.name ?? ex.name,
-      p.playerName ?? ex.playerName,
-      p.className ?? ex.className,
-      p.species ?? ex.species,
-      p.level ?? ex.level,
-      p.hpMax ?? ex.hpMax,
-      p.hpCurrent ?? ex.hpCurrent,
-      p.ac ?? ex.ac,
-      p.speed ?? ex.speed,
-      p.strScore !== undefined ? p.strScore : ex.strScore,
-      p.dexScore !== undefined ? p.dexScore : ex.dexScore,
-      p.conScore !== undefined ? p.conScore : ex.conScore,
-      p.intScore !== undefined ? p.intScore : ex.intScore,
-      p.wisScore !== undefined ? p.wisScore : ex.wisScore,
-      p.chaScore !== undefined ? p.chaScore : ex.chaScore,
-      p.color !== undefined ? p.color : ex.color,
+      serializeCharacterSheetState({
+        name: p.name ?? ex.name,
+        playerName: p.playerName ?? ex.playerName,
+        className: p.className ?? ex.className,
+        species: p.species ?? ex.species,
+        level: p.level ?? ex.level,
+        hpMax: p.hpMax ?? ex.hpMax,
+        hpCurrent: p.hpCurrent ?? ex.hpCurrent,
+        ac: p.ac ?? ex.ac,
+        speed: p.speed ?? ex.speed,
+        strScore: p.strScore !== undefined ? p.strScore : ex.strScore,
+        dexScore: p.dexScore !== undefined ? p.dexScore : ex.dexScore,
+        conScore: p.conScore !== undefined ? p.conScore : ex.conScore,
+        intScore: p.intScore !== undefined ? p.intScore : ex.intScore,
+        wisScore: p.wisScore !== undefined ? p.wisScore : ex.wisScore,
+        chaScore: p.chaScore !== undefined ? p.chaScore : ex.chaScore,
+        color: p.color !== undefined ? p.color : ex.color,
+        ...(ex.deathSaves ? { deathSaves: ex.deathSaves } : {}),
+      }),
       p.characterData !== undefined
         ? (p.characterData === null
           ? null
-          : JSON.stringify(normalizeCharacterData({ ...(ex.characterData ?? {}), ...p.characterData })))
+          : JSON.stringify({ ...(ex.characterData ?? {}), ...p.characterData }))
         : existing.character_data_json,
       t, charId, userId
     );
 
-    // Sync all assigned campaign players rows with updated stats
-    for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
-      db.prepare(`
-        UPDATE players SET
-          character_name=?, class=?, species=?, level=?,
-          hp_max=?, hp_current=?, ac=?, speed=?,
-          str=?, dex=?, con=?, int=?, wis=?, cha=?,
-          color=?, updated_at=?
-        WHERE id=?
-      `).run(
-        p.name ?? ex.name,
-        p.className ?? ex.className,
-        p.species ?? ex.species,
-        p.level ?? ex.level,
-        p.hpMax ?? ex.hpMax,
-        p.hpCurrent ?? ex.hpCurrent,
-        p.ac ?? ex.ac,
-        p.speed ?? ex.speed,
-        p.strScore !== undefined ? p.strScore : ex.strScore,
-        p.dexScore !== undefined ? p.dexScore : ex.dexScore,
-        p.conScore !== undefined ? p.conScore : ex.conScore,
-        p.intScore !== undefined ? p.intScore : ex.intScore,
-        p.wisScore !== undefined ? p.wisScore : ex.wisScore,
-        p.chaScore !== undefined ? p.chaScore : ex.chaScore,
-        p.color !== undefined ? p.color : ex.color,
-        t, player_id
-      );
-      ctx.broadcast("players:changed", { campaignId: campaign_id });
-      broadcastPlayerCombatantChanges(db, ctx.broadcast, player_id);
-    }
+    const nextChar = {
+      ...ex,
+      name: p.name ?? ex.name,
+      playerName: p.playerName ?? ex.playerName,
+      className: p.className ?? ex.className,
+      species: p.species ?? ex.species,
+      level: p.level ?? ex.level,
+      hpMax: p.hpMax ?? ex.hpMax,
+      hpCurrent: p.hpCurrent ?? ex.hpCurrent,
+      ac: p.ac ?? ex.ac,
+      speed: p.speed ?? ex.speed,
+      strScore: p.strScore !== undefined ? p.strScore : ex.strScore,
+      dexScore: p.dexScore !== undefined ? p.dexScore : ex.dexScore,
+      conScore: p.conScore !== undefined ? p.conScore : ex.conScore,
+      intScore: p.intScore !== undefined ? p.intScore : ex.intScore,
+      wisScore: p.wisScore !== undefined ? p.wisScore : ex.wisScore,
+      chaScore: p.chaScore !== undefined ? p.chaScore : ex.chaScore,
+      color: p.color !== undefined ? p.color : ex.color,
+    };
+    syncAssignedPlayerRows(db, ctx.broadcast, charId, buildMirroredPlayerSnapshot(nextChar), t, userId);
 
-    const updated = db.prepare(`SELECT ${USER_CHARACTER_COLS} FROM user_characters WHERE id = ?`).get(charId) as Record<string, unknown>;
-    res.json(rowToUserCharacter(updated));
+    const updated = db.prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ?`).get(charId) as Record<string, unknown>;
+    res.json(rowToCharacterSheet(updated));
   });
 
-  // Player self-updates their own conditions (writes to players.conditions_json + broadcasts)
+  // Player self-updates their linked campaign-character conditions.
   app.patch("/api/me/characters/:id/conditions", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
     if (!requireUserChar(charId, (req as any).user.userId, res)) return;
 
     const conditions = Array.isArray(req.body?.conditions) ? req.body.conditions : [];
-    const conditionsJson = JSON.stringify(conditions);
     const t = now();
 
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
-      db.prepare("UPDATE players SET conditions_json=?, updated_at=? WHERE id=?")
-        .run(conditionsJson, t, player_id);
+      const pRow = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(player_id) as Record<string, unknown>;
+      const player = rowToCampaignCharacter(pRow);
+      updateCampaignCharacterLive(db, player_id, player, { conditions }, t);
       ctx.broadcast("players:changed", { campaignId: campaign_id });
       broadcastPlayerCombatantChanges(db, ctx.broadcast, player_id);
     }
@@ -255,7 +257,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true, conditions });
   });
 
-  // Player self-updates death saves (writes to both user_characters + players rows, broadcasts)
+  // Player self-updates death saves on both the sheet and any linked campaign characters.
   app.patch("/api/me/characters/:id/deathSaves", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
@@ -269,12 +271,24 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const deathSavesJson = JSON.stringify(deathSaves);
     const t = now();
 
-    db.prepare("UPDATE user_characters SET death_saves_json=?, updated_at=? WHERE id=?")
-      .run(deathSavesJson, t, charId);
+    const currentRow = db
+      .prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ? AND user_id = ?`)
+      .get(charId, (req as any).user.userId) as Record<string, unknown>;
+    const current = rowToCharacterSheet(currentRow);
+    db.prepare("UPDATE user_characters SET sheet_json=?, updated_at=? WHERE id=?")
+      .run(
+        serializeCharacterSheetState({
+          ...buildCharacterSheetState(current),
+          deathSaves,
+        }),
+        t,
+        charId,
+      );
 
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
-      db.prepare("UPDATE players SET death_saves_json=?, updated_at=? WHERE id=?")
-        .run(deathSavesJson, t, player_id);
+      const pRow = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(player_id) as Record<string, unknown>;
+      const player = rowToCampaignCharacter(pRow);
+      updateCampaignCharacterLive(db, player_id, player, { deathSaves }, t);
       ctx.broadcast("players:changed", { campaignId: campaign_id });
       broadcastPlayerCombatantChanges(db, ctx.broadcast, player_id);
     }
@@ -288,11 +302,11 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     if (!charId) return;
     const userId = (req as any).user.userId;
     const existing = db
-      .prepare(`SELECT ${USER_CHARACTER_COLS} FROM user_characters WHERE id = ? AND user_id = ?`)
+      .prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ? AND user_id = ?`)
       .get(charId, userId) as Record<string, unknown> | undefined;
     if (!existing) return res.status(404).json({ ok: false, message: "Not found" });
 
-    const ex = rowToUserCharacter(existing);
+    const ex = rowToCharacterSheet(existing);
     const parsed = parseBody(OverridesBody, req);
     const overrides = {
       tempHp: Math.max(0, Math.floor(Number(parsed.tempHp) || 0)),
@@ -309,8 +323,9 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       .run(JSON.stringify(nextCharacterData), t, charId, userId);
 
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
-      db.prepare("UPDATE players SET overrides_json = ?, updated_at = ? WHERE id = ?")
-        .run(JSON.stringify(overrides), t, player_id);
+      const pRow = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(player_id) as Record<string, unknown>;
+      const player = rowToCampaignCharacter(pRow);
+      updateCampaignCharacterLive(db, player_id, player, { overrides }, t);
       ctx.broadcast("players:changed", { campaignId: campaign_id });
       broadcastPlayerCombatantChanges(db, ctx.broadcast, player_id);
     }
@@ -318,7 +333,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true, overrides });
   });
 
-  // Toggle inspiration (writes to linked players overrides_json + broadcasts)
+  // Toggle inspiration on linked campaign characters.
   app.patch("/api/me/characters/:id/inspiration", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
@@ -328,12 +343,12 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const t = now();
 
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
-      const row = db.prepare("SELECT overrides_json FROM players WHERE id = ?")
-        .get(player_id) as { overrides_json: string } | undefined;
-      const overrides = JSON.parse(row?.overrides_json || "{}") as Record<string, unknown>;
-      overrides.inspiration = inspiration;
-      db.prepare("UPDATE players SET overrides_json=?, updated_at=? WHERE id=?")
-        .run(JSON.stringify(overrides), t, player_id);
+      const pRow = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`)
+        .get(player_id) as Record<string, unknown> | undefined;
+      if (!pRow) continue;
+      const player = rowToCampaignCharacter(pRow);
+      const overrides = { ...(player.overrides ?? DEFAULT_OVERRIDES), inspiration };
+      updateCampaignCharacterLive(db, player_id, player, { overrides }, t);
       ctx.broadcast("players:changed", { campaignId: campaign_id });
     }
 
@@ -372,7 +387,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       ctx.broadcast("players:changed", { campaignId: campaign_id });
     }
 
-    // CASCADE handles character_campaigns deletion
+    // Linked campaign characters are deleted alongside the sheet.
     db.prepare("DELETE FROM user_characters WHERE id = ?").run(charId);
     res.json({ ok: true });
   });
@@ -384,14 +399,15 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const userId = (req as any).user.userId;
 
     const existing = db
-      .prepare(`SELECT ${USER_CHARACTER_COLS} FROM user_characters WHERE id = ? AND user_id = ?`)
+      .prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ? AND user_id = ?`)
       .get(charId, userId) as Record<string, unknown> | undefined;
     if (!existing) return res.status(404).json({ ok: false, message: "Not found" });
-    const char = rowToUserCharacter(existing);
+    const char = rowToCharacterSheet(existing);
 
     const { campaignIds } = parseBody(AssignBody, req);
     const t = now();
     const results: { campaignId: string; playerId: string }[] = [];
+    const snapshot = buildMirroredPlayerSnapshot(char);
 
     for (const campaignId of campaignIds) {
       // Verify user is a member of the campaign
@@ -400,66 +416,28 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
         .get(campaignId, userId);
       if (!membership) continue;
 
-      // Check if already assigned
       const existing_link = db
-        .prepare("SELECT id, player_id FROM character_campaigns WHERE character_id = ? AND campaign_id = ?")
-        .get(charId, campaignId) as { id: string; player_id: string | null } | undefined;
+        .prepare("SELECT id FROM players WHERE campaign_id = ? AND character_id = ?")
+        .get(campaignId, charId) as { id: string } | undefined;
 
-      if (existing_link?.player_id) {
-        // Already assigned — sync stats instead
-        db.prepare(`
-          UPDATE players SET
-            character_name=?, class=?, species=?, level=?,
-            hp_max=?, hp_current=?, ac=?, speed=?,
-            str=?, dex=?, con=?, int=?, wis=?, cha=?,
-            color=?, user_id=?, updated_at=?
-          WHERE id=?
-        `).run(
-          char.name, char.className, char.species, char.level,
-          char.hpMax, char.hpCurrent, char.ac, char.speed,
-          char.strScore, char.dexScore, char.conScore,
-          char.intScore, char.wisScore, char.chaScore,
-          char.color, userId, t, existing_link.player_id
-        );
+      if (existing_link?.id) {
+        updateProjectedPlayerRow(db, existing_link.id, snapshot, t, userId);
         ctx.broadcast("players:changed", { campaignId });
-        results.push({ campaignId, playerId: existing_link.player_id });
+        results.push({ campaignId, playerId: existing_link.id });
         continue;
       }
 
-      // Create a players row for this campaign
       const playerId = uid();
-      db.prepare(`
-        INSERT INTO players
-          (id, campaign_id, user_id, player_name, character_name, class, species, level,
-           hp_max, hp_current, ac, speed, str, dex, con, int, wis, cha, color,
-           overrides_json, conditions_json, death_saves_json, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        playerId, campaignId, userId,
-        char.playerName || "Player",
-        char.name,
-        char.className || "Class",
-        char.species || "Species",
-        char.level,
-        char.hpMax, char.hpCurrent, char.ac, char.speed,
-        char.strScore, char.dexScore, char.conScore,
-        char.intScore, char.wisScore, char.chaScore,
-        char.color,
-        JSON.stringify(DEFAULT_OVERRIDES),
-        JSON.stringify([]),
-        JSON.stringify(DEFAULT_DEATH_SAVES),
-        t, t
-      );
-
-      // Upsert character_campaigns link
-      if (existing_link) {
-        db.prepare("UPDATE character_campaigns SET player_id = ? WHERE id = ?").run(playerId, existing_link.id);
-      } else {
-        db.prepare(`
-          INSERT INTO character_campaigns (id, character_id, campaign_id, player_id)
-          VALUES (?, ?, ?, ?)
-        `).run(uid(), charId, campaignId, playerId);
-      }
+      insertProjectedPlayerRow(db, {
+        playerId,
+        campaignId,
+        characterId: charId,
+        snapshot,
+        liveState: buildCampaignCharacterLiveState(char),
+        createdAt: t,
+        updatedAt: t,
+        userId,
+      });
 
       ctx.broadcast("players:changed", { campaignId });
       results.push({ campaignId, playerId });
@@ -482,16 +460,12 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const { campaignId } = parseBody(UnassignBody, req);
 
     const link = db
-      .prepare("SELECT id, player_id FROM character_campaigns WHERE character_id = ? AND campaign_id = ?")
-      .get(charId, campaignId) as { id: string; player_id: string | null } | undefined;
+      .prepare("SELECT id FROM players WHERE character_id = ? AND campaign_id = ?")
+      .get(charId, campaignId) as { id: string } | undefined;
 
-    if (link?.player_id) {
-      db.prepare("DELETE FROM players WHERE id = ?").run(link.player_id);
+    if (link?.id) {
+      db.prepare("DELETE FROM players WHERE id = ?").run(link.id);
       ctx.broadcast("players:changed", { campaignId });
-    }
-
-    if (link) {
-      db.prepare("DELETE FROM character_campaigns WHERE id = ?").run(link.id);
     }
 
     res.json({ ok: true });

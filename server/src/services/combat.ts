@@ -1,9 +1,93 @@
 // server/src/services/combat.ts
 import type Database from "better-sqlite3";
 import { now, uid } from "../lib/runtime.js";
-import { rowToCombatant, rowToPlayer, COMBATANT_COLS, PLAYER_COLS } from "../lib/db.js";
-import type { StoredCombatant, StoredPlayer } from "../server/userData.js";
+import { rowToEncounterActor, rowToCampaignCharacter, ENCOUNTER_ACTOR_COLS, CAMPAIGN_CHARACTER_COLS } from "../lib/db.js";
+import type {
+  StoredEncounterActor,
+  StoredCampaignCharacter,
+  StoredEncounterActorLiveState,
+  StoredEncounterActorSnapshot,
+} from "../server/userData.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
+import { serializeCampaignCharacterLive } from "./characters.js";
+
+export function serializeEncounterActorSnapshot(snapshot: StoredEncounterActorSnapshot): string {
+  return JSON.stringify(snapshot);
+}
+
+export function serializeEncounterActorLive(live: StoredEncounterActorLiveState): string {
+  return JSON.stringify(live);
+}
+
+export function buildEncounterActorSnapshot(
+  actor: Pick<
+    StoredEncounterActor,
+    "name" | "label" | "friendly" | "color" | "hpMax" | "hpDetails" | "ac" | "acDetails" | "attackOverrides"
+  >,
+  patch: Partial<StoredEncounterActorSnapshot> = {},
+): StoredEncounterActorSnapshot {
+  return {
+    name: patch.name ?? actor.name,
+    label: patch.label ?? actor.label,
+    friendly: patch.friendly ?? actor.friendly,
+    color: patch.color ?? actor.color,
+    hpMax: patch.hpMax ?? actor.hpMax,
+    hpDetails: patch.hpDetails !== undefined ? patch.hpDetails : actor.hpDetails,
+    ac: patch.ac ?? actor.ac,
+    acDetails: patch.acDetails !== undefined ? patch.acDetails : actor.acDetails,
+    attackOverrides: patch.attackOverrides !== undefined ? patch.attackOverrides : actor.attackOverrides,
+  };
+}
+
+export function buildEncounterActorLive(
+  actor: Pick<
+    StoredEncounterActor,
+    | "initiative"
+    | "hpCurrent"
+    | "overrides"
+    | "conditions"
+    | "deathSaves"
+    | "usedReaction"
+    | "usedLegendaryActions"
+    | "usedLegendaryResistances"
+    | "usedSpellSlots"
+  >,
+  patch: Partial<StoredEncounterActorLiveState> = {},
+): StoredEncounterActorLiveState {
+  const deathSaves = patch.deathSaves ?? actor.deathSaves;
+  return {
+    initiative: patch.initiative !== undefined ? patch.initiative : actor.initiative,
+    hpCurrent: patch.hpCurrent !== undefined ? patch.hpCurrent : actor.hpCurrent,
+    overrides: patch.overrides ?? actor.overrides ?? DEFAULT_OVERRIDES,
+    conditions: patch.conditions ?? actor.conditions ?? [],
+    ...(deathSaves ? { deathSaves } : {}),
+    usedReaction: patch.usedReaction ?? actor.usedReaction ?? false,
+    usedLegendaryActions: patch.usedLegendaryActions ?? actor.usedLegendaryActions ?? 0,
+    usedLegendaryResistances:
+      patch.usedLegendaryResistances ?? actor.usedLegendaryResistances ?? 0,
+    ...(patch.usedSpellSlots ?? actor.usedSpellSlots
+      ? { usedSpellSlots: patch.usedSpellSlots ?? actor.usedSpellSlots ?? {} }
+      : {}),
+  };
+}
+
+export function updateEncounterActor(
+  db: Database.Database,
+  actor: StoredEncounterActor,
+  updatedAt: number,
+): void {
+  db.prepare(`
+    UPDATE combatants SET
+      snapshot_json=?, live_json=?, updated_at=?
+    WHERE id=? AND encounter_id=?
+  `).run(
+    serializeEncounterActorSnapshot(buildEncounterActorSnapshot(actor)),
+    serializeEncounterActorLive(buildEncounterActorLive(actor)),
+    updatedAt,
+    actor.id,
+    actor.encounterId,
+  );
+}
 
 /** Ensures a combat record exists for the encounter; creates it if missing. */
 export function ensureCombat(db: Database.Database, encounterId: string): void {
@@ -17,9 +101,9 @@ export function ensureCombat(db: Database.Database, encounterId: string): void {
 export function nextLabelNumber(db: Database.Database, encounterId: string, baseName: string): number {
   ensureCombat(db, encounterId);
   const row = db.prepare(
-    `SELECT COALESCE(MAX(CAST(SUBSTR(label, LENGTH(?)+2) AS INTEGER)), 0) + 1 AS n
+    `SELECT COALESCE(MAX(CAST(SUBSTR(json_extract(snapshot_json, '$.label'), LENGTH(?)+2) AS INTEGER)), 0) + 1 AS n
      FROM combatants
-     WHERE encounter_id = ? AND label LIKE ? || ' %'`
+     WHERE encounter_id = ? AND json_extract(snapshot_json, '$.label') LIKE ? || ' %'`
   ).get(baseName, encounterId, baseName) as { n: number };
   return row.n;
 }
@@ -30,9 +114,9 @@ export function createPlayerCombatant({
   t = now(),
 }: {
   encounterId: string;
-  player: StoredPlayer;
+  player: StoredCampaignCharacter;
   t?: number;
-}): StoredCombatant {
+}): StoredEncounterActor {
   return {
     id: uid(),
     encounterId,
@@ -57,33 +141,18 @@ export function createPlayerCombatant({
   };
 }
 
-/** Insert a StoredCombatant into the combatants table. */
-export function insertCombatant(db: Database.Database, c: StoredCombatant): void {
+/** Insert a StoredEncounterActor into the combatants table. */
+export function insertCombatant(db: Database.Database, c: StoredEncounterActor): void {
   db.prepare(
     `INSERT INTO combatants
-       (id, encounter_id, base_type, base_id, name, label, initiative, friendly, color,
-        hp_current, hp_max, hp_details, ac, ac_details, sort, used_reaction, used_legendary_actions,
-        overrides_json, conditions_json, death_saves_json, used_spell_slots_json, attack_overrides_json,
-        created_at, updated_at)
+       (id, encounter_id, base_type, base_id, snapshot_json, live_json, sort, created_at, updated_at)
      VALUES
-       (?, ?, ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?,
-        ?, ?)`
+       (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
-    c.id, c.encounterId, c.baseType, c.baseId, c.name, c.label,
-    c.initiative,
-    c.friendly ? 1 : 0,
-    c.color,
-    c.hpCurrent, c.hpMax, c.hpDetails, c.ac, c.acDetails,
+    c.id, c.encounterId, c.baseType, c.baseId,
+    serializeEncounterActorSnapshot(buildEncounterActorSnapshot(c)),
+    serializeEncounterActorLive(buildEncounterActorLive(c)),
     c.sort ?? null,
-    c.usedReaction ? 1 : 0,
-    c.usedLegendaryActions ?? 0,
-    JSON.stringify(c.overrides ?? DEFAULT_OVERRIDES),
-    JSON.stringify(c.conditions ?? []),
-    c.deathSaves ? JSON.stringify(c.deathSaves) : null,
-    c.usedSpellSlots ? JSON.stringify(c.usedSpellSlots) : null,
-    c.attackOverrides != null ? JSON.stringify(c.attackOverrides) : null,
     c.createdAt,
     c.updatedAt,
   );
@@ -96,27 +165,32 @@ export function insertCombatant(db: Database.Database, c: StoredCombatant): void
  */
 export function syncCombatantToPlayer(
   db: Database.Database,
-  combatant: StoredCombatant,
+  combatant: StoredEncounterActor,
   t: number
 ): string | null {
   if (combatant.baseType !== "player") return null;
   const pRow = db
-    .prepare("SELECT campaign_id FROM players WHERE id = ?")
-    .get(combatant.baseId) as { campaign_id: string } | undefined;
+    .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`)
+    .get(combatant.baseId) as Record<string, unknown> | undefined;
   if (!pRow) return null;
+  const player = rowToCampaignCharacter(pRow);
   db.prepare(`
     UPDATE players SET
-      hp_current=?, conditions_json=?, death_saves_json=?, overrides_json=?, updated_at=?
+      live_json=?, updated_at=?
     WHERE id=?
   `).run(
-    combatant.hpCurrent,
-    JSON.stringify(combatant.conditions ?? []),
-    combatant.deathSaves ? JSON.stringify(combatant.deathSaves) : null,
-    JSON.stringify(combatant.overrides ?? DEFAULT_OVERRIDES),
+    serializeCampaignCharacterLive({
+      hpCurrent: combatant.hpCurrent ?? player.hpCurrent,
+      conditions: combatant.conditions ?? [],
+      overrides: combatant.overrides ?? DEFAULT_OVERRIDES,
+      ...((combatant.deathSaves ?? player.deathSaves)
+        ? { deathSaves: combatant.deathSaves ?? player.deathSaves }
+        : {}),
+    }),
     t,
     combatant.baseId
   );
-  return pRow.campaign_id;
+  return player.campaignId;
 }
 
 /**
@@ -125,14 +199,14 @@ export function syncCombatantToPlayer(
  */
 export function hydratePlayerCombatant(
   db: Database.Database,
-  combatant: StoredCombatant
-): StoredCombatant {
+  combatant: StoredEncounterActor
+): StoredEncounterActor {
   if (combatant.baseType !== "player") return combatant;
   const pRow = db
-    .prepare(`SELECT ${PLAYER_COLS} FROM players WHERE id = ?`)
+    .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`)
     .get(combatant.baseId) as Record<string, unknown> | undefined;
   if (!pRow) return combatant;
-  const player = rowToPlayer(pRow);
+  const player = rowToCampaignCharacter(pRow);
   return {
     ...combatant,
     name: player.characterName,
@@ -149,9 +223,9 @@ export function hydratePlayerCombatant(
 }
 
 /** Load all combatants for an encounter, sorted by position. */
-export function loadCombatants(db: Database.Database, encounterId: string): StoredCombatant[] {
+export function loadCombatants(db: Database.Database, encounterId: string): StoredEncounterActor[] {
   const rows = db.prepare(
-    `SELECT ${COMBATANT_COLS} FROM combatants WHERE encounter_id = ? ORDER BY COALESCE(sort, 9999), created_at`
+    `SELECT ${ENCOUNTER_ACTOR_COLS} FROM combatants WHERE encounter_id = ? ORDER BY COALESCE(sort, 9999), created_at`
   ).all(encounterId) as Record<string, unknown>[];
-  return rows.map(rowToCombatant);
+  return rows.map(rowToEncounterActor);
 }

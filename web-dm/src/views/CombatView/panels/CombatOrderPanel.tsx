@@ -1,5 +1,5 @@
 import React from "react";
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 import { theme } from "@/theme/theme";
 import { Panel } from "@/ui/Panel";
 import { IconInitiative } from "@/icons";
@@ -8,7 +8,7 @@ import { useCombatOrderModel } from "@/views/CombatView/panels/CombatOrderPanel/
 import { CombatOrderRow } from "@/views/CombatView/panels/CombatOrderPanel/components/CombatOrderRow";
 
 export function CombatOrderPanel(props: {
-  combatants: Combatant[];
+  combatants: EncounterActor[];
   playersById: Record<
     string,
     {
@@ -21,6 +21,7 @@ export function CombatOrderPanel(props: {
       hpMax: number;
       hpCurrent: number;
       deathSaves?: { success: number; fail: number };
+      imageUrl?: string | null;
     }
   >;
   monsterCrById: Record<string, number | null | undefined>;

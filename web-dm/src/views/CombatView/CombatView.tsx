@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useParams } from "react-router-dom";
 import { useStore } from "@/store";
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 import type { State } from "@/store/state";
 import { theme } from "@/theme/theme";
 
@@ -102,8 +102,8 @@ export function CombatView() {
 
   const { monsterCache, setMonsterCache, monsterCrById, activeMonster, targetMonster } = useMonsterDetailsCache(
     combatants,
-    (active as Combatant | null) ?? null,
-    (target as Combatant | null) ?? null,
+    (active as EncounterActor | null) ?? null,
+    (target as EncounterActor | null) ?? null,
     inpcsById
   );
 
@@ -141,7 +141,7 @@ export function CombatView() {
     inpcsById,
     delta,
     setDelta,
-    target: (target as Combatant | null) ?? null,
+    target: (target as EncounterActor | null) ?? null,
     refresh,
     monsterCache,
     setMonsterCache,
@@ -181,13 +181,13 @@ export function CombatView() {
   const activeCtx = useCombatantDetailsCtx({
     isNarrow,
     role: "active",
-    combatant: (active as Combatant | null) ?? null,
+    combatant: (active as EncounterActor | null) ?? null,
     selectedMonster: applyMonsterAttackOverrides(activeMonster ?? null, active ?? null),
     playersById,
     spellNames: sortedActiveSpellNames,
     spellLevels: spellLevelCache,
     roster: orderedCombatants,
-    activeForCaster: (active as Combatant | null) ?? null,
+    activeForCaster: (active as EncounterActor | null) ?? null,
     currentRound: round,
     updateCombatant,
     onOpenOverrides,
@@ -199,13 +199,13 @@ export function CombatView() {
   const targetCtx = useCombatantDetailsCtx({
     isNarrow,
     role: "target",
-    combatant: (target as Combatant | null) ?? null,
+    combatant: (target as EncounterActor | null) ?? null,
     selectedMonster: applyMonsterAttackOverrides(targetMonster ?? null, target ?? null),
     playersById,
     spellNames: sortedTargetSpellNames,
     spellLevels: spellLevelCache,
     roster: orderedCombatants,
-    activeForCaster: (active as Combatant | null) ?? null,
+    activeForCaster: (active as EncounterActor | null) ?? null,
     currentRound: round,
     updateCombatant,
     onOpenOverrides,

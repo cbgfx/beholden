@@ -5,6 +5,7 @@ import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { rowToTreasure, nextSortFor, TREASURE_COLS } from "../lib/db.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
+import type { StoredTreasureState } from "../server/userData.js";
 
 const TreasureQtyBody = z.object({
   qty: z.number().int().min(1),
@@ -33,6 +34,10 @@ const TreasureCreateBody = z.discriminatedUnion("source", [
 export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now, normalizeKey } = ctx.helpers;
+
+  function serializeTreasureState(entry: StoredTreasureState) {
+    return JSON.stringify(entry);
+  }
 
   app.get("/api/campaigns/:campaignId/treasure", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
@@ -63,11 +68,30 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
   app.patch("/api/treasure/:treasureId/qty", dmOrAdmin(db), (req, res) => {
     const treasureId = requireParam(req, res, "treasureId");
     if (!treasureId) return;
-    const row = db.prepare("SELECT campaign_id FROM treasure WHERE id = ?").get(treasureId) as { campaign_id: string } | undefined;
+    const row = db
+      .prepare(`SELECT ${TREASURE_COLS} FROM treasure WHERE id = ?`)
+      .get(treasureId) as Record<string, unknown> | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Treasure not found" });
     const { qty } = parseBody(TreasureQtyBody, req);
-    db.prepare("UPDATE treasure SET qty = ?, updated_at = ? WHERE id = ?").run(qty, now(), treasureId);
-    ctx.broadcast("treasure:changed", { campaignId: row.campaign_id });
+    const treasure = rowToTreasure(row);
+    const t = now();
+    db.prepare("UPDATE treasure SET entry_json = ?, updated_at = ? WHERE id = ?").run(
+      serializeTreasureState({
+        source: treasure.source,
+        itemId: treasure.itemId,
+        name: treasure.name,
+        rarity: treasure.rarity,
+        type: treasure.type,
+        type_key: treasure.type_key,
+        attunement: treasure.attunement,
+        magic: treasure.magic,
+        text: treasure.text,
+        qty,
+      }),
+      t,
+      treasureId
+    );
+    ctx.broadcast("treasure:changed", { campaignId: treasure.campaignId });
     res.json({ ok: true, qty });
   });
 
@@ -145,13 +169,18 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     const id = uid();
     const t = now();
 
-    let name = "New Item";
-    let rarity: string | null = null;
-    let type: string | null = null;
-    let typeKey: string | null = null;
-    let attunement = false;
-    let magic = false;
-    let text = "";
+    let entry: StoredTreasureState = {
+      source,
+      itemId: itemId != null ? String(itemId) : null,
+      name: "New Item",
+      rarity: null,
+      type: null,
+      type_key: null,
+      attunement: false,
+      magic: false,
+      text: "",
+      qty,
+    };
 
     if (source === "compendium") {
       const itRow = db
@@ -160,22 +189,33 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
       if (!itRow)
         return { error: { status: 404, message: "Item not found in compendium" } };
       const it = JSON.parse(itRow.data_json);
-      name = it.name;
-      rarity = it.rarity ?? null;
-      type = it.type ?? null;
-      typeKey = it.typeKey ?? it.type_key ?? null;
-      attunement = Boolean(it.attunement);
-      magic = Boolean(it.magic);
-      text = Array.isArray(it.text) ? it.text.join("\n\n") : (it.text ?? "");
+      entry = {
+        source,
+        itemId: String(itemId ?? ""),
+        name: it.name,
+        rarity: it.rarity ?? null,
+        type: it.type ?? null,
+        type_key: it.typeKey ?? it.type_key ?? null,
+        attunement: Boolean(it.attunement),
+        magic: Boolean(it.magic),
+        text: Array.isArray(it.text) ? it.text.join("\n\n") : (it.text ?? ""),
+        qty,
+      };
     } else {
       const c = (custom as Record<string, unknown>) ?? {};
-      name = String(c.name ?? "New Item").trim() || "New Item";
-      rarity = c.rarity != null ? String(c.rarity).trim() : null;
-      type = c.type != null ? String(c.type).trim() : null;
-      typeKey = type ? normalizeKey(type) : null;
-      attunement = Boolean(c.attunement);
-      magic = Boolean(c.magic);
-      text = c.text != null ? String(c.text) : "";
+      const type = c.type != null ? String(c.type).trim() : null;
+      entry = {
+        source,
+        itemId: null,
+        name: String(c.name ?? "New Item").trim() || "New Item",
+        rarity: c.rarity != null ? String(c.rarity).trim() : null,
+        type,
+        type_key: type ? normalizeKey(type) : null,
+        attunement: Boolean(c.attunement),
+        magic: Boolean(c.magic),
+        text: c.text != null ? String(c.text) : "",
+        qty,
+      };
     }
 
     const sort = adventureId
@@ -184,21 +224,21 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
 
     db.prepare(`
       INSERT INTO treasure
-        (id, campaign_id, adventure_id, source, item_id, name, rarity, type, type_key,
-         attunement, magic, text, qty, sort, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (id, campaign_id, adventure_id, entry_json, sort, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(
-      id, campaignId, adventureId ?? null, source,
-      itemId != null ? String(itemId) : null,
-      name, rarity, type, typeKey,
-      attunement ? 1 : 0,
-      magic ? 1 : 0,
-      text, qty, sort, t, t
+      id,
+      campaignId,
+      adventureId ?? null,
+      serializeTreasureState(entry),
+      sort,
+      t,
+      t
     );
 
-    const entry = rowToTreasure(
+    const createdEntry = rowToTreasure(
       db.prepare(`SELECT ${TREASURE_COLS} FROM treasure WHERE id = ?`).get(id) as Record<string, unknown>
     );
-    return { entry };
+    return { entry: createdEntry };
   }
 }

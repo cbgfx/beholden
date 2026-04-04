@@ -1,13 +1,13 @@
 import { z } from "zod";
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
-import type { StoredCombatant } from "../server/userData.js";
+import type { StoredEncounterActor } from "../server/userData.js";
 import { parseBody } from "../shared/validate.js";
 import { requireParam } from "../lib/routeHelpers.js";
-import { rowToEncounter, rowToCombatant, nextSortFor, ENCOUNTER_COLS } from "../lib/db.js";
+import { rowToEncounter, rowToEncounterActor, nextSortFor, ENCOUNTER_COLS } from "../lib/db.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
-import { ensureCombat, insertCombatant, loadCombatants } from "../services/combat.js";
+import { ensureCombat, insertCombatant, loadCombatants, buildEncounterActorLive } from "../services/combat.js";
 
 const EncounterCreateBody = z.object({
   name: z.string().trim().optional(),
@@ -153,18 +153,20 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
       ensureCombat(db, newId);
 
       for (const c of origCombatants) {
-        const fresh: StoredCombatant = {
+        const fresh: StoredEncounterActor = {
           ...c,
           id: uid(),
           encounterId: newId,
-          initiative: null,
-          conditions: [],
-          hpCurrent: c.hpMax,
-          overrides: { ...DEFAULT_OVERRIDES },
-          deathSaves: { ...DEFAULT_DEATH_SAVES },
-          usedReaction: false,
-          usedLegendaryActions: 0,
-          usedSpellSlots: {},
+          ...buildEncounterActorLive(c, {
+            initiative: null,
+            hpCurrent: c.hpMax,
+            overrides: { ...DEFAULT_OVERRIDES },
+            conditions: [],
+            deathSaves: { ...DEFAULT_DEATH_SAVES },
+            usedReaction: false,
+            usedLegendaryActions: 0,
+            usedSpellSlots: {},
+          }),
           createdAt: t,
           updatedAt: t,
         };

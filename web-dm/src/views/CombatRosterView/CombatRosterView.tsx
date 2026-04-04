@@ -54,7 +54,7 @@ export function CombatRosterView() {
   // Campaign-scoped refresh: players + inpcs only (sufficient for roster view).
   const refreshCampaignForRoster = React.useCallback(async (cid: string) => {
     const [players, inpcs] = await Promise.all([
-      api<Player[]>(`/api/campaigns/${cid}/players`),
+      api<CampaignCharacter[]>(`/api/campaigns/${cid}/players`),
       api<INpc[]>(`/api/campaigns/${cid}/inpcs`),
     ]);
     dispatch({ type: "setPlayers", players });

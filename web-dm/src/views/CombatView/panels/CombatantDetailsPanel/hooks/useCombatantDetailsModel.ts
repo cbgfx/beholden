@@ -1,5 +1,5 @@
 import React from "react";
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 import type { CombatantDetailsCtx } from "@/views/CombatView/panels/CombatantDetailsPanel/CombatantDetailsPanel";
 import { useCharacterSheetStats } from "./useCharacterSheetStats";
 import { useCombatantConditions } from "./useCombatantConditions";
@@ -16,7 +16,7 @@ function norm(v: unknown) {
 export function useCombatantDetailsModel(args: {
   roleTitle: string;
   role: Role;
-  combatant: Combatant | null;
+  combatant: EncounterActor | null;
   ctx: CombatantDetailsCtx;
 }) {
   const { role, combatant, ctx } = args;

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { IconPlayer, IconMonster, IconINPC, IconSkull } from "@/icons";
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 
 type Props = {
   combatant: Combatant | undefined;

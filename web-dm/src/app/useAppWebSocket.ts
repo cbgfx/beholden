@@ -41,7 +41,7 @@ export function useAppWebSocket({
       refreshCampaign(selectedCampaignId); return;
     }
     if (msg.type === "players:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
-      api<Player[]>(`/api/campaigns/${selectedCampaignId}/players`).then((pls) => dispatch({ type: "setPlayers", players: pls }));
+      api<CampaignCharacter[]>(`/api/campaigns/${selectedCampaignId}/players`).then((pls) => dispatch({ type: "setPlayers", players: pls }));
       return;
     }
     if (msg.type === "inpcs:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {

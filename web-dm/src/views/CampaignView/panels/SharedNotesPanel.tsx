@@ -3,7 +3,7 @@ import { Panel } from "@/ui/Panel";
 import { theme, withAlpha } from "@/theme/theme";
 import { IconNotes, IconPlus } from "@/icons";
 import { IconButton } from "@/ui/IconButton";
-import type { Player } from "@/domain/types/domain";
+import type { CampaignCharacter } from "@/domain/types/domain";
 import { api, jsonInit } from "@/services/api";
 
 interface SharedNote {
@@ -28,7 +28,7 @@ type EditTarget =
 export function SharedNotesPanel(props: {
   campaignId: string;
   campaignSharedNotes: string;
-  players: Player[];
+  players: CampaignCharacter[];
 }) {
   const [expandedIds, setExpandedIds] = React.useState<string[]>([]);
   const [dmNotes, setDmNotes] = React.useState<SharedNote[]>(() => parseNotes(props.campaignSharedNotes));

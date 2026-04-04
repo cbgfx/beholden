@@ -80,6 +80,7 @@ export interface Step5ChoiceState {
   missingFeatOptionSelections: boolean;
   missingCoreLanguages: boolean;
   missingClassLanguages: boolean;
+  missingWeaponMasteries: boolean;
   hasAnything: boolean;
   takenSkillKeys: Set<string>;
   takenToolKeys: Set<string>;
@@ -290,6 +291,7 @@ export function getStep5ChoiceState(args: Step5ChoiceStateArgs): Step5ChoiceStat
     .some(({ key, choice }) => (form.chosenFeatOptions[key] ?? []).length < choice.count);
   const missingCoreLanguages = form.chosenRaceLanguages.length < (coreLanguageChoice?.choose ?? 0);
   const missingClassLanguages = form.chosenClassLanguages.length < (classLanguageChoice?.choose ?? 0);
+  const missingWeaponMasteries = weaponMasteryChoice != null && form.chosenWeaponMasteries.length < weaponMasteryChoice.count;
   const hasAnything =
     classFeatChoices.length > 0 ||
     classSelectedFeatChoices.length > 0 ||
@@ -315,6 +317,7 @@ export function getStep5ChoiceState(args: Step5ChoiceStateArgs): Step5ChoiceStat
     missingFeatOptionSelections,
     missingCoreLanguages,
     missingClassLanguages,
+    missingWeaponMasteries,
     hasAnything,
     takenSkillKeys,
     takenToolKeys,

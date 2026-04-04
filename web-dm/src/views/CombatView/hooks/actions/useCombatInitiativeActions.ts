@@ -1,12 +1,12 @@
 import * as React from "react";
 import { api } from "@/services/api";
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
 import { dexModFromMonster } from "@/views/CombatView/utils/combat";
 
 type Args = {
   encounterId: string | undefined;
-  orderedCombatants: Combatant[];
+  orderedCombatants: EncounterActor[];
   inpcsById: Record<string, { monsterId?: string } | undefined>;
   monsterCache: Record<string, MonsterDetail>;
   setMonsterCache: (next: Record<string, MonsterDetail>) => void;

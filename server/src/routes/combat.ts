@@ -1,11 +1,11 @@
 import { z } from "zod";
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
-import type { StoredCombatant, StoredCombatState, StoredConditionInstance, StoredOverrides } from "../server/userData.js";
+import type { StoredEncounterActor, StoredCombatState, StoredConditionInstance, StoredOverrides } from "../server/userData.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
-import { rowToPlayer, rowToCombatant, parseJson, PLAYER_COLS, COMBATANT_COLS } from "../lib/db.js";
+import { rowToCampaignCharacter, rowToEncounterActor, CAMPAIGN_CHARACTER_COLS, ENCOUNTER_ACTOR_COLS } from "../lib/db.js";
 import { extractLeadingNumber, extractDetails } from "../lib/text.js";
 import {
   ensureCombat,
@@ -14,6 +14,7 @@ import {
   nextLabelNumber,
   syncCombatantToPlayer,
   hydratePlayerCombatant,
+  updateEncounterActor,
 } from "../services/combat.js";
 import {
   ConditionInstanceSchema,
@@ -79,14 +80,16 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
 
     const rows = db.prepare(`
       SELECT c.*,
-        p.character_name   AS p_character_name,
-        p.player_name      AS p_player_name,
-        p.hp_current       AS p_hp_current,
-        p.hp_max           AS p_hp_max,
-        p.ac               AS p_ac,
-        p.conditions_json  AS p_conditions_json,
-        p.death_saves_json AS p_death_saves_json,
-        p.overrides_json   AS p_overrides_json
+        p.id             AS p_id,
+        p.campaign_id    AS p_campaign_id,
+        p.user_id        AS p_user_id,
+        p.character_id   AS p_character_id,
+        p.sheet_json     AS p_sheet_json,
+        p.live_json      AS p_live_json,
+        p.image_url      AS p_image_url,
+        p.shared_notes   AS p_shared_notes,
+        p.created_at     AS p_created_at,
+        p.updated_at     AS p_updated_at
       FROM combatants c
       LEFT JOIN players p ON c.base_type = 'player' AND p.id = c.base_id
       WHERE c.encounter_id = ?
@@ -94,19 +97,31 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
     `).all(encounterId) as Record<string, unknown>[];
 
     const merged = rows.map((row) => {
-      const c = rowToCombatant(row);
-      if (row.base_type !== "player" || row.p_character_name == null) return c;
+      const c = rowToEncounterActor(row);
+      if (row.base_type !== "player" || row.p_id == null) return c;
+      const player = rowToCampaignCharacter({
+        id: row.p_id,
+        campaign_id: row.p_campaign_id,
+        user_id: row.p_user_id,
+        character_id: row.p_character_id,
+        sheet_json: row.p_sheet_json,
+        live_json: row.p_live_json,
+        image_url: row.p_image_url,
+        shared_notes: row.p_shared_notes,
+        created_at: row.p_created_at,
+        updated_at: row.p_updated_at,
+      });
       return {
         ...c,
-        name: row.p_character_name as string,
-        playerName: row.p_player_name as string,
-        label: c.label || (row.p_character_name as string),
-        hpCurrent: row.p_hp_current as number,
-        hpMax: row.p_hp_max as number,
-        ac: row.p_ac as number,
-        conditions: parseJson(row.p_conditions_json, [] as unknown[]),
-        deathSaves: parseJson(row.p_death_saves_json, null) ?? c.deathSaves,
-        overrides: parseJson(row.p_overrides_json, DEFAULT_OVERRIDES),
+        name: player.characterName,
+        playerName: player.playerName,
+        label: c.label || player.characterName,
+        hpCurrent: player.hpCurrent,
+        hpMax: player.hpMax,
+        ac: player.ac,
+        conditions: player.conditions ?? [],
+        deathSaves: player.deathSaves ?? c.deathSaves,
+        overrides: player.overrides ?? DEFAULT_OVERRIDES,
       };
     });
 
@@ -170,7 +185,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
 
     const players = (
       db.prepare(`
-        SELECT ${PLAYER_COLS}
+        SELECT ${CAMPAIGN_CHARACTER_COLS}
         FROM players
         WHERE campaign_id = ?
           AND id NOT IN (
@@ -178,7 +193,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
             WHERE encounter_id = ? AND base_type = 'player'
           )
       `).all(encRow.campaign_id, encounterId) as Record<string, unknown>[]
-    ).map(rowToPlayer);
+    ).map(rowToCampaignCharacter);
 
     const t = now();
     let added = 0;
@@ -205,11 +220,11 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
 
     const { playerId } = parseBody(AddPlayerBody, req);
     const pRow = db
-      .prepare(`SELECT ${PLAYER_COLS} FROM players WHERE id = ?`)
+      .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`)
       .get(playerId) as Record<string, unknown> | undefined;
     if (!pRow)
       return res.status(404).json({ ok: false, message: "Player not found" });
-    const p = rowToPlayer(pRow);
+    const p = rowToCampaignCharacter(pRow);
     if (p.campaignId !== encRow.campaign_id)
       return res.status(400).json({ ok: false, message: "Player not in campaign" });
 
@@ -269,7 +284,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
     const effectiveLabelBase = labelBase || baseName;
     let n: number = nextLabelNumber(db, encounterId, effectiveLabelBase);
 
-    const created: StoredCombatant[] = [];
+    const created: StoredEncounterActor[] = [];
     db.transaction(() => {
       for (let i = 0; i < qty; i++) {
         const label =
@@ -283,7 +298,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
             ? acOverride
             : (defaultAc ?? null);
 
-        const c: StoredCombatant = {
+        const c: StoredEncounterActor = {
           id: uid(),
           encounterId,
           baseType: "monster",
@@ -345,7 +360,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
 
     ensureCombat(db, encounterId);
 
-    const c: StoredCombatant = {
+    const c: StoredEncounterActor = {
       id: uid(),
       encounterId,
       baseType: "inpc",
@@ -383,12 +398,12 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
       if (!combatantId) return;
 
       const existingRow = db
-        .prepare(`SELECT ${COMBATANT_COLS} FROM combatants WHERE id = ? AND encounter_id = ?`)
+        .prepare(`SELECT ${ENCOUNTER_ACTOR_COLS} FROM combatants WHERE id = ? AND encounter_id = ?`)
         .get(combatantId, encounterId) as Record<string, unknown> | undefined;
       if (!existingRow)
         return res.status(404).json({ ok: false, message: "Not found" });
 
-      const existing = hydratePlayerCombatant(db, rowToCombatant(existingRow));
+      const existing = hydratePlayerCombatant(db, rowToEncounterActor(existingRow));
       const body = parseBody(CombatantUpdateBody, req);
       const t = now();
 
@@ -399,7 +414,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
           }
         : existing.deathSaves;
 
-      const next: StoredCombatant = {
+      const next: StoredEncounterActor = {
         ...existing,
         label: body.label ?? existing.label,
         initiative: body.initiative !== undefined ? body.initiative : (existing.initiative ?? null),
@@ -421,36 +436,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         updatedAt: t,
       };
 
-      db.prepare(`
-        UPDATE combatants SET
-          label=?, initiative=?, friendly=?, color=?,
-          hp_current=?, hp_max=?, hp_details=?, ac=?, ac_details=?,
-          attack_overrides_json=?, overrides_json=?, conditions_json=?,
-          death_saves_json=?, used_reaction=?, used_legendary_actions=?,
-          used_legendary_resistances=?, used_spell_slots_json=?, updated_at=?
-        WHERE id=? AND encounter_id=?
-      `).run(
-        next.label,
-        next.initiative,
-        next.friendly ? 1 : 0,
-        next.color,
-        next.hpCurrent,
-        next.hpMax,
-        next.hpDetails,
-        next.ac,
-        next.acDetails,
-        next.attackOverrides != null ? JSON.stringify(next.attackOverrides) : null,
-        JSON.stringify(next.overrides ?? DEFAULT_OVERRIDES),
-        JSON.stringify(next.conditions ?? []),
-        next.deathSaves ? JSON.stringify(next.deathSaves) : null,
-        next.usedReaction ? 1 : 0,
-        next.usedLegendaryActions ?? 0,
-        next.usedLegendaryResistances ?? 0,
-        next.usedSpellSlots ? JSON.stringify(next.usedSpellSlots) : null,
-        t,
-        combatantId,
-        encounterId
-      );
+      updateEncounterActor(db, next, t);
 
       // Sync player record for player-type combatants
       const syncedCampaignId = syncCombatantToPlayer(db, next, t);

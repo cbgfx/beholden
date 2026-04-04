@@ -2,7 +2,7 @@
 // Shared Zod schemas reused across multiple route files.
 import { z } from "zod";
 
-/** A condition applied to a combatant or player. Extra fields pass through for forward-compat. */
+/** A condition applied to a combatant or player. */
 export const ConditionInstanceSchema = z.object({
   key: z.string(),
   casterId: z.string().nullable().optional(),

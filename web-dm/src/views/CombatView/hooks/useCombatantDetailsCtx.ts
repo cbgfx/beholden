@@ -7,16 +7,16 @@ type Role = "active" | "target";
 type Args = {
   isNarrow: boolean;
   role: Role;
-  combatant: Combatant | null;
+  combatant: EncounterActor | null;
   selectedMonster: MonsterDetail | null;
-  playersById: Record<string, Player>;
+  playersById: Record<string, CampaignCharacter>;
 
   spellNames: string[];
 // spell levels are resolved async; unknown levels may be null until fetched
 spellLevels: Record<string, number | null>;
 
-  roster: Combatant[];
-  activeForCaster: Combatant | null;
+  roster: EncounterActor[];
+  activeForCaster: EncounterActor | null;
   currentRound: number;
 
   updateCombatant: (id: string, patch: Record<string, unknown>) => void;

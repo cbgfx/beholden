@@ -945,7 +945,8 @@ function parseWeaponMasteryEffects(source: FeatureEffectSource, text: string, ef
 
   const countMatch =
     text.match(/mastery properties of\s+(\w+)\s+kinds? of/i)
-    ?? text.match(/mastery properties of\s+(\d+)\s+kinds? of/i);
+    ?? text.match(/mastery properties of\s+(\d+)\s+kinds? of/i)
+    ?? text.match(/mastery properties of\s+(\w+)\s+weapons?/i);
   const count = parseWordCount(countMatch?.[1] ?? "") ?? 0;
   const filters: WeaponMasteryEffect["choice"] extends infer T ? T extends { filters?: infer F } ? F : never : never = [];
   if (/simple/i.test(text)) filters.push("simple_weapon");

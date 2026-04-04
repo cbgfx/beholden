@@ -8,10 +8,10 @@ import type { Combatant, INpc, Player } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
 
 type Props = {
-  combatants: Combatant[];
+  combatants: EncounterActor[];
   inpcs: INpc[];
   monsterDetails: Record<string, MonsterDetail>;
-  players: Player[];
+  players: CampaignCharacter[];
 };
 
 function parseCrFromDetail(detail: MonsterDetail): number | null {

@@ -1,9 +1,9 @@
 import type { MonsterDetail } from "@/domain/types/compendium";
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 
 export function applyMonsterAttackOverrides(
   monster: MonsterDetail | null,
-  combatant: Combatant | null
+  combatant: EncounterActor | null
 ): MonsterDetail | null {
   if (!monster || !combatant) return monster;
   const overrides = combatant.attackOverrides;

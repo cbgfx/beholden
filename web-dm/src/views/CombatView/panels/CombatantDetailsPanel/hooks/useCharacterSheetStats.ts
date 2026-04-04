@@ -1,5 +1,5 @@
 import React from "react";
-import type { Combatant, Player } from "@/domain/types/domain";
+import type { EncounterActor, CampaignCharacter } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
 import type { CharacterSheetStats } from "@/components/CharacterSheet";
 import {
@@ -11,9 +11,9 @@ import {
 } from "@/utils/compendiumFormat";
 
 export function useCharacterSheetStats(args: {
-  combatant: Combatant | null;
+  combatant: EncounterActor | null;
   selectedMonster: MonsterDetail | null;
-  player: Player | null;
+  player: CampaignCharacter | null;
 }) {
   const { combatant, selectedMonster, player } = args;
 

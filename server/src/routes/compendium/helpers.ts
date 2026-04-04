@@ -140,11 +140,6 @@ export function buildItemRecord(id: string, b: ItemBodyType) {
     ? b.text
     : typeof b.text === "string" ? [b.text] : [];
   const data = {
-    id, name, nameKey, name_key: nameKey,
-    rarity: rarityVal, type: typeVal, typeKey: typeKeyVal, type_key: typeKeyVal,
-    attunement, magic,
-    weight: b.weight ?? null,
-    value: b.value ?? null,
     ac: b.ac ?? null,
     stealthDisadvantage: b.stealthDisadvantage ?? false,
     dmg1: b.dmg1?.trim() || null,
@@ -153,6 +148,8 @@ export function buildItemRecord(id: string, b: ItemBodyType) {
     properties: b.properties ?? [],
     modifiers: b.modifiers ?? [],
     text: textArr,
+    weight: b.weight ?? null,
+    value: b.value ?? null,
   };
   return { name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data };
 }

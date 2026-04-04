@@ -1,14 +1,14 @@
 // web/src/views/CombatView/panels/CombatOrderPanel/components/CombatOrderRow.tsx
 
 import React from "react";
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 import { theme, withAlpha } from "@/theme/theme";
 import { IconINPC, IconMonster, IconPlayer, IconSkull, IconInitiative } from "@/icons";
 import { InitiativeInput } from "@/views/CombatView/panels/CombatOrderPanel/components/InitiativeInput";
 import { TurnBadge } from "@/views/CombatView/panels/CombatOrderPanel/components/TurnBadge";
 
 function CombatantAvatar(props: {
-  baseType: Combatant["baseType"];
+  baseType: EncounterActor["baseType"];
   isDead: boolean;
   iconColor: string;
   isActive: boolean;
@@ -55,7 +55,7 @@ function CombatantAvatar(props: {
 }
 
 export function CombatOrderRow(props: {
-  combatant: Combatant;
+  combatant: EncounterActor;
   section: "upcoming" | "wrapped";
   playersById: Record<string, {
     playerName: string; characterName: string; class: string;

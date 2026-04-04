@@ -8,7 +8,7 @@ import {
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
 
-export function useCombatantDerived(combatant: Combatant, player?: Player | null) {
+export function useCombatantDerived(combatant: Combatant, player?: CampaignCharacter | null) {
   const overrides = combatant.overrides ?? null;
   const acBonus = Number(overrides?.acBonus ?? 0) || 0;
   const tempHp = Math.max(0, Number(overrides?.tempHp ?? 0) || 0);
@@ -30,7 +30,7 @@ export function useCombatantDerived(combatant: Combatant, player?: Player | null
   const hpMax = hpMaxBase != null ? Math.max(1, hpMaxBase + hpMod) : null;
 
   const abilities = ABILITIES.map((key) => {
-    const score = parseAbilityScore(combatant[key as keyof Combatant]);
+    const score = parseAbilityScore(combatant[key as keyof EncounterActor]);
     return {
       key,
       score,

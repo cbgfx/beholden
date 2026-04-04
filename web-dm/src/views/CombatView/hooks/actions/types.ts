@@ -1,4 +1,4 @@
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
 import type { Action } from "@/store/actions";
 
@@ -7,7 +7,7 @@ export type StoreDispatch = (action: Action) => void;
 export type BaseActionArgs = {
   campaignId?: string;
   encounterId: string | undefined;
-  orderedCombatants: Combatant[];
+  orderedCombatants: EncounterActor[];
   setActiveId: (id: string | null) => void;
   setTargetId: (id: string | null) => void;
   setRound: (n: number | ((prev: number) => number)) => void;

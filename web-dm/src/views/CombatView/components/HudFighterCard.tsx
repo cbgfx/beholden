@@ -3,16 +3,16 @@ import * as React from "react";
 import { theme } from "@/theme/theme";
 import { HudConditionsStrip } from "@/views/CombatView/components/HudConditionsStrip";
 import { clamp01, getHudHp, getHudHpFill, getHudNames } from "@/views/CombatView/utils/hud";
-import type { Combatant, Player } from "@/domain/types/domain";
+import type { EncounterActor, CampaignCharacter } from "@/domain/types/domain";
 
 import "@/views/CombatView/combatView.css";
 
 type Role = "active" | "target";
 
 type Props = {
-  combatant: Combatant | null;
+  combatant: EncounterActor | null;
   role: Role;
-  playersById: Record<string, Player>;
+  playersById: Record<string, CampaignCharacter>;
   renderCombatantIcon: (c: Combatant | null) => React.ReactNode;
   activeId: string | null;
   targetId: string | null;

@@ -10,6 +10,116 @@ export interface Timestamps {
   updatedAt: number;
 }
 
+export interface StoredOptionalAbilities {
+  str?: number;
+  dex?: number;
+  con?: number;
+  int?: number;
+  wis?: number;
+  cha?: number;
+}
+
+export interface StoredSheetAbilities {
+  strScore: number | null;
+  dexScore: number | null;
+  conScore: number | null;
+  intScore: number | null;
+  wisScore: number | null;
+  chaScore: number | null;
+}
+
+export interface StoredActorVitals {
+  hpMax: number;
+  hpCurrent: number;
+  ac: number;
+}
+
+export interface StoredCharacterSheetState
+  extends StoredActorVitals,
+    StoredSheetAbilities {
+  name: string;
+  playerName: string;
+  className: string;
+  species: string;
+  level: number;
+  speed: number;
+  color: string | null;
+  deathSaves?: StoredDeathSaves;
+}
+
+export interface StoredCampaignCharacterSheetState
+  extends Omit<StoredActorVitals, "hpCurrent">,
+    StoredOptionalAbilities {
+  playerName: string;
+  characterName: string;
+  class: string;
+  species: string;
+  level: number;
+  speed?: number;
+  color?: string | null;
+}
+
+export interface StoredCampaignCharacterLiveState {
+  hpCurrent: number;
+  overrides?: StoredOverrides;
+  conditions?: StoredConditionInstance[];
+  deathSaves?: StoredDeathSaves;
+}
+
+export interface StoredEncounterActorSnapshot {
+  name: string;
+  label: string;
+  friendly: boolean;
+  color: string;
+  hpMax: number | null;
+  hpDetails: string | null;
+  ac: number | null;
+  acDetails: string | null;
+  attackOverrides: unknown | null;
+}
+
+export interface StoredEncounterActorLiveState {
+  initiative: number | null;
+  hpCurrent: number | null;
+  overrides: StoredOverrides;
+  conditions: StoredConditionInstance[];
+  deathSaves?: StoredDeathSaves;
+  usedReaction?: boolean;
+  usedLegendaryActions?: number;
+  usedLegendaryResistances?: number;
+  usedSpellSlots?: Record<string, number>;
+}
+
+export interface StoredNoteState {
+  title: string;
+  text: string;
+}
+
+export interface StoredTreasureState {
+  source: "compendium" | "custom";
+  itemId: string | null;
+  name: string;
+  rarity: string | null;
+  type: string | null;
+  type_key: string | null;
+  attunement: boolean;
+  magic: boolean;
+  text: string;
+  qty: number;
+}
+
+export interface StoredPartyInventoryItemState {
+  name: string;
+  quantity: number;
+  weight: number | null;
+  notes: string;
+  source: string | null;
+  itemId: string | null;
+  rarity: string | null;
+  type: string | null;
+  description: string | null;
+}
+
 // ---------------------------------------------------------------------------
 // Overrides & sub-types
 // ---------------------------------------------------------------------------
@@ -101,35 +211,41 @@ export interface StoredTreasure extends Timestamps {
   sort: number;
 }
 
-export interface StoredPlayer extends Timestamps {
+export interface StoredPartyInventoryItem extends Timestamps {
+  id: Id;
+  campaignId: Id;
+  name: string;
+  quantity: number;
+  weight: number | null;
+  notes: string;
+  source: string | null;
+  itemId: string | null;
+  rarity: string | null;
+  type: string | null;
+  description: string | null;
+  sort: number;
+}
+
+export interface StoredCampaignCharacter extends Timestamps, StoredActorVitals, StoredOptionalAbilities {
   id: Id;
   campaignId: Id;
   userId?: string | null;
+  characterId?: string | null;
   playerName: string;
   characterName: string;
   class: string;
   species: string;
   level: number;
-  hpMax: number;
-  hpCurrent: number;
-  ac: number;
   speed?: number;
   overrides?: StoredOverrides;
   conditions?: StoredConditionInstance[];
   deathSaves?: StoredDeathSaves;
-  // Ability scores
-  str?: number;
-  dex?: number;
-  con?: number;
-  int?: number;
-  wis?: number;
-  cha?: number;
   color?: string;
   imageUrl?: string | null;
   sharedNotes?: string;
 }
 
-export interface StoredUserCharacter extends Timestamps {
+export interface StoredCharacterSheet extends Timestamps, StoredActorVitals, StoredSheetAbilities {
   id: Id;
   userId: Id;
   name: string;
@@ -137,16 +253,7 @@ export interface StoredUserCharacter extends Timestamps {
   className: string;
   species: string;
   level: number;
-  hpMax: number;
-  hpCurrent: number;
-  ac: number;
   speed: number;
-  strScore: number | null;
-  dexScore: number | null;
-  conScore: number | null;
-  intScore: number | null;
-  wisScore: number | null;
-  chaScore: number | null;
   color: string | null;
   imageUrl: string | null;
   characterData: Record<string, unknown> | null;
@@ -178,12 +285,12 @@ export interface StoredCondition extends Timestamps {
   sort?: number;
 }
 
-export type StoredCombatantBaseType = "player" | "monster" | "inpc";
+export type StoredEncounterActorBaseType = "player" | "monster" | "inpc";
 
-export interface StoredCombatant extends Timestamps {
+export interface StoredEncounterActor extends Timestamps {
   id: Id;
   encounterId: Id;
-  baseType: StoredCombatantBaseType;
+  baseType: StoredEncounterActorBaseType;
   baseId: string;
   name: string;
   label: string;

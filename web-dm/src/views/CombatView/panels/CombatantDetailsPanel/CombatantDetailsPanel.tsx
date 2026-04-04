@@ -10,7 +10,7 @@ import type { MonsterDetail } from "@/domain/types/compendium";
 import { MonsterActions } from "@/views/CombatView/components/MonsterActions";
 import { MonsterSpells } from "@/views/CombatView/components/MonsterSpells";
 import { MonsterTraits } from "@/views/CombatView/components/MonsterTraits";
-import type { Player } from "@/domain/types/domain";
+import type { CampaignCharacter } from "@/domain/types/domain";
 
 import { CombatantConditionsSection } from "@/views/CombatView/panels/CombatantDetailsPanel/components/CombatantConditionsSection";
 import { useCharacterSheetStats } from "@/views/CombatView/panels/CombatantDetailsPanel/hooks/useCharacterSheetStats";
@@ -20,11 +20,11 @@ export type CombatantDetailsCtx = {
   isNarrow: boolean;
   selectedMonster: MonsterDetail | null;
   playerName: string | null;
-  player: Player | null;
+  player: CampaignCharacter | null;
   spellNames: string[];
   spellLevels: Record<string, number | null>;
-  roster: Combatant[];
-  activeForCaster: Combatant | null;
+  roster: EncounterActor[];
+  activeForCaster: EncounterActor | null;
   currentRound: number;
   showHpActions: boolean;
   onChangeAttack: (actionName: string, patch: AttackOverride) => void;
@@ -38,7 +38,7 @@ export type CombatantDetailsCtx = {
 type Props = {
   roleTitle: string;
   role: "active" | "target";
-  combatant: Combatant | null;
+  combatant: EncounterActor | null;
   ctx: CombatantDetailsCtx;
 };
 

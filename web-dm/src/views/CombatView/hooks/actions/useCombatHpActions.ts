@@ -1,6 +1,6 @@
 import * as React from "react";
 import { api } from "@/services/api";
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 import { rollDiceExpr } from "@/views/CombatView/utils/dice";
 import { resolveCombatantDamage } from "@/views/CombatView/utils/polymorphDamage";
 
@@ -38,7 +38,7 @@ type Args = {
   encounterId: string | undefined;
   delta: string;
   setDelta: (v: string) => void;
-  target: Combatant | null;
+  target: EncounterActor | null;
   refresh: () => Promise<void>;
 };
 

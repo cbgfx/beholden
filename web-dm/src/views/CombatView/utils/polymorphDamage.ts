@@ -1,4 +1,4 @@
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 
 type PolymorphCondition = {
   key: "polymorphed";
@@ -15,7 +15,7 @@ function getPolymorphCondition(combatant: Combatant): PolymorphCondition | null 
 export function resolveCombatantDamage(combatant: Combatant, amount: number): {
   hpCurrent: number;
   overrides: Record<string, unknown>;
-  conditions?: Combatant["conditions"];
+  conditions?: EncounterActor["conditions"];
 } | null {
   if (combatant.hpCurrent == null) return null;
 

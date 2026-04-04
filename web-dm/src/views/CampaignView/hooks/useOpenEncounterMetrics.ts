@@ -5,7 +5,7 @@ import { calcEncounterDifficulty } from "@/domain/utils/difficulty";
 import { estimateMonsterDpr } from "@/domain/utils/monsterDpr";
 import { parseCrToNumberOrNull } from "@/domain/utils/crParsing";
 import type { Action } from "@/store/actions";
-import type { Player, INpc } from "@/domain/types/domain";
+import type { CampaignCharacter, INpc } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
 
 type DifficultyRow = {
@@ -27,7 +27,7 @@ function parseCrFromDetail(detail: MonsterDetail | null | undefined): number | n
 
 export function useOpenEncounterMetrics(args: {
   encounters: EncounterLike[];
-  players: Player[];
+  players: CampaignCharacter[];
   inpcs: INpc[];
   monsterDetails: Record<string, MonsterDetail>;
   dispatch: (action: Action) => void;

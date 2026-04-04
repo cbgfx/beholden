@@ -5,7 +5,7 @@ import { Panel } from "@/ui/Panel";
 import type { AddMonsterOptions } from "@/domain/types/domain";
 import { MonsterPickerModal } from "@/views/CampaignView/monsterPicker/MonsterPickerModal";
 import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 import { EncounterRosterHeaderActions } from "@/views/CampaignView/panels/EncounterRosterPanel/EncounterRosterHeaderActions";
 import { EncounterRosterList } from "@/views/CampaignView/panels/EncounterRosterPanel/EncounterRosterList";
 import type { CombatantVM } from "@/views/CampaignView/panels/EncounterRosterPanel/utils";
@@ -15,7 +15,7 @@ export function EncounterRosterPanel(props: {
   selectedEncounter: { id: string; name: string } | null;
 
   // NOTE: store/API combatants come in here (not the VM)
-  combatants: Combatant[];
+  combatants: EncounterActor[];
   playersById?: Record<string, { imageUrl?: string | null }>;
 
   // Optional per-combatant XP (for monster/inpc rows).

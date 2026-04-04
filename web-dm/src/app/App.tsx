@@ -5,7 +5,7 @@ import { ShellLayout } from "@/layout/ShellLayout";
 import { theme } from "@/theme/theme";
 import { StoreProvider, useStore } from "@/store";
 import { api } from "@/services/api";
-import type { Adventure, Campaign, Combatant, Encounter, INpc, Meta, Note, Player, TreasureEntry } from "@/domain/types/domain";
+import type { Adventure, Campaign, CampaignCharacter, Encounter, EncounterActor, INpc, Meta, Note, TreasureEntry } from "@/domain/types/domain";
 import { useAppWebSocket } from "@/app/useAppWebSocket";
 import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
 import { HomeView } from "@/views/HomeView";
@@ -46,7 +46,7 @@ function AppInner() {
     if (!cid) return;
     const [adv, pls, inpcs, notes, treasure] = await Promise.all([
       api<Adventure[]>(`/api/campaigns/${cid}/adventures`),
-      api<Player[]>(`/api/campaigns/${cid}/players`),
+      api<CampaignCharacter[]>(`/api/campaigns/${cid}/players`),
       api<INpc[]>(`/api/campaigns/${cid}/inpcs`),
       api<Note[]>(`/api/campaigns/${cid}/notes`),
       api<TreasureEntry[]>(`/api/campaigns/${cid}/treasure`)
@@ -77,7 +77,7 @@ function AppInner() {
 
   const refreshEncounter = useCallback(async (encounterId: string | null) => {
     if (!encounterId) { dispatch({ type: "setCombatants", combatants: [] }); return; }
-    dispatch({ type: "setCombatants", combatants: await api<Combatant[]>(`/api/encounters/${encounterId}/combatants`) });
+    dispatch({ type: "setCombatants", combatants: await api<EncounterActor[]>(`/api/encounters/${encounterId}/combatants`) });
   }, [dispatch]);
 
   useEffect(() => { refreshAll(); }, []);

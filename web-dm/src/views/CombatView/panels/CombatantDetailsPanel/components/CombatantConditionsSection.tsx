@@ -1,5 +1,5 @@
 import React from "react";
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 import { theme } from "@/theme/theme";
 import { conditionIconByKey } from "@/icons/conditions";
 import {
@@ -11,9 +11,9 @@ import {
 } from "@/domain/conditions";
 
 export function CombatantConditionsSection(props: {
-  selected: Combatant;
+  selected: EncounterActor;
   role: "active" | "target";
-  roster: Combatant[];
+  roster: EncounterActor[];
   currentRound?: number;
   onCommit: (next: ConditionInstance[]) => void;
 }) {

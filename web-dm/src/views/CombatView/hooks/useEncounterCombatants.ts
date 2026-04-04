@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 import { api } from "@/services/api";
 import { useWs } from "@/services/ws";
 import type { Action } from "@/store/actions";
@@ -16,7 +16,7 @@ type StoreDispatch = (action: Action) => void;
 export function useEncounterCombatants(encounterId: string | undefined, dispatch: StoreDispatch) {
   const refresh = React.useCallback(async () => {
     if (!encounterId) return;
-    const rows = await api<Combatant[]>(`/api/encounters/${encounterId}/combatants`);
+    const rows = await api<EncounterActor[]>(`/api/encounters/${encounterId}/combatants`);
     dispatch({ type: "setCombatants", combatants: rows });
   }, [encounterId, dispatch]);
 

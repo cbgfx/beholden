@@ -1,4 +1,4 @@
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
 
 import { useCombatHpActions } from "@/views/CombatView/hooks/actions/useCombatHpActions";
@@ -12,7 +12,7 @@ type Args = {
   campaignId?: string;
   encounterId: string | undefined;
   round: number;
-  orderedCombatants: Combatant[];
+  orderedCombatants: EncounterActor[];
   setActiveId: (id: string | null) => void;
   setTargetId: (id: string | null) => void;
   setRound: (n: number | ((prev: number) => number)) => void;
@@ -20,7 +20,7 @@ type Args = {
   inpcsById: Record<string, { monsterId?: string } | undefined>;
   delta: string;
   setDelta: (v: string) => void;
-  target: Combatant | null;
+  target: EncounterActor | null;
   refresh: () => Promise<void>;
   monsterCache: Record<string, MonsterDetail>;
   setMonsterCache: (next: Record<string, MonsterDetail>) => void;

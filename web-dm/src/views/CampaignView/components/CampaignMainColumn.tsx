@@ -7,8 +7,8 @@ import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/ty
 
 
 export function CampaignMainColumn(props: {
-  players: Player[];
-  combatants: Combatant[];
+  players: CampaignCharacter[];
+  combatants: EncounterActor[];
   inpcs: INpc[];
   compRows: CompendiumMonsterRow[];
   selectedEncounterId: string | null;

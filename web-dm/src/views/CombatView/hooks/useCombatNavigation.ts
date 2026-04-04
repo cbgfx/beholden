@@ -1,6 +1,6 @@
 import * as React from "react";
 import { api } from "@/services/api";
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 import {
   activeIndexOf,
   ensureActiveId,
@@ -11,7 +11,7 @@ import {
 
 type Args = {
   encounterId: string | undefined;
-  orderedCombatants: Combatant[];
+  orderedCombatants: EncounterActor[];
   canNavigate: boolean;
   started: boolean;
   loaded: boolean;

@@ -1,5 +1,5 @@
 import React from "react";
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 import {
   CONDITION_DEFS,
   conditionLabel,
@@ -10,9 +10,9 @@ import {
 type Role = "active" | "target";
 
 export function useCombatantConditions(args: {
-  selected: Combatant | null;
+  selected: EncounterActor | null;
   role: Role;
-  roster: Combatant[];
+  roster: EncounterActor[];
   onUpdate: (patch: Record<string, unknown>) => void;
 }) {
   const { selected, role, roster, onUpdate } = args;

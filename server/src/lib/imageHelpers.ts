@@ -13,17 +13,12 @@ export async function resizeToWebP(buffer: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
-/**
- * Best-effort deletion of all legacy-format image files for a given id.
- * Covers old uploads that may have used png/jpg/gif before we standardised on webp.
- */
+/** Remove the current canonical image asset for an id. */
 export function deleteImageFiles(
   ctx: Pick<ServerContext, "fs" | "path">,
   imagesDir: string,
   id: string
 ): void {
-  for (const ext of ["png", "jpg", "gif", "webp"]) {
-    const p = ctx.path.join(imagesDir, `${id}.${ext}`);
-    try { if (ctx.fs.existsSync(p)) ctx.fs.unlinkSync(p); } catch { /* best-effort */ }
-  }
+  const p = ctx.path.join(imagesDir, `${id}.webp`);
+  try { if (ctx.fs.existsSync(p)) ctx.fs.unlinkSync(p); } catch { /* best-effort */ }
 }

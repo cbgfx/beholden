@@ -35,7 +35,6 @@ export function PlayerRow(props: {
   menuItems?: RowMenuItem[];
   subtitle?: React.ReactNode;
   icon?: React.ReactNode;
-  // Legacy compat — renders directly instead of menu
   actions?: React.ReactNode | null;
   onEdit?: () => void;
   variant?: "campaign" | "combatList";

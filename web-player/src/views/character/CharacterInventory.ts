@@ -21,6 +21,7 @@ export interface InventoryItem {
   name: string;
   quantity: number;
   equipped: boolean;
+  proficiency?: string | null;
   equipState?: "backpack" | "mainhand-1h" | "mainhand-2h" | "offhand" | "worn";
   containerId?: string | null;
   notes?: string;
@@ -66,6 +67,7 @@ export interface InventoryPickerPayload {
   equippable?: boolean;
   weight?: number | null;
   value?: number | null;
+  proficiency?: string | null;
   ac?: number | null;
   stealthDisadvantage?: boolean;
   dmg1?: string | null;
@@ -85,6 +87,7 @@ export interface CompendiumItemDetail {
   equippable?: boolean;
   weight: number | null;
   value: number | null;
+  proficiency?: string | null;
   ac: number | null;
   stealthDisadvantage?: boolean;
   dmg1: string | null;
@@ -230,10 +233,22 @@ export function parseWeaponMastery(item: Pick<InventoryItem, "description"> | nu
   return { name, text };
 }
 
-export function hasWeaponMastery(item: Pick<InventoryItem, "description" | "name"> | null | undefined, prof: ProficiencyMapLike | undefined): boolean {
-  const itemName = stripMagicBonusFromName(String(item?.name ?? "").trim()).toLowerCase();
-  if (!itemName) return false;
-  return (prof?.masteries ?? []).some((entry) => stripMagicBonusFromName(String(entry.name ?? "").trim()).toLowerCase() === itemName);
+export function hasWeaponMastery(item: Pick<InventoryItem, "proficiency" | "name"> | null | undefined, prof: ProficiencyMapLike | undefined): boolean {
+  if (!item) return false;
+  const masteries = prof?.masteries ?? [];
+  if (masteries.length === 0) return false;
+
+  // "simple, mace" → ["simple", "mace"]
+  const itemTags = String(item.proficiency ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+
+  return masteries.some((entry) => {
+    const entryNorm = stripMagicBonusFromName(String(entry.name ?? "").trim()).toLowerCase();
+    const itemName = stripMagicBonusFromName(String(item.name ?? "").trim()).toLowerCase();
+    if (entryNorm === itemName) return true;
+    // "simple weapons" → "simple" for tag comparison
+    const entrySimplified = entryNorm.replace(/\s+weapons?$/, "");
+    return itemTags.includes(entrySimplified) || itemTags.includes(entryNorm);
+  });
 }
 
 export function isShieldOrTorch(item: InventoryItem): boolean {

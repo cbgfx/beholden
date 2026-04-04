@@ -50,8 +50,8 @@ export function importCompendiumXml(args: {
   `);
   const itemStmt = db.prepare(`
     INSERT OR REPLACE INTO compendium_items
-      (id, name, name_key, rarity, type, type_key, attunement, magic, equippable, data_json)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, name, name_key, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const classStmt = db.prepare(`
     INSERT OR REPLACE INTO compendium_classes (id, name, name_key, hd, data_json)
@@ -226,7 +226,10 @@ export function importCompendiumXml(args: {
         data.attunement ? 1 : 0,
         data.magic ? 1 : 0,
         data.equippable ? 1 : 0,
-        JSON.stringify(data)
+        data.weight ?? null,
+        data.value ?? null,
+        data.proficiency ?? null,
+        JSON.stringify(data.blob)
       );
     }
 
@@ -473,10 +476,29 @@ function xmlItemToJson(it: any): any | null {
   const fullText = text.join("\n");
   const equippable = inferItemEquippable(type, fullText);
 
+  // Parse "Proficiency: simple, mace" line from text
+  const proficiencyMatch = fullText.match(/^Proficiency:\s*(.+)$/im);
+  const proficiency = proficiencyMatch?.[1]?.trim() || null;
+
+  const weightVal = Number.isFinite(weight) ? weight : null;
+  const valueVal = Number.isFinite(value) ? value : null;
+
+  // Blob: only fields that don't have their own column
+  const blob = {
+    ac: Number.isFinite(ac) ? ac : null,
+    stealthDisadvantage,
+    dmg1: dmg1 || null,
+    dmg2: dmg2 || null,
+    dmgType: dmgType || null,
+    properties,
+    modifiers,
+    text,
+  };
+
   return {
     id,
     name,
-    ruleset: inferRuleset(name, it?.detail, text.join("\n")),
+    ruleset: inferRuleset(name, it?.detail, fullText),
     name_key: nameKey,
     nameKey,
     rarity,
@@ -486,16 +508,10 @@ function xmlItemToJson(it: any): any | null {
     attunement,
     magic,
     equippable,
-    weight: Number.isFinite(weight) ? weight : null,
-    value: Number.isFinite(value) ? value : null,
-    ac: Number.isFinite(ac) ? ac : null,
-    stealthDisadvantage,
-    dmg1: dmg1 || null,
-    dmg2: dmg2 || null,
-    dmgType: dmgType || null,
-    properties,
-    modifiers,
-    text,
+    weight: weightVal,
+    value: valueVal,
+    proficiency,
+    blob,
   };
 }
 

@@ -3,7 +3,9 @@ import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../shared/validate.js";
 import { requireParam } from "../lib/routeHelpers.js";
+import { PARTY_INVENTORY_COLS, rowToPartyInventoryItem } from "../lib/db.js";
 import { memberOrAdmin } from "../middleware/campaignAuth.js";
+import type { StoredPartyInventoryItemState } from "../server/userData.js";
 
 const ItemBody = z.object({
   name: z.string().trim().min(1),
@@ -19,6 +21,10 @@ const ItemBody = z.object({
 
 const QuantityBody = z.object({ quantity: z.number().int().min(1) });
 
+function serializePartyInventoryItemState(item: StoredPartyInventoryItemState) {
+  return JSON.stringify(item);
+}
+
 export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
@@ -28,9 +34,9 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
     const rows = db.prepare(
-      "SELECT * FROM party_inventory WHERE campaign_id = ? ORDER BY sort ASC, created_at ASC"
+      `SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE campaign_id = ? ORDER BY sort ASC, created_at ASC`
     ).all(campaignId) as Record<string, unknown>[];
-    res.json(rows.map(rowToItem));
+    res.json(rows.map(rowToPartyInventoryItem));
   });
 
   // POST add item
@@ -44,11 +50,32 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
       "SELECT COALESCE(MAX(sort),0)+1 AS n FROM party_inventory WHERE campaign_id = ?"
     ).get(campaignId) as { n: number }).n;
     db.prepare(
-      `INSERT INTO party_inventory (id, campaign_id, name, quantity, weight, notes, source, item_id, rarity, type, description, sort, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(id, campaignId, body.name, body.quantity, body.weight ?? null, body.notes, body.source ?? null, body.itemId ?? null, body.rarity ?? null, body.type ?? null, body.description ?? null, maxSort, t, t);
+      `INSERT INTO party_inventory (id, campaign_id, item_json, sort, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).run(
+      id,
+      campaignId,
+      serializePartyInventoryItemState({
+        name: body.name,
+        quantity: body.quantity ?? 1,
+        weight: body.weight ?? null,
+        notes: body.notes ?? "",
+        source: body.source ?? null,
+        itemId: body.itemId ?? null,
+        rarity: body.rarity ?? null,
+        type: body.type ?? null,
+        description: body.description ?? null,
+      }),
+      maxSort,
+      t,
+      t
+    );
     ctx.broadcast("partyInventory:changed", { campaignId });
-    res.status(201).json(rowToItem(db.prepare("SELECT * FROM party_inventory WHERE id = ?").get(id) as Record<string, unknown>));
+    res.status(201).json(
+      rowToPartyInventoryItem(
+        db.prepare(`SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE id = ?`).get(id) as Record<string, unknown>
+      )
+    );
   });
 
   // PUT update item
@@ -58,14 +85,35 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
     const itemId = req.params["itemId"];
     const body = parseBody(ItemBody, req);
     const t = now();
+    const existing = db
+      .prepare(`SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE id = ? AND campaign_id = ?`)
+      .get(itemId, campaignId) as Record<string, unknown> | undefined;
+    if (!existing) return res.status(404).json({ ok: false, message: "Not found" });
     db.prepare(
-      `UPDATE party_inventory SET name=?, quantity=?, weight=?, notes=?, rarity=?, type=?, description=?, updated_at=?
+      `UPDATE party_inventory SET item_json=?, updated_at=?
        WHERE id=? AND campaign_id=?`
-    ).run(body.name, body.quantity, body.weight ?? null, body.notes, body.rarity ?? null, body.type ?? null, body.description ?? null, t, itemId, campaignId);
+    ).run(
+      serializePartyInventoryItemState({
+        name: body.name,
+        quantity: body.quantity ?? 1,
+        weight: body.weight ?? null,
+        notes: body.notes ?? "",
+        source: body.source ?? null,
+        itemId: body.itemId ?? null,
+        rarity: body.rarity ?? null,
+        type: body.type ?? null,
+        description: body.description ?? null,
+      }),
+      t,
+      itemId,
+      campaignId
+    );
     ctx.broadcast("partyInventory:changed", { campaignId });
-    const row = db.prepare("SELECT * FROM party_inventory WHERE id = ?").get(itemId) as Record<string, unknown> | undefined;
+    const row = db
+      .prepare(`SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE id = ?`)
+      .get(itemId) as Record<string, unknown> | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Not found" });
-    res.json(rowToItem(row));
+    res.json(rowToPartyInventoryItem(row));
   });
 
   // PATCH quantity only (quick +/- from UI)
@@ -74,8 +122,28 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
     if (!campaignId) return;
     const itemId = req.params["itemId"];
     const { quantity } = parseBody(QuantityBody, req);
-    db.prepare("UPDATE party_inventory SET quantity=?, updated_at=? WHERE id=? AND campaign_id=?")
-      .run(quantity, now(), itemId, campaignId);
+    const existing = db
+      .prepare(`SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE id = ? AND campaign_id = ?`)
+      .get(itemId, campaignId) as Record<string, unknown> | undefined;
+    if (!existing) return res.status(404).json({ ok: false, message: "Not found" });
+    const item = rowToPartyInventoryItem(existing);
+    db.prepare("UPDATE party_inventory SET item_json=?, updated_at=? WHERE id=? AND campaign_id=?")
+      .run(
+        serializePartyInventoryItemState({
+          name: item.name,
+          quantity,
+          weight: item.weight,
+          notes: item.notes,
+          source: item.source,
+          itemId: item.itemId,
+          rarity: item.rarity,
+          type: item.type,
+          description: item.description,
+        }),
+        now(),
+        itemId,
+        campaignId
+      );
     ctx.broadcast("partyInventory:changed", { campaignId });
     res.json({ ok: true });
   });
@@ -89,23 +157,4 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
     ctx.broadcast("partyInventory:changed", { campaignId });
     res.json({ ok: true });
   });
-}
-
-function rowToItem(r: Record<string, unknown>) {
-  return {
-    id: r["id"] as string,
-    campaignId: r["campaign_id"] as string,
-    name: r["name"] as string,
-    quantity: r["quantity"] as number,
-    weight: r["weight"] as number | null,
-    notes: r["notes"] as string,
-    source: r["source"] as string | null,
-    itemId: r["item_id"] as string | null,
-    rarity: r["rarity"] as string | null,
-    type: r["type"] as string | null,
-    description: r["description"] as string | null,
-    sort: r["sort"] as number,
-    createdAt: r["created_at"] as number,
-    updatedAt: r["updated_at"] as number,
-  };
 }

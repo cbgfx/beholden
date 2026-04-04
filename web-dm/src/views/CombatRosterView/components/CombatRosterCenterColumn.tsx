@@ -1,4 +1,4 @@
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
 
 import type { AddMonsterOptions } from "@/domain/types/domain";
@@ -7,7 +7,7 @@ import { EncounterRosterPanel } from "@/views/CampaignView/panels/EncounterRoste
 
 type Props = {
   selectedEncounter: { id: string; name: string } | null;
-  combatants: Combatant[];
+  combatants: EncounterActor[];
   xpByCombatantId: Record<string, number>;
   playersById?: Record<string, { imageUrl?: string | null }>;
   compQ: string;

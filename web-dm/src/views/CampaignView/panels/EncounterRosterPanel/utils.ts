@@ -1,4 +1,4 @@
-import type { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 
 export type CombatantVM = {
   id: string;
@@ -13,7 +13,7 @@ export type CombatantVM = {
 
 // Map raw combatants -> VM used by the EncounterRosterPanel
 export function mapCombatantsToVM(
-  combatants: Combatant[],
+  combatants: EncounterActor[],
   xpByCombatantId?: Record<string, number>,
   playersById?: Record<string, { imageUrl?: string | null }>
 ): CombatantVM[] {

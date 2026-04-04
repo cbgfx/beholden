@@ -73,6 +73,7 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
     | "missingFeatOptionSelections"
     | "missingCoreLanguages"
     | "missingClassLanguages"
+    | "missingWeaponMasteries"
     | "hasAnything"
     | "takenSkillKeys"
     | "takenToolKeys"
@@ -86,7 +87,7 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
   onNext: () => void;
 }): StepResult {
   const { form, setForm, classDetailName, bgDetailName, skillList, numSkills, bgLangChoice, coreLanguageChoice, classLanguageChoice, classFeatChoices, classExpertiseChoices, classSelectedFeatChoices, selectedClassFeatEntries, bgFeatChoices, raceFeatChoices, weaponMasteryChoice, weaponOptions, choiceState, getClassFeatChoiceLabel, getClassFeatOptionLabel, sideSummary, onBack, onNext } = args;
-  const { missingClassFeatChoices, missingClassExpertiseChoices, missingFeatOptionSelections, missingCoreLanguages, missingClassLanguages, hasAnything, takenSkillKeys, takenToolKeys, takenLanguageKeys, takenExpertiseKeys } = choiceState;
+  const { missingClassFeatChoices, missingClassExpertiseChoices, missingFeatOptionSelections, missingCoreLanguages, missingClassLanguages, missingWeaponMasteries, hasAnything, takenSkillKeys, takenToolKeys, takenLanguageKeys, takenExpertiseKeys } = choiceState;
 
   function duplicateLocked(kind: "skill" | "tool" | "language" | "expertise", value: string, selected: boolean): boolean {
     return duplicateLockedForStep5(kind, value, selected, { takenSkillKeys, takenToolKeys, takenLanguageKeys, takenExpertiseKeys });
@@ -258,7 +259,7 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
       })}
 
       {!hasAnything && <p style={{ color: C.muted, fontSize: "var(--fs-medium)" }}>There are no skill, language, mastery, or expertise choices at this level.</p>}
-      <NavButtons step={5} onBack={onBack} onNext={onNext} nextDisabled={missingClassFeatChoices || missingClassExpertiseChoices || missingFeatOptionSelections || missingCoreLanguages || missingClassLanguages} />
+      <NavButtons step={5} onBack={onBack} onNext={onNext} nextDisabled={missingClassFeatChoices || missingClassExpertiseChoices || missingFeatOptionSelections || missingCoreLanguages || missingClassLanguages || missingWeaponMasteries} />
     </div>
   );
 

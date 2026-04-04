@@ -2,7 +2,7 @@ import React from "react";
 import { CampaignNotesPanel } from "@/views/CampaignView/panels/CampaignNotesPanel";
 import { AdventureNotesPanel } from "@/views/CampaignView/panels/AdventureNotesPanel";
 import { SharedNotesPanel } from "@/views/CampaignView/panels/SharedNotesPanel";
-import type { Note, Player } from "@/domain/types/domain";
+import type { Note, CampaignCharacter } from "@/domain/types/domain";
 
 export function CampaignRightSidebar(props: {
   selectedAdventureId: string | null;
@@ -10,7 +10,7 @@ export function CampaignRightSidebar(props: {
   adventureNotes: Note[];
   expandedNoteIds: string[]
   onToggleNote: (noteId: string) => void;
-  players: Player[];
+  players: CampaignCharacter[];
   campaignId: string;
   campaignSharedNotes: string;
 
