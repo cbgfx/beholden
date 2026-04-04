@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/services/api";
+import { fetchMyCharacters } from "@/services/actorApi";
 import { C } from "@/lib/theme";
 import { IconPlayer } from "@/icons";
 import { HealthBar, accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
@@ -57,10 +58,10 @@ export function PlayerHomeView() {
   function reload() {
     return Promise.all([
       api<Campaign[]>("/api/me/campaigns"),
-      api<UserCharacter[]>("/api/me/characters"),
+      fetchMyCharacters(),
     ]).then(([camps, chars]) => {
       setCampaigns(camps);
-      setCharacters(chars);
+      setCharacters(chars as UserCharacter[]);
     });
   }
 

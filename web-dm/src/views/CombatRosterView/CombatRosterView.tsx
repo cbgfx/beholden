@@ -2,7 +2,8 @@ import * as React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useStore } from "@/store";
 import { api } from "@/services/api";
-import type { INpc, Player } from "@/domain/types/domain";
+import { fetchCampaignCharacters } from "@/services/actorApi";
+import type { CampaignCharacter, INpc } from "@/domain/types/domain";
 import { useConfirm } from "@/confirm/ConfirmContext";
 import { CombatRosterHeader } from "@/views/CombatRosterView/components/CombatRosterHeader";
 import { useEncounterCombatants } from "@/views/CombatView/hooks/useEncounterCombatants";
@@ -54,10 +55,10 @@ export function CombatRosterView() {
   // Campaign-scoped refresh: players + inpcs only (sufficient for roster view).
   const refreshCampaignForRoster = React.useCallback(async (cid: string) => {
     const [players, inpcs] = await Promise.all([
-      api<CampaignCharacter[]>(`/api/campaigns/${cid}/players`),
+      fetchCampaignCharacters(cid),
       api<INpc[]>(`/api/campaigns/${cid}/inpcs`),
     ]);
-    dispatch({ type: "setPlayers", players });
+    dispatch({ type: "setPlayers", players: players as CampaignCharacter[] });
     dispatch({ type: "setINpcs", inpcs });
   }, [dispatch]);
 

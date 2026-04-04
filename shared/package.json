@@ -3,6 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "exports": {
+    "./api": "./src/api/index.ts",
+    "./api/*": "./src/api/*",
     "./icons": "./src/icons/index.tsx",
     "./icons/*": "./src/icons/*",
     "./ui": "./src/ui/index.tsx",

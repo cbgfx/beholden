@@ -4,6 +4,7 @@ import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../shared/validate.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { PARTY_INVENTORY_COLS, rowToPartyInventoryItem } from "../lib/db.js";
+import { toPartyInventoryItemDto } from "../lib/apiCollections.js";
 import { memberOrAdmin } from "../middleware/campaignAuth.js";
 import type { StoredPartyInventoryItemState } from "../server/userData.js";
 
@@ -36,7 +37,7 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
     const rows = db.prepare(
       `SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE campaign_id = ? ORDER BY sort ASC, created_at ASC`
     ).all(campaignId) as Record<string, unknown>[];
-    res.json(rows.map(rowToPartyInventoryItem));
+    res.json(rows.map(rowToPartyInventoryItem).map(toPartyInventoryItemDto));
   });
 
   // POST add item
@@ -72,8 +73,10 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
     );
     ctx.broadcast("partyInventory:changed", { campaignId });
     res.status(201).json(
-      rowToPartyInventoryItem(
-        db.prepare(`SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE id = ?`).get(id) as Record<string, unknown>
+      toPartyInventoryItemDto(
+        rowToPartyInventoryItem(
+          db.prepare(`SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE id = ?`).get(id) as Record<string, unknown>
+        )
       )
     );
   });
@@ -113,7 +116,7 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
       .prepare(`SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE id = ?`)
       .get(itemId) as Record<string, unknown> | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Not found" });
-    res.json(rowToPartyInventoryItem(row));
+    res.json(toPartyInventoryItemDto(rowToPartyInventoryItem(row)));
   });
 
   // PATCH quantity only (quick +/- from UI)
@@ -145,7 +148,11 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
         campaignId
       );
     ctx.broadcast("partyInventory:changed", { campaignId });
-    res.json({ ok: true });
+    const row = db
+      .prepare(`SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE id = ? AND campaign_id = ?`)
+      .get(itemId, campaignId) as Record<string, unknown> | undefined;
+    if (!row) return res.status(404).json({ ok: false, message: "Not found" });
+    res.json(toPartyInventoryItemDto(rowToPartyInventoryItem(row)));
   });
 
   // DELETE item

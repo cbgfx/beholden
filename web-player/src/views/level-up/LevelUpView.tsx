@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, jsonInit } from "@/services/api";
+import { fetchMyCharacter } from "@/services/actorApi";
 import { C } from "@/lib/theme";
 import { rollDiceExpr } from "@/lib/dice";
 import { collectSpellChoicesFromEffects, parseFeatureEffects } from "@/domain/character/parseFeatureEffects";
@@ -108,9 +109,9 @@ export function LevelUpView() {
   // -------------------------------------------------------------------------
   useEffect(() => {
     if (!id) return;
-    api<Character>(`/api/me/characters/${id}`)
+    fetchMyCharacter(id)
       .then((c) => {
-        setChar(c);
+        setChar(c as Character);
         setSubclass(String(c.characterData?.subclass ?? ""));
         setChosenCantrips(c.characterData?.chosenCantrips ?? []);
         setChosenSpells(c.characterData?.chosenSpells ?? []);

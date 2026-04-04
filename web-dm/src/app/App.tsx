@@ -5,6 +5,13 @@ import { ShellLayout } from "@/layout/ShellLayout";
 import { theme } from "@/theme/theme";
 import { StoreProvider, useStore } from "@/store";
 import { api } from "@/services/api";
+import { fetchCampaignCharacters, fetchEncounterActors } from "@/services/actorApi";
+import {
+  fetchAdventureNotes,
+  fetchAdventureTreasure,
+  fetchCampaignNotes,
+  fetchCampaignTreasure,
+} from "@/services/collectionApi";
 import type { Adventure, Campaign, CampaignCharacter, Encounter, EncounterActor, INpc, Meta, Note, TreasureEntry } from "@/domain/types/domain";
 import { useAppWebSocket } from "@/app/useAppWebSocket";
 import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
@@ -46,10 +53,10 @@ function AppInner() {
     if (!cid) return;
     const [adv, pls, inpcs, notes, treasure] = await Promise.all([
       api<Adventure[]>(`/api/campaigns/${cid}/adventures`),
-      api<CampaignCharacter[]>(`/api/campaigns/${cid}/players`),
+      fetchCampaignCharacters(cid),
       api<INpc[]>(`/api/campaigns/${cid}/inpcs`),
-      api<Note[]>(`/api/campaigns/${cid}/notes`),
-      api<TreasureEntry[]>(`/api/campaigns/${cid}/treasure`)
+      fetchCampaignNotes(cid) as Promise<Note[]>,
+      fetchCampaignTreasure(cid) as Promise<TreasureEntry[]>
     ]);
     dispatch({ type: "setAdventures", adventures: adv });
     dispatch({ type: "setPlayers", players: pls });
@@ -67,8 +74,8 @@ function AppInner() {
     }
     const [enc, notes, treasure] = await Promise.all([
       api<Encounter[]>(`/api/adventures/${adventureId}/encounters`),
-      api<Note[]>(`/api/adventures/${adventureId}/notes`),
-      api<TreasureEntry[]>(`/api/adventures/${adventureId}/treasure`)
+      fetchAdventureNotes(adventureId) as Promise<Note[]>,
+      fetchAdventureTreasure(adventureId) as Promise<TreasureEntry[]>
     ]);
     dispatch({ type: "setEncounters", encounters: enc });
     dispatch({ type: "setAdventureNotes", notes });
@@ -77,7 +84,7 @@ function AppInner() {
 
   const refreshEncounter = useCallback(async (encounterId: string | null) => {
     if (!encounterId) { dispatch({ type: "setCombatants", combatants: [] }); return; }
-    dispatch({ type: "setCombatants", combatants: await api<EncounterActor[]>(`/api/encounters/${encounterId}/combatants`) });
+    dispatch({ type: "setCombatants", combatants: await fetchEncounterActors(encounterId) as EncounterActor[] });
   }, [dispatch]);
 
   useEffect(() => { refreshAll(); }, []);

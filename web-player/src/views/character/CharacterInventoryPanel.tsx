@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { api, jsonInit } from "@/services/api";
+import { createPartyInventoryItem, fetchPartyInventory, updatePartyInventoryQuantity } from "@/services/inventoryApi";
 import { useWs } from "@/services/ws";
 import { C, withAlpha } from "@/lib/theme";
 import { titleCase } from "@/lib/format/titleCase";
@@ -108,8 +109,8 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
 
   const fetchPartyStash = useCallback(() => {
     if (!campaignId) return;
-    api<PartyStashItem[]>(`/api/campaigns/${campaignId}/party-inventory`)
-      .then(setPartyStashItems)
+    fetchPartyInventory(campaignId)
+      .then((items) => setPartyStashItems(items as PartyStashItem[]))
       .catch(() => {});
   }, [campaignId]);
 
@@ -372,7 +373,7 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
     if (containerId === PARTY_STASH_CONTAINER_ID && campaignId) {
       const item = items.find((it) => it.id === id);
       if (!item) return;
-      await api(`/api/campaigns/${campaignId}/party-inventory`, jsonInit("POST", {
+      await createPartyInventoryItem(campaignId, {
         name: item.name,
         quantity: item.quantity,
         weight: item.weight ?? null,
@@ -382,7 +383,7 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
         description: item.description ?? "",
         source: item.source,
         itemId: item.itemId,
-      }));
+      });
       await persist(items.filter((it) => it.id !== id));
       setExpandedItemId(null);
       return;
@@ -414,7 +415,7 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
 
   async function changePartyStashQty(id: string, quantity: number) {
     if (!campaignId) return;
-    await api(`/api/campaigns/${campaignId}/party-inventory/${id}/quantity`, jsonInit("PATCH", { quantity }));
+    await updatePartyInventoryQuantity(campaignId, id, quantity);
   }
 
   async function deleteFromPartyStash(id: string) {

@@ -1,6 +1,12 @@
 import { useWs } from "@/services/ws";
 import { api } from "@/services/api";
-import type { INpc, Note, Player, TreasureEntry } from "@/domain/types/domain";
+import { fetchCampaignCharacters } from "@/services/actorApi";
+import {
+  fetchAdventureTreasure,
+  fetchCampaignNotes,
+  fetchCampaignTreasure,
+} from "@/services/collectionApi";
+import type { CampaignCharacter, INpc, Note, TreasureEntry } from "@/domain/types/domain";
 import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
 import type { Action } from "@/store/actions";
 import type React from "react";
@@ -41,7 +47,7 @@ export function useAppWebSocket({
       refreshCampaign(selectedCampaignId); return;
     }
     if (msg.type === "players:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
-      api<CampaignCharacter[]>(`/api/campaigns/${selectedCampaignId}/players`).then((pls) => dispatch({ type: "setPlayers", players: pls }));
+      fetchCampaignCharacters(selectedCampaignId).then((pls) => dispatch({ type: "setPlayers", players: pls as CampaignCharacter[] }));
       return;
     }
     if (msg.type === "inpcs:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
@@ -53,14 +59,14 @@ export function useAppWebSocket({
       return;
     }
     if (msg.type === "notes:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
-      api<Note[]>(`/api/campaigns/${selectedCampaignId}/notes`).then((notes) => dispatch({ type: "setCampaignNotes", notes }));
+      fetchCampaignNotes(selectedCampaignId).then((notes) => dispatch({ type: "setCampaignNotes", notes: notes as Note[] }));
       if (selectedAdventureId) refreshAdventure(selectedAdventureId);
       return;
     }
     if (msg.type === "treasure:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
-      api<TreasureEntry[]>(`/api/campaigns/${selectedCampaignId}/treasure`).then((treasure) => dispatch({ type: "setCampaignTreasure", treasure }));
+      fetchCampaignTreasure(selectedCampaignId).then((treasure) => dispatch({ type: "setCampaignTreasure", treasure: treasure as TreasureEntry[] }));
       if (selectedAdventureId) {
-        api<TreasureEntry[]>(`/api/adventures/${selectedAdventureId}/treasure`).then((treasure) => dispatch({ type: "setAdventureTreasure", treasure }));
+        fetchAdventureTreasure(selectedAdventureId).then((treasure) => dispatch({ type: "setAdventureTreasure", treasure: treasure as TreasureEntry[] }));
       } else {
         dispatch({ type: "setAdventureTreasure", treasure: [] });
       }

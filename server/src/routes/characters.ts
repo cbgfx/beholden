@@ -9,6 +9,7 @@ import { parseBody } from "../shared/validate.js";
 import { rowToCampaignCharacter, rowToCharacterSheet, CAMPAIGN_CHARACTER_COLS, CHARACTER_SHEET_COLS } from "../lib/db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
+import { toCharacterCampaignAssignmentDto, toCharacterSheetDto } from "../lib/apiActors.js";
 import {
   type Assignment,
   getAssignments,
@@ -68,6 +69,70 @@ const OverridesBody = z.object({
   hpMaxBonus: z.number().int(),
 });
 
+function toCharacterSheetDtoInput(
+  character: {
+    id: string;
+    userId: string;
+    name: string;
+    playerName: string;
+    className: string;
+    species: string;
+    level: number;
+    hpMax: number;
+    hpCurrent: number;
+    ac: number;
+    speed: number;
+    strScore: number | null;
+    dexScore: number | null;
+    conScore: number | null;
+    intScore: number | null;
+    wisScore: number | null;
+    chaScore: number | null;
+    color: string | null;
+    imageUrl: string | null;
+    characterData: Record<string, unknown> | null;
+    sharedNotes: string;
+    createdAt: number;
+    updatedAt: number;
+    deathSaves?: { success: number; fail: number } | undefined;
+    conditions?: Array<Record<string, unknown>> | undefined;
+    overrides?: { tempHp: number; acBonus: number; hpMaxBonus: number; inspiration?: boolean } | undefined;
+  },
+  campaigns: ReturnType<typeof toCharacterCampaignAssignmentDto>,
+  campaignSharedNotes?: string,
+) {
+  return {
+    id: character.id,
+    userId: character.userId,
+    name: character.name,
+    playerName: character.playerName,
+    className: character.className,
+    species: character.species,
+    level: character.level,
+    hpMax: character.hpMax,
+    hpCurrent: character.hpCurrent,
+    ac: character.ac,
+    speed: character.speed,
+    strScore: character.strScore,
+    dexScore: character.dexScore,
+    conScore: character.conScore,
+    intScore: character.intScore,
+    wisScore: character.wisScore,
+    chaScore: character.chaScore,
+    color: character.color,
+    imageUrl: character.imageUrl,
+    characterData: character.characterData,
+    sharedNotes: character.sharedNotes ?? "",
+    campaigns,
+    ...(character.conditions ? { conditions: character.conditions } : {}),
+    ...(character.overrides ? { overrides: character.overrides } : {}),
+    ...(character.deathSaves ? { deathSaves: character.deathSaves } : {}),
+    ...(campaignSharedNotes !== undefined ? { campaignSharedNotes } : {}),
+    createdAt: character.createdAt,
+    updatedAt: character.updatedAt,
+  };
+}
+
 export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
@@ -90,7 +155,12 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const result = chars.map((c) => {
       const char = rowToCharacterSheet(c);
       const assignments = getAssignments(db, char.id);
-      return { ...mergeLiveStats(db, char, assignments), campaigns: assignmentsToJson(assignments) };
+      return toCharacterSheetDto(
+        toCharacterSheetDtoInput(
+          mergeLiveStats(db, char, assignments),
+          toCharacterCampaignAssignmentDto(assignmentsToJson(assignments)),
+        ),
+      );
     });
 
     res.json(result);
@@ -120,11 +190,15 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       }
     }
 
-    res.json({
-      ...merged,
-      campaignSharedNotes: JSON.stringify(campaignNotes),
-      campaigns: assignmentsToJson(assignments),
-    });
+    res.json(
+      toCharacterSheetDto(
+        toCharacterSheetDtoInput(
+          merged,
+          toCharacterCampaignAssignmentDto(assignmentsToJson(assignments)),
+          JSON.stringify(campaignNotes),
+        ),
+      ),
+    );
   });
 
   // Create a new user-owned character (no campaign required)
@@ -163,7 +237,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     );
 
     const row = db.prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ?`).get(id) as Record<string, unknown>;
-    res.json({ ...rowToCharacterSheet(row), campaigns: [] });
+    res.json(toCharacterSheetDto({ ...rowToCharacterSheet(row), campaigns: [] }));
   });
 
   // Update a user-owned character
@@ -234,7 +308,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     syncAssignedPlayerRows(db, ctx.broadcast, charId, buildMirroredPlayerSnapshot(nextChar), t, userId);
 
     const updated = db.prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ?`).get(charId) as Record<string, unknown>;
-    res.json(rowToCharacterSheet(updated));
+    res.json(toCharacterSheetDto({ ...rowToCharacterSheet(updated), campaigns: [] }));
   });
 
   // Player self-updates their linked campaign-character conditions.

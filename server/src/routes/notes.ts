@@ -4,6 +4,7 @@ import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../shared/validate.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { rowToNote, nextSortFor, NOTE_COLS } from "../lib/db.js";
+import { toNoteDto } from "../lib/apiCollections.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
 import type { StoredNoteState } from "../server/userData.js";
 
@@ -33,7 +34,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
         `SELECT ${NOTE_COLS} FROM notes WHERE campaign_id = ? AND adventure_id IS NULL ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC`
       )
       .all(campaignId) as Record<string, unknown>[];
-    res.json(rows.map(rowToNote));
+    res.json(rows.map(rowToNote).map(toNoteDto));
   });
 
   app.get("/api/adventures/:adventureId/notes", memberOrAdmin(db), (req, res) => {
@@ -44,7 +45,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
         `SELECT ${NOTE_COLS} FROM notes WHERE adventure_id = ? ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC`
       )
       .all(adventureId) as Record<string, unknown>[];
-    res.json(rows.map(rowToNote));
+    res.json(rows.map(rowToNote).map(toNoteDto));
   });
 
   app.post("/api/campaigns/:campaignId/notes", dmOrAdmin(db), (req, res) => {
@@ -63,7 +64,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     const row = db
       .prepare(`SELECT ${NOTE_COLS} FROM notes WHERE id = ?`)
       .get(id) as Record<string, unknown>;
-    res.json(rowToNote(row));
+    res.json(toNoteDto(rowToNote(row)));
   });
 
   app.post("/api/adventures/:adventureId/notes", dmOrAdmin(db), (req, res) => {
@@ -88,7 +89,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     const row = db
       .prepare(`SELECT ${NOTE_COLS} FROM notes WHERE id = ?`)
       .get(id) as Record<string, unknown>;
-    res.json(rowToNote(row));
+    res.json(toNoteDto(rowToNote(row)));
   });
 
   app.put("/api/notes/:noteId", dmOrAdmin(db), (req, res) => {
@@ -112,7 +113,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     const row = db
       .prepare(`SELECT ${NOTE_COLS} FROM notes WHERE id = ?`)
       .get(noteId) as Record<string, unknown>;
-    res.json(rowToNote(row));
+    res.json(toNoteDto(rowToNote(row)));
   });
 
   app.delete("/api/notes/:noteId", dmOrAdmin(db), (req, res) => {

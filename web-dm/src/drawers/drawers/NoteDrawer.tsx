@@ -3,6 +3,7 @@ import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { TextArea } from "@/ui/TextArea";
 import { api, jsonInit } from "@/services/api";
+import { createAdventureNote, createCampaignNote } from "@/services/collectionApi";
 import { useStore, type DrawerState } from "@/store";
 import type { DrawerContent } from "@/drawers/types";
 
@@ -36,11 +37,11 @@ export function NoteDrawer(props: {
       const t = title.trim() || "Note";
       const body = text ?? "";
       if (d.scope === "campaign") {
-        await api(`/api/campaigns/${d.campaignId}/notes`, jsonInit("POST", { title: t, text: body }));
+        await createCampaignNote(d.campaignId, { title: t, text: body });
         await props.refreshCampaign(d.campaignId);
       } else {
         const aid = d.adventureId!;
-        await api(`/api/adventures/${aid}/notes`, jsonInit("POST", { title: t, text: body }));
+        await createAdventureNote(aid, { title: t, text: body });
         await props.refreshAdventure(aid);
       }
       props.close();

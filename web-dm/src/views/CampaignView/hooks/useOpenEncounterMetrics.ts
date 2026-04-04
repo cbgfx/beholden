@@ -1,5 +1,6 @@
 import * as React from "react";
 import { api } from "@/services/api";
+import { fetchEncounterActors } from "@/services/actorApi";
 import { getMonsterXp } from "@/domain/utils/xp";
 import { calcEncounterDifficulty } from "@/domain/utils/difficulty";
 import { estimateMonsterDpr } from "@/domain/utils/monsterDpr";
@@ -57,7 +58,7 @@ export function useOpenEncounterMetrics(args: {
 
       for (const encId of toFetch) {
         try {
-          const combatants: any[] = await api(`/api/encounters/${encId}/combatants`);
+          const combatants = await fetchEncounterActors(encId);
 
           // Ensure we have monster details for referenced monsters.
           const monsterIds = new Set<string>();

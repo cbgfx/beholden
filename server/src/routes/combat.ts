@@ -22,6 +22,7 @@ import {
   OverridesSchema,
 } from "../lib/schemas.js";
 import { DEFAULT_OVERRIDES } from "../lib/defaults.js";
+import { toEncounterActorDto } from "../lib/apiActors.js";
 
 const CombatStateBody = z.object({
   round: z.number().int().min(1).optional(),
@@ -120,12 +121,12 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         hpMax: player.hpMax,
         ac: player.ac,
         conditions: player.conditions ?? [],
-        deathSaves: player.deathSaves ?? c.deathSaves,
         overrides: player.overrides ?? DEFAULT_OVERRIDES,
+        ...(player.deathSaves ?? c.deathSaves ? { deathSaves: player.deathSaves ?? c.deathSaves } : {}),
       };
     });
 
-    res.json(merged);
+    res.json(merged.map((actor) => toEncounterActorDto(actor)));
   });
 
   // ── Persisted combat state (round + active combatant) ─────────────────────
@@ -443,7 +444,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
       if (syncedCampaignId) ctx.broadcast("players:changed", { campaignId: syncedCampaignId });
 
       ctx.broadcast("encounter:combatantsChanged", { encounterId });
-      res.json(next);
+      res.json(toEncounterActorDto(next));
     }
   );
 

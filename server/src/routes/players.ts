@@ -9,6 +9,7 @@ import { ConditionInstanceSchema, OverridesSchema } from "../lib/schemas.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
 import { ACCEPTED_IMAGE_TYPES, resizeToWebP } from "../lib/imageHelpers.js";
 import { absolutizePublicUrl } from "../lib/publicUrl.js";
+import { toCampaignCharacterDto } from "../lib/apiActors.js";
 import {
   serializeCampaignCharacterLive,
   serializeCampaignCharacterSheet,
@@ -114,7 +115,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
       const rows = db
       .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE campaign_id = ?`)
       .all(campaignId) as Record<string, unknown>[];
-    res.json(rows.map(rowToCampaignCharacter));
+    res.json(rows.map((row) => toCampaignCharacterDto(rowToCampaignCharacter(row))));
   });
 
   // Player-facing party view — HP is obfuscated (percent only, no raw values).
@@ -201,7 +202,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     );
     ctx.broadcast("players:changed", { campaignId });
     const row = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(id) as Record<string, unknown>;
-    res.json(rowToCampaignCharacter(row));
+    res.json(toCampaignCharacterDto(rowToCampaignCharacter(row)));
   });
 
   app.put("/api/players/:playerId", dmOrAdmin(db), (req, res) => {
@@ -231,7 +232,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
 
     ctx.broadcast("players:changed", { campaignId: existing.campaignId });
     const updated = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(playerId) as Record<string, unknown>;
-    res.json(rowToCampaignCharacter(updated));
+    res.json(toCampaignCharacterDto(rowToCampaignCharacter(updated)));
   });
 
   // DM can update a player's shared notes (edit/delete individual notes).

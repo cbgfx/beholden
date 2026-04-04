@@ -4,6 +4,7 @@ import type { ServerContext } from "../server/context.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { rowToTreasure, nextSortFor, TREASURE_COLS } from "../lib/db.js";
+import { toTreasureDto } from "../lib/apiCollections.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
 import type { StoredTreasureState } from "../server/userData.js";
 
@@ -49,7 +50,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
         `SELECT ${TREASURE_COLS} FROM treasure WHERE campaign_id = ? AND adventure_id IS NULL ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC`
       )
       .all(campaignId) as Record<string, unknown>[];
-    res.json(rows.map(rowToTreasure));
+    res.json(rows.map(rowToTreasure).map(toTreasureDto));
   });
 
   app.get("/api/adventures/:adventureId/treasure", memberOrAdmin(db), (req, res) => {
@@ -62,7 +63,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
         `SELECT ${TREASURE_COLS} FROM treasure WHERE adventure_id = ? ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC`
       )
       .all(adventureId) as Record<string, unknown>[];
-    res.json(rows.map(rowToTreasure));
+    res.json(rows.map(rowToTreasure).map(toTreasureDto));
   });
 
   app.patch("/api/treasure/:treasureId/qty", dmOrAdmin(db), (req, res) => {
@@ -92,7 +93,10 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
       treasureId
     );
     ctx.broadcast("treasure:changed", { campaignId: treasure.campaignId });
-    res.json({ ok: true, qty });
+    const updatedRow = db
+      .prepare(`SELECT ${TREASURE_COLS} FROM treasure WHERE id = ?`)
+      .get(treasureId) as Record<string, unknown>;
+    res.json(toTreasureDto(rowToTreasure(updatedRow)));
   });
 
   app.post("/api/campaigns/:campaignId/treasure", dmOrAdmin(db), (req, res) => {
@@ -110,7 +114,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     });
     if (out.error) return res.status(out.error.status).json({ ok: false, message: out.error.message });
     ctx.broadcast("treasure:changed", { campaignId });
-    res.json(out.entry);
+    res.json(toTreasureDto(out.entry));
   });
 
   app.post("/api/adventures/:adventureId/treasure", dmOrAdmin(db), (req, res) => {
@@ -130,7 +134,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     });
     if (out.error) return res.status(out.error.status).json({ ok: false, message: out.error.message });
     ctx.broadcast("treasure:changed", { campaignId: aRow.campaign_id });
-    res.json(out.entry);
+    res.json(toTreasureDto(out.entry));
   });
 
   app.delete("/api/treasure/:treasureId", dmOrAdmin(db), (req, res) => {

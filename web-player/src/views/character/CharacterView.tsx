@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, jsonInit } from "@/services/api";
+import { fetchMyCharacter, updateMyCharacter } from "@/services/actorApi";
 import { C } from "@/lib/theme";
 import { RightDrawer } from "@/ui/RightDrawer";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
@@ -570,8 +571,8 @@ export function CharacterView() {
 
   const fetchChar = useCallback(() => {
     if (!id) return;
-    api<Character>(`/api/me/characters/${id}`)
-      .then(setChar)
+    fetchMyCharacter(id)
+      .then((next) => setChar(next as Character))
       .catch((e) => setError(e?.message ?? "Failed to load character"))
       .finally(() => setLoading(false));
   }, [id]);
@@ -1536,12 +1537,12 @@ export function CharacterView() {
   }
 
   async function saveCharacterData(updatedData: CharacterData) {
-    const updated = await api<Character>(`/api/me/characters/${char!.id}`, jsonInit("PUT", {
+    const updated = await updateMyCharacter(char!.id, {
       name: char!.name,
       characterData: updatedData,
-    }));
+    });
     setChar((prev) => prev ? { ...prev, characterData: { ...(prev.characterData ?? {}), ...updatedData } } : prev);
-    return updated;
+    return updated as Character;
   }
 
   async function saveSheetOverrides() {
@@ -1556,10 +1557,10 @@ export function CharacterView() {
     try {
       await api(`/api/me/characters/${char.id}/overrides`, jsonInit("PATCH", nextOverrides));
       if ((char.color ?? C.accentHl) !== nextColor) {
-        await api<Character>(`/api/me/characters/${char.id}`, jsonInit("PUT", {
+        await updateMyCharacter(char.id, {
           name: char.name,
           color: nextColor,
-        }));
+        });
       }
       setChar((prev) => prev ? {
         ...prev,

@@ -6,6 +6,7 @@ import {
   type Ruleset,
 } from "@/lib/characterRules";
 import { api, jsonInit } from "@/services/api";
+import { createMyCharacter, fetchMyCharacter } from "@/services/actorApi";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   invocationPrerequisitesMet,
@@ -464,7 +465,7 @@ export function CharacterCreatorView() {
   // Load existing character when editing
   React.useEffect(() => {
     if (!editId) return;
-    api<any>(`/api/me/characters/${editId}`)
+    fetchMyCharacter(editId)
       .then((ch) => {
         const cd = ch.characterData ?? {};
         setForm((f) => ({
@@ -946,7 +947,7 @@ export function CharacterCreatorView() {
         await api(`/api/me/characters/${editId}`, jsonInit("PUT", body));
         charId = editId;
       } else {
-        const created = await api<{ id: string }>("/api/me/characters", jsonInit("POST", body));
+        const created = await createMyCharacter(body);
         charId = created.id;
       }
 
