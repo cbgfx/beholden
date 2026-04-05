@@ -233,9 +233,19 @@ export function syncAssignedPlayerRows(
   snapshot: MirroredPlayerSnapshot,
   updatedAt: number,
   userId?: string,
+  livePatch?: Partial<StoredCampaignCharacterLiveState>,
 ) {
   for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
     updateProjectedPlayerRow(db, player_id, snapshot, updatedAt, userId);
+    if (livePatch && Object.keys(livePatch).length > 0) {
+      const row = db
+        .prepare("SELECT id, campaign_id, user_id, character_id, sheet_json, live_json, image_url, shared_notes, created_at, updated_at FROM players WHERE id = ?")
+        .get(player_id) as Record<string, unknown> | undefined;
+      if (row) {
+        const current = rowToCampaignCharacter(row);
+        updateCampaignCharacterLive(db, player_id, current, livePatch, updatedAt);
+      }
+    }
     broadcast("players:changed", { campaignId: campaign_id });
     broadcastPlayerCombatantChanges(db, broadcast, player_id);
   }

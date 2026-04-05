@@ -5,6 +5,8 @@
   "exports": {
     "./api": "./src/api/index.ts",
     "./api/*": "./src/api/*",
+    "./domain": "./src/domain/index.ts",
+    "./domain/*": "./src/domain/*",
     "./icons": "./src/icons/index.tsx",
     "./icons/*": "./src/icons/*",
     "./ui": "./src/ui/index.tsx",

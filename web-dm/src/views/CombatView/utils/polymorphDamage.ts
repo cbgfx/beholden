@@ -1,16 +1,5 @@
+import { getPolymorphCondition } from "@beholden/shared/domain";
 import type { EncounterActor } from "@/domain/types/domain";
-
-type PolymorphCondition = {
-  key: "polymorphed";
-  originalAcBonus?: number;
-  originalHpMaxBonus?: number;
-  originalHpCurrent?: number | null;
-};
-
-function getPolymorphCondition(combatant: Combatant): PolymorphCondition | null {
-  const condition = (combatant.conditions ?? []).find((c) => c.key === "polymorphed");
-  return condition ? (condition as PolymorphCondition) : null;
-}
 
 export function resolveCombatantDamage(combatant: Combatant, amount: number): {
   hpCurrent: number;

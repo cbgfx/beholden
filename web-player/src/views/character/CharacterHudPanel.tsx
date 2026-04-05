@@ -1,4 +1,5 @@
 import React from "react";
+import { SHARED_CONDITION_DEFS } from "@beholden/shared/domain";
 import { C } from "@/lib/theme";
 import { RightDrawer } from "@/ui/RightDrawer";
 import { IconAttack, IconConditionByKey, IconConditions, IconHeal, IconHeart, IconInspiration, IconPlayer } from "@/icons";
@@ -30,26 +31,7 @@ function IconCharacterInfo(props: { size?: number; style?: React.CSSProperties }
   );
 }
 
-const BASE_CONDITIONS = [
-  { key: "blinded", name: "Blinded" },
-  { key: "charmed", name: "Charmed" },
-  { key: "deafened", name: "Deafened" },
-  { key: "frightened", name: "Frightened" },
-  { key: "grappled", name: "Grappled" },
-  { key: "incapacitated", name: "Incapacitated" },
-  { key: "invisible", name: "Invisible" },
-  { key: "paralyzed", name: "Paralyzed" },
-  { key: "petrified", name: "Petrified" },
-  { key: "poisoned", name: "Poisoned" },
-  { key: "prone", name: "Prone" },
-  { key: "restrained", name: "Restrained" },
-  { key: "stunned", name: "Stunned" },
-  { key: "unconscious", name: "Unconscious" },
-  { key: "concentration", name: "Concentration" },
-  { key: "disadvantage", name: "Disadvantage" },
-  { key: "hexed", name: "Hexed", needsCaster: true },
-  { key: "marked", name: "Marked", needsCaster: true },
-];
+const BASE_CONDITIONS = SHARED_CONDITION_DEFS;
 
 function getAvailableConditions(char: Pick<CharacterHudLike, "className">) {
   return /barbarian/i.test(String(char.className ?? ""))

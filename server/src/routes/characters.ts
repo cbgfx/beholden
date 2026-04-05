@@ -305,7 +305,15 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       chaScore: p.chaScore !== undefined ? p.chaScore : ex.chaScore,
       color: p.color !== undefined ? p.color : ex.color,
     };
-    syncAssignedPlayerRows(db, ctx.broadcast, charId, buildMirroredPlayerSnapshot(nextChar), t, userId);
+    syncAssignedPlayerRows(
+      db,
+      ctx.broadcast,
+      charId,
+      buildMirroredPlayerSnapshot(nextChar),
+      t,
+      userId,
+      p.hpCurrent !== undefined ? { hpCurrent: p.hpCurrent } : undefined,
+    );
 
     const updated = db.prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ?`).get(charId) as Record<string, unknown>;
     res.json(toCharacterSheetDto({ ...rowToCharacterSheet(updated), campaigns: [] }));

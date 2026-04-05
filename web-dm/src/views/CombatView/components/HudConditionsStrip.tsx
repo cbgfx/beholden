@@ -1,15 +1,11 @@
 import * as React from "react";
+import { conditionLabel } from "@beholden/shared/domain";
 
 import { theme } from "@/theme/theme";
 import { conditionIconByKey } from "@/icons/conditions";
-import { CONDITION_DEFS } from "@/domain/conditions";
 import type { ConditionInstance } from "@/domain/conditions";
 
 import "@/views/CombatView/combatView.css";
-
-function conditionLabel(key: string) {
-  return CONDITION_DEFS.find((d) => d.key === key)?.name ?? key;
-}
 
 type Props = {
   conditions: ConditionInstance[];

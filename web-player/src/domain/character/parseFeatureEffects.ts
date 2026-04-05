@@ -328,7 +328,7 @@ function parseKnownSpellGrantEffects(source: FeatureEffectSource, text: string, 
     });
   }
 
-  for (const match of text.matchAll(/you\s+(?:learn|know)\s+(?:the\s+)?([A-Za-z][A-Za-z' -]+?)\s+cantrip\b/g)) {
+  for (const match of text.matchAll(/you\s+(?:learn|know)\s+(?:the\s+)?([A-Za-z][A-Za-z' -]+?)\s+cantrip\b/gi)) {
     const spellName = match[1]?.trim();
     if (!spellName) continue;
     addSpellGrantEffect(source, effects, {
@@ -339,7 +339,7 @@ function parseKnownSpellGrantEffects(source: FeatureEffectSource, text: string, 
     });
   }
 
-  for (const match of text.matchAll(/you\s+(?:learn|know)\s+(?:the\s+)?([A-Za-z][A-Za-z' -]+?)\s+spell\b/g)) {
+  for (const match of text.matchAll(/you\s+(?:learn|know)\s+(?:the\s+)?([A-Za-z][A-Za-z' -]+?)\s+spell\b/gi)) {
     const spellName = match[1]?.trim();
     if (!spellName) continue;
     addSpellGrantEffect(source, effects, {

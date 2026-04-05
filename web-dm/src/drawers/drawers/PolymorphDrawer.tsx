@@ -1,4 +1,5 @@
 import React from "react";
+import { getPolymorphCondition, type SharedPolymorphCondition } from "@beholden/shared/domain";
 import { Button } from "@/ui/Button";
 import { api, jsonInit } from "@/services/api";
 import { theme } from "@/theme/theme";
@@ -14,22 +15,7 @@ type PolymorphDrawerState = Exclude<
   null
 >;
 
-/** Condition stored on the combatant while polymorphed. */
-export type PolymorphCondition = {
-  key: "polymorphed";
-  polymorphName: string;
-  polymorphMonsterId: string | null;
-  /** Saved overrides.acBonus before transform (for revert). */
-  originalAcBonus: number;
-  /** Saved overrides.hpMaxBonus before transform (for revert). */
-  originalHpMaxBonus: number;
-  /** Saved hpCurrent before transform (for revert). */
-  originalHpCurrent: number | null;
-};
-
-function isPolymorphCondition(c: { key: string }): c is PolymorphCondition {
-  return c.key === "polymorphed";
-}
+export type PolymorphCondition = SharedPolymorphCondition;
 
 const CR_OPTIONS = ["", "0", "1/8", "1/4", "1/2", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
   "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30"];
@@ -70,7 +56,7 @@ export function PolymorphDrawer(props: {
   );
 
   const currentPolymorph = React.useMemo(
-    () => combatant?.conditions?.find(isPolymorphCondition) ?? null,
+    () => getPolymorphCondition(combatant?.conditions),
     [combatant]
   );
 

@@ -8,6 +8,15 @@ import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgres
 import { rollDiceExpr, hasDiceTerm } from "@/lib/dice";
 import { formatCr, parseCrNumber } from "@/lib/monsterPicker/utils";
 import type { CompendiumMonsterRow } from "@/lib/monsterPicker/types";
+import {
+  formatMonsterTypeLabel,
+  getPolymorphCondition,
+  parseMonsterSpeed,
+  proficiencyBonusFromChallengeRating,
+  readMonsterNumber,
+  readMonsterSkillBonus,
+  type SharedPolymorphCondition,
+} from "@beholden/shared/domain";
 import { useWs } from "@/services/ws";
 import {
   Wrap,
@@ -192,13 +201,7 @@ interface SheetOverrides {
   inspiration?: boolean;
 }
 
-interface PolymorphConditionData extends ConditionInstance {
-  polymorphName?: string;
-  polymorphMonsterId?: string | null;
-  originalAcBonus?: number;
-  originalHpMaxBonus?: number;
-  originalHpCurrent?: number | null;
-}
+type PolymorphConditionData = SharedPolymorphCondition & ConditionInstance;
 
 type EditableSheetOverrideKey = "tempHp" | "acBonus" | "hpMaxBonus";
 
@@ -305,88 +308,6 @@ function parseLeadingNumberLoose(value: unknown): number {
   if (!text) return NaN;
   const match = text.match(/-?\d+(?:\.\d+)?/);
   return match ? Number(match[0]) : NaN;
-}
-
-function readMonsterNumber(value: unknown): number | null {
-  if (value == null) return null;
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  if (typeof value === "string") {
-    const match = value.match(/-?\d+(?:\.\d+)?/);
-    return match ? Number(match[0]) : null;
-  }
-  if (Array.isArray(value)) return readMonsterNumber(value[0]);
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    const nested = record.value ?? record.average ?? record.avg ?? record.ac ?? record.hit_points ?? record.number;
-    if (nested != null && nested !== value) return readMonsterNumber(nested);
-  }
-  return null;
-}
-
-function parseMonsterSpeed(value: unknown): { walk: number | null; modes: Array<{ mode: "fly" | "swim" | "climb" | "burrow"; speed: number | null }> } {
-  if (value == null) return { walk: null, modes: [] };
-  if (typeof value === "number") return { walk: value, modes: [] };
-  if (typeof value === "string") return { walk: readMonsterNumber(value), modes: [] };
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    const walk = readMonsterNumber(record.walk ?? record.speed ?? record.value);
-    const modes = (["fly", "swim", "climb", "burrow"] as const)
-      .map((mode) => ({ mode, speed: readMonsterNumber(record[mode]) }))
-      .filter((entry) => entry.speed != null);
-    return { walk, modes };
-  }
-  return { walk: null, modes: [] };
-}
-
-function proficiencyBonusFromChallengeRating(value: unknown): number {
-  const cr = parseCrNumber(value);
-  if (!Number.isFinite(cr) || cr <= 0) return 2;
-  if (cr <= 4) return 2;
-  if (cr <= 8) return 3;
-  if (cr <= 12) return 4;
-  if (cr <= 16) return 5;
-  if (cr <= 20) return 6;
-  if (cr <= 24) return 7;
-  if (cr <= 28) return 8;
-  return 9;
-}
-
-function readMonsterSkillBonus(monster: any, skillName: string): number | null {
-  const raw = monster?.skill ?? monster?.skills;
-  if (!raw) return null;
-  if (Array.isArray(raw)) {
-    for (const entry of raw) {
-      if (typeof entry === "string") {
-        const match = entry.match(new RegExp(`${skillName}\\s*([+-]?\\d+)`, "i"));
-        if (match) return Number(match[1]);
-      }
-      if (entry && typeof entry === "object") {
-        const record = entry as Record<string, unknown>;
-        if (String(record.name ?? "").trim().toLowerCase() === skillName.toLowerCase()) {
-          return readMonsterNumber(record.bonus ?? record.value ?? record.modifier);
-        }
-      }
-    }
-  }
-  if (typeof raw === "string") {
-    const match = raw.match(new RegExp(`${skillName}\\s*([+-]?\\d+)`, "i"));
-    if (match) return Number(match[1]);
-  }
-  if (typeof raw === "object") {
-    const record = raw as Record<string, unknown>;
-    for (const [key, val] of Object.entries(record)) {
-      if (key.trim().toLowerCase() === skillName.toLowerCase()) {
-        return readMonsterNumber(val);
-      }
-    }
-  }
-  return null;
-}
-
-function formatMonsterTypeLabel(value: string | null | undefined): string {
-  const text = String(value ?? "").trim();
-  if (!text) return "All types";
-  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 function shouldDisplayClassCounterResource(name: string | null | undefined): boolean {
@@ -500,8 +421,7 @@ function shouldResetOnRest(resetCode: string | undefined, restType: "short" | "l
 }
 
 function getPolymorphConditionData(conditions: ConditionInstance[] | undefined): PolymorphConditionData | null {
-  const condition = (conditions ?? []).find((entry) => entry.key === "polymorphed");
-  return condition ? (condition as PolymorphConditionData) : null;
+  return getPolymorphCondition(conditions) as PolymorphConditionData | null;
 }
 
 // ---------------------------------------------------------------------------
