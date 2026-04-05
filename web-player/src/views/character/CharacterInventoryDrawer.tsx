@@ -3,6 +3,7 @@ import { C } from "@/lib/theme";
 import { titleCase } from "@/lib/format/titleCase";
 import { RightDrawer } from "@/ui/RightDrawer";
 import { Select } from "@/ui/Select";
+import { StatCard, Tag } from "@beholden/shared/ui";
 import type { CompendiumItemDetail, InventoryContainer, InventoryItem } from "@/views/character/CharacterInventory";
 import {
   formatItemDamageType,
@@ -227,12 +228,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return <div><div style={sectionLabel}>{label}</div>{children}</div>;
 }
 
-function Tag({ label, color }: { label: string; color: string }) {
-  return <span style={{ fontSize: "var(--fs-small)", fontWeight: 700, padding: "2px 8px", borderRadius: 999, color, border: `1px solid ${color}44`, background: `${color}18` }}>{label}</span>;
-}
-
 function Stat({ label, value }: { label: string; value: string }) {
-  return <div style={{ border: `1px solid ${C.panelBorder}`, borderRadius: 10, background: "rgba(255,255,255,0.035)", padding: "8px 10px", minWidth: 0 }}><div style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: C.muted, marginBottom: 4 }}>{label}</div><div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis" }}>{value}</div></div>;
+  return <StatCard label={label} value={value} theme={{ borderColor: C.panelBorder, background: "rgba(255,255,255,0.035)", mutedColor: C.muted, textColor: C.text }} />;
 }
 
 const sectionLabel: React.CSSProperties = { fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 };

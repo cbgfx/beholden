@@ -3,6 +3,7 @@ import {
   canAddAbilityModifierToExtraAttackDamageFromEffects,
   canUseWeaponForBonusAttackFromEffects,
 } from "@/domain/character/parseFeatureEffects";
+import { currencyCodeForName, formatItemDamageType, formatItemProperties, isCurrencyName, normalizeInventoryItemLookupName } from "@beholden/shared/domain";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
 import type { CharacterData, ProficiencyMap, TaggedItem } from "@/views/character/CharacterSheetTypes";
 import { abilityMod, normalizeWeaponProficiencyName, splitArmorProficiencyNames } from "@/views/character/CharacterSheetUtils";
@@ -118,58 +119,11 @@ export interface ItemSummaryRow {
 
 export type EquipState = "backpack" | "mainhand-1h" | "mainhand-2h" | "offhand" | "worn";
 
+export { formatItemDamageType, formatItemProperties, normalizeInventoryItemLookupName };
+
 export interface ParsedItemSpell {
   name: string;
   cost: number;
-}
-
-const ITEM_DAMAGE_TYPE_LABELS: Record<string, string> = {
-  B: "Bludgeoning",
-  P: "Piercing",
-  S: "Slashing",
-  A: "Acid",
-  C: "Cold",
-  F: "Fire",
-  FC: "Force",
-  L: "Lightning",
-  N: "Necrotic",
-  PS: "Poison",
-  PY: "Psychic",
-  R: "Radiant",
-  T: "Thunder",
-};
-
-const ITEM_PROPERTY_LABELS: Record<string, string> = {
-  A: "Ammunition",
-  AF: "Ammunition (Firearm)",
-  BF: "Burst Fire",
-  F: "Finesse",
-  H: "Heavy",
-  L: "Light",
-  LD: "Loading",
-  M: "Martial",
-  R: "Reach",
-  RC: "Reload",
-  S: "Special",
-  T: "Thrown",
-  V: "Versatile",
-  "2H": "Two-Handed",
-};
-
-export function formatItemDamageType(code: string | null | undefined): string | null {
-  const key = String(code ?? "").trim().toUpperCase();
-  if (!key) return null;
-  return ITEM_DAMAGE_TYPE_LABELS[key] ?? key;
-}
-
-export function formatItemProperties(properties: string[] | null | undefined): string {
-  return (properties ?? [])
-    .map((code) => {
-      const key = String(code ?? "").trim().toUpperCase();
-      return ITEM_PROPERTY_LABELS[key] ?? key;
-    })
-    .filter(Boolean)
-    .join(", ");
 }
 
 export interface WeaponMasteryInfo {
@@ -266,22 +220,12 @@ export function hasStealthDisadvantage(item: { stealthDisadvantage?: boolean; de
   return /disadvantage on stealth/i.test(String(item.description ?? ""));
 }
 
-export function normalizeInventoryItemLookupName(name: string): string {
-  return String(name ?? "")
-    .replace(/\s+\[(?:2024|5\.5e)\]\s*$/i, "")
-    .replace(/\s+\((?:2024|5\.5e)\)\s*$/i, "")
-    .trim()
-    .toLowerCase();
-}
-
 export function currencyCodeForItem(item: Pick<InventoryItem, "name"> | null | undefined): "PP" | "GP" | "EP" | "SP" | "CP" | null {
-  const normalized = String(item?.name ?? "").trim().toUpperCase();
-  if (normalized === "PP" || normalized === "GP" || normalized === "EP" || normalized === "SP" || normalized === "CP") return normalized;
-  return null;
+  return currencyCodeForName(item?.name);
 }
 
 export function isCurrencyItem(item: Pick<InventoryItem, "name"> | null | undefined): boolean {
-  return currencyCodeForItem(item) != null;
+  return isCurrencyName(item?.name);
 }
 
 export function addsAbilityModToOffhandDamage(
@@ -477,4 +421,3 @@ export function conditionDisplayWeaponMeta(item: InventoryItem): string {
   ].filter(Boolean);
   return meta.join(" • ");
 }
-

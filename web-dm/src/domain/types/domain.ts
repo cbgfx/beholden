@@ -1,3 +1,9 @@
+import type {
+  SharedCombatOverrides,
+  SharedConditionInstance,
+  SharedDeathSaves,
+} from "@beholden/shared/domain";
+
 export type Id = string;
 
 export interface Meta {
@@ -71,22 +77,9 @@ export interface CampaignCharacter {
 // The server returns a merged view (player combatants hydrate name/hp/ac from the Player record).
 export type CombatantBaseType = "player" | "monster" | "inpc";
 
-export interface CombatantOverrides {
-  tempHp: number;
-  acBonus: number;
-  hpMaxBonus: number;
-}
-
-export interface ConditionInstance {
-  key: string;
-  casterId?: string | null;
-  [k: string]: unknown;
-}
-
-export interface DeathSaves {
-  success: number;
-  fail: number;
-}
+export type CombatantOverrides = SharedCombatOverrides;
+export type ConditionInstance = SharedConditionInstance;
+export type DeathSaves = SharedDeathSaves;
 
 export interface EncounterActor {
   id: Id;

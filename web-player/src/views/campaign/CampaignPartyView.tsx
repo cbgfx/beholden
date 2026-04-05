@@ -1,5 +1,6 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import type { SharedConditionInstance } from "@beholden/shared/domain";
 import { C } from "@/lib/theme";
 import { api } from "@/services/api";
 import { IconPlayer, IconConditionByKey } from "@/icons";
@@ -10,7 +11,7 @@ import { hpColor } from "@/views/character/CharacterSheetUtils";
 // Types
 // ---------------------------------------------------------------------------
 
-interface ConditionInstance { key: string; [k: string]: unknown }
+type ConditionInstance = SharedConditionInstance;
 
 export interface PartyMember {
   id: string;
@@ -218,4 +219,3 @@ export function CampaignPartyView() {
     </div>
   );
 }
-

@@ -1,4 +1,5 @@
 import React from "react";
+import type { SharedConditionInstance } from "@beholden/shared/domain";
 import { Button } from "@/ui/Button";
 import { api, jsonInit } from "@/services/api";
 import { theme, withAlpha } from "@/theme/theme";
@@ -10,7 +11,7 @@ import { Select } from "@/ui/Select";
 
 type ConditionsDrawerState = Exclude<Extract<DrawerState, { type: "combatantConditions" }>, null>;
 
-type ConditionInstance = { key: string; casterId?: string | null; expiresAtRound?: number | null };
+type ConditionInstance = SharedConditionInstance & { expiresAtRound?: number | null };
 
 // Only these conditions require a caster association.
 const NEEDS_CASTER_KEYS = new Set(["hexed", "marked"]);

@@ -1,6 +1,11 @@
 import React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import { api } from "@/services/api";
+import { Input } from "@/ui/Input";
+import { Select } from "@/ui/Select";
+import { TextArea } from "@/ui/TextArea";
+import { ITEM_RARITY_ORDER, KNOWN_ITEM_TYPES } from "@beholden/shared/domain";
+import { CheckRow, FieldGrid, FormField } from "@beholden/shared/ui";
 
 export type ItemForEdit = {
   id: string;
@@ -12,18 +17,44 @@ export type ItemForEdit = {
   text: string | string[];
 };
 
-const RARITIES = ["", "common", "uncommon", "rare", "very rare", "legendary", "artifact"];
-const KNOWN_TYPES = [
-  "Light Armor", "Medium Armor", "Heavy Armor", "Shield",
-  "Melee Weapon", "Ranged Weapon", "Ammunition",
-  "Potion", "Scroll", "Wand", "Rod", "Staff", "Ring",
-  "Wondrous Item", "Adventuring Gear", "Currency", "Other",
-];
+const RARITIES = ["", ...ITEM_RARITY_ORDER];
+const KNOWN_TYPES = [...KNOWN_ITEM_TYPES];
 
 type Props = {
-  item: ItemForEdit | null; // null = create mode
+  item: ItemForEdit | null;
   onClose: () => void;
   onSaved: () => void;
+};
+
+const fieldLabelStyle: React.CSSProperties = {
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+  fontSize: "var(--fs-small)",
+  fontWeight: 600,
+  color: theme.colors.muted,
+};
+
+const checkStyle: React.CSSProperties = {
+  fontSize: "var(--fs-subtitle)",
+  color: theme.colors.text,
+};
+
+const inputTheme = {
+  radius: 8,
+  borderColor: theme.colors.panelBorder,
+  inputBg: theme.colors.panelBg,
+  textColor: theme.colors.text,
+  placeholderColor: theme.colors.muted,
+};
+
+const selectTheme = {
+  radius: 8,
+  borderColor: theme.colors.panelBorder,
+  inputBg: theme.colors.panelBg,
+  panelBg: theme.colors.panelBg,
+  textColor: theme.colors.text,
+  mutedColor: theme.colors.muted,
+  accentColor: theme.colors.accentHighlight,
 };
 
 export function ItemFormModal(props: Props) {
@@ -52,7 +83,10 @@ export function ItemFormModal(props: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) { setError("Name is required."); return; }
+    if (!name.trim()) {
+      setError("Name is required.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -80,9 +114,13 @@ export function ItemFormModal(props: Props) {
   return (
     <div
       style={{
-        position: "fixed", inset: 0, zIndex: 1200,
+        position: "fixed",
+        inset: 0,
+        zIndex: 1200,
         background: withAlpha(theme.colors.shadowColor, 0.72),
-        display: "flex", alignItems: "center", justifyContent: "center",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
       }}
       onClick={props.onClose}
     >
@@ -90,11 +128,17 @@ export function ItemFormModal(props: Props) {
         onSubmit={handleSubmit}
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: theme.colors.cardBg, borderRadius: 16,
+          background: theme.colors.cardBg,
+          borderRadius: 16,
           border: `1px solid ${theme.colors.panelBorder}`,
-          padding: 24, width: 540, maxWidth: "95vw",
-          maxHeight: "90vh", overflowY: "auto",
-          display: "flex", flexDirection: "column", gap: 16,
+          padding: 24,
+          width: 540,
+          maxWidth: "95vw",
+          maxHeight: "90vh",
+          overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
           color: theme.colors.text,
         }}
       >
@@ -102,60 +146,42 @@ export function ItemFormModal(props: Props) {
           {isEdit ? `Edit: "${props.item!.name}"` : "New Item"}
         </div>
 
-        {/* Name */}
-        <Field label="Name *">
-          <input
-            value={name} onChange={(e) => setName(e.target.value)}
-            required
-            style={inputStyle()}
-          />
-        </Field>
+        <FormField label="Name *" labelStyle={fieldLabelStyle}>
+          <Input value={name} onChange={(e) => setName(e.target.value)} required theme={inputTheme} />
+        </FormField>
 
-        {/* Rarity + Type */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="Rarity">
-            <select value={rarity} onChange={(e) => setRarity(e.target.value)} style={inputStyle()}>
-              <option value="">— None —</option>
+        <FieldGrid columns="1fr 1fr" gap={12}>
+          <FormField label="Rarity" labelStyle={fieldLabelStyle}>
+            <Select value={rarity} onChange={(e) => setRarity(e.target.value)} theme={selectTheme}>
+              <option value="">None</option>
               {RARITIES.filter(Boolean).map((r) => (
                 <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
               ))}
-            </select>
-          </Field>
-          <Field label="Type">
-            <input
-              value={type} onChange={(e) => setType(e.target.value)}
-              list="item-type-list"
-              placeholder="e.g. Wondrous Item"
-              style={inputStyle()}
-            />
+            </Select>
+          </FormField>
+          <FormField label="Type" labelStyle={fieldLabelStyle}>
+            <Input value={type} onChange={(e) => setType(e.target.value)} list="item-type-list" placeholder="e.g. Wondrous Item" theme={inputTheme} />
             <datalist id="item-type-list">
               {KNOWN_TYPES.map((t) => <option key={t} value={t} />)}
             </datalist>
-          </Field>
-        </div>
+          </FormField>
+        </FieldGrid>
 
-        {/* Attunement + Magic */}
         <div style={{ display: "flex", gap: 20 }}>
-          <CheckField label="Requires Attunement" checked={attunement} onChange={setAttunement} />
-          <CheckField label="Magic Item" checked={magic} onChange={setMagic} />
+          <CheckRow label="Requires Attunement" checked={attunement} onChange={setAttunement} style={checkStyle} />
+          <CheckRow label="Magic Item" checked={magic} onChange={setMagic} style={checkStyle} />
         </div>
 
-        {/* Description */}
-        <Field label="Description (blank lines = new paragraph)">
-          <textarea
-            value={text} onChange={(e) => setText(e.target.value)}
-            rows={8}
-            style={{ ...inputStyle(), resize: "vertical", fontFamily: "inherit", lineHeight: 1.5 }}
-          />
-        </Field>
+        <FormField label="Description (blank lines = new paragraph)" labelStyle={fieldLabelStyle}>
+          <TextArea value={text} onChange={(e) => setText(e.target.value)} rows={8} theme={inputTheme} style={{ resize: "vertical", fontFamily: "inherit", lineHeight: 1.5 }} />
+        </FormField>
 
         {error && <div style={{ color: theme.colors.red, fontSize: "var(--fs-subtitle)" }}>{error}</div>}
 
-        {/* Actions */}
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <button type="button" onClick={props.onClose} style={btnStyle("secondary")}>Cancel</button>
           <button type="submit" disabled={saving} style={btnStyle("primary")}>
-            {saving ? "Saving…" : isEdit ? "Save Changes" : "Create Item"}
+            {saving ? "Saving..." : isEdit ? "Save Changes" : "Create Item"}
           </button>
         </div>
       </form>
@@ -163,42 +189,14 @@ export function ItemFormModal(props: Props) {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "var(--fs-subtitle)", fontWeight: 600, color: theme.colors.muted }}>
-      <span style={{ textTransform: "uppercase", letterSpacing: "0.06em", fontSize: "var(--fs-small)" }}>{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function CheckField({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "var(--fs-subtitle)", color: theme.colors.text }}>
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} style={{ width: 16, height: 16 }} />
-      {label}
-    </label>
-  );
-}
-
-function inputStyle(): React.CSSProperties {
-  return {
-    background: theme.colors.panelBg,
-    color: theme.colors.text,
-    border: `1px solid ${theme.colors.panelBorder}`,
-    borderRadius: 8,
-    padding: "8px 10px",
-    outline: "none",
-    width: "100%",
-    boxSizing: "border-box",
-    fontSize: "var(--fs-medium)",
-  };
-}
-
 function btnStyle(variant: "primary" | "secondary"): React.CSSProperties {
   const isPrimary = variant === "primary";
   return {
-    padding: "8px 20px", borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: "var(--fs-medium)",
+    padding: "8px 20px",
+    borderRadius: 10,
+    fontWeight: 700,
+    cursor: "pointer",
+    fontSize: "var(--fs-medium)",
     border: `1px solid ${isPrimary ? theme.colors.accentPrimary : theme.colors.panelBorder}`,
     background: isPrimary ? theme.colors.accentPrimary : "transparent",
     color: isPrimary ? theme.colors.textDark : theme.colors.text,

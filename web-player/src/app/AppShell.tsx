@@ -4,7 +4,7 @@ import { C, withAlpha } from "@/lib/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/services/api";
 import { useWsStatus } from "@/services/ws";
-import { StatusDot, FooterGrid, navLinkStyle } from "@beholden/shared/ui";
+import { StatusDot, FooterGrid, HeaderActionButton, HeaderActionLink, navLinkStyle } from "@beholden/shared/ui";
 
 const NAV_LINKS = [
   { to: "/", label: "Home", end: true },
@@ -66,25 +66,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
-          <Link to="/profile" style={{
-            fontSize: "var(--fs-medium)", color: C.muted, textDecoration: "none",
-            padding: "4px 10px", borderRadius: 8, transition: "background 0.15s",
-          }}
-            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.07)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-          >
+          <HeaderActionLink to="/profile" color={C.muted}>
             {user?.name || user?.username}
-          </Link>
-          <button
-            onClick={logout}
-            style={{
-              background: "none", border: `1px solid ${C.panelBorder}`,
-              borderRadius: 8, color: C.muted, fontSize: "var(--fs-medium)",
-              padding: "4px 12px", cursor: "pointer", fontFamily: "inherit",
-            }}
-          >
+          </HeaderActionLink>
+          <HeaderActionButton onClick={logout} color={C.muted} borderColor={C.panelBorder}>
             Sign out
-          </button>
+          </HeaderActionButton>
           <StatusDot
             active={connected}
             activeColor={C.green}

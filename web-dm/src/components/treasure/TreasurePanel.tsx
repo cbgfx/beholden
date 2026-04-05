@@ -1,35 +1,20 @@
 import React from "react";
+import { CollectionRow, QuantityStepper, Tag } from "@beholden/shared/ui";
 import { api, jsonInit } from "@/services/api";
 import { fetchAdventureTreasure, fetchCampaignTreasure } from "@/services/collectionApi";
-import { useStore } from "@/store";
-import { theme } from "@/theme/theme";
 import type { TreasureEntry } from "@/domain/types/domain";
 import { IconChest, IconPlus } from "@/icons";
+import { useStore } from "@/store";
+import { theme } from "@/theme/theme";
 import { IconButton } from "@/ui/IconButton";
 import { Panel } from "@/ui/Panel";
 import { ItemPickerModal, type AddItemPayload } from "@/views/CampaignView/components/ItemPickerModal";
-
-const _qtyBtn: React.CSSProperties = {
-  width: 22, height: 22, border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 6, background: "rgba(255,255,255,0.05)",
-  color: "rgba(255,255,255,0.7)", cursor: "pointer",
-  fontSize: "var(--fs-body)", fontWeight: 700, lineHeight: 1,
-  display: "inline-flex", alignItems: "center", justifyContent: "center",
-  flexShrink: 0,
-};
 
 function titleFromScope(opts: { selectedAdventureId: string | null; adventureName?: string | null }) {
   if (!opts.selectedAdventureId) return "Treasure (Campaign)";
   return opts.adventureName ? `Treasure (${opts.adventureName})` : "Treasure (Adventure)";
 }
 
-/**
- * Shared Treasure panel.
- *
- * - Scope is based on whether an adventure is selected.
- * - Friendly monsters never factor into treasure; treasure is stored per campaign/adventure.
- * - Uses ItemPickerModal (compendium + Create New).
- */
 export function TreasurePanel(_props: { encounterId?: string } = {}) {
   const { state, dispatch } = useStore();
   const [isOpen, setIsOpen] = React.useState(false);
@@ -90,85 +75,78 @@ export function TreasurePanel(_props: { encounterId?: string } = {}) {
     <>
       <Panel
         storageKey="treasure"
-        title={
+        title={(
           <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
             <span style={{ display: "inline-flex" }}>
               <IconChest />
             </span>
             {titleFromScope({ selectedAdventureId: scopeAdventureId, adventureName: scopeAdventureName })}
           </span>
-        }
-        actions={
+        )}
+        actions={(
           <IconButton title="Add item" onClick={() => setIsOpen(true)} variant="accent">
             <IconPlus />
           </IconButton>
-        }
+        )}
       >
         {treasure.length === 0 ? (
           <div style={{ color: theme.colors.muted }}>No treasure yet.</div>
         ) : (
           <div style={{ maxHeight: 340, overflowY: "auto" }}>
             {treasure.map((t) => (
-              <div
+              <CollectionRow
                 key={t.id}
                 onClick={() =>
                   dispatch({
                     type: "openDrawer",
-                    drawer: { type: "viewTreasure", treasureId: t.id, title: t.name }
+                    drawer: { type: "viewTreasure", treasureId: t.id, title: t.name },
                   })
                 }
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "6px 4px",
-                  borderBottom: `1px solid ${theme.colors.panelBorder}`,
-                  cursor: "pointer",
-                }}
-              >
-                {/* Item info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: "var(--fs-subtitle)", color: theme.colors.text }}>
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</span>
-                    {t.magic ? (
-                      <span style={{ flexShrink: 0, fontSize: "var(--fs-tiny)", fontWeight: 700, color: theme.colors.colorMagic, border: "1px solid #6d28d966", borderRadius: 5, padding: "1px 5px", lineHeight: 1.4 }}>
-                        ✦ Magic
-                      </span>
-                    ) : null}
-                  </div>
-                  {[t.rarity, t.type, t.attunement ? "attunement" : null].filter(Boolean).length > 0 && (
-                    <div style={{ color: theme.colors.muted, fontSize: "var(--fs-tiny)", marginTop: 1 }}>
-                      {[t.rarity, t.type, t.attunement ? "attunement" : null].filter(Boolean).join(" • ")}
+                borderColor={theme.colors.panelBorder}
+                padding="6px 4px"
+                main={(
+                  <>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: "var(--fs-subtitle)", color: theme.colors.text }}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{t.name}</span>
+                      {t.magic ? <Tag label="Magic" color={theme.colors.colorMagic} /> : null}
                     </div>
-                  )}
-                </div>
-
-                {/* Qty stepper + delete */}
-                <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
-                  {(t.qty ?? 1) > 1 && (
+                    {[t.rarity, t.type, t.attunement ? "attunement" : null].filter(Boolean).length > 0 ? (
+                      <div style={{ color: theme.colors.muted, fontSize: "var(--fs-tiny)", marginTop: 1 }}>
+                        {[t.rarity, t.type, t.attunement ? "attunement" : null].filter(Boolean).join(" • ")}
+                      </div>
+                    ) : null}
+                  </>
+                )}
+                trailing={(
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                    <QuantityStepper
+                      value={(t.qty ?? 1) > 1 ? t.qty : null}
+                      valuePrefix="x"
+                      onDecrement={(t.qty ?? 1) > 1 ? () => updateQty(t.id, Math.max(1, (t.qty ?? 1) - 1)) : undefined}
+                      decrementDisabled={(t.qty ?? 1) <= 1}
+                      onIncrement={() => updateQty(t.id, (t.qty ?? 1) + 1)}
+                      theme={{
+                        buttonBackground: "rgba(255,255,255,0.05)",
+                        buttonBorder: "rgba(255,255,255,0.12)",
+                        buttonColor: "rgba(255,255,255,0.7)",
+                        valueColor: theme.colors.muted,
+                        buttonSize: 22,
+                        borderRadius: 6,
+                        fontSize: "var(--fs-body)",
+                        valueMinWidth: 18,
+                      }}
+                    />
                     <button
-                      type="button" title="Decrease quantity"
-                      onClick={() => updateQty(t.id, Math.max(1, (t.qty ?? 1) - 1))}
-                      style={_qtyBtn}
-                    >−</button>
-                  )}
-                  {(t.qty ?? 1) > 1 && (
-                    <span style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: theme.colors.muted, minWidth: 18, textAlign: "center" }}>
-                      ×{t.qty}
-                    </span>
-                  )}
-                  <button
-                    type="button" title="Increase quantity"
-                    onClick={() => updateQty(t.id, (t.qty ?? 1) + 1)}
-                    style={_qtyBtn}
-                  >+</button>
-                  <button
-                    type="button" title="Remove"
-                    onClick={() => remove(t.id)}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(248,113,113,0.55)", fontSize: 16, padding: "0 2px", lineHeight: 1 }}
-                  >×</button>
-                </div>
-              </div>
+                      type="button"
+                      title="Remove"
+                      onClick={() => remove(t.id)}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(248,113,113,0.55)", fontSize: 16, padding: "0 2px", lineHeight: 1 }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+              />
             ))}
           </div>
         )}

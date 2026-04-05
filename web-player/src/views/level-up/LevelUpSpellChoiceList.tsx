@@ -3,6 +3,11 @@ import { C } from "@/lib/theme";
 import { extractPrerequisite, stripPrerequisiteLine } from "@/views/character/CharacterSheetUtils";
 import type { LevelUpSpellSummary } from "./LevelUpParts";
 
+function levelGroupLabel(level: number | null | undefined): string {
+  const value = Number(level ?? 0);
+  return value > 0 ? `Level ${value}` : "Cantrips";
+}
+
 export function LevelUpSpellChoiceList({
   title,
   caption,
@@ -11,6 +16,7 @@ export function LevelUpSpellChoiceList({
   max,
   onToggle,
   isAllowed,
+  disabledIds,
 }: {
   title: string;
   caption: string;
@@ -19,12 +25,26 @@ export function LevelUpSpellChoiceList({
   max: number;
   onToggle: (id: string) => void;
   isAllowed?: (spell: LevelUpSpellSummary) => boolean;
+  disabledIds?: string[];
 }) {
   const [activeId, setActiveId] = React.useState<string | null>(null);
-  const visibleSpells = React.useMemo(
-    () => spells,
-    [spells],
-  );
+  const visibleSpells = React.useMemo(() => spells, [spells]);
+  const disabledIdSet = React.useMemo(() => new Set(disabledIds ?? []), [disabledIds]);
+  const groupedSpells = React.useMemo(() => {
+    const groups = new Map<string, LevelUpSpellSummary[]>();
+    for (const spell of visibleSpells) {
+      const key = levelGroupLabel(spell.level);
+      const existing = groups.get(key);
+      if (existing) existing.push(spell);
+      else groups.set(key, [spell]);
+    }
+    return Array.from(groups.entries()).sort((a, b) => {
+      const aLevel = a[0] === "Cantrips" ? 0 : Number(a[0].replace("Level ", ""));
+      const bLevel = b[0] === "Cantrips" ? 0 : Number(b[0].replace("Level ", ""));
+      return aLevel - bLevel;
+    });
+  }, [visibleSpells]);
+
   const activeSpell =
     visibleSpells.find((spell) => spell.id === activeId)
     ?? visibleSpells[0]
@@ -48,55 +68,68 @@ export function LevelUpSpellChoiceList({
           {chosen.length} / {max} · {caption}
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8 }}>
-        {visibleSpells.map((spell) => {
-          const active = chosen.includes(spell.id);
-          const focused = activeSpell?.id === spell.id;
-          const allowed = isAllowed ? isAllowed(spell) : true;
-          const blocked = (!active && chosen.length >= max) || !allowed;
-          const prerequisite = extractPrerequisite(spell.text);
-          return (
-            <button
-              key={spell.id}
-              type="button"
-              onClick={() => {
-                setActiveId(spell.id);
-                if (!blocked) onToggle(spell.id);
-              }}
-              style={{
-                padding: "10px 12px",
-                borderRadius: 8,
-                cursor: blocked ? "not-allowed" : "pointer",
-                border: `2px solid ${active || focused ? C.accentHl : "rgba(255,255,255,0.1)"}`,
-                background: active ? "rgba(56,182,255,0.14)" : focused ? "rgba(56,182,255,0.08)" : "rgba(255,255,255,0.03)",
-                color: blocked ? C.muted : C.text,
-                textAlign: "left",
-                opacity: blocked ? 0.6 : 1,
-                minHeight: 72,
-              }}
-            >
-              <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700 }}>{spell.name}</div>
-              {spell.level != null && spell.level > 0 && (
-                <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginTop: 2 }}>
-                  Level {spell.level}
-                </div>
-              )}
-              {prerequisite && (
-                <div style={{ marginTop: 6, fontSize: "var(--fs-tiny)", lineHeight: 1.35 }}>
-                  <span style={{ color: allowed ? C.colorGold : C.colorPinkRed, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                    Prerequisite
-                  </span>
-                  <span style={{ color: allowed ? "rgba(251,191,36,0.92)" : "#fca5a5" }}> {prerequisite}</span>
-                </div>
-              )}
-              {!allowed && prerequisite && (
-                <div style={{ marginTop: 4, fontSize: "var(--fs-tiny)", color: C.colorPinkRed, fontWeight: 700 }}>
-                  Prerequisite not met
-                </div>
-              )}
-            </button>
-          );
-        })}
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {groupedSpells.map(([groupLabel, group]) => (
+          <div key={groupLabel}>
+            <div style={{ fontSize: "var(--fs-small)", color: C.accentHl, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>
+              {groupLabel}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(132px, 1fr))", gap: 8 }}>
+              {group.map((spell) => {
+                const active = chosen.includes(spell.id);
+                const focused = activeSpell?.id === spell.id;
+                const allowed = isAllowed ? isAllowed(spell) : true;
+                const disabledElsewhere = !active && disabledIdSet.has(spell.id);
+                const blocked = (!active && chosen.length >= max) || !allowed || disabledElsewhere;
+                const prerequisite = extractPrerequisite(spell.text);
+                return (
+                  <button
+                    key={spell.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveId(spell.id);
+                      if (!blocked) onToggle(spell.id);
+                    }}
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      cursor: blocked ? "not-allowed" : "pointer",
+                      border: `2px solid ${active || focused ? C.accentHl : "rgba(255,255,255,0.1)"}`,
+                      background: active ? "rgba(56,182,255,0.14)" : focused ? "rgba(56,182,255,0.08)" : "rgba(255,255,255,0.03)",
+                      color: blocked ? C.muted : C.text,
+                      textAlign: "left",
+                      opacity: blocked ? 0.6 : 1,
+                      minHeight: 58,
+                    }}
+                  >
+                    <div style={{ fontSize: "var(--fs-body)", fontWeight: 800, lineHeight: 1.2 }}>{spell.name}</div>
+                    <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginTop: 3 }}>
+                      {Number(spell.level ?? 0) > 0 ? `Level ${spell.level}` : "Cantrip"}
+                    </div>
+                    {disabledElsewhere && (
+                      <div style={{ marginTop: 5, fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700 }}>
+                        Already selected
+                      </div>
+                    )}
+                    {prerequisite && (
+                      <div style={{ marginTop: 5, fontSize: "var(--fs-tiny)", lineHeight: 1.3 }}>
+                        <span style={{ color: allowed ? C.colorGold : C.colorPinkRed, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                          Prerequisite
+                        </span>
+                        <span style={{ color: allowed ? "rgba(251,191,36,0.92)" : "#fca5a5" }}> {prerequisite}</span>
+                      </div>
+                    )}
+                    {!allowed && prerequisite && (
+                      <div style={{ marginTop: 4, fontSize: "var(--fs-tiny)", color: C.colorPinkRed, fontWeight: 700 }}>
+                        Prerequisite not met
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
       {activeSpell && (
         <div
@@ -110,9 +143,9 @@ export function LevelUpSpellChoiceList({
         >
           <div style={{ fontWeight: 800, fontSize: "var(--fs-subtitle)", color: C.accentHl }}>
             {activeSpell.name}
-            {activeSpell.level != null && activeSpell.level > 0 ? (
+            {activeSpell.level != null ? (
               <span style={{ color: "rgba(160,180,220,0.65)", marginLeft: 6, fontSize: "var(--fs-small)" }}>
-                Level {activeSpell.level}
+                {Number(activeSpell.level) > 0 ? `Level ${activeSpell.level}` : "Cantrip"}
               </span>
             ) : null}
           </div>

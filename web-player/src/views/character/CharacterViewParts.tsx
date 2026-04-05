@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { C, withAlpha } from "@/lib/theme";
 import { RightDrawer } from "@/ui/RightDrawer";
-import { SectionTitle as SharedSectionTitle, accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
+import { FormField, Input, NoteRow as SharedNoteRow, SectionTitle as SharedSectionTitle, TextArea, accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import type { ClassFeatureEntry, PlayerNote } from "@/views/character/CharacterSheetTypes";
 
@@ -296,18 +296,6 @@ export function inventoryRarityColor(rarity: string | null): string {
   }
 }
 
-export function toggleFilterPill(active: boolean, accentColor: string): React.CSSProperties {
-  return {
-    padding: "4px 10px",
-    borderRadius: 999,
-    border: `1px solid ${active ? accentColor : C.panelBorder}`,
-    background: active ? `${accentColor}18` : "rgba(255,255,255,0.04)",
-    color: active ? accentColor : C.muted,
-    cursor: "pointer",
-    fontSize: "var(--fs-small)",
-    fontWeight: 700,
-  };
-}
 
 export function miniPillBtn(enabled: boolean): React.CSSProperties {
   return {
@@ -353,43 +341,7 @@ export function NoteItem(props: {
   const { note, expanded, accentColor, hideTitle } = props;
   const preview = (note.text ?? "").trim().split(/\r?\n/).find(Boolean) ?? "";
   const label = hideTitle ? (preview || note.title || "Untitled") : (note.title || "Untitled");
-  return (
-    <div style={{
-      padding: "5px 6px", borderRadius: 7,
-      background: expanded ? withAlpha(accentColor, 0.07) : "transparent",
-      border: `1px solid ${expanded ? withAlpha(accentColor, 0.22) : "transparent"}`,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <button
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.onToggle(); }}
-          style={{ all: "unset", cursor: "pointer", fontWeight: 700, color: C.text, flex: 1, fontSize: "var(--fs-subtitle)", lineHeight: 1.4 }}
-        >
-          {label}
-        </button>
-        {props.onEdit && (
-          <button
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.onEdit!(); }}
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 5, color: C.muted, cursor: "pointer", padding: "2px 7px", fontSize: "var(--fs-small)" }}
-          >
-            Edit
-          </button>
-        )}
-        {props.onDelete && (
-          <button
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.onDelete!(); }}
-            style={{ background: "rgba(255,93,93,0.08)", border: "1px solid rgba(255,93,93,0.25)", borderRadius: 5, color: C.red, cursor: "pointer", padding: "2px 7px", fontSize: "var(--fs-small)" }}
-          >
-            ×
-          </button>
-        )}
-      </div>
-      {expanded && note.text && (
-        <div style={{ marginTop: 6, color: C.muted, fontSize: "var(--fs-small)", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
-          {note.text}
-        </div>
-      )}
-    </div>
-  );
+  return <SharedNoteRow title={label} text={note.text} expanded={expanded} accentColor={accentColor} textColor={C.text} mutedColor={C.muted} deleteColor={C.red} onToggle={props.onToggle} onEdit={props.onEdit} onDelete={props.onDelete} />;
 }
 
 export function ClassFeatureItem(props: {
@@ -558,28 +510,28 @@ export function NoteEditDrawer(props: {
         </div>
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <div>
-          <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Title</div>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Note title..."
-            style={{ width: "100%", boxSizing: "border-box", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, color: C.text, fontSize: "var(--fs-subtitle)", padding: "8px 10px", fontFamily: "inherit" }}
-          />
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <FormField label="Title" labelStyle={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Note title..."
+              theme={{ radius: 6, panelBorder: "rgba(255,255,255,0.12)", inputBg: "rgba(255,255,255,0.06)", text: C.text }}
+              style={{ width: "100%", boxSizing: "border-box", fontSize: "var(--fs-subtitle)", fontFamily: "inherit" }}
+            />
+          </FormField>
+          <FormField label="Text" labelStyle={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <TextArea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Write..."
+              rows={12}
+              theme={{ radius: 6, panelBorder: "rgba(255,255,255,0.12)", inputBg: "rgba(255,255,255,0.06)", text: C.text }}
+              style={{ width: "100%", boxSizing: "border-box", resize: "vertical", fontSize: "var(--fs-subtitle)", padding: "8px 10px", fontFamily: "inherit", lineHeight: 1.5 }}
+            />
+          </FormField>
         </div>
-        <div>
-          <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Text</div>
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Write..."
-            rows={12}
-            style={{ width: "100%", boxSizing: "border-box", resize: "vertical", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, color: C.text, fontSize: "var(--fs-subtitle)", padding: "8px 10px", fontFamily: "inherit", lineHeight: 1.5 }}
-          />
-        </div>
-      </div>
-    </RightDrawer>
-  );
-}
+      </RightDrawer>
+    );
+  }
 

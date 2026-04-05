@@ -471,7 +471,7 @@ function pushFreeCastSpellEffects(
       resourceKey,
       label: `${spellName} (${source.name})`,
       max: args.uses,
-      reset: args.reset,
+      reset: args.reset ?? "long_rest",
       restoreAmount: "all",
       linkedSpellName: spellName,
       summary: `${spellName} resource pool`,
@@ -485,11 +485,11 @@ function parseRitualOnlySpellGrantEffects(source: FeatureEffectSource, text: str
     if (!raw) continue;
     const spellNames = splitNamedSpellList(raw);
     for (const spellName of spellNames) {
-      if (hasSpellGrantEffect(effects, spellName, "at_will")) continue;
+      if (hasSpellGrantEffect(effects, spellName, "known")) continue;
       addSpellGrantEffect(source, effects, {
         spellName,
-        mode: "at_will",
-        riderSummary: "Ritual only.",
+        mode: "known",
+        riderSummary: "Ritual only. No spell slot required.",
         summary: `${spellName} ritual casting`,
       });
     }
@@ -792,6 +792,34 @@ function parseResourceGrantEffects(source: FeatureEffectSource, text: string, ef
       summary: `${sourceLabel} uses`,
     });
   }
+
+  // Pattern: "you can use this feature/trait/benefit/ability a number of times equal to your Proficiency Bonus"
+  // Covers species traits, feat abilities, class features not using "you have a number of X" phrasing.
+  // Matches: "this feature", "this trait", "this benefit", "this ability", "this Breath Weapon", "the Vigilant Guardian", etc.
+  const pbUsesRe = new RegExp(
+    `you can use (?:this\\s+(?:feature|trait|benefit|ability)|(?:(?:this|the)\\s+)?${escapedLabel})\\s+a\\s+number of times equal to your Proficiency Bonus`,
+    "i",
+  );
+  const hasPbUsesLanguage = sourceLabel && pbUsesRe.test(text);
+  if (hasPbUsesLanguage && (regainsOneOnShort || regainsAllOnRest)) {
+    // Don't double-emit if the PB branch above already produced an effect for this sourceLabel.
+    const alreadyEmitted = effects.some(
+      (e) => e.type === "resource_grant" && e.source === source && (e as { resourceKey?: string }).resourceKey === normalizeResourceKey(sourceLabel),
+    );
+    if (!alreadyEmitted) {
+      effects.push({
+        id: createFeatureEffectId(source, "resource_grant", effects.length),
+        type: "resource_grant",
+        source,
+        resourceKey: normalizeResourceKey(sourceLabel),
+        label: sourceLabel,
+        max: { kind: "proficiency_bonus" },
+        reset: regainsOneOnShort ? "short_rest" : regainsAllOnRest!,
+        restoreAmount: regainsOneOnShort ? "one" : "all",
+        summary: `${sourceLabel} uses (PB)`,
+      });
+    }
+  }
 }
 
 function parseProficiencyGrantEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
@@ -996,7 +1024,7 @@ function parseDefenseEffects(source: FeatureEffectSource, text: string, effects:
 
   const addDamageDefense = (mode: DefenseEffect["mode"], rawTargets: string) => {
     const lower = rawTargets.toLowerCase();
-    const targets = DAMAGE_TYPES.filter((damageType) => new RegExp(`\\b${damageType}\\b`, "i").test(lower));
+    const targets: string[] = DAMAGE_TYPES.filter((damageType) => new RegExp(`\\b${damageType}\\b`, "i").test(lower));
     if (targets.length === 0 && /nonmagical/i.test(lower) && /bludgeoning|piercing|slashing/i.test(lower)) {
       targets.push("Nonmagical B/P/S");
     }
@@ -1605,12 +1633,15 @@ export function buildGrantedSpellDataFromEffects(
       }
 
       if (effect.mode === "known") {
+        const isCantrip = /\bcantrip\b/i.test(effect.summary ?? "") || effect.requiredLevel === 0;
         spells.push({
           key: effect.id,
           spellName: effect.spellName,
           sourceName: effect.source.name,
           mode: "known",
-          note: effect.riderSummary ? `Known spell. ${effect.riderSummary}` : "Known spell.",
+          note: effect.riderSummary
+            ? `${isCantrip ? "Known cantrip." : "Known spell."} ${effect.riderSummary}`
+            : (isCantrip ? "Known cantrip." : "Known spell."),
         });
         continue;
       }

@@ -1,24 +1,16 @@
 import React from "react";
+import { TextArea as SharedTextArea } from "@beholden/shared/ui";
 import { theme } from "@/theme/theme";
 
-export function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function TextArea(props: React.ComponentProps<typeof SharedTextArea>) {
   return (
-    <textarea
+    <SharedTextArea
       {...props}
-      style={{
-        width: "100%",
-        padding: "8px 10px",
-        borderRadius: theme.radius.control,
-        border: `1px solid ${theme.colors.panelBorder}`,
-        background: theme.colors.inputBg,
-        color: theme.colors.text,
-        fontSize: "var(--fs-medium)",
-        outline: "none",
-        minHeight: 120,
-        resize: "vertical",
-        lineHeight: 1.5,
-        transition: "border-color 120ms ease",
-        ...(props.style ?? {}),
+      theme={{
+        radius: theme.radius.control,
+        panelBorder: theme.colors.panelBorder,
+        inputBg: theme.colors.inputBg,
+        text: theme.colors.text,
       }}
     />
   );

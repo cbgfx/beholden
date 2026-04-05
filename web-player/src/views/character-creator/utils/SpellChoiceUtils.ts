@@ -134,8 +134,6 @@ export async function loadSpellChoiceOptions(
 ): Promise<Record<string, SharedSpellSummary[]>> {
   const entries = await Promise.all(
     choices.map(async (choice) => {
-      if (choice.listNames.length === 0) return [choice.key, []] as const;
-
       const groups = await Promise.all(
         choice.listNames.map(async (listName) => {
           const encoded = encodeURIComponent(listName);

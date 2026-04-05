@@ -8,6 +8,8 @@ import type { PartyMember } from "./CampaignPartyView";
 import type { AbilKey } from "@/views/character/CharacterSheetTypes";
 import { ABILITY_LABELS, ALL_SKILLS } from "@/views/character/CharacterSheetConstants";
 import { abilityMod, formatModifier, hasNamedProficiency, hpColor, proficiencyBonus } from "@/views/character/CharacterSheetUtils";
+import { MiniStat } from "@/views/character/CharacterViewParts";
+import { Tag } from "@beholden/shared/ui";
 
 // ---------------------------------------------------------------------------
 // Mini sub-components
@@ -29,31 +31,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(160,180,220,0.45)", marginBottom: 8 }}>
       {children}
     </div>
-  );
-}
-
-function MiniStat({ label, value, icon, accent }: { label: string; value: string; icon?: React.ReactNode; accent?: string }) {
-  return (
-    <div style={{
-      display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-      background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "6px 4px",
-    }}>
-      {icon && <span style={{ opacity: 0.55, fontSize: "var(--fs-tiny)" }}>{icon}</span>}
-      <span style={{ fontSize: "var(--fs-large)", fontWeight: 900, color: accent ?? C.text }}>{value}</span>
-      <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, textAlign: "center", lineHeight: 1.2 }}>{label}</span>
-    </div>
-  );
-}
-
-function Chip({ children, color }: { children: React.ReactNode; color?: string }) {
-  return (
-    <span style={{
-      fontSize: "var(--fs-small)", padding: "3px 9px", borderRadius: 20, fontWeight: 600,
-      background: `${color ?? C.accentHl}18`, border: `1px solid ${color ?? C.accentHl}44`,
-      color: color ?? C.accentHl,
-    }}>
-      {children}
-    </span>
   );
 }
 
@@ -264,7 +241,7 @@ export function PartyMemberView() {
                     <div key={label} style={{ marginBottom: 10 }}>
                       <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: "rgba(160,180,220,0.45)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>{label}</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                        {items.map((item) => <Chip key={item.name} color={color}>{item.name}</Chip>)}
+                        {items.map((item) => <Tag key={item.name} label={item.name} color={color} />)}
                       </div>
                     </div>
                   ) : null

@@ -827,6 +827,54 @@ export function LevelUpView() {
     () => [...lockedInvocationSelectionIds, ...displayedChosenInvocations],
     [displayedChosenInvocations, lockedInvocationSelectionIds]
   );
+  const selectedFeatResolvedSpellIds = React.useMemo(
+    () =>
+      featResolvedSpellChoices.flatMap((choice) =>
+        resolveSelectedSpellOptionEntries(
+          chosenFeatOptions[choice.key] ?? [],
+          featSpellChoiceOptions[choice.key] ?? [],
+        ).map((spell) => String(spell.id))
+      ),
+    [chosenFeatOptions, featResolvedSpellChoices, featSpellChoiceOptions]
+  );
+  const selectedClassFeatureResolvedSpellIds = React.useMemo(
+    () =>
+      classFeatureResolvedSpellChoices.flatMap((choice) =>
+        resolveSelectedSpellOptionEntries(
+          chosenFeatOptions[choice.key] ?? [],
+          classFeatureSpellChoiceOptions[choice.key] ?? [],
+        ).map((spell) => String(spell.id))
+      ),
+    [chosenFeatOptions, classFeatureResolvedSpellChoices, classFeatureSpellChoiceOptions]
+  );
+  const selectedInvocationResolvedSpellIds = React.useMemo(
+    () =>
+      invocationResolvedSpellChoices.flatMap((choice) =>
+        resolveSelectedSpellOptionEntries(
+          chosenFeatOptions[choice.key] ?? [],
+          invocationSpellChoiceOptions[choice.key] ?? [],
+        ).map((spell) => String(spell.id))
+      ),
+    [chosenFeatOptions, invocationResolvedSpellChoices, invocationSpellChoiceOptions]
+  );
+  const globallyChosenSpellChoiceIds = React.useMemo(
+    () => new Set([
+      ...displayedChosenCantrips,
+      ...displayedChosenSpells,
+      ...displayedChosenInvocations,
+      ...selectedFeatResolvedSpellIds,
+      ...selectedClassFeatureResolvedSpellIds,
+      ...selectedInvocationResolvedSpellIds,
+    ]),
+    [
+      displayedChosenCantrips,
+      displayedChosenInvocations,
+      displayedChosenSpells,
+      selectedClassFeatureResolvedSpellIds,
+      selectedFeatResolvedSpellIds,
+      selectedInvocationResolvedSpellIds,
+    ]
+  );
 
   const { filteredFeatSummaries, featPrereqsMet, featRepeatableValid, asiTotal, canConfirm } = React.useMemo(
     () =>
@@ -1324,6 +1372,7 @@ export function LevelUpView() {
                 caption={`Choose ${cantripChoiceCount}`}
                 spells={availableCantripChoices}
                 chosen={displayedChosenCantrips}
+                disabledIds={Array.from(globallyChosenSpellChoiceIds).filter((id) => !displayedChosenCantrips.includes(id))}
                 max={cantripChoiceCount}
                 onToggle={(id) => toggleSelection(id, displayedChosenCantrips, (updater) => {
                   setChosenCantrips((prev) => {
@@ -1344,6 +1393,7 @@ export function LevelUpView() {
                 caption={`Choose ${spellChoiceCount} (up to level ${maxSpellLevel})`}
                 spells={availableSpellChoices}
                 chosen={displayedChosenSpells}
+                disabledIds={Array.from(globallyChosenSpellChoiceIds).filter((id) => !displayedChosenSpells.includes(id))}
                 max={spellChoiceCount}
                 onToggle={(id) => toggleSelection(id, displayedChosenSpells, (updater) => {
                   setChosenSpells((prev) => {
@@ -1380,6 +1430,7 @@ export function LevelUpView() {
                 caption={`Choose ${invocationChoiceCount}`}
                 spells={availableInvocationChoices}
                 chosen={displayedChosenInvocations}
+                disabledIds={Array.from(globallyChosenSpellChoiceIds).filter((id) => !displayedChosenInvocations.includes(id))}
                 max={invocationChoiceCount}
                 onToggle={(id) => toggleSelection(id, displayedChosenInvocations, (updater) => {
                   setChosenInvocations((prev) => {
@@ -1516,6 +1567,7 @@ export function LevelUpView() {
                 caption={`Choose ${choice.count}`}
                 spells={(featSpellChoiceOptions[choice.key] ?? []).map((spell) => ({ ...spell, id: String(spell.id) }))}
                 chosen={resolveSelectedSpellOptionEntries(chosenFeatOptions[choice.key] ?? [], featSpellChoiceOptions[choice.key] ?? []).map((spell) => String(spell.id))}
+                disabledIds={Array.from(globallyChosenSpellChoiceIds).filter((id) => !(resolveSelectedSpellOptionEntries(chosenFeatOptions[choice.key] ?? [], featSpellChoiceOptions[choice.key] ?? []).map((spell) => String(spell.id))).includes(id))}
                 max={choice.count}
                 onToggle={(id) => {
                   setChosenFeatOptions((prev) => {
@@ -1537,6 +1589,7 @@ export function LevelUpView() {
                 caption={`Choose ${choice.count}`}
                 spells={(classFeatureSpellChoiceOptions[choice.key] ?? []).map((spell) => ({ ...spell, id: String(spell.id) }))}
                 chosen={resolveSelectedSpellOptionEntries(chosenFeatOptions[choice.key] ?? [], classFeatureSpellChoiceOptions[choice.key] ?? []).map((spell) => String(spell.id))}
+                disabledIds={Array.from(globallyChosenSpellChoiceIds).filter((id) => !(resolveSelectedSpellOptionEntries(chosenFeatOptions[choice.key] ?? [], classFeatureSpellChoiceOptions[choice.key] ?? []).map((spell) => String(spell.id))).includes(id))}
                 max={choice.count}
                 onToggle={(id) => {
                   setChosenFeatOptions((prev) => {
@@ -1558,6 +1611,7 @@ export function LevelUpView() {
                 caption={`Choose ${choice.count}`}
                 spells={(invocationSpellChoiceOptions[choice.key] ?? []).map((spell) => ({ ...spell, id: String(spell.id) }))}
                 chosen={resolveSelectedSpellOptionEntries(chosenFeatOptions[choice.key] ?? [], invocationSpellChoiceOptions[choice.key] ?? []).map((spell) => String(spell.id))}
+                disabledIds={Array.from(globallyChosenSpellChoiceIds).filter((id) => !(resolveSelectedSpellOptionEntries(chosenFeatOptions[choice.key] ?? [], invocationSpellChoiceOptions[choice.key] ?? []).map((spell) => String(spell.id))).includes(id))}
                 max={choice.count}
                 onToggle={(id) => {
                   setChosenFeatOptions((prev) => {

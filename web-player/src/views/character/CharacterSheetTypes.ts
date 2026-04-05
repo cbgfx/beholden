@@ -1,3 +1,8 @@
+import type {
+  SharedCombatOverrides,
+  SharedConditionInstance,
+  SharedDeathSaves,
+} from "@beholden/shared/domain";
 import type { InventoryContainer, InventoryItem } from "@/views/character/CharacterInventory";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 
@@ -60,12 +65,9 @@ export interface GrantedSpellCast {
   reset?: string;
 }
 
-export interface ConditionInstance {
-  key: string;
-  casterId?: string | null;
+export interface ConditionInstance extends SharedConditionInstance {
   casterName?: string | null;
   sourceName?: string | null;
-  [k: string]: unknown;
 }
 
 export interface CharacterCampaign {
@@ -86,11 +88,7 @@ export interface CharacterData {
   age?: string | null;
   weight?: string | null;
   gender?: string | null;
-  sheetOverrides?: {
-    tempHp: number;
-    acBonus: number;
-    hpMaxBonus: number;
-  } | null;
+  sheetOverrides?: SharedCombatOverrides | null;
   chosenRaceFeatId?: string | null;
   chosenBgOriginFeatId?: string | null;
   subclass?: string | null;
@@ -118,5 +116,6 @@ export interface CharacterData {
   preparedSpells?: string[];
   customResistances?: string[];
   customImmunities?: string[];
+  deathSaves?: SharedDeathSaves;
 }
 

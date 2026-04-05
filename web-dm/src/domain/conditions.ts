@@ -1,36 +1,23 @@
-export type ConditionDef = { key: string; name: string; needsCaster?: boolean };
+import {
+  SHARED_CONDITION_DEFS,
+  conditionLabel as sharedConditionLabel,
+  displayActorName,
+  type SharedConditionDef,
+  type SharedConditionInstance,
+} from "@beholden/shared/domain";
+
+export type ConditionDef = SharedConditionDef;
 
 // Stored on combatants as `conditions?: ConditionInstance[]`.
-export type ConditionInstance = {
-  key: string;
-  casterId?: string | null;
+export type ConditionInstance = SharedConditionInstance & {
   /** Combat round at which this condition expires (inclusive). null = no timer. */
   expiresAtRound?: number | null;
 };
 
-export const CONDITION_DEFS: ConditionDef[] = [
-  { key: "blinded", name: "Blinded" },
-  { key: "charmed", name: "Charmed" },
-  { key: "deafened", name: "Deafened" },
-  { key: "frightened", name: "Frightened" },
-  { key: "grappled", name: "Grappled" },
-  { key: "incapacitated", name: "Incapacitated" },
-  { key: "invisible", name: "Invisible" },
-  { key: "paralyzed", name: "Paralyzed" },
-  { key: "petrified", name: "Petrified" },
-  { key: "poisoned", name: "Poisoned" },
-  { key: "prone", name: "Prone" },
-  { key: "restrained", name: "Restrained" },
-  { key: "stunned", name: "Stunned" },
-  { key: "unconscious", name: "Unconscious" },
-  { key: "concentration", name: "Concentration" },
-  { key: "disadvantage", name: "Disadvantage" },
-  { key: "hexed", name: "Hexed", needsCaster: true },
-  { key: "marked", name: "Marked", needsCaster: true },
-];
+export const CONDITION_DEFS: ConditionDef[] = SHARED_CONDITION_DEFS;
 
 export function conditionLabel(key: string): string {
-  return CONDITION_DEFS.find((d) => d.key === key)?.name ?? key;
+  return sharedConditionLabel(key);
 }
 
 /** Build a quick lookup map for a roster of combatants. */
@@ -42,8 +29,5 @@ export function buildRosterById<T extends { id: string }>(roster: T[]): Record<s
 
 /** UI display name for a combatant. */
 export function displayName(c: { label?: unknown; name?: unknown; type?: unknown } | null | undefined): string {
-  const label = String(c?.label ?? "").trim();
-  if (label) return label;
-  const type = String(c?.type ?? "").trim();
-  return type ? type.toUpperCase() : "COMBATANT";
+  return displayActorName(c);
 }

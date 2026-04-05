@@ -5,6 +5,7 @@ import { IconNotes, IconPlus } from "@/icons";
 import { IconButton } from "@/ui/IconButton";
 import type { CampaignCharacter } from "@/domain/types/domain";
 import { api, jsonInit } from "@/services/api";
+import { Input, NoteRow as SharedNoteRow, TextArea } from "@beholden/shared/ui";
 
 interface SharedNote {
   id: string;
@@ -141,26 +142,34 @@ export function SharedNotesPanel(props: {
           <div style={{ color: theme.colors.muted }}>No shared notes yet.</div>
         ) : (
           <div style={{ display: "grid", gap: 4 }}>
-            {dmNotes.map((note) => (
-              <NoteRow
-                key={note.id}
-                note={note}
-                expanded={expandedIds.includes(note.id)}
-                accentColor={accent}
-                onToggle={() => toggle(note.id)}
-                onEdit={() => openEditDm(note.id)}
-                onDelete={() => handleDeleteDm(note.id)}
-              />
-            ))}
-            {playerNotes.map(({ note, playerId }) => (
-              <NoteRow
-                key={note.id}
-                note={note}
-                expanded={expandedIds.includes(note.id)}
-                accentColor={accent}
-                onToggle={() => toggle(note.id)}
-                onEdit={() => openEditPlayer(note.id, playerId)}
-                onDelete={() => handleDeletePlayer(note.id, playerId)}
+              {dmNotes.map((note) => (
+                <SharedNoteRow
+                  key={note.id}
+                  title={note.title || "Untitled"}
+                  text={note.text}
+                  expanded={expandedIds.includes(note.id)}
+                  accentColor={accent}
+                  textColor={theme.colors.text}
+                  mutedColor={theme.colors.muted}
+                  deleteColor={theme.colors.red}
+                  onToggle={() => toggle(note.id)}
+                  onEdit={() => openEditDm(note.id)}
+                  onDelete={() => handleDeleteDm(note.id)}
+                />
+              ))}
+              {playerNotes.map(({ note, playerId }) => (
+                <SharedNoteRow
+                  key={note.id}
+                  title={note.title || "Untitled"}
+                  text={note.text}
+                  expanded={expandedIds.includes(note.id)}
+                  accentColor={accent}
+                  textColor={theme.colors.text}
+                  mutedColor={theme.colors.muted}
+                  deleteColor={theme.colors.red}
+                  onToggle={() => toggle(note.id)}
+                  onEdit={() => openEditPlayer(note.id, playerId)}
+                  onDelete={() => handleDeletePlayer(note.id, playerId)}
               />
             ))}
           </div>
@@ -192,22 +201,24 @@ export function SharedNotesPanel(props: {
             <div style={{ flex: 1, overflow: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
               <div>
                 <label style={{ display: "block", marginBottom: 4, fontSize: "var(--fs-subtitle)", fontWeight: 600, color: theme.colors.muted }}>Title</label>
-                <input
-                  value={drawerTitle}
-                  onChange={(e) => setDrawerTitle(e.target.value)}
-                  placeholder="Note title"
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: theme.radius.control, border: `1px solid ${theme.colors.panelBorder}`, background: theme.colors.inputBg, color: theme.colors.text, fontSize: "var(--fs-medium)", outline: "none", boxSizing: "border-box" }}
-                />
-              </div>
-              <div>
-                <label style={{ display: "block", marginBottom: 4, fontSize: "var(--fs-subtitle)", fontWeight: 600, color: theme.colors.muted }}>Body</label>
-                <textarea
-                  value={drawerText}
-                  onChange={(e) => setDrawerText(e.target.value)}
-                  placeholder="Note body"
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: theme.radius.control, border: `1px solid ${theme.colors.panelBorder}`, background: theme.colors.inputBg, color: theme.colors.text, fontSize: "var(--fs-medium)", outline: "none", minHeight: 140, resize: "vertical", lineHeight: 1.5, boxSizing: "border-box" }}
-                />
-              </div>
+                  <Input
+                    value={drawerTitle}
+                    onChange={(e) => setDrawerTitle(e.target.value)}
+                    placeholder="Note title"
+                    theme={{ radius: theme.radius.control, borderColor: theme.colors.panelBorder, inputBg: theme.colors.inputBg, textColor: theme.colors.text, placeholderColor: theme.colors.muted }}
+                    style={{ width: "100%", fontSize: "var(--fs-medium)" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", marginBottom: 4, fontSize: "var(--fs-subtitle)", fontWeight: 600, color: theme.colors.muted }}>Body</label>
+                  <TextArea
+                    value={drawerText}
+                    onChange={(e) => setDrawerText(e.target.value)}
+                    placeholder="Note body"
+                    theme={{ radius: theme.radius.control, borderColor: theme.colors.panelBorder, inputBg: theme.colors.inputBg, textColor: theme.colors.text, placeholderColor: theme.colors.muted }}
+                    style={{ width: "100%", fontSize: "var(--fs-medium)", minHeight: 140, resize: "vertical", lineHeight: 1.5 }}
+                  />
+                </div>
             </div>
             <div style={{ padding: "12px 16px", borderTop: `1px solid ${theme.colors.panelBorder}`, display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setEditTarget(null)} style={{ padding: "8px 14px", borderRadius: theme.radius.control, border: `1px solid ${theme.colors.panelBorder}`, background: "transparent", color: theme.colors.text, cursor: "pointer", fontSize: "var(--fs-medium)", fontWeight: 700 }}>Cancel</button>
@@ -220,46 +231,3 @@ export function SharedNotesPanel(props: {
   );
 }
 
-function NoteRow(props: {
-  note: SharedNote;
-  expanded: boolean;
-  accentColor: string;
-  onToggle: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  const { note, expanded, accentColor } = props;
-  return (
-    <div style={{
-      padding: "5px 6px", borderRadius: 7,
-      background: expanded ? withAlpha(accentColor, 0.07) : "transparent",
-      border: `1px solid ${expanded ? withAlpha(accentColor, 0.22) : "transparent"}`,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <button
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.onToggle(); }}
-          style={{ all: "unset", cursor: "pointer", fontWeight: 700, color: theme.colors.text, flex: 1 }}
-        >
-          {note.title || "Untitled"}
-        </button>
-        <button
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.onEdit(); }}
-          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 5, color: theme.colors.muted, cursor: "pointer", padding: "2px 7px", fontSize: "var(--fs-small)" }}
-        >
-          Edit
-        </button>
-        <button
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.onDelete(); }}
-          style={{ background: "rgba(255,93,93,0.08)", border: "1px solid rgba(255,93,93,0.25)", borderRadius: 5, color: theme.colors.red, cursor: "pointer", padding: "2px 7px", fontSize: "var(--fs-small)" }}
-        >
-          ×
-        </button>
-      </div>
-      {expanded && note.text && (
-        <div style={{ marginTop: 6, color: theme.colors.muted, fontSize: "var(--fs-subtitle)", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
-          {note.text}
-        </div>
-      )}
-    </div>
-  );
-}

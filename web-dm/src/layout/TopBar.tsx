@@ -6,7 +6,7 @@ import { useWs, useWsStatus } from "@/services/ws";
 import { theme, withAlpha } from "@/theme/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsNarrow } from "@/views/CombatView/hooks/useIsNarrow";
-import { StatusDot, navLinkStyle } from "@beholden/shared/ui";
+import { HeaderActionButton, HeaderActionLink, StatusDot, navLinkStyle } from "@beholden/shared/ui";
 
 function useSaveStatus(): "idle" | "saving" | "saved" {
   const [status, setStatus] = React.useState<"idle" | "saving" | "saved">("idle");
@@ -108,26 +108,21 @@ export function TopBar() {
         {user && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "var(--fs-medium)" }}>
             {!isPhone && (
-              <Link to="/profile" style={{ color: theme.colors.muted, textDecoration: "none" }}
-                title="Account settings">
+              <HeaderActionLink to="/profile" color={theme.colors.muted} title="Account settings">
                 {user.name}
-              </Link>
+              </HeaderActionLink>
             )}
-            <button
+            <HeaderActionButton
               onClick={logout}
               title={isPhone ? `Sign out (${user.name})` : undefined}
-              style={{
-                background: "transparent",
-                border: `1px solid ${theme.colors.panelBorder}`,
-                borderRadius: theme.radius.control,
-                color: theme.colors.muted,
-                cursor: "pointer",
-                padding: "4px 8px",
-                fontSize: "inherit",
-              }}
+              color={theme.colors.muted}
+              borderColor={theme.colors.panelBorder}
+              padding="4px 8px"
+              borderRadius={theme.radius.control}
+              fontSize="inherit"
             >
               Sign out
-            </button>
+            </HeaderActionButton>
           </div>
         )}
         <StatusDot

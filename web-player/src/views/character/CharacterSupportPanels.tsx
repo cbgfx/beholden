@@ -79,12 +79,13 @@ export function CharacterSupportPanels(props: {
     onRevertTransformSelf,
   } = props;
 
-  const formatResetLabel = (reset: string): string => {
-    const code = String(reset ?? "").trim().toUpperCase();
+  const formatResetLabel = (resource: ResourceCounter): string => {
+    const code = String(resource.reset ?? "").trim().toUpperCase();
+    if (code === "S" && resource.restoreAmount === "one") return "Regains 1 on Short Rest, all on Long Rest";
     if (code === "S") return "Resets on Short Rest";
     if (code === "L") return "Resets on Long Rest";
     if (code === "SL") return "Resets on Short or Long Rest";
-    return `Reset ${reset}`;
+    return `Reset ${resource.reset}`;
   };
 
   return (
@@ -250,7 +251,7 @@ export function CharacterSupportPanels(props: {
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: C.text }}>{resource.name}</div>
                       <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>
-                        {formatResetLabel(resource.reset)}
+                        {formatResetLabel(resource)}
                       </div>
                     </div>
                     <button
@@ -376,4 +377,3 @@ export function CharacterSupportPanels(props: {
     </div>
   );
 }
-

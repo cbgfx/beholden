@@ -5,17 +5,7 @@ import { C, withAlpha } from "@/lib/theme";
 import { expandSchool } from "@/lib/format/expandSchool";
 import { useSpellSearch } from "@/views/CompendiumView/hooks/useSpellSearch";
 import { IconSpells } from "@/ui/Icons";
-
-function togglePill(active: boolean, gold = false): React.CSSProperties {
-  const accent = gold ? C.accent : C.accentHl;
-  return {
-    padding: "4px 10px", borderRadius: 999,
-    border: `1px solid ${active ? accent : C.panelBorder}`,
-    background: active ? withAlpha(accent, 0.18) : withAlpha(C.accentHl, 0.08),
-    color: active ? accent : C.muted,
-    cursor: "pointer", fontSize: "var(--fs-pill)", fontWeight: 700,
-  };
-}
+import { togglePillStyle } from "@beholden/shared/ui";
 
 export function SpellsPanel(props: {
   selectedSpellId?: string | null;
@@ -75,19 +65,19 @@ export function SpellsPanel(props: {
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
         {([["V", filterV, setFilterV], ["S", filterS, setFilterS], ["M", filterM, setFilterM]] as const).map(
           ([label, active, setActive]) => (
-            <button key={label} type="button" onClick={() => setActive(!active)} style={togglePill(active, true)}>
+            <button key={label} type="button" onClick={() => setActive(!active)} style={togglePillStyle(active, C.accent, C.panelBorder, C.muted)}>
               {label}
             </button>
           )
         )}
-        <button type="button" onClick={() => setFilterConcentration(!filterConcentration)} style={togglePill(filterConcentration)}>
+        <button type="button" onClick={() => setFilterConcentration(!filterConcentration)} style={togglePillStyle(filterConcentration, C.accentHl, C.panelBorder, C.muted)}>
           Concentration
         </button>
-        <button type="button" onClick={() => setFilterRitual(!filterRitual)} style={togglePill(filterRitual)}>
+        <button type="button" onClick={() => setFilterRitual(!filterRitual)} style={togglePillStyle(filterRitual, C.accentHl, C.panelBorder, C.muted)}>
           Ritual
         </button>
         {hasActiveFilters && (
-          <button type="button" onClick={clearFilters} style={togglePill(false)}>Clear</button>
+          <button type="button" onClick={clearFilters} style={togglePillStyle(false, C.accentHl, C.panelBorder, C.muted)}>Clear</button>
         )}
       </div>
 

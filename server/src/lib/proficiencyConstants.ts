@@ -119,8 +119,8 @@ function detectChooseN(text: string): number {
   };
   const patterns = [
     /choose\s+(\w+)/i,
-    /(\w+)\s+of\s+(?:your|the following)\s+(?:skills?|tools?|languages?|instrument)/i,
-    /(\w+)\s+(?:skills?|tools?|languages?)\s+(?:of\s+)?your\s+choice/i,
+    /(\w+)\s+of\s+(?:your|the following)\s+(?:skills?|tools?|languages?|instruments?)/i,
+    /(\w+)\s+(?:skills?|tools?|languages?|instruments?)\s+(?:of\s+)?your\s+choice/i,
     /pick\s+(\w+)/i,
   ];
   for (const re of patterns) {
@@ -232,8 +232,10 @@ export function parseBackgroundProficiencies(bg: {
   }));
 
   // Tool trait — "Tool Proficiency: ..." in name
-  const toolTrait = traits.find(t =>
-    /tool|instrument|kit|vehicle|gaming|music/i.test(t.name)
+  const toolTrait = traits.find((t) =>
+    /^(?:tool proficienc(?:y|ies)|tool training|instrument training|instrument proficiency|vehicle proficiency|gaming set|gaming sets|artisan'?s tools?)/i.test(t.name)
+  ) ?? traits.find((t) =>
+    /tool|instrument|kit|vehicle|gaming/i.test(t.name) && !/^Feat:\s*/i.test(t.name)
   );
   // Language trait
   const langTrait = traits.find(t => /language/i.test(t.name));

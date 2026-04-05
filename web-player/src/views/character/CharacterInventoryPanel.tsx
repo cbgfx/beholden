@@ -22,7 +22,7 @@ import {
 } from "@/views/character/CharacterInventoryPanelHelpers";
 import { InventoryItemDrawer } from "@/views/character/CharacterInventoryDrawer";
 import { InventoryItemPickerModal } from "@/views/character/CharacterInventoryPickerModal";
-import { InventoryStat, InventoryTag, ItemRow, PartyStashItemRow, type PartyStashItem } from "@/views/character/CharacterInventoryPanelRows";
+import { InventoryStat, ItemRow, PartyStashItemRow, type PartyStashItem } from "@/views/character/CharacterInventoryPanelRows";
 import {
   CollapsiblePanel,
   addBtnStyle,
@@ -34,8 +34,8 @@ import {
   inventoryPickerListStyle,
   inventoryRarityColor,
   panelHeaderAddBtn,
-  toggleFilterPill,
 } from "@/views/character/CharacterViewParts";
+import { togglePillStyle } from "@beholden/shared/ui";
 import {
   canEquipOffhand,
   type CharacterDataLike,
@@ -772,7 +772,7 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
                 <button
                   type="button"
                   onClick={() => { void toggleContainerIgnoreWeight(container.id); }}
-                  style={toggleFilterPill(Boolean(container.ignoreWeight), accentColor)}
+                  style={togglePillStyle(Boolean(container.ignoreWeight), accentColor, C.panelBorder, C.muted)}
                 >
                   Ignore Weight
                 </button>

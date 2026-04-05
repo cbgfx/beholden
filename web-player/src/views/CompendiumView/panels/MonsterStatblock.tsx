@@ -1,113 +1,20 @@
 import * as React from "react";
+import {
+  buildMonsterInfoLines,
+  parseSpeedDisplay,
+  readMonsterNumber,
+} from "@beholden/shared/domain";
 import { C, withAlpha } from "@/lib/theme";
 import { formatCr } from "@/lib/monsterPicker/utils";
 import { formatModifier } from "@/views/character/CharacterSheetUtils";
-
-// ─── Utilities ───────────────────────────────────────────────────────────────
 
 function abilityMod(score: number): number {
   return Math.floor((score - 10) / 2);
 }
 
-function readNumber(v: any): number | null {
-  if (v == null) return null;
-  if (typeof v === "number") return Number.isFinite(v) ? v : null;
-  if (typeof v === "string") {
-    const n = parseInt(v, 10);
-    return Number.isFinite(n) ? n : null;
-  }
-  if (Array.isArray(v)) return readNumber(v[0]);
-  if (typeof v === "object") {
-    const inner = (v as any).value ?? (v as any).average ?? (v as any).avg ?? (v as any).ac ?? (v as any).hit_points;
-    if (inner != null && inner !== v) return readNumber(inner);
-  }
-  return null;
-}
-
-function listToString(v: unknown): string {
-  if (!v) return "";
-  if (typeof v === "string") return v;
-  if (Array.isArray(v)) {
-    return v.map((x) => {
-      if (x == null) return "";
-      if (typeof x === "string") return x;
-      if (typeof x === "number") return String(x);
-      if (typeof x === "object") {
-        const o = x as Record<string, unknown>;
-        if (typeof o["name"] === "string") return o["name"];
-        if (typeof o["note"] === "string" && typeof o["type"] === "string") return `${o["type"]} ${o["note"]}`;
-        if (typeof o["type"] === "string") return o["type"];
-      }
-      return String(x);
-    }).map(s => s.trim()).filter(Boolean).join(", ");
-  }
-  if (typeof v === "object") {
-    return Object.entries(v as Record<string, unknown>).map(([k, val]) => `${k} ${String(val).trim()}`).join(", ");
-  }
-  return "";
-}
-
-function parseSpeedDisplay(sp: unknown): string {
-  if (sp == null) return "";
-  if (typeof sp === "string") return sp;
-  if (typeof sp === "number") return `${sp} ft.`;
-  if (typeof sp === "object") {
-    const obj = sp as Record<string, unknown>;
-    const parts: string[] = [];
-    const push = (label: string, val: unknown) => {
-      if (val == null) return;
-      const s = String(val).trim();
-      if (!s) return;
-      parts.push(label === "walk" ? s : `${label} ${s}`);
-    };
-    if (obj["walk"] != null) push("walk", obj["walk"]);
-    else if (obj["speed"] != null) push("walk", obj["speed"]);
-    else if (obj["value"] != null) push("walk", obj["value"]);
-    if (obj["fly"] != null) push("fly", obj["fly"]);
-    if (obj["climb"] != null) push("climb", obj["climb"]);
-    if (obj["swim"] != null) push("swim", obj["swim"]);
-    if (obj["burrow"] != null) push("burrow", obj["burrow"]);
-    return parts.join(", ");
-  }
-  return "";
-}
-
-const SIZE_CODE: Record<string, string> = { T: "Tiny", S: "Small", M: "Medium", L: "Large", H: "Huge", G: "Gargantuan" };
-
-function buildInfoLines(m: any): Array<{ label: string; value: string }> {
-  const sizeStr = SIZE_CODE[String(m.size ?? "").trim().toUpperCase()] ?? String(m.size ?? "").trim();
-  const typeRaw = m.type?.type ?? m.type ?? "";
-  const typeStr = typeof typeRaw === "string" ? typeRaw : "";
-  const typeDisplay = typeStr ? typeStr.charAt(0).toUpperCase() + typeStr.slice(1) : "";
-  const skillsStr = listToString(m.skill ?? m.skills ?? "");
-  const sensesStr = listToString(m.senses ?? "");
-  const langsStr = listToString(m.languages ?? "");
-  const cr = m.cr ?? m.challenge_rating ?? m.challengeRating;
-  const crStr = cr != null ? String(cr) : "";
-  const dmgRes = listToString(m.damageResist ?? m.resist ?? m.resistance ?? "");
-  const dmgImm = listToString(m.damageImmune ?? m.immune ?? m.immunity ?? "");
-  const dmgVuln = listToString(m.damageVulnerable ?? m.vulnerable ?? m.vulnerability ?? "");
-  const condImm = listToString(m.conditionImmune ?? m.conditionImmunity ?? m.condImmune ?? "");
-
-  return [
-    ...(sizeStr ? [{ label: "Size", value: sizeStr }] : []),
-    ...(typeDisplay ? [{ label: "Type", value: typeDisplay }] : []),
-    { label: "Skills", value: skillsStr || "—" },
-    { label: "Senses", value: sensesStr || "—" },
-    { label: "Languages", value: langsStr || "—" },
-    { label: "Challenge Rating", value: crStr || "—" },
-    { label: "Damage Resistances", value: dmgRes || "—" },
-    { label: "Damage Vulnerabilities", value: dmgVuln || "—" },
-    { label: "Damage Immunities", value: dmgImm || "—" },
-    { label: "Condition Immunities", value: condImm || "—" },
-  ];
-}
-
 function isSpellSection(name: unknown): boolean {
   return /spellcasting/i.test(String(name ?? ""));
 }
-
-// ─── Icon SVGs ────────────────────────────────────────────────────────────────
 
 function IconShield({ size = 14 }: { size?: number }) {
   return (
@@ -133,8 +40,6 @@ function IconSpeed({ size = 14 }: { size?: number }) {
   );
 }
 
-// ─── StatBar ─────────────────────────────────────────────────────────────────
-
 function StatBar({ icon, label, value, flex }: { icon: React.ReactNode; label: string; value: React.ReactNode; flex?: number }) {
   return (
     <div style={{ flex: flex ?? 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 10px" }}>
@@ -149,8 +54,6 @@ function StatBar({ icon, label, value, flex }: { icon: React.ReactNode; label: s
   );
 }
 
-// ─── AbilityTable ─────────────────────────────────────────────────────────────
-
 type AbilityKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
 
 function AbilityGroup({ keys, abilities, saves }: { keys: AbilityKey[]; abilities: Record<AbilityKey, number>; saves?: Partial<Record<AbilityKey, number>> }) {
@@ -159,19 +62,23 @@ function AbilityGroup({ keys, abilities, saves }: { keys: AbilityKey[]; abilitie
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ display: "grid", gridTemplateColumns: cols, gap: 6, marginBottom: 6 }}>
         <div />
-        {["Score", "Mod", "Save"].map(h => (
-          <div key={h} style={{ fontSize: "var(--fs-tiny)", fontWeight: 900, letterSpacing: 1, textTransform: "uppercase", color: C.muted, textAlign: "center" }}>{h}</div>
+        {["Score", "Mod", "Save"].map((header) => (
+          <div key={header} style={{ fontSize: "var(--fs-tiny)", fontWeight: 900, letterSpacing: 1, textTransform: "uppercase", color: C.muted, textAlign: "center" }}>
+            {header}
+          </div>
         ))}
       </div>
       <div style={{ display: "grid", gap: 5 }}>
-        {keys.map((k) => {
-          const score = Number(abilities[k] ?? 10);
+        {keys.map((key) => {
+          const score = Number(abilities[key] ?? 10);
           const mod = abilityMod(score);
-          const save = saves?.[k] != null ? Number(saves[k]) : mod;
+          const save = saves?.[key] != null ? Number(saves[key]) : mod;
           return (
-            <div key={k} style={{ display: "grid", gridTemplateColumns: cols, gap: 6, alignItems: "center" }}>
-              <div style={{ fontSize: "var(--fs-small)", fontWeight: 900, textTransform: "uppercase", color: C.muted }}>{k}</div>
-              <div style={{ padding: "5px 8px", borderRadius: 8, background: withAlpha("rgba(0,0,0,0.80)", 0.5), border: `1px solid ${C.panelBorder}`, fontWeight: 900, fontSize: "var(--fs-medium)", textAlign: "center", color: C.text, fontVariantNumeric: "tabular-nums", minWidth: 32 }}>{score}</div>
+            <div key={key} style={{ display: "grid", gridTemplateColumns: cols, gap: 6, alignItems: "center" }}>
+              <div style={{ fontSize: "var(--fs-small)", fontWeight: 900, textTransform: "uppercase", color: C.muted }}>{key}</div>
+              <div style={{ padding: "5px 8px", borderRadius: 8, background: withAlpha("rgba(0,0,0,0.80)", 0.5), border: `1px solid ${C.panelBorder}`, fontWeight: 900, fontSize: "var(--fs-medium)", textAlign: "center", color: C.text, fontVariantNumeric: "tabular-nums", minWidth: 32 }}>
+                {score}
+              </div>
               <div style={{ fontWeight: 900, fontSize: "var(--fs-medium)", textAlign: "center", color: C.text, fontVariantNumeric: "tabular-nums" }}>{formatModifier(mod)}</div>
               <div style={{ fontWeight: 900, fontSize: "var(--fs-medium)", textAlign: "center", color: C.text, fontVariantNumeric: "tabular-nums" }}>{formatModifier(save)}</div>
             </div>
@@ -192,26 +99,22 @@ function AbilityTable({ abilities, saves }: { abilities: Record<AbilityKey, numb
   );
 }
 
-// ─── TextBlock ───────────────────────────────────────────────────────────────
-
 function TextBlock({ items, title }: { items: any[]; title: string }) {
   if (!items.length) return null;
   return (
     <div style={{ display: "grid", gap: 5 }}>
       <div style={{ color: C.accent, fontWeight: 900 }}>{title}</div>
-      {items.map((t: any, i: number) => (
-        <div key={i} style={{ display: "grid", gap: 2 }}>
-          <div style={{ fontWeight: 900 }}>{t.name ?? t.title ?? ""}</div>
+      {items.map((item: any, index: number) => (
+        <div key={index} style={{ display: "grid", gap: 2 }}>
+          <div style={{ fontWeight: 900 }}>{item.name ?? item.title ?? ""}</div>
           <div style={{ color: C.muted, whiteSpace: "pre-wrap", fontSize: "var(--fs-subtitle)" }}>
-            {Array.isArray(t.text) ? t.text.join("\n") : (t.text ?? t.description ?? "")}
+            {Array.isArray(item.text) ? item.text.join("\n") : (item.text ?? item.description ?? "")}
           </div>
         </div>
       ))}
     </div>
   );
 }
-
-// ─── Main component ───────────────────────────────────────────────────────────
 
 export function MonsterStatblock({ monster, hideSummaryBar = false }: { monster: any | null; hideSummaryBar?: boolean }) {
   const [infoOpen, setInfoOpen] = React.useState(true);
@@ -220,47 +123,43 @@ export function MonsterStatblock({ monster, hideSummaryBar = false }: { monster:
     return <div style={{ color: C.muted }}>Select a monster to view its stat block.</div>;
   }
 
-  const m = monster;
-
-  const ac = readNumber(m.ac?.value ?? m.ac ?? m.armor_class);
-  const hp = readNumber(m.hp?.average ?? m.hp ?? m.hit_points);
-  const speedDisplay = parseSpeedDisplay(m.speed) || "—";
+  const ac = readMonsterNumber(monster.ac?.value ?? monster.ac ?? monster.armor_class);
+  const hp = readMonsterNumber(monster.hp?.average ?? monster.hp ?? monster.hit_points);
+  const speedDisplay = parseSpeedDisplay(monster.speed) || "—";
   const hpValue = hp != null ? `${hp} / ${hp}` : "—";
 
   const abilities: Record<AbilityKey, number> = {
-    str: readNumber(m.str) ?? 10,
-    dex: readNumber(m.dex) ?? 10,
-    con: readNumber(m.con) ?? 10,
-    int: readNumber(m.int) ?? 10,
-    wis: readNumber(m.wis) ?? 10,
-    cha: readNumber(m.cha) ?? 10,
+    str: readMonsterNumber(monster.str) ?? 10,
+    dex: readMonsterNumber(monster.dex) ?? 10,
+    con: readMonsterNumber(monster.con) ?? 10,
+    int: readMonsterNumber(monster.int) ?? 10,
+    wis: readMonsterNumber(monster.wis) ?? 10,
+    cha: readMonsterNumber(monster.cha) ?? 10,
   };
 
-  const infoLines = buildInfoLines(m).filter(l => l.value?.trim() && l.value.trim() !== "—");
+  const infoLines = buildMonsterInfoLines(monster).filter((line) => line.value?.trim() && line.value.trim() !== "—");
 
-  const type = m.type?.type ?? m.type;
-  const alignment = m.alignment;
-  const cr = formatCr(m.cr ?? m.challenge_rating);
+  const type = monster.type?.type ?? monster.type;
+  const alignment = monster.alignment;
+  const cr = formatCr(monster.cr ?? monster.challenge_rating);
 
-  const traitArr: any[] = Array.isArray(m.traits ?? m.trait) ? (m.traits ?? m.trait) : [];
-  const actionArr: any[] = Array.isArray(m.actions ?? m.action) ? (m.actions ?? m.action) : [];
-  const reactionArr: any[] = Array.isArray(m.reactions ?? m.reaction) ? (m.reactions ?? m.reaction) : [];
-  const legendary: any[] = Array.isArray(m.legendary ?? m.legendaryActions) ? (m.legendary ?? m.legendaryActions) : [];
+  const traitArr: any[] = Array.isArray(monster.traits ?? monster.trait) ? (monster.traits ?? monster.trait) : [];
+  const actionArr: any[] = Array.isArray(monster.actions ?? monster.action) ? (monster.actions ?? monster.action) : [];
+  const reactionArr: any[] = Array.isArray(monster.reactions ?? monster.reaction) ? (monster.reactions ?? monster.reaction) : [];
+  const legendary: any[] = Array.isArray(monster.legendary ?? monster.legendaryActions) ? (monster.legendary ?? monster.legendaryActions) : [];
 
-  const nonSpellTraits = traitArr.filter(t => !isSpellSection(t?.name ?? t?.title));
-  const nonSpellActions = actionArr.filter(a => !isSpellSection(a?.name ?? a?.title));
+  const nonSpellTraits = traitArr.filter((trait) => !isSpellSection(trait?.name ?? trait?.title));
+  const nonSpellActions = actionArr.filter((action) => !isSpellSection(action?.name ?? action?.title));
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
-      {/* Summary */}
       <div>
-        <div style={{ fontWeight: 900, fontSize: "var(--fs-title)", color: C.text }}>{m.name}</div>
+        <div style={{ fontWeight: 900, fontSize: "var(--fs-title)", color: C.text }}>{monster.name}</div>
         <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>
           {[type, alignment, cr ? `CR ${cr}` : null].filter(Boolean).join(" · ")}
         </div>
       </div>
 
-      {/* AC / HP / Speed bar */}
       {!hideSummaryBar && (
         <div style={{ display: "flex", borderRadius: 12, border: `1px solid ${C.panelBorder}`, background: C.panelBg, overflow: "hidden" }}>
           <StatBar icon={<IconShield />} label="Armor Class" value={ac != null ? ac : "—"} />
@@ -271,17 +170,15 @@ export function MonsterStatblock({ monster, hideSummaryBar = false }: { monster:
         </div>
       )}
 
-      {/* Ability table */}
       <div style={{ borderRadius: 12, border: `1px solid ${C.panelBorder}`, background: C.panelBg, padding: "8px 12px" }}>
         <AbilityTable abilities={abilities} />
       </div>
 
-      {/* Details (collapsible) */}
       {infoLines.length > 0 && (
         <div style={{ border: `1px solid ${C.panelBorder}`, borderRadius: 12, background: C.panelBg, overflow: "hidden" }}>
           <button
             type="button"
-            onClick={() => setInfoOpen(v => !v)}
+            onClick={() => setInfoOpen((value) => !value)}
             style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "transparent", border: 0, cursor: "pointer", color: C.text, fontSize: "var(--fs-small)", fontWeight: 900, letterSpacing: 0.8, textTransform: "uppercase" }}
           >
             <span>Details</span>
@@ -289,10 +186,10 @@ export function MonsterStatblock({ monster, hideSummaryBar = false }: { monster:
           </button>
           {infoOpen && (
             <div style={{ padding: "0 12px 10px", display: "grid", gap: 4 }}>
-              {infoLines.map(l => (
-                <div key={l.label} style={{ display: "flex", gap: 6, fontSize: "var(--fs-small)", lineHeight: 1.4 }}>
-                  <span style={{ color: C.muted, fontWeight: 700, whiteSpace: "nowrap" }}>{l.label}</span>
-                  <span style={{ color: C.text }}>{l.value}</span>
+              {infoLines.map((line) => (
+                <div key={line.label} style={{ display: "flex", gap: 6, fontSize: "var(--fs-small)", lineHeight: 1.4 }}>
+                  <span style={{ color: C.muted, fontWeight: 700, whiteSpace: "nowrap" }}>{line.label}</span>
+                  <span style={{ color: C.text }}>{line.value}</span>
                 </div>
               ))}
             </div>
@@ -307,4 +204,3 @@ export function MonsterStatblock({ monster, hideSummaryBar = false }: { monster:
     </div>
   );
 }
-

@@ -21,6 +21,12 @@ import {
   spellSectionHeaderBtn,
 } from "@/views/character/CharacterSpellShared";
 
+function formatResourceResetLabel(reset: ResourceCounter["reset"]): string {
+  if (reset === "S") return "Short Rest";
+  if (reset === "SL") return "Short or Long Rest";
+  return "Long Rest";
+}
+
 // ---------------------------------------------------------------------------
 // RichSpellsPanel
 // ---------------------------------------------------------------------------

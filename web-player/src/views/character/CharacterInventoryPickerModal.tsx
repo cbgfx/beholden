@@ -8,8 +8,9 @@ import { useItemSearch } from "@/views/CompendiumView/hooks/useItemSearch";
 import type { CompendiumItemDetail, InventoryPickerPayload } from "@/views/character/CharacterInventory";
 import { formatItemDamageType, formatItemProperties, hasStealthDisadvantage } from "@/views/character/CharacterInventory";
 import { INVENTORY_PICKER_ROW_HEIGHT, inputStyle, stepperBtn } from "@/views/character/CharacterInventoryPanelHelpers";
-import { InventoryStat, InventoryTag } from "@/views/character/CharacterInventoryPanelRows";
-import { addBtnStyle, cancelBtnStyle, inventoryCheckboxLabel, inventoryPickerColumnStyle, inventoryPickerDetailStyle, inventoryPickerListStyle, inventoryRarityColor, toggleFilterPill } from "@/views/character/CharacterViewParts";
+import { ItemListRow, Tag, togglePillStyle } from "@beholden/shared/ui";
+import { InventoryStat } from "@/views/character/CharacterInventoryPanelRows";
+import { addBtnStyle, cancelBtnStyle, inventoryCheckboxLabel, inventoryPickerColumnStyle, inventoryPickerDetailStyle, inventoryPickerListStyle, inventoryRarityColor } from "@/views/character/CharacterViewParts";
 
 export function InventoryItemPickerModal(props: {
   isOpen: boolean;
@@ -114,9 +115,9 @@ export function InventoryItemPickerModal(props: {
           </div>
 
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <button type="button" onClick={() => setFilterAttunement(!filterAttunement)} style={toggleFilterPill(filterAttunement, props.accentColor)}>Attunement</button>
-            <button type="button" onClick={() => setFilterMagic(!filterMagic)} style={toggleFilterPill(filterMagic, props.accentColor)}>Magic</button>
-            {hasActiveFilters ? <button type="button" onClick={clearFilters} style={toggleFilterPill(false, props.accentColor)}>Clear</button> : null}
+            <button type="button" onClick={() => setFilterAttunement(!filterAttunement)} style={togglePillStyle(filterAttunement, props.accentColor, C.panelBorder, C.muted)}>Attunement</button>
+            <button type="button" onClick={() => setFilterMagic(!filterMagic)} style={togglePillStyle(filterMagic, props.accentColor, C.panelBorder, C.muted)}>Magic</button>
+            {hasActiveFilters ? <button type="button" onClick={clearFilters} style={togglePillStyle(false, props.accentColor, C.panelBorder, C.muted)}>Clear</button> : null}
           </div>
 
           <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
@@ -127,19 +128,24 @@ export function InventoryItemPickerModal(props: {
             <div style={{ height: padTop }} />
             {!busy && error ? <div style={{ padding: 12, color: C.red }}>{error}</div> : null}
             {!busy && rows.length === 0 ? <div style={{ padding: 12, color: C.muted }}>No items found.</div> : null}
-            {rows.slice(start, end).map((item) => {
-              const active = item.id === selectedId;
-              return (
-                <button key={item.id} type="button" onClick={() => { setSelectedId(item.id); setCreateMode(false); }} style={{ width: "100%", border: "none", borderBottom: `1px solid ${C.panelBorder}`, background: active ? withAlpha(C.accentHl, 0.15) : "transparent", color: C.text, textAlign: "left", padding: "0 16px", cursor: "pointer", minHeight: INVENTORY_PICKER_ROW_HEIGHT, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    {item.rarity ? <span style={{ width: 9, height: 9, borderRadius: "50%", background: inventoryRarityColor(item.rarity), flexShrink: 0 }} /> : null}
-                    <span style={{ fontWeight: 800, fontSize: "var(--fs-subtitle)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</span>
-                    {item.magic ? <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: "var(--fs-small)", fontWeight: 700, color: C.colorMagic, border: "1px solid #6d28d966", borderRadius: 6, padding: "1px 6px", lineHeight: 1.4, whiteSpace: "nowrap" }}>Magic</span> : null}
-                  </div>
-                  <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginTop: 2 }}>{[item.rarity ? titleCase(item.rarity) : null, item.type, item.attunement ? "Attunement" : null].filter(Boolean).join(" • ")}</div>
-                </button>
-              );
-            })}
+            {rows.slice(start, end).map((item) => (
+              <ItemListRow
+                key={item.id}
+                name={item.name}
+                subtitle={[item.rarity ? titleCase(item.rarity) : null, item.type, item.attunement ? "Attunement" : null].filter(Boolean).join(" • ") || null}
+                rarityColor={item.rarity ? inventoryRarityColor(item.rarity) : null}
+                magic={!!item.magic}
+                magicColor={C.colorMagic}
+                active={item.id === selectedId}
+                onClick={() => { setSelectedId(item.id); setCreateMode(false); }}
+                height={INVENTORY_PICKER_ROW_HEIGHT}
+                padding="0 16px"
+                textColor={C.text}
+                mutedColor={C.muted}
+                borderColor={C.panelBorder}
+                activeBackground={withAlpha(C.accentHl, 0.15)}
+              />
+            ))}
             <div style={{ height: padBottom }} />
           </div>
         </div>
@@ -187,11 +193,11 @@ export function InventoryItemPickerModal(props: {
           ) : detail ? (
             <>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {detail.magic ? <InventoryTag label="Magic" color={C.colorMagic} /> : null}
-                {detail.attunement ? <InventoryTag label="Attunement" color={props.accentColor} /> : null}
-                {detail.rarity ? <InventoryTag label={titleCase(detail.rarity)} color={inventoryRarityColor(detail.rarity)} /> : null}
-                {detail.type ? <InventoryTag label={detail.type} color={C.muted} /> : null}
-                {hasStealthDisadvantage(detail) ? <InventoryTag label="D" color={C.colorPinkRed} /> : null}
+                {detail.magic ? <Tag label="Magic" color={C.colorMagic} /> : null}
+                {detail.attunement ? <Tag label="Attunement" color={props.accentColor} /> : null}
+                {detail.rarity ? <Tag label={titleCase(detail.rarity)} color={inventoryRarityColor(detail.rarity)} /> : null}
+                {detail.type ? <Tag label={detail.type} color={C.muted} /> : null}
+                {hasStealthDisadvantage(detail) ? <Tag label="D" color={C.colorPinkRed} /> : null}
               </div>
               {(detail.dmg1 || detail.dmg2 || detail.dmgType || detail.weight != null || detail.value != null || detail.properties.length > 0) ? (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>

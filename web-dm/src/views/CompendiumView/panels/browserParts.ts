@@ -1,5 +1,6 @@
 import React from "react";
-import { theme, withAlpha } from "@/theme/theme";
+import { theme } from "@/theme/theme";
+import { togglePillStyle as sharedTogglePillStyle } from "@beholden/shared/ui";
 import { IconPlus } from "@/icons";
 
 /** Inline style for edit/delete action icon buttons in browser panel rows. */
@@ -16,13 +17,7 @@ export function actionBtnStyle(color: string): React.CSSProperties {
 /** Inline style for toggle-pill filter buttons. Pass `gold = true` for gold accent. */
 export function togglePillStyle(active: boolean, gold = false): React.CSSProperties {
   const accent = gold ? theme.colors.accentPrimary : theme.colors.accentHighlight;
-  return {
-    padding: "4px 10px", borderRadius: 999,
-    border: `1px solid ${active ? accent : theme.colors.panelBorder}`,
-    background: active ? withAlpha(accent, 0.18) : withAlpha(theme.colors.shadowColor, 0.12),
-    color: active ? accent : theme.colors.muted,
-    cursor: "pointer", fontSize: "var(--fs-pill, 11px)", fontWeight: 700,
-  };
+  return sharedTogglePillStyle(active, accent, theme.colors.panelBorder, theme.colors.muted);
 }
 
 /** Small + button used in the panel header actions area to open a create form. */
