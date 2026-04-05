@@ -1,4 +1,5 @@
 import React from "react";
+import { EmptyState } from "@beholden/shared/ui";
 import { C } from "@/lib/theme";
 import { IconWerewolf } from "@/icons";
 import { DraggableList } from "@/ui/DraggableList";
@@ -277,7 +278,7 @@ export function CharacterSupportPanels(props: {
                 ))}
               </div>
             ) : (
-              <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>No tracked resources.</div>
+              <EmptyState textColor={C.muted}>No tracked resources.</EmptyState>
             )}
           </div>
         </div>
@@ -310,7 +311,7 @@ export function CharacterSupportPanels(props: {
             }}
           />
         ) : (
-          <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>No notes yet.</div>
+          <EmptyState textColor={C.muted}>No notes yet.</EmptyState>
         )}
       </CollapsiblePanel>
 
@@ -341,7 +342,7 @@ export function CharacterSupportPanels(props: {
             }}
           />
         ) : (
-          <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>No notes yet.</div>
+          <EmptyState textColor={C.muted}>No notes yet.</EmptyState>
         )}
       </CollapsiblePanel>}
 
@@ -359,7 +360,7 @@ export function CharacterSupportPanels(props: {
             ))}
           </div>
         ) : (
-          <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>No live player features were derived for this character.</div>
+          <EmptyState textColor={C.muted}>No live player features were derived for this character.</EmptyState>
         )}
       </CollapsiblePanel>
 

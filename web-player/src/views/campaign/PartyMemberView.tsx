@@ -9,30 +9,7 @@ import type { AbilKey } from "@/views/character/CharacterSheetTypes";
 import { ABILITY_LABELS, ALL_SKILLS } from "@/views/character/CharacterSheetConstants";
 import { abilityMod, formatModifier, hasNamedProficiency, hpColor, proficiencyBonus } from "@/views/character/CharacterSheetUtils";
 import { MiniStat } from "@/views/character/CharacterViewParts";
-import { Tag } from "@beholden/shared/ui";
-
-// ---------------------------------------------------------------------------
-// Mini sub-components
-// ---------------------------------------------------------------------------
-
-function Panel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return (
-    <div style={{
-      background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)",
-      borderRadius: 14, padding: 14, ...style,
-    }}>
-      {children}
-    </div>
-  );
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(160,180,220,0.45)", marginBottom: 8 }}>
-      {children}
-    </div>
-  );
-}
+import { Panel, SubsectionLabel, Tag } from "@beholden/shared/ui";
 
 // ---------------------------------------------------------------------------
 // View
@@ -178,7 +155,7 @@ export function PartyMemberView() {
 
             {/* Ability scores */}
             <Panel>
-              <SectionLabel>Ability Scores</SectionLabel>
+                <SubsectionLabel>Ability Scores</SubsectionLabel>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
                 {(Object.keys(ABILITY_LABELS) as AbilKey[]).map((k) => {
                   const score = scores[k];
@@ -204,7 +181,7 @@ export function PartyMemberView() {
             {/* Skills */}
             {prof?.skills && prof.skills.length > 0 && (
               <Panel>
-                <SectionLabel>Skills</SectionLabel>
+                <SubsectionLabel>Skills</SubsectionLabel>
                 <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                   {ALL_SKILLS.map(({ name, abil }) => {
                     const proficient = hasNamedProficiency(prof.skills ?? [], name);
@@ -230,7 +207,7 @@ export function PartyMemberView() {
             {/* Armor / Weapons / Tools / Languages */}
             {(prof?.armor?.length || prof?.weapons?.length || prof?.tools?.length || prof?.languages?.length) ? (
               <Panel>
-                <SectionLabel>Proficiencies</SectionLabel>
+                <SubsectionLabel>Proficiencies</SubsectionLabel>
                 {[
                   { label: "Armor", items: prof?.armor },
                   { label: "Weapons", items: prof?.weapons },
@@ -252,7 +229,7 @@ export function PartyMemberView() {
             {/* Class features */}
             {classFeatures.length > 0 && (
               <Panel>
-                <SectionLabel>Class Features</SectionLabel>
+                <SubsectionLabel>Class Features</SubsectionLabel>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {classFeatures.map((f, i) => (
                     <details key={i} style={{ fontSize: "var(--fs-small)" }}>
@@ -273,7 +250,7 @@ export function PartyMemberView() {
             {/* Notes */}
             {(playerNotes.length > 0 || sharedNotes.length > 0) && (
               <Panel>
-                <SectionLabel>Notes</SectionLabel>
+                <SubsectionLabel>Notes</SubsectionLabel>
                 {[...sharedNotes, ...playerNotes].map((note) => (
                   <details key={note.id} style={{ fontSize: "var(--fs-small)", marginBottom: 5 }}>
                     <summary style={{ cursor: "pointer", fontWeight: 700, color: C.text, userSelect: "none", listStyle: "none" }}>
@@ -294,7 +271,7 @@ export function PartyMemberView() {
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {(cantrips.length > 0 || spells.length > 0 || invocations.length > 0) && (
               <Panel>
-                <SectionLabel>Spells & Invocations</SectionLabel>
+                <SubsectionLabel>Spells & Invocations</SubsectionLabel>
                 {cantrips.length > 0 && (
                   <div style={{ marginBottom: 10 }}>
                     <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: "rgba(160,180,220,0.45)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>Cantrips</div>
@@ -327,7 +304,7 @@ export function PartyMemberView() {
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {inventory.length > 0 && (
               <Panel>
-                <SectionLabel>Inventory</SectionLabel>
+                <SubsectionLabel>Inventory</SubsectionLabel>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   {inventory.map((item: any, i: number) => (
                     <div key={i} style={{

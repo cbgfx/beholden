@@ -499,6 +499,15 @@ export function CharacterView() {
 
   useEffect(() => { fetchChar(); }, [fetchChar]);
 
+  useEffect(() => {
+    if (char?.id && char.name) {
+      try {
+        localStorage.setItem("beholden:lastCharacter", JSON.stringify({ id: char.id, name: char.name }));
+        window.dispatchEvent(new CustomEvent("beholden:lastCharacter"));
+      } catch {}
+    }
+  }, [char?.id, char?.name]);
+
   const polymorphTypeOptions = React.useMemo(() => {
     const values = new Set<string>();
     for (const row of polymorphRows) {

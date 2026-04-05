@@ -1,15 +1,12 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import type { SharedConditionInstance } from "@beholden/shared/domain";
+import { EmptyState } from "@beholden/shared/ui";
 import { C } from "@/lib/theme";
 import { api } from "@/services/api";
 import { IconPlayer, IconConditionByKey } from "@/icons";
 import { useWs } from "@/services/ws";
 import { hpColor } from "@/views/character/CharacterSheetUtils";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 type ConditionInstance = SharedConditionInstance;
 
@@ -37,16 +34,12 @@ export interface PartyMember {
 }
 
 function hpLabel(pct: number): string {
-  if (pct <= 0)  return "Down";
-  if (pct < 25)  return "Critical";
-  if (pct < 50)  return "Bloodied";
-  if (pct < 75)  return "Bloody";
+  if (pct <= 0) return "Down";
+  if (pct < 25) return "Critical";
+  if (pct < 50) return "Bloodied";
+  if (pct < 75) return "Bloody";
   return "Healthy";
 }
-
-// ---------------------------------------------------------------------------
-// Party member card
-// ---------------------------------------------------------------------------
 
 function MemberCard({ m, campaignId }: { m: PartyMember; campaignId: string }) {
   const navigate = useNavigate();
@@ -67,25 +60,35 @@ function MemberCard({ m, campaignId }: { m: PartyMember; campaignId: string }) {
         gap: 10,
         transition: "border-color 0.15s, background 0.15s",
       }}
-      onMouseEnter={e => {
+      onMouseEnter={(e) => {
         (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.07)";
         (e.currentTarget as HTMLDivElement).style.borderColor = `${color}66`;
       }}
-      onMouseLeave={e => {
+      onMouseLeave={(e) => {
         (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.04)";
         (e.currentTarget as HTMLDivElement).style.borderColor = `${color}33`;
       }}
     >
-      {/* Portrait + info */}
       <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-        <div style={{
-          width: 54, height: 54, borderRadius: 10, flexShrink: 0,
-          background: `${color}22`, border: `2px solid ${color}55`,
-          overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-          {m.imageUrl
-            ? <img src={m.imageUrl} alt={m.characterName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            : <IconPlayer size={28} style={{ opacity: 0.4 }} />}
+        <div
+          style={{
+            width: 54,
+            height: 54,
+            borderRadius: 10,
+            flexShrink: 0,
+            background: `${color}22`,
+            border: `2px solid ${color}55`,
+            overflow: "hidden",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {m.imageUrl ? (
+            <img src={m.imageUrl} alt={m.characterName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            <IconPlayer size={28} style={{ opacity: 0.4 }} />
+          )}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 800, fontSize: "var(--fs-body)", color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -94,62 +97,73 @@ function MemberCard({ m, campaignId }: { m: PartyMember; campaignId: string }) {
           <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginTop: 2 }}>
             {[m.className, m.species].filter(Boolean).join(" · ")}
           </div>
-          <div style={{ fontSize: "var(--fs-small)", color: color, fontWeight: 700, marginTop: 1 }}>Level {m.level}</div>
-          {m.playerName && (
-            <div style={{ fontSize: "var(--fs-small)", color: "rgba(160,180,220,0.4)", marginTop: 1 }}>
-              {m.playerName}
-            </div>
-          )}
+          <div style={{ fontSize: "var(--fs-small)", color, fontWeight: 700, marginTop: 1 }}>Level {m.level}</div>
+          {m.playerName ? (
+            <div style={{ fontSize: "var(--fs-small)", color: "rgba(160,180,220,0.4)", marginTop: 1 }}>{m.playerName}</div>
+          ) : null}
         </div>
-        {/* AC badge */}
-        <div style={{
-          display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-          background: "rgba(255,255,255,0.06)", borderRadius: 8, padding: "4px 8px", flexShrink: 0,
-        }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+            background: "rgba(255,255,255,0.06)",
+            borderRadius: 8,
+            padding: "4px 8px",
+            flexShrink: 0,
+          }}
+        >
           <span style={{ fontSize: "var(--fs-body)", fontWeight: 900, color: C.text }}>{m.ac}</span>
           <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 600 }}>AC</span>
         </div>
       </div>
 
-      {/* HP bar */}
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
           <span style={{ fontSize: "var(--fs-small)", color: hpC, fontWeight: 700 }}>{hpLabel(m.hpPercent)}</span>
           <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>{m.hpPercent}%</span>
         </div>
         <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
-          <div style={{
-            height: "100%", borderRadius: 3,
-            width: `${m.hpPercent}%`,
-            background: hpC,
-            transition: "width 0.4s ease",
-          }} />
+          <div
+            style={{
+              height: "100%",
+              borderRadius: 3,
+              width: `${m.hpPercent}%`,
+              background: hpC,
+              transition: "width 0.4s ease",
+            }}
+          />
         </div>
       </div>
 
-      {/* Conditions */}
-      {m.conditions.length > 0 && (
+      {m.conditions.length > 0 ? (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
           {m.conditions.map((c, i) => (
-            <span key={i} style={{
-              display: "inline-flex", alignItems: "center", gap: 3,
-              fontSize: "var(--fs-small)", padding: "2px 7px", borderRadius: 20, fontWeight: 600,
-              background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.3)",
-              color: "#fca5a5",
-            }}>
+            <span
+              key={i}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 3,
+                fontSize: "var(--fs-small)",
+                padding: "2px 7px",
+                borderRadius: 20,
+                fontWeight: 600,
+                background: "rgba(248,113,113,0.12)",
+                border: "1px solid rgba(248,113,113,0.3)",
+                color: "#fca5a5",
+              }}
+            >
               <IconConditionByKey condKey={c.key} size={10} />
               {String(c.key)}
             </span>
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// View
-// ---------------------------------------------------------------------------
 
 export function CampaignPartyView() {
   const { id: campaignId } = useParams<{ id: string }>();
@@ -169,33 +183,38 @@ export function CampaignPartyView() {
 
   React.useEffect(() => {
     fetchParty();
-    // Fetch campaign name from campaigns list
     api<{ id: string; name: string }[]>("/api/me/campaigns")
       .then((list) => {
-        const c = list.find((c) => c.id === campaignId);
+        const c = list.find((entry) => entry.id === campaignId);
         if (c) setCampaignName(c.name);
       })
       .catch(() => {});
   }, [campaignId, fetchParty]);
 
-  // Re-fetch when DM changes player stats
-  useWs(React.useCallback((msg) => {
-    if (msg.type === "players:changed") {
-      const cId = (msg.payload as any)?.campaignId as string | undefined;
-      if (cId === campaignId) fetchParty();
-    }
-  }, [campaignId, fetchParty]));
+  useWs(
+    React.useCallback(
+      (msg) => {
+        if (msg.type === "players:changed") {
+          const cId = (msg.payload as any)?.campaignId as string | undefined;
+          if (cId === campaignId) fetchParty();
+        }
+      },
+      [campaignId, fetchParty]
+    )
+  );
 
   const inner = (() => {
-    if (loading) return <p style={{ color: C.muted }}>Loading…</p>;
-    if (error) return <p style={{ color: C.colorPinkRed }}>{error}</p>;
-    if (party.length === 0) return <p style={{ color: C.muted }}>No players in this campaign yet.</p>;
+    if (loading) return <EmptyState textColor={C.muted}>Loading…</EmptyState>;
+    if (error) return <EmptyState textColor={C.colorPinkRed}>{error}</EmptyState>;
+    if (party.length === 0) return <EmptyState textColor={C.muted}>No players in this campaign yet.</EmptyState>;
     return (
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-        gap: 16,
-      }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+          gap: 16,
+        }}
+      >
         {party.map((m) => (
           <MemberCard key={m.id} m={m} campaignId={campaignId!} />
         ))}
@@ -206,8 +225,11 @@ export function CampaignPartyView() {
   return (
     <div style={{ height: "100%", overflowY: "auto", background: C.bg, color: C.text, fontFamily: "system-ui, Segoe UI, Arial, sans-serif" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "36px 24px" }}>
-        <button type="button" onClick={() => navigate("/")}
-          style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: "var(--fs-subtitle)", padding: 0, marginBottom: 20 }}>
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: "var(--fs-subtitle)", padding: 0, marginBottom: 20 }}
+        >
           ← Back
         </button>
         <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 28 }}>

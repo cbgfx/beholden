@@ -6,7 +6,7 @@ import { titleCase } from "@/lib/format/titleCase";
 import { useItemSearch, type ItemSearchRow } from "@/views/CompendiumView/hooks/useItemSearch";
 import { useVirtualList } from "@/lib/monsterPicker/useVirtualList";
 import { IconChest } from "@/ui/Icons";
-import { ItemListRow, togglePillStyle } from "@beholden/shared/ui";
+import { EmptyState, ItemListRow, ListShell, togglePillStyle } from "@beholden/shared/ui";
 
 const ROW_HEIGHT = 52;
 
@@ -82,10 +82,7 @@ export function ItemsBrowserPanel(props: {
         )}
       </div>
 
-      <div
-        ref={vl.scrollRef} onScroll={vl.onScroll}
-        style={{ flex: 1, minHeight: 0, overflowY: "auto", border: `1px solid ${C.panelBorder}`, borderRadius: 12 }}
-      >
+      <ListShell ref={vl.scrollRef} borderColor={C.panelBorder}>
         <div style={{ height: padTop }} />
         {rows.slice(start, end).map((item) => (
           <ItemRow
@@ -97,9 +94,9 @@ export function ItemsBrowserPanel(props: {
         ))}
         <div style={{ height: padBottom }} />
         {!busy && rows.length === 0 && (
-          <div style={{ padding: 10, color: C.muted }}>No items found.</div>
+          <EmptyState textColor={C.muted} style={{ padding: 10 }}>No items found.</EmptyState>
         )}
-      </div>
+      </ListShell>
     </Panel>
   );
 }

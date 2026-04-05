@@ -11,6 +11,33 @@ const NAV_LINKS = [
   { to: "/compendium", label: "Compendium", end: false },
 ];
 
+function readLastCharacter(): { id: string; name: string } | null {
+  try {
+    const raw = localStorage.getItem("beholden:lastCharacter");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.id === "string" && typeof parsed.name === "string") return parsed;
+  } catch {}
+  return null;
+}
+
+function useLastCharacter() {
+  const [last, setLast] = React.useState(readLastCharacter);
+  React.useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key === "beholden:lastCharacter") setLast(readLastCharacter());
+    }
+    function onCustom() { setLast(readLastCharacter()); }
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("beholden:lastCharacter", onCustom);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("beholden:lastCharacter", onCustom);
+    };
+  }, []);
+  return last;
+}
+
 interface Meta {
   support: boolean;
 }
@@ -39,6 +66,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const updateAvailable = useUpdateCheck();
   const showSupport = meta?.support === true;
   const connected = useWsStatus();
+  const lastChar = useLastCharacter();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: C.bg, color: C.text, fontFamily: "system-ui, Segoe UI, Arial, sans-serif" }}>
@@ -63,6 +91,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {label}
             </NavLink>
           ))}
+          {lastChar && (
+            <NavLink
+              to={`/characters/${lastChar.id}`}
+              style={({ isActive }) => navLinkStyle(isActive, C.accentHl, C.muted)}
+            >
+              {lastChar.name}
+            </NavLink>
+          )}
         </nav>
 
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>

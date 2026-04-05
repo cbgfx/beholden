@@ -1,6 +1,7 @@
 import React from "react";
 import { theme } from "@/theme/theme";
 import { Panel as SharedPanel } from "@beholden/shared/ui";
+import { dmSharedPanelTheme } from "@/ui/sharedUiTheme";
 
 export function Panel(props: {
   title: React.ReactNode;
@@ -19,12 +20,7 @@ export function Panel(props: {
       bodyStyle={props.bodyStyle}
       storageKey={props.storageKey}
       titleColor={props.titleColor ?? theme.colors.accentPrimary}
-      borderColor="rgba(255,255,255,0.09)"
-      background="rgba(255,255,255,0.035)"
-      radius={theme.radius.panel}
-      padding="12px 14px"
-      titleFontSize="var(--fs-tiny)"
-      titleFontWeight={700}
+      {...dmSharedPanelTheme}
     >
       {props.children}
     </SharedPanel>

@@ -124,6 +124,16 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
   }, [campaignId, fetchPartyStash]));
 
   useEffect(() => {
+    setItems(
+      ((charData?.inventory ?? []) as InventoryItem[]).map((item) => ({
+        ...item,
+        equipState: getEquipState(item),
+        properties: item.properties ?? [],
+      }))
+    );
+  }, [charData?.inventory]);
+
+  useEffect(() => {
     setContainers(normalizeContainers(charData?.inventoryContainers));
   }, [charData?.inventoryContainers]);
 

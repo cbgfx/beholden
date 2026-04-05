@@ -1,5 +1,5 @@
 import React from "react";
-import { ItemListRow } from "@beholden/shared/ui";
+import { EmptyState, ItemListRow, ListShell } from "@beholden/shared/ui";
 import { IconChest, IconPencil, IconTrash } from "@/icons";
 import { titleCase } from "@/lib/format/titleCase";
 import { api } from "@/services/api";
@@ -133,10 +133,10 @@ export function ItemsBrowserPanel(props: Props) {
           {hasActiveFilters ? <button type="button" onClick={clearFilters} style={togglePillStyle(false)}>Clear</button> : null}
         </div>
 
-        <div
+        <ListShell
           ref={vl.scrollRef}
-          onScroll={vl.onScroll}
-          style={{ flex: 1, minHeight: 0, overflowY: "auto", border: `1px solid ${theme.colors.panelBorder}`, borderRadius: 12 }}
+          onScroll={vl.onScroll as React.UIEventHandler<HTMLDivElement>}
+          style={{ borderColor: theme.colors.panelBorder }}
         >
           <div style={{ height: padTop }} />
 
@@ -161,8 +161,8 @@ export function ItemsBrowserPanel(props: Props) {
 
           <div style={{ height: padBottom }} />
 
-          {!busy && rows.length === 0 ? <div style={{ padding: 10, color: theme.colors.muted }}>No items found.</div> : null}
-        </div>
+          {!busy && rows.length === 0 ? <EmptyState textColor={theme.colors.muted} style={{ padding: 10 }}>No items found.</EmptyState> : null}
+        </ListShell>
       </Panel>
 
       {formTarget ? (

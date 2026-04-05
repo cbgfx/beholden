@@ -1,7 +1,7 @@
 import React from "react";
+import { InfoPageLayout } from "@beholden/shared/ui";
 import { Panel } from "@/ui/Panel";
 import { C } from "@/lib/theme";
-import { InfoPageLayout } from "./InfoPageLayout";
 
 export function AboutView() {
   return (

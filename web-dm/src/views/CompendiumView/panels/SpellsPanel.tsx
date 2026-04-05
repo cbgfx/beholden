@@ -1,4 +1,5 @@
 import React from "react";
+import { EmptyState, ListShell } from "@beholden/shared/ui";
 import { Panel } from "@/ui/Panel";
 import { Select } from "@/ui/Select";
 import { IconSpells, IconPencil, IconTrash } from "@/icons";
@@ -191,15 +192,7 @@ export function SpellsPanel(props: SpellsPanelProps) {
         </div>
 
         {/* List container */}
-        <div
-          style={{
-            flex: 1,
-            minHeight: 0,
-            overflowY: "auto",
-            border: `1px solid ${theme.colors.panelBorder}`,
-            borderRadius: 12,
-          }}
-        >
+        <ListShell style={{ borderColor: theme.colors.panelBorder }}>
           {filtered.map((s) => {
             const active = s.id === activeId;
             const lvl = s.level == null ? "?" : s.level === 0 ? "0" : String(s.level);
@@ -327,9 +320,9 @@ export function SpellsPanel(props: SpellsPanelProps) {
           })}
 
           {!filtered.length && (
-            <div style={{ padding: 10, color: theme.colors.muted }}>No spells found.</div>
+            <EmptyState textColor={theme.colors.muted} style={{ padding: 10 }}>No spells found.</EmptyState>
           )}
-        </div>
+        </ListShell>
       </Panel>
 
       {/* Create / Edit modal */}

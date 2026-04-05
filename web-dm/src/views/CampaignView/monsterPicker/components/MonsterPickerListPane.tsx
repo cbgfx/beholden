@@ -1,4 +1,5 @@
 import * as React from "react";
+import { EmptyState, ListShell } from "@beholden/shared/ui";
 import { theme } from "@/theme/theme";
 import type { AddMonsterOptions } from "@/domain/types/domain";
 import type { CompendiumMonsterRow, AttackOverridesByMonsterId } from "@/views/CampaignView/monsterPicker/types";
@@ -29,20 +30,15 @@ export function MonsterPickerListPane(props: {
   onChangeCrMax: (v: string) => void;
   onQuickCr: (min: string, max: string) => void;
   onClear: () => void;
-
   loadingIndex: boolean;
   indexError: string | null;
-
   rows: CompendiumMonsterRow[];
   selectedMonsterId: string | null;
   onSelectMonster: (id: string) => void;
-
   lettersInList: string[];
   onJumpToLetter: (letter: string) => void;
-
   qtyById: Record<string, number>;
   setQtyForId: (id: string, qty: number) => void;
-
   labelById: Record<string, string>;
   acById: Record<string, string>;
   acDetailById: Record<string, string>;
@@ -50,9 +46,7 @@ export function MonsterPickerListPane(props: {
   hpDetailById: Record<string, string>;
   friendlyById: Record<string, boolean>;
   attackOverridesById: AttackOverridesByMonsterId;
-
   onAddMonster: (monsterId: string, qty: number, opts?: AddMonsterOptions) => void;
-
   onProvideScrollToIndex?: (fn: (idx: number) => void) => void;
 }) {
   const ROW_HEIGHT = 86;
@@ -90,7 +84,7 @@ export function MonsterPickerListPane(props: {
               friendly={props.friendlyById[m.id] ?? false}
               attackOverridesById={props.attackOverridesById}
               onSetLabelBase={() => {
-                /* kept for parity; label is edited on right panel */
+                // kept for parity; label is edited on right panel
               }}
               onAddMonster={props.onAddMonster}
             />
@@ -108,7 +102,7 @@ export function MonsterPickerListPane(props: {
         gap: 5,
         borderRight: `1px solid ${theme.colors.panelBorder}`,
         paddingRight: 14,
-        minHeight: 0
+        minHeight: 0,
       }}
     >
       <MonsterPickerFilters
@@ -133,23 +127,33 @@ export function MonsterPickerListPane(props: {
         onClear={props.onClear}
       />
 
-      <div
-        style={{ flex: 1, minHeight: 0, overflow: "auto", paddingRight: 22, position: "relative" }}
+      <ListShell
+        style={{
+          border: "none",
+          borderRadius: 0,
+          flex: 1,
+          minHeight: 0,
+          overflow: "auto",
+          paddingRight: 22,
+          position: "relative",
+        }}
         ref={v.scrollRef}
-        onScroll={v.onScroll}
+        onScroll={v.onScroll as React.UIEventHandler<HTMLDivElement>}
       >
         {renderRows()}
 
         {props.loadingIndex ? (
-          <div style={{ color: theme.colors.muted }}>Loading compendium…</div>
+          <EmptyState textColor={theme.colors.muted}>Loading compendium...</EmptyState>
         ) : props.indexError ? (
-          <div style={{ color: theme.colors.red, fontWeight: 700 }}>Failed to load compendium: {props.indexError}</div>
+          <EmptyState textColor={theme.colors.red} style={{ fontWeight: 700 }}>
+            Failed to load compendium: {props.indexError}
+          </EmptyState>
         ) : !props.rows.length ? (
-          <div style={{ color: theme.colors.muted }}>No results.</div>
+          <EmptyState textColor={theme.colors.muted}>No results.</EmptyState>
         ) : null}
 
         <LettersBar letters={props.lettersInList} onJump={props.onJumpToLetter} />
-      </div>
+      </ListShell>
     </div>
   );
 }

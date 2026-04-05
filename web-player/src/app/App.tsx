@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { WsProvider } from "@/services/ws";
 import { LoginView } from "@/views/auth/LoginView";
@@ -16,6 +16,11 @@ const PartyMemberView = React.lazy(() => import("@/views/campaign/PartyMemberVie
 const AboutView = React.lazy(() => import("@/views/Info/AboutView").then(m => ({ default: m.AboutView })));
 const FaqView = React.lazy(() => import("@/views/Info/FaqView").then(m => ({ default: m.FaqView })));
 const UpdatesView = React.lazy(() => import("@/views/Info/UpdatesView").then(m => ({ default: m.UpdatesView })));
+
+function KeyedCharacterView() {
+  const { id } = useParams<{ id: string }>();
+  return <CharacterView key={id} />;
+}
 
 function AuthGate() {
   const { user, isLoading } = useAuth();
@@ -48,7 +53,7 @@ function AuthGate() {
             <Route path="/" element={<PlayerHomeView />} />
             <Route path="/compendium" element={<CompendiumView />} />
             <Route path="/characters/new" element={<CharacterCreatorView />} />
-            <Route path="/characters/:id" element={<CharacterView />} />
+            <Route path="/characters/:id" element={<KeyedCharacterView />} />
             <Route path="/characters/:id/edit" element={<CharacterCreatorView />} />
             <Route path="/characters/:id/levelup" element={<LevelUpView />} />
             <Route path="/profile" element={<ProfileView />} />

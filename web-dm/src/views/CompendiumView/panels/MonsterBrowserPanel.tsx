@@ -1,4 +1,5 @@
 import * as React from "react";
+import { EmptyState, ListShell } from "@beholden/shared/ui";
 import { Panel } from "@/ui/Panel";
 import { theme, withAlpha } from "@/theme/theme";
 import { api } from "@/services/api";
@@ -251,22 +252,20 @@ export function MonsterBrowserPanel(props: {
         )}
 
         {/* Scrollable virtual list */}
-        <div
-          ref={vl.scrollRef} onScroll={vl.onScroll}
-          style={{
-            flex: 1, minHeight: 0, overflowY: "auto",
-            border: `1px solid ${theme.colors.panelBorder}`, borderRadius: 12,
-          }}
+        <ListShell
+          ref={vl.scrollRef}
+          onScroll={vl.onScroll as React.UIEventHandler<HTMLDivElement>}
+          style={{ borderColor: theme.colors.panelBorder }}
         >
           {loadError && (
-            <div style={{ padding: 12, color: theme.colors.red }}>Failed to load: {loadError}</div>
+            <EmptyState textColor={theme.colors.red} style={{ padding: 12 }}>Failed to load: {loadError}</EmptyState>
           )}
           {!loading && !loadError && filteredRows.length === 0 && (
-            <div style={{ padding: 12, color: theme.colors.muted }}>
+            <EmptyState textColor={theme.colors.muted} style={{ padding: 12 }}>
               {baseRows.length === 0
                 ? "No compendium data loaded. Import an XML file in the Import section."
                 : "No monsters match the current filters."}
-            </div>
+            </EmptyState>
           )}
           {filteredRows.length > 0 && (
             <div style={{ paddingTop: padTop, paddingBottom: padBottom }}>
@@ -287,7 +286,7 @@ export function MonsterBrowserPanel(props: {
               ))}
             </div>
           )}
-        </div>
+        </ListShell>
       </Panel>
 
       {/* Create-choice modal */}

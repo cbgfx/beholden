@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { C, withAlpha } from "@/lib/theme";
 import { RightDrawer } from "@/ui/RightDrawer";
-import { FormField, Input, NoteRow as SharedNoteRow, SectionTitle as SharedSectionTitle, TextArea, accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
+import { FormField, Input, MiniStat as SharedMiniStat, NoteRow as SharedNoteRow, Panel as SharedPanel, SectionTitle as SharedSectionTitle, TextArea, accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import type { ClassFeatureEntry, PlayerNote } from "@/views/character/CharacterSheetTypes";
 
@@ -55,7 +55,11 @@ const PANEL_STYLE: React.CSSProperties = {
 };
 
 export function Panel({ children }: { children: React.ReactNode }) {
-  return <div style={PANEL_STYLE}>{children}</div>;
+  return (
+    <SharedPanel borderColor="rgba(255,255,255,0.09)" background="rgba(255,255,255,0.035)" radius={12} padding="14px 16px">
+      {children}
+    </SharedPanel>
+  );
 }
 
 export function PanelTitle({ children, color, actions, style }: { children: React.ReactNode; color: string; actions?: React.ReactNode; style?: React.CSSProperties }) {
@@ -171,22 +175,18 @@ export function HexBtn({ variant, active, title, disabled, onClick, children }: 
 
 export function MiniStat({ label, value, accent, icon }: { label: string; value: string; accent?: string; icon?: React.ReactNode }) {
   return (
-    <div style={{
-      textAlign: "center", padding: "8px 6px", borderRadius: 8,
-      background: "rgba(255,255,255,0.04)",
-      border: `1px solid ${accent ? accent + "33" : "rgba(255,255,255,0.09)"}`,
-    }}>
-      <div style={{
-        fontSize: "var(--fs-tiny)", fontWeight: 700, color: C.muted, textTransform: "uppercase",
-        letterSpacing: "0.06em", marginBottom: 3,
-        display: "flex", alignItems: "center", justifyContent: "center", gap: 3,
-      }}>
-        {icon}{label}
-      </div>
-      <div style={{ fontSize: "var(--fs-body)", fontWeight: 800, color: accent ?? C.text }}>
-        {value}
-      </div>
-    </div>
+    <SharedMiniStat
+      label={label}
+      value={value}
+      accent={accent}
+      icon={icon}
+      theme={{
+        mutedColor: C.muted,
+        textColor: C.text,
+        borderColor: "rgba(255,255,255,0.09)",
+        background: "rgba(255,255,255,0.04)",
+      }}
+    />
   );
 }
 
