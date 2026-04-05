@@ -1295,6 +1295,36 @@ function parseHitPointBonusEffects(source: FeatureEffectSource, text: string, ef
 }
 
 function parseAttackEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
+  if (/martial arts die/i.test(text) && /unarmed strike/i.test(text)) {
+    effects.push({
+      id: createFeatureEffectId(source, "attack", effects.length),
+      type: "attack",
+      source,
+      mode: "damage_die_override",
+      amount: { kind: "named_progression", key: "monk_martial_arts_die" },
+      gate: {
+        duration: "passive",
+        notes: "unarmed_or_monk_weapon",
+      },
+      summary: "Martial Arts damage die replaces normal Unarmed Strike or Monk weapon damage.",
+    } satisfies AttackEffect);
+  }
+
+  if (/dexterity modifier instead of your strength modifier/i.test(text) && /unarmed strikes?/i.test(text)) {
+    effects.push({
+      id: createFeatureEffectId(source, "attack", effects.length),
+      type: "attack",
+      source,
+      mode: "weapon_ability_override",
+      ability: "dex",
+      gate: {
+        duration: "passive",
+        notes: "weapon_or_unarmed",
+      },
+      summary: "Use Dexterity for Unarmed Strikes and Monk weapons.",
+    } satisfies AttackEffect);
+  }
+
   if (/extra attack as a result of using a weapon that has the Light property/i.test(text) && /add your ability modifier to the damage of that attack/i.test(text)) {
     effects.push({
       id: createFeatureEffectId(source, "attack", effects.length),
@@ -1712,6 +1742,29 @@ function resolveScalingValueInContext(value: ScalingValue | undefined, context: 
   return null;
 }
 
+function resolveScalingDiceInContext(
+  value: ScalingDice | undefined,
+  context: { level?: number | null; scores?: Partial<Record<AbilKey, number | null>> }
+): string | null {
+  if (!value) return null;
+  if (value.kind === "fixed") return value.dice;
+  if (value.kind === "per_scalar") {
+    const scalar = resolveScalingValueInContext(value.scalar, context);
+    return scalar != null && scalar > 0 ? `${scalar}${value.die}` : null;
+  }
+  if (value.kind === "named_progression") {
+    if (value.key === "monk_martial_arts_die") {
+      const level = context.level ?? null;
+      if (level == null) return null;
+      if (level >= 17) return "1d12";
+      if (level >= 11) return "1d10";
+      if (level >= 5) return "1d8";
+      return "1d6";
+    }
+  }
+  return null;
+}
+
 export function collectTaggedGrantsFromEffects(parsed: ParsedFeatureEffects[]): {
   armor: TaggedItem[];
   weapons: TaggedItem[];
@@ -1976,6 +2029,50 @@ export function deriveAttackDamageBonusFromEffects(
     }
   }
   return total;
+}
+
+export function deriveAttackAbilityOverrideFromEffects(
+  parsed: ParsedFeatureEffects[],
+  opts?: {
+    raging?: boolean;
+    isWeapon?: boolean;
+    isUnarmed?: boolean;
+  }
+): AbilKey | null {
+  for (const parsedFeature of parsed) {
+    for (const effect of parsedFeature.effects) {
+      if (effect.type !== "attack" || effect.mode !== "weapon_ability_override") continue;
+      if (!isEffectActive(effect, { raging: opts?.raging })) continue;
+      if (effect.gate?.notes === "weapon_or_unarmed" && !opts?.isWeapon && !opts?.isUnarmed) continue;
+      if (effect.ability) return effect.ability;
+    }
+  }
+  return null;
+}
+
+export function deriveAttackDamageDiceOverrideFromEffects(
+  parsed: ParsedFeatureEffects[],
+  opts?: {
+    level?: number | null;
+    scores?: Partial<Record<AbilKey, number | null>>;
+    raging?: boolean;
+    isWeapon?: boolean;
+    isUnarmed?: boolean;
+  }
+): string | null {
+  for (const parsedFeature of parsed) {
+    for (const effect of parsedFeature.effects) {
+      if (effect.type !== "attack" || effect.mode !== "damage_die_override") continue;
+      if (!isEffectActive(effect, { raging: opts?.raging })) continue;
+      if (effect.gate?.notes === "unarmed_or_monk_weapon" && !opts?.isWeapon && !opts?.isUnarmed) continue;
+      const dice = resolveScalingDiceInContext(effect.amount as ScalingDice | undefined, {
+        level: opts?.level,
+        scores: opts?.scores,
+      });
+      if (dice) return dice;
+    }
+  }
+  return null;
 }
 
 export function deriveUnarmoredDefenseFromEffects(

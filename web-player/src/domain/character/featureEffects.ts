@@ -213,6 +213,7 @@ export interface AttackEffect extends FeatureEffectBase {
   mode:
     | "extra_attack"
     | "bonus_damage"
+    | "damage_die_override"
     | "add_ability_to_damage"
     | "weapon_ability_override"
     | "replace_attack_with_cantrip"

@@ -9,7 +9,7 @@ import type { CharacterData, ProficiencyMap, TaggedItem } from "@/views/characte
 import { abilityMod, normalizeWeaponProficiencyName, splitArmorProficiencyNames } from "@/views/character/CharacterSheetUtils";
 
 export type TaggedItemLike = TaggedItem;
-export type ProficiencyMapLike = Pick<ProficiencyMap, "weapons" | "armor" | "masteries">;
+export type ProficiencyMapLike = Pick<ProficiencyMap, "weapons" | "armor">;
 export type CharacterDataLike = Pick<CharacterData, "proficiencies" | "inventoryContainers">;
 
 export interface CharacterLike {
@@ -188,21 +188,7 @@ export function parseWeaponMastery(item: Pick<InventoryItem, "description"> | nu
 }
 
 export function hasWeaponMastery(item: Pick<InventoryItem, "proficiency" | "name"> | null | undefined, prof: ProficiencyMapLike | undefined): boolean {
-  if (!item) return false;
-  const masteries = prof?.masteries ?? [];
-  if (masteries.length === 0) return false;
-
-  // "simple, mace" → ["simple", "mace"]
-  const itemTags = String(item.proficiency ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-
-  return masteries.some((entry) => {
-    const entryNorm = stripMagicBonusFromName(String(entry.name ?? "").trim()).toLowerCase();
-    const itemName = stripMagicBonusFromName(String(item.name ?? "").trim()).toLowerCase();
-    if (entryNorm === itemName) return true;
-    // "simple weapons" → "simple" for tag comparison
-    const entrySimplified = entryNorm.replace(/\s+weapons?$/, "");
-    return itemTags.includes(entrySimplified) || itemTags.includes(entryNorm);
-  });
+  return Boolean(item) && hasWeaponProficiency(item as InventoryItem, prof);
 }
 
 export function isShieldOrTorch(item: InventoryItem): boolean {
@@ -380,27 +366,32 @@ function isSimpleWeapon(item: InventoryItem): boolean {
   return isWeaponItem(item) && !isMartialWeapon(item);
 }
 
+function weaponMatchesQualifier(item: InventoryItem, qualifier: string): boolean {
+  const normalized = normalizeWeaponProficiencyName(qualifier).toLowerCase();
+  if (!normalized) return false;
+  if (normalized === "simple weapons") return isSimpleWeapon(item);
+  if (normalized === "martial weapons") return isMartialWeapon(item);
+  if (normalized === "improvised weapons") return /improvised/i.test(item.type ?? "") || /improvised/i.test(item.name);
+  if (normalized === "light weapons") return isWeaponItem(item) && hasItemProperty(item, "L");
+  if (normalized === "finesse weapons") return isWeaponItem(item) && hasItemProperty(item, "F");
+  if (normalized === "thrown weapons") return isWeaponItem(item) && hasItemProperty(item, "T");
+  if (normalized === "heavy weapons") return isWeaponItem(item) && hasItemProperty(item, "H");
+  if (normalized === "ranged weapons") return isRangedWeapon(item);
+  if (normalized === "versatile weapons") return isWeaponItem(item) && hasItemProperty(item, "V");
+  if (normalized === "two-handed weapons") return isWeaponItem(item) && hasItemProperty(item, "2H");
+  if (normalized === "special weapons") return isWeaponItem(item) && hasItemProperty(item, "S");
+  if (normalized === "reach weapons") return isWeaponItem(item) && hasItemProperty(item, "R");
+  if (normalized === "loading weapons") return isWeaponItem(item) && hasItemProperty(item, "LD");
+  return false;
+}
+
 function weaponMatchesProficiency(item: InventoryItem, proficiencyName: string): boolean {
   const normalized = normalizeWeaponProficiencyName(proficiencyName).toLowerCase();
   const itemName = normalizeInventoryItemLookupName(item.name);
 
   if (!normalized) return false;
   if (normalized === itemName) return true;
-  if (normalized.includes("improvised weapon")) return /improvised/i.test(item.type ?? "") || /improvised/i.test(item.name);
-
-  const requiresFinesseOrLight = /finesse\s+and\s+light weapons|finesse or light/i.test(normalized);
-  if (requiresFinesseOrLight && !hasItemProperty(item, "F") && !hasItemProperty(item, "L")) return false;
-
-  const mentionsSimple = /\bsimple weapons?\b/.test(normalized);
-  const mentionsMartial = /\bmartial weapons?\b/.test(normalized);
-
-  if (mentionsSimple || mentionsMartial || requiresFinesseOrLight) {
-    if (mentionsSimple && isSimpleWeapon(item)) return true;
-    if (mentionsMartial && isMartialWeapon(item)) return true;
-    if (requiresFinesseOrLight && isWeaponItem(item)) return true;
-    return false;
-  }
-
+  if (weaponMatchesQualifier(item, normalized)) return true;
   return normalized === itemName;
 }
 

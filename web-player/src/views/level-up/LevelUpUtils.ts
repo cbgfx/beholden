@@ -334,9 +334,11 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
   const existingToolEntries = _arr(proficiencies?.tools);
   const existingLanguageEntries = _arr(proficiencies?.languages);
   const existingArmorEntries = _arr(proficiencies?.armor);
-  const existingWeaponEntries = _arr(proficiencies?.weapons);
+  const existingWeaponEntries = [
+    ..._arr(proficiencies?.weapons),
+    ..._arr(proficiencies?.masteries),
+  ];
   const existingSaveEntries = _arr(proficiencies?.saves);
-  const existingMasteryEntries = _arr(proficiencies?.masteries);
   const existingManeuverEntries = _arr(proficiencies?.maneuvers);
   const existingPlanEntries = _arr(proficiencies?.plans);
   const classSource = classDetailName ?? char.className;
@@ -418,14 +420,11 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
       weapons: [
         ...existingWeaponEntries.filter((entry) => entry.source !== featSourceLabel),
         ...(selectedFeatEntries?.weapons ?? []),
+        ...(selectedFeatEntries?.masteries ?? []),
       ],
       saves: [
         ...existingSaveEntries.filter((entry) => entry.source !== featSourceLabel),
         ...(selectedFeatEntries?.saves ?? []),
-      ],
-      masteries: [
-        ...existingMasteryEntries.filter((entry) => entry.source !== featSourceLabel),
-        ...(selectedFeatEntries?.masteries ?? []),
       ],
       spells: [
         ...existingSpells.filter((entry) => entry.source !== classSource && entry.source !== featSourceLabel),

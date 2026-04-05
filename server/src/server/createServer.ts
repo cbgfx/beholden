@@ -180,7 +180,23 @@ export function createServer() {
   };
   ctx.broadcast = broadcast;
 
-  return { app, httpServer, wss };
+  let closed = false;
+  const close = async () => {
+    if (closed) return;
+    closed = true;
+
+    await new Promise<void>((resolve) => {
+      wss.close(() => resolve());
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      httpServer.close((err) => (err ? reject(err) : resolve()));
+    });
+
+    db.close();
+  };
+
+  return { app, httpServer, wss, close };
 }
 
 function seedAdminUser(

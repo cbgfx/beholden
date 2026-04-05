@@ -1,6 +1,7 @@
 import React from "react";
 import { C } from "@/lib/theme";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
+import { deriveAttackAbilityOverrideFromEffects, deriveAttackDamageDiceOverrideFromEffects } from "@/domain/character/parseFeatureEffects";
 import { IconInitiative, IconShield, IconSpeed } from "@/icons";
 import { CollapsiblePanel, MiniStat, Tooltip } from "@/views/character/CharacterViewParts";
 import { abilityMod, formatModifier } from "@/views/character/CharacterSheetUtils";
@@ -77,8 +78,19 @@ export function CharacterCombatPanels({
   const nonProficientArmorItems = inventory.filter((it) => getEquipState(it) !== "backpack" && (isShieldItem(it) || /\barmor\b/i.test(it.type ?? "")) && !hasArmorProficiency(it, prof ?? undefined));
   const strMod = abilityMod(strScore);
   const dexMod = abilityMod(dexScore);
-  const unarmedToHit = strMod + pb;
-  const unarmedDmg = 1 + strMod + (rageActive ? unarmedRageDamageBonus : 0);
+  const unarmedAbilityOverride = deriveAttackAbilityOverrideFromEffects(parsedFeatureEffects ?? [], { raging: rageActive, isUnarmed: true });
+  const unarmedAttackAbilityMod = unarmedAbilityOverride === "dex" ? dexMod : strMod;
+  const unarmedDamageDice = deriveAttackDamageDiceOverrideFromEffects(parsedFeatureEffects ?? [], {
+    level,
+    scores: { str: strScore, dex: dexScore },
+    raging: rageActive,
+    isUnarmed: true,
+  });
+  const unarmedToHit = unarmedAttackAbilityMod + pb;
+  const unarmedDamageBonus = unarmedAttackAbilityMod + (rageActive ? unarmedRageDamageBonus : 0);
+  const unarmedDmg = unarmedDamageDice
+    ? `${unarmedDamageDice}${unarmedDamageBonus === 0 ? "" : `${unarmedDamageBonus >= 0 ? "+" : ""}${unarmedDamageBonus}`}`
+    : String(1 + unarmedDamageBonus);
   const isRogue = /rogue/i.test(String(className ?? ""));
   const sneakAttackDice = Math.max(1, Math.ceil(level / 2));
 

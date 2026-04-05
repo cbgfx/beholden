@@ -66,7 +66,9 @@ export interface ProficiencyChoice {
 
 export interface LevelUpFeatSelection {
   level: number;
-  featId: string;
+  featId?: string | null;
+  type?: "asi" | "feat";
+  abilityBonuses?: Record<string, number>;
 }
 
 export interface LevelUpFeatDetail {

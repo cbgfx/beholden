@@ -241,7 +241,7 @@ export function CharacterCreatorView() {
     () => collectSpellChoicesFromEffects(selectedInvocationEffects),
     [selectedInvocationEffects]
   );
-  const selectedFeatAbilityBonuses = React.useMemo(() => {
+  const selectedFeatGrantedAbilityBonuses = React.useMemo(() => {
     const bonusMap: Record<string, number> = {};
     const applyBonus = (bonus: Record<string, number>) => {
       for (const [key, value] of Object.entries(bonus)) {
@@ -269,6 +269,19 @@ export function CharacterCreatorView() {
     }
     return bonusMap;
   }, [bgOriginFeatDetail, raceFeatDetail, classFeatDetails, form.chosenFeatOptions, levelUpFeatDetails]);
+  const selectedFeatAbilityBonuses = React.useMemo(() => {
+    const bonusMap = { ...selectedFeatGrantedAbilityBonuses };
+    const applyBonus = (bonus: Record<string, number>) => {
+      for (const [key, value] of Object.entries(bonus)) {
+        bonusMap[key] = (bonusMap[key] ?? 0) + value;
+      }
+    };
+    for (const entry of form.chosenLevelUpFeats) {
+      if (entry?.type !== "asi" || !entry.abilityBonuses) continue;
+      applyBonus(entry.abilityBonuses);
+    }
+    return bonusMap;
+  }, [form.chosenLevelUpFeats, selectedFeatGrantedAbilityBonuses]);
   const step5SkillList = classDetail ? parseSkillList(classDetail.proficiency) : [];
   const step5NumSkills = classDetail?.numSkills ?? 0;
   const step5BgLangChoice = bgDetail?.proficiencies?.languages ?? { fixed: [], choose: 0, from: null };
@@ -478,7 +491,14 @@ export function CharacterCreatorView() {
           subclass: cd.subclass ?? "",
           chosenOptionals: cd.chosenOptionals ?? [],
           chosenClassFeatIds: cd.chosenClassFeatIds ?? {},
-          chosenLevelUpFeats: cd.chosenLevelUpFeats ?? [],
+          chosenLevelUpFeats: Array.isArray(cd.chosenLevelUpFeats)
+            ? cd.chosenLevelUpFeats.map((entry: any) => ({
+                level: Number(entry?.level) || 0,
+                featId: typeof entry?.featId === "string" ? entry.featId : null,
+                type: entry?.type === "asi" ? "asi" : (typeof entry?.featId === "string" ? "feat" : null),
+                abilityBonuses: entry?.abilityBonuses && typeof entry.abilityBonuses === "object" ? entry.abilityBonuses : {},
+              })).filter((entry: LevelUpFeatSelection & { type: "asi" | "feat" | null }) => entry.level > 0 && entry.type)
+            : [],
           chosenRaceSkills: cd.chosenRaceSkills ?? [],
           chosenRaceLanguages: cd.chosenRaceLanguages ?? [],
           chosenRaceTools: cd.chosenRaceTools ?? [],
@@ -797,7 +817,20 @@ export function CharacterCreatorView() {
   React.useEffect(() => {
     if (!bgDetail) return;
     const prof = bgDetail.proficiencies;
-    if (!prof || prof.featChoice > 0 || prof.feats.length === 0) return;
+    if (!prof || prof.featChoice > 0 || prof.feats.length === 0) {
+      return;
+    }
+    // Fixed background feats are already carried on the background detail itself.
+    // Only true "choose a feat" backgrounds should populate chosenBgOriginFeatId.
+    setForm((f) => (f.chosenBgOriginFeatId == null ? f : { ...f, chosenBgOriginFeatId: null }));
+    return;
+  }, [bgDetail]);
+
+  // Auto-select the first feat for backgrounds that explicitly grant a feat choice.
+  React.useEffect(() => {
+    if (!bgDetail) return;
+    const prof = bgDetail.proficiencies;
+    if (!prof || prof.featChoice <= 0 || prof.feats.length === 0) return;
     const grantedName = prof.feats[0]?.name;
     if (!grantedName) return;
     const match = featSummaries.find((f) =>
@@ -988,10 +1021,10 @@ export function CharacterCreatorView() {
       case 1: return StepClass();
       case 2: return StepSpecies();
       case 3: return StepBackground();
-      case 4: return StepLevel();
-      case 5: return StepSkills();
-      case 6: return StepSpells();
-      case 7: return StepAbilityScores();
+      case 4: return StepAbilityScores();
+      case 5: return StepLevel();
+      case 6: return StepSkills();
+      case 7: return StepSpells();
       case 8: return StepDerivedStats();
       case 9: return StepIdentity();
       case 10: return StepCampaigns();
@@ -1176,18 +1209,77 @@ export function CharacterCreatorView() {
     });
   }
 
-  // Step 4: Level
+  // Step 4: Ability Scores
+  function StepAbilityScores(): { main: React.ReactNode; side: React.ReactNode } {
+    const usedIndices = Object.values(form.standardAssign).filter((v) => v >= 0);
+    const spent = pointBuySpent(form.pbScores);
+    const remaining = POINT_BUY_BUDGET - spent;
+    const primaryKeys = getPrimaryAbilityKeys(classDetail);
+    const bgBonuses = form.bgAbilityBonuses;
+    const hasBgBonuses = Object.keys(bgBonuses).length > 0;
+
+    return renderAbilityScoresStep({
+      form,
+      setAbilityMethod: (method) => set("abilityMethod", method),
+      setStandardAssign: (key, idx) => setForm((f) => ({ ...f, standardAssign: { ...f.standardAssign, [key]: idx } })),
+      setPointBuyScore: (key, score) => setForm((f) => ({ ...f, pbScores: { ...f.pbScores, [key]: score } })),
+      setManualScore: (key, score) => setForm((f) => ({ ...f, manualScores: { ...f.manualScores, [key]: score } })),
+      usedIndices,
+      remaining,
+      primaryKeys,
+      bgBonuses,
+      hasBgBonuses,
+      backgroundName: bgDetail?.name,
+      abilityLabels: ABILITY_LABELS,
+      abilityKeys: ABILITY_KEYS,
+      standardArray: STANDARD_ARRAY,
+      pointBuyBudget: POINT_BUY_BUDGET,
+      pointBuyCosts: POINT_BUY_COSTS,
+      abilityMod,
+      onBack: () => setStep(3),
+      onNext: () => setStep(5),
+      side: SideSummaryCard(),
+    });
+  }
+
+  // Step 5: Level
   function StepLevel(): { main: React.ReactNode; side: React.ReactNode } {
     const subclassList = classDetail ? getSubclassList(classDetail) : [];
     const scNeeded = classDetail ? (getSubclassLevel(classDetail) ?? 99) : 99;
     const showSubclass = classDetail && form.level >= scNeeded && subclassList.length > 0;
     const features = classDetail ? featuresUpToLevelForSubclass(classDetail, form.level, form.subclass) : [];
-    const optGroups = classDetail ? getOptionalGroups(classDetail, form.level) : [];
+    const optGroups = classDetail
+      ? getOptionalGroups(classDetail, form.level)
+          .map((group) => ({
+            ...group,
+            features: group.features.filter((feature) => !/ability score improvement/i.test(feature.name.trim())),
+          }))
+          .filter((group) => group.features.length > 0)
+      : [];
     const classEquipmentText = extractClassStartingEquipment(classDetail);
     const classEquipmentOptions = parseStartingEquipmentOptions(classEquipmentText);
+    const scoresBeforeLevelUpAsi = resolvedScores(form, selectedFeatGrantedAbilityBonuses);
+    const levelUpScores = levelUpFeatLevels.reduce<Record<number, Record<string, number>>>((acc, level) => {
+      const previousLevel = levelUpFeatLevels
+        .filter((candidate) => candidate < level)
+        .sort((a, b) => a - b)
+        .pop();
+      const previousScores = previousLevel != null ? acc[previousLevel] : scoresBeforeLevelUpAsi;
+      const nextScores = { ...previousScores };
+      const previousEntry = previousLevel != null ? form.chosenLevelUpFeats.find((entry) => entry.level === previousLevel) : null;
+      if (previousEntry?.type === "asi") {
+        for (const [ability, bonus] of Object.entries(previousEntry.abilityBonuses ?? {})) {
+          nextScores[ability] = Math.min(20, (nextScores[ability] ?? 10) + bonus);
+        }
+      }
+      acc[level] = nextScores;
+      return acc;
+    }, {});
     const levelUpFeatChoices = levelUpFeatLevels.map((level) => ({
       level,
+      mode: form.chosenLevelUpFeats.find((entry) => entry.level === level)?.type ?? null,
       selectedFeatId: form.chosenLevelUpFeats.find((entry) => entry.level === level)?.featId ?? null,
+      asiBonuses: form.chosenLevelUpFeats.find((entry) => entry.level === level)?.abilityBonuses ?? {},
       options: availableLevelUpFeats.map((feat) => ({ id: feat.id, name: feat.name })),
     }));
 
@@ -1223,22 +1315,55 @@ export function CharacterCreatorView() {
       className: classDetail?.name ?? null,
       features,
       levelUpFeatChoices,
+      levelUpScores,
+      toggleLevelUpChoiceMode: (level, mode) => setForm((f) => ({
+        ...f,
+        chosenLevelUpFeats: [
+          ...f.chosenLevelUpFeats.filter((entry) => entry.level !== level),
+          { level, type: mode, featId: null, abilityBonuses: {} },
+        ].sort((a, b) => a.level - b.level),
+        chosenFeatOptions: Object.fromEntries(
+          Object.entries(f.chosenFeatOptions).filter(([key]) => !key.startsWith(`levelupfeat:${level}:`))
+        ),
+      })),
+      toggleLevelUpAsiPoint: (level, ability) => setForm((f) => {
+        const existing = f.chosenLevelUpFeats.find((entry) => entry.level === level);
+        const bonuses = { ...(existing?.abilityBonuses ?? {}) };
+        const assigned = Object.values(bonuses).reduce((sum, value) => sum + value, 0);
+        const current = bonuses[ability] ?? 0;
+        if (current > 0) {
+          if (current === 1) delete bonuses[ability];
+          else bonuses[ability] = current - 1;
+        } else if (assigned < 2) {
+          bonuses[ability] = 1;
+        }
+        return {
+          ...f,
+          chosenLevelUpFeats: [
+            ...f.chosenLevelUpFeats.filter((entry) => entry.level !== level),
+            { level, type: "asi", featId: null, abilityBonuses: bonuses },
+          ].sort((a, b) => a.level - b.level),
+        };
+      }),
       chooseLevelUpFeat: (level, featId) => setForm((f) => ({
         ...f,
-        chosenLevelUpFeats: featId
-          ? [
-              ...f.chosenLevelUpFeats.filter((entry) => entry.level !== level),
-              { level, featId },
-            ].sort((a, b) => a.level - b.level)
-          : f.chosenLevelUpFeats.filter((entry) => entry.level !== level),
+        chosenLevelUpFeats: [
+          ...f.chosenLevelUpFeats.filter((entry) => entry.level !== level),
+          { level, type: "feat", featId: featId || null, abilityBonuses: {} },
+        ].sort((a, b) => a.level - b.level),
+        chosenFeatOptions: featId
+          ? f.chosenFeatOptions
+          : Object.fromEntries(
+              Object.entries(f.chosenFeatOptions).filter(([key]) => !key.startsWith(`levelupfeat:${level}:`))
+            ),
       })),
       levelUpFeatConflict,
-      onBack: () => setStep(3),
-      onNext: () => setStep(5),
+      onBack: () => setStep(4),
+      onNext: () => setStep(6),
     });
   }
 
-  // Step 5: Skills, languages, and feature-based picks
+  // Step 6: Skills, languages, and feature-based picks
   function StepSkills(): { main: React.ReactNode; side: React.ReactNode } {
     return renderSkillsStep({
       form,
@@ -1273,12 +1398,12 @@ export function CharacterCreatorView() {
       getClassFeatChoiceLabel,
       getClassFeatOptionLabel,
       sideSummary: SideSummaryCard(),
-      onBack: () => setStep(4),
-      onNext: () => setStep(6),
+      onBack: () => setStep(5),
+      onNext: () => setStep(7),
     });
   }
 
-  // Step 6: Spells & Invocations
+  // Step 7: Spells & Invocations
   function StepSpells(): { main: React.ReactNode; side: React.ReactNode } {
     const cantripCount = classDetail ? getCantripCount(classDetail, form.level, form.subclass) : 0;
     const maxSlotLvl   = classDetail ? getMaxSlotLevel(classDetail, form.level, form.subclass) : 0;
@@ -1452,42 +1577,9 @@ export function CharacterCreatorView() {
       extraSpellChoices: [...extraSpellChoices, ...maneuverSpellChoices],
       extraChoiceGroups: [...maneuverAbilityChoices, ...progressionTableChoices],
       extraItemChoices: planItemChoices,
-      onBack: () => setStep(5),
-      onNext: () => setStep(7),
-      nextDisabled: missingExtraSpellSelections,
-      side: SideSummaryCard(),
-    });
-  }
-
-  // Step 7: Ability Scores
-  function StepAbilityScores(): { main: React.ReactNode; side: React.ReactNode } {
-    const usedIndices = Object.values(form.standardAssign).filter((v) => v >= 0);
-    const spent = pointBuySpent(form.pbScores);
-    const remaining = POINT_BUY_BUDGET - spent;
-    const primaryKeys = getPrimaryAbilityKeys(classDetail);
-    const bgBonuses = form.bgAbilityBonuses;
-    const hasBgBonuses = Object.keys(bgBonuses).length > 0;
-
-    return renderAbilityScoresStep({
-      form,
-      setAbilityMethod: (method) => set("abilityMethod", method),
-      setStandardAssign: (key, idx) => setForm((f) => ({ ...f, standardAssign: { ...f.standardAssign, [key]: idx } })),
-      setPointBuyScore: (key, score) => setForm((f) => ({ ...f, pbScores: { ...f.pbScores, [key]: score } })),
-      setManualScore: (key, score) => setForm((f) => ({ ...f, manualScores: { ...f.manualScores, [key]: score } })),
-      usedIndices,
-      remaining,
-      primaryKeys,
-      bgBonuses,
-      hasBgBonuses,
-      backgroundName: bgDetail?.name,
-      abilityLabels: ABILITY_LABELS,
-      abilityKeys: ABILITY_KEYS,
-      standardArray: STANDARD_ARRAY,
-      pointBuyBudget: POINT_BUY_BUDGET,
-      pointBuyCosts: POINT_BUY_COSTS,
-      abilityMod,
       onBack: () => setStep(6),
       onNext: () => setStep(8),
+      nextDisabled: missingExtraSpellSelections,
       side: SideSummaryCard(),
     });
   }
@@ -1521,7 +1613,6 @@ export function CharacterCreatorView() {
       { label: "Weapons", items: prof.weapons },
       { label: "Tools", items: prof.tools },
       { label: "Languages", items: prof.languages },
-      { label: "Weapon Masteries", items: prof.masteries },
       { label: "Maneuvers", items: prof.maneuvers },
       { label: "Magic Item Plans", items: prof.plans },
       { label: "Spells", items: prof.spells },

@@ -35,6 +35,9 @@ export function orderByInitiative(combatants: TurnableCombatant[]): TurnableComb
   rows.sort((a, b) => {
     const ai = initValue(a.initiative);
     const bi = initValue(b.initiative);
+    const aPending = !Number.isFinite(ai) || ai === Number.NEGATIVE_INFINITY;
+    const bPending = !Number.isFinite(bi) || bi === Number.NEGATIVE_INFINITY;
+    if (aPending !== bPending) return aPending ? -1 : 1;
     if (bi !== ai) return bi - ai;
     const an = String(a.label || a.name || "");
     const bn = String(b.label || b.name || "");

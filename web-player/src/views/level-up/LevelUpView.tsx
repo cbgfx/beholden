@@ -228,8 +228,8 @@ export function LevelUpView() {
   const charProficiencies: ProficiencyMap = {
     skills: _arr(_cp?.skills), expertise: _arr(_cp?.expertise), saves: _arr(_cp?.saves),
     tools: _arr(_cp?.tools), languages: _arr(_cp?.languages), armor: _arr(_cp?.armor),
-    weapons: _arr(_cp?.weapons), spells: _arr(_cp?.spells), invocations: _arr(_cp?.invocations),
-    masteries: _arr(_cp?.masteries), maneuvers: _arr(_cp?.maneuvers), plans: _arr(_cp?.plans),
+    weapons: [..._arr(_cp?.weapons), ..._arr(_cp?.masteries)], spells: _arr(_cp?.spells), invocations: _arr(_cp?.invocations),
+    maneuvers: _arr(_cp?.maneuvers), plans: _arr(_cp?.plans),
   };
   const proficientSkills = Array.isArray(charProficiencies?.skills)
     ? charProficiencies.skills

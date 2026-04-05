@@ -36,7 +36,17 @@ export const ARMOR_PROFICIENCY_OPTIONS = [
 export const WEAPON_PROFICIENCY_OPTIONS = [
   "Simple Weapons",
   "Martial Weapons",
+  "Light Weapons",
   "Improvised Weapons",
+  "Finesse Weapons",
+  "Thrown Weapons",
+  "Heavy Weapons",
+  "Ranged Weapons",
+  "Versatile Weapons",
+  "Two-Handed Weapons",
+  "Special Weapons",
+  "Reach Weapons",
+  "Loading Weapons",
 ];
 
 export const SAVING_THROW_OPTIONS = [

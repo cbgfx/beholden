@@ -26,4 +26,27 @@ import { createServer } from "./server/createServer.js";
   dotenv.config({ path: found, override: !isRailway });
 })();
 
-createServer();
+const server = createServer();
+
+let shuttingDown = false;
+async function shutdown(signal: NodeJS.Signals) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[beholden] Received ${signal}, shutting down gracefully...`);
+  try {
+    await server.close();
+    console.log("[beholden] Shutdown complete.");
+    process.exit(0);
+  } catch (error) {
+    console.error("[beholden] Graceful shutdown failed:", error);
+    process.exit(1);
+  }
+}
+
+process.on("SIGTERM", () => {
+  void shutdown("SIGTERM");
+});
+
+process.on("SIGINT", () => {
+  void shutdown("SIGINT");
+});

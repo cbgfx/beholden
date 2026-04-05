@@ -53,7 +53,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
   spellcastingBlocked?: boolean;
 }) {
   const [details, setDetails] = React.useState<Record<string, FetchedSpellDetail>>({});
-  const [selectedSpell, setSelectedSpell] = React.useState<FetchedSpellDetail | null>(null);
+  const [selectedSpell, setSelectedSpell] = React.useState<{ detail: FetchedSpellDetail; source?: string | null } | null>(null);
   const [collapsedSections, setCollapsedSections] = React.useState<Record<string, boolean>>({});
   const [addSpellOpen, setAddSpellOpen] = React.useState(false);
   const [spellSearch, setSpellSearch] = React.useState("");
@@ -332,7 +332,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
                 }}
                 onClick={(ev) => {
                   if ((ev.target as HTMLElement).closest("button")) return;
-                  if (detail) setSelectedSpell(detail);
+                  if (detail) setSelectedSpell({ detail, source: entry.sourceName });
                 }}
               >
                 <div style={{ minWidth: 0 }}>
@@ -492,7 +492,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
                 }}
                   onClick={(ev) => {
                     if ((ev.target as HTMLElement).closest("button")) return;
-                    if (d) setSelectedSpell(d);
+                    if (d) setSelectedSpell({ detail: d, source: e.source });
                   }}
                 >
                   {/* Prepared radio */}
@@ -542,7 +542,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
                   />
 
                   {/* Name + meta */}
-                  <div style={{ minWidth: 0 }}>
+                  <div style={{ minWidth: 0 }} title={e.source ? `Source: ${e.source}` : undefined}>
                     <div style={{ fontWeight: 700, fontSize: "var(--fs-subtitle)", color: isPrepared ? C.text : C.muted }}>
                       {e.searchName}
                       {conc && <span title="Concentration" style={{ marginLeft: 5, fontSize: "var(--fs-tiny)", color: C.colorRitual }}>◆</span>}
@@ -589,7 +589,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
       })}
       </div>
       {selectedSpell && (
-        <SpellDrawer spell={selectedSpell} accentColor={accentColor} onClose={() => setSelectedSpell(null)} charLevel={charLevel} maxSlotLevel={maxSpellSlotLevel} />
+        <SpellDrawer spell={selectedSpell.detail} sourceLabel={selectedSpell.source ?? null} accentColor={accentColor} onClose={() => setSelectedSpell(null)} charLevel={charLevel} maxSlotLevel={maxSpellSlotLevel} />
       )}
     </CollapsiblePanel>
     {addSpellOpen && (

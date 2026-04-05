@@ -92,6 +92,7 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
   const mainActive = state === "mainhand-1h" || state === "mainhand-2h";
   const mainLabel = requiresTwoHands(item) ? "2H" : state === "mainhand-2h" ? "2H" : "1H";
   const equipped = state !== "backpack";
+  const canEquipItem = isWeapon || isArmor || isWearable || offhandAllowed;
   const lacksArmorProficiency = equipped && (isArmor || isShieldItem(item)) && !hasArmorProficiency(item, charData?.proficiencies as never);
   const mastery = isWeapon ? parseWeaponMastery(item) : null;
   const mastered = isWeapon && hasWeaponMastery(item, charData?.proficiencies as never);
@@ -126,7 +127,7 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
             value={item.quantity > 1 ? item.quantity : null}
             valuePrefix="x"
             onDecrement={item.quantity > 1 ? () => onQty(item.id, -1) : undefined}
-            onIncrement={() => onQty(item.id, 1)}
+            onIncrement={canEquipItem ? undefined : () => onQty(item.id, 1)}
           />
           <button onClick={() => onRemove(item.id)} title="Remove" style={{ background: "transparent", border: "none", color: "rgba(255,255,255,0.22)", cursor: "pointer", fontSize: "var(--fs-body)", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>x</button>
         </>

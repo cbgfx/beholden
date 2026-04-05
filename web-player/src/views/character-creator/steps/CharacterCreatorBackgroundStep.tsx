@@ -106,6 +106,10 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
     onNext,
     step,
   } = args;
+  const bgAbilityKeys = bgDetail?.proficiencies?.abilityScores ? abilityNamesToKeys(bgDetail.proficiencies.abilityScores) : [];
+  const bgAbilityBonusCount = Object.keys(form.bgAbilityBonuses).length;
+  const bgAbilityValid = bgAbilityKeys.length === 0
+    || (form.bgAbilityMode === "split" ? bgAbilityBonusCount === 2 : bgAbilityBonusCount === bgAbilityKeys.length);
 
   const bgChoicesMain = bgDetail
     ? (() => {
@@ -559,7 +563,7 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
         step={step}
         onBack={onBack}
         onNext={onNext}
-        nextDisabled={!form.bgId || bgDetail?.id !== form.bgId || (equipmentOptions.length > 0 && !form.chosenBgEquipmentOption)}
+        nextDisabled={!form.bgId || bgDetail?.id !== form.bgId || !bgAbilityValid || (equipmentOptions.length > 0 && !form.chosenBgEquipmentOption)}
       />
     </div>
   );

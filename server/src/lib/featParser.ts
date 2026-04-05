@@ -162,6 +162,27 @@ function parseLanguageOptions(text: string): string[] {
   return findExplicitOptions(text, ALL_LANGUAGES);
 }
 
+function parseWeaponProficiencyGrants(text: string): string[] {
+  const normalized = String(text ?? "").trim().toLowerCase();
+  if (!normalized) return [];
+
+  const results = new Set<string>();
+  if (/\bsimple\b/.test(normalized)) results.add("Simple Weapons");
+  if (/\bmartial\b/.test(normalized)) results.add("Martial Weapons");
+  if (/\blight\b/.test(normalized)) results.add("Light Weapons");
+  if (/\bimprovised\b/.test(normalized)) results.add("Improvised Weapons");
+  if (/\bfinesse\b/.test(normalized)) results.add("Finesse Weapons");
+  if (/\bthrown\b/.test(normalized)) results.add("Thrown Weapons");
+  if (/\bheavy\b/.test(normalized)) results.add("Heavy Weapons");
+  if (/\brange(?:d)?\b/.test(normalized)) results.add("Ranged Weapons");
+  if (/\bversatile\b/.test(normalized)) results.add("Versatile Weapons");
+  if (/\btwo[-\s]?handed\b|\b2h\b/.test(normalized)) results.add("Two-Handed Weapons");
+  if (/\bspecial\b/.test(normalized)) results.add("Special Weapons");
+  if (/\breach\b/.test(normalized)) results.add("Reach Weapons");
+  if (/\bloading\b/.test(normalized)) results.add("Loading Weapons");
+  return Array.from(results);
+}
+
 function addIfMissing(list: string[], values: string[]) {
   for (const value of values) {
     if (!list.includes(value)) list.push(value);
@@ -792,9 +813,7 @@ export function parseFeat(args: {
       if (/Medium armor/i.test(paragraph)) addIfMissing(grants.armor, ["Medium Armor"]);
       if (/Light armor/i.test(paragraph)) addIfMissing(grants.armor, ["Light Armor"]);
       if (/Shield/i.test(paragraph)) addIfMissing(grants.armor, ["Shield"]);
-      if (/Martial Weapons?/i.test(paragraph)) addIfMissing(grants.weapons, ["Martial Weapons"]);
-      if (/Simple Weapons?/i.test(paragraph)) addIfMissing(grants.weapons, ["Simple Weapons"]);
-      if (/improvised weapons?/i.test(paragraph)) addIfMissing(grants.weapons, ["Improvised Weapons"]);
+      addIfMissing(grants.weapons, parseWeaponProficiencyGrants(paragraph));
       continue;
     }
 

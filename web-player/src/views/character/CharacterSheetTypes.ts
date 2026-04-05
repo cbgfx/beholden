@@ -24,7 +24,7 @@ export interface ProficiencyMap {
   weapons: TaggedItem[];
   tools: TaggedItem[];
   languages: TaggedItem[];
-  masteries: TaggedItem[];
+  masteries?: TaggedItem[];
   spells: TaggedItem[];
   invocations: TaggedItem[];
   maneuvers: TaggedItem[];
@@ -99,7 +99,7 @@ export interface CharacterData {
   chosenOptionals?: string[];
   selectedFeatureNames?: string[];
   chosenClassFeatIds?: Record<string, string>;
-  chosenLevelUpFeats?: Array<{ level: number; featId: string }>;
+  chosenLevelUpFeats?: Array<{ level: number; featId?: string | null; type?: "asi" | "feat"; abilityBonuses?: Record<string, number> }>;
   chosenSkills?: string[];
   chosenClassLanguages?: string[];
   chosenFeatOptions?: Record<string, string[]>;

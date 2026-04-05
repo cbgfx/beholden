@@ -24,7 +24,7 @@ function btnStyle(primary: boolean, disabled: boolean): React.CSSProperties {
 }
 
 export function StepHeader({ current, onStepClick }: { current: number; onStepClick: (s: number) => void }) {
-  const steps = ["Class", "Species", "Background", "Level", "Skills", "Spells", "Ability Scores", "Stats", "Identity", "Assign"];
+  const steps = ["Class", "Species", "Background", "Ability Scores", "Level", "Skills", "Spells", "Stats", "Identity", "Assign"];
   return (
     <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 28 }}>
       {steps.map((label, i) => {

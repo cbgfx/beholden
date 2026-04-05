@@ -69,6 +69,46 @@ export function importCompendiumXml(args: {
     INSERT OR REPLACE INTO compendium_feats (id, name, name_key, data_json)
     VALUES (?, ?, ?, ?)
   `);
+  const upsertFeat = (args: {
+    name: string;
+    text: string;
+    prerequisite?: string | null;
+    proficiency?: string | null;
+    special?: string | null;
+    modifierDetails?: Array<{ category: string; text: string }>;
+  }) => {
+    const name = args.name.trim();
+    const nameKey = normalizeKey(name);
+    const id = `f_${nameKey.replace(/\s/g, "_")}`;
+    const modifierDetails = (args.modifierDetails ?? []).filter((m) => m.text.length > 0);
+    const modifiers = modifierDetails.map((m) => m.text);
+    const prerequisite = args.prerequisite ?? null;
+    const proficiency = args.proficiency ?? null;
+    const special = args.special ?? null;
+    const parsed = parseFeat({
+      name,
+      text: args.text,
+      prerequisite,
+      proficiency,
+      modifiers: modifierDetails,
+    });
+    const data = {
+      id,
+      name,
+      ruleset: inferRuleset(name, args.text, prerequisite, special),
+      nameKey,
+      name_key: nameKey,
+      text: args.text,
+      prerequisite,
+      proficiency,
+      special,
+      modifiers,
+      modifierDetails,
+      parsed,
+    };
+
+    featStmt.run(id, name, nameKey, JSON.stringify(data));
+  };
 
   db.transaction(() => {
     // ── Monsters ────────────────────────────────────────────────────────────
@@ -377,14 +417,20 @@ export function importCompendiumXml(args: {
       };
 
       bgStmt.run(id, name, nameKey, JSON.stringify(data));
+
+      for (const trait of traits) {
+        const traitName = String(trait?.name ?? "").trim();
+        const featName = traitName.match(/^Feat:\s*(.+)$/i)?.[1]?.trim();
+        if (!featName) continue;
+        upsertFeat({
+          name: featName,
+          text: String(trait?.text ?? ""),
+        });
+      }
     }
 
     // ── Feats ────────────────────────────────────────────────────────────────
     for (const ft of feats) {
-      const name = (asText(ft?.name) || "Unknown").trim();
-      const nameKey = normalizeKey(name);
-      const id = `f_${nameKey.replace(/\s/g, "_")}`;
-
       const modifierDetails = asArray(ft?.modifier).map((m: any) =>
         typeof m === "string"
           ? { category: "", text: m }
@@ -394,26 +440,14 @@ export function importCompendiumXml(args: {
       const prerequisite = asText(ft?.prerequisite) || null;
       const proficiency = asText(ft?.proficiency) || null;
       const special = asText(ft?.special) || null;
-      const parsed = parseFeat({
-        name,
-        text: asText(ft?.text) || "",
-        prerequisite,
-        proficiency,
-        modifiers: modifierDetails,
-      });
-
-      const data = {
-        id, name, ruleset: inferRuleset(name, asText(ft?.text), prerequisite, special), nameKey, name_key: nameKey,
+      upsertFeat({
+        name: (asText(ft?.name) || "Unknown").trim(),
         text: asText(ft?.text) || "",
         prerequisite,
         proficiency,
         special,
-        modifiers,
         modifierDetails,
-        parsed,
-      };
-
-      featStmt.run(id, name, nameKey, JSON.stringify(data));
+      });
     }
   })();
 

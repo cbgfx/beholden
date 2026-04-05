@@ -10,7 +10,7 @@ export function QuantityStepper({
 }: {
   value?: number | string | null;
   onDecrement?: () => void;
-  onIncrement: () => void;
+  onIncrement?: () => void;
   decrementDisabled?: boolean;
   valuePrefix?: string;
   theme?: {
@@ -73,7 +73,7 @@ export function QuantityStepper({
           {valuePrefix}{value}
         </span>
       ) : null}
-      <button type="button" onClick={onIncrement} style={buttonStyle}>+</button>
+      {onIncrement ? <button type="button" onClick={onIncrement} style={buttonStyle}>+</button> : null}
     </div>
   );
 }

@@ -73,10 +73,47 @@ export function getPassiveScore(skillBonus: number): number {
 export function normalizeWeaponProficiencyName(name: string): string {
   const normalized = String(name ?? "").trim();
   if (!normalized) return normalized;
-  if (/simple weapons?\s+and\s+martial weapons?\s+that have the finesse or light property/i.test(normalized)) {
-    return "Finesse and Light Weapons";
-  }
-  return normalized;
+  if (/^simple$/i.test(normalized)) return "Simple Weapons";
+  if (/^martial$/i.test(normalized)) return "Martial Weapons";
+  if (/^light$/i.test(normalized)) return "Light Weapons";
+  if (/^improvised$/i.test(normalized)) return "Improvised Weapons";
+  if (/^finesse$/i.test(normalized)) return "Finesse Weapons";
+  if (/^thrown$/i.test(normalized)) return "Thrown Weapons";
+  if (/^heavy$/i.test(normalized)) return "Heavy Weapons";
+  if (/^range(?:d)?$/i.test(normalized)) return "Ranged Weapons";
+  if (/^versatile$/i.test(normalized)) return "Versatile Weapons";
+  if (/^two[-\s]?handed$/i.test(normalized)) return "Two-Handed Weapons";
+  if (/^special$/i.test(normalized)) return "Special Weapons";
+  if (/^reach$/i.test(normalized)) return "Reach Weapons";
+  if (/^loading$/i.test(normalized)) return "Loading Weapons";
+  return normalized.replace(/\s+/g, " ");
+}
+
+export function splitWeaponProficiencyNames(name: string): string[] {
+  const normalized = String(name ?? "").trim();
+  if (!normalized) return [];
+  const results = new Set<string>();
+  const lower = normalized.toLowerCase();
+
+  const add = (value: string) => results.add(normalizeWeaponProficiencyName(value));
+
+  if (/\bsimple\b/.test(lower)) add("Simple");
+  if (/\bmartial\b/.test(lower)) add("Martial");
+  if (/\blight\b/.test(lower)) add("Light");
+  if (/\bimprovised\b/.test(lower)) add("Improvised");
+  if (/\bfinesse\b/.test(lower)) add("Finesse");
+  if (/\bthrown\b/.test(lower)) add("Thrown");
+  if (/\bheavy\b/.test(lower)) add("Heavy");
+  if (/\brange(?:d)?\b/.test(lower)) add("Ranged");
+  if (/\bversatile\b/.test(lower)) add("Versatile");
+  if (/\btwo[-\s]?handed\b|\b2h\b/.test(lower)) add("Two-Handed");
+  if (/\bspecial\b/.test(lower)) add("Special");
+  if (/\breach\b/.test(lower)) add("Reach");
+  if (/\bloading\b/.test(lower)) add("Loading");
+
+  if (results.size > 0) return Array.from(results);
+
+  return [normalizeWeaponProficiencyName(normalized)];
 }
 
 export function normalizeArmorProficiencyName(name: string): string {

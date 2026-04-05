@@ -1,6 +1,7 @@
 import React from "react";
 import { C } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
+import { ABILITY_KEYS, ABILITY_LABELS } from "@/views/character-creator/constants/CharacterCreatorConstants";
 import { abilityNamesToKeys, parseSkillList } from "../utils/CharacterCreatorUtils";
 import { ItemPicker, NavButtons, SpellPicker } from "../shared/CharacterCreatorParts";
 import {
@@ -878,6 +879,9 @@ export function renderLevelStep({
   className,
   features,
   levelUpFeatChoices,
+  levelUpScores,
+  toggleLevelUpChoiceMode,
+  toggleLevelUpAsiPoint,
   chooseLevelUpFeat,
   levelUpFeatConflict,
   onBack,
@@ -899,7 +903,16 @@ export function renderLevelStep({
   chooseClassEquipmentOption: (id: string) => void;
   className: string | null;
   features: Array<{ level: number; name: string; text: string; preparedSpellProgression?: PreparedSpellProgressionTable[] }>;
-  levelUpFeatChoices: Array<{ level: number; selectedFeatId: string | null; options: Array<{ id: string; name: string }> }>;
+  levelUpFeatChoices: Array<{
+    level: number;
+    mode: "asi" | "feat" | null;
+    selectedFeatId: string | null;
+    options: Array<{ id: string; name: string }>;
+    asiBonuses: Record<string, number>;
+  }>;
+  levelUpScores: Record<number, Record<string, number>>;
+  toggleLevelUpChoiceMode: (level: number, mode: "asi" | "feat") => void;
+  toggleLevelUpAsiPoint: (level: number, ability: string) => void;
   chooseLevelUpFeat: (level: number, featId: string) => void;
   levelUpFeatConflict: boolean;
   onBack: () => void;
@@ -991,6 +1004,107 @@ export function renderLevelStep({
         );
       })}
 
+      {levelUpFeatChoices.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ ...labelStyle, marginBottom: 8 }}>Level-Up Feats</div>
+          <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 10 }}>
+            Choose feats for each Ability Score Improvement level included in this starting level.
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {levelUpFeatChoices.map((choice) => (
+              <div key={choice.level}>
+                <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.accentHl, marginBottom: 6 }}>Level {choice.level}</div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => toggleLevelUpChoiceMode(choice.level, "asi")}
+                    style={{
+                      padding: "7px 14px",
+                      borderRadius: 8,
+                      cursor: "pointer",
+                      border: `1px solid ${choice.mode === "asi" ? C.accentHl : "rgba(255,255,255,0.14)"}`,
+                      background: choice.mode === "asi" ? "rgba(56,182,255,0.15)" : "rgba(255,255,255,0.055)",
+                      color: choice.mode === "asi" ? C.accentHl : "rgba(160,180,220,0.7)",
+                      fontWeight: choice.mode === "asi" ? 700 : 500,
+                      fontSize: "var(--fs-small)",
+                    }}
+                  >
+                    Ability Score Improvement
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleLevelUpChoiceMode(choice.level, "feat")}
+                    style={{
+                      padding: "7px 14px",
+                      borderRadius: 8,
+                      cursor: "pointer",
+                      border: `1px solid ${choice.mode === "feat" ? C.accentHl : "rgba(255,255,255,0.14)"}`,
+                      background: choice.mode === "feat" ? "rgba(56,182,255,0.15)" : "rgba(255,255,255,0.055)",
+                      color: choice.mode === "feat" ? C.accentHl : "rgba(160,180,220,0.7)",
+                      fontWeight: choice.mode === "feat" ? 700 : 500,
+                      fontSize: "var(--fs-small)",
+                    }}
+                  >
+                    Level-Up Feat
+                  </button>
+                </div>
+                <Select
+                  value={choice.selectedFeatId ?? ""}
+                  onChange={(e) => chooseLevelUpFeat(choice.level, e.target.value)}
+                  disabled={choice.mode !== "feat"}
+                  style={{ width: "100%", maxWidth: 380, opacity: choice.mode === "feat" ? 1 : 0.55 }}
+                >
+                  <option value="">- Choose feat -</option>
+                  {choice.options.map((feat) => (
+                    <option key={feat.id} value={feat.id}>{feat.name}</option>
+                  ))}
+                </Select>
+                {choice.mode === "asi" && (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8, marginTop: 10 }}>
+                    {ABILITY_KEYS.map((ability) => {
+                      const current = levelUpScores[choice.level]?.[ability] ?? 10;
+                      const bonus = choice.asiBonuses[ability] ?? 0;
+                      const totalAssigned = Object.values(choice.asiBonuses).reduce((sum, value) => sum + value, 0);
+                      const capped = current >= 20;
+                      const blocked = bonus === 0 && (totalAssigned >= 2 || capped);
+                      return (
+                        <button
+                          key={`${choice.level}:${ability}`}
+                          type="button"
+                          disabled={blocked}
+                          onClick={() => toggleLevelUpAsiPoint(choice.level, ability)}
+                          style={{
+                            padding: "10px 8px",
+                            borderRadius: 8,
+                            textAlign: "center",
+                            cursor: blocked ? "default" : "pointer",
+                            border: `1px solid ${bonus > 0 ? C.accentHl : "rgba(255,255,255,0.12)"}`,
+                            background: bonus > 0 ? "rgba(56,182,255,0.15)" : "rgba(255,255,255,0.055)",
+                            color: blocked && bonus === 0 ? "rgba(160,180,220,0.4)" : C.text,
+                          }}
+                        >
+                          <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginBottom: 3 }}>{ABILITY_LABELS[ability]}</div>
+                          <div style={{ fontWeight: 800, fontSize: "var(--fs-medium)" }}>
+                            {Math.min(20, current + bonus)}
+                            {bonus > 0 ? <span style={{ fontSize: "var(--fs-small)", color: C.accentHl }}> +{bonus}</span> : null}
+                          </div>
+                          <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{capped && bonus === 0 ? "MAX" : bonus > 0 ? "Click to remove" : "Click to add"}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          {levelUpFeatConflict && (
+            <div style={{ color: C.red, fontSize: "var(--fs-small)", marginTop: 10 }}>
+              A non-repeatable feat has been selected more than once.
+            </div>
+          )}
+        </div>
+      )}
+
       {classEquipmentText && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ ...labelStyle, marginBottom: 8 }}>
@@ -1031,38 +1145,19 @@ export function renderLevelStep({
         </div>
       )}
 
-      {levelUpFeatChoices.length > 0 && (
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ ...labelStyle, marginBottom: 8 }}>Level-Up Feats</div>
-          <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 10 }}>
-            Choose feats for each Ability Score Improvement level included in this starting level.
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {levelUpFeatChoices.map((choice) => (
-              <div key={choice.level}>
-                <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.accentHl, marginBottom: 6 }}>Level {choice.level}</div>
-                <Select value={choice.selectedFeatId ?? ""} onChange={(e) => chooseLevelUpFeat(choice.level, e.target.value)} style={{ width: "100%", maxWidth: 380 }}>
-                  <option value="">- Choose feat -</option>
-                  {choice.options.map((feat) => (
-                    <option key={feat.id} value={feat.id}>{feat.name}</option>
-                  ))}
-                </Select>
-              </div>
-            ))}
-          </div>
-          {levelUpFeatConflict && (
-            <div style={{ color: C.red, fontSize: "var(--fs-small)", marginTop: 10 }}>
-              A non-repeatable feat has been selected more than once.
-            </div>
-          )}
-        </div>
-      )}
-
       <NavButtons
-        step={4}
+        step={5}
         onBack={onBack}
         onNext={onNext}
-        nextDisabled={(classEquipmentOptions.length > 0 && !chosenClassEquipmentOption) || levelUpFeatChoices.some((choice) => !choice.selectedFeatId) || levelUpFeatConflict}
+        nextDisabled={
+          (classEquipmentOptions.length > 0 && !chosenClassEquipmentOption)
+          || levelUpFeatChoices.some((choice) => (
+            !choice.mode
+            || (choice.mode === "feat" && !choice.selectedFeatId)
+            || (choice.mode === "asi" && Object.values(choice.asiBonuses).reduce((sum, value) => sum + value, 0) !== 2)
+          ))
+          || levelUpFeatConflict
+        }
       />
     </div>
   );
@@ -1485,7 +1580,7 @@ export function renderAbilityScoresStep({
         </div>
       )}
 
-      <NavButtons step={7} onBack={onBack} onNext={onNext} />
+      <NavButtons step={4} onBack={onBack} onNext={onNext} />
     </div>
   );
   return { main, side };

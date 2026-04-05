@@ -22,6 +22,7 @@ import {
   normalizeLanguageName,
   normalizeSpellTrackingName,
   splitArmorProficiencyNames,
+  splitWeaponProficiencyNames,
   normalizeWeaponProficiencyName,
 } from "@/views/character/CharacterSheetUtils";
 import {
@@ -314,8 +315,15 @@ export function buildProficiencyMap(args: {
     });
   };
   const pushWeapon = (name: string, source: string) => {
-    const formatted = normalizeWeaponProficiencyName(name);
-    if (formatted) weapons.push({ name: formatted, source });
+    splitWeaponProficiencyNames(name).forEach((formatted) => {
+      if (formatted) weapons.push({ name: formatted, source });
+    });
+  };
+  const pushTool = (name: string, source: string) => {
+    const formatted = String(name ?? "").trim();
+    if (!formatted) return;
+    if (/\b(?:choose|choice|of your choice|any one type)\b/i.test(formatted)) return;
+    tools.push({ name: formatted, source });
   };
   const pushLanguage = (name: string, source: string) => {
     const formatted = normalizeLanguageName(name);
@@ -327,7 +335,7 @@ export function buildProficiencyMap(args: {
   if (classDetail) {
     splitComma(classDetail.armor).forEach((name) => pushArmor(name, className));
     splitComma(classDetail.weapons).forEach((name) => pushWeapon(name, className));
-    splitComma(classDetail.tools ?? "").forEach((name) => tools.push({ name, source: className }));
+    splitComma(classDetail.tools ?? "").forEach((name) => pushTool(name, className));
 
     splitComma(classDetail.proficiency)
       .filter((name) => ABILITY_SCORE_NAMES.has(name))
@@ -360,7 +368,7 @@ export function buildProficiencyMap(args: {
     const classFeatureGrants = collectTaggedGrantsFromEffects(parsedClassFeatures);
     classFeatureGrants.armor.forEach((entry) => pushArmor(entry.name, entry.source));
     classFeatureGrants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
-    classFeatureGrants.tools.forEach((entry) => tools.push(entry));
+    classFeatureGrants.tools.forEach((entry) => pushTool(entry.name, entry.source));
     classFeatureGrants.skills.forEach((entry) => skills.push(entry));
     classFeatureGrants.expertise.forEach((entry) => pushExpertise(entry.name, entry.source));
     classFeatureGrants.saves.forEach((entry) => saves.push(entry));
@@ -382,7 +390,7 @@ export function buildProficiencyMap(args: {
           : value,
       });
       grants.skills.forEach((entry) => skills.push(entry));
-      grants.tools.forEach((entry) => tools.push(entry));
+      grants.tools.forEach((entry) => pushTool(entry.name, entry.source));
       grants.languages.forEach((entry) => pushLanguage(entry.name, entry.source));
       grants.armor.forEach((entry) => pushArmor(entry.name, entry.source));
       grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
@@ -405,13 +413,13 @@ export function buildProficiencyMap(args: {
     bgSkills.forEach((name) => skills.push({ name, source: bgName }));
     form.chosenBgSkills.forEach((name) => skills.push({ name, source: bgName }));
     if (prof) {
-      prof.tools.fixed.forEach((name) => tools.push({ name, source: bgName }));
-      form.chosenBgTools.forEach((name) => tools.push({ name, source: bgName }));
+      prof.tools.fixed.forEach((name) => pushTool(name, bgName));
+      form.chosenBgTools.forEach((name) => pushTool(name, bgName));
       prof.languages.fixed.forEach((name) => pushLanguage(name, bgName));
       form.chosenBgLanguages.forEach((name) => pushLanguage(name, bgName));
     } else {
       for (const trait of bgDetail.traits) {
-        if (/tool/i.test(trait.name)) splitComma(trait.text).forEach((name) => tools.push({ name, source: bgName }));
+        if (/tool/i.test(trait.name)) splitComma(trait.text).forEach((name) => pushTool(name, bgName));
         else if (/language/i.test(trait.name)) splitComma(trait.text).forEach((name) => pushLanguage(name, bgName));
       }
     }
@@ -426,7 +434,7 @@ export function buildProficiencyMap(args: {
           : value,
       });
       grants.skills.forEach((entry) => skills.push(entry));
-      grants.tools.forEach((entry) => tools.push(entry));
+      grants.tools.forEach((entry) => pushTool(entry.name, entry.source));
       grants.languages.forEach((entry) => pushLanguage(entry.name, entry.source));
       grants.armor.forEach((entry) => pushArmor(entry.name, entry.source));
       grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
@@ -452,7 +460,7 @@ export function buildProficiencyMap(args: {
           : value,
       });
       grants.skills.forEach((entry) => skills.push(entry));
-      grants.tools.forEach((entry) => tools.push(entry));
+      grants.tools.forEach((entry) => pushTool(entry.name, entry.source));
       grants.languages.forEach((entry) => pushLanguage(entry.name, entry.source));
       grants.armor.forEach((entry) => pushArmor(entry.name, entry.source));
       grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
@@ -477,7 +485,7 @@ export function buildProficiencyMap(args: {
         if (!match) continue;
         const value = match[2].trim();
         if (/language/i.test(match[1])) pushLanguage(value, raceName);
-        else if (/tool/i.test(match[1])) tools.push({ name: value, source: raceName });
+        else if (/tool/i.test(match[1])) pushTool(value, raceName);
         else if (/skill/i.test(match[1])) skills.push({ name: value, source: raceName });
       }
       if (/^languages?$/i.test(trait.name) && trait.modifier.length === 0) {
@@ -488,7 +496,7 @@ export function buildProficiencyMap(args: {
     }
     form.chosenRaceSkills.forEach((name) => skills.push({ name, source: raceName }));
     if (!coreLanguageChoice) form.chosenRaceLanguages.forEach((name) => pushLanguage(name, raceName));
-    form.chosenRaceTools.forEach((name) => tools.push({ name, source: raceName }));
+    form.chosenRaceTools.forEach((name) => pushTool(name, raceName));
 
     if (raceFeatDetail) {
       const grants = collectFeatTaggedEntries({
@@ -500,7 +508,7 @@ export function buildProficiencyMap(args: {
           : value,
       });
       grants.skills.forEach((entry) => skills.push(entry));
-      grants.tools.forEach((entry) => tools.push(entry));
+      grants.tools.forEach((entry) => pushTool(entry.name, entry.source));
       grants.languages.forEach((entry) => pushLanguage(entry.name, entry.source));
       grants.armor.forEach((entry) => pushArmor(entry.name, entry.source));
       grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
@@ -533,7 +541,7 @@ export function buildProficiencyMap(args: {
         : value,
     });
     grants.skills.forEach((entry) => skills.push(entry));
-    grants.tools.forEach((entry) => tools.push(entry));
+    grants.tools.forEach((entry) => pushTool(entry.name, entry.source));
     grants.languages.forEach((entry) => pushLanguage(entry.name, entry.source));
     grants.armor.forEach((entry) => pushArmor(entry.name, entry.source));
     grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
@@ -629,10 +637,9 @@ export function buildProficiencyMap(args: {
     expertise: dedupeTaggedItems(expertise),
     saves: dedupeTaggedItems(saves),
     armor: dedupeTaggedItems(armor, normalizeArmorProficiencyName),
-    weapons: dedupeTaggedItems(weapons, normalizeWeaponProficiencyName),
     tools: dedupeTaggedItems(tools),
     languages: dedupeTaggedItems(languages, normalizeLanguageName),
-    masteries: dedupeTaggedItems(masteries),
+    weapons: dedupeTaggedItems([...weapons, ...masteries], normalizeWeaponProficiencyName),
     spells: dedupeTaggedItems(spells, normalizeSpellTrackingName),
     invocations: dedupeTaggedItems(invocations),
     maneuvers: dedupeTaggedItems(maneuvers),

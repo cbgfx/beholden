@@ -11,6 +11,7 @@ import {
   getFeatureSubclassName,
 } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import type { ClassDetail, ClassFeatChoice } from "@/views/character-creator/utils/CharacterCreatorTypes";
+import type { LevelUpFeatSelection } from "@/views/character-creator/utils/CharacterCreatorTypes";
 import type {
   ParsedFeatChoiceLike as ParsedFeatChoice,
 } from "@/views/character-creator/utils/FeatChoiceTypes";
@@ -27,7 +28,7 @@ export interface FormState {
   subclass: string;
   chosenOptionals: string[];
   chosenClassFeatIds: Record<string, string>;
-  chosenLevelUpFeats: any[];
+  chosenLevelUpFeats: LevelUpFeatSelection[];
   chosenRaceSkills: string[];
   chosenRaceLanguages: string[];
   chosenRaceTools: string[];

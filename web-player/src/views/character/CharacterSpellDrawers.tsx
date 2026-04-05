@@ -255,12 +255,14 @@ export function AddSpellDrawer({
 
 export function SpellDrawer({
   spell,
+  sourceLabel,
   accentColor,
   onClose,
   charLevel,
   maxSlotLevel,
 }: {
   spell: FetchedSpellDetail;
+  sourceLabel?: string | null;
   accentColor: string;
   onClose: () => void;
   charLevel?: number;
@@ -353,6 +355,11 @@ export function SpellDrawer({
           {spell.classes && (
             <p style={{ margin: "8px 0 0", fontSize: "var(--fs-small)", color: C.muted, fontStyle: "italic" }}>
               Classes: {spell.classes}
+            </p>
+          )}
+          {sourceLabel && (
+            <p style={{ margin: "8px 0 0", fontSize: "var(--fs-small)", color: C.muted }}>
+              Source: {sourceLabel}
             </p>
           )}
         </div>

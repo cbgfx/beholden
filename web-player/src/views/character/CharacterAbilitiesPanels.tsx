@@ -8,6 +8,7 @@ import { formatWeaponProficiencyName } from "@/views/character/CharacterInventor
 
 export interface CharacterAbilitiesPanelsProps {
   scores: Record<AbilKey, number | null>;
+  scoreExplanations?: Partial<Record<AbilKey, string>>;
   pb: number;
   prof?: ProficiencyMap | null;
   saveBonuses?: Partial<Record<AbilKey, number>>;
@@ -67,6 +68,7 @@ function StateBadge({
 
 export function CharacterAbilitiesPanels({
   scores,
+  scoreExplanations,
   pb,
   prof,
   saveBonuses,
@@ -100,7 +102,7 @@ export function CharacterAbilitiesPanels({
                 <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: isProfSave ? accentColor : C.muted }}>
                   {ABILITY_LABELS[k]}
                 </div>
-                <Tooltip text={score != null ? `${ABILITY_FULL[k]}: ${score} → modifier ⌊(${score} − 10) / 2⌋ = ${fmtMod(m)}` : `${ABILITY_FULL[k]}: not set`}>
+                <Tooltip text={scoreExplanations?.[k] ?? `${ABILITY_FULL[k]}: ${score ?? "not set"}.`} multiline>
                   <div style={{ padding: "6px 2px", borderRadius: 7, background: "rgba(255,255,255,0.06)", border: `1px solid ${isProfSave ? accentColor + "55" : "rgba(255,255,255,0.10)"}`, textAlign: "center", fontSize: "var(--fs-subtitle)", fontWeight: 900, color: isProfSave ? accentColor : C.text, cursor: "help", width: "100%" }}>
                     {score ?? "-"}
                   </div>
@@ -114,7 +116,7 @@ export function CharacterAbilitiesPanels({
                   />
                 </div>
                 <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, textAlign: "center", color: saveState === "disadvantage" ? C.colorPinkRed : saveState === "advantage" ? accentColor : isProfSave ? accentColor : C.text, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}>
-                  <Tooltip text={isProfSave ? `${fmtMod(m)} (mod) + ${pb} (prof) = ${fmtMod(save)}${armorSaveDisadvantage ? " • Disadvantage from armor" : ""}` : `${fmtMod(m)} (mod, not proficient)${armorSaveDisadvantage ? " • Disadvantage from armor" : ""}`}>
+                  <Tooltip text={isProfSave ? `${fmtMod(m)} (mod) + ${pb} (prof) = ${fmtMod(save)}${armorSaveDisadvantage ? " - Disadvantage from armor" : ""}` : `${fmtMod(m)} (mod, not proficient)${armorSaveDisadvantage ? " - Disadvantage from armor" : ""}`}>
                     <span style={{ cursor: "help" }}>{fmtMod(save)}</span>
                   </Tooltip>
                   <StateBadge
@@ -199,7 +201,7 @@ export function CharacterAbilitiesPanels({
                   }}
                 >
                   {isProfSkill && (src || expertiseSrc)
-                    ? <Tooltip text={[src, expertiseSrc].filter(Boolean).join(" • ")}>{fmtMod(bonus)}</Tooltip>
+                    ? <Tooltip text={[src, expertiseSrc].filter(Boolean).join(" - ")}>{fmtMod(bonus)}</Tooltip>
                     : fmtMod(bonus)}
                 </span>
               </div>
@@ -223,7 +225,6 @@ export function CharacterProficienciesPanel({
   const sections = [
     { label: "Armor", items: prof.armor, color: C.colorMagic },
     { label: "Weapons", items: prof.weapons, color: C.colorPinkRed },
-    { label: "Weapon Masteries", items: prof.masteries, color: C.colorGold },
     { label: "Maneuvers", items: prof.maneuvers, color: C.accentHl },
     { label: "Magic Item Plans", items: prof.plans, color: C.colorRitual },
     { label: "Tools", items: prof.tools, color: C.colorOrange },

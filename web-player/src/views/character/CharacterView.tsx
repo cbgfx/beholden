@@ -68,6 +68,7 @@ import {
   normalizeSpellTrackingKey,
   normalizeSpellTrackingName,
   splitArmorProficiencyNames,
+  splitWeaponProficiencyNames,
   normalizeWeaponProficiencyName,
   proficiencyBonus,
 } from "@/views/character/CharacterSheetUtils";
@@ -94,6 +95,86 @@ import {
 
 /** Total XP required to reach each level (index = level). Index 0 unused. */
 const XP_TO_LEVEL = [0, 0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 260000, 300000, 355000];
+
+type ItemAbilityScoreOverride = {
+  ability: AbilKey;
+  value: number;
+  mode: "set" | "minimum";
+};
+
+const ABILITY_SCORE_NAMES: Record<AbilKey, string> = {
+  str: "Strength",
+  dex: "Dexterity",
+  con: "Constitution",
+  int: "Intelligence",
+  wis: "Wisdom",
+  cha: "Charisma",
+};
+
+function isInventoryItemActiveForCharacterEffects(item: InventoryItem): boolean {
+  return getEquipState(item) !== "backpack" && (!item.attunement || item.attuned);
+}
+
+function parseItemAbilityScoreOverrides(item: InventoryItem): ItemAbilityScoreOverride[] {
+  const text = `${item.description ?? ""}\n${item.notes ?? ""}`;
+  if (!text.trim()) return [];
+  const overrides: ItemAbilityScoreOverride[] = [];
+  for (const [ability, abilityName] of Object.entries(ABILITY_SCORE_NAMES) as [AbilKey, string][]) {
+    const overrideMatch = text.match(new RegExp(`\\b(?:your\\s+)?${abilityName}\\s+score\\s+(?:is|becomes?|equals?)\\s+(\\d+)\\b`, "i"));
+    if (!overrideMatch) continue;
+    const value = Number.parseInt(overrideMatch[1], 10);
+    if (!Number.isFinite(value)) continue;
+    const minimumMode = new RegExp(`no effect on you if your ${abilityName} is already ${value} or higher`, "i").test(text)
+      || new RegExp(`if your ${abilityName} is already ${value} or higher`, "i").test(text);
+    overrides.push({ ability, value, mode: minimumMode ? "minimum" : "set" });
+  }
+  return overrides;
+}
+
+function applyItemAbilityScoreOverrides(
+  baseScores: Record<AbilKey, number | null>,
+  inventory: InventoryItem[],
+): Record<AbilKey, number | null> {
+  const activeOverrides = inventory
+    .filter(isInventoryItemActiveForCharacterEffects)
+    .flatMap((item) => parseItemAbilityScoreOverrides(item));
+  const nextScores = { ...baseScores };
+  for (const ability of Object.keys(baseScores) as AbilKey[]) {
+    const base = baseScores[ability];
+    const setValues = activeOverrides.filter((entry) => entry.ability === ability && entry.mode === "set").map((entry) => entry.value);
+    const minimumValues = activeOverrides.filter((entry) => entry.ability === ability && entry.mode === "minimum").map((entry) => entry.value);
+    let current = base;
+    if (setValues.length > 0) current = Math.max(...setValues);
+    if (minimumValues.length > 0) current = Math.max(current ?? Number.NEGATIVE_INFINITY, ...minimumValues);
+    nextScores[ability] = Number.isFinite(current ?? NaN) ? current : base;
+  }
+  return nextScores;
+}
+
+function buildAbilityScoreExplanations(
+  baseScores: Record<AbilKey, number | null>,
+  effectiveScores: Record<AbilKey, number | null>,
+  inventory: InventoryItem[],
+): Record<AbilKey, string> {
+  const activeItems = inventory.filter(isInventoryItemActiveForCharacterEffects);
+  return Object.fromEntries(
+    (Object.keys(baseScores) as AbilKey[]).map((ability) => {
+      const base = baseScores[ability];
+      const finalScore = effectiveScores[ability];
+      const parts: string[] = [];
+      parts.push(`${ABILITY_FULL[ability]} base score: ${base ?? "not set"}.`);
+      for (const item of activeItems) {
+        for (const override of parseItemAbilityScoreOverrides(item)) {
+          if (override.ability !== ability) continue;
+          const verb = override.mode === "minimum" ? `sets ${ABILITY_FULL[ability]} to at least ${override.value}` : `sets ${ABILITY_FULL[ability]} to ${override.value}`;
+          parts.push(`${item.name}: ${verb}.`);
+        }
+      }
+      parts.push(`${ABILITY_FULL[ability]} final score: ${finalScore ?? "not set"}.`);
+      return [ability, parts.join("\n")];
+    })
+  ) as Record<AbilKey, string>;
+}
 
 interface Character {
   id: string;
@@ -763,16 +844,23 @@ export function CharacterView() {
     ),
     normalizeArmorProficiencyName,
   );
+  const sanitizedWeapons = dedupeTaggedItems(
+    ([...(rawProf?.weapons ?? []), ...(rawProf?.masteries ?? [])]).flatMap((entry) =>
+      splitWeaponProficiencyNames(entry?.name ?? "").map((name) => ({ ...entry, name }))
+    ),
+    normalizeWeaponProficiencyName,
+  );
+  const sanitizedTools = dedupeTaggedItems(rawProf?.tools)
+    .filter((entry) => !/\b(?:choose|choice|of your choice|any one type)\b/i.test(String(entry.name ?? "")));
   const prof = rawProf ? {
     ...rawProf,
     skills: dedupeTaggedItems(rawProf.skills),
     expertise: dedupeTaggedItems(rawProf.expertise),
     saves: dedupeTaggedItems(rawProf.saves),
     armor: sanitizedArmor,
-    weapons: dedupeTaggedItems(rawProf.weapons, normalizeWeaponProficiencyName),
-    tools: dedupeTaggedItems(rawProf.tools),
+    weapons: sanitizedWeapons,
+    tools: sanitizedTools,
     languages: dedupeTaggedItems(rawProf.languages, normalizeLanguageName),
-    masteries: dedupeTaggedItems(rawProf.masteries),
     spells: sanitizedTrackedSpells,
     invocations: dedupeTaggedItems(rawProf.invocations),
     maneuvers: dedupeTaggedItems(rawProf.maneuvers),
@@ -783,10 +871,13 @@ export function CharacterView() {
   const hitDieSize = hd ?? classDetail?.hd ?? null;
   const hitDiceMax = Math.max(0, char.level);
   const hitDiceCurrent = Math.max(0, Math.min(hitDiceMax, Math.floor(Number(char.characterData?.hitDiceCurrent ?? hitDiceMax) || 0)));
-  const scores: Record<AbilKey, number | null> = {
+  const inventory = char.characterData?.inventory ?? [];
+  const baseScores: Record<AbilKey, number | null> = {
     str: char.strScore, dex: char.dexScore, con: char.conScore,
     int: char.intScore, wis: char.wisScore, cha: char.chaScore,
   };
+  const scores = applyItemAbilityScoreOverrides(baseScores, inventory);
+  const scoreExplanations = buildAbilityScoreExplanations(baseScores, scores, inventory);
   const _featureArgs = {
     charData: char.characterData,
     characterLevel: char.level,
@@ -874,11 +965,11 @@ export function CharacterView() {
 
   const accentColor = char.color ?? C.accentHl;
   const overrides: SheetOverrides = char.overrides ?? char.characterData?.sheetOverrides ?? { tempHp: 0, acBonus: 0, hpMaxBonus: 0 };
+  const conScoreDeltaPerLevel = abilityMod(scores.con) - abilityMod(char.conScore);
   const featureHpMaxBonus = deriveHitPointMaxBonusFromEffects(parsedFeatureEffects, { level: char.level, scores });
-  const effectiveHpMax = Math.max(1, char.hpMax + featureHpMaxBonus + (overrides.hpMaxBonus ?? 0));
+  const effectiveHpMax = Math.max(1, char.hpMax + (conScoreDeltaPerLevel * char.level) + featureHpMaxBonus + (overrides.hpMaxBonus ?? 0));
   const xpEarned = char.characterData?.xp ?? 0;
   const xpNeeded = XP_TO_LEVEL[char.level + 1] ?? 0;
-  const inventory = char.characterData?.inventory ?? [];
   const wornShield = inventory.find((it) => getEquipState(it) === "offhand" && isShieldItem(it));
   const shieldBonus = wornShield ? 2 : 0;
   const wornArmor = inventory.find((it) => getEquipState(it) === "worn" && isArmorItem(it) && (it.ac ?? 0) > 0);
@@ -891,20 +982,20 @@ export function CharacterView() {
   const nonProficientArmorPenalty = armorWithoutProficiency || shieldWithoutProficiency;
   const hasDisadvantage = (char.conditions ?? []).some((c) => c.key === "disadvantage");
   const stealthDisadvantage = Boolean((wornArmor && hasStealthDisadvantage(wornArmor)) || nonProficientArmorPenalty);
-  const dexMod = abilityMod(char.dexScore);
-  const conMod = abilityMod(char.conScore);
+  const dexMod = abilityMod(scores.dex);
+  const conMod = abilityMod(scores.con);
   const hasJackOfAllTrades = Boolean(
     classDetail?.autolevels
       ?.filter((autolevel) => autolevel.level <= char.level)
       .some((autolevel) => (autolevel.features ?? []).some((feature) => /jack of all trades/i.test(feature.name)))
   );
   const scoresByAbility: Record<AbilKey, number | null> = {
-    str: char.strScore,
-    dex: char.dexScore,
-    con: char.conScore,
-    int: char.intScore,
-    wis: char.wisScore,
-    cha: char.chaScore,
+    str: scores.str,
+    dex: scores.dex,
+    con: scores.con,
+    int: scores.int,
+    wis: scores.wis,
+    cha: scores.cha,
   };
   const wornArmorAc = (() => {
     if (!wornArmor || !wornArmor.ac) return null;
@@ -949,7 +1040,7 @@ export function CharacterView() {
   });
   const passivePerc = getPassiveScore(getSkillBonus("Perception", "wis", scoresByAbility, char.level, prof ?? undefined, { jackOfAllTrades: hasJackOfAllTrades })) + passiveScoreBonus;
   const passiveInv  = getPassiveScore(getSkillBonus("Investigation", "int", scoresByAbility, char.level, prof ?? undefined, { jackOfAllTrades: hasJackOfAllTrades })) + passiveScoreBonus;
-  const initiativeBonus = getInitiativeBonus(char.dexScore, char.level, { jackOfAllTrades: hasJackOfAllTrades })
+  const initiativeBonus = getInitiativeBonus(scores.dex, char.level, { jackOfAllTrades: hasJackOfAllTrades })
     + deriveModifierBonusFromEffects(parsedFeatureEffects, "initiative", { level: char.level, scores: scoresByAbility, raging: rageActive });
   const transformedCombatStats = polymorphMonster ? (() => {
     const monsterDex = readMonsterNumber(polymorphMonster.dex) ?? 10;
@@ -965,7 +1056,7 @@ export function CharacterView() {
       passivePerc: skillPerception != null ? 10 + skillPerception : 10 + abilityMod(monsterWis),
       passiveInv,
       dexScore: monsterDex,
-      strScore: readMonsterNumber(polymorphMonster.str) ?? char.strScore,
+      strScore: readMonsterNumber(polymorphMonster.str) ?? scores.str,
       className: polymorphMonster.name ?? char.className,
     };
   })() : null;
@@ -1213,7 +1304,7 @@ export function CharacterView() {
   }
 
   const _baseProficiencies = currentCharacterData.proficiencies ?? {
-    skills: [], expertise: [], saves: [], armor: [], weapons: [], tools: [], languages: [], masteries: [], spells: [], invocations: [], maneuvers: [], plans: [],
+    skills: [], expertise: [], saves: [], armor: [], weapons: [], tools: [], languages: [], spells: [], invocations: [], maneuvers: [], plans: [],
   };
 
   const _normalizeSpellName = (n: string) => n.replace(/\s*\[[^\]]+\]\s*$/u, "").trim().toLowerCase();
@@ -1642,6 +1733,7 @@ export function CharacterView() {
 
           <CharacterAbilitiesPanels
             scores={scores}
+            scoreExplanations={scoreExplanations}
             pb={pb}
             prof={prof}
             saveBonuses={saveBonuses}
@@ -1683,8 +1775,8 @@ export function CharacterView() {
             level={char.level}
             className={transformedCombatStats?.className ?? char.className}
             initiativeBonus={transformedCombatStats?.initiativeBonus ?? initiativeBonus}
-            strScore={transformedCombatStats?.strScore ?? char.strScore}
-            dexScore={transformedCombatStats?.dexScore ?? char.dexScore}
+            strScore={transformedCombatStats?.strScore ?? scores.str}
+            dexScore={transformedCombatStats?.dexScore ?? scores.dex}
             pb={transformedCombatStats?.pb ?? pb}
             passivePerc={transformedCombatStats?.passivePerc ?? passivePerc}
             passiveInv={transformedCombatStats?.passiveInv ?? passiveInv}
@@ -1720,9 +1812,9 @@ export function CharacterView() {
               <ItemSpellsPanel
                 items={inventory}
                 pb={pb}
-                intScore={char.intScore}
-                wisScore={char.wisScore}
-                chaScore={char.chaScore}
+                intScore={scores.int}
+                wisScore={scores.wis}
+                chaScore={scores.cha}
                 accentColor={accentColor}
                 onChargeChange={handleItemChargeChange}
                 spellcastingBlocked={nonProficientArmorPenalty}

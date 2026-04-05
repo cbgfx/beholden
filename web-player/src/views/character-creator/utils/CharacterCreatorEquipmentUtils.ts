@@ -1,5 +1,6 @@
 import type { ParsedFeatChoiceLike } from "@/lib/characterRules";
 import { parseStartingEquipmentOptions } from "./CharacterCreatorUtils";
+import { MUSICAL_INSTRUMENTS } from "../constants/CharacterCreatorConstants";
 import { normalizeInventoryItemLookupName } from "@/views/character/CharacterInventory";
 
 export interface ItemSummaryLike {
@@ -106,6 +107,25 @@ export function currencyCodeFromEntry(entry: string): "PP" | "GP" | "EP" | "SP" 
   return currencyMatch ? (currencyMatch[2].toUpperCase() as "PP" | "GP" | "EP" | "SP" | "CP") : null;
 }
 
+function resolveToolPlaceholder(name: string, grantedTools: string[]): string | null {
+  const normalized = String(name ?? "").trim();
+  if (!normalized) return null;
+
+  const lower = normalized.toLowerCase();
+  const chosenToolReference = /\b(?:same as above|chosen for the tool proficiency above)\b/i.test(normalized);
+  const wantsInstrument = /\bmusical instrument\b/i.test(normalized);
+  const wantsArtisanTool = /\bartisan'?s tools?\b/i.test(normalized);
+  if (!chosenToolReference && !/\bof your choice\b/i.test(normalized)) return null;
+
+  const instrumentChoices = grantedTools.filter((tool) => MUSICAL_INSTRUMENTS.includes(tool));
+  const artisanChoices = grantedTools.filter((tool) => !MUSICAL_INSTRUMENTS.includes(tool));
+
+  if (wantsInstrument && instrumentChoices.length === 1) return instrumentChoices[0];
+  if (wantsArtisanTool && artisanChoices.length === 1) return artisanChoices[0];
+  if (grantedTools.length === 1) return grantedTools[0];
+  return null;
+}
+
 export function buildEquipmentItems(
   optionId: string | null,
   equipmentText: string | undefined,
@@ -195,6 +215,14 @@ export function buildEquipmentItems(
     }
 
     const parsed = parseEntry(normalized);
+    const resolvedPlaceholder = resolveToolPlaceholder(parsed.name, grantedTools);
+    if (resolvedPlaceholder) {
+      pushItem(resolvedPlaceholder, parsed.quantity);
+      continue;
+    }
+    if (/\b(?:same as above|chosen for the tool proficiency above)\b/i.test(parsed.name)) {
+      continue;
+    }
     if (/^tool:/i.test(parsed.name)) {
       const toolName = parsed.name.replace(/^tool:\s*/i, "").trim();
       if (grantedTools.some((tool) => tool.toLowerCase() === toolName.toLowerCase())) continue;
@@ -207,4 +235,3 @@ export function buildEquipmentItems(
 
   return seeds;
 }
-
