@@ -7,6 +7,7 @@ import { theme, withAlpha } from "@/theme/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsNarrow } from "@/views/CombatView/hooks/useIsNarrow";
 import { HeaderActionButton, HeaderActionLink, StatusDot, navLinkStyle } from "@beholden/shared/ui";
+import { ToolsBar } from "@/layout/ToolsBar";
 
 function useSaveStatus(): "idle" | "saving" | "saved" {
   const [status, setStatus] = React.useState<"idle" | "saving" | "saved">("idle");
@@ -91,6 +92,8 @@ export function TopBar() {
           </div>
         ) : null}
       </div>
+
+      <ToolsBar />
 
       <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, color: theme.colors.muted, fontSize: "var(--fs-medium)" }}>
         {selectedCampaignId ? <NavLink to={`/campaign/${selectedCampaignId}`} label="Campaign" /> : <NavLink to="/" label="Campaign" />}
