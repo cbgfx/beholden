@@ -6,6 +6,7 @@ import { theme, withAlpha } from "@/theme/theme";
 import { IconINPC, IconMonster, IconPlayer, IconSkull, IconInitiative } from "@/icons";
 import { InitiativeInput } from "@/views/CombatView/panels/CombatOrderPanel/components/InitiativeInput";
 import { TurnBadge } from "@/views/CombatView/panels/CombatOrderPanel/components/TurnBadge";
+import { resolveAssetUrl } from "@/services/api";
 
 function CombatantAvatar(props: {
   baseType: EncounterActor["baseType"];
@@ -16,6 +17,7 @@ function CombatantAvatar(props: {
   imageUrl?: string | null;
 }) {
   const { baseType, isDead, iconColor, isActive, isTarget } = props;
+  const imageUrl = resolveAssetUrl(props.imageUrl);
 
   const borderColor = isActive
     ? theme.colors.accentHighlight
@@ -40,8 +42,8 @@ function CombatantAvatar(props: {
           : isTarget ? `0 0 0 2px ${theme.colors.blue}` : "none",
         overflow: "hidden",
       }}>
-        {props.imageUrl && !isDead
-          ? <img src={props.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        {imageUrl && !isDead
+          ? <img src={imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           : <span style={{ color: iconColor, display: "inline-flex", alignItems: "center" }}>{iconEl}</span>
         }
       </div>

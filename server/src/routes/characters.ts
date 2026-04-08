@@ -28,7 +28,7 @@ import {
   updateCampaignCharacterLive,
 } from "../services/characters.js";
 import { ACCEPTED_IMAGE_TYPES, resizeToWebP } from "../lib/imageHelpers.js";
-import { absolutizePublicUrl } from "../lib/publicUrl.js";
+import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
 import {
   AssignBody,
   CharacterCreateBody,
@@ -44,6 +44,11 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
 
+  const withAbsoluteImageUrl = <T extends { imageUrl?: string | null }>(req: Parameters<Express["get"]>[1] extends (...args: infer P) => any ? P[0] : never, value: T): T => ({
+    ...value,
+    ...(value.imageUrl !== undefined ? { imageUrl: absolutizePublicUrlForRequest(req, value.imageUrl) } : {}),
+  });
+
   // List all user-owned characters with campaign assignment info
   app.get("/api/me/characters", requireAuth, (req, res) => {
     const userId = (req as any).user.userId;
@@ -54,12 +59,12 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const result = chars.map((c) => {
       const char = rowToCharacterSheet(c);
       const assignments = getAssignments(db, char.id);
-      return toCharacterSheetDto(
+      return withAbsoluteImageUrl(req, toCharacterSheetDto(
         toCharacterSheetDtoInput(
           mergeLiveStats(db, char, assignments),
           toCharacterCampaignAssignmentDto(assignmentsToJson(assignments)),
         ),
-      );
+      ));
     });
 
     res.json(result);
@@ -80,13 +85,13 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const merged = mergeLiveStats(db, char, assignments);
 
     res.json(
-      toCharacterSheetDto(
+      withAbsoluteImageUrl(req, toCharacterSheetDto(
         toCharacterSheetDtoInput(
           merged,
           toCharacterCampaignAssignmentDto(assignmentsToJson(assignments)),
           collectCampaignSharedNotes(db, assignments, charId),
         ),
-      ),
+      )),
     );
   });
 
@@ -126,7 +131,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     );
 
     const row = db.prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ?`).get(id) as Record<string, unknown>;
-    res.json(toCharacterSheetDto({ ...rowToCharacterSheet(row), campaigns: [] }));
+    res.json(withAbsoluteImageUrl(req, toCharacterSheetDto({ ...rowToCharacterSheet(row), campaigns: [] })));
   });
 
   // Update a user-owned character
@@ -205,7 +210,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     );
 
     const updated = db.prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ?`).get(charId) as Record<string, unknown>;
-    res.json(toCharacterSheetDto({ ...rowToCharacterSheet(updated), campaigns: [] }));
+    res.json(withAbsoluteImageUrl(req, toCharacterSheetDto({ ...rowToCharacterSheet(updated), campaigns: [] })));
   });
 
   // Player self-updates their linked campaign-character conditions.
@@ -476,7 +481,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       db.prepare("UPDATE players SET image_url = ?, updated_at = ? WHERE id = ?").run(imageUrl, t, player_id);
       ctx.broadcast("players:changed", { campaignId: campaign_id });
     }
-    res.json({ ok: true, imageUrl: absolutizePublicUrl(imageUrl) });
+    res.json({ ok: true, imageUrl: absolutizePublicUrlForRequest(req, imageUrl) });
   });
 
   // Remove character portrait image.

@@ -11,7 +11,7 @@ import { rowToEncounterActor } from "../lib/db.js";
 import { ENCOUNTER_ACTOR_COLS } from "../lib/db.js";
 import { buildEncounterActorLive, updateEncounterActor } from "../services/combat.js";
 import { ACCEPTED_IMAGE_TYPES, resizeToWebP, deleteImageFiles } from "../lib/imageHelpers.js";
-import { absolutizePublicUrl } from "../lib/publicUrl.js";
+import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
 import { requireAdmin } from "../middleware/auth.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
 
@@ -22,6 +22,11 @@ const CampaignUpsertBody = z.object({
 export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { now, uid } = ctx.helpers;
+
+  const withAbsoluteImageUrl = <T extends { imageUrl?: string | null }>(req: Parameters<Express["get"]>[1] extends (...args: infer P) => any ? P[0] : never, value: T): T => ({
+    ...value,
+    ...(value.imageUrl !== undefined ? { imageUrl: absolutizePublicUrlForRequest(req, value.imageUrl) } : {}),
+  });
 
   app.get("/api/campaigns", (req, res) => {
     const user = req.user!;
@@ -44,7 +49,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
           ORDER BY c.updated_at DESC
         `).all(user.userId) as Record<string, unknown>[];
 
-    res.json(rows.map((r) => ({
+    res.json(rows.map((r) => withAbsoluteImageUrl(req, {
       ...rowToCampaign(r),
       playerCount: r.player_count as number,
     })));
@@ -62,7 +67,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
         GROUP BY c.id
         ORDER BY c.updated_at DESC
       `).all(user.userId) as Record<string, unknown>[];
-    res.json(rows.map((r) => ({
+    res.json(rows.map((r) => withAbsoluteImageUrl(req, {
       ...rowToCampaign(r),
       playerCount: r.player_count as number,
     })));
@@ -78,7 +83,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     ).run(id, name, t, t);
     ctx.helpers.seedDefaultConditions(id);
     ctx.broadcast("campaigns:changed", { campaignId: id });
-    res.json({ id, name, color: null, imageUrl: null, sharedNotes: "", createdAt: t, updatedAt: t });
+    res.json(withAbsoluteImageUrl(req, { id, name, color: null, imageUrl: null, sharedNotes: "", createdAt: t, updatedAt: t }));
   });
 
   app.put("/api/campaigns/:campaignId", dmOrAdmin(db), (req, res) => {
@@ -91,7 +96,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     const t = now();
     db.prepare("UPDATE campaigns SET name = ?, updated_at = ? WHERE id = ?").run(name, t, campaignId);
     ctx.broadcast("campaigns:changed", { campaignId });
-    res.json({ ...rowToCampaign(row), name, updatedAt: t });
+    res.json(withAbsoluteImageUrl(req, { ...rowToCampaign(row), name, updatedAt: t }));
   });
 
   app.delete("/api/campaigns/:campaignId", requireAdmin, (req, res) => {
@@ -221,7 +226,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     const imageUrl = `/campaign-images/${filename}`;
     db.prepare("UPDATE campaigns SET image_url = ?, updated_at = ? WHERE id = ?").run(imageUrl, now(), campaignId);
     ctx.broadcast("campaigns:changed", { campaignId });
-    res.json({ ok: true, imageUrl: absolutizePublicUrl(imageUrl) });
+    res.json({ ok: true, imageUrl: absolutizePublicUrlForRequest(req, imageUrl) });
   });
 
   // Update DM-created shared notes for a campaign.

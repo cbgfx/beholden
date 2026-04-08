@@ -23,6 +23,14 @@ function resolveApiPath(path: string) {
   return `${API_ORIGIN}${path}`;
 }
 
+export function resolveAssetUrl(pathOrUrl: string | null | undefined): string | null {
+  if (!pathOrUrl) return null;
+  if (/^(?:https?:)?\/\//i.test(pathOrUrl)) return pathOrUrl;
+  if (/^(?:data|blob):/i.test(pathOrUrl)) return pathOrUrl;
+  if (API_ORIGIN && pathOrUrl.startsWith("/")) return `${API_ORIGIN}${pathOrUrl}`;
+  return pathOrUrl;
+}
+
 function directServerUrl(path: string) {
   const loc = window.location;
   return `${loc.protocol}//${loc.hostname}:${SERVER_PORT_FALLBACK}${path}`;

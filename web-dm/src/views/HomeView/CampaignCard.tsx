@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
 import { IconPencil, IconTrash, IconDownload, IconCamera, IconUsers } from "@/icons";
-import { api } from "@/services/api";
+import { api, resolveAssetUrl } from "@/services/api";
 
 export type CampaignSummary = {
   id: string;
@@ -77,6 +77,7 @@ export function CampaignCard({ campaign: c, onOpen, onEdit, onDelete, onRefresh 
     .toUpperCase();
 
   const hasImage = Boolean(c.imageUrl);
+  const imageUrl = resolveAssetUrl(c.imageUrl);
 
   async function handleImageSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -140,9 +141,9 @@ export function CampaignCard({ campaign: c, onOpen, onEdit, onDelete, onRefresh 
         onMouseLeave={() => setHovered(false)}
         title="Click to set banner image"
       >
-        {hasImage && (
+        {imageUrl && (
           <img
-            src={`${c.imageUrl}?v=${c.updatedAt ?? 0}`}
+            src={`${imageUrl}?v=${c.updatedAt ?? 0}`}
             alt=""
             style={{
               position: "absolute",

@@ -6,6 +6,7 @@ import { PlayerConditions } from "./PlayerConditions";
 import type { RowMenuItem } from "@/ui/RowMenu";
 import { RowMenu } from "@/ui/RowMenu";
 import { HealthBar } from "@beholden/shared/ui";
+import { resolveAssetUrl } from "@/services/api";
 
 export type PlayerVM = {
   id: string;
@@ -49,7 +50,8 @@ export function PlayerRow(props: {
   const isDead = cur <= 0;
   const showDeathSaves = isDead && Boolean(p.playerName);
   const [imgError, setImgError] = React.useState(false);
-  React.useEffect(() => { setImgError(false); }, [p.imageUrl]);
+  const imageUrl = resolveAssetUrl(p.imageUrl);
+  React.useEffect(() => { setImgError(false); }, [imageUrl]);
 
   const tempHp = Math.max(0, Number((p as any).tempHp ?? 0) || 0);
   const acTotal = Number(p.ac ?? 0) + (Number((p as any).acBonus ?? 0) || 0);
@@ -91,8 +93,8 @@ export function PlayerRow(props: {
           display: "flex", alignItems: "center", justifyContent: "center",
           color: iconColor, overflow: "hidden",
         }}>
-          {p.imageUrl && !imgError
-            ? <img src={p.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={() => setImgError(true)} />
+          {imageUrl && !imgError
+            ? <img src={imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={() => setImgError(true)} />
             : (props.icon ?? <IconPlayer size={20} />)
           }
         </div>

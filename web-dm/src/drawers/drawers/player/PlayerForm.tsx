@@ -2,6 +2,7 @@ import React from "react";
 import { Input } from "@/ui/Input";
 import { theme } from "@/theme/theme";
 import { IconCamera } from "@/icons";
+import { resolveAssetUrl } from "@/services/api";
 
 export type PlayerFormState = {
   playerName: string;
@@ -53,6 +54,7 @@ export function PlayerForm(props: {
 }) {
   const s = props.state;
   const h = props.handlers;
+  const imageUrl = resolveAssetUrl(props.imageUrl);
 
   return (
     <div style={{ display: "grid", gap: 10 }}>
@@ -62,14 +64,14 @@ export function PlayerForm(props: {
           title={props.imageUrl ? "Change photo" : "Add photo"}
           style={{
             width: 72, height: 72, borderRadius: 8, flexShrink: 0,
-            background: props.imageUrl ? "transparent" : theme.colors.inputBg,
+            background: imageUrl ? "transparent" : theme.colors.inputBg,
             border: `1px solid ${theme.colors.panelBorder}`,
             overflow: "hidden", cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
-          {props.imageUrl
-            ? <img src={props.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          {imageUrl
+            ? <img src={imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             : <IconCamera size={22} style={{ opacity: 0.35 }} />}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -77,9 +79,9 @@ export function PlayerForm(props: {
             type="button" onClick={props.onImageClick}
             style={{ background: "none", border: "none", cursor: "pointer", color: theme.colors.text, fontSize: "var(--fs-medium)", textAlign: "left", padding: 0 }}
           >
-            {props.imageUrl ? "Change photo" : "Add photo"}
+            {imageUrl ? "Change photo" : "Add photo"}
           </button>
-          {props.imageUrl && (
+          {imageUrl && (
             <button
               type="button" onClick={props.onImageRemove}
               style={{ background: "none", border: "none", cursor: "pointer", color: theme.colors.muted, fontSize: "var(--fs-medium)", textAlign: "left", padding: 0 }}

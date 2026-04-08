@@ -2,6 +2,7 @@ import React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import { IconButton } from "@/ui/IconButton";
 import { IconINPC, IconMonster, IconPlayer, IconTrash } from "@/icons";
+import { resolveAssetUrl } from "@/services/api";
 
 import type { CombatantVM } from "@/views/CampaignView/panels/EncounterRosterPanel/utils";
 import { formatCombatantMeta } from "@/views/CampaignView/panels/EncounterRosterPanel/utils";
@@ -25,6 +26,7 @@ export function EncounterRosterList(props: {
 
         const icon = isPlayer ? <IconPlayer /> : isINpc ? <IconINPC /> : <IconMonster />;
         const meta = formatCombatantMeta(c);
+        const imageUrl = resolveAssetUrl(c.imageUrl);
 
         return (
           <div
@@ -47,8 +49,8 @@ export function EncounterRosterList(props: {
                   color: iconColor, display: "inline-flex", alignItems: "center",
                   width: 20, height: 20, borderRadius: 4, overflow: "hidden", flexShrink: 0,
                 }}>
-                  {c.imageUrl
-                    ? <img src={c.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  {imageUrl
+                    ? <img src={imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     : icon
                   }
                 </span>

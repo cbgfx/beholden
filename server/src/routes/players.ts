@@ -8,7 +8,7 @@ import { rowToCampaignCharacter, CAMPAIGN_CHARACTER_COLS, parseJson } from "../l
 import { ConditionInstanceSchema, OverridesSchema } from "../lib/schemas.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
 import { ACCEPTED_IMAGE_TYPES, resizeToWebP } from "../lib/imageHelpers.js";
-import { absolutizePublicUrl } from "../lib/publicUrl.js";
+import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
 import { toCampaignCharacterDto } from "../lib/apiActors.js";
 import {
   serializeCampaignCharacterLive,
@@ -109,13 +109,18 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
 
+  const withAbsoluteImageUrl = <T extends { imageUrl?: string | null }>(req: Parameters<Express["get"]>[1] extends (...args: infer P) => any ? P[0] : never, value: T): T => ({
+    ...value,
+    ...(value.imageUrl !== undefined ? { imageUrl: absolutizePublicUrlForRequest(req, value.imageUrl) } : {}),
+  });
+
   app.get("/api/campaigns/:campaignId/players", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
       const rows = db
       .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE campaign_id = ?`)
       .all(campaignId) as Record<string, unknown>[];
-    res.json(rows.map((row) => toCampaignCharacterDto(rowToCampaignCharacter(row))));
+    res.json(rows.map((row) => withAbsoluteImageUrl(req, toCampaignCharacterDto(rowToCampaignCharacter(row)))));
   });
 
   // Player-facing party view — HP is obfuscated (percent only, no raw values).
@@ -153,7 +158,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
         wisScore: actor.wis ?? null,
         chaScore: actor.cha ?? null,
         color: actor.color ?? null,
-        imageUrl: actor.imageUrl ?? null,
+        imageUrl: absolutizePublicUrlForRequest(req, actor.imageUrl ?? null),
         conditions: actor.conditions ?? [],
         characterData: parseJson(p.character_data_json, null),
       };
@@ -202,7 +207,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     );
     ctx.broadcast("players:changed", { campaignId });
     const row = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(id) as Record<string, unknown>;
-    res.json(toCampaignCharacterDto(rowToCampaignCharacter(row)));
+    res.json(withAbsoluteImageUrl(req, toCampaignCharacterDto(rowToCampaignCharacter(row))));
   });
 
   app.put("/api/players/:playerId", dmOrAdmin(db), (req, res) => {
@@ -232,7 +237,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
 
     ctx.broadcast("players:changed", { campaignId: existing.campaignId });
     const updated = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(playerId) as Record<string, unknown>;
-    res.json(toCampaignCharacterDto(rowToCampaignCharacter(updated)));
+    res.json(withAbsoluteImageUrl(req, toCampaignCharacterDto(rowToCampaignCharacter(updated))));
   });
 
   // DM can update a player's shared notes (edit/delete individual notes).
@@ -315,7 +320,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     const imageUrl = `/player-images/${filename}`;
     db.prepare("UPDATE players SET image_url = ?, updated_at = ? WHERE id = ?").run(imageUrl, now(), playerId);
     ctx.broadcast("players:changed", { campaignId: row.campaign_id });
-    res.json({ ok: true, imageUrl: absolutizePublicUrl(imageUrl) });
+    res.json({ ok: true, imageUrl: absolutizePublicUrlForRequest(req, imageUrl) });
   });
 
   // Remove player character image.
