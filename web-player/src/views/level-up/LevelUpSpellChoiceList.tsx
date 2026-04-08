@@ -1,0 +1,180 @@
+import React from "react";
+import { C } from "@/lib/theme";
+import { extractPrerequisite, stripPrerequisiteLine } from "@/views/character/CharacterSheetUtils";
+import type { LevelUpSpellSummary } from "./LevelUpParts";
+
+function levelGroupLabel(level: number | null | undefined): string {
+  const value = Number(level ?? 0);
+  return value > 0 ? `Level ${value}` : "Cantrips";
+}
+
+export function LevelUpSpellChoiceList({
+  title,
+  caption,
+  spells,
+  chosen,
+  max,
+  onToggle,
+  isAllowed,
+  disabledIds,
+}: {
+  title: string;
+  caption: string;
+  spells: LevelUpSpellSummary[];
+  chosen: string[];
+  max: number;
+  onToggle: (id: string) => void;
+  isAllowed?: (spell: LevelUpSpellSummary) => boolean;
+  disabledIds?: string[];
+}) {
+  const [activeId, setActiveId] = React.useState<string | null>(null);
+  const visibleSpells = React.useMemo(() => spells, [spells]);
+  const disabledIdSet = React.useMemo(() => new Set(disabledIds ?? []), [disabledIds]);
+  const groupedSpells = React.useMemo(() => {
+    const groups = new Map<string, LevelUpSpellSummary[]>();
+    for (const spell of visibleSpells) {
+      const key = levelGroupLabel(spell.level);
+      const existing = groups.get(key);
+      if (existing) existing.push(spell);
+      else groups.set(key, [spell]);
+    }
+    return Array.from(groups.entries()).sort((a, b) => {
+      const aLevel = a[0] === "Cantrips" ? 0 : Number(a[0].replace("Level ", ""));
+      const bLevel = b[0] === "Cantrips" ? 0 : Number(b[0].replace("Level ", ""));
+      return aLevel - bLevel;
+    });
+  }, [visibleSpells]);
+
+  const activeSpell =
+    visibleSpells.find((spell) => spell.id === activeId)
+    ?? visibleSpells[0]
+    ?? null;
+
+  React.useEffect(() => {
+    if (!activeSpell) {
+      if (activeId !== null) setActiveId(null);
+      return;
+    }
+    if (activeId == null || !visibleSpells.some((spell) => spell.id === activeId)) {
+      setActiveId(activeSpell.id);
+    }
+  }, [activeId, activeSpell, visibleSpells]);
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+        <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text }}>{title}</div>
+        <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
+          {chosen.length} / {max} · {caption}
+        </div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {groupedSpells.map(([groupLabel, group]) => (
+          <div key={groupLabel}>
+            <div style={{ fontSize: "var(--fs-small)", color: C.accentHl, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>
+              {groupLabel}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(118px, 1fr))", gap: 6 }}>
+              {group.map((spell) => {
+                const active = chosen.includes(spell.id);
+                const focused = activeSpell?.id === spell.id;
+                const allowed = isAllowed ? isAllowed(spell) : true;
+                const disabledElsewhere = !active && disabledIdSet.has(spell.id);
+                const blocked = (!active && chosen.length >= max) || !allowed || disabledElsewhere;
+                const prerequisite = extractPrerequisite(spell.text);
+                return (
+                  <button
+                    key={spell.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveId(spell.id);
+                      if (!blocked) onToggle(spell.id);
+                    }}
+                    style={{
+                      padding: "6px 8px",
+                      borderRadius: 8,
+                      cursor: blocked ? "not-allowed" : "pointer",
+                      border: `2px solid ${active || focused ? C.accentHl : "rgba(255,255,255,0.1)"}`,
+                      background: active ? "rgba(56,182,255,0.14)" : focused ? "rgba(56,182,255,0.08)" : "rgba(255,255,255,0.03)",
+                      color: blocked ? C.muted : C.text,
+                      textAlign: "left",
+                      opacity: blocked ? 0.6 : 1,
+                      minHeight: 44,
+                    }}
+                  >
+                    <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, lineHeight: 1.15 }}>{spell.name}</div>
+                    <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginTop: 2 }}>
+                      {Number(spell.level ?? 0) > 0 ? `Level ${spell.level}` : "Cantrip"}
+                    </div>
+                    {disabledElsewhere && (
+                      <div style={{ marginTop: 4, fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700 }}>
+                        Already selected
+                      </div>
+                    )}
+                    {prerequisite && (
+                      <div style={{ marginTop: 4, fontSize: "var(--fs-tiny)", lineHeight: 1.25 }}>
+                        <span style={{ color: allowed ? C.colorGold : C.colorPinkRed, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                          Prerequisite
+                        </span>
+                        <span style={{ color: allowed ? "rgba(251,191,36,0.92)" : "#fca5a5" }}> {prerequisite}</span>
+                      </div>
+                    )}
+                    {!allowed && prerequisite && (
+                      <div style={{ marginTop: 4, fontSize: "var(--fs-tiny)", color: C.colorPinkRed, fontWeight: 700 }}>
+                        Prerequisite not met
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      {activeSpell && (
+        <div
+          style={{
+            marginTop: 10,
+            padding: "12px 14px",
+            borderRadius: 10,
+            border: "1px solid rgba(255,255,255,0.12)",
+            background: "rgba(255,255,255,0.05)",
+          }}
+        >
+          <div style={{ fontWeight: 800, fontSize: "var(--fs-subtitle)", color: C.accentHl }}>
+            {activeSpell.name}
+            {activeSpell.level != null ? (
+              <span style={{ color: "rgba(160,180,220,0.65)", marginLeft: 6, fontSize: "var(--fs-small)" }}>
+                {Number(activeSpell.level) > 0 ? `Level ${activeSpell.level}` : "Cantrip"}
+              </span>
+            ) : null}
+          </div>
+          {extractPrerequisite(activeSpell.text) && (
+            <div style={{ marginTop: 8, fontSize: "var(--fs-small)", lineHeight: 1.45 }}>
+              <span style={{ color: C.colorGold, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                Prerequisite
+              </span>
+              <span style={{ color: "rgba(251,191,36,0.92)" }}> {extractPrerequisite(activeSpell.text)}</span>
+            </div>
+          )}
+          {stripPrerequisiteLine(activeSpell.text).replace(/Source:.*$/ms, "").trim() && (
+            <div
+              style={{
+                marginTop: 8,
+                fontSize: "var(--fs-small)",
+                lineHeight: 1.55,
+                color: "rgba(191,227,255,0.82)",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {stripPrerequisiteLine(activeSpell.text).replace(/Source:.*$/ms, "").trim()}
+            </div>
+          )}
+        </div>
+      )}
+      {visibleSpells.length === 0 && (
+        <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>No eligible options found in compendium.</div>
+      )}
+    </div>
+  );
+}

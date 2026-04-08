@@ -1,0 +1,21 @@
+{
+  "name": "@beholden/shared",
+  "version": "0.0.1",
+  "private": true,
+  "exports": {
+    "./api": "./src/api/index.ts",
+    "./api/*": "./src/api/*",
+    "./domain": "./src/domain/index.ts",
+    "./domain/*": "./src/domain/*",
+    "./icons": "./src/icons/index.tsx",
+    "./icons/*": "./src/icons/*",
+    "./ui": "./src/ui/index.tsx",
+    "./ui/*": "./src/ui/*",
+    "./styles/*": "./styles/*"
+  },
+  "peerDependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.8.2"
+  }
+}
