@@ -207,6 +207,16 @@ CREATE TABLE IF NOT EXISTS compendium_feats (
   data_json TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS compendium_deck_cards (
+  id TEXT PRIMARY KEY,
+  deck_name TEXT NOT NULL,
+  deck_key TEXT NOT NULL,
+  card_name TEXT NOT NULL,
+  card_key TEXT,
+  card_text TEXT,
+  sort_index INTEGER NOT NULL DEFAULT 0
+);
+
 -- Campaign-agnostic player-owned characters (not bound to a campaign).
 CREATE TABLE IF NOT EXISTS user_characters (
   id TEXT PRIMARY KEY,
@@ -271,6 +281,7 @@ CREATE INDEX IF NOT EXISTS idx_compclass_name        ON compendium_classes(name 
 CREATE INDEX IF NOT EXISTS idx_comprace_name         ON compendium_races(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_compbg_name           ON compendium_backgrounds(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_compfeat_name         ON compendium_feats(name COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_compdeck_deck         ON compendium_deck_cards(deck_key, sort_index);
 CREATE INDEX IF NOT EXISTS idx_uchars_user           ON user_characters(user_id);
 CREATE INDEX IF NOT EXISTS idx_party_inventory_campaign ON party_inventory(campaign_id);
 `;

@@ -20,6 +20,7 @@ export function importCompendiumSqlite(args: {
   races: number;
   backgrounds: number;
   feats: number;
+  decks: number;
 } {
   const { buffer, db } = args;
 
@@ -34,7 +35,7 @@ export function importCompendiumSqlite(args: {
         .map((r) => r.name)
     );
 
-    let monsters = 0, spells = 0, items = 0, classes = 0, races = 0, backgrounds = 0, feats = 0;
+    let monsters = 0, spells = 0, items = 0, classes = 0, races = 0, backgrounds = 0, feats = 0, decks = 0;
 
     db.transaction(() => {
       if (tableNames.has("compendium_monsters")) {
@@ -107,6 +108,16 @@ export function importCompendiumSqlite(args: {
         }
       }
 
+      if (tableNames.has("compendium_deck_cards")) {
+        const stmt = db.prepare(
+          "INSERT OR REPLACE INTO compendium_deck_cards (id, deck_name, deck_key, card_name, card_key, card_text, sort_index) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        );
+        for (const r of src.prepare("SELECT id, deck_name, deck_key, card_name, card_key, card_text, sort_index FROM compendium_deck_cards").all() as any[]) {
+          stmt.run(r.id, r.deck_name, r.deck_key, r.card_name, r.card_key, r.card_text, r.sort_index);
+          decks++;
+        }
+      }
+
       backfillMonsterSpellRefs(db);
     })();
 
@@ -114,7 +125,7 @@ export function importCompendiumSqlite(args: {
 
     const total = (db.prepare("SELECT count(*) AS n FROM compendium_monsters").get() as { n: number }).n;
 
-    return { imported: monsters, total, spells, items, classes, races, backgrounds, feats };
+    return { imported: monsters, total, spells, items, classes, races, backgrounds, feats, decks };
   } finally {
     try { fs.unlinkSync(tmpPath); } catch { /* best-effort cleanup */ }
   }

@@ -17,6 +17,7 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
       db.prepare("DELETE FROM compendium_races").run();
       db.prepare("DELETE FROM compendium_backgrounds").run();
       db.prepare("DELETE FROM compendium_feats").run();
+      db.prepare("DELETE FROM compendium_deck_cards").run();
     })();
     ctx.broadcast("compendium:changed", { cleared: true });
     res.json({ ok: true });
@@ -36,6 +37,7 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
       races: out.races ?? 0,
       backgrounds: out.backgrounds ?? 0,
       feats: out.feats ?? 0,
+      decks: out.decks ?? 0,
     });
   });
 
@@ -53,6 +55,7 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
       races: out.races,
       backgrounds: out.backgrounds,
       feats: out.feats,
+      decks: out.decks,
     });
   });
 }

@@ -1,5 +1,6 @@
 import type { TaggedItem } from "@/views/character/CharacterSheetTypes";
 import type { AbilKey, ProficiencyMap } from "@/views/character/CharacterSheetTypes";
+import { C } from "@/lib/theme";
 
 export function abilityMod(score: number | null | undefined): number {
   return Math.floor(((score ?? 10) - 10) / 2);

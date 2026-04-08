@@ -47,6 +47,7 @@ export interface Helpers {
     races?: number;
     backgrounds?: number;
     feats?: number;
+    decks?: number;
   };
   importCompendiumSqlite: (args: { buffer: Buffer }) => {
     imported: number;
@@ -57,6 +58,7 @@ export interface Helpers {
     races: number;
     backgrounds: number;
     feats: number;
+    decks: number;
   };
 }
 

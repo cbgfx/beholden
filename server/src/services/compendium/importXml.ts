@@ -24,6 +24,7 @@ export function importCompendiumXml(args: {
   races?: number;
   backgrounds?: number;
   feats?: number;
+  decks?: number;
 } {
   const { xml, db } = args;
   const parser = new XMLParser({
@@ -41,6 +42,7 @@ export function importCompendiumXml(args: {
   const races = asArray(comp?.race);
   const backgrounds = asArray(comp?.background);
   const feats = asArray(comp?.feat);
+  const deckCards = asArray(parsed?.deck?.card ?? comp?.deck?.card ?? comp?.card);
 
   const monStmt = db.prepare(`
     INSERT OR REPLACE INTO compendium_monsters
@@ -72,6 +74,11 @@ export function importCompendiumXml(args: {
   const featStmt = db.prepare(`
     INSERT OR REPLACE INTO compendium_feats (id, name, name_key, data_json)
     VALUES (?, ?, ?, ?)
+  `);
+  const deckCardStmt = db.prepare(`
+    INSERT OR REPLACE INTO compendium_deck_cards
+      (id, deck_name, deck_key, card_name, card_key, card_text, sort_index)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
   const upsertFeat = createFeatUpserter(featStmt);
 
@@ -172,6 +179,19 @@ export function importCompendiumXml(args: {
         modifierDetails,
       });
     }
+
+    if (deckCards.length > 0) {
+      db.prepare("DELETE FROM compendium_deck_cards WHERE deck_key = ?").run("deck");
+      for (let index = 0; index < deckCards.length; index += 1) {
+        const card = deckCards[index] as Record<string, unknown>;
+        const cardName = asText(card?.name).trim();
+        if (!cardName) continue;
+        const cardText = asText(card?.text).trim() || null;
+        const cardKey = cardName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+        const id = `deck:${cardKey || "card"}:${index + 1}`;
+        deckCardStmt.run(id, "Deck", "deck", cardName, cardKey || null, cardText, index);
+      }
+    }
   })();
 
   const totalMonsters = (db.prepare("SELECT count(*) AS n FROM compendium_monsters").get() as { n: number }).n;
@@ -184,5 +204,6 @@ export function importCompendiumXml(args: {
     races: races.length,
     backgrounds: backgrounds.length,
     feats: feats.length,
+    decks: deckCards.length > 0 ? 1 : 0,
   };
 }
