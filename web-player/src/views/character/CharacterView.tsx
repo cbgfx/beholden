@@ -97,6 +97,7 @@ export function CharacterView() {
   const [polymorphApplyingId, setPolymorphApplyingId] = useState<string | null>(null);
   const [portraitUploading, setPortraitUploading] = useState(false);
   const portraitFileRef = useRef<HTMLInputElement>(null);
+  const lastSyncedAcRef = useRef<{ charId: string; ac: number } | null>(null);
   const characterData = char?.characterData;
   const primaryClassEntry = getPrimaryCharacterClassEntry(characterData);
 
@@ -369,9 +370,35 @@ export function CharacterView() {
   const polymorphCondition = getPolymorphConditionData(char?.conditions);
   const polymorphMonsterId = polymorphCondition?.polymorphMonsterId ?? null;
   const polymorphMonsterState = useCompendiumMonster(polymorphMonsterId, "Failed to load transformed form.");
+  const derivedState = !loading && !error && char
+    ? buildCharacterViewDerivedState({
+        char,
+        classDetail,
+        raceDetail,
+        backgroundDetail,
+        bgOriginFeatDetail,
+        raceFeatDetail,
+        classFeatDetails,
+        levelUpFeatDetails,
+        invocationDetails,
+        subclass: primaryClassEntry?.subclass ?? null,
+        polymorphCondition,
+        polymorphMonsterState,
+      })
+    : null;
+  const syncedAcValue = derivedState ? derivedState.effectiveAc - (derivedState.overrides?.acBonus ?? 0) : null;
+  useEffect(() => {
+    if (!char || syncedAcValue == null) return;
+    const prev = lastSyncedAcRef.current;
+    if (prev?.charId === char.id && prev?.ac === syncedAcValue) return;
+    lastSyncedAcRef.current = { charId: char.id, ac: syncedAcValue };
+    if (syncedAcValue !== char.syncedAc) {
+      void api(`/api/me/characters/${char.id}`, jsonInit("PUT", { syncedAc: syncedAcValue }));
+    }
+  }, [syncedAcValue, char?.id, char?.syncedAc]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <Wrap><p style={{ color: C.muted }}>Loading…</p></Wrap>;
-  if (error || !char) return <Wrap><p style={{ color: C.red }}>{error ?? "Character not found."}</p></Wrap>;
+  if (error || !char || !derivedState) return <Wrap><p style={{ color: C.red }}>{error ?? "Character not found."}</p></Wrap>;
 
   const {
     currentCharacterData,
@@ -428,37 +455,7 @@ export function CharacterView() {
     senses,
     editableOverrideFields,
     identityFields,
-  } = buildCharacterViewDerivedState({
-    char,
-    classDetail,
-    raceDetail,
-    backgroundDetail,
-    bgOriginFeatDetail,
-    raceFeatDetail,
-    classFeatDetails,
-    levelUpFeatDetails,
-    invocationDetails,
-    subclass: primaryClassEntry?.subclass ?? null,
-    polymorphCondition,
-    polymorphMonsterState,
-  });
-
-  // Sync the computed effective AC to the DM via a dedicated `syncedAc` field so the DM's
-  // Players panel shows the correct value (armor + features + shield, without DM acBonus override).
-  // We use `syncedAc` — NOT `ac` — so the player's formula (Math.max(char.ac, wornArmorAc) + bonuses)
-  // is never affected by the sync, which would otherwise cause an infinite inflate loop.
-  const syncedAcValue = effectiveAc - (overrides?.acBonus ?? 0);
-  const lastSyncedAcRef = useRef<{ charId: string; ac: number } | null>(null);
-  useEffect(() => {
-    if (!char) return;
-    const prev = lastSyncedAcRef.current;
-    if (prev?.charId === char.id && prev?.ac === syncedAcValue) return;
-    lastSyncedAcRef.current = { charId: char.id, ac: syncedAcValue };
-    if (syncedAcValue !== char.syncedAc) {
-      void api(`/api/me/characters/${char.id}`, jsonInit("PUT", { syncedAc: syncedAcValue }));
-    }
-  }, [syncedAcValue, char?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
+  } = derivedState;
   function rollAndFlash(): number {
     const result = rollDiceExpr(hpAmount.trim());
     if (hasDiceTerm(hpAmount)) {

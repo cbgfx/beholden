@@ -31,7 +31,10 @@ export function useCharacterSheetStats(args: {
     const hpMax = toFinite(Math.max(1, Number(combatant.hpMax ?? 1) + hpMod), 0);
     const hpCur = toFinite(combatant.hpCurrent ?? 0, 0);
     const tempHp = Math.max(0, Number(overrides.tempHp ?? 0) || 0);
-    const ac = Math.max(0, toFinite(combatant.ac ?? 10, 10) + acBonus);
+    const baseAc = combatant.baseType === "player"
+      ? toFinite(player?.syncedAc ?? combatant.ac ?? 10, 10)
+      : toFinite(combatant.ac ?? 10, 10);
+    const ac = Math.max(0, baseAc + acBonus);
 
     const isMonster = combatant.baseType === "monster" || combatant.baseType === "inpc";
 

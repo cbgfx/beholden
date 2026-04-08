@@ -73,6 +73,7 @@ export interface CampaignCharacterSheetDto {
   level: number;
   hpMax: number;
   ac: number;
+  syncedAc?: number;
   speed?: number;
   str?: number;
   dex?: number;
@@ -185,6 +186,7 @@ export interface FlatCampaignCharacterDto {
   hpMax: number;
   hpCurrent: number;
   ac: number;
+  syncedAc?: number;
   speed?: number;
   str?: number;
   dex?: number;
@@ -278,6 +280,7 @@ export function flattenCampaignCharacterDto(dto: CampaignCharacterDto): FlatCamp
     ac: dto.sheet.ac,
     conditions: dto.live.conditions,
   };
+  if (dto.sheet.syncedAc !== undefined) flat.syncedAc = dto.sheet.syncedAc;
   if (dto.sheet.speed !== undefined) flat.speed = dto.sheet.speed;
   if (dto.sheet.str !== undefined) flat.str = dto.sheet.str;
   if (dto.sheet.dex !== undefined) flat.dex = dto.sheet.dex;

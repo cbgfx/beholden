@@ -150,6 +150,7 @@ export function toCampaignCharacterDto(character: StoredCampaignCharacter): Camp
       level: character.level,
       hpMax: character.hpMax,
       ac: character.ac,
+      ...(character.syncedAc !== undefined ? { syncedAc: character.syncedAc } : {}),
       ...(character.speed !== undefined ? { speed: character.speed } : {}),
       ...(character.str !== undefined ? { str: character.str } : {}),
       ...(character.dex !== undefined ? { dex: character.dex } : {}),
