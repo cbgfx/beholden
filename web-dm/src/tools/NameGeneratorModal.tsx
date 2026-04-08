@@ -1,26 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "@/components/overlay/Modal";
 import { theme, withAlpha } from "@/theme/theme";
+import namesData from "@/lib/names.json";
 
 type Gender = "male" | "female" | "fantasy";
 type NamesData = { femname: string[]; malename: string[]; fantname: string[]; lastname: string[] };
 
-let namesCache: NamesData | null = null;
+const names = namesData as NamesData;
 
 function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function useNames() {
-  const [names, setNames] = useState<NamesData | null>(namesCache);
-  useEffect(() => {
-    if (namesCache) return;
-    fetch("/names.json")
-      .then((r) => r.json())
-      .then((data) => { namesCache = data; setNames(data); })
-      .catch(() => {});
-  }, []);
-  return names;
 }
 
 const GENDERS: { id: Gender; label: string }[] = [
@@ -30,26 +19,25 @@ const GENDERS: { id: Gender; label: string }[] = [
 ];
 
 export function NameGeneratorModal(props: { isOpen: boolean; onClose: () => void }) {
-  const names = useNames();
   const [gender, setGender] = useState<Gender>("male");
   const [fullName, setFullName] = useState("");
   const [copied, setCopied] = useState(false);
 
-  function generate(g: Gender, data: NamesData) {
-    const pool = g === "male" ? data.malename : g === "female" ? data.femname : data.fantname;
+  function generate(g: Gender) {
+    const pool = g === "male" ? names.malename : g === "female" ? names.femname : names.fantname;
     const first = pickRandom(pool);
-    const last  = g === "fantasy" ? pickRandom(data.fantname) : pickRandom(data.lastname);
+    const last  = g === "fantasy" ? pickRandom(names.fantname) : pickRandom(names.lastname);
     setFullName(`${first} ${last}`);
     setCopied(false);
   }
 
   useEffect(() => {
-    if (names && props.isOpen) generate(gender, names);
-  }, [names, props.isOpen]);
+    if (props.isOpen) generate(gender);
+  }, [props.isOpen]);
 
   function handleGender(g: Gender) {
     setGender(g);
-    if (names) generate(g, names);
+    generate(g);
   }
 
   function handleCopy() {
@@ -92,14 +80,10 @@ export function NameGeneratorModal(props: { isOpen: boolean; onClose: () => void
 
         {/* Name + Copy */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {names ? (
-            <span style={{ fontSize: 24, fontWeight: 800, color: theme.colors.text, letterSpacing: 0.5 }}>
-              {fullName || "—"}
-            </span>
-          ) : (
-            <span style={{ color: theme.colors.muted, fontSize: 16 }}>Loading…</span>
-          )}
-          {names && (
+          <span style={{ fontSize: 24, fontWeight: 800, color: theme.colors.text, letterSpacing: 0.5 }}>
+            {fullName || "—"}
+          </span>
+          {fullName && (
             <button
               onClick={handleCopy}
               title="Copy name"
@@ -121,15 +105,13 @@ export function NameGeneratorModal(props: { isOpen: boolean; onClose: () => void
 
         {/* Regenerate */}
         <button
-          onClick={() => names && generate(gender, names)}
-          disabled={!names}
+          onClick={() => generate(gender)}
           style={{
             ...btnBase,
             background: withAlpha(theme.colors.accentHighlight, 0.15),
             color: theme.colors.accentHighlight,
             border: `1px solid ${withAlpha(theme.colors.accentHighlight, 0.4)}`,
             padding: "10px 32px",
-            opacity: names ? 1 : 0.5,
           }}
         >
           Regenerate

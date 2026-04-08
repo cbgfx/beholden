@@ -918,11 +918,12 @@ export function CharacterCreatorView() {
     }
   }, [classDetail]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-calculate HP, speed when class/race/scores change
+  // Auto-calculate HP, AC, speed when class/race/scores change
   React.useEffect(() => {
     const hd = classDetail?.hd ?? 8;
     const scores = resolvedScores(form, selectedFeatAbilityBonuses);
     const conMod = abilityMod(scores.con ?? 10);
+    const dexMod = abilityMod(scores.dex ?? 10);
     const selectedBgFeatName = resolvedBgOriginFeatDetail?.name
       ?? featSummaries.find((feat) => feat.id === form.chosenBgOriginFeatId)?.name
       ?? null;
@@ -932,8 +933,9 @@ export function CharacterCreatorView() {
       || selectedClassFeatDetails.some((feat) => isToughFeat(feat.name))
       || levelUpFeatDetails.some(({ feat }) => isToughFeat(feat.name));
     const hp = calcHpMax(hd, form.level, conMod) + (hasTough ? form.level * 2 : 0);
+    const ac = 10 + dexMod;
     const baseSpeed = raceDetail?.speed ?? 30;
-    setForm((f) => ({ ...f, hpMax: String(hp), speed: String(baseSpeed) }));
+    setForm((f) => ({ ...f, hpMax: String(hp), ac: String(ac), speed: String(baseSpeed) }));
   }, [classDetail, raceDetail, form.level, form.abilityMethod, form.standardAssign, form.pbScores, resolvedRaceFeatDetail?.name, resolvedBgOriginFeatDetail?.name, form.chosenBgOriginFeatId, featSummaries, selectedClassFeatDetails, selectedFeatAbilityBonuses, levelUpFeatDetails]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function set<K extends keyof FormState>(key: K, val: FormState[K]) {
