@@ -673,9 +673,7 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
 
               <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                 <Button variant="ghost" onClick={() => void deleteSelectedBastion()} disabled={saving}>Delete Bastion</Button>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Button variant="ghost" onClick={() => void load()} disabled={saving}>Reload</Button>
-                </div>
+                <div />
               </div>
             </div>
           ) : null}
