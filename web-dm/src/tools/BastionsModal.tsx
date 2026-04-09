@@ -528,14 +528,6 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
                       <div style={{ marginTop: 4, fontSize: "var(--fs-small)", color: theme.colors.muted, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         Bastion Defenders: {Math.max(0, selectedBastion.defendersArmed + selectedBastion.defendersUnarmed)}
                         <label style={{ display: "inline-flex", alignItems: "center", gap: 6, color: theme.colors.muted, fontSize: "var(--fs-tiny)" }}>
-                          <input
-                            type="checkbox"
-                            checked={Boolean(selectedBastion.walled)}
-                            onChange={(e) => updateSelectedDraft((bastion) => ({ ...bastion, walled: e.target.checked }))}
-                          />
-                          Walled
-                        </label>
-                        <label style={{ display: "inline-flex", alignItems: "center", gap: 6, color: theme.colors.muted, fontSize: "var(--fs-tiny)" }}>
                           Armed
                           <input
                             type="number"
@@ -579,6 +571,15 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
                             }}
                           />
                         </label>
+                      </div>
+                      <div style={{ marginTop: 6 }}>
+                        <button
+                          type="button"
+                          onClick={() => updateSelectedDraft((bastion) => ({ ...bastion, walled: !bastion.walled }))}
+                          style={chipButtonStyle(Boolean(selectedBastion.walled))}
+                        >
+                          Walled
+                        </button>
                       </div>
                     </div>
                     <div>
