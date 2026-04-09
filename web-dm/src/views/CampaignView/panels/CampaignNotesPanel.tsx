@@ -3,7 +3,7 @@ import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";
 import { DraggableList } from "@/components/drag/DraggableList";
 import { theme } from "@/theme/theme";
-import { IconNotes, IconPlus } from "@/icons";
+import { IconPlus } from "@/icons";
 import type { Note } from "@/domain/types/domain";
 import { NoteAccordionItem } from "@/views/CampaignView/components/NoteAccordionItem";
 
@@ -21,11 +21,7 @@ export function CampaignNotesPanel(props: {
   return (
     <Panel
       storageKey="campaign-notes"
-      title={
-        <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-          <IconNotes /> Campaign Notes ({notes.length})
-        </span>
-      }
+      title={`Campaign Notes (${notes.length})`}
       actions={
         <IconButton onClick={props.onAdd} title="Add note" variant="accent">
           <IconPlus />

@@ -233,6 +233,30 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
       );
     }
 
+    const bastions = toArray(doc["bastions"]);
+    for (const bastion of bastions) {
+      db.prepare(`
+        INSERT OR IGNORE INTO bastions
+          (id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, assigned_player_ids_json, assigned_character_ids_json, notes, maintain_order, facilities_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        String(bastion["id"]),
+        campaignId,
+        String(bastion["name"] ?? "Bastion"),
+        Boolean(bastion["active"]) ? 1 : 0,
+        Boolean(bastion["walled"]) ? 1 : 0,
+        Math.max(0, Math.floor(Number(bastion["defendersArmed"] ?? 0))),
+        Math.max(0, Math.floor(Number(bastion["defendersUnarmed"] ?? 0))),
+        JSON.stringify(Array.isArray(bastion["assignedPlayerIds"]) ? bastion["assignedPlayerIds"] : []),
+        JSON.stringify(Array.isArray(bastion["assignedCharacterIds"]) ? bastion["assignedCharacterIds"] : []),
+        String(bastion["notes"] ?? ""),
+        Boolean(bastion["maintainOrder"]) ? 1 : 0,
+        JSON.stringify(Array.isArray(bastion["facilities"]) ? bastion["facilities"] : []),
+        Number(bastion["createdAt"] ?? Date.now()),
+        Number(bastion["updatedAt"] ?? Date.now()),
+      );
+    }
+
     const combats = toArray(doc["combats"]);
     for (const combat of combats) {
       const encounterId = String(combat["encounterId"]);

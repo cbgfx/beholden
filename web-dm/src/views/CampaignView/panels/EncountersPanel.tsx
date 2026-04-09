@@ -3,7 +3,7 @@ import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";
 import { DraggableList } from "@/components/drag/DraggableList";
 import { theme } from "@/theme/theme";
-import { IconEncounter, IconPencil, IconPlus, IconTrash, IconPlay, IconBuild, IconCopy } from "@/icons";
+import { IconPencil, IconPlus, IconTrash, IconPlay, IconBuild, IconCopy } from "@/icons";
 import { RowMenu } from "@/ui/RowMenu";
 
 export function EncountersPanel(props: {
@@ -24,11 +24,7 @@ export function EncountersPanel(props: {
   return (
     <Panel
       storageKey="campaign-encounters"
-      title={
-        <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-          <IconEncounter /> Encounters ({encounters.length})
-        </span>
-      }
+      title={`Encounters (${encounters.length})`}
       actions={
         <IconButton onClick={props.onCreate} disabled={!selectedAdventureId} title="Add encounter" variant="accent">
           <IconPlus />

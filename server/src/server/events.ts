@@ -30,6 +30,7 @@ export type InpcsChangedPayload = { campaignId: Id };
 export type TreasureChangedPayload = { campaignId: Id };
 
 export type PartyInventoryChangedPayload = { campaignId: Id };
+export type BastionsChangedPayload = { campaignId: Id };
 
 export type CompendiumChangedPayload =
   | { cleared: true }
@@ -62,6 +63,7 @@ export interface ServerEventMap {
   "inpcs:changed": InpcsChangedPayload;
   "treasure:changed": TreasureChangedPayload;
   "partyInventory:changed": PartyInventoryChangedPayload;
+  "bastions:changed": BastionsChangedPayload;
   "compendium:changed": CompendiumChangedPayload;
 
   "encounter:combatantsChanged": EncounterCombatantsChangedPayload;

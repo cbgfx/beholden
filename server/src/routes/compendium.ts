@@ -9,6 +9,7 @@ import { registerItemRoutes } from "./compendium/items.js";
 import { registerSpellRoutes } from "./compendium/spells.js";
 import { registerLoreRoutes } from "./compendium/lore.js";
 import { registerDeckRoutes } from "./compendium/decks.js";
+import { registerBastionCompendiumRoutes } from "./compendium/bastions.js";
 import { registerCompendiumAdminRoutes } from "./compendium/admin.js";
 
 export function registerCompendiumRoutes(app: Express, ctx: ServerContext) {
@@ -18,5 +19,6 @@ export function registerCompendiumRoutes(app: Express, ctx: ServerContext) {
   registerSpellRoutes(app, ctx, anyDm);
   registerLoreRoutes(app, ctx);
   registerDeckRoutes(app, ctx);
+  registerBastionCompendiumRoutes(app, ctx);
   registerCompendiumAdminRoutes(app, ctx);
 }

@@ -3,7 +3,7 @@ import { CollectionRow, QuantityStepper, Tag } from "@beholden/shared/ui";
 import { api, jsonInit } from "@/services/api";
 import { fetchAdventureTreasure, fetchCampaignTreasure } from "@/services/collectionApi";
 import type { TreasureEntry } from "@/domain/types/domain";
-import { IconChest, IconPlus } from "@/icons";
+import { IconPlus } from "@/icons";
 import { useStore } from "@/store";
 import { theme } from "@/theme/theme";
 import { IconButton } from "@/ui/IconButton";
@@ -76,14 +76,7 @@ export function TreasurePanel(_props: { encounterId?: string } = {}) {
     <>
       <Panel
         storageKey="treasure"
-        title={(
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <span style={{ display: "inline-flex" }}>
-              <IconChest />
-            </span>
-            {titleFromScope({ selectedAdventureId: scopeAdventureId, adventureName: scopeAdventureName })}
-          </span>
-        )}
+        title={titleFromScope({ selectedAdventureId: scopeAdventureId, adventureName: scopeAdventureName })}
         actions={(
           <IconButton title="Add item" onClick={() => setIsOpen(true)} variant="accent">
             <IconPlus />

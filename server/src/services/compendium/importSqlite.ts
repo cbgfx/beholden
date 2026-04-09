@@ -21,6 +21,7 @@ export function importCompendiumSqlite(args: {
   backgrounds: number;
   feats: number;
   decks: number;
+  bastions: number;
 } {
   const { buffer, db } = args;
 
@@ -35,7 +36,7 @@ export function importCompendiumSqlite(args: {
         .map((r) => r.name)
     );
 
-    let monsters = 0, spells = 0, items = 0, classes = 0, races = 0, backgrounds = 0, feats = 0, decks = 0;
+    let monsters = 0, spells = 0, items = 0, classes = 0, races = 0, backgrounds = 0, feats = 0, decks = 0, bastions = 0;
 
     db.transaction(() => {
       if (tableNames.has("compendium_monsters")) {
@@ -118,6 +119,47 @@ export function importCompendiumSqlite(args: {
         }
       }
 
+      if (tableNames.has("compendium_bastion_spaces")) {
+        const stmt = db.prepare(
+          "INSERT OR REPLACE INTO compendium_bastion_spaces (id, name, name_key, squares, label, sort_index) VALUES (?, ?, ?, ?, ?, ?)"
+        );
+        for (const r of src.prepare("SELECT id, name, name_key, squares, label, sort_index FROM compendium_bastion_spaces").all() as any[]) {
+          stmt.run(r.id, r.name, r.name_key, r.squares, r.label, r.sort_index);
+        }
+      }
+
+      if (tableNames.has("compendium_bastion_orders")) {
+        const stmt = db.prepare(
+          "INSERT OR REPLACE INTO compendium_bastion_orders (id, order_name, order_key, sort_index) VALUES (?, ?, ?, ?)"
+        );
+        for (const r of src.prepare("SELECT id, order_name, order_key, sort_index FROM compendium_bastion_orders").all() as any[]) {
+          stmt.run(r.id, r.order_name, r.order_key, r.sort_index);
+        }
+      }
+
+      if (tableNames.has("compendium_bastion_facilities")) {
+        const stmt = db.prepare(
+          "INSERT OR REPLACE INTO compendium_bastion_facilities (id, name, name_key, facility_type, minimum_level, prerequisite, orders_json, space, hirelings, allow_multiple, description, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        );
+        for (const r of src.prepare("SELECT id, name, name_key, facility_type, minimum_level, prerequisite, orders_json, space, hirelings, allow_multiple, description, data_json FROM compendium_bastion_facilities").all() as any[]) {
+          stmt.run(
+            r.id,
+            r.name,
+            r.name_key,
+            r.facility_type,
+            r.minimum_level,
+            r.prerequisite,
+            r.orders_json,
+            r.space,
+            r.hirelings,
+            r.allow_multiple,
+            r.description,
+            r.data_json,
+          );
+          bastions++;
+        }
+      }
+
       backfillMonsterSpellRefs(db);
     })();
 
@@ -125,7 +167,7 @@ export function importCompendiumSqlite(args: {
 
     const total = (db.prepare("SELECT count(*) AS n FROM compendium_monsters").get() as { n: number }).n;
 
-    return { imported: monsters, total, spells, items, classes, races, backgrounds, feats, decks };
+    return { imported: monsters, total, spells, items, classes, races, backgrounds, feats, decks, bastions };
   } finally {
     try { fs.unlinkSync(tmpPath); } catch { /* best-effort cleanup */ }
   }

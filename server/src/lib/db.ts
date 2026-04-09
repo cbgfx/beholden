@@ -217,6 +217,37 @@ CREATE TABLE IF NOT EXISTS compendium_deck_cards (
   sort_index INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS compendium_bastion_spaces (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  name_key TEXT NOT NULL,
+  squares INTEGER,
+  label TEXT,
+  sort_index INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS compendium_bastion_orders (
+  id TEXT PRIMARY KEY,
+  order_name TEXT NOT NULL,
+  order_key TEXT NOT NULL,
+  sort_index INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS compendium_bastion_facilities (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  name_key TEXT NOT NULL,
+  facility_type TEXT NOT NULL,
+  minimum_level INTEGER NOT NULL DEFAULT 0,
+  prerequisite TEXT,
+  orders_json TEXT NOT NULL DEFAULT '[]',
+  space TEXT,
+  hirelings INTEGER,
+  allow_multiple INTEGER NOT NULL DEFAULT 0,
+  description TEXT,
+  data_json TEXT NOT NULL
+);
+
 -- Campaign-agnostic player-owned characters (not bound to a campaign).
 CREATE TABLE IF NOT EXISTS user_characters (
   id TEXT PRIMARY KEY,
@@ -258,6 +289,23 @@ CREATE TABLE IF NOT EXISTS party_inventory (
   updated_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS bastions (
+  id TEXT PRIMARY KEY,
+  campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 0,
+  walled INTEGER NOT NULL DEFAULT 0,
+  defenders_armed INTEGER NOT NULL DEFAULT 0,
+  defenders_unarmed INTEGER NOT NULL DEFAULT 0,
+  assigned_player_ids_json TEXT NOT NULL DEFAULT '[]',
+  assigned_character_ids_json TEXT NOT NULL DEFAULT '[]',
+  notes TEXT NOT NULL DEFAULT '',
+  maintain_order INTEGER NOT NULL DEFAULT 0,
+  facilities_json TEXT NOT NULL DEFAULT '[]',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_adventures_campaign   ON adventures(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_encounters_adventure  ON encounters(adventure_id);
 CREATE INDEX IF NOT EXISTS idx_encounters_campaign   ON encounters(campaign_id);
@@ -282,8 +330,13 @@ CREATE INDEX IF NOT EXISTS idx_comprace_name         ON compendium_races(name CO
 CREATE INDEX IF NOT EXISTS idx_compbg_name           ON compendium_backgrounds(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_compfeat_name         ON compendium_feats(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_compdeck_deck         ON compendium_deck_cards(deck_key, sort_index);
+CREATE INDEX IF NOT EXISTS idx_compbastion_space_key ON compendium_bastion_spaces(name_key);
+CREATE INDEX IF NOT EXISTS idx_compbastion_order_key ON compendium_bastion_orders(order_key);
+CREATE INDEX IF NOT EXISTS idx_compbastion_fac_type  ON compendium_bastion_facilities(facility_type, minimum_level);
+CREATE INDEX IF NOT EXISTS idx_compbastion_fac_name  ON compendium_bastion_facilities(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_uchars_user           ON user_characters(user_id);
 CREATE INDEX IF NOT EXISTS idx_party_inventory_campaign ON party_inventory(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_bastions_campaign     ON bastions(campaign_id, updated_at);
 `;
 
 // ---------------------------------------------------------------------------
@@ -329,6 +382,9 @@ export function openDb(dbPath: string): Db {
   try { db.exec("ALTER TABLE compendium_items ADD COLUMN weight REAL"); } catch { /* already exists */ }
   try { db.exec("ALTER TABLE compendium_items ADD COLUMN value REAL"); } catch { /* already exists */ }
   try { db.exec("ALTER TABLE compendium_items ADD COLUMN proficiency TEXT"); } catch { /* already exists */ }
+  try { db.exec("ALTER TABLE bastions ADD COLUMN walled INTEGER NOT NULL DEFAULT 0"); } catch { /* already exists */ }
+  try { db.exec("ALTER TABLE bastions ADD COLUMN defenders_armed INTEGER NOT NULL DEFAULT 0"); } catch { /* already exists */ }
+  try { db.exec("ALTER TABLE bastions ADD COLUMN defenders_unarmed INTEGER NOT NULL DEFAULT 0"); } catch { /* already exists */ }
   return db;
 }
 

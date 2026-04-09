@@ -8,12 +8,14 @@ export function SectionTitle({
   actions,
   collapsed,
   onToggle,
+  style,
 }: {
   children: React.ReactNode;
   color?: string;
   actions?: React.ReactNode;
   collapsed?: boolean;
   onToggle?: () => void;
+  style?: React.CSSProperties;
 }) {
   return (
     <SharedSectionTitle
@@ -23,6 +25,7 @@ export function SectionTitle({
       onToggle={onToggle}
       fontSize="var(--fs-tiny)"
       fontWeight={700}
+      style={style}
     >
       {children}
     </SharedSectionTitle>

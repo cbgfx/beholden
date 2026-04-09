@@ -24,6 +24,7 @@ import {
   TREASURE_COLS,
   CONDITION_COLS,
   ENCOUNTER_ACTOR_COLS,
+  parseJson,
 } from "../lib/db.js";
 import { importCampaignDocument } from "./exportImportHelpers.js";
 
@@ -80,6 +81,28 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
         .map(rowToCondition)
         .map((condition) => [condition.id, condition]),
     );
+    const bastions = Object.fromEntries(
+      (db.prepare(
+        "SELECT id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, assigned_player_ids_json, assigned_character_ids_json, notes, maintain_order, facilities_json, created_at, updated_at FROM bastions WHERE campaign_id = ?"
+      ).all(campaignId) as Record<string, unknown>[])
+        .map((row) => ({
+          id: String(row.id),
+          campaignId: String(row.campaign_id),
+          name: String(row.name ?? ""),
+          active: Number(row.active ?? 0) === 1,
+          walled: Number(row.walled ?? 0) === 1,
+          defendersArmed: Math.max(0, Math.floor(Number(row.defenders_armed ?? 0))),
+          defendersUnarmed: Math.max(0, Math.floor(Number(row.defenders_unarmed ?? 0))),
+          assignedPlayerIds: parseJson<string[]>(row.assigned_player_ids_json, []),
+          assignedCharacterIds: parseJson<string[]>(row.assigned_character_ids_json, []),
+          notes: String(row.notes ?? ""),
+          maintainOrder: Number(row.maintain_order ?? 0) === 1,
+          facilities: parseJson<unknown[]>(row.facilities_json, []),
+          createdAt: Number(row.created_at ?? Date.now()),
+          updatedAt: Number(row.updated_at ?? Date.now()),
+        }))
+        .map((entry) => [entry.id, entry]),
+    );
 
     const combatantsByEncounter = new Map<string, ReturnType<typeof rowToEncounterActor>[]>();
     for (const row of db.prepare(
@@ -119,6 +142,7 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
       partyInventory,
       treasure,
       conditions,
+      bastions,
       combats,
     };
 

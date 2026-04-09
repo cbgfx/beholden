@@ -3,7 +3,7 @@ import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";
 import { DraggableList } from "@/components/drag/DraggableList";
 import { theme } from "@/theme/theme";
-import { IconNotes, IconPlus } from "@/icons";
+import { IconPlus } from "@/icons";
 import type { Note } from "@/domain/types/domain";
 import { NoteAccordionItem } from "@/views/CampaignView/components/NoteAccordionItem";
 
@@ -22,11 +22,7 @@ export function AdventureNotesPanel(props: {
   return (
     <Panel
       storageKey="campaign-adventure-notes"
-      title={
-        <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-          <IconNotes /> Adventure Notes ({notes.length})
-        </span>
-      }
+      title={`Adventure Notes (${notes.length})`}
       actions={
         <IconButton onClick={props.onAdd} disabled={!props.selectedAdventureId} title="Add note" variant="accent">
           <IconPlus />

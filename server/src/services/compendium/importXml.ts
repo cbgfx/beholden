@@ -25,6 +25,7 @@ export function importCompendiumXml(args: {
   backgrounds?: number;
   feats?: number;
   decks?: number;
+  bastions?: number;
 } {
   const { xml, db } = args;
   const parser = new XMLParser({
@@ -43,6 +44,12 @@ export function importCompendiumXml(args: {
   const backgrounds = asArray(comp?.background);
   const feats = asArray(comp?.feat);
   const deckCards = asArray(parsed?.deck?.card ?? comp?.deck?.card ?? comp?.card);
+  const bastionCompendium = parsed?.bastionCompendium;
+  const bastionSpaces = asArray(bastionCompendium?.spaces?.space);
+  const bastionOrders = asArray(bastionCompendium?.orders?.order);
+  const bastionBasicFacilities = asArray(bastionCompendium?.basicFacilities?.facility);
+  const bastionSpecialFacilities = asArray(bastionCompendium?.specialFacilities?.facility);
+  const bastionFacilities = [...bastionBasicFacilities, ...bastionSpecialFacilities];
 
   const monStmt = db.prepare(`
     INSERT OR REPLACE INTO compendium_monsters
@@ -79,6 +86,21 @@ export function importCompendiumXml(args: {
     INSERT OR REPLACE INTO compendium_deck_cards
       (id, deck_name, deck_key, card_name, card_key, card_text, sort_index)
     VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+  const bastionSpaceStmt = db.prepare(`
+    INSERT OR REPLACE INTO compendium_bastion_spaces
+      (id, name, name_key, squares, label, sort_index)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+  const bastionOrderStmt = db.prepare(`
+    INSERT OR REPLACE INTO compendium_bastion_orders
+      (id, order_name, order_key, sort_index)
+    VALUES (?, ?, ?, ?)
+  `);
+  const bastionFacilityStmt = db.prepare(`
+    INSERT OR REPLACE INTO compendium_bastion_facilities
+      (id, name, name_key, facility_type, minimum_level, prerequisite, orders_json, space, hirelings, allow_multiple, description, data_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const upsertFeat = createFeatUpserter(featStmt);
 
@@ -192,6 +214,87 @@ export function importCompendiumXml(args: {
         deckCardStmt.run(id, "Deck", "deck", cardName, cardKey || null, cardText, index);
       }
     }
+
+    if (bastionCompendium) {
+      db.prepare("DELETE FROM compendium_bastion_spaces").run();
+      db.prepare("DELETE FROM compendium_bastion_orders").run();
+      db.prepare("DELETE FROM compendium_bastion_facilities").run();
+
+      for (let index = 0; index < bastionSpaces.length; index += 1) {
+        const space = bastionSpaces[index] as Record<string, unknown>;
+        const name = asText(space?.name).trim();
+        if (!name) continue;
+        const key = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+        const squaresText = asText(space?.squares).trim();
+        const squares = squaresText ? Number.parseInt(squaresText, 10) : NaN;
+        bastionSpaceStmt.run(
+          `bastion-space:${key || index + 1}`,
+          name,
+          key || `space-${index + 1}`,
+          Number.isFinite(squares) ? squares : null,
+          asText(space?.label).trim() || null,
+          index,
+        );
+      }
+
+      for (let index = 0; index < bastionOrders.length; index += 1) {
+        const orderName = asText(bastionOrders[index]).trim();
+        if (!orderName) continue;
+        const orderKey = orderName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+        bastionOrderStmt.run(
+          `bastion-order:${orderKey || index + 1}`,
+          orderName,
+          orderKey || `order-${index + 1}`,
+          index,
+        );
+      }
+
+      for (let index = 0; index < bastionFacilities.length; index += 1) {
+        const facility = bastionFacilities[index] as Record<string, unknown>;
+        const name = asText(facility?.name).trim();
+        if (!name) continue;
+        const typeRaw = asText(facility?.type).trim().toLowerCase();
+        const facilityType = typeRaw === "basic" ? "basic" : "special";
+        const nameKey = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+        const minimumLevelText = asText(facility?.minimumLevel).trim();
+        const minimumLevel = minimumLevelText ? Number.parseInt(minimumLevelText, 10) : 0;
+        const prerequisite = asText(facility?.prerequisite).trim() || null;
+        const orders = asArray((facility as any)?.orders?.order)
+          .map((entry) => asText(entry).trim())
+          .filter((entry) => entry.length > 0);
+        const space = asText(facility?.space).trim() || null;
+        const hirelingsText = asText(facility?.hirelings).trim();
+        const hirelingsLeading = hirelingsText.match(/^\d+/u)?.[0] ?? "";
+        const hirelings = hirelingsLeading ? Number.parseInt(hirelingsLeading, 10) : NaN;
+        const description = asText(facility?.description).trim();
+        const allowMultiple = /can have more than one/i.test(description) ? 1 : 0;
+        const data = {
+          name,
+          type: facilityType,
+          minimumLevel: Number.isFinite(minimumLevel) ? minimumLevel : 0,
+          prerequisite,
+          orders,
+          space,
+          hirelings: Number.isFinite(hirelings) ? hirelings : null,
+          description,
+          allowMultiple: allowMultiple === 1,
+        };
+        bastionFacilityStmt.run(
+          `bastion-facility:${nameKey || index + 1}`,
+          name,
+          nameKey || `facility-${index + 1}`,
+          facilityType,
+          Number.isFinite(minimumLevel) ? minimumLevel : 0,
+          prerequisite,
+          JSON.stringify(orders),
+          space,
+          Number.isFinite(hirelings) ? hirelings : null,
+          allowMultiple,
+          description || null,
+          JSON.stringify(data),
+        );
+      }
+    }
   })();
 
   const totalMonsters = (db.prepare("SELECT count(*) AS n FROM compendium_monsters").get() as { n: number }).n;
@@ -205,5 +308,6 @@ export function importCompendiumXml(args: {
     backgrounds: backgrounds.length,
     feats: feats.length,
     decks: deckCards.length > 0 ? 1 : 0,
+    bastions: bastionFacilities.length > 0 ? bastionFacilities.length : 0,
   };
 }

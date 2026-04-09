@@ -13,6 +13,7 @@ const LevelUpView = React.lazy(() => import("@/views/level-up/LevelUpView").then
 const ProfileView = React.lazy(() => import("@/views/profile/ProfileView").then(m => ({ default: m.ProfileView })));
 const CampaignPartyView = React.lazy(() => import("@/views/campaign/CampaignPartyView").then(m => ({ default: m.CampaignPartyView })));
 const PartyMemberView = React.lazy(() => import("@/views/campaign/PartyMemberView").then(m => ({ default: m.PartyMemberView })));
+const BastionView = React.lazy(() => import("@/views/campaign/BastionView").then(m => ({ default: m.BastionView })));
 const AboutView = React.lazy(() => import("@/views/Info/AboutView").then(m => ({ default: m.AboutView })));
 const FaqView = React.lazy(() => import("@/views/Info/FaqView").then(m => ({ default: m.FaqView })));
 const UpdatesView = React.lazy(() => import("@/views/Info/UpdatesView").then(m => ({ default: m.UpdatesView })));
@@ -59,6 +60,7 @@ function AuthGate() {
             <Route path="/profile" element={<ProfileView />} />
             <Route path="/campaigns/:id" element={<CampaignPartyView />} />
             <Route path="/campaigns/:id/members/:playerId" element={<PartyMemberView />} />
+            <Route path="/campaigns/:id/bastions/:bastionId" element={<BastionView />} />
             <Route path="/about" element={<AboutView />} />
             <Route path="/faq" element={<FaqView />} />
             <Route path="/updates" element={<UpdatesView />} />
@@ -81,4 +83,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-

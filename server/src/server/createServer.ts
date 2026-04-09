@@ -56,6 +56,7 @@ import { registerExportImportRoutes } from "../routes/exportImport.js";
 import { registerUpdateCheckRoutes } from "../routes/updateCheck.js";
 import { registerWebUiRoutes } from "../routes/webUi.js";
 import { registerPartyInventoryRoutes } from "../routes/partyInventory.js";
+import { registerBastionRoutes } from "../routes/bastions.js";
 
 export function createServer() {
   const runtime = getRuntimeConfig();
@@ -151,6 +152,7 @@ export function createServer() {
   registerUpdateCheckRoutes(app, ctx);
   registerWebUiRoutes(app, ctx);
   registerPartyInventoryRoutes(app, ctx);
+  registerBastionRoutes(app, ctx);
 
   // --- error handling -------------------------------------------------------
   app.use(multerErrorMiddleware);

@@ -3,7 +3,7 @@ import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";
 import { DraggableList } from "@/components/drag/DraggableList";
 import { theme } from "@/theme/theme";
-import { IconChest, IconPencil, IconPlus, IconTrash, IconDownload, IconImport } from "@/icons";
+import { IconPencil, IconPlus, IconTrash, IconDownload, IconImport } from "@/icons";
 import { RowMenu } from "@/ui/RowMenu";
 
 export function AdventuresPanel(props: {
@@ -22,11 +22,7 @@ export function AdventuresPanel(props: {
   return (
     <Panel
       storageKey="campaign-adventures"
-      title={
-        <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-          <IconChest /> Adventures ({adventures.length})
-        </span>
-      }
+      title={`Adventures (${adventures.length})`}
       actions={
         <div style={{ display: "inline-flex", gap: 4 }}>
           <IconButton onClick={props.onImport} title="Import adventure">

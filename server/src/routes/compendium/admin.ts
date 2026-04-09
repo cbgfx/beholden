@@ -18,6 +18,9 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
       db.prepare("DELETE FROM compendium_backgrounds").run();
       db.prepare("DELETE FROM compendium_feats").run();
       db.prepare("DELETE FROM compendium_deck_cards").run();
+      db.prepare("DELETE FROM compendium_bastion_spaces").run();
+      db.prepare("DELETE FROM compendium_bastion_orders").run();
+      db.prepare("DELETE FROM compendium_bastion_facilities").run();
     })();
     ctx.broadcast("compendium:changed", { cleared: true });
     res.json({ ok: true });
@@ -38,6 +41,7 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
       backgrounds: out.backgrounds ?? 0,
       feats: out.feats ?? 0,
       decks: out.decks ?? 0,
+      bastions: out.bastions ?? 0,
     });
   });
 
@@ -56,6 +60,7 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
       backgrounds: out.backgrounds,
       feats: out.feats,
       decks: out.decks,
+      bastions: out.bastions ?? 0,
     });
   });
 }

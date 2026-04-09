@@ -33,6 +33,15 @@ export interface PartyMember {
   characterData: Record<string, unknown> | null;
 }
 
+interface CampaignBastionSummary {
+  id: string;
+  name: string;
+  active: boolean;
+  level: number;
+  specialSlots: number;
+  specialSlotsUsed: number;
+}
+
 function hpLabel(pct: number): string {
   if (pct <= 0) return "Down";
   if (pct < 25) return "Critical";
@@ -172,6 +181,7 @@ export function CampaignPartyView() {
   const [campaignName, setCampaignName] = React.useState<string>("");
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [bastions, setBastions] = React.useState<CampaignBastionSummary[]>([]);
 
   const fetchParty = React.useCallback(() => {
     if (!campaignId) return;
@@ -182,7 +192,11 @@ export function CampaignPartyView() {
   }, [campaignId]);
 
   React.useEffect(() => {
+    if (!campaignId) return;
     fetchParty();
+    api<{ bastions: CampaignBastionSummary[] }>(`/api/campaigns/${campaignId}/bastions`)
+      .then((res) => setBastions((res.bastions ?? []).filter((entry) => entry.active)))
+      .catch(() => setBastions([]));
     api<{ id: string; name: string }[]>("/api/me/campaigns")
       .then((list) => {
         const c = list.find((entry) => entry.id === campaignId);
@@ -197,6 +211,14 @@ export function CampaignPartyView() {
         if (msg.type === "players:changed") {
           const cId = (msg.payload as any)?.campaignId as string | undefined;
           if (cId === campaignId) fetchParty();
+        }
+        if (msg.type === "bastions:changed") {
+          const cId = (msg.payload as any)?.campaignId as string | undefined;
+          if (cId === campaignId) {
+            api<{ bastions: CampaignBastionSummary[] }>(`/api/campaigns/${campaignId}/bastions`)
+              .then((res) => setBastions((res.bastions ?? []).filter((entry) => entry.active)))
+              .catch(() => {});
+          }
         }
       },
       [campaignId, fetchParty]
@@ -237,6 +259,37 @@ export function CampaignPartyView() {
           <span style={{ fontSize: "var(--fs-medium)", color: C.muted }}>— Party</span>
         </div>
         {inner}
+
+        {bastions.length > 0 ? (
+          <div style={{ marginTop: 24 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
+              <h2 style={{ margin: 0, fontSize: "var(--fs-title)", fontWeight: 900 }}>Bastions</h2>
+              <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>({bastions.length})</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
+              {bastions.map((bastion) => (
+                <button
+                  key={bastion.id}
+                  onClick={() => navigate(`/campaigns/${campaignId}/bastions/${bastion.id}`)}
+                  style={{
+                    textAlign: "left",
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 12,
+                    padding: 12,
+                    color: C.text,
+                    cursor: "pointer",
+                  }}
+                >
+                  <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800 }}>{bastion.name}</div>
+                  <div style={{ marginTop: 4, fontSize: "var(--fs-small)", color: C.muted }}>
+                    Level {bastion.level} • Slots {bastion.specialSlotsUsed}/{bastion.specialSlots}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

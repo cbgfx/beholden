@@ -11,6 +11,8 @@ export type ImportResult = {
   races?: number;
   backgrounds?: number;
   feats?: number;
+  decks?: number;
+  bastions?: number;
 };
 
 export function buildImportSummary(lastImport: ImportResult | null) {
@@ -22,6 +24,8 @@ export function buildImportSummary(lastImport: ImportResult | null) {
         { label: "Species", count: lastImport.races ?? 0 },
         { label: "Backgrounds", count: lastImport.backgrounds ?? 0 },
         { label: "Feats", count: lastImport.feats ?? 0 },
+        { label: "Decks", count: lastImport.decks ?? 0 },
+        { label: "Bastion Facilities", count: lastImport.bastions ?? 0 },
       ].filter((entry) => entry.count > 0)
     : [];
 }

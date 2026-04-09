@@ -1,7 +1,7 @@
 import React from "react";
 import { Panel } from "@/ui/Panel";
 import { theme, withAlpha } from "@/theme/theme";
-import { IconNotes, IconPlus } from "@/icons";
+import { IconPlus } from "@/icons";
 import { IconButton } from "@/ui/IconButton";
 import type { CampaignCharacter } from "@/domain/types/domain";
 import { api, jsonInit } from "@/services/api";
@@ -127,11 +127,7 @@ export function SharedNotesPanel(props: {
     <>
       <Panel
         storageKey="campaign-shared-notes"
-        title={
-          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-            <IconNotes /> Shared Notes ({totalCount})
-          </span>
-        }
+        title={`Shared Notes (${totalCount})`}
         actions={
           <IconButton onClick={openCreate} title="Add shared note" variant="accent">
             <IconPlus />

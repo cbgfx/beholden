@@ -147,10 +147,20 @@ export function DeckOfManyThingsModal(props: { isOpen: boolean; onClose: () => v
                 </div>
               </>
             ) : (
-              <div style={{ padding: 14, textAlign: "center" }}>
+              <div style={{ padding: 14, textAlign: "center", height: "100%", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
                 <div style={{ fontSize: 20, fontWeight: 900, color: theme.colors.text, marginBottom: 8 }}>{current.name}</div>
-                <div style={{ fontSize: 12, color: theme.colors.muted, lineHeight: 1.35 }}>
-                  {current.text ? current.text.slice(0, 180) : "No description."}
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: theme.colors.muted,
+                    lineHeight: 1.35,
+                    textAlign: "left",
+                    overflowY: "auto",
+                    paddingRight: 2,
+                    flex: 1,
+                  }}
+                >
+                  {current.text ? current.text : "No description."}
                 </div>
               </div>
             )
