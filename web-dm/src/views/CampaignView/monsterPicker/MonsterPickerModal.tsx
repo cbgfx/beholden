@@ -38,7 +38,7 @@ export function MonsterPickerModal(props: {
       onClose={props.onClose}
       title={
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5 }}>
-          <div style={{ fontWeight: 900 }}>Add monsters</div>
+          <div style={{ fontWeight: 900 }}>Add MONSTERS</div>
           <IconButton title="Close" variant="ghost" onClick={props.onClose}>
             <IconClose />
           </IconButton>

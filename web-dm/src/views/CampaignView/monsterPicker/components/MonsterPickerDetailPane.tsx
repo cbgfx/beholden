@@ -70,15 +70,57 @@ export function MonsterPickerDetailPane(props: {
         </div>
       </div>
 
-      <label style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 12 }}>
-        <input
-          type="checkbox"
-          checked={props.friendly}
-          onChange={(e) => props.onChangeFriendly(e.target.checked)}
-          disabled={disabled}
-        />
-        <span style={{ color: theme.colors.text, fontWeight: 700 }}>Friendly</span>
-      </label>
+      <div style={{ display: "flex", alignItems: "center", paddingBottom: 12 }}>
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 2,
+            padding: 2,
+            borderRadius: 999,
+            border: "1px solid rgba(255,255,255,0.15)",
+            background: "rgba(255,255,255,0.05)",
+            opacity: disabled ? 0.5 : 1,
+          }}
+        >
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => props.onChangeFriendly(false)}
+            style={{
+              minWidth: 82,
+              padding: "4px 10px",
+              borderRadius: 999,
+              border: "none",
+              background: !props.friendly ? "rgba(239,68,68,0.22)" : "transparent",
+              color: !props.friendly ? "#ef4444" : theme.colors.muted,
+              fontWeight: 800,
+              fontSize: "var(--fs-small)",
+              cursor: disabled ? "not-allowed" : "pointer",
+            }}
+          >
+            Hostile
+          </button>
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => props.onChangeFriendly(true)}
+            style={{
+              minWidth: 82,
+              padding: "4px 10px",
+              borderRadius: 999,
+              border: "none",
+              background: props.friendly ? "rgba(34,197,94,0.22)" : "transparent",
+              color: props.friendly ? "#22c55e" : theme.colors.muted,
+              fontWeight: 800,
+              fontSize: "var(--fs-small)",
+              cursor: disabled ? "not-allowed" : "pointer",
+            }}
+          >
+            Friendly
+          </button>
+        </div>
+      </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", paddingRight: 6 }}>
         <MonsterStatblock

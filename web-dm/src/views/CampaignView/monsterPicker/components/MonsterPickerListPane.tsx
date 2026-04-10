@@ -49,7 +49,8 @@ export function MonsterPickerListPane(props: {
   onAddMonster: (monsterId: string, qty: number, opts?: AddMonsterOptions) => void;
   onProvideScrollToIndex?: (fn: (idx: number) => void) => void;
 }) {
-  const ROW_HEIGHT = 86;
+  // Row is 86px tall + 8px bottom gap in MonsterRow.
+  const ROW_HEIGHT = 94;
   const v = useVirtualList({ isEnabled: props.isOpen, rowHeight: ROW_HEIGHT, overscan: 6 });
 
   React.useEffect(() => {

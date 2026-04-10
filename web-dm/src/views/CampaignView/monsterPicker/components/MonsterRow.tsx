@@ -23,11 +23,34 @@ export function MonsterRow(props: {
   onAddMonster: (monsterId: string, qty: number, opts?: AddMonsterOptions) => void;
 }) {
   const m = props.row;
+  const [showAddedFeedback, setShowAddedFeedback] = React.useState(false);
+  const feedbackTimerRef = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (feedbackTimerRef.current != null) {
+        window.clearTimeout(feedbackTimerRef.current);
+        feedbackTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  const triggerAddedFeedback = React.useCallback(() => {
+    setShowAddedFeedback(true);
+    if (feedbackTimerRef.current != null) window.clearTimeout(feedbackTimerRef.current);
+    feedbackTimerRef.current = window.setTimeout(() => {
+      setShowAddedFeedback(false);
+      feedbackTimerRef.current = null;
+    }, 500);
+  }, []);
+
   return (
     <div
       onClick={props.onSelect}
       style={{
+        height: 86,
         padding: 10,
+        boxSizing: "border-box",
         borderRadius: 12,
         border: `1px solid ${theme.colors.panelBorder}`,
         background: props.active ? withAlpha(theme.colors.accentHighlight, 0.12) : withAlpha(theme.colors.shadowColor, 0.10),
@@ -36,15 +59,15 @@ export function MonsterRow(props: {
         display: "grid",
         gridTemplateColumns: "1fr auto",
         gap: 5,
-        alignItems: "center"
+        alignItems: "center",
       }}
     >
-      <div>
-        <div style={{ color: theme.colors.text, fontWeight: 900 }}>{m.name}</div>
-        <div style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)" }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ color: theme.colors.text, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div>
+        <div style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {`CR ${formatCr(m.cr)}`}
-          {m.type ? ` • ${m.type}` : ""}
-          {m.environment ? ` • ${m.environment}` : ""}
+          {m.type ? ` - ${m.type}` : ""}
+          {m.environment ? ` - ${m.environment}` : ""}
         </div>
       </div>
 
@@ -52,9 +75,11 @@ export function MonsterRow(props: {
         <QtyStepper value={props.qty} onChange={props.onChangeQty} />
         <Button
           type="button"
+          disabled={showAddedFeedback}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
+            triggerAddedFeedback();
 
             const acNum = parseLeadingNumberLoose(props.acRaw);
             const hpNum = parseLeadingNumberLoose(props.hpRaw);
@@ -66,11 +91,11 @@ export function MonsterRow(props: {
               hpMax: Number.isFinite(hpNum) ? hpNum : undefined,
               hpDetails: props.hpDetail.trim() || undefined,
               friendly: props.friendly,
-              attackOverrides: props.attackOverridesById[m.id]
+              attackOverrides: props.attackOverridesById[m.id],
             });
           }}
         >
-          Add
+          {showAddedFeedback ? "Added" : "Add"}
         </Button>
       </div>
     </div>
