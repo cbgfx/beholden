@@ -164,6 +164,13 @@ function AppInner() {
 
   const hasCampaigns = state.campaigns.length > 0;
 
+  // Apply campaign accent color as a CSS variable on the document root.
+  const selectedCampaignColor = state.campaigns.find((c) => c.id === state.selectedCampaignId)?.color ?? null;
+  useEffect(() => {
+    const accent = selectedCampaignColor ?? "#a78bfa";
+    document.documentElement.style.setProperty("--campaign-accent", accent);
+  }, [selectedCampaignColor]);
+
   return (
     <ShellLayout>
       <DrawerHost refreshAll={refreshAll} refreshCampaign={refreshCampaign} refreshAdventure={refreshAdventure} refreshEncounter={refreshEncounter} />

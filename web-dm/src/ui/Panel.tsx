@@ -13,7 +13,7 @@ export function Panel(props: {
   bodyStyle?: React.CSSProperties;
   storageKey?: string;
 }) {
-  const titleColor = props.titleColor ?? theme.colors.colorMagic;
+  const titleColor = props.titleColor ?? "var(--campaign-accent, #a78bfa)";
   return (
     <SharedPanel
       title={

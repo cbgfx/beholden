@@ -17,6 +17,7 @@ import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
 
 const CampaignUpsertBody = z.object({
   name: z.string().trim().optional(),
+  color: z.string().trim().nullable().optional(),
 });
 
 export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
@@ -93,10 +94,11 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     if (!row) return res.status(404).json({ ok: false, message: "Campaign not found" });
     const body = parseBody(CampaignUpsertBody, req);
     const name = (body.name ?? "").toString().trim() || (row.name as string);
+    const color = body.color !== undefined ? (body.color ?? null) : (row.color as string | null ?? null);
     const t = now();
-    db.prepare("UPDATE campaigns SET name = ?, updated_at = ? WHERE id = ?").run(name, t, campaignId);
+    db.prepare("UPDATE campaigns SET name = ?, color = ?, updated_at = ? WHERE id = ?").run(name, color, t, campaignId);
     ctx.broadcast("campaigns:changed", { campaignId });
-    res.json(withAbsoluteImageUrl(req, { ...rowToCampaign(row), name, updatedAt: t }));
+    res.json(withAbsoluteImageUrl(req, { ...rowToCampaign(row), name, color, updatedAt: t }));
   });
 
   app.delete("/api/campaigns/:campaignId", requireAdmin, (req, res) => {

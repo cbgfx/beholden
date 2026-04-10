@@ -18,6 +18,29 @@ type NameDrawerState = Exclude<
   null
 >;
 
+const CAMPAIGN_COLOR_PRESETS = [
+  "#a78bfa", // purple (default)
+  "#38b6ff", // blue
+  "#22c55e", // green
+  "#f59e0b", // amber
+  "#ff5d5d", // red
+  "#8b5cf6", // violet
+  "#fb7185", // rose
+  "#f97316", // orange
+  "#d946ef", // fuchsia
+  "#14b8a6", // teal
+  "#06b6d4", // cyan
+  "#6366f1", // indigo
+  "#d08ce9", // light purple
+  "#68b38c", // sage
+  "#d4b24c", // gold
+  "#8f46d9", // deep violet
+  "#ff6b3d", // coral
+  "#5bc0eb", // sky
+  "#94a3b8", // slate
+  "#cf4444", // crimson
+];
+
 export function NameDrawer(props: {
   drawer: NameDrawerState;
   close: () => void;
@@ -27,14 +50,19 @@ export function NameDrawer(props: {
 }): DrawerContent {
   const { state } = useStore();
   const [name, setName] = React.useState("");
+  const [color, setColor] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const d = props.drawer;
     setName("");
+    setColor(null);
     switch (d.type) {
       case "editCampaign": {
         const c = state.campaigns.find((x) => x.id === d.campaignId);
-        if (c) setName(c.name);
+        if (c) {
+          setName(c.name);
+          setColor(c.color ?? null);
+        }
         break;
       }
       case "editAdventure": {
@@ -66,7 +94,7 @@ export function NameDrawer(props: {
         props.close();
         return;
       case "editCampaign":
-        await api(`/api/campaigns/${d.campaignId}`, jsonInit("PUT", { name: safeName("Campaign") }));
+        await api(`/api/campaigns/${d.campaignId}`, jsonInit("PUT", { name: safeName("Campaign"), color }));
         await props.refreshAll();
         props.close();
         return;
@@ -93,24 +121,58 @@ export function NameDrawer(props: {
       default:
         props.close();
     }
-  }, [name, props, state.selectedAdventureId, state.selectedCampaignId]);
+  }, [name, color, props, state.selectedAdventureId, state.selectedCampaignId]);
+
+  const isEditCampaign = props.drawer.type === "editCampaign";
 
   return {
     body: (
-      <div style={{ display: "grid", gap: 10 }}>
-        <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>Name</div>
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => {
-            // QoL: drawers with a single "name" field should save on Enter.
-            if (e.key === "Enter") {
-              e.preventDefault();
-              submit();
-            }
-          }}
-          placeholder="Name"
-        />
+      <div style={{ display: "grid", gap: 16 }}>
+        <div style={{ display: "grid", gap: 10 }}>
+          <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>Name</div>
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                submit();
+              }
+            }}
+            placeholder="Name"
+          />
+        </div>
+
+        {isEditCampaign && (
+          <div style={{ display: "grid", gap: 10 }}>
+            <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>Theme color</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {CAMPAIGN_COLOR_PRESETS.map((c) => {
+                const selected = color === c || (!color && c === "#a78bfa");
+                return (
+                  <button
+                    key={c}
+                    onClick={() => setColor(c)}
+                    title={c}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      background: c,
+                      border: selected
+                        ? `2px solid #fff`
+                        : "2px solid transparent",
+                      boxShadow: selected ? `0 0 0 2px ${c}` : "none",
+                      cursor: "pointer",
+                      padding: 0,
+                      flexShrink: 0,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     ),
     footer: (

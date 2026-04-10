@@ -35,7 +35,7 @@ function NavLink(props: { to: string; label: string }) {
   return (
     <Link
       to={props.to}
-      style={navLinkStyle(active, theme.colors.accentHighlight, theme.colors.muted, { borderRadius: theme.radius.control })}
+      style={navLinkStyle(active, "var(--campaign-accent, #a78bfa)", theme.colors.muted, { borderRadius: theme.radius.control })}
     >
       {props.label}
     </Link>
@@ -76,9 +76,9 @@ export function TopBar() {
               marginLeft: isPhone ? 0 : 8,
               padding: isPhone ? "4px 8px" : "5px 14px",
               borderRadius: theme.radius.control,
-              border: `1px solid ${withAlpha(theme.colors.accentHighlight, 0.35)}`,
-              background: withAlpha(theme.colors.accentHighlight, 0.10),
-              color: theme.colors.accentHighlight,
+              border: `1px solid color-mix(in srgb, var(--campaign-accent, #a78bfa) 35%, transparent)`,
+              background: "color-mix(in srgb, var(--campaign-accent, #a78bfa) 10%, transparent)",
+              color: "var(--campaign-accent, #a78bfa)",
               fontWeight: 700,
               fontSize: "var(--fs-medium)",
               maxWidth: isPhone ? 120 : 360,

@@ -1,23 +1,5 @@
-import {
-  parseMonsterSpeed,
-  proficiencyBonusFromChallengeRating,
-  readMonsterNumber,
-  readMonsterSkillBonus,
-} from "@beholden/shared/domain";
-import { ALL_SKILLS, ABILITY_FULL } from "@/views/character/CharacterSheetConstants";
 import type { AbilKey, CharacterData, ResourceCounter } from "@/views/character/CharacterSheetTypes";
 import {
-  type Character,
-  type ClassRestDetail,
-  type RaceFeatureDetail,
-  type BackgroundFeatureDetail,
-  type FeatFeatureDetail,
-  type LevelUpFeatDetail,
-  type InvocationFeatureDetail,
-  type ClassFeatFeatureDetail,
-  type SheetOverrides,
-  type EditableSheetOverrideField,
-  type PolymorphConditionData,
   applyItemAbilityScoreOverrides,
   buildAbilityScoreExplanations,
   collectClassResources,
@@ -41,7 +23,6 @@ import {
   deriveAttackDamageBonusFromEffects,
   deriveHitPointMaxBonusFromEffects,
   deriveModifierBonusFromEffects,
-  deriveModifierStateFromEffects,
   deriveSpeedBonusFromEffects,
   deriveUnarmoredDefenseFromEffects,
   parseFeatureEffects,
@@ -50,14 +31,10 @@ import {
 import {
   abilityMod,
   getInitiativeBonus,
-  getPassiveScore,
-  getSkillBonus,
   normalizeSpellTrackingKey,
   proficiencyBonus,
-  spellLooksLikeDamageSpell,
 } from "@/views/character/CharacterSheetUtils";
 import {
-  type InventoryItem,
   getEquipState,
   hasArmorProficiency,
   hasStealthDisadvantage,
@@ -65,103 +42,15 @@ import {
   isShieldItem,
 } from "@/views/character/CharacterInventory";
 import { getPreparedSpellCount, usesFlexiblePreparedSpells } from "@/views/character-creator/utils/CharacterCreatorUtils";
-
-type TransformedMonsterState = {
-  monster: any | null;
-  busy: boolean;
-  error: string | null;
-};
-
-type CharacterViewDerivedStateArgs = {
-  char: Character;
-  classDetail: ClassRestDetail | null;
-  raceDetail: RaceFeatureDetail | null;
-  backgroundDetail: BackgroundFeatureDetail | null;
-  bgOriginFeatDetail: FeatFeatureDetail | null;
-  raceFeatDetail: FeatFeatureDetail | null;
-  classFeatDetails: ClassFeatFeatureDetail[];
-  levelUpFeatDetails: LevelUpFeatDetail[];
-  invocationDetails: InvocationFeatureDetail[];
-  subclass: string | null;
-  polymorphCondition: PolymorphConditionData | null;
-  polymorphMonsterState: TransformedMonsterState;
-};
-
-type CharacterViewDerivedState = {
-  currentCharacterData: CharacterData;
-  prof: ReturnType<typeof normalizeProficiencies>;
-  pb: number;
-  hd: number | null;
-  hitDieSize: number | null;
-  hitDiceMax: number;
-  hitDiceCurrent: number;
-  inventory: InventoryItem[];
-  baseScores: Record<AbilKey, number | null>;
-  scores: Record<AbilKey, number | null>;
-  scoreExplanations: ReturnType<typeof buildAbilityScoreExplanations>;
-  appliedFeatures: ReturnType<typeof buildAppliedCharacterFeatures>;
-  classFeaturesList: ReturnType<typeof buildDisplayPlayerFeatures>;
-  parsedFeatureEffects: ReturnType<typeof parseFeatureEffects>[];
-  grantedSpellData: ReturnType<typeof buildGrantedSpellDataFromEffects>;
-  classResourcesWithSpellCasts: ResourceCounter[];
-  polymorphName: string;
-  rageActive: boolean;
-  parsedDefenses: {
-    resistances: string[];
-    damageImmunities: string[];
-    conditionImmunities: string[];
-    vulnerabilities: string[];
-  };
-  usesFlexiblePreparedList: boolean;
-  preparedSpellLimit: number;
-  preparedSpells: string[];
-  invocationSpellDamageBonuses: Record<string, number>;
-  accentColor: string;
-  overrides: SheetOverrides;
-  featureHpMaxBonus: number;
-  effectiveHpMax: number;
-  xpEarned: number;
-  xpNeeded: number;
-  nonProficientArmorPenalty: boolean;
-  hasDisadvantage: boolean;
-  stealthDisadvantage: boolean;
-  dexMod: number;
-  conMod: number;
-  hasJackOfAllTrades: boolean;
-  effectiveAc: number;
-  effectiveSpeed: number;
-  movementModes: ReturnType<typeof collectMovementModesFromEffects>;
-  tempHp: number;
-  hpPct: number;
-  tempPct: number;
-  passivePerc: number;
-  passiveInv: number;
-  initiativeBonus: number;
-  transformedCombatStats: {
-    effectiveAc: number;
-    speed: number;
-    movementModes: ReturnType<typeof parseMonsterSpeed>["modes"];
-    initiativeBonus: number;
-    pb: number;
-    passivePerc: number;
-    passiveInv: number;
-    dexScore: number;
-    strScore: number | null;
-    className: string;
-  } | null;
-  saveBonuses: Partial<Record<AbilKey, number>>;
-  abilityCheckAdvantages: Partial<Record<AbilKey, boolean>>;
-  abilityCheckDisadvantages: Partial<Record<AbilKey, boolean>>;
-  saveAdvantages: Partial<Record<AbilKey, boolean>>;
-  saveDisadvantages: Partial<Record<AbilKey, boolean>>;
-  skillAdvantages: Record<string, boolean>;
-  skillDisadvantages: Record<string, boolean>;
-  rageDamageBonus: number;
-  unarmedRageDamageBonus: number;
-  senses: string[];
-  editableOverrideFields: EditableSheetOverrideField[];
-  identityFields: [string, string][];
-};
+import {
+  buildInvocationSpellDamageBonuses,
+  buildModifierStateMaps,
+  buildPassiveScores,
+  buildPreparedSpells,
+  buildSaveBonuses,
+  buildTransformedCombatStats,
+} from "@/views/character/CharacterViewDerivedComputations";
+import type { CharacterViewDerivedState, CharacterViewDerivedStateArgs } from "@/views/character/CharacterViewDerivedTypes";
 
 export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateArgs): CharacterViewDerivedState {
   const currentCharacterData: CharacterData = args.char.characterData ?? {};
@@ -254,74 +143,26 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
       .map((entry) => normalizeSpellTrackingKey(entry.spellName))
   );
   const knownSpellKeys = new Set((prof?.spells ?? []).map((entry) => normalizeSpellTrackingKey(entry.name)));
-  const preparedSpells = (() => {
-    const saved = Array.isArray(currentCharacterData.preparedSpells)
-      ? currentCharacterData.preparedSpells
-      : (!usesFlexiblePreparedList && preparedSpellLimit > 0 && Array.isArray(currentCharacterData.chosenSpells)
-          ? currentCharacterData.chosenSpells
-          : []);
-    const allowed = new Set([...knownSpellKeys, ...forcedPreparedSpellKeys]);
-    const unique = Array.from(new Set(saved.map((entry) => normalizeSpellTrackingKey(entry)).filter((entry) => allowed.has(entry))));
-    const forced = unique.filter((entry) => forcedPreparedSpellKeys.has(entry));
-    const userChosen = unique.filter((entry) => !forcedPreparedSpellKeys.has(entry));
-    const limitedUserChosen = preparedSpellLimit > 0 ? userChosen.slice(0, preparedSpellLimit) : userChosen;
-    return [...forced, ...limitedUserChosen];
-  })();
-  const invocationSpellDamageBonuses = (() => {
-    const hasAgonizingBlast = args.invocationDetails.some((invocation) => {
-      const name = String(invocation.name ?? "");
-      const text = String(invocation.text ?? "");
-      return /agonizing blast/i.test(name) || (/charisma modifier/i.test(text) && /damage rolls/i.test(text));
-    }) || (prof?.invocations ?? []).some((invocation) => /agonizing blast/i.test(String(invocation.name ?? "")));
-    if (!hasAgonizingBlast) return {};
-
-    const chosenFeatOptions = currentCharacterData.chosenFeatOptions ?? {};
-    const selectedInvocationSpellTokens = Object.entries(chosenFeatOptions)
-      .filter(([key]) => key.startsWith("invocation:"))
-      .flatMap(([, values]) => Array.isArray(values) ? values : [])
-      .map((value) => String(value ?? "").trim())
-      .filter(Boolean);
-
-    const selectedTokens = new Set(selectedInvocationSpellTokens.map((value) => value.toLowerCase()));
-    const bySpellKey: Record<string, number> = {};
-    const chaMod = abilityMod(scores.cha);
-    if (chaMod === 0) return bySpellKey;
-
-    const damageCantripEntries = (prof?.spells ?? []).filter((spell) =>
-      spellLooksLikeDamageSpell({
-        name: spell.name,
-        text: grantedSpellData.spells.find((entry) => normalizeSpellTrackingKey(entry.spellName) === normalizeSpellTrackingKey(spell.name))?.note ?? null,
-      }) || /eldritch blast/i.test(String(spell.name ?? ""))
-    );
-
-    const eldritchBlastEntry = (prof?.spells ?? []).find((spell) => /eldritch blast/i.test(String(spell.name ?? "")));
-    if (selectedTokens.size === 0 && eldritchBlastEntry) {
-      bySpellKey[normalizeSpellTrackingKey(eldritchBlastEntry.name)] = chaMod;
-      return bySpellKey;
-    }
-    if (selectedTokens.size === 0 && damageCantripEntries.length === 1) {
-      bySpellKey[normalizeSpellTrackingKey(damageCantripEntries[0].name)] = chaMod;
-      return bySpellKey;
-    }
-    for (const spell of prof?.spells ?? []) {
-      const spellId = spell.id ? String(spell.id).trim().toLowerCase() : "";
-      const spellName = String(spell.name ?? "").trim();
-      const normalizedName = normalizeSpellTrackingKey(spellName);
-      if (!normalizedName) continue;
-      if (selectedTokens.has(spellId) || selectedTokens.has(spellName.toLowerCase()) || selectedTokens.has(normalizedName)) {
-        bySpellKey[normalizedName] = chaMod;
-      }
-    }
-    if (Object.keys(bySpellKey).length === 0 && eldritchBlastEntry) {
-      bySpellKey[normalizeSpellTrackingKey(eldritchBlastEntry.name)] = chaMod;
-    } else if (Object.keys(bySpellKey).length === 0 && damageCantripEntries.length === 1) {
-      bySpellKey[normalizeSpellTrackingKey(damageCantripEntries[0].name)] = chaMod;
-    }
-    return bySpellKey;
-  })();
+  const preparedSpells = buildPreparedSpells({
+    currentCharacterData,
+    usesFlexiblePreparedList,
+    preparedSpellLimit,
+    knownSpellKeys,
+    forcedPreparedSpellKeys,
+  });
+  const grantedSpellNotesByKey = new Map(
+    grantedSpellData.spells.map((entry) => [normalizeSpellTrackingKey(entry.spellName), entry.note ?? null] as const)
+  );
+  const invocationSpellDamageBonuses = buildInvocationSpellDamageBonuses({
+    invocationDetails: args.invocationDetails,
+    prof: prof ?? undefined,
+    currentCharacterData,
+    scoresCha: scores.cha,
+    grantedSpellNotesByKey,
+  });
 
   const accentColor = args.char.color ?? "#38b6ff";
-  const overrides: SheetOverrides = args.char.overrides ?? currentCharacterData.sheetOverrides ?? { tempHp: 0, acBonus: 0, hpMaxBonus: 0 };
+  const overrides = args.char.overrides ?? currentCharacterData.sheetOverrides ?? { tempHp: 0, acBonus: 0, hpMaxBonus: 0 };
   const conScoreDeltaPerLevel = abilityMod(scores.con) - abilityMod(args.char.conScore);
   const featureHpMaxBonus = deriveHitPointMaxBonusFromEffects(parsedFeatureEffects, { level: args.char.level, scores });
   const effectiveHpMax = Math.max(1, args.char.hpMax + (conScoreDeltaPerLevel * args.char.level) + featureHpMaxBonus + (overrides.hpMaxBonus ?? 0));
@@ -384,62 +225,41 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   const tempHp = overrides.tempHp ?? 0;
   const hpPct = effectiveHpMax > 0 ? Math.max(0, Math.min(1, args.char.hpCurrent / effectiveHpMax)) : 0;
   const tempPct = effectiveHpMax > 0 ? Math.min(1 - hpPct, tempHp / effectiveHpMax) : 0;
-  const passiveScoreBonus = deriveModifierBonusFromEffects(parsedFeatureEffects, "passive_score", {
+  const { passivePerc, passiveInv } = buildPassiveScores({
+    parsedFeatureEffects,
     level: args.char.level,
-    scores: scoresByAbility,
+    scoresByAbility,
+    prof: prof ?? undefined,
+    hasJackOfAllTrades,
     raging: rageActive,
   });
-  const passivePerc = getPassiveScore(getSkillBonus("Perception", "wis", scoresByAbility, args.char.level, prof ?? undefined, { jackOfAllTrades: hasJackOfAllTrades })) + passiveScoreBonus;
-  const passiveInv = getPassiveScore(getSkillBonus("Investigation", "int", scoresByAbility, args.char.level, prof ?? undefined, { jackOfAllTrades: hasJackOfAllTrades })) + passiveScoreBonus;
   const initiativeBonus = getInitiativeBonus(scores.dex, args.char.level, { jackOfAllTrades: hasJackOfAllTrades })
     + deriveModifierBonusFromEffects(parsedFeatureEffects, "initiative", { level: args.char.level, scores: scoresByAbility, raging: rageActive });
-  const transformedCombatStats = args.polymorphMonsterState.monster ? (() => {
-    const monsterDex = readMonsterNumber(args.polymorphMonsterState.monster.dex) ?? 10;
-    const monsterWis = readMonsterNumber(args.polymorphMonsterState.monster.wis) ?? 10;
-    const speedData = parseMonsterSpeed(args.polymorphMonsterState.monster.speed);
-    const skillPerception = readMonsterSkillBonus(args.polymorphMonsterState.monster, "Perception");
-    return {
-      effectiveAc: readMonsterNumber(args.polymorphMonsterState.monster.ac?.value ?? args.polymorphMonsterState.monster.ac ?? args.polymorphMonsterState.monster.armor_class) ?? effectiveAc,
-      speed: speedData.walk ?? effectiveSpeed,
-      movementModes: speedData.modes,
-      initiativeBonus: abilityMod(monsterDex),
-      pb: proficiencyBonusFromChallengeRating(args.polymorphMonsterState.monster.cr ?? args.polymorphMonsterState.monster.challenge_rating),
-      passivePerc: skillPerception != null ? 10 + skillPerception : 10 + abilityMod(monsterWis),
-      passiveInv,
-      dexScore: monsterDex,
-      strScore: readMonsterNumber(args.polymorphMonsterState.monster.str) ?? scores.str,
-      className: args.polymorphMonsterState.monster.name ?? args.char.className,
-    };
-  })() : null;
-  const saveBonuses = Object.fromEntries(
-    (Object.entries(ABILITY_FULL) as [AbilKey, string][]).map(([key, name]) => [
-      key,
-      deriveModifierBonusFromEffects(parsedFeatureEffects, "saving_throw", { appliesTo: name, level: args.char.level, scores: scoresByAbility, raging: rageActive }),
-    ])
-  ) as Partial<Record<AbilKey, number>>;
-  const abilityCheckAdvantages: Partial<Record<AbilKey, boolean>> = {};
-  const abilityCheckDisadvantages: Partial<Record<AbilKey, boolean>> = {};
-  const saveAdvantages: Partial<Record<AbilKey, boolean>> = {};
-  const saveDisadvantages: Partial<Record<AbilKey, boolean>> = {};
-  (Object.keys(ABILITY_FULL) as AbilKey[]).forEach((ability) => {
-    const abilityName = ABILITY_FULL[ability];
-    const abilityCheckState = deriveModifierStateFromEffects(parsedFeatureEffects, "ability_check", { appliesTo: abilityName, raging: rageActive });
-    const saveState = deriveModifierStateFromEffects(parsedFeatureEffects, "saving_throw", { appliesTo: abilityName, raging: rageActive });
-    if (abilityCheckState.advantage) abilityCheckAdvantages[ability] = true;
-    if (abilityCheckState.disadvantage) abilityCheckDisadvantages[ability] = true;
-    if (saveState.advantage) saveAdvantages[ability] = true;
-    if (saveState.disadvantage) saveDisadvantages[ability] = true;
+  const transformedCombatStats = buildTransformedCombatStats({
+    monster: args.polymorphMonsterState.monster,
+    effectiveAc,
+    effectiveSpeed,
+    passiveInv,
+    className: args.char.className,
+    fallbackStrScore: scores.str,
   });
-  const skillAdvantages = Object.fromEntries(
-    ALL_SKILLS
-      .filter(({ name }) => deriveModifierStateFromEffects(parsedFeatureEffects, "skill_check", { appliesTo: name, raging: rageActive }).advantage)
-      .map(({ name }) => [name, true]),
-  ) as Record<string, boolean>;
-  const skillDisadvantages = Object.fromEntries(
-    ALL_SKILLS
-      .filter(({ name }) => deriveModifierStateFromEffects(parsedFeatureEffects, "skill_check", { appliesTo: name, raging: rageActive }).disadvantage)
-      .map(({ name }) => [name, true]),
-  ) as Record<string, boolean>;
+  const saveBonuses = buildSaveBonuses({
+    parsedFeatureEffects,
+    level: args.char.level,
+    scoresByAbility,
+    raging: rageActive,
+  });
+  const {
+    abilityCheckAdvantages,
+    abilityCheckDisadvantages,
+    saveAdvantages,
+    saveDisadvantages,
+    skillAdvantages,
+    skillDisadvantages,
+  } = buildModifierStateMaps({
+    parsedFeatureEffects,
+    raging: rageActive,
+  });
   const rageDamageBonus = deriveAttackDamageBonusFromEffects(parsedFeatureEffects, {
     level: args.char.level,
     scores: scoresByAbility,
@@ -455,7 +275,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     isUnarmed: true,
   });
   const senses = effectSenses.map((sense) => `${sense.kind[0].toUpperCase()}${sense.kind.slice(1)} ${sense.range} ft.`);
-  const editableOverrideFields: EditableSheetOverrideField[] = [
+  const editableOverrideFields = [
     { key: "tempHp", label: "Temp HP", help: "Current temporary hit points." },
     { key: "acBonus", label: "AC Bonus", help: "Bonus applied on top of normal armor class." },
     { key: "hpMaxBonus", label: "Max HP Modifier", help: "Bonus or penalty to maximum hit points." },

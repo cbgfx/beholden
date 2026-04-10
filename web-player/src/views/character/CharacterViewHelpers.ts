@@ -280,6 +280,9 @@ export function buildAbilityScoreExplanations(
 
 export function normalizeProficiencies(rawProf: CharacterData["proficiencies"] | undefined): ProficiencyMap | undefined {
   if (!rawProf) return undefined;
+  const isExpertiseChoicePlaceholder = (value: string): boolean =>
+    /\b(?:choose|choice|of your choice)\b/i.test(value)
+    || /\b(?:one|two|three|four|five|six|\d+)\s+(?:more\s+)?of your skill proficiencies\b/i.test(value);
   const isToolChoicePlaceholder = (value: string): boolean =>
     /^(?:\d+|one|two|three|four|five|six)\s+musical instruments?$/i.test(value.trim())
     || /\b(?:choose|choice|of your choice|any one type)\b/i.test(value);
@@ -299,10 +302,12 @@ export function normalizeProficiencies(rawProf: CharacterData["proficiencies"] |
   );
   const sanitizedTools = dedupeTaggedItems(rawProf.tools)
     .filter((entry) => !isToolChoicePlaceholder(String(entry.name ?? "")));
+  const sanitizedExpertise = dedupeTaggedItems(rawProf.expertise)
+    .filter((entry) => !isExpertiseChoicePlaceholder(String(entry.name ?? "")));
   return {
     ...rawProf,
     skills: dedupeTaggedItems(rawProf.skills),
-    expertise: dedupeTaggedItems(rawProf.expertise),
+    expertise: sanitizedExpertise,
     saves: dedupeTaggedItems(rawProf.saves),
     armor: sanitizedArmor,
     weapons: sanitizedWeapons,
