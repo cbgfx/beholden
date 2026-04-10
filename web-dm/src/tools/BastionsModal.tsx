@@ -1,6 +1,7 @@
 import React from "react";
 import { Modal } from "@/components/overlay/Modal";
 import { api, jsonInit } from "@/services/api";
+import { useWs } from "@/services/ws";
 import { useStore } from "@/store";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
@@ -78,6 +79,17 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
     if (!props.isOpen) return;
     void load();
   }, [props.isOpen, campaignId]);
+
+  useWs((msg) => {
+    if (!props.isOpen || !campaignId) return;
+    if (msg.type !== "bastions:changed") return;
+    const payload = msg.payload;
+    const changedCampaignId = payload && typeof payload === "object"
+      ? (payload as { campaignId?: unknown }).campaignId
+      : undefined;
+    if (typeof changedCampaignId !== "string" || changedCampaignId !== campaignId) return;
+    void load(selectedBastionId);
+  });
 
   React.useEffect(() => {
     if (!selectedBastion) {

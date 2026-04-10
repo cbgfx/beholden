@@ -40,6 +40,14 @@ export const OverridesBody = z.object({
   tempHp: z.number().int(),
   acBonus: z.number().int(),
   hpMaxBonus: z.number().int(),
+  abilityScores: z.object({
+    str: z.number().int().min(1).max(30).optional(),
+    dex: z.number().int().min(1).max(30).optional(),
+    con: z.number().int().min(1).max(30).optional(),
+    int: z.number().int().min(1).max(30).optional(),
+    wis: z.number().int().min(1).max(30).optional(),
+    cha: z.number().int().min(1).max(30).optional(),
+  }).optional(),
 });
 
 export function toCharacterSheetDtoInput(
@@ -69,7 +77,20 @@ export function toCharacterSheetDtoInput(
     updatedAt: number;
     deathSaves?: { success: number; fail: number } | undefined;
     conditions?: Array<Record<string, unknown>> | undefined;
-    overrides?: { tempHp: number; acBonus: number; hpMaxBonus: number; inspiration?: boolean } | undefined;
+    overrides?: {
+      tempHp: number;
+      acBonus: number;
+      hpMaxBonus: number;
+      inspiration?: boolean;
+      abilityScores?: {
+        str?: number | undefined;
+        dex?: number | undefined;
+        con?: number | undefined;
+        int?: number | undefined;
+        wis?: number | undefined;
+        cha?: number | undefined;
+      } | undefined;
+    } | undefined;
   },
   campaigns: CharacterCampaignAssignmentDto[],
   campaignSharedNotes?: string,

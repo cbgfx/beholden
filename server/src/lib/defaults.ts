@@ -8,6 +8,7 @@ export const DEFAULT_OVERRIDES: StoredOverrides = Object.freeze({
   acBonus: 0,
   hpMaxBonus: 0,
   inspiration: false,
+  abilityScores: {},
 });
 
 export const DEFAULT_DEATH_SAVES: StoredDeathSaves = Object.freeze({

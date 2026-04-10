@@ -16,6 +16,14 @@ export interface ActorOverridesDto {
   acBonus: number;
   hpMaxBonus: number;
   inspiration?: boolean;
+  abilityScores?: {
+    str?: number | undefined;
+    dex?: number | undefined;
+    con?: number | undefined;
+    int?: number | undefined;
+    wis?: number | undefined;
+    cha?: number | undefined;
+  } | undefined;
 }
 
 export interface CharacterCampaignAssignmentDto {

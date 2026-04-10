@@ -90,7 +90,13 @@ export interface Character {
   characterData: CharacterData | null;
   campaigns: CharacterCampaign[];
   conditions?: ConditionInstance[];
-  overrides?: { tempHp: number; acBonus: number; hpMaxBonus: number; inspiration?: boolean };
+  overrides?: {
+    tempHp: number;
+    acBonus: number;
+    hpMaxBonus: number;
+    inspiration?: boolean;
+    abilityScores?: Partial<Record<AbilKey, number>>;
+  };
   deathSaves?: { success: number; fail: number };
   sharedNotes?: string;
   campaignSharedNotes?: string;
@@ -168,6 +174,7 @@ export interface SheetOverrides {
   acBonus: number;
   hpMaxBonus: number;
   inspiration?: boolean;
+  abilityScores?: Partial<Record<AbilKey, number>>;
 }
 
 export type PolymorphConditionData = SharedPolymorphCondition & ConditionInstance;

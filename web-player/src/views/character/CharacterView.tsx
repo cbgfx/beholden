@@ -21,7 +21,7 @@ import {
   normalizeSpellTrackingKey,
 } from "@/views/character/CharacterSheetUtils";
 import type {
-  CharacterData, PlayerNote,
+  AbilKey, CharacterData, PlayerNote,
 } from "@/views/character/CharacterSheetTypes";
 import {
   type Character,
@@ -59,6 +59,7 @@ export function CharacterView() {
   const [noteDrawer, setNoteDrawer] = useState<{ scope: "player" | "shared"; note: PlayerNote | null } | null>(null);
   const [infoDrawerOpen, setInfoDrawerOpen] = useState(false);
   const [overridesDraft, setOverridesDraft] = useState<SheetOverrides>({ tempHp: 0, acBonus: 0, hpMaxBonus: 0 });
+  const [abilityOverridesDraft, setAbilityOverridesDraft] = useState<Partial<Record<AbilKey, number>>>({});
   const [colorDraft, setColorDraft] = useState<string>(C.accentHl);
   const [overridesSaving, setOverridesSaving] = useState(false);
   const [concentrationAlert, setConcentrationAlert] = useState<{ dc: number } | null>(null);
@@ -119,7 +120,21 @@ export function CharacterView() {
       acBonus: Math.floor(Number(source.acBonus ?? 0) || 0),
       hpMaxBonus: Math.floor(Number(source.hpMaxBonus ?? 0) || 0),
     });
-  }, [char?.overrides?.tempHp, char?.overrides?.acBonus, char?.overrides?.hpMaxBonus, characterData?.sheetOverrides?.tempHp, characterData?.sheetOverrides?.acBonus, characterData?.sheetOverrides?.hpMaxBonus]);
+    setAbilityOverridesDraft((source.abilityScores && typeof source.abilityScores === "object")
+      ? Object.fromEntries(
+          Object.entries(source.abilityScores).filter(([, value]) => Number.isFinite(Number(value)))
+        ) as Partial<Record<AbilKey, number>>
+      : {});
+  }, [
+    char?.overrides?.tempHp,
+    char?.overrides?.acBonus,
+    char?.overrides?.hpMaxBonus,
+    char?.overrides?.abilityScores,
+    characterData?.sheetOverrides?.tempHp,
+    characterData?.sheetOverrides?.acBonus,
+    characterData?.sheetOverrides?.hpMaxBonus,
+    characterData?.sheetOverrides?.abilityScores,
+  ]);
 
   useEffect(() => {
     setColorDraft(char?.color ?? C.accentHl);
@@ -170,6 +185,8 @@ export function CharacterView() {
     savePlayerNotesList,
     saveCustomResistances,
     saveCustomImmunities,
+    saveCustomTools,
+    saveCustomLanguages,
     saveSharedNotesList,
     handleNoteSave,
     handleNoteDelete,
@@ -185,6 +202,7 @@ export function CharacterView() {
     setNoteDrawer,
     setExpandedNoteIds,
     overridesDraft,
+    abilityOverridesDraft,
     colorDraft,
     setInfoDrawerOpen,
     setOverridesSaving,
@@ -420,7 +438,14 @@ export function CharacterView() {
             onCustomResistancesChange: (value) => { void saveCustomResistances(value); },
             onCustomImmunitiesChange: (value) => { void saveCustomImmunities(value); },
           }}
-          proficienciesProps={{ prof, accentColor }}
+          proficienciesProps={{
+            prof,
+            accentColor,
+            customTools: currentCharacterData.customTools ?? [],
+            customLanguages: currentCharacterData.customLanguages ?? [],
+            onCustomToolsChange: (value) => { void saveCustomTools(value); },
+            onCustomLanguagesChange: (value) => { void saveCustomLanguages(value); },
+          }}
         />
 
         <CharacterActionColumn
@@ -572,6 +597,7 @@ export function CharacterView() {
         overridesDraft={overridesDraft}
         colorDraft={colorDraft}
         colorPresets={SHEET_COLOR_PRESETS}
+        abilityOverridesDraft={abilityOverridesDraft}
         overridesSaving={overridesSaving}
         onClose={() => setInfoDrawerOpen(false)}
         onSave={() => saveSheetOverrides()}
@@ -581,6 +607,14 @@ export function CharacterView() {
             ...prev,
             [key]: value,
           }));
+        }}
+        onAbilityOverrideChange={(key, value) => {
+          setAbilityOverridesDraft((prev) => {
+            const next = { ...prev };
+            if (value == null || !Number.isFinite(value)) delete next[key];
+            else next[key] = Math.floor(value);
+            return next;
+          });
         }}
       />
     </Wrap>

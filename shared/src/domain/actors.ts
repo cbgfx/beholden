@@ -18,11 +18,21 @@ export interface SharedDeathSaves {
   fail: number;
 }
 
+export interface SharedAbilityScoreOverrides {
+  str?: number | undefined;
+  dex?: number | undefined;
+  con?: number | undefined;
+  int?: number | undefined;
+  wis?: number | undefined;
+  cha?: number | undefined;
+}
+
 export interface SharedCombatOverrides {
   tempHp: number;
   acBonus: number;
   hpMaxBonus: number;
   inspiration?: boolean;
+  abilityScores?: SharedAbilityScoreOverrides;
 }
 
 export function isPolymorphCondition(condition: SharedConditionInstance | null | undefined): condition is SharedPolymorphCondition {

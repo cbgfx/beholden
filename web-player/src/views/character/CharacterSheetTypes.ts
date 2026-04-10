@@ -137,6 +137,8 @@ export interface CharacterData {
   preparedSpells?: string[];
   customResistances?: string[];
   customImmunities?: string[];
+  customTools?: string[];
+  customLanguages?: string[];
   deathSaves?: SharedDeathSaves;
 }
 

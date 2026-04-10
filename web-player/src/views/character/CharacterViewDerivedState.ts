@@ -61,6 +61,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   const hitDiceMax = Math.max(0, args.char.level);
   const hitDiceCurrent = Math.max(0, Math.min(hitDiceMax, Math.floor(Number(currentCharacterData.hitDiceCurrent ?? hitDiceMax) || 0)));
   const inventory = currentCharacterData.inventory ?? [];
+  const overrides = args.char.overrides ?? currentCharacterData.sheetOverrides ?? { tempHp: 0, acBonus: 0, hpMaxBonus: 0 };
   const baseScores: Record<AbilKey, number | null> = {
     str: args.char.strScore,
     dex: args.char.dexScore,
@@ -69,7 +70,18 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     wis: args.char.wisScore,
     cha: args.char.chaScore,
   };
-  const scores = applyItemAbilityScoreOverrides(baseScores, inventory);
+  const itemAdjustedScores = applyItemAbilityScoreOverrides(baseScores, inventory);
+  const scores = (() => {
+    const next = { ...itemAdjustedScores };
+    const abilityScores = overrides.abilityScores;
+    if (!abilityScores || typeof abilityScores !== "object") return next;
+    for (const ability of Object.keys(next) as AbilKey[]) {
+      const value = Math.floor(Number(abilityScores[ability]));
+      if (!Number.isFinite(value) || value < 1 || value > 30) continue;
+      next[ability] = value;
+    }
+    return next;
+  })();
   const scoreExplanations = buildAbilityScoreExplanations(baseScores, scores, inventory);
   const featureArgs = {
     charData: currentCharacterData,
@@ -162,7 +174,6 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   });
 
   const accentColor = args.char.color ?? "#38b6ff";
-  const overrides = args.char.overrides ?? currentCharacterData.sheetOverrides ?? { tempHp: 0, acBonus: 0, hpMaxBonus: 0 };
   const conScoreDeltaPerLevel = abilityMod(scores.con) - abilityMod(args.char.conScore);
   const featureHpMaxBonus = deriveHitPointMaxBonusFromEffects(parsedFeatureEffects, { level: args.char.level, scores });
   const effectiveHpMax = Math.max(1, args.char.hpMax + (conScoreDeltaPerLevel * args.char.level) + featureHpMaxBonus + (overrides.hpMaxBonus ?? 0));

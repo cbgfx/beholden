@@ -47,11 +47,21 @@ interface CharacterSheetDtoInput {
 
 function toOverridesDto(value: StoredCampaignCharacter["overrides"] | StoredEncounterActor["overrides"] | undefined): ActorOverridesDto | undefined {
   if (!value) return undefined;
+  const abilityScores = (() => {
+    if (!value.abilityScores) return undefined;
+    const next: { str?: number; dex?: number; con?: number; int?: number; wis?: number; cha?: number } = {};
+    for (const key of ["str", "dex", "con", "int", "wis", "cha"] as const) {
+      const score = Math.floor(Number(value.abilityScores[key]));
+      if (Number.isFinite(score)) next[key] = score;
+    }
+    return Object.keys(next).length > 0 ? next : undefined;
+  })();
   return {
     tempHp: value.tempHp,
     acBonus: value.acBonus,
     hpMaxBonus: value.hpMaxBonus,
     ...(value.inspiration !== undefined ? { inspiration: value.inspiration } : {}),
+    ...(abilityScores && Object.keys(abilityScores).length > 0 ? { abilityScores } : {}),
   };
 }
 

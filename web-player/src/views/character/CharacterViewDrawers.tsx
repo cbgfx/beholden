@@ -6,6 +6,7 @@ import type { CompendiumMonsterRow } from "@/lib/monsterPicker/types";
 import { formatMonsterTypeLabel } from "@beholden/shared/domain";
 import { RightDrawer } from "@/ui/RightDrawer";
 import type { EditableSheetOverrideField, SheetOverrides } from "@/views/character/CharacterViewHelpers";
+import type { AbilKey } from "@/views/character/CharacterSheetTypes";
 
 export function CharacterPolymorphDrawer(props: {
   open: boolean;
@@ -154,6 +155,7 @@ export function CharacterInfoDrawer(props: {
   identityFields: Array<[string, string]>;
   editableOverrideFields: EditableSheetOverrideField[];
   overridesDraft: SheetOverrides;
+  abilityOverridesDraft: Partial<Record<AbilKey, number>>;
   colorDraft: string;
   colorPresets: string[];
   overridesSaving: boolean;
@@ -161,6 +163,7 @@ export function CharacterInfoDrawer(props: {
   onSave: () => void | Promise<void>;
   onColorChange: (value: string) => void;
   onOverrideChange: (key: EditableSheetOverrideField["key"], value: number) => void;
+  onAbilityOverrideChange: (key: AbilKey, value: number | null) => void;
 }) {
   if (!props.open) return null;
   return (
@@ -286,6 +289,49 @@ export function CharacterInfoDrawer(props: {
                   <span style={{ fontSize: "var(--fs-small)", color: "rgba(160,180,220,0.6)" }}>{field.help}</span>
                 </label>
               ))}
+            </div>
+            <div style={{ marginTop: 12, padding: "10px 12px", borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.08em" }}>Ability score override</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+                {([
+                  ["str", "STR"],
+                  ["dex", "DEX"],
+                  ["con", "CON"],
+                  ["int", "INT"],
+                  ["wis", "WIS"],
+                  ["cha", "CHA"],
+                ] as [AbilKey, string][]).map(([ability, label]) => (
+                  <label key={ability} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, letterSpacing: "0.08em" }}>{label}</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={30}
+                      placeholder="--"
+                      value={props.abilityOverridesDraft[ability] ?? ""}
+                      onChange={(e) => {
+                        const raw = e.target.value.trim();
+                        if (!raw) {
+                          props.onAbilityOverrideChange(ability, null);
+                          return;
+                        }
+                        const value = Math.floor(Number(raw));
+                        props.onAbilityOverrideChange(ability, Number.isFinite(value) ? value : null);
+                      }}
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        background: "rgba(255,255,255,0.05)",
+                        color: C.text,
+                        fontSize: "var(--fs-body)",
+                        fontWeight: 700,
+                        outline: "none",
+                      }}
+                    />
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
         </div>

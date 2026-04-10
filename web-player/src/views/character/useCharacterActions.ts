@@ -3,7 +3,7 @@ import { api, jsonInit } from "@/services/api";
 import { updateMyCharacter } from "@/services/actorApi";
 import { C } from "@/lib/theme";
 import { uid, normalizeCharacterClasses, normalizeProficiencies, type Character, type SheetOverrides } from "@/views/character/CharacterViewHelpers";
-import type { CharacterData, PlayerNote } from "@/views/character/CharacterSheetTypes";
+import type { AbilKey, CharacterData, PlayerNote } from "@/views/character/CharacterSheetTypes";
 
 export function useCharacterActions(args: {
   char: Character | null;
@@ -17,6 +17,7 @@ export function useCharacterActions(args: {
   setNoteDrawer: React.Dispatch<React.SetStateAction<{ scope: "player" | "shared"; note: PlayerNote | null } | null>>;
   setExpandedNoteIds: React.Dispatch<React.SetStateAction<string[]>>;
   overridesDraft: SheetOverrides;
+  abilityOverridesDraft: Partial<Record<AbilKey, number>>;
   colorDraft: string;
   setInfoDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setOverridesSaving: React.Dispatch<React.SetStateAction<boolean>>;
@@ -33,6 +34,7 @@ export function useCharacterActions(args: {
     setNoteDrawer,
     setExpandedNoteIds,
     overridesDraft,
+    abilityOverridesDraft,
     colorDraft,
     setInfoDrawerOpen,
     setOverridesSaving,
@@ -71,6 +73,14 @@ export function useCharacterActions(args: {
     await saveCharacterData({ ...currentCharacterData, customImmunities: values });
   }, [currentCharacterData, saveCharacterData]);
 
+  const saveCustomTools = React.useCallback(async (values: string[]) => {
+    await saveCharacterData({ ...currentCharacterData, customTools: values });
+  }, [currentCharacterData, saveCharacterData]);
+
+  const saveCustomLanguages = React.useCallback(async (values: string[]) => {
+    await saveCharacterData({ ...currentCharacterData, customLanguages: values });
+  }, [currentCharacterData, saveCharacterData]);
+
   const saveSharedNotesList = React.useCallback((list: PlayerNote[]) => {
     if (!char) return;
     const campaignNoteIds = new Set(campaignNotesList.map((note) => note.id));
@@ -102,10 +112,16 @@ export function useCharacterActions(args: {
 
   const saveSheetOverrides = React.useCallback(async () => {
     if (!char) return;
+    const nextAbilityScores = Object.fromEntries(
+      (Object.entries(abilityOverridesDraft) as [AbilKey, number | undefined][])
+        .map(([ability, value]) => [ability, Math.floor(Number(value))] as const)
+        .filter(([, value]) => Number.isFinite(value) && value >= 1 && value <= 30),
+    ) as Partial<Record<AbilKey, number>>;
     const nextOverrides = {
       tempHp: Math.max(0, Math.floor(Number(overridesDraft.tempHp) || 0)),
       acBonus: Math.floor(Number(overridesDraft.acBonus) || 0),
       hpMaxBonus: Math.floor(Number(overridesDraft.hpMaxBonus) || 0),
+      ...(Object.keys(nextAbilityScores).length > 0 ? { abilityScores: nextAbilityScores } : {}),
     };
     const nextColor = colorDraft || C.accentHl;
     setOverridesSaving(true);
@@ -134,13 +150,15 @@ export function useCharacterActions(args: {
     } finally {
       setOverridesSaving(false);
     }
-  }, [char, colorDraft, overridesDraft, setChar, setInfoDrawerOpen, setOverridesSaving]);
+  }, [abilityOverridesDraft, char, colorDraft, overridesDraft, setChar, setInfoDrawerOpen, setOverridesSaving]);
 
   return {
     saveCharacterData,
     savePlayerNotesList,
     saveCustomResistances,
     saveCustomImmunities,
+    saveCustomTools,
+    saveCustomLanguages,
     saveSharedNotesList,
     handleNoteSave,
     handleNoteDelete,

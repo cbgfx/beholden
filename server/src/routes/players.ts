@@ -76,6 +76,7 @@ function resolvePlayerUpdateState(
     acBonus: rawOverrides.acBonus ?? DEFAULT_OVERRIDES.acBonus,
     hpMaxBonus: rawOverrides.hpMaxBonus ?? DEFAULT_OVERRIDES.hpMaxBonus,
     ...(rawOverrides.inspiration !== undefined ? { inspiration: rawOverrides.inspiration } : {}),
+    ...(rawOverrides.abilityScores ? { abilityScores: rawOverrides.abilityScores } : {}),
   };
 
   return {

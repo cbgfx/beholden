@@ -43,6 +43,16 @@ import {
 export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
+  const normalizeAbilityScores = (value: unknown): { str?: number; dex?: number; con?: number; int?: number; wis?: number; cha?: number } | undefined => {
+    if (!value || typeof value !== "object") return undefined;
+    const raw = value as Record<string, unknown>;
+    const next: { str?: number; dex?: number; con?: number; int?: number; wis?: number; cha?: number } = {};
+    for (const key of ["str", "dex", "con", "int", "wis", "cha"] as const) {
+      const parsed = Math.floor(Number(raw[key]));
+      if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 30) next[key] = parsed;
+    }
+    return Object.keys(next).length > 0 ? next : undefined;
+  };
 
   const withAbsoluteImageUrl = <T extends { imageUrl?: string | null }>(req: Parameters<Express["get"]>[1] extends (...args: infer P) => any ? P[0] : never, value: T): T => ({
     ...value,
@@ -284,10 +294,16 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
 
     const ex = rowToCharacterSheet(existing);
     const parsed = parseBody(OverridesBody, req);
+    const existingSheetOverrides = (ex.characterData?.sheetOverrides && typeof ex.characterData.sheetOverrides === "object")
+      ? ex.characterData.sheetOverrides as Record<string, unknown>
+      : undefined;
+    const existingAbilityScores = normalizeAbilityScores(existingSheetOverrides?.abilityScores);
+    const abilityScores = normalizeAbilityScores(parsed.abilityScores) ?? existingAbilityScores;
     const overrides = {
       tempHp: Math.max(0, Math.floor(Number(parsed.tempHp) || 0)),
       acBonus: Math.floor(Number(parsed.acBonus) || 0),
       hpMaxBonus: Math.floor(Number(parsed.hpMaxBonus) || 0),
+      ...(abilityScores ? { abilityScores } : {}),
     };
     const t = now();
 
