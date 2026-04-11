@@ -42,6 +42,7 @@ export function PartyStashItemRow({ item, onTake, onDelete, onQuantity }: {
 }) {
   return (
     <CollectionRow
+      padding="4px 2px"
       main={(
         <>
           <div style={{ fontSize: "var(--fs-medium)", fontWeight: 600, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
@@ -108,8 +109,8 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
         </>
       )}
       main={(
-        <button type="button" onClick={() => onToggleExpanded(item.id)} style={{ width: "100%", minWidth: 0, background: expanded ? "rgba(255,255,255,0.05)" : "transparent", border: expanded ? `1px solid ${accentColor}33` : "1px solid transparent", borderRadius: 8, padding: "6px 8px", textAlign: "left", cursor: "pointer" }}>
-          <div style={{ fontSize: "var(--fs-subtitle)", color: C.text, fontWeight: equipped ? 600 : 400, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+        <button type="button" onClick={() => onToggleExpanded(item.id)} style={{ width: "100%", minWidth: 0, background: expanded ? "rgba(255,255,255,0.05)" : "transparent", border: expanded ? `1px solid ${accentColor}33` : "1px solid transparent", borderRadius: 8, padding: "3px 8px", textAlign: "left", cursor: "pointer" }}>
+          <div style={{ fontSize: "var(--fs-medium)", color: C.text, fontWeight: equipped ? 600 : 400, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             {item.rarity ? <RarityDot rarity={item.rarity} /> : null}
             {item.name}
             {item.magic ? <Tag label="Magic" color={C.colorMagic} /> : null}

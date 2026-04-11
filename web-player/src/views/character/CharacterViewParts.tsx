@@ -192,8 +192,8 @@ export function MiniStat({ label, value, accent, icon }: { label: string; value:
 
 export function inventoryEquipBtn(active: boolean, color: string): React.CSSProperties {
   return {
-    minWidth: 30,
-    height: 24,
+    minWidth: 28,
+    height: 20,
     borderRadius: 999,
     border: `1px solid ${active ? color : C.panelBorder}`,
     background: active ? withAlpha(color, 0.14) : "transparent",

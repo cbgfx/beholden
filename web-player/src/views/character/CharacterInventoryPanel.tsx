@@ -854,13 +854,15 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
                     padding: "0 0 2px",
                   }}
                 />
-                <button
-                  type="button"
-                  onClick={() => { void toggleContainerIgnoreWeight(container.id); }}
-                  style={togglePillStyle(Boolean(container.ignoreWeight), accentColor, C.panelBorder, C.muted)}
-                >
-                  Ignore Weight
-                </button>
+                {!isDefault && (
+                  <button
+                    type="button"
+                    onClick={() => { void toggleContainerIgnoreWeight(container.id); }}
+                    style={togglePillStyle(Boolean(container.ignoreWeight), accentColor, C.panelBorder, C.muted)}
+                  >
+                    Ignore Weight
+                  </button>
+                )}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <button
