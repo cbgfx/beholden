@@ -1,11 +1,10 @@
 import React from "react";
-import { Panel } from "@/ui/Panel";
-import { theme, withAlpha } from "@/theme/theme";
+import { theme } from "@/theme/theme";
 import { IconPlus } from "@/icons";
 import { IconButton } from "@/ui/IconButton";
 import type { CampaignCharacter } from "@/domain/types/domain";
 import { api, jsonInit } from "@/services/api";
-import { Input, NoteRow as SharedNoteRow, TextArea } from "@beholden/shared/ui";
+import { NoteEditorFields, NoteList, NotesPanel } from "@beholden/shared/ui";
 
 interface SharedNote {
   id: string;
@@ -51,6 +50,8 @@ export function SharedNotesPanel(props: {
   );
 
   const totalCount = dmNotes.length + playerNotes.length;
+  const campaignNoteKey = React.useCallback((noteId: string) => `campaign:${noteId}`, []);
+  const playerNoteKey = React.useCallback((playerId: string, noteId: string) => `player:${playerId}:${noteId}`, []);
 
   function toggle(id: string) {
     setExpandedIds((prev) =>
@@ -121,13 +122,23 @@ export function SharedNotesPanel(props: {
     await api(`/api/players/${playerId}/sharedNotes`, jsonInit("PATCH", { sharedNotes: JSON.stringify(notes) }));
   }
 
-  const accent = theme.colors.accentPrimary;
+  async function handleReorderDm(ids: string[]) {
+    if (ids.length !== dmNotes.length) return;
+    const byId = new Map(dmNotes.map((note) => [note.id, note] as const));
+    const reordered = ids.map((id) => byId.get(id)).filter((note): note is SharedNote => Boolean(note));
+    if (reordered.length !== dmNotes.length) return;
+    setDmNotes(reordered);
+    await api(`/api/campaigns/${props.campaignId}/sharedNotes`, jsonInit("PATCH", { sharedNotes: JSON.stringify(reordered) }));
+  }
+
+  const accent = `var(--campaign-accent, ${theme.colors.accentPrimary})`;
 
   return (
     <>
-      <Panel
+      <NotesPanel
         storageKey="campaign-shared-notes"
         title={`Shared Notes (${totalCount})`}
+        color={accent}
         actions={
           <IconButton onClick={openCreate} title="Add shared note" variant="accent">
             <IconPlus />
@@ -138,39 +149,63 @@ export function SharedNotesPanel(props: {
           <div style={{ color: theme.colors.muted }}>No shared notes yet.</div>
         ) : (
           <div style={{ display: "grid", gap: 4 }}>
-              {dmNotes.map((note) => (
-                <SharedNoteRow
-                  key={note.id}
-                  title={note.title || "Untitled"}
-                  text={note.text}
-                  expanded={expandedIds.includes(note.id)}
-                  accentColor={accent}
-                  textColor={theme.colors.text}
-                  mutedColor={theme.colors.muted}
-                  deleteColor={theme.colors.red}
-                  onToggle={() => toggle(note.id)}
-                  onEdit={() => openEditDm(note.id)}
-                  onDelete={() => handleDeleteDm(note.id)}
-                />
-              ))}
-              {playerNotes.map(({ note, playerId }) => (
-                <SharedNoteRow
-                  key={note.id}
-                  title={note.title || "Untitled"}
-                  text={note.text}
-                  expanded={expandedIds.includes(note.id)}
-                  accentColor={accent}
-                  textColor={theme.colors.text}
-                  mutedColor={theme.colors.muted}
-                  deleteColor={theme.colors.red}
-                  onToggle={() => toggle(note.id)}
-                  onEdit={() => openEditPlayer(note.id, playerId)}
-                  onDelete={() => handleDeletePlayer(note.id, playerId)}
+            {dmNotes.length > 0 ? (
+              <NoteList
+                items={dmNotes.map((note) => ({ id: campaignNoteKey(note.id), title: note.title || "Untitled", text: note.text }))}
+                expandedIds={expandedIds}
+                accentColor={accent}
+                textColor={theme.colors.text}
+                mutedColor={theme.colors.muted}
+                deleteColor={theme.colors.red}
+                onToggle={toggle}
+                onEdit={(key) => {
+                  const noteId = key.startsWith("campaign:") ? key.slice("campaign:".length) : key;
+                  openEditDm(noteId);
+                }}
+                onDelete={(key) => {
+                  const noteId = key.startsWith("campaign:") ? key.slice("campaign:".length) : key;
+                  void handleDeleteDm(noteId);
+                }}
+                onReorder={(ids) => {
+                  const rawIds = ids
+                    .map((key) => (key.startsWith("campaign:") ? key.slice("campaign:".length) : key))
+                    .filter(Boolean);
+                  void handleReorderDm(rawIds);
+                }}
               />
-            ))}
+            ) : null}
+            {playerNotes.length > 0 ? (
+              <NoteList
+                items={playerNotes.map(({ note, playerId }) => ({ id: playerNoteKey(playerId, note.id), title: note.title || "Untitled", text: note.text }))}
+                expandedIds={expandedIds}
+                accentColor={accent}
+                textColor={theme.colors.text}
+                mutedColor={theme.colors.muted}
+                deleteColor={theme.colors.red}
+                onToggle={(compositeId) => toggle(compositeId)}
+                onEdit={(compositeId) => {
+                  if (!compositeId.startsWith("player:")) return;
+                  const payload = compositeId.slice("player:".length);
+                  const sepIndex = payload.indexOf(":");
+                  if (sepIndex < 0) return;
+                  const playerId = payload.slice(0, sepIndex);
+                  const noteId = payload.slice(sepIndex + 1);
+                  openEditPlayer(noteId, playerId);
+                }}
+                onDelete={(compositeId) => {
+                  if (!compositeId.startsWith("player:")) return;
+                  const payload = compositeId.slice("player:".length);
+                  const sepIndex = payload.indexOf(":");
+                  if (sepIndex < 0) return;
+                  const playerId = payload.slice(0, sepIndex);
+                  const noteId = payload.slice(sepIndex + 1);
+                  void handleDeletePlayer(noteId, playerId);
+                }}
+              />
+            ) : null}
           </div>
         )}
-      </Panel>
+      </NotesPanel>
 
       {/* Edit drawer */}
       {editTarget && (
@@ -195,26 +230,20 @@ export function SharedNotesPanel(props: {
               <button onClick={() => setEditTarget(null)} style={{ all: "unset", cursor: "pointer", color: theme.colors.muted, fontSize: "var(--fs-title)", lineHeight: 1 }}>×</button>
             </div>
             <div style={{ flex: 1, overflow: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <label style={{ display: "block", marginBottom: 4, fontSize: "var(--fs-subtitle)", fontWeight: 600, color: theme.colors.muted }}>Title</label>
-                  <Input
-                    value={drawerTitle}
-                    onChange={(e) => setDrawerTitle(e.target.value)}
-                    placeholder="Note title"
-                    theme={{ radius: theme.radius.control, borderColor: theme.colors.panelBorder, inputBg: theme.colors.inputBg, textColor: theme.colors.text, placeholderColor: theme.colors.muted }}
-                    style={{ width: "100%", fontSize: "var(--fs-medium)" }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", marginBottom: 4, fontSize: "var(--fs-subtitle)", fontWeight: 600, color: theme.colors.muted }}>Body</label>
-                  <TextArea
-                    value={drawerText}
-                    onChange={(e) => setDrawerText(e.target.value)}
-                    placeholder="Note body"
-                    theme={{ radius: theme.radius.control, borderColor: theme.colors.panelBorder, inputBg: theme.colors.inputBg, textColor: theme.colors.text, placeholderColor: theme.colors.muted }}
-                    style={{ width: "100%", fontSize: "var(--fs-medium)", minHeight: 140, resize: "vertical", lineHeight: 1.5 }}
-                  />
-                </div>
+              <NoteEditorFields
+                title={drawerTitle}
+                text={drawerText}
+                onTitleChange={setDrawerTitle}
+                onTextChange={setDrawerText}
+                textRows={10}
+                titlePlaceholder="Note title"
+                textPlaceholder="Note body"
+                labelColor={theme.colors.muted}
+                textColor={theme.colors.text}
+                borderColor={theme.colors.panelBorder}
+                inputBg={theme.colors.inputBg}
+                radius={theme.radius.control}
+              />
             </div>
             <div style={{ padding: "12px 16px", borderTop: `1px solid ${theme.colors.panelBorder}`, display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setEditTarget(null)} style={{ padding: "8px 14px", borderRadius: theme.radius.control, border: `1px solid ${theme.colors.panelBorder}`, background: "transparent", color: theme.colors.text, cursor: "pointer", fontSize: "var(--fs-medium)", fontWeight: 700 }}>Cancel</button>

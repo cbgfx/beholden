@@ -82,6 +82,7 @@ function buildCreatureTypeLine(monster: MonsterDetail | null): string | null {
 
 export function CombatantDetailsPanel(props: Props) {
   const { roleTitle, role, combatant, ctx } = props;
+  const panelTitleColor = "var(--campaign-accent, #a78bfa)";
 
   const selected = combatant ?? null;
   const isMonster = selected?.baseType === "monster" || (selected?.baseType === "inpc" && !!ctx.selectedMonster);
@@ -147,8 +148,8 @@ export function CombatantDetailsPanel(props: Props) {
         <div style={{ display: "flex", flexDirection: "column", gap: 2, width: "100%", minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
             <span style={{ fontSize: "var(--fs-title)", fontWeight: 900 }}>
-              {roleTitle ? <span style={{ color: theme.colors.accentPrimary }}>{roleTitle}: </span> : null}
-              {titleMain}
+              {roleTitle ? <span style={{ color: panelTitleColor }}>{roleTitle}: </span> : null}
+              <span style={{ color: theme.colors.text }}>{titleMain}</span>
             </span>
             {selected ? (
               isMonster ? (

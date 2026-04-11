@@ -8,6 +8,7 @@ import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
 import { Select } from "@/ui/Select";
 import { useVirtualList } from "@/lib/monsterPicker/useVirtualList";
 import { useItemSearch } from "@/views/CompendiumView/hooks/useItemSearch";
+import { DraggableList } from "@/ui/DraggableList";
 import {
   DEFAULT_CONTAINER_ID,
   INVENTORY_PICKER_ROW_HEIGHT,
@@ -581,6 +582,30 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
     await persist(updated);
   }
 
+  async function reorderItemsByIds(ids: string[], predicate: (item: InventoryItem) => boolean) {
+    const subset = items.filter(predicate);
+    if (subset.length < 2) return;
+
+    const subsetIds = subset.map((item) => item.id);
+    if (ids.length !== subsetIds.length) return;
+    const idSet = new Set(subsetIds);
+    if (ids.some((id) => !idSet.has(id))) return;
+
+    const byId = new Map(subset.map((item) => [item.id, item] as const));
+    const reorderedSubset = ids.map((id) => byId.get(id)).filter((item): item is InventoryItem => Boolean(item));
+    if (reorderedSubset.length !== subset.length) return;
+
+    let subsetIndex = 0;
+    const updated = items.map((item) => {
+      if (!predicate(item)) return item;
+      const next = reorderedSubset[subsetIndex];
+      subsetIndex += 1;
+      return next;
+    });
+
+    await persist(updated);
+  }
+
   const equipped = items.filter((it) => getEquipState(it) !== "backpack");
   const currencyTotals = items.reduce<Record<"PP" | "GP" | "EP" | "SP" | "CP", number>>((acc, item) => {
     const name = String(item.name ?? "").trim().toUpperCase();
@@ -741,17 +766,31 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
       {equipped.length > 0 && (
         <div style={{ marginBottom: 10 }}>
           <div style={subLabelStyle}>Equipped</div>
-          {equipped.map((it) => (
-            <ItemRow key={it.id} item={it} accentColor={accentColor}
-              charData={charData}
-              parsedFeatureEffects={parsedFeatureEffects}
-              expanded={expandedItemId === it.id}
-              onToggleExpanded={toggleExpandedItem}
-              onCycleMain={cycleMainHand}
-              onToggleOffhand={toggleOffhand}
-              onToggleWorn={toggleWorn}
-              onRemove={removeItem} onQty={changeQty} />
-          ))}
+          <DraggableList
+            items={equipped.map((item) => ({ id: item.id }))}
+            onReorder={(ids) => {
+              void reorderItemsByIds(ids, (item) => getEquipState(item) !== "backpack");
+            }}
+            renderItem={(dragItem) => {
+              const it = equipped.find((item) => item.id === dragItem.id);
+              if (!it) return null;
+              return (
+                <ItemRow
+                  item={it}
+                  accentColor={accentColor}
+                  charData={charData}
+                  parsedFeatureEffects={parsedFeatureEffects}
+                  expanded={expandedItemId === it.id}
+                  onToggleExpanded={toggleExpandedItem}
+                  onCycleMain={cycleMainHand}
+                  onToggleOffhand={toggleOffhand}
+                  onToggleWorn={toggleWorn}
+                  onRemove={removeItem}
+                  onQty={changeQty}
+                />
+              );
+            }}
+          />
         </div>
       )}
 
@@ -844,17 +883,40 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
                 )}
               </div>
             </div>
-            {!isCollapsed && (containerItems.length > 0 ? containerItems.map((it) => (
-              <ItemRow key={it.id} item={it} accentColor={accentColor}
-                charData={charData}
-                parsedFeatureEffects={parsedFeatureEffects}
-                expanded={expandedItemId === it.id}
-                onToggleExpanded={toggleExpandedItem}
-                onCycleMain={cycleMainHand}
-                onToggleOffhand={toggleOffhand}
-                onToggleWorn={toggleWorn}
-                onRemove={removeItem} onQty={changeQty} />
-            )) : (
+            {!isCollapsed && (containerItems.length > 0 ? (
+              <DraggableList
+                items={containerItems.map((item) => ({ id: item.id }))}
+                onReorder={(ids) => {
+                  void reorderItemsByIds(ids, (item) => {
+                    if (getEquipState(item) !== "backpack") return false;
+                    if (isCurrencyItem(item)) return false;
+                    const itemContainerId = item.containerId && containers.some((entry) => entry.id === item.containerId)
+                      ? item.containerId
+                      : DEFAULT_CONTAINER_ID;
+                    return itemContainerId === container.id;
+                  });
+                }}
+                renderItem={(dragItem) => {
+                  const it = containerItems.find((item) => item.id === dragItem.id);
+                  if (!it) return null;
+                  return (
+                    <ItemRow
+                      item={it}
+                      accentColor={accentColor}
+                      charData={charData}
+                      parsedFeatureEffects={parsedFeatureEffects}
+                      expanded={expandedItemId === it.id}
+                      onToggleExpanded={toggleExpandedItem}
+                      onCycleMain={cycleMainHand}
+                      onToggleOffhand={toggleOffhand}
+                      onToggleWorn={toggleWorn}
+                      onRemove={removeItem}
+                      onQty={changeQty}
+                    />
+                  );
+                }}
+              />
+            ) : (
               <div style={emptyContainerStyle}>Empty.</div>
             ))}
           </div>

@@ -153,6 +153,14 @@ function splitComma(s: string): string[] {
   return s.split(/[,;]/).map((x) => x.trim()).filter(Boolean);
 }
 
+function isProficiencyNoiseToken(value: string): boolean {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized) return true;
+  if (/\bof your choice\b/i.test(normalized)) return true;
+  if (/^(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)$/i.test(normalized)) return true;
+  return /^(?:this|that|these|those|extra|another|any|language|languages|tool|tools|skill|skills)$/i.test(normalized);
+}
+
 export function parseSelectedClassOptionalFeatureEffects(
   classDetail: CreatorClassDetailLike | null,
   level: number,
@@ -325,15 +333,19 @@ export function buildProficiencyMap(args: {
     if (
       /\b(?:choose|choice|of your choice|any one type)\b/i.test(formatted)
       || /^(?:\d+|one|two|three|four|five|six)\s+musical instruments?$/i.test(formatted)
+      || isProficiencyNoiseToken(formatted)
     ) return;
     tools.push({ name: formatted, source });
   };
   const pushLanguage = (name: string, source: string) => {
     const formatted = normalizeLanguageName(name);
-    if (formatted) languages.push({ name: formatted, source });
+    if (!formatted || isProficiencyNoiseToken(formatted)) return;
+    languages.push({ name: formatted, source });
   };
   const pushExpertise = (name: string, source: string) => {
-    if (name) expertise.push({ name, source });
+    const formatted = String(name ?? "").trim();
+    if (!formatted || isProficiencyNoiseToken(formatted)) return;
+    expertise.push({ name: formatted, source });
   };
   if (classDetail) {
     splitComma(classDetail.armor).forEach((name) => pushArmor(name, className));
@@ -644,12 +656,12 @@ export function buildProficiencyMap(args: {
   });
 
   return {
-    skills: dedupeTaggedItems(skills),
-    expertise: dedupeTaggedItems(expertise),
+    skills: dedupeTaggedItems(skills).filter((entry) => !isProficiencyNoiseToken(entry.name)),
+    expertise: dedupeTaggedItems(expertise).filter((entry) => !isProficiencyNoiseToken(entry.name)),
     saves: dedupeTaggedItems(saves),
     armor: dedupeTaggedItems(armor, normalizeArmorProficiencyName),
-    tools: dedupeTaggedItems(tools),
-    languages: dedupeTaggedItems(languages, normalizeLanguageName),
+    tools: dedupeTaggedItems(tools).filter((entry) => !isProficiencyNoiseToken(entry.name)),
+    languages: dedupeTaggedItems(languages, normalizeLanguageName).filter((entry) => !isProficiencyNoiseToken(entry.name)),
     weapons: dedupeTaggedItems(weapons, normalizeWeaponProficiencyName),
     spells: dedupeTaggedItems(spells, normalizeSpellTrackingName),
     invocations: dedupeTaggedItems(invocations),

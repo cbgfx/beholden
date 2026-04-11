@@ -34,6 +34,7 @@ export function CombatOrderPanel(props: {
   bulkSelectedIds?: Set<string>;
   onToggleBulkSelect?: (id: string) => void;
 }) {
+  const panelTitleColor = "var(--campaign-accent, #a78bfa)";
   const { upcoming, wrapped } = useCombatOrderModel({ combatants: props.combatants, activeId: props.activeId });
 
   const getRowShadow = (isActive: boolean, isTarget: boolean) => {
@@ -62,7 +63,7 @@ export function CombatOrderPanel(props: {
       title={
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <IconInitiative size={18} title="Initiative" />
-          <span style={{ fontSize: "var(--fs-title)", color: theme.colors.accentPrimary, fontWeight: 900 }}>INITIATIVE</span>
+          <span style={{ fontSize: "var(--fs-title)", color: panelTitleColor, fontWeight: 900 }}>INITIATIVE</span>
         </div>
       }
     >
@@ -94,7 +95,7 @@ export function CombatOrderPanel(props: {
         ))}
 
         {wrapped.length ? (
-          <div style={{ padding: "6px 2px 2px", color: theme.colors.accentPrimary, fontSize: "var(--fs-title)", fontWeight: 900 }}>
+          <div style={{ padding: "6px 2px 2px", color: panelTitleColor, fontSize: "var(--fs-title)", fontWeight: 900 }}>
             NEXT ROUND
           </div>
         ) : null}

@@ -57,6 +57,14 @@ function parseWordCount(value: string): number | null {
   return words[normalized] ?? null;
 }
 
+function isProficiencyNoiseToken(value: string): boolean {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized) return true;
+  if (/\bof your choice\b/i.test(normalized)) return true;
+  if (parseWordCount(normalized) != null) return true;
+  return /^(?:\d+|this|that|these|those|extra|another|any|language|languages|tool|tools|skill|skills)$/i.test(normalized);
+}
+
 function cleanupText(text: string): string {
   return String(text ?? "")
     .replace(/Source:.*$/gim, "")
@@ -942,12 +950,14 @@ function parseProficiencyGrantEffects(source: FeatureEffectSource, text: string,
 
   const toolRe = /proficiency with\s+([\w\s']+?(?:tools?|kit|instruments?|supplies))\b/gi;
   while ((m = toolRe.exec(text)) !== null) {
-    tools.push(toTitleCase(m[1].trim()));
+    const parsed = toTitleCase(m[1].trim());
+    if (isProficiencyNoiseToken(parsed)) continue;
+    tools.push(parsed);
   }
 
   const skillRe = /proficiency in\s+([\w\s]+?)(?:\.|,|\band\b|$)/gi;
   while ((m = skillRe.exec(text)) !== null) {
-    skills.push(toTitleCase(m[1].trim()));
+    splitSkillNames(m[1]).forEach((name) => skills.push(name));
   }
 
   for (const match of text.matchAll(/proficiency (?:with|in)\s+([A-Za-z,\s]+?)\s+saving throws?/gi)) {
@@ -1044,7 +1054,9 @@ function parseProficiencyGrantEffects(source: FeatureEffectSource, text: string,
       .split(/\s+and\s+|,/)
       .map((part) => part.trim())
       .filter(Boolean)
-      .forEach((name) => expertise.push(toTitleCase(name)));
+      .map((name) => normalizeSkillName(name))
+      .filter((name): name is string => Boolean(name))
+      .forEach((name) => expertise.push(name));
   }
 
   if (/you have Expertise in those two skills/i.test(text)) {
@@ -1056,7 +1068,9 @@ function parseProficiencyGrantEffects(source: FeatureEffectSource, text: string,
 
   const langRe = /(?:learn|speak|know|understand)\s+(?:the\s+)?([\w]+)\s+language/gi;
   while ((m = langRe.exec(text)) !== null) {
-    languages.add(normalizeLanguageName(toTitleCase(m[1])));
+    const parsed = normalizeLanguageName(toTitleCase(m[1]));
+    if (!parsed || isProficiencyNoiseToken(parsed)) continue;
+    languages.add(parsed);
   }
   if (/know\s+thieves' cant/i.test(text)) languages.add("Thieves' Cant");
 

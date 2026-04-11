@@ -21,6 +21,10 @@ export function SectionTitle({
   fontWeight?: number;
   style?: React.CSSProperties;
 }) {
+  const lineColor = color.includes("var(")
+    ? `color-mix(in srgb, ${color} 30%, transparent)`
+    : `${color}30`;
+
   return (
     <div
       onClick={onToggle}
@@ -42,7 +46,7 @@ export function SectionTitle({
       <span style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
         {children}
       </span>
-      <div style={{ flex: 1, height: 1, background: `${color}30` }} />
+      <div style={{ flex: 1, height: 1, background: lineColor }} />
       {actions ? (
         <div
           style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}

@@ -1,11 +1,9 @@
 import React from "react";
-import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";
-import { DraggableList } from "@/components/drag/DraggableList";
 import { theme } from "@/theme/theme";
 import { IconPlus } from "@/icons";
 import type { Note } from "@/domain/types/domain";
-import { NoteAccordionItem } from "@/views/CampaignView/components/NoteAccordionItem";
+import { NoteList, NotesPanel } from "@beholden/shared/ui";
 
 export function AdventureNotesPanel(props: {
   selectedAdventureId: string | null;
@@ -20,9 +18,10 @@ export function AdventureNotesPanel(props: {
   const notes = props.notes;
 
   return (
-    <Panel
+    <NotesPanel
       storageKey="campaign-adventure-notes"
       title={`Adventure Notes (${notes.length})`}
+      color={`var(--campaign-accent, ${theme.colors.accentPrimary})`}
       actions={
         <IconButton onClick={props.onAdd} disabled={!props.selectedAdventureId} title="Add note" variant="accent">
           <IconPlus />
@@ -30,31 +29,22 @@ export function AdventureNotesPanel(props: {
       }
     >
       {props.selectedAdventureId ? (
-        notes.length ? (
-          <DraggableList
-            items={notes.map((n) => ({ id: n.id }))}
-          activeIds={props.expandedNoteIds}
-            onSelect={(id) => props.onToggle(id)}
-            onReorder={props.onReorder}
-            renderItem={(it) => {
-              const n = notes.find((x) => x.id === it.id)!;
-              return (
-                <NoteAccordionItem
-                  note={n}
-                expanded={props.expandedNoteIds.includes(n.id)}
-                  onToggle={() => props.onToggle(n.id)}
-                  onEdit={() => props.onEdit(n.id)}
-                  onDelete={() => props.onDelete(n.id)}
-                />
-              );
-            }}
-          />
-        ) : (
-          <div style={{ color: theme.colors.muted }}>No adventure notes yet.</div>
-        )
+        <NoteList
+          items={notes.map((note) => ({ id: note.id, title: note.title || "Untitled", text: note.text }))}
+          expandedIds={props.expandedNoteIds}
+          accentColor={`var(--campaign-accent, ${theme.colors.accentPrimary})`}
+          textColor={theme.colors.text}
+          mutedColor={theme.colors.muted}
+          deleteColor={theme.colors.red}
+          onToggle={props.onToggle}
+          onEdit={props.onEdit}
+          onDelete={props.onDelete}
+          onReorder={props.onReorder}
+          emptyText="No adventure notes yet."
+        />
       ) : (
         <div style={{ color: theme.colors.muted }}>Select an adventure.</div>
       )}
-    </Panel>
+    </NotesPanel>
   );
 }

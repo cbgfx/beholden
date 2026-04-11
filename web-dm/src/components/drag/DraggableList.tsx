@@ -83,13 +83,27 @@ export function DraggableList(props: {
                 }}
               >
                 <span
+                  aria-hidden
                   style={{
-                    fontSize: "var(--fs-medium)",
-                    lineHeight: 1,
-                    opacity: 0.9,
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, 3px)",
+                    gridAutoRows: "3px",
+                    gap: 2,
+                    opacity: 0.85,
                   }}
                 >
-                  ===
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <span
+                      key={`grip-dot-${i}`}
+                      style={{
+                        width: 3,
+                        height: 3,
+                        borderRadius: "50%",
+                        background: theme.colors.muted,
+                        display: "block",
+                      }}
+                    />
+                  ))}
                 </span>
               </div>
 

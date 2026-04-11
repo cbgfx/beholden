@@ -1,15 +1,13 @@
 import React from "react";
-import { EmptyState } from "@beholden/shared/ui";
+import { EmptyState, NoteList, NotesPanel } from "@beholden/shared/ui";
 import { C } from "@/lib/theme";
 import { IconWerewolf } from "@/icons";
-import { DraggableList } from "@/ui/DraggableList";
 import type { ClassFeatureEntry, PlayerNote, ResourceCounter } from "@/views/character/CharacterSheetTypes";
 import {
   CollapsiblePanel,
   panelHeaderAddBtn,
   miniPillBtn,
   restBtnStyle,
-  NoteItem,
   ClassFeatureItem,
 } from "@/views/character/CharacterViewParts";
 
@@ -284,67 +282,59 @@ export function CharacterSupportPanels(props: {
         </div>
       </CollapsiblePanel>
 
-      <CollapsiblePanel title="Player Notes" color={accentColor} storageKey="player-notes" actions={
-        <button type="button" onClick={onOpenPlayerNoteCreate} title="Add note" style={panelHeaderAddBtn(accentColor)}>+</button>
-      }>
-        {playerNotesList.length ? (
-          <DraggableList
-            items={playerNotesList}
-            expandedIds={expandedNoteIds}
-            onSelect={(id) => onToggleNoteExpanded(id)}
-            onReorder={(ids) => {
-              const byId = Object.fromEntries(playerNotesList.map((n) => [n.id, n]));
-              onSavePlayerNotesOrder(ids.map((id) => byId[id]).filter(Boolean));
-            }}
-            renderItem={(it) => {
-              const note = playerNotesList.find((n) => n.id === it.id)!;
-              return (
-                <NoteItem
-                  note={note}
-                  expanded={expandedNoteIds.includes(it.id)}
-                  accentColor={accentColor}
-                  onToggle={() => onToggleNoteExpanded(it.id)}
-                  onEdit={() => onOpenPlayerNoteEdit(note)}
-                  onDelete={() => onDeletePlayerNote(it.id)}
-                />
-              );
-            }}
-          />
-        ) : (
-          <EmptyState textColor={C.muted}>No notes yet.</EmptyState>
-        )}
-      </CollapsiblePanel>
+      <NotesPanel
+        title={`Player Notes (${playerNotesList.length})`}
+        color={accentColor}
+        storageKey="player-notes"
+        actions={<button type="button" onClick={onOpenPlayerNoteCreate} title="Add note" style={panelHeaderAddBtn(accentColor)}>+</button>}
+      >
+        <NoteList
+          items={playerNotesList.map((note) => ({ id: note.id, title: note.title || "Untitled", text: note.text }))}
+          expandedIds={expandedNoteIds}
+          accentColor={accentColor}
+          textColor={C.text}
+          mutedColor={C.muted}
+          deleteColor={C.red}
+          onToggle={onToggleNoteExpanded}
+          onEdit={(id) => {
+            const note = playerNotesList.find((entry) => entry.id === id);
+            if (note) onOpenPlayerNoteEdit(note);
+          }}
+          onDelete={onDeletePlayerNote}
+          onReorder={(ids) => {
+            const byId = Object.fromEntries(playerNotesList.map((n) => [n.id, n]));
+            onSavePlayerNotesOrder(ids.map((id) => byId[id]).filter(Boolean));
+          }}
+          emptyText="No notes yet."
+        />
+      </NotesPanel>
 
-      {hasCampaign && <CollapsiblePanel title="Shared Notes" color={accentColor} storageKey="shared-notes" actions={
-        <button type="button" onClick={onOpenSharedNoteCreate} title="Add shared note" style={panelHeaderAddBtn(accentColor)}>+</button>
-      }>
-        {allSharedNotes.length ? (
-          <DraggableList
-            items={allSharedNotes}
-            expandedIds={expandedNoteIds}
-            onSelect={(id) => onToggleNoteExpanded(id)}
-            onReorder={(ids) => {
-              const byId = Object.fromEntries(allSharedNotes.map((n) => [n.id, n]));
-              onSaveSharedNotesOrder(ids.map((id) => byId[id]).filter(Boolean));
-            }}
-            renderItem={(it) => {
-              const note = allSharedNotes.find((n) => n.id === it.id)!;
-              return (
-                <NoteItem
-                  note={note}
-                  expanded={expandedNoteIds.includes(it.id)}
-                  accentColor={C.green}
-                  onToggle={() => onToggleNoteExpanded(it.id)}
-                  onEdit={() => onOpenSharedNoteEdit(note)}
-                  onDelete={() => onDeleteSharedNote(it.id)}
-                />
-              );
-            }}
-          />
-        ) : (
-          <EmptyState textColor={C.muted}>No notes yet.</EmptyState>
-        )}
-      </CollapsiblePanel>}
+      {hasCampaign && <NotesPanel
+        title={`Shared Notes (${allSharedNotes.length})`}
+        color={accentColor}
+        storageKey="shared-notes"
+        actions={<button type="button" onClick={onOpenSharedNoteCreate} title="Add shared note" style={panelHeaderAddBtn(accentColor)}>+</button>}
+      >
+        <NoteList
+          items={allSharedNotes.map((note) => ({ id: note.id, title: note.title || "Untitled", text: note.text }))}
+          expandedIds={expandedNoteIds}
+          accentColor={accentColor}
+          textColor={C.text}
+          mutedColor={C.muted}
+          deleteColor={C.red}
+          onToggle={onToggleNoteExpanded}
+          onEdit={(id) => {
+            const note = allSharedNotes.find((entry) => entry.id === id);
+            if (note) onOpenSharedNoteEdit(note);
+          }}
+          onDelete={onDeleteSharedNote}
+          onReorder={(ids) => {
+            const byId = Object.fromEntries(allSharedNotes.map((n) => [n.id, n]));
+            onSaveSharedNotesOrder(ids.map((id) => byId[id]).filter(Boolean));
+          }}
+          emptyText="No notes yet."
+        />
+      </NotesPanel>}
 
       <CollapsiblePanel title="Player Features" color={accentColor} storageKey="player-features">
         {classFeaturesList.length > 0 ? (

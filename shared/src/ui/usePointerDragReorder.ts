@@ -50,15 +50,23 @@ export function usePointerDragReorder<T extends { id: string }>(
   const findOverId = React.useCallback((clientY: number, draggingId: string): string | null => {
     const ids = (orderIdsRef.current ?? orderIds ?? items.map((item) => item.id))
       .filter((id) => id !== draggingId);
-    let last: string | null = null;
+    if (ids.length === 0) return null;
+
+    const first = ids[0];
+    const firstRect = rowRefs.current[first]?.getBoundingClientRect();
+    if (firstRect && clientY <= firstRect.top) return first;
+
+    const last = ids[ids.length - 1];
+    const lastRect = rowRefs.current[last]?.getBoundingClientRect();
+    if (lastRect && clientY >= lastRect.bottom) return last;
+
     for (const id of ids) {
       const element = rowRefs.current[id];
       if (!element) continue;
       const rect = element.getBoundingClientRect();
-      last = id;
-      if (clientY < rect.top + rect.height / 2) return id;
+      if (clientY >= rect.top && clientY <= rect.bottom) return id;
     }
-    return last;
+    return null;
   }, [items, orderIds]);
 
   const onHandlePointerDown = React.useCallback((e: React.PointerEvent, id: string) => {

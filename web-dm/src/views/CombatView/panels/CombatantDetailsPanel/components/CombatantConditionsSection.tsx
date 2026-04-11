@@ -1,6 +1,7 @@
 import React from "react";
 import type { EncounterActor } from "@/domain/types/domain";
 import { theme } from "@/theme/theme";
+import { SectionTitle } from "@/ui/SectionTitle";
 import { conditionIconByKey } from "@/icons/conditions";
 import {
   CONDITION_DEFS,
@@ -51,11 +52,10 @@ export function CombatantConditionsSection(props: {
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-        <span style={{ color: theme.colors.accentPrimary, fontSize: "var(--fs-title)", fontWeight: 900, whiteSpace: "nowrap" }}>
-          CONDITIONS
-        </span>
-        <div style={{ flex: 1, height: 1, background: theme.colors.panelBorder }} />
+      <div style={{ marginBottom: 10 }}>
+        <SectionTitle style={{ marginBottom: 0 }}>
+          Conditions
+        </SectionTitle>
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>

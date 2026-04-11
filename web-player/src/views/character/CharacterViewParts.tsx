@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { C, withAlpha } from "@/lib/theme";
 import { RightDrawer } from "@/ui/RightDrawer";
-import { FormField, Input, MiniStat as SharedMiniStat, NoteRow as SharedNoteRow, Panel as SharedPanel, SectionTitle as SharedSectionTitle, TextArea, accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
+import { MiniStat as SharedMiniStat, NoteEditorFields, NoteRow as SharedNoteRow, Panel as SharedPanel, SectionTitle as SharedSectionTitle, accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import type { ClassFeatureEntry, PlayerNote } from "@/views/character/CharacterSheetTypes";
 
@@ -471,7 +471,7 @@ export function NoteEditDrawer(props: {
   onDelete?: () => void;
   onClose: () => void;
 }) {
-  const color = props.scope === "shared" ? C.green : props.accentColor;
+  const color = props.accentColor;
   const label = props.scope === "shared" ? "Shared Note" : "Player Note";
   const [title, setTitle] = useState(props.note?.title ?? "");
   const [text, setText] = useState(props.note?.text ?? "");
@@ -510,27 +510,16 @@ export function NoteEditDrawer(props: {
         </div>
       }
     >
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <FormField label="Title" labelStyle={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Note title..."
-              theme={{ radius: 6, panelBorder: "rgba(255,255,255,0.12)", inputBg: "rgba(255,255,255,0.06)", text: C.text }}
-              style={{ width: "100%", boxSizing: "border-box", fontSize: "var(--fs-subtitle)", fontFamily: "inherit" }}
-            />
-          </FormField>
-          <FormField label="Text" labelStyle={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            <TextArea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Write..."
-              rows={12}
-              theme={{ radius: 6, panelBorder: "rgba(255,255,255,0.12)", inputBg: "rgba(255,255,255,0.06)", text: C.text }}
-              style={{ width: "100%", boxSizing: "border-box", resize: "vertical", fontSize: "var(--fs-subtitle)", padding: "8px 10px", fontFamily: "inherit", lineHeight: 1.5 }}
-            />
-          </FormField>
-        </div>
+      <NoteEditorFields
+        title={title}
+        text={text}
+        onTitleChange={setTitle}
+        onTextChange={setText}
+        labelColor={C.muted}
+        textColor={C.text}
+        borderColor="rgba(255,255,255,0.12)"
+        inputBg="rgba(255,255,255,0.06)"
+      />
       </RightDrawer>
     );
   }

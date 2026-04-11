@@ -17,24 +17,41 @@ export function IconButton(props: {
   const [hovered, setHovered] = React.useState(false);
   const size = props.size ?? "md";
   const variant = props.variant ?? "ghost";
+  const usesCssVarAccent = props.accentColor.includes("var(");
   const px = size === "sm" ? 6 : 8;
   const py = size === "sm" ? 5 : 7;
   const hoverBackground = props.hoverBackground ?? props.borderColor;
 
+  const accentSoft = usesCssVarAccent
+    ? "color-mix(in srgb, " + props.accentColor + " 18%, transparent)"
+    : `${props.accentColor}2e`;
+  const accentSoftHover = usesCssVarAccent
+    ? "color-mix(in srgb, " + props.accentColor + " 32%, transparent)"
+    : `${props.accentColor}52`;
+  const accentBorder = usesCssVarAccent
+    ? "color-mix(in srgb, " + props.accentColor + " 40%, transparent)"
+    : `${props.accentColor}61`;
+  const accentSolid = usesCssVarAccent
+    ? "color-mix(in srgb, " + props.accentColor + " 78%, black)"
+    : `${props.accentColor}b3`;
+  const accentSolidHover = usesCssVarAccent
+    ? "color-mix(in srgb, " + props.accentColor + " 88%, black)"
+    : `${props.accentColor}d9`;
+
   const bg =
     variant === "solid"
       ? hovered
-        ? `${props.accentColor}d9`
-        : `${props.accentColor}b3`
+        ? accentSolidHover
+        : accentSolid
       : variant === "accent"
         ? hovered
-          ? `${props.accentColor}52`
-          : `${props.accentColor}2e`
+          ? accentSoftHover
+          : accentSoft
         : hovered
           ? hoverBackground
           : (props.ghostBackground ?? `${props.borderColor}1f`);
 
-  const border = variant === "accent" ? `${props.accentColor}61` : props.borderColor;
+  const border = variant === "accent" ? accentBorder : props.borderColor;
   const color =
     variant === "solid"
       ? props.textDarkColor

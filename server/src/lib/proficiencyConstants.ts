@@ -77,6 +77,7 @@ export interface StructuredBgProficiencies {
   feats: Array<{ name: string; parsed: ParsedFeat }>;
   featChoice: number;        // number of origin feats the player must choose (0 = none)
   abilityScores: string[];   // the ability scores player can choose from
+  abilityScoreChoose: number; // number of ability scores that can receive +1 in "even" mode
 }
 
 export interface StructuredRaceChoices {
@@ -265,15 +266,19 @@ export function parseBackgroundProficiencies(bg: {
 
   // Ability scores — "Ability Scores: Str, Dex, Con" OR "Choose Abilities" in trait name
   const abilityScores: string[] = [];
+  let abilityScoreChoose = 0;
   for (const t of traits) {
     const m = t.name.match(/^Ability Scores?:\s*(.+)$/i);
     if (m?.[1]) {
       m[1].split(",").map(s => s.trim()).filter(Boolean).forEach(s => abilityScores.push(s));
+      const chooseN = detectChooseN(t.name) || detectChooseN(t.text);
+      if (chooseN > 0) abilityScoreChoose = Math.max(abilityScoreChoose, chooseN);
     } else if (/choose\s+abilit/i.test(t.name) || /^Abilit(?:y|ies)\s*Scores?$/i.test(t.name)) {
       // Detect ability names from text; fall back to all six
       const found = findNamesIn(t.text, ABILITY_SCORE_NAMES);
       const toAdd = found.length >= 3 ? found : ABILITY_SCORE_NAMES;
       toAdd.forEach(s => { if (!abilityScores.includes(s)) abilityScores.push(s); });
+      abilityScoreChoose = Math.max(abilityScoreChoose, detectChooseN(t.text) || detectChooseN(t.name) || 3);
     }
   }
 
@@ -296,6 +301,7 @@ export function parseBackgroundProficiencies(bg: {
     feats,
     featChoice,
     abilityScores,
+    abilityScoreChoose,
   };
 }
 

@@ -44,6 +44,7 @@ interface BackgroundDetailLike {
     feats: Array<{ name: string }>;
     featChoice: number;
     abilityScores?: string[];
+    abilityScoreChoose?: number;
   };
 }
 
@@ -107,9 +108,12 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
     step,
   } = args;
   const bgAbilityKeys = bgDetail?.proficiencies?.abilityScores ? abilityNamesToKeys(bgDetail.proficiencies.abilityScores) : [];
+  const bgAbilityEvenTarget = bgDetail?.proficiencies?.abilityScoreChoose
+    ? Math.min(bgAbilityKeys.length, Math.max(1, bgDetail.proficiencies.abilityScoreChoose))
+    : bgAbilityKeys.length;
   const bgAbilityBonusCount = Object.keys(form.bgAbilityBonuses).length;
   const bgAbilityValid = bgAbilityKeys.length === 0
-    || (form.bgAbilityMode === "split" ? bgAbilityBonusCount === 2 : bgAbilityBonusCount === bgAbilityKeys.length);
+    || (form.bgAbilityMode === "split" ? bgAbilityBonusCount === 2 : bgAbilityBonusCount === bgAbilityEvenTarget);
 
   const bgChoicesMain = bgDetail
     ? (() => {
@@ -273,6 +277,9 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
 
             {prof?.abilityScores && prof.abilityScores.length > 0 && (() => {
               const abilityKeys = abilityNamesToKeys(prof.abilityScores);
+              const evenTarget = prof.abilityScoreChoose
+                ? Math.min(abilityKeys.length, Math.max(1, prof.abilityScoreChoose))
+                : abilityKeys.length;
               const bonuses = form.bgAbilityBonuses;
               const mode = form.bgAbilityMode;
 
@@ -297,13 +304,13 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                 setForm((prev) => {
                   const current = { ...prev.bgAbilityBonuses };
                   if (current[key]) delete current[key];
-                  else if (Object.keys(current).length < abilityKeys.length) current[key] = 1;
+                  else if (Object.keys(current).length < evenTarget) current[key] = 1;
                   return { ...prev, bgAbilityBonuses: current };
                 });
               }
 
               const splitDone = Object.keys(bonuses).length === 2;
-              const evenDone = Object.keys(bonuses).length === abilityKeys.length;
+              const evenDone = Object.keys(bonuses).length === evenTarget;
 
               return (
                 <div>
@@ -328,7 +335,7 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                           color: mode === option ? C.colorMagic : C.muted,
                         }}
                       >
-                        {option === "split" ? "+2 / +1" : "+1 each"}
+                        {option === "split" ? "+2 / +1" : (evenTarget < abilityKeys.length ? `+1 x${evenTarget}` : "+1 each")}
                       </button>
                     ))}
                   </div>
@@ -341,7 +348,7 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                           : "Click another for +1"
                       : evenDone
                         ? "All bonuses assigned"
-                        : `Click abilities to assign +1 (${Object.keys(bonuses).length}/${abilityKeys.length})`}
+                        : `Click abilities to assign +1 (${Object.keys(bonuses).length}/${evenTarget})`}
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                     {prof.abilityScores.map((abilityName) => {
@@ -350,7 +357,7 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                       const isSelected = bonus != null;
                       const canSelect = mode === "split"
                         ? !isSelected && Object.keys(bonuses).length < 2
-                        : !isSelected && Object.keys(bonuses).length < abilityKeys.length;
+                        : !isSelected && Object.keys(bonuses).length < evenTarget;
                       return (
                         <button
                           key={abilityName}
@@ -405,6 +412,33 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                       >
                         Option {option.id}
                       </button>
+                    );
+                  })}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+                  {equipOptions.map((option) => {
+                    const selected = form.chosenBgEquipmentOption === option.id;
+                    return (
+                      <div
+                        key={`bg-eq-${option.id}`}
+                        style={{
+                          borderRadius: 8,
+                          border: `1px solid ${selected ? `${C.accentHl}66` : "rgba(255,255,255,0.12)"}`,
+                          background: selected ? "rgba(56,182,255,0.10)" : "rgba(255,255,255,0.03)",
+                          padding: "8px 10px",
+                        }}
+                      >
+                        <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, color: selected ? C.accentHl : C.text, marginBottom: 4 }}>
+                          Option {option.id}
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                          {option.entries.map((entry, index) => (
+                            <div key={`bg-eq-${option.id}-${index}`} style={{ color: C.muted, fontSize: "var(--fs-small)", lineHeight: 1.45 }}>
+                              {entry}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
@@ -479,9 +513,26 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
             {bgDetail.equipment && (
               <div style={{ marginBottom: 10 }}>
                 <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>Equipment </span>
-                <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginTop: 4, lineHeight: 1.6 }}>
-                  {bgDetail.equipment.slice(0, 300)}{bgDetail.equipment.length > 300 ? "..." : ""}
-                </div>
+                {parseStartingEquipmentOptions(bgDetail.equipment).length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 5 }}>
+                    {parseStartingEquipmentOptions(bgDetail.equipment).map((option) => (
+                      <div key={`bg-side-eq-${option.id}`} style={{ borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.03)", padding: "6px 8px" }}>
+                        <div style={{ color: C.text, fontSize: "var(--fs-small)", fontWeight: 700, marginBottom: 3 }}>Option {option.id}</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                          {option.entries.map((entry, index) => (
+                            <div key={`bg-side-eq-${option.id}-${index}`} style={{ color: C.muted, fontSize: "var(--fs-small)", lineHeight: 1.4 }}>
+                              {entry}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginTop: 4, lineHeight: 1.6 }}>
+                    {bgDetail.equipment.slice(0, 300)}{bgDetail.equipment.length > 300 ? "..." : ""}
+                  </div>
+                )}
               </div>
             )}
 

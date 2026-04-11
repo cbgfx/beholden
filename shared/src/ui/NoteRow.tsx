@@ -23,13 +23,16 @@ export function NoteRow({
   onEdit?: () => void;
   onDelete?: () => void;
 }) {
+  const activeBg = `color-mix(in srgb, ${accentColor} 12%, transparent)`;
+  const activeBorder = `color-mix(in srgb, ${accentColor} 32%, transparent)`;
+
   return (
     <div
       style={{
         padding: "5px 6px",
         borderRadius: 7,
-        background: expanded ? `${accentColor}12` : "transparent",
-        border: `1px solid ${expanded ? `${accentColor}38` : "transparent"}`,
+        background: expanded ? activeBg : "transparent",
+        border: `1px solid ${expanded ? activeBorder : "transparent"}`,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

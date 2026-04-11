@@ -18,7 +18,7 @@ export function IconButton(props: {
       variant={props.variant}
       size={props.size}
       borderColor={theme.colors.panelBorder}
-      accentColor={theme.colors.colorMagic}
+      accentColor={"var(--campaign-accent, #a78bfa)"}
       textColor={theme.colors.text}
       textDarkColor={theme.colors.textDark}
       hoverBackground={withAlpha(theme.colors.panelBorder, 0.30)}

@@ -4,7 +4,7 @@ import { SectionTitle as SharedSectionTitle } from "@beholden/shared/ui";
 
 export function SectionTitle({
   children,
-  color = theme.colors.accentPrimary,
+  color = "var(--campaign-accent, #a78bfa)",
   actions,
   collapsed,
   onToggle,

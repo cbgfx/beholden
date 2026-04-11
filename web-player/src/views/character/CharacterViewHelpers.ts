@@ -1,6 +1,6 @@
-/**
+﻿/**
  * Module-level helpers, types, and constants extracted from CharacterView.tsx.
- * These are all pure functions or data — no React/hooks.
+ * These are all pure functions or data â€” no React/hooks.
  */
 import type { AbilKey, CharacterCampaign, CharacterClassEntry, CharacterData, ConditionInstance, ProficiencyMap, ResourceCounter } from "@/views/character/CharacterSheetTypes";
 import {
@@ -287,6 +287,27 @@ export function buildAbilityScoreExplanations(
 
 export function normalizeProficiencies(rawProf: CharacterData["proficiencies"] | undefined): ProficiencyMap | undefined {
   if (!rawProf) return undefined;
+  const isCountWord = (value: string): boolean =>
+    /^(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)$/i.test(value.trim());
+  const isNoiseToken = (value: string): boolean => {
+    const normalized = value.trim().toLowerCase();
+    return (
+      normalized === "this"
+      || normalized === "that"
+      || normalized === "these"
+      || normalized === "those"
+      || normalized === "extra"
+      || normalized === "another"
+      || normalized === "any"
+      || normalized === "language"
+      || normalized === "languages"
+      || normalized === "tool"
+      || normalized === "tools"
+      || normalized === "skill"
+      || normalized === "skills"
+      || isCountWord(normalized)
+    );
+  };
   const isNamedPlaceholder = (value: string): boolean => {
     const normalized = value.trim().toLowerCase();
     return (
@@ -295,6 +316,7 @@ export function normalizeProficiencies(rawProf: CharacterData["proficiencies"] |
       || normalized === "n/a"
       || normalized === "-"
       || normalized === "—"
+      || isNoiseToken(normalized)
     );
   };
   const isExpertiseChoicePlaceholder = (value: string): boolean =>
@@ -320,15 +342,25 @@ export function normalizeProficiencies(rawProf: CharacterData["proficiencies"] |
   const sanitizedTools = dedupeTaggedItems(rawProf.tools)
     .filter((entry) => {
       const name = String(entry.name ?? "");
-      return !isNamedPlaceholder(name) && !isToolChoicePlaceholder(name);
+      return !isNamedPlaceholder(name) && !isToolChoicePlaceholder(name) && !/\bof your choice\b/i.test(name);
     });
   const sanitizedExpertise = dedupeTaggedItems(rawProf.expertise)
-    .filter((entry) => !isExpertiseChoicePlaceholder(String(entry.name ?? "")));
+    .filter((entry) => {
+      const name = String(entry.name ?? "");
+      return !isExpertiseChoicePlaceholder(name) && !isNamedPlaceholder(name) && !/\bof your choice\b/i.test(name);
+    });
   const sanitizedLanguages = dedupeTaggedItems(rawProf.languages, normalizeLanguageName)
-    .filter((entry) => !isNamedPlaceholder(String(entry.name ?? "")));
+    .filter((entry) => {
+      const name = String(entry.name ?? "");
+      return !isNamedPlaceholder(name) && !/\bof your choice\b/i.test(name);
+    });
   return {
     ...rawProf,
-    skills: dedupeTaggedItems(rawProf.skills),
+    skills: dedupeTaggedItems(rawProf.skills)
+      .filter((entry) => {
+        const name = String(entry.name ?? "");
+        return !isNamedPlaceholder(name) && !/\bof your choice\b/i.test(name);
+      }),
     expertise: sanitizedExpertise,
     saves: dedupeTaggedItems(rawProf.saves),
     armor: sanitizedArmor,
@@ -341,7 +373,6 @@ export function normalizeProficiencies(rawProf: CharacterData["proficiencies"] |
     plans: dedupeTaggedItems(rawProf.plans),
   };
 }
-
 export function normalizeCharacterClasses(
   rawData: CharacterData | null | undefined,
 ): CharacterClassEntry[] {
@@ -538,3 +569,5 @@ export function shouldResetOnRest(resetCode: string | undefined, restType: "shor
 export function getPolymorphConditionData(conditions: ConditionInstance[] | undefined): PolymorphConditionData | null {
   return getPolymorphCondition(conditions) as PolymorphConditionData | null;
 }
+
+

@@ -25,7 +25,7 @@ export function AdventuresPanel(props: {
       title={`Adventures (${adventures.length})`}
       actions={
         <div style={{ display: "inline-flex", gap: 4 }}>
-          <IconButton onClick={props.onImport} title="Import adventure">
+          <IconButton onClick={props.onImport} title="Import adventure" variant="accent">
             <IconImport />
           </IconButton>
           <IconButton onClick={props.onCreate} title="Add adventure" variant="accent">

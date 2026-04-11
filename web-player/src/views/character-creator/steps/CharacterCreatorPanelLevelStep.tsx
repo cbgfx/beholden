@@ -3,7 +3,7 @@ import { Select } from "@/ui/Select";
 import { C } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import { ABILITY_KEYS, ABILITY_LABELS } from "@/views/character-creator/constants/CharacterCreatorConstants";
-import { abilityNamesToKeys, parseSkillList } from "../utils/CharacterCreatorUtils";
+import { abilityNamesToKeys, parseSkillList, type StartingEquipmentOption } from "../utils/CharacterCreatorUtils";
 import { NavButtons } from "../shared/CharacterCreatorParts";
 import {
   collectPreparedSpellProgressionTables,
@@ -73,7 +73,7 @@ export function renderLevelStep({
   toggleOptional: (name: string, exclusive: boolean, groupFeatures: string[]) => void;
   parseFeatureGrants: (text: string) => { armor: string[]; weapons: string[]; tools: string[]; skills: string[]; languages: string[] };
   classEquipmentText: string;
-  classEquipmentOptions: Array<{ id: string }>;
+  classEquipmentOptions: StartingEquipmentOption[];
   chosenClassEquipmentOption: string | null;
   chooseClassEquipmentOption: (id: string) => void;
   className: string | null;
@@ -311,7 +311,34 @@ export function renderLevelStep({
               })}
             </div>
           )}
-          <div style={{ color: C.muted, fontSize: "var(--fs-small)", lineHeight: 1.6 }}>{classEquipmentText}</div>
+          {classEquipmentOptions.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+              {classEquipmentOptions.map((option) => (
+                <div
+                  key={`class-eq-${option.id}`}
+                  style={{
+                    borderRadius: 8,
+                    border: `1px solid ${chosenClassEquipmentOption === option.id ? `${C.accentHl}66` : "rgba(255,255,255,0.12)"}`,
+                    background: chosenClassEquipmentOption === option.id ? "rgba(56,182,255,0.10)" : "rgba(255,255,255,0.03)",
+                    padding: "8px 10px",
+                  }}
+                >
+                  <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, color: chosenClassEquipmentOption === option.id ? C.accentHl : C.text, marginBottom: 4 }}>
+                    Option {option.id}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    {option.entries.map((entry, index) => (
+                      <div key={`class-eq-${option.id}-${index}`} style={{ color: C.muted, fontSize: "var(--fs-small)", lineHeight: 1.45 }}>
+                        {entry}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ color: C.muted, fontSize: "var(--fs-small)", lineHeight: 1.6 }}>{classEquipmentText}</div>
+          )}
           {chosenClassEquipmentOption && classEquipmentOptions.length > 0 && (
             <div style={{ color: C.accentHl, fontSize: "var(--fs-small)", marginTop: 8 }}>
               Inventory will start with class option {chosenClassEquipmentOption}.

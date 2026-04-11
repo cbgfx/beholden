@@ -84,6 +84,7 @@ export interface StructuredBgProficiencies {
   feats: Array<ParsedFeatDetailLike<ParsedFeatChoiceLike>>;
   featChoice: number;
   abilityScores: string[];
+  abilityScoreChoose: number;
 }
 
 export interface BgDetail {

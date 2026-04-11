@@ -1,5 +1,6 @@
 import React from "react";
 import { theme } from "@/theme/theme";
+import { SectionTitle } from "@/ui/SectionTitle";
 
 export function CharacterSheetDetailsPanel({
   infoLines,
@@ -22,28 +23,15 @@ export function CharacterSheetDetailsPanel({
         overflow: "hidden",
       }}
     >
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: compact ? "7px 10px" : "8px 12px",
-          background: "transparent",
-          border: 0,
-          cursor: "pointer",
-          color: theme.colors.text,
-          fontSize: "var(--fs-small)",
-          fontWeight: 900,
-          letterSpacing: 0.8,
-          textTransform: "uppercase",
-        }}
-      >
-        <span>Details</span>
-        <span style={{ color: theme.colors.muted }}>{open ? "^" : "v"}</span>
-      </button>
+      <div style={{ padding: compact ? "7px 10px" : "8px 12px" }}>
+        <SectionTitle
+          collapsed={!open}
+          onToggle={() => setOpen((value) => !value)}
+          style={{ width: "100%", marginBottom: 0 }}
+        >
+          Details
+        </SectionTitle>
+      </div>
 
       {open && (
         <div style={{ padding: compact ? "0 10px 8px" : "0 12px 10px", display: "grid", gap: 4 }}>
