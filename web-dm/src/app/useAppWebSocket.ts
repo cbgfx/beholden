@@ -9,7 +9,7 @@ import {
 import type { CampaignCharacter, INpc, Note, TreasureEntry } from "@/domain/types/domain";
 import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
 import type { Action } from "@/store/actions";
-import type React from "react";
+import React from "react";
 
 type Dispatch = React.Dispatch<Action>;
 
@@ -36,47 +36,128 @@ export function useAppWebSocket({
   refreshEncounter,
   setCompendiumIndex,
 }: Deps) {
+  const taskStateRef = React.useRef(
+    new Map<string, { timer: number | null; inflight: boolean; pending: boolean }>()
+  );
+
+  React.useEffect(() => {
+    return () => {
+      for (const state of taskStateRef.current.values()) {
+        if (state.timer != null) window.clearTimeout(state.timer);
+      }
+      taskStateRef.current.clear();
+    };
+  }, []);
+
+  const enqueue = React.useCallback((key: string, run: () => Promise<void> | void, delayMs = 150) => {
+    let state = taskStateRef.current.get(key);
+    if (!state) {
+      state = { timer: null, inflight: false, pending: false };
+      taskStateRef.current.set(key, state);
+    }
+
+    if (state.timer != null) window.clearTimeout(state.timer);
+    state.timer = window.setTimeout(() => {
+      state!.timer = null;
+      const execute = () => {
+        if (state!.inflight) {
+          state!.pending = true;
+          return;
+        }
+
+        state!.inflight = true;
+        Promise.resolve(run())
+          .catch(() => {})
+          .finally(() => {
+            state!.inflight = false;
+            if (state!.pending) {
+              state!.pending = false;
+              execute();
+            }
+          });
+      };
+      execute();
+    }, delayMs);
+  }, []);
+
   useWs((msg) => {
-    if (msg.type === "campaigns:changed" || msg.type === "user:changed") { refreshAll(); return; }
+    if (msg.type === "campaigns:changed" || msg.type === "user:changed") {
+      enqueue("refresh:all", async () => {
+        await refreshAll();
+      }, 250);
+      return;
+    }
 
     const p = msg.payload;
     const campaignId = (p && typeof p === "object") ? (p as { campaignId?: unknown }).campaignId : undefined;
     const encounterId = (p && typeof p === "object") ? (p as { encounterId?: unknown }).encounterId : undefined;
 
     if (msg.type === "adventures:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
-      refreshCampaign(selectedCampaignId); return;
+      enqueue(`refresh:campaign:${selectedCampaignId}`, async () => {
+        await refreshCampaign(selectedCampaignId);
+      });
+      return;
     }
     if (msg.type === "players:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
-      fetchCampaignCharacters(selectedCampaignId).then((pls) => dispatch({ type: "setPlayers", players: pls as CampaignCharacter[] }));
+      enqueue(`refresh:players:${selectedCampaignId}`, async () => {
+        const players = await fetchCampaignCharacters(selectedCampaignId);
+        dispatch({ type: "setPlayers", players: players as CampaignCharacter[] });
+      });
       return;
     }
     if (msg.type === "inpcs:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
-      api<INpc[]>(`/api/campaigns/${selectedCampaignId}/inpcs`).then((inpcs) => dispatch({ type: "setINpcs", inpcs }));
+      enqueue(`refresh:inpcs:${selectedCampaignId}`, async () => {
+        const inpcs = await api<INpc[]>(`/api/campaigns/${selectedCampaignId}/inpcs`);
+        dispatch({ type: "setINpcs", inpcs });
+      });
       return;
     }
     if (msg.type === "encounters:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
-      if (selectedAdventureId) refreshAdventure(selectedAdventureId);
+      if (selectedAdventureId) {
+        enqueue(`refresh:adventure:${selectedAdventureId}`, async () => {
+          await refreshAdventure(selectedAdventureId);
+        });
+      }
       return;
     }
     if (msg.type === "notes:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
-      fetchCampaignNotes(selectedCampaignId).then((notes) => dispatch({ type: "setCampaignNotes", notes: notes as Note[] }));
-      if (selectedAdventureId) refreshAdventure(selectedAdventureId);
+      enqueue(`refresh:campaign-notes:${selectedCampaignId}`, async () => {
+        const notes = await fetchCampaignNotes(selectedCampaignId);
+        dispatch({ type: "setCampaignNotes", notes: notes as Note[] });
+      });
+      if (selectedAdventureId) {
+        enqueue(`refresh:adventure:${selectedAdventureId}`, async () => {
+          await refreshAdventure(selectedAdventureId);
+        });
+      }
       return;
     }
     if (msg.type === "treasure:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
-      fetchCampaignTreasure(selectedCampaignId).then((treasure) => dispatch({ type: "setCampaignTreasure", treasure: treasure as TreasureEntry[] }));
+      enqueue(`refresh:campaign-treasure:${selectedCampaignId}`, async () => {
+        const treasure = await fetchCampaignTreasure(selectedCampaignId);
+        dispatch({ type: "setCampaignTreasure", treasure: treasure as TreasureEntry[] });
+      });
       if (selectedAdventureId) {
-        fetchAdventureTreasure(selectedAdventureId).then((treasure) => dispatch({ type: "setAdventureTreasure", treasure: treasure as TreasureEntry[] }));
+        enqueue(`refresh:adventure-treasure:${selectedAdventureId}`, async () => {
+          const treasure = await fetchAdventureTreasure(selectedAdventureId);
+          dispatch({ type: "setAdventureTreasure", treasure: treasure as TreasureEntry[] });
+        });
       } else {
         dispatch({ type: "setAdventureTreasure", treasure: [] });
       }
       return;
     }
     if (msg.type === "encounter:combatantsChanged" && typeof encounterId === "string" && encounterId === selectedEncounterId) {
-      refreshEncounter(selectedEncounterId); return;
+      enqueue(`refresh:encounter:${selectedEncounterId}`, async () => {
+        await refreshEncounter(selectedEncounterId);
+      }, 100);
+      return;
     }
     if (msg.type === "compendium:changed") {
-      api<CompendiumMonsterRow[]>(`/api/compendium/monsters`).then(setCompendiumIndex);
+      enqueue("refresh:compendium-index", async () => {
+        const rows = await api<CompendiumMonsterRow[]>(`/api/compendium/monsters`);
+        setCompendiumIndex(rows);
+      }, 350);
       return;
     }
   });

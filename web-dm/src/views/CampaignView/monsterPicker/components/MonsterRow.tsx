@@ -76,7 +76,7 @@ export function MonsterRow(props: {
         <Button
           type="button"
           disabled={showAddedFeedback}
-          onClick={(e) => {
+          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
             e.preventDefault();
             e.stopPropagation();
             triggerAddedFeedback();

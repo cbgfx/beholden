@@ -83,7 +83,15 @@ export function ItemPickerBrowsePanel(props: {
       style={{ display: "flex", flexDirection: "column", minHeight: 0, height: "100%" }}
       bodyStyle={{ flex: 1, display: "flex", flexDirection: "column", gap: 8, minHeight: 0 }}
     >
-      <input value={props.q} onChange={(e) => props.onQChange(e.target.value)} placeholder="Search items..." style={searchStyle()} />
+      <input
+        value={props.q}
+        onChange={(e) => props.onQChange(e.target.value)}
+        placeholder="Search items..."
+        spellCheck={false}
+        autoCorrect="off"
+        autoCapitalize="none"
+        style={searchStyle()}
+      />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
         <Select value={props.rarity} onChange={(e) => props.onRarityChange(e.target.value)} style={{ width: "100%" }}>
