@@ -24,6 +24,11 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
   app.get("/api/spells/search", (req, res) => {
     const q = String(req.query.q ?? "").trim().toLowerCase();
     const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "50"), 10) || 50, 1), 500);
+    const includeTextRaw = String(req.query.includeText ?? "").trim().toLowerCase();
+    const includeText = includeTextRaw === "1" || includeTextRaw === "true" || includeTextRaw === "yes";
+    const excludeSpecialRaw = String(req.query.excludeSpecial ?? "").trim().toLowerCase();
+    const excludeSpecial =
+      excludeSpecialRaw === "1" || excludeSpecialRaw === "true" || excludeSpecialRaw === "yes";
     const levelRaw = String(req.query.level ?? "").trim();
     const level = levelRaw === "" ? null : Number(levelRaw);
     const maxLevelRaw = String(req.query.maxLevel ?? "").trim();
@@ -66,6 +71,17 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     if (ritualOnly) {
       parts.push("AND ritual = 1");
     }
+    if (excludeSpecial) {
+      // Hide non-spell option rows (kept in table for other game systems).
+      parts.push("AND classes NOT LIKE ?");
+      parts.push("AND classes NOT LIKE ?");
+      parts.push("AND classes NOT LIKE ?");
+      parts.push("AND classes NOT LIKE ?");
+      params.push("%Eldritch Invocations%");
+      params.push("%Maneuver Options%");
+      params.push("%Metamagic Options%");
+      params.push("%Infusion%");
+    }
     parts.push("ORDER BY level NULLS LAST, name COLLATE NOCASE");
     parts.push(`LIMIT ${limit}`);
 
@@ -75,15 +91,18 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     }[];
     res.json(rows.map((row) => {
       const s = JSON.parse(row.data_json);
-      const textArr: string[] = Array.isArray(s.text) ? s.text : (s.text ? [s.text] : []);
-      return {
+      const out: Record<string, unknown> = {
         id: row.id, name: row.name, level: row.level, school: row.school,
         time: s.time ?? null,
         ritual: row.ritual === 1, concentration: row.concentration === 1,
         components: row.components ?? s.components ?? null,
         classes: row.classes ?? s.classes ?? null,
-        text: textArr.join("\n") || null,
       };
+      if (includeText) {
+        const textArr: string[] = Array.isArray(s.text) ? s.text : (s.text ? [s.text] : []);
+        out.text = textArr.join("\n") || null;
+      }
+      return out;
     }));
   });
 

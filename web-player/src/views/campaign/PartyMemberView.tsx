@@ -65,6 +65,9 @@ export function PartyMemberView() {
   const [expandedFeatureIds, setExpandedFeatureIds] = React.useState<Record<string, boolean>>({});
   const [expandedNoteIds, setExpandedNoteIds] = React.useState<Record<string, boolean>>({});
   const viewportWidth = useViewportWidth();
+  const refreshTimerRef = React.useRef<number | null>(null);
+  const refreshInflightRef = React.useRef(false);
+  const refreshPendingRef = React.useRef(false);
 
   const fetchMember = React.useCallback(() => {
     if (!campaignId) return;
@@ -82,15 +85,48 @@ export function PartyMemberView() {
       .finally(() => setLoading(false));
   }, [campaignId, playerId]);
 
+  const enqueueFetchMember = React.useCallback((delayMs = 150) => {
+    if (refreshTimerRef.current != null) window.clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = window.setTimeout(() => {
+      refreshTimerRef.current = null;
+      const run = () => {
+        if (refreshInflightRef.current) {
+          refreshPendingRef.current = true;
+          return;
+        }
+        refreshInflightRef.current = true;
+        Promise.resolve(fetchMember())
+          .catch(() => {})
+          .finally(() => {
+            refreshInflightRef.current = false;
+            if (refreshPendingRef.current) {
+              refreshPendingRef.current = false;
+              run();
+            }
+          });
+      };
+      run();
+    }, delayMs);
+  }, [fetchMember]);
+
   React.useEffect(() => {
     fetchMember();
   }, [fetchMember]);
 
+  React.useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current != null) {
+        window.clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+    };
+  }, []);
+
   useWs(React.useCallback((msg) => {
     if (msg.type !== "players:changed") return;
     const changedCampaignId = (msg.payload as any)?.campaignId as string | undefined;
-    if (changedCampaignId === campaignId) fetchMember();
-  }, [campaignId, fetchMember]));
+    if (changedCampaignId === campaignId) enqueueFetchMember();
+  }, [campaignId, enqueueFetchMember]));
 
   const cd = (member?.characterData as any) ?? null;
   const prof = (cd?.proficiencies ?? undefined) as Proficiencies | undefined;

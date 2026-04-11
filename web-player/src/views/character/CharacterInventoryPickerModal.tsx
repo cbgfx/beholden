@@ -57,7 +57,7 @@ export function InventoryItemPickerModal(props: {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [props]);
+  }, [props.isOpen, props.onClose]);
 
   useEffect(() => {
     if (!props.isOpen) {

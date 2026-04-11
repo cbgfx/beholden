@@ -1,65 +1,127 @@
-/**
- * Dice expression evaluator.
+﻿/**
+ * Dice/math expression evaluator for combat delta input.
  *
- * Supports standard NdM notation with additive/subtractive chaining:
- *   "d6"           → roll 1d6
- *   "2d6"          → roll 2d6, sum them
- *   "2d6+3"        → roll 2d6, sum, add 3
- *   "1d4+6d8+3d4"  → roll each group, sum all
- *   "-2d6+10"      → negate the 2d6 roll, add 10 (minimum result 0)
- *   "8"            → constant 8 (no dice, passthrough)
- *
- * Returns 0 for empty / unparseable expressions.
- * Result is always clamped to ≥ 0 (HP can't go negative from a dice roll alone).
+ * Supported examples:
+ * - d6
+ * - 2d6+3
+ * - (2d6+3)/2
+ * - 12/3
+ * - 4x5 ("x" is treated as "*")
  */
 export function rollDiceExpr(expr: string): number {
-  const raw = String(expr ?? "").trim().toLowerCase().replace(/\s+/g, "");
+  const raw = String(expr ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/[x×]/g, "*");
   if (!raw) return 0;
 
-  // Tokenise into signed groups.
-  // Pattern matches (optional sign)(NdM | d6 | constant):
-  //   [+-]?  optional leading sign
-  //   (?:    followed by one of:
-  //     [1-9]\d*d\d+   e.g. 2d6, 10d4
-  //     d\d+           e.g. d6, d20  (implicit 1 die)
-  //     \d+            e.g. 3, 10    (flat constant)
-  //   )
-  const TOKEN_RE = /[+-]?(?:[1-9]\d*d\d+|d\d+|\d+)/g;
-  const tokens = raw.match(TOKEN_RE);
-  if (!tokens) return 0;
+  let i = 0;
 
-  let total = 0;
+  const peek = () => raw[i] ?? "";
+  const consume = () => raw[i++] ?? "";
 
-  for (const token of tokens) {
-    const sign = token[0] === "-" ? -1 : 1;
-    const part = token.replace(/^[+-]/, "");
-
-    if (part.includes("d")) {
-      const dIdx = part.indexOf("d");
-      const countStr = part.slice(0, dIdx);
-      const sidesStr = part.slice(dIdx + 1);
-
-      const count = countStr ? Math.max(0, Math.floor(Number(countStr))) : 1;
-      const sides = Math.max(1, Math.floor(Number(sidesStr)));
-
-      if (!Number.isFinite(count) || !Number.isFinite(sides)) continue;
-
-      for (let i = 0; i < count; i++) {
-        total += sign * (Math.floor(Math.random() * sides) + 1);
-      }
-    } else {
-      const n = Number(part);
-      if (Number.isFinite(n)) total += sign * Math.floor(n);
+  const parseNumber = (): number => {
+    const start = i;
+    while (/\d/.test(peek())) consume();
+    if (peek() === ".") {
+      consume();
+      while (/\d/.test(peek())) consume();
     }
-  }
+    const text = raw.slice(start, i);
+    if (!text) return NaN;
+    const n = Number(text);
+    return Number.isFinite(n) ? n : NaN;
+  };
 
-  return Math.max(0, total);
+  const rollDice = (count: number, sides: number): number => {
+    if (!Number.isFinite(count) || !Number.isFinite(sides)) return NaN;
+    const c = Math.max(0, Math.floor(count));
+    const s = Math.max(1, Math.floor(sides));
+    let total = 0;
+    for (let idx = 0; idx < c; idx += 1) {
+      total += Math.floor(Math.random() * s) + 1;
+    }
+    return total;
+  };
+
+  const parsePrimary = (): number => {
+    if (peek() === "(") {
+      consume();
+      const v = parseExpression();
+      if (peek() !== ")") return NaN;
+      consume();
+      return v;
+    }
+
+    if (peek() === "d") {
+      consume();
+      const sides = parseNumber();
+      if (!Number.isFinite(sides)) return NaN;
+      return rollDice(1, sides);
+    }
+
+    const n = parseNumber();
+    if (!Number.isFinite(n)) return NaN;
+
+    // Dice literal: <count>d<sides>
+    if (peek() === "d") {
+      consume();
+      const sides = parseNumber();
+      if (!Number.isFinite(sides)) return NaN;
+      return rollDice(n, sides);
+    }
+    return n;
+  };
+
+  const parseUnary = (): number => {
+    if (peek() === "+") {
+      consume();
+      return parseUnary();
+    }
+    if (peek() === "-") {
+      consume();
+      const v = parseUnary();
+      return Number.isFinite(v) ? -v : NaN;
+    }
+    return parsePrimary();
+  };
+
+  const parseTerm = (): number => {
+    let left = parseUnary();
+    while (peek() === "*" || peek() === "/") {
+      const op = consume();
+      const right = parseUnary();
+      if (!Number.isFinite(left) || !Number.isFinite(right)) return NaN;
+      if (op === "*") left *= right;
+      else {
+        if (right === 0) return NaN;
+        left /= right;
+      }
+    }
+    return left;
+  };
+
+  const parseExpression = (): number => {
+    let left = parseTerm();
+    while (peek() === "+" || peek() === "-") {
+      const op = consume();
+      const right = parseTerm();
+      if (!Number.isFinite(left) || !Number.isFinite(right)) return NaN;
+      if (op === "+") left += right;
+      else left -= right;
+    }
+    return left;
+  };
+
+  const value = parseExpression();
+  if (!Number.isFinite(value) || i < raw.length) return 0;
+  return Math.max(0, Math.floor(value));
 }
 
 /**
  * Returns true when the string contains at least one dice term (NdM).
- * Used to decide whether to show roll preview vs. a plain number.
  */
 export function hasDiceTerm(expr: string): boolean {
-  return /\dd/i.test(String(expr ?? ""));
+  return /(?:\d+d\d+|d\d+)/i.test(String(expr ?? ""));
 }

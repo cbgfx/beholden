@@ -154,15 +154,15 @@ export async function loadSpellChoiceOptions(
           const schoolQuery = choice.schools?.length ? `&school=${encodeURIComponent(choice.schools.join(","))}` : "";
           const ritualQuery = choice.ritualOnly ? "&ritual=1" : "";
           if ((choice.level ?? 0) === 0) {
-            return fetchSpells(`/api/spells/search?classes=${encoded}&level=0${schoolQuery}${ritualQuery}&limit=200`).catch(() => []);
+            return fetchSpells(`/api/spells/search?classes=${encoded}&level=0${schoolQuery}${ritualQuery}&limit=200&includeText=1`).catch(() => []);
           }
           if (typeof choice.level === "number" && /\bat or below\b/i.test(choice.note ?? "")) {
-            return fetchSpells(`/api/spells/search?classes=${encoded}&minLevel=1&maxLevel=${choice.level}${schoolQuery}${ritualQuery}&limit=300`).catch(() => []);
+            return fetchSpells(`/api/spells/search?classes=${encoded}&minLevel=1&maxLevel=${choice.level}${schoolQuery}${ritualQuery}&limit=300&includeText=1`).catch(() => []);
           }
           if (typeof choice.level === "number") {
-            return fetchSpells(`/api/spells/search?classes=${encoded}&level=${choice.level}${schoolQuery}${ritualQuery}&limit=300`).catch(() => []);
+            return fetchSpells(`/api/spells/search?classes=${encoded}&level=${choice.level}${schoolQuery}${ritualQuery}&limit=300&includeText=1`).catch(() => []);
           }
-          return fetchSpells(`/api/spells/search?classes=${encoded}${schoolQuery}${ritualQuery}&limit=300`).catch(() => []);
+          return fetchSpells(`/api/spells/search?classes=${encoded}${schoolQuery}${ritualQuery}&limit=300&includeText=1`).catch(() => []);
         })
       );
 
@@ -171,12 +171,12 @@ export async function loadSpellChoiceOptions(
         const ritualQuery = choice.ritualOnly ? "&ritual=1" : "";
         const query =
           (choice.level ?? 0) === 0
-            ? `/api/spells/search?level=0${schoolQuery}${ritualQuery}&limit=500`
+            ? `/api/spells/search?level=0${schoolQuery}${ritualQuery}&limit=500&includeText=1`
             : typeof choice.level === "number" && /\bat or below\b/i.test(choice.note ?? "")
-              ? `/api/spells/search?minLevel=1&maxLevel=${choice.level}${schoolQuery}${ritualQuery}&limit=500`
+              ? `/api/spells/search?minLevel=1&maxLevel=${choice.level}${schoolQuery}${ritualQuery}&limit=500&includeText=1`
               : typeof choice.level === "number"
-                ? `/api/spells/search?level=${choice.level}${schoolQuery}${ritualQuery}&limit=500`
-                : `/api/spells/search?${schoolQuery ? schoolQuery.slice(1) : ""}${ritualQuery}&limit=500`;
+                ? `/api/spells/search?level=${choice.level}${schoolQuery}${ritualQuery}&limit=500&includeText=1`
+                : `/api/spells/search?${schoolQuery ? schoolQuery.slice(1) : ""}${ritualQuery}&limit=500&includeText=1`;
         groups.push(await fetchSpells(query).catch(() => []));
       }
 

@@ -11,6 +11,33 @@ export function useCharacterSyncEffects(args: {
 }) {
   const { char, setChar, fetchChar, syncedAcValue } = args;
   const lastSyncedAcRef = React.useRef<{ charId: string; ac: number } | null>(null);
+  const syncTimerRef = React.useRef<number | null>(null);
+  const syncInflightRef = React.useRef(false);
+  const syncPendingRef = React.useRef(false);
+
+  const enqueueFetchChar = React.useCallback((delayMs = 120) => {
+    if (syncTimerRef.current != null) window.clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = window.setTimeout(() => {
+      syncTimerRef.current = null;
+      const run = () => {
+        if (syncInflightRef.current) {
+          syncPendingRef.current = true;
+          return;
+        }
+        syncInflightRef.current = true;
+        Promise.resolve(fetchChar())
+          .catch(() => {})
+          .finally(() => {
+            syncInflightRef.current = false;
+            if (syncPendingRef.current) {
+              syncPendingRef.current = false;
+              run();
+            }
+          });
+      };
+      run();
+    }, delayMs);
+  }, [fetchChar]);
 
   React.useEffect(() => {
     if (char?.id && char.name) {
@@ -21,17 +48,26 @@ export function useCharacterSyncEffects(args: {
     }
   }, [char?.id, char?.name]);
 
+  React.useEffect(() => {
+    return () => {
+      if (syncTimerRef.current != null) {
+        window.clearTimeout(syncTimerRef.current);
+        syncTimerRef.current = null;
+      }
+    };
+  }, []);
+
   useWs(React.useCallback((msg) => {
     if (msg.type !== "players:changed") return;
     const campaignId = (msg.payload as any)?.campaignId as string | undefined;
     if (!campaignId) return;
     setChar((prev) => {
       if (prev?.campaigns.some((campaign) => campaign.campaignId === campaignId)) {
-        void fetchChar();
+        enqueueFetchChar();
       }
       return prev;
     });
-  }, [fetchChar, setChar]));
+  }, [enqueueFetchChar, setChar]));
 
   React.useEffect(() => {
     if (!char || syncedAcValue == null) return;

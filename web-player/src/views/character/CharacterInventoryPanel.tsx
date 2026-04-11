@@ -106,6 +106,9 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
   const nameRef = useRef<HTMLInputElement>(null);
   const currencyPopupRef = useRef<HTMLDivElement | null>(null);
   const [partyStashItems, setPartyStashItems] = useState<PartyStashItem[]>([]);
+  const partyStashTimerRef = useRef<number | null>(null);
+  const partyStashInflightRef = useRef(false);
+  const partyStashPendingRef = useRef(false);
 
   const fetchPartyStash = useCallback(() => {
     if (!campaignId) return;
@@ -114,14 +117,47 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
       .catch(() => {});
   }, [campaignId]);
 
+  const enqueuePartyStashRefresh = useCallback((delayMs = 150) => {
+    if (partyStashTimerRef.current != null) window.clearTimeout(partyStashTimerRef.current);
+    partyStashTimerRef.current = window.setTimeout(() => {
+      partyStashTimerRef.current = null;
+      const run = () => {
+        if (partyStashInflightRef.current) {
+          partyStashPendingRef.current = true;
+          return;
+        }
+        partyStashInflightRef.current = true;
+        Promise.resolve(fetchPartyStash())
+          .catch(() => {})
+          .finally(() => {
+            partyStashInflightRef.current = false;
+            if (partyStashPendingRef.current) {
+              partyStashPendingRef.current = false;
+              run();
+            }
+          });
+      };
+      run();
+    }, delayMs);
+  }, [fetchPartyStash]);
+
   useEffect(() => { fetchPartyStash(); }, [fetchPartyStash]);
+
+  useEffect(() => {
+    return () => {
+      if (partyStashTimerRef.current != null) {
+        window.clearTimeout(partyStashTimerRef.current);
+        partyStashTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useWs(useCallback((msg) => {
     if (msg.type === "partyInventory:changed") {
       const cId = (msg.payload as { campaignId?: string })?.campaignId;
-      if (cId === campaignId) fetchPartyStash();
+      if (cId === campaignId) enqueuePartyStashRefresh();
     }
-  }, [campaignId, fetchPartyStash]));
+  }, [campaignId, enqueuePartyStashRefresh]));
 
   useEffect(() => {
     setItems(

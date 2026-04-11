@@ -1,4 +1,4 @@
-import * as React from "react";
+﻿import * as React from "react";
 import type { CompendiumMonsterRow, PreparedMonsterRow, SortMode } from "@/views/CampaignView/monsterPicker/types";
 import { parseCrNumber } from "@/views/CampaignView/monsterPicker/utils";
 
@@ -19,12 +19,20 @@ function resolveSizeLabel(raw: string | undefined): string {
   const trimmed = raw.trim();
   // Single-letter code (most common from compendium data).
   if (SIZE_CODE_MAP[trimmed.toUpperCase()]) return SIZE_CODE_MAP[trimmed.toUpperCase()];
-  // Already a full name — normalise capitalisation.
+  // Already a full name; normalize capitalization.
   const lower = trimmed.toLowerCase();
   for (const label of SIZE_LABELS) {
     if (label.toLowerCase() === lower) return label;
   }
-  return trimmed; // Unknown — pass through as-is.
+  return trimmed; // Unknown, pass through as-is.
+}
+
+function normalizeMonsterSortName(name: string): string {
+  return name
+    .trim()
+    .replace(/^[^a-z0-9]+/i, "")
+    .replace(/^the\s+/i, "")
+    .trim();
 }
 
 export function useMonsterPickerRows(args: {
@@ -42,6 +50,7 @@ export function useMonsterPickerRows(args: {
   const preparedRows = React.useMemo<PreparedMonsterRow[]>(() => {
     return args.rows.map((m) => {
       const name = String(m.name ?? "");
+      const sortName = normalizeMonsterSortName(name) || name;
       const envRaw = String(m?.environment ?? "").trim();
       const envParts = envRaw
         ? envRaw
@@ -50,12 +59,13 @@ export function useMonsterPickerRows(args: {
             .filter(Boolean)
         : [];
 
-      const first = name.trim().charAt(0).toUpperCase();
+      const first = sortName.trim().charAt(0).toUpperCase();
       const firstLetter = first >= "A" && first <= "Z" ? first : "#";
 
       return {
         ...m,
         nameLower: name.toLowerCase(),
+        sortNameLower: sortName.toLowerCase(),
         envParts,
         envPartsLower: envParts.map((e) => e.toLowerCase()),
         crNum: parseCrNumber(m.cr),
@@ -67,7 +77,7 @@ export function useMonsterPickerRows(args: {
 
   const rowsAz = React.useMemo(() => {
     const a = [...preparedRows];
-    a.sort((x, y) => x.nameLower.localeCompare(y.nameLower));
+    a.sort((x, y) => x.sortNameLower.localeCompare(y.sortNameLower));
     return a;
   }, [preparedRows]);
 
@@ -78,11 +88,11 @@ export function useMonsterPickerRows(args: {
       const by = y.crNum;
       const aOk = Number.isFinite(ax);
       const bOk = Number.isFinite(by);
-      if (!aOk && !bOk) return x.nameLower.localeCompare(y.nameLower);
+      if (!aOk && !bOk) return x.sortNameLower.localeCompare(y.sortNameLower);
       if (!aOk) return 1;
       if (!bOk) return -1;
       const d = ax! - by!;
-      return d !== 0 ? d : x.nameLower.localeCompare(y.nameLower);
+      return d !== 0 ? d : x.sortNameLower.localeCompare(y.sortNameLower);
     });
     return a;
   }, [preparedRows]);
@@ -187,6 +197,6 @@ export function useMonsterPickerRows(args: {
     typeOptions,
     filteredRows,
     lettersInList,
-    letterFirstIndex
+    letterFirstIndex,
   };
 }

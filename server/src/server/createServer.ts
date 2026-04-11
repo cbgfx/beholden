@@ -8,6 +8,7 @@
  */
 
 import express from "express";
+import compression from "compression";
 import os from "node:os";
 import fs from "node:fs";
 import path from "node:path";
@@ -73,6 +74,49 @@ export function createServer() {
   // --- app ------------------------------------------------------------------
   const app = express();
   app.disable("x-powered-by");
+  app.set("etag", "strong");
+
+  // Compress API/static responses to cut egress for large JSON payloads.
+  app.use(compression({ threshold: 1024 }));
+
+  const logEgress = String(process.env.BEHOLDEN_LOG_EGRESS ?? "").trim().toLowerCase();
+  const shouldLogEgress = logEgress === "1" || logEgress === "true" || logEgress === "yes";
+  if (shouldLogEgress) {
+    app.use((req, res, next) => {
+      const startedAt = Date.now();
+      let bytes = 0;
+
+      const originalWrite = res.write.bind(res);
+      const originalEnd = res.end.bind(res);
+
+      res.write = ((chunk: unknown, ...args: unknown[]) => {
+        if (chunk != null) {
+          bytes += Buffer.isBuffer(chunk)
+            ? chunk.length
+            : Buffer.byteLength(String(chunk));
+        }
+        return (originalWrite as (...writeArgs: unknown[]) => unknown)(chunk, ...args);
+      }) as typeof res.write;
+
+      res.end = ((chunk?: unknown, ...args: unknown[]) => {
+        if (chunk != null) {
+          bytes += Buffer.isBuffer(chunk)
+            ? chunk.length
+            : Buffer.byteLength(String(chunk));
+        }
+        return (originalEnd as (...endArgs: unknown[]) => unknown)(chunk, ...args);
+      }) as typeof res.end;
+
+      res.on("finish", () => {
+        const durationMs = Date.now() - startedAt;
+        const mb = (bytes / (1024 * 1024)).toFixed(3);
+        const encoding = res.getHeader("content-encoding") ?? "identity";
+        console.log(`[egress] ${req.method} ${req.originalUrl} -> ${res.statusCode} ${bytes}B (${mb}MB) ${durationMs}ms enc=${encoding}`);
+      });
+
+      next();
+    });
+  }
 
   app.use(express.json({ limit: process.env.BEHOLDEN_JSON_LIMIT ?? "2mb" }));
 
@@ -120,17 +164,29 @@ export function createServer() {
   // --- campaign images (static) --------------------------------------------
   const campaignImagesDir = path.join(paths.dataDir, "campaign-images");
   fs.mkdirSync(campaignImagesDir, { recursive: true });
-  app.use("/campaign-images", express.static(campaignImagesDir));
+  app.use("/campaign-images", express.static(campaignImagesDir, {
+    maxAge: "1h",
+    etag: true,
+    lastModified: true,
+  }));
 
   // --- player images (static) ----------------------------------------------
   const playerImagesDir = path.join(paths.dataDir, "player-images");
   fs.mkdirSync(playerImagesDir, { recursive: true });
-  app.use("/player-images", express.static(playerImagesDir));
+  app.use("/player-images", express.static(playerImagesDir, {
+    maxAge: "1h",
+    etag: true,
+    lastModified: true,
+  }));
 
   // --- character portrait images (static) -----------------------------------
   const characterImagesDir = path.join(paths.dataDir, "character-images");
   fs.mkdirSync(characterImagesDir, { recursive: true });
-  app.use("/character-images", express.static(characterImagesDir));
+  app.use("/character-images", express.static(characterImagesDir, {
+    maxAge: "1h",
+    etag: true,
+    lastModified: true,
+  }));
 
   // --- routes ---------------------------------------------------------------
   registerAuthRoutes(app, ctx);

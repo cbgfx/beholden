@@ -3,7 +3,7 @@ import { C } from "@/lib/theme";
 
 export function RulesSectionBox(props: { title: string; children: React.ReactNode }) {
   return (
-    <details style={{ border: `1px solid ${C.panelBorder}`, borderRadius: 12, overflow: "hidden" }}>
+    <details style={{ border: `1px solid ${C.panelBorder}`, borderRadius: 12, overflow: "hidden", flexShrink: 0 }}>
       <summary
         style={{
           listStyle: "none",

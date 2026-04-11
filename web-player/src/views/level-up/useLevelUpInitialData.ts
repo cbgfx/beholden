@@ -75,14 +75,14 @@ export function useLevelUpInitialData(id: string | undefined) {
     }
     const spellcastingClassName = getSpellcastingClassName(classDetail, nextLevel, subclass) ?? classDetail.name;
     const encodedClass = encodeURIComponent(spellcastingClassName);
-    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&level=0&limit=200`)
+    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&level=0&limit=200&includeText=1`)
       .then(setClassCantrips)
       .catch(() => setClassCantrips([]));
-    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&minLevel=1&maxLevel=9&limit=300`)
+    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&minLevel=1&maxLevel=9&limit=300&includeText=1`)
       .then(setClassSpells)
       .catch(() => setClassSpells([]));
     if (/warlock/i.test(classDetail.name)) {
-      api<SpellSummary[]>("/api/spells/search?classes=Eldritch+Invocations&limit=200")
+      api<SpellSummary[]>("/api/spells/search?classes=Eldritch+Invocations&limit=200&includeText=1")
         .then(setClassInvocations)
         .catch(() => setClassInvocations([]));
     } else {
@@ -95,7 +95,7 @@ export function useLevelUpInitialData(id: string | undefined) {
   }, []);
 
   useEffect(() => {
-    api<ItemSummary[]>("/api/compendium/items").then(setItems).catch(() => setItems([]));
+    api<ItemSummary[]>("/api/compendium/items?compact=1").then(setItems).catch(() => setItems([]));
   }, []);
 
   useEffect(() => {

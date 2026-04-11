@@ -37,7 +37,7 @@ export function useCompendiumSpellSearch(api: ApiFn) {
       try {
         const lv = level === "all" ? "" : `&level=${encodeURIComponent(level)}`;
         const res = await api<any[]>(
-          `/api/spells/search?q=${encodeURIComponent(q)}&limit=500${lv}`,
+          `/api/spells/search?q=${encodeURIComponent(q)}&limit=500${lv}&excludeSpecial=1`,
         );
         if (cancelled) return;
         const cleaned = (Array.isArray(res) ? res : [])
@@ -106,12 +106,16 @@ export function useCompendiumSpellSearch(api: ApiFn) {
   const hasActiveFilters =
     schoolFilter !== "all" || classFilter !== "all" || filterConcentration || filterRitual;
 
-  function clearFilters() {
+  const clearFilters = React.useCallback(() => {
     setSchoolFilter("all");
     setClassFilter("all");
     setFilterConcentration(false);
     setFilterRitual(false);
-  }
+  }, []);
+
+  const refresh = React.useCallback(() => {
+    setRefreshKey((k) => k + 1);
+  }, []);
 
   return {
     q,
@@ -138,6 +142,6 @@ export function useCompendiumSpellSearch(api: ApiFn) {
     clearFilters,
     rows,
     busy,
-    refresh: () => setRefreshKey((k) => k + 1),
+    refresh,
   };
 }

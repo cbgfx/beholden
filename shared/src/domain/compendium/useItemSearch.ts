@@ -13,6 +13,36 @@ export type UseCompendiumItemSearchOptions = {
   includeError?: boolean;
 };
 
+const ITEM_LIST_CACHE_TTL_MS = 30_000;
+let cachedItemRows: ItemSearchRow[] | null = null;
+let cachedItemRowsAtMs = 0;
+let inflightItemRows: Promise<ItemSearchRow[]> | null = null;
+
+function readItemRowsFromCache(): ItemSearchRow[] | null {
+  if (!cachedItemRows) return null;
+  if (Date.now() - cachedItemRowsAtMs > ITEM_LIST_CACHE_TTL_MS) return null;
+  return cachedItemRows;
+}
+
+function loadItemRows(api: ApiFn, forceRefresh: boolean): Promise<ItemSearchRow[]> {
+  if (!forceRefresh) {
+    const cached = readItemRowsFromCache();
+    if (cached) return Promise.resolve(cached);
+  }
+  if (inflightItemRows) return inflightItemRows;
+  inflightItemRows = api<ItemSearchRow[]>("/api/compendium/items?compact=1")
+    .then((rows) => {
+      const safeRows = Array.isArray(rows) ? rows : [];
+      cachedItemRows = safeRows;
+      cachedItemRowsAtMs = Date.now();
+      return safeRows;
+    })
+    .finally(() => {
+      inflightItemRows = null;
+    });
+  return inflightItemRows;
+}
+
 export function useCompendiumItemSearch(
   api: ApiFn,
   options: UseCompendiumItemSearchOptions = {},
@@ -31,9 +61,21 @@ export function useCompendiumItemSearch(
 
   React.useEffect(() => {
     let cancelled = false;
+    const forceRefresh = refreshKey > 0;
+    const cached = !forceRefresh ? readItemRowsFromCache() : null;
+
+    if (cached) {
+      setAllRows(cached);
+      setBusy(false);
+      if (includeError) setError(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     setBusy(true);
     if (includeError) setError(null);
-    api<ItemSearchRow[]>("/api/compendium/items")
+    loadItemRows(api, forceRefresh)
       .then((data) => {
         if (!cancelled) setAllRows(data ?? []);
       })
@@ -71,12 +113,16 @@ export function useCompendiumItemSearch(
   const hasActiveFilters =
     rarityFilter !== "all" || typeFilter !== "all" || filterAttunement || filterMagic;
 
-  function clearFilters() {
+  const clearFilters = React.useCallback(() => {
     setRarityFilter("all");
     setTypeFilter("all");
     setFilterAttunement(false);
     setFilterMagic(false);
-  }
+  }, []);
+
+  const refresh = React.useCallback(() => {
+    setRefreshKey((k) => k + 1);
+  }, []);
 
   return {
     q,
@@ -97,6 +143,6 @@ export function useCompendiumItemSearch(
     busy,
     error,
     totalCount: allRows.length,
-    refresh: () => setRefreshKey((k) => k + 1),
+    refresh,
   };
 }

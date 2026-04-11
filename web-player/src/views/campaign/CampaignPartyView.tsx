@@ -182,6 +182,47 @@ export function CampaignPartyView() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [bastions, setBastions] = React.useState<CampaignBastionSummary[]>([]);
+  const taskStateRef = React.useRef(
+    new Map<string, { timer: number | null; inflight: boolean; pending: boolean }>()
+  );
+
+  const enqueue = React.useCallback((key: string, run: () => Promise<void> | void, delayMs = 150) => {
+    let state = taskStateRef.current.get(key);
+    if (!state) {
+      state = { timer: null, inflight: false, pending: false };
+      taskStateRef.current.set(key, state);
+    }
+    if (state.timer != null) window.clearTimeout(state.timer);
+    state.timer = window.setTimeout(() => {
+      state!.timer = null;
+      const execute = () => {
+        if (state!.inflight) {
+          state!.pending = true;
+          return;
+        }
+        state!.inflight = true;
+        Promise.resolve(run())
+          .catch(() => {})
+          .finally(() => {
+            state!.inflight = false;
+            if (state!.pending) {
+              state!.pending = false;
+              execute();
+            }
+          });
+      };
+      execute();
+    }, delayMs);
+  }, []);
+
+  React.useEffect(() => {
+    return () => {
+      for (const state of taskStateRef.current.values()) {
+        if (state.timer != null) window.clearTimeout(state.timer);
+      }
+      taskStateRef.current.clear();
+    };
+  }, []);
 
   const fetchParty = React.useCallback(() => {
     if (!campaignId) return;
@@ -210,18 +251,23 @@ export function CampaignPartyView() {
       (msg) => {
         if (msg.type === "players:changed") {
           const cId = (msg.payload as any)?.campaignId as string | undefined;
-          if (cId === campaignId) fetchParty();
+          if (cId === campaignId) {
+            enqueue(`party:${campaignId}`, async () => {
+              fetchParty();
+            });
+          }
         }
         if (msg.type === "bastions:changed") {
           const cId = (msg.payload as any)?.campaignId as string | undefined;
           if (cId === campaignId) {
-            api<{ bastions: CampaignBastionSummary[] }>(`/api/campaigns/${campaignId}/bastions`)
-              .then((res) => setBastions((res.bastions ?? []).filter((entry) => entry.active)))
-              .catch(() => {});
+            enqueue(`bastions:${campaignId}`, async () => {
+              const res = await api<{ bastions: CampaignBastionSummary[] }>(`/api/campaigns/${campaignId}/bastions`);
+              setBastions((res.bastions ?? []).filter((entry) => entry.active));
+            });
           }
         }
       },
-      [campaignId, fetchParty]
+      [campaignId, enqueue, fetchParty]
     )
   );
 

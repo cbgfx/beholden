@@ -23,7 +23,7 @@ export function useItemPicker(isOpen: boolean) {
     if (!isOpen) return;
     let alive = true;
     setLoading(true);
-    api<CompendiumItemRow[]>("/api/compendium/items")
+    api<CompendiumItemRow[]>("/api/compendium/items?compact=1")
       .then((r) => { if (alive) setRows(r); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };

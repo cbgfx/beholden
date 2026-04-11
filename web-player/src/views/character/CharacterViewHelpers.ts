@@ -287,6 +287,16 @@ export function buildAbilityScoreExplanations(
 
 export function normalizeProficiencies(rawProf: CharacterData["proficiencies"] | undefined): ProficiencyMap | undefined {
   if (!rawProf) return undefined;
+  const isNamedPlaceholder = (value: string): boolean => {
+    const normalized = value.trim().toLowerCase();
+    return (
+      normalized === ""
+      || normalized === "none"
+      || normalized === "n/a"
+      || normalized === "-"
+      || normalized === "—"
+    );
+  };
   const isExpertiseChoicePlaceholder = (value: string): boolean =>
     /\b(?:choose|choice|of your choice)\b/i.test(value)
     || /\b(?:one|two|three|four|five|six|\d+)\s+(?:more\s+)?of your skill proficiencies\b/i.test(value);
@@ -308,9 +318,14 @@ export function normalizeProficiencies(rawProf: CharacterData["proficiencies"] |
     normalizeWeaponProficiencyName,
   );
   const sanitizedTools = dedupeTaggedItems(rawProf.tools)
-    .filter((entry) => !isToolChoicePlaceholder(String(entry.name ?? "")));
+    .filter((entry) => {
+      const name = String(entry.name ?? "");
+      return !isNamedPlaceholder(name) && !isToolChoicePlaceholder(name);
+    });
   const sanitizedExpertise = dedupeTaggedItems(rawProf.expertise)
     .filter((entry) => !isExpertiseChoicePlaceholder(String(entry.name ?? "")));
+  const sanitizedLanguages = dedupeTaggedItems(rawProf.languages, normalizeLanguageName)
+    .filter((entry) => !isNamedPlaceholder(String(entry.name ?? "")));
   return {
     ...rawProf,
     skills: dedupeTaggedItems(rawProf.skills),
@@ -319,7 +334,7 @@ export function normalizeProficiencies(rawProf: CharacterData["proficiencies"] |
     armor: sanitizedArmor,
     weapons: sanitizedWeapons,
     tools: sanitizedTools,
-    languages: dedupeTaggedItems(rawProf.languages, normalizeLanguageName),
+    languages: sanitizedLanguages,
     spells: sanitizedTrackedSpells,
     invocations: dedupeTaggedItems(rawProf.invocations),
     maneuvers: dedupeTaggedItems(rawProf.maneuvers),

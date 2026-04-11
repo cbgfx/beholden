@@ -27,7 +27,7 @@ export function useCreatorCompendiumCatalogs() {
       .then(setFeatSummaries)
       .catch(() => {});
     api<Campaign[]>("/api/me/campaigns").then(setCampaigns).catch(() => {});
-    api<ItemSummary[]>("/api/compendium/items").then(setItems).catch(() => {});
+    api<ItemSummary[]>("/api/compendium/items?compact=1").then(setItems).catch(() => {});
   }, []);
 
   return {

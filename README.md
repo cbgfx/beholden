@@ -78,7 +78,7 @@ Create a `.env` file in the repo root:
 ```env
 BEHOLDEN_SUPPORT=true
 BEHOLDEN_RATE_LIMIT_WINDOW_MS=900000
-BEHOLDEN_RATE_LIMIT_MAX=2000
+BEHOLDEN_RATE_LIMIT_MAX=5000
 WEB_PORT=5173
 SERVER_PORT=5174
 ```
@@ -134,7 +134,8 @@ Change the password immediately via Admin → Users, or set `BEHOLDEN_ADMIN_USER
 | `BEHOLDEN_JWT_SECRET` | dev secret | Secret for signing JWTs — **change this in production** |
 | `BEHOLDEN_SUPPORT` | `false` | Show a support link in the UI |
 | `BEHOLDEN_RATE_LIMIT_WINDOW_MS` | `900000` | Rate limit window in ms |
-| `BEHOLDEN_RATE_LIMIT_MAX` | `2000` | Max requests per window |
+| `BEHOLDEN_RATE_LIMIT_MAX` | `5000` | Max requests per window |
+| `BEHOLDEN_LOG_EGRESS` | `-` | Set to `true` to log per-request egress bytes + duration |
 | `BEHOLDEN_DEBUG` | — | Set to `true` for verbose server logs |
 
 ---

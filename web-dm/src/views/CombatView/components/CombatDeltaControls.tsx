@@ -1,4 +1,4 @@
-import * as React from "react";
+﻿import * as React from "react";
 import { theme } from "@/theme/theme";
 import { IconAttack, IconHeal, IconConditions, IconBulkDamage } from "@/icons";
 import { rollDiceExpr, hasDiceTerm } from "@/views/CombatView/utils/dice";
@@ -22,8 +22,8 @@ type Props = {
  */
 function normalizeDeltaInput(raw: string): string {
   const s = String(raw ?? "");
-  // Keep digits, 'd'/'D', '+', '-' — strip everything else.
-  return s.replace(/[^0-9dD+\-]/g, "");
+  // Keep digits, 'd'/'D', '+', '-' â€” strip everything else.
+  return s.replace(/[^0-9dD+\-*/().x×]/g, "");
 }
 
 function HexButton({
@@ -162,7 +162,7 @@ export function CombatDeltaControls(props: Props) {
         {props.onToggleBulkMode ? (
           <div style={{ position: "relative" }}>
             <HexButton
-              title={bulkMode ? `Bulk mode active — ${bulkCount} selected. Click to cancel.` : "Bulk Damage — select multiple targets"}
+              title={bulkMode ? `Bulk mode active â€” ${bulkCount} selected. Click to cancel.` : "Bulk Damage â€” select multiple targets"}
               disabled={false}
               onClick={props.onToggleBulkMode}
               variant="bulk"
@@ -203,7 +203,7 @@ export function CombatDeltaControls(props: Props) {
             data-allow-combat-nav="true"
             value={props.value}
             inputMode="text"
-            placeholder="1d6+2/+10"
+            placeholder="2d6+3, (8+4)/2, 4x5"
             onChange={(e) => props.onChange(normalizeDeltaInput(e.target.value))}
             onKeyDown={(e) => {
               const k = String(e.key || "").toLowerCase();
@@ -226,7 +226,7 @@ export function CombatDeltaControls(props: Props) {
               }
             }}
             disabled={disabled}
-            title={disabled ? tooltip : "Enter: damage • +N heals • -N damages • 2d6+3 supported"}
+            title={disabled ? tooltip : "Enter dice/math: 2d6+3, (8+4)/2, 4x5, +10, -2"}
             style={{
               width: 140,
               textAlign: "center",
@@ -247,10 +247,10 @@ export function CombatDeltaControls(props: Props) {
             <button
               type="button"
               onClick={handleRollPreview}
-              title="Roll dice — preview result in field"
+              title="Roll dice â€” preview result in field"
               style={{ all: "unset", cursor: "pointer", fontSize: "var(--fs-tiny)", color: theme.colors.accentPrimary, fontWeight: 700 }}
             >
-              🎲 roll preview
+              ðŸŽ² roll preview
             </button>
           )}
         </div>

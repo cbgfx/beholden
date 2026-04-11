@@ -9,28 +9,83 @@ import { ItemBody, buildItemRecord } from "./helpers.js";
 export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: RequestHandler) {
   const { db } = ctx;
 
-  app.get("/api/compendium/items", (_req, res) => {
+  app.get("/api/compendium/items", (req, res) => {
+    const compactRaw = String(req.query.compact ?? "").trim().toLowerCase();
+    const compact = compactRaw === "1" || compactRaw === "true" || compactRaw === "yes";
+    const includeStatsRaw = String(req.query.includeStats ?? "").trim().toLowerCase();
+    const includeStats =
+      includeStatsRaw === "1" || includeStatsRaw === "true" || includeStatsRaw === "yes";
+    const useCompact = compact && !includeStats;
+
+    if (useCompact) {
+      const rows = db
+        .prepare(
+          "SELECT id, name, rarity, type, type_key, attunement, magic FROM compendium_items ORDER BY name COLLATE NOCASE",
+        )
+        .all() as {
+        id: string;
+        name: string;
+        rarity: string | null;
+        type: string | null;
+        type_key: string | null;
+        attunement: number;
+        magic: number;
+      }[];
+      return res.json(
+        rows.map((r) => ({
+          id: r.id,
+          name: r.name,
+          rarity: r.rarity ?? null,
+          type: r.type ?? null,
+          typeKey: r.type_key ?? null,
+          attunement: Boolean(r.attunement),
+          magic: Boolean(r.magic),
+        })),
+      );
+    }
+
     const rawRows = db
-      .prepare("SELECT id, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items ORDER BY name COLLATE NOCASE")
-      .all() as { id: string; name: string; rarity: string | null; type: string | null; type_key: string | null; attunement: number; magic: number; equippable: number; weight: number | null; value: number | null; proficiency: string | null; data_json: string; }[];
-    res.json(rawRows.map((r) => {
-      const data = JSON.parse(r.data_json ?? "{}");
-      return {
-        id: r.id, name: r.name,
-        rarity: r.rarity ?? null,
-        type: r.type ?? null, typeKey: r.type_key ?? null,
-        attunement: Boolean(r.attunement), magic: Boolean(r.magic), equippable: Boolean(r.equippable),
-        weight: r.weight ?? data.weight ?? null,
-        value: r.value ?? data.value ?? null,
-        proficiency: r.proficiency ?? null,
-        ac: data.ac ?? null,
-        stealthDisadvantage: Boolean(data.stealthDisadvantage),
-        dmg1: data.dmg1 ?? null,
-        dmg2: data.dmg2 ?? null,
-        dmgType: data.dmgType ?? null,
-        properties: data.properties ?? [],
-      };
-    }));
+      .prepare(
+        "SELECT id, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items ORDER BY name COLLATE NOCASE",
+      )
+      .all() as {
+      id: string;
+      name: string;
+      rarity: string | null;
+      type: string | null;
+      type_key: string | null;
+      attunement: number;
+      magic: number;
+      equippable: number;
+      weight: number | null;
+      value: number | null;
+      proficiency: string | null;
+      data_json: string;
+    }[];
+    return res.json(
+      rawRows.map((r) => {
+        const data = JSON.parse(r.data_json ?? "{}");
+        return {
+          id: r.id,
+          name: r.name,
+          rarity: r.rarity ?? null,
+          type: r.type ?? null,
+          typeKey: r.type_key ?? null,
+          attunement: Boolean(r.attunement),
+          magic: Boolean(r.magic),
+          equippable: Boolean(r.equippable),
+          weight: r.weight ?? data.weight ?? null,
+          value: r.value ?? data.value ?? null,
+          proficiency: r.proficiency ?? null,
+          ac: data.ac ?? null,
+          stealthDisadvantage: Boolean(data.stealthDisadvantage),
+          dmg1: data.dmg1 ?? null,
+          dmg2: data.dmg2 ?? null,
+          dmgType: data.dmgType ?? null,
+          properties: data.properties ?? [],
+        };
+      }),
+    );
   });
 
   app.get("/api/compendium/items/:itemId", (req, res) => {

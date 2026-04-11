@@ -9,6 +9,7 @@ export type CompendiumMonsterRow = {
 
 export type PreparedMonsterRow = CompendiumMonsterRow & {
   nameLower: string;
+  sortNameLower: string;
   envParts: string[];
   envPartsLower: string[];
   crNum: number | null;

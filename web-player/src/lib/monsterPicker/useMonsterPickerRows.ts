@@ -1,4 +1,4 @@
-import * as React from "react";
+﻿import * as React from "react";
 import type { CompendiumMonsterRow, PreparedMonsterRow, SortMode } from "@/lib/monsterPicker/types";
 import { parseCrNumber } from "@/lib/monsterPicker/utils";
 
@@ -19,6 +19,14 @@ function resolveSizeLabel(raw: string | undefined): string {
   return trimmed;
 }
 
+function normalizeMonsterSortName(name: string): string {
+  return name
+    .trim()
+    .replace(/^[^a-z0-9]+/i, "")
+    .replace(/^the\s+/i, "")
+    .trim();
+}
+
 export function useMonsterPickerRows(args: {
   rows: CompendiumMonsterRow[];
   compQ: string;
@@ -34,13 +42,15 @@ export function useMonsterPickerRows(args: {
   const preparedRows = React.useMemo<PreparedMonsterRow[]>(() => {
     return args.rows.map((m) => {
       const name = String(m.name ?? "");
+      const sortName = normalizeMonsterSortName(name) || name;
       const envRaw = String(m?.environment ?? "").trim();
       const envParts = envRaw ? envRaw.split(",").map((e) => e.trim()).filter(Boolean) : [];
-      const first = name.trim().charAt(0).toUpperCase();
+      const first = sortName.trim().charAt(0).toUpperCase();
       const firstLetter = first >= "A" && first <= "Z" ? first : "#";
       return {
         ...m,
         nameLower: name.toLowerCase(),
+        sortNameLower: sortName.toLowerCase(),
         envParts,
         envPartsLower: envParts.map((e) => e.toLowerCase()),
         crNum: parseCrNumber(m.cr),
@@ -51,18 +61,18 @@ export function useMonsterPickerRows(args: {
   }, [args.rows]);
 
   const rowsAz = React.useMemo(() => {
-    return [...preparedRows].sort((x, y) => x.nameLower.localeCompare(y.nameLower));
+    return [...preparedRows].sort((x, y) => x.sortNameLower.localeCompare(y.sortNameLower));
   }, [preparedRows]);
 
   const rowsCrAsc = React.useMemo(() => {
     return [...preparedRows].sort((x, y) => {
       const ax = x.crNum, by = y.crNum;
       const aOk = Number.isFinite(ax), bOk = Number.isFinite(by);
-      if (!aOk && !bOk) return x.nameLower.localeCompare(y.nameLower);
+      if (!aOk && !bOk) return x.sortNameLower.localeCompare(y.sortNameLower);
       if (!aOk) return 1;
       if (!bOk) return -1;
       const d = ax! - by!;
-      return d !== 0 ? d : x.nameLower.localeCompare(y.nameLower);
+      return d !== 0 ? d : x.sortNameLower.localeCompare(y.sortNameLower);
     });
   }, [preparedRows]);
 

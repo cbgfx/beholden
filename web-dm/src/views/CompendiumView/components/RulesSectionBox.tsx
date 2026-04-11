@@ -9,6 +9,7 @@ export function RulesSectionBox(props: { title: string; children: React.ReactNod
         border: `1px solid ${theme.colors.panelBorder}`,
         borderRadius: 12,
         overflow: "hidden",
+        flexShrink: 0,
       }}
     >
       <summary
