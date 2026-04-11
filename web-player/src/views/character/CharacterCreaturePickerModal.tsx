@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { api } from "@/services/api";
 import { C, withAlpha } from "@/lib/theme";
 import { MonsterStatblock } from "@/views/CompendiumView/panels/MonsterStatblock";
@@ -49,16 +49,35 @@ export function CharacterCreaturePickerModal(props: {
   const [detailBusy, setDetailBusy] = useState(false);
 
   useEffect(() => {
-    if (!props.isOpen || rows.length > 0) return;
-    let alive = true;
-    setBusy(true);
-    setError(null);
-    api<CompendiumMonsterRow[]>("/api/compendium/monsters")
-      .then((data) => { if (alive) setRows(data ?? []); })
-      .catch((e) => { if (alive) setError(e?.message ?? "Failed to load monsters."); })
-      .finally(() => { if (alive) setBusy(false); });
-    return () => { alive = false; };
-  }, [props.isOpen, rows.length]);
+    if (!props.isOpen) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setBusy(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams({
+          q: query,
+          limit: "220",
+          sort: "az",
+        });
+        const data = await api<CompendiumMonsterRow[]>(`/api/compendium/search?${params.toString()}`, {
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+        setRows(Array.isArray(data) ? data : []);
+      } catch (e: any) {
+        if (controller.signal.aborted) return;
+        setRows([]);
+        setError(e?.message ?? "Failed to load monsters.");
+      } finally {
+        if (!controller.signal.aborted) setBusy(false);
+      }
+    }, 220);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [props.isOpen, query]);
 
   useEffect(() => {
     if (!props.isOpen) {
@@ -66,6 +85,7 @@ export function CharacterCreaturePickerModal(props: {
       setSelectedId(null);
       setDetail(null);
       setDetailBusy(false);
+      setRows([]);
     }
   }, [props.isOpen]);
 
@@ -84,16 +104,7 @@ export function CharacterCreaturePickerModal(props: {
     return () => { alive = false; };
   }, [props.isOpen, selectedId]);
 
-  const filteredRows = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((row) =>
-      row.name.toLowerCase().includes(q)
-      || String(row.type ?? "").toLowerCase().includes(q)
-      || String(row.environment ?? "").toLowerCase().includes(q)
-      || String(row.size ?? "").toLowerCase().includes(q)
-    );
-  }, [query, rows]);
+  const filteredRows = rows;
 
   const selectedRow = filteredRows.find((row) => row.id === selectedId) ?? rows.find((row) => row.id === selectedId) ?? null;
 

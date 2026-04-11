@@ -1,11 +1,17 @@
 import * as React from "react";
 import { api } from "@/services/api";
-import type { MonsterDetail, SpellDetail, SpellSummary } from "@/views/CombatView/types";
-import { bestSpellMatch, parseMonsterSpells, sortSpellNames } from "@/views/CombatView/utils/spells";
+import type { MonsterDetail, SpellDetail } from "@/views/CombatView/types";
+import { parseMonsterSpells, sortSpellNames } from "@/views/CombatView/utils/spells";
+
+type SpellSummaryLite = { id: string; name: string; level: number | null };
+type SpellLookupRow = {
+  query: string;
+  match: SpellSummaryLite | null;
+};
 
 export function useSpellModal(activeMonster: MonsterDetail | null, targetMonster: MonsterDetail | null) {
   const [spellLevelCache, setSpellLevelCache] = React.useState<Record<string, number | null>>({});
-  const [spellSummaryCache, setSpellSummaryCache] = React.useState<Record<string, SpellSummary | null>>({});
+  const [spellSummaryCache, setSpellSummaryCache] = React.useState<Record<string, SpellSummaryLite | null>>({});
   const [spellDetail, setSpellDetail] = React.useState<SpellDetail | null>(null);
   const [spellError, setSpellError] = React.useState<string | null>(null);
   const [spellLoading, setSpellLoading] = React.useState(false);
@@ -23,8 +29,12 @@ export function useSpellModal(activeMonster: MonsterDetail | null, targetMonster
       const cacheKey = q.toLowerCase();
       let best = spellSummaryCache[cacheKey] ?? null;
       if (!best) {
-        const rows = await api<SpellSummary[]>(`/api/spells/search?q=${encodeURIComponent(q)}&limit=10`);
-        best = bestSpellMatch(rows, q);
+        const payload = await api<{ rows: SpellLookupRow[] }>("/api/spells/lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ names: [q] }),
+        });
+        best = payload.rows?.[0]?.match ?? null;
         setSpellSummaryCache((prev) => ({ ...prev, [cacheKey]: best ?? null }));
       }
       if (!best) {
@@ -45,22 +55,42 @@ export function useSpellModal(activeMonster: MonsterDetail | null, targetMonster
     let alive = true;
     (async () => {
       const names = Array.from(new Set([...targetSpellNames, ...activeSpellNames]));
-      for (const n of names) {
+      const unresolved = names.filter((n) => {
         const key = n.trim().toLowerCase();
-        if (!key) continue;
-        if (spellLevelCache[key] !== undefined) continue;
-        try {
-          const rows = await api<SpellSummary[]>(`/api/spells/search?q=${encodeURIComponent(n)}&limit=5`);
-          const best = bestSpellMatch(rows, n);
+        return key && spellLevelCache[key] === undefined;
+      });
+      if (unresolved.length === 0) return;
+      try {
+        const payload = await api<{ rows: SpellLookupRow[] }>("/api/spells/lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ names: unresolved }),
+        });
+        if (!alive) return;
+        const nextSummary: Record<string, SpellSummaryLite | null> = {};
+        const nextLevels: Record<string, number | null> = {};
+        for (const row of payload.rows ?? []) {
+          const key = row.query.trim().toLowerCase();
+          if (!key) continue;
+          const best = row.match ?? null;
           const lvl = best ? Number(best.level) : null;
-          if (!alive) return;
-          setSpellSummaryCache((prev) => (prev[key] === undefined ? { ...prev, [key]: best ?? null } : prev));
-          setSpellLevelCache((prev) => ({ ...prev, [key]: Number.isFinite(lvl) ? lvl : null }));
-        } catch {
-          if (!alive) return;
-          setSpellSummaryCache((prev) => (prev[key] === undefined ? { ...prev, [key]: null } : prev));
-          setSpellLevelCache((prev) => ({ ...prev, [key]: null }));
+          nextSummary[key] = best;
+          nextLevels[key] = Number.isFinite(lvl) ? lvl : null;
         }
+        setSpellSummaryCache((prev) => ({ ...prev, ...nextSummary }));
+        setSpellLevelCache((prev) => ({ ...prev, ...nextLevels }));
+      } catch {
+        if (!alive) return;
+        const nextSummary: Record<string, null> = {};
+        const nextLevels: Record<string, null> = {};
+        for (const n of unresolved) {
+          const key = n.trim().toLowerCase();
+          if (!key) continue;
+          nextSummary[key] = null;
+          nextLevels[key] = null;
+        }
+        setSpellSummaryCache((prev) => ({ ...prev, ...nextSummary }));
+        setSpellLevelCache((prev) => ({ ...prev, ...nextLevels }));
       }
     })();
     return () => {

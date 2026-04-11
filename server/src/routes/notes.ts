@@ -25,6 +25,20 @@ function serializeNoteState(note: StoredNoteState) {
 export function registerNoteRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
+  const emitNoteChange = (args: {
+    campaignId: string;
+    adventureId?: string | null;
+    action: "upsert" | "delete" | "refresh";
+    noteId?: string;
+  }) => {
+    ctx.broadcast("notes:changed", { campaignId: args.campaignId, adventureId: args.adventureId ?? null });
+    ctx.broadcast("notes:delta", {
+      campaignId: args.campaignId,
+      adventureId: args.adventureId ?? null,
+      action: args.action,
+      ...(args.noteId ? { noteId: args.noteId } : {}),
+    });
+  };
 
   app.get("/api/campaigns/:campaignId/notes", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
@@ -48,6 +62,16 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     res.json(rows.map(rowToNote).map(toNoteDto));
   });
 
+  app.get("/api/notes/:noteId", memberOrAdmin(db), (req, res) => {
+    const noteId = requireParam(req, res, "noteId");
+    if (!noteId) return;
+    const row = db
+      .prepare(`SELECT ${NOTE_COLS} FROM notes WHERE id = ?`)
+      .get(noteId) as Record<string, unknown> | undefined;
+    if (!row) return res.status(404).json({ ok: false, message: "Note not found" });
+    res.json(toNoteDto(rowToNote(row)));
+  });
+
   app.post("/api/campaigns/:campaignId/notes", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -60,7 +84,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     db.prepare(
       "INSERT INTO notes (id, campaign_id, adventure_id, note_json, sort, created_at, updated_at) VALUES (?, ?, NULL, ?, ?, ?, ?)"
     ).run(id, campaignId, serializeNoteState({ title, text }), sort, t, t);
-    ctx.broadcast("notes:changed", { campaignId, adventureId: null });
+    emitNoteChange({ campaignId, adventureId: null, action: "upsert", noteId: id });
     const row = db
       .prepare(`SELECT ${NOTE_COLS} FROM notes WHERE id = ?`)
       .get(id) as Record<string, unknown>;
@@ -85,7 +109,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     db.prepare(
       "INSERT INTO notes (id, campaign_id, adventure_id, note_json, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
     ).run(id, advRow.campaign_id, adventureId, serializeNoteState({ title, text }), sort, t, t);
-    ctx.broadcast("notes:changed", { campaignId: advRow.campaign_id, adventureId });
+    emitNoteChange({ campaignId: advRow.campaign_id, adventureId, action: "upsert", noteId: id });
     const row = db
       .prepare(`SELECT ${NOTE_COLS} FROM notes WHERE id = ?`)
       .get(id) as Record<string, unknown>;
@@ -109,7 +133,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     db.prepare("UPDATE notes SET note_json=?, updated_at=? WHERE id=?").run(
       serializeNoteState({ title, text }), t, noteId
     );
-    ctx.broadcast("notes:changed", { campaignId: n.campaignId, adventureId: n.adventureId });
+    emitNoteChange({ campaignId: n.campaignId, adventureId: n.adventureId ?? null, action: "upsert", noteId });
     const row = db
       .prepare(`SELECT ${NOTE_COLS} FROM notes WHERE id = ?`)
       .get(noteId) as Record<string, unknown>;
@@ -126,7 +150,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
       return res.status(404).json({ ok: false, message: "Note not found" });
     const n = rowToNote(noteRow);
     db.prepare("DELETE FROM notes WHERE id = ?").run(noteId);
-    ctx.broadcast("notes:changed", { campaignId: n.campaignId, adventureId: n.adventureId });
+    emitNoteChange({ campaignId: n.campaignId, adventureId: n.adventureId ?? null, action: "delete", noteId });
     res.json({ ok: true });
   });
 }

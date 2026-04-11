@@ -3,25 +3,33 @@ import { api } from "@/services/api";
 import { splitLeadingNumberAndDetail } from "@/lib/parse/statDetails";
 import type { AddMonsterOptions } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
-import type { AttackOverridesByMonsterId, CompendiumMonsterRow, SortMode } from "@/views/CampaignView/monsterPicker/types";
-import { useMonsterPickerRows } from "@/views/CampaignView/monsterPicker/hooks/useMonsterPickerRows";
+import type {
+  AttackOverridesByMonsterId,
+  CompendiumMonsterRow,
+  SortMode,
+} from "@/views/CampaignView/monsterPicker/types";
+import { SIZE_LABELS } from "@/views/CampaignView/monsterPicker/hooks/useMonsterPickerRows";
 import { formatAcString, formatHpString } from "@/views/CampaignView/monsterPicker/utils/monsterFormat";
+
+function normalizeMonsterSortName(name: string): string {
+  return name
+    .trim()
+    .replace(/^[^a-z0-9]+/i, "")
+    .replace(/^the\s+/i, "")
+    .trim();
+}
 
 export function useMonsterPickerState(args: {
   isOpen: boolean;
   compQ: string;
-  compRows: CompendiumMonsterRow[];
-  baseRows: CompendiumMonsterRow[];
   onAddMonster: (monsterId: string, qty: number, opts?: AddMonsterOptions) => void;
 }) {
-  const { isOpen, compQ, baseRows, onAddMonster } = args;
+  const { isOpen, compQ, onAddMonster } = args;
 
-  // Selected monster + loaded detail
   const [selectedMonsterId, setSelectedMonsterId] = React.useState<string | null>(null);
   const [monster, setMonster] = React.useState<MonsterDetail | null>(null);
   const monsterCache = React.useRef<Record<string, MonsterDetail>>({});
 
-  // Per-monster overrides (committed atomically when Add is clicked)
   const [qtyById, setQtyById] = React.useState<Record<string, number>>({});
   const [labelById, setLabelById] = React.useState<Record<string, string>>({});
   const [acById, setAcById] = React.useState<Record<string, string>>({});
@@ -31,7 +39,6 @@ export function useMonsterPickerState(args: {
   const [friendlyById, setFriendlyById] = React.useState<Record<string, boolean>>({});
   const [attackOverridesById, setAttackOverridesById] = React.useState<AttackOverridesByMonsterId>({});
 
-  // List filter/sort controls
   const [sortMode, setSortMode] = React.useState<SortMode>("az");
   const [envFilter, setEnvFilter] = React.useState<string>("all");
   const [sizeFilter, setSizeFilter] = React.useState<string>("all");
@@ -39,18 +46,85 @@ export function useMonsterPickerState(args: {
   const [crMin, setCrMin] = React.useState<string>("");
   const [crMax, setCrMax] = React.useState<string>("");
 
-  const { filteredRows, envOptions, sizeOptions, typeOptions, lettersInList, letterFirstIndex } = useMonsterPickerRows({
-    rows: baseRows,
-    compQ,
-    sortMode,
-    envFilter,
-    sizeFilter,
-    typeFilter,
-    crMin,
-    crMax,
-  });
+  const [filteredRows, setFilteredRows] = React.useState<CompendiumMonsterRow[]>([]);
+  const [loadingIndex, setLoadingIndex] = React.useState(false);
+  const [indexError, setIndexError] = React.useState<string | null>(null);
+  const [envOptions, setEnvOptions] = React.useState<string[]>(["all"]);
+  const [sizeOptions, setSizeOptions] = React.useState<string[]>(["all"]);
+  const [typeOptions, setTypeOptions] = React.useState<string[]>(["all"]);
 
-  // Fetch and cache a monster detail, seeding per-monster defaults on first load
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const controller = new AbortController();
+    api<{ environments: string[]; sizes: string[]; types: string[] }>("/api/compendium/monsters/facets", {
+      signal: controller.signal,
+    })
+      .then((data) => {
+        const nextEnv = Array.isArray(data?.environments) ? data.environments : [];
+        const nextSizesRaw = Array.isArray(data?.sizes) ? data.sizes : [];
+        const nextTypes = Array.isArray(data?.types) ? data.types : [];
+
+        const sizeOrder = new Map<string, number>(SIZE_LABELS.map((size, index) => [size, index]));
+        const nextSizes = [...nextSizesRaw].sort((a, b) => {
+          const aOrder = sizeOrder.get(a);
+          const bOrder = sizeOrder.get(b);
+          if (aOrder != null && bOrder != null) return aOrder - bOrder;
+          if (aOrder != null) return -1;
+          if (bOrder != null) return 1;
+          return a.localeCompare(b);
+        });
+
+        setEnvOptions(["all", ...nextEnv]);
+        setSizeOptions(["all", ...nextSizes]);
+        setTypeOptions(["all", ...nextTypes]);
+      })
+      .catch(() => {
+        setEnvOptions(["all"]);
+        setSizeOptions(["all"]);
+        setTypeOptions(["all"]);
+      });
+    return () => controller.abort();
+  }, [isOpen]);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLoadingIndex(true);
+      setIndexError(null);
+      try {
+        const params = new URLSearchParams({
+          q: compQ,
+          limit: "400",
+          offset: "0",
+          sort: sortMode,
+        });
+        if (envFilter !== "all") params.set("env", envFilter);
+        if (sizeFilter !== "all") params.set("sizes", sizeFilter);
+        if (typeFilter !== "all") params.set("types", typeFilter);
+        if (crMin.trim()) params.set("crMin", crMin.trim());
+        if (crMax.trim()) params.set("crMax", crMax.trim());
+
+        const rows = await api<CompendiumMonsterRow[]>(`/api/compendium/search?${params.toString()}`, {
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+        setFilteredRows(Array.isArray(rows) ? rows : []);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setFilteredRows([]);
+        setIndexError(error instanceof Error ? error.message : String(error));
+      } finally {
+        if (!controller.signal.aborted) setLoadingIndex(false);
+      }
+    }, 220);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [isOpen, compQ, sortMode, envFilter, sizeFilter, typeFilter, crMin, crMax]);
+
   const hydrateMonster = React.useCallback(async (monsterId: string): Promise<MonsterDetail> => {
     if (monsterCache.current[monsterId]) return monsterCache.current[monsterId]!;
     const m = await api<MonsterDetail>(`/api/compendium/monsters/${monsterId}`);
@@ -74,27 +148,27 @@ export function useMonsterPickerState(args: {
     return m;
   }, []);
 
-  // Auto-select first row when list changes
   React.useEffect(() => {
     if (!isOpen || !filteredRows.length) return;
-    if (!selectedMonsterId || !filteredRows.some((r) => r.id === selectedMonsterId)) {
+    if (!selectedMonsterId || !filteredRows.some((row) => row.id === selectedMonsterId)) {
       setSelectedMonsterId(filteredRows[0]!.id);
     }
   }, [isOpen, selectedMonsterId, filteredRows]);
 
-  // Ensure default label when a row is selected
   React.useEffect(() => {
     if (!isOpen || !selectedMonsterId) return;
-    const row = baseRows.find((r) => r.id === selectedMonsterId);
+    const row = filteredRows.find((entry) => entry.id === selectedMonsterId);
     if (!row) return;
     setLabelById((prev) => (prev[selectedMonsterId] ? prev : { ...prev, [selectedMonsterId]: row.name }));
-  }, [isOpen, selectedMonsterId, baseRows]);
+  }, [isOpen, selectedMonsterId, filteredRows]);
 
-  // Load monster detail for the selected monster
   React.useEffect(() => {
     let cancelled = false;
     async function load() {
-      if (!isOpen || !selectedMonsterId) { setMonster(null); return; }
+      if (!isOpen || !selectedMonsterId) {
+        setMonster(null);
+        return;
+      }
       try {
         const m = await hydrateMonster(selectedMonsterId);
         if (!cancelled) setMonster(m);
@@ -103,10 +177,11 @@ export function useMonsterPickerState(args: {
       }
     }
     void load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, selectedMonsterId, hydrateMonster]);
 
-  // Prefill editable AC/HP from loaded monster
   React.useEffect(() => {
     if (!isOpen || !selectedMonsterId || !monster) return;
     if (monster.id && String(monster.id) !== String(selectedMonsterId)) return;
@@ -126,22 +201,46 @@ export function useMonsterPickerState(args: {
     (actionName: string, patch: { toHit?: number; damage?: string; damageType?: string }) => {
       if (!selectedMonsterId) return;
       setAttackOverridesById((prev) => {
-        const cur = prev[selectedMonsterId] ?? {};
-        return { ...prev, [selectedMonsterId]: { ...cur, [actionName]: { ...(cur[actionName] ?? {}), ...patch } } };
+        const current = prev[selectedMonsterId] ?? {};
+        return {
+          ...prev,
+          [selectedMonsterId]: {
+            ...current,
+            [actionName]: { ...(current[actionName] ?? {}), ...patch },
+          },
+        };
       });
     },
-    [selectedMonsterId]
+    [selectedMonsterId],
   );
 
-  // Scroll-to-index ref lives here so the modal can pass it to the list pane
+  const lettersInList = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const row of filteredRows) {
+      const first = normalizeMonsterSortName(String(row.name ?? "")).charAt(0).toUpperCase();
+      if (first >= "A" && first <= "Z") set.add(first);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [filteredRows]);
+
+  const letterFirstIndex = React.useMemo(() => {
+    const out: Record<string, number> = {};
+    for (let i = 0; i < filteredRows.length; i += 1) {
+      const first = normalizeMonsterSortName(String(filteredRows[i].name ?? "")).charAt(0).toUpperCase();
+      if (!(first >= "A" && first <= "Z")) continue;
+      if (out[first] == null) out[first] = i;
+    }
+    return out;
+  }, [filteredRows]);
+
   const listScrollToIndexRef = React.useRef<((idx: number) => void) | null>(null);
   const onJumpToLetter = React.useCallback(
     (letter: string) => {
-      const idx = letterFirstIndex[letter];
-      if (idx == null) return;
-      listScrollToIndexRef.current?.(idx);
+      const index = letterFirstIndex[letter];
+      if (index == null) return;
+      listScrollToIndexRef.current?.(index);
     },
-    [letterFirstIndex]
+    [letterFirstIndex],
   );
 
   const handleAddMonster = React.useCallback(
@@ -167,16 +266,25 @@ export function useMonsterPickerState(args: {
             hpMax: Number.isFinite(Number(opts?.hpMax ?? hpRaw)) ? Number(opts?.hpMax ?? hpRaw) : undefined,
             hpDetails: (opts?.hpDetails ?? (hpDetailById[monsterId] ?? "").trim()) || undefined,
             attackOverrides: opts?.attackOverrides ?? (attackOverridesById[monsterId] ?? null) ?? undefined,
-          })
+          }),
         );
       } catch (e) {
         alert(e instanceof Error ? e.message : String(e));
       }
     },
-    [acById, hpById, friendlyById, labelById, acDetailById, hpDetailById, attackOverridesById, hydrateMonster, onAddMonster]
+    [
+      acById,
+      hpById,
+      friendlyById,
+      labelById,
+      acDetailById,
+      hpDetailById,
+      attackOverridesById,
+      hydrateMonster,
+      onAddMonster,
+    ],
   );
 
-  // Derived selected-monster values for the detail pane
   const selectedLabel = selectedMonsterId ? (labelById[selectedMonsterId] ?? "") : "";
   const selectedAc = selectedMonsterId ? (acById[selectedMonsterId] ?? "") : "";
   const selectedAcDetail = selectedMonsterId ? (acDetailById[selectedMonsterId] ?? "") : "";
@@ -185,12 +293,10 @@ export function useMonsterPickerState(args: {
   const selectedFriendly = selectedMonsterId ? (friendlyById[selectedMonsterId] ?? false) : false;
 
   return {
-    // Selection
     selectedMonsterId,
     setSelectedMonsterId,
     monster,
 
-    // Per-monster maps (passed to list pane)
     qtyById,
     labelById,
     acById,
@@ -200,9 +306,8 @@ export function useMonsterPickerState(args: {
     friendlyById,
     attackOverridesById,
 
-    // Setters
     setQtyForId: (id: string, qty: number) => setQtyById((prev) => ({ ...prev, [id]: qty })),
-    setLabelForId: (id: string, v: string) => setLabelById((prev) => ({ ...prev, [id]: v })),
+    setLabelForId: (id: string, value: string) => setLabelById((prev) => ({ ...prev, [id]: value })),
     setAcForId: (id: string, numText: string, detail: string) => {
       setAcById((prev) => ({ ...prev, [id]: numText }));
       setAcDetailById((prev) => ({ ...prev, [id]: detail }));
@@ -211,25 +316,31 @@ export function useMonsterPickerState(args: {
       setHpById((prev) => ({ ...prev, [id]: numText }));
       setHpDetailById((prev) => ({ ...prev, [id]: detail }));
     },
-    setFriendlyForId: (id: string, v: boolean) => setFriendlyById((prev) => ({ ...prev, [id]: v })),
+    setFriendlyForId: (id: string, value: boolean) => setFriendlyById((prev) => ({ ...prev, [id]: value })),
     onChangeAttack,
 
-    // List state
-    sortMode, setSortMode,
-    envFilter, setEnvFilter,
+    sortMode,
+    setSortMode,
+    envFilter,
+    setEnvFilter,
     envOptions,
-    sizeFilter, setSizeFilter,
+    sizeFilter,
+    setSizeFilter,
     sizeOptions,
-    typeFilter, setTypeFilter,
+    typeFilter,
+    setTypeFilter,
     typeOptions,
-    crMin, setCrMin,
-    crMax, setCrMax,
+    crMin,
+    setCrMin,
+    crMax,
+    setCrMax,
     filteredRows,
     lettersInList,
     onJumpToLetter,
     listScrollToIndexRef,
+    loadingIndex,
+    indexError,
 
-    // Detail pane derived values
     selectedLabel,
     selectedAc,
     selectedAcDetail,
@@ -237,8 +348,14 @@ export function useMonsterPickerState(args: {
     selectedHpDetail,
     selectedFriendly,
 
-    // Actions
     handleAddMonster,
-    clearFilters: () => { setEnvFilter("all"); setSizeFilter("all"); setTypeFilter("all"); setCrMin(""); setCrMax(""); setSortMode("az"); },
+    clearFilters: () => {
+      setEnvFilter("all");
+      setSizeFilter("all");
+      setTypeFilter("all");
+      setCrMin("");
+      setCrMax("");
+      setSortMode("az");
+    },
   };
 }

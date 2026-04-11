@@ -109,6 +109,16 @@ export function CharacterAbilitiesPanels({
     saveState: "advantage" | "disadvantage" | null;
     armorSaveDisadvantage: boolean;
   }>;
+  const skillColumns = 2;
+  const skillsPerColumn = Math.ceil(ALL_SKILLS.length / skillColumns);
+  const orderedSkillsForGrid = Array.from({ length: skillsPerColumn }).flatMap((_, rowIndex) => {
+    const row: (typeof ALL_SKILLS)[number][] = [];
+    for (let columnIndex = 0; columnIndex < skillColumns; columnIndex += 1) {
+      const skill = ALL_SKILLS[columnIndex * skillsPerColumn + rowIndex];
+      if (skill) row.push(skill);
+    }
+    return row;
+  });
 
   return (
     <>
@@ -180,7 +190,7 @@ export function CharacterAbilitiesPanels({
 
       <CollapsiblePanel title="Skills" color={accentColor} storageKey="skills">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", columnGap: 18, rowGap: 2 }}>
-          {ALL_SKILLS.map(({ name, abil }) => {
+          {orderedSkillsForGrid.map(({ name, abil }) => {
             const tier = getSkillProficiencyTier(prof ?? undefined, name);
             const isProfSkill = tier >= 1;
             const isExpertise = tier >= 2;

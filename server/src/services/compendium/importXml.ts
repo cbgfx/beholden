@@ -12,6 +12,7 @@ import {
   createFeatUpserter,
   xmlItemToJson,
 } from "./importXmlHelpers.js";
+import { pruneItemBlob, pruneMonsterBlob, pruneSpellBlob, trimCompendiumBlobColumns } from "./blobHygiene.js";
 
 export function importCompendiumXml(args: {
   xml: string;
@@ -117,7 +118,7 @@ export function importCompendiumXml(args: {
         data.typeFull,
         asText(monster?.size) || null,
         asText(monster?.environment) || null,
-        JSON.stringify(data),
+        JSON.stringify(pruneMonsterBlob(data as Record<string, unknown>)),
       );
     }
 
@@ -133,7 +134,7 @@ export function importCompendiumXml(args: {
         data.concentration,
         data.components,
         data.classes,
-        JSON.stringify(data),
+        JSON.stringify(pruneSpellBlob(data as Record<string, unknown>)),
       );
     }
     backfillMonsterSpellRefs(db);
@@ -154,7 +155,7 @@ export function importCompendiumXml(args: {
         data.weight ?? null,
         data.value ?? null,
         data.proficiency ?? null,
-        JSON.stringify(data.blob),
+        JSON.stringify(pruneItemBlob(data.blob as Record<string, unknown>)),
       );
     }
 
@@ -295,6 +296,8 @@ export function importCompendiumXml(args: {
         );
       }
     }
+
+    trimCompendiumBlobColumns(db);
   })();
 
   const totalMonsters = (db.prepare("SELECT count(*) AS n FROM compendium_monsters").get() as { n: number }).n;

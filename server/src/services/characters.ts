@@ -248,6 +248,12 @@ export function syncAssignedPlayerRows(
       }
     }
     broadcast("players:changed", { campaignId: campaign_id });
+    broadcast("players:delta", {
+      campaignId: campaign_id,
+      action: "upsert",
+      playerId: player_id,
+      characterId: charId,
+    });
     broadcastPlayerCombatantChanges(db, broadcast, player_id);
   }
 }

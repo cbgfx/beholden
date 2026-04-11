@@ -2,7 +2,7 @@ import React from "react";
 import { expandSchool } from "./expandSchool";
 import { normalizeSpellSearchRow, type SpellSearchRow } from "./normalizeSpellSearchRow";
 
-type ApiFn = <T>(path: string) => Promise<T>;
+type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
 
 function hasComponent(components: string | null, letter: string): boolean {
   if (!components) return false;
@@ -31,29 +31,30 @@ export function useCompendiumSpellSearch(api: ApiFn) {
   const [busy, setBusy] = React.useState(false);
 
   React.useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     const run = async () => {
       setBusy(true);
       try {
         const lv = level === "all" ? "" : `&level=${encodeURIComponent(level)}`;
         const res = await api<any[]>(
-          `/api/spells/search?q=${encodeURIComponent(q)}&limit=500${lv}&excludeSpecial=1`,
+          `/api/spells/search?q=${encodeURIComponent(q)}&limit=180${lv}&excludeSpecial=1&compact=1`,
+          { signal: controller.signal },
         );
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
         const cleaned = (Array.isArray(res) ? res : [])
           .map(normalizeSpellSearchRow)
           .filter((r): r is SpellSearchRow => Boolean(r));
         setAllRows(cleaned);
       } catch {
-        if (!cancelled) setAllRows([]);
+        if (!controller.signal.aborted) setAllRows([]);
       } finally {
-        if (!cancelled) setBusy(false);
+        if (!controller.signal.aborted) setBusy(false);
       }
     };
-    const t = window.setTimeout(run, refreshKey === 0 ? 120 : 0);
+    const t = window.setTimeout(run, refreshKey === 0 ? 220 : 0);
     return () => {
-      cancelled = true;
       window.clearTimeout(t);
+      controller.abort();
     };
   }, [api, q, level, refreshKey]);
 

@@ -4,6 +4,7 @@
 import type { Express } from "express";
 import type { ServerContext } from "../../server/context.js";
 import { requireParam } from "../../lib/routeHelpers.js";
+import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { parseFeat } from "../../lib/featParser.js";
 import { parseBackgroundProficiencies, parseRaceChoicesByRuleset } from "../../lib/proficiencyConstants.js";
@@ -15,6 +16,7 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
 
   // --- Classes ---------------------------------------------------------------
   app.get("/api/compendium/classes", requireAuth, (_req, res) => {
+    applySharedApiCacheHeaders(res);
     const rows = db.prepare("SELECT id, name, hd, data_json FROM compendium_classes ORDER BY name COLLATE NOCASE").all() as { id: string; name: string; hd: number | null; data_json: string }[];
     res.json(rows.map((row) => {
       const data = JSON.parse(row.data_json);
@@ -23,6 +25,7 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.get("/api/compendium/classes/:id", requireAuth, (req, res) => {
+    applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const id = requireParam(req, res, "id");
     if (!id) return;
     const row = db.prepare("SELECT data_json FROM compendium_classes WHERE id = ?").get(id) as { data_json: string } | undefined;
@@ -47,6 +50,7 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
 
   // --- Races -----------------------------------------------------------------
   app.get("/api/compendium/races", requireAuth, (_req, res) => {
+    applySharedApiCacheHeaders(res);
     const rows = db.prepare("SELECT id, name, size, speed, data_json FROM compendium_races ORDER BY name COLLATE NOCASE").all() as { id: string; name: string; size: string | null; speed: number | null; data_json: string }[];
     res.json(rows.map((row) => {
       const data = JSON.parse(row.data_json);
@@ -55,6 +59,7 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.get("/api/compendium/races/:id", requireAuth, (req, res) => {
+    applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const id = requireParam(req, res, "id");
     if (!id) return;
     const row = db.prepare("SELECT data_json FROM compendium_races WHERE id = ?").get(id) as { data_json: string } | undefined;
@@ -82,6 +87,7 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
 
   // --- Backgrounds -----------------------------------------------------------
   app.get("/api/compendium/backgrounds", requireAuth, (_req, res) => {
+    applySharedApiCacheHeaders(res);
     const rows = db.prepare("SELECT id, name, data_json FROM compendium_backgrounds ORDER BY name COLLATE NOCASE").all() as { id: string; name: string; data_json: string }[];
     res.json(rows.map((row) => {
       const data = JSON.parse(row.data_json);
@@ -90,6 +96,7 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.get("/api/compendium/backgrounds/:id", requireAuth, (req, res) => {
+    applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const id = requireParam(req, res, "id");
     if (!id) return;
     const row = db.prepare("SELECT data_json FROM compendium_backgrounds WHERE id = ?").get(id) as { data_json: string } | undefined;
@@ -116,6 +123,7 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
 
   // --- Feats -----------------------------------------------------------------
   app.get("/api/compendium/feats", requireAuth, (_req, res) => {
+    applySharedApiCacheHeaders(res);
     const rows = db.prepare("SELECT id, name, data_json FROM compendium_feats ORDER BY name COLLATE NOCASE").all() as { id: string; name: string; data_json: string }[];
     res.json(rows.map((row) => {
       const data = JSON.parse(row.data_json);
@@ -124,6 +132,7 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.get("/api/compendium/feats/:featId", requireAuth, (req, res) => {
+    applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const featId = requireParam(req, res, "featId");
     if (!featId) return;
     const row = db.prepare("SELECT data_json FROM compendium_feats WHERE id = ?").get(featId) as { data_json: string } | undefined;

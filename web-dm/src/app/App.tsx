@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useMatch } from "react-router-dom";
 import { ShellLayout } from "@/layout/ShellLayout";
 import { theme } from "@/theme/theme";
@@ -14,7 +14,6 @@ import {
 } from "@/services/collectionApi";
 import type { Adventure, Campaign, CampaignCharacter, Encounter, EncounterActor, INpc, Meta, Note, TreasureEntry } from "@/domain/types/domain";
 import { useAppWebSocket } from "@/app/useAppWebSocket";
-import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
 import { HomeView } from "@/views/HomeView";
 import { DrawerHost } from "@/drawers/DrawerHost";
 import { ConfirmProvider, useConfirm } from "@/confirm/ConfirmContext";
@@ -37,9 +36,6 @@ function AppInner() {
   const { state, dispatch } = useStore();
   const navigate = useNavigate();
   const confirm = useConfirm();
-  const [compQ, setCompQ] = useState("");
-  const [compendiumIndex, setCompendiumIndex] = useState<CompendiumMonsterRow[]>([]);
-  const [compRows, setCompRows] = useState<CompendiumMonsterRow[]>([]);
   const importAdventureFileRef = useRef<HTMLInputElement>(null);
 
   const refreshAll = useCallback(async () => {
@@ -105,23 +101,6 @@ function AppInner() {
     dispatch({ type: "selectCampaign", campaignId: routeCampaignId });
   }, [routeCampaignId, state.selectedCampaignId, dispatch]);
 
-  // Load the full compendium index once, then filter client-side.
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      const rows = await api<CompendiumMonsterRow[]>(`/api/compendium/monsters`);
-      if (!alive) return;
-      setCompendiumIndex(rows);
-    })();
-    return () => { alive = false; };
-  }, []);
-
-  useEffect(() => {
-    const q = compQ.trim().toLowerCase();
-    if (!q) { setCompRows(compendiumIndex); return; }
-    setCompRows(compendiumIndex.filter((m) => String(m?.name ?? "").toLowerCase().includes(q)));
-  }, [compQ, compendiumIndex]);
-
   useAppWebSocket({
     selectedCampaignId: state.selectedCampaignId,
     selectedAdventureId: state.selectedAdventureId,
@@ -131,7 +110,6 @@ function AppInner() {
     refreshCampaign,
     refreshAdventure,
     refreshEncounter,
-    setCompendiumIndex,
   });
 
   const {
@@ -239,9 +217,6 @@ function AppInner() {
                 onReorderEncounters={reorderEncounters}
                 onReorderCampaignNotes={reorderCampaignNotes}
                 onReorderAdventureNotes={reorderAdventureNotes}
-                compQ={compQ}
-                setCompQ={setCompQ}
-                compRows={compRows}
               />
   )}
           />

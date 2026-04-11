@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { api, jsonInit } from "@/services/api";
-import { createPartyInventoryItem, fetchPartyInventory, updatePartyInventoryQuantity } from "@/services/inventoryApi";
+import { createPartyInventoryItem, fetchPartyInventory, fetchPartyInventoryItem, updatePartyInventoryQuantity } from "@/services/inventoryApi";
 import { useWs } from "@/services/ws";
 import { C, withAlpha } from "@/lib/theme";
 import { titleCase } from "@/lib/format/titleCase";
@@ -157,6 +157,37 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
     if (msg.type === "partyInventory:changed") {
       const cId = (msg.payload as { campaignId?: string })?.campaignId;
       if (cId === campaignId) enqueuePartyStashRefresh();
+      return;
+    }
+    if (msg.type === "partyInventory:delta") {
+      const payload = (msg.payload ?? {}) as {
+        campaignId?: string;
+        action?: "upsert" | "delete" | "refresh";
+        itemId?: string;
+      };
+      if (payload.campaignId !== campaignId) return;
+      if (payload.action === "delete" && payload.itemId) {
+        setPartyStashItems((prev) => prev.filter((item) => item.id !== payload.itemId));
+        return;
+      }
+      if (payload.action === "upsert" && payload.itemId) {
+        if (!campaignId) return;
+        void fetchPartyInventoryItem(campaignId, payload.itemId)
+          .then((item) => {
+            setPartyStashItems((prev) => {
+              const idx = prev.findIndex((entry) => entry.id === item.id);
+              if (idx === -1) return [...prev, item as PartyStashItem];
+              const next = prev.slice();
+              next[idx] = item as PartyStashItem;
+              return next;
+            });
+          })
+          .catch(() => {
+            enqueuePartyStashRefresh();
+          });
+        return;
+      }
+      enqueuePartyStashRefresh();
     }
   }, [campaignId, enqueuePartyStashRefresh]));
 
@@ -176,7 +207,7 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
 
   useEffect(() => {
     let alive = true;
-    api<ItemSummaryRow[]>("/api/compendium/items")
+    api<ItemSummaryRow[]>("/api/compendium/items?compact=1")
       .then((rows) => { if (alive) setItemIndex(rows ?? []); })
       .catch(() => { if (alive) setItemIndex([]); });
     return () => { alive = false; };

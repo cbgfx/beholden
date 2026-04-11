@@ -11,8 +11,6 @@ type Props = {
   inpcs: INpc[];
   selectedCampaignId: string;
   selectedEncounterId: string | null;
-  compQ: string;
-  onChangeCompQ: (q: string) => void;
   onFullRest: () => Promise<void>;
   onCreatePlayer: () => void;
   onEditPlayer: (playerId: string) => void;
@@ -42,8 +40,6 @@ export function CombatRosterLeftColumn(props: Props) {
         inpcs={props.inpcs}
         selectedCampaignId={props.selectedCampaignId}
         selectedEncounterId={props.selectedEncounterId}
-        compQ={props.compQ}
-        onChangeCompQ={props.onChangeCompQ}
         onAddINpcFromMonster={props.onAddINpcFromMonster}
         onEditINpc={props.onEditINpc}
         onDeleteINpc={props.onDeleteINpc}

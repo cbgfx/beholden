@@ -58,6 +58,18 @@ export function useCharacterSyncEffects(args: {
   }, []);
 
   useWs(React.useCallback((msg) => {
+    if (msg.type === "players:delta") {
+      const payload = (msg.payload ?? {}) as { campaignId?: string; characterId?: string | null };
+      const campaignId = payload.campaignId;
+      if (!campaignId) return;
+      setChar((prev) => {
+        if (!prev?.campaigns.some((campaign) => campaign.campaignId === campaignId)) return prev;
+        if (typeof payload.characterId === "string" && payload.characterId && payload.characterId !== prev.id) return prev;
+        enqueueFetchChar(80);
+        return prev;
+      });
+      return;
+    }
     if (msg.type !== "players:changed") return;
     const campaignId = (msg.payload as any)?.campaignId as string | undefined;
     if (!campaignId) return;

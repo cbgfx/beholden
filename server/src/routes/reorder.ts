@@ -65,6 +65,7 @@ export function registerReorderRoutes(app: Express, ctx: ServerContext) {
     const { ids } = parseBody(ReorderBody, req);
     runReorder("notes", "campaign_id", campaignId, ids, now(), " AND adventure_id IS NULL");
     ctx.broadcast("notes:changed", { campaignId });
+    ctx.broadcast("notes:delta", { campaignId, adventureId: null, action: "refresh" });
     res.json({ ok: true });
   });
 
@@ -78,6 +79,7 @@ export function registerReorderRoutes(app: Express, ctx: ServerContext) {
     const { ids } = parseBody(ReorderBody, req);
     runReorder("notes", "adventure_id", adventureId, ids, now());
     ctx.broadcast("notes:changed", { campaignId: aRow.campaign_id });
+    ctx.broadcast("notes:delta", { campaignId: aRow.campaign_id, adventureId, action: "refresh" });
     res.json({ ok: true });
   });
 }

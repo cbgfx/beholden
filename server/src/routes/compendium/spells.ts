@@ -3,9 +3,11 @@
 import type { Express, RequestHandler } from "express";
 import type { ServerContext } from "../../server/context.js";
 import { requireParam } from "../../lib/routeHelpers.js";
+import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { parseBody } from "../../shared/validate.js";
 import { SpellBody, buildSpellRecord } from "./helpers.js";
 import { backfillMonsterSpellRefs } from "../../services/compendium/normalizeMonsterSpellRefs.js";
+import { z } from "zod";
 
 export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: RequestHandler) {
   const { db } = ctx;
@@ -21,11 +23,57 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     transmutation: ["T", "Transmutation"],
   };
 
+  const SpellLookupBody = z.object({
+    names: z.array(z.string()).max(400),
+  });
+
+  const selectSpellByExact = db.prepare(
+    "SELECT id, name, level FROM compendium_spells WHERE name_key = ? OR lower(name) = ? ORDER BY name_key ASC LIMIT 1",
+  );
+  const selectSpellByPrefix = db.prepare(
+    "SELECT id, name, level FROM compendium_spells WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
+  );
+  const selectSpellByContains = db.prepare(
+    "SELECT id, name, level FROM compendium_spells WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
+  );
+
+  function normalizeLookupName(value: string): string {
+    return value
+      .trim()
+      .replace(/\s*\[[^\]]+\]\s*$/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  function lookupSpellByName(rawName: string): { id: string; name: string; level: number | null } | null {
+    const normalized = normalizeLookupName(rawName);
+    if (!normalized) return null;
+
+    const exact = selectSpellByExact.get(normalized, normalized) as
+      | { id: string; name: string; level: number | null }
+      | undefined;
+    if (exact) return exact;
+
+    const prefix = selectSpellByPrefix.get(`${normalized}%`) as
+      | { id: string; name: string; level: number | null }
+      | undefined;
+    if (prefix) return prefix;
+
+    const contains = selectSpellByContains.get(`%${normalized}%`) as
+      | { id: string; name: string; level: number | null }
+      | undefined;
+    return contains ?? null;
+  }
+
   app.get("/api/spells/search", (req, res) => {
+    applySharedApiCacheHeaders(res);
     const q = String(req.query.q ?? "").trim().toLowerCase();
     const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "50"), 10) || 50, 1), 500);
     const includeTextRaw = String(req.query.includeText ?? "").trim().toLowerCase();
     const includeText = includeTextRaw === "1" || includeTextRaw === "true" || includeTextRaw === "yes";
+    const compactRaw = String(req.query.compact ?? "").trim().toLowerCase();
+    const compact = compactRaw === "1" || compactRaw === "true" || compactRaw === "yes";
     const excludeSpecialRaw = String(req.query.excludeSpecial ?? "").trim().toLowerCase();
     const excludeSpecial =
       excludeSpecialRaw === "1" || excludeSpecialRaw === "true" || excludeSpecialRaw === "yes";
@@ -38,9 +86,10 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     const ritualRaw = String(req.query.ritual ?? "").trim().toLowerCase();
     const ritualOnly = ritualRaw === "1" || ritualRaw === "true" || ritualRaw === "yes";
 
-    const parts: string[] = [
-      "SELECT id, name, level, school, ritual, concentration, components, classes, data_json FROM compendium_spells WHERE 1=1",
-    ];
+    const baseSelect = compact && !includeText
+      ? "SELECT id, name, level, school, ritual, concentration, components, classes FROM compendium_spells WHERE 1=1"
+      : "SELECT id, name, level, school, ritual, concentration, components, classes, data_json FROM compendium_spells WHERE 1=1";
+    const parts: string[] = [baseSelect];
     const params: unknown[] = [];
 
     if (q) { parts.push("AND (name LIKE ? OR name_key LIKE ?)"); const like = `%${q}%`; params.push(like, like); }
@@ -87,10 +136,13 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
 
     const rows = db.prepare(parts.join(" ")).all(...params) as {
       id: string; name: string; level: number | null; school: string | null;
-      ritual: number; concentration: number; components: string | null; classes: string | null; data_json: string;
+      ritual: number; concentration: number; components: string | null; classes: string | null; data_json?: string;
     }[];
     res.json(rows.map((row) => {
-      const s = JSON.parse(row.data_json);
+      const s =
+        !compact || includeText
+          ? JSON.parse(row.data_json ?? "{}")
+          : {};
       const out: Record<string, unknown> = {
         id: row.id, name: row.name, level: row.level, school: row.school,
         time: s.time ?? null,
@@ -106,15 +158,57 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     }));
   });
 
+  app.post("/api/spells/lookup", (req, res) => {
+    const body = parseBody(SpellLookupBody, req);
+    const seen = new Set<string>();
+    const rows = body.names
+      .map((entry) => String(entry ?? ""))
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+      .filter((entry) => {
+        const key = normalizeLookupName(entry);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map((query) => ({ query, match: lookupSpellByName(query) }));
+    res.json({ rows });
+  });
+
   app.get("/api/spells/:spellId", (req, res) => {
+    applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const spellId = requireParam(req, res, "spellId");
     if (!spellId) return;
     const row = db
-      .prepare("SELECT data_json FROM compendium_spells WHERE id = ?")
-      .get(spellId) as { data_json: string } | undefined;
+      .prepare("SELECT id, name, name_key, level, school, ritual, concentration, components, classes, data_json FROM compendium_spells WHERE id = ?")
+      .get(spellId) as {
+      id: string;
+      name: string;
+      name_key: string | null;
+      level: number | null;
+      school: string | null;
+      ritual: number;
+      concentration: number;
+      components: string | null;
+      classes: string | null;
+      data_json: string;
+    } | undefined;
     if (!row)
       return res.status(404).json({ ok: false, message: "Spell not found in compendium" });
-    res.json(JSON.parse(row.data_json));
+    const data = JSON.parse(row.data_json ?? "{}") as Record<string, unknown>;
+    res.json({
+      ...data,
+      id: row.id,
+      name: row.name,
+      nameKey: row.name_key ?? (typeof data.nameKey === "string" ? data.nameKey : null),
+      name_key: row.name_key ?? (typeof data.name_key === "string" ? data.name_key : null),
+      level: row.level,
+      school: row.school,
+      ritual: row.ritual === 1,
+      concentration: row.concentration === 1,
+      components: row.components ?? data.components ?? null,
+      classes: row.classes ?? data.classes ?? null,
+    });
   });
 
   app.post("/api/spells", anyDm, (req, res) => {

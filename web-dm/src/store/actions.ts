@@ -19,8 +19,16 @@ export type Action =
   | { type: "mergeMonsterDetails"; patch: Record<string, MonsterDetail> }
   | { type: "setCampaignNotes"; notes: Note[] }
   | { type: "setAdventureNotes"; notes: Note[] }
+  | { type: "upsertCampaignNote"; note: Note }
+  | { type: "removeCampaignNote"; noteId: string }
+  | { type: "upsertAdventureNote"; note: Note }
+  | { type: "removeAdventureNote"; noteId: string }
   | { type: "setCampaignTreasure"; treasure: TreasureEntry[] }
   | { type: "setAdventureTreasure"; treasure: TreasureEntry[] }
+  | { type: "upsertCampaignTreasure"; entry: TreasureEntry }
+  | { type: "removeCampaignTreasure"; treasureId: string }
+  | { type: "upsertAdventureTreasure"; entry: TreasureEntry }
+  | { type: "removeAdventureTreasure"; treasureId: string }
   | { type: "toggleNote"; noteId: string }
   | { type: "openDrawer"; drawer: DrawerState }
   | { type: "closeDrawer" };

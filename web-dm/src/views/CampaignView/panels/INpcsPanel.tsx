@@ -7,16 +7,11 @@ import { PlayerRow } from "@/views/CampaignView/components/PlayerRow";
 import { MonsterPickerModal } from "@/views/CampaignView/monsterPicker/MonsterPickerModal";
 import type { AddMonsterOptions, INpc } from "@/domain/types/domain";
 import { titleCase } from "@/lib/format/titleCase";
-import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
 
 type Props = {
   inpcs: INpc[];
   selectedCampaignId: string | null;
   selectedEncounterId: string | null;
-
-  compQ: string;
-  onChangeCompQ: (q: string) => void;
-  compRows?: CompendiumMonsterRow[];
 
   onAddINpcFromMonster: (monsterId: string, qty: number, opts?: AddMonsterOptions) => void;
   onEditINpc: (inpcId: string) => void;
@@ -110,9 +105,6 @@ export function INpcsPanel(props: Props) {
       <MonsterPickerModal
         isOpen={isPickerOpen}
         onClose={() => setIsPickerOpen(false)}
-        compQ={props.compQ}
-        onChangeCompQ={props.onChangeCompQ}
-        compRows={(props.compRows ?? []) as any}
         onAddMonster={(monsterId, qty, opts) => {
           props.onAddINpcFromMonster(monsterId, qty, opts);
           setIsPickerOpen(false);

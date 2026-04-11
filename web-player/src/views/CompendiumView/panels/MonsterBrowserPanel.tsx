@@ -3,10 +3,10 @@ import { Panel } from "@/ui/Panel";
 import { Select } from "@/ui/Select";
 import { C, withAlpha } from "@/lib/theme";
 import { api } from "@/services/api";
-import { formatCr, parseCrNumber } from "@/lib/monsterPicker/utils";
-import { useMonsterPickerRows } from "@/lib/monsterPicker/useMonsterPickerRows";
+import { formatCr } from "@/lib/monsterPicker/utils";
 import { useVirtualList } from "@/lib/monsterPicker/useVirtualList";
 import type { CompendiumMonsterRow, SortMode } from "@/lib/monsterPicker/types";
+import { SIZE_LABELS } from "@/lib/monsterPicker/useMonsterPickerRows";
 
 const ROW_HEIGHT = 52;
 
@@ -30,23 +30,25 @@ function pillStyle(): React.CSSProperties {
   };
 }
 
+function normalizeSortName(name: string): string {
+  return name
+    .trim()
+    .replace(/^[^a-z0-9]+/i, "")
+    .replace(/^the\s+/i, "")
+    .trim();
+}
+
 export function MonsterBrowserPanel(props: {
   selectedMonsterId: string | null;
   onSelectMonster: (id: string) => void;
 }) {
-  const [baseRows, setBaseRows] = React.useState<CompendiumMonsterRow[]>([]);
+  const [rows, setRows] = React.useState<CompendiumMonsterRow[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    let alive = true;
-    setLoading(true);
-    api<CompendiumMonsterRow[]>("/api/compendium/monsters")
-      .then((rows) => { if (alive) setBaseRows(rows); })
-      .catch((e) => { if (alive) setLoadError(String(e?.message ?? e)); })
-      .finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
-  }, []);
+  const [totalRows, setTotalRows] = React.useState(0);
+  const [envOptions, setEnvOptions] = React.useState<string[]>(["all"]);
+  const [sizeOptions, setSizeOptions] = React.useState<string[]>(["all"]);
+  const [typeOptions, setTypeOptions] = React.useState<string[]>(["all"]);
 
   const [compQ, setCompQ] = React.useState("");
   const [sortMode, setSortMode] = React.useState<SortMode>("az");
@@ -56,8 +58,99 @@ export function MonsterBrowserPanel(props: {
   const [crMin, setCrMin] = React.useState("");
   const [crMax, setCrMax] = React.useState("");
 
-  const { filteredRows, envOptions, sizeOptions, typeOptions, lettersInList, letterFirstIndex } =
-    useMonsterPickerRows({ rows: baseRows, compQ, sortMode, envFilter, sizeFilter, typeFilter, crMin, crMax });
+  React.useEffect(() => {
+    const controller = new AbortController();
+    api<{ environments: string[]; sizes: string[]; types: string[] }>("/api/compendium/monsters/facets", {
+      signal: controller.signal,
+    })
+      .then((data) => {
+        const nextEnv = Array.isArray(data?.environments) ? data.environments : [];
+        const nextSizesRaw = Array.isArray(data?.sizes) ? data.sizes : [];
+        const nextTypes = Array.isArray(data?.types) ? data.types : [];
+        const sizeOrder = new Map<string, number>(SIZE_LABELS.map((size, index) => [size, index]));
+        const nextSizes = [...nextSizesRaw].sort((a, b) => {
+          const aOrder = sizeOrder.get(a);
+          const bOrder = sizeOrder.get(b);
+          if (aOrder != null && bOrder != null) return aOrder - bOrder;
+          if (aOrder != null) return -1;
+          if (bOrder != null) return 1;
+          return a.localeCompare(b);
+        });
+        setEnvOptions(["all", ...nextEnv]);
+        setSizeOptions(["all", ...nextSizes]);
+        setTypeOptions(["all", ...nextTypes]);
+      })
+      .catch(() => {
+        setEnvOptions(["all"]);
+        setSizeOptions(["all"]);
+        setTypeOptions(["all"]);
+      });
+    return () => controller.abort();
+  }, []);
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const params = new URLSearchParams({
+          q: compQ,
+          limit: "400",
+          offset: "0",
+          withTotal: "1",
+          sort: sortMode,
+        });
+        if (envFilter !== "all") params.set("env", envFilter);
+        if (sizeFilter !== "all") params.set("sizes", sizeFilter);
+        if (typeFilter !== "all") params.set("types", typeFilter);
+        if (crMin.trim()) params.set("crMin", crMin.trim());
+        if (crMax.trim()) params.set("crMax", crMax.trim());
+
+        const result = await api<{ rows: CompendiumMonsterRow[]; total: number }>(
+          `/api/compendium/search?${params.toString()}`,
+          { signal: controller.signal },
+        );
+        if (controller.signal.aborted) return;
+        const nextRows = Array.isArray(result?.rows) ? result.rows : [];
+        setRows(nextRows);
+        setTotalRows(Number.isFinite(result?.total as number) ? Number(result.total) : nextRows.length);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setRows([]);
+        setTotalRows(0);
+        setLoadError(String((error as any)?.message ?? error));
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }, 220);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [compQ, sortMode, envFilter, sizeFilter, typeFilter, crMin, crMax]);
+
+  const filteredRows = rows;
+
+  const lettersInList = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const row of filteredRows) {
+      const first = normalizeSortName(String(row.name ?? "")).charAt(0).toUpperCase();
+      if (first >= "A" && first <= "Z") set.add(first);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [filteredRows]);
+
+  const letterFirstIndex = React.useMemo(() => {
+    const out: Record<string, number> = {};
+    for (let i = 0; i < filteredRows.length; i += 1) {
+      const first = normalizeSortName(String(filteredRows[i].name ?? "")).charAt(0).toUpperCase();
+      if (!(first >= "A" && first <= "Z")) continue;
+      if (out[first] == null) out[first] = i;
+    }
+    return out;
+  }, [filteredRows]);
 
   const vl = useVirtualList({ isEnabled: true, rowHeight: ROW_HEIGHT, overscan: 8 });
   const { start, end, padTop, padBottom } = vl.getRange(filteredRows.length);
@@ -73,25 +166,23 @@ export function MonsterBrowserPanel(props: {
       title="Monsters"
       actions={
         <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>
-          {loading ? "Loading…" : `${filteredRows.length.toLocaleString()} / ${baseRows.length.toLocaleString()}`}
+          {loading ? "Loading..." : `${filteredRows.length.toLocaleString()} / ${totalRows.toLocaleString()}`}
         </div>
       }
       style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
       bodyStyle={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, gap: 8 }}
     >
-      {/* Search */}
       <input
-        value={compQ} placeholder="Search monsters…"
+        value={compQ} placeholder="Search monsters..."
         onChange={(e) => setCompQ(e.target.value)}
         style={inputStyle()}
       />
 
-      {/* Sort + filters */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 6 }}>
         <Select style={{ width: "100%" }} value={sortMode} onChange={(e) => setSortMode(e.target.value as SortMode)}>
           <option value="az">A-Z</option>
-          <option value="crAsc">CR (low→high)</option>
-          <option value="crDesc">CR (high→low)</option>
+          <option value="crAsc">CR (low to high)</option>
+          <option value="crDesc">CR (high to low)</option>
         </Select>
         <Select style={{ width: "100%" }} value={envFilter} onChange={(e) => setEnvFilter(e.target.value)}>
           {envOptions.map((env) => (
@@ -110,13 +201,11 @@ export function MonsterBrowserPanel(props: {
         </Select>
       </div>
 
-      {/* CR range */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
         <input value={crMin} onChange={(e) => setCrMin(e.target.value)} placeholder="CR min" style={inputStyle()} />
         <input value={crMax} onChange={(e) => setCrMax(e.target.value)} placeholder="CR max" style={inputStyle()} />
       </div>
 
-      {/* Quick CR pills */}
       <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
         {[{ label: "0-1", min: "0", max: "1" }, { label: "2-4", min: "2", max: "4" },
           { label: "3-7", min: "3", max: "7" }, { label: "5-10", min: "5", max: "10" },
@@ -129,7 +218,6 @@ export function MonsterBrowserPanel(props: {
         <button type="button" style={pillStyle()} onClick={handleClear}>Clear</button>
       </div>
 
-      {/* Letter jump */}
       {lettersInList.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
           {lettersInList.map((letter) => (
@@ -146,7 +234,6 @@ export function MonsterBrowserPanel(props: {
         </div>
       )}
 
-      {/* Virtual list */}
       <div
         ref={vl.scrollRef} onScroll={vl.onScroll}
         style={{ flex: 1, minHeight: 0, overflowY: "auto", border: `1px solid ${C.panelBorder}`, borderRadius: 12 }}
@@ -154,13 +241,13 @@ export function MonsterBrowserPanel(props: {
         {loadError && <div style={{ padding: 12, color: C.red }}>Failed to load: {loadError}</div>}
         {!loading && !loadError && filteredRows.length === 0 && (
           <div style={{ padding: 12, color: C.muted }}>
-            {baseRows.length === 0 ? "No compendium data loaded." : "No monsters match the current filters."}
+            {totalRows === 0 ? "No compendium data loaded." : "No monsters match the current filters."}
           </div>
         )}
         {filteredRows.length > 0 && (
           <div style={{ paddingTop: padTop, paddingBottom: padBottom }}>
             {filteredRows.slice(start, end).map((m) => {
-              const crLabel = m.cr != null ? `CR ${formatCr(m.cr)}` : "CR —";
+              const crLabel = m.cr != null ? `CR ${formatCr(m.cr)}` : "CR -";
               const type = m.type ? String(m.type).charAt(0).toUpperCase() + String(m.type).slice(1) : null;
               const active = m.id === props.selectedMonsterId;
               return (
@@ -178,7 +265,7 @@ export function MonsterBrowserPanel(props: {
                 >
                   <div style={{ fontWeight: 700, lineHeight: 1.15 }}>{m.name}</div>
                   <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginTop: 2 }}>
-                    {crLabel}{type ? ` • ${type}` : ""}{m.environment ? ` • ${m.environment}` : ""}
+                    {crLabel}{type ? ` - ${type}` : ""}{m.environment ? ` - ${m.environment}` : ""}
                   </div>
                 </button>
               );

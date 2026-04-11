@@ -1,7 +1,11 @@
 import React from "react";
 import { api } from "@/services/api";
 import { ordinal } from "@/lib/format/ordinal";
-import { normalizeSpellName } from "@/utils/compendiumFormat";
+
+type SpellLookupRow = {
+  query: string;
+  match: { id: string; name: string; level: number | null } | null;
+};
 
 export type GroupedSpell = {
   level: number;
@@ -104,21 +108,19 @@ export function useMonsterSpells(monster: any | null): {
     setSlotsByLevel(nextSlots);
 
     async function loadMeta() {
-      const out: Record<string, any> = {};
-      for (const name of spellNames) {
-        try {
-          const q = encodeURIComponent(name);
-          const results = await api<any[]>(`/api/spells/search?q=${q}&limit=50`);
-          const wantExact = String(name).trim().toLowerCase();
-          const base = wantExact.replace(/\s*\[[^\]]+\]\s*$/, "").trim();
-          const pick =
-            results.find((r) => String(r?.name ?? "").trim().toLowerCase() === wantExact) ??
-            results.find((r) => String(r?.name ?? "").trim().toLowerCase() === base) ??
-            results[0];
-          if (pick?.id) out[name] = pick;
-        } catch {
-          // ignore — spell not in compendium
+      const out: Record<string, { id: string; name: string; level: number | null }> = {};
+      try {
+        const payload = await api<{ rows: SpellLookupRow[] }>("/api/spells/lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ names: spellNames }),
+        });
+        for (const row of payload.rows ?? []) {
+          if (!row?.match?.id) continue;
+          out[row.query] = row.match;
         }
+      } catch {
+        // ignore — spell not in compendium
       }
       if (!cancelled) setSpellMetaByName(out);
     }
@@ -167,12 +169,12 @@ export function useMonsterSpells(monster: any | null): {
         setSpellDetail(detail);
         return;
       }
-      const q = encodeURIComponent(ref.name);
-      const results = await api<any[]>(`/api/spells/search?q=${q}&limit=20`);
-      const want = normalizeSpellName(ref.name);
-      const best =
-        results.find((r) => normalizeSpellName(String(r?.name ?? "")) === want) ??
-        results[0];
+      const payload = await api<{ rows: SpellLookupRow[] }>("/api/spells/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ names: [ref.name] }),
+      });
+      const best = payload.rows?.[0]?.match ?? null;
       if (!best?.id) {
         setSpellError("Spell not found in compendium.");
         return;

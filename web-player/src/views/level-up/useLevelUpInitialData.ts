@@ -75,14 +75,14 @@ export function useLevelUpInitialData(id: string | undefined) {
     }
     const spellcastingClassName = getSpellcastingClassName(classDetail, nextLevel, subclass) ?? classDetail.name;
     const encodedClass = encodeURIComponent(spellcastingClassName);
-    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&level=0&limit=200&includeText=1`)
+    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&level=0&limit=120&compact=1&excludeSpecial=1`)
       .then(setClassCantrips)
       .catch(() => setClassCantrips([]));
-    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&minLevel=1&maxLevel=9&limit=300&includeText=1`)
+    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&minLevel=1&maxLevel=9&limit=220&compact=1&excludeSpecial=1`)
       .then(setClassSpells)
       .catch(() => setClassSpells([]));
     if (/warlock/i.test(classDetail.name)) {
-      api<SpellSummary[]>("/api/spells/search?classes=Eldritch+Invocations&limit=200&includeText=1")
+      api<SpellSummary[]>("/api/spells/search?classes=Eldritch+Invocations&limit=150&includeText=1")
         .then(setClassInvocations)
         .catch(() => setClassInvocations([]));
     } else {

@@ -518,11 +518,11 @@ export function CharacterCreatorView() {
     if (!classDetail) { setClassCantrips([]); setClassSpells([]); setClassInvocations([]); return; }
     const spellcastingClassName = getSpellcastingClassName(classDetail, form.level, form.subclass) ?? classDetail.name;
     const name = encodeURIComponent(spellcastingClassName);
-    api<SpellSummary[]>(`/api/spells/search?classes=${name}&level=0&limit=200&includeText=1`).then(setClassCantrips).catch(() => {});
-    api<SpellSummary[]>(`/api/spells/search?classes=${name}&minLevel=1&maxLevel=9&limit=300&includeText=1`).then(setClassSpells).catch(() => {});
+    api<SpellSummary[]>(`/api/spells/search?classes=${name}&level=0&limit=120&includeText=1&excludeSpecial=1`).then(setClassCantrips).catch(() => {});
+    api<SpellSummary[]>(`/api/spells/search?classes=${name}&minLevel=1&maxLevel=9&limit=220&compact=1&excludeSpecial=1`).then(setClassSpells).catch(() => {});
     // Eldritch Invocations live in their own spell list
     if (/warlock/i.test(classDetail.name)) {
-      api<SpellSummary[]>("/api/spells/search?classes=Eldritch+Invocations&limit=200&includeText=1").then(setClassInvocations).catch(() => {});
+      api<SpellSummary[]>("/api/spells/search?classes=Eldritch+Invocations&limit=150&includeText=1").then(setClassInvocations).catch(() => {});
     } else {
       setClassInvocations([]);
     }

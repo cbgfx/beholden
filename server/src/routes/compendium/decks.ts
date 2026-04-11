@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import type { ServerContext } from "../../server/context.js";
+import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { requireAuth } from "../../middleware/auth.js";
 
 type DeckCardRow = {
@@ -13,6 +14,7 @@ export function registerDeckRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
 
   app.get("/api/compendium/decks/:deckKey", requireAuth, (req, res) => {
+    applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const deckKey = String(req.params.deckKey ?? "").trim().toLowerCase();
     if (!deckKey) return res.status(400).json({ ok: false, message: "deckKey is required" });
 
@@ -33,4 +35,3 @@ export function registerDeckRoutes(app: Express, ctx: ServerContext) {
     });
   });
 }
-

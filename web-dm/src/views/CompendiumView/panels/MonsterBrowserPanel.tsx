@@ -4,8 +4,8 @@ import { Panel } from "@/ui/Panel";
 import { theme, withAlpha } from "@/theme/theme";
 import { api } from "@/services/api";
 import { IconPencil, IconTrash } from "@/icons";
-import type { CompendiumMonsterRow, PreparedMonsterRow, SortMode } from "@/views/CampaignView/monsterPicker/types";
-import { useMonsterPickerRows } from "@/views/CampaignView/monsterPicker/hooks/useMonsterPickerRows";
+import type { CompendiumMonsterRow, SortMode } from "@/views/CampaignView/monsterPicker/types";
+import { SIZE_LABELS } from "@/views/CampaignView/monsterPicker/hooks/useMonsterPickerRows";
 import { MonsterPickerFilters } from "@/views/CampaignView/monsterPicker/components/MonsterPickerFilters";
 import { useVirtualList } from "@/views/CampaignView/monsterPicker/hooks/useVirtualList";
 import { formatCr } from "@/views/CampaignView/monsterPicker/utils";
@@ -16,7 +16,7 @@ import { actionBtnStyle, BrowserAddButton } from "./browserParts";
 const ROW_HEIGHT = 52;
 
 function MonsterBrowserRow(props: {
-  row: PreparedMonsterRow;
+  row: CompendiumMonsterRow;
   active: boolean;
   editable: boolean;
   onClick: () => void;
@@ -115,30 +115,16 @@ export function MonsterBrowserPanel(props: {
   onSelectMonster: (id: string) => void;
   editable?: boolean;
 }) {
-  const [baseRows, setBaseRows] = React.useState<CompendiumMonsterRow[]>([]);
+  const [rows, setRows] = React.useState<CompendiumMonsterRow[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [totalRows, setTotalRows] = React.useState(0);
   const [refreshKey, setRefreshKey] = React.useState(0);
+  const [envOptions, setEnvOptions] = React.useState<string[]>(["all"]);
+  const [sizeOptions, setSizeOptions] = React.useState<string[]>(["all"]);
+  const [typeOptions, setTypeOptions] = React.useState<string[]>(["all"]);
 
   const refresh = React.useCallback(() => setRefreshKey((value) => value + 1), []);
-
-  React.useEffect(() => {
-    let alive = true;
-    setLoading(true);
-    api<CompendiumMonsterRow[]>("/api/compendium/monsters")
-      .then((rows) => {
-        if (alive) setBaseRows(rows);
-      })
-      .catch((error) => {
-        if (alive) setLoadError(String(error?.message ?? error));
-      })
-      .finally(() => {
-        if (alive) setLoading(false);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [refreshKey]);
 
   const [compQ, setCompQ] = React.useState("");
   const [sortMode, setSortMode] = React.useState<SortMode>("az");
@@ -148,16 +134,106 @@ export function MonsterBrowserPanel(props: {
   const [crMin, setCrMin] = React.useState("");
   const [crMax, setCrMax] = React.useState("");
 
-  const { filteredRows, envOptions, sizeOptions, typeOptions, lettersInList, letterFirstIndex } = useMonsterPickerRows({
-    rows: baseRows,
-    compQ,
-    sortMode,
-    envFilter,
-    sizeFilter,
-    typeFilter,
-    crMin,
-    crMax,
-  });
+  React.useEffect(() => {
+    const controller = new AbortController();
+    api<{ environments: string[]; sizes: string[]; types: string[] }>("/api/compendium/monsters/facets", {
+      signal: controller.signal,
+    })
+      .then((data) => {
+        const nextEnv = Array.isArray(data?.environments) ? data.environments : [];
+        const nextSizesRaw = Array.isArray(data?.sizes) ? data.sizes : [];
+        const nextTypes = Array.isArray(data?.types) ? data.types : [];
+        const sizeOrder = new Map<string, number>(SIZE_LABELS.map((size, index) => [size, index]));
+        const nextSizes = [...nextSizesRaw].sort((a, b) => {
+          const aOrder = sizeOrder.get(a);
+          const bOrder = sizeOrder.get(b);
+          if (aOrder != null && bOrder != null) return aOrder - bOrder;
+          if (aOrder != null) return -1;
+          if (bOrder != null) return 1;
+          return a.localeCompare(b);
+        });
+        setEnvOptions(["all", ...nextEnv]);
+        setSizeOptions(["all", ...nextSizes]);
+        setTypeOptions(["all", ...nextTypes]);
+      })
+      .catch(() => {
+        setEnvOptions(["all"]);
+        setSizeOptions(["all"]);
+        setTypeOptions(["all"]);
+      });
+    return () => controller.abort();
+  }, [refreshKey]);
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const params = new URLSearchParams({
+          q: compQ,
+          limit: "400",
+          offset: "0",
+          withTotal: "1",
+          sort: sortMode,
+        });
+        if (envFilter !== "all") params.set("env", envFilter);
+        if (sizeFilter !== "all") params.set("sizes", sizeFilter);
+        if (typeFilter !== "all") params.set("types", typeFilter);
+        if (crMin.trim()) params.set("crMin", crMin.trim());
+        if (crMax.trim()) params.set("crMax", crMax.trim());
+        const result = await api<{ rows: CompendiumMonsterRow[]; total: number }>(
+          `/api/compendium/search?${params.toString()}`,
+          { signal: controller.signal },
+        );
+        if (controller.signal.aborted) return;
+        const nextRows = Array.isArray(result?.rows) ? result.rows : [];
+        setRows(nextRows);
+        setTotalRows(Number.isFinite(result?.total as number) ? Number(result.total) : nextRows.length);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setRows([]);
+        setTotalRows(0);
+        setLoadError(String((error as any)?.message ?? error));
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }, 220);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [compQ, sortMode, envFilter, sizeFilter, typeFilter, crMin, crMax, refreshKey]);
+
+  const filteredRows = rows;
+
+  const normalizeSortName = React.useCallback((name: string) => {
+    return name
+      .trim()
+      .replace(/^[^a-z0-9]+/i, "")
+      .replace(/^the\s+/i, "")
+      .trim();
+  }, []);
+
+  const lettersInList = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const row of filteredRows) {
+      const first = normalizeSortName(String(row.name ?? "")).charAt(0).toUpperCase();
+      if (first >= "A" && first <= "Z") set.add(first);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [filteredRows, normalizeSortName]);
+
+  const letterFirstIndex = React.useMemo(() => {
+    const out: Record<string, number> = {};
+    for (let i = 0; i < filteredRows.length; i += 1) {
+      const first = normalizeSortName(String(filteredRows[i].name ?? "")).charAt(0).toUpperCase();
+      if (!(first >= "A" && first <= "Z")) continue;
+      if (out[first] == null) out[first] = i;
+    }
+    return out;
+  }, [filteredRows, normalizeSortName]);
 
   const vl = useVirtualList({ isEnabled: true, rowHeight: ROW_HEIGHT, overscan: 8 });
   const { start, end, padTop, padBottom } = vl.getRange(filteredRows.length);
@@ -176,9 +252,9 @@ export function MonsterBrowserPanel(props: {
 
   const dupFilteredRows = React.useMemo(() => {
     const query = dupSearchQ.trim().toLowerCase();
-    const rows = query ? baseRows.filter((monster) => monster.name.toLowerCase().includes(query)) : baseRows;
-    return rows.slice(0, 200);
-  }, [baseRows, dupSearchQ]);
+    const next = query ? filteredRows.filter((monster) => monster.name.toLowerCase().includes(query)) : filteredRows;
+    return next.slice(0, 200);
+  }, [filteredRows, dupSearchQ]);
 
   async function handleEditClick(id: string) {
     setEditLoading(id);
@@ -228,7 +304,7 @@ export function MonsterBrowserPanel(props: {
         actions={
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
-              {loading ? "Loading..." : `${filteredRows.length.toLocaleString()} / ${baseRows.length.toLocaleString()}`}
+              {loading ? "Loading..." : `${filteredRows.length.toLocaleString()} / ${totalRows.toLocaleString()}`}
             </div>
             {props.editable && <BrowserAddButton title="New monster" onClick={() => setShowCreateChoice(true)} />}
           </div>
@@ -306,7 +382,7 @@ export function MonsterBrowserPanel(props: {
           )}
           {!loading && !loadError && filteredRows.length === 0 && (
             <EmptyState textColor={theme.colors.muted} style={{ padding: 12 }}>
-              {baseRows.length === 0 ? "No compendium data loaded. Import an XML file in the Import section." : "No monsters match the current filters."}
+              {totalRows === 0 ? "No compendium data loaded. Import an XML file in the Import section." : "No monsters match the current filters."}
             </EmptyState>
           )}
           {filteredRows.length > 0 && (

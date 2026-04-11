@@ -109,6 +109,19 @@ function resolvePlayerUpdateState(
 export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
+  const queryFlag = (value: unknown): boolean => {
+    const raw = String(value ?? "").trim().toLowerCase();
+    return raw === "1" || raw === "true" || raw === "yes";
+  };
+  const emitPlayerChange = (args: { campaignId: string; action: "upsert" | "delete" | "refresh"; playerId?: string; characterId?: string | null }) => {
+    ctx.broadcast("players:changed", { campaignId: args.campaignId });
+    ctx.broadcast("players:delta", {
+      campaignId: args.campaignId,
+      action: args.action,
+      ...(args.playerId ? { playerId: args.playerId } : {}),
+      ...(args.characterId !== undefined ? { characterId: args.characterId } : {}),
+    });
+  };
 
   const withAbsoluteImageUrl = <T extends { imageUrl?: string | null }>(req: Parameters<Express["get"]>[1] extends (...args: infer P) => any ? P[0] : never, value: T): T => ({
     ...value,
@@ -118,16 +131,22 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
   app.get("/api/campaigns/:campaignId/players", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
+    const includeSharedNotes = queryFlag(req.query.includeSharedNotes) || String(req.query.includeSharedNotes ?? "").trim() === "";
       const rows = db
       .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE campaign_id = ?`)
       .all(campaignId) as Record<string, unknown>[];
-    res.json(rows.map((row) => withAbsoluteImageUrl(req, toCampaignCharacterDto(rowToCampaignCharacter(row)))));
+    res.json(rows.map((row) => {
+      const dto = toCampaignCharacterDto(rowToCampaignCharacter(row));
+      if (!includeSharedNotes) delete dto.sharedNotes;
+      return withAbsoluteImageUrl(req, dto);
+    }));
   });
 
   // Player-facing party view — HP is obfuscated (percent only, no raw values).
   app.get("/api/campaigns/:campaignId/party", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
+    const includeCharacterData = queryFlag(req.query.includeCharacterData);
 
     const rows = db.prepare(`
       SELECT p.*, uc.character_data_json
@@ -161,11 +180,54 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
         color: actor.color ?? null,
         imageUrl: absolutizePublicUrlForRequest(req, actor.imageUrl ?? null),
         conditions: actor.conditions ?? [],
-        characterData: parseJson(p.character_data_json, null),
+        ...(includeCharacterData ? { characterData: parseJson(p.character_data_json, null) } : {}),
       };
     });
 
     res.json(party);
+  });
+
+  app.get("/api/campaigns/:campaignId/party/:playerId", memberOrAdmin(db), (req, res) => {
+    const campaignId = requireParam(req, res, "campaignId");
+    const playerId = requireParam(req, res, "playerId");
+    if (!campaignId || !playerId) return;
+
+    const p = db.prepare(`
+      SELECT p.*, uc.character_data_json
+      FROM players p
+      LEFT JOIN user_characters uc ON uc.id = p.character_id
+      WHERE p.campaign_id = ? AND p.id = ?
+    `).get(campaignId, playerId) as Record<string, unknown> | undefined;
+
+    if (!p) return res.status(404).json({ ok: false, message: "Not found" });
+
+    const actor = rowToCampaignCharacter(p);
+    const overrides = actor.overrides ?? DEFAULT_OVERRIDES;
+    const effectiveHpMax = Math.max(1, actor.hpMax + (overrides.hpMaxBonus ?? 0));
+    const hpPercent = Math.max(0, Math.min(100, Math.round((actor.hpCurrent / effectiveHpMax) * 100)));
+
+    res.json({
+      id: actor.id,
+      userId: actor.userId,
+      playerName: actor.playerName,
+      characterName: actor.characterName,
+      className: actor.class,
+      species: actor.species,
+      level: actor.level,
+      hpPercent,
+      ac: actor.ac + (overrides.acBonus ?? 0),
+      speed: actor.speed ?? null,
+      strScore: actor.str ?? null,
+      dexScore: actor.dex ?? null,
+      conScore: actor.con ?? null,
+      intScore: actor.int ?? null,
+      wisScore: actor.wis ?? null,
+      chaScore: actor.cha ?? null,
+      color: actor.color ?? null,
+      imageUrl: absolutizePublicUrlForRequest(req, actor.imageUrl ?? null),
+      conditions: actor.conditions ?? [],
+      characterData: parseJson(p.character_data_json, null),
+    });
   });
 
   app.post("/api/campaigns/:campaignId/players", dmOrAdmin(db), (req, res) => {
@@ -206,7 +268,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
       t,
       t,
     );
-    ctx.broadcast("players:changed", { campaignId });
+    emitPlayerChange({ campaignId, action: "upsert", playerId: id, characterId: null });
     const row = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(id) as Record<string, unknown>;
     res.json(withAbsoluteImageUrl(req, toCampaignCharacterDto(rowToCampaignCharacter(row))));
   });
@@ -236,7 +298,12 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
       playerId
     );
 
-    ctx.broadcast("players:changed", { campaignId: existing.campaignId });
+    emitPlayerChange({
+      campaignId: existing.campaignId,
+      action: "upsert",
+      playerId,
+      characterId: existing.characterId ?? null,
+    });
     const updated = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(playerId) as Record<string, unknown>;
     res.json(withAbsoluteImageUrl(req, toCampaignCharacterDto(rowToCampaignCharacter(updated))));
   });
@@ -251,7 +318,12 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     const t = now();
     db.prepare("UPDATE players SET shared_notes = ?, updated_at = ? WHERE id = ?").run(sharedNotes, t, playerId);
     const existing = rowToCampaignCharacter(existingRow);
-    ctx.broadcast("players:changed", { campaignId: existing.campaignId });
+    emitPlayerChange({
+      campaignId: existing.campaignId,
+      action: "upsert",
+      playerId,
+      characterId: existing.characterId ?? null,
+    });
     res.json({ ok: true, sharedNotes });
   });
 
@@ -289,7 +361,12 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     const imgPath = ctx.path.join(imagesDir, `${playerId}.webp`);
     try { if (ctx.fs.existsSync(imgPath)) ctx.fs.unlinkSync(imgPath); } catch { /* best-effort */ }
 
-    ctx.broadcast("players:changed", { campaignId: existing.campaignId });
+    emitPlayerChange({
+      campaignId: existing.campaignId,
+      action: "delete",
+      playerId,
+      characterId: existing.characterId ?? null,
+    });
     res.json({ ok: true });
   });
 
@@ -320,7 +397,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
 
     const imageUrl = `/player-images/${filename}`;
     db.prepare("UPDATE players SET image_url = ?, updated_at = ? WHERE id = ?").run(imageUrl, now(), playerId);
-    ctx.broadcast("players:changed", { campaignId: row.campaign_id });
+    emitPlayerChange({ campaignId: row.campaign_id, action: "upsert", playerId, characterId: null });
     res.json({ ok: true, imageUrl: absolutizePublicUrlForRequest(req, imageUrl) });
   });
 
@@ -336,7 +413,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     try { if (ctx.fs.existsSync(imgPath)) ctx.fs.unlinkSync(imgPath); } catch { /* best-effort */ }
 
     db.prepare("UPDATE players SET image_url = NULL, updated_at = ? WHERE id = ?").run(now(), playerId);
-    ctx.broadcast("players:changed", { campaignId: row.campaign_id });
+    emitPlayerChange({ campaignId: row.campaign_id, action: "upsert", playerId, characterId: null });
     res.json({ ok: true });
   });
 }

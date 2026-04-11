@@ -21,6 +21,11 @@ import {
   spellSectionHeaderBtn,
 } from "@/views/character/CharacterSpellShared";
 
+type SpellLookupRow = {
+  query: string;
+  match: { id: string; name: string; level: number | null } | null;
+};
+
 function formatResourceResetLabel(reset: ResourceCounter["reset"]): string {
   if (reset === "S") return "Short Rest";
   if (reset === "SL") return "Short or Long Rest";
@@ -131,28 +136,76 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
 
   const entryKeysStr = [...entries.map((e) => e.key), ...specialGrantedEntries.map((e) => e.key)].join(",");
   React.useEffect(() => {
-    for (const e of [...entries, ...specialGrantedEntries]) {
-      if (details[e.key]) continue;
-      const loadDetail = e.spellId
-        ? api<FetchedSpellDetail>(`/api/spells/${encodeURIComponent(e.spellId)}`)
-        : api<{ id: string; name: string; level: number | null }[]>(
-            `/api/spells/search?q=${encodeURIComponent(e.searchName)}&limit=5`
-          ).then((results) => {
-            const match =
-              results.find((r) => r.name.replace(/\s*\[.+\]$/, "").toLowerCase() === e.searchName.toLowerCase())
-              ?? results[0];
-            if (!match) return null;
-            return api<FetchedSpellDetail>(`/api/spells/${match.id}`);
-          });
-      loadDetail.then((detail) => {
-        if (!detail) return;
-          const textStr = Array.isArray(detail.text) ? detail.text.join("\n") : String(detail.text ?? "");
-          setDetails((prev) => ({
-            ...prev,
-            [e.key]: { ...detail, damage: parseSpellDamage(textStr), save: parseSpellSave(textStr) },
-          }));
-      }).catch(() => {});
+    const allEntries = [...entries, ...specialGrantedEntries];
+    const missingEntries = allEntries.filter((entry) => !details[entry.key]);
+    if (missingEntries.length === 0) return;
+    let alive = true;
+
+    const directEntries = missingEntries.filter((entry) => entry.spellId);
+    const unresolvedByName = new Map<string, typeof missingEntries>();
+    for (const entry of missingEntries) {
+      if (entry.spellId) continue;
+      const bucket = unresolvedByName.get(entry.searchName) ?? [];
+      bucket.push(entry);
+      unresolvedByName.set(entry.searchName, bucket);
     }
+
+    const load = async () => {
+      const updates: Record<string, FetchedSpellDetail> = {};
+
+      await Promise.all(
+        directEntries.map(async (entry) => {
+          try {
+            const detail = await api<FetchedSpellDetail>(`/api/spells/${encodeURIComponent(entry.spellId!)}`);
+            const textStr = Array.isArray(detail.text) ? detail.text.join("\n") : String(detail.text ?? "");
+            updates[entry.key] = { ...detail, damage: parseSpellDamage(textStr), save: parseSpellSave(textStr) };
+          } catch {
+            // ignore
+          }
+        }),
+      );
+
+      const unresolvedNames = Array.from(unresolvedByName.keys());
+      if (unresolvedNames.length > 0) {
+        try {
+          const payload = await api<{ rows: SpellLookupRow[] }>("/api/spells/lookup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ names: unresolvedNames }),
+          });
+          await Promise.all(
+            (payload.rows ?? [])
+              .filter((row) => Boolean(row?.match?.id))
+              .map(async (row) => {
+                try {
+                  const detail = await api<FetchedSpellDetail>(`/api/spells/${encodeURIComponent(row.match!.id)}`);
+                  const textStr = Array.isArray(detail.text) ? detail.text.join("\n") : String(detail.text ?? "");
+                  const enriched: FetchedSpellDetail = {
+                    ...detail,
+                    damage: parseSpellDamage(textStr),
+                    save: parseSpellSave(textStr),
+                  };
+                  for (const entry of unresolvedByName.get(row.query) ?? []) {
+                    updates[entry.key] = enriched;
+                  }
+                } catch {
+                  // ignore
+                }
+              }),
+          );
+        } catch {
+          // ignore
+        }
+      }
+
+      if (!alive) return;
+      if (Object.keys(updates).length > 0) setDetails((prev) => ({ ...prev, ...updates }));
+    };
+
+    void load();
+    return () => {
+      alive = false;
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entryKeysStr]);
 
@@ -232,7 +285,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
     }
     let alive = true;
     setSpellSearchLoading(true);
-    api<Array<{ id: string; name: string; level: number | null }>>(`/api/spells/search?q=${encodeURIComponent(query)}&limit=20`)
+    api<Array<{ id: string; name: string; level: number | null }>>(`/api/spells/search?q=${encodeURIComponent(query)}&limit=20&compact=1&excludeSpecial=1`)
       .then(async (results) => {
         if (!alive) return;
         const detailed = await Promise.all(

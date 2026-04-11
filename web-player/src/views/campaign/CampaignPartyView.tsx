@@ -30,7 +30,7 @@ export interface PartyMember {
   color: string | null;
   imageUrl: string | null;
   conditions: ConditionInstance[];
-  characterData: Record<string, unknown> | null;
+  characterData?: Record<string, unknown> | null;
 }
 
 interface CampaignBastionSummary {
@@ -232,6 +232,15 @@ export function CampaignPartyView() {
       .finally(() => setLoading(false));
   }, [campaignId]);
 
+  const fetchPartyMember = React.useCallback(async (playerId: string): Promise<PartyMember | null> => {
+    if (!campaignId || !playerId) return null;
+    try {
+      return await api<PartyMember>(`/api/campaigns/${campaignId}/party/${playerId}`);
+    } catch {
+      return null;
+    }
+  }, [campaignId]);
+
   React.useEffect(() => {
     if (!campaignId) return;
     fetchParty();
@@ -256,6 +265,39 @@ export function CampaignPartyView() {
               fetchParty();
             });
           }
+          return;
+        }
+        if (msg.type === "players:delta") {
+          const payload = (msg.payload ?? {}) as {
+            campaignId?: string;
+            action?: "upsert" | "delete" | "refresh";
+            playerId?: string;
+          };
+          if (payload.campaignId !== campaignId) return;
+          if (payload.action === "delete" && payload.playerId) {
+            setParty((prev) => prev.filter((member) => member.id !== payload.playerId));
+            return;
+          }
+          if (payload.action === "upsert" && payload.playerId) {
+            enqueue(`party:delta:${campaignId}:${payload.playerId}`, async () => {
+              const member = await fetchPartyMember(payload.playerId!);
+              if (!member) {
+                setParty((prev) => prev.filter((entry) => entry.id !== payload.playerId));
+                return;
+              }
+              setParty((prev) => {
+                const idx = prev.findIndex((entry) => entry.id === member.id);
+                if (idx === -1) return [...prev, member];
+                const next = prev.slice();
+                next[idx] = member;
+                return next;
+              });
+            }, 80);
+            return;
+          }
+          enqueue(`party:${campaignId}`, async () => {
+            fetchParty();
+          });
         }
         if (msg.type === "bastions:changed") {
           const cId = (msg.payload as any)?.campaignId as string | undefined;
@@ -267,7 +309,7 @@ export function CampaignPartyView() {
           }
         }
       },
-      [campaignId, enqueue, fetchParty]
+      [campaignId, enqueue, fetchParty, fetchPartyMember]
     )
   );
 

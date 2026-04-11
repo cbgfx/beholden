@@ -11,7 +11,22 @@ export function createWsServer(opts: {
   authorize?: (req: import('http').IncomingMessage) => boolean;
 }) {
   const { httpServer, path = "/ws", onConnectionHello, authorize } = opts;
-  const wss = new WebSocketServer({ server: httpServer, path });
+  const wsCompressionRaw = String(process.env.BEHOLDEN_WS_COMPRESSION ?? "true").trim().toLowerCase();
+  const wsCompressionEnabled =
+    wsCompressionRaw === "1" || wsCompressionRaw === "true" || wsCompressionRaw === "yes";
+  const wss = new WebSocketServer({
+    server: httpServer,
+    path,
+    perMessageDeflate: wsCompressionEnabled
+      ? {
+          // Avoid compressing tiny frames where compression overhead outweighs gains.
+          threshold: 1024,
+          clientNoContextTakeover: true,
+          serverNoContextTakeover: true,
+          concurrencyLimit: 10,
+        }
+      : false,
+  });
 
   wss.on("connection", (ws, req) => {
     if (authorize && !authorize(req)) {

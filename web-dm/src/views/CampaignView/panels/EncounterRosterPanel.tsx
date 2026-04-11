@@ -4,7 +4,6 @@ import { Button } from "@/ui/Button";
 import { Panel } from "@/ui/Panel";
 import type { AddMonsterOptions } from "@/domain/types/domain";
 import { MonsterPickerModal } from "@/views/CampaignView/monsterPicker/MonsterPickerModal";
-import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
 import type { EncounterActor } from "@/domain/types/domain";
 import { EncounterRosterHeaderActions } from "@/views/CampaignView/panels/EncounterRosterPanel/EncounterRosterHeaderActions";
 import { EncounterRosterList } from "@/views/CampaignView/panels/EncounterRosterPanel/EncounterRosterList";
@@ -22,10 +21,6 @@ export function EncounterRosterPanel(props: {
   // Keyed by combatant id.
   xpByCombatantId?: Record<string, number>;
 
-  // Keep these for now (CampaignView already owns compendium filtering)
-  compQ: string;
-  onChangeCompQ: (q: string) => void;
-  compRows: CompendiumMonsterRow[];
   onAddMonster: (
     monsterId: string,
     qty: number,
@@ -80,9 +75,6 @@ export function EncounterRosterPanel(props: {
           <MonsterPickerModal
             isOpen={pickerOpen}
             onClose={() => setPickerOpen(false)}
-            compQ={props.compQ}
-            onChangeCompQ={props.onChangeCompQ}
-            compRows={props.compRows}
             onAddMonster={(id, qty, opts) => props.onAddMonster(id, qty, opts)}
           />
         </div>

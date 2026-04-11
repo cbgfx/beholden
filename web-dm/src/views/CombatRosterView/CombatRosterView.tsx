@@ -47,15 +47,13 @@ export function CombatRosterView() {
     players: state.players,
   });
 
-  const [compQ, setCompQ] = React.useState("");
-
   // Encounter-scoped actions — keyed to the explicit route encounterId.
   const encounterActions = useEncounterActions(encounterId, refresh);
 
   // Campaign-scoped refresh: players + inpcs only (sufficient for roster view).
   const refreshCampaignForRoster = React.useCallback(async (cid: string) => {
     const [players, inpcs] = await Promise.all([
-      fetchCampaignCharacters(cid),
+      fetchCampaignCharacters(cid, { includeSharedNotes: false }),
       api<INpc[]>(`/api/campaigns/${cid}/inpcs`),
     ]);
     dispatch({ type: "setPlayers", players: players as CampaignCharacter[] });
@@ -92,8 +90,6 @@ export function CombatRosterView() {
           inpcs={state.inpcs}
           selectedCampaignId={state.selectedCampaignId ?? ""}
           selectedEncounterId={encounterId ?? null}
-          compQ={compQ}
-          onChangeCompQ={setCompQ}
           onFullRest={campaignActions.fullRestPlayers}
           onCreatePlayer={() => dispatch({ type: "openDrawer", drawer: { type: "createPlayer", campaignId: state.selectedCampaignId } })}
           onEditPlayer={(playerId) => dispatch({ type: "openDrawer", drawer: { type: "editPlayer", playerId } })}
@@ -110,9 +106,6 @@ export function CombatRosterView() {
           combatants={combatants}
           xpByCombatantId={xpByCombatantId}
           playersById={playersById}
-          compQ={compQ}
-          onChangeCompQ={setCompQ}
-          compRows={[]}
           onAddMonster={encounterActions.addMonster}
           onAddAllPlayers={encounterActions.addAllPlayers}
           onOpenCombat={() => encounterId && nav(campaignId ? `/campaign/${campaignId}/combat/${encounterId}` : `/combat/${encounterId}`)}

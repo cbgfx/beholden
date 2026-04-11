@@ -14,6 +14,11 @@ import type {
 } from "@/views/character/CharacterViewHelpers";
 import { getPrimaryCharacterClassEntry } from "@/views/character/CharacterViewHelpers";
 
+type SpellLookupRow = {
+  query: string;
+  match: { id: string; name: string; level: number | null } | null;
+};
+
 export function useCharacterData(id: string | undefined, polymorphDrawerOpen: boolean) {
   const [char, setChar] = React.useState<Character | null>(null);
   const [classDetail, setClassDetail] = React.useState<ClassRestDetail | null>(null);
@@ -236,35 +241,51 @@ export function useCharacterData(id: string | undefined, polymorphDrawerOpen: bo
       return;
     }
     let alive = true;
-    const normalizeName = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
-    Promise.all(
-      invocationRefs.map(async (ref) => {
-        const detail = ref.id
-          ? await api<any>(`/api/spells/${encodeURIComponent(ref.id)}`)
-          : await api<Array<{ id: string; name: string }>>(
-              `/api/spells/search?q=${encodeURIComponent(ref.name ?? "")}&limit=5`,
-            ).then(async (results) => {
-              const exact = results.find(
-                (entry) => normalizeName(String(entry.name ?? "")) === normalizeName(ref.name ?? ""),
-              );
-              const match = exact ?? results[0];
-              if (!match?.id) return null;
-              return api<any>(`/api/spells/${encodeURIComponent(match.id)}`);
+    (async () => {
+        const unresolvedNames = Array.from(
+          new Set(
+            invocationRefs
+              .filter((entry) => !entry.id && entry.name)
+              .map((entry) => String(entry.name ?? "").trim())
+              .filter(Boolean),
+          ),
+        );
+        const lookupByName = new Map<string, string>();
+        if (unresolvedNames.length > 0) {
+          try {
+            const payload = await api<{ rows: SpellLookupRow[] }>("/api/spells/lookup", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ names: unresolvedNames }),
             });
-        if (!detail) return null;
-        const text = Array.isArray(detail?.text)
-          ? detail.text
-              .map((entry: unknown) => String(entry ?? "").trim())
-              .filter(Boolean)
-              .join("\n")
-          : String(detail?.text ?? "").trim();
-        return {
-          id: String(detail?.id ?? ref.id ?? ref.name ?? ""),
-          name: String(detail?.name ?? ref.name ?? ref.id ?? ""),
-          text,
-        } satisfies InvocationFeatureDetail;
-      }),
-    )
+            for (const row of payload.rows ?? []) {
+              if (row?.query && row?.match?.id) lookupByName.set(row.query, row.match.id);
+            }
+          } catch {
+            // ignore
+          }
+        }
+        return Promise.all(
+          invocationRefs.map(async (ref) => {
+            const resolvedId = ref.id ?? (ref.name ? lookupByName.get(ref.name) ?? null : null);
+            const detail = resolvedId
+              ? await api<any>(`/api/spells/${encodeURIComponent(resolvedId)}`)
+              : null;
+            if (!detail) return null;
+            const text = Array.isArray(detail?.text)
+              ? detail.text
+                  .map((entry: unknown) => String(entry ?? "").trim())
+                  .filter(Boolean)
+                  .join("\n")
+              : String(detail?.text ?? "").trim();
+            return {
+              id: String(detail?.id ?? ref.id ?? ref.name ?? ""),
+              name: String(detail?.name ?? ref.name ?? ref.id ?? ""),
+              text,
+            } satisfies InvocationFeatureDetail;
+          }),
+        );
+      })()
       .then((details) => {
         if (!alive) return;
         const deduped = new Map<string, InvocationFeatureDetail>();

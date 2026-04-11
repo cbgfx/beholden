@@ -6,6 +6,11 @@ import { type InventoryItem, type ParsedItemSpell, getEquipState, parseItemSpell
 import { FetchedSpellDetail, DMG_COLORS, DMG_EMOJI, LEVEL_LABELS, abbrevTime, parseSpellDamage, parseSpellSave } from "@/views/character/CharacterSpellShared";
 import { SpellDrawer } from "@/views/character/CharacterSpellDrawers";
 
+type SpellLookupRow = {
+  query: string;
+  match: { id: string; name: string; level: number | null } | null;
+};
+
 export function ItemSpellsPanel({
   items,
   pb,
@@ -48,22 +53,59 @@ export function ItemSpellsPanel({
       ),
     [itemsWithSpells]
   );
-
   const keysStr = allKeys.map((entry) => entry.key).join(",");
   React.useEffect(() => {
+    const missingByName = new Map<string, string[]>();
     for (const entry of allKeys) {
       if (details[entry.key]) continue;
-      api<{ id: string; name: string; level: number | null }[]>(
-        `/api/spells/search?q=${encodeURIComponent(entry.spellName)}&limit=5`
-      ).then((results) => {
-        const match = results.find((result) => result.name.replace(/\s*\[.+\]$/, "").toLowerCase() === entry.spellName.toLowerCase()) ?? results[0];
-        if (!match) return;
-        return api<FetchedSpellDetail>(`/api/spells/${match.id}`).then((detail) => {
-          const text = Array.isArray(detail.text) ? detail.text.join("\n") : String(detail.text ?? "");
-          setDetails((prev) => ({ ...prev, [entry.key]: { ...detail, damage: parseSpellDamage(text), save: parseSpellSave(text) } }));
-        });
-      }).catch(() => {});
+      const list = missingByName.get(entry.spellName) ?? [];
+      list.push(entry.key);
+      missingByName.set(entry.spellName, list);
     }
+    const missingNames = Array.from(missingByName.keys());
+    if (missingNames.length === 0) return;
+    let alive = true;
+    api<{ rows: SpellLookupRow[] }>("/api/spells/lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ names: missingNames }),
+    })
+      .then(async (payload) => {
+        if (!alive) return;
+        const detailPairs = await Promise.all(
+          (payload.rows ?? [])
+            .filter((row) => Boolean(row?.match?.id))
+            .map(async (row) => {
+              try {
+                const detail = await api<FetchedSpellDetail>(`/api/spells/${row.match!.id}`);
+                return [row.query, detail] as const;
+              } catch {
+                return null;
+              }
+            }),
+        );
+        if (!alive) return;
+        const updates: Record<string, FetchedSpellDetail> = {};
+        for (const pair of detailPairs) {
+          if (!pair) continue;
+          const [query, detail] = pair;
+          const keys = missingByName.get(query) ?? [];
+          const text = Array.isArray(detail.text) ? detail.text.join("\n") : String(detail.text ?? "");
+          const enriched: FetchedSpellDetail = {
+            ...detail,
+            damage: parseSpellDamage(text),
+            save: parseSpellSave(text),
+          };
+          for (const key of keys) updates[key] = enriched;
+        }
+        if (Object.keys(updates).length > 0) {
+          setDetails((prev) => ({ ...prev, ...updates }));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keysStr]);
 

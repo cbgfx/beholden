@@ -35,6 +35,20 @@ const TreasureCreateBody = z.discriminatedUnion("source", [
 export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now, normalizeKey } = ctx.helpers;
+  const emitTreasureChange = (args: {
+    campaignId: string;
+    adventureId?: string | null;
+    action: "upsert" | "delete" | "refresh";
+    treasureId?: string;
+  }) => {
+    ctx.broadcast("treasure:changed", { campaignId: args.campaignId });
+    ctx.broadcast("treasure:delta", {
+      campaignId: args.campaignId,
+      adventureId: args.adventureId ?? null,
+      action: args.action,
+      ...(args.treasureId ? { treasureId: args.treasureId } : {}),
+    });
+  };
 
   function serializeTreasureState(entry: StoredTreasureState) {
     return JSON.stringify(entry);
@@ -96,6 +110,16 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     res.json(rows.map(rowToTreasure).map(hydrateTreasureEntry).map(toTreasureDto));
   });
 
+  app.get("/api/treasure/:treasureId", memberOrAdmin(db), (req, res) => {
+    const treasureId = requireParam(req, res, "treasureId");
+    if (!treasureId) return;
+    const row = db
+      .prepare(`SELECT ${TREASURE_COLS} FROM treasure WHERE id = ?`)
+      .get(treasureId) as Record<string, unknown> | undefined;
+    if (!row) return res.status(404).json({ ok: false, message: "Treasure not found" });
+    res.json(toTreasureDto(hydrateTreasureEntry(rowToTreasure(row))));
+  });
+
   app.patch("/api/treasure/:treasureId/qty", dmOrAdmin(db), (req, res) => {
     const treasureId = requireParam(req, res, "treasureId");
     if (!treasureId) return;
@@ -122,7 +146,12 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
       t,
       treasureId
     );
-    ctx.broadcast("treasure:changed", { campaignId: treasure.campaignId });
+    emitTreasureChange({
+      campaignId: treasure.campaignId,
+      adventureId: treasure.adventureId ?? null,
+      action: "upsert",
+      treasureId,
+    });
     const updatedRow = db
       .prepare(`SELECT ${TREASURE_COLS} FROM treasure WHERE id = ?`)
       .get(treasureId) as Record<string, unknown>;
@@ -143,7 +172,12 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
       qty: b.qty,
     });
     if (out.error) return res.status(out.error.status).json({ ok: false, message: out.error.message });
-    ctx.broadcast("treasure:changed", { campaignId });
+    emitTreasureChange({
+      campaignId,
+      adventureId: null,
+      action: "upsert",
+      treasureId: out.entry.id,
+    });
     res.json(toTreasureDto(hydrateTreasureEntry(out.entry)));
   });
 
@@ -163,7 +197,12 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
       qty: b.qty,
     });
     if (out.error) return res.status(out.error.status).json({ ok: false, message: out.error.message });
-    ctx.broadcast("treasure:changed", { campaignId: aRow.campaign_id });
+    emitTreasureChange({
+      campaignId: aRow.campaign_id,
+      adventureId,
+      action: "upsert",
+      treasureId: out.entry.id,
+    });
     res.json(toTreasureDto(hydrateTreasureEntry(out.entry)));
   });
 
@@ -176,7 +215,12 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     if (!row) return res.status(404).json({ ok: false, message: "Treasure not found" });
     const t = rowToTreasure(row);
     db.prepare("DELETE FROM treasure WHERE id = ?").run(treasureId);
-    ctx.broadcast("treasure:changed", { campaignId: t.campaignId });
+    emitTreasureChange({
+      campaignId: t.campaignId,
+      adventureId: t.adventureId ?? null,
+      action: "delete",
+      treasureId,
+    });
     res.json({ ok: true });
   });
 

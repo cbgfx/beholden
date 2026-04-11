@@ -13,6 +13,15 @@ export function fetchPartyInventory(
   ).then((rows) => rows.map(flattenPartyInventoryItemDto));
 }
 
+export function fetchPartyInventoryItem(
+  campaignId: string,
+  itemId: string,
+): Promise<FlatPartyInventoryItemDto> {
+  return api<PartyInventoryItemDto>(
+    `/api/campaigns/${campaignId}/party-inventory/${itemId}`,
+  ).then(flattenPartyInventoryItemDto);
+}
+
 export function createPartyInventoryItem(
   campaignId: string,
   body: Record<string, unknown>,

@@ -80,11 +80,55 @@ export function reducer(state: State, action: Action): State {
     case "setAdventureNotes":
       return { ...state, adventureNotes: action.notes };
 
+    case "upsertCampaignNote": {
+      const idx = state.campaignNotes.findIndex((n) => n.id === action.note.id);
+      if (idx === -1) return { ...state, campaignNotes: [...state.campaignNotes, action.note] };
+      const next = state.campaignNotes.slice();
+      next[idx] = action.note;
+      return { ...state, campaignNotes: next };
+    }
+
+    case "removeCampaignNote":
+      return { ...state, campaignNotes: state.campaignNotes.filter((n) => n.id !== action.noteId) };
+
+    case "upsertAdventureNote": {
+      const idx = state.adventureNotes.findIndex((n) => n.id === action.note.id);
+      if (idx === -1) return { ...state, adventureNotes: [...state.adventureNotes, action.note] };
+      const next = state.adventureNotes.slice();
+      next[idx] = action.note;
+      return { ...state, adventureNotes: next };
+    }
+
+    case "removeAdventureNote":
+      return { ...state, adventureNotes: state.adventureNotes.filter((n) => n.id !== action.noteId) };
+
     case "setCampaignTreasure":
       return { ...state, campaignTreasure: action.treasure };
 
     case "setAdventureTreasure":
       return { ...state, adventureTreasure: action.treasure };
+
+    case "upsertCampaignTreasure": {
+      const idx = state.campaignTreasure.findIndex((t) => t.id === action.entry.id);
+      if (idx === -1) return { ...state, campaignTreasure: [...state.campaignTreasure, action.entry] };
+      const next = state.campaignTreasure.slice();
+      next[idx] = action.entry;
+      return { ...state, campaignTreasure: next };
+    }
+
+    case "removeCampaignTreasure":
+      return { ...state, campaignTreasure: state.campaignTreasure.filter((t) => t.id !== action.treasureId) };
+
+    case "upsertAdventureTreasure": {
+      const idx = state.adventureTreasure.findIndex((t) => t.id === action.entry.id);
+      if (idx === -1) return { ...state, adventureTreasure: [...state.adventureTreasure, action.entry] };
+      const next = state.adventureTreasure.slice();
+      next[idx] = action.entry;
+      return { ...state, adventureTreasure: next };
+    }
+
+    case "removeAdventureTreasure":
+      return { ...state, adventureTreasure: state.adventureTreasure.filter((t) => t.id !== action.treasureId) };
 
     case "toggleNote": {
       const exists = state.expandedNoteIds.includes(action.noteId);

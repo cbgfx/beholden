@@ -2,7 +2,6 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "@/store";
 import type { AddMonsterOptions } from "@/domain/types/domain";
-import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
 import { useOpenEncounterMetrics } from "@/views/CampaignView/hooks/useOpenEncounterMetrics";
 import { CampaignLeftSidebar } from "@/views/CampaignView/components/CampaignLeftSidebar";
 import { CampaignMainColumn } from "@/views/CampaignView/components/CampaignMainColumn";
@@ -41,10 +40,6 @@ export function CampaignView(props: {
   onImportAdventure: () => void;
   onReorderCampaignNotes: (ids: string[]) => void;
   onReorderAdventureNotes: (ids: string[]) => void;
-
-  compQ: string;
-  setCompQ: (v: string) => void;
-  compRows: CompendiumMonsterRow[];
 }) {
   const { state, dispatch } = useStore();
   const nav = useNavigate();
@@ -128,9 +123,6 @@ export function CampaignView(props: {
         onAddPlayerToEncounter={props.onAddPlayerToEncounter}
         inpcs={inpcs}
         selectedCampaignId={state.selectedCampaignId}
-        compQ={props.compQ}
-        onChangeCompQ={props.setCompQ}
-        compRows={props.compRows}
         onAddINpcFromMonster={props.onAddINpcFromMonster}
         onEditINpc={props.onEditINpc}
         onDeleteINpc={props.onDeleteINpc}

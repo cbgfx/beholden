@@ -3,32 +3,60 @@
 import type { Express, RequestHandler } from "express";
 import type { ServerContext } from "../../server/context.js";
 import { requireParam } from "../../lib/routeHelpers.js";
+import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { parseBody } from "../../shared/validate.js";
-import { MonsterBody, buildMonsterRecord, parseCrToNumeric } from "./helpers.js";
+import { MonsterBody, buildMonsterRecord } from "./helpers.js";
+
+function parseCrFilterValue(raw: unknown): number | null {
+  const text = String(raw ?? "").trim();
+  if (!text) return null;
+  if (text.includes("/")) {
+    const [numeratorRaw, denominatorRaw] = text.split("/");
+    const numerator = Number(numeratorRaw);
+    const denominator = Number(denominatorRaw);
+    if (Number.isFinite(numerator) && Number.isFinite(denominator) && denominator !== 0) {
+      return numerator / denominator;
+    }
+    return null;
+  }
+  const value = Number(text);
+  return Number.isFinite(value) ? value : null;
+}
 
 export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: RequestHandler) {
   const { db } = ctx;
 
   app.get("/api/compendium/monsters/:monsterId", (req, res) => {
+    applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const monsterId = requireParam(req, res, "monsterId");
     if (!monsterId) return;
     const row = db
-      .prepare("SELECT data_json FROM compendium_monsters WHERE id = ?")
-      .get(monsterId) as { data_json: string } | undefined;
+      .prepare("SELECT id, name, name_key, cr, type_key, type_full, size, environment, data_json FROM compendium_monsters WHERE id = ?")
+      .get(monsterId) as {
+      id: string;
+      name: string;
+      name_key: string | null;
+      cr: string | null;
+      type_key: string | null;
+      type_full: string | null;
+      size: string | null;
+      environment: string | null;
+      data_json: string;
+    } | undefined;
     if (!row)
       return res.status(404).json({ ok: false, message: "Monster not found in compendium" });
 
-    const m = JSON.parse(row.data_json);
+    const m = JSON.parse(row.data_json ?? "{}");
     res.json({
-      id: m.id,
-      name: m.name,
-      nameKey: m.nameKey ?? m.name_key ?? null,
-      cr: m.cr ?? null,
+      id: row.id,
+      name: row.name,
+      nameKey: row.name_key ?? m.nameKey ?? m.name_key ?? null,
+      cr: row.cr ?? m.cr ?? null,
       xp: m.xp ?? null,
-      typeFull: m.typeFull ?? m.type_full ?? null,
-      typeKey: m.typeKey ?? m.type_key ?? null,
-      size: m.size ?? null,
-      environment: m.environment ?? null,
+      typeFull: row.type_full ?? m.typeFull ?? m.type_full ?? null,
+      typeKey: row.type_key ?? m.typeKey ?? m.type_key ?? null,
+      size: row.size ?? m.size ?? null,
+      environment: row.environment ?? m.environment ?? null,
       source: m.source ?? null,
       ac: m.ac ?? null,
       hp: ctx.helpers.normalizeHp(m.hp ?? null),
@@ -57,6 +85,7 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
   });
 
   app.get("/api/compendium/monsters", (_req, res) => {
+    applySharedApiCacheHeaders(res);
     const rows = db
       .prepare("SELECT id, name, cr, cr_numeric, type_key, size, environment FROM compendium_monsters")
       .all() as {
@@ -109,32 +138,113 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
 
   // Monster search
   app.get("/api/compendium/search", (req, res) => {
+    applySharedApiCacheHeaders(res);
     const q = String(req.query.q ?? "").trim().toLowerCase();
-    const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "50"), 10) || 50, 1), 200);
-    const crMin = req.query.crMin != null ? Number(req.query.crMin) : null;
-    const crMax = req.query.crMax != null ? Number(req.query.crMax) : null;
+    const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "50"), 10) || 50, 1), 500);
+    const offset = Math.max(parseInt(String(req.query.offset ?? "0"), 10) || 0, 0);
+    const crMin = parseCrFilterValue(req.query.crMin);
+    const crMax = parseCrFilterValue(req.query.crMax);
     const types = req.query.types ? String(req.query.types).split(",").filter(Boolean) : null;
     const sizes = req.query.sizes ? String(req.query.sizes).split(",").filter(Boolean) : null;
     const environments = req.query.env ? String(req.query.env).split(",").filter(Boolean) : null;
+    const sortRaw = String(req.query.sort ?? "az").trim();
+    const sort: "az" | "crAsc" | "crDesc" =
+      sortRaw === "crAsc" || sortRaw === "crDesc" ? sortRaw : "az";
+    const withTotalRaw = String(req.query.withTotal ?? "").trim().toLowerCase();
+    const withTotal = withTotalRaw === "1" || withTotalRaw === "true" || withTotalRaw === "yes";
 
     const parts: string[] = ["SELECT id, name, cr, cr_numeric, type_key, size, environment FROM compendium_monsters WHERE 1=1"];
+    const countParts: string[] = ["SELECT count(*) AS n FROM compendium_monsters WHERE 1=1"];
     const params: unknown[] = [];
 
-    if (q) { parts.push("AND (name LIKE ? OR name_key LIKE ?)"); const like = `%${q}%`; params.push(like, like); }
-    if (crMin != null && Number.isFinite(crMin)) { parts.push("AND cr_numeric >= ?"); params.push(crMin); }
-    if (crMax != null && Number.isFinite(crMax)) { parts.push("AND cr_numeric <= ?"); params.push(crMax); }
-    if (types?.length) { parts.push(`AND type_key IN (${types.map(() => "?").join(",")})`); params.push(...types); }
-    if (sizes?.length) { parts.push(`AND size IN (${sizes.map(() => "?").join(",")})`); params.push(...sizes); }
-    if (environments?.length) { parts.push(`AND environment IN (${environments.map(() => "?").join(",")})`); params.push(...environments); }
-    parts.push(`LIMIT ${limit}`);
+    if (q) {
+      parts.push("AND (name LIKE ? OR name_key LIKE ?)");
+      countParts.push("AND (name LIKE ? OR name_key LIKE ?)");
+      const like = `%${q}%`;
+      params.push(like, like);
+    }
+    if (crMin != null && Number.isFinite(crMin)) {
+      parts.push("AND cr_numeric >= ?");
+      countParts.push("AND cr_numeric >= ?");
+      params.push(crMin);
+    }
+    if (crMax != null && Number.isFinite(crMax)) {
+      parts.push("AND cr_numeric <= ?");
+      countParts.push("AND cr_numeric <= ?");
+      params.push(crMax);
+    }
+    if (types?.length) {
+      const clause = `AND type_key IN (${types.map(() => "?").join(",")})`;
+      parts.push(clause);
+      countParts.push(clause);
+      params.push(...types);
+    }
+    if (sizes?.length) {
+      const clause = `AND size IN (${sizes.map(() => "?").join(",")})`;
+      parts.push(clause);
+      countParts.push(clause);
+      params.push(...sizes);
+    }
+    if (environments?.length) {
+      const envClauses: string[] = [];
+      for (const envRaw of environments) {
+        const env = envRaw.trim().toLowerCase();
+        if (!env) continue;
+        envClauses.push("LOWER(environment) LIKE ?");
+        params.push(`%${env}%`);
+      }
+      if (envClauses.length > 0) {
+        const clause = `AND (${envClauses.join(" OR ")})`;
+        parts.push(clause);
+        countParts.push(clause);
+      }
+    }
+    if (sort === "crAsc") {
+      parts.push("ORDER BY cr_numeric ASC, name_key ASC");
+    } else if (sort === "crDesc") {
+      parts.push("ORDER BY cr_numeric DESC, name_key ASC");
+    } else {
+      parts.push("ORDER BY name_key ASC");
+    }
+    parts.push(`LIMIT ${limit} OFFSET ${offset}`);
 
     const rows = db.prepare(parts.join(" ")).all(...params) as {
       id: string; name: string; cr: string | null; cr_numeric: number | null;
       type_key: string | null; size: string | null; environment: string | null;
     }[];
-    res.json(rows.map((r) => ({
+    const outRows = rows.map((r) => ({
       id: r.id, name: r.name, cr: r.cr ?? r.cr_numeric ?? 0,
       type: r.type_key ?? "", environment: r.environment ?? "", size: r.size ?? "",
-    })));
+    }));
+    if (!withTotal) return res.json(outRows);
+
+    const total = (db.prepare(countParts.join(" ")).get(...params) as { n: number }).n;
+    return res.json({ rows: outRows, total });
+  });
+
+  app.get("/api/compendium/monsters/facets", (_req, res) => {
+    applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
+    const rows = db
+      .prepare("SELECT type_key, size, environment FROM compendium_monsters")
+      .all() as Array<{ type_key: string | null; size: string | null; environment: string | null }>;
+    const envSet = new Set<string>();
+    const typeSet = new Set<string>();
+    const sizeSet = new Set<string>();
+    for (const row of rows) {
+      const typeKey = String(row.type_key ?? "").trim();
+      if (typeKey) typeSet.add(typeKey);
+      const size = String(row.size ?? "").trim();
+      if (size) sizeSet.add(size);
+      const envRaw = String(row.environment ?? "").trim();
+      if (!envRaw) continue;
+      for (const part of envRaw.split(",").map((value) => value.trim()).filter(Boolean)) {
+        envSet.add(part);
+      }
+    }
+    res.json({
+      environments: Array.from(envSet).sort((a, b) => a.localeCompare(b)),
+      sizes: Array.from(sizeSet).sort((a, b) => a.localeCompare(b)),
+      types: Array.from(typeSet).sort((a, b) => a.localeCompare(b)),
+    });
   });
 }

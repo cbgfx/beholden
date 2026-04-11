@@ -2,6 +2,7 @@
 // Shared schemas, builders, and small utilities for compendium routes.
 
 import { z } from "zod";
+import { pruneItemBlob, pruneMonsterBlob, pruneSpellBlob } from "../../services/compendium/blobHygiene.js";
 
 export const BlockSchema = z.object({ name: z.string(), text: z.string() });
 
@@ -101,7 +102,7 @@ export function buildMonsterRecord(id: string, b: MonsterBodyType) {
   const size = b.size?.trim() || null;
   const environment = b.environment?.trim() || null;
   const numField = (v: number | null | undefined) => (v != null && Number.isFinite(v) ? v : null);
-  const data = {
+  const data = pruneMonsterBlob({
     id, name, nameKey, name_key: nameKey,
     cr, typeFull, type_full: typeFull,
     typeKey, type_key: typeKey,
@@ -124,7 +125,7 @@ export function buildMonsterRecord(id: string, b: MonsterBodyType) {
     reaction:  toBlocks(b.reaction),
     legendary: toBlocks(b.legendary),
     spellcasting: [], spells: [],
-  };
+  });
   return { name, nameKey, cr, crNumeric: parseCrToNumeric(cr), typeKey, typeFull, size, environment, data };
 }
 
@@ -139,7 +140,7 @@ export function buildItemRecord(id: string, b: ItemBodyType) {
   const textArr = Array.isArray(b.text)
     ? b.text
     : typeof b.text === "string" ? [b.text] : [];
-  const data = {
+  const data = pruneItemBlob({
     ac: b.ac ?? null,
     stealthDisadvantage: b.stealthDisadvantage ?? false,
     dmg1: b.dmg1?.trim() || null,
@@ -150,7 +151,7 @@ export function buildItemRecord(id: string, b: ItemBodyType) {
     text: textArr,
     weight: b.weight ?? null,
     value: b.value ?? null,
-  };
+  });
   return { name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data };
 }
 
@@ -164,7 +165,7 @@ export function buildSpellRecord(id: string, b: SpellBodyType) {
   const classesVal    = b.classes?.trim()    || null;
   const isRitual        = b.ritual ? 1 : 0;
   const isConcentration = /concentration/i.test(durationVal ?? "") ? 1 : 0;
-  const data = {
+  const data = pruneSpellBlob({
     id, name, nameKey, name_key: nameKey,
     baseName: name, baseKey: nameKey.replace(/\s/g, "_"), base_key: nameKey.replace(/\s/g, "_"),
     level: levelVal, school: schoolVal,
@@ -175,6 +176,6 @@ export function buildSpellRecord(id: string, b: SpellBodyType) {
     duration:   durationVal,
     classes:    classesVal,
     text: Array.isArray(b.text) ? b.text : typeof b.text === "string" ? [b.text] : [],
-  };
+  });
   return { name, nameKey, levelVal, schoolVal, isRitual, isConcentration, componentsVal, classesVal, data };
 }

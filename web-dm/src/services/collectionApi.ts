@@ -20,6 +20,10 @@ export function fetchAdventureNotes(adventureId: string): Promise<FlatNoteDto[]>
   );
 }
 
+export function fetchNoteById(noteId: string): Promise<FlatNoteDto> {
+  return api<NoteDto>(`/api/notes/${noteId}`).then(flattenNoteDto);
+}
+
 export function fetchCampaignTreasure(
   campaignId: string,
 ): Promise<FlatTreasureDto[]> {
@@ -36,6 +40,10 @@ export function fetchAdventureTreasure(
   );
 }
 
+export function fetchTreasureById(treasureId: string): Promise<FlatTreasureDto> {
+  return api<TreasureDto>(`/api/treasure/${treasureId}`).then(flattenTreasureDto);
+}
+
 export function createCampaignNote(campaignId: string, body: { title: string; text: string }) {
   return api<NoteDto>(`/api/campaigns/${campaignId}/notes`, jsonInit("POST", body)).then(
     flattenNoteDto,
@@ -47,4 +55,3 @@ export function createAdventureNote(adventureId: string, body: { title: string; 
     flattenNoteDto,
   );
 }
-

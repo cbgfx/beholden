@@ -29,6 +29,18 @@ function serializePartyInventoryItemState(item: StoredPartyInventoryItemState) {
 export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
+  const emitPartyInventoryChange = (args: {
+    campaignId: string;
+    action: "upsert" | "delete" | "refresh";
+    itemId?: string;
+  }) => {
+    ctx.broadcast("partyInventory:changed", { campaignId: args.campaignId });
+    ctx.broadcast("partyInventory:delta", {
+      campaignId: args.campaignId,
+      action: args.action,
+      ...(args.itemId ? { itemId: args.itemId } : {}),
+    });
+  };
 
   // GET all items
   app.get("/api/campaigns/:campaignId/party-inventory", memberOrAdmin(db), (req, res) => {
@@ -38,6 +50,17 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
       `SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE campaign_id = ? ORDER BY sort ASC, created_at ASC`
     ).all(campaignId) as Record<string, unknown>[];
     res.json(rows.map(rowToPartyInventoryItem).map(toPartyInventoryItemDto));
+  });
+
+  app.get("/api/campaigns/:campaignId/party-inventory/:itemId", memberOrAdmin(db), (req, res) => {
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
+    const itemId = req.params["itemId"];
+    const row = db
+      .prepare(`SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE id = ? AND campaign_id = ?`)
+      .get(itemId, campaignId) as Record<string, unknown> | undefined;
+    if (!row) return res.status(404).json({ ok: false, message: "Not found" });
+    res.json(toPartyInventoryItemDto(rowToPartyInventoryItem(row)));
   });
 
   // POST add item
@@ -71,7 +94,7 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
       t,
       t
     );
-    ctx.broadcast("partyInventory:changed", { campaignId });
+    emitPartyInventoryChange({ campaignId, action: "upsert", itemId: id });
     res.status(201).json(
       toPartyInventoryItemDto(
         rowToPartyInventoryItem(
@@ -85,7 +108,8 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
   app.put("/api/campaigns/:campaignId/party-inventory/:itemId", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
-    const itemId = req.params["itemId"];
+    const itemId = requireParam(req, res, "itemId");
+    if (!itemId) return;
     const body = parseBody(ItemBody, req);
     const t = now();
     const existing = db
@@ -111,7 +135,7 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
       itemId,
       campaignId
     );
-    ctx.broadcast("partyInventory:changed", { campaignId });
+    emitPartyInventoryChange({ campaignId, action: "upsert", itemId });
     const row = db
       .prepare(`SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE id = ?`)
       .get(itemId) as Record<string, unknown> | undefined;
@@ -123,7 +147,8 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
   app.patch("/api/campaigns/:campaignId/party-inventory/:itemId/quantity", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
-    const itemId = req.params["itemId"];
+    const itemId = requireParam(req, res, "itemId");
+    if (!itemId) return;
     const { quantity } = parseBody(QuantityBody, req);
     const existing = db
       .prepare(`SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE id = ? AND campaign_id = ?`)
@@ -147,7 +172,7 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
         itemId,
         campaignId
       );
-    ctx.broadcast("partyInventory:changed", { campaignId });
+    emitPartyInventoryChange({ campaignId, action: "upsert", itemId });
     const row = db
       .prepare(`SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE id = ? AND campaign_id = ?`)
       .get(itemId, campaignId) as Record<string, unknown> | undefined;
@@ -159,9 +184,11 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
   app.delete("/api/campaigns/:campaignId/party-inventory/:itemId", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
+    const itemId = requireParam(req, res, "itemId");
+    if (!itemId) return;
     db.prepare("DELETE FROM party_inventory WHERE id = ? AND campaign_id = ?")
-      .run(req.params["itemId"], campaignId);
-    ctx.broadcast("partyInventory:changed", { campaignId });
+      .run(itemId, campaignId);
+    emitPartyInventoryChange({ campaignId, action: "delete", itemId });
     res.json({ ok: true });
   });
 }

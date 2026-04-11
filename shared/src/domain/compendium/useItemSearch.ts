@@ -2,56 +2,33 @@ import React from "react";
 import {
   buildItemRarityOptions,
   buildItemTypeOptions,
-  filterItemRows,
   type ItemSearchRow,
 } from "./itemSearch";
 
-type ApiFn = <T>(path: string) => Promise<T>;
+type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
 
 export type UseCompendiumItemSearchOptions = {
   nameSearchValue?: (name: string) => string;
   includeError?: boolean;
 };
 
-const ITEM_LIST_CACHE_TTL_MS = 30_000;
-let cachedItemRows: ItemSearchRow[] | null = null;
-let cachedItemRowsAtMs = 0;
-let inflightItemRows: Promise<ItemSearchRow[]> | null = null;
+type ItemFacetOption = { value: string; count: number };
+type ItemFacetsResponse = { rarity: ItemFacetOption[]; type: ItemFacetOption[] };
+type ItemSearchResponse = { rows: ItemSearchRow[]; total: number };
 
-function readItemRowsFromCache(): ItemSearchRow[] | null {
-  if (!cachedItemRows) return null;
-  if (Date.now() - cachedItemRowsAtMs > ITEM_LIST_CACHE_TTL_MS) return null;
-  return cachedItemRows;
-}
-
-function loadItemRows(api: ApiFn, forceRefresh: boolean): Promise<ItemSearchRow[]> {
-  if (!forceRefresh) {
-    const cached = readItemRowsFromCache();
-    if (cached) return Promise.resolve(cached);
-  }
-  if (inflightItemRows) return inflightItemRows;
-  inflightItemRows = api<ItemSearchRow[]>("/api/compendium/items?compact=1")
-    .then((rows) => {
-      const safeRows = Array.isArray(rows) ? rows : [];
-      cachedItemRows = safeRows;
-      cachedItemRowsAtMs = Date.now();
-      return safeRows;
-    })
-    .finally(() => {
-      inflightItemRows = null;
-    });
-  return inflightItemRows;
-}
+const SEARCH_LIMIT = 300;
 
 export function useCompendiumItemSearch(
   api: ApiFn,
   options: UseCompendiumItemSearchOptions = {},
 ) {
   const { nameSearchValue, includeError = false } = options;
-  const [allRows, setAllRows] = React.useState<ItemSearchRow[]>([]);
+  const [rows, setRows] = React.useState<ItemSearchRow[]>([]);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [totalCount, setTotalCount] = React.useState(0);
   const [refreshKey, setRefreshKey] = React.useState(0);
+  const [facets, setFacets] = React.useState<ItemFacetsResponse>({ rarity: [], type: [] });
 
   const [q, setQ] = React.useState("");
   const [rarityFilter, setRarityFilter] = React.useState("all");
@@ -60,55 +37,107 @@ export function useCompendiumItemSearch(
   const [filterMagic, setFilterMagic] = React.useState(false);
 
   React.useEffect(() => {
-    let cancelled = false;
-    const forceRefresh = refreshKey > 0;
-    const cached = !forceRefresh ? readItemRowsFromCache() : null;
-
-    if (cached) {
-      setAllRows(cached);
-      setBusy(false);
-      if (includeError) setError(null);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    setBusy(true);
-    if (includeError) setError(null);
-    loadItemRows(api, forceRefresh)
+    const controller = new AbortController();
+    let alive = true;
+    api<ItemFacetsResponse>("/api/compendium/items/facets", { signal: controller.signal })
       .then((data) => {
-        if (!cancelled) setAllRows(data ?? []);
+        if (!alive) return;
+        setFacets({
+          rarity: Array.isArray(data?.rarity) ? data.rarity : [],
+          type: Array.isArray(data?.type) ? data.type : [],
+        });
       })
-      .catch((err) => {
-        if (cancelled) return;
-        setAllRows([]);
+      .catch(() => {
+        if (!alive) return;
+        setFacets({ rarity: [], type: [] });
+      });
+    return () => {
+      alive = false;
+      controller.abort();
+    };
+  }, [api, refreshKey]);
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setBusy(true);
+      if (includeError) setError(null);
+      try {
+        const queryParts = [
+          `/api/compendium/items?compact=1&withTotal=1&limit=${SEARCH_LIMIT}&offset=0`,
+          `q=${encodeURIComponent(q)}`,
+          `rarity=${encodeURIComponent(rarityFilter)}`,
+          `type=${encodeURIComponent(typeFilter)}`,
+          `attunement=${filterAttunement ? "1" : "0"}`,
+          `magic=${filterMagic ? "1" : "0"}`,
+        ];
+        const data = await api<ItemSearchResponse>(queryParts.join("&"), { signal: controller.signal });
+        if (controller.signal.aborted) return;
+        const nextRows = Array.isArray(data?.rows) ? data.rows : [];
+        setRows(nextRows);
+        setTotalCount(Number.isFinite(data?.total as number) ? Number(data.total) : nextRows.length);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setRows([]);
+        setTotalCount(0);
         if (includeError) {
           setError(err instanceof Error ? err.message : "Failed to load items");
         }
-      })
-      .finally(() => {
-        if (!cancelled) setBusy(false);
-      });
+      } finally {
+        if (!controller.signal.aborted) setBusy(false);
+      }
+    }, 220);
+
     return () => {
-      cancelled = true;
+      window.clearTimeout(timer);
+      controller.abort();
     };
-  }, [api, includeError, refreshKey]);
+  }, [
+    api,
+    q,
+    rarityFilter,
+    typeFilter,
+    filterAttunement,
+    filterMagic,
+    includeError,
+    refreshKey,
+  ]);
 
-  const rarityOptions = React.useMemo(() => buildItemRarityOptions(allRows), [allRows]);
-  const typeOptions = React.useMemo(() => buildItemTypeOptions(allRows), [allRows]);
+  const rarityOptions = React.useMemo(() => {
+    const rowsFromFacets = facets.rarity.map((entry) => ({
+      id: "",
+      name: "",
+      rarity: entry.value,
+      type: null,
+      typeKey: null,
+      attunement: false,
+      magic: false,
+    } satisfies ItemSearchRow));
+    const fallback = buildItemRarityOptions(rows);
+    const fromFacets = buildItemRarityOptions(rowsFromFacets);
+    return fromFacets.length > 1 ? fromFacets : fallback;
+  }, [facets.rarity, rows]);
 
-  const rows = React.useMemo(
-    () =>
-      filterItemRows(allRows, {
-        q,
-        rarityFilter,
-        typeFilter,
-        filterAttunement,
-        filterMagic,
-        nameSearchValue,
-      }),
-    [allRows, q, rarityFilter, typeFilter, filterAttunement, filterMagic, nameSearchValue],
-  );
+  const typeOptions = React.useMemo(() => {
+    const rowsFromFacets = facets.type.map((entry) => ({
+      id: "",
+      name: "",
+      rarity: null,
+      type: entry.value,
+      typeKey: null,
+      attunement: false,
+      magic: false,
+    } satisfies ItemSearchRow));
+    const fallback = buildItemTypeOptions(rows);
+    const fromFacets = buildItemTypeOptions(rowsFromFacets);
+    return fromFacets.length > 1 ? fromFacets : fallback;
+  }, [facets.type, rows]);
+  const visibleRows = React.useMemo(() => {
+    if (!nameSearchValue) return rows;
+    return rows.filter((row) =>
+      nameSearchValue(row.name).toLowerCase().includes(q.toLowerCase().trim()),
+    );
+  }, [rows, q, nameSearchValue]);
 
   const hasActiveFilters =
     rarityFilter !== "all" || typeFilter !== "all" || filterAttunement || filterMagic;
@@ -139,10 +168,10 @@ export function useCompendiumItemSearch(
     setFilterMagic,
     hasActiveFilters,
     clearFilters,
-    rows,
+    rows: visibleRows,
     busy,
     error,
-    totalCount: allRows.length,
+    totalCount,
     refresh,
   };
 }

@@ -70,16 +70,11 @@ export function PartyMemberView() {
   const refreshPendingRef = React.useRef(false);
 
   const fetchMember = React.useCallback(() => {
-    if (!campaignId) return;
-    api<PartyMember[]>(`/api/campaigns/${campaignId}/party`)
-      .then((list) => {
-        const found = list.find((entry) => entry.id === playerId);
-        if (found) {
-          setMember(found);
-          setError(null);
-        } else {
-          setError("Member not found.");
-        }
+    if (!campaignId || !playerId) return;
+    api<PartyMember>(`/api/campaigns/${campaignId}/party/${playerId}`)
+      .then((found) => {
+        setMember(found);
+        setError(null);
       })
       .catch((e) => setError(e?.message ?? "Failed to load."))
       .finally(() => setLoading(false));
@@ -123,9 +118,26 @@ export function PartyMemberView() {
   }, []);
 
   useWs(React.useCallback((msg) => {
-    if (msg.type !== "players:changed") return;
-    const changedCampaignId = (msg.payload as any)?.campaignId as string | undefined;
-    if (changedCampaignId === campaignId) enqueueFetchMember();
+    if (msg.type === "players:changed") {
+      const changedCampaignId = (msg.payload as any)?.campaignId as string | undefined;
+      if (changedCampaignId === campaignId) enqueueFetchMember();
+      return;
+    }
+    if (msg.type !== "players:delta") return;
+    const payload = (msg.payload ?? {}) as {
+      campaignId?: string;
+      action?: "upsert" | "delete" | "refresh";
+      playerId?: string;
+    };
+    if (payload.campaignId !== campaignId) return;
+    if (payload.playerId && payload.playerId !== playerId) return;
+    if (payload.action === "delete") {
+      setMember(null);
+      setError("Member not found.");
+      setLoading(false);
+      return;
+    }
+    enqueueFetchMember(80);
   }, [campaignId, enqueueFetchMember]));
 
   const cd = (member?.characterData as any) ?? null;

@@ -7,7 +7,7 @@ import { useStore, type DrawerState } from "@/store";
 import type { DrawerContent } from "@/drawers/types";
 import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
 import type { MonsterDetail } from "@/domain/types/compendium";
-import { parseCrNumber, parseLeadingNumberLoose } from "@/views/CampaignView/monsterPicker/utils";
+import { parseLeadingNumberLoose } from "@/views/CampaignView/monsterPicker/utils";
 import {
   inputStyle,
   PolymorphCreatureList,
@@ -39,9 +39,7 @@ export function PolymorphDrawer(props: {
   );
 
   const [rows, setRows] = React.useState<CompendiumMonsterRow[]>([]);
-  React.useEffect(() => {
-    api<CompendiumMonsterRow[]>("/api/compendium/monsters").then(setRows).catch(() => {});
-  }, []);
+  const [typeOptions, setTypeOptions] = React.useState<string[]>(["all"]);
 
   const [q, setQ] = React.useState("");
   const [crMax, setCrMax] = React.useState("");
@@ -51,33 +49,47 @@ export function PolymorphDrawer(props: {
   const [selectedBeast, setSelectedBeast] = React.useState<{ id: string; name: string } | null>(null);
   const [loading, setLoading] = React.useState(false);
 
-  const typeOptions = React.useMemo(() => {
-    const values = new Set<string>();
-    for (const row of rows) {
-      if (row.type) values.add(String(row.type).trim());
-    }
-    return ["all", ...Array.from(values).sort()];
-  }, [rows]);
-
-  const filteredRows = React.useMemo(() => {
-    const query = q.trim().toLowerCase();
-    const maxCrNum = crMax ? parseCrNumber(crMax) : NaN;
-    return rows
-      .filter((row) => {
-        if (query && !String(row.name ?? "").toLowerCase().includes(query)) return false;
-        if (typeFilter !== "all" && String(row.type ?? "").trim() !== typeFilter) return false;
-        if (Number.isFinite(maxCrNum)) {
-          const crNum = parseCrNumber(row.cr);
-          if (!Number.isFinite(crNum) || crNum > maxCrNum) return false;
-        }
-        return true;
+  React.useEffect(() => {
+    const controller = new AbortController();
+    api<{ environments: string[]; sizes: string[]; types: string[] }>("/api/compendium/monsters/facets", {
+      signal: controller.signal,
+    })
+      .then((data) => {
+        const nextTypes = Array.isArray(data?.types) ? data.types : [];
+        setTypeOptions(["all", ...nextTypes]);
       })
-      .sort((a, b) => {
-        const crDiff = parseCrNumber(a.cr) - parseCrNumber(b.cr);
-        if (Number.isFinite(crDiff) && Math.abs(crDiff) > 1e-9) return crDiff;
-        return String(a.name ?? "").localeCompare(String(b.name ?? ""));
-      });
-  }, [rows, q, crMax, typeFilter]);
+      .catch(() => setTypeOptions(["all"]));
+    return () => controller.abort();
+  }, []);
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({
+          q,
+          limit: "250",
+          sort: "crAsc",
+        });
+        if (typeFilter !== "all") params.set("types", typeFilter);
+        if (crMax.trim()) params.set("crMax", crMax.trim());
+        const data = await api<CompendiumMonsterRow[]>(`/api/compendium/search?${params.toString()}`, {
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+        setRows(Array.isArray(data) ? data : []);
+      } catch {
+        if (controller.signal.aborted) return;
+        setRows([]);
+      }
+    }, 220);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [q, crMax, typeFilter]);
+
+  const filteredRows = rows;
 
   const selectBeast = React.useCallback(async (row: CompendiumMonsterRow) => {
     setSelectedBeast({ id: row.id, name: row.name });

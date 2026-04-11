@@ -43,6 +43,15 @@ import {
 export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
+  const emitPlayerChange = (args: { campaignId: string; action: "upsert" | "delete" | "refresh"; playerId?: string; characterId?: string | null }) => {
+    ctx.broadcast("players:changed", { campaignId: args.campaignId });
+    ctx.broadcast("players:delta", {
+      campaignId: args.campaignId,
+      action: args.action,
+      ...(args.playerId ? { playerId: args.playerId } : {}),
+      ...(args.characterId !== undefined ? { characterId: args.characterId } : {}),
+    });
+  };
   const normalizeAbilityScores = (value: unknown): { str?: number; dex?: number; con?: number; int?: number; wis?: number; cha?: number } | undefined => {
     if (!value || typeof value !== "object") return undefined;
     const raw = value as Record<string, unknown>;
@@ -236,7 +245,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       const pRow = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(player_id) as Record<string, unknown>;
       const player = rowToCampaignCharacter(pRow);
       updateCampaignCharacterLive(db, player_id, player, { conditions }, t);
-      ctx.broadcast("players:changed", { campaignId: campaign_id });
+      emitPlayerChange({ campaignId: campaign_id, action: "upsert", playerId: player_id, characterId: charId });
       broadcastPlayerCombatantChanges(db, ctx.broadcast, player_id);
     }
 
@@ -275,7 +284,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       const pRow = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(player_id) as Record<string, unknown>;
       const player = rowToCampaignCharacter(pRow);
       updateCampaignCharacterLive(db, player_id, player, { deathSaves }, t);
-      ctx.broadcast("players:changed", { campaignId: campaign_id });
+      emitPlayerChange({ campaignId: campaign_id, action: "upsert", playerId: player_id, characterId: charId });
       broadcastPlayerCombatantChanges(db, ctx.broadcast, player_id);
     }
 
@@ -318,7 +327,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       const pRow = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(player_id) as Record<string, unknown>;
       const player = rowToCampaignCharacter(pRow);
       updateCampaignCharacterLive(db, player_id, player, { overrides }, t);
-      ctx.broadcast("players:changed", { campaignId: campaign_id });
+      emitPlayerChange({ campaignId: campaign_id, action: "upsert", playerId: player_id, characterId: charId });
       broadcastPlayerCombatantChanges(db, ctx.broadcast, player_id);
     }
 
@@ -341,7 +350,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       const player = rowToCampaignCharacter(pRow);
       const overrides = { ...(player.overrides ?? DEFAULT_OVERRIDES), inspiration };
       updateCampaignCharacterLive(db, player_id, player, { overrides }, t);
-      ctx.broadcast("players:changed", { campaignId: campaign_id });
+      emitPlayerChange({ campaignId: campaign_id, action: "upsert", playerId: player_id, characterId: charId });
     }
 
     res.json({ ok: true, inspiration });
@@ -362,7 +371,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
       db.prepare("UPDATE players SET shared_notes=?, updated_at=? WHERE id=?")
         .run(sharedNotes, t, player_id);
-      ctx.broadcast("players:changed", { campaignId: campaign_id });
+      emitPlayerChange({ campaignId: campaign_id, action: "upsert", playerId: player_id, characterId: charId });
     }
 
     res.json({ ok: true, sharedNotes });
@@ -376,7 +385,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
 
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
       db.prepare("DELETE FROM players WHERE id = ?").run(player_id);
-      ctx.broadcast("players:changed", { campaignId: campaign_id });
+      emitPlayerChange({ campaignId: campaign_id, action: "delete", playerId: player_id, characterId: charId });
     }
 
     // Linked campaign characters are deleted alongside the sheet.
@@ -420,7 +429,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
         if (char.imageUrl) {
           db.prepare("UPDATE players SET image_url = ?, updated_at = ? WHERE id = ?").run(char.imageUrl, t, existing_link.id);
         }
-        ctx.broadcast("players:changed", { campaignId });
+        emitPlayerChange({ campaignId, action: "upsert", playerId: existing_link.id, characterId: charId });
         results.push({ campaignId, playerId: existing_link.id });
         continue;
       }
@@ -440,7 +449,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
         db.prepare("UPDATE players SET image_url = ?, updated_at = ? WHERE id = ?").run(char.imageUrl, t, playerId);
       }
 
-      ctx.broadcast("players:changed", { campaignId });
+      emitPlayerChange({ campaignId, action: "upsert", playerId, characterId: charId });
       results.push({ campaignId, playerId });
     }
 
@@ -466,7 +475,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
 
     if (link?.id) {
       db.prepare("DELETE FROM players WHERE id = ?").run(link.id);
-      ctx.broadcast("players:changed", { campaignId });
+      emitPlayerChange({ campaignId, action: "delete", playerId: link.id, characterId: charId });
     }
 
     res.json({ ok: true });
@@ -495,7 +504,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     // Sync image to all campaign player rows linked to this character.
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
       db.prepare("UPDATE players SET image_url = ?, updated_at = ? WHERE id = ?").run(imageUrl, t, player_id);
-      ctx.broadcast("players:changed", { campaignId: campaign_id });
+      emitPlayerChange({ campaignId: campaign_id, action: "upsert", playerId: player_id, characterId: charId });
     }
     res.json({ ok: true, imageUrl: absolutizePublicUrlForRequest(req, imageUrl) });
   });
@@ -513,7 +522,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     // Sync image removal to all campaign player rows linked to this character.
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
       db.prepare("UPDATE players SET image_url = NULL, updated_at = ? WHERE id = ?").run(t, player_id);
-      ctx.broadcast("players:changed", { campaignId: campaign_id });
+      emitPlayerChange({ campaignId: campaign_id, action: "upsert", playerId: player_id, characterId: charId });
     }
     res.json({ ok: true });
   });

@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import type { ServerContext } from "../../server/context.js";
+import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { parseJson } from "../../lib/db.js";
 
@@ -37,6 +38,7 @@ export function registerBastionCompendiumRoutes(app: Express, ctx: ServerContext
   const { db } = ctx;
 
   app.get("/api/compendium/bastions", requireAuth, (_req, res) => {
+    applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const spaces = db.prepare(
       "SELECT id, name, name_key, squares, label, sort_index FROM compendium_bastion_spaces ORDER BY sort_index ASC, name COLLATE NOCASE ASC"
     ).all() as BastionSpaceRow[];

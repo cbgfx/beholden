@@ -7,6 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { backfillMonsterSpellRefs } from "./normalizeMonsterSpellRefs.js";
+import { trimCompendiumBlobColumns } from "./blobHygiene.js";
 
 export function importCompendiumSqlite(args: {
   buffer: Buffer;
@@ -35,6 +36,14 @@ export function importCompendiumSqlite(args: {
       (src.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[])
         .map((r) => r.name)
     );
+    const sourceHasColumn = (table: string, column: string): boolean => {
+      try {
+        const rows = src.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name?: string }>;
+        return rows.some((row) => String(row.name ?? "").toLowerCase() === column.toLowerCase());
+      } catch {
+        return false;
+      }
+    };
 
     let monsters = 0, spells = 0, items = 0, classes = 0, races = 0, backgrounds = 0, feats = 0, decks = 0, bastions = 0;
 
@@ -61,10 +70,29 @@ export function importCompendiumSqlite(args: {
 
       if (tableNames.has("compendium_items")) {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_items (id, name, name_key, rarity, type, type_key, attunement, magic, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          "INSERT OR REPLACE INTO compendium_items (id, name, name_key, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
-        for (const r of src.prepare("SELECT id, name, name_key, rarity, type, type_key, attunement, magic, data_json FROM compendium_items").all() as any[]) {
-          stmt.run(r.id, r.name, r.name_key, r.rarity, r.type, r.type_key, r.attunement, r.magic, r.data_json);
+        const hasEquippable = sourceHasColumn("compendium_items", "equippable");
+        const hasWeight = sourceHasColumn("compendium_items", "weight");
+        const hasValue = sourceHasColumn("compendium_items", "value");
+        const hasProficiency = sourceHasColumn("compendium_items", "proficiency");
+        const selectCols = [
+          "id",
+          "name",
+          "name_key",
+          "rarity",
+          "type",
+          "type_key",
+          "attunement",
+          "magic",
+          ...(hasEquippable ? ["equippable"] : []),
+          ...(hasWeight ? ["weight"] : []),
+          ...(hasValue ? ["value"] : []),
+          ...(hasProficiency ? ["proficiency"] : []),
+          "data_json",
+        ].join(", ");
+        for (const r of src.prepare(`SELECT ${selectCols} FROM compendium_items`).all() as any[]) {
+          stmt.run(r.id, r.name, r.name_key, r.rarity, r.type, r.type_key, r.attunement, r.magic, r.equippable ?? 0, r.weight ?? null, r.value ?? null, r.proficiency ?? null, r.data_json);
           items++;
         }
       }
@@ -161,6 +189,7 @@ export function importCompendiumSqlite(args: {
       }
 
       backfillMonsterSpellRefs(db);
+      trimCompendiumBlobColumns(db);
     })();
 
     src.close();

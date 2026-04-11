@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { C, withAlpha } from "@/lib/theme";
 import { RightDrawer } from "@/ui/RightDrawer";
-import { MiniStat as SharedMiniStat, NoteEditorFields, NoteRow as SharedNoteRow, Panel as SharedPanel, SectionTitle as SharedSectionTitle, accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
+import { MiniStat as SharedMiniStat, NoteEditorFields, Panel as SharedPanel, accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import type { ClassFeatureEntry, PlayerNote } from "@/views/character/CharacterSheetTypes";
 
@@ -59,14 +59,6 @@ export function Panel({ children }: { children: React.ReactNode }) {
     <SharedPanel borderColor="rgba(255,255,255,0.09)" background="rgba(255,255,255,0.035)" radius={12} padding="14px 16px">
       {children}
     </SharedPanel>
-  );
-}
-
-export function PanelTitle({ children, color, actions, style }: { children: React.ReactNode; color: string; actions?: React.ReactNode; style?: React.CSSProperties }) {
-  return (
-    <SharedSectionTitle color={color} actions={actions} style={style}>
-      {children}
-    </SharedSectionTitle>
   );
 }
 
@@ -327,21 +319,6 @@ export function restBtnStyle(color: string): React.CSSProperties {
     fontWeight: 800,
     minWidth: 102,
   };
-}
-
-export function NoteItem(props: {
-  note: PlayerNote;
-  expanded: boolean;
-  accentColor: string;
-  hideTitle?: boolean;
-  onToggle: () => void;
-  onEdit?: () => void;
-  onDelete?: () => void;
-}) {
-  const { note, expanded, accentColor, hideTitle } = props;
-  const preview = (note.text ?? "").trim().split(/\r?\n/).find(Boolean) ?? "";
-  const label = hideTitle ? (preview || note.title || "Untitled") : (note.title || "Untitled");
-  return <SharedNoteRow title={label} text={note.text} expanded={expanded} accentColor={accentColor} textColor={C.text} mutedColor={C.muted} deleteColor={C.red} onToggle={props.onToggle} onEdit={props.onEdit} onDelete={props.onDelete} />;
 }
 
 export function ClassFeatureItem(props: {

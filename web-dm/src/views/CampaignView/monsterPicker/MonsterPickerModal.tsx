@@ -4,7 +4,6 @@ import { IconButton } from "@/ui/IconButton";
 import { IconClose } from "@/icons";
 import { Modal } from "@/components/overlay/Modal";
 import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
-import { useCompendiumIndexFallback } from "@/views/CampaignView/monsterPicker/hooks/useCompendiumIndexFallback";
 import { MonsterPickerListPane } from "@/views/CampaignView/monsterPicker/components/MonsterPickerListPane";
 import { MonsterPickerDetailPane } from "@/views/CampaignView/monsterPicker/components/MonsterPickerDetailPane";
 import { useMonsterPickerState } from "@/views/CampaignView/monsterPicker/hooks/useMonsterPickerState";
@@ -14,21 +13,17 @@ export { type CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/ty
 export function MonsterPickerModal(props: {
   isOpen: boolean;
   onClose: () => void;
-  compQ: string;
-  onChangeCompQ: (q: string) => void;
-  compRows: CompendiumMonsterRow[];
   onAddMonster: (monsterId: string, qty: number, opts?: AddMonsterOptions) => void;
 }) {
-  const { rows: baseRows, loadingIndex, indexError } = useCompendiumIndexFallback({
-    isOpen: props.isOpen,
-    providedRows: props.compRows,
-  });
+  const [compQ, setCompQ] = React.useState("");
+
+  React.useEffect(() => {
+    if (!props.isOpen) setCompQ("");
+  }, [props.isOpen]);
 
   const s = useMonsterPickerState({
     isOpen: props.isOpen,
-    compQ: props.compQ,
-    compRows: props.compRows,
-    baseRows,
+    compQ,
     onAddMonster: props.onAddMonster,
   });
 
@@ -51,8 +46,8 @@ export function MonsterPickerModal(props: {
 
           <MonsterPickerListPane
             isOpen={props.isOpen}
-            compQ={props.compQ}
-            onChangeCompQ={props.onChangeCompQ}
+            compQ={compQ}
+            onChangeCompQ={setCompQ}
             sortMode={s.sortMode}
             onChangeSortMode={s.setSortMode}
             envFilter={s.envFilter}
@@ -70,8 +65,8 @@ export function MonsterPickerModal(props: {
             onChangeCrMax={s.setCrMax}
             onQuickCr={(min, max) => { s.setCrMin(min); s.setCrMax(max); }}
             onClear={s.clearFilters}
-            loadingIndex={loadingIndex}
-            indexError={indexError}
+            loadingIndex={s.loadingIndex}
+            indexError={s.indexError}
             rows={s.filteredRows}
             selectedMonsterId={s.selectedMonsterId}
             onSelectMonster={s.setSelectedMonsterId}
