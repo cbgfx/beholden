@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "@/services/api";
 import { fetchMyCharacter } from "@/services/actorApi";
+import { fetchFeatCatalog } from "@/services/compendiumApi";
 import { getSpellcastingClassName } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import { mergeAutoLevels } from "@/views/level-up/LevelUpHelpers";
 import type {
@@ -89,7 +90,7 @@ export function useLevelUpInitialData(id: string | undefined) {
   }, [classDetail, nextLevel, subclass]);
 
   useEffect(() => {
-    api<FeatSummary[]>("/api/compendium/feats").then(setFeatSummaries).catch(() => setFeatSummaries([]));
+    fetchFeatCatalog().then((rows) => setFeatSummaries(rows as FeatSummary[])).catch(() => setFeatSummaries([]));
   }, []);
 
   useEffect(() => {

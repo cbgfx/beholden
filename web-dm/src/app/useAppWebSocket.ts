@@ -1,12 +1,15 @@
 import { useWs } from "@/services/ws";
 import { api } from "@/services/api";
 import { fetchCampaignCharacter, fetchCampaignCharacters, fetchEncounterActor } from "@/services/actorApi";
+import { encounterPath } from "@/services/encounterApi";
 import { useDebouncedTaskQueue } from "@beholden/shared/ui";
+import { flattenEncounterActorDto, flattenNoteDto, flattenTreasureDto, type EncounterActorDto, type NoteDto, type TreasureDto } from "@beholden/shared/api";
 import {
-  fetchAdventureTreasure,
+  fetchAdventureNotesList,
+  fetchAdventureTreasureList,
   fetchNoteById,
-  fetchCampaignNotes,
-  fetchCampaignTreasure,
+  fetchCampaignNotesList,
+  fetchCampaignTreasureList,
   fetchTreasureById,
 } from "@/services/collectionApi";
 import type { Adventure, CampaignCharacter, Encounter, EncounterActor, INpc, Note, TreasureEntry } from "@/domain/types/domain";
@@ -125,7 +128,7 @@ export function useAppWebSocket({
       }
       if (payload.action === "upsert" && payload.encounterId) {
         enqueue(`delta:encounter:${payload.encounterId}`, async () => {
-          const encounter = await api<Encounter>(`/api/encounters/${payload.encounterId}`);
+          const encounter = await api<Encounter>(encounterPath(payload.encounterId));
           dispatch({ type: "upsertEncounter", encounter });
         }, 80);
         return;
@@ -141,6 +144,7 @@ export function useAppWebSocket({
         action?: "upsert" | "delete" | "refresh";
         noteId?: string;
         adventureId?: string | null;
+        note?: NoteDto;
       }) : {};
       if (payload.action === "delete" && payload.noteId) {
         if (payload.adventureId) {
@@ -153,6 +157,17 @@ export function useAppWebSocket({
         return;
       }
       if (payload.action === "upsert" && payload.noteId) {
+        if (payload.note && typeof payload.note === "object") {
+          const flat = flattenNoteDto(payload.note as NoteDto);
+          if (payload.adventureId) {
+            if (payload.adventureId === selectedAdventureId) {
+              dispatch({ type: "upsertAdventureNote", note: flat as Note });
+            }
+          } else {
+            dispatch({ type: "upsertCampaignNote", note: flat as Note });
+          }
+          return;
+        }
         enqueue(`delta:note:${payload.noteId}`, async () => {
           const note = await fetchNoteById(payload.noteId!);
           if (payload.adventureId) {
@@ -167,12 +182,12 @@ export function useAppWebSocket({
       }
       if (payload.adventureId === null) {
         enqueue(`refresh:campaign-notes:${selectedCampaignId}`, async () => {
-          const notes = await fetchCampaignNotes(selectedCampaignId);
+          const notes = await fetchCampaignNotesList(selectedCampaignId);
           dispatch({ type: "setCampaignNotes", notes: notes as Note[] });
         });
       } else if (typeof payload.adventureId === "string" && payload.adventureId === selectedAdventureId) {
         enqueue(`refresh:adventure-notes:${selectedAdventureId}`, async () => {
-          const notes = await api<Note[]>(`/api/adventures/${selectedAdventureId}/notes`);
+          const notes = await fetchAdventureNotesList(selectedAdventureId);
           dispatch({ type: "setAdventureNotes", notes });
         });
       }
@@ -183,6 +198,7 @@ export function useAppWebSocket({
         action?: "upsert" | "delete" | "refresh";
         treasureId?: string;
         adventureId?: string | null;
+        treasure?: TreasureDto;
       }) : {};
       if (payload.action === "delete" && payload.treasureId) {
         if (payload.adventureId) {
@@ -195,6 +211,17 @@ export function useAppWebSocket({
         return;
       }
       if (payload.action === "upsert" && payload.treasureId) {
+        if (payload.treasure && typeof payload.treasure === "object") {
+          const flat = flattenTreasureDto(payload.treasure as TreasureDto);
+          if (payload.adventureId) {
+            if (payload.adventureId === selectedAdventureId) {
+              dispatch({ type: "upsertAdventureTreasure", entry: flat as TreasureEntry });
+            }
+          } else {
+            dispatch({ type: "upsertCampaignTreasure", entry: flat as TreasureEntry });
+          }
+          return;
+        }
         enqueue(`delta:treasure:${payload.treasureId}`, async () => {
           const entry = await fetchTreasureById(payload.treasureId!);
           if (payload.adventureId) {
@@ -209,12 +236,12 @@ export function useAppWebSocket({
       }
       if (payload.adventureId === null) {
         enqueue(`refresh:campaign-treasure:${selectedCampaignId}`, async () => {
-          const treasure = await fetchCampaignTreasure(selectedCampaignId);
+          const treasure = await fetchCampaignTreasureList(selectedCampaignId);
           dispatch({ type: "setCampaignTreasure", treasure: treasure as TreasureEntry[] });
         });
       } else if (typeof payload.adventureId === "string" && payload.adventureId === selectedAdventureId) {
         enqueue(`refresh:adventure-treasure:${selectedAdventureId}`, async () => {
-          const treasure = await fetchAdventureTreasure(selectedAdventureId);
+          const treasure = await fetchAdventureTreasureList(selectedAdventureId);
           dispatch({ type: "setAdventureTreasure", treasure: treasure as TreasureEntry[] });
         });
       }
@@ -224,12 +251,20 @@ export function useAppWebSocket({
       const payload = (p && typeof p === "object") ? (p as {
         action?: "upsert" | "delete" | "refresh";
         combatantId?: string;
+        combatant?: EncounterActorDto;
       }) : {};
       if (payload.action === "delete" && payload.combatantId) {
         dispatch({ type: "removeCombatant", combatantId: payload.combatantId });
         return;
       }
       if (payload.action === "upsert" && payload.combatantId) {
+        if (payload.combatant && typeof payload.combatant === "object") {
+          dispatch({
+            type: "upsertCombatant",
+            combatant: flattenEncounterActorDto(payload.combatant) as EncounterActor,
+          });
+          return;
+        }
         enqueue(`delta:combatant:${payload.combatantId}`, async () => {
           const combatant = await fetchEncounterActor(selectedEncounterId, payload.combatantId!);
           dispatch({ type: "upsertCombatant", combatant: combatant as EncounterActor });

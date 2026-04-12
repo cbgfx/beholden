@@ -98,6 +98,7 @@ function canUseDirectPortFallback() {
 
 type WsCtx = {
   subscribe: (handler: Handler) => () => void;
+  setScope: (scope: { campaignId?: string | null; adventureId?: string | null; encounterId?: string | null }) => void;
   connected: boolean;
 };
 
@@ -109,6 +110,8 @@ const WsContext = createContext<WsCtx | null>(null);
 
 export function WsProvider({ children }: { children: React.ReactNode }) {
   const subscribers = useRef<Set<Handler>>(new Set());
+  const socketRef = useRef<WebSocket | null>(null);
+  const scopeRef = useRef<{ campaignId?: string | null; adventureId?: string | null; encounterId?: string | null }>({});
   const [connected, setConnected] = React.useState(false);
 
   const subscribe = React.useCallback((handler: Handler) => {
@@ -116,6 +119,22 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscribers.current.delete(handler);
     };
+  }, []);
+
+  const setScope = React.useCallback((scope: { campaignId?: string | null; adventureId?: string | null; encounterId?: string | null }) => {
+    const next = {
+      campaignId: scope.campaignId ?? null,
+      adventureId: scope.adventureId ?? null,
+      encounterId: scope.encounterId ?? null,
+    };
+    scopeRef.current = next;
+    const ws = socketRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    try {
+      ws.send(JSON.stringify({ type: "ws:scope", payload: next }));
+    } catch {
+      // ignore transport race
+    }
   }, []);
 
   useEffect(() => {
@@ -131,6 +150,7 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
       if (dead) return;
 
       ws = new WebSocket(url);
+      socketRef.current = ws;
       let settled = false;
 
       const failTimer = window.setTimeout(() => {
@@ -146,6 +166,11 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
         settled = true;
         window.clearTimeout(failTimer);
         setConnected(true);
+        try {
+          ws?.send(JSON.stringify({ type: "ws:scope", payload: scopeRef.current }));
+        } catch {
+          // ignore transport race
+        }
       };
 
       ws.onmessage = (ev) => {
@@ -169,6 +194,7 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
       ws.onclose = () => {
         window.clearTimeout(failTimer);
         setConnected(false);
+        socketRef.current = null;
 
         if (dead) return;
 
@@ -223,13 +249,14 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       dead = true;
+      socketRef.current = null;
       try {
         ws?.close();
       } catch {}
     };
   }, []);
 
-  const ctx = React.useMemo(() => ({ subscribe, connected }), [subscribe, connected]);
+  const ctx = React.useMemo(() => ({ subscribe, setScope, connected }), [subscribe, setScope, connected]);
 
   return <WsContext.Provider value={ctx}>{children}</WsContext.Provider>;
 }
@@ -257,4 +284,13 @@ export function useWs(onMessage: Handler) {
     const forwarder: Handler = (msg) => handlerRef.current(msg);
     return ctx.subscribe(forwarder);
   }, [ctx]);
+}
+
+export function useWsScope(scope: { campaignId?: string | null; adventureId?: string | null; encounterId?: string | null }) {
+  const ctx = useContext(WsContext);
+  if (!ctx) throw new Error("<WsProvider> is missing from the tree.");
+
+  useEffect(() => {
+    ctx.setScope(scope);
+  }, [ctx, scope.campaignId, scope.adventureId, scope.encounterId]);
 }

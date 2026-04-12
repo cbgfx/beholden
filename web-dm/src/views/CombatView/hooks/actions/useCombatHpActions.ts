@@ -1,8 +1,8 @@
 import * as React from "react";
-import { api, jsonInit } from "@/services/api";
 import type { EncounterActor } from "@/domain/types/domain";
 import { rollDiceExpr } from "@/views/CombatView/utils/dice";
 import { resolveCombatantDamage } from "@/views/CombatView/utils/polymorphDamage";
+import { putEncounterCombatant } from "@/services/encounterApi";
 
 function parseSignedDelta(
   input: string,
@@ -66,11 +66,11 @@ export function useCombatHpActions({ encounterId, delta, setDelta, target }: Arg
         const resolved = resolveCombatantDamage(target, amount);
         if (!resolved) return;
         nextHp = resolved.hpCurrent;
-        await api(`/api/encounters/${encounterId}/combatants/${target.id}`, jsonInit("PUT", {
+        await putEncounterCombatant(encounterId, target.id, {
           hpCurrent: resolved.hpCurrent,
           overrides: resolved.overrides,
           ...(resolved.conditions ? { conditions: resolved.conditions } : {}),
-        }));
+        });
         setDelta("");
 
         if (amount > 0 && target.conditions?.some(c => c.key === "concentration")) {
@@ -84,13 +84,13 @@ export function useCombatHpActions({ encounterId, delta, setDelta, target }: Arg
         else nextHp = nextHp + amount;
       }
 
-      await api(`/api/encounters/${encounterId}/combatants/${target.id}`, jsonInit("PUT", {
+      await putEncounterCombatant(encounterId, target.id, {
         hpCurrent: nextHp,
         overrides: {
           ...overrides,
           tempHp: nextTemp
         }
-      }));
+      });
       setDelta("");
 
       // Concentration check: if damage was dealt to a concentrating combatant, fire a reminder.

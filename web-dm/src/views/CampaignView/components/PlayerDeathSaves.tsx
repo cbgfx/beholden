@@ -2,6 +2,7 @@ import React from "react";
 import { theme } from "@/theme/theme";
 import { IconHeart, IconShield } from "@/icons";
 import { api } from "@/services/api";
+import { putEncounterCombatant } from "@/services/encounterApi";
 
 type Props = {
   playerId?: string;
@@ -30,11 +31,7 @@ export function PlayerDeathSaves({ playerId, encounterId, combatantId, variant, 
     try {
       if (variant === "combatList") {
         if (!encounterId) return;
-        await api(`/api/encounters/${encounterId}/combatants/${combatantId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ deathSaves: { success: next.s, fail: next.f } }),
-        });
+        await putEncounterCombatant(encounterId, combatantId, { deathSaves: { success: next.s, fail: next.f } });
       } else {
         if (!playerId) return;
         await api(`/api/players/${playerId}`, {

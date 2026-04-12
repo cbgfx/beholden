@@ -48,6 +48,7 @@ export function useCharacterPolymorphControls(open: boolean) {
         const params = new URLSearchParams({
           q: polymorphQuery.trim(),
           sort: "az",
+          fields: "id,name,cr,type,environment",
           limit:
             polymorphQuery.trim().length >= 2
             || polymorphTypeFilter !== "all"

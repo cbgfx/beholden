@@ -19,6 +19,15 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   const FeatLookupBody = z.object({
     ids: z.array(z.string()).max(MAX_FEAT_LOOKUP_IDS),
   });
+  const parseRequestedFields = (value: unknown): Set<string> =>
+    new Set(
+      String(value ?? "")
+        .split(",")
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean),
+    );
+  const includeField = (fields: Set<string>, ...aliases: string[]) =>
+    fields.size === 0 || aliases.some((alias) => fields.has(alias.toLowerCase()));
 
   function buildFeatDetailFromRow(row: { data_json: string }) {
     const feat = JSON.parse(row.data_json);
@@ -40,12 +49,24 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   }
 
   // --- Classes ---------------------------------------------------------------
-  app.get("/api/compendium/classes", requireAuth, (_req, res) => {
+  app.get("/api/compendium/classes", requireAuth, (req, res) => {
     applySharedApiCacheHeaders(res);
-    const rows = db.prepare("SELECT id, name, hd, data_json FROM compendium_classes ORDER BY name COLLATE NOCASE").all() as { id: string; name: string; hd: number | null; data_json: string }[];
+    const fields = parseRequestedFields(req.query.fields);
+    const wantHd = includeField(fields, "hd");
+    const wantRuleset = includeField(fields, "ruleset");
+    const rows = db.prepare(
+      `SELECT id, name${wantHd ? ", hd" : ""}${wantRuleset ? ", data_json" : ""}
+       FROM compendium_classes
+       ORDER BY name COLLATE NOCASE`,
+    ).all() as Array<{ id: string; name: string; hd?: number | null; data_json?: string }>;
     res.json(rows.map((row) => {
-      const data = JSON.parse(row.data_json);
-      return { id: row.id, name: row.name, hd: row.hd, ruleset: data.ruleset ?? inferRuleset(row.name) };
+      const data = wantRuleset ? JSON.parse(row.data_json ?? "{}") : {};
+      return {
+        ...(includeField(fields, "id") ? { id: row.id } : {}),
+        ...(includeField(fields, "name") ? { name: row.name } : {}),
+        ...(wantHd ? { hd: row.hd ?? null } : {}),
+        ...(wantRuleset ? { ruleset: data.ruleset ?? inferRuleset(row.name) } : {}),
+      };
     }));
   });
 
@@ -74,12 +95,26 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   });
 
   // --- Races -----------------------------------------------------------------
-  app.get("/api/compendium/races", requireAuth, (_req, res) => {
+  app.get("/api/compendium/races", requireAuth, (req, res) => {
     applySharedApiCacheHeaders(res);
-    const rows = db.prepare("SELECT id, name, size, speed, data_json FROM compendium_races ORDER BY name COLLATE NOCASE").all() as { id: string; name: string; size: string | null; speed: number | null; data_json: string }[];
+    const fields = parseRequestedFields(req.query.fields);
+    const wantSize = includeField(fields, "size");
+    const wantSpeed = includeField(fields, "speed");
+    const wantRuleset = includeField(fields, "ruleset");
+    const rows = db.prepare(
+      `SELECT id, name${wantSize ? ", size" : ""}${wantSpeed ? ", speed" : ""}${wantRuleset ? ", data_json" : ""}
+       FROM compendium_races
+       ORDER BY name COLLATE NOCASE`,
+    ).all() as Array<{ id: string; name: string; size?: string | null; speed?: number | null; data_json?: string }>;
     res.json(rows.map((row) => {
-      const data = JSON.parse(row.data_json);
-      return { id: row.id, name: row.name, size: row.size, speed: row.speed, ruleset: data.ruleset ?? inferRuleset(row.name) };
+      const data = wantRuleset ? JSON.parse(row.data_json ?? "{}") : {};
+      return {
+        ...(includeField(fields, "id") ? { id: row.id } : {}),
+        ...(includeField(fields, "name") ? { name: row.name } : {}),
+        ...(wantSize ? { size: row.size ?? null } : {}),
+        ...(wantSpeed ? { speed: row.speed ?? null } : {}),
+        ...(wantRuleset ? { ruleset: data.ruleset ?? inferRuleset(row.name) } : {}),
+      };
     }));
   });
 
@@ -111,12 +146,22 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   });
 
   // --- Backgrounds -----------------------------------------------------------
-  app.get("/api/compendium/backgrounds", requireAuth, (_req, res) => {
+  app.get("/api/compendium/backgrounds", requireAuth, (req, res) => {
     applySharedApiCacheHeaders(res);
-    const rows = db.prepare("SELECT id, name, data_json FROM compendium_backgrounds ORDER BY name COLLATE NOCASE").all() as { id: string; name: string; data_json: string }[];
+    const fields = parseRequestedFields(req.query.fields);
+    const wantRuleset = includeField(fields, "ruleset");
+    const rows = db.prepare(
+      `SELECT id, name${wantRuleset ? ", data_json" : ""}
+       FROM compendium_backgrounds
+       ORDER BY name COLLATE NOCASE`,
+    ).all() as Array<{ id: string; name: string; data_json?: string }>;
     res.json(rows.map((row) => {
-      const data = JSON.parse(row.data_json);
-      return { id: row.id, name: row.name, ruleset: data.ruleset ?? inferRuleset(row.name) };
+      const data = wantRuleset ? JSON.parse(row.data_json ?? "{}") : {};
+      return {
+        ...(includeField(fields, "id") ? { id: row.id } : {}),
+        ...(includeField(fields, "name") ? { name: row.name } : {}),
+        ...(wantRuleset ? { ruleset: data.ruleset ?? inferRuleset(row.name) } : {}),
+      };
     }));
   });
 
@@ -147,12 +192,22 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   });
 
   // --- Feats -----------------------------------------------------------------
-  app.get("/api/compendium/feats", requireAuth, (_req, res) => {
+  app.get("/api/compendium/feats", requireAuth, (req, res) => {
     applySharedApiCacheHeaders(res);
-    const rows = db.prepare("SELECT id, name, data_json FROM compendium_feats ORDER BY name COLLATE NOCASE").all() as { id: string; name: string; data_json: string }[];
+    const fields = parseRequestedFields(req.query.fields);
+    const wantRuleset = includeField(fields, "ruleset");
+    const rows = db.prepare(
+      `SELECT id, name${wantRuleset ? ", data_json" : ""}
+       FROM compendium_feats
+       ORDER BY name COLLATE NOCASE`,
+    ).all() as Array<{ id: string; name: string; data_json?: string }>;
     res.json(rows.map((row) => {
-      const data = JSON.parse(row.data_json);
-      return { id: row.id, name: row.name, ruleset: data.ruleset ?? inferRuleset(row.name) };
+      const data = wantRuleset ? JSON.parse(row.data_json ?? "{}") : {};
+      return {
+        ...(includeField(fields, "id") ? { id: row.id } : {}),
+        ...(includeField(fields, "name") ? { name: row.name } : {}),
+        ...(wantRuleset ? { ruleset: data.ruleset ?? inferRuleset(row.name) } : {}),
+      };
     }));
   });
 

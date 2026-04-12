@@ -1,8 +1,8 @@
 // web/src/views/CombatView/hooks/actions/useCombatFightActions.ts
 import * as React from "react";
 import { useNavigate } from "react-router-dom";
-import { api, jsonInit } from "@/services/api";
 import type { EncounterActor } from "@/domain/types/domain";
+import { putEncounter, putEncounterCombatant } from "@/services/encounterApi";
 
 type Args = {
   campaignId?: string;
@@ -40,7 +40,7 @@ export function useCombatFightActions({
       // and are only modified by in-combat HP actions, conditions drawers, or Full Rest.
       if (c.baseType === "player") {
         // Only clear initiative so they re-roll for the next fight.
-        await api(`/api/encounters/${encounterId}/combatants/${c.id}`, jsonInit("PUT", { initiative: null }));
+        await putEncounterCombatant(encounterId, c.id, { initiative: null });
         continue;
       }
 
@@ -49,15 +49,15 @@ export function useCombatFightActions({
       const hpBonus = normalizeHpMaxBonus(overrides?.hpMaxBonus) ?? 0;
       const max = Math.max(1, Number(c.hpMax) + hpBonus);
 
-      await api(`/api/encounters/${encounterId}/combatants/${c.id}`, jsonInit("PUT", {
+      await putEncounterCombatant(encounterId, c.id, {
         initiative: null,
         conditions: [],
         hpCurrent: Number.isFinite(max) ? max : Number(c.hpCurrent ?? 0),
-      }));
+      });
     }
 
     try {
-      await api(`/api/encounters/${encounterId}`, jsonInit("PUT", { status: "Open" }));
+      await putEncounter(encounterId, { status: "Open" });
     } catch {
       // ignore
     }
@@ -75,7 +75,7 @@ export function useCombatFightActions({
   const endCombat = React.useCallback(async () => {
     if (!encounterId) return;
     try {
-      await api(`/api/encounters/${encounterId}`, jsonInit("PUT", { status: "Complete" }));
+      await putEncounter(encounterId, { status: "Complete" });
     } catch {
       // ignore
     }

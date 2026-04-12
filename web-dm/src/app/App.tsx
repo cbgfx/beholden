@@ -7,10 +7,10 @@ import { StoreProvider, useStore } from "@/store";
 import { api } from "@/services/api";
 import { fetchCampaignCharacters, fetchEncounterActors } from "@/services/actorApi";
 import {
-  fetchAdventureNotes,
-  fetchAdventureTreasure,
-  fetchCampaignNotes,
-  fetchCampaignTreasure,
+  fetchAdventureNotesList,
+  fetchAdventureTreasureList,
+  fetchCampaignNotesList,
+  fetchCampaignTreasureList,
 } from "@/services/collectionApi";
 import type { Adventure, Campaign, CampaignCharacter, Encounter, EncounterActor, INpc, Meta, Note, TreasureEntry } from "@/domain/types/domain";
 import { useAppWebSocket } from "@/app/useAppWebSocket";
@@ -21,6 +21,7 @@ import { useCampaignActions } from "@/app/useCampaignActions";
 import type { State } from "@/store/state";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LoginView } from "@/views/LoginView";
+import { useWsScope } from "@/services/ws";
 
 const CompendiumView = React.lazy(() => import("@/views/CompendiumView/CompendiumView").then(m => ({ default: m.CompendiumView })));
 const CampaignView = React.lazy(() => import("@/views/CampaignView/CampaignView").then(m => ({ default: m.CampaignView })));
@@ -51,8 +52,8 @@ function AppInner() {
       api<Adventure[]>(`/api/campaigns/${cid}/adventures`),
       fetchCampaignCharacters(cid),
       api<INpc[]>(`/api/campaigns/${cid}/inpcs`),
-      fetchCampaignNotes(cid) as Promise<Note[]>,
-      fetchCampaignTreasure(cid) as Promise<TreasureEntry[]>
+      fetchCampaignNotesList(cid) as Promise<Note[]>,
+      fetchCampaignTreasureList(cid) as Promise<TreasureEntry[]>
     ]);
     dispatch({ type: "setAdventures", adventures: adv });
     dispatch({ type: "setPlayers", players: pls });
@@ -70,8 +71,8 @@ function AppInner() {
     }
     const [enc, notes, treasure] = await Promise.all([
       api<Encounter[]>(`/api/adventures/${adventureId}/encounters`),
-      fetchAdventureNotes(adventureId) as Promise<Note[]>,
-      fetchAdventureTreasure(adventureId) as Promise<TreasureEntry[]>
+      fetchAdventureNotesList(adventureId) as Promise<Note[]>,
+      fetchAdventureTreasureList(adventureId) as Promise<TreasureEntry[]>
     ]);
     dispatch({ type: "setEncounters", encounters: enc });
     dispatch({ type: "setAdventureNotes", notes });
@@ -86,7 +87,12 @@ function AppInner() {
   useEffect(() => { refreshAll(); }, []);
   useEffect(() => { if (state.selectedCampaignId) refreshCampaign(state.selectedCampaignId); }, [state.selectedCampaignId]);
   useEffect(() => { refreshAdventure(state.selectedAdventureId); }, [state.selectedAdventureId]);
-  useEffect(() => { refreshEncounter(state.selectedEncounterId); }, [state.selectedEncounterId]);
+  const matchCombatRoute = useMatch("/campaign/:campaignId/combat/:encounterId");
+  useEffect(() => {
+    // CombatView hydrates combatants via its own live hook; skip duplicate App-level fetches there.
+    if (matchCombatRoute) return;
+    refreshEncounter(state.selectedEncounterId);
+  }, [state.selectedEncounterId, matchCombatRoute, refreshEncounter]);
 
   // Sync the :campaignId route param into the store.
   // Covers direct links, refreshes, and back/forward navigation to any
@@ -108,6 +114,12 @@ function AppInner() {
     dispatch,
     refreshAll,
     refreshEncounter,
+  });
+
+  useWsScope({
+    campaignId: state.selectedCampaignId,
+    adventureId: state.selectedAdventureId,
+    encounterId: state.selectedEncounterId,
   });
 
   const {

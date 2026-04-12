@@ -229,6 +229,15 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
       sortRaw === "crAsc" || sortRaw === "crDesc" ? sortRaw : "az";
     const withTotalRaw = String(req.query.withTotal ?? "").trim().toLowerCase();
     const withTotal = withTotalRaw === "1" || withTotalRaw === "true" || withTotalRaw === "yes";
+    const fieldsParam = String(req.query.fields ?? "").trim();
+    const requestedFields = new Set(
+      fieldsParam
+        .split(",")
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean),
+    );
+    const hasRequestedFields = requestedFields.size > 0;
+    const includeField = (field: string) => !hasRequestedFields || requestedFields.has(field);
 
     const parts: string[] = ["SELECT id, name, cr, cr_numeric, type_key, size, environment FROM compendium_monsters WHERE 1=1"];
     const countParts: string[] = ["SELECT count(*) AS n FROM compendium_monsters WHERE 1=1"];
@@ -290,8 +299,12 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
       type_key: string | null; size: string | null; environment: string | null;
     }[];
     const outRows = rows.map((r) => ({
-      id: r.id, name: r.name, cr: r.cr ?? r.cr_numeric ?? 0,
-      type: r.type_key ?? "", environment: r.environment ?? "", size: r.size ?? "",
+      ...(includeField("id") ? { id: r.id } : {}),
+      ...(includeField("name") ? { name: r.name } : {}),
+      ...(includeField("cr") ? { cr: r.cr ?? r.cr_numeric ?? 0 } : {}),
+      ...(includeField("type") ? { type: r.type_key ?? "" } : {}),
+      ...(includeField("environment") ? { environment: r.environment ?? "" } : {}),
+      ...(includeField("size") ? { size: r.size ?? "" } : {}),
     }));
     if (!withTotal) return res.json(outRows);
 

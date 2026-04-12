@@ -4,6 +4,7 @@ import { Input } from "@/ui/Input";
 import { api, jsonInit } from "@/services/api";
 import { useStore, type DrawerState } from "@/store";
 import type { DrawerContent } from "@/drawers/types";
+import { putEncounter } from "@/services/encounterApi";
 
 type NameDrawerState = Exclude<
   Extract<
@@ -109,7 +110,7 @@ export function NameDrawer(props: {
         props.close();
         return;
       case "editEncounter":
-        await api(`/api/encounters/${d.encounterId}`, jsonInit("PUT", { name: safeName("Encounter") }));
+        await putEncounter(d.encounterId, { name: safeName("Encounter") });
         props.close();
         return;
       default:

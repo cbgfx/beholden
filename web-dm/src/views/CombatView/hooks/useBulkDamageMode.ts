@@ -1,8 +1,8 @@
 import * as React from "react";
 import type { EncounterActor } from "@/domain/types/domain";
-import { api, jsonInit } from "@/services/api";
 import { rollDiceExpr } from "@/views/CombatView/utils/dice";
 import { resolveCombatantDamage } from "@/views/CombatView/utils/polymorphDamage";
+import { putEncounterCombatant } from "@/services/encounterApi";
 
 type Props = {
   encounterId: string | undefined;
@@ -40,11 +40,11 @@ export function useBulkDamageMode({ encounterId, delta, setDelta, orderedCombata
       targets.map(async (c) => {
         const resolved = resolveCombatantDamage(c, amount);
         if (!resolved) return;
-        await api(`/api/encounters/${encounterId}/combatants/${c.id}`, jsonInit("PUT", {
+        await putEncounterCombatant(encounterId, c.id, {
           hpCurrent: resolved.hpCurrent,
           overrides: resolved.overrides,
           ...(resolved.conditions ? { conditions: resolved.conditions } : {}),
-        }));
+        });
       })
     );
     setDelta("");

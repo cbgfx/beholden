@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "@/store";
 import type { AddMonsterOptions } from "@/domain/types/domain";
+import { fetchNoteById } from "@/services/collectionApi";
 import { useOpenEncounterMetrics } from "@/views/CampaignView/hooks/useOpenEncounterMetrics";
 import { CampaignLeftSidebar } from "@/views/CampaignView/components/CampaignLeftSidebar";
 import { CampaignMainColumn } from "@/views/CampaignView/components/CampaignMainColumn";
@@ -73,6 +74,23 @@ export function CampaignView(props: {
     dispatch,
   });
 
+  const handleToggleNote = React.useCallback((noteId: string) => {
+    dispatch({ type: "toggleNote", noteId });
+    const isExpanded = state.expandedNoteIds.includes(noteId);
+    if (isExpanded) return;
+    const note = [...state.campaignNotes, ...state.adventureNotes].find((entry) => entry.id === noteId);
+    if (!note || note.text) return;
+    void fetchNoteById(noteId)
+      .then((full) => {
+        if (full.scope === "adventure") {
+          dispatch({ type: "upsertAdventureNote", note: full });
+        } else {
+          dispatch({ type: "upsertCampaignNote", note: full });
+        }
+      })
+      .catch(() => {});
+  }, [dispatch, state.adventureNotes, state.campaignNotes, state.expandedNoteIds]);
+
   return (
     <div className="campaignGrid">
       {/* LEFT SIDEBAR */}
@@ -136,7 +154,7 @@ export function CampaignView(props: {
         campaignNotes={campaignNotes}
         adventureNotes={adventureNotes}
         expandedNoteIds={expandedNoteIds}
-        onToggleNote={(noteId) => dispatch({ type: "toggleNote", noteId })}
+        onToggleNote={handleToggleNote}
         players={players}
         campaignId={state.selectedCampaignId}
         campaignSharedNotes={campaignSharedNotes}

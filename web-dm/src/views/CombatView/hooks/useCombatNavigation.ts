@@ -1,5 +1,4 @@
 import * as React from "react";
-import { api } from "@/services/api";
 import type { EncounterActor } from "@/domain/types/domain";
 import {
   activeIndexOf,
@@ -8,6 +7,7 @@ import {
   nextTurn as nextTurnEngine,
   prevTurn as prevTurnEngine,
 } from "@/views/CombatView/engine/CombatEngine";
+import { putEncounter } from "@/services/encounterApi";
 
 type Args = {
   encounterId: string | undefined;
@@ -77,11 +77,7 @@ export function useCombatNavigation({
       if (encounterId) {
         (async () => {
           try {
-            await api(`/api/encounters/${encounterId}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ status: "In Progress" })
-            });
+            await putEncounter(encounterId, { status: "In Progress" });
           } catch {
             // ignore
           }

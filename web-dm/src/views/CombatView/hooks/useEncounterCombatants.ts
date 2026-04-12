@@ -3,6 +3,7 @@ import type { EncounterActor } from "@/domain/types/domain";
 import { fetchEncounterActor, fetchEncounterActors } from "@/services/actorApi";
 import { useWs } from "@/services/ws";
 import type { Action } from "@/store/actions";
+import { flattenEncounterActorDto, type EncounterActorDto } from "@beholden/shared/api";
 
 type StoreDispatch = (action: Action) => void;
 
@@ -32,6 +33,7 @@ export function useEncounterCombatants(encounterId: string | undefined, dispatch
       encounterId?: unknown;
       action?: unknown;
       combatantId?: unknown;
+      combatant?: EncounterActorDto;
     };
     const encId = payload.encounterId;
     if (typeof encId !== "string" || encId !== encounterId) return;
@@ -42,6 +44,10 @@ export function useEncounterCombatants(encounterId: string | undefined, dispatch
       return;
     }
     if (action === "upsert" && typeof payload.combatantId === "string") {
+      if (payload.combatant && typeof payload.combatant === "object") {
+        dispatch({ type: "upsertCombatant", combatant: flattenEncounterActorDto(payload.combatant) as EncounterActor });
+        return;
+      }
       const combatantId = payload.combatantId;
       void (async () => {
         try {

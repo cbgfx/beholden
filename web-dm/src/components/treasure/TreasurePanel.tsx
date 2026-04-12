@@ -1,7 +1,7 @@
 import React from "react";
 import { CollectionRow, QuantityStepper, Tag } from "@beholden/shared/ui";
 import { api, jsonInit } from "@/services/api";
-import { fetchAdventureTreasure, fetchCampaignTreasure } from "@/services/collectionApi";
+import { fetchAdventureTreasureList, fetchCampaignTreasureList } from "@/services/collectionApi";
 import type { TreasureEntry } from "@/domain/types/domain";
 import { IconPlus } from "@/icons";
 import { useStore } from "@/store";
@@ -30,11 +30,11 @@ export function TreasurePanel(_props: { encounterId?: string } = {}) {
 
   async function refreshTreasure() {
     if (!state.selectedCampaignId) return;
-    const campaignTreasure = await fetchCampaignTreasure(state.selectedCampaignId) as TreasureEntry[];
+    const campaignTreasure = await fetchCampaignTreasureList(state.selectedCampaignId) as TreasureEntry[];
     dispatch({ type: "setCampaignTreasure", treasure: campaignTreasure });
 
     if (scopeAdventureId) {
-      const adventureTreasure = await fetchAdventureTreasure(scopeAdventureId) as TreasureEntry[];
+      const adventureTreasure = await fetchAdventureTreasureList(scopeAdventureId) as TreasureEntry[];
       dispatch({ type: "setAdventureTreasure", treasure: adventureTreasure });
     } else {
       dispatch({ type: "setAdventureTreasure", treasure: [] });

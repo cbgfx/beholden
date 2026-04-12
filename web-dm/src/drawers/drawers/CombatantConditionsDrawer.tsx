@@ -1,7 +1,7 @@
 import React from "react";
 import type { SharedConditionInstance } from "@beholden/shared/domain";
 import { Button } from "@/ui/Button";
-import { api, jsonInit } from "@/services/api";
+import { putEncounterCombatant } from "@/services/encounterApi";
 import { theme, withAlpha } from "@/theme/theme";
 import { useStore, type DrawerState } from "@/store";
 import type { DrawerContent } from "@/drawers/types";
@@ -68,7 +68,7 @@ export function CombatantConditionsDrawer(props: {
         expiresAtRound: c.expiresAtRound ?? null,
       }));
       try {
-        await api(`/api/encounters/${d.encounterId}/combatants/${d.combatantId}`, jsonInit("PUT", { conditions: next }));
+        await putEncounterCombatant(d.encounterId, d.combatantId, { conditions: next });
       } catch { /* Non-blocking */ }
     },
     [props.drawer]

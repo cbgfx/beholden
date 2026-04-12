@@ -1,10 +1,10 @@
 import React from "react";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
-import { api, jsonInit } from "@/services/api";
 import { theme } from "@/theme/theme";
 import { useStore, type DrawerState } from "@/store";
 import type { DrawerContent } from "@/drawers/types";
+import { putEncounterCombatant } from "@/services/encounterApi";
 
 type OverridesDrawerState = Exclude<Extract<DrawerState, { type: "combatantOverrides"; encounterId: string; combatantId: string }>, null>;
 
@@ -51,15 +51,12 @@ if (!combatant) return;
       tempHp: Number(tempHp) || 0,
       hpMaxBonus: Number(hpMaxBonus) || 0
     };
-    await api(
-      `/api/encounters/${d.encounterId}/combatants/${d.combatantId}`,
-      jsonInit("PUT", {
-        initiative: initVal,
-        color: color || null,
-        friendly,
-        overrides: nextOverrides
-      })
-    );
+    await putEncounterCombatant(d.encounterId, d.combatantId, {
+      initiative: initVal,
+      color: color || null,
+      friendly,
+      overrides: nextOverrides
+    });
     props.close();
   }, [acBonus, color, combatant, friendly, hpMaxBonus, initiative, props, tempHp]);
 

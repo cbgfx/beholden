@@ -1,6 +1,6 @@
 import React from "react";
-import { api, jsonInit } from "@/services/api";
 import type { AddMonsterOptions } from "@/domain/types/domain";
+import { deleteEncounterCombatant, postEncounterCombatants } from "@/services/encounterApi";
 
 function apiErr(e: unknown) {
   alert(e instanceof Error ? e.message : "Something went wrong. Please try again.");
@@ -12,21 +12,21 @@ export function useEncounterActions(
   const addAllPlayers = React.useCallback(async () => {
     if (!encounterId) return;
     try {
-      await api(`/api/encounters/${encounterId}/combatants/addPlayers`, { method: "POST" });
+      await postEncounterCombatants(encounterId, "addPlayers");
     } catch (e) { apiErr(e); }
   }, [encounterId]);
 
   const addPlayerToEncounter = React.useCallback(async (playerId: string) => {
     if (!encounterId) return;
     try {
-      await api(`/api/encounters/${encounterId}/combatants/addPlayer`, jsonInit("POST", { playerId }));
+      await postEncounterCombatants(encounterId, "addPlayer", { playerId });
     } catch (e) { apiErr(e); }
   }, [encounterId]);
 
   const addMonster = React.useCallback(async (monsterId: string, qty: number, opts?: AddMonsterOptions) => {
     if (!encounterId) return;
     try {
-      await api(`/api/encounters/${encounterId}/combatants/addMonster`, jsonInit("POST", {
+      await postEncounterCombatants(encounterId, "addMonster", {
         monsterId,
         qty,
         friendly: Boolean(opts?.friendly ?? false),
@@ -36,21 +36,21 @@ export function useEncounterActions(
         hpMax: opts?.hpMax,
         hpDetails: opts?.hpDetails ?? undefined,
         attackOverrides: opts?.attackOverrides ?? null,
-      }));
+      });
     } catch (e) { apiErr(e); }
   }, [encounterId]);
 
   const removeCombatant = React.useCallback(async (combatantId: string) => {
     if (!encounterId) return;
     try {
-      await api(`/api/encounters/${encounterId}/combatants/${combatantId}`, { method: "DELETE" });
+      await deleteEncounterCombatant(encounterId, combatantId);
     } catch (e) { apiErr(e); }
   }, [encounterId]);
 
   const addINpcToEncounter = React.useCallback(async (inpcId: string) => {
     if (!encounterId) return;
     try {
-      await api(`/api/encounters/${encounterId}/combatants/addInpc`, jsonInit("POST", { inpcId }));
+      await postEncounterCombatants(encounterId, "addInpc", { inpcId });
     } catch (e) { apiErr(e); }
   }, [encounterId]);
 

@@ -1,8 +1,9 @@
 import * as React from "react";
-import { api, jsonInit } from "@/services/api";
+import { api } from "@/services/api";
 import type { EncounterActor } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
 import { dexModFromMonster } from "@/views/CombatView/utils/combat";
+import { putEncounterCombatant } from "@/services/encounterApi";
 
 type Args = {
   encounterId: string | undefined;
@@ -52,7 +53,7 @@ export function useCombatInitiativeActions({
       const mod = dexModFromMonster(d);
       const roll = 1 + Math.floor(Math.random() * 20);
       const init = roll + mod;
-      await api(`/api/encounters/${encounterId}/combatants/${c.id}`, jsonInit("PUT", { initiative: init }));
+      await putEncounterCombatant(encounterId, c.id, { initiative: init });
     }
   }, [encounterId, orderedCombatants, monsterCache, setMonsterCache, inpcsById]);
 

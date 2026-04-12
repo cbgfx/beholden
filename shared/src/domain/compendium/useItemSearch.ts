@@ -78,6 +78,7 @@ export function useCompendiumItemSearch(
           `type=${encodeURIComponent(typeFilter)}`,
           `attunement=${filterAttunement ? "1" : "0"}`,
           `magic=${filterMagic ? "1" : "0"}`,
+          `fields=${encodeURIComponent("id,name,rarity,type,typeKey,attunement,magic")}`,
         ].join("&");
 
         const merged: ItemSearchRow[] = [];

@@ -24,7 +24,7 @@ import { seedDefaultConditions } from "../services/conditions.js";
 import { now, uid } from "../lib/runtime.js";
 import { normalizeKey, parseLeadingInt } from "../lib/text.js";
 import { normalizeHp } from "../services/compendium/normalizeHp.js";
-import { createWsServer, sendWsEvent } from "./ws.js";
+import { createBroadcaster, createWsServer, sendWsEvent } from "./ws.js";
 import type { ServerContext } from "./context.js";
 import type { BroadcastFn } from "./events.js";
 import { multerErrorMiddleware, zodErrorMiddleware } from "../shared/validate.js";
@@ -231,11 +231,7 @@ export function createServer() {
     },
   });
 
-  broadcast = (event, data) => {
-    for (const client of wss.clients) {
-      sendWsEvent(client as any, event, data);
-    }
-  };
+  broadcast = createBroadcaster(wss);
   ctx.broadcast = broadcast;
 
   let closed = false;

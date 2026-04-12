@@ -1,6 +1,11 @@
 import React from "react";
 import { api } from "@/services/api";
-import type { Ruleset } from "@/lib/characterRules";
+import {
+  fetchBackgroundCatalog,
+  fetchClassCatalog,
+  fetchFeatCatalog,
+  fetchRaceCatalog,
+} from "@/services/compendiumApi";
 import type {
   BgSummary,
   Campaign,
@@ -18,12 +23,10 @@ export function useCreatorCompendiumCatalogs() {
   const [campaigns, setCampaigns] = React.useState<Campaign[]>([]);
 
   React.useEffect(() => {
-    api<ClassSummary[]>("/api/compendium/classes").then(setClasses).catch(() => {});
-    api<RaceSummary[]>("/api/compendium/races").then(setRaces).catch(() => {});
-    api<BgSummary[]>("/api/compendium/backgrounds").then(setBgs).catch(() => {});
-    api<{ id: string; name: string; ruleset?: Ruleset | null }[]>("/api/compendium/feats")
-      .then(setFeatSummaries)
-      .catch(() => {});
+    fetchClassCatalog().then((rows) => setClasses(rows as ClassSummary[])).catch(() => {});
+    fetchRaceCatalog().then((rows) => setRaces(rows as RaceSummary[])).catch(() => {});
+    fetchBackgroundCatalog().then((rows) => setBgs(rows as BgSummary[])).catch(() => {});
+    fetchFeatCatalog().then((rows) => setFeatSummaries(rows)).catch(() => {});
     api<Campaign[]>("/api/me/campaigns").then(setCampaigns).catch(() => {});
   }, []);
 

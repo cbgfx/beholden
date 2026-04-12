@@ -26,17 +26,23 @@ function serializeNoteState(note: StoredNoteState) {
 export function registerNoteRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
+  const isListView = (value: unknown): boolean => {
+    const raw = String(value ?? "").trim().toLowerCase();
+    return raw === "list" || raw === "summary" || raw === "compact";
+  };
   const emitNoteChange = (args: {
     campaignId: string;
     adventureId?: string | null;
     action: "upsert" | "delete" | "refresh";
     noteId?: string;
+    note?: ReturnType<typeof toNoteDto>;
   }) => {
     ctx.broadcast("notes:delta", {
       campaignId: args.campaignId,
       adventureId: args.adventureId ?? null,
       action: args.action,
       ...(args.noteId ? { noteId: args.noteId } : {}),
+      ...(args.note ? { note: args.note } : {}),
     });
   };
 
@@ -48,7 +54,18 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
         `SELECT ${NOTE_COLS} FROM notes WHERE campaign_id = ? AND adventure_id IS NULL ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC`
       )
       .all(campaignId) as Record<string, unknown>[];
-    res.json(rows.map(rowToNote).map(toNoteDto));
+    const notes = rows.map(rowToNote);
+    if (isListView(req.query.view)) {
+      return res.json(notes.map((note) => ({
+        id: note.id,
+        campaignId: note.campaignId,
+        adventureId: null as string | null,
+        title: note.title,
+        sort: note.sort,
+        updatedAt: note.updatedAt,
+      })));
+    }
+    res.json(notes.map(toNoteDto));
   });
 
   app.get("/api/adventures/:adventureId/notes", memberOrAdmin(db), (req, res) => {
@@ -59,7 +76,18 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
         `SELECT ${NOTE_COLS} FROM notes WHERE adventure_id = ? ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC`
       )
       .all(adventureId) as Record<string, unknown>[];
-    res.json(rows.map(rowToNote).map(toNoteDto));
+    const notes = rows.map(rowToNote);
+    if (isListView(req.query.view)) {
+      return res.json(notes.map((note) => ({
+        id: note.id,
+        campaignId: note.campaignId,
+        adventureId: note.adventureId,
+        title: note.title,
+        sort: note.sort,
+        updatedAt: note.updatedAt,
+      })));
+    }
+    res.json(notes.map(toNoteDto));
   });
 
   app.get("/api/notes/:noteId", memberOrAdmin(db), (req, res) => {
@@ -84,11 +112,12 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     db.prepare(
       "INSERT INTO notes (id, campaign_id, adventure_id, title, text, note_json, sort, created_at, updated_at) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?)"
     ).run(id, campaignId, title, text, serializeNoteState({ title, text }), sort, t, t);
-    emitNoteChange({ campaignId, adventureId: null, action: "upsert", noteId: id });
     const row = db
       .prepare(`SELECT ${NOTE_COLS} FROM notes WHERE id = ?`)
       .get(id) as Record<string, unknown>;
-    res.json(toNoteDto(rowToNote(row)));
+    const dto = toNoteDto(rowToNote(row));
+    emitNoteChange({ campaignId, adventureId: null, action: "upsert", noteId: id, note: dto });
+    res.json(dto);
   });
 
   app.post("/api/adventures/:adventureId/notes", dmOrAdmin(db), (req, res) => {
@@ -109,11 +138,12 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     db.prepare(
       "INSERT INTO notes (id, campaign_id, adventure_id, title, text, note_json, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     ).run(id, advRow.campaign_id, adventureId, title, text, serializeNoteState({ title, text }), sort, t, t);
-    emitNoteChange({ campaignId: advRow.campaign_id, adventureId, action: "upsert", noteId: id });
     const row = db
       .prepare(`SELECT ${NOTE_COLS} FROM notes WHERE id = ?`)
       .get(id) as Record<string, unknown>;
-    res.json(toNoteDto(rowToNote(row)));
+    const dto = toNoteDto(rowToNote(row));
+    emitNoteChange({ campaignId: advRow.campaign_id, adventureId, action: "upsert", noteId: id, note: dto });
+    res.json(dto);
   });
 
   app.put("/api/notes/:noteId", dmOrAdmin(db), (req, res) => {
@@ -135,11 +165,12 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
       text,
       serializeNoteState({ title, text }), t, noteId
     );
-    emitNoteChange({ campaignId: n.campaignId, adventureId: n.adventureId ?? null, action: "upsert", noteId });
     const row = db
       .prepare(`SELECT ${NOTE_COLS} FROM notes WHERE id = ?`)
       .get(noteId) as Record<string, unknown>;
-    res.json(toNoteDto(rowToNote(row)));
+    const dto = toNoteDto(rowToNote(row));
+    emitNoteChange({ campaignId: n.campaignId, adventureId: n.adventureId ?? null, action: "upsert", noteId, note: dto });
+    res.json(dto);
   });
 
   app.delete("/api/notes/:noteId", dmOrAdmin(db), (req, res) => {

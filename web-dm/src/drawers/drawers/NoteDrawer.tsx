@@ -3,7 +3,7 @@ import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { TextArea } from "@/ui/TextArea";
 import { api, jsonInit } from "@/services/api";
-import { createAdventureNote, createCampaignNote } from "@/services/collectionApi";
+import { createAdventureNote, createCampaignNote, fetchNoteById } from "@/services/collectionApi";
 import { useStore, type DrawerState } from "@/store";
 import type { DrawerContent } from "@/drawers/types";
 
@@ -18,6 +18,7 @@ export function NoteDrawer(props: {
   const { state } = useStore();
   const [title, setTitle] = React.useState("");
   const [text, setText] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
     const d = props.drawer;
@@ -29,6 +30,22 @@ export function NoteDrawer(props: {
       setTitle(n.title);
       setText(n.text ?? "");
     }
+    if (!n || n.text) return;
+    let cancelled = false;
+    setLoading(true);
+    fetchNoteById(d.noteId)
+      .then((full) => {
+        if (cancelled) return;
+        setTitle(full.title ?? "");
+        setText(full.text ?? "");
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [props.drawer, state.adventureNotes, state.campaignNotes]);
 
   const submit = React.useCallback(async () => {
@@ -55,6 +72,7 @@ export function NoteDrawer(props: {
       <div style={{ display: "grid", gap: 10 }}>
         <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>Title</div>
         <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
+        {loading ? <div style={{ fontSize: "var(--fs-small)", opacity: 0.7 }}>Loading note content...</div> : null}
         <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8, marginTop: 6 }}>Text</div>
         <TextArea value={text} onChange={(e) => setText(e.target.value)} placeholder="Write..." rows={10} />
       </div>

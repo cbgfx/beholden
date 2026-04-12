@@ -330,7 +330,12 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
     const t = now();
     const created = createPlayerCombatant({ encounterId, player: p, t });
     insertCombatant(db, created);
-    ctx.broadcast("encounter:combatantsDelta", { encounterId, action: "upsert", combatantId: created.id });
+    ctx.broadcast("encounter:combatantsDelta", {
+      encounterId,
+      action: "upsert",
+      combatantId: created.id,
+      combatant: toEncounterActorDto(created),
+    });
     res.json({ ok: true, added: 1 });
   });
 
@@ -426,7 +431,12 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
     })();
 
     for (const combatant of created) {
-      ctx.broadcast("encounter:combatantsDelta", { encounterId, action: "upsert", combatantId: combatant.id });
+      ctx.broadcast("encounter:combatantsDelta", {
+        encounterId,
+        action: "upsert",
+        combatantId: combatant.id,
+        combatant: toEncounterActorDto(combatant),
+      });
     }
     res.json({ ok: true, created });
   });
@@ -476,7 +486,12 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
     };
     insertCombatant(db, c);
 
-    ctx.broadcast("encounter:combatantsDelta", { encounterId, action: "upsert", combatantId: c.id });
+    ctx.broadcast("encounter:combatantsDelta", {
+      encounterId,
+      action: "upsert",
+      combatantId: c.id,
+      combatant: toEncounterActorDto(c),
+    });
     res.json({ ok: true, created: c });
   });
 
@@ -541,7 +556,12 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         });
       }
 
-      ctx.broadcast("encounter:combatantsDelta", { encounterId, action: "upsert", combatantId: next.id });
+      ctx.broadcast("encounter:combatantsDelta", {
+        encounterId,
+        action: "upsert",
+        combatantId: next.id,
+        combatant: toEncounterActorDto(next),
+      });
       res.json(toEncounterActorDto(next));
     }
   );

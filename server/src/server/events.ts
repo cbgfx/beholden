@@ -3,6 +3,8 @@
 // IMPORTANT: This must stay aligned with what the web client expects.
 // Do NOT invent new event names casually.
 
+import type { EncounterActorDto, NoteDto, TreasureDto } from "@beholden/shared/api";
+
 export type Id = string;
 
 export type HelloPayload = { ok: true; time: number };
@@ -26,6 +28,7 @@ export type NotesDeltaPayload = {
   adventureId?: Id | null;
   action: "upsert" | "delete" | "refresh";
   noteId?: Id;
+  note?: NoteDto;
 };
 
 export type PlayersDeltaPayload = {
@@ -46,6 +49,7 @@ export type TreasureDeltaPayload = {
   adventureId?: Id | null;
   action: "upsert" | "delete" | "refresh";
   treasureId?: Id;
+  treasure?: TreasureDto;
 };
 
 export type PartyInventoryDeltaPayload = {
@@ -86,6 +90,7 @@ export type EncounterCombatantsDeltaPayload = {
   encounterId: Id;
   action: "upsert" | "delete" | "refresh";
   combatantId?: Id;
+  combatant?: EncounterActorDto;
 };
 
 export type EncounterCombatStateChangedPayload = { encounterId: Id };

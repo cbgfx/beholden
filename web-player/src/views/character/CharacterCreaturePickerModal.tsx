@@ -60,6 +60,7 @@ export function CharacterCreaturePickerModal(props: {
           q: query,
           limit: query.trim().length >= 2 ? "220" : "120",
           sort: "az",
+          fields: "id,name,cr,type,environment",
         });
         const data = await api<CompendiumMonsterRow[]>(`/api/compendium/search?${params.toString()}`, {
           signal: controller.signal,

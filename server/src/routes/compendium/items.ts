@@ -133,6 +133,15 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     const offset = Number.isFinite(offsetRaw) && offsetRaw > 0 ? offsetRaw : 0;
     const withTotalRaw = String(req.query.withTotal ?? "").trim().toLowerCase();
     const withTotal = withTotalRaw === "1" || withTotalRaw === "true" || withTotalRaw === "yes";
+    const fieldsParam = String(req.query.fields ?? "").trim();
+    const requestedFields = new Set(
+      fieldsParam
+        .split(",")
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean),
+    );
+    const hasRequestedFields = requestedFields.size > 0;
+    const includeField = (field: string) => !hasRequestedFields || requestedFields.has(field);
     const whereParts: string[] = [];
     const whereParams: unknown[] = [];
     if (q) {
@@ -166,13 +175,13 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
         magic: number;
       }[];
       const mapped = rows.map((r) => ({
-          id: r.id,
-          name: r.name,
-          rarity: r.rarity ?? null,
-          type: r.type ?? null,
-          typeKey: r.type_key ?? null,
-          attunement: Boolean(r.attunement),
-          magic: Boolean(r.magic),
+          ...(includeField("id") ? { id: r.id } : {}),
+          ...(includeField("name") ? { name: r.name } : {}),
+          ...(includeField("rarity") ? { rarity: r.rarity ?? null } : {}),
+          ...(includeField("type") ? { type: r.type ?? null } : {}),
+          ...(includeField("typekey") ? { typeKey: r.type_key ?? null } : {}),
+          ...(includeField("attunement") ? { attunement: Boolean(r.attunement) } : {}),
+          ...(includeField("magic") ? { magic: Boolean(r.magic) } : {}),
         }));
       if (withTotal) {
         const totalRow = db
@@ -204,23 +213,23 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     const mapped = rawRows.map((r) => {
         const data = JSON.parse(r.data_json ?? "{}");
         return {
-          id: r.id,
-          name: r.name,
-          rarity: r.rarity ?? null,
-          type: r.type ?? null,
-          typeKey: r.type_key ?? null,
-          attunement: Boolean(r.attunement),
-          magic: Boolean(r.magic),
-          equippable: Boolean(r.equippable),
-          weight: r.weight ?? data.weight ?? null,
-          value: r.value ?? data.value ?? null,
-          proficiency: r.proficiency ?? null,
-          ac: data.ac ?? null,
-          stealthDisadvantage: Boolean(data.stealthDisadvantage),
-          dmg1: data.dmg1 ?? null,
-          dmg2: data.dmg2 ?? null,
-          dmgType: data.dmgType ?? null,
-          properties: data.properties ?? [],
+          ...(includeField("id") ? { id: r.id } : {}),
+          ...(includeField("name") ? { name: r.name } : {}),
+          ...(includeField("rarity") ? { rarity: r.rarity ?? null } : {}),
+          ...(includeField("type") ? { type: r.type ?? null } : {}),
+          ...(includeField("typekey") ? { typeKey: r.type_key ?? null } : {}),
+          ...(includeField("attunement") ? { attunement: Boolean(r.attunement) } : {}),
+          ...(includeField("magic") ? { magic: Boolean(r.magic) } : {}),
+          ...(includeField("equippable") ? { equippable: Boolean(r.equippable) } : {}),
+          ...(includeField("weight") ? { weight: r.weight ?? data.weight ?? null } : {}),
+          ...(includeField("value") ? { value: r.value ?? data.value ?? null } : {}),
+          ...(includeField("proficiency") ? { proficiency: r.proficiency ?? null } : {}),
+          ...(includeField("ac") ? { ac: data.ac ?? null } : {}),
+          ...(includeField("stealthdisadvantage") ? { stealthDisadvantage: Boolean(data.stealthDisadvantage) } : {}),
+          ...(includeField("dmg1") ? { dmg1: data.dmg1 ?? null } : {}),
+          ...(includeField("dmg2") ? { dmg2: data.dmg2 ?? null } : {}),
+          ...(includeField("dmgtype") ? { dmgType: data.dmgType ?? null } : {}),
+          ...(includeField("properties") ? { properties: data.properties ?? [] } : {}),
         };
       });
     if (withTotal) {

@@ -1,7 +1,7 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { WsProvider } from "@/services/ws";
+import { WsProvider, useWsScope } from "@/services/ws";
 import { LoginView } from "@/views/auth/LoginView";
 import { PlayerHomeView } from "@/views/home/PlayerHomeView";
 import { AppShell } from "./AppShell";
@@ -21,6 +21,17 @@ const UpdatesView = React.lazy(() => import("@/views/Info/UpdatesView").then(m =
 function KeyedCharacterView() {
   const { id } = useParams<{ id: string }>();
   return <CharacterView key={id} />;
+}
+
+function WsScopeBridge() {
+  const location = useLocation();
+  const campaignMatch = location.pathname.match(/^\/campaigns\/([^/]+)/);
+  useWsScope({
+    campaignId: campaignMatch ? decodeURIComponent(campaignMatch[1]) : null,
+    adventureId: null,
+    encounterId: null,
+  });
+  return null;
 }
 
 function AuthGate() {
@@ -48,6 +59,7 @@ function AuthGate() {
 
   return (
     <WsProvider>
+      <WsScopeBridge />
       <AppShell>
         <React.Suspense fallback={null}>
           <Routes>

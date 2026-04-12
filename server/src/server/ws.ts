@@ -3,6 +3,11 @@ import type WebSocket from "ws";
 import { WebSocketServer } from "ws";
 
 import type { BroadcastFn, ServerEventMap, ServerEventType } from "./events.js";
+type WsScope = {
+  campaignId?: string | null;
+  adventureId?: string | null;
+  encounterId?: string | null;
+};
 
 export function createWsServer(opts: {
   httpServer: Server;
@@ -29,13 +34,25 @@ export function createWsServer(opts: {
   });
 
   wss.on("connection", (ws, req) => {
+    (ws as WebSocket & { __beholdenScope?: WsScope }).__beholdenScope = {};
     if (authorize && !authorize(req)) {
       try { ws.close(1008, "Unauthorized"); } catch {}
       return;
     }
-    // We are server->client only. Ignore inbound client messages.
-    ws.on("message", () => {
-      /* ignored */
+    ws.on("message", (raw) => {
+      try {
+        const text = typeof raw === "string" ? raw : raw.toString("utf8");
+        const parsed = JSON.parse(text) as { type?: unknown; payload?: unknown };
+        if (parsed.type !== "ws:scope") return;
+        const payload = (parsed.payload && typeof parsed.payload === "object") ? parsed.payload as WsScope : {};
+        (ws as WebSocket & { __beholdenScope?: WsScope }).__beholdenScope = {
+          campaignId: typeof payload.campaignId === "string" && payload.campaignId ? payload.campaignId : null,
+          adventureId: typeof payload.adventureId === "string" && payload.adventureId ? payload.adventureId : null,
+          encounterId: typeof payload.encounterId === "string" && payload.encounterId ? payload.encounterId : null,
+        };
+      } catch {
+        // ignore malformed frames
+      }
     });
 
     if (onConnectionHello) onConnectionHello(ws);
@@ -54,7 +71,11 @@ export function createBroadcaster(wss: WebSocketServer | null | undefined): Broa
     Number.isFinite(refreshCoalesceWindowRaw) && refreshCoalesceWindowRaw > 0
       ? Math.floor(refreshCoalesceWindowRaw)
       : 0;
-  const pendingRefresh = new Map<string, string>();
+  const pendingRefresh = new Map<string, {
+    type: ServerEventType;
+    payload: ServerEventMap[ServerEventType];
+    msg: string;
+  }>();
   let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
   const flushPendingRefresh = () => {
@@ -68,12 +89,15 @@ export function createBroadcaster(wss: WebSocketServer | null | undefined): Broa
     flushTimer = null;
     for (const ws of wss.clients) {
       if (ws.readyState !== ws.OPEN) continue;
-      for (const msg of messages) ws.send(msg);
+      for (const pending of messages) {
+        if (!shouldDeliverToScope(ws, pending.type, pending.payload)) continue;
+        ws.send(pending.msg);
+      }
     }
   };
 
-  const queueRefresh = (key: string, msg: string) => {
-    pendingRefresh.set(key, msg);
+  const queueRefresh = (key: string, value: { type: ServerEventType; payload: ServerEventMap[ServerEventType]; msg: string }) => {
+    pendingRefresh.set(key, value);
     if (!flushTimer) {
       flushTimer = setTimeout(flushPendingRefresh, refreshCoalesceWindowMs);
     }
@@ -84,17 +108,45 @@ export function createBroadcaster(wss: WebSocketServer | null | undefined): Broa
     if (refreshCoalesceWindowMs > 0) {
       const refreshKey = getRefreshCoalesceKey(type, payload);
       if (refreshKey) {
-        queueRefresh(refreshKey, JSON.stringify({ type, payload }));
+        queueRefresh(refreshKey, {
+          type,
+          payload: payload as ServerEventMap[ServerEventType],
+          msg: JSON.stringify({ type, payload }),
+        });
         return;
       }
     }
     const msg = JSON.stringify({ type, payload });
     for (const ws of wss.clients) {
-      if (ws.readyState === ws.OPEN) ws.send(msg);
+      if (ws.readyState !== ws.OPEN) continue;
+      if (!shouldDeliverToScope(ws, type, payload)) continue;
+      ws.send(msg);
     }
   }) as BroadcastFn;
 
   return broadcast;
+}
+
+function shouldDeliverToScope(
+  ws: WebSocket,
+  type: ServerEventType,
+  payload: ServerEventMap[ServerEventType],
+): boolean {
+  const scope = (ws as WebSocket & { __beholdenScope?: WsScope }).__beholdenScope;
+  if (!scope) return true;
+  const scopeCampaign = typeof scope.campaignId === "string" && scope.campaignId ? scope.campaignId : null;
+  const scopeAdventure = typeof scope.adventureId === "string" && scope.adventureId ? scope.adventureId : null;
+  const scopeEncounter = typeof scope.encounterId === "string" && scope.encounterId ? scope.encounterId : null;
+
+  const payloadObj = (payload && typeof payload === "object") ? payload as Record<string, unknown> : null;
+  const payloadCampaign = payloadObj && typeof payloadObj.campaignId === "string" ? payloadObj.campaignId : null;
+  const payloadAdventure = payloadObj && typeof payloadObj.adventureId === "string" ? payloadObj.adventureId : null;
+  const payloadEncounter = payloadObj && typeof payloadObj.encounterId === "string" ? payloadObj.encounterId : null;
+
+  if (scopeCampaign && payloadCampaign && payloadCampaign !== scopeCampaign) return false;
+  if (scopeAdventure && payloadAdventure && payloadAdventure !== scopeAdventure) return false;
+  if (scopeEncounter && payloadEncounter && payloadEncounter !== scopeEncounter) return false;
+  return true;
 }
 
 function getRefreshCoalesceKey(type: ServerEventType, payload: ServerEventMap[ServerEventType]): string | null {

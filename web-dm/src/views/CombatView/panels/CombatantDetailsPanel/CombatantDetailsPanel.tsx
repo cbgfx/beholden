@@ -1,6 +1,5 @@
 import React from "react";
 import type { AttackOverride, Combatant } from "@/domain/types/domain";
-import { api, jsonInit } from "@/services/api";
 import { theme } from "@/theme/theme";
 import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";
@@ -15,6 +14,7 @@ import type { CampaignCharacter } from "@/domain/types/domain";
 import { CombatantConditionsSection } from "@/views/CombatView/panels/CombatantDetailsPanel/components/CombatantConditionsSection";
 import { useCharacterSheetStats } from "@/views/CombatView/panels/CombatantDetailsPanel/hooks/useCharacterSheetStats";
 import { PlayerDeathSaves } from "@/views/CampaignView/components/PlayerDeathSaves";
+import { putEncounterCombatant } from "@/services/encounterApi";
 
 export type CombatantDetailsCtx = {
   isNarrow: boolean;
@@ -123,14 +123,11 @@ export function CombatantDetailsPanel(props: Props) {
     const nextHpCurrent = typeof originalHpCurrent === "number" ? originalHpCurrent : selected.hpCurrent ?? null;
     setRevertingPolymorph(true);
     try {
-      await api(
-        `/api/encounters/${selected.encounterId}/combatants/${selected.id}`,
-        jsonInit("PUT", {
-          hpCurrent: nextHpCurrent,
-          overrides: nextOverrides,
-          conditions: nextConditions,
-        })
-      );
+      await putEncounterCombatant(selected.encounterId, selected.id, {
+        hpCurrent: nextHpCurrent,
+        overrides: nextOverrides,
+        conditions: nextConditions,
+      });
       ctx.onUpdate({
         hpCurrent: nextHpCurrent,
         overrides: nextOverrides,

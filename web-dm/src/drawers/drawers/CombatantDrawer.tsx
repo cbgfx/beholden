@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
-import { api, jsonInit } from "@/services/api";
+import { api } from "@/services/api";
 import { theme } from "@/theme/theme";
 import { useStore, type DrawerState } from "@/store";
 import type { DrawerContent } from "@/drawers/types";
@@ -9,6 +9,7 @@ import { MonsterPreview } from "@/drawers/drawers/combatant/MonsterPreview";
 import { MonsterActions } from "@/views/CombatView/components/MonsterActions";
 import type { AttackOverride } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
+import { putEncounterCombatant } from "@/services/encounterApi";
 
 type CombatantDrawerState = Exclude<Extract<DrawerState, { type: "editCombatant"; encounterId: string; combatantId: string }>, null>;
 
@@ -47,17 +48,14 @@ export function CombatantDrawer(props: {
 
   const submit = React.useCallback(async () => {
     const d = props.drawer;
-    await api(
-      `/api/encounters/${d.encounterId}/combatants/${d.combatantId}`,
-      jsonInit("PUT", {
-        label,
-        friendly,
-        ac: ac !== "" ? Number(ac) : undefined,
-        hpMax: hpMax !== "" ? Number(hpMax) : undefined,
-        hpCurrent: hpCur !== "" ? Number(hpCur) : undefined,
-        attackOverrides
-      })
-    );
+    await putEncounterCombatant(d.encounterId, d.combatantId, {
+      label,
+      friendly,
+      ac: ac !== "" ? Number(ac) : undefined,
+      hpMax: hpMax !== "" ? Number(hpMax) : undefined,
+      hpCurrent: hpCur !== "" ? Number(hpCur) : undefined,
+      attackOverrides
+    });
     props.close();
   }, [ac, friendly, hpCur, hpMax, label, props]);
 

@@ -4,6 +4,7 @@ import type { AddMonsterOptions } from "@/domain/types/domain";
 import type { State } from "@/store/state";
 import type { Action } from "@/store/actions";
 import type { ConfirmOptions } from "@/confirm/ConfirmContext";
+import { deleteEncounterById, deleteEncounterCombatant, postEncounter, postEncounterCombatants } from "@/services/encounterApi";
 
 type Dispatch = React.Dispatch<Action>;
 type ConfirmFn = (options: ConfirmOptions) => Promise<boolean>;
@@ -28,14 +29,14 @@ export function useCampaignActions(
   const addAllPlayers = React.useCallback(async () => {
     if (!state.selectedEncounterId) return;
     try {
-      await api(`/api/encounters/${state.selectedEncounterId}/combatants/addPlayers`, { method: "POST" });
+      await postEncounterCombatants(state.selectedEncounterId, "addPlayers");
     } catch (e) { apiErr(e); }
   }, [state.selectedEncounterId]);
 
   const addPlayerToEncounter = React.useCallback(async (playerId: string) => {
     if (!state.selectedEncounterId) return;
     try {
-      await api(`/api/encounters/${state.selectedEncounterId}/combatants/addPlayer`, jsonInit("POST", { playerId }));
+      await postEncounterCombatants(state.selectedEncounterId, "addPlayer", { playerId });
     } catch (e) { apiErr(e); }
   }, [state.selectedEncounterId]);
 
@@ -87,7 +88,7 @@ export function useCampaignActions(
   const addMonster = React.useCallback(async (monsterId: string, qty: number, opts?: AddMonsterOptions) => {
     if (!state.selectedEncounterId) return;
     try {
-      await api(`/api/encounters/${state.selectedEncounterId}/combatants/addMonster`, jsonInit("POST", {
+      await postEncounterCombatants(state.selectedEncounterId, "addMonster", {
         monsterId,
         qty,
         friendly: Boolean(opts?.friendly ?? false),
@@ -97,14 +98,14 @@ export function useCampaignActions(
         hpMax: opts?.hpMax,
         hpDetail: opts?.hpDetails ?? undefined,
         attackOverrides: opts?.attackOverrides ?? null
-      }));
+      });
     } catch (e) { apiErr(e); }
   }, [state.selectedEncounterId]);
 
   const removeCombatant = React.useCallback(async (combatantId: string) => {
     if (!state.selectedEncounterId) return;
     try {
-      await api(`/api/encounters/${state.selectedEncounterId}/combatants/${combatantId}`, { method: "DELETE" });
+      await deleteEncounterCombatant(state.selectedEncounterId, combatantId);
     } catch (e) { apiErr(e); }
   }, [state.selectedEncounterId]);
 
@@ -188,7 +189,7 @@ export function useCampaignActions(
   const addINpcToEncounter = React.useCallback(async (inpcId: string) => {
     if (!state.selectedEncounterId) return;
     try {
-      await api(`/api/encounters/${state.selectedEncounterId}/combatants/addInpc`, jsonInit("POST", { inpcId }));
+      await postEncounterCombatants(state.selectedEncounterId, "addInpc", { inpcId });
     } catch (e) { apiErr(e); }
   }, [state.selectedEncounterId]);
 
@@ -217,14 +218,14 @@ export function useCampaignActions(
 
   const duplicateEncounter = React.useCallback(async (encounterId: string) => {
     try {
-      await api(`/api/encounters/${encounterId}/duplicate`, { method: "POST" });
+      await postEncounter(encounterId, "duplicate");
     } catch (e) { apiErr(e); }
   }, []);
 
   const deleteEncounter = React.useCallback(async (encounterId: string) => {
     if (!(await confirm({ title: "Delete encounter", message: "Delete this encounter?", intent: "danger" }))) return;
     try {
-      await api(`/api/encounters/${encounterId}`, { method: "DELETE" });
+      await deleteEncounterById(encounterId);
     } catch (e) { apiErr(e); }
   }, [confirm]);
 

@@ -35,17 +35,23 @@ const TreasureCreateBody = z.discriminatedUnion("source", [
 export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now, normalizeKey } = ctx.helpers;
+  const isListView = (value: unknown): boolean => {
+    const raw = String(value ?? "").trim().toLowerCase();
+    return raw === "list" || raw === "summary" || raw === "compact";
+  };
   const emitTreasureChange = (args: {
     campaignId: string;
     adventureId?: string | null;
     action: "upsert" | "delete" | "refresh";
     treasureId?: string;
+    treasure?: ReturnType<typeof toTreasureDto>;
   }) => {
     ctx.broadcast("treasure:delta", {
       campaignId: args.campaignId,
       adventureId: args.adventureId ?? null,
       action: args.action,
       ...(args.treasureId ? { treasureId: args.treasureId } : {}),
+      ...(args.treasure ? { treasure: args.treasure } : {}),
     });
   };
 
@@ -97,7 +103,24 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
         `SELECT ${TREASURE_COLS} FROM treasure WHERE campaign_id = ? AND adventure_id IS NULL ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC`
       )
       .all(campaignId) as Record<string, unknown>[];
-    res.json(rows.map(rowToTreasure).map(hydrateTreasureEntry).map(toTreasureDto));
+    const treasure = rows.map(rowToTreasure).map(hydrateTreasureEntry);
+    if (isListView(req.query.view)) {
+      return res.json(treasure.map((entry) => ({
+        id: entry.id,
+        campaignId: entry.campaignId,
+        adventureId: null as string | null,
+        itemId: entry.itemId,
+        name: entry.name,
+        qty: entry.qty,
+        rarity: entry.rarity,
+        type: entry.type,
+        attunement: entry.attunement,
+        magic: entry.magic,
+        sort: entry.sort,
+        updatedAt: entry.updatedAt,
+      })));
+    }
+    res.json(treasure.map(toTreasureDto));
   });
 
   app.get("/api/adventures/:adventureId/treasure", memberOrAdmin(db), (req, res) => {
@@ -110,7 +133,24 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
         `SELECT ${TREASURE_COLS} FROM treasure WHERE adventure_id = ? ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC`
       )
       .all(adventureId) as Record<string, unknown>[];
-    res.json(rows.map(rowToTreasure).map(hydrateTreasureEntry).map(toTreasureDto));
+    const treasure = rows.map(rowToTreasure).map(hydrateTreasureEntry);
+    if (isListView(req.query.view)) {
+      return res.json(treasure.map((entry) => ({
+        id: entry.id,
+        campaignId: entry.campaignId,
+        adventureId: entry.adventureId,
+        itemId: entry.itemId,
+        name: entry.name,
+        qty: entry.qty,
+        rarity: entry.rarity,
+        type: entry.type,
+        attunement: entry.attunement,
+        magic: entry.magic,
+        sort: entry.sort,
+        updatedAt: entry.updatedAt,
+      })));
+    }
+    res.json(treasure.map(toTreasureDto));
   });
 
   app.get("/api/treasure/:treasureId", memberOrAdmin(db), (req, res) => {
@@ -161,16 +201,18 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
       t,
       treasureId,
     );
+    const updatedRow = db
+      .prepare(`SELECT ${TREASURE_COLS} FROM treasure WHERE id = ?`)
+      .get(treasureId) as Record<string, unknown>;
+    const dto = toTreasureDto(hydrateTreasureEntry(rowToTreasure(updatedRow)));
     emitTreasureChange({
       campaignId: treasure.campaignId,
       adventureId: treasure.adventureId ?? null,
       action: "upsert",
       treasureId,
+      treasure: dto,
     });
-    const updatedRow = db
-      .prepare(`SELECT ${TREASURE_COLS} FROM treasure WHERE id = ?`)
-      .get(treasureId) as Record<string, unknown>;
-    res.json(toTreasureDto(hydrateTreasureEntry(rowToTreasure(updatedRow))));
+    res.json(dto);
   });
 
   app.post("/api/campaigns/:campaignId/treasure", dmOrAdmin(db), (req, res) => {
@@ -187,13 +229,15 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
       qty: b.qty,
     });
     if (out.error) return res.status(out.error.status).json({ ok: false, message: out.error.message });
+    const dto = toTreasureDto(hydrateTreasureEntry(out.entry));
     emitTreasureChange({
       campaignId,
       adventureId: null,
       action: "upsert",
       treasureId: out.entry.id,
+      treasure: dto,
     });
-    res.json(toTreasureDto(hydrateTreasureEntry(out.entry)));
+    res.json(dto);
   });
 
   app.post("/api/adventures/:adventureId/treasure", dmOrAdmin(db), (req, res) => {
@@ -212,13 +256,15 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
       qty: b.qty,
     });
     if (out.error) return res.status(out.error.status).json({ ok: false, message: out.error.message });
+    const dto = toTreasureDto(hydrateTreasureEntry(out.entry));
     emitTreasureChange({
       campaignId: aRow.campaign_id,
       adventureId,
       action: "upsert",
       treasureId: out.entry.id,
+      treasure: dto,
     });
-    res.json(toTreasureDto(hydrateTreasureEntry(out.entry)));
+    res.json(dto);
   });
 
   app.delete("/api/treasure/:treasureId", dmOrAdmin(db), (req, res) => {

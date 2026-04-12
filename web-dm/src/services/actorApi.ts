@@ -6,6 +6,7 @@ import type {
 } from "@beholden/shared/api";
 import { flattenCampaignCharacterDto, flattenEncounterActorDto } from "@beholden/shared/api";
 import { api } from "@/services/api";
+import { encounterCombatantsPath } from "@/services/encounterApi";
 
 export async function fetchCampaignCharacters(
   campaignId: string,
@@ -34,10 +35,10 @@ export async function fetchCampaignCharacter(
 }
 
 export async function fetchEncounterActors(encounterId: string): Promise<FlatEncounterActorDto[]> {
-  return (await api<EncounterActorDto[]>(`/api/encounters/${encounterId}/combatants`)).map(flattenEncounterActorDto);
+  return (await api<EncounterActorDto[]>(encounterCombatantsPath(encounterId))).map(flattenEncounterActorDto);
 }
 
 export async function fetchEncounterActor(encounterId: string, combatantId: string): Promise<FlatEncounterActorDto> {
-  const dto = await api<EncounterActorDto>(`/api/encounters/${encounterId}/combatants/${combatantId}`);
+  const dto = await api<EncounterActorDto>(encounterCombatantsPath(encounterId, combatantId));
   return flattenEncounterActorDto(dto);
 }

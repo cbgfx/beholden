@@ -115,6 +115,7 @@ export function MonsterBrowserPanel(props: {
             offset: String(offset),
             withTotal: "1",
             sort: sortMode,
+            fields: "id,name,cr,type,environment",
           });
           if (envFilter !== "all") params.set("env", envFilter);
           if (sizeFilter !== "all") params.set("sizes", sizeFilter);

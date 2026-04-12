@@ -106,6 +106,7 @@ export function useMonsterPickerState(args: {
               : "120",
           offset: "0",
           sort: sortMode,
+          fields: "id,name,cr,type,environment",
         });
         if (envFilter !== "all") params.set("env", envFilter);
         if (sizeFilter !== "all") params.set("sizes", sizeFilter);

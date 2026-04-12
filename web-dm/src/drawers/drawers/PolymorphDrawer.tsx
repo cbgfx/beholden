@@ -1,7 +1,7 @@
 import React from "react";
 import { getPolymorphCondition, type SharedPolymorphCondition } from "@beholden/shared/domain";
 import { Button } from "@/ui/Button";
-import { api, jsonInit } from "@/services/api";
+import { api } from "@/services/api";
 import { theme } from "@/theme/theme";
 import { useStore, type DrawerState } from "@/store";
 import type { DrawerContent } from "@/drawers/types";
@@ -13,6 +13,7 @@ import {
   PolymorphCreatureList,
   PolymorphCurrentBanner,
 } from "./PolymorphDrawerParts";
+import { putEncounterCombatant } from "@/services/encounterApi";
 
 type PolymorphDrawerState = Exclude<
   Extract<DrawerState, { type: "polymorphTransform" }>,
@@ -75,6 +76,7 @@ export function PolymorphDrawer(props: {
               ? "200"
               : "120",
           sort: "crAsc",
+          fields: "id,name,cr,type,environment",
         });
         if (typeFilter !== "all") params.set("types", typeFilter);
         if (crMax.trim()) params.set("crMax", crMax.trim());
@@ -143,14 +145,11 @@ export function PolymorphDrawer(props: {
 
       setLoading(true);
       try {
-        await api(
-          `/api/encounters/${props.drawer.encounterId}/combatants/${combatant.id}`,
-          jsonInit("PUT", {
-            hpCurrent: hp,
-            overrides: nextOverrides,
-            conditions: nextConditions,
-          }),
-        );
+        await putEncounterCombatant(props.drawer.encounterId, combatant.id, {
+          hpCurrent: hp,
+          overrides: nextOverrides,
+          conditions: nextConditions,
+        });
         props.close();
       } finally {
         setLoading(false);
@@ -171,14 +170,11 @@ export function PolymorphDrawer(props: {
 
     setLoading(true);
     try {
-      await api(
-        `/api/encounters/${props.drawer.encounterId}/combatants/${combatant.id}`,
-        jsonInit("PUT", {
-          hpCurrent: currentPolymorph.originalHpCurrent,
-          overrides: nextOverrides,
-          conditions: nextConditions,
-        }),
-      );
+      await putEncounterCombatant(props.drawer.encounterId, combatant.id, {
+        hpCurrent: currentPolymorph.originalHpCurrent,
+        overrides: nextOverrides,
+        conditions: nextConditions,
+      });
       props.close();
     } finally {
       setLoading(false);
