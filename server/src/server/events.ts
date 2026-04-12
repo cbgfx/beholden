@@ -8,20 +8,19 @@ export type Id = string;
 export type HelloPayload = { ok: true; time: number };
 
 export type CampaignsChangedPayload = { campaignId: Id };
+export type AdventuresDeltaPayload = {
+  campaignId: Id;
+  action: "upsert" | "delete" | "refresh";
+  adventureId?: Id;
+};
 
-export type AdventuresChangedPayload =
-  | { campaignId: Id }
-  | { adventureId: Id };
+export type EncountersDeltaPayload = {
+  campaignId: Id;
+  adventureId: Id;
+  action: "upsert" | "delete" | "refresh";
+  encounterId?: Id;
+};
 
-export type EncountersChangedPayload =
-  | { campaignId: Id; adventureId: Id }
-  | { campaignId: Id }
-  | { encounterId: Id };
-
-export type NotesChangedPayload =
-  | { campaignId: Id; adventureId: Id | null }
-  | { campaignId: Id }
-  | { noteId: Id };
 export type NotesDeltaPayload = {
   campaignId: Id;
   adventureId?: Id | null;
@@ -29,7 +28,6 @@ export type NotesDeltaPayload = {
   noteId?: Id;
 };
 
-export type PlayersChangedPayload = { campaignId: Id };
 export type PlayersDeltaPayload = {
   campaignId: Id;
   action: "upsert" | "delete" | "refresh";
@@ -37,9 +35,12 @@ export type PlayersDeltaPayload = {
   characterId?: Id | null;
 };
 
-export type InpcsChangedPayload = { campaignId: Id };
+export type InpcsDeltaPayload = {
+  campaignId: Id;
+  action: "upsert" | "delete" | "refresh";
+  inpcId?: Id;
+};
 
-export type TreasureChangedPayload = { campaignId: Id };
 export type TreasureDeltaPayload = {
   campaignId: Id;
   adventureId?: Id | null;
@@ -47,13 +48,16 @@ export type TreasureDeltaPayload = {
   treasureId?: Id;
 };
 
-export type PartyInventoryChangedPayload = { campaignId: Id };
 export type PartyInventoryDeltaPayload = {
   campaignId: Id;
   action: "upsert" | "delete" | "refresh";
   itemId?: Id;
 };
-export type BastionsChangedPayload = { campaignId: Id };
+export type BastionsDeltaPayload = {
+  campaignId: Id;
+  action: "upsert" | "delete" | "refresh";
+  bastionId?: Id;
+};
 
 export type CompendiumChangedPayload =
   | { cleared: true }
@@ -78,7 +82,11 @@ export type CompendiumChangedPayload =
   | { spellUpdated: string }
   | { spellDeleted: string };
 
-export type EncounterCombatantsChangedPayload = { encounterId: Id };
+export type EncounterCombatantsDeltaPayload = {
+  encounterId: Id;
+  action: "upsert" | "delete" | "refresh";
+  combatantId?: Id;
+};
 
 export type EncounterCombatStateChangedPayload = { encounterId: Id };
 
@@ -89,21 +97,17 @@ export interface ServerEventMap {
   hello: HelloPayload;
 
   "campaigns:changed": CampaignsChangedPayload;
-  "adventures:changed": AdventuresChangedPayload;
-  "encounters:changed": EncountersChangedPayload;
-  "notes:changed": NotesChangedPayload;
+  "adventures:delta": AdventuresDeltaPayload;
+  "encounters:delta": EncountersDeltaPayload;
   "notes:delta": NotesDeltaPayload;
-  "players:changed": PlayersChangedPayload;
   "players:delta": PlayersDeltaPayload;
-  "inpcs:changed": InpcsChangedPayload;
-  "treasure:changed": TreasureChangedPayload;
+  "inpcs:delta": InpcsDeltaPayload;
   "treasure:delta": TreasureDeltaPayload;
-  "partyInventory:changed": PartyInventoryChangedPayload;
   "partyInventory:delta": PartyInventoryDeltaPayload;
-  "bastions:changed": BastionsChangedPayload;
+  "bastions:delta": BastionsDeltaPayload;
   "compendium:changed": CompendiumChangedPayload;
 
-  "encounter:combatantsChanged": EncounterCombatantsChangedPayload;
+  "encounter:combatantsDelta": EncounterCombatantsDeltaPayload;
   "encounter:combatStateChanged": EncounterCombatStateChangedPayload;
 
   "save:pending": SavePendingPayload;

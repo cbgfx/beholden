@@ -366,7 +366,6 @@ export function syncAssignedPlayerRows(
         updateCampaignCharacterLive(db, player_id, current, livePatch, updatedAt);
       }
     }
-    broadcast("players:changed", { campaignId: campaign_id });
     broadcast("players:delta", {
       campaignId: campaign_id,
       action: "upsert",
@@ -382,18 +381,23 @@ export function broadcastPlayerCombatantChanges(
   broadcast: BroadcastFn,
   playerId: string,
 ) {
-  const encounterIds = (
+  const combatants = (
     db
       .prepare(
-        `SELECT DISTINCT encounter_id
+        `SELECT id, encounter_id
          FROM combatants
          WHERE base_type = 'player' AND base_id = ?`,
       )
-      .all(playerId) as { encounter_id: string }[]
-  ).map((r) => r.encounter_id);
+      .all(playerId) as { id: string; encounter_id: string }[]
+  );
 
-  for (const encounterId of encounterIds) {
-    broadcast("encounter:combatantsChanged", { encounterId });
+  for (const { encounter_id, id } of combatants) {
+    const encounterId = encounter_id;
+    broadcast("encounter:combatantsDelta", {
+      encounterId,
+      action: "upsert",
+      combatantId: id,
+    });
   }
 }
 

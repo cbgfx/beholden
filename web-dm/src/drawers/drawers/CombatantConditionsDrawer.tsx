@@ -69,10 +69,9 @@ export function CombatantConditionsDrawer(props: {
       }));
       try {
         await api(`/api/encounters/${d.encounterId}/combatants/${d.combatantId}`, jsonInit("PUT", { conditions: next }));
-        await props.refreshEncounter(d.encounterId);
       } catch { /* Non-blocking */ }
     },
-    [props.drawer, props.refreshEncounter]
+    [props.drawer]
   );
 
   // Keep latest-value refs in sync (needed for the unmount flush).

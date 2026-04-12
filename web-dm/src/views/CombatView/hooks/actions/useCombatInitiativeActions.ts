@@ -1,5 +1,5 @@
 import * as React from "react";
-import { api } from "@/services/api";
+import { api, jsonInit } from "@/services/api";
 import type { EncounterActor } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
 import { dexModFromMonster } from "@/views/CombatView/utils/combat";
@@ -10,7 +10,6 @@ type Args = {
   inpcsById: Record<string, { monsterId?: string } | undefined>;
   monsterCache: Record<string, MonsterDetail>;
   setMonsterCache: (next: Record<string, MonsterDetail>) => void;
-  refresh: () => Promise<void>;
 };
 
 export function useCombatInitiativeActions({
@@ -18,8 +17,7 @@ export function useCombatInitiativeActions({
   orderedCombatants,
   inpcsById,
   monsterCache,
-  setMonsterCache,
-  refresh
+  setMonsterCache
 }: Args) {
   const rollInitiativeForMonsters = React.useCallback(async () => {
     if (!encounterId) return;
@@ -54,14 +52,9 @@ export function useCombatInitiativeActions({
       const mod = dexModFromMonster(d);
       const roll = 1 + Math.floor(Math.random() * 20);
       const init = roll + mod;
-      await api(`/api/encounters/${encounterId}/combatants/${c.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initiative: init })
-      });
+      await api(`/api/encounters/${encounterId}/combatants/${c.id}`, jsonInit("PUT", { initiative: init }));
     }
-    await refresh();
-  }, [encounterId, orderedCombatants, monsterCache, setMonsterCache, refresh, inpcsById]);
+  }, [encounterId, orderedCombatants, monsterCache, setMonsterCache, inpcsById]);
 
   return { rollInitiativeForMonsters };
 }

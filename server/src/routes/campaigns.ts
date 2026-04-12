@@ -179,9 +179,9 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
 
     const updatedEncounterIds = [...new Set(combatantRows.map((row) => row.encounter_id as string))];
 
-    ctx.broadcast("players:changed", { campaignId });
+    ctx.broadcast("players:delta", { campaignId, action: "refresh" });
     for (const encounterId of updatedEncounterIds) {
-      ctx.broadcast("encounter:combatantsChanged", { encounterId });
+      ctx.broadcast("encounter:combatantsDelta", { encounterId, action: "refresh" });
     }
 
     res.json({ ok: true, playersUpdated: playersResult.changes, encountersUpdated: updatedEncounterIds.length });
@@ -243,7 +243,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     db.prepare("UPDATE campaigns SET shared_notes = ?, updated_at = ? WHERE id = ?").run(sharedNotes, t, campaignId);
     ctx.broadcast("campaigns:changed", { campaignId });
     // Also notify player clients so web-player refreshes character data.
-    ctx.broadcast("players:changed", { campaignId });
+    ctx.broadcast("players:delta", { campaignId, action: "refresh" });
     res.json({ ok: true, sharedNotes });
   });
 

@@ -25,6 +25,19 @@ const EncounterUpdateBody = z.object({
 export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
+  const emitEncounterChange = (args: {
+    campaignId: string;
+    adventureId: string;
+    action: "upsert" | "delete" | "refresh";
+    encounterId?: string;
+  }) => {
+    ctx.broadcast("encounters:delta", {
+      campaignId: args.campaignId,
+      adventureId: args.adventureId,
+      action: args.action,
+      ...(args.encounterId ? { encounterId: args.encounterId } : {}),
+    });
+  };
 
   app.get("/api/adventures/:adventureId/encounters", memberOrAdmin(db), (req, res) => {
     const adventureId = requireParam(req, res, "adventureId");
@@ -35,6 +48,65 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
       )
       .all(adventureId) as Record<string, unknown>[];
     res.json(rows.map(rowToEncounter));
+  });
+
+  app.get("/api/adventures/:adventureId/encounters/combatantsSummary", memberOrAdmin(db), (req, res) => {
+    const adventureId = requireParam(req, res, "adventureId");
+    if (!adventureId) return;
+
+    const idsRaw = String(req.query.ids ?? "").trim();
+    const encounterIds = idsRaw
+      ? Array.from(new Set(idsRaw.split(",").map((id) => id.trim()).filter(Boolean)))
+      : [];
+
+    const params: unknown[] = [adventureId];
+    const parts: string[] = [
+      `SELECT c.encounter_id, c.base_type, c.base_id, c.live_json
+       FROM combatants c
+       JOIN encounters e ON e.id = c.encounter_id
+       WHERE e.adventure_id = ?
+         AND c.base_type IN ('monster', 'inpc')`,
+    ];
+    if (encounterIds.length > 0) {
+      parts.push(`AND c.encounter_id IN (${encounterIds.map(() => "?").join(",")})`);
+      params.push(...encounterIds);
+    }
+    parts.push("ORDER BY c.encounter_id ASC, COALESCE(c.sort, 9999) ASC, c.created_at ASC");
+
+    const rows = db.prepare(parts.join("\n")).all(...params) as Array<{
+      encounter_id: string;
+      base_type: "monster" | "inpc";
+      base_id: string;
+      live_json: string;
+    }>;
+
+    const summaryRows = rows.map((row) => {
+      let friendly = false;
+      try {
+        const parsed = JSON.parse(row.live_json ?? "{}") as { friendly?: unknown };
+        friendly = parsed?.friendly === true || parsed?.friendly === 1;
+      } catch {
+        friendly = false;
+      }
+      return {
+        encounterId: row.encounter_id,
+        baseType: row.base_type,
+        baseId: row.base_id,
+        friendly,
+      };
+    });
+
+    res.json({ rows: summaryRows });
+  });
+
+  app.get("/api/encounters/:encounterId", memberOrAdmin(db), (req, res) => {
+    const encounterId = requireParam(req, res, "encounterId");
+    if (!encounterId) return;
+    const row = db
+      .prepare(`SELECT ${ENCOUNTER_COLS} FROM encounters WHERE id = ?`)
+      .get(encounterId) as Record<string, unknown> | undefined;
+    if (!row) return res.status(404).json({ ok: false, message: "Encounter not found" });
+    res.json(rowToEncounter(row));
   });
 
   app.post("/api/adventures/:adventureId/encounters", dmOrAdmin(db), (req, res) => {
@@ -55,9 +127,11 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
       "INSERT INTO encounters (id, campaign_id, adventure_id, name, status, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     ).run(id, advRow.campaign_id, adventureId, name, "Open", sort, t, t);
     ensureCombat(db, id);
-    ctx.broadcast("encounters:changed", {
+    emitEncounterChange({
       campaignId: advRow.campaign_id,
       adventureId,
+      action: "upsert",
+      encounterId: id,
     });
     const row = db
       .prepare(`SELECT ${ENCOUNTER_COLS} FROM encounters WHERE id = ?`)
@@ -95,9 +169,11 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
       "UPDATE encounters SET name=?, status=?, combat_round=?, combat_active_combatant_id=?, updated_at=? WHERE id=?"
     ).run(name, status, combatRound, combatActiveCombatantId, t, encounterId);
 
-    ctx.broadcast("encounters:changed", {
+    emitEncounterChange({
       campaignId: e.campaignId,
       adventureId: e.adventureId,
+      action: "upsert",
+      encounterId,
     });
     const updated = db
       .prepare(`SELECT ${ENCOUNTER_COLS} FROM encounters WHERE id = ?`)
@@ -115,7 +191,12 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
       return res.status(404).json({ ok: false, message: "Encounter not found" });
     // FK CASCADE: encounter → combats, combatants
     db.prepare("DELETE FROM encounters WHERE id = ?").run(encounterId);
-    ctx.broadcast("encounters:changed", { encounterId });
+    emitEncounterChange({
+      campaignId: encRow.campaign_id,
+      adventureId: encRow.adventure_id,
+      action: "delete",
+      encounterId,
+    });
     res.json({ ok: true });
   });
 
@@ -174,9 +255,11 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
       }
     })();
 
-    ctx.broadcast("encounters:changed", {
+    emitEncounterChange({
       campaignId: enc.campaignId,
       adventureId: enc.adventureId,
+      action: "upsert",
+      encounterId: newId,
     });
     const newRow = db
       .prepare(`SELECT ${ENCOUNTER_COLS} FROM encounters WHERE id = ?`)

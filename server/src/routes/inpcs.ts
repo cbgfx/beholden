@@ -34,6 +34,17 @@ const InpcUpdateBody = z.object({
 export function registerInpcRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
+  const emitInpcChange = (args: {
+    campaignId: string;
+    action: "upsert" | "delete" | "refresh";
+    inpcId?: string;
+  }) => {
+    ctx.broadcast("inpcs:delta", {
+      campaignId: args.campaignId,
+      action: args.action,
+      ...(args.inpcId ? { inpcId: args.inpcId } : {}),
+    });
+  };
 
   app.get("/api/campaigns/:campaignId/inpcs", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
@@ -42,6 +53,17 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
       .prepare(`SELECT ${INPC_COLS} FROM inpcs WHERE campaign_id = ?`)
       .all(campaignId) as Record<string, unknown>[];
     res.json(rows.map(rowToINpc));
+  });
+
+  app.get("/api/campaigns/:campaignId/inpcs/:inpcId", dmOrAdmin(db), (req, res) => {
+    const campaignId = requireParam(req, res, "campaignId");
+    const inpcId = requireParam(req, res, "inpcId");
+    if (!campaignId || !inpcId) return;
+    const row = db
+      .prepare(`SELECT ${INPC_COLS} FROM inpcs WHERE campaign_id = ? AND id = ?`)
+      .get(campaignId, inpcId) as Record<string, unknown> | undefined;
+    if (!row) return res.status(404).json({ ok: false, message: "Not found" });
+    res.json(rowToINpc(row));
   });
 
   app.post("/api/campaigns/:campaignId/inpcs", dmOrAdmin(db), (req, res) => {
@@ -99,7 +121,12 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
       });
     }
 
-    ctx.broadcast("inpcs:changed", { campaignId });
+    const singleCreated = created.length === 1 ? created[0] : null;
+    if (singleCreated) {
+      emitInpcChange({ campaignId, action: "upsert", inpcId: singleCreated.id });
+    } else {
+      emitInpcChange({ campaignId, action: "refresh" });
+    }
     res.json(created.length === 1 ? created[0] : { ok: true, created });
   });
 
@@ -130,7 +157,7 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
       WHERE id=?
     `).run(name, label, friendly ? 1 : 0, hpMax, hpCurrent, hpDetails, ac, acDetails, t, inpcId);
 
-    ctx.broadcast("inpcs:changed", { campaignId: existing.campaignId });
+    emitInpcChange({ campaignId: existing.campaignId, action: "upsert", inpcId });
     const updated = db.prepare(`SELECT ${INPC_COLS} FROM inpcs WHERE id = ?`).get(inpcId) as Record<string, unknown>;
     res.json(rowToINpc(updated));
   });
@@ -146,22 +173,26 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
     const existing = rowToINpc(existingRow);
 
     // Remove inpc-type combatants from all encounters
-    const affectedEncounters = db
+    const removedCombatants = db
       .prepare(
-        "SELECT DISTINCT encounter_id FROM combatants WHERE base_type = 'inpc' AND base_id = ?"
+        "SELECT id, encounter_id FROM combatants WHERE base_type = 'inpc' AND base_id = ?"
       )
-      .all(inpcId) as { encounter_id: string }[];
+      .all(inpcId) as { id: string; encounter_id: string }[];
 
     db.prepare(
       "DELETE FROM combatants WHERE base_type = 'inpc' AND base_id = ?"
     ).run(inpcId);
 
-    for (const { encounter_id } of affectedEncounters) {
-      ctx.broadcast("encounter:combatantsChanged", { encounterId: encounter_id });
+    for (const { encounter_id, id } of removedCombatants) {
+      ctx.broadcast("encounter:combatantsDelta", {
+        encounterId: encounter_id,
+        action: "delete",
+        combatantId: id,
+      });
     }
 
     db.prepare("DELETE FROM inpcs WHERE id = ?").run(inpcId);
-    ctx.broadcast("inpcs:changed", { campaignId: existing.campaignId });
+    emitInpcChange({ campaignId: existing.campaignId, action: "delete", inpcId });
     res.json({ ok: true });
   });
 }

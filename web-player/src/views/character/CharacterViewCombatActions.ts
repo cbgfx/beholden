@@ -1,5 +1,6 @@
 import type React from "react";
-import { api, jsonInit } from "@/services/api";
+import { api } from "@/services/api";
+import { patchMyCharacter, putMyCharacter } from "@/views/character/characterApi";
 import {
   shouldResetOnRest,
   parseLeadingNumberLoose,
@@ -191,7 +192,7 @@ export function buildCharacterRuntimeActions(args: {
     const nextUsedSpellSlots = /S/i.test(slotsReset) ? (currentCharacterData.usedSpellSlots ?? {}) : {};
     const nextInventory = inventory.map((item) => ((item.chargesMax ?? 0) > 0 ? { ...item, charges: item.chargesMax } : item));
 
-    await api(`/api/me/characters/${char.id}`, jsonInit("PUT", {
+    await putMyCharacter(char.id, {
       hpCurrent: effectiveHpMax,
       characterData: {
         ...currentCharacterData,
@@ -200,14 +201,14 @@ export function buildCharacterRuntimeActions(args: {
         usedSpellSlots: nextUsedSpellSlots,
         inventory: nextInventory,
       },
-    }));
+    });
 
     const nextDeathSaves = { success: 0, fail: 0 };
-    await api(`/api/me/characters/${char.id}/deathSaves`, jsonInit("PATCH", nextDeathSaves));
+    await patchMyCharacter(char.id, "deathSaves", nextDeathSaves);
 
     const hasResourceful = raceDetail?.traits?.some((trait) => /^resourceful$/i.test(trait.name)) ?? false;
     if (hasResourceful && !(overrides.inspiration ?? false)) {
-      await api(`/api/me/characters/${char.id}/inspiration`, jsonInit("PATCH", { inspiration: true }));
+      await patchMyCharacter(char.id, "inspiration", { inspiration: true });
     }
 
     setChar((prev) => prev ? {
@@ -242,7 +243,7 @@ export function buildCharacterRuntimeActions(args: {
     const hasResourceful = raceDetail?.traits?.some((trait) => /^resourceful$/i.test(trait.name)) ?? false;
     const nextInspiration = hasResourceful ? true : (overrides.inspiration ?? false);
 
-    await api(`/api/me/characters/${char.id}`, jsonInit("PUT", {
+    await putMyCharacter(char.id, {
       hpCurrent: effectiveHpMax,
       characterData: {
         ...currentCharacterData,
@@ -251,12 +252,12 @@ export function buildCharacterRuntimeActions(args: {
         usedSpellSlots: nextUsedSpellSlots,
         inventory: nextInventory,
       },
-    }));
+    });
     await Promise.all([
-      api(`/api/me/characters/${char.id}/deathSaves`, jsonInit("PATCH", nextDeathSaves)),
-      api(`/api/me/characters/${char.id}/overrides`, jsonInit("PATCH", nextOverrides)),
+      patchMyCharacter(char.id, "deathSaves", nextDeathSaves),
+      patchMyCharacter(char.id, "overrides", nextOverrides),
       nextInspiration !== (overrides.inspiration ?? false)
-        ? api(`/api/me/characters/${char.id}/inspiration`, jsonInit("PATCH", { inspiration: nextInspiration }))
+        ? patchMyCharacter(char.id, "inspiration", { inspiration: nextInspiration })
         : Promise.resolve(null),
     ]);
 
@@ -278,14 +279,14 @@ export function buildCharacterRuntimeActions(args: {
 
   const handleToggleInspiration = async () => {
     const next = !(overrides.inspiration ?? false);
-    await api(`/api/me/characters/${char.id}/inspiration`, jsonInit("PATCH", { inspiration: next }));
+    await patchMyCharacter(char.id, "inspiration", { inspiration: next });
     setChar((prev) => prev ? { ...prev, overrides: { ...prev.overrides!, inspiration: next } } : prev);
   };
 
   const saveDeathSaves = async (next: { success: number; fail: number }) => {
     setDsSaving(true);
     try {
-      await api(`/api/me/characters/${char.id}/deathSaves`, jsonInit("PATCH", next));
+      await patchMyCharacter(char.id, "deathSaves", next);
       setChar((prev) => prev ? { ...prev, deathSaves: next } : prev);
     } catch (error) {
       console.error("Death saves update failed:", error);
@@ -301,9 +302,9 @@ export function buildCharacterRuntimeActions(args: {
   }) => {
     const { hpCurrent, overrides: nextOverrides, conditions: nextConditions } = params;
     await Promise.all([
-      api(`/api/me/characters/${char.id}`, jsonInit("PUT", { hpCurrent })),
-      api(`/api/me/characters/${char.id}/overrides`, jsonInit("PATCH", nextOverrides)),
-      api(`/api/me/characters/${char.id}/conditions`, jsonInit("PATCH", { conditions: nextConditions })),
+      putMyCharacter(char.id, { hpCurrent }),
+      patchMyCharacter(char.id, "overrides", nextOverrides),
+      patchMyCharacter(char.id, "conditions", { conditions: nextConditions }),
     ]);
     setChar((prev) => prev ? {
       ...prev,
@@ -402,7 +403,7 @@ export function buildCharacterRuntimeActions(args: {
         nextCharacterData = { ...currentCharacterData, resources: nextResources };
         await saveCharacterData(nextCharacterData);
       }
-      await api(`/api/me/characters/${char.id}/conditions`, jsonInit("PATCH", { conditions: next }));
+      await patchMyCharacter(char.id, "conditions", { conditions: next });
       setChar((prev) => prev ? { ...prev, conditions: next, characterData: { ...(prev.characterData ?? {}), ...nextCharacterData } } : prev);
     } catch (error) {
       fetchChar();

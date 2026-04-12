@@ -48,11 +48,11 @@ type Bastion = {
   hirelingsTotal?: number;
 };
 
-type BastionsResponse = {
+type BastionResponse = {
   ok: boolean;
   role: "dm" | "player";
   currentUserPlayerIds: string[];
-  bastions: Bastion[];
+  bastion: Bastion;
 };
 
 type BastionCompendiumResponse = {
@@ -174,18 +174,17 @@ export function BastionView() {
     setError(null);
     Promise.all([
       api<BastionCompendiumResponse>("/api/compendium/bastions"),
-      api<BastionsResponse>(`/api/campaigns/${campaignId}/bastions`),
+      api<BastionResponse>(`/api/campaigns/${campaignId}/bastions/${bastionId}`),
     ])
       .then(([compendiumData, bastionData]) => {
         setCompendium(compendiumData);
         setCurrentUserPlayerIds(bastionData.currentUserPlayerIds ?? []);
-        const found = bastionData.bastions.find((entry) => entry.id === bastionId) ?? null;
-        if (!found) {
+        if (!bastionData.bastion) {
           setError("Bastion not found.");
           setBastion(null);
           return;
         }
-        setBastion(found);
+        setBastion(bastionData.bastion);
       })
       .catch((e) => {
         setError(e?.message ?? "Failed to load Bastion.");
@@ -196,10 +195,27 @@ export function BastionView() {
   React.useEffect(() => { load(); }, [load]);
 
   useWs(React.useCallback((msg) => {
-    if (msg.type !== "bastions:changed") return;
     const changedCampaignId = (msg.payload as any)?.campaignId as string | undefined;
-    if (changedCampaignId === campaignId) load();
-  }, [campaignId, load]));
+    if (changedCampaignId !== campaignId) return;
+
+    if (msg.type === "bastions:delta") {
+      const payload = (msg.payload as any) as { action?: "upsert" | "delete" | "refresh"; bastionId?: string };
+      if (payload.action === "delete" && payload.bastionId === bastionId) {
+        setBastion(null);
+        setError("Bastion not found.");
+        return;
+      }
+      if (payload.action === "upsert" && payload.bastionId === bastionId) {
+        load();
+        return;
+      }
+      if (payload.action === "refresh") {
+        load();
+        return;
+      }
+    }
+
+  }, [bastionId, campaignId, load]));
 
   // Auto-save with debounce
   const scheduleAutoSave = React.useCallback(() => {

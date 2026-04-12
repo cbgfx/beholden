@@ -10,12 +10,22 @@ export type Action =
   // Keeps refreshAll dep-free of state.selectedCampaignId.
   | { type: "autoSelectFirstCampaign"; campaigns: Campaign[] }
   | { type: "setAdventures"; adventures: Adventure[] }
+  | { type: "upsertAdventure"; adventure: Adventure }
+  | { type: "removeAdventure"; adventureId: string }
   | { type: "selectAdventure"; adventureId: string | null }
   | { type: "setEncounters"; encounters: Encounter[] }
+  | { type: "upsertEncounter"; encounter: Encounter }
+  | { type: "removeEncounter"; encounterId: string }
   | { type: "selectEncounter"; encounterId: string | null }
   | { type: "setPlayers"; players: CampaignCharacter[] }
+  | { type: "upsertPlayer"; player: CampaignCharacter }
+  | { type: "removePlayer"; playerId: string }
   | { type: "setINpcs"; inpcs: INpc[] }
+  | { type: "upsertINpc"; inpc: INpc }
+  | { type: "removeINpc"; inpcId: string }
   | { type: "setCombatants"; combatants: EncounterActor[] }
+  | { type: "upsertCombatant"; combatant: EncounterActor }
+  | { type: "removeCombatant"; combatantId: string }
   | { type: "mergeMonsterDetails"; patch: Record<string, MonsterDetail> }
   | { type: "setCampaignNotes"; notes: Note[] }
   | { type: "setAdventureNotes"; notes: Note[] }

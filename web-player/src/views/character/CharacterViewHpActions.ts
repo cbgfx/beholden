@@ -1,5 +1,5 @@
 import type React from "react";
-import { api, jsonInit } from "@/services/api";
+import { patchMyCharacter, putMyCharacter } from "@/views/character/characterApi";
 import { hasDiceTerm, rollDiceExpr } from "@/lib/dice";
 import type { Character, PolymorphConditionData, SheetOverrides } from "@/views/character/CharacterViewHelpers";
 
@@ -59,7 +59,7 @@ export function buildCharacterHpActions(args: {
     try {
       if (kind === "heal") {
         const newHp = Math.min(char.hpCurrent + amt, effectiveHpMax);
-        await api(`/api/me/characters/${char.id}`, jsonInit("PUT", { hpCurrent: newHp }));
+        await putMyCharacter(char.id, { hpCurrent: newHp });
         setChar((prev) => prev ? { ...prev, hpCurrent: newHp } : prev);
       } else {
         const currentTemp = Math.max(0, Number(overrides.tempHp ?? 0) || 0);
@@ -73,9 +73,9 @@ export function buildCharacterHpActions(args: {
           const nextOverrides = nextTemp === currentTemp
             ? null
             : { ...overrides, tempHp: nextTemp };
-          await api(`/api/me/characters/${char.id}`, jsonInit("PUT", { hpCurrent: newHp }));
+          await putMyCharacter(char.id, { hpCurrent: newHp });
           if (nextOverrides) {
-            await api(`/api/me/characters/${char.id}/overrides`, jsonInit("PATCH", nextOverrides));
+            await patchMyCharacter(char.id, "overrides", nextOverrides);
           }
           setChar((prev) => prev ? {
             ...prev,

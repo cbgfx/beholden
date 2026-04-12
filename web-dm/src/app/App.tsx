@@ -107,8 +107,6 @@ function AppInner() {
     selectedEncounterId: state.selectedEncounterId,
     dispatch,
     refreshAll,
-    refreshCampaign,
-    refreshAdventure,
     refreshEncounter,
   });
 

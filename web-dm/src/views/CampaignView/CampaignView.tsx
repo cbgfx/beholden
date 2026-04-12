@@ -65,6 +65,7 @@ export function CampaignView(props: {
   }, [encounters, selectedEncounterId]);
 
   const { encountersForPanel } = useOpenEncounterMetrics({
+    selectedAdventureId,
     encounters,
     players,
     inpcs,

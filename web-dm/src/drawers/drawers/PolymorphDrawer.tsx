@@ -151,7 +151,6 @@ export function PolymorphDrawer(props: {
             conditions: nextConditions,
           }),
         );
-        await props.refreshEncounter(props.drawer.encounterId);
         props.close();
       } finally {
         setLoading(false);
@@ -180,7 +179,6 @@ export function PolymorphDrawer(props: {
           conditions: nextConditions,
         }),
       );
-      await props.refreshEncounter(props.drawer.encounterId);
       props.close();
     } finally {
       setLoading(false);

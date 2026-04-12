@@ -1,5 +1,5 @@
 import * as React from "react";
-import { api } from "@/services/api";
+import { api, jsonInit } from "@/services/api";
 import type { EncounterActor } from "@/domain/types/domain";
 import { rollDiceExpr } from "@/views/CombatView/utils/dice";
 import { resolveCombatantDamage } from "@/views/CombatView/utils/polymorphDamage";
@@ -39,10 +39,9 @@ type Args = {
   delta: string;
   setDelta: (v: string) => void;
   target: EncounterActor | null;
-  refresh: () => Promise<void>;
 };
 
-export function useCombatHpActions({ encounterId, delta, setDelta, target, refresh }: Args) {
+export function useCombatHpActions({ encounterId, delta, setDelta, target }: Args) {
   const [concentrationAlert, setConcentrationAlert] = React.useState<{ name: string; dc: number } | null>(null);
 
   const applyHpDelta = React.useCallback(
@@ -67,16 +66,11 @@ export function useCombatHpActions({ encounterId, delta, setDelta, target, refre
         const resolved = resolveCombatantDamage(target, amount);
         if (!resolved) return;
         nextHp = resolved.hpCurrent;
-        await api(`/api/encounters/${encounterId}/combatants/${target.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            hpCurrent: resolved.hpCurrent,
-            overrides: resolved.overrides,
-            ...(resolved.conditions ? { conditions: resolved.conditions } : {}),
-          })
-        });
-        await refresh();
+        await api(`/api/encounters/${encounterId}/combatants/${target.id}`, jsonInit("PUT", {
+          hpCurrent: resolved.hpCurrent,
+          overrides: resolved.overrides,
+          ...(resolved.conditions ? { conditions: resolved.conditions } : {}),
+        }));
         setDelta("");
 
         if (amount > 0 && target.conditions?.some(c => c.key === "concentration")) {
@@ -90,18 +84,13 @@ export function useCombatHpActions({ encounterId, delta, setDelta, target, refre
         else nextHp = nextHp + amount;
       }
 
-      await api(`/api/encounters/${encounterId}/combatants/${target.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          hpCurrent: nextHp,
-          overrides: {
-            ...overrides,
-            tempHp: nextTemp
-          }
-        })
-      });
-      await refresh();
+      await api(`/api/encounters/${encounterId}/combatants/${target.id}`, jsonInit("PUT", {
+        hpCurrent: nextHp,
+        overrides: {
+          ...overrides,
+          tempHp: nextTemp
+        }
+      }));
       setDelta("");
 
       // Concentration check: if damage was dealt to a concentrating combatant, fire a reminder.
@@ -110,7 +99,7 @@ export function useCombatHpActions({ encounterId, delta, setDelta, target, refre
         setConcentrationAlert({ name: target.label || target.name, dc });
       }
     },
-    [encounterId, target, delta, refresh, setDelta]
+    [encounterId, target, delta, setDelta]
   );
 
   return {

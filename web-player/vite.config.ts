@@ -23,7 +23,19 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          return id.includes("react-router-dom") ? "vendor-router" : undefined;
+          const normalizedId = id.replaceAll("\\", "/");
+          if (normalizedId.includes("react-router-dom")) return "vendor-router";
+
+          // Keep heavy character rules in a dedicated async chunk that can be cached across
+          // CharacterView, CharacterCreatorView, and LevelUpView.
+          if (
+            normalizedId.includes("/domain/character/parseFeatureEffects") ||
+            normalizedId.includes("/domain/character/parseFeatureEffectsDerived")
+          ) {
+            return "character-feature-effects";
+          }
+
+          return undefined;
         },
       },
     },

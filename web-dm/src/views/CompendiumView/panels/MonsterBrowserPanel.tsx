@@ -170,34 +170,53 @@ export function MonsterBrowserPanel(props: {
       setLoading(true);
       setLoadError(null);
       try {
-        const params = new URLSearchParams({
-          q: compQ,
-          limit:
-            compQ.trim().length >= 2
-            || envFilter !== "all"
-            || sizeFilter !== "all"
-            || typeFilter !== "all"
-            || Boolean(crMin.trim())
-            || Boolean(crMax.trim())
-              ? "200"
-              : "120",
-          offset: "0",
-          withTotal: "1",
-          sort: sortMode,
-        });
-        if (envFilter !== "all") params.set("env", envFilter);
-        if (sizeFilter !== "all") params.set("sizes", sizeFilter);
-        if (typeFilter !== "all") params.set("types", typeFilter);
-        if (crMin.trim()) params.set("crMin", crMin.trim());
-        if (crMax.trim()) params.set("crMax", crMax.trim());
-        const result = await api<{ rows: CompendiumMonsterRow[]; total: number }>(
-          `/api/compendium/search?${params.toString()}`,
-          { signal: controller.signal },
-        );
+        const limit =
+          compQ.trim().length >= 2
+          || envFilter !== "all"
+          || sizeFilter !== "all"
+          || typeFilter !== "all"
+          || Boolean(crMin.trim())
+          || Boolean(crMax.trim())
+            ? 200
+            : 120;
+        const merged: CompendiumMonsterRow[] = [];
+        let total = 0;
+        let offset = 0;
+        const maxRows = 10000;
+
+        while (!controller.signal.aborted) {
+          const params = new URLSearchParams({
+            q: compQ,
+            limit: String(limit),
+            offset: String(offset),
+            withTotal: "1",
+            sort: sortMode,
+          });
+          if (envFilter !== "all") params.set("env", envFilter);
+          if (sizeFilter !== "all") params.set("sizes", sizeFilter);
+          if (typeFilter !== "all") params.set("types", typeFilter);
+          if (crMin.trim()) params.set("crMin", crMin.trim());
+          if (crMax.trim()) params.set("crMax", crMax.trim());
+
+          const result = await api<{ rows: CompendiumMonsterRow[]; total: number }>(
+            `/api/compendium/search?${params.toString()}`,
+            { signal: controller.signal },
+          );
+          if (controller.signal.aborted) return;
+
+          const nextRows = Array.isArray(result?.rows) ? result.rows : [];
+          total = Number.isFinite(result?.total as number) ? Number(result.total) : nextRows.length;
+          merged.push(...nextRows);
+
+          if (nextRows.length === 0) break;
+          offset += nextRows.length;
+          if (offset >= total) break;
+          if (merged.length >= maxRows) break;
+        }
+
         if (controller.signal.aborted) return;
-        const nextRows = Array.isArray(result?.rows) ? result.rows : [];
-        setRows(nextRows);
-        setTotalRows(Number.isFinite(result?.total as number) ? Number(result.total) : nextRows.length);
+        setRows(merged);
+        setTotalRows(total || merged.length);
       } catch (error) {
         if (controller.signal.aborted) return;
         setRows([]);

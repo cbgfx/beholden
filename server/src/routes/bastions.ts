@@ -15,6 +15,17 @@ function unique(values: string[]): string[] {
 export function registerBastionRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
+  const emitBastionChange = (args: {
+    campaignId: string;
+    action: "upsert" | "delete" | "refresh";
+    bastionId?: string;
+  }) => {
+    ctx.broadcast("bastions:delta", {
+      campaignId: args.campaignId,
+      action: args.action,
+      ...(args.bastionId ? { bastionId: args.bastionId } : {}),
+    });
+  };
 
   app.get("/api/campaigns/:campaignId/bastions", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
@@ -46,6 +57,37 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
       role,
       currentUserPlayerIds,
       bastions,
+    });
+  });
+
+  app.get("/api/campaigns/:campaignId/bastions/:bastionId", memberOrAdmin(db), (req, res) => {
+    const campaignId = requireParam(req, res, "campaignId");
+    const bastionId = requireParam(req, res, "bastionId");
+    if (!campaignId || !bastionId) return;
+
+    const user = req.user!;
+    const role = user.isAdmin ? "dm" : roleForCampaign(db, campaignId, user.userId);
+    if (!role) return res.status(403).json({ ok: false, message: "Forbidden" });
+
+    const playerRows = readCampaignPlayerRows(db, campaignId);
+    const currentUserPlayerIds = playerRows.filter((row) => row.user_id === user.userId).map((row) => row.id);
+    const row = db.prepare(
+      "SELECT id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, assigned_player_ids_json, assigned_character_ids_json, notes, maintain_order, facilities_json, created_at, updated_at FROM bastions WHERE campaign_id = ? AND id = ?"
+    ).get(campaignId, bastionId) as BastionRow | undefined;
+    if (!row) return res.status(404).json({ ok: false, message: "Bastion not found." });
+
+    const compendiumFacilities = readCompendiumFacilities(db);
+    const bastion = parseBastionRow(row, compendiumFacilities, playerRows);
+    if (role !== "dm") {
+      const canView = bastion.active && bastion.assignedPlayerIds.some((id) => currentUserPlayerIds.includes(id));
+      if (!canView) return res.status(404).json({ ok: false, message: "Bastion not found." });
+    }
+
+    res.json({
+      ok: true,
+      role,
+      currentUserPlayerIds,
+      bastion,
     });
   });
 
@@ -96,7 +138,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
       t,
     );
 
-    ctx.broadcast("bastions:changed", { campaignId });
+    emitBastionChange({ campaignId, action: "upsert", bastionId: id });
     res.json({ ok: true, id });
   });
 
@@ -147,7 +189,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
       bastionId,
     );
 
-    ctx.broadcast("bastions:changed", { campaignId });
+    emitBastionChange({ campaignId, action: "upsert", bastionId });
     res.json({ ok: true });
   });
 
@@ -228,7 +270,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
       bastionId,
     );
 
-    ctx.broadcast("bastions:changed", { campaignId });
+    emitBastionChange({ campaignId, action: "upsert", bastionId });
     res.json({ ok: true });
   });
 
@@ -238,7 +280,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
     if (!campaignId || !bastionId) return;
 
     db.prepare("DELETE FROM bastions WHERE id = ? AND campaign_id = ?").run(bastionId, campaignId);
-    ctx.broadcast("bastions:changed", { campaignId });
+    emitBastionChange({ campaignId, action: "delete", bastionId });
     res.json({ ok: true });
   });
 }

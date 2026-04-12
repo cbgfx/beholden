@@ -77,6 +77,9 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
       Math.max(parseInt(String(req.query.limit ?? "50"), 10) || 50, 1),
       MAX_SPELL_SEARCH_LIMIT,
     );
+    const offset = Math.max(parseInt(String(req.query.offset ?? "0"), 10) || 0, 0);
+    const withTotalRaw = String(req.query.withTotal ?? "").trim().toLowerCase();
+    const withTotal = withTotalRaw === "1" || withTotalRaw === "true" || withTotalRaw === "yes";
     const includeTextRaw = String(req.query.includeText ?? "").trim().toLowerCase();
     const includeText = includeTextRaw === "1" || includeTextRaw === "true" || includeTextRaw === "yes";
     const liteRaw = String(req.query.lite ?? "").trim().toLowerCase();
@@ -100,18 +103,37 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
       ? "SELECT id, name, level, school, ritual, concentration, components, classes, data_json FROM compendium_spells WHERE 1=1"
       : "SELECT id, name, level, school, ritual, concentration, components, classes FROM compendium_spells WHERE 1=1";
     const parts: string[] = [baseSelect];
+    const countParts: string[] = ["SELECT count(*) AS n FROM compendium_spells WHERE 1=1"];
     const params: unknown[] = [];
 
-    if (q) { parts.push("AND (name LIKE ? OR name_key LIKE ?)"); const like = `%${q}%`; params.push(like, like); }
-    if (level != null && Number.isFinite(level)) { parts.push("AND level = ?"); params.push(level); }
+    if (q) {
+      parts.push("AND (name LIKE ? OR name_key LIKE ?)");
+      countParts.push("AND (name LIKE ? OR name_key LIKE ?)");
+      const like = `%${q}%`;
+      params.push(like, like);
+    }
+    if (level != null && Number.isFinite(level)) {
+      parts.push("AND level = ?");
+      countParts.push("AND level = ?");
+      params.push(level);
+    }
     const minLevelRaw = String(req.query.minLevel ?? "").trim();
     const minLevel = minLevelRaw === "" ? null : Number(minLevelRaw);
-    if (minLevel != null && Number.isFinite(minLevel)) { parts.push("AND level >= ?"); params.push(minLevel); }
-    if (maxLevel != null && Number.isFinite(maxLevel)) { parts.push("AND level <= ?"); params.push(maxLevel); }
+    if (minLevel != null && Number.isFinite(minLevel)) {
+      parts.push("AND level >= ?");
+      countParts.push("AND level >= ?");
+      params.push(minLevel);
+    }
+    if (maxLevel != null && Number.isFinite(maxLevel)) {
+      parts.push("AND level <= ?");
+      countParts.push("AND level <= ?");
+      params.push(maxLevel);
+    }
     if (classesFilter) {
       const cls = classesFilter.split(",").map(s => s.trim()).filter(Boolean);
       const orParts = cls.map(() => "classes LIKE ?");
       parts.push(`AND (${orParts.join(" OR ")})`);
+      countParts.push(`AND (${orParts.join(" OR ")})`);
       params.push(...cls.map(c => `%${c}%`));
     }
     if (schoolFilter) {
@@ -124,11 +146,13 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
       if (uniqueSchools.length > 0) {
         const orParts = uniqueSchools.map(() => "school LIKE ?");
         parts.push(`AND (${orParts.join(" OR ")})`);
+        countParts.push(`AND (${orParts.join(" OR ")})`);
         params.push(...uniqueSchools.map((school) => `%${school}%`));
       }
     }
     if (ritualOnly) {
       parts.push("AND ritual = 1");
+      countParts.push("AND ritual = 1");
     }
     if (excludeSpecial) {
       // Hide non-spell option rows (kept in table for other game systems).
@@ -136,19 +160,23 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
       parts.push("AND classes NOT LIKE ?");
       parts.push("AND classes NOT LIKE ?");
       parts.push("AND classes NOT LIKE ?");
+      countParts.push("AND classes NOT LIKE ?");
+      countParts.push("AND classes NOT LIKE ?");
+      countParts.push("AND classes NOT LIKE ?");
+      countParts.push("AND classes NOT LIKE ?");
       params.push("%Eldritch Invocations%");
       params.push("%Maneuver Options%");
       params.push("%Metamagic Options%");
       params.push("%Infusion%");
     }
     parts.push("ORDER BY level NULLS LAST, name COLLATE NOCASE");
-    parts.push(`LIMIT ${limit}`);
+    parts.push(`LIMIT ${limit} OFFSET ${offset}`);
 
     const rows = db.prepare(parts.join(" ")).all(...params) as {
       id: string; name: string; level: number | null; school: string | null;
       ritual: number; concentration: number; components: string | null; classes: string | null; data_json?: string;
     }[];
-    res.json(rows.map((row) => {
+    const outRows = rows.map((row) => {
       const s = shouldSelectDataJson ? JSON.parse(row.data_json ?? "{}") : {};
       if (lite) {
         const out: Record<string, unknown> = {
@@ -182,7 +210,11 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
         out.text = textArr.join("\n") || null;
       }
       return out;
-    }));
+    });
+
+    if (!withTotal) return res.json(outRows);
+    const total = (db.prepare(countParts.join(" ")).get(...params) as { n: number }).n;
+    return res.json({ rows: outRows, total });
   });
 
   app.post("/api/spells/lookup", (req, res) => {

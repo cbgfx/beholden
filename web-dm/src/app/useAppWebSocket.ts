@@ -1,6 +1,7 @@
 import { useWs } from "@/services/ws";
 import { api } from "@/services/api";
-import { fetchCampaignCharacters } from "@/services/actorApi";
+import { fetchCampaignCharacter, fetchCampaignCharacters, fetchEncounterActor } from "@/services/actorApi";
+import { useDebouncedTaskQueue } from "@beholden/shared/ui";
 import {
   fetchAdventureTreasure,
   fetchNoteById,
@@ -8,9 +9,9 @@ import {
   fetchCampaignTreasure,
   fetchTreasureById,
 } from "@/services/collectionApi";
-import type { CampaignCharacter, INpc, Note, TreasureEntry } from "@/domain/types/domain";
+import type { Adventure, CampaignCharacter, Encounter, EncounterActor, INpc, Note, TreasureEntry } from "@/domain/types/domain";
 import type { Action } from "@/store/actions";
-import React from "react";
+import type React from "react";
 
 type Dispatch = React.Dispatch<Action>;
 
@@ -20,8 +21,6 @@ type Deps = {
   selectedEncounterId: string | null;
   dispatch: Dispatch;
   refreshAll: () => void;
-  refreshCampaign: (cid: string) => void;
-  refreshAdventure: (adventureId: string | null) => void;
   refreshEncounter: (encounterId: string | null) => void;
 };
 
@@ -31,53 +30,9 @@ export function useAppWebSocket({
   selectedEncounterId,
   dispatch,
   refreshAll,
-  refreshCampaign,
-  refreshAdventure,
   refreshEncounter,
 }: Deps) {
-  const taskStateRef = React.useRef(
-    new Map<string, { timer: number | null; inflight: boolean; pending: boolean }>()
-  );
-
-  React.useEffect(() => {
-    return () => {
-      for (const state of taskStateRef.current.values()) {
-        if (state.timer != null) window.clearTimeout(state.timer);
-      }
-      taskStateRef.current.clear();
-    };
-  }, []);
-
-  const enqueue = React.useCallback((key: string, run: () => Promise<void> | void, delayMs = 150) => {
-    let state = taskStateRef.current.get(key);
-    if (!state) {
-      state = { timer: null, inflight: false, pending: false };
-      taskStateRef.current.set(key, state);
-    }
-
-    if (state.timer != null) window.clearTimeout(state.timer);
-    state.timer = window.setTimeout(() => {
-      state!.timer = null;
-      const execute = () => {
-        if (state!.inflight) {
-          state!.pending = true;
-          return;
-        }
-
-        state!.inflight = true;
-        Promise.resolve(run())
-          .catch(() => {})
-          .finally(() => {
-            state!.inflight = false;
-            if (state!.pending) {
-              state!.pending = false;
-              execute();
-            }
-          });
-      };
-      execute();
-    }, delayMs);
-  }, []);
+  const enqueue = useDebouncedTaskQueue();
 
   useWs((msg) => {
     if (msg.type === "campaigns:changed" || msg.type === "user:changed") {
@@ -91,44 +46,94 @@ export function useAppWebSocket({
     const campaignId = (p && typeof p === "object") ? (p as { campaignId?: unknown }).campaignId : undefined;
     const encounterId = (p && typeof p === "object") ? (p as { encounterId?: unknown }).encounterId : undefined;
 
-    if (msg.type === "adventures:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
-      enqueue(`refresh:campaign:${selectedCampaignId}`, async () => {
-        await refreshCampaign(selectedCampaignId);
+    if (msg.type === "adventures:delta" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
+      const payload = (p && typeof p === "object") ? (p as {
+        action?: "upsert" | "delete" | "refresh";
+        adventureId?: string;
+      }) : {};
+      if (payload.action === "delete" && payload.adventureId) {
+        dispatch({ type: "removeAdventure", adventureId: payload.adventureId });
+        return;
+      }
+      if (payload.action === "upsert" && payload.adventureId) {
+        enqueue(`delta:adventure:${payload.adventureId}`, async () => {
+          const adventure = await api<Adventure>(`/api/adventures/${payload.adventureId}`);
+          dispatch({ type: "upsertAdventure", adventure });
+        }, 80);
+        return;
+      }
+      enqueue(`refresh:adventures:${selectedCampaignId}`, async () => {
+        const adventures = await api<Adventure[]>(`/api/campaigns/${selectedCampaignId}/adventures`);
+        dispatch({ type: "setAdventures", adventures });
       });
       return;
     }
-    if (msg.type === "players:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
+    if (msg.type === "players:delta" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
+      const payload = (p && typeof p === "object") ? (p as {
+        action?: "upsert" | "delete" | "refresh";
+        playerId?: string;
+      }) : {};
+      if (payload.action === "delete" && payload.playerId) {
+        dispatch({ type: "removePlayer", playerId: payload.playerId });
+        return;
+      }
+      if (payload.action === "upsert" && payload.playerId) {
+        enqueue(`delta:player:${payload.playerId}`, async () => {
+          const player = await fetchCampaignCharacter(selectedCampaignId, payload.playerId!);
+          dispatch({ type: "upsertPlayer", player: player as CampaignCharacter });
+        }, 80);
+        return;
+      }
       enqueue(`refresh:players:${selectedCampaignId}`, async () => {
         const players = await fetchCampaignCharacters(selectedCampaignId);
         dispatch({ type: "setPlayers", players: players as CampaignCharacter[] });
       });
       return;
     }
-    if (msg.type === "inpcs:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
+    if (msg.type === "inpcs:delta" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
+      const payload = (p && typeof p === "object") ? (p as {
+        action?: "upsert" | "delete" | "refresh";
+        inpcId?: string;
+      }) : {};
+      if (payload.action === "delete" && payload.inpcId) {
+        dispatch({ type: "removeINpc", inpcId: payload.inpcId });
+        return;
+      }
+      if (payload.action === "upsert" && payload.inpcId) {
+        enqueue(`delta:inpc:${payload.inpcId}`, async () => {
+          const inpc = await api<INpc>(`/api/campaigns/${selectedCampaignId}/inpcs/${payload.inpcId}`);
+          dispatch({ type: "upsertINpc", inpc });
+        }, 80);
+        return;
+      }
       enqueue(`refresh:inpcs:${selectedCampaignId}`, async () => {
         const inpcs = await api<INpc[]>(`/api/campaigns/${selectedCampaignId}/inpcs`);
         dispatch({ type: "setINpcs", inpcs });
       });
       return;
     }
-    if (msg.type === "encounters:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
-      if (selectedAdventureId) {
-        enqueue(`refresh:adventure:${selectedAdventureId}`, async () => {
-          await refreshAdventure(selectedAdventureId);
-        });
+    if (msg.type === "encounters:delta" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
+      const payload = (p && typeof p === "object") ? (p as {
+        action?: "upsert" | "delete" | "refresh";
+        encounterId?: string;
+        adventureId?: string;
+      }) : {};
+      if (typeof payload.adventureId !== "string" || payload.adventureId !== selectedAdventureId) return;
+      if (payload.action === "delete" && payload.encounterId) {
+        dispatch({ type: "removeEncounter", encounterId: payload.encounterId });
+        return;
       }
-      return;
-    }
-    if (msg.type === "notes:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
-      enqueue(`refresh:campaign-notes:${selectedCampaignId}`, async () => {
-        const notes = await fetchCampaignNotes(selectedCampaignId);
-        dispatch({ type: "setCampaignNotes", notes: notes as Note[] });
+      if (payload.action === "upsert" && payload.encounterId) {
+        enqueue(`delta:encounter:${payload.encounterId}`, async () => {
+          const encounter = await api<Encounter>(`/api/encounters/${payload.encounterId}`);
+          dispatch({ type: "upsertEncounter", encounter });
+        }, 80);
+        return;
+      }
+      enqueue(`refresh:encounters:${selectedAdventureId}`, async () => {
+        const encounters = await api<Encounter[]>(`/api/adventures/${selectedAdventureId}/encounters`);
+        dispatch({ type: "setEncounters", encounters });
       });
-      if (selectedAdventureId) {
-        enqueue(`refresh:adventure:${selectedAdventureId}`, async () => {
-          await refreshAdventure(selectedAdventureId);
-        });
-      }
       return;
     }
     if (msg.type === "notes:delta" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
@@ -160,19 +165,16 @@ export function useAppWebSocket({
         }, 80);
         return;
       }
-    }
-    if (msg.type === "treasure:changed" && typeof campaignId === "string" && campaignId === selectedCampaignId) {
-      enqueue(`refresh:campaign-treasure:${selectedCampaignId}`, async () => {
-        const treasure = await fetchCampaignTreasure(selectedCampaignId);
-        dispatch({ type: "setCampaignTreasure", treasure: treasure as TreasureEntry[] });
-      });
-      if (selectedAdventureId) {
-        enqueue(`refresh:adventure-treasure:${selectedAdventureId}`, async () => {
-          const treasure = await fetchAdventureTreasure(selectedAdventureId);
-          dispatch({ type: "setAdventureTreasure", treasure: treasure as TreasureEntry[] });
+      if (payload.adventureId === null) {
+        enqueue(`refresh:campaign-notes:${selectedCampaignId}`, async () => {
+          const notes = await fetchCampaignNotes(selectedCampaignId);
+          dispatch({ type: "setCampaignNotes", notes: notes as Note[] });
         });
-      } else {
-        dispatch({ type: "setAdventureTreasure", treasure: [] });
+      } else if (typeof payload.adventureId === "string" && payload.adventureId === selectedAdventureId) {
+        enqueue(`refresh:adventure-notes:${selectedAdventureId}`, async () => {
+          const notes = await api<Note[]>(`/api/adventures/${selectedAdventureId}/notes`);
+          dispatch({ type: "setAdventureNotes", notes });
+        });
       }
       return;
     }
@@ -205,8 +207,35 @@ export function useAppWebSocket({
         }, 80);
         return;
       }
+      if (payload.adventureId === null) {
+        enqueue(`refresh:campaign-treasure:${selectedCampaignId}`, async () => {
+          const treasure = await fetchCampaignTreasure(selectedCampaignId);
+          dispatch({ type: "setCampaignTreasure", treasure: treasure as TreasureEntry[] });
+        });
+      } else if (typeof payload.adventureId === "string" && payload.adventureId === selectedAdventureId) {
+        enqueue(`refresh:adventure-treasure:${selectedAdventureId}`, async () => {
+          const treasure = await fetchAdventureTreasure(selectedAdventureId);
+          dispatch({ type: "setAdventureTreasure", treasure: treasure as TreasureEntry[] });
+        });
+      }
+      return;
     }
-    if (msg.type === "encounter:combatantsChanged" && typeof encounterId === "string" && encounterId === selectedEncounterId) {
+    if (msg.type === "encounter:combatantsDelta" && typeof encounterId === "string" && encounterId === selectedEncounterId) {
+      const payload = (p && typeof p === "object") ? (p as {
+        action?: "upsert" | "delete" | "refresh";
+        combatantId?: string;
+      }) : {};
+      if (payload.action === "delete" && payload.combatantId) {
+        dispatch({ type: "removeCombatant", combatantId: payload.combatantId });
+        return;
+      }
+      if (payload.action === "upsert" && payload.combatantId) {
+        enqueue(`delta:combatant:${payload.combatantId}`, async () => {
+          const combatant = await fetchEncounterActor(selectedEncounterId, payload.combatantId!);
+          dispatch({ type: "upsertCombatant", combatant: combatant as EncounterActor });
+        }, 80);
+        return;
+      }
       enqueue(`refresh:encounter:${selectedEncounterId}`, async () => {
         await refreshEncounter(selectedEncounterId);
       }, 100);

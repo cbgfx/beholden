@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { EncounterActor } from "@/domain/types/domain";
-import { fetchEncounterActors } from "@/services/actorApi";
+import { fetchEncounterActor, fetchEncounterActors } from "@/services/actorApi";
 import { useWs } from "@/services/ws";
 import type { Action } from "@/store/actions";
 
@@ -25,12 +25,35 @@ export function useEncounterCombatants(encounterId: string | undefined, dispatch
   }, [refresh]);
 
   useWs((msg) => {
-    if (msg.type !== "encounter:combatantsChanged") return;
+    if (msg.type !== "encounter:combatantsDelta") return;
     const p = msg.payload;
     if (!p || typeof p !== "object") return;
-    // Narrow payload shape defensively.
-    const encId = (p as { encounterId?: unknown }).encounterId;
-    if (typeof encId === "string" && encId === encounterId) refresh();
+    const payload = p as {
+      encounterId?: unknown;
+      action?: unknown;
+      combatantId?: unknown;
+    };
+    const encId = payload.encounterId;
+    if (typeof encId !== "string" || encId !== encounterId) return;
+
+    const action = payload.action;
+    if (action === "delete" && typeof payload.combatantId === "string") {
+      dispatch({ type: "removeCombatant", combatantId: payload.combatantId });
+      return;
+    }
+    if (action === "upsert" && typeof payload.combatantId === "string") {
+      const combatantId = payload.combatantId;
+      void (async () => {
+        try {
+          const row = await fetchEncounterActor(encId, combatantId);
+          dispatch({ type: "upsertCombatant", combatant: row as EncounterActor });
+        } catch {
+          // If the row changed again or was removed before fetch resolves, wait for the next delta.
+        }
+      })();
+      return;
+    }
+    void refresh();
   });
 
   return { refresh };

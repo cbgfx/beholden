@@ -31,5 +31,7 @@ export { InfoPageLayout } from "./InfoPageLayout";
 export { FooterGrid } from "./FooterGrid";
 export { togglePillStyle } from "./browserStyles";
 export { AbilityScoresCompact } from "./AbilityScoresCompact";
+export { useDebouncedTaskQueue } from "./useDebouncedTaskQueue";
+export { useDebouncedSingleflight } from "./useDebouncedSingleflight";
 export type { AbilityKey as CompactAbilityKey } from "./AbilityScoresCompact";
 export type { AbilityScoreCellContext } from "./AbilityScoresCompact";

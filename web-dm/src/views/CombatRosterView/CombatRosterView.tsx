@@ -48,7 +48,7 @@ export function CombatRosterView() {
   });
 
   // Encounter-scoped actions — keyed to the explicit route encounterId.
-  const encounterActions = useEncounterActions(encounterId, refresh);
+  const encounterActions = useEncounterActions(encounterId);
 
   // Campaign-scoped refresh: players + inpcs only (sufficient for roster view).
   const refreshCampaignForRoster = React.useCallback(async (cid: string) => {

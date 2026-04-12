@@ -60,7 +60,6 @@ if (!combatant) return;
         overrides: nextOverrides
       })
     );
-    await props.refreshEncounter(d.encounterId);
     props.close();
   }, [acBonus, color, combatant, friendly, hpMaxBonus, initiative, props, tempHp]);
 

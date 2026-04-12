@@ -90,38 +90,32 @@ export function NameDrawer(props: {
     switch (d.type) {
       case "createCampaign":
         await api(`/api/campaigns`, jsonInit("POST", { name: safeName("New Campaign"), color }));
-        await props.refreshAll();
         props.close();
         return;
       case "editCampaign":
         await api(`/api/campaigns/${d.campaignId}`, jsonInit("PUT", { name: safeName("Campaign"), color }));
-        await props.refreshAll();
         props.close();
         return;
       case "createAdventure":
         await api(`/api/campaigns/${d.campaignId}/adventures`, jsonInit("POST", { name: safeName("New Adventure") }));
-        await props.refreshCampaign(d.campaignId);
         props.close();
         return;
       case "editAdventure":
         await api(`/api/adventures/${d.adventureId}`, jsonInit("PUT", { name: safeName("Adventure") }));
-        await props.refreshCampaign(state.selectedCampaignId);
         props.close();
         return;
       case "createEncounter":
         await api(`/api/adventures/${d.adventureId}/encounters`, jsonInit("POST", { name: safeName("New Encounter") }));
-        await props.refreshAdventure(d.adventureId);
         props.close();
         return;
       case "editEncounter":
         await api(`/api/encounters/${d.encounterId}`, jsonInit("PUT", { name: safeName("Encounter") }));
-        await props.refreshAdventure(state.selectedAdventureId);
         props.close();
         return;
       default:
         props.close();
     }
-  }, [name, color, props, state.selectedAdventureId, state.selectedCampaignId]);
+  }, [name, color, props]);
 
   const isEditCampaign = props.drawer.type === "editCampaign";
 

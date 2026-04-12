@@ -114,7 +114,6 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     return raw === "1" || raw === "true" || raw === "yes";
   };
   const emitPlayerChange = (args: { campaignId: string; action: "upsert" | "delete" | "refresh"; playerId?: string; characterId?: string | null }) => {
-    ctx.broadcast("players:changed", { campaignId: args.campaignId });
     ctx.broadcast("players:delta", {
       campaignId: args.campaignId,
       action: args.action,
@@ -140,6 +139,20 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
       if (!includeSharedNotes) delete dto.sharedNotes;
       return withAbsoluteImageUrl(req, dto);
     }));
+  });
+
+  app.get("/api/campaigns/:campaignId/players/:playerId", memberOrAdmin(db), (req, res) => {
+    const campaignId = requireParam(req, res, "campaignId");
+    const playerId = requireParam(req, res, "playerId");
+    if (!campaignId || !playerId) return;
+    const includeSharedNotes = queryFlag(req.query.includeSharedNotes) || String(req.query.includeSharedNotes ?? "").trim() === "";
+    const row = db
+      .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE campaign_id = ? AND id = ?`)
+      .get(campaignId, playerId) as Record<string, unknown> | undefined;
+    if (!row) return res.status(404).json({ ok: false, message: "Not found" });
+    const dto = toCampaignCharacterDto(rowToCampaignCharacter(row));
+    if (!includeSharedNotes) delete dto.sharedNotes;
+    res.json(withAbsoluteImageUrl(req, dto));
   });
 
   // Player-facing party view — HP is obfuscated (percent only, no raw values).
@@ -386,21 +399,25 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     const existing = rowToCampaignCharacter(existingRow);
 
     // Remove player-type combatants from all encounters in this campaign
-    const affectedEncounters = db
+    const removedCombatants = db
       .prepare(`
-        SELECT DISTINCT c.encounter_id
+        SELECT c.id, c.encounter_id
         FROM combatants c
         JOIN encounters e ON e.id = c.encounter_id
         WHERE c.base_type = 'player' AND c.base_id = ? AND e.campaign_id = ?
       `)
-      .all(playerId, existing.campaignId) as { encounter_id: string }[];
+      .all(playerId, existing.campaignId) as { id: string; encounter_id: string }[];
 
     db.prepare(
       "DELETE FROM combatants WHERE base_type = 'player' AND base_id = ?"
     ).run(playerId);
 
-    for (const { encounter_id } of affectedEncounters) {
-      ctx.broadcast("encounter:combatantsChanged", { encounterId: encounter_id });
+    for (const { encounter_id, id } of removedCombatants) {
+      ctx.broadcast("encounter:combatantsDelta", {
+        encounterId: encounter_id,
+        action: "delete",
+        combatantId: id,
+      });
     }
 
     db.prepare("DELETE FROM players WHERE id = ?").run(playerId);

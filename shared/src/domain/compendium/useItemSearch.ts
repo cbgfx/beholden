@@ -72,19 +72,39 @@ export function useCompendiumItemSearch(
         const hasFacetFilters =
           rarityFilter !== "all" || typeFilter !== "all" || filterAttunement || filterMagic;
         const limit = hasQuery || hasFacetFilters ? SEARCH_LIMIT_FILTERED : SEARCH_LIMIT_BASE;
-        const queryParts = [
-          `/api/compendium/items?compact=1&withTotal=1&limit=${limit}&offset=0`,
+        const baseQuery = [
           `q=${encodeURIComponent(q)}`,
           `rarity=${encodeURIComponent(rarityFilter)}`,
           `type=${encodeURIComponent(typeFilter)}`,
           `attunement=${filterAttunement ? "1" : "0"}`,
           `magic=${filterMagic ? "1" : "0"}`,
-        ];
-        const data = await api<ItemSearchResponse>(queryParts.join("&"), { signal: controller.signal });
+        ].join("&");
+
+        const merged: ItemSearchRow[] = [];
+        let total = 0;
+        let offset = 0;
+        const maxRows = 10000;
+
+        while (!controller.signal.aborted) {
+          const data = await api<ItemSearchResponse>(
+            `/api/compendium/items?compact=1&withTotal=1&limit=${limit}&offset=${offset}&${baseQuery}`,
+            { signal: controller.signal },
+          );
+          if (controller.signal.aborted) return;
+
+          const pageRows = Array.isArray(data?.rows) ? data.rows : [];
+          total = Number.isFinite(data?.total as number) ? Number(data.total) : pageRows.length;
+          merged.push(...pageRows);
+
+          if (pageRows.length === 0) break;
+          offset += pageRows.length;
+          if (offset >= total) break;
+          if (merged.length >= maxRows) break;
+        }
+
         if (controller.signal.aborted) return;
-        const nextRows = Array.isArray(data?.rows) ? data.rows : [];
-        setRows(nextRows);
-        setTotalCount(Number.isFinite(data?.total as number) ? Number(data.total) : nextRows.length);
+        setRows(merged);
+        setTotalCount(total || merged.length);
       } catch (err) {
         if (controller.signal.aborted) return;
         setRows([]);

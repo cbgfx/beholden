@@ -59,17 +59,81 @@ export function reducer(state: State, action: Action): State {
       };
     }
 
+    case "upsertAdventure": {
+      const idx = state.adventures.findIndex((a) => a.id === action.adventure.id);
+      if (idx === -1) return { ...state, adventures: [...state.adventures, action.adventure] };
+      const next = state.adventures.slice();
+      next[idx] = action.adventure;
+      return { ...state, adventures: next };
+    }
+
+    case "removeAdventure": {
+      const adventures = state.adventures.filter((a) => a.id !== action.adventureId);
+      const selectedAdventureId =
+        state.selectedAdventureId === action.adventureId ? null : state.selectedAdventureId;
+      const selectedEncounterId = selectedAdventureId ? state.selectedEncounterId : null;
+      return { ...state, adventures, selectedAdventureId, selectedEncounterId };
+    }
+
+    case "upsertEncounter": {
+      const idx = state.encounters.findIndex((e) => e.id === action.encounter.id);
+      if (idx === -1) return { ...state, encounters: [...state.encounters, action.encounter] };
+      const next = state.encounters.slice();
+      next[idx] = action.encounter;
+      return { ...state, encounters: next };
+    }
+
+    case "removeEncounter": {
+      const nextEncounters = state.encounters.filter((e) => e.id !== action.encounterId);
+      const selectedEncounterId =
+        state.selectedEncounterId === action.encounterId ? null : state.selectedEncounterId;
+      return { ...state, encounters: nextEncounters, selectedEncounterId };
+    }
+
     case "selectEncounter":
       return { ...state, selectedEncounterId: action.encounterId };
 
     case "setPlayers":
       return { ...state, players: action.players };
 
+    case "upsertPlayer": {
+      const idx = state.players.findIndex((p) => p.id === action.player.id);
+      if (idx === -1) return { ...state, players: [...state.players, action.player] };
+      const next = state.players.slice();
+      next[idx] = action.player;
+      return { ...state, players: next };
+    }
+
+    case "removePlayer":
+      return { ...state, players: state.players.filter((p) => p.id !== action.playerId) };
+
     case "setINpcs":
       return { ...state, inpcs: action.inpcs };
 
+    case "upsertINpc": {
+      const idx = state.inpcs.findIndex((i) => i.id === action.inpc.id);
+      if (idx === -1) return { ...state, inpcs: [...state.inpcs, action.inpc] };
+      const next = state.inpcs.slice();
+      next[idx] = action.inpc;
+      return { ...state, inpcs: next };
+    }
+
+    case "removeINpc":
+      return { ...state, inpcs: state.inpcs.filter((i) => i.id !== action.inpcId) };
+
     case "setCombatants":
       return { ...state, combatants: action.combatants };
+
+    case "upsertCombatant": {
+      const idx = state.combatants.findIndex((c) => c.id === action.combatant.id);
+      if (idx === -1) return { ...state, combatants: [...state.combatants, action.combatant] };
+      const next = state.combatants.slice();
+      next[idx] = action.combatant;
+      return { ...state, combatants: next };
+    }
+
+    case "removeCombatant":
+      return { ...state, combatants: state.combatants.filter((c) => c.id !== action.combatantId) };
 
     case "mergeMonsterDetails":
       return { ...state, monsterDetails: { ...state.monsterDetails, ...action.patch } };

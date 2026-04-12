@@ -42,7 +42,7 @@ export function registerReorderRoutes(app: Express, ctx: ServerContext) {
     if (!campaignId) return;
     const { ids } = parseBody(ReorderBody, req);
     runReorder("adventures", "campaign_id", campaignId, ids, now());
-    ctx.broadcast("adventures:changed", { campaignId });
+    ctx.broadcast("adventures:delta", { campaignId, action: "refresh" });
     res.json({ ok: true });
   });
 
@@ -55,7 +55,11 @@ export function registerReorderRoutes(app: Express, ctx: ServerContext) {
     if (!aRow) return res.status(404).json({ ok: false, message: "Adventure not found" });
     const { ids } = parseBody(ReorderBody, req);
     runReorder("encounters", "adventure_id", adventureId, ids, now());
-    ctx.broadcast("encounters:changed", { campaignId: aRow.campaign_id });
+    ctx.broadcast("encounters:delta", {
+      campaignId: aRow.campaign_id,
+      adventureId,
+      action: "refresh",
+    });
     res.json({ ok: true });
   });
 
@@ -64,7 +68,6 @@ export function registerReorderRoutes(app: Express, ctx: ServerContext) {
     if (!campaignId) return;
     const { ids } = parseBody(ReorderBody, req);
     runReorder("notes", "campaign_id", campaignId, ids, now(), " AND adventure_id IS NULL");
-    ctx.broadcast("notes:changed", { campaignId });
     ctx.broadcast("notes:delta", { campaignId, adventureId: null, action: "refresh" });
     res.json({ ok: true });
   });
@@ -78,7 +81,6 @@ export function registerReorderRoutes(app: Express, ctx: ServerContext) {
     if (!aRow) return res.status(404).json({ ok: false, message: "Adventure not found" });
     const { ids } = parseBody(ReorderBody, req);
     runReorder("notes", "adventure_id", adventureId, ids, now());
-    ctx.broadcast("notes:changed", { campaignId: aRow.campaign_id });
     ctx.broadcast("notes:delta", { campaignId: aRow.campaign_id, adventureId, action: "refresh" });
     res.json({ ok: true });
   });

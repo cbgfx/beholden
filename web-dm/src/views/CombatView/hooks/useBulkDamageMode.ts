@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { EncounterActor } from "@/domain/types/domain";
-import { api } from "@/services/api";
+import { api, jsonInit } from "@/services/api";
 import { rollDiceExpr } from "@/views/CombatView/utils/dice";
 import { resolveCombatantDamage } from "@/views/CombatView/utils/polymorphDamage";
 
@@ -9,10 +9,9 @@ type Props = {
   delta: string;
   setDelta: (v: string) => void;
   orderedCombatants: EncounterActor[];
-  refresh: () => Promise<void>;
 };
 
-export function useBulkDamageMode({ encounterId, delta, setDelta, orderedCombatants, refresh }: Props) {
+export function useBulkDamageMode({ encounterId, delta, setDelta, orderedCombatants }: Props) {
   const [bulkMode, setBulkMode] = React.useState(false);
   const [bulkSelectedIds, setBulkSelectedIds] = React.useState<Set<string>>(new Set());
 
@@ -41,22 +40,17 @@ export function useBulkDamageMode({ encounterId, delta, setDelta, orderedCombata
       targets.map(async (c) => {
         const resolved = resolveCombatantDamage(c, amount);
         if (!resolved) return;
-        await api(`/api/encounters/${encounterId}/combatants/${c.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            hpCurrent: resolved.hpCurrent,
-            overrides: resolved.overrides,
-            ...(resolved.conditions ? { conditions: resolved.conditions } : {}),
-          }),
-        });
+        await api(`/api/encounters/${encounterId}/combatants/${c.id}`, jsonInit("PUT", {
+          hpCurrent: resolved.hpCurrent,
+          overrides: resolved.overrides,
+          ...(resolved.conditions ? { conditions: resolved.conditions } : {}),
+        }));
       })
     );
-    await refresh();
     setDelta("");
     setBulkSelectedIds(new Set());
     setBulkMode(false);
-  }, [encounterId, bulkSelectedIds, delta, orderedCombatants, refresh, setDelta]);
+  }, [encounterId, bulkSelectedIds, delta, orderedCombatants, setDelta]);
 
   return {
     bulkMode,

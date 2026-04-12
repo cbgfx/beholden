@@ -71,7 +71,7 @@ export function CombatView() {
     toggleBulkMode: handleToggleBulkMode,
     toggleBulkSelect: handleToggleBulkSelect,
     applyBulkDamage,
-  } = useBulkDamageMode({ encounterId, delta, setDelta, orderedCombatants, refresh });
+  } = useBulkDamageMode({ encounterId, delta, setDelta, orderedCombatants });
 
   const { active, nextTurn, prevTurn } = useCombatNavigation({
     encounterId,

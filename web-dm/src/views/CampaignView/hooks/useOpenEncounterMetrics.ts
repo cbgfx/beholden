@@ -1,6 +1,5 @@
 import * as React from "react";
 import { api } from "@/services/api";
-import { fetchEncounterActors } from "@/services/actorApi";
 import { getMonsterXp } from "@/domain/utils/xp";
 import { calcEncounterDifficulty } from "@/domain/utils/difficulty";
 import { estimateMonsterDpr } from "@/domain/utils/monsterDpr";
@@ -27,89 +26,121 @@ function parseCrFromDetail(detail: MonsterDetail | null | undefined): number | n
 }
 
 export function useOpenEncounterMetrics(args: {
+  selectedAdventureId: string | null;
   encounters: EncounterLike[];
   players: CampaignCharacter[];
   inpcs: INpc[];
   monsterDetails: Record<string, MonsterDetail>;
   dispatch: (action: Action) => void;
 }) {
-  const { encounters, players, inpcs, monsterDetails, dispatch } = args;
+  const { selectedAdventureId, encounters, players, inpcs, monsterDetails, dispatch } = args;
 
   // All encounters show XP (hostile monsters only) and difficulty next to the status label.
   const [encounterXp, setEncounterXp] = React.useState<Record<string, number>>({});
   const [encounterDifficulty, setEncounterDifficulty] = React.useState<Record<string, DifficultyRow>>({});
+  const monsterDetailsRef = React.useRef(monsterDetails);
+  monsterDetailsRef.current = monsterDetails;
 
   React.useEffect(() => {
     let cancelled = false;
 
     const run = async () => {
+      if (!selectedAdventureId) {
+        if (!cancelled) {
+          setEncounterXp({});
+          setEncounterDifficulty({});
+        }
+        return;
+      }
+
       const encounterIds = (encounters ?? []).map((e) => e.id);
-      const toFetch = encounterIds.filter(
-        (id) => encounterXp[id] == null || encounterDifficulty[id] == null,
-      );
-      if (!toFetch.length) return;
+      if (!encounterIds.length) {
+        if (!cancelled) {
+          setEncounterXp({});
+          setEncounterDifficulty({});
+        }
+        return;
+      }
+
+      const idsParam = encodeURIComponent(encounterIds.join(","));
+      const summary = await api<{
+        rows: Array<{
+          encounterId: string;
+          baseType: "monster" | "inpc";
+          baseId: string;
+          friendly: boolean;
+        }>;
+      }>(`/api/adventures/${selectedAdventureId}/encounters/combatantsSummary?ids=${idsParam}`);
+      if (cancelled) return;
 
       const nextXp: Record<string, number> = {};
       const nextDiff: Record<string, DifficultyRow> = {};
+      const rowsByEncounter = new Map<string, Array<{
+        encounterId: string;
+        baseType: "monster" | "inpc";
+        baseId: string;
+        friendly: boolean;
+      }>>();
+      for (const row of summary.rows ?? []) {
+        const list = rowsByEncounter.get(row.encounterId) ?? [];
+        list.push(row);
+        rowsByEncounter.set(row.encounterId, list);
+      }
+
       const partyHpMax = players.reduce((sum, p) => sum + (p.hpMax ?? 0), 0);
       const playerLevels = players
         .map((p) => Number(p.level ?? 1))
         .filter((n) => Number.isFinite(n) && n > 0);
 
-      for (const encId of toFetch) {
+      // Ensure we have monster details for all referenced monsters in one batch pass.
+      const monsterIds = new Set<string>();
+      for (const row of summary.rows ?? []) {
+        if (row.baseType === "monster" && row.baseId) {
+          monsterIds.add(String(row.baseId));
+          continue;
+        }
+        if (row.baseType === "inpc" && row.baseId) {
+          const inpc = inpcs.find((x) => String(x.id) === String(row.baseId));
+          if (inpc?.monsterId) monsterIds.add(String(inpc.monsterId));
+        }
+      }
+      const missing = Array.from(monsterIds).filter((id) => !monsterDetailsRef.current?.[id]);
+      const patch: Record<string, MonsterDetail> = {};
+      if (missing.length) {
         try {
-          const combatants = await fetchEncounterActors(encId);
-
-          // Ensure we have monster details for referenced monsters.
-          const monsterIds = new Set<string>();
-          for (const combatant of combatants ?? []) {
-            if (combatant?.baseType === "monster" && combatant.baseId != null) {
-              monsterIds.add(String(combatant.baseId));
-            }
-            if (combatant?.baseType === "inpc" && combatant.baseId != null) {
-              const inpcId = String(combatant.baseId);
-              const inpc = inpcs.find((x) => String(x.id) === inpcId);
-              if (inpc?.monsterId != null) {
-                monsterIds.add(String(inpc.monsterId));
-              }
-            }
+          const idsParam = encodeURIComponent(missing.join(","));
+          const batch = await api<{ rows: MonsterDetail[] }>(`/api/compendium/monsters-metrics?ids=${idsParam}`);
+          for (const detail of batch.rows ?? []) {
+            const id = String((detail as { id?: unknown }).id ?? "");
+            if (!id) continue;
+            patch[id] = detail;
           }
+        } catch {
+          // best-effort; metrics are optional
+        }
+        if (!cancelled && Object.keys(patch).length) {
+          dispatch({ type: "mergeMonsterDetails", patch });
+        }
+      }
+      const details = { ...monsterDetailsRef.current, ...patch };
 
-          const missing = Array.from(monsterIds).filter((id) => !monsterDetails?.[id]);
-          const patch: Record<string, MonsterDetail> = {};
-          if (missing.length) {
-            const results = await Promise.allSettled(
-              missing.map((id) =>
-                api<MonsterDetail>(`/api/compendium/monsters/${id}?view=metrics`).then((detail) => ({ id, detail })),
-              ),
-            );
-            for (const result of results) {
-              if (result.status !== "fulfilled") continue;
-              patch[result.value.id] = result.value.detail;
-            }
-            if (!cancelled && Object.keys(patch).length) {
-              dispatch({ type: "mergeMonsterDetails", patch });
-            }
-          }
-
-          const details = { ...monsterDetails, ...patch };
-
+      for (const encId of encounterIds) {
+        try {
           let totalXp = 0;
           let hostileDpr = 0;
           let burstFactor = 1.0;
           let monsterCount = 0;
           let maxMonsterCr = 0;
 
-          for (const combatant of combatants ?? []) {
-            if (combatant?.baseType === "player") continue;
-            if (combatant?.friendly) continue;
-
+          const encounterRows = rowsByEncounter.get(encId) ?? [];
+          for (const row of encounterRows) {
+            if (row.friendly) continue;
             let monsterId: string | null = null;
-            if (combatant?.baseType === "monster") {
-              monsterId = combatant.baseId != null ? String(combatant.baseId) : null;
+            if (row.baseType === "monster") {
+              monsterId = row.baseId != null ? String(row.baseId) : null;
             }
-            if (combatant?.baseType === "inpc") {
-              const inpcId = combatant.baseId != null ? String(combatant.baseId) : null;
+            if (row.baseType === "inpc") {
+              const inpcId = row.baseId != null ? String(row.baseId) : null;
               const inpc = inpcId
                 ? (inpcs ?? []).find((x: any) => String(x.id) === inpcId)
                 : null;
@@ -165,12 +196,8 @@ export function useOpenEncounterMetrics(args: {
       }
 
       if (cancelled) return;
-      if (Object.keys(nextXp).length) {
-        setEncounterXp((prev) => ({ ...prev, ...nextXp }));
-      }
-      if (Object.keys(nextDiff).length) {
-        setEncounterDifficulty((prev) => ({ ...prev, ...nextDiff }));
-      }
+      setEncounterXp(nextXp);
+      setEncounterDifficulty(nextDiff);
     };
 
     run();
@@ -179,11 +206,9 @@ export function useOpenEncounterMetrics(args: {
     };
   }, [
     dispatch,
-    encounterDifficulty,
-    encounterXp,
+    selectedAdventureId,
     encounters,
     inpcs,
-    monsterDetails,
     players,
   ]);
 

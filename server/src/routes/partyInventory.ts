@@ -35,7 +35,6 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
     action: "upsert" | "delete" | "refresh";
     itemId?: string;
   }) => {
-    ctx.broadcast("partyInventory:changed", { campaignId: args.campaignId });
     ctx.broadcast("partyInventory:delta", {
       campaignId: args.campaignId,
       action: args.action,

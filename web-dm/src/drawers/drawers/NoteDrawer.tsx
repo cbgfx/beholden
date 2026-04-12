@@ -38,21 +38,17 @@ export function NoteDrawer(props: {
       const body = text ?? "";
       if (d.scope === "campaign") {
         await createCampaignNote(d.campaignId, { title: t, text: body });
-        await props.refreshCampaign(d.campaignId);
       } else {
         const aid = d.adventureId!;
         await createAdventureNote(aid, { title: t, text: body });
-        await props.refreshAdventure(aid);
       }
       props.close();
       return;
     }
 
     await api(`/api/notes/${d.noteId}`, jsonInit("PUT", { title: title.trim() || "Note", text }));
-    await props.refreshCampaign(state.selectedCampaignId);
-    await props.refreshAdventure(state.selectedAdventureId);
     props.close();
-  }, [props, state.selectedAdventureId, state.selectedCampaignId, text, title]);
+  }, [props, text, title]);
 
   return {
     body: (

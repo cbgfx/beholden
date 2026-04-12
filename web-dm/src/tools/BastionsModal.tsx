@@ -6,7 +6,7 @@ import { useStore } from "@/store";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
-import type { Bastion, BastionCompendiumResponse, BastionFacility, BastionsResponse, CompendiumFacility } from "@/tools/bastions/types";
+import type { Bastion, BastionCompendiumResponse, BastionFacility, BastionResponse, BastionsResponse, CompendiumFacility } from "@/tools/bastions/types";
 import { useBastionAutosave } from "@/tools/bastions/useBastionAutosave";
 import { chipButtonStyle } from "@/tools/bastions/styles";
 import { BastionsSidebar } from "@/tools/bastions/BastionsSidebar";
@@ -75,6 +75,15 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
     }
   }
 
+  async function fetchSingleBastion(nextBastionId: string): Promise<BastionResponse | null> {
+    if (!campaignId) return null;
+    try {
+      return await api<BastionResponse>(`/api/campaigns/${campaignId}/bastions/${nextBastionId}`);
+    } catch {
+      return null;
+    }
+  }
+
   React.useEffect(() => {
     if (!props.isOpen) return;
     void load();
@@ -82,13 +91,46 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
 
   useWs((msg) => {
     if (!props.isOpen || !campaignId) return;
-    if (msg.type !== "bastions:changed") return;
     const payload = msg.payload;
     const changedCampaignId = payload && typeof payload === "object"
       ? (payload as { campaignId?: unknown }).campaignId
       : undefined;
     if (typeof changedCampaignId !== "string" || changedCampaignId !== campaignId) return;
-    void load(selectedBastionId);
+
+    if (msg.type === "bastions:delta") {
+      const delta = payload && typeof payload === "object"
+        ? (payload as { action?: "upsert" | "delete" | "refresh"; bastionId?: string })
+        : {};
+
+      if (delta.action === "delete" && delta.bastionId) {
+        setBastions((prev) => prev.filter((entry) => entry.id !== delta.bastionId));
+        setSelectedBastionId((prev) => (prev === delta.bastionId ? null : prev));
+        return;
+      }
+
+      if (delta.action === "upsert" && delta.bastionId) {
+        void fetchSingleBastion(delta.bastionId).then((single) => {
+          if (!single?.bastion) return;
+          setBastions((prev) => {
+            const idx = prev.findIndex((entry) => entry.id === single.bastion.id);
+            if (idx === -1) return [...prev, single.bastion];
+            const next = prev.slice();
+            next[idx] = single.bastion;
+            return next;
+          });
+          setSelectedBastionId((prev) => {
+            if (prev === single.bastion.id) return prev;
+            if (!prev) return single.bastion.id;
+            return prev;
+          });
+        });
+        return;
+      }
+
+      void load(selectedBastionId);
+      return;
+    }
+
   });
 
   React.useEffect(() => {
@@ -115,7 +157,7 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
         assignedPlayerIds: [],
         facilities: [],
       }));
-      await load(result.id);
+      setSelectedBastionId(result.id);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Failed to grant Bastion.");
     } finally {
@@ -130,7 +172,8 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
     setMessage("");
     try {
       await api(`/api/campaigns/${campaignId}/bastions/${selectedBastion.id}`, { method: "DELETE" });
-      await load();
+      setBastions((prev) => prev.filter((entry) => entry.id !== selectedBastion.id));
+      setSelectedBastionId((prev) => (prev === selectedBastion.id ? null : prev));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Failed to delete Bastion.");
     } finally {

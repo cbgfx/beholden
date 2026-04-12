@@ -41,7 +41,6 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     action: "upsert" | "delete" | "refresh";
     treasureId?: string;
   }) => {
-    ctx.broadcast("treasure:changed", { campaignId: args.campaignId });
     ctx.broadcast("treasure:delta", {
       campaignId: args.campaignId,
       adventureId: args.adventureId ?? null,
@@ -56,7 +55,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
   }
 
   function hydrateTreasureEntry(entry: ReturnType<typeof rowToTreasure>) {
-    if (entry.source !== "compendium" || !entry.itemId) return entry;
+    if (!entry.itemId) return entry;
     const itemRow = db
       .prepare("SELECT name, rarity, type, type_key, attunement, magic, data_json FROM compendium_items WHERE id = ?")
       .get(entry.itemId) as
@@ -73,9 +72,12 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     if (!itemRow) return entry;
     const itemData = JSON.parse(itemRow.data_json ?? "{}");
     const itemText = Array.isArray(itemData.text) ? itemData.text.join("\n\n") : (itemData.text ?? "");
+    const hasPlaceholderName = !String(entry.name ?? "").trim() || entry.name === "New Item";
     return {
       ...entry,
-      name: entry.name === "New Item" ? String(itemRow.name ?? "").trim() || entry.name : entry.name,
+      // Legacy rows may have source mismatches; if itemId resolves, prefer real compendium metadata.
+      source: entry.source === "compendium" ? entry.source : (hasPlaceholderName ? "compendium" : entry.source),
+      name: hasPlaceholderName ? String(itemRow.name ?? "").trim() || entry.name : entry.name,
       rarity: itemRow.rarity ?? entry.rarity,
       type: itemRow.type ?? entry.type,
       type_key: itemRow.type_key ?? entry.type_key,

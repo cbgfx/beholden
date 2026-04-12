@@ -58,7 +58,6 @@ export function CombatantDrawer(props: {
         attackOverrides
       })
     );
-    await props.refreshEncounter(d.encounterId);
     props.close();
   }, [ac, friendly, hpCur, hpMax, label, props]);
 

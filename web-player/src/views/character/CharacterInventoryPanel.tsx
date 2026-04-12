@@ -9,6 +9,7 @@ import { Select } from "@/ui/Select";
 import { useVirtualList } from "@/lib/monsterPicker/useVirtualList";
 import { useItemSearch } from "@/views/CompendiumView/hooks/useItemSearch";
 import { DraggableList } from "@/ui/DraggableList";
+import { useDebouncedSingleflight } from "@beholden/shared/ui";
 import {
   DEFAULT_CONTAINER_ID,
   INVENTORY_PICKER_ROW_HEIGHT,
@@ -108,9 +109,6 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
   const nameRef = useRef<HTMLInputElement>(null);
   const currencyPopupRef = useRef<HTMLDivElement | null>(null);
   const [partyStashItems, setPartyStashItems] = useState<PartyStashItem[]>([]);
-  const partyStashTimerRef = useRef<number | null>(null);
-  const partyStashInflightRef = useRef(false);
-  const partyStashPendingRef = useRef(false);
 
   const fetchPartyStash = useCallback(() => {
     if (!campaignId) return;
@@ -119,47 +117,11 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
       .catch(() => {});
   }, [campaignId]);
 
-  const enqueuePartyStashRefresh = useCallback((delayMs = 150) => {
-    if (partyStashTimerRef.current != null) window.clearTimeout(partyStashTimerRef.current);
-    partyStashTimerRef.current = window.setTimeout(() => {
-      partyStashTimerRef.current = null;
-      const run = () => {
-        if (partyStashInflightRef.current) {
-          partyStashPendingRef.current = true;
-          return;
-        }
-        partyStashInflightRef.current = true;
-        Promise.resolve(fetchPartyStash())
-          .catch(() => {})
-          .finally(() => {
-            partyStashInflightRef.current = false;
-            if (partyStashPendingRef.current) {
-              partyStashPendingRef.current = false;
-              run();
-            }
-          });
-      };
-      run();
-    }, delayMs);
-  }, [fetchPartyStash]);
+  const enqueuePartyStashRefresh = useDebouncedSingleflight(fetchPartyStash);
 
   useEffect(() => { fetchPartyStash(); }, [fetchPartyStash]);
 
-  useEffect(() => {
-    return () => {
-      if (partyStashTimerRef.current != null) {
-        window.clearTimeout(partyStashTimerRef.current);
-        partyStashTimerRef.current = null;
-      }
-    };
-  }, []);
-
   useWs(useCallback((msg) => {
-    if (msg.type === "partyInventory:changed") {
-      const cId = (msg.payload as { campaignId?: string })?.campaignId;
-      if (cId === campaignId) enqueuePartyStashRefresh();
-      return;
-    }
     if (msg.type === "partyInventory:delta") {
       const payload = (msg.payload ?? {}) as {
         campaignId?: string;
@@ -1036,8 +998,8 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
                   key={it.id}
                   item={it}
                   onTake={() => void takeFromPartyStash(it)}
-                  onDelete={() => void deleteFromPartyStash(it.id).then(fetchPartyStash)}
-                  onQuantity={(q) => void changePartyStashQty(it.id, q).then(fetchPartyStash)}
+                  onDelete={() => void deleteFromPartyStash(it.id)}
+                  onQuantity={(q) => void changePartyStashQty(it.id, q)}
                 />
               ))
             ))}

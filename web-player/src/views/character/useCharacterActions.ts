@@ -1,8 +1,8 @@
 import React from "react";
-import { api, jsonInit } from "@/services/api";
 import { updateMyCharacter } from "@/services/actorApi";
 import { C } from "@/lib/theme";
 import { uid, normalizeCharacterClasses, normalizeProficiencies, type Character, type SheetOverrides } from "@/views/character/CharacterViewHelpers";
+import { patchMyCharacter } from "@/views/character/characterApi";
 import type { AbilKey, CharacterData, PlayerNote } from "@/views/character/CharacterSheetTypes";
 
 export function useCharacterActions(args: {
@@ -86,7 +86,7 @@ export function useCharacterActions(args: {
     const campaignNoteIds = new Set(campaignNotesList.map((note) => note.id));
     const playerOnlyNotes = list.filter((note) => !campaignNoteIds.has(note.id));
     const val = JSON.stringify(playerOnlyNotes);
-    void api(`/api/me/characters/${char.id}/sharedNotes`, jsonInit("PATCH", { sharedNotes: val }));
+    void patchMyCharacter(char.id, "sharedNotes", { sharedNotes: val });
     setChar((prev) => (prev ? { ...prev, sharedNotes: val } : prev));
   }, [campaignNotesList, char, setChar]);
 
@@ -126,7 +126,7 @@ export function useCharacterActions(args: {
     const nextColor = colorDraft || C.accentHl;
     setOverridesSaving(true);
     try {
-      await api(`/api/me/characters/${char.id}/overrides`, jsonInit("PATCH", nextOverrides));
+      await patchMyCharacter(char.id, "overrides", nextOverrides);
       if ((char.color ?? C.accentHl) !== nextColor) {
         await updateMyCharacter(char.id, {
           name: char.name,

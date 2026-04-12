@@ -6,6 +6,7 @@ import { C } from "@/lib/theme";
 import { api } from "@/services/api";
 import { IconPlayer, IconConditionByKey } from "@/icons";
 import { useWs } from "@/services/ws";
+import { useDebouncedTaskQueue } from "@beholden/shared/ui";
 import { hpColor } from "@/views/character/CharacterSheetUtils";
 
 type ConditionInstance = SharedConditionInstance;
@@ -40,6 +41,13 @@ interface CampaignBastionSummary {
   level: number;
   specialSlots: number;
   specialSlotsUsed: number;
+}
+
+interface CampaignBastionResponse {
+  ok: boolean;
+  role: "dm" | "player";
+  currentUserPlayerIds: string[];
+  bastion: CampaignBastionSummary;
 }
 
 function hpLabel(pct: number): string {
@@ -182,47 +190,7 @@ export function CampaignPartyView() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [bastions, setBastions] = React.useState<CampaignBastionSummary[]>([]);
-  const taskStateRef = React.useRef(
-    new Map<string, { timer: number | null; inflight: boolean; pending: boolean }>()
-  );
-
-  const enqueue = React.useCallback((key: string, run: () => Promise<void> | void, delayMs = 150) => {
-    let state = taskStateRef.current.get(key);
-    if (!state) {
-      state = { timer: null, inflight: false, pending: false };
-      taskStateRef.current.set(key, state);
-    }
-    if (state.timer != null) window.clearTimeout(state.timer);
-    state.timer = window.setTimeout(() => {
-      state!.timer = null;
-      const execute = () => {
-        if (state!.inflight) {
-          state!.pending = true;
-          return;
-        }
-        state!.inflight = true;
-        Promise.resolve(run())
-          .catch(() => {})
-          .finally(() => {
-            state!.inflight = false;
-            if (state!.pending) {
-              state!.pending = false;
-              execute();
-            }
-          });
-      };
-      execute();
-    }, delayMs);
-  }, []);
-
-  React.useEffect(() => {
-    return () => {
-      for (const state of taskStateRef.current.values()) {
-        if (state.timer != null) window.clearTimeout(state.timer);
-      }
-      taskStateRef.current.clear();
-    };
-  }, []);
+  const enqueue = useDebouncedTaskQueue();
 
   const fetchParty = React.useCallback(() => {
     if (!campaignId) return;
@@ -236,6 +204,16 @@ export function CampaignPartyView() {
     if (!campaignId || !playerId) return null;
     try {
       return await api<PartyMember>(`/api/campaigns/${campaignId}/party/${playerId}`);
+    } catch {
+      return null;
+    }
+  }, [campaignId]);
+
+  const fetchSingleBastion = React.useCallback(async (bastionId: string): Promise<CampaignBastionSummary | null> => {
+    if (!campaignId || !bastionId) return null;
+    try {
+      const res = await api<CampaignBastionResponse>(`/api/campaigns/${campaignId}/bastions/${bastionId}`);
+      return res.bastion ?? null;
     } catch {
       return null;
     }
@@ -258,15 +236,6 @@ export function CampaignPartyView() {
   useWs(
     React.useCallback(
       (msg) => {
-        if (msg.type === "players:changed") {
-          const cId = (msg.payload as any)?.campaignId as string | undefined;
-          if (cId === campaignId) {
-            enqueue(`party:${campaignId}`, async () => {
-              fetchParty();
-            });
-          }
-          return;
-        }
         if (msg.type === "players:delta") {
           const payload = (msg.payload ?? {}) as {
             campaignId?: string;
@@ -299,17 +268,44 @@ export function CampaignPartyView() {
             fetchParty();
           });
         }
-        if (msg.type === "bastions:changed") {
-          const cId = (msg.payload as any)?.campaignId as string | undefined;
-          if (cId === campaignId) {
-            enqueue(`bastions:${campaignId}`, async () => {
-              const res = await api<{ bastions: CampaignBastionSummary[] }>(`/api/campaigns/${campaignId}/bastions`);
-              setBastions((res.bastions ?? []).filter((entry) => entry.active));
-            });
+        const cId = (msg.payload as any)?.campaignId as string | undefined;
+        if (cId !== campaignId) return;
+
+        if (msg.type === "bastions:delta") {
+          const payload = (msg.payload ?? {}) as {
+            action?: "upsert" | "delete" | "refresh";
+            bastionId?: string;
+          };
+          if (payload.action === "delete" && payload.bastionId) {
+            setBastions((prev) => prev.filter((entry) => entry.id !== payload.bastionId));
+            return;
           }
+          if (payload.action === "upsert" && payload.bastionId) {
+            enqueue(`bastion:delta:${campaignId}:${payload.bastionId}`, async () => {
+              const bastion = await fetchSingleBastion(payload.bastionId!);
+              if (!bastion || !bastion.active) {
+                setBastions((prev) => prev.filter((entry) => entry.id !== payload.bastionId));
+                return;
+              }
+              setBastions((prev) => {
+                const idx = prev.findIndex((entry) => entry.id === bastion.id);
+                if (idx === -1) return [...prev, bastion];
+                const next = prev.slice();
+                next[idx] = bastion;
+                return next;
+              });
+            }, 80);
+            return;
+          }
+          enqueue(`bastions:${campaignId}`, async () => {
+            const res = await api<{ bastions: CampaignBastionSummary[] }>(`/api/campaigns/${campaignId}/bastions`);
+            setBastions((res.bastions ?? []).filter((entry) => entry.active));
+          });
+          return;
         }
+
       },
-      [campaignId, enqueue, fetchParty, fetchPartyMember]
+      [campaignId, enqueue, fetchParty, fetchPartyMember, fetchSingleBastion]
     )
   );
 

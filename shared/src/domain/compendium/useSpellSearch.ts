@@ -28,6 +28,7 @@ export function useCompendiumSpellSearch(api: ApiFn) {
   const [filterRitual, setFilterRitual] = React.useState(false);
 
   const [allRows, setAllRows] = React.useState<SpellSearchRow[]>([]);
+  const [totalCount, setTotalCount] = React.useState(0);
   const [busy, setBusy] = React.useState(false);
 
   React.useEffect(() => {
@@ -38,17 +39,46 @@ export function useCompendiumSpellSearch(api: ApiFn) {
         const lv = level === "all" ? "" : `&level=${encodeURIComponent(level)}`;
         const hasQuery = q.trim().length >= 2;
         const limit = hasQuery ? 180 : 120;
-        const res = await api<any[]>(
-          `/api/spells/search?q=${encodeURIComponent(q)}&limit=${limit}${lv}&excludeSpecial=1&compact=1`,
-          { signal: controller.signal },
-        );
+        const merged: SpellSearchRow[] = [];
+        let total = 0;
+        let offset = 0;
+        const maxRows = 10000;
+
+        while (!controller.signal.aborted) {
+          const res = await api<{ rows?: any[]; total?: number } | any[]>(
+            `/api/spells/search?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&withTotal=1${lv}&excludeSpecial=1&compact=1`,
+            { signal: controller.signal },
+          );
+          if (controller.signal.aborted) return;
+          const pageRows = Array.isArray(res)
+            ? res
+            : Array.isArray((res as { rows?: unknown[] }).rows)
+              ? ((res as { rows: unknown[] }).rows as any[])
+              : [];
+          const pageTotal = Array.isArray(res)
+            ? pageRows.length
+            : Number((res as { total?: unknown }).total);
+          total = Number.isFinite(pageTotal) ? Number(pageTotal) : pageRows.length;
+
+          const cleaned = pageRows
+            .map(normalizeSpellSearchRow)
+            .filter((r): r is SpellSearchRow => Boolean(r));
+          merged.push(...cleaned);
+
+          if (cleaned.length === 0) break;
+          offset += cleaned.length;
+          if (offset >= total) break;
+          if (merged.length >= maxRows) break;
+        }
+
         if (controller.signal.aborted) return;
-        const cleaned = (Array.isArray(res) ? res : [])
-          .map(normalizeSpellSearchRow)
-          .filter((r): r is SpellSearchRow => Boolean(r));
-        setAllRows(cleaned);
+        setAllRows(merged);
+        setTotalCount(total || merged.length);
       } catch {
-        if (!controller.signal.aborted) setAllRows([]);
+        if (!controller.signal.aborted) {
+          setAllRows([]);
+          setTotalCount(0);
+        }
       } finally {
         if (!controller.signal.aborted) setBusy(false);
       }
@@ -144,6 +174,7 @@ export function useCompendiumSpellSearch(api: ApiFn) {
     hasActiveFilters,
     clearFilters,
     rows,
+    totalCount,
     busy,
     refresh,
   };

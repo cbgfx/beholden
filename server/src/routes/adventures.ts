@@ -88,6 +88,17 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
   const serializeNoteState = (note: StoredNoteState) => JSON.stringify(note);
+  const emitAdventureChange = (args: {
+    campaignId: string;
+    action: "upsert" | "delete" | "refresh";
+    adventureId?: string;
+  }) => {
+    ctx.broadcast("adventures:delta", {
+      campaignId: args.campaignId,
+      action: args.action,
+      ...(args.adventureId ? { adventureId: args.adventureId } : {}),
+    });
+  };
 
   app.get("/api/campaigns/:campaignId/adventures", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
@@ -98,6 +109,16 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
       )
       .all(campaignId) as Record<string, unknown>[];
     res.json(rows.map(rowToAdventure));
+  });
+
+  app.get("/api/adventures/:adventureId", memberOrAdmin(db), (req, res) => {
+    const adventureId = requireParam(req, res, "adventureId");
+    if (!adventureId) return;
+    const row = db
+      .prepare(`SELECT ${ADVENTURE_COLS} FROM adventures WHERE id = ?`)
+      .get(adventureId) as Record<string, unknown> | undefined;
+    if (!row) return res.status(404).json({ ok: false, message: "Adventure not found" });
+    res.json(rowToAdventure(row));
   });
 
   app.post("/api/campaigns/:campaignId/adventures", dmOrAdmin(db), (req, res) => {
@@ -111,7 +132,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
     db.prepare(
       "INSERT INTO adventures (id, campaign_id, name, status, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
     ).run(id, campaignId, name, "active", sort, t, t);
-    ctx.broadcast("adventures:changed", { campaignId });
+    emitAdventureChange({ campaignId, action: "upsert", adventureId: id });
     const row = db
       .prepare(`SELECT ${ADVENTURE_COLS} FROM adventures WHERE id = ?`)
       .get(id) as Record<string, unknown>;
@@ -284,7 +305,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
       }
     })();
 
-    ctx.broadcast("adventures:changed", { campaignId });
+    emitAdventureChange({ campaignId, action: "upsert", adventureId: advId });
     const advRow = db
       .prepare(`SELECT ${ADVENTURE_COLS} FROM adventures WHERE id = ?`)
       .get(advId) as Record<string, unknown>;
@@ -310,7 +331,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
       t,
       adventureId
     );
-    ctx.broadcast("adventures:changed", { adventureId });
+    emitAdventureChange({ campaignId: a.campaignId, action: "upsert", adventureId });
     res.json({ ...a, name, updatedAt: t });
   });
 
@@ -324,7 +345,11 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
       return res.status(404).json({ ok: false, message: "Adventure not found" });
     // FK CASCADE handles: encounters → combats, combatants; notes
     db.prepare("DELETE FROM adventures WHERE id = ?").run(adventureId);
-    ctx.broadcast("adventures:changed", { adventureId, campaignId: advRow.campaign_id });
+    emitAdventureChange({
+      campaignId: advRow.campaign_id,
+      action: "delete",
+      adventureId,
+    });
     res.json({ ok: true });
   });
 }

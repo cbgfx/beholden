@@ -9,6 +9,7 @@ import type { AbilKey } from "@/views/character/CharacterSheetTypes";
 import { ABILITY_LABELS, ALL_SKILLS } from "@/views/character/CharacterSheetConstants";
 import { abilityMod, formatModifier, hasNamedProficiency, hpColor, normalizeSpellTrackingKey, normalizeSpellTrackingName, proficiencyBonus } from "@/views/character/CharacterSheetUtils";
 import { CollapsiblePanel } from "@/views/character/CharacterViewParts";
+import { useDebouncedSingleflight } from "@beholden/shared/ui";
 import { CollectionRow, HeaderActionLink, MiniStat, NoteRow, Panel, SubsectionLabel, Tag } from "@beholden/shared/ui";
 
 interface NamedEntry {
@@ -65,9 +66,6 @@ export function PartyMemberView() {
   const [expandedFeatureIds, setExpandedFeatureIds] = React.useState<Record<string, boolean>>({});
   const [expandedNoteIds, setExpandedNoteIds] = React.useState<Record<string, boolean>>({});
   const viewportWidth = useViewportWidth();
-  const refreshTimerRef = React.useRef<number | null>(null);
-  const refreshInflightRef = React.useRef(false);
-  const refreshPendingRef = React.useRef(false);
 
   const fetchMember = React.useCallback(() => {
     if (!campaignId || !playerId) return;
@@ -80,49 +78,13 @@ export function PartyMemberView() {
       .finally(() => setLoading(false));
   }, [campaignId, playerId]);
 
-  const enqueueFetchMember = React.useCallback((delayMs = 150) => {
-    if (refreshTimerRef.current != null) window.clearTimeout(refreshTimerRef.current);
-    refreshTimerRef.current = window.setTimeout(() => {
-      refreshTimerRef.current = null;
-      const run = () => {
-        if (refreshInflightRef.current) {
-          refreshPendingRef.current = true;
-          return;
-        }
-        refreshInflightRef.current = true;
-        Promise.resolve(fetchMember())
-          .catch(() => {})
-          .finally(() => {
-            refreshInflightRef.current = false;
-            if (refreshPendingRef.current) {
-              refreshPendingRef.current = false;
-              run();
-            }
-          });
-      };
-      run();
-    }, delayMs);
-  }, [fetchMember]);
+  const enqueueFetchMember = useDebouncedSingleflight(fetchMember);
 
   React.useEffect(() => {
     fetchMember();
   }, [fetchMember]);
 
-  React.useEffect(() => {
-    return () => {
-      if (refreshTimerRef.current != null) {
-        window.clearTimeout(refreshTimerRef.current);
-        refreshTimerRef.current = null;
-      }
-    };
-  }, []);
-
   useWs(React.useCallback((msg) => {
-    if (msg.type === "players:changed") {
-      const changedCampaignId = (msg.payload as any)?.campaignId as string | undefined;
-      if (changedCampaignId === campaignId) enqueueFetchMember();
-      return;
-    }
     if (msg.type !== "players:delta") return;
     const payload = (msg.payload ?? {}) as {
       campaignId?: string;

@@ -76,7 +76,6 @@ export function PlayerDrawer(props: {
       const fd = new FormData();
       fd.append("image", file);
       await api<unknown>(`/api/players/${props.drawer.playerId}/image`, { method: "POST", body: fd });
-      await props.refreshCampaign(state.selectedCampaignId);
     } else {
       // Hold the file until the player is created.
       setPendingImage((prev) => {
@@ -89,7 +88,6 @@ export function PlayerDrawer(props: {
   async function handleImageRemove() {
     if (props.drawer.type === "editPlayer") {
       await api<unknown>(`/api/players/${props.drawer.playerId}/image`, { method: "DELETE" });
-      await props.refreshCampaign(state.selectedCampaignId);
     } else {
       setPendingImage((prev) => {
         if (prev) URL.revokeObjectURL(prev.previewUrl);
@@ -130,7 +128,6 @@ export function PlayerDrawer(props: {
         await api<unknown>(`/api/players/${newPlayer.id}/image`, { method: "POST", body: fd });
         URL.revokeObjectURL(pendingImage.previewUrl);
       }
-      await props.refreshCampaign(d.campaignId);
       props.close();
       return;
     }
@@ -155,9 +152,8 @@ export function PlayerDrawer(props: {
         cha: Number(form.pCha) || 10
       })
     );
-    await props.refreshCampaign(state.selectedCampaignId);
     props.close();
-  }, [form, pendingImage, props, state.selectedCampaignId]);
+  }, [form, pendingImage, props]);
 
   const deletePlayer = React.useCallback(async () => {
     const d = props.drawer;
@@ -175,9 +171,8 @@ export function PlayerDrawer(props: {
     )
       return;
     await api(`/api/players/${d.playerId}`, { method: "DELETE" });
-    await props.refreshCampaign(state.selectedCampaignId);
     props.close();
-  }, [confirm, props, state.selectedCampaignId]);
+  }, [confirm, props]);
 
   const handlers: PlayerFormHandlers = React.useMemo(
     () => ({

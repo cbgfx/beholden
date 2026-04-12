@@ -43,7 +43,6 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
   const emitPlayerChange = (args: { campaignId: string; action: "upsert" | "delete" | "refresh"; playerId?: string; characterId?: string | null }) => {
-    ctx.broadcast("players:changed", { campaignId: args.campaignId });
     ctx.broadcast("players:delta", {
       campaignId: args.campaignId,
       action: args.action,

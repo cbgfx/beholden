@@ -49,6 +49,13 @@ export type BastionsResponse = {
   bastions: Bastion[];
 };
 
+export type BastionResponse = {
+  ok: boolean;
+  role: "dm" | "player";
+  currentUserPlayerIds: string[];
+  bastion: Bastion;
+};
+
 export type BastionCompendiumResponse = {
   ok: boolean;
   facilities: CompendiumFacility[];

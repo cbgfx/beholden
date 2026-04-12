@@ -7,24 +7,21 @@ function apiErr(e: unknown) {
 }
 
 export function useEncounterActions(
-  encounterId: string | undefined,
-  refresh: () => Promise<void>
+  encounterId: string | undefined
 ) {
   const addAllPlayers = React.useCallback(async () => {
     if (!encounterId) return;
     try {
       await api(`/api/encounters/${encounterId}/combatants/addPlayers`, { method: "POST" });
-      await refresh();
     } catch (e) { apiErr(e); }
-  }, [encounterId, refresh]);
+  }, [encounterId]);
 
   const addPlayerToEncounter = React.useCallback(async (playerId: string) => {
     if (!encounterId) return;
     try {
       await api(`/api/encounters/${encounterId}/combatants/addPlayer`, jsonInit("POST", { playerId }));
-      await refresh();
     } catch (e) { apiErr(e); }
-  }, [encounterId, refresh]);
+  }, [encounterId]);
 
   const addMonster = React.useCallback(async (monsterId: string, qty: number, opts?: AddMonsterOptions) => {
     if (!encounterId) return;
@@ -40,25 +37,22 @@ export function useEncounterActions(
         hpDetails: opts?.hpDetails ?? undefined,
         attackOverrides: opts?.attackOverrides ?? null,
       }));
-      await refresh();
     } catch (e) { apiErr(e); }
-  }, [encounterId, refresh]);
+  }, [encounterId]);
 
   const removeCombatant = React.useCallback(async (combatantId: string) => {
     if (!encounterId) return;
     try {
       await api(`/api/encounters/${encounterId}/combatants/${combatantId}`, { method: "DELETE" });
-      await refresh();
     } catch (e) { apiErr(e); }
-  }, [encounterId, refresh]);
+  }, [encounterId]);
 
   const addINpcToEncounter = React.useCallback(async (inpcId: string) => {
     if (!encounterId) return;
     try {
       await api(`/api/encounters/${encounterId}/combatants/addInpc`, jsonInit("POST", { inpcId }));
-      await refresh();
     } catch (e) { apiErr(e); }
-  }, [encounterId, refresh]);
+  }, [encounterId]);
 
   return { addAllPlayers, addPlayerToEncounter, addMonster, removeCombatant, addINpcToEncounter };
 }

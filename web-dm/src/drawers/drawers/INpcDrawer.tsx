@@ -62,9 +62,8 @@ export function INpcDrawer(props: {
         acDetails: acDetails.trim() || null
       })
     );
-    await props.refreshCampaign(state.selectedCampaignId);
     props.close();
-  }, [inpc, name, friendly, hpMax, hpCurrent, hpDetails, ac, acDetails, props, state.selectedCampaignId]);
+  }, [inpc, name, friendly, hpMax, hpCurrent, hpDetails, ac, acDetails, props]);
 
   const deleteINpc = React.useCallback(async () => {
     if (!inpc) return;
@@ -77,9 +76,8 @@ export function INpcDrawer(props: {
     )
       return;
     await api(`/api/inpcs/${inpc.id}`, { method: "DELETE" });
-    await props.refreshCampaign(state.selectedCampaignId);
     props.close();
-  }, [confirm, inpc, props, state.selectedCampaignId]);
+  }, [confirm, inpc, props]);
 
   return {
     body: !inpc ? (

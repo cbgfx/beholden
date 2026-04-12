@@ -32,7 +32,6 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     action: "upsert" | "delete" | "refresh";
     noteId?: string;
   }) => {
-    ctx.broadcast("notes:changed", { campaignId: args.campaignId, adventureId: args.adventureId ?? null });
     ctx.broadcast("notes:delta", {
       campaignId: args.campaignId,
       adventureId: args.adventureId ?? null,
