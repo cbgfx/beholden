@@ -50,6 +50,12 @@ import {
   parseStartingEquipmentOptions,
 } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import {
+  buildGrowthItemLookupBody,
+  buildItemLookupBodyFromNames,
+  fetchCompendiumItemsByLookup,
+  isItemLookupBodyEmpty,
+} from "@/views/character-creator/utils/ItemLookupUtils";
+import {
   buildGrowthChoiceItemOptions,
   getGrowthChoiceDefinitions,
   getGrowthChoiceSelectedAbility,
@@ -112,6 +118,10 @@ import {
   buildStartingInventory as buildStartingInventoryFromUtils,
   getWeaponMasteryChoice as getWeaponMasteryChoiceFromUtils,
 } from "@/views/character-creator/utils/CharacterCreatorProficiencyUtils";
+import {
+  collectEquipmentLookupNames,
+  getBackgroundGrantedToolSelections as getBackgroundGrantedToolSelectionsFromUtils,
+} from "@/views/character-creator/utils/CharacterCreatorEquipmentUtils";
 import {
   deriveFeatGrantedAbilityBonuses,
   deriveTotalFeatAbilityBonuses,
@@ -186,20 +196,7 @@ export function CharacterCreatorView() {
   const bgs = catalogs.bgs;
   const featSummaries = catalogs.featSummaries;
   const campaigns = catalogs.campaigns;
-  const items = catalogs.items;
-  const loadFeatDetail = React.useCallback(
-    async (featId: string) => {
-      const feat = await api<{ name: string; text?: string; parsed: ParsedFeat }>(
-        `/api/compendium/feats/${encodeURIComponent(featId)}`
-      );
-      const detail = { id: featId, name: feat.name, text: feat.text, parsed: feat.parsed };
-      setFeatDetailCache((prev) => ({ ...prev, [featId]: detail }));
-      if (form.chosenRaceFeatId === featId) setRaceFeatDetail(detail);
-      if (form.chosenBgOriginFeatId === featId) setBgOriginFeatDetail(detail);
-      return detail;
-    },
-    [form.chosenBgOriginFeatId, form.chosenRaceFeatId]
-  );
+  const [items, setItems] = React.useState<ItemSummary[]>([]);
   const resolvedRaceFeatDetail = form.chosenRaceFeatId
     ? (raceFeatDetail?.id === form.chosenRaceFeatId ? raceFeatDetail : featDetailCache[form.chosenRaceFeatId] ?? null)
     : null;
@@ -518,11 +515,11 @@ export function CharacterCreatorView() {
     if (!classDetail) { setClassCantrips([]); setClassSpells([]); setClassInvocations([]); return; }
     const spellcastingClassName = getSpellcastingClassName(classDetail, form.level, form.subclass) ?? classDetail.name;
     const name = encodeURIComponent(spellcastingClassName);
-    api<SpellSummary[]>(`/api/spells/search?classes=${name}&level=0&limit=120&includeText=1&excludeSpecial=1`).then(setClassCantrips).catch(() => {});
-    api<SpellSummary[]>(`/api/spells/search?classes=${name}&minLevel=1&maxLevel=9&limit=220&compact=1&excludeSpecial=1`).then(setClassSpells).catch(() => {});
+    api<SpellSummary[]>(`/api/spells/search?classes=${name}&level=0&limit=120&includeText=1&lite=1&excludeSpecial=1`).then(setClassCantrips).catch(() => {});
+    api<SpellSummary[]>(`/api/spells/search?classes=${name}&minLevel=1&maxLevel=9&limit=220&compact=1&lite=1&excludeSpecial=1`).then(setClassSpells).catch(() => {});
     // Eldritch Invocations live in their own spell list
     if (/warlock/i.test(classDetail.name)) {
-      api<SpellSummary[]>("/api/spells/search?classes=Eldritch+Invocations&limit=150&includeText=1").then(setClassInvocations).catch(() => {});
+      api<SpellSummary[]>("/api/spells/search?classes=Eldritch+Invocations&limit=150&includeText=1&lite=1").then(setClassInvocations).catch(() => {});
     } else {
       setClassInvocations([]);
     }
@@ -576,69 +573,92 @@ export function CharacterCreatorView() {
     api<RaceDetail>(`/api/compendium/races/${form.raceId}`).then(setRaceDetail).catch(() => {});
   }, [form.raceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch race feat detail when chosenRaceFeatId changes
   React.useEffect(() => {
-    if (!form.chosenRaceFeatId) { setRaceFeatDetail(null); return; }
-    loadFeatDetail(form.chosenRaceFeatId).catch(() => {});
-  }, [form.chosenRaceFeatId, loadFeatDetail]); // eslint-disable-line react-hooks/exhaustive-deps
+    const raceFeatId = typeof form.chosenRaceFeatId === "string" ? form.chosenRaceFeatId.trim() : "";
+    const bgFeatId = typeof form.chosenBgOriginFeatId === "string" ? form.chosenBgOriginFeatId.trim() : "";
+    const classFeatEntries = Object.entries(form.chosenClassFeatIds).filter(
+      ([, featId]): featId is string => typeof featId === "string" && featId.trim().length > 0,
+    );
+    const levelUpFeatEntries = form.chosenLevelUpFeats.filter(
+      (entry): entry is { level: number; featId: string } =>
+        typeof entry?.level === "number"
+        && typeof entry?.featId === "string"
+        && entry.featId.trim().length > 0,
+    );
+    const ids = Array.from(
+      new Set(
+        [
+          raceFeatId,
+          bgFeatId,
+          ...classFeatEntries.map(([, featId]) => featId.trim()),
+          ...levelUpFeatEntries.map((entry) => entry.featId.trim()),
+        ].filter(Boolean),
+      ),
+    );
 
-  React.useEffect(() => {
-    if (!form.chosenBgOriginFeatId) { setBgOriginFeatDetail(null); return; }
-    loadFeatDetail(form.chosenBgOriginFeatId).catch(() => {});
-  }, [form.chosenBgOriginFeatId, loadFeatDetail]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  React.useEffect(() => {
-    const missingFeatIds = [
-      form.chosenRaceFeatId,
-      form.chosenBgOriginFeatId,
-    ].filter((featId): featId is string => Boolean(featId) && !featDetailCache[String(featId)]);
-    if (missingFeatIds.length === 0) return;
-    missingFeatIds.forEach((featId) => {
-      loadFeatDetail(featId).catch(() => {});
-    });
-  }, [featDetailCache, form.chosenBgOriginFeatId, form.chosenRaceFeatId, loadFeatDetail]);
-
-  React.useEffect(() => {
-    const entries = Object.entries(form.chosenClassFeatIds).filter(([, featId]) => Boolean(featId));
-    if (entries.length === 0) {
+    if (ids.length === 0) {
+      setRaceFeatDetail(null);
+      setBgOriginFeatDetail(null);
       setClassFeatDetails({});
-      return;
-    }
-    let cancelled = false;
-    Promise.all(
-      entries.map(async ([featureName, featId]) => {
-        const detail = await api<{ name: string; text?: string; parsed: ParsedFeat }>(`/api/compendium/feats/${encodeURIComponent(featId)}`);
-        return [featureName, { name: detail.name, text: detail.text, parsed: detail.parsed }] as const;
-      })
-    )
-      .then((pairs) => {
-        if (cancelled) return;
-        setClassFeatDetails(Object.fromEntries(pairs));
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [form.chosenClassFeatIds]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  React.useEffect(() => {
-    const entries = form.chosenLevelUpFeats.filter((entry) => Boolean(entry?.featId));
-    if (entries.length === 0) {
       setLevelUpFeatDetails([]);
       return;
     }
+
     let cancelled = false;
-    Promise.all(
-      entries.map(async ({ level, featId }) => {
-        const detail = await api<{ name: string; text?: string; parsed: ParsedFeat }>(`/api/compendium/feats/${encodeURIComponent(featId)}`);
-        return { level, featId, feat: { name: detail.name, text: detail.text, parsed: detail.parsed } } satisfies LevelUpFeatDetail;
-      })
+    api<{ rows: Array<{ id: string; feat: ({ name: string; text?: string; parsed: ParsedFeat } & Record<string, unknown>) | null }> }>(
+      "/api/compendium/feats/lookup",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      },
     )
-      .then((details) => {
+      .then((payload) => {
         if (cancelled) return;
-        setLevelUpFeatDetails(details);
+        const detailById = new Map<string, { id: string; name: string; text?: string; parsed: ParsedFeat }>();
+        for (const row of payload.rows ?? []) {
+          if (!row?.id || !row?.feat) continue;
+          detailById.set(String(row.id), {
+            id: String(row.id),
+            name: String(row.feat.name ?? ""),
+            text: typeof row.feat.text === "string" ? row.feat.text : undefined,
+            parsed: row.feat.parsed as ParsedFeat,
+          });
+        }
+
+        setFeatDetailCache((prev) => {
+          const next = { ...prev };
+          for (const [featId, detail] of detailById.entries()) next[featId] = detail;
+          return next;
+        });
+
+        setRaceFeatDetail(raceFeatId ? detailById.get(raceFeatId) ?? null : null);
+        setBgOriginFeatDetail(bgFeatId ? detailById.get(bgFeatId) ?? null : null);
+        setClassFeatDetails(
+          Object.fromEntries(
+            classFeatEntries.flatMap(([featureName, featId]) => {
+              const detail = detailById.get(featId);
+              return detail ? [[featureName, detail] as const] : [];
+            }),
+          ),
+        );
+        setLevelUpFeatDetails(
+          levelUpFeatEntries.flatMap(({ level, featId }) => {
+            const detail = detailById.get(featId);
+            return detail ? [{ level, featId, feat: detail } satisfies LevelUpFeatDetail] : [];
+          }),
+        );
       })
-      .catch(() => {});
+      .catch(() => {
+        if (cancelled) return;
+        setRaceFeatDetail(null);
+        setBgOriginFeatDetail(null);
+        setClassFeatDetails({});
+        setLevelUpFeatDetails([]);
+      });
+
     return () => { cancelled = true; };
-  }, [form.chosenLevelUpFeats]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [form.chosenBgOriginFeatId, form.chosenClassFeatIds, form.chosenLevelUpFeats, form.chosenRaceFeatId]);
 
   React.useEffect(() => {
     setForm((f) => {
@@ -676,6 +696,29 @@ export function CharacterCreatorView() {
       });
     return () => { cancelled = true; };
   }, [step6ResolvedSpellChoices]);
+
+  React.useEffect(() => {
+    if (growthChoiceDefinitions.length === 0) {
+      setItems((prev) => (prev.length === 0 ? prev : []));
+      return;
+    }
+    let cancelled = false;
+    const lookupBody = buildGrowthItemLookupBody(growthChoiceDefinitions);
+    if (isItemLookupBodyEmpty(lookupBody)) {
+      setItems((prev) => (prev.length === 0 ? prev : []));
+      return;
+    }
+    fetchCompendiumItemsByLookup(lookupBody)
+      .then((rows) => {
+        if (cancelled) return;
+        setItems(rows);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setItems([]);
+      });
+    return () => { cancelled = true; };
+  }, [growthChoiceDefinitions]);
 
   React.useEffect(() => {
     const spellBackedDefinitions = growthChoiceDefinitions.filter((definition) => definition.spellChoice);
@@ -879,9 +922,23 @@ export function CharacterCreatorView() {
         levelUpFeatDetails,
         invocationDetails: [],
       }).map((feature) => feature.name);
-      const startingInventory = isEditing
-        ? undefined
-        : buildStartingInventoryFromUtils(form, bgDetail, classDetail, items);
+      let startingInventory: ReturnType<typeof buildStartingInventoryFromUtils> | undefined;
+      if (!isEditing) {
+        const bgToolSelections = getBackgroundGrantedToolSelectionsFromUtils(form, bgDetail, [], classifyFeatSelection);
+        const equipmentLookupNames = [
+          ...collectEquipmentLookupNames(form.chosenBgEquipmentOption, bgDetail?.equipment, bgToolSelections),
+          ...collectEquipmentLookupNames(
+            form.chosenClassEquipmentOption,
+            extractClassStartingEquipment(classDetail),
+            [],
+          ),
+        ];
+        const lookupBody = buildItemLookupBodyFromNames(equipmentLookupNames);
+        const startingInventoryItems = isItemLookupBodyEmpty(lookupBody)
+          ? []
+          : await fetchCompendiumItemsByLookup(lookupBody);
+        startingInventory = buildStartingInventoryFromUtils(form, bgDetail, classDetail, startingInventoryItems);
+      }
       const body = {
         name: form.characterName.trim(),
         playerName: optionalText(form.playerName),

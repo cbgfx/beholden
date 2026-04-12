@@ -5,7 +5,6 @@ import type {
   BgSummary,
   Campaign,
   ClassSummary,
-  ItemSummary,
   RaceSummary,
 } from "@/views/character-creator/utils/CharacterCreatorTypes";
 
@@ -17,7 +16,6 @@ export function useCreatorCompendiumCatalogs() {
     { id: string; name: string; ruleset?: Ruleset | null }[]
   >([]);
   const [campaigns, setCampaigns] = React.useState<Campaign[]>([]);
-  const [items, setItems] = React.useState<ItemSummary[]>([]);
 
   React.useEffect(() => {
     api<ClassSummary[]>("/api/compendium/classes").then(setClasses).catch(() => {});
@@ -27,7 +25,6 @@ export function useCreatorCompendiumCatalogs() {
       .then(setFeatSummaries)
       .catch(() => {});
     api<Campaign[]>("/api/me/campaigns").then(setCampaigns).catch(() => {});
-    api<ItemSummary[]>("/api/compendium/items?compact=1").then(setItems).catch(() => {});
   }, []);
 
   return {
@@ -36,6 +33,5 @@ export function useCreatorCompendiumCatalogs() {
     bgs,
     featSummaries,
     campaigns,
-    items,
   };
 }

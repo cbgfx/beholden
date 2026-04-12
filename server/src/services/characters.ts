@@ -3,7 +3,7 @@
 
 import type Database from "better-sqlite3";
 import type { BroadcastFn } from "../server/events.js";
-import { rowToCampaignCharacter, rowToCharacterSheet } from "../lib/db.js";
+import { rowToCampaignCharacter, rowToCharacterSheet, CAMPAIGN_CHARACTER_COLS } from "../lib/db.js";
 import { DEFAULT_DEATH_SAVES, DEFAULT_OVERRIDES } from "../lib/defaults.js";
 import type {
   StoredCampaignCharacter,
@@ -122,22 +122,85 @@ export function buildCampaignCharacterLiveState(
 }
 
 export function serializeCharacterSheetState(sheet: StoredCharacterSheetState): string {
-  return JSON.stringify(sheet);
+  void sheet;
+  return "{}";
 }
 
 export function serializeCampaignCharacterSheet(snapshot: MirroredPlayerSnapshot): string {
-  return JSON.stringify(snapshot);
+  void snapshot;
+  return "{}";
 }
 
 export function serializeCampaignCharacterLive(
   live: StoredCampaignCharacterLiveState,
 ): string {
-  return JSON.stringify({
+  const compact: Record<string, unknown> = {};
+  const overrides = live.overrides ?? DEFAULT_OVERRIDES;
+  const hasAbilityScores = Boolean(overrides.abilityScores && Object.keys(overrides.abilityScores).length > 0);
+  const hasNonDefaultOverrides =
+    overrides.tempHp !== DEFAULT_OVERRIDES.tempHp ||
+    overrides.acBonus !== DEFAULT_OVERRIDES.acBonus ||
+    overrides.hpMaxBonus !== DEFAULT_OVERRIDES.hpMaxBonus ||
+    overrides.inspiration !== DEFAULT_OVERRIDES.inspiration ||
+    hasAbilityScores;
+  if (hasNonDefaultOverrides) compact.overrides = overrides;
+  if (Array.isArray(live.conditions) && live.conditions.length > 0) compact.conditions = live.conditions;
+  return Object.keys(compact).length > 0 ? JSON.stringify(compact) : "{}";
+}
+
+export function characterSheetDbColumns(sheet: StoredCharacterSheetState) {
+  return {
+    name: sheet.name,
+    playerName: sheet.playerName,
+    className: sheet.className,
+    species: sheet.species,
+    level: sheet.level,
+    hpMax: sheet.hpMax,
+    hpCurrent: sheet.hpCurrent,
+    ac: sheet.ac,
+    speed: sheet.speed,
+    strScore: sheet.strScore,
+    dexScore: sheet.dexScore,
+    conScore: sheet.conScore,
+    intScore: sheet.intScore,
+    wisScore: sheet.wisScore,
+    chaScore: sheet.chaScore,
+    color: sheet.color ?? null,
+    deathSavesSuccess: sheet.deathSaves?.success ?? null,
+    deathSavesFail: sheet.deathSaves?.fail ?? null,
+    sheetJson: serializeCharacterSheetState(sheet),
+  };
+}
+
+export function campaignSheetDbColumns(snapshot: MirroredPlayerSnapshot) {
+  return {
+    playerName: snapshot.playerName,
+    characterName: snapshot.characterName,
+    className: snapshot.class,
+    species: snapshot.species,
+    level: snapshot.level,
+    hpMax: snapshot.hpMax,
+    ac: snapshot.ac,
+    speed: snapshot.speed ?? null,
+    str: snapshot.str ?? null,
+    dex: snapshot.dex ?? null,
+    con: snapshot.con ?? null,
+    int: snapshot.int ?? null,
+    wis: snapshot.wis ?? null,
+    cha: snapshot.cha ?? null,
+    color: snapshot.color ?? null,
+    syncedAc: snapshot.syncedAc ?? null,
+    sheetJson: serializeCampaignCharacterSheet(snapshot),
+  };
+}
+
+export function campaignLiveDbColumns(live: StoredCampaignCharacterLiveState) {
+  return {
     hpCurrent: live.hpCurrent,
-    overrides: live.overrides ?? DEFAULT_OVERRIDES,
-    conditions: live.conditions ?? [],
-    ...(live.deathSaves ? { deathSaves: live.deathSaves } : {}),
-  });
+    deathSavesSuccess: live.deathSaves?.success ?? null,
+    deathSavesFail: live.deathSaves?.fail ?? null,
+    liveJson: serializeCampaignCharacterLive(live),
+  };
 }
 
 export function buildCampaignCharacterLive(
@@ -160,12 +223,11 @@ export function updateCampaignCharacterLive(
   patch: Partial<StoredCampaignCharacterLiveState>,
   updatedAt: number,
 ) {
-  db.prepare("UPDATE players SET live_json=?, updated_at=? WHERE id=?")
-    .run(
-      serializeCampaignCharacterLive(buildCampaignCharacterLive(current, patch)),
-      updatedAt,
-      playerId,
-    );
+  const live = buildCampaignCharacterLive(current, patch);
+  const liveCols = campaignLiveDbColumns(live);
+  db.prepare(
+    "UPDATE players SET hp_current=?, death_saves_success=?, death_saves_fail=?, live_json=?, updated_at=? WHERE id=?",
+  ).run(liveCols.hpCurrent, liveCols.deathSavesSuccess, liveCols.deathSavesFail, liveCols.liveJson, updatedAt, playerId);
 }
 
 export function updateProjectedPlayerRow(
@@ -175,15 +237,48 @@ export function updateProjectedPlayerRow(
   updatedAt: number,
   userId?: string,
 ) {
+  const sheetCols = campaignSheetDbColumns(snapshot);
   db.prepare(`
     UPDATE players SET
       user_id=?,
+      player_name=?,
+      character_name=?,
+      class_name=?,
+      species=?,
+      level=?,
+      hp_max=?,
+      ac=?,
+      speed=?,
+      str=?,
+      dex=?,
+      con=?,
+      int=?,
+      wis=?,
+      cha=?,
+      color=?,
+      synced_ac=?,
       sheet_json=?,
       updated_at=?
     WHERE id=?
   `).run(
     userId ?? null,
-    serializeCampaignCharacterSheet(snapshot),
+    sheetCols.playerName,
+    sheetCols.characterName,
+    sheetCols.className,
+    sheetCols.species,
+    sheetCols.level,
+    sheetCols.hpMax,
+    sheetCols.ac,
+    sheetCols.speed,
+    sheetCols.str,
+    sheetCols.dex,
+    sheetCols.con,
+    sheetCols.int,
+    sheetCols.wis,
+    sheetCols.cha,
+    sheetCols.color,
+    sheetCols.syncedAc,
+    sheetCols.sheetJson,
     updatedAt,
     playerId,
   );
@@ -211,17 +306,41 @@ export function insertProjectedPlayerRow(
     userId?: string;
   },
 ) {
+  const sheetCols = campaignSheetDbColumns(snapshot);
+  const liveCols = campaignLiveDbColumns(liveState);
   db.prepare(`
     INSERT INTO players
-      (id, campaign_id, user_id, character_id, sheet_json, live_json, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      (id, campaign_id, user_id, character_id,
+       player_name, character_name, class_name, species, level, hp_max, hp_current, ac, speed,
+       str, dex, con, int, wis, cha, color, synced_ac, death_saves_success, death_saves_fail,
+       sheet_json, live_json, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     playerId,
     campaignId,
     userId ?? null,
     characterId ?? null,
-    serializeCampaignCharacterSheet(snapshot),
-    serializeCampaignCharacterLive(liveState),
+    sheetCols.playerName,
+    sheetCols.characterName,
+    sheetCols.className,
+    sheetCols.species,
+    sheetCols.level,
+    sheetCols.hpMax,
+    liveCols.hpCurrent,
+    sheetCols.ac,
+    sheetCols.speed,
+    sheetCols.str,
+    sheetCols.dex,
+    sheetCols.con,
+    sheetCols.int,
+    sheetCols.wis,
+    sheetCols.cha,
+    sheetCols.color,
+    sheetCols.syncedAc,
+    liveCols.deathSavesSuccess,
+    liveCols.deathSavesFail,
+    sheetCols.sheetJson,
+    liveCols.liveJson,
     createdAt,
     updatedAt,
   );
@@ -240,7 +359,7 @@ export function syncAssignedPlayerRows(
     updateProjectedPlayerRow(db, player_id, snapshot, updatedAt, userId);
     if (livePatch && Object.keys(livePatch).length > 0) {
       const row = db
-        .prepare("SELECT id, campaign_id, user_id, character_id, sheet_json, live_json, image_url, shared_notes, created_at, updated_at FROM players WHERE id = ?")
+        .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`)
         .get(player_id) as Record<string, unknown> | undefined;
       if (row) {
         const current = rowToCampaignCharacter(row);
@@ -289,7 +408,7 @@ export function mergeLiveStats(
 
   const liveRow = db
     .prepare(
-      `SELECT id, campaign_id, user_id, character_id, sheet_json, live_json, image_url, shared_notes, created_at, updated_at
+      `SELECT ${CAMPAIGN_CHARACTER_COLS}
        FROM players
        WHERE id IN (${playerIds.map(() => "?").join(",")})
        ORDER BY updated_at DESC LIMIT 1`,
@@ -324,25 +443,26 @@ export function mergeLiveStats(
     if (unresolvedCasterIds.length > 0) {
       const playerRows = db
         .prepare(
-          `SELECT id, sheet_json
+          `SELECT id, character_name, sheet_json
            FROM players
            WHERE id IN (${unresolvedCasterIds.map(() => "?").join(",")})`,
         )
-        .all(...unresolvedCasterIds) as { id: string; sheet_json: string }[];
+        .all(...unresolvedCasterIds) as { id: string; character_name: string | null; sheet_json: string }[];
       for (const row of playerRows) {
-        const actor = rowToCampaignCharacter({
-          id: row.id,
-          campaign_id: "",
-          user_id: null,
-          character_id: null,
-          sheet_json: row.sheet_json,
-          live_json: "{}",
-          image_url: null,
-          shared_notes: "",
-          created_at: 0,
-          updated_at: 0,
-        });
-        casterNameById[row.id] = actor.characterName;
+        if (typeof row.character_name === "string" && row.character_name.trim()) {
+          casterNameById[row.id] = row.character_name.trim();
+          continue;
+        }
+        let parsed: Record<string, unknown> = {};
+        try {
+          parsed = JSON.parse(row.sheet_json || "{}") as Record<string, unknown>;
+        } catch {
+          parsed = {};
+        }
+        const fallback = typeof parsed.characterName === "string" && parsed.characterName.trim()
+          ? parsed.characterName.trim()
+          : "Player";
+        casterNameById[row.id] = fallback;
       }
     }
   }

@@ -68,7 +68,12 @@ export function PolymorphDrawer(props: {
       try {
         const params = new URLSearchParams({
           q,
-          limit: "250",
+          limit:
+            q.trim().length >= 2
+            || typeFilter !== "all"
+            || Boolean(crMax.trim())
+              ? "200"
+              : "120",
           sort: "crAsc",
         });
         if (typeFilter !== "all") params.set("types", typeFilter);

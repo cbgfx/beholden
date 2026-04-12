@@ -11,6 +11,8 @@ import { z } from "zod";
 
 export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: RequestHandler) {
   const { db } = ctx;
+  const MAX_SPELL_SEARCH_LIMIT = 250;
+  const MAX_SPELL_LOOKUP_NAMES = 250;
 
   const schoolAliases: Record<string, string[]> = {
     abjuration: ["A", "Abjuration"],
@@ -24,7 +26,9 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
   };
 
   const SpellLookupBody = z.object({
-    names: z.array(z.string()).max(400),
+    ids: z.array(z.string()).max(MAX_SPELL_LOOKUP_NAMES).optional(),
+    names: z.array(z.string()).max(MAX_SPELL_LOOKUP_NAMES).optional(),
+    includeText: z.boolean().optional(),
   });
 
   const selectSpellByExact = db.prepare(
@@ -69,9 +73,14 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
   app.get("/api/spells/search", (req, res) => {
     applySharedApiCacheHeaders(res);
     const q = String(req.query.q ?? "").trim().toLowerCase();
-    const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "50"), 10) || 50, 1), 500);
+    const limit = Math.min(
+      Math.max(parseInt(String(req.query.limit ?? "50"), 10) || 50, 1),
+      MAX_SPELL_SEARCH_LIMIT,
+    );
     const includeTextRaw = String(req.query.includeText ?? "").trim().toLowerCase();
     const includeText = includeTextRaw === "1" || includeTextRaw === "true" || includeTextRaw === "yes";
+    const liteRaw = String(req.query.lite ?? "").trim().toLowerCase();
+    const lite = liteRaw === "1" || liteRaw === "true" || liteRaw === "yes";
     const compactRaw = String(req.query.compact ?? "").trim().toLowerCase();
     const compact = compactRaw === "1" || compactRaw === "true" || compactRaw === "yes";
     const excludeSpecialRaw = String(req.query.excludeSpecial ?? "").trim().toLowerCase();
@@ -86,9 +95,10 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     const ritualRaw = String(req.query.ritual ?? "").trim().toLowerCase();
     const ritualOnly = ritualRaw === "1" || ritualRaw === "true" || ritualRaw === "yes";
 
-    const baseSelect = compact && !includeText
-      ? "SELECT id, name, level, school, ritual, concentration, components, classes FROM compendium_spells WHERE 1=1"
-      : "SELECT id, name, level, school, ritual, concentration, components, classes, data_json FROM compendium_spells WHERE 1=1";
+    const shouldSelectDataJson = includeText || (!compact && !lite);
+    const baseSelect = shouldSelectDataJson
+      ? "SELECT id, name, level, school, ritual, concentration, components, classes, data_json FROM compendium_spells WHERE 1=1"
+      : "SELECT id, name, level, school, ritual, concentration, components, classes FROM compendium_spells WHERE 1=1";
     const parts: string[] = [baseSelect];
     const params: unknown[] = [];
 
@@ -139,10 +149,27 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
       ritual: number; concentration: number; components: string | null; classes: string | null; data_json?: string;
     }[];
     res.json(rows.map((row) => {
-      const s =
-        !compact || includeText
-          ? JSON.parse(row.data_json ?? "{}")
-          : {};
+      const s = shouldSelectDataJson ? JSON.parse(row.data_json ?? "{}") : {};
+      if (lite) {
+        const out: Record<string, unknown> = {
+          id: row.id,
+          name: row.name,
+          level: row.level,
+          school: row.school ?? null,
+          ritual: row.ritual === 1,
+          concentration: row.concentration === 1,
+          components: row.components ?? null,
+          classes: row.classes ?? null,
+        };
+        out.time = s.time ?? null;
+        out.range = s.range ?? null;
+        out.duration = s.duration ?? null;
+        if (includeText) {
+          const textArr: string[] = Array.isArray(s.text) ? s.text : (s.text ? [s.text] : []);
+          out.text = textArr.join("\n") || null;
+        }
+        return out;
+      }
       const out: Record<string, unknown> = {
         id: row.id, name: row.name, level: row.level, school: row.school,
         time: s.time ?? null,
@@ -160,8 +187,42 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
 
   app.post("/api/spells/lookup", (req, res) => {
     const body = parseBody(SpellLookupBody, req);
+    const includeText = Boolean(body.includeText);
+    const rows: Array<{
+      query: string;
+      match:
+        | ( {
+            id: string;
+            name: string;
+            level: number | null;
+            school?: string | null;
+            ritual?: boolean;
+            concentration?: boolean;
+            components?: string | null;
+            classes?: string | null;
+            time?: string | null;
+            range?: string | null;
+            duration?: string | null;
+            text?: string | null;
+          } )
+        | null;
+    }> = [];
+
+    const ids = Array.from(new Set((body.ids ?? []).map((entry) => String(entry ?? "").trim()).filter(Boolean)));
+    if (ids.length > 0) {
+      const placeholders = ids.map(() => "?").join(", ");
+      const idRows = db.prepare(
+        `SELECT id, name, level FROM compendium_spells WHERE id IN (${placeholders})`,
+      ).all(...ids) as Array<{ id: string; name: string; level: number | null }>;
+      const idRowById = new Map(idRows.map((row) => [row.id, row]));
+      for (const id of ids) {
+        const row = idRowById.get(id);
+        rows.push({ query: id, match: row ?? null });
+      }
+    }
+
     const seen = new Set<string>();
-    const rows = body.names
+    const nameRows = (body.names ?? [])
       .map((entry) => String(entry ?? ""))
       .map((entry) => entry.trim())
       .filter(Boolean)
@@ -172,6 +233,78 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
         return true;
       })
       .map((query) => ({ query, match: lookupSpellByName(query) }));
+    rows.push(...nameRows);
+
+    if (includeText) {
+      const matchIds = Array.from(
+        new Set(
+          rows
+            .map((row) => row.match?.id)
+            .filter((id): id is string => typeof id === "string" && id.length > 0),
+        ),
+      );
+      if (matchIds.length > 0) {
+        const placeholders = matchIds.map(() => "?").join(", ");
+        const textRows = db.prepare(
+          `SELECT id, school, ritual, concentration, components, classes, data_json
+           FROM compendium_spells
+           WHERE id IN (${placeholders})`,
+        ).all(...matchIds) as Array<{
+          id: string;
+          school: string | null;
+          ritual: number;
+          concentration: number;
+          components: string | null;
+          classes: string | null;
+          data_json: string | null;
+        }>;
+        const detailById = new Map(
+          textRows.map((row) => {
+            let time: string | null = null;
+            let range: string | null = null;
+            let duration: string | null = null;
+            let text: string | null = null;
+            try {
+              const parsed = JSON.parse(row.data_json ?? "{}") as {
+                time?: unknown;
+                range?: unknown;
+                duration?: unknown;
+                text?: unknown;
+              };
+              time = parsed.time == null ? null : String(parsed.time);
+              range = parsed.range == null ? null : String(parsed.range);
+              duration = parsed.duration == null ? null : String(parsed.duration);
+              const textArr: string[] = Array.isArray(parsed.text)
+                ? parsed.text.map((entry) => String(entry ?? "")).filter(Boolean)
+                : parsed.text
+                  ? [String(parsed.text)]
+                  : [];
+              text = textArr.join("\n").trim() || null;
+            } catch {
+              // keep null fields
+            }
+            return [row.id, {
+              school: row.school ?? null,
+              ritual: row.ritual === 1,
+              concentration: row.concentration === 1,
+              components: row.components ?? null,
+              classes: row.classes ?? null,
+              time,
+              range,
+              duration,
+              text,
+            }] as const;
+          }),
+        );
+        for (const row of rows) {
+          if (!row.match?.id) continue;
+          const detail = detailById.get(row.match.id);
+          if (!detail) continue;
+          row.match = { ...row.match, ...detail };
+        }
+      }
+    }
+
     res.json({ rows });
   });
 

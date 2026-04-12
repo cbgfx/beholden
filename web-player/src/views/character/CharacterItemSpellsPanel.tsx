@@ -8,7 +8,7 @@ import { SpellDrawer } from "@/views/character/CharacterSpellDrawers";
 
 type SpellLookupRow = {
   query: string;
-  match: { id: string; name: string; level: number | null } | null;
+  match: (FetchedSpellDetail & { text?: string | null }) | null;
 };
 
 export function ItemSpellsPanel({
@@ -68,27 +68,15 @@ export function ItemSpellsPanel({
     api<{ rows: SpellLookupRow[] }>("/api/spells/lookup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ names: missingNames }),
+      body: JSON.stringify({ names: missingNames, includeText: true }),
     })
-      .then(async (payload) => {
-        if (!alive) return;
-        const detailPairs = await Promise.all(
-          (payload.rows ?? [])
-            .filter((row) => Boolean(row?.match?.id))
-            .map(async (row) => {
-              try {
-                const detail = await api<FetchedSpellDetail>(`/api/spells/${row.match!.id}`);
-                return [row.query, detail] as const;
-              } catch {
-                return null;
-              }
-            }),
-        );
+      .then((payload) => {
         if (!alive) return;
         const updates: Record<string, FetchedSpellDetail> = {};
-        for (const pair of detailPairs) {
-          if (!pair) continue;
-          const [query, detail] = pair;
+        for (const row of payload.rows ?? []) {
+          if (!row?.match?.id) continue;
+          const query = row.query;
+          const detail = row.match;
           const keys = missingByName.get(query) ?? [];
           const text = Array.isArray(detail.text) ? detail.text.join("\n") : String(detail.text ?? "");
           const enriched: FetchedSpellDetail = {

@@ -25,11 +25,14 @@ function parseCrFilterValue(raw: unknown): number | null {
 
 export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: RequestHandler) {
   const { db } = ctx;
+  const MAX_MONSTER_SEARCH_LIMIT = 200;
 
   app.get("/api/compendium/monsters/:monsterId", (req, res) => {
     applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const monsterId = requireParam(req, res, "monsterId");
     if (!monsterId) return;
+    const view = String(req.query.view ?? "").trim().toLowerCase();
+    const metricsOnly = view === "metrics" || view === "summary";
     const row = db
       .prepare("SELECT id, name, name_key, cr, type_key, type_full, size, environment, data_json FROM compendium_monsters WHERE id = ?")
       .get(monsterId) as {
@@ -47,6 +50,17 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
       return res.status(404).json({ ok: false, message: "Monster not found in compendium" });
 
     const m = JSON.parse(row.data_json ?? "{}");
+    if (metricsOnly) {
+      return res.json({
+        id: row.id,
+        name: row.name,
+        cr: row.cr ?? m.cr ?? null,
+        xp: m.xp ?? null,
+        action: m.action ?? [],
+        legendary: m.legendary ?? [],
+        _summaryOnly: true,
+      });
+    }
     res.json({
       id: row.id,
       name: row.name,
@@ -140,7 +154,10 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
   app.get("/api/compendium/search", (req, res) => {
     applySharedApiCacheHeaders(res);
     const q = String(req.query.q ?? "").trim().toLowerCase();
-    const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "50"), 10) || 50, 1), 500);
+    const limit = Math.min(
+      Math.max(parseInt(String(req.query.limit ?? "50"), 10) || 50, 1),
+      MAX_MONSTER_SEARCH_LIMIT,
+    );
     const offset = Math.max(parseInt(String(req.query.offset ?? "0"), 10) || 0, 0);
     const crMin = parseCrFilterValue(req.query.crMin);
     const crMax = parseCrFilterValue(req.query.crMax);

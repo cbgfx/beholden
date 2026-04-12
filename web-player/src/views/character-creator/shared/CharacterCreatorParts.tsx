@@ -3,7 +3,10 @@ import { C } from "@/lib/theme";
 import { api } from "@/services/api";
 import { inputStyle, labelStyle } from "./CharacterCreatorStyles";
 import { extractPrerequisite, stripPrerequisiteLine } from "@/views/character/CharacterSheetUtils";
-import type { CompendiumItemDetail } from "@/views/character/CharacterInventory";
+
+type ItemDetailPreview = {
+  text?: string[] | string | null;
+};
 
 function btnStyle(primary: boolean, disabled: boolean): React.CSSProperties {
   return {
@@ -321,7 +324,7 @@ export function ItemPicker<T extends { id: string; name: string; rarity?: string
 }) {
   const [q, setQ] = React.useState("");
   const [activeId, setActiveId] = React.useState<string | null>(null);
-  const [details, setDetails] = React.useState<Record<string, CompendiumItemDetail>>({});
+  const [details, setDetails] = React.useState<Record<string, ItemDetailPreview>>({});
   const disabledIdSet = React.useMemo(() => new Set(disabledIds ?? []), [disabledIds]);
   const filtered = q
     ? items.filter((item) => item.name.toLowerCase().includes(q.toLowerCase()))
@@ -342,16 +345,27 @@ export function ItemPicker<T extends { id: string; name: string; rarity?: string
   }, [activeId, activeItem, items]);
 
   React.useEffect(() => {
-    if (!activeItem || details[activeItem.id]) return;
+    const ids = filtered
+      .map((item) => item.id)
+      .filter((id) => !details[id])
+      .slice(0, 48);
+    if (ids.length === 0) return;
     let alive = true;
-    api<CompendiumItemDetail>(`/api/compendium/items/${encodeURIComponent(activeItem.id)}`)
-      .then((detail) => {
+    api<{ rows: Array<{ id: string; text?: string[] | null }> }>("/api/compendium/items/lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids, includeText: true }),
+    })
+      .then((result) => {
         if (!alive) return;
-        setDetails((prev) => ({ ...prev, [activeItem.id]: detail }));
+        const patch: Record<string, ItemDetailPreview> = {};
+        for (const row of result.rows ?? []) patch[row.id] = { text: row.text ?? null };
+        if (Object.keys(patch).length === 0) return;
+        setDetails((prev) => ({ ...prev, ...patch }));
       })
       .catch(() => {});
     return () => { alive = false; };
-  }, [activeItem, details]);
+  }, [details, filtered]);
 
   return (
     <div style={{ marginBottom: 24 }}>

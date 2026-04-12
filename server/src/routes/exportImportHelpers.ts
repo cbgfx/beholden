@@ -2,7 +2,7 @@ import type { Db } from "../lib/db.js";
 import { ensureCombat, insertCombatant } from "../services/combat.js";
 import { DEFAULT_DEATH_SAVES, DEFAULT_OVERRIDES } from "../lib/defaults.js";
 import { seedDefaultConditions } from "../services/conditions.js";
-import { serializeCampaignCharacterLive, serializeCampaignCharacterSheet } from "../services/characters.js";
+import { campaignLiveDbColumns, campaignSheetDbColumns } from "../services/characters.js";
 import type {
   StoredConditionInstance,
   StoredDeathSaves,
@@ -79,38 +79,63 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
 
     const players = toArray(doc["players"]);
     for (const player of players) {
+      const sheetCols = campaignSheetDbColumns({
+        playerName: String(player["playerName"] ?? ""),
+        characterName: String(player["characterName"] ?? ""),
+        class: String(player["class"] ?? ""),
+        species: String(player["species"] ?? ""),
+        level: Number(player["level"] ?? 1),
+        hpMax: Number(player["hpMax"] ?? 10),
+        ac: Number(player["ac"] ?? 10),
+        ...(player["speed"] != null ? { speed: Number(player["speed"]) } : {}),
+        ...(player["str"] != null ? { str: Number(player["str"]) } : {}),
+        ...(player["dex"] != null ? { dex: Number(player["dex"]) } : {}),
+        ...(player["con"] != null ? { con: Number(player["con"]) } : {}),
+        ...(player["int"] != null ? { int: Number(player["int"]) } : {}),
+        ...(player["wis"] != null ? { wis: Number(player["wis"]) } : {}),
+        ...(player["cha"] != null ? { cha: Number(player["cha"]) } : {}),
+        ...(player["color"] != null ? { color: player["color"] as string | null } : {}),
+        ...(player["syncedAc"] != null ? { syncedAc: Number(player["syncedAc"]) } : {}),
+      });
+      const liveCols = campaignLiveDbColumns({
+        hpCurrent: Number(player["hpCurrent"] ?? 10),
+        overrides: (player["overrides"] as StoredOverrides | undefined) ?? DEFAULT_OVERRIDES,
+        conditions: (player["conditions"] as StoredConditionInstance[] | undefined) ?? [],
+        ...(player["deathSaves"] != null ? { deathSaves: player["deathSaves"] as StoredDeathSaves } : {}),
+      });
       db.prepare(`
         INSERT OR IGNORE INTO players
-          (id, campaign_id, user_id, character_id, sheet_json, live_json, image_url, shared_notes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (id, campaign_id, user_id, character_id,
+           player_name, character_name, class_name, species, level, hp_max, hp_current, ac, speed,
+           str, dex, con, int, wis, cha, color, synced_ac, death_saves_success, death_saves_fail,
+           sheet_json, live_json, image_url, shared_notes, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         String(player["id"]),
         campaignId,
         (player["userId"] as string | null) ?? null,
         (player["characterId"] as string | null) ?? null,
-        serializeCampaignCharacterSheet({
-          playerName: String(player["playerName"] ?? ""),
-          characterName: String(player["characterName"] ?? ""),
-          class: String(player["class"] ?? ""),
-          species: String(player["species"] ?? ""),
-          level: Number(player["level"] ?? 1),
-          hpMax: Number(player["hpMax"] ?? 10),
-          ac: Number(player["ac"] ?? 10),
-          ...(player["speed"] != null ? { speed: Number(player["speed"]) } : {}),
-          ...(player["str"] != null ? { str: Number(player["str"]) } : {}),
-          ...(player["dex"] != null ? { dex: Number(player["dex"]) } : {}),
-          ...(player["con"] != null ? { con: Number(player["con"]) } : {}),
-          ...(player["int"] != null ? { int: Number(player["int"]) } : {}),
-          ...(player["wis"] != null ? { wis: Number(player["wis"]) } : {}),
-          ...(player["cha"] != null ? { cha: Number(player["cha"]) } : {}),
-          ...((player["color"] as string | null) != null ? { color: player["color"] as string } : {}),
-        }),
-        serializeCampaignCharacterLive({
-          hpCurrent: Number(player["hpCurrent"] ?? 10),
-          overrides: (player["overrides"] as StoredOverrides | undefined) ?? DEFAULT_OVERRIDES,
-          conditions: (player["conditions"] as StoredConditionInstance[] | undefined) ?? [],
-          ...(player["deathSaves"] != null ? { deathSaves: player["deathSaves"] as StoredDeathSaves } : {}),
-        }),
+        sheetCols.playerName,
+        sheetCols.characterName,
+        sheetCols.className,
+        sheetCols.species,
+        sheetCols.level,
+        sheetCols.hpMax,
+        liveCols.hpCurrent,
+        sheetCols.ac,
+        sheetCols.speed,
+        sheetCols.str,
+        sheetCols.dex,
+        sheetCols.con,
+        sheetCols.int,
+        sheetCols.wis,
+        sheetCols.cha,
+        sheetCols.color,
+        sheetCols.syncedAc,
+        liveCols.deathSavesSuccess,
+        liveCols.deathSavesFail,
+        sheetCols.sheetJson,
+        liveCols.liveJson,
         (player["imageUrl"] as string | null) ?? null,
         String(player["sharedNotes"] ?? ""),
         Number(player["createdAt"] ?? Date.now()),

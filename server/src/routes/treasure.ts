@@ -51,7 +51,8 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
   };
 
   function serializeTreasureState(entry: StoredTreasureState) {
-    return JSON.stringify(entry);
+    void entry;
+    return "{}";
   }
 
   function hydrateTreasureEntry(entry: ReturnType<typeof rowToTreasure>) {
@@ -130,7 +131,19 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     const { qty } = parseBody(TreasureQtyBody, req);
     const treasure = hydrateTreasureEntry(rowToTreasure(row));
     const t = now();
-    db.prepare("UPDATE treasure SET entry_json = ?, updated_at = ? WHERE id = ?").run(
+    db.prepare(
+      "UPDATE treasure SET source = ?, item_id = ?, name = ?, rarity = ?, type = ?, type_key = ?, attunement = ?, magic = ?, text = ?, qty = ?, entry_json = ?, updated_at = ? WHERE id = ?",
+    ).run(
+      treasure.source,
+      treasure.itemId,
+      treasure.name,
+      treasure.rarity,
+      treasure.type,
+      treasure.type_key,
+      treasure.attunement ? 1 : 0,
+      treasure.magic ? 1 : 0,
+      treasure.text,
+      qty,
       serializeTreasureState({
         source: treasure.source,
         itemId: treasure.itemId,
@@ -144,7 +157,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
         qty,
       }),
       t,
-      treasureId
+      treasureId,
     );
     emitTreasureChange({
       campaignId: treasure.campaignId,
@@ -302,12 +315,22 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
 
     db.prepare(`
       INSERT INTO treasure
-        (id, campaign_id, adventure_id, entry_json, sort, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+        (id, campaign_id, adventure_id, source, item_id, name, rarity, type, type_key, attunement, magic, text, qty, entry_json, sort, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       campaignId,
       adventureId ?? null,
+      entry.source,
+      entry.itemId,
+      entry.name,
+      entry.rarity,
+      entry.type,
+      entry.type_key,
+      entry.attunement ? 1 : 0,
+      entry.magic ? 1 : 0,
+      entry.text,
+      entry.qty,
       serializeTreasureState(entry),
       sort,
       t,

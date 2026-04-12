@@ -57,7 +57,9 @@ export function useMonsterDetailsCache(
 
   const ensureMonster = React.useCallback(
     async (baseId: string) => {
-      if (!baseId || monsterCache[baseId]) return;
+      if (!baseId) return;
+      const cached = monsterCache[baseId] as (MonsterDetail & { _summaryOnly?: boolean }) | undefined;
+      if (cached && !cached._summaryOnly) return;
       try {
         const d = await api<MonsterDetail>(`/api/compendium/monsters/${baseId}`);
         dispatch({ type: "mergeMonsterDetails", patch: { [baseId]: d } });
@@ -97,7 +99,7 @@ export function useMonsterDetailsCache(
 
     Promise.allSettled(
       missing.map((id) =>
-        api<MonsterDetail>(`/api/compendium/monsters/${id}`).then((d) => ({ id, d }))
+        api<MonsterDetail>(`/api/compendium/monsters/${id}?view=metrics`).then((d) => ({ id, d }))
       )
     ).then((results) => {
       if (!alive) return;

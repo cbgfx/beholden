@@ -1,65 +1,86 @@
 import React from "react";
-import { api } from "@/services/api";
 import type { CompendiumItemDetail, CompendiumItemRow } from "@/domain/types/compendium";
-import { uniqSorted, sortedRarities } from "./ItemPickerModalParts";
 import { useVirtualList } from "@/views/CampaignView/monsterPicker/hooks/useVirtualList";
+import { api } from "@/services/api";
+import { useItemSearch } from "@/views/CompendiumView/hooks/useItemSearch";
 
 const ROW_HEIGHT = 52;
 
 export function useItemPicker(isOpen: boolean) {
-  const [rows, setRows] = React.useState<CompendiumItemRow[]>([]);
-  const [loading, setLoading] = React.useState(false);
-
-  const [q, setQ] = React.useState("");
-  const [rarity, setRarity] = React.useState("");
-  const [type, setType] = React.useState("");
+  const {
+    q,
+    setQ,
+    rarityFilter,
+    setRarityFilter,
+    rarityOptions: rawRarityOptions,
+    typeFilter,
+    setTypeFilter,
+    typeOptions: rawTypeOptions,
+    setFilterMagic,
+    rows: serverRows,
+    busy,
+    totalCount,
+    refresh,
+  } = useItemSearch({ enabled: isOpen });
   const [magicFilter, setMagicFilter] = React.useState<"" | "magic" | "nonmagic">("");
 
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [detail, setDetail] = React.useState<CompendiumItemDetail | null>(null);
+  const [detailCache, setDetailCache] = React.useState<Record<string, CompendiumItemDetail>>({});
 
-  // Fetch item list when modal opens
+  React.useEffect(() => {
+    setFilterMagic(magicFilter === "magic");
+  }, [magicFilter, setFilterMagic]);
+
   React.useEffect(() => {
     if (!isOpen) return;
-    let alive = true;
-    setLoading(true);
-    api<CompendiumItemRow[]>("/api/compendium/items?compact=1")
-      .then((r) => { if (alive) setRows(r); })
-      .finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
-  }, [isOpen]);
+    refresh();
+  }, [isOpen, refresh]);
 
   // Reset all state when modal closes
   React.useEffect(() => {
     if (isOpen) return;
-    setQ(""); setRarity(""); setType(""); setMagicFilter("");
-    setSelectedId(null); setDetail(null);
-  }, [isOpen]);
+    setQ(""); setRarityFilter("all"); setTypeFilter("all"); setMagicFilter("");
+    setSelectedId(null); setDetail(null); setDetailCache({});
+  }, [isOpen, setQ, setRarityFilter, setTypeFilter]);
 
   // Fetch detail when selection changes
   React.useEffect(() => {
     if (!isOpen || !selectedId) { setDetail(null); return; }
+    const cached = detailCache[selectedId];
+    if (cached) {
+      setDetail(cached);
+      return;
+    }
     let alive = true;
     api<CompendiumItemDetail>(`/api/compendium/items/${selectedId}`)
-      .then((d) => { if (alive) setDetail(d); })
+      .then((d) => {
+        if (!alive) return;
+        setDetail(d);
+        setDetailCache((prev) => ({ ...prev, [selectedId]: d }));
+      })
       .catch(() => { if (alive) setDetail(null); });
     return () => { alive = false; };
-  }, [isOpen, selectedId]);
+  }, [isOpen, selectedId, detailCache]);
 
-  const rarityOptions = React.useMemo(() =>
-    sortedRarities(rows.map((r) => (r.rarity ?? "").trim())), [rows]);
+  const rarityOptions = React.useMemo(
+    () => rawRarityOptions.filter((value) => value !== "all"),
+    [rawRarityOptions],
+  );
 
-  const typeOptions = React.useMemo(() =>
-    uniqSorted(rows.map((r) => (r.type ?? "").trim())), [rows]);
+  const typeOptions = React.useMemo(
+    () => rawTypeOptions.filter((value) => value !== "all"),
+    [rawTypeOptions],
+  );
 
   const filtered = React.useMemo(() => {
-    const ql = q.trim().toLowerCase();
-    return rows
-      .filter((r) => !rarity || r.rarity === rarity)
-      .filter((r) => !type || r.type === type)
-      .filter((r) => !magicFilter || (magicFilter === "magic" ? r.magic : !r.magic))
-      .filter((r) => !ql || r.name.toLowerCase().replace(/\s*\[.*?\]\s*$/, "").includes(ql));
-  }, [rows, q, rarity, type, magicFilter]);
+    if (magicFilter === "nonmagic") return serverRows.filter((row) => !row.magic);
+    return serverRows;
+  }, [serverRows, magicFilter]);
+
+  React.useEffect(() => {
+    setSelectedId((current) => (current && filtered.some((row) => row.id === current) ? current : null));
+  }, [filtered]);
 
   const vl = useVirtualList({ isEnabled: true, rowHeight: ROW_HEIGHT, overscan: 6 });
 
@@ -67,13 +88,19 @@ export function useItemPicker(isOpen: boolean) {
   React.useEffect(() => {
     const el = vl.scrollRef.current;
     if (el) el.scrollTop = 0;
-  }, [q, rarity, type, magicFilter]);
+  }, [q, rarityFilter, typeFilter, magicFilter]);
 
   return {
-    rows, loading,
+    rows: serverRows as CompendiumItemRow[],
+    totalCount,
+    loading: busy,
     q, setQ,
-    rarity, setRarity, rarityOptions,
-    type, setType, typeOptions,
+    rarity: rarityFilter === "all" ? "" : rarityFilter,
+    setRarity: (value: string) => setRarityFilter(value || "all"),
+    rarityOptions,
+    type: typeFilter === "all" ? "" : typeFilter,
+    setType: (value: string) => setTypeFilter(value || "all"),
+    typeOptions,
     magicFilter, setMagicFilter,
     selectedId, setSelectedId,
     detail,

@@ -46,6 +46,7 @@ export function CharacterCreaturePickerModal(props: {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<any | null>(null);
+  const [detailCache, setDetailCache] = useState<Record<string, any>>({});
   const [detailBusy, setDetailBusy] = useState(false);
 
   useEffect(() => {
@@ -57,7 +58,7 @@ export function CharacterCreaturePickerModal(props: {
       try {
         const params = new URLSearchParams({
           q: query,
-          limit: "220",
+          limit: query.trim().length >= 2 ? "220" : "120",
           sort: "az",
         });
         const data = await api<CompendiumMonsterRow[]>(`/api/compendium/search?${params.toString()}`, {
@@ -84,6 +85,7 @@ export function CharacterCreaturePickerModal(props: {
       setQuery("");
       setSelectedId(null);
       setDetail(null);
+      setDetailCache({});
       setDetailBusy(false);
       setRows([]);
     }
@@ -95,14 +97,24 @@ export function CharacterCreaturePickerModal(props: {
       setDetailBusy(false);
       return;
     }
+    const cached = detailCache[selectedId];
+    if (cached) {
+      setDetail(cached);
+      setDetailBusy(false);
+      return;
+    }
     let alive = true;
     setDetailBusy(true);
     api<any>(`/api/compendium/monsters/${encodeURIComponent(selectedId)}`)
-      .then((data) => { if (alive) setDetail(data); })
+      .then((data) => {
+        if (!alive) return;
+        setDetail(data);
+        setDetailCache((prev) => ({ ...prev, [selectedId]: data }));
+      })
       .catch(() => { if (alive) setDetail(null); })
       .finally(() => { if (alive) setDetailBusy(false); });
     return () => { alive = false; };
-  }, [props.isOpen, selectedId]);
+  }, [props.isOpen, selectedId, detailCache]);
 
   const filteredRows = rows;
 

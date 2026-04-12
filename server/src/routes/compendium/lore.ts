@@ -6,13 +6,38 @@ import type { ServerContext } from "../../server/context.js";
 import { requireParam } from "../../lib/routeHelpers.js";
 import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { requireAuth } from "../../middleware/auth.js";
+import { parseBody } from "../../shared/validate.js";
 import { parseFeat } from "../../lib/featParser.js";
 import { parseBackgroundProficiencies, parseRaceChoicesByRuleset } from "../../lib/proficiencyConstants.js";
 import { inferRuleset } from "../../lib/inferRuleset.js";
 import { parsePreparedSpellProgression } from "../../lib/preparedSpellProgression.js";
+import { z } from "zod";
 
 export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
+  const MAX_FEAT_LOOKUP_IDS = 300;
+  const FeatLookupBody = z.object({
+    ids: z.array(z.string()).max(MAX_FEAT_LOOKUP_IDS),
+  });
+
+  function buildFeatDetailFromRow(row: { data_json: string }) {
+    const feat = JSON.parse(row.data_json);
+    if (!feat.ruleset) {
+      feat.ruleset = inferRuleset(feat.name, feat.text, feat.prerequisite, feat.special);
+    }
+    feat.parsed = parseFeat({
+      name: String(feat.name ?? ""),
+      text: String(feat.text ?? ""),
+      prerequisite: typeof feat.prerequisite === "string" ? feat.prerequisite : null,
+      proficiency: typeof feat.proficiency === "string" ? feat.proficiency : null,
+      modifiers: Array.isArray(feat.modifierDetails)
+        ? feat.modifierDetails
+        : Array.isArray(feat.modifiers)
+          ? feat.modifiers.map((text: unknown) => ({ category: "", text: String(text ?? "") }))
+          : [],
+    });
+    return feat;
+  }
 
   // --- Classes ---------------------------------------------------------------
   app.get("/api/compendium/classes", requireAuth, (_req, res) => {
@@ -137,21 +162,27 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     if (!featId) return;
     const row = db.prepare("SELECT data_json FROM compendium_feats WHERE id = ?").get(featId) as { data_json: string } | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Feat not found" });
-    const feat = JSON.parse(row.data_json);
-    if (!feat.ruleset) {
-      feat.ruleset = inferRuleset(feat.name, feat.text, feat.prerequisite, feat.special);
-    }
-    feat.parsed = parseFeat({
-      name: String(feat.name ?? ""),
-      text: String(feat.text ?? ""),
-      prerequisite: typeof feat.prerequisite === "string" ? feat.prerequisite : null,
-      proficiency: typeof feat.proficiency === "string" ? feat.proficiency : null,
-      modifiers: Array.isArray(feat.modifierDetails)
-        ? feat.modifierDetails
-        : Array.isArray(feat.modifiers)
-          ? feat.modifiers.map((text: unknown) => ({ category: "", text: String(text ?? "") }))
-          : [],
+    res.json(buildFeatDetailFromRow(row));
+  });
+
+  app.post("/api/compendium/feats/lookup", requireAuth, (req, res) => {
+    const body = parseBody(FeatLookupBody, req);
+    const ids = Array.from(new Set(body.ids.map((id) => String(id ?? "").trim()).filter(Boolean)));
+    if (ids.length === 0) return res.json({ rows: [] });
+
+    const placeholders = ids.map(() => "?").join(", ");
+    const rows = db.prepare(
+      `SELECT id, data_json
+       FROM compendium_feats
+       WHERE id IN (${placeholders})`,
+    ).all(...ids) as Array<{ id: string; data_json: string }>;
+    const byId = new Map(rows.map((row) => [row.id, buildFeatDetailFromRow({ data_json: row.data_json })]));
+
+    res.json({
+      rows: ids.map((id) => ({
+        id,
+        feat: byId.get(id) ?? null,
+      })),
     });
-    res.json(feat);
   });
 }

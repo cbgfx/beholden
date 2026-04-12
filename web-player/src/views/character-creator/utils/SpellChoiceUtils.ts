@@ -164,6 +164,7 @@ export async function loadSpellChoiceOptions(
     if (args.schoolQuery) parts.push(args.schoolQuery);
     if (args.ritualQuery) parts.push(args.ritualQuery);
     parts.push(`&limit=${args.limit}`);
+    parts.push("&lite=1");
     parts.push(args.includeText ? "&includeText=1" : "&compact=1");
     return parts.join("");
   };

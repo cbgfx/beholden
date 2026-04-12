@@ -26,12 +26,13 @@ export function InventoryItemPickerModal(props: {
     filterMagic, setFilterMagic,
     hasActiveFilters, clearFilters,
     rows, busy, error, totalCount, refresh,
-  } = useItemSearch();
+  } = useItemSearch({ enabled: props.isOpen });
   const vl = useVirtualList({ isEnabled: true, rowHeight: INVENTORY_PICKER_ROW_HEIGHT, overscan: 8 });
   const { start, end, padTop, padBottom } = vl.getRange(rows.length);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<CompendiumItemDetail | null>(null);
+  const [detailCache, setDetailCache] = useState<Record<string, CompendiumItemDetail>>({});
   const [qty, setQty] = useState(1);
   const [createMode, setCreateMode] = useState(false);
   const [customName, setCustomName] = useState("");
@@ -63,6 +64,7 @@ export function InventoryItemPickerModal(props: {
     if (!props.isOpen) {
       setSelectedId(null);
       setDetail(null);
+      setDetailCache({});
       setQty(1);
       setCreateMode(false);
       setCustomName("");
@@ -79,18 +81,27 @@ export function InventoryItemPickerModal(props: {
       setDetail(null);
       return;
     }
+    const cached = detailCache[selectedId];
+    if (cached) {
+      setDetail(cached);
+      const parenQty = cached.name?.match(/\((\d+)\)$/);
+      if (parenQty) setQty(parseInt(parenQty[1], 10));
+      else setQty(1);
+      return;
+    }
     let alive = true;
     api<CompendiumItemDetail>(`/api/compendium/items/${selectedId}`)
       .then((data) => {
         if (!alive) return;
         setDetail(data);
+        setDetailCache((prev) => ({ ...prev, [selectedId]: data }));
         const parenQty = data.name?.match(/\((\d+)\)$/);
         if (parenQty) setQty(parseInt(parenQty[1], 10));
         else setQty(1);
       })
       .catch(() => { if (alive) setDetail(null); });
     return () => { alive = false; };
-  }, [props.isOpen, createMode, selectedId]);
+  }, [props.isOpen, createMode, selectedId, detailCache]);
 
   if (!props.isOpen) return null;
 

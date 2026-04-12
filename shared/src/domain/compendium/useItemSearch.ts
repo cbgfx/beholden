@@ -10,19 +10,22 @@ type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
 export type UseCompendiumItemSearchOptions = {
   nameSearchValue?: (name: string) => string;
   includeError?: boolean;
+  enabled?: boolean;
 };
 
 type ItemFacetOption = { value: string; count: number };
 type ItemFacetsResponse = { rarity: ItemFacetOption[]; type: ItemFacetOption[] };
 type ItemSearchResponse = { rows: ItemSearchRow[]; total: number };
 
-const SEARCH_LIMIT = 300;
+const SEARCH_LIMIT_BASE = 120;
+const SEARCH_LIMIT_FILTERED = 220;
 
 export function useCompendiumItemSearch(
   api: ApiFn,
   options: UseCompendiumItemSearchOptions = {},
 ) {
   const { nameSearchValue, includeError = false } = options;
+  const enabled = options.enabled ?? true;
   const [rows, setRows] = React.useState<ItemSearchRow[]>([]);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -37,6 +40,7 @@ export function useCompendiumItemSearch(
   const [filterMagic, setFilterMagic] = React.useState(false);
 
   React.useEffect(() => {
+    if (!enabled) return;
     const controller = new AbortController();
     let alive = true;
     api<ItemFacetsResponse>("/api/compendium/items/facets", { signal: controller.signal })
@@ -55,16 +59,21 @@ export function useCompendiumItemSearch(
       alive = false;
       controller.abort();
     };
-  }, [api, refreshKey]);
+  }, [api, refreshKey, enabled]);
 
   React.useEffect(() => {
+    if (!enabled) return;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setBusy(true);
       if (includeError) setError(null);
       try {
+        const hasQuery = q.trim().length >= 2;
+        const hasFacetFilters =
+          rarityFilter !== "all" || typeFilter !== "all" || filterAttunement || filterMagic;
+        const limit = hasQuery || hasFacetFilters ? SEARCH_LIMIT_FILTERED : SEARCH_LIMIT_BASE;
         const queryParts = [
-          `/api/compendium/items?compact=1&withTotal=1&limit=${SEARCH_LIMIT}&offset=0`,
+          `/api/compendium/items?compact=1&withTotal=1&limit=${limit}&offset=0`,
           `q=${encodeURIComponent(q)}`,
           `rarity=${encodeURIComponent(rarityFilter)}`,
           `type=${encodeURIComponent(typeFilter)}`,
@@ -94,6 +103,7 @@ export function useCompendiumItemSearch(
     };
   }, [
     api,
+    enabled,
     q,
     rarityFilter,
     typeFilter,
@@ -150,8 +160,9 @@ export function useCompendiumItemSearch(
   }, []);
 
   const refresh = React.useCallback(() => {
+    if (!enabled) return;
     setRefreshKey((k) => k + 1);
-  }, []);
+  }, [enabled]);
 
   return {
     q,

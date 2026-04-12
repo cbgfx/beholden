@@ -95,7 +95,15 @@ export function useMonsterPickerState(args: {
       try {
         const params = new URLSearchParams({
           q: compQ,
-          limit: "400",
+          limit:
+            compQ.trim().length >= 2
+            || envFilter !== "all"
+            || sizeFilter !== "all"
+            || typeFilter !== "all"
+            || Boolean(crMin.trim())
+            || Boolean(crMax.trim())
+              ? "200"
+              : "120",
           offset: "0",
           sort: sortMode,
         });

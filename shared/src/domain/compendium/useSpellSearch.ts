@@ -36,8 +36,10 @@ export function useCompendiumSpellSearch(api: ApiFn) {
       setBusy(true);
       try {
         const lv = level === "all" ? "" : `&level=${encodeURIComponent(level)}`;
+        const hasQuery = q.trim().length >= 2;
+        const limit = hasQuery ? 180 : 120;
         const res = await api<any[]>(
-          `/api/spells/search?q=${encodeURIComponent(q)}&limit=180${lv}&excludeSpecial=1&compact=1`,
+          `/api/spells/search?q=${encodeURIComponent(q)}&limit=${limit}${lv}&excludeSpecial=1&compact=1`,
           { signal: controller.signal },
         );
         if (controller.signal.aborted) return;

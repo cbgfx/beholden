@@ -11,8 +11,8 @@ import { ACCEPTED_IMAGE_TYPES, resizeToWebP } from "../lib/imageHelpers.js";
 import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
 import { toCampaignCharacterDto } from "../lib/apiActors.js";
 import {
-  serializeCampaignCharacterLive,
-  serializeCampaignCharacterSheet,
+  campaignLiveDbColumns,
+  campaignSheetDbColumns,
   getLinkedCharacterIdForPlayer,
 } from "../services/characters.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
@@ -236,35 +236,61 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     const p = parseBody(PlayerCreateBody, req);
     const id = uid();
     const t = now();
+    const sheet = {
+      playerName: p.playerName || "Player",
+      characterName: p.characterName || "Character",
+      class: p.class || "Class",
+      species: p.species || "Species",
+      level: p.level ?? 1,
+      hpMax: p.hpMax ?? 10,
+      ac: p.ac ?? 10,
+      str: p.str ?? 10,
+      dex: p.dex ?? 10,
+      con: p.con ?? 10,
+      int: p.int ?? 10,
+      wis: p.wis ?? 10,
+      cha: p.cha ?? 10,
+      color: p.color ?? "green",
+    };
+    const live = {
+      hpCurrent: p.hpCurrent ?? p.hpMax ?? 10,
+      overrides: { ...DEFAULT_OVERRIDES },
+      conditions: [],
+      deathSaves: { ...DEFAULT_DEATH_SAVES },
+    };
+    const sheetCols = campaignSheetDbColumns(sheet);
+    const liveCols = campaignLiveDbColumns(live);
     db.prepare(`
       INSERT INTO players
-        (id, campaign_id, user_id, character_id, sheet_json, live_json, created_at, updated_at)
-      VALUES (?, ?, NULL, NULL, ?, ?, ?, ?)
+        (id, campaign_id, user_id, character_id,
+         player_name, character_name, class_name, species, level, hp_max, hp_current, ac, speed,
+         str, dex, con, int, wis, cha, color, synced_ac, death_saves_success, death_saves_fail,
+         sheet_json, live_json, created_at, updated_at)
+      VALUES (?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       campaignId,
-      serializeCampaignCharacterSheet({
-        playerName: p.playerName || "Player",
-        characterName: p.characterName || "Character",
-        class: p.class || "Class",
-        species: p.species || "Species",
-        level: p.level ?? 1,
-        hpMax: p.hpMax ?? 10,
-        ac: p.ac ?? 10,
-        str: p.str ?? 10,
-        dex: p.dex ?? 10,
-        con: p.con ?? 10,
-        int: p.int ?? 10,
-        wis: p.wis ?? 10,
-        cha: p.cha ?? 10,
-        color: p.color ?? "green",
-      }),
-      serializeCampaignCharacterLive({
-        hpCurrent: p.hpCurrent ?? p.hpMax ?? 10,
-        overrides: { ...DEFAULT_OVERRIDES },
-        conditions: [],
-        deathSaves: { ...DEFAULT_DEATH_SAVES },
-      }),
+      sheetCols.playerName,
+      sheetCols.characterName,
+      sheetCols.className,
+      sheetCols.species,
+      sheetCols.level,
+      sheetCols.hpMax,
+      liveCols.hpCurrent,
+      sheetCols.ac,
+      sheetCols.speed,
+      sheetCols.str,
+      sheetCols.dex,
+      sheetCols.con,
+      sheetCols.int,
+      sheetCols.wis,
+      sheetCols.cha,
+      sheetCols.color,
+      sheetCols.syncedAc,
+      liveCols.deathSavesSuccess,
+      liveCols.deathSavesFail,
+      sheetCols.sheetJson,
+      liveCols.liveJson,
       t,
       t,
     );
@@ -286,14 +312,37 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     const linkedCharacterId = getLinkedCharacterIdForPlayer(db, playerId);
     const isLinkedProjection = Boolean(linkedCharacterId);
     const next = resolvePlayerUpdateState(existing, p, isLinkedProjection);
+    const sheetCols = campaignSheetDbColumns(next.sheet);
+    const liveCols = campaignLiveDbColumns(next.live);
 
     db.prepare(`
       UPDATE players SET
+        player_name=?, character_name=?, class_name=?, species=?, level=?, hp_max=?, hp_current=?, ac=?, speed=?,
+        str=?, dex=?, con=?, int=?, wis=?, cha=?, color=?, synced_ac=?, death_saves_success=?, death_saves_fail=?,
         sheet_json=?, live_json=?, updated_at=?
       WHERE id=?
     `).run(
-      serializeCampaignCharacterSheet(next.sheet),
-      serializeCampaignCharacterLive(next.live),
+      sheetCols.playerName,
+      sheetCols.characterName,
+      sheetCols.className,
+      sheetCols.species,
+      sheetCols.level,
+      sheetCols.hpMax,
+      liveCols.hpCurrent,
+      sheetCols.ac,
+      sheetCols.speed,
+      sheetCols.str,
+      sheetCols.dex,
+      sheetCols.con,
+      sheetCols.int,
+      sheetCols.wis,
+      sheetCols.cha,
+      sheetCols.color,
+      sheetCols.syncedAc,
+      liveCols.deathSavesSuccess,
+      liveCols.deathSavesFail,
+      sheetCols.sheetJson,
+      liveCols.liveJson,
       t,
       playerId
     );

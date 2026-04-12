@@ -58,7 +58,16 @@ export type BastionsChangedPayload = { campaignId: Id };
 export type CompendiumChangedPayload =
   | { cleared: true }
   | { imported: number; total: number }
-  | { blobTrimmed: true; updatedMonsters: number; updatedSpells: number; updatedItems: number }
+  | {
+      blobTrimmed: true;
+      updatedMonsters: number;
+      updatedSpells: number;
+      updatedItems: number;
+      updatedClasses: number;
+      updatedRaces: number;
+      updatedBackgrounds: number;
+      updatedFeats: number;
+    }
   | { monsterCreated: string }
   | { monsterUpdated: string }
   | { monsterDeleted: string }

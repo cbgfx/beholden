@@ -50,12 +50,12 @@ export function NameDrawer(props: {
 }): DrawerContent {
   const { state } = useStore();
   const [name, setName] = React.useState("");
-  const [color, setColor] = React.useState<string | null>(null);
+  const [color, setColor] = React.useState<string | null>("#f59e0b");
 
   React.useEffect(() => {
     const d = props.drawer;
     setName("");
-    setColor(null);
+    setColor("#f59e0b");
     switch (d.type) {
       case "editCampaign": {
         const c = state.campaigns.find((x) => x.id === d.campaignId);
@@ -89,7 +89,7 @@ export function NameDrawer(props: {
 
     switch (d.type) {
       case "createCampaign":
-        await api(`/api/campaigns`, jsonInit("POST", { name: safeName("New Campaign") }));
+        await api(`/api/campaigns`, jsonInit("POST", { name: safeName("New Campaign"), color }));
         await props.refreshAll();
         props.close();
         return;
@@ -148,7 +148,7 @@ export function NameDrawer(props: {
             <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>Theme color</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {CAMPAIGN_COLOR_PRESETS.map((c) => {
-                const selected = color === c || (!color && c === "#a78bfa");
+                const selected = color === c || (!color && c === "#f59e0b");
                 return (
                   <button
                     key={c}

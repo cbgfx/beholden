@@ -25,6 +25,7 @@ export function ItemPickerModal(props: {
 }) {
   const {
     rows,
+    totalCount,
     loading,
     q,
     setQ,
@@ -102,6 +103,7 @@ export function ItemPickerModal(props: {
           typeOptions={typeOptions}
           magicFilter={magicFilter}
           rows={rows}
+          totalCount={totalCount}
           filtered={filtered}
           selectedId={selectedId}
           rowHeight={ROW_HEIGHT}

@@ -1,7 +1,6 @@
 import React from "react";
 import { api } from "@/services/api";
 import { fetchMyCharacter } from "@/services/actorApi";
-import type { CompendiumMonsterRow } from "@/lib/monsterPicker/types";
 import type {
   Character,
   ClassRestDetail,
@@ -16,10 +15,15 @@ import { getPrimaryCharacterClassEntry } from "@/views/character/CharacterViewHe
 
 type SpellLookupRow = {
   query: string;
-  match: { id: string; name: string; level: number | null } | null;
+  match: { id: string; name: string; level: number | null; text?: string | null } | null;
 };
 
-export function useCharacterData(id: string | undefined, polymorphDrawerOpen: boolean) {
+type FeatLookupRow = {
+  id: string;
+  feat: FeatFeatureDetail | null;
+};
+
+export function useCharacterData(id: string | undefined) {
   const [char, setChar] = React.useState<Character | null>(null);
   const [classDetail, setClassDetail] = React.useState<ClassRestDetail | null>(null);
   const [raceDetail, setRaceDetail] = React.useState<RaceFeatureDetail | null>(null);
@@ -31,9 +35,6 @@ export function useCharacterData(id: string | undefined, polymorphDrawerOpen: bo
   const [invocationDetails, setInvocationDetails] = React.useState<InvocationFeatureDetail[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [polymorphRows, setPolymorphRows] = React.useState<CompendiumMonsterRow[]>([]);
-  const [polymorphRowsBusy, setPolymorphRowsBusy] = React.useState(false);
-  const [polymorphRowsError, setPolymorphRowsError] = React.useState<string | null>(null);
 
   const characterData = char?.characterData;
   const primaryClassEntry = getPrimaryCharacterClassEntry(characterData);
@@ -68,26 +69,6 @@ export function useCharacterData(id: string | undefined, polymorphDrawerOpen: bo
       alive = false;
     };
   }, [primaryClassEntry?.classId]);
-
-  React.useEffect(() => {
-    if (!polymorphDrawerOpen || polymorphRows.length > 0) return;
-    let alive = true;
-    setPolymorphRowsBusy(true);
-    setPolymorphRowsError(null);
-    api<CompendiumMonsterRow[]>("/api/compendium/monsters")
-      .then((rows) => {
-        if (alive) setPolymorphRows(rows);
-      })
-      .catch((e) => {
-        if (alive) setPolymorphRowsError(e?.message ?? "Failed to load creatures.");
-      })
-      .finally(() => {
-        if (alive) setPolymorphRowsBusy(false);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [polymorphDrawerOpen, polymorphRows.length]);
 
   React.useEffect(() => {
     const raceId = characterData?.raceId;
@@ -128,99 +109,85 @@ export function useCharacterData(id: string | undefined, polymorphDrawerOpen: bo
   }, [characterData?.bgId]);
 
   React.useEffect(() => {
-    const featId = characterData?.chosenRaceFeatId;
-    if (!featId) {
-      setRaceFeatDetail(null);
-      return;
-    }
-    let alive = true;
-    api<FeatFeatureDetail>(`/api/compendium/feats/${encodeURIComponent(featId)}`)
-      .then((detail) => {
-        if (alive) setRaceFeatDetail(detail);
-      })
-      .catch(() => {
-        if (alive) setRaceFeatDetail(null);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [characterData?.chosenRaceFeatId]);
-
-  React.useEffect(() => {
-    const featId = characterData?.chosenBgOriginFeatId;
-    if (!featId) {
-      setBgOriginFeatDetail(null);
-      return;
-    }
-    let alive = true;
-    api<FeatFeatureDetail>(`/api/compendium/feats/${encodeURIComponent(featId)}`)
-      .then((detail) => {
-        if (alive) setBgOriginFeatDetail(detail);
-      })
-      .catch(() => {
-        if (alive) setBgOriginFeatDetail(null);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [characterData?.chosenBgOriginFeatId]);
-
-  React.useEffect(() => {
-    const entries = Object.entries(characterData?.chosenClassFeatIds ?? {}).filter(
+    const raceFeatId = typeof characterData?.chosenRaceFeatId === "string" ? characterData.chosenRaceFeatId.trim() : "";
+    const bgFeatId = typeof characterData?.chosenBgOriginFeatId === "string" ? characterData.chosenBgOriginFeatId.trim() : "";
+    const classFeatEntries = Object.entries(characterData?.chosenClassFeatIds ?? {}).filter(
       ([, featId]): featId is string => typeof featId === "string" && featId.trim().length > 0,
     );
-    if (entries.length === 0) {
-      setClassFeatDetails([]);
-      return;
-    }
-    let alive = true;
-    Promise.all(
-      entries.map(async ([featureName, featId]) => {
-        const feat = await api<FeatFeatureDetail>(`/api/compendium/feats/${encodeURIComponent(featId)}`);
-        return { featureName, feat };
-      }),
-    )
-      .then((details) => {
-        if (alive) setClassFeatDetails(details);
-      })
-      .catch(() => {
-        if (alive) setClassFeatDetails([]);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [characterData?.chosenClassFeatIds]);
-
-  React.useEffect(() => {
-    const entries = Array.isArray(characterData?.chosenLevelUpFeats)
+    const levelUpEntries = Array.isArray(characterData?.chosenLevelUpFeats)
       ? characterData.chosenLevelUpFeats.filter(
           (entry): entry is { level: number; featId: string } =>
-            typeof entry?.level === "number" &&
-            typeof entry?.featId === "string" &&
-            entry.featId.trim().length > 0,
+            typeof entry?.level === "number"
+            && typeof entry?.featId === "string"
+            && entry.featId.trim().length > 0,
         )
       : [];
-    if (entries.length === 0) {
+
+    const ids = Array.from(
+      new Set(
+        [
+          raceFeatId,
+          bgFeatId,
+          ...classFeatEntries.map(([, featId]) => featId.trim()),
+          ...levelUpEntries.map((entry) => entry.featId.trim()),
+        ].filter(Boolean),
+      ),
+    );
+
+    if (ids.length === 0) {
+      setRaceFeatDetail(null);
+      setBgOriginFeatDetail(null);
+      setClassFeatDetails([]);
       setLevelUpFeatDetails([]);
       return;
     }
+
     let alive = true;
-    Promise.all(
-      entries.map(async ({ level, featId }) => {
-        const detail = await api<FeatFeatureDetail>(`/api/compendium/feats/${encodeURIComponent(featId)}`);
-        return { level, featId, feat: detail } satisfies LevelUpFeatDetail;
-      }),
-    )
-      .then((details) => {
-        if (alive) setLevelUpFeatDetails(details);
+    api<{ rows: FeatLookupRow[] }>("/api/compendium/feats/lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    })
+      .then((payload) => {
+        if (!alive) return;
+        const featById = new Map<string, FeatFeatureDetail>();
+        for (const row of payload.rows ?? []) {
+          if (!row?.id || !row.feat) continue;
+          featById.set(String(row.id), row.feat);
+        }
+
+        setRaceFeatDetail(raceFeatId ? featById.get(raceFeatId) ?? null : null);
+        setBgOriginFeatDetail(bgFeatId ? featById.get(bgFeatId) ?? null : null);
+        setClassFeatDetails(
+          classFeatEntries.flatMap(([featureName, featId]) => {
+            const feat = featById.get(featId);
+            return feat ? [{ featureName, feat } satisfies ClassFeatFeatureDetail] : [];
+          }),
+        );
+        setLevelUpFeatDetails(
+          levelUpEntries.flatMap(({ level, featId }) => {
+            const feat = featById.get(featId);
+            return feat ? [{ level, featId, feat } satisfies LevelUpFeatDetail] : [];
+          }),
+        );
       })
       .catch(() => {
-        if (alive) setLevelUpFeatDetails([]);
+        if (!alive) return;
+        setRaceFeatDetail(null);
+        setBgOriginFeatDetail(null);
+        setClassFeatDetails([]);
+        setLevelUpFeatDetails([]);
       });
+
     return () => {
       alive = false;
     };
-  }, [characterData?.chosenLevelUpFeats]);
+  }, [
+    characterData?.chosenBgOriginFeatId,
+    characterData?.chosenClassFeatIds,
+    characterData?.chosenLevelUpFeats,
+    characterData?.chosenRaceFeatId,
+  ]);
 
   React.useEffect(() => {
     const chosenInvocationIds = Array.isArray(characterData?.chosenInvocations)
@@ -250,41 +217,42 @@ export function useCharacterData(id: string | undefined, polymorphDrawerOpen: bo
               .filter(Boolean),
           ),
         );
-        const lookupByName = new Map<string, string>();
-        if (unresolvedNames.length > 0) {
-          try {
-            const payload = await api<{ rows: SpellLookupRow[] }>("/api/spells/lookup", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ names: unresolvedNames }),
-            });
-            for (const row of payload.rows ?? []) {
-              if (row?.query && row?.match?.id) lookupByName.set(row.query, row.match.id);
-            }
-          } catch {
-            // ignore
-          }
-        }
-        return Promise.all(
-          invocationRefs.map(async (ref) => {
-            const resolvedId = ref.id ?? (ref.name ? lookupByName.get(ref.name) ?? null : null);
-            const detail = resolvedId
-              ? await api<any>(`/api/spells/${encodeURIComponent(resolvedId)}`)
-              : null;
+        const directIds = Array.from(
+          new Set(
+            invocationRefs
+              .map((entry) => String(entry.id ?? "").trim())
+              .filter(Boolean),
+          ),
+        );
+        const lookupPayload = await api<{ rows: SpellLookupRow[] }>("/api/spells/lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: directIds, names: unresolvedNames, includeText: true }),
+        });
+        const lookupByQuery = new Map(
+          (lookupPayload.rows ?? [])
+            .filter((row): row is SpellLookupRow => Boolean(row?.query))
+            .map((row) => [row.query, row.match] as const),
+        );
+        return invocationRefs.map((ref) => {
+            const detail = ref.id
+              ? lookupByQuery.get(ref.id) ?? null
+              : ref.name
+                ? lookupByQuery.get(ref.name) ?? null
+                : null;
             if (!detail) return null;
-            const text = Array.isArray(detail?.text)
+            const text = Array.isArray(detail.text)
               ? detail.text
                   .map((entry: unknown) => String(entry ?? "").trim())
                   .filter(Boolean)
                   .join("\n")
-              : String(detail?.text ?? "").trim();
+              : String(detail.text ?? "").trim();
             return {
               id: String(detail?.id ?? ref.id ?? ref.name ?? ""),
               name: String(detail?.name ?? ref.name ?? ref.id ?? ""),
               text,
             } satisfies InvocationFeatureDetail;
-          }),
-        );
+          });
       })()
       .then((details) => {
         if (!alive) return;
@@ -320,9 +288,6 @@ export function useCharacterData(id: string | undefined, polymorphDrawerOpen: bo
     error,
     setError,
     fetchChar,
-    polymorphRows,
-    polymorphRowsBusy,
-    polymorphRowsError,
     characterData,
     primaryClassEntry,
   };

@@ -44,6 +44,7 @@ export function ItemPickerBrowsePanel(props: {
   typeOptions: string[];
   magicFilter: "" | "magic" | "nonmagic";
   rows: CompendiumItemRow[];
+  totalCount: number;
   filtered: CompendiumItemRow[];
   selectedId: string | null;
   rowHeight: number;
@@ -114,7 +115,11 @@ export function ItemPickerBrowsePanel(props: {
       </div>
 
       <div style={{ fontSize: "var(--fs-small)", color: theme.colors.muted }}>
-        {props.loading ? "Loading..." : `${props.filtered.length} of ${props.rows.length}`}
+        {props.loading
+          ? "Loading..."
+          : props.totalCount > 0
+            ? `${props.filtered.length} of ${props.totalCount}`
+            : `${props.filtered.length} items`}
       </div>
 
       <div

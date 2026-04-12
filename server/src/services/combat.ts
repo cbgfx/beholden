@@ -9,7 +9,7 @@ import type {
   StoredEncounterActorSnapshot,
 } from "../server/userData.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
-import { serializeCampaignCharacterLive } from "./characters.js";
+import { campaignLiveDbColumns } from "./characters.js";
 
 export function serializeEncounterActorSnapshot(snapshot: StoredEncounterActorSnapshot): string {
   return JSON.stringify(snapshot);
@@ -174,19 +174,23 @@ export function syncCombatantToPlayer(
     .get(combatant.baseId) as Record<string, unknown> | undefined;
   if (!pRow) return null;
   const player = rowToCampaignCharacter(pRow);
+  const liveCols = campaignLiveDbColumns({
+    hpCurrent: combatant.hpCurrent ?? player.hpCurrent,
+    conditions: combatant.conditions ?? [],
+    overrides: combatant.overrides ?? DEFAULT_OVERRIDES,
+    ...((combatant.deathSaves ?? player.deathSaves)
+      ? { deathSaves: combatant.deathSaves ?? player.deathSaves }
+      : {}),
+  });
   db.prepare(`
     UPDATE players SET
-      live_json=?, updated_at=?
+      hp_current=?, death_saves_success=?, death_saves_fail=?, live_json=?, updated_at=?
     WHERE id=?
   `).run(
-    serializeCampaignCharacterLive({
-      hpCurrent: combatant.hpCurrent ?? player.hpCurrent,
-      conditions: combatant.conditions ?? [],
-      overrides: combatant.overrides ?? DEFAULT_OVERRIDES,
-      ...((combatant.deathSaves ?? player.deathSaves)
-        ? { deathSaves: combatant.deathSaves ?? player.deathSaves }
-        : {}),
-    }),
+    liveCols.hpCurrent,
+    liveCols.deathSavesSuccess,
+    liveCols.deathSavesFail,
+    liveCols.liveJson,
     t,
     combatant.baseId
   );

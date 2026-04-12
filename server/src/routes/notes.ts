@@ -19,7 +19,8 @@ const NoteUpdateBody = z.object({
 });
 
 function serializeNoteState(note: StoredNoteState) {
-  return JSON.stringify(note);
+  void note;
+  return "{}";
 }
 
 export function registerNoteRoutes(app: Express, ctx: ServerContext) {
@@ -82,8 +83,8 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     const t = now();
     const sort = nextSortFor(db, "notes", "campaign_id", campaignId);
     db.prepare(
-      "INSERT INTO notes (id, campaign_id, adventure_id, note_json, sort, created_at, updated_at) VALUES (?, ?, NULL, ?, ?, ?, ?)"
-    ).run(id, campaignId, serializeNoteState({ title, text }), sort, t, t);
+      "INSERT INTO notes (id, campaign_id, adventure_id, title, text, note_json, sort, created_at, updated_at) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?)"
+    ).run(id, campaignId, title, text, serializeNoteState({ title, text }), sort, t, t);
     emitNoteChange({ campaignId, adventureId: null, action: "upsert", noteId: id });
     const row = db
       .prepare(`SELECT ${NOTE_COLS} FROM notes WHERE id = ?`)
@@ -107,8 +108,8 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     const t = now();
     const sort = nextSortFor(db, "notes", "adventure_id", adventureId);
     db.prepare(
-      "INSERT INTO notes (id, campaign_id, adventure_id, note_json, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
-    ).run(id, advRow.campaign_id, adventureId, serializeNoteState({ title, text }), sort, t, t);
+      "INSERT INTO notes (id, campaign_id, adventure_id, title, text, note_json, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).run(id, advRow.campaign_id, adventureId, title, text, serializeNoteState({ title, text }), sort, t, t);
     emitNoteChange({ campaignId: advRow.campaign_id, adventureId, action: "upsert", noteId: id });
     const row = db
       .prepare(`SELECT ${NOTE_COLS} FROM notes WHERE id = ?`)
@@ -130,7 +131,9 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     const title = body.title || n.title;
     const text = body.text ?? n.text;
     const t = now();
-    db.prepare("UPDATE notes SET note_json=?, updated_at=? WHERE id=?").run(
+    db.prepare("UPDATE notes SET title=?, text=?, note_json=?, updated_at=? WHERE id=?").run(
+      title,
+      text,
       serializeNoteState({ title, text }), t, noteId
     );
     emitNoteChange({ campaignId: n.campaignId, adventureId: n.adventureId ?? null, action: "upsert", noteId });

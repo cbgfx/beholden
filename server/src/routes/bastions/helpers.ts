@@ -55,18 +55,32 @@ export function readCampaignPlayerRows(
   campaignId: string,
 ): Array<{ id: string; user_id: string | null; level: number; character_id: string | null; character_name: string }> {
   const rows = db.prepare(
-    "SELECT id, user_id, character_id, sheet_json FROM players WHERE campaign_id = ?",
-  ).all(campaignId) as Array<{ id: string; user_id: string | null; character_id: string | null; sheet_json: string }>;
+    "SELECT id, user_id, character_id, level, character_name, sheet_json FROM players WHERE campaign_id = ?",
+  ).all(campaignId) as Array<{
+    id: string;
+    user_id: string | null;
+    character_id: string | null;
+    level: number | null;
+    character_name: string | null;
+    sheet_json: string;
+  }>;
 
   return rows.map((row) => {
     const sheet = parseJson<Record<string, unknown>>(row.sheet_json, {});
-    const levelRaw = typeof sheet.level === "number" ? sheet.level : Number(sheet.level ?? 1);
+    const levelRaw = typeof row.level === "number"
+      ? row.level
+      : typeof sheet.level === "number"
+        ? sheet.level
+        : Number(sheet.level ?? 1);
     return {
       id: row.id,
       user_id: row.user_id,
       character_id: row.character_id,
       level: Number.isFinite(levelRaw) ? Math.max(1, Math.floor(levelRaw)) : 1,
-      character_name: String(sheet.characterName ?? "").trim(),
+      character_name:
+        (typeof row.character_name === "string" && row.character_name.trim())
+          ? row.character_name.trim()
+          : String(sheet.characterName ?? "").trim(),
     };
   });
 }

@@ -78,12 +78,14 @@ export function useOpenEncounterMetrics(args: {
           const missing = Array.from(monsterIds).filter((id) => !monsterDetails?.[id]);
           const patch: Record<string, MonsterDetail> = {};
           if (missing.length) {
-            for (const id of missing) {
-              try {
-                patch[id] = await api(`/api/compendium/monsters/${id}`);
-              } catch {
-                // ignore
-              }
+            const results = await Promise.allSettled(
+              missing.map((id) =>
+                api<MonsterDetail>(`/api/compendium/monsters/${id}?view=metrics`).then((detail) => ({ id, detail })),
+              ),
+            );
+            for (const result of results) {
+              if (result.status !== "fulfilled") continue;
+              patch[result.value.id] = result.value.detail;
             }
             if (!cancelled && Object.keys(patch).length) {
               dispatch({ type: "mergeMonsterDetails", patch });

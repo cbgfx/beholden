@@ -19,10 +19,9 @@ import {
   buildCampaignCharacterLive,
   buildCharacterSheetState,
   buildMirroredPlayerSnapshot,
+  characterSheetDbColumns,
   insertProjectedPlayerRow,
   mergeLiveStats,
-  serializeCampaignCharacterLive,
-  serializeCharacterSheetState,
   syncAssignedPlayerRows,
   updateProjectedPlayerRow,
   updateCampaignCharacterLive,
@@ -120,31 +119,37 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const p = parseBody(CharacterCreateBody, req);
     const id = uid();
     const t = now();
+    const sheetCols = characterSheetDbColumns({
+      name: p.name,
+      playerName: p.playerName ?? "",
+      className: p.className ?? "",
+      species: p.species ?? "",
+      level: p.level ?? 1,
+      hpMax: p.hpMax ?? 0,
+      hpCurrent: p.hpCurrent ?? p.hpMax ?? 0,
+      ac: p.ac ?? 10,
+      speed: p.speed ?? 30,
+      strScore: p.strScore ?? null,
+      dexScore: p.dexScore ?? null,
+      conScore: p.conScore ?? null,
+      intScore: p.intScore ?? null,
+      wisScore: p.wisScore ?? null,
+      chaScore: p.chaScore ?? null,
+      color: p.color ?? null,
+    });
 
     db.prepare(`
       INSERT INTO user_characters
-        (id, user_id, sheet_json, image_url, character_data_json, shared_notes, created_at, updated_at)
-      VALUES (?, ?, ?, NULL, ?, '', ?, ?)
+        (id, user_id, name, player_name, class_name, species, level, hp_max, hp_current, ac, speed,
+         str_score, dex_score, con_score, int_score, wis_score, cha_score, color, death_saves_success, death_saves_fail,
+         sheet_json, image_url, character_data_json, shared_notes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, '', ?, ?)
     `).run(
-      id, userId,
-      serializeCharacterSheetState({
-        name: p.name,
-        playerName: p.playerName ?? "",
-        className: p.className ?? "",
-        species: p.species ?? "",
-        level: p.level ?? 1,
-        hpMax: p.hpMax ?? 0,
-        hpCurrent: p.hpCurrent ?? p.hpMax ?? 0,
-        ac: p.ac ?? 10,
-        speed: p.speed ?? 30,
-        strScore: p.strScore ?? null,
-        dexScore: p.dexScore ?? null,
-        conScore: p.conScore ?? null,
-        intScore: p.intScore ?? null,
-        wisScore: p.wisScore ?? null,
-        chaScore: p.chaScore ?? null,
-        color: p.color ?? null,
-      }),
+      id, userId, sheetCols.name, sheetCols.playerName, sheetCols.className, sheetCols.species, sheetCols.level,
+      sheetCols.hpMax, sheetCols.hpCurrent, sheetCols.ac, sheetCols.speed,
+      sheetCols.strScore, sheetCols.dexScore, sheetCols.conScore, sheetCols.intScore, sheetCols.wisScore, sheetCols.chaScore,
+      sheetCols.color, sheetCols.deathSavesSuccess, sheetCols.deathSavesFail,
+      sheetCols.sheetJson,
       p.characterData ? JSON.stringify(p.characterData) : null,
       t, t,
     );
@@ -166,31 +171,37 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const p = parseBody(CharacterUpdateBody, req);
     const t = now();
     const ex = rowToCharacterSheet(existing);
+    const nextSheet = {
+      name: p.name ?? ex.name,
+      playerName: p.playerName ?? ex.playerName,
+      className: p.className ?? ex.className,
+      species: p.species ?? ex.species,
+      level: p.level ?? ex.level,
+      hpMax: p.hpMax ?? ex.hpMax,
+      hpCurrent: p.hpCurrent ?? ex.hpCurrent,
+      ac: p.ac ?? ex.ac,
+      speed: p.speed ?? ex.speed,
+      strScore: p.strScore !== undefined ? p.strScore : ex.strScore,
+      dexScore: p.dexScore !== undefined ? p.dexScore : ex.dexScore,
+      conScore: p.conScore !== undefined ? p.conScore : ex.conScore,
+      intScore: p.intScore !== undefined ? p.intScore : ex.intScore,
+      wisScore: p.wisScore !== undefined ? p.wisScore : ex.wisScore,
+      chaScore: p.chaScore !== undefined ? p.chaScore : ex.chaScore,
+      color: p.color !== undefined ? p.color : ex.color,
+      ...(ex.deathSaves ? { deathSaves: ex.deathSaves } : {}),
+    };
+    const sheetCols = characterSheetDbColumns(nextSheet);
 
     db.prepare(`
       UPDATE user_characters SET
-        sheet_json=?, character_data_json=?, updated_at=?
+        name=?, player_name=?, class_name=?, species=?, level=?, hp_max=?, hp_current=?, ac=?, speed=?,
+        str_score=?, dex_score=?, con_score=?, int_score=?, wis_score=?, cha_score=?, color=?,
+        death_saves_success=?, death_saves_fail=?, sheet_json=?, character_data_json=?, updated_at=?
       WHERE id=? AND user_id=?
     `).run(
-      serializeCharacterSheetState({
-        name: p.name ?? ex.name,
-        playerName: p.playerName ?? ex.playerName,
-        className: p.className ?? ex.className,
-        species: p.species ?? ex.species,
-        level: p.level ?? ex.level,
-        hpMax: p.hpMax ?? ex.hpMax,
-        hpCurrent: p.hpCurrent ?? ex.hpCurrent,
-        ac: p.ac ?? ex.ac,
-        speed: p.speed ?? ex.speed,
-        strScore: p.strScore !== undefined ? p.strScore : ex.strScore,
-        dexScore: p.dexScore !== undefined ? p.dexScore : ex.dexScore,
-        conScore: p.conScore !== undefined ? p.conScore : ex.conScore,
-        intScore: p.intScore !== undefined ? p.intScore : ex.intScore,
-        wisScore: p.wisScore !== undefined ? p.wisScore : ex.wisScore,
-        chaScore: p.chaScore !== undefined ? p.chaScore : ex.chaScore,
-        color: p.color !== undefined ? p.color : ex.color,
-        ...(ex.deathSaves ? { deathSaves: ex.deathSaves } : {}),
-      }),
+      sheetCols.name, sheetCols.playerName, sheetCols.className, sheetCols.species, sheetCols.level, sheetCols.hpMax, sheetCols.hpCurrent,
+      sheetCols.ac, sheetCols.speed, sheetCols.strScore, sheetCols.dexScore, sheetCols.conScore, sheetCols.intScore, sheetCols.wisScore,
+      sheetCols.chaScore, sheetCols.color, sheetCols.deathSavesSuccess, sheetCols.deathSavesFail, sheetCols.sheetJson,
       p.characterData !== undefined
         ? (p.characterData === null
           ? null
@@ -270,12 +281,15 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       .prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ? AND user_id = ?`)
       .get(charId, (req as any).user.userId) as Record<string, unknown>;
     const current = rowToCharacterSheet(currentRow);
-    db.prepare("UPDATE user_characters SET sheet_json=?, updated_at=? WHERE id=?")
+    const sheetCols = characterSheetDbColumns({
+      ...buildCharacterSheetState(current),
+      deathSaves,
+    });
+    db.prepare("UPDATE user_characters SET death_saves_success=?, death_saves_fail=?, sheet_json=?, updated_at=? WHERE id=?")
       .run(
-        serializeCharacterSheetState({
-          ...buildCharacterSheetState(current),
-          deathSaves,
-        }),
+        sheetCols.deathSavesSuccess,
+        sheetCols.deathSavesFail,
+        sheetCols.sheetJson,
         t,
         charId,
       );

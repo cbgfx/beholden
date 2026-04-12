@@ -12,7 +12,15 @@ import {
   createFeatUpserter,
   xmlItemToJson,
 } from "./importXmlHelpers.js";
-import { pruneItemBlob, pruneMonsterBlob, pruneSpellBlob, trimCompendiumBlobColumns } from "./blobHygiene.js";
+import {
+  pruneBackgroundBlob,
+  pruneClassBlob,
+  pruneItemBlob,
+  pruneMonsterBlob,
+  pruneRaceBlob,
+  pruneSpellBlob,
+  trimCompendiumBlobColumns,
+} from "./blobHygiene.js";
 
 export function importCompendiumXml(args: {
   xml: string;
@@ -161,17 +169,17 @@ export function importCompendiumXml(args: {
 
     for (const cls of classes) {
       const data = buildClassImportData(cls);
-      classStmt.run(data.id, data.name, data.nameKey, data.hd, JSON.stringify(data));
+      classStmt.run(data.id, data.name, data.nameKey, data.hd, JSON.stringify(pruneClassBlob(data as Record<string, unknown>)));
     }
 
     for (const race of races) {
       const data = buildRaceImportData(race);
-      raceStmt.run(data.id, data.name, data.nameKey, data.size, data.speed, JSON.stringify(data));
+      raceStmt.run(data.id, data.name, data.nameKey, data.size, data.speed, JSON.stringify(pruneRaceBlob(data as Record<string, unknown>)));
     }
 
     for (const background of backgrounds) {
       const { data, embeddedFeatNames } = buildBackgroundImportData(background);
-      bgStmt.run(data.id, data.name, data.nameKey, JSON.stringify(data));
+      bgStmt.run(data.id, data.name, data.nameKey, JSON.stringify(pruneBackgroundBlob(data as Record<string, unknown>)));
 
       for (const featName of embeddedFeatNames) {
         const featTrait = data.traits.find((trait) => String(trait?.name ?? "").trim() === `Feat: ${featName}`);

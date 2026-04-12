@@ -31,6 +31,11 @@ import {
   sanitizeGrowthChoiceSelections,
 } from "@/views/character-creator/utils/GrowthChoiceUtils";
 import {
+  buildGrowthItemLookupBody,
+  fetchCompendiumItemsByLookup,
+  isItemLookupBodyEmpty,
+} from "@/views/character-creator/utils/ItemLookupUtils";
+import {
   buildResolvedSpellChoiceEntry,
   buildSpellListChoiceEntry,
   loadSpellChoiceOptions,
@@ -49,6 +54,7 @@ import type {
   LevelUpSpellListChoiceEntry,
   LevelUpSpellSummary as SpellSummary,
 } from "@/views/level-up/LevelUpTypes";
+import type { ItemSummary } from "@/views/character-creator/utils/CharacterCreatorTypes";
 import { AsiAbilityGrid, BackBtn, ChoiceBtn, ExpertiseSelectionSection, FeatSelectionSection, LevelUpHpSection, Section, Wrap } from "@/views/level-up/LevelUpParts";
 import { LevelUpChoicesSection, LevelUpFeaturesSection, LevelUpSpellSlotsSection, LevelUpSubclassSection } from "@/views/level-up/LevelUpSections";
 import { buildLevelUpPayload, deriveAllowedInvocationIds, deriveFeatAbilityBonuses, deriveHpGain, deriveLevelUpValidation, derivePreviewScores } from "@/views/level-up/LevelUpUtils";
@@ -88,7 +94,6 @@ export function LevelUpView() {
     classCantrips,
     classSpells,
     classInvocations,
-    items,
   } = useLevelUpInitialData(id);
 
   const [saving, setSaving] = useState(false);
@@ -110,6 +115,7 @@ export function LevelUpView() {
   const [classFeatureSpellChoiceOptions, setClassFeatureSpellChoiceOptions] = useState<Record<string, SpellSummary[]>>({});
   const [invocationSpellChoiceOptions, setInvocationSpellChoiceOptions] = useState<Record<string, SpellSummary[]>>({});
   const [growthOptionEntriesByKey, setGrowthOptionEntriesByKey] = useState<Record<string, Array<{ id: string; name: string; rarity?: string | null; type?: string | null; magic?: boolean; attunement?: boolean }>>>({});
+  const [items, setItems] = useState<ItemSummary[]>([]);
 
   const hd = classDetail?.hd ?? 8;
   const conScore = char?.conScore ?? 10;
@@ -542,6 +548,29 @@ export function LevelUpView() {
     });
     return () => { alive = false; };
   }, [invocationResolvedSpellChoices]);
+
+  useEffect(() => {
+    if (growthChoiceDefinitions.length === 0) {
+      setItems((prev) => (prev.length === 0 ? prev : []));
+      return;
+    }
+    let alive = true;
+    const lookupBody = buildGrowthItemLookupBody(growthChoiceDefinitions);
+    if (isItemLookupBodyEmpty(lookupBody)) {
+      setItems((prev) => (prev.length === 0 ? prev : []));
+      return;
+    }
+    fetchCompendiumItemsByLookup(lookupBody)
+      .then((rows) => {
+        if (!alive) return;
+        setItems(rows);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setItems([]);
+      });
+    return () => { alive = false; };
+  }, [growthChoiceDefinitions]);
 
   useEffect(() => {
     const spellBackedDefinitions = growthChoiceDefinitions.filter((definition) => definition.spellChoice);

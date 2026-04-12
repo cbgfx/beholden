@@ -126,6 +126,49 @@ function resolveToolPlaceholder(name: string, grantedTools: string[]): string | 
   return null;
 }
 
+
+function parseEquipmentEntry(entry: string): { quantity: number; name: string } {
+  const qtyMatch = entry.match(/^(\d+)\s*[x×]\s+(.+)$/i) || entry.match(/^(\d+)\s+(.+)$/);
+  if (qtyMatch) return { quantity: Number(qtyMatch[1]) || 1, name: qtyMatch[2].trim() };
+  return { quantity: 1, name: entry.trim() };
+}
+
+export function collectEquipmentLookupNames(
+  optionId: string | null,
+  equipmentText: string | undefined,
+  grantedTools: string[],
+): string[] {
+  const options = parseStartingEquipmentOptions(equipmentText);
+  const selected = options.find((option) => option.id === optionId);
+  if (!selected) return [];
+
+  const names: string[] = [];
+  for (const entry of selected.entries) {
+    const normalized = entry.trim();
+    if (!normalized) continue;
+    if (currencyCodeFromEntry(normalized)) continue;
+
+    const parsed = parseEquipmentEntry(normalized);
+    const resolvedPlaceholder = resolveToolPlaceholder(parsed.name, grantedTools);
+    if (resolvedPlaceholder) {
+      names.push(resolvedPlaceholder);
+      continue;
+    }
+    if (/\b(?:same as above|chosen for the tool proficiency above)\b/i.test(parsed.name)) {
+      continue;
+    }
+    if (/^tool:/i.test(parsed.name)) {
+      const toolName = parsed.name.replace(/^tool:\s*/i, "").trim();
+      if (grantedTools.some((tool) => tool.toLowerCase() === toolName.toLowerCase())) continue;
+      names.push(toolName);
+      continue;
+    }
+
+    names.push(parsed.name);
+  }
+
+  return names;
+}
 function isUnresolvedEquipmentPlaceholder(name: string): boolean {
   const normalized = String(name ?? "").trim().toLowerCase();
   if (!normalized) return true;
@@ -208,12 +251,6 @@ export function buildEquipmentItems(
     });
   }
 
-  function parseEntry(entry: string): { quantity: number; name: string } {
-    const qtyMatch = entry.match(/^(\d+)\s*[x×]\s+(.+)$/i) || entry.match(/^(\d+)\s+(.+)$/);
-    if (qtyMatch) return { quantity: Number(qtyMatch[1]) || 1, name: qtyMatch[2].trim() };
-    return { quantity: 1, name: entry.trim() };
-  }
-
   for (const entry of selected.entries) {
     const normalized = entry.trim();
     if (!normalized) continue;
@@ -224,7 +261,7 @@ export function buildEquipmentItems(
       continue;
     }
 
-    const parsed = parseEntry(normalized);
+    const parsed = parseEquipmentEntry(normalized);
     const resolvedPlaceholder = resolveToolPlaceholder(parsed.name, grantedTools);
     if (resolvedPlaceholder) {
       pushItem(resolvedPlaceholder, parsed.quantity);

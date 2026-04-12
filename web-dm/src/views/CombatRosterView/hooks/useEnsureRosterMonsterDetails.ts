@@ -35,7 +35,7 @@ export function useEnsureRosterMonsterDetails(props: Props) {
       // Fetch all missing details in parallel — was sequential before.
       const results = await Promise.allSettled(
         missing.map((id) =>
-          api<MonsterDetail>(`/api/compendium/monsters/${id}`).then((d) => ({ id, d }))
+          api<MonsterDetail>(`/api/compendium/monsters/${id}?view=metrics`).then((d) => ({ id, d }))
         )
       );
 

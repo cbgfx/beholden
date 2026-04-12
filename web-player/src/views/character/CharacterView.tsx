@@ -82,12 +82,9 @@ export function CharacterView() {
     error,
     setError,
     fetchChar,
-    polymorphRows,
-    polymorphRowsBusy,
-    polymorphRowsError,
     characterData,
     primaryClassEntry,
-  } = useCharacterData(id, polymorphDrawerOpen);
+  } = useCharacterData(id);
   const {
     polymorphQuery,
     setPolymorphQuery,
@@ -97,7 +94,9 @@ export function CharacterView() {
     setPolymorphCrMax,
     polymorphTypeOptions,
     filteredPolymorphRows,
-  } = useCharacterPolymorphControls(polymorphRows);
+    polymorphRowsBusy,
+    polymorphRowsError,
+  } = useCharacterPolymorphControls(polymorphDrawerOpen);
 
   const handlePortraitSelected = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

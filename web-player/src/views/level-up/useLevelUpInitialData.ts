@@ -10,7 +10,6 @@ import type {
   LevelUpFeatSummary as FeatSummary,
   LevelUpSpellSummary as SpellSummary,
 } from "@/views/level-up/LevelUpTypes";
-import type { ItemSummary } from "@/views/character-creator/utils/CharacterCreatorTypes";
 
 export function useLevelUpInitialData(id: string | undefined) {
   const [char, setChar] = useState<Character | null>(null);
@@ -29,7 +28,6 @@ export function useLevelUpInitialData(id: string | undefined) {
   const [classCantrips, setClassCantrips] = useState<SpellSummary[]>([]);
   const [classSpells, setClassSpells] = useState<SpellSummary[]>([]);
   const [classInvocations, setClassInvocations] = useState<SpellSummary[]>([]);
-  const [items, setItems] = useState<ItemSummary[]>([]);
   const [chosenFeatId, setChosenFeatId] = useState<string>("");
 
   const nextLevel = (char?.level ?? 0) + 1;
@@ -75,14 +73,14 @@ export function useLevelUpInitialData(id: string | undefined) {
     }
     const spellcastingClassName = getSpellcastingClassName(classDetail, nextLevel, subclass) ?? classDetail.name;
     const encodedClass = encodeURIComponent(spellcastingClassName);
-    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&level=0&limit=120&compact=1&excludeSpecial=1`)
+    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&level=0&limit=120&compact=1&lite=1&excludeSpecial=1`)
       .then(setClassCantrips)
       .catch(() => setClassCantrips([]));
-    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&minLevel=1&maxLevel=9&limit=220&compact=1&excludeSpecial=1`)
+    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&minLevel=1&maxLevel=9&limit=220&compact=1&lite=1&excludeSpecial=1`)
       .then(setClassSpells)
       .catch(() => setClassSpells([]));
     if (/warlock/i.test(classDetail.name)) {
-      api<SpellSummary[]>("/api/spells/search?classes=Eldritch+Invocations&limit=150&includeText=1")
+      api<SpellSummary[]>("/api/spells/search?classes=Eldritch+Invocations&limit=150&includeText=1&lite=1")
         .then(setClassInvocations)
         .catch(() => setClassInvocations([]));
     } else {
@@ -92,10 +90,6 @@ export function useLevelUpInitialData(id: string | undefined) {
 
   useEffect(() => {
     api<FeatSummary[]>("/api/compendium/feats").then(setFeatSummaries).catch(() => setFeatSummaries([]));
-  }, []);
-
-  useEffect(() => {
-    api<ItemSummary[]>("/api/compendium/items?compact=1").then(setItems).catch(() => setItems([]));
   }, []);
 
   useEffect(() => {
@@ -136,6 +130,5 @@ export function useLevelUpInitialData(id: string | undefined) {
     classCantrips,
     classSpells,
     classInvocations,
-    items,
   };
 }

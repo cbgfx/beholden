@@ -23,7 +23,8 @@ const ItemBody = z.object({
 const QuantityBody = z.object({ quantity: z.number().int().min(1) });
 
 function serializePartyInventoryItemState(item: StoredPartyInventoryItemState) {
-  return JSON.stringify(item);
+  void item;
+  return "{}";
 }
 
 export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
@@ -74,11 +75,21 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
       "SELECT COALESCE(MAX(sort),0)+1 AS n FROM party_inventory WHERE campaign_id = ?"
     ).get(campaignId) as { n: number }).n;
     db.prepare(
-      `INSERT INTO party_inventory (id, campaign_id, item_json, sort, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO party_inventory
+       (id, campaign_id, name, quantity, weight, notes, source, item_id, rarity, type, description, item_json, sort, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
       campaignId,
+      body.name,
+      body.quantity ?? 1,
+      body.weight ?? null,
+      body.notes ?? "",
+      body.source ?? null,
+      body.itemId ?? null,
+      body.rarity ?? null,
+      body.type ?? null,
+      body.description ?? null,
       serializePartyInventoryItemState({
         name: body.name,
         quantity: body.quantity ?? 1,
@@ -117,9 +128,19 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
       .get(itemId, campaignId) as Record<string, unknown> | undefined;
     if (!existing) return res.status(404).json({ ok: false, message: "Not found" });
     db.prepare(
-      `UPDATE party_inventory SET item_json=?, updated_at=?
+      `UPDATE party_inventory SET
+         name=?, quantity=?, weight=?, notes=?, source=?, item_id=?, rarity=?, type=?, description=?, item_json=?, updated_at=?
        WHERE id=? AND campaign_id=?`
     ).run(
+      body.name,
+      body.quantity ?? 1,
+      body.weight ?? null,
+      body.notes ?? "",
+      body.source ?? null,
+      body.itemId ?? null,
+      body.rarity ?? null,
+      body.type ?? null,
+      body.description ?? null,
       serializePartyInventoryItemState({
         name: body.name,
         quantity: body.quantity ?? 1,
@@ -155,8 +176,9 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
       .get(itemId, campaignId) as Record<string, unknown> | undefined;
     if (!existing) return res.status(404).json({ ok: false, message: "Not found" });
     const item = rowToPartyInventoryItem(existing);
-    db.prepare("UPDATE party_inventory SET item_json=?, updated_at=? WHERE id=? AND campaign_id=?")
+    db.prepare("UPDATE party_inventory SET quantity=?, item_json=?, updated_at=? WHERE id=? AND campaign_id=?")
       .run(
+        quantity,
         serializePartyInventoryItemState({
           name: item.name,
           quantity,

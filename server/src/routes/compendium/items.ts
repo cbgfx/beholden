@@ -6,9 +6,111 @@ import { requireParam } from "../../lib/routeHelpers.js";
 import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { parseBody } from "../../shared/validate.js";
 import { ItemBody, buildItemRecord } from "./helpers.js";
+import { z } from "zod";
 
 export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: RequestHandler) {
   const { db } = ctx;
+  const MAX_ITEMS_LIMIT = 250;
+  const MAX_ITEM_LOOKUP_NAMES = 250;
+
+  const ItemLookupBody = z.object({
+    ids: z.array(z.string()).max(MAX_ITEM_LOOKUP_NAMES).optional(),
+    names: z.array(z.string()).max(MAX_ITEM_LOOKUP_NAMES).optional(),
+    includeCommonMagic: z.boolean().optional(),
+    includeWondrousRarities: z.array(z.string()).max(10).optional(),
+    includeText: z.boolean().optional(),
+  });
+
+  const selectItemByExact = db.prepare(
+    "SELECT id, name, rarity, type, type_key, attunement, magic FROM compendium_items WHERE name_key = ? OR lower(name) = ? ORDER BY name_key ASC LIMIT 1",
+  );
+  const selectItemByPrefix = db.prepare(
+    "SELECT id, name, rarity, type, type_key, attunement, magic FROM compendium_items WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
+  );
+  const selectItemByContains = db.prepare(
+    "SELECT id, name, rarity, type, type_key, attunement, magic FROM compendium_items WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
+  );
+
+  function normalizeLookupName(value: string): string {
+    return value
+      .trim()
+      .replace(/\s*\[[^\]]+\]\s*$/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  function mapLookupRow(row: {
+    id: string;
+    name: string;
+    rarity: string | null;
+    type: string | null;
+    type_key: string | null;
+    attunement: number;
+    magic: number;
+  }) {
+    return {
+      id: row.id,
+      name: row.name,
+      rarity: row.rarity ?? null,
+      type: row.type ?? null,
+      typeKey: row.type_key ?? null,
+      attunement: Boolean(row.attunement),
+      magic: Boolean(row.magic),
+    };
+  }
+
+  function lookupItemByName(rawName: string): {
+    id: string;
+    name: string;
+    rarity: string | null;
+    type: string | null;
+    typeKey: string | null;
+    attunement: boolean;
+    magic: boolean;
+  } | null {
+    const normalized = normalizeLookupName(rawName);
+    if (!normalized) return null;
+
+    const exact = selectItemByExact.get(normalized, normalized) as
+      | {
+        id: string;
+        name: string;
+        rarity: string | null;
+        type: string | null;
+        type_key: string | null;
+        attunement: number;
+        magic: number;
+      }
+      | undefined;
+    if (exact) return mapLookupRow(exact);
+
+    const prefix = selectItemByPrefix.get(`${normalized}%`) as
+      | {
+        id: string;
+        name: string;
+        rarity: string | null;
+        type: string | null;
+        type_key: string | null;
+        attunement: number;
+        magic: number;
+      }
+      | undefined;
+    if (prefix) return mapLookupRow(prefix);
+
+    const contains = selectItemByContains.get(`%${normalized}%`) as
+      | {
+        id: string;
+        name: string;
+        rarity: string | null;
+        type: string | null;
+        type_key: string | null;
+        attunement: number;
+        magic: number;
+      }
+      | undefined;
+    return contains ? mapLookupRow(contains) : null;
+  }
 
   app.get("/api/compendium/items", (req, res) => {
     applySharedApiCacheHeaders(res);
@@ -26,7 +128,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     const magicOnlyRaw = String(req.query.magic ?? "").trim().toLowerCase();
     const magicOnly = magicOnlyRaw === "1" || magicOnlyRaw === "true" || magicOnlyRaw === "yes";
     const limitRaw = Number.parseInt(String(req.query.limit ?? "0"), 10);
-    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 500) : null;
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, MAX_ITEMS_LIMIT) : null;
     const offsetRaw = Number.parseInt(String(req.query.offset ?? "0"), 10);
     const offset = Number.isFinite(offsetRaw) && offsetRaw > 0 ? offsetRaw : 0;
     const withTotalRaw = String(req.query.withTotal ?? "").trim().toLowerCase();
@@ -146,6 +248,134 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
       rarity: rarityRows.map((row) => ({ value: row.rarity, count: row.count })),
       type: typeRows.map((row) => ({ value: row.type, count: row.count })),
     });
+  });
+
+  app.post("/api/compendium/items/lookup", (req, res) => {
+    const body = parseBody(ItemLookupBody, req);
+    const includeText = Boolean(body.includeText);
+    const rows = new Map<string, {
+      id: string;
+      name: string;
+      rarity: string | null;
+      type: string | null;
+      typeKey: string | null;
+      attunement: boolean;
+      magic: boolean;
+      text?: string[] | null;
+    }>();
+
+    const ids = Array.from(new Set((body.ids ?? []).map((entry) => String(entry ?? "").trim()).filter(Boolean)));
+    if (ids.length > 0) {
+      const placeholders = ids.map(() => "?").join(", ");
+      const idRows = db.prepare(
+        `SELECT id, name, rarity, type, type_key, attunement, magic
+         FROM compendium_items
+         WHERE id IN (${placeholders})`,
+      ).all(...ids) as Array<{
+        id: string;
+        name: string;
+        rarity: string | null;
+        type: string | null;
+        type_key: string | null;
+        attunement: number;
+        magic: number;
+      }>;
+      idRows.forEach((row) => rows.set(row.id, mapLookupRow(row)));
+    }
+
+    const seen = new Set<string>();
+    const names = (body.names ?? [])
+      .map((entry) => String(entry ?? "").trim())
+      .filter(Boolean)
+      .filter((entry) => {
+        const key = normalizeLookupName(entry);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    for (const query of names) {
+      const match = lookupItemByName(query);
+      if (!match) continue;
+      rows.set(match.id, match);
+    }
+
+    if (body.includeCommonMagic) {
+      const commonMagicRows = db.prepare(
+        "SELECT id, name, rarity, type, type_key, attunement, magic FROM compendium_items WHERE magic = 1 AND lower(coalesce(rarity, '')) = 'common' AND lower(coalesce(type, '')) NOT LIKE '%potion%' AND lower(coalesce(type, '')) NOT LIKE '%scroll%' ORDER BY name COLLATE NOCASE LIMIT ?",
+      ).all(MAX_ITEMS_LIMIT) as Array<{
+        id: string;
+        name: string;
+        rarity: string | null;
+        type: string | null;
+        type_key: string | null;
+        attunement: number;
+        magic: number;
+      }>;
+      commonMagicRows.forEach((row) => rows.set(row.id, mapLookupRow(row)));
+    }
+
+    const wondrousRarities = Array.from(
+      new Set(
+        (body.includeWondrousRarities ?? [])
+          .map((entry) => String(entry ?? "").trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    );
+    if (wondrousRarities.length > 0) {
+      const placeholders = wondrousRarities.map(() => "?").join(", ");
+      const wondrousRows = db.prepare(
+        `SELECT id, name, rarity, type, type_key, attunement, magic
+         FROM compendium_items
+         WHERE magic = 1
+           AND lower(coalesce(rarity, '')) IN (${placeholders})
+           AND (
+             lower(coalesce(type, '')) LIKE '%wondrous%'
+             OR lower(coalesce(type_key, '')) LIKE '%wondrous%'
+           )
+         ORDER BY name COLLATE NOCASE
+         LIMIT ?`,
+      ).all(...wondrousRarities, MAX_ITEMS_LIMIT) as Array<{
+        id: string;
+        name: string;
+        rarity: string | null;
+        type: string | null;
+        type_key: string | null;
+        attunement: number;
+        magic: number;
+      }>;
+      wondrousRows.forEach((row) => rows.set(row.id, mapLookupRow(row)));
+    }
+
+    if (includeText && rows.size > 0) {
+      const rowIds = Array.from(rows.keys());
+      const placeholders = rowIds.map(() => "?").join(", ");
+      const textRows = db.prepare(
+        `SELECT id, data_json
+         FROM compendium_items
+         WHERE id IN (${placeholders})`,
+      ).all(...rowIds) as Array<{ id: string; data_json: string | null }>;
+      for (const textRow of textRows) {
+        const base = rows.get(textRow.id);
+        if (!base) continue;
+        let text: string[] | null = null;
+        try {
+          const parsed = JSON.parse(textRow.data_json ?? "{}") as { text?: unknown };
+          if (Array.isArray(parsed.text)) {
+            text = parsed.text.map((entry) => String(entry ?? "")).filter(Boolean);
+          } else if (typeof parsed.text === "string" && parsed.text.trim()) {
+            text = [parsed.text.trim()];
+          }
+        } catch {
+          text = null;
+        }
+        rows.set(textRow.id, {
+          ...base,
+          text,
+        });
+      }
+    }
+
+    res.json({ rows: Array.from(rows.values()) });
   });
 
   app.get("/api/compendium/items/:itemId", (req, res) => {

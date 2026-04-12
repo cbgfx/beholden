@@ -6,7 +6,7 @@ import { parseBody } from "../shared/validate.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { rowToCampaign, rowToCampaignCharacter, CAMPAIGN_CHARACTER_COLS } from "../lib/db.js";
 import { DEFAULT_OVERRIDES } from "../lib/defaults.js";
-import { serializeCampaignCharacterLive, updateCampaignCharacterLive } from "../services/characters.js";
+import { updateCampaignCharacterLive } from "../services/characters.js";
 import { rowToEncounterActor } from "../lib/db.js";
 import { ENCOUNTER_ACTOR_COLS } from "../lib/db.js";
 import { buildEncounterActorLive, updateEncounterActor } from "../services/combat.js";
@@ -77,14 +77,15 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   app.post("/api/campaigns", requireAdmin, (req, res) => {
     const body = parseBody(CampaignUpsertBody, req);
     const name = (body.name ?? "").toString().trim() || "New Campaign";
+    const color = body.color ?? "#f59e0b";
     const id = uid();
     const t = now();
     db.prepare(
-      `INSERT INTO campaigns (id, name, color, image_url, created_at, updated_at) VALUES (?, ?, NULL, NULL, ?, ?)`
-    ).run(id, name, t, t);
+      `INSERT INTO campaigns (id, name, color, image_url, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?)`
+    ).run(id, name, color, t, t);
     ctx.helpers.seedDefaultConditions(id);
     ctx.broadcast("campaigns:changed", { campaignId: id });
-    res.json(withAbsoluteImageUrl(req, { id, name, color: null, imageUrl: null, sharedNotes: "", createdAt: t, updatedAt: t }));
+    res.json(withAbsoluteImageUrl(req, { id, name, color, imageUrl: null, sharedNotes: "", createdAt: t, updatedAt: t }));
   });
 
   app.put("/api/campaigns/:campaignId", dmOrAdmin(db), (req, res) => {
@@ -156,7 +157,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     for (const row of combatantRows) {
       const combatant = rowToEncounterActor(row);
       const playerHpMax = db.prepare(
-        `SELECT json_extract(sheet_json, '$.hpMax') AS hp_max FROM players WHERE id = ?`
+        `SELECT hp_max FROM players WHERE id = ?`
       ).get(combatant.baseId) as { hp_max: number | null } | undefined;
       updateEncounterActor(
         db,

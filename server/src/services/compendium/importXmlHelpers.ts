@@ -6,6 +6,7 @@ import { inferRuleset } from "../../lib/inferRuleset.js";
 import { parsePreparedSpellProgression } from "../../lib/preparedSpellProgression.js";
 import { parseBackgroundProficiencies, parseRaceChoicesByRuleset } from "../../lib/proficiencyConstants.js";
 import { asArray, asText, normalizeKey, parseCrValue } from "../../lib/text.js";
+import { pruneFeatBlob } from "./blobHygiene.js";
 import { normalizeHp } from "./normalizeHp.js";
 
 export function createFeatUpserter(
@@ -49,7 +50,7 @@ export function createFeatUpserter(
       parsed,
     };
 
-    featStmt.run(id, name, nameKey, JSON.stringify(data));
+    featStmt.run(id, name, nameKey, JSON.stringify(pruneFeatBlob(data as Record<string, unknown>)));
   };
 }
 

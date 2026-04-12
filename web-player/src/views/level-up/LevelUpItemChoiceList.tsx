@@ -1,7 +1,10 @@
 import React from "react";
 import { api } from "@/services/api";
 import { C } from "@/lib/theme";
-import type { CompendiumItemDetail } from "@/views/character/CharacterInventory";
+
+type ItemDetailPreview = {
+  text?: string[] | string | null;
+};
 
 export function LevelUpItemChoiceList({
   title,
@@ -21,7 +24,7 @@ export function LevelUpItemChoiceList({
   onToggle: (id: string) => void;
 }) {
   const [activeId, setActiveId] = React.useState<string | null>(null);
-  const [details, setDetails] = React.useState<Record<string, CompendiumItemDetail>>({});
+  const [details, setDetails] = React.useState<Record<string, ItemDetailPreview>>({});
   const disabledIdSet = React.useMemo(() => new Set(disabledIds ?? []), [disabledIds]);
   const availableItems = React.useMemo(
     () => items.filter((item) => !chosen.includes(item.id)),
@@ -33,16 +36,27 @@ export function LevelUpItemChoiceList({
     ?? null;
 
   React.useEffect(() => {
-    if (!activeItem || details[activeItem.id]) return;
+    const ids = availableItems
+      .map((item) => item.id)
+      .filter((id) => !details[id])
+      .slice(0, 48);
+    if (ids.length === 0) return;
     let alive = true;
-    api<CompendiumItemDetail>(`/api/compendium/items/${encodeURIComponent(activeItem.id)}`)
-      .then((detail) => {
+    api<{ rows: Array<{ id: string; text?: string[] | null }> }>("/api/compendium/items/lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids, includeText: true }),
+    })
+      .then((result) => {
         if (!alive) return;
-        setDetails((prev) => ({ ...prev, [activeItem.id]: detail }));
+        const patch: Record<string, ItemDetailPreview> = {};
+        for (const row of result.rows ?? []) patch[row.id] = { text: row.text ?? null };
+        if (Object.keys(patch).length === 0) return;
+        setDetails((prev) => ({ ...prev, ...patch }));
       })
       .catch(() => {});
     return () => { alive = false; };
-  }, [activeItem, details]);
+  }, [availableItems, details]);
 
   React.useEffect(() => {
     if (!activeItem) {

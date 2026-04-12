@@ -23,8 +23,17 @@ import {
 
 type SpellLookupRow = {
   query: string;
-  match: { id: string; name: string; level: number | null } | null;
+  match: (FetchedSpellDetail & { text?: string | null }) | null;
 };
+
+function enrichSpellDetail(detail: FetchedSpellDetail): FetchedSpellDetail {
+  const textStr = Array.isArray(detail.text) ? detail.text.join("\n") : String(detail.text ?? "");
+  return {
+    ...detail,
+    damage: parseSpellDamage(textStr),
+    save: parseSpellSave(textStr),
+  };
+}
 
 function formatResourceResetLabel(reset: ResourceCounter["reset"]): string {
   if (reset === "S") return "Short Rest";
@@ -153,46 +162,34 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
     const load = async () => {
       const updates: Record<string, FetchedSpellDetail> = {};
 
-      await Promise.all(
-        directEntries.map(async (entry) => {
-          try {
-            const detail = await api<FetchedSpellDetail>(`/api/spells/${encodeURIComponent(entry.spellId!)}`);
-            const textStr = Array.isArray(detail.text) ? detail.text.join("\n") : String(detail.text ?? "");
-            updates[entry.key] = { ...detail, damage: parseSpellDamage(textStr), save: parseSpellSave(textStr) };
-          } catch {
-            // ignore
-          }
-        }),
-      );
-
       const unresolvedNames = Array.from(unresolvedByName.keys());
-      if (unresolvedNames.length > 0) {
+      const directIds = directEntries
+        .map((entry) => String(entry.spellId ?? "").trim())
+        .filter(Boolean);
+      if (directIds.length > 0 || unresolvedNames.length > 0) {
         try {
           const payload = await api<{ rows: SpellLookupRow[] }>("/api/spells/lookup", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ names: unresolvedNames }),
+            body: JSON.stringify({ ids: directIds, names: unresolvedNames, includeText: true }),
           });
-          await Promise.all(
+          const byQuery = new Map(
             (payload.rows ?? [])
-              .filter((row) => Boolean(row?.match?.id))
-              .map(async (row) => {
-                try {
-                  const detail = await api<FetchedSpellDetail>(`/api/spells/${encodeURIComponent(row.match!.id)}`);
-                  const textStr = Array.isArray(detail.text) ? detail.text.join("\n") : String(detail.text ?? "");
-                  const enriched: FetchedSpellDetail = {
-                    ...detail,
-                    damage: parseSpellDamage(textStr),
-                    save: parseSpellSave(textStr),
-                  };
-                  for (const entry of unresolvedByName.get(row.query) ?? []) {
-                    updates[entry.key] = enriched;
-                  }
-                } catch {
-                  // ignore
-                }
-              }),
+              .filter((row): row is SpellLookupRow => Boolean(row?.query))
+              .map((row) => [row.query, row.match] as const),
           );
+          for (const entry of directEntries) {
+            const id = String(entry.spellId ?? "").trim();
+            const detail = id ? byQuery.get(id) : null;
+            if (!detail) continue;
+            updates[entry.key] = enrichSpellDetail(detail);
+          }
+          for (const [query, groupedEntries] of unresolvedByName.entries()) {
+            const detail = byQuery.get(query);
+            if (!detail) continue;
+            const enriched = enrichSpellDetail(detail);
+            for (const entry of groupedEntries) updates[entry.key] = enriched;
+          }
         } catch {
           // ignore
         }
@@ -285,19 +282,12 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
     }
     let alive = true;
     setSpellSearchLoading(true);
-    api<Array<{ id: string; name: string; level: number | null }>>(`/api/spells/search?q=${encodeURIComponent(query)}&limit=20&compact=1&excludeSpecial=1`)
-      .then(async (results) => {
+    api<Array<FetchedSpellDetail & { text?: string | null }>>(`/api/spells/search?q=${encodeURIComponent(query)}&limit=20&lite=1&includeText=1&excludeSpecial=1`)
+      .then((results) => {
         if (!alive) return;
-        const detailed = await Promise.all(
-          results.map(async (result) => {
-            try {
-              return await api<FetchedSpellDetail>(`/api/spells/${result.id}`);
-            } catch {
-              return null;
-            }
-          })
+        setSpellSearchResults(
+          (Array.isArray(results) ? results : []).map((entry) => enrichSpellDetail(entry)),
         );
-        if (alive) setSpellSearchResults(detailed.filter((entry): entry is FetchedSpellDetail => Boolean(entry)));
       })
       .catch(() => {
         if (alive) setSpellSearchResults([]);

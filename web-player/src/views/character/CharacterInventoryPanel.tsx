@@ -101,6 +101,7 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
   const [collapsedContainerIds, setCollapsedContainerIds] = useState<string[]>([]);
   const [expandedDetail, setExpandedDetail] = useState<CompendiumItemDetail | null>(null);
   const [expandedBusy, setExpandedBusy] = useState(false);
+  const [expandedDetailCache, setExpandedDetailCache] = useState<Record<string, CompendiumItemDetail>>({});
   const [itemEditMode, setItemEditMode] = useState(false);
   const [currencyPopupCode, setCurrencyPopupCode] = useState<"PP" | "GP" | "SP" | "CP" | null>(null);
   const [currencyInput, setCurrencyInput] = useState("");
@@ -206,12 +207,35 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
   }, [charData?.inventoryContainers]);
 
   useEffect(() => {
+    const ids = Array.from(
+      new Set(
+        items
+          .map((item) => String(item.itemId ?? "").trim())
+          .filter(Boolean),
+      ),
+    ).sort((a, b) => a.localeCompare(b));
+    const names = Array.from(
+      new Set(
+        items
+          .filter((item) => !item.itemId && item.source !== "custom" && !isCurrencyItem(item))
+          .map((item) => String(item.name ?? "").trim())
+          .filter(Boolean),
+      ),
+    ).sort((a, b) => a.localeCompare(b));
+    if (ids.length === 0 && names.length === 0) {
+      setItemIndex([]);
+      return;
+    }
     let alive = true;
-    api<ItemSummaryRow[]>("/api/compendium/items?compact=1")
-      .then((rows) => { if (alive) setItemIndex(rows ?? []); })
+    api<{ rows: ItemSummaryRow[] }>("/api/compendium/items/lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids, names }),
+    })
+      .then((result) => { if (alive) setItemIndex(Array.isArray(result?.rows) ? result.rows : []); })
       .catch(() => { if (alive) setItemIndex([]); });
     return () => { alive = false; };
-  }, []);
+  }, [items]);
 
   useEffect(() => {
     if (!currencyPopupCode) return;
@@ -284,17 +308,25 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
     let alive = true;
     (async () => {
       try {
-        const details = await Promise.all(
-          missingDescriptionItems.map(async (item) => {
-            const detail = await api<CompendiumItemDetail>(`/api/compendium/items/${item.itemId}`);
-            const description = Array.isArray(detail.text) ? detail.text.join("\n\n") : String(detail.text ?? "");
-            return [item.id, description.trim()] as const;
-          })
+        const ids = Array.from(
+          new Set(
+            missingDescriptionItems
+              .map((item) => String(item.itemId ?? "").trim())
+              .filter(Boolean),
+          ),
+        );
+        const lookup = await api<{ rows: Array<{ id: string; text?: string[] | null }> }>("/api/compendium/items/lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids, includeText: true }),
+        });
+        const textByItemId = new Map(
+          (lookup.rows ?? []).map((row) => [row.id, Array.isArray(row.text) ? row.text.join("\n\n").trim() : ""]),
         );
         if (!alive) return;
-        const descriptionByItemId = new Map(details);
         const updatedItems = items.map((item) => {
-          const description = descriptionByItemId.get(item.id);
+          const itemId = String(item.itemId ?? "");
+          const description = itemId ? textByItemId.get(itemId) : undefined;
           if (!description) return item;
           return {
             ...item,
@@ -342,14 +374,25 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
       return;
     }
 
+    const cached = expandedDetailCache[matchedSummary.id];
+    if (cached) {
+      setExpandedDetail(cached);
+      setExpandedBusy(false);
+      return;
+    }
+
     let alive = true;
     setExpandedBusy(true);
     api<CompendiumItemDetail>(`/api/compendium/items/${matchedSummary.id}`)
-      .then((detail) => { if (alive) setExpandedDetail(detail); })
+      .then((detail) => {
+        if (!alive) return;
+        setExpandedDetail(detail);
+        setExpandedDetailCache((prev) => ({ ...prev, [matchedSummary.id]: detail }));
+      })
       .catch(() => { if (alive) setExpandedDetail(null); })
       .finally(() => { if (alive) setExpandedBusy(false); });
     return () => { alive = false; };
-  }, [expandedItemId, itemIndex, items]);
+  }, [expandedItemId, expandedDetailCache, itemIndex, items]);
 
   async function persist(updatedItems: InventoryItem[], updatedContainers: InventoryContainer[] = containers) {
     setSaving(true);

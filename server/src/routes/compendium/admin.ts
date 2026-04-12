@@ -4,7 +4,7 @@
 import type { Express } from "express";
 import type { ServerContext } from "../../server/context.js";
 import { requireAdmin } from "../../middleware/auth.js";
-import { trimCompendiumBlobColumns } from "../../services/compendium/blobHygiene.js";
+import { estimateCompendiumBlobTrim, trimCompendiumBlobColumns } from "../../services/compendium/blobHygiene.js";
 
 export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
@@ -69,5 +69,10 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
     const out = db.transaction(() => trimCompendiumBlobColumns(db))();
     ctx.broadcast("compendium:changed", { blobTrimmed: true, ...out });
     res.json({ ok: true, ...out });
+  });
+
+  app.get("/api/compendium/trim-blobs/estimate", requireAdmin, (_req, res) => {
+    const estimate = estimateCompendiumBlobTrim(db);
+    res.json({ ok: true, ...estimate });
   });
 }
