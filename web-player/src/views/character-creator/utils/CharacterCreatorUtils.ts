@@ -23,7 +23,7 @@ const SPELL_SCHOOL_NAMES = ["Abjuration", "Conjuration", "Divination", "Enchantm
 
 interface CreatorFeatureLike {
   name: string;
-  text: string;
+  text?: string | null;
   optional?: boolean;
   subclass?: string | null;
   preparedSpellProgression?: PreparedSpellProgressionTable[];
@@ -172,9 +172,9 @@ export function getSpellcastingClassName(cls: CreatorClassDetailLike | null, lev
   if (!cls) return null;
   const feature = getSpellcastingFeature(cls, level, selectedSubclass);
   if (!feature) return null;
-  const fromList = feature.text.match(/from the ([A-Za-z' -]+?) spell list/i);
+  const fromList = (feature.text ?? "").match(/from the ([A-Za-z' -]+?) spell list/i);
   if (fromList?.[1]) return fromList[1].trim();
-  const spellType = feature.text.match(/for your ([A-Za-z' -]+?) spells/i);
+  const spellType = (feature.text ?? "").match(/for your ([A-Za-z' -]+?) spells/i);
   if (spellType?.[1]) return spellType[1].trim();
   return null;
 }
@@ -258,9 +258,9 @@ export function getCantripCount(cls: CreatorClassDetailLike, level: number, sele
   if (slotCount > 0) return slotCount;
   const spellcastingFeature = getSpellcastingFeature(cls, level, selectedSubclass);
   if (!spellcastingFeature) return 0;
-  const knownMatch = spellcastingFeature.text.match(/you know (\w+) cantrips?/i);
+  const knownMatch = (spellcastingFeature.text ?? "").match(/you know (\w+) cantrips?/i);
   let known = wordOrNumberToInt(knownMatch?.[1] ?? "") ?? 0;
-  for (const match of spellcastingFeature.text.matchAll(/when you reach [A-Za-z]+ level (\d+), you learn another [^.]*?cantrip/gi)) {
+  for (const match of (spellcastingFeature.text ?? "").matchAll(/when you reach [A-Za-z]+ level (\d+), you learn another [^.]*?cantrip/gi)) {
     const unlockLevel = Number(match[1]);
     if (Number.isFinite(unlockLevel) && level >= unlockLevel) known += 1;
   }
@@ -303,7 +303,7 @@ export function getClassFeatureTable(cls: CreatorClassDetailLike, keyword: strin
     for (const feature of al.features ?? []) {
       if (!featureMatchesSubclass(feature, selectedSubclass) || isSubclassChoiceFeature(feature)) continue;
       if ((!feature.optional || Boolean(getFeatureSubclassName(feature))) && new RegExp(keyword, "i").test(feature.name)) {
-        const table = parseLevelTable(feature.text);
+        const table = parseLevelTable(feature.text ?? "");
         if (table.length > 0) return table;
       }
     }
@@ -627,7 +627,7 @@ export function extractClassStartingEquipment(classDetail: CreatorClassDetailLik
   for (const al of classDetail.autolevels) {
     if (al.level !== 1) continue;
     for (const feature of al.features ?? []) {
-      const match = feature.text.match(/Starting Equipment:\s*([^\n]+)/i);
+      const match = (feature.text ?? "").match(/Starting Equipment:\s*([^\n]+)/i);
       if (match?.[1]) return match[1].trim();
     }
   }

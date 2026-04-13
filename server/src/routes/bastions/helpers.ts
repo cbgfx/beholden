@@ -55,7 +55,16 @@ export function readCampaignPlayerRows(
   campaignId: string,
 ): Array<{ id: string; user_id: string | null; level: number; character_id: string | null; character_name: string }> {
   const rows = db.prepare(
-    "SELECT id, user_id, character_id, level, character_name, sheet_json FROM players WHERE campaign_id = ?",
+    `SELECT
+       p.id,
+       COALESCE(p.user_id, uc.user_id) AS user_id,
+       p.character_id,
+       p.level,
+       p.character_name,
+       p.sheet_json
+     FROM players p
+     LEFT JOIN user_characters uc ON uc.id = p.character_id
+     WHERE p.campaign_id = ?`,
   ).all(campaignId) as Array<{
     id: string;
     user_id: string | null;

@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { INpc, Player } from "@/domain/types/domain";
+import type { INpc, CampaignCharacter } from "@/domain/types/domain";
 
 type ById<T> = Record<string, T>;
 

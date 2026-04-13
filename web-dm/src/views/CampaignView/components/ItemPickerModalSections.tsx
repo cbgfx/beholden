@@ -311,7 +311,7 @@ function ItemDetail({ detail }: { detail: CompendiumItemDetail }) {
   const dmgTypeLabel = DMG_TYPE_LABELS[detail.dmgType ?? ""] ?? detail.dmgType ?? null;
   const propertyLabels = (detail.properties ?? []).map((property) => PROPERTY_LABELS[property] ?? property);
   const hasStats = dmg1 || dmg2 || detail.weight != null || detail.value != null || detail.ac != null || propertyLabels.length > 0;
-  const detailText = typeof detail.text === "string" ? detail.text.trim() : Array.isArray(detail.text) ? detail.text.join("\n\n") : "";
+  const detailText = detail.text?.trim() ?? "";
   const displayName = detail.name.replace(/\s*\[.*?\]\s*$/, "").trim();
 
   return (

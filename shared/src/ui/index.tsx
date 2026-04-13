@@ -26,6 +26,7 @@ export { RarityDot } from "./RarityDot";
 export { ItemListRow } from "./ItemListRow";
 export { HeaderActionLink } from "./HeaderActionLink";
 export { HeaderActionButton } from "./HeaderActionButton";
+export { TopBarFrame } from "./TopBarFrame";
 export { accentButtonStyle, ghostButtonStyle, navLinkStyle } from "./buttonStyles";
 export { InfoPageLayout } from "./InfoPageLayout";
 export { FooterGrid } from "./FooterGrid";

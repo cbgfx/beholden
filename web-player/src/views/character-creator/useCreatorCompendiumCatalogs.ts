@@ -12,6 +12,7 @@ import type {
   ClassSummary,
   RaceSummary,
 } from "@/views/character-creator/utils/CharacterCreatorTypes";
+import type { Ruleset } from "@/lib/characterRules";
 
 export function useCreatorCompendiumCatalogs() {
   const [classes, setClasses] = React.useState<ClassSummary[]>([]);

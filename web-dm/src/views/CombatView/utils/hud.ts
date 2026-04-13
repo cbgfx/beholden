@@ -30,7 +30,7 @@ export function getHudNames(c: any, playersById: Record<string, any>) {
   return { primary: label || baseName || "—", secondary: null };
 }
 
-export function getHudHp(c: Combatant | null) {
+export function getHudHp(c: EncounterActor | null) {
   const hpCurrent = Number(c?.hpCurrent ?? 0) || 0;
   const baseHpMax = Number(c?.hpMax ?? 0) || 0;
   const hpMod = Number(c?.overrides?.hpMaxBonus ?? 0) || 0;

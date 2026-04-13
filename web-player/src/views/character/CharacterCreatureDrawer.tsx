@@ -104,9 +104,8 @@ export function CharacterCreatureDrawer(props: {
                 hpMax: Math.max(1, Math.floor(Number(draft.hpMax) || 1)),
                 ac: Math.max(1, Math.floor(Number(draft.ac) || 1)),
               })}
-              style={accentButtonStyle({
-                background: props.accentColor,
-                color: "#081018",
+              style={accentButtonStyle(props.accentColor, {
+                textColor: "#081018",
                 padding: "8px 14px",
                 fontSize: "var(--fs-subtitle)",
                 borderRadius: 8,

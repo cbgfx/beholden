@@ -130,6 +130,7 @@ import {
   getClassFeatOptionLabel,
   getOptionalGroups,
   getPrimaryAbilityKeys,
+  getSelectedAbilityIncrease,
   initForm,
   isToughFeat,
   pointBuySpent,
@@ -137,8 +138,9 @@ import {
   type FormState,
   type Step,
 } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
-import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
-import { renderCharacterCreatorStep } from "@/views/character-creator/CharacterCreatorStepViews";
+import type { CharacterData, ProficiencyMap } from "@/views/character/CharacterSheetTypes";
+import { renderCharacterCreatorStep, type CharacterCreatorStepRenderContext } from "@/views/character-creator/CharacterCreatorStepViews";
+import { renderIdentityStep } from "@/views/character-creator/steps/CharacterCreatorPanelCoreSteps";
 import { useCreatorCompendiumCatalogs } from "@/views/character-creator/useCreatorCompendiumCatalogs";
 import { useCreatorEditHydration } from "@/views/character-creator/useCreatorEditHydration";
 
@@ -482,9 +484,9 @@ export function CharacterCreatorView() {
     for (const [featId, count] of counts.entries()) {
       if (count < 2) continue;
       const detail = levelUpFeatDetails.find((entry) => entry.featId === featId)?.feat;
-      if (!detail?.parsed.repeatable) return true;
+      if (!detail?.parsed.repeatable) return `Duplicate feat selected: ${featId}`;
     }
-    return false;
+    return null;
   }, [form.chosenLevelUpFeats, levelUpFeatDetails]);
 
   // Load compendium lists on mount
@@ -577,8 +579,8 @@ export function CharacterCreatorView() {
     const raceFeatId = typeof form.chosenRaceFeatId === "string" ? form.chosenRaceFeatId.trim() : "";
     const bgFeatId = typeof form.chosenBgOriginFeatId === "string" ? form.chosenBgOriginFeatId.trim() : "";
     const classFeatEntries = Object.entries(form.chosenClassFeatIds).filter(
-      ([, featId]): featId is string => typeof featId === "string" && featId.trim().length > 0,
-    );
+      ([, featId]) => typeof featId === "string" && featId.trim().length > 0,
+    ) as [string, string][];
     const levelUpFeatEntries = form.chosenLevelUpFeats.filter(
       (entry): entry is { level: number; featId: string } =>
         typeof entry?.level === "number"
@@ -722,6 +724,7 @@ export function CharacterCreatorView() {
 
   React.useEffect(() => {
     const spellBackedDefinitions = growthChoiceDefinitions.filter((definition) => definition.spellChoice);
+    const includeSpecialSpellRows = growthChoiceDefinitions.some((definition) => definition.category === "maneuver");
     if (growthChoiceDefinitions.length === 0) {
       setGrowthOptionEntriesByKey({});
       return;
@@ -738,7 +741,8 @@ export function CharacterCreatorView() {
     }
     loadSpellChoiceOptions(
       spellBackedDefinitions.map((definition) => definition.spellChoice!).filter(Boolean),
-      (query) => api<SpellSummary[]>(query)
+      (query) => api<SpellSummary[]>(query),
+      { excludeSpecial: !includeSpecialSpellRows },
     )
       .then((optionsByKey) => {
         if (!cancelled) setGrowthOptionEntriesByKey({ ...optionsByKey, ...itemBacked });
@@ -907,9 +911,8 @@ export function CharacterCreatorView() {
       const scores = resolvedScores(form, selectedFeatAbilityBonuses);
       const selectedFeatureNames = buildAppliedCharacterFeatures({
         charData: {
-          subclass: form.subclass || null,
           chosenOptionals: form.chosenOptionals,
-        },
+        } as CharacterData,
         characterLevel: form.level,
         classDetail,
         raceDetail,
@@ -1119,7 +1122,7 @@ export function CharacterCreatorView() {
       step6SpellListChoices,
       step6ResolvedSpellChoices,
       selectedFeatSpellcastingAbilityChoices,
-      selectedClassFeatureProficiencyChoices,
+      selectedClassFeatureProficiencyChoices: selectedClassFeatureProficiencyChoices as CharacterCreatorStepRenderContext["selectedClassFeatureProficiencyChoices"],
       selectedFeatGrantedAbilityBonuses,
       selectedFeatAbilityBonuses,
       levelUpFeatLevels,

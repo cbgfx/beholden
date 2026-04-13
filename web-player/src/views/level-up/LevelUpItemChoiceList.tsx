@@ -140,7 +140,7 @@ export function LevelUpItemChoiceList({
             }}
           >
             {Array.isArray(details[activeItem.id].text)
-              ? details[activeItem.id].text.join("\n\n").trim()
+              ? (details[activeItem.id].text as string[]).join("\n\n").trim()
               : String(details[activeItem.id].text ?? "").trim()}
           </div>
         </div>

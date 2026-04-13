@@ -43,6 +43,7 @@ export function PlayerRow(props: {
   const p = props.p;
   const variant = props.variant ?? "campaign";
   const isCombatList = variant === "combatList";
+  const clickable = typeof props.onEdit === "function";
 
   const max = Math.max(1, Number(p.hpMax) || 1);
   const cur = Math.max(0, Number(p.hpCurrent) || 0);
@@ -80,7 +81,26 @@ export function PlayerRow(props: {
   );
 
   return (
-    <div style={{ ...rowStyle, display: "flex", flexDirection: "column", gap: 6 }}>
+    <div
+      style={{
+        ...rowStyle,
+        display: "flex",
+        flexDirection: "column",
+        gap: 6,
+        cursor: clickable ? "pointer" : "default",
+      }}
+      onClick={clickable ? () => props.onEdit?.() : undefined}
+      onKeyDown={clickable ? (e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          props.onEdit?.();
+        }
+      } : undefined}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      aria-label={clickable ? `Edit ${p.characterName}` : undefined}
+    >
 
       {/* Top row: avatar · name/meta · stats · actions */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flexWrap: "wrap" }}>
@@ -141,7 +161,12 @@ export function PlayerRow(props: {
 
         {/* Action area */}
         {props.actions !== null && (
-          <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 4, marginLeft: "auto" }} onClick={(e) => e.stopPropagation()}>
+          <div
+            style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 4, marginLeft: "auto" }}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            onKeyUp={(e) => e.stopPropagation()}
+          >
             {hasLegacyActions ? props.actions : null}
             {!hasLegacyActions && props.primaryAction != null ? props.primaryAction : null}
             {showMenu ? <RowMenu items={props.menuItems!} /> : null}

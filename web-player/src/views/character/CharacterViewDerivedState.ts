@@ -8,6 +8,7 @@ import {
   normalizeProficiencies,
   stripEditionTag,
   XP_TO_LEVEL,
+  type EditableSheetOverrideField,
 } from "@/views/character/CharacterViewHelpers";
 import {
   buildAppliedCharacterFeatures,
@@ -286,7 +287,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     isUnarmed: true,
   });
   const senses = effectSenses.map((sense) => `${sense.kind[0].toUpperCase()}${sense.kind.slice(1)} ${sense.range} ft.`);
-  const editableOverrideFields = [
+  const editableOverrideFields: EditableSheetOverrideField[] = [
     { key: "tempHp", label: "Temp HP", help: "Current temporary hit points." },
     { key: "acBonus", label: "AC Bonus", help: "Bonus applied on top of normal armor class." },
     { key: "hpMaxBonus", label: "Max HP Modifier", help: "Bonus or penalty to maximum hit points." },

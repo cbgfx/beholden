@@ -62,8 +62,9 @@ export function PlayerDrawer(props: {
   }, [props.drawer, state.players]);
 
   // Current image URL to display: local preview (create) or stored URL (edit).
-  const editPlayer = props.drawer.type === "editPlayer"
-    ? state.players.find((p) => p.id === props.drawer.playerId)
+  const drawer = props.drawer;
+  const editPlayer = drawer.type === "editPlayer"
+    ? state.players.find((p) => p.id === drawer.playerId)
     : null;
   const displayImageUrl = pendingImage?.previewUrl ?? editPlayer?.imageUrl ?? null;
 

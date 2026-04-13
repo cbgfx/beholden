@@ -20,7 +20,7 @@ export function useCreatorEditHydration(args: {
     if (!editId) return;
     fetchMyCharacter(editId)
       .then((ch) => {
-        const cd = ch.characterData ?? {};
+        const cd = (ch.characterData ?? {}) as Record<string, any>;
         const primaryClassEntry = Array.isArray(cd.classes) ? cd.classes[0] : null;
         const recordedBgBonuses =
           cd.bgAbilityBonuses && typeof cd.bgAbilityBonuses === "object" ? cd.bgAbilityBonuses : {};
@@ -91,16 +91,13 @@ export function useCreatorEditHydration(args: {
                 .map((entry: any) => ({
                   level: Number(entry?.level) || 0,
                   featId: typeof entry?.featId === "string" ? entry.featId : null,
-                  type: entry?.type === "asi" ? "asi" : typeof entry?.featId === "string" ? "feat" : null,
+                  type: entry?.type === "asi" ? "asi" as const : typeof entry?.featId === "string" ? "feat" as const : undefined,
                   abilityBonuses:
                     entry?.abilityBonuses && typeof entry.abilityBonuses === "object"
                       ? entry.abilityBonuses
                       : {},
                 }))
-                .filter(
-                  (entry: LevelUpFeatSelection & { type: "asi" | "feat" | null }) =>
-                    entry.level > 0 && entry.type,
-                )
+                .filter((entry) => entry.level > 0 && entry.type) as LevelUpFeatSelection[]
             : [],
           chosenRaceSkills: cd.chosenRaceSkills ?? [],
           chosenRaceLanguages: cd.chosenRaceLanguages ?? [],

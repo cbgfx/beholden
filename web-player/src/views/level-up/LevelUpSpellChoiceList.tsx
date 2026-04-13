@@ -4,8 +4,22 @@ import { extractPrerequisite, stripPrerequisiteLine } from "@/views/character/Ch
 import type { LevelUpSpellSummary } from "./LevelUpParts";
 
 function levelGroupLabel(level: number | null | undefined): string {
+  if (level == null) return "Options";
   const value = Number(level ?? 0);
   return value > 0 ? `Level ${value}` : "Cantrips";
+}
+
+function normalizeOptionName(name: string): string {
+  return String(name ?? "").replace(/^maneuver:\s*/i, "").trim();
+}
+
+function optionLevelLabel(level: number | null | undefined): string | null {
+  if (level == null) return null;
+  return Number(level) > 0 ? `Level ${level}` : "Cantrip";
+}
+
+function cleanedDescription(text: string | null | undefined): string {
+  return stripPrerequisiteLine(text).replace(/Source:.*$/ms, "").trim();
 }
 
 export function LevelUpSpellChoiceList({
@@ -39,8 +53,13 @@ export function LevelUpSpellChoiceList({
       else groups.set(key, [spell]);
     }
     return Array.from(groups.entries()).sort((a, b) => {
-      const aLevel = a[0] === "Cantrips" ? 0 : Number(a[0].replace("Level ", ""));
-      const bLevel = b[0] === "Cantrips" ? 0 : Number(b[0].replace("Level ", ""));
+      const toSortValue = (group: string) => {
+        if (group === "Cantrips") return 0;
+        if (group === "Options") return Number.NEGATIVE_INFINITY;
+        return Number(group.replace("Level ", ""));
+      };
+      const aLevel = toSortValue(a[0]);
+      const bLevel = toSortValue(b[0]);
       return aLevel - bLevel;
     });
   }, [visibleSpells]);
@@ -71,9 +90,11 @@ export function LevelUpSpellChoiceList({
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {groupedSpells.map(([groupLabel, group]) => (
           <div key={groupLabel}>
-            <div style={{ fontSize: "var(--fs-small)", color: C.accentHl, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>
-              {groupLabel}
-            </div>
+            {groupLabel !== "Options" && (
+              <div style={{ fontSize: "var(--fs-small)", color: C.accentHl, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>
+                {groupLabel}
+              </div>
+            )}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(118px, 1fr))", gap: 6 }}>
               {group.map((spell) => {
                 const active = chosen.includes(spell.id);
@@ -82,6 +103,7 @@ export function LevelUpSpellChoiceList({
                 const disabledElsewhere = !active && disabledIdSet.has(spell.id);
                 const blocked = (!active && chosen.length >= max) || !allowed || disabledElsewhere;
                 const prerequisite = extractPrerequisite(spell.text);
+                const levelLabel = optionLevelLabel(spell.level);
                 return (
                   <button
                     key={spell.id}
@@ -102,10 +124,12 @@ export function LevelUpSpellChoiceList({
                       minHeight: 44,
                     }}
                   >
-                    <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, lineHeight: 1.15 }}>{spell.name}</div>
-                    <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginTop: 2 }}>
-                      {Number(spell.level ?? 0) > 0 ? `Level ${spell.level}` : "Cantrip"}
-                    </div>
+                    <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, lineHeight: 1.15 }}>{normalizeOptionName(spell.name)}</div>
+                    {levelLabel ? (
+                      <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginTop: 2 }}>
+                        {levelLabel}
+                      </div>
+                    ) : null}
                     {disabledElsewhere && (
                       <div style={{ marginTop: 4, fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700 }}>
                         Already selected
@@ -142,10 +166,10 @@ export function LevelUpSpellChoiceList({
           }}
         >
           <div style={{ fontWeight: 800, fontSize: "var(--fs-subtitle)", color: C.accentHl }}>
-            {activeSpell.name}
-            {activeSpell.level != null ? (
+            {normalizeOptionName(activeSpell.name)}
+            {optionLevelLabel(activeSpell.level) ? (
               <span style={{ color: "rgba(160,180,220,0.65)", marginLeft: 6, fontSize: "var(--fs-small)" }}>
-                {Number(activeSpell.level) > 0 ? `Level ${activeSpell.level}` : "Cantrip"}
+                {optionLevelLabel(activeSpell.level)}
               </span>
             ) : null}
           </div>
@@ -157,7 +181,7 @@ export function LevelUpSpellChoiceList({
               <span style={{ color: "rgba(251,191,36,0.92)" }}> {extractPrerequisite(activeSpell.text)}</span>
             </div>
           )}
-          {stripPrerequisiteLine(activeSpell.text).replace(/Source:.*$/ms, "").trim() && (
+          {cleanedDescription(activeSpell.text) && (
             <div
               style={{
                 marginTop: 8,
@@ -167,7 +191,7 @@ export function LevelUpSpellChoiceList({
                 whiteSpace: "pre-wrap",
               }}
             >
-              {stripPrerequisiteLine(activeSpell.text).replace(/Source:.*$/ms, "").trim()}
+              {cleanedDescription(activeSpell.text)}
             </div>
           )}
         </div>

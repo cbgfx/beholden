@@ -45,7 +45,7 @@ export function HudConditionsStrip(props: Props) {
     >
       {shown.map((cond, idx) => {
         const key = String(cond?.key ?? "");
-        const CondIcon = conditionIconByKey[key];
+        const CondIcon = conditionIconByKey[key as keyof typeof conditionIconByKey];
         if (!CondIcon) return null;
 
         return (

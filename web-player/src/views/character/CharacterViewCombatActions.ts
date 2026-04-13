@@ -148,7 +148,7 @@ export function buildCharacterRuntimeActions(args: {
   };
 
   const handleItemChargeChange = async (itemId: string, charges: number) => {
-    const nextInventory = inventory.map((item) => item.id === itemId ? { ...item, charges } : item);
+    const nextInventory = (inventory ?? []).map((item) => item.id === itemId ? { ...item, charges } : item);
     await saveCharacterData({ ...currentCharacterData, inventory: nextInventory });
   };
 
@@ -190,7 +190,7 @@ export function buildCharacterRuntimeActions(args: {
     const nextHitDice = Math.max(0, Math.min(hitDiceMax, hitDiceCurrent + recoveredHitDice));
     const slotsReset = classDetail?.slotsReset ?? "L";
     const nextUsedSpellSlots = /S/i.test(slotsReset) ? (currentCharacterData.usedSpellSlots ?? {}) : {};
-    const nextInventory = inventory.map((item) => ((item.chargesMax ?? 0) > 0 ? { ...item, charges: item.chargesMax } : item));
+    const nextInventory = (inventory ?? []).map((item) => ((item.chargesMax ?? 0) > 0 ? { ...item, charges: item.chargesMax } : item));
 
     await putMyCharacter(char.id, {
       hpCurrent: effectiveHpMax,
@@ -233,7 +233,7 @@ export function buildCharacterRuntimeActions(args: {
     }));
     const nextHitDice = hitDiceMax;
     const nextUsedSpellSlots: Record<string, number> = {};
-    const nextInventory = inventory.map((item) => ((item.chargesMax ?? 0) > 0 ? { ...item, charges: item.chargesMax } : item));
+    const nextInventory = (inventory ?? []).map((item) => ((item.chargesMax ?? 0) > 0 ? { ...item, charges: item.chargesMax } : item));
     const nextDeathSaves = { success: 0, fail: 0 };
     const nextOverrides = {
       tempHp: 0,

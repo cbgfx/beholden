@@ -2,7 +2,7 @@ import React from "react";
 import type { AddMonsterOptions } from "@/domain/types/domain";
 import { PlayersPanel } from "@/views/CampaignView/panels/PlayersPanel";
 import { INpcsPanel } from "@/views/CampaignView/panels/INpcsPanel";
-import type { Combatant, Player, INpc } from "@/domain/types/domain";
+import type { EncounterActor, CampaignCharacter, INpc } from "@/domain/types/domain";
 
 
 export function CampaignMainColumn(props: {

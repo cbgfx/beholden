@@ -1,5 +1,5 @@
 import React from "react";
-import type { AttackOverride, Combatant } from "@/domain/types/domain";
+import type { AttackOverride, EncounterActor } from "@/domain/types/domain";
 import { theme } from "@/theme/theme";
 import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";

@@ -13,6 +13,18 @@
     "./ui/*": "./src/ui/*",
     "./styles/*": "./styles/*"
   },
+  "typesVersions": {
+    "*": {
+      "domain/*": ["./src/domain/*"],
+      "ui/*": ["./src/ui/*"],
+      "api/*": ["./src/api/*"],
+      "icons/*": ["./src/icons/*"]
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.2.3"
+  },
   "peerDependencies": {
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

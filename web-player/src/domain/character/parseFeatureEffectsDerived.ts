@@ -246,7 +246,7 @@ function resolveScalingDiceInContext(
   context: { level?: number | null; scores?: Partial<Record<AbilKey, number | null>> }
 ): string | null {
   if (!value) return null;
-  if (value.kind === "fixed") return value.dice;
+  if (value.kind === "fixed") return "dice" in value ? value.dice : null;
   if (value.kind === "per_scalar") {
     const scalar = resolveScalingValueInContext(value.scalar, context);
     return scalar != null && scalar > 0 ? `${scalar}${value.die}` : null;

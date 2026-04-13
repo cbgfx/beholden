@@ -3,7 +3,7 @@ import { IconPlayer, IconMonster, IconINPC, IconSkull } from "@/icons";
 import type { EncounterActor } from "@/domain/types/domain";
 
 type Props = {
-  combatant: Combatant | undefined;
+  combatant: EncounterActor | undefined;
 };
 
 export function CombatantTypeIcon({ combatant }: Props) {

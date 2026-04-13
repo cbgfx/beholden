@@ -51,11 +51,11 @@ import type {
   RaceSummary,
   SpellSummary,
 } from "@/views/character-creator/utils/CharacterCreatorTypes";
-import type { BackgroundFeat } from "@/views/character-creator/utils/FeatChoiceTypes";
+import type { ParsedFeatDetailLike as BackgroundFeat } from "@/views/character-creator/utils/FeatChoiceTypes";
 import type { SharedSpellSummary } from "@/views/character-creator/utils/SpellChoiceUtils";
 import type { SelectedFeatSpellcastingAbilityChoiceEntry } from "@/views/character-creator/utils/FeatSpellcastingUtils";
 import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
-import type { ParseFeatureGrantsResult } from "@/views/character/CharacterRuleParsers";
+import type { FeatureGrants as ParseFeatureGrantsResult } from "@/views/character/CharacterRuleParsers";
 import { renderClassStep, renderLevelStep, renderSpeciesStep, renderSpellsStep } from "@/views/character-creator/steps/CharacterCreatorStepPanels";
 import { renderBackgroundStep } from "@/views/character-creator/steps/CharacterCreatorBackgroundStep";
 import { renderAbilityScoresStep, renderDerivedStatsStep } from "@/views/character-creator/steps/CharacterCreatorPanelAdvancedSteps";
@@ -297,7 +297,7 @@ function renderLevel(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
   const subclassList = ctx.classDetail ? getSubclassList(ctx.classDetail) : [];
   const scNeeded = ctx.classDetail ? (getSubclassLevel(ctx.classDetail) ?? 99) : 99;
   const showSubclass = Boolean(ctx.classDetail && ctx.form.level >= scNeeded && subclassList.length > 0);
-  const features = ctx.classDetail ? featuresUpToLevelForSubclass(ctx.classDetail, ctx.form.level, ctx.form.subclass) : [];
+  const features = (ctx.classDetail ? featuresUpToLevelForSubclass(ctx.classDetail, ctx.form.level, ctx.form.subclass) : []).map((f) => ({ ...f, text: f.text ?? "" }));
   const optGroups = ctx.classDetail
     ? getOptionalGroups(ctx.classDetail, ctx.form.level)
         .map((group) => ({
@@ -366,7 +366,7 @@ function renderLevel(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
       ...f,
       chosenLevelUpFeats: [
         ...f.chosenLevelUpFeats.filter((entry) => entry.level !== level),
-        { level, type: mode, featId: null, abilityBonuses: {} },
+        { level, type: mode as "feat" | "asi" | undefined, featId: null, abilityBonuses: {} },
       ].sort((a, b) => a.level - b.level),
       chosenFeatOptions: Object.fromEntries(Object.entries(f.chosenFeatOptions).filter(([key]) => !key.startsWith(`levelupfeat:${level}:`))),
     })),
@@ -384,7 +384,7 @@ function renderLevel(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
         ...f,
         chosenLevelUpFeats: [
           ...f.chosenLevelUpFeats.filter((entry) => entry.level !== level),
-          { level, type: "asi", featId: null, abilityBonuses: bonuses },
+          { level, type: "asi" as const, featId: null, abilityBonuses: bonuses },
         ].sort((a, b) => a.level - b.level),
       };
     }),
@@ -392,13 +392,13 @@ function renderLevel(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
       ...f,
       chosenLevelUpFeats: [
         ...f.chosenLevelUpFeats.filter((entry) => entry.level !== level),
-        { level, type: "feat", featId: featId || null, abilityBonuses: {} },
+        { level, type: "feat" as const, featId: featId || null, abilityBonuses: {} },
       ].sort((a, b) => a.level - b.level),
       chosenFeatOptions: featId
         ? f.chosenFeatOptions
         : Object.fromEntries(Object.entries(f.chosenFeatOptions).filter(([key]) => !key.startsWith(`levelupfeat:${level}:`))),
     })),
-    levelUpFeatConflict: ctx.levelUpFeatConflict,
+    levelUpFeatConflict: Boolean(ctx.levelUpFeatConflict),
     onBack: () => ctx.setStep(4),
     onNext: () => ctx.setStep(6),
   });
@@ -478,7 +478,7 @@ function renderSpells(ctx: CharacterCreatorStepRenderContext): StepRenderResult 
       step6ResolvedSpellChoices: ctx.step6ResolvedSpellChoices,
       growthChoiceDefinitions: ctx.growthChoiceDefinitions,
       preparedSpellProgressionChoiceDefinitions: ctx.preparedSpellProgressionChoiceDefinitions,
-      growthOptionEntriesByKey: ctx.growthOptionEntriesByKey,
+      growthOptionEntriesByKey: ctx.growthOptionEntriesByKey as Record<string, import("@/views/character-creator/utils/CharacterCreatorTypes").ItemSummary[]>,
     featSpellChoiceOptions: ctx.featSpellChoiceOptions,
     getGrowthChoiceSelectedAbility: ctx.getGrowthChoiceSelectedAbility,
   });

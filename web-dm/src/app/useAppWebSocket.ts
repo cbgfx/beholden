@@ -128,7 +128,7 @@ export function useAppWebSocket({
       }
       if (payload.action === "upsert" && payload.encounterId) {
         enqueue(`delta:encounter:${payload.encounterId}`, async () => {
-          const encounter = await api<Encounter>(encounterPath(payload.encounterId));
+          const encounter = await api<Encounter>(encounterPath(payload.encounterId!));
           dispatch({ type: "upsertEncounter", encounter });
         }, 80);
         return;

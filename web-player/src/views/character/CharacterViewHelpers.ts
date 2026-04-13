@@ -216,7 +216,7 @@ type ItemAbilityScoreOverride = {
 };
 
 export function isInventoryItemActiveForCharacterEffects(item: InventoryItem): boolean {
-  return getEquipState(item) !== "backpack" && (!item.attunement || item.attuned);
+  return getEquipState(item) !== "backpack" && (!item.attunement || Boolean(item.attuned));
 }
 
 export function parseItemAbilityScoreOverrides(item: InventoryItem): ItemAbilityScoreOverride[] {
@@ -391,7 +391,7 @@ export function normalizeCharacterClasses(
         subclass: typeof entry?.subclass === "string" && entry.subclass.trim().length > 0 ? entry.subclass.trim() : null,
       } satisfies CharacterClassEntry;
     })
-    .filter((entry): entry is CharacterClassEntry => Boolean(entry));
+    .filter(Boolean) as CharacterClassEntry[];
 }
 
 export function getPrimaryCharacterClassEntry(

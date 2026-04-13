@@ -39,23 +39,6 @@ const checkStyle: React.CSSProperties = {
   color: theme.colors.text,
 };
 
-const inputTheme = {
-  radius: 8,
-  borderColor: theme.colors.panelBorder,
-  inputBg: theme.colors.panelBg,
-  textColor: theme.colors.text,
-  placeholderColor: theme.colors.muted,
-};
-
-const selectTheme = {
-  radius: 8,
-  borderColor: theme.colors.panelBorder,
-  inputBg: theme.colors.panelBg,
-  panelBg: theme.colors.panelBg,
-  textColor: theme.colors.text,
-  mutedColor: theme.colors.muted,
-  accentColor: theme.colors.accentHighlight,
-};
 
 export function ItemFormModal(props: Props) {
   const isEdit = props.item != null;
@@ -128,7 +111,7 @@ export function ItemFormModal(props: Props) {
         onSubmit={handleSubmit}
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: theme.colors.cardBg,
+          background: theme.colors.panelBg,
           borderRadius: 16,
           border: `1px solid ${theme.colors.panelBorder}`,
           padding: 24,
@@ -147,12 +130,12 @@ export function ItemFormModal(props: Props) {
         </div>
 
         <FormField label="Name *" labelStyle={fieldLabelStyle}>
-          <Input value={name} onChange={(e) => setName(e.target.value)} required theme={inputTheme} />
+          <Input value={name} onChange={(e) => setName(e.target.value)} required />
         </FormField>
 
         <FieldGrid columns="1fr 1fr" gap={12}>
           <FormField label="Rarity" labelStyle={fieldLabelStyle}>
-            <Select value={rarity} onChange={(e) => setRarity(e.target.value)} theme={selectTheme}>
+            <Select value={rarity} onChange={(e) => setRarity(e.target.value)}>
               <option value="">None</option>
               {RARITIES.filter(Boolean).map((r) => (
                 <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
@@ -160,7 +143,7 @@ export function ItemFormModal(props: Props) {
             </Select>
           </FormField>
           <FormField label="Type" labelStyle={fieldLabelStyle}>
-            <Input value={type} onChange={(e) => setType(e.target.value)} list="item-type-list" placeholder="e.g. Wondrous Item" theme={inputTheme} />
+            <Input value={type} onChange={(e) => setType(e.target.value)} list="item-type-list" placeholder="e.g. Wondrous Item" />
             <datalist id="item-type-list">
               {KNOWN_TYPES.map((t) => <option key={t} value={t} />)}
             </datalist>
@@ -173,7 +156,7 @@ export function ItemFormModal(props: Props) {
         </div>
 
         <FormField label="Description (blank lines = new paragraph)" labelStyle={fieldLabelStyle}>
-          <TextArea value={text} onChange={(e) => setText(e.target.value)} rows={8} theme={inputTheme} style={{ resize: "vertical", fontFamily: "inherit", lineHeight: 1.5 }} />
+          <TextArea value={text} onChange={(e) => setText(e.target.value)} rows={8} style={{ resize: "vertical", fontFamily: "inherit", lineHeight: 1.5 }} />
         </FormField>
 
         {error && <div style={{ color: theme.colors.red, fontSize: "var(--fs-subtitle)" }}>{error}</div>}

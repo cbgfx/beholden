@@ -21,7 +21,7 @@ export function useMonsterDetailsCache(
   );
 
   const resolveMonsterId = React.useCallback(
-    (c: Combatant | null): string | null => {
+    (c: EncounterActor | null): string | null => {
       if (!c) return null;
       // If polymorphed into a compendium creature, show that creature's stats
       const polymorphCond = c.conditions?.find((x) => x.key === "polymorphed") as

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { theme } from "@/theme/theme";
 import { formatCr } from "@/views/CampaignView/monsterPicker/utils";
-import type { PreparedMonsterRow } from "@/views/CampaignView/monsterPicker/types";
+import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
 
 export function MonsterCreateChoiceModal(props: {
   onClose: () => void;
@@ -39,7 +39,7 @@ export function MonsterCreateChoiceModal(props: {
 
 export function MonsterDuplicatePickerModal(props: {
   searchQuery: string;
-  rows: PreparedMonsterRow[];
+  rows: CompendiumMonsterRow[];
   loadingId: string | null;
   onClose: () => void;
   onSearchChange: (value: string) => void;

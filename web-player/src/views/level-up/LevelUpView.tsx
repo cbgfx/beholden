@@ -574,6 +574,7 @@ export function LevelUpView() {
 
   useEffect(() => {
     const spellBackedDefinitions = growthChoiceDefinitions.filter((definition) => definition.spellChoice);
+    const includeSpecialSpellRows = growthChoiceDefinitions.some((definition) => definition.category === "maneuver");
     let alive = true;
     if (growthChoiceDefinitions.length === 0) {
       setGrowthOptionEntriesByKey((prev) => hasKeys(prev) ? {} : prev);
@@ -588,7 +589,11 @@ export function LevelUpView() {
       setGrowthOptionEntriesByKey((prev) => sameSpellChoiceOptionMap(prev, itemBacked) ? prev : itemBacked);
       return;
     }
-    loadSpellChoiceOptions(spellBackedDefinitions.map((definition) => definition.spellChoice!).filter(Boolean), (query) => api<SpellSummary[]>(query)).then((optionsByKey) => {
+    loadSpellChoiceOptions(
+      spellBackedDefinitions.map((definition) => definition.spellChoice!).filter(Boolean),
+      (query) => api<SpellSummary[]>(query),
+      { excludeSpecial: !includeSpecialSpellRows },
+    ).then((optionsByKey) => {
       const next = { ...optionsByKey, ...itemBacked };
       if (alive) setGrowthOptionEntriesByKey((prev) => sameSpellChoiceOptionMap(prev, next) ? prev : next);
     }).catch(() => {
@@ -721,7 +726,7 @@ export function LevelUpView() {
           return Boolean(spell)
             && spellLevel > 0
             && spellLevel <= maxSpellLevel
-            && !preparedSpellProgressionGrantedKeys.has(normalizeSpellTrackingKey(spell.name));
+            && !preparedSpellProgressionGrantedKeys.has(normalizeSpellTrackingKey(spell!.name));
         })
         .slice(0, prepCount),
     [char?.characterData?.chosenSpells, classSpells, existingClassSpellNames, maxSpellLevel, prepCount, preparedSpellProgressionGrantedKeys]
@@ -760,7 +765,7 @@ export function LevelUpView() {
           selectedAbility: getGrowthChoiceSelectedAbility(chosenFeatureChoices, definition),
         };
       })
-      .filter((entry) => entry.remainingCount > 0 || entry.chosen.length > 0 || entry.definition.abilityChoice),
+      .filter((entry) => entry.remainingCount > 0),
     [char?.characterData?.chosenFeatureChoices, chosenFeatureChoices, growthChoiceDefinitions, growthOptionEntriesByKey]
   );
   const planChoiceEntries = React.useMemo(

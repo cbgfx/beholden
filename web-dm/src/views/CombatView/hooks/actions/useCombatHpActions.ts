@@ -92,12 +92,6 @@ export function useCombatHpActions({ encounterId, delta, setDelta, target }: Arg
         }
       });
       setDelta("");
-
-      // Concentration check: if damage was dealt to a concentrating combatant, fire a reminder.
-      if (kind === "damage" && amount > 0 && target.conditions?.some(c => c.key === "concentration")) {
-        const dc = Math.max(10, Math.floor(amount / 2));
-        setConcentrationAlert({ name: target.label || target.name, dc });
-      }
     },
     [encounterId, target, delta, setDelta]
   );

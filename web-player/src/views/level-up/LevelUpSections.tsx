@@ -445,7 +445,7 @@ export function LevelUpChoicesSection(props: {
                           }));
                         }}
                       >
-                        {ABILITY_LABELS[option]}
+                        {(ABILITY_LABELS as Record<string, string>)[option]}
                       </ChoiceBtn>
                     );
                   })}

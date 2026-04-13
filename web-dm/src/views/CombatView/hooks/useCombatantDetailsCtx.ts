@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { AttackOverride, Combatant, Player } from "@/domain/types/domain";
+import type { AttackOverride, EncounterActor, CampaignCharacter } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
 
 type Role = "active" | "target";

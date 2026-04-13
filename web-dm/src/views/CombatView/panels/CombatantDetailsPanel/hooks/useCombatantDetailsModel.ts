@@ -34,7 +34,7 @@ export function useCombatantDetailsModel(args: {
   const showMonsterBaseName =
     isMonster && monsterBaseName && norm(monsterBaseName) !== norm(titleMain);
 
-  const displayName = React.useCallback((c: Combatant | null) => {
+  const displayName = React.useCallback((c: EncounterActor | null) => {
     if (!c) return "—";
     return c.label || c.name || "Combatant";
   }, []);

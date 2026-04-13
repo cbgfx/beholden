@@ -4,7 +4,7 @@ import { C, withAlpha } from "@/lib/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/services/api";
 import { useWsStatus } from "@/services/ws";
-import { StatusDot, FooterGrid, HeaderActionButton, HeaderActionLink, navLinkStyle } from "@beholden/shared/ui";
+import { StatusDot, FooterGrid, HeaderActionButton, HeaderActionLink, TopBarFrame, navLinkStyle } from "@beholden/shared/ui";
 
 const NAV_LINKS = [
   { to: "/", label: "Home", end: true },
@@ -70,13 +70,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: C.bg, color: C.text, fontFamily: "system-ui, Segoe UI, Arial, sans-serif" }}>
-      <header style={{
-        display: "flex", alignItems: "center", gap: 24,
-        padding: "0 20px", height: 68, flexShrink: 0,
-        background: C.panelBg, borderBottom: `1px solid ${C.panelBorder}`,
-      }}>
+      <TopBarFrame>
         <Link to="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", flexShrink: 0 }}>
-          <img src={`${import.meta.env.BASE_URL}beholden_logo.png`} alt="" style={{ width: 50, height: 50, objectFit: "contain" }} />
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 52,
+              height: 52,
+              borderRadius: 12,
+              border: "1px solid rgba(251,191,36,0.42)",
+              background: "linear-gradient(180deg, rgba(251,191,36,0.14), rgba(255,255,255,0.02))",
+              boxShadow: "0 10px 22px rgba(251,191,36,0.16)",
+            }}
+          >
+            <img src={`${import.meta.env.BASE_URL}beholden_logo.png`} alt="" style={{ width: 40, height: 40, objectFit: "contain" }} />
+          </span>
           <span style={{ fontSize: "var(--fs-hero)", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>
             Beholden
           </span>
@@ -115,7 +125,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             title={connected ? "Server connected" : "Server disconnected"}
           />
         </div>
-      </header>
+      </TopBarFrame>
 
       <main style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
         {children}

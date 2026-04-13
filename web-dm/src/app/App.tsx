@@ -56,7 +56,7 @@ function AppInner() {
       fetchCampaignTreasureList(cid) as Promise<TreasureEntry[]>
     ]);
     dispatch({ type: "setAdventures", adventures: adv });
-    dispatch({ type: "setPlayers", players: pls });
+    dispatch({ type: "setPlayers", players: pls as CampaignCharacter[] });
     dispatch({ type: "setINpcs", inpcs });
     dispatch({ type: "setCampaignNotes", notes });
     dispatch({ type: "setCampaignTreasure", treasure });
@@ -299,7 +299,7 @@ function AuthGate() {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <BrowserRouter>
         <AuthGate />
       </BrowserRouter>
     </AuthProvider>

@@ -2,7 +2,7 @@ import React from "react";
 import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";
 import { theme } from "@/theme/theme";
-import { IconPlayer, IconPlus, IconSkull, IconRest, IconPencil, IconTrash } from "@/icons";
+import { IconPlayer, IconPlus, IconSkull, IconRest, IconTrash } from "@/icons";
 import { PlayerRow } from "@/views/CampaignView/components/PlayerRow";
 import type { EncounterActor, CampaignCharacter } from "@/domain/types/domain";
 
@@ -69,28 +69,41 @@ export function PlayersPanel(props: {
                 key={p.id}
                 p={p}
                 icon={p.hpCurrent > 0 ? <IconPlayer /> : <IconSkull />}
-                primaryAction={
-                  props.selectedEncounterId ? (
-                    <IconButton
-                      title={alreadyIn ? "Already in encounter" : "Add to encounter"}
-                      onClick={(e) => (e.stopPropagation(), alreadyIn ? null : props.onAddPlayerToEncounter(p.id))}
-                      disabled={alreadyIn}
-                      variant="ghost"
-                      size="sm"
+                onEdit={() => props.onEditPlayer(p.id)}
+                actions={
+                  <>
+                    {props.selectedEncounterId ? (
+                      <IconButton
+                        title={alreadyIn ? "Already in encounter" : "Add to encounter"}
+                        onClick={(e) => (e.stopPropagation(), alreadyIn ? null : props.onAddPlayerToEncounter(p.id))}
+                        disabled={alreadyIn}
+                        variant="ghost"
+                        size="sm"
+                      >
+                        <IconPlus />
+                      </IconButton>
+                    ) : null}
+                    <button
+                      type="button"
+                      title={p.userId ? "Remove from Campaign" : "Delete Character"}
+                      onClick={(e) => { e.stopPropagation(); props.onDeletePlayer(p.id); }}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 34,
+                        height: 34,
+                        borderRadius: 8,
+                        border: `1px solid ${theme.colors.red}66`,
+                        background: "rgba(248,113,113,0.14)",
+                        color: theme.colors.red,
+                        cursor: "pointer",
+                      }}
                     >
-                      <IconPlus />
-                    </IconButton>
-                  ) : null
+                      <IconTrash size={14} />
+                    </button>
+                  </>
                 }
-                menuItems={[
-                  { label: "Edit Character", icon: <IconPencil size={14} />, onClick: () => props.onEditPlayer(p.id) },
-                  {
-                    label: p.userId ? "Remove from Campaign" : "Delete Character",
-                    icon: <IconTrash size={14} />,
-                    danger: true,
-                    onClick: () => props.onDeletePlayer(p.id)
-                  },
-                ]}
               />
             );
           })}

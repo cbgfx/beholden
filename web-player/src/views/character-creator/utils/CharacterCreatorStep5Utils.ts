@@ -53,7 +53,7 @@ export interface Step5EntryWithChoice {
 
 export interface Step5ChoiceStateArgs {
   form: Step5FormLike;
-  bgDetail: { name?: string | null; proficiencies?: { languages?: Step5LanguageChoiceLike } } | null;
+  bgDetail: { name?: string | null; proficiencies?: { languages?: Step5LanguageChoiceLike; feats?: Step5BackgroundFeatLike[] } } | null;
   raceDetailName?: string | null;
   bgOriginFeatDetail?: Step5BackgroundFeatLike | null;
   bgSkillFixed: string[];

@@ -92,7 +92,7 @@ export function buildSpellStepChoiceState(args: {
     key: entry.key,
     title: entry.title,
     sourceLabel: entry.sourceLabel,
-    spells: (featSpellChoiceOptions[entry.key] ?? []).map((spell) => ({ ...spell, id: String(spell.id) })),
+    spells: (featSpellChoiceOptions[entry.key] ?? []).map((spell) => ({ ...spell, id: String(spell.id), level: spell.level ?? null })),
     chosen: resolveSelectedSpellOptionEntries(form.chosenFeatOptions[entry.key] ?? [], featSpellChoiceOptions[entry.key] ?? []).map((spell) => String(spell.id)),
     chosenNames: resolveSelectedSpellOptionEntries(form.chosenFeatOptions[entry.key] ?? [], featSpellChoiceOptions[entry.key] ?? []).map((spell) => spell.name),
     max: entry.count,

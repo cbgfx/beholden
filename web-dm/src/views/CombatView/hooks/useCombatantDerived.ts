@@ -1,4 +1,4 @@
-import { Combatant, Player } from "@/domain/types/domain";
+import type { EncounterActor, CampaignCharacter } from "@/domain/types/domain";
 import {
   parseAC,
   parseHP,
@@ -8,7 +8,7 @@ import {
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
 
-export function useCombatantDerived(combatant: Combatant, player?: CampaignCharacter | null) {
+export function useCombatantDerived(combatant: EncounterActor, player?: CampaignCharacter | null) {
   const overrides = combatant.overrides ?? null;
   const acBonus = Number(overrides?.acBonus ?? 0) || 0;
   const tempHp = Math.max(0, Number(overrides?.tempHp ?? 0) || 0);

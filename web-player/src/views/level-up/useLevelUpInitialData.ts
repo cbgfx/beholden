@@ -45,9 +45,9 @@ export function useLevelUpInitialData(id: string | undefined) {
         setChar(c as Character);
         const classEntry = Array.isArray(c.characterData?.classes) ? c.characterData.classes[0] ?? null : null;
         setSubclass(String(classEntry?.subclass ?? ""));
-        setChosenCantrips(c.characterData?.chosenCantrips ?? []);
-        setChosenSpells(c.characterData?.chosenSpells ?? []);
-        setChosenInvocations(c.characterData?.chosenInvocations ?? []);
+        setChosenCantrips((c.characterData?.chosenCantrips ?? []) as string[]);
+        setChosenSpells((c.characterData?.chosenSpells ?? []) as string[]);
+        setChosenInvocations((c.characterData?.chosenInvocations ?? []) as string[]);
         setChosenFeatureChoices((c.characterData?.chosenFeatureChoices ?? {}) as Record<string, string[]>);
         const existingFeatOptions = (c.characterData?.chosenFeatOptions ?? {}) as Record<string, string[]>;
         setChosenExpertise(

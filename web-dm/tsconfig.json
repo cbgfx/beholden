@@ -8,7 +8,11 @@
     "strict": true,
     "skipLibCheck": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@beholden/shared/domain/*": ["../shared/src/domain/*"],
+      "@beholden/shared/ui/*": ["../shared/src/ui/*"],
+      "@beholden/shared/api/*": ["../shared/src/api/*"],
+      "@beholden/shared/icons/*": ["../shared/src/icons/*"]
     }
   },
   "include": ["src"]

@@ -78,7 +78,7 @@ export interface CharacterHudPanelProps {
   hpAmount: string;
   hd: number | null;
   lastRoll: number | null;
-  hpInputRef: React.RefObject<HTMLInputElement>;
+  hpInputRef: React.RefObject<HTMLInputElement | null>;
   setHpError: (value: string | null) => void;
   setLastRoll: (value: number | null) => void;
   setHpAmount: (value: string) => void;
@@ -305,11 +305,15 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
                         </button>
                       </div>
                       <div style={{ display: "flex", gap: 5 }}>
-                        {[50, 100, 200, 300].map((amt) => (
+                        {[
+                          { label: "+100", amount: 100 },
+                          { label: "+1000", amount: 1000 },
+                          { label: "+Level", amount: Math.max(0, xpNeeded - xpEarned) },
+                        ].map((quick) => (
                           <button
-                            key={amt}
+                            key={quick.label}
                             onClick={() => {
-                              const v = xpEarned + amt;
+                              const v = xpEarned + quick.amount;
                               setXpInput(String(v));
                               void saveXp(v);
                             }}
@@ -325,7 +329,7 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
                               color: C.muted,
                             }}
                           >
-                            +{amt}
+                            {quick.label}
                           </button>
                         ))}
                       </div>

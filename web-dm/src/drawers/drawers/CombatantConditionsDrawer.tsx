@@ -151,7 +151,7 @@ export function CombatantConditionsDrawer(props: {
           }}>
             {visibleDefs.map((c) => {
               const on = selectedKeys.has(c.key);
-              const CondIcon = conditionIconByKey[c.key];
+              const CondIcon = conditionIconByKey[c.key as keyof typeof conditionIconByKey];
               return (
                 <button
                   key={c.key}
@@ -195,7 +195,7 @@ export function CombatantConditionsDrawer(props: {
               {conds.map((c, idx) => {
                 const def = CONDITION_DEFS.find((x) => x.key === c.key);
                 const needsCaster = needsCasterForKey(c.key);
-                const CondIcon = conditionIconByKey[c.key];
+                const CondIcon = conditionIconByKey[c.key as keyof typeof conditionIconByKey];
                 const caster = c.casterId ? state.combatants.find((x) => x.id === c.casterId) : undefined;
 
                 const hasTimer = c.expiresAtRound != null;

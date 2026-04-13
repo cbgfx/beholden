@@ -1,5 +1,5 @@
 import { Panel } from "@/ui/Panel";
-import { Combatant } from "@/domain/types/domain";
+import type { EncounterActor } from "@/domain/types/domain";
 
 type Props = {
   combatants: EncounterActor[];

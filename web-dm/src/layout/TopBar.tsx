@@ -35,7 +35,7 @@ function NavLink(props: { to: string; label: string }) {
   return (
     <Link
       to={props.to}
-      style={navLinkStyle(active, "var(--campaign-accent, #a78bfa)", theme.colors.muted, { borderRadius: theme.radius.control })}
+      style={navLinkStyle(active, theme.colors.colorGold, theme.colors.muted, { borderRadius: theme.radius.control })}
     >
       {props.label}
     </Link>
@@ -54,7 +54,22 @@ export function TopBar() {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <img src="/beholden_logo.png" alt="Beholden" style={{ width: isPhone ? 36 : 50, height: isPhone ? 36 : 50 }} />
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: isPhone ? 40 : 52,
+            height: isPhone ? 40 : 52,
+            borderRadius: 12,
+            border: "1px solid rgba(251,191,36,0.42)",
+            background: "linear-gradient(180deg, rgba(251,191,36,0.14), rgba(255,255,255,0.02))",
+            boxShadow: "0 10px 22px rgba(251,191,36,0.16)",
+            flexShrink: 0,
+          }}
+        >
+          <img src="/beholden_logo.png" alt="Beholden" style={{ width: isPhone ? 28 : 40, height: isPhone ? 28 : 40 }} />
+        </span>
         {!isPhone && (
           <Link
             to="/"
@@ -63,6 +78,7 @@ export function TopBar() {
               fontWeight: 900,
               color: theme.colors.text,
               textDecoration: "none",
+              textShadow: "0 2px 16px rgba(56,182,255,0.15)",
             }}
             title="Home"
           >
@@ -76,9 +92,9 @@ export function TopBar() {
               marginLeft: isPhone ? 0 : 8,
               padding: isPhone ? "4px 8px" : "5px 14px",
               borderRadius: theme.radius.control,
-              border: `1px solid color-mix(in srgb, var(--campaign-accent, #a78bfa) 35%, transparent)`,
-              background: "color-mix(in srgb, var(--campaign-accent, #a78bfa) 10%, transparent)",
-              color: "var(--campaign-accent, #a78bfa)",
+              border: "1px solid rgba(251,191,36,0.40)",
+              background: "linear-gradient(180deg, rgba(251,191,36,0.18), rgba(251,191,36,0.08))",
+              color: theme.colors.colorGold,
               fontWeight: 700,
               fontSize: "var(--fs-medium)",
               maxWidth: isPhone ? 120 : 360,

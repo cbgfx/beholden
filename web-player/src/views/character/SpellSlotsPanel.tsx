@@ -39,7 +39,7 @@ export function SpellSlotsPanel({ classDetail, level, usedSpellSlots, onSave, ac
   async function toggleSlot(spellLevel: number, slotIndex: number) {
     const key = String(spellLevel);
     const used = usedSpellSlots[key] ?? 0;
-    const max = slots[spellLevel] ?? 0;
+    const max = slots![spellLevel] ?? 0;
     const next = slotIndex < used ? slotIndex : Math.min(max, slotIndex + 1);
     await onSave({ ...usedSpellSlots, [key]: next });
   }

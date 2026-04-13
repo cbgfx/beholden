@@ -4,7 +4,7 @@ import { getMonsterXp } from "@/domain/utils/xp";
 import { calcEncounterDifficulty } from "@/domain/utils/difficulty";
 import { estimateMonsterDpr } from "@/domain/utils/monsterDpr";
 import { parseCrToNumberOrNull } from "@/domain/utils/crParsing";
-import type { Combatant, INpc, Player } from "@/domain/types/domain";
+import type { EncounterActor, INpc, CampaignCharacter } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
 
 type Props = {

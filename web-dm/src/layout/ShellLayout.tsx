@@ -4,7 +4,7 @@ import { theme, withAlpha } from "@/theme/theme";
 import { useStore } from "@/store";
 import { TopBar } from "@/layout/TopBar";
 import { api } from "@/services/api";
-import { FooterGrid } from "@beholden/shared/ui";
+import { FooterGrid, TopBarFrame } from "@beholden/shared/ui";
 
 function useUpdateCheck() {
   const [updateAvailable, setUpdateAvailable] = React.useState(false);
@@ -48,17 +48,15 @@ export function ShellLayout(props: { children: React.ReactNode }) {
         flexDirection: "column",
       }}
     >
-      {/* Header with surface chrome */}
-      <header
-        style={{
-          background: theme.colors.panelBg,
-          borderBottom: `1px solid ${theme.colors.panelBorder}`,
-          padding: "8px 16px",
-          flexShrink: 0,
-        }}
+      {/* Header with shared top-bar chrome */}
+      <TopBarFrame
+        height="auto"
+        padding="8px 16px"
+        gap={10}
+        innerStyle={{ flexWrap: "wrap" }}
       >
         <TopBar />
-      </header>
+      </TopBarFrame>
 
       {/* Scrollable content */}
       <div className="shellLayout" style={{ flex: 1, minHeight: 0, overflow: "auto" }}>

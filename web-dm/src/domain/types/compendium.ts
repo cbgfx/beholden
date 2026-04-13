@@ -19,6 +19,7 @@ export type MonsterDetail = {
   legendary: any[];
   spellcasting: any[];
   spells?: any;
+  type?: string | null;
   raw_json: any;
 };
 

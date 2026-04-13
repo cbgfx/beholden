@@ -192,7 +192,7 @@ export function CharacterView() {
   } = useCharacterActions({
     char,
     setChar,
-    characterData,
+    characterData: characterData ?? undefined,
     currentCharacterData: currentCharacterDataForActions,
     playerNotesList,
     allSharedNotes,

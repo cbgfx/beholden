@@ -136,7 +136,7 @@ export function InventoryItemDrawer(props: {
               isMeleeWeaponLike={isMeleeWeaponLike}
               canEnableAttuned={canEnableAttuned}
               chargesMax={props.item.chargesMax ?? null}
-              onSaveCharges={async (v) => { await props.onSave({ chargesMax: v, charges: v ?? null }); }}
+              onSaveCharges={async (v: number | null) => { await props.onSave({ chargesMax: v, charges: v ?? null }); }}
             />
           ) : props.busy ? (
             <div style={{ color: C.muted, padding: "8px 2px" }}>Loading...</div>

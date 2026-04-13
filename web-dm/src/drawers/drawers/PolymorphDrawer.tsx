@@ -189,7 +189,7 @@ export function PolymorphDrawer(props: {
       </p>
 
       {currentPolymorph && (
-        <PolymorphCurrentBanner polymorphName={currentPolymorph.polymorphName} loading={loading} onRevert={revertPolymorph} />
+        <PolymorphCurrentBanner polymorphName={currentPolymorph.polymorphName ?? ""} loading={loading} onRevert={revertPolymorph} />
       )}
 
       <div>

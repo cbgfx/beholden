@@ -145,7 +145,9 @@ export function buildResolvedSpellChoiceEntry(args: {
 export async function loadSpellChoiceOptions(
   choices: SharedResolvedSpellChoiceEntry[],
   fetchSpells: (query: string) => Promise<SharedSpellSummary[]>,
+  options?: { excludeSpecial?: boolean },
 ): Promise<Record<string, SharedSpellSummary[]>> {
+  const excludeSpecial = options?.excludeSpecial ?? true;
   const buildSearchQuery = (args: {
     classes?: string;
     level?: number;
@@ -156,22 +158,28 @@ export async function loadSpellChoiceOptions(
     limit: number;
     includeText: boolean;
   }): string => {
-    const parts: string[] = ["/api/spells/search?excludeSpecial=1"];
-    if (args.classes) parts.push(`&classes=${args.classes}`);
-    if (typeof args.level === "number") parts.push(`&level=${args.level}`);
-    if (typeof args.minLevel === "number") parts.push(`&minLevel=${args.minLevel}`);
-    if (typeof args.maxLevel === "number") parts.push(`&maxLevel=${args.maxLevel}`);
-    if (args.schoolQuery) parts.push(args.schoolQuery);
-    if (args.ritualQuery) parts.push(args.ritualQuery);
-    parts.push(`&limit=${args.limit}`);
-    parts.push("&lite=1");
-    parts.push(args.includeText ? "&includeText=1" : "&compact=1");
-    return parts.join("");
+    const params: string[] = [];
+    if (excludeSpecial) params.push("excludeSpecial=1");
+    if (args.classes) params.push(`classes=${args.classes}`);
+    if (typeof args.level === "number") params.push(`level=${args.level}`);
+    if (typeof args.minLevel === "number") params.push(`minLevel=${args.minLevel}`);
+    if (typeof args.maxLevel === "number") params.push(`maxLevel=${args.maxLevel}`);
+    if (args.schoolQuery) params.push(args.schoolQuery.replace(/^&/, ""));
+    if (args.ritualQuery) params.push(args.ritualQuery.replace(/^&/, ""));
+    params.push(`limit=${args.limit}`);
+    params.push("lite=1");
+    params.push(args.includeText ? "includeText=1" : "compact=1");
+    return `/api/spells/search?${params.join("&")}`;
   };
 
   const entries = await Promise.all(
     choices.map(async (choice) => {
       const requiresText = /deals damage/i.test(choice.note ?? "");
+      const isManeuverChoice =
+        choice.listNames.some((listName) => /maneuver options/i.test(String(listName ?? "")))
+        || /maneuver/i.test(String(choice.title ?? ""))
+        || /maneuver/i.test(String(choice.sourceLabel ?? ""));
+      const includeText = requiresText || isManeuverChoice;
       const groups = await Promise.all(
         choice.listNames.map(async (listName) => {
           const encoded = encodeURIComponent(listName);
@@ -184,7 +192,7 @@ export async function loadSpellChoiceOptions(
               schoolQuery,
               ritualQuery,
               limit: 140,
-              includeText: requiresText,
+              includeText,
             })).catch(() => []);
           }
           if (typeof choice.level === "number" && /\bat or below\b/i.test(choice.note ?? "")) {
@@ -195,7 +203,7 @@ export async function loadSpellChoiceOptions(
               schoolQuery,
               ritualQuery,
               limit: 220,
-              includeText: requiresText,
+              includeText,
             })).catch(() => []);
           }
           if (typeof choice.level === "number") {
@@ -205,7 +213,7 @@ export async function loadSpellChoiceOptions(
               schoolQuery,
               ritualQuery,
               limit: 220,
-              includeText: requiresText,
+              includeText,
             })).catch(() => []);
           }
           return fetchSpells(buildSearchQuery({
@@ -213,7 +221,7 @@ export async function loadSpellChoiceOptions(
             schoolQuery,
             ritualQuery,
             limit: 220,
-            includeText: requiresText,
+            includeText,
           })).catch(() => []);
         })
       );
@@ -222,12 +230,12 @@ export async function loadSpellChoiceOptions(
         const schoolQuery = choice.schools?.length ? `&school=${encodeURIComponent(choice.schools.join(","))}` : "";
         const ritualQuery = choice.ritualOnly ? "&ritual=1" : "";
         const query = (choice.level ?? 0) === 0
-          ? buildSearchQuery({ level: 0, schoolQuery, ritualQuery, limit: 200, includeText: requiresText })
+          ? buildSearchQuery({ level: 0, schoolQuery, ritualQuery, limit: 200, includeText })
           : typeof choice.level === "number" && /\bat or below\b/i.test(choice.note ?? "")
-            ? buildSearchQuery({ minLevel: 1, maxLevel: choice.level, schoolQuery, ritualQuery, limit: 280, includeText: requiresText })
+            ? buildSearchQuery({ minLevel: 1, maxLevel: choice.level, schoolQuery, ritualQuery, limit: 280, includeText })
             : typeof choice.level === "number"
-              ? buildSearchQuery({ level: choice.level, schoolQuery, ritualQuery, limit: 280, includeText: requiresText })
-              : buildSearchQuery({ schoolQuery, ritualQuery, limit: 280, includeText: requiresText });
+              ? buildSearchQuery({ level: choice.level, schoolQuery, ritualQuery, limit: 280, includeText })
+              : buildSearchQuery({ schoolQuery, ritualQuery, limit: 280, includeText });
         groups.push(await fetchSpells(query).catch(() => []));
       }
 

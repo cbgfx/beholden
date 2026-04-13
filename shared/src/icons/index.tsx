@@ -74,6 +74,7 @@ export const IconInitiative = make("initiative");
 export const IconINPC = make("inpc");
 export const IconPlay = make("play");
 export const IconBuild = make("build");
+export const IconBastions = make("bastions");
 export const IconBlood = make("blood");
 export const IconHeal = make("heal");
 export const IconDead = make("dead");

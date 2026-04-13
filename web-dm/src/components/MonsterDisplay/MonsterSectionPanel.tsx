@@ -27,7 +27,7 @@ export function MonsterSectionPanel({
       }}
     >
       <div style={{ padding: "10px 12px 8px" }}>
-        <SectionTitle collapsed={!open} onToggle={() => setOpen((v) => !v)} actions={actions} marginBottom={0}>
+        <SectionTitle collapsed={!open} onToggle={() => setOpen((v) => !v)} actions={actions}>
           {title}
         </SectionTitle>
       </div>

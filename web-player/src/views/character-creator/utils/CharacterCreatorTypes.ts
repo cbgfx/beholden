@@ -116,6 +116,7 @@ export interface CreatorSpellListChoiceEntry {
   options: string[];
   count: number;
   note?: string | null;
+  linkedTo?: string | null;
 }
 
 export interface CreatorResolvedSpellChoiceEntry {

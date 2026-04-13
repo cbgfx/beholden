@@ -13,7 +13,7 @@ type Props = {
   combatant: EncounterActor | null;
   role: Role;
   playersById: Record<string, CampaignCharacter>;
-  renderCombatantIcon: (c: Combatant | null) => React.ReactNode;
+  renderCombatantIcon: (c: EncounterActor | null) => React.ReactNode;
   activeId: string | null;
   targetId: string | null;
   onOpenConditions: (combatantId: string, role: Role, casterId: string | null) => void;

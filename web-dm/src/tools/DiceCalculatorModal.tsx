@@ -15,8 +15,9 @@ function rollAllDice(expr: string): string {
 }
 
 function evalArith(expr: string): number {
-  const tokens = expr.match(/\d+|[+\-*/()]/g);
-  if (!tokens) return 0;
+  const rawTokens = expr.match(/\d+|[+\-*/()]/g);
+  if (!rawTokens) return 0;
+  const tokens: string[] = rawTokens;
   let pos = 0;
 
   function parseExpr(): number { return parseAddSub(); }

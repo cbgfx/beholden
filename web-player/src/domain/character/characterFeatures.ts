@@ -17,7 +17,7 @@ export interface CharacterFeatureLike {
 
 export interface CharacterAutolevelLike {
   level: number | null;
-  features: CharacterFeatureLike[];
+  features?: CharacterFeatureLike[];
 }
 
 export interface CharacterClassDetailLike {
@@ -42,7 +42,7 @@ export interface CharacterBackgroundDetailLike {
 }
 
 export interface CharacterFeatDetailLike {
-  id: string;
+  id?: string;
   name: string;
   text?: string | null;
   preparedSpellProgression?: PreparedSpellProgressionTable[];

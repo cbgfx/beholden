@@ -39,9 +39,9 @@ export function useCharacterData(id: string | undefined) {
   const characterData = char?.characterData;
   const primaryClassEntry = getPrimaryCharacterClassEntry(characterData);
 
-  const fetchChar = React.useCallback(() => {
-    if (!id) return;
-    fetchMyCharacter(id)
+  const fetchChar = React.useCallback((): Promise<void> => {
+    if (!id) return Promise.resolve();
+    return fetchMyCharacter(id)
       .then((next) => setChar(next as Character))
       .catch((e) => setError(e?.message ?? "Failed to load character"))
       .finally(() => setLoading(false));
@@ -112,7 +112,7 @@ export function useCharacterData(id: string | undefined) {
     const raceFeatId = typeof characterData?.chosenRaceFeatId === "string" ? characterData.chosenRaceFeatId.trim() : "";
     const bgFeatId = typeof characterData?.chosenBgOriginFeatId === "string" ? characterData.chosenBgOriginFeatId.trim() : "";
     const classFeatEntries = Object.entries(characterData?.chosenClassFeatIds ?? {}).filter(
-      ([, featId]): featId is string => typeof featId === "string" && featId.trim().length > 0,
+      ([, featId]) => typeof featId === "string" && featId.trim().length > 0,
     );
     const levelUpEntries = Array.isArray(characterData?.chosenLevelUpFeats)
       ? characterData.chosenLevelUpFeats.filter(
@@ -194,7 +194,7 @@ export function useCharacterData(id: string | undefined) {
       ? characterData.chosenInvocations.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
       : [];
     const profInvocationEntries = Array.isArray(characterData?.proficiencies?.invocations)
-      ? characterData.proficiencies.invocations.filter((entry): entry is { id?: string; name?: string } => Boolean(entry))
+      ? characterData.proficiencies.invocations.filter((entry) => Boolean(entry)) as { id?: string; name?: string }[]
       : [];
     const invocationRefs = [
       ...chosenInvocationIds.map((entry) => ({ id: entry, name: null as string | null })),

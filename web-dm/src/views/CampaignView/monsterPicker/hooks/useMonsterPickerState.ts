@@ -274,7 +274,7 @@ export function useMonsterPickerState(args: {
             acDetails: (opts?.acDetails ?? (acDetailById[monsterId] ?? "").trim()) || undefined,
             hpMax: Number.isFinite(Number(opts?.hpMax ?? hpRaw)) ? Number(opts?.hpMax ?? hpRaw) : undefined,
             hpDetails: (opts?.hpDetails ?? (hpDetailById[monsterId] ?? "").trim()) || undefined,
-            attackOverrides: opts?.attackOverrides ?? (attackOverridesById[monsterId] ?? null) ?? undefined,
+            attackOverrides: opts?.attackOverrides ?? attackOverridesById[monsterId] ?? undefined,
           }),
         );
       } catch (e) {
