@@ -4,6 +4,7 @@ import {
   buildAbilityScoreExplanations,
   collectClassResources,
   collectFeatureResourceFallbacks,
+  isInventoryItemActiveForCharacterEffects,
   mergeResourceState,
   normalizeProficiencies,
   stripEditionTag,
@@ -105,6 +106,18 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
       suppressStructuredSpellGrants: Boolean(feature.preparedSpellProgression?.length),
     } satisfies ParseFeatureEffectsInput)
   );
+  const parsedItemEffects = inventory
+    .filter((item) => isInventoryItemActiveForCharacterEffects(item))
+    .map((item, index) => {
+      const text = `${item.description ?? ""}\n${item.notes ?? ""}`.trim();
+      if (!text) return null;
+      return parseFeatureEffects({
+        source: { id: `item:${index}:${item.id}`, kind: "item", name: item.name, text },
+        text,
+      } satisfies ParseFeatureEffectsInput);
+    })
+    .filter((entry): entry is ReturnType<typeof parseFeatureEffects> => Boolean(entry));
+  const parsedAllEffects = [...parsedFeatureEffects, ...parsedItemEffects];
   const progressionGrantedSpells = buildPreparedSpellProgressionGrants(appliedFeatures, args.char.level, currentCharacterData.chosenFeatureChoices).map((entry) => ({
     key: entry.key,
     spellName: entry.spellName,
@@ -113,7 +126,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     note: entry.note,
   }));
   const grantedSpellData = (() => {
-    const base = buildGrantedSpellDataFromEffects(parsedFeatureEffects, scores, args.char.level);
+    const base = buildGrantedSpellDataFromEffects(parsedAllEffects, scores, args.char.level);
     const seen = new Set(base.spells.map((entry) => normalizeSpellTrackingKey(entry.spellName)));
     for (const spell of progressionGrantedSpells) {
       const normalized = normalizeSpellTrackingKey(spell.spellName);
@@ -137,8 +150,8 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   const classResourcesWithSpellCasts = mergeResourceState(currentCharacterData.resources, derivedResources);
   const polymorphName = stripEditionTag(args.polymorphCondition?.polymorphName ?? "");
   const rageActive = (args.char.conditions ?? []).some((condition) => condition.key === "rage");
-  const effectDefenses = collectDefensesFromEffects(parsedFeatureEffects, { raging: rageActive });
-  const effectSenses = collectSensesFromEffects(parsedFeatureEffects);
+  const effectDefenses = collectDefensesFromEffects(parsedAllEffects, { raging: rageActive });
+  const effectSenses = collectSensesFromEffects(parsedAllEffects);
   const parsedDefenses = {
     resistances: effectDefenses.resistances,
     damageImmunities: effectDefenses.damageImmunities,
@@ -176,7 +189,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
 
   const accentColor = args.char.color ?? "#38b6ff";
   const conScoreDeltaPerLevel = abilityMod(scores.con) - abilityMod(args.char.conScore);
-  const featureHpMaxBonus = deriveHitPointMaxBonusFromEffects(parsedFeatureEffects, { level: args.char.level, scores });
+  const featureHpMaxBonus = deriveHitPointMaxBonusFromEffects(parsedAllEffects, { level: args.char.level, scores });
   const effectiveHpMax = Math.max(1, args.char.hpMax + (conScoreDeltaPerLevel * args.char.level) + featureHpMaxBonus + (overrides.hpMaxBonus ?? 0));
   const xpEarned = currentCharacterData.xp ?? 0;
   const xpNeeded = XP_TO_LEVEL[args.char.level + 1] ?? 0;
@@ -211,11 +224,11 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     if (armorType.includes("medium")) return wornArmor.ac + Math.min(2, dexMod);
     return wornArmor.ac + dexMod;
   })();
-  const unarmoredDefenseAc = deriveUnarmoredDefenseFromEffects(parsedFeatureEffects, scoresByAbility, {
+  const unarmoredDefenseAc = deriveUnarmoredDefenseFromEffects(parsedAllEffects, scoresByAbility, {
     armorEquipped: Boolean(wornArmor),
     shieldEquipped: Boolean(wornShield),
   });
-  const featureAcBonus = deriveArmorClassBonusFromEffects(parsedFeatureEffects, {
+  const featureAcBonus = deriveArmorClassBonusFromEffects(parsedAllEffects, {
     armorEquipped: Boolean(wornArmor),
     armorCategory:
       wornArmor && /\bheavy\b/i.test(wornArmor.type ?? "") ? "heavy"
@@ -227,9 +240,9 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     scores: scoresByAbility,
   });
   const effectiveAc = Math.max(args.char.ac, wornArmorAc ?? 0, unarmoredDefenseAc ?? 0) + featureAcBonus + (overrides.acBonus ?? 0) + shieldBonus;
-  const speedBonus = deriveSpeedBonusFromEffects(parsedFeatureEffects, { armorState: speedArmorState, raging: rageActive });
+  const speedBonus = deriveSpeedBonusFromEffects(parsedAllEffects, { armorState: speedArmorState, raging: rageActive });
   const effectiveSpeed = args.char.speed + speedBonus;
-  const movementModes = collectMovementModesFromEffects(parsedFeatureEffects, {
+  const movementModes = collectMovementModesFromEffects(parsedAllEffects, {
     baseWalkSpeed: effectiveSpeed,
     armorState: speedArmorState,
     raging: rageActive,
@@ -238,7 +251,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   const hpPct = effectiveHpMax > 0 ? Math.max(0, Math.min(1, args.char.hpCurrent / effectiveHpMax)) : 0;
   const tempPct = effectiveHpMax > 0 ? Math.min(1 - hpPct, tempHp / effectiveHpMax) : 0;
   const { passivePerc, passiveInv } = buildPassiveScores({
-    parsedFeatureEffects,
+    parsedFeatureEffects: parsedAllEffects,
     level: args.char.level,
     scoresByAbility,
     prof: prof ?? undefined,
@@ -246,7 +259,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     raging: rageActive,
   });
   const initiativeBonus = getInitiativeBonus(scores.dex, args.char.level, { jackOfAllTrades: hasJackOfAllTrades })
-    + deriveModifierBonusFromEffects(parsedFeatureEffects, "initiative", { level: args.char.level, scores: scoresByAbility, raging: rageActive });
+    + deriveModifierBonusFromEffects(parsedAllEffects, "initiative", { level: args.char.level, scores: scoresByAbility, raging: rageActive });
   const transformedCombatStats = buildTransformedCombatStats({
     monster: args.polymorphMonsterState.monster,
     effectiveAc,
@@ -256,7 +269,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     fallbackStrScore: scores.str,
   });
   const saveBonuses = buildSaveBonuses({
-    parsedFeatureEffects,
+    parsedFeatureEffects: parsedAllEffects,
     level: args.char.level,
     scoresByAbility,
     raging: rageActive,
@@ -269,17 +282,17 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     skillAdvantages,
     skillDisadvantages,
   } = buildModifierStateMaps({
-    parsedFeatureEffects,
+    parsedFeatureEffects: parsedAllEffects,
     raging: rageActive,
   });
-  const rageDamageBonus = deriveAttackDamageBonusFromEffects(parsedFeatureEffects, {
+  const rageDamageBonus = deriveAttackDamageBonusFromEffects(parsedAllEffects, {
     level: args.char.level,
     scores: scoresByAbility,
     raging: rageActive,
     attackAbility: "str",
     isWeapon: true,
   });
-  const unarmedRageDamageBonus = deriveAttackDamageBonusFromEffects(parsedFeatureEffects, {
+  const unarmedRageDamageBonus = deriveAttackDamageBonusFromEffects(parsedAllEffects, {
     level: args.char.level,
     scores: scoresByAbility,
     raging: rageActive,
@@ -316,7 +329,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     scoreExplanations,
     appliedFeatures,
     classFeaturesList,
-    parsedFeatureEffects,
+    parsedFeatureEffects: parsedAllEffects,
     grantedSpellData,
     classResourcesWithSpellCasts,
     polymorphName,

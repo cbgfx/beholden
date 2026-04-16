@@ -505,15 +505,28 @@ export function deriveModifierStateFromEffects(
 
 export function collectSensesFromEffects(parsed: ParsedFeatureEffects[]): Array<{ kind: SensesEffect["senses"][number]["kind"]; range: number }> {
   const bestByKind = new Map<SensesEffect["senses"][number]["kind"], number>();
+  const bonusByKind = new Map<SensesEffect["senses"][number]["kind"], number>();
 
   for (const parsedFeature of parsed) {
     for (const effect of parsedFeature.effects) {
-      if (effect.type !== "senses" || effect.mode !== "grant") continue;
+      if (effect.type !== "senses") continue;
+      if (effect.mode === "bonus") {
+        for (const sense of effect.senses) {
+          bonusByKind.set(sense.kind, (bonusByKind.get(sense.kind) ?? 0) + sense.range);
+        }
+        continue;
+      }
+      if (effect.mode !== "grant") continue;
       for (const sense of effect.senses) {
         const current = bestByKind.get(sense.kind) ?? 0;
         if (sense.range > current) bestByKind.set(sense.kind, sense.range);
       }
     }
+  }
+
+  for (const [kind, bonus] of bonusByKind.entries()) {
+    const base = bestByKind.get(kind) ?? 0;
+    if (base > 0) bestByKind.set(kind, base + bonus);
   }
 
   return Array.from(bestByKind.entries()).map(([kind, range]) => ({ kind, range }));

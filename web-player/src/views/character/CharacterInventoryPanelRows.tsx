@@ -98,7 +98,7 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
   const mastery = isWeapon ? parseWeaponMastery(item) : null;
   const mastered = isWeapon && hasWeaponMastery(item, charData?.proficiencies as never);
   const masteryName = mastered ? (mastery?.name ?? getWeaponMasteryName(item)) : null;
-  const meta = [item.type ?? null, item.attunement ? "Attunement" : null].filter(Boolean).join(" ? ");
+  const meta = [item.type ?? null, item.attunement ? "Attunement" : null].filter(Boolean).join(" • ");
 
   return (
     <CollectionRow

@@ -19,7 +19,7 @@ export function PlayersPanel(props: {
   const players = React.useMemo(() => {
     return [...props.players].sort((a, b) => a.characterName.localeCompare(b.characterName)).map((p) => {
       const acBonus = Number(p.overrides?.acBonus ?? 0) || 0;
-      const baseAc = p.syncedAc ?? p.ac;
+      const baseAc = p.syncedAc || p.ac;
       const hpMod = (() => {
         const n = Number(p.overrides?.hpMaxBonus ?? 0);
         return Number.isFinite(n) ? n : 0;

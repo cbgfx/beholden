@@ -210,6 +210,13 @@ export function resolvedScores(form: FormState, featAbilityBonuses?: Record<stri
   return base;
 }
 
+function normalizeAbilityBonusKey(rawKey: string): string | null {
+  const normalized = String(rawKey ?? "").trim().toLowerCase();
+  if (!normalized) return null;
+  if ((ABILITY_KEYS as readonly string[]).includes(normalized)) return normalized;
+  return ABILITY_NAME_TO_KEY[normalized] ?? null;
+}
+
 export function inferStandardAssignFromScores(scores: Record<string, number>): Record<string, number> | null {
   const available = STANDARD_ARRAY.map((value, index) => ({ value, index }));
   const assign: Record<string, number> = { str: -1, dex: -1, con: -1, int: -1, wis: -1, cha: -1 };
@@ -250,18 +257,34 @@ export function deriveFeatGrantedAbilityBonuses(args: {
   const bonusMap: Record<string, number> = {};
   const applyBonus = (bonus: Record<string, number>) => {
     for (const [key, value] of Object.entries(bonus)) {
-      bonusMap[key] = (bonusMap[key] ?? 0) + value;
+      const abilityKey = normalizeAbilityBonusKey(key);
+      if (!abilityKey) continue;
+      bonusMap[abilityKey] = (bonusMap[abilityKey] ?? 0) + value;
     }
   };
   const applyFeat = (prefix: string, feat: BackgroundFeat | null) => {
     if (!feat) return;
+    const grantedAbilityKeys = new Set<string>();
     for (const [key, value] of Object.entries(feat.parsed.grants.abilityIncreases)) {
-      bonusMap[key] = (bonusMap[key] ?? 0) + value;
+      const abilityKey = normalizeAbilityBonusKey(key);
+      if (!abilityKey) continue;
+      grantedAbilityKeys.add(abilityKey);
+      bonusMap[abilityKey] = (bonusMap[abilityKey] ?? 0) + value;
     }
     for (const choice of feat.parsed.choices) {
       if (choice.type !== "ability_score") continue;
       const selected = chosenFeatOptions[`${prefix}:${choice.id}`] ?? [];
       applyBonus(getSelectedAbilityIncrease(choice, selected));
+    }
+
+    // Fallback for fixed feat wording that wasn't captured in parsed grants.
+    const featText = String(feat.text ?? "");
+    for (const match of featText.matchAll(/(?:increase\s+your|your)\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+score(?:\s+increases?)?\s+by\s+(\d+)/gi)) {
+      const abilityKey = normalizeAbilityBonusKey(match[1] ?? "");
+      if (!abilityKey || grantedAbilityKeys.has(abilityKey)) continue;
+      const amount = Number(match[2]);
+      if (!Number.isFinite(amount) || amount <= 0) continue;
+      bonusMap[abilityKey] = (bonusMap[abilityKey] ?? 0) + amount;
     }
   };
   applyFeat(`bg:${bgOriginFeatDetail?.name ?? ""}`, bgOriginFeatDetail);
@@ -283,7 +306,9 @@ export function deriveTotalFeatAbilityBonuses(
   for (const entry of chosenLevelUpFeats) {
     if (entry?.type !== "asi" || !entry.abilityBonuses) continue;
     for (const [key, value] of Object.entries(entry.abilityBonuses)) {
-      bonusMap[key] = (bonusMap[key] ?? 0) + value;
+      const abilityKey = normalizeAbilityBonusKey(key);
+      if (!abilityKey) continue;
+      bonusMap[abilityKey] = (bonusMap[abilityKey] ?? 0) + value;
     }
   }
   return bonusMap;

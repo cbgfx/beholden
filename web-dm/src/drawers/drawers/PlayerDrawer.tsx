@@ -41,7 +41,10 @@ export function PlayerDrawer(props: {
 
     if (d.type !== "editPlayer") return;
     const p = state.players.find((x) => x.id === d.playerId);
-    if (!p) return;
+    if (!p) {
+      props.close();
+      return;
+    }
     setForm({
       playerName: p.playerName ?? "",
       characterName: p.characterName ?? "",

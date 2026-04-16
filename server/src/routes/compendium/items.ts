@@ -22,13 +22,13 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
   });
 
   const selectItemByExact = db.prepare(
-    "SELECT id, name, rarity, type, type_key, attunement, magic FROM compendium_items WHERE name_key = ? OR lower(name) = ? ORDER BY name_key ASC LIMIT 1",
+    "SELECT id, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items WHERE name_key = ? OR lower(name) = ? ORDER BY name_key ASC LIMIT 1",
   );
   const selectItemByPrefix = db.prepare(
-    "SELECT id, name, rarity, type, type_key, attunement, magic FROM compendium_items WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
+    "SELECT id, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
   );
   const selectItemByContains = db.prepare(
-    "SELECT id, name, rarity, type, type_key, attunement, magic FROM compendium_items WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
+    "SELECT id, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
   );
 
   function normalizeLookupName(value: string): string {
@@ -48,7 +48,25 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     type_key: string | null;
     attunement: number;
     magic: number;
+    equippable: number;
+    weight: number | null;
+    value: number | null;
+    proficiency: string | null;
+    data_json: string | null;
   }) {
+    let data: {
+      ac?: number | null;
+      stealthDisadvantage?: boolean;
+      dmg1?: string | null;
+      dmg2?: string | null;
+      dmgType?: string | null;
+      properties?: string[];
+    } = {};
+    try {
+      data = JSON.parse(row.data_json ?? "{}");
+    } catch {
+      data = {};
+    }
     return {
       id: row.id,
       name: row.name,
@@ -57,6 +75,16 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
       typeKey: row.type_key ?? null,
       attunement: Boolean(row.attunement),
       magic: Boolean(row.magic),
+      equippable: Boolean(row.equippable),
+      weight: row.weight ?? null,
+      value: row.value ?? null,
+      proficiency: row.proficiency ?? null,
+      ac: data.ac ?? null,
+      stealthDisadvantage: Boolean(data.stealthDisadvantage),
+      dmg1: data.dmg1 ?? null,
+      dmg2: data.dmg2 ?? null,
+      dmgType: data.dmgType ?? null,
+      properties: Array.isArray(data.properties) ? data.properties : [],
     };
   }
 
@@ -81,6 +109,11 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
         type_key: string | null;
         attunement: number;
         magic: number;
+        equippable: number;
+        weight: number | null;
+        value: number | null;
+        proficiency: string | null;
+        data_json: string | null;
       }
       | undefined;
     if (exact) return mapLookupRow(exact);
@@ -94,6 +127,11 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
         type_key: string | null;
         attunement: number;
         magic: number;
+        equippable: number;
+        weight: number | null;
+        value: number | null;
+        proficiency: string | null;
+        data_json: string | null;
       }
       | undefined;
     if (prefix) return mapLookupRow(prefix);
@@ -107,6 +145,11 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
         type_key: string | null;
         attunement: number;
         magic: number;
+        equippable: number;
+        weight: number | null;
+        value: number | null;
+        proficiency: string | null;
+        data_json: string | null;
       }
       | undefined;
     return contains ? mapLookupRow(contains) : null;
@@ -277,7 +320,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     if (ids.length > 0) {
       const placeholders = ids.map(() => "?").join(", ");
       const idRows = db.prepare(
-        `SELECT id, name, rarity, type, type_key, attunement, magic
+        `SELECT id, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json
          FROM compendium_items
          WHERE id IN (${placeholders})`,
       ).all(...ids) as Array<{
@@ -288,6 +331,11 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
         type_key: string | null;
         attunement: number;
         magic: number;
+        equippable: number;
+        weight: number | null;
+        value: number | null;
+        proficiency: string | null;
+        data_json: string | null;
       }>;
       idRows.forEach((row) => rows.set(row.id, mapLookupRow(row)));
     }
@@ -310,7 +358,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
 
     if (body.includeCommonMagic) {
       const commonMagicRows = db.prepare(
-        "SELECT id, name, rarity, type, type_key, attunement, magic FROM compendium_items WHERE magic = 1 AND lower(coalesce(rarity, '')) = 'common' AND lower(coalesce(type, '')) NOT LIKE '%potion%' AND lower(coalesce(type, '')) NOT LIKE '%scroll%' ORDER BY name COLLATE NOCASE LIMIT ?",
+        "SELECT id, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items WHERE magic = 1 AND lower(coalesce(rarity, '')) = 'common' AND lower(coalesce(type, '')) NOT LIKE '%potion%' AND lower(coalesce(type, '')) NOT LIKE '%scroll%' ORDER BY name COLLATE NOCASE LIMIT ?",
       ).all(MAX_ITEMS_LIMIT) as Array<{
         id: string;
         name: string;
@@ -319,6 +367,11 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
         type_key: string | null;
         attunement: number;
         magic: number;
+        equippable: number;
+        weight: number | null;
+        value: number | null;
+        proficiency: string | null;
+        data_json: string | null;
       }>;
       commonMagicRows.forEach((row) => rows.set(row.id, mapLookupRow(row)));
     }
@@ -333,7 +386,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     if (wondrousRarities.length > 0) {
       const placeholders = wondrousRarities.map(() => "?").join(", ");
       const wondrousRows = db.prepare(
-        `SELECT id, name, rarity, type, type_key, attunement, magic
+        `SELECT id, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json
          FROM compendium_items
          WHERE magic = 1
            AND lower(coalesce(rarity, '')) IN (${placeholders})
@@ -351,6 +404,11 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
         type_key: string | null;
         attunement: number;
         magic: number;
+        equippable: number;
+        weight: number | null;
+        value: number | null;
+        proficiency: string | null;
+        data_json: string | null;
       }>;
       wondrousRows.forEach((row) => rows.set(row.id, mapLookupRow(row)));
     }

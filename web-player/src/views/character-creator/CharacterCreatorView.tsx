@@ -250,45 +250,16 @@ export function CharacterCreatorView() {
     [selectedInvocationEffects]
   );
   const selectedFeatGrantedAbilityBonuses = React.useMemo(() => {
-    const bonusMap: Record<string, number> = {};
-    const applyBonus = (bonus: Record<string, number>) => {
-      for (const [key, value] of Object.entries(bonus)) {
-        bonusMap[key] = (bonusMap[key] ?? 0) + value;
-      }
-    };
-    const applyFeat = (prefix: string, feat: BackgroundFeat | null) => {
-      if (!feat) return;
-      for (const [key, value] of Object.entries(feat.parsed.grants.abilityIncreases)) {
-        bonusMap[key] = (bonusMap[key] ?? 0) + value;
-      }
-      for (const choice of feat.parsed.choices) {
-        if (choice.type !== "ability_score") continue;
-        const selected = form.chosenFeatOptions[`${prefix}:${choice.id}`] ?? [];
-        applyBonus(getSelectedAbilityIncrease(choice, selected));
-      }
-    };
-    applyFeat(`bg:${resolvedBgOriginFeatDetail?.name ?? ""}`, resolvedBgOriginFeatDetail);
-    applyFeat(`race:${resolvedRaceFeatDetail?.name ?? ""}`, resolvedRaceFeatDetail);
-    for (const [featureName, feat] of Object.entries(classFeatDetails)) {
-      applyFeat(`classfeat:${featureName}`, feat);
-    }
-    for (const detail of levelUpFeatDetails) {
-      applyFeat(`levelupfeat:${detail.level}:${detail.featId}`, detail.feat);
-    }
-    return bonusMap;
+    return deriveFeatGrantedAbilityBonuses({
+      bgOriginFeatDetail: resolvedBgOriginFeatDetail,
+      raceFeatDetail: resolvedRaceFeatDetail,
+      classFeatDetails,
+      levelUpFeatDetails,
+      chosenFeatOptions: form.chosenFeatOptions,
+    });
   }, [resolvedBgOriginFeatDetail, resolvedRaceFeatDetail, classFeatDetails, form.chosenFeatOptions, levelUpFeatDetails]);
   const selectedFeatAbilityBonuses = React.useMemo(() => {
-    const bonusMap = { ...selectedFeatGrantedAbilityBonuses };
-    const applyBonus = (bonus: Record<string, number>) => {
-      for (const [key, value] of Object.entries(bonus)) {
-        bonusMap[key] = (bonusMap[key] ?? 0) + value;
-      }
-    };
-    for (const entry of form.chosenLevelUpFeats) {
-      if (entry?.type !== "asi" || !entry.abilityBonuses) continue;
-      applyBonus(entry.abilityBonuses);
-    }
-    return bonusMap;
+    return deriveTotalFeatAbilityBonuses(selectedFeatGrantedAbilityBonuses, form.chosenLevelUpFeats);
   }, [form.chosenLevelUpFeats, selectedFeatGrantedAbilityBonuses]);
   const step5SkillList = classDetail ? parseSkillList(classDetail.proficiency) : [];
   const step5NumSkills = classDetail?.numSkills ?? 0;
@@ -518,7 +489,7 @@ export function CharacterCreatorView() {
     const spellcastingClassName = getSpellcastingClassName(classDetail, form.level, form.subclass) ?? classDetail.name;
     const name = encodeURIComponent(spellcastingClassName);
     api<SpellSummary[]>(`/api/spells/search?classes=${name}&level=0&limit=120&includeText=1&lite=1&excludeSpecial=1`).then(setClassCantrips).catch(() => {});
-    api<SpellSummary[]>(`/api/spells/search?classes=${name}&minLevel=1&maxLevel=9&limit=220&compact=1&lite=1&excludeSpecial=1`).then(setClassSpells).catch(() => {});
+    api<SpellSummary[]>(`/api/spells/search?classes=${name}&minLevel=1&maxLevel=9&limit=220&includeText=1&compact=1&lite=1&excludeSpecial=1`).then(setClassSpells).catch(() => {});
     // Eldritch Invocations live in their own spell list
     if (/warlock/i.test(classDetail.name)) {
       api<SpellSummary[]>("/api/spells/search?classes=Eldritch+Invocations&limit=150&includeText=1&lite=1").then(setClassInvocations).catch(() => {});

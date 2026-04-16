@@ -265,11 +265,20 @@ export function isWeaponItem(item: InventoryItem): boolean {
   return Boolean(item.dmg1) || /weapon/i.test(item.type ?? "") || /\bstaff\b/i.test(item.type ?? "");
 }
 
+const WEARABLE_HINT_RE = /\b(amulet|anklet|armor|armband|band|belt|boots?|bracer|bracelet|brooch|cape|circlet|cloak|clothing|coat|crown|dress|gauntlets?|girdle|gloves?|goggles?|hat|headband|helm|hood|jacket|mantle|mask|necklace|pendent|pendant|ring|robe|sandals?|scarf|shawl|shirt|shoes?|slippers?|suit|tabard|tiara|tunic|vest|vestments?|wraps?)\b/i;
+const NON_WEARABLE_HINT_RE = /\b(ammunition|animal feed|arrow|axe beak|ball bearings|barrel|bedroll|blanket|bolt|book|bottle|bucket|caltrops|carriage|cart|case|chain|chest|component pouch|crowbar|flask|grappling hook|hammer|holy water|hook|horse|kit|ladder|lantern|lock|mule|net|oil|pack|picks?|piton|pole|potion|quiver|rations?|rope|saddle|saw|scroll|ship|spikes?|tack|tent|thieves'? tools|tinderbox|torch|vehicle|vial|wagon|waterskin)\b/i;
+
 /** Items that are worn/held as wondrous gear (rings, rods, wands, amulets, etc.) but are not weapons or armor. */
 export function isWearableItem(item: InventoryItem): boolean {
   if (isWeaponItem(item) || isArmorItem(item) || isShieldItem(item)) return false;
+  const type = String(item.type ?? "");
+  const name = String(item.name ?? "");
+  const hintText = `${name} ${type}`;
+  if (NON_WEARABLE_HINT_RE.test(hintText)) return false;
+  if (WEARABLE_HINT_RE.test(hintText)) return true;
+  if (/^(ring|rod|wand)$/i.test(type)) return true;
   if (item.equippable) return true;
-  return /^(ring|rod|wand)$/i.test(item.type ?? "");
+  return false;
 }
 
 export function parseItemSpells(text: string): ParsedItemSpell[] {

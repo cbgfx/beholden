@@ -241,7 +241,7 @@ export interface ActionEffect extends FeatureEffectBase {
 
 export interface SensesEffect extends FeatureEffectBase {
   type: "senses";
-  mode: "grant";
+  mode: "grant" | "bonus";
   senses: Array<{ kind: "darkvision" | "blindsight" | "tremorsense" | "truesight"; range: number }>;
 }
 

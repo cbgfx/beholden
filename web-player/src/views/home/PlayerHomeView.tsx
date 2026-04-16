@@ -1,12 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/services/api";
-import { fetchMyCharacters } from "@/services/actorApi";
+import { createMyCharacter, fetchMyCharacter, fetchMyCharacters } from "@/services/actorApi";
 import { C } from "@/lib/theme";
-import { IconPlayer } from "@/icons";
+import { Icon, IconPlayer } from "@/icons";
+import type { FlatCharacterSheetDto } from "@beholden/shared/api";
 import { HealthBar, accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
 
 const LS_KEY = "beholden:lastOpened";
+const CHARACTER_EXPORT_FORMAT = "beholden.character";
+const CHARACTER_EXPORT_VERSION = 1;
+const IMPORT_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M5 20a2 2 0 0 1-2-2v-3h2v3h14v-3h2v3a2 2 0 0 1-2 2H5Zm7-16 4 4h-3v6h-2V8H8l4-4Z" transform="rotate(180 12 10)"/></svg>';
+const EXPORT_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M5 20a2 2 0 0 1-2-2v-3h2v3h14v-3h2v3a2 2 0 0 1-2 2H5Zm7-16 4 4h-3v6h-2V8H8l4-4Z"/></svg>';
 
 function readLastOpened(): Record<string, number> {
   try { return JSON.parse(localStorage.getItem(LS_KEY) ?? "{}"); } catch { return {}; }
@@ -47,11 +52,91 @@ interface UserCharacter {
   campaigns: CharacterCampaign[];
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function optionalString(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  const text = String(value).trim();
+  return text ? text : undefined;
+}
+
+function intOrFallback(value: unknown, fallback: number): number {
+  const parsed = Math.round(Number(value));
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function parseAbilityScore(value: unknown): number | null | undefined {
+  if (value === null) return null;
+  if (value === undefined) return undefined;
+  const parsed = Math.round(Number(value));
+  if (!Number.isFinite(parsed)) return undefined;
+  return clamp(parsed, 1, 30);
+}
+
+function parseCharacterData(value: unknown): Record<string, unknown> | null | undefined {
+  if (value === null) return null;
+  return asRecord(value) ?? undefined;
+}
+
+function buildCharacterCreatePayload(raw: unknown): Record<string, unknown> {
+  const root = asRecord(raw);
+  if (!root) throw new Error("Import file must be a JSON object.");
+  const candidate = asRecord(root.character) ?? root;
+  const name = optionalString(candidate.name);
+  if (!name) throw new Error("Import file is missing `name`.");
+
+  const hpMax = Math.max(0, intOrFallback(candidate.hpMax, 0));
+  const level = clamp(intOrFallback(candidate.level, 1), 1, 20);
+  const hpCurrent = Math.max(0, intOrFallback(candidate.hpCurrent, hpMax));
+
+  return {
+    name,
+    playerName: optionalString(candidate.playerName),
+    className: optionalString(candidate.className),
+    species: optionalString(candidate.species),
+    level,
+    hpMax,
+    hpCurrent,
+    ac: intOrFallback(candidate.ac, 10),
+    speed: intOrFallback(candidate.speed, 30),
+    strScore: parseAbilityScore(candidate.strScore),
+    dexScore: parseAbilityScore(candidate.dexScore),
+    conScore: parseAbilityScore(candidate.conScore),
+    intScore: parseAbilityScore(candidate.intScore),
+    wisScore: parseAbilityScore(candidate.wisScore),
+    chaScore: parseAbilityScore(candidate.chaScore),
+    color: optionalString(candidate.color),
+    characterData: parseCharacterData(candidate.characterData),
+  };
+}
+
+function sanitizeFilenamePart(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "character";
+}
+
+function buildExportFilename(name: string): string {
+  const stamp = new Date().toISOString().slice(0, 10);
+  return `${sanitizeFilenamePart(name)}-${stamp}.beholden-character.json`;
+}
+
 export function PlayerHomeView() {
   const navigate = useNavigate();
+  const importFileRef = useRef<HTMLInputElement>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [characters, setCharacters] = useState<UserCharacter[]>([]);
   const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastOpened, setLastOpened] = useState<Record<string, number>>(readLastOpened);
 
@@ -91,16 +176,66 @@ export function PlayerHomeView() {
     [...campaigns].sort((a, b) => (lastOpened[b.id] ?? 0) - (lastOpened[a.id] ?? 0)),
   [campaigns, lastOpened]);
 
+  async function handleImportSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setImporting(true);
+    setError(null);
+    try {
+      const text = (await file.text()).replace(/^\uFEFF/, "");
+      const parsed = JSON.parse(text) as unknown;
+      const payload = buildCharacterCreatePayload(parsed);
+      await createMyCharacter(payload);
+      await reload();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to import character.";
+      setError(`Import failed: ${message}`);
+    } finally {
+      setImporting(false);
+    }
+  }
+
   return (
     <div style={{ height: "100%", background: C.bg, color: C.text, overflowY: "auto" }}>
       <div style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px" }}>
+        <input
+          ref={importFileRef}
+          type="file"
+          accept="application/json,.json"
+          onChange={handleImportSelected}
+          style={{ display: "none" }}
+        />
 
         {/* ── My Characters ── */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <h2 style={{ margin: 0, fontSize: "var(--fs-hero)", fontWeight: 800 }}>My Characters</h2>
-          <button style={{ ...accentButtonStyle(C.colorGold, { textColor: C.textDark, borderColor: "transparent", padding: "8px 18px", fontSize: "var(--fs-subtitle)" }), background: C.colorGold }} onClick={() => navigate("/characters/new")}>
-            + Create Character
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              title="Import character"
+              aria-label="Import character"
+              disabled={importing}
+              style={{
+                ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "8px 12px", fontSize: "var(--fs-subtitle)" }),
+                minWidth: 42,
+              }}
+              onClick={() => importFileRef.current?.click()}
+            >
+              {importing ? "..." : <Icon svg={IMPORT_SVG} size={18} />}
+            </button>
+            <button
+              title="Create character"
+              aria-label="Create character"
+              style={{
+                ...accentButtonStyle(C.colorGold, { textColor: C.textDark, borderColor: "transparent", padding: "8px 12px", fontSize: "var(--fs-subtitle)" }),
+                background: C.colorGold,
+                minWidth: 42,
+              }}
+              onClick={() => navigate("/characters/new")}
+            >
+              +
+            </button>
+          </div>
         </div>
 
         {loading && <p style={{ color: C.muted }}>Loading…</p>}
@@ -118,7 +253,13 @@ export function PlayerHomeView() {
             marginBottom: 40,
           }}>
             {sortedCharacters.map((ch) => (
-              <CharacterRow key={ch.id} ch={ch} onOpen={openCharacter} onRefresh={reload} />
+              <CharacterRow
+                key={ch.id}
+                ch={ch}
+                onOpen={openCharacter}
+                onRefresh={reload}
+                onError={(message) => setError(message)}
+              />
             ))}
           </div>
         )}
@@ -150,14 +291,16 @@ export function PlayerHomeView() {
 
 // ── Character card ───────────────────────────────────────────────────────────
 
-function CharacterRow({ ch, onOpen, onRefresh }: {
+function CharacterRow({ ch, onOpen, onRefresh, onError }: {
   ch: UserCharacter;
   onOpen: (id: string) => void;
   onRefresh: () => Promise<void>;
+  onError: (message: string) => void;
 }) {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -187,6 +330,33 @@ function CharacterRow({ ch, onOpen, onRefresh }: {
       await onRefresh();
     } catch (err) { console.error(err); }
     finally { setDeleting(false); setConfirmDelete(false); }
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const character = await fetchMyCharacter(ch.id);
+      const payload = {
+        format: CHARACTER_EXPORT_FORMAT,
+        version: CHARACTER_EXPORT_VERSION,
+        exportedAt: new Date().toISOString(),
+        character,
+      } satisfies { format: string; version: number; exportedAt: string; character: FlatCharacterSheetDto };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = buildExportFilename(ch.name);
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      onError("Export failed. Please try again.");
+    } finally {
+      setExporting(false);
+    }
   }
 
   return (
@@ -286,6 +456,15 @@ function CharacterRow({ ch, onOpen, onRefresh }: {
         </div>
       ) : (
         <div style={{ display: "flex", gap: 6 }}>
+          <button
+            style={{ ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "6px 10px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}
+            onClick={() => void handleExport()}
+            title="Export character"
+            aria-label="Export character"
+            disabled={exporting}
+          >
+            {exporting ? "..." : <Icon svg={EXPORT_SVG} size={16} />}
+          </button>
           <button style={{ ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flex: 1, flexShrink: 0 }} onClick={() => navigate(`/characters/${ch.id}/edit`)}>
             Edit
           </button>

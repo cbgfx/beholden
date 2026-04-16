@@ -580,6 +580,7 @@ function parseSpellGrantEffects(source: FeatureEffectSource, text: string, effec
   if (!spellMatch) return;
 
   const spellName = spellMatch[1].replace(/\s+on yourself$/i, "").trim();
+  if (/^(?:it|that spell|either spell|each spell|these spells?)\b/i.test(spellName)) return;
 
   if (abilityCountMatch && reset) {
     const ability = abilityCountMatch[1].trim().toLowerCase().slice(0, 3) as AbilKey;
@@ -670,6 +671,69 @@ function parseSpellGrantEffects(source: FeatureEffectSource, text: string, effec
     castsWithoutSlot: true,
     summary: `${spellName} at will`,
   });
+}
+
+function parseItemCanCastSpellEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
+  if (source.kind !== "item") return;
+  const reset =
+    /next dawn|at dawn|finish a long rest/i.test(text) ? "long_rest"
+    : /finish a short or long rest/i.test(text) ? "short_or_long_rest"
+    : /finish a short rest/i.test(text) ? "short_rest"
+    : undefined;
+  const hasLimitedUseLanguage =
+    /once used|can't be used again|can't cast .* again until|once per /i.test(text);
+
+  for (const match of text.matchAll(/you can cast\s+([^.;!?]+)/gi)) {
+    const clause = String(match[1] ?? "").trim();
+    if (!clause || /\bbut only as rituals?\b/i.test(clause)) continue;
+    const saveDcMatch = clause.match(/\(\s*save dc\s*(\d+)\s*\)/i);
+    const candidate = clause
+      .replace(/\(\s*save dc\s*\d+\s*\)/gi, "")
+      .replace(/\s+at will\b/gi, "")
+      .trim();
+    const spellNames = splitNamedSpellList(candidate);
+    if (spellNames.length === 0) continue;
+    const atWill = /\bat will\b/i.test(clause);
+
+    for (const spellName of spellNames) {
+      if (atWill) {
+        if (hasSpellGrantEffect(effects, spellName, "at_will")) continue;
+        addSpellGrantEffect(source, effects, {
+          spellName,
+          mode: "at_will",
+          riderSummary: saveDcMatch ? `Save DC ${saveDcMatch[1]}.` : undefined,
+          summary: `${spellName} at will`,
+        });
+        continue;
+      }
+      if (hasLimitedUseLanguage || reset) {
+        if (hasSpellGrantEffect(effects, spellName, "free_cast")) continue;
+        const resourceKey = normalizeResourceKey(`${source.name}:${spellName}`);
+        addSpellGrantEffect(source, effects, {
+          spellName,
+          mode: "free_cast",
+          uses: { kind: "fixed", value: 1 },
+          reset: reset ?? "long_rest",
+          castsWithoutSlot: true,
+          resourceKey,
+          riderSummary: saveDcMatch ? `Save DC ${saveDcMatch[1]}.` : undefined,
+          summary: `${spellName} item cast`,
+        });
+        effects.push({
+          id: createFeatureEffectId(source, "resource_grant", effects.length),
+          type: "resource_grant",
+          source,
+          resourceKey,
+          label: `${spellName} (${source.name})`,
+          max: { kind: "fixed", value: 1 },
+          reset: reset ?? "long_rest",
+          restoreAmount: "all",
+          linkedSpellName: spellName,
+          summary: `${spellName} resource pool`,
+        });
+      }
+    }
+  }
 }
 
 function parseSpellChoiceEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
@@ -1019,6 +1083,22 @@ function parseProficiencyGrantEffects(source: FeatureEffectSource, text: string,
         optionCategory: "skill",
       },
       summary: `Choose ${count} skill${count === 1 ? "" : "s"} for expertise`,
+    } satisfies ProficiencyGrantEffect);
+  }
+
+  for (const match of text.matchAll(/(?:learn|know)\s+(one|two|three|four|five|six|\d+)\s+languages?\s+of your choice\b/gi)) {
+    const count = parseWordCount(match[1] ?? "") ?? 0;
+    if (count <= 0) continue;
+    effects.push({
+      id: createFeatureEffectId(source, "proficiency_grant", effects.length),
+      type: "proficiency_grant",
+      source,
+      category: "language",
+      choice: {
+        count: { kind: "fixed", value: count },
+        optionCategory: "language",
+      },
+      summary: `Choose ${count} language${count === 1 ? "" : "s"} for proficiency`,
     } satisfies ProficiencyGrantEffect);
   }
 
@@ -1384,30 +1464,37 @@ function parseAbilityScoreEffects(source: FeatureEffectSource, text: string, eff
     return;
   }
 
-  // "your Strength or Dexterity score increases by N" (two-choice restricted)
+  // "your Strength or Dexterity score increases by N"
+  // or "Increase your Strength or Dexterity score by N" (two-choice restricted)
   const twoChoiceMatch = text.match(
-    /your\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+or\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+score increases? by (\d+)/i,
+    /(?:your\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+or\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+score increases?|increase\s+your\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+or\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+score)\s+by\s+(\d+)/i,
   );
   if (twoChoiceMatch) {
-    const a = ABILITY_NAME_MAP[twoChoiceMatch[1].toLowerCase()] as AbilKey;
-    const b = ABILITY_NAME_MAP[twoChoiceMatch[2].toLowerCase()] as AbilKey;
+    const firstAbility = (twoChoiceMatch[1] ?? twoChoiceMatch[3]) as string;
+    const secondAbility = (twoChoiceMatch[2] ?? twoChoiceMatch[4]) as string;
+    const amount = Number(twoChoiceMatch[5]);
+    const a = ABILITY_NAME_MAP[firstAbility.toLowerCase()] as AbilKey;
+    const b = ABILITY_NAME_MAP[secondAbility.toLowerCase()] as AbilKey;
     effects.push({
       id: createFeatureEffectId(source, "ability_score", effects.length),
       type: "ability_score", source, mode: "choice",
-      chooseFrom: [a, b], choiceCount: 1, amount: Number(twoChoiceMatch[3]),
-      summary: `+${twoChoiceMatch[3]} to ${a.toUpperCase()} or ${b.toUpperCase()}`,
+      chooseFrom: [a, b], choiceCount: 1, amount,
+      summary: `+${amount} to ${a.toUpperCase()} or ${b.toUpperCase()}`,
     } satisfies AbilityScoreEffect);
     return;
   }
 
-  // "your Charisma score increases by 1" (fixed, may repeat for multiple abilities)
-  for (const match of text.matchAll(/your\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+score increases? by (\d+)/gi)) {
-    const ability = ABILITY_NAME_MAP[match[1].toLowerCase()] as AbilKey;
+  // "your Charisma score increases by 1"
+  // or "Increase your Dexterity score by 1" (fixed, may repeat for multiple abilities)
+  for (const match of text.matchAll(/(?:your\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+score increases?|increase\s+your\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+score)\s+by\s+(\d+)/gi)) {
+    const abilityToken = (match[1] ?? match[2]) as string;
+    const amount = Number(match[3]);
+    const ability = ABILITY_NAME_MAP[abilityToken.toLowerCase()] as AbilKey;
     effects.push({
       id: createFeatureEffectId(source, "ability_score", effects.length),
       type: "ability_score", source, mode: "fixed",
-      ability, choiceCount: 1, amount: Number(match[2]),
-      summary: `+${match[2]} ${ability.toUpperCase()}`,
+      ability, choiceCount: 1, amount,
+      summary: `+${amount} ${ability.toUpperCase()}`,
     } satisfies AbilityScoreEffect);
   }
 }
@@ -1684,6 +1771,7 @@ function parseSensesEffects(source: FeatureEffectSource, text: string, effects: 
     tremorsense: "tremorsense", truesight: "truesight",
   };
   const senses: SensesEffect["senses"] = [];
+  const bonusSenses: SensesEffect["senses"] = [];
 
   const re = /\b(Darkvision|Blindsight|Tremorsense|Truesight)\b[^.]*?(?:out to|with a range of|range of|up to)?\s*(\d+)\s*feet/gi;
   for (const match of text.matchAll(re)) {
@@ -1695,11 +1783,49 @@ function parseSensesEffects(source: FeatureEffectSource, text: string, effects: 
     else senses.push({ kind, range });
   }
 
+  for (const match of text.matchAll(/\b(?:if you already have|if you have|the range of)\s+(Darkvision|Blindsight|Tremorsense|Truesight)[^.]*?increases?\s+by\s+(\d+)\s*feet/gi)) {
+    const kind = kindMap[match[1].toLowerCase()];
+    const range = Number(match[2]);
+    if (!kind || !range) continue;
+    const existing = bonusSenses.find((s) => s.kind === kind);
+    if (existing) existing.range += range;
+    else bonusSenses.push({ kind, range });
+  }
+
+  // Handles pronoun phrasing like "If you already have Darkvision ... its range increases by 60 feet."
+  // Avoid double-counting Umbral Sight style text where both:
+  // "If you already have Darkvision ... increases by X"
+  // and "its range increases by X" appear in the same sentence.
+  const hasExplicitDarkvisionBonusClause = /\b(?:if you already have|if you have|the range of)\s+Darkvision[^.]*?increases?\s+by\s+\d+\s*feet/i.test(text);
+  if (!hasExplicitDarkvisionBonusClause && /already have darkvision/i.test(text)) {
+    const pronounBonus = text.match(/\bits range increases?\s+by\s+(\d+)\s*feet/i);
+    if (pronounBonus) {
+      const range = Number(pronounBonus[1]);
+      if (Number.isFinite(range) && range > 0) {
+        const existing = bonusSenses.find((s) => s.kind === "darkvision");
+        if (existing) existing.range += range;
+        else bonusSenses.push({ kind: "darkvision", range });
+      }
+    }
+  }
+
   if (senses.length > 0) {
     effects.push({
       id: createFeatureEffectId(source, "senses", effects.length),
       type: "senses", source, mode: "grant", senses,
       summary: senses.map((s) => `${s.kind} ${s.range}ft`).join(", "),
+    } satisfies SensesEffect);
+  }
+
+  if (bonusSenses.length > 0) {
+    effects.push({
+      id: createFeatureEffectId(source, "senses", effects.length),
+      type: "senses",
+      source,
+      mode: "bonus",
+      senses: bonusSenses,
+      gate: { notes: "requires_existing_sense" },
+      summary: bonusSenses.map((s) => `${s.kind} +${s.range}ft`).join(", "),
     } satisfies SensesEffect);
   }
 }
@@ -1733,6 +1859,7 @@ export function parseFeatureEffects(input: ParseFeatureEffectsInput): ParsedFeat
     }
     parseRitualOnlySpellGrantEffects(source, cleanText, effects);
     parseSpellGrantEffects(source, cleanText, effects);
+    parseItemCanCastSpellEffects(source, cleanText, effects);
     parseResourceGrantEffects(source, cleanText, effects);
     parseProficiencyGrantEffects(source, cleanText, effects);
     parseWeaponMasteryEffects(source, cleanText, effects);

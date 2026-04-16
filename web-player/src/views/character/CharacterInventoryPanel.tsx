@@ -53,6 +53,7 @@ import {
   formatWeight,
   getEquipState,
   hasStealthDisadvantage,
+  isArmorItem,
   isCurrencyItem,
   isWeaponItem,
   normalizeInventoryItemLookupName,
@@ -74,6 +75,64 @@ type PersistPayload = {
   inventory: InventoryItem[];
   inventoryContainers: InventoryContainer[];
 };
+
+interface PackContentEntry {
+  name: string;
+  quantity: number;
+}
+
+
+function singularizeLoose(name: string): string {
+  const n = String(name ?? "").trim();
+  if (!n) return n;
+  if (/tools$/i.test(n)) return n;
+  if (/ies$/i.test(n)) return `${n.slice(0, -3)}y`;
+  if (/(ches|shes|sses|xes|zes)$/i.test(n)) return n.slice(0, -2);
+  if (/s$/i.test(n) && !/ss$/i.test(n)) return n.slice(0, -1);
+  return n;
+}
+
+function normalizePackItemName(raw: string): string {
+  let name = String(raw ?? "").trim().replace(/\.$/, "");
+  name = name.replace(/^(?:and|or)\s+/i, "");
+  name = name.replace(/^an?\s+/i, "");
+  name = name.replace(/^(?:set|pair)\s+of\s+/i, "");
+  name = name.replace(/^(?:flasks?|vials?|sheets?|sticks?|pieces?|pounds?|days?)\s+of\s+/i, "");
+  return name.trim();
+}
+
+function splitPackListText(listText: string): string[] {
+  const base = String(listText ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\.$/, "");
+  if (!base) return [];
+  return base
+    .split(/\s*,\s*/g)
+    .flatMap((part, index, all) => (index === all.length - 1 ? part.split(/\s+and\s+/i) : [part]))
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function parsePackContentsFromDescription(description: string): PackContentEntry[] {
+  const raw = String(description ?? "");
+  if (!raw) return [];
+  const listMatch = raw.match(/\bpack contains the following items:\s*([\s\S]*?)(?:\n\s*Source:|Source:|$)/i);
+  if (!listMatch?.[1]) return [];
+  const tokens = splitPackListText(listMatch[1]);
+  if (tokens.length === 0) return [];
+  return tokens
+    .map((token) => {
+      const qtyMatch = token.match(/^(\d[\d,]*)\s+(.+)$/);
+      const quantity = qtyMatch ? Math.max(1, Number(qtyMatch[1].replace(/,/g, "")) || 1) : 1;
+      const rawName = qtyMatch ? qtyMatch[2] : token;
+      let name = normalizePackItemName(rawName);
+      if (quantity > 1) name = singularizeLoose(name);
+      if (/^backpacks?$/i.test(name)) return null;
+      return { name, quantity } satisfies PackContentEntry;
+    })
+    .filter((entry): entry is PackContentEntry => Boolean(entry?.name));
+}
 
 export function InventoryPanel({ char, charData, parsedFeatureEffects, accentColor, campaignId, onSave }: {
   char: InventoryPanelCharacter;
@@ -379,6 +438,31 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
   async function addItem(payload?: InventoryPickerPayload) {
     const next = payload;
     if (!next?.name) return;
+    const packEntries = parsePackContentsFromDescription(next.description ?? "");
+    if (packEntries.length > 0) {
+      let nextContainers = containers;
+      const nextItems = [...items];
+      const packCount = Math.max(1, Number(next.quantity) || 1);
+      for (let i = 0; i < packCount; i += 1) {
+        const packContainer = createContainer(next.name, false);
+        nextContainers = [...nextContainers, packContainer];
+        for (const entry of packEntries) {
+          nextItems.push({
+            id: uid(),
+            name: entry.name,
+            quantity: entry.quantity,
+            equipped: false,
+            equipState: "backpack",
+            source: "compendium",
+            containerId: packContainer.id,
+            properties: [],
+          });
+        }
+      }
+      await persist(nextItems, nextContainers);
+      setPickerOpen(false);
+      return;
+    }
     const item: InventoryItem = {
       id: uid(),
       name: next.name,
@@ -515,6 +599,8 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
   }
 
   async function setEquipStateFor(id: string, state: EquipState) {
+    const target = items.find((it) => it.id === id);
+    const targetIsArmor = Boolean(target && isArmorItem(target));
     const updated = items.map((it) => {
       if (it.id === id) return { ...it, equipped: state !== "backpack", equipState: state };
       const currentState = getEquipState(it);
@@ -532,7 +618,8 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
       if (state === "offhand" && currentState === "offhand") {
         return { ...it, equipped: false, equipState: "backpack" as const };
       }
-      if (state === "worn" && currentState === "worn") {
+      // Allow multiple worn items (cloak + amulet + etc.), but only one worn armor piece.
+      if (state === "worn" && targetIsArmor && currentState === "worn" && isArmorItem(it)) {
         return { ...it, equipped: false, equipState: "backpack" as const };
       }
       return { ...it, equipped: currentState !== "backpack", equipState: currentState };
@@ -1078,3 +1165,4 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
     </CollapsiblePanel>
   );
 }
+
