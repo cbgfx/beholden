@@ -35,6 +35,17 @@ function useLastCharacter() {
       window.removeEventListener("beholden:lastCharacter", onCustom);
     };
   }, []);
+  React.useEffect(() => {
+    if (!last?.id) return;
+    api<Array<{ id: string }>>("/api/me/characters")
+      .then((characters) => {
+        const stillExists = characters.some((character) => character.id === last.id);
+        if (stillExists) return;
+        localStorage.removeItem("beholden:lastCharacter");
+        setLast(null);
+      })
+      .catch(() => {});
+  }, [last?.id]);
   return last;
 }
 

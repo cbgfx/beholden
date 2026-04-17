@@ -3,15 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { api } from "@/services/api";
 import { createMyCharacter, fetchMyCharacter, fetchMyCharacters } from "@/services/actorApi";
 import { C } from "@/lib/theme";
-import { Icon, IconPlayer } from "@/icons";
+import { IconDownload, IconImport, IconPlayer } from "@/icons";
 import type { FlatCharacterSheetDto } from "@beholden/shared/api";
 import { HealthBar, accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
 
 const LS_KEY = "beholden:lastOpened";
 const CHARACTER_EXPORT_FORMAT = "beholden.character";
 const CHARACTER_EXPORT_VERSION = 1;
-const IMPORT_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M5 20a2 2 0 0 1-2-2v-3h2v3h14v-3h2v3a2 2 0 0 1-2 2H5Zm7-16 4 4h-3v6h-2V8H8l4-4Z" transform="rotate(180 12 10)"/></svg>';
-const EXPORT_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M5 20a2 2 0 0 1-2-2v-3h2v3h14v-3h2v3a2 2 0 0 1-2 2H5Zm7-16 4 4h-3v6h-2V8H8l4-4Z"/></svg>';
 
 function readLastOpened(): Record<string, number> {
   try { return JSON.parse(localStorage.getItem(LS_KEY) ?? "{}"); } catch { return {}; }
@@ -130,13 +128,29 @@ function buildExportFilename(name: string): string {
   return `${sanitizeFilenamePart(name)}-${stamp}.beholden-character.json`;
 }
 
+const exportIconButtonStyle: React.CSSProperties = {
+  width: 38,
+  height: 38,
+  flexShrink: 0,
+  borderRadius: 9,
+  border: "1px solid rgba(255,255,255,0.18)",
+  background: "rgba(255,255,255,0.07)",
+  color: C.text,
+  display: "inline-grid",
+  placeItems: "center",
+  cursor: "pointer",
+  transition: "background 0.12s, border-color 0.12s",
+};
+
 export function PlayerHomeView() {
   const navigate = useNavigate();
   const importFileRef = useRef<HTMLInputElement>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [characters, setCharacters] = useState<UserCharacter[]>([]);
   const [loading, setLoading] = useState(true);
+  const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [lastOpened, setLastOpened] = useState<Record<string, number>>(readLastOpened);
 
@@ -176,11 +190,10 @@ export function PlayerHomeView() {
     [...campaigns].sort((a, b) => (lastOpened[b.id] ?? 0) - (lastOpened[a.id] ?? 0)),
   [campaigns, lastOpened]);
 
-  async function handleImportSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
+  async function handleImportSelected(file?: File | null) {
     if (!file) return;
     setImporting(true);
+    setImportMsg("");
     setError(null);
     try {
       const text = (await file.text()).replace(/^\uFEFF/, "");
@@ -188,9 +201,12 @@ export function PlayerHomeView() {
       const payload = buildCharacterCreatePayload(parsed);
       await createMyCharacter(payload);
       await reload();
+      setImportFile(null);
+      setImportMsg("Character imported.");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to import character.";
       setError(`Import failed: ${message}`);
+      setImportMsg(`Import failed: ${message}`);
     } finally {
       setImporting(false);
     }
@@ -203,25 +219,50 @@ export function PlayerHomeView() {
           ref={importFileRef}
           type="file"
           accept="application/json,.json"
-          onChange={handleImportSelected}
+          onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
           style={{ display: "none" }}
         />
 
         {/* ── My Characters ── */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <h2 style={{ margin: 0, fontSize: "var(--fs-hero)", fontWeight: 800 }}>My Characters</h2>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              title="Import character"
-              aria-label="Import character"
-              disabled={importing}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <label
               style={{
-                ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "8px 12px", fontSize: "var(--fs-subtitle)" }),
-                minWidth: 42,
+                padding: "7px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(251,191,36,0.35)",
+                background: "rgba(255,255,255,0.02)",
+                color: importFile ? C.text : C.muted,
+                fontSize: "var(--fs-subtitle)",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                maxWidth: 220,
+                textOverflow: "ellipsis",
+                display: "inline-block",
               }}
+              title={importFile ? importFile.name : "Choose a character JSON file"}
               onClick={() => importFileRef.current?.click()}
             >
-              {importing ? "..." : <Icon svg={IMPORT_SVG} size={18} />}
+              {importFile ? importFile.name : "Choose file..."}
+            </label>
+            <button
+              title="Import selected character file"
+              aria-label="Import selected character file"
+              disabled={!importFile || importing}
+              style={{
+                ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "8px 14px", fontSize: "var(--fs-subtitle)" }),
+                minWidth: 100,
+                opacity: !importFile || importing ? 0.6 : 1,
+                cursor: !importFile || importing ? "not-allowed" : "pointer",
+              }}
+              onClick={() => void handleImportSelected(importFile)}
+            >
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                <IconImport size={14} />
+                {importing ? "Importing..." : "Import"}
+              </span>
             </button>
             <button
               title="Create character"
@@ -240,6 +281,7 @@ export function PlayerHomeView() {
 
         {loading && <p style={{ color: C.muted }}>Loading…</p>}
         {error && <p style={{ color: C.red }}>{error}</p>}
+        {!error && importMsg && <p style={{ color: C.muted }}>{importMsg}</p>}
 
         {!loading && !error && characters.length === 0 && (
           <p style={{ color: C.muted, fontSize: "var(--fs-medium)" }}>No characters yet. Create one to get started.</p>
@@ -327,6 +369,16 @@ function CharacterRow({ ch, onOpen, onRefresh, onError }: {
     setDeleting(true);
     try {
       await api(`/api/me/characters/${ch.id}`, { method: "DELETE" });
+      const raw = localStorage.getItem("beholden:lastCharacter");
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as { id?: string };
+          if (parsed?.id === ch.id) {
+            localStorage.removeItem("beholden:lastCharacter");
+            window.dispatchEvent(new Event("beholden:lastCharacter"));
+          }
+        } catch {}
+      }
       await onRefresh();
     } catch (err) { console.error(err); }
     finally { setDeleting(false); setConfirmDelete(false); }
@@ -457,13 +509,17 @@ function CharacterRow({ ch, onOpen, onRefresh, onError }: {
       ) : (
         <div style={{ display: "flex", gap: 6 }}>
           <button
-            style={{ ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "6px 10px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}
+            style={{
+              ...exportIconButtonStyle,
+              opacity: exporting ? 0.45 : 1,
+              cursor: exporting ? "not-allowed" : exportIconButtonStyle.cursor,
+            }}
             onClick={() => void handleExport()}
             title="Export character"
             aria-label="Export character"
             disabled={exporting}
           >
-            {exporting ? "..." : <Icon svg={EXPORT_SVG} size={16} />}
+            <IconDownload size={17} />
           </button>
           <button style={{ ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flex: 1, flexShrink: 0 }} onClick={() => navigate(`/characters/${ch.id}/edit`)}>
             Edit
