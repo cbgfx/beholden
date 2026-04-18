@@ -50,10 +50,19 @@ export function TopBar() {
   const isPhone = useIsNarrow("(max-width: 640px)");
   const { campaigns, selectedCampaignId } = state;
   const selectedName = campaigns.find((c) => c.id === selectedCampaignId)?.name ?? "";
+  const rootLayoutStyle = isPhone
+    ? { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const }
+    : {
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
+        alignItems: "center",
+        columnGap: 10,
+        width: "100%",
+      };
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+    <div style={rootLayoutStyle}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
         <span
           style={{
             display: "inline-flex",
@@ -109,9 +118,22 @@ export function TopBar() {
         ) : null}
       </div>
 
-      <ToolsBar />
+      <div style={isPhone ? undefined : { justifySelf: "center" }}>
+        <ToolsBar />
+      </div>
 
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, color: theme.colors.muted, fontSize: "var(--fs-medium)" }}>
+      <div
+        style={{
+          marginLeft: isPhone ? "auto" : 0,
+          justifySelf: isPhone ? undefined : "end",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          gap: 10,
+          color: theme.colors.muted,
+          fontSize: "var(--fs-medium)",
+        }}
+      >
         {selectedCampaignId ? <NavLink to={`/campaign/${selectedCampaignId}`} label="Campaign" /> : <NavLink to="/" label="Campaign" />}
         <NavLink to="/compendium" label="Compendium" />
         {user?.isAdmin && <NavLink to="/admin" label="Admin" />}
