@@ -45,7 +45,7 @@ export function rollDiceExpr(expr: string): number {
       if (!Number.isFinite(count) || !Number.isFinite(sides)) continue;
 
       for (let i = 0; i < count; i++) {
-        total += sign * (Math.floor(Math.random() * sides) + 1);
+        total += sign * rollDie(sides);
       }
     } else {
       const n = Number(part);
@@ -54,6 +54,25 @@ export function rollDiceExpr(expr: string): number {
   }
 
   return Math.max(0, total);
+}
+
+function rollDie(sides: number): number {
+  const boundedSides = Math.max(1, Math.floor(Number(sides) || 1));
+  if (boundedSides <= 1) return 1;
+  const cryptoApi = (globalThis as { crypto?: Crypto }).crypto;
+  if (cryptoApi?.getRandomValues) {
+    // Rejection-sampling to avoid modulo bias.
+    const maxUint = 0x1_0000_0000;
+    const limit = Math.floor(maxUint / boundedSides) * boundedSides;
+    const buf = new Uint32Array(1);
+    let value = 0;
+    do {
+      cryptoApi.getRandomValues(buf);
+      value = buf[0] ?? 0;
+    } while (value >= limit);
+    return (value % boundedSides) + 1;
+  }
+  return Math.floor(Math.random() * boundedSides) + 1;
 }
 
 /**

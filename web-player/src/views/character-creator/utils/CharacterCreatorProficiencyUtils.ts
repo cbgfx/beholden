@@ -348,6 +348,9 @@ export function buildProficiencyMap(args: {
     if (!formatted || isProficiencyNoiseToken(formatted)) return;
     expertise.push({ name: formatted, source });
   };
+  const cantripById = Object.fromEntries(classCantrips.map((spell) => [spell.id, spell]));
+  const spellById = Object.fromEntries(classSpells.map((spell) => [spell.id, spell]));
+  const invocationById = Object.fromEntries(classInvocations.map((spell) => [spell.id, spell]));
   if (classDetail) {
     splitComma(classDetail.armor).forEach((name) => pushArmor(name, className));
     splitComma(classDetail.weapons).forEach((name) => pushWeapon(name, className));
@@ -405,7 +408,11 @@ export function buildProficiencyMap(args: {
     const classFeatureSpellChoices = collectSpellChoicesFromEffects(parsedClassFeatures);
     classFeatureSpellChoices.forEach((choice) => {
       const key = `classfeature:${choice.id}`;
-      resolveSelectedSpellOptionEntries(form.chosenFeatOptions[key] ?? [], spellChoiceOptionsByKey[key] ?? [])
+      const fallbackOptions =
+        choice.level === 0 ? classCantrips
+        : choice.level != null && choice.level > 0 ? classSpells.filter((spell) => Number(spell.level ?? 0) === choice.level)
+        : classSpells;
+      resolveSelectedSpellOptionEntries(form.chosenFeatOptions[key] ?? [], spellChoiceOptionsByKey[key] ?? fallbackOptions)
         .forEach((spell) => spells.push({ id: String(spell.id), name: spell.name, source: choice.source.name }));
     });
 
@@ -586,9 +593,6 @@ export function buildProficiencyMap(args: {
     form.chosenRaceLanguages.forEach((name) => pushLanguage(name, coreLanguageChoice.source));
   }
 
-  const cantripById = Object.fromEntries(classCantrips.map((spell) => [spell.id, spell]));
-  const spellById = Object.fromEntries(classSpells.map((spell) => [spell.id, spell]));
-  const invocationById = Object.fromEntries(classInvocations.map((spell) => [spell.id, spell]));
   const chosenInvocationEffects = form.chosenInvocations
     .map((id) => invocationById[id])
     .filter((spell): spell is CreatorSpellSummaryLike => Boolean(spell && String(spell.text ?? "").trim()))
@@ -604,7 +608,7 @@ export function buildProficiencyMap(args: {
   const invocationSpellChoices = collectSpellChoicesFromEffects(chosenInvocationEffects);
   invocationSpellChoices.forEach((choice) => {
     const key = `invocation:${choice.id}`;
-    resolveSelectedSpellOptionEntries(form.chosenFeatOptions[key] ?? [], spellChoiceOptionsByKey[key] ?? [])
+    resolveSelectedSpellOptionEntries(form.chosenFeatOptions[key] ?? [], spellChoiceOptionsByKey[key] ?? classInvocations)
       .forEach((spell) => spells.push({ id: String(spell.id), name: spell.name, source: choice.source.name }));
   });
 

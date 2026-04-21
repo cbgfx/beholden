@@ -347,6 +347,7 @@ export function buildDisplayPlayerFeatures(args: BuildDisplayPlayerFeaturesArgs)
   return buildAppliedCharacterFeatures(args)
     .filter((feature) =>
       feature.kind === "class"
+      || feature.kind === "feat"
       || feature.kind === "invocation"
       || feature.preparedSpellProgression?.length
       || shouldDisplayPlayerFeature(feature.name, feature.text ?? "")

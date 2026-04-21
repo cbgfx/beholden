@@ -134,6 +134,32 @@ function parsePackContentsFromDescription(description: string): PackContentEntry
     .filter((entry): entry is PackContentEntry => Boolean(entry?.name));
 }
 
+function inferStackKey(item: Pick<InventoryItem, "name" | "itemId" | "type">): string {
+  const itemId = String(item.itemId ?? "").trim();
+  if (itemId) return `id:${itemId.toLowerCase()}`;
+  const normalizedName = normalizeInventoryItemLookupName(singularizeInventoryLookupName(item.name));
+  const normalizedType = String(item.type ?? "").trim().toLowerCase();
+  return `name:${normalizedName}|type:${normalizedType}`;
+}
+
+function isStackableItem(item: InventoryItem): boolean {
+  return !isWeaponItem(item) && !isArmorItem(item) && !isWearableItem(item);
+}
+
+function mergeStackedInventoryItem(existing: InventoryItem, incoming: InventoryItem): InventoryItem {
+  return {
+    ...existing,
+    quantity: Math.max(1, existing.quantity) + Math.max(1, incoming.quantity),
+    source: existing.source ?? incoming.source,
+    itemId: existing.itemId ?? incoming.itemId,
+    rarity: existing.rarity ?? incoming.rarity ?? null,
+    type: existing.type ?? incoming.type ?? null,
+    weight: existing.weight ?? incoming.weight ?? null,
+    description: existing.description ?? incoming.description,
+    notes: existing.notes ?? incoming.notes,
+  };
+}
+
 export function InventoryPanel({ char, charData, parsedFeatureEffects, accentColor, campaignId, onSave }: {
   char: InventoryPanelCharacter;
   charData: InventoryPanelCharacterData | null;
@@ -499,6 +525,18 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
       const bagContainer = createContainer("Bag of Holding", true);
       nextContainers = [...containers, bagContainer];
     }
+    if (isStackableItem(item)) {
+      const incomingKey = inferStackKey(item);
+      const existingIndex = items.findIndex((entry) => isStackableItem(entry) && inferStackKey(entry) === incomingKey);
+      if (existingIndex >= 0) {
+        const updated = items.map((entry, index) =>
+          index === existingIndex ? mergeStackedInventoryItem(entry, item) : entry
+        );
+        await persist(updated, nextContainers);
+        setPickerOpen(false);
+        return;
+      }
+    }
     await persist([...items, item], nextContainers);
     setPickerOpen(false);
   }
@@ -540,17 +578,38 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
     if (containerId === PARTY_STASH_CONTAINER_ID && campaignId) {
       const item = items.find((it) => it.id === id);
       if (!item) return;
-      await createPartyInventoryItem(campaignId, {
-        name: item.name,
-        quantity: item.quantity,
-        weight: item.weight ?? null,
-        notes: item.notes ?? "",
-        rarity: item.rarity ?? null,
-        type: item.type ?? null,
-        description: item.description ?? "",
-        source: item.source,
-        itemId: item.itemId,
+      const incomingKey = inferStackKey(item);
+      const existing = partyStashItems.find((stash) => {
+        const stashAsInventory: InventoryItem = {
+          id: stash.id,
+          name: stash.name,
+          quantity: Math.max(1, stash.quantity),
+          equipped: false,
+          equipState: "backpack",
+          source: (stash.source ?? "custom") as "compendium" | "custom",
+          itemId: stash.itemId ?? undefined,
+          type: stash.type ?? null,
+          rarity: stash.rarity ?? null,
+          weight: stash.weight ?? null,
+          description: stash.description ?? undefined,
+        };
+        return isStackableItem(item) && isStackableItem(stashAsInventory) && inferStackKey(stashAsInventory) === incomingKey;
       });
+      if (existing) {
+        await updatePartyInventoryQuantity(campaignId, existing.id, Math.max(1, existing.quantity) + Math.max(1, item.quantity));
+      } else {
+        await createPartyInventoryItem(campaignId, {
+          name: item.name,
+          quantity: item.quantity,
+          weight: item.weight ?? null,
+          notes: item.notes ?? "",
+          rarity: item.rarity ?? null,
+          type: item.type ?? null,
+          description: item.description ?? "",
+          source: item.source,
+          itemId: item.itemId,
+        });
+      }
       await persist(items.filter((it) => it.id !== id));
       setExpandedItemId(null);
       return;
@@ -565,19 +624,32 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
   async function takeFromPartyStash(stashItem: PartyStashItem) {
     if (!campaignId) return;
     await api(`/api/campaigns/${campaignId}/party-inventory/${stashItem.id}`, { method: "DELETE" });
-    const newItem: InventoryItem = {
+    const incomingItem: InventoryItem = {
       id: uid(),
       name: stashItem.name,
       quantity: stashItem.quantity,
       equipped: false,
       equipState: "backpack",
-      source: "custom",
+      source: (stashItem.source ?? "custom") as "compendium" | "custom",
+      itemId: stashItem.itemId ?? undefined,
       rarity: stashItem.rarity ?? null,
       type: stashItem.type ?? null,
       weight: stashItem.weight ?? null,
+      description: stashItem.description ?? undefined,
       containerId: DEFAULT_CONTAINER_ID,
     };
-    await persist([...items, newItem]);
+    if (isStackableItem(incomingItem)) {
+      const incomingKey = inferStackKey(incomingItem);
+      const existingIndex = items.findIndex((entry) => isStackableItem(entry) && inferStackKey(entry) === incomingKey);
+      if (existingIndex >= 0) {
+        const updated = items.map((entry, index) =>
+          index === existingIndex ? mergeStackedInventoryItem(entry, incomingItem) : entry
+        );
+        await persist(updated);
+        return;
+      }
+    }
+    await persist([...items, incomingItem]);
   }
 
   async function changePartyStashQty(id: string, quantity: number) {

@@ -182,6 +182,8 @@ export function CharacterCreatorView() {
 
   // Track initially-assigned campaigns so we can diff on save in edit mode
   const initialCampaignIdsRef = React.useRef<string[]>([]);
+  const prevRaceIdRef = React.useRef<string | null>(null);
+  const prevBgIdRef = React.useRef<string | null>(null);
 
   // Portrait selection (not part of form schema — uploaded separately after save)
   const [portraitFile, setPortraitFile] = React.useState<File | null>(null);
@@ -227,7 +229,11 @@ export function CharacterCreatorView() {
   );
   const selectedClassFeatureProficiencyChoices = React.useMemo(
     () => collectProficiencyChoiceEffectsFromEffects(selectedClassFeatureEffects)
-      .filter((choice) => choice.choice?.count.kind === "fixed" && ["skill", "tool", "language"].includes(choice.choice?.optionCategory ?? "")),
+      .filter((choice) =>
+        !choice.expertise
+        && choice.choice?.count.kind === "fixed"
+        && ["skill", "tool", "language"].includes(choice.choice?.optionCategory ?? "")
+      ),
     [selectedClassFeatureEffects]
   );
   const selectedInvocationEffects = React.useMemo(
@@ -536,15 +542,20 @@ export function CharacterCreatorView() {
   // Load race detail when selected — also reset race choices
   React.useEffect(() => {
     if (!form.raceId) { setRaceDetail(null); setRaceFeatDetail(null); return; }
-    setForm(f => ({
-      ...f,
-      chosenRaceSkills: [], chosenRaceLanguages: [], chosenRaceTools: [], chosenRaceFeatId: null, chosenRaceSize: null,
-      chosenClassLanguages: [],
-      chosenFeatOptions: Object.fromEntries(Object.entries(f.chosenFeatOptions).filter(([k]) => !k.startsWith("race:"))),
-    }));
+    const prevRaceId = prevRaceIdRef.current;
+    prevRaceIdRef.current = form.raceId;
+    const shouldResetRaceChoices = !isEditing || (prevRaceId !== null && prevRaceId !== form.raceId);
+    if (shouldResetRaceChoices) {
+      setForm(f => ({
+        ...f,
+        chosenRaceSkills: [], chosenRaceLanguages: [], chosenRaceTools: [], chosenRaceFeatId: null, chosenRaceSize: null,
+        chosenClassLanguages: [],
+        chosenFeatOptions: Object.fromEntries(Object.entries(f.chosenFeatOptions).filter(([k]) => !k.startsWith("race:"))),
+      }));
+    }
     setRaceFeatDetail(null);
     api<RaceDetail>(`/api/compendium/races/${form.raceId}`).then(setRaceDetail).catch(() => {});
-  }, [form.raceId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [form.raceId, isEditing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   React.useEffect(() => {
     const raceFeatId = typeof form.chosenRaceFeatId === "string" ? form.chosenRaceFeatId.trim() : "";
@@ -790,10 +801,24 @@ export function CharacterCreatorView() {
   // Load bg detail when selected
   React.useEffect(() => {
     if (!form.bgId) { setBgDetail(null); return; }
+    const prevBgId = prevBgIdRef.current;
+    prevBgIdRef.current = form.bgId;
+    const shouldResetBgChoices = !isEditing || (prevBgId !== null && prevBgId !== form.bgId);
     setBgOriginFeatDetail(null);
-    setForm(f => ({ ...f, chosenBgTools: [], chosenBgLanguages: [], chosenBgOriginFeatId: null, chosenBgEquipmentOption: null, chosenFeatOptions: {}, bgAbilityMode: "split", bgAbilityBonuses: {} }));
+    if (shouldResetBgChoices) {
+      setForm(f => ({
+        ...f,
+        chosenBgTools: [],
+        chosenBgLanguages: [],
+        chosenBgOriginFeatId: null,
+        chosenBgEquipmentOption: null,
+        chosenFeatOptions: Object.fromEntries(Object.entries(f.chosenFeatOptions).filter(([k]) => !k.startsWith("bg:"))),
+        bgAbilityMode: "split",
+        bgAbilityBonuses: {},
+      }));
+    }
     api<BgDetail>(`/api/compendium/backgrounds/${form.bgId}`).then(setBgDetail).catch(() => {});
-  }, [form.bgId]);
+  }, [form.bgId, isEditing]);
 
   // Auto-select directly-granted background feats (e.g. Charlatan → Skilled)
   React.useEffect(() => {
@@ -879,7 +904,85 @@ export function CharacterCreatorView() {
     }
     setBusy(true); setError(null);
     try {
-      const scores = resolvedScores(form, selectedFeatAbilityBonuses);
+      const raceFeatId = typeof form.chosenRaceFeatId === "string" ? form.chosenRaceFeatId.trim() : "";
+      const bgFeatId = typeof form.chosenBgOriginFeatId === "string" ? form.chosenBgOriginFeatId.trim() : "";
+      const classFeatEntries = Object.entries(form.chosenClassFeatIds).filter(
+        ([, featId]) => typeof featId === "string" && featId.trim().length > 0,
+      ) as [string, string][];
+      const levelUpFeatEntries = form.chosenLevelUpFeats.filter(
+        (entry): entry is { level: number; featId: string } =>
+          typeof entry?.level === "number"
+          && typeof entry?.featId === "string"
+          && entry.featId.trim().length > 0,
+      );
+      const selectedFeatIds = Array.from(
+        new Set(
+          [
+            raceFeatId,
+            bgFeatId,
+            ...classFeatEntries.map(([, featId]) => featId.trim()),
+            ...levelUpFeatEntries.map((entry) => entry.featId.trim()),
+          ].filter(Boolean),
+        ),
+      );
+
+      const submitFeatDetailById = new Map<string, { id: string; name: string; text?: string; parsed: ParsedFeat }>(
+        Object.entries(featDetailCache).map(([id, detail]) => [id, detail]),
+      );
+      if (resolvedRaceFeatDetail?.id) submitFeatDetailById.set(resolvedRaceFeatDetail.id, resolvedRaceFeatDetail);
+      if (resolvedBgOriginFeatDetail?.id) submitFeatDetailById.set(resolvedBgOriginFeatDetail.id, resolvedBgOriginFeatDetail);
+      for (const detail of Object.values(classFeatDetails)) {
+        if (detail?.id) submitFeatDetailById.set(detail.id, detail);
+      }
+      for (const detail of levelUpFeatDetails) {
+        if (detail?.feat?.id) submitFeatDetailById.set(detail.feat.id, detail.feat);
+      }
+
+      const missingFeatIds = selectedFeatIds.filter((id) => !submitFeatDetailById.has(id));
+      if (missingFeatIds.length > 0) {
+        const payload = await api<{ rows: Array<{ id: string; feat: ({ name: string; text?: string; parsed: ParsedFeat } & Record<string, unknown>) | null }> }>(
+          "/api/compendium/feats/lookup",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: missingFeatIds }),
+          },
+        );
+        for (const row of payload.rows ?? []) {
+          if (!row?.id || !row?.feat) continue;
+          submitFeatDetailById.set(String(row.id), {
+            id: String(row.id),
+            name: String(row.feat.name ?? ""),
+            text: typeof row.feat.text === "string" ? row.feat.text : undefined,
+            parsed: row.feat.parsed as ParsedFeat,
+          });
+        }
+      }
+
+      const submitRaceFeatDetail = raceFeatId ? submitFeatDetailById.get(raceFeatId) ?? null : null;
+      const submitBgOriginFeatDetail = bgFeatId ? submitFeatDetailById.get(bgFeatId) ?? null : null;
+      const submitClassFeatDetails = Object.fromEntries(
+        classFeatEntries.flatMap(([featureName, featId]) => {
+          const detail = submitFeatDetailById.get(featId);
+          return detail ? [[featureName, detail] as const] : [];
+        }),
+      );
+      const submitLevelUpFeatDetails = levelUpFeatEntries.flatMap(({ level, featId }) => {
+        const detail = submitFeatDetailById.get(featId);
+        return detail ? [{ level, featId, feat: detail } satisfies LevelUpFeatDetail] : [];
+      });
+      const submitFeatGrantedAbilityBonuses = deriveFeatGrantedAbilityBonuses({
+        bgOriginFeatDetail: submitBgOriginFeatDetail,
+        raceFeatDetail: submitRaceFeatDetail,
+        classFeatDetails: submitClassFeatDetails,
+        levelUpFeatDetails: submitLevelUpFeatDetails,
+        chosenFeatOptions: form.chosenFeatOptions,
+      });
+      const submitFeatAbilityBonuses = deriveTotalFeatAbilityBonuses(
+        submitFeatGrantedAbilityBonuses,
+        form.chosenLevelUpFeats,
+      );
+      const scores = resolvedScores(form, submitFeatAbilityBonuses);
       const selectedFeatureNames = buildAppliedCharacterFeatures({
         charData: {
           chosenOptionals: form.chosenOptionals,
@@ -888,12 +991,12 @@ export function CharacterCreatorView() {
         classDetail,
         raceDetail,
         backgroundDetail: bgDetail,
-        bgOriginFeatDetail: resolvedBgOriginFeatDetail,
-        raceFeatDetail: resolvedRaceFeatDetail,
+        bgOriginFeatDetail: submitBgOriginFeatDetail,
+        raceFeatDetail: submitRaceFeatDetail,
         classFeatDetails: Object.entries(form.chosenClassFeatIds)
-          .map(([featureName]) => classFeatDetails[featureName])
+          .map(([featureName]) => submitClassFeatDetails[featureName])
           .filter(Boolean),
-        levelUpFeatDetails,
+        levelUpFeatDetails: submitLevelUpFeatDetails,
         invocationDetails: [],
       }).map((feature) => feature.name);
       let startingInventory: ReturnType<typeof buildStartingInventoryFromUtils> | undefined;
@@ -986,10 +1089,10 @@ export function CharacterCreatorView() {
             classCantrips,
             classSpells,
             classInvocations,
-            bgOriginFeatDetail: resolvedBgOriginFeatDetail,
-            raceFeatDetail: resolvedRaceFeatDetail,
-            classFeatDetails,
-            levelUpFeatDetails,
+            bgOriginFeatDetail: submitBgOriginFeatDetail,
+            raceFeatDetail: submitRaceFeatDetail,
+            classFeatDetails: submitClassFeatDetails,
+            levelUpFeatDetails: submitLevelUpFeatDetails,
             spellChoiceOptionsByKey: featSpellChoiceOptions,
             itemChoiceOptionsByKey: growthOptionEntriesByKey,
           }),

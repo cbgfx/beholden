@@ -40,6 +40,8 @@ export function RightDrawer({
           background: C.bg,
           borderLeft: "1px solid rgba(255,255,255,0.12)",
           display: "flex", flexDirection: "column",
+          minHeight: 0,
+          overflow: "hidden",
           boxShadow: "-8px 0 30px rgba(0,0,0,0.5)",
         }}
       >
@@ -54,7 +56,7 @@ export function RightDrawer({
           <div style={{ minWidth: 0 }}>{title}</div>
           <button type="button" onClick={onClose} style={closeBtn}>Close</button>
         </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "16px 20px" }}>
           {children}
         </div>
         {footer && (

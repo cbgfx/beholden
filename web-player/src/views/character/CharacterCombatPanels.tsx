@@ -1,7 +1,11 @@
 import React from "react";
 import { C } from "@/lib/theme";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
-import { deriveAttackAbilityOverrideFromEffects, deriveAttackDamageDiceOverrideFromEffects } from "@/domain/character/parseFeatureEffects";
+import {
+  deriveAttackAbilityOverrideFromEffects,
+  deriveAttackDamageBonusFromEffects,
+  deriveAttackDamageDiceOverrideFromEffects,
+} from "@/domain/character/parseFeatureEffects";
 import { IconInitiative, IconShield, IconSpeed } from "@/icons";
 import { CollapsiblePanel, MiniStat, Tooltip } from "@/views/character/CharacterViewParts";
 import { abilityMod, formatModifier } from "@/views/character/CharacterSheetUtils";
@@ -219,11 +223,20 @@ export function CharacterCombatPanels({
             const toHit = ability + (proficient ? pb : 0) + magicBonus;
             const damageAbility = attackState === "offhand" && !addsAbilityModToOffhandDamage(it, parsedFeatureEffects) ? 0 : ability;
             const rageBonus = rageActive && weaponUsesStrength(it) ? rageDamageBonus : 0;
+            const featureDamageBonus = deriveAttackDamageBonusFromEffects(parsedFeatureEffects ?? [], {
+              level,
+              scores: { str: strScore, dex: dexScore },
+              // Rage is added separately above to avoid double-counting.
+              raging: false,
+              isWeapon: true,
+              attackAbility: weaponUsesStrength(it) ? "str" : "dex",
+              item: it,
+            });
             const damageType = formatItemDamageType(it.dmgType);
             const props = formatItemProperties(it.properties);
             const isReach = hasItemProperty(it, "R");
             const rangeLabel = isRangedWeapon(it) ? (it.properties?.find((p) => /^\d/.test(p)) ?? "Range") : `${isReach ? "10" : "5"} ft.`;
-            const totalFlatBonus = damageAbility + rageBonus + magicBonus;
+            const totalFlatBonus = damageAbility + rageBonus + featureDamageBonus + magicBonus;
             const dmgText = dmg ? `${dmg}${totalFlatBonus === 0 ? "" : `${totalFlatBonus >= 0 ? "+" : ""}${totalFlatBonus}`}${damageType ? ` ${damageType}` : ""}` : "-";
             const modeLabel = attackState === "mainhand-2h" ? "2H" : attackState === "offhand" ? "Offhand" : null;
 

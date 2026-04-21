@@ -166,7 +166,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }
         centerRight={showSupport ? (
           <a href="https://www.buymeacoffee.com/beholden" target="_blank" rel="noreferrer" title="Buy me a pizza" style={{ display: "inline-flex", alignItems: "center" }}>
-            <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a pizza" style={{ height: 44, width: "auto" }} />
+            <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a pizza" style={{ height: "clamp(30px, 7vw, 44px)", width: "auto" }} />
           </a>
         ) : null}
         right={updateAvailable ? (

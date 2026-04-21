@@ -81,6 +81,8 @@ function weaponMatchesFilters(item: WeaponLike | null | undefined, filters: Weap
         return hasWeaponProperty(item, "F");
       case "light_weapon":
         return hasWeaponProperty(item, "L");
+      case "heavy_weapon":
+        return hasWeaponProperty(item, "H");
       case "crossbow_weapon":
         return isCrossbowWeaponLike(item);
       case "light_crossbow":
@@ -541,6 +543,7 @@ export function deriveAttackDamageBonusFromEffects(
     attackAbility?: AbilKey;
     isWeapon?: boolean;
     isUnarmed?: boolean;
+    item?: WeaponLike | null;
   }
 ): number {
   let total = 0;
@@ -550,6 +553,7 @@ export function deriveAttackDamageBonusFromEffects(
       if (!isEffectActive(effect, { raging: opts?.raging })) continue;
       if (effect.gate?.attackAbility && effect.gate.attackAbility !== opts?.attackAbility) continue;
       if (effect.gate?.notes === "weapon_or_unarmed" && !opts?.isWeapon && !opts?.isUnarmed) continue;
+      if (effect.gate?.weaponFilters?.length && !weaponMatchesFilters(opts?.item, effect.gate.weaponFilters)) continue;
       const amount = "kind" in (effect.amount ?? {}) ? resolveScalingValueInContext(effect.amount as ScalingValue, {
         level: opts?.level,
         scores: opts?.scores,

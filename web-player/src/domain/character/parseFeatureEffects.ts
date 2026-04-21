@@ -45,6 +45,9 @@ function parseWordCount(value: string): number | null {
   const direct = Number.parseInt(normalized, 10);
   if (Number.isFinite(direct)) return direct;
   const words: Record<string, number> = {
+    a: 1,
+    an: 1,
+    another: 1,
     once: 1,
     one: 1,
     twice: 2,
@@ -257,6 +260,8 @@ function weaponMatchesFilters(item: WeaponLike | null | undefined, filters: Weap
         return hasWeaponProperty(item, "F");
       case "light_weapon":
         return hasWeaponProperty(item, "L");
+      case "heavy_weapon":
+        return hasWeaponProperty(item, "H");
       case "crossbow_weapon":
         return isCrossbowWeaponLike(item);
       case "light_crossbow":
@@ -1044,7 +1049,7 @@ function parseProficiencyGrantEffects(source: FeatureEffectSource, text: string,
     saves.push("Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma");
   }
 
-  for (const match of text.matchAll(/gain proficiency (?:with|in)\s+(one|two|three|four|five|six|\d+)\s+(skills?|tools?|languages?)\s+of your choice/gi)) {
+  for (const match of text.matchAll(/gain proficiency (?:with|in)\s+(a|an|another|one|two|three|four|five|six|\d+)\s+(skills?|tools?|languages?)\s+of your choice/gi)) {
     const count = parseWordCount(match[1] ?? "") ?? 0;
     if (count <= 0) continue;
     const rawCategory = String(match[2] ?? "").toLowerCase();
@@ -1827,6 +1832,25 @@ function parseSensesEffects(source: FeatureEffectSource, text: string, effects: 
       gate: { notes: "requires_existing_sense" },
       summary: bonusSenses.map((s) => `${s.kind} +${s.range}ft`).join(", "),
     } satisfies SensesEffect);
+  }
+
+  if (
+    /weapon that has the Heavy property/i.test(text)
+    && /extra damage/i.test(text)
+    && /equals your Proficiency Bonus/i.test(text)
+  ) {
+    effects.push({
+      id: createFeatureEffectId(source, "attack", effects.length),
+      type: "attack",
+      source,
+      mode: "bonus_damage",
+      amount: { kind: "proficiency_bonus" },
+      gate: {
+        duration: "passive",
+        weaponFilters: ["heavy_weapon"],
+      },
+      summary: "Heavy weapon hits deal extra damage equal to Proficiency Bonus",
+    } satisfies AttackEffect);
   }
 }
 

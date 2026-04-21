@@ -6,6 +6,13 @@ type SpellOptionLike = {
   name: string;
 };
 
+function normalizeSpellNameKey(value: string | null | undefined): string {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
 const ABILITY_OPTION_LABELS = [
   "Strength",
   "Dexterity",
@@ -109,9 +116,11 @@ export function resolveFeatSpellEntries(args: {
     const key = getChoiceKey ? getChoiceKey(choice) : choice.id;
     const selected = selectedChoices[key] ?? [];
     const options = spellChoiceOptionsByKey[key] ?? [];
+    const byId = new Map(options.map((entry) => [String(entry.id), entry]));
+    const byName = new Map(options.map((entry) => [normalizeSpellNameKey(entry.name), entry]));
 
     for (const value of selected) {
-      const option = options.find((entry) => entry.id === value || entry.name === value);
+      const option = byId.get(String(value)) ?? byName.get(normalizeSpellNameKey(value));
       entries.push({
         name: option?.name ?? value,
         source,

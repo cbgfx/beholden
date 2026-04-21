@@ -53,6 +53,7 @@ export type WeaponFilter =
   | "ranged_weapon"
   | "finesse_weapon"
   | "light_weapon"
+  | "heavy_weapon"
   | "crossbow_weapon"
   | "light_crossbow"
   | "no_two_handed";

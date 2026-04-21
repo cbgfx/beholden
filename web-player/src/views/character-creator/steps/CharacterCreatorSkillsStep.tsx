@@ -42,6 +42,18 @@ interface SelectedClassFeatEntryLike {
   detail: { name: string; text?: string | null };
 }
 
+const SKILL_KEY_SET = new Set(ALL_SKILLS.map((skill) => normalizeChoiceKey(skill.name)));
+const TOOL_KEY_SET = new Set(ALL_TOOLS.map((tool) => normalizeChoiceKey(tool)));
+const LANGUAGE_KEY_SET = new Set(ALL_LANGUAGES.map((language) => normalizeChoiceKey(language)));
+
+function classifyChoiceOption(option: string): "skill" | "tool" | "language" | null {
+  const key = normalizeChoiceKey(option);
+  if (SKILL_KEY_SET.has(key)) return "skill";
+  if (TOOL_KEY_SET.has(key)) return "tool";
+  if (LANGUAGE_KEY_SET.has(key)) return "language";
+  return null;
+}
+
 function choiceButtonStyle(selected: boolean, locked: boolean, duplicate: boolean): React.CSSProperties {
   return {
     padding: "6px 14px",
@@ -162,15 +174,14 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
         options: getFeatChoiceOptionsForStep5(choice),
         isSelected: (option) => selected.includes(option),
         isLocked: (option, isSelected) => {
-          const duplicate = choice.type === "proficiency" && choice.anyOf?.includes("tool")
-            ? duplicateLocked("tool", option, isSelected)
-            : choice.type === "proficiency" && choice.anyOf?.includes("language")
-              ? duplicateLocked("language", option, isSelected)
-              : choice.type === "proficiency" && choice.anyOf?.includes("skill")
-                ? duplicateLocked("skill", option, isSelected)
-                : choice.type === "expertise"
-                  ? duplicateLocked("expertise", option, isSelected)
-                  : false;
+          const duplicate = (() => {
+            if (choice.type === "expertise") return duplicateLocked("expertise", option, isSelected);
+            if (choice.type !== "proficiency") return false;
+            const optionKind = classifyChoiceOption(option);
+            if (!optionKind) return false;
+            if (!choice.anyOf?.includes(optionKind)) return false;
+            return duplicateLocked(optionKind, option, isSelected);
+          })();
           return (!isSelected && selected.length >= choice.count) || duplicate;
         },
         onToggle: (option) => toggleFeatChoice(key, option, choice.count),

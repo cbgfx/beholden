@@ -304,7 +304,11 @@ export function LevelUpView() {
   );
   const classFeatureProficiencyChoices = React.useMemo(
     () => collectProficiencyChoiceEffectsFromEffects(parsedNewFeatureEffects)
-      .filter((choice) => choice.choice?.count.kind === "fixed" && ["skill", "tool", "language"].includes(choice.choice?.optionCategory ?? ""))
+      .filter((choice) =>
+        !choice.expertise
+        && choice.choice?.count.kind === "fixed"
+        && ["skill", "tool", "language"].includes(choice.choice?.optionCategory ?? "")
+      )
       .map((choice) => ({
         key: `classfeature:${choice.id}`,
         sourceLabel: choice.source.name,

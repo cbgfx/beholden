@@ -190,6 +190,8 @@ export function CharacterInfoDrawer(props: {
           zIndex: 71,
           display: "flex",
           flexDirection: "column",
+          minHeight: 0,
+          overflow: "hidden",
         }}
       >
         <div style={{ padding: "20px 24px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -213,7 +215,7 @@ export function CharacterInfoDrawer(props: {
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
           <div>
             <div style={{ fontSize: "var(--fs-small)", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: props.accentColor, marginBottom: 12 }}>Identity</div>
             {props.identityFields.length > 0 ? (

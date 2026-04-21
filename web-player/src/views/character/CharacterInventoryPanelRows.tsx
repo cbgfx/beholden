@@ -32,6 +32,9 @@ export interface PartyStashItem {
   notes: string;
   rarity: string | null;
   type: string | null;
+  source?: "compendium" | "custom" | null;
+  itemId?: string | null;
+  description?: string | null;
 }
 
 export function PartyStashItemRow({ item, onTake, onDelete, onQuantity }: {
