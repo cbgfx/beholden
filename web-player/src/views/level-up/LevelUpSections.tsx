@@ -273,6 +273,7 @@ export function LevelUpChoicesSection(props: {
             choice.category === "skill" ? props.existingSkillKeys
             : choice.category === "tool" ? props.existingToolKeys
             : props.existingLanguageKeys;
+          const hasNonDuplicateOption = options.some((option) => !existingKeys.has(normalizeChoiceKey(option)));
           const title =
             choice.category === "skill" ? "Bonus Proficiencies"
             : choice.category === "tool" ? "Bonus Tool Proficiencies"
@@ -291,7 +292,7 @@ export function LevelUpChoicesSection(props: {
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {options.map((option) => {
                   const active = selected.includes(option);
-                  const duplicate = !active && existingKeys.has(normalizeChoiceKey(option));
+                  const duplicate = hasNonDuplicateOption && !active && existingKeys.has(normalizeChoiceKey(option));
                   const blocked = duplicate || (!active && selected.length >= choice.count);
                   return (
                     <ChoiceBtn

@@ -203,7 +203,8 @@ function addSpellGrantEffect(
     summary: string;
   },
 ) {
-  const cleaned = args.spellName.trim().replace(/^the\s+/i, "");
+  const normalizedSpellName = hasLikelySpellNameCapitalization(args.spellName) ? args.spellName : toTitleCase(args.spellName);
+  const cleaned = normalizedSpellName.trim().replace(/^the\s+/i, "");
   if (!cleaned || !isLikelySpellName(cleaned)) return;
   effects.push({
     id: createFeatureEffectId(source, "spell_grant", effects.length),
@@ -362,6 +363,18 @@ function parseKnownSpellGrantEffects(source: FeatureEffectSource, text: string, 
       summary: `${spellName} known spell`,
     });
   }
+
+  if (
+    /\btelekinetic\b/i.test(source.name)
+    && !hasSpellGrantEffect(effects, "Mage Hand", "known")
+  ) {
+    addSpellGrantEffect(source, effects, {
+      spellName: "Mage Hand",
+      spellList,
+      mode: "known",
+      summary: "Mage Hand known cantrip",
+    });
+  }
 }
 
 function parseAlwaysPreparedSpellGrantEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
@@ -451,6 +464,16 @@ function hasSpellGrantEffect(
     effect.type === "spell_grant"
     && effect.mode === mode
     && effect.spellName.trim().toLowerCase() === spellName.trim().toLowerCase()
+  );
+}
+
+function hasResourceGrantEffect(
+  effects: FeatureEffect[],
+  resourceKey: string
+): boolean {
+  return effects.some((effect) =>
+    effect.type === "resource_grant"
+    && effect.resourceKey === resourceKey
   );
 }
 
@@ -737,6 +760,43 @@ function parseItemCanCastSpellEffects(source: FeatureEffectSource, text: string,
           summary: `${spellName} resource pool`,
         });
       }
+    }
+  }
+
+  if (/cast one of the following spells/i.test(text) && /\(\d+\s*charges?\)/i.test(text)) {
+    const chargePool = Number(text.match(/has\s+(\d+)\s+charges?/i)?.[1] ?? 0);
+    const chargeReset =
+      /next dawn|at dawn|daily at dawn|regains? .* at dawn/i.test(text) ? "long_rest"
+      : reset ?? "long_rest";
+    const sharedResourceKey = normalizeResourceKey(`${source.name}:charges`);
+    if (chargePool > 0 && !hasResourceGrantEffect(effects, sharedResourceKey)) {
+      effects.push({
+        id: createFeatureEffectId(source, "resource_grant", effects.length),
+        type: "resource_grant",
+        source,
+        resourceKey: sharedResourceKey,
+        label: `${source.name} Charges`,
+        max: { kind: "fixed", value: chargePool },
+        reset: chargeReset,
+        restoreAmount: "all",
+        summary: `${source.name} charge pool`,
+      });
+    }
+
+    for (const match of text.matchAll(/([A-Za-z][A-Za-z' -]+)\s*\((\d+)\s*charges?\)/gi)) {
+      const spellName = toTitleCase(String(match[1] ?? "").trim());
+      const chargeCost = Number(match[2] ?? 0);
+      if (!spellName || chargeCost <= 0 || hasSpellGrantEffect(effects, spellName, "free_cast")) continue;
+      addSpellGrantEffect(source, effects, {
+        spellName,
+        mode: "free_cast",
+        uses: chargePool > 0 ? { kind: "fixed", value: chargePool } : { kind: "fixed", value: 1 },
+        reset: chargeReset,
+        castsWithoutSlot: true,
+        resourceKey: chargePool > 0 ? sharedResourceKey : undefined,
+        riderSummary: `Costs ${chargeCost} charge${chargeCost === 1 ? "" : "s"}.`,
+        summary: `${spellName} item cast`,
+      });
     }
   }
 }
@@ -1527,6 +1587,39 @@ function parseHitPointBonusEffects(source: FeatureEffectSource, text: string, ef
 }
 
 function parseAttackEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
+  const isArcheryFightingStyle = /\bfighting style\s*:\s*archery\b/i.test(source.name);
+  if (
+    isArcheryFightingStyle
+    || /gain a \+?2\s+bonus to attack rolls you make with ranged weapons?/i.test(text)
+  ) {
+    effects.push({
+      id: createFeatureEffectId(source, "modifier", effects.length),
+      type: "modifier",
+      source,
+      target: "attack_roll",
+      mode: "bonus",
+      amount: { kind: "fixed", value: 2 },
+      gate: { duration: "passive", weaponFilters: ["ranged_weapon"] },
+      summary: "+2 to attack rolls with ranged weapons",
+    } satisfies ModifierEffect);
+  }
+
+  for (const match of text.matchAll(/gain a \+?(\d+)\s+bonus to attack rolls you make with ranged weapons?/gi)) {
+    const amount = Number(match[1]);
+    if (!Number.isFinite(amount) || amount <= 0) continue;
+    if (isArcheryFightingStyle && amount === 2) continue;
+    effects.push({
+      id: createFeatureEffectId(source, "modifier", effects.length),
+      type: "modifier",
+      source,
+      target: "attack_roll",
+      mode: "bonus",
+      amount: { kind: "fixed", value: amount },
+      gate: { duration: "passive", weaponFilters: ["ranged_weapon"] },
+      summary: `+${amount} to attack rolls with ranged weapons`,
+    } satisfies ModifierEffect);
+  }
+
   if (/martial arts die/i.test(text) && /unarmed strike/i.test(text)) {
     effects.push({
       id: createFeatureEffectId(source, "attack", effects.length),
@@ -1640,7 +1733,10 @@ function parseAttackEffects(source: FeatureEffectSource, text: string, effects: 
 }
 
 function parseInitiativeModifierEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
-  if (/add your Proficiency Bonus to (?:your )?(?:the )?Initiative/i.test(text)) {
+  const hasDirectInitiativePbText = /add your Proficiency Bonus to (?:your )?(?:the )?Initiative/i.test(text);
+  const hasRollInitiativePbText = /\bwhen you roll initiative\b/i.test(text) && /\badd your proficiency bonus to (?:the )?roll\b/i.test(text);
+  const isAlertNameFallback = /\balert\b/i.test(source.name) && (!text || /\binitiative\b/i.test(text));
+  if (hasDirectInitiativePbText || hasRollInitiativePbText || isAlertNameFallback) {
     effects.push({
       id: createFeatureEffectId(source, "modifier", effects.length),
       type: "modifier", source,
@@ -1873,32 +1969,30 @@ export function parseFeatureEffects(input: ParseFeatureEffectsInput): ParsedFeat
   const source: FeatureEffectSource = { ...input.source, text: cleanText };
   const effects: FeatureEffect[] = [];
 
-  if (cleanText) {
-    parseAbilityScoreEffects(source, cleanText, effects);
-    parseSpellChoiceEffects(source, cleanText, effects);
-    parseKnownSpellGrantEffects(source, cleanText, effects);
-    if (!input.suppressStructuredSpellGrants) {
-      parseAlwaysPreparedSpellGrantEffects(source, cleanText, effects);
-      parseExpandedListSpellGrantEffects(source, cleanText, effects);
-    }
-    parseRitualOnlySpellGrantEffects(source, cleanText, effects);
-    parseSpellGrantEffects(source, cleanText, effects);
-    parseItemCanCastSpellEffects(source, cleanText, effects);
-    parseResourceGrantEffects(source, cleanText, effects);
-    parseProficiencyGrantEffects(source, cleanText, effects);
-    parseWeaponMasteryEffects(source, cleanText, effects);
-    parseDefenseEffects(source, cleanText, effects);
-    parseSpeedEffects(source, cleanText, effects);
-    parseArmorClassEffects(source, cleanText, effects);
-    parseArmorClassBonusEffects(source, cleanText, effects);
-    parseHitPointBonusEffects(source, cleanText, effects);
-    parseAttackEffects(source, cleanText, effects);
-    parseInitiativeModifierEffects(source, cleanText, effects);
-    parseSavingThrowModifierEffects(source, cleanText, effects);
-    parseAdvantageModifierEffects(source, cleanText, effects);
-    parseSensesEffects(source, cleanText, effects);
-    parsePassiveScoreEffects(source, cleanText, effects);
+  parseAbilityScoreEffects(source, cleanText, effects);
+  parseSpellChoiceEffects(source, cleanText, effects);
+  parseKnownSpellGrantEffects(source, cleanText, effects);
+  if (!input.suppressStructuredSpellGrants) {
+    parseAlwaysPreparedSpellGrantEffects(source, cleanText, effects);
+    parseExpandedListSpellGrantEffects(source, cleanText, effects);
   }
+  parseRitualOnlySpellGrantEffects(source, cleanText, effects);
+  parseSpellGrantEffects(source, cleanText, effects);
+  parseItemCanCastSpellEffects(source, cleanText, effects);
+  parseResourceGrantEffects(source, cleanText, effects);
+  parseProficiencyGrantEffects(source, cleanText, effects);
+  parseWeaponMasteryEffects(source, cleanText, effects);
+  parseDefenseEffects(source, cleanText, effects);
+  parseSpeedEffects(source, cleanText, effects);
+  parseArmorClassEffects(source, cleanText, effects);
+  parseArmorClassBonusEffects(source, cleanText, effects);
+  parseHitPointBonusEffects(source, cleanText, effects);
+  parseAttackEffects(source, cleanText, effects);
+  parseInitiativeModifierEffects(source, cleanText, effects);
+  parseSavingThrowModifierEffects(source, cleanText, effects);
+  parseAdvantageModifierEffects(source, cleanText, effects);
+  parseSensesEffects(source, cleanText, effects);
+  parsePassiveScoreEffects(source, cleanText, effects);
 
   return { source, effects };
 }

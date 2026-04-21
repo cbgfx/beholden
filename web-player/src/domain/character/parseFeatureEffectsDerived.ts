@@ -479,6 +479,31 @@ export function deriveModifierBonusFromEffects(
   return total;
 }
 
+export function deriveAttackRollBonusFromEffects(
+  parsed: ParsedFeatureEffects[],
+  opts?: {
+    appliesTo?: string;
+    level?: number | null;
+    scores?: Partial<Record<AbilKey, number | null>>;
+    raging?: boolean;
+    item?: WeaponLike | null;
+  }
+): number {
+  let total = 0;
+  for (const parsedFeature of parsed) {
+    for (const effect of parsedFeature.effects) {
+      if (effect.type !== "modifier" || effect.target !== "attack_roll" || effect.mode !== "bonus") continue;
+      if (!isEffectActive(effect, { raging: opts?.raging })) continue;
+      if (effect.appliesTo?.length && opts?.appliesTo && !effect.appliesTo.some((value) => value.toLowerCase() === opts.appliesTo?.toLowerCase())) continue;
+      if (effect.appliesTo?.length && !opts?.appliesTo) continue;
+      if (effect.gate?.weaponFilters?.length && !weaponMatchesFilters(opts?.item, effect.gate.weaponFilters)) continue;
+      const resolved = resolveScalingValueInContext(effect.amount, { level: opts?.level, scores: opts?.scores });
+      if (resolved != null) total += resolved;
+    }
+  }
+  return total;
+}
+
 export function deriveModifierStateFromEffects(
   parsed: ParsedFeatureEffects[],
   target: ModifierEffect["target"],

@@ -5,6 +5,7 @@ import {
   deriveAttackAbilityOverrideFromEffects,
   deriveAttackDamageBonusFromEffects,
   deriveAttackDamageDiceOverrideFromEffects,
+  deriveAttackRollBonusFromEffects,
 } from "@/domain/character/parseFeatureEffects";
 import { IconInitiative, IconShield, IconSpeed } from "@/icons";
 import { CollapsiblePanel, MiniStat, Tooltip } from "@/views/character/CharacterViewParts";
@@ -90,7 +91,13 @@ export function CharacterCombatPanels({
     raging: rageActive,
     isUnarmed: true,
   });
-  const unarmedToHit = unarmedAttackAbilityMod + pb;
+  const unarmedAttackRollBonus = deriveAttackRollBonusFromEffects(parsedFeatureEffects ?? [], {
+    level,
+    scores: { str: strScore, dex: dexScore },
+    raging: rageActive,
+    item: null,
+  });
+  const unarmedToHit = unarmedAttackAbilityMod + pb + unarmedAttackRollBonus;
   const unarmedDamageBonus = unarmedAttackAbilityMod + (rageActive ? unarmedRageDamageBonus : 0);
   const unarmedDmg = unarmedDamageDice
     ? `${unarmedDamageDice}${unarmedDamageBonus === 0 ? "" : `${unarmedDamageBonus >= 0 ? "+" : ""}${unarmedDamageBonus}`}`
@@ -220,7 +227,13 @@ export function CharacterCombatPanels({
             const masteryKnown = hasWeaponMastery(it, prof ?? undefined);
             const masteryName = masteryKnown ? (mastery?.name ?? getWeaponMasteryName(it)) : null;
             const magicBonus = parseMagicBonus(it);
-            const toHit = ability + (proficient ? pb : 0) + magicBonus;
+            const featureAttackRollBonus = deriveAttackRollBonusFromEffects(parsedFeatureEffects ?? [], {
+              level,
+              scores: { str: strScore, dex: dexScore },
+              raging: rageActive,
+              item: it,
+            });
+            const toHit = ability + (proficient ? pb : 0) + magicBonus + featureAttackRollBonus;
             const damageAbility = attackState === "offhand" && !addsAbilityModToOffhandDamage(it, parsedFeatureEffects) ? 0 : ability;
             const rageBonus = rageActive && weaponUsesStrength(it) ? rageDamageBonus : 0;
             const featureDamageBonus = deriveAttackDamageBonusFromEffects(parsedFeatureEffects ?? [], {

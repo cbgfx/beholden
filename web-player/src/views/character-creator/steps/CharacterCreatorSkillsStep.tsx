@@ -300,6 +300,8 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
           choice.category === "skill" ? ALL_SKILLS.map((skill) => skill.name)
           : choice.category === "tool" ? ALL_TOOLS
           : ALL_LANGUAGES;
+        const duplicateKind = choice.category === "language" ? "language" : choice.category;
+        const hasNonDuplicateOption = options.some((option) => !duplicateLocked(duplicateKind, option, false));
         return renderChoiceChipGroup({
           title:
             choice.category === "skill" ? "Bonus Proficiencies"
@@ -312,7 +314,7 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
           isSelected: (option) => selected.includes(option),
           isLocked: (option, isSelected) =>
             (!isSelected && selected.length >= choice.count)
-            || duplicateLocked(choice.category === "language" ? "language" : choice.category, option, isSelected),
+            || (hasNonDuplicateOption && duplicateLocked(duplicateKind, option, isSelected)),
           onToggle: (option) =>
             setChosenFeatureChoices((prev) => {
               const current = prev[choice.key] ?? [];

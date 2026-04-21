@@ -152,6 +152,32 @@ function cleanedText(value: string | null | undefined): string {
   return String(value ?? "").trim();
 }
 
+function normalizeOptionalFeatureToken(value: string | null | undefined): string {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/^level\s+\d+\s*:\s*/i, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function isOptionalFeatureChosen(
+  featureName: string,
+  selectedRaw: Set<string>,
+  selectedNormalized: Set<string>,
+): boolean {
+  if (selectedRaw.has(featureName)) return true;
+  const normalizedFeature = normalizeOptionalFeatureToken(featureName);
+  if (!normalizedFeature) return false;
+  if (selectedNormalized.has(normalizedFeature)) return true;
+  const tail = normalizedFeature.split(/\s+/).slice(-3).join(" ");
+  if (tail && selectedNormalized.has(tail)) return true;
+  for (const selected of selectedNormalized) {
+    if (selected && (normalizedFeature.endsWith(selected) || selected.endsWith(normalizedFeature))) return true;
+  }
+  return false;
+}
+
 function shouldSkipBackgroundTrait(name: string): boolean {
   return (
     /^description$/i.test(name)
@@ -234,6 +260,11 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
 
   const selectedSubclass = String(charData?.classes?.[0]?.subclass ?? "").trim();
   const chosenOptionals = new Set(charData?.chosenOptionals ?? []);
+  const chosenOptionalsNormalized = new Set(
+    Array.from(chosenOptionals)
+      .map((value) => normalizeOptionalFeatureToken(value))
+      .filter(Boolean),
+  );
   const byId = new Map<string, AppliedCharacterFeatureEntry>();
   const dedupeKeys = new Set<string>();
 
@@ -241,7 +272,7 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
     if (!feature) return;
     const name = String(feature.name ?? "").trim();
     const text = cleanedText(feature.text);
-    if (!name || !text) return;
+    if (!name) return;
     const dedupeKey = `${feature.kind}:${name.toLowerCase()}::${text.replace(/\s+/g, " ").toLowerCase()}`;
     if (byId.has(feature.id) || dedupeKeys.has(dedupeKey)) return;
     byId.set(feature.id, { ...feature, name, text });
@@ -256,7 +287,7 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
       const text = cleanedText(feature.text);
       if (!name || !text) continue;
       const isSubclassFeature = Boolean(getFeatureSubclassName(feature));
-      if (feature.optional && !isSubclassFeature && !chosenOptionals.has(name)) continue;
+      if (feature.optional && !isSubclassFeature && !isOptionalFeatureChosen(name, chosenOptionals, chosenOptionalsNormalized)) continue;
       addFeature({
         id: `class:${classDetail?.id}:${name}`,
         kind: "class",

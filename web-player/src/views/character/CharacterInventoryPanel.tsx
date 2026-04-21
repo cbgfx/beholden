@@ -462,83 +462,93 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
   }
 
   async function addItem(payload?: InventoryPickerPayload) {
-    const next = payload;
-    if (!next?.name) return;
-    const packEntries = parsePackContentsFromDescription(next.description ?? "");
-    if (packEntries.length > 0) {
-      let nextContainers = containers;
-      const nextItems = [...items];
-      const packCount = Math.max(1, Number(next.quantity) || 1);
-      for (let i = 0; i < packCount; i += 1) {
-        const packContainer = createContainer(next.name, false);
-        nextContainers = [...nextContainers, packContainer];
-        for (const entry of packEntries) {
-          nextItems.push({
-            id: uid(),
-            name: entry.name,
-            quantity: entry.quantity,
-            equipped: false,
-            equipState: "backpack",
-            source: "compendium",
-            containerId: packContainer.id,
-            properties: [],
-          });
+    try {
+      const next = payload;
+      if (!next?.name) return;
+      const packEntries = parsePackContentsFromDescription(next.description ?? "");
+      if (packEntries.length > 0) {
+        let nextContainers = containers;
+        const nextItems = [...items];
+        const packCount = Math.max(1, Number(next.quantity) || 1);
+        for (let packIndex = 0; packIndex < packCount; packIndex += 1) {
+          const packContainer = createContainer(next.name, false);
+          nextContainers = [...nextContainers, packContainer];
+          for (const entry of packEntries) {
+            nextItems.push({
+              id: uid(),
+              name: entry.name,
+              quantity: entry.quantity,
+              equipped: false,
+              equipState: "backpack",
+              source: "compendium",
+              containerId: packContainer.id,
+              properties: [],
+            });
+          }
         }
-      }
-      await persist(nextItems, nextContainers);
-      setPickerOpen(false);
-      return;
-    }
-    const item: InventoryItem = {
-      id: uid(),
-      name: next.name,
-      quantity: Math.max(1, next.quantity),
-      equipped: false,
-      equipState: "backpack",
-      source: next.source,
-      itemId: next.itemId,
-      rarity: next.rarity ?? null,
-      type: next.type ?? null,
-      attunement: next.attunement ?? false,
-      attuned: next.attuned ?? false,
-      magic: next.magic ?? false,
-      silvered: next.silvered ?? false,
-      equippable: next.equippable ?? false,
-      weight: next.weight ?? null,
-      value: next.value ?? null,
-      proficiency: next.proficiency ?? null,
-      ac: next.ac ?? null,
-      stealthDisadvantage: next.stealthDisadvantage ?? false,
-      dmg1: next.dmg1 ?? null,
-      dmg2: next.dmg2 ?? null,
-      dmgType: next.dmgType ?? null,
-      properties: next.properties ?? [],
-      description: next.description?.trim() || undefined,
-      ...(() => {
-        const desc = next.description?.trim() ?? "";
-        const charges = desc ? (parseChargesMax(desc) ?? null) : null;
-        return { chargesMax: charges, charges };
-      })(),
-    };
-    let nextContainers = containers;
-    if (/^bag of holding\b/i.test(next.name)) {
-      const bagContainer = createContainer("Bag of Holding", true);
-      nextContainers = [...containers, bagContainer];
-    }
-    if (isStackableItem(item)) {
-      const incomingKey = inferStackKey(item);
-      const existingIndex = items.findIndex((entry) => isStackableItem(entry) && inferStackKey(entry) === incomingKey);
-      if (existingIndex >= 0) {
-        const updated = items.map((entry, index) =>
-          index === existingIndex ? mergeStackedInventoryItem(entry, item) : entry
-        );
-        await persist(updated, nextContainers);
+        await persist(nextItems, nextContainers);
         setPickerOpen(false);
         return;
       }
+      const item: InventoryItem = {
+        id: uid(),
+        name: next.name,
+        quantity: Math.max(1, next.quantity),
+        equipped: false,
+        equipState: "backpack",
+        source: next.source,
+        itemId: next.itemId,
+        rarity: next.rarity ?? null,
+        type: next.type ?? null,
+        attunement: next.attunement ?? false,
+        attuned: next.attuned ?? false,
+        magic: next.magic ?? false,
+        silvered: next.silvered ?? false,
+        equippable: next.equippable ?? false,
+        weight: next.weight ?? null,
+        value: next.value ?? null,
+        proficiency: next.proficiency ?? null,
+        ac: next.ac ?? null,
+        stealthDisadvantage: next.stealthDisadvantage ?? false,
+        dmg1: next.dmg1 ?? null,
+        dmg2: next.dmg2 ?? null,
+        dmgType: next.dmgType ?? null,
+        properties: next.properties ?? [],
+        description: next.description?.trim() || undefined,
+        ...(() => {
+          const desc = next.description?.trim() ?? "";
+          const charges = desc ? (parseChargesMax(desc) ?? null) : null;
+          return { chargesMax: charges, charges };
+        })(),
+      };
+      let nextContainers = containers;
+      if (/^bag of holding\b/i.test(next.name)) {
+        const bagContainer = createContainer("Bag of Holding", true);
+        nextContainers = [...containers, bagContainer];
+      }
+      let merged = false;
+      try {
+        if (isStackableItem(item)) {
+          const incomingKey = inferStackKey(item);
+          const existingIndex = items.findIndex((entry) => isStackableItem(entry) && inferStackKey(entry) === incomingKey);
+          if (existingIndex >= 0) {
+            const updated = items.map((entry, index) =>
+              index === existingIndex ? mergeStackedInventoryItem(entry, item) : entry
+            );
+            await persist(updated, nextContainers);
+            merged = true;
+          }
+        }
+      } catch (mergeError) {
+        console.error("Inventory stack merge failed; falling back to direct add.", mergeError);
+      }
+      if (!merged) {
+        await persist([...items, item], nextContainers);
+      }
+      setPickerOpen(false);
+    } catch (error) {
+      console.error("Failed to add inventory item.", error);
     }
-    await persist([...items, item], nextContainers);
-    setPickerOpen(false);
   }
 
   async function addContainer(afterId?: string | null, baseName = "Backpack", ignoreWeight = false) {
