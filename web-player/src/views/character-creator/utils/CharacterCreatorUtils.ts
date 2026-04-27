@@ -434,6 +434,7 @@ export function parseSkillList(proficiency: string): string[] {
 }
 
 export { wordOrNumberToInt };
+export { getGrowthChoiceDefinitions } from "./GrowthChoiceUtils";
 
 export function baseWeaponKind(name: string): string {
   return name.replace(/\s*\[[^\]]+\]\s*$/u, "").trim();
