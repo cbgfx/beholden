@@ -17,6 +17,7 @@ export function registerWebUiRoutes(app: Express, ctx: ServerContext) {
     });
     app.get(webPlayerSpaRoute, (req, res, next) => {
       if (req.path.startsWith("/api")) return next();
+      if (req.path.includes("/assets/")) return next();
       res.sendFile(path.join(paths.webPlayerDistDir, "index.html"));
     });
   }
@@ -30,6 +31,7 @@ export function registerWebUiRoutes(app: Express, ctx: ServerContext) {
   app.get(webDmSpaRoute, (req, res, next) => {
     if (req.path.startsWith("/api")) return next();
     if (req.path.startsWith("/player")) return next();
+    if (req.path.includes("/assets/")) return next();
     res.sendFile(path.join(paths.webDistDir, "index.html"));
   });
 }
