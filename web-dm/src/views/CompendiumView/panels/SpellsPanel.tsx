@@ -7,6 +7,7 @@ import { theme } from "@/theme/theme";
 import { useStore } from "@/store";
 import { api } from "@/services/api";
 import { useSpellSearch } from "@/views/CompendiumView/hooks/useSpellSearch";
+import { expandSchool } from "@/lib/format/expandSchool";
 import { SpellFormModal, SpellForEdit } from "@/views/CompendiumView/panels/SpellFormModal";
 import { BrowserAddButton, togglePillStyle } from "./browserParts";
 import { SpellBrowserRow } from "./SpellBrowserRow";
@@ -124,7 +125,7 @@ export function SpellsPanel(props: SpellsPanelProps) {
           </Select>
           <Select value={schoolFilter} onChange={(event) => setSchoolFilter(event.target.value)} style={{ width: "100%" }} title="Filter by school">
             {schoolOptions.map((school) => (
-              <option key={school} value={school}>{school === "all" ? "All Schools" : school}</option>
+              <option key={school} value={school}>{school === "all" ? "All Schools" : expandSchool(school)}</option>
             ))}
           </Select>
           <Select value={classFilter} onChange={(event) => setClassFilter(event.target.value)} style={{ width: "100%" }} title="Filter by class">
