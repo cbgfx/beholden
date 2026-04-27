@@ -22,7 +22,7 @@ type Props = {
  */
 function normalizeDeltaInput(raw: string): string {
   const s = String(raw ?? "");
-  // Keep digits, 'd'/'D', '+', '-' â€” strip everything else.
+  // Keep digits, 'd'/'D', '+', '-', and dice operators; strip everything else.
   return s.replace(/[^0-9dD+\-*/().x×]/g, "");
 }
 
@@ -162,7 +162,7 @@ export function CombatDeltaControls(props: Props) {
         {props.onToggleBulkMode ? (
           <div style={{ position: "relative" }}>
             <HexButton
-              title={bulkMode ? `Bulk mode active â€” ${bulkCount} selected. Click to cancel.` : "Bulk Damage â€” select multiple targets"}
+              title={bulkMode ? `Bulk mode active - ${bulkCount} selected. Click to cancel.` : "Bulk Damage - select multiple targets"}
               disabled={false}
               onClick={props.onToggleBulkMode}
               variant="bulk"
@@ -247,10 +247,10 @@ export function CombatDeltaControls(props: Props) {
             <button
               type="button"
               onClick={handleRollPreview}
-              title="Roll dice â€” preview result in field"
+              title="Roll dice - preview result in field"
               style={{ all: "unset", cursor: "pointer", fontSize: "var(--fs-tiny)", color: theme.colors.accentPrimary, fontWeight: 700 }}
             >
-              ðŸŽ² roll preview
+              roll preview
             </button>
           )}
         </div>

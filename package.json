@@ -12,13 +12,19 @@
     "dev:server": "npm -w server run dev",
     "dev:web-dm": "npm -w web-dm run dev",
     "dev:web-player": "npm -w web-player run dev",
+    "typecheck": "npm -w server run build",
+    "lint": "eslint \"{server,shared,web-dm,web-player}/src/**/*.{ts,tsx}\" --cache --cache-location .eslintcache",
     "build": "npm -w server run build && npm -w web-dm run build && npm -w web-player run build",
     "build:web-dm": "npm -w web-dm run build",
     "build:web-player": "npm -w web-player run build",
     "start": "npm -w server run start",
+    "test": "npm run build",
     "check:payload-budgets": "node server/scripts/check-payload-budgets.mjs"
   },
   "devDependencies": {
-    "concurrently": "^9.0.1"
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
+    "concurrently": "^9.0.1",
+    "eslint": "^9.38.0"
   }
 }

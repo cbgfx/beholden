@@ -150,38 +150,78 @@ export function InventoryItemDrawer(props: {
   );
 }
 
-function EditFields({ draft, setDraft, isWeaponLike, isArmorLike, isMeleeWeaponLike, canEnableAttuned, chargesMax, onSaveCharges }: any) {
+type InventoryDraft = {
+  name: string;
+  rarity: string;
+  type: string;
+  attunement: boolean;
+  attuned: boolean;
+  magic: boolean;
+  silvered: boolean;
+  weight: number | null;
+  value: number | null;
+  ac: number | null;
+  stealthDisadvantage: boolean;
+  dmg1: string;
+  dmg2: string;
+  dmgType: string;
+  properties: string[];
+  description: string;
+};
+
+type EditFieldsProps = {
+  draft: InventoryDraft;
+  setDraft: React.Dispatch<React.SetStateAction<InventoryDraft>>;
+  isWeaponLike: boolean;
+  isArmorLike: boolean;
+  isMeleeWeaponLike: boolean;
+  canEnableAttuned: boolean;
+  chargesMax: number | null;
+  onSaveCharges: (value: number | null) => Promise<void>;
+};
+
+function EditFields({ draft, setDraft, isWeaponLike, isArmorLike, isMeleeWeaponLike, canEnableAttuned, chargesMax, onSaveCharges }: EditFieldsProps) {
   return (
     <>
-      <Field label="Title"><input value={draft.name} onChange={(e) => setDraft((d: any) => ({ ...d, name: e.target.value }))} placeholder="Item name" style={fullInput} /></Field>
+      <Field label="Title"><input value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} placeholder="Item name" style={fullInput} /></Field>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <Field label="Rarity">
-          <Select value={draft.rarity} onChange={(e) => setDraft((d: any) => ({ ...d, rarity: e.target.value }))} style={fullInput}>
+          <Select value={draft.rarity} onChange={(e) => setDraft((d) => ({ ...d, rarity: e.target.value }))} style={fullInput}>
             <option value="">None</option><option value="common">Common</option><option value="uncommon">Uncommon</option><option value="rare">Rare</option><option value="very rare">Very Rare</option><option value="legendary">Legendary</option><option value="artifact">Artifact</option>
           </Select>
         </Field>
-        <Field label="Weight"><input type="number" value={draft.weight ?? ""} onChange={(e) => setDraft((d: any) => ({ ...d, weight: e.target.value === "" ? null : Number(e.target.value) }))} placeholder="Weight" style={fullInput} /></Field>
-        <Field label="Value"><input type="number" value={draft.value ?? ""} onChange={(e) => setDraft((d: any) => ({ ...d, value: e.target.value === "" ? null : Number(e.target.value) }))} placeholder="Value" style={fullInput} /></Field>
-        {isWeaponLike ? <Field label="Damage 1"><input value={draft.dmg1} onChange={(e) => setDraft((d: any) => ({ ...d, dmg1: e.target.value }))} style={fullInput} /></Field> : null}
-        {isWeaponLike ? <Field label="Damage 2"><input value={draft.dmg2} onChange={(e) => setDraft((d: any) => ({ ...d, dmg2: e.target.value }))} style={fullInput} /></Field> : null}
-        {isWeaponLike ? <Field label="Damage Type"><input value={draft.dmgType} onChange={(e) => setDraft((d: any) => ({ ...d, dmgType: e.target.value }))} style={fullInput} /></Field> : null}
-        {isWeaponLike ? <Field label="Properties"><input value={draft.properties.join(", ")} onChange={(e) => setDraft((d: any) => ({ ...d, properties: e.target.value.split(",").map((p: string) => p.trim()).filter(Boolean) }))} style={fullInput} /></Field> : null}
-        {isArmorLike ? <Field label="Armor Class"><input type="number" value={draft.ac ?? ""} onChange={(e) => setDraft((d: any) => ({ ...d, ac: e.target.value === "" ? null : Number(e.target.value) }))} style={fullInput} /></Field> : null}
+        <Field label="Weight"><input type="number" value={draft.weight ?? ""} onChange={(e) => setDraft((d) => ({ ...d, weight: e.target.value === "" ? null : Number(e.target.value) }))} placeholder="Weight" style={fullInput} /></Field>
+        <Field label="Value"><input type="number" value={draft.value ?? ""} onChange={(e) => setDraft((d) => ({ ...d, value: e.target.value === "" ? null : Number(e.target.value) }))} placeholder="Value" style={fullInput} /></Field>
+        {isWeaponLike ? <Field label="Damage 1"><input value={draft.dmg1} onChange={(e) => setDraft((d) => ({ ...d, dmg1: e.target.value }))} style={fullInput} /></Field> : null}
+        {isWeaponLike ? <Field label="Damage 2"><input value={draft.dmg2} onChange={(e) => setDraft((d) => ({ ...d, dmg2: e.target.value }))} style={fullInput} /></Field> : null}
+        {isWeaponLike ? <Field label="Damage Type"><input value={draft.dmgType} onChange={(e) => setDraft((d) => ({ ...d, dmgType: e.target.value }))} style={fullInput} /></Field> : null}
+        {isWeaponLike ? <Field label="Properties"><input value={draft.properties.join(", ")} onChange={(e) => setDraft((d) => ({ ...d, properties: e.target.value.split(",").map((p: string) => p.trim()).filter(Boolean) }))} style={fullInput} /></Field> : null}
+        {isArmorLike ? <Field label="Armor Class"><input type="number" value={draft.ac ?? ""} onChange={(e) => setDraft((d) => ({ ...d, ac: e.target.value === "" ? null : Number(e.target.value) }))} style={fullInput} /></Field> : null}
         <Field label="Max Charges"><input type="number" min={0} value={chargesMax ?? ""} onChange={async (e) => { const v = e.target.value === "" ? null : Number(e.target.value); await onSaveCharges(v); }} placeholder="0" style={fullInput} /></Field>
       </div>
       <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
-        <label style={inventoryCheckboxLabel}><input type="checkbox" checked={draft.magic} onChange={(e) => setDraft((d: any) => ({ ...d, magic: e.target.checked }))} />Magic</label>
-        {draft.attunement ? <label style={inventoryCheckboxLabel}><input type="checkbox" checked={draft.attuned} disabled={!draft.attuned && !canEnableAttuned} onChange={(e) => setDraft((d: any) => ({ ...d, attuned: e.target.checked }))} />Attuned</label> : null}
-        {isMeleeWeaponLike ? <label style={inventoryCheckboxLabel}><input type="checkbox" checked={draft.silvered} onChange={(e) => setDraft((d: any) => ({ ...d, silvered: e.target.checked }))} />Silvered</label> : null}
-        {isArmorLike ? <label style={inventoryCheckboxLabel}><input type="checkbox" checked={draft.stealthDisadvantage} onChange={(e) => setDraft((d: any) => ({ ...d, stealthDisadvantage: e.target.checked }))} />Stealth D</label> : null}
+        <label style={inventoryCheckboxLabel}><input type="checkbox" checked={draft.magic} onChange={(e) => setDraft((d) => ({ ...d, magic: e.target.checked }))} />Magic</label>
+        {draft.attunement ? <label style={inventoryCheckboxLabel}><input type="checkbox" checked={draft.attuned} disabled={!draft.attuned && !canEnableAttuned} onChange={(e) => setDraft((d) => ({ ...d, attuned: e.target.checked }))} />Attuned</label> : null}
+        {isMeleeWeaponLike ? <label style={inventoryCheckboxLabel}><input type="checkbox" checked={draft.silvered} onChange={(e) => setDraft((d) => ({ ...d, silvered: e.target.checked }))} />Silvered</label> : null}
+        {isArmorLike ? <label style={inventoryCheckboxLabel}><input type="checkbox" checked={draft.stealthDisadvantage} onChange={(e) => setDraft((d) => ({ ...d, stealthDisadvantage: e.target.checked }))} />Stealth D</label> : null}
       </div>
       {draft.attunement && !canEnableAttuned ? <div style={{ fontSize: "var(--fs-small)", color: C.red }}>You can have no more than 3 attuned items at a time.</div> : null}
-      <Field label="Text"><textarea value={draft.description} onChange={(e) => setDraft((d: any) => ({ ...d, description: e.target.value }))} placeholder="Description" rows={12} style={{ ...fullInput, resize: "vertical", minHeight: 240, fontFamily: "inherit", lineHeight: 1.5 }} /></Field>
+      <Field label="Text"><textarea value={draft.description} onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))} placeholder="Description" rows={12} style={{ ...fullInput, resize: "vertical", minHeight: 240, fontFamily: "inherit", lineHeight: 1.5 }} /></Field>
     </>
   );
 }
 
-function ReadFields({ draft, item, isWeaponLike, isArmorLike, isMeleeWeaponLike, accentColor, onChargesChange }: any) {
+type ReadFieldsProps = {
+  draft: InventoryDraft;
+  item: InventoryItem;
+  isWeaponLike: boolean;
+  isArmorLike: boolean;
+  isMeleeWeaponLike: boolean;
+  accentColor: string;
+  onChargesChange: (charges: number) => void | Promise<void>;
+};
+
+function ReadFields({ draft, item, isWeaponLike, isArmorLike, isMeleeWeaponLike, accentColor, onChargesChange }: ReadFieldsProps) {
   return (
     <>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -212,7 +252,7 @@ function ReadFields({ draft, item, isWeaponLike, isArmorLike, isMeleeWeaponLike,
   );
 }
 
-function ChargeBoxes({ item, accentColor, onChargesChange }: any) {
+function ChargeBoxes({ item, accentColor, onChargesChange }: { item: InventoryItem; accentColor: string; onChargesChange: (charges: number) => void | Promise<void> }) {
   const max = item.chargesMax!;
   const cur = item.charges ?? max;
   return <div><div style={sectionLabel}>Charges</div><div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>{Array.from({ length: max }).map((_, i) => { const filled = i < cur; return <button key={i} title={filled ? "Expend charge" : "Regain charge"} onClick={() => onChargesChange(filled ? cur - 1 : i + 1)} style={{ width: 24, height: 24, borderRadius: 4, border: `2px solid ${filled ? accentColor : "rgba(255,255,255,0.2)"}`, background: filled ? `${accentColor}33` : "transparent", cursor: "pointer", padding: 0 }} />; })}<span style={{ fontSize: "var(--fs-small)", color: C.muted, marginLeft: 4 }}>{cur} / {max}</span></div></div>;

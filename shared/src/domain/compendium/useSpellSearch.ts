@@ -3,6 +3,7 @@ import { expandSchool } from "./expandSchool";
 import { normalizeSpellSearchRow, type SpellSearchRow } from "./normalizeSpellSearchRow";
 
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
+type SpellSearchApiResponse = { rows?: unknown[]; total?: number } | unknown[];
 
 function hasComponent(components: string | null, letter: string): boolean {
   if (!components) return false;
@@ -45,7 +46,7 @@ export function useCompendiumSpellSearch(api: ApiFn) {
         const maxRows = 10000;
 
         while (!controller.signal.aborted) {
-          const res = await api<{ rows?: any[]; total?: number } | any[]>(
+          const res = await api<SpellSearchApiResponse>(
             `/api/spells/search?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&withTotal=1${lv}&excludeSpecial=1&compact=1`,
             { signal: controller.signal },
           );
@@ -53,7 +54,7 @@ export function useCompendiumSpellSearch(api: ApiFn) {
           const pageRows = Array.isArray(res)
             ? res
             : Array.isArray((res as { rows?: unknown[] }).rows)
-              ? ((res as { rows: unknown[] }).rows as any[])
+              ? (res as { rows: unknown[] }).rows
               : [];
           const pageTotal = Array.isArray(res)
             ? pageRows.length

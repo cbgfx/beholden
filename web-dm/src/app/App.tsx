@@ -14,7 +14,6 @@ import {
 } from "@/services/collectionApi";
 import type { Adventure, Campaign, CampaignCharacter, Encounter, EncounterActor, INpc, Meta, Note, TreasureEntry } from "@/domain/types/domain";
 import { useAppWebSocket } from "@/app/useAppWebSocket";
-import { HomeView } from "@/views/HomeView";
 import { DrawerHost } from "@/drawers/DrawerHost";
 import { ConfirmProvider, useConfirm } from "@/confirm/ConfirmContext";
 import { useCampaignActions } from "@/app/useCampaignActions";
@@ -23,6 +22,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LoginView } from "@/views/LoginView";
 import { useWsScope } from "@/services/ws";
 
+const HomeView = React.lazy(() => import("@/views/HomeView").then(m => ({ default: m.HomeView })));
 const CompendiumView = React.lazy(() => import("@/views/CompendiumView/CompendiumView").then(m => ({ default: m.CompendiumView })));
 const CampaignView = React.lazy(() => import("@/views/CampaignView/CampaignView").then(m => ({ default: m.CampaignView })));
 const CombatView = React.lazy(() => import("@/views/CombatView/CombatView").then(m => ({ default: m.CombatView })));

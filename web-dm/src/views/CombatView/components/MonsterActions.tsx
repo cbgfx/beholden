@@ -6,13 +6,20 @@ import type { AttackOverride } from "@/domain/types/domain";
 import { ActionRow } from "@/views/CombatView/components/ActionRow";
 import { MonsterSectionPanel } from "@/components/MonsterDisplay/MonsterSectionPanel";
 
-function isAttackAction(a: any): boolean {
+type MonsterActionEntry = {
+  name?: string;
+  title?: string;
+  text?: string | string[] | null;
+  attack?: unknown;
+};
+
+function isAttackAction(a: MonsterActionEntry): boolean {
   if (a?.attack) return true;
   const text = Array.isArray(a?.text) ? a.text.map(String).join(" ") : String(a?.text ?? "");
   return /\bto\s+hit\b/i.test(text);
 }
 
-function parseAttackDefaults(a: any): { toHit?: number; damage?: string } {
+function parseAttackDefaults(a: MonsterActionEntry): { toHit?: number; damage?: string } {
   if (a?.attack) {
     const parts = String(a.attack).split("||");
     if (parts.length >= 3) {
@@ -106,7 +113,7 @@ function ActionSection({
   onChangeAttack,
 }: {
   title: string;
-  items: any[];
+  items: MonsterActionEntry[];
   editable?: boolean;
   attackOverrides?: Record<string, AttackOverride> | null;
   onChangeAttack?: (actionName: string, patch: AttackOverride) => void;
@@ -116,7 +123,7 @@ function ActionSection({
   return (
     <MonsterSectionPanel title={title}>
       <div style={{ display: "grid", gap: 8 }}>
-        {items.map((a: any, i: number) => {
+        {items.map((a, i: number) => {
           const name = String(a?.name ?? a?.title ?? "");
 
           if (editable && isAttackAction(a) && onChangeAttack) {
@@ -168,12 +175,12 @@ export function MonsterActions(props: {
   usedLegendaryActions?: number;
   onChangeLegendaryUsed?: (n: number) => void;
 }) {
-  const actions = (props.monster as any).action ?? [];
-  const reactions = (props.monster as any).reaction ?? [];
-  const legendaryRaw = (props.monster as any).legendary ?? [];
+  const actions = Array.isArray(props.monster.action) ? (props.monster.action as MonsterActionEntry[]) : [];
+  const reactions = Array.isArray(props.monster.reaction) ? (props.monster.reaction as MonsterActionEntry[]) : [];
+  const legendaryRaw = Array.isArray(props.monster.legendary) ? (props.monster.legendary as MonsterActionEntry[]) : [];
 
   const legendaryIntro = React.useMemo(() => {
-    const intro = (legendaryRaw as any[]).find((l: any) =>
+    const intro = legendaryRaw.find((l) =>
       String(l?.name ?? "").toLowerCase().includes("legendary actions")
     );
     if (!intro) return null;
@@ -182,7 +189,7 @@ export function MonsterActions(props: {
   }, [legendaryRaw]);
 
   const legendary = React.useMemo(
-    () => (legendaryRaw as any[]).filter((l: any) => !String(l?.name ?? "").toLowerCase().includes("legendary actions")),
+    () => legendaryRaw.filter((l) => !String(l?.name ?? "").toLowerCase().includes("legendary actions")),
     [legendaryRaw]
   );
 
@@ -216,7 +223,7 @@ export function MonsterActions(props: {
           ) : null}
           {legendary.length ? (
             <div style={{ display: "grid", gap: 8 }}>
-              {legendary.map((l: any, i: number) => (
+              {legendary.map((l, i: number) => (
                 <ActionRow key={`legendary-${i}`} row={l} />
               ))}
             </div>

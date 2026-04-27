@@ -328,8 +328,7 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
 
   const newHpMax = char.hpMax + hpGain + featHpBonus;
   const proficiencies = { ...(char.characterData?.proficiencies ?? {}) } as NonNullable<NonNullable<typeof char.characterData>["proficiencies"]>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const _arr = <T = { source: string; sourceKey?: string | null; name?: string }>(v: any): T[] => Array.isArray(v) ? v as T[] : [];
+  const _arr = <T = { source: string; sourceKey?: string | null; name?: string }>(v: unknown): T[] => Array.isArray(v) ? v as T[] : [];
   const existingSpells = _arr(proficiencies?.spells);
   const existingInvocations = _arr(proficiencies?.invocations);
   const existingExpertiseEntries = _arr(proficiencies?.expertise);

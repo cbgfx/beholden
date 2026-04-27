@@ -10,6 +10,7 @@ import { ABILITY_LABELS, ALL_SKILLS } from "@/views/character/CharacterSheetCons
 import { abilityMod, formatModifier, hasNamedProficiency, hpColor, normalizeSpellTrackingKey, normalizeSpellTrackingName, proficiencyBonus } from "@/views/character/CharacterSheetUtils";
 import { CollapsiblePanel } from "@/views/character/CharacterViewParts";
 import { useDebouncedSingleflight } from "@beholden/shared/ui";
+import type { SharedConditionInstance } from "@beholden/shared/types";
 import { CollectionRow, HeaderActionLink, MiniStat, NoteRow, Panel, SubsectionLabel, Tag } from "@beholden/shared/ui";
 
 interface NamedEntry {
@@ -37,6 +38,43 @@ interface NoteEntry {
   id: string;
   title: string;
   text: string;
+}
+
+interface CharacterClassEntry {
+  subclass?: string;
+}
+
+interface CharacterDataShape {
+  proficiencies?: Proficiencies;
+  selectedFeatures?: Array<{ name?: string; text?: string }>;
+  selectedFeatureNames?: string[];
+  playerNotesList?: Array<{ id?: string; title?: string; text?: string }>;
+  sharedNotes?: string | Array<{ id?: string; title?: string; text?: string }>;
+  chosenCantrips?: string[];
+  chosenSpells?: string[];
+  chosenInvocations?: string[];
+  classes?: CharacterClassEntry[];
+  hd?: number;
+}
+
+function asCharacterData(value: unknown): CharacterDataShape | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as CharacterDataShape;
+}
+
+function toNoteEntries(value: unknown): NoteEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((note) => {
+      if (!note || typeof note !== "object") return null;
+      const candidate = note as { id?: unknown; title?: unknown; text?: unknown };
+      return {
+        id: String(candidate.id ?? ""),
+        title: String(candidate.title ?? ""),
+        text: String(candidate.text ?? ""),
+      };
+    })
+    .filter((note): note is NoteEntry => Boolean(note && note.id.length > 0));
 }
 
 const MINI_STAT_THEME = {
@@ -102,7 +140,7 @@ export function PartyMemberView() {
     enqueueFetchMember(80);
   }, [campaignId, enqueueFetchMember]));
 
-  const cd = (member?.characterData as any) ?? null;
+  const cd = asCharacterData(member?.characterData);
   const prof = (cd?.proficiencies ?? undefined) as Proficiencies | undefined;
 
   const spellNameLookup = React.useMemo(() => {
@@ -123,7 +161,7 @@ export function PartyMemberView() {
   const classFeatures: FeatureEntry[] = React.useMemo(() => {
     const detailed = Array.isArray(cd?.selectedFeatures)
       ? cd.selectedFeatures
-        .map((entry: any) => ({
+        .map((entry) => ({
           name: String(entry?.name ?? "").trim(),
           text: typeof entry?.text === "string" ? entry.text.trim() : "",
         }))
@@ -133,27 +171,14 @@ export function PartyMemberView() {
     return (cd?.selectedFeatureNames ?? []).map((name: string) => ({ name: String(name ?? "").trim() })).filter((entry: FeatureEntry) => entry.name.length > 0);
   }, [cd?.selectedFeatureNames, cd?.selectedFeatures]);
 
-  const playerNotes: NoteEntry[] = Array.isArray(cd?.playerNotesList)
-    ? cd.playerNotesList.map((note: any) => ({
-      id: String(note?.id ?? ""),
-      title: String(note?.title ?? ""),
-      text: String(note?.text ?? ""),
-    })).filter((note: NoteEntry) => note.id.length > 0)
-    : [];
+  const playerNotes: NoteEntry[] = toNoteEntries(cd?.playerNotesList);
 
   const sharedNotes: NoteEntry[] = React.useMemo(() => {
-    if (Array.isArray(cd?.sharedNotes)) {
-      return cd.sharedNotes
-        .map((note: any) => ({ id: String(note?.id ?? ""), title: String(note?.title ?? ""), text: String(note?.text ?? "") }))
-        .filter((note: NoteEntry) => note.id.length > 0);
-    }
+    if (Array.isArray(cd?.sharedNotes)) return toNoteEntries(cd.sharedNotes);
     if (typeof cd?.sharedNotes === "string" && cd.sharedNotes.trim().length > 0) {
       try {
         const parsed = JSON.parse(cd.sharedNotes);
-        if (!Array.isArray(parsed)) return [];
-        return parsed
-          .map((note: any) => ({ id: String(note?.id ?? ""), title: String(note?.title ?? ""), text: String(note?.text ?? "") }))
-          .filter((note: NoteEntry) => note.id.length > 0);
+        return toNoteEntries(parsed);
       } catch {
         return [];
       }
@@ -286,9 +311,9 @@ export function PartyMemberView() {
 
         {m.conditions.length > 0 ? (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 20 }}>
-            {m.conditions.map((condition, index) => (
+            {m.conditions.map((condition: SharedConditionInstance, index) => (
               <span
-                key={`${String((condition as any).key)}:${index}`}
+                key={`${String(condition.key)}:${index}`}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -302,8 +327,8 @@ export function PartyMemberView() {
                   color: "#fca5a5",
                 }}
               >
-                <IconConditionByKey condKey={(condition as any).key} size={10} />
-                {String((condition as any).key)}
+                <IconConditionByKey condKey={condition.key} size={10} />
+                {String(condition.key)}
               </span>
             ))}
           </div>

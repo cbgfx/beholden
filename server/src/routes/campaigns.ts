@@ -12,6 +12,7 @@ import { ENCOUNTER_ACTOR_COLS } from "../lib/db.js";
 import { buildEncounterActorLive, updateEncounterActor } from "../services/combat.js";
 import { ACCEPTED_IMAGE_TYPES, resizeToWebP, deleteImageFiles } from "../lib/imageHelpers.js";
 import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
+import { withAbsoluteImageUrl } from "../lib/routeImageUrl.js";
 import { requireAdmin } from "../middleware/auth.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
 
@@ -23,11 +24,6 @@ const CampaignUpsertBody = z.object({
 export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { now, uid } = ctx.helpers;
-
-  const withAbsoluteImageUrl = <T extends { imageUrl?: string | null }>(req: Parameters<Express["get"]>[1] extends (...args: infer P) => any ? P[0] : never, value: T): T => ({
-    ...value,
-    ...(value.imageUrl !== undefined ? { imageUrl: absolutizePublicUrlForRequest(req, value.imageUrl) } : {}),
-  });
 
   app.get("/api/campaigns", (req, res) => {
     const user = req.user!;

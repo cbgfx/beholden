@@ -9,11 +9,13 @@ import {
   rowToAdventure,
   rowToEncounter,
   rowToNote,
+  rowToTreasure,
   rowToEncounterActor,
   nextSortFor,
   ADVENTURE_COLS,
   ENCOUNTER_COLS,
   NOTE_COLS,
+  TREASURE_COLS,
   ENCOUNTER_ACTOR_COLS,
 } from "../lib/db.js";
 import { ensureCombat, insertCombatant } from "../services/combat.js";
@@ -23,7 +25,7 @@ import {
   OverridesSchema,
 } from "../lib/schemas.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
-import type { StoredNoteState } from "../server/userData.js";
+import type { StoredNoteState, StoredTreasureState } from "../server/userData.js";
 
 const AdventureCreateBody = z.object({
   name: z.string().trim().optional(),
@@ -72,6 +74,20 @@ const NoteImport = z.object({
   sort: z.number().optional(),
 });
 
+const TreasureImport = z.object({
+  source: z.enum(["compendium", "custom"]).default("custom"),
+  itemId: z.string().nullable().default(null),
+  name: z.string().default("New Item"),
+  rarity: z.string().nullable().default(null),
+  type: z.string().nullable().default(null),
+  type_key: z.string().nullable().default(null),
+  attunement: z.boolean().default(false),
+  magic: z.boolean().default(false),
+  text: z.string().default(""),
+  qty: z.number().int().min(1).default(1),
+  sort: z.number().optional(),
+});
+
 const AdventureImportBody = z.object({
   version: z.literal(1),
   adventure: z.object({
@@ -79,6 +95,7 @@ const AdventureImportBody = z.object({
     status: z.string().default("active"),
     notes: z.array(NoteImport).default([]),
     encounters: z.array(EncounterImport).default([]),
+    treasure: z.array(TreasureImport).default([]),
   }),
 });
 
@@ -88,6 +105,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
   const serializeNoteState = (note: StoredNoteState) => JSON.stringify(note);
+  const serializeTreasureState = (treasure: StoredTreasureState) => JSON.stringify(treasure);
   const emitAdventureChange = (args: {
     campaignId: string;
     action: "upsert" | "delete" | "refresh";
@@ -165,6 +183,28 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
       };
     });
 
+    const treasureRows = db
+      .prepare(
+        `SELECT ${TREASURE_COLS} FROM treasure WHERE adventure_id = ? ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC`
+      )
+      .all(adventureId) as Record<string, unknown>[];
+    const treasure = treasureRows.map((entryRow) => {
+      const entry = rowToTreasure(entryRow);
+      return {
+        source: entry.source,
+        itemId: entry.itemId,
+        name: entry.name,
+        rarity: entry.rarity,
+        type: entry.type,
+        type_key: entry.type_key,
+        attunement: entry.attunement,
+        magic: entry.magic,
+        text: entry.text,
+        qty: entry.qty,
+        sort: entry.sort,
+      };
+    });
+
     const encRows = db
       .prepare(
         `SELECT ${ENCOUNTER_COLS} FROM encounters WHERE adventure_id = ? ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC`
@@ -215,7 +255,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
 
     res.json({
       version: 1,
-      adventure: { name: adv.name, status: adv.status, notes, encounters },
+      adventure: { name: adv.name, status: adv.status, notes, encounters, treasure },
     });
   });
 
@@ -302,6 +342,41 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
           };
           insertCombatant(db, combatant);
         }
+      }
+
+      for (const [i, entry] of imp.treasure.entries()) {
+        db.prepare(
+          "INSERT INTO treasure (id, campaign_id, adventure_id, source, item_id, name, rarity, type, type_key, attunement, magic, text, qty, entry_json, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        ).run(
+          uid(),
+          campaignId,
+          advId,
+          entry.source,
+          entry.itemId,
+          entry.name,
+          entry.rarity,
+          entry.type,
+          entry.type_key,
+          entry.attunement ? 1 : 0,
+          entry.magic ? 1 : 0,
+          entry.text,
+          entry.qty,
+          serializeTreasureState({
+            source: entry.source,
+            itemId: entry.itemId,
+            name: entry.name,
+            rarity: entry.rarity,
+            type: entry.type,
+            type_key: entry.type_key,
+            attunement: entry.attunement,
+            magic: entry.magic,
+            text: entry.text,
+            qty: entry.qty,
+          }),
+          entry.sort ?? i + 1,
+          t,
+          t
+        );
       }
     })();
 

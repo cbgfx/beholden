@@ -3,9 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { WsProvider, useWsScope } from "@/services/ws";
 import { LoginView } from "@/views/auth/LoginView";
-import { PlayerHomeView } from "@/views/home/PlayerHomeView";
 import { AppShell } from "./AppShell";
 
+const PlayerHomeView = React.lazy(() => import("@/views/home/PlayerHomeView").then(m => ({ default: m.PlayerHomeView })));
 const CompendiumView = React.lazy(() => import("@/views/CompendiumView/CompendiumView").then(m => ({ default: m.CompendiumView })));
 const CharacterCreatorView = React.lazy(() => import("@/views/character-creator/CharacterCreatorView").then(m => ({ default: m.CharacterCreatorView })));
 const CharacterView = React.lazy(() => import("@/views/character/CharacterView").then(m => ({ default: m.CharacterView })));

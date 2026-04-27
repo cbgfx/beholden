@@ -9,6 +9,7 @@ import { ConditionInstanceSchema, OverridesSchema } from "../lib/schemas.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
 import { ACCEPTED_IMAGE_TYPES, resizeToWebP } from "../lib/imageHelpers.js";
 import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
+import { withAbsoluteImageUrl } from "../lib/routeImageUrl.js";
 import { toCampaignCharacterDto } from "../lib/apiActors.js";
 import {
   campaignLiveDbColumns,
@@ -121,11 +122,6 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
       ...(args.characterId !== undefined ? { characterId: args.characterId } : {}),
     });
   };
-
-  const withAbsoluteImageUrl = <T extends { imageUrl?: string | null }>(req: Parameters<Express["get"]>[1] extends (...args: infer P) => any ? P[0] : never, value: T): T => ({
-    ...value,
-    ...(value.imageUrl !== undefined ? { imageUrl: absolutizePublicUrlForRequest(req, value.imageUrl) } : {}),
-  });
 
   app.get("/api/campaigns/:campaignId/players", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");

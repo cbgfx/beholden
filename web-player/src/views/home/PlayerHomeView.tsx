@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/services/api";
 import { createMyCharacter, fetchMyCharacter, fetchMyCharacters } from "@/services/actorApi";
@@ -154,7 +154,7 @@ export function PlayerHomeView() {
   const [error, setError] = useState<string | null>(null);
   const [lastOpened, setLastOpened] = useState<Record<string, number>>(readLastOpened);
 
-  function reload() {
+  const reload = useCallback(() => {
     return Promise.all([
       api<Campaign[]>("/api/me/campaigns"),
       fetchMyCharacters(),
@@ -162,13 +162,13 @@ export function PlayerHomeView() {
       setCampaigns(camps);
       setCharacters(chars as UserCharacter[]);
     });
-  }
+  }, []);
 
   useEffect(() => {
     reload()
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
       .finally(() => setLoading(false));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [reload]);
 
   function openCharacter(id: string) {
     touchLastOpened(id);

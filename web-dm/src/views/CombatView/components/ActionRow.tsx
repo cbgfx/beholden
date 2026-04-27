@@ -24,7 +24,7 @@ export function ActionRow(props: Props) {
     : String(props.title ?? "").trim();
 
   const subtitle = "row" in props
-    ? normalizeText((props.row as any)?.text ?? (props.row as any)?.entries)
+    ? normalizeText(props.row?.text ?? props.row?.entries)
     : normalizeText(props.subtitle);
 
   if (!title && !subtitle) return null;

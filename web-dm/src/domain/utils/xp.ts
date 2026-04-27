@@ -59,15 +59,18 @@ const crToXp = (cr: unknown): number | null => {
  */
 export function getMonsterXp(detail: MonsterDetail | null | undefined): number | null {
   if (!detail) return null;
-  const anyDetail: any = detail;
-  const direct = toNumberOrNull(anyDetail.xp ?? anyDetail.experience);
+  const detailRecord = detail as Record<string, unknown>;
+  const direct = toNumberOrNull(detail.xp ?? detailRecord.experience);
   if (direct != null) return direct;
 
-  const raw = anyDetail.raw_json ?? anyDetail.rawJson ?? null;
+  const raw = (detail.raw_json ??
+    (detailRecord.rawJson && typeof detailRecord.rawJson === "object" ? detailRecord.rawJson : null)) as
+    | Record<string, unknown>
+    | null;
   const rawXp = toNumberOrNull(raw?.xp ?? raw?.experience);
   if (rawXp != null) return rawXp;
 
   // CR fallback.
-  const cr = anyDetail.cr ?? raw?.cr ?? raw?.challenge_rating;
+  const cr = detail.cr ?? raw?.cr ?? raw?.challenge_rating;
   return crToXp(cr);
 }

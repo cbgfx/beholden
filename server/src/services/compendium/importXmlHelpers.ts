@@ -9,6 +9,36 @@ import { asArray, asText, normalizeKey, parseCrValue } from "../../lib/text.js";
 import { pruneFeatBlob } from "./blobHygiene.js";
 import { normalizeHp } from "./normalizeHp.js";
 
+type XmlObject = Record<string, unknown>;
+type XmlModifierDetail = { category: string; text: string };
+type XmlItemJson = {
+  id: string;
+  name: string;
+  ruleset: string | null;
+  name_key: string;
+  nameKey: string;
+  rarity: string;
+  type: string;
+  type_key: string;
+  typeKey: string;
+  attunement: boolean;
+  magic: boolean;
+  equippable: boolean;
+  weight: number | null;
+  value: number | null;
+  proficiency: string | null;
+  blob: {
+    ac: number | null;
+    stealthDisadvantage: boolean;
+    dmg1: string | null;
+    dmg2: string | null;
+    dmgType: string | null;
+    properties: string[];
+    modifiers: XmlModifierDetail[];
+    text: string[];
+  };
+};
+
 export function createFeatUpserter(
   featStmt: Database.Statement,
 ) {
@@ -54,7 +84,7 @@ export function createFeatUpserter(
   };
 }
 
-export function buildMonsterImportData(monster: any) {
+export function buildMonsterImportData(monster: XmlObject | null | undefined) {
   const name = (asText(monster?.name) || "Unknown").trim();
   const nameKey = normalizeKey(name);
   const typeFull = monster?.type != null ? String(monster.type) : null;
@@ -109,7 +139,7 @@ export function buildMonsterImportData(monster: any) {
     vulnerable: monster?.vulnerable ?? null,
     conditionImmune: monster?.conditionImmune ?? null,
     trait: asArray(monster?.trait),
-    action: asArray(monster?.action).map((action: any) => {
+    action: asArray<XmlObject>(monster?.action as XmlObject | XmlObject[] | null | undefined).map((action) => {
       const actionName = action?.name ?? action?.title ?? null;
       const text = action?.text ?? action?.description ?? "";
       const attack = parseAttackFromText(text);
@@ -122,7 +152,7 @@ export function buildMonsterImportData(monster: any) {
   };
 }
 
-export function buildSpellImportData(spell: any) {
+export function buildSpellImportData(spell: XmlObject | null | undefined) {
   const displayName = (asText(spell?.name) || "Unknown").trim();
   const fullKey = normalizeKey(displayName);
   const normalizedName = displayName.replace(/\s*\[[^\]]+\]\s*$/, "").trim() || displayName;
@@ -163,26 +193,26 @@ export function buildSpellImportData(spell: any) {
   };
 }
 
-export function buildClassImportData(cls: any) {
+export function buildClassImportData(cls: XmlObject | null | undefined) {
   const name = (asText(cls?.name) || "Unknown").trim();
   const nameKey = normalizeKey(name);
   const id = `c_${nameKey.replace(/\s/g, "_")}`;
   const hd = cls?.hd != null ? Number(cls.hd) : null;
 
-  const autolevels = asArray(cls?.autolevel).map((al: any) => {
+  const autolevels = asArray<XmlObject>(cls?.autolevel as XmlObject | XmlObject[] | null | undefined).map((al) => {
     const level = al?.["@_level"] != null ? Number(al["@_level"]) : null;
     const scoreImprovement = al?.["@_scoreImprovement"] === "YES";
-    const features = asArray(al?.feature).map((feature: any) => ({
+    const features = asArray<XmlObject>(al?.feature as XmlObject | XmlObject[] | null | undefined).map((feature) => ({
       name: asText(feature?.name) || "",
       text: asText(feature?.text) || "",
       optional: feature?.["@_optional"] === "YES",
       special: feature?.special ? asText(feature.special) : null,
       modifier: feature?.modifier
-        ? asArray(feature.modifier).map((m: any) => (typeof m === "string" ? m : (m?.["#text"] ?? asText(m) ?? "")))
+        ? asArray<unknown>(feature.modifier as unknown[] | unknown | null | undefined).map((m) => (typeof m === "string" ? m : asText((m as XmlObject)?.["#text"] ?? m)))
         : [],
       preparedSpellProgression: parsePreparedSpellProgression(asText(feature?.text) || ""),
     }));
-    const counters = asArray(al?.counter).map((counter: any) => ({
+    const counters = asArray<XmlObject>(al?.counter as XmlObject | XmlObject[] | null | undefined).map((counter) => ({
       name: asText(counter?.name) || "",
       value: counter?.value != null ? Number(counter.value) : 0,
       reset: asText(counter?.reset) || "L",
@@ -206,24 +236,24 @@ export function buildClassImportData(cls: any) {
     weapons: asText(cls?.weapons) || "",
     tools: asText(cls?.tools) || "",
     slotsReset: asText(cls?.slotsReset) || "L",
-    description: asText(asArray(cls?.trait)?.[0]?.text) || "",
+    description: asText((asArray<XmlObject>(cls?.trait as XmlObject | XmlObject[] | null | undefined)[0] ?? {})?.text) || "",
     autolevels,
   };
 }
 
-export function buildRaceImportData(race: any) {
+export function buildRaceImportData(race: XmlObject | null | undefined) {
   const name = (asText(race?.name) || "Unknown").trim();
   const nameKey = normalizeKey(name);
   const id = `r_${nameKey.replace(/\s/g, "_")}`;
   const speed = race?.speed != null ? Number(race.speed) : null;
   const size = asText(race?.size) || null;
 
-  const traits = asArray(race?.trait).map((trait: any) => ({
+  const traits = asArray<XmlObject>(race?.trait as XmlObject | XmlObject[] | null | undefined).map((trait) => ({
     name: asText(trait?.name) || "",
     text: asText(trait?.text) || "",
     category: trait?.["@_category"] ? asText(trait["@_category"]) : null,
     modifier: trait?.modifier
-      ? asArray(trait.modifier).map((m: any) => (typeof m === "string" ? m : (m?.["#text"] ?? asText(m) ?? "")))
+      ? asArray<unknown>(trait.modifier as unknown[] | unknown | null | undefined).map((m) => (typeof m === "string" ? m : asText((m as XmlObject)?.["#text"] ?? m)))
       : [],
     preparedSpellProgression: parsePreparedSpellProgression(asText(trait?.text) || ""),
   }));
@@ -258,12 +288,12 @@ export function buildRaceImportData(race: any) {
   };
 }
 
-export function buildBackgroundImportData(background: any) {
+export function buildBackgroundImportData(background: XmlObject | null | undefined) {
   const name = (asText(background?.name) || "Unknown").trim();
   const nameKey = normalizeKey(name);
   const id = `bg_${nameKey.replace(/\s/g, "_")}`;
 
-  const traits = asArray(background?.trait).map((trait: any) => ({
+  const traits = asArray<XmlObject>(background?.trait as XmlObject | XmlObject[] | null | undefined).map((trait) => ({
     name: asText(trait?.name) || "",
     text: asText(trait?.text) || "",
     preparedSpellProgression: parsePreparedSpellProgression(asText(trait?.text) || ""),
@@ -285,9 +315,9 @@ export function buildBackgroundImportData(background: any) {
     if (typeof eq === "string") {
       equipment = eq.trim();
     } else {
-      const items = asArray(eq?.item)
-        .map((it: any) => {
-          const count = it?.["@_count"];
+      const items = asArray<unknown>(((eq as XmlObject)?.item as unknown[] | unknown | null | undefined))
+        .map((it) => {
+          const count = (it as XmlObject)?.["@_count"];
           const itemName = asText(it) || "";
           return count ? `${count}× ${itemName}` : itemName;
         })
@@ -320,7 +350,7 @@ export function buildBackgroundImportData(background: any) {
   };
 }
 
-export function xmlItemToJson(it: any): any | null {
+export function xmlItemToJson(it: XmlObject | null | undefined): XmlItemJson | null {
   const name = String(it?.name ?? "Unknown").trim();
   if (!name) return null;
   const nameKey = normalizeKey(name);
@@ -328,8 +358,8 @@ export function xmlItemToJson(it: any): any | null {
 
   const typeCode = it?.type ?? null;
   const { type, typeKey } = mapItemType(typeCode);
-  const text = asArray(it?.text)
-    .map((t: any) => (t == null ? "" : String(t)).trim())
+  const text = asArray<unknown>(it?.text as unknown[] | unknown | null | undefined)
+    .map((t) => (t == null ? "" : String(t)).trim())
     .filter((t: string) => t.length > 0);
 
   const { rarity, attunement, inferredMagic } = parseItemDetail(it?.detail, name, text);
@@ -345,13 +375,13 @@ export function xmlItemToJson(it: any): any | null {
   const stealthDisadvantage = String(it?.stealth ?? "").trim().toUpperCase() === "YES";
   const propertyRaw = it?.property != null ? String(it.property).trim() : "";
   const properties = propertyRaw ? propertyRaw.split(",").map((p: string) => p.trim()).filter(Boolean) : [];
-  const modifiers = asArray(it?.modifier)
-    .map((m: any) =>
+  const modifiers = asArray<unknown>(it?.modifier as unknown[] | unknown | null | undefined)
+    .map<XmlModifierDetail>((m) =>
       typeof m === "string"
         ? { category: "", text: m }
-        : { category: m?.["@_category"] ?? "", text: m?.["#text"] ?? asText(m) ?? "" },
+        : { category: String((m as XmlObject)?.["@_category"] ?? ""), text: asText((m as XmlObject)?.["#text"] ?? m) },
     )
-    .filter((m: any) => m.text.length > 0);
+    .filter((m) => m.text.length > 0);
 
   const fullText = text.join("\n");
   const equippable = inferItemEquippable(type, fullText);

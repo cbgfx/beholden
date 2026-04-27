@@ -29,7 +29,7 @@ function ResistanceDots({
         return (
           <button
             key={i}
-            title={spent ? "Spent — click to restore one" : "Click to spend one legendary resistance"}
+            title={spent ? "Spent - click to restore one" : "Click to spend one legendary resistance"}
             onClick={() => onChange(spent ? used - 1 : used + 1)}
             style={{
               all: "unset",
@@ -54,7 +54,7 @@ export function MonsterTraits(props: {
   usedLegendaryResistances?: number;
   onChangeLegendaryResistancesUsed?: (n: number) => void;
 }) {
-  const allTraits: any[] = props.monster.trait ?? [];
+  const allTraits = Array.isArray(props.monster.trait) ? props.monster.trait : [];
   const legendaryResistanceTrait = allTraits.find((t) => /legendary resistance/i.test(String(t?.name ?? "")));
   const otherTraits = allTraits.filter((t) => !/legendary resistance/i.test(String(t?.name ?? "")));
 

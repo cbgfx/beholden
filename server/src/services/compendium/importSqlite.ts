@@ -52,7 +52,7 @@ export function importCompendiumSqlite(args: {
         const stmt = db.prepare(
           "INSERT OR REPLACE INTO compendium_monsters (id, name, name_key, cr, cr_numeric, type_key, type_full, size, environment, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
-        for (const r of src.prepare("SELECT id, name, name_key, cr, cr_numeric, type_key, type_full, size, environment, data_json FROM compendium_monsters").all() as any[]) {
+        for (const r of src.prepare("SELECT id, name, name_key, cr, cr_numeric, type_key, type_full, size, environment, data_json FROM compendium_monsters").all() as Array<Record<string, unknown>>) {
           stmt.run(r.id, r.name, r.name_key, r.cr, r.cr_numeric, r.type_key, r.type_full, r.size, r.environment, r.data_json);
           monsters++;
         }
@@ -62,7 +62,7 @@ export function importCompendiumSqlite(args: {
         const stmt = db.prepare(
           "INSERT OR REPLACE INTO compendium_spells (id, name, name_key, level, school, ritual, concentration, components, classes, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
-        for (const r of src.prepare("SELECT id, name, name_key, level, school, ritual, concentration, components, classes, data_json FROM compendium_spells").all() as any[]) {
+        for (const r of src.prepare("SELECT id, name, name_key, level, school, ritual, concentration, components, classes, data_json FROM compendium_spells").all() as Array<Record<string, unknown>>) {
           stmt.run(r.id, r.name, r.name_key, r.level, r.school, r.ritual, r.concentration, r.components, r.classes, r.data_json);
           spells++;
         }
@@ -91,7 +91,7 @@ export function importCompendiumSqlite(args: {
           ...(hasProficiency ? ["proficiency"] : []),
           "data_json",
         ].join(", ");
-        for (const r of src.prepare(`SELECT ${selectCols} FROM compendium_items`).all() as any[]) {
+        for (const r of src.prepare(`SELECT ${selectCols} FROM compendium_items`).all() as Array<Record<string, unknown>>) {
           stmt.run(r.id, r.name, r.name_key, r.rarity, r.type, r.type_key, r.attunement, r.magic, r.equippable ?? 0, r.weight ?? null, r.value ?? null, r.proficiency ?? null, r.data_json);
           items++;
         }
@@ -101,7 +101,7 @@ export function importCompendiumSqlite(args: {
         const stmt = db.prepare(
           "INSERT OR REPLACE INTO compendium_classes (id, name, name_key, hd, data_json) VALUES (?, ?, ?, ?, ?)"
         );
-        for (const r of src.prepare("SELECT id, name, name_key, hd, data_json FROM compendium_classes").all() as any[]) {
+        for (const r of src.prepare("SELECT id, name, name_key, hd, data_json FROM compendium_classes").all() as Array<Record<string, unknown>>) {
           stmt.run(r.id, r.name, r.name_key, r.hd, r.data_json);
           classes++;
         }
@@ -111,7 +111,7 @@ export function importCompendiumSqlite(args: {
         const stmt = db.prepare(
           "INSERT OR REPLACE INTO compendium_races (id, name, name_key, size, speed, data_json) VALUES (?, ?, ?, ?, ?, ?)"
         );
-        for (const r of src.prepare("SELECT id, name, name_key, size, speed, data_json FROM compendium_races").all() as any[]) {
+        for (const r of src.prepare("SELECT id, name, name_key, size, speed, data_json FROM compendium_races").all() as Array<Record<string, unknown>>) {
           stmt.run(r.id, r.name, r.name_key, r.size, r.speed, r.data_json);
           races++;
         }
@@ -121,7 +121,7 @@ export function importCompendiumSqlite(args: {
         const stmt = db.prepare(
           "INSERT OR REPLACE INTO compendium_backgrounds (id, name, name_key, data_json) VALUES (?, ?, ?, ?)"
         );
-        for (const r of src.prepare("SELECT id, name, name_key, data_json FROM compendium_backgrounds").all() as any[]) {
+        for (const r of src.prepare("SELECT id, name, name_key, data_json FROM compendium_backgrounds").all() as Array<Record<string, unknown>>) {
           stmt.run(r.id, r.name, r.name_key, r.data_json);
           backgrounds++;
         }
@@ -131,7 +131,7 @@ export function importCompendiumSqlite(args: {
         const stmt = db.prepare(
           "INSERT OR REPLACE INTO compendium_feats (id, name, name_key, data_json) VALUES (?, ?, ?, ?)"
         );
-        for (const r of src.prepare("SELECT id, name, name_key, data_json FROM compendium_feats").all() as any[]) {
+        for (const r of src.prepare("SELECT id, name, name_key, data_json FROM compendium_feats").all() as Array<Record<string, unknown>>) {
           stmt.run(r.id, r.name, r.name_key, r.data_json);
           feats++;
         }
@@ -141,7 +141,7 @@ export function importCompendiumSqlite(args: {
         const stmt = db.prepare(
           "INSERT OR REPLACE INTO compendium_deck_cards (id, deck_name, deck_key, card_name, card_key, card_text, sort_index) VALUES (?, ?, ?, ?, ?, ?, ?)"
         );
-        for (const r of src.prepare("SELECT id, deck_name, deck_key, card_name, card_key, card_text, sort_index FROM compendium_deck_cards").all() as any[]) {
+        for (const r of src.prepare("SELECT id, deck_name, deck_key, card_name, card_key, card_text, sort_index FROM compendium_deck_cards").all() as Array<Record<string, unknown>>) {
           stmt.run(r.id, r.deck_name, r.deck_key, r.card_name, r.card_key, r.card_text, r.sort_index);
           decks++;
         }
@@ -151,7 +151,7 @@ export function importCompendiumSqlite(args: {
         const stmt = db.prepare(
           "INSERT OR REPLACE INTO compendium_bastion_spaces (id, name, name_key, squares, label, sort_index) VALUES (?, ?, ?, ?, ?, ?)"
         );
-        for (const r of src.prepare("SELECT id, name, name_key, squares, label, sort_index FROM compendium_bastion_spaces").all() as any[]) {
+        for (const r of src.prepare("SELECT id, name, name_key, squares, label, sort_index FROM compendium_bastion_spaces").all() as Array<Record<string, unknown>>) {
           stmt.run(r.id, r.name, r.name_key, r.squares, r.label, r.sort_index);
         }
       }
@@ -160,7 +160,7 @@ export function importCompendiumSqlite(args: {
         const stmt = db.prepare(
           "INSERT OR REPLACE INTO compendium_bastion_orders (id, order_name, order_key, sort_index) VALUES (?, ?, ?, ?)"
         );
-        for (const r of src.prepare("SELECT id, order_name, order_key, sort_index FROM compendium_bastion_orders").all() as any[]) {
+        for (const r of src.prepare("SELECT id, order_name, order_key, sort_index FROM compendium_bastion_orders").all() as Array<Record<string, unknown>>) {
           stmt.run(r.id, r.order_name, r.order_key, r.sort_index);
         }
       }
@@ -169,7 +169,7 @@ export function importCompendiumSqlite(args: {
         const stmt = db.prepare(
           "INSERT OR REPLACE INTO compendium_bastion_facilities (id, name, name_key, facility_type, minimum_level, prerequisite, orders_json, space, hirelings, allow_multiple, description, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
-        for (const r of src.prepare("SELECT id, name, name_key, facility_type, minimum_level, prerequisite, orders_json, space, hirelings, allow_multiple, description, data_json FROM compendium_bastion_facilities").all() as any[]) {
+        for (const r of src.prepare("SELECT id, name, name_key, facility_type, minimum_level, prerequisite, orders_json, space, hirelings, allow_multiple, description, data_json FROM compendium_bastion_facilities").all() as Array<Record<string, unknown>>) {
           stmt.run(
             r.id,
             r.name,

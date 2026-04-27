@@ -191,13 +191,13 @@ export function importCompendiumXml(args: {
     }
 
     for (const feat of feats) {
-      const modifierDetails = asArray(feat?.modifier)
-        .map((m: any) =>
+      const modifierDetails = asArray<unknown>(feat?.modifier as unknown[] | unknown | null | undefined)
+        .map<{ category: string; text: string }>((m) =>
           typeof m === "string"
             ? { category: "", text: m }
-            : { category: m?.["@_category"] ?? "", text: m?.["#text"] ?? asText(m) ?? "" },
+            : { category: String((m as Record<string, unknown>)?.["@_category"] ?? ""), text: asText((m as Record<string, unknown>)?.["#text"] ?? m) },
         )
-        .filter((m: { text: string }) => m.text.length > 0);
+        .filter((m) => m.text.length > 0);
       const prerequisite = asText(feat?.prerequisite) || null;
       const proficiency = asText(feat?.proficiency) || null;
       const special = asText(feat?.special) || null;
@@ -268,7 +268,8 @@ export function importCompendiumXml(args: {
         const minimumLevelText = asText(facility?.minimumLevel).trim();
         const minimumLevel = minimumLevelText ? Number.parseInt(minimumLevelText, 10) : 0;
         const prerequisite = asText(facility?.prerequisite).trim() || null;
-        const orders = asArray((facility as any)?.orders?.order)
+        const ordersNode = ((facility as Record<string, unknown>)?.orders as Record<string, unknown> | null | undefined)?.order;
+        const orders = asArray<unknown>(ordersNode as unknown[] | unknown | null | undefined)
           .map((entry) => asText(entry).trim())
           .filter((entry) => entry.length > 0);
         const space = asText(facility?.space).trim() || null;

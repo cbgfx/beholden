@@ -56,8 +56,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
   };
 
   function serializeTreasureState(entry: StoredTreasureState) {
-    void entry;
-    return "{}";
+    return JSON.stringify(entry);
   }
 
   function hydrateTreasureEntry(entry: ReturnType<typeof rowToTreasure>) {

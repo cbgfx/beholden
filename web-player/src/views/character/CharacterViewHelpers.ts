@@ -1,6 +1,6 @@
 ﻿/**
  * Module-level helpers, types, and constants extracted from CharacterView.tsx.
- * These are all pure functions or data â€” no React/hooks.
+ * These are all pure functions or data - no React/hooks.
  */
 import type { AbilKey, CharacterCampaign, CharacterClassEntry, CharacterData, ConditionInstance, ProficiencyMap, ResourceCounter } from "@/views/character/CharacterSheetTypes";
 import {
@@ -577,5 +577,6 @@ export function shouldResetOnRest(resetCode: string | undefined, restType: "shor
 export function getPolymorphConditionData(conditions: ConditionInstance[] | undefined): PolymorphConditionData | null {
   return getPolymorphCondition(conditions) as PolymorphConditionData | null;
 }
+
 
 

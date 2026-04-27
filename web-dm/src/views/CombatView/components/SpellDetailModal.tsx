@@ -2,20 +2,21 @@ import React from "react";
 import { theme } from "@/theme/theme";
 import { Modal } from "@/components/overlay/Modal";
 import { Button } from "@/ui/Button";
+import type { SpellDetail } from "@/views/CombatView/types";
 
 export function SpellDetailModal(props: {
   isOpen: boolean;
   title: React.ReactNode;
   isLoading?: boolean;
   error?: string | null;
-  spellDetail?: any | null;
+  spellDetail?: SpellDetail | null;
   onClose: () => void;
 }) {
   return (
     <Modal isOpen={props.isOpen} title={props.title} onClose={props.onClose} width={920} height={640}>
       <div style={{ padding: 14, height: "100%", overflow: "auto" }}>
         {props.isLoading ? (
-          <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-medium)" }}>Loading spell…</div>
+          <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-medium)" }}>Loading spell...</div>
         ) : null}
 
         {props.error ? (
@@ -38,7 +39,7 @@ export function SpellDetailModal(props: {
               </Button>
             </div>
             <div style={{ marginTop: 6, color: theme.colors.muted, fontSize: "var(--fs-medium)" }}>
-              Level {props.spellDetail.level} • {props.spellDetail.school} • {props.spellDetail.time}
+              Level {props.spellDetail.level} | {props.spellDetail.school} | {props.spellDetail.time}
             </div>
             <div style={{ marginTop: 8, color: theme.colors.text, fontSize: "var(--fs-medium)", lineHeight: 1.35, whiteSpace: "pre-wrap" }}>
               {Array.isArray(props.spellDetail.text)

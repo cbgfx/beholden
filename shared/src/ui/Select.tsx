@@ -18,13 +18,14 @@ function toOptionList(children: React.ReactNode): OptionLike[] {
   const out: OptionLike[] = [];
   React.Children.forEach(children, (child) => {
     if (!React.isValidElement(child)) return;
-    if ((child.type as any) === "option") {
-      const value = String((child.props as any).value ?? "");
-      const raw = (child.props as any).children;
+    if (child.type === "option") {
+      const optionProps = child.props as { value?: unknown; children?: React.ReactNode; disabled?: unknown };
+      const value = String(optionProps.value ?? "");
+      const raw = optionProps.children;
       const label = Array.isArray(raw)
         ? raw.map((c: unknown) => String(c ?? "")).join("")
         : String(raw ?? "");
-      const disabled = Boolean((child.props as any).disabled ?? false);
+      const disabled = Boolean(optionProps.disabled ?? false);
       out.push({ value, label, disabled });
     }
   });
@@ -108,8 +109,8 @@ export function Select(
     }
   }, [isControlled, onChange]);
 
-  const width = (style as any)?.width;
-  const minWidth = (style as any)?.minWidth;
+  const width = style?.width;
+  const minWidth = style?.minWidth;
 
   const triggerStyle: React.CSSProperties = {
     width,

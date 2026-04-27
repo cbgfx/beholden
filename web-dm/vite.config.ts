@@ -21,7 +21,19 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          return id.includes("react-router-dom") ? "vendor-router" : undefined;
+          const normalizedId = id.replaceAll("\\", "/");
+          if (normalizedId.includes("/node_modules/react-router-dom/")) return "vendor-router";
+          if (normalizedId.includes("/node_modules/react/") || normalizedId.includes("/node_modules/react-dom/")) {
+            return "vendor-react";
+          }
+          if (normalizedId.includes("/shared/src/domain/") || normalizedId.includes("/shared/src/api/")) {
+            return "shared-domain";
+          }
+          if (normalizedId.includes("/src/store/")) return "dm-store";
+          if (normalizedId.includes("/src/drawers/")) return "dm-drawers";
+          if (normalizedId.includes("/src/domain/")) return "dm-domain";
+          if (normalizedId.includes("/src/services/")) return "dm-services";
+          return undefined;
         },
       },
     },

@@ -24,7 +24,14 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           const normalizedId = id.replaceAll("\\", "/");
-          if (normalizedId.includes("react-router-dom")) return "vendor-router";
+          if (normalizedId.includes("/node_modules/react-router-dom/")) return "vendor-router";
+          if (normalizedId.includes("/node_modules/react/") || normalizedId.includes("/node_modules/react-dom/")) {
+            return "vendor-react";
+          }
+          if (normalizedId.includes("/shared/src/domain/") || normalizedId.includes("/shared/src/api/")) {
+            return "shared-domain";
+          }
+          if (normalizedId.includes("/src/domain/character/")) return "player-character-domain";
 
           // Keep heavy character rules in a dedicated async chunk that can be cached across
           // CharacterView, CharacterCreatorView, and LevelUpView.

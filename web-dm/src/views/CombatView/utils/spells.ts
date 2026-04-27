@@ -1,5 +1,7 @@
 import type { MonsterDetail, SpellSummary } from "@/views/CombatView/types";
 
+type NamedSpellEntry = { name?: unknown };
+
 export function parseMonsterSpells(detail: MonsterDetail | null): string[] {
   if (!detail) return [];
 
@@ -7,11 +9,11 @@ export function parseMonsterSpells(detail: MonsterDetail | null): string[] {
   // - an array of spell names
   // - a CSV/semicolon-separated string
   // And we may receive them either on the top-level monster record or inside `raw_json`.
-  const raw = (detail as any)?.raw_json ?? {};
-  const v = (raw as any)?.spells ?? (detail as any)?.spells;
+  const raw = detail.raw_json ?? {};
+  const v = raw["spells"] ?? detail.spells;
 
   const out: string[] = [];
-  const push = (name: any) => {
+  const push = (name: unknown) => {
     const s = String(name ?? "").trim();
     if (!s) return;
     // Some sources may pack multiple spells into one string.
@@ -24,7 +26,7 @@ export function parseMonsterSpells(detail: MonsterDetail | null): string[] {
   if (Array.isArray(v)) {
     for (const item of v) {
       // Sometimes the array contains objects; prefer a `name` field.
-      if (item && typeof item === "object" && "name" in (item as any)) push((item as any).name);
+      if (item && typeof item === "object" && "name" in item) push((item as NamedSpellEntry).name);
       else push(item);
     }
   } else if (typeof v === "string") {

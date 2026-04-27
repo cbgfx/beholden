@@ -143,7 +143,6 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
   const knownSpellKeys = React.useMemo(() => new Set(entries.map((entry) => entry.key)), [entries]);
   const grantedSpellKeys = React.useMemo(() => new Set(specialGrantedEntries.map((entry) => entry.key)), [specialGrantedEntries]);
 
-  const entryKeysStr = [...entries.map((e) => e.key), ...specialGrantedEntries.map((e) => e.key)].join(",");
   React.useEffect(() => {
     const allEntries = [...entries, ...specialGrantedEntries];
     const missingEntries = allEntries.filter((entry) => !details[entry.key]);
@@ -203,8 +202,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
     return () => {
       alive = false;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entryKeysStr]);
+  }, [details, entries, specialGrantedEntries]);
 
   const intMod = Math.floor(((scores.int ?? 10) - 10) / 2);
   const wisMod = Math.floor(((scores.wis ?? 10) - 10) / 2);

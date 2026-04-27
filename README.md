@@ -13,8 +13,8 @@
 
 Beholden is a fast, self-hosted campaign tracker for tabletop RPGs. It has two distinct interfaces that share a single backend:
 
-- **DM App** (`web-dm`) — for Dungeon Masters to manage campaigns, encounters, combat, NPCs, treasure, notes, and the compendium
-- **Player App** (`web-player`) — for players to manage their characters, view shared campaign info, and follow along in real time
+- **DM App** (`web-dm`) - for Dungeon Masters to manage campaigns, encounters, combat, NPCs, treasure, notes, and the compendium
+- **Player App** (`web-player`) - for players to manage their characters, view shared campaign info, and follow along in real time
 
 Everything runs on a single Node.js server with a local SQLite database. No cloud account required.
 
@@ -49,12 +49,12 @@ Everything runs on a single Node.js server with a local SQLite database. No clou
 
 ```
 beholden/
-├── server/        → Express API, SQLite, WebSocket
-├── web-dm/        → DM React app (Vite)
-├── web-player/    → Player React app (Vite)
-├── shared/        → Shared styles
-├── .env           → Local configuration
-└── start.bat      → Windows quick-start script
+|- server/        -> Express API, SQLite, WebSocket
+|- web-dm/        -> DM React app (Vite)
+|- web-player/    -> Player React app (Vite)
+|- shared/        -> Shared styles
+|- .env           -> Local configuration
+`- start.bat      -> Windows quick-start script
 ```
 
 ---
@@ -115,7 +115,7 @@ Username: admin
 Password: admin
 ```
 
-Change the password immediately via Admin → Users, or set `BEHOLDEN_ADMIN_USER` / `BEHOLDEN_ADMIN_PASS` in `.env` before the first run.
+Change the password immediately via Admin -> Users, or set `BEHOLDEN_ADMIN_USER` / `BEHOLDEN_ADMIN_PASS` in `.env` before the first run.
 
 ---
 
@@ -131,12 +131,12 @@ Change the password immediately via Admin → Users, or set `BEHOLDEN_ADMIN_USER
 | `BEHOLDEN_DB_PATH` | `<data_dir>/beholden.db` | Override the database file path |
 | `BEHOLDEN_ADMIN_USER` | `admin` | Initial admin username (used only on first run) |
 | `BEHOLDEN_ADMIN_PASS` | `admin` | Initial admin password (used only on first run) |
-| `BEHOLDEN_JWT_SECRET` | dev secret | Secret for signing JWTs — **change this in production** |
+| `BEHOLDEN_JWT_SECRET` | dev secret | Secret for signing JWTs - **change this in production** |
 | `BEHOLDEN_SUPPORT` | `false` | Show a support link in the UI |
 | `BEHOLDEN_RATE_LIMIT_WINDOW_MS` | `900000` | Rate limit window in ms |
 | `BEHOLDEN_RATE_LIMIT_MAX` | `5000` | Max requests per window |
 | `BEHOLDEN_LOG_EGRESS` | `-` | Set to `true` to log per-request egress bytes + duration |
-| `BEHOLDEN_DEBUG` | — | Set to `true` for verbose server logs |
+| `BEHOLDEN_DEBUG` | - | Set to `true` for verbose server logs |
 
 ---
 
@@ -160,10 +160,10 @@ Set `VITE_API_ORIGIN` on both web services to point at your server's public URL 
 
 Beholden supports importing monster, item, spell, class, race, background, and feat data from:
 
-- **XML** — compatible with common 5e compendium XML formats
-- **SQLite** — direct import from another Beholden database
+- **XML** - compatible with common 5e compendium XML formats
+- **SQLite** - direct import from another Beholden database
 
-Import via **Compendium → Admin** in the DM app. The compendium is shared across all campaigns.
+Import via **Compendium -> Admin** in the DM app. The compendium is shared across all campaigns.
 
 ---
 
@@ -178,4 +178,4 @@ Import via **Compendium → Admin** in the DM app. The compendium is shared acro
 
 ## License
 
-MIT — free to use, modify, and self-host.
+MIT - free to use, modify, and self-host.

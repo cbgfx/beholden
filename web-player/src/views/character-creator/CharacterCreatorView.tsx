@@ -50,13 +50,11 @@ import {
   parseStartingEquipmentOptions,
 } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import {
-  buildGrowthItemLookupBody,
   buildItemLookupBodyFromNames,
   fetchCompendiumItemsByLookup,
   isItemLookupBodyEmpty,
 } from "@/views/character-creator/utils/ItemLookupUtils";
 import {
-  buildGrowthChoiceItemOptions,
   getGrowthChoiceDefinitions,
   getGrowthChoiceSelectedAbility,
   sanitizeGrowthChoiceSelections,
@@ -68,10 +66,8 @@ import { buildSpellStepChoiceState, buildStep6SpellListChoices, buildStep6Resolv
 import {
   buildSpellListChoiceEntry,
   buildResolvedSpellChoiceEntry,
-  loadSpellChoiceOptions,
   resolveSelectedSpellOptionEntries,
   sanitizeSpellChoiceSelections,
-  type SharedSpellSummary,
 } from "@/views/character-creator/utils/SpellChoiceUtils";
 import type {
   ParsedFeatChoiceLike as ParsedFeatChoice,
@@ -87,7 +83,6 @@ import type {
   ClassSummary,
   CreatorResolvedSpellChoiceEntry,
   CreatorSpellListChoiceEntry,
-  ItemSummary,
   LevelUpFeatDetail,
   LevelUpFeatSelection,
   ProficiencyChoice,
@@ -143,6 +138,8 @@ import { renderCharacterCreatorStep, type CharacterCreatorStepRenderContext } fr
 import { renderIdentityStep } from "@/views/character-creator/steps/CharacterCreatorPanelCoreSteps";
 import { useCreatorCompendiumCatalogs } from "@/views/character-creator/useCreatorCompendiumCatalogs";
 import { useCreatorEditHydration } from "@/views/character-creator/useCreatorEditHydration";
+import { useCreatorChoiceData } from "@/views/character-creator/useCreatorChoiceData";
+import { buildCreatorSubmissionBody } from "@/views/character-creator/creatorSubmission";
 
 
 // ---------------------------------------------------------------------------
@@ -177,8 +174,6 @@ export function CharacterCreatorView() {
   const [classCantrips, setClassCantrips] = React.useState<SpellSummary[]>([]);
   const [classSpells, setClassSpells] = React.useState<SpellSummary[]>([]);
   const [classInvocations, setClassInvocations] = React.useState<SpellSummary[]>([]);
-  const [featSpellChoiceOptions, setFeatSpellChoiceOptions] = React.useState<Record<string, SharedSpellSummary[]>>({});
-  const [growthOptionEntriesByKey, setGrowthOptionEntriesByKey] = React.useState<Record<string, Array<{ id: string; name: string; rarity?: string | null; type?: string | null; magic?: boolean; attunement?: boolean }>>>({});
 
   // Track initially-assigned campaigns so we can diff on save in edit mode
   const initialCampaignIdsRef = React.useRef<string[]>([]);
@@ -200,7 +195,6 @@ export function CharacterCreatorView() {
   const bgs = catalogs.bgs;
   const featSummaries = catalogs.featSummaries;
   const campaigns = catalogs.campaigns;
-  const [items, setItems] = React.useState<ItemSummary[]>([]);
   const resolvedRaceFeatDetail = form.chosenRaceFeatId
     ? (raceFeatDetail?.id === form.chosenRaceFeatId ? raceFeatDetail : featDetailCache[form.chosenRaceFeatId] ?? null)
     : null;
@@ -294,7 +288,23 @@ export function CharacterCreatorView() {
     classExpertiseChoices: step5ClassExpertiseChoices,
     weaponMasteryChoice: step5WeaponMasteryChoice,
     weaponOptions: step5WeaponOptions,
-  }), [form, bgDetail, raceDetail, resolvedBgOriginFeatDetail, classFeatDetails, resolvedRaceFeatDetail, levelUpFeatDetails, classDetail, featSummaries, items]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [
+    classFeatDetails,
+    form,
+    bgDetail,
+    levelUpFeatDetails,
+    raceDetail?.name,
+    resolvedBgOriginFeatDetail,
+    resolvedRaceFeatDetail,
+    step5BgSkillFixed,
+    step5BgToolFixed,
+    step5ClassExpertiseChoices,
+    step5ClassFeatChoices,
+    step5ClassLanguageChoice,
+    step5CoreLanguageChoice,
+    step5WeaponMasteryChoice,
+    step5WeaponOptions,
+  ]);
   const step6FeatSpellListChoices = React.useMemo<CreatorSpellListChoiceEntry[]>(
     () => step5ChoiceState.allFeatChoices
       .filter(({ choice }) => choice.type === "spell_list")
@@ -415,6 +425,10 @@ export function CharacterCreatorView() {
     }),
     [classDetail, form.classId, form.level, form.subclass, selectedClassSummary?.name]
   );
+  const { featSpellChoiceOptions, growthOptionEntriesByKey, items } = useCreatorChoiceData({
+    step6ResolvedSpellChoices,
+    growthChoiceDefinitions,
+  });
   const preparedSpellProgressionChoiceDefinitions = React.useMemo(
     () => buildPreparedSpellProgressionChoiceDefinitions(buildAppliedCharacterFeatures({
       charData: {
@@ -502,7 +516,7 @@ export function CharacterCreatorView() {
     } else {
       setClassInvocations([]);
     }
-  }, [classDetail, form.level, form.subclass]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [classDetail, form.level, form.subclass]);
 
   const eligibleInvocationIds = React.useMemo(() => {
     const chosenCantripNames = classCantrips
@@ -537,7 +551,7 @@ export function CharacterCreatorView() {
       if (next.length === f.chosenInvocations.length) return f;
       return { ...f, chosenInvocations: next };
     });
-  }, [classInvocations, eligibleInvocationIds]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [classInvocations, eligibleInvocationIds]);
 
   // Load race detail when selected — also reset race choices
   React.useEffect(() => {
@@ -555,7 +569,7 @@ export function CharacterCreatorView() {
     }
     setRaceFeatDetail(null);
     api<RaceDetail>(`/api/compendium/races/${form.raceId}`).then(setRaceDetail).catch(() => {});
-  }, [form.raceId, isEditing]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [form.raceId, isEditing]);
 
   React.useEffect(() => {
     const raceFeatId = typeof form.chosenRaceFeatId === "string" ? form.chosenRaceFeatId.trim() : "";
@@ -664,76 +678,6 @@ export function CharacterCreatorView() {
       };
     });
   }, [levelUpFeatLevels]);
-
-  React.useEffect(() => {
-    if (step6ResolvedSpellChoices.length === 0) {
-      setFeatSpellChoiceOptions({});
-      return;
-    }
-    let cancelled = false;
-    loadSpellChoiceOptions(step6ResolvedSpellChoices, (query) => api<SpellSummary[]>(query))
-      .then((optionsByKey) => {
-        if (!cancelled) setFeatSpellChoiceOptions(optionsByKey);
-      })
-      .catch(() => {
-        if (!cancelled) setFeatSpellChoiceOptions({});
-      });
-    return () => { cancelled = true; };
-  }, [step6ResolvedSpellChoices]);
-
-  React.useEffect(() => {
-    if (growthChoiceDefinitions.length === 0) {
-      setItems((prev) => (prev.length === 0 ? prev : []));
-      return;
-    }
-    let cancelled = false;
-    const lookupBody = buildGrowthItemLookupBody(growthChoiceDefinitions);
-    if (isItemLookupBodyEmpty(lookupBody)) {
-      setItems((prev) => (prev.length === 0 ? prev : []));
-      return;
-    }
-    fetchCompendiumItemsByLookup(lookupBody)
-      .then((rows) => {
-        if (cancelled) return;
-        setItems(rows);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setItems([]);
-      });
-    return () => { cancelled = true; };
-  }, [growthChoiceDefinitions]);
-
-  React.useEffect(() => {
-    const spellBackedDefinitions = growthChoiceDefinitions.filter((definition) => definition.spellChoice);
-    const includeSpecialSpellRows = growthChoiceDefinitions.some((definition) => definition.category === "maneuver");
-    if (growthChoiceDefinitions.length === 0) {
-      setGrowthOptionEntriesByKey({});
-      return;
-    }
-    let cancelled = false;
-    const itemBacked = Object.fromEntries(
-      growthChoiceDefinitions
-        .filter((definition) => definition.category === "plan")
-        .map((definition) => [definition.key, buildGrowthChoiceItemOptions(definition, items)])
-    );
-    if (spellBackedDefinitions.length === 0) {
-      setGrowthOptionEntriesByKey(itemBacked);
-      return;
-    }
-    loadSpellChoiceOptions(
-      spellBackedDefinitions.map((definition) => definition.spellChoice!).filter(Boolean),
-      (query) => api<SpellSummary[]>(query),
-      { excludeSpecial: !includeSpecialSpellRows },
-    )
-      .then((optionsByKey) => {
-        if (!cancelled) setGrowthOptionEntriesByKey({ ...optionsByKey, ...itemBacked });
-      })
-      .catch(() => {
-        if (!cancelled) setGrowthOptionEntriesByKey(itemBacked);
-      });
-    return () => { cancelled = true; };
-  }, [growthChoiceDefinitions, items]);
 
   React.useEffect(() => {
     const allSpellChoiceKeys = new Set<string>([
@@ -846,7 +790,7 @@ export function CharacterCreatorView() {
     if (match) {
       setForm((f) => f.chosenBgOriginFeatId === match.id ? f : { ...f, chosenBgOriginFeatId: match.id });
     }
-  }, [bgDetail, featSummaries]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [bgDetail, featSummaries]);
 
   // Auto-select the first equipment option when bgDetail loads
   React.useEffect(() => {
@@ -855,7 +799,7 @@ export function CharacterCreatorView() {
     if (options.length > 0) {
       setForm(f => f.chosenBgEquipmentOption ? f : { ...f, chosenBgEquipmentOption: options[0].id });
     }
-  }, [bgDetail]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [bgDetail]);
 
   // Auto-select the first equipment option when classDetail loads
   React.useEffect(() => {
@@ -865,7 +809,7 @@ export function CharacterCreatorView() {
     if (options.length > 0) {
       setForm(f => f.chosenClassEquipmentOption ? f : { ...f, chosenClassEquipmentOption: options[0].id });
     }
-  }, [classDetail]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [classDetail]);
 
   // Auto-calculate HP, AC, speed when class/race/scores change
   React.useEffect(() => {
@@ -885,7 +829,7 @@ export function CharacterCreatorView() {
     const ac = 10 + dexMod;
     const baseSpeed = raceDetail?.speed ?? 30;
     setForm((f) => ({ ...f, hpMax: String(hp), ac: String(ac), speed: String(baseSpeed) }));
-  }, [classDetail, raceDetail, form.level, form.abilityMethod, form.standardAssign, form.pbScores, resolvedRaceFeatDetail?.name, resolvedBgOriginFeatDetail?.name, form.chosenBgOriginFeatId, featSummaries, selectedClassFeatDetails, selectedFeatAbilityBonuses, levelUpFeatDetails]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [classDetail, raceDetail, form.level, form.abilityMethod, form.standardAssign, form.pbScores, form.bgAbilityBonuses, resolvedRaceFeatDetail?.name, resolvedBgOriginFeatDetail?.name, form.chosenBgOriginFeatId, featSummaries, selectedClassFeatDetails, selectedFeatAbilityBonuses, levelUpFeatDetails]);
 
   function set<K extends keyof FormState>(key: K, val: FormState[K]) {
     setForm((f) => ({ ...f, [key]: val }));
@@ -904,200 +848,27 @@ export function CharacterCreatorView() {
     }
     setBusy(true); setError(null);
     try {
-      const raceFeatId = typeof form.chosenRaceFeatId === "string" ? form.chosenRaceFeatId.trim() : "";
-      const bgFeatId = typeof form.chosenBgOriginFeatId === "string" ? form.chosenBgOriginFeatId.trim() : "";
-      const classFeatEntries = Object.entries(form.chosenClassFeatIds).filter(
-        ([, featId]) => typeof featId === "string" && featId.trim().length > 0,
-      ) as [string, string][];
-      const levelUpFeatEntries = form.chosenLevelUpFeats.filter(
-        (entry): entry is { level: number; featId: string } =>
-          typeof entry?.level === "number"
-          && typeof entry?.featId === "string"
-          && entry.featId.trim().length > 0,
-      );
-      const selectedFeatIds = Array.from(
-        new Set(
-          [
-            raceFeatId,
-            bgFeatId,
-            ...classFeatEntries.map(([, featId]) => featId.trim()),
-            ...levelUpFeatEntries.map((entry) => entry.featId.trim()),
-          ].filter(Boolean),
-        ),
-      );
-
-      const submitFeatDetailById = new Map<string, { id: string; name: string; text?: string; parsed: ParsedFeat }>(
-        Object.entries(featDetailCache).map(([id, detail]) => [id, detail]),
-      );
-      if (resolvedRaceFeatDetail?.id) submitFeatDetailById.set(resolvedRaceFeatDetail.id, resolvedRaceFeatDetail);
-      if (resolvedBgOriginFeatDetail?.id) submitFeatDetailById.set(resolvedBgOriginFeatDetail.id, resolvedBgOriginFeatDetail);
-      for (const detail of Object.values(classFeatDetails)) {
-        if (detail?.id) submitFeatDetailById.set(detail.id, detail);
-      }
-      for (const detail of levelUpFeatDetails) {
-        if (detail?.feat?.id) submitFeatDetailById.set(detail.feat.id, detail.feat);
-      }
-
-      const missingFeatIds = selectedFeatIds.filter((id) => !submitFeatDetailById.has(id));
-      if (missingFeatIds.length > 0) {
-        const payload = await api<{ rows: Array<{ id: string; feat: ({ name: string; text?: string; parsed: ParsedFeat } & Record<string, unknown>) | null }> }>(
-          "/api/compendium/feats/lookup",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ids: missingFeatIds }),
-          },
-        );
-        for (const row of payload.rows ?? []) {
-          if (!row?.id || !row?.feat) continue;
-          submitFeatDetailById.set(String(row.id), {
-            id: String(row.id),
-            name: String(row.feat.name ?? ""),
-            text: typeof row.feat.text === "string" ? row.feat.text : undefined,
-            parsed: row.feat.parsed as ParsedFeat,
-          });
-        }
-      }
-
-      const submitRaceFeatDetail = raceFeatId ? submitFeatDetailById.get(raceFeatId) ?? null : null;
-      const submitBgOriginFeatDetail = bgFeatId ? submitFeatDetailById.get(bgFeatId) ?? null : null;
-      const submitClassFeatDetails = Object.fromEntries(
-        classFeatEntries.flatMap(([featureName, featId]) => {
-          const detail = submitFeatDetailById.get(featId);
-          return detail ? [[featureName, detail] as const] : [];
-        }),
-      );
-      const submitLevelUpFeatDetails = levelUpFeatEntries.flatMap(({ level, featId }) => {
-        const detail = submitFeatDetailById.get(featId);
-        return detail ? [{ level, featId, feat: detail } satisfies LevelUpFeatDetail] : [];
-      });
-      const submitFeatGrantedAbilityBonuses = deriveFeatGrantedAbilityBonuses({
-        bgOriginFeatDetail: submitBgOriginFeatDetail,
-        raceFeatDetail: submitRaceFeatDetail,
-        classFeatDetails: submitClassFeatDetails,
-        levelUpFeatDetails: submitLevelUpFeatDetails,
-        chosenFeatOptions: form.chosenFeatOptions,
-      });
-      const submitFeatAbilityBonuses = deriveTotalFeatAbilityBonuses(
-        submitFeatGrantedAbilityBonuses,
-        form.chosenLevelUpFeats,
-      );
-      const scores = resolvedScores(form, submitFeatAbilityBonuses);
-      const selectedFeatureNames = buildAppliedCharacterFeatures({
-        charData: {
-          chosenOptionals: form.chosenOptionals,
-        } as CharacterData,
-        characterLevel: form.level,
+      const { body } = await buildCreatorSubmissionBody({
+        api,
+        form,
+        selectedRuleset,
         classDetail,
+        selectedClassSummary,
         raceDetail,
-        backgroundDetail: bgDetail,
-        bgOriginFeatDetail: submitBgOriginFeatDetail,
-        raceFeatDetail: submitRaceFeatDetail,
-        classFeatDetails: Object.entries(form.chosenClassFeatIds)
-          .map(([featureName]) => submitClassFeatDetails[featureName])
-          .filter(Boolean),
-        levelUpFeatDetails: submitLevelUpFeatDetails,
-        invocationDetails: [],
-      }).map((feature) => feature.name);
-      let startingInventory: ReturnType<typeof buildStartingInventoryFromUtils> | undefined;
-      if (!isEditing) {
-        const bgToolSelections = getBackgroundGrantedToolSelectionsFromUtils(form, bgDetail, [], classifyFeatSelection);
-        const equipmentLookupNames = [
-          ...collectEquipmentLookupNames(form.chosenBgEquipmentOption, bgDetail?.equipment, bgToolSelections),
-          ...collectEquipmentLookupNames(
-            form.chosenClassEquipmentOption,
-            extractClassStartingEquipment(classDetail),
-            [],
-          ),
-        ];
-        const lookupBody = buildItemLookupBodyFromNames(equipmentLookupNames);
-        const startingInventoryItems = isItemLookupBodyEmpty(lookupBody)
-          ? []
-          : await fetchCompendiumItemsByLookup(lookupBody);
-        startingInventory = buildStartingInventoryFromUtils(form, bgDetail, classDetail, startingInventoryItems);
-      }
-      const body = {
-        name: form.characterName.trim(),
-        playerName: optionalText(form.playerName),
-        className: classDetail?.name ?? form.characterName,
-        species: raceDetail?.name ?? "",
-        level: form.level,
-        hpMax: Number(form.hpMax) || 0,
-        hpCurrent: Number(form.hpMax) || 0,
-        ac: Number(form.ac) || 10,
-        speed: Number(form.speed) || 30,
-        strScore: scores.str, dexScore: scores.dex, conScore: scores.con,
-        intScore: scores.int, wisScore: scores.wis, chaScore: scores.cha,
-        color: form.color,
-        characterData: {
-          ruleset: selectedRuleset,
-          classes: [{
-            id: `class_${form.classId}`,
-            classId: form.classId,
-            className: classDetail?.name ?? selectedClassSummary?.name ?? null,
-            level: form.level,
-            subclass: form.subclass || null,
-          }],
-          raceId: form.raceId,
-          bgId: form.bgId,
-          abilityMethod: form.abilityMethod,
-          standardAssign: form.abilityMethod === "standard" ? form.standardAssign : undefined,
-          pbScores: form.abilityMethod === "pointbuy" ? form.pbScores : undefined,
-          bgAbilityMode: form.bgAbilityMode,
-          bgAbilityBonuses: form.bgAbilityBonuses,
-          alignment: optionalText(form.alignment),
-          hair: optionalText(form.hair),
-          skin: optionalText(form.skin),
-          height: optionalText(form.heightText),
-          age: optionalText(form.age),
-          weight: optionalText(form.weight),
-          gender: optionalText(form.gender),
-          hd: classDetail?.hd ?? null,
-          chosenOptionals: form.chosenOptionals,
-          selectedFeatureNames,
-          chosenClassFeatIds: form.chosenClassFeatIds,
-          chosenLevelUpFeats: form.chosenLevelUpFeats,
-          chosenRaceSkills: form.chosenRaceSkills,
-          chosenRaceLanguages: form.chosenRaceLanguages,
-          chosenRaceTools: form.chosenRaceTools,
-          chosenRaceFeatId: form.chosenRaceFeatId,
-          chosenRaceSize: form.chosenRaceSize,
-          chosenBgOriginFeatId: form.chosenBgOriginFeatId,
-          chosenSkills: form.chosenSkills,
-          chosenClassLanguages: form.chosenClassLanguages,
-          chosenClassEquipmentOption: form.chosenClassEquipmentOption,
-          chosenBgEquipmentOption: form.chosenBgEquipmentOption,
-          chosenFeatOptions: form.chosenFeatOptions,
-          chosenFeatureChoices: form.chosenFeatureChoices,
-          chosenWeaponMasteries: form.chosenWeaponMasteries,
-          chosenCantrips: form.chosenCantrips,
-          chosenSpells: form.chosenSpells,
-          preparedSpells:
-            classDetail && classDetail.slotsReset !== "S" && getPreparedSpellCount(classDetail, form.level, form.subclass) > 0
-              ? form.chosenSpells
-                .map((id) => classSpells.find((spell) => spell.id === id)?.name ?? "")
-                .filter(Boolean)
-                .map(normalizeSpellTrackingKey)
-              : undefined,
-          chosenInvocations: form.chosenInvocations,
-          ...(startingInventory ? { inventory: startingInventory } : {}),
-          proficiencies: buildProficiencyMapFromUtils({
-            form,
-            classDetail,
-            raceDetail,
-            bgDetail,
-            classCantrips,
-            classSpells,
-            classInvocations,
-            bgOriginFeatDetail: submitBgOriginFeatDetail,
-            raceFeatDetail: submitRaceFeatDetail,
-            classFeatDetails: submitClassFeatDetails,
-            levelUpFeatDetails: submitLevelUpFeatDetails,
-            spellChoiceOptionsByKey: featSpellChoiceOptions,
-            itemChoiceOptionsByKey: growthOptionEntriesByKey,
-          }),
-        },
-      };
+        bgDetail,
+        featDetailCache,
+        resolvedRaceFeatDetail,
+        resolvedBgOriginFeatDetail,
+        classFeatDetails,
+        levelUpFeatDetails,
+        featSpellChoiceOptions,
+        growthOptionEntriesByKey,
+        classCantrips,
+        classSpells,
+        classInvocations,
+        isEditing,
+        classifyFeatSelection,
+      });
 
       let charId: string;
       if (isEditing && editId) {

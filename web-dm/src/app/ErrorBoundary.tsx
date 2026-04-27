@@ -19,7 +19,6 @@ export class ErrorBoundary extends React.Component<
 
   componentDidCatch(error: Error) {
     // Keep a breadcrumb in the dev console.
-    // eslint-disable-next-line no-console
     console.error("Beholden render error:", error);
   }
 

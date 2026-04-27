@@ -28,6 +28,7 @@ import {
 } from "../services/characters.js";
 import { ACCEPTED_IMAGE_TYPES, resizeToWebP } from "../lib/imageHelpers.js";
 import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
+import { withAbsoluteImageUrl } from "../lib/routeImageUrl.js";
 import {
   AssignBody,
   CharacterCreateBody,
@@ -61,14 +62,9 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     return Object.keys(next).length > 0 ? next : undefined;
   };
 
-  const withAbsoluteImageUrl = <T extends { imageUrl?: string | null }>(req: Parameters<Express["get"]>[1] extends (...args: infer P) => any ? P[0] : never, value: T): T => ({
-    ...value,
-    ...(value.imageUrl !== undefined ? { imageUrl: absolutizePublicUrlForRequest(req, value.imageUrl) } : {}),
-  });
-
   // List all user-owned characters with campaign assignment info
   app.get("/api/me/characters", requireAuth, (req, res) => {
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
     const chars = db
       .prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE user_id = ? ORDER BY updated_at DESC`)
       .all(userId) as Record<string, unknown>[];
@@ -91,7 +87,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   app.get("/api/me/characters/:id", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
     const row = db
       .prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ? AND user_id = ?`)
       .get(charId, userId) as Record<string, unknown> | undefined;
@@ -114,7 +110,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
 
   // Create a new user-owned character (no campaign required)
   app.post("/api/me/characters", requireAuth, (req, res) => {
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
     const p = parseBody(CharacterCreateBody, req);
     const id = uid();
     const t = now();
@@ -161,7 +157,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   app.put("/api/me/characters/:id", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
     const existing = db
       .prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ? AND user_id = ?`)
       .get(charId, userId) as Record<string, unknown> | undefined;
@@ -246,7 +242,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   app.patch("/api/me/characters/:id/conditions", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
-    if (!requireOwnedCharacter(db, charId, (req as any).user.userId, res)) return;
+    if (!requireOwnedCharacter(db, charId, req.user!.userId, res)) return;
 
     const conditions = Array.isArray(req.body?.conditions) ? req.body.conditions : [];
     const t = now();
@@ -266,7 +262,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   app.patch("/api/me/characters/:id/deathSaves", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
-    if (!requireOwnedCharacter(db, charId, (req as any).user.userId, res)) return;
+    if (!requireOwnedCharacter(db, charId, req.user!.userId, res)) return;
 
     const { success = 0, fail = 0 } = (req.body ?? {}) as { success?: number; fail?: number };
     const deathSaves = {
@@ -278,7 +274,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
 
     const currentRow = db
       .prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ? AND user_id = ?`)
-      .get(charId, (req as any).user.userId) as Record<string, unknown>;
+      .get(charId, req.user!.userId) as Record<string, unknown>;
     const current = rowToCharacterSheet(currentRow);
     const sheetCols = characterSheetDbColumns({
       ...buildCharacterSheetState(current),
@@ -308,7 +304,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   app.patch("/api/me/characters/:id/overrides", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
     const existing = db
       .prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ? AND user_id = ?`)
       .get(charId, userId) as Record<string, unknown> | undefined;
@@ -351,7 +347,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   app.patch("/api/me/characters/:id/inspiration", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
-    if (!requireOwnedCharacter(db, charId, (req as any).user.userId, res)) return;
+    if (!requireOwnedCharacter(db, charId, req.user!.userId, res)) return;
 
     const inspiration: boolean = typeof req.body?.inspiration === "boolean" ? req.body.inspiration : false;
     const t = now();
@@ -373,7 +369,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   app.patch("/api/me/characters/:id/sharedNotes", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
-    if (!requireOwnedCharacter(db, charId, (req as any).user.userId, res)) return;
+    if (!requireOwnedCharacter(db, charId, req.user!.userId, res)) return;
 
     const sharedNotes: string = typeof req.body?.sharedNotes === "string" ? req.body.sharedNotes : "";
     const t = now();
@@ -394,7 +390,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   app.delete("/api/me/characters/:id", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
-    if (!requireOwnedCharacter(db, charId, (req as any).user.userId, res)) return;
+    if (!requireOwnedCharacter(db, charId, req.user!.userId, res)) return;
 
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
       db.prepare("DELETE FROM players WHERE id = ?").run(player_id);
@@ -410,8 +406,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   app.post("/api/me/characters/:id/assign", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
-    const userId = (req as any).user.userId;
-    const isAdmin = Boolean((req as any).user.isAdmin);
+    const userId = req.user!.userId;
+    const isAdmin = Boolean(req.user!.isAdmin);
 
     const existing = db
       .prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ? AND user_id = ?`)
@@ -473,7 +469,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   app.post("/api/me/characters/:id/unassign", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
 
     const existing = db
       .prepare("SELECT id FROM user_characters WHERE id = ? AND user_id = ?")
@@ -498,7 +494,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   app.post("/api/me/characters/:id/image", requireAuth, ctx.upload.single("image"), async (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
-    if (!requireOwnedCharacter(db, charId, (req as any).user.userId, res)) return;
+    if (!requireOwnedCharacter(db, charId, req.user!.userId, res)) return;
     if (!req.file) return res.status(400).json({ ok: false, message: "No file" });
     if (!ACCEPTED_IMAGE_TYPES.includes(req.file.mimetype)) {
       return res.status(400).json({ ok: false, message: "Unsupported image type" });
@@ -526,7 +522,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   app.delete("/api/me/characters/:id/image", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
-    if (!requireOwnedCharacter(db, charId, (req as any).user.userId, res)) return;
+    if (!requireOwnedCharacter(db, charId, req.user!.userId, res)) return;
     const imagesDir = ctx.path.join(ctx.paths.dataDir, "character-images");
     const imgPath = ctx.path.join(imagesDir, `${charId}.webp`);
     try { if (ctx.fs.existsSync(imgPath)) ctx.fs.unlinkSync(imgPath); } catch { /* best-effort */ }

@@ -3,17 +3,17 @@ import { Panel } from "@/ui/Panel";
 import { C } from "@/lib/theme";
 import { api } from "@/services/api";
 import { formatCr } from "@/lib/monsterPicker/utils";
-import { MonsterStatblock } from "./MonsterStatblock";
+import { MonsterStatblock, type MonsterRecord } from "./MonsterStatblock";
 
 export function MonsterDetailPanel(props: { monsterId: string }) {
-  const [monster, setMonster] = React.useState<any | null>(null);
+  const [monster, setMonster] = React.useState<MonsterRecord | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
     setBusy(true); setError(null); setMonster(null);
-    api<any>(`/api/compendium/monsters/${encodeURIComponent(props.monsterId)}`)
+    api<MonsterRecord>(`/api/compendium/monsters/${encodeURIComponent(props.monsterId)}`)
       .then((m) => { if (!cancelled) setMonster(m); })
       .catch((e) => { if (!cancelled) setError(String(e?.message ?? e)); })
       .finally(() => { if (!cancelled) setBusy(false); });

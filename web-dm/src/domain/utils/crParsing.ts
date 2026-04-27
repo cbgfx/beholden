@@ -2,7 +2,7 @@
  * Shared CR parsing utilities used by xp.ts and difficulty.ts
  */
 
-export const toNumberOrNull = (v: any): number | null => {
+export const toNumberOrNull = (v: unknown): number | null => {
   if (v == null) return null;
   if (typeof v === "number" && Number.isFinite(v)) return v;
   if (typeof v === "string") {

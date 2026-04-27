@@ -96,23 +96,31 @@ const getBurstFactorFromText = (text: string): number => {
 
 export function estimateMonsterDpr(detail: MonsterDetail | null | undefined): { dpr: number; burstFactor: number } | null {
   if (!detail) return null;
-  const actions: any[] = Array.isArray((detail as any).action) ? (detail as any).action : [];
+  const actions = Array.isArray(detail.action) ? detail.action : [];
+  const detailRecord = detail as Record<string, unknown>;
+  const rawJson = (detail.raw_json && typeof detail.raw_json === "object")
+    ? detail.raw_json
+    : (detailRecord.raw_json as Record<string, unknown> | undefined);
 
   // Legendary monsters get extra actions every round — bump DPR by 25%.
-  const legendaryRaw = (detail as any).legendary ?? (detail as any).legendaryActions ?? (detail as any).legendary_actions;
+  const legendaryRaw =
+    detail.legendary ??
+    (detailRecord.legendaryActions as unknown[] | undefined) ??
+    (detailRecord.legendary_actions as unknown[] | undefined);
   const hasLegendaryActions = Array.isArray(legendaryRaw) && legendaryRaw.length > 0;
 
   // CR-based fallback DPR — used as a floor to prevent silent parse failures.
-  const cr = (detail as any).cr ?? (detail as any).raw_json?.cr ?? (detail as any).raw_json?.challenge_rating;
+  const cr = detail.cr ?? rawJson?.cr ?? rawJson?.challenge_rating;
   const crFallback = crToFallbackDpr(cr);
 
   const attackByName: Record<string, number> = {};
   let bestSingle = 0;
   let burstFactor = 1.0;
 
-  for (const a of actions) {
-    const name = String(a?.name ?? "").trim();
-    const text = normalizeActionText(a?.text);
+  for (const action of actions) {
+    const actionRecord = action as Record<string, unknown>;
+    const name = String(action.name ?? "").trim();
+    const text = normalizeActionText(action.text ?? actionRecord.description ?? actionRecord.entries);
     if (!name) continue;
 
     burstFactor = Math.max(burstFactor, getBurstFactorFromText(text));
@@ -124,7 +132,7 @@ export function estimateMonsterDpr(detail: MonsterDetail | null | undefined): { 
     bestSingle = Math.max(bestSingle, avg);
   }
 
-  const multi = actions.find((a) => /^multiattack$/i.test(String(a?.name ?? "").trim()));
+  const multi = actions.find((action) => /^multiattack$/i.test(String(action.name ?? "").trim()));
   if (multi?.text) {
     const mt = normalizeActionText(multi.text);
     const countMatch = mt.match(/makes\s+([a-z0-9]+)\s+attacks?/i);

@@ -6,7 +6,6 @@ import { verifyToken, type JwtPayload } from "../lib/jwtAuth.js";
 import type { Db } from "../lib/db.js";
 
 declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       user?: JwtPayload;

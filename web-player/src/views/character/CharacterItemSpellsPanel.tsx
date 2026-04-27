@@ -53,7 +53,6 @@ export function ItemSpellsPanel({
       ),
     [itemsWithSpells]
   );
-  const keysStr = allKeys.map((entry) => entry.key).join(",");
   React.useEffect(() => {
     const missingByName = new Map<string, string[]>();
     for (const entry of allKeys) {
@@ -94,8 +93,7 @@ export function ItemSpellsPanel({
     return () => {
       alive = false;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keysStr]);
+  }, [allKeys, details]);
 
   if (!itemsWithSpells.length) return null;
 

@@ -46,5 +46,5 @@ export function useCharacterSyncEffects(args: {
     if (syncedAcValue !== char.syncedAc) {
       void putMyCharacter(char.id, { syncedAc: syncedAcValue });
     }
-  }, [syncedAcValue, char?.id, char?.syncedAc]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [char, syncedAcValue]);
 }

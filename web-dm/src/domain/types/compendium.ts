@@ -1,26 +1,38 @@
+export type JsonRecord = Record<string, unknown>;
+
+export type MonsterStatValue = number | string | null | JsonRecord;
+
+export type MonsterTextEntry = {
+  name?: string;
+  text?: string;
+  description?: string;
+  entries?: unknown;
+  [key: string]: unknown;
+};
+
 export type MonsterDetail = {
   id: string;
   name: string;
   cr: number | null;
   // Some compendium imports include this directly.
   xp?: number | null;
-  ac: any;
-  hp: any;
-  speed: any;
+  ac: MonsterStatValue;
+  hp: MonsterStatValue;
+  speed: MonsterStatValue;
   str: number | null;
   dex: number | null;
   con: number | null;
   int: number | null;
   wis: number | null;
   cha: number | null;
-  trait: any[];
-  action: any[];
-  reaction: any[];
-  legendary: any[];
-  spellcasting: any[];
-  spells?: any;
+  trait: MonsterTextEntry[];
+  action: MonsterTextEntry[];
+  reaction: MonsterTextEntry[];
+  legendary: MonsterTextEntry[];
+  spellcasting: MonsterTextEntry[];
+  spells?: JsonRecord | string[] | null;
   type?: string | null;
-  raw_json: any;
+  raw_json: JsonRecord;
 };
 
 export type SpellSummary = {
@@ -31,7 +43,15 @@ export type SpellSummary = {
   time?: string;
 };
 
-export type SpellDetail = any;
+export type SpellDetail = JsonRecord & {
+  id?: string;
+  name?: string;
+  level?: number | string | null;
+  school?: string | null;
+  time?: string | null;
+  text?: string | string[] | null;
+  raw_json?: JsonRecord;
+};
 
 export type CompendiumItemRow = {
   id: string;

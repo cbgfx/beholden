@@ -55,6 +55,13 @@ function StatBar({ icon, label, value, flex }: { icon: React.ReactNode; label: s
 }
 
 type AbilityKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
+export type MonsterRecord = Record<string, unknown>;
+type MonsterTextEntry = { name?: string; title?: string; text?: string | string[]; description?: string };
+
+function asMonsterEntryArray(value: unknown): MonsterTextEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is MonsterTextEntry => Boolean(entry && typeof entry === "object"));
+}
 
 function AbilityGroup({ keys, abilities, saves }: { keys: AbilityKey[]; abilities: Record<AbilityKey, number>; saves?: Partial<Record<AbilityKey, number>> }) {
   const cols = "48px 38px 1fr 1fr";
@@ -99,12 +106,12 @@ function AbilityTable({ abilities, saves }: { abilities: Record<AbilityKey, numb
   );
 }
 
-function TextBlock({ items, title }: { items: any[]; title: string }) {
+function TextBlock({ items, title }: { items: MonsterTextEntry[]; title: string }) {
   if (!items.length) return null;
   return (
     <div style={{ display: "grid", gap: 5 }}>
       <div style={{ color: C.accent, fontWeight: 900 }}>{title}</div>
-      {items.map((item: any, index: number) => (
+      {items.map((item, index: number) => (
         <div key={index} style={{ display: "grid", gap: 2 }}>
           <div style={{ fontWeight: 900 }}>{item.name ?? item.title ?? ""}</div>
           <div style={{ color: C.muted, whiteSpace: "pre-wrap", fontSize: "var(--fs-subtitle)" }}>
@@ -116,7 +123,7 @@ function TextBlock({ items, title }: { items: any[]; title: string }) {
   );
 }
 
-export function MonsterStatblock({ monster, hideSummaryBar = false }: { monster: any | null; hideSummaryBar?: boolean }) {
+export function MonsterStatblock({ monster, hideSummaryBar = false }: { monster: MonsterRecord | null; hideSummaryBar?: boolean }) {
   const [infoOpen, setInfoOpen] = React.useState(true);
 
   if (!monster) {
@@ -143,10 +150,10 @@ export function MonsterStatblock({ monster, hideSummaryBar = false }: { monster:
   const alignment = monster.alignment;
   const cr = formatCr(monster.cr ?? monster.challenge_rating);
 
-  const traitArr: any[] = Array.isArray(monster.traits ?? monster.trait) ? (monster.traits ?? monster.trait) : [];
-  const actionArr: any[] = Array.isArray(monster.actions ?? monster.action) ? (monster.actions ?? monster.action) : [];
-  const reactionArr: any[] = Array.isArray(monster.reactions ?? monster.reaction) ? (monster.reactions ?? monster.reaction) : [];
-  const legendary: any[] = Array.isArray(monster.legendary ?? monster.legendaryActions) ? (monster.legendary ?? monster.legendaryActions) : [];
+  const traitArr = asMonsterEntryArray(monster.traits ?? monster.trait);
+  const actionArr = asMonsterEntryArray(monster.actions ?? monster.action);
+  const reactionArr = asMonsterEntryArray(monster.reactions ?? monster.reaction);
+  const legendary = asMonsterEntryArray(monster.legendary ?? monster.legendaryActions);
 
   const nonSpellTraits = traitArr.filter((trait) => !isSpellSection(trait?.name ?? trait?.title));
   const nonSpellActions = actionArr.filter((action) => !isSpellSection(action?.name ?? action?.title));

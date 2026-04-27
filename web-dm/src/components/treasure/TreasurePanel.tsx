@@ -28,7 +28,7 @@ export function TreasurePanel(_props: { encounterId?: string } = {}) {
     return state.adventures.find((a) => a.id === scopeAdventureId)?.name ?? null;
   }, [scopeAdventureId, state.adventures]);
 
-  async function refreshTreasure() {
+  const refreshTreasure = React.useCallback(async () => {
     if (!state.selectedCampaignId) return;
     const campaignTreasure = await fetchCampaignTreasureList(state.selectedCampaignId) as TreasureEntry[];
     dispatch({ type: "setCampaignTreasure", treasure: campaignTreasure });
@@ -39,12 +39,11 @@ export function TreasurePanel(_props: { encounterId?: string } = {}) {
     } else {
       dispatch({ type: "setAdventureTreasure", treasure: [] });
     }
-  }
+  }, [dispatch, scopeAdventureId, state.selectedCampaignId]);
 
   React.useEffect(() => {
-    refreshTreasure();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.selectedCampaignId, scopeAdventureId]);
+    void refreshTreasure();
+  }, [refreshTreasure]);
 
   async function addItem(payload: AddItemPayload) {
     if (!state.selectedCampaignId) return;

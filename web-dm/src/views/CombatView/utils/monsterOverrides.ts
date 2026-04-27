@@ -1,5 +1,14 @@
 import type { MonsterDetail } from "@/domain/types/compendium";
-import type { EncounterActor } from "@/domain/types/domain";
+import type { AttackOverride, EncounterActor } from "@/domain/types/domain";
+
+type MonsterActionLike = {
+  name?: unknown;
+  title?: unknown;
+  attack?: Record<string, unknown>;
+  text?: unknown;
+  description?: unknown;
+  [key: string]: unknown;
+};
 
 export function applyMonsterAttackOverrides(
   monster: MonsterDetail | null,
@@ -9,7 +18,9 @@ export function applyMonsterAttackOverrides(
   const overrides = combatant.attackOverrides;
   if (!overrides || typeof overrides !== "object") return monster;
 
-  const patchText = (text: string, ov: any) => {
+  const typedOverrides = overrides as Record<string, AttackOverride>;
+
+  const patchText = (text: string, ov: AttackOverride) => {
     let out = String(text ?? "");
     if (typeof ov?.toHit === "number" && Number.isFinite(ov.toHit)) {
       out = out.replace(/Weapon Attack:\s*\+?\d+\s*to hit/i, (m) => m.replace(/\+?\d+/, `+${ov.toHit}`));
@@ -26,13 +37,17 @@ export function applyMonsterAttackOverrides(
     return out;
   };
 
-const actions = Array.isArray(monster.action) ? monster.action : [];
-  const nextActions = actions.map((a: any) => {
+  const actions = Array.isArray(monster.action) ? monster.action : [];
+  const nextActions = actions.map((a: MonsterActionLike) => {
     const name = String(a?.name ?? a?.title ?? "");
-    const ov = (overrides as any)[name];
+    const ov = typedOverrides[name];
     if (!ov) return a;
     const nextAttack = { ...(a?.attack ?? {}), ...ov };
-    const nextText = a?.text ? patchText(a.text, ov) : a?.description ? patchText(a.description, ov) : a?.text;
+    const nextText = a?.text
+      ? patchText(String(a.text), ov)
+      : a?.description
+        ? patchText(String(a.description), ov)
+        : a?.text;
     return { ...a, attack: nextAttack, text: nextText };
   });
 

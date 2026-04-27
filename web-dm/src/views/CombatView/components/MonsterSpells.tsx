@@ -4,7 +4,7 @@ import { titleCase } from "@/lib/format/titleCase";
 import { ordinal } from "@/lib/format/ordinal";
 import { MonsterSectionPanel } from "@/components/MonsterDisplay/MonsterSectionPanel";
 
-function parseSlotCounts(raw: any): Record<number, number> {
+function parseSlotCounts(raw: unknown): Record<number, number> {
   const result: Record<number, number> = {};
   if (!raw) return result;
   const str = Array.isArray(raw) ? raw.join(",") : String(raw);
@@ -32,7 +32,7 @@ function SlotDots({
         return (
           <button
             key={i}
-            title={spent ? "Slot used — click to restore" : "Click to expend slot"}
+            title={spent ? "Slot used - click to restore" : "Click to expend slot"}
             onClick={(e) => {
               e.stopPropagation();
               onChange(spent ? used - 1 : used + 1);
@@ -59,7 +59,7 @@ export function MonsterSpells(props: {
   spellNames: string[];
   spellLevels?: Record<string, number | null>;
   onOpenSpell: (name: string) => void;
-  slots?: any;
+  slots?: unknown;
   usedSpellSlots?: Record<string, number>;
   onChangeSpellSlots?: (level: number, used: number) => void;
 }) {

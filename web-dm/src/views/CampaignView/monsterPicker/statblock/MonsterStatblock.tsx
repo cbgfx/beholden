@@ -10,16 +10,28 @@ import { MonsterSpellPanel } from "./MonsterSpellPanel";
 import { MonsterSectionPanel } from "@/components/MonsterDisplay/MonsterSectionPanel";
 
 type AttackOverride = { toHit?: number; damage?: string; damageType?: string };
+type MonsterLike = Record<string, unknown>;
+type MonsterTextEntry = { name?: string; title?: string; text?: unknown; description?: unknown; attack?: unknown };
 
-function readNumber(v: any): number | null {
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function asTextEntries(value: unknown): MonsterTextEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is MonsterTextEntry => Boolean(entry && typeof entry === "object"));
+}
+
+function readNumber(v: unknown): number | null {
   if (v == null) return null;
   if (typeof v === "number") return Number.isFinite(v) ? v : null;
   if (typeof v === "string") return parseLeadingNumber(v);
   if (Array.isArray(v)) return readNumber(v[0]);
   if (typeof v === "object") {
     const inner =
-      (v as any).value ?? (v as any).average ?? (v as any).avg ??
-      (v as any).ac ?? (v as any).armor_class ?? (v as any).hit_points;
+      (v as Record<string, unknown>).value ?? (v as Record<string, unknown>).average ?? (v as Record<string, unknown>).avg ??
+      (v as Record<string, unknown>).ac ?? (v as Record<string, unknown>).armor_class ?? (v as Record<string, unknown>).hit_points;
     if (inner != null && inner !== v) return readNumber(inner);
     return parseLeadingNumber(String(v));
   }
@@ -31,7 +43,7 @@ function isSpellSection(name: unknown): boolean {
   return /spellcasting/i.test(s) || /innate spellcasting/i.test(s);
 }
 
-function isAttackAction(a: any): boolean {
+function isAttackAction(a: MonsterTextEntry): boolean {
   if (a?.attack) return true;
   const text = Array.isArray(a?.text) ? a.text.map(String).join(" ") : String(a?.text ?? "");
   return /\bto\s+hit\b/i.test(text);
@@ -39,7 +51,7 @@ function isAttackAction(a: any): boolean {
 
 type ParsedAttackDefaults = { toHit: number | undefined; damage: string | undefined; damageType: string | undefined };
 
-function parseAttackDefaults(a: any): ParsedAttackDefaults {
+function parseAttackDefaults(a: MonsterTextEntry): ParsedAttackDefaults {
   const text = Array.isArray(a?.text) ? a.text.map(String).join(" ") : String(a?.text ?? "");
   const hitMatch = text.match(/([+-]?\d+)\s+to\s+hit/i);
   const toHit = hitMatch ? parseInt(hitMatch[1], 10) : undefined;
@@ -55,16 +67,16 @@ function fmtToHit(n: number | undefined): string {
   return n >= 0 ? `+${n}` : String(n);
 }
 
-function TextBlock({ items, title }: { items: any[]; title: string }) {
+function TextBlock({ items, title }: { items: MonsterTextEntry[]; title: string }) {
   if (!items.length) return null;
   return (
     <MonsterSectionPanel title={title}>
       <div style={{ display: "grid", gap: 8 }}>
-        {items.map((t: any, i: number) => (
+        {items.map((t, i: number) => (
           <div key={i} style={{ display: "grid", gap: 2, padding: "10px 12px", borderRadius: 10, border: `1px solid ${theme.colors.panelBorder}`, background: theme.colors.panelBg }}>
             <div style={{ fontWeight: 900 }}>{t.name ?? t.title}</div>
             <div style={{ color: theme.colors.muted, whiteSpace: "pre-wrap", fontSize: "var(--fs-subtitle)" }}>
-              {t.text ?? t.description ?? ""}
+              {String(t.text ?? t.description ?? "")}
             </div>
           </div>
         ))}
@@ -109,7 +121,7 @@ function AttackOverrideInputs({ name, override, defaults, onChange }: {
 }
 
 export function MonsterStatblock(props: {
-  monster: any | null;
+  monster: MonsterLike | null;
   hideSummary?: boolean;
   attackOverrides?: Record<string, AttackOverride>;
   onChangeAttack?: (actionName: string, patch: AttackOverride) => void;
@@ -150,14 +162,14 @@ export function MonsterStatblock(props: {
 
   const ac = m.ac?.value ?? m.ac ?? m.armor_class;
   const hp = m.hp?.average ?? m.hp ?? m.hit_points;
-  const type = m.type?.type ?? m.type;
+  const type = asRecord(m.type)?.type ?? m.type;
   const alignment = m.alignment;
   const cr = formatCr(m.cr ?? m.challenge_rating);
 
-  const traitArr: any[] = Array.isArray(m.traits ?? m.trait) ? (m.traits ?? m.trait) : [];
-  const actionArr: any[] = Array.isArray(m.actions ?? m.action) ? (m.actions ?? m.action) : [];
-  const reactionArr: any[] = Array.isArray(m.reactions ?? m.reaction) ? (m.reactions ?? m.reaction) : [];
-  const legendary: any[] = Array.isArray(m.legendary ?? m.legendaryActions) ? (m.legendary ?? m.legendaryActions) : [];
+  const traitArr = asTextEntries(m.traits ?? m.trait);
+  const actionArr = asTextEntries(m.actions ?? m.action);
+  const reactionArr = asTextEntries(m.reactions ?? m.reaction);
+  const legendary = asTextEntries(m.legendary ?? m.legendaryActions);
 
   const nonSpellTraits = traitArr.filter((t) => !isSpellSection(t?.name ?? t?.title));
   const nonSpellActions = actionArr.filter((a) => !isSpellSection(a?.name ?? a?.title));
@@ -169,7 +181,7 @@ export function MonsterStatblock(props: {
         <div>
           <div style={{ fontWeight: 900, fontSize: "var(--fs-title)", color: theme.colors.text }}>{m.name}</div>
           <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
-            {[type, alignment, cr ? `CR ${cr}` : null].filter(Boolean).join(" · ")}
+            {[type, alignment, cr ? `CR ${cr}` : null].filter(Boolean).join(" | ")}
           </div>
         </div>
       )}
@@ -183,7 +195,7 @@ export function MonsterStatblock(props: {
       {nonSpellActions.length > 0 && (
         <MonsterSectionPanel title="Actions">
           <div style={{ display: "grid", gap: 8 }}>
-            {nonSpellActions.map((a: any, i: number) => {
+            {nonSpellActions.map((a, i: number) => {
               const name = a.name ?? a.title ?? "";
               return (
                 <div key={i} style={{ display: "grid", gap: 4, padding: "10px 12px", borderRadius: 10, border: `1px solid ${theme.colors.panelBorder}`, background: theme.colors.panelBg }}>

@@ -1,7 +1,5 @@
 import type { AbilKey, GrantedSpellCast, ResourceCounter, TaggedItem } from "@/views/character/CharacterSheetTypes";
 import { normalizeLanguageName, normalizeResourceKey, proficiencyBonus } from "@/views/character/CharacterSheetUtils";
-import { ALL_SKILLS } from "@/views/character/CharacterSheetConstants";
-import { titleCase as toTitleCase } from "@/lib/format/titleCase";
 import {
   createFeatureEffectId,
   type AbilityScoreEffect,
@@ -22,6 +20,16 @@ import {
   type WeaponMasteryEffect,
   type WeaponFilter,
 } from "@/domain/character/featureEffects";
+import {
+  cleanupText,
+  hasContextualQualifier,
+  isProficiencyNoiseToken,
+  normalizeSkillName,
+  parseWordCount,
+  splitSkillNames,
+} from "@/domain/character/parseFeatureEffects.normalizers";
+import { parseSpellChoiceEffects } from "@/domain/character/parseFeatureEffects.choices";
+import { parseItemCanCastSpellEffects, parseSpellGrantEffects } from "@/domain/character/parseFeatureEffects.grants";
 
 export interface ParseFeatureEffectsInput {
   source: FeatureEffectSource;
@@ -39,69 +47,6 @@ interface EffectStateContext {
   armorState?: "any" | "no_armor" | "not_heavy";
 }
 
-
-function parseWordCount(value: string): number | null {
-  const normalized = String(value ?? "").trim().toLowerCase();
-  const direct = Number.parseInt(normalized, 10);
-  if (Number.isFinite(direct)) return direct;
-  const words: Record<string, number> = {
-    a: 1,
-    an: 1,
-    another: 1,
-    once: 1,
-    one: 1,
-    twice: 2,
-    two: 2,
-    three: 3,
-    four: 4,
-    five: 5,
-    six: 6,
-  };
-  return words[normalized] ?? null;
-}
-
-function isProficiencyNoiseToken(value: string): boolean {
-  const normalized = String(value ?? "").trim().toLowerCase();
-  if (!normalized) return true;
-  if (/\bof your choice\b/i.test(normalized)) return true;
-  if (parseWordCount(normalized) != null) return true;
-  return /^(?:\d+|this|that|these|those|extra|another|any|language|languages|tool|tools|skill|skills)$/i.test(normalized);
-}
-
-function cleanupText(text: string): string {
-  return String(text ?? "")
-    .replace(/Source:.*$/gim, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function normalizeSkillName(raw: string): string | null {
-  const normalized = raw.trim().replace(/\s+/g, " ").toLowerCase();
-  return SKILL_NAME_MAP.get(normalized) ?? null;
-}
-
-function splitSkillNames(raw: string): string[] {
-  return raw
-    .split(/\s*,\s*|\s+and\s+|\s+or\s+/i)
-    .map((part) => normalizeSkillName(part))
-    .filter((name): name is string => Boolean(name));
-}
-
-function hasContextualQualifier(text: string, matchEndIndex: number): boolean {
-  const tail = text.slice(matchEndIndex).trimStart().toLowerCase();
-  return [
-    "against ",
-    "made ",
-    "to ",
-    "where ",
-    "when ",
-    "during ",
-    "as part of ",
-    "that rely on ",
-    "using ",
-    "within ",
-  ].some((prefix) => tail.startsWith(prefix));
-}
 
 function textUsesRageGate(text: string): boolean {
   return /while your rage is active|while raging/i.test(text);

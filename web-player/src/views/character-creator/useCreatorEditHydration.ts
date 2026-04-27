@@ -1,12 +1,50 @@
 import React from "react";
 import { fetchMyCharacter } from "@/services/actorApi";
 import { C } from "@/lib/theme";
+import type { CharacterCampaignAssignmentDto } from "@beholden/shared/api";
 import {
   inferAbilityMethodFromScores,
   inferStandardAssignFromScores,
   type FormState,
 } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
 import type { LevelUpFeatSelection } from "@/views/character-creator/utils/CharacterCreatorTypes";
+
+type CreatorCharacterData = Record<string, unknown> & {
+  classes?: Array<{ classId?: string; subclass?: string }>;
+  bgAbilityBonuses?: Record<string, number>;
+  chosenLevelUpFeats?: Array<{ level?: number; featId?: string; type?: string; abilityBonuses?: Record<string, number> }>;
+  abilityMethod?: "pointbuy" | "standard" | string;
+  raceId?: string;
+  bgId?: string;
+  chosenOptionals?: string[];
+  chosenClassFeatIds?: Record<string, string>;
+  chosenRaceSkills?: string[];
+  chosenRaceLanguages?: string[];
+  chosenRaceTools?: string[];
+  chosenRaceFeatId?: string | null;
+  chosenRaceSize?: string | null;
+  chosenSkills?: string[];
+  chosenBgOriginFeatId?: string | null;
+  chosenClassLanguages?: string[];
+  chosenClassEquipmentOption?: string | null;
+  chosenBgEquipmentOption?: string | null;
+  chosenFeatOptions?: Record<string, string[]>;
+  chosenFeatureChoices?: Record<string, string[]>;
+  chosenWeaponMasteries?: string[];
+  chosenCantrips?: string[];
+  chosenSpells?: string[];
+  chosenInvocations?: string[];
+  bgAbilityMode?: "split" | "even";
+  standardAssign?: Record<string, number>;
+  pbScores?: Record<string, number>;
+  alignment?: string;
+  hair?: string;
+  skin?: string;
+  height?: string;
+  age?: string;
+  weight?: string;
+  gender?: string;
+};
 
 export function useCreatorEditHydration(args: {
   editId: string | undefined;
@@ -20,12 +58,12 @@ export function useCreatorEditHydration(args: {
     if (!editId) return;
     fetchMyCharacter(editId)
       .then((ch) => {
-        const cd = (ch.characterData ?? {}) as Record<string, any>;
+        const cd: CreatorCharacterData = (ch.characterData ?? {}) as CreatorCharacterData;
         const primaryClassEntry = Array.isArray(cd.classes) ? cd.classes[0] : null;
         const recordedBgBonuses =
           cd.bgAbilityBonuses && typeof cd.bgAbilityBonuses === "object" ? cd.bgAbilityBonuses : {};
         const recordedAsiBonuses = Array.isArray(cd.chosenLevelUpFeats)
-          ? cd.chosenLevelUpFeats.reduce((acc: Record<string, number>, entry: any) => {
+          ? cd.chosenLevelUpFeats.reduce((acc: Record<string, number>, entry) => {
               if (!entry?.abilityBonuses || typeof entry.abilityBonuses !== "object") return acc;
               Object.entries(entry.abilityBonuses).forEach(([key, value]) => {
                 acc[key] = (acc[key] ?? 0) + (Number(value) || 0);
@@ -88,7 +126,7 @@ export function useCreatorEditHydration(args: {
           chosenClassFeatIds: cd.chosenClassFeatIds ?? {},
           chosenLevelUpFeats: Array.isArray(cd.chosenLevelUpFeats)
             ? cd.chosenLevelUpFeats
-                .map((entry: any) => ({
+                .map((entry) => ({
                   level: Number(entry?.level) || 0,
                   featId: typeof entry?.featId === "string" ? entry.featId : null,
                   type: entry?.type === "asi" ? "asi" as const : typeof entry?.featId === "string" ? "feat" as const : undefined,
@@ -143,11 +181,11 @@ export function useCreatorEditHydration(args: {
           weight: typeof cd.weight === "string" ? cd.weight : "",
           gender: typeof cd.gender === "string" ? cd.gender : "",
           color: ch.color ?? C.accentHl,
-          campaignIds: (ch.campaigns ?? []).map((campaign: any) => campaign.campaignId),
+          campaignIds: (ch.campaigns ?? []).map((campaign: CharacterCampaignAssignmentDto) => campaign.campaignId),
         }));
-        initialCampaignIdsRef.current = (ch.campaigns ?? []).map((campaign: any) => campaign.campaignId);
+        initialCampaignIdsRef.current = (ch.campaigns ?? []).map((campaign: CharacterCampaignAssignmentDto) => campaign.campaignId);
       })
       .catch(() => {})
       .finally(() => setEditLoading(false));
-  }, [editId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editId, initialCampaignIdsRef, setEditLoading, setForm]);
 }

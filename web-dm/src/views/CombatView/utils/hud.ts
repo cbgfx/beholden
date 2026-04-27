@@ -1,4 +1,4 @@
-import { theme } from "@/theme/theme";
+﻿import { theme } from "@/theme/theme";
 import type { EncounterActor } from "@/domain/types/domain";
 import type { CampaignCharacter } from "@/domain/types/domain";
 
@@ -9,8 +9,8 @@ export function clamp01(n: number) {
   return n;
 }
 
-export function getHudNames(c: any, playersById: Record<string, any>) {
-  if (!c) return { primary: "—", secondary: null as string | null };
+export function getHudNames(c: EncounterActor | null, playersById: Record<string, CampaignCharacter>) {
+  if (!c) return { primary: "-", secondary: null as string | null };
 
   const baseType = c.baseType;
   const baseName = c.name.trim();
@@ -19,7 +19,7 @@ export function getHudNames(c: any, playersById: Record<string, any>) {
   if (baseType === "player") {
     const p = playersById?.[c.baseId];
     const playerName = (p?.playerName ?? "").trim();
-    return { primary: label || "—", secondary: playerName ? `(${playerName})` : null };
+    return { primary: label || "-", secondary: playerName ? `(${playerName})` : null };
   }
 
   // Monster / iNPC: show Label (BaseName) when label differs from base name
@@ -27,7 +27,7 @@ export function getHudNames(c: any, playersById: Record<string, any>) {
     return { primary: label, secondary: `(${baseName})` };
   }
 
-  return { primary: label || baseName || "—", secondary: null };
+  return { primary: label || baseName || "-", secondary: null };
 }
 
 export function getHudHp(c: EncounterActor | null) {

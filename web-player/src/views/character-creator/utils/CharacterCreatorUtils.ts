@@ -1,4 +1,4 @@
-import { wordOrNumberToInt, type Ruleset, type RaceChoices } from "@/lib/characterRules";
+﻿import { wordOrNumberToInt, type Ruleset, type RaceChoices } from "@/lib/characterRules";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import { abilityMod } from "@/views/character/CharacterSheetUtils";
 import type { ParsedFeatChoiceLike as CreatorParsedFeatChoiceLike } from "./FeatChoiceTypes";
@@ -599,8 +599,7 @@ export function parseStartingEquipmentOptions(equipment: string | undefined): St
     .replace(/\r/g, "")
     .replace(/Choose\s+A\s+or\s+8/gi, "Choose A or B")
     .replace(/\(8\)/g, "(B)")
-    .replace(/â€¢/g, "•")
-    .replace(/•/g, ";")
+    .replace(/\u2022/g, ";")
     .replace(/\s+/g, " ")
     .trim();
   const matches = [...normalized.matchAll(/\(([A-Z])\)\s*([\s\S]*?)(?=(?:;\s*or\s*\([A-Z]\))|(?:;\s*\([A-Z]\))|$)/g)];
@@ -633,3 +632,4 @@ export function extractClassStartingEquipment(classDetail: CreatorClassDetailLik
   }
   return "";
 }
+
