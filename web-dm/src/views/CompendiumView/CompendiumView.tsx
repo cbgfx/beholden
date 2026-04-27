@@ -6,7 +6,7 @@ import { CompendiumRightColumn } from "@/views/CompendiumView/components/Compend
 export type CompendiumSection = "compendium" | "spells" | "rules" | "monsters" | "items";
 
 export function CompendiumView() {
-  const [activeSection, setActiveSection] = React.useState<CompendiumSection>("monsters");
+  const [activeSection, setActiveSection] = React.useState<CompendiumSection>("rules");
   const [selectedSpellId, setSelectedSpellId] = React.useState<string | null>(null);
   const [selectedMonsterId, setSelectedMonsterId] = React.useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = React.useState<string | null>(null);
