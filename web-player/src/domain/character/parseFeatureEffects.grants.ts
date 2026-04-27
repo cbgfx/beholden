@@ -270,10 +270,17 @@ function parseRitualOnlySpellGrantEffects(source: FeatureEffectSource, text: str
   }
 }
 
-export function parseSpellGrantEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
+export function parseSpellGrantEffects(
+  source: FeatureEffectSource,
+  text: string,
+  effects: FeatureEffect[],
+  options?: { suppressStructuredSpellGrants?: boolean },
+) {
   parseKnownSpellGrantEffects(source, text, effects);
-  parseAlwaysPreparedSpellGrantEffects(source, text, effects);
-  parseExpandedListSpellGrantEffects(source, text, effects);
+  if (!options?.suppressStructuredSpellGrants) {
+    parseAlwaysPreparedSpellGrantEffects(source, text, effects);
+    parseExpandedListSpellGrantEffects(source, text, effects);
+  }
   parseRitualOnlySpellGrantEffects(source, text, effects);
   if (!/without expending a spell slot/i.test(text)) return;
   const reset =

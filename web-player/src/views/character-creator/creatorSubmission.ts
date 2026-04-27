@@ -7,7 +7,11 @@ import type {
   RaceDetail,
   SpellSummary,
 } from "@/views/character-creator/utils/CharacterCreatorTypes";
-import type { ParsedFeatLike as ParsedFeat, ParsedFeatDetailLike as FeatDetail } from "@/views/character-creator/utils/FeatChoiceTypes";
+import type {
+  ParsedFeatChoiceLike as ParsedFeatChoice,
+  ParsedFeatLike as ParsedFeat,
+  ParsedFeatDetailLike as FeatDetail,
+} from "@/views/character-creator/utils/FeatChoiceTypes";
 import { buildAppliedCharacterFeatures } from "@/domain/character/characterFeatures";
 import { normalizeSpellTrackingKey } from "@/views/character/CharacterSheetUtils";
 import {
@@ -46,7 +50,10 @@ export async function buildCreatorSubmissionBody(args: {
   classSpells: SpellSummary[];
   classInvocations: SpellSummary[];
   isEditing: boolean;
-  classifyFeatSelection: (featName: string) => string | null;
+  classifyFeatSelection: (
+    choice: ParsedFeatChoice<string>,
+    value: string,
+  ) => "skill" | "tool" | "language" | "armor" | "weapon" | "saving_throw" | "weapon_mastery" | null;
 }) {
   const {
     api,
@@ -92,8 +99,10 @@ export async function buildCreatorSubmissionBody(args: {
     ),
   );
 
-  const submitFeatDetailById = new Map<string, { id: string; name: string; text?: string; parsed: ParsedFeat }>(
-    Object.entries(featDetailCache).map(([id, detail]) => [id, detail]),
+  const submitFeatDetailById = new Map<string, FeatDetail<ParsedFeatChoice<string>>>(
+    Object.entries(featDetailCache)
+      .filter(([, detail]) => Boolean(detail?.id))
+      .map(([, detail]) => [String(detail.id), detail]),
   );
   if (resolvedRaceFeatDetail?.id) submitFeatDetailById.set(resolvedRaceFeatDetail.id, resolvedRaceFeatDetail);
   if (resolvedBgOriginFeatDetail?.id) submitFeatDetailById.set(resolvedBgOriginFeatDetail.id, resolvedBgOriginFeatDetail);
