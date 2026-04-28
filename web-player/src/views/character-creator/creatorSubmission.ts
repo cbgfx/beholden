@@ -20,10 +20,9 @@ import {
   resolvedScores,
   type FormState,
 } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
-import { buildProficiencyMap as buildProficiencyMapFromUtils, buildStartingInventory as buildStartingInventoryFromUtils } from "@/views/character-creator/utils/CharacterCreatorProficiencyUtils";
-import { collectEquipmentLookupNames, getBackgroundGrantedToolSelections as getBackgroundGrantedToolSelectionsFromUtils } from "@/views/character-creator/utils/CharacterCreatorEquipmentUtils";
-import { extractClassStartingEquipment, getPreparedSpellCount } from "@/views/character-creator/utils/CharacterCreatorUtils";
-import { buildItemLookupBodyFromNames, fetchCompendiumItemsByLookup, isItemLookupBodyEmpty } from "@/views/character-creator/utils/ItemLookupUtils";
+import { buildProficiencyMap as buildProficiencyMapFromUtils } from "@/views/character-creator/utils/CharacterCreatorProficiencyUtils";
+import { getPreparedSpellCount } from "@/views/character-creator/utils/CharacterCreatorUtils";
+import { buildCreatorStartingInventory } from "@/views/character-creator/creatorSubmissionInventory";
 
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
 
@@ -174,23 +173,13 @@ export async function buildCreatorSubmissionBody(args: {
     levelUpFeatDetails: submitLevelUpFeatDetails,
     invocationDetails: [],
   }).map((feature) => feature.name);
-  let startingInventory: ReturnType<typeof buildStartingInventoryFromUtils> | undefined;
-  if (!isEditing) {
-    const bgToolSelections = getBackgroundGrantedToolSelectionsFromUtils(form, bgDetail, [], classifyFeatSelection);
-    const equipmentLookupNames = [
-      ...collectEquipmentLookupNames(form.chosenBgEquipmentOption, bgDetail?.equipment, bgToolSelections),
-      ...collectEquipmentLookupNames(
-        form.chosenClassEquipmentOption,
-        extractClassStartingEquipment(classDetail),
-        [],
-      ),
-    ];
-    const lookupBody = buildItemLookupBodyFromNames(equipmentLookupNames);
-    const startingInventoryItems = isItemLookupBodyEmpty(lookupBody)
-      ? []
-      : await fetchCompendiumItemsByLookup(lookupBody);
-    startingInventory = buildStartingInventoryFromUtils(form, bgDetail, classDetail, startingInventoryItems);
-  }
+  const startingInventory = await buildCreatorStartingInventory({
+    form,
+    bgDetail,
+    classDetail,
+    isEditing,
+    classifyFeatSelection,
+  });
 
   const body = {
     name: form.characterName.trim(),

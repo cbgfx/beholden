@@ -21,11 +21,19 @@ export function MonsterDetailPanel(props: { monsterId: string }) {
   }, [props.monsterId]);
 
   const cr = monster ? formatCr(monster.cr) : null;
-  const type = monster ? (monster.type?.type ?? monster.type) : null;
+  const type = React.useMemo(() => {
+    if (!monster) return null;
+    if (typeof monster.type === "string") return monster.type;
+    if (monster.type && typeof monster.type === "object" && "type" in monster.type) {
+      const nested = (monster.type as { type?: unknown }).type;
+      return typeof nested === "string" ? nested : null;
+    }
+    return null;
+  }, [monster]);
 
   return (
     <Panel
-      title={monster ? monster.name : busy ? "Loading…" : "Monster"}
+      title={monster ? String(monster.name ?? "Monster") : busy ? "Loading..." : "Monster"}
       actions={
         monster ? (
           <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>

@@ -10,7 +10,7 @@ import { ABILITY_LABELS, ALL_SKILLS } from "@/views/character/CharacterSheetCons
 import { abilityMod, formatModifier, hasNamedProficiency, hpColor, normalizeSpellTrackingKey, normalizeSpellTrackingName, proficiencyBonus } from "@/views/character/CharacterSheetUtils";
 import { CollapsiblePanel } from "@/views/character/CharacterViewParts";
 import { useDebouncedSingleflight } from "@beholden/shared/ui";
-import type { SharedConditionInstance } from "@beholden/shared/types";
+import type { SharedConditionInstance } from "@beholden/shared/domain";
 import { CollectionRow, HeaderActionLink, MiniStat, NoteRow, Panel, SubsectionLabel, Tag } from "@beholden/shared/ui";
 
 interface NamedEntry {

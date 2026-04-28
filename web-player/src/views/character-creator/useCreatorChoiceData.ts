@@ -1,6 +1,6 @@
 import React from "react";
 import { api } from "@/services/api";
-import type { CreatorResolvedSpellChoiceEntry, SpellSummary } from "@/views/character-creator/utils/CharacterCreatorTypes";
+import type { CreatorResolvedSpellChoiceEntry, ItemSummary, SpellSummary } from "@/views/character-creator/utils/CharacterCreatorTypes";
 import type { SharedSpellSummary } from "@/views/character-creator/utils/SpellChoiceUtils";
 import type { GrowthChoiceDefinition } from "@/views/character-creator/utils/GrowthChoiceUtils";
 import { loadSpellChoiceOptions } from "@/views/character-creator/utils/SpellChoiceUtils";
@@ -27,7 +27,7 @@ export function useCreatorChoiceData(args: {
   const { step6ResolvedSpellChoices, growthChoiceDefinitions } = args;
   const [featSpellChoiceOptions, setFeatSpellChoiceOptions] = React.useState<Record<string, SharedSpellSummary[]>>({});
   const [growthOptionEntriesByKey, setGrowthOptionEntriesByKey] = React.useState<Record<string, ItemOptionEntry[]>>({});
-  const [items, setItems] = React.useState<ItemOptionEntry[]>([]);
+  const [items, setItems] = React.useState<ItemSummary[]>([]);
 
   React.useEffect(() => {
     if (step6ResolvedSpellChoices.length === 0) {

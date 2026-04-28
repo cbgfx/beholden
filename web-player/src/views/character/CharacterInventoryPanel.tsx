@@ -55,6 +55,7 @@ import {
   hasStealthDisadvantage,
   isArmorItem,
   isCurrencyItem,
+  isWearableItem,
   isWeaponItem,
   normalizeInventoryItemLookupName,
   parseChargesMax,

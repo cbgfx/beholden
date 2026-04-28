@@ -120,6 +120,7 @@ export interface CreatorBgDetailLike {
 export interface CreatorSpellSummaryLike {
   id: string;
   name: string;
+  level?: number | null;
   text?: string | null;
 }
 

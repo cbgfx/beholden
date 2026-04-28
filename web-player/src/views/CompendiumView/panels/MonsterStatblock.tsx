@@ -58,6 +58,11 @@ type AbilityKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
 export type MonsterRecord = Record<string, unknown>;
 type MonsterTextEntry = { name?: string; title?: string; text?: string | string[]; description?: string };
 
+function readNamedObjectValue(source: unknown, key: string): unknown {
+  if (!source || typeof source !== "object") return null;
+  return (source as Record<string, unknown>)[key];
+}
+
 function asMonsterEntryArray(value: unknown): MonsterTextEntry[] {
   if (!Array.isArray(value)) return [];
   return value.filter((entry): entry is MonsterTextEntry => Boolean(entry && typeof entry === "object"));
@@ -130,8 +135,8 @@ export function MonsterStatblock({ monster, hideSummaryBar = false }: { monster:
     return <div style={{ color: C.muted }}>Select a monster to view its stat block.</div>;
   }
 
-  const ac = readMonsterNumber(monster.ac?.value ?? monster.ac ?? monster.armor_class);
-  const hp = readMonsterNumber(monster.hp?.average ?? monster.hp ?? monster.hit_points);
+  const ac = readMonsterNumber(readNamedObjectValue(monster.ac, "value") ?? monster.ac ?? monster.armor_class);
+  const hp = readMonsterNumber(readNamedObjectValue(monster.hp, "average") ?? monster.hp ?? monster.hit_points);
   const speedDisplay = parseSpeedDisplay(monster.speed) || "—";
   const hpValue = hp != null ? `${hp} / ${hp}` : "—";
 
@@ -146,8 +151,12 @@ export function MonsterStatblock({ monster, hideSummaryBar = false }: { monster:
 
   const infoLines = buildMonsterInfoLines(monster).filter((line) => line.value?.trim() && line.value.trim() !== "—");
 
-  const type = monster.type?.type ?? monster.type;
-  const alignment = monster.alignment;
+  const type = ((): string | null => {
+    if (typeof monster.type === "string") return monster.type;
+    const nested = readNamedObjectValue(monster.type, "type");
+    return typeof nested === "string" ? nested : null;
+  })();
+  const alignment = typeof monster.alignment === "string" ? monster.alignment : null;
   const cr = formatCr(monster.cr ?? monster.challenge_rating);
 
   const traitArr = asMonsterEntryArray(monster.traits ?? monster.trait);
@@ -161,7 +170,7 @@ export function MonsterStatblock({ monster, hideSummaryBar = false }: { monster:
   return (
     <div style={{ display: "grid", gap: 14 }}>
       <div>
-        <div style={{ fontWeight: 900, fontSize: "var(--fs-title)", color: C.text }}>{monster.name}</div>
+        <div style={{ fontWeight: 900, fontSize: "var(--fs-title)", color: C.text }}>{String(monster.name ?? "Monster")}</div>
         <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>
           {[type, alignment, cr ? `CR ${cr}` : null].filter(Boolean).join(" · ")}
         </div>
