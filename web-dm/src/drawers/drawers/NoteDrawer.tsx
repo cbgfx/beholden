@@ -1,11 +1,11 @@
 import React from "react";
 import { Button } from "@/ui/Button";
-import { Input } from "@/ui/Input";
-import { TextArea } from "@/ui/TextArea";
 import { api, jsonInit } from "@/services/api";
 import { createAdventureNote, createCampaignNote, fetchNoteById } from "@/services/collectionApi";
 import { useStore, type DrawerState } from "@/store";
 import type { DrawerContent } from "@/drawers/types";
+import { theme } from "@/theme/theme";
+import { NoteEditorFields } from "@beholden/shared/ui";
 
 type NoteDrawerState = Exclude<Extract<DrawerState, { type: "note" } | { type: "editNote"; noteId: string }>, null>;
 
@@ -70,11 +70,21 @@ export function NoteDrawer(props: {
   return {
     body: (
       <div style={{ display: "grid", gap: 10 }}>
-        <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>Title</div>
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
         {loading ? <div style={{ fontSize: "var(--fs-small)", opacity: 0.7 }}>Loading note content...</div> : null}
-        <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8, marginTop: 6 }}>Text</div>
-        <TextArea value={text} onChange={(e) => setText(e.target.value)} placeholder="Write..." rows={10} />
+        <NoteEditorFields
+          title={title}
+          text={text}
+          onTitleChange={setTitle}
+          onTextChange={setText}
+          titlePlaceholder="Title"
+          textPlaceholder="Write..."
+          textRows={10}
+          labelColor={theme.colors.muted}
+          textColor={theme.colors.text}
+          borderColor={theme.colors.panelBorder}
+          inputBg={theme.colors.inputBg}
+          radius={theme.radius.control}
+        />
       </div>
     ),
     footer: (

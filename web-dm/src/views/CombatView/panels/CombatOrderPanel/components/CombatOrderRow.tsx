@@ -12,15 +12,16 @@ function CombatantAvatar(props: {
   baseType: EncounterActor["baseType"];
   isDead: boolean;
   iconColor: string;
+  activeAccent: string;
   isActive: boolean;
   isTarget: boolean;
   imageUrl?: string | null;
 }) {
-  const { baseType, isDead, iconColor, isActive, isTarget } = props;
+  const { baseType, isDead, iconColor, activeAccent, isActive, isTarget } = props;
   const imageUrl = resolveAssetUrl(props.imageUrl);
 
   const borderColor = isActive
-    ? theme.colors.accentHighlight
+    ? activeAccent
     : isTarget ? theme.colors.blue
     : withAlpha(iconColor, 0.40);
 
@@ -38,7 +39,7 @@ function CombatantAvatar(props: {
         border: `1px solid ${borderColor}`,
         display: "flex", alignItems: "center", justifyContent: "center",
         color: iconColor,
-        boxShadow: isActive ? `0 0 0 2px ${theme.colors.accentHighlight}`
+        boxShadow: isActive ? `0 0 0 2px ${activeAccent}`
           : isTarget ? `0 0 0 2px ${theme.colors.blue}` : "none",
         overflow: "hidden",
       }}>
@@ -49,7 +50,7 @@ function CombatantAvatar(props: {
       </div>
       {(isActive || isTarget) && (
         <div style={{ position: "absolute", bottom: -4, right: -4, zIndex: 1 }}>
-          <TurnBadge active={isActive} targeted={isTarget} />
+          <TurnBadge active={isActive} targeted={isTarget} activeColor={activeAccent} />
         </div>
       )}
     </div>
@@ -71,7 +72,7 @@ export function CombatOrderRow(props: {
   onSelectTarget: (id: string) => void;
   onSetInitiative: (id: string, initiative: number) => void;
   onToggleReaction: (id: string) => void;
-  getRowShadow: (isActive: boolean, isTarget: boolean) => string;
+  getRowShadow: (isActive: boolean, isTarget: boolean, activeAccent: string) => string;
   bulkMode?: boolean;
   isBulkSelected?: boolean;
   onToggleBulkSelect?: (id: string) => void;
@@ -95,9 +96,10 @@ export function CombatOrderRow(props: {
   const isDead = hpCurrent <= 0;
   const dim = isDead && c.baseType !== "player";
 
-   const iconColor = isDead ? theme.colors.muted
-   : c.baseType === "player" ? theme.colors.blue
-   : friendly ? theme.colors.green : theme.colors.red;
+  const iconColor = isDead ? theme.colors.muted
+    : c.baseType === "player" ? theme.colors.blue
+    : c.color || (friendly ? theme.colors.green : theme.colors.red);
+  const activeAccent = iconColor;
 
   const pct = hpMax > 0 ? Math.max(0, Math.min(1, hpCurrent / hpMax)) : 0;
   const barColor = isDead ? theme.colors.red
@@ -115,8 +117,8 @@ export function CombatOrderRow(props: {
       padding: "1px 7px", borderRadius: 999,
       fontSize: "var(--fs-tiny)", fontWeight: 900, letterSpacing: 0.6,
       textTransform: "uppercase" as const, color: theme.colors.text,
-      border: `1px solid ${isActive ? theme.colors.accentHighlight : theme.colors.blue}`,
-      background: isActive ? `${theme.colors.accentHighlight}22` : `${theme.colors.blue}22`,
+      border: `1px solid ${isActive ? activeAccent : theme.colors.blue}`,
+      background: isActive ? `${activeAccent}22` : `${theme.colors.blue}22`,
     }}>
       {isActive && isTarget ? "Self" : isActive ? "Active" : "Target"}
     </span>
@@ -149,7 +151,7 @@ export function CombatOrderRow(props: {
     >
       <div style={{
         borderRadius: 12, border: `1px solid ${bulkMode && props.isBulkSelected ? theme.colors.accentWarning : theme.colors.panelBorder}`,
-        overflow: "hidden", boxShadow: bulkMode ? "none" : props.getRowShadow(isActive, isTarget),
+        overflow: "hidden", boxShadow: bulkMode ? "none" : props.getRowShadow(isActive, isTarget, activeAccent),
         animation: !bulkMode && isTarget ? "beholdenTargetPulse 1.8s ease-in-out infinite" : undefined,
         transform: isActive ? "translateY(-1px)" : "none", transition: "transform 80ms ease, border-color 120ms ease",
         opacity: dim ? 0.45 : 1, filter: dim ? "grayscale(0.85)" : "none",
@@ -169,7 +171,7 @@ export function CombatOrderRow(props: {
               {props.isBulkSelected ? "✓" : ""}
             </div>
           )}
-          <CombatantAvatar baseType={c.baseType} isDead={isDead} iconColor={iconColor} isActive={isActive} isTarget={isTarget}
+          <CombatantAvatar baseType={c.baseType} isDead={isDead} iconColor={iconColor} activeAccent={activeAccent} isActive={isActive} isTarget={isTarget}
             imageUrl={c.baseType === "player" ? props.playersById[c.baseId]?.imageUrl : undefined} />
 
           <div style={{ flex: "1 1 auto", minWidth: 0 }}>

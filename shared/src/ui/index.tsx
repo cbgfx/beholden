@@ -17,6 +17,7 @@ export { EmptyState } from "./EmptyState";
 export { NoteRow } from "./NoteRow";
 export { NoteList } from "./NoteList";
 export { NoteEditorFields } from "./NoteEditorFields";
+export { WysiwygNoteEditor } from "./WysiwygNoteEditor";
 export { NotesPanel } from "./NotesPanel";
 export { CollectionRow } from "./CollectionRow";
 export { ListShell } from "./ListShell";

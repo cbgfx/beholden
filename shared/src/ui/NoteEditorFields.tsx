@@ -1,7 +1,7 @@
 import React from "react";
 import { FormField } from "./FormField";
 import { Input } from "./Input";
-import { TextArea } from "./TextArea";
+import { WysiwygNoteEditor } from "./WysiwygNoteEditor";
 
 export function NoteEditorFields(props: {
   title: string;
@@ -31,13 +31,13 @@ export function NoteEditorFields(props: {
         />
       </FormField>
       <FormField label="Text" labelStyle={{ fontSize: "var(--fs-small)", fontWeight: 700, color: props.labelColor, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-        <TextArea
+        <WysiwygNoteEditor
           value={props.text}
-          onChange={(event) => props.onTextChange(event.target.value)}
+          onChange={props.onTextChange}
           placeholder={props.textPlaceholder ?? "Write..."}
-          rows={props.textRows ?? 12}
+          minHeight={(props.textRows ?? 12) * 24}
           theme={{ radius, panelBorder: props.borderColor, inputBg: props.inputBg, text: props.textColor }}
-          style={{ width: "100%", boxSizing: "border-box", resize: "vertical", fontSize: "var(--fs-subtitle)", padding: "8px 10px", fontFamily: "inherit", lineHeight: 1.5 }}
+          style={{ width: "100%", boxSizing: "border-box", fontFamily: "inherit" }}
         />
       </FormField>
     </div>

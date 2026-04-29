@@ -37,18 +37,18 @@ export function CombatOrderPanel(props: {
   const panelTitleColor = "var(--campaign-accent, #a78bfa)";
   const { upcoming, wrapped } = useCombatOrderModel({ combatants: props.combatants, activeId: props.activeId });
 
-  const getRowShadow = (isActive: boolean, isTarget: boolean) => {
+  const getRowShadow = (isActive: boolean, isTarget: boolean, activeAccent: string) => {
     // Target glow should remain visible even when the target is also the active combatant (self-target).
     if (isActive && isTarget) {
       return `
-        0 0 0 2px ${theme.colors.accentHighlight} inset,
+        0 0 0 2px ${activeAccent} inset,
         0 0 0 4px ${theme.colors.blue} inset,
         0 0 18px ${theme.colors.blue} inset,
         0 6px 18px rgba(0,0,0,0.18)
       `;
     }
     if (isActive) {
-      return `0 0 0 2px ${theme.colors.accentHighlight} inset, 0 6px 18px rgba(0,0,0,0.18)`;
+      return `0 0 0 2px ${activeAccent} inset, 0 6px 18px rgba(0,0,0,0.18)`;
     }
     if (isTarget) {
       // Inset-only to avoid scrollbars in the initiative list.
