@@ -241,16 +241,18 @@ function readEncounterActorLiveState(
 function readNoteState(row: Record<string, unknown>): StoredNoteState {
   const titleCol = typeof row.title === "string" ? row.title : null;
   const textCol = typeof row.text === "string" ? row.text : null;
+  const note = parseJson<Partial<StoredNoteState>>(row.note_json, {});
+  const jsonTitle = typeof note.title === "string" ? note.title : null;
+  const jsonText = typeof note.text === "string" ? note.text : null;
   if (titleCol != null || textCol != null) {
     return {
-      title: titleCol ?? "Note",
-      text: textCol ?? "",
+      title: titleCol === "Note" && jsonTitle && jsonTitle !== "Note" ? jsonTitle : titleCol ?? jsonTitle ?? "Note",
+      text: textCol === "" && jsonText ? jsonText : textCol ?? jsonText ?? "",
     };
   }
-  const note = parseJson<Partial<StoredNoteState>>(row.note_json, {});
   return {
-    title: typeof note.title === "string" ? note.title : "Note",
-    text: typeof note.text === "string" ? note.text : "",
+    title: jsonTitle ?? "Note",
+    text: jsonText ?? "",
   };
 }
 

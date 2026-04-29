@@ -293,11 +293,13 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
 
       for (const [i, n] of imp.notes.entries()) {
         db.prepare(
-          "INSERT INTO notes (id, campaign_id, adventure_id, note_json, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+          "INSERT INTO notes (id, campaign_id, adventure_id, title, text, note_json, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
         ).run(
           uid(),
           campaignId,
           advId,
+          n.title,
+          n.text,
           serializeNoteState({ title: n.title, text: n.text }),
           n.sort ?? i + 1,
           t,

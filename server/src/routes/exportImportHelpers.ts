@@ -170,16 +170,20 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
 
     const notes = toArray(doc["notes"]);
     for (const note of notes) {
+      const title = String(note["title"] ?? "");
+      const text = String(note["text"] ?? "");
       db.prepare(`
-        INSERT OR IGNORE INTO notes (id, campaign_id, adventure_id, note_json, sort, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT OR IGNORE INTO notes (id, campaign_id, adventure_id, title, text, note_json, sort, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         String(note["id"]),
         campaignId,
         (note["adventureId"] as string | null) ?? null,
+        title,
+        text,
         serializeNoteState({
-          title: String(note["title"] ?? ""),
-          text: String(note["text"] ?? ""),
+          title,
+          text,
         }),
         Number(note["sort"] ?? 0),
         Number(note["createdAt"] ?? Date.now()),
