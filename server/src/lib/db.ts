@@ -661,14 +661,29 @@ function backfillActorColumns(db: Db) {
 }
 
 function backfillStructuredContentColumns(db: Db) {
-  const notesRows = db.prepare("SELECT id, note_json FROM notes").all() as Array<{ id: string; note_json: string }>;
+  const notesRows = db.prepare("SELECT id, title, text, note_json FROM notes").all() as Array<{
+    id: string;
+    title: string;
+    text: string;
+    note_json: string;
+  }>;
   const noteUpdate = db.prepare("UPDATE notes SET title = ?, text = ?, note_json = ? WHERE id = ?");
   for (const row of notesRows) {
     const jsonText = String(row.note_json ?? "").trim();
-    if (!jsonText || jsonText === "{}") continue;
+    if (!jsonText || jsonText === "{}") {
+      const inferredTitle = inferNoteTitleFromText(row.text);
+      if (row.title === "Note" && inferredTitle) {
+        noteUpdate.run(inferredTitle, row.text ?? "", "{}", row.id);
+      }
+      continue;
+    }
     const parsed = parseJsonObject(row.note_json);
-    const title = typeof parsed?.title === "string" ? parsed.title : "Note";
-    const text = typeof parsed?.text === "string" ? parsed.text : "";
+    const text = typeof parsed?.text === "string" ? parsed.text : row.text ?? "";
+    const title = typeof parsed?.title === "string" && parsed.title.trim()
+      ? parsed.title
+      : row.title === "Note"
+        ? inferNoteTitleFromText(text) ?? row.title
+        : row.title;
     noteUpdate.run(title, text, "{}", row.id);
   }
 
@@ -716,6 +731,18 @@ function backfillStructuredContentColumns(db: Db) {
     const description = typeof parsed?.description === "string" ? parsed.description : null;
     partyUpdate.run(name, quantity, weight, notes, source, itemId, rarity, type, description, "{}", row.id);
   }
+}
+
+function inferNoteTitleFromText(text: unknown): string | null {
+  if (typeof text !== "string" || !text.trim()) return null;
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const heading = line.match(/^#{1,6}\s+(.+)$/);
+    const title = (heading?.[1] ?? line).trim();
+    return title || null;
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------

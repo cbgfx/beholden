@@ -238,20 +238,41 @@ function readEncounterActorLiveState(
   };
 }
 
+function titleFromNoteText(text: string | null): string | null {
+  if (!text) return null;
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const heading = line.match(/^#{1,6}\s+(.+)$/);
+    const title = (heading?.[1] ?? line).trim();
+    return title || null;
+  }
+  return null;
+}
+
 function readNoteState(row: Record<string, unknown>): StoredNoteState {
   const titleCol = typeof row.title === "string" ? row.title : null;
   const textCol = typeof row.text === "string" ? row.text : null;
   const note = parseJson<Partial<StoredNoteState>>(row.note_json, {});
   const jsonTitle = typeof note.title === "string" ? note.title : null;
   const jsonText = typeof note.text === "string" ? note.text : null;
+  const text = textCol === "" && jsonText ? jsonText : textCol ?? jsonText ?? "";
+  const inferredTitle = titleFromNoteText(text);
   if (titleCol != null || textCol != null) {
     return {
-      title: titleCol === "Note" && jsonTitle && jsonTitle !== "Note" ? jsonTitle : titleCol ?? jsonTitle ?? "Note",
-      text: textCol === "" && jsonText ? jsonText : textCol ?? jsonText ?? "",
+      title:
+        titleCol === "Note" && jsonTitle && jsonTitle !== "Note"
+          ? jsonTitle
+          : titleCol === "Note" && inferredTitle
+            ? inferredTitle
+            : titleCol && titleCol.trim()
+              ? titleCol
+              : jsonTitle ?? inferredTitle ?? "Note",
+      text,
     };
   }
   return {
-    title: jsonTitle ?? "Note",
+    title: jsonTitle ?? inferredTitle ?? "Note",
     text: jsonText ?? "",
   };
 }
