@@ -1,4 +1,4 @@
-import type { MonsterDetail, SpellSummary } from "@/views/CombatView/types";
+import type { MonsterDetail } from "@/views/CombatView/types";
 
 type NamedSpellEntry = { name?: unknown };
 
@@ -43,15 +43,6 @@ export function parseMonsterSpells(detail: MonsterDetail | null): string[] {
     uniq.push(s);
   }
   return uniq;
-}
-
-export function bestSpellMatch(rows: SpellSummary[], name: string): SpellSummary | null {
-  const n = name.trim().toLowerCase();
-  if (!n) return null;
-  const exact = rows.find((r) => String(r.name).trim().toLowerCase() === n);
-  if (exact) return exact;
-  const starts = rows.find((r) => String(r.name).trim().toLowerCase().startsWith(n));
-  return starts ?? rows[0] ?? null;
 }
 
 export function sortSpellNames(names: string[], levelCache: Record<string, number | null | undefined>): string[] {

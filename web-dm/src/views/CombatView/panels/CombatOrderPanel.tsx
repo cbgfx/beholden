@@ -1,4 +1,3 @@
-import React from "react";
 import type { EncounterActor } from "@/domain/types/domain";
 import { theme } from "@/theme/theme";
 import { Panel } from "@/ui/Panel";

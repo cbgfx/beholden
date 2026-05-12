@@ -121,17 +121,17 @@ export function buildCampaignCharacterLiveState(
   };
 }
 
-export function serializeCharacterSheetState(sheet: StoredCharacterSheetState): string {
+function serializeCharacterSheetState(sheet: StoredCharacterSheetState): string {
   void sheet;
   return "{}";
 }
 
-export function serializeCampaignCharacterSheet(snapshot: MirroredPlayerSnapshot): string {
+function serializeCampaignCharacterSheet(snapshot: MirroredPlayerSnapshot): string {
   void snapshot;
   return "{}";
 }
 
-export function serializeCampaignCharacterLive(
+function serializeCampaignCharacterLive(
   live: StoredCampaignCharacterLiveState,
 ): string {
   const compact: Record<string, unknown> = {};
@@ -203,7 +203,7 @@ export function campaignLiveDbColumns(live: StoredCampaignCharacterLiveState) {
   };
 }
 
-export function buildCampaignCharacterLive(
+function buildCampaignCharacterLive(
   current: Pick<StoredCampaignCharacter, "hpCurrent" | "overrides" | "conditions" | "deathSaves">,
   patch: Partial<StoredCampaignCharacterLiveState>,
 ): StoredCampaignCharacterLiveState {

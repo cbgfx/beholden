@@ -163,34 +163,6 @@ function isProficiencyNoiseToken(value: string): boolean {
   return /^(?:this|that|these|those|extra|another|any|language|languages|tool|tools|skill|skills)$/i.test(normalized);
 }
 
-export function parseSelectedClassOptionalFeatureEffects(
-  classDetail: CreatorClassDetailLike | null,
-  level: number,
-  chosenOptionals: string[],
-): ParsedFeatureEffects[] {
-  if (!classDetail || chosenOptionals.length === 0) return [];
-  const selected = new Set(chosenOptionals);
-  const parsed: ParsedFeatureEffects[] = [];
-  for (const autolevel of classDetail.autolevels) {
-    if (autolevel.level == null || autolevel.level > level) continue;
-    for (const feature of autolevel.features) {
-      if (!feature.optional || !selected.has(feature.name) || !String(feature.text ?? "").trim()) continue;
-      parsed.push(parseFeatureEffects({
-        source: {
-          id: `creator-class-optional:${autolevel.level}:${feature.name}`,
-          kind: "class",
-          name: feature.name,
-          level: autolevel.level,
-          parentName: classDetail.name,
-          text: feature.text,
-        },
-        text: feature.text,
-      } satisfies ParseFeatureEffectsInput));
-    }
-  }
-  return parsed;
-}
-
 export function parseAppliedClassFeatureEffects(
   classDetail: CreatorClassDetailLike | null,
   level: number,

@@ -65,18 +65,6 @@ function treasureListRowToFlat(row: TreasureListRow): FlatTreasureDto {
   };
 }
 
-export function fetchCampaignNotes(campaignId: string): Promise<FlatNoteDto[]> {
-  return api<NoteDto[]>(`/api/campaigns/${campaignId}/notes`).then((rows) =>
-    rows.map(flattenNoteDto),
-  );
-}
-
-export function fetchAdventureNotes(adventureId: string): Promise<FlatNoteDto[]> {
-  return api<NoteDto[]>(`/api/adventures/${adventureId}/notes`).then((rows) =>
-    rows.map(flattenNoteDto),
-  );
-}
-
 export function fetchCampaignNotesList(campaignId: string): Promise<FlatNoteDto[]> {
   return api<NoteListRow[]>(`/api/campaigns/${campaignId}/notes?view=list`).then((rows) =>
     rows.map(noteListRowToFlat),
@@ -91,22 +79,6 @@ export function fetchAdventureNotesList(adventureId: string): Promise<FlatNoteDt
 
 export function fetchNoteById(noteId: string): Promise<FlatNoteDto> {
   return api<NoteDto>(`/api/notes/${noteId}`).then(flattenNoteDto);
-}
-
-export function fetchCampaignTreasure(
-  campaignId: string,
-): Promise<FlatTreasureDto[]> {
-  return api<TreasureDto[]>(`/api/campaigns/${campaignId}/treasure`).then((rows) =>
-    rows.map(flattenTreasureDto),
-  );
-}
-
-export function fetchAdventureTreasure(
-  adventureId: string,
-): Promise<FlatTreasureDto[]> {
-  return api<TreasureDto[]>(`/api/adventures/${adventureId}/treasure`).then((rows) =>
-    rows.map(flattenTreasureDto),
-  );
 }
 
 export function fetchCampaignTreasureList(

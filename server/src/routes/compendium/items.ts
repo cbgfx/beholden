@@ -476,7 +476,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
   app.post("/api/compendium/items", anyDm, (req, res) => {
     const b = parseBody(ItemBody, req);
     const id = `i_${b.name.toLowerCase().replace(/\s+/g, "_")}`;
-    const { name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data } = buildItemRecord(id, b);
+    const { name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data } = buildItemRecord(b);
     db.prepare("INSERT OR REPLACE INTO compendium_items (id, name, name_key, rarity, type, type_key, attunement, magic, weight, value, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
       .run(id, name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data.weight ?? null, data.value ?? null, JSON.stringify(data));
     ctx.broadcast("compendium:changed", { itemCreated: id });
@@ -489,7 +489,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     if (!db.prepare("SELECT id FROM compendium_items WHERE id = ?").get(itemId))
       return res.status(404).json({ ok: false, message: "Item not found" });
     const b = parseBody(ItemBody, req);
-    const { name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data } = buildItemRecord(itemId, b);
+    const { name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data } = buildItemRecord(b);
     db.prepare("UPDATE compendium_items SET name = ?, name_key = ?, rarity = ?, type = ?, type_key = ?, attunement = ?, magic = ?, weight = ?, value = ?, data_json = ? WHERE id = ?")
       .run(name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data.weight ?? null, data.value ?? null, JSON.stringify(data), itemId);
     ctx.broadcast("compendium:changed", { itemUpdated: itemId });

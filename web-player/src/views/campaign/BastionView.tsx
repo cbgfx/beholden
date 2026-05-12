@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { api, jsonInit } from "@/services/api";
 import { useWs } from "@/services/ws";
@@ -155,7 +155,6 @@ const inputStyle: React.CSSProperties = {
 
 export function BastionView() {
   const { id: campaignId, bastionId } = useParams<{ id: string; bastionId: string }>();
-  const navigate = useNavigate();
 
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);

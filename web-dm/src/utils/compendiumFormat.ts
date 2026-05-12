@@ -1,7 +1,5 @@
 export {
   buildMonsterInfoLines,
-  listToString,
-  normalizeSpellName,
   parseSaves,
   parseSpeedDisplay,
   parseSpeedVal,

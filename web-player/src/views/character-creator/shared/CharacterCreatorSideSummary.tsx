@@ -1,4 +1,3 @@
-import React from "react";
 import { C } from "@/lib/theme";
 import { ABILITY_KEYS, ABILITY_LABELS } from "@/views/character-creator/constants/CharacterCreatorConstants";
 import { abilityMod } from "@/views/character-creator/utils/CharacterCreatorUtils";

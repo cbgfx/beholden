@@ -1,4 +1,3 @@
-import React from "react";
 import { IconAC, IconHP, IconSpeed } from "@/icons";
 import { theme } from "@/theme/theme";
 import { StatBar } from "@/components/CharacterSheet/StatBar";

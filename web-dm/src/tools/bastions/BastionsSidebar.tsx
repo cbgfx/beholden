@@ -1,4 +1,3 @@
-import React from "react";
 import { Button } from "@/ui/Button";
 import { theme, withAlpha } from "@/theme/theme";
 import type { Bastion } from "@/tools/bastions/types";

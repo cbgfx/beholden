@@ -1,4 +1,3 @@
-import React from "react";
 import { AdventuresPanel } from "@/views/CampaignView/panels/AdventuresPanel";
 import { EncountersPanel } from "@/views/CampaignView/panels/EncountersPanel";
 import { TreasurePanel } from "@/views/CampaignView/panels/TreasurePanel";

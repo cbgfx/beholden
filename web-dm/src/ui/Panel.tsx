@@ -1,5 +1,4 @@
 import React from "react";
-import { theme } from "@/theme/theme";
 import { Panel as SharedPanel } from "@beholden/shared/ui";
 import { dmSharedPanelTheme } from "@/ui/sharedUiTheme";
 import { SectionTitle } from "@/ui/SectionTitle";

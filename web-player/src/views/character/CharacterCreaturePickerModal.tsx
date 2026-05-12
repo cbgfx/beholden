@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "@/services/api";
 import { C, withAlpha } from "@/lib/theme";
 import { MonsterStatblock } from "@/views/CompendiumView/panels/MonsterStatblock";

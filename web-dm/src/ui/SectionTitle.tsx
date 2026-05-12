@@ -1,5 +1,4 @@
 import React from "react";
-import { theme } from "@/theme/theme";
 import { SectionTitle as SharedSectionTitle } from "@beholden/shared/ui";
 
 export function SectionTitle({

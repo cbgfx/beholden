@@ -51,30 +51,3 @@ export function parseAttackFromText(text: unknown): ParsedAttack | null {
   };
 }
 
-export function applyAttackOverrideToText(
-  text: unknown,
-  override?: Partial<ParsedAttack> | null
-): string {
-  const raw = String(text ?? "");
-  if (!override) return raw;
-
-  let out = raw;
-
-  if (typeof override.toHit === "number" && Number.isFinite(override.toHit)) {
-    out = out.replace(/Weapon Attack:\s*\+?\d+\s*to hit/i, (m) =>
-      m.replace(/\+?\d+/, `+${override.toHit}`)
-    );
-  }
-  if (override.damage) {
-    out = out.replace(/\(\s*[^)]+\s*\)\s*[a-zA-Z]+\s+damage/i, (m) => {
-      const type = override.damageType
-        ? String(override.damageType)
-        : m.match(/\)\s*([a-zA-Z]+)\s+damage/i)?.[1] ?? "";
-      return `(${override.damage}) ${type} damage`;
-    });
-  }
-  if (override.damageType) {
-    out = out.replace(/\)\s*[a-zA-Z]+\s+damage/i, `) ${override.damageType} damage`);
-  }
-  return out;
-}

@@ -2,7 +2,7 @@ import type { CampaignCharacter } from "@/domain/types/domain";
 import { specialSlotsForLevel } from "@/tools/bastions/utils";
 import type { Bastion, CompendiumFacility } from "@/tools/bastions/types";
 
-export function selectedLevelFromAssignments(bastion: Bastion, players: CampaignCharacter[]): number {
+function selectedLevelFromAssignments(bastion: Bastion, players: CampaignCharacter[]): number {
   return Math.max(
     1,
     ...players

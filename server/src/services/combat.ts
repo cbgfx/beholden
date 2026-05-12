@@ -11,15 +11,15 @@ import type {
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
 import { campaignLiveDbColumns } from "./characters.js";
 
-export function serializeEncounterActorSnapshot(snapshot: StoredEncounterActorSnapshot): string {
+function serializeEncounterActorSnapshot(snapshot: StoredEncounterActorSnapshot): string {
   return JSON.stringify(snapshot);
 }
 
-export function serializeEncounterActorLive(live: StoredEncounterActorLiveState): string {
+function serializeEncounterActorLive(live: StoredEncounterActorLiveState): string {
   return JSON.stringify(live);
 }
 
-export function buildEncounterActorSnapshot(
+function buildEncounterActorSnapshot(
   actor: Pick<
     StoredEncounterActor,
     "name" | "label" | "friendly" | "color" | "hpMax" | "hpDetails" | "ac" | "acDetails" | "attackOverrides"

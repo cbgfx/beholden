@@ -1,4 +1,3 @@
-import * as React from "react";
 import {
   Icon,
   IconAttack,
@@ -13,12 +12,10 @@ import {
   IconShield,
   IconSpeed,
   IconWerewolf,
-  conditionIconSvgByKey,
   type SvgIconProps,
 } from "@beholden/shared/icons";
 
 export {
-  Icon,
   IconAttack,
   IconConditionByKey,
   IconConditions,
@@ -31,7 +28,6 @@ export {
   IconShield,
   IconSpeed,
   IconWerewolf,
-  conditionIconSvgByKey,
 };
 
 export type IconProps = Omit<SvgIconProps, "svg" | "className">;

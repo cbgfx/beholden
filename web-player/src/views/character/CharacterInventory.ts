@@ -4,7 +4,7 @@ import {
   canUseWeaponForBonusAttackFromEffects,
   deriveAttackAbilityOverrideFromEffects,
 } from "@/domain/character/parseFeatureEffects";
-import { currencyCodeForName, formatItemDamageType, formatItemProperties, isCurrencyName, normalizeInventoryItemLookupName } from "@beholden/shared/domain";
+import { formatItemDamageType, formatItemProperties, isCurrencyName, normalizeInventoryItemLookupName } from "@beholden/shared/domain";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
 import type { CharacterData, ProficiencyMap, TaggedItem } from "@/views/character/CharacterSheetTypes";
 import { abilityMod, normalizeWeaponProficiencyName, splitArmorProficiencyNames } from "@/views/character/CharacterSheetUtils";
@@ -192,7 +192,7 @@ export function hasWeaponMastery(item: Pick<InventoryItem, "proficiency" | "name
   return Boolean(item) && hasWeaponProficiency(item as InventoryItem, prof);
 }
 
-export function isShieldOrTorch(item: InventoryItem): boolean {
+function isShieldOrTorch(item: InventoryItem): boolean {
   const type = String(item.type ?? "").toLowerCase();
   const name = String(item.name ?? "").toLowerCase();
   return type.includes("shield") || name.includes("shield") || name.includes("torch");
@@ -205,10 +205,6 @@ export function isArmorItem(item: InventoryItem): boolean {
 export function hasStealthDisadvantage(item: { stealthDisadvantage?: boolean; description?: string | null }): boolean {
   if (item.stealthDisadvantage) return true;
   return /disadvantage on stealth/i.test(String(item.description ?? ""));
-}
-
-export function currencyCodeForItem(item: Pick<InventoryItem, "name"> | null | undefined): "PP" | "GP" | "EP" | "SP" | "CP" | null {
-  return currencyCodeForName(item?.name);
 }
 
 export function isCurrencyItem(item: Pick<InventoryItem, "name"> | null | undefined): boolean {
@@ -232,7 +228,7 @@ export function requiresTwoHands(item: InventoryItem): boolean {
   return isWeaponItem(item) && hasItemProperty(item, "2H");
 }
 
-export function armorProficiencyNameForItem(item: InventoryItem): "Light Armor" | "Medium Armor" | "Heavy Armor" | "Shields" | null {
+function armorProficiencyNameForItem(item: InventoryItem): "Light Armor" | "Medium Armor" | "Heavy Armor" | "Shields" | null {
   if (isShieldItem(item)) return "Shields";
   const type = String(item.type ?? "").toLowerCase();
   if (type.includes("light armor")) return "Light Armor";
@@ -326,7 +322,7 @@ function isMartialWeapon(item: InventoryItem): boolean {
   return hasItemProperty(item, "M");
 }
 
-export function isMonkWeapon(item: InventoryItem): boolean {
+function isMonkWeapon(item: InventoryItem): boolean {
   if (!isWeaponItem(item) || isRangedWeapon(item)) return false;
   if (isSimpleWeapon(item)) return !hasItemProperty(item, "2H") && !hasItemProperty(item, "H");
   return isMartialWeapon(item) && hasItemProperty(item, "L");
@@ -429,12 +425,3 @@ export function hasWeaponProficiency(item: InventoryItem, prof: ProficiencyMapLi
   return (prof?.weapons ?? []).some((entry) => weaponMatchesProficiency(item, entry.name));
 }
 
-export function conditionDisplayWeaponMeta(item: InventoryItem): string {
-  const meta = [
-    item.rarity ? titleCase(item.rarity) : null,
-    item.type ?? null,
-    item.attunement ? "Attunement" : null,
-    item.magic ? "Magic" : null,
-  ].filter(Boolean);
-  return meta.join(" • ");
-}

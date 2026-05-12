@@ -1,4 +1,4 @@
-﻿import { wordOrNumberToInt, type Ruleset, type RaceChoices } from "@/lib/characterRules";
+import { wordOrNumberToInt, type RaceChoices } from "@/lib/characterRules";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import { abilityMod } from "@/views/character/CharacterSheetUtils";
 import type { ParsedFeatChoiceLike as CreatorParsedFeatChoiceLike } from "./FeatChoiceTypes";
@@ -189,12 +189,6 @@ export function getSubclassLevel(cls: CreatorClassDetailLike | null): number | n
   return null;
 }
 
-export function featuresUpToLevel(cls: CreatorClassDetailLike, level: number) {
-  return getMergedAutolevels(cls)
-    .filter((al) => al.level != null && al.level <= level)
-    .flatMap((al) => (al.features ?? []).filter((feature) => !feature.optional).map((feature) => ({ ...feature, level: al.level })));
-}
-
 export function featuresUpToLevelForSubclass(cls: CreatorClassDetailLike, level: number, selectedSubclass?: string | null) {
   return getMergedAutolevels(cls)
     .filter((al) => al.level != null && al.level <= level)
@@ -218,7 +212,7 @@ export function getSubclassList(cls: CreatorClassDetailLike): string[] {
   return names;
 }
 
-export function parseLevelTable(text: string): [number, number][] {
+function parseLevelTable(text: string): [number, number][] {
   const pairs: [number, number][] = [];
   let inTable = false;
   for (const raw of text.split("\n")) {
@@ -245,7 +239,7 @@ export function tableValueAtLevel(table: [number, number][], level: number): num
   return result;
 }
 
-export function getSlotsAtLevel(cls: CreatorClassDetailLike, level: number): number[] | null {
+function getSlotsAtLevel(cls: CreatorClassDetailLike, level: number): number[] | null {
   let best: number[] | null = null;
   for (const al of getMergedAutolevels(cls)) {
     if (al.level != null && al.level <= level && al.slots != null) best = al.slots;
@@ -436,22 +430,6 @@ export function parseSkillList(proficiency: string): string[] {
 export { wordOrNumberToInt };
 export { getGrowthChoiceDefinitions } from "./GrowthChoiceUtils";
 
-export function baseWeaponKind(name: string): string {
-  return name.replace(/\s*\[[^\]]+\]\s*$/u, "").trim();
-}
-
-export function getWeaponMasteryOptions(items: CreatorItemSummaryLike[]): string[] {
-  const kinds = new Set<string>();
-  for (const item of items) {
-    if (!/weapon/i.test(item.type ?? "")) continue;
-    if (item.magic || item.attunement || item.rarity) continue;
-    const kind = baseWeaponKind(item.name);
-    if (!WEAPON_MASTERY_KIND_SET.has(kind)) continue;
-    kinds.add(kind);
-  }
-  return [...kinds].sort((a, b) => a.localeCompare(b));
-}
-
 function normalizeFeatChoiceOption(option: unknown): string | null {
   if (typeof option === "string") return option;
   if (typeof option === "number" || typeof option === "boolean") return String(option);
@@ -613,7 +591,7 @@ export function parseStartingEquipmentOptions(equipment: string | undefined): St
     .filter((option) => option.id && option.entries.length > 0);
 }
 
-export function splitEquipmentEntries(text: string): string[] {
+function splitEquipmentEntries(text: string): string[] {
   return text
     .replace(/\s+or\s+$/i, "")
     .replace(/\s+and\s+/gi, ", ")

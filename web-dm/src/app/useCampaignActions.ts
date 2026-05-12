@@ -22,9 +22,9 @@ function apiErr(e: unknown) {
 
 export function useCampaignActions(
   state: State,
-  dispatch: Dispatch,
+  _dispatch: Dispatch,
   confirm: ConfirmFn,
-  { refreshAll, refreshCampaign, refreshAdventure, refreshEncounter }: RefreshFns
+  _refreshFns: RefreshFns
 ) {
   const addAllPlayers = React.useCallback(async () => {
     if (!state.selectedEncounterId) return;

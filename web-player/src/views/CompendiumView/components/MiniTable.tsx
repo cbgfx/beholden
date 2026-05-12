@@ -1,4 +1,3 @@
-import React from "react";
 import { C } from "@/lib/theme";
 
 export function MiniTable(props: { cols: string[]; rows: Array<Array<string | number>> }) {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const FacilityInputSchema = z.object({
+const FacilityInputSchema = z.object({
   id: z.string().trim().min(1).optional(),
   facilityKey: z.string().trim().min(1),
   source: z.enum(["player", "dm_extra"]),

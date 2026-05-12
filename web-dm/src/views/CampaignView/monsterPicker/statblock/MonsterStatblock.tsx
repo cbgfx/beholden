@@ -133,13 +133,15 @@ export function MonsterStatblock(props: {
 
   const sheetStats: CharacterSheetStats | null = React.useMemo(() => {
     if (!m) return null;
-    const ac = m.ac?.value ?? m.ac ?? m.armor_class;
-    const hp = m.hp?.average ?? m.hp ?? m.hit_points;
+    const acRecord = asRecord(m.ac);
+    const hpRecord = asRecord(m.hp);
+    const acValue = acRecord?.value ?? m.ac ?? m.armor_class;
+    const hpValue = hpRecord?.average ?? m.hp ?? m.hit_points;
     const raw: Record<string, unknown> = (m.raw_json ?? m) as Record<string, unknown>;
     return {
-      ac: readNumber(ac) ?? NaN,
-      hpCur: readNumber(hp) ?? NaN,
-      hpMax: readNumber(hp) ?? NaN,
+      ac: readNumber(acValue) ?? NaN,
+      hpCur: readNumber(hpValue) ?? NaN,
+      hpMax: readNumber(hpValue) ?? NaN,
       speed: parseSpeedVal(raw["speed"] ?? m.speed),
       speedDisplay: parseSpeedDisplay(raw["speed"] ?? m.speed),
       abilities: {
@@ -160,8 +162,6 @@ export function MonsterStatblock(props: {
     return <div style={{ color: theme.colors.muted }}>Select a monster to preview its stats.</div>;
   }
 
-  const ac = m.ac?.value ?? m.ac ?? m.armor_class;
-  const hp = m.hp?.average ?? m.hp ?? m.hit_points;
   const type = asRecord(m.type)?.type ?? m.type;
   const alignment = m.alignment;
   const cr = formatCr(m.cr ?? m.challenge_rating);
@@ -179,7 +179,7 @@ export function MonsterStatblock(props: {
     <div style={{ display: "grid", gap: 14 }}>
       {!props.hideSummary && (
         <div>
-          <div style={{ fontWeight: 900, fontSize: "var(--fs-title)", color: theme.colors.text }}>{m.name}</div>
+          <div style={{ fontWeight: 900, fontSize: "var(--fs-title)", color: theme.colors.text }}>{String(m.name ?? "")}</div>
           <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
             {[type, alignment, cr ? `CR ${cr}` : null].filter(Boolean).join(" | ")}
           </div>
@@ -196,12 +196,12 @@ export function MonsterStatblock(props: {
         <MonsterSectionPanel title="Actions">
           <div style={{ display: "grid", gap: 8 }}>
             {nonSpellActions.map((a, i: number) => {
-              const name = a.name ?? a.title ?? "";
+              const name = String(a.name ?? a.title ?? "");
               return (
                 <div key={i} style={{ display: "grid", gap: 4, padding: "10px 12px", borderRadius: 10, border: `1px solid ${theme.colors.panelBorder}`, background: theme.colors.panelBg }}>
                   <div style={{ fontWeight: 900 }}>{name}</div>
                   <div style={{ color: theme.colors.muted, whiteSpace: "pre-wrap", fontSize: "var(--fs-subtitle)" }}>
-                    {a.text ?? a.description ?? ""}
+                    {String(a.text ?? a.description ?? "")}
                   </div>
                   {props.onChangeAttack && isAttackAction(a) && (
                     <AttackOverrideInputs

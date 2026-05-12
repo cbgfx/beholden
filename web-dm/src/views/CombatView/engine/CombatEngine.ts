@@ -46,12 +46,12 @@ export function orderByInitiative(combatants: TurnableCombatant[]): TurnableComb
   return rows;
 }
 
-export function clampRound(n: number): number {
+function clampRound(n: number): number {
   const x = Number(n);
   return Number.isFinite(x) ? Math.max(1, Math.floor(x)) : 1;
 }
 
-export function isSelectable(c: TurnableCombatant): boolean {
+function isSelectable(c: TurnableCombatant): boolean {
   // Monsters and iNPCs at 0 HP are dead and should be skipped.
   // Players at 0 HP are making death saves and must remain in turn order.
   if (c.baseType === "player") return true;

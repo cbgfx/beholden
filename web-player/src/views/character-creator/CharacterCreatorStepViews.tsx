@@ -9,7 +9,6 @@ import {
   POINT_BUY_BUDGET,
   POINT_BUY_COSTS,
   STANDARD_ARRAY,
-  WEAPON_MASTERY_KINDS,
 } from "@/views/character-creator/constants/CharacterCreatorConstants";
 import {
   abilityMod,
@@ -23,7 +22,6 @@ import {
   getSubclassList,
   isSpellcaster,
   parseRaceChoices,
-  parseSkillList,
   parseStartingEquipmentOptions,
   tableValueAtLevel,
 } from "@/views/character-creator/utils/CharacterCreatorUtils";
@@ -323,14 +321,6 @@ function renderLevel(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
     acc[level] = nextScores;
     return acc;
   }, {});
-  const levelUpFeatChoices = ctx.levelUpFeatLevels.map((level) => ({
-    level,
-    mode: ctx.form.chosenLevelUpFeats.find((entry) => entry.level === level)?.type ?? null,
-    selectedFeatId: ctx.form.chosenLevelUpFeats.find((entry) => entry.level === level)?.featId ?? null,
-    asiBonuses: ctx.form.chosenLevelUpFeats.find((entry) => entry.level === level)?.abilityBonuses ?? {},
-    options: ctx.availableLevelUpFeats.map((feat) => ({ id: feat.id, name: feat.name })),
-  }));
-
   function toggleOptional(name: string, exclusive: boolean, groupFeatures: string[]) {
     ctx.setForm((f) => {
       let next = [...f.chosenOptionals];

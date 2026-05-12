@@ -5,7 +5,7 @@ import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/ty
 import { formatCr } from "@/views/CampaignView/monsterPicker/utils";
 import { titleCase } from "@/lib/format/titleCase";
 
-export const selectStyle: React.CSSProperties = {
+const selectStyle: React.CSSProperties = {
   background: theme.colors.panelBg,
   color: theme.colors.text,
   border: `1px solid ${theme.colors.panelBorder}`,
@@ -28,7 +28,7 @@ export const inputStyle: React.CSSProperties = {
   boxSizing: "border-box",
 };
 
-export const CR_OPTIONS = [
+const CR_OPTIONS = [
   "", "0", "1/8", "1/4", "1/2", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
   "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30",
 ];

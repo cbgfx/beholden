@@ -10,7 +10,6 @@ export function useLevelUpSelectionSanitizers(args: {
   classInvocations: SpellSummary[];
   existingClassSpellNames: string[];
   existingClassInvocationNames: string[];
-  preparedSpellProgressionGrantedKeys: Set<string>;
   cantripCount: number;
   maxSpellLevel: number;
   prepCount: number;
@@ -31,7 +30,6 @@ export function useLevelUpSelectionSanitizers(args: {
     classInvocations,
     existingClassSpellNames,
     existingClassInvocationNames,
-    preparedSpellProgressionGrantedKeys,
     cantripCount,
     maxSpellLevel,
     prepCount,

@@ -308,50 +308,6 @@ export interface ParsedFeatureEffects {
   unmatchedText?: string[];
 }
 
-export const FEATURE_EFFECT_PRIORITIES: Record<FeatureEffect["type"], number> = {
-  ability_score: 5,
-  proficiency_grant: 10,
-  weapon_mastery: 20,
-  resource_grant: 30,
-  spell_grant: 40,
-  spell_choice: 45,
-  armor_class: 50,
-  speed: 60,
-  senses: 70,
-  defense: 80,
-  modifier: 90,
-  check_override: 100,
-  hit_points: 110,
-  attack: 120,
-  action: 130,
-  choice_bundle: 140,
-  narrative: 999,
-};
-
-export const FEATURE_EFFECT_MODEL_NOTES = {
-  goals: [
-    "Represent common compendium patterns once and reuse them across classes, subclasses, feats, and invocations.",
-    "Separate actionable sheet mechanics from narrative reference text.",
-    "Prefer effect handlers per pattern, not per feature.",
-  ],
-  compendiumPatternsCovered: [
-    "Free casts with short/long rest resets and ability-mod scaling.",
-    "Always-prepared, at-will, and expanded-list spell grants.",
-    "Resource pools like Rage, Channel Divinity, Bardic Inspiration, and Wild Shape.",
-    "Skill/tool/language/armor/weapon/save proficiencies and Expertise.",
-    "Weapon Mastery selections and rest-swappable weapon picks.",
-    "Unarmored Defense, AC bonuses, speed bonuses, and movement modes.",
-    "Resistances, immunities, advantage/disadvantage, and passive score modifiers.",
-    "Attack riders like Sneak Attack, Rage Damage, Brutal Strike, and Extra Attack.",
-    "Choice-driven feature bundles such as Wild Heart options, maneuvers, and subclass pick lists.",
-  ],
-  expectedEscapeHatches: [
-    "Highly bespoke triggered effects with battlefield targeting or party coordination.",
-    "Features that rewrite another subsystem rather than adding a local modifier.",
-    "Narrative/reference-only feature text that should remain visible but not automated.",
-  ],
-} as const;
-
 export function createFeatureEffectId(source: FeatureEffectSource, type: FeatureEffect["type"], index: number): string {
   return `${source.kind}:${source.id}:${type}:${index}`;
 }

@@ -1,4 +1,3 @@
-import React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import { IconButton } from "@/ui/IconButton";
 import { IconINPC, IconMonster, IconPlayer, IconTrash } from "@/icons";

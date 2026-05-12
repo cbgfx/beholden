@@ -1,4 +1,3 @@
-import React from "react";
 import { FormField } from "./FormField";
 import { Input } from "./Input";
 import { WysiwygNoteEditor } from "./WysiwygNoteEditor";

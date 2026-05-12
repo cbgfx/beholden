@@ -7,7 +7,3 @@ export function dexModFromMonster(d: MonsterDetail | null): number {
   return Math.floor((dex - 10) / 2);
 }
 
-export function parsePositiveInt(value: string): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
-}

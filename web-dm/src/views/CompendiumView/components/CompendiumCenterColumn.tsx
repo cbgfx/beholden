@@ -1,4 +1,3 @@
-import React from "react";
 import { SpellsPanel } from "@/views/CompendiumView/panels/SpellsPanel";
 import { RulesReferencePanel } from "@/views/CompendiumView/panels/RulesReferencePanel";
 import { CompendiumAdminPanel } from "@/views/CompendiumView/panels/CompendiumAdminPanel";

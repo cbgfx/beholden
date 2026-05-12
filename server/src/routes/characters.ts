@@ -7,16 +7,14 @@ import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { rowToCampaignCharacter, rowToCharacterSheet, CAMPAIGN_CHARACTER_COLS, CHARACTER_SHEET_COLS } from "../lib/db.js";
 import { requireAuth } from "../middleware/auth.js";
-import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
+import { DEFAULT_OVERRIDES } from "../lib/defaults.js";
 import { toCharacterCampaignAssignmentDto, toCharacterSheetDto } from "../lib/apiActors.js";
 import {
-  type Assignment,
   getAssignments,
   assignmentsToJson,
   getAssignedPlayers,
   broadcastPlayerCombatantChanges,
   buildCampaignCharacterLiveState,
-  buildCampaignCharacterLive,
   buildCharacterSheetState,
   buildMirroredPlayerSnapshot,
   characterSheetDbColumns,
@@ -269,7 +267,6 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       success: Math.min(3, Math.max(0, Math.floor(Number(success) || 0))),
       fail:    Math.min(3, Math.max(0, Math.floor(Number(fail)    || 0))),
     };
-    const deathSavesJson = JSON.stringify(deathSaves);
     const t = now();
 
     const currentRow = db

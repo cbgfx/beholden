@@ -1,4 +1,3 @@
-import React from "react";
 import { theme } from "@/theme/theme";
 import type { GroupedSpell } from "./useMonsterSpells";
 import { MonsterSectionPanel } from "@/components/MonsterDisplay/MonsterSectionPanel";

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { C, withAlpha } from "@/lib/theme";
 import { titleCase } from "@/lib/format/titleCase";
 import { api } from "@/services/api";

@@ -1,4 +1,3 @@
-import React from "react";
 import { NoteRow } from "./NoteRow";
 import { usePointerDragReorder } from "./usePointerDragReorder";
 

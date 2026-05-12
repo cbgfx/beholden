@@ -73,7 +73,7 @@ export function getFeatSpellcastingAbilityChoice(
   };
 }
 
-export function resolveFeatSpellcastingAbility(args: {
+function resolveFeatSpellcastingAbility(args: {
   feat: ParsedFeatDetailLike;
   selectedChoices?: Record<string, string[]>;
   getChoiceKey?: (choice: ParsedFeatChoiceLike) => string;

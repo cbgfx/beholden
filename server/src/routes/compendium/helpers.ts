@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { pruneItemBlob, pruneMonsterBlob, pruneSpellBlob } from "../../services/compendium/blobHygiene.js";
 
-export const BlockSchema = z.object({ name: z.string(), text: z.string() });
+const BlockSchema = z.object({ name: z.string(), text: z.string() });
 
 export const MonsterBody = z.object({
   name: z.string().trim().min(1),
@@ -66,7 +66,7 @@ export const SpellBody = z.object({
   text: z.union([z.string(), z.array(z.string())]).optional(),
 });
 
-export function parseCrToNumeric(cr: string | null): number | null {
+function parseCrToNumeric(cr: string | null): number | null {
   if (!cr) return null;
   const s = cr.trim();
   if (s.includes("/")) {
@@ -78,15 +78,11 @@ export function parseCrToNumeric(cr: string | null): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export function toBlocks(v: unknown): Array<{ name: string; text: string }> {
+function toBlocks(v: unknown): Array<{ name: string; text: string }> {
   if (!Array.isArray(v)) return [];
   return (v as Array<Record<string, unknown>>)
     .filter((b) => b && typeof b === "object")
     .map((b) => ({ name: String(b.name ?? b.title ?? ""), text: String(b.text ?? b.description ?? "") }));
-}
-
-export function baseItemName(name: string): string | null {
-  return String(name).replace(/\s+\[2024\]\s*$/i, "").trim() || null;
 }
 
 export type MonsterBodyType = z.infer<typeof MonsterBody>;
@@ -129,7 +125,7 @@ export function buildMonsterRecord(id: string, b: MonsterBodyType) {
   return { name, nameKey, cr, crNumeric: parseCrToNumeric(cr), typeKey, typeFull, size, environment, data };
 }
 
-export function buildItemRecord(id: string, b: ItemBodyType) {
+export function buildItemRecord(b: ItemBodyType) {
   const name = b.name;
   const nameKey = name.toLowerCase().replace(/\s+/g, " ");
   const rarityVal = b.rarity?.trim().toLowerCase() || null;

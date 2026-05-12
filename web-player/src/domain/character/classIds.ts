@@ -1,4 +1,4 @@
-export function normalizeCompendiumClassId(value: unknown): string {
+function normalizeCompendiumClassId(value: unknown): string {
   const raw = typeof value === "string" ? value.trim() : "";
   if (!raw) return "";
 

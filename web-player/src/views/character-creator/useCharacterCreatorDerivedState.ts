@@ -17,11 +17,7 @@ import {
   WEAPON_MASTERY_KINDS,
 } from "@/views/character-creator/constants/CharacterCreatorConstants";
 import {
-  classifyFeatSelection,
-  extractClassStartingEquipment,
   getClassExpertiseChoices,
-  getPreparedSpellCount,
-  getSpellcastingClassName,
   getSlotLevelTriggeredSpellChoicesUpToLevel,
   parseSkillList,
 } from "@/views/character-creator/utils/CharacterCreatorUtils";
@@ -35,10 +31,7 @@ import {
   buildSpellListChoiceEntry,
   buildResolvedSpellChoiceEntry,
 } from "@/views/character-creator/utils/SpellChoiceUtils";
-import type {
-  ParsedFeatLike as ParsedFeat,
-  ParsedFeatDetailLike as BackgroundFeat,
-} from "@/views/character-creator/utils/FeatChoiceTypes";
+import type { ParsedFeatDetailLike as BackgroundFeat } from "@/views/character-creator/utils/FeatChoiceTypes";
 import type {
   BgDetail,
   ClassDetail,
@@ -76,7 +69,6 @@ export function useCharacterCreatorDerivedState(args: {
   classFeatDetails: Record<string, BackgroundFeat>;
   levelUpFeatDetails: LevelUpFeatDetail[];
   classCantrips: SpellSummary[];
-  classSpells: SpellSummary[];
   classInvocations: SpellSummary[];
 }) {
   const {
@@ -92,7 +84,6 @@ export function useCharacterCreatorDerivedState(args: {
     classFeatDetails,
     levelUpFeatDetails,
     classCantrips,
-    classSpells,
     classInvocations,
   } = args;
 

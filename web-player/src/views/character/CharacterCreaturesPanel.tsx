@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { C } from "@/lib/theme";
 import { CharacterCreatureDrawer } from "@/views/character/CharacterCreatureDrawer";
 import { CharacterCreaturePickerModal } from "@/views/character/CharacterCreaturePickerModal";

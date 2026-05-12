@@ -13,7 +13,6 @@ import {
   type Step5ClassFeatChoiceLike,
   type Step5EntryWithChoice,
   type Step5LanguageChoiceLike,
-  type Step5ParsedFeatLike,
   type Step5ChoiceState,
   type Step5WeaponMasteryChoiceLike,
 } from "../utils/CharacterCreatorStep5Utils";

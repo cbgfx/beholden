@@ -71,7 +71,7 @@ export interface FormState {
 
 const DEFAULT_SCORES = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 };
 
-export function matchesClassFeatGroup(featName: string, featGroup: string): boolean {
+function matchesClassFeatGroup(featName: string, featGroup: string): boolean {
   const normalizedGroup = featGroup.trim().toLowerCase();
   if (normalizedGroup === "fighting style") return /^fighting style:/i.test(featName);
   if (normalizedGroup === "origin") return /^origin:/i.test(featName);
@@ -130,12 +130,12 @@ export function isToughFeat(name: string | null | undefined): boolean {
   return /\bTough\b/i.test(normalized);
 }
 
-export function toAbilityKey(value: string): string | null {
+function toAbilityKey(value: string): string | null {
   const lowered = String(value ?? "").trim().toLowerCase();
   return ABILITY_NAME_TO_KEY[lowered] ?? null;
 }
 
-export function getSelectedAbilityIncrease(choice: ParsedFeatChoice, selected: string[]): Record<string, number> {
+function getSelectedAbilityIncrease(choice: ParsedFeatChoice, selected: string[]): Record<string, number> {
   if (choice.type !== "ability_score") return {};
   const amount = Math.max(1, Number(choice.amount ?? 1) || 1);
   const next: Record<string, number> = {};

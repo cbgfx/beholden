@@ -1,4 +1,4 @@
-import { estimateMonsterDpr, labelForRoundsToTpk } from "@/domain/utils/monsterDpr";
+import { labelForRoundsToTpk } from "@/domain/utils/monsterDpr";
 
 type DifficultyLabel = "Too Easy" | "Easy" | "Medium" | "Hard" | "Deadly" | "TPK";
 

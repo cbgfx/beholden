@@ -1,4 +1,3 @@
-import * as React from "react";
 import { theme } from "@/theme/theme";
 import { Input } from "@/ui/Input";
 import { splitLeadingNumberAndDetail } from "@/lib/parse/statDetails";

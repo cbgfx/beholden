@@ -1,4 +1,3 @@
-import React from "react";
 import { IconButton } from "@/ui/IconButton";
 import { theme } from "@/theme/theme";
 import { IconPlus } from "@/icons";

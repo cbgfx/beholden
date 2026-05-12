@@ -6,7 +6,7 @@ interface NamedOptionEntry {
   name: string;
 }
 
-export function normalizeSpellSelectionKey(value: string | null | undefined): string {
+function normalizeSpellSelectionKey(value: string | null | undefined): string {
   return String(value ?? "")
     .replace(/\s*\[[^\]]+\]\s*$/u, "")
     .trim()

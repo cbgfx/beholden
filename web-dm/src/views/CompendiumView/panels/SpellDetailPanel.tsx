@@ -2,7 +2,6 @@ import React from "react";
 import { Panel } from "@/ui/Panel";
 import { theme } from "@/theme/theme";
 import { api } from "@/services/api";
-import { titleCase } from "@/lib/format/titleCase";
 import { expandSchool } from "@/lib/format/expandSchool";
 
 type SpellFull = {

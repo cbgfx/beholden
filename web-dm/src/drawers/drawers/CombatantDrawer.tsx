@@ -5,7 +5,6 @@ import { api } from "@/services/api";
 import { theme } from "@/theme/theme";
 import { useStore, type DrawerState } from "@/store";
 import type { DrawerContent } from "@/drawers/types";
-import { MonsterPreview } from "@/drawers/drawers/combatant/MonsterPreview";
 import { MonsterActions } from "@/views/CombatView/components/MonsterActions";
 import type { AttackOverride } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";

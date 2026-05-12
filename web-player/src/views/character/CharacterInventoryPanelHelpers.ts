@@ -29,7 +29,7 @@ export function matchInventorySummary(item: InventoryItem, itemIndex: ItemSummar
     ?? null;
 }
 
-export function defaultContainer(): InventoryContainer {
+function defaultContainer(): InventoryContainer {
   return { id: DEFAULT_CONTAINER_ID, name: "Backpack", ignoreWeight: false };
 }
 

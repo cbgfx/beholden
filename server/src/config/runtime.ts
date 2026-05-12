@@ -11,7 +11,6 @@ export function getRuntimeConfig() {
   // The server needs to be reachable from LAN clients during local development
   // as well as in production deployments, so default to 0.0.0.0 unless a host
   // is explicitly provided.
-  const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_PROJECT_ID;
   const host = process.env.HOST || "0.0.0.0";
 
   const dataDir = process.env.BEHOLDEN_DATA_DIR

@@ -1,41 +1,14 @@
 import React from "react";
 import { C } from "@/lib/theme";
-import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
-import { ABILITY_KEYS, ABILITY_LABELS } from "@/views/character-creator/constants/CharacterCreatorConstants";
-import { abilityNamesToKeys, parseSkillList } from "../utils/CharacterCreatorUtils";
 import { ItemPicker, NavButtons, SpellPicker } from "../shared/CharacterCreatorParts";
 import {
-  collectPreparedSpellProgressionTables,
   renderChoiceChipGroup,
-  renderClassFeatSingleChoicePanel,
-  type Step5ClassFeatChoiceLike,
 } from "./CharacterCreatorPanelHelpers";
 import {
-  detailBoxStyle,
   headingStyle,
-  profChipStyle,
-  sourceTagStyle,
-  statLabelStyle, statValueStyle,
 } from "../shared/CharacterCreatorStyles";
 
-export { renderCampaignsStep, renderClassStep, renderIdentityStep, renderSpeciesStep } from "./CharacterCreatorPanelCoreSteps";
-
-interface OptionalGroupLike {
-  level: number;
-  features: Array<{ name: string; text: string; preparedSpellProgression?: PreparedSpellProgressionTable[] }>;
-}
-
-interface FeatureGrantBadge {
-  label: string;
-  color: string;
-}
-
-interface TaggedItemLike {
-  name: string;
-  source: string;
-}
-
-type StepNumber = number;
+export { renderCampaignsStep, renderClassStep, renderSpeciesStep } from "./CharacterCreatorPanelCoreSteps";
 
 export { renderLevelStep } from "./CharacterCreatorPanelLevelStep";
 
@@ -198,7 +171,7 @@ export function renderSpellsStep<T extends { id: string; name: string; level: nu
             maxCount: entry.max,
             options: entry.options,
             isSelected: (option) => entry.chosen.includes(option),
-            isLocked: (option, isSelected) => !isSelected && entry.chosen.length >= entry.max,
+            isLocked: (_option, isSelected) => !isSelected && entry.chosen.length >= entry.max,
             onToggle: entry.onToggle,
             note: entry.note,
           })}
@@ -242,7 +215,7 @@ export function renderSpellsStep<T extends { id: string; name: string; level: nu
             maxCount: entry.max,
             options: entry.options,
             isSelected: (option) => entry.chosen.includes(option),
-            isLocked: (option, isSelected) => !isSelected && entry.chosen.length >= entry.max,
+            isLocked: (_option, isSelected) => !isSelected && entry.chosen.length >= entry.max,
             onToggle: entry.onToggle,
             note: entry.note,
           })}

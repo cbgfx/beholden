@@ -1,6 +1,5 @@
 // web/src/views/CombatView/panels/CombatOrderPanel/components/CombatOrderRow.tsx
 
-import React from "react";
 import type { EncounterActor } from "@/domain/types/domain";
 import { theme, withAlpha } from "@/theme/theme";
 import { IconINPC, IconMonster, IconPlayer, IconSkull, IconInitiative } from "@/icons";

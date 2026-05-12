@@ -1,4 +1,3 @@
-import React from "react";
 import { C } from "@/lib/theme";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
 import {
@@ -66,7 +65,6 @@ export function CharacterCombatPanels({
   dexScore,
   pb,
   passivePerc,
-  passiveInv,
   accentColor,
   inventory,
   prof,

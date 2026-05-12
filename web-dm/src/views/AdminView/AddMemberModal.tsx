@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { api, jsonInit } from "@/services/api";
+import { useEffect, useState } from "react";
+import type React from "react";
+import { api } from "@/services/api";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
-import type { User, Member } from "./adminTypes";
+import type { User } from "./adminTypes";
 
 interface Props {
   campaignId: string;

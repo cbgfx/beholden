@@ -220,7 +220,7 @@ function hasSelectedReplacementClassFeat(charData: CharacterData | null | undefi
   });
 }
 
-export function shouldDisplayPlayerFeature(name: string, text: string): boolean {
+function shouldDisplayPlayerFeature(name: string, text: string): boolean {
   const normalizedName = String(name ?? "").trim();
   const normalizedText = String(text ?? "").trim();
   const haystack = `${normalizedName} ${normalizedText}`;

@@ -39,10 +39,6 @@ function getAvailableConditions(char: Pick<CharacterHudLike, "className">) {
     : BASE_CONDITIONS;
 }
 
-function stripEditionTag(s: string): string {
-  return s.replace(/\s*\[(?:5\.5e|2024|5e|5\.0)\]\s*$/i, "").trim();
-}
-
 function conditionDisplayLabel(cond: ConditionInstance): string {
   if (cond.key === "polymorphed") {
     const name = (cond as Record<string, unknown>).polymorphName;
@@ -113,7 +109,6 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
     effectiveHpMax,
     tempHp,
     hpPct,
-    tempPct,
     hpError,
     hpSaving,
     hpAmount,

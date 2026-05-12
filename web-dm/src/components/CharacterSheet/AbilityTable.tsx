@@ -1,4 +1,3 @@
-import React from "react";
 import { AbilityScoresCompact } from "@beholden/shared/ui";
 import { theme, withAlpha } from "@/theme/theme";
 import type { CharacterSheetStats } from "@/components/CharacterSheet/types";

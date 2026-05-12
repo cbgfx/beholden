@@ -55,7 +55,7 @@ export interface SharedSpellChoiceLike {
   note?: string | null;
 }
 
-export const FEAT_SPELL_LIST_NAMES = new Set(["Artificer", "Bard", "Cleric", "Druid", "Paladin", "Ranger", "Sorcerer", "Warlock", "Wizard"]);
+const FEAT_SPELL_LIST_NAMES = new Set(["Artificer", "Bard", "Cleric", "Druid", "Paladin", "Ranger", "Sorcerer", "Warlock", "Wizard"]);
 
 function normalizeSpellOptionKey(value: string | null | undefined): string {
   return String(value ?? "")
@@ -65,14 +65,14 @@ function normalizeSpellOptionKey(value: string | null | undefined): string {
     .replace(/[^a-z0-9]+/g, "");
 }
 
-export function choiceCountAtLevel(choice: { count: number; countFrom?: "proficiency_bonus" | null }, level: number): number {
+function choiceCountAtLevel(choice: { count: number; countFrom?: "proficiency_bonus" | null }, level: number): number {
   if (choice.countFrom === "proficiency_bonus") {
     return Math.max(1, Math.ceil(Math.max(1, level) / 4) + 1);
   }
   return Math.max(0, Number(choice.count ?? 0) || 0);
 }
 
-export function inferSpellListFromSourceLabel(sourceLabel: string | null | undefined, options?: string[] | null): string | null {
+function inferSpellListFromSourceLabel(sourceLabel: string | null | undefined, options?: string[] | null): string | null {
   if (!sourceLabel) return null;
 
   const allowed = new Set(options ?? Array.from(FEAT_SPELL_LIST_NAMES));

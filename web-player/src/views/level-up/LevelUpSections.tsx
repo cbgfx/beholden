@@ -11,7 +11,6 @@ import { LevelUpItemChoiceList } from "@/views/level-up/LevelUpItemChoiceList";
 import { LevelUpSpellChoiceList } from "@/views/level-up/LevelUpSpellChoiceList";
 import { cleanFeatureText } from "@/views/level-up/LevelUpHelpers";
 import type {
-  LevelUpFeatDetail as FeatDetail,
   LevelUpResolvedSpellChoiceEntry,
   LevelUpSpellListChoiceEntry,
   LevelUpSpellSummary as SpellSummary,

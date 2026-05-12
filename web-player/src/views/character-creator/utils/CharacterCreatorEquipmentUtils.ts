@@ -67,7 +67,7 @@ export function getBackgroundGrantedToolSelections(
   return [...granted];
 }
 
-export function singularizeEquipmentName(name: string): string {
+function singularizeEquipmentName(name: string): string {
   const trimmed = name.trim();
   const irregular: Record<string, string> = {
     daggers: "Dagger",
@@ -80,7 +80,7 @@ export function singularizeEquipmentName(name: string): string {
   return trimmed;
 }
 
-export function resolveStartingInventoryItem(name: string, items: ItemSummaryLike[]): ItemSummaryLike | null {
+function resolveStartingInventoryItem(name: string, items: ItemSummaryLike[]): ItemSummaryLike | null {
   const normalized = normalizeInventoryItemLookupName(name);
   const singularNormalized = normalizeInventoryItemLookupName(singularizeEquipmentName(name));
   return items.find((item) => normalizeInventoryItemLookupName(item.name) === normalized)
@@ -88,7 +88,7 @@ export function resolveStartingInventoryItem(name: string, items: ItemSummaryLik
     ?? null;
 }
 
-export function currencyCodeFromEntry(entry: string): "PP" | "GP" | "EP" | "SP" | "CP" | null {
+function currencyCodeFromEntry(entry: string): "PP" | "GP" | "EP" | "SP" | "CP" | null {
   const normalized = String(entry ?? "")
     .replace(/\bplatinum pieces?\b/gi, "PP")
     .replace(/\bgold pieces?\b/gi, "GP")
@@ -111,7 +111,6 @@ function resolveToolPlaceholder(name: string, grantedTools: string[]): string | 
   const normalized = String(name ?? "").trim();
   if (!normalized) return null;
 
-  const lower = normalized.toLowerCase();
   const chosenToolReference = /\b(?:same as above|chosen for the tool proficiency above)\b/i.test(normalized);
   const wantsInstrument = /\bmusical instrument\b/i.test(normalized);
   const wantsArtisanTool = /\bartisan'?s tools?\b/i.test(normalized);

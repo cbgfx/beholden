@@ -92,7 +92,7 @@ function useUpdateCheck() {
   return updateAvailable;
 }
 
-export function topbarToolButtonStyle(active = false, accent = C.accentHl, muted = C.muted): React.CSSProperties {
+function topbarToolButtonStyle(active = false, accent = C.accentHl, muted = C.muted): React.CSSProperties {
   return {
     width: 36,
     height: 36,

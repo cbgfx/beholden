@@ -636,7 +636,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
       })}
       </div>
       {selectedSpell && (
-        <SpellDrawer spell={selectedSpell.detail} sourceLabel={selectedSpell.source ?? null} accentColor={accentColor} onClose={() => setSelectedSpell(null)} charLevel={charLevel} maxSlotLevel={maxSpellSlotLevel} />
+        <SpellDrawer spell={selectedSpell.detail} sourceLabel={selectedSpell.source ?? null} onClose={() => setSelectedSpell(null)} charLevel={charLevel} maxSlotLevel={maxSpellSlotLevel} />
       )}
     </CollapsiblePanel>
     {addSpellOpen && (

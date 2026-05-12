@@ -5,7 +5,6 @@ import { Button } from "@/ui/Button";
 import type { Campaign, Member } from "./adminTypes";
 import { AddMemberModal } from "./AddMemberModal";
 
-const ROLE_LABELS: Record<string, string> = { dm: "Dungeon Master", player: "Player" };
 const ROLE_COLORS: Record<string, string> = { dm: theme.colors.accentPrimary, player: theme.colors.accentHighlight };
 
 function MemberRow({ member, onChangeRole, onRemove }: {

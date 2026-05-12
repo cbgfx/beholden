@@ -3,19 +3,14 @@ import { Select } from "@/ui/Select";
 import { C } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import { ABILITY_KEYS, ABILITY_LABELS } from "@/views/character-creator/constants/CharacterCreatorConstants";
-import { abilityNamesToKeys, parseSkillList, type StartingEquipmentOption } from "../utils/CharacterCreatorUtils";
+import { type StartingEquipmentOption } from "../utils/CharacterCreatorUtils";
 import { NavButtons } from "../shared/CharacterCreatorParts";
-import {
-  collectPreparedSpellProgressionTables,
-} from "./CharacterCreatorPanelHelpers";
 import {
   detailBoxStyle,
   headingStyle,
   inputStyle,
   labelStyle,
-  profChipStyle,
   sourceTagStyle,
-  statLabelStyle, statValueStyle,
 } from "../shared/CharacterCreatorStyles";
 import { PreparedSpellProgressionBlock } from "@/views/character/CharacterViewParts";
 
@@ -28,13 +23,6 @@ interface FeatureGrantBadge {
   label: string;
   color: string;
 }
-
-interface TaggedItemLike {
-  name: string;
-  source: string;
-}
-
-type StepNumber = number;
 
 export function renderLevelStep({
   level,
@@ -360,7 +348,7 @@ export function renderLevelStep({
     <div style={{ ...detailBoxStyle, maxHeight: 600, overflowY: "auto" }}>
       <div style={{ fontWeight: 700, marginBottom: 8, fontSize: "var(--fs-subtitle)", color: C.accentHl }}>Class Features — Level {level}</div>
       {features.length === 0 && <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>No features yet. Select a class first.</div>}
-      {features.map((f, i) => (
+      {features.map((f) => (
         <div key={`${f.level}:${f.name}`} style={{ marginBottom: 10 }}>
           <div style={{ fontWeight: 700, fontSize: "var(--fs-small)", color: C.accentHl }}>Lv{f.level} · {f.name}</div>
           <div style={{ color: "rgba(160,180,220,0.65)", fontSize: "var(--fs-small)", lineHeight: 1.4 }}>

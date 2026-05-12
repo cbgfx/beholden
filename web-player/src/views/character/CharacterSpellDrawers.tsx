@@ -279,14 +279,12 @@ export function AddSpellDrawer({
 export function SpellDrawer({
   spell,
   sourceLabel,
-  accentColor,
   onClose,
   charLevel,
   maxSlotLevel,
 }: {
   spell: FetchedSpellDetail;
   sourceLabel?: string | null;
-  accentColor: string;
   onClose: () => void;
   charLevel?: number;
   maxSlotLevel?: number;

@@ -1,4 +1,3 @@
-import * as React from "react";
 import { theme } from "@/theme/theme";
 import { formatCr } from "@/views/CampaignView/monsterPicker/utils";
 import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";

@@ -129,7 +129,7 @@ export function createBroadcaster(wss: WebSocketServer | null | undefined): Broa
 
 function shouldDeliverToScope(
   ws: WebSocket,
-  type: ServerEventType,
+  _type: ServerEventType,
   payload: ServerEventMap[ServerEventType],
 ): boolean {
   const scope = (ws as WebSocket & { __beholdenScope?: WsScope }).__beholdenScope;

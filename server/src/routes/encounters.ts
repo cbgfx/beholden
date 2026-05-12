@@ -4,7 +4,7 @@ import type { ServerContext } from "../server/context.js";
 import type { StoredEncounterActor } from "../server/userData.js";
 import { parseBody } from "../shared/validate.js";
 import { requireParam } from "../lib/routeHelpers.js";
-import { rowToEncounter, rowToEncounterActor, nextSortFor, ENCOUNTER_COLS } from "../lib/db.js";
+import { rowToEncounter, nextSortFor, ENCOUNTER_COLS } from "../lib/db.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
 import { ensureCombat, insertCombatant, loadCombatants, buildEncounterActorLive } from "../services/combat.js";

@@ -1,20 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { api, jsonInit } from "@/services/api";
+import { api } from "@/services/api";
 import { createPartyInventoryItem, fetchPartyInventory, fetchPartyInventoryItem, updatePartyInventoryQuantity } from "@/services/inventoryApi";
 import { useWs } from "@/services/ws";
-import { C, withAlpha } from "@/lib/theme";
-import { titleCase } from "@/lib/format/titleCase";
+import { C } from "@/lib/theme";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
-import { Select } from "@/ui/Select";
-import { useVirtualList } from "@/lib/monsterPicker/useVirtualList";
-import { useItemSearch } from "@/views/CompendiumView/hooks/useItemSearch";
 import { DraggableList } from "@/ui/DraggableList";
 import { useDebouncedSingleflight } from "@beholden/shared/ui";
 import {
   DEFAULT_CONTAINER_ID,
-  INVENTORY_PICKER_ROW_HEIGHT,
   PARTY_STASH_CONTAINER_ID,
-  inputStyle,
   matchInventorySummary,
   normalizeContainers,
   singularizeInventoryLookupName,
@@ -24,17 +18,10 @@ import {
 } from "@/views/character/CharacterInventoryPanelHelpers";
 import { InventoryItemDrawer } from "@/views/character/CharacterInventoryDrawer";
 import { InventoryItemPickerModal } from "@/views/character/CharacterInventoryPickerModal";
-import { InventoryStat, ItemRow, PartyStashItemRow, type PartyStashItem } from "@/views/character/CharacterInventoryPanelRows";
+import { ItemRow, PartyStashItemRow, type PartyStashItem } from "@/views/character/CharacterInventoryPanelRows";
 import {
   CollapsiblePanel,
   addBtnStyle,
-  cancelBtnStyle,
-  inventoryCheckboxLabel,
-  inventoryEquipBtn,
-  inventoryPickerColumnStyle,
-  inventoryPickerDetailStyle,
-  inventoryPickerListStyle,
-  inventoryRarityColor,
   panelHeaderAddBtn,
 } from "@/views/character/CharacterViewParts";
 import { togglePillStyle } from "@beholden/shared/ui";
@@ -48,11 +35,8 @@ import {
   type InventoryPickerPayload,
   type ItemSummaryRow,
   canUseTwoHands,
-  formatItemDamageType,
-  formatItemProperties,
   formatWeight,
   getEquipState,
-  hasStealthDisadvantage,
   isArmorItem,
   isCurrencyItem,
   isWearableItem,
@@ -178,10 +162,6 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
   );
   const [containers, setContainers] = useState<InventoryContainer[]>(() => normalizeContainers(charData?.inventoryContainers));
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [adding, setAdding] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newQty, setNewQty] = useState(1);
-  const [newNotes, setNewNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [itemIndex, setItemIndex] = useState<ItemSummaryRow[]>([]);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
@@ -192,7 +172,6 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
   const [itemEditMode, setItemEditMode] = useState(false);
   const [currencyPopupCode, setCurrencyPopupCode] = useState<"PP" | "GP" | "SP" | "CP" | null>(null);
   const [currencyInput, setCurrencyInput] = useState("");
-  const nameRef = useRef<HTMLInputElement>(null);
   const currencyPopupRef = useRef<HTMLDivElement | null>(null);
   const [partyStashItems, setPartyStashItems] = useState<PartyStashItem[]>([]);
 
@@ -834,8 +813,6 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
     list.push(item.containerId === containerId ? item : { ...item, containerId });
     itemsByContainer.set(containerId, list);
   }
-  const actionItems = equipped.filter((it) => isWeaponItem(it));
-  const prof = charData?.proficiencies;
   const carriedWeight = totalInventoryWeight(items, containers);
   const strScore = Math.max(0, char.strScore ?? 0);
   const carryCapacity = strScore * 15;
@@ -1176,44 +1153,6 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
           </div>
         );
       })()}
-
-      {/* Inventory add controls */}
-      {false ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: items.length > 0 ? 10 : 0 }}>
-          <div style={{ display: "flex", gap: 6 }}>
-            <input
-              ref={nameRef}
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") addItem(); if (e.key === "Escape") { setAdding(false); setNewName(""); } }}
-              placeholder="Item name…"
-              autoFocus
-              style={inputStyle}
-            />
-            <input
-              type="number"
-              value={newQty}
-              min={1}
-              onChange={(e) => setNewQty(Number(e.target.value))}
-              style={{ ...inputStyle, width: 56, textAlign: "center" }}
-            />
-          </div>
-          <input
-            value={newNotes}
-            onChange={(e) => setNewNotes(e.target.value)}
-            placeholder="Notes (optional)…"
-            style={{ ...inputStyle, fontSize: "var(--fs-small)", color: C.muted }}
-          />
-          <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => { void addItem(); }} disabled={!newName.trim()} style={addBtnStyle(accentColor)}>
-              Add
-            </button>
-            <button onClick={() => { setAdding(false); setNewName(""); setNewQty(1); setNewNotes(""); }} style={cancelBtnStyle}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : null}
 
       <InventoryItemPickerModal
         isOpen={pickerOpen}

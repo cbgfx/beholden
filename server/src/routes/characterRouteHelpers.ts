@@ -4,7 +4,7 @@ import type { CharacterCampaignAssignmentDto } from "@beholden/shared/api";
 import type { Db } from "../lib/db.js";
 import type { Assignment } from "../services/characters.js";
 
-export const CharacterBodyBase = z.object({
+const CharacterBodyBase = z.object({
   name: z.string().trim().min(1).optional(),
   playerName: z.string().trim().optional(),
   className: z.string().trim().optional(),

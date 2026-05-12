@@ -1,14 +1,5 @@
-import type { MonsterDetail } from "@/domain/types/compendium";
+import type { MonsterDetail, MonsterTextEntry } from "@/domain/types/compendium";
 import type { AttackOverride, EncounterActor } from "@/domain/types/domain";
-
-type MonsterActionLike = {
-  name?: unknown;
-  title?: unknown;
-  attack?: Record<string, unknown>;
-  text?: unknown;
-  description?: unknown;
-  [key: string]: unknown;
-};
 
 export function applyMonsterAttackOverrides(
   monster: MonsterDetail | null,
@@ -38,11 +29,11 @@ export function applyMonsterAttackOverrides(
   };
 
   const actions = Array.isArray(monster.action) ? monster.action : [];
-  const nextActions = actions.map((a: MonsterActionLike) => {
+  const nextActions = actions.map((a: MonsterTextEntry) => {
     const name = String(a?.name ?? a?.title ?? "");
     const ov = typedOverrides[name];
     if (!ov) return a;
-    const nextAttack = { ...(a?.attack ?? {}), ...ov };
+    const nextAttack = { ...((a?.attack as Record<string, unknown> | undefined) ?? {}), ...ov };
     const nextText = a?.text
       ? patchText(String(a.text), ov)
       : a?.description

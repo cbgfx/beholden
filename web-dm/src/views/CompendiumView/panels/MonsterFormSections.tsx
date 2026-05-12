@@ -1,4 +1,3 @@
-import * as React from "react";
 
 import { Input } from "@/ui/Input";
 import { Select } from "@/ui/Select";

@@ -1,4 +1,3 @@
-import React from "react";
 import { theme } from "@/theme/theme";
 import { Panel } from "@/ui/Panel";
 import { SpellDetailPanel } from "@/views/CompendiumView/panels/SpellDetailPanel";

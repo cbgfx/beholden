@@ -5,7 +5,7 @@ import {
 } from "./proficiencyConstants.js";
 
 export const ABILITY_SCORES = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"] as const;
-export const DAMAGE_TYPES = ["Acid", "Cold", "Fire", "Force", "Lightning", "Necrotic", "Poison", "Psychic", "Radiant", "Thunder"] as const;
+const DAMAGE_TYPES = ["Acid", "Cold", "Fire", "Force", "Lightning", "Necrotic", "Poison", "Psychic", "Radiant", "Thunder"] as const;
 export const KNOWN_CANTRIPS = [
   "Acid Splash", "Blade Ward", "Booming Blade", "Chill Touch", "Control Flames", "Create Bonfire",
   "Dancing Lights", "Druidcraft", "Eldritch Blast", "Elementalism", "Fire Bolt", "Friends", "Frostbite",

@@ -2,21 +2,16 @@ import React from "react";
 import { Select } from "@/ui/Select";
 import { C } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
-import { ABILITY_KEYS, ABILITY_LABELS } from "@/views/character-creator/constants/CharacterCreatorConstants";
 import { abilityNamesToKeys, parseSkillList } from "../utils/CharacterCreatorUtils";
-import { ItemPicker, NavButtons, SpellPicker } from "../shared/CharacterCreatorParts";
+import { NavButtons } from "../shared/CharacterCreatorParts";
 import {
   collectPreparedSpellProgressionTables,
-  renderChoiceChipGroup,
-  renderClassFeatSingleChoicePanel,
-  type Step5ClassFeatChoiceLike,
 } from "./CharacterCreatorPanelHelpers";
 import {
   detailBoxStyle,
   headingStyle,
   inputStyle,
   labelStyle,
-  profChipStyle,
   sourceTagStyle,
   statLabelStyle,
   statValueStyle,
@@ -71,23 +66,6 @@ interface RaceChoiceSetLike {
   toolChoice: { count: number; from: string[] | null } | null;
   languageChoice: { count: number; from: string[] | null } | null;
 }
-
-interface OptionalGroupLike {
-  level: number;
-  features: Array<{ name: string; text: string; preparedSpellProgression?: PreparedSpellProgressionTable[] }>;
-}
-
-interface FeatureGrantBadge {
-  label: string;
-  color: string;
-}
-
-interface TaggedItemLike {
-  name: string;
-  source: string;
-}
-
-type StepNumber = number;
 
 function getPrimaryAbilityKeys(classDetail: ClassDetailLike | null): string[] {
   if (!classDetail) return [];

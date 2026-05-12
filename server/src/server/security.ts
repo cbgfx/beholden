@@ -13,7 +13,6 @@
  */
 
 import type express from "express";
-import type { IncomingMessage } from "node:http";
 
 // ---------------------------------------------------------------------------
 // CORS
@@ -64,43 +63,6 @@ export function corsMiddleware(allowedHosts: Set<string> | null): express.Reques
 // ---------------------------------------------------------------------------
 // Basic Auth
 // ---------------------------------------------------------------------------
-
-function timingSafeEq(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let out = 0;
-  for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return out === 0;
-}
-
-export function basicAuthCheck(
-  authHeader: string | string[] | undefined,
-  user: string,
-  pass: string
-): boolean {
-  const raw = authHeader;
-  const header = Array.isArray(raw) ? raw[0] : raw;
-  if (!header) return false;
-  const [scheme, value] = header.split(" ");
-  if (scheme?.toLowerCase() !== "basic" || !value) return false;
-  let decoded = "";
-  try {
-    decoded = Buffer.from(value, "base64").toString("utf8");
-  } catch {
-    return false;
-  }
-  const idx = decoded.indexOf(":");
-  if (idx === -1) return false;
-  const u = decoded.slice(0, idx);
-  const p = decoded.slice(idx + 1);
-  return timingSafeEq(u, user) && timingSafeEq(p, pass);
-}
-
-export function getBasicAuthConfig() {
-  const user = (process.env.BEHOLDEN_BASIC_AUTH_USER ?? "dm").trim();
-  const pass = (process.env.BEHOLDEN_BASIC_AUTH_PASS ?? "FrozenAssets").trim();
-  const enabled = user.length > 0 && pass.length > 0;
-  return { user, pass, enabled };
-}
 
 // ---------------------------------------------------------------------------
 // Rate limiter

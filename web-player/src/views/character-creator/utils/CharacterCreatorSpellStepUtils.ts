@@ -3,19 +3,10 @@ import React from "react";
 import { titleCase } from "@/lib/format/titleCase";
 import { ABILITY_LABELS } from "@/views/character-creator/constants/CharacterCreatorConstants";
 import {
-  buildResolvedSpellChoiceEntry,
-  buildSpellListChoiceEntry,
   resolveSelectedSpellOptionEntries,
   type SharedSpellSummary,
 } from "@/views/character-creator/utils/SpellChoiceUtils";
-import {
-  getFeatChoiceOptionsForStep5,
-  type Step5EntryWithChoice,
-} from "@/views/character-creator/utils/CharacterCreatorStep5Utils";
-import { getSlotLevelTriggeredSpellChoicesUpToLevel } from "@/views/character-creator/utils/CharacterCreatorUtils";
-import type { SpellChoiceEffect } from "@/domain/character/featureEffects";
 import type {
-  ClassDetail,
   CreatorResolvedSpellChoiceEntry,
   CreatorSpellListChoiceEntry,
   ItemSummary,
@@ -215,98 +206,4 @@ export function buildSpellStepChoiceState(args: {
     progressionTableChoices,
     missingExtraSpellSelections,
   };
-}
-
-export function buildStep6SpellListChoices(args: {
-  allFeatChoices: Step5EntryWithChoice[];
-  level: number;
-}): CreatorSpellListChoiceEntry[] {
-  const { allFeatChoices, level } = args;
-  return allFeatChoices
-    .filter(({ choice }) => choice.type === "spell_list")
-    .map(({ featName, choice, key, sourceLabel }) => {
-      const resolvedSourceLabel = sourceLabel ?? featName;
-      const entry = buildSpellListChoiceEntry({
-        key,
-        choice: { ...choice, options: getFeatChoiceOptionsForStep5(choice) },
-        level,
-        sourceLabel: resolvedSourceLabel,
-      });
-      return {
-        ...entry,
-        title: "Spell List",
-        note: entry.options.length === 1 && resolvedSourceLabel !== featName
-          ? (choice.note ?? "Spell list fixed by this feat.")
-          : choice.note,
-      };
-    });
-}
-
-export function buildStep6ResolvedSpellChoices(args: {
-  allFeatChoices: Step5EntryWithChoice[];
-  chosenFeatOptions: Record<string, string[]>;
-  level: number;
-  selectedClassFeatureSpellChoices: SpellChoiceEffect[];
-  selectedInvocationSpellChoices: SpellChoiceEffect[];
-  classDetail: ClassDetail | null;
-  subclass: string;
-}): CreatorResolvedSpellChoiceEntry[] {
-  const {
-    allFeatChoices, chosenFeatOptions, level,
-    selectedClassFeatureSpellChoices, selectedInvocationSpellChoices,
-    classDetail, subclass,
-  } = args;
-  const featResolved = allFeatChoices
-    .filter(({ choice }) => choice.type === "spell")
-    .map(({ featName, choice, key, sourceLabel }) => {
-      const resolvedSourceLabel = sourceLabel ?? featName;
-      const linkedChoiceKey = choice.linkedTo ? key.replace(`:${choice.id}`, `:${choice.linkedTo}`) : null;
-      return {
-        ...buildResolvedSpellChoiceEntry({
-          key, choice, level,
-          sourceLabel: resolvedSourceLabel,
-          chosenOptions: chosenFeatOptions,
-          linkedChoiceKey,
-        }),
-      };
-    });
-  const classFeatureResolved = selectedClassFeatureSpellChoices.flatMap((effect) => {
-    if (effect.count.kind !== "fixed") return [];
-    return [{
-      key: `classfeature:${effect.id}`,
-      title: effect.level === 0 ? "Bonus Cantrip" : `Bonus Level ${effect.level} Spell`,
-      sourceLabel: effect.source.name,
-      count: effect.count.value,
-      level: effect.level,
-      note: effect.summary,
-      listNames: effect.spellLists,
-    }];
-  });
-  const invocationResolved = selectedInvocationSpellChoices.flatMap((effect) => {
-    if (effect.count.kind !== "fixed") return [];
-    return [{
-      key: `invocation:${effect.id}`,
-      title: effect.level === 0 ? "Invocation Bonus Cantrip" : `Invocation Bonus Level ${effect.level} Spell`,
-      sourceLabel: effect.source.name,
-      count: effect.count.value,
-      level: effect.level,
-      note: effect.note ?? effect.summary,
-      listNames: effect.spellLists,
-      schools: effect.schools,
-      ritualOnly: /\britual tag\b/i.test(effect.note ?? ""),
-    }];
-  });
-  const slotGrowthResolved = getSlotLevelTriggeredSpellChoicesUpToLevel(classDetail, level, subclass || null)
-    .map((choice) => ({
-      key: `creator:${choice.key}`,
-      title: choice.title,
-      sourceLabel: choice.sourceLabel,
-      count: choice.count,
-      level: choice.level,
-      note: choice.note ?? null,
-      listNames: choice.listNames,
-      schools: choice.schools,
-      ritualOnly: false,
-    }));
-  return [...featResolved, ...classFeatureResolved, ...invocationResolved, ...slotGrowthResolved];
 }

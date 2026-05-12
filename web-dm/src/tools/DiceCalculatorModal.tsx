@@ -129,12 +129,6 @@ export function DiceCalculatorModal(props: { isOpen: boolean; onClose: () => voi
     inputRef.current?.focus();
   }
 
-  function clear() {
-    setResult(null);
-    setExpr("");
-    inputRef.current?.focus();
-  }
-
   function roll() {
     if (!expr.trim()) return;
     setResult(evaluate(expr));

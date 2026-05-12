@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
 import { IconPlus } from "@/icons";

@@ -8,7 +8,7 @@ import type {
 } from "@/views/level-up/LevelUpTypes";
 import { AsiAbilityGrid, BackBtn, ChoiceBtn, ExpertiseSelectionSection, FeatSelectionSection, LevelUpHpSection, Section, Wrap } from "@/views/level-up/LevelUpParts";
 import { LevelUpChoicesSection, LevelUpFeaturesSection, LevelUpSpellSlotsSection, LevelUpSubclassSection } from "@/views/level-up/LevelUpSections";
-import { deriveFeatAbilityBonuses, deriveHpGain, deriveLevelUpValidation, derivePreviewScores } from "@/views/level-up/LevelUpUtils";
+import { deriveFeatAbilityBonuses, deriveHpGain, deriveLevelUpValidation } from "@/views/level-up/LevelUpUtils";
 import { isToughFeat } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
 import { useLevelUpInitialData } from "@/views/level-up/useLevelUpInitialData";
 import { useLevelUpDerivedState } from "@/views/level-up/useLevelUpDerivedState";
@@ -67,17 +67,12 @@ export function LevelUpView() {
 
   const {
     hd,
-    conScore,
     conMod,
     hpAverage,
-    hpRollMax,
-    autoLevel,
-    hasAsiFeature,
     usesFlexiblePreparedSpellsModel,
     newFeatures,
     isAsiLevel,
     newSlots,
-    subclassLevel,
     subclassOptions,
     showSubclassChoice,
     needsSubclassChoice,
@@ -91,8 +86,6 @@ export function LevelUpView() {
     expertiseChoices,
     charProficiencies,
     proficientSkills,
-    proficientTools,
-    proficientLanguages,
     existingExpertise,
     existingClassSpellNames,
     existingClassInvocationNames,
@@ -100,18 +93,14 @@ export function LevelUpView() {
     featSourceLabel,
     featSpellListChoices,
     featResolvedSpellChoices,
-    parsedNewFeatureEffects,
-    slotLevelTriggeredSpellChoices,
     classFeatureResolvedSpellChoices,
     classFeatureProficiencyChoices,
     classFeatureSkillKeys,
     classFeatureToolKeys,
     classFeatureLanguageKeys,
     growthChoiceDefinitions,
-    appliedPreparedSpellProgressionFeatures,
     preparedSpellProgressionChoiceDefinitions,
     preparedSpellProgressionGrantedKeys,
-    selectedInvocationEffects,
     invocationResolvedSpellChoices,
     allowedInvocationIds,
     featSpellChoiceOptions,
@@ -131,7 +120,6 @@ export function LevelUpView() {
     chosenFeatureChoices,
     chosenFeatDetail,
     classCantrips,
-    classSpells,
     classInvocations,
   });
 
@@ -142,7 +130,6 @@ export function LevelUpView() {
     classInvocations,
     existingClassSpellNames,
     existingClassInvocationNames,
-    preparedSpellProgressionGrantedKeys,
     cantripCount,
     maxSpellLevel,
     prepCount,
@@ -175,10 +162,6 @@ export function LevelUpView() {
       cha: char?.chaScore ?? 10,
     }),
     [char?.chaScore, char?.conScore, char?.dexScore, char?.intScore, char?.strScore, char?.wisScore],
-  );
-  const previewScores = React.useMemo(
-    () => derivePreviewScores({ baseScores, asiStats, asiMode, featAbilityBonuses }),
-    [baseScores, asiStats, asiMode, featAbilityBonuses]
   );
   const {
     featChoiceOptionsByKey,
@@ -235,7 +218,7 @@ export function LevelUpView() {
     invocCount,
   });
 
-  const { filteredFeatSummaries, featPrereqsMet, featRepeatableValid, asiTotal, canConfirm } = React.useMemo(
+  const { filteredFeatSummaries, featPrereqsMet, featRepeatableValid, canConfirm } = React.useMemo(
     () =>
       deriveLevelUpValidation({
         isAsiLevel,

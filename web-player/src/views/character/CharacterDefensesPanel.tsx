@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { C } from "@/lib/theme";
 import { CollapsiblePanel } from "@/views/character/CharacterViewParts";
 

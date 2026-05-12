@@ -7,9 +7,6 @@ import {
 import { api } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  normalizeSpellTrackingKey,
-} from "@/views/character/CharacterSheetUtils";
-import {
   parseFeatureGrants as parseFeatureGrantsFromRules,
 } from "@/views/character/CharacterRuleParsers";
 import {
@@ -21,11 +18,6 @@ import {
   parseStartingEquipmentOptions,
 } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import {
-  buildItemLookupBodyFromNames,
-  fetchCompendiumItemsByLookup,
-  isItemLookupBodyEmpty,
-} from "@/views/character-creator/utils/ItemLookupUtils";
-import {
   getGrowthChoiceSelectedAbility,
 } from "@/views/character-creator/utils/GrowthChoiceUtils";
 import type {
@@ -33,57 +25,23 @@ import type {
 } from "@/views/character-creator/utils/FeatChoiceTypes";
 import type {
   BgDetail,
-  BgSummary,
-  Campaign,
   ClassDetail,
-  ClassFeatChoice,
-  ClassSummary,
-  CreatorResolvedSpellChoiceEntry,
-  CreatorSpellListChoiceEntry,
   LevelUpFeatDetail,
-  LevelUpFeatSelection,
-  ProficiencyChoice,
   RaceDetail,
-  RaceSummary,
   SpellSummary,
-  StructuredBgProficiencies,
 } from "@/views/character-creator/utils/CharacterCreatorTypes";
-import { Select } from "@/ui/Select";
-import { NavButtons, SpellPicker, StepHeader } from "@/views/character-creator/shared/CharacterCreatorParts";
+import { StepHeader } from "@/views/character-creator/shared/CharacterCreatorParts";
 import { CharacterCreatorSideSummary } from "@/views/character-creator/shared/CharacterCreatorSideSummary";
-import {
-  detailBoxStyle,
-  headingStyle,
-  inputStyle,
-  labelStyle,
-  profChipStyle,
-  smallBtnStyle,
-  sourceTagStyle,
-  statLabelStyle,
-  statValueStyle,
-} from "@/views/character-creator/shared/CharacterCreatorStyles";
 import { getStep5ChoiceState } from "@/views/character-creator/utils/CharacterCreatorStep5Utils";
 import {
-  buildProficiencyMap as buildProficiencyMapFromUtils,
-} from "@/views/character-creator/utils/CharacterCreatorProficiencyUtils";
-import {
-  collectEquipmentLookupNames,
-  getBackgroundGrantedToolSelections as getBackgroundGrantedToolSelectionsFromUtils,
-} from "@/views/character-creator/utils/CharacterCreatorEquipmentUtils";
-import {
-  deriveFeatGrantedAbilityBonuses,
-  deriveTotalFeatAbilityBonuses,
   getClassFeatChoiceLabel,
   getClassFeatOptionLabel,
-  getSelectedAbilityIncrease,
   initForm,
   isToughFeat,
-  pointBuySpent,
   resolvedScores,
   type FormState,
   type Step,
 } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
-import type { CharacterData, ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 import { renderCharacterCreatorStep, type CharacterCreatorStepRenderContext } from "@/views/character-creator/CharacterCreatorStepViews";
 import { useCreatorCompendiumCatalogs } from "@/views/character-creator/useCreatorCompendiumCatalogs";
 import { useCreatorEditHydration } from "@/views/character-creator/useCreatorEditHydration";
@@ -229,7 +187,6 @@ export function CharacterCreatorView() {
     classFeatDetails,
     levelUpFeatDetails,
     classCantrips,
-    classSpells,
     classInvocations,
   });
   const effectiveClassName = selectedClassSummary?.name ?? editSummaryFallback?.className ?? displayNameFromCompendiumId(form.classId);

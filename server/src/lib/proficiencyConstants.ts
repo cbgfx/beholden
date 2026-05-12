@@ -25,7 +25,7 @@ export const ARTISAN_TOOLS = [
   "Weaver's Tools", "Woodcarver's Tools",
 ];
 
-export const GAMING_SETS = [
+const GAMING_SETS = [
   "Dice Set", "Dragonchess Set", "Playing Card Set", "Three-Dragon Ante Set",
 ];
 
@@ -43,7 +43,7 @@ export const ALL_TOOLS = [
   "Land Vehicles", "Water Vehicles", "Sea Vehicles",
 ];
 
-export const ABILITY_SCORE_NAMES = [
+const ABILITY_SCORE_NAMES = [
   "Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma",
 ];
 
@@ -142,16 +142,6 @@ function wordOrNumberToInt(value: string): number | null {
   return words[lowered] ?? null;
 }
 
-function extractLabeledLine(text: string, labelPattern: RegExp): string | null {
-  for (const rawLine of text.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line) continue;
-    const match = line.match(new RegExp(`${labelPattern.source}\\s*:\\s*(.+)$`, "i"));
-    if (match?.[1]) return match[1].trim();
-  }
-  return null;
-}
-
 /** Parse a tool or language trait using BOTH the trait name and text. */
 function parseToolTrait(traitName: string, traitText: string): ProficiencyChoice {
   // 1. Check trait NAME for "Choose one kind of X" → get category and choose count
@@ -201,7 +191,7 @@ function parseLangTrait(traitName: string, traitText: string): ProficiencyChoice
 
   const chooseN = detectChooseN(traitName) || detectChooseN(traitText);
   const listInText = findNamesIn(traitText, ALL_LANGUAGES);
-  const fixedInText = listInText.filter(n =>
+  const fixedInText = listInText.filter(() =>
     !traitText.toLowerCase().includes("choose") &&
     !traitText.toLowerCase().includes("of your choice")
   );
@@ -349,7 +339,7 @@ function parseRaceChoicesCore(traits: { name: string; text: string }[]): Pick<St
   return { skillChoice, toolChoice, languageChoice };
 }
 
-export function parseRaceChoices(traits: { name: string; text: string }[]): StructuredRaceChoices {
+function parseRaceChoices(traits: { name: string; text: string }[]): StructuredRaceChoices {
   const hasChosenSize = traits.some(t => /^size$/i.test(t.name) && /chosen when you select/i.test(t.text));
   const hasFeatChoice = traits.some(t => /origin feat of your choice/i.test(t.text));
   return { hasChosenSize, ...parseRaceChoicesCore(traits), hasFeatChoice };

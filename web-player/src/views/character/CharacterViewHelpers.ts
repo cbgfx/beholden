@@ -26,7 +26,7 @@ import { resolveStoredCompendiumClassId } from "@/domain/character/classIds";
 /** Total XP required to reach each level (index = level). Index 0 unused. */
 export const XP_TO_LEVEL = [0, 0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 260000, 300000, 355000];
 
-export const ABILITY_SCORE_NAMES: Record<AbilKey, string> = {
+const ABILITY_SCORE_NAMES: Record<AbilKey, string> = {
   str: "Strength",
   dex: "Dexterity",
   con: "Constitution",
@@ -194,7 +194,7 @@ export interface ResourceProgressionOverride {
   values: Array<{ level: number; value: number }>;
 }
 
-export const RESOURCE_PROGRESSION_OVERRIDES: ResourceProgressionOverride[] = [
+const RESOURCE_PROGRESSION_OVERRIDES: ResourceProgressionOverride[] = [
   {
     className: "Druid",
     featureName: "Wild Shape",
@@ -220,7 +220,7 @@ export function isInventoryItemActiveForCharacterEffects(item: InventoryItem): b
   return getEquipState(item) !== "backpack" && (!item.attunement || Boolean(item.attuned));
 }
 
-export function parseItemAbilityScoreOverrides(item: InventoryItem): ItemAbilityScoreOverride[] {
+function parseItemAbilityScoreOverrides(item: InventoryItem): ItemAbilityScoreOverride[] {
   const text = `${item.description ?? ""}\n${item.notes ?? ""}`;
   if (!text.trim()) return [];
   const overrides: ItemAbilityScoreOverride[] = [];
@@ -409,7 +409,7 @@ export function uid(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-export function normalizeCompendiumClassLookupName(name: string | null | undefined): string {
+function normalizeCompendiumClassLookupName(name: string | null | undefined): string {
   return String(name ?? "")
     .replace(/\s*\[[^\]]+\]\s*$/u, "")
     .replace(/\s+/g, " ")
@@ -417,7 +417,7 @@ export function normalizeCompendiumClassLookupName(name: string | null | undefin
     .toLowerCase();
 }
 
-export function resolveResourceProgressionOverride(
+function resolveResourceProgressionOverride(
   className: string | null | undefined,
   featureName: string | null | undefined,
   level: number,
@@ -436,7 +436,7 @@ export function resolveResourceProgressionOverride(
   return result;
 }
 
-export function normalizeSubclassLookupName(name: string | null | undefined): string {
+function normalizeSubclassLookupName(name: string | null | undefined): string {
   return String(name ?? "").trim().toLowerCase();
 }
 
@@ -453,7 +453,7 @@ export function parseLeadingNumberLoose(value: unknown): number {
   return match ? Number(match[0]) : NaN;
 }
 
-export function shouldDisplayClassCounterResource(name: string | null | undefined): boolean {
+function shouldDisplayClassCounterResource(name: string | null | undefined): boolean {
   const normalized = String(name ?? "").trim();
   if (!normalized) return false;
   if (/^(spells prepared|plans known|known forms)$/i.test(normalized)) return false;
@@ -489,7 +489,7 @@ export function collectClassResources(classDetail: ClassRestDetail | null, level
   return Array.from(latest.values());
 }
 
-export function parseWordCount(value: string): number | null {
+function parseWordCount(value: string): number | null {
   const normalized = String(value ?? "").trim().toLowerCase();
   const direct = Number.parseInt(normalized, 10);
   if (Number.isFinite(direct)) return direct;

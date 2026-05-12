@@ -639,5 +639,4 @@ function CampaignCard({ campaign: c, characters, onOpen }: {
   );
 }
 
-// ── Shared button styles ─────────────────────────────────────────────────────
 

@@ -1,4 +1,3 @@
-import React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import { MonsterSpellSection } from "@/drawers/drawers/combatant/MonsterSpellSection";
 import { MonsterTextSection } from "@/drawers/drawers/combatant/MonsterTextSection";

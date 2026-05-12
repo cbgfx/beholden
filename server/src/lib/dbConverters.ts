@@ -1,7 +1,7 @@
 // server/src/lib/dbConverters.ts
 // Row → domain object converters, shared across all route files.
 
-import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "./defaults.js";
+import { DEFAULT_OVERRIDES } from "./defaults.js";
 import { absolutizePublicUrl } from "./publicUrl.js";
 import type {
   StoredCampaign,
@@ -35,36 +35,6 @@ function readTimestamps(row: Record<string, unknown>) {
   return {
     createdAt: row.created_at as number,
     updatedAt: row.updated_at as number,
-  };
-}
-
-function readOptionalAbilities(row: Record<string, unknown>) {
-  return {
-    ...(row.str != null ? { str: row.str as number } : {}),
-    ...(row.dex != null ? { dex: row.dex as number } : {}),
-    ...(row.con != null ? { con: row.con as number } : {}),
-    ...(row.int != null ? { int: row.int as number } : {}),
-    ...(row.wis != null ? { wis: row.wis as number } : {}),
-    ...(row.cha != null ? { cha: row.cha as number } : {}),
-  };
-}
-
-function readSheetAbilities(row: Record<string, unknown>) {
-  return {
-    strScore: (row.str_score as number | null) ?? null,
-    dexScore: (row.dex_score as number | null) ?? null,
-    conScore: (row.con_score as number | null) ?? null,
-    intScore: (row.int_score as number | null) ?? null,
-    wisScore: (row.wis_score as number | null) ?? null,
-    chaScore: (row.cha_score as number | null) ?? null,
-  };
-}
-
-function readActorVitals(row: Record<string, unknown>) {
-  return {
-    hpMax: row.hp_max as number,
-    hpCurrent: row.hp_current as number,
-    ac: row.ac as number,
   };
 }
 

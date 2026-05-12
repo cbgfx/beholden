@@ -12,7 +12,7 @@ function unique(values: string[]): string[] {
   return [...new Set(values.map((entry) => entry.trim()).filter((entry) => entry.length > 0))];
 }
 
-export function specialSlotsForLevel(level: number): number {
+function specialSlotsForLevel(level: number): number {
   if (level >= 17) return 6;
   if (level >= 13) return 5;
   if (level >= 9) return 4;

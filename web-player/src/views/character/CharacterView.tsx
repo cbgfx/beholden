@@ -24,7 +24,6 @@ import type {
   AbilKey, CharacterData, PlayerNote,
 } from "@/views/character/CharacterSheetTypes";
 import {
-  type Character,
   type SheetOverrides,
   SHEET_COLOR_PRESETS,
   getPolymorphConditionData,
@@ -80,7 +79,6 @@ export function CharacterView() {
     invocationDetails,
     loading,
     error,
-    setError,
     fetchChar,
     characterData,
     primaryClassEntry,

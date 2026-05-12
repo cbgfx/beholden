@@ -248,7 +248,7 @@ export function ItemSpellsPanel({
         );
       })}
       {selectedSpell && (
-        <SpellDrawer spell={selectedSpell} accentColor={accentColor} onClose={() => setSelectedSpell(null)} />
+        <SpellDrawer spell={selectedSpell} onClose={() => setSelectedSpell(null)} />
       )}
     </>
   );

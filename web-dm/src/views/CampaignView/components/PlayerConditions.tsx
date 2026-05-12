@@ -1,4 +1,3 @@
-import React from "react";
 import { theme } from "@/theme/theme";
 import { conditionIconByKey } from "@/icons/conditions";
 import { conditionLabel } from "@/domain/conditions";

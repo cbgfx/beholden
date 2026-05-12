@@ -3,7 +3,6 @@ import type { AddMonsterOptions } from "@/domain/types/domain";
 import { IconButton } from "@/ui/IconButton";
 import { IconClose } from "@/icons";
 import { Modal } from "@/components/overlay/Modal";
-import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
 import { MonsterPickerListPane } from "@/views/CampaignView/monsterPicker/components/MonsterPickerListPane";
 import { MonsterPickerDetailPane } from "@/views/CampaignView/monsterPicker/components/MonsterPickerDetailPane";
 import { useMonsterPickerState } from "@/views/CampaignView/monsterPicker/hooks/useMonsterPickerState";

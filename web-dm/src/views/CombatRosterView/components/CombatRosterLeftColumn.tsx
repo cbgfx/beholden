@@ -1,4 +1,3 @@
-import * as React from "react";
 import type { EncounterActor, CampaignCharacter } from "@/domain/types/domain";
 import type { AddMonsterOptions, INpc } from "@/domain/types/domain";
 

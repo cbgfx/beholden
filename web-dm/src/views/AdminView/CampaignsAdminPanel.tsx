@@ -1,7 +1,7 @@
 // web-dm/src/views/AdminView/CampaignsAdminPanel.tsx
 // Admin panel for managing campaign memberships (who is DM / player per campaign).
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "@/services/api";
 import { theme } from "@/theme/theme";
 import type { Campaign } from "./adminTypes";

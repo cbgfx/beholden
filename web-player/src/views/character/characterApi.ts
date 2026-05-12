@@ -1,6 +1,6 @@
 import { api, jsonInit } from "@/services/api";
 
-export const myCharacterPath = (id: string, resource?: string): string =>
+const myCharacterPath = (id: string, resource?: string): string =>
   resource ? `/api/me/characters/${id}/${resource}` : `/api/me/characters/${id}`;
 
 export function putMyCharacter<T = unknown>(id: string, payload: unknown): Promise<T> {

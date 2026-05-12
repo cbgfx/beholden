@@ -269,7 +269,7 @@ export function MonsterBrowserPanel(props: {
   const [formTarget, setFormTarget] = React.useState<
     { mode: "create" } | { mode: "edit"; monster: MonsterForEdit } | { mode: "duplicate"; source: MonsterForEdit } | null
   >(null);
-  const [editLoading, setEditLoading] = React.useState<string | null>(null);
+  const [, setEditLoading] = React.useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = React.useState<string | null>(null);
   const [deleteBusy, setDeleteBusy] = React.useState(false);
 

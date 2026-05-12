@@ -42,7 +42,6 @@ export function useCombatActions({
   delta,
   setDelta,
   target,
-  refresh,
   monsterCache,
   setMonsterCache,
   dispatch

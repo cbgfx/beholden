@@ -85,51 +85,6 @@ export function NavButtons({
   );
 }
 
-export function CardGrid({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
-      {children}
-    </div>
-  );
-}
-
-export function SelectableCard({
-  selected,
-  onClick,
-  title,
-  subtitle,
-}: {
-  selected: boolean;
-  onClick: () => void;
-  title: string;
-  subtitle?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        padding: "13px 15px",
-        borderRadius: 10,
-        textAlign: "left",
-        border: `2px solid ${selected ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-        background: selected ? "rgba(56,182,255,0.15)" : "rgba(255,255,255,0.055)",
-        color: C.text,
-        cursor: "pointer",
-        boxShadow: selected ? `0 0 0 1px ${C.accentHl}22` : "none",
-        transition: "border-color 0.12s, background 0.12s",
-      }}
-    >
-      <div style={{ fontWeight: 700, fontSize: "var(--fs-medium)", color: selected ? C.accentHl : C.text }}>{title}</div>
-      {subtitle && (
-        <div style={{ color: selected ? "rgba(56,182,255,0.75)" : "rgba(160,180,220,0.6)", fontSize: "var(--fs-small)", marginTop: 3 }}>
-          {subtitle}
-        </div>
-      )}
-    </button>
-  );
-}
-
 export function SpellPicker<T extends { id: string; name: string; level: number | null; text?: string | null }>({
   title,
   sourceLabel,

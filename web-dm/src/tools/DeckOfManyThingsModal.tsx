@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/overlay/Modal";
 import { api } from "@/services/api";
 import { theme, withAlpha } from "@/theme/theme";

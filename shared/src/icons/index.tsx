@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Icon, type SvgIconProps } from "./Icon";
 
 const svgs = import.meta.glob("./svg/*.svg", {

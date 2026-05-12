@@ -129,8 +129,6 @@ function AppInner() {
     reorderEncounters,
     reorderCampaignNotes,
     reorderAdventureNotes,
-    addMonster,
-    removeCombatant,
     addINpcFromMonster,
     deletePlayer,
     deleteINpc,

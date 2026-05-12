@@ -1,4 +1,3 @@
-import React from "react";
 import { Panel } from "@/ui/Panel";
 import { theme } from "@/theme/theme";
 import { InfoPageLayout } from "./InfoPageLayout";

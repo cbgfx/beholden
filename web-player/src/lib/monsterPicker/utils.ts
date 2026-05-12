@@ -21,16 +21,3 @@ export function formatCr(raw: unknown): string {
   return String(n);
 }
 
-export function parseCrNumber(cr: unknown): number {
-  if (cr == null) return NaN;
-  if (typeof cr === "number") return cr;
-  const s = String(cr).trim();
-  if (!s) return NaN;
-  if (s.includes("/")) {
-    const [a, b] = s.split("/").map((x) => Number(x));
-    if (!Number.isFinite(a) || !Number.isFinite(b) || b === 0) return NaN;
-    return a / b;
-  }
-  const n = Number(s);
-  return Number.isFinite(n) ? n : NaN;
-}

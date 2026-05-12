@@ -3,7 +3,7 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useStore } from "@/store";
 import { useWs, useWsStatus } from "@/services/ws";
-import { theme, withAlpha } from "@/theme/theme";
+import { theme } from "@/theme/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsNarrow } from "@/views/CombatView/hooks/useIsNarrow";
 import { HeaderActionButton, HeaderActionLink, StatusDot, navLinkStyle } from "@beholden/shared/ui";

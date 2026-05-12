@@ -18,7 +18,7 @@ export function hasNamedProficiency(list: Array<Pick<TaggedItem, "name">> | null
   return (list ?? []).some((s) => String(s.name).toLowerCase() === name.toLowerCase());
 }
 
-export function proficiencyValue(level: number, tier: 0 | 0.5 | 1 | 2): number {
+function proficiencyValue(level: number, tier: 0 | 0.5 | 1 | 2): number {
   const pb = proficiencyBonus(level);
   if (tier === 2) return pb * 2;
   if (tier === 1) return pb;
@@ -199,7 +199,7 @@ export function normalizeResourceKey(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export function parseInvocationPrereqLevel(text: string): number {
+function parseInvocationPrereqLevel(text: string): number {
   const m = text.match(/Prerequisite[^:]*:.*?Level\s+(\d+)\+/i);
   return m ? parseInt(m[1], 10) : 1;
 }

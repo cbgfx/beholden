@@ -1,4 +1,3 @@
-import React from "react";
 import type { AddMonsterOptions } from "@/domain/types/domain";
 import { PlayersPanel } from "@/views/CampaignView/panels/PlayersPanel";
 import { INpcsPanel } from "@/views/CampaignView/panels/INpcsPanel";

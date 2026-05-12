@@ -68,11 +68,11 @@ export function hasContextualQualifier(text: string, matchEndIndex: number): boo
   ].some((prefix) => tail.startsWith(prefix));
 }
 
-export function textUsesRageGate(text: string): boolean {
+function textUsesRageGate(text: string): boolean {
   return /while your rage is active|while raging/i.test(text);
 }
 
-export function isBaseRageRulesText(source: FeatureEffectSource, text: string): boolean {
+function isBaseRageRulesText(source: FeatureEffectSource, text: string): boolean {
   return /\brage\b/i.test(source.name)
     && /your rage follows the rules below|damage resistance|rage damage|strength advantage/i.test(text);
 }

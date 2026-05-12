@@ -4,7 +4,6 @@ import { theme } from "@/theme/theme";
 import { SectionTitle } from "@/ui/SectionTitle";
 import { conditionIconByKey } from "@/icons/conditions";
 import {
-  CONDITION_DEFS,
   buildRosterById,
   conditionLabel,
   displayName,

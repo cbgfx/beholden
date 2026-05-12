@@ -26,7 +26,7 @@ import {
 import { buildResolvedSpellChoiceEntry, buildSpellListChoiceEntry } from "@/views/character-creator/utils/SpellChoiceUtils";
 import { getFeatSpellcastingAbilityChoice } from "@/views/character-creator/utils/FeatSpellcastingUtils";
 import { deriveAllowedInvocationIds } from "@/views/level-up/LevelUpUtils";
-import { deriveCharProficiencies, reconcileSelectedSpellIds, stripRulesetSuffix } from "@/views/level-up/LevelUpHelpers";
+import { deriveCharProficiencies, stripRulesetSuffix } from "@/views/level-up/LevelUpHelpers";
 import type {
   LevelUpCharacter as Character,
   LevelUpClassDetail as ClassDetail,
@@ -54,7 +54,6 @@ export function useLevelUpDerivedState(args: {
   chosenFeatureChoices: Record<string, string[]>;
   chosenFeatDetail: FeatDetail | null;
   classCantrips: Array<{ id: string; name: string; level?: number | null; text?: string | null }>;
-  classSpells: Array<{ id: string; name: string; level?: number | null; text?: string | null }>;
   classInvocations: Array<{ id: string; name: string; level?: number | null; text?: string | null }>;
 }) {
   const {
@@ -70,7 +69,6 @@ export function useLevelUpDerivedState(args: {
     chosenFeatureChoices,
     chosenFeatDetail,
     classCantrips,
-    classSpells,
     classInvocations,
   } = args;
 

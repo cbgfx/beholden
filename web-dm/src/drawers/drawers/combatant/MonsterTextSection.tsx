@@ -1,4 +1,3 @@
-import React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import { SectionTitle } from "@/ui/SectionTitle";
 

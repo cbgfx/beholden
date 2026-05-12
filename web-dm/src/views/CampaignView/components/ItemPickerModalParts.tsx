@@ -1,18 +1,10 @@
 import React from "react";
-import { ITEM_RARITY_ORDER, KNOWN_ITEM_TYPES, sortedRarities as sharedSortedRarities, uniqSorted as sharedUniqSorted } from "@beholden/shared/domain";
+import { ITEM_RARITY_ORDER, KNOWN_ITEM_TYPES } from "@beholden/shared/domain";
 import { CheckRow as SharedCheckRow, FormField as SharedFormField, MagicBadge as SharedMagicBadge, RarityDot as SharedRarityDot, StatCard, Tag } from "@beholden/shared/ui";
 import { theme } from "@/theme/theme";
 
 export const RARITY_ORDER = [...ITEM_RARITY_ORDER];
 export const KNOWN_TYPES = [...KNOWN_ITEM_TYPES];
-
-export function uniqSorted(xs: string[]) {
-  return sharedUniqSorted(xs);
-}
-
-export function sortedRarities(xs: string[]) {
-  return sharedSortedRarities(xs);
-}
 
 export function rarityChipColor(rarity: string | null): string {
   switch ((rarity ?? "").toLowerCase()) {

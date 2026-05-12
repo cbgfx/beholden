@@ -118,13 +118,6 @@ export interface DeriveFeatAbilityBonusesArgs {
   nextLevel: number;
 }
 
-export interface DerivePreviewScoresArgs {
-  baseScores: Record<string, number>;
-  asiStats: Record<string, number>;
-  asiMode: "asi" | "feat" | null;
-  featAbilityBonuses: Record<string, number>;
-}
-
 export interface DeriveLevelUpValidationArgs {
   isAsiLevel: boolean;
   asiMode: "asi" | "feat" | null;
@@ -206,22 +199,6 @@ export function deriveFeatAbilityBonuses(args: DeriveFeatAbilityBonusesArgs): Re
   }
 
   return bonusMap;
-}
-
-export function derivePreviewScores(args: DerivePreviewScoresArgs): Record<string, number> {
-  const { baseScores, asiStats, asiMode, featAbilityBonuses } = args;
-  const previewScores = { ...baseScores };
-
-  for (const [key, value] of Object.entries(asiStats)) {
-    previewScores[key] = Math.min(20, (previewScores[key] ?? 10) + value);
-  }
-  if (asiMode === "feat") {
-    for (const [key, value] of Object.entries(featAbilityBonuses)) {
-      previewScores[key] = Math.min(20, (previewScores[key] ?? 10) + value);
-    }
-  }
-
-  return previewScores;
 }
 
 export function deriveHpGain(hpChoice: "roll" | "average" | "manual" | null, hpAverage: number, rolledHp: number | null, manualHp: string): number | null {
@@ -315,7 +292,7 @@ export function deriveLevelUpValidation(args: DeriveLevelUpValidationArgs) {
 export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<string, unknown> {
   const {
     char, nextLevel, hpGain, featHpBonus, subclass, chosenCantrips, chosenSpells, chosenInvocations,
-    chosenExpertise, chosenFeatOptions, chosenFeatureChoices, expertiseChoices, featChoiceEntries, chosenFeatDetail, featSourceLabel,
+    chosenExpertise, chosenFeatOptions, chosenFeatureChoices, expertiseChoices, chosenFeatDetail, featSourceLabel,
     featSpellChoiceOptions = {},
     newFeatures, classDetailName, selectedCantripEntries, selectedSpellEntries, selectedInvocationEntries,
     selectedClassFeatureSpellEntries = [],

@@ -1,4 +1,3 @@
-import React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import type { MonsterDetail } from "@/views/CombatView/types";
 import { ActionRow } from "@/views/CombatView/components/ActionRow";

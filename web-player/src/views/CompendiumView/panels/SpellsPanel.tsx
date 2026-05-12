@@ -1,4 +1,3 @@
-import React from "react";
 import { Panel } from "@/ui/Panel";
 import { Select } from "@/ui/Select";
 import { C, withAlpha } from "@/lib/theme";
