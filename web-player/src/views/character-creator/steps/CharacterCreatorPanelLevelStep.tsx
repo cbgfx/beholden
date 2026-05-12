@@ -91,6 +91,7 @@ export function renderLevelStep({
   onBack: () => void;
   onNext: () => void;
 }): { main: React.ReactNode; side: React.ReactNode } {
+  const trimmedClassName = String(className ?? "").trim();
   const main = (
     <div>
       <h2 style={headingStyle}>Class Details</h2>
@@ -274,7 +275,7 @@ export function renderLevelStep({
       {classEquipmentText && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ ...labelStyle, marginBottom: 8 }}>
-            Class Starting Equipment {className && <span style={sourceTagStyle}>{className}</span>}
+            Class Starting Equipment {trimmedClassName ? <span style={sourceTagStyle}>{trimmedClassName}</span> : null}
           </div>
           {classEquipmentOptions.length > 0 && (
             <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>

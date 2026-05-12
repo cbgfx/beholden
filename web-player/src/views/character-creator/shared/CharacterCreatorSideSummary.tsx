@@ -14,7 +14,9 @@ interface CharacterCreatorSideSummaryProps {
   bgDetail: BgDetail | null;
   featAbilityBonuses: Record<string, number>;
   fallbackClassName?: string;
+  fallbackClassHd?: number | null;
   fallbackRaceName?: string;
+  fallbackRaceSpeed?: number | null;
   fallbackBgName?: string;
 }
 
@@ -25,12 +27,16 @@ export function CharacterCreatorSideSummary({
   bgDetail,
   featAbilityBonuses,
   fallbackClassName,
+  fallbackClassHd,
   fallbackRaceName,
+  fallbackRaceSpeed,
   fallbackBgName,
 }: CharacterCreatorSideSummaryProps) {
   const scores = resolvedScores(form, featAbilityBonuses);
   const className = classDetail?.name ?? fallbackClassName;
+  const classHd = classDetail?.hd ?? fallbackClassHd ?? null;
   const raceName = raceDetail?.name ?? fallbackRaceName;
+  const raceSpeed = raceDetail?.speed ?? fallbackRaceSpeed ?? null;
   const bgName = bgDetail?.name ?? fallbackBgName;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -40,14 +46,14 @@ export function CharacterCreatorSideSummary({
           <div style={{ marginBottom: 6 }}>
             <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>Class </span>
             <span style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700 }}>{className}</span>
-            {classDetail?.hd && <span style={{ color: C.muted, fontSize: "var(--fs-small)", marginLeft: 6 }}>d{classDetail.hd}</span>}
+            {classHd && <span style={{ color: C.muted, fontSize: "var(--fs-small)", marginLeft: 6 }}>d{classHd}</span>}
           </div>
         )}
         {raceName && (
           <div style={{ marginBottom: 6 }}>
             <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>Species </span>
             <span style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700 }}>{raceName}</span>
-            {raceDetail?.speed && <span style={{ color: C.muted, fontSize: "var(--fs-small)", marginLeft: 6 }}>{raceDetail.speed} ft</span>}
+            {raceSpeed && <span style={{ color: C.muted, fontSize: "var(--fs-small)", marginLeft: 6 }}>{raceSpeed} ft</span>}
           </div>
         )}
         {bgName && (

@@ -66,6 +66,29 @@ function addUniqueCaseInsensitive(values: string[], value: string): string[] {
   return values.some((entry) => entry.toLowerCase() === value.toLowerCase()) ? values : [...values, value];
 }
 
+function isToughReference(value: string | null | undefined): boolean {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/^f_/, "")
+    .replace(/[^a-z0-9]+/g, " ");
+  return /\btough\b/.test(normalized);
+}
+
+function characterDataReferencesToughFeat(charData: CharacterData): boolean {
+  if (isToughReference(charData.chosenRaceFeatId) || isToughReference(charData.chosenBgOriginFeatId)) return true;
+  if (Object.values(charData.chosenClassFeatIds ?? {}).some((featId) => isToughReference(featId))) return true;
+  if ((charData.chosenLevelUpFeats ?? []).some((entry) => isToughReference(entry.featId))) return true;
+  return false;
+}
+
+function parsedEffectsIncludeToughHpBonus(parsed: ReturnType<typeof parseFeatureEffects>[]): boolean {
+  return parsed.some((parsedFeature) =>
+    isToughReference(parsedFeature.source.name)
+    && parsedFeature.effects.some((effect) => effect.type === "hit_points" && effect.mode === "max_bonus")
+  );
+}
+
 export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateArgs): CharacterViewDerivedState {
   const currentCharacterData: CharacterData = args.char.characterData ?? {};
   const prof = normalizeProficiencies(currentCharacterData.proficiencies);
@@ -208,7 +231,12 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
 
   const accentColor = args.char.color ?? "#38b6ff";
   const conScoreDeltaPerLevel = abilityMod(scores.con) - abilityMod(args.char.conScore);
-  const featureHpMaxBonus = deriveHitPointMaxBonusFromEffects(parsedAllEffects, { level: args.char.level, scores });
+  const parsedFeatureHpMaxBonus = deriveHitPointMaxBonusFromEffects(parsedAllEffects, { level: args.char.level, scores });
+  const toughFallbackHpMaxBonus =
+    characterDataReferencesToughFeat(currentCharacterData) && !parsedEffectsIncludeToughHpBonus(parsedAllEffects)
+      ? args.char.level * 2
+      : 0;
+  const featureHpMaxBonus = parsedFeatureHpMaxBonus + toughFallbackHpMaxBonus;
   const effectiveHpMax = Math.max(1, args.char.hpMax + (conScoreDeltaPerLevel * args.char.level) + featureHpMaxBonus + (overrides.hpMaxBonus ?? 0));
   const xpEarned = currentCharacterData.xp ?? 0;
   const xpNeeded = XP_TO_LEVEL[args.char.level + 1] ?? 0;

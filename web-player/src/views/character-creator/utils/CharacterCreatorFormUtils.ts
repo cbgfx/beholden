@@ -123,7 +123,11 @@ export function getClassFeatOptionLabel(optionName: string, featGroup: string): 
 }
 
 export function isToughFeat(name: string | null | undefined): boolean {
-  return /\bTough\b/i.test(String(name ?? "").trim());
+  const normalized = String(name ?? "")
+    .trim()
+    .replace(/^f_/, "")
+    .replace(/[^a-z0-9]+/gi, " ");
+  return /\bTough\b/i.test(normalized);
 }
 
 export function toAbilityKey(value: string): string | null {

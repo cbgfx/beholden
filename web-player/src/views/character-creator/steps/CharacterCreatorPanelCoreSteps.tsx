@@ -103,6 +103,11 @@ function getPrimaryAbilityKeys(classDetail: ClassDetailLike | null): string[] {
   return [];
 }
 
+function SourceTag({ value }: { value: string | null | undefined }) {
+  const label = String(value ?? "").trim();
+  return label ? <span style={sourceTagStyle}>{label}</span> : null;
+}
+
 export function renderClassStep({
   classes,
   classSearch,
@@ -391,7 +396,7 @@ export function renderSpeciesStep({
         <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 18 }}>
           {raceChoices.hasChosenSize && (
             <div>
-              <div style={{ ...labelStyle, marginBottom: 8 }}>Size <span style={sourceTagStyle}>{raceDetail.name}</span></div>
+              <div style={{ ...labelStyle, marginBottom: 8 }}>Size <SourceTag value={raceDetail.name} /></div>
               <div style={{ display: "flex", gap: 8 }}>
                 {["Medium", "Small"].map((sz) => {
                   const sel = chosenRaceSize === sz;
@@ -422,7 +427,7 @@ export function renderSpeciesStep({
           {skillChoice && (
             <div>
               <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
-                <div style={{ ...labelStyle, margin: 0 }}>Skill Proficiency <span style={sourceTagStyle}>{raceDetail.name}</span></div>
+                <div style={{ ...labelStyle, margin: 0 }}>Skill Proficiency <SourceTag value={raceDetail.name} /></div>
                 <span style={{ fontSize: "var(--fs-small)", color: chosenRaceSkills.length >= skillChoice.count ? C.accentHl : C.muted }}>
                   {chosenRaceSkills.length} / {skillChoice.count}
                 </span>
@@ -459,7 +464,7 @@ export function renderSpeciesStep({
           {toolChoice && (
             <div>
               <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
-                <div style={{ ...labelStyle, margin: 0 }}>Tool Proficiency <span style={sourceTagStyle}>{raceDetail.name}</span></div>
+                <div style={{ ...labelStyle, margin: 0 }}>Tool Proficiency <SourceTag value={raceDetail.name} /></div>
                 <span style={{ fontSize: "var(--fs-small)", color: chosenRaceTools.length >= toolChoice.count ? C.accentHl : C.muted }}>
                   {chosenRaceTools.length} / {toolChoice.count}
                 </span>
@@ -496,7 +501,7 @@ export function renderSpeciesStep({
           {languageChoice && (
             <div>
               <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
-                <div style={{ ...labelStyle, margin: 0 }}>Language <span style={sourceTagStyle}>{raceDetail.name}</span></div>
+                <div style={{ ...labelStyle, margin: 0 }}>Language <SourceTag value={raceDetail.name} /></div>
                 <span style={{ fontSize: "var(--fs-small)", color: chosenRaceLanguages.length >= languageChoice.count ? C.accentHl : C.muted }}>
                   {chosenRaceLanguages.length} / {languageChoice.count}
                 </span>
@@ -532,7 +537,7 @@ export function renderSpeciesStep({
 
           {raceChoices.hasFeatChoice && (
             <div>
-              <div style={{ ...labelStyle, marginBottom: 8 }}>Origin Feat <span style={sourceTagStyle}>{raceDetail.name}</span></div>
+              <div style={{ ...labelStyle, marginBottom: 8 }}>Origin Feat <SourceTag value={raceDetail.name} /></div>
               <input
                 value={raceFeatSearch}
                 onChange={(e) => setRaceFeatSearch(e.target.value)}

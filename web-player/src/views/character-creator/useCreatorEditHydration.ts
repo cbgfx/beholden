@@ -35,6 +35,7 @@ type CreatorCharacterData = Record<string, unknown> & {
   chosenCantrips?: string[];
   chosenSpells?: string[];
   chosenInvocations?: string[];
+  hd?: number | null;
   bgAbilityMode?: "split" | "even";
   standardAssign?: Record<string, number>;
   pbScores?: Record<string, number>;
@@ -52,8 +53,9 @@ export function useCreatorEditHydration(args: {
   setForm: React.Dispatch<React.SetStateAction<FormState>>;
   setEditLoading: React.Dispatch<React.SetStateAction<boolean>>;
   initialCampaignIdsRef: React.MutableRefObject<string[]>;
+  onHydrated?: (summary: { className: string; species: string; hitDie: number | null }) => void;
 }) {
-  const { editId, setForm, setEditLoading, initialCampaignIdsRef } = args;
+  const { editId, setForm, setEditLoading, initialCampaignIdsRef, onHydrated } = args;
 
   React.useEffect(() => {
     if (!editId) return;
@@ -62,6 +64,11 @@ export function useCreatorEditHydration(args: {
         const cd: CreatorCharacterData = (ch.characterData ?? {}) as CreatorCharacterData;
         const primaryClassEntry = Array.isArray(cd.classes) ? cd.classes[0] : null;
         const classId = resolveStoredCompendiumClassId(primaryClassEntry, ch.className);
+        const hydratedClassName = typeof primaryClassEntry?.className === "string" && primaryClassEntry.className.trim()
+          ? primaryClassEntry.className.trim()
+          : ch.className ?? "";
+        const hydratedHitDie = Number.isFinite(Number(cd.hd)) ? Number(cd.hd) : null;
+        onHydrated?.({ className: hydratedClassName, species: ch.species ?? "", hitDie: hydratedHitDie });
         const recordedBgBonuses =
           cd.bgAbilityBonuses && typeof cd.bgAbilityBonuses === "object" ? cd.bgAbilityBonuses : {};
         const recordedAsiBonuses = Array.isArray(cd.chosenLevelUpFeats)

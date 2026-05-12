@@ -97,6 +97,40 @@ import { useCharacterCreatorSubmit } from "@/views/character-creator/useCharacte
 // Main view
 // ---------------------------------------------------------------------------
 
+const FALLBACK_CLASS_HIT_DICE: Record<string, number> = {
+  barbarian: 12,
+  fighter: 10,
+  paladin: 10,
+  ranger: 10,
+  bard: 8,
+  cleric: 8,
+  druid: 8,
+  monk: 8,
+  rogue: 8,
+  warlock: 8,
+  sorcerer: 6,
+  wizard: 6,
+};
+
+function inferHitDieFromClassName(value: string | null | undefined): number | null {
+  const normalized = String(value ?? "").toLowerCase();
+  for (const [className, hitDie] of Object.entries(FALLBACK_CLASS_HIT_DICE)) {
+    if (new RegExp(`\\b${className}\\b`, "i").test(normalized)) return hitDie;
+  }
+  return null;
+}
+
+function displayNameFromCompendiumId(value: string | null | undefined): string {
+  const normalized = String(value ?? "")
+    .replace(/^c_/, "")
+    .replace(/^race_/, "")
+    .replace(/^bg_/, "")
+    .replace(/^background_/, "")
+    .replace(/_/g, " ")
+    .trim();
+  return normalized.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 export function CharacterCreatorView() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -135,6 +169,7 @@ export function CharacterCreatorView() {
   const [portraitFile, setPortraitFile] = React.useState<File | null>(null);
   const [portraitPreview, setPortraitPreview] = React.useState<string | null>(null);
   const portraitInputRef = React.useRef<HTMLInputElement>(null);
+  const [editSummaryFallback, setEditSummaryFallback] = React.useState<{ className: string; species: string; hitDie: number | null } | null>(null);
 
   // Search states for long lists (hoisted to avoid Rules-of-Hooks violations in inner fns)
   const [classSearch, setClassSearch] = React.useState("");
@@ -197,6 +232,13 @@ export function CharacterCreatorView() {
     classSpells,
     classInvocations,
   });
+  const effectiveClassName = selectedClassSummary?.name ?? editSummaryFallback?.className ?? displayNameFromCompendiumId(form.classId);
+  const effectiveHitDie =
+    classDetail?.hd ??
+    selectedClassSummary?.hd ??
+    editSummaryFallback?.hitDie ??
+    inferHitDieFromClassName(effectiveClassName || form.classId) ??
+    8;
 
   // Load compendium lists on mount
 
@@ -205,6 +247,7 @@ export function CharacterCreatorView() {
     setForm,
     setEditLoading,
     initialCampaignIdsRef,
+    onHydrated: setEditSummaryFallback,
   });
 
   // Load class detail when selected
@@ -297,6 +340,7 @@ export function CharacterCreatorView() {
     prevBgIdRef.current = form.bgId;
     const shouldResetBgChoices = !isEditing || (prevBgId !== null && prevBgId !== form.bgId);
     setBgOriginFeatDetail(null);
+    setBgDetail(null);
     if (shouldResetBgChoices) {
       setForm(f => ({
         ...f,
@@ -361,7 +405,7 @@ export function CharacterCreatorView() {
 
   // Auto-calculate HP, AC, speed when class/race/scores change
   React.useEffect(() => {
-    const hd = classDetail?.hd ?? 8;
+    const hd = effectiveHitDie;
     const scores = resolvedScores(form, selectedFeatAbilityBonuses);
     const conMod = abilityMod(scores.con ?? 10);
     const dexMod = abilityMod(scores.dex ?? 10);
@@ -374,7 +418,11 @@ export function CharacterCreatorView() {
       || (bgDetail?.proficiencies?.feats ?? []).some((feat) => isToughFeat(feat.name))
       || (bgDetail?.traits ?? []).some((trait) => /^Feat:\s*/i.test(trait.name) && isToughFeat(trait.name))
       || selectedClassFeatDetails.some((feat) => isToughFeat(feat.name))
-      || levelUpFeatDetails.some(({ feat }) => isToughFeat(feat.name));
+      || levelUpFeatDetails.some(({ feat }) => isToughFeat(feat.name))
+      || isToughFeat(form.chosenRaceFeatId)
+      || isToughFeat(form.chosenBgOriginFeatId)
+      || Object.values(form.chosenClassFeatIds).some((featId) => isToughFeat(featId))
+      || form.chosenLevelUpFeats.some((entry) => isToughFeat(entry.featId));
     const hp = calcHpMax(hd, form.level, conMod) + (hasTough ? form.level * 2 : 0);
     const ac = 10 + dexMod;
     const baseSpeed = raceDetail?.speed ?? 30;
@@ -382,7 +430,7 @@ export function CharacterCreatorView() {
     const acStr = String(ac);
     const speedStr = String(baseSpeed);
     setForm((f) => (f.hpMax === hpStr && f.ac === acStr && f.speed === speedStr ? f : { ...f, hpMax: hpStr, ac: acStr, speed: speedStr }));
-  }, [classDetail, raceDetail, form.level, form.abilityMethod, form.standardAssign, form.pbScores, form.bgAbilityBonuses, resolvedRaceFeatDetail?.name, resolvedBgOriginFeatDetail?.name, form.chosenBgOriginFeatId, featSummaries, selectedClassFeatDetails, selectedFeatAbilityBonuses, levelUpFeatDetails, bgDetail?.proficiencies?.feats, bgDetail?.traits]);
+  }, [effectiveHitDie, raceDetail, form.level, form.abilityMethod, form.standardAssign, form.pbScores, form.bgAbilityBonuses, form.chosenRaceFeatId, form.chosenBgOriginFeatId, form.chosenClassFeatIds, form.chosenLevelUpFeats, resolvedRaceFeatDetail?.name, resolvedBgOriginFeatDetail?.name, featSummaries, selectedClassFeatDetails, selectedFeatAbilityBonuses, levelUpFeatDetails, bgDetail?.proficiencies?.feats, bgDetail?.traits]);
 
   function set<K extends keyof FormState>(key: K, val: FormState[K]) {
     setForm((f) => ({ ...f, [key]: val }));
@@ -435,6 +483,7 @@ export function CharacterCreatorView() {
       handleSubmit: handleSubmitWithChecks,
       sideSummary,
       classDetail,
+      effectiveHitDie,
       selectedRuleset,
       classes,
       classSearch,
@@ -507,8 +556,10 @@ export function CharacterCreatorView() {
       raceDetail={raceDetail}
       bgDetail={bgDetail}
       featAbilityBonuses={selectedFeatAbilityBonuses}
-      fallbackClassName={classDetail ? undefined : classes.find((c) => c.id === form.classId)?.name}
-      fallbackRaceName={raceDetail ? undefined : races.find((r) => r.id === form.raceId)?.name}
+      fallbackClassName={classDetail ? undefined : effectiveClassName}
+      fallbackClassHd={classDetail ? undefined : effectiveHitDie}
+      fallbackRaceName={raceDetail ? undefined : races.find((r) => r.id === form.raceId)?.name ?? editSummaryFallback?.species ?? displayNameFromCompendiumId(form.raceId)}
+      fallbackRaceSpeed={raceDetail ? undefined : races.find((r) => r.id === form.raceId)?.speed}
       fallbackBgName={bgDetail ? undefined : bgs.find((b) => b.id === form.bgId)?.name}
     />
   );
@@ -545,4 +596,3 @@ export function CharacterCreatorView() {
     </div>
   );
 }
-

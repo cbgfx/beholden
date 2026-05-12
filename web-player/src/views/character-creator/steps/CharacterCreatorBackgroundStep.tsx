@@ -119,6 +119,24 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
   const bgAbilityBonusCount = Object.keys(form.bgAbilityBonuses).length;
   const bgAbilityValid = bgAbilityKeys.length === 0
     || (form.bgAbilityMode === "split" ? bgAbilityBonusCount === 2 : bgAbilityBonusCount === bgAbilityEvenTarget);
+  const bgProf = bgDetail?.proficiencies;
+  const bgSkillChoice = bgProf?.skills ?? { fixed: [], choose: 0, from: null };
+  const bgToolChoice = bgProf?.tools ?? { fixed: [], choose: 0, from: null };
+  const bgLanguageChoice = bgProf?.languages ?? { fixed: [], choose: 0, from: null };
+  const bgSkillsValid = !bgProf || form.chosenBgSkills.length >= bgSkillChoice.choose;
+  const bgToolsValid = !bgProf || form.chosenBgTools.length >= bgToolChoice.choose;
+  const bgLanguagesValid = !bgProf || form.chosenBgLanguages.length >= bgLanguageChoice.choose;
+  const bgFeatValid = !bgProf || bgProf.featChoice <= 0 || Boolean(form.chosenBgOriginFeatId);
+  const bgEquipmentValid = equipmentOptions.length === 0 || Boolean(form.chosenBgEquipmentOption);
+  const nextDisabled =
+    !form.bgId
+    || !bgDetail
+    || !bgAbilityValid
+    || !bgSkillsValid
+    || !bgToolsValid
+    || !bgLanguagesValid
+    || !bgFeatValid
+    || !bgEquipmentValid;
 
   const bgChoicesMain = bgDetail
     ? (() => {
@@ -619,7 +637,7 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
         step={step}
         onBack={onBack}
         onNext={onNext}
-        nextDisabled={!form.bgId || bgDetail?.id !== form.bgId || !bgAbilityValid || (equipmentOptions.length > 0 && !form.chosenBgEquipmentOption)}
+        nextDisabled={nextDisabled}
       />
     </div>
   );

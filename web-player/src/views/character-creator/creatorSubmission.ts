@@ -184,7 +184,7 @@ export async function buildCreatorSubmissionBody(args: {
   const body = {
     name: form.characterName.trim(),
     playerName: optionalText(form.playerName),
-    className: classDetail?.name ?? form.characterName,
+    className: classDetail?.name ?? selectedClassSummary?.name ?? "",
     species: raceDetail?.name ?? "",
     level: form.level,
     hpMax: Number(form.hpMax) || 0,

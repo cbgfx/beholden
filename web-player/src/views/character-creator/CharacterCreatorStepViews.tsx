@@ -75,6 +75,7 @@ export type CharacterCreatorStepRenderContext = {
   handleSubmit: () => Promise<void>;
   sideSummary: React.ReactNode;
   classDetail: ClassDetail | null;
+  effectiveHitDie: number;
   selectedRuleset: Ruleset;
   classes: ClassSummary[];
   classSearch: string;
@@ -542,7 +543,7 @@ function renderDerivedStats(ctx: CharacterCreatorStepRenderContext): StepRenderR
   const scores = resolvedScores(ctx.form, ctx.selectedFeatAbilityBonuses);
   const conMod = abilityMod(scores.con ?? 10);
   const dexMod = abilityMod(scores.dex ?? 10);
-  const hd = ctx.classDetail?.hd ?? 8;
+  const hd = ctx.effectiveHitDie;
   const prof: ProficiencyMap = buildProficiencyMapFromUtils({
     form: ctx.form,
     classDetail: ctx.classDetail,
