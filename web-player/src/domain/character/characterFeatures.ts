@@ -320,7 +320,19 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
 
   for (const trait of backgroundDetail?.traits ?? []) {
     const name = String(trait.name ?? "").trim();
-    if (!name || shouldSkipBackgroundTrait(name)) continue;
+    if (!name) continue;
+    const fixedFeatMatch = name.match(/^Feat:\s*(.+)$/i);
+    if (fixedFeatMatch?.[1]) {
+      addFeature({
+        id: `background-feat:${backgroundDetail?.id}:${fixedFeatMatch[1].trim()}`,
+        kind: "feat",
+        name: fixedFeatMatch[1].trim(),
+        text: trait.text,
+        preparedSpellProgression: trait.preparedSpellProgression,
+      });
+      continue;
+    }
+    if (shouldSkipBackgroundTrait(name)) continue;
     addFeature({
       id: `background:${backgroundDetail?.id}:${name}`,
       kind: "background",

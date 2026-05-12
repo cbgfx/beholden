@@ -34,6 +34,49 @@ function WsScopeBridge() {
   return null;
 }
 
+function RouteLoading() {
+  return (
+    <div
+      style={{
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "rgba(160,180,220,0.75)",
+        fontFamily: "system-ui, Segoe UI, Arial",
+      }}
+    >
+      Loading...
+    </div>
+  );
+}
+
+function RoutedViews() {
+  const location = useLocation();
+  return (
+    <div key={location.pathname} style={{ height: "100%", minHeight: 0 }}>
+      <React.Suspense fallback={<RouteLoading />}>
+        <Routes location={location}>
+          <Route path="/" element={<PlayerHomeView />} />
+          <Route path="/compendium" element={<CompendiumView />} />
+          <Route path="/characters/new" element={<CharacterCreatorView />} />
+          <Route path="/characters/:id" element={<KeyedCharacterView />} />
+          <Route path="/characters/:id/edit" element={<CharacterCreatorView />} />
+          <Route path="/characters/:id/levelup" element={<LevelUpView />} />
+          <Route path="/profile" element={<ProfileView />} />
+          <Route path="/campaigns/:id" element={<CampaignPartyView />} />
+          <Route path="/campaigns/:id/members/:playerId" element={<PartyMemberView />} />
+          <Route path="/campaigns/:id/bastions/:bastionId" element={<BastionView />} />
+          <Route path="/about" element={<AboutView />} />
+          <Route path="/faq" element={<FaqView />} />
+          <Route path="/updates" element={<UpdatesView />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </React.Suspense>
+    </div>
+  );
+}
+
 function AuthGate() {
   const { user, isLoading } = useAuth();
 
@@ -61,24 +104,7 @@ function AuthGate() {
     <WsProvider>
       <WsScopeBridge />
       <AppShell>
-        <React.Suspense fallback={null}>
-          <Routes>
-            <Route path="/" element={<PlayerHomeView />} />
-            <Route path="/compendium" element={<CompendiumView />} />
-            <Route path="/characters/new" element={<CharacterCreatorView />} />
-            <Route path="/characters/:id" element={<KeyedCharacterView />} />
-            <Route path="/characters/:id/edit" element={<CharacterCreatorView />} />
-            <Route path="/characters/:id/levelup" element={<LevelUpView />} />
-            <Route path="/profile" element={<ProfileView />} />
-            <Route path="/campaigns/:id" element={<CampaignPartyView />} />
-            <Route path="/campaigns/:id/members/:playerId" element={<PartyMemberView />} />
-            <Route path="/campaigns/:id/bastions/:bastionId" element={<BastionView />} />
-            <Route path="/about" element={<AboutView />} />
-            <Route path="/faq" element={<FaqView />} />
-            <Route path="/updates" element={<UpdatesView />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </React.Suspense>
+        <RoutedViews />
       </AppShell>
     </WsProvider>
   );

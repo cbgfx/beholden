@@ -237,7 +237,9 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
       {coreLanguageChoice && (
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
-            <div style={{ ...labelStyle, margin: 0 }}>Languages <span style={sourceTagStyle}>{coreLanguageChoice.source}</span></div>
+            <div style={{ ...labelStyle, margin: 0 }}>
+              Languages {String(coreLanguageChoice.source ?? "").trim() ? <span style={sourceTagStyle}>{coreLanguageChoice.source}</span> : null}
+            </div>
             <span style={{ fontSize: "var(--fs-small)", color: form.chosenRaceLanguages.length >= coreLanguageChoice.choose ? C.accentHl : C.muted }}>{form.chosenRaceLanguages.length} / {coreLanguageChoice.choose}</span>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>{coreLanguageChoice.fixed.map((language) => <span key={language} style={profChipStyle}>{language}</span>)}</div>
@@ -253,7 +255,9 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
       {classLanguageChoice && (
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
-            <div style={{ ...labelStyle, margin: 0 }}>Languages <span style={sourceTagStyle}>{classLanguageChoice.source}</span></div>
+            <div style={{ ...labelStyle, margin: 0 }}>
+              Languages {String(classLanguageChoice.source ?? "").trim() ? <span style={sourceTagStyle}>{classLanguageChoice.source}</span> : null}
+            </div>
             {classLanguageChoice.choose > 0 && <span style={{ fontSize: "var(--fs-small)", color: form.chosenClassLanguages.length >= classLanguageChoice.choose ? C.accentHl : C.muted }}>{form.chosenClassLanguages.length} / {classLanguageChoice.choose}</span>}
           </div>
           {classLanguageChoice.fixed.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: classLanguageChoice.choose > 0 ? 10 : 0 }}>{classLanguageChoice.fixed.map((language) => <span key={language} style={profChipStyle}>{language}</span>)}</div>}

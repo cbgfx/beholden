@@ -2,6 +2,7 @@ import React from "react";
 import { fetchMyCharacter } from "@/services/actorApi";
 import { C } from "@/lib/theme";
 import type { CharacterCampaignAssignmentDto } from "@beholden/shared/api";
+import { resolveStoredCompendiumClassId } from "@/domain/character/classIds";
 import {
   inferAbilityMethodFromScores,
   inferStandardAssignFromScores,
@@ -10,7 +11,7 @@ import {
 import type { LevelUpFeatSelection } from "@/views/character-creator/utils/CharacterCreatorTypes";
 
 type CreatorCharacterData = Record<string, unknown> & {
-  classes?: Array<{ classId?: string; subclass?: string }>;
+  classes?: Array<{ id?: string; classId?: string | null; className?: string | null; subclass?: string | null }>;
   bgAbilityBonuses?: Record<string, number>;
   chosenLevelUpFeats?: Array<{ level?: number; featId?: string; type?: string; abilityBonuses?: Record<string, number> }>;
   abilityMethod?: "pointbuy" | "standard" | string;
@@ -60,6 +61,7 @@ export function useCreatorEditHydration(args: {
       .then((ch) => {
         const cd: CreatorCharacterData = (ch.characterData ?? {}) as CreatorCharacterData;
         const primaryClassEntry = Array.isArray(cd.classes) ? cd.classes[0] : null;
+        const classId = resolveStoredCompendiumClassId(primaryClassEntry, ch.className);
         const recordedBgBonuses =
           cd.bgAbilityBonuses && typeof cd.bgAbilityBonuses === "object" ? cd.bgAbilityBonuses : {};
         const recordedAsiBonuses = Array.isArray(cd.chosenLevelUpFeats)
@@ -117,7 +119,7 @@ export function useCreatorEditHydration(args: {
         setForm((f) => ({
           ...f,
           ruleset: "5.5e",
-          classId: typeof primaryClassEntry?.classId === "string" ? primaryClassEntry.classId : "",
+          classId,
           raceId: cd.raceId ?? "",
           bgId: cd.bgId ?? "",
           level: ch.level ?? 1,

@@ -89,7 +89,7 @@ export function buildCharacterSheetState(char: StoredCharacterSheet): StoredChar
   };
 }
 
-export function buildMirroredPlayerSnapshot(char: StoredCharacterSheet, syncedAc?: number): MirroredPlayerSnapshot {
+export function buildMirroredPlayerSnapshot(char: StoredCharacterSheet, syncedAc?: number, syncedSpeed?: number): MirroredPlayerSnapshot {
   return {
     playerName: char.playerName,
     characterName: char.name,
@@ -98,7 +98,7 @@ export function buildMirroredPlayerSnapshot(char: StoredCharacterSheet, syncedAc
     level: char.level,
     hpMax: char.hpMax,
     ac: char.ac,
-    speed: char.speed,
+    speed: syncedSpeed ?? char.speed,
     ...(char.strScore != null ? { str: char.strScore } : {}),
     ...(char.dexScore != null ? { dex: char.dexScore } : {}),
     ...(char.conScore != null ? { con: char.conScore } : {}),

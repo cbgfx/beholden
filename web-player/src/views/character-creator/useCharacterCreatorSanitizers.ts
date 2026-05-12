@@ -19,6 +19,7 @@ function selectionMapChanged(nextMap: Record<string, string[]>, currentMap: Reco
 
 export function useCharacterCreatorSanitizers(args: {
   setForm: React.Dispatch<React.SetStateAction<FormState>>;
+  canSanitizeLevelUpFeats: boolean;
   levelUpFeatLevels: number[];
   step6SpellListChoices: CreatorSpellListChoiceEntry[];
   step6ResolvedSpellChoices: CreatorResolvedSpellChoiceEntry[];
@@ -31,6 +32,7 @@ export function useCharacterCreatorSanitizers(args: {
 }) {
   const {
     setForm,
+    canSanitizeLevelUpFeats,
     levelUpFeatLevels,
     step6SpellListChoices,
     step6ResolvedSpellChoices,
@@ -43,6 +45,7 @@ export function useCharacterCreatorSanitizers(args: {
   } = args;
 
   React.useEffect(() => {
+    if (!canSanitizeLevelUpFeats) return;
     setForm((f) => {
       const allowedLevels = new Set(levelUpFeatLevels);
       const nextChosenLevelUpFeats = f.chosenLevelUpFeats.filter((entry) => allowedLevels.has(entry.level));
@@ -61,7 +64,7 @@ export function useCharacterCreatorSanitizers(args: {
         chosenFeatOptions: nextChosenFeatOptions,
       };
     });
-  }, [levelUpFeatLevels, setForm]);
+  }, [canSanitizeLevelUpFeats, levelUpFeatLevels, setForm]);
 
   React.useEffect(() => {
     const allSpellChoiceKeys = new Set<string>([

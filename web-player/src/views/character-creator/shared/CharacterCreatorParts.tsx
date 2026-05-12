@@ -27,7 +27,7 @@ function btnStyle(primary: boolean, disabled: boolean): React.CSSProperties {
 }
 
 export function StepHeader({ current, onStepClick }: { current: number; onStepClick: (s: number) => void }) {
-  const steps = ["Class", "Species", "Background", "Ability Scores", "Level", "Skills", "Spells", "Stats", "Identity", "Assign"];
+  const steps = ["Class", "Species", "Background", "Ability Scores", "Class Details", "Skills", "Spells", "Stats", "Identity", "Assign"];
   return (
     <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 28 }}>
       {steps.map((label, i) => {
@@ -155,6 +155,7 @@ export function SpellPicker<T extends { id: string; name: string; level: number 
 }) {
   const [q, setQ] = React.useState("");
   const [activeId, setActiveId] = React.useState<string | null>(null);
+  const trimmedSourceLabel = String(sourceLabel ?? "").trim();
   const disabledIdSet = React.useMemo(() => new Set(disabledIds ?? []), [disabledIds]);
   const disabledNameSet = React.useMemo(
     () => new Set((disabledNames ?? []).map((name) => name.trim().toLowerCase())),
@@ -208,7 +209,7 @@ export function SpellPicker<T extends { id: string; name: string; level: number 
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
         <div style={{ ...labelStyle, margin: 0 }}>
           {title}
-          {sourceLabel ? <span style={{ marginLeft: 8, fontSize: "var(--fs-small)", color: C.accentHl }}>{sourceLabel}</span> : null}
+          {trimmedSourceLabel ? <span style={{ marginLeft: 8, fontSize: "var(--fs-small)", color: C.accentHl }}>{trimmedSourceLabel}</span> : null}
         </div>
         <span style={{ fontSize: "var(--fs-small)", color: chosen.length >= max ? C.accentHl : C.muted }}>
           {chosen.length} / {max}
@@ -360,6 +361,7 @@ export function ItemPicker<T extends { id: string; name: string; rarity?: string
   const [q, setQ] = React.useState("");
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const [details, setDetails] = React.useState<Record<string, ItemDetailPreview>>({});
+  const trimmedSourceLabel = String(sourceLabel ?? "").trim();
   const disabledIdSet = React.useMemo(() => new Set(disabledIds ?? []), [disabledIds]);
   const filtered = q
     ? items.filter((item) => item.name.toLowerCase().includes(q.toLowerCase()))
@@ -407,7 +409,7 @@ export function ItemPicker<T extends { id: string; name: string; rarity?: string
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
         <div style={{ ...labelStyle, margin: 0 }}>
           {title}
-          {sourceLabel ? <span style={{ marginLeft: 8, fontSize: "var(--fs-small)", color: C.accentHl }}>{sourceLabel}</span> : null}
+          {trimmedSourceLabel ? <span style={{ marginLeft: 8, fontSize: "var(--fs-small)", color: C.accentHl }}>{trimmedSourceLabel}</span> : null}
         </div>
         <span style={{ fontSize: "var(--fs-small)", color: chosen.length >= max ? C.accentHl : C.muted }}>
           {chosen.length} / {max}

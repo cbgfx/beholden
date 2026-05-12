@@ -23,6 +23,7 @@ export const CharacterBodyBase = z.object({
   color: z.string().optional(),
   characterData: z.record(z.string(), z.unknown()).nullable().optional(),
   syncedAc: z.number().int().optional(),
+  syncedSpeed: z.number().int().optional(),
 });
 
 export const CharacterCreateBody = CharacterBodyBase.extend({ name: z.string().trim().min(1) });

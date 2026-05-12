@@ -193,6 +193,11 @@ export function renderDerivedStatsStep({
   onNext: () => void;
   side: React.ReactNode;
 }): { main: React.ReactNode; side: React.ReactNode } {
+  const hpPerLaterLevel = Math.floor(hd / 2) + 1;
+  const conLabel = conMod >= 0 ? `+ ${conMod} CON` : `- ${Math.abs(conMod)} CON`;
+  const hpFormulaLabel = level <= 1
+    ? `Level 1: ${hd} ${conLabel}`
+    : `Level 1: ${hd} ${conLabel}; later levels: ${hpPerLaterLevel} ${conLabel}`;
   const main = (
     <div>
       <h2 style={headingStyle}>Combat Stats</h2>
@@ -200,7 +205,7 @@ export function renderDerivedStatsStep({
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
         <div>
           <label style={labelStyle}>HP Max</label>
-          <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 4 }}>d{hd} + {conMod >= 0 ? "+" : ""}{conMod} CON × lvl {level}</div>
+          <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 4 }}>{hpFormulaLabel}</div>
           <input type="number" value={hpMax} onChange={(e) => setField("hpMax", e.target.value)} style={{ ...inputStyle, width: "100%" }} />
         </div>
         <div>
@@ -224,7 +229,7 @@ export function renderDerivedStatsStep({
                 {section.items.map((item, index) => (
                   <span key={`${section.label}:${item.name}:${item.source}:${index}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                     <span style={profChipStyle}>{item.name}</span>
-                    <span style={sourceTagStyle}>{item.source}</span>
+                    {String(item.source ?? "").trim() ? <span style={sourceTagStyle}>{item.source}</span> : null}
                   </span>
                 ))}
               </div>

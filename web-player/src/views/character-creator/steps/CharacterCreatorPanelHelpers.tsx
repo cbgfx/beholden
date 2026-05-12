@@ -50,12 +50,13 @@ export function renderChoiceChipGroup({
   onToggle: (value: string) => void;
   note?: string | null;
 }): React.ReactNode {
+  const trimmedSourceLabel = String(sourceLabel ?? "").trim();
   return (
     <div style={{ marginBottom: 24 }}>
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
         <div style={{ ...labelStyle, margin: 0 }}>
           {title}
-          {sourceLabel ? <span style={sourceStyle ?? sourceTagStyle}> {sourceLabel}</span> : null}
+          {trimmedSourceLabel ? <span style={sourceStyle ?? sourceTagStyle}> {trimmedSourceLabel}</span> : null}
         </div>
         <span style={{ fontSize: "var(--fs-small)", color: selectedCount >= maxCount ? C.accentHl : C.muted }}>
           {selectedCount} / {maxCount}
@@ -64,7 +65,7 @@ export function renderChoiceChipGroup({
       {fixedGrants.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
           {fixedGrants.map((grant) => (
-            <span key={`${title}:${sourceLabel ?? "none"}:${grant}`} style={profChipStyle}>{grant}</span>
+            <span key={`${title}:${trimmedSourceLabel || "none"}:${grant}`} style={profChipStyle}>{grant}</span>
           ))}
         </div>
       )}
@@ -112,11 +113,12 @@ export function renderClassFeatSingleChoicePanel({
   getOptionLabel: (optionName: string, featGroup: string) => string;
   onSelect: (id: string) => void;
 }): React.ReactNode {
+  const trimmedFeatureName = choice.featureName.trim();
   return (
     <div key={choice.featureName} style={{ marginBottom: 24 }}>
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
         <div style={{ ...labelStyle, margin: 0 }}>
-          {getChoiceLabel(choice.featGroup)} <span style={sourceTagStyle}>{choice.featureName}</span>
+          {getChoiceLabel(choice.featGroup)} {trimmedFeatureName ? <span style={sourceTagStyle}>{trimmedFeatureName}</span> : null}
         </div>
         <span style={{ fontSize: "var(--fs-small)", color: selectedId ? C.accentHl : C.muted }}>
           {selectedId ? "1 / 1" : "Required"}

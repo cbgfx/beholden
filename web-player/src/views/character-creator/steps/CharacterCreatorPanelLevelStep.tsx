@@ -38,7 +38,6 @@ type StepNumber = number;
 
 export function renderLevelStep({
   level,
-  setLevel,
   subclass,
   setSubclass,
   showSubclass,
@@ -63,7 +62,6 @@ export function renderLevelStep({
   onNext,
 }: {
   level: number;
-  setLevel: (level: number) => void;
   subclass: string;
   setSubclass: (value: string) => void;
   showSubclass: boolean | null;
@@ -95,17 +93,10 @@ export function renderLevelStep({
 }): { main: React.ReactNode; side: React.ReactNode } {
   const main = (
     <div>
-      <h2 style={headingStyle}>Choose Level</h2>
+      <h2 style={headingStyle}>Class Details</h2>
       <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 20 }}>
         <label style={{ color: C.muted, fontWeight: 600 }}>Level</label>
-        <input
-          type="number"
-          min={1}
-          max={20}
-          value={level}
-          onChange={(e) => setLevel(Math.min(20, Math.max(1, Number(e.target.value) || 1)))}
-          style={{ ...inputStyle, width: 80 }}
-        />
+        <div style={{ ...inputStyle, width: 80, opacity: 0.68, cursor: "default" }}>{level}</div>
       </div>
 
       {showSubclass && (
@@ -183,7 +174,7 @@ export function renderLevelStep({
         <div style={{ marginBottom: 20 }}>
           <div style={{ ...labelStyle, marginBottom: 8 }}>Level-Up Feats</div>
           <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 10 }}>
-            Choose feats for each Ability Score Improvement level included in this starting level.
+            Review feats for each Ability Score Improvement level included in this character.
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {levelUpFeatChoices.map((choice) => (

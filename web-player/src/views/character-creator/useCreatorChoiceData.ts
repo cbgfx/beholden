@@ -31,7 +31,7 @@ export function useCreatorChoiceData(args: {
 
   React.useEffect(() => {
     if (step6ResolvedSpellChoices.length === 0) {
-      setFeatSpellChoiceOptions({});
+      setFeatSpellChoiceOptions((prev) => (Object.keys(prev).length === 0 ? prev : {}));
       return;
     }
     let cancelled = false;

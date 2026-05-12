@@ -27,6 +27,7 @@ const PlayerCreateBody = z.object({
   hpMax: z.number().int().optional(),
   hpCurrent: z.number().int().optional(),
   ac: z.number().int().optional(),
+  speed: z.number().int().optional(),
   str: z.number().int().optional(),
   dex: z.number().int().optional(),
   con: z.number().int().optional(),
@@ -45,6 +46,7 @@ const PlayerUpdateBody = z.object({
   hpMax: z.number().int().optional(),
   hpCurrent: z.number().int().optional(),
   ac: z.number().int().optional(),
+  speed: z.number().int().optional(),
   str: z.number().int().optional(),
   dex: z.number().int().optional(),
   con: z.number().int().optional(),
@@ -89,7 +91,10 @@ function resolvePlayerUpdateState(
       species: isLinkedProjection ? existing.species : (update.species ?? existing.species),
       hpMax: isLinkedProjection ? existing.hpMax : (update.hpMax ?? existing.hpMax),
       ac: isLinkedProjection ? existing.ac : (update.ac ?? existing.ac),
-      ...(existing.speed != null ? { speed: existing.speed } : {}),
+      ...(() => {
+        const speed = isLinkedProjection ? existing.speed : (update.speed ?? existing.speed);
+        return speed != null ? { speed } : {};
+      })(),
       str: isLinkedProjection ? (existing.str ?? 10) : (update.str ?? existing.str ?? 10),
       dex: isLinkedProjection ? (existing.dex ?? 10) : (update.dex ?? existing.dex ?? 10),
       con: isLinkedProjection ? (existing.con ?? 10) : (update.con ?? existing.con ?? 10),
@@ -253,6 +258,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
       level: p.level ?? 1,
       hpMax: p.hpMax ?? 10,
       ac: p.ac ?? 10,
+      speed: p.speed ?? 30,
       str: p.str ?? 10,
       dex: p.dex ?? 10,
       con: p.con ?? 10,

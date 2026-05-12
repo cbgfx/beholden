@@ -345,7 +345,6 @@ function renderLevel(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
 
   return renderLevelStep({
     level: ctx.form.level,
-    setLevel: (level) => ctx.setField("level", level),
     subclass: ctx.form.subclass,
     setSubclass: (value) => ctx.setField("subclass", value),
     showSubclass,
@@ -360,7 +359,7 @@ function renderLevel(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
     chooseClassEquipmentOption: (id) => ctx.setForm((f) => ({ ...f, chosenClassEquipmentOption: id })),
     className: ctx.classDetail?.name ?? null,
     features,
-    levelUpFeatChoices,
+    levelUpFeatChoices: [],
     levelUpScores,
     toggleLevelUpChoiceMode: (level, mode) => ctx.setForm((f) => ({
       ...f,
@@ -398,7 +397,7 @@ function renderLevel(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
         ? f.chosenFeatOptions
         : Object.fromEntries(Object.entries(f.chosenFeatOptions).filter(([key]) => !key.startsWith(`levelupfeat:${level}:`))),
     })),
-    levelUpFeatConflict: Boolean(ctx.levelUpFeatConflict),
+    levelUpFeatConflict: false,
     onBack: () => ctx.setStep(4),
     onNext: () => ctx.setStep(6),
   });

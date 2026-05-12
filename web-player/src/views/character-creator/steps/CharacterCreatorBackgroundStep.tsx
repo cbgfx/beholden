@@ -73,6 +73,11 @@ function choiceButtonStyle(selected: boolean, locked = false): React.CSSProperti
   };
 }
 
+function SourceTag({ value }: { value: string | null | undefined }) {
+  const label = String(value ?? "").trim();
+  return label ? <span style={sourceTagStyle}>{label}</span> : null;
+}
+
 export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
   availableBackgrounds: BackgroundSummaryLike[];
   filteredBackgrounds: BackgroundSummaryLike[];
@@ -139,7 +144,7 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
               <div>
                 <div style={{ marginBottom: 8 }}>
                   <span style={{ ...labelStyle, display: "inline", margin: 0 }}>Skill Proficiencies </span>
-                  <span style={sourceTagStyle}>{bgDetail.name}</span>
+                  <SourceTag value={bgDetail.name} />
                   <span style={{ marginLeft: 8, fontSize: "var(--fs-small)", color: form.chosenBgSkills.length >= prof.skills.choose ? C.accentHl : C.muted }}>
                     {form.chosenBgSkills.length} / {prof.skills.choose}
                   </span>
@@ -178,7 +183,7 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
               <div>
                 <div style={{ marginBottom: 8 }}>
                   <span style={{ ...labelStyle, display: "inline", margin: 0 }}>Feat </span>
-                  <span style={sourceTagStyle}>{bgDetail.name}</span>
+                  <SourceTag value={bgDetail.name} />
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {prof.feats.map((feat) => (
@@ -192,7 +197,7 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
               <div>
                 <div style={{ marginBottom: 8 }}>
                   <span style={{ ...labelStyle, display: "inline", margin: 0 }}>Origin Feat </span>
-                  <span style={sourceTagStyle}>{bgDetail.name}</span>
+                  <SourceTag value={bgDetail.name} />
                 </div>
                 <input
                   type="text"
@@ -239,7 +244,7 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
               <div>
                 <div style={{ marginBottom: 8 }}>
                   <span style={{ ...labelStyle, display: "inline", margin: 0 }}>Tools </span>
-                  <span style={sourceTagStyle}>{bgDetail.name}</span>
+                  <SourceTag value={bgDetail.name} />
                 </div>
                 {tools.fixed.length > 0 && (
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: tools.choose > 0 ? 8 : 0 }}>
@@ -316,7 +321,7 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                 <div>
                   <div style={{ marginBottom: 8 }}>
                     <span style={{ ...labelStyle, display: "inline", margin: 0 }}>Ability Scores </span>
-                    <span style={sourceTagStyle}>{bgDetail.name}</span>
+                    <SourceTag value={bgDetail.name} />
                   </div>
                   <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
                     {(["split", "even"] as const).map((option) => (
@@ -389,7 +394,7 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
               <div>
                 <div style={{ marginBottom: 8 }}>
                   <span style={{ ...labelStyle, display: "inline", margin: 0 }}>Starting Equipment </span>
-                  <span style={sourceTagStyle}>{bgDetail.name}</span>
+                  <SourceTag value={bgDetail.name} />
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {equipOptions.map((option) => {
@@ -468,7 +473,7 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
             {(skills.fixed.length > 0 || skills.choose > 0) && (
               <div style={{ marginBottom: 10 }}>
                 <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>Skills </span>
-                <span style={sourceTagStyle}>{bgDetail.name}</span>
+                <SourceTag value={bgDetail.name} />
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5 }}>
                   {skills.fixed.map((skill) => <span key={skill} style={profChipStyle}>{skill}</span>)}
                   {skills.choose > 0 && (
@@ -483,7 +488,7 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
             {languages.fixed.length > 0 && (
               <div style={{ marginBottom: 10 }}>
                 <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>Languages </span>
-                <span style={sourceTagStyle}>{bgDetail.name}</span>
+                <SourceTag value={bgDetail.name} />
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5 }}>
                   {languages.fixed.map((language) => <span key={language} style={profChipStyle}>{language}</span>)}
                 </div>
@@ -493,7 +498,7 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
             {((prof?.feats && prof.feats.length > 0) || (prof?.featChoice ?? 0) > 0) && (
               <div style={{ marginBottom: 10 }}>
                 <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>Feat </span>
-                <span style={sourceTagStyle}>{bgDetail.name}</span>
+                <SourceTag value={bgDetail.name} />
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5 }}>
                   {prof?.feats.map((feat) => (
                     <span

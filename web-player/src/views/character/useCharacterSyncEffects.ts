@@ -9,9 +9,11 @@ export function useCharacterSyncEffects(args: {
   setChar: React.Dispatch<React.SetStateAction<Character | null>>;
   fetchChar: () => Promise<void>;
   syncedAcValue: number | null;
+  syncedSpeedValue: number | null;
 }) {
-  const { char, setChar, fetchChar, syncedAcValue } = args;
+  const { char, setChar, fetchChar, syncedAcValue, syncedSpeedValue } = args;
   const lastSyncedAcRef = React.useRef<{ charId: string; ac: number } | null>(null);
+  const lastSyncedSpeedRef = React.useRef<{ charId: string; speed: number } | null>(null);
   const enqueueFetchChar = useDebouncedSingleflight(fetchChar);
 
   React.useEffect(() => {
@@ -47,4 +49,14 @@ export function useCharacterSyncEffects(args: {
       void putMyCharacter(char.id, { syncedAc: syncedAcValue });
     }
   }, [char, syncedAcValue]);
+
+  React.useEffect(() => {
+    if (!char || syncedSpeedValue == null) return;
+    const prev = lastSyncedSpeedRef.current;
+    if (prev?.charId === char.id && prev?.speed === syncedSpeedValue) return;
+    lastSyncedSpeedRef.current = { charId: char.id, speed: syncedSpeedValue };
+    if (syncedSpeedValue !== char.speed) {
+      void putMyCharacter(char.id, { syncedSpeed: syncedSpeedValue });
+    }
+  }, [char, syncedSpeedValue]);
 }

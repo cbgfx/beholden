@@ -228,7 +228,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       db,
       ctx.broadcast,
       charId,
-      buildMirroredPlayerSnapshot(nextChar, p.syncedAc),
+      buildMirroredPlayerSnapshot(nextChar, p.syncedAc, p.syncedSpeed),
       t,
       userId,
       p.hpCurrent !== undefined ? { hpCurrent: p.hpCurrent } : undefined,

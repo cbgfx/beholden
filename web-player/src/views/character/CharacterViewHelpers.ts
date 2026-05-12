@@ -17,6 +17,7 @@ import {
 import { getPolymorphCondition, type SharedPolymorphCondition } from "@beholden/shared/domain";
 import { getEquipState, type InventoryItem } from "@/views/character/CharacterInventory";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
+import { resolveStoredCompendiumClassId } from "@/domain/character/classIds";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -380,7 +381,7 @@ export function normalizeCharacterClasses(
   return entries
     .map((entry, index) => {
       const level = Math.max(1, Math.floor(Number(entry?.level ?? NaN) || 0));
-      const classId = typeof entry?.classId === "string" && entry.classId.trim().length > 0 ? entry.classId.trim() : null;
+      const classId = resolveStoredCompendiumClassId(entry) || null;
       const className = typeof entry?.className === "string" && entry.className.trim().length > 0 ? entry.className.trim() : null;
       if (!classId && !className) return null;
       return {

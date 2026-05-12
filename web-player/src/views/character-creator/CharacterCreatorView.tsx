@@ -127,6 +127,7 @@ export function CharacterCreatorView() {
 
   // Track initially-assigned campaigns so we can diff on save in edit mode
   const initialCampaignIdsRef = React.useRef<string[]>([]);
+  const prevClassIdRef = React.useRef<string | null>(null);
   const prevRaceIdRef = React.useRef<string | null>(null);
   const prevBgIdRef = React.useRef<string | null>(null);
 
@@ -208,17 +209,27 @@ export function CharacterCreatorView() {
 
   // Load class detail when selected
   React.useEffect(() => {
-    if (!form.classId) { setClassDetail(null); setClassFeatDetails({}); return; }
-    setForm((f) => ({
-      ...f,
-      chosenClassFeatIds: {},
-      chosenClassLanguages: [],
-      chosenClassEquipmentOption: null,
-      chosenFeatOptions: Object.fromEntries(Object.entries(f.chosenFeatOptions).filter(([k]) => !k.startsWith("classfeat:"))),
-    }));
+    if (!form.classId) {
+      prevClassIdRef.current = null;
+      setClassDetail(null);
+      setClassFeatDetails({});
+      return;
+    }
+    const prevClassId = prevClassIdRef.current;
+    prevClassIdRef.current = form.classId;
+    const shouldResetClassChoices = !isEditing || (prevClassId !== null && prevClassId !== form.classId);
+    if (shouldResetClassChoices) {
+      setForm((f) => ({
+        ...f,
+        chosenClassFeatIds: {},
+        chosenClassLanguages: [],
+        chosenClassEquipmentOption: null,
+        chosenFeatOptions: Object.fromEntries(Object.entries(f.chosenFeatOptions).filter(([k]) => !k.startsWith("classfeat:"))),
+      }));
+    }
     setClassFeatDetails({});
     api<ClassDetail>(`/api/compendium/classes/${form.classId}`).then(setClassDetail).catch(() => {});
-  }, [form.classId]);
+  }, [form.classId, isEditing]);
 
   // Load spell lists once classDetail is known
   React.useEffect(() => {
@@ -267,6 +278,7 @@ export function CharacterCreatorView() {
 
   useCharacterCreatorSanitizers({
     setForm,
+    canSanitizeLevelUpFeats: !editLoading && Boolean(classDetail),
     levelUpFeatLevels,
     step6SpellListChoices,
     step6ResolvedSpellChoices,
@@ -359,13 +371,18 @@ export function CharacterCreatorView() {
     const hasTough =
       isToughFeat(resolvedRaceFeatDetail?.name)
       || isToughFeat(selectedBgFeatName)
+      || (bgDetail?.proficiencies?.feats ?? []).some((feat) => isToughFeat(feat.name))
+      || (bgDetail?.traits ?? []).some((trait) => /^Feat:\s*/i.test(trait.name) && isToughFeat(trait.name))
       || selectedClassFeatDetails.some((feat) => isToughFeat(feat.name))
       || levelUpFeatDetails.some(({ feat }) => isToughFeat(feat.name));
     const hp = calcHpMax(hd, form.level, conMod) + (hasTough ? form.level * 2 : 0);
     const ac = 10 + dexMod;
     const baseSpeed = raceDetail?.speed ?? 30;
-    setForm((f) => ({ ...f, hpMax: String(hp), ac: String(ac), speed: String(baseSpeed) }));
-  }, [classDetail, raceDetail, form.level, form.abilityMethod, form.standardAssign, form.pbScores, form.bgAbilityBonuses, resolvedRaceFeatDetail?.name, resolvedBgOriginFeatDetail?.name, form.chosenBgOriginFeatId, featSummaries, selectedClassFeatDetails, selectedFeatAbilityBonuses, levelUpFeatDetails]);
+    const hpStr = String(hp);
+    const acStr = String(ac);
+    const speedStr = String(baseSpeed);
+    setForm((f) => (f.hpMax === hpStr && f.ac === acStr && f.speed === speedStr ? f : { ...f, hpMax: hpStr, ac: acStr, speed: speedStr }));
+  }, [classDetail, raceDetail, form.level, form.abilityMethod, form.standardAssign, form.pbScores, form.bgAbilityBonuses, resolvedRaceFeatDetail?.name, resolvedBgOriginFeatDetail?.name, form.chosenBgOriginFeatId, featSummaries, selectedClassFeatDetails, selectedFeatAbilityBonuses, levelUpFeatDetails, bgDetail?.proficiencies?.feats, bgDetail?.traits]);
 
   function set<K extends keyof FormState>(key: K, val: FormState[K]) {
     setForm((f) => ({ ...f, [key]: val }));

@@ -155,16 +155,43 @@ export function useCharacterCreatorDerivedState(args: {
   const selectedFeatAbilityBonuses = React.useMemo(() => {
     return deriveTotalFeatAbilityBonuses(selectedFeatGrantedAbilityBonuses, form.chosenLevelUpFeats);
   }, [form.chosenLevelUpFeats, selectedFeatGrantedAbilityBonuses]);
-  const step5SkillList = classDetail ? parseSkillList(classDetail.proficiency) : [];
+  const step5SkillList = React.useMemo(
+    () => classDetail ? parseSkillList(classDetail.proficiency) : [],
+    [classDetail]
+  );
   const step5NumSkills = classDetail?.numSkills ?? 0;
-  const step5BgLangChoice = bgDetail?.proficiencies?.languages ?? { fixed: [], choose: 0, from: null };
-  const step5BgSkillFixed = bgDetail?.proficiencies?.skills?.fixed ?? (bgDetail ? parseSkillList(bgDetail.proficiency) : []);
-  const step5BgToolFixed = bgDetail?.proficiencies?.tools?.fixed ?? [];
-  const step5CoreLanguageChoice = getCoreLanguageChoiceFromRules(raceDetail, STANDARD_55E_LANGUAGES);
-  const step5ClassFeatChoices = getClassFeatChoices(classDetail, form.level, featSummaries, selectedRuleset);
-  const step5ClassLanguageChoice = getClassLanguageChoiceFromRules(classDetail, form.level, ALL_LANGUAGES);
-  const step5ClassExpertiseChoices = getClassExpertiseChoices(classDetail, form.level);
-  const step5WeaponMasteryChoice = getWeaponMasteryChoiceFromUtils(classDetail, form.level);
+  const step5BgLangChoice = React.useMemo(
+    () => bgDetail?.proficiencies?.languages ?? { fixed: [], choose: 0, from: null },
+    [bgDetail]
+  );
+  const step5BgSkillFixed = React.useMemo(
+    () => bgDetail?.proficiencies?.skills?.fixed ?? (bgDetail ? parseSkillList(bgDetail.proficiency) : []),
+    [bgDetail]
+  );
+  const step5BgToolFixed = React.useMemo(
+    () => bgDetail?.proficiencies?.tools?.fixed ?? [],
+    [bgDetail]
+  );
+  const step5CoreLanguageChoice = React.useMemo(
+    () => getCoreLanguageChoiceFromRules(raceDetail, STANDARD_55E_LANGUAGES),
+    [raceDetail]
+  );
+  const step5ClassFeatChoices = React.useMemo(
+    () => getClassFeatChoices(classDetail, form.level, featSummaries, selectedRuleset),
+    [classDetail, form.level, featSummaries, selectedRuleset]
+  );
+  const step5ClassLanguageChoice = React.useMemo(
+    () => getClassLanguageChoiceFromRules(classDetail, form.level, ALL_LANGUAGES),
+    [classDetail, form.level]
+  );
+  const step5ClassExpertiseChoices = React.useMemo(
+    () => getClassExpertiseChoices(classDetail, form.level),
+    [classDetail, form.level]
+  );
+  const step5WeaponMasteryChoice = React.useMemo(
+    () => getWeaponMasteryChoiceFromUtils(classDetail, form.level),
+    [classDetail, form.level]
+  );
   const step5WeaponOptions = React.useMemo(() => [...WEAPON_MASTERY_KINDS].sort((a, b) => a.localeCompare(b)), []);
   const step5ChoiceState = React.useMemo(() => getStep5ChoiceState({
     form,
