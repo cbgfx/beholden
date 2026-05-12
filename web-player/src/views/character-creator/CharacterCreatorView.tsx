@@ -507,6 +507,9 @@ export function CharacterCreatorView() {
       raceDetail={raceDetail}
       bgDetail={bgDetail}
       featAbilityBonuses={selectedFeatAbilityBonuses}
+      fallbackClassName={classDetail ? undefined : classes.find((c) => c.id === form.classId)?.name}
+      fallbackRaceName={raceDetail ? undefined : races.find((r) => r.id === form.raceId)?.name}
+      fallbackBgName={bgDetail ? undefined : bgs.find((b) => b.id === form.bgId)?.name}
     />
   );
 

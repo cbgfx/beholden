@@ -76,10 +76,17 @@ export function CharacterCreaturesPanel(props: {
             {orderedCreatures.map((creature) => {
               const sourceLabel = formatCreatureMonsterSource(creature.monsterId);
               return (
-                <button
+                <div
                   key={creature.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setSelectedCreatureId(creature.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedCreatureId(creature.id);
+                    }
+                  }}
                   style={{
                     width: "100%",
                     textAlign: "left",
@@ -137,7 +144,7 @@ export function CharacterCreaturesPanel(props: {
                       {creature.notes.trim()}
                     </div>
                   ) : null}
-                </button>
+                </div>
               );
             })}
           </div>

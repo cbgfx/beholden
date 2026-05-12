@@ -3,6 +3,7 @@ import type { ServerContext } from "../server/context.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseJson } from "../lib/db.js";
 import { parseBody } from "../shared/validate.js";
+import { requireAuth } from "../middleware/auth.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
 import { BastionCreateSchema, BastionPlayerUpdateSchema, BastionUpdateSchema } from "./bastions/schemas.js";
 import { normalizeAndValidateFacilities, parseBastionRow, parseFacilityState, readCampaignPlayerRows, readCompendiumFacilities, roleForCampaign } from "./bastions/helpers.js";
@@ -27,6 +28,49 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
     });
   };
 
+  app.get("/api/me/characters/:characterId/bastions", requireAuth, (req, res) => {
+    const characterId = requireParam(req, res, "characterId");
+    if (!characterId) return;
+
+    const user = req.user!;
+    const owned = db
+      .prepare("SELECT id FROM user_characters WHERE id = ? AND user_id = ?")
+      .get(characterId, user.userId) as { id: string } | undefined;
+    if (!owned) return res.status(404).json({ ok: false, message: "Character not found." });
+
+    const assignments = db
+      .prepare("SELECT id AS playerId, campaign_id AS campaignId FROM players WHERE character_id = ?")
+      .all(characterId) as Array<{ playerId: string; campaignId: string }>;
+    const compendiumFacilities = readCompendiumFacilities(db);
+    const bastions = assignments.flatMap((assignment) => {
+      const playerRows = readCampaignPlayerRows(db, assignment.campaignId);
+      const rows = db.prepare(
+        "SELECT id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, assigned_player_ids_json, assigned_character_ids_json, notes, maintain_order, facilities_json, created_at, updated_at FROM bastions WHERE campaign_id = ? ORDER BY updated_at DESC, created_at DESC"
+      ).all(assignment.campaignId) as BastionRow[];
+
+      return rows
+        .map((row) => parseBastionRow(row, compendiumFacilities, playerRows))
+        .filter((bastion) => (
+          bastion.active &&
+          (
+            bastion.assignedPlayerIds.includes(assignment.playerId) ||
+            bastion.assignedCharacterIds.includes(characterId) ||
+            bastion.assignedPlayers.some((player) => player.id === assignment.playerId || player.characterId === characterId)
+          )
+        ));
+    });
+
+    const seen = new Set<string>();
+    res.json({
+      ok: true,
+      bastions: bastions.filter((bastion) => {
+        if (seen.has(bastion.id)) return false;
+        seen.add(bastion.id);
+        return true;
+      }),
+    });
+  });
+
   app.get("/api/campaigns/:campaignId/bastions", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -37,6 +81,9 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
 
     const playerRows = readCampaignPlayerRows(db, campaignId);
     const currentUserPlayerIds = playerRows.filter((row) => row.user_id === user.userId).map((row) => row.id);
+    const currentUserCharacterIds = playerRows
+      .filter((row) => row.user_id === user.userId && typeof row.character_id === "string" && row.character_id)
+      .map((row) => row.character_id as string);
 
     const rows = db.prepare(
       "SELECT id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, assigned_player_ids_json, assigned_character_ids_json, notes, maintain_order, facilities_json, created_at, updated_at FROM bastions WHERE campaign_id = ? ORDER BY updated_at DESC, created_at DESC"
@@ -49,7 +96,10 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
       .filter((bastion) => {
         if (role === "dm") return true;
         if (!bastion.active) return false;
-        return bastion.assignedPlayerIds.some((id) => currentUserPlayerIds.includes(id));
+        return (
+          bastion.assignedPlayerIds.some((id) => currentUserPlayerIds.includes(id)) ||
+          bastion.assignedCharacterIds.some((id) => currentUserCharacterIds.includes(id))
+        );
       });
 
     res.json({
@@ -71,6 +121,9 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
 
     const playerRows = readCampaignPlayerRows(db, campaignId);
     const currentUserPlayerIds = playerRows.filter((row) => row.user_id === user.userId).map((row) => row.id);
+    const currentUserCharacterIds = playerRows
+      .filter((row) => row.user_id === user.userId && typeof row.character_id === "string" && row.character_id)
+      .map((row) => row.character_id as string);
     const row = db.prepare(
       "SELECT id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, assigned_player_ids_json, assigned_character_ids_json, notes, maintain_order, facilities_json, created_at, updated_at FROM bastions WHERE campaign_id = ? AND id = ?"
     ).get(campaignId, bastionId) as BastionRow | undefined;
@@ -79,7 +132,10 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
     const compendiumFacilities = readCompendiumFacilities(db);
     const bastion = parseBastionRow(row, compendiumFacilities, playerRows);
     if (role !== "dm") {
-      const canView = bastion.active && bastion.assignedPlayerIds.some((id) => currentUserPlayerIds.includes(id));
+      const canView = bastion.active && (
+        bastion.assignedPlayerIds.some((id) => currentUserPlayerIds.includes(id)) ||
+        bastion.assignedCharacterIds.some((id) => currentUserCharacterIds.includes(id))
+      );
       if (!canView) return res.status(404).json({ ok: false, message: "Bastion not found." });
     }
 

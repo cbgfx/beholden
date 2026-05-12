@@ -187,6 +187,39 @@ function shouldSkipBackgroundTrait(name: string): boolean {
   );
 }
 
+function normalizeFeatIdToken(value: string | null | undefined): string {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/^f_/, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function buildFallbackClassFeat(featureName: string, featId: string): CharacterFeatDetailLike | null {
+  const normalizedFeature = normalizeOptionalFeatureToken(featureName);
+  const normalizedFeat = normalizeFeatIdToken(featId);
+  if (/\bfighting style\b/i.test(normalizedFeature) && normalizedFeat === "fighting style archery") {
+    return {
+      id: featId,
+      name: "Fighting Style: Archery",
+      text: "You gain a +2 bonus to attack rolls you make with Ranged weapons.",
+    };
+  }
+  return null;
+}
+
+function hasSelectedReplacementClassFeat(charData: CharacterData | null | undefined, featureName: string): boolean {
+  const normalizedFeature = normalizeOptionalFeatureToken(featureName);
+  if (!normalizedFeature) return false;
+  return Object.keys(charData?.chosenClassFeatIds ?? {}).some((selectedFeatureName) => {
+    const normalizedSelected = normalizeOptionalFeatureToken(selectedFeatureName);
+    return normalizedSelected === normalizedFeature
+      || normalizedSelected.endsWith(normalizedFeature)
+      || normalizedFeature.endsWith(normalizedSelected);
+  });
+}
+
 export function shouldDisplayPlayerFeature(name: string, text: string): boolean {
   const normalizedName = String(name ?? "").trim();
   const normalizedText = String(text ?? "").trim();
@@ -267,6 +300,8 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
   );
   const byId = new Map<string, AppliedCharacterFeatureEntry>();
   const dedupeKeys = new Set<string>();
+  const selectedClassFeatEntries = Object.entries(charData?.chosenClassFeatIds ?? {})
+    .filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].trim().length > 0);
 
   const addFeature = (feature: AppliedCharacterFeatureEntry | null | undefined) => {
     if (!feature) return;
@@ -363,6 +398,22 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
     });
   }
 
+  const existingClassFeatIds = new Set(
+    classFeatDetails.map((feat) => String(feat.id ?? "").trim()).filter(Boolean),
+  );
+  for (const [featureName, featId] of selectedClassFeatEntries) {
+    if (existingClassFeatIds.has(featId)) continue;
+    const fallbackFeat = buildFallbackClassFeat(featureName, featId);
+    if (!fallbackFeat || !cleanedText(fallbackFeat.text)) continue;
+    addFeature({
+      id: `class-feat:${fallbackFeat.id}`,
+      kind: "feat",
+      name: fallbackFeat.name,
+      text: cleanedText(fallbackFeat.text),
+      preparedSpellProgression: fallbackFeat.preparedSpellProgression,
+    });
+  }
+
   for (const entry of levelUpFeatDetails) {
     if (!cleanedText(entry.feat.text)) continue;
     addFeature({
@@ -388,6 +439,7 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
 
 export function buildDisplayPlayerFeatures(args: BuildDisplayPlayerFeaturesArgs): ClassFeatureEntry[] {
   return buildAppliedCharacterFeatures(args)
+    .filter((feature) => !(feature.kind === "class" && hasSelectedReplacementClassFeat(args.charData, feature.name)))
     .filter((feature) =>
       feature.kind === "class"
       || feature.kind === "feat"

@@ -110,6 +110,18 @@ describe("parseFeatureEffects parser modules", () => {
       expect(dreadBonus.amount?.kind).toBe("ability_mod");
       if (dreadBonus.amount?.kind === "ability_mod") expect(dreadBonus.amount.ability).toBe("wis");
     }
+
+    // PHB 5.5e wording: "When you roll Initiative, you can add your Wisdom modifier to the roll."
+    const dreadAmbusherAlt = parse(
+      "Initiative Bonus",
+      "Initiative Bonus. When you roll Initiative, you can add your Wisdom modifier to the roll.",
+    );
+    const dreadBonusAlt = dreadAmbusherAlt.effects.find((effect) => effect.type === "modifier" && effect.target === "initiative");
+    expect(dreadBonusAlt).toBeTruthy();
+    if (dreadBonusAlt && dreadBonusAlt.type === "modifier") {
+      expect(dreadBonusAlt.amount?.kind).toBe("ability_mod");
+      if (dreadBonusAlt.amount?.kind === "ability_mod") expect(dreadBonusAlt.amount.ability).toBe("wis");
+    }
   });
 
   it("parses skill-check bonuses from ability modifiers (modifiers module)", () => {

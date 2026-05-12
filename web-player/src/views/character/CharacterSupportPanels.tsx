@@ -86,6 +86,10 @@ export function CharacterSupportPanels(props: {
     if (code === "SL") return "Resets on Short or Long Rest";
     return `Reset ${resource.reset}`;
   };
+  const sortedClassFeaturesList = React.useMemo(
+    () => [...classFeaturesList].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })),
+    [classFeaturesList],
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -337,9 +341,9 @@ export function CharacterSupportPanels(props: {
       </NotesPanel>}
 
       <CollapsiblePanel title="Player Features" color={accentColor} storageKey="player-features">
-        {classFeaturesList.length > 0 ? (
+        {sortedClassFeaturesList.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {classFeaturesList.map((feature) => (
+            {sortedClassFeaturesList.map((feature) => (
               <ClassFeatureItem
                 key={feature.id}
                 feature={feature}

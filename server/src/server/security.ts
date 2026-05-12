@@ -133,6 +133,10 @@ export function createInMemoryRateLimiter(opts: { windowMs: number; max: number 
   sweepInterval.unref();
 
   return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (!req.path.startsWith("/api/")) {
+      return next();
+    }
+
     // WebSocket upgrades arrive as HTTP GET /ws with an Upgrade header.
     // Skip them entirely — they are not API requests.
     if (req.path === "/ws" || req.headers.upgrade?.toLowerCase() === "websocket") {
@@ -148,7 +152,13 @@ export function createInMemoryRateLimiter(opts: { windowMs: number; max: number 
     }
     b.count += 1;
     if (b.count > opts.max) {
-      res.status(429).json({ error: "rate_limited" });
+      const retryAfterSeconds = Math.max(1, Math.ceil((b.resetAt - nowMs) / 1000));
+      res.setHeader("Retry-After", String(retryAfterSeconds));
+      res.status(429).json({
+        error: "rate_limited",
+        message: `Too many requests. Please wait ${retryAfterSeconds} seconds and try again.`,
+        retryAfterSeconds,
+      });
       return;
     }
     next();

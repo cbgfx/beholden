@@ -75,6 +75,56 @@ export function parseInitiativeModifierEffects(source: FeatureEffectSource, text
       summary: `Add ${ability.toUpperCase()} modifier to Initiative`,
     } satisfies ModifierEffect);
   }
+
+  // "When you roll Initiative, you can add your Wisdom modifier to the roll." (e.g. Dread Ambusher)
+  for (const match of text.matchAll(/\bwhen you roll initiative\b[^.]*?\badd your (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) modifier to (?:the )?roll\b/gi)) {
+    const ability = ABILITY_NAME_MAP[match[1].toLowerCase()];
+    effects.push({
+      id: createFeatureEffectId(source, "modifier", effects.length),
+      type: "modifier",
+      source,
+      target: "initiative",
+      mode: "bonus",
+      amount: { kind: "ability_mod", ability },
+      summary: `Add ${ability.toUpperCase()} modifier to Initiative`,
+    } satisfies ModifierEffect);
+  }
+
+  for (const match of text.matchAll(/\badd your (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) modifier to (?:your )?initiative rolls?\b/gi)) {
+    const ability = ABILITY_NAME_MAP[match[1].toLowerCase()];
+    effects.push({
+      id: createFeatureEffectId(source, "modifier", effects.length),
+      type: "modifier",
+      source,
+      target: "initiative",
+      mode: "bonus",
+      amount: { kind: "ability_mod", ability },
+      summary: `Add ${ability.toUpperCase()} modifier to Initiative`,
+    } satisfies ModifierEffect);
+  }
+
+  if (
+    /\bdread ambusher\b/i.test(source.name)
+    && /\binitiative\b/i.test(text)
+    && /\bwisdom modifier\b/i.test(text)
+    && !effects.some((effect) =>
+      effect.type === "modifier"
+      && effect.target === "initiative"
+      && effect.mode === "bonus"
+      && effect.amount?.kind === "ability_mod"
+      && effect.amount.ability === "wis"
+    )
+  ) {
+    effects.push({
+      id: createFeatureEffectId(source, "modifier", effects.length),
+      type: "modifier",
+      source,
+      target: "initiative",
+      mode: "bonus",
+      amount: { kind: "ability_mod", ability: "wis" },
+      summary: "Add WIS modifier to Initiative",
+    } satisfies ModifierEffect);
+  }
 }
 
 export function parseSavingThrowModifierEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {

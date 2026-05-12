@@ -111,6 +111,17 @@ export function CharacterCombatPanels({
     return true;
   }
 
+  function splitDamageDiceBonus(value: string | null | undefined): { dice: string; bonus: number } | null {
+    const raw = String(value ?? "").trim();
+    if (!raw) return null;
+    const match = raw.match(/^(.+?)([+-]\d+)\s*$/);
+    if (!match) return { dice: raw, bonus: 0 };
+    return {
+      dice: match[1].trim(),
+      bonus: Number(match[2]) || 0,
+    };
+  }
+
   return (
     <>
       <CollapsiblePanel title="Combat Stats" color={accentColor} storageKey="combat-stats">
@@ -249,8 +260,10 @@ export function CharacterCombatPanels({
             const props = formatItemProperties(it.properties);
             const isReach = hasItemProperty(it, "R");
             const rangeLabel = isRangedWeapon(it) ? (it.properties?.find((p) => /^\d/.test(p)) ?? "Range") : `${isReach ? "10" : "5"} ft.`;
-            const totalFlatBonus = damageAbility + rageBonus + featureDamageBonus + magicBonus;
-            const dmgText = dmg ? `${dmg}${totalFlatBonus === 0 ? "" : `${totalFlatBonus >= 0 ? "+" : ""}${totalFlatBonus}`}${damageType ? ` ${damageType}` : ""}` : "-";
+            const parsedDmg = splitDamageDiceBonus(dmg);
+            const totalFlatBonus = damageAbility + rageBonus + featureDamageBonus + magicBonus + (parsedDmg?.bonus ?? 0);
+            const flatBonusText = totalFlatBonus === 0 ? "" : `${totalFlatBonus >= 0 ? "+" : ""}${totalFlatBonus}`;
+            const dmgText = parsedDmg ? `${parsedDmg.dice}${flatBonusText}${damageType ? ` ${damageType}` : ""}` : "-";
             const modeLabel = attackState === "mainhand-2h" ? "2H" : attackState === "offhand" ? "Offhand" : null;
 
             return (
@@ -263,7 +276,7 @@ export function CharacterCombatPanels({
                     {!proficient && <span style={{ fontSize: "var(--fs-tiny)", color: C.red, fontWeight: 700 }}>No proficiency</span>}
                     {attackDisadvantage && <span style={{ fontSize: "var(--fs-tiny)", color: C.colorPinkRed, fontWeight: 700 }}>D</span>}
                   </div>
-                  <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{isWeaponItem(it) ? "Melee Weapon" : it.type ?? ""}</div>
+                  <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{isWeaponItem(it) ? (isRangedWeapon(it) ? "Ranged Weapon" : "Melee Weapon") : it.type ?? ""}</div>
                 </div>
                 <div style={{ fontSize: "var(--fs-small)", color: C.muted, textAlign: "center", whiteSpace: "nowrap" }}>{rangeLabel}</div>
                 <div

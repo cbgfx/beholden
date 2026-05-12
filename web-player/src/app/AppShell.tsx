@@ -1,9 +1,11 @@
 import React from "react";
-import { NavLink, Link } from "react-router-dom";
+import { NavLink, Link, useNavigate } from "react-router-dom";
 import { C, withAlpha } from "@/lib/theme";
 import { useAuth } from "@/contexts/AuthContext";
+import { IconBastions, IconDice } from "@/icons";
 import { api } from "@/services/api";
-import { useWsStatus } from "@/services/ws";
+import { useWs, useWsStatus } from "@/services/ws";
+import { DiceCalculatorModal } from "@/tools/DiceCalculatorModal";
 import { StatusDot, FooterGrid, HeaderActionButton, HeaderActionLink, TopBarFrame, navLinkStyle } from "@beholden/shared/ui";
 
 const NAV_LINKS = [
@@ -53,6 +55,25 @@ interface Meta {
   support: boolean;
 }
 
+type LastCharacter = { id: string; name: string };
+
+type BastionSummary = {
+  id: string;
+  name: string;
+  active?: boolean;
+  campaignId?: string | null;
+};
+
+type BastionListResponse = {
+  bastions?: BastionSummary[];
+};
+
+type ActiveBastionLink = {
+  id: string;
+  name: string;
+  campaignId: string;
+};
+
 function useServerMeta() {
   const [meta, setMeta] = React.useState<Meta | null>(null);
   React.useEffect(() => {
@@ -71,13 +92,95 @@ function useUpdateCheck() {
   return updateAvailable;
 }
 
+export function topbarToolButtonStyle(active = false, accent = C.accentHl, muted = C.muted): React.CSSProperties {
+  return {
+    width: 36,
+    height: 36,
+    borderRadius: 9,
+    border: `1px solid ${active ? withAlpha(accent, 0.55) : C.panelBorder}`,
+    background: active ? withAlpha(accent, 0.14) : "rgba(255,255,255,0.04)",
+    color: active ? accent : muted,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    padding: 0,
+    flexShrink: 0,
+  };
+}
+
+function useActiveBastionForCharacter(lastChar: LastCharacter | null): ActiveBastionLink | null {
+  const [active, setActive] = React.useState<ActiveBastionLink | null>(null);
+  const [refreshKey, setRefreshKey] = React.useState(0);
+  const refreshTimerRef = React.useRef<number | null>(null);
+
+  useWs(
+    React.useCallback((msg) => {
+      if (msg.type === "bastions:delta" || msg.type === "players:delta") {
+        if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = window.setTimeout(() => {
+          refreshTimerRef.current = null;
+          setRefreshKey((key) => key + 1);
+        }, 250);
+      }
+    }, [])
+  );
+
+  React.useEffect(() => () => {
+    if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current);
+  }, []);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const characterId = lastChar?.id;
+    if (!characterId) {
+      setActive(null);
+      return;
+    }
+    const encodedCharacterId = encodeURIComponent(characterId);
+
+    async function load() {
+      try {
+        const data = await api<BastionListResponse>(`/api/me/characters/${encodedCharacterId}/bastions`);
+        const bastion = (data.bastions ?? []).find((entry) => entry.active === true && typeof entry.campaignId === "string");
+        if (!cancelled) {
+          const next = bastion ? { id: bastion.id, name: bastion.name, campaignId: bastion.campaignId! } : null;
+          setActive((prev) => {
+            if (
+              prev?.id === next?.id &&
+              prev?.name === next?.name &&
+              prev?.campaignId === next?.campaignId
+            ) {
+              return prev;
+            }
+            return next;
+          });
+        }
+      } catch {
+        // Keep the last known value during transient refresh failures so the
+        // topbar does not flicker while live updates are settling.
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [lastChar?.id, refreshKey]);
+
+  return active;
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const meta = useServerMeta();
   const updateAvailable = useUpdateCheck();
   const showSupport = meta?.support === true;
   const connected = useWsStatus();
   const lastChar = useLastCharacter();
+  const activeBastion = useActiveBastionForCharacter(lastChar);
+  const [diceOpen, setDiceOpen] = React.useState(false);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: C.bg, color: C.text, fontFamily: "system-ui, Segoe UI, Arial, sans-serif" }}>
@@ -123,6 +226,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+          {activeBastion && (
+            <button
+              type="button"
+              aria-label={`Open bastion: ${activeBastion.name}`}
+              title={`Bastion: ${activeBastion.name}`}
+              onClick={() => navigate(`/campaigns/${activeBastion.campaignId}/bastions/${activeBastion.id}`)}
+              style={topbarToolButtonStyle()}
+            >
+              <IconBastions size={22} />
+            </button>
+          )}
+          <button
+            type="button"
+            aria-label="Open dice calculator"
+            title="Dice Calculator"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              setDiceOpen(true);
+            }}
+            onClick={() => setDiceOpen(true)}
+            style={topbarToolButtonStyle(diceOpen)}
+          >
+            <IconDice size={22} />
+          </button>
           <HeaderActionLink to="/profile" color={C.muted}>
             {user?.name || user?.username}
           </HeaderActionLink>
@@ -137,6 +264,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           />
         </div>
       </TopBarFrame>
+      <DiceCalculatorModal isOpen={diceOpen} onClose={() => setDiceOpen(false)} />
 
       <main style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
         {children}

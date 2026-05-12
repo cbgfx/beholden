@@ -52,6 +52,10 @@ const SAME_ORIGIN_IS_DIRECT_PORT = (() => {
 /** Try to pull a human-readable message out of a non-OK response body. */
 async function apiError(res: Response): Promise<Error> {
   const contentType = res.headers.get("content-type") ?? "";
+  const retryAfter = Number(res.headers.get("retry-after"));
+  const retryText = Number.isFinite(retryAfter) && retryAfter > 0
+    ? ` Please wait ${Math.ceil(retryAfter)} seconds and try again.`
+    : "";
 
   try {
     if (!contentType.includes("application/json")) {
@@ -73,11 +77,15 @@ async function apiError(res: Response): Promise<Error> {
       const label = first.path ? `${first.path}: ${first.message}` : first.message;
       return new Error(label);
     }
+    if (b.error === "rate_limited") {
+      return new Error(`Too many requests.${retryText}`);
+    }
     const msg = b.message ?? b.error;
     if (msg) return new Error(String(msg));
   } catch {
     // Ignore JSON parse errors and fall through to status text.
   }
+  if (res.status === 429) return new Error(`Too many requests.${retryText}`);
   return new Error(`${res.status} ${res.statusText}`);
 }
 

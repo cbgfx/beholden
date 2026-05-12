@@ -72,6 +72,34 @@ export function parseAttackEffects(source: FeatureEffectSource, text: string, ef
     } satisfies ModifierEffect);
   }
 
+  // "gain a +2 bonus to attack rolls and damage rolls with such weapons" — Bracers of Archery, etc.
+  // "such weapons" is only treated as ranged when the surrounding text references bows or ranged weapons.
+  const hasRangedBowContext = /\b(?:long|short)?bow\b/i.test(text) || /\branged weapons?\b/i.test(text);
+  for (const match of text.matchAll(/gain a \+?(\d+)\s+bonus to attack rolls and damage rolls with (such weapons?|(?:long|short)?bows?|ranged weapons?)\b/gi)) {
+    const amount = Number(match[1]);
+    if (!Number.isFinite(amount) || amount <= 0) continue;
+    if (/with such weapons?/i.test(match[0]) && !hasRangedBowContext) continue;
+    effects.push({
+      id: createFeatureEffectId(source, "modifier", effects.length),
+      type: "modifier",
+      source,
+      target: "attack_roll",
+      mode: "bonus",
+      amount: { kind: "fixed", value: amount },
+      gate: { duration: "passive", weaponFilters: ["ranged_weapon"] },
+      summary: `+${amount} to attack rolls with ranged weapons`,
+    } satisfies ModifierEffect);
+    effects.push({
+      id: createFeatureEffectId(source, "attack", effects.length),
+      type: "attack",
+      source,
+      mode: "bonus_damage",
+      amount: { kind: "fixed", value: amount },
+      gate: { duration: "passive", weaponFilters: ["ranged_weapon"] },
+      summary: `+${amount} to damage rolls with ranged weapons`,
+    } satisfies AttackEffect);
+  }
+
   if (/martial arts die/i.test(text) && /unarmed strike/i.test(text)) {
     effects.push({
       id: createFeatureEffectId(source, "attack", effects.length),
