@@ -45,7 +45,7 @@ function formatResourceResetLabel(reset: ResourceCounter["reset"]): string {
 // RichSpellsPanel
 // ---------------------------------------------------------------------------
 
-export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb, scores, accentColor, classDetail, charLevel, preparedLimit = 0, usesFlexiblePreparedList = false, usedSpellSlots, preparedSpells, onSlotsChange, onPreparedChange, onAddSpell, onRemoveSpell, addSpellSourceLabel, onResourceChange, spellcastingBlocked = false, spellDamageBonuses = {} }: {
+export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb, scores, accentColor, classDetail, charLevel, preparedLimit = 0, usesFlexiblePreparedList = false, usedSpellSlots, preparedSpells, onSlotsChange, onPreparedChange, onAddSpell, onRemoveSpell, addSpellSourceLabel, onResourceChange, spellcastingBlocked = false, spellDamageBonuses = {}, spellSaveDcBonus = 0 }: {
   spells: { name: string; source: string; id?: string; ability?: "str" | "dex" | "con" | "int" | "wis" | "cha" | null }[];
   grantedSpells?: GrantedSpellCast[];
   resources?: ResourceCounter[];
@@ -66,6 +66,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
   onResourceChange?: (key: string, delta: number) => Promise<void> | void;
   spellcastingBlocked?: boolean;
   spellDamageBonuses?: Record<string, number>;
+  spellSaveDcBonus?: number;
 }) {
   const [details, setDetails] = React.useState<Record<string, FetchedSpellDetail>>({});
   const [selectedSpell, setSelectedSpell] = React.useState<{ detail: FetchedSpellDetail; source?: string | null } | null>(null);
@@ -213,7 +214,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
   }
   const spellMod = Math.max(intMod, wisMod, chaMod);
   const spellAbilLabel = spellMod === chaMod ? "CHA" : spellMod === wisMod ? "WIS" : "INT";
-  const saveDc = 8 + pb + spellMod;
+  const saveDc = 8 + pb + spellMod + spellSaveDcBonus;
   const spellAtk = pb + spellMod;
 
   // Spell slots for current level
@@ -516,7 +517,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
                 const usesAtk = spellUsesAttack(d);
                 const entryAbility = e.ability ?? null;
                 const entrySpellMod = entryAbility ? abilityModFor(entryAbility) : spellMod;
-                const entrySaveDc = 8 + pb + entrySpellMod;
+                const entrySaveDc = 8 + pb + entrySpellMod + spellSaveDcBonus;
                 const entrySpellAtk = pb + entrySpellMod;
                 const isCantrip = level === 0;
                 const isAlwaysPrepared = e.forcedPrepared;

@@ -88,6 +88,30 @@ describe("parseFeatureEffects parser modules", () => {
     }
   });
 
+  it("parses fixed and ability-mod initiative bonuses", () => {
+    const alert = parse(
+      "Alert",
+      "Always on the lookout for danger, you gain a +5 bonus to initiative.",
+    );
+    const alertBonus = alert.effects.find((effect) => effect.type === "modifier" && effect.target === "initiative");
+    expect(alertBonus).toBeTruthy();
+    if (alertBonus && alertBonus.type === "modifier") {
+      expect(alertBonus.amount?.kind).toBe("fixed");
+      if (alertBonus.amount?.kind === "fixed") expect(alertBonus.amount.value).toBe(5);
+    }
+
+    const dreadAmbusher = parse(
+      "Dread Ambusher",
+      "You can give yourself a bonus to your initiative rolls equal to your Wisdom modifier.",
+    );
+    const dreadBonus = dreadAmbusher.effects.find((effect) => effect.type === "modifier" && effect.target === "initiative");
+    expect(dreadBonus).toBeTruthy();
+    if (dreadBonus && dreadBonus.type === "modifier") {
+      expect(dreadBonus.amount?.kind).toBe("ability_mod");
+      if (dreadBonus.amount?.kind === "ability_mod") expect(dreadBonus.amount.ability).toBe("wis");
+    }
+  });
+
   it("parses skill-check bonuses from ability modifiers (modifiers module)", () => {
     const parsed = parse(
       "Divine Order: Thaumaturge",
@@ -103,6 +127,29 @@ describe("parseFeatureEffects parser modules", () => {
         expect(skillBonus.amount.ability).toBe("wis");
         expect(skillBonus.amount.min).toBe(1);
       }
+    }
+  });
+
+  it("does not treat placeholder words as item-granted spells", () => {
+    const parsed = parseFeatureEffects({
+      source: { id: "test:item-placeholder", kind: "item", name: "Wand of Bad Grammar" },
+      text: "You can cast another spell from the wand at will.",
+    });
+
+    expect(parsed.effects.some((effect) => effect.type === "spell_grant" && effect.spellName === "Another")).toBe(false);
+  });
+
+  it("parses item spell save DC bonuses", () => {
+    const parsed = parseFeatureEffects({
+      source: { id: "test:revelers-concertina", kind: "item", name: "Reveler's Concertina" },
+      text: "While holding this concertina, you gain a +2 bonus to the saving throw DC of your Bard spells.",
+    });
+
+    const dcBonus = parsed.effects.find((effect) => effect.type === "modifier" && effect.target === "spell_save_dc");
+    expect(dcBonus).toBeTruthy();
+    if (dcBonus && dcBonus.type === "modifier") {
+      expect(dcBonus.amount?.kind).toBe("fixed");
+      if (dcBonus.amount?.kind === "fixed") expect(dcBonus.amount.value).toBe(2);
     }
   });
 

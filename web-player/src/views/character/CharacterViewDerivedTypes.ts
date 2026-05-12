@@ -94,6 +94,7 @@ export type CharacterViewDerivedState = {
   passivePerc: number;
   passiveInv: number;
   initiativeBonus: number;
+  spellSaveDcBonus: number;
   transformedCombatStats: {
     effectiveAc: number;
     speed: number;

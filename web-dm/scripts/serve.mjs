@@ -55,6 +55,16 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    const requestPath = (req.url || "/").split("?")[0];
+    if (requestPath.includes("/assets/")) {
+      res.writeHead(404, {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache",
+      });
+      res.end("Asset not found.");
+      return;
+    }
+
     const html = await readFile(indexPath);
     res.writeHead(200, {
       "Content-Type": "text/html; charset=utf-8",

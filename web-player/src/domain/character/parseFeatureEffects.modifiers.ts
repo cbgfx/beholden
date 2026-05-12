@@ -35,7 +35,10 @@ const ABILITY_NAME_MAP: Record<string, AbilKey> = {
 export function parseInitiativeModifierEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
   const hasDirectInitiativePbText = /add your Proficiency Bonus to (?:your )?(?:the )?Initiative/i.test(text);
   const hasRollInitiativePbText = /\bwhen you roll initiative\b/i.test(text) && /\badd your proficiency bonus to (?:the )?roll\b/i.test(text);
-  const isAlertNameFallback = /\balert\b/i.test(source.name) && (!text || /\binitiative\b/i.test(text));
+  const hasFixedInitiativeBonusText = /\+\d+\s+(?:bonus\s+)?to (?:your\s+)?(?:initiative|initiative rolls?)\b/i.test(text);
+  const hasAbilityInitiativeBonusText = /bonus to (?:your )?(?:initiative|initiative rolls?)(?: equal to| equals?| equal) your (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) modifier/i.test(text);
+  const hasExplicitInitiativeBonusText = hasDirectInitiativePbText || hasRollInitiativePbText || hasFixedInitiativeBonusText || hasAbilityInitiativeBonusText;
+  const isAlertNameFallback = /\balert\b/i.test(source.name) && (!text || (/\binitiative\b/i.test(text) && !hasExplicitInitiativeBonusText));
   if (hasDirectInitiativePbText || hasRollInitiativePbText || isAlertNameFallback) {
     effects.push({
       id: createFeatureEffectId(source, "modifier", effects.length),
@@ -43,6 +46,33 @@ export function parseInitiativeModifierEffects(source: FeatureEffectSource, text
       target: "initiative", mode: "bonus",
       amount: { kind: "proficiency_bonus" },
       summary: "Add Proficiency Bonus to Initiative",
+    } satisfies ModifierEffect);
+  }
+
+  for (const match of text.matchAll(/\+(\d+)\s+(?:bonus\s+)?to (?:your\s+)?(?:initiative|initiative rolls?)\b/gi)) {
+    const value = Number(match[1]);
+    if (!Number.isFinite(value) || value <= 0) continue;
+    effects.push({
+      id: createFeatureEffectId(source, "modifier", effects.length),
+      type: "modifier",
+      source,
+      target: "initiative",
+      mode: "bonus",
+      amount: { kind: "fixed", value },
+      summary: `+${value} Initiative`,
+    } satisfies ModifierEffect);
+  }
+
+  for (const match of text.matchAll(/bonus to (?:your )?(?:initiative|initiative rolls?)(?: equal to| equals?| equal) your (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) modifier/gi)) {
+    const ability = ABILITY_NAME_MAP[match[1].toLowerCase()];
+    effects.push({
+      id: createFeatureEffectId(source, "modifier", effects.length),
+      type: "modifier",
+      source,
+      target: "initiative",
+      mode: "bonus",
+      amount: { kind: "ability_mod", ability },
+      summary: `Add ${ability.toUpperCase()} modifier to Initiative`,
     } satisfies ModifierEffect);
   }
 }
@@ -93,6 +123,22 @@ export function parseSkillCheckBonusEffects(source: FeatureEffectSource, text: s
       amount: { kind: "ability_mod", ability: amountAbility, ...(min != null ? { min } : {}) },
       appliesTo: skillNames,
       summary: `Add ${amountAbility.toUpperCase()} modifier to ${skillNames.join(", ")} checks`,
+    } satisfies ModifierEffect);
+  }
+}
+
+export function parseSpellSaveDcModifierEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
+  for (const match of text.matchAll(/\+(\d+)\s+bonus to (?:the )?(?:saving throw DC|spell save DC|save DC)(?: of your [A-Za-z]+ spells?)?/gi)) {
+    const value = Number(match[1]);
+    if (!Number.isFinite(value) || value <= 0) continue;
+    effects.push({
+      id: createFeatureEffectId(source, "modifier", effects.length),
+      type: "modifier",
+      source,
+      target: "spell_save_dc",
+      mode: "bonus",
+      amount: { kind: "fixed", value },
+      summary: `+${value} spell save DC`,
     } satisfies ModifierEffect);
   }
 }

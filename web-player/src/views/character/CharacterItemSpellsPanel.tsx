@@ -20,6 +20,7 @@ export function ItemSpellsPanel({
   accentColor,
   onChargeChange,
   spellcastingBlocked = false,
+  spellSaveDcBonus = 0,
 }: {
   items: InventoryItem[];
   pb: number;
@@ -29,6 +30,7 @@ export function ItemSpellsPanel({
   accentColor: string;
   onChargeChange: (itemId: string, charges: number) => void;
   spellcastingBlocked?: boolean;
+  spellSaveDcBonus?: number;
 }) {
   const [details, setDetails] = React.useState<Record<string, FetchedSpellDetail>>({});
   const [selectedSpell, setSelectedSpell] = React.useState<FetchedSpellDetail | null>(null);
@@ -102,7 +104,7 @@ export function ItemSpellsPanel({
     Math.floor(((wisScore ?? 10) - 10) / 2),
     Math.floor(((chaScore ?? 10) - 10) / 2),
   );
-  const saveDc = 8 + pb + spellMod;
+  const saveDc = 8 + pb + spellMod + spellSaveDcBonus;
   const spellAtk = pb + spellMod;
   const ordinals = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
 

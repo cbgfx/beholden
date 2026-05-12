@@ -122,6 +122,7 @@ export function isLikelySpellName(spellName: string): boolean {
   if (/^(yes|no)$/i.test(cleaned)) return false;
   if (!hasLikelySpellNameCapitalization(spellName)) return false;
   if (/^(it|that|these|those)(?:\s+spell|\s+spells)?$/i.test(cleaned)) return false;
+  if (/^(a|an|another|any|one|each|either|this|that|these|those|extra)$/i.test(cleaned)) return false;
   if (/^(a|an|another)\s+/i.test(cleaned)) return false;
   if (/^(prepared|chosen|listed|extra|one extra)\b/i.test(cleaned)) return false;
   if (/^different\b/i.test(cleaned)) return false;

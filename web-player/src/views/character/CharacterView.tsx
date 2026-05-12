@@ -251,6 +251,7 @@ export function CharacterView() {
     passivePerc,
     passiveInv,
     initiativeBonus,
+    spellSaveDcBonus,
     transformedCombatStats,
     saveBonuses,
     skillBonuses,
@@ -484,6 +485,7 @@ export function CharacterView() {
             accentColor,
             onChargeChange: handleItemChargeChange,
             spellcastingBlocked: nonProficientArmorPenalty,
+            spellSaveDcBonus,
           }}
           richSpellsProps={{
             spells: prof?.spells ?? [],
@@ -506,6 +508,7 @@ export function CharacterView() {
             onResourceChange: changeResourceCurrent,
             spellcastingBlocked: nonProficientArmorPenalty,
             spellDamageBonuses: invocationSpellDamageBonuses,
+            spellSaveDcBonus,
           }}
         />
 

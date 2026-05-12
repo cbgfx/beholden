@@ -279,6 +279,11 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   });
   const initiativeBonus = getInitiativeBonus(scores.dex, args.char.level, { jackOfAllTrades: hasJackOfAllTrades })
     + deriveModifierBonusFromEffects(parsedAllEffects, "initiative", { level: args.char.level, scores: scoresByAbility, raging: rageActive });
+  const spellSaveDcBonus = deriveModifierBonusFromEffects(parsedAllEffects, "spell_save_dc", {
+    level: args.char.level,
+    scores: scoresByAbility,
+    raging: rageActive,
+  });
   const transformedCombatStats = buildTransformedCombatStats({
     monster: args.polymorphMonsterState.monster,
     effectiveAc,
@@ -385,6 +390,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     passivePerc,
     passiveInv,
     initiativeBonus,
+    spellSaveDcBonus,
     transformedCombatStats,
     saveBonuses,
     skillBonuses,
