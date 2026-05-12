@@ -5,21 +5,7 @@ import {
   type FeatureEffect,
   type FeatureEffectSource,
 } from "@/domain/character/featureEffects";
-
-function textUsesRageGate(text: string): boolean {
-  return /while your rage is active|while raging/i.test(text);
-}
-
-function isBaseRageRulesText(source: FeatureEffectSource, text: string): boolean {
-  return /\brage\b/i.test(source.name)
-    && /your rage follows the rules below|damage resistance|rage damage|strength advantage/i.test(text);
-}
-
-function createRageGate(source: FeatureEffectSource, text: string) {
-  return textUsesRageGate(text) || isBaseRageRulesText(source, text)
-    ? { duration: "while_raging" as const }
-    : undefined;
-}
+import { createRageGate } from "@/domain/character/parseFeatureEffects.normalizers";
 
 export function parseDefenseEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
   const DAMAGE_TYPES = [
@@ -126,4 +112,3 @@ export function parseDefenseEffects(source: FeatureEffectSource, text: string, e
     }
   }
 }
-

@@ -1,4 +1,5 @@
 import { ALL_SKILLS } from "@/views/character/CharacterSheetConstants";
+import type { FeatureEffectSource } from "@/domain/character/featureEffects";
 
 const SPELL_LIST_NAMES = ["Artificer", "Bard", "Cleric", "Druid", "Paladin", "Ranger", "Sorcerer", "Warlock", "Wizard"];
 const SPELL_SCHOOL_NAMES = ["Abjuration", "Conjuration", "Divination", "Enchantment", "Evocation", "Illusion", "Necromancy", "Transmutation"];
@@ -65,6 +66,21 @@ export function hasContextualQualifier(text: string, matchEndIndex: number): boo
     "using ",
     "within ",
   ].some((prefix) => tail.startsWith(prefix));
+}
+
+export function textUsesRageGate(text: string): boolean {
+  return /while your rage is active|while raging/i.test(text);
+}
+
+export function isBaseRageRulesText(source: FeatureEffectSource, text: string): boolean {
+  return /\brage\b/i.test(source.name)
+    && /your rage follows the rules below|damage resistance|rage damage|strength advantage/i.test(text);
+}
+
+export function createRageGate(source: FeatureEffectSource, text: string) {
+  return textUsesRageGate(text) || isBaseRageRulesText(source, text)
+    ? { duration: "while_raging" as const }
+    : undefined;
 }
 
 function normalizeBrokenWord(raw: string, candidates: string[]): string | null {

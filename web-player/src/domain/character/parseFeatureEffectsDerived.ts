@@ -1,9 +1,7 @@
 import type { AbilKey, GrantedSpellCast, ResourceCounter, TaggedItem } from "@/views/character/CharacterSheetTypes";
-import { normalizeResourceKey, proficiencyBonus } from "@/views/character/CharacterSheetUtils";
+import { proficiencyBonus } from "@/views/character/CharacterSheetUtils";
 import type {
   AttackEffect,
-  ArmorClassEffect,
-  DefenseEffect,
   FeatureEffect,
   ModifierEffect,
   ParsedFeatureEffects,
@@ -101,7 +99,6 @@ export function buildGrantedSpellDataFromEffects(
   level?: number | null,
 ): { spells: GrantedSpellCast[]; resources: ResourceCounter[] } {
   const spells: GrantedSpellCast[] = [];
-  const resources: ResourceCounter[] = [];
 
   const resolveScalingValue = (value: ScalingValue | undefined): number | null =>
     resolveScalingValueInContext(value, { scores, level });

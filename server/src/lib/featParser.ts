@@ -11,7 +11,6 @@ import {
 } from "./preparedSpellProgression.js";
 import {
   ABILITY_SCORES,
-  DAMAGE_TYPES,
   KNOWN_CANTRIPS,
   parseAbilityOptions,
   parseDamageTypeOptions,

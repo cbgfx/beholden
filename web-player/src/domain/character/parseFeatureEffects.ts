@@ -1,26 +1,27 @@
 import type { ParsedFeatureEffects, FeatureEffectSource } from "@/domain/character/featureEffects";
 import { cleanupText } from "@/domain/character/parseFeatureEffects.normalizers";
 import { parseSpellChoiceEffects } from "@/domain/character/parseFeatureEffects.choices";
+import { parseAttackEffects, parseWeaponMasteryEffects } from "@/domain/character/parseFeatureEffects.combat";
+import {
+  parseAdvantageModifierEffects,
+  parseArmorClassBonusEffects,
+  parseInitiativeModifierEffects,
+  parseSavingThrowModifierEffects,
+  parseSkillCheckBonusEffects,
+  parseSpellSaveDcModifierEffects,
+} from "@/domain/character/parseFeatureEffects.modifiers";
 import { parseItemCanCastSpellEffects, parseSpellGrantEffects } from "@/domain/character/parseFeatureEffects.grants";
 import { parseResourceGrantEffects } from "@/domain/character/parseFeatureEffects.resources";
 import { parseProficiencyGrantEffects } from "@/domain/character/parseFeatureEffects.proficiencies";
 import { parseDefenseEffects } from "@/domain/character/parseFeatureEffects.defense";
 import {
   parseAbilityScoreEffects,
-  parseArmorClassBonusEffects,
   parseArmorClassEffects,
-  parseAttackEffects,
-  parseAdvantageModifierEffects,
   parseHitPointBonusEffects,
-  parseInitiativeModifierEffects,
   parsePassiveScoreEffects,
-  parseSavingThrowModifierEffects,
   parseSensesEffects,
-  parseSkillCheckBonusEffects,
-  parseSpellSaveDcModifierEffects,
   parseSpeedEffects,
-  parseWeaponMasteryEffects,
-} from "@/domain/character/parseFeatureEffects.parsers";
+} from "@/domain/character/parseFeatureEffects.stats";
 
 export interface ParseFeatureEffectsInput {
   source: FeatureEffectSource;

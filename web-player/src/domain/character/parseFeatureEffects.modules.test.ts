@@ -68,6 +68,20 @@ describe("parseFeatureEffects parser modules", () => {
     }
   });
 
+  it("parses heavy-weapon proficiency-bonus damage in the combat module", () => {
+    const parsed = parse(
+      "Great Weapon Master",
+      "When you hit a creature with a weapon that has the Heavy property, the weapon deals extra damage to the creature. The extra damage equals your Proficiency Bonus.",
+    );
+
+    const heavyDamage = parsed.effects.find((effect) => effect.type === "attack" && effect.mode === "bonus_damage");
+    expect(heavyDamage).toBeTruthy();
+    if (heavyDamage && heavyDamage.type === "attack") {
+      expect(heavyDamage.amount?.kind).toBe("proficiency_bonus");
+      expect(heavyDamage.gate?.weaponFilters).toEqual(expect.arrayContaining(["heavy_weapon"]));
+    }
+  });
+
   it("parses initiative and saving throw modifiers (modifiers module)", () => {
     const parsed = parse(
       "Alerting Grace",
@@ -162,6 +176,20 @@ describe("parseFeatureEffects parser modules", () => {
     if (dcBonus && dcBonus.type === "modifier") {
       expect(dcBonus.amount?.kind).toBe("fixed");
       if (dcBonus.amount?.kind === "fixed") expect(dcBonus.amount.value).toBe(2);
+    }
+  });
+
+  it("parses Tough max-HP scaling", () => {
+    const parsed = parse(
+      "Origin: Tough",
+      "Your Hit Point maximum increases by an amount equal to twice your character level when you gain this feat. Whenever you gain a character level thereafter, your Hit Point maximum increases by an additional 2 Hit Points.",
+    );
+
+    const hpBonus = parsed.effects.find((effect) => effect.type === "hit_points" && effect.mode === "max_bonus");
+    expect(hpBonus).toBeTruthy();
+    if (hpBonus && hpBonus.type === "hit_points" && "kind" in hpBonus.amount) {
+      expect(hpBonus.amount.kind).toBe("character_level");
+      if (hpBonus.amount.kind === "character_level") expect(hpBonus.amount.multiplier).toBe(2);
     }
   });
 

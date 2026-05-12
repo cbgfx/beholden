@@ -210,4 +210,23 @@ export function parseAttackEffects(source: FeatureEffectSource, text: string, ef
       summary: "Rage Damage bonus on Strength weapon and unarmed attacks",
     } satisfies AttackEffect);
   }
+
+  if (
+    /weapon that has the Heavy property/i.test(text)
+    && /extra damage/i.test(text)
+    && /equals your Proficiency Bonus/i.test(text)
+  ) {
+    effects.push({
+      id: createFeatureEffectId(source, "attack", effects.length),
+      type: "attack",
+      source,
+      mode: "bonus_damage",
+      amount: { kind: "proficiency_bonus" },
+      gate: {
+        duration: "passive",
+        weaponFilters: ["heavy_weapon"],
+      },
+      summary: "Heavy weapon hits deal extra damage equal to Proficiency Bonus",
+    } satisfies AttackEffect);
+  }
 }
