@@ -65,7 +65,7 @@ export type CompendiumItemRow = {
 
 export type CompendiumItemDetail = CompendiumItemRow & {
   nameKey?: string | null;
-  text: string;
+  text: string | string[] | null;
   weight?: number | null;
   value?: number | null;
   dmg1?: string | null;

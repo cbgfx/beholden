@@ -183,7 +183,9 @@ export function CharacterInfoDrawer(props: {
           top: 0,
           right: 0,
           width: "min(560px, 92vw)",
-          height: "100vh",
+          bottom: 0,
+          height: "100dvh",
+          maxHeight: "100dvh",
           background: "#11182a",
           borderLeft: "1px solid rgba(255,255,255,0.08)",
           boxShadow: "-16px 0 40px rgba(0,0,0,0.45)",
@@ -338,7 +340,7 @@ export function CharacterInfoDrawer(props: {
           </div>
         </div>
 
-        <div style={{ padding: 24, borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "flex-end", gap: 12 }}>
+        <div style={{ padding: "24px 24px calc(24px + env(safe-area-inset-bottom, 0px))", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "flex-end", gap: 12, flexShrink: 0 }}>
           <button
             onClick={props.onClose}
             style={{

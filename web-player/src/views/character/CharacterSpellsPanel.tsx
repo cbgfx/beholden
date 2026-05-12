@@ -462,7 +462,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span aria-hidden="true" style={spellSectionArrow(isCollapsed, accentColor)}>▼</span>
                 <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, color: accentColor, textTransform: "uppercase", letterSpacing: 1 }}>
-                {level === -1 ? "Loading…" : level === 0 ? "Cantrips" : (LEVEL_LABELS[level] ?? `Level ${level}`)}
+                {level === -1 ? "Unresolved Spells" : level === 0 ? "Cantrips" : (LEVEL_LABELS[level] ?? `Level ${level}`)}
               </div>
               {maxSlots > 0 && (
                 <div style={{ display: "flex", alignItems: "center", gap: 5 }}>

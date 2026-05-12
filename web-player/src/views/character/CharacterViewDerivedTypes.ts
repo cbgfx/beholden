@@ -107,6 +107,7 @@ export type CharacterViewDerivedState = {
     className: string;
   } | null;
   saveBonuses: Partial<Record<AbilKey, number>>;
+  skillBonuses: Record<string, number>;
   abilityCheckAdvantages: Partial<Record<AbilKey, boolean>>;
   abilityCheckDisadvantages: Partial<Record<AbilKey, boolean>>;
   saveAdvantages: Partial<Record<AbilKey, boolean>>;

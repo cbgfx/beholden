@@ -16,6 +16,7 @@ import {
   parsePassiveScoreEffects,
   parseSavingThrowModifierEffects,
   parseSensesEffects,
+  parseSkillCheckBonusEffects,
   parseSpeedEffects,
   parseWeaponMasteryEffects,
 } from "@/domain/character/parseFeatureEffects.parsers";
@@ -48,6 +49,7 @@ export function parseFeatureEffects(input: ParseFeatureEffectsInput): ParsedFeat
   parseAttackEffects(source, cleanText, effects);
   parseInitiativeModifierEffects(source, cleanText, effects);
   parseSavingThrowModifierEffects(source, cleanText, effects);
+  parseSkillCheckBonusEffects(source, cleanText, effects);
   parseAdvantageModifierEffects(source, cleanText, effects);
   parseSensesEffects(source, cleanText, effects);
   parsePassiveScoreEffects(source, cleanText, effects);

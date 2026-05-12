@@ -78,6 +78,25 @@ export function parseSavingThrowModifierEffects(source: FeatureEffectSource, tex
   }
 }
 
+export function parseSkillCheckBonusEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
+  for (const match of text.matchAll(/bonus to your (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s*\(([^)]+)\)\s+checks?\.?\s+The bonus equals your (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) modifier(?:\s*\(minimum (?:bonus )?of \+?(\d+)\))?/gi)) {
+    const skillNames = splitSkillNames(match[2]);
+    const amountAbility = ABILITY_NAME_MAP[match[3].toLowerCase()];
+    const min = match[4] ? Number(match[4]) : undefined;
+    if (skillNames.length === 0) continue;
+    effects.push({
+      id: createFeatureEffectId(source, "modifier", effects.length),
+      type: "modifier",
+      source,
+      target: "skill_check",
+      mode: "bonus",
+      amount: { kind: "ability_mod", ability: amountAbility, ...(min != null ? { min } : {}) },
+      appliesTo: skillNames,
+      summary: `Add ${amountAbility.toUpperCase()} modifier to ${skillNames.join(", ")} checks`,
+    } satisfies ModifierEffect);
+  }
+}
+
 export function parseAdvantageModifierEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
   const rageGate = createRageGate(source, text);
   const addModifier = (

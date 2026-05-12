@@ -14,6 +14,7 @@ export interface CharacterAbilitiesPanelsProps {
   pb: number;
   prof?: ProficiencyMap | null;
   saveBonuses?: Partial<Record<AbilKey, number>>;
+  skillBonuses?: Record<string, number>;
   abilityCheckAdvantages?: Partial<Record<AbilKey, boolean>>;
   abilityCheckDisadvantages?: Partial<Record<AbilKey, boolean>>;
   saveAdvantages?: Partial<Record<AbilKey, boolean>>;
@@ -74,6 +75,7 @@ export function CharacterAbilitiesPanels({
   pb,
   prof,
   saveBonuses,
+  skillBonuses,
   abilityCheckAdvantages,
   abilityCheckDisadvantages,
   saveAdvantages,
@@ -194,7 +196,8 @@ export function CharacterAbilitiesPanels({
             const tier = getSkillProficiencyTier(prof ?? undefined, name);
             const isProfSkill = tier >= 1;
             const isExpertise = tier >= 2;
-            const bonus = getSkillBonus(name, abil, scores, Math.max(1, (pb - 1) * 4), prof ?? undefined, { jackOfAllTrades: hasJackOfAllTrades });
+            const extraSkillBonus = skillBonuses?.[name] ?? 0;
+            const bonus = getSkillBonus(name, abil, scores, Math.max(1, (pb - 1) * 4), prof ?? undefined, { jackOfAllTrades: hasJackOfAllTrades }) + extraSkillBonus;
             const src = prof?.skills.find((s) => s.name.toLowerCase() === name.toLowerCase())?.source;
             const expertiseSrc = prof?.expertise.find((s) => s.name.toLowerCase() === name.toLowerCase())?.source;
             const armorPenalty = nonProficientArmorPenalty && (abil === "str" || abil === "dex");
@@ -256,8 +259,8 @@ export function CharacterAbilitiesPanels({
                     color: skillState === "disadvantage" ? C.colorPinkRed : skillState === "advantage" ? accentColor : isExpertise ? accentColor : isProfSkill ? C.green : C.text,
                   }}
                 >
-                  {isProfSkill && (src || expertiseSrc)
-                    ? <Tooltip text={[src, expertiseSrc].filter(Boolean).join(" - ")}>{fmtMod(bonus)}</Tooltip>
+                  {(isProfSkill && (src || expertiseSrc)) || extraSkillBonus !== 0
+                    ? <Tooltip text={[src, expertiseSrc, extraSkillBonus !== 0 ? `Feature bonus ${fmtMod(extraSkillBonus)}` : null].filter(Boolean).join(" - ")}>{fmtMod(bonus)}</Tooltip>
                     : fmtMod(bonus)}
                 </span>
               </div>

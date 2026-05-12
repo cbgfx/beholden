@@ -135,7 +135,7 @@ export function useCharacterCreatorSubmit(args: {
         await api(`/api/me/characters/${charId}/image`, { method: "POST", body: fd });
       }
 
-      navigate("/");
+      navigate(`/characters/${charId}`, { replace: true });
       return true;
     } catch (e: any) {
       setError(e?.message ?? "Failed to save character.");

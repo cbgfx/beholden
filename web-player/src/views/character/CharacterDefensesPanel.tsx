@@ -8,21 +8,24 @@ const DAMAGE_TYPE_OPTIONS = [
   "Slashing", "Thunder", "Nonmagical B/P/S",
 ];
 
+const IMMUNITY_OPTIONS = [...DAMAGE_TYPE_OPTIONS, "Critical Hits"];
+
 interface DefenseRowProps {
   label: string;
   color: string;
   items: string[];
   customItems: string[];
+  options: string[];
   onAdd: (value: string) => void;
   onRemove: (value: string) => void;
   accentColor: string;
 }
 
-function DefenseRow({ label, color, items, customItems, onAdd, onRemove, accentColor }: DefenseRowProps) {
+function DefenseRow({ label, color, items, customItems, options, onAdd, onRemove, accentColor }: DefenseRowProps) {
   const [adding, setAdding] = useState(false);
   const allItems = Array.from(new Set([...items, ...customItems]));
 
-  const remaining = DAMAGE_TYPE_OPTIONS.filter((o) => !allItems.includes(o));
+  const remaining = options.filter((o) => !allItems.includes(o));
 
   return (
     <div>
@@ -182,6 +185,7 @@ export function CharacterDefensesPanel({
           color="#34d399"
           items={resistances}
           customItems={customResistances}
+          options={DAMAGE_TYPE_OPTIONS}
           accentColor={accentColor}
           onAdd={(v) => onCustomResistancesChange([...customResistances, v])}
           onRemove={(v) => onCustomResistancesChange(customResistances.filter((x) => x !== v))}
@@ -191,6 +195,7 @@ export function CharacterDefensesPanel({
           color={C.colorRitual}
           items={damageImmunities}
           customItems={customImmunities}
+          options={IMMUNITY_OPTIONS}
           accentColor={accentColor}
           onAdd={(v) => onCustomImmunitiesChange([...customImmunities, v])}
           onRemove={(v) => onCustomImmunitiesChange(customImmunities.filter((x) => x !== v))}

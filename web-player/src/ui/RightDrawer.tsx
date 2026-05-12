@@ -37,6 +37,8 @@ export function RightDrawer({
         style={{
           position: "fixed", top: 0, right: 0, bottom: 0, zIndex: zIndex + 1,
           width,
+          height: "100dvh",
+          maxHeight: "100dvh",
           background: C.bg,
           borderLeft: "1px solid rgba(255,255,255,0.12)",
           display: "flex", flexDirection: "column",
@@ -62,7 +64,7 @@ export function RightDrawer({
         {footer && (
           <div
             style={{
-              padding: "12px 20px",
+              padding: "12px 20px calc(12px + env(safe-area-inset-bottom, 0px))",
               borderTop: "1px solid rgba(255,255,255,0.08)",
               flexShrink: 0,
             }}

@@ -34,6 +34,12 @@ const PROPERTY_LABELS: Record<string, string> = {
   LD: "Loading", S: "Special",
 };
 
+function formatItemText(text: CompendiumItemDetail["text"]): string {
+  return Array.isArray(text)
+    ? text.map((entry) => String(entry ?? "").trim()).filter(Boolean).join("\n\n")
+    : String(text ?? "").trim();
+}
+
 export function ItemPickerBrowsePanel(props: {
   createMode: boolean;
   loading: boolean;
@@ -311,7 +317,7 @@ function ItemDetail({ detail }: { detail: CompendiumItemDetail }) {
   const dmgTypeLabel = DMG_TYPE_LABELS[detail.dmgType ?? ""] ?? detail.dmgType ?? null;
   const propertyLabels = (detail.properties ?? []).map((property) => PROPERTY_LABELS[property] ?? property);
   const hasStats = dmg1 || dmg2 || detail.weight != null || detail.value != null || detail.ac != null || propertyLabels.length > 0;
-  const detailText = detail.text?.trim() ?? "";
+  const detailText = formatItemText(detail.text);
   const displayName = detail.name.replace(/\s*\[.*?\]\s*$/, "").trim();
 
   return (

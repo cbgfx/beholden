@@ -88,6 +88,24 @@ describe("parseFeatureEffects parser modules", () => {
     }
   });
 
+  it("parses skill-check bonuses from ability modifiers (modifiers module)", () => {
+    const parsed = parse(
+      "Divine Order: Thaumaturge",
+      "Your mystical connection to the divine gives you a bonus to your Intelligence (Arcana or Religion) checks. The bonus equals your Wisdom modifier (minimum of +1).",
+    );
+
+    const skillBonus = parsed.effects.find((effect) => effect.type === "modifier" && effect.target === "skill_check");
+    expect(skillBonus).toBeTruthy();
+    if (skillBonus && skillBonus.type === "modifier") {
+      expect(skillBonus.appliesTo).toEqual(["Arcana", "Religion"]);
+      expect(skillBonus.amount?.kind).toBe("ability_mod");
+      if (skillBonus.amount?.kind === "ability_mod") {
+        expect(skillBonus.amount.ability).toBe("wis");
+        expect(skillBonus.amount.min).toBe(1);
+      }
+    }
+  });
+
   it("parses AC bonus and darkvision enhancements (stats/modifiers modules)", () => {
     const parsed = parse(
       "Defensive Sight",

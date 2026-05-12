@@ -49,10 +49,22 @@ import {
   buildModifierStateMaps,
   buildPassiveScores,
   buildPreparedSpells,
+  buildSkillBonuses,
   buildSaveBonuses,
   buildTransformedCombatStats,
 } from "@/views/character/CharacterViewDerivedComputations";
 import type { CharacterViewDerivedState, CharacterViewDerivedStateArgs } from "@/views/character/CharacterViewDerivedTypes";
+
+function hasAdamantineCriticalHitImmunity(item: { name?: string | null; type?: string | null; description?: string | null; notes?: string | null }): boolean {
+  const text = `${item.name ?? ""} ${item.type ?? ""} ${item.description ?? ""} ${item.notes ?? ""}`;
+  return /\badamanti(?:ne|um)\b/i.test(text)
+    || /critical hit against you becomes a normal hit/i.test(text)
+    || /immune to critical hits/i.test(text);
+}
+
+function addUniqueCaseInsensitive(values: string[], value: string): string[] {
+  return values.some((entry) => entry.toLowerCase() === value.toLowerCase()) ? values : [...values, value];
+}
 
 export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateArgs): CharacterViewDerivedState {
   const currentCharacterData: CharacterData = args.char.characterData ?? {};
@@ -152,9 +164,16 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   const rageActive = (args.char.conditions ?? []).some((condition) => condition.key === "rage");
   const effectDefenses = collectDefensesFromEffects(parsedAllEffects, { raging: rageActive });
   const effectSenses = collectSensesFromEffects(parsedAllEffects);
+  const hasCriticalHitImmunity = inventory.some((item) =>
+    getEquipState(item) === "worn"
+    && isArmorItem(item)
+    && hasAdamantineCriticalHitImmunity(item)
+  );
   const parsedDefenses = {
     resistances: effectDefenses.resistances,
-    damageImmunities: effectDefenses.damageImmunities,
+    damageImmunities: hasCriticalHitImmunity
+      ? addUniqueCaseInsensitive(effectDefenses.damageImmunities, "Critical Hits")
+      : effectDefenses.damageImmunities,
     conditionImmunities: effectDefenses.conditionImmunities,
     vulnerabilities: [] as string[],
   };
@@ -274,6 +293,12 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     scoresByAbility,
     raging: rageActive,
   });
+  const skillBonuses = buildSkillBonuses({
+    parsedFeatureEffects: parsedAllEffects,
+    level: args.char.level,
+    scoresByAbility,
+    raging: rageActive,
+  });
   const {
     abilityCheckAdvantages,
     abilityCheckDisadvantages,
@@ -362,6 +387,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     initiativeBonus,
     transformedCombatStats,
     saveBonuses,
+    skillBonuses,
     abilityCheckAdvantages,
     abilityCheckDisadvantages,
     saveAdvantages,

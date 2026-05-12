@@ -153,6 +153,27 @@ export function buildSaveBonuses({
   ) as Partial<Record<AbilKey, number>>;
 }
 
+export function buildSkillBonuses({
+  parsedFeatureEffects,
+  level,
+  scoresByAbility,
+  raging,
+}: {
+  parsedFeatureEffects: ParsedFeatureEffects[];
+  level: number;
+  scoresByAbility: Record<AbilKey, number | null>;
+  raging: boolean;
+}) {
+  return Object.fromEntries(
+    ALL_SKILLS
+      .map(({ name }) => [
+        name,
+        deriveModifierBonusFromEffects(parsedFeatureEffects, "skill_check", { appliesTo: name, level, scores: scoresByAbility, raging }),
+      ] as const)
+      .filter(([, bonus]) => bonus !== 0)
+  ) as Record<string, number>;
+}
+
 export function buildModifierStateMaps({
   parsedFeatureEffects,
   raging,
