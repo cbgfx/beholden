@@ -49,6 +49,14 @@ export function selectedHirelingsTotal(
   }, 0);
 }
 
+function sortFacilitiesByLevelThenName(facilities: CompendiumFacility[]): CompendiumFacility[] {
+  return [...facilities].sort((a, b) => {
+    const levelDelta = (a.minimumLevel ?? 0) - (b.minimumLevel ?? 0);
+    if (levelDelta !== 0) return levelDelta;
+    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+  });
+}
+
 export function availableFacilityOptions(args: {
   bastion: Bastion;
   source: "player" | "dm_extra";
@@ -61,10 +69,11 @@ export function availableFacilityOptions(args: {
   const level = selectedLevelFromAssignments(bastion, players);
   const existingCounts = new Map<string, number>();
   for (const facility of bastion.facilities) {
+    if (source === "player" && facility.ownerPlayerId !== ownerPlayerId) continue;
     existingCounts.set(facility.facilityKey, (existingCounts.get(facility.facilityKey) ?? 0) + 1);
   }
 
-  return compendiumFacilities.filter((facility) => {
+  return sortFacilitiesByLevelThenName(compendiumFacilities.filter((facility) => {
     const ownerLevel = ownerPlayerId ? (players.find((entry) => entry.id === ownerPlayerId)?.level ?? 1) : level;
     if (facility.type === "special" && source !== "dm_extra" && facility.minimumLevel > ownerLevel) return false;
     if (source === "player" && ownerPlayerId && facility.type === "special") {
@@ -74,5 +83,5 @@ export function availableFacilityOptions(args: {
     }
     if (!facility.allowMultiple && (existingCounts.get(facility.key) ?? 0) > 0) return false;
     return true;
-  });
+  }));
 }

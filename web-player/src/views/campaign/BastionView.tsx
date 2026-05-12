@@ -78,6 +78,14 @@ function orderListWithMaintain(orders: string[]): string[] {
   return out;
 }
 
+function sortFacilitiesByLevelThenName(facilities: CompendiumFacility[]): CompendiumFacility[] {
+  return [...facilities].sort((a, b) => {
+    const levelDelta = (a.minimumLevel ?? 0) - (b.minimumLevel ?? 0);
+    if (levelDelta !== 0) return levelDelta;
+    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Toggle pill style (Active / Maintain)
 // ---------------------------------------------------------------------------
@@ -337,22 +345,25 @@ export function BastionView() {
   const availableOptionsByOwner = React.useMemo(() => {
     if (!bastion) return new Map<string, CompendiumFacility[]>();
     const out = new Map<string, CompendiumFacility[]>();
-    const counts = new Map<string, number>();
-    for (const f of bastion.facilities) counts.set(f.facilityKey, (counts.get(f.facilityKey) ?? 0) + 1);
     for (const ownerId of editableOwnerIds) {
       const ownerLevel = bastion.assignedPlayers?.find((p) => p.id === ownerId)?.level ?? 1;
       const ownerSlots = ownerLevel >= 17 ? 6 : ownerLevel >= 13 ? 5 : ownerLevel >= 9 ? 4 : ownerLevel >= 5 ? 2 : 0;
+      const ownerCounts = new Map<string, number>();
+      for (const facility of playerFacilities) {
+        if (facility.ownerPlayerId !== ownerId) continue;
+        ownerCounts.set(facility.facilityKey, (ownerCounts.get(facility.facilityKey) ?? 0) + 1);
+      }
       const ownerUsed = playerFacilities.filter((f) => {
         if (f.ownerPlayerId !== ownerId) return false;
         const def = f.definition ?? facilitiesByKey.get(f.facilityKey);
         return def?.type === "special";
       }).length;
-      out.set(ownerId, (compendium?.facilities ?? []).filter((f) => {
+      out.set(ownerId, sortFacilitiesByLevelThenName((compendium?.facilities ?? []).filter((f) => {
         if (f.minimumLevel > ownerLevel) return false;
-        if (!f.allowMultiple && (counts.get(f.key) ?? 0) > 0) return false;
+        if (!f.allowMultiple && (ownerCounts.get(f.key) ?? 0) > 0) return false;
         if (f.type === "special" && ownerUsed >= ownerSlots) return false;
         return true;
-      }));
+      })));
     }
     return out;
   }, [bastion, compendium?.facilities, editableOwnerIds, facilitiesByKey, playerFacilities]);
