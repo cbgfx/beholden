@@ -54,12 +54,10 @@ import type { SharedSpellSummary } from "@/views/character-creator/utils/SpellCh
 import type { SelectedFeatSpellcastingAbilityChoiceEntry } from "@/views/character-creator/utils/FeatSpellcastingUtils";
 import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 import type { FeatureGrants as ParseFeatureGrantsResult } from "@/views/character/CharacterRuleParsers";
-import { renderClassStep, renderLevelStep, renderSpeciesStep, renderSpellsStep } from "@/views/character-creator/steps/CharacterCreatorStepPanels";
+import { renderCampaignsStep, renderClassStep, renderIdentityStep, renderLevelStep, renderSpeciesStep, renderSpellsStep } from "@/views/character-creator/steps/CharacterCreatorStepPanels";
 import { renderBackgroundStep } from "@/views/character-creator/steps/CharacterCreatorBackgroundStep";
 import { renderAbilityScoresStep, renderDerivedStatsStep } from "@/views/character-creator/steps/CharacterCreatorPanelAdvancedSteps";
-import { renderIdentityStep } from "@/views/character-creator/steps/CharacterCreatorPanelCoreSteps";
 import { renderSkillsStep } from "@/views/character-creator/steps/CharacterCreatorSkillsStep";
-import { renderCampaignsStep } from "@/views/character-creator/steps/CharacterCreatorStepPanels";
 import { buildProficiencyMap as buildProficiencyMapFromUtils } from "@/views/character-creator/utils/CharacterCreatorProficiencyUtils";
 
 type StepRenderResult = { main: React.ReactNode; side: React.ReactNode };

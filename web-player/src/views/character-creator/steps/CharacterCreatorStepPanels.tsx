@@ -8,7 +8,10 @@ import {
   headingStyle,
 } from "../shared/CharacterCreatorStyles";
 
-export { renderCampaignsStep, renderClassStep, renderSpeciesStep } from "./CharacterCreatorPanelCoreSteps";
+export { renderClassStep } from "./CharacterCreatorClassStep";
+export { renderSpeciesStep } from "./CharacterCreatorSpeciesStep";
+export { renderIdentityStep } from "./CharacterCreatorIdentityStep";
+export { renderCampaignsStep } from "./CharacterCreatorCampaignsStep";
 
 export { renderLevelStep } from "./CharacterCreatorPanelLevelStep";
 

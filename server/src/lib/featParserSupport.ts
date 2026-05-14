@@ -3,6 +3,7 @@ import {
   ALL_SKILLS,
   ALL_TOOLS,
 } from "./proficiencyConstants.js";
+import type { ParsedFeatChoice, ParsedFeatUse } from "./featParserTypes.js";
 
 export const ABILITY_SCORES = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"] as const;
 const DAMAGE_TYPES = ["Acid", "Cold", "Fire", "Force", "Lightning", "Necrotic", "Poison", "Psychic", "Radiant", "Thunder"] as const;
@@ -93,4 +94,82 @@ export function wordToNumber(value: string): number {
   };
   const parsed = Number.parseInt(lowered, 10);
   return Number.isFinite(parsed) ? parsed : (lookup[lowered] ?? 1);
+}
+
+export function uniq(values: string[]): string[] {
+  return [...new Set(values)];
+}
+
+export function addIfMissing(list: string[], values: string[]) {
+  for (const value of values) {
+    if (!list.includes(value)) list.push(value);
+  }
+}
+
+export function splitSentences(text: string): string[] {
+  return text
+    .split(/(?<=[.!?])\s+(?=[A-Z])/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+export function normalizeChoiceDomain(value: string): string {
+  const lowered = value.toLowerCase();
+  if (lowered.startsWith("skill")) return "skill";
+  if (lowered.startsWith("tool")) return "tool";
+  if (lowered.startsWith("language")) return "language";
+  return lowered;
+}
+
+export function pushChoice(choices: ParsedFeatChoice[], choice: ParsedFeatChoice) {
+  const key = JSON.stringify({
+    type: choice.type,
+    count: choice.count,
+    options: choice.options,
+    level: choice.level,
+    linkedTo: choice.linkedTo,
+    dependsOnChoiceId: choice.dependsOnChoiceId,
+    dependencyKind: choice.dependencyKind,
+    replacementFor: choice.replacementFor,
+    note: choice.note,
+  });
+  const exists = choices.some((entry) => JSON.stringify({
+    type: entry.type,
+    count: entry.count,
+    options: entry.options,
+    level: entry.level,
+    linkedTo: entry.linkedTo,
+    dependsOnChoiceId: entry.dependsOnChoiceId,
+    dependencyKind: entry.dependencyKind,
+    replacementFor: entry.replacementFor,
+    note: entry.note,
+  }) === key);
+  if (!exists) choices.push(choice);
+}
+
+export function detectRecharge(text: string): ParsedFeatUse["recharge"] {
+  if (/finish a Short or Long Rest/i.test(text)) return "short_or_long_rest";
+  if (/finish a Long Rest/i.test(text)) return "long_rest";
+  if (/finish a Short Rest/i.test(text)) return "short_rest";
+  return null;
+}
+
+export function pushUse(uses: ParsedFeatUse[], use: ParsedFeatUse) {
+  const key = JSON.stringify({
+    count: use.count,
+    countFrom: use.countFrom ?? null,
+    ability: use.ability ?? null,
+    minimum: use.minimum ?? null,
+    recharge: use.recharge ?? null,
+    note: use.note,
+  });
+  const exists = uses.some((entry) => JSON.stringify({
+    count: entry.count,
+    countFrom: entry.countFrom ?? null,
+    ability: entry.ability ?? null,
+    minimum: entry.minimum ?? null,
+    recharge: entry.recharge ?? null,
+    note: entry.note,
+  }) === key);
+  if (!exists) uses.push(use);
 }

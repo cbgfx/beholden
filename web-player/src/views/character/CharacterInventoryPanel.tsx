@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { api } from "@/services/api";
 import { createPartyInventoryItem, fetchPartyInventory, fetchPartyInventoryItem, updatePartyInventoryQuantity } from "@/services/inventoryApi";
 import { useWs } from "@/services/ws";
@@ -9,22 +9,26 @@ import { useDebouncedSingleflight } from "@beholden/shared/ui";
 import {
   DEFAULT_CONTAINER_ID,
   PARTY_STASH_CONTAINER_ID,
+  inferStackKey,
+  isStackableItem,
   matchInventorySummary,
+  mergeStackedInventoryItem,
   normalizeContainers,
+  parsePackContentsFromDescription,
   singularizeInventoryLookupName,
-  stepperBtn,
   subLabelStyle,
   uid,
 } from "@/views/character/CharacterInventoryPanelHelpers";
 import { InventoryItemDrawer } from "@/views/character/CharacterInventoryDrawer";
 import { InventoryItemPickerModal } from "@/views/character/CharacterInventoryPickerModal";
-import { ItemRow, PartyStashItemRow, type PartyStashItem } from "@/views/character/CharacterInventoryPanelRows";
+import { ItemRow, type PartyStashItem } from "@/views/character/CharacterInventoryPanelRows";
+import { InventoryCurrencyBar } from "@/views/character/CharacterInventoryCurrencyBar";
+import { InventoryPartyStashSection } from "@/views/character/CharacterInventoryPartyStashSection";
+import { InventoryContainerSection } from "@/views/character/CharacterInventoryContainerSection";
 import {
   CollapsiblePanel,
-  addBtnStyle,
   panelHeaderAddBtn,
 } from "@/views/character/CharacterViewParts";
-import { togglePillStyle } from "@beholden/shared/ui";
 import {
   canEquipOffhand,
   type CharacterDataLike,
@@ -61,90 +65,6 @@ type PersistPayload = {
   inventoryContainers: InventoryContainer[];
 };
 
-interface PackContentEntry {
-  name: string;
-  quantity: number;
-}
-
-
-function singularizeLoose(name: string): string {
-  const n = String(name ?? "").trim();
-  if (!n) return n;
-  if (/tools$/i.test(n)) return n;
-  if (/ies$/i.test(n)) return `${n.slice(0, -3)}y`;
-  if (/(ches|shes|sses|xes|zes)$/i.test(n)) return n.slice(0, -2);
-  if (/s$/i.test(n) && !/ss$/i.test(n)) return n.slice(0, -1);
-  return n;
-}
-
-function normalizePackItemName(raw: string): string {
-  let name = String(raw ?? "").trim().replace(/\.$/, "");
-  name = name.replace(/^(?:and|or)\s+/i, "");
-  name = name.replace(/^an?\s+/i, "");
-  name = name.replace(/^(?:set|pair)\s+of\s+/i, "");
-  name = name.replace(/^(?:flasks?|vials?|sheets?|sticks?|pieces?|pounds?|days?)\s+of\s+/i, "");
-  return name.trim();
-}
-
-function splitPackListText(listText: string): string[] {
-  const base = String(listText ?? "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/\.$/, "");
-  if (!base) return [];
-  return base
-    .split(/\s*,\s*/g)
-    .flatMap((part, index, all) => (index === all.length - 1 ? part.split(/\s+and\s+/i) : [part]))
-    .map((part) => part.trim())
-    .filter(Boolean);
-}
-
-function parsePackContentsFromDescription(description: string): PackContentEntry[] {
-  const raw = String(description ?? "");
-  if (!raw) return [];
-  const listMatch = raw.match(/\bpack contains the following items:\s*([\s\S]*?)(?:\n\s*Source:|Source:|$)/i);
-  if (!listMatch?.[1]) return [];
-  const tokens = splitPackListText(listMatch[1]);
-  if (tokens.length === 0) return [];
-  return tokens
-    .map((token) => {
-      const qtyMatch = token.match(/^(\d[\d,]*)\s+(.+)$/);
-      const quantity = qtyMatch ? Math.max(1, Number(qtyMatch[1].replace(/,/g, "")) || 1) : 1;
-      const rawName = qtyMatch ? qtyMatch[2] : token;
-      let name = normalizePackItemName(rawName);
-      if (quantity > 1) name = singularizeLoose(name);
-      if (/^backpacks?$/i.test(name)) return null;
-      return { name, quantity } satisfies PackContentEntry;
-    })
-    .filter((entry): entry is PackContentEntry => Boolean(entry?.name));
-}
-
-function inferStackKey(item: Pick<InventoryItem, "name" | "itemId" | "type">): string {
-  const itemId = String(item.itemId ?? "").trim();
-  if (itemId) return `id:${itemId.toLowerCase()}`;
-  const normalizedName = normalizeInventoryItemLookupName(singularizeInventoryLookupName(item.name));
-  const normalizedType = String(item.type ?? "").trim().toLowerCase();
-  return `name:${normalizedName}|type:${normalizedType}`;
-}
-
-function isStackableItem(item: InventoryItem): boolean {
-  return !isWeaponItem(item) && !isArmorItem(item) && !isWearableItem(item);
-}
-
-function mergeStackedInventoryItem(existing: InventoryItem, incoming: InventoryItem): InventoryItem {
-  return {
-    ...existing,
-    quantity: Math.max(1, existing.quantity) + Math.max(1, incoming.quantity),
-    source: existing.source ?? incoming.source,
-    itemId: existing.itemId ?? incoming.itemId,
-    rarity: existing.rarity ?? incoming.rarity ?? null,
-    type: existing.type ?? incoming.type ?? null,
-    weight: existing.weight ?? incoming.weight ?? null,
-    description: existing.description ?? incoming.description,
-    notes: existing.notes ?? incoming.notes,
-  };
-}
-
 export function InventoryPanel({ char, charData, parsedFeatureEffects, accentColor, campaignId, onSave }: {
   char: InventoryPanelCharacter;
   charData: InventoryPanelCharacterData | null;
@@ -170,9 +90,6 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
   const [expandedBusy, setExpandedBusy] = useState(false);
   const [expandedDetailCache, setExpandedDetailCache] = useState<Record<string, CompendiumItemDetail>>({});
   const [itemEditMode, setItemEditMode] = useState(false);
-  const [currencyPopupCode, setCurrencyPopupCode] = useState<"PP" | "GP" | "SP" | "CP" | null>(null);
-  const [currencyInput, setCurrencyInput] = useState("");
-  const currencyPopupRef = useRef<HTMLDivElement | null>(null);
   const [partyStashItems, setPartyStashItems] = useState<PartyStashItem[]>([]);
 
   const fetchPartyStash = useCallback(() => {
@@ -263,19 +180,6 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
       .catch(() => { if (alive) setItemIndex([]); });
     return () => { alive = false; };
   }, [items]);
-
-  useEffect(() => {
-    if (!currencyPopupCode) return;
-    function handlePointerDown(event: MouseEvent) {
-      if (!currencyPopupRef.current) return;
-      const target = event.target;
-      if (target instanceof Node && !currencyPopupRef.current.contains(target)) {
-        setCurrencyPopupCode(null);
-      }
-    }
-    document.addEventListener("mousedown", handlePointerDown);
-    return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [currencyPopupCode]);
 
   useEffect(() => {
     if (itemIndex.length === 0) return;
@@ -822,15 +726,6 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
     ? items.filter((it) => it.id !== selectedItem.id && it.attuned).length
     : items.filter((it) => it.attuned).length;
 
-  const emptyContainerStyle: React.CSSProperties = {
-    padding: "8px 10px",
-    border: "1px dashed rgba(255,255,255,0.08)",
-    borderRadius: 10,
-    color: C.muted,
-    fontSize: "var(--fs-small)",
-    background: "rgba(255,255,255,0.02)",
-  };
-
   return (
     <CollapsiblePanel
       title={<>Inventory{saving && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginLeft: 6, fontWeight: 400, textTransform: "none" }}>saving…</span>}</>}
@@ -839,112 +734,14 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
       actions={<button type="button" onClick={() => setPickerOpen(true)} title="Add item" style={panelHeaderAddBtn(accentColor)}>+</button>}
     >
 
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 12,
-        marginBottom: 10,
-        padding: "0 2px",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0 }}>
-          <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>
-            Currency
-          </div>
-          {(["PP", "GP", "SP", "CP"] as const).map((code) => (
-            <div
-              key={code}
-              ref={currencyPopupCode === code ? currencyPopupRef : undefined}
-              style={{ position: "relative" }}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setCurrencyInput(String(currencyTotals[code]));
-                  setCurrencyPopupCode((current) => current === code ? null : code);
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  fontSize: "var(--fs-small)",
-                  color: C.text,
-                  padding: "2px 10px",
-                  borderRadius: 999,
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  background: "rgba(255,255,255,0.04)",
-                  cursor: "pointer",
-                }}
-              >
-                <span style={{ color: C.muted, fontWeight: 700 }}>{code}</span>
-                <span style={{ fontWeight: 800, minWidth: 20, textAlign: "right" }}>{currencyTotals[code].toLocaleString()}</span>
-              </button>
-              {currencyPopupCode === code && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "calc(100% + 6px)",
-                    left: 0,
-                    zIndex: 20,
-                    background: "#1e2030",
-                    border: "1px solid rgba(255,255,255,0.15)",
-                    borderRadius: 10,
-                    padding: "12px 14px",
-                    minWidth: 210,
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
-                  }}
-                >
-                  <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted, marginBottom: 2 }}>Edit {code}</div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <input
-                      autoFocus
-                      type="number"
-                      min={0}
-                      value={currencyInput}
-                      onChange={(e) => setCurrencyInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          void saveCurrencyAmount(code, Number(currencyInput));
-                          setCurrencyPopupCode(null);
-                        }
-                        if (e.key === "Escape") setCurrencyPopupCode(null);
-                      }}
-                      style={{
-                        flex: 1,
-                        padding: "6px 8px",
-                        borderRadius: 6,
-                        fontSize: "var(--fs-subtitle)",
-                        fontWeight: 700,
-                        border: "1px solid rgba(255,255,255,0.15)",
-                        background: "rgba(255,255,255,0.07)",
-                        color: C.text,
-                        outline: "none",
-                        textAlign: "center",
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void saveCurrencyAmount(code, Number(currencyInput));
-                        setCurrencyPopupCode(null);
-                      }}
-                      style={addBtnStyle(accentColor)}
-                    >
-                      Save
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-        <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: overCapacity ? C.red : C.muted }}>
-          {formatWeight(carriedWeight)} / {formatWeight(carryCapacity)} lb
-        </div>
-      </div>
+      <InventoryCurrencyBar
+        currencyTotals={currencyTotals}
+        carriedWeight={carriedWeight}
+        carryCapacity={carryCapacity}
+        overCapacity={overCapacity}
+        accentColor={accentColor}
+        onSaveCurrency={saveCurrencyAmount}
+      />
 
       {equipped.length > 0 && (
         <div style={{ marginBottom: 10 }}>
@@ -980,179 +777,52 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
       {containers.map((container) => {
         const containerItems = itemsByContainer.get(container.id) ?? [];
         const isDefault = container.id === DEFAULT_CONTAINER_ID;
-        const isCollapsed = collapsedContainerIds.includes(container.id);
         return (
-          <div key={container.id} style={{ marginBottom: 12 }}>
-            <div
-              onClick={(event) => {
-                const target = event.target;
-                if (target instanceof HTMLElement && target.closest("button, input, select, textarea, label")) return;
-                toggleContainerCollapsed(container.id);
-              }}
-              style={{ ...subLabelStyle, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, cursor: "pointer" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0 }}>
-                <span
-                  aria-hidden="true"
-                  style={{
-                    color: C.muted,
-                    fontSize: "var(--fs-tiny)",
-                    lineHeight: 1,
-                    transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
-                    transition: "transform 120ms ease",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 10,
-                    flexShrink: 0,
-                  }}
-                >
-                  ▼
-                </span>
-                <input
-                  value={container.name}
-                  onChange={(e) => {
-                    setContainers((prev) => prev.map((entry) => entry.id === container.id ? { ...entry, name: e.target.value } : entry));
-                  }}
-                  onBlur={(e) => { void renameContainer(container.id, e.target.value); }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.currentTarget.blur();
-                    }
-                    if (e.key === "Escape") {
-                      setContainers(normalizeContainers(charData?.inventoryContainers ?? containers));
-                    }
-                  }}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    borderBottom: "1px dashed rgba(255,255,255,0.12)",
-                    color: C.muted,
-                    fontSize: "var(--fs-tiny)",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.07em",
-                    minWidth: 110,
-                    outline: "none",
-                    padding: "0 0 2px",
-                  }}
-                />
-                {!isDefault && (
-                  <button
-                    type="button"
-                    onClick={() => { void toggleContainerIgnoreWeight(container.id); }}
-                    style={togglePillStyle(Boolean(container.ignoreWeight), accentColor, C.panelBorder, C.muted)}
-                  >
-                    Ignore Weight
-                  </button>
-                )}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <button
-                  type="button"
-                  onClick={() => { void addContainer(container.id); }}
-                  title="Add container"
-                  style={{ ...stepperBtn, width: 24, height: 24, fontSize: "var(--fs-body)" }}
-                >
-                  +
-                </button>
-                {!isDefault && (
-                  <button
-                    type="button"
-                    onClick={() => { void removeContainer(container.id); }}
-                    title="Remove container"
-                    style={{ ...stepperBtn, width: 24, height: 24, fontSize: "var(--fs-body)" }}
-                  >
-                    −
-                  </button>
-                )}
-              </div>
-            </div>
-            {!isCollapsed && (containerItems.length > 0 ? (
-              <DraggableList
-                items={containerItems.map((item) => ({ id: item.id }))}
-                onReorder={(ids) => {
-                  void reorderItemsByIds(ids, (item) => {
-                    if (getEquipState(item) !== "backpack") return false;
-                    if (isCurrencyItem(item)) return false;
-                    const itemContainerId = item.containerId && containers.some((entry) => entry.id === item.containerId)
-                      ? item.containerId
-                      : DEFAULT_CONTAINER_ID;
-                    return itemContainerId === container.id;
-                  });
-                }}
-                renderItem={(dragItem) => {
-                  const it = containerItems.find((item) => item.id === dragItem.id);
-                  if (!it) return null;
-                  return (
-                    <ItemRow
-                      item={it}
-                      accentColor={accentColor}
-                      charData={charData}
-                      parsedFeatureEffects={parsedFeatureEffects}
-                      expanded={expandedItemId === it.id}
-                      onToggleExpanded={toggleExpandedItem}
-                      onCycleMain={cycleMainHand}
-                      onToggleOffhand={toggleOffhand}
-                      onToggleWorn={toggleWorn}
-                      onRemove={removeItem}
-                      onQty={changeQty}
-                    />
-                  );
-                }}
-              />
-            ) : (
-              <div style={emptyContainerStyle}>Empty.</div>
-            ))}
-          </div>
+          <InventoryContainerSection
+            key={container.id}
+            container={container}
+            containerItems={containerItems}
+            isDefault={isDefault}
+            isCollapsed={collapsedContainerIds.includes(container.id)}
+            accentColor={accentColor}
+            charData={charData}
+            parsedFeatureEffects={parsedFeatureEffects}
+            expandedItemId={expandedItemId}
+            onToggleCollapsed={() => toggleContainerCollapsed(container.id)}
+            onNameChange={(name) => setContainers((prev) => prev.map((entry) => entry.id === container.id ? { ...entry, name } : entry))}
+            onRename={(name) => renameContainer(container.id, name)}
+            onResetName={() => setContainers(normalizeContainers(charData?.inventoryContainers ?? containers))}
+            onToggleIgnoreWeight={() => toggleContainerIgnoreWeight(container.id)}
+            onRemove={!isDefault ? () => removeContainer(container.id) : undefined}
+            onAdd={() => addContainer(container.id)}
+            onReorder={(ids) => void reorderItemsByIds(ids, (item) => {
+              if (getEquipState(item) !== "backpack") return false;
+              if (isCurrencyItem(item)) return false;
+              const itemContainerId = item.containerId && containers.some((entry) => entry.id === item.containerId)
+                ? item.containerId
+                : DEFAULT_CONTAINER_ID;
+              return itemContainerId === container.id;
+            })}
+            onToggleExpandedItem={toggleExpandedItem}
+            onCycleMain={cycleMainHand}
+            onToggleOffhand={toggleOffhand}
+            onToggleWorn={toggleWorn}
+            onRemoveItem={removeItem}
+            onQty={changeQty}
+          />
         );
       })}
 
-      {/* Party Stash */}
-      {campaignId && (() => {
-        const stashCollapsed = collapsedContainerIds.includes(PARTY_STASH_CONTAINER_ID);
-        return (
-          <div style={{ marginBottom: 12 }}>
-            <div
-              onClick={() => toggleContainerCollapsed(PARTY_STASH_CONTAINER_ID)}
-              style={{ ...subLabelStyle, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
-            >
-              <span
-                aria-hidden="true"
-                style={{
-                  color: C.muted,
-                  fontSize: "var(--fs-tiny)",
-                  lineHeight: 1,
-                  transform: stashCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
-                  transition: "transform 120ms ease",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 10,
-                  flexShrink: 0,
-                }}
-              >▼</span>
-              Party Stash
-              <span style={{ fontWeight: 400, color: C.muted, textTransform: "none", letterSpacing: 0, fontSize: "var(--fs-tiny)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>— shared</span>
-            </div>
-            {!stashCollapsed && (partyStashItems.length === 0 ? (
-              <div style={emptyContainerStyle}>
-                Empty. Move an item here to share it with the party.
-              </div>
-            ) : (
-              partyStashItems.map((it) => (
-                <PartyStashItemRow
-                  key={it.id}
-                  item={it}
-                  onTake={() => void takeFromPartyStash(it)}
-                  onDelete={() => void deleteFromPartyStash(it.id)}
-                  onQuantity={(q) => void changePartyStashQty(it.id, q)}
-                />
-              ))
-            ))}
-          </div>
-        );
-      })()}
+      {campaignId && (
+        <InventoryPartyStashSection
+          stashItems={partyStashItems}
+          collapsed={collapsedContainerIds.includes(PARTY_STASH_CONTAINER_ID)}
+          onToggleCollapsed={() => toggleContainerCollapsed(PARTY_STASH_CONTAINER_ID)}
+          onTake={(item) => void takeFromPartyStash(item)}
+          onDelete={(id) => void deleteFromPartyStash(id)}
+          onQuantity={(id, q) => void changePartyStashQty(id, q)}
+        />
+      )}
 
       <InventoryItemPickerModal
         isOpen={pickerOpen}

@@ -1,30 +1,49 @@
-﻿/**
- * Module-level helpers, types, and constants extracted from CharacterView.tsx.
- * These are all pure functions or data - no React/hooks.
- */
-import type { AbilKey, CharacterCampaign, CharacterClassEntry, CharacterData, ConditionInstance, ProficiencyMap, ResourceCounter } from "@/views/character/CharacterSheetTypes";
+import type { AbilKey, CharacterClassEntry, CharacterData, ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 import {
   dedupeTaggedItems,
   isLikelyTrackedSpellName,
   normalizeArmorProficiencyName,
   normalizeLanguageName,
-  normalizeResourceKey,
   normalizeSpellTrackingName,
   splitArmorProficiencyNames,
   splitWeaponProficiencyNames,
   normalizeWeaponProficiencyName,
 } from "@/views/character/CharacterSheetUtils";
-import { getPolymorphCondition, type SharedPolymorphCondition } from "@beholden/shared/domain";
+import { getPolymorphCondition } from "@beholden/shared/domain";
 import { getEquipState, type InventoryItem } from "@/views/character/CharacterInventory";
-import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import { resolveStoredCompendiumClassId } from "@/domain/character/classIds";
+import type { PolymorphConditionData } from "./CharacterViewTypes";
+
+export {
+  XP_TO_LEVEL,
+  SHEET_COLOR_PRESETS,
+  type Character,
+  type ClassCounterDef,
+  type ClassRestDetail,
+  type LoreTraitDetail,
+  type RaceFeatureDetail,
+  type BackgroundFeatureDetail,
+  type FeatFeatureDetail,
+  type LevelUpFeatDetail,
+  type InvocationFeatureDetail,
+  type ClassFeatFeatureDetail,
+  type SheetOverrides,
+  type PolymorphConditionData,
+  type EditableSheetOverrideKey,
+  type EditableSheetOverrideField,
+  type ResourceProgressionOverride,
+} from "./CharacterViewTypes";
+
+export {
+  collectClassResources,
+  collectFeatureResourceFallbacks,
+  mergeResourceState,
+  shouldResetOnRest,
+} from "./CharacterViewResourceHelpers";
 
 // ---------------------------------------------------------------------------
-// Constants
+// Inventory / ability score helpers
 // ---------------------------------------------------------------------------
-
-/** Total XP required to reach each level (index = level). Index 0 unused. */
-export const XP_TO_LEVEL = [0, 0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 260000, 300000, 355000];
 
 const ABILITY_SCORE_NAMES: Record<AbilKey, string> = {
   str: "Strength",
@@ -34,181 +53,6 @@ const ABILITY_SCORE_NAMES: Record<AbilKey, string> = {
   wis: "Wisdom",
   cha: "Charisma",
 };
-
-export const SHEET_COLOR_PRESETS = [
-  "#38bdf8",
-  "#22c55e",
-  "#f59e0b",
-  "#ff5d5d",
-  "#8b5cf6",
-  "#fb7185",
-  "#f97316",
-  "#d946ef",
-  "#14b8a6",
-  "#06b6d4",
-  "#84cc16",
-  "#eab308",
-  "#6366f1",
-  "#94a3b8",
-  "#ff6b3d",
-  "#d08ce9",
-  "#b9c4cf",
-  "#8a9b32",
-  "#a96c4f",
-  "#5bc0eb",
-  "#d4b24c",
-  "#68b38c",
-  "#6f6f6a",
-  "#cf4444",
-  "#8f46d9",
-  "#0b5fff",
-];
-
-// ---------------------------------------------------------------------------
-// Types: API response shapes
-// ---------------------------------------------------------------------------
-
-export interface Character {
-  id: string;
-  name: string;
-  playerName: string;
-  className: string;
-  species: string;
-  level: number;
-  hpMax: number;
-  hpCurrent: number;
-  ac: number;
-  syncedAc?: number;
-  speed: number;
-  strScore: number | null;
-  dexScore: number | null;
-  conScore: number | null;
-  intScore: number | null;
-  wisScore: number | null;
-  chaScore: number | null;
-  color: string | null;
-  imageUrl: string | null;
-  characterData: CharacterData | null;
-  campaigns: CharacterCampaign[];
-  conditions?: ConditionInstance[];
-  overrides?: {
-    tempHp: number;
-    acBonus: number;
-    hpMaxBonus: number;
-    inspiration?: boolean;
-    abilityScores?: Partial<Record<AbilKey, number>>;
-  };
-  deathSaves?: { success: number; fail: number };
-  sharedNotes?: string;
-  campaignSharedNotes?: string;
-}
-
-export interface ClassCounterDef {
-  name: string;
-  value: number;
-  reset: string;
-  subclass?: string | null;
-}
-
-export interface ClassRestDetail {
-  id: string;
-  name: string;
-  hd: number | null;
-  slotsReset?: string | null;
-  autolevels: Array<{
-    level: number;
-    slots: number[] | null;
-    counters: ClassCounterDef[];
-    features?: Array<{
-      name: string;
-      text: string;
-      optional?: boolean;
-      preparedSpellProgression?: PreparedSpellProgressionTable[];
-    }>;
-  }>;
-}
-
-export interface LoreTraitDetail {
-  name: string;
-  text: string;
-  preparedSpellProgression?: PreparedSpellProgressionTable[];
-}
-
-export interface RaceFeatureDetail {
-  id: string;
-  name: string;
-  traits: LoreTraitDetail[];
-}
-
-export interface BackgroundFeatureDetail {
-  id: string;
-  name: string;
-  traits: LoreTraitDetail[];
-}
-
-export interface FeatFeatureDetail {
-  id: string;
-  name: string;
-  text?: string | null;
-  preparedSpellProgression?: PreparedSpellProgressionTable[];
-}
-
-export interface LevelUpFeatDetail {
-  level: number;
-  featId: string;
-  feat: FeatFeatureDetail;
-}
-
-export interface InvocationFeatureDetail {
-  id: string;
-  name: string;
-  text: string;
-}
-
-export interface ClassFeatFeatureDetail {
-  featureName: string;
-  feat: FeatFeatureDetail;
-}
-
-export interface SheetOverrides {
-  tempHp: number;
-  acBonus: number;
-  hpMaxBonus: number;
-  inspiration?: boolean;
-  abilityScores?: Partial<Record<AbilKey, number>>;
-}
-
-export type PolymorphConditionData = SharedPolymorphCondition & ConditionInstance;
-
-export type EditableSheetOverrideKey = "tempHp" | "acBonus" | "hpMaxBonus";
-
-export interface EditableSheetOverrideField {
-  key: EditableSheetOverrideKey;
-  label: string;
-  help: string;
-}
-
-export interface ResourceProgressionOverride {
-  className: string;
-  featureName: string;
-  values: Array<{ level: number; value: number }>;
-}
-
-const RESOURCE_PROGRESSION_OVERRIDES: ResourceProgressionOverride[] = [
-  {
-    className: "Druid",
-    featureName: "Wild Shape",
-    values: [
-      { level: 2, value: 2 },
-      { level: 6, value: 3 },
-      { level: 17, value: 4 },
-    ],
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Inventory / ability score helpers
-// ---------------------------------------------------------------------------
 
 type ItemAbilityScoreOverride = {
   ability: AbilKey;
@@ -374,6 +218,11 @@ export function normalizeProficiencies(rawProf: CharacterData["proficiencies"] |
     plans: dedupeTaggedItems(rawProf.plans),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Character class utilities
+// ---------------------------------------------------------------------------
+
 export function normalizeCharacterClasses(
   rawData: CharacterData | null | undefined,
 ): CharacterClassEntry[] {
@@ -409,37 +258,6 @@ export function uid(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-function normalizeCompendiumClassLookupName(name: string | null | undefined): string {
-  return String(name ?? "")
-    .replace(/\s*\[[^\]]+\]\s*$/u, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-}
-
-function resolveResourceProgressionOverride(
-  className: string | null | undefined,
-  featureName: string | null | undefined,
-  level: number,
-): number | null {
-  const normalizedClass = normalizeCompendiumClassLookupName(className);
-  const normalizedFeature = String(featureName ?? "").trim().toLowerCase();
-  const override = RESOURCE_PROGRESSION_OVERRIDES.find((entry) =>
-    normalizeCompendiumClassLookupName(entry.className) === normalizedClass
-    && entry.featureName.trim().toLowerCase() === normalizedFeature
-  );
-  if (!override) return null;
-  let result: number | null = null;
-  for (const row of override.values) {
-    if (row.level <= level) result = row.value;
-  }
-  return result;
-}
-
-function normalizeSubclassLookupName(name: string | null | undefined): string {
-  return String(name ?? "").trim().toLowerCase();
-}
-
 export function stripEditionTag(value: string | null | undefined): string {
   return String(value ?? "")
     .replace(/\s*\[(?:5\.5e|2024|5e|5\.0)\]\s*$/i, "")
@@ -453,131 +271,6 @@ export function parseLeadingNumberLoose(value: unknown): number {
   return match ? Number(match[0]) : NaN;
 }
 
-function shouldDisplayClassCounterResource(name: string | null | undefined): boolean {
-  const normalized = String(name ?? "").trim();
-  if (!normalized) return false;
-  if (/^(spells prepared|plans known|known forms)$/i.test(normalized)) return false;
-  return true;
+export function getPolymorphConditionData(conditions: unknown[] | undefined): PolymorphConditionData | null {
+  return getPolymorphCondition(conditions as never) as PolymorphConditionData | null;
 }
-
-// ---------------------------------------------------------------------------
-// Resource collection / merging
-// ---------------------------------------------------------------------------
-
-export function collectClassResources(classDetail: ClassRestDetail | null, level: number, selectedSubclass?: string | null): ResourceCounter[] {
-  if (!classDetail) return [];
-  const latest = new Map<string, ResourceCounter>();
-  for (const autolevel of classDetail.autolevels) {
-    if (autolevel.level > level) continue;
-    for (const counter of autolevel.counters ?? []) {
-      const max = Math.max(0, Math.floor(Number(counter.value) || 0));
-      const name = String(counter.name ?? "").trim();
-      const counterSubclass = String(counter.subclass ?? "").trim();
-      if (counterSubclass && normalizeSubclassLookupName(counterSubclass) !== normalizeSubclassLookupName(selectedSubclass)) continue;
-      if (!name || max <= 0 || !shouldDisplayClassCounterResource(name)) continue;
-      const key = normalizeResourceKey(name);
-      latest.set(key, {
-        key,
-        name,
-        current: max,
-        max,
-        reset: String(counter.reset ?? "L").trim().toUpperCase() || "L",
-        restoreAmount: "all",
-      });
-    }
-  }
-  return Array.from(latest.values());
-}
-
-function parseWordCount(value: string): number | null {
-  const normalized = String(value ?? "").trim().toLowerCase();
-  const direct = Number.parseInt(normalized, 10);
-  if (Number.isFinite(direct)) return direct;
-  const words: Record<string, number> = {
-    once: 1,
-    one: 1,
-    twice: 2,
-    two: 2,
-    three: 3,
-    four: 4,
-    five: 5,
-    six: 6,
-  };
-  return words[normalized] ?? null;
-}
-
-export function collectFeatureResourceFallbacks(
-  features: Array<{ name: string; text?: string | null }>,
-  className: string | null | undefined,
-  level: number,
-): ResourceCounter[] {
-  const fallback = new Map<string, ResourceCounter>();
-  for (const feature of features) {
-    const sourceLabel = String(feature.name ?? "").replace(/^Level\s+\d+\s*:\s*/i, "").trim();
-    const text = String(feature.text ?? "").replace(/\s+/g, " ").trim();
-    if (!sourceLabel || !text) continue;
-    const escapedLabel = sourceLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const fixedUseMatch = text.match(new RegExp(`you can use (?:the )?(?:${escapedLabel}|this feature)\\s+(once|twice|one|two|three|four|five|six|\\d+)`, "i"));
-    const fixedUses = parseWordCount(fixedUseMatch?.[1] ?? "");
-    const regainsOneOnShort = /regain one expended use when you finish a short rest/i.test(text);
-    const regainsAllOnLong = /regain all expended uses when you finish a long rest/i.test(text);
-    const regainsAllOnShortOrLong = /regain all expended uses when you finish a short or long rest/i.test(text);
-    const regainsAllOnShort = /regain all expended uses when you finish a short rest/i.test(text);
-    const reset =
-      regainsOneOnShort ? "S"
-      : regainsAllOnShortOrLong ? "SL"
-      : regainsAllOnShort ? "S"
-      : regainsAllOnLong ? "L"
-      : null;
-    if (!fixedUses || !reset) continue;
-    const scaledMax = resolveResourceProgressionOverride(className, sourceLabel, level) ?? fixedUses;
-    const key = normalizeResourceKey(sourceLabel);
-    if (fallback.has(key)) continue;
-    fallback.set(key, {
-      key,
-      name: sourceLabel,
-      current: scaledMax,
-      max: scaledMax,
-      reset,
-      restoreAmount: regainsOneOnShort ? "one" : "all",
-    });
-  }
-  return Array.from(fallback.values());
-}
-
-export function mergeResourceState(saved: ResourceCounter[] | undefined, derived: ResourceCounter[]): ResourceCounter[] {
-  const savedList = Array.isArray(saved) ? saved : [];
-  const savedByKey = new Map(savedList.map((resource) => [resource.key || normalizeResourceKey(resource.name), resource]));
-  const merged = derived.map((resource) => {
-    const existing = savedByKey.get(resource.key);
-    return {
-      ...resource,
-      restoreAmount: existing?.restoreAmount ?? resource.restoreAmount,
-      current: Math.max(0, Math.min(resource.max, Math.floor(Number(existing?.current ?? resource.current) || 0))),
-    };
-  });
-  const derivedKeys = new Set(merged.map((resource) => resource.key));
-  const extras = savedList.filter((resource) => {
-    if (derivedKeys.has(resource.key || normalizeResourceKey(resource.name))) return false;
-    // Filter out stale resources from an older parser bug that embedded the feature source name
-    // in the resource label (e.g. "it twice (Level 1: Favored Enemy)"). These were generated by
-    // a regex that incorrectly captured pronoun + count words as a spell name. The pattern
-    // `(Level \d+:` never appears in user-created resource names, so filtering it is safe.
-    if (/\(Level \d+:/i.test(resource.name ?? "")) return false;
-    return true;
-  });
-  return [...merged, ...extras];
-}
-
-export function shouldResetOnRest(resetCode: string | undefined, restType: "short" | "long"): boolean {
-  const code = String(resetCode ?? "").trim().toUpperCase();
-  if (restType === "short") return code === "S";
-  return code === "S" || code === "L";
-}
-
-export function getPolymorphConditionData(conditions: ConditionInstance[] | undefined): PolymorphConditionData | null {
-  return getPolymorphCondition(conditions) as PolymorphConditionData | null;
-}
-
-
-

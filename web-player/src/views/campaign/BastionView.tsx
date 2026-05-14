@@ -6,152 +6,16 @@ import { useWs } from "@/services/ws";
 import { IconBastions } from "@beholden/shared/icons";
 import { HeaderActionLink, Panel, SectionTitle, SubsectionLabel } from "@beholden/shared/ui";
 import { Select } from "@/ui/Select";
-
-type CompendiumFacility = {
-  id: string;
-  name: string;
-  key: string;
-  type: "basic" | "special";
-  minimumLevel: number;
-  prerequisite: string | null;
-  orders: string[];
-  space: string | null;
-  hirelings: number | null;
-  allowMultiple: boolean;
-  description: string | null;
-};
-
-type BastionFacility = {
-  id: string;
-  facilityKey: string;
-  source: "player" | "dm_extra";
-  ownerPlayerId: string | null;
-  order: string | null;
-  notes: string;
-  definition: CompendiumFacility | null;
-};
-
-type Bastion = {
-  id: string;
-  campaignId: string;
-  name: string;
-  active: boolean;
-  defendersArmed: number;
-  defendersUnarmed: number;
-  assignedPlayerIds: string[];
-  assignedPlayers?: Array<{ id: string; userId: string | null; level: number; characterId: string | null; characterName: string }>;
-  notes: string;
-  maintainOrder: boolean;
-  facilities: BastionFacility[];
-  level: number;
-  specialSlots: number;
-  specialSlotsUsed: number;
-  hirelingsTotal?: number;
-};
-
-type BastionResponse = {
-  ok: boolean;
-  role: "dm" | "player";
-  currentUserPlayerIds: string[];
-  bastion: Bastion;
-};
-
-type BastionCompendiumResponse = {
-  ok: boolean;
-  facilities: CompendiumFacility[];
-};
-
-function normalizeOrder(value: string | null | undefined): string | null {
-  const next = String(value ?? "").trim();
-  return next.length > 0 ? next : null;
-}
-
-function orderListWithMaintain(orders: string[]): string[] {
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const order of [...orders, "Maintain"]) {
-    const key = order.trim().toLowerCase();
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    out.push(order);
-  }
-  return out;
-}
-
-function sortFacilitiesByLevelThenName(facilities: CompendiumFacility[]): CompendiumFacility[] {
-  return [...facilities].sort((a, b) => {
-    const levelDelta = (a.minimumLevel ?? 0) - (b.minimumLevel ?? 0);
-    if (levelDelta !== 0) return levelDelta;
-    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Toggle pill style (Active / Maintain)
-// ---------------------------------------------------------------------------
-function pillStyle(active: boolean): React.CSSProperties {
-  return {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    padding: "5px 12px",
-    borderRadius: 999,
-    border: `1px solid ${active ? `${C.colorGold}99` : C.panelBorder}`,
-    background: active ? "rgba(251,191,36,0.18)" : "rgba(255,255,255,0.04)",
-    color: active ? C.colorGold : C.muted,
-    cursor: "pointer",
-    fontSize: "var(--fs-small)",
-    fontWeight: 700,
-    whiteSpace: "nowrap" as const,
-    transition: "all 120ms ease",
-  };
-}
-
-function ghostButtonStyle(): React.CSSProperties {
-  return {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "5px 11px",
-    borderRadius: 8,
-    border: `1px solid rgba(251,191,36,0.35)`,
-    background: "rgba(251,191,36,0.10)",
-    color: C.colorGold,
-    cursor: "pointer",
-    fontSize: "var(--fs-small)",
-    fontWeight: 700,
-  };
-}
-
-function accentButtonStyle(enabled: boolean): React.CSSProperties {
-  return {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "5px 14px",
-    borderRadius: 8,
-    border: "none",
-    background: enabled ? C.colorGold : "rgba(255,255,255,0.08)",
-    color: enabled ? C.textDark : C.muted,
-    cursor: enabled ? "pointer" : "not-allowed",
-    fontSize: "var(--fs-small)",
-    fontWeight: 800,
-    transition: "background 120ms ease",
-  };
-}
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "7px 10px",
-  borderRadius: 8,
-  border: `1px solid ${C.panelBorder}`,
-  background: "rgba(0,0,0,0.30)",
-  color: C.text,
-  fontSize: "var(--fs-small)",
-  fontFamily: "inherit",
-  outline: "none",
-  boxSizing: "border-box",
-};
-
-// ---------------------------------------------------------------------------
+import type { Bastion, BastionCompendiumResponse, BastionResponse, CompendiumFacility } from "./BastionViewShared";
+import {
+  accentButtonStyle,
+  inputStyle,
+  normalizeOrder,
+  orderListWithMaintain,
+  pillStyle,
+  sortFacilitiesByLevelThenName,
+} from "./BastionViewShared";
+import { FacilityRows } from "./BastionFacilityRows";
 
 export function BastionView() {
   const { id: campaignId, bastionId } = useParams<{ id: string; bastionId: string }>();
@@ -166,7 +30,6 @@ export function BastionView() {
   const [addKeyByOwner, setAddKeyByOwner] = React.useState<Record<string, string>>({});
   const [selectedFacilityId, setSelectedFacilityId] = React.useState<string | null>(null);
 
-  // Debounced auto-save ref
   const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const bastionRef = React.useRef<Bastion | null>(null);
   bastionRef.current = bastion;
@@ -231,7 +94,6 @@ export function BastionView() {
 
   }, [bastionId, campaignId, load]));
 
-  // Auto-save with debounce
   const scheduleAutoSave = React.useCallback(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
@@ -269,7 +131,7 @@ export function BastionView() {
     scheduleAutoSave();
   }
 
-  function updateFacility(facilityId: string, patch: Partial<BastionFacility>) {
+  function updateFacility(facilityId: string, patch: Partial<import("./BastionViewShared").BastionFacility>) {
     mutateBastionAndSave((prev) => ({
       ...prev,
       facilities: prev.facilities.map((f) => (f.id === facilityId ? { ...f, ...patch } : f)),
@@ -653,92 +515,6 @@ export function BastionView() {
 
         </div>
       </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// FacilityRows
-// ---------------------------------------------------------------------------
-
-function FacilityRows(props: {
-  rows: BastionFacility[];
-  facilitiesByKey: Map<string, CompendiumFacility>;
-  onUpdate?: (facilityId: string, patch: Partial<BastionFacility>) => void;
-  onRemove?: (facilityId: string) => void;
-  selectedFacilityId?: string | null;
-  onSelectFacility?: (facilityId: string) => void;
-}) {
-  if (props.rows.length === 0) {
-    return <div style={{ fontSize: "var(--fs-small)", color: C.muted, opacity: 0.5 }}>None</div>;
-  }
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {props.rows.map((facility) => {
-        const definition = facility.definition ?? props.facilitiesByKey.get(facility.facilityKey) ?? null;
-        const orders = orderListWithMaintain(definition?.orders ?? []);
-        const selected = props.selectedFacilityId === facility.id;
-        return (
-          <div
-            key={facility.id}
-            style={{
-              border: `1px solid ${selected ? `${C.accentHl}66` : C.panelBorder}`,
-              borderRadius: 10,
-              padding: "10px 12px",
-              background: selected ? "rgba(56,182,255,0.08)" : "rgba(255,255,255,0.02)",
-              cursor: props.onSelectFacility ? "pointer" : "default",
-            }}
-            onClick={() => props.onSelectFacility?.(facility.id)}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: "var(--fs-small)", color: C.text }}>
-                  {definition?.name ?? facility.facilityKey}
-                </div>
-                <div style={{ marginTop: 2, fontSize: "var(--fs-tiny)", color: C.muted }}>
-                  {definition?.prerequisite ? `Prerequisite: ${definition.prerequisite}` : "No prerequisite"}
-                  {definition?.hirelings != null ? ` - Hirelings: ${definition.hirelings}` : ""}
-                </div>
-              </div>
-              {props.onRemove && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    props.onRemove?.(facility.id);
-                  }}
-                  style={ghostButtonStyle()}
-                >
-                  Remove
-                </button>
-              )}
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: orders.length > 0 ? "180px 1fr" : "1fr", gap: 8 }}>
-              {orders.length > 0 && (
-                <Select
-                  value={facility.order ?? "Maintain"}
-                  onChange={(e) => props.onUpdate?.(facility.id, { order: normalizeOrder(e.target.value) })}
-                  onClick={(e) => e.stopPropagation()}
-                  disabled={!props.onUpdate}
-                >
-                  {orders.map((order) => (
-                    <option key={`${facility.id}:${order}`} value={order}>{order}</option>
-                  ))}
-                </Select>
-              )}
-              <input
-                value={facility.notes}
-                onChange={(e) => props.onUpdate?.(facility.id, { notes: e.target.value })}
-                onClick={(e) => e.stopPropagation()}
-                style={inputStyle}
-                placeholder="Facility notes..."
-                disabled={!props.onUpdate}
-              />
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }

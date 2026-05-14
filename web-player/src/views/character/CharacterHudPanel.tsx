@@ -1,11 +1,13 @@
 import React from "react";
 import { SHARED_CONDITION_DEFS } from "@beholden/shared/domain";
 import { C } from "@/lib/theme";
-import { RightDrawer } from "@/ui/RightDrawer";
 import { IconAttack, IconConditionByKey, IconConditions, IconHeal, IconHeart, IconInspiration, IconPlayer } from "@/icons";
 import { HexBtn, Panel } from "@/views/character/CharacterViewParts";
 import { HealthBar } from "@beholden/shared/ui";
 import type { CharacterCampaign, ConditionInstance, CharacterData } from "@/views/character/CharacterSheetTypes";
+import { CharacterHudXpPopup } from "./CharacterHudXpPopup";
+import { CharacterHudDeathSaves } from "./CharacterHudDeathSaves";
+import { CharacterHudConditionsDrawer } from "./CharacterHudConditionsDrawer";
 
 interface CharacterHudLike {
   id: string;
@@ -130,23 +132,10 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
     hpMaxBonus,
   } = props;
   const availableConditions = React.useMemo(() => getAvailableConditions(char), [char]);
-  const xpPopupRef = React.useRef<HTMLDivElement | null>(null);
 
   function stripEditionTag(s: string): string {
     return s.replace(/\s*\[(?:5\.5e|2024|5e|5\.0)\]\s*$/i, "").trim();
   }
-  React.useEffect(() => {
-    if (!xpPopupOpen) return;
-    function handlePointerDown(event: MouseEvent) {
-      if (!xpPopupRef.current) return;
-      const target = event.target;
-      if (target instanceof Node && !xpPopupRef.current.contains(target)) {
-        setXpPopupOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handlePointerDown);
-    return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [xpPopupOpen, setXpPopupOpen]);
 
   return (
     <>
@@ -189,149 +178,38 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
             {char.playerName && <div style={{ fontSize: "var(--fs-small)", color: "rgba(160,180,220,0.45)", marginBottom: 3 }}>Player: {char.playerName}</div>}
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "space-between" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-              {char.campaigns.map((c) => (
-                <span
-                  key={c.id}
-                  style={{
-                    fontSize: "var(--fs-tiny)",
-                    padding: "1px 7px",
-                    borderRadius: 20,
-                    fontWeight: 700,
-                    background: `${accentColor}14`,
-                    border: `1px solid ${accentColor}33`,
-                    color: accentColor,
-                    whiteSpace: "nowrap",
-                    maxWidth: 160,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                  title={c.campaignName}
-                >
-                  {c.campaignName}
-                </span>
-              ))}
-              </div>
-              {xpNeeded > 0 && (
-                <div ref={xpPopupRef} style={{ position: "relative" }}>
-                  <button
-                    onClick={() => {
-                      setXpInput(String(xpEarned));
-                      setXpPopupOpen((o) => !o);
-                    }}
+                {char.campaigns.map((c) => (
+                  <span
+                    key={c.id}
                     style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: "2px 4px",
-                      fontSize: "var(--fs-small)",
+                      fontSize: "var(--fs-tiny)",
+                      padding: "1px 7px",
+                      borderRadius: 20,
                       fontWeight: 700,
-                      color: "#fff",
-                      borderRadius: 6,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 3,
+                      background: `${accentColor}14`,
+                      border: `1px solid ${accentColor}33`,
+                      color: accentColor,
+                      whiteSpace: "nowrap",
+                      maxWidth: 160,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                     }}
+                    title={c.campaignName}
                   >
-                    {xpEarned.toLocaleString()} / {xpNeeded.toLocaleString()} xp
-                  </button>
-                  {xpPopupOpen && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: "calc(100% + 6px)",
-                        right: 0,
-                        zIndex: 100,
-                        background: "#1e2030",
-                        border: "1px solid rgba(255,255,255,0.15)",
-                        borderRadius: 10,
-                        padding: "12px 14px",
-                        minWidth: 200,
-                        boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 8,
-                      }}
-                    >
-                      <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted, marginBottom: 2 }}>Edit XP</div>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <input
-                          autoFocus
-                          type="number"
-                          min={0}
-                          value={xpInput}
-                          onChange={(e) => setXpInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              const v = parseInt(xpInput, 10);
-                              if (!isNaN(v) && v >= 0) void saveXp(v);
-                            }
-                            if (e.key === "Escape") setXpPopupOpen(false);
-                          }}
-                          style={{
-                            flex: 1,
-                            padding: "6px 8px",
-                            borderRadius: 6,
-                            fontSize: "var(--fs-subtitle)",
-                            fontWeight: 700,
-                            border: "1px solid rgba(255,255,255,0.15)",
-                            background: "rgba(255,255,255,0.07)",
-                            color: C.text,
-                            outline: "none",
-                            textAlign: "center",
-                          }}
-                        />
-                        <button
-                          onClick={() => {
-                            const v = parseInt(xpInput, 10);
-                            if (!isNaN(v) && v >= 0) void saveXp(v);
-                          }}
-                          style={{
-                            padding: "6px 12px",
-                            borderRadius: 6,
-                            cursor: "pointer",
-                            fontSize: "var(--fs-small)",
-                            fontWeight: 700,
-                            background: accentColor,
-                            border: "none",
-                            color: "#fff",
-                          }}
-                        >
-                          Save
-                        </button>
-                      </div>
-                      <div style={{ display: "flex", gap: 5 }}>
-                        {[
-                          { label: "+100", amount: 100 },
-                          { label: "+1000", amount: 1000 },
-                          { label: "+Level", amount: Math.max(0, xpNeeded - xpEarned) },
-                        ].map((quick) => (
-                          <button
-                            key={quick.label}
-                            onClick={() => {
-                              const v = xpEarned + quick.amount;
-                              setXpInput(String(v));
-                              void saveXp(v);
-                            }}
-                            style={{
-                              flex: 1,
-                              padding: "4px 0",
-                              borderRadius: 5,
-                              cursor: "pointer",
-                              fontSize: "var(--fs-tiny)",
-                              fontWeight: 700,
-                              background: "rgba(255,255,255,0.07)",
-                              border: "1px solid rgba(255,255,255,0.1)",
-                              color: C.muted,
-                            }}
-                          >
-                            {quick.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    {c.campaignName}
+                  </span>
+                ))}
+              </div>
+              <CharacterHudXpPopup
+                xpEarned={xpEarned}
+                xpNeeded={xpNeeded}
+                xpInput={xpInput}
+                xpPopupOpen={xpPopupOpen}
+                setXpInput={setXpInput}
+                setXpPopupOpen={setXpPopupOpen}
+                saveXp={saveXp}
+                accentColor={accentColor}
+              />
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
@@ -478,82 +356,12 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
           {(hpError || hpSaving) && <div style={{ textAlign: "center", fontSize: "var(--fs-small)", color: hpError ? C.red : C.muted }}>{hpError ?? "Saving..."}</div>}
         </div>
 
-        {char.hpCurrent === 0 && (
-          <div style={{ margin: "4px 0 10px", padding: "10px 14px", borderRadius: 10, background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.35)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 900, color: C.red, textTransform: "uppercase", letterSpacing: "0.1em" }}>Death Saving Throws</span>
-              {dsSaving && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>saving...</span>}
-            </div>
-            <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: "#4ade80", textTransform: "uppercase", letterSpacing: "0.06em" }}>Success</span>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {[0, 1, 2].map((i) => {
-                    const filled = i < (char.deathSaves?.success ?? 0);
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        disabled={dsSaving}
-                        onClick={() => {
-                          const cur = char.deathSaves?.success ?? 0;
-                          const next = cur > i ? i : i + 1;
-                          saveDeathSaves({ success: Math.min(3, next), fail: char.deathSaves?.fail ?? 0 });
-                        }}
-                        style={{
-                          width: 22,
-                          height: 22,
-                          borderRadius: "50%",
-                          border: `2px solid ${filled ? "#4ade80" : "rgba(74,222,128,0.3)"}`,
-                          background: filled ? "#4ade80" : "transparent",
-                          cursor: dsSaving ? "default" : "pointer",
-                          padding: 0,
-                          transition: "all 120ms",
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-
-              <span style={{ fontSize: "var(--fs-title)", opacity: 0.4 }}>💀</span>
-
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: C.red, textTransform: "uppercase", letterSpacing: "0.06em" }}>Failure</span>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {[0, 1, 2].map((i) => {
-                    const filled = i < (char.deathSaves?.fail ?? 0);
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        disabled={dsSaving}
-                        onClick={() => {
-                          const cur = char.deathSaves?.fail ?? 0;
-                          const next = cur > i ? i : i + 1;
-                          saveDeathSaves({ success: char.deathSaves?.success ?? 0, fail: Math.min(3, next) });
-                        }}
-                        style={{
-                          width: 22,
-                          height: 22,
-                          borderRadius: "50%",
-                          border: `2px solid ${filled ? C.red : "rgba(220,38,38,0.3)"}`,
-                          background: filled ? C.red : "transparent",
-                          cursor: dsSaving ? "default" : "pointer",
-                          padding: 0,
-                          transition: "all 120ms",
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {(char.deathSaves?.success ?? 0) >= 3 && <div style={{ marginTop: 8, fontSize: "var(--fs-small)", fontWeight: 700, color: "#4ade80", textAlign: "center" }}>✦ Stable - character has stabilised</div>}
-            {(char.deathSaves?.fail ?? 0) >= 3 && <div style={{ marginTop: 8, fontSize: "var(--fs-small)", fontWeight: 700, color: C.red, textAlign: "center" }}>✦ Dead</div>}
-          </div>
-        )}
+        <CharacterHudDeathSaves
+          hpCurrent={char.hpCurrent}
+          deathSaves={char.deathSaves}
+          dsSaving={dsSaving}
+          saveDeathSaves={saveDeathSaves}
+        />
 
         {(char.conditions ?? []).length > 0 && (
           <div style={{ marginTop: 2 }}>
@@ -578,50 +386,15 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
         )}
       </Panel>
 
-      {condPickerOpen && (
-        <RightDrawer
-          onClose={() => setCondPickerOpen(false)}
-          width="min(340px, 90vw)"
-          title={
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <IconConditions size={16} style={{ color: accentColor }} />
-              <span style={{ fontWeight: 900, fontSize: "var(--fs-subtitle)", letterSpacing: "0.08em", textTransform: "uppercase", color: accentColor }}>Conditions</span>
-              {condSaving && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>saving...</span>}
-            </div>
-          }
-        >
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-                {availableConditions.map((cd) => {
-                  const active = (char.conditions ?? []).some((c) => c.key === cd.key);
-                  return (
-                    <button
-                      key={cd.key}
-                      onClick={() => toggleCondition(cd.key)}
-                      disabled={condSaving}
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: 5,
-                        padding: "10px 6px",
-                        borderRadius: 8,
-                        background: active ? `${accentColor}22` : "rgba(255,255,255,0.04)",
-                        border: `1px solid ${active ? accentColor + "77" : "rgba(255,255,255,0.10)"}`,
-                        color: active ? accentColor : C.muted,
-                        cursor: condSaving ? "wait" : "pointer",
-                        transition: "all 120ms",
-                        outline: "none",
-                      }}
-                    >
-                      <IconConditionByKey condKey={cd.key} size={22} style={{ opacity: active ? 1 : 0.5 }} />
-                      <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, textAlign: "center", lineHeight: 1.2 }}>{cd.name}</span>
-                      {active && <span style={{ fontSize: "var(--fs-tiny)", color: accentColor, fontWeight: 900, letterSpacing: "0.04em" }}>ACTIVE</span>}
-                    </button>
-                  );
-                })}
-            </div>
-        </RightDrawer>
-      )}
+      <CharacterHudConditionsDrawer
+        condPickerOpen={condPickerOpen}
+        availableConditions={availableConditions}
+        accentColor={accentColor}
+        conditions={char.conditions ?? []}
+        condSaving={condSaving}
+        toggleCondition={toggleCondition}
+        onClose={() => setCondPickerOpen(false)}
+      />
     </>
   );
 }

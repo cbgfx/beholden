@@ -1,7 +1,3 @@
-import {
-  buildEquipmentItems as buildEquipmentItemsFromUtils,
-  getBackgroundGrantedToolSelections as getBackgroundGrantedToolSelectionsFromUtils,
-} from "./CharacterCreatorEquipmentUtils";
 import { collectFeatTaggedEntries } from "./FeatGrantUtils";
 import {
   ABILITY_SCORE_NAMES,
@@ -9,12 +5,7 @@ import {
   STANDARD_55E_LANGUAGES,
 } from "../constants/CharacterCreatorConstants";
 import {
-  classifyFeatSelection,
-  extractClassStartingEquipment,
-  featureMatchesSubclass,
-  getFeatureSubclassName,
   getClassExpertiseChoices,
-  isSubclassChoiceFeature,
 } from "./CharacterCreatorUtils";
 import {
   dedupeTaggedItems,
@@ -34,7 +25,6 @@ import {
   collectSpellChoicesFromEffects,
   collectTaggedGrantsFromEffects,
   parseFeatureEffects,
-  type ParseFeatureEffectsInput,
 } from "@/domain/character/parseFeatureEffects";
 import { resolveSelectedSpellOptionEntries } from "./SpellChoiceUtils";
 import { resolveFeatSpellEntries } from "./FeatSpellcastingUtils";
@@ -43,113 +33,43 @@ import {
   getGrowthChoiceSelectedAbility,
   getGrowthChoiceSelectedIds,
 } from "./GrowthChoiceUtils";
-import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
 import type { ProficiencyMap, TaggedItem } from "@/views/character/CharacterSheetTypes";
-import type { ParsedFeatChoiceLike as CreatorParsedFeatChoiceLike, ParsedFeatDetailLike } from "./FeatChoiceTypes";
+import {
+  parseAppliedClassFeatureEffects,
+  buildStartingInventory,
+  getWeaponMasteryChoice,
+} from "./CharacterCreatorClassFeatureUtils";
+import type {
+  CreatorItemSummaryLike,
+  CreatorInventoryItemSeed,
+  CreatorBackgroundFeatLike,
+  CreatorLevelUpFeatDetailLike,
+  CreatorClassDetailLike,
+  CreatorRaceDetailLike,
+  CreatorBgDetailLike,
+  CreatorSpellSummaryLike,
+  CreatorFormLike,
+  CreatorWeaponMasteryChoice,
+} from "./CharacterCreatorProficiencyTypes";
 
-export interface CreatorItemSummaryLike {
-  id: string;
-  name: string;
-  type: string | null;
-  rarity?: string | null;
-  magic?: boolean;
-  attunement?: boolean;
-  weight?: number | null;
-  value?: number | null;
-  ac?: number | null;
-  stealthDisadvantage?: boolean;
-  dmg1?: string | null;
-  dmg2?: string | null;
-  dmgType?: string | null;
-  properties?: string[];
-}
+export type {
+  CreatorItemSummaryLike,
+  CreatorInventoryItemSeed,
+  CreatorBackgroundFeatLike,
+  CreatorLevelUpFeatDetailLike,
+  CreatorClassDetailLike,
+  CreatorRaceDetailLike,
+  CreatorBgDetailLike,
+  CreatorSpellSummaryLike,
+  CreatorFormLike,
+  CreatorWeaponMasteryChoice,
+} from "./CharacterCreatorProficiencyTypes";
 
-export interface CreatorInventoryItemSeed {
-  id: string;
-  name: string;
-  quantity: number;
-  equipped: boolean;
-  equipState?: "backpack" | "mainhand-1h" | "mainhand-2h" | "offhand";
-  notes?: string;
-  source?: "compendium" | "custom";
-  itemId?: string;
-  type?: string | null;
-  rarity?: string | null;
-  magic?: boolean;
-  attunement?: boolean;
-}
-
-export type CreatorBackgroundFeatLike = ParsedFeatDetailLike<CreatorParsedFeatChoiceLike>;
-
-export interface CreatorLevelUpFeatDetailLike {
-  level: number;
-  featId: string;
-  feat: CreatorBackgroundFeatLike;
-}
-
-export interface CreatorClassDetailLike {
-  name: string;
-  armor: string;
-  weapons: string;
-  tools?: string;
-  proficiency: string;
-  autolevels: Array<{
-    level: number | null;
-    features: Array<{ name: string; text: string; optional: boolean }>;
-  }>;
-}
-
-export interface CreatorRaceDetailLike {
-  name: string;
-  traits: Array<{ name: string; text: string; modifier: string[] }>;
-}
-
-export interface CreatorBgDetailLike {
-  name: string;
-  proficiency: string;
-  equipment?: string;
-  proficiencies?: {
-    skills: { fixed: string[] };
-    tools: { fixed: string[] };
-    languages: { fixed: string[] };
-    feats: CreatorBackgroundFeatLike[];
-  };
-  traits: Array<{ name: string; text: string }>;
-}
-
-export interface CreatorSpellSummaryLike {
-  id: string;
-  name: string;
-  level?: number | null;
-  text?: string | null;
-}
-
-export interface CreatorFormLike {
-  level: number;
-  subclass?: string | null;
-  chosenSkills: string[];
-  chosenClassLanguages: string[];
-  chosenWeaponMasteries: string[];
-  chosenOptionals: string[];
-  chosenFeatOptions: Record<string, string[]>;
-  chosenFeatureChoices: Record<string, string[]>;
-  chosenBgSkills: string[];
-  chosenBgTools: string[];
-  chosenBgLanguages: string[];
-  chosenRaceSkills: string[];
-  chosenRaceLanguages: string[];
-  chosenRaceTools: string[];
-  chosenCantrips: string[];
-  chosenSpells: string[];
-  chosenInvocations: string[];
-  chosenBgEquipmentOption: string | null;
-  chosenClassEquipmentOption: string | null;
-}
-
-export interface CreatorWeaponMasteryChoice {
-  source: string;
-  count: number;
-}
+export {
+  parseAppliedClassFeatureEffects,
+  buildStartingInventory,
+  getWeaponMasteryChoice,
+} from "./CharacterCreatorClassFeatureUtils";
 
 function splitComma(s: string): string[] {
   return s.split(/[,;]/).map((x) => x.trim()).filter(Boolean);
@@ -161,87 +81,6 @@ function isProficiencyNoiseToken(value: string): boolean {
   if (/\bof your choice\b/i.test(normalized)) return true;
   if (/^(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)$/i.test(normalized)) return true;
   return /^(?:this|that|these|those|extra|another|any|language|languages|tool|tools|skill|skills)$/i.test(normalized);
-}
-
-export function parseAppliedClassFeatureEffects(
-  classDetail: CreatorClassDetailLike | null,
-  level: number,
-  selectedSubclass: string | null | undefined,
-  chosenOptionals: string[],
-): ParsedFeatureEffects[] {
-  if (!classDetail) return [];
-  const selected = new Set(chosenOptionals);
-  const parsed: ParsedFeatureEffects[] = [];
-  for (const autolevel of classDetail.autolevels) {
-    if (autolevel.level == null || autolevel.level > level) continue;
-    for (const feature of autolevel.features) {
-      if (!featureMatchesSubclass(feature, selectedSubclass) || isSubclassChoiceFeature(feature)) continue;
-      const isSubclassFeature = Boolean(getFeatureSubclassName(feature));
-      if (feature.optional && !isSubclassFeature && !selected.has(feature.name)) continue;
-      if (!String(feature.text ?? "").trim()) continue;
-      parsed.push(parseFeatureEffects({
-        source: {
-          id: `creator-class-feature:${autolevel.level}:${feature.name}`,
-          kind: isSubclassFeature ? "subclass" : "class",
-          name: feature.name,
-          level: autolevel.level,
-          parentName: classDetail.name,
-          text: feature.text,
-        },
-        text: feature.text,
-      } satisfies ParseFeatureEffectsInput));
-    }
-  }
-  return parsed;
-}
-
-export function buildStartingInventory(
-  form: CreatorFormLike,
-  bgDetail: CreatorBgDetailLike | null,
-  classDetail: CreatorClassDetailLike | null,
-  itemIndex: CreatorItemSummaryLike[],
-): CreatorInventoryItemSeed[] {
-  const bgItems = buildEquipmentItemsFromUtils(
-    form.chosenBgEquipmentOption,
-    bgDetail?.equipment,
-    "bg",
-    getBackgroundGrantedToolSelectionsFromUtils(form as never, bgDetail as never, [], classifyFeatSelection),
-    itemIndex as never,
-  );
-  const classItems = buildEquipmentItemsFromUtils(
-    form.chosenClassEquipmentOption,
-    extractClassStartingEquipment(classDetail as never),
-    "class",
-    [],
-    itemIndex as never,
-  );
-  return [...classItems, ...bgItems];
-}
-
-export function getWeaponMasteryChoice(
-  classDetail: CreatorClassDetailLike | null,
-  level: number,
-): CreatorWeaponMasteryChoice | null {
-  if (!classDetail) return null;
-  for (const autolevel of classDetail.autolevels) {
-    if (autolevel.level == null || autolevel.level > level) continue;
-    for (const feature of autolevel.features) {
-      const parsed = parseFeatureEffects({
-        source: {
-          id: `creator-class-feature:${autolevel.level}:${feature.name}`,
-          kind: "class",
-          name: feature.name,
-          text: feature.text,
-        },
-        text: feature.text,
-      });
-      const masteryEffect = parsed.effects.find((effect) => effect.type === "weapon_mastery");
-      if (masteryEffect?.type !== "weapon_mastery") continue;
-      const count = masteryEffect.choice?.count?.kind === "fixed" ? masteryEffect.choice.count.value : null;
-      if (count && count > 0) return { source: feature.name, count };
-    }
-  }
-  return null;
 }
 
 export function buildProficiencyMap(args: {
