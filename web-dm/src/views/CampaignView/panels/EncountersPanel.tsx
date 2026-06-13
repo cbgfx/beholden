@@ -7,9 +7,9 @@ import { RowMenu } from "@/ui/RowMenu";
 
 function getStatusStyle(meta?: string) {
   const status = meta?.split("•", 1)[0]?.trim().toLowerCase();
-  if (status === "complete") return { label: "Complete", color: theme.colors.green };
-  if (status === "in progress") return { label: "In Progress", color: theme.colors.accentWarning };
-  return { label: "Open", color: theme.colors.blue };
+  if (status === "complete") return { label: "Complete", color: theme.colors.muted, opacity: 0.55, rank: 2 };
+  if (status === "in progress") return { label: "In Progress", color: theme.colors.accentWarning, opacity: 1, rank: 0 };
+  return { label: "Open", color: theme.colors.muted, opacity: 1, rank: 1 };
 }
 
 export function EncountersPanel(props: {
@@ -26,6 +26,10 @@ export function EncountersPanel(props: {
   onReorder: (ids: string[]) => void;
 }) {
   const { encounters, selectedAdventureId, selectedEncounterId } = props;
+  const orderedEncounters = [...encounters].sort((a, b) => {
+    const rankDiff = getStatusStyle(a.status ?? undefined).rank - getStatusStyle(b.status ?? undefined).rank;
+    return rankDiff || encounters.indexOf(a) - encounters.indexOf(b);
+  });
 
   return (
     <Panel
@@ -40,13 +44,16 @@ export function EncountersPanel(props: {
       {selectedAdventureId ? (
         encounters.length ? (
           <DraggableList
-            items={encounters.map((e) => ({ id: e.id, title: e.name, meta: e.status ?? undefined }))}
+            items={orderedEncounters.map((e) => ({ id: e.id, title: e.name, meta: e.status ?? undefined }))}
             activeId={selectedEncounterId}
             onSelect={(id) => props.onSelectEncounter(id)}
             onReorder={props.onReorder}
             getItemStyle={(it) => {
               const status = getStatusStyle(it.meta);
-              return { borderColor: status.color };
+              return {
+                borderColor: status.label === "Open" ? theme.colors.panelBorder : status.color,
+                opacity: status.opacity,
+              };
             }}
             renderItem={(it) => (
               <div style={{ padding: "4px 6px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
