@@ -1,0 +1,45 @@
+import * as React from "react";
+
+export type SvgIconProps = {
+  svg: string;
+  size?: number;
+  title?: string;
+  className?: string;
+  style?: React.CSSProperties;
+};
+
+function escapeAttr(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function injectSizeAndA11y(svg: string, size: number, title?: string) {
+  const hasWidth = /\swidth=/.test(svg);
+  const hasHeight = /\sheight=/.test(svg);
+
+  let out = svg;
+  if (!hasWidth || !hasHeight) {
+    out = out.replace(
+      "<svg",
+      `<svg${hasWidth ? "" : ` width="${size}"`}${hasHeight ? "" : ` height="${size}"`}`
+    );
+  }
+
+  if (title) {
+    if (!/\srole=/.test(out)) out = out.replace("<svg", `<svg role="img"`);
+    if (!/\saria-label=/.test(out)) out = out.replace("<svg", `<svg aria-label="${escapeAttr(title)}"`);
+  }
+
+  return out;
+}
+
+export function Icon({ svg, size = 20, title, className, style }: SvgIconProps) {
+  const markup = React.useMemo(() => injectSizeAndA11y(svg, size, title), [svg, size, title]);
+
+  return (
+    <span
+      className={className}
+      style={{ display: "inline-flex", width: size, height: size, color: "inherit", ...style }}
+      dangerouslySetInnerHTML={{ __html: markup }}
+    />
+  );
+}
