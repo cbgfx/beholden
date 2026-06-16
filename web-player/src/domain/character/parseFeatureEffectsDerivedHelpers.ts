@@ -52,6 +52,10 @@ export function isCrossbowWeaponLike(item: WeaponLike | null | undefined): boole
   return /crossbow/i.test(String(item?.name ?? "")) || /crossbow/i.test(String(item?.type ?? ""));
 }
 
+export function isLongbowOrShortbowLike(item: WeaponLike | null | undefined): boolean {
+  return /\b(?:longbow|shortbow)\b/i.test(String(item?.name ?? ""));
+}
+
 export function weaponMatchesFilters(item: WeaponLike | null | undefined, filters: WeaponFilter[] | undefined): boolean {
   if (!filters?.length) return false;
   return filters.every((filter) => {
@@ -72,6 +76,8 @@ export function weaponMatchesFilters(item: WeaponLike | null | undefined, filter
         return hasWeaponProperty(item, "H");
       case "crossbow_weapon":
         return isCrossbowWeaponLike(item);
+      case "longbow_or_shortbow":
+        return isLongbowOrShortbowLike(item);
       case "light_crossbow":
         return hasWeaponProperty(item, "L") && isCrossbowWeaponLike(item);
       case "no_two_handed":

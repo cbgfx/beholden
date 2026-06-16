@@ -100,6 +100,21 @@ export function parseAttackEffects(source: FeatureEffectSource, text: string, ef
     } satisfies AttackEffect);
   }
 
+  for (const match of text.matchAll(/gain a \+?(\d+)\s+bonus to damage rolls made with (such weapons?|(?:long|short)?bows?)\b/gi)) {
+    const amount = Number(match[1]);
+    if (!Number.isFinite(amount) || amount <= 0) continue;
+    if (/with such weapons?/i.test(match[0]) && !hasRangedBowContext) continue;
+    effects.push({
+      id: createFeatureEffectId(source, "attack", effects.length),
+      type: "attack",
+      source,
+      mode: "bonus_damage",
+      amount: { kind: "fixed", value: amount },
+      gate: { duration: "passive", weaponFilters: ["longbow_or_shortbow"] },
+      summary: `+${amount} to damage rolls with longbows and shortbows`,
+    } satisfies AttackEffect);
+  }
+
   if (/martial arts die/i.test(text) && /unarmed strike/i.test(text)) {
     effects.push({
       id: createFeatureEffectId(source, "attack", effects.length),

@@ -56,6 +56,14 @@ export function parseProficiencyGrantEffects(source: FeatureEffectSource, text: 
       .forEach((s) => weapons.push(`${toTitleCase(s)} Weapons`));
   }
 
+  for (const match of text.matchAll(/proficiency with\s+(?:the\s+)?((?:longbow|shortbow)(?:\s*(?:,|and)\s*(?:longbow|shortbow))*)\b/gi)) {
+    match[1]
+      .split(/\s+and\s+|,/)
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .forEach((name) => weapons.push(toTitleCase(name)));
+  }
+
   const toolRe = /proficiency with\s+([\w\s']+?(?:tools?|kit|instruments?|supplies))\b/gi;
   while ((m = toolRe.exec(text)) !== null) {
     const parsed = toTitleCase(m[1].trim());
@@ -230,4 +238,3 @@ export function parseProficiencyGrantEffects(source: FeatureEffectSource, text: 
     } satisfies ProficiencyGrantEffect);
   }
 }
-

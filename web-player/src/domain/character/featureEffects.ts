@@ -55,6 +55,7 @@ export type WeaponFilter =
   | "light_weapon"
   | "heavy_weapon"
   | "crossbow_weapon"
+  | "longbow_or_shortbow"
   | "light_crossbow"
   | "no_two_handed";
 

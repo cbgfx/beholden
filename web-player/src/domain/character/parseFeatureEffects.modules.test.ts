@@ -198,6 +198,27 @@ describe("parseFeatureEffects parser modules", () => {
     }
   });
 
+  it("parses Bracers of Archery proficiency and bow damage bonus", () => {
+    const parsed = parseFeatureEffects({
+      source: { id: "test:bracers-of-archery", kind: "item", name: "Bracers of Archery" },
+      text: "While wearing these bracers, you have proficiency with the Longbow and Shortbow, and you gain a +2 bonus to damage rolls made with such weapons.",
+    });
+
+    const weaponGrant = parsed.effects.find((effect) => effect.type === "proficiency_grant" && effect.category === "weapon");
+    expect(weaponGrant).toBeTruthy();
+    if (weaponGrant && weaponGrant.type === "proficiency_grant") {
+      expect(weaponGrant.grants).toEqual(expect.arrayContaining(["Longbow", "Shortbow"]));
+    }
+
+    const damageBonus = parsed.effects.find((effect) => effect.type === "attack" && effect.mode === "bonus_damage");
+    expect(damageBonus).toBeTruthy();
+    if (damageBonus && damageBonus.type === "attack") {
+      expect(damageBonus.amount?.kind).toBe("fixed");
+      if (damageBonus.amount?.kind === "fixed") expect(damageBonus.amount.value).toBe(2);
+      expect(damageBonus.gate?.weaponFilters).toEqual(["longbow_or_shortbow"]);
+    }
+  });
+
   it("parses Tough max-HP scaling", () => {
     const parsed = parse(
       "Origin: Tough",
