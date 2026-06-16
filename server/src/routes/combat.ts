@@ -359,8 +359,8 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
     const attackOverrides = body.attackOverrides ?? null;
 
     const monRow = db
-      .prepare("SELECT data_json FROM compendium_monsters WHERE id = ?")
-      .get(monsterId) as { data_json: string } | undefined;
+      .prepare("SELECT name, data_json FROM compendium_monsters WHERE id = ?")
+      .get(monsterId) as { name: string; data_json: string } | undefined;
     if (!monRow)
       return res.status(404).json({ ok: false, message: "Monster not found in compendium" });
 
@@ -376,7 +376,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
     ensureCombat(db, encounterId);
     const t = now();
 
-    const baseName = m.name;
+    const baseName = String(monRow.name || m?.name || "Monster").trim() || "Monster";
     const effectiveLabelBase = labelBase || baseName;
     let n: number = nextLabelNumber(db, encounterId, effectiveLabelBase);
 

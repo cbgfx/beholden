@@ -90,7 +90,7 @@ export function CombatOrderRow(props: {
   })();
   const hpMax = Math.max(1, (rawHpMax || 1) + hpMod);
   const ac = Math.max(0, Number(c.ac ?? 0) + acBonus);
-  const displayName = (c.label || "(Unnamed)").trim();
+  const displayName = (c.label || c.name || "(Unnamed)").trim();
   const friendly = Boolean(c.friendly);
   const isDead = hpCurrent <= 0;
   const dim = isDead && c.baseType !== "player";
