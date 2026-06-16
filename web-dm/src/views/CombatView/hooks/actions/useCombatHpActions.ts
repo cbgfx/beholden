@@ -23,7 +23,6 @@ export function useCombatHpActions({ encounterId, delta, setDelta, target }: Arg
       if (kind === "damage") {
         const resolved = resolveCombatantDamage(target, amount);
         if (!resolved) return;
-        nextHp = resolved.hpCurrent;
         await putEncounterCombatant(encounterId, target.id, {
           hpCurrent: resolved.hpCurrent,
           overrides: resolved.overrides,

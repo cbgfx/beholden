@@ -1,6 +1,7 @@
 import type React from "react";
 import { patchMyCharacter, putMyCharacter } from "@/views/character/characterApi";
-import { hasDiceTerm, rollDiceExpr } from "@/lib/dice";
+import { hasDiceTerm } from "@/lib/dice";
+import { parseCharacterHpDelta } from "@/views/character/CharacterHpDelta";
 import type { Character, PolymorphConditionData, SheetOverrides } from "@/views/character/CharacterViewHelpers";
 
 export function buildCharacterHpActions(args: {
@@ -36,10 +37,11 @@ export function buildCharacterHpActions(args: {
     revertPolymorph,
   } = args;
 
-  const rollAndFlash = (): number => {
-    const result = rollDiceExpr(hpAmount.trim());
+  const rollAndFlash = (defaultKind: "damage" | "heal"): number => {
+    const delta = parseCharacterHpDelta(hpAmount, defaultKind);
+    const result = delta.amount;
     if (hasDiceTerm(hpAmount)) {
-      setHpAmount(String(result));
+      setHpAmount(`${delta.sign}${result}`);
       setLastRoll(result);
       if (flashRef.current) window.clearTimeout(flashRef.current);
       flashRef.current = window.setTimeout(() => setLastRoll(null), 1600);
@@ -49,7 +51,9 @@ export function buildCharacterHpActions(args: {
   };
 
   const applyHp = async (kind: "damage" | "heal", resolvedAmt?: number) => {
-    const amt = resolvedAmt ?? rollDiceExpr(hpAmount.trim());
+    const delta = parseCharacterHpDelta(hpAmount, kind);
+    const amt = resolvedAmt ?? delta.amount;
+    const resolvedKind = delta.kind;
     if (amt <= 0) {
       setHpError("Enter a number > 0  (e.g. 8, 2d6+3, +5)");
       return;
@@ -57,7 +61,7 @@ export function buildCharacterHpActions(args: {
     setHpError(null);
     setHpSaving(true);
     try {
-      if (kind === "heal") {
+      if (resolvedKind === "heal") {
         const newHp = Math.min(char.hpCurrent + amt, effectiveHpMax);
         await putMyCharacter(char.id, { hpCurrent: newHp });
         setChar((prev) => prev ? { ...prev, hpCurrent: newHp } : prev);
@@ -90,7 +94,7 @@ export function buildCharacterHpActions(args: {
       }
       setHpAmount("");
       setLastRoll(null);
-      if (kind === "damage" && amt > 0 && (char.conditions ?? []).some((condition) => condition.key === "concentration")) {
+      if (resolvedKind === "damage" && amt > 0 && (char.conditions ?? []).some((condition) => condition.key === "concentration")) {
         setConcentrationAlert({ dc: Math.max(10, Math.floor(amt / 2)) });
       }
     } catch (error: unknown) {
@@ -102,13 +106,10 @@ export function buildCharacterHpActions(args: {
     }
   };
 
-  const resolveKind = (explicit: "damage" | "heal"): "damage" | "heal" =>
-    hpAmount.trim().startsWith("+") ? "heal" : explicit;
-
   const handleApplyHp = (explicit: "damage" | "heal") => {
-    const kind = resolveKind(explicit);
+    const { kind } = parseCharacterHpDelta(hpAmount, explicit);
     if (hasDiceTerm(hpAmount)) {
-      const rolled = rollAndFlash();
+      const rolled = rollAndFlash(explicit);
       setTimeout(() => {
         void applyHp(kind, rolled);
       }, 0);
