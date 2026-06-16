@@ -157,7 +157,8 @@ export function CharacterView() {
       })
     : null;
   const syncedAcValue = derivedState ? derivedState.effectiveAc - (derivedState.overrides?.acBonus ?? 0) : null;
-  useCharacterSyncEffects({ char, setChar, fetchChar, syncedAcValue });
+  const syncedSpeedValue = derivedState?.effectiveSpeed ?? null;
+  useCharacterSyncEffects({ char, setChar, fetchChar, syncedAcValue, syncedSpeedValue });
 
   const currentCharacterDataForActions: CharacterData = (derivedState?.currentCharacterData ?? characterData ?? {}) as CharacterData;
   const playerNotesList: PlayerNote[] = currentCharacterDataForActions.playerNotesList ?? [];

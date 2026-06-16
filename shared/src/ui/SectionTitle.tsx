@@ -31,6 +31,7 @@ export function SectionTitle({
       style={{
         display: "flex",
         alignItems: "center",
+        flexWrap: "wrap",
         gap: 8,
         fontSize,
         fontWeight,
@@ -43,13 +44,13 @@ export function SectionTitle({
         ...style,
       }}
     >
-      <span style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+      <span style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", minWidth: 0 }}>
         {children}
       </span>
-      <div style={{ flex: 1, height: 1, background: lineColor }} />
+      <div style={{ flex: "1 1 24px", height: 1, background: lineColor }} />
       {actions ? (
         <div
-          style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}
+          style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 5, flex: "1 1 auto", minWidth: 0, flexWrap: "wrap" }}
           onClick={(e) => e.stopPropagation()}
         >
           {actions}

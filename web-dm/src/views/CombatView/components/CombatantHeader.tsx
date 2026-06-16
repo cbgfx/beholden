@@ -37,18 +37,18 @@ export function CombatantHeader(props: Props) {
   return (
     <Panel
       title={
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", minWidth: 0 }}>
           <Button
             onClick={() => navigate(props.backTo)}
             title={props.backTitle ?? "Back"}
           >
             Back
           </Button>
-          <span style={{ fontSize: "var(--fs-title)", fontWeight: 900, color: theme.colors.text }}>{title}</span>
+          <span style={{ fontSize: "var(--fs-title)", fontWeight: 900, color: theme.colors.text, minWidth: 0 }}>{title}</span>
         </div>
       }
       actions={
-        <div style={{ display: "flex", gap: isPhone ? 4 : 8, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: isPhone ? 4 : 8, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", minWidth: 0 }}>
           <Button variant="primary" onClick={props.onRollOrReset}>
             {rollLabel}
           </Button>
