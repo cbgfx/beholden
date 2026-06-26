@@ -1,2 +1,18 @@
 /* web-player app-specific styles */
 /* All tokens and base resets come from @beholden/shared via main.tsx */
+
+.character-panel__actions {
+  opacity: 0.62;
+  transition: opacity 120ms ease;
+}
+
+.character-panel:hover > div > .character-panel__actions,
+.character-panel:focus-within > div > .character-panel__actions {
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .character-panel__actions {
+    opacity: 0.38;
+  }
+}

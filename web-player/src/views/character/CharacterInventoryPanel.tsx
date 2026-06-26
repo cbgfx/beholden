@@ -731,6 +731,7 @@ export function InventoryPanel({ char, charData, parsedFeatureEffects, accentCol
       title={<>Inventory{saving && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginLeft: 6, fontWeight: 400, textTransform: "none" }}>saving…</span>}</>}
       color={accentColor}
       storageKey="inventory"
+      summary={`${items.length} items · ${Math.round(carriedWeight * 10) / 10} / ${carryCapacity} lb`}
       actions={<button type="button" onClick={() => setPickerOpen(true)} title="Add item" style={panelHeaderAddBtn(accentColor)}>+</button>}
     >
 

@@ -10,16 +10,28 @@ import { CharacterSupportPanels } from "@/views/character/CharacterSupportPanels
 import { InventoryPanel } from "@/views/character/CharacterInventoryPanel";
 import { ItemSpellsPanel } from "@/views/character/CharacterItemSpellsPanel";
 import { RichSpellsPanel } from "@/views/character/CharacterSpellsPanel";
+import { useSheetDensity } from "@/views/character/CharacterViewParts";
 
 export function CharacterPrimaryColumn(props: {
   hudProps: React.ComponentProps<typeof CharacterHudPanel>;
+  combatProps: React.ComponentProps<typeof CharacterCombatPanels>;
   abilitiesProps: React.ComponentProps<typeof CharacterAbilitiesPanels>;
   defensesProps: React.ComponentProps<typeof CharacterDefensesPanel>;
   proficienciesProps: React.ComponentProps<typeof CharacterProficienciesPanel>;
 }) {
+  const compact = useSheetDensity() === "compact";
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <CharacterHudPanel {...props.hudProps} />
+    <div style={{ display: "flex", flexDirection: "column", gap: compact ? 9 : 14 }}>
+      <div style={{
+        display: "flex", flexDirection: "column",
+        overflow: "hidden",
+        border: "1px solid rgba(255,255,255,0.09)",
+        borderRadius: 12,
+        background: "rgba(255,255,255,0.035)",
+      }}>
+        <CharacterHudPanel {...props.hudProps} embedded />
+        <CharacterCombatPanels {...props.combatProps} showActions={false} embeddedStats />
+      </div>
       <CharacterAbilitiesPanels {...props.abilitiesProps} />
       <CharacterDefensesPanel {...props.defensesProps} />
       <CharacterProficienciesPanel {...props.proficienciesProps} />
@@ -34,9 +46,10 @@ export function CharacterActionColumn(props: {
   itemSpellsProps: React.ComponentProps<typeof ItemSpellsPanel>;
   richSpellsProps: React.ComponentProps<typeof RichSpellsPanel>;
 }) {
+  const compact = useSheetDensity() === "compact";
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <CharacterCombatPanels {...props.combatProps} />
+    <div style={{ display: "flex", flexDirection: "column", gap: compact ? 9 : 14 }}>
+      <CharacterCombatPanels {...props.combatProps} showStats={false} />
       {props.polymorphed ? (
         props.polymorphMonsterState.monster ? (
           <MonsterStatblock monster={props.polymorphMonsterState.monster} hideSummaryBar />
@@ -65,17 +78,20 @@ export function CharacterActionColumn(props: {
 
 export function CharacterInventoryColumn(props: {
   inventoryProps: React.ComponentProps<typeof InventoryPanel>;
-  creaturesProps: React.ComponentProps<typeof CharacterCreaturesPanel>;
 }) {
-  return (
-    <div>
-      <InventoryPanel {...props.inventoryProps} />
-      <div style={{ height: 12 }} />
-      <CharacterCreaturesPanel {...props.creaturesProps} />
-    </div>
-  );
+  return <InventoryPanel {...props.inventoryProps} />;
 }
 
-export function CharacterSupportColumn(props: React.ComponentProps<typeof CharacterSupportPanels>) {
-  return <CharacterSupportPanels {...props} />;
+export function CharacterSupportColumn(
+  props: React.ComponentProps<typeof CharacterSupportPanels> & {
+    creaturesProps?: React.ComponentProps<typeof CharacterCreaturesPanel>;
+  },
+) {
+  const { creaturesProps, ...supportProps } = props;
+  return (
+    <CharacterSupportPanels
+      {...supportProps}
+      afterUpkeep={creaturesProps ? <CharacterCreaturesPanel {...creaturesProps} /> : undefined}
+    />
+  );
 }

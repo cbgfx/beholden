@@ -42,7 +42,12 @@ export function CharacterProficienciesPanel({
   ].filter((s) => s.items.length > 0 || s.label === "Tools" || s.label === "Languages");
   if (!sections.length) return null;
   return (
-    <CollapsiblePanel title="Proficiencies &amp; Languages" color={accentColor} storageKey="proficiencies">
+    <CollapsiblePanel
+      title="Proficiencies &amp; Languages"
+      color={accentColor}
+      storageKey="proficiencies"
+      summary={`${allToolNames.length} tools · ${allLanguageNames.length} languages`}
+    >
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {sections.map((s) => (
           <div key={s.label}>

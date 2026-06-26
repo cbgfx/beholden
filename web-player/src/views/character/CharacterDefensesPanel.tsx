@@ -178,7 +178,15 @@ export function CharacterDefensesPanel({
   void hasAnything;
 
   return (
-    <CollapsiblePanel title="Defenses" color={accentColor} storageKey="defenses">
+    <CollapsiblePanel
+      title="Defenses"
+      color={accentColor}
+      storageKey="defenses"
+      defaultOpen={hasAnything}
+      summary={hasAnything
+        ? `${resistances.length + customResistances.length} resist · ${damageImmunities.length + conditionImmunities.length + customImmunities.length} immune${senses.length ? ` · ${senses.join(", ")}` : ""}`
+        : "None"}
+    >
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <DefenseRow
           label="Resistances"

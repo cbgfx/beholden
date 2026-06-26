@@ -5,6 +5,8 @@ import { C } from "@/lib/theme";
 import {
   Wrap,
   NoteEditDrawer,
+  SheetDensityProvider,
+  type SheetDensity,
 } from "@/views/character/CharacterViewParts";
 import {
   CharacterActionColumn,
@@ -34,6 +36,16 @@ import { buildCharacterRuntimeActions } from "@/views/character/CharacterViewCom
 import { buildCharacterHpActions } from "@/views/character/CharacterViewHpActions";
 import { useCharacterSyncEffects } from "@/views/character/useCharacterSyncEffects";
 import { useCharacterPolymorphControls } from "@/views/character/useCharacterPolymorphControls";
+import type { CharacterCombatPanelsProps } from "@/views/character/CharacterCombatPanels";
+
+type SheetView = "play" | "gear" | "reference" | "all";
+
+const SHEET_VIEWS: { id: SheetView; label: string; description: string }[] = [
+  { id: "play", label: "Play", description: "Character, actions, and upkeep" },
+  { id: "gear", label: "Gear", description: "Character and inventory" },
+  { id: "reference", label: "Reference", description: "Character, notes, and features" },
+  { id: "all", label: "All", description: "The complete four-column sheet" },
+];
 
 // ---------------------------------------------------------------------------
 // View
@@ -66,6 +78,18 @@ export function CharacterView() {
   const [polymorphApplyingId, setPolymorphApplyingId] = useState<string | null>(null);
   const [portraitUploading, setPortraitUploading] = useState(false);
   const portraitFileRef = useRef<HTMLInputElement>(null);
+  const [sheetView, setSheetView] = useState<SheetView>(() => {
+    try {
+      const saved = localStorage.getItem("character-sheet:view");
+      if (SHEET_VIEWS.some((view) => view.id === saved)) return saved as SheetView;
+    } catch { /* ignore */ }
+    return "play";
+  });
+  const [sheetDensity, setSheetDensity] = useState<SheetDensity>(() => {
+    try {
+      return localStorage.getItem("character-sheet:density") === "compact" ? "compact" : "comfortable";
+    } catch { return "comfortable"; }
+  });
   const {
     char,
     setChar,
@@ -339,9 +363,32 @@ export function CharacterView() {
     (id: string) => setFn((prev) => prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]);
   const toggleNoteExpanded = _makeToggleExpanded(setExpandedNoteIds);
   const toggleClassFeatureExpanded = _makeToggleExpanded(setExpandedClassFeatureIds);
+  const combatProps = {
+    effectiveAc: transformedCombatStats?.effectiveAc ?? effectiveAc,
+    speed: transformedCombatStats?.speed ?? effectiveSpeed,
+    movementModes: transformedCombatStats?.movementModes ?? movementModes,
+    level: char.level,
+    className: transformedCombatStats?.className ?? char.className,
+    initiativeBonus: transformedCombatStats?.initiativeBonus ?? initiativeBonus,
+    strScore: transformedCombatStats?.strScore ?? scores.str,
+    dexScore: transformedCombatStats?.dexScore ?? scores.dex,
+    pb: transformedCombatStats?.pb ?? pb,
+    passivePerc: transformedCombatStats?.passivePerc ?? passivePerc,
+    passiveInv: transformedCombatStats?.passiveInv ?? passiveInv,
+    accentColor,
+    inventory,
+    prof,
+    parsedFeatureEffects,
+    nonProficientArmorPenalty,
+    hasDisadvantage,
+    rageDamageBonus,
+    unarmedRageDamageBonus,
+    rageActive,
+    showActions: !polymorphCondition,
+  } satisfies CharacterCombatPanelsProps;
 
   return (
-    <Wrap wide>
+    <Wrap wide minWidth={sheetView === "all" ? 1760 : sheetView === "play" ? 1260 : 880}>
       <input
         ref={portraitFileRef}
         type="file"
@@ -366,9 +413,83 @@ export function CharacterView() {
           </button>
         </div>
       )}
-      {/* ── 4-column layout ──────────────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(420px, 1fr))", gap: 16, alignItems: "flex-start" }}>
+      {/* Focused sheet navigation; "All" preserves the full four-column view. */}
+      <nav
+        aria-label="Character sheet sections"
+        style={{
+          position: "sticky", top: 0, zIndex: 30,
+          display: "flex", alignItems: "center", gap: 4,
+          width: "fit-content", margin: "0 auto 14px", padding: 4,
+          border: "1px solid rgba(255,255,255,0.09)", borderRadius: 12,
+          background: "rgba(10,18,33,0.92)", backdropFilter: "blur(14px)",
+          boxShadow: "0 8px 28px rgba(0,0,0,0.22)",
+        }}
+      >
+        {SHEET_VIEWS.map((view) => {
+          const selected = sheetView === view.id;
+          return (
+            <button
+              key={view.id}
+              type="button"
+              aria-pressed={selected}
+              title={view.description}
+              onClick={() => {
+                setSheetView(view.id);
+                try { localStorage.setItem("character-sheet:view", view.id); } catch { /* ignore */ }
+              }}
+              style={{
+                appearance: "none", cursor: "pointer", boxSizing: "border-box",
+                border: 0, fontFamily: "inherit",
+                padding: "7px 14px", borderRadius: 8,
+                color: selected ? "#eaf7ff" : C.muted,
+                background: selected ? `${accentColor}24` : "transparent",
+                boxShadow: selected ? `inset 0 0 0 1px ${accentColor}55` : "none",
+                fontSize: "var(--fs-small)", fontWeight: selected ? 800 : 650,
+                transition: "background 120ms ease, color 120ms ease, box-shadow 120ms ease",
+              }}
+            >
+              {view.label}
+            </button>
+          );
+        })}
+        <div style={{ width: 1, height: 22, margin: "0 3px", background: "rgba(255,255,255,0.10)" }} />
+        <button
+          type="button"
+          aria-pressed={sheetDensity === "compact"}
+          title="Fit more information on screen"
+          onClick={() => {
+            const next = sheetDensity === "compact" ? "comfortable" : "compact";
+            setSheetDensity(next);
+            try { localStorage.setItem("character-sheet:density", next); } catch { /* ignore */ }
+          }}
+          style={{
+            appearance: "none", cursor: "pointer", boxSizing: "border-box",
+            border: 0, fontFamily: "inherit",
+            padding: "7px 12px", borderRadius: 8,
+            color: sheetDensity === "compact" ? "#eaf7ff" : C.muted,
+            background: sheetDensity === "compact" ? `${accentColor}24` : "transparent",
+            boxShadow: sheetDensity === "compact" ? `inset 0 0 0 1px ${accentColor}55` : "none",
+            fontSize: "var(--fs-small)", fontWeight: 700,
+          }}
+        >
+          Compact
+        </button>
+      </nav>
+
+      <SheetDensityProvider density={sheetDensity}>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns:
+          sheetView === "all"
+            ? "repeat(4, minmax(420px, 1fr))"
+            : sheetView === "play"
+              ? "minmax(390px, 0.95fr) minmax(460px, 1.15fr) minmax(390px, 0.95fr)"
+              : "minmax(390px, 0.9fr) minmax(460px, 1.1fr)",
+        gap: sheetDensity === "compact" ? 10 : 16,
+        alignItems: "flex-start",
+      }}>
         <CharacterPrimaryColumn
+          combatProps={combatProps}
           hudProps={{
             char,
             accentColor,
@@ -449,30 +570,9 @@ export function CharacterView() {
           }}
         />
 
+        {(sheetView === "play" || sheetView === "all") && (
         <CharacterActionColumn
-          combatProps={{
-            effectiveAc: transformedCombatStats?.effectiveAc ?? effectiveAc,
-            speed: transformedCombatStats?.speed ?? effectiveSpeed,
-            movementModes: transformedCombatStats?.movementModes ?? movementModes,
-            level: char.level,
-            className: transformedCombatStats?.className ?? char.className,
-            initiativeBonus: transformedCombatStats?.initiativeBonus ?? initiativeBonus,
-            strScore: transformedCombatStats?.strScore ?? scores.str,
-            dexScore: transformedCombatStats?.dexScore ?? scores.dex,
-            pb: transformedCombatStats?.pb ?? pb,
-            passivePerc: transformedCombatStats?.passivePerc ?? passivePerc,
-            passiveInv: transformedCombatStats?.passiveInv ?? passiveInv,
-            accentColor,
-            inventory,
-            prof,
-            parsedFeatureEffects,
-            nonProficientArmorPenalty,
-            hasDisadvantage,
-            rageDamageBonus,
-            unarmedRageDamageBonus,
-            rageActive,
-            showActions: !polymorphCondition,
-          }}
+          combatProps={combatProps}
           polymorphed={Boolean(polymorphCondition)}
           polymorphMonsterState={polymorphMonsterState}
           itemSpellsProps={{
@@ -510,7 +610,9 @@ export function CharacterView() {
             spellSaveDcBonus,
           }}
         />
+        )}
 
+        {(sheetView === "gear" || sheetView === "all") && (
         <CharacterInventoryColumn
           inventoryProps={{
             char,
@@ -520,13 +622,10 @@ export function CharacterView() {
             campaignId: char.campaigns[0]?.campaignId ?? null,
             onSave: saveCharacterData,
           }}
-          creaturesProps={{
-            charData: char.characterData,
-            accentColor,
-            onSave: saveCharacterData,
-          }}
         />
+        )}
 
+        {(sheetView === "play" || sheetView === "reference" || sheetView === "all") && (
         <CharacterSupportColumn
           accentColor={accentColor}
           hasCampaign={char.campaigns.length > 0}
@@ -556,12 +655,19 @@ export function CharacterView() {
           onDeleteSharedNote={(id) => handleNoteDelete("shared", id)}
           onSavePlayerNotesOrder={(list) => { void savePlayerNotesList(list); }}
           onSaveSharedNotesOrder={saveSharedNotesList}
+          showReferenceContent={sheetView !== "play"}
+          creaturesProps={sheetView === "play" || sheetView === "all" ? {
+            charData: char.characterData,
+            accentColor,
+            onSave: saveCharacterData,
+          } : undefined}
           polymorphName={polymorphName || null}
           onOpenTransformSelf={() => setPolymorphDrawerOpen(true)}
           onRevertTransformSelf={polymorphCondition ? () => { void toggleCondition("polymorphed"); } : undefined}
         />
+        )}
       </div>
-      {/* end 4-column grid */}
+      </SheetDensityProvider>
 
       <CharacterPolymorphDrawer
         open={polymorphDrawerOpen}

@@ -61,6 +61,7 @@ export function CharacterCreaturesPanel(props: {
         title={<>Creatures ({creatures.length})</>}
         color={props.accentColor}
         storageKey="creatures"
+        summary={orderedCreatures.length > 0 ? orderedCreatures.map((creature) => creature.name).join(", ") : "None"}
         actions={
           <button type="button" onClick={() => setPickerOpen(true)} style={panelHeaderAddBtn(props.accentColor)} title="Add creature">
             +

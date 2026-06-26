@@ -5,6 +5,17 @@ import { MiniStat as SharedMiniStat, Panel as SharedPanel, ghostButtonStyle } fr
 export { PreparedSpellProgressionBlock, ClassFeatureItem } from "./CharacterViewFeatureParts";
 export { NoteEditDrawer } from "./CharacterViewNoteDrawer";
 
+export type SheetDensity = "comfortable" | "compact";
+const SheetDensityContext = React.createContext<SheetDensity>("comfortable");
+
+export function SheetDensityProvider({ density, children }: { density: SheetDensity; children: React.ReactNode }) {
+  return <SheetDensityContext.Provider value={density}>{children}</SheetDensityContext.Provider>;
+}
+
+export function useSheetDensity() {
+  return React.useContext(SheetDensityContext);
+}
+
 export function Tooltip({ text, children, multiline }: { text: string; children: React.ReactNode; multiline?: boolean }) {
   const [visible, setVisible] = useState(false);
 
@@ -38,10 +49,10 @@ export function Tooltip({ text, children, multiline }: { text: string; children:
   );
 }
 
-export function Wrap({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
+export function Wrap({ children, wide, minWidth }: { children: React.ReactNode; wide?: boolean; minWidth?: number | string }) {
   return (
     <div style={{ height: "100%", overflowY: "auto", overflowX: wide ? "auto" : "hidden", background: C.bg, color: C.text }}>
-      <div style={{ maxWidth: wide ? "none" : 1060, minWidth: wide ? 1760 : "auto", margin: "0 auto", padding: wide ? "16px" : "28px 20px" }}>
+      <div style={{ maxWidth: wide ? "none" : 1060, minWidth: wide ? (minWidth ?? 1760) : "auto", margin: "0 auto", padding: wide ? "16px" : "28px 20px" }}>
         {children}
       </div>
     </div>
@@ -54,16 +65,22 @@ const PANEL_STYLE: React.CSSProperties = {
   borderRadius: 12, padding: "14px 16px",
 };
 
-export function Panel({ children }: { children: React.ReactNode }) {
+export function Panel({ children, embedded = false }: { children: React.ReactNode; embedded?: boolean }) {
+  const compact = useSheetDensity() === "compact";
   return (
-    <SharedPanel borderColor="rgba(255,255,255,0.09)" background="rgba(255,255,255,0.035)" radius={12} padding="14px 16px">
+    <SharedPanel
+      borderColor={embedded ? "transparent" : "rgba(255,255,255,0.09)"}
+      background={embedded ? "transparent" : "rgba(255,255,255,0.035)"}
+      radius={embedded ? 0 : 12}
+      padding={compact ? "10px 12px" : "14px 16px"}
+    >
       {children}
     </SharedPanel>
   );
 }
 
 export function CollapsiblePanel({
-  title, color, actions, children, storageKey, defaultOpen = true,
+  title, color, actions, children, storageKey, defaultOpen = true, summary, embedded = false,
 }: {
   title: React.ReactNode;
   color: string;
@@ -71,7 +88,10 @@ export function CollapsiblePanel({
   children: React.ReactNode;
   storageKey: string;
   defaultOpen?: boolean;
+  summary?: React.ReactNode;
+  embedded?: boolean;
 }) {
+  const compact = useSheetDensity() === "compact";
   const [open, setOpen] = useState(() => {
     try {
       const v = localStorage.getItem(`panel:${storageKey}`);
@@ -89,7 +109,13 @@ export function CollapsiblePanel({
   };
 
   return (
-    <div style={PANEL_STYLE}>
+    <div className="character-panel" style={embedded ? {
+      padding: compact ? "10px 12px" : "14px 16px",
+      borderTop: "1px solid rgba(255,255,255,0.07)",
+    } : {
+      ...PANEL_STYLE,
+      padding: compact ? "10px 12px" : PANEL_STYLE.padding,
+    }}>
       <div
         onClick={toggle}
         style={{
@@ -101,9 +127,17 @@ export function CollapsiblePanel({
         <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color, display: "flex", alignItems: "center", gap: 6 }}>
           {title}
         </span>
+        {!open && summary && (
+          <span style={{
+            minWidth: 0, maxWidth: "58%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600,
+          }}>
+            {summary}
+          </span>
+        )}
         <div style={{ flex: 1, height: 1, background: `${color}30` }} />
         {actions && (
-          <div style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>{actions}</div>
+          <div className="character-panel__actions" style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>{actions}</div>
         )}
         <span style={{
           color, fontSize: "var(--fs-tiny)", lineHeight: 1,

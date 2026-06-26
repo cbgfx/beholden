@@ -51,6 +51,8 @@ export interface CharacterCombatPanelsProps {
   rageDamageBonus?: number;
   unarmedRageDamageBonus?: number;
   rageActive?: boolean;
+  embeddedStats?: boolean;
+  showStats?: boolean;
   showActions?: boolean;
 }
 
@@ -74,6 +76,8 @@ export function CharacterCombatPanels({
   rageDamageBonus = 0,
   unarmedRageDamageBonus = 0,
   rageActive = false,
+  embeddedStats = false,
+  showStats = true,
   showActions = true,
 }: CharacterCombatPanelsProps) {
   const attackDisadvantage = nonProficientArmorPenalty || hasDisadvantage;
@@ -122,7 +126,13 @@ export function CharacterCombatPanels({
 
   return (
     <>
-      <CollapsiblePanel title="Combat Stats" color={accentColor} storageKey="combat-stats">
+      {showStats && <CollapsiblePanel
+        title="Combat Stats"
+        color={accentColor}
+        storageKey="combat-stats"
+        summary={`AC ${effectiveAc} · Init ${formatModifier(initiativeBonus)} · ${speed} ft · PP ${passivePerc}`}
+        embedded={embeddedStats}
+      >
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(88px, 1fr))", gap: 6 }}>
           <MiniStat label="Armor Class" value={String(effectiveAc)} accent={accentColor} icon={<IconShield size={11} />} />
           <MiniStat label="Speed" value={`${speed} ft`} icon={<IconSpeed size={11} />} />
@@ -201,9 +211,14 @@ export function CharacterCombatPanels({
             </div>
           </div>
         )}
-      </CollapsiblePanel>
+      </CollapsiblePanel>}
 
-      {showActions && <CollapsiblePanel title="Actions" color={accentColor} storageKey="actions">
+      {showActions && <CollapsiblePanel
+        title="Actions"
+        color={accentColor}
+        storageKey="actions"
+        summary={`${actionItems.length + 1} attack${actionItems.length === 0 ? "" : "s"}`}
+      >
         {nonProficientArmorItems.length > 0 && (
           <div style={{
             marginBottom: 10,

@@ -53,6 +53,7 @@ function conditionDisplayLabel(cond: ConditionInstance): string {
 }
 
 export interface CharacterHudPanelProps {
+  embedded?: boolean;
   char: CharacterHudLike;
   accentColor: string;
   xpEarned: number;
@@ -95,6 +96,7 @@ export interface CharacterHudPanelProps {
 export function CharacterHudPanel(props: CharacterHudPanelProps) {
   const {
     char,
+    embedded = false,
     accentColor,
     xpEarned,
     xpNeeded,
@@ -139,7 +141,7 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
 
   return (
     <>
-      <Panel>
+      <Panel embedded={embedded}>
         <div style={{ display: "flex", gap: 14, alignItems: "flex-start", marginBottom: 14 }}>
           <div
             onClick={onPortraitClick}
@@ -165,7 +167,16 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
             )}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{ margin: "0 0 2px", fontSize: "var(--fs-hero)", fontWeight: 900, letterSpacing: -0.5, color: C.text }}>{char.name}</h1>
+            <h1 style={{
+              margin: "0 0 3px",
+              fontSize: "clamp(var(--fs-title), 1.4vw, 22px)",
+              lineHeight: 1.15,
+              fontWeight: 800,
+              letterSpacing: -0.2,
+              color: C.text,
+            }}>
+              {char.name}
+            </h1>
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "2px 6px", marginBottom: 3, fontSize: "var(--fs-subtitle)", color: C.muted }}>
               {[char.className, char.characterData?.classes?.[0]?.subclass, char.species].filter(Boolean).map((item, i, arr) => (
                 <React.Fragment key={i}>

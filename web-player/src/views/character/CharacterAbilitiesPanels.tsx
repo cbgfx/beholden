@@ -124,7 +124,12 @@ export function CharacterAbilitiesPanels({
 
   return (
     <>
-      <CollapsiblePanel title="Abilities &amp; Saves" color={accentColor} storageKey="abilities-saves">
+      <CollapsiblePanel
+        title="Abilities &amp; Saves"
+        color={accentColor}
+        storageKey="abilities-saves"
+        summary={abilityKeys.map((key) => `${ABILITY_LABELS[key]} ${scores[key] ?? "-"}`).join(" · ")}
+      >
         <AbilityScoresCompact
           scores={scores}
           compact
@@ -190,7 +195,12 @@ export function CharacterAbilitiesPanels({
         />
       </CollapsiblePanel>
 
-      <CollapsiblePanel title="Skills" color={accentColor} storageKey="skills">
+      <CollapsiblePanel
+        title="Skills"
+        color={accentColor}
+        storageKey="skills"
+        summary={`${new Set([...(prof?.skills ?? []), ...(prof?.expertise ?? [])].map((entry) => entry.name.toLowerCase())).size} proficient`}
+      >
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", columnGap: 18, rowGap: 2 }}>
           {orderedSkillsForGrid.map(({ name, abil }) => {
             const tier = getSkillProficiencyTier(prof ?? undefined, name);

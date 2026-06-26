@@ -9,6 +9,7 @@ import {
   miniPillBtn,
   restBtnStyle,
   ClassFeatureItem,
+  useSheetDensity,
 } from "@/views/character/CharacterViewParts";
 
 export function CharacterSupportPanels(props: {
@@ -40,6 +41,8 @@ export function CharacterSupportPanels(props: {
   onDeleteSharedNote: (id: string) => void;
   onSavePlayerNotesOrder: (list: PlayerNote[]) => void;
   onSaveSharedNotesOrder: (list: PlayerNote[]) => void;
+  showReferenceContent?: boolean;
+  afterUpkeep?: React.ReactNode;
   polymorphName?: string | null;
   onOpenTransformSelf: () => void;
   onRevertTransformSelf?: () => void;
@@ -73,6 +76,8 @@ export function CharacterSupportPanels(props: {
     onDeleteSharedNote,
     onSavePlayerNotesOrder,
     onSaveSharedNotesOrder,
+    showReferenceContent = true,
+    afterUpkeep,
     polymorphName,
     onOpenTransformSelf,
     onRevertTransformSelf,
@@ -90,13 +95,17 @@ export function CharacterSupportPanels(props: {
     () => [...classFeaturesList].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })),
     [classFeaturesList],
   );
+  const compact = useSheetDensity() === "compact";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: compact ? 9 : 14 }}>
       <CollapsiblePanel
         title="Upkeep"
         color={accentColor}
         storageKey="recovery"
+        summary={classResources.length > 0
+          ? `${classResources.reduce((sum, resource) => sum + resource.current, 0)} / ${classResources.reduce((sum, resource) => sum + resource.max, 0)} resources`
+          : `${hitDiceCurrent} / ${hitDiceMax} hit dice`}
         actions={
           <button
             type="button"
@@ -286,12 +295,16 @@ export function CharacterSupportPanels(props: {
         </div>
       </CollapsiblePanel>
 
-      <NotesPanel
-        title={`Player Notes (${playerNotesList.length})`}
-        color={accentColor}
-        storageKey="player-notes"
-        actions={<button type="button" onClick={onOpenPlayerNoteCreate} title="Add note" style={panelHeaderAddBtn(accentColor)}>+</button>}
-      >
+      {afterUpkeep}
+
+      {showReferenceContent && (
+        <>
+          <NotesPanel
+            title={`Player Notes (${playerNotesList.length})`}
+            color={accentColor}
+            storageKey="player-notes"
+            actions={<button type="button" onClick={onOpenPlayerNoteCreate} title="Add note" style={panelHeaderAddBtn(accentColor)}>+</button>}
+          >
         <NoteList
           items={playerNotesList.map((note) => ({ id: note.id, title: note.title || "Untitled", text: note.text }))}
           expandedIds={expandedNoteIds}
@@ -311,7 +324,7 @@ export function CharacterSupportPanels(props: {
           }}
           emptyText="No notes yet."
         />
-      </NotesPanel>
+          </NotesPanel>
 
       {hasCampaign && <NotesPanel
         title={`Shared Notes (${allSharedNotes.length})`}
@@ -340,7 +353,12 @@ export function CharacterSupportPanels(props: {
         />
       </NotesPanel>}
 
-      <CollapsiblePanel title="Player Features" color={accentColor} storageKey="player-features">
+          <CollapsiblePanel
+            title="Player Features"
+            color={accentColor}
+            storageKey="player-features"
+            summary={`${sortedClassFeaturesList.length} features`}
+          >
         {sortedClassFeaturesList.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {sortedClassFeaturesList.map((feature) => (
@@ -356,7 +374,9 @@ export function CharacterSupportPanels(props: {
         ) : (
           <EmptyState textColor={C.muted}>No live player features were derived for this character.</EmptyState>
         )}
-      </CollapsiblePanel>
+          </CollapsiblePanel>
+        </>
+      )}
 
       <div style={{ display: "none" }}>
         <button
