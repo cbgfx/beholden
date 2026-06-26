@@ -139,6 +139,7 @@ export function SharedNotesPanel(props: {
         storageKey="campaign-shared-notes"
         title={`Shared Notes (${totalCount})`}
         color={accent}
+        borderColor="transparent"
         actions={
           <IconButton onClick={openCreate} title="Add shared note" variant="accent">
             <IconPlus />

@@ -20,6 +20,7 @@ export function CampaignNotesPanel(props: {
       storageKey="campaign-notes"
       title={`Campaign Notes (${notes.length})`}
       color={`var(--campaign-accent, ${theme.colors.accentPrimary})`}
+      borderColor="transparent"
       actions={
         <IconButton onClick={props.onAdd} title="Add note" variant="accent">
           <IconPlus />

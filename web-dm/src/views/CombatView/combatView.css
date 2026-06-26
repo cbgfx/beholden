@@ -17,6 +17,18 @@
   min-width: 0;
 }
 
+.cvHudCard--active,
+.cvHudCard--target {
+  border-color: var(--cv-panelBorder);
+  background:
+    linear-gradient(90deg, var(--cv-roleTintStart), var(--cv-roleTintEnd) 28%, transparent 58%),
+    var(--cv-panelBg);
+  box-shadow:
+    inset 3px 0 0 var(--cv-roleAccent),
+    0 0 0 2px rgba(0, 0, 0, 0.18),
+    0 10px 26px rgba(0, 0, 0, 0.30);
+}
+
 .cvHudTopRow {
   display: flex;
   align-items: center;
@@ -68,7 +80,7 @@
   letter-spacing: 0.6px;
   font-size: var(--fs-tiny);
   color: #0b0e13;
-  background: var(--cv-roleAccent);
+  background: var(--cv-badgeAccent);
   border: 1px solid rgba(0,0,0,0.35);
   box-shadow: 0 8px 18px rgba(0,0,0,0.35);
 }

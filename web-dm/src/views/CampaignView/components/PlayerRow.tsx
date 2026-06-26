@@ -82,6 +82,7 @@ export function PlayerRow(props: {
 
   return (
     <div
+      className={variant === "campaign" ? "campaignInteractiveRow" : undefined}
       style={{
         ...rowStyle,
         display: "flex",
@@ -169,7 +170,7 @@ export function PlayerRow(props: {
           >
             {hasLegacyActions ? props.actions : null}
             {!hasLegacyActions && props.primaryAction != null ? props.primaryAction : null}
-            {showMenu ? <RowMenu items={props.menuItems!} /> : null}
+            {showMenu ? <div className="campaignRowActions"><RowMenu items={props.menuItems!} /></div> : null}
           </div>
         )}
       </div>

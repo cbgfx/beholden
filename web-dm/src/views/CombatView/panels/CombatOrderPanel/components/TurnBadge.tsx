@@ -4,10 +4,11 @@ import { IconTargeted } from "@/icons";
 export function TurnBadge(props: { active: boolean; targeted: boolean; activeColor?: string }) {
   const size = 22;
   const activeColor = props.activeColor ?? theme.colors.accentHighlight;
-  const border = props.active ? activeColor : theme.colors.panelBorder;
+  const targetColor = theme.colors.accentPrimary;
+  const border = props.targeted ? targetColor : props.active ? activeColor : theme.colors.panelBorder;
   const bg = props.active ? activeColor : "transparent";
   const shadow = props.active ? `0 0 0 2px ${activeColor}40` : "none";
-  const iconColor = props.active ? theme.colors.panelBg : theme.colors.accentHighlight;
+  const iconColor = props.targeted ? targetColor : props.active ? theme.colors.panelBg : theme.colors.accentHighlight;
 
   return (
     <div

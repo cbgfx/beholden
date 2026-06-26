@@ -34,27 +34,8 @@ export function CombatOrderPanel(props: {
   onToggleBulkSelect?: (id: string) => void;
 }) {
   const panelTitleColor = "var(--campaign-accent, #a78bfa)";
+  const targetAccent = theme.colors.accentPrimary;
   const { upcoming, wrapped } = useCombatOrderModel({ combatants: props.combatants, activeId: props.activeId });
-
-  const getRowShadow = (isActive: boolean, isTarget: boolean, activeAccent: string) => {
-    // Target glow should remain visible even when the target is also the active combatant (self-target).
-    if (isActive && isTarget) {
-      return `
-        0 0 0 2px ${activeAccent} inset,
-        0 0 0 4px ${theme.colors.blue} inset,
-        0 0 18px ${theme.colors.blue} inset,
-        0 6px 18px rgba(0,0,0,0.18)
-      `;
-    }
-    if (isActive) {
-      return `0 0 0 2px ${activeAccent} inset, 0 6px 18px rgba(0,0,0,0.18)`;
-    }
-    if (isTarget) {
-      // Inset-only to avoid scrollbars in the initiative list.
-      return `0 0 0 2px ${theme.colors.blue} inset, 0 0 18px ${theme.colors.blue} inset`;
-    }
-    return "none";
-  };
 
   return (
     <Panel
@@ -69,7 +50,7 @@ export function CombatOrderPanel(props: {
       <style>
         {`@keyframes beholdenTargetPulse {
             0% { filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
-            50% { filter: drop-shadow(0 0 14px ${theme.colors.blue}80); }
+            50% { filter: drop-shadow(0 0 8px ${targetAccent}40); }
             100% { filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
           }`}
       </style>
@@ -86,7 +67,6 @@ export function CombatOrderPanel(props: {
             onSelectTarget={props.onSelectTarget}
             onSetInitiative={props.onSetInitiative}
             onToggleReaction={props.onToggleReaction}
-            getRowShadow={getRowShadow}
             bulkMode={props.bulkMode}
             isBulkSelected={props.bulkSelectedIds?.has(c.id)}
             onToggleBulkSelect={props.onToggleBulkSelect}
@@ -110,7 +90,6 @@ export function CombatOrderPanel(props: {
             onSelectTarget={props.onSelectTarget}
             onSetInitiative={props.onSetInitiative}
             onToggleReaction={props.onToggleReaction}
-            getRowShadow={getRowShadow}
             bulkMode={props.bulkMode}
             isBulkSelected={props.bulkSelectedIds?.has(c.id)}
             onToggleBulkSelect={props.onToggleBulkSelect}

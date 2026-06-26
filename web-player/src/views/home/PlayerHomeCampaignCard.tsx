@@ -10,7 +10,8 @@ export function CampaignCard({ campaign: c, characters, onOpen }: {
   onOpen: (id: string) => void;
 }) {
   const navigate = useNavigate();
-  const [imgHovered, setImgHovered] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const accent = c.color ?? C.colorGold;
 
   const assignedChars = characters.filter((ch) =>
     ch.campaigns.some((cc) => cc.campaignId === c.id)
@@ -24,14 +25,21 @@ export function CampaignCard({ campaign: c, characters, onOpen }: {
     .toUpperCase();
 
   return (
-    <div style={{
-      background: "rgba(255,255,255,0.04)",
-      border: "1px solid rgba(255,255,255,0.1)",
+    <div
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
+      background: `linear-gradient(155deg, color-mix(in srgb, ${accent} 5%, transparent) 0%, rgba(255,255,255,0.045) 45%, rgba(255,255,255,0.025) 100%)`,
+      border: `1px solid ${isHovered ? `color-mix(in srgb, ${accent} 40%, transparent)` : "rgba(255,255,255,0.1)"}`,
       borderRadius: 12,
       overflow: "hidden",
       display: "grid",
       gridTemplateRows: "160px 1fr auto",
-      boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
+      transform: isHovered ? "translateY(-4px)" : "translateY(0)",
+      boxShadow: isHovered
+        ? `inset 0 1px 0 rgba(255,255,255,0.08), 0 22px 52px rgba(0,0,0,0.46), 0 0 28px color-mix(in srgb, ${accent} 11%, transparent)`
+        : "inset 0 1px 0 rgba(255,255,255,0.05), 0 12px 32px rgba(0,0,0,0.32), 0 3px 10px rgba(0,0,0,0.22)",
+      transition: "transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease",
     }}>
       {/* Banner */}
       <div
@@ -41,14 +49,14 @@ export function CampaignCard({ campaign: c, characters, onOpen }: {
           background: c.imageUrl ? "#000" : "linear-gradient(135deg,rgba(56,182,255,0.18) 0%,rgba(56,182,255,0.04) 100%)",
           cursor: "default",
         }}
-        onMouseEnter={() => setImgHovered(true)}
-        onMouseLeave={() => setImgHovered(false)}
       >
         {c.imageUrl
           ? <img src={`${c.imageUrl}?v=${c.updatedAt}`} alt="" style={{
               position: "absolute", top: 0, left: 0,
               width: "100%", height: "100%", objectFit: "cover", display: "block",
-              opacity: imgHovered ? 0.85 : 1, transition: "opacity 0.15s",
+              opacity: isHovered ? 0.9 : 1,
+              transform: isHovered ? "scale(1.025)" : "scale(1)",
+              transition: "opacity 200ms ease, transform 260ms ease",
             }} />
           : <span style={{
               position: "absolute", inset: 0,

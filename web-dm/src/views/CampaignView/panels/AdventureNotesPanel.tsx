@@ -21,6 +21,7 @@ export function AdventureNotesPanel(props: {
       storageKey="campaign-adventure-notes"
       title={`Adventure Notes (${notes.length})`}
       color={`var(--campaign-accent, ${theme.colors.accentPrimary})`}
+      borderColor="transparent"
       actions={
         <IconButton onClick={props.onAdd} disabled={!props.selectedAdventureId} title="Add note" variant="accent">
           <IconPlus />

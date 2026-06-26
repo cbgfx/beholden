@@ -8,6 +8,7 @@ export function CampaignLeftSidebar(props: {
   selectedAdventureId: string | null;
   encounters: { id: string; name: string; status: string }[];
   selectedEncounterId: string | null;
+  selectedEncounterCounts: { players: number; friendlies: number; hostiles: number } | null;
 
   onSelectAdventure: (id: string) => void;
   onCreateAdventure: () => void;
@@ -44,6 +45,7 @@ export function CampaignLeftSidebar(props: {
         encounters={props.encounters}
         selectedAdventureId={props.selectedAdventureId}
         selectedEncounterId={props.selectedEncounterId}
+        selectedEncounterCounts={props.selectedEncounterCounts}
         onSelectEncounter={props.onSelectEncounter}
         onBuild={props.onBuildEncounter}
         onPlay={props.onPlayEncounter}

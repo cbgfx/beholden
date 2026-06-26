@@ -27,6 +27,7 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
   const [exporting, setExporting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const color = ch.color ?? C.accentHl;
   const hpPct = ch.hpMax > 0 ? Math.max(0, Math.min(100, Math.round((ch.hpCurrent / ch.hpMax) * 100))) : 0;
@@ -95,15 +96,22 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
   }
 
   return (
-    <div style={{
-      background: "rgba(255,255,255,0.04)",
-      border: `1px solid ${confirmDelete ? "rgba(248,113,113,0.35)" : `${color}33`}`,
+    <div
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
+      background: `linear-gradient(145deg, color-mix(in srgb, ${color} 5%, transparent) 0%, rgba(255,255,255,0.045) 42%, rgba(255,255,255,0.025) 100%)`,
+      border: `1px solid ${confirmDelete ? "rgba(248,113,113,0.35)" : `color-mix(in srgb, ${color} ${isHovered ? 40 : 20}%, transparent)`}`,
       borderRadius: 14,
       padding: 16,
       display: "flex",
       flexDirection: "column",
       gap: 10,
-      transition: "border-color 0.15s",
+      transform: isHovered ? "translateY(-3px)" : "translateY(0)",
+      boxShadow: isHovered
+        ? `inset 0 1px 0 rgba(255,255,255,0.08), 0 18px 42px rgba(0,0,0,0.42), 0 0 24px color-mix(in srgb, ${color} 11%, transparent)`
+        : "inset 0 1px 0 rgba(255,255,255,0.05), 0 10px 28px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.2)",
+      transition: "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease",
     }}>
       <input ref={fileRef} type="file" accept="image/*" onChange={handleImageSelected} style={{ display: "none" }} />
 

@@ -26,14 +26,38 @@
 .campaignGrid {
   margin-top: var(--gap-10);
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 6fr) minmax(0, 7fr);
-  gap: var(--gap-6);
+  grid-template-columns: minmax(0, 8fr) minmax(420px, 5.5fr) minmax(0, 8fr);
+  gap: var(--gap-8);
 }
 
 .campaignCol {
   display: grid;
-  gap: var(--gap-6);
+  gap: var(--gap-8);
   align-content: start;
+}
+
+.campaignRowActions,
+.noteRowActions {
+  opacity: 0.18;
+  transition: opacity 140ms ease;
+}
+
+.noteInteractiveRow--expanded .noteRowActions {
+  opacity: 0.45;
+}
+
+.campaignInteractiveRow:hover .campaignRowActions,
+.campaignInteractiveRow:focus-within .campaignRowActions,
+.noteInteractiveRow:hover .noteRowActions,
+.noteInteractiveRow:focus-within .noteRowActions {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .campaignRowActions,
+  .noteRowActions {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 1440px) {

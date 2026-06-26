@@ -42,7 +42,8 @@ export function DraggableList(props: {
               userSelect: "none",
               cursor: props.onSelect ? "pointer" : "default",
               background: bg,
-              border: `1px solid ${theme.colors.panelBorder}`,
+              border: "1px solid transparent",
+              outline: "none",
               opacity: isDragging ? 0.92 : 1,
               ...props.getItemStyle?.(it),
             }}

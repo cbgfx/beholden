@@ -11,12 +11,13 @@ export function NotesPanel(props: {
   defaultOpen?: boolean;
   style?: React.CSSProperties;
   bodyStyle?: React.CSSProperties;
+  borderColor?: string;
 }) {
   return (
     <Panel
       storageKey={props.storageKey}
       defaultOpen={props.defaultOpen ?? true}
-      borderColor="rgba(255,255,255,0.09)"
+      borderColor={props.borderColor ?? "rgba(255,255,255,0.09)"}
       background="rgba(255,255,255,0.035)"
       radius={12}
       padding="14px 16px"

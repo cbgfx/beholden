@@ -34,6 +34,20 @@ function renderInlineRichText(text: string): React.ReactNode[] {
   return nodes;
 }
 
+function parseTableCells(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function isTableDivider(line: string): boolean {
+  const cells = parseTableCells(line);
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+
 function renderNoteRichText(text: string): React.ReactNode {
   const lines = text.replace(/\r/g, "").split("\n");
   const out: React.ReactNode[] = [];
@@ -61,6 +75,47 @@ function renderNoteRichText(text: string): React.ReactNode {
     if (/^---+$/.test(trimmed)) {
       out.push(<hr key={`hr-${i}`} style={{ border: 0, borderTop: "1px solid rgba(255,255,255,0.2)", margin: "10px 0" }} />);
       i += 1;
+      continue;
+    }
+
+    const nextLine = lines[i + 1] ?? "";
+    if (trimmed.includes("|") && isTableDivider(nextLine)) {
+      const headers = parseTableCells(line);
+      const rows: string[][] = [];
+      let j = i + 2;
+      while (j < lines.length) {
+        const candidate = lines[j] ?? "";
+        if (!candidate.trim() || !candidate.includes("|")) break;
+        rows.push(parseTableCells(candidate));
+        j += 1;
+      }
+      out.push(
+        <div key={`table-${i}`} style={{ overflowX: "auto", margin: "8px 0 12px" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "inherit" }}>
+            <thead>
+              <tr>
+                {headers.map((cell, index) => (
+                  <th key={`th-${i}-${index}`} style={{ padding: "7px 9px", textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.22)", color: "currentColor", fontWeight: 800 }}>
+                    {renderInlineRichText(cell)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, rowIndex) => (
+                <tr key={`tr-${i}-${rowIndex}`}>
+                  {headers.map((_, cellIndex) => (
+                    <td key={`td-${i}-${rowIndex}-${cellIndex}`} style={{ padding: "7px 9px", borderBottom: "1px solid rgba(255,255,255,0.09)", verticalAlign: "top" }}>
+                      {renderInlineRichText(row[cellIndex] ?? "")}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      i = j;
       continue;
     }
 
@@ -129,16 +184,17 @@ export function NoteRow({
   onEdit?: () => void;
   onDelete?: () => void;
 }) {
-  const activeBg = `color-mix(in srgb, ${accentColor} 12%, transparent)`;
-  const activeBorder = `color-mix(in srgb, ${accentColor} 32%, transparent)`;
-
   return (
     <div
+      className={`noteInteractiveRow${expanded ? " noteInteractiveRow--expanded" : ""}`}
       style={{
-        padding: "5px 6px",
-        borderRadius: 7,
-        background: expanded ? activeBg : "transparent",
-        border: `1px solid ${expanded ? activeBorder : "transparent"}`,
+        padding: expanded ? "7px 8px 9px" : "5px 6px",
+        borderRadius: 8,
+        background: expanded
+          ? `linear-gradient(90deg, color-mix(in srgb, ${accentColor} 10%, transparent), color-mix(in srgb, ${accentColor} 2%, transparent) 32%, transparent 66%), rgba(0,0,0,0.08)`
+          : "transparent",
+        border: "1px solid transparent",
+        boxShadow: "none",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -152,33 +208,37 @@ export function NoteRow({
         >
           {title}
         </button>
-        {onEdit ? (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onEdit();
-            }}
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 5, color: mutedColor, cursor: "pointer", padding: "2px 7px", fontSize: "var(--fs-small)" }}
-          >
-            Edit
-          </button>
-        ) : null}
-        {onDelete ? (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onDelete();
-            }}
-            style={{ background: "rgba(255,93,93,0.08)", border: "1px solid rgba(255,93,93,0.25)", borderRadius: 5, color: deleteColor, cursor: "pointer", padding: "2px 7px", fontSize: "var(--fs-small)" }}
-          >
-            x
-          </button>
+        {onEdit || onDelete ? (
+          <div className="noteRowActions" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+            {onEdit ? (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 5, color: mutedColor, cursor: "pointer", padding: "2px 7px", fontSize: "var(--fs-small)" }}
+              >
+                Edit
+              </button>
+            ) : null}
+            {onDelete ? (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                style={{ background: "rgba(255,93,93,0.08)", border: "1px solid rgba(255,93,93,0.25)", borderRadius: 5, color: deleteColor, cursor: "pointer", padding: "2px 7px", fontSize: "var(--fs-small)" }}
+              >
+                x
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </div>
       {expanded && text ? (
-        <div style={{ marginTop: 6, color: mutedColor, fontSize: "var(--fs-small)", lineHeight: 1.5 }}>
+        <div style={{ marginTop: 8, color: `color-mix(in srgb, ${textColor} 78%, ${mutedColor})`, fontSize: "var(--fs-small)", lineHeight: 1.62, maxWidth: "76ch" }}>
           {renderNoteRichText(text)}
         </div>
       ) : null}

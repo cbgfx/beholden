@@ -18,10 +18,11 @@ function CombatantAvatar(props: {
 }) {
   const { baseType, isDead, iconColor, activeAccent, isActive, isTarget } = props;
   const imageUrl = resolveAssetUrl(props.imageUrl);
+  const targetAccent = theme.colors.accentPrimary;
 
   const borderColor = isActive
     ? activeAccent
-    : isTarget ? theme.colors.blue
+    : isTarget ? targetAccent
     : withAlpha(iconColor, 0.40);
 
   // Explicit JSX — don't use dynamic component variables with these icon types
@@ -39,7 +40,7 @@ function CombatantAvatar(props: {
         display: "flex", alignItems: "center", justifyContent: "center",
         color: iconColor,
         boxShadow: isActive ? `0 0 0 2px ${activeAccent}`
-          : isTarget ? `0 0 0 2px ${theme.colors.blue}` : "none",
+          : isTarget ? `0 0 0 2px ${targetAccent}` : "none",
         overflow: "hidden",
       }}>
         {imageUrl && !isDead
@@ -71,7 +72,6 @@ export function CombatOrderRow(props: {
   onSelectTarget: (id: string) => void;
   onSetInitiative: (id: string, initiative: number) => void;
   onToggleReaction: (id: string) => void;
-  getRowShadow: (isActive: boolean, isTarget: boolean, activeAccent: string) => string;
   bulkMode?: boolean;
   isBulkSelected?: boolean;
   onToggleBulkSelect?: (id: string) => void;
@@ -79,6 +79,7 @@ export function CombatOrderRow(props: {
   const c = props.combatant;
   const isActive = c.id === props.activeId;
   const isTarget = c.id === props.targetId;
+  const targetAccent = theme.colors.accentPrimary;
   const bulkMode = Boolean(props.bulkMode);
 
   const hpCurrent = Number(c.hpCurrent ?? 0);
@@ -99,6 +100,17 @@ export function CombatOrderRow(props: {
     : c.baseType === "player" ? theme.colors.blue
     : c.color || (friendly ? theme.colors.green : theme.colors.red);
   const activeAccent = iconColor;
+  const hasTurnState = isActive || isTarget;
+  const rowBackground = hasTurnState
+    ? `linear-gradient(90deg, ${withAlpha(activeAccent, 0.12)}, ${withAlpha(activeAccent, 0.025)} 30%, transparent 62%)`
+    : undefined;
+  const rowShadow = hasTurnState
+    ? [
+        `inset 3px 0 0 ${activeAccent}`,
+        isTarget ? `inset 0 0 14px ${withAlpha(targetAccent, 0.12)}` : "",
+        "0 6px 18px rgba(0,0,0,0.18)",
+      ].filter(Boolean).join(", ")
+    : "none";
 
   const pct = hpMax > 0 ? Math.max(0, Math.min(1, hpCurrent / hpMax)) : 0;
   const barColor = isDead ? theme.colors.red
@@ -111,13 +123,14 @@ export function CombatOrderRow(props: {
   const init = c.initiative == null ? null : Number(c.initiative);
   const hasInit = init != null && Number.isFinite(init);
 
+  const statusAccent = isTarget ? targetAccent : activeAccent;
   const statusBadge = (isActive || isTarget) && (
     <span style={{
       padding: "1px 7px", borderRadius: 999,
       fontSize: "var(--fs-tiny)", fontWeight: 900, letterSpacing: 0.6,
       textTransform: "uppercase" as const, color: theme.colors.text,
-      border: `1px solid ${isActive ? activeAccent : theme.colors.blue}`,
-      background: withAlpha(isActive ? activeAccent : theme.colors.blue, 0.13),
+      border: `1px solid ${statusAccent}`,
+      background: withAlpha(statusAccent, 0.13),
     }}>
       {isActive && isTarget ? "Self" : isActive ? "Active" : "Target"}
     </span>
@@ -145,11 +158,12 @@ export function CombatOrderRow(props: {
     >
       <div style={{
         borderRadius: 12, border: `1px solid ${bulkMode && props.isBulkSelected ? theme.colors.accentWarning : theme.colors.panelBorder}`,
-        overflow: "hidden", boxShadow: bulkMode ? "none" : props.getRowShadow(isActive, isTarget, activeAccent),
+        overflow: "hidden", boxShadow: bulkMode ? "none" : rowShadow,
         animation: !bulkMode && isTarget ? "beholdenTargetPulse 1.8s ease-in-out infinite" : undefined,
-        transform: isActive ? "translateY(-1px)" : "none", transition: "transform 80ms ease, border-color 120ms ease",
+        transform: isActive ? "translateY(-1px)" : "none",
+        transition: "transform 80ms ease, border-color 120ms ease, background 120ms ease, box-shadow 120ms ease",
         opacity: dim ? 0.45 : 1, filter: dim ? "grayscale(0.85)" : "none",
-        background: bulkMode && props.isBulkSelected ? `${theme.colors.accentWarning}12` : undefined,
+        background: bulkMode && props.isBulkSelected ? `${theme.colors.accentWarning}12` : rowBackground,
       }}>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px" }}>

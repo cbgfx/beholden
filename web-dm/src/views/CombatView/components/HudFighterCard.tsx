@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { theme } from "@/theme/theme";
+import { theme, withAlpha } from "@/theme/theme";
 import { HudConditionsStrip } from "@/views/CombatView/components/HudConditionsStrip";
 import { clamp01, getHudHp, getHudHpFill, getHudNames } from "@/views/CombatView/utils/hud";
 import type { EncounterActor, CampaignCharacter } from "@/domain/types/domain";
@@ -40,7 +40,15 @@ export function HudFighterCard(props: Props) {
     props.activeId != null &&
     String(props.targetId) === String(props.activeId);
 
-  const roleAccent = props.role === "active" ? theme.colors.accentHighlight : theme.colors.blue;
+  const combatantAccent = !c
+    ? theme.colors.muted
+    : c.baseType === "player"
+      ? theme.colors.blue
+      : c.friendly
+        ? theme.colors.green
+        : theme.colors.red;
+  const roleAccent = combatantAccent;
+  const badgeAccent = props.role === "target" ? theme.colors.accentPrimary : combatantAccent;
   const roleLabel = isSelfTarget ? "SELF" : props.role === "active" ? "ACTIVE" : "TARGET";
 
   // Accent used for the HUD portrait hex backing (match PlayerRow / combat icon coloring).
@@ -66,10 +74,13 @@ export function HudFighterCard(props: Props) {
 
   return (
     <div
-      className="cvHudCard"
+      className={`cvHudCard cvHudCard--${props.role}`}
       style={
         {
           "--cv-roleAccent": roleAccent,
+          "--cv-badgeAccent": badgeAccent,
+          "--cv-roleTintStart": withAlpha(roleAccent, 0.11),
+          "--cv-roleTintEnd": withAlpha(roleAccent, 0.025),
           "--cv-panelBg": theme.colors.panelBg,
           "--cv-panelBorder": theme.colors.panelBorder,
           "--cv-bg": theme.colors.bg,

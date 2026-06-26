@@ -18,6 +18,7 @@ export function touchLastOpened(id: string) {
 export interface Campaign {
   id: string;
   name: string;
+  color?: string | null;
   updatedAt: number;
   playerCount: number;
   imageUrl: string | null;

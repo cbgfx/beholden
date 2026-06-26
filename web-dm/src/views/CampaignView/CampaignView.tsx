@@ -61,10 +61,6 @@ export function CampaignView(props: {
   const selectedCampaign = state.campaigns.find((c) => c.id === state.selectedCampaignId);
   const campaignSharedNotes = selectedCampaign?.sharedNotes ?? "";
 
-  const selectedEncounter = React.useMemo(() => {
-    return encounters.find((e) => e.id === selectedEncounterId) ?? null;
-  }, [encounters, selectedEncounterId]);
-
   const { encountersForPanel } = useOpenEncounterMetrics({
     selectedAdventureId,
     encounters,
@@ -73,6 +69,15 @@ export function CampaignView(props: {
     monsterDetails: state.monsterDetails,
     dispatch,
   });
+  const selectedEncounterCounts = React.useMemo(() => {
+    if (!selectedEncounterId) return null;
+    const roster = combatants.filter((combatant) => combatant.encounterId === selectedEncounterId);
+    return {
+      players: roster.filter((combatant) => combatant.baseType === "player").length,
+      friendlies: roster.filter((combatant) => combatant.baseType !== "player" && combatant.friendly).length,
+      hostiles: roster.filter((combatant) => combatant.baseType !== "player" && !combatant.friendly).length,
+    };
+  }, [combatants, selectedEncounterId]);
 
   const handleToggleNote = React.useCallback((noteId: string) => {
     dispatch({ type: "toggleNote", noteId });
@@ -99,6 +104,7 @@ export function CampaignView(props: {
         selectedAdventureId={selectedAdventureId}
         encounters={encountersForPanel}
         selectedEncounterId={selectedEncounterId}
+        selectedEncounterCounts={selectedEncounterCounts}
         onSelectAdventure={(id) =>
           dispatch({
             type: "selectAdventure",
@@ -134,7 +140,7 @@ export function CampaignView(props: {
       <CampaignMainColumn
         players={players}
         combatants={combatants}
-        selectedEncounterId={selectedEncounter ? selectedEncounter.id : null}
+        selectedEncounterId={selectedEncounterId}
         onFullRest={props.onFullRest}
         onCreatePlayer={props.onCreatePlayer}
         onEditPlayer={props.onEditPlayer}

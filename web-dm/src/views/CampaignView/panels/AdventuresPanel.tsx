@@ -1,7 +1,7 @@
 import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";
 import { DraggableList } from "@/components/drag/DraggableList";
-import { theme } from "@/theme/theme";
+import { theme, withAlpha } from "@/theme/theme";
 import { IconPencil, IconPlus, IconTrash, IconDownload, IconImport } from "@/icons";
 import { RowMenu } from "@/ui/RowMenu";
 
@@ -39,16 +39,22 @@ export function AdventuresPanel(props: {
           activeId={selectedAdventureId}
           onSelect={(id) => props.onSelectAdventure(id)}
           onReorder={props.onReorder}
+          getItemStyle={(it) => it.id === selectedAdventureId ? {
+            background: `linear-gradient(90deg, ${withAlpha(theme.colors.accentHighlight, 0.12)}, ${withAlpha(theme.colors.accentHighlight, 0.025)} 30%, transparent 62%), ${withAlpha(theme.colors.shadowColor, 0.14)}`,
+            boxShadow: `inset 3px 0 0 ${withAlpha(theme.colors.accentHighlight, 0.78)}`,
+          } : {}}
           renderItem={(it) => (
-            <div style={{ padding: "4px 6px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <div className="campaignInteractiveRow" style={{ padding: "4px 6px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
               <div style={{ fontWeight: 900, color: theme.colors.text }}>{it.title ?? it.id}</div>
-              <RowMenu
-                items={[
-                  { label: "Edit", icon: <IconPencil size={14} />, onClick: () => props.onEdit(it.id) },
-                  { label: "Export", icon: <IconDownload size={14} />, onClick: () => props.onExport(it.id) },
-                  { label: "Delete", icon: <IconTrash size={14} />, danger: true, onClick: () => props.onDelete(it.id) },
-                ]}
-              />
+              <div className="campaignRowActions">
+                <RowMenu
+                  items={[
+                    { label: "Edit", icon: <IconPencil size={14} />, onClick: () => props.onEdit(it.id) },
+                    { label: "Export", icon: <IconDownload size={14} />, onClick: () => props.onExport(it.id) },
+                    { label: "Delete", icon: <IconTrash size={14} />, danger: true, onClick: () => props.onDelete(it.id) },
+                  ]}
+                />
+              </div>
             </div>
           )}
         />

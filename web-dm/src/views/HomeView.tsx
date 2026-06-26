@@ -35,29 +35,31 @@ export function HomeView({
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importBusy, setImportBusy] = useState(false);
   const [importMsg, setImportMsg] = useState<string>("");
+  const [importFailed, setImportFailed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function importCampaign() {
     if (!importFile) return;
     setImportBusy(true);
     setImportMsg("");
+    setImportFailed(false);
     try {
       const fd = new FormData();
       fd.append("file", importFile);
       await api<unknown>("/api/campaigns/import", { method: "POST", body: fd });
-      setImportMsg("Campaign imported.");
+      setImportMsg("Campaign imported — it now appears below.");
       setImportFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       await onRefresh();
     } catch (e: unknown) {
+      setImportFailed(true);
       setImportMsg(String((e as any)?.message ?? e));
     } finally {
       setImportBusy(false);
     }
   }
 
-  const msgColor = importMsg.toLowerCase().includes("fail") || importMsg.toLowerCase().includes("error")
-    ? theme.colors.red
-    : theme.colors.muted;
+  const msgColor = importFailed ? theme.colors.red : theme.colors.green;
 
   return (
     <div style={{ width: "100%", minHeight: "100%", display: "grid", justifyItems: "center", alignContent: "start", padding: "36px 28px 60px", gap: 32 }}>
@@ -108,7 +110,11 @@ export function HomeView({
               ref={fileInputRef}
               type="file"
               accept=".json,application/json"
-              onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                setImportFile(e.target.files?.[0] ?? null);
+                setImportMsg("");
+                setImportFailed(false);
+              }}
               style={{ display: "none" }}
             />
             {importFile ? importFile.name : "Choose file…"}
