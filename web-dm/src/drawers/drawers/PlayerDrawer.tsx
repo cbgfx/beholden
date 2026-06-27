@@ -22,6 +22,7 @@ export function PlayerDrawer(props: {
 }): DrawerContent {
   const { state } = useStore();
   const confirm = useConfirm();
+  const close = props.close;
 
   const [form, setForm] = React.useState<PlayerFormState>(DEFAULT_PLAYER_FORM);
 
@@ -42,7 +43,7 @@ export function PlayerDrawer(props: {
     if (d.type !== "editPlayer") return;
     const p = state.players.find((x) => x.id === d.playerId);
     if (!p) {
-      props.close();
+      close();
       return;
     }
     setForm({
@@ -62,7 +63,7 @@ export function PlayerDrawer(props: {
   pWis: String(p.wis ?? 10),
   pCha: String(p.cha ?? 10)
     });
-  }, [props.drawer, state.players]);
+  }, [props.drawer, state.players, close]);
 
   // Current image URL to display: local preview (create) or stored URL (edit).
   const drawer = props.drawer;
@@ -176,7 +177,7 @@ export function PlayerDrawer(props: {
       return;
     await api(`/api/players/${d.playerId}`, { method: "DELETE" });
     props.close();
-  }, [confirm, props]);
+  }, [confirm, props, state.players]);
 
   const handlers: PlayerFormHandlers = React.useMemo(
     () => ({

@@ -1,4 +1,12 @@
-import multer from "multer";
+import multer, { type Options } from "multer";
+
+const uploadLimits: NonNullable<Options["limits"]> & { fieldNestingDepth: number } = {
+  fileSize: 100 * 1024 * 1024, // 100MB
+  files: 1,
+  fields: 20,
+  parts: 21,
+  fieldNestingDepth: 3,
+};
 
 /**
  * Centralized upload middleware.
@@ -7,7 +15,5 @@ import multer from "multer";
  */
 export const upload = multer({
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB
-  },
+  limits: uploadLimits,
 });

@@ -70,6 +70,7 @@ export function SpellFormModal(props: {
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const onClose = props.onClose;
   const isCreate = props.spell == null;
   const [form, setForm] = React.useState<FormData>(() =>
     props.spell ? spellToForm(props.spell) : EMPTY
@@ -79,10 +80,10 @@ export function SpellFormModal(props: {
 
   // Close on Escape
   React.useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") props.onClose(); };
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [props.onClose]);
+  }, [onClose]);
 
   function set(field: keyof FormData) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>

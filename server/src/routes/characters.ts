@@ -2,7 +2,9 @@
 // Player-owned characters: campaign-agnostic CRUD + campaign assignment.
 
 import type { Express } from "express";
+import { z } from "zod";
 import type { ServerContext } from "../server/context.js";
+import type { StoredConditionInstance } from "../server/userData.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { normalizeCharacterSheetForStorage, rowToCampaignCharacter, rowToCharacterSheet, CAMPAIGN_CHARACTER_COLS, CHARACTER_SHEET_COLS } from "../lib/db.js";
@@ -25,6 +27,7 @@ import {
   updateCampaignCharacterLive,
 } from "../services/characters.js";
 import { ACCEPTED_IMAGE_TYPES, resizeToWebP } from "../lib/imageHelpers.js";
+import { ConditionInstanceSchema } from "../lib/schemas.js";
 import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
 import { withAbsoluteImageUrl } from "../lib/routeImageUrl.js";
 import {
@@ -37,6 +40,10 @@ import {
   requireOwnedCharacter,
   toCharacterSheetDtoInput,
 } from "./characterRouteHelpers.js";
+
+const ConditionsBody = z.object({
+  conditions: z.array(ConditionInstanceSchema).max(100),
+});
 
 export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
@@ -230,7 +237,16 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     if (!charId) return;
     if (!requireOwnedCharacter(db, charId, req.user!.userId, res)) return;
 
-    const conditions = Array.isArray(req.body?.conditions) ? req.body.conditions : [];
+    const parsed = parseBody(ConditionsBody, req);
+    const conditions: StoredConditionInstance[] = parsed.conditions.map((condition) => {
+      const { casterId, hexAbility, ...rest } = condition;
+      return {
+        ...rest,
+        key: condition.key,
+        ...(casterId !== undefined ? { casterId } : {}),
+        ...(hexAbility !== undefined ? { hexAbility } : {}),
+      };
+    });
     const t = now();
 
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {

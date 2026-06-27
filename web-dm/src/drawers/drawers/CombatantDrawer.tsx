@@ -56,7 +56,7 @@ export function CombatantDrawer(props: {
       attackOverrides
     });
     props.close();
-  }, [ac, friendly, hpCur, hpMax, label, props]);
+  }, [ac, attackOverrides, friendly, hpCur, hpMax, label, props]);
 
   return {
     body: (

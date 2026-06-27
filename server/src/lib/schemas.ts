@@ -6,6 +6,7 @@ import { z } from "zod";
 export const ConditionInstanceSchema = z.object({
   key: z.string(),
   casterId: z.string().nullable().optional(),
+  hexAbility: z.enum(["str", "dex", "con", "int", "wis", "cha"]).optional(),
 }).passthrough();
 
 /** Per-attack stat overrides keyed by attack name. */

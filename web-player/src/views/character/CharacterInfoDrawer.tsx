@@ -1,4 +1,3 @@
-import React from "react";
 import { C } from "@/lib/theme";
 import type { EditableSheetOverrideField, SheetOverrides } from "@/views/character/CharacterViewHelpers";
 import type { AbilKey } from "@/views/character/CharacterSheetTypes";

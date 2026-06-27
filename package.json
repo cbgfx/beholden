@@ -12,19 +12,21 @@
     "dev:server": "npm -w server run dev",
     "dev:web-dm": "npm -w web-dm run dev",
     "dev:web-player": "npm -w web-player run dev",
-    "typecheck": "npm -w server run build",
+    "typecheck": "npm -w server run typecheck && npm -w web-dm run typecheck && npm -w web-player run typecheck",
     "lint": "eslint \"{server,shared,web-dm,web-player}/src/**/*.{ts,tsx}\" --cache --cache-location .eslintcache",
     "build": "npm -w server run build && npm -w web-dm run build && npm -w web-player run build",
     "build:web-dm": "npm -w web-dm run build",
     "build:web-player": "npm -w web-player run build",
     "start": "npm -w server run start",
-    "test": "npm run build",
-    "check:payload-budgets": "node server/scripts/check-payload-budgets.mjs"
+    "test": "npm -w web-player run test",
+    "check:payload-budgets": "node server/scripts/check-payload-budgets.mjs",
+    "verify": "npm run typecheck && npm run lint && npm test && npm run build && npm run check:payload-budgets"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.46.2",
-    "@typescript-eslint/parser": "^8.46.2",
-    "concurrently": "^9.0.1",
-    "eslint": "^9.38.0"
+    "@typescript-eslint/eslint-plugin": "^8.62.0",
+    "@typescript-eslint/parser": "^8.62.0",
+    "concurrently": "^10.0.3",
+    "eslint": "^10.6.0",
+    "eslint-plugin-react-hooks": "^7.1.1"
   }
 }

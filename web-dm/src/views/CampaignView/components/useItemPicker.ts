@@ -83,12 +83,13 @@ export function useItemPicker(isOpen: boolean) {
   }, [filtered]);
 
   const vl = useVirtualList({ isEnabled: true, rowHeight: ROW_HEIGHT, overscan: 6 });
+  const scrollRef = vl.scrollRef;
 
   // Scroll to top when filters change
   React.useEffect(() => {
-    const el = vl.scrollRef.current;
+    const el = scrollRef.current;
     if (el) el.scrollTop = 0;
-  }, [q, rarityFilter, typeFilter, magicFilter]);
+  }, [q, rarityFilter, typeFilter, magicFilter, scrollRef]);
 
   return {
     rows: serverRows as CompendiumItemRow[],

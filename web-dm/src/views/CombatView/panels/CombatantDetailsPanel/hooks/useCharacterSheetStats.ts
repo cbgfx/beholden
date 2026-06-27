@@ -73,13 +73,5 @@ export function useCharacterSheetStats(args: {
     const infoLines = isMonster ? buildMonsterInfoLines(detail) : [];
 
     return { ac, hpCur, hpMax, tempHp, speed, speedDisplay, abilities, saves, infoLines };
-  }, [
-    combatant?.id,
-    combatant?.hpCurrent,
-    combatant?.hpMax,
-    combatant?.ac,
-    combatant?.overrides,
-    selectedMonster?.id,
-    player,
-  ]);
+  }, [combatant, selectedMonster, player]);
 }

@@ -46,15 +46,19 @@ export function HudConditionsStrip(props: Props) {
       {shown.map((cond, idx) => {
         const key = String(cond?.key ?? "");
         const CondIcon = conditionIconByKey[key as keyof typeof conditionIconByKey];
+        const hexAbility = key === "hexed" && typeof cond.hexAbility === "string"
+          ? cond.hexAbility.toUpperCase()
+          : null;
         if (!CondIcon) return null;
 
         return (
           <span
             key={`${key}-${cond?.casterId ?? ""}-${idx}`}
-            className="cvCondChip"
-            title={conditionLabel(key)}
+            className={`cvCondChip${hexAbility ? " cvCondChipWithLabel" : ""}`}
+            title={`${conditionLabel(key)}${hexAbility ? ` · ${hexAbility}` : ""}`}
           >
             <CondIcon size={14} style={{ opacity: 0.92 }} />
+            {hexAbility ? <span className="cvCondAbility">{hexAbility}</span> : null}
           </span>
         );
       })}

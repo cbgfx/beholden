@@ -1,6 +1,6 @@
 import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 import type { CharacterClassEntry } from "@/views/character/CharacterSheetTypes";
-import { featPrerequisitesMet, invocationPrerequisitesMet, normalizeSpellTrackingKey, spellLooksLikeDamageSpell } from "@/views/character/CharacterSheetUtils";
+import { featPrerequisitesMet, invocationPrerequisitesMet, spellLooksLikeDamageSpell } from "@/views/character/CharacterSheetUtils";
 import type { ParsedFeatChoiceLike as LevelUpFeatChoiceLike, ParsedFeatDetailLike as SharedLevelUpFeatDetailLike } from "@/views/character-creator/utils/FeatChoiceTypes";
 
 export { buildLevelUpPayload } from "./buildLevelUpPayload";

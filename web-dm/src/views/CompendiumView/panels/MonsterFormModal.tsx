@@ -23,6 +23,7 @@ export function MonsterFormModal(props: {
   onClose: () => void;
   onSaved: (id: string) => void;
 }) {
+  const onClose = props.onClose;
   const isDuplicate = props.isDuplicate ?? false;
   const isEdit = props.monster != null && !isDuplicate;
   const monster = props.monster;
@@ -33,11 +34,11 @@ export function MonsterFormModal(props: {
 
   React.useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") props.onClose();
+      if (event.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [props.onClose]);
+  }, [onClose]);
 
   const setField = React.useCallback(<K extends keyof MonsterFormState>(field: K, value: MonsterFormState[K]) => {
     setForm((current) => ({ ...current, [field]: value }));

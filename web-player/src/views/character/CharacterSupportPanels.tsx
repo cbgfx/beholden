@@ -47,7 +47,6 @@ export function CharacterSupportPanels(props: {
   polymorphName?: string | null;
   onOpenTransformSelf: () => void;
   onRevertTransformSelf?: () => void;
-  extraFeatIds?: string[];
   onOpenFeatPicker?: () => void;
   onRemoveExtraFeat?: (featId: string) => Promise<void>;
 }) {
@@ -86,7 +85,6 @@ export function CharacterSupportPanels(props: {
     polymorphName,
     onOpenTransformSelf,
     onRevertTransformSelf,
-    extraFeatIds = [],
     onOpenFeatPicker,
     onRemoveExtraFeat,
   } = props;

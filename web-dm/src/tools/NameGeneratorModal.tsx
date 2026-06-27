@@ -33,11 +33,10 @@ export function NameGeneratorModal(props: { isOpen: boolean; onClose: () => void
 
   useEffect(() => {
     if (props.isOpen) generate(gender);
-  }, [props.isOpen]);
+  }, [props.isOpen, gender]);
 
   function handleGender(g: Gender) {
     setGender(g);
-    generate(g);
   }
 
   function handleCopy() {

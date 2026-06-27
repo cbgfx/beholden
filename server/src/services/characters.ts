@@ -433,9 +433,14 @@ export function mergeLiveStats(
   if (casterIds.length > 0) {
     const combatantRows = db
       .prepare(
-        `SELECT c.id,
-                COALESCE(NULLIF(c.label, ''), NULLIF(c.name, ''), NULLIF(c.base_type, ''), 'Combatant') AS display_name
-         FROM combatants c
+         `SELECT c.id,
+                COALESCE(
+                  NULLIF(json_extract(c.snapshot_json, '$.label'), ''),
+                  NULLIF(json_extract(c.snapshot_json, '$.name'), ''),
+                  NULLIF(c.base_type, ''),
+                  'Combatant'
+                ) AS display_name
+          FROM combatants c
          WHERE c.id IN (${casterIds.map(() => "?").join(",")})`,
       )
       .all(...casterIds) as { id: string; display_name: string }[];

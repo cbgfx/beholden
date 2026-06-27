@@ -1,6 +1,10 @@
+export type SharedAbilityKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
+
 export type SharedConditionInstance = {
   key: string;
   casterId?: string | null;
+  /** Ability whose checks are disadvantaged by Hex. Only applies when key is "hexed". */
+  hexAbility?: SharedAbilityKey;
   [k: string]: unknown;
 };
 

@@ -90,6 +90,7 @@ function HexButton({
 
 export function CombatDeltaControls(props: Props) {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const { onChange, value } = props;
 
   const disabled = Boolean(props.disabled);
   const tooltip = disabled ? "Select a target" : "";
@@ -105,18 +106,18 @@ export function CombatDeltaControls(props: Props) {
 
   // Roll the current expression and put the result back in the field.
   const handleRollPreview = React.useCallback(() => {
-    if (!props.value.trim()) return;
-    const raw = props.value.trim();
+    if (!value.trim()) return;
+    const raw = value.trim();
     const sign = raw[0] === "+" || raw[0] === "-" ? raw[0] : "";
     const expr = sign ? raw.slice(1) : raw;
     const result = rollDiceExpr(expr);
     if (result <= 0) return;
-    props.onChange(`${sign}${result}`);
+    onChange(`${sign}${result}`);
     setLastRoll(result);
     if (flashRef.current) window.clearTimeout(flashRef.current);
     flashRef.current = window.setTimeout(() => setLastRoll(null), 1600);
     inputRef.current?.focus();
-  }, [props.value, props.onChange]);
+  }, [value, onChange]);
 
   // When a new target is selected, snap focus back to the input for fast table flow.
   React.useEffect(() => {

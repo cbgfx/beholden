@@ -22,7 +22,6 @@ import {
   parseWeaponProficiencyGrants,
   pushChoice,
   pushUse,
-  splitList,
   splitSentences,
   uniq,
   wordToNumber,

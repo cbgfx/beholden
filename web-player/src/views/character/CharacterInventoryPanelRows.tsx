@@ -44,34 +44,37 @@ export function PartyStashItemRow({ item, onTake, onDelete, onQuantity }: {
   onQuantity: (q: number) => void;
 }) {
   return (
-    <CollectionRow
-      padding="4px 2px"
-      main={(
-        <>
-          <div style={{ fontSize: "var(--fs-medium)", fontWeight: 600, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
-          {item.notes ? <div style={{ fontSize: "var(--fs-small)", color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.notes}</div> : null}
-        </>
-      )}
-      trailing={(
-        <>
-          <QuantityStepper
-            value={item.quantity}
-            onDecrement={() => item.quantity > 1 && onQuantity(item.quantity - 1)}
-            decrementDisabled={item.quantity <= 1}
-            onIncrement={() => onQuantity(item.quantity + 1)}
-            theme={{
-              buttonBorder: C.panelBorder,
-              buttonColor: C.text,
-              valueColor: C.text,
-              borderRadius: 5,
-              fontSize: 13,
-            }}
-          />
-          <button onClick={onTake} title="Take - moves item to your backpack" style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${C.panelBorder}`, borderRadius: 6, color: C.text, cursor: "pointer", fontSize: "var(--fs-tiny)", fontWeight: 700, padding: "3px 8px", flexShrink: 0 }}>Take</button>
-          <button onClick={onDelete} title="Remove from stash" style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(248,113,113,0.5)", fontSize: 16, padding: "0 2px", flexShrink: 0, lineHeight: 1 }}>x</button>
-        </>
-      )}
-    />
+    <div className="character-inventory-row">
+      <CollectionRow
+        padding="4px 2px"
+        main={(
+          <>
+            <div style={{ fontSize: "var(--fs-medium)", fontWeight: 600, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
+            {item.notes ? <div style={{ fontSize: "var(--fs-small)", color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.notes}</div> : null}
+          </>
+        )}
+        trailing={(
+          <>
+            <QuantityStepper
+              value={item.quantity}
+              onDecrement={() => item.quantity > 1 && onQuantity(item.quantity - 1)}
+              decrementDisabled={item.quantity <= 1}
+              onIncrement={() => onQuantity(item.quantity + 1)}
+              buttonClassName="character-row-action"
+              theme={{
+                buttonBorder: C.panelBorder,
+                buttonColor: C.text,
+                valueColor: C.text,
+                borderRadius: 5,
+                fontSize: 13,
+              }}
+            />
+            <button className="character-row-action" onClick={onTake} title="Take - moves item to your backpack" style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${C.panelBorder}`, borderRadius: 6, color: C.text, cursor: "pointer", fontSize: "var(--fs-tiny)", fontWeight: 700, padding: "3px 8px", flexShrink: 0 }}>Take</button>
+            <button className="character-row-action" onClick={onDelete} title="Remove from stash" style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(248,113,113,0.5)", fontSize: 16, padding: "0 2px", flexShrink: 0, lineHeight: 1 }}>x</button>
+          </>
+        )}
+      />
+    </div>
   );
 }
 
@@ -115,7 +118,8 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
   ) : null;
 
   return (
-    <CollectionRow
+    <div className="character-inventory-row">
+      <CollectionRow
       main={(
         <button type="button" onClick={() => onToggleExpanded(item.id)} style={{ width: "100%", minWidth: 0, background: expanded ? "rgba(255,255,255,0.05)" : "transparent", border: expanded ? `1px solid ${accentColor}33` : "1px solid transparent", borderRadius: 8, padding: "3px 8px", textAlign: "left", cursor: "pointer" }}>
           <div style={{ fontSize: "var(--fs-medium)", color: C.text, fontWeight: equipped ? 600 : 400, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
@@ -140,12 +144,14 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
             valuePrefix="x"
             onDecrement={item.quantity > 1 ? () => onQty(item.id, -1) : undefined}
             onIncrement={canEquipItem ? undefined : () => onQty(item.id, 1)}
+            buttonClassName="character-row-action"
           />
-          <button onClick={() => onRemove(item.id)} title="Remove" style={{ background: "transparent", border: "none", color: "rgba(255,255,255,0.22)", cursor: "pointer", fontSize: "var(--fs-body)", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>x</button>
+          <button className="character-row-action" onClick={() => onRemove(item.id)} title="Remove" style={{ background: "transparent", border: "none", color: "rgba(255,255,255,0.22)", cursor: "pointer", fontSize: "var(--fs-body)", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>x</button>
         </>
       )}
       padding="4px 2px"
-    />
+      />
+    </div>
   );
 }
 

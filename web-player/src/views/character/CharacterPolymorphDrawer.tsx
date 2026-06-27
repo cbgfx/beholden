@@ -1,4 +1,3 @@
-import React from "react";
 import { C } from "@/lib/theme";
 import { formatCr } from "@/lib/monsterPicker/utils";
 import type { CompendiumMonsterRow } from "@/lib/monsterPicker/types";

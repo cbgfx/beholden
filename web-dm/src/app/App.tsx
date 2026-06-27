@@ -84,9 +84,9 @@ function AppInner() {
     dispatch({ type: "setCombatants", combatants: await fetchEncounterActors(encounterId) as EncounterActor[] });
   }, [dispatch]);
 
-  useEffect(() => { refreshAll(); }, []);
-  useEffect(() => { if (state.selectedCampaignId) refreshCampaign(state.selectedCampaignId); }, [state.selectedCampaignId]);
-  useEffect(() => { refreshAdventure(state.selectedAdventureId); }, [state.selectedAdventureId]);
+  useEffect(() => { refreshAll(); }, [refreshAll]);
+  useEffect(() => { if (state.selectedCampaignId) refreshCampaign(state.selectedCampaignId); }, [state.selectedCampaignId, refreshCampaign]);
+  useEffect(() => { refreshAdventure(state.selectedAdventureId); }, [state.selectedAdventureId, refreshAdventure]);
   const matchCombatRoute = useMatch("/campaign/:campaignId/combat/:encounterId");
   useEffect(() => {
     // CombatView hydrates combatants via its own live hook; skip duplicate App-level fetches there.

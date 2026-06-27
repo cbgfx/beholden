@@ -26,7 +26,7 @@ export function CombatantConditionsSection(props: {
       casterId: c?.casterId != null ? String(c.casterId) : null,
       expiresAtRound: c?.expiresAtRound != null ? Number(c.expiresAtRound) : null,
     }));
-  }, [props.selected.id, props.selected.conditions]);
+  }, [props.selected.conditions]);
 
   const rosterById = React.useMemo(() => buildRosterById(props.roster ?? []), [props.roster]);
 
@@ -92,6 +92,11 @@ export function CombatantConditionsSection(props: {
                   : conditionLabel(c.key)}
                 {needsCaster && casterLabel ? (
                   <span style={{ color: theme.colors.muted, fontWeight: 900 }}>({casterLabel})</span>
+                ) : null}
+                {c.key === "hexed" && c.hexAbility ? (
+                  <span style={{ color: theme.colors.muted, fontWeight: 900, textTransform: "uppercase" }}>
+                    {String(c.hexAbility)}
+                  </span>
                 ) : null}
 
                 {/* Expiry badge */}

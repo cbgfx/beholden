@@ -256,8 +256,9 @@ export function useWs(onMessage: Handler) {
 export function useWsScope(scope: { campaignId?: string | null; adventureId?: string | null; encounterId?: string | null }) {
   const ctx = useContext(WsContext);
   if (!ctx) throw new Error("<WsProvider> is missing from the tree.");
+  const { campaignId, adventureId, encounterId } = scope;
 
   useEffect(() => {
-    ctx.setScope(scope);
-  }, [ctx, scope.campaignId, scope.adventureId, scope.encounterId]);
+    ctx.setScope({ campaignId, adventureId, encounterId });
+  }, [ctx, campaignId, adventureId, encounterId]);
 }

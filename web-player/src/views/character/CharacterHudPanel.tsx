@@ -45,8 +45,11 @@ function conditionDisplayLabel(cond: ConditionInstance): string {
   }
   const def = [...BASE_CONDITIONS, { key: "rage", name: "Rage" }].find((c) => c.key === cond.key);
   const base = def?.name ?? cond.key;
+  const hexAbility = cond.key === "hexed" && typeof cond.hexAbility === "string"
+    ? ` · ${cond.hexAbility.toUpperCase()}`
+    : "";
   const extra = cond.casterName || cond.sourceName;
-  return extra ? `${base} (${extra})` : base;
+  return `${extra ? `${base} (${extra})` : base}${hexAbility}`;
 }
 
 export interface CharacterHudPanelProps {
@@ -70,7 +73,7 @@ export interface CharacterHudPanelProps {
   condPickerOpen: boolean;
   setCondPickerOpen: React.Dispatch<React.SetStateAction<boolean>>;
   condSaving: boolean;
-  toggleCondition: (key: string) => void;
+  toggleCondition: (key: string, condition?: ConditionInstance) => void;
   dsSaving: boolean;
   saveDeathSaves: (next: { success: number; fail: number }) => void;
   hpMaxBonus: number;
@@ -293,7 +296,7 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
                   ) : conditionDisplayLabel(cond)}
                   <button
                     onClick={() => {
-                      toggleCondition(cond.key);
+                      toggleCondition(cond.key, cond);
                       if (cond.key === "concentration") {
                         onConcentrationSpellChange?.(null);
                         setConcentrationPickerOpen(false);

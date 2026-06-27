@@ -10,13 +10,14 @@ export function Drawer(props: {
   children: React.ReactNode;
   footer?: React.ReactNode;
 }) {
+  const { isOpen, onClose } = props;
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") props.onClose();
+      if (e.key === "Escape") onClose();
     }
-    if (props.isOpen) window.addEventListener("keydown", onKey);
+    if (isOpen) window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [props.isOpen, props.onClose]);
+  }, [isOpen, onClose]);
 
   if (!props.isOpen) return null;
 

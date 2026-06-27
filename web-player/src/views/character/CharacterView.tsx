@@ -57,7 +57,7 @@ import { useCharacterLiveUpdates } from "@/views/character/useCharacterLiveUpdat
 type SheetView = "play" | "gear" | "reference" | "all";
 
 const SHEET_VIEWS: { id: SheetView; label: string; description: string }[] = [
-  { id: "play", label: "Play", description: "Character, actions, and upkeep" },
+  { id: "play", label: "Combat", description: "Character, actions, and upkeep" },
   { id: "gear", label: "Gear", description: "Character and inventory" },
   { id: "reference", label: "Reference", description: "Character, notes, and features" },
   { id: "all", label: "All", description: "The complete four-column sheet" },
@@ -153,7 +153,7 @@ export function CharacterView() {
       setChar((prev) => prev ? { ...prev, imageUrl: result.imageUrl } : prev);
     } catch (err) { console.error(err); }
     finally { setPortraitUploading(false); }
-  }, [id]);
+  }, [id, setChar]);
 
   useEffect(() => {
     const source = char?.overrides ?? characterData?.sheetOverrides ?? { tempHp: 0, acBonus: 0, hpMaxBonus: 0 };
@@ -167,16 +167,7 @@ export function CharacterView() {
           Object.entries(source.abilityScores).filter(([, value]) => Number.isFinite(Number(value)))
         ) as Partial<Record<AbilKey, number>>
       : {});
-  }, [
-    char?.overrides?.tempHp,
-    char?.overrides?.acBonus,
-    char?.overrides?.hpMaxBonus,
-    char?.overrides?.abilityScores,
-    characterData?.sheetOverrides?.tempHp,
-    characterData?.sheetOverrides?.acBonus,
-    characterData?.sheetOverrides?.hpMaxBonus,
-    characterData?.sheetOverrides?.abilityScores,
-  ]);
+  }, [char?.overrides, characterData?.sheetOverrides]);
 
   useEffect(() => {
     setColorDraft(char?.color ?? C.accentHl);
@@ -292,7 +283,6 @@ export function CharacterView() {
     movementModes,
     tempHp,
     passivePerc,
-    passiveInv,
     initiativeBonus,
     spellSaveDcBonus,
     transformedCombatStats,
@@ -477,7 +467,7 @@ export function CharacterView() {
           <div
             onClick={() => portraitFileRef.current?.click()}
             style={{
-              width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+              width: 46, height: 46, borderRadius: 10, flexShrink: 0,
               background: `${accentColor}22`, border: `2px solid ${accentColor}55`,
               overflow: "hidden", cursor: "pointer", position: "relative",
               display: "flex", alignItems: "center", justifyContent: "center",
@@ -485,32 +475,17 @@ export function CharacterView() {
           >
             {char.imageUrl
               ? <img src={char.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : <IconPlayer size={18} style={{ opacity: 0.35 }} />
+              : <IconPlayer size={23} style={{ opacity: 0.35 }} />
             }
             {portraitUploading && (
               <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "var(--fs-tiny)", color: "#fff" }}>…</div>
             )}
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div>
               <span style={{ fontWeight: 800, fontSize: "var(--fs-body)", color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 220 }}>
                 {char.name}
               </span>
-              <button
-                onClick={() => setInfoDrawerOpen(true)}
-                title="Character Information"
-                style={{ padding: "5px 9px", borderRadius: 8, cursor: "pointer", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", color: C.muted, display: "flex", alignItems: "center" }}
-              >
-                <IconCharacterInfo size={15} />
-              </button>
-              <button
-                type="button"
-                title="Edit character"
-                onClick={() => navigate(`/characters/${char.id}/edit`)}
-                style={{ appearance: "none", cursor: "pointer", fontFamily: "inherit", padding: "5px 12px", borderRadius: 8, color: C.muted, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", fontSize: "var(--fs-small)", fontWeight: 700 }}
-              >
-                Edit
-              </button>
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: "2px 4px", flexWrap: "nowrap", marginTop: 1 }}>
               {identityLabels.map((item, i, arr) => (
@@ -521,6 +496,21 @@ export function CharacterView() {
                 ))}
             </div>
           </div>
+          <button
+            onClick={() => setInfoDrawerOpen(true)}
+            title="Character Information"
+            style={{ width: 40, height: 32, padding: 0, borderRadius: 8, cursor: "pointer", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+          >
+            <IconCharacterInfo size={19} />
+          </button>
+          <button
+            type="button"
+            title="Edit character"
+            onClick={() => navigate(`/characters/${char.id}/edit`)}
+            style={{ appearance: "none", cursor: "pointer", fontFamily: "inherit", height: 32, padding: "0 16px", borderRadius: 8, color: C.muted, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", fontSize: "var(--fs-medium)", fontWeight: 700, flexShrink: 0 }}
+          >
+            Edit
+          </button>
         </div>
 
         <div style={{ flex: 1 }} />
@@ -567,13 +557,13 @@ export function CharacterView() {
               onClick={() => navigate(`/campaigns/${activeBastion.campaignId}/bastions/${activeBastion.id}`)}
               style={{
                 appearance: "none", cursor: "pointer", boxSizing: "border-box",
-                padding: "4px 8px", borderRadius: 8,
+                height: 32, padding: "0 12px", borderRadius: 8,
                 border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.05)",
-                color: C.muted, display: "inline-flex", alignItems: "center", gap: 5,
-                fontSize: "var(--fs-tiny)", fontWeight: 700,
+                color: C.muted, display: "inline-flex", alignItems: "center", gap: 7,
+                fontSize: "var(--fs-medium)", fontWeight: 700,
               }}
             >
-              <IconBastions size={14} />
+              <IconBastions size={19} />
               {activeBastion.name}
             </button>
           )}
@@ -786,7 +776,6 @@ export function CharacterView() {
           polymorphName={polymorphName || null}
           onOpenTransformSelf={() => setPolymorphDrawerOpen(true)}
           onRevertTransformSelf={polymorphCondition ? () => { void toggleCondition("polymorphed"); } : undefined}
-          extraFeatIds={currentCharacterData.extraFeatIds ?? []}
           onOpenFeatPicker={() => setFeatPickerOpen(true)}
           onRemoveExtraFeat={handleRemoveExtraFeat}
         />

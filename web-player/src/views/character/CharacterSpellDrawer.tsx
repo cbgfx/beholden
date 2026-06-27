@@ -1,4 +1,3 @@
-import React from "react";
 import { C } from "@/lib/theme";
 import type { FetchedSpellDetail } from "@/views/character/CharacterSpellShared";
 import { DMG_COLORS, DMG_EMOJI, getScaledSpellDamage } from "@/views/character/CharacterSpellShared";

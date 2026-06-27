@@ -16,3 +16,23 @@
     opacity: 0.38;
   }
 }
+
+.character-row-action,
+.noteRowActions {
+  opacity: 1;
+  transition: opacity 140ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .character-inventory-row .character-row-action,
+  .noteInteractiveRow .noteRowActions {
+    opacity: 0.18;
+  }
+
+  .character-inventory-row:hover .character-row-action,
+  .character-inventory-row:focus-within .character-row-action,
+  .noteInteractiveRow:hover .noteRowActions,
+  .noteInteractiveRow:focus-within .noteRowActions {
+    opacity: 1;
+  }
+}

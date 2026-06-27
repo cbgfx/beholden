@@ -22,7 +22,8 @@ export type PlayerVM = {
   hpCurrent: number;
   tempHp?: number;
   acBonus?: number;
-  conditions?: { key: string; casterId?: string | null }[];
+  conditions?: { key: string; casterId?: string | null; hexAbility?: string }[];
+  concentrationSpell?: string | null;
   deathSaves?: { success: number; fail: number };
   imageUrl?: string | null;
 };
@@ -201,7 +202,10 @@ export function PlayerRow(props: {
       </div>
 
       {/* Conditions */}
-      <PlayerConditions conditions={p.conditions ?? []} />
+      <PlayerConditions
+        conditions={p.conditions ?? []}
+        concentrationSpell={p.concentrationSpell}
+      />
     </div>
   );
 }

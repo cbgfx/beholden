@@ -18,6 +18,7 @@ export function InventoryItemPickerModal(props: {
   onClose: () => void;
   onAdd: (payload?: InventoryPickerPayload) => void;
 }) {
+  const { isOpen, onClose } = props;
   const {
     q, setQ,
     rarityFilter, setRarityFilter, rarityOptions,
@@ -52,13 +53,13 @@ export function InventoryItemPickerModal(props: {
   }, [q, rarityFilter, typeFilter, filterAttunement, filterMagic, createMode, props.isOpen, vl.scrollRef]);
 
   useEffect(() => {
-    if (!props.isOpen) return;
+    if (!isOpen) return;
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") props.onClose();
+      if (e.key === "Escape") onClose();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [props.isOpen, props.onClose]);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (!props.isOpen) {

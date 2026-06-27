@@ -77,7 +77,7 @@ export function MonsterSpellSection(props: { monster: any }) {
     return () => {
       cancelled = true;
     };
-  }, [baseMonster, spellNames.join("|")]);
+  }, [baseMonster, spellNames]);
 
   const grouped = React.useMemo(() => {
     const byLevel = new Map<number, { level: number; spells: { key: string; display: string; spellId: string | null }[] }>();

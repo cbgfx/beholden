@@ -1,4 +1,3 @@
-import * as React from "react";
 import type { AttackOverride, EncounterActor, CampaignCharacter } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
 
@@ -34,8 +33,7 @@ spellLevels: Record<string, number | null>;
  * This is a pure memoized adapter to keep CombatView slim.
  */
 export function useCombatantDetailsCtx(args: Args) {
-  return React.useMemo(
-    () => ({
+  return {
       isNarrow: args.isNarrow,
       selectedMonster: args.selectedMonster,
       playerName:
@@ -72,27 +70,5 @@ export function useCombatantDetailsCtx(args: Args) {
           args.combatant?.label || args.combatant?.name || "Combatant"
         ),
       onOpenSpell: (name: string) => args.openSpellByName(name)
-    }),
-    [
-      args.isNarrow,
-      args.selectedMonster,
-      args.combatant?.baseType,
-      args.combatant?.baseId,
-      args.playersById,
-      args.spellNames,
-      args.spellLevels,
-      args.roster,
-      args.activeForCaster,
-      args.currentRound,
-      args.combatant?.id,
-      args.updateCombatant,
-      args.onOpenOverrides,
-      args.onOpenConditions,
-      args.onOpenPolymorph,
-      args.openSpellByName,
-      args.combatant?.attackOverrides,
-      args.role,
-      args.casterIdForTarget
-    ]
-  );
+    };
 }

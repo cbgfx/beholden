@@ -1,4 +1,3 @@
-import React from "react";
 import { AbilityScoresCompact } from "@beholden/shared/ui";
 import { C } from "@/lib/theme";
 import { CollapsiblePanel, ProfDot, Tooltip } from "@/views/character/CharacterViewParts";

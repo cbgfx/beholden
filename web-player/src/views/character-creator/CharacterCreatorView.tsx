@@ -397,7 +397,7 @@ export function CharacterCreatorView() {
     const acStr = String(ac);
     const speedStr = String(inferCreatorSpeed(baseSpeed, effectiveClassName, form.level));
     setForm((f) => (f.hpMax === hpStr && f.ac === acStr && f.speed === speedStr ? f : { ...f, hpMax: hpStr, ac: acStr, speed: speedStr }));
-  }, [effectiveHitDie, effectiveClassName, raceDetail, races, form.raceId, form.level, form.abilityMethod, form.standardAssign, form.pbScores, form.bgAbilityBonuses, form.chosenRaceFeatId, form.chosenBgOriginFeatId, form.chosenClassFeatIds, form.chosenLevelUpFeats, resolvedRaceFeatDetail?.name, resolvedBgOriginFeatDetail?.name, featSummaries, selectedClassFeatDetails, selectedFeatAbilityBonuses, levelUpFeatDetails, bgDetail?.proficiencies?.feats, bgDetail?.traits]);
+  }, [effectiveHitDie, effectiveClassName, raceDetail, races, form, resolvedRaceFeatDetail?.name, resolvedBgOriginFeatDetail?.name, featSummaries, selectedClassFeatDetails, selectedFeatAbilityBonuses, levelUpFeatDetails, bgDetail?.proficiencies?.feats, bgDetail?.traits]);
 
   function set<K extends keyof FormState>(key: K, val: FormState[K]) {
     setForm((f) => ({ ...f, [key]: val }));

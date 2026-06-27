@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "@/services/api";
 import { createPartyInventoryItem, fetchPartyInventory, fetchPartyInventoryItem, updatePartyInventoryQuantity } from "@/services/inventoryApi";
 import { useWs } from "@/services/ws";
@@ -39,11 +39,9 @@ import {
   type InventoryPickerPayload,
   type ItemSummaryRow,
   canUseTwoHands,
-  formatWeight,
   getEquipState,
   isArmorItem,
   isCurrencyItem,
-  isWearableItem,
   isWeaponItem,
   normalizeInventoryItemLookupName,
   parseChargesMax,

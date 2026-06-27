@@ -41,6 +41,7 @@ const checkStyle: React.CSSProperties = {
 
 
 export function ItemFormModal(props: Props) {
+  const onClose = props.onClose;
   const isEdit = props.item != null;
 
   const [name, setName] = React.useState(props.item?.name ?? "");
@@ -58,11 +59,11 @@ export function ItemFormModal(props: Props) {
 
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") props.onClose();
+      if (e.key === "Escape") onClose();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [props.onClose]);
+  }, [onClose]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

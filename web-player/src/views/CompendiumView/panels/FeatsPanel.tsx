@@ -1,4 +1,3 @@
-import React from "react";
 import { C } from "@/lib/theme";
 import { IconInspiration } from "@/icons";
 import { Panel } from "@/ui/Panel";

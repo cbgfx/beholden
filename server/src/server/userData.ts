@@ -145,6 +145,7 @@ export interface StoredOverrides {
 export interface StoredConditionInstance {
   key: string;
   casterId?: string | null;
+  hexAbility?: "str" | "dex" | "con" | "int" | "wis" | "cha";
   [k: string]: unknown;
 }
 

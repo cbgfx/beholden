@@ -63,8 +63,6 @@ export function MonsterSpells(props: {
   usedSpellSlots?: Record<string, number>;
   onChangeSpellSlots?: (level: number, used: number) => void;
 }) {
-  if (!props.spellNames.length) return null;
-
   const slotCounts = React.useMemo(() => parseSlotCounts(props.slots), [props.slots]);
   const hasSlots = Object.keys(slotCounts).length > 0;
 
@@ -95,6 +93,8 @@ export function MonsterSpells(props: {
 
     return sections;
   }, [props.spellNames, props.spellLevels]);
+
+  if (!props.spellNames.length) return null;
 
   return (
     <MonsterSectionPanel title="Spells">

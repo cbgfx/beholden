@@ -1,4 +1,3 @@
-import React from "react";
 import { C } from "@/lib/theme";
 import { LEVEL_LABELS } from "@/views/character/CharacterSpellShared";
 import { Section } from "@/views/level-up/LevelUpParts";

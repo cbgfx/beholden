@@ -269,6 +269,8 @@ export function LevelUpView() {
       nextLevel,
       classDetail?.name,
       char?.className,
+      char?.characterData?.chosenLevelUpFeats,
+      baseScores,
       charProficiencies,
       featSearch,
       featSummaries,

@@ -11,6 +11,7 @@ import {
   type RaceFeatureDetail,
 } from "@/views/character/CharacterViewHelpers";
 import type { CharacterData, ConditionInstance, ResourceCounter } from "@/views/character/CharacterSheetTypes";
+import { toggleConditionInstance } from "@/views/character/CharacterConditions";
 import type { CompendiumMonsterRow } from "@/lib/monsterPicker/types";
 import { getLongRestRecovery } from "@/views/character/CharacterRestRecovery";
 
@@ -323,7 +324,7 @@ export function buildCharacterRuntimeActions(args: {
     }
   };
 
-  const toggleCondition = async (key: string) => {
+  const toggleCondition = async (key: string, condition?: ConditionInstance) => {
     if (key === "polymorphed") {
       setCondSaving(true);
       try {
@@ -338,7 +339,7 @@ export function buildCharacterRuntimeActions(args: {
     }
     const current = char.conditions ?? [];
     const has = current.some((condition) => condition.key === key);
-    const next = has ? current.filter((condition) => condition.key !== key) : [...current, { key }];
+    const next = toggleConditionInstance(current, key, condition);
     setCondSaving(true);
     try {
       let nextCharacterData = currentCharacterData;

@@ -17,21 +17,33 @@
   },
   "typesVersions": {
     "*": {
-      "domain/*": ["./src/domain/*"],
-      "ui/*": ["./src/ui/*"],
-      "api/*": ["./src/api/*"],
-      "icons/*": ["./src/icons/*"],
-      "views": ["./src/views/index.tsx"],
-      "views/*": ["./src/views/*"]
+      "domain/*": [
+        "./src/domain/*"
+      ],
+      "ui/*": [
+        "./src/ui/*"
+      ],
+      "api/*": [
+        "./src/api/*"
+      ],
+      "icons/*": [
+        "./src/icons/*"
+      ],
+      "views": [
+        "./src/views/index.tsx"
+      ],
+      "views/*": [
+        "./src/views/*"
+      ]
     }
   },
   "devDependencies": {
-    "@types/react": "^19.1.12",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3"
   },
   "peerDependencies": {
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-router-dom": "^7.8.2"
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.0"
   }
 }

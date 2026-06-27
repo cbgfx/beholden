@@ -31,6 +31,7 @@ export function CharacterFeatPickerModal(props: {
   onClose: () => void;
   onAdd: (feat: FeatRow, abilityChoices: string[]) => void;
 }) {
+  const { isOpen, onClose } = props;
   const [allFeats, setAllFeats] = useState<FeatRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState("");
@@ -41,13 +42,13 @@ export function CharacterFeatPickerModal(props: {
   const detailCache = useRef<Record<string, FeatDetail>>({});
 
   useEffect(() => {
-    if (!props.isOpen) return;
+    if (!isOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") props.onClose();
+      if (event.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [props.isOpen, props.onClose]);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (!props.isOpen || allFeats.length > 0) return;

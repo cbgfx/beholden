@@ -76,7 +76,7 @@ export function useMonsterSpells(monster: any | null): {
     const names = fromMonster.length ? fromMonster : extractSpellNamesFromText(combined);
 
     return { spellNames: names, spellTextCombined: combined };
-  }, [m?.id, m?.name]);
+  }, [m]);
 
   const [spellMetaByName, setSpellMetaByName] = React.useState<Record<string, any>>({});
   const [slotsByLevel, setSlotsByLevel] = React.useState<Record<number, number>>({});
@@ -128,7 +128,7 @@ export function useMonsterSpells(monster: any | null): {
     setSpellMetaByName({});
     if (spellNames.length) void loadMeta();
     return () => { cancelled = true; };
-  }, [m?.id, spellTextCombined, spellNames.join("|")]);
+  }, [m?.id, spellTextCombined, spellNames]);
 
   const groupedSpells = React.useMemo((): GroupedSpell[] => {
     const byLevel = new Map<number, GroupedSpell>();

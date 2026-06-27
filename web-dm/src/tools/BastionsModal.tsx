@@ -51,7 +51,7 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
     return map;
   }, [compendium?.facilities]);
 
-  async function load(preferredBastionId?: string | null) {
+  const load = React.useCallback(async (preferredBastionId?: string | null) => {
     if (!props.isOpen || !campaignId) return;
     setLoading(true);
     setMessage("");
@@ -73,7 +73,7 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [campaignId, props.isOpen, registerLoadedBastions]);
 
   async function fetchSingleBastion(nextBastionId: string): Promise<BastionResponse | null> {
     if (!campaignId) return null;
@@ -87,7 +87,7 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
   React.useEffect(() => {
     if (!props.isOpen) return;
     void load();
-  }, [props.isOpen, campaignId]);
+  }, [props.isOpen, load]);
 
   useWs((msg) => {
     if (!props.isOpen || !campaignId) return;
@@ -139,7 +139,7 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
       return;
     }
     setActivePlayerFacilityId((prev) => (prev && selectedBastion.assignedPlayerIds.includes(prev) ? prev : null));
-  }, [selectedBastionId, selectedAssignedKey]);
+  }, [selectedBastion, selectedAssignedKey]);
 
   function updateSelectedDraft(mutator: (bastion: Bastion) => Bastion) {
     if (!selectedBastion) return;

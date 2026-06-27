@@ -16,20 +16,21 @@ type Props = {
  * Fetches all missing details in parallel rather than serially.
  */
 export function useEnsureRosterMonsterDetails(props: Props) {
+  const { combatants, dispatch, inpcs, monsterDetails } = props;
   React.useEffect(() => {
     let cancelled = false;
 
     const run = async () => {
       const monsterIds = new Set<string>();
-      for (const c of props.combatants) {
+      for (const c of combatants) {
         if (c?.baseType === "monster" && c.baseId != null) monsterIds.add(String(c.baseId));
         if (c?.baseType === "inpc" && c.baseId != null) {
-          const inpc = props.inpcs.find((x) => String(x.id) === String(c.baseId));
+          const inpc = inpcs.find((x) => String(x.id) === String(c.baseId));
           if (inpc?.monsterId != null) monsterIds.add(String(inpc.monsterId));
         }
       }
 
-      const missing = Array.from(monsterIds).filter((id) => !props.monsterDetails[id]);
+      const missing = Array.from(monsterIds).filter((id) => !monsterDetails[id]);
       if (!missing.length) return;
 
       // Fetch all missing details in parallel — was sequential before.
@@ -46,10 +47,10 @@ export function useEnsureRosterMonsterDetails(props: Props) {
         if (r.status === "fulfilled") patch[r.value.id] = r.value.d;
         // rejected: ignore — XP/difficulty just won't show for that monster
       }
-      if (Object.keys(patch).length) props.dispatch({ type: "mergeMonsterDetails", patch });
+      if (Object.keys(patch).length) dispatch({ type: "mergeMonsterDetails", patch });
     };
 
     run();
     return () => { cancelled = true; };
-  }, [props.combatants, props.dispatch, props.inpcs, props.monsterDetails]);
+  }, [combatants, dispatch, inpcs, monsterDetails]);
 }

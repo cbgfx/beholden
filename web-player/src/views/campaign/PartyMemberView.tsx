@@ -138,7 +138,7 @@ export function PartyMemberView() {
       return;
     }
     enqueueFetchMember(80);
-  }, [campaignId, enqueueFetchMember]));
+  }, [campaignId, enqueueFetchMember, playerId]));
 
   const cd = asCharacterData(member?.characterData);
   const prof = (cd?.proficiencies ?? undefined) as Proficiencies | undefined;

@@ -10,11 +10,12 @@ export function useDebouncedTaskQueue() {
   const taskStateRef = React.useRef(new Map<string, TaskState>());
 
   React.useEffect(() => {
+    const taskStates = taskStateRef.current;
     return () => {
-      for (const state of taskStateRef.current.values()) {
+      for (const state of taskStates.values()) {
         if (state.timer != null) window.clearTimeout(state.timer);
       }
-      taskStateRef.current.clear();
+      taskStates.clear();
     };
   }, []);
 
@@ -54,4 +55,3 @@ export function useDebouncedTaskQueue() {
 
   return enqueue;
 }
-

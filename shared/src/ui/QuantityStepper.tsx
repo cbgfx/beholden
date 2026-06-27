@@ -7,12 +7,14 @@ export function QuantityStepper({
   decrementDisabled = false,
   valuePrefix = "",
   theme,
+  buttonClassName,
 }: {
   value?: number | string | null;
   onDecrement?: () => void;
   onIncrement?: () => void;
   decrementDisabled?: boolean;
   valuePrefix?: string;
+  buttonClassName?: string;
   theme?: {
     buttonBackground?: string;
     buttonBorder?: string;
@@ -52,10 +54,14 @@ export function QuantityStepper({
     <div style={{ display: "flex", alignItems: "center", gap, flexShrink: 0 }}>
       {onDecrement ? (
         <button
+          className={buttonClassName}
           type="button"
           onClick={onDecrement}
           disabled={decrementDisabled}
-          style={{ ...buttonStyle, opacity: decrementDisabled ? theme?.disabledOpacity ?? 0.3 : 1 }}
+          style={{
+            ...buttonStyle,
+            ...(decrementDisabled ? { opacity: theme?.disabledOpacity ?? 0.3 } : {}),
+          }}
         >
           -
         </button>
@@ -73,7 +79,7 @@ export function QuantityStepper({
           {valuePrefix}{value}
         </span>
       ) : null}
-      {onIncrement ? <button type="button" onClick={onIncrement} style={buttonStyle}>+</button> : null}
+      {onIncrement ? <button className={buttonClassName} type="button" onClick={onIncrement} style={buttonStyle}>+</button> : null}
     </div>
   );
 }

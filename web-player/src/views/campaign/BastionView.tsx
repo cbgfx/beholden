@@ -168,8 +168,14 @@ export function BastionView() {
     setAddKeyByOwner((prev) => ({ ...prev, [ownerPlayerId]: "" }));
   }
 
-  const playerFacilities = bastion?.facilities.filter((f) => f.source === "player") ?? [];
-  const dmExtraFacilities = bastion?.facilities.filter((f) => f.source === "dm_extra") ?? [];
+  const playerFacilities = React.useMemo(
+    () => bastion?.facilities.filter((f) => f.source === "player") ?? [],
+    [bastion?.facilities],
+  );
+  const dmExtraFacilities = React.useMemo(
+    () => bastion?.facilities.filter((f) => f.source === "dm_extra") ?? [],
+    [bastion?.facilities],
+  );
   const ownedUserIds = React.useMemo(
     () =>
       new Set(

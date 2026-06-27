@@ -3,6 +3,7 @@ export type ActorId = string;
 export interface ActorConditionInstanceDto {
   key: string;
   casterId?: string | null;
+  hexAbility?: "str" | "dex" | "con" | "int" | "wis" | "cha";
   [k: string]: unknown;
 }
 

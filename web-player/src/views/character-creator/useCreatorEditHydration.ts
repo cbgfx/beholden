@@ -197,5 +197,5 @@ export function useCreatorEditHydration(args: {
       })
       .catch(() => {})
       .finally(() => setEditLoading(false));
-  }, [editId, initialCampaignIdsRef, setEditLoading, setForm]);
+  }, [editId, initialCampaignIdsRef, onHydrated, setEditLoading, setForm]);
 }

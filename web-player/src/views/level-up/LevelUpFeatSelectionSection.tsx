@@ -1,4 +1,3 @@
-import React from "react";
 import { C } from "@/lib/theme";
 import { ChoiceBtn } from "./LevelUpParts";
 import type { LevelUpFeatDetail } from "./LevelUpParts";

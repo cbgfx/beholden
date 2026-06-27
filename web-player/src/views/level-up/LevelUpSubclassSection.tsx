@@ -1,4 +1,3 @@
-import React from "react";
 import { C } from "@/lib/theme";
 import { ChoiceBtn, Section } from "@/views/level-up/LevelUpParts";
 import { cleanFeatureText } from "@/views/level-up/LevelUpHelpers";

@@ -74,13 +74,13 @@ export function useMonsterDetailsCache(
   React.useEffect(() => {
     const mid = resolveMonsterId(active);
     if (mid) void ensureMonster(mid);
-  }, [active?.id, active?.baseType, active?.baseId, ensureMonster, resolveMonsterId]);
+  }, [active, ensureMonster, resolveMonsterId]);
 
   // Ensure target combatant's monster data.
   React.useEffect(() => {
     const mid = resolveMonsterId(target);
     if (mid) void ensureMonster(mid);
-  }, [target?.id, target?.baseType, target?.baseId, ensureMonster, resolveMonsterId]);
+  }, [target, ensureMonster, resolveMonsterId]);
 
   // Preload CR data for all roster monsters in parallel so initiative order
   // rows don't flash with missing XP/CR. Was a serial await-in-loop before.

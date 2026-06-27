@@ -55,8 +55,6 @@ interface Meta {
   support: boolean;
 }
 
-type LastCharacter = { id: string; name: string };
-
 function useServerMeta() {
   const [meta, setMeta] = React.useState<Meta | null>(null);
   React.useEffect(() => {

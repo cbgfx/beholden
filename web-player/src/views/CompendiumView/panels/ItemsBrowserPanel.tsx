@@ -37,12 +37,13 @@ export function ItemsBrowserPanel(props: {
   } = useItemSearch();
 
   const vl = useVirtualList({ isEnabled: true, rowHeight: ROW_HEIGHT, overscan: 6 });
+  const scrollRef = vl.scrollRef;
   const { start, end, padTop, padBottom } = vl.getRange(rows.length);
 
   React.useEffect(() => {
-    const el = vl.scrollRef.current;
+    const el = scrollRef.current;
     if (el) el.scrollTop = 0;
-  }, [q, rarityFilter, typeFilter, filterAttunement, filterMagic]);
+  }, [q, rarityFilter, typeFilter, filterAttunement, filterMagic, scrollRef]);
 
   return (
     <Panel

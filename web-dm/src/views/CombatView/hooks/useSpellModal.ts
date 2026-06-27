@@ -16,8 +16,8 @@ export function useSpellModal(activeMonster: MonsterDetail | null, targetMonster
   const [spellError, setSpellError] = React.useState<string | null>(null);
   const [spellLoading, setSpellLoading] = React.useState(false);
 
-  const activeSpellNames = React.useMemo(() => parseMonsterSpells(activeMonster), [activeMonster?.id]);
-  const targetSpellNames = React.useMemo(() => parseMonsterSpells(targetMonster), [targetMonster?.id]);
+  const activeSpellNames = React.useMemo(() => parseMonsterSpells(activeMonster), [activeMonster]);
+  const targetSpellNames = React.useMemo(() => parseMonsterSpells(targetMonster), [targetMonster]);
 
   const openSpellByName = React.useCallback(async (name: string) => {
     setSpellError(null);
@@ -96,7 +96,7 @@ export function useSpellModal(activeMonster: MonsterDetail | null, targetMonster
     return () => {
       alive = false;
     };
-  }, [targetSpellNames.join("|"), activeSpellNames.join("|"), spellLevelCache]);
+  }, [targetSpellNames, activeSpellNames, spellLevelCache]);
 
   const sortedActiveSpellNames = React.useMemo(
     () => sortSpellNames(activeSpellNames, spellLevelCache),

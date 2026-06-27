@@ -1,4 +1,3 @@
-import React from "react";
 import { C, withAlpha } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import type { ClassFeatureEntry } from "@/views/character/CharacterSheetTypes";

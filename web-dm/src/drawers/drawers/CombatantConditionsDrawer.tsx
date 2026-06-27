@@ -1,5 +1,5 @@
 import React from "react";
-import type { SharedConditionInstance } from "@beholden/shared/domain";
+import type { SharedAbilityKey, SharedConditionInstance } from "@beholden/shared/domain";
 import { Button } from "@/ui/Button";
 import { putEncounterCombatant } from "@/services/encounterApi";
 import { theme, withAlpha } from "@/theme/theme";
@@ -15,8 +15,20 @@ type ConditionInstance = SharedConditionInstance & { expiresAtRound?: number | n
 
 // Only these conditions require a caster association.
 const NEEDS_CASTER_KEYS = new Set(["hexed", "marked"]);
+const REPEATABLE_CASTER_KEYS = new Set(["hexed", "marked"]);
+const HEX_ABILITIES: Array<{ key: SharedAbilityKey; label: string }> = [
+  { key: "str", label: "Strength (Str)" },
+  { key: "dex", label: "Dexterity (Dex)" },
+  { key: "con", label: "Constitution (Con)" },
+  { key: "int", label: "Intelligence (Int)" },
+  { key: "wis", label: "Wisdom (Wis)" },
+  { key: "cha", label: "Charisma (Cha)" },
+];
 function needsCasterForKey(key: string) {
   return NEEDS_CASTER_KEYS.has(String(key ?? "").trim().toLowerCase());
+}
+function isRepeatableCasterKey(key: string) {
+  return REPEATABLE_CASTER_KEYS.has(String(key ?? "").trim().toLowerCase());
 }
 
 /** Cycle the expiry round: null → cr+1 → cr+2 → cr+3 → cr+4 → null */
@@ -51,18 +63,36 @@ export function CombatantConditionsDrawer(props: {
   React.useEffect(() => {
     if (!combatant) { setConds([]); return; }
     const raw = Array.isArray(combatant.conditions) ? combatant.conditions : [];
+    const claimedHexAbilities = new Set<SharedAbilityKey>();
     skipNextCommitRef.current = true;
-    setConds(raw.map((x) => ({
-      key: String(x.key ?? ""),
-      casterId: x.casterId ?? null,
-      expiresAtRound: x.expiresAtRound != null ? Number(x.expiresAtRound) : null,
-    })));
+    setConds(raw.map((x) => {
+      const key = String(x.key ?? "");
+      const requestedHexAbility = x.hexAbility;
+      const validHexAbility = HEX_ABILITIES.some((ability) => ability.key === requestedHexAbility)
+        ? requestedHexAbility as SharedAbilityKey
+        : undefined;
+      const hexAbility = key === "hexed"
+        && validHexAbility
+        && !claimedHexAbilities.has(validHexAbility)
+        ? validHexAbility
+        : undefined;
+      if (hexAbility) claimedHexAbilities.add(hexAbility);
+
+      return {
+        ...x,
+        key,
+        casterId: x.casterId ?? null,
+        expiresAtRound: x.expiresAtRound != null ? Number(x.expiresAtRound) : null,
+        hexAbility,
+      };
+    }));
   }, [combatant]);
 
   const commit = React.useCallback(
     async (nextConds: ConditionInstance[]) => {
       const d = props.drawer;
       const next = nextConds.map((c) => ({
+        ...c,
         key: c.key,
         casterId: c.casterId ?? null,
         expiresAtRound: c.expiresAtRound ?? null,
@@ -124,6 +154,17 @@ export function CombatantConditionsDrawer(props: {
     setConds((prev) => { const next = [...prev]; next[idx] = { ...next[idx], casterId }; return next; });
   }, []);
 
+  const setHexAbilityForIndex = React.useCallback((idx: number, hexAbility: SharedAbilityKey | null) => {
+    setConds((prev) => {
+      const next = [...prev];
+      const condition = { ...next[idx] };
+      if (hexAbility) condition.hexAbility = hexAbility;
+      else delete condition.hexAbility;
+      next[idx] = condition;
+      return next;
+    });
+  }, []);
+
   const setExpiryForIndex = React.useCallback((idx: number, expiresAtRound: number | null) => {
     setConds((prev) => { const next = [...prev]; next[idx] = { ...next[idx], expiresAtRound }; return next; });
   }, []);
@@ -133,6 +174,7 @@ export function CombatantConditionsDrawer(props: {
   }, []);
 
   const selectedKeys = new Set(conds.map((c) => c.key));
+  const hexCount = conds.filter((c) => c.key === "hexed").length;
   const visibleDefs = CONDITION_DEFS.filter((c) => allowedKeys.has(c.key));
 
   return {
@@ -151,14 +193,27 @@ export function CombatantConditionsDrawer(props: {
           }}>
             {visibleDefs.map((c) => {
               const on = selectedKeys.has(c.key);
+              const addDisabled = c.key === "hexed" && hexCount >= HEX_ABILITIES.length;
               const CondIcon = conditionIconByKey[c.key as keyof typeof conditionIconByKey];
               return (
                 <button
                   key={c.key}
-                  onClick={() => needsCasterForKey(c.key) && !on ? addCasterCondition(c.key) : toggle(c.key)}
+                  disabled={addDisabled}
+                  onClick={() => {
+                    if (addDisabled) return;
+                    if (isRepeatableCasterKey(c.key)) addCasterCondition(c.key);
+                    else toggle(c.key);
+                  }}
+                  title={
+                    addDisabled
+                      ? "All six abilities are already assigned to Hex sources"
+                      : isRepeatableCasterKey(c.key) && on
+                        ? `Add another ${c.name} source`
+                        : undefined
+                  }
                   style={{
                     all: "unset",
-                    cursor: "pointer",
+                    cursor: addDisabled ? "not-allowed" : "pointer",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -175,6 +230,7 @@ export function CombatantConditionsDrawer(props: {
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
+                    opacity: addDisabled ? 0.45 : 1,
                   }}
                 >
                   {CondIcon ? <CondIcon size={17} /> : null}
@@ -197,6 +253,12 @@ export function CombatantConditionsDrawer(props: {
                 const needsCaster = needsCasterForKey(c.key);
                 const CondIcon = conditionIconByKey[c.key as keyof typeof conditionIconByKey];
                 const caster = c.casterId ? state.combatants.find((x) => x.id === c.casterId) : undefined;
+                const availableHexAbilities = HEX_ABILITIES.filter((ability) => {
+                  const ownerIdx = conds.findIndex((other) =>
+                    other.key === "hexed" && other.hexAbility === ability.key
+                  );
+                  return ownerIdx < 0 || ownerIdx === idx;
+                });
 
                 const hasTimer = c.expiresAtRound != null;
                 const isExpired = hasTimer && c.expiresAtRound! <= currentRound;
@@ -230,6 +292,11 @@ export function CombatantConditionsDrawer(props: {
                       {needsCaster && caster && (
                         <span style={{ color: theme.colors.muted, fontWeight: 600, fontSize: "var(--fs-tiny)" }}>
                           · {caster.label ?? "Caster"}
+                        </span>
+                      )}
+                      {c.key === "hexed" && c.hexAbility && (
+                        <span style={{ color: theme.colors.muted, fontWeight: 700, fontSize: "var(--fs-tiny)", textTransform: "uppercase" }}>
+                          · {c.hexAbility}
                         </span>
                       )}
 
@@ -291,18 +358,37 @@ export function CombatantConditionsDrawer(props: {
                       </button>
                     </div>
 
-                    {/* Caster selector — compact, only shown when needed */}
+                    {/* Source details — compact, only shown when needed */}
                     {needsCaster && (
-                      <Select
-                        value={c.casterId ?? ""}
-                        onChange={(e) => setCasterForIndex(idx, (e.target as HTMLSelectElement).value || null)}
-                        style={{ fontSize: "var(--fs-tiny)", padding: "2px 6px", width: "100%", minWidth: 120 }}
-                      >
-                        <option value="">— caster —</option>
-                        {state.combatants.map((r) => (
-                          <option key={r.id} value={r.id}>{String(r.label || "Combatant")}</option>
-                        ))}
-                      </Select>
+                      <div style={{ display: "grid", gap: 4, width: "100%", minWidth: 140 }}>
+                        <Select
+                          aria-label={`${def?.name ?? c.key} source`}
+                          value={c.casterId ?? ""}
+                          onChange={(e) => setCasterForIndex(idx, (e.target as HTMLSelectElement).value || null)}
+                          style={{ fontSize: "var(--fs-tiny)", padding: "2px 6px", width: "100%" }}
+                        >
+                          <option value="">— source —</option>
+                          {state.combatants.map((r) => (
+                            <option key={r.id} value={r.id}>{String(r.label || "Combatant")}</option>
+                          ))}
+                        </Select>
+                        {c.key === "hexed" && (
+                          <Select
+                            aria-label="Hexed ability"
+                            value={c.hexAbility ?? ""}
+                            onChange={(e) => setHexAbilityForIndex(
+                              idx,
+                              ((e.target as HTMLSelectElement).value || null) as SharedAbilityKey | null
+                            )}
+                            style={{ fontSize: "var(--fs-tiny)", padding: "2px 6px", width: "100%" }}
+                          >
+                            <option value="">— hexed ability —</option>
+                            {availableHexAbilities.map((ability) => (
+                              <option key={ability.key} value={ability.key}>{ability.label}</option>
+                            ))}
+                          </Select>
+                        )}
+                      </div>
                     )}
                   </div>
                 );

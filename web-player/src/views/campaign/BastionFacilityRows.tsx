@@ -1,4 +1,3 @@
-import React from "react";
 import { C } from "@/lib/theme";
 import { Select } from "@/ui/Select";
 import type { BastionFacility, CompendiumFacility } from "./BastionViewShared";

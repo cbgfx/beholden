@@ -177,7 +177,10 @@ export function MonsterActions(props: {
 }) {
   const actions = Array.isArray(props.monster.action) ? (props.monster.action as MonsterActionEntry[]) : [];
   const reactions = Array.isArray(props.monster.reaction) ? (props.monster.reaction as MonsterActionEntry[]) : [];
-  const legendaryRaw = Array.isArray(props.monster.legendary) ? (props.monster.legendary as MonsterActionEntry[]) : [];
+  const legendaryRaw = React.useMemo(
+    () => Array.isArray(props.monster.legendary) ? (props.monster.legendary as MonsterActionEntry[]) : [],
+    [props.monster.legendary],
+  );
 
   const legendaryIntro = React.useMemo(() => {
     const intro = legendaryRaw.find((l) =>

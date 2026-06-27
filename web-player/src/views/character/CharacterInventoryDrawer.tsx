@@ -34,7 +34,7 @@ export function InventoryItemDrawer(props: {
   onMoveToContainer: (containerId: string | null) => Promise<void>;
   onChargesChange: (charges: number) => void | Promise<void>;
 }) {
-  const merged = {
+  const merged = React.useMemo(() => ({
     name: props.item.name,
     rarity: props.item.rarity ?? props.detail?.rarity ?? "",
     type: props.item.type ?? props.detail?.type ?? "",
@@ -51,7 +51,7 @@ export function InventoryItemDrawer(props: {
     dmgType: props.item.dmgType ?? props.detail?.dmgType ?? "",
     properties: props.item.properties?.length ? props.item.properties : (props.detail?.properties ?? []),
     description: props.item.description ?? (props.detail ? (Array.isArray(props.detail.text) ? props.detail.text.join("\n\n") : props.detail.text ?? "") : ""),
-  };
+  }), [props.detail, props.item]);
   const kindItem: InventoryItem = { ...props.item, type: merged.type || null, dmg1: merged.dmg1 || null, dmg2: merged.dmg2 || null, ac: merged.ac, properties: merged.properties };
   const isWeaponLike = isWeaponItem(kindItem);
   const isRangedWeaponLike = isWeaponLike && isRangedWeapon(kindItem);
@@ -61,7 +61,7 @@ export function InventoryItemDrawer(props: {
 
   useEffect(() => {
     setDraft(merged);
-  }, [props.item.id, merged.name, merged.rarity, merged.type, merged.attunement, merged.attuned, merged.magic, merged.silvered, merged.weight, merged.value, merged.ac, merged.stealthDisadvantage, merged.dmg1, merged.dmg2, merged.dmgType, merged.description, merged.properties.join("|")]);
+  }, [merged]);
 
   const hasAnyDetails = Boolean(
     draft.rarity || draft.type || draft.description || draft.weight != null || draft.value != null ||

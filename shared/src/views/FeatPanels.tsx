@@ -1,5 +1,5 @@
 import React from "react";
-import { EmptyState, ListShell, Panel, togglePillStyle } from "../ui";
+import { EmptyState, ListShell, togglePillStyle } from "../ui";
 
 export type FeatCatalogRow = {
   id: string;

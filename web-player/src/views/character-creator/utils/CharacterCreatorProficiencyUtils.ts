@@ -36,12 +36,9 @@ import {
 import type { ProficiencyMap, TaggedItem } from "@/views/character/CharacterSheetTypes";
 import {
   parseAppliedClassFeatureEffects,
-  buildStartingInventory,
   getWeaponMasteryChoice,
 } from "./CharacterCreatorClassFeatureUtils";
 import type {
-  CreatorItemSummaryLike,
-  CreatorInventoryItemSeed,
   CreatorBackgroundFeatLike,
   CreatorLevelUpFeatDetailLike,
   CreatorClassDetailLike,
@@ -49,7 +46,6 @@ import type {
   CreatorBgDetailLike,
   CreatorSpellSummaryLike,
   CreatorFormLike,
-  CreatorWeaponMasteryChoice,
 } from "./CharacterCreatorProficiencyTypes";
 
 export type {

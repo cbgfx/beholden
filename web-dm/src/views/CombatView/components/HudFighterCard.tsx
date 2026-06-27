@@ -68,13 +68,14 @@ export function HudFighterCard(props: Props) {
   // Fighting-game style: HP + optional temp overlay segment.
   const tempLeft = clamp01(hpPct);
   const tempWidth = clamp01(Math.min(tempPct, 1 - tempLeft));
+  const { activeId, onOpenConditions, role } = props;
 
   const openHudConditions = React.useCallback(() => {
     const id = c?.id ?? null;
     if (!id) return;
-    const casterId = props.role === "active" ? id : (props.activeId ? String(props.activeId) : null);
-    props.onOpenConditions(id, props.role, casterId);
-  }, [c, props.role, props.activeId, props.onOpenConditions]);
+    const casterId = role === "active" ? id : (activeId ? String(activeId) : null);
+    onOpenConditions(id, role, casterId);
+  }, [c, role, activeId, onOpenConditions]);
 
   return (
     <div
