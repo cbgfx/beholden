@@ -102,7 +102,9 @@ export function useCharacterViewUiSync({
       const body = new FormData();
       body.append("image", file);
       const result = await api<{ ok: boolean; imageUrl: string }>(`/api/me/characters/${id}/image`, { method: "POST", body });
-      setChar((previous) => previous ? { ...previous, imageUrl: result.imageUrl } : previous);
+      const sep = result.imageUrl.includes("?") ? "&" : "?";
+      const bustedUrl = `${result.imageUrl}${sep}v=${Date.now()}`;
+      setChar((previous) => previous ? { ...previous, imageUrl: bustedUrl } : previous);
     } catch (error) {
       console.error(error);
     } finally {

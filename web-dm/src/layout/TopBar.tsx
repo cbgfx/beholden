@@ -3,7 +3,7 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useStore } from "@/store";
 import { useWs, useWsStatus } from "@/services/ws";
-import { theme } from "@/theme/theme";
+import { theme, withAlpha } from "@/theme/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsNarrow } from "@/views/CombatView/hooks/useIsNarrow";
 import { HeaderActionButton, HeaderActionLink, StatusDot, navLinkStyle } from "@beholden/shared/ui";
@@ -68,16 +68,16 @@ export function TopBar() {
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            width: isPhone ? 40 : 52,
-            height: isPhone ? 40 : 52,
-            borderRadius: 12,
+            width: isPhone ? 40 : 40,
+            height: isPhone ? 40 : 40,
+            borderRadius: 10,
             border: "1px solid rgba(251,191,36,0.42)",
             background: "linear-gradient(180deg, rgba(251,191,36,0.14), rgba(255,255,255,0.02))",
             boxShadow: "0 10px 22px rgba(251,191,36,0.16)",
             flexShrink: 0,
           }}
         >
-          <img src="/beholden_logo.png" alt="Beholden" style={{ width: isPhone ? 28 : 40, height: isPhone ? 28 : 40 }} />
+          <img src="/beholden_logo.png" alt="Beholden" style={{ width: isPhone ? 28 : 28, height: isPhone ? 28 : 28 }} />
         </span>
         {!isPhone && (
           <Link
@@ -94,28 +94,20 @@ export function TopBar() {
             Beholden
           </Link>
         )}
-
-        {selectedCampaignId && selectedName ? (
-          <div
-            style={{
-              marginLeft: isPhone ? 0 : 8,
-              padding: isPhone ? "4px 8px" : "5px 14px",
-              borderRadius: theme.radius.control,
-              border: "1px solid rgba(251,191,36,0.40)",
-              background: "linear-gradient(180deg, rgba(251,191,36,0.18), rgba(251,191,36,0.08))",
-              color: theme.colors.colorGold,
-              fontWeight: 700,
-              fontSize: "var(--fs-medium)",
-              maxWidth: isPhone ? 120 : 360,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-            title={selectedName}
-          >
-            {selectedName}
-          </div>
-        ) : null}
+        <span
+          style={{
+            padding: "3px 10px",
+            borderRadius: theme.radius.control,
+            border: `1px solid ${withAlpha(theme.colors.accentPrimary, 0.4)}`,
+            background: withAlpha(theme.colors.accentPrimary, 0.1),
+            color: theme.colors.accentPrimary,
+            fontWeight: 700,
+            fontSize: "var(--fs-medium)",
+            flexShrink: 0,
+          }}
+        >
+          DM
+        </span>
       </div>
 
       <div style={isPhone ? undefined : { justifySelf: "center" }}>
@@ -134,7 +126,10 @@ export function TopBar() {
           fontSize: "var(--fs-medium)",
         }}
       >
-        {selectedCampaignId ? <NavLink to={`/campaign/${selectedCampaignId}`} label="Campaign" /> : <NavLink to="/" label="Campaign" />}
+        <NavLink to="/" label="Home" />
+        {selectedCampaignId && selectedName && (
+          <NavLink to={`/campaign/${selectedCampaignId}`} label={selectedName} />
+        )}
         <NavLink to="/compendium" label="Compendium" />
         {user?.isAdmin && <NavLink to="/admin" label="Admin" />}
         {saveStatus !== "idle" && (

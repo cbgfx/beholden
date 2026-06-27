@@ -8,10 +8,6 @@ import { useWsStatus } from "@/services/ws";
 import { DiceCalculatorModal } from "@/tools/DiceCalculatorModal";
 import { StatusDot, FooterGrid, HeaderActionButton, HeaderActionLink, TopBarFrame, navLinkStyle } from "@beholden/shared/ui";
 
-const NAV_LINKS = [
-  { to: "/", label: "Home", end: true },
-  { to: "/compendium", label: "Compendium", end: false },
-];
 
 function readLastCharacter(): { id: string; name: string } | null {
   try {
@@ -104,73 +100,117 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: C.bg, color: C.text, fontFamily: "system-ui, Segoe UI, Arial, sans-serif" }}>
-      <TopBarFrame>
-        <Link to="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", flexShrink: 0 }}>
-          <span
+      <TopBarFrame height="auto" padding="8px 16px" gap={0}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
+            alignItems: "center",
+            columnGap: 10,
+            width: "100%",
+          }}
+        >
+          {/* Left: logo + role badge */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <Link to="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
+                  border: "1px solid rgba(251,191,36,0.42)",
+                  background: "linear-gradient(180deg, rgba(251,191,36,0.14), rgba(255,255,255,0.02))",
+                  boxShadow: "0 10px 22px rgba(251,191,36,0.16)",
+                }}
+              >
+                <img src={`${import.meta.env.BASE_URL}beholden_logo.png`} alt="" style={{ width: 28, height: 28, objectFit: "contain" }} />
+              </span>
+              <span style={{ fontSize: "var(--fs-hero)", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>
+                Beholden
+              </span>
+            </Link>
+            <span
+              style={{
+                padding: "3px 10px",
+                borderRadius: 8,
+                border: `1px solid ${withAlpha(C.accentHl, 0.4)}`,
+                background: withAlpha(C.accentHl, 0.1),
+                color: C.accentHl,
+                fontWeight: 700,
+                fontSize: "var(--fs-medium)",
+                flexShrink: 0,
+              }}
+            >
+              Player
+            </span>
+          </div>
+
+          {/* Center: tools */}
+          <div
             style={{
-              display: "inline-flex",
+              display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              width: 52,
-              height: 52,
-              borderRadius: 12,
-              border: "1px solid rgba(251,191,36,0.42)",
-              background: "linear-gradient(180deg, rgba(251,191,36,0.14), rgba(255,255,255,0.02))",
-              boxShadow: "0 10px 22px rgba(251,191,36,0.16)",
+              gap: 2,
+              padding: "0 8px",
+              borderLeft: `1px solid ${C.panelBorder}`,
+              borderRight: `1px solid ${C.panelBorder}`,
             }}
           >
-            <img src={`${import.meta.env.BASE_URL}beholden_logo.png`} alt="" style={{ width: 40, height: 40, objectFit: "contain" }} />
-          </span>
-          <span style={{ fontSize: "var(--fs-hero)", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>
-            Beholden
-          </span>
-        </Link>
-
-        <nav style={{ display: "flex", gap: 4, flex: 1 }}>
-          {NAV_LINKS.map(({ to, label, end }) => (
-            <NavLink
-              key={to} to={to} end={end}
-              style={({ isActive }) => navLinkStyle(isActive, C.accentHl, C.muted)}
+            <button
+              type="button"
+              aria-label="Open dice calculator"
+              title="Dice Calculator"
+              onPointerDown={(e) => { e.preventDefault(); setDiceOpen(true); }}
+              onClick={() => setDiceOpen(true)}
+              style={topbarToolButtonStyle(diceOpen)}
             >
-              {label}
-            </NavLink>
-          ))}
-          {lastChar && (
-            <NavLink
-              to={`/characters/${lastChar.id}`}
-              style={({ isActive }) => navLinkStyle(isActive, C.accentHl, C.muted)}
-            >
-              {lastChar.name}
-            </NavLink>
-          )}
-        </nav>
+              <IconDice size={22} />
+            </button>
+          </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
-          <button
-            type="button"
-            aria-label="Open dice calculator"
-            title="Dice Calculator"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              setDiceOpen(true);
+          {/* Right: nav + user */}
+          <div
+            style={{
+              justifySelf: "end",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              color: C.muted,
+              fontSize: "var(--fs-medium)",
             }}
-            onClick={() => setDiceOpen(true)}
-            style={topbarToolButtonStyle(diceOpen)}
           >
-            <IconDice size={22} />
-          </button>
-          <HeaderActionLink to="/profile" color={C.muted}>
-            {user?.name || user?.username}
-          </HeaderActionLink>
-          <HeaderActionButton onClick={logout} color={C.muted} borderColor={C.panelBorder}>
-            Sign out
-          </HeaderActionButton>
-          <StatusDot
-            active={connected}
-            activeColor={C.green}
-            inactiveColor={C.red}
-            title={connected ? "Server connected" : "Server disconnected"}
-          />
+            <nav style={{ display: "flex", gap: 4 }}>
+              <NavLink to="/" end style={({ isActive }) => navLinkStyle(isActive, C.accentHl, C.muted)}>
+                Home
+              </NavLink>
+              {lastChar && (
+                <NavLink
+                  to={`/characters/${lastChar.id}`}
+                  style={({ isActive }) => navLinkStyle(isActive, C.accentHl, C.muted)}
+                >
+                  {lastChar.name}
+                </NavLink>
+              )}
+              <NavLink to="/compendium" style={({ isActive }) => navLinkStyle(isActive, C.accentHl, C.muted)}>
+                Compendium
+              </NavLink>
+            </nav>
+            <HeaderActionLink to="/profile" color={C.muted}>
+              {user?.name || user?.username}
+            </HeaderActionLink>
+            <HeaderActionButton onClick={logout} color={C.muted} borderColor={C.panelBorder}>
+              Sign out
+            </HeaderActionButton>
+            <StatusDot
+              active={connected}
+              activeColor={C.green}
+              inactiveColor={C.red}
+              title={connected ? "Server connected" : "Server disconnected"}
+            />
+          </div>
         </div>
       </TopBarFrame>
       <DiceCalculatorModal isOpen={diceOpen} onClose={() => setDiceOpen(false)} />

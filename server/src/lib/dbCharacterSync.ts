@@ -68,13 +68,23 @@ export function syncCharacterDerivedColumns(db: Db): void {
       color = ?, death_saves_success = ?, death_saves_fail = ?, character_data_json = ?
     WHERE id = ?
   `);
-  const linkedPlayersByCharacter = db.prepare(`
+
+  const allLinkedPlayers = db.prepare(`
     SELECT
-      id, user_id, player_name, character_name, class_name, species, level, hp_max, ac, speed,
+      id, user_id, character_id, player_name, character_name, class_name, species, level, hp_max, ac, speed,
       str, dex, con, int, wis, cha, color
     FROM players
-    WHERE character_id = ?
-  `);
+    WHERE character_id IS NOT NULL
+  `).all() as Array<Record<string, unknown>>;
+  const playersByCharacterId = new Map<string, Array<Record<string, unknown>>>();
+  for (const player of allLinkedPlayers) {
+    const characterId = player.character_id as string;
+    if (!playersByCharacterId.has(characterId)) {
+      playersByCharacterId.set(characterId, []);
+    }
+    playersByCharacterId.get(characterId)!.push(player);
+  }
+
   const updateLinkedPlayer = db.prepare(`
     UPDATE players
     SET
@@ -167,7 +177,8 @@ export function syncCharacterDerivedColumns(db: Db): void {
       );
     }
 
-    for (const player of linkedPlayersByCharacter.all(row.id) as Array<Record<string, unknown>>) {
+    const linkedPlayers = playersByCharacterId.get(row.id as string) ?? [];
+    for (const player of linkedPlayers) {
       const shouldUpdatePlayer =
         valuesDiffer(player.user_id, row.user_id)
         || valuesDiffer(player.player_name, sheet.playerName)

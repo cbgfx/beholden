@@ -401,4 +401,13 @@ CREATE INDEX IF NOT EXISTS idx_party_inventory_campaign ON party_inventory(campa
 CREATE INDEX IF NOT EXISTS idx_bastions_campaign     ON bastions(campaign_id, updated_at);
 CREATE INDEX IF NOT EXISTS idx_bastion_players_player ON bastion_players(player_id);
 CREATE INDEX IF NOT EXISTS idx_bastion_characters_character ON bastion_characters(character_id);
+
+-- Indexes to support nextSortFor()
+CREATE INDEX IF NOT EXISTS idx_adventures_sort       ON adventures(campaign_id, sort DESC);
+CREATE INDEX IF NOT EXISTS idx_encounters_sort       ON encounters(adventure_id, sort DESC);
+CREATE INDEX IF NOT EXISTS idx_notes_campaign_sort   ON notes(campaign_id, sort DESC);
+CREATE INDEX IF NOT EXISTS idx_notes_adventure_sort  ON notes(adventure_id, sort DESC);
+CREATE INDEX IF NOT EXISTS idx_treasure_campaign_sort ON treasure(campaign_id, sort DESC);
+CREATE INDEX IF NOT EXISTS idx_treasure_adventure_sort ON treasure(adventure_id, sort DESC);
+
 `;
