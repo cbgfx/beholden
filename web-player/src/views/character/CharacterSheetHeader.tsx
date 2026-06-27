@@ -75,36 +75,43 @@ export function CharacterSheetHeader(props: {
         boxShadow: "0 8px 28px rgba(0,0,0,0.22)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
         <button
           type="button"
           onClick={onSelectPortrait}
           title="Change portrait"
           style={{
-            width: 46, height: 46, borderRadius: 10, flexShrink: 0, padding: 0,
-            background: `${accentColor}22`, border: `2px solid ${accentColor}55`,
+            width: 58, height: 58, borderRadius: 14, flexShrink: 0, padding: 0,
+            background: `${accentColor}18`,
+            border: `2px solid ${accentColor}80`,
+            boxShadow: `0 0 20px ${accentColor}38, 0 4px 16px rgba(0,0,0,0.4)`,
             overflow: "hidden", cursor: "pointer", position: "relative",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
           {character.imageUrl
             ? <img src={character.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            : <IconPlayer size={23} style={{ opacity: 0.35 }} />}
+            : <IconPlayer size={28} style={{ opacity: 0.35 }} />}
           {portraitUploading && (
             <span style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "var(--fs-tiny)", color: "#fff" }}>…</span>
           )}
         </button>
         <div style={{ minWidth: 0 }}>
           <div>
-            <span style={{ fontWeight: 800, fontSize: "var(--fs-body)", color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 220 }}>
+            <span style={{
+              fontWeight: 900, fontSize: "var(--fs-title)", color: C.text,
+              textShadow: `0 0 24px ${accentColor}55`,
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 280,
+              display: "block",
+            }}>
               {character.name}
             </span>
           </div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: "2px 4px", flexWrap: "nowrap", marginTop: 1 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "2px 5px", flexWrap: "nowrap", marginTop: 3 }}>
             {identityLabels.map((item, index) => (
               <React.Fragment key={`${item}:${index}`}>
-                <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, whiteSpace: "nowrap" }}>{stripEditionTag(item)}</span>
-                {index < identityLabels.length - 1 && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, opacity: 0.4 }}>·</span>}
+                <span style={{ fontSize: "var(--fs-small)", color: `${accentColor}bb`, whiteSpace: "nowrap" }}>{stripEditionTag(item)}</span>
+                {index < identityLabels.length - 1 && <span style={{ fontSize: "var(--fs-small)", color: `${accentColor}50` }}>·</span>}
               </React.Fragment>
             ))}
           </div>
