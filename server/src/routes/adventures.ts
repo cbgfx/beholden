@@ -290,7 +290,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
 
       for (const [i, n] of imp.notes.entries()) {
         db.prepare(
-          "INSERT INTO notes (id, campaign_id, adventure_id, title, text, note_json, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, '{}', ?, ?, ?)"
+          "INSERT INTO notes (id, campaign_id, adventure_id, title, text, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         ).run(uid(), campaignId, advId, n.title, n.text, n.sort ?? i + 1, t, t);
       }
 
@@ -335,7 +335,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
 
       for (const [i, entry] of imp.treasure.entries()) {
         db.prepare(
-          "INSERT INTO treasure (id, campaign_id, adventure_id, source, item_id, name, rarity, type, type_key, attunement, magic, text, qty, entry_json, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?)"
+          "INSERT INTO treasure (id, campaign_id, adventure_id, source, item_id, name, rarity, type, type_key, attunement, magic, text, qty, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         ).run(
           uid(),
           campaignId,
@@ -395,7 +395,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
       .get(adventureId) as { campaign_id: string } | undefined;
     if (!advRow)
       return res.status(404).json({ ok: false, message: "Adventure not found" });
-    // FK CASCADE handles: encounters → combats, combatants; notes
+    // FK CASCADE handles encounters, combatants, notes, and treasure.
     db.prepare("DELETE FROM adventures WHERE id = ?").run(adventureId);
     emitAdventureChange({
       campaignId: advRow.campaign_id,

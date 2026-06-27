@@ -287,8 +287,8 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
         (id, campaign_id, user_id, character_id,
          player_name, character_name, class_name, species, level, hp_max, hp_current, ac, speed,
          str, dex, con, int, wis, cha, color, synced_ac, death_saves_success, death_saves_fail,
-         sheet_json, live_json, created_at, updated_at)
-      VALUES (?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?)
+         live_json, created_at, updated_at)
+      VALUES (?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       campaignId,

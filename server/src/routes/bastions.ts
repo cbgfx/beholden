@@ -6,7 +6,16 @@ import { parseBody } from "../shared/validate.js";
 import { requireAuth } from "../middleware/auth.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
 import { BastionCreateSchema, BastionPlayerUpdateSchema, BastionUpdateSchema } from "./bastions/schemas.js";
-import { normalizeAndValidateFacilities, parseBastionRow, parseFacilityState, readCampaignPlayerRows, readCompendiumFacilities, roleForCampaign } from "./bastions/helpers.js";
+import {
+  BASTION_SELECT,
+  normalizeAndValidateFacilities,
+  parseBastionRow,
+  parseFacilityState,
+  readCampaignPlayerRows,
+  readCompendiumFacilities,
+  replaceBastionAssignments,
+  roleForCampaign,
+} from "./bastions/helpers.js";
 import type { BastionRow } from "./bastions/types.js";
 
 function unique(values: string[]): string[] {
@@ -45,7 +54,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
     const bastions = assignments.flatMap((assignment) => {
       const playerRows = readCampaignPlayerRows(db, assignment.campaignId);
       const rows = db.prepare(
-        "SELECT id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, assigned_player_ids_json, assigned_character_ids_json, notes, maintain_order, facilities_json, created_at, updated_at FROM bastions WHERE campaign_id = ? ORDER BY updated_at DESC, created_at DESC"
+        `SELECT ${BASTION_SELECT} FROM bastions b WHERE b.campaign_id = ? ORDER BY b.updated_at DESC, b.created_at DESC`
       ).all(assignment.campaignId) as BastionRow[];
 
       return rows
@@ -86,7 +95,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
       .map((row) => row.character_id as string);
 
     const rows = db.prepare(
-      "SELECT id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, assigned_player_ids_json, assigned_character_ids_json, notes, maintain_order, facilities_json, created_at, updated_at FROM bastions WHERE campaign_id = ? ORDER BY updated_at DESC, created_at DESC"
+      `SELECT ${BASTION_SELECT} FROM bastions b WHERE b.campaign_id = ? ORDER BY b.updated_at DESC, b.created_at DESC`
     ).all(campaignId) as BastionRow[];
 
     const compendiumFacilities = readCompendiumFacilities(db);
@@ -125,7 +134,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
       .filter((row) => row.user_id === user.userId && typeof row.character_id === "string" && row.character_id)
       .map((row) => row.character_id as string);
     const row = db.prepare(
-      "SELECT id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, assigned_player_ids_json, assigned_character_ids_json, notes, maintain_order, facilities_json, created_at, updated_at FROM bastions WHERE campaign_id = ? AND id = ?"
+      `SELECT ${BASTION_SELECT} FROM bastions b WHERE b.campaign_id = ? AND b.id = ?`
     ).get(campaignId, bastionId) as BastionRow | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Bastion not found." });
 
@@ -175,24 +184,25 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
 
     const id = uid();
     const t = now();
-    db.prepare(
-      "INSERT INTO bastions (id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, assigned_player_ids_json, assigned_character_ids_json, notes, maintain_order, facilities_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    ).run(
-      id,
-      campaignId,
-      body.name.trim(),
-      body.active ? 1 : 0,
-      body.walled ? 1 : 0,
-      Math.max(0, Math.floor(body.defendersArmed ?? 0)),
-      Math.max(0, Math.floor(body.defendersUnarmed ?? 0)),
-      JSON.stringify(assignedPlayerIds),
-      JSON.stringify(assignedCharacterIds),
-      body.notes ?? "",
-      body.maintainOrder ? 1 : 0,
-      JSON.stringify(validated.facilities),
-      t,
-      t,
-    );
+    db.transaction(() => {
+      db.prepare(
+        "INSERT INTO bastions (id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, notes, maintain_order, facilities_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      ).run(
+        id,
+        campaignId,
+        body.name.trim(),
+        body.active ? 1 : 0,
+        body.walled ? 1 : 0,
+        Math.max(0, Math.floor(body.defendersArmed ?? 0)),
+        Math.max(0, Math.floor(body.defendersUnarmed ?? 0)),
+        body.notes ?? "",
+        body.maintainOrder ? 1 : 0,
+        JSON.stringify(validated.facilities),
+        t,
+        t,
+      );
+      replaceBastionAssignments(db, id, assignedPlayerIds, assignedCharacterIds);
+    })();
 
     emitBastionChange({ campaignId, action: "upsert", bastionId: id });
     res.json({ ok: true, id });
@@ -204,7 +214,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
     if (!campaignId || !bastionId) return;
 
     const row = db.prepare(
-      "SELECT id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, assigned_player_ids_json, assigned_character_ids_json, notes, maintain_order, facilities_json, created_at, updated_at FROM bastions WHERE id = ? AND campaign_id = ?"
+      `SELECT ${BASTION_SELECT} FROM bastions b WHERE b.id = ? AND b.campaign_id = ?`
     ).get(bastionId, campaignId) as BastionRow | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Bastion not found." });
 
@@ -228,22 +238,23 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
     }
 
     const t = now();
-    db.prepare(
-      "UPDATE bastions SET name = ?, active = ?, walled = ?, defenders_armed = ?, defenders_unarmed = ?, assigned_player_ids_json = ?, assigned_character_ids_json = ?, notes = ?, maintain_order = ?, facilities_json = ?, updated_at = ? WHERE id = ?"
-    ).run(
-      body.name?.trim() || row.name,
-      body.active === undefined ? row.active : (body.active ? 1 : 0),
-      body.walled === undefined ? row.walled : (body.walled ? 1 : 0),
-      body.defendersArmed === undefined ? row.defenders_armed : Math.max(0, Math.floor(body.defendersArmed)),
-      body.defendersUnarmed === undefined ? row.defenders_unarmed : Math.max(0, Math.floor(body.defendersUnarmed)),
-      JSON.stringify(assignedPlayerIds),
-      JSON.stringify(assignedCharacterIds),
-      body.notes === undefined ? row.notes : body.notes,
-      body.maintainOrder === undefined ? row.maintain_order : (body.maintainOrder ? 1 : 0),
-      JSON.stringify(validated.facilities),
-      t,
-      bastionId,
-    );
+    db.transaction(() => {
+      db.prepare(
+        "UPDATE bastions SET name = ?, active = ?, walled = ?, defenders_armed = ?, defenders_unarmed = ?, notes = ?, maintain_order = ?, facilities_json = ?, updated_at = ? WHERE id = ?"
+      ).run(
+        body.name?.trim() || row.name,
+        body.active === undefined ? row.active : (body.active ? 1 : 0),
+        body.walled === undefined ? row.walled : (body.walled ? 1 : 0),
+        body.defendersArmed === undefined ? row.defenders_armed : Math.max(0, Math.floor(body.defendersArmed)),
+        body.defendersUnarmed === undefined ? row.defenders_unarmed : Math.max(0, Math.floor(body.defendersUnarmed)),
+        body.notes === undefined ? row.notes : body.notes,
+        body.maintainOrder === undefined ? row.maintain_order : (body.maintainOrder ? 1 : 0),
+        JSON.stringify(validated.facilities),
+        t,
+        bastionId,
+      );
+      replaceBastionAssignments(db, bastionId, assignedPlayerIds, assignedCharacterIds);
+    })();
 
     emitBastionChange({ campaignId, action: "upsert", bastionId });
     res.json({ ok: true });
@@ -259,7 +270,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
     if (!role) return res.status(403).json({ ok: false, message: "Forbidden" });
 
     const row = db.prepare(
-      "SELECT id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, assigned_player_ids_json, assigned_character_ids_json, notes, maintain_order, facilities_json, created_at, updated_at FROM bastions WHERE id = ? AND campaign_id = ?"
+      `SELECT ${BASTION_SELECT} FROM bastions b WHERE b.id = ? AND b.campaign_id = ?`
     ).get(bastionId, campaignId) as BastionRow | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Bastion not found." });
 

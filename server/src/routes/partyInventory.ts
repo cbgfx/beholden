@@ -69,8 +69,8 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
     ).get(campaignId) as { n: number }).n;
     db.prepare(
       `INSERT INTO party_inventory
-       (id, campaign_id, name, quantity, weight, notes, source, item_id, rarity, type, description, item_json, sort, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?)`
+       (id, campaign_id, name, quantity, weight, notes, source, item_id, rarity, type, description, sort, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
       campaignId,

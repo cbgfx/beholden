@@ -33,7 +33,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
   });
 
   const selectSpellByExact = db.prepare(
-    "SELECT id, name, level, concentration FROM compendium_spells WHERE name_key = ? OR lower(name) = ? ORDER BY name_key ASC LIMIT 1",
+    "SELECT id, name, level, concentration FROM compendium_spells WHERE name_key = ? ORDER BY name_key ASC LIMIT 1",
   );
   const selectSpellByPrefix = db.prepare(
     "SELECT id, name, level, concentration FROM compendium_spells WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
@@ -58,7 +58,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
 
     const toOut = (row: SpellBasicRow) => ({ ...row, concentration: row.concentration === 1 });
 
-    const exact = selectSpellByExact.get(normalized, normalized) as SpellBasicRow | undefined;
+    const exact = selectSpellByExact.get(normalized) as SpellBasicRow | undefined;
     if (exact) return toOut(exact);
 
     const prefix = selectSpellByPrefix.get(`${normalized}%`) as SpellBasicRow | undefined;

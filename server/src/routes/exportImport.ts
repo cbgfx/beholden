@@ -27,6 +27,7 @@ import {
   parseJson,
 } from "../lib/db.js";
 import { importCampaignDocument } from "./exportImportHelpers.js";
+import { BASTION_SELECT } from "./bastions/helpers.js";
 
 export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
@@ -83,7 +84,7 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
     );
     const bastions = Object.fromEntries(
       (db.prepare(
-        "SELECT id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, assigned_player_ids_json, assigned_character_ids_json, notes, maintain_order, facilities_json, created_at, updated_at FROM bastions WHERE campaign_id = ?"
+        `SELECT ${BASTION_SELECT} FROM bastions b WHERE b.campaign_id = ?`
       ).all(campaignId) as Record<string, unknown>[])
         .map((row) => ({
           id: String(row.id),

@@ -8,6 +8,42 @@ import {
   FACILITY_ID_PREFIX,
 } from "./types.js";
 
+export const BASTION_SELECT = `
+  b.id, b.campaign_id, b.name, b.active, b.walled, b.defenders_armed, b.defenders_unarmed,
+  COALESCE(
+    (SELECT json_group_array(bp.player_id) FROM bastion_players bp WHERE bp.bastion_id = b.id),
+    '[]'
+  ) AS assigned_player_ids_json,
+  COALESCE(
+    (SELECT json_group_array(bc.character_id) FROM bastion_characters bc WHERE bc.bastion_id = b.id),
+    '[]'
+  ) AS assigned_character_ids_json,
+  b.notes, b.maintain_order, b.facilities_json, b.created_at, b.updated_at
+`;
+
+export function replaceBastionAssignments(
+  db: ServerContext["db"],
+  bastionId: string,
+  playerIds: string[],
+  characterIds: string[],
+): void {
+  const insertPlayer = db.prepare(
+    `INSERT OR IGNORE INTO bastion_players (bastion_id, player_id)
+     SELECT b.id, p.id
+     FROM bastions b
+     JOIN players p ON p.id = ? AND p.campaign_id = b.campaign_id
+     WHERE b.id = ?`,
+  );
+  const insertCharacter = db.prepare(
+    `INSERT OR IGNORE INTO bastion_characters (bastion_id, character_id)
+     SELECT ?, id FROM user_characters WHERE id = ?`,
+  );
+  db.prepare("DELETE FROM bastion_players WHERE bastion_id = ?").run(bastionId);
+  db.prepare("DELETE FROM bastion_characters WHERE bastion_id = ?").run(bastionId);
+  for (const playerId of playerIds) insertPlayer.run(playerId, bastionId);
+  for (const characterId of characterIds) insertCharacter.run(bastionId, characterId);
+}
+
 function unique(values: string[]): string[] {
   return [...new Set(values.map((entry) => entry.trim()).filter((entry) => entry.length > 0))];
 }
@@ -60,8 +96,7 @@ export function readCampaignPlayerRows(
        COALESCE(p.user_id, uc.user_id) AS user_id,
        p.character_id,
        p.level,
-       p.character_name,
-       p.sheet_json
+       p.character_name
      FROM players p
      LEFT JOIN user_characters uc ON uc.id = p.character_id
      WHERE p.campaign_id = ?`,
@@ -71,16 +106,10 @@ export function readCampaignPlayerRows(
     character_id: string | null;
     level: number | null;
     character_name: string | null;
-    sheet_json: string;
   }>;
 
   return rows.map((row) => {
-    const sheet = parseJson<Record<string, unknown>>(row.sheet_json, {});
-    const levelRaw = typeof row.level === "number"
-      ? row.level
-      : typeof sheet.level === "number"
-        ? sheet.level
-        : Number(sheet.level ?? 1);
+    const levelRaw = typeof row.level === "number" ? row.level : 1;
     return {
       id: row.id,
       user_id: row.user_id,
@@ -89,7 +118,7 @@ export function readCampaignPlayerRows(
       character_name:
         (typeof row.character_name === "string" && row.character_name.trim())
           ? row.character_name.trim()
-          : String(sheet.characterName ?? "").trim(),
+          : "",
     };
   });
 }

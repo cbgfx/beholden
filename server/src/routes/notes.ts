@@ -104,7 +104,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     const t = now();
     const sort = nextSortFor(db, "notes", "campaign_id", campaignId);
     db.prepare(
-      "INSERT INTO notes (id, campaign_id, adventure_id, title, text, note_json, sort, created_at, updated_at) VALUES (?, ?, NULL, ?, ?, '{}', ?, ?, ?)"
+      "INSERT INTO notes (id, campaign_id, adventure_id, title, text, sort, created_at, updated_at) VALUES (?, ?, NULL, ?, ?, ?, ?, ?)"
     ).run(id, campaignId, title, text, sort, t, t);
     const row = db
       .prepare(`SELECT ${NOTE_COLS} FROM notes WHERE id = ?`)
@@ -130,7 +130,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     const t = now();
     const sort = nextSortFor(db, "notes", "adventure_id", adventureId);
     db.prepare(
-      "INSERT INTO notes (id, campaign_id, adventure_id, title, text, note_json, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, '{}', ?, ?, ?)"
+      "INSERT INTO notes (id, campaign_id, adventure_id, title, text, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     ).run(id, advRow.campaign_id, adventureId, title, text, sort, t, t);
     const row = db
       .prepare(`SELECT ${NOTE_COLS} FROM notes WHERE id = ?`)

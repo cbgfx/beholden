@@ -104,7 +104,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     const row = db.prepare("SELECT id FROM campaigns WHERE id = ?").get(campaignId);
     if (!row) return res.status(404).json({ ok: false, message: "Campaign not found" });
 
-    // FK CASCADE handles all related rows (adventures → encounters → combats/combatants, players, inpcs, etc.)
+    // FK CASCADE handles all related rows (adventures → encounters/combatants, players, inpcs, etc.)
     db.prepare("DELETE FROM campaigns WHERE id = ?").run(campaignId);
 
     // Best-effort removal of campaign image files.

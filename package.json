@@ -12,6 +12,7 @@
     "dev:server": "npm -w server run dev",
     "dev:web-dm": "npm -w web-dm run dev",
     "dev:web-player": "npm -w web-player run dev",
+    "db:maintenance": "npm -w server run db:maintenance --",
     "typecheck": "npm -w server run typecheck && npm -w web-dm run typecheck && npm -w web-player run typecheck",
     "lint": "eslint \"{server,shared,web-dm,web-player}/src/**/*.{ts,tsx}\" --cache --cache-location .eslintcache",
     "build": "npm -w server run build && npm -w web-dm run build && npm -w web-player run build",

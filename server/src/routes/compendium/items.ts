@@ -22,7 +22,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
   });
 
   const selectItemByExact = db.prepare(
-    "SELECT id, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items WHERE name_key = ? OR lower(name) = ? ORDER BY name_key ASC LIMIT 1",
+    "SELECT id, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items WHERE name_key = ? ORDER BY name_key ASC LIMIT 1",
   );
   const selectItemByPrefix = db.prepare(
     "SELECT id, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
@@ -100,7 +100,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     const normalized = normalizeLookupName(rawName);
     if (!normalized) return null;
 
-    const exact = selectItemByExact.get(normalized, normalized) as
+    const exact = selectItemByExact.get(normalized) as
       | {
         id: string;
         name: string;

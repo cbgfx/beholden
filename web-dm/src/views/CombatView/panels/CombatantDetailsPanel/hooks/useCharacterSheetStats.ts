@@ -32,7 +32,7 @@ export function useCharacterSheetStats(args: {
     const hpCur = toFinite(combatant.hpCurrent ?? 0, 0);
     const tempHp = Math.max(0, Number(overrides.tempHp ?? 0) || 0);
     const baseAc = combatant.baseType === "player"
-      ? toFinite(player?.syncedAc ?? combatant.ac ?? 10, 10)
+      ? toFinite(player?.ac ?? combatant.ac ?? 10, 10)
       : toFinite(combatant.ac ?? 10, 10);
     const ac = Math.max(0, baseAc + acBonus);
 

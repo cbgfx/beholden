@@ -1,8 +1,9 @@
 import type { Db } from "../lib/db.js";
-import { ensureCombat, insertCombatant } from "../services/combat.js";
+import { insertCombatant } from "../services/combat.js";
 import { DEFAULT_DEATH_SAVES, DEFAULT_OVERRIDES } from "../lib/defaults.js";
 import { seedDefaultConditions } from "../services/conditions.js";
 import { campaignLiveDbColumns, campaignSheetDbColumns } from "../services/characters.js";
+import { replaceBastionAssignments } from "./bastions/helpers.js";
 import type {
   StoredConditionInstance,
   StoredDeathSaves,
@@ -38,6 +39,7 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
     );
 
     const adventures = toArray(doc["adventures"]);
+    const adventureIds = new Set(adventures.map((adventure) => String(adventure["id"])));
     for (const adventure of adventures) {
       db.prepare(`
         INSERT OR IGNORE INTO adventures (id, campaign_id, name, status, sort, created_at, updated_at)
@@ -116,8 +118,8 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
           (id, campaign_id, user_id, character_id,
            player_name, character_name, class_name, species, level, hp_max, hp_current, ac, speed,
            str, dex, con, int, wis, cha, color, synced_ac, death_saves_success, death_saves_fail,
-           sheet_json, live_json, image_url, shared_notes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?, ?, ?)
+           live_json, image_url, shared_notes, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         String(player["id"]),
         campaignId,
@@ -179,16 +181,16 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
     for (const note of notes) {
       const title = String(note["title"] ?? "");
       const text = String(note["text"] ?? "");
+      const requestedAdventureId = (note["adventureId"] as string | null) ?? null;
       db.prepare(`
-        INSERT OR IGNORE INTO notes (id, campaign_id, adventure_id, title, text, note_json, sort, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT OR IGNORE INTO notes (id, campaign_id, adventure_id, title, text, sort, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         String(note["id"]),
         campaignId,
-        (note["adventureId"] as string | null) ?? null,
+        requestedAdventureId && adventureIds.has(requestedAdventureId) ? requestedAdventureId : null,
         title,
         text,
-        "{}",
         Number(note["sort"] ?? 0),
         Number(note["createdAt"] ?? Date.now()),
         Number(note["updatedAt"] ?? Date.now()),
@@ -197,6 +199,7 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
 
     const treasure = toArray(doc["treasure"]);
     for (const entry of treasure) {
+      const requestedAdventureId = (entry["adventureId"] as string | null) ?? null;
       const treasureState: StoredTreasureState = {
         source: entry["source"] === "custom" ? "custom" : "compendium",
         itemId: (entry["itemId"] as string | null) ?? null,
@@ -212,12 +215,12 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
       db.prepare(`
         INSERT OR IGNORE INTO treasure
           (id, campaign_id, adventure_id, source, item_id, name, rarity, type, type_key,
-           attunement, magic, text, qty, entry_json, sort, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           attunement, magic, text, qty, sort, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         String(entry["id"]),
         campaignId,
-        (entry["adventureId"] as string | null) ?? null,
+        requestedAdventureId && adventureIds.has(requestedAdventureId) ? requestedAdventureId : null,
         treasureState.source,
         treasureState.itemId,
         treasureState.name,
@@ -228,7 +231,6 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
         treasureState.magic ? 1 : 0,
         treasureState.text,
         treasureState.qty,
-        "{}",
         Number(entry["sort"] ?? 0),
         Number(entry["createdAt"] ?? Date.now()),
         Number(entry["updatedAt"] ?? Date.now()),
@@ -239,8 +241,8 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
     for (const item of partyInventory) {
       db.prepare(`
         INSERT OR IGNORE INTO party_inventory
-          (id, campaign_id, name, quantity, weight, notes, source, item_id, rarity, type, description, item_json, sort, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?)
+          (id, campaign_id, name, quantity, weight, notes, source, item_id, rarity, type, description, sort, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         String(item["id"]),
         campaignId,
@@ -280,8 +282,8 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
     for (const bastion of bastions) {
       db.prepare(`
         INSERT OR IGNORE INTO bastions
-          (id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, assigned_player_ids_json, assigned_character_ids_json, notes, maintain_order, facilities_json, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, notes, maintain_order, facilities_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         String(bastion["id"]),
         campaignId,
@@ -290,21 +292,24 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
         Boolean(bastion["walled"]) ? 1 : 0,
         Math.max(0, Math.floor(Number(bastion["defendersArmed"] ?? 0))),
         Math.max(0, Math.floor(Number(bastion["defendersUnarmed"] ?? 0))),
-        JSON.stringify(Array.isArray(bastion["assignedPlayerIds"]) ? bastion["assignedPlayerIds"] : []),
-        JSON.stringify(Array.isArray(bastion["assignedCharacterIds"]) ? bastion["assignedCharacterIds"] : []),
         String(bastion["notes"] ?? ""),
         Boolean(bastion["maintainOrder"]) ? 1 : 0,
         JSON.stringify(Array.isArray(bastion["facilities"]) ? bastion["facilities"] : []),
         Number(bastion["createdAt"] ?? Date.now()),
         Number(bastion["updatedAt"] ?? Date.now()),
       );
+      replaceBastionAssignments(
+        db,
+        String(bastion["id"]),
+        Array.isArray(bastion["assignedPlayerIds"]) ? bastion["assignedPlayerIds"].map(String) : [],
+        Array.isArray(bastion["assignedCharacterIds"]) ? bastion["assignedCharacterIds"].map(String) : [],
+      );
     }
 
     const combats = toArray(doc["combats"]);
     for (const combat of combats) {
       const encounterId = String(combat["encounterId"]);
-      ensureCombat(db, encounterId);
-      db.prepare("UPDATE combats SET round=?, active_combatant_id=? WHERE encounter_id=?").run(
+      db.prepare("UPDATE encounters SET combat_round=?, combat_active_combatant_id=? WHERE id=?").run(
         Number(combat["round"] ?? 1),
         (combat["activeCombatantId"] as string | null) ?? null,
         encounterId,

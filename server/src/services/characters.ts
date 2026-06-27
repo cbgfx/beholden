@@ -83,8 +83,8 @@ export interface MirroredPlayerSnapshot extends StoredCampaignCharacterSheetStat
 /**
  * Linked campaign characters are projections of canonical character sheets.
  *
- * Mirrored fields come from the sheet baseline and are synchronized into
- * players.sheet_json. Campaign-local mutable state lives in players.live_json.
+ * Mirrored scalar fields come from the sheet baseline. Campaign-local nested
+ * mutable state lives in players.live_json.
  */
 
 export function buildCharacterSheetState(char: StoredCharacterSheet): StoredCharacterSheetState {
@@ -109,14 +109,22 @@ export function buildCharacterSheetState(char: StoredCharacterSheet): StoredChar
   };
 }
 
-export function buildMirroredPlayerSnapshot(char: StoredCharacterSheet, syncedAc?: number, syncedSpeed?: number): MirroredPlayerSnapshot {
+export function buildMirroredPlayerSnapshot(
+  char: StoredCharacterSheet,
+  syncedAc?: number,
+  syncedSpeed?: number,
+  syncedHpMax?: number,
+): MirroredPlayerSnapshot {
+  const storedDerivedHpMax = Number(char.characterData?.derivedHpMax);
+  const derivedHpMax = syncedHpMax
+    ?? (Number.isFinite(storedDerivedHpMax) && storedDerivedHpMax >= 1 ? Math.floor(storedDerivedHpMax) : char.hpMax);
   return {
     playerName: char.playerName,
     characterName: char.name,
     class: char.className,
     species: char.species,
     level: char.level,
-    hpMax: char.hpMax,
+    hpMax: derivedHpMax,
     ac: char.ac,
     speed: syncedSpeed ?? char.speed,
     ...(char.strScore != null ? { str: char.strScore } : {}),
@@ -126,7 +134,7 @@ export function buildMirroredPlayerSnapshot(char: StoredCharacterSheet, syncedAc
     ...(char.wisScore != null ? { wis: char.wisScore } : {}),
     ...(char.chaScore != null ? { cha: char.chaScore } : {}),
     color: char.color,
-    ...(syncedAc != null ? { syncedAc } : {}),
+    ...(syncedAc != null && syncedAc > 0 ? { syncedAc } : {}),
   };
 }
 
@@ -198,7 +206,7 @@ export function campaignSheetDbColumns(snapshot: MirroredPlayerSnapshot) {
     wis: snapshot.wis ?? null,
     cha: snapshot.cha ?? null,
     color: snapshot.color ?? null,
-    syncedAc: snapshot.syncedAc ?? null,
+    syncedAc: snapshot.syncedAc != null && snapshot.syncedAc > 0 ? snapshot.syncedAc : null,
   };
 }
 
@@ -319,8 +327,8 @@ export function insertProjectedPlayerRow(
       (id, campaign_id, user_id, character_id,
        player_name, character_name, class_name, species, level, hp_max, hp_current, ac, speed,
        str, dex, con, int, wis, cha, color, synced_ac, death_saves_success, death_saves_fail,
-       sheet_json, live_json, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?)
+       live_json, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     playerId,
     campaignId,
@@ -371,6 +379,7 @@ export function syncAssignedPlayerRows(
         updateCampaignCharacterLive(db, player_id, current, livePatch, updatedAt);
       }
     }
+    syncPlayerCombatantSnapshots(db, player_id);
     broadcast("players:delta", {
       campaignId: campaign_id,
       action: "upsert",
@@ -379,6 +388,22 @@ export function syncAssignedPlayerRows(
     });
     broadcastPlayerCombatantChanges(db, broadcast, player_id);
   }
+}
+
+export function syncPlayerCombatantSnapshots(
+  db: Database.Database,
+  playerId: string,
+): void {
+  db.prepare(`
+    UPDATE combatants
+    SET snapshot_json = json_set(
+      snapshot_json,
+      '$.name', (SELECT character_name FROM players WHERE id = ?),
+      '$.hpMax', (SELECT hp_max FROM players WHERE id = ?),
+      '$.ac', (SELECT ac FROM players WHERE id = ?)
+    )
+    WHERE base_type = 'player' AND base_id = ?
+  `).run(playerId, playerId, playerId, playerId);
 }
 
 export function broadcastPlayerCombatantChanges(

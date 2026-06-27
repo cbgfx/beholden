@@ -148,8 +148,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       INSERT INTO user_characters
         (id, user_id, name, player_name, class_name, species, level, hp_max, hp_current, ac, speed,
          str_score, dex_score, con_score, int_score, wis_score, cha_score, color, death_saves_success, death_saves_fail,
-         sheet_json, image_url, character_data_json, shared_notes, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', NULL, ?, '', ?, ?)
+         image_url, character_data_json, shared_notes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, '', ?, ?)
     `).run(
       id, userId, sheetCols.name, sheetCols.playerName, sheetCols.className, sheetCols.species, sheetCols.level,
       sheetCols.hpMax, sheetCols.hpCurrent, sheetCols.ac, sheetCols.speed,
@@ -201,6 +201,9 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       ...(ex.deathSaves ? { deathSaves: ex.deathSaves } : {}),
     };
     const normalized = normalizeCharacterSheetForStorage(nextSheet, mergedCharacterData);
+    const characterDataForStorage = p.syncedHpMax !== undefined
+      ? { ...(normalized.characterData ?? {}), derivedHpMax: p.syncedHpMax }
+      : normalized.characterData;
     const sheetCols = characterSheetDbColumns(normalized.sheet);
 
     db.prepare(`
@@ -213,20 +216,20 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       sheetCols.name, sheetCols.playerName, sheetCols.className, sheetCols.species, sheetCols.level, sheetCols.hpMax, sheetCols.hpCurrent,
       sheetCols.ac, sheetCols.speed, sheetCols.strScore, sheetCols.dexScore, sheetCols.conScore, sheetCols.intScore, sheetCols.wisScore,
       sheetCols.chaScore, sheetCols.color, sheetCols.deathSavesSuccess, sheetCols.deathSavesFail,
-      normalized.characterData ? JSON.stringify(normalized.characterData) : null,
+      characterDataForStorage ? JSON.stringify(characterDataForStorage) : null,
       t, charId, userId
     );
 
     const nextChar = {
       ...ex,
       ...normalized.sheet,
-      characterData: normalized.characterData,
+      characterData: characterDataForStorage,
     };
     syncAssignedPlayerRows(
       db,
       ctx.broadcast,
       charId,
-      buildMirroredPlayerSnapshot(nextChar, p.syncedAc, p.syncedSpeed),
+      buildMirroredPlayerSnapshot(nextChar, undefined, p.syncedSpeed, p.syncedHpMax),
       t,
       userId,
       p.hpCurrent !== undefined ? { hpCurrent: p.hpCurrent } : undefined,

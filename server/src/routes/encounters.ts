@@ -189,7 +189,7 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
       .get(encounterId) as { campaign_id: string; adventure_id: string } | undefined;
     if (!encRow)
       return res.status(404).json({ ok: false, message: "Encounter not found" });
-    // FK CASCADE: encounter → combats, combatants
+    // FK CASCADE: encounter → combatants
     db.prepare("DELETE FROM encounters WHERE id = ?").run(encounterId);
     emitEncounterChange({
       campaignId: encRow.campaign_id,

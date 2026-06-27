@@ -129,7 +129,7 @@ export function createPlayerCombatant({
     hpCurrent: player.hpCurrent,
     hpMax: player.hpMax,
     hpDetails: null,
-    ac: player.syncedAc ?? player.ac,
+    ac: player.ac,
     acDetails: null,
     attackOverrides: null,
     conditions: Array.isArray(player.conditions) ? player.conditions : [],
@@ -215,7 +215,7 @@ export function hydratePlayerCombatant(
     label: combatant.label || player.characterName,
     hpCurrent: player.hpCurrent,
     hpMax: player.hpMax,
-    ac: player.syncedAc ?? player.ac,
+    ac: player.ac,
     conditions: player.conditions ?? [],
     overrides: player.overrides ?? combatant.overrides,
     ...((player.deathSaves ?? combatant.deathSaves) !== undefined

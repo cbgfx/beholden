@@ -23,6 +23,7 @@ const CharacterBodyBase = z.object({
   color: z.string().optional(),
   characterData: z.record(z.string(), z.unknown()).nullable().optional(),
   syncedAc: z.number().int().optional(),
+  syncedHpMax: z.number().int().min(1).optional(),
   syncedSpeed: z.number().int().optional(),
 });
 

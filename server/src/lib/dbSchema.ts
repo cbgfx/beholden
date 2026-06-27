@@ -64,7 +64,6 @@ CREATE TABLE IF NOT EXISTS players (
   synced_ac INTEGER,
   death_saves_success INTEGER,
   death_saves_fail INTEGER,
-  sheet_json TEXT NOT NULL,
   live_json TEXT NOT NULL,
   image_url TEXT,
   shared_notes TEXT NOT NULL DEFAULT '',
@@ -95,10 +94,10 @@ CREATE TABLE IF NOT EXISTS notes (
   adventure_id TEXT,
   title TEXT NOT NULL DEFAULT 'Note',
   text TEXT NOT NULL DEFAULT '',
-  note_json TEXT NOT NULL,
   sort INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
+  updated_at INTEGER NOT NULL,
+  FOREIGN KEY (adventure_id) REFERENCES adventures(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS treasure (
@@ -115,10 +114,10 @@ CREATE TABLE IF NOT EXISTS treasure (
   magic INTEGER NOT NULL DEFAULT 0,
   text TEXT NOT NULL DEFAULT '',
   qty INTEGER NOT NULL DEFAULT 1,
-  entry_json TEXT NOT NULL,
   sort INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
+  updated_at INTEGER NOT NULL,
+  FOREIGN KEY (adventure_id) REFERENCES adventures(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS conditions (
@@ -128,15 +127,6 @@ CREATE TABLE IF NOT EXISTS conditions (
   name TEXT NOT NULL,
   description TEXT,
   sort INTEGER,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS combats (
-  encounter_id TEXT PRIMARY KEY REFERENCES encounters(id) ON DELETE CASCADE,
-  round INTEGER NOT NULL DEFAULT 1,
-  active_index INTEGER NOT NULL DEFAULT 0,
-  active_combatant_id TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -291,7 +281,6 @@ CREATE TABLE IF NOT EXISTS user_characters (
   color TEXT,
   death_saves_success INTEGER,
   death_saves_fail INTEGER,
-  sheet_json TEXT NOT NULL,
   image_url TEXT,
   character_data_json TEXT,
   shared_notes TEXT NOT NULL DEFAULT '',
@@ -339,7 +328,6 @@ CREATE TABLE IF NOT EXISTS party_inventory (
   rarity TEXT,
   type TEXT,
   description TEXT,
-  item_json TEXT NOT NULL,
   sort INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
@@ -353,13 +341,23 @@ CREATE TABLE IF NOT EXISTS bastions (
   walled INTEGER NOT NULL DEFAULT 0,
   defenders_armed INTEGER NOT NULL DEFAULT 0,
   defenders_unarmed INTEGER NOT NULL DEFAULT 0,
-  assigned_player_ids_json TEXT NOT NULL DEFAULT '[]',
-  assigned_character_ids_json TEXT NOT NULL DEFAULT '[]',
   notes TEXT NOT NULL DEFAULT '',
   maintain_order INTEGER NOT NULL DEFAULT 0,
   facilities_json TEXT NOT NULL DEFAULT '[]',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS bastion_players (
+  bastion_id TEXT NOT NULL REFERENCES bastions(id) ON DELETE CASCADE,
+  player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  PRIMARY KEY (bastion_id, player_id)
+);
+
+CREATE TABLE IF NOT EXISTS bastion_characters (
+  bastion_id TEXT NOT NULL REFERENCES bastions(id) ON DELETE CASCADE,
+  character_id TEXT NOT NULL REFERENCES user_characters(id) ON DELETE CASCADE,
+  PRIMARY KEY (bastion_id, character_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_adventures_campaign   ON adventures(campaign_id);
@@ -370,11 +368,9 @@ CREATE INDEX IF NOT EXISTS idx_notes_campaign        ON notes(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_notes_adventure       ON notes(adventure_id);
 CREATE INDEX IF NOT EXISTS idx_treasure_campaign     ON treasure(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_treasure_adventure    ON treasure(adventure_id);
-CREATE INDEX IF NOT EXISTS idx_conditions_campaign   ON conditions(campaign_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_conditions_campaign_key ON conditions(campaign_id, key);
+CREATE INDEX IF NOT EXISTS idx_conditions_campaign_key ON conditions(campaign_id, key);
 CREATE INDEX IF NOT EXISTS idx_combatants_encounter  ON combatants(encounter_id);
 CREATE INDEX IF NOT EXISTS idx_combatants_base       ON combatants(base_type, base_id);
-CREATE INDEX IF NOT EXISTS idx_membership_campaign   ON campaign_membership(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_membership_user       ON campaign_membership(user_id);
 CREATE INDEX IF NOT EXISTS idx_players_user          ON players(user_id);
 CREATE INDEX IF NOT EXISTS idx_players_campaign      ON players(campaign_id);
@@ -387,7 +383,9 @@ CREATE INDEX IF NOT EXISTS idx_compmon_typekey       ON compendium_monsters(type
 CREATE INDEX IF NOT EXISTS idx_compmon_size          ON compendium_monsters(size);
 CREATE INDEX IF NOT EXISTS idx_compmon_cr            ON compendium_monsters(cr_numeric);
 CREATE INDEX IF NOT EXISTS idx_compitem_name         ON compendium_items(name COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_compitem_name_key     ON compendium_items(name_key);
 CREATE INDEX IF NOT EXISTS idx_compspell_name        ON compendium_spells(name COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_compspell_name_key    ON compendium_spells(name_key);
 CREATE INDEX IF NOT EXISTS idx_compspell_level       ON compendium_spells(level);
 CREATE INDEX IF NOT EXISTS idx_compclass_name        ON compendium_classes(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_comprace_name         ON compendium_races(name COLLATE NOCASE);
@@ -401,4 +399,6 @@ CREATE INDEX IF NOT EXISTS idx_compbastion_fac_name  ON compendium_bastion_facil
 CREATE INDEX IF NOT EXISTS idx_uchars_user           ON user_characters(user_id);
 CREATE INDEX IF NOT EXISTS idx_party_inventory_campaign ON party_inventory(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_bastions_campaign     ON bastions(campaign_id, updated_at);
+CREATE INDEX IF NOT EXISTS idx_bastion_players_player ON bastion_players(player_id);
+CREATE INDEX IF NOT EXISTS idx_bastion_characters_character ON bastion_characters(character_id);
 `;

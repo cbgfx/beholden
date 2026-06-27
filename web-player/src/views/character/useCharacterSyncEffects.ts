@@ -8,12 +8,15 @@ export function useCharacterSyncEffects(args: {
   char: Character | null;
   setChar: React.Dispatch<React.SetStateAction<Character | null>>;
   fetchChar: () => Promise<void>;
-  syncedAcValue: number | null;
+  syncedHpMaxValue: number | null;
   syncedSpeedValue?: number | null;
 }) {
-  const { char, setChar, fetchChar, syncedAcValue, syncedSpeedValue } = args;
-  const lastSyncedAcRef = React.useRef<{ charId: string; ac: number } | null>(null);
-  const lastSyncedSpeedRef = React.useRef<{ charId: string; speed: number } | null>(null);
+  const { char, setChar, fetchChar, syncedHpMaxValue, syncedSpeedValue } = args;
+  const lastSyncedStatsRef = React.useRef<{
+    charId: string;
+    hpMax: number;
+    speed: number | null;
+  } | null>(null);
   const enqueueFetchChar = useDebouncedSingleflight(fetchChar);
 
   React.useEffect(() => {
@@ -41,23 +44,23 @@ export function useCharacterSyncEffects(args: {
   }, [enqueueFetchChar, setChar]));
 
   React.useEffect(() => {
-    if (!char || syncedAcValue == null) return;
-    const prev = lastSyncedAcRef.current;
-    if (prev?.charId === char.id && prev?.ac === syncedAcValue) return;
-    lastSyncedAcRef.current = { charId: char.id, ac: syncedAcValue };
-    if (syncedAcValue !== char.syncedAc) {
-      void putMyCharacter(char.id, { syncedAc: syncedAcValue });
-    }
-  }, [char, syncedAcValue]);
-
-  React.useEffect(() => {
-    if (!char || syncedSpeedValue == null) return;
-    const prev = lastSyncedSpeedRef.current;
-    if (prev?.charId === char.id && prev?.speed === syncedSpeedValue) return;
-    lastSyncedSpeedRef.current = { charId: char.id, speed: syncedSpeedValue };
-    if (syncedSpeedValue !== char.speed) {
-      void putMyCharacter(char.id, { syncedSpeed: syncedSpeedValue });
-    }
-  }, [char, syncedSpeedValue]);
+    if (!char || syncedHpMaxValue == null) return;
+    const speed = syncedSpeedValue ?? null;
+    const prev = lastSyncedStatsRef.current;
+    if (
+      prev?.charId === char.id
+      && prev.hpMax === syncedHpMaxValue
+      && prev.speed === speed
+    ) return;
+    lastSyncedStatsRef.current = {
+      charId: char.id,
+      hpMax: syncedHpMaxValue,
+      speed,
+    };
+    void putMyCharacter(char.id, {
+      syncedHpMax: syncedHpMaxValue,
+      ...(speed != null ? { syncedSpeed: speed } : {}),
+    });
+  }, [char, syncedHpMaxValue, syncedSpeedValue]);
 
 }

@@ -292,7 +292,7 @@ function readCampaignCharacterSheetState(
     ...(typeof row.wis === "number" ? { wis: row.wis } : {}),
     ...(typeof row.cha === "number" ? { cha: row.cha } : {}),
     ...(typeof row.color === "string" || row.color === null ? { color: (row.color as string | null) ?? null } : {}),
-    ...(typeof row.synced_ac === "number" ? { syncedAc: row.synced_ac } : {}),
+    ...(typeof row.synced_ac === "number" && row.synced_ac > 0 ? { syncedAc: row.synced_ac } : {}),
   };
 }
 
