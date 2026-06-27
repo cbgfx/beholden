@@ -114,26 +114,34 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
   const [concentrationSpells, setConcentrationSpells] = React.useState<string[]>([]);
   const [concentrationSpellsLoading, setConcentrationSpellsLoading] = React.useState(false);
   const [concentrationSpellsError, setConcentrationSpellsError] = React.useState(false);
-  const concentrationSpellLookupKey = concentrationSpellNames.join("\u0000");
+  const concentrationSpellCacheRef = React.useRef<Record<string, string[]>>({});
+  const concentrationSpellLookupKey = concentrationSpellNames.join("|||");
   const availableConditions = React.useMemo(() => getAvailableConditions(char), [char]);
   const displayHpMax = effectiveHpMax;
   const displayHpPct = displayHpMax > 0 ? Math.min(1, char.hpCurrent / displayHpMax) : 0;
   React.useEffect(() => {
     if (!concentrationPickerOpen) return;
 
-    const names = concentrationSpellLookupKey
-      .split("\u0000")
-      .map((name) => name.trim())
-      .filter(Boolean);
-    let alive = true;
+    const names = concentrationSpellNames.filter(Boolean);
 
-    setConcentrationSpells([]);
-    setConcentrationSpellsError(false);
     if (names.length === 0) {
+      setConcentrationSpells([]);
       setConcentrationSpellsLoading(false);
+      setConcentrationSpellsError(false);
       return;
     }
 
+    const cached = concentrationSpellCacheRef.current[concentrationSpellLookupKey];
+    if (cached) {
+      setConcentrationSpells(cached);
+      setConcentrationSpellsLoading(false);
+      setConcentrationSpellsError(false);
+      return;
+    }
+
+    let alive = true;
+    setConcentrationSpells([]);
+    setConcentrationSpellsError(false);
     setConcentrationSpellsLoading(true);
     api<{ rows: ConcentrationSpellLookupRow[] }>("/api/spells/lookup", {
       method: "POST",
@@ -141,7 +149,10 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
       body: JSON.stringify({ names }),
     })
       .then((payload) => {
-        if (alive) setConcentrationSpells(concentrationSpellNamesFromLookup(payload.rows ?? []));
+        if (!alive) return;
+        const result = concentrationSpellNamesFromLookup(payload.rows ?? []);
+        concentrationSpellCacheRef.current[concentrationSpellLookupKey] = result;
+        setConcentrationSpells(result);
       })
       .catch(() => {
         if (alive) setConcentrationSpellsError(true);
@@ -153,6 +164,8 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
     return () => {
       alive = false;
     };
+  // concentrationSpellNames is encoded in concentrationSpellLookupKey
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [concentrationPickerOpen, concentrationSpellLookupKey]);
   return (
     <>

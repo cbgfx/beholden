@@ -101,10 +101,16 @@ export function CharacterFeatPickerModal(props: {
     return () => { alive = false; };
   }, [selectedId]);
 
-  const existingNamesLower = new Set(props.existingFeatureNames.map((name) => name.toLowerCase().trim()));
-  const rows = query
-    ? allFeats.filter((feat) => feat.name.toLowerCase().includes(query.toLowerCase()))
-    : allFeats;
+  const existingNamesLower = useMemo(
+    () => new Set(props.existingFeatureNames.map((name) => name.toLowerCase().trim())),
+    [props.existingFeatureNames],
+  );
+  const rows = useMemo(
+    () => query
+      ? allFeats.filter((feat) => feat.name.toLowerCase().includes(query.toLowerCase()))
+      : allFeats,
+    [allFeats, query],
+  );
   const selectedFeat = selectedId ? allFeats.find((feat) => feat.id === selectedId) ?? null : null;
   const choiceSpec = useMemo(() => getExtraFeatAbilityChoiceSpec(selectedDetail), [selectedDetail]);
   const choicesValid = isValidExtraFeatAbilityChoice(choiceSpec, selectedAbilities);

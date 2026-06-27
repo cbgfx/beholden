@@ -10,8 +10,6 @@ import { CharacterSupportPanels } from "@/views/character/CharacterSupportPanels
 import { InventoryPanel } from "@/views/character/CharacterInventoryPanel";
 import { ItemSpellsPanel } from "@/views/character/CharacterItemSpellsPanel";
 import { RichSpellsPanel } from "@/views/character/CharacterSpellsPanel";
-import { useSheetDensity } from "@/views/character/CharacterViewParts";
-
 export function CharacterPrimaryColumn(props: {
   hudProps: React.ComponentProps<typeof CharacterHudPanel>;
   combatProps: React.ComponentProps<typeof CharacterCombatPanels>;
@@ -19,9 +17,8 @@ export function CharacterPrimaryColumn(props: {
   defensesProps: React.ComponentProps<typeof CharacterDefensesPanel>;
   proficienciesProps: React.ComponentProps<typeof CharacterProficienciesPanel>;
 }) {
-  const compact = useSheetDensity() === "compact";
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: compact ? 9 : 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{
         display: "flex", flexDirection: "column",
         overflow: "hidden",
@@ -46,9 +43,8 @@ export function CharacterActionColumn(props: {
   itemSpellsProps: React.ComponentProps<typeof ItemSpellsPanel>;
   richSpellsProps: React.ComponentProps<typeof RichSpellsPanel>;
 }) {
-  const compact = useSheetDensity() === "compact";
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: compact ? 9 : 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <CharacterCombatPanels {...props.combatProps} showStats={false} />
       {props.polymorphed ? (
         props.polymorphMonsterState.monster ? (

@@ -25,7 +25,7 @@ export function XpAwardModal(props: {
 
   React.useEffect(() => () => {
     if (closeTimerRef.current != null) window.clearTimeout(closeTimerRef.current);
-  }, [onClose]);
+  }, []);
 
   const xpValue = parseInt(xpInput, 10);
   const valid = !isNaN(xpValue) && xpValue > 0;

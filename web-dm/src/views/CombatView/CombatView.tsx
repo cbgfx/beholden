@@ -272,9 +272,6 @@ export function CombatView() {
         backTo={campaignId && encounterId ? `/campaign/${campaignId}/roster/${encounterId}` : (campaignId ? `/campaign/${campaignId}` : "/")}
         backTitle="Back to Roster"
         title={encounter?.name ?? "Combat"}
-        round={round}
-        seconds={secondsInRound}
-        canNavigate={canNavigate}
         rollLabel="Roll Initiative"
         onRollOrReset={rollInitiativeForMonsters}
         onResetFight={resetFight}
@@ -282,8 +279,6 @@ export function CombatView() {
         onOpenSpellBook={openSpellBook}
         onOpenAdventureNotes={openAdventureNotes}
         onEndCombat={endCombat}
-        onPrev={prevTurn}
-        onNext={nextTurn}
       />
 
       <div

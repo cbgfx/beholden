@@ -100,7 +100,7 @@ export function InventoryContainerSection({
           <input
             value={container.name}
             onChange={(e) => onNameChange(e.target.value)}
-            onBlur={(e) => { void onRename(e.target.value); }}
+            onBlur={(e) => { onRename(e.target.value).catch(() => onResetName()); }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.currentTarget.blur();

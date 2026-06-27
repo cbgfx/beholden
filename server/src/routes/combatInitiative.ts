@@ -62,6 +62,29 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
     res.json({ prompt: prompt ?? null });
   });
 
+  app.delete("/api/me/characters/:characterId/initiative-prompt", (req, res) => {
+    const characterId = requireParam(req, res, "characterId");
+    if (!characterId) return;
+
+    const owned = db
+      .prepare("SELECT 1 FROM user_characters WHERE id = ? AND user_id = ?")
+      .get(characterId, req.user!.userId);
+    if (!owned && !req.user!.isAdmin) {
+      return res.status(404).json({ ok: false, message: "Character not found" });
+    }
+
+    const rawCombatantId = (req.body as { combatantId?: unknown }).combatantId;
+    if (typeof rawCombatantId !== "string" || !rawCombatantId) {
+      return res.status(400).json({ ok: false, message: "combatantId is required" });
+    }
+
+    db.prepare(
+      "DELETE FROM initiative_prompts WHERE combatant_id = ? AND character_id = ?",
+    ).run(rawCombatantId, characterId);
+
+    res.json({ ok: true });
+  });
+
   app.post(
     "/api/encounters/:encounterId/prompt-initiative",
     dmOrAdmin(db),

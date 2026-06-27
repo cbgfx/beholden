@@ -56,7 +56,7 @@ export function useCombatInitiativeActions({
       const mod = dexModFromMonster(d);
       const roll = 1 + Math.floor(Math.random() * 20);
       const init = roll + mod;
-      await putEncounterCombatant(encounterId, c.id, { initiative: init });
+      try { await putEncounterCombatant(encounterId, c.id, { initiative: init }); } catch { /* skip, user can set manually */ }
     }
 
     // Prompt player combatants without initiative to roll on their sheet.

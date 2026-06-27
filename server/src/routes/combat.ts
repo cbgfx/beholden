@@ -380,10 +380,9 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
 
     const baseName = String(monRow.name || m?.name || "Monster").trim() || "Monster";
     const effectiveLabelBase = labelBase || baseName;
-    let n: number = nextLabelNumber(db, encounterId, effectiveLabelBase);
-
     const created: StoredEncounterActor[] = [];
     db.transaction(() => {
+      let n: number = nextLabelNumber(db, encounterId, effectiveLabelBase);
       for (let i = 0; i < qty; i++) {
         const label =
           qty === 1 ? effectiveLabelBase : `${effectiveLabelBase} ${n++}`;

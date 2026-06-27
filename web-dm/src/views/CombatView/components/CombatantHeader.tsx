@@ -9,9 +9,6 @@ type Props = {
   backTo: string;
   backTitle?: string;
   title: string;
-  round: number;
-  seconds?: number | null;
-  canNavigate: boolean;
   rollLabel: string;
   onRollOrReset: () => void;
   onResetFight?: () => void;
@@ -19,8 +16,6 @@ type Props = {
   onEndCombat: () => void;
   onOpenSpellBook: () => void;
   onOpenAdventureNotes: () => void;
-  onPrev: () => void;
-  onNext: () => void;
 };
 
 /**

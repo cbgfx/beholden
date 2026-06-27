@@ -124,8 +124,8 @@ export function CharacterView() {
   const {
     activeBastion,
     initiativePrompt,
-    setInitiativePrompt,
     refreshInitiativePrompt,
+    dismissInitiativePrompt,
   } = useCharacterLiveUpdates(id, fetchChar);
 
   const {
@@ -422,7 +422,6 @@ export function CharacterView() {
     dexScore: transformedCombatStats?.dexScore ?? scores.dex,
     pb: transformedCombatStats?.pb ?? pb,
     passivePerc: transformedCombatStats?.passivePerc ?? passivePerc,
-    passiveInv: transformedCombatStats?.passiveInv ?? passiveInv,
     accentColor,
     inventory,
     prof,
@@ -809,7 +808,7 @@ export function CharacterView() {
           combatantId={initiativePrompt.combatantId}
           initiativeBonus={(transformedCombatStats?.initiativeBonus ?? initiativeBonus) - exhaustionD20Penalty}
           accentColor={accentColor}
-          onClose={() => setInitiativePrompt(null)}
+          onClose={() => void dismissInitiativePrompt(initiativePrompt.combatantId)}
           onSubmitted={() => { void refreshInitiativePrompt(); }}
         />
       )}

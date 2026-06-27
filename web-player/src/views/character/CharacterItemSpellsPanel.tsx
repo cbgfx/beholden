@@ -44,6 +44,7 @@ export function ItemSpellsPanel({
 }) {
   const [details, setDetails] = React.useState<Record<string, FetchedSpellDetail>>({});
   const [selectedSpell, setSelectedSpell] = React.useState<FetchedSpellDetail | null>(null);
+  const failedKeysRef = React.useRef<Set<string>>(new Set());
 
   const itemsWithSpells = React.useMemo(
     () =>
@@ -68,7 +69,7 @@ export function ItemSpellsPanel({
   React.useEffect(() => {
     const missingByName = new Map<string, string[]>();
     for (const entry of allKeys) {
-      if (details[entry.key]) continue;
+      if (details[entry.key] || failedKeysRef.current.has(entry.key)) continue;
       const list = missingByName.get(entry.spellName) ?? [];
       list.push(entry.key);
       missingByName.set(entry.spellName, list);
@@ -101,7 +102,12 @@ export function ItemSpellsPanel({
           setDetails((prev) => ({ ...prev, ...updates }));
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!alive) return;
+        for (const key of missingByName.values()) {
+          for (const k of key) failedKeysRef.current.add(k);
+        }
+      });
     return () => {
       alive = false;
     };
@@ -176,7 +182,7 @@ export function ItemSpellsPanel({
                     fontSize: "var(--fs-small)", fontWeight: 800, color: "#ef4444", textTransform: "uppercase",
                     letterSpacing: 1, paddingBottom: 5, borderBottom: "1px solid rgba(239,68,68,0.25)", marginBottom: 8,
                   }}>
-                    {level === -1 ? "Loading..." : LEVEL_LABELS[level] ?? `Level ${level}`}
+                    {level === -1 ? (groupSpells.every((s) => failedKeysRef.current.has(s.name.toLowerCase().replace(/[^a-z0-9]/g, ""))) ? "Unknown level" : "Loading...") : LEVEL_LABELS[level] ?? `Level ${level}`}
                   </div>
 
                   <div style={{ display: "grid", gridTemplateColumns: SPELL_ROW_GRID_WITH_MARKER, gap: "0 8px", alignItems: "end", marginBottom: 4 }}>

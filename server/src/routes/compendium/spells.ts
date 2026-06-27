@@ -3,6 +3,7 @@
 import type { Express, RequestHandler } from "express";
 import type { ServerContext } from "../../server/context.js";
 import { requireParam } from "../../lib/routeHelpers.js";
+import { requireAuth } from "../../middleware/auth.js";
 import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { parseBody } from "../../shared/validate.js";
 import { SpellBody, buildSpellRecord } from "./helpers.js";
@@ -67,7 +68,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     return contains ? toOut(contains) : null;
   }
 
-  app.get("/api/spells/search", (req, res) => {
+  app.get("/api/spells/search", requireAuth, (req, res) => {
     applySharedApiCacheHeaders(res);
     const q = String(req.query.q ?? "").trim().toLowerCase();
     const limit = Math.min(
@@ -214,7 +215,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     return res.json({ rows: outRows, total });
   });
 
-  app.post("/api/spells/lookup", (req, res) => {
+  app.post("/api/spells/lookup", requireAuth, (req, res) => {
     const body = parseBody(SpellLookupBody, req);
     const includeText = Boolean(body.includeText);
     const rows: Array<{

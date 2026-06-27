@@ -44,7 +44,6 @@ export interface CharacterCombatPanelsProps {
   dexScore: number | null;
   pb: number;
   passivePerc: number;
-  passiveInv: number;
   accentColor: string;
   inventory: InventoryItem[];
   prof?: ProficiencyMapLike | null;

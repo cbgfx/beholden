@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { C } from "@/lib/theme";
 
 export function CharacterHudXpPopup(props: {
@@ -13,6 +13,7 @@ export function CharacterHudXpPopup(props: {
 }) {
   const { xpEarned, xpNeeded, xpInput, xpPopupOpen, setXpInput, setXpPopupOpen, saveXp, accentColor } = props;
   const xpPopupRef = useRef<HTMLDivElement | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!xpPopupOpen) return;
@@ -84,7 +85,7 @@ export function CharacterHudXpPopup(props: {
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   const v = parseInt(xpInput, 10);
-                  if (!isNaN(v) && v >= 0) void saveXp(v);
+                  if (!isNaN(v) && v >= 0) { setSaveError(null); saveXp(v).catch(() => setSaveError("Save failed")); }
                 }
                 if (e.key === "Escape") setXpPopupOpen(false);
               }}
@@ -104,7 +105,7 @@ export function CharacterHudXpPopup(props: {
             <button
               onClick={() => {
                 const v = parseInt(xpInput, 10);
-                if (!isNaN(v) && v >= 0) void saveXp(v);
+                if (!isNaN(v) && v >= 0) { setSaveError(null); saveXp(v).catch(() => setSaveError("Save failed")); }
               }}
               style={{
                 padding: "6px 12px",
@@ -131,7 +132,8 @@ export function CharacterHudXpPopup(props: {
                 onClick={() => {
                   const v = xpEarned + quick.amount;
                   setXpInput(String(v));
-                  void saveXp(v);
+                  setSaveError(null);
+                  saveXp(v).catch(() => setSaveError("Save failed"));
                 }}
                 style={{
                   flex: 1,
@@ -149,6 +151,9 @@ export function CharacterHudXpPopup(props: {
               </button>
             ))}
           </div>
+          {saveError && (
+            <div style={{ fontSize: "var(--fs-tiny)", color: "#ef4444", textAlign: "center" }}>{saveError}</div>
+          )}
         </div>
       )}
     </div>

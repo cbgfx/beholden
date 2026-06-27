@@ -5,17 +5,6 @@ import { MiniStat as SharedMiniStat, Panel as SharedPanel, ghostButtonStyle } fr
 export { PreparedSpellProgressionBlock, ClassFeatureItem } from "./CharacterViewFeatureParts";
 export { NoteEditDrawer } from "./CharacterViewNoteDrawer";
 
-export type SheetDensity = "comfortable" | "compact";
-const SheetDensityContext = React.createContext<SheetDensity>("comfortable");
-
-export function SheetDensityProvider({ density, children }: { density: SheetDensity; children: React.ReactNode }) {
-  return <SheetDensityContext.Provider value={density}>{children}</SheetDensityContext.Provider>;
-}
-
-export function useSheetDensity() {
-  return React.useContext(SheetDensityContext);
-}
-
 export function Tooltip({ text, children, multiline }: { text: string; children: React.ReactNode; multiline?: boolean }) {
   const [visible, setVisible] = useState(false);
 
@@ -66,13 +55,12 @@ const PANEL_STYLE: React.CSSProperties = {
 };
 
 export function Panel({ children, embedded = false }: { children: React.ReactNode; embedded?: boolean }) {
-  const compact = useSheetDensity() === "compact";
   return (
     <SharedPanel
       borderColor={embedded ? "transparent" : "rgba(255,255,255,0.09)"}
       background={embedded ? "transparent" : "rgba(255,255,255,0.035)"}
       radius={embedded ? 0 : 12}
-      padding={compact ? "10px 12px" : "14px 16px"}
+      padding="14px 16px"
     >
       {children}
     </SharedPanel>
@@ -91,7 +79,6 @@ export function CollapsiblePanel({
   summary?: React.ReactNode;
   embedded?: boolean;
 }) {
-  const compact = useSheetDensity() === "compact";
   const [open, setOpen] = useState(() => {
     try {
       const v = localStorage.getItem(`panel:${storageKey}`);
@@ -110,12 +97,9 @@ export function CollapsiblePanel({
 
   return (
     <div className="character-panel" style={embedded ? {
-      padding: compact ? "10px 12px" : "14px 16px",
+      padding: "14px 16px",
       borderTop: "1px solid rgba(255,255,255,0.07)",
-    } : {
-      ...PANEL_STYLE,
-      padding: compact ? "10px 12px" : PANEL_STYLE.padding,
-    }}>
+    } : PANEL_STYLE}>
       <div
         onClick={toggle}
         style={{

@@ -385,6 +385,7 @@ export function buildDisplayPlayerFeatures(args: BuildDisplayPlayerFeaturesArgs)
     .filter((feature) => !(feature.kind === "class" && hasSelectedReplacementClassFeat(args.charData, feature.name)))
     .filter((feature) =>
       feature.kind === "class"
+      || feature.kind === "subclass"
       || feature.kind === "feat"
       || feature.kind === "invocation"
       || feature.preparedSpellProgression?.length

@@ -1,5 +1,5 @@
 import React from "react";
-import { NavLink, Link, useNavigate } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 import { C, withAlpha } from "@/lib/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { IconDice } from "@/icons";
@@ -95,7 +95,6 @@ function topbarToolButtonStyle(active = false, accent = C.accentHl, muted = C.mu
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const meta = useServerMeta();
   const updateAvailable = useUpdateCheck();
   const showSupport = meta?.support === true;

@@ -10,7 +10,6 @@ import {
   miniPillBtn,
   restBtnStyle,
   ClassFeatureItem,
-  useSheetDensity,
 } from "@/views/character/CharacterViewParts";
 
 export function CharacterSupportPanels(props: {
@@ -116,7 +115,6 @@ export function CharacterSupportPanels(props: {
   }, [classFeaturesList]);
 
   const totalFeatureCount = classFeaturesList.length;
-  const compact = useSheetDensity() === "compact";
   const exhaustionColor =
     exhaustion === 0 ? C.muted : exhaustion <= 2 ? "#f59e0b" : exhaustion <= 4 ? "#f97316" : "#dc2626";
   const activeExhaustionEffects = getExhaustionEffects(exhaustion);
@@ -125,7 +123,7 @@ export function CharacterSupportPanels(props: {
     : `${hitDiceCurrent} / ${hitDiceMax} hit dice`;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: compact ? 9 : 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <CollapsiblePanel
         title="Upkeep"
         color={accentColor}
@@ -488,17 +486,6 @@ export function CharacterSupportPanels(props: {
         </>
       )}
 
-      <div style={{ display: "none" }}>
-        <button
-          style={{
-            background: "transparent", border: "1px solid rgba(255,255,255,0.14)",
-            borderRadius: 8, padding: "7px 16px", color: C.muted,
-            cursor: "pointer", fontSize: "var(--fs-subtitle)",
-          }}
-        >
-          ← Back
-        </button>
-      </div>
     </div>
   );
 }

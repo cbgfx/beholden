@@ -18,12 +18,12 @@ interface CacheEntry {
 let cache: CacheEntry | null = null;
 let inFlight: Promise<string> | null = null;
 
-function getCurrentVersion(): string {
+const CURRENT_VERSION = (() => {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const pkgPath = path.resolve(__dirname, "../../package.json");
   const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as { version: string };
   return pkg.version;
-}
+})();
 
 async function getLatestVersion(): Promise<string> {
   const now = Date.now();
@@ -59,7 +59,7 @@ async function getLatestVersion(): Promise<string> {
 
 function isNewer(latest: string, current: string): boolean {
   const parse = (v: string): [number, number, number] => {
-    const parts = v.split(".").map(Number);
+    const parts = v.replace(/[-+].*$/, "").split(".").map(Number);
     return [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0];
   };
   const [lMaj, lMin, lPat] = parse(latest);
@@ -72,7 +72,7 @@ function isNewer(latest: string, current: string): boolean {
 export function registerUpdateCheckRoutes(app: Express, _ctx: ServerContext) {
   app.get("/api/update-check", async (_req, res) => {
     try {
-      const currentVersion = getCurrentVersion();
+      const currentVersion = CURRENT_VERSION;
       const latestVersion = await getLatestVersion();
       res.json({
         ok: true,
