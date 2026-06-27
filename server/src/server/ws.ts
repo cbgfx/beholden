@@ -62,6 +62,7 @@ export function createWsServer(opts: {
 }
 
 export function sendWsEvent<K extends ServerEventType>(ws: WebSocket, type: K, payload: ServerEventMap[K]) {
+  if (ws.readyState !== ws.OPEN) return;
   ws.send(JSON.stringify({ type, payload }));
 }
 

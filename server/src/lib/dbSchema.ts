@@ -12,6 +12,11 @@ CREATE TABLE IF NOT EXISTS campaigns (
   updated_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS db_meta (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS adventures (
   id TEXT PRIMARY KEY,
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
@@ -362,13 +367,20 @@ CREATE INDEX IF NOT EXISTS idx_encounters_adventure  ON encounters(adventure_id)
 CREATE INDEX IF NOT EXISTS idx_encounters_campaign   ON encounters(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_inpcs_campaign        ON inpcs(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_notes_campaign        ON notes(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_notes_adventure       ON notes(adventure_id);
 CREATE INDEX IF NOT EXISTS idx_treasure_campaign     ON treasure(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_treasure_adventure    ON treasure(adventure_id);
 CREATE INDEX IF NOT EXISTS idx_conditions_campaign   ON conditions(campaign_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_conditions_campaign_key ON conditions(campaign_id, key);
 CREATE INDEX IF NOT EXISTS idx_combatants_encounter  ON combatants(encounter_id);
+CREATE INDEX IF NOT EXISTS idx_combatants_base       ON combatants(base_type, base_id);
 CREATE INDEX IF NOT EXISTS idx_membership_campaign   ON campaign_membership(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_membership_user       ON campaign_membership(user_id);
 CREATE INDEX IF NOT EXISTS idx_players_user          ON players(user_id);
+CREATE INDEX IF NOT EXISTS idx_players_campaign      ON players(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_players_character     ON players(character_id) WHERE character_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_initiative_prompts_character ON initiative_prompts(character_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_initiative_prompts_encounter ON initiative_prompts(encounter_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_players_campaign_character ON players(campaign_id, character_id) WHERE character_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_compmon_name          ON compendium_monsters(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_compmon_typekey       ON compendium_monsters(type_key);

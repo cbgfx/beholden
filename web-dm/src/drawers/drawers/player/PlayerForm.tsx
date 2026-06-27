@@ -48,6 +48,7 @@ export function PlayerForm(props: {
   state: PlayerFormState;
   handlers: PlayerFormHandlers;
   imageUrl?: string | null;
+  playerNameLocked?: boolean;
   onImageClick?: () => void;
   onImageRemove?: () => void;
 }) {
@@ -92,8 +93,15 @@ export function PlayerForm(props: {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div>
-          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Player name</div>
-          <Input value={s.playerName} onChange={(e) => h.setPlayerName(e.target.value)} />
+          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>
+            Player name{props.playerNameLocked ? " (account owner)" : ""}
+          </div>
+          <Input
+            value={s.playerName}
+            onChange={(e) => h.setPlayerName(e.target.value)}
+            readOnly={props.playerNameLocked}
+            title={props.playerNameLocked ? "This name comes from the linked player account." : undefined}
+          />
         </div>
         <div>
           <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Character name</div>

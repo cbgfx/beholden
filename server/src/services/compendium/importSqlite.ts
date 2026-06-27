@@ -38,7 +38,8 @@ export function importCompendiumSqlite(args: {
     );
     const sourceHasColumn = (table: string, column: string): boolean => {
       try {
-        const rows = src.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name?: string }>;
+        const quotedTable = `"${table.replace(/"/g, '""')}"`;
+        const rows = src.prepare(`PRAGMA table_info(${quotedTable})`).all() as Array<{ name?: string }>;
         return rows.some((row) => String(row.name ?? "").toLowerCase() === column.toLowerCase());
       } catch {
         return false;

@@ -36,7 +36,7 @@ import {
   getAllowedOriginHosts,
 } from "./security.js";
 
-import { hashPassword } from "../lib/jwtAuth.js";
+import { hashPassword, verifyToken } from "../lib/jwtAuth.js";
 import { requireAuth } from "../middleware/auth.js";
 import { registerAuthRoutes } from "../routes/authRoutes.js";
 import { registerAdminRoutes } from "../routes/adminRoutes.js";
@@ -67,9 +67,11 @@ export function createServer() {
   const db = openDb(paths.dbPath);
   seedAdminUser(db, hashPassword, uid, now);
 
-  // --- broadcast (filled in after WS server starts) -------------------------
-  const noopBroadcast: BroadcastFn = (() => { /* noop */ }) as BroadcastFn;
-  let broadcast: BroadcastFn = noopBroadcast;
+  // --- broadcast ------------------------------------------------------------
+  // Stable closure so ctx.broadcast never needs to be reassigned and no
+  // request in the startup window can capture the noop by value.
+  let realBroadcast: BroadcastFn = (() => { /* noop until WS ready */ }) as BroadcastFn;
+  const broadcast: BroadcastFn = ((type: never, payload: never) => realBroadcast(type, payload)) as BroadcastFn;
 
   // --- app ------------------------------------------------------------------
   const app = express();
@@ -229,10 +231,14 @@ export function createServer() {
     onConnectionHello: (ws) => {
       sendWsEvent(ws, "hello", { ok: true, time: now() });
     },
+    authorize: (req) => {
+      const search = (req.url ?? "").replace(/^[^?]*/, "");
+      const token = new URLSearchParams(search).get("token") ?? "";
+      return token.length > 0 && verifyToken(token) !== null;
+    },
   });
 
-  broadcast = createBroadcaster(wss);
-  ctx.broadcast = broadcast;
+  realBroadcast = createBroadcaster(wss);
 
   let closed = false;
   const close = async () => {

@@ -60,10 +60,6 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     });
   };
 
-  function serializeTreasureState(entry: StoredTreasureState) {
-    return JSON.stringify(entry);
-  }
-
   function hydrateTreasureEntry(entry: ReturnType<typeof rowToTreasure>) {
     if (!entry.itemId) return entry;
     const itemRow = db
@@ -178,7 +174,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     const treasure = hydrateTreasureEntry(rowToTreasure(row));
     const t = now();
     db.prepare(
-      "UPDATE treasure SET source = ?, item_id = ?, name = ?, rarity = ?, type = ?, type_key = ?, attunement = ?, magic = ?, text = ?, qty = ?, entry_json = ?, updated_at = ? WHERE id = ?",
+      "UPDATE treasure SET source = ?, item_id = ?, name = ?, rarity = ?, type = ?, type_key = ?, attunement = ?, magic = ?, text = ?, qty = ?, updated_at = ? WHERE id = ?",
     ).run(
       treasure.source,
       treasure.itemId,
@@ -190,18 +186,6 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
       treasure.magic ? 1 : 0,
       treasure.text,
       qty,
-      serializeTreasureState({
-        source: treasure.source,
-        itemId: treasure.itemId,
-        name: treasure.name,
-        rarity: treasure.rarity,
-        type: treasure.type,
-        type_key: treasure.type_key,
-        attunement: treasure.attunement,
-        magic: treasure.magic,
-        text: treasure.text,
-        qty,
-      }),
       t,
       treasureId,
     );
@@ -327,24 +311,8 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
       }
 
       db.prepare(
-        "UPDATE treasure SET qty = ?, entry_json = ?, updated_at = ? WHERE id = ?",
-      ).run(
-        remaining,
-        serializeTreasureState({
-          source: treasure.source,
-          itemId: treasure.itemId,
-          name: treasure.name,
-          rarity: treasure.rarity,
-          type: treasure.type,
-          type_key: treasure.type_key,
-          attunement: treasure.attunement,
-          magic: treasure.magic,
-          text: treasure.text,
-          qty: remaining,
-        }),
-        t,
-        treasureId,
-      );
+        "UPDATE treasure SET qty = ?, updated_at = ? WHERE id = ?",
+      ).run(remaining, t, treasureId);
       const updatedRow = db
         .prepare(`SELECT ${TREASURE_COLS} FROM treasure WHERE id = ?`)
         .get(treasureId) as Record<string, unknown>;
@@ -525,7 +493,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     db.prepare(`
       INSERT INTO treasure
         (id, campaign_id, adventure_id, source, item_id, name, rarity, type, type_key, attunement, magic, text, qty, entry_json, sort, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?)
     `).run(
       id,
       campaignId,
@@ -540,7 +508,6 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
       entry.magic ? 1 : 0,
       entry.text,
       entry.qty,
-      serializeTreasureState(entry),
       sort,
       t,
       t

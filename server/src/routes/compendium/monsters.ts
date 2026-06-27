@@ -30,27 +30,25 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
 
   app.get("/api/compendium/monsters/facets", (_req, res) => {
     applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
-    const rows = db
-      .prepare("SELECT type_key, size, environment FROM compendium_monsters")
-      .all() as Array<{ type_key: string | null; size: string | null; environment: string | null }>;
+    const typeRows = db
+      .prepare("SELECT DISTINCT type_key FROM compendium_monsters WHERE type_key IS NOT NULL AND type_key != ''")
+      .all() as Array<{ type_key: string }>;
+    const sizeRows = db
+      .prepare("SELECT DISTINCT size FROM compendium_monsters WHERE size IS NOT NULL AND size != ''")
+      .all() as Array<{ size: string }>;
+    const envRows = db
+      .prepare("SELECT environment FROM compendium_monsters WHERE environment IS NOT NULL AND environment != ''")
+      .all() as Array<{ environment: string }>;
     const envSet = new Set<string>();
-    const typeSet = new Set<string>();
-    const sizeSet = new Set<string>();
-    for (const row of rows) {
-      const typeKey = String(row.type_key ?? "").trim();
-      if (typeKey) typeSet.add(typeKey);
-      const size = String(row.size ?? "").trim();
-      if (size) sizeSet.add(size);
-      const envRaw = String(row.environment ?? "").trim();
-      if (!envRaw) continue;
-      for (const part of envRaw.split(",").map((value) => value.trim()).filter(Boolean)) {
+    for (const row of envRows) {
+      for (const part of row.environment.split(",").map((v) => v.trim()).filter(Boolean)) {
         envSet.add(part);
       }
     }
     res.json({
       environments: Array.from(envSet).sort((a, b) => a.localeCompare(b)),
-      sizes: Array.from(sizeSet).sort((a, b) => a.localeCompare(b)),
-      types: Array.from(typeSet).sort((a, b) => a.localeCompare(b)),
+      sizes: sizeRows.map((r) => r.size).sort((a, b) => a.localeCompare(b)),
+      types: typeRows.map((r) => r.type_key).sort((a, b) => a.localeCompare(b)),
     });
   });
 

@@ -13,6 +13,13 @@ export function useCharacterLiveUpdates(
   const [initiativePrompt, setInitiativePrompt] = useState<InitiativePrompt | null>(null);
   const connected = useWsStatus();
   const mountedRef = useRef(true);
+  const characterIdRef = useRef(characterId);
+  characterIdRef.current = characterId;
+
+  useEffect(() => {
+    setActiveBastion(null);
+    setInitiativePrompt(null);
+  }, [characterId]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -24,11 +31,12 @@ export function useCharacterLiveUpdates(
       setActiveBastion(null);
       return;
     }
+    const resolvedFor = characterId;
     try {
       const data = await api<{
         bastions?: Array<{ id: string; name: string; active?: boolean; campaignId?: string | null }>;
       }>(`/api/me/characters/${encodeURIComponent(characterId)}/bastions`);
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || characterIdRef.current !== resolvedFor) return;
       const bastion = (data.bastions ?? []).find(
         (entry): entry is typeof entry & { campaignId: string } =>
           Boolean(entry.active) && typeof entry.campaignId === "string",
@@ -46,11 +54,12 @@ export function useCharacterLiveUpdates(
       setInitiativePrompt(null);
       return;
     }
+    const resolvedFor = characterId;
     try {
       const data = await api<{ prompt: InitiativePrompt | null }>(
         `/api/me/characters/${encodeURIComponent(characterId)}/initiative-prompt`,
       );
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || characterIdRef.current !== resolvedFor) return;
       setInitiativePrompt(data.prompt);
     } catch {
       // A live prompt event can still populate state after a transient failure.

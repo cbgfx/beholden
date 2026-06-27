@@ -214,6 +214,7 @@ export function PlayerDrawer(props: {
           mode={props.drawer.type === "createPlayer" ? "create" : "edit"}
           state={form}
           handlers={handlers}
+          playerNameLocked={Boolean(editPlayer?.userId)}
           imageUrl={displayImageUrl}
           onImageClick={() => imageInputRef.current?.click()}
           onImageRemove={handleImageRemove}

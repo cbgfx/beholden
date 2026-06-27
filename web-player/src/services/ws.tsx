@@ -85,6 +85,11 @@ type WsCtx = {
 
 const WsContext = createContext<WsCtx | null>(null);
 
+function withToken(url: string): string {
+  const token = localStorage.getItem("beholden_token") ?? "";
+  return token ? `${url}?token=${encodeURIComponent(token)}` : url;
+}
+
 export function WsProvider({ children }: { children: React.ReactNode }) {
   const subscribers = useRef<Set<Handler>>(new Set());
   const socketRef = useRef<WebSocket | null>(null);
@@ -118,6 +123,7 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
     let ws: WebSocket | null = null;
     let dead = false;
     let usingDirectFallback = false;
+    let reconnectAttempt = 0;
 
     const dispatch = (msg: WsMessage) => {
       for (const h of subscribers.current) h(msg);
@@ -141,6 +147,7 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
 
       ws.onopen = () => {
         settled = true;
+        reconnectAttempt = 0;
         window.clearTimeout(failTimer);
         setConnected(true);
         try {
@@ -173,34 +180,36 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
 
         if (dead) return;
 
+        const delay = Math.min(30000, 1000 * Math.pow(2, reconnectAttempt) + Math.random() * 500);
+        reconnectAttempt++;
         window.setTimeout(() => {
           if (dead) return;
 
           if (WS_ORIGIN) {
-            connect(wsUrlConfigured());
+            connect(withToken(wsUrlConfigured()));
             return;
           }
 
           if (usingDirectFallback) {
-            connect(wsUrlDirect());
+            connect(withToken(wsUrlDirect()));
             return;
           }
 
           connect(
-            wsUrlSameOrigin(),
+            withToken(wsUrlSameOrigin()),
             canUseDirectPortFallback()
               ? () => {
                   usingDirectFallback = true;
-                  connect(wsUrlDirect());
+                  connect(withToken(wsUrlDirect()));
                 }
               : undefined
           );
-        }, 3000);
+        }, delay);
       };
     };
 
     if (WS_ORIGIN) {
-      connect(wsUrlConfigured());
+      connect(withToken(wsUrlConfigured()));
       return () => {
         dead = true;
         try {
@@ -210,11 +219,11 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
     }
 
     connect(
-      wsUrlSameOrigin(),
+      withToken(wsUrlSameOrigin()),
       canUseDirectPortFallback()
         ? () => {
             usingDirectFallback = true;
-            connect(wsUrlDirect());
+            connect(withToken(wsUrlDirect()));
           }
         : undefined
     );

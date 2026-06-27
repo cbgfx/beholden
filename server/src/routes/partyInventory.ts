@@ -6,7 +6,6 @@ import { requireParam } from "../lib/routeHelpers.js";
 import { PARTY_INVENTORY_COLS, rowToPartyInventoryItem } from "../lib/db.js";
 import { toPartyInventoryItemDto } from "../lib/apiCollections.js";
 import { memberOrAdmin } from "../middleware/campaignAuth.js";
-import type { StoredPartyInventoryItemState } from "../server/userData.js";
 
 const ItemBody = z.object({
   name: z.string().trim().min(1),
@@ -21,11 +20,6 @@ const ItemBody = z.object({
 });
 
 const QuantityBody = z.object({ quantity: z.number().int().min(1) });
-
-function serializePartyInventoryItemState(item: StoredPartyInventoryItemState) {
-  void item;
-  return "{}";
-}
 
 export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
@@ -76,7 +70,7 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
     db.prepare(
       `INSERT INTO party_inventory
        (id, campaign_id, name, quantity, weight, notes, source, item_id, rarity, type, description, item_json, sort, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?)`
     ).run(
       id,
       campaignId,
@@ -89,17 +83,6 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
       body.rarity ?? null,
       body.type ?? null,
       body.description ?? null,
-      serializePartyInventoryItemState({
-        name: body.name,
-        quantity: body.quantity ?? 1,
-        weight: body.weight ?? null,
-        notes: body.notes ?? "",
-        source: body.source ?? null,
-        itemId: body.itemId ?? null,
-        rarity: body.rarity ?? null,
-        type: body.type ?? null,
-        description: body.description ?? null,
-      }),
       maxSort,
       t,
       t
@@ -128,7 +111,7 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
     if (!existing) return res.status(404).json({ ok: false, message: "Not found" });
     db.prepare(
       `UPDATE party_inventory SET
-         name=?, quantity=?, weight=?, notes=?, source=?, item_id=?, rarity=?, type=?, description=?, item_json=?, updated_at=?
+         name=?, quantity=?, weight=?, notes=?, source=?, item_id=?, rarity=?, type=?, description=?, updated_at=?
        WHERE id=? AND campaign_id=?`
     ).run(
       body.name,
@@ -140,17 +123,6 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
       body.rarity ?? null,
       body.type ?? null,
       body.description ?? null,
-      serializePartyInventoryItemState({
-        name: body.name,
-        quantity: body.quantity ?? 1,
-        weight: body.weight ?? null,
-        notes: body.notes ?? "",
-        source: body.source ?? null,
-        itemId: body.itemId ?? null,
-        rarity: body.rarity ?? null,
-        type: body.type ?? null,
-        description: body.description ?? null,
-      }),
       t,
       itemId,
       campaignId
@@ -174,25 +146,8 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
       .prepare(`SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE id = ? AND campaign_id = ?`)
       .get(itemId, campaignId) as Record<string, unknown> | undefined;
     if (!existing) return res.status(404).json({ ok: false, message: "Not found" });
-    const item = rowToPartyInventoryItem(existing);
-    db.prepare("UPDATE party_inventory SET quantity=?, item_json=?, updated_at=? WHERE id=? AND campaign_id=?")
-      .run(
-        quantity,
-        serializePartyInventoryItemState({
-          name: item.name,
-          quantity,
-          weight: item.weight,
-          notes: item.notes,
-          source: item.source,
-          itemId: item.itemId,
-          rarity: item.rarity,
-          type: item.type,
-          description: item.description,
-        }),
-        now(),
-        itemId,
-        campaignId
-      );
+    db.prepare("UPDATE party_inventory SET quantity=?, updated_at=? WHERE id=? AND campaign_id=?")
+      .run(quantity, now(), itemId, campaignId);
     emitPartyInventoryChange({ campaignId, action: "upsert", itemId });
     const row = db
       .prepare(`SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE id = ? AND campaign_id = ?`)

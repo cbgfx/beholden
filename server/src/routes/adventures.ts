@@ -25,7 +25,6 @@ import {
   OverridesSchema,
 } from "../lib/schemas.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
-import type { StoredNoteState, StoredTreasureState } from "../server/userData.js";
 
 const AdventureCreateBody = z.object({
   name: z.string().trim().optional(),
@@ -104,8 +103,6 @@ const AdventureImportBody = z.object({
 export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
-  const serializeNoteState = (note: StoredNoteState) => JSON.stringify(note);
-  const serializeTreasureState = (treasure: StoredTreasureState) => JSON.stringify(treasure);
   const emitAdventureChange = (args: {
     campaignId: string;
     action: "upsert" | "delete" | "refresh";
@@ -293,18 +290,8 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
 
       for (const [i, n] of imp.notes.entries()) {
         db.prepare(
-          "INSERT INTO notes (id, campaign_id, adventure_id, title, text, note_json, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        ).run(
-          uid(),
-          campaignId,
-          advId,
-          n.title,
-          n.text,
-          serializeNoteState({ title: n.title, text: n.text }),
-          n.sort ?? i + 1,
-          t,
-          t
-        );
+          "INSERT INTO notes (id, campaign_id, adventure_id, title, text, note_json, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, '{}', ?, ?, ?)"
+        ).run(uid(), campaignId, advId, n.title, n.text, n.sort ?? i + 1, t, t);
       }
 
       for (const [i, enc] of imp.encounters.entries()) {
@@ -348,7 +335,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
 
       for (const [i, entry] of imp.treasure.entries()) {
         db.prepare(
-          "INSERT INTO treasure (id, campaign_id, adventure_id, source, item_id, name, rarity, type, type_key, attunement, magic, text, qty, entry_json, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          "INSERT INTO treasure (id, campaign_id, adventure_id, source, item_id, name, rarity, type, type_key, attunement, magic, text, qty, entry_json, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?)"
         ).run(
           uid(),
           campaignId,
@@ -363,18 +350,6 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
           entry.magic ? 1 : 0,
           entry.text,
           entry.qty,
-          serializeTreasureState({
-            source: entry.source,
-            itemId: entry.itemId,
-            name: entry.name,
-            rarity: entry.rarity,
-            type: entry.type,
-            type_key: entry.type_key,
-            attunement: entry.attunement,
-            magic: entry.magic,
-            text: entry.text,
-            qty: entry.qty,
-          }),
           entry.sort ?? i + 1,
           t,
           t

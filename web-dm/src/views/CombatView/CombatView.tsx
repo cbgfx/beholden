@@ -195,12 +195,12 @@ export function CombatView() {
     onOpenConditions(target.id, role, active.id);
   }, [active?.id, target?.id, onOpenConditions]);
 
-  const handleApplyDamage = React.useCallback(() => {
+  const handleApplyDamage = React.useCallback((resolvedValue?: string) => {
     if (bulkMode) {
-      void applyBulkHpDelta("damage");
+      void applyBulkHpDelta("damage", resolvedValue);
       return;
     }
-    void applyHpDelta("damage");
+    void applyHpDelta("damage", resolvedValue);
   }, [applyBulkHpDelta, applyHpDelta, bulkMode]);
 
   const handleApplyHeal = React.useCallback(() => {

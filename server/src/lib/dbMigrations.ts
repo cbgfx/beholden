@@ -261,7 +261,12 @@ export function backfillStructuredContentColumns(db: Db) {
 }
 
 export function backfillCharacterDerivedColumns(db: Db) {
-  const rows = db.prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters`).all() as Array<Record<string, unknown>>;
+  const characterColumns = CHARACTER_SHEET_COLS.split(", ").map((column) => `uc.${column}`).join(", ");
+  const rows = db.prepare(`
+    SELECT ${characterColumns}, u.name AS owner_name
+    FROM user_characters uc
+    JOIN users u ON u.id = uc.user_id
+  `).all() as Array<Record<string, unknown>>;
   const updateCharacter = db.prepare(`
     UPDATE user_characters
     SET
@@ -273,7 +278,7 @@ export function backfillCharacterDerivedColumns(db: Db) {
   `);
   const linkedPlayersByCharacter = db.prepare(`
     SELECT
-      id, player_name, character_name, class_name, species, level, hp_max, ac, speed,
+      id, user_id, player_name, character_name, class_name, species, level, hp_max, ac, speed,
       str, dex, con, int, wis, cha, color, sheet_json
     FROM players
     WHERE character_id = ?
@@ -281,7 +286,7 @@ export function backfillCharacterDerivedColumns(db: Db) {
   const updateLinkedPlayer = db.prepare(`
     UPDATE players
     SET
-      player_name = ?, character_name = ?, class_name = ?, species = ?, level = ?,
+      user_id = ?, player_name = ?, character_name = ?, class_name = ?, species = ?, level = ?,
       hp_max = ?, ac = ?, speed = ?,
       str = ?, dex = ?, con = ?, int = ?, wis = ?, cha = ?,
       color = ?, sheet_json = ?
@@ -290,9 +295,10 @@ export function backfillCharacterDerivedColumns(db: Db) {
 
   for (const row of rows) {
     const readCharacter = rowToCharacterSheet(row);
+    const ownerName = String(row.owner_name ?? "").trim() || readCharacter.playerName;
     const normalized = normalizeCharacterSheetForStorage({
       name: readCharacter.name,
-      playerName: readCharacter.playerName,
+      playerName: ownerName,
       className: readCharacter.className,
       species: readCharacter.species,
       level: readCharacter.level,
@@ -363,7 +369,8 @@ export function backfillCharacterDerivedColumns(db: Db) {
 
     for (const player of linkedPlayersByCharacter.all(row.id) as Array<Record<string, unknown>>) {
       const shouldUpdatePlayer =
-        valuesDiffer(player.player_name, sheet.playerName)
+        valuesDiffer(player.user_id, row.user_id)
+        || valuesDiffer(player.player_name, sheet.playerName)
         || valuesDiffer(player.character_name, sheet.name)
         || valuesDiffer(player.class_name, sheet.className)
         || valuesDiffer(player.species, sheet.species)
@@ -381,6 +388,7 @@ export function backfillCharacterDerivedColumns(db: Db) {
         || valuesDiffer(player.sheet_json, "{}");
       if (!shouldUpdatePlayer) continue;
       updateLinkedPlayer.run(
+        row.user_id,
         sheet.playerName,
         sheet.name,
         sheet.className,

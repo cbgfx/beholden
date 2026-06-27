@@ -72,14 +72,16 @@ export function FeatDetailPanel({ featId, fetchFeat, colors, PanelComponent }: {
 }) {
   const [feat, setFeat] = React.useState<FeatDetail | null>(null);
   const [busy, setBusy] = React.useState(false);
+  const [fetchError, setFetchError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let alive = true;
     setBusy(true);
     setFeat(null);
+    setFetchError(null);
     fetchFeat(featId)
       .then((data) => { if (alive) setFeat(data ?? null); })
-      .catch(() => { if (alive) setFeat(null); })
+      .catch((e: unknown) => { if (alive) setFetchError(e instanceof Error ? e.message : "Failed to load feat."); })
       .finally(() => { if (alive) setBusy(false); });
     return () => { alive = false; };
   }, [featId, fetchFeat]);
@@ -105,7 +107,9 @@ export function FeatDetailPanel({ featId, fetchFeat, colors, PanelComponent }: {
       style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
       bodyStyle={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 10 }}
     >
-      {!feat ? (
+      {fetchError ? (
+        <div style={{ color: "#ef4444" }}>{fetchError}</div>
+      ) : !feat ? (
         <div style={{ color: colors.muted }}>Select a feat to view its details.</div>
       ) : (
         <>

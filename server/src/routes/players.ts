@@ -288,7 +288,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
          player_name, character_name, class_name, species, level, hp_max, hp_current, ac, speed,
          str, dex, con, int, wis, cha, color, synced_ac, death_saves_success, death_saves_fail,
          sheet_json, live_json, created_at, updated_at)
-      VALUES (?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?)
     `).run(
       id,
       campaignId,
@@ -311,7 +311,6 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
       sheetCols.syncedAc,
       liveCols.deathSavesSuccess,
       liveCols.deathSavesFail,
-      sheetCols.sheetJson,
       liveCols.liveJson,
       t,
       t,
@@ -341,7 +340,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
       UPDATE players SET
         player_name=?, character_name=?, class_name=?, species=?, level=?, hp_max=?, hp_current=?, ac=?, speed=?,
         str=?, dex=?, con=?, int=?, wis=?, cha=?, color=?, synced_ac=?, death_saves_success=?, death_saves_fail=?,
-        sheet_json=?, live_json=?, updated_at=?
+        live_json=?, updated_at=?
       WHERE id=?
     `).run(
       sheetCols.playerName,
@@ -363,7 +362,6 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
       sheetCols.syncedAc,
       liveCols.deathSavesSuccess,
       liveCols.deathSavesFail,
-      sheetCols.sheetJson,
       liveCols.liveJson,
       t,
       playerId
@@ -417,9 +415,12 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
       `)
       .all(playerId, existing.campaignId) as { id: string; encounter_id: string }[];
 
-    db.prepare(
-      "DELETE FROM combatants WHERE base_type = 'player' AND base_id = ?"
-    ).run(playerId);
+    db.transaction(() => {
+      db.prepare(
+        "DELETE FROM combatants WHERE base_type = 'player' AND base_id = ?"
+      ).run(playerId);
+      db.prepare("DELETE FROM players WHERE id = ?").run(playerId);
+    })();
 
     for (const { encounter_id, id } of removedCombatants) {
       ctx.broadcast("encounter:combatantsDelta", {
@@ -428,8 +429,6 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
         combatantId: id,
       });
     }
-
-    db.prepare("DELETE FROM players WHERE id = ?").run(playerId);
 
     // Best-effort removal of player image.
     const imagesDir = ctx.path.join(ctx.paths.dataDir, "player-images");

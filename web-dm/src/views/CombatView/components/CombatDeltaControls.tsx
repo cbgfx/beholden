@@ -8,7 +8,7 @@ type Props = {
   targetId?: string | null;
   disabled?: boolean;
   onChange: (v: string) => void;
-  onApplyDamage: () => void;
+  onApplyDamage: (resolvedValue?: string) => void;
   onApplyHeal: () => void;
   onOpenConditions?: () => void;
   bulkMode?: boolean;
@@ -101,22 +101,27 @@ export function CombatDeltaControls(props: Props) {
   // Show dice roll flash briefly after a preview roll.
   const [lastRoll, setLastRoll] = React.useState<number | null>(null);
   const flashRef = React.useRef<number | null>(null);
+  React.useEffect(() => () => {
+    if (flashRef.current != null) window.clearTimeout(flashRef.current);
+  }, []);
 
   const isDiceExpr = hasDiceTerm(props.value);
 
   // Roll the current expression and put the result back in the field.
-  const handleRollPreview = React.useCallback(() => {
-    if (!value.trim()) return;
+  const handleRollPreview = React.useCallback((): string | null => {
+    if (!value.trim()) return null;
     const raw = value.trim();
     const sign = raw[0] === "+" || raw[0] === "-" ? raw[0] : "";
     const expr = sign ? raw.slice(1) : raw;
     const result = rollDiceExpr(expr);
-    if (result <= 0) return;
-    onChange(`${sign}${result}`);
+    if (result <= 0) return null;
+    const resolvedValue = `${sign}${result}`;
+    onChange(resolvedValue);
     setLastRoll(result);
     if (flashRef.current) window.clearTimeout(flashRef.current);
     flashRef.current = window.setTimeout(() => setLastRoll(null), 1600);
     inputRef.current?.focus();
+    return resolvedValue;
   }, [value, onChange]);
 
   // When a new target is selected, snap focus back to the input for fast table flow.
@@ -217,9 +222,8 @@ export function CombatDeltaControls(props: Props) {
                 e.preventDefault();
                 // If it's a dice expression, roll first then apply damage.
                 if (hasDiceTerm(props.value)) {
-                  handleRollPreview();
-                  // Apply on next tick so the rolled value is in place.
-                  setTimeout(() => props.onApplyDamage(), 0);
+                  const resolvedValue = handleRollPreview();
+                  if (resolvedValue) props.onApplyDamage(resolvedValue);
                 } else {
                   props.onApplyDamage();
                 }

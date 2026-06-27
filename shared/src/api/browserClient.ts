@@ -104,7 +104,11 @@ function mergeInit(init?: RequestInit): RequestInit {
 /** Raw fetch helper without auth header injection. Used by AuthContext for login/me. */
 export async function apiRaw<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(resolveApiPath(path), init);
-  if (!res.ok) throw await apiError(res);
+  if (!res.ok) {
+    const error = await apiError(res);
+    Object.assign(error, { status: res.status });
+    throw error;
+  }
   const contentType = res.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
     const text = (await res.text()).trim();

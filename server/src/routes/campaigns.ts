@@ -77,7 +77,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     const id = uid();
     const t = now();
     db.prepare(
-      `INSERT INTO campaigns (id, name, color, image_url, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?)`
+      `INSERT INTO campaigns (id, name, color, image_url, shared_notes, created_at, updated_at) VALUES (?, ?, ?, NULL, '', ?, ?)`
     ).run(id, name, color, t, t);
     ctx.helpers.seedDefaultConditions(id);
     ctx.broadcast("campaigns:changed", { campaignId: id });
@@ -126,21 +126,11 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     const playerRows = db
       .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE campaign_id = ?`)
       .all(campaignId) as Record<string, unknown>[];
-    for (const row of playerRows) {
-      const player = rowToCampaignCharacter(row);
-      updateCampaignCharacterLive(
-        db,
-        player.id,
-        player,
-        {
-          hpCurrent: player.hpMax,
-          overrides: { ...DEFAULT_OVERRIDES },
-          conditions: [],
-        },
-        t,
-      );
-    }
-    const playersResult = { changes: playerRows.length };
+
+    // Build hp_max lookup from the already-loaded player rows to avoid N+1 in the combatant loop.
+    const playerHpMaxById = new Map<string, number>(
+      playerRows.map((r) => [r.id as string, r.hp_max as number])
+    );
 
     // Reset all player combatants across every encounter in the campaign.
     const combatantRows = db.prepare(
@@ -150,28 +140,44 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
          AND encounter_id IN (SELECT id FROM encounters WHERE campaign_id = ?)`
     ).all(campaignId) as Record<string, unknown>[];
 
-    for (const row of combatantRows) {
-      const combatant = rowToEncounterActor(row);
-      const playerHpMax = db.prepare(
-        `SELECT hp_max FROM players WHERE id = ?`
-      ).get(combatant.baseId) as { hp_max: number | null } | undefined;
-      updateEncounterActor(
-        db,
-        {
-          ...combatant,
-          ...buildEncounterActorLive(combatant, {
-            hpCurrent: playerHpMax?.hp_max ?? combatant.hpMax,
+    db.transaction(() => {
+      for (const row of playerRows) {
+        const player = rowToCampaignCharacter(row);
+        updateCampaignCharacterLive(
+          db,
+          player.id,
+          player,
+          {
+            hpCurrent: player.hpMax,
             overrides: { ...DEFAULT_OVERRIDES },
             conditions: [],
-            usedReaction: false,
-            usedLegendaryActions: 0,
-            usedSpellSlots: {},
-          }),
-          updatedAt: t,
-        },
-        t,
-      );
-    }
+          },
+          t,
+        );
+      }
+
+      for (const row of combatantRows) {
+        const combatant = rowToEncounterActor(row);
+        updateEncounterActor(
+          db,
+          {
+            ...combatant,
+            ...buildEncounterActorLive(combatant, {
+              hpCurrent: playerHpMaxById.get(combatant.baseId) ?? combatant.hpMax,
+              overrides: { ...DEFAULT_OVERRIDES },
+              conditions: [],
+              usedReaction: false,
+              usedLegendaryActions: 0,
+              usedSpellSlots: {},
+            }),
+            updatedAt: t,
+          },
+          t,
+        );
+      }
+    })();
+
+    const playersResult = { changes: playerRows.length };
 
     const updatedEncounterIds = [...new Set(combatantRows.map((row) => row.encounter_id as string))];
 

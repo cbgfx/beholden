@@ -16,7 +16,7 @@ export function openDb(dbPath: string): Db {
     Boolean(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(table));
   const hasColumn = (table: string, column: string) =>
     tableExists(table) &&
-    (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).some((r) => r.name === column);
+    (db.prepare(`PRAGMA table_info("${table.replace(/"/g, '""')}")`).all() as Array<{ name: string }>).some((r) => r.name === column);
   const needsActorReset =
     (tableExists("players") && (!hasColumn("players", "sheet_json") || !hasColumn("players", "live_json"))) ||
     (tableExists("user_characters") && !hasColumn("user_characters", "sheet_json")) ||
@@ -108,14 +108,44 @@ export function openDb(dbPath: string): Db {
   try { db.exec("ALTER TABLE party_inventory ADD COLUMN rarity TEXT"); } catch { /* already exists */ }
   try { db.exec("ALTER TABLE party_inventory ADD COLUMN type TEXT"); } catch { /* already exists */ }
   try { db.exec("ALTER TABLE party_inventory ADD COLUMN description TEXT"); } catch { /* already exists */ }
-  backfillActorColumns(db);
-  backfillStructuredContentColumns(db);
+  // New indexes for existing deployments — schema SQL already has these for fresh installs.
+  try { db.exec("CREATE INDEX IF NOT EXISTS idx_players_campaign ON players(campaign_id)"); } catch { /* already exists */ }
+  try { db.exec("CREATE INDEX IF NOT EXISTS idx_players_character ON players(character_id) WHERE character_id IS NOT NULL"); } catch { /* already exists */ }
+  try { db.exec("CREATE INDEX IF NOT EXISTS idx_combatants_base ON combatants(base_type, base_id)"); } catch { /* already exists */ }
+  try { db.exec("CREATE INDEX IF NOT EXISTS idx_initiative_prompts_encounter ON initiative_prompts(encounter_id)"); } catch { /* already exists */ }
+  try { db.exec("CREATE INDEX IF NOT EXISTS idx_notes_adventure ON notes(adventure_id)"); } catch { /* already exists */ }
+  try { db.exec("CREATE INDEX IF NOT EXISTS idx_treasure_adventure ON treasure(adventure_id)"); } catch { /* already exists */ }
+  try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_conditions_campaign_key ON conditions(campaign_id, key)"); } catch { /* already exists */ }
+  // One-time data migrations — guarded so they don't scan full tables on every boot.
+  const actorsMigrated = db.prepare("SELECT value FROM db_meta WHERE key = 'actors_migrated'").get();
+  if (!actorsMigrated) {
+    backfillActorColumns(db);
+    db.prepare("INSERT OR REPLACE INTO db_meta (key, value) VALUES ('actors_migrated', '1')").run();
+  }
+  const contentMigrated = db.prepare("SELECT value FROM db_meta WHERE key = 'content_migrated'").get();
+  if (!contentMigrated) {
+    backfillStructuredContentColumns(db);
+    db.prepare("INSERT OR REPLACE INTO db_meta (key, value) VALUES ('content_migrated', '1')").run();
+  }
+  // Character-to-player sync runs every boot to propagate sheet changes made while server was down.
   backfillCharacterDerivedColumns(db);
   return db;
 }
 
+const NEXT_SORT_ALLOWLIST = new Set([
+  "adventures|campaign_id",
+  "encounters|adventure_id",
+  "notes|campaign_id",
+  "notes|adventure_id",
+  "treasure|campaign_id",
+  "treasure|adventure_id",
+]);
+
 /** Returns max(sort)+1 for rows in a table matching a given column/value. */
 export function nextSortFor(db: Db, table: string, col: string, val: string): number {
+  if (!NEXT_SORT_ALLOWLIST.has(`${table}|${col}`)) {
+    throw new Error(`nextSortFor: disallowed table/column pair: ${table}.${col}`);
+  }
   const row = db.prepare(`SELECT COALESCE(MAX(sort), 0) + 1 AS n FROM ${table} WHERE ${col} = ?`).get(val) as { n: number };
   return row.n;
 }

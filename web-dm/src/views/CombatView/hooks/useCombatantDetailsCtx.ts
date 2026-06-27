@@ -30,7 +30,7 @@ spellLevels: Record<string, number | null>;
 
 /**
  * Builds the ctx object consumed by CombatantDetailsPanel.
- * This is a pure memoized adapter to keep CombatView slim.
+ * This is a pure adapter to keep CombatView slim.
  */
 export function useCombatantDetailsCtx(args: Args) {
   return {
@@ -70,5 +70,5 @@ export function useCombatantDetailsCtx(args: Args) {
           args.combatant?.label || args.combatant?.name || "Combatant"
         ),
       onOpenSpell: (name: string) => args.openSpellByName(name)
-    };
+  };
 }

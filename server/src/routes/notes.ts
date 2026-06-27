@@ -6,7 +6,6 @@ import { requireParam } from "../lib/routeHelpers.js";
 import { rowToNote, nextSortFor, NOTE_COLS } from "../lib/db.js";
 import { toNoteDto } from "../lib/apiCollections.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
-import type { StoredNoteState } from "../server/userData.js";
 
 const NoteCreateBody = z.object({
   title: z.string().trim().optional(),
@@ -17,11 +16,6 @@ const NoteUpdateBody = z.object({
   title: z.string().trim().optional(),
   text: z.string().optional(),
 });
-
-function serializeNoteState(note: StoredNoteState) {
-  void note;
-  return "{}";
-}
 
 export function registerNoteRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
@@ -110,8 +104,8 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     const t = now();
     const sort = nextSortFor(db, "notes", "campaign_id", campaignId);
     db.prepare(
-      "INSERT INTO notes (id, campaign_id, adventure_id, title, text, note_json, sort, created_at, updated_at) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?)"
-    ).run(id, campaignId, title, text, serializeNoteState({ title, text }), sort, t, t);
+      "INSERT INTO notes (id, campaign_id, adventure_id, title, text, note_json, sort, created_at, updated_at) VALUES (?, ?, NULL, ?, ?, '{}', ?, ?, ?)"
+    ).run(id, campaignId, title, text, sort, t, t);
     const row = db
       .prepare(`SELECT ${NOTE_COLS} FROM notes WHERE id = ?`)
       .get(id) as Record<string, unknown>;
@@ -136,8 +130,8 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     const t = now();
     const sort = nextSortFor(db, "notes", "adventure_id", adventureId);
     db.prepare(
-      "INSERT INTO notes (id, campaign_id, adventure_id, title, text, note_json, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    ).run(id, advRow.campaign_id, adventureId, title, text, serializeNoteState({ title, text }), sort, t, t);
+      "INSERT INTO notes (id, campaign_id, adventure_id, title, text, note_json, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, '{}', ?, ?, ?)"
+    ).run(id, advRow.campaign_id, adventureId, title, text, sort, t, t);
     const row = db
       .prepare(`SELECT ${NOTE_COLS} FROM notes WHERE id = ?`)
       .get(id) as Record<string, unknown>;
@@ -160,11 +154,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     const title = body.title || n.title;
     const text = body.text ?? n.text;
     const t = now();
-    db.prepare("UPDATE notes SET title=?, text=?, note_json=?, updated_at=? WHERE id=?").run(
-      title,
-      text,
-      serializeNoteState({ title, text }), t, noteId
-    );
+    db.prepare("UPDATE notes SET title=?, text=?, updated_at=? WHERE id=?").run(title, text, t, noteId);
     const row = db
       .prepare(`SELECT ${NOTE_COLS} FROM notes WHERE id = ?`)
       .get(noteId) as Record<string, unknown>;

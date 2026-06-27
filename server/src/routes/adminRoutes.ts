@@ -6,6 +6,7 @@ import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../shared/validate.js";
 import { hashPassword } from "../lib/jwtAuth.js";
+import { syncOwnedPlayerName } from "../services/characters.js";
 import { requireAuth, requireAdmin } from "../middleware/auth.js";
 import { rowToUser } from "../lib/db.js";
 
@@ -57,6 +58,9 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
 
   app.put("/api/admin/users/:userId", requireAuth, requireAdmin, (req, res) => {
     const { userId } = req.params;
+    if (typeof userId !== "string") {
+      return res.status(400).json({ ok: false, message: "Invalid user ID" });
+    }
     const row = db
       .prepare("SELECT id, username, name, is_admin, created_at, updated_at FROM users WHERE id = ?")
       .get(userId) as Record<string, unknown> | undefined;
@@ -80,6 +84,16 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
 
     values.push(userId);
     db.prepare(`UPDATE users SET ${setClauses.join(", ")} WHERE id = ?`).run(...values);
+    if (body.name !== undefined) {
+      for (const player of syncOwnedPlayerName(db, userId, body.name, t)) {
+        ctx.broadcast("players:delta", {
+          campaignId: player.campaign_id,
+          action: "upsert",
+          playerId: player.id,
+          characterId: player.character_id,
+        });
+      }
+    }
 
     const updated = db
       .prepare("SELECT id, username, name, is_admin, created_at, updated_at FROM users WHERE id = ?")

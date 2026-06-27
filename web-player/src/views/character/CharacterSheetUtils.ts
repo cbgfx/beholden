@@ -252,6 +252,57 @@ export function invocationPrerequisitesMet(
   return true;
 }
 
+const PREREQUISITE_ABILITIES: Array<{ key: AbilKey; pattern: string }> = [
+  { key: "str", pattern: "strength|str" },
+  { key: "dex", pattern: "dexterity|dex" },
+  { key: "con", pattern: "constitution|con" },
+  { key: "int", pattern: "intelligence|int" },
+  { key: "wis", pattern: "wisdom|wis" },
+  { key: "cha", pattern: "charisma|cha" },
+];
+
+function abilityPrerequisitesMet(
+  prerequisite: string,
+  scores: Partial<Record<AbilKey, number | null | undefined>> | undefined,
+): boolean {
+  const normalized = prerequisite
+    .replace(/\b(\d+)\s+or\s+higher\b/gi, "$1+")
+    .replace(/\bscore(?:s)?\s+of\s+/gi, "")
+    .replace(/\bscore(?:s)?\b/gi, "");
+  const abilityPattern = PREREQUISITE_ABILITIES.map(({ pattern }) => pattern).join("|");
+  const mentionRegex = new RegExp(`\\b(${abilityPattern})\\b`, "gi");
+  const mentions = [...normalized.matchAll(mentionRegex)].map((match) => {
+    const label = match[1].toLowerCase();
+    const ability = PREREQUISITE_ABILITIES.find(({ pattern }) =>
+      new RegExp(`^(?:${pattern})$`, "i").test(label)
+    );
+    return { key: ability?.key ?? null, index: match.index ?? 0 };
+  }).filter((mention): mention is { key: AbilKey; index: number } => mention.key !== null);
+  const thresholds = [...normalized.matchAll(/(\d+)\s*\+/g)].map((match) => ({
+    value: Number(match[1]),
+    index: match.index ?? 0,
+    end: (match.index ?? 0) + match[0].length,
+  }));
+  if (mentions.length === 0 || thresholds.length === 0) return true;
+
+  const groupResults = thresholds.map((threshold, index) => {
+    const start = index === 0 ? 0 : thresholds[index - 1].end;
+    const groupMentions = mentions.filter((mention) => mention.index >= start && mention.index < threshold.index);
+    if (groupMentions.length === 0) return true;
+    const connectorText = normalized.slice(groupMentions[0].index, threshold.index);
+    const checks = groupMentions.map(({ key }) => Number(scores?.[key] ?? 0) >= threshold.value);
+    return /\bor\b/i.test(connectorText) ? checks.some(Boolean) : checks.every(Boolean);
+  });
+
+  if (groupResults.length === 1) return groupResults[0];
+  const betweenGroups = thresholds.slice(0, -1).map((threshold, index) =>
+    normalized.slice(threshold.end, thresholds[index + 1].index)
+  ).join(" ");
+  return /\bor\b/i.test(betweenGroups) && !/\band\b/i.test(betweenGroups)
+    ? groupResults.some(Boolean)
+    : groupResults.every(Boolean);
+}
+
 export function featPrerequisitesMet(
   text: string | null | undefined,
   opts: {
@@ -275,23 +326,7 @@ export function featPrerequisitesMet(
 
   if (/\bspellcasting\b|\bpact magic\b/i.test(raw) && !opts.spellcaster) return false;
 
-  const abilityRequirements: Array<{ key: AbilKey; patterns: RegExp[] }> = [
-    { key: "str", patterns: [/\bstrength\b/i, /\bstr\b/i] },
-    { key: "dex", patterns: [/\bdexterity\b/i, /\bdex\b/i] },
-    { key: "con", patterns: [/\bconstitution\b/i, /\bcon\b/i] },
-    { key: "int", patterns: [/\bintelligence\b/i, /\bint\b/i] },
-    { key: "wis", patterns: [/\bwisdom\b/i, /\bwis\b/i] },
-    { key: "cha", patterns: [/\bcharisma\b/i, /\bcha\b/i] },
-  ];
-
-  for (const requirement of abilityRequirements) {
-    const hasAbilityMention = requirement.patterns.some((pattern) => pattern.test(raw));
-    if (!hasAbilityMention) continue;
-    const scoreMatch = raw.match(/(\d+)\+/);
-    if (!scoreMatch) continue;
-    const score = Number(opts.scores?.[requirement.key] ?? 0);
-    if (score < Number(scoreMatch[1])) return false;
-  }
+  if (!abilityPrerequisitesMet(raw, opts.scores)) return false;
 
   if (/\bproficiency with a martial weapon\b/i.test(raw) && !hasNamedProficiency(opts.prof?.weapons, "Martial Weapons")) return false;
   if (/\bproficiency with a shield\b/i.test(raw) && !hasNamedProficiency(opts.prof?.armor, "Shields")) return false;

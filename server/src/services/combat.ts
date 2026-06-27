@@ -89,13 +89,11 @@ export function updateEncounterActor(
   );
 }
 
-/** Ensures a combat record exists for the encounter; creates it if missing. */
+/** Initializes combat state on the encounter row if not already set. */
 export function ensureCombat(db: Database.Database, encounterId: string): void {
-  const t = now();
   db.prepare(
-    `INSERT OR IGNORE INTO combats (encounter_id, round, active_index, active_combatant_id, created_at, updated_at)
-     VALUES (?, 1, 0, NULL, ?, ?)`
-  ).run(encounterId, t, t);
+    `UPDATE encounters SET combat_round = COALESCE(combat_round, 1), updated_at = ? WHERE id = ?`
+  ).run(now(), encounterId);
 }
 
 export function nextLabelNumber(db: Database.Database, encounterId: string, baseName: string): number {

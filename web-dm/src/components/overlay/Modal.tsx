@@ -11,7 +11,7 @@ export function Modal(props: {
   title: React.ReactNode;
   onClose: () => void;
   width?: number;
-  height?: number;
+  height?: number | "auto";
   children: React.ReactNode;
 }) {
   const { isOpen, onClose } = props;
@@ -46,7 +46,7 @@ export function Modal(props: {
       <div
         style={{
           width: props.width ?? 1100,
-          height: props.height ?? 720,
+          height: props.height === "auto" ? undefined : (props.height ?? 720),
           maxWidth: "calc(100vw - 48px)",
           maxHeight: "calc(100vh - 48px)",
           background: theme.colors.modalBg, // The background color of the modal

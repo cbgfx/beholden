@@ -12,6 +12,7 @@ type SpellLookupRow = {
 export function useSpellModal(activeMonster: MonsterDetail | null, targetMonster: MonsterDetail | null) {
   const [spellLevelCache, setSpellLevelCache] = React.useState<Record<string, number | null>>({});
   const [spellSummaryCache, setSpellSummaryCache] = React.useState<Record<string, SpellSummaryLite | null>>({});
+  const resolvedLevelKeysRef = React.useRef<Set<string>>(new Set());
   const [spellDetail, setSpellDetail] = React.useState<SpellDetail | null>(null);
   const [spellError, setSpellError] = React.useState<string | null>(null);
   const [spellLoading, setSpellLoading] = React.useState(false);
@@ -57,9 +58,11 @@ export function useSpellModal(activeMonster: MonsterDetail | null, targetMonster
       const names = Array.from(new Set([...targetSpellNames, ...activeSpellNames]));
       const unresolved = names.filter((n) => {
         const key = n.trim().toLowerCase();
-        return key && spellLevelCache[key] === undefined;
+        return key && !resolvedLevelKeysRef.current.has(key);
       });
       if (unresolved.length === 0) return;
+      // Mark as in-flight immediately so concurrent effect runs don't re-fetch the same names.
+      for (const n of unresolved) resolvedLevelKeysRef.current.add(n.trim().toLowerCase());
       try {
         const payload = await api<{ rows: SpellLookupRow[] }>("/api/spells/lookup", {
           method: "POST",
@@ -81,6 +84,8 @@ export function useSpellModal(activeMonster: MonsterDetail | null, targetMonster
         setSpellLevelCache((prev) => ({ ...prev, ...nextLevels }));
       } catch {
         if (!alive) return;
+        // Remove from resolved set on failure so they can be retried next time.
+        for (const n of unresolved) resolvedLevelKeysRef.current.delete(n.trim().toLowerCase());
         const nextSummary: Record<string, null> = {};
         const nextLevels: Record<string, null> = {};
         for (const n of unresolved) {
@@ -96,7 +101,7 @@ export function useSpellModal(activeMonster: MonsterDetail | null, targetMonster
     return () => {
       alive = false;
     };
-  }, [targetSpellNames, activeSpellNames, spellLevelCache]);
+  }, [targetSpellNames, activeSpellNames]);
 
   const sortedActiveSpellNames = React.useMemo(
     () => sortSpellNames(activeSpellNames, spellLevelCache),

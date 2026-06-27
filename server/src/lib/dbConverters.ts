@@ -245,53 +245,30 @@ function readTimestamps(row: Record<string, unknown>) {
 }
 
 function readCharacterSheetState(row: Record<string, unknown>): StoredCharacterSheetState {
-  const hasStructuredColumns = row.name !== undefined || row.player_name !== undefined;
-  const sheet = parseJson<Partial<StoredCharacterSheetState>>(row.sheet_json, {});
-  const deathSavesFromCols =
+  const deathSaves =
     typeof row.death_saves_success === "number" && typeof row.death_saves_fail === "number"
       ? {
           success: Math.max(0, Math.min(3, Math.floor(row.death_saves_success))),
           fail: Math.max(0, Math.min(3, Math.floor(row.death_saves_fail))),
         }
       : undefined;
-  const deathSaves = deathSavesFromCols ?? sheet.deathSaves;
   return {
-    name: hasStructuredColumns
-      ? (typeof row.name === "string" ? row.name : "")
-      : (typeof sheet.name === "string" ? sheet.name : ""),
-    playerName: hasStructuredColumns
-      ? (typeof row.player_name === "string" ? row.player_name : "")
-      : (typeof sheet.playerName === "string" ? sheet.playerName : ""),
-    className: hasStructuredColumns
-      ? (typeof row.class_name === "string" ? row.class_name : "")
-      : (typeof sheet.className === "string" ? sheet.className : ""),
-    species: hasStructuredColumns
-      ? (typeof row.species === "string" ? row.species : "")
-      : (typeof sheet.species === "string" ? sheet.species : ""),
-    level: hasStructuredColumns
-      ? (typeof row.level === "number" ? row.level : 1)
-      : (typeof sheet.level === "number" ? sheet.level : 1),
-    hpMax: hasStructuredColumns
-      ? (typeof row.hp_max === "number" ? row.hp_max : 0)
-      : (typeof sheet.hpMax === "number" ? sheet.hpMax : 0),
-    hpCurrent: hasStructuredColumns
-      ? (typeof row.hp_current === "number" ? row.hp_current : 0)
-      : (typeof sheet.hpCurrent === "number" ? sheet.hpCurrent : 0),
-    ac: hasStructuredColumns
-      ? (typeof row.ac === "number" ? row.ac : 10)
-      : (typeof sheet.ac === "number" ? sheet.ac : 10),
-    speed: hasStructuredColumns
-      ? (typeof row.speed === "number" ? row.speed : 30)
-      : (typeof sheet.speed === "number" ? sheet.speed : 30),
-    strScore: hasStructuredColumns ? (typeof row.str_score === "number" ? row.str_score : null) : (sheet.strScore ?? null),
-    dexScore: hasStructuredColumns ? (typeof row.dex_score === "number" ? row.dex_score : null) : (sheet.dexScore ?? null),
-    conScore: hasStructuredColumns ? (typeof row.con_score === "number" ? row.con_score : null) : (sheet.conScore ?? null),
-    intScore: hasStructuredColumns ? (typeof row.int_score === "number" ? row.int_score : null) : (sheet.intScore ?? null),
-    wisScore: hasStructuredColumns ? (typeof row.wis_score === "number" ? row.wis_score : null) : (sheet.wisScore ?? null),
-    chaScore: hasStructuredColumns ? (typeof row.cha_score === "number" ? row.cha_score : null) : (sheet.chaScore ?? null),
-    color: hasStructuredColumns
-      ? (typeof row.color === "string" || row.color === null ? (row.color as string | null) ?? null : null)
-      : (typeof sheet.color === "string" || sheet.color === null ? sheet.color ?? null : null),
+    name: typeof row.name === "string" ? row.name : "",
+    playerName: typeof row.player_name === "string" ? row.player_name : "",
+    className: typeof row.class_name === "string" ? row.class_name : "",
+    species: typeof row.species === "string" ? row.species : "",
+    level: typeof row.level === "number" ? row.level : 1,
+    hpMax: typeof row.hp_max === "number" ? row.hp_max : 0,
+    hpCurrent: typeof row.hp_current === "number" ? row.hp_current : 0,
+    ac: typeof row.ac === "number" ? row.ac : 10,
+    speed: typeof row.speed === "number" ? row.speed : 30,
+    strScore: typeof row.str_score === "number" ? row.str_score : null,
+    dexScore: typeof row.dex_score === "number" ? row.dex_score : null,
+    conScore: typeof row.con_score === "number" ? row.con_score : null,
+    intScore: typeof row.int_score === "number" ? row.int_score : null,
+    wisScore: typeof row.wis_score === "number" ? row.wis_score : null,
+    chaScore: typeof row.cha_score === "number" ? row.cha_score : null,
+    color: typeof row.color === "string" || row.color === null ? (row.color as string | null) ?? null : null,
     ...(deathSaves ? { deathSaves } : {}),
   };
 }
@@ -299,57 +276,23 @@ function readCharacterSheetState(row: Record<string, unknown>): StoredCharacterS
 function readCampaignCharacterSheetState(
   row: Record<string, unknown>,
 ): StoredCampaignCharacterSheetState {
-  const hasStructuredColumns = row.player_name !== undefined || row.character_name !== undefined;
-  const sheet = parseJson<Partial<StoredCampaignCharacterSheetState>>(row.sheet_json, {});
   return {
-    playerName: hasStructuredColumns
-      ? (typeof row.player_name === "string" ? row.player_name : "")
-      : (typeof sheet.playerName === "string" ? sheet.playerName : ""),
-    characterName: hasStructuredColumns
-      ? (typeof row.character_name === "string" ? row.character_name : "")
-      : (typeof sheet.characterName === "string" ? sheet.characterName : ""),
-    class: hasStructuredColumns
-      ? (typeof row.class_name === "string" ? row.class_name : "")
-      : (typeof sheet.class === "string" ? sheet.class : ""),
-    species: hasStructuredColumns
-      ? (typeof row.species === "string" ? row.species : "")
-      : (typeof sheet.species === "string" ? sheet.species : ""),
-    level: hasStructuredColumns
-      ? (typeof row.level === "number" ? row.level : 1)
-      : (typeof sheet.level === "number" ? sheet.level : 1),
-    hpMax: hasStructuredColumns
-      ? (typeof row.hp_max === "number" ? row.hp_max : 10)
-      : (typeof sheet.hpMax === "number" ? sheet.hpMax : 10),
-    ac: hasStructuredColumns
-      ? (typeof row.ac === "number" ? row.ac : 10)
-      : (typeof sheet.ac === "number" ? sheet.ac : 10),
-    ...(hasStructuredColumns
-      ? (typeof row.speed === "number" ? { speed: row.speed } : {})
-      : (typeof sheet.speed === "number" ? { speed: sheet.speed } : {})),
-    ...(hasStructuredColumns
-      ? (typeof row.str === "number" ? { str: row.str } : {})
-      : (sheet.str != null ? { str: sheet.str } : {})),
-    ...(hasStructuredColumns
-      ? (typeof row.dex === "number" ? { dex: row.dex } : {})
-      : (sheet.dex != null ? { dex: sheet.dex } : {})),
-    ...(hasStructuredColumns
-      ? (typeof row.con === "number" ? { con: row.con } : {})
-      : (sheet.con != null ? { con: sheet.con } : {})),
-    ...(hasStructuredColumns
-      ? (typeof row.int === "number" ? { int: row.int } : {})
-      : (sheet.int != null ? { int: sheet.int } : {})),
-    ...(hasStructuredColumns
-      ? (typeof row.wis === "number" ? { wis: row.wis } : {})
-      : (sheet.wis != null ? { wis: sheet.wis } : {})),
-    ...(hasStructuredColumns
-      ? (typeof row.cha === "number" ? { cha: row.cha } : {})
-      : (sheet.cha != null ? { cha: sheet.cha } : {})),
-    ...(hasStructuredColumns
-      ? (typeof row.color === "string" || row.color === null ? { color: (row.color as string | null) ?? null } : {})
-      : (typeof sheet.color === "string" || sheet.color === null ? { color: sheet.color ?? null } : {})),
-    ...(hasStructuredColumns
-      ? (typeof row.synced_ac === "number" ? { syncedAc: row.synced_ac } : {})
-      : (typeof sheet.syncedAc === "number" ? { syncedAc: sheet.syncedAc } : {})),
+    playerName: typeof row.player_name === "string" ? row.player_name : "",
+    characterName: typeof row.character_name === "string" ? row.character_name : "",
+    class: typeof row.class_name === "string" ? row.class_name : "",
+    species: typeof row.species === "string" ? row.species : "",
+    level: typeof row.level === "number" ? row.level : 1,
+    hpMax: typeof row.hp_max === "number" ? row.hp_max : 10,
+    ac: typeof row.ac === "number" ? row.ac : 10,
+    ...(typeof row.speed === "number" ? { speed: row.speed } : {}),
+    ...(typeof row.str === "number" ? { str: row.str } : {}),
+    ...(typeof row.dex === "number" ? { dex: row.dex } : {}),
+    ...(typeof row.con === "number" ? { con: row.con } : {}),
+    ...(typeof row.int === "number" ? { int: row.int } : {}),
+    ...(typeof row.wis === "number" ? { wis: row.wis } : {}),
+    ...(typeof row.cha === "number" ? { cha: row.cha } : {}),
+    ...(typeof row.color === "string" || row.color === null ? { color: (row.color as string | null) ?? null } : {}),
+    ...(typeof row.synced_ac === "number" ? { syncedAc: row.synced_ac } : {}),
   };
 }
 
@@ -427,92 +370,44 @@ function titleFromNoteText(text: string | null): string | null {
 }
 
 function readNoteState(row: Record<string, unknown>): StoredNoteState {
-  const titleCol = typeof row.title === "string" ? row.title : null;
-  const textCol = typeof row.text === "string" ? row.text : null;
-  const note = parseJson<Partial<StoredNoteState>>(row.note_json, {});
-  const jsonTitle = typeof note.title === "string" ? note.title : null;
-  const jsonText = typeof note.text === "string" ? note.text : null;
-  const text = textCol === "" && jsonText ? jsonText : textCol ?? jsonText ?? "";
+  const title = typeof row.title === "string" ? row.title : "Note";
+  const text = typeof row.text === "string" ? row.text : "";
   const inferredTitle = titleFromNoteText(text);
-  if (titleCol != null || textCol != null) {
-    return {
-      title:
-        titleCol === "Note" && jsonTitle && jsonTitle !== "Note"
-          ? jsonTitle
-          : titleCol === "Note" && inferredTitle
-            ? inferredTitle
-            : titleCol && titleCol.trim()
-              ? titleCol
-              : jsonTitle ?? inferredTitle ?? "Note",
-      text,
-    };
-  }
   return {
-    title: jsonTitle ?? inferredTitle ?? "Note",
-    text: jsonText ?? "",
+    title: title === "Note" && inferredTitle ? inferredTitle : title || "Note",
+    text,
   };
 }
 
 function readTreasureState(row: Record<string, unknown>): StoredTreasureState {
-  const sourceCol = row.source === "custom" ? "custom" : row.source === "compendium" ? "compendium" : null;
-  if (sourceCol) {
-    return {
-      source: sourceCol,
-      itemId: typeof row.item_id === "string" || row.item_id === null ? (row.item_id as string | null) : null,
-      name: typeof row.name === "string" ? row.name : "New Item",
-      rarity: typeof row.rarity === "string" || row.rarity === null ? (row.rarity as string | null) : null,
-      type: typeof row.type === "string" || row.type === null ? (row.type as string | null) : null,
-      type_key: typeof row.type_key === "string" || row.type_key === null ? (row.type_key as string | null) : null,
-      attunement: Boolean(row.attunement),
-      magic: Boolean(row.magic),
-      text: typeof row.text === "string" ? row.text : "",
-      qty: typeof row.qty === "number" ? row.qty : 1,
-    };
-  }
-  const entry = parseJson<Partial<StoredTreasureState>>(row.entry_json, {});
   return {
-    source: entry.source === "custom" ? "custom" : "compendium",
-    itemId: typeof entry.itemId === "string" || entry.itemId === null ? entry.itemId ?? null : null,
-    name: typeof entry.name === "string" ? entry.name : "New Item",
-    rarity: typeof entry.rarity === "string" || entry.rarity === null ? entry.rarity ?? null : null,
-    type: typeof entry.type === "string" || entry.type === null ? entry.type ?? null : null,
-    type_key: typeof entry.type_key === "string" || entry.type_key === null ? entry.type_key ?? null : null,
-    attunement: Boolean(entry.attunement),
-    magic: Boolean(entry.magic),
-    text: typeof entry.text === "string" ? entry.text : "",
-    qty: typeof entry.qty === "number" ? entry.qty : 1,
+    source: row.source === "custom" ? "custom" : row.source === "compendium" ? "compendium" : "custom",
+    itemId: typeof row.item_id === "string" || row.item_id === null ? (row.item_id as string | null) : null,
+    name: typeof row.name === "string" ? row.name : "New Item",
+    rarity: typeof row.rarity === "string" || row.rarity === null ? (row.rarity as string | null) : null,
+    type: typeof row.type === "string" || row.type === null ? (row.type as string | null) : null,
+    type_key: typeof row.type_key === "string" || row.type_key === null ? (row.type_key as string | null) : null,
+    attunement: Boolean(row.attunement),
+    magic: Boolean(row.magic),
+    text: typeof row.text === "string" ? row.text : "",
+    qty: typeof row.qty === "number" ? row.qty : 1,
   };
 }
 
 function readPartyInventoryItemState(row: Record<string, unknown>): StoredPartyInventoryItemState {
-  const nameCol = typeof row.name === "string" ? row.name : null;
-  if (nameCol != null) {
-    return {
-      name: nameCol,
-      quantity: typeof row.quantity === "number" ? row.quantity : 1,
-      weight: typeof row.weight === "number" ? row.weight : null,
-      notes: typeof row.notes === "string" ? row.notes : "",
-      source: typeof row.source === "string" || row.source === null ? (row.source as string | null) : null,
-      itemId: typeof row.item_id === "string" || row.item_id === null ? (row.item_id as string | null) : null,
-      rarity: typeof row.rarity === "string" || row.rarity === null ? (row.rarity as string | null) : null,
-      type: typeof row.type === "string" || row.type === null ? (row.type as string | null) : null,
-      description:
-        typeof row.description === "string" || row.description === null
-          ? (row.description as string | null)
-          : null,
-    };
-  }
-  const item = parseJson<Partial<StoredPartyInventoryItemState>>(row.item_json, {});
   return {
-    name: typeof item.name === "string" ? item.name : "New Item",
-    quantity: typeof item.quantity === "number" ? item.quantity : 1,
-    weight: typeof item.weight === "number" ? item.weight : null,
-    notes: typeof item.notes === "string" ? item.notes : "",
-    source: typeof item.source === "string" || item.source === null ? item.source ?? null : null,
-    itemId: typeof item.itemId === "string" || item.itemId === null ? item.itemId ?? null : null,
-    rarity: typeof item.rarity === "string" || item.rarity === null ? item.rarity ?? null : null,
-    type: typeof item.type === "string" || item.type === null ? item.type ?? null : null,
-    description: typeof item.description === "string" || item.description === null ? item.description ?? null : null,
+    name: typeof row.name === "string" ? row.name : "New Item",
+    quantity: typeof row.quantity === "number" ? row.quantity : 1,
+    weight: typeof row.weight === "number" ? row.weight : null,
+    notes: typeof row.notes === "string" ? row.notes : "",
+    source: typeof row.source === "string" || row.source === null ? (row.source as string | null) : null,
+    itemId: typeof row.item_id === "string" || row.item_id === null ? (row.item_id as string | null) : null,
+    rarity: typeof row.rarity === "string" || row.rarity === null ? (row.rarity as string | null) : null,
+    type: typeof row.type === "string" || row.type === null ? (row.type as string | null) : null,
+    description:
+      typeof row.description === "string" || row.description === null
+        ? (row.description as string | null)
+        : null,
   };
 }
 

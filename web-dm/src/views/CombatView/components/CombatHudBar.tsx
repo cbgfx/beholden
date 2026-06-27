@@ -19,7 +19,7 @@ type Props = {
   delta: string;
   deltaDisabled: boolean;
   onChangeDelta: (value: string) => void;
-  onApplyDamage: () => void;
+  onApplyDamage: (resolvedValue?: string) => void;
   onApplyHeal: () => void;
   onOpenConditionsFromDelta: () => void;
   bulkMode: boolean;

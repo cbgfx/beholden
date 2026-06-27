@@ -7,13 +7,10 @@ import type {
   StoredConditionInstance,
   StoredDeathSaves,
   StoredEncounterActor,
-  StoredNoteState,
+
   StoredOverrides,
   StoredTreasureState,
 } from "../server/userData.js";
-
-const serializeNoteState = (note: StoredNoteState) => JSON.stringify(note);
-const serializeTreasureState = (entry: StoredTreasureState) => JSON.stringify(entry);
 
 export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid: () => string): string {
   const campaign = doc["campaign"];
@@ -79,6 +76,12 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
     }
 
     const players = toArray(doc["players"]);
+    const existingUserIds = new Set(
+      (db.prepare("SELECT id FROM users").all() as Array<{ id: string }>).map((r) => r.id)
+    );
+    const existingCharacterIds = new Set(
+      (db.prepare("SELECT id FROM user_characters").all() as Array<{ id: string }>).map((r) => r.id)
+    );
     for (const player of players) {
       const sheetCols = campaignSheetDbColumns({
         playerName: String(player["playerName"] ?? ""),
@@ -106,19 +109,15 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
       });
       const requestedUserId = (player["userId"] as string | null) ?? null;
       const requestedCharacterId = (player["characterId"] as string | null) ?? null;
-      const userExists = requestedUserId
-        ? Boolean(db.prepare("SELECT 1 FROM users WHERE id = ?").get(requestedUserId))
-        : false;
-      const characterExists = requestedCharacterId
-        ? Boolean(db.prepare("SELECT 1 FROM user_characters WHERE id = ?").get(requestedCharacterId))
-        : false;
+      const userExists = requestedUserId ? existingUserIds.has(requestedUserId) : false;
+      const characterExists = requestedCharacterId ? existingCharacterIds.has(requestedCharacterId) : false;
       db.prepare(`
         INSERT OR IGNORE INTO players
           (id, campaign_id, user_id, character_id,
            player_name, character_name, class_name, species, level, hp_max, hp_current, ac, speed,
            str, dex, con, int, wis, cha, color, synced_ac, death_saves_success, death_saves_fail,
            sheet_json, live_json, image_url, shared_notes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?, ?, ?)
       `).run(
         String(player["id"]),
         campaignId,
@@ -143,7 +142,6 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
         sheetCols.syncedAc,
         liveCols.deathSavesSuccess,
         liveCols.deathSavesFail,
-        sheetCols.sheetJson,
         liveCols.liveJson,
         (player["imageUrl"] as string | null) ?? null,
         String(player["sharedNotes"] ?? ""),
@@ -190,10 +188,7 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
         (note["adventureId"] as string | null) ?? null,
         title,
         text,
-        serializeNoteState({
-          title,
-          text,
-        }),
+        "{}",
         Number(note["sort"] ?? 0),
         Number(note["createdAt"] ?? Date.now()),
         Number(note["updatedAt"] ?? Date.now()),
@@ -233,7 +228,7 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
         treasureState.magic ? 1 : 0,
         treasureState.text,
         treasureState.qty,
-        serializeTreasureState(treasureState),
+        "{}",
         Number(entry["sort"] ?? 0),
         Number(entry["createdAt"] ?? Date.now()),
         Number(entry["updatedAt"] ?? Date.now()),
@@ -244,22 +239,20 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
     for (const item of partyInventory) {
       db.prepare(`
         INSERT OR IGNORE INTO party_inventory
-          (id, campaign_id, item_json, sort, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+          (id, campaign_id, name, quantity, weight, notes, source, item_id, rarity, type, description, item_json, sort, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?)
       `).run(
         String(item["id"]),
         campaignId,
-        JSON.stringify({
-          name: String(item["name"] ?? "New Item"),
-          quantity: Number(item["quantity"] ?? 1),
-          weight: item["weight"] != null ? Number(item["weight"]) : null,
-          notes: String(item["notes"] ?? ""),
-          source: (item["source"] as string | null) ?? null,
-          itemId: (item["itemId"] as string | null) ?? null,
-          rarity: (item["rarity"] as string | null) ?? null,
-          type: (item["type"] as string | null) ?? null,
-          description: (item["description"] as string | null) ?? null,
-        }),
+        String(item["name"] ?? "New Item"),
+        Number(item["quantity"] ?? 1),
+        item["weight"] != null ? Number(item["weight"]) : null,
+        String(item["notes"] ?? ""),
+        (item["source"] as string | null) ?? null,
+        (item["itemId"] as string | null) ?? null,
+        (item["rarity"] as string | null) ?? null,
+        (item["type"] as string | null) ?? null,
+        (item["description"] as string | null) ?? null,
         Number(item["sort"] ?? 0),
         Number(item["createdAt"] ?? Date.now()),
         Number(item["updatedAt"] ?? Date.now()),

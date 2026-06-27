@@ -48,6 +48,10 @@ const ConditionsBody = z.object({
 export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
+  const accountNameFor = (userId: string): string => {
+    const user = db.prepare("SELECT name FROM users WHERE id = ?").get(userId) as { name: string } | undefined;
+    return String(user?.name ?? "").trim() || "Player";
+  };
   const emitPlayerChange = (args: { campaignId: string; action: "upsert" | "delete" | "refresh"; playerId?: string; characterId?: string | null }) => {
     ctx.broadcast("players:delta", {
       campaignId: args.campaignId,
@@ -116,12 +120,13 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   // Create a new user-owned character (no campaign required)
   app.post("/api/me/characters", requireAuth, (req, res) => {
     const userId = req.user!.userId;
+    const ownerName = accountNameFor(userId);
     const p = parseBody(CharacterCreateBody, req);
     const id = uid();
     const t = now();
     const normalized = normalizeCharacterSheetForStorage({
       name: p.name,
-      playerName: p.playerName ?? "",
+      playerName: ownerName,
       className: p.className ?? "",
       species: p.species ?? "",
       level: p.level ?? 1,
@@ -144,13 +149,12 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
         (id, user_id, name, player_name, class_name, species, level, hp_max, hp_current, ac, speed,
          str_score, dex_score, con_score, int_score, wis_score, cha_score, color, death_saves_success, death_saves_fail,
          sheet_json, image_url, character_data_json, shared_notes, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, '', ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', NULL, ?, '', ?, ?)
     `).run(
       id, userId, sheetCols.name, sheetCols.playerName, sheetCols.className, sheetCols.species, sheetCols.level,
       sheetCols.hpMax, sheetCols.hpCurrent, sheetCols.ac, sheetCols.speed,
       sheetCols.strScore, sheetCols.dexScore, sheetCols.conScore, sheetCols.intScore, sheetCols.wisScore, sheetCols.chaScore,
       sheetCols.color, sheetCols.deathSavesSuccess, sheetCols.deathSavesFail,
-      sheetCols.sheetJson,
       normalized.characterData ? JSON.stringify(normalized.characterData) : null,
       t, t,
     );
@@ -164,6 +168,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
     const userId = req.user!.userId;
+    const ownerName = accountNameFor(userId);
     const existing = db
       .prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ? AND user_id = ?`)
       .get(charId, userId) as Record<string, unknown> | undefined;
@@ -178,7 +183,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
         : ex.characterData;
     const nextSheet = {
       name: p.name ?? ex.name,
-      playerName: p.playerName ?? ex.playerName,
+      playerName: ownerName,
       className: p.className ?? ex.className,
       species: p.species ?? ex.species,
       level: p.level ?? ex.level,
@@ -202,12 +207,12 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       UPDATE user_characters SET
         name=?, player_name=?, class_name=?, species=?, level=?, hp_max=?, hp_current=?, ac=?, speed=?,
         str_score=?, dex_score=?, con_score=?, int_score=?, wis_score=?, cha_score=?, color=?,
-        death_saves_success=?, death_saves_fail=?, sheet_json=?, character_data_json=?, updated_at=?
+        death_saves_success=?, death_saves_fail=?, character_data_json=?, updated_at=?
       WHERE id=? AND user_id=?
     `).run(
       sheetCols.name, sheetCols.playerName, sheetCols.className, sheetCols.species, sheetCols.level, sheetCols.hpMax, sheetCols.hpCurrent,
       sheetCols.ac, sheetCols.speed, sheetCols.strScore, sheetCols.dexScore, sheetCols.conScore, sheetCols.intScore, sheetCols.wisScore,
-      sheetCols.chaScore, sheetCols.color, sheetCols.deathSavesSuccess, sheetCols.deathSavesFail, sheetCols.sheetJson,
+      sheetCols.chaScore, sheetCols.color, sheetCols.deathSavesSuccess, sheetCols.deathSavesFail,
       normalized.characterData ? JSON.stringify(normalized.characterData) : null,
       t, charId, userId
     );
@@ -281,14 +286,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       ...buildCharacterSheetState(current),
       deathSaves,
     });
-    db.prepare("UPDATE user_characters SET death_saves_success=?, death_saves_fail=?, sheet_json=?, updated_at=? WHERE id=?")
-      .run(
-        sheetCols.deathSavesSuccess,
-        sheetCols.deathSavesFail,
-        sheetCols.sheetJson,
-        t,
-        charId,
-      );
+    db.prepare("UPDATE user_characters SET death_saves_success=?, death_saves_fail=?, updated_at=? WHERE id=?")
+      .run(sheetCols.deathSavesSuccess, sheetCols.deathSavesFail, t, charId);
 
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
       const pRow = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(player_id) as Record<string, unknown>;

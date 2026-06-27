@@ -38,7 +38,8 @@ export function useAppWebSocket({
   const enqueue = useDebouncedTaskQueue();
 
   useWs((msg) => {
-    if (msg.type === "campaigns:changed" || msg.type === "user:changed") {
+    // Re-fetch all state after reconnect to catch events missed during disconnect.
+    if (msg.type === "hello" || msg.type === "campaigns:changed" || msg.type === "user:changed") {
       enqueue("refresh:all", async () => {
         await refreshAll();
       }, 250);

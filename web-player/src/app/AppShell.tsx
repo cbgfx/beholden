@@ -39,7 +39,8 @@ function useLastCharacter() {
   }, []);
   React.useEffect(() => {
     if (!last?.id) return;
-    api<Array<{ id: string }>>("/api/me/characters")
+    const controller = new AbortController();
+    api<Array<{ id: string }>>("/api/me/characters", { signal: controller.signal })
       .then((characters) => {
         const stillExists = characters.some((character) => character.id === last.id);
         if (stillExists) return;
@@ -47,6 +48,7 @@ function useLastCharacter() {
         setLast(null);
       })
       .catch(() => {});
+    return () => controller.abort();
   }, [last?.id]);
   return last;
 }

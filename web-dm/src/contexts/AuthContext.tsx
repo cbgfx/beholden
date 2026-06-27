@@ -45,7 +45,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     apiRaw<AuthUser>("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
       .then((u) => setUser(u))
-      .catch(() => logout())
+      .catch((e: unknown) => {
+        const status = typeof e === "object" && e !== null && "status" in e
+          ? Number((e as { status?: unknown }).status)
+          : null;
+        if (status === 401 || status === 403) logout();
+      })
       .finally(() => setIsLoading(false));
   }, [token, logout]);
 

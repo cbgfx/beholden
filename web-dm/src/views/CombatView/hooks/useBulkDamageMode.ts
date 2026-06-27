@@ -31,9 +31,10 @@ export function useBulkDamageMode({ encounterId, delta, setDelta, orderedCombata
     });
   }, []);
 
-  const applyBulkHpDelta = React.useCallback(async (defaultKind: "damage" | "heal") => {
-    if (!encounterId || bulkSelectedIds.size === 0 || !delta.trim()) return;
-    const { kind, amount } = parseSignedHpDelta(delta, defaultKind);
+  const applyBulkHpDelta = React.useCallback(async (defaultKind: "damage" | "heal", deltaOverride?: string) => {
+    const resolvedDelta = deltaOverride ?? delta;
+    if (!encounterId || bulkSelectedIds.size === 0 || !resolvedDelta.trim()) return;
+    const { kind, amount } = parseSignedHpDelta(resolvedDelta, defaultKind);
     if (amount <= 0) return;
     const targets = orderedCombatants.filter((c) => bulkSelectedIds.has(c.id));
     await Promise.all(

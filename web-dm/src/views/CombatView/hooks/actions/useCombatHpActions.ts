@@ -15,9 +15,9 @@ export function useCombatHpActions({ encounterId, delta, setDelta, target }: Arg
   const [concentrationAlert, setConcentrationAlert] = React.useState<{ name: string; dc: number } | null>(null);
 
   const applyHpDelta = React.useCallback(
-    async (defaultKind: "damage" | "heal") => {
+    async (defaultKind: "damage" | "heal", deltaOverride?: string) => {
       if (!encounterId || !target) return;
-      const { kind, amount } = parseSignedHpDelta(delta, defaultKind);
+      const { kind, amount } = parseSignedHpDelta(deltaOverride ?? delta, defaultKind);
       if (amount <= 0) return;
 
       if (kind === "damage") {

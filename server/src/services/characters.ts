@@ -19,6 +19,26 @@ export type Assignment = {
   campaign_name: string;
 };
 
+export function syncOwnedPlayerName(
+  db: Database.Database,
+  userId: string,
+  playerName: string,
+  updatedAt: number,
+): Array<{ id: string; campaign_id: string; character_id: string | null }> {
+  const linkedPlayers = db.prepare(`
+    SELECT id, campaign_id, character_id
+    FROM players
+    WHERE user_id = ?
+  `).all(userId) as Array<{ id: string; campaign_id: string; character_id: string | null }>;
+  db.transaction(() => {
+    db.prepare("UPDATE user_characters SET player_name = ?, updated_at = ? WHERE user_id = ?")
+      .run(playerName, updatedAt, userId);
+    db.prepare("UPDATE players SET player_name = ?, updated_at = ? WHERE user_id = ?")
+      .run(playerName, updatedAt, userId);
+  })();
+  return linkedPlayers;
+}
+
 export function getAssignments(db: Database.Database, charId: string): Assignment[] {
   return db
     .prepare(`
@@ -121,16 +141,6 @@ export function buildCampaignCharacterLiveState(
   };
 }
 
-function serializeCharacterSheetState(sheet: StoredCharacterSheetState): string {
-  void sheet;
-  return "{}";
-}
-
-function serializeCampaignCharacterSheet(snapshot: MirroredPlayerSnapshot): string {
-  void snapshot;
-  return "{}";
-}
-
 function serializeCampaignCharacterLive(
   live: StoredCampaignCharacterLiveState,
 ): string {
@@ -168,7 +178,6 @@ export function characterSheetDbColumns(sheet: StoredCharacterSheetState) {
     color: sheet.color ?? null,
     deathSavesSuccess: sheet.deathSaves?.success ?? null,
     deathSavesFail: sheet.deathSaves?.fail ?? null,
-    sheetJson: serializeCharacterSheetState(sheet),
   };
 }
 
@@ -190,7 +199,6 @@ export function campaignSheetDbColumns(snapshot: MirroredPlayerSnapshot) {
     cha: snapshot.cha ?? null,
     color: snapshot.color ?? null,
     syncedAc: snapshot.syncedAc ?? null,
-    sheetJson: serializeCampaignCharacterSheet(snapshot),
   };
 }
 
@@ -257,7 +265,6 @@ export function updateProjectedPlayerRow(
       cha=?,
       color=?,
       synced_ac=?,
-      sheet_json=?,
       updated_at=?
     WHERE id=?
   `).run(
@@ -278,7 +285,6 @@ export function updateProjectedPlayerRow(
     sheetCols.cha,
     sheetCols.color,
     sheetCols.syncedAc,
-    sheetCols.sheetJson,
     updatedAt,
     playerId,
   );
@@ -314,7 +320,7 @@ export function insertProjectedPlayerRow(
        player_name, character_name, class_name, species, level, hp_max, hp_current, ac, speed,
        str, dex, con, int, wis, cha, color, synced_ac, death_saves_success, death_saves_fail,
        sheet_json, live_json, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?)
   `).run(
     playerId,
     campaignId,
@@ -339,7 +345,6 @@ export function insertProjectedPlayerRow(
     sheetCols.syncedAc,
     liveCols.deathSavesSuccess,
     liveCols.deathSavesFail,
-    sheetCols.sheetJson,
     liveCols.liveJson,
     createdAt,
     updatedAt,
@@ -452,26 +457,16 @@ export function mergeLiveStats(
     if (unresolvedCasterIds.length > 0) {
       const playerRows = db
         .prepare(
-          `SELECT id, character_name, sheet_json
+          `SELECT id, character_name
            FROM players
            WHERE id IN (${unresolvedCasterIds.map(() => "?").join(",")})`,
         )
-        .all(...unresolvedCasterIds) as { id: string; character_name: string | null; sheet_json: string }[];
+        .all(...unresolvedCasterIds) as { id: string; character_name: string | null }[];
       for (const row of playerRows) {
-        if (typeof row.character_name === "string" && row.character_name.trim()) {
-          casterNameById[row.id] = row.character_name.trim();
-          continue;
-        }
-        let parsed: Record<string, unknown> = {};
-        try {
-          parsed = JSON.parse(row.sheet_json || "{}") as Record<string, unknown>;
-        } catch {
-          parsed = {};
-        }
-        const fallback = typeof parsed.characterName === "string" && parsed.characterName.trim()
-          ? parsed.characterName.trim()
-          : "Player";
-        casterNameById[row.id] = fallback;
+        casterNameById[row.id] =
+          typeof row.character_name === "string" && row.character_name.trim()
+            ? row.character_name.trim()
+            : "Player";
       }
     }
   }

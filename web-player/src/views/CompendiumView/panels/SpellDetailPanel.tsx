@@ -21,20 +21,21 @@ function levelLabel(level: number | null) {
 export function SpellDetailPanel(props: { spellId: string }) {
   const [spell, setSpell] = React.useState<SpellFull | null>(null);
   const [busy, setBusy] = React.useState(false);
+  const [fetchError, setFetchError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
-    setBusy(true); setSpell(null);
+    setBusy(true); setSpell(null); setFetchError(null);
     api<SpellFull>(`/api/spells/${encodeURIComponent(props.spellId)}`)
       .then((s) => { if (!cancelled) setSpell(s ?? null); })
-      .catch(() => { if (!cancelled) setSpell(null); })
+      .catch((e: unknown) => { if (!cancelled) setFetchError(e instanceof Error ? e.message : "Failed to load spell."); })
       .finally(() => { if (!cancelled) setBusy(false); });
     return () => { cancelled = true; };
   }, [props.spellId]);
 
   const header = spell
     ? `${levelLabel(spell.level)}${spell.school ? ` • ${expandSchool(spell.school)}` : ""}`
-    : busy ? "Loading…" : "Select a spell";
+    : busy ? "Loading…" : fetchError ? "Error" : "Select a spell";
 
   return (
     <Panel
@@ -43,7 +44,9 @@ export function SpellDetailPanel(props: { spellId: string }) {
       style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
       bodyStyle={{ minHeight: 0 }}
     >
-      {!spell ? (
+      {fetchError ? (
+        <div style={{ color: C.red }}>{fetchError}</div>
+      ) : !spell ? (
         <div style={{ color: C.muted }}>Pick a spell on the left to view details.</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

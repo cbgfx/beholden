@@ -86,8 +86,11 @@ export function useCharacterActions(args: {
     const campaignNoteIds = new Set(campaignNotesList.map((note) => note.id));
     const playerOnlyNotes = list.filter((note) => !campaignNoteIds.has(note.id));
     const val = JSON.stringify(playerOnlyNotes);
-    void patchMyCharacter(char.id, "sharedNotes", { sharedNotes: val });
+    const prevSharedNotes = char.sharedNotes;
     setChar((prev) => (prev ? { ...prev, sharedNotes: val } : prev));
+    patchMyCharacter(char.id, "sharedNotes", { sharedNotes: val }).catch(() => {
+      setChar((prev) => (prev?.sharedNotes === val ? { ...prev, sharedNotes: prevSharedNotes } : prev));
+    });
   }, [campaignNotesList, char, setChar]);
 
   const handleNoteSave = React.useCallback((title: string, text: string) => {

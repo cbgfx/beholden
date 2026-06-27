@@ -8,6 +8,7 @@ import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../shared/validate.js";
 import { verifyPassword, hashPassword, signToken } from "../lib/jwtAuth.js";
 import { requireAuth } from "../middleware/auth.js";
+import { syncOwnedPlayerName } from "../services/characters.js";
 
 const LoginBody = z.object({
   username: z.string().trim().min(1),
@@ -92,6 +93,16 @@ export function registerAuthRoutes(app: Express, ctx: ServerContext) {
 
     values.push(userId);
     db.prepare(`UPDATE users SET ${setClauses.join(", ")} WHERE id = ?`).run(...values);
+    if (body.name !== undefined) {
+      for (const player of syncOwnedPlayerName(db, userId, body.name, Date.now())) {
+        ctx.broadcast("players:delta", {
+          campaignId: player.campaign_id,
+          action: "upsert",
+          playerId: player.id,
+          characterId: player.character_id,
+        });
+      }
+    }
 
     const updated = db
       .prepare("SELECT id, username, name, is_admin FROM users WHERE id = ?")

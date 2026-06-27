@@ -165,8 +165,10 @@ export function useCompendiumItemSearch(
   }, [facets.type, rows]);
   const visibleRows = React.useMemo(() => {
     if (!nameSearchValue) return rows;
+    const lq = q.toLowerCase().trim();
+    if (!lq) return rows;
     return rows.filter((row) =>
-      nameSearchValue(row.name).toLowerCase().includes(q.toLowerCase().trim()),
+      nameSearchValue(row.name).toLowerCase().includes(lq) || row.name.toLowerCase().includes(lq),
     );
   }, [rows, q, nameSearchValue]);
 
