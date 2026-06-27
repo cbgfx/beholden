@@ -120,6 +120,8 @@ export function parseArmorClassEffects(source: FeatureEffectSource, text: string
 }
 
 export function parseAbilityScoreEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
+  const maximumMatch = text.match(/to a maximum of (\d+)/i);
+  const maximum = maximumMatch ? Number(maximumMatch[1]) : 20;
   const asiMatch = text.match(
     /increase one (?:of your )?ability scores? by (\d+),? or (?:choose two (?:different )?ability scores? and increase each|increase two (?:of your )?ability scores?) by (\d+)/i,
   );
@@ -128,54 +130,67 @@ export function parseAbilityScoreEffects(source: FeatureEffectSource, text: stri
       id: createFeatureEffectId(source, "ability_score", effects.length),
       type: "ability_score", source, mode: "choice",
       choiceCount: 1, amount: Number(asiMatch[1]),
+      maximum,
       summary: `+${asiMatch[1]} to one ability score`,
     } satisfies AbilityScoreEffect);
     effects.push({
       id: createFeatureEffectId(source, "ability_score", effects.length),
       type: "ability_score", source, mode: "choice",
       choiceCount: 2, amount: Number(asiMatch[2]),
+      maximum,
       summary: `+${asiMatch[2]} to two ability scores`,
     } satisfies AbilityScoreEffect);
     return;
   }
 
-  const freeMatch = text.match(/increase one (?:of your )?ability scores? by (\d+)/i);
+  const freeMatch = text.match(/increase one (?:(?:of your )?ability scores?|ability score of your choice) by (\d+)/i);
   if (freeMatch) {
     effects.push({
       id: createFeatureEffectId(source, "ability_score", effects.length),
       type: "ability_score", source, mode: "choice",
       choiceCount: 1, amount: Number(freeMatch[1]),
+      maximum,
       summary: `+${freeMatch[1]} to one ability score`,
     } satisfies AbilityScoreEffect);
     return;
   }
 
-  const twoChoiceMatch = text.match(
-    /(?:your\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+or\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+score increases?|increase\s+your\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+or\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+score)\s+by\s+(\d+)/i,
-  );
-  if (twoChoiceMatch) {
-    const firstAbility = (twoChoiceMatch[1] ?? twoChoiceMatch[3]) as string;
-    const secondAbility = (twoChoiceMatch[2] ?? twoChoiceMatch[4]) as string;
-    const amount = Number(twoChoiceMatch[5]);
-    const a = ABILITY_NAME_MAP[firstAbility.toLowerCase()] as AbilKey;
-    const b = ABILITY_NAME_MAP[secondAbility.toLowerCase()] as AbilKey;
+  const abilityListPattern = "(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)(?:(?:\\s*,\\s*|\\s*,?\\s+or\\s+)(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma))+";
+  const listedChoiceMatch =
+    text.match(new RegExp(`increase your (${abilityListPattern})(?:\\s+score)?\\s+by\\s+(\\d+)`, "i"))
+    ?? text.match(new RegExp(`your (${abilityListPattern})\\s+score increases?\\s+by\\s+(\\d+)`, "i"));
+  if (listedChoiceMatch) {
+    const chooseFrom = Array.from(
+      listedChoiceMatch[1].matchAll(/Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma/gi),
+      (match) => ABILITY_NAME_MAP[match[0].toLowerCase()] as AbilKey,
+    );
+    const amount = Number(listedChoiceMatch[2]);
+    if (chooseFrom.length === 1) {
+      effects.push({
+        id: createFeatureEffectId(source, "ability_score", effects.length),
+        type: "ability_score", source, mode: "fixed",
+        ability: chooseFrom[0], choiceCount: 1, amount, maximum,
+        summary: `+${amount} ${chooseFrom[0].toUpperCase()}`,
+      } satisfies AbilityScoreEffect);
+      return;
+    }
     effects.push({
       id: createFeatureEffectId(source, "ability_score", effects.length),
       type: "ability_score", source, mode: "choice",
-      chooseFrom: [a, b], choiceCount: 1, amount,
-      summary: `+${amount} to ${a.toUpperCase()} or ${b.toUpperCase()}`,
+      chooseFrom, choiceCount: 1, amount, maximum,
+      summary: `+${amount} to ${chooseFrom.map((ability) => ability.toUpperCase()).join(" or ")}`,
     } satisfies AbilityScoreEffect);
     return;
   }
 
-  for (const match of text.matchAll(/(?:your\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+score increases?|increase\s+your\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+score)\s+by\s+(\d+)/gi)) {
+  for (const match of text.matchAll(/(?:your\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+score increases?|increase\s+your\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)(?:\s+score)?)\s+by\s+(\d+)/gi)) {
     const abilityToken = (match[1] ?? match[2]) as string;
     const amount = Number(match[3]);
     const ability = ABILITY_NAME_MAP[abilityToken.toLowerCase()] as AbilKey;
     effects.push({
       id: createFeatureEffectId(source, "ability_score", effects.length),
       type: "ability_score", source, mode: "fixed",
-      ability, choiceCount: 1, amount,
+      ability, choiceCount: 1, amount, maximum,
       summary: `+${amount} ${ability.toUpperCase()}`,
     } satisfies AbilityScoreEffect);
   }

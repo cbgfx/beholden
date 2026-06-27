@@ -9,6 +9,8 @@
     "./domain/*": "./src/domain/*",
     "./icons": "./src/icons/index.tsx",
     "./icons/*": "./src/icons/*",
+    "./views": "./src/views/index.tsx",
+    "./views/*": "./src/views/*",
     "./ui": "./src/ui/index.tsx",
     "./ui/*": "./src/ui/*",
     "./styles/*": "./styles/*"
@@ -18,7 +20,9 @@
       "domain/*": ["./src/domain/*"],
       "ui/*": ["./src/ui/*"],
       "api/*": ["./src/api/*"],
-      "icons/*": ["./src/icons/*"]
+      "icons/*": ["./src/icons/*"],
+      "views": ["./src/views/index.tsx"],
+      "views/*": ["./src/views/*"]
     }
   },
   "devDependencies": {

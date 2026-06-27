@@ -3,6 +3,7 @@ import { RulesReferencePanel } from "@/views/CompendiumView/panels/RulesReferenc
 import { CompendiumAdminPanel } from "@/views/CompendiumView/panels/CompendiumAdminPanel";
 import { MonsterBrowserPanel } from "@/views/CompendiumView/panels/MonsterBrowserPanel";
 import { ItemsBrowserPanel } from "@/views/CompendiumView/panels/ItemsBrowserPanel";
+import { FeatsPanel } from "@/views/CompendiumView/panels/FeatsPanel";
 import type { CompendiumSection } from "@/views/CompendiumView/CompendiumView";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -14,6 +15,8 @@ export function CompendiumCenterColumn(props: {
   onSelectMonster: (id: string) => void;
   selectedItemId: string | null;
   onSelectItem: (id: string) => void;
+  selectedFeatId: string | null;
+  onSelectFeat: (id: string) => void;
 }) {
   const { user } = useAuth();
   const isAdmin = Boolean(user?.isAdmin);
@@ -40,6 +43,12 @@ export function CompendiumCenterColumn(props: {
           editable
           selectedItemId={props.selectedItemId}
           onSelectItem={props.onSelectItem}
+        />
+      )}
+      {props.activeSection === "feats" && (
+        <FeatsPanel
+          selectedFeatId={props.selectedFeatId}
+          onSelectFeat={props.onSelectFeat}
         />
       )}
       {props.activeSection === "rules" && <RulesReferencePanel />}

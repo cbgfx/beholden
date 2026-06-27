@@ -12,6 +12,7 @@ import {
   IconShield,
   IconSpeed,
   IconWerewolf,
+  IconWeight,
   type SvgIconProps,
 } from "@beholden/shared/icons";
 
@@ -28,6 +29,7 @@ export {
   IconShield,
   IconSpeed,
   IconWerewolf,
+  IconWeight,
 };
 
 export type IconProps = Omit<SvgIconProps, "svg" | "className">;

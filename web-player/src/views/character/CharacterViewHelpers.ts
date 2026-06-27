@@ -12,6 +12,7 @@ import {
 import { getPolymorphCondition } from "@beholden/shared/domain";
 import { getEquipState, type InventoryItem } from "@/views/character/CharacterInventory";
 import { resolveStoredCompendiumClassId } from "@/domain/character/classIds";
+import type { ExtraFeatAbilityApplication } from "@/domain/character/extraFeatAbilityScores";
 import type { PolymorphConditionData } from "./CharacterViewTypes";
 
 export {
@@ -105,6 +106,7 @@ export function buildAbilityScoreExplanations(
   baseScores: Record<AbilKey, number | null>,
   effectiveScores: Record<AbilKey, number | null>,
   inventory: InventoryItem[],
+  extraFeatApplications: ExtraFeatAbilityApplication[] = [],
 ): Record<AbilKey, string> {
   const activeItems = inventory.filter(isInventoryItemActiveForCharacterEffects);
   return Object.fromEntries(
@@ -113,6 +115,9 @@ export function buildAbilityScoreExplanations(
       const finalScore = effectiveScores[ability];
       const parts: string[] = [];
       parts.push(`${ABILITY_SCORE_NAMES[ability]} base score: ${base ?? "not set"}.`);
+      for (const application of extraFeatApplications.filter((entry) => entry.ability === ability)) {
+        parts.push(`${application.featName}: +${application.amount} (maximum ${application.maximum}).`);
+      }
       for (const item of activeItems) {
         for (const override of parseItemAbilityScoreOverrides(item)) {
           if (override.ability !== ability) continue;

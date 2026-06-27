@@ -9,6 +9,8 @@ import { CombatantHeader } from "@/views/CombatView/components/CombatantHeader";
 import { CombatHudBar } from "@/views/CombatView/components/CombatHudBar";
 import { CombatDeltaControls } from "@/views/CombatView/components/CombatDeltaControls";
 import { SpellDetailModal } from "@/views/CombatView/components/SpellDetailModal";
+import { XpAwardModal } from "@/views/CombatView/components/XpAwardModal";
+import { getMonsterXp } from "@/domain/utils/xp";
 import { CombatantTypeIcon } from "@/views/CombatView/components/CombatantTypeIcon";
 import { TurnControls } from "@/views/CombatView/components/TurnControls";
 import { CombatOrderPanel } from "@/views/CombatView/panels/CombatOrderPanel";
@@ -40,6 +42,7 @@ export function CombatView() {
   }, [dispatch]);
 
   const [targetId, setTargetId] = React.useState<string | null>(null);
+  const [xpAwardOpen, setXpAwardOpen] = React.useState(false);
 
   const { encounter, combatants, orderedCombatants, canNavigate, target, playersById, inpcsById } = useCombatViewModel({
     encounterId,
@@ -105,6 +108,17 @@ export function CombatView() {
     (active as EncounterActor | null) ?? null,
     (target as EncounterActor | null) ?? null,
     inpcsById
+  );
+
+  const totalEncounterXp = React.useMemo(() => {
+    return orderedCombatants
+      .filter((c) => c.baseType === "monster" || c.baseType === "inpc")
+      .reduce((sum, c) => sum + (getMonsterXp(monsterCache[c.baseId] ?? null) ?? 0), 0);
+  }, [orderedCombatants, monsterCache]);
+
+  const playerCombatantCount = React.useMemo(
+    () => orderedCombatants.filter((c) => c.baseType === "player").length,
+    [orderedCombatants]
   );
 
   const {
@@ -261,9 +275,10 @@ export function CombatView() {
         round={round}
         seconds={secondsInRound}
         canNavigate={canNavigate}
-        rollLabel="Roll Monsters"
+        rollLabel="Roll Initiative"
         onRollOrReset={rollInitiativeForMonsters}
         onResetFight={resetFight}
+        onAwardXp={encounterId ? () => setXpAwardOpen(true) : undefined}
         onOpenSpellBook={openSpellBook}
         onOpenAdventureNotes={openAdventureNotes}
         onEndCombat={endCombat}
@@ -357,6 +372,15 @@ export function CombatView() {
         spellDetail={spellDetail}
         onClose={closeSpell}
       />
+
+      {xpAwardOpen && encounterId && (
+        <XpAwardModal
+          encounterId={encounterId}
+          totalXp={totalEncounterXp}
+          playerCount={playerCombatantCount}
+          onClose={() => setXpAwardOpen(false)}
+        />
+      )}
     </div>
   );
 }

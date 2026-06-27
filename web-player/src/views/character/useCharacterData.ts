@@ -32,6 +32,7 @@ export function useCharacterData(id: string | undefined) {
   const [raceFeatDetail, setRaceFeatDetail] = React.useState<FeatFeatureDetail | null>(null);
   const [classFeatDetails, setClassFeatDetails] = React.useState<ClassFeatFeatureDetail[]>([]);
   const [levelUpFeatDetails, setLevelUpFeatDetails] = React.useState<LevelUpFeatDetail[]>([]);
+  const [extraFeatDetails, setExtraFeatDetails] = React.useState<FeatFeatureDetail[]>([]);
   const [invocationDetails, setInvocationDetails] = React.useState<InvocationFeatureDetail[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -123,6 +124,10 @@ export function useCharacterData(id: string | undefined) {
         )
       : [];
 
+    const extraFeatIdList = Array.isArray(characterData?.extraFeatIds)
+      ? characterData.extraFeatIds.filter((id): id is string => typeof id === "string" && id.trim().length > 0).map((id) => id.trim())
+      : [];
+
     const ids = Array.from(
       new Set(
         [
@@ -130,6 +135,7 @@ export function useCharacterData(id: string | undefined) {
           bgFeatId,
           ...classFeatEntries.map(([, featId]) => featId.trim()),
           ...levelUpEntries.map((entry) => entry.featId.trim()),
+          ...extraFeatIdList,
         ].filter(Boolean),
       ),
     );
@@ -139,6 +145,7 @@ export function useCharacterData(id: string | undefined) {
       setBgOriginFeatDetail(null);
       setClassFeatDetails([]);
       setLevelUpFeatDetails([]);
+      setExtraFeatDetails([]);
       return;
     }
 
@@ -170,6 +177,12 @@ export function useCharacterData(id: string | undefined) {
             return feat ? [{ level, featId, feat } satisfies LevelUpFeatDetail] : [];
           }),
         );
+        setExtraFeatDetails(
+          extraFeatIdList.flatMap((featId) => {
+            const feat = featById.get(featId);
+            return feat ? [feat] : [];
+          }),
+        );
       })
       .catch(() => {
         if (!alive) return;
@@ -177,6 +190,7 @@ export function useCharacterData(id: string | undefined) {
         setBgOriginFeatDetail(null);
         setClassFeatDetails([]);
         setLevelUpFeatDetails([]);
+        setExtraFeatDetails([]);
       });
 
     return () => {
@@ -187,6 +201,7 @@ export function useCharacterData(id: string | undefined) {
     characterData?.chosenClassFeatIds,
     characterData?.chosenLevelUpFeats,
     characterData?.chosenRaceFeatId,
+    characterData?.extraFeatIds,
   ]);
 
   React.useEffect(() => {
@@ -283,6 +298,7 @@ export function useCharacterData(id: string | undefined) {
     raceFeatDetail,
     classFeatDetails,
     levelUpFeatDetails,
+    extraFeatDetails,
     invocationDetails,
     loading,
     error,

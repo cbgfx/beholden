@@ -3,19 +3,21 @@ import { CompendiumLeftColumn } from "@/views/CompendiumView/components/Compendi
 import { CompendiumCenterColumn } from "@/views/CompendiumView/components/CompendiumCenterColumn";
 import { CompendiumRightColumn } from "@/views/CompendiumView/components/CompendiumRightColumn";
 
-export type CompendiumSection = "compendium" | "spells" | "rules" | "monsters" | "items";
+export type CompendiumSection = "compendium" | "spells" | "rules" | "monsters" | "items" | "feats";
 
 export function CompendiumView() {
   const [activeSection, setActiveSection] = React.useState<CompendiumSection>("rules");
   const [selectedSpellId, setSelectedSpellId] = React.useState<string | null>(null);
   const [selectedMonsterId, setSelectedMonsterId] = React.useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = React.useState<string | null>(null);
+  const [selectedFeatId, setSelectedFeatId] = React.useState<string | null>(null);
 
   const handleSetSection = React.useCallback((s: CompendiumSection) => {
     setActiveSection(s);
     setSelectedSpellId(null);
     setSelectedMonsterId(null);
     setSelectedItemId(null);
+    setSelectedFeatId(null);
   }, []);
 
   const hasRightColumn = activeSection !== "rules" && activeSection !== "compendium";
@@ -46,6 +48,8 @@ export function CompendiumView() {
           onSelectMonster={setSelectedMonsterId}
           selectedItemId={selectedItemId}
           onSelectItem={setSelectedItemId}
+          selectedFeatId={selectedFeatId}
+          onSelectFeat={setSelectedFeatId}
         />
         {hasRightColumn && (
           <CompendiumRightColumn
@@ -53,6 +57,7 @@ export function CompendiumView() {
             selectedSpellId={selectedSpellId}
             selectedMonsterId={selectedMonsterId}
             selectedItemId={selectedItemId}
+            selectedFeatId={selectedFeatId}
           />
         )}
       </div>

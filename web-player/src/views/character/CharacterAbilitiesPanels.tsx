@@ -25,6 +25,7 @@ export interface CharacterAbilitiesPanelsProps {
   stealthDisadvantage: boolean;
   nonProficientArmorPenalty: boolean;
   hasJackOfAllTrades?: boolean;
+  d20TestPenalty?: number;
   mod: (score: number | null) => number;
   fmtMod: (value: number) => string;
 }
@@ -86,6 +87,7 @@ export function CharacterAbilitiesPanels({
   stealthDisadvantage,
   nonProficientArmorPenalty,
   hasJackOfAllTrades = false,
+  d20TestPenalty = 0,
   mod,
   fmtMod,
 }: CharacterAbilitiesPanelsProps) {
@@ -96,7 +98,7 @@ export function CharacterAbilitiesPanels({
       const score = scores[k];
       const m = mod(score);
       const isProfSave = prof ? hasNamedProficiency(prof.saves, ABILITY_FULL[k]) : false;
-      const save = getSaveBonus(ABILITY_FULL[k], k, scores, derivedPb, prof ?? undefined, saveBonuses?.[k] ?? 0);
+      const save = getSaveBonus(ABILITY_FULL[k], k, scores, derivedPb, prof ?? undefined, saveBonuses?.[k] ?? 0) - d20TestPenalty;
       const abilityCheckState = getModifierState(Boolean(abilityCheckAdvantages?.[k]), Boolean(abilityCheckDisadvantages?.[k]));
       const armorSaveDisadvantage = nonProficientArmorPenalty && (k === "str" || k === "dex");
       const saveState = getModifierState(Boolean(saveAdvantages?.[k]), Boolean(saveDisadvantages?.[k]) || armorSaveDisadvantage);
@@ -207,7 +209,7 @@ export function CharacterAbilitiesPanels({
             const isProfSkill = tier >= 1;
             const isExpertise = tier >= 2;
             const extraSkillBonus = skillBonuses?.[name] ?? 0;
-            const bonus = getSkillBonus(name, abil, scores, Math.max(1, (pb - 1) * 4), prof ?? undefined, { jackOfAllTrades: hasJackOfAllTrades }) + extraSkillBonus;
+            const bonus = getSkillBonus(name, abil, scores, Math.max(1, (pb - 1) * 4), prof ?? undefined, { jackOfAllTrades: hasJackOfAllTrades }) + extraSkillBonus - d20TestPenalty;
             const src = prof?.skills.find((s) => s.name.toLowerCase() === name.toLowerCase())?.source;
             const expertiseSrc = prof?.expertise.find((s) => s.name.toLowerCase() === name.toLowerCase())?.source;
             const armorPenalty = nonProficientArmorPenalty && (abil === "str" || abil === "dex");

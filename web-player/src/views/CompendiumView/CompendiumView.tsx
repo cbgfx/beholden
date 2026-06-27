@@ -7,15 +7,19 @@ import { SpellDetailPanel } from "./panels/SpellDetailPanel";
 import { ItemsBrowserPanel } from "./panels/ItemsBrowserPanel";
 import { ItemDetailPanel } from "./panels/ItemDetailPanel";
 import { RulesReferencePanel } from "./panels/RulesReferencePanel";
+import { FeatsPanel } from "./panels/FeatsPanel";
+import { FeatDetailPanel } from "./panels/FeatDetailPanel";
 import { Panel } from "@/ui/Panel";
 import { IconMonster, IconSpells, IconChest, IconNotes } from "@/ui/Icons";
+import { IconInspiration } from "@/icons";
 
-type Section = "monsters" | "spells" | "items" | "rules";
+type Section = "monsters" | "spells" | "items" | "feats" | "rules";
 
 const NAV: { id: Section; label: string; Icon: React.FC<{ size?: number }> }[] = [
   { id: "monsters", label: "Monsters",       Icon: IconMonster },
   { id: "spells",   label: "Spells",         Icon: IconSpells },
   { id: "items",    label: "Items",          Icon: IconChest },
+  { id: "feats",    label: "Feats",          Icon: IconInspiration },
   { id: "rules",    label: "Rules Reference",Icon: IconNotes },
 ];
 
@@ -45,12 +49,14 @@ export function CompendiumView() {
   const [selectedSpellId, setSelectedSpellId] = React.useState<string | null>(null);
   const [selectedMonsterId, setSelectedMonsterId] = React.useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = React.useState<string | null>(null);
+  const [selectedFeatId, setSelectedFeatId] = React.useState<string | null>(null);
 
   const handleSetSection = React.useCallback((s: Section) => {
     setActiveSection(s);
     setSelectedSpellId(null);
     setSelectedMonsterId(null);
     setSelectedItemId(null);
+    setSelectedFeatId(null);
   }, []);
 
   const hasRightColumn = activeSection !== "rules";
@@ -93,6 +99,9 @@ export function CompendiumView() {
           {activeSection === "items" && (
             <ItemsBrowserPanel selectedItemId={selectedItemId} onSelectItem={setSelectedItemId} />
           )}
+          {activeSection === "feats" && (
+            <FeatsPanel selectedFeatId={selectedFeatId} onSelectFeat={setSelectedFeatId} />
+          )}
           {activeSection === "rules" && <RulesReferencePanel />}
         </div>
 
@@ -118,6 +127,13 @@ export function CompendiumView() {
                 ? <ItemDetailPanel itemId={selectedItemId} />
                 : <Panel title="Item Detail" style={{ flex: 1 }} bodyStyle={{ flex: 1 }}>
                     <div style={{ color: C.muted }}>Select an item to view its details.</div>
+                  </Panel>
+            )}
+            {activeSection === "feats" && (
+              selectedFeatId
+                ? <FeatDetailPanel featId={selectedFeatId} />
+                : <Panel title="Feat Detail" style={{ flex: 1 }} bodyStyle={{ flex: 1 }}>
+                    <div style={{ color: C.muted }}>Select a feat to view its details.</div>
                   </Panel>
             )}
           </div>

@@ -97,6 +97,7 @@ export interface CampaignCharacterLiveDto {
   conditions: ActorConditionInstanceDto[];
   overrides?: ActorOverridesDto;
   deathSaves?: ActorDeathSavesDto;
+  concentrationSpell?: string | null;
 }
 
 export interface CampaignCharacterDto {
@@ -208,6 +209,7 @@ export interface FlatCampaignCharacterDto {
   color?: string | null;
   imageUrl?: string | null;
   sharedNotes?: string;
+  concentrationSpell?: string | null;
   createdAt?: number;
   updatedAt?: number;
 }
@@ -303,6 +305,7 @@ export function flattenCampaignCharacterDto(dto: CampaignCharacterDto): FlatCamp
   if (dto.sheet.color !== undefined) flat.color = dto.sheet.color;
   if (dto.imageUrl !== undefined) flat.imageUrl = dto.imageUrl;
   if (dto.sharedNotes !== undefined) flat.sharedNotes = dto.sharedNotes;
+  if (dto.live.concentrationSpell !== undefined) flat.concentrationSpell = dto.live.concentrationSpell;
   if (dto.createdAt !== undefined) flat.createdAt = dto.createdAt;
   if (dto.updatedAt !== undefined) flat.updatedAt = dto.updatedAt;
   return flat;

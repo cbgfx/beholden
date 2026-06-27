@@ -3,7 +3,17 @@ import { api } from "@/services/api";
 import { C } from "@/lib/theme";
 import { CollapsiblePanel } from "@/views/character/CharacterViewParts";
 import { type InventoryItem, type ParsedItemSpell, getEquipState, parseItemSpells } from "@/views/character/CharacterInventory";
-import { FetchedSpellDetail, DMG_COLORS, DMG_EMOJI, LEVEL_LABELS, abbrevTime, parseSpellDamage, parseSpellSave } from "@/views/character/CharacterSpellShared";
+import {
+  FetchedSpellDetail,
+  DMG_COLORS,
+  DMG_EMOJI,
+  LEVEL_LABELS,
+  SPELL_ROW_GRID_WITH_MARKER,
+  abbrevTime,
+  parseSpellDamage,
+  parseSpellSave,
+  spellColumnHeaderStyle,
+} from "@/views/character/CharacterSpellShared";
 import { SpellDrawer } from "@/views/character/CharacterSpellDrawers";
 
 type SpellLookupRow = {
@@ -169,12 +179,12 @@ export function ItemSpellsPanel({
                     {level === -1 ? "Loading..." : LEVEL_LABELS[level] ?? `Level ${level}`}
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "24px 1fr auto auto auto", gap: "0 8px", marginBottom: 4 }}>
-                    <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>CST</div>
-                    <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>NAME</div>
-                    <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", textAlign: "center" }}>TIME</div>
-                    <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", textAlign: "center" }}>HIT / DC</div>
-                    <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", textAlign: "center" }}>EFFECT</div>
+                  <div style={{ display: "grid", gridTemplateColumns: SPELL_ROW_GRID_WITH_MARKER, gap: "0 8px", alignItems: "end", marginBottom: 4 }}>
+                    <div style={spellColumnHeaderStyle}>CST</div>
+                    <div style={spellColumnHeaderStyle}>NAME</div>
+                    <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>TIME</div>
+                    <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>HIT / DC</div>
+                    <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>EFFECT</div>
                   </div>
 
                   {groupSpells.map((spell, i) => {
@@ -191,15 +201,15 @@ export function ItemSpellsPanel({
                       <div
                         key={i}
                         style={{
-                          display: "grid", gridTemplateColumns: "24px 1fr auto auto auto",
-                          alignItems: "start", gap: "0 8px",
+                          display: "grid", gridTemplateColumns: SPELL_ROW_GRID_WITH_MARKER,
+                          alignItems: "center", gap: "0 8px",
                           padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)",
                           cursor: detail ? "pointer" : "default",
                         }}
                         onClick={() => { if (detail) setSelectedSpell(detail); }}
                       >
                         <div title={`${spell.cost} charge${spell.cost !== 1 ? "s" : ""}`} style={{
-                          width: 20, height: 20, borderRadius: "50%", marginTop: 3,
+                          width: 20, height: 20, borderRadius: "50%",
                           background: "#dc2626", display: "grid", placeItems: "center", flexShrink: 0,
                         }}>
                           <span style={{ color: "#fff", fontSize: "var(--fs-tiny)", fontWeight: 900, lineHeight: 1 }}>{spell.cost}</span>
@@ -216,12 +226,12 @@ export function ItemSpellsPanel({
                           </div>
                         </div>
 
-                        <div style={{ fontSize: "var(--fs-small)", color: C.muted, paddingTop: 3, textAlign: "center", minWidth: 28 }}>
+                        <div style={{ minWidth: 0, fontSize: "var(--fs-small)", color: C.muted, textAlign: "center", lineHeight: 1.25 }}>
                           {detail ? abbrevTime(detail.time ?? "-") : ""}
                         </div>
 
                         {detail && (usesSave || usesAtk) ? (
-                          <div style={{ textAlign: "center", paddingTop: 1 }}>
+                          <div style={{ minWidth: 0, textAlign: "center" }}>
                             <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700 }}>{usesSave ? (detail.save ?? "SAVE") : "ATK"}</div>
                             <div style={{ fontWeight: 900, fontSize: "var(--fs-body)", color: spellcastingBlocked ? C.colorPinkRed : accentColor, lineHeight: 1.2 }}>
                               {usesSave ? `${saveDc}${spellcastingBlocked ? " X" : ""}` : `+${spellAtk}${spellcastingBlocked ? " X" : ""}`}
@@ -231,6 +241,7 @@ export function ItemSpellsPanel({
 
                         {detail?.damage ? (
                           <div style={{
+                            minWidth: 0,
                             padding: "4px 7px", borderRadius: 6, border: `1px solid ${dmgColor}55`,
                             background: `${dmgColor}15`, textAlign: "center", whiteSpace: "nowrap",
                           }}>

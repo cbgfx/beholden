@@ -12,6 +12,7 @@ import {
 } from "@/views/character/CharacterViewHelpers";
 import type { CharacterData, ConditionInstance, ResourceCounter } from "@/views/character/CharacterSheetTypes";
 import type { CompendiumMonsterRow } from "@/lib/monsterPicker/types";
+import { getLongRestRecovery } from "@/views/character/CharacterRestRecovery";
 
 export function buildCharacterRuntimeActions(args: {
   char: Character;
@@ -21,7 +22,6 @@ export function buildCharacterRuntimeActions(args: {
   currentCharacterData: CharacterData;
   classResourcesWithSpellCasts: ResourceCounter[];
   hitDiceMax: number;
-  hitDiceCurrent: number;
   inventory: CharacterData["inventory"];
   effectiveHpMax: number;
   overrides: SheetOverrides;
@@ -47,7 +47,6 @@ export function buildCharacterRuntimeActions(args: {
     currentCharacterData,
     classResourcesWithSpellCasts,
     hitDiceMax,
-    hitDiceCurrent,
     inventory,
     effectiveHpMax,
     overrides,
@@ -186,8 +185,7 @@ export function buildCharacterRuntimeActions(args: {
         ? { ...resource, current: resource.max }
         : resource,
     );
-    const recoveredHitDice = hitDiceMax > 0 ? Math.max(1, Math.floor(hitDiceMax / 2)) : 0;
-    const nextHitDice = Math.max(0, Math.min(hitDiceMax, hitDiceCurrent + recoveredHitDice));
+    const recovery = getLongRestRecovery(hitDiceMax, currentCharacterData.exhaustion ?? 0);
     const slotsReset = classDetail?.slotsReset ?? "L";
     const nextUsedSpellSlots = /S/i.test(slotsReset) ? (currentCharacterData.usedSpellSlots ?? {}) : {};
     const nextInventory = (inventory ?? []).map((item) => ((item.chargesMax ?? 0) > 0 ? { ...item, charges: item.chargesMax } : item));
@@ -196,7 +194,8 @@ export function buildCharacterRuntimeActions(args: {
       hpCurrent: effectiveHpMax,
       characterData: {
         ...currentCharacterData,
-        hitDiceCurrent: nextHitDice,
+        hitDiceCurrent: recovery.hitDiceCurrent,
+        exhaustion: recovery.exhaustion,
         resources: nextResources,
         usedSpellSlots: nextUsedSpellSlots,
         inventory: nextInventory,
@@ -218,61 +217,11 @@ export function buildCharacterRuntimeActions(args: {
       overrides: hasResourceful ? { ...prev.overrides!, inspiration: true } : prev.overrides,
       characterData: {
         ...prev.characterData,
-        hitDiceCurrent: nextHitDice,
+        hitDiceCurrent: recovery.hitDiceCurrent,
+        exhaustion: recovery.exhaustion,
         resources: nextResources,
         usedSpellSlots: nextUsedSpellSlots,
         inventory: nextInventory,
-      },
-    } : prev);
-  };
-
-  const handleFullRest = async () => {
-    const nextResources = classResourcesWithSpellCasts.map((resource) => ({
-      ...resource,
-      current: resource.max,
-    }));
-    const nextHitDice = hitDiceMax;
-    const nextUsedSpellSlots: Record<string, number> = {};
-    const nextInventory = (inventory ?? []).map((item) => ((item.chargesMax ?? 0) > 0 ? { ...item, charges: item.chargesMax } : item));
-    const nextDeathSaves = { success: 0, fail: 0 };
-    const nextOverrides = {
-      tempHp: 0,
-      acBonus: Math.floor(Number(overrides.acBonus ?? 0) || 0),
-      hpMaxBonus: Math.floor(Number(overrides.hpMaxBonus ?? 0) || 0),
-    };
-    const hasResourceful = raceDetail?.traits?.some((trait) => /^resourceful$/i.test(trait.name)) ?? false;
-    const nextInspiration = hasResourceful ? true : (overrides.inspiration ?? false);
-
-    await putMyCharacter(char.id, {
-      hpCurrent: effectiveHpMax,
-      characterData: {
-        ...currentCharacterData,
-        hitDiceCurrent: nextHitDice,
-        resources: nextResources,
-        usedSpellSlots: nextUsedSpellSlots,
-        inventory: nextInventory,
-      },
-    });
-    await Promise.all([
-      patchMyCharacter(char.id, "deathSaves", nextDeathSaves),
-      patchMyCharacter(char.id, "overrides", nextOverrides),
-      nextInspiration !== (overrides.inspiration ?? false)
-        ? patchMyCharacter(char.id, "inspiration", { inspiration: nextInspiration })
-        : Promise.resolve(null),
-    ]);
-
-    setChar((prev) => prev ? {
-      ...prev,
-      hpCurrent: effectiveHpMax,
-      deathSaves: nextDeathSaves,
-      overrides: { ...(prev.overrides ?? {}), ...nextOverrides, inspiration: nextInspiration },
-      characterData: {
-        ...prev.characterData,
-        hitDiceCurrent: nextHitDice,
-        resources: nextResources,
-        usedSpellSlots: nextUsedSpellSlots,
-        inventory: nextInventory,
-        sheetOverrides: nextOverrides,
       },
     } : prev);
   };
@@ -425,7 +374,6 @@ export function buildCharacterRuntimeActions(args: {
     changeResourceCurrent,
     handleShortRest,
     handleLongRest,
-    handleFullRest,
     handleToggleInspiration,
     saveDeathSaves,
     revertPolymorph,

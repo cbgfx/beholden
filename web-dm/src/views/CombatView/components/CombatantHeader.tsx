@@ -15,6 +15,7 @@ type Props = {
   rollLabel: string;
   onRollOrReset: () => void;
   onResetFight?: () => void;
+  onAwardXp?: () => void;
   onEndCombat: () => void;
   onOpenSpellBook: () => void;
   onOpenAdventureNotes: () => void;
@@ -56,6 +57,12 @@ export function CombatantHeader(props: Props) {
           {props.onResetFight && !isPhone && (
             <Button variant="ghost" onClick={props.onResetFight} title="Reset monsters HP and conditions to full">
               Reset Fight
+            </Button>
+          )}
+
+          {props.onAwardXp && !isPhone && (
+            <Button variant="ghost" onClick={props.onAwardXp} title="Award encounter XP to all players">
+              Award XP
             </Button>
           )}
 

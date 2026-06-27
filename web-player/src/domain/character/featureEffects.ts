@@ -282,6 +282,8 @@ export interface AbilityScoreEffect extends FeatureEffectBase {
   choiceCount: number;
   /** Points added to each chosen ability. */
   amount: number;
+  /** Maximum score this increase can produce (normally 20, or 30 for epic boons). */
+  maximum?: number;
 }
 
 export type FeatureEffect =

@@ -86,8 +86,24 @@ export function ShellLayout(props: { children: React.ReactNode }) {
           </>
         }
         centerRight={showSupport ? (
-          <a href="https://www.buymeacoffee.com/beholden" target="_blank" rel="noreferrer" title="Buy me a pizza" style={{ display: "inline-flex", alignItems: "center" }}>
-            <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a pizza" style={{ height: 44, width: "auto" }} />
+          <a
+            href="https://www.buymeacoffee.com/beholden"
+            target="_blank"
+            rel="noreferrer"
+            title="Support Beholden"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "7px 12px",
+              borderRadius: 8,
+              border: `1px solid ${withAlpha(theme.colors.colorGold, 0.45)}`,
+              background: withAlpha(theme.colors.colorGold, 0.12),
+              color: theme.colors.colorGold,
+              textDecoration: "none",
+              fontWeight: 800,
+            }}
+          >
+            Support Beholden
           </a>
         ) : null}
         right={

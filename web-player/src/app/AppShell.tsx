@@ -2,9 +2,9 @@ import React from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import { C, withAlpha } from "@/lib/theme";
 import { useAuth } from "@/contexts/AuthContext";
-import { IconBastions, IconDice } from "@/icons";
+import { IconDice } from "@/icons";
 import { api } from "@/services/api";
-import { useWs, useWsStatus } from "@/services/ws";
+import { useWsStatus } from "@/services/ws";
 import { DiceCalculatorModal } from "@/tools/DiceCalculatorModal";
 import { StatusDot, FooterGrid, HeaderActionButton, HeaderActionLink, TopBarFrame, navLinkStyle } from "@beholden/shared/ui";
 
@@ -57,23 +57,6 @@ interface Meta {
 
 type LastCharacter = { id: string; name: string };
 
-type BastionSummary = {
-  id: string;
-  name: string;
-  active?: boolean;
-  campaignId?: string | null;
-};
-
-type BastionListResponse = {
-  bastions?: BastionSummary[];
-};
-
-type ActiveBastionLink = {
-  id: string;
-  name: string;
-  campaignId: string;
-};
-
 function useServerMeta() {
   const [meta, setMeta] = React.useState<Meta | null>(null);
   React.useEffect(() => {
@@ -109,67 +92,6 @@ function topbarToolButtonStyle(active = false, accent = C.accentHl, muted = C.mu
   };
 }
 
-function useActiveBastionForCharacter(lastChar: LastCharacter | null): ActiveBastionLink | null {
-  const [active, setActive] = React.useState<ActiveBastionLink | null>(null);
-  const [refreshKey, setRefreshKey] = React.useState(0);
-  const refreshTimerRef = React.useRef<number | null>(null);
-
-  useWs(
-    React.useCallback((msg) => {
-      if (msg.type === "bastions:delta" || msg.type === "players:delta") {
-        if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current);
-        refreshTimerRef.current = window.setTimeout(() => {
-          refreshTimerRef.current = null;
-          setRefreshKey((key) => key + 1);
-        }, 250);
-      }
-    }, [])
-  );
-
-  React.useEffect(() => () => {
-    if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current);
-  }, []);
-
-  React.useEffect(() => {
-    let cancelled = false;
-    const characterId = lastChar?.id;
-    if (!characterId) {
-      setActive(null);
-      return;
-    }
-    const encodedCharacterId = encodeURIComponent(characterId);
-
-    async function load() {
-      try {
-        const data = await api<BastionListResponse>(`/api/me/characters/${encodedCharacterId}/bastions`);
-        const bastion = (data.bastions ?? []).find((entry) => entry.active === true && typeof entry.campaignId === "string");
-        if (!cancelled) {
-          const next = bastion ? { id: bastion.id, name: bastion.name, campaignId: bastion.campaignId! } : null;
-          setActive((prev) => {
-            if (
-              prev?.id === next?.id &&
-              prev?.name === next?.name &&
-              prev?.campaignId === next?.campaignId
-            ) {
-              return prev;
-            }
-            return next;
-          });
-        }
-      } catch {
-        // Keep the last known value during transient refresh failures so the
-        // topbar does not flicker while live updates are settling.
-      }
-    }
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [lastChar?.id, refreshKey]);
-
-  return active;
-}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -179,7 +101,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const showSupport = meta?.support === true;
   const connected = useWsStatus();
   const lastChar = useLastCharacter();
-  const activeBastion = useActiveBastionForCharacter(lastChar);
   const [diceOpen, setDiceOpen] = React.useState(false);
 
   return (
@@ -226,17 +147,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
-          {activeBastion && (
-            <button
-              type="button"
-              aria-label={`Open bastion: ${activeBastion.name}`}
-              title={`Bastion: ${activeBastion.name}`}
-              onClick={() => navigate(`/campaigns/${activeBastion.campaignId}/bastions/${activeBastion.id}`)}
-              style={topbarToolButtonStyle()}
-            >
-              <IconBastions size={22} />
-            </button>
-          )}
           <button
             type="button"
             aria-label="Open dice calculator"
@@ -293,8 +203,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </>
         }
         centerRight={showSupport ? (
-          <a href="https://www.buymeacoffee.com/beholden" target="_blank" rel="noreferrer" title="Buy me a pizza" style={{ display: "inline-flex", alignItems: "center" }}>
-            <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a pizza" style={{ height: "clamp(30px, 7vw, 44px)", width: "auto" }} />
+          <a
+            href="https://www.buymeacoffee.com/beholden"
+            target="_blank"
+            rel="noreferrer"
+            title="Support Beholden"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "7px 12px",
+              borderRadius: 8,
+              border: `1px solid ${withAlpha(C.colorGold, 0.45)}`,
+              background: withAlpha(C.colorGold, 0.12),
+              color: C.colorGold,
+              textDecoration: "none",
+              fontWeight: 800,
+            }}
+          >
+            Support Beholden
           </a>
         ) : null}
         right={updateAvailable ? (

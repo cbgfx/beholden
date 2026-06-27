@@ -69,6 +69,7 @@ export interface CampaignCharacter {
   overrides?: CombatantOverrides;
   conditions?: ConditionInstance[];
   deathSaves?: DeathSaves;
+  concentrationSpell?: string | null;
   color?: string;
   imageUrl?: string | null;
   sharedNotes?: string;

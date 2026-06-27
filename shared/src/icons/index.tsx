@@ -78,6 +78,7 @@ export const IconBlood = make("blood");
 export const IconHeal = make("heal");
 export const IconDead = make("dead");
 export const IconDice = make("dice");
+export const IconWeight = make("weight");
 
 export const conditionIconSvgByKey: Record<string, string> = {
   blinded: fromFile("blinded"),

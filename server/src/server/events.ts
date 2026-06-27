@@ -98,6 +98,25 @@ export type EncounterCombatStateChangedPayload = { encounterId: Id };
 export type SavePendingPayload = Record<string, never>;
 export type SaveCompletePayload = Record<string, never>;
 
+export type InitiativePromptPayload = {
+  campaignId: Id;
+  encounterId: Id;
+  prompts: Array<{ characterId: Id; combatantId: Id }>;
+};
+
+export type InitiativeFulfilledPayload = {
+  campaignId: Id;
+  encounterId: Id;
+  combatantId: Id;
+  characterId: Id;
+};
+
+export type XpAwardedPayload = {
+  campaignId: Id;
+  characterId: Id;
+  xpAdded: number;
+};
+
 export interface ServerEventMap {
   hello: HelloPayload;
 
@@ -114,6 +133,10 @@ export interface ServerEventMap {
 
   "encounter:combatantsDelta": EncounterCombatantsDeltaPayload;
   "encounter:combatStateChanged": EncounterCombatStateChangedPayload;
+
+  "initiative:prompt": InitiativePromptPayload;
+  "initiative:fulfilled": InitiativeFulfilledPayload;
+  "xp:awarded": XpAwardedPayload;
 
   "save:pending": SavePendingPayload;
   "save:complete": SaveCompletePayload;

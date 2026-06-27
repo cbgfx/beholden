@@ -314,6 +314,14 @@ CREATE TABLE IF NOT EXISTS campaign_membership (
   UNIQUE(campaign_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS initiative_prompts (
+  combatant_id TEXT PRIMARY KEY REFERENCES combatants(id) ON DELETE CASCADE,
+  encounter_id TEXT NOT NULL REFERENCES encounters(id) ON DELETE CASCADE,
+  campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+  character_id TEXT NOT NULL REFERENCES user_characters(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS party_inventory (
   id TEXT PRIMARY KEY,
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
@@ -360,6 +368,7 @@ CREATE INDEX IF NOT EXISTS idx_combatants_encounter  ON combatants(encounter_id)
 CREATE INDEX IF NOT EXISTS idx_membership_campaign   ON campaign_membership(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_membership_user       ON campaign_membership(user_id);
 CREATE INDEX IF NOT EXISTS idx_players_user          ON players(user_id);
+CREATE INDEX IF NOT EXISTS idx_initiative_prompts_character ON initiative_prompts(character_id, created_at);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_players_campaign_character ON players(campaign_id, character_id) WHERE character_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_compmon_name          ON compendium_monsters(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_compmon_typekey       ON compendium_monsters(type_key);

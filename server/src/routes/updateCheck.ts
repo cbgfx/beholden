@@ -8,6 +8,7 @@ const GITHUB_RAW_URL =
   "https://raw.githubusercontent.com/cbgfx/beholden/main/server/package.json";
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const REQUEST_TIMEOUT_MS = 5_000;
 
 interface CacheEntry {
   latestVersion: string;
@@ -15,6 +16,7 @@ interface CacheEntry {
 }
 
 let cache: CacheEntry | null = null;
+let inFlight: Promise<string> | null = null;
 
 function getCurrentVersion(): string {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -28,11 +30,31 @@ async function getLatestVersion(): Promise<string> {
   if (cache && now - cache.fetchedAt < CACHE_TTL_MS) {
     return cache.latestVersion;
   }
-  const res = await fetch(GITHUB_RAW_URL);
-  if (!res.ok) throw new Error(`GitHub fetch failed: ${res.status}`);
-  const pkg = (await res.json()) as { version: string };
-  cache = { latestVersion: pkg.version, fetchedAt: now };
-  return pkg.version;
+  if (inFlight) return inFlight;
+
+  inFlight = (async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const res = await fetch(GITHUB_RAW_URL, { signal: controller.signal });
+      if (!res.ok) throw new Error(`GitHub fetch failed: ${res.status}`);
+      const pkg = (await res.json()) as { version?: unknown };
+      const latestVersion = typeof pkg.version === "string" ? pkg.version.trim() : "";
+      if (!/^\d+\.\d+\.\d+(?:[-+].*)?$/.test(latestVersion)) {
+        throw new Error("GitHub returned an invalid version");
+      }
+      cache = { latestVersion, fetchedAt: Date.now() };
+      return latestVersion;
+    } finally {
+      clearTimeout(timeout);
+    }
+  })();
+
+  try {
+    return await inFlight;
+  } finally {
+    inFlight = null;
+  }
 }
 
 function isNewer(latest: string, current: string): boolean {

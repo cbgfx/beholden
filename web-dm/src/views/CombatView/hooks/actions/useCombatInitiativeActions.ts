@@ -28,7 +28,10 @@ export function useCombatInitiativeActions({
       if (c.initiative == null) return true;
       return !Number.isFinite(Number(c.initiative));
     });
-    if (!targets.length) return;
+    const hasPlayerTargets = orderedCombatants.some(
+      (c) => c.baseType === "player" && (c.initiative == null || !Number.isFinite(Number(c.initiative)))
+    );
+    if (!targets.length && !hasPlayerTargets) return;
 
     // Ensure monster details are available (for Dex mod).
     const localCache: Record<string, MonsterDetail> = { ...monsterCache };
@@ -46,7 +49,7 @@ export function useCombatInitiativeActions({
     }
     setMonsterCache(localCache);
 
-    // Apply initiative.
+    // Apply initiative to monsters/iNPCs.
     for (const c of targets) {
       const monsterId = c.baseType === "inpc" ? (inpcsById[c.baseId]?.monsterId ?? null) : c.baseId;
       const d = monsterId ? localCache[monsterId] ?? null : null;
@@ -54,6 +57,15 @@ export function useCombatInitiativeActions({
       const roll = 1 + Math.floor(Math.random() * 20);
       const init = roll + mod;
       await putEncounterCombatant(encounterId, c.id, { initiative: init });
+    }
+
+    // Prompt player combatants without initiative to roll on their sheet.
+    if (hasPlayerTargets) {
+      try {
+        await api(`/api/encounters/${encounterId}/prompt-initiative`, { method: "POST" });
+      } catch {
+        // ignore — players can still enter initiative manually
+      }
     }
   }, [encounterId, orderedCombatants, monsterCache, setMonsterCache, inpcsById]);
 

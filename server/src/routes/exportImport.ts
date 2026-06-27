@@ -36,7 +36,7 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
     if (!campaignId) return;
 
     const campaignRow = db
-      .prepare("SELECT id, name, color, image_url, created_at, updated_at FROM campaigns WHERE id = ?")
+      .prepare("SELECT id, name, color, image_url, shared_notes, created_at, updated_at FROM campaigns WHERE id = ?")
       .get(campaignId) as Record<string, unknown> | undefined;
     if (!campaignRow) return res.status(404).json({ ok: false, message: "Campaign not found" });
 
@@ -179,7 +179,7 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
 
   app.get("/api/user/export", requireAdmin, (_req, res) => {
     const campaigns = (
-      db.prepare("SELECT id, name, color, image_url, created_at, updated_at FROM campaigns").all() as Record<string, unknown>[]
+      db.prepare("SELECT id, name, color, image_url, shared_notes, created_at, updated_at FROM campaigns").all() as Record<string, unknown>[]
     ).map(rowToCampaign);
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Content-Disposition", "attachment; filename=userData.json");

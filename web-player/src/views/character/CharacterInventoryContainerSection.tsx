@@ -1,5 +1,5 @@
 import { C } from "@/lib/theme";
-import { togglePillStyle } from "@beholden/shared/ui";
+import { IconWeight } from "@/icons";
 import { DraggableList } from "@/ui/DraggableList";
 import { subLabelStyle, stepperBtn } from "@/views/character/CharacterInventoryPanelHelpers";
 import { ItemRow } from "@/views/character/CharacterInventoryPanelRows";
@@ -74,7 +74,7 @@ export function InventoryContainerSection({
       <div
         onClick={(event) => {
           const target = event.target;
-          if (target instanceof HTMLElement && target.closest("button, input, select, textarea, label")) return;
+          if (target instanceof Element && target.closest("button, input, select, textarea, label, svg, path")) return;
           onToggleCollapsed();
         }}
         style={{ ...subLabelStyle, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, cursor: "pointer" }}
@@ -123,34 +123,44 @@ export function InventoryContainerSection({
               padding: "0 0 2px",
             }}
           />
-          {!isDefault && (
-            <button
-              type="button"
-              onClick={() => { void onToggleIgnoreWeight(); }}
-              style={togglePillStyle(Boolean(container.ignoreWeight), accentColor, C.panelBorder, C.muted)}
-            >
-              Ignore Weight
-            </button>
-          )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <button
-            type="button"
-            onClick={() => { void onAdd(); }}
-            title="Add container"
-            style={{ ...stepperBtn, width: 24, height: 24, fontSize: "var(--fs-body)" }}
-          >
-            +
-          </button>
-          {!isDefault && onRemove && (
+          {isDefault ? (
             <button
               type="button"
-              onClick={() => { void onRemove(); }}
-              title="Remove container"
+              onClick={() => { void onAdd(); }}
+              title="Add container"
               style={{ ...stepperBtn, width: 24, height: 24, fontSize: "var(--fs-body)" }}
             >
-              −
+              +
             </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => { void onToggleIgnoreWeight(); }}
+                title={container.ignoreWeight ? "Weight ignored" : "Ignore weight"}
+                style={{
+                  ...stepperBtn,
+                  width: 24,
+                  height: 24,
+                  color: container.ignoreWeight ? "rgba(255,255,255,0.2)" : C.muted,
+                  transition: "color 150ms ease",
+                }}
+              >
+                <IconWeight size={13} />
+              </button>
+              {onRemove && (
+                <button
+                  type="button"
+                  onClick={() => { void onRemove(); }}
+                  title="Remove container"
+                  style={{ ...stepperBtn, width: 24, height: 24, fontSize: "var(--fs-body)", color: "rgba(248,113,113,0.7)" }}
+                >
+                  ×
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

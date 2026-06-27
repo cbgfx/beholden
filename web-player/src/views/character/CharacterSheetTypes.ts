@@ -140,5 +140,9 @@ export interface CharacterData {
   customTools?: string[];
   customLanguages?: string[];
   deathSaves?: SharedDeathSaves;
+  extraFeatIds?: string[];
+  extraFeatAbilityChoices?: Record<string, string[]>;
+  exhaustion?: number;
+  concentrationSpell?: string | null;
 }
 

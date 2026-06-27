@@ -16,6 +16,7 @@ import {
   buildDisplayPlayerFeatures,
   buildPreparedSpellProgressionGrants,
 } from "@/domain/character/characterFeatures";
+import { applyExtraFeatAbilityScores } from "@/domain/character/extraFeatAbilityScores";
 import {
   buildGrantedSpellDataFromEffects,
   collectDefensesFromEffects,
@@ -120,7 +121,12 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     wis: args.char.wisScore,
     cha: args.char.chaScore,
   };
-  const itemAdjustedScores = applyItemAbilityScoreOverrides(baseScores, inventory);
+  const extraFeatAbilityResult = applyExtraFeatAbilityScores(
+    baseScores,
+    args.extraFeatDetails,
+    currentCharacterData.extraFeatAbilityChoices,
+  );
+  const itemAdjustedScores = applyItemAbilityScoreOverrides(extraFeatAbilityResult.scores, inventory);
   const scores = (() => {
     const next = { ...itemAdjustedScores };
     const abilityScores = overrides.abilityScores;
@@ -132,7 +138,12 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     }
     return next;
   })();
-  const scoreExplanations = buildAbilityScoreExplanations(baseScores, scores, inventory);
+  const scoreExplanations = buildAbilityScoreExplanations(
+    baseScores,
+    scores,
+    inventory,
+    extraFeatAbilityResult.applications,
+  );
   const featureArgs = {
     charData: currentCharacterData,
     characterLevel: args.char.level,
@@ -144,6 +155,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     classFeatDetails: args.classFeatDetails.map((entry) => entry.feat),
     levelUpFeatDetails: args.levelUpFeatDetails,
     invocationDetails: args.invocationDetails,
+    extraFeatDetails: args.extraFeatDetails,
   };
   const appliedFeatures = buildAppliedCharacterFeatures(featureArgs);
   const classFeaturesList = buildDisplayPlayerFeatures(featureArgs);
@@ -314,8 +326,6 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     raging: rageActive,
   });
   const tempHp = overrides.tempHp ?? 0;
-  const hpPct = effectiveHpMax > 0 ? Math.max(0, Math.min(1, args.char.hpCurrent / effectiveHpMax)) : 0;
-  const tempPct = effectiveHpMax > 0 ? Math.min(1 - hpPct, tempHp / effectiveHpMax) : 0;
   const { passivePerc, passiveInv } = buildPassiveScores({
     parsedFeatureEffects: parsedAllEffects,
     level: args.char.level,
@@ -432,8 +442,6 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     effectiveSpeed,
     movementModes,
     tempHp,
-    hpPct,
-    tempPct,
     passivePerc,
     passiveInv,
     initiativeBonus,

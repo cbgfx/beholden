@@ -116,7 +116,6 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
 
   return (
     <CollectionRow
-      leading={equipControls}
       main={(
         <button type="button" onClick={() => onToggleExpanded(item.id)} style={{ width: "100%", minWidth: 0, background: expanded ? "rgba(255,255,255,0.05)" : "transparent", border: expanded ? `1px solid ${accentColor}33` : "1px solid transparent", borderRadius: 8, padding: "3px 8px", textAlign: "left", cursor: "pointer" }}>
           <div style={{ fontSize: "var(--fs-medium)", color: C.text, fontWeight: equipped ? 600 : 400, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
@@ -135,6 +134,7 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
       )}
       trailing={(
         <>
+          {equipControls}
           <QuantityStepper
             value={item.quantity > 1 ? item.quantity : null}
             valuePrefix="x"

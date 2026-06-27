@@ -3,6 +3,7 @@ import * as React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import { HudConditionsStrip } from "@/views/CombatView/components/HudConditionsStrip";
 import { clamp01, getHudHp, getHudHpFill, getHudNames } from "@/views/CombatView/utils/hud";
+import { conditionIconByKey } from "@/icons/conditions";
 import type { EncounterActor, CampaignCharacter } from "@/domain/types/domain";
 
 import "@/views/CombatView/combatView.css";
@@ -39,6 +40,9 @@ export function HudFighterCard(props: Props) {
     props.targetId != null &&
     props.activeId != null &&
     String(props.targetId) === String(props.activeId);
+
+  const player = c?.baseType === "player" ? props.playersById[c.baseId] : null;
+  const concentrationSpell = player?.concentrationSpell ?? null;
 
   const combatantAccent = !c
     ? theme.colors.muted
@@ -190,6 +194,21 @@ export function HudFighterCard(props: Props) {
         maxShown={6}
         iconColor={theme.colors.text}
       />
+
+      {concentrationSpell ? (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 5, marginTop: 4,
+          padding: "2px 8px", borderRadius: 6,
+          background: "rgba(124,58,237,0.15)", border: "1px solid rgba(124,58,237,0.35)",
+          fontSize: "var(--fs-tiny)", color: theme.colors.accentHighlight,
+          fontWeight: 700, maxWidth: "100%",
+        }}>
+          {React.createElement(conditionIconByKey.concentration, { size: 11, style: { flexShrink: 0 } })}
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {concentrationSpell}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }

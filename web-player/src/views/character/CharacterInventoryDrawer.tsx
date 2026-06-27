@@ -16,7 +16,7 @@ import {
   parseChargesMax,
   parseItemSpells,
 } from "@/views/character/CharacterInventory";
-import { inventoryCheckboxLabel, inventoryPickerDetailStyle, inventoryRarityColor } from "@/views/character/CharacterViewParts";
+import { inventoryPickerDetailStyle, inventoryRarityColor } from "@/views/character/CharacterViewParts";
 import { DEFAULT_CONTAINER_ID, inputStyle } from "@/views/character/CharacterInventoryPanelHelpers";
 
 export function InventoryItemDrawer(props: {
@@ -137,6 +137,7 @@ export function InventoryItemDrawer(props: {
               canEnableAttuned={canEnableAttuned}
               chargesMax={props.item.chargesMax ?? null}
               onSaveCharges={async (v: number | null) => { await props.onSave({ chargesMax: v, charges: v ?? null }); }}
+              accentColor={props.accentColor}
             />
           ) : props.busy ? (
             <div style={{ color: C.muted, padding: "8px 2px" }}>Loading...</div>
@@ -178,9 +179,10 @@ type EditFieldsProps = {
   canEnableAttuned: boolean;
   chargesMax: number | null;
   onSaveCharges: (value: number | null) => Promise<void>;
+  accentColor: string;
 };
 
-function EditFields({ draft, setDraft, isWeaponLike, isArmorLike, isMeleeWeaponLike, canEnableAttuned, chargesMax, onSaveCharges }: EditFieldsProps) {
+function EditFields({ draft, setDraft, isWeaponLike, isArmorLike, isMeleeWeaponLike, canEnableAttuned, chargesMax, onSaveCharges, accentColor }: EditFieldsProps) {
   return (
     <>
       <Field label="Title"><input value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} placeholder="Item name" style={fullInput} /></Field>
@@ -197,17 +199,38 @@ function EditFields({ draft, setDraft, isWeaponLike, isArmorLike, isMeleeWeaponL
         {isWeaponLike ? <Field label="Damage Type"><input value={draft.dmgType} onChange={(e) => setDraft((d) => ({ ...d, dmgType: e.target.value }))} style={fullInput} /></Field> : null}
         {isWeaponLike ? <Field label="Properties"><input value={draft.properties.join(", ")} onChange={(e) => setDraft((d) => ({ ...d, properties: e.target.value.split(",").map((p: string) => p.trim()).filter(Boolean) }))} style={fullInput} /></Field> : null}
         {isArmorLike ? <Field label="Armor Class"><input type="number" value={draft.ac ?? ""} onChange={(e) => setDraft((d) => ({ ...d, ac: e.target.value === "" ? null : Number(e.target.value) }))} style={fullInput} /></Field> : null}
-        <Field label="Max Charges"><input type="number" min={0} value={chargesMax ?? ""} onChange={async (e) => { const v = e.target.value === "" ? null : Number(e.target.value); await onSaveCharges(v); }} placeholder="0" style={fullInput} /></Field>
+        {(chargesMax ?? 0) > 0 ? <Field label="Max Charges"><input type="number" min={0} value={chargesMax ?? ""} onChange={async (e) => { const v = e.target.value === "" ? null : Number(e.target.value); await onSaveCharges(v); }} placeholder="0" style={fullInput} /></Field> : null}
       </div>
-      <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
-        <label style={inventoryCheckboxLabel}><input type="checkbox" checked={draft.magic} onChange={(e) => setDraft((d) => ({ ...d, magic: e.target.checked }))} />Magic</label>
-        {draft.attunement ? <label style={inventoryCheckboxLabel}><input type="checkbox" checked={draft.attuned} disabled={!draft.attuned && !canEnableAttuned} onChange={(e) => setDraft((d) => ({ ...d, attuned: e.target.checked }))} />Attuned</label> : null}
-        {isMeleeWeaponLike ? <label style={inventoryCheckboxLabel}><input type="checkbox" checked={draft.silvered} onChange={(e) => setDraft((d) => ({ ...d, silvered: e.target.checked }))} />Silvered</label> : null}
-        {isArmorLike ? <label style={inventoryCheckboxLabel}><input type="checkbox" checked={draft.stealthDisadvantage} onChange={(e) => setDraft((d) => ({ ...d, stealthDisadvantage: e.target.checked }))} />Stealth D</label> : null}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <TogglePill active={draft.magic} label="Magic" color={C.colorMagic} onClick={() => setDraft((d) => ({ ...d, magic: !d.magic }))} />
+        {draft.attunement ? <TogglePill active={draft.attuned} label="Attuned" color={accentColor} disabled={!draft.attuned && !canEnableAttuned} onClick={() => setDraft((d) => ({ ...d, attuned: !d.attuned }))} /> : null}
+        {isMeleeWeaponLike ? <TogglePill active={draft.silvered} label="Silvered" color="#cbd5e1" onClick={() => setDraft((d) => ({ ...d, silvered: !d.silvered }))} /> : null}
+        {isArmorLike ? <TogglePill active={draft.stealthDisadvantage} label="Stealth Disadvantage" color={C.red} onClick={() => setDraft((d) => ({ ...d, stealthDisadvantage: !d.stealthDisadvantage }))} /> : null}
       </div>
       {draft.attunement && !canEnableAttuned ? <div style={{ fontSize: "var(--fs-small)", color: C.red }}>You can have no more than 3 attuned items at a time.</div> : null}
       <Field label="Text"><textarea value={draft.description} onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))} placeholder="Description" rows={12} style={{ ...fullInput, resize: "vertical", minHeight: 240, fontFamily: "inherit", lineHeight: 1.5 }} /></Field>
     </>
+  );
+}
+
+function TogglePill({ active, label, color, disabled, onClick }: { active: boolean; label: string; color: string; disabled?: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      style={{
+        padding: "6px 14px", borderRadius: 20, cursor: disabled ? "not-allowed" : "pointer",
+        border: `1px solid ${active ? color + "88" : "rgba(255,255,255,0.12)"}`,
+        background: active ? `${color}22` : "rgba(255,255,255,0.04)",
+        color: active ? color : C.muted,
+        fontWeight: 700, fontSize: "var(--fs-small)",
+        opacity: disabled ? 0.45 : 1,
+        transition: "background 120ms ease, border-color 120ms ease, color 120ms ease",
+      }}
+    >
+      {label}
+    </button>
   );
 }
 

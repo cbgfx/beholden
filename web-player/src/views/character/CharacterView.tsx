@@ -2,12 +2,25 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "@/services/api";
 import { C } from "@/lib/theme";
+import { CharacterInitiativePrompt } from "@/views/character/CharacterInitiativePrompt";
+import { IconBastions, IconPlayer } from "@/icons";
+import { CharacterHudXpPopup } from "@/views/character/CharacterHudXpPopup";
 import {
   Wrap,
   NoteEditDrawer,
-  SheetDensityProvider,
-  type SheetDensity,
 } from "@/views/character/CharacterViewParts";
+
+function stripEditionTag(s: string): string {
+  return s.replace(/\s*\[(?:5\.5e|2024|5e|5\.0)\]\s*$/i, "").trim();
+}
+
+function IconCharacterInfo({ size = 16 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 512 512" width={size} height={size} fill="currentColor" aria-hidden="true">
+      <path d="M453.295 17.117c-.546 7.232 1.619 15.478 5.957 22.612 4.338 7.133 10.666 12.847 17.338 15.69 9.655-11.206-5.483-37.974-20.092-38.624-1.09-.07-2.254.137-3.203.322zm-111.547 8.38L329.492 49.61l61.018 100.326 25.627-2.127 13.676-21.777-9.063-14.9-27.34 16.628-37.931-62.371L350.8 57.7l27.34-16.628-9.346-15.368zm93.977 1.62-60.194 36.61 23.905 39.303 60.193-36.61c-6.345-4.604-11.676-10.635-15.754-17.34-4.078-6.704-6.981-14.21-8.15-21.963zm-125.01 19.711-161.647 2.62c10.403 24.036 7.492 47.197-4.388 65.648-18.658-14.237-44.341-15.374-63.407-17.717-14.06 123.827-6.22 225.967-6.271 342.149-.004 9.469-1.157 23.12 4.826 32.947 1.887 3.1 4.37 5.928 8.129 8.342 17.708-6.206 41.405-12.44 54.87-22.274-6.951-.825-14.755.952-21.138.955-8.458-.04-19.144-6.11-24.748-19.496-2.919-6.973-6.636-18.193-.181-29.072 2.838-4.785 9.383-10.302 14.26-10.328 94.651.504 191.392-.32 279.568.154-5.523-76.851-10.013-154.096-5.53-232.308l-4.146.343-14.842-24.404-66.867 40.668 6.781 10.598-15.162 9.699-59.097-92.371 15.16-9.7L255 115.966l68.46-41.637-11.95-19.65-2.606-4.285zm-180.17 4.383c-15.366 8.213-29.102 17.702-40.99 28.707 16.167 1.495 33.74 3.063 48.64 9.95 3.139-13.836-3.247-26.896-7.65-38.657zm202.268 38.494-66.645 40.534 7.275 11.962 33.325-20.265 9.351 15.377-33.322 20.267 7.277 11.963 66.643-40.533zM201.41 136.278l.445 17.992c-30.522.253-58.62 2.029-90.013 2.11v-18a35163.72 35163.72 0 0 0 89.568-2.103zm144.983 78.98.24 17.996-234.346 3.143-.242-17.996zm.078 40.684.408 17.992-123.654 2.81-.41-17.994zm-235.178 3.097h90.602v17.998h-90.602zm234.795 33.237.406 17.992-62.158 1.406-.406-17.994zm-83.686 1.455.338 17.996-150.3 2.808-.337-17.994zm85.946 52.806.402 17.995-125.647 2.808-.402-17.992zm-196.323 70.79c10.05 9.261 17.925 22.065 15.078 36.718-2.074 10.682-10.422 17.606-19.814 23.106s-20.775 9.866-32.512 13.914a1395.68 1395.68 0 0 1-12.238 4.154l301.387-7.672c7.772-.45 14.658-5.66 19.734-13.406 5.082-7.754 7.477-17.817 6.895-23.236-.583-5.419-4.857-14.677-10.973-21.48-6.116-6.805-13.547-10.824-19.025-10.618l-.198.008zm-39.785 2.787c-1.07 1.802-.466 8.714 1.303 12.939 3.72 8.887 6.028 8.437 8.232 8.447 8.877 2.102 17.347.269 25.85-1.025-2.053-4.123-5.283-8.704-10.283-12.113-4.12-2.809-20.675-15.634-25.102-8.248z" />
+    </svg>
+  );
+}
 import {
   CharacterActionColumn,
   CharacterInventoryColumn,
@@ -17,6 +30,7 @@ import {
 import { buildCharacterViewDerivedState } from "@/views/character/CharacterViewDerivedState";
 import { useCompendiumMonster } from "@/views/character/CharacterCompendiumMonsterHooks";
 import { CharacterInfoDrawer, CharacterPolymorphDrawer } from "@/views/character/CharacterViewDrawers";
+import { CharacterFeatPickerModal } from "@/views/character/CharacterFeatPickerModal";
 import {
   abilityMod,
   formatModifier,
@@ -37,6 +51,8 @@ import { buildCharacterHpActions } from "@/views/character/CharacterViewHpAction
 import { useCharacterSyncEffects } from "@/views/character/useCharacterSyncEffects";
 import { useCharacterPolymorphControls } from "@/views/character/useCharacterPolymorphControls";
 import type { CharacterCombatPanelsProps } from "@/views/character/CharacterCombatPanels";
+import { getExhaustionD20Penalty } from "@/views/character/CharacterExhaustion";
+import { useCharacterLiveUpdates } from "@/views/character/useCharacterLiveUpdates";
 
 type SheetView = "play" | "gear" | "reference" | "all";
 
@@ -74,6 +90,7 @@ export function CharacterView() {
   const [colorDraft, setColorDraft] = useState<string>(C.accentHl);
   const [overridesSaving, setOverridesSaving] = useState(false);
   const [concentrationAlert, setConcentrationAlert] = useState<{ dc: number } | null>(null);
+  const [featPickerOpen, setFeatPickerOpen] = useState(false);
   const [polymorphDrawerOpen, setPolymorphDrawerOpen] = useState(false);
   const [polymorphApplyingId, setPolymorphApplyingId] = useState<string | null>(null);
   const [portraitUploading, setPortraitUploading] = useState(false);
@@ -85,11 +102,6 @@ export function CharacterView() {
     } catch { /* ignore */ }
     return "play";
   });
-  const [sheetDensity, setSheetDensity] = useState<SheetDensity>(() => {
-    try {
-      return localStorage.getItem("character-sheet:density") === "compact" ? "compact" : "comfortable";
-    } catch { return "comfortable"; }
-  });
   const {
     char,
     setChar,
@@ -100,6 +112,7 @@ export function CharacterView() {
     raceFeatDetail,
     classFeatDetails,
     levelUpFeatDetails,
+    extraFeatDetails,
     invocationDetails,
     loading,
     error,
@@ -107,6 +120,14 @@ export function CharacterView() {
     characterData,
     primaryClassEntry,
   } = useCharacterData(id);
+
+  const {
+    activeBastion,
+    initiativePrompt,
+    setInitiativePrompt,
+    refreshInitiativePrompt,
+  } = useCharacterLiveUpdates(id, fetchChar);
+
   const {
     polymorphQuery,
     setPolymorphQuery,
@@ -174,6 +195,7 @@ export function CharacterView() {
         raceFeatDetail,
         classFeatDetails,
         levelUpFeatDetails,
+        extraFeatDetails,
         invocationDetails,
         subclass: primaryClassEntry?.subclass ?? null,
         polymorphCondition,
@@ -269,8 +291,6 @@ export function CharacterView() {
     effectiveSpeed,
     movementModes,
     tempHp,
-    hpPct,
-    tempPct,
     passivePerc,
     passiveInv,
     initiativeBonus,
@@ -291,6 +311,13 @@ export function CharacterView() {
     identityFields,
   } = derivedState;
   const currentCharacterData = derivedState.currentCharacterData;
+  const exhaustionLevel = currentCharacterData.exhaustion ?? 0;
+  const exhaustionD20Penalty = getExhaustionD20Penalty(exhaustionLevel);
+  const identityLabels = [
+    char.className,
+    currentCharacterData.classes?.[0]?.subclass,
+    char.species,
+  ].filter((item): item is string => Boolean(item));
   const forcedPreparedSpellKeys = new Set(
     grantedSpellData.spells
       .filter((spell) => spell.mode === "always_prepared")
@@ -308,7 +335,6 @@ export function CharacterView() {
     changeResourceCurrent,
     handleShortRest,
     handleLongRest,
-    handleFullRest,
     handleToggleInspiration,
     saveDeathSaves,
     revertPolymorph,
@@ -322,7 +348,6 @@ export function CharacterView() {
     currentCharacterData,
     classResourcesWithSpellCasts,
     hitDiceMax,
-    hitDiceCurrent,
     inventory,
     effectiveHpMax,
     overrides,
@@ -340,6 +365,29 @@ export function CharacterView() {
     forcedPreparedSpellKeys,
     normalizeSpellTrackingKey,
   });
+
+  const handleAddFeat = async (feat: { id: string; name: string }, abilityChoices: string[]) => {
+    const current = Array.isArray(currentCharacterData.extraFeatIds) ? currentCharacterData.extraFeatIds : [];
+    if (current.includes(feat.id)) return;
+    const nextChoices = { ...(currentCharacterData.extraFeatAbilityChoices ?? {}) };
+    if (abilityChoices.length > 0) nextChoices[feat.id] = abilityChoices;
+    await saveCharacterData({
+      ...currentCharacterData,
+      extraFeatIds: [...current, feat.id],
+      extraFeatAbilityChoices: nextChoices,
+    });
+  };
+
+  const handleRemoveExtraFeat = async (featId: string) => {
+    const current = Array.isArray(currentCharacterData.extraFeatIds) ? currentCharacterData.extraFeatIds : [];
+    const nextChoices = { ...(currentCharacterData.extraFeatAbilityChoices ?? {}) };
+    delete nextChoices[featId];
+    await saveCharacterData({
+      ...currentCharacterData,
+      extraFeatIds: current.filter((id) => id !== featId),
+      extraFeatAbilityChoices: nextChoices,
+    });
+  };
 
   const { handleApplyHp } = buildCharacterHpActions({
     hpAmount,
@@ -369,7 +417,7 @@ export function CharacterView() {
     movementModes: transformedCombatStats?.movementModes ?? movementModes,
     level: char.level,
     className: transformedCombatStats?.className ?? char.className,
-    initiativeBonus: transformedCombatStats?.initiativeBonus ?? initiativeBonus,
+    initiativeBonus: (transformedCombatStats?.initiativeBonus ?? initiativeBonus) - exhaustionD20Penalty,
     strScore: transformedCombatStats?.strScore ?? scores.str,
     dexScore: transformedCombatStats?.dexScore ?? scores.dex,
     pb: transformedCombatStats?.pb ?? pb,
@@ -384,6 +432,7 @@ export function CharacterView() {
     rageDamageBonus,
     unarmedRageDamageBonus,
     rageActive,
+    exhaustion: exhaustionLevel,
     showActions: !polymorphCondition,
   } satisfies CharacterCombatPanelsProps;
 
@@ -413,70 +462,150 @@ export function CharacterView() {
           </button>
         </div>
       )}
-      {/* Focused sheet navigation; "All" preserves the full four-column view. */}
       <nav
         aria-label="Character sheet sections"
         style={{
           position: "sticky", top: 0, zIndex: 30,
-          display: "flex", alignItems: "center", gap: 4,
-          width: "fit-content", margin: "0 auto 14px", padding: 4,
+          display: "flex", alignItems: "center", gap: 10,
+          marginBottom: 14, padding: "5px 8px",
           border: "1px solid rgba(255,255,255,0.09)", borderRadius: 12,
           background: "rgba(10,18,33,0.92)", backdropFilter: "blur(14px)",
           boxShadow: "0 8px 28px rgba(0,0,0,0.22)",
         }}
       >
-        {SHEET_VIEWS.map((view) => {
-          const selected = sheetView === view.id;
-          return (
+        {/* Left — identity */}
+        <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
+          <div
+            onClick={() => portraitFileRef.current?.click()}
+            style={{
+              width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+              background: `${accentColor}22`, border: `2px solid ${accentColor}55`,
+              overflow: "hidden", cursor: "pointer", position: "relative",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            {char.imageUrl
+              ? <img src={char.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : <IconPlayer size={18} style={{ opacity: 0.35 }} />
+            }
+            {portraitUploading && (
+              <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "var(--fs-tiny)", color: "#fff" }}>…</div>
+            )}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontWeight: 800, fontSize: "var(--fs-body)", color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 220 }}>
+                {char.name}
+              </span>
+              <button
+                onClick={() => setInfoDrawerOpen(true)}
+                title="Character Information"
+                style={{ padding: "5px 9px", borderRadius: 8, cursor: "pointer", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", color: C.muted, display: "flex", alignItems: "center" }}
+              >
+                <IconCharacterInfo size={15} />
+              </button>
+              <button
+                type="button"
+                title="Edit character"
+                onClick={() => navigate(`/characters/${char.id}/edit`)}
+                style={{ appearance: "none", cursor: "pointer", fontFamily: "inherit", padding: "5px 12px", borderRadius: 8, color: C.muted, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", fontSize: "var(--fs-small)", fontWeight: 700 }}
+              >
+                Edit
+              </button>
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "2px 4px", flexWrap: "nowrap", marginTop: 1 }}>
+              {identityLabels.map((item, i, arr) => (
+                  <React.Fragment key={i}>
+                    <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, whiteSpace: "nowrap" }}>{stripEditionTag(item)}</span>
+                    {i < arr.length - 1 && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, opacity: 0.4 }}>·</span>}
+                  </React.Fragment>
+                ))}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ flex: 1 }} />
+
+        {/* Center — view tabs */}
+        <div style={{ display: "flex", alignItems: "center", gap: 3, padding: 3, borderRadius: 9, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          {SHEET_VIEWS.map((view) => {
+            const selected = sheetView === view.id;
+            return (
+              <button
+                key={view.id}
+                type="button"
+                aria-pressed={selected}
+                title={view.description}
+                onClick={() => {
+                  setSheetView(view.id);
+                  try { localStorage.setItem("character-sheet:view", view.id); } catch { /* ignore */ }
+                }}
+                style={{
+                  appearance: "none", cursor: "pointer", boxSizing: "border-box",
+                  border: 0, fontFamily: "inherit",
+                  padding: "5px 13px", borderRadius: 7,
+                  color: selected ? "#eaf7ff" : C.muted,
+                  background: selected ? `${accentColor}24` : "transparent",
+                  boxShadow: selected ? `inset 0 0 0 1px ${accentColor}55` : "none",
+                  fontSize: "var(--fs-small)", fontWeight: selected ? 800 : 650,
+                  transition: "background 120ms ease, color 120ms ease, box-shadow 120ms ease",
+                }}
+              >
+                {view.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ flex: 1 }} />
+
+        {/* Right — bastion · level · xp */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          {activeBastion && (
             <button
-              key={view.id}
               type="button"
-              aria-pressed={selected}
-              title={view.description}
-              onClick={() => {
-                setSheetView(view.id);
-                try { localStorage.setItem("character-sheet:view", view.id); } catch { /* ignore */ }
-              }}
+              title={`Bastion: ${activeBastion.name}`}
+              onClick={() => navigate(`/campaigns/${activeBastion.campaignId}/bastions/${activeBastion.id}`)}
               style={{
                 appearance: "none", cursor: "pointer", boxSizing: "border-box",
-                border: 0, fontFamily: "inherit",
-                padding: "7px 14px", borderRadius: 8,
-                color: selected ? "#eaf7ff" : C.muted,
-                background: selected ? `${accentColor}24` : "transparent",
-                boxShadow: selected ? `inset 0 0 0 1px ${accentColor}55` : "none",
-                fontSize: "var(--fs-small)", fontWeight: selected ? 800 : 650,
-                transition: "background 120ms ease, color 120ms ease, box-shadow 120ms ease",
+                padding: "4px 8px", borderRadius: 8,
+                border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.05)",
+                color: C.muted, display: "inline-flex", alignItems: "center", gap: 5,
+                fontSize: "var(--fs-tiny)", fontWeight: 700,
               }}
             >
-              {view.label}
+              <IconBastions size={14} />
+              {activeBastion.name}
             </button>
-          );
-        })}
-        <div style={{ width: 1, height: 22, margin: "0 3px", background: "rgba(255,255,255,0.10)" }} />
-        <button
-          type="button"
-          aria-pressed={sheetDensity === "compact"}
-          title="Fit more information on screen"
-          onClick={() => {
-            const next = sheetDensity === "compact" ? "comfortable" : "compact";
-            setSheetDensity(next);
-            try { localStorage.setItem("character-sheet:density", next); } catch { /* ignore */ }
-          }}
-          style={{
-            appearance: "none", cursor: "pointer", boxSizing: "border-box",
-            border: 0, fontFamily: "inherit",
-            padding: "7px 12px", borderRadius: 8,
-            color: sheetDensity === "compact" ? "#eaf7ff" : C.muted,
-            background: sheetDensity === "compact" ? `${accentColor}24` : "transparent",
-            boxShadow: sheetDensity === "compact" ? `inset 0 0 0 1px ${accentColor}55` : "none",
-            fontSize: "var(--fs-small)", fontWeight: 700,
-          }}
-        >
-          Compact
-        </button>
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: "var(--fs-title)", fontWeight: 800, color: accentColor, whiteSpace: "nowrap" }}>
+              Lv {char.level}
+            </span>
+            {xpEarned >= xpNeeded && xpNeeded > 0 && (
+              <button
+                onClick={() => navigate(`/characters/${char.id}/levelup`)}
+                style={{
+                  padding: "2px 7px", borderRadius: 6, cursor: "pointer", flexShrink: 0,
+                  background: `${accentColor}22`, border: `1px solid ${accentColor}66`,
+                  color: accentColor, fontWeight: 700, fontSize: "var(--fs-tiny)",
+                }}
+              >↑</button>
+            )}
+          </div>
+          <CharacterHudXpPopup
+            xpEarned={xpEarned}
+            xpNeeded={xpNeeded}
+            xpInput={xpInput}
+            xpPopupOpen={xpPopupOpen}
+            setXpInput={setXpInput}
+            setXpPopupOpen={setXpPopupOpen}
+            saveXp={saveXp}
+            accentColor={accentColor}
+          />
+        </div>
       </nav>
 
-      <SheetDensityProvider density={sheetDensity}>
       <div style={{
         display: "grid",
         gridTemplateColumns:
@@ -485,7 +614,7 @@ export function CharacterView() {
             : sheetView === "play"
               ? "minmax(390px, 0.95fr) minmax(460px, 1.15fr) minmax(390px, 0.95fr)"
               : "minmax(390px, 0.9fr) minmax(460px, 1.1fr)",
-        gap: sheetDensity === "compact" ? 10 : 16,
+        gap: 16,
         alignItems: "flex-start",
       }}>
         <CharacterPrimaryColumn
@@ -493,22 +622,8 @@ export function CharacterView() {
           hudProps={{
             char,
             accentColor,
-            xpEarned,
-            xpNeeded,
-            xpInput,
-            xpPopupOpen,
-            setXpInput,
-            setXpPopupOpen,
-            saveXp,
-            onOpenInfo: () => setInfoDrawerOpen(true),
-            onLevelUp: () => navigate(`/characters/${char.id}/levelup`),
-            onEdit: () => navigate(`/characters/${char.id}/edit`),
-            onPortraitClick: () => portraitFileRef.current?.click(),
-            portraitUploading,
             effectiveHpMax,
             tempHp,
-            hpPct,
-            tempPct,
             hpError,
             hpSaving,
             hpAmount,
@@ -528,6 +643,12 @@ export function CharacterView() {
             dsSaving,
             saveDeathSaves,
             hpMaxBonus: overrides.hpMaxBonus ?? 0,
+            concentrationSpell: currentCharacterData.concentrationSpell ?? null,
+            onConcentrationSpellChange: (spell: string | null) => { void saveCharacterData({ ...currentCharacterData, concentrationSpell: spell }); },
+            concentrationSpellNames: Array.from(new Set([
+              ...grantedSpellData.spells.map((s) => s.spellName),
+              ...(prof?.spells ?? []).map((s) => s.name),
+            ])).sort((a, b) => a.localeCompare(b)),
           }}
           abilitiesProps={{
             scores,
@@ -546,6 +667,7 @@ export function CharacterView() {
             stealthDisadvantage,
             nonProficientArmorPenalty,
             hasJackOfAllTrades,
+            d20TestPenalty: exhaustionD20Penalty,
             mod: abilityMod,
             fmtMod: formatModifier,
           }}
@@ -634,6 +756,7 @@ export function CharacterView() {
           hitDieSize={hitDieSize}
           hitDieConMod={conMod}
           featureHpMaxBonus={featureHpMaxBonus}
+          exhaustion={exhaustionLevel}
           classResources={classResourcesWithSpellCasts}
           playerNotesList={playerNotesList}
           allSharedNotes={allSharedNotes}
@@ -643,7 +766,7 @@ export function CharacterView() {
           onSaveHitDiceCurrent={(value) => saveHitDiceCurrent(value)}
           onShortRest={() => handleShortRest()}
           onLongRest={() => handleLongRest()}
-          onFullRest={() => handleFullRest()}
+          onExhaustionChange={(value) => { void saveCharacterData({ ...currentCharacterData, exhaustion: value }); }}
           onChangeResourceCurrent={(key, delta) => changeResourceCurrent(key, delta)}
           onOpenPlayerNoteCreate={() => setNoteDrawer({ scope: "player", note: null })}
           onOpenSharedNoteCreate={() => setNoteDrawer({ scope: "shared", note: null })}
@@ -664,10 +787,32 @@ export function CharacterView() {
           polymorphName={polymorphName || null}
           onOpenTransformSelf={() => setPolymorphDrawerOpen(true)}
           onRevertTransformSelf={polymorphCondition ? () => { void toggleCondition("polymorphed"); } : undefined}
+          extraFeatIds={currentCharacterData.extraFeatIds ?? []}
+          onOpenFeatPicker={() => setFeatPickerOpen(true)}
+          onRemoveExtraFeat={handleRemoveExtraFeat}
         />
         )}
       </div>
-      </SheetDensityProvider>
+
+      <CharacterFeatPickerModal
+        isOpen={featPickerOpen}
+        accentColor={accentColor}
+        currentFeatIds={currentCharacterData.extraFeatIds ?? []}
+        existingFeatureNames={classFeaturesList.map((f) => f.name)}
+        onClose={() => setFeatPickerOpen(false)}
+        onAdd={(feat, abilityChoices) => { void handleAddFeat(feat, abilityChoices); }}
+      />
+
+      {initiativePrompt && (
+        <CharacterInitiativePrompt
+          encounterId={initiativePrompt.encounterId}
+          combatantId={initiativePrompt.combatantId}
+          initiativeBonus={(transformedCombatStats?.initiativeBonus ?? initiativeBonus) - exhaustionD20Penalty}
+          accentColor={accentColor}
+          onClose={() => setInitiativePrompt(null)}
+          onSubmitted={() => { void refreshInitiativePrompt(); }}
+        />
+      )}
 
       <CharacterPolymorphDrawer
         open={polymorphDrawerOpen}

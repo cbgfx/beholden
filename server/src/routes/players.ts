@@ -128,15 +128,21 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     });
   };
 
+  function addConcentrationSpell(row: Record<string, unknown>, dto: ReturnType<typeof toCampaignCharacterDto>) {
+    const cs = row.concentration_spell;
+    if (typeof cs === "string" && cs) dto.live.concentrationSpell = cs;
+  }
+
   app.get("/api/campaigns/:campaignId/players", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
     const includeSharedNotes = queryFlag(req.query.includeSharedNotes) || String(req.query.includeSharedNotes ?? "").trim() === "";
-      const rows = db
-      .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE campaign_id = ?`)
+    const rows = db
+      .prepare(`SELECT p.${CAMPAIGN_CHARACTER_COLS.split(", ").join(", p.")}, json_extract(uc.character_data_json, '$.concentrationSpell') AS concentration_spell FROM players p LEFT JOIN user_characters uc ON uc.id = p.character_id WHERE p.campaign_id = ?`)
       .all(campaignId) as Record<string, unknown>[];
     res.json(rows.map((row) => {
       const dto = toCampaignCharacterDto(rowToCampaignCharacter(row));
+      addConcentrationSpell(row, dto);
       if (!includeSharedNotes) delete dto.sharedNotes;
       return withAbsoluteImageUrl(req, dto);
     }));
@@ -148,10 +154,11 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     if (!campaignId || !playerId) return;
     const includeSharedNotes = queryFlag(req.query.includeSharedNotes) || String(req.query.includeSharedNotes ?? "").trim() === "";
     const row = db
-      .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE campaign_id = ? AND id = ?`)
+      .prepare(`SELECT p.${CAMPAIGN_CHARACTER_COLS.split(", ").join(", p.")}, json_extract(uc.character_data_json, '$.concentrationSpell') AS concentration_spell FROM players p LEFT JOIN user_characters uc ON uc.id = p.character_id WHERE p.campaign_id = ? AND p.id = ?`)
       .get(campaignId, playerId) as Record<string, unknown> | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Not found" });
     const dto = toCampaignCharacterDto(rowToCampaignCharacter(row));
+    addConcentrationSpell(row, dto);
     if (!includeSharedNotes) delete dto.sharedNotes;
     res.json(withAbsoluteImageUrl(req, dto));
   });

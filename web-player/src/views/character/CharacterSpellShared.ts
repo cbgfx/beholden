@@ -18,6 +18,18 @@ export interface FetchedSpellDetail {
   save?: string | null;
 }
 
+export const SPELL_ROW_GRID_WITH_MARKER = "24px minmax(0, 1fr) 108px 68px 92px";
+export const SPELL_ROW_GRID = "minmax(0, 1fr) 108px 68px 92px";
+
+export const spellColumnHeaderStyle: React.CSSProperties = {
+  minWidth: 0,
+  color: C.muted,
+  fontSize: "var(--fs-tiny)",
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.07em",
+};
+
 export function parseSpellDamage(text: string): { dice: string; type: string } | null {
   const match = text.match(/(\d+d\d+(?:\s*\+\s*\d+)?)\s+(fire|cold|lightning|acid|poison|necrotic|radiant|thunder|psychic|force|bludgeoning|piercing|slashing)\s+damage/i);
   if (!match) return null;
@@ -109,7 +121,7 @@ export function parseSpellSave(text: string): string | null {
 export function abbrevTime(time: string): string {
   const base = time.split(/,\s*which\b/i)[0].trim();
   return base
-    .replace(/1 bonus action/i, "1BA")
+    .replace(/(?:1\s+)?bonus action/i, "Bonus")
     .replace(/1 action/i, "1A")
     .replace(/1 reaction/i, "1R")
     .replace(/1 minute/i, "1 min");

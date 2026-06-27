@@ -41,16 +41,19 @@ export function CharacterHudXpPopup(props: {
           border: "none",
           cursor: "pointer",
           padding: "2px 4px",
-          fontSize: "var(--fs-small)",
-          fontWeight: 700,
-          color: "#fff",
           borderRadius: 6,
           display: "flex",
-          alignItems: "center",
-          gap: 3,
+          flexDirection: "column",
+          alignItems: "flex-end",
+          gap: 4,
         }}
       >
-        {xpEarned.toLocaleString()} / {xpNeeded.toLocaleString()} xp
+        <span style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: "#fff" }}>
+          {xpEarned.toLocaleString()} / {xpNeeded.toLocaleString()} xp
+        </span>
+        <div style={{ width: "100%", minWidth: 80, height: 3, borderRadius: 2, background: "rgba(255,255,255,0.10)", overflow: "hidden" }}>
+          <div style={{ height: "100%", borderRadius: 2, background: accentColor, width: `${Math.min(100, Math.max(0, (xpEarned / xpNeeded) * 100))}%`, transition: "width 0.5s ease" }} />
+        </div>
       </button>
       {xpPopupOpen && (
         <div

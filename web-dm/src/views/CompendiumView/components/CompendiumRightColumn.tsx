@@ -3,6 +3,7 @@ import { Panel } from "@/ui/Panel";
 import { SpellDetailPanel } from "@/views/CompendiumView/panels/SpellDetailPanel";
 import { MonsterDetailPanel } from "@/views/CompendiumView/panels/MonsterDetailPanel";
 import { ItemDetailPanel } from "@/views/CompendiumView/panels/ItemDetailPanel";
+import { FeatDetailPanel } from "@/views/CompendiumView/panels/FeatDetailPanel";
 import type { CompendiumSection } from "@/views/CompendiumView/CompendiumView";
 
 export function CompendiumRightColumn(props: {
@@ -10,6 +11,7 @@ export function CompendiumRightColumn(props: {
   selectedSpellId: string | null;
   selectedMonsterId: string | null;
   selectedItemId: string | null;
+  selectedFeatId: string | null;
 }) {
   // --- Monsters ---
   if (props.activeSection === "monsters") {
@@ -77,6 +79,30 @@ export function CompendiumRightColumn(props: {
         >
           <div style={{ color: theme.colors.muted, lineHeight: 1.5 }}>
             Select an item from the list to view its details here.
+          </div>
+        </Panel>
+      </div>
+    );
+  }
+
+  // --- Feats ---
+  if (props.activeSection === "feats") {
+    if (props.selectedFeatId) {
+      return (
+        <div style={{ minWidth: 0, minHeight: 0, height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <FeatDetailPanel featId={props.selectedFeatId} />
+        </div>
+      );
+    }
+    return (
+      <div style={{ minWidth: 0, minHeight: 0, height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <Panel
+          title="Feat Detail"
+          style={{ flex: 1, display: "flex", flexDirection: "column" }}
+          bodyStyle={{ flex: 1 }}
+        >
+          <div style={{ color: theme.colors.muted, lineHeight: 1.5 }}>
+            Select a feat from the list to view its details here.
           </div>
         </Panel>
       </div>

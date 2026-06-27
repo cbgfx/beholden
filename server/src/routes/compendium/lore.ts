@@ -200,17 +200,60 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     applySharedApiCacheHeaders(res);
     const fields = parseRequestedFields(req.query.fields);
     const wantRuleset = includeField(fields, "ruleset");
+    const wantMetadata = [
+      "category",
+      "prerequisite",
+      "repeatable",
+      "source",
+      "abilities",
+    ].some((field) => includeField(fields, field));
     const rows = db.prepare(
-      `SELECT id, name${wantRuleset ? ", data_json" : ""}
+      `SELECT id, name${wantRuleset || wantMetadata ? ", data_json" : ""}
        FROM compendium_feats
        ORDER BY name COLLATE NOCASE`,
     ).all() as Array<{ id: string; name: string; data_json?: string }>;
     res.json(rows.map((row) => {
-      const data = wantRuleset ? JSON.parse(row.data_json ?? "{}") : {};
+      const data = wantRuleset || wantMetadata ? JSON.parse(row.data_json ?? "{}") : {};
+      const parsed = wantMetadata
+        ? (data.parsed ?? parseFeat({
+            name: row.name,
+            text: String(data.text ?? ""),
+            prerequisite: typeof data.prerequisite === "string" ? data.prerequisite : null,
+            proficiency: typeof data.proficiency === "string" ? data.proficiency : null,
+            modifiers: Array.isArray(data.modifierDetails) ? data.modifierDetails : [],
+          }))
+        : null;
+      const prerequisite = parsed?.prerequisite ?? data.prerequisite ?? null;
+      const category = parsed?.category
+        ?? (/^Boon of\b/i.test(row.name) || /\bLevel 19\b/i.test(String(prerequisite ?? "")) ? "Epic Boon"
+          : /\bFighting Style Feature\b/i.test(String(prerequisite ?? "")) ? "Fighting Style"
+            : /\bLevel 4\b/i.test(String(prerequisite ?? "")) ? "General"
+              : "Other");
+      const abilityNames = new Map([
+        ["str", "Strength"],
+        ["dex", "Dexterity"],
+        ["con", "Constitution"],
+        ["int", "Intelligence"],
+        ["wis", "Wisdom"],
+        ["cha", "Charisma"],
+      ]);
+      const abilityKeys = new Set<string>(Object.keys(parsed?.grants?.abilityIncreases ?? {}));
+      for (const choice of parsed?.choices ?? []) {
+        if (choice.type !== "ability_score") continue;
+        for (const option of choice.options ?? []) abilityKeys.add(String(option).toLowerCase().slice(0, 3));
+      }
+      const abilities = Array.from(abilityKeys)
+        .map((key) => abilityNames.get(key.toLowerCase().slice(0, 3)))
+        .filter((value): value is string => Boolean(value));
       return {
         ...(includeField(fields, "id") ? { id: row.id } : {}),
         ...(includeField(fields, "name") ? { name: row.name } : {}),
         ...(wantRuleset ? { ruleset: data.ruleset ?? inferRuleset(row.name) } : {}),
+        ...(includeField(fields, "category") ? { category } : {}),
+        ...(includeField(fields, "prerequisite") ? { prerequisite } : {}),
+        ...(includeField(fields, "repeatable") ? { repeatable: Boolean(parsed?.repeatable) } : {}),
+        ...(includeField(fields, "source") ? { source: parsed?.source ?? null } : {}),
+        ...(includeField(fields, "abilities") ? { abilities } : {}),
       };
     }));
   });

@@ -1,3 +1,4 @@
+import React from "react";
 import { C } from "@/lib/theme";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
 import {
@@ -7,8 +8,9 @@ import {
   deriveAttackRollBonusFromEffects,
 } from "@/domain/character/parseFeatureEffects";
 import { IconInitiative, IconShield, IconSpeed } from "@/icons";
-import { CollapsiblePanel, MiniStat, Tooltip } from "@/views/character/CharacterViewParts";
+import { CollapsiblePanel, Tooltip } from "@/views/character/CharacterViewParts";
 import { abilityMod, formatModifier } from "@/views/character/CharacterSheetUtils";
+import { getExhaustedSpeed, getExhaustionD20Penalty } from "@/views/character/CharacterExhaustion";
 import {
   type InventoryItem,
   type ProficiencyMapLike,
@@ -29,6 +31,7 @@ import {
   weaponAbilityMod,
   weaponDamageDice,
 } from "@/views/character/CharacterInventory";
+
 
 export interface CharacterCombatPanelsProps {
   effectiveAc: number;
@@ -54,6 +57,7 @@ export interface CharacterCombatPanelsProps {
   embeddedStats?: boolean;
   showStats?: boolean;
   showActions?: boolean;
+  exhaustion?: number;
 }
 
 export function CharacterCombatPanels({
@@ -79,7 +83,11 @@ export function CharacterCombatPanels({
   embeddedStats = false,
   showStats = true,
   showActions = true,
+  exhaustion = 0,
 }: CharacterCombatPanelsProps) {
+  const exhaustionPenalty = getExhaustionD20Penalty(exhaustion);
+  const displaySpeed = getExhaustedSpeed(speed, exhaustion);
+  const speedAccent = exhaustion >= 6 ? "#dc2626" : exhaustion > 0 ? "#f59e0b" : undefined;
   const attackDisadvantage = nonProficientArmorPenalty || hasDisadvantage;
   const actionItems = inventory.filter((it) => getEquipState(it) !== "backpack" && isWeaponItem(it) && (!it.attunement || it.attuned));
   const nonProficientArmorItems = inventory.filter((it) => getEquipState(it) !== "backpack" && (isShieldItem(it) || /\barmor\b/i.test(it.type ?? "")) && !hasArmorProficiency(it, prof ?? undefined));
@@ -99,7 +107,7 @@ export function CharacterCombatPanels({
     raging: rageActive,
     item: null,
   });
-  const unarmedToHit = unarmedAttackAbilityMod + pb + unarmedAttackRollBonus;
+  const unarmedToHit = unarmedAttackAbilityMod + pb + unarmedAttackRollBonus - exhaustionPenalty;
   const unarmedDamageBonus = unarmedAttackAbilityMod + (rageActive ? unarmedRageDamageBonus : 0);
   const unarmedDmg = unarmedDamageDice
     ? `${unarmedDamageDice}${unarmedDamageBonus === 0 ? "" : `${unarmedDamageBonus >= 0 ? "+" : ""}${unarmedDamageBonus}`}`
@@ -130,15 +138,25 @@ export function CharacterCombatPanels({
         title="Combat Stats"
         color={accentColor}
         storageKey="combat-stats"
-        summary={`AC ${effectiveAc} · Init ${formatModifier(initiativeBonus)} · ${speed} ft · PP ${passivePerc}`}
+        summary={`AC ${effectiveAc} · Init ${formatModifier(initiativeBonus)} · ${displaySpeed} ft${exhaustion > 0 ? " (exhausted)" : ""} · PP ${passivePerc}`}
         embedded={embeddedStats}
       >
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(88px, 1fr))", gap: 6 }}>
-          <MiniStat label="Armor Class" value={String(effectiveAc)} accent={accentColor} icon={<IconShield size={11} />} />
-          <MiniStat label="Speed" value={`${speed} ft`} icon={<IconSpeed size={11} />} />
-          <MiniStat label="Initiative" value={formatModifier(initiativeBonus)} accent={accentColor} icon={<IconInitiative size={11} />} />
-          <MiniStat label="Prof. Bonus" value={`+${pb}`} accent={accentColor} />
-          <MiniStat label="Passive Perc." value={String(passivePerc)} />
+        <div style={{ display: "flex", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", overflow: "hidden" }}>
+          {([
+            { label: "Armor Class", value: String(effectiveAc), icon: <IconShield size={13} />, accent: accentColor },
+            { label: "Speed",       value: `${displaySpeed} ft`,          icon: <IconSpeed size={13} />, accent: speedAccent },
+            { label: "Initiative",  value: formatModifier(initiativeBonus), icon: <IconInitiative size={13} />, accent: accentColor },
+            { label: "Prof. Bonus", value: `+${pb}`,               accent: accentColor },
+            { label: "Passive Perc.", value: String(passivePerc) },
+          ] as Array<{ label: string; value: string; icon?: React.ReactNode; accent?: string }>).map(({ label, value, icon, accent }, i, arr) => (
+            <div key={i} style={{ flex: 1, textAlign: "center", padding: "8px 6px", borderRight: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.07)" : undefined }}>
+              <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>{label}</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: "var(--fs-body)", fontWeight: 800, color: accent ?? C.text }}>
+                {icon}
+                {value}
+              </div>
+            </div>
+          ))}
         </div>
         {movementModes.length > 0 && (
           <div style={{ marginTop: 10 }}>
@@ -257,7 +275,7 @@ export function CharacterCombatPanels({
               raging: rageActive,
               item: it,
             });
-            const toHit = ability + (proficient ? pb : 0) + magicBonus + featureAttackRollBonus;
+            const toHit = ability + (proficient ? pb : 0) + magicBonus + featureAttackRollBonus - exhaustionPenalty;
             const damageAbility = attackState === "offhand" && !addsAbilityModToOffhandDamage(it, parsedFeatureEffects) ? 0 : ability;
             const rageBonus = rageActive && weaponUsesStrength(it) ? rageDamageBonus : 0;
             const featureDamageBonus = deriveAttackDamageBonusFromEffects(parsedFeatureEffects ?? [], {

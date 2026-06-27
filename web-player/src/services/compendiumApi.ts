@@ -7,7 +7,11 @@ type CatalogFields =
   | "hd"
   | "size"
   | "speed"
-  | "ruleset";
+  | "ruleset"
+  | "category"
+  | "prerequisite"
+  | "repeatable"
+  | "abilities";
 
 function withFields(path: string, fields: readonly CatalogFields[]): string {
   if (!fields.length) return path;
@@ -40,6 +44,10 @@ export type FeatCatalogRow = {
   id: string;
   name: string;
   ruleset?: Ruleset | null;
+  category?: string | null;
+  prerequisite?: string | null;
+  repeatable?: boolean;
+  abilities?: string[];
 };
 
 export function fetchClassCatalog(fields: readonly CatalogFields[] = ["id", "name", "hd", "ruleset"]) {
@@ -54,6 +62,14 @@ export function fetchBackgroundCatalog(fields: readonly CatalogFields[] = ["id",
   return api<BackgroundCatalogRow[]>(withFields("/api/compendium/backgrounds", fields));
 }
 
-export function fetchFeatCatalog(fields: readonly CatalogFields[] = ["id", "name", "ruleset"]) {
+export function fetchFeatCatalog(fields: readonly CatalogFields[] = [
+  "id",
+  "name",
+  "ruleset",
+  "category",
+  "prerequisite",
+  "repeatable",
+  "abilities",
+]) {
   return api<FeatCatalogRow[]>(withFields("/api/compendium/feats", fields));
 }

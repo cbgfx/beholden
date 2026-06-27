@@ -39,6 +39,7 @@ export type CharacterViewDerivedStateArgs = {
   classFeatDetails: ClassFeatFeatureDetail[];
   levelUpFeatDetails: LevelUpFeatDetail[];
   invocationDetails: InvocationFeatureDetail[];
+  extraFeatDetails: FeatFeatureDetail[];
   subclass: string | null;
   polymorphCondition: PolymorphConditionData | null;
   polymorphMonsterState: TransformedMonsterState;
@@ -89,8 +90,6 @@ export type CharacterViewDerivedState = {
   effectiveSpeed: number;
   movementModes: MovementModesResult;
   tempHp: number;
-  hpPct: number;
-  tempPct: number;
   passivePerc: number;
   passiveInv: number;
   initiativeBonus: number;

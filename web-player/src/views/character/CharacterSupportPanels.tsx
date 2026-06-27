@@ -3,6 +3,7 @@ import { EmptyState, NoteList, NotesPanel } from "@beholden/shared/ui";
 import { C } from "@/lib/theme";
 import { IconWerewolf } from "@/icons";
 import type { ClassFeatureEntry, PlayerNote, ResourceCounter } from "@/views/character/CharacterSheetTypes";
+import { getExhaustionEffects } from "@/views/character/CharacterExhaustion";
 import {
   CollapsiblePanel,
   panelHeaderAddBtn,
@@ -20,6 +21,7 @@ export function CharacterSupportPanels(props: {
   hitDieSize: number | null;
   hitDieConMod: number;
   featureHpMaxBonus: number;
+  exhaustion: number;
   classResources: ResourceCounter[];
   playerNotesList: PlayerNote[];
   allSharedNotes: PlayerNote[];
@@ -29,7 +31,7 @@ export function CharacterSupportPanels(props: {
   onSaveHitDiceCurrent: (value: number) => Promise<void> | void;
   onShortRest: () => Promise<void> | void;
   onLongRest: () => Promise<void> | void;
-  onFullRest: () => Promise<void> | void;
+  onExhaustionChange: (value: number) => Promise<void> | void;
   onChangeResourceCurrent: (key: string, delta: number) => Promise<void> | void;
   onOpenPlayerNoteCreate: () => void;
   onOpenSharedNoteCreate: () => void;
@@ -46,6 +48,9 @@ export function CharacterSupportPanels(props: {
   polymorphName?: string | null;
   onOpenTransformSelf: () => void;
   onRevertTransformSelf?: () => void;
+  extraFeatIds?: string[];
+  onOpenFeatPicker?: () => void;
+  onRemoveExtraFeat?: (featId: string) => Promise<void>;
 }) {
   const {
     accentColor,
@@ -55,6 +60,7 @@ export function CharacterSupportPanels(props: {
     hitDieSize,
     hitDieConMod,
     featureHpMaxBonus,
+    exhaustion,
     classResources,
     playerNotesList,
     allSharedNotes,
@@ -64,7 +70,7 @@ export function CharacterSupportPanels(props: {
     onSaveHitDiceCurrent,
     onShortRest,
     onLongRest,
-    onFullRest,
+    onExhaustionChange,
     onChangeResourceCurrent,
     onOpenPlayerNoteCreate,
     onOpenSharedNoteCreate,
@@ -81,6 +87,9 @@ export function CharacterSupportPanels(props: {
     polymorphName,
     onOpenTransformSelf,
     onRevertTransformSelf,
+    extraFeatIds = [],
+    onOpenFeatPicker,
+    onRemoveExtraFeat,
   } = props;
 
   const formatResetLabel = (resource: ResourceCounter): string => {
@@ -91,11 +100,29 @@ export function CharacterSupportPanels(props: {
     if (code === "SL") return "Resets on Short or Long Rest";
     return `Reset ${resource.reset}`;
   };
-  const sortedClassFeaturesList = React.useMemo(
-    () => [...classFeaturesList].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })),
-    [classFeaturesList],
-  );
+  const groupedFeatures = React.useMemo(() => {
+    const getGroup = (id: string): "class" | "race" | "background" | "feats" => {
+      if (id.startsWith("class:") || id.startsWith("invocation:")) return "class";
+      if (id.startsWith("race:") || id.startsWith("race-feat:")) return "race";
+      if (id.startsWith("background:") || id.startsWith("background-feat:") || id.startsWith("bg-feat:")) return "background";
+      return "feats";
+    };
+    const groups: Record<"class" | "race" | "background" | "feats", typeof classFeaturesList> = {
+      class: [], race: [], background: [], feats: [],
+    };
+    for (const feature of classFeaturesList) groups[getGroup(feature.id)].push(feature);
+    const sort = (arr: typeof classFeaturesList) => arr.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+    return { class: sort(groups.class), race: sort(groups.race), background: sort(groups.background), feats: sort(groups.feats) };
+  }, [classFeaturesList]);
+
+  const totalFeatureCount = classFeaturesList.length;
   const compact = useSheetDensity() === "compact";
+  const exhaustionColor =
+    exhaustion === 0 ? C.muted : exhaustion <= 2 ? "#f59e0b" : exhaustion <= 4 ? "#f97316" : "#dc2626";
+  const activeExhaustionEffects = getExhaustionEffects(exhaustion);
+  const upkeepSummary = classResources.length > 0
+    ? `${classResources.reduce((sum, resource) => sum + resource.current, 0)} / ${classResources.reduce((sum, resource) => sum + resource.max, 0)} resources`
+    : `${hitDiceCurrent} / ${hitDiceMax} hit dice`;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: compact ? 9 : 14 }}>
@@ -103,9 +130,7 @@ export function CharacterSupportPanels(props: {
         title="Upkeep"
         color={accentColor}
         storageKey="recovery"
-        summary={classResources.length > 0
-          ? `${classResources.reduce((sum, resource) => sum + resource.current, 0)} / ${classResources.reduce((sum, resource) => sum + resource.max, 0)} resources`
-          : `${hitDiceCurrent} / ${hitDiceMax} hit dice`}
+        summary={`${upkeepSummary}${exhaustion > 0 ? ` · Exhaustion ${exhaustion}` : ""}`}
         actions={
           <button
             type="button"
@@ -164,30 +189,37 @@ export function CharacterSupportPanels(props: {
             </div>
           )}
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{
-              padding: "10px 12px",
-              borderRadius: 10,
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 9,
+              overflow: "hidden",
+              background: "rgba(255,255,255,0.035)",
+              border: `1px solid ${exhaustion > 0 ? `${exhaustionColor}44` : "rgba(255,255,255,0.08)"}`,
             }}>
-              <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>
-                Hit Dice
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between" }}>
-                <div>
-                  <div style={{ fontSize: "var(--fs-title)", fontWeight: 900, color: C.text }}>
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "minmax(76px, auto) minmax(0, 1fr) auto",
+                alignItems: "center",
+                gap: 10,
+                padding: "7px 10px",
+              }}>
+                <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                  Hit Dice
+                </div>
+                <div style={{ minWidth: 0, display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "var(--fs-subtitle)", fontWeight: 900, color: C.text }}>
                     {hitDiceCurrent} / {hitDiceMax}
-                  </div>
+                  </span>
                   {hitDieSize != null && (
-                    <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
+                    <span style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>
                       d{hitDieSize}{hitDieConMod >= 0 ? ` + ${hitDieConMod}` : ` - ${Math.abs(hitDieConMod)}`} per die
-                    </div>
+                    </span>
                   )}
                 </div>
-                <div style={{ display: "flex", gap: 6 }}>
+                <div style={{ display: "flex", gap: 5 }}>
                   <button
                     type="button"
+                    aria-label="Spend Hit Die"
                     onClick={() => void onSaveHitDiceCurrent(hitDiceCurrent - 1)}
                     disabled={hitDiceCurrent <= 0}
                     style={miniPillBtn(hitDiceCurrent > 0)}
@@ -196,6 +228,7 @@ export function CharacterSupportPanels(props: {
                   </button>
                   <button
                     type="button"
+                    aria-label="Restore Hit Die"
                     onClick={() => void onSaveHitDiceCurrent(hitDiceCurrent + 1)}
                     disabled={hitDiceCurrent >= hitDiceMax}
                     style={miniPillBtn(hitDiceCurrent < hitDiceMax)}
@@ -204,17 +237,67 @@ export function CharacterSupportPanels(props: {
                   </button>
                 </div>
               </div>
+
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "minmax(76px, auto) minmax(0, 1fr) auto",
+                alignItems: "center",
+                gap: 10,
+                padding: "7px 10px",
+                borderTop: "1px solid rgba(255,255,255,0.07)",
+              }}>
+                <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                  Exhaustion
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <span style={{ fontSize: "var(--fs-subtitle)", fontWeight: 900, color: exhaustionColor }}>
+                    {exhaustion} / 6
+                  </span>
+                  {activeExhaustionEffects.length > 0 && (
+                    <div
+                      title={activeExhaustionEffects.join("; ")}
+                      style={{
+                        color: exhaustionColor,
+                        fontSize: "var(--fs-tiny)",
+                        marginTop: 1,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {activeExhaustionEffects.length} active effect{activeExhaustionEffects.length === 1 ? "" : "s"} · {activeExhaustionEffects[activeExhaustionEffects.length - 1]}
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: "flex", gap: 5 }}>
+                  <button
+                    type="button"
+                    aria-label="Reduce Exhaustion"
+                    onClick={() => void onExhaustionChange(Math.max(0, exhaustion - 1))}
+                    disabled={exhaustion <= 0}
+                    style={miniPillBtn(exhaustion > 0)}
+                  >
+                    -
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Increase Exhaustion"
+                    onClick={() => void onExhaustionChange(Math.min(6, exhaustion + 1))}
+                    disabled={exhaustion >= 6}
+                    style={miniPillBtn(exhaustion < 6)}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <div style={{ display: "flex", gap: 10 }}>
-              <button type="button" onClick={() => void onShortRest()} style={{ ...restBtnStyle(C.colorRitual), flex: 1 }}>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" onClick={() => void onShortRest()} style={{ ...restBtnStyle(C.colorRitual), flex: 1, minWidth: 0, padding: "7px 10px", borderRadius: 8 }}>
                 Short Rest
               </button>
-              <button type="button" onClick={() => void onLongRest()} style={{ ...restBtnStyle("#34d399"), flex: 1 }}>
+              <button type="button" onClick={() => void onLongRest()} style={{ ...restBtnStyle("#34d399"), flex: 1, minWidth: 0, padding: "7px 10px", borderRadius: 8 }}>
                 Long Rest
-              </button>
-              <button type="button" onClick={() => void onFullRest()} style={{ ...restBtnStyle(accentColor), flex: 1 }}>
-                Full Rest
               </button>
             </div>
           </div>
@@ -354,25 +437,52 @@ export function CharacterSupportPanels(props: {
       </NotesPanel>}
 
           <CollapsiblePanel
-            title="Player Features"
+            title="Features"
             color={accentColor}
             storageKey="player-features"
-            summary={`${sortedClassFeaturesList.length} features`}
+            summary={`${totalFeatureCount} features`}
+            actions={onOpenFeatPicker ? (
+              <button type="button" onClick={onOpenFeatPicker} title="Add feat" style={panelHeaderAddBtn(accentColor)}>+</button>
+            ) : undefined}
           >
-        {sortedClassFeaturesList.length > 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {sortedClassFeaturesList.map((feature) => (
-              <ClassFeatureItem
-                key={feature.id}
-                feature={feature}
-                expanded={expandedClassFeatureIds.includes(feature.id)}
-                accentColor={accentColor}
-                onToggle={() => onToggleClassFeatureExpanded(feature.id)}
-              />
-            ))}
+        {totalFeatureCount > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {(["class", "race", "background", "feats"] as const).map((group) => {
+              const features = groupedFeatures[group];
+              if (features.length === 0) return null;
+              const label = group === "class" ? "Class" : group === "race" ? "Race" : group === "background" ? "Background" : "Feats";
+              return (
+                <div key={group}>
+                  <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5, opacity: 0.6 }}>{label}</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                    {features.map((feature) => {
+                      const extraFeatId = feature.id.startsWith("extra-feat:") ? feature.id.slice("extra-feat:".length) : null;
+                      return (
+                        <div key={feature.id} style={{ position: "relative" }}>
+                          <ClassFeatureItem
+                            feature={feature}
+                            expanded={expandedClassFeatureIds.includes(feature.id)}
+                            accentColor={accentColor}
+                            onToggle={() => onToggleClassFeatureExpanded(feature.id)}
+                          />
+                          {extraFeatId && onRemoveExtraFeat && (
+                            <button
+                              type="button"
+                              title="Remove feat"
+                              onClick={() => { void onRemoveExtraFeat(extraFeatId); }}
+                              style={{ position: "absolute", top: 8, right: 10, border: "none", background: "transparent", cursor: "pointer", color: "rgba(248,113,113,0.6)", fontSize: "var(--fs-body)", lineHeight: 1, padding: 0, fontWeight: 700 }}
+                            >×</button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
-          <EmptyState textColor={C.muted}>No live player features were derived for this character.</EmptyState>
+          <EmptyState textColor={C.muted}>No features yet. Add feats with the + button above.</EmptyState>
         )}
           </CollapsiblePanel>
         </>

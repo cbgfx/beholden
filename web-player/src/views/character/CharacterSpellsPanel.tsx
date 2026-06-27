@@ -19,6 +19,9 @@ import {
   parseSpellSave,
   spellSectionArrow,
   spellSectionHeaderBtn,
+  SPELL_ROW_GRID,
+  SPELL_ROW_GRID_WITH_MARKER,
+  spellColumnHeaderStyle,
 } from "@/views/character/CharacterSpellShared";
 
 type SpellLookupRow = {
@@ -223,6 +226,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
 
   const isPactMagic = classDetail?.slotsReset === "S";
   const usesPreparedSpellSelection = usesFlexiblePreparedList;
+  const spellRowGrid = usesFlexiblePreparedList ? SPELL_ROW_GRID_WITH_MARKER : SPELL_ROW_GRID;
 
   // Group by spell level; for Pact Magic, all leveled spells are always cast at the current slot level
   const groups = new Map<number, typeof entries>();
@@ -494,14 +498,14 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
             {!isCollapsed && (
               <>
             {/* Column headers */}
-            <div style={{ display: "grid", gridTemplateColumns: "24px 1fr auto auto auto", gap: "0 8px", marginBottom: 4 }}>
-              <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+            <div style={{ display: "grid", gridTemplateColumns: spellRowGrid, gap: "0 8px", alignItems: "end", marginBottom: 4 }}>
+              {usesFlexiblePreparedList && <div style={spellColumnHeaderStyle}>
                 {usesPreparedSpellSelection ? "PREP" : usesFlexiblePreparedList ? "LIST" : "KNOWN"}
-              </div>
-              <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>NAME</div>
-              <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", textAlign: "center" }}>TIME</div>
-              <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", textAlign: "center" }}>HIT / DC</div>
-              <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", textAlign: "center" }}>EFFECT</div>
+              </div>}
+              <div style={spellColumnHeaderStyle}>NAME</div>
+              <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>TIME</div>
+              <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>HIT / DC</div>
+              <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>EFFECT</div>
             </div>
 
             {groupEntries.map((e, i) => {
@@ -532,8 +536,8 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
                 return (
                 <div key={i} style={{
                   display: "grid",
-                  gridTemplateColumns: "24px 1fr auto auto auto",
-                  alignItems: "start", gap: "0 8px",
+                  gridTemplateColumns: spellRowGrid,
+                  alignItems: "center", gap: "0 8px",
                   padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)",
                   cursor: d ? "pointer" : "default",
                 }}
@@ -543,50 +547,46 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
                   }}
                 >
                   {/* Prepared radio */}
-                  <button
-                    onClick={() => {
-                      if (usesPreparedSpellSelection && !isCantrip && !isAlwaysPrepared && !preparedLocked) {
-                        togglePrepared(e.key);
+                  {usesFlexiblePreparedList && (
+                    <button
+                      onClick={() => {
+                        if (usesPreparedSpellSelection && !isCantrip && !isAlwaysPrepared && !preparedLocked) {
+                          togglePrepared(e.key);
+                        }
+                      }}
+                      title={
+                        !usesPreparedSpellSelection
+                          ? isCantrip
+                            ? "Known cantrip"
+                            : usesFlexiblePreparedList
+                              ? "On your prepared spell list"
+                              : "Known spell"
+                          : isCantrip
+                            ? "Cantrip (always prepared)"
+                            : isAlwaysPrepared
+                              ? "Always prepared"
+                            : isPrepared
+                              ? "Mark unprepared"
+                              : preparedLocked
+                                ? `Prepared limit reached (${preparedLimit})`
+                                : "Mark prepared"
                       }
-                    }}
-                    title={
-                      !usesPreparedSpellSelection
-                        ? isCantrip
-                          ? "Known cantrip"
-                          : usesFlexiblePreparedList
-                            ? "On your prepared spell list"
-                            : "Known spell"
-                        : isCantrip
-                          ? "Cantrip (always prepared)"
-                          : isAlwaysPrepared
-                            ? "Always prepared"
-                          : isPrepared
-                            ? "Mark unprepared"
-                            : preparedLocked
-                              ? `Prepared limit reached (${preparedLimit})`
-                              : "Mark prepared"
-                    }
-                    style={{
-                      width: 20, height: 20, borderRadius: "50%", padding: 0,
-                      cursor: !usesPreparedSpellSelection || isCantrip || isAlwaysPrepared || preparedLocked ? "default" : "pointer",
-                      marginTop: 3,
-                      border: `2px solid ${
-                        isAlwaysPrepared
-                          ? "rgba(196,181,253,0.95)"
-                          : isPrepared
-                            ? accentColor
-                            : "rgba(255,255,255,0.25)"
-                      }`,
-                      background:
-                        isAlwaysPrepared
-                          ? "rgba(196,181,253,0.28)"
-                          : isPrepared
-                            ? accentColor
-                            : preparedLocked ? "rgba(255,255,255,0.05)" : "transparent",
-                      opacity: preparedLocked ? 0.65 : 1,
-                      flexShrink: 0,
-                    }}
-                  />
+                      style={{
+                        width: 20, height: 20, borderRadius: "50%", padding: 0,
+                        cursor: !usesPreparedSpellSelection || isCantrip || isAlwaysPrepared || preparedLocked ? "default" : "pointer",
+                        border: `2px solid ${
+                          isAlwaysPrepared
+                            ? "rgba(196,181,253,0.95)"
+                            : isPrepared
+                              ? accentColor
+                              : "rgba(255,255,255,0.25)"
+                        }`,
+                        background: isAlwaysPrepared ? "rgba(196,181,253,0.28)" : isPrepared ? accentColor : preparedLocked ? "rgba(255,255,255,0.05)" : "transparent",
+                        opacity: preparedLocked ? 0.65 : 1,
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
 
                   {/* Name + meta */}
                   <div style={{ minWidth: 0 }} title={e.source ? `Source: ${e.source}` : undefined}>
@@ -600,13 +600,13 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
                   </div>
 
                   {/* Time */}
-                  <div style={{ fontSize: "var(--fs-small)", color: C.muted, paddingTop: 3, textAlign: "center", minWidth: 28 }}>
+                  <div style={{ minWidth: 0, fontSize: "var(--fs-small)", color: C.muted, textAlign: "center", lineHeight: 1.25 }}>
                     {d ? abbrevTime(d.time ?? "—") : ""}
                   </div>
 
                   {/* HIT / SAVE */}
                   {d && (usesSave || usesAtk) ? (
-                    <div style={{ textAlign: "center", paddingTop: 1 }}>
+                    <div style={{ minWidth: 0, textAlign: "center" }}>
                       <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700 }}>
                         {usesSave ? (d.save ?? "SAVE") : "ATK"}
                       </div>
@@ -619,6 +619,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
                   {/* Effect */}
                   {scaledDamage ? (
                     <div style={{
+                      minWidth: 0,
                       padding: "4px 7px", borderRadius: 6, border: `1px solid ${dmgColor}55`,
                       background: `${dmgColor}15`, textAlign: "center", whiteSpace: "nowrap",
                     }}>

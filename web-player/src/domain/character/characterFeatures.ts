@@ -75,6 +75,7 @@ interface BuildAppliedCharacterFeaturesArgs {
   classFeatDetails?: CharacterFeatDetailLike[];
   levelUpFeatDetails: CharacterLevelUpFeatDetailLike[];
   invocationDetails: CharacterInvocationDetailLike[];
+  extraFeatDetails?: CharacterFeatDetailLike[];
 }
 
 interface BuildDisplayPlayerFeaturesArgs extends BuildAppliedCharacterFeaturesArgs {}
@@ -362,6 +363,17 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
       kind: "invocation",
       name: String(invocation.name ?? "").replace(/^Invocation:\s*/i, "").trim(),
       text: invocation.text,
+    });
+  }
+
+  for (const feat of args.extraFeatDetails ?? []) {
+    if (!cleanedText(feat.text)) continue;
+    addFeature({
+      id: `extra-feat:${feat.id}`,
+      kind: "feat",
+      name: feat.name,
+      text: cleanedText(feat.text),
+      preparedSpellProgression: feat.preparedSpellProgression,
     });
   }
 

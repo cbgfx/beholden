@@ -32,13 +32,13 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
   });
 
   const selectSpellByExact = db.prepare(
-    "SELECT id, name, level FROM compendium_spells WHERE name_key = ? OR lower(name) = ? ORDER BY name_key ASC LIMIT 1",
+    "SELECT id, name, level, concentration FROM compendium_spells WHERE name_key = ? OR lower(name) = ? ORDER BY name_key ASC LIMIT 1",
   );
   const selectSpellByPrefix = db.prepare(
-    "SELECT id, name, level FROM compendium_spells WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
+    "SELECT id, name, level, concentration FROM compendium_spells WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
   );
   const selectSpellByContains = db.prepare(
-    "SELECT id, name, level FROM compendium_spells WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
+    "SELECT id, name, level, concentration FROM compendium_spells WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
   );
 
   function normalizeLookupName(value: string): string {
@@ -50,24 +50,21 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
       .toLowerCase();
   }
 
-  function lookupSpellByName(rawName: string): { id: string; name: string; level: number | null } | null {
+  type SpellBasicRow = { id: string; name: string; level: number | null; concentration: number };
+  function lookupSpellByName(rawName: string): { id: string; name: string; level: number | null; concentration: boolean } | null {
     const normalized = normalizeLookupName(rawName);
     if (!normalized) return null;
 
-    const exact = selectSpellByExact.get(normalized, normalized) as
-      | { id: string; name: string; level: number | null }
-      | undefined;
-    if (exact) return exact;
+    const toOut = (row: SpellBasicRow) => ({ ...row, concentration: row.concentration === 1 });
 
-    const prefix = selectSpellByPrefix.get(`${normalized}%`) as
-      | { id: string; name: string; level: number | null }
-      | undefined;
-    if (prefix) return prefix;
+    const exact = selectSpellByExact.get(normalized, normalized) as SpellBasicRow | undefined;
+    if (exact) return toOut(exact);
 
-    const contains = selectSpellByContains.get(`%${normalized}%`) as
-      | { id: string; name: string; level: number | null }
-      | undefined;
-    return contains ?? null;
+    const prefix = selectSpellByPrefix.get(`${normalized}%`) as SpellBasicRow | undefined;
+    if (prefix) return toOut(prefix);
+
+    const contains = selectSpellByContains.get(`%${normalized}%`) as SpellBasicRow | undefined;
+    return contains ? toOut(contains) : null;
   }
 
   app.get("/api/spells/search", (req, res) => {
@@ -244,9 +241,17 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     if (ids.length > 0) {
       const placeholders = ids.map(() => "?").join(", ");
       const idRows = db.prepare(
-        `SELECT id, name, level FROM compendium_spells WHERE id IN (${placeholders})`,
-      ).all(...ids) as Array<{ id: string; name: string; level: number | null }>;
-      const idRowById = new Map(idRows.map((row) => [row.id, row]));
+        `SELECT id, name, level, concentration FROM compendium_spells WHERE id IN (${placeholders})`,
+      ).all(...ids) as SpellBasicRow[];
+      const idRowById = new Map(idRows.map((row) => [
+        row.id,
+        {
+          id: row.id,
+          name: row.name,
+          level: row.level,
+          concentration: row.concentration === 1,
+        },
+      ]));
       for (const id of ids) {
         const row = idRowById.get(id);
         rows.push({ query: id, match: row ?? null });

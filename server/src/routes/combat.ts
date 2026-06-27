@@ -24,6 +24,8 @@ import {
   CombatantUpdateBody,
   CombatStateBody,
 } from "./combatRouteHelpers.js";
+import { fulfillInitiativePrompt, registerCombatInitiativeRoutes } from "./combatInitiative.js";
+import { registerCombatXpRoutes } from "./combatXp.js";
 
 export function registerCombatRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
@@ -562,6 +564,11 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         combatantId: next.id,
         combatant: toEncounterActorDto(next),
       });
+
+      if (body.initiative != null) {
+        fulfillInitiativePrompt(ctx, next, syncedCampaignId);
+      }
+
       res.json(toEncounterActorDto(next));
     }
   );
@@ -589,4 +596,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
       res.json({ ok: true });
     }
   );
+
+  registerCombatInitiativeRoutes(app, ctx);
+  registerCombatXpRoutes(app, ctx);
 }

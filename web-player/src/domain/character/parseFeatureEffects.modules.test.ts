@@ -51,6 +51,47 @@ describe("parseFeatureEffects parser modules", () => {
     }
   });
 
+  it("parses fixed and constrained feat ability increases", () => {
+    const durable = parse(
+      "Durable",
+      "Ability Score Increase. Increase your Constitution score by 1, to a maximum of 20.",
+    );
+    expect(durable.effects).toContainEqual(expect.objectContaining({
+      type: "ability_score",
+      mode: "fixed",
+      ability: "con",
+      amount: 1,
+      maximum: 20,
+    }));
+
+    const physicalChoice = parse(
+      "Physical Boon",
+      "Ability Score Increase. Increase your Strength, Dexterity, or Constitution score by 1, to a maximum of 20.",
+    );
+    expect(physicalChoice.effects).toContainEqual(expect.objectContaining({
+      type: "ability_score",
+      mode: "choice",
+      chooseFrom: ["str", "dex", "con"],
+      choiceCount: 1,
+      amount: 1,
+      maximum: 20,
+    }));
+  });
+
+  it("parses unrestricted epic-boon ability choices", () => {
+    const parsed = parse(
+      "Epic Boon",
+      "Ability Score Increase. Increase one ability score of your choice by 1, to a maximum of 30.",
+    );
+    expect(parsed.effects).toContainEqual(expect.objectContaining({
+      type: "ability_score",
+      mode: "choice",
+      choiceCount: 1,
+      amount: 1,
+      maximum: 30,
+    }));
+  });
+
   it("parses speed + rage bonus-damage effects (combat/stats modules)", () => {
     const parsed = parse(
       "Fast Rage",
@@ -214,7 +255,9 @@ describe("parseFeatureEffects parser modules", () => {
     expect(damageBonus).toBeTruthy();
     if (damageBonus && damageBonus.type === "attack") {
       expect(damageBonus.amount?.kind).toBe("fixed");
-      if (damageBonus.amount?.kind === "fixed") expect(damageBonus.amount.value).toBe(2);
+      if (damageBonus.amount?.kind === "fixed" && "value" in damageBonus.amount) {
+        expect(damageBonus.amount.value).toBe(2);
+      }
       expect(damageBonus.gate?.weaponFilters).toEqual(["longbow_or_shortbow"]);
     }
   });

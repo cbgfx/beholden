@@ -29,8 +29,8 @@ export function CharacterPrimaryColumn(props: {
         borderRadius: 12,
         background: "rgba(255,255,255,0.035)",
       }}>
-        <CharacterHudPanel {...props.hudProps} embedded />
         <CharacterCombatPanels {...props.combatProps} showActions={false} embeddedStats />
+        <CharacterHudPanel {...props.hudProps} embedded />
       </div>
       <CharacterAbilitiesPanels {...props.abilitiesProps} />
       <CharacterDefensesPanel {...props.defensesProps} />
