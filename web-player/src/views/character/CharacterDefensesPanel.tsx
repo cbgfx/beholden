@@ -208,16 +208,20 @@ export function CharacterDefensesPanel({
           onAdd={(v) => onCustomImmunitiesChange([...customImmunities, v])}
           onRemove={(v) => onCustomImmunitiesChange(customImmunities.filter((x) => x !== v))}
         />
-        <ReadonlyTagRow
-          label="Condition Immunities"
-          color={C.colorOrange}
-          items={conditionImmunities}
-        />
-        <ReadonlyTagRow
-          label="Senses"
-          color={C.colorGold}
-          items={senses}
-        />
+        {conditionImmunities.length > 0 && (
+          <ReadonlyTagRow
+            label="Condition Immunities"
+            color={C.colorOrange}
+            items={conditionImmunities}
+          />
+        )}
+        {senses.length > 0 && (
+          <ReadonlyTagRow
+            label="Senses"
+            color={C.colorGold}
+            items={senses}
+          />
+        )}
       </div>
     </CollapsiblePanel>
   );

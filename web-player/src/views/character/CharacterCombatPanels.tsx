@@ -145,7 +145,7 @@ export function CharacterCombatPanels({
             { label: "Armor Class", value: String(effectiveAc), icon: <IconShield size={13} />, accent: accentColor },
             { label: "Speed",       value: `${displaySpeed} ft`,          icon: <IconSpeed size={13} />, accent: speedAccent },
             { label: "Initiative",  value: formatModifier(initiativeBonus), icon: <IconInitiative size={13} />, accent: accentColor },
-            { label: "Prof. Bonus", value: `+${pb}`,               accent: accentColor },
+            { label: "Proficiency", value: `+${pb}`,               accent: accentColor },
             { label: "Passive Perc.", value: String(passivePerc) },
           ] as Array<{ label: string; value: string; icon?: React.ReactNode; accent?: string }>).map(({ label, value, icon, accent }, i, arr) => (
             <div key={i} style={{ flex: 1, textAlign: "center", padding: "8px 6px", borderRight: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.07)" : undefined }}>
