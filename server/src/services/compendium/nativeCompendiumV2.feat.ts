@@ -1,11 +1,11 @@
 import { classifyFeatResolution } from "../../lib/featResolution.js";
 import { CANONICAL_V2_SCHEMA_VERSION } from "./nativeCompendiumV2Schemas.js";
-import { isCanonicalV2Shape, upgradeCanonicalV2Entry } from "./nativeCompendiumV2Migration.js";
+import { isCanonicalV2Entry } from "./nativeCompendiumV2Schemas.js";
 import { type JsonRecord, record, list, text } from "./nativeCompendiumV2.helpers.js";
 import { compactFeatEntry, expandFeatMechanics } from "./featCompaction.js";
 
 export function featToV2(entry: JsonRecord): JsonRecord {
-  if (isCanonicalV2Shape("feats", entry)) return compactFeatEntry(upgradeCanonicalV2Entry("feats", entry));
+  if (isCanonicalV2Entry("feats", entry)) return entry;
   const parsed = record(entry.parsed);
   const classified = classifyFeatResolution(String(entry.name ?? ""), parsed);
   const fullMechanics = "baseName" in parsed ? expandFeatMechanics(parsed, entry) : parsed;

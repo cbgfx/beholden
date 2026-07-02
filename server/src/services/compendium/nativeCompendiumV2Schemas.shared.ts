@@ -64,16 +64,16 @@ export const PreparedSpellProgressionSchema = z
 
 export const StructuredFeatureEffectSchema = z.union([
   z.object({
-    kind: z.literal("legacy_modifier"),
+    kind: z.literal("source_modifier"),
     category: z.string().nullable(),
     value: z.string(),
   }).strict(),
   z.object({
-    kind: z.literal("legacy_special"),
+    kind: z.literal("source_special"),
     value: z.string(),
   }).strict(),
   z.object({
-    kind: z.literal("legacy_proficiency"),
+    kind: z.literal("source_proficiency"),
     value: z.string(),
   }).strict(),
   z.object({

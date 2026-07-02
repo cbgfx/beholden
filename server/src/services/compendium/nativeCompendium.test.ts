@@ -5,8 +5,6 @@ import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { SCHEMA_SQL } from "../../lib/dbSchema.js";
 import {
-  BEHOLDEN_COMPENDIUM_FORMAT,
-  BEHOLDEN_COMPENDIUM_VERSION,
   NATIVE_COMPENDIUM_CATEGORIES,
   exportNativeCompendiumBatch,
   exportNativeCompendiumBundle,
@@ -19,17 +17,14 @@ import {
 } from "./nativeCompendium.js";
 import { convertCompendiumXmlToNative } from "./convertXmlToNative.js";
 import { assertCanonicalV2Entry, collectV2MonsterSpellIds } from "./nativeCompendiumV2.js";
-import { trimCompendiumBlobColumns } from "./blobHygiene.js";
-import {
-  mergeCanonicalV2Edit,
-  upgradeStoredCanonicalV2Entries,
-} from "./nativeCompendiumV2Migration.js";
-import {
-  parseStoredCanonicalCompendiumEntry,
-  parseStoredCompendiumEntry,
-} from "./storedCompendium.js";
-import { backfillMonsterSpellRefs } from "./normalizeMonsterSpellRefs.js";
-import { parseFeat } from "../../lib/featParser.js";
+import { mergeCanonicalV2Edit } from "./canonicalCompendiumEdits.js";
+import { compactBackgroundEntry } from "./backgroundCompaction.js";
+import { compactClassEntry } from "./classCompaction.js";
+import { compactFeatEntry } from "./featCompaction.js";
+import { compactItemEntry } from "./itemCompaction.js";
+import { compactMonsterEntry } from "./monsterCompaction.js";
+import { compactSpeciesEntry } from "./speciesCompaction.js";
+import { compactSpellEntry } from "./spellCompaction.js";
 
 const samples: Record<NativeCompendiumCategory, Array<Record<string, unknown>>> = {
   monsters: [{
@@ -167,6 +162,14 @@ const samples: Record<NativeCompendiumCategory, Array<Record<string, unknown>>> 
   ],
 };
 
+samples.monsters = samples.monsters.map(compactMonsterEntry);
+samples.items = samples.items.map(compactItemEntry);
+samples.spells = samples.spells.map(compactSpellEntry);
+samples.classes = samples.classes.map(compactClassEntry);
+samples.species = samples.species.map(compactSpeciesEntry);
+samples.backgrounds = samples.backgrounds.map(compactBackgroundEntry);
+samples.feats = samples.feats.map(compactFeatEntry);
+
 function batch(category: NativeCompendiumCategory, entries = samples[category]) {
   return {
     format: "beholden.compendium",
@@ -214,7 +217,7 @@ test("native imports replace matching IDs", () => {
 
   try {
     importNativeCompendiumBatch(db, batch("items"));
-    importNativeCompendiumBatch(db, batch("items", [{
+    importNativeCompendiumBatch(db, batch("items", [compactItemEntry({
       schemaVersion: 2,
       id: "i_test_blade",
       name: "Test Blade, Revised",
@@ -231,7 +234,7 @@ test("native imports replace matching IDs", () => {
       modifiers: [],
       rolls: [],
       description: ["Replacement rules."],
-    }]));
+    })]));
 
     const exported = exportNativeCompendiumBatch(db, "items");
     assert.equal(exported.entries.length, 1);
@@ -243,7 +246,7 @@ test("native imports replace matching IDs", () => {
   }
 });
 
-test("native v2 remains canonical in storage and survives legacy blob hygiene", () => {
+test("native v2 remains canonical in storage", () => {
   const db = new Database(":memory:");
   db.exec(SCHEMA_SQL);
 
@@ -265,345 +268,20 @@ test("native v2 remains canonical in storage and survives legacy blob hygiene", 
     assert.ok(Array.isArray(storedClass.levels));
     assert.equal(storedClass.autolevels, undefined);
 
-    trimCompendiumBlobColumns(db);
-    assert.deepEqual(
-      JSON.parse((db.prepare("SELECT data_json FROM compendium_monsters WHERE id = ?")
-        .get("m_test_guardian") as { data_json: string }).data_json),
-      storedMonster,
-    );
   } finally {
     db.close();
   }
 });
 
-test("canonical read boundary converts a legacy class row during migration", () => {
-  const canonical = parseStoredCanonicalCompendiumEntry("classes", JSON.stringify({
-    id: "c_legacy",
-    name: "Legacy Class",
-    hd: 8,
-    proficiency: "Wisdom, Charisma",
-    numSkills: 2,
-    armor: "Light Armor",
-    weapons: "Simple Weapons",
-    tools: "None",
-    slotsReset: "L",
-    spellAbility: "Wisdom",
-    description: "Legacy description.",
-    autolevels: [],
-  }));
-  assert.equal(canonical.hitDie, 8);
-  assert.equal(canonical.description, "Legacy description.");
-  assert.ok(Array.isArray(canonical.levels));
-  assert.equal(canonical.autolevels, undefined);
-});
-
-test("older canonical v2 rows are upgraded without falling through the legacy path", () => {
-  const db = new Database(":memory:");
-  db.exec(SCHEMA_SQL);
-
-  try {
-    const oldClass = structuredClone(samples.classes[0]!);
-    delete oldClass.schemaVersion;
-    delete oldClass.startingWealth;
-    const spellcasting = oldClass.spellcasting as Record<string, unknown>;
-    spellcasting.ability = "Intelligence";
-    for (const level of oldClass.levels as Array<Record<string, unknown>>) {
-      for (const feature of (level.features ?? []) as Array<Record<string, unknown>>) {
-        delete feature.scalingRolls;
-      }
-    }
-    db.prepare(
-      "INSERT INTO compendium_classes (id, name, name_key, hd, data_json) VALUES (?, ?, ?, ?, ?)",
-    ).run(oldClass.id, oldClass.name, "test class", oldClass.hitDie, JSON.stringify(oldClass));
-
-    const before = parseStoredCompendiumEntry("classes", JSON.stringify(oldClass));
-    assert.equal((before.autolevels as unknown[]).length, (oldClass.levels as unknown[]).length);
-
-    trimCompendiumBlobColumns(db);
-    assert.deepEqual(
-      JSON.parse((db.prepare("SELECT data_json FROM compendium_classes WHERE id = ?")
-        .get(oldClass.id) as { data_json: string }).data_json),
-      oldClass,
-    );
-
-    assert.equal(upgradeStoredCanonicalV2Entries(db), 1);
-    const stored = JSON.parse((db.prepare(
-      "SELECT data_json FROM compendium_classes WHERE id = ?",
-    ).get(oldClass.id) as { data_json: string }).data_json) as Record<string, unknown>;
-    assertCanonicalV2Entry("classes", stored, 0);
-
-    const exported = exportNativeCompendiumBatch(db, "classes");
-    assert.equal(
-      (exported.entries[0]?.levels as unknown[]).length,
-      (oldClass.levels as unknown[]).length,
-    );
-  } finally {
-    db.close();
-  }
-});
-
-test("startup refreshes affected Fighting Style mechanics for existing canonical rows", () => {
-  const db = new Database(":memory:");
-  db.exec(SCHEMA_SQL);
-  const styles = [
-    {
-      id: "f_style_blessed_warrior",
-      name: "Fighting Style: Blessed Warrior",
-      description: "You learn two Cleric cantrips of your choice. The chosen cantrips count as Paladin spells for you, and Charisma is your spellcasting ability for them.",
-    },
-    {
-      id: "f_style_dueling",
-      name: "Fighting Style: Dueling",
-      description: "When you're holding a Melee weapon in one hand and no other weapons, you gain a +2 bonus to damage rolls with that weapon.",
-    },
-    {
-      id: "f_style_great_weapon",
-      name: "Fighting Style: Great Weapon Fighting",
-      description: "When you roll damage for an attack you make with a Melee weapon that you are holding with two hands, you can treat any 1 or 2 on a damage die as a 3.",
-    },
-    {
-      id: "f_style_interception",
-      name: "Fighting Style: Interception",
-      description: "You can take a Reaction to reduce the damage dealt to the target.",
-    },
-    {
-      id: "f_style_protection",
-      name: "Fighting Style: Protection",
-      description: "You can take a Reaction to interpose your Shield.",
-    },
-    {
-      id: "f_style_thrown",
-      name: "Fighting Style: Thrown Weapon Fighting",
-      description: "When you hit with a ranged attack roll using a weapon that has the Thrown property, you gain a +2 bonus to the damage roll.",
-    },
-  ];
-
-  try {
-    const insert = db.prepare(
-      "INSERT INTO compendium_feats (id, name, name_key, data_json) VALUES (?, ?, ?, ?)",
-    );
-    for (const style of styles) {
-      insert.run(
-        style.id,
-        style.name,
-        style.name.toLowerCase(),
-        JSON.stringify({
-          ...samples.feats[0],
-          ...style,
-          category: "Fighting Style",
-          mechanics: {},
-        }),
-      );
-    }
-
-    assert.equal(upgradeStoredCanonicalV2Entries(db), 6);
-
-    const blessed = JSON.parse((db.prepare(
-      "SELECT data_json FROM compendium_feats WHERE id = ?",
-    ).get("f_style_blessed_warrior") as { data_json: string }).data_json) as {
-      mechanics: {
-        choices: Array<{ options: string[] }>;
-        spellcastingAbility: string;
-      };
-    };
-    assert.deepEqual(blessed.mechanics.choices[0]!.options, ["Cleric"]);
-    assert.equal(blessed.mechanics.spellcastingAbility, "cha");
-
-    for (const id of ["f_style_dueling", "f_style_thrown"]) {
-      const stored = JSON.parse((db.prepare(
-        "SELECT data_json FROM compendium_feats WHERE id = ?",
-      ).get(id) as { data_json: string }).data_json) as {
-        mechanics: {
-          grants: {
-            effects: Array<{
-              target: string;
-              amount: { value: number };
-            }>;
-          };
-        };
-      };
-      assert.equal(stored.mechanics.grants.effects[0]!.target, "damage_roll");
-      assert.equal(stored.mechanics.grants.effects[0]!.amount.value, 2);
-    }
-
-    for (const id of ["f_style_great_weapon", "f_style_interception", "f_style_protection"]) {
-      const stored = JSON.parse((db.prepare(
-        "SELECT data_json FROM compendium_feats WHERE id = ?",
-      ).get(id) as { data_json: string }).data_json) as {
-        mechanics: {
-          grants: {
-            effects: Array<{ resolution: string }>;
-          };
-        };
-      };
-      assert.equal(stored.mechanics.grants.effects[0]!.resolution, "manual");
-    }
-
-    assert.equal(upgradeStoredCanonicalV2Entries(db), 0, "refresh must be idempotent");
-  } finally {
-    db.close();
-  }
-});
-
-test("startup backfills conservative feat resolution on existing canonical rows", () => {
-  const db = new Database(":memory:");
-  db.exec(SCHEMA_SQL);
-
-  try {
-    const {
-      resolution: _resolution,
-      resolutionNotes: _resolutionNotes,
-      ...mechanics
-    } = parseFeat({
-      name: "Actor",
-      text: "You gain proficiency in the Deception skill.",
-    });
-    const feat = {
-      ...samples.feats[0],
-      id: "f_existing_actor",
-      name: "Actor",
-      description: "You gain structured benefits and additional benefits described by this feat.",
-      mechanics,
-    };
-    db.prepare(
-      "INSERT INTO compendium_feats (id, name, name_key, data_json) VALUES (?, ?, ?, ?)",
-    ).run(feat.id, feat.name, "actor", JSON.stringify(feat));
-
-    assert.equal(upgradeStoredCanonicalV2Entries(db), 1);
-    const stored = JSON.parse((db.prepare(
-      "SELECT data_json FROM compendium_feats WHERE id = ?",
-    ).get(feat.id) as { data_json: string }).data_json) as {
-      resolution: string;
-      resolutionNotes?: string[];
-      mechanics: { resolution?: string; resolutionNotes?: string[] };
-    };
-    assert.equal(stored.resolution, "mixed");
-    assert.equal(stored.resolutionNotes, undefined);
-    assert.equal(stored.mechanics.resolution, undefined);
-    assert.equal(stored.mechanics.resolutionNotes, undefined);
-    const legacy = parseStoredCompendiumEntry("feats", JSON.stringify(stored));
-    const parsed = legacy.parsed as Record<string, unknown>;
-    assert.equal(parsed.resolution, "mixed");
-    assert.ok(
-      (parsed.resolutionNotes as string[]).some((note) => /until reviewed/i.test(note)),
-    );
-    assert.equal(upgradeStoredCanonicalV2Entries(db), 0, "backfill must be idempotent");
-  } finally {
-    db.close();
-  }
-});
-
-test("startup structures equipment choices on existing canonical backgrounds", () => {
-  const db = new Database(":memory:");
-  db.exec(SCHEMA_SQL);
-
-  try {
-    const background = {
-      ...samples.backgrounds[0],
-      id: "bg_existing_acolyte",
-      name: "Acolyte",
-      equipment: {
-        description: "Choose A or B: (A) Dagger, Parchment (10 sheets), 8 GP; or (B) 50 GP",
-      },
-    };
-    db.prepare(
-      "INSERT INTO compendium_backgrounds (id, name, name_key, data_json) VALUES (?, ?, ?, ?)",
-    ).run(background.id, background.name, "acolyte", JSON.stringify(background));
-
-    assert.equal(upgradeStoredCanonicalV2Entries(db), 1);
-    const stored = JSON.parse((db.prepare(
-      "SELECT data_json FROM compendium_backgrounds WHERE id = ?",
-    ).get(background.id) as { data_json: string }).data_json) as {
-      equipment: { options: Array<{ id: string; entries: unknown[] }> };
-    };
-    assert.deepEqual(stored.equipment.options.map((option) => option.id), ["A", "B"]);
-    assert.deepEqual(stored.equipment.options[1]?.entries, [
-      { kind: "currency", denomination: "GP", amount: 50 },
-    ]);
-    assert.equal(upgradeStoredCanonicalV2Entries(db), 0, "backfill must be idempotent");
-  } finally {
-    db.close();
-  }
-});
-
-test("native import normalizes legacy verbose backgrounds to compact V2", () => {
-  const batch = parseNativeCompendiumBatch({
-    format: BEHOLDEN_COMPENDIUM_FORMAT,
-    version: BEHOLDEN_COMPENDIUM_VERSION,
-    category: "backgrounds",
-    exportedAt: "2026-01-01T00:00:00.000Z",
-    entries: [{
-      schemaVersion: 2,
-      id: "bg_legacy",
-      name: "Legacy Background",
-      source: null,
-      proficiencies: {
-        skills: { fixed: ["Insight", "Religion"], choose: 0, from: null },
-        tools: { fixed: [], choose: 0, from: null },
-        languages: { fixed: [], choose: 0, from: null },
-        feats: [],
-        featChoice: 0,
-        abilityScores: ["Intelligence", "Wisdom", "Charisma"],
-        abilityScoreChoose: 0,
-      },
-      equipment: { description: "" },
-      traits: [{
-        id: "description",
-        name: "Description",
-        description: "Legacy prose.",
-        category: null,
-        scalingRolls: [],
-        preparedSpellProgression: [],
-        resolution: "manual",
-      }],
-    }],
-  });
-
-  assert.deepEqual(batch.entries, [{
-    id: "bg_legacy",
-    name: "Legacy Background",
-    description: "Legacy prose.",
-    proficiencies: {
-      skills: ["Insight", "Religion"],
-      abilityScores: ["Intelligence", "Wisdom", "Charisma"],
-    },
-  }]);
-});
-
-test("spell-reference maintenance leaves older canonical monsters untouched", () => {
-  const db = new Database(":memory:");
-  db.exec(SCHEMA_SQL);
-
-  try {
-    const oldMonster = structuredClone(samples.monsters[0]!);
-    delete oldMonster.schemaVersion;
-    delete oldMonster.description;
-    delete oldMonster.initiativeBonus;
-    delete oldMonster.passivePerception;
-    oldMonster.spells = [{ id: "s_test", name: "Test Spell" }];
-    db.prepare(
-      "INSERT INTO compendium_monsters (id, name, name_key, data_json) VALUES (?, ?, ?, ?)",
-    ).run(oldMonster.id, oldMonster.name, "test guardian", JSON.stringify(oldMonster));
-
-    backfillMonsterSpellRefs(db);
-    const stored = JSON.parse((db.prepare(
-      "SELECT data_json FROM compendium_monsters WHERE id = ?",
-    ).get(oldMonster.id) as { data_json: string }).data_json);
-    assert.deepEqual(stored, oldMonster);
-  } finally {
-    db.close();
-  }
-});
-
-test("legacy-shaped editor replacements preserve canonical-only fields", () => {
+test("editor replacements preserve canonical-only fields", () => {
   const monster = samples.monsters[0]!;
   const replacement = structuredClone(monster);
-  replacement.source = null;
-  replacement.description = null;
-  replacement.spellcasting = [];
-  replacement.spells = [];
-  (replacement.classification as Record<string, unknown>).alignment = null;
-  const mergedMonster = mergeCanonicalV2Edit("monsters", {
+  delete replacement.source;
+  delete replacement.description;
+  delete replacement.spellcasting;
+  delete replacement.spells;
+  delete (replacement.classification as Record<string, unknown>).alignment;
+  const existing = compactMonsterEntry({
     ...monster,
     source: "Test Source",
     description: "Canonical description",
@@ -611,17 +289,14 @@ test("legacy-shaped editor replacements preserve canonical-only fields", () => {
       id: "innate",
       name: "Innate Spellcasting",
       description: "The guardian casts spells.",
-      category: null,
-      recharge: null,
-      attack: null,
-      attacks: [],
     }],
     spells: [{ id: "s_test", name: "Test Spell" }],
     classification: {
       ...(monster.classification as Record<string, unknown>),
       alignment: "Neutral",
     },
-  }, replacement);
+  });
+  const mergedMonster = mergeCanonicalV2Edit("monsters", existing, replacement);
 
   assert.equal(mergedMonster.source, "Test Source");
   assert.equal(mergedMonster.description, "Canonical description");
@@ -729,7 +404,7 @@ test("invalid native bundles make no partial writes", () => {
   }
 });
 
-test("legacy XML conversion returns one native bundle without a destination database", () => {
+test("XML conversion returns one native V2 bundle without a destination database", () => {
   const document = convertCompendiumXmlToNative(`
     <compendium>
       <monster>
@@ -775,8 +450,8 @@ test("native batch parser rejects foreign formats and mixed envelopes", () => {
   );
 });
 
-test("native batch parser normalizes earlier V2 spell exports during migration", () => {
-  const legacyV2Spell: Record<string, unknown> = {
+test("native batch parser rejects earlier non-canonical V2 spell exports", () => {
+  const obsoleteV2Spell: Record<string, unknown> = {
     ...structuredClone(samples.spells[0]!),
     schemaVersion: 2,
     source: null,
@@ -793,23 +468,17 @@ test("native batch parser normalizes earlier V2 spell exports during migration",
       duration: { description: "Instantaneous", concentration: false },
     },
   };
-  legacyV2Spell.school = "EV";
-  legacyV2Spell.source = null;
-  legacyV2Spell.classes = ["School: Evocation", "Wizard", "Wizard"];
-  (legacyV2Spell.casting as Record<string, unknown>).time = "Action";
-  ((legacyV2Spell.casting as Record<string, unknown>).duration as Record<string, unknown>).description =
+  obsoleteV2Spell.school = "EV";
+  obsoleteV2Spell.source = null;
+  obsoleteV2Spell.classes = ["School: Evocation", "Wizard", "Wizard"];
+  (obsoleteV2Spell.casting as Record<string, unknown>).time = "Action";
+  ((obsoleteV2Spell.casting as Record<string, unknown>).duration as Record<string, unknown>).description =
     "Concentration, up to 10 minute";
-  legacyV2Spell.description = ["A spell.\n\nSource:\tTest Grimoire p. 12"];
+  obsoleteV2Spell.description = ["A spell.\n\nSource:\tTest Grimoire p. 12"];
 
-  const parsed = parseNativeCompendiumBatch(batch("spells", [legacyV2Spell]));
-  const spell = parsed.entries[0]!;
-  assert.equal(spell.school, "Evocation");
-  assert.equal(spell.source, "Test Grimoire p. 12");
-  assert.deepEqual(spell.classes, ["Wizard"]);
-  assert.equal((spell.casting as Record<string, unknown>).time, "Action");
-  assert.equal(
-    ((spell.casting as Record<string, unknown>).duration as Record<string, unknown>).description,
-    "Concentration, up to 10 Minutes",
+  assert.throws(
+    () => parseNativeCompendiumBatch(batch("spells", [obsoleteV2Spell])),
+    /invalid/u,
   );
 });
 

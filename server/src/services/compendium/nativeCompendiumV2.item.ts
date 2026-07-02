@@ -1,9 +1,9 @@
-import { isCanonicalV2Shape, upgradeCanonicalV2Entry } from "./nativeCompendiumV2Migration.js";
+import { isCanonicalV2Entry } from "./nativeCompendiumV2Schemas.js";
 import { type JsonRecord, record, list } from "./nativeCompendiumV2.helpers.js";
 import { compactItemEntry, expandedItemDetail, itemTypeKey } from "./itemCompaction.js";
 
 export function itemToV2(entry: JsonRecord): JsonRecord {
-  if (isCanonicalV2Shape("items", entry)) return upgradeCanonicalV2Entry("items", entry);
+  if (isCanonicalV2Entry("items", entry)) return entry;
   return compactItemEntry(entry);
 }
 

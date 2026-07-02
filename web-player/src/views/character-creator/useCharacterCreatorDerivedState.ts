@@ -166,7 +166,15 @@ export function useCharacterCreatorDerivedState(args: {
     [bgDetail]
   );
   const step5ClassToolProficiency = React.useMemo(
-    () => classDetail?.proficiencies?.tools ?? null,
+    () => {
+      const tools = classDetail?.proficiencies?.tools;
+      if (!tools) return null;
+      return {
+        fixed: Array.isArray(tools.fixed) ? tools.fixed : [],
+        choices: Array.isArray(tools.choices) ? tools.choices : [],
+        notes: Array.isArray(tools.notes) ? tools.notes : [],
+      };
+    },
     [classDetail]
   );
   const step5CoreLanguageChoice = React.useMemo(

@@ -6,7 +6,7 @@ import { requireParam } from "../../lib/routeHelpers.js";
 import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { parseBody } from "../../shared/validate.js";
 import { itemToV2 } from "../../services/compendium/nativeCompendiumV2.js";
-import { mergeCanonicalV2Edit } from "../../services/compendium/nativeCompendiumV2Migration.js";
+import { mergeCanonicalV2Edit } from "../../services/compendium/canonicalCompendiumEdits.js";
 import { parseStoredCompendiumEntry } from "../../services/compendium/storedCompendium.js";
 import { ItemBody, buildItemRecord, normalizeLookupName } from "./helpers.js";
 import { z } from "zod";

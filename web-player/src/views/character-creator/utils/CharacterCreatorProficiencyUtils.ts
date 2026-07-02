@@ -164,14 +164,10 @@ export function buildProficiencyMap(args: {
     splitComma(classDetail.weapons).forEach((name) => pushWeapon(name, className));
     const classToolProf = classDetail.proficiencies?.tools;
     if (classToolProf) {
-      // Structured tool data from v2 class: fixed tools are auto-granted,
+      // Structured V2 tool data: fixed tools are auto-granted,
       // choices come from the user's selections, notes are display-only.
       classToolProf.fixed.forEach((name) => pushTool(name, className));
       form.chosenClassTools.forEach((name) => pushTool(name, className));
-    } else {
-      // Legacy classes: parse the flat tools string, filtering out noise
-      // tokens like "Choose 3 tools" produced by classFromV2 for old entries.
-      splitComma(classDetail.tools ?? "").forEach((name) => pushTool(name, className));
     }
 
     splitComma(classDetail.proficiency)

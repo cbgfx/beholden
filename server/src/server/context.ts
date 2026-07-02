@@ -39,18 +39,6 @@ export interface Helpers {
   nextLabelNumber: (encounterId: string, baseName: string) => number;
   createPlayerCombatant: (args: { encounterId: string; player: StoredCampaignCharacter; t?: number }) => StoredEncounterActor;
   seedDefaultConditions: (campaignId: string) => void;
-  importCompendiumSqlite: (args: { buffer: Buffer }) => {
-    imported: number;
-    total: number;
-    spells: number;
-    items: number;
-    classes: number;
-    races: number;
-    backgrounds: number;
-    feats: number;
-    decks: number;
-    bastions?: number;
-  };
 }
 
 export interface ServerContext {

@@ -6,18 +6,8 @@ import {
   monsterFromV2,
   spellFromV2,
   speciesFromV2,
-  backgroundToV2,
-  classToV2,
-  featToV2,
-  itemToV2,
-  monsterToV2,
-  spellToV2,
-  speciesToV2,
 } from "./nativeCompendiumV2.js";
-import {
-  isCanonicalV2Shape,
-  upgradeCanonicalV2Entry,
-} from "./nativeCompendiumV2Migration.js";
+import { CATEGORY_SCHEMAS } from "./nativeCompendiumV2Schemas.js";
 
 type JsonRecord = Record<string, unknown>;
 type StoredCategory =
@@ -29,7 +19,7 @@ type StoredCategory =
   | "backgrounds"
   | "feats";
 
-const toLegacyView: Record<StoredCategory, (entry: JsonRecord) => JsonRecord> = {
+const toScreenView: Record<StoredCategory, (entry: JsonRecord) => JsonRecord> = {
   monsters: monsterFromV2,
   items: itemFromV2,
   spells: spellFromV2,
@@ -39,70 +29,31 @@ const toLegacyView: Record<StoredCategory, (entry: JsonRecord) => JsonRecord> = 
   feats: featFromV2,
 };
 
-const toCanonicalView: Record<StoredCategory, (entry: JsonRecord) => JsonRecord> = {
-  monsters: monsterToV2,
-  items: itemToV2,
-  spells: spellToV2,
-  classes: classToV2,
-  species: speciesToV2,
-  backgrounds: backgroundToV2,
-  feats: featToV2,
-};
+function parseStoredCanonical(
+  category: StoredCategory,
+  json: string | null | undefined,
+): JsonRecord {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json ?? "");
+  } catch (error) {
+    throw new Error(`Stored ${category} entry contains invalid JSON.`, { cause: error });
+  }
+  return CATEGORY_SCHEMAS[category].parse(parsed) as JsonRecord;
+}
 
-/**
- * Gives existing API consumers their legacy-shaped view without changing storage.
- * Canonical v2 conversion is deterministic; legacy rows pass through untouched.
- */
+/** Projects strict canonical V2 storage into the shape consumed by current screens. */
 export function parseStoredCompendiumEntry(
   category: StoredCategory,
   json: string | null | undefined,
 ): JsonRecord {
-  let entry: JsonRecord = {};
-  try {
-    const parsed = JSON.parse(json ?? "{}") as unknown;
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      entry = parsed as JsonRecord;
-    }
-  } catch {
-    return {};
-  }
-  return isCanonicalV2Shape(category, entry)
-    ? toLegacyView[category](upgradeCanonicalV2Entry(category, entry))
-    : entry;
+  return toScreenView[category](parseStoredCanonical(category, json));
 }
 
-export function isStoredCompendiumEntryCanonical(
-  category: StoredCategory,
-  json: string | null | undefined,
-): boolean {
-  try {
-    const parsed = JSON.parse(json ?? "{}") as unknown;
-    return Boolean(
-      parsed
-      && typeof parsed === "object"
-      && !Array.isArray(parsed)
-      && isCanonicalV2Shape(category, parsed as JsonRecord),
-    );
-  } catch {
-    return false;
-  }
-}
-
-/** Returns canonical V2 for both migrated rows and legacy rows during rollout. */
+/** Returns the strict canonical V2 entry stored in the database. */
 export function parseStoredCanonicalCompendiumEntry(
   category: StoredCategory,
   json: string | null | undefined,
 ): JsonRecord {
-  let entry: JsonRecord = {};
-  try {
-    const parsed = JSON.parse(json ?? "{}") as unknown;
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      entry = parsed as JsonRecord;
-    }
-  } catch {
-    return {};
-  }
-  return isCanonicalV2Shape(category, entry)
-    ? upgradeCanonicalV2Entry(category, entry)
-    : toCanonicalView[category](entry);
+  return parseStoredCanonical(category, json);
 }

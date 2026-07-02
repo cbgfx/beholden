@@ -1,6 +1,6 @@
 import type Database from "better-sqlite3";
 import { normalizeKey } from "../../lib/text.js";
-import { isCanonicalV2Shape } from "./nativeCompendiumV2Migration.js";
+import { isCanonicalV2Entry } from "./nativeCompendiumV2Schemas.js";
 
 export type MonsterSpellRef = {
   spellId: string | null;
@@ -56,7 +56,7 @@ function normalizeMonsterSpellRefs(
   });
 }
 
-export function backfillMonsterSpellRefs(db: Database.Database): void {
+export function resolveSourceMonsterSpellRefs(db: Database.Database): void {
   const spellRows = db.prepare(
     `SELECT id, name, name_key, json_extract(data_json, '$.base_key') AS base_key FROM compendium_spells`
   ).all() as Array<{ id: string; name: string; name_key: string; base_key: string | null }>;
@@ -80,7 +80,7 @@ export function backfillMonsterSpellRefs(db: Database.Database): void {
   for (const row of monsters) {
     const data = row.data_json ? JSON.parse(row.data_json) : null;
     if (!data || typeof data !== "object") continue;
-    if (isCanonicalV2Shape("monsters", data as Record<string, unknown>)) continue;
+    if (isCanonicalV2Entry("monsters", data as Record<string, unknown>)) continue;
     const names = extractMonsterSpellNames((data as { spells?: unknown }).spells);
     const nextSpells = normalizeMonsterSpellRefs(names, findSpellByKey);
     updateMonsterDataStmt.run(

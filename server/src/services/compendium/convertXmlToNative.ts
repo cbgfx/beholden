@@ -8,7 +8,7 @@ import {
 } from "./nativeCompendium.js";
 
 /**
- * Translate legacy XML into a portable Beholden JSON document without touching
+ * Translate source XML into a strict V2 Beholden JSON document without touching
  * the live application database.
  */
 export function convertCompendiumXmlToNative(xml: string): NativeCompendiumBundle & { warnings: string[] } {
@@ -17,7 +17,11 @@ export function convertCompendiumXmlToNative(xml: string): NativeCompendiumBundl
     db.pragma("foreign_keys = ON");
     db.exec(SCHEMA_SQL);
     const { warnings } = importCompendiumXml({ xml, db });
-    const document = exportNativeCompendiumBundle(db);
+    const document = exportNativeCompendiumBundle(
+      db,
+      undefined,
+      { allowSourceConversion: true },
+    );
     // The converter is the only heuristic boundary. Never let it download a
     // document that the strict native importer would reject later.
     parseNativeCompendiumDocument(document);

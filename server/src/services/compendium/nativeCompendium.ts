@@ -11,10 +11,7 @@ import {
   spellToV2,
   speciesToV2,
 } from "./nativeCompendiumV2.js";
-import {
-  isCanonicalV2Shape,
-  upgradeCanonicalV2Entry,
-} from "./nativeCompendiumV2Migration.js";
+import { isCanonicalV2Entry } from "./nativeCompendiumV2.js";
 import { CANONICAL_V2_SCHEMA_VERSION } from "./nativeCompendiumV2Schemas.js";
 import { type JsonRecord, record } from "../../lib/jsonRecord.js";
 
@@ -157,11 +154,13 @@ function mergeExportEntry(
   category: NativeCompendiumCategory,
   row: JsonRecord,
   scalar: JsonRecord,
+  allowSourceConversion: boolean,
 ): JsonRecord {
   const blob = parseJsonRecord(row.data_json);
-  return isCanonicalV2Shape(category, blob)
-    ? upgradeCanonicalV2Entry(category, blob)
-    : { ...blob, ...scalar };
+  if (isCanonicalV2Entry(category, blob)) return blob;
+  if (allowSourceConversion) return { ...blob, ...scalar };
+  assertCanonicalV2Entry(category, blob, 0);
+  return blob;
 }
 
 function stringList(value: unknown): string[] {
@@ -189,9 +188,10 @@ export function parseNativeCompendiumBatch(value: unknown): NativeCompendiumBatc
   }
   const entries = root.entries.map((entry, index) => {
     const parsed = asRecord(entry, `Entry ${index + 1}`);
-    return isCanonicalV2Shape(category, parsed)
-      ? upgradeCanonicalV2Entry(category, parsed)
-      : parsed;
+    if (!isCanonicalV2Entry(category, parsed)) {
+      assertCanonicalV2Entry(category, parsed, index);
+    }
+    return parsed;
   });
   entries.forEach((entry, index) => assertCanonicalV2Entry(category, entry, index));
   const ids = new Set<string>();
@@ -306,11 +306,18 @@ export function previewNativeCompendiumDocument(
 export function exportNativeCompendiumBundle(
   db: Database.Database,
   categories: Iterable<NativeCompendiumCategory> = NATIVE_COMPENDIUM_CATEGORIES,
-  options: { includeEmpty?: boolean } = {},
+  options: { includeEmpty?: boolean; allowSourceConversion?: boolean } = {},
 ): NativeCompendiumBundle {
   const exportedAt = new Date().toISOString();
   const batches = Array.from(categories)
-    .map((category) => exportNativeCompendiumBatch(db, category))
+    .map((category) => exportNativeCompendiumBatch(
+      db,
+      category,
+      undefined,
+      options.allowSourceConversion === undefined
+        ? {}
+        : { allowSourceConversion: options.allowSourceConversion },
+    ))
     .filter((batch) => options.includeEmpty || batch.entries.length > 0)
     .map((batch) => ({ category: batch.category, entries: batch.entries }));
   return {
@@ -325,8 +332,10 @@ export function exportNativeCompendiumBatch(
   db: Database.Database,
   category: NativeCompendiumCategory,
   ids?: Iterable<string>,
+  options: { allowSourceConversion?: boolean } = {},
 ): NativeCompendiumBatch {
   let entries: JsonRecord[];
+  const allowSourceConversion = options.allowSourceConversion === true;
 
   switch (category) {
     case "monsters":
@@ -342,7 +351,7 @@ export function exportNativeCompendiumBatch(
         typeFull: row.type_full ?? null,
         size: row.size ?? null,
         environment: row.environment ?? null,
-      }));
+      }, allowSourceConversion));
       break;
     case "items":
       entries = (db.prepare(
@@ -360,7 +369,7 @@ export function exportNativeCompendiumBatch(
         weight: row.weight ?? null,
         value: row.value ?? null,
         proficiency: row.proficiency ?? null,
-      }));
+      }, allowSourceConversion));
       break;
     case "spells":
       entries = (db.prepare(
@@ -375,7 +384,7 @@ export function exportNativeCompendiumBatch(
         concentration: bool(row.concentration),
         components: row.components ?? null,
         classes: row.classes ?? null,
-      }));
+      }, allowSourceConversion));
       break;
     case "classes":
       entries = (db.prepare(
@@ -385,7 +394,7 @@ export function exportNativeCompendiumBatch(
         name: row.name,
         nameKey: row.name_key ?? null,
         hd: row.hd ?? null,
-      }));
+      }, allowSourceConversion));
       break;
     case "species":
       entries = (db.prepare(
@@ -396,7 +405,7 @@ export function exportNativeCompendiumBatch(
         nameKey: row.name_key ?? null,
         size: row.size ?? null,
         speed: row.speed ?? null,
-      }));
+      }, allowSourceConversion));
       break;
     case "backgrounds":
       entries = (db.prepare(
@@ -405,7 +414,7 @@ export function exportNativeCompendiumBatch(
         id: row.id,
         name: row.name,
         nameKey: row.name_key ?? null,
-      }));
+      }, allowSourceConversion));
       break;
     case "feats":
       entries = (db.prepare(
@@ -414,7 +423,7 @@ export function exportNativeCompendiumBatch(
         id: row.id,
         name: row.name,
         nameKey: row.name_key ?? null,
-      }));
+      }, allowSourceConversion));
       break;
     case "decks":
       entries = (db.prepare(
@@ -565,7 +574,7 @@ export function importNativeCompendiumBatch(
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Spell ${index + 1} name`);
-          const legacy = spellFromV2(entry);
+          const screenView = spellFromV2(entry);
           stmt.run(
             idOrGenerated(entry, "s_", name),
             name,
@@ -573,9 +582,9 @@ export function importNativeCompendiumBatch(
             optionalNumber(entry.level),
             optionalText(entry.school),
             bool(entry.ritual) ? 1 : 0,
-            bool(legacy.concentration) ? 1 : 0,
-            optionalText(legacy.components),
-            optionalText(legacy.classes),
+            bool(screenView.concentration) ? 1 : 0,
+            optionalText(screenView.components),
+            optionalText(screenView.classes),
             JSON.stringify(entry),
           );
         }

@@ -69,10 +69,15 @@ export function fetchFeatCatalog(fields: readonly CatalogFields[] = [
 
 type JsonRecord = Record<string, any>;
 
-function classV2ToPlayer(entry: JsonRecord): JsonRecord {
+export function classV2ToPlayer(entry: JsonRecord): JsonRecord {
   const proficiencies = entry.proficiencies ?? {};
   const spellcasting = entry.spellcasting ?? {};
   const tools = proficiencies.tools ?? { fixed: [], choices: [], notes: [] };
+  const expandedTools = {
+    fixed: Array.isArray(tools.fixed) ? tools.fixed : [],
+    choices: Array.isArray(tools.choices) ? tools.choices : [],
+    notes: Array.isArray(tools.notes) ? tools.notes : [],
+  };
   return {
     id: entry.id,
     name: entry.name,
@@ -85,11 +90,14 @@ function classV2ToPlayer(entry: JsonRecord): JsonRecord {
     armor: (proficiencies.armor ?? []).join(", "),
     weapons: (proficiencies.weapons ?? []).join(", "),
     tools: [
-      ...(tools.fixed ?? []),
-      ...(tools.choices ?? []).map((choice: JsonRecord) => `Choose ${choice.count} tool${choice.count === 1 ? "" : "s"}`),
-      ...(tools.notes ?? []),
+      ...expandedTools.fixed,
+      ...expandedTools.choices.map((choice: JsonRecord) => `Choose ${choice.count} tool${choice.count === 1 ? "" : "s"}`),
+      ...expandedTools.notes,
     ].join(", "),
-    proficiencies,
+    proficiencies: {
+      ...proficiencies,
+      tools: expandedTools,
+    },
     spellAbility: spellcasting.ability,
     slotsReset: spellcasting.slotRecovery === "short_rest" ? "S" : "L",
     autolevels: (entry.levels ?? []).map((level: JsonRecord) => {

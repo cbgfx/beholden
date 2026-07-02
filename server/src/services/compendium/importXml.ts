@@ -2,7 +2,7 @@ import type Database from "better-sqlite3";
 import { XMLParser } from "fast-xml-parser";
 
 import { asArray, asText } from "../../lib/text.js";
-import { backfillMonsterSpellRefs } from "./normalizeMonsterSpellRefs.js";
+import { resolveSourceMonsterSpellRefs } from "./normalizeMonsterSpellRefs.js";
 import { assertKnownXmlKeys, assertKnownXmlKeysEach } from "./xmlFieldGuard.js";
 import {
   buildBackgroundImportData,
@@ -20,7 +20,6 @@ import {
   pruneMonsterBlob,
   pruneRaceBlob,
   pruneSpellBlob,
-  trimCompendiumBlobColumns,
 } from "./blobHygiene.js";
 
 export function importCompendiumXml(args: {
@@ -244,7 +243,7 @@ export function importCompendiumXml(args: {
         JSON.stringify(pruneSpellBlob(data as Record<string, unknown>)),
       );
     }
-    backfillMonsterSpellRefs(db);
+    resolveSourceMonsterSpellRefs(db);
 
     for (const item of items) {
       const data = xmlItemToJson(item, warnings);
@@ -423,7 +422,6 @@ export function importCompendiumXml(args: {
       }
     }
 
-    trimCompendiumBlobColumns(db);
   })();
 
   const totalMonsters = (db.prepare("SELECT count(*) AS n FROM compendium_monsters").get() as { n: number }).n;

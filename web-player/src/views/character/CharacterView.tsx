@@ -64,6 +64,9 @@ export function CharacterView() {
     char,
     setChar,
     fetchChar,
+    syncedAcValue: derived
+      ? derived.effectiveAc - (derived.overrides?.acBonus ?? 0)
+      : null,
     syncedHpMaxValue: derived ? derived.effectiveHpMax - (derived.overrides?.hpMaxBonus ?? 0) : null,
     syncedSpeedValue: derived?.effectiveSpeed ?? null,
   });

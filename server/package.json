@@ -9,7 +9,7 @@
     "db:maintenance": "tsx src/scripts/databaseMaintenance.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx --test src/services/compendium/nativeCompendium.test.ts src/services/compendium/nativeCompendiumV2Schemas.test.ts src/services/compendium/convertXmlToNative.fixtures.test.ts src/services/compendium/developmentCorpusConservation.test.ts src/services/compendium/wotc2024FeatCorpus.test.ts src/routes/compendium/compendiumV2Compat.test.ts src/lib/featParser.test.ts src/lib/classTools.test.ts",
+    "test": "tsx --test src/services/compendium/nativeCompendium.test.ts src/services/compendium/nativeCompendiumV2Schemas.test.ts src/services/compendium/convertXmlToNative.fixtures.test.ts src/services/compendium/developmentCorpusConservation.test.ts src/services/compendium/wotc2024FeatCorpus.test.ts src/routes/compendium/compendiumV2Routes.test.ts src/lib/featParser.test.ts src/lib/classTools.test.ts src/lib/characterSheetNormalization.test.ts",
     "start": "node dist/main.js"
   },
   "dependencies": {

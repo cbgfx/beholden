@@ -2,11 +2,11 @@ import {
   compactBackgroundEntry,
   expandBackgroundProficiencies,
 } from "./backgroundCompaction.js";
-import { isCanonicalV2Shape, upgradeCanonicalV2Entry } from "./nativeCompendiumV2Migration.js";
+import { isCanonicalV2Entry } from "./nativeCompendiumV2Schemas.js";
 import { type JsonRecord, record, list, text } from "./nativeCompendiumV2.helpers.js";
 
 export function backgroundToV2(entry: JsonRecord): JsonRecord {
-  if (isCanonicalV2Shape("backgrounds", entry)) return upgradeCanonicalV2Entry("backgrounds", entry);
+  if (isCanonicalV2Entry("backgrounds", entry)) return entry;
   return compactBackgroundEntry(entry);
 }
 

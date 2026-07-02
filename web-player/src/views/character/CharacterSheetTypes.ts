@@ -121,6 +121,8 @@ export interface CharacterData {
   chosenBgOriginFeatId?: string | null;
   abilityMethod?: string;
   hd?: number | null;
+  derivedAc?: number;
+  derivedHpMax?: number;
   hitDiceCurrent?: number | null;
   xp?: number;
   chosenOptionals?: string[];

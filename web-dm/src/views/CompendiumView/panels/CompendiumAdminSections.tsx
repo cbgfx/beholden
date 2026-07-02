@@ -268,16 +268,16 @@ export function NativeImportPreview({ preview }: { preview: NativePreviewResult 
   );
 }
 
-export function LegacyCompendiumDescription() {
+export function XmlConversionDescription() {
   return (
     <div style={{ color: theme.colors.muted, lineHeight: 1.5 }}>
-      Convert a legacy XML (Fight Club 5e) file into one native Beholden JSON bundle. Conversion only downloads a new file:
+      Convert a Fight Club 5e XML source file into one strict V2 Beholden JSON bundle. Conversion only downloads a new file:
       it never imports XML or changes the currently loaded compendium.
     </div>
   );
 }
 
-export function LegacyCompendiumActions(props: {
+export function XmlConversionActions(props: {
   busy: boolean;
   fileSelected: boolean;
   onFileChange: (file: File | null) => void;

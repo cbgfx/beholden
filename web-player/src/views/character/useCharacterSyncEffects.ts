@@ -8,12 +8,14 @@ export function useCharacterSyncEffects(args: {
   char: Character | null;
   setChar: React.Dispatch<React.SetStateAction<Character | null>>;
   fetchChar: () => Promise<void>;
+  syncedAcValue: number | null;
   syncedHpMaxValue: number | null;
   syncedSpeedValue?: number | null;
 }) {
-  const { char, setChar, fetchChar, syncedHpMaxValue, syncedSpeedValue } = args;
+  const { char, setChar, fetchChar, syncedAcValue, syncedHpMaxValue, syncedSpeedValue } = args;
   const lastSyncedStatsRef = React.useRef<{
     charId: string;
+    ac: number | null;
     hpMax: number;
     speed: number | null;
   } | null>(null);
@@ -49,18 +51,21 @@ export function useCharacterSyncEffects(args: {
     const prev = lastSyncedStatsRef.current;
     if (
       prev?.charId === char.id
+      && prev.ac === syncedAcValue
       && prev.hpMax === syncedHpMaxValue
       && prev.speed === speed
     ) return;
     lastSyncedStatsRef.current = {
       charId: char.id,
+      ac: syncedAcValue,
       hpMax: syncedHpMaxValue,
       speed,
     };
     void putMyCharacter(char.id, {
       syncedHpMax: syncedHpMaxValue,
+      ...(syncedAcValue != null ? { syncedAc: syncedAcValue } : {}),
       ...(speed != null ? { syncedSpeed: speed } : {}),
     });
-  }, [char, syncedHpMaxValue, syncedSpeedValue]);
+  }, [char, syncedAcValue, syncedHpMaxValue, syncedSpeedValue]);
 
 }

@@ -11,6 +11,7 @@ import type {
   StoredCampaignCharacterSheetState,
   StoredCharacterSheet,
   StoredCharacterSheetState,
+  StoredOverrides,
 } from "../server/userData.js";
 
 export type Assignment = {
@@ -224,9 +225,12 @@ function buildCampaignCharacterLive(
   patch: Partial<StoredCampaignCharacterLiveState>,
 ): StoredCampaignCharacterLiveState {
   const deathSaves = patch.deathSaves ?? current.deathSaves;
+  const overrides = patch.overrides
+    ? { ...(current.overrides ?? DEFAULT_OVERRIDES), ...patch.overrides }
+    : current.overrides ?? DEFAULT_OVERRIDES;
   return {
     hpCurrent: patch.hpCurrent ?? current.hpCurrent,
-    overrides: patch.overrides ?? current.overrides ?? DEFAULT_OVERRIDES,
+    overrides,
     conditions: patch.conditions ?? current.conditions ?? [],
     ...(deathSaves ? { deathSaves } : {}),
   };
@@ -431,14 +435,39 @@ export function broadcastPlayerCombatantChanges(
   }
 }
 
+export function getCharacterSheetOverrides(
+  char: Pick<StoredCharacterSheet, "characterData">,
+): StoredOverrides | null {
+  const raw = char.characterData?.sheetOverrides;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const record = raw as Record<string, unknown>;
+  const numberOrDefault = (value: unknown, fallback: number) =>
+    typeof value === "number" && Number.isFinite(value) ? Math.trunc(value) : fallback;
+
+  return {
+    tempHp: Math.max(0, numberOrDefault(record.tempHp, DEFAULT_OVERRIDES.tempHp)),
+    acBonus: numberOrDefault(record.acBonus, DEFAULT_OVERRIDES.acBonus),
+    hpMaxBonus: numberOrDefault(record.hpMaxBonus, DEFAULT_OVERRIDES.hpMaxBonus),
+    ...(typeof record.inspiration === "boolean" ? { inspiration: record.inspiration } : {}),
+    ...(record.abilityScores && typeof record.abilityScores === "object" && !Array.isArray(record.abilityScores)
+      ? { abilityScores: record.abilityScores as StoredOverrides["abilityScores"] }
+      : {}),
+  };
+}
+
 /** Overlay live campaign-character state onto a character sheet, resolving caster names in conditions. */
 export function mergeLiveStats(
   db: Database.Database,
   char: ReturnType<typeof rowToCharacterSheet>,
   assignments: Assignment[],
 ) {
+  const sheetOverrides = getCharacterSheetOverrides(char);
   const playerIds = assignments.map((a) => a.player_id);
-  if (playerIds.length === 0) return char;
+  if (playerIds.length === 0) {
+    return sheetOverrides
+      ? { ...char, ac: char.ac + sheetOverrides.acBonus, overrides: sheetOverrides }
+      : char;
+  }
 
   const liveRow = db
     .prepare(
@@ -449,9 +478,21 @@ export function mergeLiveStats(
     )
     .get(...playerIds) as Record<string, unknown> | undefined;
 
-  if (!liveRow) return char;
+  if (!liveRow) {
+    return sheetOverrides
+      ? { ...char, ac: char.ac + sheetOverrides.acBonus, overrides: sheetOverrides }
+      : char;
+  }
   const live = rowToCampaignCharacter(liveRow);
   const liveConditions = live.conditions ?? [];
+  const liveOverrides = live.overrides ?? DEFAULT_OVERRIDES;
+  const effectiveOverrides = sheetOverrides
+    ? {
+        ...liveOverrides,
+        ...sheetOverrides,
+        inspiration: liveOverrides.inspiration ?? sheetOverrides.inspiration ?? false,
+      }
+    : liveOverrides;
 
   const casterIds = [...new Set(
     liveConditions
@@ -498,6 +539,7 @@ export function mergeLiveStats(
 
   return {
     ...char,
+    ac: char.ac + effectiveOverrides.acBonus,
     hpCurrent: live.hpCurrent,
     imageUrl: live.imageUrl ?? char.imageUrl,
     conditions: liveConditions.map((cond) => {
@@ -506,7 +548,7 @@ export function mergeLiveStats(
       if (!resolvedCasterName) return cond;
       return { ...cond, casterName: resolvedCasterName, sourceName: resolvedCasterName };
     }),
-    overrides: live.overrides ?? DEFAULT_OVERRIDES,
+    overrides: effectiveOverrides,
     deathSaves: live.deathSaves ?? char.deathSaves,
     sharedNotes: live.sharedNotes ?? char.sharedNotes,
   };

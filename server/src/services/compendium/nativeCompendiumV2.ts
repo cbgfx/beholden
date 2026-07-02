@@ -1,6 +1,7 @@
 import {
   CATEGORY_SCHEMAS,
   formatCanonicalV2Issues,
+  isCanonicalV2Entry,
 } from "./nativeCompendiumV2Schemas.js";
 import { type JsonRecord, record, list, text } from "./nativeCompendiumV2.helpers.js";
 
@@ -18,10 +19,7 @@ export function assertCanonicalV2Entry(category: string, entry: JsonRecord, inde
   }
 }
 
-export function isCanonicalV2Entry(category: string, entry: JsonRecord): boolean {
-  if (!(category in CATEGORY_SCHEMAS)) return false;
-  return CATEGORY_SCHEMAS[category as keyof typeof CATEGORY_SCHEMAS].safeParse(entry).success;
-}
+export { isCanonicalV2Entry };
 
 export function collectV2MonsterSpellIds(entries: JsonRecord[]): Set<string> {
   const ids = new Set<string>();

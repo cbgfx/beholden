@@ -44,7 +44,7 @@ export function buildClassImportData(cls: XmlObject | null | undefined, warnings
       const modifiers = feature?.modifier
         ? asArray<unknown>(feature.modifier as unknown[] | unknown | null | undefined)
           .map((modifier) => ({
-            kind: "legacy_modifier",
+            kind: "source_modifier",
             category: typeof modifier === "string"
               ? null
               : asText((modifier as XmlObject)?.["@_category"]) || null,
@@ -57,7 +57,7 @@ export function buildClassImportData(cls: XmlObject | null | undefined, warnings
       const rolls = feature?.roll
         ? asArray<unknown>(feature.roll as unknown[] | unknown | null | undefined)
           .map((roll) => ({
-            kind: "legacy_roll",
+            kind: "source_roll",
             description: typeof roll === "string"
               ? null
               : asText((roll as XmlObject)?.["@_description"]) || null,
@@ -85,8 +85,8 @@ export function buildClassImportData(cls: XmlObject | null | undefined, warnings
         effects: [
           ...modifiers,
           ...rolls,
-          ...(special ? [{ kind: "legacy_special", value: special }] : []),
-          ...(proficiency ? [{ kind: "legacy_proficiency", value: proficiency }] : []),
+          ...(special ? [{ kind: "source_special", value: special }] : []),
+          ...(proficiency ? [{ kind: "source_proficiency", value: proficiency }] : []),
         ],
         preparedSpellProgression: parsePreparedSpellProgression(asText(feature?.text) || ""),
       };

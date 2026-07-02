@@ -1,12 +1,11 @@
 /**
- * HTTP-level integration tests for the V2 compatibility boundary.
+ * HTTP-level integration tests for canonical V2 compendium routes.
  *
  * Tests that:
  *  - GET detail routes project canonical V2 fields (source, action, spells) correctly.
  *  - PUT routes for monsters/items/spells preserve canonical-only fields that the
  *    edit body never carries (source, spellcasting, spells, recharge, attunement.requirements, rolls).
- *  - GET /api/compendium/classes/:id returns legacy `autolevels` for canonical V2
- *    classes, including older records that lack recently-added fields like `proficiencies`.
+ *  - GET /api/compendium/classes/:id projects canonical V2 for current screens.
  */
 import assert from "node:assert/strict";
 import { describe, it, before, after } from "node:test";
@@ -23,7 +22,10 @@ import { signToken } from "../../lib/jwtAuth.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { registerCompendiumRoutes } from "../compendium.js";
 import { importNativeCompendiumBatch } from "../../services/compendium/nativeCompendium.js";
-import { upgradeStoredCanonicalV2Entries } from "../../services/compendium/nativeCompendiumV2Migration.js";
+import { compactClassEntry } from "../../services/compendium/classCompaction.js";
+import { compactItemEntry } from "../../services/compendium/itemCompaction.js";
+import { compactMonsterEntry } from "../../services/compendium/monsterCompaction.js";
+import { compactSpellEntry } from "../../services/compendium/spellCompaction.js";
 import type { ServerContext } from "../../server/context.js";
 
 // ---------------------------------------------------------------------------
@@ -213,40 +215,6 @@ const CANONICAL_CLASS = {
   ],
 };
 
-// Older canonical V2 class — has `hitDie`, `levels`, `spellcasting` (required by
-// isCanonicalV2Shape) but lacks `proficiencies` (a recently-added V2 field).
-// Simulates a record stored before that field was added to the schema.
-// Inserted directly via SQL to bypass assertCanonicalV2Entry.
-const OLDER_CANONICAL_CLASS = {
-  id: "c_compat_older_barbarian",
-  name: "Compat Older Barbarian",
-  description: "An older-style class entry without structured proficiency data.",
-  hitDie: 12,
-  startingWealth: null,
-  // `proficiencies` intentionally absent — simulates a pre-schema-addition record
-  spellcasting: { ability: null, slotRecovery: "long_rest" },
-  levels: [
-    {
-      level: 1,
-      abilityScoreImprovement: false,
-      cantripsKnown: null,
-      spellSlots: {},
-      features: [
-        {
-          id: "barbarian_1_rage",
-          name: "Rage",
-          description: "As a Bonus Action, you can enter a Rage.",
-          optional: false,
-          effects: [],
-          scalingRolls: [],
-          preparedSpellProgression: [],
-        },
-      ],
-      resources: [{ name: "Rage", uses: 2, recovery: "long_rest", subclass: null }],
-    },
-  ],
-};
-
 // ---------------------------------------------------------------------------
 // Test harness
 // ---------------------------------------------------------------------------
@@ -255,16 +223,22 @@ function makeTestBatch(
   category: string,
   entries: Record<string, unknown>[],
 ) {
+  const converters: Record<string, (entry: Record<string, unknown>) => Record<string, unknown>> = {
+    monsters: compactMonsterEntry,
+    items: compactItemEntry,
+    spells: compactSpellEntry,
+    classes: compactClassEntry,
+  };
   return {
     format: "beholden.compendium",
     version: 2,
     category,
     exportedAt: "2026-06-28T00:00:00.000Z",
-    entries,
+    entries: entries.map((entry) => converters[category]?.(entry) ?? entry),
   };
 }
 
-describe("V2 compatibility boundary — HTTP integration", () => {
+describe("canonical V2 compendium routes — HTTP integration", () => {
   let server: http.Server;
   let port: number;
   let db: Database.Database;
@@ -374,17 +348,6 @@ describe("V2 compatibility boundary — HTTP integration", () => {
         nextLabelNumber: () => 1,
         createPlayerCombatant: ((() => ({})) as unknown) as ServerContext["helpers"]["createPlayerCombatant"],
         seedDefaultConditions: () => {},
-        importCompendiumSqlite: ((() => ({
-          imported: 0,
-          total: 0,
-          spells: 0,
-          items: 0,
-          classes: 0,
-          races: 0,
-          backgrounds: 0,
-          feats: 0,
-          decks: 0,
-        })) as unknown) as ServerContext["helpers"]["importCompendiumSqlite"],
       },
     };
 
@@ -418,18 +381,6 @@ describe("V2 compatibility boundary — HTTP integration", () => {
       makeTestBatch("classes", [CANONICAL_CLASS]) as Parameters<typeof importNativeCompendiumBatch>[1],
     );
 
-    // Insert the pre-versioned canonical class directly, then run the same startup
-    // upgrade used by the application before exercising the HTTP boundary.
-    db.prepare(
-      "INSERT INTO compendium_classes (id, name, hd, data_json) VALUES (?, ?, ?, ?)",
-    ).run(
-      OLDER_CANONICAL_CLASS.id,
-      OLDER_CANONICAL_CLASS.name,
-      OLDER_CANONICAL_CLASS.hitDie,
-      JSON.stringify(OLDER_CANONICAL_CLASS),
-    );
-    assert.ok(upgradeStoredCanonicalV2Entries(db) >= 2);
-    assert.equal(upgradeStoredCanonicalV2Entries(db), 0, "startup migration must be idempotent");
   });
 
   after(async () => {
@@ -483,7 +434,7 @@ describe("V2 compatibility boundary — HTTP integration", () => {
       assert.equal(body.source, "PHB");
     });
 
-    it("returns the legacy action array with all seeded actions", async () => {
+    it("returns the screen action array with all seeded actions", async () => {
       const { body } = await request("GET", `/api/compendium/monsters/${CANONICAL_MONSTER.id}`) as { body: Record<string, unknown> };
       const actions = body.action as Array<Record<string, unknown>>;
       assert.ok(Array.isArray(actions), "action should be an array");
@@ -750,7 +701,7 @@ describe("V2 compatibility boundary — HTTP integration", () => {
       assert.equal(status, 200);
     });
 
-    it("returns legacy autolevels from V2 levels via classFromV2 shim", async () => {
+    it("returns screen autolevels projected from V2 levels", async () => {
       const { body } = await request("GET", `/api/compendium/classes/${CANONICAL_CLASS.id}`) as { body: Record<string, unknown> };
       const autolevels = body.autolevels as Array<Record<string, unknown>>;
       assert.ok(Array.isArray(autolevels), "autolevels must be an array");
@@ -787,47 +738,4 @@ describe("V2 compatibility boundary — HTTP integration", () => {
     });
   });
 
-  describe("GET /api/compendium/classes/:id — older canonical V2 upgraded from missing proficiencies", () => {
-    it("returns 200 after startup migration", async () => {
-      const { status } = await request(
-        "GET",
-        `/api/compendium/classes/${OLDER_CANONICAL_CLASS.id}`,
-      );
-      assert.equal(status, 200);
-    });
-
-    it("returns legacy autolevels after startup fills missing fields", async () => {
-      const { body } = await request(
-        "GET",
-        `/api/compendium/classes/${OLDER_CANONICAL_CLASS.id}`,
-      ) as { body: Record<string, unknown> };
-      const autolevels = body.autolevels as Array<Record<string, unknown>>;
-      assert.ok(Array.isArray(autolevels), "autolevels must be present");
-      assert.equal(autolevels.length, 1);
-      assert.equal(autolevels[0]?.level, 1);
-    });
-
-    it("autolevels[0].features contains the seeded feature", async () => {
-      const { body } = await request(
-        "GET",
-        `/api/compendium/classes/${OLDER_CANONICAL_CLASS.id}`,
-      ) as { body: Record<string, unknown> };
-      const autolevels = body.autolevels as Array<Record<string, unknown>>;
-      const features = autolevels[0]?.features as Array<Record<string, unknown>>;
-      assert.ok(Array.isArray(features) && features.length > 0, "features must be non-empty");
-      assert.equal(features[0]?.name, "Rage");
-    });
-
-    it("returns the default structured proficiencies added by startup migration", async () => {
-      const { status, body } = await request(
-        "GET",
-        `/api/compendium/classes/${OLDER_CANONICAL_CLASS.id}`,
-      ) as { status: number; body: Record<string, unknown> };
-      assert.equal(status, 200);
-      const proficiencies = body.proficiencies as Record<string, unknown>;
-      assert.deepEqual(proficiencies.savingThrows, []);
-      assert.deepEqual(proficiencies.armor, []);
-      assert.deepEqual(proficiencies.weapons, []);
-    });
-  });
 });

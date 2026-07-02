@@ -5,11 +5,11 @@ import { api, apiBlob } from "@/services/api";
 import { Panel } from "@/ui/Panel";
 import {
   CompendiumAdminFeedback,
-  LegacyCompendiumActions,
-  LegacyCompendiumDescription,
   NativeCompendiumActions,
   NativeCompendiumDescription,
   NativeImportPreview,
+  XmlConversionActions,
+  XmlConversionDescription,
   type NativeCompendiumCategory,
   type NativeImportResult,
   type NativePreviewResult,
@@ -60,14 +60,14 @@ function convertedJsonFilename(sourceFilename: string): string {
 }
 
 export function CompendiumAdminPanel() {
-  const [legacyFile, setLegacyFile] = React.useState<File | null>(null);
+  const [xmlFile, setXmlFile] = React.useState<File | null>(null);
   const [nativeFile, setNativeFile] = React.useState<File | null>(null);
   const [previewedNativeFile, setPreviewedNativeFile] = React.useState<File | null>(null);
   const [nativePreview, setNativePreview] = React.useState<NativePreviewResult | null>(null);
   const [nativeCategory, setNativeCategory] = React.useState<NativeCompendiumCategory>("monsters");
   const [busy, setBusy] = React.useState(false);
   const [nativeMsg, setNativeMsg] = React.useState("");
-  const [legacyMsg, setLegacyMsg] = React.useState("");
+  const [xmlMsg, setXmlMsg] = React.useState("");
   async function exportNativeCategory() {
     setBusy(true);
     setNativeMsg("");
@@ -147,27 +147,27 @@ export function CompendiumAdminPanel() {
     }
   }
 
-  async function convertLegacyXml() {
-    if (!legacyFile) return;
+  async function convertXmlToV2() {
+    if (!xmlFile) return;
     setBusy(true);
-    setLegacyMsg("");
+    setXmlMsg("");
     try {
       const form = new FormData();
-      form.append("file", legacyFile);
+      form.append("file", xmlFile);
       const result = await api<{ ok: boolean; document: NativeBundle; warnings: string[] }>(
         "/api/compendium/convert/xml",
         { method: "POST", body: form },
       );
-      downloadJson(convertedJsonFilename(legacyFile.name), result.document);
+      downloadJson(convertedJsonFilename(xmlFile.name), result.document);
       const entries = result.document.batches.reduce((total, batch) => total + batch.entries.length, 0);
       const summary = `Converted ${entries} entries across ${result.document.batches.length} categories. The live compendium was not changed.`;
-      setLegacyMsg(
+      setXmlMsg(
         result.warnings.length > 0
           ? `${summary}\n\nWarnings (${result.warnings.length}):\n${result.warnings.join("\n")}`
           : summary,
       );
     } catch (error: unknown) {
-      setLegacyMsg(toErrorMessage(error));
+      setXmlMsg(toErrorMessage(error));
     } finally {
       setBusy(false);
     }
@@ -221,15 +221,15 @@ export function CompendiumAdminPanel() {
         <CompendiumAdminFeedback msg={nativeMsg} />
       </Panel>
 
-      <Panel storageKey="compendium-admin-legacy" title="Legacy XML converter">
-        <LegacyCompendiumDescription />
-        <LegacyCompendiumActions
+      <Panel storageKey="compendium-admin-xml-v2" title="XML → V2 converter">
+        <XmlConversionDescription />
+        <XmlConversionActions
           busy={busy}
-          fileSelected={!!legacyFile}
-          onFileChange={setLegacyFile}
-          onConvert={() => void convertLegacyXml()}
+          fileSelected={!!xmlFile}
+          onFileChange={setXmlFile}
+          onConvert={() => void convertXmlToV2()}
         />
-        <CompendiumAdminFeedback msg={legacyMsg} />
+        <CompendiumAdminFeedback msg={xmlMsg} />
       </Panel>
     </div>
   );

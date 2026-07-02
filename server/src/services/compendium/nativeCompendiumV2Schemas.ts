@@ -38,6 +38,11 @@ export function parseCanonicalV2Entry(category: NativeCompendiumCategory, value:
   return CATEGORY_SCHEMAS[category].parse(value);
 }
 
+export function isCanonicalV2Entry(category: string, value: unknown): boolean {
+  return category in CATEGORY_SCHEMAS
+    && CATEGORY_SCHEMAS[category as NativeCompendiumCategory].safeParse(value).success;
+}
+
 export function formatCanonicalV2Issues(error: ZodError): string {
   return error.issues
     .map((issue) => {

@@ -19,15 +19,16 @@ function item(overrides: Partial<InventoryItem>): InventoryItem {
 }
 
 describe("character inventory calculations", () => {
-  it("normalizes legacy equipped armor and two-handed weapons", () => {
-    expect(getEquipState(item({ equipState: undefined, equipped: true, type: "Heavy Armor" }))).toBe("worn");
+  it("uses the explicit V2 equip state", () => {
+    expect(getEquipState(item({ equipState: "worn", equipped: true, type: "Heavy Armor" }))).toBe("worn");
     expect(getEquipState(item({
-      equipState: undefined,
+      equipState: "mainhand-2h",
       equipped: true,
       type: "Martial Melee Weapon",
       dmg1: "2d6",
       properties: ["2H"],
     }))).toBe("mainhand-2h");
+    expect(getEquipState(item({ equipState: undefined, equipped: true }))).toBe("backpack");
   });
 
   it("uses the correct ability modifier for finesse and ranged weapons", () => {

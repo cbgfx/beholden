@@ -1,11 +1,6 @@
 import Database from "better-sqlite3";
 import { SCHEMA_SQL } from "./dbSchema.js";
-import {
-  backfillActorColumns,
-  backfillStructuredContentColumns,
-} from "./dbMigrations.js";
 import { syncCharacterDerivedColumns } from "./dbCharacterSync.js";
-import { columnExists, runSchemaMigrations } from "./dbSchemaMigrations.js";
 
 export type Db = Database.Database;
 
@@ -19,29 +14,6 @@ export function openDb(dbPath: string): Db {
   db.pragma("foreign_keys = ON");
   db.pragma("journal_size_limit = 16777216");
   db.exec(SCHEMA_SQL);
-
-  // Import legacy JSON mirrors once, before the versioned cleanup removes them.
-  const actorsMigrated = db.prepare("SELECT value FROM db_meta WHERE key = 'actors_migrated'").get();
-  if (!actorsMigrated) {
-    if (columnExists(db, "players", "sheet_json") && columnExists(db, "user_characters", "sheet_json")) {
-      backfillActorColumns(db);
-    }
-    db.prepare("INSERT OR REPLACE INTO db_meta (key, value) VALUES ('actors_migrated', '1')").run();
-  }
-
-  const contentMigrated = db.prepare("SELECT value FROM db_meta WHERE key = 'content_migrated'").get();
-  if (!contentMigrated) {
-    if (
-      columnExists(db, "notes", "note_json")
-      && columnExists(db, "treasure", "entry_json")
-      && columnExists(db, "party_inventory", "item_json")
-    ) {
-      backfillStructuredContentColumns(db);
-    }
-    db.prepare("INSERT OR REPLACE INTO db_meta (key, value) VALUES ('content_migrated', '1')").run();
-  }
-
-  runSchemaMigrations(db);
 
   // Linked campaign rows are projections of canonical character sheets.
   syncCharacterDerivedColumns(db);

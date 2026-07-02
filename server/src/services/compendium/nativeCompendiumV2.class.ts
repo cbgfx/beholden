@@ -1,6 +1,6 @@
 import { parseClassTools } from "../../lib/proficiencyConstants.js";
 import { withContentResolution } from "./contentResolution.js";
-import { isCanonicalV2Shape, upgradeCanonicalV2Entry } from "./nativeCompendiumV2Migration.js";
+import { isCanonicalV2Entry } from "./nativeCompendiumV2Schemas.js";
 import { type JsonRecord, ABILITY_NAMES, record, list, text, number, abilityKey, split } from "./nativeCompendiumV2.helpers.js";
 import { compactClassEntry } from "./classCompaction.js";
 
@@ -23,7 +23,7 @@ function classProficiencies(entry: JsonRecord) {
 }
 
 export function classToV2(entry: JsonRecord): JsonRecord {
-  if (isCanonicalV2Shape("classes", entry)) return upgradeCanonicalV2Entry("classes", entry);
+  if (isCanonicalV2Entry("classes", entry)) return entry;
   const byLevel = new Map<number, JsonRecord>();
   for (const raw of list(entry.autolevels)) {
     const level = record(raw);
@@ -51,7 +51,7 @@ export function classToV2(entry: JsonRecord): JsonRecord {
         const effects = list(feature.effects);
         const scalingRolls = effects
           .map(record)
-          .filter((effect) => effect.kind === "legacy_roll")
+          .filter((effect) => effect.kind === "source_roll")
           .flatMap((effect) => {
             const formula = text(effect.value);
             if (!formula) return [];
@@ -68,7 +68,7 @@ export function classToV2(entry: JsonRecord): JsonRecord {
           optional: feature.optional === true,
           source: text(feature.source),
           subclass: text(feature.subclass),
-          effects: effects.filter((effect) => record(effect).kind !== "legacy_roll"),
+          effects: effects.filter((effect) => record(effect).kind !== "source_roll"),
           scalingRolls,
           preparedSpellProgression: list(feature.preparedSpellProgression),
         }, effects.length > 0 || scalingRolls.length > 0 || list(feature.preparedSpellProgression).length > 0);
@@ -172,7 +172,7 @@ export function classFromV2(entry: JsonRecord): JsonRecord {
               ...list(feature.scalingRolls).map((rawRoll) => {
                 const roll = record(rawRoll);
                 return {
-                  kind: "legacy_roll",
+                  kind: "source_roll",
                   description: roll.description ?? null,
                   level: roll.level ?? null,
                   value: roll.formula ?? "",

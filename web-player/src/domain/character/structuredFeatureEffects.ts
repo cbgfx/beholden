@@ -75,7 +75,7 @@ export function structuredEffectsFromCanonical(args: {
     const effect = record(rawEffect);
     const kind = String(effect.kind ?? "");
     const value = String(effect.value ?? "").trim();
-    if (kind === "legacy_modifier") {
+    if (kind === "source_modifier") {
       const match = value.match(/^(speed|hp|strength|dexterity|constitution|intelligence|wisdom|charisma)\s*([+-]\d+)$/iu);
       const amount = Number(match?.[2]);
       if (match?.[1] && Number.isFinite(amount)) {
@@ -102,7 +102,7 @@ export function structuredEffectsFromCanonical(args: {
         }
       }
     }
-    if (kind === "legacy_proficiency") {
+    if (kind === "source_proficiency") {
       const grouped = new Map<"skill" | "saving_throw", string[]>();
       for (const name of value.split(",").map((part) => part.trim()).filter(Boolean)) {
         const abilityKey = ability(name);

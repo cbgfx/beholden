@@ -15,9 +15,9 @@ describe("structured canonical feature effects", () => {
     const effects = structuredEffectsFromCanonical({
       source,
       classEffects: [
-        { kind: "legacy_modifier", category: "bonus", value: "speed +10" },
-        { kind: "legacy_modifier", category: "ability score", value: "strength +4" },
-        { kind: "legacy_proficiency", value: "Wisdom, Perception" },
+        { kind: "source_modifier", category: "bonus", value: "speed +10" },
+        { kind: "source_modifier", category: "ability score", value: "strength +4" },
+        { kind: "source_proficiency", value: "Wisdom, Perception" },
       ],
     });
 
@@ -70,7 +70,7 @@ describe("structured canonical feature effects", () => {
     const parsed = parseFeatureEffects({
       source: { ...source, text: "Your speed increases by 10 feet." },
       text: "Your speed increases by 10 feet.",
-      classEffects: [{ kind: "legacy_modifier", category: "bonus", value: "speed +10" }],
+      classEffects: [{ kind: "source_modifier", category: "bonus", value: "speed +10" }],
     });
     expect(parsed.effects.filter((effect) => effect.type === "speed")).toHaveLength(1);
   });

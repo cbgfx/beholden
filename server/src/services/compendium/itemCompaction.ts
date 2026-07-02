@@ -44,7 +44,7 @@ function redundantDetail(detail: string, rarity: string, attunement: true | stri
   return false;
 }
 
-/** Converts legacy, verbose-v2, or compact-v2 item data into the sparse canonical shape. */
+/** Converts source or verbose item data into the sparse canonical V2 shape. */
 export function compactItemEntry(entry: JsonRecord): JsonRecord {
   const classification = record(entry.classification);
   const oldAttunement = record(entry.attunement);

@@ -1,6 +1,6 @@
 import { normalizeCanonicalSpell } from "./spellNormalization.js";
 import { compactSpellEntry } from "./spellCompaction.js";
-import { isCanonicalV2Shape, upgradeCanonicalV2Entry } from "./nativeCompendiumV2Migration.js";
+import { isCanonicalV2Entry } from "./nativeCompendiumV2Schemas.js";
 import { type JsonRecord, record, list, text, number, split } from "./nativeCompendiumV2.helpers.js";
 
 function parseComponents(value: unknown) {
@@ -35,7 +35,7 @@ function componentsToLegacy(value: unknown): string | null {
 }
 
 export function spellToV2(entry: JsonRecord): JsonRecord {
-  if (isCanonicalV2Shape("spells", entry)) return upgradeCanonicalV2Entry("spells", entry);
+  if (isCanonicalV2Entry("spells", entry)) return entry;
   return compactSpellEntry(normalizeCanonicalSpell({
     id: text(entry.id),
     name: text(entry.name),

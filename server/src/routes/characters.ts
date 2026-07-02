@@ -13,6 +13,7 @@ import { DEFAULT_OVERRIDES } from "../lib/defaults.js";
 import { toCharacterCampaignAssignmentDto, toCharacterSheetDto } from "../lib/apiActors.js";
 import {
   getAssignments,
+  getCharacterSheetOverrides,
   assignmentsToJson,
   getAssignedPlayers,
   broadcastPlayerCombatantChanges,
@@ -201,10 +202,19 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       ...(ex.deathSaves ? { deathSaves: ex.deathSaves } : {}),
     };
     const normalized = normalizeCharacterSheetForStorage(nextSheet, mergedCharacterData);
-    const characterDataForStorage = p.syncedHpMax !== undefined
-      ? { ...(normalized.characterData ?? {}), derivedHpMax: p.syncedHpMax }
+    const hasSyncedDerivedStats = p.syncedHpMax !== undefined || p.syncedAc !== undefined;
+    const characterDataForStorage = hasSyncedDerivedStats
+      ? {
+          ...(normalized.characterData ?? {}),
+          ...(p.syncedHpMax !== undefined ? { derivedHpMax: p.syncedHpMax } : {}),
+          ...(p.syncedAc !== undefined ? { derivedAc: p.syncedAc } : {}),
+        }
       : normalized.characterData;
-    const sheetCols = characterSheetDbColumns(normalized.sheet);
+    const finalNormalized = normalizeCharacterSheetForStorage(
+      normalized.sheet,
+      characterDataForStorage,
+    );
+    const sheetCols = characterSheetDbColumns(finalNormalized.sheet);
 
     db.prepare(`
       UPDATE user_characters SET
@@ -222,17 +232,23 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
 
     const nextChar = {
       ...ex,
-      ...normalized.sheet,
+      ...finalNormalized.sheet,
       characterData: characterDataForStorage,
     };
+    const sheetOverrides = getCharacterSheetOverrides(nextChar);
     syncAssignedPlayerRows(
       db,
       ctx.broadcast,
       charId,
-      buildMirroredPlayerSnapshot(nextChar, undefined, p.syncedSpeed, p.syncedHpMax),
+      buildMirroredPlayerSnapshot(nextChar, p.syncedAc, p.syncedSpeed, p.syncedHpMax),
       t,
       userId,
-      p.hpCurrent !== undefined ? { hpCurrent: p.hpCurrent } : undefined,
+      p.hpCurrent !== undefined || sheetOverrides
+        ? {
+            ...(p.hpCurrent !== undefined ? { hpCurrent: p.hpCurrent } : {}),
+            ...(sheetOverrides ? { overrides: sheetOverrides } : {}),
+          }
+        : undefined,
     );
 
     const updated = db.prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ?`).get(charId) as Record<string, unknown>;

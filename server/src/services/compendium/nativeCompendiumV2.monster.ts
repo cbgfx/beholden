@@ -1,5 +1,5 @@
 import { parseAttackFromText } from "../../lib/attacks.js";
-import { isCanonicalV2Shape, upgradeCanonicalV2Entry } from "./nativeCompendiumV2Migration.js";
+import { isCanonicalV2Entry } from "./nativeCompendiumV2Schemas.js";
 import { type JsonRecord, ABILITIES, record, list, text, number, split } from "./nativeCompendiumV2.helpers.js";
 import { compactMonsterEntry } from "./monsterCompaction.js";
 
@@ -171,7 +171,7 @@ function actionEntriesToLegacy(value: unknown) {
 }
 
 export function monsterToV2(entry: JsonRecord): JsonRecord {
-  if (isCanonicalV2Shape("monsters", entry)) return upgradeCanonicalV2Entry("monsters", entry);
+  if (isCanonicalV2Entry("monsters", entry)) return entry;
   return compactMonsterEntry({
     id: text(entry.id),
     name: text(entry.name),

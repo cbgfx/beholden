@@ -6,7 +6,6 @@
  *  - Monk:     1 from Artisan's Tools OR Musical Instruments (merged pool)
  *  - Artificer: fixed Thieves' Tools + Tinker's Tools, then 1 Artisan's Tool choice
  *  - Duplicate prevention: already-taken tool is blocked
- *  - Legacy fallback: no structured proficiencies → legacy string parsing
  */
 
 import { describe, expect, it } from "vitest";
@@ -47,8 +46,6 @@ const ARTIFICER_TOOLS: ClassToolProficiencyLike = {
   notes: [],
 };
 
-const LEGACY_TOOLS: ClassToolProficiencyLike | undefined = undefined;
-
 function makeBaseForm(overrides: Partial<{
   chosenClassTools: string[];
   chosenBgTools: string[];
@@ -78,12 +75,12 @@ function makeBaseForm(overrides: Partial<{
   };
 }
 
-function makeClassDetail(tools: ClassToolProficiencyLike | undefined, rawToolsString = "") {
+function makeClassDetail(tools: ClassToolProficiencyLike | undefined) {
   return {
     name: "Test Class",
     armor: "",
     weapons: "",
-    tools: rawToolsString,
+    tools: "",
     proficiency: "",
     proficiencies: tools ? { tools } : undefined,
     autolevels: [],
@@ -190,19 +187,6 @@ describe("buildProficiencyMap – class tool proficiency", () => {
     expect(map.tools.map((t) => t.name)).toContain("Drum");
   });
 
-  it("legacy fallback: fixed tool string is split and added (no proficiencies field)", () => {
-    const form = makeBaseForm();
-    const classDetail = makeClassDetail(LEGACY_TOOLS, "Herbalism Kit");
-    const map = buildProficiencyMap({ ...BASE_MAP_ARGS, form, classDetail, raceDetail: null, bgDetail: null });
-    expect(map.tools.map((t) => t.name)).toContain("Herbalism Kit");
-  });
-
-  it("legacy fallback: 'Choose 3 tools' noise string is filtered out", () => {
-    const form = makeBaseForm();
-    const classDetail = makeClassDetail(LEGACY_TOOLS, "Choose 3 tools");
-    const map = buildProficiencyMap({ ...BASE_MAP_ARGS, form, classDetail, raceDetail: null, bgDetail: null });
-    expect(map.tools).toHaveLength(0);
-  });
 });
 
 // ── getStep5ChoiceState – takenToolKeys and missingClassToolChoices ──────────

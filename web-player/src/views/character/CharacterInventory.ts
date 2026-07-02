@@ -246,15 +246,7 @@ export function hasArmorProficiency(item: InventoryItem, prof: ProficiencyMapLik
 }
 
 export function getEquipState(item: InventoryItem): EquipState {
-  if (item.equipState) return item.equipState;
-  if (item.equipped) {
-    if (isArmorItem(item)) return "worn";
-    if (isWearableItem(item)) return "worn";
-    if (requiresTwoHands(item)) return "mainhand-2h";
-    if (!item.dmg1 && item.dmg2) return "mainhand-2h";
-    return "mainhand-1h";
-  }
-  return "backpack";
+  return item.equipState ?? "backpack";
 }
 
 export function isWeaponItem(item: InventoryItem): boolean {

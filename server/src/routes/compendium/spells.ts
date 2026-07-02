@@ -7,10 +7,9 @@ import { requireAuth } from "../../middleware/auth.js";
 import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { parseBody } from "../../shared/validate.js";
 import { spellToV2 } from "../../services/compendium/nativeCompendiumV2.js";
-import { mergeCanonicalV2Edit } from "../../services/compendium/nativeCompendiumV2Migration.js";
+import { mergeCanonicalV2Edit } from "../../services/compendium/canonicalCompendiumEdits.js";
 import { parseStoredCompendiumEntry } from "../../services/compendium/storedCompendium.js";
 import { SpellBody, buildSpellRecord, normalizeLookupName } from "./helpers.js";
-import { backfillMonsterSpellRefs } from "../../services/compendium/normalizeMonsterSpellRefs.js";
 import { z } from "zod";
 
 export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: RequestHandler) {
@@ -382,7 +381,6 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     db.prepare(
       "INSERT OR REPLACE INTO compendium_spells (id, name, name_key, level, school, ritual, concentration, components, classes, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     ).run(id, name, nameKey, levelVal, schoolVal, isRitual, isConcentration, componentsVal, classesVal, JSON.stringify(canonical));
-    backfillMonsterSpellRefs(db);
     ctx.broadcast("compendium:changed", { spellCreated: id });
     res.json({ ok: true, id });
   });
@@ -408,7 +406,6 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     db.prepare(
       "UPDATE compendium_spells SET name = ?, name_key = ?, level = ?, school = ?, ritual = ?, concentration = ?, components = ?, classes = ?, data_json = ? WHERE id = ?"
     ).run(name, nameKey, levelVal, schoolVal, isRitual, isConcentration, componentsVal, classesVal, JSON.stringify(canonical), spellId);
-    backfillMonsterSpellRefs(db);
     ctx.broadcast("compendium:changed", { spellUpdated: spellId });
     res.json({ ok: true });
   });
@@ -417,7 +414,6 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     const spellId = requireParam(req, res, "spellId");
     if (!spellId) return;
     db.prepare("DELETE FROM compendium_spells WHERE id = ?").run(spellId);
-    backfillMonsterSpellRefs(db);
     ctx.broadcast("compendium:changed", { spellDeleted: spellId });
     res.json({ ok: true });
   });

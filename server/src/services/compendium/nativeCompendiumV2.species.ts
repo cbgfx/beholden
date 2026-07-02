@@ -1,10 +1,10 @@
-import { isCanonicalV2Shape, upgradeCanonicalV2Entry } from "./nativeCompendiumV2Migration.js";
+import { isCanonicalV2Entry } from "./nativeCompendiumV2Schemas.js";
 import { type JsonRecord, record, list, text, number, abilityKey, split } from "./nativeCompendiumV2.helpers.js";
 import { traitsToV2, traitsFromV2 } from "./nativeCompendiumV2.traits.js";
 import { compactSpeciesEntry } from "./speciesCompaction.js";
 
 export function speciesToV2(entry: JsonRecord): JsonRecord {
-  if (isCanonicalV2Shape("species", entry)) return upgradeCanonicalV2Entry("species", entry);
+  if (isCanonicalV2Entry("species", entry)) return entry;
   return compactSpeciesEntry({
     id: text(entry.id),
     name: text(entry.name),

@@ -423,9 +423,9 @@ test("class features, counters, special fields, and modifiers survive conversion
           `${String(cls.name)}|${Number(rawLevel.level)}|${String(feature.name)}|${String(feature.description)}`,
         );
         for (const effect of asArray<JsonRecord>(feature.effects as JsonRecord[] | null | undefined)) {
-          if (effect.kind === "legacy_special") nativeSpecials += 1;
-          if (effect.kind === "legacy_modifier") nativeModifiers += 1;
-          if (effect.kind === "legacy_proficiency") nativeProficiencies += 1;
+          if (effect.kind === "source_special") nativeSpecials += 1;
+          if (effect.kind === "source_modifier") nativeModifiers += 1;
+          if (effect.kind === "source_proficiency") nativeProficiencies += 1;
         }
         nativeRolls += asArray(feature.scalingRolls).length;
       }
@@ -809,7 +809,7 @@ test("spell V2 is compact, sparse, and omits default mechanics", () => {
   }));
 });
 
-test("feat V2 is compact, sparse, and expands safely at the legacy boundary", () => {
+test("feat V2 is compact, sparse, and expands safely at the screen boundary", () => {
   const document = convertFile(path.basename(primaryCorpusPath));
   const feats = batchEntries(document, "feats");
   const prettyBytes = Buffer.byteLength(JSON.stringify({ entries: feats }, null, 2));
@@ -842,8 +842,8 @@ test("feat V2 is compact, sparse, and expands safely at the legacy boundary", ()
 
   const compact = feats.find((feat) => feat.name === "Aberrant Dragonmark");
   assert.ok(compact);
-  const legacy = parseStoredCompendiumEntry("feats", JSON.stringify(compact));
-  const parsed = legacy.parsed as JsonRecord;
+  const screenView = parseStoredCompendiumEntry("feats", JSON.stringify(compact));
+  const parsed = screenView.parsed as JsonRecord;
   const grants = parsed.grants as JsonRecord;
   assert.ok(Array.isArray(grants.skills));
   assert.ok(Array.isArray(parsed.choices));

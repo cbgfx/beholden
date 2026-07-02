@@ -1,5 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { backgroundV2ToPlayer } from "./compendiumApi";
+import { backgroundV2ToPlayer, classV2ToPlayer } from "./compendiumApi";
+
+describe("classV2ToPlayer", () => {
+  it("expands sparse V2 tool proficiencies for character-creation consumers", () => {
+    const result = classV2ToPlayer({
+      id: "class_bard",
+      name: "Bard",
+      hitDie: 8,
+      proficiencies: {
+        tools: {
+          choices: [{ count: 3, from: ["Lute", "Flute"] }],
+        },
+      },
+    });
+
+    expect(result.proficiencies.tools).toEqual({
+      fixed: [],
+      choices: [{ count: 3, from: ["Lute", "Flute"] }],
+      notes: [],
+    });
+  });
+});
 
 describe("backgroundV2ToPlayer", () => {
   it("expands compact background data for existing character-creation consumers", () => {

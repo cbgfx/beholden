@@ -7,11 +7,7 @@ import { requireParam } from "../../lib/routeHelpers.js";
 import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { parseBody } from "../../shared/validate.js";
-import { parseFeat } from "../../lib/featParser.js";
-import { parseBackgroundProficiencies, parseRaceChoices } from "../../lib/proficiencyConstants.js";
-import { parsePreparedSpellProgression } from "../../lib/preparedSpellProgression.js";
 import {
-  isStoredCompendiumEntryCanonical,
   parseStoredCanonicalCompendiumEntry,
   parseStoredCompendiumEntry,
 } from "../../services/compendium/storedCompendium.js";
@@ -53,24 +49,11 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   }
 
   function buildFeatDetailFromRow(row: { id: string; name: string; data_json: string }) {
-    const canonical = isStoredCompendiumEntryCanonical("feats", row.data_json);
-    const feat: any = {
+    return {
       ...parseStoredCompendiumEntry("feats", row.data_json),
       id: row.id,
       name: row.name,
     };
-    if (!canonical && !feat.parsed) feat.parsed = parseFeat({
-        name: String(feat.name ?? ""),
-        text: String(feat.text ?? ""),
-        prerequisite: typeof feat.prerequisite === "string" ? feat.prerequisite : null,
-        proficiency: typeof feat.proficiency === "string" ? feat.proficiency : null,
-        modifiers: Array.isArray(feat.modifierDetails)
-          ? feat.modifierDetails
-          : Array.isArray(feat.modifiers)
-            ? feat.modifiers.map((text: unknown) => ({ category: "", text: String(text ?? "") }))
-            : [],
-      });
-    return feat;
   }
 
   // --- Classes ---------------------------------------------------------------
@@ -99,26 +82,8 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     const row = db.prepare("SELECT data_json FROM compendium_classes WHERE id = ?").get(id) as { data_json: string } | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Not found" });
     const cls: any = parseStoredCompendiumEntry("classes", row.data_json);
-    const canonical = isStoredCompendiumEntryCanonical("classes", row.data_json);
-    if (canonical) {
-      // Attach structured proficiencies from v2 storage so the character creator
-      // can consume structured tool choices instead of the flattened legacy string.
-      const v2Data = JSON.parse(row.data_json) as { proficiencies?: unknown };
-      if (v2Data.proficiencies) cls.proficiencies = v2Data.proficiencies;
-    }
-    if (!canonical && Array.isArray(cls.autolevels)) {
-      cls.autolevels = cls.autolevels.map((al: any) => ({
-        ...al,
-        features: Array.isArray(al?.features)
-          ? al.features.map((feature: any) => ({
-              ...feature,
-              preparedSpellProgression: Array.isArray(feature?.preparedSpellProgression)
-                ? feature.preparedSpellProgression
-                : parsePreparedSpellProgression(String(feature?.text ?? "")),
-            }))
-          : [],
-      }));
-    }
+    const v2Data = parseStoredCanonicalCompendiumEntry("classes", row.data_json);
+    if (v2Data.proficiencies) cls.proficiencies = v2Data.proficiencies;
     res.json(cls);
   });
 
@@ -150,20 +115,6 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     const row = db.prepare("SELECT data_json FROM compendium_races WHERE id = ?").get(id) as { data_json: string } | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Not found" });
     const race: any = parseStoredCompendiumEntry("species", row.data_json);
-    const canonical = isStoredCompendiumEntryCanonical("species", row.data_json);
-    if (!canonical && !race.parsedChoices) {
-      race.parsedChoices = parseRaceChoices(
-        Array.isArray(race.traits) ? race.traits.map((t: any) => ({ name: String(t?.name ?? ""), text: String(t?.text ?? "") })) : [],
-      );
-    }
-    if (!canonical && Array.isArray(race.traits)) {
-      race.traits = race.traits.map((trait: any) => ({
-        ...trait,
-        preparedSpellProgression: Array.isArray(trait?.preparedSpellProgression)
-          ? trait.preparedSpellProgression
-          : parsePreparedSpellProgression(String(trait?.text ?? "")),
-      }));
-    }
     res.json(race);
   });
 
@@ -191,19 +142,6 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     const row = db.prepare("SELECT data_json FROM compendium_backgrounds WHERE id = ?").get(id) as { data_json: string } | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Not found" });
     const bg: any = parseStoredCompendiumEntry("backgrounds", row.data_json);
-    const canonical = isStoredCompendiumEntryCanonical("backgrounds", row.data_json);
-    if (!canonical && !bg.proficiencies) bg.proficiencies = parseBackgroundProficiencies({
-        proficiency: bg.proficiency,
-        trait: bg.traits,
-      });
-    if (!canonical && Array.isArray(bg.traits)) {
-      bg.traits = bg.traits.map((trait: any) => ({
-        ...trait,
-        preparedSpellProgression: Array.isArray(trait?.preparedSpellProgression)
-          ? trait.preparedSpellProgression
-          : parsePreparedSpellProgression(String(trait?.text ?? "")),
-      }));
-    }
     res.json(bg);
   });
 
@@ -227,16 +165,8 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
       const data: any = wantMetadata
         ? parseStoredCompendiumEntry("feats", row.data_json)
         : {};
-      const canonical = wantMetadata
-        && isStoredCompendiumEntryCanonical("feats", row.data_json);
       const parsed: any = wantMetadata
-        ? (data.parsed ?? (!canonical ? parseFeat({
-            name: row.name,
-            text: String(data.text ?? ""),
-            prerequisite: typeof data.prerequisite === "string" ? data.prerequisite : null,
-            proficiency: typeof data.proficiency === "string" ? data.proficiency : null,
-            modifiers: Array.isArray(data.modifierDetails) ? data.modifierDetails : [],
-          }) : {}))
+        ? (data.parsed ?? {})
         : null;
       const prerequisite = parsed?.prerequisite ?? data.prerequisite ?? null;
       const category = data.category ?? parsed?.category

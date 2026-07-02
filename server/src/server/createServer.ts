@@ -17,13 +17,11 @@ import { getRuntimeConfig } from "../config/runtime.js";
 import { upload } from "../lib/upload.js";
 import { getPaths } from "../config/paths.js";
 import { openDb } from "../lib/db.js";
-import { importCompendiumSqlite } from "../services/compendium/importSqlite.js";
 import { ensureCombat, nextLabelNumber, createPlayerCombatant } from "../services/combat.js";
 import { seedDefaultConditions } from "../services/conditions.js";
 import { now, uid } from "../lib/runtime.js";
 import { normalizeKey, parseLeadingInt } from "../lib/text.js";
 import { normalizeHp } from "../services/compendium/normalizeHp.js";
-import { upgradeStoredCanonicalV2Entries } from "../services/compendium/nativeCompendiumV2Migration.js";
 import { createBroadcaster, createWsServer, sendWsEvent } from "./ws.js";
 import type { ServerContext } from "./context.js";
 import type { BroadcastFn } from "./events.js";
@@ -65,7 +63,6 @@ export function createServer() {
 
   // --- database -------------------------------------------------------------
   const db = openDb(paths.dbPath);
-  upgradeStoredCanonicalV2Entries(db);
   seedAdminUser(db, hashPassword, uid, now);
 
   // --- broadcast ------------------------------------------------------------
@@ -159,7 +156,6 @@ export function createServer() {
       nextLabelNumber: (encounterId, baseName) => nextLabelNumber(db, encounterId, baseName),
       createPlayerCombatant,
       seedDefaultConditions: (campaignId) => seedDefaultConditions(db, campaignId),
-      importCompendiumSqlite: ({ buffer }) => importCompendiumSqlite({ buffer, db }),
     },
   };
 
@@ -224,6 +220,21 @@ export function createServer() {
   const httpServer = app.listen(runtime.port, runtime.host, () => {
     console.log(`[beholden] API listening on http://${runtime.host}:${runtime.port}`);
   });
+  let reportedServerError = false;
+  const reportServerError = (error: Error & { code?: string }) => {
+    if (reportedServerError) return;
+    reportedServerError = true;
+    if (error.code === "EADDRINUSE") {
+      console.error(
+        `[beholden] Cannot start: port ${runtime.port} is already in use. `
+        + "Close the older Beholden window/process, then try again.",
+      );
+    } else {
+      console.error("[beholden] Server failed:", error);
+    }
+    process.exitCode = 1;
+  };
+  httpServer.on("error", reportServerError);
 
   const wss = createWsServer({
     httpServer,
@@ -237,6 +248,10 @@ export function createServer() {
       return token.length > 0 && verifyToken(token) !== null;
     },
   });
+  // ws mirrors errors from the attached HTTP server. Handle that mirror so a
+  // port collision produces one concise startup message instead of an
+  // unhandled WebSocketServer error and stack trace.
+  wss.on("error", reportServerError);
 
   realBroadcast = createBroadcaster(wss);
 

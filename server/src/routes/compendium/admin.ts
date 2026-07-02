@@ -5,7 +5,6 @@ import type { Express } from "express";
 import { ZipArchive } from "archiver";
 import type { ServerContext } from "../../server/context.js";
 import { requireAdmin } from "../../middleware/auth.js";
-import { estimateCompendiumBlobTrim, trimCompendiumBlobColumns } from "../../services/compendium/blobHygiene.js";
 import {
   exportNativeCompendiumBatch,
   importNativeCompendiumDocument,
@@ -47,25 +46,6 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
       const message = error instanceof Error ? error.message : "XML conversion failed.";
       return res.status(400).json({ ok: false, message });
     }
-  });
-
-  app.post("/api/compendium/import/sqlite", requireAdmin, ctx.upload.single("file"), (req, res) => {
-    if (!req.file) return res.status(400).json({ ok: false, message: "No file uploaded" });
-    const out = ctx.helpers.importCompendiumSqlite({ buffer: req.file.buffer });
-    ctx.broadcast("compendium:changed", { imported: out.imported, total: out.total });
-    res.json({
-      ok: true,
-      imported: out.imported,
-      total: out.total,
-      spells: out.spells,
-      items: out.items,
-      classes: out.classes,
-      races: out.races,
-      backgrounds: out.backgrounds,
-      feats: out.feats,
-      decks: out.decks,
-      bastions: out.bastions ?? 0,
-    });
   });
 
   app.get("/api/compendium/native/:category/export", requireAdmin, (req, res) => {
@@ -144,14 +124,4 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
     }
   });
 
-  app.post("/api/compendium/trim-blobs", requireAdmin, (_req, res) => {
-    const out = db.transaction(() => trimCompendiumBlobColumns(db))();
-    ctx.broadcast("compendium:changed", { blobTrimmed: true, ...out });
-    res.json({ ok: true, ...out });
-  });
-
-  app.get("/api/compendium/trim-blobs/estimate", requireAdmin, (_req, res) => {
-    const estimate = estimateCompendiumBlobTrim(db);
-    res.json({ ok: true, ...estimate });
-  });
 }

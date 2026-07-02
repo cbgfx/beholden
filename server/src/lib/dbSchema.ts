@@ -13,11 +13,6 @@ CREATE TABLE IF NOT EXISTS campaigns (
   updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS db_meta (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS adventures (
   id TEXT PRIMARY KEY,
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,

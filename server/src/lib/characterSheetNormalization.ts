@@ -97,7 +97,7 @@ function abilityMod(score: number | null): number {
 }
 
 function getEquipState(item: Record<string, unknown>): string {
-  return optionalText(item.equipState) ?? (item.equipped ? "worn" : "backpack");
+  return optionalText(item.equipState) ?? "backpack";
 }
 
 function isArmorItem(item: Record<string, unknown>): boolean {
@@ -195,6 +195,7 @@ export function normalizeCharacterSheetForStorage(
     characterData && hitDie && !positiveIntOrUndefined(characterData.hd)
       ? { ...characterData, hd: hitDie }
       : characterData;
+  const syncedDerivedAc = positiveIntOrUndefined(normalizedCharacterData?.derivedAc);
   const normalizedSheet: StoredCharacterSheetState = {
     ...sheet,
     className,
@@ -203,7 +204,8 @@ export function normalizeCharacterSheetForStorage(
   return {
     sheet: {
       ...normalizedSheet,
-      ac: deriveArmorClassSummary(normalizedSheet, normalizedCharacterData, className),
+      ac: syncedDerivedAc
+        ?? deriveArmorClassSummary(normalizedSheet, normalizedCharacterData, className),
       speed: deriveSpeedSummary(normalizedSheet, normalizedCharacterData, species, className),
     },
     characterData: normalizedCharacterData,
