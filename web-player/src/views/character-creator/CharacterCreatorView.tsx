@@ -1,10 +1,12 @@
 import React from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { C } from "@/lib/theme";
-import {
-  type Ruleset,
-} from "@/lib/characterRules";
 import { api } from "@/services/api";
+import {
+  fetchBackgroundDetailV2,
+  fetchClassDetailV2,
+  fetchRaceDetailV2,
+} from "@/services/compendiumApi";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   parseFeatureGrants as parseFeatureGrantsFromRules,
@@ -153,7 +155,6 @@ export function CharacterCreatorView() {
   const resolvedBgOriginFeatDetail = form.chosenBgOriginFeatId
     ? (bgOriginFeatDetail?.id === form.chosenBgOriginFeatId ? bgOriginFeatDetail : featDetailCache[form.chosenBgOriginFeatId] ?? null)
     : null;
-  const selectedRuleset: Ruleset = "5.5e";
   const {
     selectedClassSummary,
     selectedClassFeatDetails,
@@ -167,6 +168,7 @@ export function CharacterCreatorView() {
     step5ClassFeatChoices,
     step5ClassLanguageChoice,
     step5ClassExpertiseChoices,
+    step5ClassToolProficiency,
     step5WeaponMasteryChoice,
     step5WeaponOptions,
     step5ChoiceState,
@@ -186,7 +188,6 @@ export function CharacterCreatorView() {
     classes,
     featSummaries,
     form,
-    selectedRuleset,
     classDetail,
     raceDetail,
     bgDetail,
@@ -237,7 +238,7 @@ export function CharacterCreatorView() {
       }));
     }
     setClassFeatDetails({});
-    api<ClassDetail>(`/api/compendium/classes/${form.classId}`).then(setClassDetail).catch(() => {});
+    fetchClassDetailV2<ClassDetail>(form.classId).then(setClassDetail).catch(() => {});
   }, [form.classId, isEditing]);
 
   // Load spell lists once classDetail is known
@@ -270,7 +271,7 @@ export function CharacterCreatorView() {
       }));
     }
     setRaceFeatDetail(null);
-    api<RaceDetail>(`/api/compendium/races/${form.raceId}`).then(setRaceDetail).catch(() => {});
+    fetchRaceDetailV2<RaceDetail>(form.raceId).then(setRaceDetail).catch(() => {});
   }, [form.raceId, isEditing]);
 
   useCharacterCreatorFeatDetails({
@@ -319,7 +320,7 @@ export function CharacterCreatorView() {
         bgAbilityBonuses: {},
       }));
     }
-    api<BgDetail>(`/api/compendium/backgrounds/${form.bgId}`).then(setBgDetail).catch(() => {});
+    fetchBackgroundDetailV2<BgDetail>(form.bgId).then(setBgDetail).catch(() => {});
   }, [form.bgId, isEditing]);
 
   // Auto-select directly-granted background feats (e.g. Charlatan → Skilled)
@@ -353,7 +354,7 @@ export function CharacterCreatorView() {
   // Auto-select the first equipment option when bgDetail loads
   React.useEffect(() => {
     if (!bgDetail?.equipment) return;
-    const options = parseStartingEquipmentOptions(bgDetail.equipment);
+    const options = parseStartingEquipmentOptions(bgDetail.equipment, bgDetail.equipmentOptions);
     if (options.length > 0) {
       setForm(f => f.chosenBgEquipmentOption ? f : { ...f, chosenBgEquipmentOption: options[0].id });
     }
@@ -405,7 +406,6 @@ export function CharacterCreatorView() {
 
   const { busy, handleSubmit } = useCharacterCreatorSubmit({
     form,
-    selectedRuleset,
     classDetail,
     selectedClassSummary,
     raceDetail,
@@ -455,7 +455,6 @@ export function CharacterCreatorView() {
       sideSummary,
       classDetail,
       effectiveHitDie,
-      selectedRuleset,
       classes,
       classSearch,
       setClassSearch,
@@ -495,6 +494,7 @@ export function CharacterCreatorView() {
       step5ClassFeatChoices,
       step5ClassLanguageChoice,
       step5ClassExpertiseChoices,
+      step5ClassToolProficiency,
       step5WeaponMasteryChoice,
       step5WeaponOptions,
       step5ChoiceState,

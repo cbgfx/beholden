@@ -27,6 +27,7 @@ type CreatorCharacterData = Record<string, unknown> & {
   chosenSkills?: string[];
   chosenBgOriginFeatId?: string | null;
   chosenClassLanguages?: string[];
+  chosenClassTools?: string[];
   chosenClassEquipmentOption?: string | null;
   chosenBgEquipmentOption?: string | null;
   chosenFeatOptions?: Record<string, string[]>;
@@ -126,7 +127,6 @@ export function useCreatorEditHydration(args: {
         const inferredStandardAssign = inferStandardAssignFromScores(fallbackBaseScores);
         setForm((f) => ({
           ...f,
-          ruleset: "5.5e",
           classId,
           raceId: cd.raceId ?? "",
           bgId: cd.bgId ?? "",
@@ -155,6 +155,9 @@ export function useCreatorEditHydration(args: {
           chosenSkills: cd.chosenSkills ?? [],
           chosenBgOriginFeatId: cd.chosenBgOriginFeatId ?? null,
           chosenClassLanguages: cd.chosenClassLanguages ?? [],
+          chosenClassTools: Array.isArray(cd.chosenClassTools)
+            ? cd.chosenClassTools.filter((v): v is string => typeof v === "string")
+            : [],
           chosenClassEquipmentOption: cd.chosenClassEquipmentOption ?? null,
           chosenBgEquipmentOption: cd.chosenBgEquipmentOption ?? null,
           chosenFeatOptions: cd.chosenFeatOptions ?? {},

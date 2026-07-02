@@ -40,7 +40,14 @@ export interface ClassFeatureEntry {
   id: string;
   name: string;
   text: string;
+  scalingRolls?: Array<{
+    description: string | null;
+    level: number | null;
+    formula: string;
+  }>;
   preparedSpellProgression?: PreparedSpellProgressionTable[];
+  resolution?: "automatic" | "manual" | "mixed";
+  resolutionNotes?: string[];
 }
 
 export interface ResourceCounter {

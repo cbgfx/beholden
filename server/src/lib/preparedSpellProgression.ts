@@ -23,6 +23,20 @@ function splitList(text: string): string[] {
     .filter(Boolean);
 }
 
+function cleanSpellName(value: string): string {
+  const cleaned = value
+    .replace(/^(?:the|a|an)\s+/i, "")
+    .replace(/[.;:]+$/g, "")
+    .trim();
+  return /^(?:it|that|this|those|these)$/i.test(cleaned) ? "" : cleaned;
+}
+
+function splitSpellNames(text: string): string[] {
+  return splitList(text)
+    .map(cleanSpellName)
+    .filter(Boolean);
+}
+
 function slugify(value: string): string {
   return value
     .trim()
@@ -78,7 +92,7 @@ export function parsePreparedSpellProgression(text: string): PreparedSpellProgre
       if (!line.includes("|")) break;
       if (/^[^|]+Level\s*\|/i.test(line)) break;
 
-      const rowMatch = line.match(/^(\d+)\s*\|\s*(.+)$/);
+      const rowMatch = line.match(/^(\d+)(?:st|nd|rd|th)?\s*\|\s*(.+)$/i);
       if (!rowMatch) break;
 
       rows.push({
@@ -118,4 +132,53 @@ export function parsePreparedSpellProgression(text: string): PreparedSpellProgre
   }
 
   return tables;
+}
+
+/**
+ * Converts legacy prose-based species spell grants into explicit V2 progression
+ * rows. This inference belongs at the XML conversion boundary; native V2
+ * consumers must only read the resulting structured data.
+ */
+export function parseSpeciesSpellProgression(
+  text: string,
+  traitName: string,
+): PreparedSpellProgressionTable[] {
+  const rowsByLevel = new Map<number, string[]>();
+  const addSpells = (level: number, spellNames: string[]) => {
+    const spells = rowsByLevel.get(level) ?? [];
+    for (const spellName of spellNames) {
+      if (!spells.some((existing) => existing.toLowerCase() === spellName.toLowerCase())) {
+        spells.push(spellName);
+      }
+    }
+    if (spells.length > 0) rowsByLevel.set(level, spells);
+  };
+
+  for (const match of text.matchAll(/\byou (?:also )?know\s+(.+?)\s+cantrips?\b/giu)) {
+    addSpells(1, splitSpellNames(match[1] ?? ""));
+  }
+
+  for (const match of text.matchAll(
+    /\byou (?:also )?always have\s+(?:the\s+)?(.+?)\s+spell prepared\b/giu,
+  )) {
+    addSpells(1, splitSpellNames(match[1] ?? ""));
+  }
+
+  for (const match of text.matchAll(
+    /\bwhen you reach character levels\s+(\d+)\s+and\s+(\d+),\s+you learn\s+(.+?)\s+and\s+(.+?)\s+respectively\b/giu,
+  )) {
+    addSpells(Number(match[1]), [cleanSpellName(match[3] ?? "")]);
+    addSpells(Number(match[2]), [cleanSpellName(match[4] ?? "")]);
+  }
+
+  const rows = Array.from(rowsByLevel, ([level, spells]) => ({ level, spells }))
+    .sort((a, b) => a.level - b.level);
+  if (rows.length === 0) return [];
+
+  return [{
+    label: `${traitName.trim() || "Species Trait"} Spells`,
+    levelLabel: "Character Level",
+    spellLabel: "Granted Spells",
+    rows,
+  }];
 }

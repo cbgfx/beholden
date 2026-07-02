@@ -172,6 +172,7 @@ export function useCharacterInventoryContainers({
         return isStackableItem(item) && isStackableItem(stashItem)
           && inferStackKey(stashItem) === inferStackKey(item);
       });
+      await persist(items.filter((entry) => entry.id !== id));
       if (existing) {
         await updatePartyInventoryQuantity(campaignId, existing.id, existing.quantity + Math.max(1, item.quantity));
       } else {
@@ -181,7 +182,6 @@ export function useCharacterInventoryContainers({
           description: item.description ?? "", source: item.source, itemId: item.itemId,
         });
       }
-      await persist(items.filter((entry) => entry.id !== id));
       sync.setExpandedItemId(null);
       return;
     }

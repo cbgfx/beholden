@@ -188,7 +188,7 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
       const updatedAt = now();
       const next: StoredEncounterActor = { ...existing, initiative, updatedAt };
       updateEncounterActor(db, next, updatedAt);
-      const campaignId = syncCombatantToPlayer(db, next, updatedAt);
+      const synced = syncCombatantToPlayer(db, next, updatedAt);
 
       ctx.broadcast("encounter:combatantsDelta", {
         encounterId,
@@ -196,7 +196,7 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
         combatantId: next.id,
         combatant: toEncounterActorDto(next),
       });
-      fulfillInitiativePrompt(ctx, next, campaignId);
+      fulfillInitiativePrompt(ctx, next, synced?.campaignId ?? null);
 
       res.json({ ok: true });
     },

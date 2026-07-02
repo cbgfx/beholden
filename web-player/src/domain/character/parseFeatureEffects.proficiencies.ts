@@ -40,7 +40,12 @@ export function parseProficiencyGrantEffects(source: FeatureEffectSource, text: 
     const clause = m[1]?.trim();
     if (!clause) continue;
     pushArmorGrant(clause);
-    if (/\bshields?\b/i.test(clause)) armor.push("Shields");
+    // Check the captured clause AND the text immediately following the match
+    // for "and shields" — e.g. "training with Medium armor and Shields"
+    const afterMatch = text.slice(m.index + m[0].length, m.index + m[0].length + 20);
+    if (/\bshields?\b/i.test(clause) || /^\s*(?:,|and)\s+shields?\b/i.test(afterMatch)) {
+      armor.push("Shields");
+    }
   }
 
   for (const match of text.matchAll(/(?:armor training:\s*|training with\s+|proficiency with\s+)shields?\b/gi)) {
@@ -64,11 +69,16 @@ export function parseProficiencyGrantEffects(source: FeatureEffectSource, text: 
       .forEach((name) => weapons.push(toTitleCase(name)));
   }
 
-  const toolRe = /proficiency with\s+([\w\s']+?(?:tools?|kit|instruments?|supplies))\b/gi;
+  // Capture optional "and (the) Y" so "X and the Herbalism Kit" extracts both tools.
+  const toolRe = /proficiency with\s+([\w\s']+?(?:tools?|kit|instruments?|supplies)\b(?:\s+and\s+(?:the\s+)?[\w\s']+?(?:tools?|kit|instruments?|supplies)\b)?)/gi;
   while ((m = toolRe.exec(text)) !== null) {
-    const parsed = toTitleCase(m[1].trim());
-    if (isProficiencyNoiseToken(parsed)) continue;
-    tools.push(parsed);
+    for (const part of m[1].split(/\s+and\s+/i)) {
+      const stripped = part.trim().replace(/^(?:the|a|an)\s+/i, "");
+      if (!stripped) continue;
+      const parsed = toTitleCase(stripped);
+      if (isProficiencyNoiseToken(parsed)) continue;
+      tools.push(parsed);
+    }
   }
 
   const skillRe = /proficiency in\s+([\w\s]+?)(?:\.|,|\band\b|$)/gi;
@@ -205,6 +215,16 @@ export function parseProficiencyGrantEffects(source: FeatureEffectSource, text: 
     languages.add(parsed);
   }
   if (/know\s+thieves' cant/i.test(text)) languages.add("Thieves' Cant");
+
+  if (/\bgain(?:s)? proficiency in initiative\b/i.test(text) || /\bproficiency (?:in|with) initiative rolls?\b/i.test(text)) {
+    effects.push({
+      id: createFeatureEffectId(source, "proficiency_grant", effects.length),
+      type: "proficiency_grant",
+      source,
+      category: "initiative",
+      summary: "Proficiency in Initiative rolls",
+    } satisfies ProficiencyGrantEffect);
+  }
 
   const byCategory = [
     { category: "armor", values: armor },

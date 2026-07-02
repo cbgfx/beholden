@@ -16,6 +16,7 @@ export function seedDefaultConditions(db: Database.Database, campaignId: string)
     "Poisoned",
     "Prone",
     "Restrained",
+    "Slow",
     "Stunned",
     "Unconscious",
     "Hex",

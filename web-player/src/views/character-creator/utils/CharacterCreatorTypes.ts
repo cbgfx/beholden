@@ -1,20 +1,39 @@
-import type { Ruleset, RaceChoices } from "@/lib/characterRules";
+import type { RaceChoices } from "@/lib/characterRules";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import type { ParsedFeatChoiceLike, ParsedFeatDetailLike } from "./FeatChoiceTypes";
+import type { StructuredStartingEquipmentOption } from "./CharacterCreatorClassCoreUtils";
 
-export interface ClassSummary { id: string; name: string; hd: number | null; ruleset?: Ruleset | null }
+export interface ClassSummary { id: string; name: string; hd: number | null; }
+
+export interface ClassToolProficiency {
+  fixed: string[];
+  choices: Array<{ count: number; from: string[] }>;
+  notes: string[];
+}
 
 export interface ClassDetail {
-  id: string; name: string; hd: number | null; ruleset?: Ruleset | null;
+  id: string; name: string; hd: number | null;
   numSkills: number;
   proficiency: string;
   slotsReset: string;
+  spellAbility?: string | null;
+  wealth?: number | null;
   armor: string; weapons: string; tools: string;
+  /** Structured proficiencies present for canonical v2 classes. When present,
+   *  tools.fixed/choices/notes supersede the flat `tools` string. */
+  proficiencies?: {
+    savingThrows: string[];
+    skills: { choose: number; from: string[] };
+    armor: string[];
+    weapons: string[];
+    tools: ClassToolProficiency;
+  };
   description: string;
+  descriptions?: string[];
   autolevels: {
     level: number; scoreImprovement: boolean;
     slots: number[] | null;
-    features: { name: string; text: string; optional: boolean; preparedSpellProgression?: PreparedSpellProgressionTable[] }[];
+    features: { name: string; text: string; optional: boolean; effects?: unknown[]; scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>; preparedSpellProgression?: PreparedSpellProgressionTable[] }[];
     counters: { name: string; value: number; reset: string }[];
   }[];
 }
@@ -46,17 +65,18 @@ export interface ItemSummary {
   properties?: string[];
 }
 
-export interface RaceSummary { id: string; name: string; size: string | null; speed: number | null; ruleset?: Ruleset | null }
+export interface RaceSummary { id: string; name: string; size: string | null; speed: number | null; }
 
 export interface RaceDetail {
-  id: string; name: string; size: string | null; speed: number | null; ruleset?: Ruleset | null;
+  id: string; name: string; size: string | null; speed: number | null;
+  spellAbility?: string | null;
   resist: string | null;
   vision: { type: string; range: number }[];
   parsedChoices?: RaceChoices;
-  traits: { name: string; text: string; category: string | null; modifier: string[]; preparedSpellProgression?: PreparedSpellProgressionTable[] }[];
+  traits: { name: string; text: string; category: string | null; modifier: string[]; scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>; preparedSpellProgression?: PreparedSpellProgressionTable[] }[];
 }
 
-export interface BgSummary { id: string; name: string; ruleset?: Ruleset | null }
+export interface BgSummary { id: string; name: string; }
 
 export interface ProficiencyChoice {
   fixed: string[];
@@ -88,10 +108,11 @@ export interface StructuredBgProficiencies {
 }
 
 export interface BgDetail {
-  id: string; name: string; proficiency: string; ruleset?: Ruleset | null;
+  id: string; name: string; proficiency: string;
   proficiencies?: StructuredBgProficiencies;
-  traits: { name: string; text: string; preparedSpellProgression?: PreparedSpellProgressionTable[] }[];
+  traits: { name: string; text: string; scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>; preparedSpellProgression?: PreparedSpellProgressionTable[] }[];
   equipment?: string;
+  equipmentOptions?: StructuredStartingEquipmentOption[];
 }
 
 export interface Campaign {

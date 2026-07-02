@@ -13,7 +13,7 @@ import {
 import type { CharacterData, ConditionInstance, ResourceCounter } from "@/views/character/CharacterSheetTypes";
 import { toggleConditionInstance } from "@/views/character/CharacterConditions";
 import type { CompendiumMonsterRow } from "@/lib/monsterPicker/types";
-import { getLongRestRecovery } from "@/views/character/CharacterRestRecovery";
+import { getLongRestOverrides, getLongRestRecovery } from "@/views/character/CharacterRestRecovery";
 
 export function buildCharacterRuntimeActions(args: {
   char: Character;
@@ -24,7 +24,7 @@ export function buildCharacterRuntimeActions(args: {
   classResourcesWithSpellCasts: ResourceCounter[];
   hitDiceMax: number;
   inventory: CharacterData["inventory"];
-  effectiveHpMax: number;
+  effectiveHpMaxWithoutOverrides: number;
   overrides: SheetOverrides;
   polymorphCondition: PolymorphConditionData | null;
   saveCharacterData: (updatedData: CharacterData) => Promise<Character | null>;
@@ -49,7 +49,7 @@ export function buildCharacterRuntimeActions(args: {
     classResourcesWithSpellCasts,
     hitDiceMax,
     inventory,
-    effectiveHpMax,
+    effectiveHpMaxWithoutOverrides,
     overrides,
     polymorphCondition,
     saveCharacterData,
@@ -190,9 +190,11 @@ export function buildCharacterRuntimeActions(args: {
     const slotsReset = classDetail?.slotsReset ?? "L";
     const nextUsedSpellSlots = /S/i.test(slotsReset) ? (currentCharacterData.usedSpellSlots ?? {}) : {};
     const nextInventory = (inventory ?? []).map((item) => ((item.chargesMax ?? 0) > 0 ? { ...item, charges: item.chargesMax } : item));
+    const hasResourceful = raceDetail?.traits?.some((trait) => /^resourceful$/i.test(trait.name)) ?? false;
+    const nextOverrides = getLongRestOverrides(Boolean(overrides.inspiration), hasResourceful);
 
     await putMyCharacter(char.id, {
-      hpCurrent: effectiveHpMax,
+      hpCurrent: effectiveHpMaxWithoutOverrides,
       characterData: {
         ...currentCharacterData,
         hitDiceCurrent: recovery.hitDiceCurrent,
@@ -205,17 +207,17 @@ export function buildCharacterRuntimeActions(args: {
 
     const nextDeathSaves = { success: 0, fail: 0 };
     await patchMyCharacter(char.id, "deathSaves", nextDeathSaves);
+    await patchMyCharacter(char.id, "overrides", nextOverrides);
 
-    const hasResourceful = raceDetail?.traits?.some((trait) => /^resourceful$/i.test(trait.name)) ?? false;
     if (hasResourceful && !(overrides.inspiration ?? false)) {
       await patchMyCharacter(char.id, "inspiration", { inspiration: true });
     }
 
     setChar((prev) => prev ? {
       ...prev,
-      hpCurrent: effectiveHpMax,
+      hpCurrent: effectiveHpMaxWithoutOverrides,
       deathSaves: nextDeathSaves,
-      overrides: hasResourceful ? { ...prev.overrides!, inspiration: true } : prev.overrides,
+      overrides: nextOverrides,
       characterData: {
         ...prev.characterData,
         hitDiceCurrent: recovery.hitDiceCurrent,
@@ -223,6 +225,7 @@ export function buildCharacterRuntimeActions(args: {
         resources: nextResources,
         usedSpellSlots: nextUsedSpellSlots,
         inventory: nextInventory,
+        sheetOverrides: nextOverrides,
       },
     } : prev);
   };

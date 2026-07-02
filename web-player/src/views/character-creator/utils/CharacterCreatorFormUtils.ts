@@ -1,5 +1,4 @@
 import { C } from "@/lib/theme";
-import { matchesRuleset, type Ruleset } from "@/lib/characterRules";
 import {
   ABILITY_KEYS,
   ABILITY_NAME_TO_KEY,
@@ -20,7 +19,6 @@ export type AbilityMethod = "standard" | "pointbuy";
 export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
 export interface FormState {
-  ruleset?: Ruleset | null;
   classId: string;
   raceId: string;
   bgId: string;
@@ -46,6 +44,7 @@ export interface FormState {
   bgAbilityBonuses: Record<string, number>;
   chosenSkills: string[];
   chosenClassLanguages: string[];
+  chosenClassTools: string[];
   chosenWeaponMasteries: string[];
   chosenCantrips: string[];
   chosenSpells: string[];
@@ -83,8 +82,7 @@ function matchesClassFeatGroup(featName: string, featGroup: string): boolean {
 export function getClassFeatChoices(
   classDetail: ClassDetail | null,
   level: number,
-  featSummaries: Array<{ id: string; name: string; ruleset?: Ruleset | null }>,
-  ruleset: Ruleset | null,
+  featSummaries: Array<{ id: string; name: string }>,
 ): ClassFeatChoice[] {
   if (!classDetail) return [];
   const choices: ClassFeatChoice[] = [];
@@ -99,7 +97,6 @@ export function getClassFeatChoices(
       if (seen.has(key)) continue;
       seen.add(key);
       const options = featSummaries
-        .filter((feat) => matchesRuleset(feat, ruleset))
         .filter((feat) => matchesClassFeatGroup(feat.name, featGroup))
         .map((feat) => ({ id: feat.id, name: feat.name }))
         .sort((a, b) => a.name.localeCompare(b.name));
@@ -176,13 +173,12 @@ export function pointBuySpent(scores: Record<string, number>): number {
 export function initForm(user: { name?: string } | null, params: URLSearchParams): FormState {
   const preselectedCampaign = params.get("campaign");
   return {
-    ruleset: null,
     classId: "", raceId: "", bgId: "",
     level: 1, subclass: "", chosenOptionals: [], chosenClassFeatIds: {}, chosenLevelUpFeats: [],
     chosenRaceSkills: [], chosenRaceLanguages: [], chosenRaceTools: [], chosenRaceFeatId: null, chosenRaceSize: null,
     chosenBgSkills: [], chosenBgOriginFeatId: null,
     chosenBgTools: [], chosenBgLanguages: [], chosenClassEquipmentOption: null, chosenBgEquipmentOption: null, chosenFeatOptions: {}, chosenFeatureChoices: {}, bgAbilityMode: "split", bgAbilityBonuses: {},
-    chosenSkills: [], chosenClassLanguages: [], chosenWeaponMasteries: [], chosenCantrips: [], chosenSpells: [], chosenInvocations: [],
+    chosenSkills: [], chosenClassLanguages: [], chosenClassTools: [], chosenWeaponMasteries: [], chosenCantrips: [], chosenSpells: [], chosenInvocations: [],
     abilityMethod: "standard",
     standardAssign: { str: -1, dex: -1, con: -1, int: -1, wis: -1, cha: -1 },
     pbScores: { ...DEFAULT_SCORES },

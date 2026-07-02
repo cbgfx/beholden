@@ -2,6 +2,7 @@ import type { ParsedFeatChoiceLike } from "@/lib/characterRules";
 import { parseStartingEquipmentOptions } from "./CharacterCreatorUtils";
 import { MUSICAL_INSTRUMENTS } from "../constants/CharacterCreatorConstants";
 import { normalizeInventoryItemLookupName } from "@/views/character/CharacterInventory";
+import type { StructuredStartingEquipmentOption } from "./CharacterCreatorClassCoreUtils";
 
 export interface ItemSummaryLike {
   id: string;
@@ -136,8 +137,9 @@ export function collectEquipmentLookupNames(
   optionId: string | null,
   equipmentText: string | undefined,
   grantedTools: string[],
+  structuredOptions?: StructuredStartingEquipmentOption[],
 ): string[] {
-  const options = parseStartingEquipmentOptions(equipmentText);
+  const options = parseStartingEquipmentOptions(equipmentText, structuredOptions);
   const selected = options.find((option) => option.id === optionId);
   if (!selected) return [];
 
@@ -183,8 +185,9 @@ export function buildEquipmentItems(
   prefix: string,
   grantedTools: string[],
   itemIndex: ItemSummaryLike[],
+  structuredOptions?: StructuredStartingEquipmentOption[],
 ): InventoryItemSeedLike[] {
-  const options = parseStartingEquipmentOptions(equipmentText);
+  const options = parseStartingEquipmentOptions(equipmentText, structuredOptions);
   const selected = options.find((option) => option.id === optionId);
   if (!selected) return [];
 

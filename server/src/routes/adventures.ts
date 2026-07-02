@@ -25,6 +25,12 @@ import {
   OverridesSchema,
 } from "../lib/schemas.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
+import {
+  exportNativeCompendiumBatch,
+  importNativeCompendiumBatch,
+  type NativeCompendiumBatch,
+} from "../services/compendium/nativeCompendium.js";
+import { collectV2MonsterSpellIds } from "../services/compendium/nativeCompendiumV2.js";
 
 const AdventureCreateBody = z.object({
   name: z.string().trim().optional(),
@@ -88,7 +94,9 @@ const TreasureImport = z.object({
 });
 
 const AdventureImportBody = z.object({
-  version: z.literal(1),
+  format: z.literal("beholden.adventure").optional(),
+  version: z.union([z.literal(1), z.literal(2)]),
+  compendium: z.array(z.unknown()).default([]),
   adventure: z.object({
     name: z.string(),
     status: z.string().default("active"),
@@ -224,10 +232,14 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
       combatantsByEnc.get(encId)!.push(row);
     }
 
+    const referencedMonsterIds = new Set<string>();
     const encounters = encRows.map((encRow) => {
       const enc = rowToEncounter(encRow);
       const combatants = (combatantsByEnc.get(enc.id) ?? []).map((c) => {
         const combatant = rowToEncounterActor(c);
+        if (combatant.baseType === "monster" && combatant.baseId) {
+          referencedMonsterIds.add(combatant.baseId);
+        }
         return {
           baseType: combatant.baseType,
           baseId: combatant.baseId,
@@ -250,8 +262,28 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
       return { name: enc.name, status: enc.status, sort: enc.sort, combatants };
     });
 
+    const monsterBatch = exportNativeCompendiumBatch(db, "monsters", referencedMonsterIds);
+    const referencedSpellIds = collectV2MonsterSpellIds(monsterBatch.entries);
+    const referencedItemIds = new Set(
+      treasure
+        .filter((entry) => entry.source === "compendium" && entry.itemId)
+        .map((entry) => String(entry.itemId)),
+    );
+    const compendium: NativeCompendiumBatch[] = [];
+    if (monsterBatch.entries.length > 0) compendium.push(monsterBatch);
+    if (referencedSpellIds.size > 0) {
+      const spellBatch = exportNativeCompendiumBatch(db, "spells", referencedSpellIds);
+      if (spellBatch.entries.length > 0) compendium.push(spellBatch);
+    }
+    if (referencedItemIds.size > 0) {
+      const itemBatch = exportNativeCompendiumBatch(db, "items", referencedItemIds);
+      if (itemBatch.entries.length > 0) compendium.push(itemBatch);
+    }
+
     res.json({
-      version: 1,
+      format: "beholden.adventure",
+      version: 2,
+      compendium,
       adventure: { name: adv.name, status: adv.status, notes, encounters, treasure },
     });
   });
@@ -284,6 +316,10 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
     const sort = nextSortFor(db, "adventures", "campaign_id", campaignId);
 
     db.transaction(() => {
+      for (const batch of parsed.data.compendium) {
+        importNativeCompendiumBatch(db, batch);
+      }
+
       db.prepare(
         "INSERT INTO adventures (id, campaign_id, name, status, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
       ).run(advId, campaignId, adventureName, imp.status, sort, t, t);
@@ -357,6 +393,16 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
       }
     })();
 
+    if (parsed.data.compendium.length > 0) {
+      ctx.broadcast("compendium:changed", {
+        imported: parsed.data.compendium.reduce<number>((total, batch) => {
+          if (!batch || typeof batch !== "object" || Array.isArray(batch)) return total;
+          const entries = (batch as Record<string, unknown>).entries;
+          return total + (Array.isArray(entries) ? entries.length : 0);
+        }, 0),
+        total: parsed.data.compendium.length,
+      });
+    }
     emitAdventureChange({ campaignId, action: "upsert", adventureId: advId });
     const advRow = db
       .prepare(`SELECT ${ADVENTURE_COLS} FROM adventures WHERE id = ?`)

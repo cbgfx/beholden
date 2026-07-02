@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  collectTaggedGrantsFromEffects,
   deriveModifierBonusFromEffects,
   parseFeatureEffects,
 } from "@/domain/character/parseFeatureEffects";
@@ -322,5 +323,86 @@ describe("parseFeatureEffects parser modules", () => {
 
     expect(Array.isArray(parsed.effects)).toBe(true);
     expect(parsed.effects.length).toBe(0);
+  });
+
+  it("parses armor + shields when shields follows via 'and' after an armor clause (College of Valor regression)", () => {
+    // "training with Medium armor and Shields" — Shields was missed because the
+    // armor clause regex stops at "armor" and the shield check only tested the captured clause.
+    const parsed = parse(
+      "Martial Training",
+      "You gain proficiency with Martial weapons and training with Medium armor and Shields. In addition, you can use a Simple or Martial weapon as a Spellcasting Focus to cast spells from your Bard spell list.",
+    );
+
+    const grants = collectTaggedGrantsFromEffects([parsed]);
+    const armorNames = grants.armor.map((a) => a.name);
+    const weaponNames = grants.weapons.map((w) => w.name);
+
+    expect(armorNames).toContain("Medium Armor");
+    expect(armorNames).toContain("Shields");
+    expect(weaponNames).toContain("Martial Weapons");
+  });
+
+  it("captures both tools from 'proficiency with X and the Y' compound grants (Alchemist regression)", () => {
+    // Alchemist "Tools of the Trade": "You gain proficiency with Alchemist's Supplies and the Herbalism Kit."
+    // Previously only Alchemist's Supplies was captured; Herbalism Kit was silently dropped.
+    const parsed = parse(
+      "Tools of the Trade (Alchemist)",
+      "You gain proficiency with Alchemist's Supplies and the Herbalism Kit. If you already have one of these proficiencies, you gain proficiency with one other type of Artisan's Tools of your choice.",
+    );
+
+    const grants = collectTaggedGrantsFromEffects([parsed]);
+    const toolNames = grants.tools.map((t) => t.name);
+
+    expect(toolNames).toContain("Alchemist's Supplies");
+    expect(toolNames).toContain("Herbalism Kit");
+    expect(toolNames).not.toContain("The Herbalism Kit");
+    // The conditional fallback "one other type of Artisan's Tools" must not be treated as a fixed grant
+    expect(toolNames.some((n) => /one other type/i.test(n))).toBe(false);
+  });
+
+  it("strips leading article from 'proficiency with the Herbalism Kit' (Warrior of Mercy regression)", () => {
+    // "proficiency with the Herbalism Kit" → "Herbalism Kit", not "The Herbalism Kit"
+    const parsed = parse(
+      "Implements of Mercy",
+      "You gain proficiency in the Insight and Medicine skills and proficiency with the Herbalism Kit.",
+    );
+
+    const grants = collectTaggedGrantsFromEffects([parsed]);
+    const toolNames = grants.tools.map((t) => t.name);
+
+    expect(toolNames).toContain("Herbalism Kit");
+    expect(toolNames).not.toContain("The Herbalism Kit");
+  });
+
+  it("parses Monk Unarmored Movement with correct armor gate and level scaling", () => {
+    // "while you aren't wearing armor" must produce an armorState: no_armor gate.
+    // Speed must scale by level via named_progression, not be fixed at +10.
+    const parsed = parse(
+      "Level 2: Unarmored Movement",
+      "Your speed increases by 10 feet while you aren't wearing armor or wielding a Shield. This bonus increases when you reach certain Monk levels, as shown on the Monk Features table.",
+    );
+
+    const speedEffect = parsed.effects.find((e) => e.type === "speed" && e.mode === "bonus");
+    expect(speedEffect).toBeTruthy();
+    if (!speedEffect || speedEffect.type !== "speed") return;
+    expect(speedEffect.gate?.armorState).toBe("no_armor");
+    expect(speedEffect.amount?.kind).toBe("named_progression");
+    if (speedEffect.amount?.kind === "named_progression") {
+      expect(speedEffect.amount.key).toBe("monk_unarmored_movement");
+    }
+  });
+
+  it("parses Magical Discoveries spell choice (College of Lore L6)", () => {
+    const text =
+      "You learn two spells of your choice. These spells can come from the Cleric, Druid, or Wizard spell list or any combination thereof (see a class's section for its spell list). A spell you choose must be a cantrip or a spell for which you have spell slots, as shown in the Bard Features table. You always have the chosen spells prepared, and whenever you gain a Bard level, you can replace one of the spells with another spell that meets these requirements.";
+    const parsed = parse("Level 6: Magical Discoveries (College of Lore)", text);
+
+    const choice = parsed.effects.find((e) => e.type === "spell_choice");
+    expect(choice).toBeTruthy();
+    if (!choice || choice.type !== "spell_choice") return;
+    expect(choice.count).toEqual({ kind: "fixed", value: 2 });
+    expect(choice.level).toBeNull();
+    expect(choice.spellLists).toEqual(expect.arrayContaining(["Cleric", "Druid", "Wizard"]));
+    expect(choice.spellLists).toHaveLength(3);
   });
 });

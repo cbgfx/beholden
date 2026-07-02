@@ -28,7 +28,12 @@ export async function buildCreatorStartingInventory(args: {
 
   const bgToolSelections = getBackgroundGrantedToolSelectionsFromUtils(form, bgDetail, [], classifyFeatSelection);
   const equipmentLookupNames = [
-    ...collectEquipmentLookupNames(form.chosenBgEquipmentOption, bgDetail?.equipment, bgToolSelections),
+    ...collectEquipmentLookupNames(
+      form.chosenBgEquipmentOption,
+      bgDetail?.equipment,
+      bgToolSelections,
+      bgDetail?.equipmentOptions,
+    ),
     ...collectEquipmentLookupNames(
       form.chosenClassEquipmentOption,
       extractClassStartingEquipment(classDetail),
@@ -41,4 +46,3 @@ export async function buildCreatorStartingInventory(args: {
     : await fetchCompendiumItemsByLookup(lookupBody);
   return buildStartingInventoryFromUtils(form, bgDetail, classDetail, startingInventoryItems);
 }
-

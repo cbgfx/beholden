@@ -1,0 +1,42 @@
+<bastionCompendium>
+  <spaces>
+    <space>
+      <name>Basic Room</name>
+      <squares>1</squares>
+      <label>BR</label>
+    </space>
+    <space>
+      <name>Hallway</name>
+      <squares>2</squares>
+      <label>H</label>
+    </space>
+  </spaces>
+  <orders>
+    <order>Order of the Gauntlet</order>
+    <order>Harpers</order>
+  </orders>
+  <basicFacilities>
+    <facility>
+        <name>Armory</name>
+        <type>basic</type>
+        <minimumLevel>5</minimumLevel>
+        <space>Basic Room</space>
+        <hirelings>2</hirelings>
+        <description>An armory stores weapons and armor.</description>
+    </facility>
+  </basicFacilities>
+  <specialFacilities>
+    <facility>
+        <name>Wizard's Tower</name>
+        <type>special</type>
+        <minimumLevel>11</minimumLevel>
+        <prerequisite>Library</prerequisite>
+        <orders>
+            <order>Harpers</order>
+        </orders>
+        <space>Basic Room</space>
+        <hirelings>1 apprentice</hirelings>
+        <description>A tall tower for arcane research. You can have more than one.</description>
+    </facility>
+  </specialFacilities>
+</bastionCompendium>

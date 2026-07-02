@@ -5,7 +5,10 @@ import type { ServerContext } from "../../server/context.js";
 import { requireParam } from "../../lib/routeHelpers.js";
 import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { parseBody } from "../../shared/validate.js";
-import { ItemBody, buildItemRecord } from "./helpers.js";
+import { itemToV2 } from "../../services/compendium/nativeCompendiumV2.js";
+import { mergeCanonicalV2Edit } from "../../services/compendium/nativeCompendiumV2Migration.js";
+import { parseStoredCompendiumEntry } from "../../services/compendium/storedCompendium.js";
+import { ItemBody, buildItemRecord, normalizeLookupName } from "./helpers.js";
 import { z } from "zod";
 
 export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: RequestHandler) {
@@ -31,15 +34,6 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     "SELECT id, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
   );
 
-  function normalizeLookupName(value: string): string {
-    return value
-      .trim()
-      .replace(/\s*\[[^\]]+\]\s*$/g, "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .toLowerCase();
-  }
-
   function mapLookupRow(row: {
     id: string;
     name: string;
@@ -62,11 +56,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
       dmgType?: string | null;
       properties?: string[];
     } = {};
-    try {
-      data = JSON.parse(row.data_json ?? "{}");
-    } catch {
-      data = {};
-    }
+    data = parseStoredCompendiumEntry("items", row.data_json) as typeof data;
     return {
       id: row.id,
       name: row.name,
@@ -254,7 +244,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
       data_json: string;
     }[];
     const mapped = rawRows.map((r) => {
-        const data = JSON.parse(r.data_json ?? "{}");
+        const data = parseStoredCompendiumEntry("items", r.data_json);
         return {
           ...(includeField("id") ? { id: r.id } : {}),
           ...(includeField("name") ? { name: r.name } : {}),
@@ -425,15 +415,11 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
         const base = rows.get(textRow.id);
         if (!base) continue;
         let text: string[] | null = null;
-        try {
-          const parsed = JSON.parse(textRow.data_json ?? "{}") as { text?: unknown };
-          if (Array.isArray(parsed.text)) {
-            text = parsed.text.map((entry) => String(entry ?? "")).filter(Boolean);
-          } else if (typeof parsed.text === "string" && parsed.text.trim()) {
-            text = [parsed.text.trim()];
-          }
-        } catch {
-          text = null;
+        const parsed = parseStoredCompendiumEntry("items", textRow.data_json);
+        if (Array.isArray(parsed.text)) {
+          text = parsed.text.map((entry) => String(entry ?? "")).filter(Boolean);
+        } else if (typeof parsed.text === "string" && parsed.text.trim()) {
+          text = [parsed.text.trim()];
         }
         rows.set(textRow.id, {
           ...base,
@@ -454,7 +440,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
       .get(itemId) as Record<string, unknown> | undefined;
     if (!row)
       return res.status(404).json({ ok: false, message: "Item not found in compendium" });
-    const it = JSON.parse(row.data_json as string);
+    const it = parseStoredCompendiumEntry("items", row.data_json as string);
     res.json({
       id: row.id, name: row.name, nameKey: row.name_key ?? null,
       rarity: row.rarity ?? null, type: row.type ?? null, typeKey: row.type_key ?? null,
@@ -477,8 +463,12 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     const b = parseBody(ItemBody, req);
     const id = `i_${b.name.toLowerCase().replace(/\s+/g, "_")}`;
     const { name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data } = buildItemRecord(b);
+    const canonical = itemToV2({
+      ...data, id, name, nameKey, rarity: rarityVal, type: typeVal, typeKey: typeKeyVal,
+      attunement: Boolean(attunement), magic: Boolean(magic),
+    });
     db.prepare("INSERT OR REPLACE INTO compendium_items (id, name, name_key, rarity, type, type_key, attunement, magic, weight, value, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(id, name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data.weight ?? null, data.value ?? null, JSON.stringify(data));
+      .run(id, name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data.weight ?? null, data.value ?? null, JSON.stringify(canonical));
     ctx.broadcast("compendium:changed", { itemCreated: id });
     res.json({ ok: true, id });
   });
@@ -486,12 +476,22 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
   app.put("/api/compendium/items/:itemId", anyDm, (req, res) => {
     const itemId = requireParam(req, res, "itemId");
     if (!itemId) return;
-    if (!db.prepare("SELECT id FROM compendium_items WHERE id = ?").get(itemId))
+    const existing = db.prepare("SELECT data_json FROM compendium_items WHERE id = ?").get(itemId) as { data_json: string } | undefined;
+    if (!existing)
       return res.status(404).json({ ok: false, message: "Item not found" });
     const b = parseBody(ItemBody, req);
     const { name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data } = buildItemRecord(b);
+    const replacement = itemToV2({
+      ...data, id: itemId, name, nameKey, rarity: rarityVal, type: typeVal, typeKey: typeKeyVal,
+      attunement: Boolean(attunement), magic: Boolean(magic),
+    });
+    const canonical = mergeCanonicalV2Edit(
+      "items",
+      JSON.parse(existing.data_json) as Record<string, unknown>,
+      replacement,
+    );
     db.prepare("UPDATE compendium_items SET name = ?, name_key = ?, rarity = ?, type = ?, type_key = ?, attunement = ?, magic = ?, weight = ?, value = ?, data_json = ? WHERE id = ?")
-      .run(name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data.weight ?? null, data.value ?? null, JSON.stringify(data), itemId);
+      .run(name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data.weight ?? null, data.value ?? null, JSON.stringify(canonical), itemId);
     ctx.broadcast("compendium:changed", { itemUpdated: itemId });
     res.json({ ok: true });
   });

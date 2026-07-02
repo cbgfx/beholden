@@ -5,6 +5,8 @@ import { parseAttackEffects, parseWeaponMasteryEffects } from "@/domain/characte
 import {
   parseAdvantageModifierEffects,
   parseArmorClassBonusEffects,
+  parseAttackRollBonusEffects,
+  parseDamageRollBonusEffects,
   parseInitiativeModifierEffects,
   parseSavingThrowModifierEffects,
   parseSkillCheckBonusEffects,
@@ -22,11 +24,17 @@ import {
   parseSensesEffects,
   parseSpeedEffects,
 } from "@/domain/character/parseFeatureEffects.stats";
+import {
+  structuredEffectsFromCanonical,
+  type StructuredFeatMechanicsLike,
+} from "@/domain/character/structuredFeatureEffects";
 
 export interface ParseFeatureEffectsInput {
   source: FeatureEffectSource;
   text: string;
   suppressStructuredSpellGrants?: boolean;
+  classEffects?: unknown[];
+  featMechanics?: StructuredFeatMechanicsLike | null;
 }
 
 export function parseFeatureEffects(input: ParseFeatureEffectsInput): ParsedFeatureEffects {
@@ -47,6 +55,8 @@ export function parseFeatureEffects(input: ParseFeatureEffectsInput): ParsedFeat
   parseSpeedEffects(source, cleanText, effects);
   parseArmorClassEffects(source, cleanText, effects);
   parseArmorClassBonusEffects(source, cleanText, effects);
+  parseAttackRollBonusEffects(source, cleanText, effects);
+  parseDamageRollBonusEffects(source, cleanText, effects);
   parseHitPointBonusEffects(source, cleanText, effects);
   parseAttackEffects(source, cleanText, effects);
   parseInitiativeModifierEffects(source, cleanText, effects);
@@ -57,7 +67,19 @@ export function parseFeatureEffects(input: ParseFeatureEffectsInput): ParsedFeat
   parseSensesEffects(source, cleanText, effects);
   parsePassiveScoreEffects(source, cleanText, effects);
 
-  return { source, effects };
+  const structuredEffects = structuredEffectsFromCanonical({
+    source,
+    classEffects: input.classEffects,
+    featMechanics: input.featMechanics,
+  });
+  // Existing prose parsers sometimes carry conditions that legacy modifier
+  // fields do not (for example, "while not wearing heavy armor"). Prefer that
+  // richer result when available; structured data fills mechanic types prose
+  // did not understand.
+  const proseTypes = new Set(effects.map((effect) => effect.type));
+  const structuredFallbacks = structuredEffects.filter((effect) => !proseTypes.has(effect.type));
+
+  return { source, effects: [...effects, ...structuredFallbacks] };
 }
 
 export * from "@/domain/character/parseFeatureEffectsDerived";

@@ -105,6 +105,12 @@ export interface PartyInventoryItemDto {
   meta: PartyInventoryMetaDto;
 }
 
+export interface PartyInventoryListDto {
+  items: PartyInventoryItemDto[];
+  /** Combined remaining carry capacity of all OTHER party members (lbs). Null when no STR data is available. */
+  otherMembersCapacityLbs: number | null;
+}
+
 export interface FlatPartyInventoryItemDto {
   id: string;
   campaignId: string;

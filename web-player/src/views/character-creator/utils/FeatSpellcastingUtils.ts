@@ -80,14 +80,15 @@ function resolveFeatSpellcastingAbility(args: {
 }): AbilKey | null {
   const { feat, selectedChoices = {}, getChoiceKey } = args;
   const abilityChoice = getFeatSpellcastingAbilityChoice(feat);
-  if (!abilityChoice) return null;
-  const key = getChoiceKey ? getChoiceKey(abilityChoice) : abilityChoice.id;
-  const selected = selectedChoices[key] ?? [];
-  for (const value of selected) {
-    const abilityKey = toAbilityKey(value);
-    if (abilityKey) return abilityKey;
+  if (abilityChoice) {
+    const key = getChoiceKey ? getChoiceKey(abilityChoice) : abilityChoice.id;
+    const selected = selectedChoices[key] ?? [];
+    for (const value of selected) {
+      const abilityKey = toAbilityKey(value);
+      if (abilityKey) return abilityKey;
+    }
   }
-  return null;
+  return toAbilityKey(feat.parsed.spellcastingAbility);
 }
 
 export function resolveFeatSpellEntries(args: {

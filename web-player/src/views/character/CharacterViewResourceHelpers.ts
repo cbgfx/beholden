@@ -72,7 +72,8 @@ function parseWordCount(value: string): number | null {
 export function collectClassResources(classDetail: ClassRestDetail | null, level: number, selectedSubclass?: string | null): ResourceCounter[] {
   if (!classDetail) return [];
   const latest = new Map<string, ResourceCounter>();
-  for (const autolevel of classDetail.autolevels) {
+  const autolevels = Array.isArray(classDetail.autolevels) ? classDetail.autolevels : [];
+  for (const autolevel of autolevels) {
     if (autolevel.level > level) continue;
     for (const counter of autolevel.counters ?? []) {
       const max = Math.max(0, Math.floor(Number(counter.value) || 0));

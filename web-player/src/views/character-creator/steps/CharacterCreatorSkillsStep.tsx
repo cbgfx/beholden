@@ -19,8 +19,15 @@ import {
 
 type StepResult = { main: React.ReactNode; side: React.ReactNode };
 
+interface ClassToolProficiencyLike {
+  fixed: string[];
+  choices: Array<{ count: number; from: string[] }>;
+  notes: string[];
+}
+
 interface CreatorFormLike {
   chosenSkills: string[];
+  chosenClassTools: string[];
   chosenBgLanguages: string[];
   chosenRaceLanguages: string[];
   chosenClassLanguages: string[];
@@ -73,6 +80,7 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
   bgDetailName?: string | null;
   skillList: string[];
   numSkills: number;
+  classToolProficiency?: ClassToolProficiencyLike | null;
   bgLangChoice: { fixed: string[]; choose: number; from: string[] | null };
   coreLanguageChoice: Step5LanguageChoiceLike | null;
   classLanguageChoice: Step5LanguageChoiceLike | null;
@@ -95,6 +103,7 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
     | "missingCoreLanguages"
     | "missingClassLanguages"
     | "missingWeaponMasteries"
+    | "missingClassToolChoices"
     | "hasAnything"
     | "takenSkillKeys"
     | "takenToolKeys"
@@ -107,9 +116,9 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
   onBack: () => void;
   onNext: () => void;
 }): StepResult {
-  const { form, setForm, classDetailName, bgDetailName, skillList, numSkills, bgLangChoice, coreLanguageChoice, classLanguageChoice, classFeatChoices, classExpertiseChoices, classSelectedFeatChoices, selectedClassFeatEntries, bgFeatChoices, raceFeatChoices, weaponMasteryChoice, weaponOptions, choiceState, getClassFeatChoiceLabel, getClassFeatOptionLabel, sideSummary, onBack, onNext } = args;
+  const { form, setForm, classDetailName, bgDetailName, skillList, numSkills, classToolProficiency, bgLangChoice, coreLanguageChoice, classLanguageChoice, classFeatChoices, classExpertiseChoices, classSelectedFeatChoices, selectedClassFeatEntries, bgFeatChoices, raceFeatChoices, weaponMasteryChoice, weaponOptions, choiceState, getClassFeatChoiceLabel, getClassFeatOptionLabel, sideSummary, onBack, onNext } = args;
   const { classFeatureProficiencyChoices, chosenFeatureChoices, setChosenFeatureChoices } = args;
-  const { missingClassFeatChoices, missingClassExpertiseChoices, missingFeatOptionSelections, missingCoreLanguages, missingClassLanguages, missingWeaponMasteries, hasAnything, takenSkillKeys, takenToolKeys, takenLanguageKeys, takenExpertiseKeys } = choiceState;
+  const { missingClassFeatChoices, missingClassExpertiseChoices, missingFeatOptionSelections, missingCoreLanguages, missingClassLanguages, missingWeaponMasteries, missingClassToolChoices, hasAnything, takenSkillKeys, takenToolKeys, takenLanguageKeys, takenExpertiseKeys } = choiceState;
 
   const takenFeatureSkillKeys = new Set(
     classFeatureProficiencyChoices
@@ -138,6 +147,19 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
       if (kind === "language" && takenFeatureLanguageKeys.has(normalized)) return true;
     }
     return duplicateLockedForStep5(kind, value, selected, { takenSkillKeys, takenToolKeys, takenLanguageKeys, takenExpertiseKeys });
+  }
+
+  function toggleClassTool(tool: string, from: string[], max: number) {
+    setForm((prev) => {
+      const current = (prev as unknown as { chosenClassTools: string[] }).chosenClassTools;
+      const selected = current.includes(tool);
+      const poolKeys = new Set(from.map(normalizeChoiceKey));
+      const countInPool = current.filter((t) => poolKeys.has(normalizeChoiceKey(t))).length;
+      const next = selected
+        ? current.filter((t) => t !== tool)
+        : countInPool < max ? [...current, tool] : current;
+      return { ...prev, chosenClassTools: next } as TForm;
+    });
   }
 
   function toggleList(key: "chosenBgLanguages" | "chosenRaceLanguages" | "chosenClassLanguages" | "chosenWeaponMasteries" | "chosenSkills", value: string, max: number) {
@@ -214,6 +236,59 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {classToolProficiency && (classToolProficiency.fixed.length > 0 || classToolProficiency.choices.length > 0 || classToolProficiency.notes.length > 0) && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
+            <div style={{ ...labelStyle, margin: 0 }}>
+              Tool Proficiencies {classDetailName ? <span style={sourceTagStyle}>from {classDetailName}</span> : null}
+            </div>
+          </div>
+          {classToolProficiency.fixed.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: classToolProficiency.choices.length > 0 || classToolProficiency.notes.length > 0 ? 8 : 0 }}>
+              {classToolProficiency.fixed.map((tool) => (
+                <span key={tool} style={profChipStyle}>{tool}</span>
+              ))}
+            </div>
+          )}
+          {classToolProficiency.choices.map((choiceGroup, idx) => {
+            const chosenInPool = form.chosenClassTools.filter((t) =>
+              choiceGroup.from.some((opt) => normalizeChoiceKey(opt) === normalizeChoiceKey(t))
+            );
+            return (
+              <div key={idx} style={{ marginBottom: 8 }}>
+                <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 6 }}>
+                  Choose {choiceGroup.count} ({chosenInPool.length}/{choiceGroup.count})
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {choiceGroup.from.map((tool) => {
+                    const selected = form.chosenClassTools.includes(tool);
+                    const duplicate = !selected && duplicateLocked("tool", tool, false);
+                    const countFull = chosenInPool.length >= choiceGroup.count;
+                    const locked = (!selected && countFull) || duplicate;
+                    return (
+                      <button
+                        key={tool}
+                        type="button"
+                        disabled={locked}
+                        onClick={() => toggleClassTool(tool, choiceGroup.from, choiceGroup.count)}
+                        style={choiceButtonStyle(selected, locked, duplicate)}
+                      >
+                        {tool}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          {classToolProficiency.notes.map((note, idx) => (
+            <div key={idx} style={{ color: C.muted, fontSize: "var(--fs-small)", fontStyle: "italic", marginTop: 4 }}>
+              {note}
+            </div>
+          ))}
         </div>
       )}
 
@@ -354,6 +429,7 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
           || missingCoreLanguages
           || missingClassLanguages
           || missingWeaponMasteries
+          || missingClassToolChoices
           || classFeatureProficiencyChoices.some((choice) => (chosenFeatureChoices[choice.key] ?? []).length < choice.count)
         }
       />

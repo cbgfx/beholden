@@ -80,6 +80,7 @@ export interface ClassRestDetail {
   id: string;
   name: string;
   hd: number | null;
+  spellAbility?: string | null;
   slotsReset?: string | null;
   autolevels: Array<{
     level: number;
@@ -89,6 +90,7 @@ export interface ClassRestDetail {
       name: string;
       text: string;
       optional?: boolean;
+      scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>;
       preparedSpellProgression?: PreparedSpellProgressionTable[];
     }>;
   }>;
@@ -97,12 +99,14 @@ export interface ClassRestDetail {
 export interface LoreTraitDetail {
   name: string;
   text: string;
+  scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>;
   preparedSpellProgression?: PreparedSpellProgressionTable[];
 }
 
 export interface RaceFeatureDetail {
   id: string;
   name: string;
+  spellAbility?: string | null;
   traits: LoreTraitDetail[];
 }
 

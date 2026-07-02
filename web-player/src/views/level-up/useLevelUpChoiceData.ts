@@ -53,7 +53,7 @@ export function useLevelUpChoiceData(args: {
       setFeatSpellChoiceOptions((prev) => hasKeys(prev) ? {} : prev);
       return;
     }
-    loadSpellChoiceOptions(featResolvedSpellChoices, (query) => api<LevelUpSpellSummary[]>(query)).then((optionsByKey) => {
+    loadSpellChoiceOptions(featResolvedSpellChoices, (query) => api<LevelUpSpellSummary[]>(query), { forceIncludeText: true }).then((optionsByKey) => {
       if (alive) {
         setFeatSpellChoiceOptions((prev) => sameSpellChoiceOptionMap(prev, optionsByKey) ? prev : optionsByKey);
       }
@@ -69,7 +69,7 @@ export function useLevelUpChoiceData(args: {
       setClassFeatureSpellChoiceOptions((prev) => hasKeys(prev) ? {} : prev);
       return;
     }
-    loadSpellChoiceOptions(classFeatureResolvedSpellChoices, (query) => api<LevelUpSpellSummary[]>(query)).then((optionsByKey) => {
+    loadSpellChoiceOptions(classFeatureResolvedSpellChoices, (query) => api<LevelUpSpellSummary[]>(query), { forceIncludeText: true }).then((optionsByKey) => {
       if (alive) {
         setClassFeatureSpellChoiceOptions((prev) => sameSpellChoiceOptionMap(prev, optionsByKey) ? prev : optionsByKey);
       }
@@ -85,7 +85,7 @@ export function useLevelUpChoiceData(args: {
       setInvocationSpellChoiceOptions((prev) => hasKeys(prev) ? {} : prev);
       return;
     }
-    loadSpellChoiceOptions(invocationResolvedSpellChoices, (query) => api<LevelUpSpellSummary[]>(query)).then((optionsByKey) => {
+    loadSpellChoiceOptions(invocationResolvedSpellChoices, (query) => api<LevelUpSpellSummary[]>(query), { forceIncludeText: true }).then((optionsByKey) => {
       if (alive) {
         setInvocationSpellChoiceOptions((prev) => sameSpellChoiceOptionMap(prev, optionsByKey) ? prev : optionsByKey);
       }

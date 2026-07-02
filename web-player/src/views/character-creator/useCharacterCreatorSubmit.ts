@@ -12,7 +12,6 @@ import {
   getWeaponMasteryChoice,
   parseAppliedClassFeatureEffects,
 } from "@/views/character-creator/utils/CharacterCreatorProficiencyUtils";
-import type { Ruleset } from "@/lib/characterRules";
 import type {
   BgDetail,
   ClassDetail,
@@ -77,7 +76,6 @@ function findCreatorSubmissionProblem(args: { form: FormState; classDetail: Clas
 
 export function useCharacterCreatorSubmit(args: {
   form: FormState;
-  selectedRuleset: Ruleset;
   classDetail: ClassDetail | null;
   selectedClassSummary: ClassSummary | null;
   raceDetail: RaceDetail | null;
@@ -112,7 +110,6 @@ export function useCharacterCreatorSubmit(args: {
   const handleSubmit = React.useCallback(async () => {
     const {
       form,
-      selectedRuleset,
       classDetail,
       selectedClassSummary,
       raceDetail,
@@ -156,7 +153,6 @@ export function useCharacterCreatorSubmit(args: {
       const { body } = await buildCreatorSubmissionBody({
         api,
         form,
-        selectedRuleset,
         classDetail,
         selectedClassSummary,
         raceDetail,

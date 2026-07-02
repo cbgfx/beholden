@@ -225,6 +225,63 @@ export function parseAdvantageModifierEffects(source: FeatureEffectSource, text:
   }
 }
 
+export function parseAttackRollBonusEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
+  // Archery Fighting Style: +N to attack rolls with Ranged weapons
+  for (const match of text.matchAll(/\+(\d+)\s+(?:bonus\s+)?to (?:attack rolls?|attack rolls? you make)\s+with\s+(?:a\s+)?Ranged weapons?/gi)) {
+    const value = Number(match[1]);
+    if (!Number.isFinite(value) || value <= 0) continue;
+    effects.push({
+      id: createFeatureEffectId(source, "modifier", effects.length),
+      type: "modifier", source, target: "attack_roll", mode: "bonus",
+      amount: { kind: "fixed", value },
+      gate: { weaponFilters: ["ranged_weapon"] },
+      summary: `+${value} to attack rolls with Ranged weapons`,
+    } satisfies ModifierEffect);
+  }
+}
+
+export function parseDamageRollBonusEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
+  // Dueling: +2 to damage rolls when wielding a melee weapon in one hand and no other weapons
+  const duelingMatch =
+    text.match(/\+(\d+)\s+(?:bonus\s+)?to (?:your\s+)?damage rolls?\s+when(?:ever)?\s+you are wielding a (?:melee\s+)?weapon in one hand and no other weapons/i)
+    ?? text.match(/holding a (?:melee\s+)?weapon in one hand and no other weapons[^.]*?\+(\d+)\s+bonus to damage rolls?/i);
+  if (duelingMatch) {
+    effects.push({
+      id: createFeatureEffectId(source, "modifier", effects.length),
+      type: "modifier", source, target: "damage_roll", mode: "bonus",
+      amount: { kind: "fixed", value: Number(duelingMatch[1]) },
+      gate: { weaponFilters: ["melee_weapon", "no_offhand", "no_two_handed"] },
+      summary: `+${duelingMatch[1]} damage (one melee weapon, no offhand)`,
+    } satisfies ModifierEffect);
+    return;
+  }
+
+  // Thrown Weapon Fighting: +2 to damage rolls with thrown weapons
+  const thrownMatch =
+    text.match(/\+(\d+)\s+(?:bonus\s+)?to (?:your\s+)?damage rolls?\s+(?:you make\s+)?with (?:the\s+)?thrown (?:weapon|property)/i)
+    ?? text.match(/weapon that has the Thrown property[^.]*?\+(\d+)\s+bonus to (?:the\s+)?damage roll/i);
+  if (thrownMatch) {
+    effects.push({
+      id: createFeatureEffectId(source, "modifier", effects.length),
+      type: "modifier", source, target: "damage_roll", mode: "bonus",
+      amount: { kind: "fixed", value: Number(thrownMatch[1]) },
+      gate: { weaponFilters: ["thrown_weapon"] },
+      summary: `+${thrownMatch[1]} damage with thrown weapons`,
+    } satisfies ModifierEffect);
+  }
+
+  // Great Weapon Fighting: reroll 1s and 2s on damage dice with two-handed or versatile weapons
+  if (/reroll\b[^.]*?\b(?:1|a 1|one)\b[^.]*?\bor\b[^.]*?\b(?:2|a 2|two)\b[^.]*?\b(?:two.?handed|versatile)/i.test(text)
+    || /when you roll a 1 or 2 on a damage die\b[^.]*?\bwith a (?:two.?handed|versatile)/i.test(text)) {
+    effects.push({
+      id: createFeatureEffectId(source, "modifier", effects.length),
+      type: "modifier", source, target: "damage_roll", mode: "reroll",
+      gate: { notes: "two_handed_or_versatile" },
+      summary: "Reroll 1s and 2s on damage dice (two-handed/versatile weapons)",
+    } satisfies ModifierEffect);
+  }
+}
+
 export function parseArmorClassBonusEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
   const armorBonusMatch = text.match(/\+(\d+)\s+bonus to (?:your\s+)?(?:Armor Class|AC)\s+while (?:you are )?wearing armor/i);
   if (armorBonusMatch) {

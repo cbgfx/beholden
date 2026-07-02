@@ -30,6 +30,8 @@ export function isProficiencyNoiseToken(value: string): boolean {
   if (!normalized) return true;
   if (/\bof your choice\b/i.test(normalized)) return true;
   if (parseWordCount(normalized) != null) return true;
+  // "one other type of Artisan's Tools" — starts with a count word followed by more text
+  if (/^(?:one|two|three|four|five|six|another|any|\d+)\s+/i.test(normalized)) return true;
   return /^(?:\d+|this|that|these|those|extra|another|any|language|languages|tool|tools|skill|skills)$/i.test(normalized);
 }
 

@@ -16,26 +16,20 @@ if not exist node_modules (
     if errorlevel 1 goto :fail
 )
 
-:: ── Build web-dm ──────────────────────────────────────────────────────────
-echo Building...
-call npm run build
+:: ── Start Beholden development environment ──────────────────────────────
+echo Starting Beholden development environment...
+call npm run dev
 if errorlevel 1 goto :fail
 
-:: ── Launch server in its own titled window ────────────────────────────────
-echo Starting Beholden...
-start "Beholden" cmd /k "npm start"
+start "" "http://localhost:5173"
+start "" "http://localhost:5175"
 
-:: Give the server a moment to bind its port
-:wait
-timeout /t 1 /nobreak >nul
-powershell -NoProfile -Command "try{$t=New-Object Net.Sockets.TcpClient;$t.Connect('127.0.0.1',5174);$t.Close();exit 0}catch{exit 1}" >nul 2>&1
-if errorlevel 1 goto :wait
-
-:: ── Open browser ──────────────────────────────────────────────────────────
-start "" "http://localhost:5174"
 echo.
-echo Beholden is running at http://localhost:5174
-echo The server window can be closed to stop it.
+echo DM view is running at http://localhost:5173
+echo Player view is running at http://localhost:5175
+echo.
+echo Beholden is running. Keep this window open.
+echo Close this window to stop Beholden.
 exit /b 0
 
 :fail

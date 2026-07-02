@@ -50,6 +50,7 @@ export const IconPetrified = make("petrified");
 export const IconPoisoned = make("poisoned");
 export const IconProne = make("prone");
 export const IconRestrained = make("restrained");
+export const IconSlow = make("speed");
 export const IconStunned = make("stunned");
 export const IconUnconscious = make("unconscious");
 export const IconConcentration = make("concentration");
@@ -72,6 +73,7 @@ export const IconBuild = make("build");
 export const IconBastions = make("bastions");
 export const IconHeal = make("heal");
 export const IconDice = make("dice");
+export const IconAI = make("artificial-intelligence");
 export const IconWeight = make("weight");
 
 export const conditionIconSvgByKey: Record<string, string> = {
@@ -89,6 +91,7 @@ export const conditionIconSvgByKey: Record<string, string> = {
   marked: fromFile("marked"),
   prone: fromFile("prone"),
   restrained: fromFile("restrained"),
+  slow: fromFile("speed"),
   stunned: fromFile("stunned"),
   unconscious: fromFile("unconscious"),
   concentration: fromFile("concentration"),
@@ -111,6 +114,7 @@ export const conditionIconByKey = {
   poisoned: IconPoisoned,
   prone: IconProne,
   restrained: IconRestrained,
+  slow: IconSlow,
   stunned: IconStunned,
   unconscious: IconUnconscious,
   concentration: IconConcentration,

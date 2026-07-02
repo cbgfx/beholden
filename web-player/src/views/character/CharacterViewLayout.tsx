@@ -40,6 +40,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
       <CharacterSheetHeader
         character={char}
         identityLabels={identityLabels}
+        campaigns={char.campaigns}
         accentColor={derived.accentColor}
         portraitUploading={ui.portraitUploading}
         onSelectPortrait={() => ui.portraitFileRef.current?.click()}
@@ -205,7 +206,6 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
             hitDiceMax={derived.hitDiceMax}
             hitDieSize={derived.hitDieSize}
             hitDieConMod={derived.conMod}
-            featureHpMaxBonus={derived.featureHpMaxBonus}
             exhaustion={currentData.exhaustion ?? 0}
             classResources={derived.classResourcesWithSpellCasts}
             playerNotesList={notes.playerNotesList}

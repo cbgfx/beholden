@@ -3,6 +3,7 @@ import { patchMyCharacter, putMyCharacter } from "@/views/character/characterApi
 import { hasDiceTerm } from "@/lib/dice";
 import { parseCharacterHpDelta } from "@/views/character/CharacterHpDelta";
 import type { Character, PolymorphConditionData, SheetOverrides } from "@/views/character/CharacterViewHelpers";
+import { concentrationSaveDc } from "@beholden/shared/domain";
 
 export function buildCharacterHpActions(args: {
   hpAmount: string;
@@ -95,7 +96,7 @@ export function buildCharacterHpActions(args: {
       setHpAmount("");
       setLastRoll(null);
       if (resolvedKind === "damage" && amt > 0 && (char.conditions ?? []).some((condition) => condition.key === "concentration")) {
-        setConcentrationAlert({ dc: Math.max(10, Math.floor(amt / 2)) });
+        setConcentrationAlert({ dc: concentrationSaveDc(amt) });
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);

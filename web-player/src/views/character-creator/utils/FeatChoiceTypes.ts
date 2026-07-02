@@ -38,6 +38,8 @@ export interface ParsedFeatGrantsLike {
 }
 
 export interface ParsedFeatLike<TChoice extends ParsedFeatChoiceLike<any> = ParsedFeatChoiceLike> {
+  resolution?: "automatic" | "manual" | "mixed";
+  resolutionNotes?: string[];
   category?: string | null;
   baseName?: string;
   variant?: string | null;
@@ -46,6 +48,15 @@ export interface ParsedFeatLike<TChoice extends ParsedFeatChoiceLike<any> = Pars
   source?: string | null;
   grants: ParsedFeatGrantsLike;
   choices: TChoice[];
+  uses?: Array<{
+    count?: number;
+    countFrom?: "proficiency_bonus" | "ability_modifier";
+    ability?: string | null;
+    minimum?: number | null;
+    recharge?: "short_rest" | "long_rest" | "short_or_long_rest" | null;
+    note?: string;
+  }>;
+  spellcastingAbility?: string | null;
   spellcastingAbilityFromChoiceId?: string | null;
 }
 

@@ -76,8 +76,8 @@ export type CharacterViewDerivedState = {
   invocationSpellDamageBonuses: Record<string, number>;
   accentColor: string;
   overrides: SheetOverrides;
-  featureHpMaxBonus: number;
   effectiveHpMax: number;
+  effectiveHpMaxWithoutOverrides: number;
   xpEarned: number;
   xpNeeded: number;
   nonProficientArmorPenalty: boolean;

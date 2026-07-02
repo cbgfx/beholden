@@ -1,6 +1,11 @@
 import { wordOrNumberToInt } from "@/lib/characterRules";
 import { ALL_SKILLS } from "../constants/CharacterCreatorConstants";
-import type { CreatorClassDetailLike, CreatorRaceTraitLike, StartingEquipmentOption } from "./CharacterCreatorClassCoreUtils";
+import type {
+  CreatorClassDetailLike,
+  CreatorRaceTraitLike,
+  StartingEquipmentOption,
+  StructuredStartingEquipmentOption,
+} from "./CharacterCreatorClassCoreUtils";
 import type { RaceChoices } from "./CharacterCreatorClassCoreUtils";
 
 const SKILL_NAMES = ALL_SKILLS.map((skill) => skill.name);
@@ -62,12 +67,24 @@ function splitEquipmentEntries(text: string): string[] {
     .filter(Boolean);
 }
 
-export function parseStartingEquipmentOptions(equipment: string | undefined): StartingEquipmentOption[] {
+export function parseStartingEquipmentOptions(
+  equipment: string | undefined,
+  structuredOptions?: StructuredStartingEquipmentOption[],
+): StartingEquipmentOption[] {
+  if (structuredOptions?.length) {
+    return structuredOptions.map((option) => {
+      const entries = option.entries.map((entry) => entry.kind === "currency"
+        ? `${entry.amount} ${entry.denomination}`
+        : `${entry.quantity > 1 ? `${entry.quantity}× ` : ""}${entry.name}`);
+      return { id: option.id, entries, text: entries.join(", ") };
+    });
+  }
   if (!equipment) return [];
   const normalized = equipment
     .replace(/\r/g, "")
     .replace(/Choose\s+A\s+or\s+8/gi, "Choose A or B")
     .replace(/\(8\)/g, "(B)")
+    .replace(/\u2022/g, ";")
     .replace(/•/g, ";")
     .replace(/\s+/g, " ")
     .trim();

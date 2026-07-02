@@ -71,7 +71,7 @@ function resolvePlayerUpdateState(
     const normalized: Record<string, unknown> = { ...condition };
     if (condition.casterId === undefined) delete normalized.casterId;
     else normalized.casterId = condition.casterId ?? null;
-    return normalized as typeof existing.conditions extends Array<infer T> ? T : never;
+    return normalized as NonNullable<typeof existing.conditions>[number];
   });
   const rawOverrides = update.overrides ?? existing.overrides ?? DEFAULT_OVERRIDES;
   const overrides = {
@@ -333,6 +333,27 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     const linkedCharacterId = getLinkedCharacterIdForPlayer(db, playerId);
     const isLinkedProjection = Boolean(linkedCharacterId);
     const next = resolvePlayerUpdateState(existing, p, isLinkedProjection);
+
+    let baseSpeed: number;
+    if (isLinkedProjection && linkedCharacterId) {
+      const charSheetRow = db.prepare(`SELECT speed FROM user_characters WHERE id = ?`).get(linkedCharacterId) as { speed: number } | undefined;
+      baseSpeed = charSheetRow?.speed ?? existing.speed ?? 30;
+    } else {
+      baseSpeed = next.sheet.speed ?? existing.speed ?? 30;
+    }
+
+    const conditions = next.live.conditions;
+    let newSpeed = baseSpeed;
+    const hasZeroSpeedCondition = conditions.some(c => ["grappled", "restrained", "paralyzed", "petrified", "stunned", "unconscious"].includes(c.key));
+    const hasSlow = conditions.some(c => c.key === "slow");
+
+    if (hasZeroSpeedCondition) {
+      newSpeed = 0;
+    } else if (hasSlow) {
+      newSpeed = Math.max(0, baseSpeed - 10);
+    }
+    next.sheet.speed = newSpeed;
+
     const sheetCols = campaignSheetDbColumns(next.sheet);
     const liveCols = campaignLiveDbColumns(next.live);
 

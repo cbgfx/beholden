@@ -199,7 +199,7 @@ export function ItemSpellsPanel({
                     const dmgColor = detail?.damage ? (DMG_COLORS[detail.damage.type] ?? C.text) : null;
                     const concentration = detail ? Boolean(detail.concentration) : false;
                     const text = detail ? (Array.isArray(detail.text) ? detail.text.join(" ") : String(detail.text ?? "")) : "";
-                    const usesSave = /saving throw/i.test(text);
+                    const usesSave = /(strength|dexterity|constitution|intelligence|wisdom|charisma) saving throw/i.test(text);
                     const usesAtk = /spell attack/i.test(text);
                     const compactComponents = detail?.components ? detail.components.replace(/\s*\([^)]*\)/g, "").trim() : null;
 

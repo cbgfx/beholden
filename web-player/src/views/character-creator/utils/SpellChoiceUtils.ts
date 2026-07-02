@@ -32,6 +32,7 @@ export interface SharedResolvedSpellChoiceEntry {
   sourceLabel?: string | null;
   count: number;
   level: number | null;
+  maxLevel?: number | null;
   note?: string | null;
   linkedTo?: string | null;
   dependsOnChoiceId?: string | null;
@@ -127,7 +128,7 @@ export function buildResolvedSpellChoiceEntry(args: {
 
   return {
     key,
-    title: (choice.level ?? 0) === 0 ? "Cantrip Choice" : "Spell Choice",
+    title: choice.level === 0 ? "Cantrip Choice" : "Spell Choice",
     sourceLabel,
     count: choiceCountAtLevel(choice, level),
     level: choice.level ?? null,
@@ -145,7 +146,7 @@ export function buildResolvedSpellChoiceEntry(args: {
 export async function loadSpellChoiceOptions(
   choices: SharedResolvedSpellChoiceEntry[],
   fetchSpells: (query: string) => Promise<SharedSpellSummary[]>,
-  options?: { excludeSpecial?: boolean },
+  options?: { excludeSpecial?: boolean; forceIncludeText?: boolean },
 ): Promise<Record<string, SharedSpellSummary[]>> {
   const excludeSpecial = options?.excludeSpecial ?? true;
   const buildSearchQuery = (args: {
@@ -179,13 +180,13 @@ export async function loadSpellChoiceOptions(
         choice.listNames.some((listName) => /maneuver options/i.test(String(listName ?? "")))
         || /maneuver/i.test(String(choice.title ?? ""))
         || /maneuver/i.test(String(choice.sourceLabel ?? ""));
-      const includeText = requiresText || isManeuverChoice;
+      const includeText = (options?.forceIncludeText ?? false) || requiresText || isManeuverChoice;
       const groups = await Promise.all(
         choice.listNames.map(async (listName) => {
           const encoded = encodeURIComponent(listName);
           const schoolQuery = choice.schools?.length ? `&school=${encodeURIComponent(choice.schools.join(","))}` : "";
           const ritualQuery = choice.ritualOnly ? "&ritual=1" : "";
-          if ((choice.level ?? 0) === 0) {
+          if (choice.level === 0) {
             return fetchSpells(buildSearchQuery({
               classes: encoded,
               level: 0,
@@ -216,6 +217,19 @@ export async function loadSpellChoiceOptions(
               includeText,
             })).catch(() => []);
           }
+          // level is null — "any level". Honour maxLevel cap if present (e.g. capped to
+          // the character's highest available spell slot so L7–L9 spells don't appear for
+          // a L6 Bard choosing Magical Discoveries spells).
+          if (typeof choice.maxLevel === "number" && choice.maxLevel > 0) {
+            return fetchSpells(buildSearchQuery({
+              classes: encoded,
+              maxLevel: choice.maxLevel,
+              schoolQuery,
+              ritualQuery,
+              limit: 280,
+              includeText,
+            })).catch(() => []);
+          }
           return fetchSpells(buildSearchQuery({
             classes: encoded,
             schoolQuery,
@@ -229,13 +243,15 @@ export async function loadSpellChoiceOptions(
       if (groups.length === 0) {
         const schoolQuery = choice.schools?.length ? `&school=${encodeURIComponent(choice.schools.join(","))}` : "";
         const ritualQuery = choice.ritualOnly ? "&ritual=1" : "";
-        const query = (choice.level ?? 0) === 0
+        const query = choice.level === 0
           ? buildSearchQuery({ level: 0, schoolQuery, ritualQuery, limit: 200, includeText })
           : typeof choice.level === "number" && /\bat or below\b/i.test(choice.note ?? "")
             ? buildSearchQuery({ minLevel: 1, maxLevel: choice.level, schoolQuery, ritualQuery, limit: 280, includeText })
             : typeof choice.level === "number"
               ? buildSearchQuery({ level: choice.level, schoolQuery, ritualQuery, limit: 280, includeText })
-              : buildSearchQuery({ schoolQuery, ritualQuery, limit: 280, includeText });
+              : typeof choice.maxLevel === "number" && choice.maxLevel > 0
+                ? buildSearchQuery({ maxLevel: choice.maxLevel, schoolQuery, ritualQuery, limit: 280, includeText })
+                : buildSearchQuery({ schoolQuery, ritualQuery, limit: 280, includeText });
         groups.push(await fetchSpells(query).catch(() => []));
       }
 
@@ -244,15 +260,15 @@ export async function loadSpellChoiceOptions(
         if (!spell?.name) continue;
         byName.set(spell.name.toLowerCase(), spell);
       }
-      let options = Array.from(byName.values()).filter(
+      let spellOptions = Array.from(byName.values()).filter(
         (spell) => !/^invocation:/i.test(String(spell.name ?? ""))
       );
       if (/deals damage via an attack roll/i.test(choice.note ?? "")) {
-        options = options.filter((spell) => spellLooksLikeDamageSpell(spell) && spellUsesAttackRoll(spell));
+        spellOptions = spellOptions.filter((spell) => spellLooksLikeDamageSpell(spell) && spellUsesAttackRoll(spell));
       } else if (/deals damage/i.test(choice.note ?? "")) {
-        options = options.filter((spell) => spellLooksLikeDamageSpell(spell));
+        spellOptions = spellOptions.filter((spell) => spellLooksLikeDamageSpell(spell));
       }
-      return [choice.key, options.sort((a, b) => a.name.localeCompare(b.name))] as const;
+      return [choice.key, spellOptions.sort((a, b) => a.name.localeCompare(b.name))] as const;
     })
   );
 

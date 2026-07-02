@@ -165,7 +165,7 @@ export function syncCombatantToPlayer(
   db: Database.Database,
   combatant: StoredEncounterActor,
   t: number
-): string | null {
+): { campaignId: string; characterId: string | null } | null {
   if (combatant.baseType !== "player") return null;
   const pRow = db
     .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`)
@@ -192,7 +192,7 @@ export function syncCombatantToPlayer(
     t,
     combatant.baseId
   );
-  return player.campaignId;
+  return { campaignId: player.campaignId, characterId: player.characterId ?? null };
 }
 
 /**

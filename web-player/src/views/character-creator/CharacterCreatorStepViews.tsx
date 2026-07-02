@@ -1,5 +1,4 @@
 import React from "react";
-import { matchesRuleset, type Ruleset } from "@/lib/characterRules";
 import {
   ABILITY_KEYS,
   ABILITY_LABELS,
@@ -72,7 +71,6 @@ export type CharacterCreatorStepRenderContext = {
   sideSummary: React.ReactNode;
   classDetail: ClassDetail | null;
   effectiveHitDie: number;
-  selectedRuleset: Ruleset;
   classes: ClassSummary[];
   classSearch: string;
   setClassSearch: React.Dispatch<React.SetStateAction<string>>;
@@ -80,7 +78,7 @@ export type CharacterCreatorStepRenderContext = {
   raceSearch: string;
   setRaceSearch: React.Dispatch<React.SetStateAction<string>>;
   raceDetail: RaceDetail | null;
-  featSummaries: { id: string; name: string; ruleset?: Ruleset | null }[];
+  featSummaries: { id: string; name: string }[];
   raceFeatSearch: string;
   setRaceFeatSearch: React.Dispatch<React.SetStateAction<string>>;
   raceFeatDetail: BackgroundFeat | null;
@@ -112,6 +110,7 @@ export type CharacterCreatorStepRenderContext = {
   step5ClassFeatChoices: any[];
   step5ClassLanguageChoice: ProficiencyChoice | null;
   step5ClassExpertiseChoices: any[];
+  step5ClassToolProficiency: { fixed: string[]; choices: Array<{ count: number; from: string[] }>; notes: string[] } | null;
   step5WeaponMasteryChoice: { count: number; source: string } | null;
   step5WeaponOptions: string[];
   step5ChoiceState: any;
@@ -145,7 +144,6 @@ function renderClass(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
     onSelectClass: (classId) => ctx.setForm((f) => ({
       ...f,
       classId,
-      ruleset: "5.5e",
       raceId: "",
       bgId: "",
       chosenRaceSkills: [],
@@ -158,6 +156,7 @@ function renderClass(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
       chosenBgTools: [],
       chosenBgLanguages: [],
       chosenBgEquipmentOption: null,
+      chosenClassTools: [],
       chosenFeatOptions: {},
       chosenFeatureChoices: {},
       bgAbilityMode: "split",
@@ -170,7 +169,7 @@ function renderClass(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
 }
 
 function renderSpecies(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
-  const availableRaces = ctx.races.filter((r) => matchesRuleset(r, ctx.selectedRuleset));
+  const availableRaces = ctx.races;
   const filtered = ctx.raceSearch
     ? availableRaces.filter((r) => r.name.toLowerCase().includes(ctx.raceSearch.toLowerCase()))
     : availableRaces;
@@ -191,7 +190,7 @@ function renderSpecies(ctx: CharacterCreatorStepRenderContext): StepRenderResult
   }
 
   const raceChoices = ctx.raceDetail ? (ctx.raceDetail.parsedChoices ?? parseRaceChoices(ctx.raceDetail.traits)) : null;
-  const originFeats = ctx.featSummaries.filter((f) => /\borigin\b/i.test(f.name) && matchesRuleset(f, ctx.selectedRuleset));
+  const originFeats = ctx.featSummaries.filter((f) => /\borigin\b/i.test(f.name));
   const filteredFeats = ctx.raceFeatSearch
     ? originFeats.filter((f) => f.name.toLowerCase().includes(ctx.raceFeatSearch.toLowerCase()))
     : originFeats;
@@ -230,12 +229,15 @@ function renderSpecies(ctx: CharacterCreatorStepRenderContext): StepRenderResult
 }
 
 function renderBackground(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
-  const availableBackgrounds = ctx.bgs.filter((b) => matchesRuleset(b, ctx.selectedRuleset));
+  const availableBackgrounds = ctx.bgs;
   const filtered = ctx.bgSearch
     ? availableBackgrounds.filter((b) => b.name.toLowerCase().includes(ctx.bgSearch.toLowerCase()))
     : availableBackgrounds;
-  const equipmentOptions = parseStartingEquipmentOptions(ctx.bgDetail?.equipment);
-  const originFeats = ctx.featSummaries.filter((f) => /\borigin\b/i.test(f.name) && matchesRuleset(f, ctx.selectedRuleset));
+  const equipmentOptions = parseStartingEquipmentOptions(
+    ctx.bgDetail?.equipment,
+    ctx.bgDetail?.equipmentOptions,
+  );
+  const originFeats = ctx.featSummaries.filter((f) => /\borigin\b/i.test(f.name));
   const filteredBgFeats = ctx.bgOriginFeatSearch
     ? originFeats.filter((f) => f.name.toLowerCase().includes(ctx.bgOriginFeatSearch.toLowerCase()))
     : originFeats;
@@ -409,6 +411,7 @@ function renderSkills(ctx: CharacterCreatorStepRenderContext): StepRenderResult 
     bgDetailName: ctx.bgDetail?.name ?? null,
     skillList: ctx.step5SkillList,
     numSkills: ctx.step5NumSkills,
+    classToolProficiency: ctx.step5ClassToolProficiency,
     bgLangChoice: ctx.step5BgLangChoice,
     coreLanguageChoice: ctx.step5CoreLanguageChoice,
     classLanguageChoice: ctx.step5ClassLanguageChoice,
@@ -439,6 +442,7 @@ function renderSkills(ctx: CharacterCreatorStepRenderContext): StepRenderResult 
       missingCoreLanguages: ctx.step5ChoiceState.missingCoreLanguages,
       missingClassLanguages: ctx.step5ChoiceState.missingClassLanguages,
       missingWeaponMasteries: ctx.step5ChoiceState.missingWeaponMasteries,
+      missingClassToolChoices: ctx.step5ChoiceState.missingClassToolChoices ?? false,
       hasAnything: ctx.step5ChoiceState.hasAnything,
       takenSkillKeys: ctx.step5ChoiceState.takenSkillKeys,
       takenToolKeys: ctx.step5ChoiceState.takenToolKeys,

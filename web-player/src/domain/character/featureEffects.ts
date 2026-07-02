@@ -57,7 +57,9 @@ export type WeaponFilter =
   | "crossbow_weapon"
   | "longbow_or_shortbow"
   | "light_crossbow"
-  | "no_two_handed";
+  | "no_two_handed"
+  | "thrown_weapon"
+  | "no_offhand";
 
 export type ScalingValue =
   | { kind: "fixed"; value: number }
@@ -107,6 +109,7 @@ interface FeatureEffectBase {
   source: FeatureEffectSource;
   summary?: string;
   gate?: EffectGate;
+  resolution?: "automatic" | "manual";
 }
 
 export interface ResourceGrantEffect extends FeatureEffectBase {
@@ -138,7 +141,7 @@ export interface SpellChoiceEffect extends FeatureEffectBase {
   type: "spell_choice";
   mode: "learn";
   count: ScalingValue;
-  level: number;
+  level: number | null;
   spellLists: string[];
   schools?: string[];
   note?: string;
@@ -146,7 +149,7 @@ export interface SpellChoiceEffect extends FeatureEffectBase {
 
 export interface ProficiencyGrantEffect extends FeatureEffectBase {
   type: "proficiency_grant";
-  category: "skill" | "tool" | "language" | "armor" | "weapon" | "saving_throw";
+  category: "skill" | "tool" | "language" | "armor" | "weapon" | "saving_throw" | "initiative";
   grants?: string[];
   choice?: ChoiceSpec;
   expertise?: boolean;
@@ -195,6 +198,7 @@ export interface ModifierEffect extends FeatureEffectBase {
     | "skill_check"
     | "saving_throw"
     | "attack_roll"
+    | "damage_roll"
     | "spell_attack"
     | "spell_save_dc"
     | "passive_score";
@@ -221,6 +225,8 @@ export interface AttackEffect extends FeatureEffectBase {
     | "replace_attack_with_cantrip"
     | "triggered_attack";
   amount?: ScalingValue | ScalingDice;
+  alternateAmount?: ScalingDice;
+  alternateWhen?: "no_weapon_or_shield";
   ability?: AbilKey;
   damageType?: "same_as_attack" | string;
   frequency?: "once_per_turn" | "first_hit_each_turn" | "once_per_rage" | "special";
@@ -273,16 +279,22 @@ export interface NarrativeEffect extends FeatureEffectBase {
  */
 export interface AbilityScoreEffect extends FeatureEffectBase {
   type: "ability_score";
-  mode: "fixed" | "choice";
-  /** Set when mode === "fixed": which ability receives the bonus. */
+  /**
+   * fixed      — a specific ability is increased (e.g. Actor: +1 CHA).
+   * choice     — the player picks from a constrained set; used for ASI / feats.
+   * set_minimum — while this effect is active the ability score cannot fall below
+   *               `amount` (used for items like Amulet of Health, Belt of Giant Strength).
+   */
+  mode: "fixed" | "choice" | "set_minimum";
+  /** Set when mode === "fixed" or "set_minimum": the ability affected. */
   ability?: AbilKey;
   /** Set when mode === "choice" and the options are restricted (e.g. [str, dex]). */
   chooseFrom?: AbilKey[];
-  /** How many abilities the player improves (default 1). */
+  /** How many abilities the player improves (default 1). Not meaningful for set_minimum. */
   choiceCount: number;
-  /** Points added to each chosen ability. */
+  /** For fixed/choice: points added. For set_minimum: the floor value (e.g. 19). */
   amount: number;
-  /** Maximum score this increase can produce (normally 20, or 30 for epic boons). */
+  /** Maximum score this increase can produce (normally 20, or 30 for epic boons). Not used for set_minimum. */
   maximum?: number;
 }
 

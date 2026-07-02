@@ -6,6 +6,18 @@ export function abilityMod(score: number | null | undefined): number {
   return Math.floor(((score ?? 10) - 10) / 2);
 }
 
+export function normalizeAbilityKey(value: string | null | undefined): AbilKey | null {
+  const aliases: Record<string, AbilKey> = {
+    strength: "str", str: "str",
+    dexterity: "dex", dex: "dex",
+    constitution: "con", con: "con",
+    intelligence: "int", int: "int",
+    wisdom: "wis", wis: "wis",
+    charisma: "cha", cha: "cha",
+  };
+  return aliases[String(value ?? "").trim().toLowerCase()] ?? null;
+}
+
 export function formatModifier(n: number): string {
   return (n >= 0 ? "+" : "") + n;
 }

@@ -104,16 +104,41 @@ export function deriveAttackDamageBonusFromEffects(
     isWeapon?: boolean;
     isUnarmed?: boolean;
     item?: WeaponLike | null;
+    hasOtherWeapon?: boolean;
   }
 ): number {
   let total = 0;
   for (const parsedFeature of parsed) {
     for (const effect of parsedFeature.effects) {
+      if (
+        effect.type === "modifier"
+        && effect.target === "damage_roll"
+        && effect.mode === "bonus"
+      ) {
+        if (!isEffectActive(effect, { raging: opts?.raging })) continue;
+        if (
+          effect.gate?.weaponFilters?.length
+          && !weaponMatchesFilters(opts?.item, effect.gate.weaponFilters, {
+            hasOtherWeapon: opts?.hasOtherWeapon,
+          })
+        ) continue;
+        const amount = resolveScalingValueInContext(effect.amount, {
+          level: opts?.level,
+          scores: opts?.scores,
+        });
+        if (amount != null) total += amount;
+        continue;
+      }
       if (effect.type !== "attack" || effect.mode !== "bonus_damage") continue;
       if (!isEffectActive(effect, { raging: opts?.raging })) continue;
       if (effect.gate?.attackAbility && effect.gate.attackAbility !== opts?.attackAbility) continue;
       if (effect.gate?.notes === "weapon_or_unarmed" && !opts?.isWeapon && !opts?.isUnarmed) continue;
-      if (effect.gate?.weaponFilters?.length && !weaponMatchesFilters(opts?.item, effect.gate.weaponFilters)) continue;
+      if (
+        effect.gate?.weaponFilters?.length
+        && !weaponMatchesFilters(opts?.item, effect.gate.weaponFilters, {
+          hasOtherWeapon: opts?.hasOtherWeapon,
+        })
+      ) continue;
       const amount = "kind" in (effect.amount ?? {}) ? resolveScalingValueInContext(effect.amount as ScalingValue, {
         level: opts?.level,
         scores: opts?.scores,
@@ -155,6 +180,7 @@ export function deriveAttackDamageDiceOverrideFromEffects(
     isWeapon?: boolean;
     isUnarmed?: boolean;
     isMonkWeapon?: boolean;
+    noWeaponOrShield?: boolean;
   }
 ): string | null {
   for (const parsedFeature of parsed) {
@@ -163,6 +189,13 @@ export function deriveAttackDamageDiceOverrideFromEffects(
       if (!isEffectActive(effect, { raging: opts?.raging })) continue;
       if (effect.gate?.notes === "unarmed_only" && !opts?.isUnarmed) continue;
       if (effect.gate?.notes === "unarmed_or_monk_weapon" && !opts?.isUnarmed && !opts?.isMonkWeapon) continue;
+      if (effect.alternateWhen === "no_weapon_or_shield" && opts?.noWeaponOrShield) {
+        const alternateDice = resolveScalingDiceInContext(effect.alternateAmount, {
+          level: opts?.level,
+          scores: opts?.scores,
+        });
+        if (alternateDice) return alternateDice;
+      }
       const dice = resolveScalingDiceInContext(effect.amount as ScalingDice | undefined, {
         level: opts?.level,
         scores: opts?.scores,

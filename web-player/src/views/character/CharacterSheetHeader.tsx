@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { IconBastions, IconPlayer } from "@/icons";
 import { CharacterHudXpPopup } from "@/views/character/CharacterHudXpPopup";
+import { stripEditionTag } from "@/views/character/CharacterViewHelpers";
 
 export type SheetView = "play" | "gear" | "reference" | "all";
 
@@ -12,10 +13,6 @@ export const SHEET_VIEWS: { id: SheetView; label: string; description: string }[
   { id: "reference", label: "Reference", description: "Character, notes, and features" },
   { id: "all", label: "All", description: "The complete four-column sheet" },
 ];
-
-function stripEditionTag(value: string): string {
-  return value.replace(/\s*\[(?:5\.5e|2024|5e|5\.0)\]\s*$/i, "").trim();
-}
 
 function IconCharacterInfo({ size = 16 }: { size?: number }) {
   return (
@@ -28,6 +25,7 @@ function IconCharacterInfo({ size = 16 }: { size?: number }) {
 export function CharacterSheetHeader(props: {
   character: { id: string; name: string; imageUrl: string | null; level: number };
   identityLabels: string[];
+  campaigns: Array<{ campaignId: string; campaignName: string }>;
   accentColor: string;
   portraitUploading: boolean;
   onSelectPortrait: () => void;
@@ -47,6 +45,7 @@ export function CharacterSheetHeader(props: {
   const {
     character,
     identityLabels,
+    campaigns,
     accentColor,
     portraitUploading,
     onSelectPortrait,
@@ -152,6 +151,35 @@ export function CharacterSheetHeader(props: {
       </div>
 
       <div style={{ flex: 1 }} />
+              {campaigns.map((campaign) => (
+          <button
+            key={campaign.campaignId}
+            type="button"
+            title={`Open campaign: ${campaign.campaignName}`}
+            onClick={() => navigate(`/campaigns/${campaign.campaignId}`)}
+            style={{
+              appearance: "none",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              height: 32,
+              maxWidth: 220,
+              padding: "0 11px",
+              borderRadius: 8,
+              color: C.text,
+              background: `${accentColor}12`,
+              border: `1px solid ${accentColor}42`,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 7,
+              flexShrink: 1,
+              minWidth: 0,
+            }}
+          >
+            <span style={{ color: accentColor, fontSize: "var(--fs-small)", fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {campaign.campaignName}
+            </span>
+          </button>
+        ))}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         {activeBastion && (
           <button type="button" title={`Bastion: ${activeBastion.name}`} onClick={() => navigate(`/campaigns/${activeBastion.campaignId}/bastions/${activeBastion.id}`)} style={{ appearance: "none", cursor: "pointer", boxSizing: "border-box", height: 32, padding: "0 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.05)", color: C.muted, display: "inline-flex", alignItems: "center", gap: 7, fontSize: "var(--fs-medium)", fontWeight: 700 }}>

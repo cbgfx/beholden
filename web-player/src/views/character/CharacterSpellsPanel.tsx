@@ -4,7 +4,7 @@ import { C } from "@/lib/theme";
 import { CollapsiblePanel, panelHeaderAddBtn } from "@/views/character/CharacterViewParts";
 import type { GrantedSpellCast, ResourceCounter } from "@/views/character/CharacterSheetTypes";
 import type { ClassRestDetail } from "@/views/character/SpellSlotsPanel";
-import { normalizeSpellTrackingKey, normalizeSpellTrackingName } from "@/views/character/CharacterSheetUtils";
+import { normalizeAbilityKey, normalizeSpellTrackingKey, normalizeSpellTrackingName } from "@/views/character/CharacterSheetUtils";
 import { AddSpellDrawer, SpellDrawer } from "@/views/character/CharacterSpellDrawers";
 import {
   type FetchedSpellDetail,
@@ -208,20 +208,23 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
     };
   }, [details, entries, specialGrantedEntries]);
 
-  const intMod = Math.floor(((scores.int ?? 10) - 10) / 2);
-  const wisMod = Math.floor(((scores.wis ?? 10) - 10) / 2);
-  const chaMod = Math.floor(((scores.cha ?? 10) - 10) / 2);
   function abilityModFor(key: "str" | "dex" | "con" | "int" | "wis" | "cha" | null | undefined): number {
     const score = key ? scores[key] : null;
     return Math.floor((((score ?? 10) as number) - 10) / 2);
   }
-  const spellMod = Math.max(intMod, wisMod, chaMod);
-  const spellAbilLabel = spellMod === chaMod ? "CHA" : spellMod === wisMod ? "WIS" : "INT";
+  const classSpellAbility = normalizeAbilityKey(classDetail?.spellAbility);
+  const fallbackMentalAbilities = ["int", "wis", "cha"] as const;
+  const fallbackSpellAbility = fallbackMentalAbilities.reduce((best, ability) =>
+    abilityModFor(ability) > abilityModFor(best) ? ability : best
+  );
+  const spellAbility = classSpellAbility ?? fallbackSpellAbility;
+  const spellMod = abilityModFor(spellAbility);
+  const spellAbilLabel = spellAbility.toUpperCase();
   const saveDc = 8 + pb + spellMod + spellSaveDcBonus;
   const spellAtk = pb + spellMod;
 
   // Spell slots for current level
-  const levelSlots = classDetail?.autolevels.find((al) => al.level === charLevel)?.slots ?? null;
+  const levelSlots = classDetail?.autolevels?.find((al) => al.level === charLevel)?.slots ?? null;
   const maxSpellSlotLevel = highestAvailableSlotLevel(levelSlots);
 
   const isPactMagic = classDetail?.slotsReset === "S";
@@ -264,7 +267,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
     return Array.isArray(d.text) ? d.text.join(" ") : String(d.text ?? "");
   }
   function spellUsesSave(d: FetchedSpellDetail | undefined): boolean {
-    return d ? /saving throw/i.test(spellText(d)) : false;
+    return d ? /(strength|dexterity|constitution|intelligence|wisdom|charisma) saving throw/i.test(spellText(d)) : false;
   }
   function spellUsesAttack(d: FetchedSpellDetail | undefined): boolean {
     return d ? /spell attack|ranged spell attack|melee spell attack/i.test(spellText(d)) : false;

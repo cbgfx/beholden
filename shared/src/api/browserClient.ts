@@ -159,6 +159,33 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res2.json()) as T;
 }
 
+/** Authenticated binary download with the same proxy/direct-port fallback as api(). */
+export async function apiBlob(path: string, init?: RequestInit): Promise<Blob> {
+  const merged = mergeInit(init);
+
+  if (!path.startsWith("/api") || API_ORIGIN) {
+    const res = await fetch(resolveApiPath(path), merged);
+    if (!res.ok) throw await apiError(res);
+    return res.blob();
+  }
+
+  let proxyError: Error | null = null;
+  try {
+    const res = await fetch(path, merged);
+    if (res.ok) return res.blob();
+    if (res.status < 500) throw await apiError(res);
+    proxyError = new Error(`proxy ${res.status}`);
+  } catch (error) {
+    proxyError = error instanceof Error ? error : new Error(String(error));
+  }
+
+  if (SAME_ORIGIN_IS_DIRECT_PORT) throw proxyError;
+
+  const fallback = await fetch(directServerUrl(path), merged);
+  if (!fallback.ok) throw await apiError(fallback);
+  return fallback.blob();
+}
+
 export function jsonInit(method: string, body: unknown): RequestInit {
   return { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
 }

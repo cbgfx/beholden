@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useDebouncedSingleflight } from "@beholden/shared/ui";
 import { api } from "@/services/api";
-import { fetchPartyInventory, fetchPartyInventoryItem } from "@/services/inventoryApi";
+import {
+  fetchPartyInventory,
+  fetchPartyInventoryItem,
+  fetchPartyCurrency,
+  type PartyCurrencyMap,
+} from "@/services/inventoryApi";
 import { useWs } from "@/services/ws";
 import {
   getEquipState,
@@ -50,17 +55,34 @@ export function useCharacterInventorySync({
   const [expandedDetailCache, setExpandedDetailCache] = useState<Record<string, CompendiumItemDetail>>({});
   const [itemEditMode, setItemEditMode] = useState(false);
   const [partyStashItems, setPartyStashItems] = useState<PartyStashItem[]>([]);
+  const [otherMembersCapacityLbs, setOtherMembersCapacityLbs] = useState<number | null>(null);
+  const [partyCurrency, setPartyCurrency] = useState<PartyCurrencyMap>({ PP: 0, GP: 0, SP: 0, CP: 0 });
 
   const fetchPartyStash = useCallback(() => {
     if (!campaignId) return;
     fetchPartyInventory(campaignId)
-      .then((result) => setPartyStashItems(result as PartyStashItem[]))
+      .then(({ items, otherMembersCapacityLbs }) => {
+        setPartyStashItems(items as PartyStashItem[]);
+        setOtherMembersCapacityLbs(otherMembersCapacityLbs);
+      })
       .catch(() => {});
+  }, [campaignId]);
+
+  const fetchCurrency = useCallback(() => {
+    if (!campaignId) return;
+    fetchPartyCurrency(campaignId).then(setPartyCurrency).catch(() => {});
   }, [campaignId]);
   const enqueuePartyStashRefresh = useDebouncedSingleflight(fetchPartyStash);
 
   useEffect(() => { fetchPartyStash(); }, [fetchPartyStash]);
+  useEffect(() => { fetchCurrency(); }, [fetchCurrency]);
+
   useWs(useCallback((message) => {
+    if (message.type === "partyCurrency:delta") {
+      const payload = (message.payload ?? {}) as { campaignId?: string };
+      if (payload.campaignId === campaignId) fetchCurrency();
+      return;
+    }
     if (message.type !== "partyInventory:delta") return;
     const payload = (message.payload ?? {}) as {
       campaignId?: string;
@@ -87,7 +109,7 @@ export function useCharacterInventorySync({
       return;
     }
     enqueuePartyStashRefresh();
-  }, [campaignId, enqueuePartyStashRefresh]));
+  }, [campaignId, enqueuePartyStashRefresh, fetchCurrency]));
 
   useEffect(() => {
     setItems((inventory ?? []).map((item) => ({
@@ -236,6 +258,7 @@ export function useCharacterInventorySync({
     items, setItems, containers, setContainers, pickerOpen, setPickerOpen, saving, setSaving,
     itemIndex, expandedItemId, setExpandedItemId, collapsedContainerIds, setCollapsedContainerIds,
     expandedDetail, expandedBusy, itemEditMode, setItemEditMode, partyStashItems, setPartyStashItems,
+    otherMembersCapacityLbs, partyCurrency, setPartyCurrency,
   };
 }
 

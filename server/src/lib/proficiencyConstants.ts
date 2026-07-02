@@ -7,7 +7,6 @@
  */
 
 import { parseFeat, type ParsedFeat } from "./featParser.js";
-import { type Ruleset } from "./inferRuleset.js";
 
 export const ALL_SKILLS = [
   "Acrobatics", "Animal Handling", "Arcana", "Athletics", "Deception",
@@ -86,6 +85,12 @@ export interface StructuredRaceChoices {
   toolChoice: { count: number; from: string[] | null } | null;
   languageChoice: { count: number; from: string[] | null } | null;
   hasFeatChoice: boolean;
+}
+
+export interface ClassToolProficiency {
+  fixed: string[];
+  choices: Array<{ count: number; from: string[] }>;
+  notes: string[];
 }
 
 // ── Internal helpers ─────────────────────────────────────────────────────────
@@ -208,9 +213,7 @@ function parseLangTrait(traitName: string, traitText: string): ProficiencyChoice
 export function parseBackgroundProficiencies(bg: {
   proficiency?: unknown;
   trait?: unknown;
-  ruleset?: Ruleset | null;
 }): StructuredBgProficiencies {
-  void bg.ruleset;
   // Skills — clean comma-separated <proficiency> field
   const profText = typeof bg.proficiency === "string" ? bg.proficiency : "";
   const fixedSkills = profText.split(",").map(s => s.trim()).filter(Boolean);
@@ -319,6 +322,16 @@ function parseRaceChoicesCore(traits: { name: string; text: string }[]): Pick<St
       if (!skillChoice) skillChoice = { count: 1, from: null };
     }
 
+    const toolListMatch = text.match(/tools of your choice:\s*([^.]+)/i);
+    if (toolListMatch && !toolChoice) {
+      const toolListStr = toolListMatch[1] ?? "";
+      const toolNames = toolListStr.replace(/\bor\b/g, ",").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+      const from = ALL_TOOLS.filter(canonicalTool => toolNames.includes(canonicalTool.toLowerCase()));
+      if (from.length > 0) {
+        toolChoice = { count: detectChooseN(text) || 1, from };
+      }
+    }
+
     if (/one tool proficiency of your choice/i.test(text)) {
       if (!toolChoice) toolChoice = { count: 1, from: null };
     }
@@ -339,16 +352,72 @@ function parseRaceChoicesCore(traits: { name: string; text: string }[]): Pick<St
   return { skillChoice, toolChoice, languageChoice };
 }
 
-function parseRaceChoices(traits: { name: string; text: string }[]): StructuredRaceChoices {
+export function parseRaceChoices(traits: { name: string; text: string }[]): StructuredRaceChoices {
   const hasChosenSize = traits.some(t => /^size$/i.test(t.name) && /chosen when you select/i.test(t.text));
   const hasFeatChoice = traits.some(t => /origin feat of your choice/i.test(t.text));
   return { hasChosenSize, ...parseRaceChoicesCore(traits), hasFeatChoice };
 }
 
-export function parseRaceChoicesByRuleset(
-  ruleset: Ruleset,
-  traits: { name: string; text: string }[],
-): StructuredRaceChoices {
-  void ruleset;
-  return parseRaceChoices(traits);
+export function parseClassTools(toolsText: string): ClassToolProficiency {
+  const text = toolsText.trim().replace(/[’‘]/gu, "'");
+  if (!text || text.toLowerCase() === "none") {
+    return { fixed: [], choices: [], notes: [] };
+  }
+
+  const alternativeCategories = text.match(
+    /(?:any\s+)?(one|two|three|\d+)\s+(?:type\s+of\s+)?artisan'?s tools?\s+or\s+(?:any\s+)?(?:one|two|three|\d+)\s+musical instruments?(?:\s+of your choice)?/iu,
+  );
+  if (alternativeCategories) {
+    return {
+      fixed: [],
+      choices: [{
+        count: wordOrNumberToInt(alternativeCategories[1] ?? "one") ?? 1,
+        from: [...ARTISAN_TOOLS, ...MUSICAL_INSTRUMENTS],
+      }],
+      notes: [],
+    };
+  }
+
+  const result: ClassToolProficiency = { fixed: [], choices: [], notes: [] };
+  const unmatchedParts: string[] = [];
+
+  const parts = text.split(',').map(p => p.trim()).filter(Boolean);
+
+  for (const part of parts) {
+    const knownTool = ALL_TOOLS.find(t => t.toLowerCase() === part.toLowerCase());
+    if (knownTool) {
+      result.fixed.push(knownTool);
+      continue;
+    }
+    unmatchedParts.push(part);
+  }
+
+  if (unmatchedParts.length > 0) {
+    for (const remainingText of unmatchedParts) {
+      const choiceMatch = remainingText.match(
+        /^(?:(one|two|three|four|any|\d+)\s+)?(?:type(?:s)?\s+of\s+)?(artisan'?s tools?|musical instruments?|gaming sets?)(?:\s+of your choice)?$/iu,
+      );
+      if (!choiceMatch) {
+        result.notes.push(remainingText);
+        continue;
+      }
+      const count = wordOrNumberToInt(choiceMatch[1] ?? "one") ?? 1;
+      const category = (choiceMatch[2] ?? "").toLowerCase();
+      const from = category.startsWith("artisan")
+        ? ARTISAN_TOOLS
+        : category.startsWith("musical")
+          ? MUSICAL_INSTRUMENTS
+          : category.startsWith("gaming")
+            ? GAMING_SETS
+            : [];
+      if (from.length > 0) result.choices.push({ count, from: [...from] });
+      else result.notes.push(remainingText);
+    }
+  }
+
+  if (result.fixed.length === 0 && result.choices.length === 0 && result.notes.length === 0) {
+    result.notes.push(text);
+  }
+
+  return result;
 }

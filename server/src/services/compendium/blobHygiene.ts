@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { isCanonicalV2Shape } from "./nativeCompendiumV2Migration.js";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -8,6 +9,7 @@ const monsterColumnKeys = new Set([
   "nameKey",
   "name_key",
   "cr",
+  "crNumeric",
   "cr_numeric",
   "typeKey",
   "type_key",
@@ -160,7 +162,7 @@ export function trimCompendiumBlobColumns(db: Database.Database): {
 
   for (const row of db.prepare("SELECT id, data_json FROM compendium_monsters").all() as Array<{ id: string; data_json: string }>) {
     const parsed = parseJsonObject(row.data_json);
-    if (!parsed) continue;
+    if (!parsed || isCanonicalV2Shape("monsters", parsed)) continue;
     const pruned = pruneMonsterBlob(parsed);
     const nextJson = JSON.stringify(pruned);
     if (nextJson !== row.data_json) {
@@ -171,7 +173,7 @@ export function trimCompendiumBlobColumns(db: Database.Database): {
 
   for (const row of db.prepare("SELECT id, data_json FROM compendium_spells").all() as Array<{ id: string; data_json: string }>) {
     const parsed = parseJsonObject(row.data_json);
-    if (!parsed) continue;
+    if (!parsed || isCanonicalV2Shape("spells", parsed)) continue;
     const pruned = pruneSpellBlob(parsed);
     const nextJson = JSON.stringify(pruned);
     if (nextJson !== row.data_json) {
@@ -182,7 +184,7 @@ export function trimCompendiumBlobColumns(db: Database.Database): {
 
   for (const row of db.prepare("SELECT id, data_json FROM compendium_items").all() as Array<{ id: string; data_json: string }>) {
     const parsed = parseJsonObject(row.data_json);
-    if (!parsed) continue;
+    if (!parsed || isCanonicalV2Shape("items", parsed)) continue;
     const pruned = pruneItemBlob(parsed);
     const nextJson = JSON.stringify(pruned);
     if (nextJson !== row.data_json) {
@@ -193,7 +195,7 @@ export function trimCompendiumBlobColumns(db: Database.Database): {
 
   for (const row of db.prepare("SELECT id, data_json FROM compendium_classes").all() as Array<{ id: string; data_json: string }>) {
     const parsed = parseJsonObject(row.data_json);
-    if (!parsed) continue;
+    if (!parsed || isCanonicalV2Shape("classes", parsed)) continue;
     const pruned = pruneClassBlob(parsed);
     const nextJson = JSON.stringify(pruned);
     if (nextJson !== row.data_json) {
@@ -204,7 +206,7 @@ export function trimCompendiumBlobColumns(db: Database.Database): {
 
   for (const row of db.prepare("SELECT id, data_json FROM compendium_races").all() as Array<{ id: string; data_json: string }>) {
     const parsed = parseJsonObject(row.data_json);
-    if (!parsed) continue;
+    if (!parsed || isCanonicalV2Shape("species", parsed)) continue;
     const pruned = pruneRaceBlob(parsed);
     const nextJson = JSON.stringify(pruned);
     if (nextJson !== row.data_json) {
@@ -215,7 +217,7 @@ export function trimCompendiumBlobColumns(db: Database.Database): {
 
   for (const row of db.prepare("SELECT id, data_json FROM compendium_backgrounds").all() as Array<{ id: string; data_json: string }>) {
     const parsed = parseJsonObject(row.data_json);
-    if (!parsed) continue;
+    if (!parsed || isCanonicalV2Shape("backgrounds", parsed)) continue;
     const pruned = pruneBackgroundBlob(parsed);
     const nextJson = JSON.stringify(pruned);
     if (nextJson !== row.data_json) {
@@ -226,7 +228,7 @@ export function trimCompendiumBlobColumns(db: Database.Database): {
 
   for (const row of db.prepare("SELECT id, data_json FROM compendium_feats").all() as Array<{ id: string; data_json: string }>) {
     const parsed = parseJsonObject(row.data_json);
-    if (!parsed) continue;
+    if (!parsed || isCanonicalV2Shape("feats", parsed)) continue;
     const pruned = pruneFeatBlob(parsed);
     const nextJson = JSON.stringify(pruned);
     if (nextJson !== row.data_json) {

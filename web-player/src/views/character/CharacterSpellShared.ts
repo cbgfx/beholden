@@ -119,12 +119,10 @@ export function parseSpellSave(text: string): string | null {
 }
 
 export function abbrevTime(time: string): string {
-  const base = time.split(/,\s*which\b/i)[0].trim();
-  return base
-    .replace(/(?:1\s+)?bonus action/i, "Bonus")
-    .replace(/1 action/i, "1A")
-    .replace(/1 reaction/i, "1R")
-    .replace(/1 minute/i, "1 min");
+  return time
+    .split(/,\s*which\b/i)[0].trim()
+    .replace(/bonus action/i, "Bonus")
+    .replace(/(\d+)\s+minute/i, "$1 min");
 }
 
 export function grantedSpellChargeBtn(enabled: boolean): React.CSSProperties {

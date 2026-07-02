@@ -5,7 +5,7 @@ import { PreparedSpellProgressionBlock } from "@/views/character/CharacterViewPa
 import { ABILITY_NAME_TO_KEY, ALL_SKILLS, ALL_TOOLS } from "../constants/CharacterCreatorConstants";
 import { NavButtons } from "../shared/CharacterCreatorParts";
 import { detailBoxStyle, headingStyle, inputStyle, labelStyle, profChipStyle, sourceTagStyle } from "../shared/CharacterCreatorStyles";
-import { abilityNamesToKeys, parseStartingEquipmentOptions } from "../utils/CharacterCreatorUtils";
+import { abilityNamesToKeys } from "../utils/CharacterCreatorUtils";
 
 type StepResult = { main: React.ReactNode; side: React.ReactNode };
 
@@ -90,7 +90,7 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
   bgOriginFeatSearch: string;
   setBgOriginFeatSearch: (value: string) => void;
   filteredBgFeats: BackgroundFeatSummaryLike[];
-  equipmentOptions: Array<{ id: string }>;
+  equipmentOptions: Array<{ id: string; entries: string[]; text: string }>;
   onBack: () => void;
   onNext: () => void;
   step: number;
@@ -142,7 +142,7 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
     ? (() => {
         const prof = bgDetail.proficiencies;
         const tools = prof?.tools ?? { fixed: [], choose: 0, from: null };
-        const equipOptions = parseStartingEquipmentOptions(bgDetail.equipment);
+        const equipOptions = equipmentOptions;
 
         function toggleBgChoice(item: string, key: "chosenBgTools" | "chosenBgLanguages", max: number) {
           setForm((prev) => {
@@ -536,9 +536,9 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
             {bgDetail.equipment && (
               <div style={{ marginBottom: 10 }}>
                 <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>Equipment </span>
-                {parseStartingEquipmentOptions(bgDetail.equipment).length > 0 ? (
+                {equipmentOptions.length > 0 ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 5 }}>
-                    {parseStartingEquipmentOptions(bgDetail.equipment).map((option) => (
+                    {equipmentOptions.map((option) => (
                       <div key={`bg-side-eq-${option.id}`} style={{ borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.03)", padding: "6px 8px" }}>
                         <div style={{ color: C.text, fontSize: "var(--fs-small)", fontWeight: 700, marginBottom: 3 }}>Option {option.id}</div>
                         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>

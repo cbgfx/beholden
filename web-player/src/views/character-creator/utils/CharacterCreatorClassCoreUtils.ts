@@ -23,6 +23,7 @@ export interface CreatorFeatureLike {
   text?: string | null;
   optional?: boolean;
   subclass?: string | null;
+  effects?: unknown[];
   preparedSpellProgression?: PreparedSpellProgressionTable[];
 }
 
@@ -62,6 +63,15 @@ export interface StartingEquipmentOption {
   id: string;
   entries: string[];
   text: string;
+}
+
+export type StructuredStartingEquipmentEntry =
+  | { kind: "item"; name: string; quantity: number }
+  | { kind: "currency"; denomination: "PP" | "GP" | "EP" | "SP" | "CP"; amount: number };
+
+export interface StructuredStartingEquipmentOption {
+  id: string;
+  entries: StructuredStartingEquipmentEntry[];
 }
 
 export function getMergedAutolevels(cls: CreatorClassDetailLike): CreatorAutolevelLike[] {
@@ -203,25 +213,46 @@ export function getClassExpertiseChoices(cls: CreatorClassDetailLike | null, lev
           .map((s) => s.trim())
           .map((s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())
           .filter((s) => SKILL_NAMES.includes(s));
-      } else {
-        const generalMatch = text.match(/gain Expertise in\s+(one|two|three|four|\d+)(?:\s+more)?\s+of your skill proficiencies of your choice/i);
-        if (generalMatch) {
-          count = wordOrNumberToInt(generalMatch[1] ?? "") ?? 1;
-        }
-      }
 
-      if (!count || count <= 0) continue;
-      const key = `classexpertise:${al.level}:${name}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      choices.push({ key, source: name, count, options: options && options.length > 0 ? options : null });
+        if (!count || count <= 0) continue;
+        const key = `classexpertise:${al.level}:${name}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        choices.push({ key, source: name, count, options: options && options.length > 0 ? options : null });
+      } else {
+        // Use matchAll so a single feature text can grant expertise at multiple levels
+        // e.g. Bard "Level 2: Expertise" says "two at L2" AND "At Bard level 9, two more".
+        let matchIdx = 0;
+        for (const m of text.matchAll(
+          /gain Expertise in\s+(one|two|three|four|\d+)(?:\s+more)?\s+of your skill proficiencies of your choice/gi,
+        )) {
+          const matchCount = wordOrNumberToInt(m[1] ?? "") ?? 1;
+          if (!matchCount || matchCount <= 0) { matchIdx++; continue; }
+          // Detect "At [Class] level X" immediately before this occurrence
+          const prefix = text.slice(Math.max(0, (m.index ?? 0) - 40), m.index ?? 0);
+          const levelGate = prefix.match(/At\s+\w+\s+level\s+(\d+)/i);
+          const gatedLevel = levelGate ? Number(levelGate[1]) : al.level;
+          if (gatedLevel > level) { matchIdx++; continue; }
+          const matchKey = matchIdx === 0
+            ? `classexpertise:${al.level}:${name}`
+            : `classexpertise:${gatedLevel}:${name}:${matchIdx}`;
+          if (seen.has(matchKey)) { matchIdx++; continue; }
+          seen.add(matchKey);
+          choices.push({ key: matchKey, source: name, count: matchCount, options: null });
+          matchIdx++;
+        }
+        continue; // skip the old single-push below
+      }
+      continue;
     }
   }
   return choices;
 }
 
+const ABILITY_KEY_SET = new Set(["str", "dex", "con", "int", "wis", "cha"]);
+
 export function parseSkillList(proficiency: string): string[] {
-  return proficiency.split(/[,;]/).map((s) => s.trim()).filter((s) => s && !ABILITY_SCORE_NAMES.has(s));
+  return proficiency.split(/[,;]/).map((s) => s.trim()).filter((s) => s && !ABILITY_SCORE_NAMES.has(s) && !ABILITY_KEY_SET.has(s.toLowerCase()));
 }
 
 function normalizeFeatChoiceOption(option: unknown): string | null {

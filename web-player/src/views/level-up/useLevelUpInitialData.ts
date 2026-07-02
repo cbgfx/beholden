@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "@/services/api";
 import { fetchMyCharacter } from "@/services/actorApi";
-import { fetchFeatCatalog } from "@/services/compendiumApi";
+import { fetchClassDetailV2, fetchFeatCatalog } from "@/services/compendiumApi";
 import { getSpellcastingClassName } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import { mergeAutoLevels } from "@/views/level-up/LevelUpHelpers";
 import type {
@@ -56,7 +56,7 @@ export function useLevelUpInitialData(id: string | undefined) {
           ),
         );
         const classId = typeof classEntry?.classId === "string" ? classEntry.classId : null;
-        return classId ? api<ClassDetail>(`/api/compendium/classes/${classId}`) : null;
+        return classId ? fetchClassDetailV2<ClassDetail>(classId) : null;
       })
       .then((cd) => {
         if (cd) setClassDetail(cd);
@@ -74,10 +74,10 @@ export function useLevelUpInitialData(id: string | undefined) {
     }
     const spellcastingClassName = getSpellcastingClassName(classDetail, nextLevel, subclass) ?? classDetail.name;
     const encodedClass = encodeURIComponent(spellcastingClassName);
-    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&level=0&limit=120&compact=1&lite=1&excludeSpecial=1`)
+    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&level=0&limit=120&includeText=1&lite=1&excludeSpecial=1`)
       .then(setClassCantrips)
       .catch(() => setClassCantrips([]));
-    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&minLevel=1&maxLevel=9&limit=220&compact=1&lite=1&excludeSpecial=1`)
+    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&minLevel=1&maxLevel=9&limit=220&includeText=1&lite=1&excludeSpecial=1`)
       .then(setClassSpells)
       .catch(() => setClassSpells([]));
     if (/warlock/i.test(classDetail.name)) {

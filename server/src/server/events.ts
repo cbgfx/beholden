@@ -57,6 +57,9 @@ export type PartyInventoryDeltaPayload = {
   action: "upsert" | "delete" | "refresh";
   itemId?: Id;
 };
+export type PartyCurrencyDeltaPayload = {
+  campaignId: Id;
+};
 export type BastionsDeltaPayload = {
   campaignId: Id;
   action: "upsert" | "delete" | "refresh";
@@ -66,6 +69,12 @@ export type BastionsDeltaPayload = {
 export type CompendiumChangedPayload =
   | { cleared: true }
   | { imported: number; total: number }
+  | {
+      nativeImported: true;
+      category: string;
+      imported: number;
+      total: number;
+    }
   | {
       blobTrimmed: true;
       updatedMonsters: number;
@@ -111,6 +120,14 @@ export type InitiativeFulfilledPayload = {
   characterId: Id;
 };
 
+export type ConcentrationCheckPayload = {
+  campaignId: Id;
+  encounterId: Id;
+  characterId: Id;
+  characterName: string;
+  dc: number;
+};
+
 export type XpAwardedPayload = {
   campaignId: Id;
   characterId: Id;
@@ -128,6 +145,7 @@ export interface ServerEventMap {
   "inpcs:delta": InpcsDeltaPayload;
   "treasure:delta": TreasureDeltaPayload;
   "partyInventory:delta": PartyInventoryDeltaPayload;
+  "partyCurrency:delta": PartyCurrencyDeltaPayload;
   "bastions:delta": BastionsDeltaPayload;
   "compendium:changed": CompendiumChangedPayload;
 
@@ -136,6 +154,7 @@ export interface ServerEventMap {
 
   "initiative:prompt": InitiativePromptPayload;
   "initiative:fulfilled": InitiativeFulfilledPayload;
+  "concentration:check": ConcentrationCheckPayload;
   "xp:awarded": XpAwardedPayload;
 
   "save:pending": SavePendingPayload;

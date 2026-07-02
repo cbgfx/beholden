@@ -1,0 +1,29 @@
+<compendium>
+  <race>
+    <name>Test Dwarf</name>
+    <size>M</size>
+    <speed>30</speed>
+    <resist>poison</resist>
+    <trait>
+      <name>Darkvision</name>
+      <text>Accustomed to life underground, you have superior vision in dark and dim conditions. You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray.</text>
+    </trait>
+    <trait>
+      <name>Dwarven Combat Training</name>
+      <text>You have proficiency with the battleaxe, handaxe, light hammer, and warhammer.</text>
+    </trait>
+    <trait>
+      <name>Tool Proficiency</name>
+      <text>You gain proficiency with the artisan's tools of your choice: smith's tools, brewer's supplies, or mason's tools.</text>
+    </trait>
+    <trait>
+      <name>Languages</name>
+      <text>You can speak, read, and write Common and Dwarvish.</text>
+    </trait>
+    <trait>
+      <name>Drow Lineage</name>
+      <text>You also know the Dancing Lights cantrip.
+When you reach character levels 3 and 5, you learn Faerie Fire and Darkness respectively. You always have that spell prepared.</text>
+    </trait>
+  </race>
+</compendium>

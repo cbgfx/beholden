@@ -188,7 +188,13 @@ function migrateToVersion3(db: Db): void {
   `);
 }
 
-const MIGRATIONS = [migrateToVersion1, migrateToVersion2, migrateToVersion3];
+function migrateToVersion4(db: Db): void {
+  if (!columnExists(db, "campaigns", "party_currency_json")) {
+    db.exec(`ALTER TABLE campaigns ADD COLUMN party_currency_json TEXT NOT NULL DEFAULT '{"PP":0,"GP":0,"SP":0,"CP":0}'`);
+  }
+}
+
+const MIGRATIONS = [migrateToVersion1, migrateToVersion2, migrateToVersion3, migrateToVersion4];
 
 export function runSchemaMigrations(db: Db): void {
   let version = Number(

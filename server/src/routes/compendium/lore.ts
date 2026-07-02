@@ -8,9 +8,13 @@ import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { parseBody } from "../../shared/validate.js";
 import { parseFeat } from "../../lib/featParser.js";
-import { parseBackgroundProficiencies, parseRaceChoicesByRuleset } from "../../lib/proficiencyConstants.js";
-import { inferRuleset } from "../../lib/inferRuleset.js";
+import { parseBackgroundProficiencies, parseRaceChoices } from "../../lib/proficiencyConstants.js";
 import { parsePreparedSpellProgression } from "../../lib/preparedSpellProgression.js";
+import {
+  isStoredCompendiumEntryCanonical,
+  parseStoredCanonicalCompendiumEntry,
+  parseStoredCompendiumEntry,
+} from "../../services/compendium/storedCompendium.js";
 import { z } from "zod";
 
 export function registerLoreRoutes(app: Express, ctx: ServerContext) {
@@ -29,26 +33,43 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   const includeField = (fields: Set<string>, ...aliases: string[]) =>
     fields.size === 0 || aliases.some((alias) => fields.has(alias.toLowerCase()));
 
+  const canonicalDetailRoutes = [
+    ["classes", "classes", "compendium_classes"],
+    ["species", "species", "compendium_races"],
+    ["backgrounds", "backgrounds", "compendium_backgrounds"],
+    ["feats", "feats", "compendium_feats"],
+  ] as const;
+  for (const [routeCategory, storedCategory, table] of canonicalDetailRoutes) {
+    app.get(`/api/compendium/v2/${routeCategory}/:id`, requireAuth, (req, res) => {
+      applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
+      const id = requireParam(req, res, "id");
+      if (!id) return;
+      const row = db.prepare(`SELECT data_json FROM ${table} WHERE id = ?`).get(id) as
+        | { data_json: string }
+        | undefined;
+      if (!row) return res.status(404).json({ ok: false, message: "Not found" });
+      return res.json(parseStoredCanonicalCompendiumEntry(storedCategory, row.data_json));
+    });
+  }
+
   function buildFeatDetailFromRow(row: { id: string; name: string; data_json: string }) {
-    const feat = {
-      ...JSON.parse(row.data_json),
+    const canonical = isStoredCompendiumEntryCanonical("feats", row.data_json);
+    const feat: any = {
+      ...parseStoredCompendiumEntry("feats", row.data_json),
       id: row.id,
       name: row.name,
     };
-    if (!feat.ruleset) {
-      feat.ruleset = inferRuleset(feat.name, feat.text, feat.prerequisite, feat.special);
-    }
-    feat.parsed = parseFeat({
-      name: String(feat.name ?? ""),
-      text: String(feat.text ?? ""),
-      prerequisite: typeof feat.prerequisite === "string" ? feat.prerequisite : null,
-      proficiency: typeof feat.proficiency === "string" ? feat.proficiency : null,
-      modifiers: Array.isArray(feat.modifierDetails)
-        ? feat.modifierDetails
-        : Array.isArray(feat.modifiers)
-          ? feat.modifiers.map((text: unknown) => ({ category: "", text: String(text ?? "") }))
-          : [],
-    });
+    if (!canonical && !feat.parsed) feat.parsed = parseFeat({
+        name: String(feat.name ?? ""),
+        text: String(feat.text ?? ""),
+        prerequisite: typeof feat.prerequisite === "string" ? feat.prerequisite : null,
+        proficiency: typeof feat.proficiency === "string" ? feat.proficiency : null,
+        modifiers: Array.isArray(feat.modifierDetails)
+          ? feat.modifierDetails
+          : Array.isArray(feat.modifiers)
+            ? feat.modifiers.map((text: unknown) => ({ category: "", text: String(text ?? "") }))
+            : [],
+      });
     return feat;
   }
 
@@ -57,19 +78,16 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     applySharedApiCacheHeaders(res);
     const fields = parseRequestedFields(req.query.fields);
     const wantHd = includeField(fields, "hd");
-    const wantRuleset = includeField(fields, "ruleset");
     const rows = db.prepare(
-      `SELECT id, name${wantHd ? ", hd" : ""}${wantRuleset ? ", data_json" : ""}
+      `SELECT id, name${wantHd ? ", hd" : ""}
        FROM compendium_classes
        ORDER BY name COLLATE NOCASE`,
-    ).all() as Array<{ id: string; name: string; hd?: number | null; data_json?: string }>;
+    ).all() as Array<{ id: string; name: string; hd?: number | null }>;
     res.json(rows.map((row) => {
-      const data = wantRuleset ? JSON.parse(row.data_json ?? "{}") : {};
       return {
         ...(includeField(fields, "id") ? { id: row.id } : {}),
         ...(includeField(fields, "name") ? { name: row.name } : {}),
         ...(wantHd ? { hd: row.hd ?? null } : {}),
-        ...(wantRuleset ? { ruleset: data.ruleset ?? inferRuleset(row.name) } : {}),
       };
     }));
   });
@@ -80,9 +98,15 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     if (!id) return;
     const row = db.prepare("SELECT data_json FROM compendium_classes WHERE id = ?").get(id) as { data_json: string } | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Not found" });
-    const cls = JSON.parse(row.data_json);
-    if (!cls.ruleset) cls.ruleset = inferRuleset(cls.name);
-    if (Array.isArray(cls.autolevels)) {
+    const cls: any = parseStoredCompendiumEntry("classes", row.data_json);
+    const canonical = isStoredCompendiumEntryCanonical("classes", row.data_json);
+    if (canonical) {
+      // Attach structured proficiencies from v2 storage so the character creator
+      // can consume structured tool choices instead of the flattened legacy string.
+      const v2Data = JSON.parse(row.data_json) as { proficiencies?: unknown };
+      if (v2Data.proficiencies) cls.proficiencies = v2Data.proficiencies;
+    }
+    if (!canonical && Array.isArray(cls.autolevels)) {
       cls.autolevels = cls.autolevels.map((al: any) => ({
         ...al,
         features: Array.isArray(al?.features)
@@ -104,20 +128,17 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     const fields = parseRequestedFields(req.query.fields);
     const wantSize = includeField(fields, "size");
     const wantSpeed = includeField(fields, "speed");
-    const wantRuleset = includeField(fields, "ruleset");
     const rows = db.prepare(
-      `SELECT id, name${wantSize ? ", size" : ""}${wantSpeed ? ", speed" : ""}${wantRuleset ? ", data_json" : ""}
+      `SELECT id, name${wantSize ? ", size" : ""}${wantSpeed ? ", speed" : ""}
        FROM compendium_races
        ORDER BY name COLLATE NOCASE`,
-    ).all() as Array<{ id: string; name: string; size?: string | null; speed?: number | null; data_json?: string }>;
+    ).all() as Array<{ id: string; name: string; size?: string | null; speed?: number | null }>;
     res.json(rows.map((row) => {
-      const data = wantRuleset ? JSON.parse(row.data_json ?? "{}") : {};
       return {
         ...(includeField(fields, "id") ? { id: row.id } : {}),
         ...(includeField(fields, "name") ? { name: row.name } : {}),
         ...(wantSize ? { size: row.size ?? null } : {}),
         ...(wantSpeed ? { speed: row.speed ?? null } : {}),
-        ...(wantRuleset ? { ruleset: data.ruleset ?? inferRuleset(row.name) } : {}),
       };
     }));
   });
@@ -128,17 +149,14 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     if (!id) return;
     const row = db.prepare("SELECT data_json FROM compendium_races WHERE id = ?").get(id) as { data_json: string } | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Not found" });
-    const race = JSON.parse(row.data_json);
-    if (!race.ruleset) {
-      race.ruleset = inferRuleset(race.name, Array.isArray(race.traits) ? race.traits.map((t: any) => `${t?.name ?? ""}\n${t?.text ?? ""}`).join("\n") : "");
-    }
-    if (!race.parsedChoices) {
-      race.parsedChoices = parseRaceChoicesByRuleset(
-        race.ruleset,
+    const race: any = parseStoredCompendiumEntry("species", row.data_json);
+    const canonical = isStoredCompendiumEntryCanonical("species", row.data_json);
+    if (!canonical && !race.parsedChoices) {
+      race.parsedChoices = parseRaceChoices(
         Array.isArray(race.traits) ? race.traits.map((t: any) => ({ name: String(t?.name ?? ""), text: String(t?.text ?? "") })) : [],
       );
     }
-    if (Array.isArray(race.traits)) {
+    if (!canonical && Array.isArray(race.traits)) {
       race.traits = race.traits.map((trait: any) => ({
         ...trait,
         preparedSpellProgression: Array.isArray(trait?.preparedSpellProgression)
@@ -153,18 +171,15 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   app.get("/api/compendium/backgrounds", requireAuth, (req, res) => {
     applySharedApiCacheHeaders(res);
     const fields = parseRequestedFields(req.query.fields);
-    const wantRuleset = includeField(fields, "ruleset");
     const rows = db.prepare(
-      `SELECT id, name${wantRuleset ? ", data_json" : ""}
+      `SELECT id, name
        FROM compendium_backgrounds
        ORDER BY name COLLATE NOCASE`,
-    ).all() as Array<{ id: string; name: string; data_json?: string }>;
+    ).all() as Array<{ id: string; name: string }>;
     res.json(rows.map((row) => {
-      const data = wantRuleset ? JSON.parse(row.data_json ?? "{}") : {};
       return {
         ...(includeField(fields, "id") ? { id: row.id } : {}),
         ...(includeField(fields, "name") ? { name: row.name } : {}),
-        ...(wantRuleset ? { ruleset: data.ruleset ?? inferRuleset(row.name) } : {}),
       };
     }));
   });
@@ -175,16 +190,13 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     if (!id) return;
     const row = db.prepare("SELECT data_json FROM compendium_backgrounds WHERE id = ?").get(id) as { data_json: string } | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Not found" });
-    const bg = JSON.parse(row.data_json);
-    if (!bg.ruleset) {
-      bg.ruleset = inferRuleset(bg.name, bg.equipment, Array.isArray(bg.traits) ? bg.traits.map((t: any) => `${t?.name ?? ""}\n${t?.text ?? ""}`).join("\n") : "");
-    }
-    bg.proficiencies = parseBackgroundProficiencies({
-      proficiency: bg.proficiency,
-      trait: bg.traits,
-      ruleset: bg.ruleset,
-    });
-    if (Array.isArray(bg.traits)) {
+    const bg: any = parseStoredCompendiumEntry("backgrounds", row.data_json);
+    const canonical = isStoredCompendiumEntryCanonical("backgrounds", row.data_json);
+    if (!canonical && !bg.proficiencies) bg.proficiencies = parseBackgroundProficiencies({
+        proficiency: bg.proficiency,
+        trait: bg.traits,
+      });
+    if (!canonical && Array.isArray(bg.traits)) {
       bg.traits = bg.traits.map((trait: any) => ({
         ...trait,
         preparedSpellProgression: Array.isArray(trait?.preparedSpellProgression)
@@ -199,7 +211,6 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   app.get("/api/compendium/feats", requireAuth, (req, res) => {
     applySharedApiCacheHeaders(res);
     const fields = parseRequestedFields(req.query.fields);
-    const wantRuleset = includeField(fields, "ruleset");
     const wantMetadata = [
       "category",
       "prerequisite",
@@ -208,23 +219,27 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
       "abilities",
     ].some((field) => includeField(fields, field));
     const rows = db.prepare(
-      `SELECT id, name${wantRuleset || wantMetadata ? ", data_json" : ""}
+      `SELECT id, name${wantMetadata ? ", data_json" : ""}
        FROM compendium_feats
        ORDER BY name COLLATE NOCASE`,
     ).all() as Array<{ id: string; name: string; data_json?: string }>;
     res.json(rows.map((row) => {
-      const data = wantRuleset || wantMetadata ? JSON.parse(row.data_json ?? "{}") : {};
-      const parsed = wantMetadata
-        ? (data.parsed ?? parseFeat({
+      const data: any = wantMetadata
+        ? parseStoredCompendiumEntry("feats", row.data_json)
+        : {};
+      const canonical = wantMetadata
+        && isStoredCompendiumEntryCanonical("feats", row.data_json);
+      const parsed: any = wantMetadata
+        ? (data.parsed ?? (!canonical ? parseFeat({
             name: row.name,
             text: String(data.text ?? ""),
             prerequisite: typeof data.prerequisite === "string" ? data.prerequisite : null,
             proficiency: typeof data.proficiency === "string" ? data.proficiency : null,
             modifiers: Array.isArray(data.modifierDetails) ? data.modifierDetails : [],
-          }))
+          }) : {}))
         : null;
       const prerequisite = parsed?.prerequisite ?? data.prerequisite ?? null;
-      const category = parsed?.category
+      const category = data.category ?? parsed?.category
         ?? (/^Boon of\b/i.test(row.name) || /\bLevel 19\b/i.test(String(prerequisite ?? "")) ? "Epic Boon"
           : /\bFighting Style Feature\b/i.test(String(prerequisite ?? "")) ? "Fighting Style"
             : /\bLevel 4\b/i.test(String(prerequisite ?? "")) ? "General"
@@ -248,7 +263,6 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
       return {
         ...(includeField(fields, "id") ? { id: row.id } : {}),
         ...(includeField(fields, "name") ? { name: row.name } : {}),
-        ...(wantRuleset ? { ruleset: data.ruleset ?? inferRuleset(row.name) } : {}),
         ...(includeField(fields, "category") ? { category } : {}),
         ...(includeField(fields, "prerequisite") ? { prerequisite } : {}),
         ...(includeField(fields, "repeatable") ? { repeatable: Boolean(parsed?.repeatable) } : {}),

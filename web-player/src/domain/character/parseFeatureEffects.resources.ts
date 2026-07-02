@@ -110,7 +110,7 @@ export function parseResourceGrantEffects(source: FeatureEffectSource, text: str
   }
 
   const pbUsesRe = new RegExp(
-    `you can use (?:this\\s+(?:feature|trait|benefit|ability)|(?:(?:this|the)\\s+)?${escapedLabel})\\s+a\\s+number of times equal to your Proficiency Bonus`,
+    `you can use (?:this\\s+(?:feature|trait|benefit|ability|Bonus Action)|(?:(?:this|the)\\s+)?${escapedLabel})\\s+a\\s+number of times equal to your Proficiency Bonus`,
     "i",
   );
   const hasPbUsesLanguage = sourceLabel && pbUsesRe.test(text);

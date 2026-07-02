@@ -15,7 +15,6 @@ export type FeatDetail = {
   name: string;
   text?: string | null;
   prerequisite?: string | null;
-  ruleset?: string | null;
   parsed?: {
     category?: string | null;
     source?: string | null;
@@ -115,7 +114,6 @@ export function FeatDetailPanel({ featId, fetchFeat, colors, PanelComponent }: {
         <>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {parsed?.category && <Tag color={colors.accentHighlight}>{parsed.category}</Tag>}
-            {feat.ruleset && <Tag color={colors.colorMagic}>{feat.ruleset}</Tag>}
             {parsed?.repeatable && <Tag color={colors.colorGold}>Repeatable</Tag>}
             {abilityIncreases.map((value) => <Tag key={value} color={colors.green}>{value}</Tag>)}
           </div>

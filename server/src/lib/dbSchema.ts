@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
   color TEXT,
   image_url TEXT,
   shared_notes TEXT NOT NULL DEFAULT '',
+  party_currency_json TEXT NOT NULL DEFAULT '{"PP":0,"GP":0,"SP":0,"CP":0}',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );

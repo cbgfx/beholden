@@ -1,6 +1,11 @@
 import React from "react";
 import { api } from "@/services/api";
 import { fetchMyCharacter } from "@/services/actorApi";
+import {
+  fetchBackgroundDetailV2,
+  fetchClassDetailV2,
+  fetchRaceDetailV2,
+} from "@/services/compendiumApi";
 import type {
   Character,
   ClassRestDetail,
@@ -59,7 +64,7 @@ export function useCharacterData(id: string | undefined) {
       return;
     }
     let alive = true;
-    api<ClassRestDetail>(`/api/compendium/classes/${classId}`)
+    fetchClassDetailV2<ClassRestDetail>(classId)
       .then((detail) => {
         if (alive) setClassDetail(detail ?? null);
       })
@@ -78,7 +83,7 @@ export function useCharacterData(id: string | undefined) {
       return;
     }
     let alive = true;
-    api<RaceFeatureDetail>(`/api/compendium/races/${raceId}`)
+    fetchRaceDetailV2<RaceFeatureDetail>(raceId)
       .then((detail) => {
         if (alive) setRaceDetail(detail);
       })
@@ -97,7 +102,7 @@ export function useCharacterData(id: string | undefined) {
       return;
     }
     let alive = true;
-    api<BackgroundFeatureDetail>(`/api/compendium/backgrounds/${bgId}`)
+    fetchBackgroundDetailV2<BackgroundFeatureDetail>(bgId)
       .then((detail) => {
         if (alive) setBackgroundDetail(detail);
       })

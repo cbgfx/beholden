@@ -12,14 +12,12 @@ import type {
   ClassSummary,
   RaceSummary,
 } from "@/views/character-creator/utils/CharacterCreatorTypes";
-import type { Ruleset } from "@/lib/characterRules";
-
 export function useCreatorCompendiumCatalogs() {
   const [classes, setClasses] = React.useState<ClassSummary[]>([]);
   const [races, setRaces] = React.useState<RaceSummary[]>([]);
   const [bgs, setBgs] = React.useState<BgSummary[]>([]);
   const [featSummaries, setFeatSummaries] = React.useState<
-    { id: string; name: string; ruleset?: Ruleset | null }[]
+    { id: string; name: string }[]
   >([]);
   const [campaigns, setCampaigns] = React.useState<Campaign[]>([]);
 

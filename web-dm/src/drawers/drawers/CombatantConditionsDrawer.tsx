@@ -175,7 +175,14 @@ export function CombatantConditionsDrawer(props: {
 
   const selectedKeys = new Set(conds.map((c) => c.key));
   const hexCount = conds.filter((c) => c.key === "hexed").length;
-  const visibleDefs = CONDITION_DEFS.filter((c) => allowedKeys.has(c.key));
+  const specialConditionKeys = new Set(["concentration", "hexed", "marked"]);
+  const visibleDefs = CONDITION_DEFS
+    .filter((c) => allowedKeys.has(c.key))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const conditionGroups = [
+    visibleDefs.filter((condition) => !specialConditionKeys.has(condition.key)),
+    visibleDefs.filter((condition) => specialConditionKeys.has(condition.key)),
+  ].filter((group) => group.length > 0);
 
   return {
     body: (
@@ -186,12 +193,17 @@ export function CombatantConditionsDrawer(props: {
           <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 10 }}>
             Conditions
           </div>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-            gap: 6,
-          }}>
-            {visibleDefs.map((c) => {
+          <div style={{ display: "grid", gap: 14 }}>
+            {conditionGroups.map((group, groupIndex) => (
+              <div
+                key={groupIndex}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+                  gap: 6,
+                }}
+              >
+                {group.map((c) => {
               const on = selectedKeys.has(c.key);
               const addDisabled = c.key === "hexed" && hexCount >= HEX_ABILITIES.length;
               const CondIcon = conditionIconByKey[c.key as keyof typeof conditionIconByKey];
@@ -237,7 +249,9 @@ export function CombatantConditionsDrawer(props: {
                   <span>{c.name}</span>
                 </button>
               );
-            })}
+                })}
+              </div>
+            ))}
           </div>
         </div>
 

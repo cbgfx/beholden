@@ -27,6 +27,7 @@ import {
   wordToNumber,
 } from "./featParserSupport.js";
 import { addNamedSpellGrants, parseSpellListChoiceParagraph, pushSpellChoice } from "./featParserSpells.js";
+import { withFeatResolution } from "./featResolution.js";
 
 export type {
   ParsedFeat,
@@ -271,7 +272,9 @@ function parseUsageScaling(paragraph: string, uses: ParsedFeatUse[]) {
     });
   }
 
-  match = normalized.match(/a number of times equal to your Proficiency Bonus/i);
+  // "a number of [X] equal to your Proficiency Bonus" — X may be "times", "Luck Points", "treats", etc.
+  // Exclude dice expressions (d4, d6, d8, …) which indicate rolled counts, not tracked resources.
+  match = normalized.match(/\ba number of (?!d\d)(?:[\w][\w' -]* )?equal to your Proficiency Bonus/i);
   if (match) {
     pushUse(uses, {
       count: 1,
@@ -302,6 +305,120 @@ function parseUsageScaling(paragraph: string, uses: ParsedFeatUse[]) {
   }
 }
 
+// Feats whose mechanics can't be parsed from text alone (unique reaction/conditional
+// mechanics with no generic pattern). These get a NarrativeEffect so downstream UIs
+// know not to try to interpret them.
+const NARRATIVE_ONLY_FEATS = new Set<string>([
+  "Origin: Healer",
+  "Origin: Savage Attacker",
+  "Origin: Vampire Hunter",
+  "Origin: Lords' Alliance Agent",
+  "Origin: Tyro of the Gauntlet",
+  "Origin: Zhentarim Ruffian",
+  "Dragonmark, Potent",
+]);
+
+function parseFeatStructuredEffects(
+  name: string,
+  category: string | null,
+  baseName: string,
+  body: string,
+  grants: ParsedFeatGrants,
+): void {
+  // ── Fighting Styles ────────────────────────────────────────────────────────
+  if (category === "Fighting Style") {
+    switch (baseName) {
+      case "Archery":
+        grants.effects.push({ type: "modifier", target: "attack_roll", mode: "bonus", resolution: "automatic", amount: { kind: "fixed", value: 2 }, gate: { duration: "passive", weaponFilters: ["ranged_weapon"] }, summary: "+2 to attack rolls with Ranged weapons" });
+        return;
+      case "Blind Fighting": {
+        const rangeMatch = body.match(/Blindsight\b.*?(\d+)\s*feet/i);
+        const range = rangeMatch ? Number(rangeMatch[1]) : 10;
+        grants.effects.push({ type: "senses", mode: "grant", resolution: "automatic", senses: [{ kind: "blindsight", range }], summary: `Blindsight ${range} ft.` });
+        return;
+      }
+      case "Defense":
+        grants.effects.push({ type: "armor_class", mode: "bonus", resolution: "automatic", bonus: { kind: "fixed", value: 1 }, gate: { duration: "passive", armorState: "not_unarmored" }, summary: "+1 AC while wearing armor" });
+        return;
+      case "Dueling":
+        grants.effects.push({ type: "modifier", target: "damage_roll", mode: "bonus", resolution: "automatic", amount: { kind: "fixed", value: 2 }, gate: { duration: "passive", weaponFilters: ["melee_weapon", "no_offhand", "no_two_handed"] }, summary: "+2 to damage rolls (melee, one hand, no other weapons)" });
+        return;
+      case "Great Weapon Fighting":
+        grants.effects.push({
+          type: "narrative",
+          category: "manual_resolution",
+          resolution: "manual",
+          description: "When rolling damage for a two-handed Melee weapon attack, treat any 1 or 2 on a damage die as a 3. The weapon must have the Two-Handed or Versatile property.",
+          summary: "Manual: treat damage-die results of 1 or 2 as 3 with qualifying weapons.",
+        });
+        return;
+      case "Interception":
+        grants.effects.push({ type: "action", activation: "reaction", resolution: "manual", description: "When a creature you see hits another creature within 5 ft, reduce that damage by 1d10 + PB (min 0). Requires Shield or weapon.", summary: "Manual reaction: reduce damage to nearby creature by 1d10 + PB." });
+        return;
+      case "Protection":
+        grants.effects.push({ type: "action", activation: "reaction", resolution: "manual", description: "When a creature you see attacks a target within 5 ft of you, impose Disadvantage on that attack roll and all attacks against that target until your next turn. Requires Shield.", summary: "Manual reaction: impose Disadvantage on attacks against nearby ally (requires Shield)." });
+        return;
+      case "Thrown Weapon Fighting":
+        grants.effects.push({ type: "modifier", target: "damage_roll", mode: "bonus", resolution: "automatic", amount: { kind: "fixed", value: 2 }, gate: { duration: "passive", weaponFilters: ["thrown_weapon"] }, summary: "+2 to damage rolls with thrown weapons" });
+        return;
+      case "Two-Weapon Fighting":
+        grants.effects.push({ type: "attack", mode: "add_ability_to_damage", resolution: "automatic", gate: { duration: "passive", weaponFilters: ["light_weapon"], notes: "extra_attack_damage" }, summary: "Add ability modifier to the bonus-action Light-weapon extra attack damage." });
+        return;
+      case "Unarmed Fighting":
+        grants.effects.push({
+          type: "attack",
+          mode: "damage_die_override",
+          resolution: "automatic",
+          amount: { kind: "fixed", dice: "1d6" },
+          alternateAmount: { kind: "fixed", dice: "1d8" },
+          alternateWhen: "no_weapon_or_shield",
+          damageType: "bludgeoning",
+          gate: { duration: "passive", notes: "unarmed_only" },
+          summary: "Unarmed Strikes deal 1d6 + STR, or 1d8 + STR while holding no weapon or Shield.",
+        });
+        grants.effects.push({
+          type: "narrative",
+          category: "manual_resolution",
+          resolution: "manual",
+          description: "At the start of each of your turns, you can deal 1d4 Bludgeoning damage to one creature Grappled by you.",
+          summary: "Manual: optional 1d4 damage to one creature Grappled by you at the start of your turn.",
+        });
+        return;
+      default:
+        // Unknown fighting style variant: fall through to narrative fallback.
+    }
+  }
+
+  // ── Origin feats with parseable structure ──────────────────────────────────
+  if (category === "Origin") {
+    if (baseName === "Alert") {
+      grants.effects.push({ type: "proficiency_grant", category: "initiative", resolution: "automatic", summary: "Proficiency in Initiative rolls" });
+      grants.effects.push({
+        type: "narrative",
+        category: "manual_resolution",
+        resolution: "manual",
+        description: "Immediately after rolling Initiative, you can swap your Initiative with one willing ally in the same combat.",
+        summary: "Manual: optionally swap Initiative with a willing ally after rolling.",
+      });
+      return;
+    }
+    if (baseName === "Tough") {
+      grants.effects.push({ type: "hit_points", mode: "max_bonus", resolution: "automatic", amount: { kind: "character_level", multiplier: 2 }, summary: "+2 HP per character level" });
+      return;
+    }
+  }
+
+  // ── Bespoke feats: mark as manual-resolution narrative ────────────────────
+  if (NARRATIVE_ONLY_FEATS.has(name)) {
+    grants.effects.push({
+      type: "narrative", category: "manual_resolution",
+      resolution: "manual",
+      description: `${name}: unique mechanics that require bespoke character-sheet handling.`,
+      summary: "Manual resolution required.",
+    });
+  }
+}
+
 export function parseFeat(args: {
   name: string;
   text: string;
@@ -326,11 +443,13 @@ export function parseFeat(args: {
     cantrips: [],
     abilityIncreases: {},
     bonuses: [],
+    effects: [],
   };
   const modifierDetails = (args.modifiers ?? []).map(parseModifier).filter(Boolean) as ParsedFeatModifier[];
   const choices: ParsedFeatChoice[] = [];
   const uses: ParsedFeatUse[] = [];
   const notes: string[] = [];
+  let spellcastingAbility: string | null = null;
   let spellcastingAbilityFromChoiceId: string | null = null;
 
   for (const modifier of modifierDetails) {
@@ -348,17 +467,23 @@ export function parseFeat(args: {
     if (/spell'?s spellcasting ability is the ability increased by this feat/i.test(paragraph)) {
       spellcastingAbilityFromChoiceId = choices.find((choice) => choice.type === "ability_score")?.id ?? spellcastingAbilityFromChoiceId;
     }
+    const fixedSpellcastingAbility = paragraph.match(
+      /\b(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) is your spellcasting ability for (?:it|them|this spell|these spells|the chosen spells)/i,
+    );
+    if (fixedSpellcastingAbility?.[1]) {
+      spellcastingAbility = fixedSpellcastingAbility[1].slice(0, 3).toLowerCase();
+    }
 
     let match: RegExpMatchArray | null = null;
 
     if (parseSpellListChoiceParagraph(paragraph, choices, grants)) continue;
 
-    match = paragraph.match(/You learn (\w+) [A-Z][A-Za-z]+ cantrips? of your choice/i);
+    match = paragraph.match(/You learn (\w+) ([A-Z][A-Za-z]+) cantrips? of your choice/i);
     if (match) {
       pushSpellChoice(choices, {
         idPrefix: "named_cantrip_choice",
         count: wordToNumber(match[1] ?? "1"),
-        options: null,
+        options: match[2] ? [match[2]] : null,
         level: 0,
         note: "Choose cantrips granted by this feat.",
       });
@@ -413,6 +538,8 @@ export function parseFeat(args: {
     notes.push("Repeatable feat with no explicit structured choice parsed.");
   }
 
+  parseFeatStructuredEffects(args.name, category, baseName, body, grants);
+
   const hasAbilityScoreChoice = choices.some((choice) => choice.type === "ability_score");
   if (!hasAbilityScoreChoice) {
     for (const modifier of modifierDetails) {
@@ -422,7 +549,7 @@ export function parseFeat(args: {
     }
   }
 
-  return {
+  return withFeatResolution(args.name, {
     category,
     baseName,
     variant,
@@ -445,6 +572,7 @@ export function parseFeat(args: {
     preparedSpellProgression,
     notes,
     modifierDetails,
+    spellcastingAbility,
     spellcastingAbilityFromChoiceId,
-  };
+  });
 }

@@ -118,7 +118,7 @@ export function NameDrawer(props: {
     }
   }, [name, color, props]);
 
-  const isEditCampaign = props.drawer.type === "editCampaign";
+  const showColorPicker = props.drawer.type === "editCampaign" || props.drawer.type === "createCampaign";
 
   return {
     body: (
@@ -138,7 +138,7 @@ export function NameDrawer(props: {
           />
         </div>
 
-        {isEditCampaign && (
+        {showColorPicker && (
           <div style={{ display: "grid", gap: 10 }}>
             <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>Theme color</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>

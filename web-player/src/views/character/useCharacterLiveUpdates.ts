@@ -8,6 +8,7 @@ type InitiativePrompt = { encounterId: string; combatantId: string };
 export function useCharacterLiveUpdates(
   characterId: string | undefined,
   onXpAwarded: () => void,
+  setConcentrationAlert: (alert: { dc: number } | null) => void,
 ) {
   const [activeBastion, setActiveBastion] = useState<ActiveBastion | null>(null);
   const [initiativePrompt, setInitiativePrompt] = useState<InitiativePrompt | null>(null);
@@ -95,13 +96,18 @@ export function useCharacterLiveUpdates(
       setInitiativePrompt((current) => current?.combatantId === payload.combatantId ? null : current);
       // Only poll for a follow-up prompt when it was our character's initiative that was fulfilled.
       if (payload.characterId === characterId) void refreshInitiativePrompt();
+    } else if (message.type === "concentration:check") {
+      const payload = message.payload as { characterId: string; dc: number };
+      if (payload.characterId === characterId) {
+        setConcentrationAlert({ dc: payload.dc });
+      }
     } else if (message.type === "bastions:delta" || message.type === "players:delta") {
       void refreshActiveBastion();
     } else if (message.type === "xp:awarded") {
       const payload = message.payload as { characterId: string };
       if (payload.characterId === characterId) onXpAwarded();
     }
-  }, [characterId, onXpAwarded, refreshActiveBastion, refreshInitiativePrompt]));
+  }, [characterId, onXpAwarded, setConcentrationAlert, refreshActiveBastion, refreshInitiativePrompt]));
 
   // Single effect: fire on mount and on every reconnect.
   // When already connected at mount, fires once; on reconnect, fires again.

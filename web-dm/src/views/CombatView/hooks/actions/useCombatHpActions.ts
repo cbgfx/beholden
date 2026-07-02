@@ -3,6 +3,7 @@ import type { EncounterActor } from "@/domain/types/domain";
 import { resolveCombatantDamage } from "@/views/CombatView/utils/polymorphDamage";
 import { parseSignedHpDelta, resolveCombatantHealing } from "@/views/CombatView/utils/hpDelta";
 import { putEncounterCombatant } from "@/services/encounterApi";
+import { concentrationSaveDc } from "@beholden/shared/domain";
 
 type Args = {
   encounterId: string | undefined;
@@ -31,7 +32,7 @@ export function useCombatHpActions({ encounterId, delta, setDelta, target }: Arg
         setDelta("");
 
         if (amount > 0 && target.conditions?.some(c => c.key === "concentration")) {
-          const dc = Math.max(10, Math.floor(amount / 2));
+          const dc = concentrationSaveDc(amount);
           setConcentrationAlert({ name: target.label || target.name, dc });
         }
         return;

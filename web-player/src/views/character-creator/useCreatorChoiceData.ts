@@ -35,7 +35,7 @@ export function useCreatorChoiceData(args: {
       return;
     }
     let cancelled = false;
-    loadSpellChoiceOptions(step6ResolvedSpellChoices, (query) => api<SpellSummary[]>(query))
+    loadSpellChoiceOptions(step6ResolvedSpellChoices, (query) => api<SpellSummary[]>(query), { forceIncludeText: true })
       .then((optionsByKey) => {
         if (!cancelled) setFeatSpellChoiceOptions(optionsByKey);
       })

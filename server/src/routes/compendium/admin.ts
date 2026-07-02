@@ -2,9 +2,18 @@
 // Admin routes: wipe compendium, import XML.
 
 import type { Express } from "express";
+import { ZipArchive } from "archiver";
 import type { ServerContext } from "../../server/context.js";
 import { requireAdmin } from "../../middleware/auth.js";
 import { estimateCompendiumBlobTrim, trimCompendiumBlobColumns } from "../../services/compendium/blobHygiene.js";
+import {
+  exportNativeCompendiumBatch,
+  importNativeCompendiumDocument,
+  isNativeCompendiumCategory,
+  NATIVE_COMPENDIUM_CATEGORIES,
+  previewNativeCompendiumDocument,
+} from "../../services/compendium/nativeCompendium.js";
+import { convertCompendiumXmlToNative } from "../../services/compendium/convertXmlToNative.js";
 
 export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
@@ -27,23 +36,17 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
     res.json({ ok: true });
   });
 
-  app.post("/api/compendium/import/xml", requireAdmin, ctx.upload.single("file"), (req, res) => {
+  app.post("/api/compendium/convert/xml", requireAdmin, ctx.upload.single("file"), (req, res) => {
     if (!req.file) return res.status(400).json({ ok: false, message: "No file uploaded" });
     const xml = req.file.buffer.toString("utf-8");
-    const out = ctx.helpers.importCompendiumXml({ xml });
-    ctx.broadcast("compendium:changed", { imported: out.imported, total: out.total });
-    res.json({
-      ok: true,
-      imported: out.imported,
-      total: out.total,
-      items: out.items ?? 0,
-      classes: out.classes ?? 0,
-      races: out.races ?? 0,
-      backgrounds: out.backgrounds ?? 0,
-      feats: out.feats ?? 0,
-      decks: out.decks ?? 0,
-      bastions: out.bastions ?? 0,
-    });
+    try {
+      const result = convertCompendiumXmlToNative(xml);
+      const { warnings, ...document } = result;
+      return res.json({ ok: true, document, warnings });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "XML conversion failed.";
+      return res.status(400).json({ ok: false, message });
+    }
   });
 
   app.post("/api/compendium/import/sqlite", requireAdmin, ctx.upload.single("file"), (req, res) => {
@@ -63,6 +66,82 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
       decks: out.decks,
       bastions: out.bastions ?? 0,
     });
+  });
+
+  app.get("/api/compendium/native/:category/export", requireAdmin, (req, res) => {
+    const category = String(req.params.category ?? "");
+    if (!isNativeCompendiumCategory(category)) {
+      return res.status(400).json({ ok: false, message: "Unknown compendium category." });
+    }
+    const batch = exportNativeCompendiumBatch(db, category);
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=beholden-compendium-${category}.json`,
+    );
+    res.send(JSON.stringify(batch, null, 2));
+  });
+
+  app.get("/api/compendium/native/export-all.zip", requireAdmin, async (_req, res, next) => {
+    const archive = new ZipArchive({ zlib: { level: 9 } });
+    archive.on("error", next);
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=beholden-compendium-all.zip",
+    );
+    archive.pipe(res);
+    for (const category of NATIVE_COMPENDIUM_CATEGORIES) {
+      const batch = exportNativeCompendiumBatch(db, category);
+      archive.append(JSON.stringify(batch, null, 2), {
+        name: `beholden-compendium-${category}.json`,
+      });
+    }
+    await archive.finalize();
+  });
+
+  function parseUploadedJson(file: Express.Multer.File): unknown {
+    return JSON.parse(file.buffer.toString("utf-8").replace(/^\uFEFF/u, ""));
+  }
+
+  app.post("/api/compendium/native/import", requireAdmin, ctx.upload.single("file"), (req, res) => {
+    if (!req.file) return res.status(400).json({ ok: false, message: "No file uploaded" });
+    let document: unknown;
+    try {
+      document = parseUploadedJson(req.file);
+    } catch {
+      return res.status(400).json({ ok: false, message: "Invalid JSON." });
+    }
+
+    try {
+      const out = importNativeCompendiumDocument(db, document);
+      ctx.broadcast("compendium:changed", {
+        nativeImported: true,
+        category: out.batches.length === 1 ? out.batches[0]?.category ?? "unknown" : "bundle",
+        imported: out.imported,
+        total: out.total,
+      });
+      return res.json({ ok: true, ...out });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Native compendium import failed.";
+      return res.status(400).json({ ok: false, message });
+    }
+  });
+
+  app.post("/api/compendium/native/preview", requireAdmin, ctx.upload.single("file"), (req, res) => {
+    if (!req.file) return res.status(400).json({ ok: false, message: "No file uploaded" });
+    let document: unknown;
+    try {
+      document = parseUploadedJson(req.file);
+    } catch {
+      return res.status(400).json({ ok: false, message: "Invalid JSON." });
+    }
+    try {
+      return res.json({ ok: true, ...previewNativeCompendiumDocument(db, document) });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Native compendium preview failed.";
+      return res.status(400).json({ ok: false, message });
+    }
   });
 
   app.post("/api/compendium/trim-blobs", requireAdmin, (_req, res) => {

@@ -228,13 +228,24 @@ export function collectDefensesFromEffects(parsed: ParsedFeatureEffects[], opts?
   };
 }
 
-export function deriveSpeedBonusFromEffects(parsed: ParsedFeatureEffects[], opts?: { armorState?: "any" | "no_armor" | "not_heavy"; raging?: boolean }): number {
+export function deriveSpeedBonusFromEffects(
+  parsed: ParsedFeatureEffects[],
+  opts?: { armorState?: "any" | "no_armor" | "not_heavy"; raging?: boolean; level?: number | null },
+): number {
   let total = 0;
   for (const parsedFeature of parsed) {
     for (const effect of parsedFeature.effects) {
       if (effect.type !== "speed" || effect.mode !== "bonus") continue;
       if (!isEffectActive(effect, opts)) continue;
-      if (effect.amount?.kind === "fixed") total += effect.amount.value;
+      const amount = effect.amount;
+      if (amount?.kind === "fixed") {
+        total += amount.value;
+      } else if (amount?.kind === "named_progression" && amount.key === "monk_unarmored_movement") {
+        const level = opts?.level ?? null;
+        if (level != null) {
+          total += level >= 18 ? 30 : level >= 14 ? 25 : level >= 10 ? 20 : level >= 6 ? 15 : 10;
+        }
+      }
     }
   }
   return total;

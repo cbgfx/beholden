@@ -45,7 +45,7 @@ export function cleanFeatureText(text: string | null | undefined): string {
   return String(text ?? "").replace(/Source:.*$/ms, "").trim();
 }
 
-export function stripRulesetSuffix(value: string | null | undefined): string {
+export function stripBracketSuffix(value: string | null | undefined): string {
   return String(value ?? "").replace(/\s*\[[^\]]+\]\s*$/u, "").trim();
 }
 

@@ -162,7 +162,17 @@ export function buildProficiencyMap(args: {
   if (classDetail) {
     splitComma(classDetail.armor).forEach((name) => pushArmor(name, className));
     splitComma(classDetail.weapons).forEach((name) => pushWeapon(name, className));
-    splitComma(classDetail.tools ?? "").forEach((name) => pushTool(name, className));
+    const classToolProf = classDetail.proficiencies?.tools;
+    if (classToolProf) {
+      // Structured tool data from v2 class: fixed tools are auto-granted,
+      // choices come from the user's selections, notes are display-only.
+      classToolProf.fixed.forEach((name) => pushTool(name, className));
+      form.chosenClassTools.forEach((name) => pushTool(name, className));
+    } else {
+      // Legacy classes: parse the flat tools string, filtering out noise
+      // tokens like "Choose 3 tools" produced by classFromV2 for old entries.
+      splitComma(classDetail.tools ?? "").forEach((name) => pushTool(name, className));
+    }
 
     splitComma(classDetail.proficiency)
       .filter((name) => ABILITY_SCORE_NAMES.has(name))

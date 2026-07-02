@@ -1,5 +1,4 @@
 import React from "react";
-import { matchesRuleset, type Ruleset } from "@/lib/characterRules";
 import {
   invocationPrerequisitesMet,
   spellLooksLikeDamageSpell,
@@ -18,6 +17,7 @@ import {
 } from "@/views/character-creator/constants/CharacterCreatorConstants";
 import {
   getClassExpertiseChoices,
+  getMaxSlotLevel,
   getSlotLevelTriggeredSpellChoicesUpToLevel,
   parseSkillList,
 } from "@/views/character-creator/utils/CharacterCreatorUtils";
@@ -58,9 +58,8 @@ import { useCreatorChoiceData } from "@/views/character-creator/useCreatorChoice
 
 export function useCharacterCreatorDerivedState(args: {
   classes: ClassSummary[];
-  featSummaries: Array<{ id: string; name: string; ruleset?: Ruleset | null }>;
+  featSummaries: Array<{ id: string; name: string }>;
   form: FormState;
-  selectedRuleset: Ruleset;
   classDetail: ClassDetail | null;
   raceDetail: RaceDetail | null;
   bgDetail: BgDetail | null;
@@ -75,7 +74,6 @@ export function useCharacterCreatorDerivedState(args: {
     classes,
     featSummaries,
     form,
-    selectedRuleset,
     classDetail,
     raceDetail,
     bgDetail,
@@ -105,6 +103,10 @@ export function useCharacterCreatorDerivedState(args: {
     () => collectSpellChoicesFromEffects(selectedClassFeatureEffects)
       .filter((choice) => !/^(level\s+\d+:\s+)?(spellcasting|pact magic)\b/i.test(choice.source.name)),
     [selectedClassFeatureEffects]
+  );
+  const maxSpellLevel = React.useMemo(
+    () => classDetail ? getMaxSlotLevel(classDetail, form.level, form.subclass) : 0,
+    [classDetail, form.level, form.subclass]
   );
   const selectedClassFeatureProficiencyChoices = React.useMemo(
     () => collectProficiencyChoiceEffectsFromEffects(selectedClassFeatureEffects)
@@ -163,13 +165,17 @@ export function useCharacterCreatorDerivedState(args: {
     () => bgDetail?.proficiencies?.tools?.fixed ?? [],
     [bgDetail]
   );
+  const step5ClassToolProficiency = React.useMemo(
+    () => classDetail?.proficiencies?.tools ?? null,
+    [classDetail]
+  );
   const step5CoreLanguageChoice = React.useMemo(
     () => getCoreLanguageChoiceFromRules(raceDetail, STANDARD_55E_LANGUAGES),
     [raceDetail]
   );
   const step5ClassFeatChoices = React.useMemo(
-    () => getClassFeatChoices(classDetail, form.level, featSummaries, selectedRuleset),
-    [classDetail, form.level, featSummaries, selectedRuleset]
+    () => getClassFeatChoices(classDetail, form.level, featSummaries),
+    [classDetail, form.level, featSummaries]
   );
   const step5ClassLanguageChoice = React.useMemo(
     () => getClassLanguageChoiceFromRules(classDetail, form.level, ALL_LANGUAGES),
@@ -191,6 +197,7 @@ export function useCharacterCreatorDerivedState(args: {
     bgOriginFeatDetail: resolvedBgOriginFeatDetail,
     bgSkillFixed: step5BgSkillFixed,
     bgToolFixed: step5BgToolFixed,
+    classToolProficiency: step5ClassToolProficiency,
     classFeatChoices: step5ClassFeatChoices,
     classFeatDetails,
     raceFeatDetail: resolvedRaceFeatDetail,
@@ -210,6 +217,7 @@ export function useCharacterCreatorDerivedState(args: {
     resolvedRaceFeatDetail,
     step5BgSkillFixed,
     step5BgToolFixed,
+    step5ClassToolProficiency,
     step5ClassExpertiseChoices,
     step5ClassFeatChoices,
     step5ClassLanguageChoice,
@@ -262,22 +270,23 @@ export function useCharacterCreatorDerivedState(args: {
       if (effect.count.kind !== "fixed") return [];
       return [{
         key: `classfeature:${effect.id}`,
-        title: effect.level === 0 ? "Bonus Cantrip" : `Bonus Level ${effect.level} Spell`,
+        title: effect.level === 0 ? "Bonus Cantrip" : effect.level == null ? "Bonus Spell" : `Bonus Level ${effect.level} Spell`,
         sourceLabel: effect.source.name,
         count: effect.count.value,
         level: effect.level,
+        maxLevel: effect.level === null && maxSpellLevel > 0 ? maxSpellLevel : null,
         note: effect.summary,
         listNames: effect.spellLists,
       }];
     }),
-    [selectedClassFeatureSpellChoices]
+    [maxSpellLevel, selectedClassFeatureSpellChoices]
   );
   const step6InvocationSpellChoices = React.useMemo<CreatorResolvedSpellChoiceEntry[]>(
     () => selectedInvocationSpellChoices.flatMap((effect) => {
       if (effect.count.kind !== "fixed") return [];
       return [{
         key: `invocation:${effect.id}`,
-        title: effect.level === 0 ? "Invocation Bonus Cantrip" : `Invocation Bonus Level ${effect.level} Spell`,
+        title: effect.level === 0 ? "Invocation Bonus Cantrip" : effect.level == null ? "Invocation Bonus Spell" : `Invocation Bonus Level ${effect.level} Spell`,
         sourceLabel: effect.source.name,
         count: effect.count.value,
         level: effect.level,
@@ -375,8 +384,8 @@ export function useCharacterCreatorDerivedState(args: {
     [classDetail, form.level]
   );
   const availableLevelUpFeats = React.useMemo(
-    () => featSummaries.filter((feat) => (form.level >= 19 || !/^boon of\b/i.test(feat.name)) && matchesRuleset(feat, selectedRuleset)),
-    [featSummaries, form.level, selectedRuleset]
+    () => featSummaries.filter((feat) => form.level >= 19 || !/^boon of\b/i.test(feat.name)),
+    [featSummaries, form.level]
   );
   const levelUpFeatConflict = React.useMemo(() => {
     const counts = new Map<string, number>();
@@ -430,6 +439,7 @@ export function useCharacterCreatorDerivedState(args: {
     step5ClassFeatChoices,
     step5ClassLanguageChoice,
     step5ClassExpertiseChoices,
+    step5ClassToolProficiency,
     step5WeaponMasteryChoice,
     step5WeaponOptions,
     step5ChoiceState,

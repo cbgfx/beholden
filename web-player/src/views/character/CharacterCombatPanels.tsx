@@ -89,6 +89,11 @@ export function CharacterCombatPanels({
   const speedAccent = exhaustion >= 6 ? "#dc2626" : exhaustion > 0 ? "#f59e0b" : undefined;
   const attackDisadvantage = nonProficientArmorPenalty || hasDisadvantage;
   const actionItems = inventory.filter((it) => getEquipState(it) !== "backpack" && isWeaponItem(it) && (!it.attunement || it.attuned));
+  const heldShield = inventory.some((it) =>
+    getEquipState(it) !== "backpack"
+    && isShieldItem(it)
+    && (!it.attunement || it.attuned)
+  );
   const nonProficientArmorItems = inventory.filter((it) => getEquipState(it) !== "backpack" && (isShieldItem(it) || /\barmor\b/i.test(it.type ?? "")) && !hasArmorProficiency(it, prof ?? undefined));
   const strMod = abilityMod(strScore);
   const dexMod = abilityMod(dexScore);
@@ -99,6 +104,7 @@ export function CharacterCombatPanels({
     scores: { str: strScore, dex: dexScore },
     raging: rageActive,
     isUnarmed: true,
+    noWeaponOrShield: actionItems.length === 0 && !heldShield,
   });
   const unarmedAttackRollBonus = deriveAttackRollBonusFromEffects(parsedFeatureEffects ?? [], {
     level,
@@ -285,6 +291,7 @@ export function CharacterCombatPanels({
               isWeapon: true,
               attackAbility: weaponUsesStrength(it) ? "str" : "dex",
               item: it,
+              hasOtherWeapon: actionItems.some((other) => other.id !== it.id),
             });
             const damageType = formatItemDamageType(it.dmgType);
             const props = formatItemProperties(it.properties);

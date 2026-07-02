@@ -36,7 +36,6 @@ export function useCharacterInventoryItems({
   const { items } = sync;
   const takeFromPartyStash = async (stashItem: PartyStashItem) => {
     if (!campaignId) return;
-    await api(`/api/campaigns/${campaignId}/party-inventory/${stashItem.id}`, { method: "DELETE" });
     const incoming: InventoryItem = {
       id: uid(), name: stashItem.name, quantity: stashItem.quantity,
       equipped: false, equipState: "backpack",
@@ -45,17 +44,14 @@ export function useCharacterInventoryItems({
       type: stashItem.type ?? null, weight: stashItem.weight ?? null,
       description: stashItem.description ?? undefined, containerId: DEFAULT_CONTAINER_ID,
     };
-    if (isStackableItem(incoming)) {
-      const key = inferStackKey(incoming);
-      const index = items.findIndex((item) => isStackableItem(item) && inferStackKey(item) === key);
-      if (index >= 0) {
-        await containers.persist(items.map((item, itemIndex) =>
-          itemIndex === index ? mergeStackedInventoryItem(item, incoming) : item
-        ));
-        return;
-      }
-    }
-    await containers.persist([...items, incoming]);
+    const stackIndex = isStackableItem(incoming)
+      ? items.findIndex((item) => isStackableItem(item) && inferStackKey(item) === inferStackKey(incoming))
+      : -1;
+    const updatedItems = stackIndex >= 0
+      ? items.map((item, i) => i === stackIndex ? mergeStackedInventoryItem(item, incoming) : item)
+      : [...items, incoming];
+    await containers.persist(updatedItems);
+    await api(`/api/campaigns/${campaignId}/party-inventory/${stashItem.id}`, { method: "DELETE" });
   };
   const changePartyStashQty = async (id: string, quantity: number) => {
     if (campaignId) await updatePartyInventoryQuantity(campaignId, id, quantity);

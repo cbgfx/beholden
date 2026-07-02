@@ -27,7 +27,7 @@ Everything runs on a single Node.js server with a local SQLite database. No clou
 - Live combat tracker with initiative, HP, conditions, spell slots, and legendary actions
 - Player roster with HP, AC, conditions, and death saves
 - INPCs (in-party NPCs) with full stat tracking
-- Monster, item, and spell compendium (importable via XML or SQLite)
+- Native JSON monster, item, spell, and rules compendium
 - Treasure and notes per campaign and adventure
 - Real-time sync across all connected clients via WebSocket
 
@@ -158,12 +158,19 @@ Set `VITE_API_ORIGIN` on both web services to point at your server's public URL 
 
 ## Compendium
 
-Beholden supports importing monster, item, spell, class, race, background, and feat data from:
+Beholden Compendium v2 JSON is the strict, portable native format. Editable exports contain one independently manageable category:
 
-- **XML** - compatible with common 5e compendium XML formats
-- **SQLite** - direct import from another Beholden database
+- monsters, items, spells, classes, species, backgrounds, and feats;
+- deck cards;
+- bastion spaces, orders, and facilities.
 
-Import via **Compendium -> Admin** in the DM app. The compendium is shared across all campaigns.
+From **Compendium -> Admin**, export any loaded category to a versioned Beholden JSON file, export all nine categories as one ZIP, or import a native category batch or complete bundle. Matching IDs are always replaced.
+
+Legacy XML is never imported into the live compendium. The stateless XML converter translates one legacy file into one complete Beholden JSON bundle for download. Import that resulting JSON through the native Beholden importer.
+
+The converter owns legacy inference and cleanup. Native v2 entries use explicit structured fields, reject unknown legacy-shaped fields, and never depend on parsing descriptive prose to discover basic statistics.
+
+Adventure version 2 files can embed native compendium batches. Their entries are installed before the adventure, allowing a portable adventure to bring its own monsters, items, spells, and other rules content. The compendium is shared across all campaigns.
 
 ---
 

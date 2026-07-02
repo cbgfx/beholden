@@ -255,11 +255,31 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
         ...(hexAbility !== undefined ? { hexAbility } : {}),
       };
     });
+    const charSheetRow = db
+      .prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ?`)
+      .get(charId) as Record<string, unknown> | undefined;
+    if (!charSheetRow) return res.status(404).json({ ok: false, message: "Not found" });
+    const charSheet = rowToCharacterSheet(charSheetRow);
+    const baseSpeed = charSheet.speed;
+
     const t = now();
 
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
       const pRow = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(player_id) as Record<string, unknown>;
       const player = rowToCampaignCharacter(pRow);
+
+      let newSpeed = baseSpeed;
+      const hasZeroSpeedCondition = conditions.some(c => ["grappled", "restrained", "paralyzed", "petrified", "stunned", "unconscious"].includes(c.key));
+      const hasSlow = conditions.some(c => c.key === "slow");
+      if (hasZeroSpeedCondition) {
+        newSpeed = 0;
+      } else if (hasSlow) {
+        newSpeed = Math.max(0, baseSpeed - 10);
+      }
+      if (newSpeed !== player.speed) {
+        db.prepare("UPDATE players SET speed = ?, updated_at = ? WHERE id = ?").run(newSpeed, t, player_id);
+      }
+
       updateCampaignCharacterLive(db, player_id, player, { conditions }, t);
       emitPlayerChange({ campaignId: campaign_id, action: "upsert", playerId: player_id, characterId: charId });
       broadcastPlayerCombatantChanges(db, ctx.broadcast, player_id);
@@ -319,7 +339,9 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       ? ex.characterData.sheetOverrides as Record<string, unknown>
       : undefined;
     const existingAbilityScores = normalizeAbilityScores(existingSheetOverrides?.abilityScores);
-    const abilityScores = normalizeAbilityScores(parsed.abilityScores) ?? existingAbilityScores;
+    const abilityScores = parsed.abilityScores === undefined
+      ? existingAbilityScores
+      : normalizeAbilityScores(parsed.abilityScores);
     const overrides = {
       tempHp: Math.max(0, Math.floor(Number(parsed.tempHp) || 0)),
       acBonus: Math.floor(Number(parsed.acBonus) || 0),
@@ -338,7 +360,12 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
       const pRow = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(player_id) as Record<string, unknown>;
       const player = rowToCampaignCharacter(pRow);
-      updateCampaignCharacterLive(db, player_id, player, { overrides }, t);
+      updateCampaignCharacterLive(db, player_id, player, {
+        overrides: {
+          ...overrides,
+          inspiration: player.overrides?.inspiration ?? false,
+        },
+      }, t);
       emitPlayerChange({ campaignId: campaign_id, action: "upsert", playerId: player_id, characterId: charId });
       broadcastPlayerCombatantChanges(db, ctx.broadcast, player_id);
     }

@@ -4,6 +4,7 @@ import { CompendiumAdminPanel } from "@/views/CompendiumView/panels/CompendiumAd
 import { MonsterBrowserPanel } from "@/views/CompendiumView/panels/MonsterBrowserPanel";
 import { ItemsBrowserPanel } from "@/views/CompendiumView/panels/ItemsBrowserPanel";
 import { FeatsPanel } from "@/views/CompendiumView/panels/FeatsPanel";
+import { AiHelpPanel } from "@/views/CompendiumView/panels/AiHelpPanel";
 import type { CompendiumSection } from "@/views/CompendiumView/CompendiumView";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -52,6 +53,7 @@ export function CompendiumCenterColumn(props: {
         />
       )}
       {props.activeSection === "rules" && <RulesReferencePanel />}
+      {props.activeSection === "ai-help" && <AiHelpPanel />}
       {isAdmin && props.activeSection === "compendium" && <CompendiumAdminPanel />}
     </div>
   );

@@ -16,22 +16,38 @@ const ABILITY_NAME_MAP: Record<string, AbilKey> = {
   intelligence: "int", wisdom: "wis", charisma: "cha",
 };
 
+// Adjective form → canonical SpeedEffect movementMode, e.g. "swimming" → "swim"
+const SPEED_ADJECTIVE_MAP: Record<string, SpeedEffect["movementMode"]> = {
+  fly: "fly", flying: "fly",
+  swim: "swim", swimming: "swim",
+  climb: "climb", climbing: "climb",
+  burrow: "burrow", burrowing: "burrow",
+};
+
 export function parseSpeedEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
   const rageGate = createRageGate(source, text);
   const armorState =
-    /if you aren't wearing any armor/i.test(text) ? "no_armor"
+    /(?:if|while) you aren't wearing (?:any )?armor\b/i.test(text) ? "no_armor"
     : /while you aren't wearing heavy armor/i.test(text) ? "not_heavy"
     : undefined;
+  // Items gate their speed grants on being equipped ("while wearing this ring", etc.).
+  const isEquippedEffect = /while (?:wearing|you wear|you (?:are )?attuned|holding) this\b/i.test(text);
+  const baseDuration = rageGate?.duration ?? (isEquippedEffect ? "while_equipped" : "passive");
+
   const bonusMatch = text.match(/your speed increases by (\d+) feet/i);
   if (bonusMatch) {
+    // Detect per-level scaling (e.g. Monk Unarmored Movement)
+    const isMonkScaling = /this bonus increases when you reach certain monk levels/i.test(text);
     effects.push({
       id: createFeatureEffectId(source, "speed", effects.length),
       type: "speed",
       source,
       mode: "bonus",
-      amount: { kind: "fixed", value: Number(bonusMatch[1]) },
+      amount: isMonkScaling
+        ? { kind: "named_progression", key: "monk_unarmored_movement" }
+        : { kind: "fixed", value: Number(bonusMatch[1]) },
       gate: {
-        duration: rageGate?.duration ?? "passive",
+        duration: baseDuration,
         ...(armorState ? { armorState } : {}),
       },
     } satisfies SpeedEffect);
@@ -44,10 +60,10 @@ export function parseSpeedEffects(source: FeatureEffectSource, text: string, eff
         type: "speed",
         source,
         mode: "grant_mode",
-        movementMode: modeName.trim().toLowerCase() as SpeedEffect["movementMode"],
+        movementMode: SPEED_ADJECTIVE_MAP[modeName.trim().toLowerCase()] ?? modeName.trim().toLowerCase() as SpeedEffect["movementMode"],
         amount: { kind: "named_progression", key: "equal_to_speed" },
         gate: {
-          ...(rageGate ? { duration: rageGate.duration } : {}),
+          duration: baseDuration,
           ...(armorState ? { armorState } : {}),
         },
       } satisfies SpeedEffect);
@@ -60,25 +76,28 @@ export function parseSpeedEffects(source: FeatureEffectSource, text: string, eff
       type: "speed",
       source,
       mode: "grant_mode",
-      movementMode: match[1].trim().toLowerCase() as SpeedEffect["movementMode"],
+      movementMode: SPEED_ADJECTIVE_MAP[match[1].trim().toLowerCase()] ?? match[1].trim().toLowerCase() as SpeedEffect["movementMode"],
       amount: { kind: "named_progression", key: "equal_to_speed" },
       gate: {
-        ...(rageGate ? { duration: rageGate.duration } : {}),
+        duration: baseDuration,
         ...(armorState ? { armorState } : {}),
       },
     } satisfies SpeedEffect);
   }
 
-  for (const match of text.matchAll(/you (?:have|gain)\s+(?:a\s+)?(Fly|Swim|Climb|Burrow) Speed of\s+(\d+)\s+feet/gi)) {
+  // Matches both "Swim Speed of 40 feet" (2024 style) and "swimming speed of 40 feet" (older style).
+  for (const match of text.matchAll(/you (?:have|gain)\s+(?:a\s+)?(fly(?:ing)?|swim(?:ming)?|climb(?:ing)?|burrow(?:ing)?) speed of\s+(\d+)\s+feet/gi)) {
+    const movementMode = SPEED_ADJECTIVE_MAP[match[1].trim().toLowerCase()];
+    if (!movementMode) continue;
     effects.push({
       id: createFeatureEffectId(source, "speed", effects.length),
       type: "speed",
       source,
       mode: "grant_mode",
-      movementMode: match[1].trim().toLowerCase() as SpeedEffect["movementMode"],
+      movementMode,
       amount: { kind: "fixed", value: Number(match[2]) },
       gate: {
-        ...(rageGate ? { duration: rageGate.duration } : {}),
+        duration: baseDuration,
         ...(armorState ? { armorState } : {}),
       },
     } satisfies SpeedEffect);
@@ -120,6 +139,47 @@ export function parseArmorClassEffects(source: FeatureEffectSource, text: string
 }
 
 export function parseAbilityScoreEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
+  // Items: ability score floor effects — "while equipped" gate implied by context.
+  // Pattern A: "Your CON score is/becomes/changes to 19 while you wear/hold/attune..."
+  //   → Amulet of Health, Headband of Intellect, Gauntlets of Ogre Power
+  for (const match of text.matchAll(
+    /Your (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) score (?:is|becomes|changes to) (\d+) while you\b/gi,
+  )) {
+    const abil = ABILITY_NAME_MAP[match[1].toLowerCase()] as AbilKey;
+    const minimum = Number(match[2]);
+    if (!abil || !Number.isFinite(minimum) || minimum <= 0) continue;
+    effects.push({
+      id: createFeatureEffectId(source, "ability_score", effects.length),
+      type: "ability_score", source,
+      mode: "set_minimum",
+      ability: abil, choiceCount: 1, amount: minimum,
+      gate: { duration: "while_equipped" },
+      summary: `${match[1]} score is at least ${minimum} (while equipped)`,
+    } satisfies AbilityScoreEffect);
+  }
+  // Pattern B: "While wearing this belt, your STR score changes to 23."
+  //   → Belt of Giant Strength family (subject comes after the while-clause)
+  for (const match of text.matchAll(
+    /While (?:wearing|holding|attuned to) this[^,]*,\s*your (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) score (?:is|becomes|changes to) (\d+)/gi,
+  )) {
+    const abil = ABILITY_NAME_MAP[match[1].toLowerCase()] as AbilKey;
+    const minimum = Number(match[2]);
+    if (!abil || !Number.isFinite(minimum) || minimum <= 0) continue;
+    // Deduplicate: skip if Pattern A already produced an identical effect for this ability.
+    const alreadyCaptured = effects.some(
+      (e) => e.type === "ability_score" && e.mode === "set_minimum" && e.ability === abil && e.amount === minimum,
+    );
+    if (alreadyCaptured) continue;
+    effects.push({
+      id: createFeatureEffectId(source, "ability_score", effects.length),
+      type: "ability_score", source,
+      mode: "set_minimum",
+      ability: abil, choiceCount: 1, amount: minimum,
+      gate: { duration: "while_equipped" },
+      summary: `${match[1]} score is at least ${minimum} (while equipped)`,
+    } satisfies AbilityScoreEffect);
+  }
+
   const maximumMatch = text.match(/to a maximum of (\d+)/i);
   const maximum = maximumMatch ? Number(maximumMatch[1]) : 20;
   const asiMatch = text.match(
@@ -207,6 +267,19 @@ export function parseHitPointBonusEffects(source: FeatureEffectSource, text: str
     return;
   }
 
+  // "increases by N ... whenever/each time you gain a level" — per-level scaling (e.g. Dwarven Toughness)
+  const perLevelMatch = text.match(/hit point maximum increases by (\d+)[^.]*(?:whenever|each time|every time) you gain a level/i);
+  if (perLevelMatch) {
+    const multiplier = Number(perLevelMatch[1]);
+    effects.push({
+      id: createFeatureEffectId(source, "hit_points", effects.length),
+      type: "hit_points", source, mode: "max_bonus",
+      amount: { kind: "character_level", multiplier },
+      summary: `+${multiplier} max HP per character level`,
+    });
+    return;
+  }
+
   const fixedMatch = text.match(/hit point maximum increases by (\d+)/i);
   if (fixedMatch) {
     effects.push({
@@ -226,11 +299,19 @@ export function parseSensesEffects(source: FeatureEffectSource, text: string, ef
   const senses: SensesEffect["senses"] = [];
   const bonusSenses: SensesEffect["senses"] = [];
 
+  // Senses granted only temporarily (e.g. "gain Tremorsense ... for 10 minutes") are not passive.
+  const temporarySenses = new Set<string>();
+  for (const m of text.matchAll(/\byou gain\s+(?:\w+\s+)?(Darkvision|Blindsight|Tremorsense|Truesight)\b[^.]*for\s+\d+\s+(?:minutes?|hours?)/gi)) {
+    const word = m[1]?.toLowerCase();
+    if (word) temporarySenses.add(word);
+  }
+
   const re = /\b(Darkvision|Blindsight|Tremorsense|Truesight)\b[^.]*?(?:out to|with a range of|range of|up to)?\s*(\d+)\s*feet/gi;
   for (const match of text.matchAll(re)) {
     const kind = kindMap[match[1].toLowerCase()];
     const range = Number(match[2]);
     if (!kind || !range) continue;
+    if (temporarySenses.has(kind)) continue;
     const existing = senses.find((s) => s.kind === kind);
     if (existing) { if (range > existing.range) existing.range = range; }
     else senses.push({ kind, range });
@@ -247,7 +328,8 @@ export function parseSensesEffects(source: FeatureEffectSource, text: string, ef
 
   const hasExplicitDarkvisionBonusClause = /\b(?:if you already have|if you have|the range of)\s+Darkvision[^.]*?increases?\s+by\s+\d+\s*feet/i.test(text);
   if (!hasExplicitDarkvisionBonusClause && /already have darkvision/i.test(text)) {
-    const pronounBonus = text.match(/\bits range increases?\s+by\s+(\d+)\s*feet/i);
+    // Handles both "its range increases by N" and "increases its range by N".
+    const pronounBonus = text.match(/\b(?:its range increases?\s+by|increases?\s+its range\s+by)\s+(\d+)\s*feet/i);
     if (pronounBonus) {
       const range = Number(pronounBonus[1]);
       if (Number.isFinite(range) && range > 0) {

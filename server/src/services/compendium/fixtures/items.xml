@@ -1,0 +1,39 @@
+<compendium>
+  <item>
+    <name>Longsword</name>
+    <type>M</type>
+    <magic>0</magic>
+    <weight>3</weight>
+    <value>1500</value>
+    <property>V</property>
+    <dmg1>1d8</dmg1>
+    <dmg2>1d10</dmg2>
+    <dmgType>S</dmgType>
+    <text>A versatile melee weapon.</text>
+  </item>
+  <item>
+    <name>Plate Armor</name>
+    <type>HA</type>
+    <magic>0</magic>
+    <weight>65</weight>
+    <ac>18</ac>
+    <stealth>YES</stealth>
+    <text>Heavy armor providing excellent protection.</text>
+  </item>
+  <item>
+    <name>Wand of Magic Missiles</name>
+    <type>WD</type>
+    <magic>1</magic>
+    <detail>requires attunement</detail>
+    <text>This wand has 7 charges. While holding it, you can use an action to expend 1 or more of its charges to cast the magic missile spell from it. For 1 charge, you cast the 1st-level version of the spell. You can increase the spell level by one for each additional charge you expend.</text>
+    <text>The wand regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll a d20. On a 1, the wand crumbles into ashes and is destroyed.</text>
+  </item>
+  <item>
+    <name>+1 Shield</name>
+    <type>S</type>
+    <magic>1</magic>
+    <ac>3</ac>
+    <modifier category="Bonus">AC +1</modifier>
+    <text>A shield that grants an additional bonus to AC.</text>
+  </item>
+</compendium>

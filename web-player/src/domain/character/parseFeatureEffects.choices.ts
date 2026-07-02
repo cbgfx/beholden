@@ -4,9 +4,13 @@ import { parseSpellLists, parseSpellSchools, parseWordCount, SPELL_LIST_NAMES } 
 function pushSpellChoiceEffect(
   source: FeatureEffectSource,
   effects: FeatureEffect[],
-  args: { count: number; level: number; spellLists: string[]; schools?: string[]; note?: string }
+  args: { count: number; level: number | null; spellLists: string[]; schools?: string[]; note?: string }
 ) {
   if (args.count <= 0 || args.spellLists.length === 0) return;
+  const spellLabel =
+    args.level === 0 ? "cantrip"
+    : args.level == null ? "spell"
+    : `level ${args.level} spell`;
   effects.push({
     id: createFeatureEffectId(source, "spell_choice", effects.length),
     type: "spell_choice",
@@ -17,7 +21,7 @@ function pushSpellChoiceEffect(
     spellLists: args.spellLists,
     schools: args.schools,
     note: args.note,
-    summary: `Choose ${args.count} ${args.level === 0 ? "cantrip" : `level ${args.level} spell`}${args.count === 1 ? "" : "s"} from ${args.spellLists.join(", ")}`,
+    summary: `Choose ${args.count} ${spellLabel}${args.count === 1 ? "" : "s"} from ${args.spellLists.join(", ")}`,
   } satisfies SpellChoiceEffect);
 }
 
@@ -104,6 +108,26 @@ export function parseSpellChoiceEffects(source: FeatureEffectSource, text: strin
       level: 0,
       spellLists,
       note: "Replacement cantrip if you already know the named cantrip.",
+    });
+  }
+
+  // "You learn N spells of your choice. These spells can come from the X, Y, or Z spell list..."
+  // Covers Magical Discoveries (College of Lore L6), Magical Secrets (Bard L10), etc.
+  // The count and spell-list reference are in adjacent sentences so we use a look-ahead approach.
+  for (const match of text.matchAll(/you\s+learn\s+(\w+)\s+spells?\s+of\s+your\s+choice/gi)) {
+    const count = parseWordCount(match[1]) ?? 0;
+    if (count <= 0) continue;
+    const afterStart = (match.index ?? 0) + match[0].length;
+    const context = text.slice(afterStart, afterStart + 350);
+    const listMatch = context.match(/from\s+(?:the\s+)?([\w\s,]+?)\s+spell\s+list/i);
+    if (!listMatch) continue;
+    const spellLists = parseSpellLists(listMatch[1]);
+    if (spellLists.length === 0) continue;
+    pushSpellChoiceEffect(source, effects, {
+      count,
+      level: null,
+      spellLists,
+      note: "A cantrip or any level for which you have spell slots.",
     });
   }
 }

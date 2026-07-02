@@ -6,7 +6,7 @@ export interface AutoLevel {
   level: number;
   scoreImprovement: boolean;
   slots: number[] | null;
-  features: { name: string; text: string; optional: boolean; preparedSpellProgression?: PreparedSpellProgressionTable[] }[];
+  features: { name: string; text: string; optional: boolean; effects?: unknown[]; preparedSpellProgression?: PreparedSpellProgressionTable[] }[];
   counters: { name: string; value: number; reset: string }[];
 }
 
@@ -82,6 +82,7 @@ export interface LevelUpResolvedSpellChoiceEntry {
   sourceLabel?: string | null;
   count: number;
   level: number | null;
+  maxLevel?: number | null;
   note?: string | null;
   linkedTo?: string | null;
   listNames: string[];

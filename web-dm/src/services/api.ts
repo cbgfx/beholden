@@ -1,5 +1,6 @@
 ﻿export {
   api,
+  apiBlob,
   apiRaw,
   jsonInit,
   resolveAssetUrl,

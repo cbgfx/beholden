@@ -1,6 +1,7 @@
 import type { AbilityScoreEffect } from "@/domain/character/featureEffects";
 import { parseFeatureEffects } from "@/domain/character/parseFeatureEffects";
 import type { AbilKey } from "@/views/character/CharacterSheetTypes";
+import type { StructuredFeatMechanicsLike } from "@/domain/character/structuredFeatureEffects";
 
 export const ABILITY_KEYS: AbilKey[] = ["str", "dex", "con", "int", "wis", "cha"];
 
@@ -17,6 +18,7 @@ export type ExtraFeatDetailLike = {
   id: string;
   name: string;
   text?: string | null;
+  parsed?: StructuredFeatMechanicsLike;
 };
 
 export type ExtraFeatAbilityApplication = {
@@ -35,10 +37,11 @@ export type ExtraFeatAbilityChoiceSpec = {
 
 function abilityEffects(feat: ExtraFeatDetailLike): AbilityScoreEffect[] {
   const text = String(feat.text ?? "").trim();
-  if (!text) return [];
+  if (!text && !feat.parsed) return [];
   return parseFeatureEffects({
     source: { id: `extra-feat:${feat.id}`, kind: "feat", name: feat.name, text },
     text,
+    featMechanics: feat.parsed,
   }).effects.filter((effect): effect is AbilityScoreEffect => effect.type === "ability_score");
 }
 

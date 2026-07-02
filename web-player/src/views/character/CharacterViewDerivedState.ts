@@ -164,6 +164,8 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
       source: { id: `feature:${index}:${feature.id}`, kind: feature.kind, name: feature.name, text: feature.text },
       text: feature.text,
       suppressStructuredSpellGrants: Boolean(feature.preparedSpellProgression?.length),
+      classEffects: feature.classEffects,
+      featMechanics: feature.featMechanics,
     } satisfies ParseFeatureEffectsInput)
   );
   const parsedItemEffects = inventory
@@ -184,6 +186,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     sourceName: entry.sourceName,
     mode: "always_prepared" as const,
     note: entry.note,
+    ability: entry.ability ?? null,
   }));
   const grantedSpellData = (() => {
     const base = buildGrantedSpellDataFromEffects(parsedAllEffects, scores, args.char.level);
@@ -262,6 +265,8 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
       ? args.char.level * 2
       : 0;
   const featureHpMaxBonus = parsedFeatureHpMaxBonus + toughFallbackHpMaxBonus;
+  const conScoreDeltaWithoutOverrides = abilityMod(itemAdjustedScores.con) - abilityMod(args.char.conScore);
+  const effectiveHpMaxWithoutOverrides = Math.max(1, args.char.hpMax + (conScoreDeltaWithoutOverrides * args.char.level) + featureHpMaxBonus);
   const effectiveHpMax = Math.max(1, args.char.hpMax + (conScoreDeltaPerLevel * args.char.level) + featureHpMaxBonus + (overrides.hpMaxBonus ?? 0));
   const xpEarned = currentCharacterData.xp ?? 0;
   const xpNeeded = XP_TO_LEVEL[args.char.level + 1] ?? 0;
@@ -317,9 +322,15 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   });
   const naturalAc = 10 + dexMod;
   const effectiveAc = Math.max(naturalAc, wornArmorAc ?? 0, unarmoredDefenseAc ?? 0) + featureAcBonus + (overrides.acBonus ?? 0) + shieldBonus;
-  const speedBonus = deriveSpeedBonusFromEffects(parsedAllEffects, { armorState: speedArmorState, raging: rageActive });
+  const speedBonus = deriveSpeedBonusFromEffects(parsedAllEffects, { armorState: speedArmorState, raging: rageActive, level: args.char.level });
   const baseWalkSpeed = inferBaseWalkSpeed(args.char.species, currentCharacterData.raceId, (currentCharacterData as Record<string, unknown>).speciesId) ?? args.char.speed;
-  const effectiveSpeed = baseWalkSpeed + speedBonus;
+  let effectiveSpeed = (baseWalkSpeed ?? 0) + speedBonus;
+  const activeConditionKeys = (args.char.conditions ?? []).map((c) => c.key);
+  if (["grappled", "restrained", "paralyzed", "petrified", "stunned", "unconscious", "incapacitated"].some((k) => activeConditionKeys.includes(k))) {
+    effectiveSpeed = 0;
+  } else if (activeConditionKeys.includes("slow")) {
+    effectiveSpeed = Math.max(0, effectiveSpeed - 10);
+  }
   const movementModes = collectMovementModesFromEffects(parsedAllEffects, {
     baseWalkSpeed: effectiveSpeed,
     armorState: speedArmorState,
@@ -428,8 +439,8 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     invocationSpellDamageBonuses,
     accentColor,
     overrides,
-    featureHpMaxBonus,
     effectiveHpMax,
+    effectiveHpMaxWithoutOverrides,
     xpEarned,
     xpNeeded,
     nonProficientArmorPenalty,

@@ -1,6 +1,8 @@
 import type { FeatureSourceKind } from "@/domain/character/featureEffects";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
+import type { StructuredFeatMechanicsLike } from "@/domain/character/structuredFeatureEffects";
 import type { CharacterData, ClassFeatureEntry } from "@/views/character/CharacterSheetTypes";
+import { normalizeAbilityKey } from "@/views/character/CharacterSheetUtils";
 import {
   featureMatchesSubclass,
   getFeatureSubclassName,
@@ -12,7 +14,11 @@ export interface CharacterFeatureLike {
   text?: string | null;
   optional?: boolean;
   preparedSpellProgression?: PreparedSpellProgressionTable[];
+  effects?: unknown[];
+  scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>;
   subclass?: string | null;
+  resolution?: "automatic" | "manual" | "mixed";
+  resolutionNotes?: string[];
 }
 
 export interface CharacterAutolevelLike {
@@ -22,17 +28,22 @@ export interface CharacterAutolevelLike {
 
 export interface CharacterClassDetailLike {
   id: string;
+  spellAbility?: string | null;
   autolevels: CharacterAutolevelLike[];
 }
 
 export interface CharacterTraitLike {
   name: string;
   text: string;
+  scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>;
   preparedSpellProgression?: PreparedSpellProgressionTable[];
+  resolution?: "automatic" | "manual" | "mixed";
+  resolutionNotes?: string[];
 }
 
 export interface CharacterRaceDetailLike {
   id: string;
+  spellAbility?: string | null;
   traits: CharacterTraitLike[];
 }
 
@@ -46,6 +57,7 @@ export interface CharacterFeatDetailLike {
   name: string;
   text?: string | null;
   preparedSpellProgression?: PreparedSpellProgressionTable[];
+  parsed?: StructuredFeatMechanicsLike;
 }
 
 export interface CharacterLevelUpFeatDetailLike {
@@ -62,6 +74,9 @@ export interface CharacterInvocationDetailLike {
 
 export interface AppliedCharacterFeatureEntry extends ClassFeatureEntry {
   kind: FeatureSourceKind;
+  classEffects?: unknown[];
+  featMechanics?: StructuredFeatMechanicsLike;
+  spellcastingAbility?: "str" | "dex" | "con" | "int" | "wis" | "cha" | null;
 }
 
 interface BuildAppliedCharacterFeaturesArgs {
@@ -188,7 +203,7 @@ function shouldDisplayPlayerFeature(name: string, text: string): boolean {
   }
 
   if (
-    /\b(darkvision|blindsight|tremorsense|truesight|short rest|long rest|regain|recover|heroic inspiration|advantage on saving throws|immune to the charmed|magic can't put you to sleep|resistance to|you have resistance to|damage resistance|can't be (?:put to sleep|surprised)|reroll|once per turn|once per combat|once per (?:short|long) rest)\b/i.test(haystack)
+    /\b(darkvision|blindsight|tremorsense|truesight|short rest|long rest|regain|recover|heroic inspiration|advantage on saving throws|immune to the charmed|magic can't put you to sleep|resistance to|you have resistance to|damage resistance|can't be (?:put to sleep|surprised)|reroll|once per turn|once per combat|once per (?:short|long) rest|hit point maximum)\b/i.test(haystack)
   ) {
     return true;
   }
@@ -261,6 +276,11 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
         name,
         text,
         preparedSpellProgression: feature.preparedSpellProgression,
+        scalingRolls: feature.scalingRolls,
+        classEffects: feature.effects,
+        spellcastingAbility: normalizeAbilityKey(classDetail?.spellAbility),
+        resolution: feature.resolution,
+        resolutionNotes: feature.resolutionNotes,
       });
     }
   }
@@ -272,6 +292,10 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
       name: trait.name,
       text: trait.text,
       preparedSpellProgression: trait.preparedSpellProgression,
+      scalingRolls: trait.scalingRolls,
+      spellcastingAbility: normalizeAbilityKey(raceDetail?.spellAbility),
+      resolution: trait.resolution,
+      resolutionNotes: trait.resolutionNotes,
     });
   }
 
@@ -282,6 +306,7 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
       name: raceFeatDetail.name,
       text: cleanedText(raceFeatDetail.text),
       preparedSpellProgression: raceFeatDetail.preparedSpellProgression,
+      featMechanics: raceFeatDetail.parsed,
     });
   }
 
@@ -295,7 +320,10 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
         kind: "feat",
         name: fixedFeatMatch[1].trim(),
         text: trait.text,
+        scalingRolls: trait.scalingRolls,
         preparedSpellProgression: trait.preparedSpellProgression,
+        resolution: trait.resolution,
+        resolutionNotes: trait.resolutionNotes,
       });
       continue;
     }
@@ -305,7 +333,10 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
       kind: "background",
       name,
       text: trait.text,
+      scalingRolls: trait.scalingRolls,
       preparedSpellProgression: trait.preparedSpellProgression,
+      resolution: trait.resolution,
+      resolutionNotes: trait.resolutionNotes,
     });
   }
 
@@ -316,6 +347,7 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
       name: bgOriginFeatDetail.name,
       text: cleanedText(bgOriginFeatDetail.text),
       preparedSpellProgression: bgOriginFeatDetail.preparedSpellProgression,
+      featMechanics: bgOriginFeatDetail.parsed,
     });
   }
 
@@ -327,6 +359,7 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
       name: feat.name,
       text: cleanedText(feat.text),
       preparedSpellProgression: feat.preparedSpellProgression,
+      featMechanics: feat.parsed,
     });
   }
 
@@ -343,6 +376,7 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
       name: fallbackFeat.name,
       text: cleanedText(fallbackFeat.text),
       preparedSpellProgression: fallbackFeat.preparedSpellProgression,
+      featMechanics: fallbackFeat.parsed,
     });
   }
 
@@ -354,6 +388,7 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
       name: entry.feat.name,
       text: cleanedText(entry.feat.text),
       preparedSpellProgression: entry.feat.preparedSpellProgression,
+      featMechanics: entry.feat.parsed,
     });
   }
 
@@ -374,6 +409,7 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
       name: feat.name,
       text: cleanedText(feat.text),
       preparedSpellProgression: feat.preparedSpellProgression,
+      featMechanics: feat.parsed,
     });
   }
 
@@ -391,10 +427,11 @@ export function buildDisplayPlayerFeatures(args: BuildDisplayPlayerFeaturesArgs)
       || feature.preparedSpellProgression?.length
       || shouldDisplayPlayerFeature(feature.name, feature.text ?? "")
     )
-    .map(({ id, name, text, preparedSpellProgression }) => ({
+    .map(({ id, name, text, scalingRolls, preparedSpellProgression }) => ({
       id,
       name,
       text,
+      scalingRolls,
       preparedSpellProgression,
     }));
 }

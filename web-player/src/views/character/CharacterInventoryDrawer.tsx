@@ -123,7 +123,7 @@ export function InventoryItemDrawer(props: {
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 8, padding: "10px 12px", border: `1px solid ${C.panelBorder}`, borderRadius: 12, background: "rgba(255,255,255,0.03)" }}>
               <div style={sectionLabel}>Container</div>
               <Select value={currentContainerId} onChange={(e) => { void props.onMoveToContainer(e.target.value); }} style={{ width: "100%" }}>
-                {props.containers.map((container) => <option key={container.id} value={container.id}>{container.name}{container.ignoreWeight ? " (Ignore Weight)" : ""}</option>)}
+                {props.containers.map((container) => <option key={container.id} value={container.id}>{container.name}</option>)}
               </Select>
             </div>
           ) : null}

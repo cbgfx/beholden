@@ -99,7 +99,10 @@ export function ClassFeatureItem(props: {
         style={{
           all: "unset",
           cursor: "pointer",
-          display: "block",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
           width: "100%",
           fontWeight: 700,
           color: C.text,
@@ -107,13 +110,54 @@ export function ClassFeatureItem(props: {
           lineHeight: 1.4,
         }}
       >
-        {feature.name}
+        <span>{feature.name}</span>
+        {feature.resolution ? (
+          <span
+            title={feature.resolutionNotes?.join(" ") || undefined}
+            style={{
+              padding: "2px 6px",
+              borderRadius: 999,
+              border: `1px solid ${withAlpha(accentColor, 0.28)}`,
+              color: feature.resolution === "automatic" ? "#7ee2a8" : feature.resolution === "mixed" ? "#ffd166" : C.muted,
+              fontSize: "10px",
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
+              flexShrink: 0,
+            }}
+          >
+            {feature.resolution}
+          </span>
+        ) : null}
       </button>
       {expanded && feature.text && (
         <div style={{ marginTop: 6, color: C.muted, fontSize: "var(--fs-small)", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
           {feature.text}
         </div>
       )}
+      {expanded && feature.scalingRolls?.length ? (
+        <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {feature.scalingRolls.map((roll, index) => (
+            <span
+              key={`${roll.description ?? "roll"}:${roll.level ?? "all"}:${roll.formula}:${index}`}
+              title={roll.level ? `Available at level ${roll.level}` : undefined}
+              style={{
+                padding: "3px 7px",
+                borderRadius: 6,
+                color: C.text,
+                background: withAlpha(accentColor, 0.1),
+                border: `1px solid ${withAlpha(accentColor, 0.25)}`,
+                fontSize: "var(--fs-small)",
+                fontWeight: 700,
+              }}
+            >
+              {roll.description ? `${roll.description}: ` : ""}
+              {roll.formula}
+              {roll.level ? ` (L${roll.level})` : ""}
+            </span>
+          ))}
+        </div>
+      ) : null}
       {expanded && feature.preparedSpellProgression?.length ? (
         <PreparedSpellProgressionBlock tables={feature.preparedSpellProgression} accentColor={accentColor} />
       ) : null}

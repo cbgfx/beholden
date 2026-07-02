@@ -1,9 +1,11 @@
 import {
   createFeatureEffectId,
+  type ActionEffect,
   type AttackEffect,
   type FeatureEffect,
   type FeatureEffectSource,
   type ModifierEffect,
+  type NarrativeEffect,
   type WeaponMasteryEffect,
 } from "@/domain/character/featureEffects";
 import { parseWordCount } from "@/domain/character/parseFeatureEffects.normalizers";
@@ -39,39 +41,6 @@ export function parseWeaponMasteryEffects(source: FeatureEffectSource, text: str
 }
 
 export function parseAttackEffects(source: FeatureEffectSource, text: string, effects: FeatureEffect[]) {
-  const isArcheryFightingStyle = /\bfighting style\s*:\s*archery\b/i.test(source.name);
-  if (
-    isArcheryFightingStyle
-    || /gain a \+?2\s+bonus to attack rolls you make with ranged weapons?/i.test(text)
-  ) {
-    effects.push({
-      id: createFeatureEffectId(source, "modifier", effects.length),
-      type: "modifier",
-      source,
-      target: "attack_roll",
-      mode: "bonus",
-      amount: { kind: "fixed", value: 2 },
-      gate: { duration: "passive", weaponFilters: ["ranged_weapon"] },
-      summary: "+2 to attack rolls with ranged weapons",
-    } satisfies ModifierEffect);
-  }
-
-  for (const match of text.matchAll(/gain a \+?(\d+)\s+bonus to attack rolls you make with ranged weapons?/gi)) {
-    const amount = Number(match[1]);
-    if (!Number.isFinite(amount) || amount <= 0) continue;
-    if (isArcheryFightingStyle && amount === 2) continue;
-    effects.push({
-      id: createFeatureEffectId(source, "modifier", effects.length),
-      type: "modifier",
-      source,
-      target: "attack_roll",
-      mode: "bonus",
-      amount: { kind: "fixed", value: amount },
-      gate: { duration: "passive", weaponFilters: ["ranged_weapon"] },
-      summary: `+${amount} to attack rolls with ranged weapons`,
-    } satisfies ModifierEffect);
-  }
-
   // "gain a +2 bonus to attack rolls and damage rolls with such weapons" — Bracers of Archery, etc.
   // "such weapons" is only treated as ranged when the surrounding text references bows or ranged weapons.
   const hasRangedBowContext = /\b(?:long|short)?bow\b/i.test(text) || /\branged weapons?\b/i.test(text);
@@ -224,6 +193,61 @@ export function parseAttackEffects(source: FeatureEffectSource, text: string, ef
       },
       summary: "Rage Damage bonus on Strength weapon and unarmed attacks",
     } satisfies AttackEffect);
+  }
+
+  // Unarmed Fighting: unarmed strikes deal 1d6 (1d8 empty-handed) + STR Bludgeoning;
+  // grappled-creature damage is a separate triggered effect described in the summary.
+  if (/unarmed strike/i.test(text) && /1d[68]\b/i.test(text) && /bludgeoning/i.test(text) && /strength modifier/i.test(text)) {
+    effects.push({
+      id: createFeatureEffectId(source, "attack", effects.length),
+      type: "attack",
+      source,
+      mode: "damage_die_override",
+      resolution: "automatic",
+      amount: { kind: "fixed", dice: "1d6" },
+      alternateAmount: { kind: "fixed", dice: "1d8" },
+      alternateWhen: "no_weapon_or_shield",
+      damageType: "bludgeoning",
+      gate: { duration: "passive", notes: "unarmed_only" },
+      summary: "Unarmed Strikes deal 1d6 + STR, or 1d8 + STR while holding no weapon or Shield.",
+    } satisfies AttackEffect);
+    if (/start of each of your turns/i.test(text) && /\b1d4\b/i.test(text) && /\bGrappled\b/i.test(text)) {
+      effects.push({
+        id: createFeatureEffectId(source, "narrative", effects.length),
+        type: "narrative",
+        source,
+        category: "manual_resolution",
+        resolution: "manual",
+        description: "At the start of each of your turns, you can deal 1d4 Bludgeoning damage to one creature Grappled by you.",
+        summary: "Manual: optional 1d4 damage to one creature Grappled by you at the start of your turn.",
+      } satisfies NarrativeEffect);
+    }
+  }
+
+  // Interception: reaction to reduce damage dealt to a nearby creature.
+  if (/\btake a Reaction\b/i.test(text) && /reduce the damage dealt to the target\b/i.test(text)) {
+    effects.push({
+      id: createFeatureEffectId(source, "action", effects.length),
+      type: "action",
+      source,
+      activation: "reaction",
+      resolution: "manual",
+      description: "When a creature you see hits another creature within 5 feet of you, reduce the damage dealt by 1d10 + Proficiency Bonus (minimum 0). Requires holding a Shield or weapon.",
+      summary: "Manual reaction: reduce damage dealt to nearby creature by 1d10 + PB.",
+    } satisfies ActionEffect);
+  }
+
+  // Protection: reaction to impose Disadvantage on an attack against a nearby ally.
+  if (/\btake a Reaction\b/i.test(text) && /interpose your Shield\b/i.test(text)) {
+    effects.push({
+      id: createFeatureEffectId(source, "action", effects.length),
+      type: "action",
+      source,
+      activation: "reaction",
+      resolution: "manual",
+      description: "When a creature you see attacks a target within 5 feet of you, impose Disadvantage on that attack roll and all further attacks against the target until your next turn. Requires Shield.",
+      summary: "Manual reaction: impose Disadvantage on attacks against a nearby ally (requires Shield).",
+    } satisfies ActionEffect);
   }
 
   if (

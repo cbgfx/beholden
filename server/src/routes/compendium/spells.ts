@@ -6,7 +6,10 @@ import { requireParam } from "../../lib/routeHelpers.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { parseBody } from "../../shared/validate.js";
-import { SpellBody, buildSpellRecord } from "./helpers.js";
+import { spellToV2 } from "../../services/compendium/nativeCompendiumV2.js";
+import { mergeCanonicalV2Edit } from "../../services/compendium/nativeCompendiumV2Migration.js";
+import { parseStoredCompendiumEntry } from "../../services/compendium/storedCompendium.js";
+import { SpellBody, buildSpellRecord, normalizeLookupName } from "./helpers.js";
 import { backfillMonsterSpellRefs } from "../../services/compendium/normalizeMonsterSpellRefs.js";
 import { z } from "zod";
 
@@ -41,15 +44,6 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
   const selectSpellByContains = db.prepare(
     "SELECT id, name, level, concentration FROM compendium_spells WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
   );
-
-  function normalizeLookupName(value: string): string {
-    return value
-      .trim()
-      .replace(/\s*\[[^\]]+\]\s*$/g, "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .toLowerCase();
-  }
 
   type SpellBasicRow = { id: string; name: string; level: number | null; concentration: number };
   function lookupSpellByName(rawName: string): { id: string; name: string; level: number | null; concentration: boolean } | null {
@@ -175,7 +169,9 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
       ritual: number; concentration: number; components: string | null; classes: string | null; data_json?: string;
     }[];
     const outRows = rows.map((row) => {
-      const s = shouldSelectDataJson ? JSON.parse(row.data_json ?? "{}") : {};
+      const s = shouldSelectDataJson
+        ? parseStoredCompendiumEntry("spells", row.data_json)
+        : {};
       if (lite) {
         const out: Record<string, unknown> = {
           id: row.id,
@@ -302,25 +298,16 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
             let range: string | null = null;
             let duration: string | null = null;
             let text: string | null = null;
-            try {
-              const parsed = JSON.parse(row.data_json ?? "{}") as {
-                time?: unknown;
-                range?: unknown;
-                duration?: unknown;
-                text?: unknown;
-              };
-              time = parsed.time == null ? null : String(parsed.time);
-              range = parsed.range == null ? null : String(parsed.range);
-              duration = parsed.duration == null ? null : String(parsed.duration);
-              const textArr: string[] = Array.isArray(parsed.text)
-                ? parsed.text.map((entry) => String(entry ?? "")).filter(Boolean)
-                : parsed.text
-                  ? [String(parsed.text)]
-                  : [];
-              text = textArr.join("\n").trim() || null;
-            } catch {
-              // keep null fields
-            }
+            const parsed = parseStoredCompendiumEntry("spells", row.data_json);
+            time = parsed.time == null ? null : String(parsed.time);
+            range = parsed.range == null ? null : String(parsed.range);
+            duration = parsed.duration == null ? null : String(parsed.duration);
+            const textArr: string[] = Array.isArray(parsed.text)
+              ? parsed.text.map((entry) => String(entry ?? "")).filter(Boolean)
+              : parsed.text
+                ? [String(parsed.text)]
+                : [];
+            text = textArr.join("\n").trim() || null;
             return [row.id, {
               school: row.school ?? null,
               ritual: row.ritual === 1,
@@ -366,7 +353,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     } | undefined;
     if (!row)
       return res.status(404).json({ ok: false, message: "Spell not found in compendium" });
-    const data = JSON.parse(row.data_json ?? "{}") as Record<string, unknown>;
+    const data = parseStoredCompendiumEntry("spells", row.data_json);
     res.json({
       ...data,
       id: row.id,
@@ -388,9 +375,13 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     const id = `s_${nameKey.replace(/\s/g, "_")}`;
     const { name, levelVal, schoolVal, isRitual, isConcentration, componentsVal, classesVal, data } =
       buildSpellRecord(id, b);
+    const canonical = spellToV2({
+      ...data, id, name, level: levelVal, school: schoolVal, ritual: Boolean(isRitual),
+      concentration: Boolean(isConcentration), components: componentsVal, classes: classesVal,
+    });
     db.prepare(
       "INSERT OR REPLACE INTO compendium_spells (id, name, name_key, level, school, ritual, concentration, components, classes, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    ).run(id, name, nameKey, levelVal, schoolVal, isRitual, isConcentration, componentsVal, classesVal, JSON.stringify(data));
+    ).run(id, name, nameKey, levelVal, schoolVal, isRitual, isConcentration, componentsVal, classesVal, JSON.stringify(canonical));
     backfillMonsterSpellRefs(db);
     ctx.broadcast("compendium:changed", { spellCreated: id });
     res.json({ ok: true, id });
@@ -399,14 +390,24 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
   app.put("/api/spells/:spellId", anyDm, (req, res) => {
     const spellId = requireParam(req, res, "spellId");
     if (!spellId) return;
-    if (!db.prepare("SELECT id FROM compendium_spells WHERE id = ?").get(spellId))
+    const existing = db.prepare("SELECT data_json FROM compendium_spells WHERE id = ?").get(spellId) as { data_json: string } | undefined;
+    if (!existing)
       return res.status(404).json({ ok: false, message: "Spell not found" });
     const b = parseBody(SpellBody, req);
     const { name, nameKey, levelVal, schoolVal, isRitual, isConcentration, componentsVal, classesVal, data } =
       buildSpellRecord(spellId, b);
+    const replacement = spellToV2({
+      ...data, id: spellId, name, level: levelVal, school: schoolVal, ritual: Boolean(isRitual),
+      concentration: Boolean(isConcentration), components: componentsVal, classes: classesVal,
+    });
+    const canonical = mergeCanonicalV2Edit(
+      "spells",
+      JSON.parse(existing.data_json) as Record<string, unknown>,
+      replacement,
+    );
     db.prepare(
       "UPDATE compendium_spells SET name = ?, name_key = ?, level = ?, school = ?, ritual = ?, concentration = ?, components = ?, classes = ?, data_json = ? WHERE id = ?"
-    ).run(name, nameKey, levelVal, schoolVal, isRitual, isConcentration, componentsVal, classesVal, JSON.stringify(data), spellId);
+    ).run(name, nameKey, levelVal, schoolVal, isRitual, isConcentration, componentsVal, classesVal, JSON.stringify(canonical), spellId);
     backfillMonsterSpellRefs(db);
     ctx.broadcast("compendium:changed", { spellUpdated: spellId });
     res.json({ ok: true });

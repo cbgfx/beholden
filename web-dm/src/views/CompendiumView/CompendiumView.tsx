@@ -3,7 +3,7 @@ import { CompendiumLeftColumn } from "@/views/CompendiumView/components/Compendi
 import { CompendiumCenterColumn } from "@/views/CompendiumView/components/CompendiumCenterColumn";
 import { CompendiumRightColumn } from "@/views/CompendiumView/components/CompendiumRightColumn";
 
-export type CompendiumSection = "compendium" | "spells" | "rules" | "monsters" | "items" | "feats";
+export type CompendiumSection = "compendium" | "spells" | "rules" | "monsters" | "items" | "feats" | "ai-help";
 
 export function CompendiumView() {
   const [activeSection, setActiveSection] = React.useState<CompendiumSection>("rules");
@@ -20,7 +20,7 @@ export function CompendiumView() {
     setSelectedFeatId(null);
   }, []);
 
-  const hasRightColumn = activeSection !== "rules" && activeSection !== "compendium";
+  const hasRightColumn = activeSection !== "rules" && activeSection !== "compendium" && activeSection !== "ai-help";
 
   return (
     <div style={{ height: "100%", padding: 12, boxSizing: "border-box", overflow: "hidden" }}>

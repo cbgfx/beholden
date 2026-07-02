@@ -45,7 +45,7 @@ export function useCharacterSheetStats(args: {
 
     const speed = isMonster
       ? parseSpeedVal(rawSpeed)
-      : (() => { const n = Number(player?.speed); return Number.isFinite(n) && n > 0 ? n : 30; })();
+      : (() => { const n = Number(player?.speed); return Number.isFinite(n) && n >= 0 ? n : 30; })();
 
     const speedDisplay = isMonster
       ? parseSpeedDisplay(rawSpeed)

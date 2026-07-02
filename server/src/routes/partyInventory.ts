@@ -3,9 +3,31 @@ import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../shared/validate.js";
 import { requireParam } from "../lib/routeHelpers.js";
-import { PARTY_INVENTORY_COLS, rowToPartyInventoryItem } from "../lib/db.js";
+import { PARTY_INVENTORY_COLS, rowToPartyInventoryItem, type Db } from "../lib/db.js";
 import { toPartyInventoryItemDto } from "../lib/apiCollections.js";
 import { memberOrAdmin } from "../middleware/campaignAuth.js";
+
+export type PartyCurrencyMap = { PP: number; GP: number; SP: number; CP: number };
+const EMPTY_PARTY_CURRENCY: PartyCurrencyMap = { PP: 0, GP: 0, SP: 0, CP: 0 };
+
+function readPartyCurrency(db: Db, campaignId: string): PartyCurrencyMap {
+  const row = db.prepare("SELECT party_currency_json FROM campaigns WHERE id = ?").get(campaignId) as
+    | { party_currency_json: string | null }
+    | undefined;
+  if (!row) return { ...EMPTY_PARTY_CURRENCY };
+  try {
+    return { ...EMPTY_PARTY_CURRENCY, ...(JSON.parse(row.party_currency_json ?? "{}") as Partial<PartyCurrencyMap>) };
+  } catch {
+    return { ...EMPTY_PARTY_CURRENCY };
+  }
+}
+
+const CurrencyPatchBody = z.object({
+  PP: z.number().int().min(0).optional(),
+  GP: z.number().int().min(0).optional(),
+  SP: z.number().int().min(0).optional(),
+  CP: z.number().int().min(0).optional(),
+});
 
 const ItemBody = z.object({
   name: z.string().trim().min(1),
@@ -43,7 +65,43 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
     const rows = db.prepare(
       `SELECT ${PARTY_INVENTORY_COLS} FROM party_inventory WHERE campaign_id = ? ORDER BY sort ASC, created_at ASC`
     ).all(campaignId) as Record<string, unknown>[];
-    res.json(rows.map(rowToPartyInventoryItem).map(toPartyInventoryItemDto));
+    const items = rows.map(rowToPartyInventoryItem).map(toPartyInventoryItemDto);
+
+    // Compute combined remaining carry capacity for all OTHER party members (not the requesting user).
+    // The requesting user's contribution is computed client-side from their live inventory state.
+    const currentUserId = req.user?.userId ?? null;
+    const playerRows = db.prepare(`
+      SELECT p.str, uc.character_data_json
+      FROM players p
+      LEFT JOIN user_characters uc ON p.character_id = uc.id
+      WHERE p.campaign_id = ? AND p.str IS NOT NULL AND (? IS NULL OR p.user_id != ?)
+    `).all(campaignId, currentUserId, currentUserId) as Array<{ str: number; character_data_json: string | null }>;
+
+    let otherMembersCapacityLbs: number | null = null;
+    if (playerRows.length > 0) {
+      otherMembersCapacityLbs = 0;
+      for (const { str, character_data_json } of playerRows) {
+        const capacity = str * 15;
+        let carried = 0;
+        if (character_data_json) {
+          try {
+            const data = JSON.parse(character_data_json) as Record<string, unknown>;
+            const inventory = Array.isArray(data.inventory) ? data.inventory as Record<string, unknown>[] : [];
+            const containers = Array.isArray(data.inventoryContainers)
+              ? data.inventoryContainers as Array<{ id: string; ignoreWeight?: boolean }>
+              : [];
+            const ignoreIds = new Set(containers.filter((c) => c.ignoreWeight).map((c) => c.id));
+            for (const item of inventory) {
+              if (item["containerId"] && ignoreIds.has(item["containerId"] as string)) continue;
+              carried += (Number(item["weight"]) || 0) * Math.max(1, Number(item["quantity"]) || 1);
+            }
+          } catch { /* skip unparseable character data */ }
+        }
+        otherMembersCapacityLbs += Math.max(0, capacity - carried);
+      }
+    }
+
+    res.json({ items, otherMembersCapacityLbs });
   });
 
   app.get("/api/campaigns/:campaignId/party-inventory/:itemId", memberOrAdmin(db), (req, res) => {
@@ -166,5 +224,25 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
       .run(itemId, campaignId);
     emitPartyInventoryChange({ campaignId, action: "delete", itemId });
     res.json({ ok: true });
+  });
+
+  // GET party currency
+  app.get("/api/campaigns/:campaignId/party-currency", memberOrAdmin(db), (req, res) => {
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
+    res.json(readPartyCurrency(db, campaignId));
+  });
+
+  // PATCH party currency (merge — only provided keys are updated)
+  app.patch("/api/campaigns/:campaignId/party-currency", memberOrAdmin(db), (req, res) => {
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
+    const patch = parseBody(CurrencyPatchBody, req);
+    const current = readPartyCurrency(db, campaignId);
+    const next: PartyCurrencyMap = { ...current, ...patch } as PartyCurrencyMap;
+    db.prepare("UPDATE campaigns SET party_currency_json = ? WHERE id = ?")
+      .run(JSON.stringify(next), campaignId);
+    ctx.broadcast("partyCurrency:delta", { campaignId });
+    res.json(next);
   });
 }

@@ -19,7 +19,6 @@ export function CharacterSupportPanels(props: {
   hitDiceMax: number;
   hitDieSize: number | null;
   hitDieConMod: number;
-  featureHpMaxBonus: number;
   exhaustion: number;
   classResources: ResourceCounter[];
   playerNotesList: PlayerNote[];
@@ -57,7 +56,6 @@ export function CharacterSupportPanels(props: {
     hitDiceMax,
     hitDieSize,
     hitDieConMod,
-    featureHpMaxBonus,
     exhaustion,
     classResources,
     playerNotesList,
@@ -297,27 +295,6 @@ export function CharacterSupportPanels(props: {
               </button>
             </div>
           </div>
-
-          {featureHpMaxBonus !== 0 && (
-            <div
-              style={{
-                padding: "10px 12px",
-                borderRadius: 10,
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
-              }}
-            >
-              <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>
-                Max HP Bonus
-              </div>
-              <div style={{ fontSize: "var(--fs-title)", fontWeight: 900, color: featureHpMaxBonus > 0 ? accentColor : C.colorPinkRed }}>
-                {featureHpMaxBonus > 0 ? "+" : ""}{featureHpMaxBonus}
-              </div>
-              <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
-                Passive feature bonus applied to maximum hit points.
-              </div>
-            </div>
-          )}
 
           <div>
             <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>

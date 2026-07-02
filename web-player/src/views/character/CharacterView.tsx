@@ -29,7 +29,7 @@ export function CharacterView() {
     invocationDetails, loading, error, fetchChar, characterData, primaryClassEntry,
   } = data;
   const handlePortraitSelected = useCharacterViewUiSync({ id, char, characterData, setChar, ui });
-  const live = useCharacterLiveUpdates(id, fetchChar);
+  const live = useCharacterLiveUpdates(id, fetchChar, ui.setConcentrationAlert);
   const polymorphControls = useCharacterPolymorphControls(ui.polymorphDrawerOpen);
   const polymorphCondition = getPolymorphConditionData(char?.conditions);
   const polymorphMonsterState = useCompendiumMonster(
@@ -98,7 +98,7 @@ export function CharacterView() {
     classResourcesWithSpellCasts: derived.classResourcesWithSpellCasts,
     hitDiceMax: derived.hitDiceMax,
     inventory: derived.inventory,
-    effectiveHpMax: derived.effectiveHpMax,
+    effectiveHpMaxWithoutOverrides: derived.effectiveHpMaxWithoutOverrides,
     overrides: derived.overrides,
     polymorphCondition,
     saveCharacterData: notes.saveCharacterData,

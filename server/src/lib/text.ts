@@ -85,6 +85,14 @@ export function extractDetails(v: unknown): string | null {
   return null;
 }
 
+export function extractSourceLine(value: string): string | null {
+  return value.match(/(?:^|\n)Source:\s*([^\n]+?)\s*$/iu)?.[1]?.trim() || null;
+}
+
+export function stripSourceLine(value: string): string {
+  return value.replace(/(?:^|\n)Source:\s*[^\n]+\s*$/iu, "").trim();
+}
+
 // Challenge Rating parsing must support fractional CRs from XML like "1/2" and "1/4".
 // NOTE: Do NOT strip non-digits naively ("1/2" -> "12").
 export function parseCrValue(raw: unknown): number | null {

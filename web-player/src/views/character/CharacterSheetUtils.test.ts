@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { featPrerequisitesMet } from "@/views/character/CharacterSheetUtils";
+import { featPrerequisitesMet, normalizeAbilityKey } from "@/views/character/CharacterSheetUtils";
 
 describe("featPrerequisitesMet ability requirements", () => {
   it("accepts either ability in a shared-threshold alternative", () => {
@@ -24,5 +24,18 @@ describe("featPrerequisitesMet ability requirements", () => {
   it("understands the or-higher wording", () => {
     const text = "Prerequisite: Strength or Dexterity score of 13 or higher";
     expect(featPrerequisitesMet(text, { level: 4, scores: { str: 13, dex: 8 } })).toBe(true);
+  });
+});
+
+describe("normalizeAbilityKey", () => {
+  it("normalizes canonical and full spellcasting ability names", () => {
+    expect(normalizeAbilityKey("Charisma")).toBe("cha");
+    expect(normalizeAbilityKey("WIS")).toBe("wis");
+    expect(normalizeAbilityKey(" Intelligence ")).toBe("int");
+  });
+
+  it("does not guess unknown abilities", () => {
+    expect(normalizeAbilityKey("highest mental ability")).toBeNull();
+    expect(normalizeAbilityKey(null)).toBeNull();
   });
 });

@@ -5,16 +5,16 @@ import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
 import { rowToCampaignCharacter, rowToEncounterActor, CAMPAIGN_CHARACTER_COLS, ENCOUNTER_ACTOR_COLS } from "../lib/db.js";
-import { extractLeadingNumber, extractDetails } from "../lib/text.js";
+
 import {
   ensureCombat,
   insertCombatant,
   createPlayerCombatant,
-  nextLabelNumber,
   syncCombatantToPlayer,
   hydratePlayerCombatant,
   updateEncounterActor,
 } from "../services/combat.js";
+import { addMonsterCombatants } from "../services/combat.addMonster.js";
 import { DEFAULT_OVERRIDES } from "../lib/defaults.js";
 import { toEncounterActorDto } from "../lib/apiActors.js";
 import {
@@ -26,6 +26,7 @@ import {
 } from "./combatRouteHelpers.js";
 import { fulfillInitiativePrompt, registerCombatInitiativeRoutes } from "./combatInitiative.js";
 import { registerCombatXpRoutes } from "./combatXp.js";
+import { concentrationSaveDc } from "@beholden/shared/domain/conditions";
 
 export function registerCombatRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
@@ -348,84 +349,25 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
       return res.status(404).json({ ok: false, message: "Encounter not found" });
 
     const body = parseBody(AddMonsterBody, req);
-    const { monsterId, qty = 1, friendly = false } = body;
-    const labelBase = body.labelBase?.trim() ?? "";
-    const acOverride = body.ac != null && Number.isFinite(body.ac) ? body.ac : null;
-    const acDetails = body.acDetails ?? null;
-    const hpMaxOverride = body.hpMax != null && Number.isFinite(body.hpMax) ? body.hpMax : null;
-    const hpDetails = body.hpDetails ?? null;
-    const attackOverrides = body.attackOverrides ?? null;
-
     const monRow = db
       .prepare("SELECT name, data_json FROM compendium_monsters WHERE id = ?")
-      .get(monsterId) as { name: string; data_json: string } | undefined;
+      .get(body.monsterId) as { name: string; data_json: string } | undefined;
     if (!monRow)
       return res.status(404).json({ ok: false, message: "Monster not found in compendium" });
 
-    const m = JSON.parse(monRow.data_json);
-
-    const mHp = m?.hp as any;
-    const mAc = m?.ac as any;
-    const defaultAc = extractLeadingNumber(mAc);
-    const defaultHp = extractLeadingNumber(mHp?.average ?? mHp);
-    const defaultAcDetails = extractDetails(mAc);
-    const defaultHpDetails = mHp?.formula ?? mHp?.roll ?? null;
-
-    ensureCombat(db, encounterId);
-    const t = now();
-
-    const baseName = String(monRow.name || m?.name || "Monster").trim() || "Monster";
-    const effectiveLabelBase = labelBase || baseName;
-    const created: StoredEncounterActor[] = [];
-    db.transaction(() => {
-      let n: number = nextLabelNumber(db, encounterId, effectiveLabelBase);
-      for (let i = 0; i < qty; i++) {
-        const label =
-          qty === 1 ? effectiveLabelBase : `${effectiveLabelBase} ${n++}`;
-        const hpMax =
-          hpMaxOverride != null && Number.isFinite(hpMaxOverride)
-            ? hpMaxOverride
-            : (defaultHp ?? null);
-        const ac =
-          acOverride != null && Number.isFinite(acOverride)
-            ? acOverride
-            : (defaultAc ?? null);
-
-        const c: StoredEncounterActor = {
-          id: uid(),
-          encounterId,
-          baseType: "monster",
-          baseId: monsterId,
-          name: baseName,
-          label,
-          initiative: null,
-          friendly,
-          color: friendly ? "lightgreen" : "red",
-          overrides: { ...DEFAULT_OVERRIDES },
-          hpCurrent: hpMax,
-          hpMax,
-          hpDetails:
-            hpDetails != null
-              ? hpDetails
-              : defaultHpDetails != null
-              ? String(defaultHpDetails)
-              : null,
-          ac,
-          acDetails:
-            acDetails != null
-              ? acDetails
-              : defaultAcDetails != null
-              ? String(defaultAcDetails)
-              : null,
-          attackOverrides: attackOverrides ?? null,
-          conditions: [],
-          createdAt: t,
-          updatedAt: t,
-        };
-        insertCombatant(db, c);
-        created.push(c);
-      }
-    })();
+    const created = addMonsterCombatants(db, encounterId, uid, now(), {
+      monsterId: body.monsterId,
+      monsterName: monRow.name,
+      monsterBlob: JSON.parse(monRow.data_json),
+      qty: body.qty ?? 1,
+      friendly: body.friendly ?? false,
+      labelBase: body.labelBase?.trim() ?? "",
+      acOverride: body.ac != null && Number.isFinite(body.ac) ? body.ac : null,
+      acDetails: body.acDetails ?? null,
+      hpMaxOverride: body.hpMax != null && Number.isFinite(body.hpMax) ? body.hpMax : null,
+      hpDetails: body.hpDetails ?? null,
+      attackOverrides: body.attackOverrides ?? null,
+    });
 
     for (const combatant of created) {
       ctx.broadcast("encounter:combatantsDelta", {
@@ -544,13 +486,29 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
       updateEncounterActor(db, next, t);
 
       // Sync player record for player-type combatants
-      const syncedCampaignId = syncCombatantToPlayer(db, next, t);
-      if (syncedCampaignId) {
+      const synced = syncCombatantToPlayer(db, next, t);
+      if (synced) {
         ctx.broadcast("players:delta", {
-          campaignId: syncedCampaignId,
+          campaignId: synced.campaignId,
           action: next.baseType === "player" ? "upsert" : "refresh",
           ...(next.baseType === "player" ? { playerId: next.baseId } : {}),
         });
+        // Notify a concentrating player that they need to make a CON save
+        if (
+          synced.characterId &&
+          body.hpCurrent !== undefined &&
+          existing.hpCurrent !== null &&
+          body.hpCurrent < existing.hpCurrent &&
+          existing.conditions.some((c) => c.key === "concentration")
+        ) {
+          ctx.broadcast("concentration:check", {
+            campaignId: synced.campaignId,
+            encounterId,
+            characterId: synced.characterId,
+            characterName: existing.label || existing.name,
+            dc: concentrationSaveDc(existing.hpCurrent - body.hpCurrent),
+          });
+        }
       }
 
       ctx.broadcast("encounter:combatantsDelta", {
@@ -561,7 +519,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
       });
 
       if (body.initiative != null) {
-        fulfillInitiativePrompt(ctx, next, syncedCampaignId);
+        fulfillInitiativePrompt(ctx, next, synced?.campaignId ?? null);
       }
 
       res.json(toEncounterActorDto(next));

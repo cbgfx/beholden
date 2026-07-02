@@ -6,6 +6,7 @@ export interface ProgressionGrantedSpellEntry {
   spellName: string;
   sourceName: string;
   note: string;
+  ability?: "str" | "dex" | "con" | "int" | "wis" | "cha" | null;
 }
 
 export interface PreparedSpellProgressionChoiceDefinition {
@@ -71,7 +72,7 @@ function inferPreparedSpellProgressionChoiceMetadata(
 }
 
 export function buildPreparedSpellProgressionGrants(
-  features: Array<Pick<AppliedCharacterFeatureEntry, "id" | "name" | "text" | "preparedSpellProgression">>,
+  features: Array<Pick<AppliedCharacterFeatureEntry, "id" | "name" | "text" | "preparedSpellProgression" | "spellcastingAbility">>,
   characterLevel: number,
   chosenFeatureChoices: Record<string, string[]> | null | undefined = {},
 ): ProgressionGrantedSpellEntry[] {
@@ -115,6 +116,7 @@ export function buildPreparedSpellProgressionGrants(
             spellName,
             sourceName: feature.name,
             note: "Always prepared.",
+            ability: feature.spellcastingAbility ?? null,
           });
         }
       }

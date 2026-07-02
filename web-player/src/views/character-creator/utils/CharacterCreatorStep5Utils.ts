@@ -38,9 +38,16 @@ export interface Step5FormLike {
   chosenBgTools: string[];
   chosenBgLanguages: string[];
   chosenClassLanguages: string[];
+  chosenClassTools: string[];
   chosenClassFeatIds: Record<string, string>;
   chosenFeatOptions: Record<string, string[]>;
   chosenWeaponMasteries: string[];
+}
+
+export interface ClassToolProficiencyLike {
+  fixed: string[];
+  choices: Array<{ count: number; from: string[] }>;
+  notes: string[];
 }
 
 export interface Step5EntryWithChoice {
@@ -58,6 +65,7 @@ export interface Step5ChoiceStateArgs {
   bgOriginFeatDetail?: Step5BackgroundFeatLike | null;
   bgSkillFixed: string[];
   bgToolFixed: string[];
+  classToolProficiency: ClassToolProficiencyLike | null;
   classFeatChoices: Step5ClassFeatChoiceLike[];
   classFeatDetails: Record<string, Step5BackgroundFeatLike>;
   raceFeatDetail: Step5BackgroundFeatLike | null;
@@ -75,12 +83,14 @@ export interface Step5ChoiceState {
   selectedClassFeatEntries: Array<{ choice: Step5ClassFeatChoiceLike; detail: Step5BackgroundFeatLike }>;
   classSelectedFeatChoices: Step5EntryWithChoice[];
   allFeatChoices: Step5EntryWithChoice[];
+  classToolProficiency: ClassToolProficiencyLike | null;
   missingClassFeatChoices: boolean;
   missingClassExpertiseChoices: boolean;
   missingFeatOptionSelections: boolean;
   missingCoreLanguages: boolean;
   missingClassLanguages: boolean;
   missingWeaponMasteries: boolean;
+  missingClassToolChoices: boolean;
   hasAnything: boolean;
   takenSkillKeys: Set<string>;
   takenToolKeys: Set<string>;
@@ -161,6 +171,7 @@ export function getStep5ChoiceState(args: Step5ChoiceStateArgs): Step5ChoiceStat
     bgOriginFeatDetail,
     bgSkillFixed,
     bgToolFixed,
+    classToolProficiency,
     classFeatChoices,
     classFeatDetails,
     raceFeatDetail,
@@ -232,6 +243,8 @@ export function getStep5ChoiceState(args: Step5ChoiceStateArgs): Step5ChoiceStat
       ...form.chosenRaceTools,
       ...bgToolFixed,
       ...form.chosenBgTools,
+      ...(classToolProficiency?.fixed ?? []),
+      ...form.chosenClassTools,
       ...chosenBgFeatTools,
       ...chosenRaceFeatTools,
       ...chosenClassFeatTools,
@@ -271,6 +284,15 @@ export function getStep5ChoiceState(args: Step5ChoiceStateArgs): Step5ChoiceStat
   const missingCoreLanguages = form.chosenRaceLanguages.length < (coreLanguageChoice?.choose ?? 0);
   const missingClassLanguages = form.chosenClassLanguages.length < (classLanguageChoice?.choose ?? 0);
   const missingWeaponMasteries = weaponMasteryChoice != null && form.chosenWeaponMasteries.length < weaponMasteryChoice.count;
+  // Each structured choice group must be fully satisfied.
+  const missingClassToolChoices = (classToolProficiency?.choices ?? []).some((choice, i) => {
+    const pool = new Set(choice.from.map(normalizeChoiceKey));
+    const picked = form.chosenClassTools.filter((t) => pool.has(normalizeChoiceKey(t)));
+    // Only the first choice group is tracked in the flat list; for multi-group
+    // classes count how many from each pool are selected.
+    void i;
+    return picked.length < choice.count;
+  });
   const hasAnything =
     classFeatChoices.length > 0 ||
     classSelectedFeatChoices.length > 0 ||
@@ -283,7 +305,8 @@ export function getStep5ChoiceState(args: Step5ChoiceStateArgs): Step5ChoiceStat
     (bgDetail?.proficiencies?.languages?.fixed.length ?? 0) > 0 ||
     (bgDetail?.proficiencies?.languages?.choose ?? 0) > 0 ||
     bgSkillFixed.length > 0 ||
-    weaponOptions.length > 0;
+    weaponOptions.length > 0 ||
+    (classToolProficiency != null && (classToolProficiency.fixed.length > 0 || classToolProficiency.choices.length > 0 || classToolProficiency.notes.length > 0));
 
   return {
     bgFeatChoices,
@@ -291,12 +314,14 @@ export function getStep5ChoiceState(args: Step5ChoiceStateArgs): Step5ChoiceStat
     selectedClassFeatEntries,
     classSelectedFeatChoices,
     allFeatChoices,
+    classToolProficiency: classToolProficiency ?? null,
     missingClassFeatChoices,
     missingClassExpertiseChoices,
     missingFeatOptionSelections,
     missingCoreLanguages,
     missingClassLanguages,
     missingWeaponMasteries,
+    missingClassToolChoices,
     hasAnything,
     takenSkillKeys,
     takenToolKeys,

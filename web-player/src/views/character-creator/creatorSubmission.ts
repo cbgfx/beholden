@@ -76,7 +76,6 @@ function isToughReference(value: string | null | undefined): boolean {
 export async function buildCreatorSubmissionBody(args: {
   api: ApiFn;
   form: FormState;
-  selectedRuleset: string;
   classDetail: ClassDetail | null;
   selectedClassSummary: ClassSummary | null;
   raceDetail: RaceDetail | null;
@@ -104,7 +103,6 @@ export async function buildCreatorSubmissionBody(args: {
   const {
     api,
     form,
-    selectedRuleset,
     classDetail,
     selectedClassSummary,
     raceDetail,
@@ -276,7 +274,6 @@ export async function buildCreatorSubmissionBody(args: {
     intScore: scores.int, wisScore: scores.wis, chaScore: scores.cha,
     color: form.color,
     characterData: {
-      ruleset: selectedRuleset,
       classes: [{
         id: `class_${form.classId}`,
         classId: form.classId,
@@ -311,6 +308,7 @@ export async function buildCreatorSubmissionBody(args: {
       chosenBgOriginFeatId: form.chosenBgOriginFeatId,
       chosenSkills: form.chosenSkills,
       chosenClassLanguages: form.chosenClassLanguages,
+      chosenClassTools: form.chosenClassTools,
       chosenClassEquipmentOption: form.chosenClassEquipmentOption,
       chosenBgEquipmentOption: form.chosenBgEquipmentOption,
       chosenFeatOptions: form.chosenFeatOptions,

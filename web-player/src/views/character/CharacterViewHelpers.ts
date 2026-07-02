@@ -70,7 +70,7 @@ function parseItemAbilityScoreOverrides(item: InventoryItem): ItemAbilityScoreOv
   if (!text.trim()) return [];
   const overrides: ItemAbilityScoreOverride[] = [];
   for (const [ability, abilityName] of Object.entries(ABILITY_SCORE_NAMES) as [AbilKey, string][]) {
-    const overrideMatch = text.match(new RegExp(`\\b(?:your\\s+)?${abilityName}\\s+score\\s+(?:is|becomes?|equals?|increases?\\s+to|rises?\\s+to|has\\s+a\\s+score\\s+of)\\s+(\\d+)\\b`, "i"));
+    const overrideMatch = text.match(new RegExp(`\\b(?:your\\s+)?${abilityName}\\s+score\\s+(?:is|becomes?|changes?\\s+to|equals?|increases?\\s+to|rises?\\s+to|has\\s+a\\s+score\\s+of)\\s+(\\d+)\\b`, "i"));
     if (!overrideMatch) continue;
     const value = Number.parseInt(overrideMatch[1], 10);
     if (!Number.isFinite(value)) continue;

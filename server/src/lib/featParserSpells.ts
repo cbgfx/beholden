@@ -37,6 +37,50 @@ export function pushSpellChoice(
 }
 
 export function parseSpellListChoiceParagraph(paragraph: string, choices: ParsedFeatChoice[], grants: ParsedFeatGrants): boolean {
+  // "Choose a class: bard, cleric, druid, sorcerer, warlock, or wizard.
+  //  You learn two cantrips of your choice from that class's spell list.
+  //  In addition, choose one 1st-level spell from that same list."
+  const classChoiceMatch = paragraph.match(/Choose a class[:\s]+([^.]+)\./i);
+  const cantripsFromClassMatch = paragraph.match(/You learn (\w+) cantrips? of your choice from that class'?s spell list/i);
+  if (classChoiceMatch && cantripsFromClassMatch) {
+    const classes = splitList(classChoiceMatch[1] ?? "");
+    if (classes.length > 0) {
+      const classListChoiceId = `class_spell_list_${choices.length + 1}`;
+      pushChoice(choices, {
+        id: classListChoiceId,
+        type: "spell_list",
+        count: 1,
+        options: classes,
+        dependsOnChoiceId: null,
+        dependencyKind: null,
+        replacementFor: null,
+        note: "Choose a class spell list for this feat.",
+      });
+      pushSpellChoice(choices, {
+        idPrefix: "cantrips_class_list",
+        count: wordToNumber(cantripsFromClassMatch[1] ?? "1"),
+        options: null,
+        level: 0,
+        linkedTo: classListChoiceId,
+        note: "Choose cantrips from the selected class's spell list.",
+      });
+      const levelSpellMatch =
+        paragraph.match(/choose (\w+)\s+(\d+)(?:st|nd|rd|th)[-\s]level spell(?:s)? from that same list/i) ??
+        paragraph.match(/choose (\w+)\s+level (\d+) spell(?:s)? from that same list/i);
+      if (levelSpellMatch) {
+        pushSpellChoice(choices, {
+          idPrefix: "spell_from_class_list",
+          count: wordToNumber(levelSpellMatch[1] ?? "1"),
+          options: null,
+          level: Number(levelSpellMatch[2] ?? "1"),
+          linkedTo: classListChoiceId,
+          note: "Choose a spell from the selected class's spell list.",
+        });
+      }
+      return true;
+    }
+  }
+
   let match = paragraph.match(/You (?:gain )?learn (\w+) cantrips? of your choice from the ([^.]+?) spell list/i);
   if (match) {
     const count = wordToNumber(match[1] ?? "1");

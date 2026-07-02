@@ -3,6 +3,7 @@ import { XMLParser } from "fast-xml-parser";
 
 import { asArray, asText } from "../../lib/text.js";
 import { backfillMonsterSpellRefs } from "./normalizeMonsterSpellRefs.js";
+import { assertKnownXmlKeys, assertKnownXmlKeysEach } from "./xmlFieldGuard.js";
 import {
   buildBackgroundImportData,
   buildClassImportData,
@@ -35,8 +36,10 @@ export function importCompendiumXml(args: {
   feats?: number;
   decks?: number;
   bastions?: number;
+  warnings: string[];
 } {
   const { xml, db } = args;
+  const warnings: string[] = [];
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: "@_",
@@ -45,6 +48,26 @@ export function importCompendiumXml(args: {
   });
   const parsed = parser.parse(xml);
   const comp = parsed?.compendium ?? parsed;
+  const ROOT_KNOWN_KEYS = ["?xml", "compendium", "deck", "bastionCompendium"] as const;
+  const COMPENDIUM_KNOWN_KEYS = [
+    "monster", "spell", "item", "class", "race", "background", "feat", "deck", "card",
+    // Metadata emitted by common compendium XML generators; it has no game semantics.
+    "@_xmlns:exsl", "@_version", "@_auto_indent",
+  ] as const;
+  if (parsed?.compendium || parsed?.deck || parsed?.bastionCompendium) {
+    assertKnownXmlKeys(parsed, ROOT_KNOWN_KEYS, {
+      entityType: "document",
+      entityName: "compendium",
+      path: "<root>",
+    }, warnings);
+  }
+  if (parsed?.compendium || (!parsed?.deck && !parsed?.bastionCompendium)) {
+    assertKnownXmlKeys(comp, COMPENDIUM_KNOWN_KEYS, {
+      entityType: "document",
+      entityName: "compendium",
+      path: "<compendium>",
+    }, warnings);
+  }
   const monsters = asArray(comp?.monster);
   const spells = asArray(comp?.spell);
   const items = asArray(comp?.item);
@@ -59,6 +82,66 @@ export function importCompendiumXml(args: {
   const bastionBasicFacilities = asArray(bastionCompendium?.basicFacilities?.facility);
   const bastionSpecialFacilities = asArray(bastionCompendium?.specialFacilities?.facility);
   const bastionFacilities = [...bastionBasicFacilities, ...bastionSpecialFacilities];
+
+  const DECK_KNOWN_KEYS = ["name", "card"] as const;
+  const DECK_CARD_KNOWN_KEYS = ["name", "text"] as const;
+  const BASTION_KNOWN_KEYS = ["spaces", "orders", "basicFacilities", "specialFacilities"] as const;
+  const BASTION_SPACE_KNOWN_KEYS = ["name", "squares", "label"] as const;
+  const BASTION_FACILITY_KNOWN_KEYS = [
+    "name", "type", "minimumLevel", "prerequisite", "orders", "space", "hirelings", "description",
+  ] as const;
+  assertKnownXmlKeys(parsed?.deck ?? comp?.deck, DECK_KNOWN_KEYS, {
+    entityType: "deck",
+    entityName: "Deck",
+    path: "<deck>",
+  }, warnings);
+  assertKnownXmlKeysEach(deckCards, DECK_CARD_KNOWN_KEYS, {
+    entityType: "deck card",
+    entityName: "Deck",
+    path: "<card>",
+  }, warnings);
+  assertKnownXmlKeys(bastionCompendium, BASTION_KNOWN_KEYS, {
+    entityType: "bastion",
+    entityName: "Bastion Compendium",
+    path: "<bastionCompendium>",
+  }, warnings);
+  assertKnownXmlKeys(bastionCompendium?.spaces, ["space"], {
+    entityType: "bastion",
+    entityName: "Bastion Compendium",
+    path: "<spaces>",
+  }, warnings);
+  assertKnownXmlKeys(bastionCompendium?.orders, ["order"], {
+    entityType: "bastion",
+    entityName: "Bastion Compendium",
+    path: "<orders>",
+  }, warnings);
+  assertKnownXmlKeys(bastionCompendium?.basicFacilities, ["facility"], {
+    entityType: "bastion",
+    entityName: "Bastion Compendium",
+    path: "<basicFacilities>",
+  }, warnings);
+  assertKnownXmlKeys(bastionCompendium?.specialFacilities, ["facility"], {
+    entityType: "bastion",
+    entityName: "Bastion Compendium",
+    path: "<specialFacilities>",
+  }, warnings);
+  assertKnownXmlKeysEach(bastionSpaces, BASTION_SPACE_KNOWN_KEYS, {
+    entityType: "bastion space",
+    entityName: "Bastion Compendium",
+    path: "<space>",
+  }, warnings);
+  assertKnownXmlKeysEach(bastionFacilities, BASTION_FACILITY_KNOWN_KEYS, {
+    entityType: "bastion facility",
+    entityName: "Bastion Compendium",
+    path: "<facility>",
+  }, warnings);
+  for (const facility of bastionFacilities) {
+    assertKnownXmlKeys((facility as Record<string, unknown>)?.orders, ["order"], {
+      entityType: "bastion facility",
+      entityName: asText((facility as Record<string, unknown>)?.name) || "Unknown",
+      path: "<orders>",
+    }, warnings);
+  }
 
   const monStmt = db.prepare(`
     INSERT OR REPLACE INTO compendium_monsters
@@ -112,10 +195,25 @@ export function importCompendiumXml(args: {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const upsertFeat = createFeatUpserter(featStmt);
+  const claimedIds = new Map<string, Set<string>>();
+  const claimId = (category: string, requested: string): string => {
+    const claimed = claimedIds.get(category) ?? new Set<string>();
+    claimedIds.set(category, claimed);
+    if (!claimed.has(requested)) {
+      claimed.add(requested);
+      return requested;
+    }
+    let suffix = 2;
+    while (claimed.has(`${requested}_${suffix}`)) suffix += 1;
+    const id = `${requested}_${suffix}`;
+    claimed.add(id);
+    return id;
+  };
 
   db.transaction(() => {
     for (const monster of monsters) {
-      const data = buildMonsterImportData(monster);
+      const data = buildMonsterImportData(monster, warnings);
+      data.id = claimId("monsters", data.id);
       monStmt.run(
         data.id,
         data.name,
@@ -131,7 +229,8 @@ export function importCompendiumXml(args: {
     }
 
     for (const spell of spells) {
-      const data = buildSpellImportData(spell);
+      const data = buildSpellImportData(spell, warnings);
+      data.id = claimId("spells", data.id);
       spellStmt.run(
         data.id,
         data.name,
@@ -148,8 +247,9 @@ export function importCompendiumXml(args: {
     backfillMonsterSpellRefs(db);
 
     for (const item of items) {
-      const data = xmlItemToJson(item);
+      const data = xmlItemToJson(item, warnings);
       if (!data) continue;
+      data.id = claimId("items", data.id);
       itemStmt.run(
         data.id,
         data.name,
@@ -168,17 +268,20 @@ export function importCompendiumXml(args: {
     }
 
     for (const cls of classes) {
-      const data = buildClassImportData(cls);
+      const data = buildClassImportData(cls, warnings);
+      data.id = claimId("classes", data.id);
       classStmt.run(data.id, data.name, data.nameKey, data.hd, JSON.stringify(pruneClassBlob(data as Record<string, unknown>)));
     }
 
     for (const race of races) {
-      const data = buildRaceImportData(race);
+      const data = buildRaceImportData(race, warnings);
+      data.id = claimId("species", data.id);
       raceStmt.run(data.id, data.name, data.nameKey, data.size, data.speed, JSON.stringify(pruneRaceBlob(data as Record<string, unknown>)));
     }
 
     for (const background of backgrounds) {
-      const { data, embeddedFeatNames } = buildBackgroundImportData(background);
+      const { data, embeddedFeatNames } = buildBackgroundImportData(background, warnings);
+      data.id = claimId("backgrounds", data.id);
       bgStmt.run(data.id, data.name, data.nameKey, JSON.stringify(pruneBackgroundBlob(data as Record<string, unknown>)));
 
       for (const featName of embeddedFeatNames) {
@@ -190,7 +293,19 @@ export function importCompendiumXml(args: {
       }
     }
 
+    const FEAT_KNOWN_KEYS = [
+      "name", "text", "prerequisite", "proficiency", "special", "modifier",
+      // repeatable: explicit XML element mirroring the "Repeatable" text marker;
+      // parseFeat already derives repeatability from the text body, so this element
+      // is redundant today — step 2 (feat typed handling) should prefer it over text parsing.
+      "repeatable",
+    ] as const;
+    const FEAT_MODIFIER_KNOWN_KEYS = ["@_category", "#text"] as const;
+
     for (const feat of feats) {
+      const featName = (asText(feat?.name) || "Unknown").trim();
+      assertKnownXmlKeys(feat, FEAT_KNOWN_KEYS, { entityType: "feat", entityName: featName, path: "<feat>" }, warnings);
+      assertKnownXmlKeysEach(feat?.modifier, FEAT_MODIFIER_KNOWN_KEYS, { entityType: "feat", entityName: featName, path: "<modifier>" }, warnings);
       const modifierDetails = asArray<unknown>(feat?.modifier as unknown[] | unknown | null | undefined)
         .map<{ category: string; text: string }>((m) =>
           typeof m === "string"
@@ -201,12 +316,14 @@ export function importCompendiumXml(args: {
       const prerequisite = asText(feat?.prerequisite) || null;
       const proficiency = asText(feat?.proficiency) || null;
       const special = asText(feat?.special) || null;
+      const repeatable = asText(feat?.repeatable) || null;
       upsertFeat({
-        name: (asText(feat?.name) || "Unknown").trim(),
+        name: featName,
         text: asText(feat?.text) || "",
         prerequisite,
         proficiency,
         special,
+        repeatable,
         modifierDetails,
       });
     }
@@ -321,5 +438,6 @@ export function importCompendiumXml(args: {
     feats: feats.length,
     decks: deckCards.length > 0 ? 1 : 0,
     bastions: bastionFacilities.length > 0 ? bastionFacilities.length : 0,
+    warnings,
   };
 }

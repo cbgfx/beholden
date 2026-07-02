@@ -13,6 +13,7 @@ export const SHARED_CONDITION_DEFS: SharedConditionDef[] = [
   { key: "poisoned", name: "Poisoned" },
   { key: "prone", name: "Prone" },
   { key: "restrained", name: "Restrained" },
+  { key: "slow", name: "Slow" },
   { key: "stunned", name: "Stunned" },
   { key: "unconscious", name: "Unconscious" },
   { key: "concentration", name: "Concentration" },
@@ -23,6 +24,11 @@ export const SHARED_CONDITION_DEFS: SharedConditionDef[] = [
 
 export function conditionLabel(key: string): string {
   return SHARED_CONDITION_DEFS.find((def) => def.key === key)?.name ?? key;
+}
+
+/** DC for a Concentration saving throw after taking `damage`. PHB rule: max(10, floor(damage / 2)). */
+export function concentrationSaveDc(damage: number): number {
+  return Math.max(10, Math.floor(damage / 2));
 }
 
 export function displayActorName(actor: { label?: unknown; name?: unknown; type?: unknown } | null | undefined): string {

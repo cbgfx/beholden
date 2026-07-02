@@ -17,7 +17,7 @@ export function parseAttackFromText(text: unknown): ParsedAttack | null {
   if (!raw) return null;
 
   const head = raw.match(
-    /^(Melee|Ranged|Melee or Ranged)\s+Weapon Attack:\s*\+?(\d+)\s*to hit,\s*([^.]*)\.\s*Hit:\s*([^]*)$/i
+    /^(Melee|Ranged|Melee or Ranged)\s+(?:Weapon Attack|Attack Roll):\s*\+?(-?\d+)(?:\s*to hit)?,\s*(.*?)\.\s*Hit:\s*([^]*)$/i
   );
   if (!head) return null;
 

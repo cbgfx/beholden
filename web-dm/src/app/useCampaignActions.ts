@@ -175,7 +175,7 @@ export function useCampaignActions(
     if (typeof data !== "object" || data === null || !("version" in data)) {
       alert("Invalid adventure file."); return;
     }
-    if ((data as { version: unknown }).version !== 1) {
+    if (![1, 2].includes(Number((data as { version: unknown }).version))) {
       alert("Adventure file version not supported."); return;
     }
     try {

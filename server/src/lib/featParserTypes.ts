@@ -1,4 +1,5 @@
 import type { PreparedSpellProgressionTable } from "./preparedSpellProgression.js";
+import type { FeatResolution } from "./featResolution.js";
 
 export interface ParsedFeatModifier {
   category: string;
@@ -35,6 +36,9 @@ export interface ParsedFeatGrants {
   cantrips: string[];
   abilityIncreases: Record<string, number>;
   bonuses: Array<{ target: string; value: number }>;
+  /** Structured FeatureEffect-compatible plain objects derived from text parsing.
+   *  Read by the feat browser UI and character creator previews. */
+  effects: unknown[];
 }
 
 export interface ParsedFeatUse {
@@ -47,6 +51,8 @@ export interface ParsedFeatUse {
 }
 
 export interface ParsedFeat {
+  resolution: FeatResolution;
+  resolutionNotes: string[];
   category: string | null;
   baseName: string;
   variant: string | null;
@@ -59,5 +65,6 @@ export interface ParsedFeat {
   preparedSpellProgression: PreparedSpellProgressionTable[];
   notes: string[];
   modifierDetails: ParsedFeatModifier[];
+  spellcastingAbility?: string | null;
   spellcastingAbilityFromChoiceId?: string | null;
 }

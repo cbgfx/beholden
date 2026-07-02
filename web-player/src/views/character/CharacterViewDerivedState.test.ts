@@ -90,7 +90,6 @@ describe("buildCharacterViewDerivedState", () => {
 
     expect(state.scores.str).toBe(19);
     expect(state.scores.con).toBe(16);
-    expect(state.featureHpMaxBonus).toBe(10);
     expect(state.effectiveHpMax).toBe(58);
     expect(state.effectiveAc).toBe(17);
     expect(state.tempHp).toBe(4);

@@ -38,7 +38,7 @@ export function parseAppliedClassFeatureEffects(
       if (!featureMatchesSubclass(feature, selectedSubclass) || isSubclassChoiceFeature(feature)) continue;
       const isSubclassFeature = Boolean(getFeatureSubclassName(feature));
       if (feature.optional && !isSubclassFeature && !selected.has(feature.name)) continue;
-      if (!String(feature.text ?? "").trim()) continue;
+      if (!String(feature.text ?? "").trim() && !(feature.effects?.length)) continue;
       parsed.push(parseFeatureEffects({
         source: {
           id: `creator-class-feature:${autolevel.level}:${feature.name}`,
@@ -49,6 +49,7 @@ export function parseAppliedClassFeatureEffects(
           text: feature.text,
         },
         text: feature.text,
+        classEffects: feature.effects,
       } satisfies ParseFeatureEffectsInput));
     }
   }
@@ -67,6 +68,7 @@ export function buildStartingInventory(
     "bg",
     getBackgroundGrantedToolSelectionsFromUtils(form as never, bgDetail as never, [], classifyFeatSelection),
     itemIndex as never,
+    bgDetail?.equipmentOptions,
   );
   const classItems = buildEquipmentItemsFromUtils(
     form.chosenClassEquipmentOption,
@@ -98,6 +100,7 @@ export function getWeaponMasteryChoice(
           text: feature.text,
         },
         text: feature.text,
+        classEffects: feature.effects,
       });
       const masteryEffect = parsed.effects.find((effect) => effect.type === "weapon_mastery");
       if (masteryEffect?.type !== "weapon_mastery") continue;

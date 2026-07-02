@@ -46,9 +46,17 @@ export interface CreatorClassDetailLike {
   weapons: string;
   tools?: string;
   proficiency: string;
+  /** Structured proficiencies present for canonical v2 classes. */
+  proficiencies?: {
+    tools: {
+      fixed: string[];
+      choices: Array<{ count: number; from: string[] }>;
+      notes: string[];
+    };
+  };
   autolevels: Array<{
     level: number | null;
-    features: Array<{ name: string; text: string; optional: boolean }>;
+    features: Array<{ name: string; text: string; optional: boolean; effects?: unknown[] }>;
   }>;
 }
 
@@ -61,6 +69,13 @@ export interface CreatorBgDetailLike {
   name: string;
   proficiency: string;
   equipment?: string;
+  equipmentOptions?: Array<{
+    id: string;
+    entries: Array<
+      | { kind: "item"; name: string; quantity: number }
+      | { kind: "currency"; denomination: "PP" | "GP" | "EP" | "SP" | "CP"; amount: number }
+    >;
+  }>;
   proficiencies?: {
     skills: { fixed: string[] };
     tools: { fixed: string[] };
@@ -82,6 +97,7 @@ export interface CreatorFormLike {
   subclass?: string | null;
   chosenSkills: string[];
   chosenClassLanguages: string[];
+  chosenClassTools: string[];
   chosenWeaponMasteries: string[];
   chosenOptionals: string[];
   chosenFeatOptions: Record<string, string[]>;

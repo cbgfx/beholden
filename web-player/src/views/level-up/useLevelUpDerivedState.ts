@@ -26,7 +26,7 @@ import {
 import { buildResolvedSpellChoiceEntry, buildSpellListChoiceEntry } from "@/views/character-creator/utils/SpellChoiceUtils";
 import { getFeatSpellcastingAbilityChoice } from "@/views/character-creator/utils/FeatSpellcastingUtils";
 import { deriveAllowedInvocationIds } from "@/views/level-up/LevelUpUtils";
-import { deriveCharProficiencies, stripRulesetSuffix } from "@/views/level-up/LevelUpHelpers";
+import { deriveCharProficiencies, stripBracketSuffix } from "@/views/level-up/LevelUpHelpers";
 import type {
   LevelUpCharacter as Character,
   LevelUpClassDetail as ClassDetail,
@@ -76,7 +76,6 @@ export function useLevelUpDerivedState(args: {
   const conScore = char?.conScore ?? 10;
   const conMod = abilityMod(conScore);
   const hpAverage = Math.floor(hd / 2) + 1 + conMod;
-  const hpRollMax = hd + conMod;
 
   const autoLevel = React.useMemo(
     () => mergedAutolevels.find((al) => al.level === nextLevel) ?? null,
@@ -105,7 +104,7 @@ export function useLevelUpDerivedState(args: {
   const needsSubclassChoice = Boolean(subclassLevel && nextLevel >= subclassLevel && subclassOptions.length > 0 && !subclass.trim());
   const subclassOverview = React.useMemo(() => {
     if (!classDetail || !subclass.trim()) return null;
-    const className = stripRulesetSuffix(classDetail.name);
+    const className = stripBracketSuffix(classDetail.name);
     const subclassPattern = new RegExp(`^${className.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s+Subclass:\\s+${subclass.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
     for (const autolevel of mergedAutolevels) {
       const feature = autolevel.features.find((entry) => subclassPattern.test(entry.name));
@@ -212,6 +211,7 @@ export function useLevelUpDerivedState(args: {
           level: nextLevel,
         },
         text: feature.text,
+        classEffects: feature.effects,
       })
     ),
     [newFeatures, nextLevel]
@@ -247,6 +247,9 @@ export function useLevelUpDerivedState(args: {
           sourceLabel: choice.source.name,
           count: choice.count.kind === "fixed" ? choice.count.value : 0,
           level: choice.level,
+          // Cap "any level" choices (level===null) to the character's highest spell slot so
+          // e.g. a L6 Bard picking Magical Discoveries only sees up to 3rd-level spells.
+          maxLevel: choice.level === null && maxSpellLevel > 0 ? maxSpellLevel : null,
           note: choice.note ?? null,
           linkedTo: null,
           listNames: choice.spellLists,
@@ -255,7 +258,7 @@ export function useLevelUpDerivedState(args: {
         })),
       ...slotLevelTriggeredSpellChoices,
     ],
-    [nextLevel, parsedNewFeatureEffects, slotLevelTriggeredSpellChoices]
+    [nextLevel, maxSpellLevel, parsedNewFeatureEffects, slotLevelTriggeredSpellChoices]
   );
   const classFeatureProficiencyChoices = React.useMemo(
     () => collectProficiencyChoiceEffectsFromEffects(parsedNewFeatureEffects)
@@ -401,7 +404,6 @@ export function useLevelUpDerivedState(args: {
     conScore,
     conMod,
     hpAverage,
-    hpRollMax,
     autoLevel,
     hasAsiFeature,
     usesFlexiblePreparedSpellsModel,
@@ -431,7 +433,6 @@ export function useLevelUpDerivedState(args: {
     featSourceLabel,
     featSpellListChoices,
     featResolvedSpellChoices,
-    parsedNewFeatureEffects,
     slotLevelTriggeredSpellChoices,
     classFeatureResolvedSpellChoices,
     classFeatureProficiencyChoices,

@@ -2,6 +2,15 @@
 // Shared schemas, builders, and small utilities for compendium routes.
 
 import { z } from "zod";
+
+export function normalizeLookupName(value: string): string {
+  return value
+    .trim()
+    .replace(/\s*\[[^\]]+\]\s*$/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
 import { pruneItemBlob, pruneMonsterBlob, pruneSpellBlob } from "../../services/compendium/blobHygiene.js";
 
 const BlockSchema = z.object({ name: z.string(), text: z.string() });
