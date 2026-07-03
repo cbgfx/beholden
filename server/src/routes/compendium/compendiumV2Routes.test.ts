@@ -691,41 +691,6 @@ describe("canonical V2 compendium routes — HTTP integration", () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // Class — GET returns legacy autolevels for canonical V2 records
-  // ---------------------------------------------------------------------------
-
-  describe("GET /api/compendium/classes/:id — canonical V2", () => {
-    it("returns 200 for a seeded canonical V2 class", async () => {
-      const { status } = await request("GET", `/api/compendium/classes/${CANONICAL_CLASS.id}`);
-      assert.equal(status, 200);
-    });
-
-    it("returns screen autolevels projected from V2 levels", async () => {
-      const { body } = await request("GET", `/api/compendium/classes/${CANONICAL_CLASS.id}`) as { body: Record<string, unknown> };
-      const autolevels = body.autolevels as Array<Record<string, unknown>>;
-      assert.ok(Array.isArray(autolevels), "autolevels must be an array");
-      assert.equal(autolevels.length, 2, "both seeded levels should appear");
-      assert.equal(autolevels[0]?.level, 1);
-      assert.equal(autolevels[1]?.level, 2);
-    });
-
-    it("autolevels[0] has a features array from V2 features", async () => {
-      const { body } = await request("GET", `/api/compendium/classes/${CANONICAL_CLASS.id}`) as { body: Record<string, unknown> };
-      const autolevels = body.autolevels as Array<Record<string, unknown>>;
-      const features = autolevels[0]?.features as Array<Record<string, unknown>>;
-      assert.ok(Array.isArray(features), "features must be an array");
-      assert.equal(features[0]?.name, "Second Wind");
-    });
-
-    it("structured proficiencies are returned for canonical V2 classes", async () => {
-      const { body } = await request("GET", `/api/compendium/classes/${CANONICAL_CLASS.id}`) as { body: Record<string, unknown> };
-      const proficiencies = body.proficiencies as Record<string, unknown>;
-      assert.ok(proficiencies, "proficiencies must be present for canonical V2");
-      assert.ok(Array.isArray(proficiencies.savingThrows), "savingThrows must be an array");
-    });
-  });
-
   describe("GET /api/compendium/v2/classes/:id", () => {
     it("returns the canonical class shape for V2-native consumers", async () => {
       const { status, body } = await request(

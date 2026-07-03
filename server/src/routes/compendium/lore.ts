@@ -75,18 +75,6 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     }));
   });
 
-  app.get("/api/compendium/classes/:id", requireAuth, (req, res) => {
-    applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
-    const id = requireParam(req, res, "id");
-    if (!id) return;
-    const row = db.prepare("SELECT data_json FROM compendium_classes WHERE id = ?").get(id) as { data_json: string } | undefined;
-    if (!row) return res.status(404).json({ ok: false, message: "Not found" });
-    const cls: any = parseStoredCompendiumEntry("classes", row.data_json);
-    const v2Data = parseStoredCanonicalCompendiumEntry("classes", row.data_json);
-    if (v2Data.proficiencies) cls.proficiencies = v2Data.proficiencies;
-    res.json(cls);
-  });
-
   // --- Races -----------------------------------------------------------------
   app.get("/api/compendium/races", requireAuth, (req, res) => {
     applySharedApiCacheHeaders(res);
@@ -108,16 +96,6 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     }));
   });
 
-  app.get("/api/compendium/races/:id", requireAuth, (req, res) => {
-    applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
-    const id = requireParam(req, res, "id");
-    if (!id) return;
-    const row = db.prepare("SELECT data_json FROM compendium_races WHERE id = ?").get(id) as { data_json: string } | undefined;
-    if (!row) return res.status(404).json({ ok: false, message: "Not found" });
-    const race: any = parseStoredCompendiumEntry("species", row.data_json);
-    res.json(race);
-  });
-
   // --- Backgrounds -----------------------------------------------------------
   app.get("/api/compendium/backgrounds", requireAuth, (req, res) => {
     applySharedApiCacheHeaders(res);
@@ -133,16 +111,6 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
         ...(includeField(fields, "name") ? { name: row.name } : {}),
       };
     }));
-  });
-
-  app.get("/api/compendium/backgrounds/:id", requireAuth, (req, res) => {
-    applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
-    const id = requireParam(req, res, "id");
-    if (!id) return;
-    const row = db.prepare("SELECT data_json FROM compendium_backgrounds WHERE id = ?").get(id) as { data_json: string } | undefined;
-    if (!row) return res.status(404).json({ ok: false, message: "Not found" });
-    const bg: any = parseStoredCompendiumEntry("backgrounds", row.data_json);
-    res.json(bg);
   });
 
   // --- Feats -----------------------------------------------------------------

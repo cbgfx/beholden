@@ -1,36 +1,24 @@
 import {
-  backgroundFromV2,
-  classFromV2,
   featFromV2,
   itemFromV2,
   monsterFromV2,
   spellFromV2,
-  speciesFromV2,
 } from "./nativeCompendiumV2.js";
 import { CATEGORY_SCHEMAS } from "./nativeCompendiumV2Schemas.js";
 
 type JsonRecord = Record<string, unknown>;
-type StoredCategory =
-  | "monsters"
-  | "items"
-  | "spells"
-  | "classes"
-  | "species"
-  | "backgrounds"
-  | "feats";
+type ScreenViewCategory = "monsters" | "items" | "spells" | "feats";
+type CanonicalCategory = ScreenViewCategory | "classes" | "species" | "backgrounds";
 
-const toScreenView: Record<StoredCategory, (entry: JsonRecord) => JsonRecord> = {
+const toScreenView: Record<ScreenViewCategory, (entry: JsonRecord) => JsonRecord> = {
   monsters: monsterFromV2,
   items: itemFromV2,
   spells: spellFromV2,
-  classes: classFromV2,
-  species: speciesFromV2,
-  backgrounds: backgroundFromV2,
   feats: featFromV2,
 };
 
 function parseStoredCanonical(
-  category: StoredCategory,
+  category: CanonicalCategory,
   json: string | null | undefined,
 ): JsonRecord {
   let parsed: unknown;
@@ -44,7 +32,7 @@ function parseStoredCanonical(
 
 /** Projects strict canonical V2 storage into the shape consumed by current screens. */
 export function parseStoredCompendiumEntry(
-  category: StoredCategory,
+  category: ScreenViewCategory,
   json: string | null | undefined,
 ): JsonRecord {
   return toScreenView[category](parseStoredCanonical(category, json));
@@ -52,7 +40,7 @@ export function parseStoredCompendiumEntry(
 
 /** Returns the strict canonical V2 entry stored in the database. */
 export function parseStoredCanonicalCompendiumEntry(
-  category: StoredCategory,
+  category: CanonicalCategory,
   json: string | null | undefined,
 ): JsonRecord {
   return parseStoredCanonical(category, json);

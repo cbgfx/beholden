@@ -33,9 +33,9 @@ export function collectV2MonsterSpellIds(entries: JsonRecord[]): Set<string> {
 }
 
 export { monsterToV2, monsterFromV2 } from "./nativeCompendiumV2.monster.js";
-export { classToV2, classFromV2 } from "./nativeCompendiumV2.class.js";
+export { classToV2 } from "./nativeCompendiumV2.class.js";
 export { itemToV2, itemFromV2 } from "./nativeCompendiumV2.item.js";
 export { spellToV2, spellFromV2 } from "./nativeCompendiumV2.spell.js";
-export { speciesToV2, speciesFromV2 } from "./nativeCompendiumV2.species.js";
-export { backgroundToV2, backgroundFromV2 } from "./nativeCompendiumV2.background.js";
+export { speciesToV2 } from "./nativeCompendiumV2.species.js";
+export { backgroundToV2 } from "./nativeCompendiumV2.background.js";
 export { featToV2, featFromV2 } from "./nativeCompendiumV2.feat.js";

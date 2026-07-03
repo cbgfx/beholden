@@ -1,6 +1,6 @@
 import { isCanonicalV2Entry } from "./nativeCompendiumV2Schemas.js";
 import { type JsonRecord, record, list, text, number, abilityKey, split } from "./nativeCompendiumV2.helpers.js";
-import { traitsToV2, traitsFromV2 } from "./nativeCompendiumV2.traits.js";
+import { traitsToV2 } from "./nativeCompendiumV2.traits.js";
 import { compactSpeciesEntry } from "./speciesCompaction.js";
 
 export function speciesToV2(entry: JsonRecord): JsonRecord {
@@ -22,17 +22,3 @@ export function speciesToV2(entry: JsonRecord): JsonRecord {
   });
 }
 
-export function speciesFromV2(entry: JsonRecord): JsonRecord {
-  return {
-    id: entry.id,
-    name: entry.name,
-    source: entry.source,
-    size: entry.size,
-    speed: entry.speed,
-    spellAbility: entry.spellcastingAbility,
-    resist: list(entry.resistances).join(", "),
-    vision: entry.vision,
-    parsedChoices: entry.choices,
-    traits: traitsFromV2(entry.traits),
-  };
-}
