@@ -130,9 +130,14 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
        ORDER BY name COLLATE NOCASE`,
     ).all() as Array<{ id: string; name: string; data_json?: string }>;
     res.json(rows.map((row) => {
-      const data: any = wantMetadata
-        ? parseStoredCompendiumEntry("feats", row.data_json)
-        : {};
+      let data: any = {};
+      if (wantMetadata) {
+        try {
+          data = parseStoredCompendiumEntry("feats", row.data_json);
+        } catch (error) {
+          console.error(`[compendium] Skipping unparsable feat metadata for "${row.id}" (${row.name}):`, error);
+        }
+      }
       const parsed: any = wantMetadata
         ? (data.parsed ?? {})
         : null;
@@ -194,7 +199,14 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
        FROM compendium_feats
        WHERE id IN (${placeholders})`,
     ).all(...ids) as Array<{ id: string; name: string; data_json: string }>;
-    const byId = new Map(rows.map((row) => [row.id, buildFeatDetailFromRow(row)]));
+    const byId = new Map<string, unknown>();
+    for (const row of rows) {
+      try {
+        byId.set(row.id, buildFeatDetailFromRow(row));
+      } catch (error) {
+        console.error(`[compendium] Skipping unparsable feat "${row.id}" (${row.name}) in lookup:`, error);
+      }
+    }
 
     res.json({
       rows: ids.map((id) => ({
