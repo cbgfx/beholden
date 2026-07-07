@@ -91,8 +91,11 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
     featureNames.add(chosenFeatDetail.name);
   }
 
+  // Deliberately not spreading `...char.characterData` here: it's a snapshot fetched once when
+  // the level-up screen opened, and any field we don't explicitly list below should come from
+  // whatever's currently on the server (the PUT handler merges this patch onto a fresh read),
+  // not from a stale copy that could clobber concurrent edits (inventory, notes, etc.).
   const nextCharacterData = {
-    ...(char.characterData ?? {}),
     classes: Array.isArray(char.characterData?.classes) && char.characterData.classes.length > 0
       ? char.characterData.classes.map((entry, index) =>
           index === 0

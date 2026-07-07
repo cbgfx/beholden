@@ -166,15 +166,18 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
             <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, padding: "3px 0" }}>No ammunition in inventory</div>
           ) : ammoItems.map((ammo) => {
             const active = item.linkedAmmoId === ammo.id;
+            const outOfStock = ammo.quantity <= 0;
+            const disabled = outOfStock && !active;
             return (
               <div key={ammo.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "3px 6px", borderRadius: 6, background: active ? `${accentColor}14` : "transparent" }}>
-                <span style={{ fontSize: "var(--fs-small)", color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {ammo.name}{ammo.quantity > 1 ? ` x${ammo.quantity}` : ""}
+                <span style={{ fontSize: "var(--fs-small)", color: outOfStock ? C.muted : C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {ammo.name}{ammo.quantity === 1 ? "" : ` x${ammo.quantity}`}
                 </span>
                 <button
-                  onClick={() => onLinkAmmo?.(item.id, active ? null : ammo.id)}
-                  title={active ? "Unequip ammunition" : "Equip ammunition"}
-                  style={inventoryEquipBtn(active, accentColor)}
+                  onClick={() => { if (!disabled) onLinkAmmo?.(item.id, active ? null : ammo.id); }}
+                  disabled={disabled}
+                  title={disabled ? "No ammunition remaining" : active ? "Unequip ammunition" : "Equip ammunition"}
+                  style={{ ...inventoryEquipBtn(active, accentColor), ...(disabled ? { opacity: 0.4, cursor: "not-allowed" } : null) }}
                 >
                   EQ
                 </button>
