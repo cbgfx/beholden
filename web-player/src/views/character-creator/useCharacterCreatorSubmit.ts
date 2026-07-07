@@ -46,8 +46,20 @@ function hasCompleteLevelUpChoice(form: FormState, level: number): boolean {
   return false;
 }
 
-function findCreatorSubmissionProblem(args: { form: FormState; classDetail: ClassDetail | null }): string | null {
-  const { form, classDetail } = args;
+function findCreatorSubmissionProblem(args: {
+  form: FormState;
+  classDetail: ClassDetail | null;
+  raceDetail: RaceDetail | null;
+  bgDetail: BgDetail | null;
+}): string | null {
+  const { form, classDetail, raceDetail, bgDetail } = args;
+  // These details drive derived proficiencies (armor/weapons/skills/etc). They're fetched
+  // asynchronously from `form.classId`/`raceId`/`bgId`, so submitting before they resolve
+  // would silently save an incomplete proficiency map — block until they're ready.
+  if (form.classId && !classDetail) return "Class details are still loading — please wait a moment and try again.";
+  if (form.raceId && !raceDetail) return "Species details are still loading — please wait a moment and try again.";
+  if (form.bgId && !bgDetail) return "Background details are still loading — please wait a moment and try again.";
+
   const subclassLevel = getSubclassLevel(classDetail);
   if (classDetail && subclassLevel != null && form.level >= subclassLevel && getSubclassList(classDetail).length > 0 && !form.subclass) {
     return "Choose a subclass before saving.";
@@ -141,7 +153,7 @@ export function useCharacterCreatorSubmit(args: {
       setError("Character name is required.");
       return false;
     }
-    const submissionProblem = findCreatorSubmissionProblem({ form, classDetail });
+    const submissionProblem = findCreatorSubmissionProblem({ form, classDetail, raceDetail, bgDetail });
     if (submissionProblem) {
       setError(submissionProblem);
       return false;

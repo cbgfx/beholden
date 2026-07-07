@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import { SCHEMA_SQL } from "./dbSchema.js";
 import { syncCharacterDerivedColumns } from "./dbCharacterSync.js";
+import { normalizeLegacyCompendiumEffectKinds } from "./compendiumLegacyKindMigration.js";
 
 export type Db = Database.Database;
 
@@ -17,6 +18,7 @@ export function openDb(dbPath: string): Db {
 
   // Linked campaign rows are projections of canonical character sheets.
   syncCharacterDerivedColumns(db);
+  normalizeLegacyCompendiumEffectKinds(db);
   db.pragma("optimize");
   return db;
 }
