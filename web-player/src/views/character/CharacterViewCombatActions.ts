@@ -67,22 +67,21 @@ export function buildCharacterRuntimeActions(args: {
   } = args;
 
   const saveXp = async (value: number) => {
-    const updated: CharacterData = { ...currentCharacterData, xp: value };
-    await saveCharacterData(updated);
+    await saveCharacterData({ xp: value });
     setXpPopupOpen(false);
   };
 
   const saveHitDiceCurrent = async (nextValue: number) => {
     const next = Math.max(0, Math.min(hitDiceMax, Math.floor(nextValue)));
-    await saveCharacterData({ ...currentCharacterData, hitDiceCurrent: next });
+    await saveCharacterData({ hitDiceCurrent: next });
   };
 
   const saveResources = async (nextResources: ResourceCounter[]) => {
-    await saveCharacterData({ ...currentCharacterData, resources: nextResources });
+    await saveCharacterData({ resources: nextResources });
   };
 
   const saveUsedSpellSlots = async (next: Record<string, number>) => {
-    await saveCharacterData({ ...currentCharacterData, usedSpellSlots: next });
+    await saveCharacterData({ usedSpellSlots: next });
   };
 
   const savePreparedSpells = async (next: string[]) => {
@@ -91,7 +90,7 @@ export function buildCharacterRuntimeActions(args: {
     const userChosen = unique.filter((entry) => !forcedPreparedSpellKeys.has(entry));
     const limitedUserChosen = preparedSpellLimit > 0 ? userChosen.slice(0, preparedSpellLimit) : userChosen;
     const limited = [...forced, ...limitedUserChosen];
-    await saveCharacterData({ ...currentCharacterData, preparedSpells: limited });
+    await saveCharacterData({ preparedSpells: limited });
   };
 
   const baseProficiencies = currentCharacterData.proficiencies ?? {
@@ -129,7 +128,6 @@ export function buildCharacterRuntimeActions(args: {
       return [...currentPrepared, normalizedKey];
     })();
     await saveCharacterData({
-      ...currentCharacterData,
       preparedSpells: nextPreparedSpells,
       proficiencies: { ...baseProficiencies, spells: nextSpells },
     });
@@ -141,7 +139,6 @@ export function buildCharacterRuntimeActions(args: {
     const nextSpells = existing.filter((entry) => normalizeSpellName(entry.name) !== normalized);
     const nextPrepared = preparedSpells.filter((key) => key !== normalized.replace(/[^a-z0-9]/g, ""));
     await saveCharacterData({
-      ...currentCharacterData,
       preparedSpells: nextPrepared,
       proficiencies: { ...baseProficiencies, spells: nextSpells },
     });
@@ -149,7 +146,7 @@ export function buildCharacterRuntimeActions(args: {
 
   const handleItemChargeChange = async (itemId: string, charges: number) => {
     const nextInventory = (inventory ?? []).map((item) => item.id === itemId ? { ...item, charges } : item);
-    await saveCharacterData({ ...currentCharacterData, inventory: nextInventory });
+    await saveCharacterData({ inventory: nextInventory });
   };
 
   const changeResourceCurrent = async (key: string, delta: number) => {
@@ -174,7 +171,7 @@ export function buildCharacterRuntimeActions(args: {
     );
     const slotsReset = classDetail?.slotsReset ?? "L";
     if (/S/i.test(slotsReset)) {
-      await saveCharacterData({ ...currentCharacterData, resources: nextResources, usedSpellSlots: {} });
+      await saveCharacterData({ resources: nextResources, usedSpellSlots: {} });
     } else {
       await saveResources(nextResources);
     }
@@ -196,7 +193,6 @@ export function buildCharacterRuntimeActions(args: {
     await putMyCharacter(char.id, {
       hpCurrent: effectiveHpMaxWithoutOverrides,
       characterData: {
-        ...currentCharacterData,
         hitDiceCurrent: recovery.hitDiceCurrent,
         exhaustion: recovery.exhaustion,
         resources: nextResources,
@@ -345,7 +341,7 @@ export function buildCharacterRuntimeActions(args: {
     const next = toggleConditionInstance(current, key, condition);
     setCondSaving(true);
     try {
-      let nextCharacterData = currentCharacterData;
+      let characterPatch: CharacterData = {};
       if (key === "rage" && !has) {
         if (!/barbarian/i.test(String(char.className ?? ""))) return;
         const rageResource = classResourcesWithSpellCasts.find((resource) => /^rage$/i.test(resource.name) || resource.key === "rage");
@@ -353,11 +349,11 @@ export function buildCharacterRuntimeActions(args: {
         const nextResources = classResourcesWithSpellCasts.map((resource) =>
           resource.key !== rageResource.key ? resource : { ...resource, current: Math.max(0, resource.current - 1) },
         );
-        nextCharacterData = { ...currentCharacterData, resources: nextResources };
-        await saveCharacterData(nextCharacterData);
+        characterPatch = { resources: nextResources };
+        await saveCharacterData(characterPatch);
       }
       await patchMyCharacter(char.id, "conditions", { conditions: next });
-      setChar((prev) => prev ? { ...prev, conditions: next, characterData: { ...(prev.characterData ?? {}), ...nextCharacterData } } : prev);
+      setChar((prev) => prev ? { ...prev, conditions: next, characterData: { ...(prev.characterData ?? {}), ...characterPatch } } : prev);
     } catch (error) {
       fetchChar();
       console.error("Condition update failed:", error);

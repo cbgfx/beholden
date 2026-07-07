@@ -25,8 +25,6 @@ export function useCharacterActions(args: {
   const {
     char,
     setChar,
-    characterData,
-    currentCharacterData,
     playerNotesList,
     allSharedNotes,
     campaignNotesList,
@@ -40,46 +38,46 @@ export function useCharacterActions(args: {
     setOverridesSaving,
   } = args;
 
+  // Sends only the fields present in `updatedData` — never a full-document snapshot.
+  // The server merges this patch onto its own freshly-read row (see PUT /api/me/characters/:id),
+  // so a stale client-side closure can never clobber fields this call didn't intend to touch.
   const saveCharacterData = React.useCallback(async (updatedData: CharacterData) => {
     if (!char) return null;
-    const mergedData = { ...(characterData ?? {}), ...updatedData };
-    const normalizedDataBase = mergedData.proficiencies
-      ? { ...mergedData, proficiencies: normalizeProficiencies(mergedData.proficiencies) }
-      : mergedData;
-    const normalizedClasses = normalizeCharacterClasses(normalizedDataBase);
-    const normalizedData = {
-      ...normalizedDataBase,
-      classes: normalizedClasses,
-    };
+    const patch = updatedData.proficiencies
+      ? { ...updatedData, proficiencies: normalizeProficiencies(updatedData.proficiencies) }
+      : updatedData;
+    const normalizedPatch = patch.classes
+      ? { ...patch, classes: normalizeCharacterClasses(patch) }
+      : patch;
     const updated = await updateMyCharacter(char.id, {
       name: char.name,
-      characterData: normalizedData,
+      characterData: normalizedPatch,
     });
     setChar((prev) =>
-      prev ? { ...prev, characterData: { ...(prev.characterData ?? {}), ...normalizedData } } : prev,
+      prev ? { ...prev, characterData: { ...(prev.characterData ?? {}), ...normalizedPatch } } : prev,
     );
     return updated as Character;
-  }, [char, characterData, setChar]);
+  }, [char, setChar]);
 
   const savePlayerNotesList = React.useCallback(async (list: PlayerNote[]) => {
-    await saveCharacterData({ ...currentCharacterData, playerNotesList: list });
-  }, [currentCharacterData, saveCharacterData]);
+    await saveCharacterData({ playerNotesList: list });
+  }, [saveCharacterData]);
 
   const saveCustomResistances = React.useCallback(async (values: string[]) => {
-    await saveCharacterData({ ...currentCharacterData, customResistances: values });
-  }, [currentCharacterData, saveCharacterData]);
+    await saveCharacterData({ customResistances: values });
+  }, [saveCharacterData]);
 
   const saveCustomImmunities = React.useCallback(async (values: string[]) => {
-    await saveCharacterData({ ...currentCharacterData, customImmunities: values });
-  }, [currentCharacterData, saveCharacterData]);
+    await saveCharacterData({ customImmunities: values });
+  }, [saveCharacterData]);
 
   const saveCustomTools = React.useCallback(async (values: string[]) => {
-    await saveCharacterData({ ...currentCharacterData, customTools: values });
-  }, [currentCharacterData, saveCharacterData]);
+    await saveCharacterData({ customTools: values });
+  }, [saveCharacterData]);
 
   const saveCustomLanguages = React.useCallback(async (values: string[]) => {
-    await saveCharacterData({ ...currentCharacterData, customLanguages: values });
-  }, [currentCharacterData, saveCharacterData]);
+    await saveCharacterData({ customLanguages: values });
+  }, [saveCharacterData]);
 
   const saveSharedNotesList = React.useCallback((list: PlayerNote[]) => {
     if (!char) return;

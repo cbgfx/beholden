@@ -140,7 +140,6 @@ export function CharacterView() {
     const choices = { ...(currentData.extraFeatAbilityChoices ?? {}) };
     if (abilityChoices.length > 0) choices[feat.id] = abilityChoices;
     await notes.saveCharacterData({
-      ...currentData,
       extraFeatIds: [...current, feat.id],
       extraFeatAbilityChoices: choices,
     });
@@ -150,7 +149,6 @@ export function CharacterView() {
     const choices = { ...(currentData.extraFeatAbilityChoices ?? {}) };
     delete choices[featId];
     await notes.saveCharacterData({
-      ...currentData,
       extraFeatIds: current.filter((entry) => entry !== featId),
       extraFeatAbilityChoices: choices,
     });

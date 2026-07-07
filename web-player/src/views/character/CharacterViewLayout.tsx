@@ -97,7 +97,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
             saveDeathSaves: runtime.saveDeathSaves,
             hpMaxBonus: derived.overrides.hpMaxBonus ?? 0,
             concentrationSpell: currentData.concentrationSpell ?? null,
-            onConcentrationSpellChange: (spell) => { void notes.saveCharacterData({ ...currentData, concentrationSpell: spell }); },
+            onConcentrationSpellChange: (spell) => { void notes.saveCharacterData({ concentrationSpell: spell }); },
             concentrationSpellNames: Array.from(new Set([
               ...derived.grantedSpellData.spells.map((spell) => spell.spellName),
               ...(derived.prof?.spells ?? []).map((spell) => spell.name),
@@ -216,7 +216,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
             onSaveHitDiceCurrent={runtime.saveHitDiceCurrent}
             onShortRest={runtime.handleShortRest}
             onLongRest={runtime.handleLongRest}
-            onExhaustionChange={(value) => { void notes.saveCharacterData({ ...currentData, exhaustion: value }); }}
+            onExhaustionChange={(value) => { void notes.saveCharacterData({ exhaustion: value }); }}
             onChangeResourceCurrent={runtime.changeResourceCurrent}
             onOpenPlayerNoteCreate={() => ui.setNoteDrawer({ scope: "player", note: null })}
             onOpenSharedNoteCreate={() => ui.setNoteDrawer({ scope: "shared", note: null })}
