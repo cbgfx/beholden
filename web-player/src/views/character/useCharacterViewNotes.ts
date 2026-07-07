@@ -16,13 +16,11 @@ function parseNotes(value: string | null | undefined): PlayerNote[] {
 export function useCharacterViewNotes({
   char,
   setChar,
-  characterData,
   currentCharacterData,
   ui,
 }: {
   char: Character | null;
   setChar: React.Dispatch<React.SetStateAction<Character | null>>;
-  characterData: CharacterData | null | undefined;
   currentCharacterData: CharacterData;
   ui: CharacterViewUiState;
 }) {
@@ -37,8 +35,6 @@ export function useCharacterViewNotes({
   const actions = useCharacterActions({
     char,
     setChar,
-    characterData: characterData ?? undefined,
-    currentCharacterData,
     playerNotesList,
     allSharedNotes,
     campaignNotesList,

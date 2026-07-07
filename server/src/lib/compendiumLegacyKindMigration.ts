@@ -10,26 +10,31 @@ const COMPENDIUM_TABLES = [
   "compendium_monsters",
 ] as const;
 
-/** Renames any `kind: "legacy_special"` effect entries (in place) to the current `"source_special"`
- * kind — same shape, just an old label from before the importer was renamed. Returns whether
- * anything changed, so callers only write back rows that actually needed it. */
-function renameLegacySpecialKind(value: unknown): boolean {
+const LEGACY_KIND_PREFIX = "legacy_";
+const SOURCE_KIND_PREFIX = "source_";
+
+/** Renames any `kind: "legacy_*"` effect entries (in place) to the current `"source_*"` kind —
+ * identical shape, just an old label from before the importer was renamed (e.g. "legacy_special"
+ * -> "source_special", "legacy_modifier" -> "source_modifier", "legacy_proficiency" ->
+ * "source_proficiency"). Returns whether anything changed, so callers only write back rows that
+ * actually needed it. */
+function renameLegacyKinds(value: unknown): boolean {
   if (Array.isArray(value)) {
     let changed = false;
     for (const entry of value) {
-      if (renameLegacySpecialKind(entry)) changed = true;
+      if (renameLegacyKinds(entry)) changed = true;
     }
     return changed;
   }
   if (value && typeof value === "object") {
     const record = value as Record<string, unknown>;
     let changed = false;
-    if (record.kind === "legacy_special") {
-      record.kind = "source_special";
+    if (typeof record.kind === "string" && record.kind.startsWith(LEGACY_KIND_PREFIX)) {
+      record.kind = SOURCE_KIND_PREFIX + record.kind.slice(LEGACY_KIND_PREFIX.length);
       changed = true;
     }
     for (const key of Object.keys(record)) {
-      if (renameLegacySpecialKind(record[key])) changed = true;
+      if (renameLegacyKinds(record[key])) changed = true;
     }
     return changed;
   }
@@ -37,16 +42,17 @@ function renameLegacySpecialKind(value: unknown): boolean {
 }
 
 /**
- * Self-healing startup fixup: some compendium rows were imported before the effect kind
- * "legacy_special" was renamed to "source_special" (identical shape). The current schema only
- * recognizes "source_special", so any stored row still using the old name fails validation on
- * read — which previously caused silent proficiency loss when the character editor submitted
- * without a fully-loaded class/race/background detail. Idempotent and cheap (no-op once fixed).
+ * Self-healing startup fixup: some compendium rows were imported before effect kinds like
+ * "legacy_special"/"legacy_modifier"/"legacy_proficiency" were renamed to their current
+ * "source_*" equivalents (identical shape). The current schema only recognizes the "source_*"
+ * names, so any stored row still using an old name fails validation on read — which previously
+ * caused silent proficiency loss when the character editor submitted without a fully-loaded
+ * class/race/background detail. Idempotent and cheap (no-op once fixed).
  */
 export function normalizeLegacyCompendiumEffectKinds(db: Db): void {
   for (const table of COMPENDIUM_TABLES) {
     const rows = db
-      .prepare(`SELECT id, data_json FROM ${table} WHERE data_json LIKE '%legacy_special%'`)
+      .prepare(`SELECT id, data_json FROM ${table} WHERE data_json LIKE '%legacy_%'`)
       .all() as Array<{ id: string; data_json: string }>;
     if (rows.length === 0) continue;
     const update = db.prepare(`UPDATE ${table} SET data_json = ? WHERE id = ?`);
@@ -57,7 +63,7 @@ export function normalizeLegacyCompendiumEffectKinds(db: Db): void {
       } catch {
         continue;
       }
-      if (!renameLegacySpecialKind(parsed)) continue;
+      if (!renameLegacyKinds(parsed)) continue;
       update.run(JSON.stringify(parsed), row.id);
     }
   }

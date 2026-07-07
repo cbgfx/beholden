@@ -75,7 +75,6 @@ export function CharacterView() {
   const notes = useCharacterViewNotes({
     char,
     setChar,
-    characterData,
     currentCharacterData: currentDataForActions,
     ui,
   });

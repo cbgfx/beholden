@@ -8,8 +8,6 @@ import type { AbilKey, CharacterData, PlayerNote } from "@/views/character/Chara
 export function useCharacterActions(args: {
   char: Character | null;
   setChar: React.Dispatch<React.SetStateAction<Character | null>>;
-  characterData: CharacterData | undefined;
-  currentCharacterData: CharacterData;
   playerNotesList: PlayerNote[];
   allSharedNotes: PlayerNote[];
   campaignNotesList: PlayerNote[];
