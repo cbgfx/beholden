@@ -43,6 +43,7 @@ interface InventoryContainerSectionProps {
   onToggleWorn: (id: string) => Promise<void>;
   onRemoveItem: (id: string) => Promise<void>;
   onQty: (id: string, delta: number) => Promise<void>;
+  ammoItems?: InventoryItem[];
 }
 
 export function InventoryContainerSection({
@@ -68,6 +69,7 @@ export function InventoryContainerSection({
   onToggleWorn,
   onRemoveItem,
   onQty,
+  ammoItems,
 }: InventoryContainerSectionProps) {
   return (
     <div style={{ marginBottom: 12 }}>
@@ -184,6 +186,7 @@ export function InventoryContainerSection({
                 onToggleWorn={onToggleWorn}
                 onRemove={onRemoveItem}
                 onQty={onQty}
+                ammoItems={ammoItems}
               />
             );
           }}

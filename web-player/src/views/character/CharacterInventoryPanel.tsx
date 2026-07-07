@@ -4,6 +4,7 @@ import { DraggableList } from "@/ui/DraggableList";
 import {
   formatWeight,
   getEquipState,
+  isAmmunitionItem,
   isCurrencyItem,
   type CharacterDataLike,
   type InventoryContainer,
@@ -75,6 +76,8 @@ export function InventoryPanel({
       ? (myRemainingCapacity ?? 0) + (sync.otherMembersCapacityLbs ?? 0)
       : null;
 
+  const ammoItems = sync.items.filter(isAmmunitionItem);
+
   const stashWeight = sync.partyStashItems.reduce((sum, item) => sum + (item.weight ?? 0) * item.quantity, 0);
   const stashWeightLabel = partyCapacityLbs !== null
     ? `${formatWeight(stashWeight)} / ${formatWeight(partyCapacityLbs)} lb`
@@ -119,6 +122,8 @@ export function InventoryPanel({
                     onToggleWorn={itemActions.toggleWorn}
                     onRemove={itemActions.removeItem}
                     onQty={itemActions.changeQty}
+                    ammoItems={ammoItems}
+                    onLinkAmmo={itemActions.linkAmmo}
                   />
                 ) : null;
               }}
@@ -161,6 +166,7 @@ export function InventoryPanel({
               onToggleWorn={itemActions.toggleWorn}
               onRemoveItem={itemActions.removeItem}
               onQty={itemActions.changeQty}
+              ammoItems={ammoItems}
             />
           );
         })}

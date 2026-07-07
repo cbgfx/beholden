@@ -47,6 +47,7 @@ export interface InventoryItem {
   description?: string;
   chargesMax?: number | null;
   charges?: number | null;
+  linkedAmmoId?: string | null;
 }
 
 export interface InventoryContainer {
@@ -322,6 +323,13 @@ function isMonkWeapon(item: InventoryItem): boolean {
 
 export function isRangedWeapon(item: InventoryItem): boolean {
   return /ranged/i.test(item.type ?? "");
+}
+
+const AMMO_NAME_RE = /\b(arrows?|bolts?|bullets?|needles?|sling bullets?|blowgun needles?|crossbow bolts?)\b/i;
+
+export function isAmmunitionItem(item: InventoryItem): boolean {
+  if (/ammo|ammunition/i.test(item.type ?? "")) return true;
+  return AMMO_NAME_RE.test(item.name ?? "");
 }
 
 function isStaffLikeWeapon(item: InventoryItem): boolean {

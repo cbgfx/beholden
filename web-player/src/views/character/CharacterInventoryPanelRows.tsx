@@ -1,4 +1,5 @@
 import type React from "react";
+import { useState } from "react";
 import { C } from "@/lib/theme";
 import { titleCase } from "@/lib/format/titleCase";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
@@ -12,6 +13,7 @@ import {
   hasStealthDisadvantage,
   hasWeaponMastery,
   isArmorItem,
+  isRangedWeapon,
   isShieldItem,
   isWearableItem,
   isWeaponItem,
@@ -78,7 +80,7 @@ export function PartyStashItemRow({ item, onTake, onDelete, onQuantity }: {
   );
 }
 
-export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, expanded, onToggleExpanded, onCycleMain, onToggleOffhand, onToggleWorn, onRemove, onQty }: {
+export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, expanded, onToggleExpanded, onCycleMain, onToggleOffhand, onToggleWorn, onRemove, onQty, ammoItems = [], onLinkAmmo }: {
   item: InventoryItem;
   accentColor: string;
   charData: InventoryPanelCharacterData | null;
@@ -90,7 +92,10 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
   onToggleWorn: (id: string) => void;
   onRemove: (id: string) => void;
   onQty: (id: string, delta: number) => void;
+  ammoItems?: InventoryItem[];
+  onLinkAmmo?: (weaponId: string, ammoId: string | null) => void;
 }) {
+  const [ammoOpen, setAmmoOpen] = useState(false);
   const state = getEquipState(item);
   const isWeapon = isWeaponItem(item);
   const isArmor = isArmorItem(item);
@@ -105,11 +110,14 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
   const mastered = isWeapon && hasWeaponMastery(item, charData?.proficiencies as never);
   const masteryName = mastered ? (mastery?.name ?? getWeaponMasteryName(item)) : null;
   const meta = [item.type ?? null, item.attunement ? "Attunement" : null].filter(Boolean).join(" • ");
+  const showAmmoControl = isWeapon && equipped && isRangedWeapon(item) && Boolean(onLinkAmmo);
+  const linkedAmmo = item.linkedAmmoId ? ammoItems.find((entry) => entry.id === item.linkedAmmoId) ?? null : null;
 
   const equipControls = isWeapon ? (
     <>
       <button onClick={() => onCycleMain(item.id)} title="Cycle main hand" style={inventoryEquipBtn(mainActive, accentColor)}>{mainLabel}</button>
       {offhandAllowed ? <button onClick={() => onToggleOffhand(item.id)} title={state === "offhand" ? "Unequip offhand" : "Equip to offhand"} style={inventoryEquipBtn(state === "offhand", accentColor)}>OH</button> : null}
+      {showAmmoControl ? <button onClick={() => setAmmoOpen((prev) => !prev)} title="Ammunition" style={inventoryEquipBtn(ammoOpen || Boolean(linkedAmmo), accentColor)}>A</button> : null}
     </>
   ) : isArmor || isWearable ? (
     <button onClick={() => onToggleWorn(item.id)} title={state === "worn" ? "Unequip" : "Equip"} style={inventoryEquipBtn(state === "worn", accentColor)}>EQ</button>
@@ -127,6 +135,7 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
             {item.name}
             {item.magic ? <Tag label="Magic" color={C.colorMagic} /> : null}
             {item.attuned ? <StatusBadge title="Currently attuned" border="rgba(56,189,248,0.55)" bg="rgba(56,189,248,0.14)" color="#38bdf8">A</StatusBadge> : null}
+            {linkedAmmo ? <StatusBadge title={`Loaded ammunition: ${linkedAmmo.name}`} border="rgba(52,211,153,0.45)" bg="rgba(52,211,153,0.14)" color="#34d399">{linkedAmmo.name}</StatusBadge> : null}
             {masteryName ? <StatusBadge title={mastery ? mastery.text : `Weapon Mastery: ${masteryName}`} border="rgba(251,191,36,0.45)" bg="rgba(251,191,36,0.14)" color={C.colorGold}>{masteryName}</StatusBadge> : null}
             {hasStealthDisadvantage(item) ? <StatusBadge title="Disadvantage on Stealth checks" border="rgba(248,113,113,0.55)" bg="rgba(248,113,113,0.14)" color={C.colorPinkRed}>D</StatusBadge> : null}
             {lacksArmorProficiency ? <StatusBadge title="Disadvantage from wearing armor or a shield without proficiency" border="rgba(248,113,113,0.55)" bg="rgba(248,113,113,0.14)" color={C.colorPinkRed}>D</StatusBadge> : null}
@@ -151,6 +160,29 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
       )}
       padding="4px 2px"
       />
+      {showAmmoControl && ammoOpen ? (
+        <div style={{ marginLeft: 22, marginTop: 2, marginBottom: 4, display: "flex", flexDirection: "column", gap: 2, borderLeft: `2px solid ${accentColor}33`, paddingLeft: 8 }}>
+          {ammoItems.length === 0 ? (
+            <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, padding: "3px 0" }}>No ammunition in inventory</div>
+          ) : ammoItems.map((ammo) => {
+            const active = item.linkedAmmoId === ammo.id;
+            return (
+              <div key={ammo.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "3px 6px", borderRadius: 6, background: active ? `${accentColor}14` : "transparent" }}>
+                <span style={{ fontSize: "var(--fs-small)", color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {ammo.name}{ammo.quantity > 1 ? ` x${ammo.quantity}` : ""}
+                </span>
+                <button
+                  onClick={() => onLinkAmmo?.(item.id, active ? null : ammo.id)}
+                  title={active ? "Unequip ammunition" : "Equip ammunition"}
+                  style={inventoryEquipBtn(active, accentColor)}
+                >
+                  EQ
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }

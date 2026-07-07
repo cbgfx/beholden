@@ -273,7 +273,8 @@ export function CharacterCombatPanels({
             const mastery = parseWeaponMastery(it);
             const masteryKnown = hasWeaponMastery(it, prof ?? undefined);
             const masteryName = masteryKnown ? (mastery?.name ?? getWeaponMasteryName(it)) : null;
-            const magicBonus = parseMagicBonus(it);
+            const linkedAmmo = isRangedWeapon(it) && it.linkedAmmoId ? inventory.find((entry) => entry.id === it.linkedAmmoId) ?? null : null;
+            const magicBonus = parseMagicBonus(it) + (linkedAmmo ? parseMagicBonus(linkedAmmo) : 0);
             const featureAttackRollBonus = deriveAttackRollBonusFromEffects(parsedFeatureEffects ?? [], {
               level,
               scores: { str: strScore, dex: dexScore },
@@ -310,6 +311,7 @@ export function CharacterCombatPanels({
                     <span style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.name}</span>
                     {modeLabel && <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: accentColor, border: `1px solid ${accentColor}44`, background: `${accentColor}18`, borderRadius: 999, padding: "1px 5px" }}>{modeLabel}</span>}
                     {masteryName && <Tooltip text={mastery?.text ?? `Weapon Mastery: ${masteryName}`} multiline><span style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.colorGold, border: "1px solid rgba(251,191,36,0.35)", background: "rgba(251,191,36,0.12)", borderRadius: 999, padding: "1px 5px", cursor: "help" }}>{masteryName}</span></Tooltip>}
+                    {linkedAmmo && <span title={`Loaded ammunition: ${linkedAmmo.name}`} style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: "#34d399", border: "1px solid rgba(52,211,153,0.4)", background: "rgba(52,211,153,0.12)", borderRadius: 999, padding: "1px 5px" }}>{linkedAmmo.name}</span>}
                     {!proficient && <span style={{ fontSize: "var(--fs-tiny)", color: C.red, fontWeight: 700 }}>No proficiency</span>}
                     {attackDisadvantage && <span style={{ fontSize: "var(--fs-tiny)", color: C.colorPinkRed, fontWeight: 700 }}>D</span>}
                   </div>

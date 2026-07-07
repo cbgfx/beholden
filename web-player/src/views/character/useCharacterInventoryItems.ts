@@ -115,6 +115,8 @@ export function useCharacterInventoryItems({
     const item = items.find((entry) => entry.id === id);
     if (item) await setEquipStateFor(id, getEquipState(item) === "worn" ? "backpack" : "worn");
   };
+  const linkAmmo = (weaponId: string, ammoId: string | null) =>
+    containers.persist(items.map((item) => item.id === weaponId ? { ...item, linkedAmmoId: ammoId } : item));
   const removeItem = (id: string) => containers.persist(items.filter((item) => item.id !== id));
   const changeQty = (id: string, delta: number) => containers.persist(items.map((item) =>
     item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
@@ -148,7 +150,7 @@ export function useCharacterInventoryItems({
 
   return {
     takeFromPartyStash, changePartyStashQty, deleteFromPartyStash, toggleContainerCollapsed,
-    cycleMainHand, toggleOffhand, toggleWorn, removeItem, changeQty, toggleExpandedItem,
+    cycleMainHand, toggleOffhand, toggleWorn, linkAmmo, removeItem, changeQty, toggleExpandedItem,
     saveItemEdits, saveCurrencyAmount, reorderItemsByIds,
   };
 }
