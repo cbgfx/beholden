@@ -34,6 +34,7 @@ export function toTreasureDto(entry: StoredTreasure): TreasureDto {
     scope: {
       campaignId: entry.campaignId,
       adventureId: entry.adventureId ?? null,
+      encounterId: entry.encounterId ?? null,
     },
     entry: {
       source: entry.source,

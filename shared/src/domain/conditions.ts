@@ -31,6 +31,22 @@ export function concentrationSaveDc(damage: number): number {
   return Math.max(10, Math.floor(damage / 2));
 }
 
+export const INCAPACITATING_CONDITION_KEYS = new Set([
+  "incapacitated",
+  "paralyzed",
+  "petrified",
+  "stunned",
+  "unconscious",
+]);
+
+export function hasIncapacitatingCondition(
+  conditions: Array<{ key?: unknown }> | null | undefined,
+): boolean {
+  return Boolean(conditions?.some((condition) =>
+    INCAPACITATING_CONDITION_KEYS.has(String(condition.key ?? "").trim().toLowerCase())
+  ));
+}
+
 export function displayActorName(actor: { label?: unknown; name?: unknown; type?: unknown } | null | undefined): string {
   const label = String(actor?.label ?? "").trim();
   if (label) return label;

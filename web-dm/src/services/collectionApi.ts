@@ -22,6 +22,7 @@ type TreasureListRow = {
   id: string;
   campaignId: string;
   adventureId: string | null;
+  encounterId?: string | null;
   itemId?: string | null;
   name: string;
   qty: number;
@@ -50,8 +51,8 @@ function noteListRowToFlat(row: NoteListRow): FlatNoteDto {
 function treasureListRowToFlat(row: TreasureListRow): FlatTreasureDto {
   return {
     id: row.id,
-    scope: row.adventureId ? "adventure" : "campaign",
-    scopeId: row.adventureId ?? row.campaignId,
+    scope: row.encounterId ? "encounter" : row.adventureId ? "adventure" : "campaign",
+    scopeId: row.encounterId ?? row.adventureId ?? row.campaignId,
     name: row.name,
     qty: row.qty,
     order: row.sort,
@@ -93,6 +94,14 @@ export function fetchAdventureTreasureList(
   adventureId: string,
 ): Promise<FlatTreasureDto[]> {
   return api<TreasureListRow[]>(`/api/adventures/${adventureId}/treasure?view=list`).then((rows) =>
+    rows.map(treasureListRowToFlat),
+  );
+}
+
+export function fetchEncounterTreasureList(
+  encounterId: string,
+): Promise<FlatTreasureDto[]> {
+  return api<TreasureListRow[]>(`/api/encounters/${encounterId}/treasure?view=list`).then((rows) =>
     rows.map(treasureListRowToFlat),
   );
 }

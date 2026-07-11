@@ -164,7 +164,10 @@ export function MonsterStatblock({ monster, hideSummaryBar = false }: { monster:
   const reactionArr = asMonsterEntryArray(monster.reactions ?? monster.reaction);
   const legendary = asMonsterEntryArray(monster.legendary ?? monster.legendaryActions);
 
-  const nonSpellTraits = traitArr.filter((trait) => !isSpellSection(trait?.name ?? trait?.title));
+  const nonSpellTraits = traitArr.filter((trait) => {
+    const name = trait?.name ?? trait?.title;
+    return !isSpellSection(name) && !/^proficiency bonus$/i.test(String(name ?? "").trim());
+  });
   const nonSpellActions = actionArr.filter((action) => !isSpellSection(action?.name ?? action?.title));
 
   return (

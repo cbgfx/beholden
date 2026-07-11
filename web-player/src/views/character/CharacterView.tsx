@@ -13,6 +13,7 @@ import { buildCharacterHpActions } from "@/views/character/CharacterViewHpAction
 import { useCharacterSyncEffects } from "@/views/character/useCharacterSyncEffects";
 import { useCharacterPolymorphControls } from "@/views/character/useCharacterPolymorphControls";
 import type { CharacterCombatPanelsProps } from "@/views/character/CharacterCombatPanels";
+import { hasIncapacitatingCondition } from "@beholden/shared/domain";
 import { getExhaustionD20Penalty } from "@/views/character/CharacterExhaustion";
 import { useCharacterLiveUpdates } from "@/views/character/useCharacterLiveUpdates";
 import { useCharacterViewUiState, useCharacterViewUiSync } from "@/views/character/useCharacterViewUiState";
@@ -177,6 +178,9 @@ export function CharacterView() {
     rageActive: derived.rageActive,
     exhaustion,
     showActions: !polymorphCondition,
+    reactionUsed: live.combatStatus?.usedReaction ?? false,
+    onToggleReaction: live.combatStatus ? live.toggleReaction : null,
+    incapacitated: hasIncapacitatingCondition(char.conditions),
   } satisfies CharacterCombatPanelsProps;
 
   return (

@@ -20,8 +20,14 @@ function isAttackAction(a: MonsterActionEntry): boolean {
 }
 
 function parseAttackDefaults(a: MonsterActionEntry): { toHit?: number; damage?: string } {
-  if (a?.attack) {
-    const parts = String(a.attack).split("||");
+  if (a?.attack && typeof a.attack === "object" && !Array.isArray(a.attack)) {
+    const attack = a.attack as Record<string, unknown>;
+    const toHit = Number(attack.toHit);
+    const damage = String(attack.damage ?? "").replace(/\s+/g, "");
+    return { toHit: Number.isFinite(toHit) ? toHit : undefined, damage: damage || undefined };
+  }
+  if (typeof a?.attack === "string") {
+    const parts = a.attack.split(/\|\|?/);
     if (parts.length >= 3) {
       const ht = parseInt(parts[1].trim(), 10);
       const dmg = parts[2].trim();
@@ -29,7 +35,7 @@ function parseAttackDefaults(a: MonsterActionEntry): { toHit?: number; damage?: 
     }
   }
   const text = Array.isArray(a?.text) ? a.text.map(String).join(" ") : String(a?.text ?? "");
-  const hitMatch = text.match(/([+-]?\d+)\s+to\s+hit/i);
+  const hitMatch = text.match(/(?:Attack Roll:\s*|)([+-]?\d+)(?:\s+to\s+hit|\s*,)/i);
   const toHit = hitMatch ? parseInt(hitMatch[1], 10) : undefined;
   const dmgMatch = text.match(/\bHit:\s+\d+\s*\(([^)]+)\)/i);
   const damage = dmgMatch ? dmgMatch[1].replace(/\s+/g, "") : undefined;

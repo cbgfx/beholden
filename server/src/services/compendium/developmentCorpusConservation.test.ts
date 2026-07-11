@@ -14,6 +14,7 @@ import {
   parseNativeCompendiumDocument,
 } from "./nativeCompendium.js";
 import { parseStoredCompendiumEntry } from "./storedCompendium.js";
+import { condenseTreasureText } from "./nativeCompendiumV2.monster.js";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -170,6 +171,9 @@ test("monster metadata, recharge, lair categories, and explicit attacks survive 
       for (const rawEntry of asArray<JsonRecord>(
         monster[field] as JsonRecord[] | JsonRecord | null | undefined,
       )) {
+        // The "Treasure" trait is extracted into its own `monster.treasure` field during
+        // conversion (see the dedicated conservation check below) rather than staying in `traits`.
+        if (field === "trait" && /^treasure$/i.test(asText(rawEntry.name))) continue;
         const attacks = asArray(rawEntry.attack).map(asText).filter(Boolean);
         sourceMechanics.push([
           asText(monster.name),
@@ -200,6 +204,22 @@ test("monster metadata, recharge, lair categories, and explicit attacks survive 
     });
   });
   assert.deepEqual(sorted(nativeMechanics), sorted(sourceMechanics));
+
+  const sourceTreasure = new Map<string, string>();
+  sourceMonsters.forEach((monster) => {
+    for (const rawEntry of asArray<JsonRecord>(
+      monster.trait as JsonRecord[] | JsonRecord | null | undefined,
+    )) {
+      if (/^treasure$/i.test(asText(rawEntry.name))) {
+        sourceTreasure.set(asText(monster.name), condenseTreasureText(asText(rawEntry.text)));
+      }
+    }
+  });
+  const nativeTreasure = new Map<string, string>();
+  nativeMonsters.forEach((monster) => {
+    if (monster.treasure) nativeTreasure.set(String(monster.name), String(monster.treasure));
+  });
+  assert.deepEqual(nativeTreasure, sourceTreasure);
 });
 
 test("item detail, requirements, range, strength, and rolls survive conversion", () => {

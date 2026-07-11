@@ -31,6 +31,8 @@ import { ACCEPTED_IMAGE_TYPES, resizeToWebP } from "../lib/imageHelpers.js";
 import { ConditionInstanceSchema } from "../lib/schemas.js";
 import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
 import { withAbsoluteImageUrl } from "../lib/routeImageUrl.js";
+import { applyConditionConsequences, conditionsBreakConcentration, detectEndedConcentration } from "../services/combatTransitions.js";
+import { sweepDependentConditions } from "../services/combat.js";
 import {
   AssignBody,
   CharacterCreateBody,
@@ -203,13 +205,16 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     };
     const normalized = normalizeCharacterSheetForStorage(nextSheet, mergedCharacterData);
     const hasSyncedDerivedStats = p.syncedHpMax !== undefined || p.syncedAc !== undefined;
-    const characterDataForStorage = hasSyncedDerivedStats
+    let characterDataForStorage = hasSyncedDerivedStats
       ? {
           ...(normalized.characterData ?? {}),
           ...(p.syncedHpMax !== undefined ? { derivedHpMax: p.syncedHpMax } : {}),
           ...(p.syncedAc !== undefined ? { derivedAc: p.syncedAc } : {}),
         }
       : normalized.characterData;
+    if (Number(normalized.sheet.hpCurrent) <= 0 && characterDataForStorage?.concentrationSpell) {
+      characterDataForStorage = { ...characterDataForStorage, concentrationSpell: null };
+    }
     const finalNormalized = normalizeCharacterSheetForStorage(
       normalized.sheet,
       characterDataForStorage,
@@ -262,13 +267,14 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     if (!requireOwnedCharacter(db, charId, req.user!.userId, res)) return;
 
     const parsed = parseBody(ConditionsBody, req);
-    const conditions: StoredConditionInstance[] = parsed.conditions.map((condition) => {
-      const { casterId, hexAbility, ...rest } = condition;
+    let conditions: StoredConditionInstance[] = parsed.conditions.map((condition) => {
+      const { casterId, hexAbility, concentrationId, ...rest } = condition;
       return {
         ...rest,
         key: condition.key,
         ...(casterId !== undefined ? { casterId } : {}),
         ...(hexAbility !== undefined ? { hexAbility } : {}),
+        ...(concentrationId !== undefined ? { concentrationId } : {}),
       };
     });
     const charSheetRow = db
@@ -277,12 +283,25 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     if (!charSheetRow) return res.status(404).json({ ok: false, message: "Not found" });
     const charSheet = rowToCharacterSheet(charSheetRow);
     const baseSpeed = charSheet.speed;
+    conditions = applyConditionConsequences({
+      hpCurrent: charSheet.hpCurrent,
+      conditions,
+    });
+    if (conditionsBreakConcentration(conditions)) {
+      conditions = conditions.filter((condition) => condition.key !== "concentration");
+      db.prepare(`
+        UPDATE user_characters
+        SET character_data_json = json_set(COALESCE(character_data_json, '{}'), '$.concentrationSpell', NULL)
+        WHERE id = ?
+      `).run(charId);
+    }
 
     const t = now();
 
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
       const pRow = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(player_id) as Record<string, unknown>;
       const player = rowToCampaignCharacter(pRow);
+      const previousConditions: StoredConditionInstance[] = Array.isArray(player.conditions) ? player.conditions : [];
 
       let newSpeed = baseSpeed;
       const hasZeroSpeedCondition = conditions.some(c => ["grappled", "restrained", "paralyzed", "petrified", "stunned", "unconscious"].includes(c.key));
@@ -299,6 +318,16 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       updateCampaignCharacterLive(db, player_id, player, { conditions }, t);
       emitPlayerChange({ campaignId: campaign_id, action: "upsert", playerId: player_id, characterId: charId });
       broadcastPlayerCombatantChanges(db, ctx.broadcast, player_id);
+
+      // If this player's combatant(s) just lost concentration, strip dependent conditions
+      // (Hexed/Marked/etc.) elsewhere in the same encounter that were owned by that session.
+      const combatantRows = db.prepare(
+        `SELECT id, encounter_id FROM combatants WHERE base_type = 'player' AND base_id = ?`
+      ).all(player_id) as { id: string; encounter_id: string }[];
+      for (const { id: combatantId, encounter_id: combatantEncounterId } of combatantRows) {
+        const ended = detectEndedConcentration(combatantId, previousConditions, conditions);
+        if (ended) sweepDependentConditions(db, ctx.broadcast, combatantEncounterId, ended, t, combatantId);
+      }
     }
 
     res.json({ ok: true, conditions });

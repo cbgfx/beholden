@@ -68,13 +68,7 @@ export function InventoryPanel({
     selectedItemId: sync.expandedItemId,
   });
 
-  const myRemainingCapacity = char.strScore !== null
-    ? Math.max(0, char.strScore * 15 - derived.carriedWeight)
-    : null;
-  const partyCapacityLbs =
-    myRemainingCapacity !== null || sync.otherMembersCapacityLbs !== null
-      ? (myRemainingCapacity ?? 0) + (sync.otherMembersCapacityLbs ?? 0)
-      : null;
+  const partyCapacityLbs = sync.partyCapacityLbs;
 
   const ammoItems = sync.items.filter(isAmmunitionItem);
 

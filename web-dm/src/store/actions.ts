@@ -39,6 +39,9 @@ export type Action =
   | { type: "removeCampaignTreasure"; treasureId: string }
   | { type: "upsertAdventureTreasure"; entry: TreasureEntry }
   | { type: "removeAdventureTreasure"; treasureId: string }
+  | { type: "setEncounterTreasure"; treasure: TreasureEntry[] }
+  | { type: "upsertEncounterTreasure"; entry: TreasureEntry }
+  | { type: "removeEncounterTreasure"; treasureId: string }
   | { type: "toggleNote"; noteId: string }
   | { type: "openDrawer"; drawer: DrawerState }
   | { type: "closeDrawer" };

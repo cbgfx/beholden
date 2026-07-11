@@ -7,6 +7,10 @@ export const ConditionInstanceSchema = z.object({
   key: z.string(),
   casterId: z.string().nullable().optional(),
   hexAbility: z.enum(["str", "dex", "con", "int", "wis", "cha"]).optional(),
+  /** Identifies a specific concentration session, so a dependent condition (e.g. Hexed, Marked)
+   * can be tied to the exact casting it came from rather than just its caster — see
+   * combatTransitions.ts's ensureConcentrationId/detectEndedConcentration/removeConditionsOwnedBy. */
+  concentrationId: z.string().nullable().optional(),
 }).passthrough();
 
 /** Per-attack stat overrides keyed by attack name. */

@@ -35,6 +35,7 @@ export interface FlatNoteDto {
 export interface TreasureScopeDto {
   campaignId: string;
   adventureId: string | null;
+  encounterId: string | null;
 }
 
 export interface TreasureEntryDto {
@@ -65,7 +66,7 @@ export interface TreasureDto {
 
 export interface FlatTreasureDto {
   id: string;
-  scope: "campaign" | "adventure";
+  scope: "campaign" | "adventure" | "encounter";
   scopeId: string;
   name: string;
   qty: number;
@@ -108,7 +109,7 @@ export interface PartyInventoryItemDto {
 export interface PartyInventoryListDto {
   items: PartyInventoryItemDto[];
   /** Combined remaining carry capacity of all OTHER party members (lbs). Null when no STR data is available. */
-  otherMembersCapacityLbs: number | null;
+  partyCapacityLbs: number | null;
 }
 
 export interface FlatPartyInventoryItemDto {
@@ -145,8 +146,8 @@ export function flattenNoteDto(dto: NoteDto): FlatNoteDto {
 export function flattenTreasureDto(dto: TreasureDto): FlatTreasureDto {
   const flat: FlatTreasureDto = {
     id: dto.id,
-    scope: dto.scope.adventureId ? "adventure" : "campaign",
-    scopeId: dto.scope.adventureId ?? dto.scope.campaignId,
+    scope: dto.scope.encounterId ? "encounter" : dto.scope.adventureId ? "adventure" : "campaign",
+    scopeId: dto.scope.encounterId ?? dto.scope.adventureId ?? dto.scope.campaignId,
     name: dto.entry.name,
     qty: dto.entry.qty,
     order: dto.meta.sort,

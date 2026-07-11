@@ -8,14 +8,14 @@ import { api, jsonInit } from "@/services/api";
 
 export type PartyInventoryResult = {
   items: FlatPartyInventoryItemDto[];
-  otherMembersCapacityLbs: number | null;
+  partyCapacityLbs: number | null;
 };
 
 export function fetchPartyInventory(campaignId: string): Promise<PartyInventoryResult> {
   return api<PartyInventoryListDto>(`/api/campaigns/${campaignId}/party-inventory`).then(
-    ({ items, otherMembersCapacityLbs }) => ({
+    ({ items, partyCapacityLbs }) => ({
       items: items.map(flattenPartyInventoryItemDto),
-      otherMembersCapacityLbs,
+      partyCapacityLbs,
     }),
   );
 }

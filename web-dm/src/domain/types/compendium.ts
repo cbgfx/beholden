@@ -25,6 +25,7 @@ export type MonsterDetail = {
   int: number | null;
   wis: number | null;
   cha: number | null;
+  treasure?: string | null;
   trait: MonsterTextEntry[];
   action: MonsterTextEntry[];
   reaction: MonsterTextEntry[];

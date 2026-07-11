@@ -170,6 +170,7 @@ export function compactMonsterEntry(entry: JsonRecord): JsonRecord {
     ...(Object.keys(defenses).length ? { defenses } : {}),
     ...(stringList(entry.senses).length ? { senses: stringList(entry.senses) } : {}),
     ...(stringList(entry.languages).length ? { languages: stringList(entry.languages) } : {}),
+    ...(text(entry.treasure) ? { treasure: text(entry.treasure) } : {}),
     ...Object.fromEntries(
       Object.entries(optionalLists).filter(([, entries]) => entries.length > 0),
     ),

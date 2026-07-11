@@ -70,6 +70,7 @@ export function mergeCanonicalV2Edit(
       initiativeBonus: existing.initiativeBonus ?? replacement.initiativeBonus,
       passivePerception: existing.passivePerception ?? replacement.passivePerception,
       npc: existing.npc ?? replacement.npc,
+      treasure: existing.treasure,
       traits: mergeActionEdits(existing.traits, replacement.traits),
       actions: mergeActionEdits(existing.actions, replacement.actions),
       reactions: mergeActionEdits(existing.reactions, replacement.reactions),

@@ -100,6 +100,7 @@ CREATE TABLE IF NOT EXISTS treasure (
   id TEXT PRIMARY KEY,
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
   adventure_id TEXT,
+  encounter_id TEXT,
   source TEXT NOT NULL DEFAULT 'custom',
   item_id TEXT,
   name TEXT NOT NULL DEFAULT 'New Item',
@@ -113,7 +114,8 @@ CREATE TABLE IF NOT EXISTS treasure (
   sort INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
-  FOREIGN KEY (adventure_id) REFERENCES adventures(id) ON DELETE CASCADE
+  FOREIGN KEY (adventure_id) REFERENCES adventures(id) ON DELETE CASCADE,
+  FOREIGN KEY (encounter_id) REFERENCES encounters(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS conditions (

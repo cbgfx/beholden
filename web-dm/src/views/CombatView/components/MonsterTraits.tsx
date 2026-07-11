@@ -55,7 +55,10 @@ export function MonsterTraits(props: {
 }) {
   const allTraits = Array.isArray(props.monster.trait) ? props.monster.trait : [];
   const legendaryResistanceTrait = allTraits.find((t) => /legendary resistance/i.test(String(t?.name ?? "")));
-  const otherTraits = allTraits.filter((t) => !/legendary resistance/i.test(String(t?.name ?? "")));
+  const otherTraits = allTraits.filter((t) => {
+    const name = String(t?.name ?? "").trim();
+    return !/legendary resistance/i.test(name) && !/^proficiency bonus$/i.test(name);
+  });
 
   const resistanceCount = legendaryResistanceTrait
     ? parseLegendaryResistanceCount(String(legendaryResistanceTrait.name ?? ""))

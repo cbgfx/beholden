@@ -8,7 +8,7 @@ interface ConditionDef {
   name: string;
 }
 
-const SPECIAL_CONDITION_KEYS = new Set(["concentration", "hexed", "marked"]);
+const HIDDEN_CONDITION_KEYS = new Set(["concentration", "hexed", "marked"]);
 
 export function CharacterHudConditionsDrawer(props: {
   condPickerOpen: boolean;
@@ -23,11 +23,10 @@ export function CharacterHudConditionsDrawer(props: {
 
   if (!condPickerOpen) return null;
 
-  const sortedConditions = [...availableConditions].sort((a, b) => a.name.localeCompare(b.name));
-  const conditionGroups = [
-    sortedConditions.filter((condition) => !SPECIAL_CONDITION_KEYS.has(condition.key)),
-    sortedConditions.filter((condition) => SPECIAL_CONDITION_KEYS.has(condition.key)),
-  ].filter((group) => group.length > 0);
+  const sortedConditions = availableConditions
+    .filter((condition) => !HIDDEN_CONDITION_KEYS.has(condition.key))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const conditionGroups = [sortedConditions];
 
   return (
     <RightDrawer

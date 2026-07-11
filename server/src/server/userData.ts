@@ -146,6 +146,8 @@ export interface StoredConditionInstance {
   key: string;
   casterId?: string | null;
   hexAbility?: "str" | "dex" | "con" | "int" | "wis" | "cha";
+  /** Identifies a specific concentration session for ownership matching — see combatTransitions.ts. */
+  concentrationId?: string | null;
   [k: string]: unknown;
 }
 
@@ -210,6 +212,7 @@ export interface StoredTreasure extends Timestamps {
   id: Id;
   campaignId: Id;
   adventureId: string | null;
+  encounterId: string | null;
   source: "compendium" | "custom";
   itemId: string | null;
   name: string;

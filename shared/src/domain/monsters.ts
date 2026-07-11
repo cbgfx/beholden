@@ -205,6 +205,13 @@ export function buildMonsterInfoLines(
     if (raw && typeof raw === "object") return listToString(raw);
     return "";
   })();
+  const proficiencyBonus = proficiencyBonusFromChallengeRating(
+    detail.cr ?? detail.challengeRating ?? detail.challenge_rating,
+  );
+  const skillsAndProficiency = [
+    skillsStr,
+    `Proficiency: +${proficiencyBonus}`,
+  ].filter(Boolean).join(", ");
 
   const sensesStr = listToString(detail.senses);
   const langsStr = listToString(detail.languages);
@@ -226,14 +233,14 @@ export function buildMonsterInfoLines(
   return [
     ...(sizeStr ? [{ label: "Size", value: sizeStr }] : []),
     ...(typeDisplay ? [{ label: "Type", value: typeDisplay }] : []),
-    { label: "Skills", value: skillsStr || "—" },
-    { label: "Senses", value: sensesStr || "—" },
-    { label: "Languages", value: langsStr || "—" },
-    { label: "Challenge Rating", value: crStr || "—" },
-    { label: "Damage Resistances", value: dmgRes || "—" },
-    { label: "Damage Vulnerabilities", value: dmgVuln || "—" },
-    { label: "Damage Immunities", value: dmgImm || "—" },
-    { label: "Condition Immunities", value: condImm || "—" },
+    { label: "Skills", value: skillsAndProficiency },
+    ...(sensesStr ? [{ label: "Senses", value: sensesStr }] : []),
+    ...(langsStr ? [{ label: "Languages", value: langsStr }] : []),
+    ...(crStr ? [{ label: "Challenge Rating", value: crStr }] : []),
+    ...(dmgRes ? [{ label: "Damage Resistances", value: dmgRes }] : []),
+    ...(dmgVuln ? [{ label: "Damage Vulnerabilities", value: dmgVuln }] : []),
+    ...(dmgImm ? [{ label: "Damage Immunities", value: dmgImm }] : []),
+    ...(condImm ? [{ label: "Condition Immunities", value: condImm }] : []),
   ];
 }
 

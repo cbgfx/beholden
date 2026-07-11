@@ -29,7 +29,7 @@ export const NOTE_COLS =
   "id, campaign_id, adventure_id, title, text, sort, created_at, updated_at";
 
 export const TREASURE_COLS =
-  "id, campaign_id, adventure_id, source, item_id, name, rarity, type, type_key, " +
+  "id, campaign_id, adventure_id, encounter_id, source, item_id, name, rarity, type, type_key, " +
   "attunement, magic, text, qty, sort, created_at, updated_at";
 
 export const PARTY_INVENTORY_COLS =

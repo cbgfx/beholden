@@ -11,6 +11,7 @@ type Args = {
   inpcsById: Record<string, { monsterId?: string } | undefined>;
   monsterCache: Record<string, MonsterDetail>;
   setMonsterCache: (next: Record<string, MonsterDetail>) => void;
+  refresh: () => Promise<void>;
 };
 
 export function useCombatInitiativeActions({
@@ -18,7 +19,8 @@ export function useCombatInitiativeActions({
   orderedCombatants,
   inpcsById,
   monsterCache,
-  setMonsterCache
+  setMonsterCache,
+  refresh,
 }: Args) {
   const rollInitiativeForMonsters = React.useCallback(async () => {
     if (!encounterId) return;
@@ -67,7 +69,8 @@ export function useCombatInitiativeActions({
         // ignore — players can still enter initiative manually
       }
     }
-  }, [encounterId, orderedCombatants, monsterCache, setMonsterCache, inpcsById]);
+    await refresh();
+  }, [encounterId, orderedCombatants, monsterCache, setMonsterCache, inpcsById, refresh]);
 
   return { rollInitiativeForMonsters };
 }

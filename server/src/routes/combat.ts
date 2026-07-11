@@ -12,7 +12,9 @@ import {
   createPlayerCombatant,
   syncCombatantToPlayer,
   hydratePlayerCombatant,
+  loadCombatants,
   updateEncounterActor,
+  sweepDependentConditions,
 } from "../services/combat.js";
 import { addMonsterCombatants } from "../services/combat.addMonster.js";
 import { DEFAULT_OVERRIDES } from "../lib/defaults.js";
@@ -27,6 +29,13 @@ import {
 import { fulfillInitiativePrompt, registerCombatInitiativeRoutes } from "./combatInitiative.js";
 import { registerCombatXpRoutes } from "./combatXp.js";
 import { concentrationSaveDc } from "@beholden/shared/domain/conditions";
+import {
+  applyCombatantTransition,
+  detectEndedConcentration,
+  expireConditionsAtRound,
+  shouldBreakConcentration,
+  type EndedConcentration,
+} from "../services/combatTransitions.js";
 
 export function registerCombatRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
@@ -244,6 +253,11 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
     const body = parseBody(CombatStateBody, req);
     const t = now();
 
+    const before = db
+      .prepare("SELECT combat_active_combatant_id FROM encounters WHERE id = ?")
+      .get(encounterId) as { combat_active_combatant_id: string | null } | undefined;
+    const previousActiveCombatantId = before?.combat_active_combatant_id ?? null;
+
     db.prepare(
       "UPDATE encounters SET combat_round=COALESCE(?,combat_round), combat_active_combatant_id=?, updated_at=? WHERE id=?"
     ).run(body.round ?? null, body.activeCombatantId ?? null, t, encounterId);
@@ -257,6 +271,61 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
       round: updated.combat_round,
       activeCombatantId: updated.combat_active_combatant_id,
     };
+
+    // Server-authoritative reaction reset for the incoming active combatant. This mirrors the
+    // existing client-side effect in CombatView.tsx (which still runs too, harmlessly), but no
+    // longer depends on the DM's browser tab being open/connected for the round to actually
+    // advance the reaction state.
+    const turnAdvancedTo = state.activeCombatantId && state.activeCombatantId !== previousActiveCombatantId
+      ? state.activeCombatantId
+      : null;
+
+    const endedConcentrations: EndedConcentration[] = [];
+
+    for (const combatant of loadCombatants(db, encounterId).map((entry) => hydratePlayerCombatant(db, entry))) {
+      const conditions = expireConditionsAtRound(combatant.conditions, state.round);
+      const conditionsChanged = conditions.length !== combatant.conditions.length;
+      const enteringTurn = combatant.id === turnAdvancedTo;
+      if (!conditionsChanged && !(enteringTurn && combatant.usedReaction)) continue;
+      // applyCombatantTransition re-forces usedReaction back to true if the combatant is (still)
+      // incapacitated, so requesting false here is safe even for a downed combatant.
+      const next = applyCombatantTransition(
+        { ...combatant, conditions, ...(enteringTurn ? { usedReaction: false } : {}), updatedAt: t },
+        combatant,
+      );
+      const ended = detectEndedConcentration(next.id, combatant.conditions, next.conditions);
+      if (ended) endedConcentrations.push(ended);
+      updateEncounterActor(db, next, t);
+      const synced = syncCombatantToPlayer(db, next, t);
+      if (synced) {
+        if (ended && synced.characterId) {
+          db.prepare(`
+            UPDATE user_characters
+            SET character_data_json = json_set(COALESCE(character_data_json, '{}'), '$.concentrationSpell', NULL), updated_at = ?
+            WHERE id = ?
+          `).run(t, synced.characterId);
+        }
+        ctx.broadcast("players:delta", {
+          campaignId: synced.campaignId,
+          action: "upsert",
+          playerId: next.baseId,
+        });
+      }
+      ctx.broadcast("encounter:combatantsDelta", {
+        encounterId,
+        action: "upsert",
+        combatantId: next.id,
+        combatant: toEncounterActorDto(next),
+      });
+    }
+
+    // A condition's own expiry timer can land on the caster's "concentration" condition itself
+    // (the DM UI allows setting one on any condition) — sweep dependents for each ended session
+    // only after every combatant's own expiry/reset pass has been persisted.
+    for (const ended of endedConcentrations) {
+      sweepDependentConditions(db, ctx.broadcast, encounterId, ended, t, ended.casterId);
+    }
+
     res.json({ ok: true, ...state });
   });
 
@@ -461,7 +530,11 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
           }
         : existing.deathSaves;
 
-      const next: StoredEncounterActor = {
+      const requestedHp = body.hpCurrent ?? existing.hpCurrent;
+      const requestedConditions = (body.conditions ?? existing.conditions ?? []) as StoredConditionInstance[];
+      const losesConcentration = shouldBreakConcentration({ hpCurrent: requestedHp, conditions: requestedConditions });
+
+      const merged: StoredEncounterActor = {
         ...existing,
         label: body.label ?? existing.label,
         initiative: body.initiative !== undefined ? body.initiative : (existing.initiative ?? null),
@@ -474,7 +547,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         acDetails: body.acDetails !== undefined ? body.acDetails : existing.acDetails,
         attackOverrides: body.attackOverrides !== undefined ? (body.attackOverrides as unknown | null) : existing.attackOverrides,
         overrides: (body.overrides ?? existing.overrides) as StoredOverrides,
-        conditions: (body.conditions ?? existing.conditions ?? []) as StoredConditionInstance[],
+        conditions: requestedConditions,
         ...(deathSaves !== undefined ? { deathSaves } : {}),
         usedReaction: body.usedReaction ?? existing.usedReaction ?? false,
         usedLegendaryActions: body.usedLegendaryActions ?? existing.usedLegendaryActions ?? 0,
@@ -482,12 +555,20 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         usedSpellSlots: body.usedSpellSlots ?? existing.usedSpellSlots ?? {},
         updatedAt: t,
       };
+      const next = applyCombatantTransition(merged, existing);
 
       updateEncounterActor(db, next, t);
 
       // Sync player record for player-type combatants
       const synced = syncCombatantToPlayer(db, next, t);
       if (synced) {
+        if (losesConcentration && synced.characterId) {
+          db.prepare(`
+            UPDATE user_characters
+            SET character_data_json = json_set(COALESCE(character_data_json, '{}'), '$.concentrationSpell', NULL), updated_at = ?
+            WHERE id = ?
+          `).run(t, synced.characterId);
+        }
         ctx.broadcast("players:delta", {
           campaignId: synced.campaignId,
           action: next.baseType === "player" ? "upsert" : "refresh",
@@ -517,6 +598,44 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         combatantId: next.id,
         combatant: toEncounterActorDto(next),
       });
+
+      const ended = detectEndedConcentration(next.id, existing.conditions, next.conditions);
+      if (ended) sweepDependentConditions(db, ctx.broadcast, encounterId, ended, t, next.id);
+
+      // Applying a concentration-dependent effect records the spell on a linked player caster.
+      // This keeps the player sheet and combat HUD label aligned with the authoritative ownership.
+      for (const condition of next.conditions) {
+        const spellName = condition.key === "hexed"
+          ? "Hex"
+          : condition.key === "marked"
+            ? "Hunter's Mark"
+            : null;
+        if (!spellName || !condition.casterId) continue;
+        const wasPresent = existing.conditions.some((previous) =>
+          previous.key === condition.key
+          && previous.casterId === condition.casterId
+          && previous.hexAbility === condition.hexAbility
+        );
+        if (wasPresent) continue;
+        const casterPlayer = db.prepare(`
+          SELECT p.character_id, p.campaign_id
+          FROM combatants c
+          JOIN players p ON p.id = c.base_id
+          WHERE c.id = ? AND c.encounter_id = ? AND c.base_type = 'player'
+          LIMIT 1
+        `).get(condition.casterId, encounterId) as { character_id: string | null; campaign_id: string } | undefined;
+        if (!casterPlayer?.character_id) continue;
+        db.prepare(`
+          UPDATE user_characters
+          SET character_data_json = json_set(COALESCE(character_data_json, '{}'), '$.concentrationSpell', ?), updated_at = ?
+          WHERE id = ?
+        `).run(spellName, t, casterPlayer.character_id);
+        ctx.broadcast("players:delta", {
+          campaignId: casterPlayer.campaign_id,
+          action: "refresh",
+          characterId: casterPlayer.character_id,
+        });
+      }
 
       if (body.initiative != null) {
         fulfillInitiativePrompt(ctx, next, synced?.campaignId ?? null);

@@ -42,7 +42,8 @@ export function HudFighterCard(props: Props) {
     String(props.targetId) === String(props.activeId);
 
   const player = c?.baseType === "player" ? props.playersById[c.baseId] : null;
-  const concentrationSpell = player?.concentrationSpell ?? null;
+  const isConcentrating = rawConditions.some((condition) => condition.key === "concentration");
+  const concentrationSpell = isConcentrating ? player?.concentrationSpell ?? null : null;
 
   const combatantAccent = !c
     ? theme.colors.muted

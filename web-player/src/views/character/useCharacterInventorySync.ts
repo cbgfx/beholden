@@ -55,15 +55,15 @@ export function useCharacterInventorySync({
   const [expandedDetailCache, setExpandedDetailCache] = useState<Record<string, CompendiumItemDetail>>({});
   const [itemEditMode, setItemEditMode] = useState(false);
   const [partyStashItems, setPartyStashItems] = useState<PartyStashItem[]>([]);
-  const [otherMembersCapacityLbs, setOtherMembersCapacityLbs] = useState<number | null>(null);
+  const [partyCapacityLbs, setPartyCapacityLbs] = useState<number | null>(null);
   const [partyCurrency, setPartyCurrency] = useState<PartyCurrencyMap>({ PP: 0, GP: 0, SP: 0, CP: 0 });
 
   const fetchPartyStash = useCallback(() => {
     if (!campaignId) return;
     fetchPartyInventory(campaignId)
-      .then(({ items, otherMembersCapacityLbs }) => {
+      .then(({ items, partyCapacityLbs }) => {
         setPartyStashItems(items as PartyStashItem[]);
-        setOtherMembersCapacityLbs(otherMembersCapacityLbs);
+        setPartyCapacityLbs(partyCapacityLbs);
       })
       .catch(() => {});
   }, [campaignId]);
@@ -258,7 +258,7 @@ export function useCharacterInventorySync({
     items, setItems, containers, setContainers, pickerOpen, setPickerOpen, saving, setSaving,
     itemIndex, expandedItemId, setExpandedItemId, collapsedContainerIds, setCollapsedContainerIds,
     expandedDetail, expandedBusy, itemEditMode, setItemEditMode, partyStashItems, setPartyStashItems,
-    otherMembersCapacityLbs, partyCurrency, setPartyCurrency,
+    partyCapacityLbs, partyCurrency, setPartyCurrency,
   };
 }
 

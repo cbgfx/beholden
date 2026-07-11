@@ -47,6 +47,7 @@ export type InpcsDeltaPayload = {
 export type TreasureDeltaPayload = {
   campaignId: Id;
   adventureId?: Id | null;
+  encounterId?: Id | null;
   action: "upsert" | "delete" | "refresh";
   treasureId?: Id;
   treasure?: TreasureDto;

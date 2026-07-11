@@ -130,6 +130,7 @@ export const MonsterSchema = z
       .optional(),
     senses: z.array(z.string().min(1)).min(1).optional(),
     languages: z.array(z.string().min(1)).min(1).optional(),
+    treasure: z.string().min(1).optional(),
     traits: z.array(ActionEntrySchema).min(1).optional(),
     actions: z.array(ActionEntrySchema).min(1).optional(),
     reactions: z.array(ActionEntrySchema).min(1).optional(),

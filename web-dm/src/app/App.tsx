@@ -107,10 +107,21 @@ function AppInner() {
     dispatch({ type: "selectCampaign", campaignId: routeCampaignId });
   }, [routeCampaignId, state.selectedCampaignId, dispatch]);
 
+  // The :encounterId route param on the roster/combat screens, used ONLY to tell the websocket
+  // handler which encounter is currently being viewed there (for treasure delta gating below).
+  // Deliberately NOT written into state.selectedEncounterId — that field already has an existing,
+  // different meaning (the encounter explicitly highlighted/selected in EncountersPanel on the
+  // main campaign page, which also controls whether PlayersPanel shows its delete button); syncing
+  // it from these routes as well left it stuck on the last-viewed encounter after navigating away,
+  // corrupting that unrelated UI state.
+  const matchRosterRoute = useMatch("/campaign/:campaignId/roster/:encounterId");
+  const viewedEncounterId = matchRosterRoute?.params.encounterId ?? matchCombatRoute?.params.encounterId ?? null;
+
   useAppWebSocket({
     selectedCampaignId: state.selectedCampaignId,
     selectedAdventureId: state.selectedAdventureId,
     selectedEncounterId: state.selectedEncounterId,
+    viewedEncounterId,
     dispatch,
     refreshAll,
     refreshEncounter,

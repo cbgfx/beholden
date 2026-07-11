@@ -10,6 +10,7 @@ import {
   fetchNoteById,
   fetchCampaignNotesList,
   fetchCampaignTreasureList,
+  fetchEncounterTreasureList,
   fetchTreasureById,
 } from "@/services/collectionApi";
 import type { Adventure, CampaignCharacter, Encounter, EncounterActor, INpc, Note, TreasureEntry } from "@/domain/types/domain";
@@ -22,6 +23,9 @@ type Deps = {
   selectedCampaignId: string | null;
   selectedAdventureId: string | null;
   selectedEncounterId: string | null;
+  /** The encounter actually being viewed on the roster/combat routes (from the URL, not the
+   * EncountersPanel selection state) — used only to gate encounter-scoped treasure deltas. */
+  viewedEncounterId: string | null;
   dispatch: Dispatch;
   refreshAll: () => void;
   refreshEncounter: (encounterId: string | null) => void;
@@ -31,6 +35,7 @@ export function useAppWebSocket({
   selectedCampaignId,
   selectedAdventureId,
   selectedEncounterId,
+  viewedEncounterId,
   dispatch,
   refreshAll,
   refreshEncounter,
@@ -85,6 +90,7 @@ export function useAppWebSocket({
         enqueue(`delta:player:${payload.playerId}`, async () => {
           const player = await fetchCampaignCharacter(selectedCampaignId, payload.playerId!);
           dispatch({ type: "upsertPlayer", player: player as CampaignCharacter });
+          if (selectedEncounterId) await refreshEncounter(selectedEncounterId);
         }, 80);
         return;
       }
@@ -199,56 +205,65 @@ export function useAppWebSocket({
         action?: "upsert" | "delete" | "refresh";
         treasureId?: string;
         adventureId?: string | null;
+        encounterId?: string | null;
         treasure?: TreasureDto;
       }) : {};
+
+      // Encounter and adventure checks are independent (not else-if): an encounter-scoped row
+      // carries both ids (the encounter's adventure is denormalized onto it), so a single delta
+      // can update both the encounter builder/fight screen's list AND the main adventure page's
+      // rollup list at once, if both happen to be the "selected" scope right now.
+      const matchesEncounter = Boolean(payload.encounterId) && payload.encounterId === viewedEncounterId;
+      const matchesAdventure = Boolean(payload.adventureId) && payload.adventureId === selectedAdventureId;
+      const isCampaignScope = !payload.adventureId && !payload.encounterId;
+
       if (payload.action === "delete" && payload.treasureId) {
-        if (payload.adventureId) {
-          if (payload.adventureId === selectedAdventureId) {
-            dispatch({ type: "removeAdventureTreasure", treasureId: payload.treasureId });
-          }
-        } else {
-          dispatch({ type: "removeCampaignTreasure", treasureId: payload.treasureId });
-        }
+        if (matchesEncounter) dispatch({ type: "removeEncounterTreasure", treasureId: payload.treasureId });
+        if (matchesAdventure) dispatch({ type: "removeAdventureTreasure", treasureId: payload.treasureId });
+        if (isCampaignScope) dispatch({ type: "removeCampaignTreasure", treasureId: payload.treasureId });
         return;
       }
       if (payload.action === "upsert" && payload.treasureId) {
+        const applyEntry = (entry: TreasureEntry) => {
+          if (matchesEncounter) dispatch({ type: "upsertEncounterTreasure", entry });
+          if (matchesAdventure) dispatch({ type: "upsertAdventureTreasure", entry });
+          if (isCampaignScope) dispatch({ type: "upsertCampaignTreasure", entry });
+        };
         if (payload.treasure && typeof payload.treasure === "object") {
-          const flat = flattenTreasureDto(payload.treasure as TreasureDto);
-          if (payload.adventureId) {
-            if (payload.adventureId === selectedAdventureId) {
-              dispatch({ type: "upsertAdventureTreasure", entry: flat as TreasureEntry });
-            }
-          } else {
-            dispatch({ type: "upsertCampaignTreasure", entry: flat as TreasureEntry });
-          }
+          applyEntry(flattenTreasureDto(payload.treasure as TreasureDto) as TreasureEntry);
           return;
         }
         enqueue(`delta:treasure:${payload.treasureId}`, async () => {
           const entry = await fetchTreasureById(payload.treasureId!);
-          if (payload.adventureId) {
-            if (payload.adventureId === selectedAdventureId) {
-              dispatch({ type: "upsertAdventureTreasure", entry: entry as TreasureEntry });
-            }
-          } else {
-            dispatch({ type: "upsertCampaignTreasure", entry: entry as TreasureEntry });
-          }
+          applyEntry(entry as TreasureEntry);
         }, 80);
         return;
       }
-      if (payload.adventureId === null) {
+      if (matchesEncounter) {
+        enqueue(`refresh:encounter-treasure:${viewedEncounterId}`, async () => {
+          const treasure = await fetchEncounterTreasureList(viewedEncounterId!);
+          dispatch({ type: "setEncounterTreasure", treasure: treasure as TreasureEntry[] });
+        });
+      }
+      if (matchesAdventure) {
+        enqueue(`refresh:adventure-treasure:${selectedAdventureId}`, async () => {
+          const treasure = await fetchAdventureTreasureList(selectedAdventureId!);
+          dispatch({ type: "setAdventureTreasure", treasure: treasure as TreasureEntry[] });
+        });
+      }
+      if (isCampaignScope) {
         enqueue(`refresh:campaign-treasure:${selectedCampaignId}`, async () => {
           const treasure = await fetchCampaignTreasureList(selectedCampaignId);
           dispatch({ type: "setCampaignTreasure", treasure: treasure as TreasureEntry[] });
         });
-      } else if (typeof payload.adventureId === "string" && payload.adventureId === selectedAdventureId) {
-        enqueue(`refresh:adventure-treasure:${selectedAdventureId}`, async () => {
-          const treasure = await fetchAdventureTreasureList(selectedAdventureId);
-          dispatch({ type: "setAdventureTreasure", treasure: treasure as TreasureEntry[] });
-        });
       }
       return;
     }
-    if (msg.type === "encounter:combatantsDelta" && typeof encounterId === "string" && encounterId === selectedEncounterId) {
+    if (
+      msg.type === "encounter:combatantsDelta"
+      && typeof encounterId === "string"
+      && (encounterId === selectedEncounterId || encounterId === viewedEncounterId)
+    ) {
       const payload = (p && typeof p === "object") ? (p as {
         action?: "upsert" | "delete" | "refresh";
         combatantId?: string;
@@ -267,13 +282,13 @@ export function useAppWebSocket({
           return;
         }
         enqueue(`delta:combatant:${payload.combatantId}`, async () => {
-          const combatant = await fetchEncounterActor(selectedEncounterId, payload.combatantId!);
+          const combatant = await fetchEncounterActor(encounterId, payload.combatantId!);
           dispatch({ type: "upsertCombatant", combatant: combatant as EncounterActor });
         }, 80);
         return;
       }
       enqueue(`refresh:encounter:${selectedEncounterId}`, async () => {
-        await refreshEncounter(selectedEncounterId);
+        await refreshEncounter(encounterId);
       }, 100);
       return;
     }

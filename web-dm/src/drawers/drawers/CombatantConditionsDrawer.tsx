@@ -1,4 +1,5 @@
 import React from "react";
+import type { EncounterActorDto } from "@beholden/shared/api";
 import type { SharedAbilityKey, SharedConditionInstance } from "@beholden/shared/domain";
 import { Button } from "@/ui/Button";
 import { putEncounterCombatant } from "@/services/encounterApi";
@@ -98,10 +99,33 @@ export function CombatantConditionsDrawer(props: {
         expiresAtRound: c.expiresAtRound ?? null,
       }));
       try {
+        const casterIds = [...new Set(
+          next
+            .filter((condition) => needsCasterForKey(condition.key) && condition.casterId)
+            .map((condition) => condition.casterId as string),
+        )];
+        for (const casterId of casterIds) {
+          const caster = state.combatants.find((combatant) => combatant.id === casterId);
+          if (!caster || caster.conditions?.some((condition) => condition.key === "concentration")) continue;
+          const casterConditions = [...(caster.conditions ?? []), { key: "concentration" }];
+          const updatedCaster = await putEncounterCombatant<EncounterActorDto>(
+            d.encounterId,
+            casterId,
+            { conditions: casterConditions },
+          );
+          const concentrationId = updatedCaster.live.conditions
+            .find((condition) => condition.key === "concentration")?.concentrationId ?? null;
+          for (const condition of next) {
+            if (condition.casterId === casterId && needsCasterForKey(condition.key)) {
+              condition.concentrationId = concentrationId;
+            }
+          }
+        }
         await putEncounterCombatant(d.encounterId, d.combatantId, { conditions: next });
+        await props.refreshEncounter(d.encounterId);
       } catch { /* Non-blocking */ }
     },
-    [props.drawer]
+    [props.drawer, props.refreshEncounter, state.combatants]
   );
 
   // Keep latest-value refs in sync (needed for the unmount flush).
@@ -145,14 +169,29 @@ export function CombatantConditionsDrawer(props: {
     });
   }, []);
 
+  // If the chosen caster currently has an active "concentration" condition, tie this dependent
+  // condition to that specific session (rather than just the caster) so ending a LATER, unrelated
+  // concentration of theirs doesn't also sweep this one away. Best-effort: if the caster isn't
+  // concentrating (or has no id yet), the condition falls back to caster-only ownership.
+  const concentrationIdFor = React.useCallback((casterId: string | null): string | null => {
+    if (!casterId) return null;
+    const caster = state.combatants.find((x) => x.id === casterId);
+    const concentration = caster?.conditions?.find((c) => c.key === "concentration");
+    return (concentration?.concentrationId as string | undefined) ?? null;
+  }, [state.combatants]);
+
   const addCasterCondition = React.useCallback((key: string) => {
     const defaultCaster = props.drawer.activeIdForCaster ?? null;
-    setConds((prev) => [...prev, { key, casterId: defaultCaster }]);
-  }, [props.drawer.activeIdForCaster]);
+    setConds((prev) => [...prev, { key, casterId: defaultCaster, concentrationId: concentrationIdFor(defaultCaster) }]);
+  }, [props.drawer.activeIdForCaster, concentrationIdFor]);
 
   const setCasterForIndex = React.useCallback((idx: number, casterId: string | null) => {
-    setConds((prev) => { const next = [...prev]; next[idx] = { ...next[idx], casterId }; return next; });
-  }, []);
+    setConds((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], casterId, concentrationId: concentrationIdFor(casterId) };
+      return next;
+    });
+  }, [concentrationIdFor]);
 
   const setHexAbilityForIndex = React.useCallback((idx: number, hexAbility: SharedAbilityKey | null) => {
     setConds((prev) => {

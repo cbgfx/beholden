@@ -143,9 +143,9 @@ export function TreasureDrawer(props: {
   const [itemData, setItemData] = React.useState<CompendiumItem | null>(null);
 
   const entry = React.useMemo(() => {
-    const all = [...state.campaignTreasure, ...state.adventureTreasure];
+    const all = [...state.campaignTreasure, ...state.adventureTreasure, ...state.encounterTreasure];
     return all.find((t) => t.id === props.drawer.treasureId) ?? null;
-  }, [props.drawer.treasureId, state.adventureTreasure, state.campaignTreasure]);
+  }, [props.drawer.treasureId, state.adventureTreasure, state.campaignTreasure, state.encounterTreasure]);
   const displayEntry = resolvedEntry ?? entry;
 
   React.useEffect(() => {

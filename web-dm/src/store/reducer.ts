@@ -194,6 +194,20 @@ export function reducer(state: State, action: Action): State {
     case "removeAdventureTreasure":
       return { ...state, adventureTreasure: state.adventureTreasure.filter((t) => t.id !== action.treasureId) };
 
+    case "setEncounterTreasure":
+      return { ...state, encounterTreasure: action.treasure };
+
+    case "upsertEncounterTreasure": {
+      const idx = state.encounterTreasure.findIndex((t) => t.id === action.entry.id);
+      if (idx === -1) return { ...state, encounterTreasure: [...state.encounterTreasure, action.entry] };
+      const next = state.encounterTreasure.slice();
+      next[idx] = action.entry;
+      return { ...state, encounterTreasure: next };
+    }
+
+    case "removeEncounterTreasure":
+      return { ...state, encounterTreasure: state.encounterTreasure.filter((t) => t.id !== action.treasureId) };
+
     case "toggleNote": {
       const exists = state.expandedNoteIds.includes(action.noteId);
       return {

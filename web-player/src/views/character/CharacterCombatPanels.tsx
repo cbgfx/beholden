@@ -57,6 +57,9 @@ export interface CharacterCombatPanelsProps {
   showStats?: boolean;
   showActions?: boolean;
   exhaustion?: number;
+  reactionUsed?: boolean;
+  onToggleReaction?: (() => void) | null;
+  incapacitated?: boolean;
 }
 
 export function CharacterCombatPanels({
@@ -83,6 +86,9 @@ export function CharacterCombatPanels({
   showStats = true,
   showActions = true,
   exhaustion = 0,
+  reactionUsed = false,
+  onToggleReaction = null,
+  incapacitated = false,
 }: CharacterCombatPanelsProps) {
   const exhaustionPenalty = getExhaustionD20Penalty(exhaustion);
   const displaySpeed = getExhaustedSpeed(speed, exhaustion);
@@ -242,6 +248,36 @@ export function CharacterCombatPanels({
         storageKey="actions"
         summary={`${actionItems.length + 1} attack${actionItems.length === 0 ? "" : "s"}`}
       >
+        {onToggleReaction ? (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+            <button
+              type="button"
+              disabled={incapacitated}
+              onClick={() => { if (!incapacitated) onToggleReaction(); }}
+              title={incapacitated ? "Reaction unavailable while incapacitated" : reactionUsed ? "Reaction used — click to restore" : "Reaction available — click to mark used"}
+              style={{
+                all: "unset",
+                cursor: incapacitated ? "not-allowed" : "pointer",
+                padding: "1px 6px",
+                borderRadius: 999,
+                fontSize: "var(--fs-tiny)",
+                fontWeight: 900,
+                border: `1px solid ${reactionUsed ? C.muted : "#ff8c42"}`,
+                color: reactionUsed ? C.muted : "#ff8c42",
+                background: reactionUsed ? "transparent" : "rgba(255,140,66,0.094)",
+                opacity: incapacitated || reactionUsed ? 0.5 : 1,
+                transition: "all 150ms ease",
+              }}
+            >
+              ⚡R
+            </button>
+          </div>
+        ) : null}
+        {incapacitated ? (
+          <div style={{ marginBottom: 10, color: C.colorPinkRed, fontSize: "var(--fs-small)", fontWeight: 800 }}>
+            Incapacitated — actions and reactions are unavailable.
+          </div>
+        ) : null}
         {nonProficientArmorItems.length > 0 && (
           <div style={{
             marginBottom: 10,

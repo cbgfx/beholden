@@ -4,6 +4,7 @@ export interface ActorConditionInstanceDto {
   key: string;
   casterId?: string | null;
   hexAbility?: "str" | "dex" | "con" | "int" | "wis" | "cha";
+  concentrationId?: string | null;
   [k: string]: unknown;
 }
 

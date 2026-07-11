@@ -2,7 +2,6 @@ import * as React from "react";
 import type { EncounterActor } from "@/domain/types/domain";
 import { resolveCombatantDamage } from "@/views/CombatView/utils/polymorphDamage";
 import { parseSignedHpDelta, resolveCombatantHealing } from "@/views/CombatView/utils/hpDelta";
-import { putEncounterCombatant } from "@/services/encounterApi";
 import { concentrationSaveDc } from "@beholden/shared/domain";
 
 type Args = {
@@ -10,9 +9,10 @@ type Args = {
   delta: string;
   setDelta: (v: string) => void;
   target: EncounterActor | null;
+  updateCombatant: (id: string, patch: Record<string, unknown>) => Promise<void>;
 };
 
-export function useCombatHpActions({ encounterId, delta, setDelta, target }: Args) {
+export function useCombatHpActions({ encounterId, delta, setDelta, target, updateCombatant }: Args) {
   const [concentrationAlert, setConcentrationAlert] = React.useState<{ name: string; dc: number } | null>(null);
 
   const applyHpDelta = React.useCallback(
@@ -24,14 +24,14 @@ export function useCombatHpActions({ encounterId, delta, setDelta, target }: Arg
       if (kind === "damage") {
         const resolved = resolveCombatantDamage(target, amount);
         if (!resolved) return;
-        await putEncounterCombatant(encounterId, target.id, {
+        await updateCombatant(target.id, {
           hpCurrent: resolved.hpCurrent,
           overrides: resolved.overrides,
           ...(resolved.conditions ? { conditions: resolved.conditions } : {}),
         });
         setDelta("");
 
-        if (amount > 0 && target.conditions?.some(c => c.key === "concentration")) {
+        if (amount > 0 && resolved.hpCurrent > 0 && target.conditions?.some(c => c.key === "concentration")) {
           const dc = concentrationSaveDc(amount);
           setConcentrationAlert({ name: target.label || target.name, dc });
         }
@@ -41,13 +41,13 @@ export function useCombatHpActions({ encounterId, delta, setDelta, target }: Arg
       const resolved = resolveCombatantHealing(target, amount);
       if (!resolved) return;
 
-      await putEncounterCombatant(encounterId, target.id, {
+      await updateCombatant(target.id, {
         hpCurrent: resolved.hpCurrent,
         overrides: resolved.overrides,
       });
       setDelta("");
     },
-    [encounterId, target, delta, setDelta]
+    [encounterId, target, delta, setDelta, updateCombatant]
   );
 
   return {

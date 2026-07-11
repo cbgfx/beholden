@@ -19,7 +19,7 @@
     "build:web-dm": "npm -w web-dm run build",
     "build:web-player": "npm -w web-player run build",
     "start": "npm -w server run start",
-    "test": "npm -w server run test && npm -w web-player run test",
+    "test": "npm -w server run test && npm -w web-player run test && npm -w web-dm run test",
     "check:payload-budgets": "node server/scripts/check-payload-budgets.mjs",
     "verify": "npm run typecheck && npm run lint && npm test && npm run build && npm run check:payload-budgets"
   },

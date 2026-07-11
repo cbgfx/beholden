@@ -150,7 +150,7 @@ export interface Note {
 
 export interface TreasureEntry {
   id: Id;
-  scope: "campaign" | "adventure";
+  scope: "campaign" | "adventure" | "encounter";
   scopeId: Id;
   name: string;
   qty: number;

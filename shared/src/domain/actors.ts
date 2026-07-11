@@ -5,6 +5,9 @@ export type SharedConditionInstance = {
   casterId?: string | null;
   /** Ability whose checks are disadvantaged by Hex. Only applies when key is "hexed". */
   hexAbility?: SharedAbilityKey;
+  /** Identifies a specific concentration session — lets a dependent condition (e.g. Hexed, Marked)
+   * be tied to the exact casting it came from, not just its caster. */
+  concentrationId?: string | null;
   [k: string]: unknown;
 };
 

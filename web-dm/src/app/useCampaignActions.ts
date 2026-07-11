@@ -24,21 +24,23 @@ export function useCampaignActions(
   state: State,
   _dispatch: Dispatch,
   confirm: ConfirmFn,
-  _refreshFns: RefreshFns
+  refreshFns: RefreshFns
 ) {
   const addAllPlayers = React.useCallback(async () => {
     if (!state.selectedEncounterId) return;
     try {
       await postEncounterCombatants(state.selectedEncounterId, "addPlayers");
+      await refreshFns.refreshEncounter(state.selectedEncounterId);
     } catch (e) { apiErr(e); }
-  }, [state.selectedEncounterId]);
+  }, [state.selectedEncounterId, refreshFns]);
 
   const addPlayerToEncounter = React.useCallback(async (playerId: string) => {
     if (!state.selectedEncounterId) return;
     try {
       await postEncounterCombatants(state.selectedEncounterId, "addPlayer", { playerId });
+      await refreshFns.refreshEncounter(state.selectedEncounterId);
     } catch (e) { apiErr(e); }
-  }, [state.selectedEncounterId]);
+  }, [state.selectedEncounterId, refreshFns]);
 
   const fullRestPlayers = React.useCallback(async () => {
     if (!state.selectedCampaignId) return;
@@ -99,15 +101,17 @@ export function useCampaignActions(
         hpDetail: opts?.hpDetails ?? undefined,
         attackOverrides: opts?.attackOverrides ?? null
       });
+      await refreshFns.refreshEncounter(state.selectedEncounterId);
     } catch (e) { apiErr(e); }
-  }, [state.selectedEncounterId]);
+  }, [state.selectedEncounterId, refreshFns]);
 
   const removeCombatant = React.useCallback(async (combatantId: string) => {
     if (!state.selectedEncounterId) return;
     try {
       await deleteEncounterCombatant(state.selectedEncounterId, combatantId);
+      await refreshFns.refreshEncounter(state.selectedEncounterId);
     } catch (e) { apiErr(e); }
-  }, [state.selectedEncounterId]);
+  }, [state.selectedEncounterId, refreshFns]);
 
   const addINpcFromMonster = React.useCallback(async (monsterId: string, qty: number, opts?: AddMonsterOptions) => {
     if (!state.selectedCampaignId) return;
@@ -190,8 +194,9 @@ export function useCampaignActions(
     if (!state.selectedEncounterId) return;
     try {
       await postEncounterCombatants(state.selectedEncounterId, "addInpc", { inpcId });
+      await refreshFns.refreshEncounter(state.selectedEncounterId);
     } catch (e) { apiErr(e); }
-  }, [state.selectedEncounterId]);
+  }, [state.selectedEncounterId, refreshFns]);
 
   const deleteCampaign = React.useCallback(async (campaignId: string) => {
     if (!campaignId) return;

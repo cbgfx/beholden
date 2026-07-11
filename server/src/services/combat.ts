@@ -10,6 +10,9 @@ import type {
 } from "../server/userData.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
 import { campaignLiveDbColumns } from "./characters.js";
+import { removeConditionsOwnedBy, type EndedConcentration } from "./combatTransitions.js";
+import { toEncounterActorDto } from "../lib/apiActors.js";
+import type { BroadcastFn } from "../server/events.js";
 
 function serializeEncounterActorSnapshot(snapshot: StoredEncounterActorSnapshot): string {
   return JSON.stringify(snapshot);
@@ -230,4 +233,44 @@ export function loadCombatants(db: Database.Database, encounterId: string): Stor
     `SELECT ${ENCOUNTER_ACTOR_COLS} FROM combatants WHERE encounter_id = ? ORDER BY COALESCE(sort, 9999), created_at`
   ).all(encounterId) as Record<string, unknown>[];
   return rows.map(rowToEncounterActor);
+}
+
+/**
+ * When a caster's concentration ends, strips any conditions it was sustaining (per
+ * removeConditionsOwnedBy's ownership rules) from every other combatant in the encounter,
+ * persisting and broadcasting each changed row exactly like a normal combatant patch. Used by both
+ * the DM combatant PUT route and the player-originated conditions PATCH route so ending
+ * concentration has the same cross-combatant effect regardless of who triggered it.
+ */
+export function sweepDependentConditions(
+  db: Database.Database,
+  broadcast: BroadcastFn,
+  encounterId: string,
+  ended: EndedConcentration,
+  t: number,
+  excludeCombatantId?: string,
+): void {
+  for (const combatant of loadCombatants(db, encounterId)) {
+    if (combatant.id === excludeCombatantId) continue;
+    const hydrated = hydratePlayerCombatant(db, combatant);
+    const conditions = removeConditionsOwnedBy(hydrated.conditions, ended);
+    if (conditions.length === hydrated.conditions.length) continue;
+
+    const next: StoredEncounterActor = { ...hydrated, conditions, updatedAt: t };
+    updateEncounterActor(db, next, t);
+    const synced = syncCombatantToPlayer(db, next, t);
+    if (synced) {
+      broadcast("players:delta", {
+        campaignId: synced.campaignId,
+        action: next.baseType === "player" ? "upsert" : "refresh",
+        ...(next.baseType === "player" ? { playerId: next.baseId } : {}),
+      });
+    }
+    broadcast("encounter:combatantsDelta", {
+      encounterId,
+      action: "upsert",
+      combatantId: next.id,
+      combatant: toEncounterActorDto(next),
+    });
+  }
 }

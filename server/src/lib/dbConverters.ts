@@ -362,6 +362,7 @@ export function rowToTreasure(row: Record<string, unknown>): StoredTreasure {
     id: row.id as string,
     campaignId: row.campaign_id as string,
     adventureId: (row.adventure_id as string | null) ?? null,
+    encounterId: (row.encounter_id as string | null) ?? null,
     source: entry.source,
     itemId: entry.itemId,
     name: entry.name,

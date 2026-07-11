@@ -9,7 +9,7 @@ import { CombatantHeader } from "@/views/CombatView/components/CombatantHeader";
 import { CombatHudBar } from "@/views/CombatView/components/CombatHudBar";
 import { CombatDeltaControls } from "@/views/CombatView/components/CombatDeltaControls";
 import { SpellDetailModal } from "@/views/CombatView/components/SpellDetailModal";
-import { XpAwardModal } from "@/views/CombatView/components/XpAwardModal";
+import { RewardsModal } from "@/views/CombatView/components/RewardsModal";
 import { getMonsterXp } from "@/domain/utils/xp";
 import { CombatantTypeIcon } from "@/views/CombatView/components/CombatantTypeIcon";
 import { TurnControls } from "@/views/CombatView/components/TurnControls";
@@ -42,7 +42,7 @@ export function CombatView() {
   }, [dispatch]);
 
   const [targetId, setTargetId] = React.useState<string | null>(null);
-  const [xpAwardOpen, setXpAwardOpen] = React.useState(false);
+  const [rewardsOpen, setRewardsOpen] = React.useState(false);
 
   const { encounter, combatants, orderedCombatants, canNavigate, target, playersById, inpcsById } = useCombatViewModel({
     encounterId,
@@ -103,7 +103,7 @@ export function CombatView() {
     });
   }, [combatants, setTargetId]);
 
-  const { monsterCache, setMonsterCache, monsterCrById, activeMonster, targetMonster } = useMonsterDetailsCache(
+  const { monsterCache, setMonsterCache, monsterCrById, activeMonster, targetMonster, ensureMonster, resolveMonsterId } = useMonsterDetailsCache(
     combatants,
     (active as EncounterActor | null) ?? null,
     (target as EncounterActor | null) ?? null,
@@ -175,14 +175,6 @@ export function CombatView() {
     },
     [orderedCombatants, updateCombatant]
   );
-
-  // Reset reaction for the incoming active combatant each time the turn changes.
-  const prevActiveIdRef = React.useRef<string | null>(null);
-  React.useEffect(() => {
-    if (!activeId || activeId === prevActiveIdRef.current) return;
-    prevActiveIdRef.current = activeId;
-    void updateCombatant(activeId, { usedReaction: false });
-  }, [activeId, updateCombatant]);
 
   const renderCombatantIcon = React.useCallback(
     (combatant: EncounterActor | null) => <CombatantTypeIcon combatant={combatant ?? undefined} />,
@@ -272,10 +264,11 @@ export function CombatView() {
         backTo={campaignId && encounterId ? `/campaign/${campaignId}/roster/${encounterId}` : (campaignId ? `/campaign/${campaignId}` : "/")}
         backTitle="Back to Roster"
         title={encounter?.name ?? "Combat"}
+        started={started}
         rollLabel="Roll Initiative"
         onRollOrReset={rollInitiativeForMonsters}
         onResetFight={resetFight}
-        onAwardXp={encounterId ? () => setXpAwardOpen(true) : undefined}
+        onOpenRewards={encounterId ? () => setRewardsOpen(true) : undefined}
         onOpenSpellBook={openSpellBook}
         onOpenAdventureNotes={openAdventureNotes}
         onEndCombat={endCombat}
@@ -368,12 +361,17 @@ export function CombatView() {
         onClose={closeSpell}
       />
 
-      {xpAwardOpen && encounterId && (
-        <XpAwardModal
+      {rewardsOpen && encounterId && (
+        <RewardsModal
           encounterId={encounterId}
           totalXp={totalEncounterXp}
           playerCount={playerCombatantCount}
-          onClose={() => setXpAwardOpen(false)}
+          orderedCombatants={orderedCombatants}
+          monsterCache={monsterCache}
+          resolveMonsterId={resolveMonsterId}
+          ensureMonster={ensureMonster}
+          players={state.players}
+          onClose={() => setRewardsOpen(false)}
         />
       )}
     </div>

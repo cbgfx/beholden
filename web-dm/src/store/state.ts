@@ -40,6 +40,7 @@ export type State = {
   adventureNotes: Note[];
   campaignTreasure: TreasureEntry[];
   adventureTreasure: TreasureEntry[];
+  encounterTreasure: TreasureEntry[];
   expandedNoteIds: string[];
   drawer: DrawerState;
 };
@@ -60,6 +61,7 @@ export const initialState: State = {
   adventureNotes: [],
   campaignTreasure: [],
   adventureTreasure: [],
+  encounterTreasure: [],
   expandedNoteIds: [],
   drawer: null
 };

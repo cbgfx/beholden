@@ -85,6 +85,44 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
     res.json({ ok: true });
   });
 
+  app.get("/api/me/characters/:characterId/combat-status", (req, res) => {
+    const characterId = requireParam(req, res, "characterId");
+    if (!characterId) return;
+
+    const owned = db
+      .prepare("SELECT 1 FROM user_characters WHERE id = ? AND user_id = ?")
+      .get(characterId, req.user!.userId);
+    if (!owned && !req.user!.isAdmin) {
+      return res.status(404).json({ ok: false, message: "Character not found" });
+    }
+
+    const row = db.prepare(`
+      SELECT c.id AS combatantId, c.encounter_id AS encounterId, c.live_json AS liveJson
+      FROM players p
+      JOIN combatants c ON c.base_type = 'player' AND c.base_id = p.id
+      JOIN encounters e ON e.id = c.encounter_id
+      WHERE p.character_id = ?
+        AND json_extract(c.live_json, '$.initiative') IS NOT NULL
+        AND COALESCE(e.status, 'Open') != 'Complete'
+      ORDER BY c.updated_at DESC
+      LIMIT 1
+    `).get(characterId) as { combatantId: string; encounterId: string; liveJson: string } | undefined;
+
+    if (!row) return res.json({ combat: null });
+
+    let usedReaction = false;
+    try {
+      const live = JSON.parse(row.liveJson ?? "{}") as { usedReaction?: unknown };
+      usedReaction = live.usedReaction === true;
+    } catch {
+      // default false
+    }
+
+    res.json({
+      combat: { encounterId: row.encounterId, combatantId: row.combatantId, usedReaction },
+    });
+  });
+
   app.post(
     "/api/encounters/:encounterId/prompt-initiative",
     dmOrAdmin(db),
@@ -197,6 +235,57 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
         combatant: toEncounterActorDto(next),
       });
       fulfillInitiativePrompt(ctx, next, synced?.campaignId ?? null);
+
+      res.json({ ok: true });
+    },
+  );
+
+  app.post(
+    "/api/encounters/:encounterId/combatants/:combatantId/reaction",
+    memberOrAdmin(db),
+    (req, res) => {
+      const encounterId = requireParam(req, res, "encounterId");
+      if (!encounterId) return;
+      const combatantId = requireParam(req, res, "combatantId");
+      if (!combatantId) return;
+
+      const rawUsedReaction = (req.body as { usedReaction?: unknown }).usedReaction;
+      if (typeof rawUsedReaction !== "boolean") {
+        return res.status(400).json({ ok: false, message: "usedReaction must be a boolean" });
+      }
+
+      const existingRow = db
+        .prepare(`SELECT ${ENCOUNTER_ACTOR_COLS} FROM combatants WHERE id = ? AND encounter_id = ?`)
+        .get(combatantId, encounterId) as Record<string, unknown> | undefined;
+      if (!existingRow) return res.status(404).json({ ok: false, message: "Not found" });
+
+      const existing = hydratePlayerCombatant(db, rowToEncounterActor(existingRow));
+      if (existing.baseType !== "player") {
+        return res.status(403).json({ ok: false, message: "Not a player combatant" });
+      }
+
+      if (!req.user!.isAdmin) {
+        const owned = db.prepare(`
+          SELECT 1
+          FROM players p
+          LEFT JOIN user_characters uc ON uc.id = p.character_id
+          WHERE p.id = ? AND (p.user_id = ? OR uc.user_id = ?)
+        `).get(existing.baseId, req.user!.userId, req.user!.userId);
+        if (!owned) {
+          return res.status(403).json({ ok: false, message: "You do not own this combatant" });
+        }
+      }
+
+      const updatedAt = now();
+      const next: StoredEncounterActor = { ...existing, usedReaction: rawUsedReaction, updatedAt };
+      updateEncounterActor(db, next, updatedAt);
+
+      ctx.broadcast("encounter:combatantsDelta", {
+        encounterId,
+        action: "upsert",
+        combatantId: next.id,
+        combatant: toEncounterActorDto(next),
+      });
 
       res.json({ ok: true });
     },

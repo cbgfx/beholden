@@ -93,17 +93,10 @@ export function useMonsterPickerState(args: {
       setLoadingIndex(true);
       setIndexError(null);
       try {
+        const pageSize = 200;
         const params = new URLSearchParams({
           q: compQ,
-          limit:
-            compQ.trim().length >= 2
-            || envFilter !== "all"
-            || sizeFilter !== "all"
-            || typeFilter !== "all"
-            || Boolean(crMin.trim())
-            || Boolean(crMax.trim())
-              ? "200"
-              : "120",
+          limit: String(pageSize),
           offset: "0",
           sort: sortMode,
           fields: "id,name,cr,type,environment",
@@ -114,11 +107,19 @@ export function useMonsterPickerState(args: {
         if (crMin.trim()) params.set("crMin", crMin.trim());
         if (crMax.trim()) params.set("crMax", crMax.trim());
 
-        const rows = await api<CompendiumMonsterRow[]>(`/api/compendium/search?${params.toString()}`, {
-          signal: controller.signal,
-        });
+        const rows: CompendiumMonsterRow[] = [];
+        for (let offset = 0; ; offset += pageSize) {
+          params.set("offset", String(offset));
+          const page = await api<CompendiumMonsterRow[]>(`/api/compendium/search?${params.toString()}`, {
+            signal: controller.signal,
+          });
+          if (controller.signal.aborted) return;
+          if (!Array.isArray(page)) break;
+          rows.push(...page);
+          if (page.length < pageSize) break;
+        }
         if (controller.signal.aborted) return;
-        setFilteredRows(Array.isArray(rows) ? rows : []);
+        setFilteredRows(rows);
       } catch (error) {
         if (controller.signal.aborted) return;
         setFilteredRows([]);

@@ -1,100 +1,62 @@
 import React from "react";
 import { CollectionRow, QuantityStepper, Tag } from "@beholden/shared/ui";
-import { api, jsonInit } from "@/services/api";
-import { fetchAdventureTreasureList, fetchCampaignTreasureList } from "@/services/collectionApi";
-import type { TreasureEntry } from "@/domain/types/domain";
 import { IconPlayer, IconPlus } from "@/icons";
 import { useStore } from "@/store";
 import { theme } from "@/theme/theme";
 import { IconButton } from "@/ui/IconButton";
 import { Panel } from "@/ui/Panel";
-import { ItemPickerModal, type AddItemPayload } from "@/views/CampaignView/components/ItemPickerModal";
+import { ItemPickerModal } from "@/views/CampaignView/components/ItemPickerModal";
 import { RarityDot } from "@/views/CampaignView/components/ItemPickerModalParts";
 import { AwardTreasureModal } from "@/components/treasure/AwardTreasureModal";
+import { useTreasurePool, type TreasureScope } from "@/components/treasure/useTreasurePool";
 
-function titleFromScope(opts: { selectedAdventureId: string | null; adventureName?: string | null }) {
+function titleFromScope(opts: {
+  encounterName?: string | null;
+  isEncounter: boolean;
+  selectedAdventureId: string | null;
+  adventureName?: string | null;
+}) {
+  if (opts.isEncounter) return `Treasure (${opts.encounterName ?? "Encounter"})`;
   if (!opts.selectedAdventureId) return "Treasure (Campaign)";
   return opts.adventureName ? `Treasure (${opts.adventureName})` : "Treasure (Adventure)";
 }
 
-export function TreasurePanel(_props: { encounterId?: string } = {}) {
+export function TreasurePanel(props: { encounterId?: string } = {}) {
   const { state, dispatch } = useStore();
   const [isOpen, setIsOpen] = React.useState(false);
-  const [awardTreasure, setAwardTreasure] = React.useState<TreasureEntry | null>(null);
-  const [awardBusy, setAwardBusy] = React.useState(false);
-  const [awardError, setAwardError] = React.useState<string | null>(null);
 
   const scopeAdventureId = state.selectedAdventureId;
-  const treasure = scopeAdventureId ? state.adventureTreasure : state.campaignTreasure;
+  const scope: TreasureScope = props.encounterId
+    ? { level: "encounter", encounterId: props.encounterId }
+    : scopeAdventureId
+      ? { level: "adventure", adventureId: scopeAdventureId }
+      : { level: "campaign" };
+
+  const {
+    treasure, addItem, remove, updateQty, award,
+    awardTreasure, setAwardTreasure, awardBusy, awardError, setAwardError,
+  } = useTreasurePool(scope);
 
   const scopeAdventureName = React.useMemo(() => {
     if (!scopeAdventureId) return null;
     return state.adventures.find((a) => a.id === scopeAdventureId)?.name ?? null;
   }, [scopeAdventureId, state.adventures]);
 
-  const refreshTreasure = React.useCallback(async () => {
-    if (!state.selectedCampaignId) return;
-    const campaignTreasure = await fetchCampaignTreasureList(state.selectedCampaignId) as TreasureEntry[];
-    dispatch({ type: "setCampaignTreasure", treasure: campaignTreasure });
-
-    if (scopeAdventureId) {
-      const adventureTreasure = await fetchAdventureTreasureList(scopeAdventureId) as TreasureEntry[];
-      dispatch({ type: "setAdventureTreasure", treasure: adventureTreasure });
-    } else {
-      dispatch({ type: "setAdventureTreasure", treasure: [] });
-    }
-  }, [dispatch, scopeAdventureId, state.selectedCampaignId]);
-
-  React.useEffect(() => {
-    void refreshTreasure();
-  }, [refreshTreasure]);
-
-  async function addItem(payload: AddItemPayload) {
-    if (!state.selectedCampaignId) return;
-    const endpoint = scopeAdventureId
-      ? `/api/adventures/${scopeAdventureId}/treasure`
-      : `/api/campaigns/${state.selectedCampaignId}/treasure`;
-
-    if (payload.source === "compendium") {
-      await api(endpoint, jsonInit("POST", { source: "compendium", itemId: payload.itemId, qty: payload.qty }));
-    } else {
-      await api(endpoint, jsonInit("POST", { source: "custom", custom: payload.custom, qty: payload.qty }));
-    }
-
-    setIsOpen(false);
-    await refreshTreasure();
-  }
-
-  async function remove(id: string) {
-    await api(`/api/treasure/${id}`, { method: "DELETE" });
-    await refreshTreasure();
-  }
-
-  async function updateQty(id: string, qty: number) {
-    await api(`/api/treasure/${id}/qty`, jsonInit("PATCH", { qty }));
-    await refreshTreasure();
-  }
-
-  async function award(playerId: string, quantity: number) {
-    if (!awardTreasure) return;
-    setAwardBusy(true);
-    setAwardError(null);
-    try {
-      await api(`/api/treasure/${awardTreasure.id}/award`, jsonInit("POST", { playerId, quantity }));
-      setAwardTreasure(null);
-      await refreshTreasure();
-    } catch (error) {
-      setAwardError(error instanceof Error ? error.message : "Could not award treasure.");
-    } finally {
-      setAwardBusy(false);
-    }
-  }
+  const encounterName = React.useMemo(() => {
+    if (!props.encounterId) return null;
+    return state.encounters.find((e) => e.id === props.encounterId)?.name ?? null;
+  }, [props.encounterId, state.encounters]);
 
   return (
     <>
       <Panel
         storageKey="treasure"
-        title={titleFromScope({ selectedAdventureId: scopeAdventureId, adventureName: scopeAdventureName })}
+        title={titleFromScope({
+          isEncounter: scope.level === "encounter",
+          encounterName,
+          selectedAdventureId: scopeAdventureId,
+          adventureName: scopeAdventureName,
+        })}
         actions={(
           <IconButton title="Add item" onClick={() => setIsOpen(true)} variant="accent">
             <IconPlus />
@@ -176,7 +138,11 @@ export function TreasurePanel(_props: { encounterId?: string } = {}) {
         )}
       </Panel>
 
-      <ItemPickerModal isOpen={isOpen} onClose={() => setIsOpen(false)} onAdd={addItem} />
+      <ItemPickerModal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        onAdd={(payload) => { void addItem(payload).then(() => setIsOpen(false)); }}
+      />
       <AwardTreasureModal
         treasure={awardTreasure}
         players={state.players}

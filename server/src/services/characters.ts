@@ -3,7 +3,9 @@
 
 import type Database from "better-sqlite3";
 import type { BroadcastFn } from "../server/events.js";
-import { rowToCampaignCharacter, rowToCharacterSheet, CAMPAIGN_CHARACTER_COLS } from "../lib/db.js";
+import { rowToCampaignCharacter, rowToCharacterSheet, rowToEncounterActor, CAMPAIGN_CHARACTER_COLS, ENCOUNTER_ACTOR_COLS } from "../lib/db.js";
+import { hydratePlayerCombatant } from "./combat.js";
+import { toEncounterActorDto } from "../lib/apiActors.js";
 import { DEFAULT_DEATH_SAVES, DEFAULT_OVERRIDES } from "../lib/defaults.js";
 import type {
   StoredCampaignCharacter,
@@ -13,6 +15,7 @@ import type {
   StoredCharacterSheetState,
   StoredOverrides,
 } from "../server/userData.js";
+import { applyConditionConsequences, shouldBreakConcentration } from "./combatTransitions.js";
 
 export type Assignment = {
   campaign_id: string;
@@ -380,7 +383,19 @@ export function syncAssignedPlayerRows(
         .get(player_id) as Record<string, unknown> | undefined;
       if (row) {
         const current = rowToCampaignCharacter(row);
-        updateCampaignCharacterLive(db, player_id, current, livePatch, updatedAt);
+        const effectiveHp = livePatch.hpCurrent ?? current.hpCurrent;
+        const effectiveConditions = applyConditionConsequences({
+          previousHpCurrent: current.hpCurrent,
+          hpCurrent: effectiveHp,
+          conditions: livePatch.conditions ?? current.conditions ?? [],
+        });
+        const losesConcentration = shouldBreakConcentration({ hpCurrent: effectiveHp, conditions: effectiveConditions });
+        updateCampaignCharacterLive(db, player_id, current, {
+          ...livePatch,
+          conditions: losesConcentration
+            ? effectiveConditions.filter((condition) => condition.key !== "concentration")
+            : effectiveConditions,
+        }, updatedAt);
       }
     }
     syncPlayerCombatantSnapshots(db, player_id);
@@ -415,22 +430,25 @@ export function broadcastPlayerCombatantChanges(
   broadcast: BroadcastFn,
   playerId: string,
 ) {
-  const combatants = (
+  const rows = (
     db
       .prepare(
-        `SELECT id, encounter_id
+        `SELECT ${ENCOUNTER_ACTOR_COLS}
          FROM combatants
          WHERE base_type = 'player' AND base_id = ?`,
       )
-      .all(playerId) as { id: string; encounter_id: string }[]
+      .all(playerId) as Record<string, unknown>[]
   );
 
-  for (const { encounter_id, id } of combatants) {
-    const encounterId = encounter_id;
+  // Inline the full combatant DTO, matching the DM-originated PUT /combatants/:id broadcast shape
+  // — an already-open DM combat view refreshes from this delta alone, without a follow-up GET.
+  for (const row of rows) {
+    const combatant = hydratePlayerCombatant(db, rowToEncounterActor(row));
     broadcast("encounter:combatantsDelta", {
-      encounterId,
+      encounterId: combatant.encounterId,
       action: "upsert",
-      combatantId: id,
+      combatantId: combatant.id,
+      combatant: toEncounterActorDto(combatant),
     });
   }
 }

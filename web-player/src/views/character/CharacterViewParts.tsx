@@ -147,14 +147,20 @@ export function ProfDot({ filled, color }: { filled: boolean; color: string }) {
 }
 
 export function HexBtn({ variant, active, title, disabled, onClick, children }: {
-  variant: "damage" | "heal" | "conditions" | "inspiration";
+  variant: "damage" | "heal" | "conditions" | "inspiration" | "reaction";
   active?: boolean;
   title: string;
   disabled: boolean;
   onClick: () => void;
   children: React.ReactNode;
 }) {
-  const bg = variant === "damage" ? C.red : variant === "heal" ? C.green : variant === "inspiration" ? (active ? "#a855f7" : "#4b2d6b") : "#f59e0b";
+  const bg = variant === "damage" ? C.red
+    : variant === "heal" ? C.green
+    : variant === "inspiration" ? (active ? "#a855f7" : "#4b2d6b")
+    : variant === "reaction" ? (active ? "#f59e0b" : "#4b3d1f")
+    : "#f59e0b";
+  const glowColor = variant === "reaction" ? "rgba(245,158,11,0.6)" : "rgba(168,85,247,0.6)";
+  const dimWhenInactive = variant === "inspiration" || variant === "reaction";
   return (
     <button
       type="button"
@@ -168,9 +174,9 @@ export function HexBtn({ variant, active, title, disabled, onClick, children }: 
         border: "2px solid rgba(255,255,255,0.1)",
         background: bg, color: "#fff",
         clipPath: "polygon(25% 4%, 75% 4%, 98% 50%, 75% 96%, 25% 96%, 2% 50%)",
-        boxShadow: disabled ? "none" : active ? "0 0 12px 4px rgba(168,85,247,0.6), 0 2px 0 0 rgba(0,0,0,0.3)" : "0 2px 0 0 rgba(0,0,0,0.3)",
+        boxShadow: disabled ? "none" : active ? `0 0 12px 4px ${glowColor}, 0 2px 0 0 rgba(0,0,0,0.3)` : "0 2px 0 0 rgba(0,0,0,0.3)",
         animation: disabled ? "none" : "playerHexPulse 2.2s ease-in-out infinite",
-        opacity: disabled ? 0.4 : variant === "inspiration" && !active ? 0.55 : 1,
+        opacity: disabled ? 0.4 : dimWhenInactive && !active ? 0.55 : 1,
         transition: "transform 80ms ease, opacity 150ms ease",
         userSelect: "none",
       }}

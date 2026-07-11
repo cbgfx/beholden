@@ -83,27 +83,29 @@ export function PlayersPanel(props: {
                         <IconPlus />
                       </IconButton>
                     ) : null}
-                    <div className="campaignRowActions">
-                      <button
-                        type="button"
-                        title={p.userId ? "Remove from Campaign" : "Delete Character"}
-                        onClick={(e) => { e.stopPropagation(); props.onDeletePlayer(p.id); }}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          width: 34,
-                          height: 34,
-                          borderRadius: 8,
-                          border: `1px solid ${theme.colors.red}66`,
-                          background: "rgba(248,113,113,0.14)",
-                          color: theme.colors.red,
-                          cursor: "pointer",
-                        }}
-                      >
-                        <IconTrash size={14} />
-                      </button>
-                    </div>
+                    {!props.selectedEncounterId ? (
+                      <div className="campaignRowActions">
+                        <button
+                          type="button"
+                          title={p.userId ? "Remove from Campaign" : "Delete Character"}
+                          onClick={(e) => { e.stopPropagation(); props.onDeletePlayer(p.id); }}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: 34,
+                            height: 34,
+                            borderRadius: 8,
+                            border: `1px solid ${theme.colors.red}66`,
+                            background: "rgba(248,113,113,0.14)",
+                            color: theme.colors.red,
+                            cursor: "pointer",
+                          }}
+                        >
+                          <IconTrash size={14} />
+                        </button>
+                      </div>
+                    ) : null}
                   </>
                 }
               />

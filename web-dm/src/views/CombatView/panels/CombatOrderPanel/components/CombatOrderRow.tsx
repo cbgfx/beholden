@@ -1,6 +1,7 @@
 // web/src/views/CombatView/panels/CombatOrderPanel/components/CombatOrderRow.tsx
 
 import type { EncounterActor } from "@/domain/types/domain";
+import { hasIncapacitatingCondition } from "@beholden/shared/domain";
 import { theme, withAlpha } from "@/theme/theme";
 import { IconINPC, IconMonster, IconPlayer, IconSkull, IconInitiative } from "@/icons";
 import { InitiativeInput } from "@/views/CombatView/panels/CombatOrderPanel/components/InitiativeInput";
@@ -94,6 +95,7 @@ export function CombatOrderRow(props: {
   const displayName = (c.label || c.name || "(Unnamed)").trim();
   const friendly = Boolean(c.friendly);
   const isDead = hpCurrent <= 0;
+  const isIncapacitated = hasIncapacitatingCondition(c.conditions);
   const dim = isDead && c.baseType !== "player";
 
   const iconColor = isDead ? theme.colors.muted
@@ -195,16 +197,17 @@ export function CombatOrderRow(props: {
               {playerName && <span style={{ fontSize: "var(--fs-small)", color: theme.colors.muted }}>({playerName})</span>}
               {statusBadge}
               <button
-                title={c.usedReaction ? "Reaction used — click to restore" : "Reaction available — click to mark used"}
-                onClick={(e) => { e.stopPropagation(); props.onToggleReaction(c.id); }}
+                disabled={isIncapacitated}
+                title={isIncapacitated ? "Reaction unavailable while incapacitated" : c.usedReaction ? "Reaction used — click to restore" : "Reaction available — click to mark used"}
+                onClick={(e) => { e.stopPropagation(); if (!isIncapacitated) props.onToggleReaction(c.id); }}
                 style={{
-                  all: "unset", cursor: "pointer",
+                  all: "unset", cursor: isIncapacitated ? "not-allowed" : "pointer",
                   padding: "1px 6px", borderRadius: 999,
                   fontSize: "var(--fs-tiny)", fontWeight: 900,
                   border: `1px solid ${c.usedReaction ? theme.colors.muted : theme.colors.accentWarning}`,
                   color: c.usedReaction ? theme.colors.muted : theme.colors.accentWarning,
                   background: c.usedReaction ? "transparent" : `${theme.colors.accentWarning}18`,
-                  opacity: c.usedReaction ? 0.5 : 1,
+                  opacity: isIncapacitated || c.usedReaction ? 0.5 : 1,
                   transition: "all 150ms ease",
                 }}
               >

@@ -52,8 +52,28 @@ function isAttackAction(a: MonsterTextEntry): boolean {
 type ParsedAttackDefaults = { toHit: number | undefined; damage: string | undefined; damageType: string | undefined };
 
 function parseAttackDefaults(a: MonsterTextEntry): ParsedAttackDefaults {
+  const structured = asRecord(a.attack);
+  if (structured) {
+    const toHit = Number(structured.toHit);
+    const damage = String(structured.damage ?? "").replace(/\s+/g, "");
+    const damageType = String(structured.damageType ?? "").trim().toLowerCase();
+    return {
+      toHit: Number.isFinite(toHit) ? toHit : undefined,
+      damage: damage || undefined,
+      damageType: damageType || undefined,
+    };
+  }
+  if (typeof a.attack === "string") {
+    const parts = a.attack.split(/\|\|?/);
+    const toHit = Number(parts[1]);
+    if (parts.length >= 3) return {
+      toHit: Number.isFinite(toHit) ? toHit : undefined,
+      damage: parts[2]?.trim().replace(/\s+/g, "") || undefined,
+      damageType: parts[0]?.trim().replace(/\s+damage$/i, "").toLowerCase() || undefined,
+    };
+  }
   const text = Array.isArray(a?.text) ? a.text.map(String).join(" ") : String(a?.text ?? "");
-  const hitMatch = text.match(/([+-]?\d+)\s+to\s+hit/i);
+  const hitMatch = text.match(/(?:Attack Roll:\s*|)([+-]?\d+)(?:\s+to\s+hit|\s*,)/i);
   const toHit = hitMatch ? parseInt(hitMatch[1], 10) : undefined;
   const dmgMatch = text.match(/\bHit:\s+\d+\s*\(([^)]+)\)/i);
   const damage = dmgMatch ? dmgMatch[1].replace(/\s+/g, "") : undefined;
@@ -171,7 +191,10 @@ export function MonsterStatblock(props: {
   const reactionArr = asTextEntries(m.reactions ?? m.reaction);
   const legendary = asTextEntries(m.legendary ?? m.legendaryActions);
 
-  const nonSpellTraits = traitArr.filter((t) => !isSpellSection(t?.name ?? t?.title));
+  const nonSpellTraits = traitArr.filter((t) => {
+    const name = t?.name ?? t?.title;
+    return !isSpellSection(name) && !/^proficiency bonus$/i.test(String(name ?? "").trim());
+  });
   const nonSpellActions = actionArr.filter((a) => !isSpellSection(a?.name ?? a?.title));
   const nonSpellReactions = reactionArr.filter((a) => !isSpellSection(a?.name ?? a?.title));
 

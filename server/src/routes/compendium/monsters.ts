@@ -117,6 +117,7 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
       resist: m.resist ?? null,
       vulnerable: m.vulnerable ?? null,
       conditionImmune: m.conditionImmune ?? null,
+      treasure: m.treasure ?? null,
       trait: m.trait ?? [],
       action: m.action ?? [],
       reaction: m.reaction ?? [],

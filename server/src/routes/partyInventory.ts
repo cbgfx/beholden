@@ -67,22 +67,20 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
     ).all(campaignId) as Record<string, unknown>[];
     const items = rows.map(rowToPartyInventoryItem).map(toPartyInventoryItemDto);
 
-    // Compute combined remaining carry capacity for all OTHER party members (not the requesting user).
-    // The requesting user's contribution is computed client-side from their live inventory state.
-    const currentUserId = req.user?.userId ?? null;
+    // The stash can use the combined unused carrying capacity of every
+    // character in the campaign: sum(max(0, Strength * 15 - carried weight)).
     const playerRows = db.prepare(`
       SELECT p.str, uc.character_data_json
       FROM players p
       LEFT JOIN user_characters uc ON p.character_id = uc.id
-      WHERE p.campaign_id = ? AND p.str IS NOT NULL AND (? IS NULL OR p.user_id != ?)
-    `).all(campaignId, currentUserId, currentUserId) as Array<{ str: number; character_data_json: string | null }>;
+      WHERE p.campaign_id = ? AND p.str IS NOT NULL
+    `).all(campaignId) as Array<{ str: number; character_data_json: string | null }>;
 
-    let otherMembersCapacityLbs: number | null = null;
+    let partyCapacityLbs: number | null = null;
     if (playerRows.length > 0) {
-      otherMembersCapacityLbs = 0;
+      partyCapacityLbs = 0;
       for (const { str, character_data_json } of playerRows) {
-        const capacity = str * 15;
-        let carried = 0;
+        let carriedWeight = 0;
         if (character_data_json) {
           try {
             const data = JSON.parse(character_data_json) as Record<string, unknown>;
@@ -90,18 +88,23 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
             const containers = Array.isArray(data.inventoryContainers)
               ? data.inventoryContainers as Array<{ id: string; ignoreWeight?: boolean }>
               : [];
-            const ignoreIds = new Set(containers.filter((c) => c.ignoreWeight).map((c) => c.id));
+            const ignoredContainerIds = new Set(
+              containers.filter((container) => container.ignoreWeight).map((container) => container.id),
+            );
             for (const item of inventory) {
-              if (item["containerId"] && ignoreIds.has(item["containerId"] as string)) continue;
-              carried += (Number(item["weight"]) || 0) * Math.max(1, Number(item["quantity"]) || 1);
+              const containerId = typeof item["containerId"] === "string" ? item["containerId"] : null;
+              if (containerId && ignoredContainerIds.has(containerId)) continue;
+              const weight = Math.max(0, Number(item["weight"]) || 0);
+              const quantity = Math.max(1, Number(item["quantity"]) || 1);
+              carriedWeight += weight * quantity;
             }
-          } catch { /* skip unparseable character data */ }
+          } catch { /* Treat invalid/missing inventory as empty. */ }
         }
-        otherMembersCapacityLbs += Math.max(0, capacity - carried);
+        partyCapacityLbs += Math.max(0, str * 15 - carriedWeight);
       }
     }
 
-    res.json({ items, otherMembersCapacityLbs });
+    res.json({ items, partyCapacityLbs });
   });
 
   app.get("/api/campaigns/:campaignId/party-inventory/:itemId", memberOrAdmin(db), (req, res) => {

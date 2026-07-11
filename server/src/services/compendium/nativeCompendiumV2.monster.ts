@@ -170,8 +170,32 @@ function actionEntriesToLegacy(value: unknown) {
   });
 }
 
+/**
+ * The 2024 monster corpus' "Treasure" trait is always the DMG glossary blurb for a fixed set of
+ * hoard-category tags (Any/Arcana/Armaments/Relics/Implements/Individual), never per-monster
+ * content — e.g. every "Armaments" monster carries the exact same sentence. Reduce it to just the
+ * tag(s), which is the only monster-specific signal in the text. Falls back to the raw text if it
+ * doesn't match the known "Tag: ..." shape (e.g. a homebrew monster's free-form treasure note).
+ */
+export function condenseTreasureText(raw: string): string {
+  const lines = raw.split("\n").map((line) => line.trim()).filter(Boolean);
+  if (lines.length === 0) return raw;
+  const tags = lines.map((line) => line.match(/^([A-Za-z][A-Za-z ]*):/)?.[1]?.trim());
+  if (tags.some((tag) => !tag)) return raw;
+  return tags.join(", ");
+}
+
+function extractTreasureTrait(traits: ReturnType<typeof actionEntries>) {
+  const treasureEntry = traits.find((t) => /^treasure$/i.test(t.name));
+  return {
+    traits: treasureEntry ? traits.filter((t) => t !== treasureEntry) : traits,
+    treasure: treasureEntry?.description ? condenseTreasureText(treasureEntry.description) : undefined,
+  };
+}
+
 export function monsterToV2(entry: JsonRecord): JsonRecord {
   if (isCanonicalV2Entry("monsters", entry)) return entry;
+  const { traits, treasure } = extractTreasureTrait(actionEntries(entry.trait));
   return compactMonsterEntry({
     id: text(entry.id),
     name: text(entry.name),
@@ -210,7 +234,8 @@ export function monsterToV2(entry: JsonRecord): JsonRecord {
     },
     senses: split(entry.senses),
     languages: split(entry.languages),
-    traits: actionEntries(entry.trait),
+    treasure: text(entry.treasure) || treasure,
+    traits,
     actions: actionEntries(entry.action),
     reactions: actionEntries(entry.reaction),
     legendaryActions: actionEntries(entry.legendary),
@@ -264,6 +289,7 @@ export function monsterFromV2(entry: JsonRecord): JsonRecord {
     conditionImmune: list(defenses.conditionImmunities).join(", "),
     senses: list(compact.senses).join(", "),
     languages: list(compact.languages).join(", "),
+    treasure: compact.treasure ?? null,
     trait: actionEntriesToLegacy(compact.traits),
     action: actionEntriesToLegacy(compact.actions),
     reaction: actionEntriesToLegacy(compact.reactions),

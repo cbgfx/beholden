@@ -2,17 +2,18 @@ import { useNavigate } from "react-router-dom";
 import { theme } from "@/theme/theme";
 import { Panel } from "@/ui/Panel";
 import { Button } from "@/ui/Button";
-import { IconNotes, IconSpells } from "@/icons";
+import { IconChest, IconDice, IconNotes, IconSpells } from "@/icons";
 import { useIsNarrow } from "@/views/CombatView/hooks/useIsNarrow";
 
 type Props = {
   backTo: string;
   backTitle?: string;
   title: string;
+  started: boolean;
   rollLabel: string;
   onRollOrReset: () => void;
   onResetFight?: () => void;
-  onAwardXp?: () => void;
+  onOpenRewards?: () => void;
   onEndCombat: () => void;
   onOpenSpellBook: () => void;
   onOpenAdventureNotes: () => void;
@@ -45,19 +46,25 @@ export function CombatantHeader(props: Props) {
       }
       actions={
         <div style={{ display: "flex", gap: isPhone ? 4 : 8, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", minWidth: 0 }}>
-          <Button variant="primary" onClick={props.onRollOrReset}>
-            {rollLabel}
-          </Button>
-
-          {props.onResetFight && !isPhone && (
-            <Button variant="ghost" onClick={props.onResetFight} title="Reset monsters HP and conditions to full">
+          {props.started && props.onResetFight ? (
+            <Button variant="primary" onClick={props.onResetFight} title="Reset monsters HP and conditions to full">
               Reset Fight
+            </Button>
+          ) : (
+            <Button variant="primary" onClick={props.onRollOrReset}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <IconDice size={18} title="Roll Initiative" />
+                {rollLabel}
+              </span>
             </Button>
           )}
 
-          {props.onAwardXp && !isPhone && (
-            <Button variant="ghost" onClick={props.onAwardXp} title="Award encounter XP to all players">
-              Award XP
+          {props.onOpenRewards && !isPhone && (
+            <Button variant="ghost" onClick={props.onOpenRewards} title="Encounter rewards: XP and loot">
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <IconChest size={18} title="Rewards" />
+                Rewards
+              </span>
             </Button>
           )}
 
@@ -75,9 +82,11 @@ export function CombatantHeader(props: Props) {
             </span>
           </Button>
 
-          <Button variant="danger" onClick={props.onEndCombat}>
-            End
-          </Button>
+          {props.started ? (
+            <Button variant="danger" onClick={props.onEndCombat}>
+              End
+            </Button>
+          ) : null}
         </div>
       }
     >

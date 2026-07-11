@@ -123,5 +123,7 @@ export function useMonsterDetailsCache(
     targetMonster,
     activeMonsterKey: activeMonsterId,
     targetMonsterKey: targetMonsterId,
+    ensureMonster,
+    resolveMonsterId,
   };
 }

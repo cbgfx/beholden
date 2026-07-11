@@ -47,6 +47,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
   const emitTreasureChange = (args: {
     campaignId: string;
     adventureId?: string | null;
+    encounterId?: string | null;
     action: "upsert" | "delete" | "refresh";
     treasureId?: string;
     treasure?: ReturnType<typeof toTreasureDto>;
@@ -54,6 +55,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     ctx.broadcast("treasure:delta", {
       campaignId: args.campaignId,
       adventureId: args.adventureId ?? null,
+      encounterId: args.encounterId ?? null,
       action: args.action,
       ...(args.treasureId ? { treasureId: args.treasureId } : {}),
       ...(args.treasure ? { treasure: args.treasure } : {}),
@@ -109,6 +111,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
         id: entry.id,
         campaignId: entry.campaignId,
         adventureId: null as string | null,
+        encounterId: entry.encounterId,
         itemId: entry.itemId,
         name: entry.name,
         qty: entry.qty,
@@ -139,6 +142,38 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
         id: entry.id,
         campaignId: entry.campaignId,
         adventureId: entry.adventureId,
+        encounterId: entry.encounterId,
+        itemId: entry.itemId,
+        name: entry.name,
+        qty: entry.qty,
+        rarity: entry.rarity,
+        type: entry.type,
+        attunement: entry.attunement,
+        magic: entry.magic,
+        sort: entry.sort,
+        updatedAt: entry.updatedAt,
+      })));
+    }
+    res.json(treasure.map(toTreasureDto));
+  });
+
+  app.get("/api/encounters/:encounterId/treasure", memberOrAdmin(db), (req, res) => {
+    const encounterId = requireParam(req, res, "encounterId");
+    if (!encounterId) return;
+    const e = db.prepare("SELECT id FROM encounters WHERE id = ?").get(encounterId);
+    if (!e) return res.status(404).json({ ok: false, message: "Encounter not found" });
+    const rows = db
+      .prepare(
+        `SELECT ${TREASURE_COLS} FROM treasure WHERE encounter_id = ? ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC`
+      )
+      .all(encounterId) as Record<string, unknown>[];
+    const treasure = rows.map(rowToTreasure).map(hydrateTreasureEntry);
+    if (isListView(req.query.view)) {
+      return res.json(treasure.map((entry) => ({
+        id: entry.id,
+        campaignId: entry.campaignId,
+        adventureId: entry.adventureId,
+        encounterId: entry.encounterId,
         itemId: entry.itemId,
         name: entry.name,
         qty: entry.qty,
@@ -196,6 +231,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     emitTreasureChange({
       campaignId: treasure.campaignId,
       adventureId: treasure.adventureId ?? null,
+      encounterId: treasure.encounterId ?? null,
       action: "upsert",
       treasureId,
       treasure: dto,
@@ -331,6 +367,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     emitTreasureChange({
       campaignId: result.treasure.campaignId,
       adventureId: result.treasure.adventureId ?? null,
+      encounterId: result.treasure.encounterId ?? null,
       action: result.remaining === 0 ? "delete" : "upsert",
       treasureId,
       ...(result.treasureDto ? { treasure: result.treasureDto } : {}),
@@ -362,6 +399,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     emitTreasureChange({
       campaignId,
       adventureId: null,
+      encounterId: null,
       action: "upsert",
       treasureId: out.entry.id,
       treasure: dto,
@@ -389,6 +427,35 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     emitTreasureChange({
       campaignId: aRow.campaign_id,
       adventureId,
+      encounterId: null,
+      action: "upsert",
+      treasureId: out.entry.id,
+      treasure: dto,
+    });
+    res.json(dto);
+  });
+
+  app.post("/api/encounters/:encounterId/treasure", dmOrAdmin(db), (req, res) => {
+    const encounterId = requireParam(req, res, "encounterId");
+    if (!encounterId) return;
+    const eRow = db
+      .prepare("SELECT campaign_id, adventure_id FROM encounters WHERE id = ?")
+      .get(encounterId) as { campaign_id: string; adventure_id: string } | undefined;
+    if (!eRow) return res.status(404).json({ ok: false, message: "Encounter not found" });
+    const b = parseBody(TreasureCreateBody, req);
+    const out = createTreasureEntry({
+      campaignId: eRow.campaign_id, adventureId: eRow.adventure_id, encounterId,
+      source: b.source,
+      itemId: b.source === "compendium" ? b.itemId : undefined,
+      custom: b.source === "custom" ? b.custom : undefined,
+      qty: b.qty,
+    });
+    if (out.error) return res.status(out.error.status).json({ ok: false, message: out.error.message });
+    const dto = toTreasureDto(hydrateTreasureEntry(out.entry));
+    emitTreasureChange({
+      campaignId: eRow.campaign_id,
+      adventureId: eRow.adventure_id,
+      encounterId,
       action: "upsert",
       treasureId: out.entry.id,
       treasure: dto,
@@ -408,6 +475,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     emitTreasureChange({
       campaignId: t.campaignId,
       adventureId: t.adventureId ?? null,
+      encounterId: t.encounterId ?? null,
       action: "delete",
       treasureId,
     });
@@ -421,6 +489,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
   function createTreasureEntry({
     campaignId,
     adventureId,
+    encounterId,
     source,
     itemId,
     custom,
@@ -428,6 +497,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
   }: {
     campaignId: string;
     adventureId?: string | null;
+    encounterId?: string | null;
     source: "compendium" | "custom";
     itemId?: unknown;
     custom?: unknown;
@@ -486,18 +556,21 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
       };
     }
 
-    const sort = adventureId
-      ? nextSortFor(db, "treasure", "adventure_id", adventureId)
-      : nextSortFor(db, "treasure", "campaign_id", campaignId);
+    const sort = encounterId
+      ? nextSortFor(db, "treasure", "encounter_id", encounterId)
+      : adventureId
+        ? nextSortFor(db, "treasure", "adventure_id", adventureId)
+        : nextSortFor(db, "treasure", "campaign_id", campaignId);
 
     db.prepare(`
       INSERT INTO treasure
-        (id, campaign_id, adventure_id, source, item_id, name, rarity, type, type_key, attunement, magic, text, qty, sort, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (id, campaign_id, adventure_id, encounter_id, source, item_id, name, rarity, type, type_key, attunement, magic, text, qty, sort, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       campaignId,
       adventureId ?? null,
+      encounterId ?? null,
       entry.source,
       entry.itemId,
       entry.name,

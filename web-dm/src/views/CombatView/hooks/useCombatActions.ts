@@ -44,16 +44,18 @@ export function useCombatActions({
   target,
   monsterCache,
   setMonsterCache,
+  refresh,
   dispatch
 }: Args) {
-  const { applyHpDelta, concentrationAlert, dismissConcentrationAlert } = useCombatHpActions({ encounterId, delta, setDelta, target });
-  const { updateCombatant } = useCombatantPatchActions({ encounterId });
+  const { updateCombatant } = useCombatantPatchActions({ encounterId, combatants: orderedCombatants, dispatch, refresh });
+  const { applyHpDelta, concentrationAlert, dismissConcentrationAlert } = useCombatHpActions({ encounterId, delta, setDelta, target, updateCombatant });
   const { rollInitiativeForMonsters } = useCombatInitiativeActions({
     encounterId,
     orderedCombatants,
     inpcsById,
     monsterCache,
-    setMonsterCache
+    setMonsterCache,
+    refresh,
   });
   const { resetFight, endCombat } = useCombatFightActions({
     campaignId,
