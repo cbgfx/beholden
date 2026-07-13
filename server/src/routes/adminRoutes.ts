@@ -35,7 +35,7 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
 
   app.get("/api/admin/users", requireAuth, requireAdmin, (_req, res) => {
     const rows = db
-      .prepare("SELECT id, username, name, is_admin, created_at, updated_at FROM users ORDER BY name ASC")
+      .prepare("SELECT id, username, name, is_admin, last_login_at, created_at, updated_at FROM users ORDER BY name ASC")
       .all() as Record<string, unknown>[];
     res.json(rows.map(rowToUser));
   });
@@ -62,7 +62,7 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
       return res.status(400).json({ ok: false, message: "Invalid user ID" });
     }
     const row = db
-      .prepare("SELECT id, username, name, is_admin, created_at, updated_at FROM users WHERE id = ?")
+      .prepare("SELECT id, username, name, is_admin, last_login_at, created_at, updated_at FROM users WHERE id = ?")
       .get(userId) as Record<string, unknown> | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "User not found" });
 
@@ -96,7 +96,7 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
     }
 
     const updated = db
-      .prepare("SELECT id, username, name, is_admin, created_at, updated_at FROM users WHERE id = ?")
+      .prepare("SELECT id, username, name, is_admin, last_login_at, created_at, updated_at FROM users WHERE id = ?")
       .get(userId) as Record<string, unknown>;
     res.json(rowToUser(updated));
   });

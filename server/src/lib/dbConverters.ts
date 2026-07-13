@@ -217,6 +217,7 @@ export function rowToUser(row: Record<string, unknown>) {
     username: row.username as string,
     name: row.name as string,
     isAdmin: Boolean(row.is_admin),
+    lastLoginAt: typeof row.last_login_at === "number" ? row.last_login_at : null,
     createdAt: row.created_at as number,
     updatedAt: row.updated_at as number,
   };

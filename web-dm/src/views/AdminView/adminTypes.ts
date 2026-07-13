@@ -16,6 +16,7 @@ export interface User {
   username: string;
   name: string;
   isAdmin: boolean;
+  lastLoginAt: number | null;
   createdAt: number;
   updatedAt: number;
 }

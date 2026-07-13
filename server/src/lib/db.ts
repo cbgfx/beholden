@@ -4,6 +4,7 @@ import { syncCharacterDerivedColumns } from "./dbCharacterSync.js";
 import { normalizeLegacyCompendiumEffectKinds } from "./compendiumLegacyKindMigration.js";
 import { extractMonsterTreasureTraits } from "./monsterTreasureMigration.js";
 import { ensureTreasureEncounterColumn } from "./treasureEncounterColumnMigration.js";
+import { ensureUserLastLoginColumn } from "./userLastLoginColumnMigration.js";
 
 export type Db = Database.Database;
 
@@ -18,6 +19,7 @@ export function openDb(dbPath: string): Db {
   db.pragma("journal_size_limit = 16777216");
   db.exec(SCHEMA_SQL);
   ensureTreasureEncounterColumn(db);
+  ensureUserLastLoginColumn(db);
 
   // Linked campaign rows are projections of canonical character sheets.
   syncCharacterDerivedColumns(db);

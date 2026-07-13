@@ -292,6 +292,7 @@ CREATE TABLE IF NOT EXISTS users (
   passhash TEXT NOT NULL,
   name TEXT NOT NULL,
   is_admin INTEGER NOT NULL DEFAULT 0,
+  last_login_at INTEGER,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );

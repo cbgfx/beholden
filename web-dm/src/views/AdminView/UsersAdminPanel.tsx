@@ -9,6 +9,14 @@ import { Button } from "@/ui/Button";
 import type { User } from "./adminTypes";
 import { UserModal, type UserFormData } from "./UserModal";
 
+function formatLastSeen(timestamp: number | null): string {
+  if (timestamp === null) return "Never";
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(timestamp));
+}
+
 export function UsersAdminPanel() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
@@ -87,13 +95,14 @@ export function UsersAdminPanel() {
                 <th style={thStyle}>Name</th>
                 <th style={thStyle}>Username</th>
                 <th style={thStyle}>Role</th>
+                <th style={thStyle}>Last Seen</th>
                 <th style={{ ...thStyle, textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={4} style={{ ...tdStyle, color: theme.colors.muted, textAlign: "center" }}>
+                  <td colSpan={5} style={{ ...tdStyle, color: theme.colors.muted, textAlign: "center" }}>
                     No users found.
                   </td>
                 </tr>
@@ -118,6 +127,9 @@ export function UsersAdminPanel() {
                     }}>
                       {u.isAdmin ? "Admin" : "Player"}
                     </span>
+                  </td>
+                  <td style={{ ...tdStyle, color: theme.colors.muted, whiteSpace: "nowrap" }}>
+                    {formatLastSeen(u.lastLoginAt)}
                   </td>
                   <td style={{ ...tdStyle, textAlign: "right" }}>
                     <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>

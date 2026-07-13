@@ -48,6 +48,8 @@ export function registerAuthRoutes(app: Express, ctx: ServerContext) {
       isAdmin: Boolean(row.is_admin),
     });
 
+    db.prepare("UPDATE users SET last_login_at = ? WHERE id = ?").run(Date.now(), row.id);
+
     const isAdmin = Boolean(row.is_admin);
     res.json({
       token,
