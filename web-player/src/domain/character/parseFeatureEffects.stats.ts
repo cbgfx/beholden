@@ -267,6 +267,20 @@ export function parseHitPointBonusEffects(source: FeatureEffectSource, text: str
     return;
   }
 
+  const directPerLevelMatch = text.match(
+    /hit point maximum increases by (\d+)[^.]*(?:for each|per) (?:character )?level/i,
+  );
+  if (directPerLevelMatch) {
+    const multiplier = Number(directPerLevelMatch[1]);
+    effects.push({
+      id: createFeatureEffectId(source, "hit_points", effects.length),
+      type: "hit_points", source, mode: "max_bonus",
+      amount: { kind: "character_level", multiplier },
+      summary: `+${multiplier} max HP per character level`,
+    });
+    return;
+  }
+
   // "increases by N ... whenever/each time you gain a level" — per-level scaling (e.g. Dwarven Toughness)
   const perLevelMatch = text.match(/hit point maximum increases by (\d+)[^.]*(?:whenever|each time|every time) you gain a level/i);
   if (perLevelMatch) {

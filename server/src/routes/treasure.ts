@@ -95,34 +95,62 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     };
   }
 
+  function readTreasureList(
+    scope: "campaign" | "adventure" | "encounter",
+    scopeId: string,
+  ) {
+    const where = scope === "campaign"
+      ? "t.campaign_id = ? AND t.adventure_id IS NULL"
+      : scope === "adventure"
+        ? "t.adventure_id = ?"
+        : "t.encounter_id = ?";
+    const rows = db.prepare(`
+      SELECT
+        t.id, t.campaign_id, t.adventure_id, t.encounter_id, t.item_id,
+        CASE
+          WHEN TRIM(COALESCE(t.name, '')) = '' OR t.name = 'New Item'
+            THEN COALESCE(NULLIF(TRIM(ci.name), ''), t.name)
+          ELSE t.name
+        END AS resolved_name,
+        COALESCE(ci.rarity, t.rarity) AS resolved_rarity,
+        COALESCE(ci.type, t.type) AS resolved_type,
+        CASE WHEN ci.id IS NULL THEN t.attunement ELSE ci.attunement END AS resolved_attunement,
+        CASE WHEN ci.id IS NULL THEN t.magic ELSE ci.magic END AS resolved_magic,
+        t.qty, t.sort, t.updated_at
+      FROM treasure t
+      LEFT JOIN compendium_items ci ON ci.id = t.item_id
+      WHERE ${where}
+      ORDER BY COALESCE(t.sort, 9999) ASC, t.updated_at DESC
+    `).all(scopeId) as Array<Record<string, unknown>>;
+    return rows.map((row) => ({
+      id: row.id,
+      campaignId: row.campaign_id,
+      adventureId: row.adventure_id,
+      encounterId: row.encounter_id,
+      itemId: row.item_id,
+      name: row.resolved_name,
+      qty: row.qty,
+      rarity: row.resolved_rarity,
+      type: row.resolved_type,
+      attunement: Boolean(row.resolved_attunement),
+      magic: Boolean(row.resolved_magic),
+      sort: row.sort,
+      updatedAt: row.updated_at,
+    }));
+  }
+
   app.get("/api/campaigns/:campaignId/treasure", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
     const c = db.prepare("SELECT id FROM campaigns WHERE id = ?").get(campaignId);
     if (!c) return res.status(404).json({ ok: false, message: "Campaign not found" });
+    if (isListView(req.query.view)) return res.json(readTreasureList("campaign", campaignId));
     const rows = db
       .prepare(
         `SELECT ${TREASURE_COLS} FROM treasure WHERE campaign_id = ? AND adventure_id IS NULL ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC`
       )
       .all(campaignId) as Record<string, unknown>[];
     const treasure = rows.map(rowToTreasure).map(hydrateTreasureEntry);
-    if (isListView(req.query.view)) {
-      return res.json(treasure.map((entry) => ({
-        id: entry.id,
-        campaignId: entry.campaignId,
-        adventureId: null as string | null,
-        encounterId: entry.encounterId,
-        itemId: entry.itemId,
-        name: entry.name,
-        qty: entry.qty,
-        rarity: entry.rarity,
-        type: entry.type,
-        attunement: entry.attunement,
-        magic: entry.magic,
-        sort: entry.sort,
-        updatedAt: entry.updatedAt,
-      })));
-    }
     res.json(treasure.map(toTreasureDto));
   });
 
@@ -131,29 +159,13 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     if (!adventureId) return;
     const a = db.prepare("SELECT id FROM adventures WHERE id = ?").get(adventureId);
     if (!a) return res.status(404).json({ ok: false, message: "Adventure not found" });
+    if (isListView(req.query.view)) return res.json(readTreasureList("adventure", adventureId));
     const rows = db
       .prepare(
         `SELECT ${TREASURE_COLS} FROM treasure WHERE adventure_id = ? ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC`
       )
       .all(adventureId) as Record<string, unknown>[];
     const treasure = rows.map(rowToTreasure).map(hydrateTreasureEntry);
-    if (isListView(req.query.view)) {
-      return res.json(treasure.map((entry) => ({
-        id: entry.id,
-        campaignId: entry.campaignId,
-        adventureId: entry.adventureId,
-        encounterId: entry.encounterId,
-        itemId: entry.itemId,
-        name: entry.name,
-        qty: entry.qty,
-        rarity: entry.rarity,
-        type: entry.type,
-        attunement: entry.attunement,
-        magic: entry.magic,
-        sort: entry.sort,
-        updatedAt: entry.updatedAt,
-      })));
-    }
     res.json(treasure.map(toTreasureDto));
   });
 
@@ -162,29 +174,13 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     if (!encounterId) return;
     const e = db.prepare("SELECT id FROM encounters WHERE id = ?").get(encounterId);
     if (!e) return res.status(404).json({ ok: false, message: "Encounter not found" });
+    if (isListView(req.query.view)) return res.json(readTreasureList("encounter", encounterId));
     const rows = db
       .prepare(
         `SELECT ${TREASURE_COLS} FROM treasure WHERE encounter_id = ? ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC`
       )
       .all(encounterId) as Record<string, unknown>[];
     const treasure = rows.map(rowToTreasure).map(hydrateTreasureEntry);
-    if (isListView(req.query.view)) {
-      return res.json(treasure.map((entry) => ({
-        id: entry.id,
-        campaignId: entry.campaignId,
-        adventureId: entry.adventureId,
-        encounterId: entry.encounterId,
-        itemId: entry.itemId,
-        name: entry.name,
-        qty: entry.qty,
-        rarity: entry.rarity,
-        type: entry.type,
-        attunement: entry.attunement,
-        magic: entry.magic,
-        sort: entry.sort,
-        updatedAt: entry.updatedAt,
-      })));
-    }
     res.json(treasure.map(toTreasureDto));
   });
 

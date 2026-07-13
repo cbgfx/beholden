@@ -101,6 +101,10 @@ function mergeInit(init?: RequestInit): RequestInit {
   };
 }
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
 /** Raw fetch helper without auth header injection. Used by AuthContext for login/me. */
 export async function apiRaw<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(resolveApiPath(path), init);
@@ -147,6 +151,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
     proxyError = new Error(`proxy ${res.status}`);
   } catch (e) {
+    if (isAbortError(e)) throw e;
     proxyError = e instanceof Error ? e : new Error(String(e));
   }
 
@@ -157,6 +162,19 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res2 = await fetch(directServerUrl(path), merged);
   if (!res2.ok) throw await apiError(res2);
   return (await res2.json()) as T;
+}
+
+const inFlightReads = new Map<string, Promise<unknown>>();
+
+/** Shares identical authenticated GETs while they are in flight. Mutations and abortable reads stay independent. */
+export function apiCoalesced<T>(path: string): Promise<T> {
+  const existing = inFlightReads.get(path) as Promise<T> | undefined;
+  if (existing) return existing;
+  const request = api<T>(path).finally(() => {
+    if (inFlightReads.get(path) === request) inFlightReads.delete(path);
+  });
+  inFlightReads.set(path, request);
+  return request;
 }
 
 /** Authenticated binary download with the same proxy/direct-port fallback as api(). */
@@ -176,6 +194,7 @@ export async function apiBlob(path: string, init?: RequestInit): Promise<Blob> {
     if (res.status < 500) throw await apiError(res);
     proxyError = new Error(`proxy ${res.status}`);
   } catch (error) {
+    if (isAbortError(error)) throw error;
     proxyError = error instanceof Error ? error : new Error(String(error));
   }
 

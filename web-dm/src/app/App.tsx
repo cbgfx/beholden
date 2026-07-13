@@ -5,14 +5,13 @@ import { ShellLayout } from "@/layout/ShellLayout";
 import { theme } from "@/theme/theme";
 import { StoreProvider, useStore } from "@/store";
 import { api } from "@/services/api";
-import { fetchCampaignCharacters, fetchEncounterActors } from "@/services/actorApi";
+import { fetchEncounterActors } from "@/services/actorApi";
+import { fetchCampaignBootstrap } from "@/services/campaignBootstrapApi";
 import {
   fetchAdventureNotesList,
   fetchAdventureTreasureList,
-  fetchCampaignNotesList,
-  fetchCampaignTreasureList,
 } from "@/services/collectionApi";
-import type { Adventure, Campaign, CampaignCharacter, Encounter, EncounterActor, INpc, Meta, Note, TreasureEntry } from "@/domain/types/domain";
+import type { Campaign, Encounter, EncounterActor, Meta, Note, TreasureEntry } from "@/domain/types/domain";
 import { useAppWebSocket } from "@/app/useAppWebSocket";
 import { DrawerHost } from "@/drawers/DrawerHost";
 import { ConfirmProvider, useConfirm } from "@/confirm/ConfirmContext";
@@ -38,6 +37,9 @@ function AppInner() {
   const navigate = useNavigate();
   const confirm = useConfirm();
   const importAdventureFileRef = useRef<HTMLInputElement>(null);
+  const campaignRequestRef = useRef<AbortController | null>(null);
+  const adventureRequestRef = useRef<AbortController | null>(null);
+  const encounterRequestRef = useRef<AbortController | null>(null);
 
   const refreshAll = useCallback(async () => {
     const [m, c] = await Promise.all([api<Meta>("/api/meta"), api<Campaign[]>("/api/campaigns")]);
@@ -48,51 +50,78 @@ function AppInner() {
 
   const refreshCampaign = useCallback(async (cid: string) => {
     if (!cid) return;
-    const [adv, pls, inpcs, notes, treasure] = await Promise.all([
-      api<Adventure[]>(`/api/campaigns/${cid}/adventures`),
-      fetchCampaignCharacters(cid),
-      api<INpc[]>(`/api/campaigns/${cid}/inpcs`),
-      fetchCampaignNotesList(cid) as Promise<Note[]>,
-      fetchCampaignTreasureList(cid) as Promise<TreasureEntry[]>
-    ]);
-    dispatch({ type: "setAdventures", adventures: adv });
-    dispatch({ type: "setPlayers", players: pls as CampaignCharacter[] });
-    dispatch({ type: "setINpcs", inpcs });
-    dispatch({ type: "setCampaignNotes", notes });
-    dispatch({ type: "setCampaignTreasure", treasure });
+    campaignRequestRef.current?.abort();
+    const controller = new AbortController();
+    campaignRequestRef.current = controller;
+    let data: Awaited<ReturnType<typeof fetchCampaignBootstrap>>;
+    try {
+      data = await fetchCampaignBootstrap(cid, controller.signal);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      throw error;
+    } finally {
+      if (campaignRequestRef.current === controller) campaignRequestRef.current = null;
+    }
+    if (controller.signal.aborted) return;
+    dispatch({ type: "setAdventures", adventures: data.adventures });
+    dispatch({ type: "setPlayers", players: data.players });
+    dispatch({ type: "setINpcs", inpcs: data.inpcs });
+    dispatch({ type: "setCampaignNotes", notes: data.notes });
+    dispatch({ type: "setCampaignTreasure", treasure: data.treasure });
   }, [dispatch]);
 
+  useEffect(() => () => {
+    campaignRequestRef.current?.abort();
+    adventureRequestRef.current?.abort();
+    encounterRequestRef.current?.abort();
+  }, []);
+
   const refreshAdventure = useCallback(async (adventureId: string | null) => {
+    adventureRequestRef.current?.abort();
     if (!adventureId) {
       dispatch({ type: "setEncounters", encounters: [] });
       dispatch({ type: "setAdventureNotes", notes: [] });
       dispatch({ type: "setAdventureTreasure", treasure: [] });
       return;
     }
-    const [enc, notes, treasure] = await Promise.all([
-      api<Encounter[]>(`/api/adventures/${adventureId}/encounters`),
-      fetchAdventureNotesList(adventureId) as Promise<Note[]>,
-      fetchAdventureTreasureList(adventureId) as Promise<TreasureEntry[]>
-    ]);
+    const controller = new AbortController();
+    adventureRequestRef.current = controller;
+    let result: [Encounter[], Note[], TreasureEntry[]];
+    try {
+      result = await Promise.all([
+        api<Encounter[]>(`/api/adventures/${adventureId}/encounters`, { signal: controller.signal }),
+        fetchAdventureNotesList(adventureId, controller.signal) as Promise<Note[]>,
+        fetchAdventureTreasureList(adventureId, controller.signal) as Promise<TreasureEntry[]>,
+      ]);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      throw error;
+    } finally {
+      if (adventureRequestRef.current === controller) adventureRequestRef.current = null;
+    }
+    if (controller.signal.aborted) return;
+    const [enc, notes, treasure] = result;
     dispatch({ type: "setEncounters", encounters: enc });
     dispatch({ type: "setAdventureNotes", notes });
     dispatch({ type: "setAdventureTreasure", treasure });
   }, [dispatch]);
 
   const refreshEncounter = useCallback(async (encounterId: string | null) => {
+    encounterRequestRef.current?.abort();
     if (!encounterId) { dispatch({ type: "setCombatants", combatants: [] }); return; }
-    dispatch({ type: "setCombatants", combatants: await fetchEncounterActors(encounterId) as EncounterActor[] });
+    const controller = new AbortController();
+    encounterRequestRef.current = controller;
+    try {
+      const combatants = await fetchEncounterActors(encounterId, controller.signal) as EncounterActor[];
+      if (!controller.signal.aborted) dispatch({ type: "setCombatants", combatants });
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) throw error;
+    } finally {
+      if (encounterRequestRef.current === controller) encounterRequestRef.current = null;
+    }
   }, [dispatch]);
 
   useEffect(() => { refreshAll(); }, [refreshAll]);
-  useEffect(() => { if (state.selectedCampaignId) refreshCampaign(state.selectedCampaignId); }, [state.selectedCampaignId, refreshCampaign]);
-  useEffect(() => { refreshAdventure(state.selectedAdventureId); }, [state.selectedAdventureId, refreshAdventure]);
-  const matchCombatRoute = useMatch("/campaign/:campaignId/combat/:encounterId");
-  useEffect(() => {
-    // CombatView hydrates combatants via its own live hook; skip duplicate App-level fetches there.
-    if (matchCombatRoute) return;
-    refreshEncounter(state.selectedEncounterId);
-  }, [state.selectedEncounterId, matchCombatRoute, refreshEncounter]);
 
   // Sync the :campaignId route param into the store.
   // Covers direct links, refreshes, and back/forward navigation to any
@@ -101,11 +130,31 @@ function AppInner() {
   const matchCampaignExact = useMatch("/campaign/:campaignId");
   const matchCampaignSub   = useMatch("/campaign/:campaignId/*");
   const routeCampaignId = matchCampaignExact?.params.campaignId ?? matchCampaignSub?.params.campaignId ?? null;
+  const onCampaignRoute = Boolean(matchCampaignExact || matchCampaignSub);
   useEffect(() => {
     if (!routeCampaignId) return;
     if (routeCampaignId === state.selectedCampaignId) return;
     dispatch({ type: "selectCampaign", campaignId: routeCampaignId });
   }, [routeCampaignId, state.selectedCampaignId, dispatch]);
+
+  // autoSelectFirstCampaign (in refreshAll) picks a selectedCampaignId as soon as campaigns
+  // load so Home/TopBar can show a campaign link, but that pick shouldn't itself trigger a
+  // fetch of that campaign's data — only actually opening a campaign route should.
+  useEffect(() => {
+    if (!onCampaignRoute) return;
+    if (state.selectedCampaignId) refreshCampaign(state.selectedCampaignId);
+  }, [state.selectedCampaignId, onCampaignRoute, refreshCampaign]);
+  useEffect(() => {
+    if (!onCampaignRoute) return;
+    refreshAdventure(state.selectedAdventureId);
+  }, [state.selectedAdventureId, onCampaignRoute, refreshAdventure]);
+  const matchCombatRoute = useMatch("/campaign/:campaignId/combat/:encounterId");
+  useEffect(() => {
+    if (!onCampaignRoute) return;
+    // CombatView hydrates combatants via its own live hook; skip duplicate App-level fetches there.
+    if (matchCombatRoute) return;
+    refreshEncounter(state.selectedEncounterId);
+  }, [state.selectedEncounterId, onCampaignRoute, matchCombatRoute, refreshEncounter]);
 
   // The :encounterId route param on the roster/combat screens, used ONLY to tell the websocket
   // handler which encounter is currently being viewed there (for treasure delta gating below).

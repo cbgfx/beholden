@@ -24,6 +24,7 @@ import {
 import { buildProficiencyMap as buildProficiencyMapFromUtils } from "@/views/character-creator/utils/CharacterCreatorProficiencyUtils";
 import { getPreparedSpellCount } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import { buildCreatorStartingInventory } from "@/views/character-creator/creatorSubmissionInventory";
+import { deriveFeatHitPointMaxBonus } from "@/domain/character/featEffects";
 
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
 
@@ -63,14 +64,6 @@ function inferHitDieFromClass(...values: unknown[]): number | null {
     if (match) return match[1];
   }
   return null;
-}
-
-function isToughReference(value: string | null | undefined): boolean {
-  const normalized = String(value ?? "")
-    .trim()
-    .replace(/^f_/, "")
-    .replace(/[^a-z0-9]+/gi, " ");
-  return /\bTough\b/i.test(normalized);
 }
 
 export async function buildCreatorSubmissionBody(args: {
@@ -245,16 +238,13 @@ export async function buildCreatorSubmissionBody(args: {
     ?? positiveIntOrNull(selectedClassSummary?.hd)
     ?? positiveIntOrNull(fallbackHitDie)
     ?? inferHitDieFromClass(className, form.classId);
-  const hasTough =
-    isToughReference(submitRaceFeatDetail?.name)
-    || isToughReference(submitBgOriginFeatDetail?.name)
-    || Object.values(submitClassFeatDetails).some((feat) => isToughReference(feat.name))
-    || submitLevelUpFeatDetails.some(({ feat }) => isToughReference(feat.name))
-    || isToughReference(form.chosenRaceFeatId)
-    || isToughReference(form.chosenBgOriginFeatId)
-    || Object.values(form.chosenClassFeatIds).some((featId) => isToughReference(featId))
-    || form.chosenLevelUpFeats.some((entry) => isToughReference(entry.featId));
-  const effectiveHpMax = hpMax + (hasTough ? form.level * 2 : 0);
+  const featHpMaxBonus = deriveFeatHitPointMaxBonus([
+    submitRaceFeatDetail,
+    submitBgOriginFeatDetail,
+    ...Object.values(submitClassFeatDetails),
+    ...submitLevelUpFeatDetails.map(({ feat }) => feat),
+  ], form.level);
+  const effectiveHpMax = hpMax + featHpMaxBonus;
   const preservedHpCurrent =
     isEditing && Number.isFinite(Number(existingHpCurrent))
       ? Math.max(0, Math.min(Number(existingHpCurrent), effectiveHpMax))
@@ -296,6 +286,7 @@ export async function buildCreatorSubmissionBody(args: {
       weight: optionalText(form.weight),
       gender: optionalText(form.gender),
       hd: hitDie,
+      derivedHpMax: effectiveHpMax,
       chosenOptionals: form.chosenOptionals,
       selectedFeatureNames,
       chosenClassFeatIds: form.chosenClassFeatIds,

@@ -8,7 +8,7 @@ import {
 } from "@beholden/shared/api";
 import { api, jsonInit } from "@/services/api";
 
-type NoteListRow = {
+export type NoteListRow = {
   id: string;
   campaignId: string;
   adventureId: string | null;
@@ -18,7 +18,7 @@ type NoteListRow = {
   updatedAt?: number;
 };
 
-type TreasureListRow = {
+export type TreasureListRow = {
   id: string;
   campaignId: string;
   adventureId: string | null;
@@ -35,7 +35,7 @@ type TreasureListRow = {
   updatedAt?: number;
 };
 
-function noteListRowToFlat(row: NoteListRow): FlatNoteDto {
+export function noteListRowToFlat(row: NoteListRow): FlatNoteDto {
   return {
     id: row.id,
     scope: row.adventureId ? "adventure" : "campaign",
@@ -48,7 +48,7 @@ function noteListRowToFlat(row: NoteListRow): FlatNoteDto {
   };
 }
 
-function treasureListRowToFlat(row: TreasureListRow): FlatTreasureDto {
+export function treasureListRowToFlat(row: TreasureListRow): FlatTreasureDto {
   return {
     id: row.id,
     scope: row.encounterId ? "encounter" : row.adventureId ? "adventure" : "campaign",
@@ -72,8 +72,8 @@ export function fetchCampaignNotesList(campaignId: string): Promise<FlatNoteDto[
   );
 }
 
-export function fetchAdventureNotesList(adventureId: string): Promise<FlatNoteDto[]> {
-  return api<NoteListRow[]>(`/api/adventures/${adventureId}/notes?view=list`).then((rows) =>
+export function fetchAdventureNotesList(adventureId: string, signal?: AbortSignal): Promise<FlatNoteDto[]> {
+  return api<NoteListRow[]>(`/api/adventures/${adventureId}/notes?view=list`, { signal }).then((rows) =>
     rows.map(noteListRowToFlat),
   );
 }
@@ -92,8 +92,9 @@ export function fetchCampaignTreasureList(
 
 export function fetchAdventureTreasureList(
   adventureId: string,
+  signal?: AbortSignal,
 ): Promise<FlatTreasureDto[]> {
-  return api<TreasureListRow[]>(`/api/adventures/${adventureId}/treasure?view=list`).then((rows) =>
+  return api<TreasureListRow[]>(`/api/adventures/${adventureId}/treasure?view=list`, { signal }).then((rows) =>
     rows.map(treasureListRowToFlat),
   );
 }

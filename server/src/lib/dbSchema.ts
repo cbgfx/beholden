@@ -408,5 +408,12 @@ CREATE INDEX IF NOT EXISTS idx_notes_campaign_sort   ON notes(campaign_id, sort 
 CREATE INDEX IF NOT EXISTS idx_notes_adventure_sort  ON notes(adventure_id, sort DESC);
 CREATE INDEX IF NOT EXISTS idx_treasure_campaign_sort ON treasure(campaign_id, sort DESC);
 CREATE INDEX IF NOT EXISTS idx_treasure_adventure_sort ON treasure(adventure_id, sort DESC);
+CREATE INDEX IF NOT EXISTS idx_adventures_order ON adventures(campaign_id, COALESCE(sort, 9999), updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_encounters_order ON encounters(adventure_id, COALESCE(sort, 9999), updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notes_campaign_order ON notes(campaign_id, COALESCE(sort, 9999), updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notes_adventure_order ON notes(adventure_id, COALESCE(sort, 9999), updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_treasure_campaign_order ON treasure(campaign_id, COALESCE(sort, 9999), updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_treasure_adventure_order ON treasure(adventure_id, COALESCE(sort, 9999), updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_treasure_encounter_order ON treasure(encounter_id, COALESCE(sort, 9999), updated_at DESC);
 
 `;

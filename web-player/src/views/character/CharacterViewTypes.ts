@@ -1,5 +1,6 @@
 import type { AbilKey, CharacterCampaign, CharacterData, ConditionInstance } from "@/views/character/CharacterSheetTypes";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
+import type { StructuredFeatMechanicsLike } from "@/domain/character/structuredFeatureEffects";
 import type { SharedPolymorphCondition } from "@beholden/shared/domain";
 
 /** Total XP required to reach each level (index = level). Index 0 unused. */
@@ -120,6 +121,7 @@ export interface FeatFeatureDetail {
   id: string;
   name: string;
   text?: string | null;
+  parsed?: StructuredFeatMechanicsLike;
   preparedSpellProgression?: PreparedSpellProgressionTable[];
 }
 

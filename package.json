@@ -21,7 +21,8 @@
     "start": "npm -w server run start",
     "test": "npm -w server run test && npm -w web-player run test && npm -w web-dm run test",
     "check:payload-budgets": "node server/scripts/check-payload-budgets.mjs",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run build && npm run check:payload-budgets"
+    "check:bundle-budgets": "node server/scripts/check-bundle-budgets.mjs",
+    "verify": "npm run typecheck && npm run lint && npm test && npm run build && npm run check:payload-budgets && npm run check:bundle-budgets"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.62.0",

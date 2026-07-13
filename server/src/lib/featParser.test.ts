@@ -227,6 +227,19 @@ describe("feat resolution classification", () => {
     assert.deepStrictEqual(result.resolutionNotes, []);
   });
 
+  it("derives per-level hit points from compendium prose instead of the feat name", () => {
+    const result = parseFeat({
+      name: "Origin: Tough",
+      text: "Your Hit Point maximum increases by 3 for each character level you have.",
+    });
+    const effect = result.grants.effects.find((entry) => (
+      (entry as Record<string, unknown>).type === "hit_points"
+    )) as Record<string, unknown>;
+
+    assert.deepStrictEqual(effect.amount, { kind: "character_level", multiplier: 3 });
+    assert.equal(effect.summary, "+3 HP per character level");
+  });
+
   it("marks feats with automatic and adjudicated benefits mixed", () => {
     const result = parseFeat({
       name: "Origin: Alert",

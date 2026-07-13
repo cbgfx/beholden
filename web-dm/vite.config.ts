@@ -30,7 +30,11 @@ export default defineConfig({
             return "shared-domain";
           }
           if (normalizedId.includes("/src/store/")) return "dm-store";
-          if (normalizedId.includes("/src/drawers/")) return "dm-drawers";
+          // Deliberately no manual bucket for src/drawers/: the drawer implementations
+          // are lazy-loaded per drawer type (see drawers/registry.tsx), and grouping them
+          // into one forced chunk name pulls in everything that reaches ANY of them,
+          // including the glue that App.tsx imports eagerly. Left to Rollup's automatic
+          // splitting, each drawer implementation gets its own small on-demand chunk.
           if (normalizedId.includes("/src/domain/")) return "dm-domain";
           if (normalizedId.includes("/src/services/")) return "dm-services";
           return undefined;

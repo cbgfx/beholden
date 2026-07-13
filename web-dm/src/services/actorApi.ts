@@ -34,8 +34,8 @@ export async function fetchCampaignCharacter(
   return flattenCampaignCharacterDto(dto);
 }
 
-export async function fetchEncounterActors(encounterId: string): Promise<FlatEncounterActorDto[]> {
-  return (await api<EncounterActorDto[]>(encounterCombatantsPath(encounterId))).map(flattenEncounterActorDto);
+export async function fetchEncounterActors(encounterId: string, signal?: AbortSignal): Promise<FlatEncounterActorDto[]> {
+  return (await api<EncounterActorDto[]>(encounterCombatantsPath(encounterId), { signal })).map(flattenEncounterActorDto);
 }
 
 export async function fetchEncounterActor(encounterId: string, combatantId: string): Promise<FlatEncounterActorDto> {

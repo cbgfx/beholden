@@ -43,44 +43,56 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
   app.get("/api/campaigns/:campaignId/notes", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
+    if (isListView(req.query.view)) {
+      const rows = db.prepare(`
+        SELECT id, campaign_id, title, sort, updated_at
+        FROM notes
+        WHERE campaign_id = ? AND adventure_id IS NULL
+        ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC
+      `).all(campaignId) as Array<Record<string, unknown>>;
+      return res.json(rows.map((row) => ({
+        id: row.id,
+        campaignId: row.campaign_id,
+        adventureId: null as string | null,
+        title: row.title,
+        sort: row.sort,
+        updatedAt: row.updated_at,
+      })));
+    }
     const rows = db
       .prepare(
         `SELECT ${NOTE_COLS} FROM notes WHERE campaign_id = ? AND adventure_id IS NULL ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC`
       )
       .all(campaignId) as Record<string, unknown>[];
     const notes = rows.map(rowToNote);
-    if (isListView(req.query.view)) {
-      return res.json(notes.map((note) => ({
-        id: note.id,
-        campaignId: note.campaignId,
-        adventureId: null as string | null,
-        title: note.title,
-        sort: note.sort,
-        updatedAt: note.updatedAt,
-      })));
-    }
     res.json(notes.map(toNoteDto));
   });
 
   app.get("/api/adventures/:adventureId/notes", memberOrAdmin(db), (req, res) => {
     const adventureId = requireParam(req, res, "adventureId");
     if (!adventureId) return;
+    if (isListView(req.query.view)) {
+      const rows = db.prepare(`
+        SELECT id, campaign_id, adventure_id, title, sort, updated_at
+        FROM notes
+        WHERE adventure_id = ?
+        ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC
+      `).all(adventureId) as Array<Record<string, unknown>>;
+      return res.json(rows.map((row) => ({
+        id: row.id,
+        campaignId: row.campaign_id,
+        adventureId: row.adventure_id,
+        title: row.title,
+        sort: row.sort,
+        updatedAt: row.updated_at,
+      })));
+    }
     const rows = db
       .prepare(
         `SELECT ${NOTE_COLS} FROM notes WHERE adventure_id = ? ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC`
       )
       .all(adventureId) as Record<string, unknown>[];
     const notes = rows.map(rowToNote);
-    if (isListView(req.query.view)) {
-      return res.json(notes.map((note) => ({
-        id: note.id,
-        campaignId: note.campaignId,
-        adventureId: note.adventureId,
-        title: note.title,
-        sort: note.sort,
-        updatedAt: note.updatedAt,
-      })));
-    }
     res.json(notes.map(toNoteDto));
   });
 

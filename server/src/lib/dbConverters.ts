@@ -44,6 +44,13 @@ function readTimestamps(row: Record<string, unknown>) {
   };
 }
 
+function readVersionedImageUrl(row: Record<string, unknown>): string | null {
+  const url = absolutizePublicUrl((row.image_url as string | null) ?? null);
+  if (!url) return null;
+  const version = typeof row.updated_at === "number" ? row.updated_at : 0;
+  return `${url}${url.includes("?") ? "&" : "?"}v=${version}`;
+}
+
 function readCharacterSheetState(row: Record<string, unknown>): StoredCharacterSheetState {
   const deathSaves =
     typeof row.death_saves_success === "number" && typeof row.death_saves_fail === "number"
@@ -228,7 +235,7 @@ export function rowToCampaign(row: Record<string, unknown>): StoredCampaign {
     id: row.id as string,
     name: row.name as string,
     color: (row.color as string | null) ?? null,
-    imageUrl: absolutizePublicUrl((row.image_url as string | null) ?? null),
+    imageUrl: readVersionedImageUrl(row),
     sharedNotes: (row.shared_notes as string | null) ?? "",
     ...readTimestamps(row),
   };
@@ -285,7 +292,7 @@ export function rowToCampaignCharacter(row: Record<string, unknown>): StoredCamp
     ...(sheet.cha != null ? { cha: sheet.cha } : {}),
     ...(sheet.color != null ? { color: sheet.color } : {}),
     ...(sheet.syncedAc != null ? { syncedAc: sheet.syncedAc } : {}),
-    imageUrl: absolutizePublicUrl((row.image_url as string | null) ?? null),
+    imageUrl: readVersionedImageUrl(row),
     overrides: live.overrides ?? DEFAULT_OVERRIDES,
     conditions: live.conditions ?? [],
     ...(live.deathSaves ? { deathSaves: live.deathSaves } : {}),
@@ -318,7 +325,7 @@ export function rowToCharacterSheet(row: Record<string, unknown>): StoredCharact
     wisScore: sheet.wisScore,
     chaScore: sheet.chaScore,
     color: sheet.color,
-    imageUrl: absolutizePublicUrl((row.image_url as string | null) ?? null),
+    imageUrl: readVersionedImageUrl(row),
     characterData: normalizedCharacterData,
     ...(sheet.deathSaves ? { deathSaves: sheet.deathSaves } : {}),
     sharedNotes: (row.shared_notes as string | null) ?? "",

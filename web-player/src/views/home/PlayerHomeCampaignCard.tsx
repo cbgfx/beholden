@@ -51,7 +51,7 @@ export function CampaignCard({ campaign: c, characters, onOpen }: {
         }}
       >
         {c.imageUrl
-          ? <img src={`${c.imageUrl}?v=${c.updatedAt}`} alt="" style={{
+          ? <img src={c.imageUrl} alt="" style={{
               position: "absolute", top: 0, left: 0,
               width: "100%", height: "100%", objectFit: "cover", display: "block",
               opacity: isHovered ? 0.9 : 1,

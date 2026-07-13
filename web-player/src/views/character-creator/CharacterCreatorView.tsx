@@ -39,7 +39,6 @@ import {
   getClassFeatChoiceLabel,
   getClassFeatOptionLabel,
   initForm,
-  isToughFeat,
   resolvedScores,
   type FormState,
   type Step,
@@ -376,21 +375,6 @@ export function CharacterCreatorView() {
     const scores = resolvedScores(form, selectedFeatAbilityBonuses);
     const conMod = abilityMod(scores.con ?? 10);
     const dexMod = abilityMod(scores.dex ?? 10);
-    const selectedBgFeatName = resolvedBgOriginFeatDetail?.name
-      ?? featSummaries.find((feat) => feat.id === form.chosenBgOriginFeatId)?.name
-      ?? null;
-    const hasTough =
-      isToughFeat(resolvedRaceFeatDetail?.name)
-      || isToughFeat(selectedBgFeatName)
-      || (bgDetail?.proficiencies?.feats ?? []).some((feat) => isToughFeat(feat.name))
-      || (bgDetail?.traits ?? []).some((trait) => /^Feat:\s*/i.test(trait.name) && isToughFeat(trait.name))
-      || selectedClassFeatDetails.some((feat) => isToughFeat(feat.name))
-      || levelUpFeatDetails.some(({ feat }) => isToughFeat(feat.name))
-      || isToughFeat(form.chosenRaceFeatId)
-      || isToughFeat(form.chosenBgOriginFeatId)
-      || Object.values(form.chosenClassFeatIds).some((featId) => isToughFeat(featId))
-      || form.chosenLevelUpFeats.some((entry) => isToughFeat(entry.featId));
-    void hasTough;
     const hp = calcHpMax(hd, form.level, conMod);
     const ac = 10 + dexMod;
     const baseSpeed = raceDetail?.speed ?? races.find((race) => race.id === form.raceId)?.speed ?? 30;

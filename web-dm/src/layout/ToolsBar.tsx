@@ -2,10 +2,19 @@ import React, { useState } from "react";
 import { useMatch } from "react-router-dom";
 import { theme, withAlpha } from "@/theme/theme";
 import { IconNameGenerator, IconDice, IconDeckOfManyThings, IconBastions } from "@/icons";
-import { NameGeneratorModal } from "@/tools/NameGeneratorModal";
-import { DiceCalculatorModal } from "@/tools/DiceCalculatorModal";
-import { DeckOfManyThingsModal } from "@/tools/DeckOfManyThingsModal";
-import { BastionsModal } from "@/tools/BastionsModal";
+
+const NameGeneratorModal = React.lazy(() =>
+  import("@/tools/NameGeneratorModal").then((module) => ({ default: module.NameGeneratorModal })),
+);
+const DiceCalculatorModal = React.lazy(() =>
+  import("@/tools/DiceCalculatorModal").then((module) => ({ default: module.DiceCalculatorModal })),
+);
+const DeckOfManyThingsModal = React.lazy(() =>
+  import("@/tools/DeckOfManyThingsModal").then((module) => ({ default: module.DeckOfManyThingsModal })),
+);
+const BastionsModal = React.lazy(() =>
+  import("@/tools/BastionsModal").then((module) => ({ default: module.BastionsModal })),
+);
 
 type ToolId = "nameGenerator" | "diceCalc" | "deck" | "bastions";
 
@@ -76,10 +85,12 @@ export function ToolsBar() {
         })}
       </div>
 
-      <NameGeneratorModal    isOpen={open === "nameGenerator"} onClose={() => setOpen(null)} />
-      <DiceCalculatorModal   isOpen={open === "diceCalc"}      onClose={() => setOpen(null)} />
-      <DeckOfManyThingsModal isOpen={open === "deck"}          onClose={() => setOpen(null)} />
-      <BastionsModal         isOpen={open === "bastions"}      onClose={() => setOpen(null)} />
+      <React.Suspense fallback={null}>
+        {open === "nameGenerator" && <NameGeneratorModal isOpen onClose={() => setOpen(null)} />}
+        {open === "diceCalc" && <DiceCalculatorModal isOpen onClose={() => setOpen(null)} />}
+        {open === "deck" && <DeckOfManyThingsModal isOpen onClose={() => setOpen(null)} />}
+        {open === "bastions" && <BastionsModal isOpen onClose={() => setOpen(null)} />}
+      </React.Suspense>
     </>
   );
 }

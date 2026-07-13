@@ -4,10 +4,13 @@ import { C, withAlpha } from "@/lib/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { IconDice } from "@/icons";
 import { api } from "@/services/api";
+import { fetchMyCharacters } from "@/services/actorApi";
 import { useWsStatus } from "@/services/ws";
-import { DiceCalculatorModal } from "@/tools/DiceCalculatorModal";
 import { StatusDot, FooterGrid, HeaderActionButton, HeaderActionLink, TopBarFrame, navLinkStyle } from "@beholden/shared/ui";
 
+const DiceCalculatorModal = React.lazy(() =>
+  import("@/tools/DiceCalculatorModal").then((module) => ({ default: module.DiceCalculatorModal })),
+);
 
 function readLastCharacter(): { id: string; name: string } | null {
   try {
@@ -35,16 +38,17 @@ function useLastCharacter() {
   }, []);
   React.useEffect(() => {
     if (!last?.id) return;
-    const controller = new AbortController();
-    api<Array<{ id: string }>>("/api/me/characters", { signal: controller.signal })
+    let cancelled = false;
+    fetchMyCharacters()
       .then((characters) => {
+        if (cancelled) return;
         const stillExists = characters.some((character) => character.id === last.id);
         if (stillExists) return;
         localStorage.removeItem("beholden:lastCharacter");
         setLast(null);
       })
       .catch(() => {});
-    return () => controller.abort();
+    return () => { cancelled = true; };
   }, [last?.id]);
   return last;
 }
@@ -64,9 +68,22 @@ function useServerMeta() {
 function useUpdateCheck() {
   const [updateAvailable, setUpdateAvailable] = React.useState(false);
   React.useEffect(() => {
-    api<{ ok: boolean; updateAvailable?: boolean }>("/api/update-check")
-      .then((r) => { if (r.ok && r.updateAvailable) setUpdateAvailable(true); })
-      .catch(() => {});
+    let cancelled = false;
+    const checkForUpdate = () => {
+      api<{ ok: boolean; updateAvailable?: boolean }>("/api/update-check")
+        .then((r) => {
+          if (!cancelled && r.ok && r.updateAvailable) setUpdateAvailable(true);
+        })
+        .catch(() => {});
+    };
+
+    const idleId = window.requestIdleCallback?.(checkForUpdate, { timeout: 3_000 });
+    const timeoutId = idleId === undefined ? window.setTimeout(checkForUpdate, 1_500) : undefined;
+    return () => {
+      cancelled = true;
+      if (idleId !== undefined) window.cancelIdleCallback?.(idleId);
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    };
   }, []);
   return updateAvailable;
 }
@@ -213,7 +230,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </TopBarFrame>
-      <DiceCalculatorModal isOpen={diceOpen} onClose={() => setDiceOpen(false)} />
+      {diceOpen && (
+        <React.Suspense fallback={null}>
+          <DiceCalculatorModal isOpen onClose={() => setDiceOpen(false)} />
+        </React.Suspense>
+      )}
 
       <main style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
         {children}

@@ -325,6 +325,24 @@ function parseFeatStructuredEffects(
   body: string,
   grants: ParsedFeatGrants,
 ): void {
+  const numericHpPerLevel = body.match(
+    /hit point maximum increases by (\d+)[^.]*(?:(?:character )?level|you gain a level)/i,
+  )?.[1];
+  const hpPerLevelMultiplier = numericHpPerLevel
+    ? Number(numericHpPerLevel)
+    : /hit point maximum increases by (?:an amount equal to )?twice your (?:character )?level/i.test(body)
+      ? 2
+      : null;
+  if (hpPerLevelMultiplier != null) {
+    grants.effects.push({
+      type: "hit_points",
+      mode: "max_bonus",
+      resolution: "automatic",
+      amount: { kind: "character_level", multiplier: hpPerLevelMultiplier },
+      summary: `+${hpPerLevelMultiplier} HP per character level`,
+    });
+  }
+
   // ── Fighting Styles ────────────────────────────────────────────────────────
   if (category === "Fighting Style") {
     switch (baseName) {
@@ -400,10 +418,6 @@ function parseFeatStructuredEffects(
         description: "Immediately after rolling Initiative, you can swap your Initiative with one willing ally in the same combat.",
         summary: "Manual: optionally swap Initiative with a willing ally after rolling.",
       });
-      return;
-    }
-    if (baseName === "Tough") {
-      grants.effects.push({ type: "hit_points", mode: "max_bonus", resolution: "automatic", amount: { kind: "character_level", multiplier: 2 }, summary: "+2 HP per character level" });
       return;
     }
   }

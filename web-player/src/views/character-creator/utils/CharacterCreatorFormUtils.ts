@@ -119,14 +119,6 @@ export function getClassFeatOptionLabel(optionName: string, featGroup: string): 
   return label;
 }
 
-export function isToughFeat(name: string | null | undefined): boolean {
-  const normalized = String(name ?? "")
-    .trim()
-    .replace(/^f_/, "")
-    .replace(/[^a-z0-9]+/gi, " ");
-  return /\bTough\b/i.test(normalized);
-}
-
 function toAbilityKey(value: string): string | null {
   const lowered = String(value ?? "").trim().toLowerCase();
   return ABILITY_NAME_TO_KEY[lowered] ?? null;

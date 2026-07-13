@@ -1,5 +1,5 @@
 import { useWs } from "@/services/ws";
-import { api } from "@/services/api";
+import { api, apiCoalesced } from "@/services/api";
 import { fetchCampaignCharacter, fetchCampaignCharacters, fetchEncounterActor } from "@/services/actorApi";
 import { encounterPath } from "@/services/encounterApi";
 import { useDebouncedTaskQueue } from "@beholden/shared/ui";
@@ -72,7 +72,7 @@ export function useAppWebSocket({
         return;
       }
       enqueue(`refresh:adventures:${selectedCampaignId}`, async () => {
-        const adventures = await api<Adventure[]>(`/api/campaigns/${selectedCampaignId}/adventures`);
+        const adventures = await apiCoalesced<Adventure[]>(`/api/campaigns/${selectedCampaignId}/adventures`);
         dispatch({ type: "setAdventures", adventures });
       });
       return;
@@ -117,7 +117,7 @@ export function useAppWebSocket({
         return;
       }
       enqueue(`refresh:inpcs:${selectedCampaignId}`, async () => {
-        const inpcs = await api<INpc[]>(`/api/campaigns/${selectedCampaignId}/inpcs`);
+        const inpcs = await apiCoalesced<INpc[]>(`/api/campaigns/${selectedCampaignId}/inpcs`);
         dispatch({ type: "setINpcs", inpcs });
       });
       return;
@@ -141,7 +141,7 @@ export function useAppWebSocket({
         return;
       }
       enqueue(`refresh:encounters:${selectedAdventureId}`, async () => {
-        const encounters = await api<Encounter[]>(`/api/adventures/${selectedAdventureId}/encounters`);
+        const encounters = await apiCoalesced<Encounter[]>(`/api/adventures/${selectedAdventureId}/encounters`);
         dispatch({ type: "setEncounters", encounters });
       });
       return;

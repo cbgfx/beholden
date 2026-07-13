@@ -143,7 +143,7 @@ export function CampaignCard({ campaign: c, onOpen, onEdit, onDelete, onRefresh 
       >
         {imageUrl && (
           <img
-            src={`${imageUrl}?v=${c.updatedAt ?? 0}`}
+            src={imageUrl}
             alt=""
             style={{
               position: "absolute",

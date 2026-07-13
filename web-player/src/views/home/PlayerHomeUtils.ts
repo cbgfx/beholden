@@ -257,10 +257,6 @@ export function finalizeDerivedSheetSummaries(raw: Record<string, unknown>, char
   };
 }
 
-function isToughReference(value: unknown): boolean {
-  return lowerLookup(value).includes("tough");
-}
-
 function cloneCharacterDataWithFixes(
   characterData: Record<string, unknown> | null | undefined,
   className: string | undefined,
@@ -306,11 +302,10 @@ export function normalizeCharacterTransfer(raw: Record<string, unknown>): Record
   const importedHpMax = Math.max(0, intOrFallback(raw.hpMax, 0));
   const inferredBaseHp = hitDie ? calcBaseHp(hitDie, level, conMod) : 0;
   const hpMax = importedHpMax > 0 && importedHpMax < inferredBaseHp ? inferredBaseHp : importedHpMax;
-  const hasTough =
-    isToughReference(characterData?.chosenRaceFeatId)
-    || (Array.isArray(characterData?.chosenLevelUpFeats) && characterData.chosenLevelUpFeats.some(isToughReference))
-    || (Array.isArray(characterData?.feats) && characterData.feats.some(isToughReference));
-  const effectiveHpMax = hpMax + (hasTough ? level * 2 : 0);
+  const storedDerivedHpMax = Number(characterData?.derivedHpMax);
+  const effectiveHpMax = Number.isFinite(storedDerivedHpMax) && storedDerivedHpMax >= 1
+    ? Math.floor(storedDerivedHpMax)
+    : hpMax;
   const hpCurrent = clamp(Math.max(0, intOrFallback(raw.hpCurrent, effectiveHpMax || hpMax)), 0, Math.max(effectiveHpMax, hpMax));
   const finalized = finalizeDerivedSheetSummaries({ ...raw, className, species, level }, characterData);
 

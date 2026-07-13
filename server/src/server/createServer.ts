@@ -42,6 +42,7 @@ import { registerHealthRoutes } from "../routes/health.js";
 import { registerMetaRoutes } from "../routes/meta.js";
 import { registerCompendiumRoutes } from "../routes/compendium.js";
 import { registerCampaignRoutes } from "../routes/campaigns.js";
+import { registerCampaignBootstrapRoute } from "../routes/campaignBootstrap.js";
 import { registerPlayerRoutes } from "../routes/players.js";
 import { registerCharacterRoutes } from "../routes/characters.js";
 import { registerInpcRoutes } from "../routes/inpcs.js";
@@ -166,6 +167,9 @@ export function createServer() {
     maxAge: "1h",
     etag: true,
     lastModified: true,
+    setHeaders: (res) => {
+      if (res.req.url?.includes("?v=")) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    },
   }));
 
   // --- player images (static) ----------------------------------------------
@@ -175,6 +179,9 @@ export function createServer() {
     maxAge: "1h",
     etag: true,
     lastModified: true,
+    setHeaders: (res) => {
+      if (res.req.url?.includes("?v=")) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    },
   }));
 
   // --- character portrait images (static) -----------------------------------
@@ -184,6 +191,9 @@ export function createServer() {
     maxAge: "1h",
     etag: true,
     lastModified: true,
+    setHeaders: (res) => {
+      if (res.req.url?.includes("?v=")) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    },
   }));
 
   // --- routes ---------------------------------------------------------------
@@ -193,6 +203,7 @@ export function createServer() {
   registerMetaRoutes(app, ctx);
   registerCompendiumRoutes(app, ctx);
   registerCampaignRoutes(app, ctx);
+  registerCampaignBootstrapRoute(app, ctx);
   registerPlayerRoutes(app, ctx);
   registerCharacterRoutes(app, ctx);
   registerInpcRoutes(app, ctx);

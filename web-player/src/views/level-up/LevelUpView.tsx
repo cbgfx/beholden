@@ -9,7 +9,7 @@ import type {
 import { AsiAbilityGrid, BackBtn, ChoiceBtn, ExpertiseSelectionSection, FeatSelectionSection, LevelUpHpSection, Section, Wrap } from "@/views/level-up/LevelUpParts";
 import { LevelUpChoicesSection, LevelUpFeaturesSection, LevelUpSpellSlotsSection, LevelUpSubclassSection } from "@/views/level-up/LevelUpSections";
 import { deriveFeatAbilityBonuses, deriveHpGain, deriveLevelUpValidation } from "@/views/level-up/LevelUpUtils";
-import { isToughFeat } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
+import { deriveFeatHitPointMaxBonus } from "@/domain/character/featEffects";
 import { useLevelUpInitialData } from "@/views/level-up/useLevelUpInitialData";
 import { useLevelUpDerivedState } from "@/views/level-up/useLevelUpDerivedState";
 import { useLevelUpChoiceSelections } from "@/views/level-up/useLevelUpChoiceSelections";
@@ -149,7 +149,9 @@ export function LevelUpView() {
     () => deriveFeatAbilityBonuses({ chosenFeatDetail, chosenFeatOptions, featChoiceEntries, nextLevel }),
     [chosenFeatDetail, chosenFeatOptions, featChoiceEntries, nextLevel]
   );
-  const featHpBonus = asiMode === "feat" && isToughFeat(chosenFeatDetail?.name) ? nextLevel * 2 : 0;
+  const featHpBonus = asiMode === "feat"
+    ? deriveFeatHitPointMaxBonus([chosenFeatDetail], nextLevel)
+    : 0;
 
   // Current scores + ASI deltas
   const baseScores = React.useMemo<Record<string, number>>(

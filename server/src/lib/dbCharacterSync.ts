@@ -19,33 +19,6 @@ function valuesDiffer(a: unknown, b: unknown): boolean {
   return (a ?? null) !== (b ?? null);
 }
 
-function isToughReference(value: unknown): boolean {
-  if (typeof value !== "string") return false;
-  return /\btough\b/.test(value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim());
-}
-
-function referencesToughFeat(characterData: Record<string, unknown> | null): boolean {
-  if (!characterData) return false;
-  if (isToughReference(characterData.chosenRaceFeatId) || isToughReference(characterData.chosenBgOriginFeatId)) {
-    return true;
-  }
-  const classFeats = characterData.chosenClassFeatIds;
-  if (
-    classFeats
-    && typeof classFeats === "object"
-    && !Array.isArray(classFeats)
-    && Object.values(classFeats).some(isToughReference)
-  ) {
-    return true;
-  }
-  return Array.isArray(characterData.chosenLevelUpFeats)
-    && characterData.chosenLevelUpFeats.some((entry) => (
-      entry != null
-      && typeof entry === "object"
-      && isToughReference((entry as Record<string, unknown>).featId)
-    ));
-}
-
 export function syncCharacterDerivedColumns(db: Db): void {
   // Linked characters use the canonical AC column. Clear the retired client
   // projection so stale values cannot leak through older API consumers.
@@ -118,14 +91,7 @@ export function syncCharacterDerivedColumns(db: Db): void {
       ...(readCharacter.deathSaves ? { deathSaves: readCharacter.deathSaves } : {}),
     }, readCharacter.characterData);
     const sheet = normalized.sheet;
-    const storedDerivedHpMax = Number(normalized.characterData?.derivedHpMax);
-    const inferredDerivedHpMax =
-      !Number.isFinite(storedDerivedHpMax) && referencesToughFeat(normalized.characterData)
-        ? sheet.hpMax + (sheet.level * 2)
-        : null;
-    const characterData = inferredDerivedHpMax != null
-      ? { ...(normalized.characterData ?? {}), derivedHpMax: inferredDerivedHpMax }
-      : normalized.characterData;
+    const characterData = normalized.characterData;
     const characterDataJson = characterData ? JSON.stringify(characterData) : null;
     const persistedDerivedHpMax = Number(characterData?.derivedHpMax);
     const mirroredHpMax = Number.isFinite(persistedDerivedHpMax) && persistedDerivedHpMax >= 1

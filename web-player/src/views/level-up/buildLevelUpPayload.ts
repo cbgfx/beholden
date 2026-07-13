@@ -17,7 +17,9 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
     baseScores, asiMode, asiStats, featAbilityBonuses,
   } = args;
 
-  const newHpMax = char.hpMax + hpGain + featHpBonus;
+  // hpMax stores base HP. Deterministic feat bonuses are derived from the
+  // current compendium definition when the sheet loads.
+  const newHpMax = char.hpMax + hpGain;
   const proficiencies = { ...(char.characterData?.proficiencies ?? {}) } as NonNullable<NonNullable<typeof char.characterData>["proficiencies"]>;
   const _arr = <T = { source: string; sourceKey?: string | null; name?: string }>(v: unknown): T[] => Array.isArray(v) ? v as T[] : [];
   const existingSpells = _arr(proficiencies?.spells);

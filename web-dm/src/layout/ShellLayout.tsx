@@ -9,9 +9,22 @@ import { FooterGrid, TopBarFrame } from "@beholden/shared/ui";
 function useUpdateCheck() {
   const [updateAvailable, setUpdateAvailable] = React.useState(false);
   React.useEffect(() => {
-    api<{ ok: boolean; updateAvailable?: boolean }>("/api/update-check")
-      .then((r) => { if (r.ok && r.updateAvailable) setUpdateAvailable(true); })
-      .catch(() => {});
+    let cancelled = false;
+    const checkForUpdate = () => {
+      api<{ ok: boolean; updateAvailable?: boolean }>("/api/update-check")
+        .then((r) => {
+          if (!cancelled && r.ok && r.updateAvailable) setUpdateAvailable(true);
+        })
+        .catch(() => {});
+    };
+
+    const idleId = window.requestIdleCallback?.(checkForUpdate, { timeout: 3_000 });
+    const timeoutId = idleId === undefined ? window.setTimeout(checkForUpdate, 1_500) : undefined;
+    return () => {
+      cancelled = true;
+      if (idleId !== undefined) window.cancelIdleCallback?.(idleId);
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    };
   }, []);
   return updateAvailable;
 }

@@ -1,5 +1,6 @@
 ﻿export {
   api,
+  apiCoalesced,
   apiBlob,
   apiRaw,
   jsonInit,
