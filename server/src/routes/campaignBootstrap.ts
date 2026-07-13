@@ -32,7 +32,7 @@ function readPlayers(ctx: ServerContext, req: Request, campaignId: string) {
 
 function readNoteSummaries(ctx: ServerContext, campaignId: string) {
   const rows = ctx.db.prepare(`
-    SELECT id, campaign_id, title, sort, updated_at
+    SELECT id, campaign_id, note_display_title(title, text) AS title, sort, updated_at
     FROM notes
     WHERE campaign_id = ? AND adventure_id IS NULL
     ORDER BY COALESCE(sort, 9999) ASC, updated_at DESC

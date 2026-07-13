@@ -47,8 +47,26 @@ function readTimestamps(row: Record<string, unknown>) {
 function readVersionedImageUrl(row: Record<string, unknown>): string | null {
   const url = absolutizePublicUrl((row.image_url as string | null) ?? null);
   if (!url) return null;
-  const version = typeof row.updated_at === "number" ? row.updated_at : 0;
+  const version = typeof row.image_updated_at === "number" ? row.image_updated_at : 0;
   return `${url}${url.includes("?") ? "&" : "?"}v=${version}`;
+}
+
+export function cleanStoredImageUrl(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const raw = value.trim();
+  try {
+    const absolute = /^[a-z][a-z\d+.-]*:\/\//i.test(raw);
+    const parsed = new URL(raw, "http://beholden.local");
+    parsed.searchParams.delete("v");
+    const query = parsed.searchParams.toString();
+    const localValue = `${parsed.pathname}${query ? `?${query}` : ""}${parsed.hash}`;
+    if (!absolute || /^\/(?:campaign|player|character)-images\//.test(parsed.pathname)) return localValue;
+    return `${parsed.origin}${localValue}`;
+  } catch {
+    return raw.replace(/([?&])v=[^&#]*(&?)/g, (_match, prefix: string, suffix: string) => (
+      prefix === "?" && suffix ? "?" : suffix ? "&" : ""
+    ));
+  }
 }
 
 function readCharacterSheetState(row: Record<string, unknown>): StoredCharacterSheetState {
@@ -176,12 +194,17 @@ function titleFromNoteText(text: string | null): string | null {
   return null;
 }
 
-function readNoteState(row: Record<string, unknown>): StoredNoteState {
-  const title = typeof row.title === "string" ? row.title : "Note";
-  const text = typeof row.text === "string" ? row.text : "";
+export function displayNoteTitle(titleValue: unknown, textValue: unknown): string {
+  const title = typeof titleValue === "string" ? titleValue : "Note";
+  const text = typeof textValue === "string" ? textValue : "";
   const inferredTitle = titleFromNoteText(text);
+  return title === "Note" && inferredTitle ? inferredTitle : title || "Note";
+}
+
+function readNoteState(row: Record<string, unknown>): StoredNoteState {
+  const text = typeof row.text === "string" ? row.text : "";
   return {
-    title: title === "Note" && inferredTitle ? inferredTitle : title || "Note",
+    title: displayNoteTitle(row.title, text),
     text,
   };
 }

@@ -7,7 +7,7 @@ import type { ServerContext } from "../server/context.js";
 import type { StoredConditionInstance } from "../server/userData.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
-import { normalizeCharacterSheetForStorage, rowToCampaignCharacter, rowToCharacterSheet, CAMPAIGN_CHARACTER_COLS, CHARACTER_SHEET_COLS } from "../lib/db.js";
+import { cleanStoredImageUrl, normalizeCharacterSheetForStorage, rowToCampaignCharacter, rowToCharacterSheet, CAMPAIGN_CHARACTER_COLS, CHARACTER_SHEET_COLS } from "../lib/db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { DEFAULT_OVERRIDES } from "../lib/defaults.js";
 import { toCharacterCampaignAssignmentDto, toCharacterSheetDto } from "../lib/apiActors.js";
@@ -489,6 +489,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       .get(charId, userId) as Record<string, unknown> | undefined;
     if (!existing) return res.status(404).json({ ok: false, message: "Not found" });
     const char = rowToCharacterSheet(existing);
+    const cleanImageUrl = cleanStoredImageUrl(existing.image_url);
 
     const { campaignIds } = parseBody(AssignBody, req);
     const t = now();
@@ -510,8 +511,9 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
 
       if (existing_link?.id) {
         updateProjectedPlayerRow(db, existing_link.id, snapshot, t, userId);
-        if (char.imageUrl) {
-          db.prepare("UPDATE players SET image_url = ?, updated_at = ? WHERE id = ?").run(char.imageUrl, t, existing_link.id);
+        if (cleanImageUrl) {
+          db.prepare("UPDATE players SET image_url = ?, image_updated_at = ?, updated_at = ? WHERE id = ?")
+            .run(cleanImageUrl, existing.image_updated_at ?? t, t, existing_link.id);
         }
         emitPlayerChange({ campaignId, action: "upsert", playerId: existing_link.id, characterId: charId });
         results.push({ campaignId, playerId: existing_link.id });
@@ -529,8 +531,9 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
         updatedAt: t,
         userId,
       });
-      if (char.imageUrl) {
-        db.prepare("UPDATE players SET image_url = ?, updated_at = ? WHERE id = ?").run(char.imageUrl, t, playerId);
+      if (cleanImageUrl) {
+        db.prepare("UPDATE players SET image_url = ?, image_updated_at = ?, updated_at = ? WHERE id = ?")
+          .run(cleanImageUrl, existing.image_updated_at ?? t, t, playerId);
       }
 
       emitPlayerChange({ campaignId, action: "upsert", playerId, characterId: charId });
@@ -584,10 +587,10 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     ctx.fs.writeFileSync(ctx.path.join(imagesDir, filename), thumbnail);
     const imageUrl = `/character-images/${filename}`;
     const t = now();
-    db.prepare("UPDATE user_characters SET image_url = ?, updated_at = ? WHERE id = ?").run(imageUrl, t, charId);
+    db.prepare("UPDATE user_characters SET image_url = ?, image_updated_at = ?, updated_at = ? WHERE id = ?").run(imageUrl, t, t, charId);
     // Sync image to all campaign player rows linked to this character.
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
-      db.prepare("UPDATE players SET image_url = ?, updated_at = ? WHERE id = ?").run(imageUrl, t, player_id);
+      db.prepare("UPDATE players SET image_url = ?, image_updated_at = ?, updated_at = ? WHERE id = ?").run(imageUrl, t, t, player_id);
       emitPlayerChange({ campaignId: campaign_id, action: "upsert", playerId: player_id, characterId: charId });
     }
     res.json({ ok: true, imageUrl: absolutizePublicUrlForRequest(req, imageUrl) });
@@ -602,10 +605,10 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const imgPath = ctx.path.join(imagesDir, `${charId}.webp`);
     try { if (ctx.fs.existsSync(imgPath)) ctx.fs.unlinkSync(imgPath); } catch { /* best-effort */ }
     const t = now();
-    db.prepare("UPDATE user_characters SET image_url = NULL, updated_at = ? WHERE id = ?").run(t, charId);
+    db.prepare("UPDATE user_characters SET image_url = NULL, image_updated_at = ?, updated_at = ? WHERE id = ?").run(t, t, charId);
     // Sync image removal to all campaign player rows linked to this character.
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
-      db.prepare("UPDATE players SET image_url = NULL, updated_at = ? WHERE id = ?").run(t, player_id);
+      db.prepare("UPDATE players SET image_url = NULL, image_updated_at = ?, updated_at = ? WHERE id = ?").run(t, t, player_id);
       emitPlayerChange({ campaignId: campaign_id, action: "upsert", playerId: player_id, characterId: charId });
     }
     res.json({ ok: true });

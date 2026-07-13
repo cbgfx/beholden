@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
   name TEXT NOT NULL,
   color TEXT,
   image_url TEXT,
+  image_updated_at INTEGER,
   shared_notes TEXT NOT NULL DEFAULT '',
   party_currency_json TEXT NOT NULL DEFAULT '{"PP":0,"GP":0,"SP":0,"CP":0}',
   created_at INTEGER NOT NULL,
@@ -62,6 +63,7 @@ CREATE TABLE IF NOT EXISTS players (
   death_saves_fail INTEGER,
   live_json TEXT NOT NULL,
   image_url TEXT,
+  image_updated_at INTEGER,
   shared_notes TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
@@ -280,6 +282,7 @@ CREATE TABLE IF NOT EXISTS user_characters (
   death_saves_success INTEGER,
   death_saves_fail INTEGER,
   image_url TEXT,
+  image_updated_at INTEGER,
   character_data_json TEXT,
   shared_notes TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL,

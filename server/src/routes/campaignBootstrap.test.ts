@@ -6,15 +6,21 @@ import express from "express";
 import { SCHEMA_SQL } from "../lib/dbSchema.js";
 import type { ServerContext } from "../server/context.js";
 import { registerCampaignBootstrapRoute } from "./campaignBootstrap.js";
+import { displayNoteTitle } from "../lib/dbConverters.js";
 
 test("campaign bootstrap enforces access and returns its stable collection shape", async (t) => {
   const db = new Database(":memory:");
   db.pragma("foreign_keys = ON");
   db.exec(SCHEMA_SQL);
+  db.function("note_display_title", { deterministic: true }, displayNoteTitle);
   const now = Date.now();
   db.prepare(`
     INSERT INTO campaigns (id, name, color, image_url, shared_notes, created_at, updated_at)
     VALUES ('campaign-1', 'Test', NULL, NULL, '', ?, ?)
+  `).run(now, now);
+  db.prepare(`
+    INSERT INTO notes (id, campaign_id, adventure_id, title, text, sort, created_at, updated_at)
+    VALUES ('note-1', 'campaign-1', NULL, 'Note', '\n# Inferred title\nBody', 1, ?, ?)
   `).run(now, now);
   t.after(() => db.close());
 
@@ -44,6 +50,7 @@ test("campaign bootstrap enforces access and returns its stable collection shape
   const body = await allowed.json() as Record<string, unknown>;
   assert.deepEqual(Object.keys(body).sort(), ["adventures", "inpcs", "notes", "players", "treasure"]);
   for (const value of Object.values(body)) assert(Array.isArray(value));
+  assert.equal((body.notes as Array<{ title: string }>)[0]?.title, "Inferred title");
 
   const missing = await fetch(url.replace("campaign-1", "missing"), { headers: { "x-test-user": "admin" } });
   assert.equal(missing.status, 404);

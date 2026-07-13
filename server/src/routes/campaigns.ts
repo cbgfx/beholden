@@ -29,7 +29,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     const user = req.user!;
     const rows = user.isAdmin
       ? db.prepare(`
-          SELECT c.id, c.name, c.color, c.image_url, c.shared_notes, c.created_at, c.updated_at,
+          SELECT c.id, c.name, c.color, c.image_url, c.image_updated_at, c.shared_notes, c.created_at, c.updated_at,
                  COUNT(p.id) AS player_count
           FROM campaigns c
           LEFT JOIN players p ON p.campaign_id = c.id
@@ -37,7 +37,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
           ORDER BY c.updated_at DESC
         `).all() as Record<string, unknown>[]
       : db.prepare(`
-          SELECT c.id, c.name, c.color, c.image_url, c.shared_notes, c.created_at, c.updated_at,
+          SELECT c.id, c.name, c.color, c.image_url, c.image_updated_at, c.shared_notes, c.created_at, c.updated_at,
                  COUNT(p.id) AS player_count
           FROM campaigns c
           LEFT JOIN players p ON p.campaign_id = c.id
@@ -56,7 +56,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   app.get("/api/me/campaigns", (req, res) => {
     const user = req.user!;
     const rows = db.prepare(`
-        SELECT c.id, c.name, c.color, c.image_url, c.shared_notes, c.created_at, c.updated_at,
+        SELECT c.id, c.name, c.color, c.image_url, c.image_updated_at, c.shared_notes, c.created_at, c.updated_at,
                COUNT(p.id) AS player_count
         FROM campaigns c
         LEFT JOIN players p ON p.campaign_id = c.id
@@ -87,7 +87,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   app.put("/api/campaigns/:campaignId", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
-    const row = db.prepare("SELECT id, name, color, image_url, shared_notes, created_at, updated_at FROM campaigns WHERE id = ?").get(campaignId) as Record<string, unknown> | undefined;
+    const row = db.prepare("SELECT id, name, color, image_url, image_updated_at, shared_notes, created_at, updated_at FROM campaigns WHERE id = ?").get(campaignId) as Record<string, unknown> | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Campaign not found" });
     const body = parseBody(CampaignUpsertBody, req);
     const name = (body.name ?? "").toString().trim() || (row.name as string);
@@ -229,7 +229,8 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     ctx.fs.writeFileSync(ctx.path.join(imagesDir, filename), thumbnail);
 
     const imageUrl = `/campaign-images/${filename}`;
-    db.prepare("UPDATE campaigns SET image_url = ?, updated_at = ? WHERE id = ?").run(imageUrl, now(), campaignId);
+    const t = now();
+    db.prepare("UPDATE campaigns SET image_url = ?, image_updated_at = ?, updated_at = ? WHERE id = ?").run(imageUrl, t, t, campaignId);
     ctx.broadcast("campaigns:changed", { campaignId });
     res.json({ ok: true, imageUrl: absolutizePublicUrlForRequest(req, imageUrl) });
   });
@@ -259,7 +260,8 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     const imagesDir = ctx.path.join(ctx.paths.dataDir, "campaign-images");
     deleteImageFiles(ctx, imagesDir, campaignId);
 
-    db.prepare("UPDATE campaigns SET image_url = NULL, updated_at = ? WHERE id = ?").run(now(), campaignId);
+    const t = now();
+    db.prepare("UPDATE campaigns SET image_url = NULL, image_updated_at = ?, updated_at = ? WHERE id = ?").run(t, t, campaignId);
     ctx.broadcast("campaigns:changed", { campaignId });
     res.json({ ok: true });
   });

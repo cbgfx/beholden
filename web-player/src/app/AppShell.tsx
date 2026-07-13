@@ -114,6 +114,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const connected = useWsStatus();
   const lastChar = useLastCharacter();
   const [diceOpen, setDiceOpen] = React.useState(false);
+  // Keep the calculator mounted after its first open so its own expression/result state
+  // (DiceCalculatorModal's internal useState) survives close/reopen, same as before it was
+  // lazy-loaded — only the first open should trigger the dynamic import.
+  const [diceEverOpened, setDiceEverOpened] = React.useState(false);
+  React.useEffect(() => {
+    if (diceOpen) setDiceEverOpened(true);
+  }, [diceOpen]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: C.bg, color: C.text, fontFamily: "system-ui, Segoe UI, Arial, sans-serif" }}>
@@ -230,9 +237,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </TopBarFrame>
-      {diceOpen && (
+      {diceEverOpened && (
         <React.Suspense fallback={null}>
-          <DiceCalculatorModal isOpen onClose={() => setDiceOpen(false)} />
+          <DiceCalculatorModal isOpen={diceOpen} onClose={() => setDiceOpen(false)} />
         </React.Suspense>
       )}
 

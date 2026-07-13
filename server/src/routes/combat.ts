@@ -74,6 +74,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         p.death_saves_fail    AS p_death_saves_fail,
         p.live_json      AS p_live_json,
         p.image_url      AS p_image_url,
+        p.image_updated_at AS p_image_updated_at,
         p.shared_notes   AS p_shared_notes,
         p.created_at     AS p_created_at,
         p.updated_at     AS p_updated_at
@@ -112,6 +113,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         death_saves_fail: row.p_death_saves_fail,
         live_json: row.p_live_json,
         image_url: row.p_image_url,
+        image_updated_at: row.p_image_updated_at,
         shared_notes: row.p_shared_notes,
         created_at: row.p_created_at,
         updated_at: row.p_updated_at,
@@ -167,6 +169,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         p.death_saves_fail    AS p_death_saves_fail,
         p.live_json      AS p_live_json,
         p.image_url      AS p_image_url,
+        p.image_updated_at AS p_image_updated_at,
         p.shared_notes   AS p_shared_notes,
         p.created_at     AS p_created_at,
         p.updated_at     AS p_updated_at
@@ -208,6 +211,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
       death_saves_fail: row.p_death_saves_fail,
       live_json: row.p_live_json,
       image_url: row.p_image_url,
+      image_updated_at: row.p_image_updated_at,
       shared_notes: row.p_shared_notes,
       created_at: row.p_created_at,
       updated_at: row.p_updated_at,

@@ -491,7 +491,8 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     ctx.fs.writeFileSync(ctx.path.join(imagesDir, filename), thumbnail);
 
     const imageUrl = `/player-images/${filename}`;
-    db.prepare("UPDATE players SET image_url = ?, updated_at = ? WHERE id = ?").run(imageUrl, now(), playerId);
+    const t = now();
+    db.prepare("UPDATE players SET image_url = ?, image_updated_at = ?, updated_at = ? WHERE id = ?").run(imageUrl, t, t, playerId);
     emitPlayerChange({ campaignId: row.campaign_id, action: "upsert", playerId, characterId: null });
     res.json({ ok: true, imageUrl: absolutizePublicUrlForRequest(req, imageUrl) });
   });
@@ -507,7 +508,8 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     const imgPath = ctx.path.join(imagesDir, `${playerId}.webp`);
     try { if (ctx.fs.existsSync(imgPath)) ctx.fs.unlinkSync(imgPath); } catch { /* best-effort */ }
 
-    db.prepare("UPDATE players SET image_url = NULL, updated_at = ? WHERE id = ?").run(now(), playerId);
+    const t = now();
+    db.prepare("UPDATE players SET image_url = NULL, image_updated_at = ?, updated_at = ? WHERE id = ?").run(t, t, playerId);
     emitPlayerChange({ campaignId: row.campaign_id, action: "upsert", playerId, characterId: null });
     res.json({ ok: true });
   });

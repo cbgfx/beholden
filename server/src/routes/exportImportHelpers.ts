@@ -4,6 +4,7 @@ import { DEFAULT_DEATH_SAVES, DEFAULT_OVERRIDES } from "../lib/defaults.js";
 import { seedDefaultConditions } from "../services/conditions.js";
 import { campaignLiveDbColumns, campaignSheetDbColumns } from "../services/characters.js";
 import { replaceBastionAssignments } from "./bastions/helpers.js";
+import { cleanStoredImageUrl } from "../lib/dbConverters.js";
 import type {
   StoredConditionInstance,
   StoredDeathSaves,
@@ -26,13 +27,14 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
     db.prepare("DELETE FROM campaigns WHERE id = ?").run(campaignId);
 
     db.prepare(`
-      INSERT INTO campaigns (id, name, color, image_url, shared_notes, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO campaigns (id, name, color, image_url, image_updated_at, shared_notes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       campaignId,
       String(c["name"] ?? ""),
       (c["color"] as string | null) ?? null,
-      (c["imageUrl"] as string | null) ?? null,
+      cleanStoredImageUrl(c["imageUrl"]),
+      Number(c["updatedAt"] ?? Date.now()),
       String(c["sharedNotes"] ?? ""),
       Number(c["createdAt"] ?? Date.now()),
       Number(c["updatedAt"] ?? Date.now()),
@@ -118,8 +120,8 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
           (id, campaign_id, user_id, character_id,
            player_name, character_name, class_name, species, level, hp_max, hp_current, ac, speed,
            str, dex, con, int, wis, cha, color, synced_ac, death_saves_success, death_saves_fail,
-           live_json, image_url, shared_notes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           live_json, image_url, image_updated_at, shared_notes, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         String(player["id"]),
         campaignId,
@@ -145,7 +147,8 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
         liveCols.deathSavesSuccess,
         liveCols.deathSavesFail,
         liveCols.liveJson,
-        (player["imageUrl"] as string | null) ?? null,
+        cleanStoredImageUrl(player["imageUrl"]),
+        Number(player["updatedAt"] ?? Date.now()),
         String(player["sharedNotes"] ?? ""),
         Number(player["createdAt"] ?? Date.now()),
         Number(player["updatedAt"] ?? Date.now()),

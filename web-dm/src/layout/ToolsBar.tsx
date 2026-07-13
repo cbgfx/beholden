@@ -27,6 +27,11 @@ const TOOLS: { id: ToolId; label: string; Icon: React.ComponentType<{ size?: num
 
 export function ToolsBar() {
   const [open, setOpen] = useState<ToolId | null>(null);
+  // Once a tool has been opened, keep its component mounted (never unmount it again) so its
+  // own internal state (dice expression, drawn cards, generated name, etc.) survives close/reopen
+  // exactly like it did before these were lazy-loaded. Only the FIRST open triggers the dynamic
+  // import; every open after that just toggles the already-mounted component's `isOpen` prop.
+  const [everOpened, setEverOpened] = useState<ReadonlySet<ToolId>>(() => new Set());
   const campaignExact = useMatch("/campaign/:campaignId");
   const campaignNested = useMatch("/campaign/:campaignId/*");
   const isInsideCampaign = Boolean(campaignExact || campaignNested);
@@ -38,6 +43,12 @@ export function ToolsBar() {
   React.useEffect(() => {
     if (!isInsideCampaign && open === "bastions") setOpen(null);
   }, [isInsideCampaign, open]);
+
+  React.useEffect(() => {
+    if (open && !everOpened.has(open)) {
+      setEverOpened((prev) => new Set(prev).add(open));
+    }
+  }, [open, everOpened]);
 
   function toggle(id: ToolId) {
     setOpen((prev) => (prev === id ? null : id));
@@ -86,10 +97,10 @@ export function ToolsBar() {
       </div>
 
       <React.Suspense fallback={null}>
-        {open === "nameGenerator" && <NameGeneratorModal isOpen onClose={() => setOpen(null)} />}
-        {open === "diceCalc" && <DiceCalculatorModal isOpen onClose={() => setOpen(null)} />}
-        {open === "deck" && <DeckOfManyThingsModal isOpen onClose={() => setOpen(null)} />}
-        {open === "bastions" && <BastionsModal isOpen onClose={() => setOpen(null)} />}
+        {everOpened.has("nameGenerator") && <NameGeneratorModal isOpen={open === "nameGenerator"} onClose={() => setOpen(null)} />}
+        {everOpened.has("diceCalc") && <DiceCalculatorModal isOpen={open === "diceCalc"} onClose={() => setOpen(null)} />}
+        {everOpened.has("deck") && <DeckOfManyThingsModal isOpen={open === "deck"} onClose={() => setOpen(null)} />}
+        {everOpened.has("bastions") && <BastionsModal isOpen={open === "bastions"} onClose={() => setOpen(null)} />}
       </React.Suspense>
     </>
   );

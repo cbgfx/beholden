@@ -5,6 +5,8 @@ import { normalizeLegacyCompendiumEffectKinds } from "./compendiumLegacyKindMigr
 import { extractMonsterTreasureTraits } from "./monsterTreasureMigration.js";
 import { ensureTreasureEncounterColumn } from "./treasureEncounterColumnMigration.js";
 import { ensureUserLastLoginColumn } from "./userLastLoginColumnMigration.js";
+import { ensureImageVersionColumns } from "./imageVersionColumnMigration.js";
+import { displayNoteTitle } from "./dbConverters.js";
 
 export type Db = Database.Database;
 
@@ -20,6 +22,8 @@ export function openDb(dbPath: string): Db {
   db.exec(SCHEMA_SQL);
   ensureTreasureEncounterColumn(db);
   ensureUserLastLoginColumn(db);
+  ensureImageVersionColumns(db);
+  db.function("note_display_title", { deterministic: true }, displayNoteTitle);
 
   // Linked campaign rows are projections of canonical character sheets.
   syncCharacterDerivedColumns(db);

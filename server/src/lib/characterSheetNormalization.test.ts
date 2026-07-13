@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type Database from "better-sqlite3";
+import Database from "better-sqlite3";
 import { normalizeCharacterSheetForStorage } from "./characterSheetNormalization.js";
 import { mergeLiveStats, type Assignment } from "../services/characters.js";
 import type { StoredCharacterSheetState, StoredCharacterSheet } from "../server/userData.js";
+import { cleanStoredImageUrl, rowToCampaignCharacter } from "./dbConverters.js";
+import { ensureImageVersionColumns } from "./imageVersionColumnMigration.js";
+import { SCHEMA_SQL } from "./dbSchema.js";
+import { importCampaignDocument } from "../routes/exportImportHelpers.js";
 
 const BASE_SHEET: StoredCharacterSheetState = {
   name: "Test Bard",
@@ -23,6 +27,83 @@ const BASE_SHEET: StoredCharacterSheetState = {
   chaScore: 16,
   color: null,
 };
+
+test("image URLs use the image-specific version and clean stored paths", () => {
+  assert.equal(
+    cleanStoredImageUrl("https://cdn.example.test/player-images/player-1.webp?v=123&v=456"),
+    "/player-images/player-1.webp",
+  );
+
+  const player = rowToCampaignCharacter({
+    id: "player-1",
+    campaign_id: "campaign-1",
+    player_name: "Player",
+    character_name: "Hero",
+    class_name: "Fighter",
+    species: "Human",
+    level: 1,
+    hp_max: 10,
+    hp_current: 10,
+    ac: 10,
+    live_json: "{}",
+    image_url: "/player-images/player-1.webp",
+    image_updated_at: 111,
+    created_at: 1,
+    updated_at: 999,
+  });
+  assert.match(player.imageUrl ?? "", /[?&]v=111$/);
+  assert.doesNotMatch(player.imageUrl ?? "", /999/);
+});
+
+test("image version migration backfills existing portraits once", () => {
+  const db = new Database(":memory:");
+  try {
+    for (const table of ["campaigns", "players", "user_characters"]) {
+      db.exec(`CREATE TABLE ${table} (id TEXT PRIMARY KEY, image_url TEXT, updated_at INTEGER NOT NULL)`);
+      db.prepare(`INSERT INTO ${table} (id, image_url, updated_at) VALUES (?, ?, ?)`)
+        .run(`${table}-1`, `/images/${table}.webp`, 123);
+    }
+
+    ensureImageVersionColumns(db);
+    ensureImageVersionColumns(db);
+
+    for (const table of ["campaigns", "players", "user_characters"]) {
+      const row = db.prepare(`SELECT image_updated_at FROM ${table}`).get() as { image_updated_at: number };
+      assert.equal(row.image_updated_at, 123);
+    }
+  } finally {
+    db.close();
+  }
+});
+
+test("campaign import stores clean image paths", () => {
+  const db = new Database(":memory:");
+  try {
+    db.exec(SCHEMA_SQL);
+    importCampaignDocument(db, {
+      campaign: {
+        id: "campaign-1",
+        name: "Campaign",
+        imageUrl: "https://public.example/campaign-images/campaign-1.webp?v=10&v=20",
+        updatedAt: 20,
+      },
+      players: [{
+        id: "player-1",
+        playerName: "Player",
+        characterName: "Hero",
+        imageUrl: "https://public.example/player-images/player-1.webp?v=30",
+        updatedAt: 30,
+      }],
+    }, () => "generated-id");
+
+    const campaign = db.prepare("SELECT image_url, image_updated_at FROM campaigns WHERE id = 'campaign-1'").get() as Record<string, unknown>;
+    const player = db.prepare("SELECT image_url, image_updated_at FROM players WHERE id = 'player-1'").get() as Record<string, unknown>;
+    assert.deepEqual(campaign, { image_url: "/campaign-images/campaign-1.webp", image_updated_at: 20 });
+    assert.deepEqual(player, { image_url: "/player-images/player-1.webp", image_updated_at: 30 });
+  } finally {
+    db.close();
+  }
+});
 
 test("character AC normalization persists the client-derived base and accepts later decreases", () => {
   const raised = normalizeCharacterSheetForStorage(BASE_SHEET, { derivedAc: 16 });
