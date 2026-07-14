@@ -130,7 +130,11 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
 
   function addConcentrationSpell(row: Record<string, unknown>, dto: ReturnType<typeof toCampaignCharacterDto>) {
     const cs = row.concentration_spell;
-    if (typeof cs === "string" && cs) dto.live.concentrationSpell = cs;
+    if (
+      typeof cs === "string"
+      && cs
+      && dto.live.conditions.some((condition) => condition.key === "concentration")
+    ) dto.live.concentrationSpell = cs;
   }
 
   app.get("/api/campaigns/:campaignId/players", memberOrAdmin(db), (req, res) => {

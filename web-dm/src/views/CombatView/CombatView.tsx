@@ -28,6 +28,7 @@ import { useCombatViewModel } from "@/views/CombatView/hooks/useCombatViewModel"
 import { useBulkDamageMode } from "@/views/CombatView/hooks/useBulkDamageMode";
 import { applyMonsterAttackOverrides } from "@/views/CombatView/utils/monsterOverrides";
 import { getSecondsInRound } from "@/views/CombatView/utils/roundTime";
+import { useRosterMetrics } from "@/views/CombatRosterView/hooks/useRosterMetrics";
 
 export function CombatView() {
   const { campaignId, encounterId } = useParams();
@@ -109,6 +110,13 @@ export function CombatView() {
     (target as EncounterActor | null) ?? null,
     inpcsById
   );
+
+  const { difficulty } = useRosterMetrics({
+    combatants,
+    inpcs: state.inpcs,
+    monsterDetails: monsterCache,
+    players: state.players,
+  });
 
   const totalEncounterXp = React.useMemo(() => {
     return orderedCombatants
@@ -272,6 +280,7 @@ export function CombatView() {
         onOpenSpellBook={openSpellBook}
         onOpenAdventureNotes={openAdventureNotes}
         onEndCombat={endCombat}
+        difficulty={difficulty}
       />
 
       <div

@@ -17,6 +17,14 @@ type Props = {
   onEndCombat: () => void;
   onOpenSpellBook: () => void;
   onOpenAdventureNotes: () => void;
+  difficulty?: {
+    label: string;
+    roundsToTpk: number;
+    partyHpMax: number;
+    hostileDpr: number;
+    burstFactor: number;
+    adjustedXp?: number;
+  };
 };
 
 /**
@@ -42,6 +50,30 @@ export function CombatantHeader(props: Props) {
             Back
           </Button>
           <span style={{ fontSize: "var(--fs-title)", fontWeight: 900, color: theme.colors.text, minWidth: 0 }}>{title}</span>
+          {props.difficulty?.label ? (
+            <span
+              style={{
+                fontSize: "var(--fs-subtitle)",
+                fontWeight: 900,
+                color: theme.colors.muted,
+                border: `1px solid ${theme.colors.panelBorder}`,
+                background: theme.colors.panelBg,
+                padding: "2px 6px",
+                borderRadius: 999,
+                whiteSpace: "nowrap",
+              }}
+              title={
+                `Difficulty (Adj. XP + CR ceiling + DPR)\n` +
+                (Number.isFinite(props.difficulty.adjustedXp) ? `Adjusted XP: ${Math.round(props.difficulty.adjustedXp!).toLocaleString()}\n` : "") +
+                `Party HP: ${Math.round(props.difficulty.partyHpMax).toLocaleString()}\n` +
+                `Hostile DPR: ${Math.round(props.difficulty.hostileDpr).toLocaleString()}\n` +
+                (props.difficulty.burstFactor > 1 ? `Burst factor: ×${props.difficulty.burstFactor.toFixed(2)}\n` : "") +
+                (Number.isFinite(props.difficulty.roundsToTpk) ? `Rounds to TPK: ${props.difficulty.roundsToTpk.toFixed(1)}` : "∞ rounds to TPK")
+              }
+            >
+              {props.difficulty.label}
+            </span>
+          ) : null}
         </div>
       }
       actions={

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { StoredEncounterActor } from "../server/userData.js";
-import { applyCombatantTransition, expireConditionsAtRound, shouldBreakConcentration } from "./combatTransitions.js";
+import { applyCombatantTransition, expireConditionsAtRound, shouldBreakConcentration, shouldClearTrackedConcentration } from "./combatTransitions.js";
 
 function actor(patch: Partial<StoredEncounterActor> = {}): StoredEncounterActor {
   return {
@@ -28,6 +28,11 @@ function actor(patch: Partial<StoredEncounterActor> = {}): StoredEncounterActor 
   };
 }
 
+test("tracked concentration is cleared whenever the authoritative condition list omits it", () => {
+  assert.equal(shouldClearTrackedConcentration([{ key: "rage" }]), true);
+  assert.equal(shouldClearTrackedConcentration([{ key: "rage" }, { key: "concentration" }]), false);
+});
+
 test("zero HP removes concentration while preserving unrelated conditions", () => {
   const next = applyCombatantTransition(actor({
     hpCurrent: 0,
@@ -44,6 +49,13 @@ for (const key of ["incapacitated", "paralyzed", "petrified", "stunned", "uncons
     assert.deepEqual(next.conditions, key === "unconscious" ? [{ key }, { key: "prone" }] : [{ key }]);
   });
 }
+
+test("rage removes concentration", () => {
+  const next = applyCombatantTransition(actor({
+    conditions: [{ key: "concentration" }, { key: "rage" }],
+  }));
+  assert.deepEqual(next.conditions, [{ key: "rage" }]);
+});
 
 test("non-incapacitating conditions preserve concentration", () => {
   const current = actor({ conditions: [{ key: "concentration" }, { key: "prone" }] });

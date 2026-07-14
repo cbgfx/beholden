@@ -102,7 +102,7 @@ export function CharacterInitiativePrompt(props: {
 
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Initiative total
+              Enter the Initiative total (roll + mod):
             </label>
             <input
               autoFocus

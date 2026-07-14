@@ -22,12 +22,16 @@ export function useCombatHpActions({ encounterId, delta, setDelta, target, updat
       if (amount <= 0) return;
 
       if (kind === "damage") {
+        // resolved is only an optimistic preview for instant UI feedback — the server resolves
+        // hpDelta authoritatively against its own freshly-read state (see combat.ts), so a
+        // concurrent change (e.g. someone else granting temp HP right now) can't get clobbered.
         const resolved = resolveCombatantDamage(target, amount);
         if (!resolved) return;
         await updateCombatant(target.id, {
           hpCurrent: resolved.hpCurrent,
           overrides: resolved.overrides,
           ...(resolved.conditions ? { conditions: resolved.conditions } : {}),
+          hpDelta: { kind: "damage", amount },
         });
         setDelta("");
 
@@ -44,6 +48,7 @@ export function useCombatHpActions({ encounterId, delta, setDelta, target, updat
       await updateCombatant(target.id, {
         hpCurrent: resolved.hpCurrent,
         overrides: resolved.overrides,
+        hpDelta: { kind: "heal", amount },
       });
       setDelta("");
     },

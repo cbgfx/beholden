@@ -37,6 +37,14 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
   const selectedExpertiseEntries = expertiseChoices.flatMap((choice) =>
     (chosenExpertise[choice.key] ?? []).map((name) => ({ name, source: choice.source }))
   );
+  const mergeTaggedEntries = <T extends { name?: string; source?: string }>(...groups: T[][]): T[] => {
+    const merged = new Map<string, T>();
+    for (const entry of groups.flat()) {
+      const key = `${String(entry.source ?? "").trim().toLowerCase()}::${String(entry.name ?? "").trim().toLowerCase()}`;
+      if (!key.endsWith("::")) merged.set(key, entry);
+    }
+    return Array.from(merged.values());
+  };
 
   const selectedFeatEntries = chosenFeatDetail
     ? collectFeatTaggedEntries({
@@ -162,12 +170,17 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
         ...(selectedFeatureProficiencyEntries.saves ?? []),
       ],
       spells: [
-        ...existingSpells.filter((entry) => entry.source !== classSource && entry.source !== featSourceLabel),
-        ...selectedCantripEntries,
-        ...selectedSpellEntries,
-        ...selectedClassFeatureSpellEntries,
-        ...selectedInvocationSpellEntries,
-        ...selectedFeatSpellEntries,
+        ...mergeTaggedEntries(
+          // Class spell proficiencies are the character's accumulated spellbook/known-spell
+          // history, not merely the currently prepared selection. Removing the class source
+          // here caused Wizards to forget every unprepared spell on level-up.
+          existingSpells.filter((entry) => entry.source !== featSourceLabel),
+          selectedCantripEntries,
+          selectedSpellEntries,
+          selectedClassFeatureSpellEntries,
+          selectedInvocationSpellEntries,
+          selectedFeatSpellEntries,
+        ),
       ],
       invocations: [
         ...existingInvocations.filter((entry) => entry.source !== classSource),

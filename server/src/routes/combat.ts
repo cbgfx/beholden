@@ -29,6 +29,7 @@ import {
 import { fulfillInitiativePrompt, registerCombatInitiativeRoutes } from "./combatInitiative.js";
 import { registerCombatXpRoutes } from "./combatXp.js";
 import { concentrationSaveDc } from "@beholden/shared/domain/conditions";
+import { resolveActorDamage, resolveActorHealing } from "@beholden/shared/domain/actors";
 import {
   applyCombatantTransition,
   detectEndedConcentration,
@@ -527,6 +528,17 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
       const body = parseBody(CombatantUpdateBody, req);
       const t = now();
 
+      // Resolve damage/heal against `existing`, which was just re-read (and, for player-type
+      // combatants, re-hydrated from the live `players` row) in this request — never against
+      // whatever the client had cached when it computed its own preview. This is what keeps a
+      // concurrent change (e.g. the player granting themselves temp HP) from being silently
+      // overwritten by a damage request that was resolved against stale data.
+      const resolvedHpDelta = body.hpDelta
+        ? (body.hpDelta.kind === "heal"
+            ? resolveActorHealing(existing, body.hpDelta.amount)
+            : resolveActorDamage(existing, body.hpDelta.amount))
+        : null;
+
       const deathSaves = body.deathSaves
         ? {
             success: Math.max(0, Math.floor(body.deathSaves.success)),
@@ -534,8 +546,8 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
           }
         : existing.deathSaves;
 
-      const requestedHp = body.hpCurrent ?? existing.hpCurrent;
-      const requestedConditions = (body.conditions ?? existing.conditions ?? []) as StoredConditionInstance[];
+      const requestedHp = resolvedHpDelta?.hpCurrent ?? body.hpCurrent ?? existing.hpCurrent;
+      const requestedConditions = (resolvedHpDelta?.conditions ?? body.conditions ?? existing.conditions ?? []) as StoredConditionInstance[];
       const losesConcentration = shouldBreakConcentration({ hpCurrent: requestedHp, conditions: requestedConditions });
 
       const merged: StoredEncounterActor = {
@@ -544,13 +556,13 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         initiative: body.initiative !== undefined ? body.initiative : (existing.initiative ?? null),
         friendly: body.friendly ?? existing.friendly,
         color: body.color ?? existing.color,
-        hpCurrent: body.hpCurrent ?? existing.hpCurrent,
+        hpCurrent: requestedHp,
         hpMax: body.hpMax ?? existing.hpMax,
         hpDetails: body.hpDetails !== undefined ? body.hpDetails : existing.hpDetails,
         ac: body.ac ?? existing.ac,
         acDetails: body.acDetails !== undefined ? body.acDetails : existing.acDetails,
         attackOverrides: body.attackOverrides !== undefined ? (body.attackOverrides as unknown | null) : existing.attackOverrides,
-        overrides: (body.overrides ?? existing.overrides) as StoredOverrides,
+        overrides: (resolvedHpDelta?.overrides ?? body.overrides ?? existing.overrides) as StoredOverrides,
         conditions: requestedConditions,
         ...(deathSaves !== undefined ? { deathSaves } : {}),
         usedReaction: body.usedReaction ?? existing.usedReaction ?? false,
@@ -581,9 +593,10 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         // Notify a concentrating player that they need to make a CON save
         if (
           synced.characterId &&
-          body.hpCurrent !== undefined &&
+          (resolvedHpDelta || body.hpCurrent !== undefined) &&
           existing.hpCurrent !== null &&
-          body.hpCurrent < existing.hpCurrent &&
+          requestedHp !== null &&
+          requestedHp < existing.hpCurrent &&
           existing.conditions.some((c) => c.key === "concentration")
         ) {
           ctx.broadcast("concentration:check", {
@@ -591,7 +604,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
             encounterId,
             characterId: synced.characterId,
             characterName: existing.label || existing.name,
-            dc: concentrationSaveDc(existing.hpCurrent - body.hpCurrent),
+            dc: concentrationSaveDc(existing.hpCurrent - requestedHp),
           });
         }
       }

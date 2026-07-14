@@ -35,6 +35,16 @@ export const CombatantUpdateBody = z.object({
   initiative: z.number().nullable().optional(),
   friendly: z.boolean().optional(),
   color: z.string().optional(),
+  // Authoritative damage/heal resolution: the server recomputes hpCurrent/overrides itself from
+  // the freshly-read combatant (see hydratePlayerCombatant) rather than trusting a client-resolved
+  // value, so a concurrent change (e.g. a player granting themselves temp HP mid-request) can't be
+  // silently clobbered by a request that was computed against stale data. When present, this takes
+  // priority over any hpCurrent/overrides/conditions also included in the same request (those are
+  // still accepted for the optimistic client-side preview, but the server ignores them).
+  hpDelta: z.object({
+    kind: z.enum(["damage", "heal"]),
+    amount: z.number().positive(),
+  }).optional(),
   hpCurrent: z.number().optional(),
   hpMax: z.number().optional(),
   hpDetails: z.string().nullable().optional(),

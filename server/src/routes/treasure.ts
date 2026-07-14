@@ -239,6 +239,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     const treasureId = requireParam(req, res, "treasureId");
     if (!treasureId) return;
     const { playerId, quantity } = parseBody(TreasureAwardBody, req);
+    const isPartyStash = playerId === "party";
 
     const result = db.transaction(() => {
       const treasureRow = db
@@ -250,36 +251,6 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
       if (quantity > treasure.qty) {
         return { error: { status: 400, message: `Only ${treasure.qty} available` } } as const;
       }
-
-      const player = db
-        .prepare("SELECT campaign_id, character_id FROM players WHERE id = ?")
-        .get(playerId) as { campaign_id: string; character_id: string | null } | undefined;
-      if (!player || player.campaign_id !== treasure.campaignId) {
-        return { error: { status: 404, message: "Player not found in this campaign" } } as const;
-      }
-      if (!player.character_id) {
-        return { error: { status: 400, message: "This player has no linked character sheet" } } as const;
-      }
-
-      const characterRow = db
-        .prepare("SELECT character_data_json FROM user_characters WHERE id = ?")
-        .get(player.character_id) as { character_data_json: string | null } | undefined;
-      if (!characterRow) {
-        return { error: { status: 404, message: "Linked character sheet not found" } } as const;
-      }
-
-      let characterData: Record<string, unknown> = {};
-      try {
-        const parsed = JSON.parse(characterRow.character_data_json ?? "{}");
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-          characterData = parsed as Record<string, unknown>;
-        }
-      } catch {
-        characterData = {};
-      }
-      const inventory = Array.isArray(characterData.inventory)
-        ? [...characterData.inventory]
-        : [];
 
       let itemDetail: Record<string, unknown> = {};
       if (treasure.itemId) {
@@ -313,44 +284,108 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
         }
       }
 
-      const inventoryItem = {
-        id: uid(),
-        name: treasure.name,
-        quantity,
-        equipped: false,
-        equipState: "backpack",
-        source: treasure.source,
-        ...(treasure.itemId ? { itemId: treasure.itemId } : {}),
-        rarity: treasure.rarity,
-        type: treasure.type,
-        attunement: treasure.attunement,
-        attuned: false,
-        magic: treasure.magic,
-        silvered: false,
-        description: treasure.text || undefined,
-        ...itemDetail,
-      };
-      inventory.push(inventoryItem);
+      let characterId: string | null = null;
+      let partyItemId: string | null = null;
 
-      const t = now();
-      db.prepare("UPDATE user_characters SET character_data_json = ?, updated_at = ? WHERE id = ?")
-        .run(JSON.stringify({ ...characterData, inventory }), t, player.character_id);
+      if (isPartyStash) {
+        const id = uid();
+        const t = now();
+        const maxSort = (db.prepare(
+          "SELECT COALESCE(MAX(sort),0)+1 AS n FROM party_inventory WHERE campaign_id = ?"
+        ).get(treasure.campaignId) as { n: number }).n;
+        db.prepare(`
+          INSERT INTO party_inventory
+            (id, campaign_id, name, quantity, weight, notes, source, item_id, rarity, type, description, sort, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          id,
+          treasure.campaignId,
+          treasure.name,
+          quantity,
+          (itemDetail.weight as number | null | undefined) ?? null,
+          "",
+          treasure.source,
+          treasure.itemId,
+          treasure.rarity,
+          treasure.type,
+          treasure.text || null,
+          maxSort,
+          t,
+          t,
+        );
+        partyItemId = id;
+      } else {
+        const player = db
+          .prepare("SELECT campaign_id, character_id FROM players WHERE id = ?")
+          .get(playerId) as { campaign_id: string; character_id: string | null } | undefined;
+        if (!player || player.campaign_id !== treasure.campaignId) {
+          return { error: { status: 404, message: "Player not found in this campaign" } } as const;
+        }
+        if (!player.character_id) {
+          return { error: { status: 400, message: "This player has no linked character sheet" } } as const;
+        }
+
+        const characterRow = db
+          .prepare("SELECT character_data_json FROM user_characters WHERE id = ?")
+          .get(player.character_id) as { character_data_json: string | null } | undefined;
+        if (!characterRow) {
+          return { error: { status: 404, message: "Linked character sheet not found" } } as const;
+        }
+
+        let characterData: Record<string, unknown> = {};
+        try {
+          const parsed = JSON.parse(characterRow.character_data_json ?? "{}");
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            characterData = parsed as Record<string, unknown>;
+          }
+        } catch {
+          characterData = {};
+        }
+        const inventory = Array.isArray(characterData.inventory)
+          ? [...characterData.inventory]
+          : [];
+
+        const inventoryItem = {
+          id: uid(),
+          name: treasure.name,
+          quantity,
+          equipped: false,
+          equipState: "backpack",
+          source: treasure.source,
+          ...(treasure.itemId ? { itemId: treasure.itemId } : {}),
+          rarity: treasure.rarity,
+          type: treasure.type,
+          attunement: treasure.attunement,
+          attuned: false,
+          magic: treasure.magic,
+          silvered: false,
+          description: treasure.text || undefined,
+          ...itemDetail,
+        };
+        inventory.push(inventoryItem);
+
+        const t = now();
+        db.prepare("UPDATE user_characters SET character_data_json = ?, updated_at = ? WHERE id = ?")
+          .run(JSON.stringify({ ...characterData, inventory }), t, player.character_id);
+        characterId = player.character_id;
+      }
 
       const remaining = treasure.qty - quantity;
       if (remaining === 0) {
         db.prepare("DELETE FROM treasure WHERE id = ?").run(treasureId);
-        return { treasure, characterId: player.character_id, remaining, treasureDto: null } as const;
+        return { treasure, characterId, partyItemId, remaining, treasureDto: null } as const;
       }
 
       db.prepare(
         "UPDATE treasure SET qty = ?, updated_at = ? WHERE id = ?",
-      ).run(remaining, t, treasureId);
+      ).run(remaining, now(), treasureId);
       const updatedRow = db
         .prepare(`SELECT ${TREASURE_COLS} FROM treasure WHERE id = ?`)
         .get(treasureId) as Record<string, unknown>;
       return {
         treasure,
-        characterId: player.character_id,
+        characterId,
+        partyItemId,
         remaining,
         treasureDto: toTreasureDto(hydrateTreasureEntry(rowToTreasure(updatedRow))),
       } as const;
@@ -368,12 +403,20 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
       treasureId,
       ...(result.treasureDto ? { treasure: result.treasureDto } : {}),
     });
-    ctx.broadcast("players:delta", {
-      campaignId: result.treasure.campaignId,
-      action: "upsert",
-      playerId,
-      characterId: result.characterId,
-    });
+    if (result.partyItemId) {
+      ctx.broadcast("partyInventory:delta", {
+        campaignId: result.treasure.campaignId,
+        action: "upsert",
+        itemId: result.partyItemId,
+      });
+    } else {
+      ctx.broadcast("players:delta", {
+        campaignId: result.treasure.campaignId,
+        action: "upsert",
+        playerId,
+        characterId: result.characterId,
+      });
+    }
     res.json({ ok: true, remaining: result.remaining });
   });
 

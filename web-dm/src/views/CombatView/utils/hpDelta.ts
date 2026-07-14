@@ -1,5 +1,6 @@
 import type { EncounterActor } from "@/domain/types/domain";
 import { rollDiceExpr } from "@/views/CombatView/utils/dice";
+import { resolveActorHealing } from "@beholden/shared/domain";
 
 export type HpDelta = { kind: "damage" | "heal"; amount: number };
 
@@ -22,27 +23,13 @@ export function parseSignedHpDelta(
   return { kind: defaultKind, amount };
 }
 
+/**
+ * Client-side preview only — see the comment on `resolveCombatantDamage` in polymorphDamage.ts.
+ * The server recomputes this authoritatively from fresh data.
+ */
 export function resolveCombatantHealing(
   combatant: EncounterActor,
   amount: number
 ): { hpCurrent: number; overrides: EncounterActor["overrides"] } | null {
-  if (combatant.hpCurrent == null || amount <= 0) return null;
-
-  const overrides = combatant.overrides ?? {};
-  const hpMaxBonus = Number(overrides.hpMaxBonus ?? 0);
-  const normalizedBonus = Number.isFinite(hpMaxBonus) ? hpMaxBonus : 0;
-  const max = combatant.hpMax == null
-    ? null
-    : Math.max(1, Number(combatant.hpMax) + normalizedBonus);
-  const hpCurrent = max == null
-    ? combatant.hpCurrent + amount
-    : Math.min(max, combatant.hpCurrent + amount);
-
-  return {
-    hpCurrent,
-    overrides: {
-      ...overrides,
-      tempHp: Math.max(0, Number(overrides.tempHp ?? 0) || 0),
-    },
-  };
+  return resolveActorHealing(combatant, amount);
 }

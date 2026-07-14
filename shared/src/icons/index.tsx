@@ -122,6 +122,7 @@ export const conditionIconByKey = {
   hexed: IconHex,
   marked: IconMarked,
   exhaustion: IconExhaustion,
+  rage: IconAttack,
   hex: IconHex,
 } as const;
 

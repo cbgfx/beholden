@@ -8,7 +8,7 @@ interface ConditionDef {
   name: string;
 }
 
-const HIDDEN_CONDITION_KEYS = new Set(["concentration", "hexed", "marked"]);
+const HIDDEN_CONDITION_KEYS = new Set(["hexed", "marked"]);
 
 export function CharacterHudConditionsDrawer(props: {
   condPickerOpen: boolean;

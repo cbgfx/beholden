@@ -23,6 +23,7 @@ export const SHARED_CONDITION_DEFS: SharedConditionDef[] = [
 ];
 
 export function conditionLabel(key: string): string {
+  if (key === "rage") return "Rage";
   return SHARED_CONDITION_DEFS.find((def) => def.key === key)?.name ?? key;
 }
 

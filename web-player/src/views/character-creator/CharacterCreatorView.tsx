@@ -22,6 +22,7 @@ import {
 import {
   getGrowthChoiceSelectedAbility,
 } from "@/views/character-creator/utils/GrowthChoiceUtils";
+import { migrateClassFeatureChoiceKeys } from "@/views/character-creator/utils/ClassFeatureChoiceMigration";
 import type {
   ParsedFeatDetailLike as BackgroundFeat,
 } from "@/views/character-creator/utils/FeatChoiceTypes";
@@ -197,6 +198,19 @@ export function CharacterCreatorView() {
     classCantrips,
     classInvocations,
   });
+  React.useEffect(() => {
+    if (selectedClassFeatureProficiencyChoices.length === 0) return;
+    const currentChoices = selectedClassFeatureProficiencyChoices.map((choice) => ({
+      key: `classfeature:${choice.id}`,
+      sourceLabel: choice.source.name,
+    }));
+    setForm((current) => {
+      const chosenFeatureChoices = migrateClassFeatureChoiceKeys(current.chosenFeatureChoices, currentChoices);
+      return chosenFeatureChoices === current.chosenFeatureChoices
+        ? current
+        : { ...current, chosenFeatureChoices };
+    });
+  }, [selectedClassFeatureProficiencyChoices, setForm]);
   const effectiveClassName = selectedClassSummary?.name ?? editSummaryFallback?.className ?? displayNameFromCompendiumId(form.classId);
   const effectiveRaceName = raceDetail?.name ?? races.find((r) => r.id === form.raceId)?.name ?? editSummaryFallback?.species ?? displayNameFromCompendiumId(form.raceId);
   const effectiveHitDie =

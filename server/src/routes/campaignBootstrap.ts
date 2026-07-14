@@ -23,7 +23,11 @@ function readPlayers(ctx: ServerContext, req: Request, campaignId: string) {
   `).all(campaignId) as Array<Record<string, unknown>>;
   return rows.map((row) => {
     const dto = toCampaignCharacterDto(rowToCampaignCharacter(row));
-    if (typeof row.concentration_spell === "string" && row.concentration_spell) {
+    if (
+      typeof row.concentration_spell === "string"
+      && row.concentration_spell
+      && dto.live.conditions.some((condition) => condition.key === "concentration")
+    ) {
       dto.live.concentrationSpell = row.concentration_spell;
     }
     return withAbsoluteImageUrl(req, dto);

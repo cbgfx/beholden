@@ -159,9 +159,10 @@ function parseSpellListsFromText(text: string): string[] {
 }
 
 function parseSpellSchoolsFromText(text: string): string[] {
+  const normalizedText = text.replace(/\billus\s+ion\b/gi, "Illusion");
   const found = new Set<string>();
   for (const school of SPELL_SCHOOL_NAMES) {
-    if (new RegExp(`\\b${school}\\b`, "i").test(text)) found.add(school);
+    if (new RegExp(`\\b${school}\\b`, "i").test(normalizedText)) found.add(school);
   }
   return Array.from(found);
 }

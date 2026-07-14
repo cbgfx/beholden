@@ -31,6 +31,7 @@ import {
   type NativeCompendiumBatch,
 } from "../services/compendium/nativeCompendium.js";
 import { collectV2MonsterSpellIds } from "../services/compendium/nativeCompendiumV2.js";
+import { planAdventureMonsterImports } from "../services/adventureMonsterImport.js";
 
 const AdventureCreateBody = z.object({
   name: z.string().trim().optional(),
@@ -314,9 +315,11 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
 
     const advId = uid();
     const sort = nextSortFor(db, "adventures", "campaign_id", campaignId);
+    const existingMonsters = db.prepare("SELECT id, name_key FROM compendium_monsters").all() as Array<{ id: string; name_key: string }>;
+    const importPlan = planAdventureMonsterImports(parsed.data.compendium, existingMonsters);
 
     db.transaction(() => {
-      for (const batch of parsed.data.compendium) {
+      for (const batch of importPlan.compendium) {
         importNativeCompendiumBatch(db, batch);
       }
 
@@ -343,7 +346,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
             id: uid(),
             encounterId: encId,
             baseType: c.baseType,
-            baseId: c.baseId,
+            baseId: c.baseType === "monster" ? importPlan.monsterIdMap.get(c.baseId) ?? c.baseId : c.baseId,
             name: c.name,
             label: c.label,
             initiative: c.initiative,
@@ -393,14 +396,14 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
       }
     })();
 
-    if (parsed.data.compendium.length > 0) {
+    if (importPlan.compendium.length > 0) {
       ctx.broadcast("compendium:changed", {
-        imported: parsed.data.compendium.reduce<number>((total, batch) => {
+        imported: importPlan.compendium.reduce<number>((total, batch) => {
           if (!batch || typeof batch !== "object" || Array.isArray(batch)) return total;
           const entries = (batch as Record<string, unknown>).entries;
           return total + (Array.isArray(entries) ? entries.length : 0);
         }, 0),
-        total: parsed.data.compendium.length,
+        total: importPlan.compendium.length,
       });
     }
     emitAdventureChange({ campaignId, action: "upsert", adventureId: advId });

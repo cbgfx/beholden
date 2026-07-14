@@ -4,6 +4,7 @@ import { patchPartyCurrency, type PartyCurrencyMap } from "@/services/inventoryA
 import { formatWeight } from "@/views/character/CharacterInventory";
 import { addBtnStyle } from "@/views/character/CharacterViewParts";
 import { PartyStashItemRow, type PartyStashItem } from "@/views/character/CharacterInventoryPanelRows";
+import { evaluateCurrencyInput } from "@/views/character/currencyMath";
 
 const emptyContainerStyle = {
   padding: "8px 10px",
@@ -50,7 +51,9 @@ function PartyCurrencyBar({ currency, campaignId, onCurrencyChange, stashWeight,
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [popupCode]);
 
-  const save = async (code: typeof CURRENCY_CODES[number], value: number) => {
+  const save = async (code: typeof CURRENCY_CODES[number]) => {
+    const value = evaluateCurrencyInput(input);
+    if (value === null) return;
     const patch = { [code]: value } as Partial<PartyCurrencyMap>;
     onCurrencyChange(patch);
     patchPartyCurrency(campaignId, patch).catch(() => {
@@ -98,12 +101,12 @@ function PartyCurrencyBar({ currency, campaignId, onCurrencyChange, stashWeight,
               <div style={{ display: "flex", gap: 6 }}>
                 <input
                   autoFocus
-                  type="number"
-                  min={0}
+                  type="text"
+                  inputMode="numeric"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") void save(code, Number(input));
+                    if (e.key === "Enter") void save(code);
                     if (e.key === "Escape") setPopupCode(null);
                   }}
                   style={{
@@ -114,7 +117,7 @@ function PartyCurrencyBar({ currency, campaignId, onCurrencyChange, stashWeight,
                     outline: "none", textAlign: "center",
                   }}
                 />
-                <button type="button" onClick={() => void save(code, Number(input))} style={addBtnStyle("#6366f1")}>
+                <button type="button" onClick={() => void save(code)} style={addBtnStyle("#6366f1")}>
                   Save
                 </button>
               </div>

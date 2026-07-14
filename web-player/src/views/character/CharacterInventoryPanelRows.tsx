@@ -117,7 +117,7 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
     <>
       <button onClick={() => onCycleMain(item.id)} title="Cycle main hand" style={inventoryEquipBtn(mainActive, accentColor)}>{mainLabel}</button>
       {offhandAllowed ? <button onClick={() => onToggleOffhand(item.id)} title={state === "offhand" ? "Unequip offhand" : "Equip to offhand"} style={inventoryEquipBtn(state === "offhand", accentColor)}>OH</button> : null}
-      {showAmmoControl ? <button onClick={() => setAmmoOpen((prev) => !prev)} title="Ammunition" style={inventoryEquipBtn(ammoOpen || Boolean(linkedAmmo), accentColor)}>A</button> : null}
+      {showAmmoControl ? <button onClick={() => setAmmoOpen((prev) => !prev)} title="Choose ammunition" style={inventoryEquipBtn(ammoOpen || Boolean(linkedAmmo), accentColor)}>A</button> : null}
     </>
   ) : isArmor || isWearable ? (
     <button onClick={() => onToggleWorn(item.id)} title={state === "worn" ? "Unequip" : "Equip"} style={inventoryEquipBtn(state === "worn", accentColor)}>EQ</button>
@@ -134,7 +134,7 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
             {item.rarity ? <RarityDot rarity={item.rarity} /> : null}
             {item.name}
             {item.magic ? <Tag label="Magic" color={C.colorMagic} /> : null}
-            {item.attuned ? <StatusBadge title="Currently attuned" border="rgba(56,189,248,0.55)" bg="rgba(56,189,248,0.14)" color="#38bdf8">A</StatusBadge> : null}
+            {item.attuned ? <StatusBadge title="Currently attuned" border="rgba(167,139,250,0.55)" bg="rgba(139,92,246,0.14)" color="#a78bfa">A</StatusBadge> : null}
             {linkedAmmo ? <StatusBadge title={`Loaded ammunition: ${linkedAmmo.name}`} border="rgba(52,211,153,0.45)" bg="rgba(52,211,153,0.14)" color="#34d399">{linkedAmmo.name}</StatusBadge> : null}
             {masteryName ? <StatusBadge title={mastery ? mastery.text : `Weapon Mastery: ${masteryName}`} border="rgba(251,191,36,0.45)" bg="rgba(251,191,36,0.14)" color={C.colorGold}>{masteryName}</StatusBadge> : null}
             {hasStealthDisadvantage(item) ? <StatusBadge title="Disadvantage on Stealth checks" border="rgba(248,113,113,0.55)" bg="rgba(248,113,113,0.14)" color={C.colorPinkRed}>D</StatusBadge> : null}
@@ -170,17 +170,33 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
             const disabled = outOfStock && !active;
             return (
               <div key={ammo.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "3px 6px", borderRadius: 6, background: active ? `${accentColor}14` : "transparent" }}>
-                <span style={{ fontSize: "var(--fs-small)", color: outOfStock ? C.muted : C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {ammo.name}{ammo.quantity === 1 ? "" : ` x${ammo.quantity}`}
+                <span style={{ fontSize: "var(--fs-small)", color: outOfStock ? C.muted : C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                  {ammo.name}
                 </span>
-                <button
-                  onClick={() => { if (!disabled) onLinkAmmo?.(item.id, active ? null : ammo.id); }}
-                  disabled={disabled}
-                  title={disabled ? "No ammunition remaining" : active ? "Unequip ammunition" : "Equip ammunition"}
-                  style={{ ...inventoryEquipBtn(active, accentColor), ...(disabled ? { opacity: 0.4, cursor: "not-allowed" } : null) }}
-                >
-                  EQ
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  <QuantityStepper
+                    value={ammo.quantity}
+                    onDecrement={() => ammo.quantity > 1 && onQty(ammo.id, -1)}
+                    decrementDisabled={ammo.quantity <= 1}
+                    onIncrement={() => onQty(ammo.id, 1)}
+                    buttonClassName="character-row-action"
+                    theme={{
+                      buttonBorder: C.panelBorder,
+                      buttonColor: C.text,
+                      valueColor: C.text,
+                      borderRadius: 5,
+                      fontSize: 13,
+                    }}
+                  />
+                  <button
+                    onClick={() => { if (!disabled) onLinkAmmo?.(item.id, active ? null : ammo.id); }}
+                    disabled={disabled}
+                    title={disabled ? "No ammunition remaining" : active ? "Unequip ammunition" : "Equip ammunition"}
+                    style={{ ...inventoryEquipBtn(active, accentColor), ...(disabled ? { opacity: 0.4, cursor: "not-allowed" } : null) }}
+                  >
+                    EQ
+                  </button>
+                </div>
               </div>
             );
           })}

@@ -39,7 +39,7 @@ export interface SharedCombatOverrides {
   acBonus: number;
   hpMaxBonus: number;
   inspiration?: boolean;
-  abilityScores?: SharedAbilityScoreOverrides;
+  abilityScores?: SharedAbilityScoreOverrides | undefined;
 }
 
 export function isPolymorphCondition(condition: SharedConditionInstance | null | undefined): condition is SharedPolymorphCondition {
@@ -51,4 +51,88 @@ export function getPolymorphCondition(
 ): SharedPolymorphCondition | null {
   const condition = (conditions ?? []).find(isPolymorphCondition);
   return condition ?? null;
+}
+
+export interface SharedDamageableActor {
+  hpCurrent: number | null | undefined;
+  overrides: SharedCombatOverrides | null | undefined;
+  conditions?: readonly SharedConditionInstance[] | null;
+}
+
+export interface SharedHealableActor {
+  hpCurrent: number | null | undefined;
+  hpMax: number | null | undefined;
+  overrides: SharedCombatOverrides | null | undefined;
+}
+
+export interface ResolvedHpChange {
+  hpCurrent: number;
+  overrides: SharedCombatOverrides;
+  conditions?: SharedConditionInstance[];
+}
+
+/**
+ * Authoritative damage resolution: temp HP absorbs damage before real HP does, and a
+ * polymorphed creature reverts (rather than dying) once damage exceeds its temporary form's HP.
+ * Callers on both server and client should resolve damage through this single implementation —
+ * computing it independently client-side and persisting the result invites a race where a
+ * concurrent temp-HP change (e.g. a player granting themselves temp HP) isn't reflected in the
+ * numbers actually saved.
+ */
+export function resolveActorDamage(actor: SharedDamageableActor, amount: number): ResolvedHpChange | null {
+  if (actor.hpCurrent == null || amount <= 0) return null;
+
+  const overrides = actor.overrides ?? { tempHp: 0, acBonus: 0, hpMaxBonus: 0 };
+  const tempHp = Math.max(0, Number(overrides.tempHp ?? 0) || 0);
+  const fromTemp = Math.min(tempHp, Math.max(0, amount));
+  const nextTemp = tempHp - fromTemp;
+  const remaining = Math.max(0, amount - fromTemp);
+  const currentHp = Math.max(0, Number(actor.hpCurrent ?? 0) || 0);
+  const polymorph = getPolymorphCondition(actor.conditions);
+
+  if (!polymorph) {
+    return {
+      hpCurrent: Math.max(0, currentHp - remaining),
+      overrides: { ...overrides, tempHp: nextTemp },
+    };
+  }
+
+  if (remaining < currentHp) {
+    return {
+      hpCurrent: currentHp - remaining,
+      overrides: { ...overrides, tempHp: nextTemp },
+    };
+  }
+
+  const overflow = remaining - currentHp;
+  const restoredHp = typeof polymorph.originalHpCurrent === "number" ? polymorph.originalHpCurrent : 0;
+  const nextConditions = (actor.conditions ?? []).filter((condition) => condition.key !== "polymorphed");
+  return {
+    hpCurrent: Math.max(0, restoredHp - overflow),
+    overrides: {
+      ...overrides,
+      tempHp: nextTemp,
+      acBonus: Number(polymorph.originalAcBonus ?? 0),
+      hpMaxBonus: Number(polymorph.originalHpMaxBonus ?? 0),
+    },
+    conditions: nextConditions,
+  };
+}
+
+/** Authoritative healing resolution: clamps to (base max + any hpMaxBonus override). */
+export function resolveActorHealing(actor: SharedHealableActor, amount: number): ResolvedHpChange | null {
+  if (actor.hpCurrent == null || amount <= 0) return null;
+
+  const overrides = actor.overrides ?? { tempHp: 0, acBonus: 0, hpMaxBonus: 0 };
+  const hpMaxBonus = Number(overrides.hpMaxBonus ?? 0);
+  const normalizedBonus = Number.isFinite(hpMaxBonus) ? hpMaxBonus : 0;
+  const max = actor.hpMax == null ? null : Math.max(1, Number(actor.hpMax) + normalizedBonus);
+  const hpCurrent = max == null
+    ? actor.hpCurrent + amount
+    : Math.min(max, actor.hpCurrent + amount);
+
+  return {
+    hpCurrent,
+    overrides: { ...overrides, tempHp: Math.max(0, Number(overrides.tempHp ?? 0) || 0) },
+  };
 }

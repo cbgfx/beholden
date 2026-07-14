@@ -39,6 +39,8 @@ export function useBulkDamageMode({ encounterId, delta, setDelta, orderedCombata
     const targets = orderedCombatants.filter((c) => bulkSelectedIds.has(c.id));
     await Promise.all(
       targets.map(async (c) => {
+        // resolved is only an optimistic preview; the server resolves hpDelta authoritatively
+        // against its own freshly-read state (see combat.ts).
         const resolved = kind === "heal"
           ? resolveCombatantHealing(c, amount)
           : resolveCombatantDamage(c, amount);
@@ -47,6 +49,7 @@ export function useBulkDamageMode({ encounterId, delta, setDelta, orderedCombata
           hpCurrent: resolved.hpCurrent,
           overrides: resolved.overrides,
           ...("conditions" in resolved && resolved.conditions ? { conditions: resolved.conditions } : {}),
+          hpDelta: { kind, amount },
         });
       })
     );

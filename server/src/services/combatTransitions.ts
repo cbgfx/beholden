@@ -2,7 +2,12 @@ import type { StoredConditionInstance, StoredEncounterActor } from "../server/us
 import { hasIncapacitatingCondition } from "@beholden/shared/domain/conditions";
 
 export function conditionsBreakConcentration(conditions: StoredConditionInstance[]): boolean {
-  return hasIncapacitatingCondition(conditions);
+  return hasIncapacitatingCondition(conditions)
+    || conditions.some((condition) => condition.key === "rage");
+}
+
+export function shouldClearTrackedConcentration(conditions: StoredConditionInstance[]): boolean {
+  return !conditions.some((condition) => condition.key === "concentration");
 }
 
 export function shouldBreakConcentration(args: {

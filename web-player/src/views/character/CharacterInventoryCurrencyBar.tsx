@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { C } from "@/lib/theme";
 import { addBtnStyle } from "@/views/character/CharacterViewParts";
 import { formatWeight } from "@/views/character/CharacterInventory";
+import { evaluateCurrencyInput } from "@/views/character/currencyMath";
 
 interface InventoryCurrencyBarProps {
   currencyTotals: Record<"PP" | "GP" | "EP" | "SP" | "CP", number>;
@@ -23,6 +24,13 @@ export function InventoryCurrencyBar({
   const [currencyPopupCode, setCurrencyPopupCode] = useState<"PP" | "GP" | "SP" | "CP" | null>(null);
   const [currencyInput, setCurrencyInput] = useState("");
   const currencyPopupRef = useRef<HTMLDivElement | null>(null);
+
+  const saveCurrency = (code: "PP" | "GP" | "SP" | "CP") => {
+    const value = evaluateCurrencyInput(currencyInput);
+    if (value === null) return;
+    void onSaveCurrency(code, value);
+    setCurrencyPopupCode(null);
+  };
 
   useEffect(() => {
     if (!currencyPopupCode) return;
@@ -100,14 +108,13 @@ export function InventoryCurrencyBar({
                 <div style={{ display: "flex", gap: 6 }}>
                   <input
                     autoFocus
-                    type="number"
-                    min={0}
+                    type="text"
+                    inputMode="numeric"
                     value={currencyInput}
                     onChange={(e) => setCurrencyInput(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
-                        void onSaveCurrency(code, Number(currencyInput));
-                        setCurrencyPopupCode(null);
+                        saveCurrency(code);
                       }
                       if (e.key === "Escape") setCurrencyPopupCode(null);
                     }}
@@ -127,8 +134,7 @@ export function InventoryCurrencyBar({
                   <button
                     type="button"
                     onClick={() => {
-                      void onSaveCurrency(code, Number(currencyInput));
-                      setCurrencyPopupCode(null);
+                      saveCurrency(code);
                     }}
                     style={addBtnStyle(accentColor)}
                   >

@@ -390,6 +390,13 @@ export function syncAssignedPlayerRows(
           conditions: livePatch.conditions ?? current.conditions ?? [],
         });
         const losesConcentration = shouldBreakConcentration({ hpCurrent: effectiveHp, conditions: effectiveConditions });
+        if (losesConcentration && effectiveConditions.some((condition) => condition.key === "concentration")) {
+          db.prepare(`
+            UPDATE user_characters
+            SET character_data_json = json_set(COALESCE(character_data_json, '{}'), '$.concentrationSpell', NULL)
+            WHERE id = ?
+          `).run(charId);
+        }
         updateCampaignCharacterLive(db, player_id, current, {
           ...livePatch,
           conditions: losesConcentration
@@ -504,6 +511,12 @@ export function mergeLiveStats(
   const live = rowToCampaignCharacter(liveRow);
   const liveConditions = live.conditions ?? [];
   const liveOverrides = live.overrides ?? DEFAULT_OVERRIDES;
+  // Sheet-level overrides win here on purpose: a character can be (or have been) assigned to a
+  // campaign whose `players` row hasn't been touched in ages, and that stale snapshot shouldn't
+  // shadow edits made since from the character's own sheet. This is safe *only* because DM combat
+  // actions are required to mirror their override changes back into the sheet too (see
+  // syncCombatantToPlayer) — that keeps sheetOverrides from ever being the stale side while a
+  // campaign is actively being played, which is what actually matters here.
   const effectiveOverrides = sheetOverrides
     ? {
         ...liveOverrides,

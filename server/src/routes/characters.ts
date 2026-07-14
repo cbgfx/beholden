@@ -31,7 +31,8 @@ import { ACCEPTED_IMAGE_TYPES, resizeToWebP } from "../lib/imageHelpers.js";
 import { ConditionInstanceSchema } from "../lib/schemas.js";
 import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
 import { withAbsoluteImageUrl } from "../lib/routeImageUrl.js";
-import { applyConditionConsequences, conditionsBreakConcentration, detectEndedConcentration } from "../services/combatTransitions.js";
+import { preserveProficienciesOnLevelUp } from "../lib/levelUpProficiencies.js";
+import { applyConditionConsequences, conditionsBreakConcentration, detectEndedConcentration, shouldClearTrackedConcentration } from "../services/combatTransitions.js";
 import { sweepDependentConditions } from "../services/combat.js";
 import {
   AssignBody,
@@ -180,10 +181,15 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const p = parseBody(CharacterUpdateBody, req);
     const t = now();
     const ex = rowToCharacterSheet(existing);
-    const mergedCharacterData =
+    const requestedCharacterData =
       p.characterData !== undefined
         ? (p.characterData === null ? null : { ...(ex.characterData ?? {}), ...p.characterData })
         : ex.characterData;
+    const mergedCharacterData = preserveProficienciesOnLevelUp(
+      ex.characterData,
+      requestedCharacterData,
+      p.level !== undefined && p.level > ex.level,
+    );
     const nextSheet = {
       name: p.name ?? ex.name,
       playerName: ownerName,
@@ -289,6 +295,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     });
     if (conditionsBreakConcentration(conditions)) {
       conditions = conditions.filter((condition) => condition.key !== "concentration");
+    }
+    if (shouldClearTrackedConcentration(conditions)) {
       db.prepare(`
         UPDATE user_characters
         SET character_data_json = json_set(COALESCE(character_data_json, '{}'), '$.concentrationSpell', NULL)

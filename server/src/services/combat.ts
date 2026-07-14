@@ -175,10 +175,11 @@ export function syncCombatantToPlayer(
     .get(combatant.baseId) as Record<string, unknown> | undefined;
   if (!pRow) return null;
   const player = rowToCampaignCharacter(pRow);
+  const overrides = combatant.overrides ?? DEFAULT_OVERRIDES;
   const liveCols = campaignLiveDbColumns({
     hpCurrent: combatant.hpCurrent ?? player.hpCurrent,
     conditions: combatant.conditions ?? [],
-    overrides: combatant.overrides ?? DEFAULT_OVERRIDES,
+    overrides,
     ...((combatant.deathSaves ?? player.deathSaves)
       ? { deathSaves: combatant.deathSaves ?? player.deathSaves }
       : {}),
@@ -195,6 +196,22 @@ export function syncCombatantToPlayer(
     t,
     combatant.baseId
   );
+
+  // Mirror the override change (tempHp/acBonus/hpMaxBonus/inspiration) back onto the linked
+  // character sheet too. mergeLiveStats deliberately prefers a character's own sheetOverrides over
+  // this campaign row when reading the character outside of this sync (so a long-abandoned
+  // campaign assignment can't shadow edits made since from the sheet) — without this mirror, that
+  // same preference would instead hide a DM's *current* combat edit behind an out-of-date sheet
+  // copy the moment the player's own screen re-reads their character.
+  if (player.characterId) {
+    db.prepare(`
+      UPDATE user_characters
+      SET character_data_json = json_set(COALESCE(character_data_json, '{}'), '$.sheetOverrides', json(?)),
+          updated_at = ?
+      WHERE id = ?
+    `).run(JSON.stringify(overrides), t, player.characterId);
+  }
+
   return { campaignId: player.campaignId, characterId: player.characterId ?? null };
 }
 

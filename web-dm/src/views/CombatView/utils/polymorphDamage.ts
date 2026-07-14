@@ -1,48 +1,16 @@
-import { getPolymorphCondition } from "@beholden/shared/domain";
+import { resolveActorDamage } from "@beholden/shared/domain";
 import type { EncounterActor } from "@/domain/types/domain";
 
+/**
+ * Client-side preview only — used for instant optimistic UI feedback while the request is in
+ * flight. The server independently recomputes this from fresh data and its response (or the
+ * `encounter:combatantsDelta` broadcast) is what actually gets persisted/displayed; see the
+ * `hpDelta` field on the combatant PUT for why the server doesn't just trust this value.
+ */
 export function resolveCombatantDamage(combatant: EncounterActor, amount: number): {
   hpCurrent: number;
-  overrides: Record<string, unknown>;
+  overrides: EncounterActor["overrides"];
   conditions?: EncounterActor["conditions"];
 } | null {
-  if (combatant.hpCurrent == null) return null;
-
-  const overrides = combatant.overrides ?? {};
-  const tempHp = Math.max(0, Number(combatant.overrides?.tempHp ?? 0) || 0);
-  const fromTemp = Math.min(tempHp, Math.max(0, amount));
-  const nextTemp = tempHp - fromTemp;
-  const remaining = Math.max(0, amount - fromTemp);
-  const currentHp = Math.max(0, Number(combatant.hpCurrent ?? 0) || 0);
-  const polymorph = getPolymorphCondition(combatant.conditions);
-
-  if (!polymorph) {
-    return {
-      hpCurrent: Math.max(0, currentHp - remaining),
-      overrides: { ...overrides, tempHp: nextTemp },
-    };
-  }
-
-  if (remaining < currentHp) {
-    return {
-      hpCurrent: currentHp - remaining,
-      overrides: { ...overrides, tempHp: nextTemp },
-    };
-  }
-
-  const overflow = remaining - currentHp;
-  const restoredHp = typeof polymorph.originalHpCurrent === "number"
-    ? polymorph.originalHpCurrent
-    : 0;
-  const nextConditions = (combatant.conditions ?? []).filter((c) => c.key !== "polymorphed");
-  return {
-    hpCurrent: Math.max(0, restoredHp - overflow),
-    overrides: {
-      ...overrides,
-      tempHp: nextTemp,
-      acBonus: Number(polymorph.originalAcBonus ?? 0),
-      hpMaxBonus: Number(polymorph.originalHpMaxBonus ?? 0),
-    },
-    conditions: nextConditions,
-  };
+  return resolveActorDamage(combatant, amount);
 }
