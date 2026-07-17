@@ -30,6 +30,7 @@ export type MonsterDetail = {
   action: MonsterTextEntry[];
   reaction: MonsterTextEntry[];
   legendary: MonsterTextEntry[];
+  legendaryUses?: number | null;
   spellcasting: MonsterTextEntry[];
   spells?: JsonRecord | string[] | null;
   type?: string | null;
@@ -74,5 +75,5 @@ export type CompendiumItemDetail = CompendiumItemRow & {
   dmgType?: string | null;
   properties?: string[];
   ac?: number | null;
-  modifiers?: Array<{ category: string; text: string }>;
+  modifiers?: Array<{ target?: string; amount?: number }>;
 };

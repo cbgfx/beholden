@@ -17,69 +17,15 @@ export interface PreparedSpellProgressionChoiceDefinition {
   options: string[];
 }
 
-function splitProgressionChoiceOptions(text: string): string[] {
-  return String(text ?? "")
-    .replace(/\band\b/gi, ",")
-    .replace(/\bor\b/gi, ",")
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-}
-
-function normalizeProgressionChoiceToken(value: string): string {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/\b(?:land|terrain|type|table|spells?)\b/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function inferPreparedSpellProgressionChoiceMetadata(
-  text: string | null | undefined,
-  tables: PreparedSpellProgressionTable[],
-): PreparedSpellProgressionTable[] {
-  if (tables.length <= 1) return tables;
-  if (tables.some((table) => table.choiceGroupKey && table.choiceOptionLabel)) return tables;
-
-  const match = String(text ?? "").match(/choose one ([^:]+):\s*([^.]+?)\.\s*consult the table below that corresponds to the chosen/i);
-  if (!match) return tables;
-
-  const promptTarget = String(match[1] ?? "").trim();
-  const options = splitProgressionChoiceOptions(match[2] ?? "");
-  if (options.length <= 1) return tables;
-  const choiceGroupKey = normalizeProgressionChoiceToken(promptTarget).replace(/\s+/g, "-") || "progression-choice";
-
-  return tables.map((table) => {
-    const matchedOption = options.find((option) => {
-      const normalizedOption = normalizeProgressionChoiceToken(option);
-      const normalizedLabel = normalizeProgressionChoiceToken(table.label ?? "");
-      return normalizedOption && normalizedLabel && (
-        normalizedOption === normalizedLabel
-        || normalizedLabel.startsWith(normalizedOption)
-        || normalizedOption.startsWith(normalizedLabel)
-      );
-    });
-    if (!matchedOption) return table;
-    return {
-      ...table,
-      choiceGroupKey,
-      choicePrompt: `Choose one ${promptTarget}`,
-      choiceOptionLabel: matchedOption,
-      choiceOptions: options,
-    };
-  });
-}
-
 export function buildPreparedSpellProgressionGrants(
-  features: Array<Pick<AppliedCharacterFeatureEntry, "id" | "name" | "text" | "preparedSpellProgression" | "spellcastingAbility">>,
+  features: Array<Pick<AppliedCharacterFeatureEntry, "id" | "name" | "preparedSpellProgression" | "spellcastingAbility">>,
   characterLevel: number,
   chosenFeatureChoices: Record<string, string[]> | null | undefined = {},
 ): ProgressionGrantedSpellEntry[] {
   const grants = new Map<string, ProgressionGrantedSpellEntry>();
 
   for (const feature of features) {
-    const tables = inferPreparedSpellProgressionChoiceMetadata(feature.text, feature.preparedSpellProgression ?? []);
+    const tables = feature.preparedSpellProgression ?? [];
     const groupedTables = tables.filter((table) => table.choiceGroupKey && table.choiceOptionLabel);
     const tablesToApply = (() => {
       if (tables.length === 1) return tables;
@@ -127,13 +73,13 @@ export function buildPreparedSpellProgressionGrants(
 }
 
 export function buildPreparedSpellProgressionChoiceDefinitions(
-  features: Array<Pick<AppliedCharacterFeatureEntry, "id" | "name" | "text" | "preparedSpellProgression">>,
+  features: Array<Pick<AppliedCharacterFeatureEntry, "id" | "name" | "preparedSpellProgression">>,
 ): PreparedSpellProgressionChoiceDefinition[] {
   const definitions: PreparedSpellProgressionChoiceDefinition[] = [];
   const seen = new Set<string>();
 
   for (const feature of features) {
-    const tablesWithMetadata = inferPreparedSpellProgressionChoiceMetadata(feature.text, feature.preparedSpellProgression ?? []);
+    const tablesWithMetadata = feature.preparedSpellProgression ?? [];
     const groups = new Map<string, PreparedSpellProgressionTable[]>();
     for (const table of tablesWithMetadata) {
       if (!table.choiceGroupKey || !table.choiceOptionLabel) continue;

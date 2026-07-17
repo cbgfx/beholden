@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { deriveFeatHitPointMaxBonus } from "@/domain/character/featEffects";
 
 describe("deriveFeatHitPointMaxBonus", () => {
-  it("uses the feat's current prose instead of its name", () => {
+  it("does not recover hit points from a feat name or description", () => {
     expect(deriveFeatHitPointMaxBonus([{
       id: "durable-build",
       name: "Durable Build",
       text: "Your Hit Point maximum increases by 3 for each character level you have.",
-    }], 5)).toBe(15);
+    }], 5)).toBe(0);
   });
 
   it("uses structured compendium mechanics when prose has no supported pattern", () => {

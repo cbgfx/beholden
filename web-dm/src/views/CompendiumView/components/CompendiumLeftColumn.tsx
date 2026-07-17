@@ -31,7 +31,7 @@ export function CompendiumLeftColumn(props: {
             padding: "0 4px",
           }}
         >
-          Import or manage your compendium XML data under the Compendium section.
+          Import or manage canonical Beholden compendium JSON under the Compendium section.
         </div>
       )}
     </div>

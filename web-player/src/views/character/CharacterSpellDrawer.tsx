@@ -87,8 +87,8 @@ export function SpellDrawer({
               display: "flex", alignItems: "center", gap: 5,
             }}>
               <span style={{ fontWeight: 800, fontSize: "var(--fs-medium)", color: C.text }}>{scaledDamage.dice}</span>
-              <span style={{ fontSize: "var(--fs-subtitle)" }}>{DMG_EMOJI[scaledDamage.type] ?? "*"}</span>
-              <span style={{ fontSize: "var(--fs-small)", color: dmgColor, fontWeight: 700, textTransform: "capitalize" }}>{scaledDamage.type}</span>
+              <span style={{ fontSize: "var(--fs-subtitle)" }}>{scaledDamage.types.map((type) => DMG_EMOJI[type] ?? "*").join(" ")}</span>
+              <span style={{ fontSize: "var(--fs-small)", color: dmgColor, fontWeight: 700, textTransform: "capitalize" }}>{scaledDamage.types.join(" / ")}</span>
             </div>
           )}
         </div>

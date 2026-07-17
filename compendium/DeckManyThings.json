@@ -1,0 +1,227 @@
+{
+  "format": "beholden.compendium",
+  "schema": "grand",
+  "exportedAt": "2026-07-03T21:48:03.683Z",
+  "decks": [
+    {
+      "schemaVersion": 2,
+      "id": "deck_balance_1",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Balance",
+      "cardKey": "balance",
+      "text": "Your mind suffers a wrenching alteration, causing your alignment to change. Lawful becomes chaotic, good becomes evil, and vice versa. If you are true neutral or unaligned, this card has no effect on you.",
+      "sort": 0
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_comet_2",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Comet",
+      "cardKey": "comet",
+      "text": "If you single-handedly defeat the next hostile monster or group of monsters you encounter, you gain experience points enough to gain one level. Otherwise, this card has no effect.",
+      "sort": 1
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_donjon_3",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Donjon",
+      "cardKey": "donjon",
+      "text": "You disappear and become entombed in a state of suspended animation in an extradimensional sphere. Everything you were wearing and carrying stays behind in the space you occupied when you disappeared. You remain imprisoned until you are found and removed from the sphere. You can't be located by any divination magic, but a wish spell can reveal the location of your prison. You draw no more cards.",
+      "sort": 2
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_euryale_4",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Euryale",
+      "cardKey": "euryale",
+      "text": "The card's medusa-like visage curses you. You take a -2 penalty on saving throws while cursed in this way. Only a god or the magic of The Fates card can end this curse.",
+      "sort": 3
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_the_fates_5",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "The Fates",
+      "cardKey": "the-fates",
+      "text": "Reality's fabric unravels and spins anew, allowing you to avoid or erase one event as if it never happened. You can use the card's magic as soon as you draw the card or at any other time before you die.",
+      "sort": 4
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_flames_6",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Flames",
+      "cardKey": "flames",
+      "text": "A powerful devil becomes your enemy. The devil seeks your ruin and plagues your life, savoring your suffering before attempting to slay you. This enmity lasts until either you or the devil dies.",
+      "sort": 5
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_fool_7",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Fool",
+      "cardKey": "fool",
+      "text": "You lose 10,000 XP, discard this card, and draw from the deck again, counting both draws as one of your declared draws. If losing that much XP would cause you to lose a level, you instead lose an amount that leaves you with just enough XP to keep your level.",
+      "sort": 6
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_gem_8",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Gem",
+      "cardKey": "gem",
+      "text": "Twenty-five pieces of jewelry worth 2,000 gp each or fifty gems worth 1,000 gp each appear at your feet.",
+      "sort": 7
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_idiot_9",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Idiot",
+      "cardKey": "idiot",
+      "text": "Permanently reduce your Intelligence by 1d4 + 1 (to a minimum score of 1). You can draw one additional card beyond your declared draws.",
+      "sort": 8
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_jester_10",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Jester",
+      "cardKey": "jester",
+      "text": "You gain 10,000 XP, or you can draw two additional cards beyond your declared draws.",
+      "sort": 9
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_key_11",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Key",
+      "cardKey": "key",
+      "text": "A rare or rarer magic weapon with which you are proficient appears in your hands. The DM chooses the weapon.",
+      "sort": 10
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_knight_12",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Knight",
+      "cardKey": "knight",
+      "text": "You gain the service of a 4th-level fighter who appears in a space you choose within 30 feet of you. The fighter is of the same race as you and serves you loyally until death, believing the fates have drawn him or her to you. You control this character.",
+      "sort": 11
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_moon_13",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Moon",
+      "cardKey": "moon",
+      "text": "You are granted the ability to cast the wish spell 1d3 times.",
+      "sort": 12
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_rogue_14",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Rogue",
+      "cardKey": "rogue",
+      "text": "A nonplayer character of the DM's choice becomes hostile toward you. The identity of your new enemy isn't known until the NPC or someone else reveals it. Nothing less than a wish spell or divine intervention can end the NPC's hostility toward you.",
+      "sort": 13
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_ruin_15",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Ruin",
+      "cardKey": "ruin",
+      "text": "All forms of wealth that you carry or own, other than magic items, are lost to you. Portable property vanishes. Businesses, buildings, and land you own are lost in a way that alters reality the least. Any documentation that proves you should own something lost to this card also disappears.",
+      "sort": 14
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_skull_16",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Skull",
+      "cardKey": "skull",
+      "text": "You summon an avatar of death-a ghostly humanoid skeleton clad in a tattered black robe and carrying a spectral scythe. It appears in a space of the DM's choice within 10 feet of you and attacks you, warning all others that you must win the battle alone. The avatar fights until you die or it drops to 0 hit points, whereupon it disappears. If anyone tries to help you, the helper summons its own avatar of death. A creature slain by an avatar of death can't be restored to life.",
+      "sort": 15
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_star_17",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Star",
+      "cardKey": "star",
+      "text": "Increase one of your ability scores by 2. The score can exceed 20 but can't exceed 24.",
+      "sort": 16
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_sun_18",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Sun",
+      "cardKey": "sun",
+      "text": "You gain 50,000 XP, and a wondrous item (which the DM determines randomly) appears in your hands.",
+      "sort": 17
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_talons_19",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Talons",
+      "cardKey": "talons",
+      "text": "Every magic item you wear or carry disintegrates. Artifacts in your possession aren't destroyed but do vanish.",
+      "sort": 18
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_throne_20",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Throne",
+      "cardKey": "throne",
+      "text": "You gain proficiency in the Persuasion skill, and you double your proficiency bonus on checks made with that skill. In addition, you gain rightful ownership of a small keep somewhere in the world. However, the keep is currently in the hands of monsters, which you must clear out before you can claim the keep as yours.",
+      "sort": 19
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_vizier_21",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "Vizier",
+      "cardKey": "vizier",
+      "text": "At any time you choose within one year of drawing this card, you can ask a question in meditation and mentally receive a truthful answer to that question. Besides information, the answer helps you solve a puzzling problem or other dilemma. In other words, the knowledge comes with wisdom on how to apply it.",
+      "sort": 20
+    },
+    {
+      "schemaVersion": 2,
+      "id": "deck_the_void_22",
+      "deckName": "Deck",
+      "deckKey": "deck",
+      "cardName": "The Void",
+      "cardKey": "the-void",
+      "text": "This black card spells disaster. Your soul is drawn from your body and contained in an object in a place of the DM's choice. One or more powerful beings guard the place. While your soul is trapped in this way, your body is incapacitated. A wish spell can't restore your soul, but the spell reveals the location of the object that holds it. You draw no more cards.",
+      "sort": 21
+    }
+  ]
+}

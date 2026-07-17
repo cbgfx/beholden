@@ -5,33 +5,21 @@ import { api, apiBlob } from "@/services/api";
 import { Panel } from "@/ui/Panel";
 import {
   CompendiumAdminFeedback,
+  LiveReferenceMigration,
+  type LiveReferenceMigrationResult,
   NativeCompendiumActions,
   NativeCompendiumDescription,
   NativeImportPreview,
-  XmlConversionActions,
-  XmlConversionDescription,
   type NativeCompendiumCategory,
   type NativeImportResult,
   type NativePreviewResult,
 } from "./CompendiumAdminSections";
 
-type NativeBatch = {
+type NativeDocument = {
   format: "beholden.compendium";
-  version: 2;
-  category: NativeCompendiumCategory;
+  schema: "grand";
   exportedAt: string;
-  entries: Array<Record<string, unknown>>;
-};
-
-type NativeBundle = {
-  format: "beholden.compendium";
-  version: 2;
-  exportedAt: string;
-  batches: Array<{
-    category: NativeCompendiumCategory;
-    entries: Array<Record<string, unknown>>;
-  }>;
-};
+} & Partial<Record<NativeCompendiumCategory, Array<Record<string, unknown>>>>;
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -54,29 +42,51 @@ function downloadBlob(filename: string, blob: Blob) {
   URL.revokeObjectURL(url);
 }
 
-function convertedJsonFilename(sourceFilename: string): string {
-  const base = sourceFilename.replace(/\.xml$/iu, "");
-  return `${base || "beholden-compendium"}.json`;
-}
-
 export function CompendiumAdminPanel() {
-  const [xmlFile, setXmlFile] = React.useState<File | null>(null);
   const [nativeFile, setNativeFile] = React.useState<File | null>(null);
   const [previewedNativeFile, setPreviewedNativeFile] = React.useState<File | null>(null);
   const [nativePreview, setNativePreview] = React.useState<NativePreviewResult | null>(null);
   const [nativeCategory, setNativeCategory] = React.useState<NativeCompendiumCategory>("monsters");
   const [busy, setBusy] = React.useState(false);
   const [nativeMsg, setNativeMsg] = React.useState("");
-  const [xmlMsg, setXmlMsg] = React.useState("");
+  const [referencePreview, setReferencePreview] = React.useState<LiveReferenceMigrationResult | null>(null);
+
+  async function previewReferenceMigration() {
+    setBusy(true);
+    setNativeMsg("");
+    setReferencePreview(null);
+    try {
+      setReferencePreview(await api<LiveReferenceMigrationResult>("/api/compendium/live-reference-migration"));
+    } catch (error: unknown) {
+      setNativeMsg(toErrorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function applyReferenceMigration() {
+    if (!referencePreview || !window.confirm(`Migrate ${referencePreview.changedReferences} live compendium references across ${referencePreview.changedRows} rows?`)) return;
+    setBusy(true);
+    setNativeMsg("");
+    try {
+      const result = await api<LiveReferenceMigrationResult>("/api/compendium/live-reference-migration", { method: "POST" });
+      setNativeMsg(`Migrated ${result.changedReferences} references across ${result.changedRows} rows.`);
+      setReferencePreview(null);
+    } catch (error: unknown) {
+      setNativeMsg(toErrorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
   async function exportNativeCategory() {
     setBusy(true);
     setNativeMsg("");
     try {
-      const batch = await api<NativeBatch>(
+      const document = await api<NativeDocument>(
         `/api/compendium/native/${encodeURIComponent(nativeCategory)}/export`,
       );
-      downloadJson(`beholden-compendium-${nativeCategory}.json`, batch);
-      setNativeMsg(`Exported ${batch.entries.length} ${nativeCategory}.`);
+      downloadJson(`beholden-compendium-${nativeCategory}.json`, document);
+      setNativeMsg(`Exported ${document[nativeCategory]?.length ?? 0} ${nativeCategory}.`);
     } catch (error: unknown) {
       setNativeMsg(toErrorMessage(error));
     } finally {
@@ -147,32 +157,6 @@ export function CompendiumAdminPanel() {
     }
   }
 
-  async function convertXmlToV2() {
-    if (!xmlFile) return;
-    setBusy(true);
-    setXmlMsg("");
-    try {
-      const form = new FormData();
-      form.append("file", xmlFile);
-      const result = await api<{ ok: boolean; document: NativeBundle; warnings: string[] }>(
-        "/api/compendium/convert/xml",
-        { method: "POST", body: form },
-      );
-      downloadJson(convertedJsonFilename(xmlFile.name), result.document);
-      const entries = result.document.batches.reduce((total, batch) => total + batch.entries.length, 0);
-      const summary = `Converted ${entries} entries across ${result.document.batches.length} categories. The live compendium was not changed.`;
-      setXmlMsg(
-        result.warnings.length > 0
-          ? `${summary}\n\nWarnings (${result.warnings.length}):\n${result.warnings.join("\n")}`
-          : summary,
-      );
-    } catch (error: unknown) {
-      setXmlMsg(toErrorMessage(error));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function deleteCompendium() {
     setBusy(true);
     setNativeMsg("");
@@ -218,18 +202,13 @@ export function CompendiumAdminPanel() {
           onDelete={() => void deleteCompendium()}
         />
         {nativePreview ? <NativeImportPreview preview={nativePreview} /> : null}
-        <CompendiumAdminFeedback msg={nativeMsg} />
-      </Panel>
-
-      <Panel storageKey="compendium-admin-xml-v2" title="XML → V2 converter">
-        <XmlConversionDescription />
-        <XmlConversionActions
+        <LiveReferenceMigration
           busy={busy}
-          fileSelected={!!xmlFile}
-          onFileChange={setXmlFile}
-          onConvert={() => void convertXmlToV2()}
+          preview={referencePreview}
+          onPreview={() => void previewReferenceMigration()}
+          onApply={() => void applyReferenceMigration()}
         />
-        <CompendiumAdminFeedback msg={xmlMsg} />
+        <CompendiumAdminFeedback msg={nativeMsg} />
       </Panel>
     </div>
   );

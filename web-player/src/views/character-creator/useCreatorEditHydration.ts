@@ -24,6 +24,7 @@ type CreatorCharacterData = Record<string, unknown> & {
   chosenRaceTools?: string[];
   chosenRaceFeatId?: string | null;
   chosenRaceSize?: string | null;
+  chosenRaceSpellAbility?: string | null;
   chosenSkills?: string[];
   chosenBgOriginFeatId?: string | null;
   chosenClassLanguages?: string[];
@@ -36,6 +37,7 @@ type CreatorCharacterData = Record<string, unknown> & {
   chosenCantrips?: string[];
   chosenSpells?: string[];
   chosenInvocations?: string[];
+  extraFeatIds?: string[];
   hd?: number | null;
   bgAbilityMode?: "split" | "even";
   standardAssign?: Record<string, number>;
@@ -54,7 +56,14 @@ export function useCreatorEditHydration(args: {
   setForm: React.Dispatch<React.SetStateAction<FormState>>;
   setEditLoading: React.Dispatch<React.SetStateAction<boolean>>;
   initialCampaignIdsRef: React.MutableRefObject<string[]>;
-  onHydrated?: (summary: { className: string; species: string; hitDie: number | null; hpCurrent: number | null }) => void;
+  onHydrated?: (summary: {
+    className: string;
+    species: string;
+    hitDie: number | null;
+    hpCurrent: number | null;
+    extraFeatIds: string[];
+    invocationFeatIds: string[];
+  }) => void;
 }) {
   const { editId, setForm, setEditLoading, initialCampaignIdsRef, onHydrated } = args;
 
@@ -70,7 +79,17 @@ export function useCreatorEditHydration(args: {
           : ch.className ?? "";
         const hydratedHitDie = Number.isFinite(Number(cd.hd)) ? Number(cd.hd) : null;
         const hydratedHpCurrent = Number.isFinite(Number(ch.hpCurrent)) ? Number(ch.hpCurrent) : null;
-        onHydrated?.({ className: hydratedClassName, species: ch.species ?? "", hitDie: hydratedHitDie, hpCurrent: hydratedHpCurrent });
+        const invocationFeatIds = Object.entries(cd.chosenFeatOptions ?? {})
+          .filter(([key]) => key.startsWith("invocation:"))
+          .flatMap(([, ids]) => Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string") : []);
+        onHydrated?.({
+          className: hydratedClassName,
+          species: ch.species ?? "",
+          hitDie: hydratedHitDie,
+          hpCurrent: hydratedHpCurrent,
+          extraFeatIds: Array.isArray(cd.extraFeatIds) ? cd.extraFeatIds.filter((id): id is string => typeof id === "string") : [],
+          invocationFeatIds,
+        });
         const recordedBgBonuses =
           cd.bgAbilityBonuses && typeof cd.bgAbilityBonuses === "object" ? cd.bgAbilityBonuses : {};
         const recordedAsiBonuses = Array.isArray(cd.chosenLevelUpFeats)
@@ -152,6 +171,7 @@ export function useCreatorEditHydration(args: {
           chosenRaceTools: cd.chosenRaceTools ?? [],
           chosenRaceFeatId: cd.chosenRaceFeatId ?? null,
           chosenRaceSize: cd.chosenRaceSize ?? null,
+          chosenRaceSpellAbility: cd.chosenRaceSpellAbility ?? null,
           chosenSkills: cd.chosenSkills ?? [],
           chosenBgOriginFeatId: cd.chosenBgOriginFeatId ?? null,
           chosenClassLanguages: cd.chosenClassLanguages ?? [],

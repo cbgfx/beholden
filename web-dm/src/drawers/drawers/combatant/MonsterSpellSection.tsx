@@ -29,7 +29,20 @@ export function MonsterSpellSection(props: { monster: any }) {
   const [spellError, setSpellError] = React.useState<string | null>(null);
   const [spellDetail, setSpellDetail] = React.useState<any | null>(null);
   const [spellMetaByName, setSpellMetaByName] = React.useState<Record<string, any>>({});
-  const [slotsByLevel, setSlotsByLevel] = React.useState<Record<number, number>>({});
+  const slotsByLevel = React.useMemo(() => {
+    const slots: Record<number, number> = {};
+    const spellcasting = Array.isArray(baseMonster?.spellcasting) ? baseMonster.spellcasting : [];
+    for (const entry of spellcasting) {
+      const typedSlots = entry?.spellSlots;
+      if (!typedSlots || typeof typedSlots !== "object" || Array.isArray(typedSlots)) continue;
+      for (const [level, count] of Object.entries(typedSlots)) {
+        const parsedLevel = Number(level);
+        const parsedCount = Number(count);
+        if (Number.isInteger(parsedLevel) && Number.isInteger(parsedCount) && parsedCount >= 0) slots[parsedLevel] = parsedCount;
+      }
+    }
+    return slots;
+  }, [baseMonster]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -38,22 +51,7 @@ export function MonsterSpellSection(props: { monster: any }) {
     setSpellError(null);
     setSpellDetail(null);
     setSpellMetaByName({});
-    setSlotsByLevel({});
-
     if (!baseMonster) return;
-
-    const traitArr: any[] = Array.isArray(baseMonster?.trait) ? baseMonster.trait : [];
-    const spellTrait = traitArr.find((t) => /spellcasting/i.test(String(t?.name ?? t?.title ?? "")));
-    const spellText = String(spellTrait?.text ?? spellTrait?.description ?? "");
-    const nextSlots: Record<number, number> = {};
-    const slotRegex = /(\d+)(?:st|nd|rd|th)\s+level\s*\((\d+)\s+slots?\)/gi;
-    let match: RegExpExecArray | null;
-    while ((match = slotRegex.exec(spellText))) {
-      const lvl = Number(match[1]);
-      const cnt = Number(match[2]);
-      if (Number.isFinite(lvl) && Number.isFinite(cnt)) nextSlots[lvl] = cnt;
-    }
-    setSlotsByLevel(nextSlots);
 
     async function loadMeta() {
       const out: Record<string, { id: string; name: string; level: number | null }> = {};

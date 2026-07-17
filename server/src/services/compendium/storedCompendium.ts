@@ -1,24 +1,24 @@
 import {
-  featFromV2,
-  itemFromV2,
-  monsterFromV2,
-  spellFromV2,
-} from "./nativeCompendiumV2.js";
-import { CATEGORY_SCHEMAS } from "./nativeCompendiumV2Schemas.js";
+  projectGrandFeat,
+  projectGrandItem,
+  projectGrandMonster,
+  projectGrandSpell,
+} from "./grandCompendium.js";
+import { CATEGORY_SCHEMAS } from "./grandCompendiumSchemas.js";
 
 type JsonRecord = Record<string, unknown>;
 type ScreenViewCategory = "monsters" | "items" | "spells" | "feats";
-type CanonicalCategory = ScreenViewCategory | "classes" | "species" | "backgrounds";
+type GrandCategory = ScreenViewCategory | "classes" | "species" | "backgrounds" | "classTalents";
 
 const toScreenView: Record<ScreenViewCategory, (entry: JsonRecord) => JsonRecord> = {
-  monsters: monsterFromV2,
-  items: itemFromV2,
-  spells: spellFromV2,
-  feats: featFromV2,
+  monsters: projectGrandMonster,
+  items: projectGrandItem,
+  spells: projectGrandSpell,
+  feats: projectGrandFeat,
 };
 
-function parseStoredCanonical(
-  category: CanonicalCategory,
+function parseStoredGrand(
+  category: GrandCategory,
   json: string | null | undefined,
 ): JsonRecord {
   let parsed: unknown;
@@ -30,18 +30,18 @@ function parseStoredCanonical(
   return CATEGORY_SCHEMAS[category].parse(parsed) as JsonRecord;
 }
 
-/** Projects strict canonical V2 storage into the shape consumed by current screens. */
-export function parseStoredCompendiumEntry(
+/** Projects strict Grand storage into the shape consumed by current screens. */
+export function parseStoredPresentationEntry(
   category: ScreenViewCategory,
   json: string | null | undefined,
 ): JsonRecord {
-  return toScreenView[category](parseStoredCanonical(category, json));
+  return toScreenView[category](parseStoredGrand(category, json));
 }
 
-/** Returns the strict canonical V2 entry stored in the database. */
-export function parseStoredCanonicalCompendiumEntry(
-  category: CanonicalCategory,
+/** Returns the strict Grand entry stored in the database. */
+export function parseStoredGrandEntry(
+  category: GrandCategory,
   json: string | null | undefined,
 ): JsonRecord {
-  return parseStoredCanonical(category, json);
+  return parseStoredGrand(category, json);
 }

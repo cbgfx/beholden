@@ -3,28 +3,10 @@ import { Panel } from "@/ui/Panel";
 import { theme } from "@/theme/theme";
 import { api } from "@/services/api";
 import { expandSchool } from "@/lib/format/expandSchool";
-
-type SpellFull = {
-  id: string;
-  name: string;
-  level: number | null;
-  school: string | null;
-  time: string | null;
-  range: string | null;
-  components: string | null;
-  duration: string | null;
-  classes: string | null;
-  text: string[];
-};
-
-function levelLabel(level: number | null) {
-  if (level == null) return "Level ?";
-  if (level === 0) return "Cantrip";
-  return `Level ${level}`;
-}
+import { spellLevelLabel, type CompendiumSpellDetail } from "@beholden/shared/domain/compendium/spellDetail";
 
 export function SpellDetailPanel(props: { spellId: string }) {
-  const [spell, setSpell] = React.useState<SpellFull | null>(null);
+  const [spell, setSpell] = React.useState<CompendiumSpellDetail | null>(null);
   const [busy, setBusy] = React.useState(false);
 
   React.useEffect(() => {
@@ -36,7 +18,7 @@ export function SpellDetailPanel(props: { spellId: string }) {
       }
       setBusy(true);
       try {
-        const s = await api<SpellFull>(`/api/spells/${encodeURIComponent(props.spellId)}`);
+        const s = await api<CompendiumSpellDetail>(`/api/spells/${encodeURIComponent(props.spellId)}`);
         if (!cancelled) setSpell(s ?? null);
       } catch {
         if (!cancelled) setSpell(null);
@@ -51,7 +33,7 @@ export function SpellDetailPanel(props: { spellId: string }) {
   }, [props.spellId]);
 
   const header = spell
-    ? `${levelLabel(spell.level)}${spell.school ? ` • ${expandSchool(spell.school)}` : ""}`
+    ? `${spellLevelLabel(spell.level)}${spell.school ? ` • ${expandSchool(spell.school)}` : ""}`
     : "Select a spell";
 
   return (
@@ -87,34 +69,8 @@ export function SpellDetailPanel(props: { spellId: string }) {
             {(spell.text ?? []).join("\n\n")}
           </div>
 
-          {(() => {
-            // Some XML imports bake "School: Abjuration, " into the classes string.
-            // Split it out so school and classes appear on separate lines.
-            let raw = spell.classes ?? "";
-            let schoolFromClasses: string | null = null;
-            const schoolMatch = raw.match(/^School:\s*([^,]+),?\s*/i);
-            if (schoolMatch) {
-              schoolFromClasses = schoolMatch[1].trim();
-              raw = raw.slice(schoolMatch[0].length).trim();
-            }
-            const schoolDisplay = spell.school
-              ? expandSchool(spell.school)
-              : schoolFromClasses ? expandSchool(schoolFromClasses) : null;
-            return (
-              <>
-                {schoolDisplay && (
-                  <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
-                    School: {schoolDisplay}
-                  </div>
-                )}
-                {raw && (
-                  <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
-                    Classes: {raw}
-                  </div>
-                )}
-              </>
-            );
-          })()}
+          {spell.school ? <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>School: {expandSchool(spell.school)}</div> : null}
+          {spell.classes ? <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>Classes: {spell.classes}</div> : null}
         </div>
       )}
     </Panel>

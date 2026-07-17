@@ -1,21 +1,19 @@
 import React from "react";
+import { getInvocationFeatChoices } from "@/domain/character/invocationFeatChoices";
+import { useInvocationGrantedFeatChoices } from "@/views/shared/useInvocationGrantedFeatChoices";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { api } from "@/services/api";
 import {
-  fetchBackgroundDetailV2,
-  fetchClassDetailV2,
-  fetchRaceDetailV2,
+  fetchGrandBackgroundDetail,
+  fetchGrandClassDetail,
+  fetchGrandSpeciesDetail,
 } from "@/services/compendiumApi";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-  parseFeatureGrants as parseFeatureGrantsFromRules,
-} from "@/views/character/CharacterRuleParsers";
 import {
   abilityMod,
   calcHpMax,
   classifyFeatSelection,
-  extractClassStartingEquipment,
   getSpellcastingClassName,
   parseStartingEquipmentOptions,
 } from "@/views/character-creator/utils/CharacterCreatorUtils";
@@ -23,6 +21,8 @@ import {
   getGrowthChoiceSelectedAbility,
 } from "@/views/character-creator/utils/GrowthChoiceUtils";
 import { migrateClassFeatureChoiceKeys } from "@/views/character-creator/utils/ClassFeatureChoiceMigration";
+import { deriveCreatorSheetFacts } from "@/views/character-creator/utils/CharacterCreatorDerivedStats";
+import { parseAppliedClassFeatureEffects, parseAppliedSpeciesTraitEffects } from "@/views/character-creator/utils/CharacterCreatorClassFeatureUtils";
 import type {
   ParsedFeatDetailLike as BackgroundFeat,
 } from "@/views/character-creator/utils/FeatChoiceTypes";
@@ -57,29 +57,6 @@ import { useCharacterCreatorSubmit } from "@/views/character-creator/useCharacte
 // Main view
 // ---------------------------------------------------------------------------
 
-const FALLBACK_CLASS_HIT_DICE: Record<string, number> = {
-  barbarian: 12,
-  fighter: 10,
-  paladin: 10,
-  ranger: 10,
-  bard: 8,
-  cleric: 8,
-  druid: 8,
-  monk: 8,
-  rogue: 8,
-  warlock: 8,
-  sorcerer: 6,
-  wizard: 6,
-};
-
-function inferHitDieFromClassName(value: string | null | undefined): number | null {
-  const normalized = String(value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ");
-  for (const [className, hitDie] of Object.entries(FALLBACK_CLASS_HIT_DICE)) {
-    if (new RegExp(`\\b${className}\\b`, "i").test(normalized)) return hitDie;
-  }
-  return null;
-}
-
 function displayNameFromCompendiumId(value: string | null | undefined): string {
   const normalized = String(value ?? "")
     .replace(/^c_/, "")
@@ -91,13 +68,6 @@ function displayNameFromCompendiumId(value: string | null | undefined): string {
   return normalized.replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function inferCreatorSpeed(baseSpeed: number, className: string, level: number): number {
-  const normalizedClass = String(className ?? "").toLowerCase();
-  let speed = baseSpeed;
-  if (normalizedClass.includes("barbarian") && level >= 5) speed += 10;
-  if (normalizedClass.includes("ranger") && level >= 6) speed += 10;
-  return speed;
-}
 
 export function CharacterCreatorView() {
   const { user } = useAuth();
@@ -110,6 +80,13 @@ export function CharacterCreatorView() {
   const [form, setForm] = React.useState<FormState>(() => initForm(user, searchParams));
   const [editLoading, setEditLoading] = React.useState(isEditing);
   const [error, setError] = React.useState<string | null>(null);
+
+  // A submission error describes the form state at the moment it was thrown; once the user
+  // changes anything, that description is stale (e.g. "choose 2 weapon masteries" after they
+  // just did) and must not linger until the next submit attempt re-evaluates it.
+  React.useEffect(() => {
+    setError(null);
+  }, [form]);
 
   // Compendium data
   const [classDetail, setClassDetail] = React.useState<ClassDetail | null>(null);
@@ -137,7 +114,14 @@ export function CharacterCreatorView() {
   const [portraitFile, setPortraitFile] = React.useState<File | null>(null);
   const [portraitPreview, setPortraitPreview] = React.useState<string | null>(null);
   const portraitInputRef = React.useRef<HTMLInputElement>(null);
-  const [editSummaryFallback, setEditSummaryFallback] = React.useState<{ className: string; species: string; hitDie: number | null; hpCurrent: number | null } | null>(null);
+  const [editSummaryFallback, setEditSummaryFallback] = React.useState<{
+    className: string;
+    species: string;
+    hitDie: number | null;
+    hpCurrent: number | null;
+    extraFeatIds: string[];
+    invocationFeatIds: string[];
+  } | null>(null);
 
   // Search states for long lists (hoisted to avoid Rules-of-Hooks violations in inner fns)
   const [classSearch, setClassSearch] = React.useState("");
@@ -198,6 +182,19 @@ export function CharacterCreatorView() {
     classCantrips,
     classInvocations,
   });
+  const invocationFeatChoices = React.useMemo(
+    () => getInvocationFeatChoices(classInvocations, form.chosenInvocations, featSummaries),
+    [classInvocations, featSummaries, form.chosenInvocations],
+  );
+  const invocationGrantedFeatChoices = useInvocationGrantedFeatChoices({
+    choices: invocationFeatChoices,
+    selectedOptions: form.chosenFeatOptions,
+    level: form.level,
+  });
+  const allFeatSpellChoiceOptions = React.useMemo(
+    () => ({ ...featSpellChoiceOptions, ...invocationGrantedFeatChoices.spellOptions }),
+    [featSpellChoiceOptions, invocationGrantedFeatChoices.spellOptions],
+  );
   React.useEffect(() => {
     if (selectedClassFeatureProficiencyChoices.length === 0) return;
     const currentChoices = selectedClassFeatureProficiencyChoices.map((choice) => ({
@@ -217,7 +214,6 @@ export function CharacterCreatorView() {
     classDetail?.hd ??
     selectedClassSummary?.hd ??
     editSummaryFallback?.hitDie ??
-    inferHitDieFromClassName(effectiveClassName || form.classId) ??
     8;
 
   // Load compendium lists on mount
@@ -251,19 +247,20 @@ export function CharacterCreatorView() {
       }));
     }
     setClassFeatDetails({});
-    fetchClassDetailV2<ClassDetail>(form.classId).then(setClassDetail).catch(() => {});
+    fetchGrandClassDetail<ClassDetail>(form.classId).then(setClassDetail).catch(() => {});
   }, [form.classId, isEditing]);
 
   // Load spell lists once classDetail is known
   React.useEffect(() => {
     if (!classDetail) { setClassCantrips([]); setClassSpells([]); setClassInvocations([]); return; }
     const spellcastingClassName = getSpellcastingClassName(classDetail, form.level, form.subclass) ?? classDetail.name;
-    const name = encodeURIComponent(spellcastingClassName);
+    const spellAccessId = Object.entries(classDetail.spellLists ?? {}).find(([, label]) => label === spellcastingClassName)?.[0];
+    const name = encodeURIComponent(spellAccessId ?? spellcastingClassName);
     api<SpellSummary[]>(`/api/spells/search?classes=${name}&level=0&limit=120&includeText=1&lite=1&excludeSpecial=1`).then(setClassCantrips).catch(() => {});
     api<SpellSummary[]>(`/api/spells/search?classes=${name}&minLevel=1&maxLevel=9&limit=220&includeText=1&compact=1&lite=1&excludeSpecial=1`).then(setClassSpells).catch(() => {});
-    // Eldritch Invocations live in their own spell list
+    // Eldritch Invocations are ClassTalents, not spells.
     if (/warlock/i.test(classDetail.name)) {
-      api<SpellSummary[]>("/api/spells/search?classes=Eldritch+Invocations&limit=150&includeText=1&lite=1").then(setClassInvocations).catch(() => {});
+      api<SpellSummary[]>("/api/class-talents/search?kind=invocation&limit=150&includeText=1").then(setClassInvocations).catch(() => {});
     } else {
       setClassInvocations([]);
     }
@@ -284,7 +281,7 @@ export function CharacterCreatorView() {
       }));
     }
     setRaceFeatDetail(null);
-    fetchRaceDetailV2<RaceDetail>(form.raceId).then(setRaceDetail).catch(() => {});
+    fetchGrandSpeciesDetail<RaceDetail>(form.raceId).then(setRaceDetail).catch(() => {});
   }, [form.raceId, isEditing]);
 
   useCharacterCreatorFeatDetails({
@@ -305,7 +302,7 @@ export function CharacterCreatorView() {
     levelUpFeatLevels,
     step6SpellListChoices,
     step6ResolvedSpellChoices,
-    featSpellChoiceOptions,
+    featSpellChoiceOptions: allFeatSpellChoiceOptions,
     growthChoiceDefinitions,
     growthOptionEntriesByKey,
     preparedSpellProgressionChoiceDefinitions,
@@ -333,7 +330,7 @@ export function CharacterCreatorView() {
         bgAbilityBonuses: {},
       }));
     }
-    fetchBackgroundDetailV2<BgDetail>(form.bgId).then(setBgDetail).catch(() => {});
+    fetchGrandBackgroundDetail<BgDetail>(form.bgId).then(setBgDetail).catch(() => {});
   }, [form.bgId, isEditing]);
 
   // Auto-select directly-granted background feats (e.g. Charlatan → Skilled)
@@ -367,7 +364,7 @@ export function CharacterCreatorView() {
   // Auto-select the first equipment option when bgDetail loads
   React.useEffect(() => {
     if (!bgDetail?.equipment) return;
-    const options = parseStartingEquipmentOptions(bgDetail.equipment, bgDetail.equipmentOptions);
+    const options = parseStartingEquipmentOptions(bgDetail.equipmentOptions);
     if (options.length > 0) {
       setForm(f => f.chosenBgEquipmentOption ? f : { ...f, chosenBgEquipmentOption: options[0].id });
     }
@@ -376,8 +373,7 @@ export function CharacterCreatorView() {
   // Auto-select the first equipment option when classDetail loads
   React.useEffect(() => {
     if (!classDetail) return;
-    const text = extractClassStartingEquipment(classDetail);
-    const options = parseStartingEquipmentOptions(text);
+    const options = parseStartingEquipmentOptions(classDetail.equipmentOptions);
     if (options.length > 0) {
       setForm(f => f.chosenClassEquipmentOption ? f : { ...f, chosenClassEquipmentOption: options[0].id });
     }
@@ -388,15 +384,22 @@ export function CharacterCreatorView() {
     const hd = effectiveHitDie;
     const scores = resolvedScores(form, selectedFeatAbilityBonuses);
     const conMod = abilityMod(scores.con ?? 10);
-    const dexMod = abilityMod(scores.dex ?? 10);
     const hp = calcHpMax(hd, form.level, conMod);
-    const ac = 10 + dexMod;
     const baseSpeed = raceDetail?.speed ?? races.find((race) => race.id === form.raceId)?.speed ?? 30;
+    const classFeatureEffects = parseAppliedClassFeatureEffects(classDetail, form.level, form.subclass, form.chosenOptionals);
+    const speciesTraitEffects = parseAppliedSpeciesTraitEffects(raceDetail);
+    const { ac, speed } = deriveCreatorSheetFacts({
+      baseSpeed,
+      level: form.level,
+      scores,
+      classFeatureEffects,
+      speciesTraitEffects,
+    });
     const hpStr = String(hp);
     const acStr = String(ac);
-    const speedStr = String(inferCreatorSpeed(baseSpeed, effectiveClassName, form.level));
+    const speedStr = String(speed);
     setForm((f) => (f.hpMax === hpStr && f.ac === acStr && f.speed === speedStr ? f : { ...f, hpMax: hpStr, ac: acStr, speed: speedStr }));
-  }, [effectiveHitDie, effectiveClassName, raceDetail, races, form, resolvedRaceFeatDetail?.name, resolvedBgOriginFeatDetail?.name, featSummaries, selectedClassFeatDetails, selectedFeatAbilityBonuses, levelUpFeatDetails, bgDetail?.proficiencies?.feats, bgDetail?.traits]);
+  }, [effectiveHitDie, effectiveClassName, classDetail, raceDetail, races, form, resolvedRaceFeatDetail?.name, resolvedBgOriginFeatDetail?.name, featSummaries, selectedClassFeatDetails, selectedFeatAbilityBonuses, levelUpFeatDetails, bgDetail?.proficiencies?.feats, bgDetail?.traits]);
 
   function set<K extends keyof FormState>(key: K, val: FormState[K]) {
     setForm((f) => ({ ...f, [key]: val }));
@@ -413,7 +416,7 @@ export function CharacterCreatorView() {
     resolvedBgOriginFeatDetail,
     classFeatDetails,
     levelUpFeatDetails,
-    featSpellChoiceOptions,
+    featSpellChoiceOptions: allFeatSpellChoiceOptions,
     growthOptionEntriesByKey,
     classCantrips,
     classSpells,
@@ -423,6 +426,8 @@ export function CharacterCreatorView() {
     fallbackHitDie: effectiveHitDie,
     fallbackSpecies: effectiveRaceName || null,
     existingHpCurrent: editSummaryFallback?.hpCurrent ?? null,
+    existingExtraFeatIds: editSummaryFallback?.extraFeatIds ?? [],
+    existingInvocationFeatIds: editSummaryFallback?.invocationFeatIds ?? [],
     editId,
     portraitFile,
     initialCampaignIdsRef,
@@ -437,8 +442,13 @@ export function CharacterCreatorView() {
       setStep(7);
       return;
     }
+    if (!invocationGrantedFeatChoices.valid) {
+      setError("Complete every choice for the Origin Feat granted by your Invocation before saving.");
+      setStep(7);
+      return;
+    }
     await handleSubmit();
-  }, [handleSubmit, selectedFeatSpellcastingAbilityChoices]);
+  }, [handleSubmit, invocationGrantedFeatChoices.valid, selectedFeatSpellcastingAbilityChoices]);
 
   // ── Step renderers ──────────────────────────────────────────────────────────
 
@@ -476,14 +486,15 @@ export function CharacterCreatorView() {
       classCantrips,
       classSpells,
       classInvocations,
-      featSpellChoiceOptions,
+      invocationFeatChoices,
+      invocationGrantedFeatChoices,
+      featSpellChoiceOptions: allFeatSpellChoiceOptions,
       growthOptionEntriesByKey,
       items,
       campaigns,
       error,
       busy,
       isEditing,
-      parseFeatureGrants: parseFeatureGrantsFromRules,
       getStep5ChoiceState,
       step5SkillList,
       step5NumSkills,

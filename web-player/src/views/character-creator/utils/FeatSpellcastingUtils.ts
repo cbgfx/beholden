@@ -13,15 +13,6 @@ function normalizeSpellNameKey(value: string | null | undefined): string {
     .replace(/\s+/g, " ");
 }
 
-const ABILITY_OPTION_LABELS = [
-  "Strength",
-  "Dexterity",
-  "Constitution",
-  "Intelligence",
-  "Wisdom",
-  "Charisma",
-] as const;
-
 function toAbilityKey(value: string | null | undefined): AbilKey | null {
   const normalized = String(value ?? "").trim().toLowerCase();
   if (!normalized) return null;
@@ -34,43 +25,17 @@ function toAbilityKey(value: string | null | undefined): AbilKey | null {
   return null;
 }
 
-function parseSpellcastingAbilityOptionsFromText(text: string | null | undefined): string[] {
-  const normalized = String(text ?? "").replace(/\s+/g, " ").trim();
-  if (!normalized) return [];
-  const match = normalized.match(
-    /((?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)(?:,\s*(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma))*\s*,?\s*or\s*(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)) is your spellcasting ability for (?:this|these) spell/i
-  );
-  if (!match) return [];
-  const abilities = (match[1] ?? "")
-    .replace(/\s+or\s+/i, ", ")
-    .split(/\s*,\s*/)
-    .map((value) => value.trim())
-    .filter((value): value is typeof ABILITY_OPTION_LABELS[number] =>
-      (ABILITY_OPTION_LABELS as readonly string[]).includes(value)
-    );
-  return [...new Set(abilities)];
-}
-
 export function getFeatSpellcastingAbilityChoice(
   feat: ParsedFeatDetailLike,
 ): ParsedFeatChoiceLike | null {
   const parsedChoiceId = feat.parsed.spellcastingAbilityFromChoiceId;
   if (parsedChoiceId) {
     const parsedChoice = (feat.parsed.choices ?? []).find(
-      (choice) => choice.id === parsedChoiceId && choice.type === "ability_score"
+      (choice) => choice.id === parsedChoiceId && (choice.type === "ability_score" || choice.type === "spellcasting_ability")
     );
     if (parsedChoice) return parsedChoice;
   }
-
-  const options = parseSpellcastingAbilityOptionsFromText(feat.text);
-  if (options.length < 2) return null;
-  return {
-    id: "spellcasting_ability",
-    type: "ability_score",
-    count: 1,
-    options,
-    note: "Choose the spellcasting ability for spells granted by this feat.",
-  };
+  return null;
 }
 
 function resolveFeatSpellcastingAbility(args: {

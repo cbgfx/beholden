@@ -3,7 +3,6 @@ import {
   inferStackKey,
   isStackableItem,
   mergeStackedInventoryItem,
-  parsePackContentsFromDescription,
 } from "@/views/character/CharacterInventoryPanelHelpers";
 import type { InventoryItem } from "@/views/character/CharacterInventory";
 
@@ -19,16 +18,6 @@ function item(overrides: Partial<InventoryItem>): InventoryItem {
 }
 
 describe("inventory add-item helpers", () => {
-  it("expands pack descriptions without nesting the backpack itself", () => {
-    expect(parsePackContentsFromDescription(
-      "This pack contains the following items: a Backpack, 10 Torches, 10 days of Rations, and a Waterskin."
-    )).toEqual([
-      { name: "Torch", quantity: 10 },
-      { name: "Ration", quantity: 10 },
-      { name: "Waterskin", quantity: 1 },
-    ]);
-  });
-
   it("stacks ordinary supplies but not weapons or armor", () => {
     expect(isStackableItem(item({ name: "Potion of Healing", type: "Potion" }))).toBe(true);
     expect(isStackableItem(item({ name: "Dagger", type: "Melee Weapon", dmg1: "1d4" }))).toBe(false);

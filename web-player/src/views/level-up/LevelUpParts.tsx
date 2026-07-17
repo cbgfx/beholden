@@ -4,6 +4,7 @@ import { abilityMod, formatModifier } from "@/views/character/CharacterSheetUtil
 import { normalizeChoiceKey } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import { ABILITY_KEYS, ABILITY_LABELS } from "@/views/character-creator/constants/CharacterCreatorConstants";
 import type { HpChoice } from "@/views/level-up/LevelUpTypes";
+import type { FeatPrerequisite } from "@/views/character/CharacterSheetUtils";
 
 export { FeatSelectionSection } from "./LevelUpFeatSelectionSection";
 
@@ -12,12 +13,16 @@ export interface LevelUpSpellSummary {
   name: string;
   level?: number | null;
   text?: string | null;
+  /** Typed ClassTalent prerequisite (invocations) — rendered from the record, never parsed from prose. */
+  prerequisite?: import("@/views/character/CharacterSheetUtils").ClassTalentPrerequisite | null;
+  repeatable?: boolean;
 }
 
 export interface LevelUpFeatDetail {
   id: string;
   name: string;
   text?: string | null;
+  parsed: { prerequisite?: FeatPrerequisite | null; repeatable?: boolean };
 }
 
 export interface LevelUpExpertiseChoice {

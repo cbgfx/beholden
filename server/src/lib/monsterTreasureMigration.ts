@@ -1,5 +1,5 @@
 import type { Db } from "./db.js";
-import { condenseTreasureText } from "../services/compendium/nativeCompendiumV2.monster.js";
+import { condenseTreasureText } from "../services/compendium/grandCompendium.monster.js";
 
 /**
  * Self-healing startup fixup: monsters used to store their "Treasure" hoard-hint text as just

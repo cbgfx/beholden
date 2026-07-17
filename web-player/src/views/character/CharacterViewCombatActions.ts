@@ -14,6 +14,22 @@ import type { CharacterData, ConditionInstance, ResourceCounter } from "@/views/
 import { toggleConditionInstance } from "@/views/character/CharacterConditions";
 import type { CompendiumMonsterRow } from "@/lib/monsterPicker/types";
 import { getLongRestOverrides, getLongRestRecovery } from "@/views/character/CharacterRestRecovery";
+import { recoverItemCharges } from "@/views/character/CharacterInventory";
+import { parseFeatureEffects } from "@/domain/character/parseFeatureEffects";
+
+/** True when a species trait grants the well-known "heroic_inspiration" resource (e.g. Human's
+ * Resourceful) — read from the trait's own structured effects, never from its name. */
+function hasHeroicInspirationGrant(raceDetail: RaceFeatureDetail | null): boolean {
+  return (raceDetail?.traits ?? []).some((trait) => {
+    if (!trait.effects?.length) return false;
+    const parsed = parseFeatureEffects({
+      source: { id: `combat-actions:${trait.name}`, kind: "species", name: trait.name, text: trait.text },
+      text: trait.text,
+      traitEffects: trait.effects,
+    });
+    return parsed.effects.some((effect) => effect.type === "resource_grant" && effect.resourceKey === "heroic_inspiration");
+  });
+}
 
 export function buildCharacterRuntimeActions(args: {
   char: Character;
@@ -186,8 +202,8 @@ export function buildCharacterRuntimeActions(args: {
     const recovery = getLongRestRecovery(hitDiceMax, currentCharacterData.exhaustion ?? 0);
     const slotsReset = classDetail?.slotsReset ?? "L";
     const nextUsedSpellSlots = /S/i.test(slotsReset) ? (currentCharacterData.usedSpellSlots ?? {}) : {};
-    const nextInventory = (inventory ?? []).map((item) => ((item.chargesMax ?? 0) > 0 ? { ...item, charges: item.chargesMax } : item));
-    const hasResourceful = raceDetail?.traits?.some((trait) => /^resourceful$/i.test(trait.name)) ?? false;
+    const nextInventory = (inventory ?? []).map((item) => recoverItemCharges(item));
+    const hasResourceful = hasHeroicInspirationGrant(raceDetail);
     const nextOverrides = getLongRestOverrides(Boolean(overrides.inspiration), hasResourceful);
 
     await putMyCharacter(char.id, {
@@ -343,7 +359,9 @@ export function buildCharacterRuntimeActions(args: {
     try {
       let characterPatch: CharacterData = {};
       if (key === "rage" && !has) {
-        if (!/barbarian/i.test(String(char.className ?? ""))) return;
+        // No class-name check needed: only a character whose class actually grants a Rage
+        // resource (via the compendium's per-level resources table — see collectClassResources)
+        // will ever have one here, regardless of what their class is named.
         const rageResource = classResourcesWithSpellCasts.find((resource) => /^rage$/i.test(resource.name) || resource.key === "rage");
         if (!rageResource || rageResource.current <= 0) return;
         const nextResources = classResourcesWithSpellCasts.map((resource) =>

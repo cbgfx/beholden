@@ -14,9 +14,7 @@ type MonsterActionEntry = {
 };
 
 function isAttackAction(a: MonsterActionEntry): boolean {
-  if (a?.attack) return true;
-  const text = Array.isArray(a?.text) ? a.text.map(String).join(" ") : String(a?.text ?? "");
-  return /\bto\s+hit\b/i.test(text);
+  return Boolean(a?.attack && typeof a.attack === "object" && !Array.isArray(a.attack));
 }
 
 function parseAttackDefaults(a: MonsterActionEntry): { toHit?: number; damage?: string } {
@@ -26,35 +24,12 @@ function parseAttackDefaults(a: MonsterActionEntry): { toHit?: number; damage?: 
     const damage = String(attack.damage ?? "").replace(/\s+/g, "");
     return { toHit: Number.isFinite(toHit) ? toHit : undefined, damage: damage || undefined };
   }
-  if (typeof a?.attack === "string") {
-    const parts = a.attack.split(/\|\|?/);
-    if (parts.length >= 3) {
-      const ht = parseInt(parts[1].trim(), 10);
-      const dmg = parts[2].trim();
-      return { toHit: Number.isFinite(ht) ? ht : undefined, damage: dmg || undefined };
-    }
-  }
-  const text = Array.isArray(a?.text) ? a.text.map(String).join(" ") : String(a?.text ?? "");
-  const hitMatch = text.match(/(?:Attack Roll:\s*|)([+-]?\d+)(?:\s+to\s+hit|\s*,)/i);
-  const toHit = hitMatch ? parseInt(hitMatch[1], 10) : undefined;
-  const dmgMatch = text.match(/\bHit:\s+\d+\s*\(([^)]+)\)/i);
-  const damage = dmgMatch ? dmgMatch[1].replace(/\s+/g, "") : undefined;
-  return { toHit: toHit !== undefined && Number.isFinite(toHit) ? toHit : undefined, damage };
+  return {};
 }
 
 function fmtToHit(n: number | undefined): string {
   if (n == null) return "+0";
   return n >= 0 ? `+${n}` : String(n);
-}
-
-function parseLegendaryCount(intro: string | null): number {
-  if (!intro) return 3;
-  const m = intro.match(/can take (\d+) legendary/i);
-  if (m) {
-    const n = parseInt(m[1], 10);
-    if (n > 0) return n;
-  }
-  return 3;
 }
 
 function LegendaryDots({
@@ -202,7 +177,7 @@ export function MonsterActions(props: {
     [legendaryRaw]
   );
 
-  const legendaryCount = React.useMemo(() => parseLegendaryCount(legendaryIntro), [legendaryIntro]);
+  const legendaryCount = props.monster.legendaryUses ?? 3;
   const showLegendary = Boolean(legendaryIntro) || legendary.length > 0;
 
   return (

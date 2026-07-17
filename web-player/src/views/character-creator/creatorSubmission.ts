@@ -14,7 +14,8 @@ import type {
 } from "@/views/character-creator/utils/FeatChoiceTypes";
 import { buildAppliedCharacterFeatures } from "@/domain/character/characterFeatures";
 import { normalizeSpellTrackingKey } from "@/views/character/CharacterSheetUtils";
-import { finalizeDerivedSheetSummaries } from "@/views/home/PlayerHomeUtils";
+import { deriveCreatorSheetFacts } from "@/views/character-creator/utils/CharacterCreatorDerivedStats";
+import { parseAppliedClassFeatureEffects, parseAppliedSpeciesTraitEffects } from "@/views/character-creator/utils/CharacterCreatorClassFeatureUtils";
 import {
   deriveFeatGrantedAbilityBonuses,
   deriveTotalFeatAbilityBonuses,
@@ -25,6 +26,8 @@ import { buildProficiencyMap as buildProficiencyMapFromUtils } from "@/views/cha
 import { getPreparedSpellCount } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import { buildCreatorStartingInventory } from "@/views/character-creator/creatorSubmissionInventory";
 import { deriveFeatHitPointMaxBonus } from "@/domain/character/featEffects";
+import { appendMissingFeatureNotes } from "@/domain/character/featureNoteTemplates";
+import { reconcileInvocationExtraFeatIds } from "@/domain/character/invocationFeatChoices";
 
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
 
@@ -32,38 +35,9 @@ function optionalText(value: string | undefined): string {
   return (value ?? "").trim();
 }
 
-const FALLBACK_CLASS_HIT_DICE: Record<string, number> = {
-  barbarian: 12,
-  fighter: 10,
-  paladin: 10,
-  ranger: 10,
-  artificer: 8,
-  bard: 8,
-  cleric: 8,
-  druid: 8,
-  monk: 8,
-  rogue: 8,
-  warlock: 8,
-  sorcerer: 6,
-  wizard: 6,
-};
-
 function positiveIntOrNull(value: unknown): number | null {
   const parsed = Math.round(Number(value));
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
-
-function inferHitDieFromClass(...values: unknown[]): number | null {
-  for (const value of values) {
-    const normalized = String(value ?? "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, " ")
-      .trim();
-    if (!normalized) continue;
-    const match = Object.entries(FALLBACK_CLASS_HIT_DICE).find(([className]) => normalized.includes(className));
-    if (match) return match[1];
-  }
-  return null;
 }
 
 export async function buildCreatorSubmissionBody(args: {
@@ -88,6 +62,8 @@ export async function buildCreatorSubmissionBody(args: {
   fallbackHitDie?: number | null;
   fallbackSpecies?: string | null;
   existingHpCurrent?: number | null;
+  existingExtraFeatIds: string[];
+  existingInvocationFeatIds: string[];
   classifyFeatSelection: (
     choice: ParsedFeatChoice<string>,
     value: string,
@@ -115,6 +91,8 @@ export async function buildCreatorSubmissionBody(args: {
     fallbackHitDie,
     fallbackSpecies,
     existingHpCurrent,
+    existingExtraFeatIds,
+    existingInvocationFeatIds,
     classifyFeatSelection,
   } = args;
 
@@ -129,6 +107,15 @@ export async function buildCreatorSubmissionBody(args: {
       && typeof entry?.featId === "string"
       && entry.featId.trim().length > 0,
   );
+  const selectedInvocationIds = new Set(form.chosenInvocations);
+  const invocationFeatIds = Array.from(new Set(classInvocations
+    .filter((invocation) => selectedInvocationIds.has(invocation.id))
+    .flatMap((invocation) => (invocation.effects ?? []).flatMap((rawEffect) => {
+      const effect = rawEffect as Record<string, unknown>;
+      if (effect.type !== "feat_choice" || effect.mode !== "learn") return [];
+      const choiceId = String(effect.choiceId ?? "").trim();
+      return choiceId ? (form.chosenFeatOptions[`invocation:${choiceId}`] ?? []) : [];
+    }))));
   const selectedFeatIds = Array.from(
     new Set(
       [
@@ -136,8 +123,14 @@ export async function buildCreatorSubmissionBody(args: {
         bgFeatId,
         ...classFeatEntries.map(([, featId]) => featId.trim()),
         ...levelUpFeatEntries.map((entry) => entry.featId.trim()),
+        ...invocationFeatIds,
       ].filter(Boolean),
     ),
+  );
+  const submittedExtraFeatIds = reconcileInvocationExtraFeatIds(
+    existingExtraFeatIds,
+    existingInvocationFeatIds,
+    invocationFeatIds,
   );
 
   const submitFeatDetailById = new Map<string, FeatDetail<ParsedFeatChoice<string>>>(
@@ -187,6 +180,10 @@ export async function buildCreatorSubmissionBody(args: {
     const detail = submitFeatDetailById.get(featId);
     return detail ? [{ level, featId, feat: detail } satisfies LevelUpFeatDetail] : [];
   });
+  const submitInvocationFeatDetails = invocationFeatIds.flatMap((featId) => {
+    const detail = submitFeatDetailById.get(featId);
+    return detail ? [detail] : [];
+  });
   const submitFeatGrantedAbilityBonuses = deriveFeatGrantedAbilityBonuses({
     bgOriginFeatDetail: submitBgOriginFeatDetail,
     raceFeatDetail: submitRaceFeatDetail,
@@ -221,6 +218,7 @@ export async function buildCreatorSubmissionBody(args: {
       .filter(Boolean),
     levelUpFeatDetails: submitLevelUpFeatDetails,
     invocationDetails: [],
+    extraFeatDetails: submitInvocationFeatDetails,
   }).map((feature) => feature.name);
   const startingInventory = await buildCreatorStartingInventory({
     form,
@@ -236,19 +234,28 @@ export async function buildCreatorSubmissionBody(args: {
   const hitDie =
     positiveIntOrNull(classDetail?.hd)
     ?? positiveIntOrNull(selectedClassSummary?.hd)
-    ?? positiveIntOrNull(fallbackHitDie)
-    ?? inferHitDieFromClass(className, form.classId);
+    ?? positiveIntOrNull(fallbackHitDie);
+  if (hitDie == null) throw new Error(`Class ${form.classId || className} has no canonical hit die.`);
   const featHpMaxBonus = deriveFeatHitPointMaxBonus([
     submitRaceFeatDetail,
     submitBgOriginFeatDetail,
     ...Object.values(submitClassFeatDetails),
     ...submitLevelUpFeatDetails.map(({ feat }) => feat),
+    ...submitInvocationFeatDetails,
   ], form.level);
   const effectiveHpMax = hpMax + featHpMaxBonus;
   const preservedHpCurrent =
     isEditing && Number.isFinite(Number(existingHpCurrent))
       ? Math.max(0, Math.min(Number(existingHpCurrent), effectiveHpMax))
       : effectiveHpMax;
+  const initialFeatureNotes = !isEditing && classDetail
+    ? appendMissingFeatureNotes([], classDetail.autolevels
+        .filter((entry) => entry.level <= form.level)
+        .flatMap((entry) => entry.features)
+        .filter((feature) => !feature.subclass || feature.subclass === form.subclass)
+        .filter((feature) => !feature.optional || form.chosenOptionals.includes(feature.name))
+        .map((feature) => feature.noteTemplate))
+    : [];
 
   const body = {
     name: form.characterName.trim(),
@@ -296,6 +303,7 @@ export async function buildCreatorSubmissionBody(args: {
       chosenRaceTools: form.chosenRaceTools,
       chosenRaceFeatId: form.chosenRaceFeatId,
       chosenRaceSize: form.chosenRaceSize,
+      chosenRaceSpellAbility: form.chosenRaceSpellAbility,
       chosenBgOriginFeatId: form.chosenBgOriginFeatId,
       chosenSkills: form.chosenSkills,
       chosenClassLanguages: form.chosenClassLanguages,
@@ -315,6 +323,8 @@ export async function buildCreatorSubmissionBody(args: {
             .map(normalizeSpellTrackingKey)
           : undefined,
       chosenInvocations: form.chosenInvocations,
+      ...((isEditing || submittedExtraFeatIds.length > 0) ? { extraFeatIds: submittedExtraFeatIds } : {}),
+      ...(initialFeatureNotes.length > 0 ? { playerNotesList: initialFeatureNotes } : {}),
       ...(startingInventory ? { inventory: startingInventory } : {}),
       proficiencies: buildProficiencyMapFromUtils({
         form,
@@ -328,6 +338,7 @@ export async function buildCreatorSubmissionBody(args: {
         raceFeatDetail: submitRaceFeatDetail,
         classFeatDetails: submitClassFeatDetails,
         levelUpFeatDetails: submitLevelUpFeatDetails,
+        extraFeatDetails: submitInvocationFeatDetails,
         spellChoiceOptionsByKey: featSpellChoiceOptions,
         itemChoiceOptionsByKey: growthOptionEntriesByKey,
       }),
@@ -335,7 +346,13 @@ export async function buildCreatorSubmissionBody(args: {
   };
 
   if (!isEditing || startingInventory) {
-    const finalized = finalizeDerivedSheetSummaries(body as Record<string, unknown>, body.characterData as Record<string, unknown>);
+    const finalized = deriveCreatorSheetFacts({
+      baseSpeed: raceDetail?.speed ?? (Number(form.speed) || 30),
+      level: form.level,
+      scores,
+      classFeatureEffects: parseAppliedClassFeatureEffects(classDetail, form.level, form.subclass, form.chosenOptionals),
+      speciesTraitEffects: parseAppliedSpeciesTraitEffects(raceDetail),
+    });
     body.ac = finalized.ac;
     body.speed = finalized.speed;
   }

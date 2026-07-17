@@ -12,6 +12,9 @@ import {
   statValueStyle,
 } from "../shared/CharacterCreatorStyles";
 import { PreparedSpellProgressionBlock } from "@/views/character/CharacterViewParts";
+import { parseAppliedSpeciesTraitEffects } from "../utils/CharacterCreatorClassFeatureUtils";
+import { collectDefensesFromEffects, collectSensesFromEffects } from "@/domain/character/parseFeatureEffects";
+import { titleCase } from "@/lib/format/titleCase";
 
 interface RaceSummaryLike {
   id: string;
@@ -23,9 +26,7 @@ interface RaceDetailLike {
   name: string;
   speed: number | null;
   size: string | null;
-  vision: Array<{ type: string; range: number }>;
-  resist: string | null;
-  traits: Array<{ name: string; text: string; preparedSpellProgression?: PreparedSpellProgressionTable[] }>;
+  traits: Array<{ name: string; text: string; modifier: string[]; preparedSpellProgression?: PreparedSpellProgressionTable[]; effects?: unknown[] }>;
 }
 
 interface RaceChoiceSetLike {
@@ -34,6 +35,7 @@ interface RaceChoiceSetLike {
   skillChoice: { count: number; from: string[] | null } | null;
   toolChoice: { count: number; from: string[] | null } | null;
   languageChoice: { count: number; from: string[] | null } | null;
+  spellcastingAbilityChoice: { options: string[] } | null;
 }
 
 function SourceTag({ value }: { value: string | null | undefined }) {
@@ -52,6 +54,8 @@ export function renderSpeciesStep({
   raceChoices,
   chosenRaceSize,
   selectRaceSize,
+  chosenRaceSpellAbility,
+  selectRaceSpellAbility,
   chosenRaceSkills,
   chosenRaceTools,
   chosenRaceLanguages,
@@ -78,6 +82,8 @@ export function renderSpeciesStep({
   raceChoices: RaceChoiceSetLike | null;
   chosenRaceSize: string | null;
   selectRaceSize: (size: string) => void;
+  chosenRaceSpellAbility: string | null;
+  selectRaceSpellAbility: (ability: string) => void;
   chosenRaceSkills: string[];
   chosenRaceTools: string[];
   chosenRaceLanguages: string[];
@@ -97,18 +103,26 @@ export function renderSpeciesStep({
   const skillChoice = raceChoices?.skillChoice ?? null;
   const toolChoice = raceChoices?.toolChoice ?? null;
   const languageChoice = raceChoices?.languageChoice ?? null;
+  const spellAbilityChoice = raceChoices?.spellcastingAbilityChoice ?? null;
   const missingRaceSize = Boolean(raceChoices?.hasChosenSize && !chosenRaceSize);
   const missingRaceSkills = Boolean(skillChoice && chosenRaceSkills.length < skillChoice.count);
   const missingRaceTools = Boolean(toolChoice && chosenRaceTools.length < toolChoice.count);
   const missingRaceLanguages = Boolean(languageChoice && chosenRaceLanguages.length < languageChoice.count);
   const missingRaceFeat = Boolean(raceChoices?.hasFeatChoice && !chosenRaceFeatId);
+  const missingRaceSpellAbility = Boolean(spellAbilityChoice && !chosenRaceSpellAbility);
+  // Derived from the species' own trait effects, not a separately-authored vision/resistances
+  // field — one fact, one home (COMPENDIUM_VALIDATION.md's schema tenets).
+  const raceTraitEffects = raceDetail ? parseAppliedSpeciesTraitEffects(raceDetail) : [];
+  const derivedSenses = collectSensesFromEffects(raceTraitEffects);
+  const derivedResistances = collectDefensesFromEffects(raceTraitEffects).resistances;
   const nextDisabled =
     !selectedRaceId
     || missingRaceSize
     || missingRaceSkills
     || missingRaceTools
     || missingRaceLanguages
-    || missingRaceFeat;
+    || missingRaceFeat
+    || missingRaceSpellAbility;
 
   const main = (
     <div>
@@ -167,8 +181,39 @@ export function renderSpeciesStep({
         </>
       )}
 
-      {raceDetail && raceChoices && (raceChoices.hasChosenSize || skillChoice || toolChoice || languageChoice || raceChoices.hasFeatChoice) && (
+      {raceDetail && raceChoices && (raceChoices.hasChosenSize || skillChoice || toolChoice || languageChoice || raceChoices.hasFeatChoice || spellAbilityChoice) && (
         <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 18 }}>
+          {spellAbilityChoice && (
+            <div>
+              <div style={{ ...labelStyle, marginBottom: 8 }}>Spellcasting Ability <SourceTag value={raceDetail.name} /></div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {spellAbilityChoice.options.map((ability) => {
+                  const sel = chosenRaceSpellAbility === ability;
+                  return (
+                    <button
+                      key={ability}
+                      type="button"
+                      onClick={() => selectRaceSpellAbility(ability)}
+                      style={{
+                        padding: "6px 16px",
+                        borderRadius: 6,
+                        fontSize: "var(--fs-subtitle)",
+                        cursor: "pointer",
+                        border: `1px solid ${sel ? C.accentHl : "rgba(255,255,255,0.12)"}`,
+                        background: sel ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
+                        color: sel ? C.accentHl : C.text,
+                        fontWeight: sel ? 700 : 400,
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {ability}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {raceChoices.hasChosenSize && (
             <div>
               <div style={{ ...labelStyle, marginBottom: 8 }}>Size <SourceTag value={raceDetail.name} /></div>
@@ -360,8 +405,8 @@ export function renderSpeciesStep({
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 10 }}>
         {raceDetail.speed != null && <div><div style={statLabelStyle}>Speed</div><div style={statValueStyle}>{raceDetail.speed} ft</div></div>}
         {raceDetail.size && <div><div style={statLabelStyle}>Size</div><div style={statValueStyle}>{raceDetail.size}</div></div>}
-        {raceDetail.vision.length > 0 && <div><div style={statLabelStyle}>Vision</div><div style={statValueStyle}>{raceDetail.vision.map((v) => `${v.type} ${v.range}ft`).join(", ")}</div></div>}
-        {raceDetail.resist && <div><div style={statLabelStyle}>Resist</div><div style={statValueStyle}>{raceDetail.resist}</div></div>}
+        {derivedSenses.length > 0 && <div><div style={statLabelStyle}>Vision</div><div style={statValueStyle}>{derivedSenses.map((s) => `${titleCase(s.kind)} ${s.range}ft`).join(", ")}</div></div>}
+        {derivedResistances.length > 0 && <div><div style={statLabelStyle}>Resist</div><div style={statValueStyle}>{derivedResistances.join(", ")}</div></div>}
       </div>
       {raceDetail.traits.map((t) => (
         <div key={t.name} style={{ marginBottom: 8 }}>

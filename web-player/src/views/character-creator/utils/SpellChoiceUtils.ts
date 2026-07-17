@@ -3,20 +3,16 @@ export interface SharedSpellSummary {
   name: string;
   level?: number | null;
   text?: string | null;
+  rolls?: Array<{ effect?: string | string[] | null }>;
+  check?: string | string[] | null;
 }
 
-function spellLooksLikeDamageSpell(spell: { name?: string | null; text?: string | null }): boolean {
-  const text = String(spell.text ?? "");
-  const name = String(spell.name ?? "");
-  return /\bdeal(?:s|ing)?\b.*\bdamage\b/i.test(text)
-    || /\btakes?\b.*\bdamage\b/i.test(text)
-    || /\b\d+d\d+\b/.test(text)
-    || /eldritch blast|poison spray|fire bolt|ray of frost|chill touch|sacred flame|acid splash|mind sliver|toll the dead|vicious mockery|word of radiance|primal savagery|thorn whip|shocking grasp/i.test(name);
+function spellLooksLikeDamageSpell(spell: SharedSpellSummary): boolean {
+  return (spell.rolls ?? []).some((roll) => Array.isArray(roll.effect) || (roll.effect && roll.effect !== "healing" && roll.effect !== "temp_hp"));
 }
 
-function spellUsesAttackRoll(spell: { text?: string | null }): boolean {
-  const text = String(spell.text ?? "");
-  return /spell attack|ranged spell attack|melee spell attack|make a ranged attack|make a melee attack/i.test(text);
+function spellUsesAttackRoll(spell: SharedSpellSummary & { check?: string | string[] | null }): boolean {
+  return (Array.isArray(spell.check) ? spell.check : [spell.check]).includes("attack");
 }
 
 export interface SharedSpellListChoiceEntry {
@@ -41,6 +37,13 @@ export interface SharedResolvedSpellChoiceEntry {
   listNames: string[];
   schools?: string[];
   ritualOnly?: boolean;
+  damageOnly?: boolean;
+  attackOnly?: boolean;
+  allowedSpellIds?: string[];
+  /** Set when the choice picks ClassTalents rather than spells (maneuvers, metamagic,
+   * invocations). Routes option loading to the talent catalog by this typed kind —
+   * never inferred from list names, titles, or source-label prose. */
+  talentKind?: "invocation" | "maneuver" | "metamagic";
 }
 
 export interface SharedSpellChoiceLike {
@@ -49,6 +52,10 @@ export interface SharedSpellChoiceLike {
   countFrom?: "proficiency_bonus" | null;
   options: string[] | null;
   level?: number | null;
+  /** Typed "at or below" level cap — mutually exclusive with `level`. */
+  maxLevel?: number | null;
+  /** Typed Ritual-tag requirement. */
+  ritual?: true | null;
   linkedTo?: string | null;
   dependsOnChoiceId?: string | null;
   dependencyKind?: "spell_list" | "ability_score" | "replacement" | null;
@@ -73,21 +80,6 @@ function choiceCountAtLevel(choice: { count: number; countFrom?: "proficiency_bo
   return Math.max(0, Number(choice.count ?? 0) || 0);
 }
 
-function inferSpellListFromSourceLabel(sourceLabel: string | null | undefined, options?: string[] | null): string | null {
-  if (!sourceLabel) return null;
-
-  const allowed = new Set(options ?? Array.from(FEAT_SPELL_LIST_NAMES));
-  const parenMatches = Array.from(sourceLabel.matchAll(/\(([^)]+)\)/g))
-    .map((match) => match[1]?.trim())
-    .filter(Boolean) as string[];
-
-  for (const candidate of parenMatches) {
-    if (allowed.has(candidate)) return candidate;
-  }
-
-  return null;
-}
-
 export function buildSpellListChoiceEntry(args: {
   key: string;
   choice: SharedSpellChoiceLike;
@@ -95,12 +87,12 @@ export function buildSpellListChoiceEntry(args: {
   sourceLabel?: string | null;
 }): SharedSpellListChoiceEntry {
   const { key, choice, level, sourceLabel } = args;
-  const options = choice.options ?? [];
-  const inferred = inferSpellListFromSourceLabel(sourceLabel, options);
+  // Spell-list options are typed facts on the choice itself — a named feat variant
+  // (e.g. Magic Initiate (Cleric)) constrains its own `options`, never its display label.
   return {
     key,
     count: choiceCountAtLevel(choice, level),
-    options: inferred ? [inferred] : options,
+    options: choice.options ?? [],
     sourceLabel,
   };
 }
@@ -118,12 +110,7 @@ export function buildResolvedSpellChoiceEntry(args: {
   const schools = directOptions.filter((name) => !FEAT_SPELL_LIST_NAMES.has(name));
   const effectiveLinkedChoiceKey = linkedChoiceKey ?? (choice.dependsOnChoiceId ? key.replace(`:${choice.id}`, `:${choice.dependsOnChoiceId}`) : null);
   const listNames = effectiveLinkedChoiceKey
-    ? (() => {
-        const selected = (chosenOptions[effectiveLinkedChoiceKey] ?? []).filter((name) => FEAT_SPELL_LIST_NAMES.has(name));
-        if (selected.length > 0) return selected;
-        const inferred = inferSpellListFromSourceLabel(sourceLabel);
-        return inferred ? [inferred] : [];
-      })()
+    ? (chosenOptions[effectiveLinkedChoiceKey] ?? []).filter((name) => FEAT_SPELL_LIST_NAMES.has(name))
     : directOptions.filter((name) => FEAT_SPELL_LIST_NAMES.has(name));
 
   return {
@@ -132,6 +119,7 @@ export function buildResolvedSpellChoiceEntry(args: {
     sourceLabel,
     count: choiceCountAtLevel(choice, level),
     level: choice.level ?? null,
+    maxLevel: choice.maxLevel ?? null,
     note: choice.note,
     linkedTo: effectiveLinkedChoiceKey ?? null,
     dependsOnChoiceId: choice.dependsOnChoiceId ?? choice.linkedTo ?? null,
@@ -139,7 +127,8 @@ export function buildResolvedSpellChoiceEntry(args: {
     replacementFor: choice.replacementFor ?? null,
     listNames,
     schools: schools.length > 0 ? schools : undefined,
-    ritualOnly: /ritual tag/i.test(choice.note ?? ""),
+    // Typed facts only: `ritual` and `maxLevel` are stored on the choice, never sniffed from `note`.
+    ritualOnly: choice.ritual === true,
   };
 }
 
@@ -175,12 +164,13 @@ export async function loadSpellChoiceOptions(
 
   const entries = await Promise.all(
     choices.map(async (choice) => {
-      const requiresText = /deals damage/i.test(choice.note ?? "");
-      const isManeuverChoice =
-        choice.listNames.some((listName) => /maneuver options/i.test(String(listName ?? "")))
-        || /maneuver/i.test(String(choice.title ?? ""))
-        || /maneuver/i.test(String(choice.sourceLabel ?? ""));
-      const includeText = (options?.forceIncludeText ?? false) || requiresText || isManeuverChoice;
+      // ClassTalent choices (maneuvers/metamagic/invocations) carry a typed `talentKind`
+      // and read the talent catalog directly — no spell-list plumbing, no name filtering.
+      if (choice.talentKind) {
+        const talents = await fetchSpells(`/api/class-talents/search?kind=${choice.talentKind}&limit=150&includeText=1`).catch(() => []);
+        return [choice.key, talents.slice().sort((a, b) => a.name.localeCompare(b.name))] as const;
+      }
+      const includeText = options?.forceIncludeText ?? false;
       const groups = await Promise.all(
         choice.listNames.map(async (listName) => {
           const encoded = encodeURIComponent(listName);
@@ -196,11 +186,12 @@ export async function loadSpellChoiceOptions(
               includeText,
             })).catch(() => []);
           }
-          if (typeof choice.level === "number" && /\bat or below\b/i.test(choice.note ?? "")) {
+          // A typed `maxLevel` means "at or below" — never sniffed from note prose.
+          if (typeof choice.maxLevel === "number" && choice.maxLevel > 0 && choice.level !== 0) {
             return fetchSpells(buildSearchQuery({
               classes: encoded,
               minLevel: 1,
-              maxLevel: choice.level,
+              maxLevel: choice.maxLevel,
               schoolQuery,
               ritualQuery,
               limit: 220,
@@ -214,19 +205,6 @@ export async function loadSpellChoiceOptions(
               schoolQuery,
               ritualQuery,
               limit: 220,
-              includeText,
-            })).catch(() => []);
-          }
-          // level is null — "any level". Honour maxLevel cap if present (e.g. capped to
-          // the character's highest available spell slot so L7–L9 spells don't appear for
-          // a L6 Bard choosing Magical Discoveries spells).
-          if (typeof choice.maxLevel === "number" && choice.maxLevel > 0) {
-            return fetchSpells(buildSearchQuery({
-              classes: encoded,
-              maxLevel: choice.maxLevel,
-              schoolQuery,
-              ritualQuery,
-              limit: 280,
               includeText,
             })).catch(() => []);
           }
@@ -245,13 +223,11 @@ export async function loadSpellChoiceOptions(
         const ritualQuery = choice.ritualOnly ? "&ritual=1" : "";
         const query = choice.level === 0
           ? buildSearchQuery({ level: 0, schoolQuery, ritualQuery, limit: 200, includeText })
-          : typeof choice.level === "number" && /\bat or below\b/i.test(choice.note ?? "")
-            ? buildSearchQuery({ minLevel: 1, maxLevel: choice.level, schoolQuery, ritualQuery, limit: 280, includeText })
+          : typeof choice.maxLevel === "number" && choice.maxLevel > 0
+            ? buildSearchQuery({ minLevel: 1, maxLevel: choice.maxLevel, schoolQuery, ritualQuery, limit: 280, includeText })
             : typeof choice.level === "number"
               ? buildSearchQuery({ level: choice.level, schoolQuery, ritualQuery, limit: 280, includeText })
-              : typeof choice.maxLevel === "number" && choice.maxLevel > 0
-                ? buildSearchQuery({ maxLevel: choice.maxLevel, schoolQuery, ritualQuery, limit: 280, includeText })
-                : buildSearchQuery({ schoolQuery, ritualQuery, limit: 280, includeText });
+              : buildSearchQuery({ schoolQuery, ritualQuery, limit: 280, includeText });
         groups.push(await fetchSpells(query).catch(() => []));
       }
 
@@ -263,11 +239,12 @@ export async function loadSpellChoiceOptions(
       let spellOptions = Array.from(byName.values()).filter(
         (spell) => !/^invocation:/i.test(String(spell.name ?? ""))
       );
-      if (/deals damage via an attack roll/i.test(choice.note ?? "")) {
-        spellOptions = spellOptions.filter((spell) => spellLooksLikeDamageSpell(spell) && spellUsesAttackRoll(spell));
-      } else if (/deals damage/i.test(choice.note ?? "")) {
-        spellOptions = spellOptions.filter((spell) => spellLooksLikeDamageSpell(spell));
+      if (choice.allowedSpellIds?.length) {
+        const allowed = new Set(choice.allowedSpellIds.map(String));
+        spellOptions = spellOptions.filter((spell) => allowed.has(String(spell.id)));
       }
+      if (choice.damageOnly) spellOptions = spellOptions.filter(spellLooksLikeDamageSpell);
+      if (choice.attackOnly) spellOptions = spellOptions.filter(spellUsesAttackRoll);
       return [choice.key, spellOptions.sort((a, b) => a.name.localeCompare(b.name))] as const;
     })
   );
@@ -308,15 +285,14 @@ export function sanitizeSpellChoiceSelections(args: {
   for (const choice of spellListChoices) {
     const current = nextSelections[choice.key] ?? [];
     const filtered = current.filter((value) => choice.options.includes(value)).slice(0, choice.count);
-    const inferred = inferSpellListFromSourceLabel(choice.sourceLabel, choice.options);
+    // A single-option list auto-selects; anything else waits for the player. Options are
+    // typed facts on the choice — never inferred from the feat's display label.
     const next =
       filtered.length > 0
         ? filtered
         : choice.count === 1 && choice.options.length === 1
           ? choice.options.slice(0, 1)
-          : inferred && choice.count === 1
-            ? [inferred]
-            : [];
+          : [];
     if (next.length === 0) delete nextSelections[choice.key];
     else nextSelections[choice.key] = next;
   }

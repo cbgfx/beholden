@@ -1,3 +1,4 @@
+import { averageHpFromFormula } from "@beholden/shared/domain/monsters";
 // Helpers for dealing with the various monster JSON shapes we import.
 // Keep these pure and reusable across the monster picker UI.
 
@@ -25,8 +26,9 @@ export function formatHpString(m: any): string {
   const v = hpVal?.value;
   if (typeof v === "string" || typeof v === "number") return String(v).trim();
 
-  const avg = hpVal?.average ?? hpVal?.avg;
   const formula = hpVal?.formula ?? hpVal?.roll;
+  // Canonical records omit the average when it is derivable from the formula.
+  const avg = hpVal?.average ?? hpVal?.avg ?? averageHpFromFormula(typeof formula === "string" ? formula : null);
   if (avg == null && formula == null) return "";
   if ((avg === 0 || String(avg) === "0") && !formula) return "";
   if (avg != null && formula) return `${String(avg).trim()} (${String(formula).trim()})`;

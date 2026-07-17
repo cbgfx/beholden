@@ -11,12 +11,15 @@ export type SpellForEdit = {
   name: string;
   level: number | null;
   school: string | null;
-  time: string | null;
-  range: string | null;
-  components: string | null;
-  duration: string | null;
-  classes: string | null;
-  text: string[];
+  casting?: {
+    time?: string;
+    range?: string;
+    components?: { verbal?: true; somatic?: true; material?: true | string };
+    duration?: { description?: string; concentration?: true };
+  };
+  access?: string[];
+  description: string[];
+  [key: string]: unknown;
 };
 
 type FormData = {
@@ -46,12 +49,12 @@ function spellToForm(s: SpellForEdit): FormData {
     name:       s.name ?? "",
     level:      s.level != null ? String(s.level) : "",
     school:     s.school ?? "",
-    time:       s.time ?? "",
-    range:      s.range ?? "",
-    components: s.components ?? "",
-    duration:   s.duration ?? "",
-    classes:    s.classes ?? "",
-    text:       (s.text ?? []).join("\n\n"),
+    time:       s.casting?.time ?? "",
+    range:      s.casting?.range ?? "",
+    components: [s.casting?.components?.verbal ? "V" : "", s.casting?.components?.somatic ? "S" : "", s.casting?.components?.material ? `M${typeof s.casting.components.material === "string" ? ` (${s.casting.components.material})` : ""}` : ""].filter(Boolean).join(", "),
+    duration:   s.casting?.duration?.description ?? "",
+    classes:    (s.access ?? []).join(", "),
+    text:       (s.description ?? []).join("\n\n"),
   };
 }
 
@@ -92,21 +95,33 @@ export function SpellFormModal(props: {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name.trim()) { setError("Name is required."); return; }
+    if (!form.name.trim() || !form.text.trim()) { setError("Name and description are required Grand facts."); return; }
     setBusy(true);
     setError(null);
 
     const levelNum = form.level.trim() !== "" ? Number(form.level) : null;
+    const componentTokens = form.components.split(",").map((value) => value.trim()).filter(Boolean);
+    const material = componentTokens.find((value) => /^M(?:\s|\(|$)/iu.test(value));
+    const components = {
+      ...(componentTokens.some((value) => /^V$/iu.test(value)) ? { verbal: true as const } : {}),
+      ...(componentTokens.some((value) => /^S$/iu.test(value)) ? { somatic: true as const } : {}),
+      ...(material ? { material: material.match(/^M\s*\((.*)\)$/iu)?.[1]?.trim() || true } : {}),
+    };
+    const durationDescription = form.duration.trim();
+    const casting = {
+      ...(form.time.trim() ? { time: form.time.trim() } : {}),
+      ...(form.range.trim() ? { range: form.range.trim() } : {}),
+      ...(Object.keys(components).length ? { components } : {}),
+      ...(durationDescription ? { duration: { description: durationDescription, ...(props.spell?.casting?.duration?.concentration ? { concentration: true as const } : {}) } } : {}),
+    };
     const body = {
+      ...(props.spell ?? {}),
       name:       form.name.trim(),
-      level:      levelNum != null && Number.isFinite(levelNum) ? levelNum : null,
-      school:     form.school.trim() || null,
-      time:       form.time.trim() || null,
-      range:      form.range.trim() || null,
-      components: form.components.trim() || null,
-      duration:   form.duration.trim() || null,
-      classes:    form.classes.trim() || null,
-      text:       form.text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean),
+      ...(levelNum != null && Number.isFinite(levelNum) ? { level: levelNum } : { level: undefined }),
+      ...(form.school.trim() ? { school: form.school.trim() } : { school: undefined }),
+      ...(Object.keys(casting).length ? { casting } : { casting: undefined }),
+      ...(form.classes.trim() ? { access: form.classes.split(",").map((value) => value.trim()).filter(Boolean) } : { access: undefined }),
+      description: form.text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean),
     };
 
     try {
@@ -214,7 +229,7 @@ export function SpellFormModal(props: {
           {/* Classes */}
           <label style={labelStyle}>
             Classes
-            <Input value={form.classes} onChange={set("classes")} placeholder="Sorcerer, Wizard" />
+            <Input value={form.classes} onChange={set("classes")} placeholder="sl_sorcerer, sl_wizard" />
           </label>
 
           {/* Description */}

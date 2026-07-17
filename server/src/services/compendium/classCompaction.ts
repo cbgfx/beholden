@@ -26,7 +26,9 @@ function compactFeature(raw: unknown): JsonRecord {
   if (source) compact.source = source;
   const subclass = text(feature.subclass);
   if (subclass) compact.subclass = subclass;
-  if (feature.optional === true) compact.optional = true;
+  if (feature.talent && typeof feature.talent === "object" && !Array.isArray(feature.talent)) compact.talent = feature.talent;
+  const choices = list(feature.choices);
+  if (choices.length > 0) compact.choices = choices;
   const effects = list(feature.effects);
   if (effects.length > 0) compact.effects = effects;
   const scalingRolls = list(feature.scalingRolls).map(compactScalingRoll);
@@ -45,7 +47,7 @@ function compactFeature(raw: unknown): JsonRecord {
 function compactResource(raw: unknown): JsonRecord {
   const r = record(raw);
   const compact: JsonRecord = { name: r.name, uses: r.uses };
-  if (r.recovery) compact.recovery = r.recovery;
+  if (r.recovery && r.recovery !== "long_rest") compact.recovery = r.recovery;
   const subclass = text(r.subclass);
   if (subclass) compact.subclass = subclass;
   return compact;
@@ -56,6 +58,7 @@ function compactLevel(raw: unknown): JsonRecord {
   const compact: JsonRecord = { level: level.level };
   if (level.abilityScoreImprovement === true) compact.abilityScoreImprovement = true;
   if (level.cantripsKnown != null) compact.cantripsKnown = level.cantripsKnown;
+  if (level.spellsPrepared != null) compact.spellsPrepared = level.spellsPrepared;
   const spellSlots = record(level.spellSlots);
   if (Object.keys(spellSlots).length > 0) compact.spellSlots = spellSlots;
   const features = list(level.features).map(compactFeature);
@@ -93,6 +96,13 @@ export function compactClassEntry(entry: JsonRecord): JsonRecord {
   }
   if (entry.hitDie != null) compact.hitDie = entry.hitDie;
   if (entry.startingWealth != null) compact.startingWealth = entry.startingWealth;
+  compact.primaryAbility = entry.primaryAbility;
+  if (entry.equipment && typeof entry.equipment === "object" && !Array.isArray(entry.equipment)) compact.equipment = entry.equipment;
+  if (entry.multiclass && typeof entry.multiclass === "object" && !Array.isArray(entry.multiclass)) compact.multiclass = entry.multiclass;
+  if (entry.subclasses && typeof entry.subclasses === "object" && !Array.isArray(entry.subclasses)) compact.subclasses = entry.subclasses;
+  const choices = list(entry.choices);
+  if (choices.length > 0) compact.choices = choices;
+  if (entry.spellLists && typeof entry.spellLists === "object" && !Array.isArray(entry.spellLists)) compact.spellLists = entry.spellLists;
   const profCompact: JsonRecord = {
     savingThrows: list(proficiencies.savingThrows),
     skills: proficiencies.skills,
@@ -103,10 +113,11 @@ export function compactClassEntry(entry: JsonRecord): JsonRecord {
   if (tools !== undefined) profCompact.tools = tools;
   compact.proficiencies = profCompact;
   const spellcasting = record(entry.spellcasting);
-  const spellcastingCompact: JsonRecord = {};
-  if (spellcasting.ability != null) spellcastingCompact.ability = spellcasting.ability;
-  spellcastingCompact.slotRecovery = spellcasting.slotRecovery ?? "long_rest";
-  compact.spellcasting = spellcastingCompact;
+  if (spellcasting.ability != null) {
+    const spellcastingCompact: JsonRecord = { ability: spellcasting.ability };
+    if (spellcasting.slotRecovery && spellcasting.slotRecovery !== "long_rest") spellcastingCompact.slotRecovery = spellcasting.slotRecovery;
+    compact.spellcasting = spellcastingCompact;
+  }
   compact.levels = list(entry.levels).map(compactLevel);
   return compact;
 }

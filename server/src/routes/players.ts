@@ -17,6 +17,7 @@ import {
   getLinkedCharacterIdForPlayer,
 } from "../services/characters.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
+import { hasZeroSpeedCondition, SLOW_SPEED_PENALTY } from "@beholden/shared/domain/conditions";
 
 const PlayerCreateBody = z.object({
   playerName: z.string().trim().optional(),
@@ -348,13 +349,12 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
 
     const conditions = next.live.conditions;
     let newSpeed = baseSpeed;
-    const hasZeroSpeedCondition = conditions.some(c => ["grappled", "restrained", "paralyzed", "petrified", "stunned", "unconscious"].includes(c.key));
     const hasSlow = conditions.some(c => c.key === "slow");
 
-    if (hasZeroSpeedCondition) {
+    if (hasZeroSpeedCondition(conditions)) {
       newSpeed = 0;
     } else if (hasSlow) {
-      newSpeed = Math.max(0, baseSpeed - 10);
+      newSpeed = Math.max(0, baseSpeed - SLOW_SPEED_PENALTY);
     }
     next.sheet.speed = newSpeed;
 

@@ -16,6 +16,8 @@ export interface FetchedSpellDetail {
   classes?: string | null;
   damage?: { dice: string; type: string } | null;
   save?: string | null;
+  check?: string | string[] | null;
+  rolls?: Array<{ formula: string; effect?: string | string[] | null; level?: number | null }>;
 }
 
 export const SPELL_ROW_GRID_WITH_MARKER = "24px minmax(0, 1fr) 108px 68px 92px";
@@ -30,38 +32,6 @@ export const spellColumnHeaderStyle: React.CSSProperties = {
   letterSpacing: "0.07em",
 };
 
-export function parseSpellDamage(text: string): { dice: string; type: string } | null {
-  const match = text.match(/(\d+d\d+(?:\s*\+\s*\d+)?)\s+(fire|cold|lightning|acid|poison|necrotic|radiant|thunder|psychic|force|bludgeoning|piercing|slashing)\s+damage/i);
-  if (!match) return null;
-  return { dice: match[1].replace(/\s+/g, ""), type: match[2].toLowerCase() };
-}
-
-function parseDiceExpression(expr: string): { count: number; sides: number; bonus: number } | null {
-  const match = String(expr ?? "").trim().match(/^(\d+)d(\d+)(?:\s*\+\s*(\d+))?$/i);
-  if (!match) return null;
-  return {
-    count: parseInt(match[1], 10),
-    sides: parseInt(match[2], 10),
-    bonus: parseInt(match[3] ?? "0", 10),
-  };
-}
-
-function formatDiceExpression(parsed: { count: number; sides: number; bonus: number }): string {
-  return `${parsed.count}d${parsed.sides}${parsed.bonus > 0 ? `+${parsed.bonus}` : ""}`;
-}
-
-function addScaledDice(baseExpr: string, incrementExpr: string, times: number): string {
-  if (times <= 0) return baseExpr.replace(/\s+/g, "");
-  const base = parseDiceExpression(baseExpr);
-  const increment = parseDiceExpression(incrementExpr);
-  if (!base || !increment || base.sides !== increment.sides) return baseExpr.replace(/\s+/g, "");
-  return formatDiceExpression({
-    count: base.count + (increment.count * times),
-    sides: base.sides,
-    bonus: base.bonus + (increment.bonus * times),
-  });
-}
-
 export function highestAvailableSlotLevel(levelSlots: number[] | null | undefined): number {
   if (!levelSlots) return 0;
   for (let i = levelSlots.length - 1; i >= 1; i -= 1) {
@@ -70,52 +40,21 @@ export function highestAvailableSlotLevel(levelSlots: number[] | null | undefine
   return 0;
 }
 
-export function getScaledSpellDamage(detail: FetchedSpellDetail, charLevel: number, maxSlotLevel: number): { dice: string; type: string } | null {
-  const text = Array.isArray(detail.text) ? detail.text.join("\n") : String(detail.text ?? "");
-  const base = parseSpellDamage(text);
-  if (!base) return null;
-
-  if ((detail.level ?? 0) === 0) {
-    const tierBoosts = (charLevel >= 5 ? 1 : 0) + (charLevel >= 11 ? 1 : 0) + (charLevel >= 17 ? 1 : 0);
-    const cantripBoost = text.match(/damage increases by (\d+d\d+(?:\s*\+\s*\d+)?)/i);
-    if (cantripBoost && tierBoosts > 0) {
-      return { ...base, dice: addScaledDice(base.dice, cantripBoost[1], tierBoosts) };
-    }
-    return base;
-  }
-
-  const baseLevel = Math.max(1, detail.level ?? 1);
-  const castLevel = Math.max(baseLevel, maxSlotLevel);
-
-  if (/^magic missile$/i.test(detail.name.trim())) {
-    const darts = 3 + Math.max(0, castLevel - 1);
-    return { dice: `${darts}d4+${darts}`, type: "force" };
-  }
-
-  const higherLevelBoost = text.match(/damage increases by (\d+d\d+(?:\s*\+\s*\d+)?) for each slot level above (\d+)(?:st|nd|rd|th)/i);
-  if (higherLevelBoost) {
-    const threshold = parseInt(higherLevelBoost[2], 10);
-    const times = Math.max(0, castLevel - threshold);
-    if (times > 0) {
-      return { ...base, dice: addScaledDice(base.dice, higherLevelBoost[1], times) };
-    }
-  }
-
-  return base;
-}
-
-export function parseSpellSave(text: string): string | null {
-  const match = text.match(/(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma|STR|DEX|CON|INT|WIS|CHA)\s+saving\s+throw/i);
-  if (!match) return null;
-  const map: Record<string, string> = {
-    strength: "STR",
-    dexterity: "DEX",
-    constitution: "CON",
-    intelligence: "INT",
-    wisdom: "WIS",
-    charisma: "CHA",
-  };
-  return map[match[1].toLowerCase()] ?? match[1].toUpperCase().slice(0, 3);
+export function getScaledSpellDamage(detail: FetchedSpellDetail, charLevel: number, maxSlotLevel: number): { dice: string; type: string; types: string[] } | null {
+  void maxSlotLevel;
+  const damageTypes = new Set(Object.keys(DMG_COLORS));
+  const rolls = (detail.rolls ?? []).filter((roll) => {
+    const effects = Array.isArray(roll.effect) ? roll.effect : [roll.effect];
+    return effects.some((effect) => effect && damageTypes.has(effect));
+  });
+  if (!rolls.length) return null;
+  // Cantrip rows scale by character level (their `level` is the tier threshold); leveled spells'
+  // rows are slot-keyed. Whether a row is character-scaled is derived from the spell's own level —
+  // a fact, not a per-row stored flag.
+  const eligible = rolls.filter((roll) => detail.level !== 0 || (roll.level ?? 0) <= charLevel);
+  const roll = eligible.at(-1) ?? rolls[0];
+  const types = (Array.isArray(roll.effect) ? roll.effect : [roll.effect]).filter((effect): effect is string => Boolean(effect));
+  return { dice: roll.formula, type: types[0] ?? "", types };
 }
 
 export function abbrevTime(time: string): string {
@@ -184,9 +123,13 @@ export const DMG_COLORS: Record<string, string> = {
   bludgeoning: "#94a3b8",
   piercing: "#94a3b8",
   slashing: C.colorPinkRed,
+  healing: "#4ade80",
+  temp_hp: "#60a5fa",
 };
 
 export const DMG_EMOJI: Record<string, string> = {
+  healing: "+",
+  temp_hp: "◇",
   fire: "🔥",
   cold: "❄️",
   lightning: "⚡",

@@ -32,7 +32,11 @@ coverage/
 
 # ===== Data =====
 /data/
-/compendium/
+/compendium/*
+!/compendium/*.json
+!/compendium/JSONs/
+/compendium/JSONs/*
+!/compendium/JSONs/*.beholden-compendium.json
 
 # ===== Misc =====
 *.zip
@@ -45,3 +49,4 @@ web-player/src/**/*.js.map
 # ===== Claude -------
 .claude/
 claude/
+.playwright-mcp/

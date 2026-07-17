@@ -1,9 +1,9 @@
 import type { AbilKey, CharacterData, ResourceCounter } from "@/views/character/CharacterSheetTypes";
+import { hasZeroSpeedCondition, itemModifierBonus, SLOW_SPEED_PENALTY } from "@beholden/shared/domain";
 import {
   applyItemAbilityScoreOverrides,
   buildAbilityScoreExplanations,
   collectClassResources,
-  collectFeatureResourceFallbacks,
   isInventoryItemActiveForCharacterEffects,
   mergeResourceState,
   normalizeProficiencies,
@@ -55,30 +55,6 @@ import {
   buildTransformedCombatStats,
 } from "@/views/character/CharacterViewDerivedComputations";
 import type { CharacterViewDerivedState, CharacterViewDerivedStateArgs } from "@/views/character/CharacterViewDerivedTypes";
-
-function hasAdamantineCriticalHitImmunity(item: { name?: string | null; type?: string | null; description?: string | null; notes?: string | null }): boolean {
-  const text = `${item.name ?? ""} ${item.type ?? ""} ${item.description ?? ""} ${item.notes ?? ""}`;
-  return /\badamanti(?:ne|um)\b/i.test(text)
-    || /critical hit against you becomes a normal hit/i.test(text)
-    || /immune to critical hits/i.test(text);
-}
-
-function addUniqueCaseInsensitive(values: string[], value: string): string[] {
-  return values.some((entry) => entry.toLowerCase() === value.toLowerCase()) ? values : [...values, value];
-}
-
-function inferBaseWalkSpeed(...values: unknown[]): number | null {
-  for (const value of values) {
-    const normalized = String(value ?? "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, " ")
-      .trim();
-    if (!normalized) continue;
-    if (/\bwood elf\b/.test(normalized) || /\belf wood\b/.test(normalized)) return 35;
-    if (/\b(human|elf|dwarf|halfling|gnome|dragonborn|tiefling|orc|half elf|half orc)\b/.test(normalized)) return 30;
-  }
-  return null;
-}
 
 export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateArgs): CharacterViewDerivedState {
   const currentCharacterData: CharacterData = args.char.characterData ?? {};
@@ -142,17 +118,19 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
       text: feature.text,
       suppressStructuredSpellGrants: Boolean(feature.preparedSpellProgression?.length),
       classEffects: feature.classEffects,
+      classChoices: feature.classChoices,
+      traitEffects: feature.traitEffects,
       featMechanics: feature.featMechanics,
     } satisfies ParseFeatureEffectsInput)
   );
   const parsedItemEffects = inventory
     .filter((item) => isInventoryItemActiveForCharacterEffects(item))
     .map((item, index) => {
-      const text = `${item.description ?? ""}\n${item.notes ?? ""}`.trim();
-      if (!text) return null;
+      if (!Array.isArray(item.effects) || item.effects.length === 0) return null;
       return parseFeatureEffects({
-        source: { id: `item:${index}:${item.id}`, kind: "item", name: item.name, text },
-        text,
+        source: { id: `item:${index}:${item.id}`, kind: "item", name: item.name, text: "" },
+        text: "",
+        traitEffects: item.effects,
       } satisfies ParseFeatureEffectsInput);
     })
     .filter((entry): entry is ReturnType<typeof parseFeatureEffects> => Boolean(entry));
@@ -181,7 +159,6 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     for (const resource of [
       ...collectClassResources(args.classDetail, args.char.level, args.subclass),
       ...grantedSpellData.resources,
-      ...collectFeatureResourceFallbacks(appliedFeatures, args.classDetail?.name ?? args.char.className ?? null, args.char.level),
     ]) {
       if (!byKey.has(resource.key)) byKey.set(resource.key, resource);
     }
@@ -192,16 +169,9 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   const rageActive = (args.char.conditions ?? []).some((condition) => condition.key === "rage");
   const effectDefenses = collectDefensesFromEffects(parsedAllEffects, { raging: rageActive });
   const effectSenses = collectSensesFromEffects(parsedAllEffects);
-  const hasCriticalHitImmunity = inventory.some((item) =>
-    getEquipState(item) === "worn"
-    && isArmorItem(item)
-    && hasAdamantineCriticalHitImmunity(item)
-  );
   const parsedDefenses = {
     resistances: effectDefenses.resistances,
-    damageImmunities: hasCriticalHitImmunity
-      ? addUniqueCaseInsensitive(effectDefenses.damageImmunities, "Critical Hits")
-      : effectDefenses.damageImmunities,
+    damageImmunities: effectDefenses.damageImmunities,
     conditionImmunities: effectDefenses.conditionImmunities,
     vulnerabilities: [] as string[],
   };
@@ -243,7 +213,10 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   const xpEarned = currentCharacterData.xp ?? 0;
   const xpNeeded = XP_TO_LEVEL[args.char.level + 1] ?? 0;
   const wornShield = inventory.find((item) => getEquipState(item) === "offhand" && isShieldItem(item));
-  const shieldBonus = wornShield ? 2 : 0;
+  // Every shield grants a flat +2 (that's a rule keyed off the item's structured `type`, not
+  // inferred from its name) plus whatever magic enchantment bonus the compendium's `modifiers`
+  // carries for this specific item (e.g. a Shield +1 adds another +1) — see itemModifierBonus.
+  const shieldBonus = wornShield ? 2 + itemModifierBonus(wornShield.modifiers, "ac") : 0;
   const wornArmor = inventory.find((item) => getEquipState(item) === "worn" && isArmorItem(item) && (item.ac ?? 0) > 0);
   const speedArmorState = !wornArmor ? "no_armor" : /\bheavy armor\b/i.test(wornArmor.type ?? "") ? "any" : "not_heavy";
   const armorWithoutProficiency = Boolean(wornArmor && !hasArmorProficiency(wornArmor, prof ?? undefined));
@@ -268,19 +241,23 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   };
   const wornArmorAc = (() => {
     if (!wornArmor || !wornArmor.ac) return null;
+    // Magic armor's enchantment bonus (e.g. Studded Leather Armor +1) lives in the item's
+    // `modifiers`, separate from its base `ac` — add it before the Dex-cap math below, same as
+    // the base AC itself.
+    const armorBase = wornArmor.ac + itemModifierBonus(wornArmor.modifiers, "ac");
     const armorType = String(wornArmor.type ?? "").toLowerCase();
-    if (armorType.includes("heavy")) return wornArmor.ac;
-    if (armorType.includes("medium")) return wornArmor.ac + Math.min(2, dexMod);
-    return wornArmor.ac + dexMod;
+    if (armorType.includes("heavy")) return armorBase;
+    if (armorType.includes("medium")) return armorBase + Math.min(2, dexMod);
+    return armorBase + dexMod;
   })();
+  // Unarmored Defense (Barbarian's Dex+Con, Monk's Dex+Wis, etc.) is derived entirely from the
+  // class feature's own text via parseArmorClassEffects — no class-name check needed here.
+  // Confirmed both Barbarian's and Monk's real compendium text parse correctly, including which
+  // two abilities to use and whether a shield disables it.
   const unarmoredDefenseAc = deriveUnarmoredDefenseFromEffects(parsedAllEffects, scoresByAbility, {
     armorEquipped: Boolean(wornArmor),
     shieldEquipped: Boolean(wornShield),
-  }) ?? (
-    !wornArmor && /barbarian/i.test(args.char.className) && args.char.level >= 1
-      ? 10 + dexMod + conMod
-      : null
-  );
+  });
   const featureAcBonus = deriveArmorClassBonusFromEffects(parsedAllEffects, {
     armorEquipped: Boolean(wornArmor),
     armorCategory:
@@ -295,13 +272,12 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   const naturalAc = 10 + dexMod;
   const effectiveAc = Math.max(naturalAc, wornArmorAc ?? 0, unarmoredDefenseAc ?? 0) + featureAcBonus + (overrides.acBonus ?? 0) + shieldBonus;
   const speedBonus = deriveSpeedBonusFromEffects(parsedAllEffects, { armorState: speedArmorState, raging: rageActive, level: args.char.level });
-  const baseWalkSpeed = inferBaseWalkSpeed(args.char.species, currentCharacterData.raceId, (currentCharacterData as Record<string, unknown>).speciesId) ?? args.char.speed;
+  const baseWalkSpeed = args.raceDetail?.speed ?? args.char.speed;
   let effectiveSpeed = (baseWalkSpeed ?? 0) + speedBonus;
-  const activeConditionKeys = (args.char.conditions ?? []).map((c) => c.key);
-  if (["grappled", "restrained", "paralyzed", "petrified", "stunned", "unconscious", "incapacitated"].some((k) => activeConditionKeys.includes(k))) {
+  if (hasZeroSpeedCondition(args.char.conditions)) {
     effectiveSpeed = 0;
-  } else if (activeConditionKeys.includes("slow")) {
-    effectiveSpeed = Math.max(0, effectiveSpeed - 10);
+  } else if ((args.char.conditions ?? []).some((c) => c.key === "slow")) {
+    effectiveSpeed = Math.max(0, effectiveSpeed - SLOW_SPEED_PENALTY);
   }
   const movementModes = collectMovementModesFromEffects(parsedAllEffects, {
     baseWalkSpeed: effectiveSpeed,
@@ -369,7 +345,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     attackAbility: "str",
     isUnarmed: true,
   });
-  const senses = effectSenses.map((sense) => `${sense.kind[0].toUpperCase()}${sense.kind.slice(1)} ${sense.range} ft.`);
+  const senses = effectSenses.map((sense) => `${sense.kind === "devils_sight" ? "Devil's Sight" : `${sense.kind[0].toUpperCase()}${sense.kind.slice(1)}`} ${sense.range} ft.`);
   const editableOverrideFields: EditableSheetOverrideField[] = [
     { key: "tempHp", label: "Temp HP", help: "Current temporary hit points." },
     { key: "acBonus", label: "AC Bonus", help: "Bonus applied on top of normal armor class." },

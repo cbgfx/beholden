@@ -13,7 +13,6 @@ import {
   normalizeSize,
   SectionHeader,
   SIZES,
-  toStr,
   TYPES,
 } from "./MonsterFormParts";
 
@@ -47,64 +46,94 @@ export type MonsterFormState = {
 };
 
 export function monsterToForm(monster: MonsterForEdit | null, isDuplicate: boolean): MonsterFormState {
+  const classification = monster?.classification ?? {};
+  const abilities = monster?.abilities ?? {};
+  const defenses = monster?.defenses ?? {};
   return {
     name: isDuplicate ? `${monster?.name ?? ""} (Copy)` : (monster?.name ?? ""),
-    cr: toStr(monster?.cr),
-    typeFull: toStr(monster?.typeFull ?? (monster as any)?.typeKey),
-    size: normalizeSize(monster?.size) || "Medium",
-    environment: toStr(monster?.environment),
-    ac: toStr(monster?.ac),
-    hp: toStr(monster?.hp),
-    speed: toStr(monster?.speed),
-    str: monster?.str != null ? String(monster.str) : "",
-    dex: monster?.dex != null ? String(monster.dex) : "",
-    con: monster?.con != null ? String(monster.con) : "",
-    int_: monster?.int != null ? String(monster.int) : "",
-    wis: monster?.wis != null ? String(monster.wis) : "",
-    cha: monster?.cha != null ? String(monster.cha) : "",
-    save: toStr(monster?.save),
-    skill: toStr(monster?.skill),
-    senses: toStr(monster?.senses),
-    languages: toStr(monster?.languages),
-    immune: toStr(monster?.immune),
-    resist: toStr(monster?.resist),
-    vulnerable: toStr(monster?.vulnerable),
-    condImm: toStr(monster?.conditionImmune),
-    traits: normalizeBlocks(monster?.trait),
-    actions: normalizeBlocks(monster?.action),
-    reactions: normalizeBlocks(monster?.reaction),
-    legendary: normalizeBlocks(monster?.legendary),
+    cr: monster?.challenge?.rating ?? "",
+    typeFull: classification.description ?? classification.type ?? "",
+    size: normalizeSize(classification.size) || "Medium",
+    environment: classification.environment?.join(", ") ?? "",
+    ac: monster?.armorClass?.value != null ? String(monster.armorClass.value) : "",
+    hp: monster?.hitPoints?.formula ?? (monster?.hitPoints?.average != null ? String(monster.hitPoints.average) : ""),
+    speed: monster?.movement ? JSON.stringify(monster.movement) : "",
+    str: abilities.str != null ? String(abilities.str) : "",
+    dex: abilities.dex != null ? String(abilities.dex) : "",
+    con: abilities.con != null ? String(abilities.con) : "",
+    int_: abilities.int != null ? String(abilities.int) : "",
+    wis: abilities.wis != null ? String(abilities.wis) : "",
+    cha: abilities.cha != null ? String(abilities.cha) : "",
+    save: monster?.proficiencies ? JSON.stringify(monster.proficiencies.savingThrows ?? []) : "",
+    skill: monster?.proficiencies ? JSON.stringify(monster.proficiencies.skills ?? []) : "",
+    senses: Array.isArray(monster?.senses) ? monster.senses.join(", ") : "",
+    languages: Array.isArray(monster?.languages) ? monster.languages.join(", ") : "",
+    immune: defenses.damageImmunities?.join(", ") ?? "",
+    resist: defenses.resistances?.join(", ") ?? "",
+    vulnerable: defenses.vulnerabilities?.join(", ") ?? "",
+    condImm: defenses.conditionImmunities?.join(", ") ?? "",
+    traits: normalizeBlocks(monster?.traits),
+    actions: normalizeBlocks(monster?.actions),
+    reactions: normalizeBlocks(monster?.reactions),
+    legendary: normalizeBlocks(monster?.legendaryActions),
   };
 }
 
-export function buildMonsterPayload(form: MonsterFormState) {
+const splitList = (value: string) => value.split(",").map((part) => part.trim()).filter(Boolean);
+const jsonObject = (value: string, label: string): Record<string, unknown> | undefined => {
+  if (!value.trim()) return undefined;
+  const parsed = JSON.parse(value) as unknown;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error(`${label} must be a Grand JSON object.`);
+  return parsed as Record<string, unknown>;
+};
+const jsonArray = (value: string, label: string): unknown[] | undefined => {
+  if (!value.trim()) return undefined;
+  const parsed = JSON.parse(value) as unknown;
+  if (!Array.isArray(parsed)) throw new Error(`${label} must be a Grand JSON array.`);
+  return parsed;
+};
+const actionBlocks = (blocks: MonsterBlock[]) => blocks.filter((block) => block.name || block.text).map((block, index) => {
+  const { text, ...facts } = block;
+  return { ...facts, id: block.id || `action_${index + 1}`, name: block.name.trim(), description: text };
+});
+
+export function buildMonsterPayload(form: MonsterFormState, original: MonsterForEdit | null) {
+  const type = form.typeFull.trim();
+  const size = ({ Tiny: "T", Small: "S", Medium: "M", Large: "L", Huge: "H", Gargantuan: "G" } as Record<string, string>)[form.size] ?? form.size;
+  const movement = jsonObject(form.speed, "Movement");
+  const savingThrows = jsonArray(form.save, "Saving throws");
+  const skills = jsonArray(form.skill, "Skills");
+  const hp = form.hp.trim();
+  const abilities = Object.fromEntries([
+    ["str", form.str], ["dex", form.dex], ["con", form.con], ["int", form.int_], ["wis", form.wis], ["cha", form.cha],
+  ].filter(([, value]) => value.trim()).map(([key, value]) => [key, Number(value)]));
+  const traits = actionBlocks(form.traits);
+  const actions = actionBlocks(form.actions);
+  const reactions = actionBlocks(form.reactions);
+  const legendaryActions = actionBlocks(form.legendary);
+  const defenses = {
+    ...(splitList(form.vulnerable).length ? { vulnerabilities: splitList(form.vulnerable) } : {}),
+    ...(splitList(form.resist).length ? { resistances: splitList(form.resist) } : {}),
+    ...(splitList(form.immune).length ? { damageImmunities: splitList(form.immune) } : {}),
+    ...(splitList(form.condImm).length ? { conditionImmunities: splitList(form.condImm) } : {}),
+  };
   return {
+    ...(original ?? {}),
     name: form.name.trim(),
-    cr: form.cr.trim() || null,
-    typeFull: form.typeFull.trim() || null,
-    size: form.size || null,
-    environment: form.environment.trim() || null,
-    ac: form.ac.trim() || null,
-    hp: form.hp.trim() || null,
-    speed: form.speed.trim() || null,
-    str: form.str.trim() ? Number(form.str.trim()) : null,
-    dex: form.dex.trim() ? Number(form.dex.trim()) : null,
-    con: form.con.trim() ? Number(form.con.trim()) : null,
-    int: form.int_.trim() ? Number(form.int_.trim()) : null,
-    wis: form.wis.trim() ? Number(form.wis.trim()) : null,
-    cha: form.cha.trim() ? Number(form.cha.trim()) : null,
-    save: form.save.trim() || null,
-    skill: form.skill.trim() || null,
-    senses: form.senses.trim() || null,
-    languages: form.languages.trim() || null,
-    immune: form.immune.trim() || null,
-    resist: form.resist.trim() || null,
-    vulnerable: form.vulnerable.trim() || null,
-    conditionImmune: form.condImm.trim() || null,
-    trait: form.traits.filter((block) => block.name || block.text),
-    action: form.actions.filter((block) => block.name || block.text),
-    reaction: form.reactions.filter((block) => block.name || block.text),
-    legendary: form.legendary.filter((block) => block.name || block.text),
+    classification: { ...(original?.classification ?? {}), ...(size ? { size } : {}), ...(type ? { type: type.split(/\s/u)[0]?.toLowerCase(), description: type } : {}), ...(splitList(form.environment).length ? { environment: splitList(form.environment) } : {}) },
+    ...(form.cr.trim() ? { challenge: { ...(original?.challenge ?? {}), rating: form.cr.trim() } } : { challenge: undefined }),
+    ...(form.ac.trim() ? { armorClass: { ...(original?.armorClass ?? {}), value: Number(form.ac) } } : { armorClass: undefined }),
+    ...(hp ? { hitPoints: hp.toLowerCase().includes("d") ? { formula: hp } : { average: Number(hp) } } : { hitPoints: undefined }),
+    ...(movement ? { movement } : { movement: undefined }),
+    ...(Object.keys(abilities).length ? { abilities } : { abilities: undefined }),
+    ...(savingThrows?.length || skills?.length ? { proficiencies: { ...(savingThrows?.length ? { savingThrows } : {}), ...(skills?.length ? { skills } : {}) } } : { proficiencies: undefined }),
+    ...(splitList(form.senses).length ? { senses: splitList(form.senses) } : { senses: undefined }),
+    ...(splitList(form.languages).length ? { languages: splitList(form.languages) } : { languages: undefined }),
+    ...(Object.keys(defenses).length ? { defenses } : { defenses: undefined }),
+    ...(traits.length ? { traits } : { traits: undefined }),
+    ...(actions.length ? { actions } : { actions: undefined }),
+    ...(reactions.length ? { reactions } : { reactions: undefined }),
+    ...(legendaryActions.length ? { legendaryActions } : { legendaryActions: undefined }),
   };
 }
 
@@ -190,7 +219,7 @@ export function MonsterCombatStatsSection({
           <Input value={form.hp} onChange={(e) => setField("hp", e.target.value)} placeholder="e.g. 256 (19d20 + 57)" />
         </Field>
         <Field label="Speed" grow>
-          <Input value={form.speed} onChange={(e) => setField("speed", e.target.value)} placeholder="e.g. 40 ft., fly 80 ft." />
+            <Input value={form.speed} onChange={(e) => setField("speed", e.target.value)} placeholder={'{"walk":40,"fly":80}'} />
         </Field>
       </FieldRow>
     </div>
@@ -241,10 +270,10 @@ export function MonsterProficienciesSection({
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <FieldRow>
           <Field label="Saving Throws" grow>
-            <Input value={form.save} onChange={(e) => setField("save", e.target.value)} placeholder="e.g. STR +9, CON +9" />
+            <Input value={form.save} onChange={(e) => setField("save", e.target.value)} placeholder={'[{"name":"STR","bonus":9}]'} />
           </Field>
           <Field label="Skills" grow>
-            <Input value={form.skill} onChange={(e) => setField("skill", e.target.value)} placeholder="e.g. Perception +5, Stealth +4" />
+            <Input value={form.skill} onChange={(e) => setField("skill", e.target.value)} placeholder={'[{"name":"Perception","bonus":5}]'} />
           </Field>
         </FieldRow>
         <FieldRow>

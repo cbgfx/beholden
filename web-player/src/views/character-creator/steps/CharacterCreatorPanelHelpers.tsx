@@ -36,6 +36,7 @@ export function renderChoiceChipGroup({
   isSelected,
   isLocked,
   onToggle,
+  getOptionLabel,
   note,
 }: {
   title: string;
@@ -48,6 +49,7 @@ export function renderChoiceChipGroup({
   isSelected: (value: string) => boolean;
   isLocked: (value: string, selected: boolean) => boolean;
   onToggle: (value: string) => void;
+  getOptionLabel?: (value: string) => string;
   note?: string | null;
 }): React.ReactNode {
   const trimmedSourceLabel = String(sourceLabel ?? "").trim();
@@ -90,7 +92,7 @@ export function renderChoiceChipGroup({
                 fontWeight: selected ? 700 : 400,
               }}
             >
-              {option}
+              {getOptionLabel?.(option) ?? option}
             </button>
           );
         })}

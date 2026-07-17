@@ -10,9 +10,9 @@ import {
 import { useWs } from "@/services/ws";
 import {
   getEquipState,
+  initializeItemUsesMaximum,
   isCurrencyItem,
   normalizeInventoryItemLookupName,
-  parseChargesMax,
   type CompendiumItemDetail,
   type InventoryContainer,
   type InventoryItem,
@@ -150,6 +150,7 @@ export function useCharacterInventorySync({
       const next = previous.map((item) => {
         const summary = matchInventorySummary(item, itemIndex);
         if (!summary) return item;
+        const chargesMax = item.chargesMax ?? initializeItemUsesMaximum(summary.uses);
         const patched: InventoryItem = {
           ...item,
           name: item.source === "custom" && !item.itemId
@@ -169,6 +170,18 @@ export function useCharacterInventorySync({
           dmg2: item.dmg2 ?? summary.dmg2 ?? null,
           dmgType: item.dmgType ?? summary.dmgType ?? null,
           properties: item.properties?.length ? item.properties : (summary.properties ?? []),
+          mastery: item.mastery ?? summary.mastery ?? null,
+          modifiers: item.modifiers?.length ? item.modifiers : (summary.modifiers ?? []),
+          uses: item.uses ?? summary.uses ?? null,
+          spells: item.spells ?? summary.spells ?? null,
+          spellcasting: item.spellcasting ?? summary.spellcasting ?? null,
+          spellTemplate: item.spellTemplate ?? summary.spellTemplate ?? null,
+          ammo: item.ammo ?? summary.ammo ?? null,
+          weaponAmmo: item.weaponAmmo ?? summary.weaponAmmo ?? null,
+          usage: item.usage ?? summary.usage ?? null,
+          effects: item.effects ?? summary.effects ?? null,
+          chargesMax,
+          charges: item.charges ?? chargesMax,
         };
         if (JSON.stringify(patched) !== JSON.stringify(item)) {
           changed = true;
@@ -189,20 +202,21 @@ export function useCharacterInventorySync({
     void (async () => {
       try {
         const ids = Array.from(new Set(missingDescriptions.map((item) => String(item.itemId ?? "")).filter(Boolean)));
-        const result = await api<{ rows: Array<{ id: string; text?: string[] | null }> }>("/api/compendium/items/lookup", {
+        const result = await api<{ rows: Array<{ id: string; text?: string[] | null; uses?: import("@/views/character/CharacterInventory").ItemUses | null; spells?: import("@/views/character/CharacterInventory").ItemSpells | null; spellcasting?: import("@/views/character/CharacterInventory").ItemSpellcasting | null; spellTemplate?: import("@/views/character/CharacterInventory").ItemSpellTemplates | null; ammo?: import("@/views/character/CharacterInventory").AmmoFamily | null; weaponAmmo?: import("@/views/character/CharacterInventory").AmmoFamily | null; usage?: "held" | null }> }>("/api/compendium/items/lookup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ids, includeText: true }),
         });
         if (!active) return;
-        const descriptions = new Map(
-          (result.rows ?? []).map((row) => [row.id, Array.isArray(row.text) ? row.text.join("\n\n").trim() : ""]),
+        const details = new Map(
+          (result.rows ?? []).map((row) => [row.id, { description: Array.isArray(row.text) ? row.text.join("\n\n").trim() : "", uses: row.uses ?? null, spells: row.spells ?? null, spellcasting: row.spellcasting ?? null, spellTemplate: row.spellTemplate ?? null, ammo: row.ammo ?? null, weaponAmmo: row.weaponAmmo ?? null, usage: row.usage ?? null }]),
         );
         const updated = items.map((item) => {
-          const description = descriptions.get(String(item.itemId ?? ""));
-          if (!description) return item;
-          const chargesMax = item.chargesMax ?? parseChargesMax(description) ?? null;
-          return { ...item, description, chargesMax, charges: item.charges ?? chargesMax };
+          const detail = details.get(String(item.itemId ?? ""));
+          if (!detail?.description) return item;
+          const uses = item.uses ?? detail.uses;
+          const chargesMax = item.chargesMax ?? initializeItemUsesMaximum(uses);
+          return { ...item, description: detail.description, uses, spells: item.spells ?? detail.spells, spellcasting: item.spellcasting ?? detail.spellcasting, spellTemplate: item.spellTemplate ?? detail.spellTemplate, ammo: item.ammo ?? detail.ammo, weaponAmmo: item.weaponAmmo ?? detail.weaponAmmo, usage: item.usage ?? detail.usage, chargesMax, charges: item.charges ?? chargesMax };
         });
         if (!updated.some((item, index) => item !== items[index])) return;
         const normalized = normalizeContainers(containers);

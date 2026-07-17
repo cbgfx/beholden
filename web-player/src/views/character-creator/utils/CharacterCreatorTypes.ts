@@ -13,13 +13,17 @@ export interface ClassToolProficiency {
 
 export interface ClassDetail {
   id: string; name: string; hd: number | null;
+  primaryAbility?: string | { any?: string[]; all?: string[] } | null;
+  spellLists?: Record<string, string>;
   numSkills: number;
   proficiency: string;
   slotsReset: string;
+  preparedSpellChanges?: "short_rest" | "long_rest" | null;
   spellAbility?: string | null;
+  spellcastingList?: string | null;
   wealth?: number | null;
   armor: string; weapons: string; tools: string;
-  /** Structured proficiencies present for canonical v2 classes. When present,
+  /** Structured proficiencies present for Grand classes. When present,
    *  tools.fixed/choices/notes supersede the flat `tools` string. */
   proficiencies?: {
     savingThrows: string[];
@@ -29,11 +33,18 @@ export interface ClassDetail {
     tools: ClassToolProficiency;
   };
   description: string;
+  equipmentOptions?: import("./CharacterCreatorClassCoreUtils").StructuredStartingEquipmentOption[];
   descriptions?: string[];
   autolevels: {
-    level: number; scoreImprovement: boolean;
+    level: number; scoreImprovement: boolean; spellsPrepared?: number | null;
     slots: number[] | null;
-    features: { name: string; text: string; optional: boolean; effects?: unknown[]; scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>; preparedSpellProgression?: PreparedSpellProgressionTable[] }[];
+    features: { name: string; text: string; optional: boolean; subclass?: string | null; effects?: unknown[]; noteTemplate?: { id: string; title: string; text: string } | null; choices?: Array<
+      | { kind: "feat"; category: "F"; count?: number; replace?: true }
+      | { kind: "weapon_mastery"; known: Record<string, number>; melee?: true }
+      | { kind: "expertise"; known: Record<string, number>; from?: string[] }
+      | { kind: "proficiency"; category: "skill" | "tool" | "language" | "saving_throw"; count: number; from?: string | string[]; ifProficient?: string }
+      | { id: string; kind: "spell"; lists: string[]; count?: number; level?: number; maxLevel?: number; school?: string; mode: "known" | "prepared" | "spellbook"; replace?: true; perNewSlotLevel?: true; freeCast?: true; ifKnown?: string }
+    >; scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>; preparedSpellProgression?: PreparedSpellProgressionTable[] }[];
     counters: { name: string; value: number; reset: string }[];
   }[];
 }
@@ -45,6 +56,11 @@ export interface SpellSummary {
   school: string | null;
   classes: string | null;
   text: string | null;
+  check?: string | string[] | null;
+  rolls?: Array<{ effect?: string | string[] | null }>;
+  prerequisite?: import("@/views/character/CharacterSheetUtils").ClassTalentPrerequisite | null;
+  repeatable?: boolean;
+  effects?: unknown[];
 }
 
 export interface ItemSummary {
@@ -63,17 +79,17 @@ export interface ItemSummary {
   dmg2?: string | null;
   dmgType?: string | null;
   properties?: string[];
+  mastery?: string | null;
 }
 
 export interface RaceSummary { id: string; name: string; size: string | null; speed: number | null; }
 
 export interface RaceDetail {
   id: string; name: string; size: string | null; speed: number | null;
+  creatureType?: string | null;
   spellAbility?: string | null;
-  resist: string | null;
-  vision: { type: string; range: number }[];
   parsedChoices?: RaceChoices;
-  traits: { name: string; text: string; category: string | null; modifier: string[]; scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>; preparedSpellProgression?: PreparedSpellProgressionTable[] }[];
+  traits: { name: string; text: string; category: string | null; modifier: string[]; scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>; preparedSpellProgression?: PreparedSpellProgressionTable[]; effects?: unknown[] }[];
 }
 
 export interface BgSummary { id: string; name: string; }
@@ -103,6 +119,7 @@ export interface StructuredBgProficiencies {
   languages: ProficiencyChoice;
   feats: Array<ParsedFeatDetailLike<ParsedFeatChoiceLike>>;
   featChoice: number;
+  featChoiceFrom?: string[];
   abilityScores: string[];
   abilityScoreChoose: number;
 }
@@ -110,7 +127,7 @@ export interface StructuredBgProficiencies {
 export interface BgDetail {
   id: string; name: string; proficiency: string;
   proficiencies?: StructuredBgProficiencies;
-  traits: { name: string; text: string; scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>; preparedSpellProgression?: PreparedSpellProgressionTable[] }[];
+  traits: { name: string; text: string; scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>; preparedSpellProgression?: PreparedSpellProgressionTable[]; effects?: unknown[] }[];
   equipment?: string;
   equipmentOptions?: StructuredStartingEquipmentOption[];
 }
@@ -149,6 +166,12 @@ export interface CreatorResolvedSpellChoiceEntry {
   note?: string | null;
   linkedTo?: string | null;
   listNames: string[];
+  schools?: string[];
+  ritualOnly?: boolean;
+  damageOnly?: boolean;
+  attackOnly?: boolean;
+  allowedSpellIds?: string[];
+  grantsSpell?: boolean;
 }
 
 export interface ClassFeatChoice {

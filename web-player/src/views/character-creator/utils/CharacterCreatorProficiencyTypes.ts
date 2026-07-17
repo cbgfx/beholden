@@ -1,4 +1,5 @@
 import type { ParsedFeatChoiceLike as CreatorParsedFeatChoiceLike, ParsedFeatDetailLike } from "./FeatChoiceTypes";
+import type { StructuredStartingEquipmentOption } from "./CharacterCreatorClassCoreUtils";
 
 export interface CreatorItemSummaryLike {
   id: string;
@@ -15,6 +16,7 @@ export interface CreatorItemSummaryLike {
   dmg2?: string | null;
   dmgType?: string | null;
   properties?: string[];
+  mastery?: string | null;
 }
 
 export interface CreatorInventoryItemSeed {
@@ -42,12 +44,19 @@ export interface CreatorLevelUpFeatDetailLike {
 
 export interface CreatorClassDetailLike {
   name: string;
+  subclasses?: { level: number; options: Record<string, string> } | null;
+  choices?: Array<{ id: string; name: string; options: Array<{ id: string; name: string; features: string[] }> }>;
+  equipmentOptions?: StructuredStartingEquipmentOption[];
   armor: string;
   weapons: string;
   tools?: string;
   proficiency: string;
-  /** Structured proficiencies present for canonical v2 classes. */
+  /** Structured proficiencies present for Grand classes. */
   proficiencies?: {
+    savingThrows?: string[];
+    skills?: { choose: number; from: string[] };
+    armor?: string[];
+    weapons?: string[];
     tools: {
       fixed: string[];
       choices: Array<{ count: number; from: string[] }>;
@@ -56,13 +65,21 @@ export interface CreatorClassDetailLike {
   };
   autolevels: Array<{
     level: number | null;
-    features: Array<{ name: string; text: string; optional: boolean; effects?: unknown[] }>;
+    features: Array<{ id?: string; name: string; text: string; optional: boolean; subclass?: string | null; effects?: unknown[]; noteTemplate?: { id: string; title: string; text: string } | null; choices?: Array<
+      | { kind: "feat"; category: "F"; count?: number; replace?: true }
+      | { kind: "weapon_mastery"; known: Record<string, number>; melee?: true }
+      | { kind: "expertise"; known: Record<string, number>; from?: string[] }
+      | { kind: "proficiency"; category: "skill" | "tool" | "language" | "saving_throw"; count: number; from?: string | string[]; ifProficient?: string }
+      | { id: string; kind: "spell"; lists: string[]; count?: number; level?: number; maxLevel?: number; school?: string; mode: "known" | "prepared" | "spellbook"; replace?: true; perNewSlotLevel?: true; freeCast?: true; ifKnown?: string }
+    > }>;
   }>;
 }
 
 export interface CreatorRaceDetailLike {
   name: string;
-  traits: Array<{ name: string; text: string; modifier: string[] }>;
+  speed?: number | null;
+  traits: Array<{ name: string; text: string; modifier: string[]; effects?: unknown[] }>;
+  parsedChoices?: { languageChoice?: { count: number; from: string[] | null } | null } | null;
 }
 
 export interface CreatorBgDetailLike {
@@ -72,7 +89,9 @@ export interface CreatorBgDetailLike {
   equipmentOptions?: Array<{
     id: string;
     entries: Array<
-      | { kind: "item"; name: string; quantity: number }
+      | { kind: "item"; itemId?: string; name?: string; quantity: number; sourceLabel?: string }
+      | { kind: "choiceRef"; choiceKey: "background.tools" | "class.tools"; quantity: number; sourceLabel: string }
+      | { kind: "itemChoice"; choiceKey: string; itemIds: string[]; quantity: number; sourceLabel: string }
       | { kind: "currency"; denomination: "PP" | "GP" | "EP" | "SP" | "CP"; amount: number }
     >;
   }>;
@@ -90,6 +109,7 @@ export interface CreatorSpellSummaryLike {
   name: string;
   level?: number | null;
   text?: string | null;
+  effects?: unknown[];
 }
 
 export interface CreatorFormLike {

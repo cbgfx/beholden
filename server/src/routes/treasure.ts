@@ -7,6 +7,7 @@ import { rowToTreasure, nextSortFor, TREASURE_COLS } from "../lib/db.js";
 import { toTreasureDto } from "../lib/apiCollections.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
 import type { StoredTreasureState } from "../server/userData.js";
+import { parseStoredPresentationEntry } from "../services/compendium/storedCompendium.js";
 
 const TreasureQtyBody = z.object({
   qty: z.number().int().min(1),
@@ -265,7 +266,11 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
           } | undefined;
         if (itemRow) {
           try {
-            const data = JSON.parse(itemRow.data_json ?? "{}") as Record<string, unknown>;
+            // Route through the same canonical projection every other item consumer uses, rather
+            // than parsing data_json directly — the canonical shape nests ac/damage under
+            // armor/weapon (e.g. `armor.ac`, `weapon.damage`), so a raw `data.ac` here was always
+            // null. This also picks up `modifiers` (magic item enchantment bonuses) for free.
+            const data = parseStoredPresentationEntry("items", itemRow.data_json) as Record<string, unknown>;
             itemDetail = {
               equippable: Boolean(itemRow.equippable),
               weight: itemRow.weight ?? data.weight ?? null,
@@ -277,6 +282,9 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
               dmg2: data.dmg2 ?? null,
               dmgType: data.dmgType ?? null,
               properties: Array.isArray(data.properties) ? data.properties : [],
+              modifiers: Array.isArray(data.modifiers) ? data.modifiers : [],
+              effects: Array.isArray(data.effects) ? data.effects : null,
+              resolution: data.resolution ?? null,
             };
           } catch {
             itemDetail = {};

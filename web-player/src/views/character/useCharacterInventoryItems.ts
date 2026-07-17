@@ -116,7 +116,11 @@ export function useCharacterInventoryItems({
     if (item) await setEquipStateFor(id, getEquipState(item) === "worn" ? "backpack" : "worn");
   };
   const linkAmmo = (weaponId: string, ammoId: string | null) =>
-    containers.persist(items.map((item) => item.id === weaponId ? { ...item, linkedAmmoId: ammoId } : item));
+    containers.persist(items.map((item) => {
+      if (item.id !== weaponId) return item;
+      const ammo = ammoId ? items.find((candidate) => candidate.id === ammoId) : null;
+      return { ...item, linkedAmmoId: ammo && item.weaponAmmo === ammo.ammo ? ammoId : null };
+    }));
   const removeItem = (id: string) => containers.persist(items.filter((item) => item.id !== id));
   const changeQty = (id: string, delta: number) => containers.persist(items.map((item) =>
     item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item

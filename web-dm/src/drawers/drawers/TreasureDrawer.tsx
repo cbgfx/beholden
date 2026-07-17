@@ -5,6 +5,7 @@ import { theme, withAlpha } from "@/theme/theme";
 import { api } from "@/services/api";
 import { fetchTreasureById } from "@/services/collectionApi";
 import type { TreasureEntry } from "@/domain/types/domain";
+import { itemModifierLabel } from "@beholden/shared/domain";
 
 type TreasureDrawerState = Exclude<Extract<DrawerState, { type: "viewTreasure" }>, null>;
 
@@ -75,7 +76,7 @@ interface CompendiumItem {
   dmg2?: string | null;
   dmgType?: string | null;
   properties?: string[];
-  modifiers?: Array<{ category: string; text: string }>;
+  modifiers?: Array<{ target?: string; amount?: number }>;
 }
 
 function Tag({ label, color }: { label: string; color: string }) {
@@ -227,9 +228,10 @@ export function TreasureDrawer(props: {
             />
           ) : null}
           {displayEntry.type ? <Tag label={displayEntry.type} color={theme.colors.muted} /> : null}
-          {(itemData?.modifiers ?? []).map((m, i) => (
-            <Tag key={i} label={m.text} color={theme.colors.colorMagic} />
-          ))}
+          {(itemData?.modifiers ?? []).map((m, i) => {
+            const label = itemModifierLabel(m);
+            return label ? <Tag key={i} label={label} color={theme.colors.colorMagic} /> : null;
+          })}
         </div>
 
         {hasStats && (

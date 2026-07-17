@@ -32,6 +32,15 @@ export interface StructuredFeatMechanicsLike {
     recharge?: ResetKind | null;
     note?: string;
   }>;
+  choices?: Array<{
+    id?: string;
+    type?: string;
+    count?: number;
+    options?: string[] | null;
+    amount?: number | null;
+    split?: true;
+    maximum?: number | null;
+  }>;
 }
 
 function record(value: unknown): JsonRecord {
@@ -57,9 +66,24 @@ function fixed(value: number) {
   return { kind: "fixed" as const, value };
 }
 
+/** Adds any `{type: <enum>, ...}`-shaped object verbatim as a real FeatureEffect — no parsing, no kind-based restriction. This is the one path that lets canonical data carry the full effect vocabulary (armor_class, defense, senses, etc.), not just the narrow source_modifier/source_proficiency shapes below. */
+function addVerbatimEffects(rawEffects: unknown[], add: (effect: EffectWithoutIdentity) => void): void {
+  for (const rawEffect of rawEffects) {
+    if (!rawEffect || typeof rawEffect !== "object" || Array.isArray(rawEffect)) continue;
+    const effect = rawEffect as Record<string, unknown>;
+    if (!effect.type || typeof effect.type !== "string") continue;
+    // Strip any id/source that may have been persisted, then re-stamp via add().
+    const { id: _id, source: _source, ...rest } = effect;
+    add(rest as EffectWithoutIdentity);
+  }
+}
+
 export function structuredEffectsFromCanonical(args: {
   source: FeatureEffectSource;
   classEffects?: unknown[];
+  classChoices?: unknown[];
+  /** Verbatim FeatureEffect-shaped facts from a trait's own `effects` field (species/background traits). */
+  traitEffects?: unknown[];
   featMechanics?: StructuredFeatMechanicsLike | null;
 }): FeatureEffect[] {
   const effects: FeatureEffect[] = [];
@@ -71,56 +95,62 @@ export function structuredEffectsFromCanonical(args: {
     } as FeatureEffect);
   };
 
+  if (args.traitEffects && args.traitEffects.length > 0) {
+    addVerbatimEffects(args.traitEffects, add);
+  }
+
   for (const rawEffect of args.classEffects ?? []) {
     const effect = record(rawEffect);
-    const kind = String(effect.kind ?? "");
-    const value = String(effect.value ?? "").trim();
-    if (kind === "source_modifier") {
-      const match = value.match(/^(speed|hp|strength|dexterity|constitution|intelligence|wisdom|charisma)\s*([+-]\d+)$/iu);
-      const amount = Number(match?.[2]);
-      if (match?.[1] && Number.isFinite(amount)) {
-        const target = match[1].toLowerCase();
-        if (target === "speed") {
-          add({ type: "speed", mode: "bonus", amount: fixed(amount) });
-          continue;
-        }
-        if (target === "hp") {
-          add({ type: "hit_points", mode: "max_bonus", amount: fixed(amount) });
-          continue;
-        }
-        const abilityKey = ability(target);
-        if (abilityKey) {
-          add({
-            type: "ability_score",
-            mode: "fixed",
-            ability: abilityKey,
-            choiceCount: 1,
-            amount,
-            maximum: 30,
-          });
-          continue;
-        }
-      }
+    if (typeof effect.type === "string" && effect.type) {
+      const { id: _id, source: _source, ...rest } = effect;
+      add(rest as EffectWithoutIdentity);
     }
-    if (kind === "source_proficiency") {
-      const grouped = new Map<"skill" | "saving_throw", string[]>();
-      for (const name of value.split(",").map((part) => part.trim()).filter(Boolean)) {
-        const abilityKey = ability(name);
-        const category = abilityKey ? "saving_throw" : "skill";
-        const grants = grouped.get(category) ?? [];
-        grants.push(abilityKey ?? name);
-        grouped.set(category, grants);
-      }
-      for (const [category, grants] of grouped) {
-        add({ type: "proficiency_grant", category, grants });
-      }
+  }
+
+  for (const rawChoice of args.classChoices ?? []) {
+    const choice = record(rawChoice);
+    if (choice.kind === "proficiency") {
+      const category = String(choice.category) as "skill" | "tool" | "language" | "saving_throw";
+      const from = Array.isArray(choice.from) ? choice.from.map(String) : [];
+      add({
+        type: "proficiency_grant",
+        category,
+        choice: {
+          count: fixed(Number(choice.count ?? 1)),
+          optionCategory: category === "saving_throw" ? undefined : category,
+          options: from.length ? from : undefined,
+          ifProficient: choice.ifProficient ? String(choice.ifProficient) : undefined,
+        },
+      });
       continue;
     }
+    if (choice.kind !== "spell") continue;
+    const mode = choice.mode === "prepared" ? "prepare" : choice.mode === "spellbook" ? "spellbook" : "learn";
     add({
-      type: "narrative",
-      category: "reference",
-      description: [String(effect.description ?? "").trim(), value].filter(Boolean).join(": "),
+      type: "spell_choice",
+      choiceId: String(choice.id),
+      mode,
+      count: fixed(Number(choice.count ?? 1)),
+      level: choice.level == null ? null : Number(choice.level),
+      spellLists: Array.isArray(choice.lists) ? choice.lists.map(String) : [],
+      schools: choice.school ? [String(choice.school)] : undefined,
+      note: [
+        choice.maxLevel == null ? "" : `Maximum spell level ${Number(choice.maxLevel)}`,
+        choice.replace === true ? "May replace when the feature permits." : "",
+        choice.perNewSlotLevel === true ? "Gain one additional choice whenever this class gains a new spell-slot level." : "",
+      ].filter(Boolean).join(" ") || undefined,
+      freeCast: choice.freeCast === true || undefined,
+      ifKnown: choice.ifKnown ? String(choice.ifKnown) : undefined,
     });
+    if (choice.freeCast === true) {
+      add({
+        type: "resource_grant",
+        resourceKey: String(choice.id),
+        label: args.source.name,
+        max: fixed(1),
+        restoreAmount: "all",
+      });
+    }
   }
 
   const grants = args.featMechanics?.grants;
@@ -156,14 +186,7 @@ export function structuredEffectsFromCanonical(args: {
 
     // Pass pre-computed structured effects from parseFeatStructuredEffects() through
     // as structured fallbacks. id and source are stamped on by add().
-    for (const rawEffect of (grants.effects ?? [])) {
-      if (!rawEffect || typeof rawEffect !== "object" || Array.isArray(rawEffect)) continue;
-      const effect = rawEffect as Record<string, unknown>;
-      if (!effect.type || typeof effect.type !== "string") continue;
-      // Strip any id/source that may have been persisted, then re-stamp via add().
-      const { id: _id, source: _source, ...rest } = effect;
-      add(rest as EffectWithoutIdentity);
-    }
+    addVerbatimEffects(grants.effects ?? [], add);
   }
 
   for (const [index, use] of (args.featMechanics?.uses ?? []).entries()) {
@@ -179,7 +202,7 @@ export function structuredEffectsFromCanonical(args: {
       resourceKey: `${args.source.id}:use:${index + 1}`,
       label: String(use.note ?? args.source.name),
       max,
-      reset: use.recharge ?? "special",
+      reset: use.recharge ?? "long_rest",
       restoreAmount: "all",
     });
   }

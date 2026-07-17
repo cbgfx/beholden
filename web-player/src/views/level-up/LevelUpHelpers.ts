@@ -21,24 +21,26 @@ export function reconcileSelectedSpellIds(
 ): string[] {
   const byId = new Map(options.map((spell) => [String(spell.id), String(spell.id)]));
   const byName = new Map(options.map((spell) => [normalizeSpellSelectionKey(spell.name), String(spell.id)]));
-  const resolved = new Set<string>();
+  const resolved: string[] = [];
+  const repeatableIds = new Set(options.filter((option) => option.repeatable).map((option) => String(option.id)));
+  const add = (id: string) => { if (repeatableIds.has(id) || !resolved.includes(id)) resolved.push(id); };
 
   for (const entry of selected) {
     const direct = byId.get(String(entry));
     if (direct) {
-      resolved.add(direct);
+      add(direct);
       continue;
     }
     const bySavedName = byName.get(normalizeSpellSelectionKey(entry));
-    if (bySavedName) resolved.add(bySavedName);
+    if (bySavedName) add(bySavedName);
   }
 
   for (const name of knownSpellNames) {
     const matched = byName.get(normalizeSpellSelectionKey(name));
-    if (matched) resolved.add(matched);
+    if (matched) add(matched);
   }
 
-  return Array.from(resolved);
+  return resolved;
 }
 
 export function cleanFeatureText(text: string | null | undefined): string {
@@ -86,6 +88,7 @@ export function deriveCharProficiencies(char: Character | null): {
   proficientSkills: string[];
   proficientTools: string[];
   proficientLanguages: string[];
+  proficientSaves: string[];
   existingExpertise: string[];
 } {
   const _cp = char?.characterData?.proficiencies;
@@ -105,6 +108,7 @@ export function deriveCharProficiencies(char: Character | null): {
     proficientSkills: toNames(_arr(_cp?.skills)),
     proficientTools: toNames(_arr(_cp?.tools)),
     proficientLanguages: toNames(_arr(_cp?.languages)),
+    proficientSaves: toNames(_arr(_cp?.saves)),
     existingExpertise: toNames(_arr(_cp?.expertise)),
   };
 }

@@ -211,142 +211,138 @@ export function normalizeResourceKey(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-function parseInvocationPrereqLevel(text: string): number {
-  const m = text.match(/Prerequisite[^:]*:.*?Level\s+(\d+)\+/i);
-  return m ? parseInt(m[1], 10) : 1;
+/** Renders a ClassTalent's typed prerequisite for display. Only invocations carry
+ * prerequisites, and invocations are Warlock-only by acquisition, so the class label is
+ * fixed. `resolveTalentName` maps a `ct_` dependency id to its display name. */
+export function classTalentPrerequisiteLabel(
+  prerequisite: ClassTalentPrerequisite | null | undefined,
+  resolveTalentName?: (id: string) => string | null | undefined,
+): string | null {
+  if (!prerequisite) return null;
+  const parts: string[] = [];
+  if (prerequisite.level) parts.push(`Level ${prerequisite.level}+ Warlock`);
+  if (prerequisite.talent) {
+    const name = resolveTalentName?.(prerequisite.talent);
+    parts.push(name ? `${name.replace(/^Invocation:\s*/i, "")} Invocation` : prerequisite.talent);
+  }
+  if (prerequisite.cantrip === "damage") parts.push("a Warlock cantrip that deals damage");
+  if (prerequisite.cantrip === "attack_damage") parts.push("a Warlock cantrip that deals damage via an attack roll");
+  return parts.length > 0 ? parts.join(", ") : null;
 }
 
-export function extractPrerequisite(text: string | null | undefined): string | null {
-  const raw = String(text ?? "");
-  const match = raw.match(/^\s*Prerequisite[^:]*:\s*(.+)$/im);
-  return match ? match[1].trim() : null;
+export function spellLooksLikeDamageSpell(spell: { name?: string | null; text?: string | null; rolls?: Array<{ effect?: string | string[] | null }> | null }): boolean {
+  return (spell.rolls ?? []).some((roll) => Array.isArray(roll.effect) || (roll.effect && roll.effect !== "healing" && roll.effect !== "temp_hp"));
 }
 
-export function stripPrerequisiteLine(text: string | null | undefined): string {
-  return String(text ?? "")
-    .replace(/^\s*Prerequisite[^:]*:.*(?:\r?\n)?/im, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-export function spellLooksLikeDamageSpell(spell: { name?: string | null; text?: string | null }): boolean {
-  const text = String(spell.text ?? "");
-  const name = String(spell.name ?? "");
-  return /\bdeal(?:s|ing)?\b.*\bdamage\b/i.test(text)
-    || /\btakes?\b.*\bdamage\b/i.test(text)
-    || /\b\d+d\d+\b/.test(text)
-    || /eldritch blast|poison spray|fire bolt|ray of frost|chill touch|sacred flame|acid splash|mind sliver|toll the dead|vicious mockery|word of radiance|primal savagery|thorn whip|shocking grasp/i.test(name);
+export interface ClassTalentPrerequisite {
+  level?: number;
+  talent?: string;
+  cantrip?: "damage" | "attack_damage";
 }
 
 export function invocationPrerequisitesMet(
-  text: string | null | undefined,
+  prerequisite: ClassTalentPrerequisite | null | undefined,
   opts: {
     level: number;
-    chosenCantripNames?: string[];
-    chosenDamageCantripNames?: string[];
-    chosenInvocationNames?: string[];
+    hasDamageCantrip?: boolean;
+    hasAttackDamageCantrip?: boolean;
+    chosenTalentIds?: string[];
   }
 ): boolean {
-  const raw = String(text ?? "");
-  if (parseInvocationPrereqLevel(raw) > opts.level) return false;
-
-  const chosenCantripNames = (opts.chosenCantripNames ?? []).map((name) => String(name).toLowerCase());
-  const chosenDamageCantripNames = (opts.chosenDamageCantripNames ?? []).map((name) => String(name).toLowerCase());
-  const chosenInvocationNames = (opts.chosenInvocationNames ?? []).map((name) => String(name).toLowerCase());
-
-  if (/prerequisite[^:]*:.*eldritch blast cantrip/i.test(raw) && !chosenCantripNames.includes("eldritch blast")) return false;
-  if (/prerequisite[^:]*:.*warlock cantrip that deals damage/i.test(raw) && chosenDamageCantripNames.length === 0) return false;
-  if (/prerequisite[^:]*:.*pact of the blade/i.test(raw) && !chosenInvocationNames.some((name) => /pact of the blade/i.test(name))) return false;
-  if (/prerequisite[^:]*:.*pact of the chain/i.test(raw) && !chosenInvocationNames.some((name) => /pact of the chain/i.test(name))) return false;
-  if (/prerequisite[^:]*:.*pact of the tome/i.test(raw) && !chosenInvocationNames.some((name) => /pact of the tome/i.test(name))) return false;
-  if (/prerequisite[^:]*:.*pact of the talisman/i.test(raw) && !chosenInvocationNames.some((name) => /pact of the talisman/i.test(name))) return false;
-
+  if (!prerequisite) return true;
+  if ((prerequisite.level ?? 0) > opts.level) return false;
+  if (prerequisite.talent && !(opts.chosenTalentIds ?? []).includes(prerequisite.talent)) return false;
+  if (prerequisite.cantrip === "damage" && !opts.hasDamageCantrip) return false;
+  if (prerequisite.cantrip === "attack_damage" && !opts.hasAttackDamageCantrip) return false;
   return true;
 }
 
-const PREREQUISITE_ABILITIES: Array<{ key: AbilKey; pattern: string }> = [
-  { key: "str", pattern: "strength|str" },
-  { key: "dex", pattern: "dexterity|dex" },
-  { key: "con", pattern: "constitution|con" },
-  { key: "int", pattern: "intelligence|int" },
-  { key: "wis", pattern: "wisdom|wis" },
-  { key: "cha", pattern: "charisma|cha" },
-];
+export interface FeatPrerequisiteFacts {
+  level?: number;
+  ability?: { any: readonly AbilKey[]; min?: number } | ReadonlyArray<{ any: readonly AbilKey[]; min?: number }>;
+  class?: "paladin";
+  feature?: "spellcasting" | "fighting_style";
+  training?: "martial_weapon" | "heavy_weapon" | "light_armor" | "medium_armor" | "heavy_armor" | "shield";
+  feat?: string;
+  anyOfFeats?: string[];
+  noneOfFeats?: string[];
+  campaign?: "eberron";
+  any?: Array<Pick<FeatPrerequisiteFacts, "feat" | "feature" | "training">>;
+}
 
-function abilityPrerequisitesMet(
-  prerequisite: string,
-  scores: Partial<Record<AbilKey, number | null | undefined>> | undefined,
+export type FeatPrerequisite = number | FeatPrerequisiteFacts;
+
+function featRequirementMet(
+  requirement: Pick<FeatPrerequisiteFacts, "feat" | "feature" | "training">,
+  opts: {
+    prof?: ProficiencyMap | null;
+    spellcaster?: boolean;
+    features?: string[];
+    featIds?: string[];
+  },
 ): boolean {
-  const normalized = prerequisite
-    .replace(/\b(\d+)\s+or\s+higher\b/gi, "$1+")
-    .replace(/\bscore(?:s)?\s+of\s+/gi, "")
-    .replace(/\bscore(?:s)?\b/gi, "");
-  const abilityPattern = PREREQUISITE_ABILITIES.map(({ pattern }) => pattern).join("|");
-  const mentionRegex = new RegExp(`\\b(${abilityPattern})\\b`, "gi");
-  const mentions = [...normalized.matchAll(mentionRegex)].map((match) => {
-    const label = match[1].toLowerCase();
-    const ability = PREREQUISITE_ABILITIES.find(({ pattern }) =>
-      new RegExp(`^(?:${pattern})$`, "i").test(label)
-    );
-    return { key: ability?.key ?? null, index: match.index ?? 0 };
-  }).filter((mention): mention is { key: AbilKey; index: number } => mention.key !== null);
-  const thresholds = [...normalized.matchAll(/(\d+)\s*\+/g)].map((match) => ({
-    value: Number(match[1]),
-    index: match.index ?? 0,
-    end: (match.index ?? 0) + match[0].length,
-  }));
-  if (mentions.length === 0 || thresholds.length === 0) return true;
-
-  const groupResults = thresholds.map((threshold, index) => {
-    const start = index === 0 ? 0 : thresholds[index - 1].end;
-    const groupMentions = mentions.filter((mention) => mention.index >= start && mention.index < threshold.index);
-    if (groupMentions.length === 0) return true;
-    const connectorText = normalized.slice(groupMentions[0].index, threshold.index);
-    const checks = groupMentions.map(({ key }) => Number(scores?.[key] ?? 0) >= threshold.value);
-    return /\bor\b/i.test(connectorText) ? checks.some(Boolean) : checks.every(Boolean);
-  });
-
-  if (groupResults.length === 1) return groupResults[0];
-  const betweenGroups = thresholds.slice(0, -1).map((threshold, index) =>
-    normalized.slice(threshold.end, thresholds[index + 1].index)
-  ).join(" ");
-  return /\bor\b/i.test(betweenGroups) && !/\band\b/i.test(betweenGroups)
-    ? groupResults.some(Boolean)
-    : groupResults.every(Boolean);
+  if (requirement.feat) return (opts.featIds ?? []).includes(requirement.feat);
+  if (requirement.feature === "spellcasting") return Boolean(opts.spellcaster);
+  if (requirement.feature === "fighting_style") return (opts.features ?? []).includes("fighting_style");
+  const training = requirement.training;
+  if (!training) return true;
+  if (training === "martial_weapon") return hasNamedProficiency(opts.prof?.weapons, "Martial Weapons");
+  if (training === "heavy_weapon") return hasNamedProficiency(opts.prof?.weapons, "Heavy Weapons") || hasNamedProficiency(opts.prof?.weapons, "Martial Weapons");
+  const armor = { light_armor: "Light Armor", medium_armor: "Medium Armor", heavy_armor: "Heavy Armor", shield: "Shields" }[training];
+  return hasNamedProficiency(opts.prof?.armor, armor);
 }
 
 export function featPrerequisitesMet(
-  text: string | null | undefined,
+  prerequisite: FeatPrerequisite | null | undefined,
   opts: {
     level: number;
     className?: string | null;
     scores?: Partial<Record<AbilKey, number | null | undefined>>;
     prof?: ProficiencyMap | null | undefined;
     spellcaster?: boolean;
+    features?: string[];
+    featIds?: string[];
   }
 ): boolean {
-  const prereq = extractPrerequisite(text);
-  if (!prereq) return true;
-
-  const raw = prereq.toLowerCase();
-  const levelMatch = raw.match(/\blevel\s+(\d+)\+/i);
-  if (levelMatch && opts.level < Number(levelMatch[1])) return false;
-
-  const className = String(opts.className ?? "").toLowerCase();
-  const classMatches = [...raw.matchAll(/\b(barbarian|bard|cleric|druid|fighter|monk|paladin|ranger|rogue|sorcerer|warlock|wizard|artificer)\b/g)].map((match) => match[1]);
-  if (classMatches.length > 0 && !classMatches.some((name) => className.includes(name))) return false;
-
-  if (/\bspellcasting\b|\bpact magic\b/i.test(raw) && !opts.spellcaster) return false;
-
-  if (!abilityPrerequisitesMet(raw, opts.scores)) return false;
-
-  if (/\bproficiency with a martial weapon\b/i.test(raw) && !hasNamedProficiency(opts.prof?.weapons, "Martial Weapons")) return false;
-  if (/\bproficiency with a shield\b/i.test(raw) && !hasNamedProficiency(opts.prof?.armor, "Shields")) return false;
-  if (/\bproficiency with light armor\b/i.test(raw) && !hasNamedProficiency(opts.prof?.armor, "Light Armor")) return false;
-  if (/\bproficiency with medium armor\b/i.test(raw) && !hasNamedProficiency(opts.prof?.armor, "Medium Armor")) return false;
-  if (/\bproficiency in the stealth skill\b/i.test(raw) && !hasNamedProficiency(opts.prof?.skills, "Stealth")) return false;
-
+  if (prerequisite == null) return true;
+  const facts = typeof prerequisite === "number" ? { level: prerequisite } : prerequisite;
+  if (facts.level && opts.level < facts.level) return false;
+  if (facts.ability) {
+    const requirements: ReadonlyArray<{ any: readonly AbilKey[]; min?: number }> = Array.isArray(facts.ability)
+      ? facts.ability as ReadonlyArray<{ any: readonly AbilKey[]; min?: number }>
+      : [facts.ability as { any: readonly AbilKey[]; min?: number }];
+    if (!requirements.every((requirement) => requirement.any.some((key) => Number(opts.scores?.[key] ?? 0) >= (requirement.min ?? 13)))) return false;
+  }
+  if (facts.class && !String(opts.className ?? "").toLowerCase().includes(facts.class)) return false;
+  if (!featRequirementMet(facts, opts)) return false;
+  const featIds = opts.featIds ?? [];
+  if (facts.anyOfFeats && !facts.anyOfFeats.some((id) => featIds.includes(id))) return false;
+  if (facts.noneOfFeats?.some((id) => featIds.includes(id))) return false;
+  if (facts.any && !facts.any.some((requirement) => featRequirementMet(requirement, opts))) return false;
+  // Campaign approval is an authored display/table constraint, not a character statistic.
   return true;
+}
+
+export function formatFeatPrerequisite(prerequisite: FeatPrerequisite | null | undefined): string | null {
+  if (prerequisite == null) return null;
+  const facts = typeof prerequisite === "number" ? { level: prerequisite } : prerequisite;
+  const parts: string[] = [];
+  if (facts.level) parts.push(`Level ${facts.level}+`);
+  if (facts.ability) {
+    const requirements: ReadonlyArray<{ any: readonly AbilKey[]; min?: number }> = Array.isArray(facts.ability)
+      ? facts.ability as ReadonlyArray<{ any: readonly AbilKey[]; min?: number }>
+      : [facts.ability as { any: readonly AbilKey[]; min?: number }];
+    parts.push(requirements.map((requirement) => `${requirement.any.map((key) => key.toUpperCase()).join(" or ")} ${requirement.min ?? 13}+`).join(" and "));
+  }
+  if (facts.class) parts.push(`${facts.class[0].toUpperCase()}${facts.class.slice(1)} class`);
+  if (facts.feature) parts.push(facts.feature === "spellcasting" ? "Spellcasting or Pact Magic feature" : "Fighting Style feature");
+  if (facts.training) parts.push(facts.training.replaceAll("_", " "));
+  if (facts.feat) parts.push(`Feat ${facts.feat}`);
+  if (facts.anyOfFeats) parts.push("a required Feat");
+  if (facts.noneOfFeats) parts.push("no other Dragonmark Feat");
+  if (facts.campaign) parts.push(`${facts.campaign[0].toUpperCase()}${facts.campaign.slice(1)} campaign`);
+  if (facts.any) parts.push("one listed requirement");
+  return parts.join(", ");
 }
 
 export function hpColor(pct: number): string {

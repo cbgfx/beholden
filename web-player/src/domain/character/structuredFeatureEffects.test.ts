@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseFeatureEffects } from "./parseFeatureEffects";
 import { deriveAttackDamageBonusFromEffects } from "./parseFeatureEffectsDerived";
 import { structuredEffectsFromCanonical } from "./structuredFeatureEffects";
+import { weaponMatchesFilters } from "./parseFeatureEffectsDerivedHelpers";
 
 const source = {
   id: "class:test",
@@ -11,13 +12,112 @@ const source = {
 };
 
 describe("structured canonical feature effects", () => {
-  it("maps class modifiers and proficiency grants without feature prose", () => {
+  it("recognizes a magic-weapon gate without reading the item name", () => {
+    const weapon = { name: "Moon Blade", dmg1: "1d8", magic: true };
+    expect(weaponMatchesFilters(weapon, ["magic_weapon"])).toBe(true);
+    expect(weaponMatchesFilters({ ...weapon, magic: false }, ["magic_weapon"])).toBe(false);
+  });
+  it("maps stable class spell choices without reading feature prose", () => {
+    const parsed = parseFeatureEffects({
+      source,
+      text: "This deliberately contains no parseable spell-choice sentence.",
+      classChoices: [{
+        id: "fc_warlock_mystic_arcanum_6",
+        kind: "spell",
+        lists: ["sl_warlock"],
+        mode: "known",
+        level: 6,
+        replace: true,
+        freeCast: true,
+      }],
+    });
+
+    expect(parsed.effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "spell_choice",
+        choiceId: "fc_warlock_mystic_arcanum_6",
+        spellLists: ["sl_warlock"],
+        mode: "learn",
+        level: 6,
+        freeCast: true,
+      }),
+      expect.objectContaining({
+        type: "resource_grant",
+        resourceKey: "fc_warlock_mystic_arcanum_6",
+        max: { kind: "fixed", value: 1 },
+      }),
+    ]));
+  });
+
+  it("preserves a conditional fallback for an already-known fixed spell", () => {
+    const effects = structuredEffectsFromCanonical({
+      source: { ...source, name: "Improved Illusions" },
+      classChoices: [{
+        id: "fc_improved_illusions_replacement",
+        kind: "spell",
+        lists: ["sl_wizard"],
+        mode: "known",
+        level: 0,
+        ifKnown: "Minor Illusion",
+      }],
+    });
+
+    expect(effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "spell_choice",
+        choiceId: "fc_improved_illusions_replacement",
+        ifKnown: "Minor Illusion",
+      }),
+    ]));
+  });
+
+  it("maps constrained class proficiency choices without prose", () => {
+    const effects = structuredEffectsFromCanonical({
+      source: { ...source, name: "Blessings of Knowledge" },
+      classChoices: [{ kind: "proficiency", category: "skill", count: 2, from: ["Arcana", "History", "Nature", "Religion"] }],
+    });
+
+    expect(effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "proficiency_grant",
+        category: "skill",
+        choice: {
+          count: { kind: "fixed", value: 2 },
+          optionCategory: "skill",
+          options: ["Arcana", "History", "Nature", "Religion"],
+        },
+      }),
+    ]));
+  });
+
+  it("preserves a conditional replacement proficiency choice", () => {
+    const effects = structuredEffectsFromCanonical({
+      source: { ...source, name: "Unfettered Mind" },
+      classChoices: [{
+        kind: "proficiency",
+        category: "saving_throw",
+        count: 1,
+        from: ["str", "dex", "con", "wis", "cha"],
+        ifProficient: "int",
+      }],
+    });
+    expect(effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "proficiency_grant",
+        category: "saving_throw",
+        choice: expect.objectContaining({ ifProficient: "int" }),
+      }),
+    ]));
+  });
+
+  it("maps typed class effects without feature prose", () => {
     const effects = structuredEffectsFromCanonical({
       source,
       classEffects: [
-        { kind: "source_modifier", category: "bonus", value: "speed +10" },
-        { kind: "source_modifier", category: "ability score", value: "strength +4" },
-        { kind: "source_proficiency", value: "Wisdom, Perception" },
+        { type: "speed", mode: "bonus", amount: { kind: "fixed", value: 10 } },
+        { type: "ability_score", mode: "fixed", ability: "str", choiceCount: 1, amount: 4, maximum: 30 },
+        { type: "proficiency_grant", category: "saving_throw", grants: ["wis"] },
+        { type: "proficiency_grant", category: "skill", grants: ["Perception"] },
       ],
     });
 
@@ -47,7 +147,6 @@ describe("structured canonical feature effects", () => {
         uses: [{
           count: 1,
           countFrom: "proficiency_bonus",
-          recharge: "long_rest",
           note: "Luck Points",
         }],
       },
@@ -66,11 +165,11 @@ describe("structured canonical feature effects", () => {
     ]));
   });
 
-  it("does not duplicate an effect type already understood from richer prose", () => {
+  it("does not derive an additional effect from prose", () => {
     const parsed = parseFeatureEffects({
       source: { ...source, text: "Your speed increases by 10 feet." },
       text: "Your speed increases by 10 feet.",
-      classEffects: [{ kind: "source_modifier", category: "bonus", value: "speed +10" }],
+      classEffects: [{ type: "speed", mode: "bonus", amount: { kind: "fixed", value: 10 } }],
     });
     expect(parsed.effects.filter((effect) => effect.type === "speed")).toHaveLength(1);
   });
@@ -117,7 +216,7 @@ describe("structured canonical feature effects", () => {
       item: longsword,
       isWeapon: true,
       hasOtherWeapon: false,
-    })).toBe(2);
+    })).toBe(0);
   });
 
   it("applies Thrown Weapon Fighting to weapons with the Thrown property", () => {
@@ -168,6 +267,80 @@ describe("structured canonical feature effects", () => {
         dmg1: "1d4",
       },
       isWeapon: true,
-    })).toBe(2);
+    })).toBe(0);
+  });
+
+  it("passes a trait's own structured effects through verbatim, with no parsing — no name/prose inference involved", () => {
+    const effects = structuredEffectsFromCanonical({
+      source: { ...source, id: "race:warforged:integrated_protection", kind: "species", name: "Integrated Protection" },
+      traitEffects: [
+        { type: "armor_class", mode: "bonus", bonus: { kind: "fixed", value: 1 } },
+      ],
+    });
+    expect(effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "armor_class", mode: "bonus", bonus: { kind: "fixed", value: 1 } }),
+    ]));
+  });
+
+  it("passes a trait's defense effect through with a causeFilter, for immunities scoped to specific causes (e.g. Warforged's Tireless)", () => {
+    const effects = structuredEffectsFromCanonical({
+      source: { ...source, id: "race:warforged:tireless", kind: "species", name: "Tireless" },
+      traitEffects: [
+        { type: "defense", mode: "condition_immunity", targets: ["Exhaustion"], causeFilter: ["dehydration", "malnutrition", "suffocation"] },
+      ],
+    });
+    expect(effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "defense", mode: "condition_immunity", targets: ["Exhaustion"], causeFilter: ["dehydration", "malnutrition", "suffocation"] }),
+    ]));
+  });
+
+  it("passes a feat_choice effect through verbatim, for a species trait that grants a feat of the player's choice (e.g. Human's Versatile)", () => {
+    const effects = structuredEffectsFromCanonical({
+      source: { ...source, id: "race:human:versatile", kind: "species", name: "Versatile" },
+      traitEffects: [
+        { type: "feat_choice", mode: "learn", count: { kind: "fixed", value: 1 }, category: "origin" },
+      ],
+    });
+    expect(effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "feat_choice", mode: "learn", count: { kind: "fixed", value: 1 }, category: "origin" }),
+    ]));
+  });
+
+  it("passes a rest_rule effect through verbatim, for a species trait that changes rest mechanics (e.g. Warforged's Sentry's Rest)", () => {
+    const effects = structuredEffectsFromCanonical({
+      source: { ...source, id: "race:warforged:sentrys_rest", kind: "species", name: "Sentry's Rest" },
+      traitEffects: [
+        { type: "rest_rule", mode: "long_rest_duration", hours: 6 },
+        { type: "rest_rule", mode: "no_sleep_required" },
+      ],
+    });
+    expect(effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "rest_rule", mode: "long_rest_duration", hours: 6 }),
+      expect.objectContaining({ type: "rest_rule", mode: "no_sleep_required" }),
+    ]));
+  });
+
+  it("passes an any_d20_test modifier through verbatim, for a broad reroll effect (e.g. Halfling Luck)", () => {
+    const effects = structuredEffectsFromCanonical({
+      source: { ...source, id: "race:halfling:luck", kind: "species", name: "Luck" },
+      traitEffects: [
+        { type: "modifier", target: "any_d20_test", mode: "reroll" },
+      ],
+    });
+    expect(effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "modifier", target: "any_d20_test", mode: "reroll" }),
+    ]));
+  });
+
+  it("passes requiredLevel through verbatim, for a species trait effect that only activates from a given character level (e.g. Draconic Flight at level 5)", () => {
+    const effects = structuredEffectsFromCanonical({
+      source: { ...source, id: "race:aasimar:draconic_flight", kind: "species", name: "Draconic Flight" },
+      traitEffects: [
+        { type: "action", activation: "bonus_action", description: "Grow spectral wings for 10 minutes.", requiredLevel: 5 },
+      ],
+    });
+    expect(effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "action", requiredLevel: 5 }),
+    ]));
   });
 });

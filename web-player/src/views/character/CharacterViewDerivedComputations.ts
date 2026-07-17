@@ -118,7 +118,7 @@ export function buildTransformedCombatStats({
   if (!monster) return null;
   const monsterDex = readMonsterNumber(monster.dex) ?? 10;
   const monsterWis = readMonsterNumber(monster.wis) ?? 10;
-  const speedData = parseMonsterSpeed(monster.speed);
+  const speedData = parseMonsterSpeed(monster.movement);
   const skillPerception = readMonsterSkillBonus(monster, "Perception");
   return {
     effectiveAc: readMonsterNumber(monster.ac?.value ?? monster.ac ?? monster.armor_class) ?? effectiveAc,

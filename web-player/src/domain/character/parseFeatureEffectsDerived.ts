@@ -164,7 +164,7 @@ export function collectTaggedGrantsFromEffects(parsed: ParsedFeatureEffects[]): 
           : effect.category === "language" ? result.languages
           : null;
         if (!target) continue;
-        for (const name of effect.grants) target.push({ name, source: effect.source.name });
+        for (const name of effect.grants) target.push({ name, source: effect.source.name, weaponFilter: effect.weaponFilter });
       }
       if (effect.type === "weapon_mastery" && effect.grants?.length) {
         for (const name of effect.grants) result.weapons.push({ name, source: effect.source.name });

@@ -3,24 +3,7 @@ import { Panel } from "@/ui/Panel";
 import { C } from "@/lib/theme";
 import { api } from "@/services/api";
 import { titleCase } from "@/lib/format/titleCase";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type ItemFull = {
-  id: string; name: string;
-  rarity: string | null; type: string | null;
-  attunement: boolean; magic: boolean;
-  weight: number | null;
-  value?: number | null;
-  ac?: number | null;
-  stealthDisadvantage?: boolean;
-  dmg1: string | null; dmg2: string | null; dmgType: string | null;
-  properties: string[];
-  modifiers: Array<{ category: string; text: string }>;
-  text: string | string[];
-};
+import { itemModifierLabel, type CompendiumItemDetail } from "@beholden/shared/domain";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -60,10 +43,8 @@ function rarityColor(rarity: string | null): string {
   }
 }
 
-function hasStealthDisadvantage(item: { stealthDisadvantage?: boolean; text?: string | string[] | null }): boolean {
-  if (item.stealthDisadvantage) return true;
-  const text = Array.isArray(item.text) ? item.text.join("\n") : String(item.text ?? "");
-  return /disadvantage on stealth/i.test(text);
+function hasStealthDisadvantage(item: { stealthDisadvantage?: boolean }): boolean {
+  return item.stealthDisadvantage === true;
 }
 
 function Tag({ label, color }: { label: string; color: string }) {
@@ -91,14 +72,14 @@ function StatChip({ label, color }: { label: string; color: string }) {
 // ---------------------------------------------------------------------------
 
 export function ItemDetailPanel(props: { itemId: string }) {
-  const [item, setItem] = React.useState<ItemFull | null>(null);
+  const [item, setItem] = React.useState<CompendiumItemDetail | null>(null);
   const [busy, setBusy] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
     if (!props.itemId) { setItem(null); return; }
     setBusy(true);
-    api<ItemFull>(`/api/compendium/items/${encodeURIComponent(props.itemId)}`)
+    api<CompendiumItemDetail>(`/api/compendium/items/${encodeURIComponent(props.itemId)}`)
       .then((d) => { if (!cancelled) setItem(d ?? null); })
       .catch(() => { if (!cancelled) setItem(null); })
       .finally(() => { if (!cancelled) setBusy(false); });
@@ -157,9 +138,10 @@ export function ItemDetailPanel(props: { itemId: string }) {
           {/* Modifier chips */}
           {hasModifiers && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-              {item.modifiers.map((m, i) => (
-                <StatChip key={i} label={m.text} color={C.colorMagic} />
-              ))}
+              {item.modifiers.map((m, i) => {
+                const label = itemModifierLabel(m);
+                return label ? <StatChip key={i} label={label} color={C.colorMagic} /> : null;
+              })}
             </div>
           )}
 

@@ -113,7 +113,7 @@ test("character AC normalization persists the client-derived base and accepts la
   assert.equal(lowered.sheet.ac, 13);
 });
 
-test("character AC normalization derives an equipment baseline before the first client sync", () => {
+test("character AC normalization does not infer rules from embedded inventory", () => {
   const normalized = normalizeCharacterSheetForStorage(BASE_SHEET, {
     inventory: [{
       name: "Leather Armor",
@@ -122,7 +122,7 @@ test("character AC normalization derives an equipment baseline before the first 
       equipState: "worn",
     }],
   });
-  assert.equal(normalized.sheet.ac, 13);
+  assert.equal(normalized.sheet.ac, BASE_SHEET.ac);
 });
 
 test("character home reads use the canonical sheet AC override when the campaign copy is stale", () => {

@@ -1,13 +1,13 @@
-import { titleCase } from "@/lib/format/titleCase";
 import {
   canAddAbilityModifierToExtraAttackDamageFromEffects,
   canUseWeaponForBonusAttackFromEffects,
   deriveAttackAbilityOverrideFromEffects,
 } from "@/domain/character/parseFeatureEffects";
-import { formatItemDamageType, formatItemProperties, isCurrencyName, normalizeInventoryItemLookupName } from "@beholden/shared/domain";
+import { formatItemDamageType, formatItemProperties, isCurrencyName, normalizeInventoryItemLookupName, itemModifierBonus } from "@beholden/shared/domain";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
 import type { CharacterData, ProficiencyMap, TaggedItem } from "@/views/character/CharacterSheetTypes";
 import { abilityMod, normalizeWeaponProficiencyName, splitArmorProficiencyNames } from "@/views/character/CharacterSheetUtils";
+import { rollDiceExpr } from "@/lib/dice";
 
 export type TaggedItemLike = TaggedItem;
 export type ProficiencyMapLike = Pick<ProficiencyMap, "weapons" | "armor">;
@@ -44,10 +44,20 @@ export interface InventoryItem {
   dmg2?: string | null;
   dmgType?: string | null;
   properties?: string[];
+  mastery?: string | null;
+  modifiers?: Array<{ target?: string; amount?: number }>;
   description?: string;
+  uses?: ItemUses | null;
+  spells?: ItemSpells | null;
+  spellcasting?: ItemSpellcasting | null;
+  spellTemplate?: ItemSpellTemplates | null;
+  ammo?: AmmoFamily | null;
+  weaponAmmo?: AmmoFamily | null;
+  usage?: "held" | null;
   chargesMax?: number | null;
   charges?: number | null;
   linkedAmmoId?: string | null;
+  effects?: unknown[] | null;
 }
 
 export interface InventoryContainer {
@@ -77,8 +87,60 @@ export interface InventoryPickerPayload {
   dmg2?: string | null;
   dmgType?: string | null;
   properties?: string[];
+  mastery?: string | null;
+  modifiers?: Array<{ target?: string; amount?: number }>;
   description?: string;
+  uses?: ItemUses | null;
+  spells?: ItemSpells | null;
+  spellcasting?: ItemSpellcasting | null;
+  spellTemplate?: ItemSpellTemplates | null;
+  ammo?: AmmoFamily | null;
+  weaponAmmo?: AmmoFamily | null;
+  usage?: "held" | null;
+  bundle?: ItemBundle | null;
+  container?: boolean;
+  ignoreWeight?: boolean;
+  effects?: unknown[] | null;
 }
+
+export interface ItemBundle {
+  container: string;
+  items: Record<string, number>;
+}
+
+export type ItemUseAmount = number | string;
+export type ItemDepletion = "destroy" | "mundane" | "loseProperties" | {
+  destroy?: true | number;
+  mundane?: true | number;
+  loseProperties?: true | number;
+  regain?: Record<string, ItemUseAmount>;
+};
+export type ItemUses = ItemUseAmount | {
+  max: ItemUseAmount;
+  recover?: false | ItemUseAmount;
+  depletion?: ItemDepletion;
+};
+export type ItemSpellAccess = number | "level" | {
+  cost?: number | "level";
+  level?: number;
+  uses?: ItemUseAmount;
+  consume?: true;
+  maxLevel?: number;
+  maxCost?: number;
+  upcast?: number;
+  dc?: number;
+  attack?: number;
+  note?: string;
+};
+export type ItemSpells = Record<string, ItemSpellAccess>;
+export type ItemSpellcasting = "character" | { dc?: number; attack?: number };
+export type AmmoFamily = "arrow" | "bolt" | "energy-cell" | "firearm-bullet" | "needle" | "sling-bullet";
+export type ItemSpellTemplate =
+  | { kind: "bound"; level?: number; minLevel?: number; maxLevel?: number; list?: string; schools?: string[]; cost?: number | "level"; uses?: number; consume?: true; prepared?: true; dc?: number; attack?: number; stats?: Record<string, { dc?: number; attack?: number }> }
+  | { kind: "stored"; capacity: number; minLevel?: number; maxLevel?: number; initial?: string }
+  | { kind: "choice"; list: string; level?: number; minLevel?: number; maxLevel?: number; uses?: number; recovery?: "short_rest" | "long_rest" }
+  | { kind: "random"; die: string; when?: string; outcomes: Record<string, string | { id: string; level?: number; note?: string }> };
+export type ItemSpellTemplates = ItemSpellTemplate | ItemSpellTemplate[];
 
 export interface CompendiumItemDetail {
   id: string;
@@ -97,8 +159,20 @@ export interface CompendiumItemDetail {
   dmg2: string | null;
   dmgType: string | null;
   properties: string[];
-  modifiers?: Array<{ category?: string; text?: string }>;
+  mastery?: string | null;
+  modifiers?: Array<{ target?: string; amount?: number }>;
   text: string | string[];
+  uses?: ItemUses | null;
+  spells?: ItemSpells | null;
+  spellcasting?: ItemSpellcasting | null;
+  spellTemplate?: ItemSpellTemplates | null;
+  ammo?: AmmoFamily | null;
+  weaponAmmo?: AmmoFamily | null;
+  usage?: "held" | null;
+  bundle?: ItemBundle | null;
+  container?: boolean;
+  ignoreWeight?: boolean;
+  effects?: unknown[] | null;
 }
 
 export interface ItemSummaryRow {
@@ -117,6 +191,19 @@ export interface ItemSummaryRow {
   dmg2?: string | null;
   dmgType?: string | null;
   properties?: string[];
+  mastery?: string | null;
+  modifiers?: Array<{ target?: string; amount?: number }>;
+  uses?: ItemUses | null;
+  spells?: ItemSpells | null;
+  spellcasting?: ItemSpellcasting | null;
+  spellTemplate?: ItemSpellTemplates | null;
+  ammo?: AmmoFamily | null;
+  weaponAmmo?: AmmoFamily | null;
+  usage?: "held" | null;
+  bundle?: ItemBundle | null;
+  container?: boolean;
+  ignoreWeight?: boolean;
+  effects?: unknown[] | null;
 }
 
 export type EquipState = "backpack" | "mainhand-1h" | "mainhand-2h" | "offhand" | "worn";
@@ -124,88 +211,64 @@ export type EquipState = "backpack" | "mainhand-1h" | "mainhand-2h" | "offhand" 
 export { formatItemDamageType, formatItemProperties, normalizeInventoryItemLookupName };
 
 export interface ParsedItemSpell {
-  name: string;
-  cost: number;
+  id: string;
+  cost: number | "level";
+  level?: number;
+  uses?: ItemUseAmount;
+  maxLevel?: number;
+  maxCost?: number;
+  upcast?: number;
+  dc?: number;
+  attack?: number;
+  consume?: true;
+  note?: string;
 }
 
-export interface WeaponMasteryInfo {
-  name: string;
-  text: string;
+/** Returns the mastery assignment authored on the canonical weapon record. */
+export function getWeaponMasteryName(item: Pick<InventoryItem, "mastery"> | null | undefined): string | null {
+  return String(item?.mastery ?? "").trim() || null;
 }
 
-// D&D 2024 weapon mastery property map (weapon name → mastery name)
-const WEAPON_MASTERY_BY_WEAPON: Record<string, string> = {
-  // Cleave
-  greataxe: "Cleave", halberd: "Cleave",
-  // Graze
-  glaive: "Graze", greatsword: "Graze",
-  // Nick
-  club: "Nick", dagger: "Nick", "light hammer": "Nick", scimitar: "Nick",
-  // Push
-  greatclub: "Push", "heavy crossbow": "Push", pike: "Push", warhammer: "Push",
-  // Sap
-  flail: "Sap", longsword: "Sap", mace: "Sap", morningstar: "Sap", "war pick": "Sap", spear: "Sap",
-  // Slow
-  javelin: "Slow", "light crossbow": "Slow", longbow: "Slow", musket: "Slow", shortbow: "Slow", sling: "Slow",
-  // Topple
-  battleaxe: "Topple", lance: "Topple", maul: "Topple", quarterstaff: "Topple", trident: "Topple",
-  // Vex
-  blowgun: "Vex", dart: "Vex", "hand crossbow": "Vex", rapier: "Vex", shortsword: "Vex",
-};
-
-/** Returns the mastery property name for a weapon (e.g. "Sap" for Mace), checking description first then static map. */
-export function getWeaponMasteryName(item: Pick<InventoryItem, "name" | "description"> | null | undefined): string | null {
-  const fromDesc = parseWeaponMastery(item);
-  if (fromDesc) return fromDesc.name;
-  const key = stripMagicBonusFromName(String(item?.name ?? "")).toLowerCase();
-  return WEAPON_MASTERY_BY_WEAPON[key] ?? null;
+/**
+ * Reads a weapon's magic attack-roll bonus from its compendium `modifiers` (e.g. a "+1" weapon's
+ * `{ text: "weapon attacks +1" }`, or a bow's `{ text: "ranged attacks +1" }`) rather than
+ * regexing a "+N" out of the item's name — the name isn't guaranteed to spell out the bonus, and
+ * the modifiers are already the compendium's own structured record of it. Checks both the
+ * generic "weapon" category and the melee/ranged-specific one, since the compendium uses either
+ * depending on the item (compare Returning Dagger's "weapon attacks" to Longbow +1's
+ * "ranged attacks").
+ */
+export function weaponAttackModifierBonus(
+  item: Pick<InventoryItem, "modifiers"> | null | undefined,
+  isRanged: boolean,
+): number {
+  return itemModifierBonus(item?.modifiers, "weapon_attacks")
+    + itemModifierBonus(item?.modifiers, isRanged ? "ranged_attacks" : "melee_attacks");
 }
 
-/** Returns the numeric magic bonus (+1/+2/+3) from an item name or description, or 0. */
-export function parseMagicBonus(item: Pick<InventoryItem, "name" | "description"> | null | undefined): number {
-  const nameMatch = String(item?.name ?? "").match(/[+](\d+)/);
-  if (nameMatch) return parseInt(nameMatch[1], 10);
-  const descMatch = String(item?.description ?? "").match(/[+](\d+)\s+bonus\s+to\s+attack\s+and\s+damage/i);
-  if (descMatch) return parseInt(descMatch[1], 10);
-  return 0;
-}
-
-function stripMagicBonusFromName(name: string): string {
-  return name.replace(/\s*[+]\d+\s*$/, "").replace(/^[+]\d+\s+/, "").trim();
-}
-
-export function parseWeaponMastery(item: Pick<InventoryItem, "description"> | null | undefined): WeaponMasteryInfo | null {
-  const raw = String(item?.description ?? "").trim();
-  if (!raw) return null;
-  const match = raw.match(/^\s*([A-Za-z][A-Za-z\s'-]+)\s+\(Mastery\):\s*([\s\S]+)$/im);
-  if (!match) return null;
-  const name = titleCase(match[1].trim());
-  const remainder = match[2].trim();
-  const text = remainder
-    .split(/\n\s*\n/)[0]
-    .split(/\n(?=[A-Z][A-Za-z' -]+:)/)[0]
-    .trim();
-  if (!name || !text) return null;
-  return { name, text };
+/** Damage-roll counterpart to {@link weaponAttackModifierBonus}. */
+export function weaponDamageModifierBonus(
+  item: Pick<InventoryItem, "modifiers"> | null | undefined,
+  isRanged: boolean,
+): number {
+  return itemModifierBonus(item?.modifiers, "weapon_damage")
+    + itemModifierBonus(item?.modifiers, isRanged ? "ranged_damage" : "melee_damage");
 }
 
 export function hasWeaponMastery(item: Pick<InventoryItem, "proficiency" | "name"> | null | undefined, prof: ProficiencyMapLike | undefined): boolean {
   return Boolean(item) && hasWeaponProficiency(item as InventoryItem, prof);
 }
 
-function isShieldOrTorch(item: InventoryItem): boolean {
-  const type = String(item.type ?? "").toLowerCase();
-  const name = String(item.name ?? "").toLowerCase();
-  return type.includes("shield") || name.includes("shield") || name.includes("torch");
+function isShieldOrHeld(item: InventoryItem): boolean {
+  return isShieldItem(item) || item.usage === "held";
 }
 
 export function isArmorItem(item: InventoryItem): boolean {
-  return /\barmor\b/i.test(item.type ?? "") && !isShieldOrTorch(item);
+  return /^(?:light|medium|heavy) armor$/i.test(String(item.type ?? "").trim());
 }
 
-export function hasStealthDisadvantage(item: { stealthDisadvantage?: boolean; description?: string | null }): boolean {
-  if (item.stealthDisadvantage) return true;
-  return /disadvantage on stealth/i.test(String(item.description ?? ""));
+export function hasStealthDisadvantage(item: { stealthDisadvantage?: boolean }): boolean {
+  return item.stealthDisadvantage === true;
 }
 
 export function isCurrencyItem(item: Pick<InventoryItem, "name"> | null | undefined): boolean {
@@ -220,9 +283,7 @@ export function addsAbilityModToOffhandDamage(
 }
 
 export function isShieldItem(item: InventoryItem): boolean {
-  const type = String(item.type ?? "").toLowerCase();
-  const name = String(item.name ?? "").toLowerCase();
-  return type.includes("shield") || (name.includes("shield") && !name.includes("torch"));
+  return /^shield$/i.test(String(item.type ?? "").trim());
 }
 
 export function requiresTwoHands(item: InventoryItem): boolean {
@@ -251,45 +312,54 @@ export function getEquipState(item: InventoryItem): EquipState {
 }
 
 export function isWeaponItem(item: InventoryItem): boolean {
-  return Boolean(item.dmg1) || /weapon/i.test(item.type ?? "") || /\bstaff\b/i.test(item.type ?? "");
+  return Boolean(item.dmg1 || item.dmg2);
 }
-
-const WEARABLE_HINT_RE = /\b(amulet|anklet|armor|armband|band|belt|boots?|bracer|bracelet|brooch|cape|circlet|cloak|clothing|coat|crown|dress|gauntlets?|girdle|gloves?|goggles?|hat|headband|helm|hood|jacket|mantle|mask|necklace|pendent|pendant|ring|robe|sandals?|scarf|shawl|shirt|shoes?|slippers?|suit|tabard|tiara|tunic|vest|vestments?|wraps?)\b/i;
-const NON_WEARABLE_HINT_RE = /\b(ammunition|animal feed|arrow|axe beak|ball bearings|barrel|bedroll|blanket|bolt|book|bottle|bucket|caltrops|carriage|cart|case|chain|chest|component pouch|crowbar|flask|grappling hook|hammer|holy water|hook|horse|kit|ladder|lantern|lock|mule|net|oil|pack|picks?|piton|pole|potion|quiver|rations?|rope|saddle|saw|scroll|ship|spikes?|tack|tent|thieves'? tools|tinderbox|torch|vehicle|vial|wagon|waterskin)\b/i;
 
 /** Items that are worn/held as wondrous gear (rings, rods, wands, amulets, etc.) but are not weapons or armor. */
 export function isWearableItem(item: InventoryItem): boolean {
   if (isWeaponItem(item) || isArmorItem(item) || isShieldItem(item)) return false;
-  const type = String(item.type ?? "");
-  const name = String(item.name ?? "");
-  const hintText = `${name} ${type}`;
-  if (NON_WEARABLE_HINT_RE.test(hintText)) return false;
-  if (WEARABLE_HINT_RE.test(hintText)) return true;
-  if (/^(ring|rod|wand)$/i.test(type)) return true;
-  if (item.equippable) return true;
-  return false;
+  return item.equippable === true;
 }
 
-export function parseItemSpells(text: string): ParsedItemSpell[] {
-  const results: ParsedItemSpell[] = [];
-  const lines = text.split("\n");
-  let inTable = false;
-  for (const line of lines) {
-    const t = line.trim();
-    if (/spell\s*\|.*charge/i.test(t)) { inTable = true; continue; }
-    if (inTable) {
-      const m = t.match(/^(.+?)\s*\|\s*(\d+)/);
-      if (m) results.push({ name: m[1].trim(), cost: parseInt(m[2], 10) });
-      else if (t && !t.includes("|")) inTable = false;
-    }
-  }
-  return results;
+export function getItemSpells(spells: ItemSpells | null | undefined): ParsedItemSpell[] {
+  return Object.entries(spells ?? {}).map(([id, access]) => {
+    if (typeof access === "number" || access === "level") return { id, cost: access };
+    return { id, ...access, cost: access.cost ?? 0 };
+  });
 }
 
-export function parseChargesMax(text: string): number | null {
-  const m = text.match(/has (\d+) charges?/i);
-  if (m) return parseInt(m[1], 10);
-  return null;
+export function fixedItemUsesMaximum(uses: ItemUses | null | undefined): number | null {
+  const maximum = uses && typeof uses === "object" ? uses.max : uses;
+  return typeof maximum === "number" && Number.isInteger(maximum) && maximum > 0 ? maximum : null;
+}
+
+function resolveItemUseAmount(amount: ItemUseAmount, roll: (formula: string) => number): number {
+  return typeof amount === "number" ? amount : roll(amount);
+}
+
+export function initializeItemUsesMaximum(
+  uses: ItemUses | null | undefined,
+  roll: (formula: string) => number = rollDiceExpr,
+): number | null {
+  if (uses == null) return null;
+  const maximum = uses && typeof uses === "object" ? uses.max : uses;
+  const resolved = resolveItemUseAmount(maximum, roll);
+  return Number.isInteger(resolved) && resolved > 0 ? resolved : null;
+}
+
+export function recoverItemCharges(
+  item: InventoryItem,
+  roll: (formula: string) => number = rollDiceExpr,
+): InventoryItem {
+  const maximum = item.chargesMax ?? initializeItemUsesMaximum(item.uses, roll);
+  if (!maximum) return item;
+  if (item.uses && typeof item.uses === "object" && item.uses.recover === false) return item;
+  const recovery = item.uses && typeof item.uses === "object" ? item.uses.recover : undefined;
+  if (recovery === false) return item;
+  const charges = recovery === undefined
+    ? maximum
+    : Math.min(maximum, Math.max(0, item.charges ?? maximum) + resolveItemUseAmount(recovery, roll));
+  return { ...item, chargesMax: maximum, charges };
 }
 
 export function hasItemProperty(item: InventoryItem, code: string): boolean {
@@ -300,7 +370,7 @@ export function canEquipOffhand(
   item: InventoryItem,
   parsedFeatureEffects: ParsedFeatureEffects[] | null | undefined
 ): boolean {
-  if (isShieldOrTorch(item)) return true;
+  if (isShieldOrHeld(item)) return true;
   if (!isWeaponItem(item)) return false;
   if (!requiresTwoHands(item)) return true;
   if (canUseWeaponForBonusAttackFromEffects(parsedFeatureEffects ?? [], item)) return true;
@@ -325,22 +395,12 @@ export function isRangedWeapon(item: InventoryItem): boolean {
   return /ranged/i.test(item.type ?? "");
 }
 
-const AMMO_NAME_RE = /\b(arrows?|bolts?|bullets?|needles?|sling bullets?|blowgun needles?|crossbow bolts?)\b/i;
-
 export function isAmmunitionItem(item: InventoryItem): boolean {
-  if (/ammo|ammunition/i.test(item.type ?? "")) return true;
-  return AMMO_NAME_RE.test(item.name ?? "");
+  return item.ammo != null;
 }
 
-function isStaffLikeWeapon(item: InventoryItem): boolean {
-  const type = String(item.type ?? "").toLowerCase();
-  const name = String(item.name ?? "").toLowerCase();
-  return type.includes("staff") || name.includes("staff");
-}
-
-function defaultWeaponDamageDice(item: InventoryItem, state: "mainhand-1h" | "mainhand-2h" | "offhand"): string | null {
-  if (isStaffLikeWeapon(item)) return state === "mainhand-2h" ? "1d8" : "1d6";
-  return null;
+export function isCompatibleAmmunition(weapon: InventoryItem, ammunition: InventoryItem): boolean {
+  return weapon.weaponAmmo != null && weapon.weaponAmmo === ammunition.ammo;
 }
 
 export function weaponAbilityMod(
@@ -362,8 +422,8 @@ export function weaponAbilityMod(
 }
 
 export function weaponDamageDice(item: InventoryItem, state: "mainhand-1h" | "mainhand-2h" | "offhand"): string | null {
-  if (state === "mainhand-2h") return item.dmg2 ?? item.dmg1 ?? defaultWeaponDamageDice(item, state);
-  return item.dmg1 ?? item.dmg2 ?? defaultWeaponDamageDice(item, state);
+  if (state === "mainhand-2h") return item.dmg2 ?? item.dmg1 ?? null;
+  return item.dmg1 ?? item.dmg2 ?? null;
 }
 
 export function totalInventoryWeight(items: InventoryItem[], containers: InventoryContainer[] = []): number {
@@ -410,9 +470,11 @@ function weaponMatchesQualifier(item: InventoryItem, qualifier: string): boolean
 function weaponMatchesProficiency(item: InventoryItem, proficiencyName: string): boolean {
   const normalized = normalizeWeaponProficiencyName(proficiencyName).toLowerCase();
   const itemName = normalizeInventoryItemLookupName(item.name);
+  const baseWeapon = normalizeWeaponProficiencyName(String(item.proficiency ?? "").split(",").at(-1) ?? "").toLowerCase();
 
   if (!normalized) return false;
   if (normalized === itemName) return true;
+  if (baseWeapon && normalized === baseWeapon) return true;
   if (weaponMatchesQualifier(item, normalized)) return true;
   return normalized === itemName;
 }
@@ -422,6 +484,16 @@ export function formatWeaponProficiencyName(name: string): string {
 }
 
 export function hasWeaponProficiency(item: InventoryItem, prof: ProficiencyMapLike | undefined): boolean {
-  return (prof?.weapons ?? []).some((entry) => weaponMatchesProficiency(item, entry.name));
+  return (prof?.weapons ?? []).some((entry) => {
+    const filter = entry.weaponFilter;
+    if (filter) {
+      if (filter.melee && isRangedWeapon(item)) return false;
+      if (filter.martial && !isMartialWeapon(item)) return false;
+      if (filter.excludeProperties?.includes("heavy") && hasItemProperty(item, "H")) return false;
+      if (filter.excludeProperties?.includes("two_handed") && hasItemProperty(item, "2H")) return false;
+      return isWeaponItem(item);
+    }
+    return weaponMatchesProficiency(item, entry.name);
+  });
 }
 

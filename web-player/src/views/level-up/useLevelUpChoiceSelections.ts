@@ -289,7 +289,7 @@ export function useLevelUpChoiceSelections(args: {
 
   const cantripChoiceCount = Math.max(0, cantripCount - lockedCantripIds.size);
   const spellChoiceCount = Math.max(0, prepCount - lockedSpellIds.size);
-  const invocationChoiceCount = Math.max(0, invocCount - lockedInvocationIds.size);
+  const invocationChoiceCount = Math.max(0, invocCount - lockedInvocationSelectionIds.length);
 
   const displayedChosenCantrips = chosenCantrips.filter((id) => {
     if (lockedCantripIds.has(id)) return false;
@@ -301,7 +301,16 @@ export function useLevelUpChoiceSelections(args: {
     const spell = classSpells.find((entry) => entry.id === id);
     return spell ? !preparedSpellProgressionGrantedKeys.has(normalizeSpellTrackingKey(spell.name)) : true;
   });
-  const displayedChosenInvocations = chosenInvocations.filter((id) => !lockedInvocationIds.has(id));
+  const displayedChosenInvocations = (() => {
+    const remainingLocked = new Map<string, number>();
+    for (const id of lockedInvocationSelectionIds) remainingLocked.set(id, (remainingLocked.get(id) ?? 0) + 1);
+    return chosenInvocations.filter((id) => {
+      const remaining = remainingLocked.get(id) ?? 0;
+      if (remaining === 0) return true;
+      remainingLocked.set(id, remaining - 1);
+      return false;
+    });
+  })();
 
   const effectiveChosenCantrips = React.useMemo(
     () => [...lockedCantripSelectionIds, ...displayedChosenCantrips],
@@ -336,17 +345,6 @@ export function useLevelUpChoiceSelections(args: {
       ),
     [chosenFeatOptions, classFeatureResolvedSpellChoices, classFeatureSpellChoiceOptions]
   );
-  const selectedInvocationResolvedSpellIds = React.useMemo(
-    () =>
-      invocationResolvedSpellChoices.flatMap((choice) =>
-        resolveSelectedSpellOptionEntries(
-          chosenFeatOptions[choice.key] ?? [],
-          invocationSpellChoiceOptions[choice.key] ?? [],
-        ).map((spell) => String(spell.id))
-      ),
-    [chosenFeatOptions, invocationResolvedSpellChoices, invocationSpellChoiceOptions]
-  );
-
   const globallyChosenSpellChoiceIds = React.useMemo(
     () =>
       new Set([
@@ -355,7 +353,6 @@ export function useLevelUpChoiceSelections(args: {
         ...displayedChosenInvocations,
         ...selectedFeatResolvedSpellIds,
         ...selectedClassFeatureResolvedSpellIds,
-        ...selectedInvocationResolvedSpellIds,
       ].map(normalizeChoiceKey)),
     [
       displayedChosenCantrips,
@@ -363,7 +360,6 @@ export function useLevelUpChoiceSelections(args: {
       displayedChosenSpells,
       selectedClassFeatureResolvedSpellIds,
       selectedFeatResolvedSpellIds,
-      selectedInvocationResolvedSpellIds,
     ]
   );
 
@@ -379,6 +375,7 @@ export function useLevelUpChoiceSelections(args: {
     lockedCantripIds,
     lockedSpellIds,
     lockedInvocationIds,
+    lockedInvocationSelectionIds,
     maneuverChoiceEntries,
     planChoiceEntries,
     progressionTableChoiceEntries,

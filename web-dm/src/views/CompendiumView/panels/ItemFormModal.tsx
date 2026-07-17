@@ -10,11 +10,12 @@ import { CheckRow, FieldGrid, FormField } from "@beholden/shared/ui";
 export type ItemForEdit = {
   id: string;
   name: string;
-  rarity: string | null;
-  type: string | null;
-  attunement: boolean;
-  magic: boolean;
-  text: string | string[];
+  rarity: string;
+  type: string;
+  attunement?: true | string;
+  magical?: true;
+  description: string | string[];
+  [key: string]: unknown;
 };
 
 const RARITIES = ["", ...ITEM_RARITY_ORDER];
@@ -47,10 +48,10 @@ export function ItemFormModal(props: Props) {
   const [name, setName] = React.useState(props.item?.name ?? "");
   const [rarity, setRarity] = React.useState(props.item?.rarity ?? "");
   const [type, setType] = React.useState(props.item?.type ?? "");
-  const [attunement, setAttunement] = React.useState(props.item?.attunement ?? false);
-  const [magic, setMagic] = React.useState(props.item?.magic ?? false);
+  const [attunement, setAttunement] = React.useState(Boolean(props.item?.attunement));
+  const [magic, setMagic] = React.useState(props.item?.magical === true);
   const [text, setText] = React.useState(() => {
-    const t = props.item?.text ?? "";
+    const t = props.item?.description ?? "";
     return Array.isArray(t) ? t.join("\n\n") : t;
   });
 
@@ -67,20 +68,22 @@ export function ItemFormModal(props: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) {
-      setError("Name is required.");
+    if (!name.trim() || !rarity.trim() || !type.trim()) {
+      setError("Name, rarity, and type are required Grand facts.");
       return;
     }
     setSaving(true);
     setError("");
     try {
+      const description = text.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
       const body = {
+        ...(props.item ?? {}),
         name: name.trim(),
-        rarity: rarity.trim() || null,
-        type: type.trim() || null,
-        attunement,
-        magic,
-        text: text.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean),
+        rarity: rarity.trim(),
+        type: type.trim(),
+        ...(attunement ? { attunement: props.item?.attunement || true } : { attunement: undefined }),
+        ...(magic ? { magical: true } : { magical: undefined }),
+        description: description.length ? description : "",
       };
       if (isEdit) {
         await api(`/api/compendium/items/${encodeURIComponent(props.item!.id)}`, { method: "PUT", body: JSON.stringify(body) });

@@ -1,5 +1,6 @@
 import type { AbilKey, CharacterCampaign, CharacterData, ConditionInstance } from "@/views/character/CharacterSheetTypes";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
+import type { CreatorFeatureLike } from "@/views/character-creator/utils/CharacterCreatorClassCoreUtils";
 import type { StructuredFeatMechanicsLike } from "@/domain/character/structuredFeatureEffects";
 import type { SharedPolymorphCondition } from "@beholden/shared/domain";
 
@@ -88,9 +89,14 @@ export interface ClassRestDetail {
     slots: number[] | null;
     counters: ClassCounterDef[];
     features?: Array<{
+      id?: string;
       name: string;
       text: string;
       optional?: boolean;
+      effects?: unknown[];
+      choices?: CreatorFeatureLike["choices"];
+      resolution?: "automatic" | "manual" | "mixed";
+      resolutionNotes?: string[];
       scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>;
       preparedSpellProgression?: PreparedSpellProgressionTable[];
     }>;
@@ -102,11 +108,18 @@ export interface LoreTraitDetail {
   text: string;
   scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>;
   preparedSpellProgression?: PreparedSpellProgressionTable[];
+  /** Verbatim FeatureEffect-shaped facts from the compendium's own `effects` field — consumed directly, no parsing. */
+  effects?: unknown[];
+  resolution?: "automatic" | "manual" | "mixed";
+  resolutionNotes?: string[];
 }
 
 export interface RaceFeatureDetail {
   id: string;
   name: string;
+  size?: string | null;
+  speed?: number | null;
+  creatureType?: string | null;
   spellAbility?: string | null;
   traits: LoreTraitDetail[];
 }
@@ -135,6 +148,7 @@ export interface InvocationFeatureDetail {
   id: string;
   name: string;
   text: string;
+  effects?: unknown[];
 }
 
 export interface ClassFeatFeatureDetail {

@@ -32,8 +32,8 @@ interface CharacterHudLike {
 
 const BASE_CONDITIONS = SHARED_CONDITION_DEFS;
 
-function getAvailableConditions(char: Pick<CharacterHudLike, "className">) {
-  return /barbarian/i.test(String(char.className ?? ""))
+function getAvailableConditions(hasRageResource: boolean) {
+  return hasRageResource
     ? [{ key: "rage", name: "Rage" }, ...BASE_CONDITIONS]
     : BASE_CONDITIONS;
 }
@@ -80,6 +80,9 @@ export interface CharacterHudPanelProps {
   concentrationSpell?: string | null;
   onConcentrationSpellChange?: (v: string | null) => void;
   concentrationSpellNames?: string[];
+  /** Whether the character currently has a Rage resource (from collectClassResources) — drives
+   * whether "Rage" appears as a toggleable condition, regardless of what their class is named. */
+  hasRageResource?: boolean;
 }
 
 export function CharacterHudPanel(props: CharacterHudPanelProps) {
@@ -111,6 +114,7 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
     concentrationSpell,
     onConcentrationSpellChange,
     concentrationSpellNames = [],
+    hasRageResource = false,
   } = props;
   const [concentrationPickerOpen, setConcentrationPickerOpen] = React.useState(false);
   const [concentrationSearch, setConcentrationSearch] = React.useState("");
@@ -119,7 +123,7 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
   const [concentrationSpellsError, setConcentrationSpellsError] = React.useState(false);
   const concentrationSpellCacheRef = React.useRef<Record<string, string[]>>({});
   const concentrationSpellLookupKey = concentrationSpellNames.join("|||");
-  const availableConditions = React.useMemo(() => getAvailableConditions(char), [char]);
+  const availableConditions = React.useMemo(() => getAvailableConditions(hasRageResource), [hasRageResource]);
   const displayHpMax = effectiveHpMax;
   const displayHpPct = displayHpMax > 0 ? Math.min(1, char.hpCurrent / displayHpMax) : 0;
   React.useEffect(() => {

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "@/services/api";
 import { fetchMyCharacter } from "@/services/actorApi";
-import { fetchClassDetailV2, fetchFeatCatalog } from "@/services/compendiumApi";
+import { fetchGrandClassDetail, fetchFeatCatalog } from "@/services/compendiumApi";
 import { getSpellcastingClassName } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import { mergeAutoLevels } from "@/views/level-up/LevelUpHelpers";
 import type {
@@ -56,7 +56,7 @@ export function useLevelUpInitialData(id: string | undefined) {
           ),
         );
         const classId = typeof classEntry?.classId === "string" ? classEntry.classId : null;
-        return classId ? fetchClassDetailV2<ClassDetail>(classId) : null;
+        return classId ? fetchGrandClassDetail<ClassDetail>(classId) : null;
       })
       .then((cd) => {
         if (cd) setClassDetail(cd);
@@ -73,7 +73,8 @@ export function useLevelUpInitialData(id: string | undefined) {
       return;
     }
     const spellcastingClassName = getSpellcastingClassName(classDetail, nextLevel, subclass) ?? classDetail.name;
-    const encodedClass = encodeURIComponent(spellcastingClassName);
+    const spellAccessId = Object.entries(classDetail.spellLists ?? {}).find(([, label]) => label === spellcastingClassName)?.[0];
+    const encodedClass = encodeURIComponent(spellAccessId ?? spellcastingClassName);
     api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&level=0&limit=120&includeText=1&lite=1&excludeSpecial=1`)
       .then(setClassCantrips)
       .catch(() => setClassCantrips([]));
@@ -81,7 +82,7 @@ export function useLevelUpInitialData(id: string | undefined) {
       .then(setClassSpells)
       .catch(() => setClassSpells([]));
     if (/warlock/i.test(classDetail.name)) {
-      api<SpellSummary[]>("/api/spells/search?classes=Eldritch+Invocations&limit=150&includeText=1&lite=1")
+      api<SpellSummary[]>("/api/class-talents/search?kind=invocation&limit=150&includeText=1")
         .then(setClassInvocations)
         .catch(() => setClassInvocations([]));
     } else {

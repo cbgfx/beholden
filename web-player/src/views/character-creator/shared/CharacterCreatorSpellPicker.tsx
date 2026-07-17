@@ -1,9 +1,9 @@
 import React from "react";
 import { C } from "@/lib/theme";
 import { inputStyle, labelStyle } from "./CharacterCreatorStyles";
-import { extractPrerequisite, stripPrerequisiteLine } from "@/views/character/CharacterSheetUtils";
+import { classTalentPrerequisiteLabel, type ClassTalentPrerequisite } from "@/views/character/CharacterSheetUtils";
 
-export function SpellPicker<T extends { id: string; name: string; level: number | null; text?: string | null }>({
+export function SpellPicker<T extends { id: string; name: string; level: number | null; text?: string | null; prerequisite?: ClassTalentPrerequisite | null; repeatable?: boolean }>({
   title,
   sourceLabel,
   spells,
@@ -23,12 +23,20 @@ export function SpellPicker<T extends { id: string; name: string; level: number 
   disabledNames?: string[];
   max: number;
   emptyMsg: string;
-  onToggle: (id: string) => void;
+  onToggle: (id: string, action?: "add" | "remove") => void;
   isAllowed?: (spell: T) => boolean;
 }) {
   const [q, setQ] = React.useState("");
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const trimmedSourceLabel = String(sourceLabel ?? "").trim();
+  // Prerequisites are typed facts on ClassTalents — rendered from the record, never
+  // regex-extracted from description prose. Talent dependencies resolve their display
+  // name from the option list itself (every dependency is another entry in this picker).
+  const talentNameById = React.useMemo(() => new Map(spells.map((spell) => [spell.id, spell.name])), [spells]);
+  const prerequisiteFor = React.useCallback(
+    (spell: T) => classTalentPrerequisiteLabel(spell.prerequisite, (id) => talentNameById.get(id)),
+    [talentNameById],
+  );
   const disabledIdSet = React.useMemo(() => new Set(disabledIds ?? []), [disabledIds]);
   const disabledNameSet = React.useMemo(
     () => new Set((disabledNames ?? []).map((name) => name.trim().toLowerCase())),
@@ -102,19 +110,20 @@ export function SpellPicker<T extends { id: string; name: string; level: number 
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {group.spells.map((spell) => {
                     const sel = chosen.includes(spell.id);
+                    const selectedCount = chosen.filter((id) => id === spell.id).length;
                     const takenElsewhere = !sel && (disabledIdSet.has(spell.id) || disabledNameSet.has(spell.name.trim().toLowerCase()));
-                    const prerequisite = extractPrerequisite(spell.text);
+                    const prerequisite = prerequisiteFor(spell);
                     const allowed = isAllowed ? isAllowed(spell) : true;
                     const locked = (!sel && chosen.length >= max) || !allowed || takenElsewhere;
                     const active = activeSpell?.id === spell.id;
-                    return (
+                    const button = (
                       <button
                         key={spell.id}
                         type="button"
                         disabled={locked}
                         onClick={() => {
                           setActiveId(spell.id);
-                          onToggle(spell.id);
+                          onToggle(spell.id, sel ? "remove" : "add");
                         }}
                         style={{
                           padding: "5px 12px",
@@ -136,6 +145,7 @@ export function SpellPicker<T extends { id: string; name: string; level: number 
                       >
                         <div style={{ fontWeight: 700 }}>
                           {spell.name}
+                          {selectedCount > 1 ? <span style={{ marginLeft: 5 }}>×{selectedCount}</span> : null}
                           {spell.level != null && spell.level > 0 ? (
                             <span style={{ color: "rgba(160,180,220,0.5)", marginLeft: 4 }}>(L{spell.level})</span>
                           ) : null}
@@ -160,6 +170,13 @@ export function SpellPicker<T extends { id: string; name: string; level: number 
                         )}
                       </button>
                     );
+                    if (!spell.repeatable || !sel) return button;
+                    return (
+                      <div key={spell.id} style={{ display: "flex", gap: 4, alignItems: "stretch" }}>
+                        {React.cloneElement(button, { key: `${spell.id}:main` })}
+                        <button type="button" disabled={chosen.length >= max || !allowed} onClick={() => onToggle(spell.id, "add")} style={{ borderRadius: 6, border: "1px solid rgba(56,182,255,0.5)", background: "rgba(56,182,255,0.12)", color: C.accentHl, fontWeight: 900, padding: "0 10px", cursor: chosen.length >= max ? "default" : "pointer" }}>+</button>
+                      </div>
+                    );
                   })}
                 </div>
               </div>
@@ -183,15 +200,15 @@ export function SpellPicker<T extends { id: string; name: string; level: number 
                   </span>
                 ) : null}
               </div>
-              {extractPrerequisite(activeSpell.text) && (
+              {prerequisiteFor(activeSpell) && (
                 <div style={{ marginTop: 8, fontSize: "var(--fs-small)", lineHeight: 1.45 }}>
                   <span style={{ color: C.colorGold, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5 }}>
                     Prerequisite
                   </span>
-                  <span style={{ color: "rgba(251,191,36,0.92)" }}> {extractPrerequisite(activeSpell.text)}</span>
+                  <span style={{ color: "rgba(251,191,36,0.92)" }}> {prerequisiteFor(activeSpell)}</span>
                 </div>
               )}
-              {stripPrerequisiteLine(activeSpell.text).replace(/Source:.*$/ms, "").trim() && (
+              {String(activeSpell.text ?? "").replace(/Source:.*$/ms, "").trim() && (
                 <div
                   style={{
                     marginTop: 8,
@@ -201,7 +218,7 @@ export function SpellPicker<T extends { id: string; name: string; level: number 
                     whiteSpace: "pre-wrap",
                   }}
                 >
-                  {stripPrerequisiteLine(activeSpell.text).replace(/Source:.*$/ms, "").trim()}
+                  {String(activeSpell.text ?? "").replace(/Source:.*$/ms, "").trim()}
                 </div>
               )}
             </div>

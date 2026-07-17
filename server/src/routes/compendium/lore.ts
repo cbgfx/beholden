@@ -8,9 +8,10 @@ import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { parseBody } from "../../shared/validate.js";
 import {
-  parseStoredCanonicalCompendiumEntry,
-  parseStoredCompendiumEntry,
+  parseStoredGrandEntry,
+  parseStoredPresentationEntry,
 } from "../../services/compendium/storedCompendium.js";
+import { featPrerequisiteLabel } from "../../services/compendium/featCompaction.js";
 import { z } from "zod";
 
 export function registerLoreRoutes(app: Express, ctx: ServerContext) {
@@ -29,6 +30,29 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   const includeField = (fields: Set<string>, ...aliases: string[]) =>
     fields.size === 0 || aliases.some((alias) => fields.has(alias.toLowerCase()));
 
+  /** Read-time projection: fill each background equipment item entry's display name from the
+   * item catalog. Canonical records store only the item ID (one fact, one home) plus an optional
+   * `sourceLabel` reserved for text that intentionally differs from the catalog name (display
+   * ordering like "Traveler's Clothes", or flavor like "Book (prayers)"). */
+  function projectBackgroundEquipmentNames(entry: Record<string, unknown>): Record<string, unknown> {
+    const equipment = entry.equipment as { options?: Array<{ entries?: Array<Record<string, unknown>> }> } | undefined;
+    const options = equipment?.options;
+    if (!Array.isArray(options)) return entry;
+    const itemEntries = options.flatMap((option) => (option.entries ?? []).filter(
+      (e) => e.kind === "item" && typeof e.itemId === "string" && e.sourceLabel === undefined && e.name === undefined,
+    ));
+    if (itemEntries.length === 0) return entry;
+    const ids = Array.from(new Set(itemEntries.map((e) => String(e.itemId))));
+    const placeholders = ids.map(() => "?").join(", ");
+    const rows = db.prepare(`SELECT id, name FROM compendium_items WHERE id IN (${placeholders})`).all(...ids) as Array<{ id: string; name: string }>;
+    const nameById = new Map(rows.map((row) => [row.id, row.name]));
+    for (const e of itemEntries) {
+      const name = nameById.get(String(e.itemId));
+      if (name) e.name = name;
+    }
+    return entry;
+  }
+
   const canonicalDetailRoutes = [
     ["classes", "classes", "compendium_classes"],
     ["species", "species", "compendium_races"],
@@ -36,7 +60,7 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     ["feats", "feats", "compendium_feats"],
   ] as const;
   for (const [routeCategory, storedCategory, table] of canonicalDetailRoutes) {
-    app.get(`/api/compendium/v2/${routeCategory}/:id`, requireAuth, (req, res) => {
+    const canonicalDetail = (req: Parameters<typeof requireAuth>[0], res: Parameters<typeof requireAuth>[1]) => {
       applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
       const id = requireParam(req, res, "id");
       if (!id) return;
@@ -44,13 +68,15 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
         | { data_json: string }
         | undefined;
       if (!row) return res.status(404).json({ ok: false, message: "Not found" });
-      return res.json(parseStoredCanonicalCompendiumEntry(storedCategory, row.data_json));
-    });
+      const entry = parseStoredGrandEntry(storedCategory, row.data_json) as Record<string, unknown>;
+      return res.json(routeCategory === "backgrounds" ? projectBackgroundEquipmentNames(entry) : entry);
+    };
+    app.get(`/api/compendium/canonical/${routeCategory}/:id`, requireAuth, canonicalDetail);
   }
 
   function buildFeatDetailFromRow(row: { id: string; name: string; data_json: string }) {
     return {
-      ...parseStoredCompendiumEntry("feats", row.data_json),
+      ...parseStoredPresentationEntry("feats", row.data_json),
       id: row.id,
       name: row.name,
     };
@@ -133,7 +159,7 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
       let data: any = {};
       if (wantMetadata) {
         try {
-          data = parseStoredCompendiumEntry("feats", row.data_json);
+          data = parseStoredPresentationEntry("feats", row.data_json);
         } catch (error) {
           console.error(`[compendium] Skipping unparsable feat metadata for "${row.id}" (${row.name}):`, error);
         }
@@ -141,12 +167,8 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
       const parsed: any = wantMetadata
         ? (data.parsed ?? {})
         : null;
-      const prerequisite = parsed?.prerequisite ?? data.prerequisite ?? null;
-      const category = data.category ?? parsed?.category
-        ?? (/^Boon of\b/i.test(row.name) || /\bLevel 19\b/i.test(String(prerequisite ?? "")) ? "Epic Boon"
-          : /\bFighting Style Feature\b/i.test(String(prerequisite ?? "")) ? "Fighting Style"
-            : /\bLevel 4\b/i.test(String(prerequisite ?? "")) ? "General"
-              : "Other");
+      const prerequisite = featPrerequisiteLabel(parsed?.prerequisite ?? data.prerequisite);
+      const category = data.category ?? parsed?.category ?? null;
       const abilityNames = new Map([
         ["str", "Strength"],
         ["dex", "Dexterity"],

@@ -14,6 +14,11 @@ export interface TaggedItem {
   id?: string;
   ability?: AbilKey | null;
   sourceKey?: string | null;
+  weaponFilter?: {
+    melee?: true;
+    martial?: true;
+    excludeProperties?: Array<"heavy" | "two_handed">;
+  };
 }
 
 export interface ProficiencyMap {
@@ -118,6 +123,8 @@ export interface CharacterData {
   gender?: string | null;
   sheetOverrides?: SharedCombatOverrides | null;
   chosenRaceFeatId?: string | null;
+  /** Player's choice among a species trait's several possible spellcasting abilities (e.g. elf lineages: Int/Wis/Cha). Absent when the species has a single fixed ability or none. */
+  chosenRaceSpellAbility?: string | null;
   chosenBgOriginFeatId?: string | null;
   abilityMethod?: string;
   hd?: number | null;

@@ -3,16 +3,7 @@ import { Panel } from "@/ui/Panel";
 import { theme } from "@/theme/theme";
 import { api } from "@/services/api";
 import { titleCase } from "@/lib/format/titleCase";
-
-type ItemFull = {
-  id: string;
-  name: string;
-  rarity: string | null;
-  type: string | null;
-  attunement: boolean;
-  magic: boolean;
-  text: string | string[];
-};
+import type { CompendiumItemDetail } from "@beholden/shared/domain";
 
 function rarityLabel(rarity: string | null): string {
   if (!rarity) return "";
@@ -20,14 +11,14 @@ function rarityLabel(rarity: string | null): string {
 }
 
 export function ItemDetailPanel(props: { itemId: string }) {
-  const [item, setItem] = React.useState<ItemFull | null>(null);
+  const [item, setItem] = React.useState<CompendiumItemDetail | null>(null);
   const [busy, setBusy] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
     if (!props.itemId) { setItem(null); return; }
     setBusy(true);
-    api<ItemFull>(`/api/compendium/items/${encodeURIComponent(props.itemId)}`)
+    api<CompendiumItemDetail>(`/api/compendium/items/${encodeURIComponent(props.itemId)}`)
       .then((d) => { if (!cancelled) setItem(d ?? null); })
       .catch(() => { if (!cancelled) setItem(null); })
       .finally(() => { if (!cancelled) setBusy(false); });

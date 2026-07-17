@@ -1,8 +1,16 @@
 import { normalizeKey } from "../../lib/text.js";
-import { type JsonRecord, list, number, record, text } from "./nativeCompendiumV2.helpers.js";
+import { type JsonRecord, list, number, record, text } from "./grandCompendium.helpers.js";
 
 function present<T>(value: T | null | undefined): value is T {
   return value !== null && value !== undefined;
+}
+
+function typedItemModifier(raw: unknown): Array<{ target: string; amount: number }> {
+  const modifier = record(raw);
+  if (typeof modifier.target === "string" && typeof modifier.amount === "number") {
+    return [{ target: modifier.target, amount: modifier.amount }];
+  }
+  return [];
 }
 
 function descriptionBlocks(value: unknown): string[] {
@@ -44,7 +52,7 @@ function redundantDetail(detail: string, rarity: string, attunement: true | stri
   return false;
 }
 
-/** Converts source or verbose item data into the sparse canonical V2 shape. */
+/** Converts source or verbose item data into the sparse Grand shape. */
 export function compactItemEntry(entry: JsonRecord): JsonRecord {
   const classification = record(entry.classification);
   const oldAttunement = record(entry.attunement);
@@ -71,7 +79,17 @@ export function compactItemEntry(entry: JsonRecord): JsonRecord {
   const weight = number(equipment.weight ?? entry.weight);
   const value = number(equipment.value ?? entry.value);
   const proficiency = text(equipment.proficiency ?? entry.proficiency);
+  const ammo = text(entry.ammo);
+  const usage = text(entry.usage);
+  const bundle = entry.bundle;
+  const isContainer = entry.container === true;
+  const ignoreWeight = entry.ignoreWeight === true;
+  const effects = list(entry.effects);
   const equippable = equipment.equippable === true || entry.equippable === true;
+  const uses = entry.uses;
+  const spells = entry.spells;
+  const spellcasting = entry.spellcasting;
+  const spellTemplate = entry.spellTemplate;
 
   const armorClass = number(oldArmor.ac ?? oldArmor.armorClass ?? entry.ac);
   const strength = number(oldArmor.strength ?? oldArmor.strengthRequirement ?? entry.strengthRequirement);
@@ -86,6 +104,8 @@ export function compactItemEntry(entry: JsonRecord): JsonRecord {
   const twoHandedDamage = text(oldWeapon.twoHandedDamage ?? entry.dmg2);
   const damageType = text(oldWeapon.damageType ?? entry.dmgType);
   const range = text(oldWeapon.range ?? entry.range);
+  const mastery = text(oldWeapon.mastery ?? entry.mastery);
+  const weaponAmmo = text(oldWeapon.ammo);
   const properties = list(oldWeapon.properties ?? entry.properties).map(String).filter(Boolean);
   const weapon = {
     ...(damage ? { damage } : {}),
@@ -93,6 +113,8 @@ export function compactItemEntry(entry: JsonRecord): JsonRecord {
     ...(damageType ? { damageType } : {}),
     ...(range ? { range } : {}),
     ...(properties.length ? { properties } : {}),
+    ...(mastery ? { mastery } : {}),
+    ...(weaponAmmo ? { ammo: weaponAmmo } : {}),
   };
 
   const sourceAndDescription = extractSource(
@@ -104,12 +126,7 @@ export function compactItemEntry(entry: JsonRecord): JsonRecord {
     : sourceAndDescription.description;
 
   const detail = text(entry.detail);
-  const modifiers = list(entry.modifiers).flatMap((raw) => {
-    const modifier = record(raw);
-    const category = text(modifier.category);
-    const modifierValue = text(modifier.value ?? modifier.text);
-    return category && modifierValue ? [{ category, value: modifierValue }] : [];
-  });
+  const modifiers = list(entry.modifiers).flatMap(typedItemModifier);
   const rolls = list(entry.rolls).flatMap((raw) => {
     const roll = record(raw);
     const formula = text(roll.formula ?? roll["#text"] ?? raw);
@@ -132,6 +149,16 @@ export function compactItemEntry(entry: JsonRecord): JsonRecord {
     ...(present(weight) ? { weight } : {}),
     ...(present(value) ? { value } : {}),
     ...(proficiency ? { proficiency } : {}),
+    ...(ammo ? { ammo } : {}),
+    ...(usage ? { usage } : {}),
+    ...(present(bundle) ? { bundle } : {}),
+    ...(isContainer ? { container: true } : {}),
+    ...(ignoreWeight ? { ignoreWeight: true } : {}),
+    ...(effects.length ? { effects } : {}),
+    ...(present(uses) ? { uses } : {}),
+    ...(present(spells) ? { spells } : {}),
+    ...(present(spellcasting) ? { spellcasting } : {}),
+    ...(present(spellTemplate) ? { spellTemplate } : {}),
     ...(Object.keys(armor).length ? { armor } : {}),
     ...(Object.keys(weapon).length ? { weapon } : {}),
     ...(detail && !redundantDetail(detail, rarity, attunement) ? { detail } : {}),

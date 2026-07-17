@@ -34,6 +34,7 @@ import { withAbsoluteImageUrl } from "../lib/routeImageUrl.js";
 import { preserveProficienciesOnLevelUp } from "../lib/levelUpProficiencies.js";
 import { applyConditionConsequences, conditionsBreakConcentration, detectEndedConcentration, shouldClearTrackedConcentration } from "../services/combatTransitions.js";
 import { sweepDependentConditions } from "../services/combat.js";
+import { hasZeroSpeedCondition, SLOW_SPEED_PENALTY } from "@beholden/shared/domain/conditions";
 import {
   AssignBody,
   CharacterCreateBody,
@@ -312,12 +313,11 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       const previousConditions: StoredConditionInstance[] = Array.isArray(player.conditions) ? player.conditions : [];
 
       let newSpeed = baseSpeed;
-      const hasZeroSpeedCondition = conditions.some(c => ["grappled", "restrained", "paralyzed", "petrified", "stunned", "unconscious"].includes(c.key));
       const hasSlow = conditions.some(c => c.key === "slow");
-      if (hasZeroSpeedCondition) {
+      if (hasZeroSpeedCondition(conditions)) {
         newSpeed = 0;
       } else if (hasSlow) {
-        newSpeed = Math.max(0, baseSpeed - 10);
+        newSpeed = Math.max(0, baseSpeed - SLOW_SPEED_PENALTY);
       }
       if (newSpeed !== player.speed) {
         db.prepare("UPDATE players SET speed = ?, updated_at = ? WHERE id = ?").run(newSpeed, t, player_id);

@@ -18,6 +18,7 @@ export interface LevelUpTaggedEntry {
 export interface LevelUpFeature {
   name: string;
   text?: string;
+  noteTemplate?: { id: string; title: string; text: string } | null;
 }
 
 export interface BuildLevelUpPayloadArgs {
@@ -60,6 +61,8 @@ export interface BuildLevelUpPayloadArgs {
   chosenInvocations: string[];
   chosenExpertise: Record<string, string[]>;
   chosenFeatOptions: Record<string, string[]>;
+  invocationFeatChoices?: import("@/domain/character/invocationFeatChoices").InvocationFeatChoiceEntry[];
+  allInvocationFeatChoices?: import("@/domain/character/invocationFeatChoices").InvocationFeatChoiceEntry[];
   chosenFeatureChoices: Record<string, string[]>;
   expertiseChoices: Array<{ key: string; source: string }>;
   featChoiceEntries: LevelUpFeatChoiceLike[];
@@ -87,6 +90,9 @@ export interface LevelUpSpellLike {
   name: string;
   level?: number | null;
   text?: string | null;
+  check?: string | string[] | null;
+  rolls?: Array<{ effect?: string | string[] | null }>;
+  prerequisite?: import("@/views/character/CharacterSheetUtils").ClassTalentPrerequisite | null;
 }
 
 export interface LevelUpFeatSummaryLike {
@@ -140,6 +146,7 @@ export interface DeriveLevelUpValidationArgs {
     text?: string | null;
     parsed?: {
       repeatable?: boolean;
+      prerequisite?: import("@/views/character/CharacterSheetUtils").FeatPrerequisite | null;
     };
   } | null;
   featChoiceEntries: LevelUpFeatChoiceLike[];
@@ -153,28 +160,26 @@ export interface DeriveLevelUpValidationArgs {
   featSummaries: LevelUpFeatSummaryLike[];
   hpGain: number | null;
   existingLevelUpFeats?: Array<{ level: number; featId?: string | null; type?: "asi" | "feat"; abilityBonuses?: Record<string, number> }>;
+  ownedFeatIds?: string[];
 }
 
 export function deriveAllowedInvocationIds(args: DeriveAllowedInvocationIdsArgs): Set<string> {
   const { classCantrips, classInvocations, chosenCantrips, chosenInvocations, nextLevel } = args;
-  const chosenCantripNames = classCantrips
-    .filter((spell) => chosenCantrips.includes(spell.id))
-    .map((spell) => spell.name);
-  const chosenDamageCantripNames = classCantrips
-    .filter((spell) => chosenCantrips.includes(spell.id) && spellLooksLikeDamageSpell(spell))
-    .map((spell) => spell.name);
-  const chosenInvocationNames = classInvocations
-    .filter((invocation) => chosenInvocations.includes(invocation.id))
-    .map((invocation) => invocation.name);
+  const selectedCantrips = classCantrips.filter((spell) => chosenCantrips.includes(spell.id));
+  const hasDamageCantrip = selectedCantrips.some(spellLooksLikeDamageSpell);
+  const hasAttackDamageCantrip = selectedCantrips.some((spell) =>
+    spellLooksLikeDamageSpell(spell)
+    && (Array.isArray(spell.check) ? spell.check : [spell.check]).includes("attack")
+  );
 
   return new Set(
     classInvocations
       .filter((invocation) =>
-        invocationPrerequisitesMet(invocation.text ?? "", {
+        invocationPrerequisitesMet(invocation.prerequisite, {
           level: nextLevel,
-          chosenCantripNames,
-          chosenDamageCantripNames,
-          chosenInvocationNames,
+          hasDamageCantrip,
+          hasAttackDamageCantrip,
+          chosenTalentIds: chosenInvocations,
         })
       )
       .map((invocation) => invocation.id)
@@ -230,7 +235,7 @@ export function deriveLevelUpValidation(args: DeriveLevelUpValidationArgs) {
   const {
     isAsiLevel, asiMode, asiStats, needsSubclassChoice, subclass, cantripCount, chosenCantrips, spellcaster,
     prepCount, chosenSpells, invocCount, chosenInvocations, expertiseChoices, chosenExpertise, chosenFeatDetail,
-    featChoiceEntries, chosenFeatOptions, nextLevel, className, level, scores, prof, featSearch, featSummaries, hpGain, existingLevelUpFeats,
+    featChoiceEntries, chosenFeatOptions, nextLevel, className, level, scores, prof, featSearch, featSummaries, hpGain, existingLevelUpFeats, ownedFeatIds,
   } = args;
 
   const availableFeatSummaries = featSummaries.filter(
@@ -242,12 +247,16 @@ export function deriveLevelUpValidation(args: DeriveLevelUpValidationArgs) {
     : availableFeatSummaries.filter((feat) => feat.name.toLowerCase().includes(needle));
 
   const featPrereqsMet = chosenFeatDetail
-    ? featPrerequisitesMet(chosenFeatDetail.text, {
+    ? featPrerequisitesMet(chosenFeatDetail.parsed?.prerequisite, {
         level,
         className,
         scores,
         prof,
-        spellcaster,
+      spellcaster,
+      featIds: [
+        ...(ownedFeatIds ?? []),
+        ...(existingLevelUpFeats ?? []).map((entry) => String(entry.featId ?? "")).filter(Boolean),
+      ],
       })
     : false;
   const featRepeatableValid = !chosenFeatDetail

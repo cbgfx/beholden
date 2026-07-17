@@ -6,7 +6,7 @@ export interface AutoLevel {
   level: number;
   scoreImprovement: boolean;
   slots: number[] | null;
-  features: { name: string; text: string; optional: boolean; effects?: unknown[]; preparedSpellProgression?: PreparedSpellProgressionTable[] }[];
+  features: { name: string; text: string; optional: boolean; subclass?: string | null; effects?: unknown[]; noteTemplate?: { id: string; title: string; text: string } | null; choices?: import("@/views/character-creator/utils/CharacterCreatorClassCoreUtils").CreatorFeatureLike["choices"]; preparedSpellProgression?: PreparedSpellProgressionTable[] }[];
   counters: { name: string; value: number; reset: string }[];
 }
 
@@ -14,6 +14,7 @@ export interface LevelUpClassDetail {
   id: string;
   name: string;
   hd: number | null;
+  spellLists?: Record<string, string>;
   autolevels: AutoLevel[];
 }
 
@@ -22,12 +23,19 @@ export interface LevelUpSpellSummary {
   name: string;
   level?: number | null;
   text?: string | null;
+  check?: string | string[] | null;
+  rolls?: Array<{ effect?: string | string[] | null }>;
+  prerequisite?: import("@/views/character/CharacterSheetUtils").ClassTalentPrerequisite | null;
+  repeatable?: boolean;
 }
 
 export interface LevelUpFeatSummary {
   id: string;
   name: string;
+  category?: string | null;
 }
+
+export type InvocationFeatChoiceEntry = import("@/domain/character/invocationFeatChoices").InvocationFeatChoiceEntry;
 
 export type LevelUpFeatDetail = ParsedFeatDetailLike<ParsedFeatChoiceLike> & { id: string };
 
@@ -88,4 +96,8 @@ export interface LevelUpResolvedSpellChoiceEntry {
   listNames: string[];
   schools?: string[];
   ritualOnly?: boolean;
+  damageOnly?: boolean;
+  attackOnly?: boolean;
+  allowedSpellIds?: string[];
+  grantsSpell?: boolean;
 }

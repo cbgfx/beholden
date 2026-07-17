@@ -158,17 +158,15 @@ Set `VITE_API_ORIGIN` on both web services to point at your server's public URL 
 
 ## Compendium
 
-Beholden Compendium v2 JSON is the strict, portable native format. Editable exports contain one independently manageable category:
+Beholden Grand Schema JSON is the strict, portable native format. Editable exports contain one independently manageable category:
 
 - monsters, items, spells, classes, species, backgrounds, and feats;
 - deck cards;
 - bastion spaces, orders, and facilities.
 
-From **Compendium -> Admin**, export any loaded category to a versioned Beholden JSON file, export all nine categories as one ZIP, or import a native category batch or complete bundle. Matching IDs are always replaced.
+From **Compendium -> Admin**, export any loaded category to a Grand Schema JSON file, export all ten categories as one ZIP, or import a single-category document or flat multi-category document. Matching IDs are always replaced.
 
-Legacy XML is never imported into the live compendium. The stateless XML converter translates one legacy file into one complete Beholden JSON bundle for download. Import that resulting JSON through the native Beholden importer.
-
-The converter owns legacy inference and cleanup. Native v2 entries use explicit structured fields, reject unknown legacy-shaped fields, and never depend on parsing descriptive prose to discover basic statistics.
+Legacy XML and conversion-oriented source shapes are not product inputs. Grand Schema entries use explicit structured fields, reject legacy-shaped fields, and never depend on parsing descriptive prose to discover mechanics.
 
 Adventure version 2 files can embed native compendium batches. Their entries are installed before the adventure, allowing a portable adventure to bring its own monsters, items, spells, and other rules content. The compendium is shared across all campaigns.
 

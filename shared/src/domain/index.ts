@@ -7,4 +7,5 @@ export * from "./compendium/itemSearch";
 export * from "./compendium/normalizeSpellSearchRow";
 export * from "./compendium/useItemSearch";
 export * from "./compendium/rulesReference";
+export * from "./compendium/spellDetail";
 export * from "./text/titleCase";

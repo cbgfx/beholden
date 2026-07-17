@@ -56,7 +56,7 @@ export function SpellsPanel(props: SpellsPanelProps) {
   async function handleEditClick(id: string) {
     setEditLoading(id);
     try {
-      const spell = await api<SpellForEdit>(`/api/spells/${encodeURIComponent(id)}`);
+      const spell = await api<SpellForEdit>(`/api/spells/${encodeURIComponent(id)}?view=grand`);
       setFormTarget({ mode: "edit", spell });
     } catch {
       // ignore

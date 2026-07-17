@@ -84,35 +84,6 @@ function parseCharacterData(value: unknown): Record<string, unknown> | null | un
   return asRecord(value) ?? undefined;
 }
 
-const CLASS_HIT_DICE: Record<string, number> = {
-  barbarian: 12,
-  fighter: 10,
-  paladin: 10,
-  ranger: 10,
-  artificer: 8,
-  bard: 8,
-  cleric: 8,
-  druid: 8,
-  monk: 8,
-  rogue: 8,
-  warlock: 8,
-  sorcerer: 6,
-  wizard: 6,
-};
-
-const RACE_SPEEDS: Record<string, number> = {
-  human: 30,
-  elf: 30,
-  dwarf: 30,
-  halfling: 30,
-  gnome: 30,
-  dragonborn: 30,
-  tiefling: 30,
-  orc: 30,
-  "half elf": 30,
-  "half orc": 30,
-};
-
 function normalizeCompendiumName(value: unknown): string | undefined {
   const text = optionalString(value);
   if (!text) return undefined;
@@ -124,136 +95,21 @@ function normalizeCompendiumName(value: unknown): string | undefined {
     .replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
 
-function lowerLookup(value: unknown): string {
-  return optionalString(value)
-    ?.toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim() ?? "";
-}
-
 function primaryClassRecord(characterData: Record<string, unknown> | null | undefined): Record<string, unknown> | null {
   const classes = characterData?.classes;
   if (!Array.isArray(classes)) return null;
   return classes.map(asRecord).find(Boolean) ?? null;
 }
 
-function inferHitDie(...values: unknown[]): number | undefined {
-  for (const value of values) {
-    const key = lowerLookup(value);
-    if (!key) continue;
-    const match = Object.entries(CLASS_HIT_DICE).find(([name]) => key.includes(name));
-    if (match) return match[1];
-  }
-  return undefined;
-}
-
-function inferRaceName(...values: unknown[]): string | undefined {
-  for (const value of values) {
-    const key = lowerLookup(value);
-    if (!key) continue;
-    const match = Object.keys(RACE_SPEEDS).find((name) => key.includes(name));
-    if (match) return match.replace(/\b\w/g, (ch) => ch.toUpperCase());
-  }
-  return undefined;
-}
-
-function inferRaceSpeed(...values: unknown[]): number | undefined {
-  for (const value of values) {
-    const key = lowerLookup(value);
-    if (/\bwood elf\b/.test(key) || /\belf wood\b/.test(key)) return 35;
-  }
-  const race = inferRaceName(...values);
-  return race ? RACE_SPEEDS[race.toLowerCase()] : undefined;
-}
-
 function calcBaseHp(hitDie: number, level: number, conMod: number): number {
   return Math.max(1, hitDie + conMod + Math.max(0, level - 1) * (Math.floor(hitDie / 2) + 1 + conMod));
 }
 
-function abilityMod(score: unknown): number {
-  const parsed = Number(score);
-  return Number.isFinite(parsed) ? Math.floor((parsed - 10) / 2) : 0;
-}
-
-function getEquipState(item: Record<string, unknown>): string {
-  return optionalString(item.equipState) ?? (item.equipped ? "worn" : "backpack");
-}
-
-function isArmorItem(item: Record<string, unknown>): boolean {
-  const type = optionalString(item.type);
-  return Boolean(type && /\barmor\b/i.test(type) && !/\bshield\b/i.test(type));
-}
-
-function isShieldItem(item: Record<string, unknown>): boolean {
-  const name = optionalString(item.name);
-  const type = optionalString(item.type);
-  return Boolean((type && /\bshield\b/i.test(type)) || (name && /\bshield\b/i.test(name)));
-}
-
-function inventoryRecords(characterData: Record<string, unknown> | null | undefined): Record<string, unknown>[] {
-  return Array.isArray(characterData?.inventory)
-    ? characterData.inventory.map(asRecord).filter((entry): entry is Record<string, unknown> => Boolean(entry))
-    : [];
-}
-
-function hasFeatureName(characterData: Record<string, unknown> | null | undefined, pattern: RegExp): boolean {
-  const selected = Array.isArray(characterData?.selectedFeatureNames) ? characterData.selectedFeatureNames : [];
-  return selected.some((value) => pattern.test(String(value ?? "")));
-}
-
-function deriveArmorClassSummary(raw: Record<string, unknown>, characterData: Record<string, unknown> | null | undefined): number | undefined {
-  const dexMod = abilityMod(raw.dexScore);
-  const conMod = abilityMod(raw.conScore);
-  const primaryClass = primaryClassRecord(characterData);
-  const level = clamp(intOrFallback(raw.level, intOrFallback(primaryClass?.level, 1)), 1, 20);
-  const className = optionalString(raw.className) ?? optionalString(primaryClass?.className) ?? normalizeCompendiumName(primaryClass?.classId);
-  const inventory = inventoryRecords(characterData);
-  const wornArmor = inventory.find((item) => getEquipState(item) === "worn" && isArmorItem(item) && positiveIntOrUndefined(item.ac));
-  const wornShield = inventory.find((item) => getEquipState(item) === "offhand" && isShieldItem(item));
-  const shieldBonus = wornShield ? 2 : 0;
-  const armorAc = (() => {
-    const armorBase = positiveIntOrUndefined(wornArmor?.ac);
-    if (!wornArmor || !armorBase) return undefined;
-    const type = String(wornArmor.type ?? "").toLowerCase();
-    if (type.includes("heavy")) return armorBase;
-    if (type.includes("medium")) return armorBase + Math.min(2, dexMod);
-    return armorBase + dexMod;
-  })();
-  const hasBarbarianUnarmoredDefense =
-    hasFeatureName(characterData, /\bunarmored defense\b/i)
-    || (lowerLookup(className).includes("barbarian") && level >= 1);
-  const unarmoredAc = hasBarbarianUnarmoredDefense
-    ? 10 + dexMod + conMod
-    : undefined;
-  const naturalAc = 10 + dexMod;
-  return Math.max(naturalAc, armorAc ?? 0, unarmoredAc ?? 0) + shieldBonus;
-}
-
-function deriveSpeedSummary(raw: Record<string, unknown>, characterData: Record<string, unknown> | null | undefined): number | undefined {
-  const primaryClass = primaryClassRecord(characterData);
-  const level = clamp(intOrFallback(raw.level, intOrFallback(primaryClass?.level, 1)), 1, 20);
-  const inferredRaceSpeed = inferRaceSpeed(raw.species, characterData?.raceName, characterData?.raceId, characterData?.speciesId);
-  const baseSpeed = inferredRaceSpeed ?? intOrFallback(raw.speed, 30);
-  const inventory = inventoryRecords(characterData);
-  const wornArmor = inventory.find((item) => getEquipState(item) === "worn" && isArmorItem(item));
-  const wearingHeavyArmor = Boolean(wornArmor && /\bheavy armor\b/i.test(String(wornArmor.type ?? "")));
-  const className = optionalString(raw.className) ?? optionalString(primaryClass?.className) ?? normalizeCompendiumName(primaryClass?.classId);
-  const hasFastMovement =
-    hasFeatureName(characterData, /\bfast movement\b/i)
-    || (lowerLookup(className).includes("barbarian") && level >= 5);
-  const hasRoving =
-    hasFeatureName(characterData, /\broving\b/i)
-    || (lowerLookup(className).includes("ranger") && level >= 6);
-  const speedBonus = !wearingHeavyArmor
-    ? (hasFastMovement ? 10 : 0) + (hasRoving ? 10 : 0)
-    : 0;
-  return baseSpeed + (inferredRaceSpeed ? speedBonus : 0);
-}
-
 export function finalizeDerivedSheetSummaries(raw: Record<string, unknown>, characterData: Record<string, unknown> | null | undefined): { ac: number; speed: number } {
+  void characterData;
   return {
-    ac: deriveArmorClassSummary(raw, characterData) ?? intOrFallback(raw.ac, 10),
-    speed: deriveSpeedSummary(raw, characterData) ?? intOrFallback(raw.speed, 30),
+    ac: intOrFallback(raw.ac, 10),
+    speed: intOrFallback(raw.speed, 30),
   };
 }
 
@@ -293,9 +149,8 @@ export function normalizeCharacterTransfer(raw: Record<string, unknown>): Record
       : optionalString(primaryClass?.className) ?? normalizeCompendiumName(primaryClass?.classId) ?? rawClassName;
   const species =
     optionalString(raw.species)
-      ?? inferRaceName(characterData?.raceName, characterData?.raceId, characterData?.speciesId);
-  const hitDie =
-    positiveIntOrUndefined(characterData?.hd) ?? inferHitDie(className, primaryClass?.className, primaryClass?.classId);
+      ?? normalizeCompendiumName(characterData?.raceName ?? characterData?.raceId ?? characterData?.speciesId);
+  const hitDie = positiveIntOrUndefined(characterData?.hd);
   const level = clamp(intOrFallback(raw.level, intOrFallback(primaryClass?.level, 1)), 1, 20);
   const conScore = parseAbilityScore(raw.conScore);
   const conMod = conScore == null ? 0 : Math.floor((conScore - 10) / 2);

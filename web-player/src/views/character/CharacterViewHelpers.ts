@@ -37,7 +37,6 @@ export {
 
 export {
   collectClassResources,
-  collectFeatureResourceFallbacks,
   mergeResourceState,
   shouldResetOnRest,
 } from "./CharacterViewResourceHelpers";
@@ -58,7 +57,9 @@ const ABILITY_SCORE_NAMES: Record<AbilKey, string> = {
 type ItemAbilityScoreOverride = {
   ability: AbilKey;
   value: number;
-  mode: "set" | "minimum";
+  mode: "set" | "minimum" | "bonus";
+  /** For "bonus": the score cannot be raised above this cap (e.g. Ioun Stones' 20). */
+  maximum?: number;
 };
 
 export function isInventoryItemActiveForCharacterEffects(item: InventoryItem): boolean {
@@ -66,20 +67,23 @@ export function isInventoryItemActiveForCharacterEffects(item: InventoryItem): b
 }
 
 function parseItemAbilityScoreOverrides(item: InventoryItem): ItemAbilityScoreOverride[] {
-  const text = `${item.description ?? ""}\n${item.notes ?? ""}`;
-  if (!text.trim()) return [];
-  const overrides: ItemAbilityScoreOverride[] = [];
-  for (const [ability, abilityName] of Object.entries(ABILITY_SCORE_NAMES) as [AbilKey, string][]) {
-    const overrideMatch = text.match(new RegExp(`\\b(?:your\\s+)?${abilityName}\\s+score\\s+(?:is|becomes?|changes?\\s+to|equals?|increases?\\s+to|rises?\\s+to|has\\s+a\\s+score\\s+of)\\s+(\\d+)\\b`, "i"));
-    if (!overrideMatch) continue;
-    const value = Number.parseInt(overrideMatch[1], 10);
-    if (!Number.isFinite(value)) continue;
-    const minimumMode = new RegExp(`no effect on you if your ${abilityName} is already ${value} or higher`, "i").test(text)
-      || new RegExp(`if your ${abilityName} is already ${value} or higher`, "i").test(text)
-      || new RegExp(`unless your ${abilityName} is already ${value} or higher`, "i").test(text);
-    overrides.push({ ability, value, mode: minimumMode ? "minimum" : "set" });
-  }
-  return overrides;
+  return (Array.isArray(item.effects) ? item.effects : []).flatMap((raw) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
+    const effect = raw as Record<string, unknown>;
+    if (effect.type !== "ability_score") return [];
+    const ability = String(effect.ability ?? "") as AbilKey;
+    const value = Number(effect.amount);
+    if (!(ability in ABILITY_SCORE_NAMES) || !Number.isFinite(value)) return [];
+    const overrides: ItemAbilityScoreOverride[] = [];
+    // set_minimum: score can't fall below `amount` (Amulet of Health).
+    if (effect.mode === "set_minimum") overrides.push({ ability, value, mode: "minimum" });
+    // fixed: flat increase while equipped, capped at `maximum` (Ioun Stones, Belt of Dwarvenkind).
+    if (effect.mode === "fixed") {
+      const maximum = Number(effect.maximum);
+      overrides.push({ ability, value, mode: "bonus", ...(Number.isFinite(maximum) ? { maximum } : {}) });
+    }
+    return overrides;
+  });
 }
 
 export function applyItemAbilityScoreOverrides(
@@ -93,9 +97,16 @@ export function applyItemAbilityScoreOverrides(
   for (const ability of Object.keys(baseScores) as AbilKey[]) {
     const base = baseScores[ability];
     const setValues = activeOverrides.filter((entry) => entry.ability === ability && entry.mode === "set").map((entry) => entry.value);
+    const bonusOverrides = activeOverrides.filter((entry) => entry.ability === ability && entry.mode === "bonus");
     const minimumValues = activeOverrides.filter((entry) => entry.ability === ability && entry.mode === "minimum").map((entry) => entry.value);
     let current = base;
     if (setValues.length > 0) current = Math.max(...setValues);
+    for (const bonus of bonusOverrides) {
+      if (current == null) continue;
+      const raised = current + bonus.value;
+      // The cap limits what the bonus can raise the score TO; a score already above it is untouched.
+      current = bonus.maximum != null ? Math.max(current, Math.min(raised, bonus.maximum)) : raised;
+    }
     if (minimumValues.length > 0) current = Math.max(current ?? Number.NEGATIVE_INFINITY, ...minimumValues);
     nextScores[ability] = Number.isFinite(current ?? NaN) ? current : base;
   }

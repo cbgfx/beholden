@@ -3,6 +3,7 @@ import type { ItemSummary } from "@/views/character-creator/utils/CharacterCreat
 import type { GrowthChoiceDefinition } from "@/views/character-creator/utils/GrowthChoiceUtils";
 
 interface ItemLookupBody {
+  ids?: string[];
   names?: string[];
   includeCommonMagic?: boolean;
   includeWondrousRarities?: string[];
@@ -28,6 +29,11 @@ export function buildItemLookupBodyFromNames(rawNames: Array<string | null | und
       return true;
     });
   return names.length > 0 ? { names } : {};
+}
+
+export function addItemLookupIds(body: ItemLookupBody, rawIds: Array<string | null | undefined>): ItemLookupBody {
+  const ids = Array.from(new Set(rawIds.map((id) => String(id ?? "").trim()).filter(Boolean)));
+  return ids.length > 0 ? { ...body, ids } : body;
 }
 
 export function buildGrowthItemLookupBody(definitions: GrowthChoiceDefinition[]): ItemLookupBody {
@@ -57,6 +63,7 @@ export function buildGrowthItemLookupBody(definitions: GrowthChoiceDefinition[])
 
 export function isItemLookupBodyEmpty(body: ItemLookupBody): boolean {
   return !body.includeCommonMagic
+    && (!body.ids || body.ids.length === 0)
     && (!body.includeWondrousRarities || body.includeWondrousRarities.length === 0)
     && (!body.names || body.names.length === 0);
 }
@@ -70,4 +77,3 @@ export async function fetchCompendiumItemsByLookup(body: ItemLookupBody): Promis
   });
   return Array.isArray(result?.rows) ? result.rows : [];
 }
-

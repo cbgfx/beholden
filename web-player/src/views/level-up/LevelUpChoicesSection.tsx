@@ -25,8 +25,9 @@ type ProgressionChoiceEntry = {
 type ClassFeatureProficiencyChoiceEntry = {
   key: string;
   sourceLabel: string;
-  category: "skill" | "tool" | "language";
+  category: "skill" | "tool" | "language" | "saving_throw";
   count: number;
+  options?: string[];
 };
 type ManeuverChoiceEntry = {
   definition: {
@@ -64,6 +65,7 @@ export function LevelUpChoicesSection(props: {
   existingSkillKeys: Set<string>;
   existingToolKeys: Set<string>;
   existingLanguageKeys: Set<string>;
+  existingSaveKeys: Set<string>;
   cantripChoiceCount: number;
   availableCantripChoices: SpellSummary[];
   displayedChosenCantrips: string[];
@@ -85,6 +87,7 @@ export function LevelUpChoicesSection(props: {
   availableInvocationChoices: SpellSummary[];
   displayedChosenInvocations: string[];
   lockedInvocationIds: Set<string>;
+  lockedInvocationSelectionIds: string[];
   allowedInvocationIds: Set<string>;
   maneuverChoiceEntries: ManeuverChoiceEntry[];
   planChoiceEntries: PlanChoiceEntry[];
@@ -93,6 +96,8 @@ export function LevelUpChoicesSection(props: {
   featResolvedSpellChoices: LevelUpResolvedSpellChoiceEntry[];
   classFeatureResolvedSpellChoices: LevelUpResolvedSpellChoiceEntry[];
   invocationResolvedSpellChoices: LevelUpResolvedSpellChoiceEntry[];
+  invocationFeatChoices: import("./LevelUpTypes").InvocationFeatChoiceEntry[];
+  invocationGrantedFeatChoices: ReturnType<typeof import("@/views/shared/useInvocationGrantedFeatChoices").useInvocationGrantedFeatChoices>;
   featSpellChoiceOptions: Record<string, SpellSummary[]>;
   classFeatureSpellChoiceOptions: Record<string, SpellSummary[]>;
   invocationSpellChoiceOptions: Record<string, SpellSummary[]>;
@@ -176,18 +181,21 @@ export function LevelUpChoicesSection(props: {
 
         {props.classFeatureProficiencyChoices.map((choice) => {
           const selected = props.chosenFeatureChoices[choice.key] ?? [];
-          const options =
-            choice.category === "skill" ? ALL_SKILLS.map((skill) => skill.name)
+          const options = choice.options?.length ? choice.options
+            : choice.category === "skill" ? ALL_SKILLS.map((skill) => skill.name)
             : choice.category === "tool" ? ALL_TOOLS
+            : choice.category === "saving_throw" ? Object.keys(ABILITY_LABELS)
             : ALL_LANGUAGES;
           const existingKeys =
             choice.category === "skill" ? props.existingSkillKeys
             : choice.category === "tool" ? props.existingToolKeys
+            : choice.category === "saving_throw" ? props.existingSaveKeys
             : props.existingLanguageKeys;
           const hasNonDuplicateOption = options.some((option) => !existingKeys.has(normalizeChoiceKey(option)));
           const title =
             choice.category === "skill" ? "Bonus Proficiencies"
             : choice.category === "tool" ? "Bonus Tool Proficiencies"
+            : choice.category === "saving_throw" ? "Saving Throw Proficiency"
             : "Bonus Languages";
           return (
             <div key={choice.key}>
@@ -305,15 +313,15 @@ export function LevelUpChoicesSection(props: {
             chosen={props.displayedChosenInvocations}
             disabledIds={Array.from(props.globallyChosenSpellChoiceIds).filter((id) => !props.displayedChosenInvocations.includes(id))}
             max={props.invocationChoiceCount}
-            onToggle={(id) =>
-              props.toggleSelection(id, props.displayedChosenInvocations, (updater) => {
-                props.setChosenInvocations((prev) => {
-                  const unlocked = prev.filter((entry) => !props.lockedInvocationIds.has(entry));
-                  const nextUnlocked = typeof updater === "function" ? updater(unlocked) : updater;
-                  return [...Array.from(props.lockedInvocationIds), ...nextUnlocked];
-                });
-              }, props.invocationChoiceCount)
-            }
+            onToggle={(id, action) => props.setChosenInvocations(() => {
+              const unlocked = props.displayedChosenInvocations;
+              if (action === "add" && unlocked.length < props.invocationChoiceCount) return [...props.lockedInvocationSelectionIds, ...unlocked, id];
+              if (action === "remove") {
+                const index = unlocked.lastIndexOf(id);
+                return index < 0 ? [...props.lockedInvocationSelectionIds, ...unlocked] : [...props.lockedInvocationSelectionIds, ...unlocked.filter((_, candidate) => candidate !== index)];
+              }
+              return [...props.lockedInvocationSelectionIds, ...unlocked];
+            })}
             isAllowed={(invocation) => props.allowedInvocationIds.has(invocation.id)}
           />
         ) : null}
@@ -438,6 +446,60 @@ export function LevelUpChoicesSection(props: {
         {props.featResolvedSpellChoices.map((choice) => renderResolvedSpellChoice(choice, props.featSpellChoiceOptions))}
         {props.classFeatureResolvedSpellChoices.map((choice) => renderResolvedSpellChoice(choice, props.classFeatureSpellChoiceOptions))}
         {props.invocationResolvedSpellChoices.map((choice) => renderResolvedSpellChoice(choice, props.invocationSpellChoiceOptions))}
+
+        {props.invocationFeatChoices.map((choice) => {
+          const selected = props.chosenFeatOptions[choice.key] ?? [];
+          return (
+            <div key={choice.key}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 8, flexWrap: "wrap" }}>
+                <div style={{ fontSize: "var(--fs-medium)", fontWeight: 800, color: "#fff" }}>{choice.title} <span style={{ color: C.muted }}>({choice.sourceLabel})</span></div>
+                <div style={{ fontSize: "var(--fs-small)", color: selected.length >= choice.count ? props.accentColor : C.muted }}>{selected.length} / {choice.count}</div>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {choice.options.map((option) => {
+                  const active = selected.includes(option.id);
+                  const blocked = !active && selected.length >= choice.count;
+                  return <ChoiceBtn key={option.id} active={active} onClick={() => {
+                    if (blocked) return;
+                    props.setChosenFeatOptions((prev) => {
+                      const current = prev[choice.key] ?? [];
+                      const next = current.includes(option.id) ? current.filter((id) => id !== option.id) : [...current, option.id];
+                      return { ...prev, [choice.key]: next };
+                    });
+                  }}>{option.name}</ChoiceBtn>;
+                })}
+              </div>
+              {choice.options.length === 0 ? <div style={{ marginTop: 8, fontSize: "var(--fs-small)", color: C.muted }}>No eligible Origin Feats found.</div> : null}
+            </div>
+          );
+        })}
+
+        {props.invocationGrantedFeatChoices.groups.map((choice) => {
+          const selected = props.chosenFeatOptions[choice.key] ?? [];
+          return (
+            <div key={choice.key}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 8, flexWrap: "wrap" }}>
+                <div style={{ fontSize: "var(--fs-medium)", fontWeight: 800, color: "#fff" }}>{choice.title} <span style={{ color: C.muted }}>({choice.sourceLabel})</span></div>
+                <div style={{ fontSize: "var(--fs-small)", color: selected.length >= choice.count ? props.accentColor : C.muted }}>{selected.length} / {choice.count}</div>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {choice.options.map((option) => <ChoiceBtn key={option} active={selected.includes(option)} onClick={() => {
+                  props.setChosenFeatOptions((prev) => {
+                    const current = prev[choice.key] ?? [];
+                    const next = current.includes(option) ? current.filter((value) => value !== option) : current.length < choice.count ? [...current, option] : current;
+                    return { ...prev, [choice.key]: next };
+                  });
+                }}>{option}</ChoiceBtn>)}
+              </div>
+              {choice.note ? <div style={{ marginTop: 8, fontSize: "var(--fs-small)", color: C.muted }}>{choice.note}</div> : null}
+            </div>
+          );
+        })}
+
+        {props.invocationGrantedFeatChoices.spellChoices.map((choice) => renderResolvedSpellChoice(
+          choice as LevelUpResolvedSpellChoiceEntry,
+          props.invocationGrantedFeatChoices.spellOptions as Record<string, SpellSummary[]>,
+        ))}
 
         {(props.featResolvedSpellChoices.some((choice) => (props.featSpellChoiceOptions[choice.key] ?? []).length === 0)
           || props.classFeatureResolvedSpellChoices.some((choice) => (props.classFeatureSpellChoiceOptions[choice.key] ?? []).length === 0)

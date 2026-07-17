@@ -69,7 +69,7 @@ export function fetchFeatCatalog(fields: readonly CatalogFields[] = [
 
 type JsonRecord = Record<string, any>;
 
-export function classV2ToPlayer(entry: JsonRecord): JsonRecord {
+export function classGrandToPlayerView(entry: JsonRecord): JsonRecord {
   const proficiencies = entry.proficiencies ?? {};
   const spellcasting = entry.spellcasting ?? {};
   const tools = proficiencies.tools ?? { fixed: [], choices: [], notes: [] };
@@ -78,9 +78,21 @@ export function classV2ToPlayer(entry: JsonRecord): JsonRecord {
     choices: Array.isArray(tools.choices) ? tools.choices : [],
     notes: Array.isArray(tools.notes) ? tools.notes : [],
   };
+  const subclassNames = entry.subclasses?.options && typeof entry.subclasses.options === "object"
+    ? Object.fromEntries(Object.entries(entry.subclasses.options as Record<string, string | JsonRecord>).map(([id, value]) => [id, typeof value === "string" ? value : value.name]))
+    : {};
+  const choiceFeatureIds = new Set<string>((entry.choices ?? []).flatMap((choice: JsonRecord) =>
+    (choice.options ?? []).flatMap((option: JsonRecord) => option.features ?? []).map(String)));
   return {
     id: entry.id,
     name: entry.name,
+    subclasses: entry.subclasses ? { ...entry.subclasses, options: subclassNames } : null,
+    subclassDetails: entry.subclasses?.options ?? {},
+    choices: entry.choices ?? [],
+    primaryAbility: entry.primaryAbility,
+    multiclass: entry.multiclass ?? null,
+    equipmentOptions: entry.equipment?.options ?? [],
+    spellLists: entry.spellLists ?? {},
     description: entry.description,
     descriptions: entry.descriptions?.length ? entry.descriptions : (entry.description ? [entry.description] : []),
     hd: entry.hitDie,
@@ -99,40 +111,49 @@ export function classV2ToPlayer(entry: JsonRecord): JsonRecord {
       tools: expandedTools,
     },
     spellAbility: spellcasting.ability,
+    spellcastingList: spellcasting.list ?? null,
     slotsReset: spellcasting.slotRecovery === "short_rest" ? "S" : "L",
+    preparedSpellChanges: spellcasting.preparedSpellChanges ?? null,
     autolevels: (entry.levels ?? []).map((level: JsonRecord) => {
       const slotEntries = Object.entries(level.spellSlots ?? {}).map(([key, value]) => [Number(key), Number(value)] as const);
       const maxSlot = slotEntries.reduce((max, [slot]) => Math.max(max, slot), 0);
       return {
         level: level.level,
         scoreImprovement: level.abilityScoreImprovement === true,
+        spellsPrepared: level.spellsPrepared ?? null,
         slots: maxSlot > 0
           ? [level.cantripsKnown ?? 0, ...Array.from({ length: maxSlot }, (_, index) => level.spellSlots?.[String(index + 1)] ?? 0)]
           : null,
         features: (level.features ?? []).map((feature: JsonRecord) => ({
+          id: feature.id,
           name: feature.name,
           text: feature.description,
           source: feature.source ?? null,
-          subclass: feature.subclass ?? null,
-          optional: feature.optional === true,
+          subclass: feature.subclass ? (subclassNames[feature.subclass] ?? feature.subclass) : null,
+          subclassId: feature.subclass ?? null,
+          optional: choiceFeatureIds.has(String(feature.id)),
           effects: feature.effects ?? [],
           scalingRolls: feature.scalingRolls ?? [],
           preparedSpellProgression: feature.preparedSpellProgression ?? [],
           resolution: feature.resolution,
           resolutionNotes: feature.resolutionNotes ?? [],
+          talent: feature.talent ?? null,
+          choices: feature.choices ?? [],
+          noteTemplate: feature.noteTemplate ?? null,
         })),
         counters: (level.resources ?? []).map((resource: JsonRecord) => ({
           name: resource.name,
           value: resource.uses,
           reset: resource.recovery === "short_rest" ? "S" : "L",
-          subclass: resource.subclass ?? null,
+          subclass: resource.subclass ? (subclassNames[resource.subclass] ?? resource.subclass) : null,
+          subclassId: resource.subclass ?? null,
         })),
       };
     }),
   };
 }
 
-function traitsV2ToPlayer(traits: JsonRecord[]): JsonRecord[] {
+function traitsGrandToPlayerView(traits: JsonRecord[]): JsonRecord[] {
   return traits.map((trait) => ({
     id: trait.id,
     name: trait.name,
@@ -144,32 +165,32 @@ function traitsV2ToPlayer(traits: JsonRecord[]): JsonRecord[] {
     specials: trait.specials ?? [],
     proficiencies: trait.proficiencies ?? [],
     preparedSpellProgression: trait.preparedSpellProgression ?? [],
+    effects: trait.effects ?? [],
     resolution: trait.resolution,
     resolutionNotes: trait.resolutionNotes ?? [],
   }));
 }
 
-export async function fetchClassDetailV2<T>(id: string): Promise<T> {
-  const canonical = await api<JsonRecord>(`/api/compendium/v2/classes/${encodeURIComponent(id)}`);
-  return classV2ToPlayer(canonical) as T;
+export async function fetchGrandClassDetail<T>(id: string): Promise<T> {
+  const canonical = await api<JsonRecord>(`/api/compendium/canonical/classes/${encodeURIComponent(id)}`);
+  return classGrandToPlayerView(canonical) as T;
 }
 
-export async function fetchRaceDetailV2<T>(id: string): Promise<T> {
-  const entry = await api<JsonRecord>(`/api/compendium/v2/species/${encodeURIComponent(id)}`);
+export async function fetchGrandSpeciesDetail<T>(id: string): Promise<T> {
+  const entry = await api<JsonRecord>(`/api/compendium/canonical/species/${encodeURIComponent(id)}`);
   return {
     id: entry.id,
     name: entry.name,
     size: entry.size,
     speed: entry.speed,
+    creatureType: entry.creatureType ?? "Humanoid",
     spellAbility: entry.spellcastingAbility,
-    resist: (entry.resistances ?? []).join(", "),
-    vision: entry.vision ?? [],
     parsedChoices: entry.choices ?? {},
-    traits: traitsV2ToPlayer(entry.traits ?? []),
+    traits: traitsGrandToPlayerView(entry.traits ?? []),
   } as T;
 }
 
-export function backgroundV2ToPlayer<T>(entry: JsonRecord): T {
+export function backgroundGrandToPlayerView<T>(entry: JsonRecord, resolvedFeats: JsonRecord[] = []): T {
   const proficiencies = entry.proficiencies ?? {};
   const expandChoice = (value: unknown) => {
     if (Array.isArray(value)) {
@@ -225,12 +246,18 @@ export function backgroundV2ToPlayer<T>(entry: JsonRecord): T {
         : {}),
     };
   };
-  const feats = Array.isArray(proficiencies.feats)
-    ? proficiencies.feats.map((feat: JsonRecord) => ({
-        ...feat,
-        parsed: expandFeatMechanics(feat.parsed, String(feat.name ?? "")),
-      }))
-    : [];
+  const resolvedFeatById = new Map(resolvedFeats.map((feat) => [String(feat.id), feat]));
+  const fixedFeatIds = typeof proficiencies.feat === "string" ? [proficiencies.feat] : [];
+  const feats = fixedFeatIds
+    .flatMap((value: unknown) => {
+        const feat = typeof value === "string" ? resolvedFeatById.get(value) : value as JsonRecord;
+        return feat ? [{ ...feat, parsed: expandFeatMechanics(feat.parsed, String(feat.name ?? "")) }] : [];
+      });
+  const featChoice = typeof proficiencies.featChoice === "number"
+    ? { count: proficiencies.featChoice, from: [] }
+    : proficiencies.featChoice && typeof proficiencies.featChoice === "object"
+      ? { count: Number(proficiencies.featChoice.count ?? 0), from: Array.isArray(proficiencies.featChoice.from) ? proficiencies.featChoice.from : [] }
+      : { count: 0, from: [] };
   const equipment = entry.equipment ?? {};
   const equipmentOptions = Array.isArray(equipment.options) ? equipment.options : [];
   const traits = [
@@ -244,7 +271,7 @@ export function backgroundV2ToPlayer<T>(entry: JsonRecord): T {
       preparedSpellProgression: feat.preparedSpellProgression ?? [],
       resolution: feat.resolution,
     })),
-    ...(Array.isArray(entry.traits) ? traitsV2ToPlayer(entry.traits) : []),
+    ...(Array.isArray(entry.traits) ? traitsGrandToPlayerView(entry.traits) : []),
   ];
   return {
     id: entry.id,
@@ -257,7 +284,8 @@ export function backgroundV2ToPlayer<T>(entry: JsonRecord): T {
       tools: expandChoice(proficiencies.tools),
       languages: expandChoice(proficiencies.languages),
       feats,
-      featChoice: typeof proficiencies.featChoice === "number" ? proficiencies.featChoice : 0,
+      featChoice: featChoice.count,
+      featChoiceFrom: featChoice.from,
       abilityScores: Array.isArray(proficiencies.abilityScores) ? proficiencies.abilityScores : [],
       abilityScoreChoose: typeof proficiencies.abilityScoreChoose === "number"
         ? proficiencies.abilityScoreChoose
@@ -271,7 +299,10 @@ export function backgroundV2ToPlayer<T>(entry: JsonRecord): T {
   } as T;
 }
 
-export async function fetchBackgroundDetailV2<T>(id: string): Promise<T> {
-  const entry = await api<JsonRecord>(`/api/compendium/v2/backgrounds/${encodeURIComponent(id)}`);
-  return backgroundV2ToPlayer<T>(entry);
+export async function fetchGrandBackgroundDetail<T>(id: string): Promise<T> {
+  const entry = await api<JsonRecord>(`/api/compendium/canonical/backgrounds/${encodeURIComponent(id)}`);
+  const featIds = typeof entry.proficiencies?.feat === "string" ? [entry.proficiencies.feat] : [];
+  const feats = await Promise.all(featIds.map((featId: string) =>
+    api<JsonRecord>(`/api/compendium/feats/${encodeURIComponent(featId)}`)));
+  return backgroundGrandToPlayerView<T>(entry, feats);
 }

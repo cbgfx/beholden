@@ -1,0 +1,210 @@
+{
+  "format": "beholden.compendium",
+  "schema": "grand",
+  "exportedAt": "2026-07-03T21:47:55.038Z",
+  "items": [
+    {
+      "id": "i_basic_poison",
+      "name": "Basic Poison",
+      "source": "Tarentha Arcana",
+      "type": "Potion",
+      "rarity": "common",
+      "magical": true,
+      "weight": 0,
+      "value": 25,
+      "description": [
+        "You can use the poison in this vial to coat one slashing or piercing weapon or up to three pieces of ammunition.",
+        "Applying the poison takes an action.",
+        "A creature hit by the Poisoned weapon or ammunition must make a DC 10 Constitution saving throw or take 1d4 poison damage. Once applied, the poison retains potency for 1 minute before drying."
+      ]
+    },
+    {
+      "id": "i_gorgon_blood",
+      "name": "Gorgon Blood",
+      "source": "Tarentha Arcana",
+      "type": "Potion",
+      "rarity": "uncommon",
+      "magical": true,
+      "weight": 0,
+      "value": 60,
+      "description": "When ingested, the creature must make a DC 13 Constitution saving throw.  On a failed save, the creature magically begins to turn to stone and is restrained. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is petrified until freed by the greater restoration spell or other magic."
+    },
+    {
+      "id": "i_gorgon_intestines",
+      "name": "Gorgon Intestines",
+      "source": "Tarentha Arcana",
+      "type": "Potion",
+      "rarity": "uncommon",
+      "magical": true,
+      "weight": 0,
+      "value": 60,
+      "description": "Used in a concoction for Stone To Flesh Oil."
+    },
+    {
+      "id": "i_herb_dreamleaf",
+      "name": "Herb, Dreamleaf",
+      "source": "Tarentha Arcana",
+      "type": "Adventuring Gear",
+      "rarity": "common",
+      "weight": 1,
+      "description": "Allows crafting Potions to be rolled with advantage. (Consumed on use)"
+    },
+    {
+      "id": "i_herb_kingsblood",
+      "name": "Herb, Kingsblood",
+      "source": "Tarentha Arcana",
+      "type": "Adventuring Gear",
+      "rarity": "common",
+      "weight": 1,
+      "description": "Used in many concoctions to brew powerful mind controlling potions."
+    },
+    {
+      "id": "i_herb_nightshade",
+      "name": "Herb, Nightshade",
+      "source": "Tarentha Arcana",
+      "type": "Adventuring Gear",
+      "rarity": "common",
+      "weight": 1,
+      "description": "When added to a concoction, turns it into poison, dealing 9d6 damage on a failed DC 17 Constitution saving throw. (Consumed on use)"
+    },
+    {
+      "id": "i_herb_silverweed",
+      "name": "Herb, Silverweed",
+      "source": "Tarentha Arcana",
+      "type": "Adventuring Gear",
+      "rarity": "uncommon",
+      "magical": true,
+      "weight": 1,
+      "description": "When added to a concoction, gives a +1 to the crafting roll. (Consumed on use)"
+    },
+    {
+      "id": "i_herb_sourgrass",
+      "name": "Herb, Sourgrass",
+      "source": "Tarentha Arcana",
+      "type": "Adventuring Gear",
+      "rarity": "common",
+      "weight": 1,
+      "description": "When added to a concoction, multiplies the yield. (Consumed on use)"
+    },
+    {
+      "id": "i_leather_dragon_scale",
+      "name": "Leather, Dragon Scale",
+      "source": "Tarentha Arcana",
+      "type": "Adventuring Gear",
+      "rarity": "common",
+      "weight": 0,
+      "value": 10,
+      "description": "Leather required to make Dragon Scale Armor"
+    },
+    {
+      "id": "i_leather_scales",
+      "name": "Leather, Scales",
+      "source": "Tarentha Arcana",
+      "type": "Adventuring Gear",
+      "rarity": "common",
+      "weight": 0,
+      "description": "Leather required to make Scale Armor"
+    },
+    {
+      "id": "i_leather_smoldering_hide",
+      "name": "Leather, Smoldering Hide",
+      "source": "Tarentha Arcana",
+      "type": "Adventuring Gear",
+      "rarity": "common",
+      "weight": 0,
+      "value": 8,
+      "description": "Leather required to make Smoldering Hide Armor"
+    },
+    {
+      "id": "i_ore_adamntine",
+      "name": "Ore, Adamntine",
+      "source": "Tarentha Arcana",
+      "type": "Adventuring Gear",
+      "rarity": "common",
+      "weight": 7,
+      "value": 60,
+      "description": "Ore required to make Adamantine Items (Consumed on use)"
+    },
+    {
+      "id": "i_ore_black_platinum",
+      "name": "Ore, Black Platinum",
+      "source": "Tarentha Arcana",
+      "type": "Adventuring Gear",
+      "rarity": "uncommon",
+      "magical": true,
+      "weight": 10,
+      "value": 100,
+      "description": "Refined ore which adds +1 Slot to any item. (Consumed on use)"
+    },
+    {
+      "id": "i_ore_darksteel",
+      "name": "Ore, Darksteel",
+      "source": "Tarentha Arcana",
+      "type": "Adventuring Gear",
+      "rarity": "uncommon",
+      "magical": true,
+      "weight": 5,
+      "value": 60,
+      "description": "Refined ore whichs adds +1 to the crafting roll. (Consumed on use)"
+    },
+    {
+      "id": "i_ore_magikite",
+      "name": "Ore, Magikite",
+      "type": "Adventuring Gear",
+      "rarity": "common",
+      "weight": 10,
+      "value": 5000,
+      "description": [
+        "A glowing piece of metal.",
+        "For it's size, it is very light. Magic clearly eminates from this item, although the nature unclear."
+      ]
+    },
+    {
+      "id": "i_ore_mithral",
+      "name": "Ore, Mithral",
+      "source": "Tarentha Arcana",
+      "type": "Adventuring Gear",
+      "rarity": "common",
+      "weight": 5,
+      "value": 60,
+      "description": "Ore required to make Mithral Items (Consumed on use)"
+    },
+    {
+      "id": "i_stone_to_flesh_oil",
+      "name": "Stone To Flesh Oil.",
+      "source": "Tarentha Arcana",
+      "type": "Potion",
+      "rarity": "uncommon",
+      "magical": true,
+      "weight": 0,
+      "value": 200,
+      "description": [
+        "When poured on a creature that has been turned to stone, the creature must perform a Constitution Saving Throw of DC 13 in order to break free.",
+        "On a successful save, the creature returns partially to flesh, suffering permanent Exhaustion Level 3. Only Greater Restoration or Wish spell can undo these changes.",
+        "However, the creature also gains +2 to AC while in this state."
+      ]
+    },
+    {
+      "id": "i_wood_darkwood",
+      "name": "Wood, Darkwood",
+      "source": "Tarentha Arcana",
+      "type": "Adventuring Gear",
+      "rarity": "uncommon",
+      "magical": true,
+      "weight": 5,
+      "value": 60,
+      "description": "Extremely hard wood whichs adds +1 to the crafting roll. (Consumed on use)"
+    },
+    {
+      "id": "i_wood_ironwood",
+      "name": "Wood, Ironwood",
+      "source": "Tarentha Arcana",
+      "type": "Adventuring Gear",
+      "rarity": "uncommon",
+      "magical": true,
+      "weight": 5,
+      "value": 20,
+      "description": "Extremely hard wood which adds +1 Slot to any item. (Consumed on use)"
+    }
+  ]
+}

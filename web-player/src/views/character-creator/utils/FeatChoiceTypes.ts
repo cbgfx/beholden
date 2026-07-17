@@ -5,7 +5,8 @@ export type FeatChoiceType =
   | "spell"
   | "spell_list"
   | "weapon_mastery"
-  | "damage_type";
+  | "damage_type"
+  | "spellcasting_ability";
 
 export interface ParsedFeatChoiceLike<TOption = string> {
   id: string;
@@ -15,6 +16,8 @@ export interface ParsedFeatChoiceLike<TOption = string> {
   options: TOption[] | null;
   anyOf?: string[];
   amount?: number | null;
+  split?: true;
+  maximum?: number | null;
   level?: number | null;
   linkedTo?: string | null;
   dependsOnChoiceId?: string | null;
@@ -43,7 +46,7 @@ export interface ParsedFeatLike<TChoice extends ParsedFeatChoiceLike<any> = Pars
   category?: string | null;
   baseName?: string;
   variant?: string | null;
-  prerequisite?: string | null;
+  prerequisite?: import("@/views/character/CharacterSheetUtils").FeatPrerequisite | null;
   repeatable?: boolean;
   source?: string | null;
   grants: ParsedFeatGrantsLike;

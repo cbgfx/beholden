@@ -160,7 +160,6 @@ export function CharacterView() {
     speed: derived.transformedCombatStats?.speed ?? derived.effectiveSpeed,
     movementModes: derived.transformedCombatStats?.movementModes ?? derived.movementModes,
     level: char.level,
-    className: derived.transformedCombatStats?.className ?? char.className,
     initiativeBonus: (derived.transformedCombatStats?.initiativeBonus ?? derived.initiativeBonus)
       - getExhaustionD20Penalty(exhaustion),
     strScore: derived.transformedCombatStats?.strScore ?? derived.scores.str,

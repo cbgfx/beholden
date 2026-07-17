@@ -48,6 +48,29 @@ export function hasIncapacitatingCondition(
   ));
 }
 
+// Shared by every player and server surface so the rule cannot drift between them. Incapacitated
+// is intentionally absent: it ends Concentration and prevents actions, but does not set Speed 0.
+// Rage's speed interaction is deliberately not folded in here; it is resolved from its feature.
+export const ZERO_SPEED_CONDITION_KEYS = new Set([
+  "grappled",
+  "restrained",
+  "paralyzed",
+  "petrified",
+  "stunned",
+  "unconscious",
+]);
+
+export function hasZeroSpeedCondition(
+  conditions: Array<{ key?: unknown }> | null | undefined,
+): boolean {
+  return Boolean(conditions?.some((condition) =>
+    ZERO_SPEED_CONDITION_KEYS.has(String(condition.key ?? "").trim().toLowerCase())
+  ));
+}
+
+/** Speed reduction (in feet) applied by the Slow condition. */
+export const SLOW_SPEED_PENALTY = 10;
+
 export function displayActorName(actor: { label?: unknown; name?: unknown; type?: unknown } | null | undefined): string {
   const label = String(actor?.label ?? "").trim();
   if (label) return label;

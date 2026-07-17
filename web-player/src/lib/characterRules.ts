@@ -6,6 +6,8 @@ export interface RaceChoices {
   toolChoice: { count: number; from: string[] | null } | null;
   languageChoice: { count: number; from: string[] | null } | null;
   hasFeatChoice: boolean;
+  /** Present only when a species trait's spell(s) use a player-chosen governing ability (elf lineages, tiefling legacies). */
+  spellcastingAbilityChoice: { options: string[] } | null;
 }
 
 export function wordOrNumberToInt(value: string): number | null {

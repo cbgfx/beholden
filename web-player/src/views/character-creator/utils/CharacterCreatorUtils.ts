@@ -21,8 +21,6 @@ export type {
   ClassExpertiseChoice,
   CreatorClassDetailLike,
   CreatorItemSummaryLike,
-  CreatorRaceTraitLike,
-  RaceChoices,
   StartingEquipmentOption,
 } from "./CharacterCreatorClassCoreUtils";
 
@@ -31,6 +29,7 @@ export {
   getClassFeatureTable,
   getMaxSlotLevel,
   getPreparedSpellCount,
+  getSpellSlotsAtLevel,
   getSlotLevelTriggeredSpellChoices,
   getSlotLevelTriggeredSpellChoicesUpToLevel,
   getSpellcastingClassName,
@@ -40,10 +39,6 @@ export {
 } from "./CharacterCreatorSpellcastingUtils";
 export type { SlotLevelTriggeredSpellChoiceDef } from "./CharacterCreatorSpellcastingUtils";
 
-export {
-  extractClassStartingEquipment,
-  parseRaceChoices,
-  parseStartingEquipmentOptions,
-} from "./CharacterCreatorRaceParseUtils";
+export { parseStartingEquipmentOptions } from "./CharacterCreatorRaceParseUtils";
 
 export { getGrowthChoiceDefinitions } from "./GrowthChoiceUtils";

@@ -91,6 +91,7 @@ export function buildProficiencyMap(args: {
   raceFeatDetail: CreatorBackgroundFeatLike | null;
   classFeatDetails: Record<string, CreatorBackgroundFeatLike>;
   levelUpFeatDetails: CreatorLevelUpFeatDetailLike[];
+  extraFeatDetails?: CreatorBackgroundFeatLike[];
   spellChoiceOptionsByKey?: Record<string, CreatorSpellSummaryLike[]>;
   itemChoiceOptionsByKey?: Record<string, Array<{ id: string; name: string }>>;
 }): ProficiencyMap {
@@ -106,6 +107,7 @@ export function buildProficiencyMap(args: {
     raceFeatDetail,
     classFeatDetails,
     levelUpFeatDetails,
+    extraFeatDetails = [],
     spellChoiceOptionsByKey = {},
     itemChoiceOptionsByKey = {},
   } = args;
@@ -164,29 +166,15 @@ export function buildProficiencyMap(args: {
     splitComma(classDetail.weapons).forEach((name) => pushWeapon(name, className));
     const classToolProf = classDetail.proficiencies?.tools;
     if (classToolProf) {
-      // Structured V2 tool data: fixed tools are auto-granted,
+      // Structured Grand tool data: fixed tools are auto-granted,
       // choices come from the user's selections, notes are display-only.
       classToolProf.fixed.forEach((name) => pushTool(name, className));
       form.chosenClassTools.forEach((name) => pushTool(name, className));
     }
 
-    splitComma(classDetail.proficiency)
-      .filter((name) => ABILITY_SCORE_NAMES.has(name))
+    (classDetail.proficiencies?.savingThrows ?? splitComma(classDetail.proficiency)
+      .filter((name) => ABILITY_SCORE_NAMES.has(name)))
       .forEach((name) => saves.push({ name, source: className }));
-
-    if (saves.length === 0) {
-      outer: for (const autolevel of classDetail.autolevels) {
-        for (const feature of autolevel.features) {
-          if (feature.optional) continue;
-          const match = feature.text.match(/Saving Throw Proficiencies?:\s*([^\n.]+)/i);
-          if (match) {
-            match[1].split(/,|\s+and\s+/i).map((s) => s.trim()).filter(Boolean)
-              .forEach((name) => saves.push({ name, source: className }));
-            break outer;
-          }
-        }
-      }
-    }
 
     form.chosenSkills.forEach((name) => skills.push({ name, source: className }));
     const classLanguageChoice = getClassLanguageChoice(classDetail as never, form.level, ALL_LANGUAGES);
@@ -200,7 +188,7 @@ export function buildProficiencyMap(args: {
     const parsedClassFeatures = parseAppliedClassFeatureEffects(classDetail, form.level, form.subclass ?? null, form.chosenOptionals);
     const classFeatureGrants = collectTaggedGrantsFromEffects(parsedClassFeatures);
     classFeatureGrants.armor.forEach((entry) => pushArmor(entry.name, entry.source));
-    classFeatureGrants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
+    classFeatureGrants.weapons.forEach((entry) => weapons.push(entry));
     classFeatureGrants.tools.forEach((entry) => pushTool(entry.name, entry.source));
     classFeatureGrants.skills.forEach((entry) => skills.push(entry));
     classFeatureGrants.expertise.forEach((entry) => pushExpertise(entry.name, entry.source));
@@ -257,20 +245,17 @@ export function buildProficiencyMap(args: {
   }
 
   if (bgDetail) {
+    // Background proficiencies are read exclusively from the compendium's structured
+    // `proficiencies` facts — never re-parsed from trait names/prose at runtime.
+    // (backgroundGrandToPlayerView always populates the structured object for canonical data.)
     const prof = bgDetail.proficiencies;
-    const bgSkills = prof ? prof.skills.fixed : splitComma(bgDetail.proficiency);
-    bgSkills.forEach((name) => skills.push({ name, source: bgName }));
+    prof?.skills.fixed.forEach((name) => skills.push({ name, source: bgName }));
     form.chosenBgSkills.forEach((name) => skills.push({ name, source: bgName }));
     if (prof) {
       prof.tools.fixed.forEach((name) => pushTool(name, bgName));
       form.chosenBgTools.forEach((name) => pushTool(name, bgName));
       prof.languages.fixed.forEach((name) => pushLanguage(name, bgName));
       form.chosenBgLanguages.forEach((name) => pushLanguage(name, bgName));
-    } else {
-      for (const trait of bgDetail.traits) {
-        if (/tool/i.test(trait.name)) splitComma(trait.text).forEach((name) => pushTool(name, bgName));
-        else if (/language/i.test(trait.name)) splitComma(trait.text).forEach((name) => pushLanguage(name, bgName));
-      }
     }
 
     for (const feat of prof?.feats ?? []) {
@@ -324,23 +309,8 @@ export function buildProficiencyMap(args: {
     }
   }
 
-  const coreLanguageChoice = getCoreLanguageChoice(raceDetail as never, STANDARD_55E_LANGUAGES);
+  const coreLanguageChoice = getCoreLanguageChoice(raceDetail?.parsedChoices ?? null, STANDARD_55E_LANGUAGES);
   if (raceDetail) {
-    for (const trait of raceDetail.traits) {
-      for (const mod of trait.modifier) {
-        const match = mod.match(/^(language|tool|skill)[:\s]+(.+)/i);
-        if (!match) continue;
-        const value = match[2].trim();
-        if (/language/i.test(match[1])) pushLanguage(value, raceName);
-        else if (/tool/i.test(match[1])) pushTool(value, raceName);
-        else if (/skill/i.test(match[1])) skills.push({ name: value, source: raceName });
-      }
-      if (/^languages?$/i.test(trait.name) && trait.modifier.length === 0) {
-        splitComma(trait.text).forEach((name) => {
-          if (name && !/choose/i.test(name)) pushLanguage(name, raceName);
-        });
-      }
-    }
     form.chosenRaceSkills.forEach((name) => skills.push({ name, source: raceName }));
     if (!coreLanguageChoice) form.chosenRaceLanguages.forEach((name) => pushLanguage(name, raceName));
     form.chosenRaceTools.forEach((name) => pushTool(name, raceName));
@@ -402,6 +372,28 @@ export function buildProficiencyMap(args: {
     }).forEach((entry) => spells.push(entry));
   }
 
+  for (const feat of extraFeatDetails) {
+    const grants = collectFeatTaggedEntries({
+      feat,
+      selectedChoices: form.chosenFeatOptions,
+      getChoiceKey: (choice) => `extra:${feat.id}:${choice.id}`,
+    });
+    grants.skills.forEach((entry) => skills.push(entry));
+    grants.tools.forEach((entry) => pushTool(entry.name, entry.source));
+    grants.languages.forEach((entry) => pushLanguage(entry.name, entry.source));
+    grants.armor.forEach((entry) => pushArmor(entry.name, entry.source));
+    grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
+    grants.saves.forEach((entry) => saves.push(entry));
+    grants.expertise.forEach((entry) => pushExpertise(entry.name, entry.source));
+    resolveFeatSpellEntries({
+      feat,
+      sourceLabel: feat.name,
+      selectedChoices: form.chosenFeatOptions,
+      getChoiceKey: (choice) => `extra:${feat.id}:${choice.id}`,
+      spellChoiceOptionsByKey,
+    }).forEach((entry) => spells.push(entry));
+  }
+
   if (coreLanguageChoice) {
     coreLanguageChoice.fixed.forEach((name) => pushLanguage(name, coreLanguageChoice.source));
     form.chosenRaceLanguages.forEach((name) => pushLanguage(name, coreLanguageChoice.source));
@@ -409,7 +401,7 @@ export function buildProficiencyMap(args: {
 
   const chosenInvocationEffects = form.chosenInvocations
     .map((id) => invocationById[id])
-    .filter((spell): spell is CreatorSpellSummaryLike => Boolean(spell && String(spell.text ?? "").trim()))
+    .filter((spell): spell is CreatorSpellSummaryLike => Boolean(spell))
     .map((spell) => parseFeatureEffects({
       source: {
         id: `creator-invocation:${spell.id}`,
@@ -418,10 +410,12 @@ export function buildProficiencyMap(args: {
         text: spell.text ?? "",
       },
       text: spell.text ?? "",
+      classEffects: spell.effects,
     }));
   const invocationSpellChoices = collectSpellChoicesFromEffects(chosenInvocationEffects);
   invocationSpellChoices.forEach((choice) => {
-    const key = `invocation:${choice.id}`;
+    if (choice.mode === "select") return;
+    const key = `invocation:${choice.choiceId ?? choice.id}`;
     resolveSelectedSpellOptionEntries(form.chosenFeatOptions[key] ?? [], spellChoiceOptionsByKey[key] ?? classInvocations)
       .forEach((spell) => spells.push({ id: String(spell.id), name: spell.name, source: choice.source.name }));
   });

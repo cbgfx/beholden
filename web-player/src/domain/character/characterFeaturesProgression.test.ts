@@ -7,7 +7,6 @@ describe("buildPreparedSpellProgressionGrants", () => {
     const grants = buildPreparedSpellProgressionGrants([{
       id: "race:aasimar:light-bearer",
       name: "Light Bearer",
-      text: "You know the Light cantrip.",
       spellcastingAbility: "cha",
       preparedSpellProgression: [{
         label: null,

@@ -1,5 +1,5 @@
 import { parseBackgroundEquipmentOptions } from "./backgroundEquipment.js";
-import { type JsonRecord, list, record, text } from "./nativeCompendiumV2.helpers.js";
+import { type JsonRecord, list, record, text } from "./grandCompendium.helpers.js";
 
 const STRUCTURAL_TRAIT_NAME = /^(?:ability scores?(?::.*)?|choose abilities|choose an? (?:origin )?feat|choose skill proficiencies|languages?(?::.*)?|tool proficienc(?:y|ies)(?::.*)?|choose a tool proficiency|starting equipment|equipment|choose equipment)$/iu;
 
@@ -32,24 +32,6 @@ function compactChoice(value: unknown): unknown {
     };
   }
   return fixed.length > 0 ? fixed : undefined;
-}
-
-export function expandBackgroundChoice(value: unknown): {
-  fixed: string[];
-  choose: number;
-  from: string[] | null;
-} {
-  if (Array.isArray(value)) {
-    return { fixed: nonEmptyStrings(value), choose: 0, from: null };
-  }
-  const choice = record(value);
-  return {
-    fixed: nonEmptyStrings(choice.fixed),
-    choose: Number.isInteger(choice.choose) && Number(choice.choose) > 0
-      ? Number(choice.choose)
-      : 0,
-    from: nonEmptyStrings(choice.from).length > 0 ? nonEmptyStrings(choice.from) : null,
-  };
 }
 
 function splitDescriptionSource(value: string): { description: string; source?: string } {
@@ -91,51 +73,6 @@ function compactFeatValue(value: unknown, key = ""): unknown {
   return value;
 }
 
-export function compactBackgroundFeatMechanics(value: unknown): JsonRecord {
-  return record(compactFeatValue(value));
-}
-
-export function expandBackgroundFeatMechanics(value: unknown, name = ""): JsonRecord {
-  const parsed = record(value);
-  const grants = record(parsed.grants);
-  return {
-    category: parsed.category ?? null,
-    baseName: parsed.baseName ?? name,
-    variant: parsed.variant ?? null,
-    prerequisite: parsed.prerequisite ?? null,
-    repeatable: parsed.repeatable === true,
-    source: parsed.source ?? null,
-    grants: {
-      skills: list(grants.skills),
-      tools: list(grants.tools),
-      languages: list(grants.languages),
-      armor: list(grants.armor),
-      weapons: list(grants.weapons),
-      savingThrows: list(grants.savingThrows),
-      spells: list(grants.spells),
-      cantrips: list(grants.cantrips),
-      abilityIncreases: record(grants.abilityIncreases),
-      bonuses: list(grants.bonuses),
-      effects: list(grants.effects),
-    },
-    choices: list(parsed.choices),
-    uses: list(parsed.uses),
-    preparedSpellProgression: list(parsed.preparedSpellProgression),
-    notes: list(parsed.notes),
-    modifierDetails: list(parsed.modifierDetails),
-    ...(parsed.spellcastingAbility !== undefined
-      ? { spellcastingAbility: parsed.spellcastingAbility }
-      : {}),
-    ...(parsed.spellcastingAbilityFromChoiceId !== undefined
-      ? { spellcastingAbilityFromChoiceId: parsed.spellcastingAbilityFromChoiceId }
-      : {}),
-    ...(parsed.resolution !== undefined ? { resolution: parsed.resolution } : {}),
-    ...(list(parsed.resolutionNotes).length > 0
-      ? { resolutionNotes: parsed.resolutionNotes }
-      : {}),
-  };
-}
-
 export function compactBackgroundEntry(entry: JsonRecord): JsonRecord {
   const traits = list(entry.traits).map(record);
   const descriptionTrait = traits.find((trait) => /^description$/iu.test(traitName(trait)));
@@ -144,35 +81,16 @@ export function compactBackgroundEntry(entry: JsonRecord): JsonRecord {
   );
   const source = text(entry.source) ?? splitDescription.source;
   const proficiencies = record(entry.proficiencies);
-  const feats = list(proficiencies.feats).map(record).flatMap((feat) => {
-    const name = text(feat.name);
-    if (!name) return [];
-    const matchingTrait = traits.find((trait) =>
-      traitName(trait).replace(/^Feat:\s*/iu, "").trim().toLowerCase() === name.toLowerCase());
-    const description = text(feat.description)
-      ?? (matchingTrait ? traitDescription(matchingTrait) : null);
-    const fullParsed = record(feat.parsed);
-    const parsed = compactBackgroundFeatMechanics(fullParsed);
-    return [{
-      name,
-      ...(description ? { description } : {}),
-      parsed,
-      ...(list(feat.scalingRolls ?? matchingTrait?.scalingRolls).length > 0
-        ? { scalingRolls: compactFeatValue(feat.scalingRolls ?? matchingTrait?.scalingRolls) }
-        : {}),
-      ...(list(feat.preparedSpellProgression ?? matchingTrait?.preparedSpellProgression).length > 0
-        ? {
-            preparedSpellProgression: compactFeatValue(
-              feat.preparedSpellProgression ?? matchingTrait?.preparedSpellProgression,
-            ),
-          }
-        : {}),
-      ...(text(feat.resolution ?? fullParsed.resolution ?? matchingTrait?.resolution)
-        ? { resolution: feat.resolution ?? fullParsed.resolution ?? matchingTrait?.resolution }
-        : {}),
-    }];
+  const featValues = Array.isArray(proficiencies.feats)
+    ? proficiencies.feats
+    : text(proficiencies.feat) ? [proficiencies.feat] : [];
+  const feats = featValues.flatMap((rawFeat) => {
+    if (typeof rawFeat === "string") return rawFeat.trim() ? [rawFeat.trim()] : [];
+    const name = text(record(rawFeat).name);
+    return name ? [`f_${name.toLowerCase().replace(/\s+/gu, "_")}`] : [];
   });
-  const featChoice = Number(proficiencies.featChoice);
+  const featChoiceValue = proficiencies.featChoice;
+  const featChoice = Number(featChoiceValue);
   const abilityScoreChoose = Number(proficiencies.abilityScoreChoose);
   const equipmentValue = entry.equipment;
   const equipmentRecord = record(equipmentValue);
@@ -196,8 +114,10 @@ export function compactBackgroundEntry(entry: JsonRecord): JsonRecord {
     ...(compactChoice(proficiencies.languages) !== undefined
       ? { languages: compactChoice(proficiencies.languages) }
       : {}),
-    ...(feats.length > 0 ? { feats } : {}),
-    ...(Number.isInteger(featChoice) && featChoice > 0 ? { featChoice } : {}),
+    ...(feats[0] ? { feat: feats[0] } : {}),
+    ...(featChoiceValue && typeof featChoiceValue === "object" && !Array.isArray(featChoiceValue)
+      ? { featChoice: featChoiceValue }
+      : Number.isInteger(featChoice) && featChoice > 0 ? { featChoice } : {}),
     ...(nonEmptyStrings(proficiencies.abilityScores).length > 0
       ? { abilityScores: nonEmptyStrings(proficiencies.abilityScores) }
       : {}),
@@ -206,7 +126,7 @@ export function compactBackgroundEntry(entry: JsonRecord): JsonRecord {
       : {}),
   };
 
-  const remainingTraits = traits.flatMap((trait) => {
+  const remainingTraits = traits.flatMap((trait, index) => {
     const name = traitName(trait);
     if (
       !name
@@ -218,6 +138,8 @@ export function compactBackgroundEntry(entry: JsonRecord): JsonRecord {
     }
     const description = traitDescription(trait);
     return [{
+      // Background traits share the species trait contract, which requires a stable id.
+      id: text(trait.id) ?? `trait_${index + 1}`,
       name,
       description,
       ...(list(trait.scalingRolls).length > 0
@@ -248,24 +170,3 @@ export function compactBackgroundEntry(entry: JsonRecord): JsonRecord {
   };
 }
 
-export function expandBackgroundProficiencies(value: unknown): JsonRecord {
-  const proficiencies = record(value);
-  return {
-    skills: expandBackgroundChoice(proficiencies.skills),
-    tools: expandBackgroundChoice(proficiencies.tools),
-    languages: expandBackgroundChoice(proficiencies.languages),
-    feats: list(proficiencies.feats).map((rawFeat) => {
-      const feat = record(rawFeat);
-      const name = text(feat.name) ?? "";
-      return {
-        ...feat,
-        parsed: expandBackgroundFeatMechanics(feat.parsed, name),
-      };
-    }),
-    featChoice: Number.isInteger(proficiencies.featChoice) ? proficiencies.featChoice : 0,
-    abilityScores: nonEmptyStrings(proficiencies.abilityScores),
-    abilityScoreChoose: Number.isInteger(proficiencies.abilityScoreChoose)
-      ? proficiencies.abilityScoreChoose
-      : 0,
-  };
-}

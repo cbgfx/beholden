@@ -3,15 +3,6 @@ import type { MonsterDetail } from "@/views/CombatView/types";
 import { ActionRow } from "@/views/CombatView/components/ActionRow";
 import { MonsterSectionPanel } from "@/components/MonsterDisplay/MonsterSectionPanel";
 
-function parseLegendaryResistanceCount(name: string): number {
-  const m = name.match(/\((\d+)\s*\/\s*day\)/i);
-  if (m) {
-    const n = parseInt(m[1], 10);
-    if (n > 0) return n;
-  }
-  return 3;
-}
-
 function ResistanceDots({
   total,
   used,
@@ -60,9 +51,8 @@ export function MonsterTraits(props: {
     return !/legendary resistance/i.test(name) && !/^proficiency bonus$/i.test(name);
   });
 
-  const resistanceCount = legendaryResistanceTrait
-    ? parseLegendaryResistanceCount(String(legendaryResistanceTrait.name ?? ""))
-    : 0;
+  const recharge = legendaryResistanceTrait?.recharge as { uses?: unknown; period?: unknown } | undefined;
+  const resistanceCount = recharge?.period === "day" && Number.isInteger(recharge.uses) ? Number(recharge.uses) : 0;
 
   const resistanceText = legendaryResistanceTrait
     ? (Array.isArray(legendaryResistanceTrait.text)
@@ -78,7 +68,7 @@ export function MonsterTraits(props: {
         <MonsterSectionPanel
           title="Legendary Resistance"
           actions={
-            props.onChangeLegendaryResistancesUsed ? (
+            props.onChangeLegendaryResistancesUsed && resistanceCount > 0 ? (
               <ResistanceDots
                 total={resistanceCount}
                 used={props.usedLegendaryResistances ?? 0}

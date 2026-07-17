@@ -55,7 +55,7 @@ export function MonsterFormModal(props: {
     setError(null);
 
     try {
-      const payload = buildMonsterPayload(form);
+      const payload = buildMonsterPayload(form, monster);
       let id: string;
       if (isEdit) {
         await api(`/api/compendium/monsters/${encodeURIComponent(monster!.id)}`, jsonInit("PUT", payload));

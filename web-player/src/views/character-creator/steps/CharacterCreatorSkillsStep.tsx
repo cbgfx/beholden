@@ -1,7 +1,7 @@
 import React from "react";
 import { C } from "@/lib/theme";
 import { normalizeChoiceKey } from "../utils/CharacterCreatorUtils";
-import { ALL_LANGUAGES, ALL_SKILLS, ALL_TOOLS } from "../constants/CharacterCreatorConstants";
+import { ABILITY_LABELS, ALL_LANGUAGES, ALL_SKILLS, ALL_TOOLS } from "../constants/CharacterCreatorConstants";
 import { NavButtons } from "../shared/CharacterCreatorParts";
 import { detailBoxStyle, headingStyle, labelStyle, profChipStyle, sourceTagStyle } from "../shared/CharacterCreatorStyles";
 import { renderChoiceChipGroup, renderClassFeatSingleChoicePanel } from "./CharacterCreatorPanelHelpers";
@@ -39,8 +39,9 @@ interface CreatorFormLike {
 interface ClassFeatureProficiencyChoiceLike {
   key: string;
   sourceLabel: string;
-  category: "skill" | "tool" | "language";
+  category: "skill" | "tool" | "language" | "saving_throw";
   count: number;
+  options?: string[];
 }
 
 interface SelectedClassFeatEntryLike {
@@ -374,16 +375,18 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
 
       {classFeatureProficiencyChoices.map((choice) => {
         const selected = chosenFeatureChoices[choice.key] ?? [];
-        const options =
-          choice.category === "skill" ? ALL_SKILLS.map((skill) => skill.name)
+        const options = choice.options?.length ? choice.options
+          : choice.category === "skill" ? ALL_SKILLS.map((skill) => skill.name)
           : choice.category === "tool" ? ALL_TOOLS
+          : choice.category === "saving_throw" ? Object.keys(ABILITY_LABELS)
           : ALL_LANGUAGES;
-        const duplicateKind = choice.category === "language" ? "language" : choice.category;
-        const hasNonDuplicateOption = options.some((option) => !duplicateLocked(duplicateKind, option, false));
+        const duplicateKind = choice.category === "saving_throw" ? null : choice.category === "language" ? "language" : choice.category;
+        const hasNonDuplicateOption = duplicateKind == null || options.some((option) => !duplicateLocked(duplicateKind, option, false));
         return renderChoiceChipGroup({
           title:
             choice.category === "skill" ? "Bonus Proficiencies"
             : choice.category === "tool" ? "Bonus Tool Proficiencies"
+            : choice.category === "saving_throw" ? "Saving Throw Proficiency"
             : "Bonus Languages",
           sourceLabel: choice.sourceLabel,
           selectedCount: selected.length,
@@ -392,7 +395,7 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
           isSelected: (option) => selected.includes(option),
           isLocked: (option, isSelected) =>
             (!isSelected && selected.length >= choice.count)
-            || (hasNonDuplicateOption && duplicateLocked(duplicateKind, option, isSelected)),
+            || (duplicateKind != null && hasNonDuplicateOption && duplicateLocked(duplicateKind, option, isSelected)),
           onToggle: (option) =>
             setChosenFeatureChoices((prev) => {
               const current = prev[choice.key] ?? [];

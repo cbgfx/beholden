@@ -1,3 +1,4 @@
+import { averageHpFromFormula } from "@beholden/shared/domain/monsters";
 import type Database from "better-sqlite3";
 import type { StoredEncounterActor } from "../server/userData.js";
 import { extractLeadingNumber, extractDetails } from "../lib/text.js";
@@ -13,7 +14,9 @@ function parseMonsterStats(monsterBlob: unknown): {
   const m = monsterBlob as Record<string, unknown>;
   const mHp = m?.hp as Record<string, unknown> | string | number | null | undefined;
   const mAc = m?.ac as unknown;
-  const average = typeof mHp === "object" && mHp !== null ? mHp.average : mHp;
+  const average = typeof mHp === "object" && mHp !== null
+    ? mHp.average ?? averageHpFromFormula(typeof mHp.formula === "string" ? mHp.formula : null)
+    : mHp;
   return {
     defaultAc: extractLeadingNumber(mAc),
     defaultHp: extractLeadingNumber(average ?? mHp),

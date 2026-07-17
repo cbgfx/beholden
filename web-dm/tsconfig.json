@@ -17,5 +17,5 @@
       "@beholden/shared/icons/*": ["../shared/src/icons/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "../shared/src/types/css-modules.d.ts"]
 }

@@ -13,11 +13,10 @@ import {
   hasStealthDisadvantage,
   hasWeaponMastery,
   isArmorItem,
-  isRangedWeapon,
   isShieldItem,
+  isCompatibleAmmunition,
   isWearableItem,
   isWeaponItem,
-  parseWeaponMastery,
   requiresTwoHands,
 } from "@/views/character/CharacterInventory";
 import { inventoryEquipBtn, inventoryRarityColor } from "@/views/character/CharacterViewParts";
@@ -106,12 +105,12 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
   const equipped = state !== "backpack";
   const canEquipItem = isWeapon || isArmor || isWearable || offhandAllowed;
   const lacksArmorProficiency = equipped && (isArmor || isShieldItem(item)) && !hasArmorProficiency(item, charData?.proficiencies as never);
-  const mastery = isWeapon ? parseWeaponMastery(item) : null;
   const mastered = isWeapon && hasWeaponMastery(item, charData?.proficiencies as never);
-  const masteryName = mastered ? (mastery?.name ?? getWeaponMasteryName(item)) : null;
+  const masteryName = mastered ? getWeaponMasteryName(item) : null;
   const meta = [item.type ?? null, item.attunement ? "Attunement" : null].filter(Boolean).join(" • ");
-  const showAmmoControl = isWeapon && equipped && isRangedWeapon(item) && Boolean(onLinkAmmo);
-  const linkedAmmo = item.linkedAmmoId ? ammoItems.find((entry) => entry.id === item.linkedAmmoId) ?? null : null;
+  const compatibleAmmo = ammoItems.filter((entry) => isCompatibleAmmunition(item, entry));
+  const showAmmoControl = isWeapon && equipped && item.weaponAmmo != null && Boolean(onLinkAmmo);
+  const linkedAmmo = item.linkedAmmoId ? compatibleAmmo.find((entry) => entry.id === item.linkedAmmoId) ?? null : null;
 
   const equipControls = isWeapon ? (
     <>
@@ -136,7 +135,7 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
             {item.magic ? <Tag label="Magic" color={C.colorMagic} /> : null}
             {item.attuned ? <StatusBadge title="Currently attuned" border="rgba(167,139,250,0.55)" bg="rgba(139,92,246,0.14)" color="#a78bfa">A</StatusBadge> : null}
             {linkedAmmo ? <StatusBadge title={`Loaded ammunition: ${linkedAmmo.name}`} border="rgba(52,211,153,0.45)" bg="rgba(52,211,153,0.14)" color="#34d399">{linkedAmmo.name}</StatusBadge> : null}
-            {masteryName ? <StatusBadge title={mastery ? mastery.text : `Weapon Mastery: ${masteryName}`} border="rgba(251,191,36,0.45)" bg="rgba(251,191,36,0.14)" color={C.colorGold}>{masteryName}</StatusBadge> : null}
+            {masteryName ? <StatusBadge title={`Weapon Mastery: ${masteryName}`} border="rgba(251,191,36,0.45)" bg="rgba(251,191,36,0.14)" color={C.colorGold}>{masteryName}</StatusBadge> : null}
             {hasStealthDisadvantage(item) ? <StatusBadge title="Disadvantage on Stealth checks" border="rgba(248,113,113,0.55)" bg="rgba(248,113,113,0.14)" color={C.colorPinkRed}>D</StatusBadge> : null}
             {lacksArmorProficiency ? <StatusBadge title="Disadvantage from wearing armor or a shield without proficiency" border="rgba(248,113,113,0.55)" bg="rgba(248,113,113,0.14)" color={C.colorPinkRed}>D</StatusBadge> : null}
           </div>
@@ -162,9 +161,9 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
       />
       {showAmmoControl && ammoOpen ? (
         <div style={{ marginLeft: 22, marginTop: 2, marginBottom: 4, display: "flex", flexDirection: "column", gap: 2, borderLeft: `2px solid ${accentColor}33`, paddingLeft: 8 }}>
-          {ammoItems.length === 0 ? (
+          {compatibleAmmo.length === 0 ? (
             <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, padding: "3px 0" }}>No ammunition in inventory</div>
-          ) : ammoItems.map((ammo) => {
+          ) : compatibleAmmo.map((ammo) => {
             const active = item.linkedAmmoId === ammo.id;
             const outOfStock = ammo.quantity <= 0;
             const disabled = outOfStock && !active;

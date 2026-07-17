@@ -287,7 +287,7 @@ export function MonsterBrowserPanel(props: {
   async function handleEditClick(id: string) {
     setEditLoading(id);
     try {
-      const monster = await api<MonsterForEdit>(`/api/compendium/monsters/${encodeURIComponent(id)}`);
+      const monster = await api<MonsterForEdit>(`/api/compendium/monsters/${encodeURIComponent(id)}?view=grand`);
       setFormTarget({ mode: "edit", monster });
     } catch {
       // ignore
@@ -299,7 +299,7 @@ export function MonsterBrowserPanel(props: {
   async function handleDuplicateClick(id: string) {
     setDupLoading(id);
     try {
-      const source = await api<MonsterForEdit>(`/api/compendium/monsters/${encodeURIComponent(id)}`);
+      const source = await api<MonsterForEdit>(`/api/compendium/monsters/${encodeURIComponent(id)}?view=grand`);
       setDupPickerOpen(false);
       setDupSearchQ("");
       setFormTarget({ mode: "duplicate", source });
@@ -410,7 +410,7 @@ export function MonsterBrowserPanel(props: {
           )}
           {!loading && !loadError && filteredRows.length === 0 && (
             <EmptyState textColor={theme.colors.muted} style={{ padding: 12 }}>
-              {totalRows === 0 ? "No compendium data loaded. Import an XML file in the Import section." : "No monsters match the current filters."}
+              {totalRows === 0 ? "No compendium data loaded. Import canonical Beholden JSON in the Compendium section." : "No monsters match the current filters."}
             </EmptyState>
           )}
           {filteredRows.length > 0 && (

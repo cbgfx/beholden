@@ -2,7 +2,7 @@ import { C } from "@/lib/theme";
 import { ChoiceBtn } from "./LevelUpParts";
 import type { LevelUpFeatDetail } from "./LevelUpParts";
 import type { ParsedFeatChoiceLike as LevelUpFeatChoice } from "@/views/character-creator/utils/FeatChoiceTypes";
-import { extractPrerequisite, stripPrerequisiteLine } from "@/views/character/CharacterSheetUtils";
+import { formatFeatPrerequisite } from "@/views/character/CharacterSheetUtils";
 import { getFeatChoiceOptions } from "@/views/character-creator/utils/CharacterCreatorUtils";
 
 export function FeatSelectionSection(props: {
@@ -86,9 +86,9 @@ export function FeatSelectionSection(props: {
           background: "rgba(255,255,255,0.03)",
         }}>
           <div style={{ fontSize: "var(--fs-large)", fontWeight: 900, color: "#fff", marginBottom: 8 }}>{chosenFeatDetail.name}</div>
-          {extractPrerequisite(chosenFeatDetail.text) && (
+          {formatFeatPrerequisite(chosenFeatDetail.parsed.prerequisite) && (
             <div style={{ fontSize: "var(--fs-small)", color: featPrereqsMet ? C.colorGold : C.colorPinkRed, marginBottom: 8, fontWeight: 700 }}>
-              Prerequisite: {extractPrerequisite(chosenFeatDetail.text)}
+              Prerequisite: {formatFeatPrerequisite(chosenFeatDetail.parsed.prerequisite)}
             </div>
           )}
           {!featPrereqsMet && (
@@ -103,7 +103,7 @@ export function FeatSelectionSection(props: {
           )}
           {chosenFeatDetail.text && (
             <div style={{ fontSize: "var(--fs-small)", color: C.muted, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-              {stripPrerequisiteLine(chosenFeatDetail.text).replace(/Source:.*$/ms, "").trim()}
+              {String(chosenFeatDetail.text ?? "").replace(/Source:.*$/ms, "").trim()}
             </div>
           )}
         </div>

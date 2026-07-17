@@ -11,7 +11,6 @@ import {
 } from "@/views/character-creator/constants/CharacterCreatorConstants";
 import {
   abilityMod,
-  extractClassStartingEquipment,
   featuresUpToLevelForSubclass,
   getCantripCount,
   getClassFeatureTable,
@@ -20,7 +19,6 @@ import {
   getSubclassLevel,
   getSubclassList,
   isSpellcaster,
-  parseRaceChoices,
   parseStartingEquipmentOptions,
   tableValueAtLevel,
 } from "@/views/character-creator/utils/CharacterCreatorUtils";
@@ -52,7 +50,6 @@ import type { ParsedFeatDetailLike as BackgroundFeat } from "@/views/character-c
 import type { SharedSpellSummary } from "@/views/character-creator/utils/SpellChoiceUtils";
 import type { SelectedFeatSpellcastingAbilityChoiceEntry } from "@/views/character-creator/utils/FeatSpellcastingUtils";
 import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
-import type { FeatureGrants as ParseFeatureGrantsResult } from "@/views/character/CharacterRuleParsers";
 import { renderCampaignsStep, renderClassStep, renderIdentityStep, renderLevelStep, renderSpeciesStep, renderSpellsStep } from "@/views/character-creator/steps/CharacterCreatorStepPanels";
 import { renderBackgroundStep } from "@/views/character-creator/steps/CharacterCreatorBackgroundStep";
 import { renderAbilityScoresStep, renderDerivedStatsStep } from "@/views/character-creator/steps/CharacterCreatorPanelAdvancedSteps";
@@ -78,7 +75,7 @@ export type CharacterCreatorStepRenderContext = {
   raceSearch: string;
   setRaceSearch: React.Dispatch<React.SetStateAction<string>>;
   raceDetail: RaceDetail | null;
-  featSummaries: { id: string; name: string }[];
+  featSummaries: { id: string; name: string; category?: string | null }[];
   raceFeatSearch: string;
   setRaceFeatSearch: React.Dispatch<React.SetStateAction<string>>;
   raceFeatDetail: BackgroundFeat | null;
@@ -94,6 +91,8 @@ export type CharacterCreatorStepRenderContext = {
   classCantrips: SpellSummary[];
   classSpells: SpellSummary[];
   classInvocations: SpellSummary[];
+  invocationFeatChoices: import("@/domain/character/invocationFeatChoices").InvocationFeatChoiceEntry[];
+  invocationGrantedFeatChoices: ReturnType<typeof import("@/views/shared/useInvocationGrantedFeatChoices").useInvocationGrantedFeatChoices>;
   featSpellChoiceOptions: Record<string, SharedSpellSummary[]>;
   growthOptionEntriesByKey: Record<string, Array<{ id: string; name: string; rarity?: string | null; type?: string | null; magic?: boolean; attunement?: boolean }>>;
   items: ItemSummary[];
@@ -101,7 +100,6 @@ export type CharacterCreatorStepRenderContext = {
   error: string | null;
   busy: boolean;
   isEditing: boolean;
-  parseFeatureGrants: (text: string) => ParseFeatureGrantsResult;
   getStep5ChoiceState: any;
   step5SkillList: string[];
   step5NumSkills: number;
@@ -117,7 +115,7 @@ export type CharacterCreatorStepRenderContext = {
   step6SpellListChoices: CreatorSpellListChoiceEntry[];
   step6ResolvedSpellChoices: CreatorResolvedSpellChoiceEntry[];
   selectedFeatSpellcastingAbilityChoices: SelectedFeatSpellcastingAbilityChoiceEntry[];
-  selectedClassFeatureProficiencyChoices: Array<{ id: string; source: { name: string }; choice?: { optionCategory?: string; count: { kind: string; value: number } } }>;
+  selectedClassFeatureProficiencyChoices: Array<{ id: string; source: { name: string }; choice?: { optionCategory?: string; options?: string[]; count: { kind: string; value: number } } }>;
   selectedFeatGrantedAbilityBonuses: Record<string, number>;
   selectedFeatAbilityBonuses: Record<string, number>;
   levelUpFeatLevels: number[];
@@ -151,6 +149,7 @@ function renderClass(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
       chosenRaceTools: [],
       chosenRaceFeatId: null,
       chosenRaceSize: null,
+      chosenRaceSpellAbility: null,
       chosenBgSkills: [],
       chosenBgOriginFeatId: null,
       chosenBgTools: [],
@@ -189,8 +188,13 @@ function renderSpecies(ctx: CharacterCreatorStepRenderContext): StepRenderResult
     });
   }
 
-  const raceChoices = ctx.raceDetail ? (ctx.raceDetail.parsedChoices ?? parseRaceChoices(ctx.raceDetail.traits)) : null;
-  const originFeats = ctx.featSummaries.filter((f) => /\borigin\b/i.test(f.name));
+  // Species choices (skill/tool/language/size/feat/spellcasting-ability) are read exclusively
+  // from the compendium's own structured `choices` field — never inferred from trait prose at
+  // runtime. A species missing `choices` data has no choices to make, not a guess.
+  const raceChoices = ctx.raceDetail?.parsedChoices ?? null;
+  const allowedFeatIds = new Set(ctx.bgDetail?.proficiencies?.featChoiceFrom ?? []);
+  const originFeats = ctx.featSummaries.filter((f) =>
+    allowedFeatIds.size > 0 ? allowedFeatIds.has(f.id) : /\borigin\b/i.test(f.name));
   const filteredFeats = ctx.raceFeatSearch
     ? originFeats.filter((f) => f.name.toLowerCase().includes(ctx.raceFeatSearch.toLowerCase()))
     : originFeats;
@@ -206,6 +210,8 @@ function renderSpecies(ctx: CharacterCreatorStepRenderContext): StepRenderResult
     raceChoices,
     chosenRaceSize: ctx.form.chosenRaceSize,
     selectRaceSize: (size) => ctx.setForm((f) => ({ ...f, chosenRaceSize: size })),
+    chosenRaceSpellAbility: ctx.form.chosenRaceSpellAbility,
+    selectRaceSpellAbility: (ability) => ctx.setForm((f) => ({ ...f, chosenRaceSpellAbility: ability })),
     chosenRaceSkills: ctx.form.chosenRaceSkills,
     chosenRaceTools: ctx.form.chosenRaceTools,
     chosenRaceLanguages: ctx.form.chosenRaceLanguages,
@@ -233,10 +239,7 @@ function renderBackground(ctx: CharacterCreatorStepRenderContext): StepRenderRes
   const filtered = ctx.bgSearch
     ? availableBackgrounds.filter((b) => b.name.toLowerCase().includes(ctx.bgSearch.toLowerCase()))
     : availableBackgrounds;
-  const equipmentOptions = parseStartingEquipmentOptions(
-    ctx.bgDetail?.equipment,
-    ctx.bgDetail?.equipmentOptions,
-  );
+  const equipmentOptions = parseStartingEquipmentOptions(ctx.bgDetail?.equipmentOptions);
   const originFeats = ctx.featSummaries.filter((f) => /\borigin\b/i.test(f.name));
   const filteredBgFeats = ctx.bgOriginFeatSearch
     ? originFeats.filter((f) => f.name.toLowerCase().includes(ctx.bgOriginFeatSearch.toLowerCase()))
@@ -305,8 +308,7 @@ function renderLevel(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
         }))
         .filter((group) => group.features.length > 0)
     : [];
-  const classEquipmentText = extractClassStartingEquipment(ctx.classDetail);
-  const classEquipmentOptions = parseStartingEquipmentOptions(classEquipmentText);
+  const classEquipmentOptions = parseStartingEquipmentOptions(ctx.classDetail?.equipmentOptions);
   const scoresBeforeLevelUpAsi = resolvedScores(ctx.form, ctx.selectedFeatGrantedAbilityBonuses);
   const levelUpScores = ctx.levelUpFeatLevels.reduce<Record<number, Record<string, number>>>((acc, level) => {
     const previousLevel = ctx.levelUpFeatLevels.filter((candidate) => candidate < level).sort((a, b) => a - b).pop();
@@ -343,8 +345,6 @@ function renderLevel(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
     optGroups,
     chosenOptionals: ctx.form.chosenOptionals,
     toggleOptional,
-    parseFeatureGrants: ctx.parseFeatureGrants,
-    classEquipmentText,
     classEquipmentOptions,
     chosenClassEquipmentOption: ctx.form.chosenClassEquipmentOption,
     chooseClassEquipmentOption: (id) => ctx.setForm((f) => ({ ...f, chosenClassEquipmentOption: id })),
@@ -424,8 +424,9 @@ function renderSkills(ctx: CharacterCreatorStepRenderContext): StepRenderResult 
     classFeatureProficiencyChoices: ctx.selectedClassFeatureProficiencyChoices.map((choice) => ({
       key: `classfeature:${choice.id}`,
       sourceLabel: choice.source.name,
-      category: choice.choice?.optionCategory as "skill" | "tool" | "language",
+      category: choice.choice?.optionCategory as "skill" | "tool" | "language" | "saving_throw",
       count: choice.choice?.count.kind === "fixed" ? choice.choice.count.value : 0,
+      options: choice.choice?.options,
     })).filter((choice) => choice.count > 0),
     weaponMasteryChoice: ctx.step5WeaponMasteryChoice,
     weaponOptions: ctx.step5WeaponOptions,
@@ -504,6 +505,45 @@ function renderSpells(ctx: CharacterCreatorStepRenderContext): StepRenderResult 
       }),
   }));
   const missingSpellcastingAbilitySelections = featSpellcastingAbilityChoices.some((entry) => entry.chosen.length < entry.max);
+  const invocationFeatChoices = ctx.invocationFeatChoices
+    .map((choice) => ({
+      key: choice.key,
+      title: choice.title,
+      sourceLabel: choice.sourceLabel,
+      options: choice.options.map((option) => option.id),
+      chosen: ctx.form.chosenFeatOptions[choice.key] ?? [],
+      max: choice.count,
+      emptyMsg: "No eligible Origin Feats found.",
+      getOptionLabel: (id: string) => choice.options.find((option) => option.id === id)?.name ?? id,
+      onToggle: (id: string) => ctx.setForm((prev) => {
+        const current = prev.chosenFeatOptions[choice.key] ?? [];
+        const next = current.includes(id)
+          ? current.filter((selected) => selected !== id)
+          : current.length < choice.count ? [...current, id] : current;
+        return { ...prev, chosenFeatOptions: { ...prev.chosenFeatOptions, [choice.key]: next } };
+      }),
+    }));
+  const missingInvocationFeatSelections = invocationFeatChoices.some((entry) => entry.chosen.length < entry.max);
+  const nestedInvocationFeatGroups = ctx.invocationGrantedFeatChoices.groups.map((choice) => ({
+    key: choice.key, title: choice.title, sourceLabel: choice.sourceLabel, options: choice.options,
+    chosen: ctx.form.chosenFeatOptions[choice.key] ?? [], max: choice.count, note: choice.note,
+    onToggle: (value: string) => ctx.setForm((prev) => {
+      const current = prev.chosenFeatOptions[choice.key] ?? [];
+      const next = current.includes(value) ? current.filter((selected) => selected !== value) : current.length < choice.count ? [...current, value] : current;
+      return { ...prev, chosenFeatOptions: { ...prev.chosenFeatOptions, [choice.key]: next } };
+    }),
+  }));
+  const nestedInvocationFeatSpells = ctx.invocationGrantedFeatChoices.spellChoices.map((choice) => ({
+    key: choice.key, title: choice.title, sourceLabel: choice.sourceLabel,
+    spells: (ctx.invocationGrantedFeatChoices.spellOptions[choice.key] ?? []).map((spell) => ({ ...spell, level: (spell as { level?: number | null }).level ?? null })),
+    chosen: ctx.form.chosenFeatOptions[choice.key] ?? [], max: choice.count, note: choice.note,
+    emptyMsg: choice.linkedTo && (ctx.form.chosenFeatOptions[choice.linkedTo] ?? []).length === 0 ? "Choose the spell list first." : "No eligible spells found.",
+    onToggle: (id: string) => ctx.setForm((prev) => {
+      const current = prev.chosenFeatOptions[choice.key] ?? [];
+      const next = current.includes(id) ? current.filter((selected) => selected !== id) : current.length < choice.count ? [...current, id] : current;
+      return { ...prev, chosenFeatOptions: { ...prev.chosenFeatOptions, [choice.key]: next } };
+    }),
+  }));
 
   function toggleSpell(id: string, listKey: "chosenCantrips" | "chosenSpells" | "chosenInvocations", max: number) {
     ctx.setForm((f) => {
@@ -522,7 +562,16 @@ function renderSpells(ctx: CharacterCreatorStepRenderContext): StepRenderResult 
     invocCount,
     classInvocations: ctx.classInvocations.filter((inv) => ctx.eligibleInvocationIds.has(inv.id)),
     chosenInvocations: ctx.form.chosenInvocations,
-    toggleInvocation: (id) => toggleSpell(id, "chosenInvocations", invocCount),
+    toggleInvocation: (id, action) => ctx.setForm((form) => {
+      const current = form.chosenInvocations;
+      const talent = ctx.classInvocations.find((entry) => entry.id === id);
+      if (action === "add" && talent?.repeatable && current.length < invocCount) return { ...form, chosenInvocations: [...current, id] };
+      if (action === "remove") {
+        const index = current.lastIndexOf(id);
+        return index < 0 ? form : { ...form, chosenInvocations: current.filter((_, candidate) => candidate !== index) };
+      }
+      return form;
+    }),
     invocationAllowed: (inv) => ctx.eligibleInvocationIds.has(inv.id),
     prepCount,
     maxSlotLevel: maxSlotLvl,
@@ -530,12 +579,12 @@ function renderSpells(ctx: CharacterCreatorStepRenderContext): StepRenderResult 
     chosenSpells: ctx.form.chosenSpells,
     toggleSpell: (id) => toggleSpell(id, "chosenSpells", prepCount),
     extraSpellListChoices,
-    extraSpellChoices: [...extraSpellChoices, ...maneuverSpellChoices],
-    extraChoiceGroups: [...featSpellcastingAbilityChoices, ...maneuverAbilityChoices, ...progressionTableChoices],
+    extraSpellChoices: [...extraSpellChoices, ...nestedInvocationFeatSpells, ...maneuverSpellChoices],
+    extraChoiceGroups: [...featSpellcastingAbilityChoices, ...invocationFeatChoices, ...nestedInvocationFeatGroups, ...maneuverAbilityChoices, ...progressionTableChoices],
     extraItemChoices: planItemChoices,
     onBack: () => ctx.setStep(6),
     onNext: () => ctx.setStep(8),
-    nextDisabled: missingExtraSpellSelections || missingSpellcastingAbilitySelections,
+    nextDisabled: missingExtraSpellSelections || missingSpellcastingAbilitySelections || missingInvocationFeatSelections || !ctx.invocationGrantedFeatChoices.valid,
     side: ctx.sideSummary,
   });
 }

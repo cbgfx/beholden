@@ -19,11 +19,6 @@ interface OptionalGroupLike {
   features: Array<{ name: string; text: string; preparedSpellProgression?: PreparedSpellProgressionTable[] }>;
 }
 
-interface FeatureGrantBadge {
-  label: string;
-  color: string;
-}
-
 export function renderLevelStep({
   level,
   subclass,
@@ -33,8 +28,6 @@ export function renderLevelStep({
   optGroups,
   chosenOptionals,
   toggleOptional,
-  parseFeatureGrants,
-  classEquipmentText,
   classEquipmentOptions,
   chosenClassEquipmentOption,
   chooseClassEquipmentOption,
@@ -57,8 +50,6 @@ export function renderLevelStep({
   optGroups: OptionalGroupLike[];
   chosenOptionals: string[];
   toggleOptional: (name: string, exclusive: boolean, groupFeatures: string[]) => void;
-  parseFeatureGrants: (text: string) => { armor: string[]; weapons: string[]; tools: string[]; skills: string[]; languages: string[] };
-  classEquipmentText: string;
   classEquipmentOptions: StartingEquipmentOption[];
   chosenClassEquipmentOption: string | null;
   chooseClassEquipmentOption: (id: string) => void;
@@ -109,14 +100,6 @@ export function renderLevelStep({
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {grp.features.map((f) => {
                 const chosen = chosenOptionals.includes(f.name);
-                const grants = parseFeatureGrants(f.text);
-                const grantBadges: FeatureGrantBadge[] = [
-                  ...grants.armor.map((n) => ({ label: n, color: C.colorMagic })),
-                  ...grants.weapons.map((n) => ({ label: n, color: C.colorPinkRed })),
-                  ...grants.tools.map((n) => ({ label: n, color: C.colorOrange })),
-                  ...grants.skills.map((n) => ({ label: n, color: "#34d399" })),
-                  ...grants.languages.map((n) => ({ label: `${n} (lang)`, color: C.colorRitual })),
-                ];
                 return (
                   <button
                     key={f.name}
@@ -137,15 +120,6 @@ export function renderLevelStep({
                       <div style={{ color: "rgba(160,180,220,0.65)", fontSize: "var(--fs-small)", marginTop: 3, lineHeight: 1.45 }}>
                         {f.text.replace(/Source:.*$/m, "").trim().slice(0, 140)}
                         {f.text.length > 140 ? "…" : ""}
-                      </div>
-                    )}
-                    {grantBadges.length > 0 && (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 7 }}>
-                        {grantBadges.map((b, i) => (
-                          <span key={`${b.label}:${b.color}:${i}`} style={{ fontSize: "var(--fs-small)", fontWeight: 600, padding: "2px 7px", borderRadius: 20, background: b.color + "22", border: `1px solid ${b.color}66`, color: b.color, letterSpacing: "0.02em" }}>
-                            {b.label}
-                          </span>
-                        ))}
                       </div>
                     )}
                     {f.preparedSpellProgression?.length ? (
@@ -260,7 +234,7 @@ export function renderLevelStep({
         </div>
       )}
 
-      {classEquipmentText && (
+      {classEquipmentOptions.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ ...labelStyle, marginBottom: 8 }}>
             Class Starting Equipment {trimmedClassName ? <span style={sourceTagStyle}>{trimmedClassName}</span> : null}
@@ -291,8 +265,7 @@ export function renderLevelStep({
               })}
             </div>
           )}
-          {classEquipmentOptions.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
               {classEquipmentOptions.map((option) => (
                 <div
                   key={`class-eq-${option.id}`}
@@ -315,10 +288,7 @@ export function renderLevelStep({
                   </div>
                 </div>
               ))}
-            </div>
-          ) : (
-            <div style={{ color: C.muted, fontSize: "var(--fs-small)", lineHeight: 1.6 }}>{classEquipmentText}</div>
-          )}
+          </div>
           {chosenClassEquipmentOption && classEquipmentOptions.length > 0 && (
             <div style={{ color: C.accentHl, fontSize: "var(--fs-small)", marginTop: 8 }}>
               Inventory will start with class option {chosenClassEquipmentOption}.

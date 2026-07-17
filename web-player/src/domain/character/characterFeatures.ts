@@ -8,6 +8,7 @@ import {
   getFeatureSubclassName,
   isSubclassChoiceFeature,
 } from "@/views/character-creator/utils/CharacterCreatorUtils";
+import type { CreatorFeatureLike } from "@/views/character-creator/utils/CharacterCreatorClassCoreUtils";
 
 export interface CharacterFeatureLike {
   name: string;
@@ -15,6 +16,7 @@ export interface CharacterFeatureLike {
   optional?: boolean;
   preparedSpellProgression?: PreparedSpellProgressionTable[];
   effects?: unknown[];
+  choices?: CreatorFeatureLike["choices"];
   scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>;
   subclass?: string | null;
   resolution?: "automatic" | "manual" | "mixed";
@@ -37,6 +39,8 @@ export interface CharacterTraitLike {
   text: string;
   scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>;
   preparedSpellProgression?: PreparedSpellProgressionTable[];
+  /** Verbatim FeatureEffect-shaped facts from the compendium's own `effects` field — consumed directly, no parsing. */
+  effects?: unknown[];
   resolution?: "automatic" | "manual" | "mixed";
   resolutionNotes?: string[];
 }
@@ -70,11 +74,15 @@ export interface CharacterInvocationDetailLike {
   id: string;
   name: string;
   text: string;
+  effects?: unknown[];
 }
 
 export interface AppliedCharacterFeatureEntry extends ClassFeatureEntry {
   kind: FeatureSourceKind;
   classEffects?: unknown[];
+  classChoices?: unknown[];
+  /** Verbatim FeatureEffect-shaped facts from a trait's own `effects` field (species/background traits). */
+  traitEffects?: unknown[];
   featMechanics?: StructuredFeatMechanicsLike;
   spellcastingAbility?: "str" | "dex" | "con" | "int" | "wis" | "cha" | null;
 }
@@ -134,28 +142,6 @@ function shouldSkipBackgroundTrait(name: string): boolean {
   );
 }
 
-function normalizeFeatIdToken(value: string | null | undefined): string {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/^f_/, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function buildFallbackClassFeat(featureName: string, featId: string): CharacterFeatDetailLike | null {
-  const normalizedFeature = normalizeOptionalFeatureToken(featureName);
-  const normalizedFeat = normalizeFeatIdToken(featId);
-  if (/\bfighting style\b/i.test(normalizedFeature) && normalizedFeat === "fighting style archery") {
-    return {
-      id: featId,
-      name: "Fighting Style: Archery",
-      text: "You gain a +2 bonus to attack rolls you make with Ranged weapons.",
-    };
-  }
-  return null;
-}
-
 function hasSelectedReplacementClassFeat(charData: CharacterData | null | undefined, featureName: string): boolean {
   const normalizedFeature = normalizeOptionalFeatureToken(featureName);
   if (!normalizedFeature) return false;
@@ -165,63 +151,6 @@ function hasSelectedReplacementClassFeat(charData: CharacterData | null | undefi
       || normalizedSelected.endsWith(normalizedFeature)
       || normalizedFeature.endsWith(normalizedSelected);
   });
-}
-
-function shouldDisplayPlayerFeature(name: string, text: string): boolean {
-  const normalizedName = String(name ?? "").trim();
-  const normalizedText = String(text ?? "").trim();
-  const haystack = `${normalizedName} ${normalizedText}`;
-  if (!normalizedName && !normalizedText) return false;
-
-  if (
-    /^(description|creature type|size|speed|tool proficiency|tool proficiencies|skill proficiency|skill proficiencies|languages?|starting equipment)$/i.test(normalizedName)
-    || /^ability scores?/i.test(normalizedName)
-    || /^feat:/i.test(normalizedName)
-    || /^(level\s+\d+:\s+)?weapon mastery$/i.test(normalizedName)
-  ) {
-    return false;
-  }
-
-  if (
-    /^(resourceful|trance|fey ancestry|brave|hellish resistance|necrotic resistance|fire resistance|cold resistance|lightning resistance|poison resilience|dwarven resilience|gnomish cunning|lucky|relentless endurance|powerful build|celestial revelation|draconic flight|arcane recovery)$/i.test(normalizedName)
-  ) {
-    return true;
-  }
-
-  if (
-    /\byou can cast .+ only as rituals?\b/i.test(normalizedText)
-    || /\bonly as rituals?\b/i.test(haystack)
-  ) {
-    return true;
-  }
-
-  if (
-    /^(darkvision|superior darkvision|blindsight|tremorsense|truesight)$/i.test(normalizedName)
-    || /\byou have (darkvision|blindsight|tremorsense|truesight)\b/i.test(normalizedText)
-  ) {
-    return false;
-  }
-
-  if (
-    /\b(darkvision|blindsight|tremorsense|truesight|short rest|long rest|regain|recover|heroic inspiration|advantage on saving throws|immune to the charmed|magic can't put you to sleep|resistance to|you have resistance to|damage resistance|can't be (?:put to sleep|surprised)|reroll|once per turn|once per combat|once per (?:short|long) rest|hit point maximum)\b/i.test(haystack)
-  ) {
-    return true;
-  }
-
-  if (
-    /^(high elf lineage|wood elf lineage|drow lineage|forest lineage|celestial lineage|draconic ancestry|creature type|size|tool proficiency|tool proficiencies|skill proficiency|skill proficiencies|instrument training|artisan'?s tools|weapon training|armor training)$/i.test(normalizedName)
-  ) {
-    return false;
-  }
-
-  if (
-    /\b(creature type|you are a .*?(humanoid|celestial|fey|fiend|undead|construct|beast|dragon|elemental|giant|monstrosity|ooze|plant))\b/i.test(normalizedText)
-    || /\b(you have proficiency|you gain proficiency|you gain training|you have training|you know the .* cantrip|you always have .* prepared|you can cast .* without a spell slot|you learn the .* cantrip|you gain one skill proficiency|you gain one tool proficiency)\b/i.test(normalizedText)
-  ) {
-    return false;
-  }
-
-  return /(?:advantage|disadvantage|resistance|immunity|vision|rest|recover|regain|heroic inspiration|sleep|charmed|frightened|poisoned|reroll|movement|speed|climb speed|swim speed|fly speed)/i.test(haystack);
 }
 
 export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeaturesArgs): AppliedCharacterFeatureEntry[] {
@@ -247,8 +176,6 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
   );
   const byId = new Map<string, AppliedCharacterFeatureEntry>();
   const dedupeKeys = new Set<string>();
-  const selectedClassFeatEntries = Object.entries(charData?.chosenClassFeatIds ?? {})
-    .filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].trim().length > 0);
 
   const addFeature = (feature: AppliedCharacterFeatureEntry | null | undefined) => {
     if (!feature) return;
@@ -257,7 +184,13 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
     if (!name) return;
     const dedupeKey = `${feature.kind}:${name.toLowerCase()}::${text.replace(/\s+/g, " ").toLowerCase()}`;
     if (byId.has(feature.id) || dedupeKeys.has(dedupeKey)) return;
-    byId.set(feature.id, { ...feature, name, text });
+    byId.set(feature.id, {
+      ...feature,
+      name,
+      text,
+      // Feats are canonical facts. Their descriptions remain player-facing rules text, never a
+      // runtime mechanics input.
+    });
     dedupeKeys.add(dedupeKey);
   };
 
@@ -278,6 +211,7 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
         preparedSpellProgression: feature.preparedSpellProgression,
         scalingRolls: feature.scalingRolls,
         classEffects: feature.effects,
+        classChoices: feature.choices,
         spellcastingAbility: normalizeAbilityKey(classDetail?.spellAbility),
         resolution: feature.resolution,
         resolutionNotes: feature.resolutionNotes,
@@ -285,6 +219,10 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
     }
   }
 
+  // A species' spellcasting ability is either a single fixed value (e.g. Aasimar: Cha) or a
+  // player choice among several (e.g. elf lineages, tiefling legacies: Int/Wis/Cha) — the choice
+  // is a player decision, so it's read from the character's own stored data, not re-derived.
+  const raceSpellAbility = normalizeAbilityKey(charData?.chosenRaceSpellAbility) ?? normalizeAbilityKey(raceDetail?.spellAbility);
   for (const trait of raceDetail?.traits ?? []) {
     addFeature({
       id: `race:${raceDetail?.id}:${trait.name}`,
@@ -293,7 +231,8 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
       text: trait.text,
       preparedSpellProgression: trait.preparedSpellProgression,
       scalingRolls: trait.scalingRolls,
-      spellcastingAbility: normalizeAbilityKey(raceDetail?.spellAbility),
+      traitEffects: trait.effects,
+      spellcastingAbility: raceSpellAbility,
       resolution: trait.resolution,
       resolutionNotes: trait.resolutionNotes,
     });
@@ -313,20 +252,6 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
   for (const trait of backgroundDetail?.traits ?? []) {
     const name = String(trait.name ?? "").trim();
     if (!name) continue;
-    const fixedFeatMatch = name.match(/^Feat:\s*(.+)$/i);
-    if (fixedFeatMatch?.[1]) {
-      addFeature({
-        id: `background-feat:${backgroundDetail?.id}:${fixedFeatMatch[1].trim()}`,
-        kind: "feat",
-        name: fixedFeatMatch[1].trim(),
-        text: trait.text,
-        scalingRolls: trait.scalingRolls,
-        preparedSpellProgression: trait.preparedSpellProgression,
-        resolution: trait.resolution,
-        resolutionNotes: trait.resolutionNotes,
-      });
-      continue;
-    }
     if (shouldSkipBackgroundTrait(name)) continue;
     addFeature({
       id: `background:${backgroundDetail?.id}:${name}`,
@@ -335,6 +260,7 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
       text: trait.text,
       scalingRolls: trait.scalingRolls,
       preparedSpellProgression: trait.preparedSpellProgression,
+      traitEffects: trait.effects,
       resolution: trait.resolution,
       resolutionNotes: trait.resolutionNotes,
     });
@@ -363,23 +289,6 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
     });
   }
 
-  const existingClassFeatIds = new Set(
-    classFeatDetails.map((feat) => String(feat.id ?? "").trim()).filter(Boolean),
-  );
-  for (const [featureName, featId] of selectedClassFeatEntries) {
-    if (existingClassFeatIds.has(featId)) continue;
-    const fallbackFeat = buildFallbackClassFeat(featureName, featId);
-    if (!fallbackFeat || !cleanedText(fallbackFeat.text)) continue;
-    addFeature({
-      id: `class-feat:${fallbackFeat.id}`,
-      kind: "feat",
-      name: fallbackFeat.name,
-      text: cleanedText(fallbackFeat.text),
-      preparedSpellProgression: fallbackFeat.preparedSpellProgression,
-      featMechanics: fallbackFeat.parsed,
-    });
-  }
-
   for (const entry of levelUpFeatDetails) {
     if (!cleanedText(entry.feat.text)) continue;
     addFeature({
@@ -398,6 +307,7 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
       kind: "invocation",
       name: String(invocation.name ?? "").replace(/^Invocation:\s*/i, "").trim(),
       text: invocation.text,
+      classEffects: invocation.effects,
     });
   }
 
@@ -425,7 +335,11 @@ export function buildDisplayPlayerFeatures(args: BuildDisplayPlayerFeaturesArgs)
       || feature.kind === "feat"
       || feature.kind === "invocation"
       || feature.preparedSpellProgression?.length
-      || shouldDisplayPlayerFeature(feature.name, feature.text ?? "")
+      // Species/background traits: the trait's own honest `resolution` decides display —
+      // "manual" means pure boilerplate (Description/Creature Type/Size) or a fact already
+      // shown via a sibling trait (one fact, one home), never a name/prose guess. A trait
+      // without a resolution label (homebrew) is shown, not filtered by keyword.
+      || feature.resolution !== "manual"
     )
     .map(({ id, name, text, scalingRolls, preparedSpellProgression }) => ({
       id,

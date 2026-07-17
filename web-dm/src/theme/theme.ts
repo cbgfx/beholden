@@ -1,4 +1,4 @@
-// theme.ts
+export { withAlpha } from "@beholden/shared/ui/colors";
 
 export const theme = {
   colors: {
@@ -47,31 +47,3 @@ export const theme = {
   spacing: { pagePad: 10, gap: 6 },
 };
 
-// Utility for creating translucent UI colors from theme tokens.
-export function withAlpha(color: string, alpha: number): string {
-  const a = Math.max(0, Math.min(1, alpha));
-  const c = (color || "").trim();
-
-  const rgbaMatch = c.match(/^rgba\((\s*\d+\s*),(\s*\d+\s*),(\s*\d+\s*),(\s*[\d.]+\s*)\)$/i);
-  if (rgbaMatch) return `rgba(${rgbaMatch[1]},${rgbaMatch[2]},${rgbaMatch[3]},${a})`;
-
-  const rgbMatch = c.match(/^rgb\((\s*\d+\s*),(\s*\d+\s*),(\s*\d+\s*)\)$/i);
-  if (rgbMatch) return `rgba(${rgbMatch[1]},${rgbMatch[2]},${rgbMatch[3]},${a})`;
-
-  const hex = c.startsWith("#") ? c.slice(1) : c;
-  if (/^[0-9a-f]{3}$/i.test(hex)) {
-    const r = parseInt(hex[0] + hex[0], 16);
-    const g = parseInt(hex[1] + hex[1], 16);
-    const b = parseInt(hex[2] + hex[2], 16);
-    return `rgba(${r},${g},${b},${a})`;
-  }
-  if (/^[0-9a-f]{6}$/i.test(hex)) {
-    const r = parseInt(hex.slice(0, 2), 16);
-    const g = parseInt(hex.slice(2, 4), 16);
-    const b = parseInt(hex.slice(4, 6), 16);
-    return `rgba(${r},${g},${b},${a})`;
-  }
-
-  // Preserve alpha for named CSS colors, variables, and other modern color syntax.
-  return `color-mix(in srgb, ${c} ${Math.round(a * 100)}%, transparent)`;
-}

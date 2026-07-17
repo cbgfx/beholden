@@ -3,30 +3,17 @@ import { Panel } from "@/ui/Panel";
 import { C } from "@/lib/theme";
 import { api } from "@/services/api";
 import { expandSchool } from "@/lib/format/expandSchool";
-
-type SpellFull = {
-  id: string; name: string;
-  level: number | null; school: string | null;
-  time: string | null; range: string | null;
-  components: string | null; duration: string | null;
-  classes: string | null; text: string[];
-};
-
-function levelLabel(level: number | null) {
-  if (level == null) return "Level ?";
-  if (level === 0) return "Cantrip";
-  return `Level ${level}`;
-}
+import { spellLevelLabel, type CompendiumSpellDetail } from "@beholden/shared/domain/compendium/spellDetail";
 
 export function SpellDetailPanel(props: { spellId: string }) {
-  const [spell, setSpell] = React.useState<SpellFull | null>(null);
+  const [spell, setSpell] = React.useState<CompendiumSpellDetail | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [fetchError, setFetchError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
     setBusy(true); setSpell(null); setFetchError(null);
-    api<SpellFull>(`/api/spells/${encodeURIComponent(props.spellId)}`)
+    api<CompendiumSpellDetail>(`/api/spells/${encodeURIComponent(props.spellId)}`)
       .then((s) => { if (!cancelled) setSpell(s ?? null); })
       .catch((e: unknown) => { if (!cancelled) setFetchError(e instanceof Error ? e.message : "Failed to load spell."); })
       .finally(() => { if (!cancelled) setBusy(false); });
@@ -34,7 +21,7 @@ export function SpellDetailPanel(props: { spellId: string }) {
   }, [props.spellId]);
 
   const header = spell
-    ? `${levelLabel(spell.level)}${spell.school ? ` • ${expandSchool(spell.school)}` : ""}`
+    ? `${spellLevelLabel(spell.level)}${spell.school ? ` • ${expandSchool(spell.school)}` : ""}`
     : busy ? "Loading…" : fetchError ? "Error" : "Select a spell";
 
   return (
@@ -63,21 +50,8 @@ export function SpellDetailPanel(props: { spellId: string }) {
           }}>
             {(spell.text ?? []).join("\n\n")}
           </div>
-          {(() => {
-            let raw = spell.classes ?? "";
-            let schoolFromClasses: string | null = null;
-            const schoolMatch = raw.match(/^School:\s*([^,]+),?\s*/i);
-            if (schoolMatch) { schoolFromClasses = schoolMatch[1].trim(); raw = raw.slice(schoolMatch[0].length).trim(); }
-            const schoolDisplay = spell.school
-              ? expandSchool(spell.school)
-              : schoolFromClasses ? expandSchool(schoolFromClasses) : null;
-            return (
-              <>
-                {schoolDisplay && <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>School: {schoolDisplay}</div>}
-                {raw && <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>Classes: {raw}</div>}
-              </>
-            );
-          })()}
+          {spell.school && <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>School: {expandSchool(spell.school)}</div>}
+          {spell.classes && <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>Classes: {spell.classes}</div>}
         </div>
       )}
     </Panel>

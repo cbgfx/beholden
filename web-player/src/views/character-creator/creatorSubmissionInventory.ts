@@ -2,9 +2,8 @@ import type { BgDetail, ClassDetail } from "@/views/character-creator/utils/Char
 import type { ParsedFeatChoiceLike as ParsedFeatChoice } from "@/views/character-creator/utils/FeatChoiceTypes";
 import type { FormState } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
 import { buildStartingInventory as buildStartingInventoryFromUtils } from "@/views/character-creator/utils/CharacterCreatorProficiencyUtils";
-import { collectEquipmentLookupNames, getBackgroundGrantedToolSelections as getBackgroundGrantedToolSelectionsFromUtils } from "@/views/character-creator/utils/CharacterCreatorEquipmentUtils";
-import { extractClassStartingEquipment } from "@/views/character-creator/utils/CharacterCreatorUtils";
-import { buildItemLookupBodyFromNames, fetchCompendiumItemsByLookup, isItemLookupBodyEmpty } from "@/views/character-creator/utils/ItemLookupUtils";
+import { collectEquipmentLookupIds, collectEquipmentLookupNames, getBackgroundGrantedToolSelections as getBackgroundGrantedToolSelectionsFromUtils } from "@/views/character-creator/utils/CharacterCreatorEquipmentUtils";
+import { addItemLookupIds, buildItemLookupBodyFromNames, fetchCompendiumItemsByLookup, isItemLookupBodyEmpty } from "@/views/character-creator/utils/ItemLookupUtils";
 
 export async function buildCreatorStartingInventory(args: {
   form: FormState;
@@ -30,17 +29,20 @@ export async function buildCreatorStartingInventory(args: {
   const equipmentLookupNames = [
     ...collectEquipmentLookupNames(
       form.chosenBgEquipmentOption,
-      bgDetail?.equipment,
       bgToolSelections,
       bgDetail?.equipmentOptions,
     ),
     ...collectEquipmentLookupNames(
       form.chosenClassEquipmentOption,
-      extractClassStartingEquipment(classDetail),
       [],
+      classDetail?.equipmentOptions,
     ),
   ];
-  const lookupBody = buildItemLookupBodyFromNames(equipmentLookupNames);
+  const equipmentLookupIds = [
+    ...collectEquipmentLookupIds(form.chosenBgEquipmentOption, bgDetail?.equipmentOptions),
+    ...collectEquipmentLookupIds(form.chosenClassEquipmentOption, classDetail?.equipmentOptions),
+  ];
+  const lookupBody = addItemLookupIds(buildItemLookupBodyFromNames(equipmentLookupNames), equipmentLookupIds);
   const startingInventoryItems = isItemLookupBodyEmpty(lookupBody)
     ? []
     : await fetchCompendiumItemsByLookup(lookupBody);

@@ -25,9 +25,10 @@ import {
   hasWeaponProficiency,
   isRangedWeapon,
   isShieldItem,
+  isCompatibleAmmunition,
   isWeaponItem,
-  parseMagicBonus,
-  parseWeaponMastery,
+  weaponAttackModifierBonus,
+  weaponDamageModifierBonus,
   weaponAbilityMod,
   weaponDamageDice,
 } from "@/views/character/CharacterInventory";
@@ -38,7 +39,6 @@ export interface CharacterCombatPanelsProps {
   speed: number;
   movementModes?: Array<{ mode: "fly" | "swim" | "climb" | "burrow"; speed: number | null }>;
   level: number;
-  className?: string | null;
   initiativeBonus: number;
   strScore: number | null;
   dexScore: number | null;
@@ -67,7 +67,6 @@ export function CharacterCombatPanels({
   speed,
   movementModes = [],
   level,
-  className,
   initiativeBonus,
   strScore,
   dexScore,
@@ -123,8 +122,6 @@ export function CharacterCombatPanels({
   const unarmedDmg = unarmedDamageDice
     ? `${unarmedDamageDice}${unarmedDamageBonus === 0 ? "" : `${unarmedDamageBonus >= 0 ? "+" : ""}${unarmedDamageBonus}`}`
     : String(1 + unarmedDamageBonus);
-  const isRogue = /rogue/i.test(String(className ?? ""));
-  const sneakAttackDice = Math.max(1, Math.ceil(level / 2));
 
   function weaponUsesStrength(item: InventoryItem): boolean {
     if (isRangedWeapon(item)) return false;
@@ -306,18 +303,20 @@ export function CharacterCombatPanels({
             const dmg = weaponDamageDice(it, attackState);
             const ability = weaponAbilityMod(it, { strScore, dexScore }, parsedFeatureEffects);
             const proficient = hasWeaponProficiency(it, prof ?? undefined);
-            const mastery = parseWeaponMastery(it);
             const masteryKnown = hasWeaponMastery(it, prof ?? undefined);
-            const masteryName = masteryKnown ? (mastery?.name ?? getWeaponMasteryName(it)) : null;
-            const linkedAmmo = isRangedWeapon(it) && it.linkedAmmoId ? inventory.find((entry) => entry.id === it.linkedAmmoId) ?? null : null;
-            const magicBonus = parseMagicBonus(it) + (linkedAmmo ? parseMagicBonus(linkedAmmo) : 0);
+            const masteryName = masteryKnown ? getWeaponMasteryName(it) : null;
+            const ranged = isRangedWeapon(it);
+            const linkedAmmoCandidate = ranged && it.linkedAmmoId ? inventory.find((entry) => entry.id === it.linkedAmmoId) ?? null : null;
+            const linkedAmmo = linkedAmmoCandidate && isCompatibleAmmunition(it, linkedAmmoCandidate) ? linkedAmmoCandidate : null;
+            const attackMagicBonus = weaponAttackModifierBonus(it, ranged) + (linkedAmmo ? weaponAttackModifierBonus(linkedAmmo, ranged) : 0);
+            const damageMagicBonus = weaponDamageModifierBonus(it, ranged) + (linkedAmmo ? weaponDamageModifierBonus(linkedAmmo, ranged) : 0);
             const featureAttackRollBonus = deriveAttackRollBonusFromEffects(parsedFeatureEffects ?? [], {
               level,
               scores: { str: strScore, dex: dexScore },
               raging: rageActive,
               item: it,
             });
-            const toHit = ability + (proficient ? pb : 0) + magicBonus + featureAttackRollBonus - exhaustionPenalty;
+            const toHit = ability + (proficient ? pb : 0) + attackMagicBonus + featureAttackRollBonus - exhaustionPenalty;
             const damageAbility = attackState === "offhand" && !addsAbilityModToOffhandDamage(it, parsedFeatureEffects) ? 0 : ability;
             const rageBonus = rageActive && weaponUsesStrength(it) ? rageDamageBonus : 0;
             const featureDamageBonus = deriveAttackDamageBonusFromEffects(parsedFeatureEffects ?? [], {
@@ -333,9 +332,9 @@ export function CharacterCombatPanels({
             const damageType = formatItemDamageType(it.dmgType);
             const props = formatItemProperties(it.properties);
             const isReach = hasItemProperty(it, "R");
-            const rangeLabel = isRangedWeapon(it) ? (it.properties?.find((p) => /^\d/.test(p)) ?? "Range") : `${isReach ? "10" : "5"} ft.`;
+            const rangeLabel = ranged ? (it.properties?.find((p) => /^\d/.test(p)) ?? "Range") : `${isReach ? "10" : "5"} ft.`;
             const parsedDmg = splitDamageDiceBonus(dmg);
-            const totalFlatBonus = damageAbility + rageBonus + featureDamageBonus + magicBonus + (parsedDmg?.bonus ?? 0);
+            const totalFlatBonus = damageAbility + rageBonus + featureDamageBonus + damageMagicBonus + (parsedDmg?.bonus ?? 0);
             const flatBonusText = totalFlatBonus === 0 ? "" : `${totalFlatBonus >= 0 ? "+" : ""}${totalFlatBonus}`;
             const dmgText = parsedDmg ? `${parsedDmg.dice}${flatBonusText}${damageType ? ` ${damageType}` : ""}` : "-";
             const modeLabel = attackState === "mainhand-2h" ? "2H" : attackState === "offhand" ? "Offhand" : null;
@@ -346,7 +345,7 @@ export function CharacterCombatPanels({
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     <span style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.name}</span>
                     {modeLabel && <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: accentColor, border: `1px solid ${accentColor}44`, background: `${accentColor}18`, borderRadius: 999, padding: "1px 5px" }}>{modeLabel}</span>}
-                    {masteryName && <Tooltip text={mastery?.text ?? `Weapon Mastery: ${masteryName}`} multiline><span style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.colorGold, border: "1px solid rgba(251,191,36,0.35)", background: "rgba(251,191,36,0.12)", borderRadius: 999, padding: "1px 5px", cursor: "help" }}>{masteryName}</span></Tooltip>}
+                    {masteryName && <Tooltip text={`Weapon Mastery: ${masteryName}`} multiline><span style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.colorGold, border: "1px solid rgba(251,191,36,0.35)", background: "rgba(251,191,36,0.12)", borderRadius: 999, padding: "1px 5px", cursor: "help" }}>{masteryName}</span></Tooltip>}
                     {linkedAmmo && <span title={`Loaded ammunition: ${linkedAmmo.name}`} style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: "#34d399", border: "1px solid rgba(52,211,153,0.4)", background: "rgba(52,211,153,0.12)", borderRadius: 999, padding: "1px 5px" }}>{linkedAmmo.name}</span>}
                     {!proficient && <span style={{ fontSize: "var(--fs-tiny)", color: C.red, fontWeight: 700 }}>No proficiency</span>}
                     {attackDisadvantage && <span style={{ fontSize: "var(--fs-tiny)", color: C.colorPinkRed, fontWeight: 700 }}>D</span>}
@@ -376,23 +375,6 @@ export function CharacterCombatPanels({
               </div>
             );
           })}
-
-          {isRogue && (
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              <div>
-                <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text }}>Sneak Attack</div>
-                <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>Once per turn</div>
-              </div>
-              <div style={{ fontSize: "var(--fs-small)", color: C.muted, textAlign: "center", whiteSpace: "nowrap" }}>On hit</div>
-              <div style={{ fontSize: "var(--fs-medium)", fontWeight: 800, color: C.muted, textAlign: "center", minWidth: 36 }}>
-                -
-              </div>
-              <div>
-                <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: C.text }}>{sneakAttackDice}d6</div>
-                <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>Finesse or ranged weapon</div>
-              </div>
-            </div>
-          )}
 
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", padding: "6px 0" }}>
             <div>

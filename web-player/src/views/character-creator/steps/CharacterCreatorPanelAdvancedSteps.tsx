@@ -198,6 +198,10 @@ export function renderDerivedStatsStep({
   const hpFormulaLabel = level <= 1
     ? `Level 1: ${hd} ${conLabel}`
     : `Level 1: ${hd} ${conLabel}; later levels: ${hpPerLaterLevel} ${conLabel}`;
+  const dexBaseAc = 10 + dexMod;
+  const acFormulaLabel = Number(ac) > dexBaseAc
+    ? `${ac} (a class or species feature raised this above 10 ${dexMod >= 0 ? "+" : ""}${dexMod} DEX)`
+    : `10 + ${dexMod >= 0 ? "+" : ""}${dexMod} DEX (base)`;
   const main = (
     <div>
       <h2 style={headingStyle}>Combat Stats</h2>
@@ -210,7 +214,7 @@ export function renderDerivedStatsStep({
         </div>
         <div>
           <label style={labelStyle}>Armor Class</label>
-          <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 4 }}>10 + {dexMod >= 0 ? "+" : ""}{dexMod} DEX (base)</div>
+          <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 4 }}>{acFormulaLabel}</div>
           <input type="number" value={ac} onChange={(e) => setField("ac", e.target.value)} style={{ ...inputStyle, width: "100%" }} />
         </div>
         <div>

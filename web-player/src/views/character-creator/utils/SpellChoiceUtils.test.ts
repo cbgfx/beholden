@@ -20,6 +20,26 @@ function magicalDiscoveriesChoice(maxLevel: number): SharedResolvedSpellChoiceEn
 }
 
 describe("loadSpellChoiceOptions", () => {
+  it("filters invocation cantrip targets from typed facts and the character's known IDs", async () => {
+    const choice: SharedResolvedSpellChoiceEntry = {
+      key: "invocation:repelling_blast_cantrip",
+      title: "Repelling Blast",
+      count: 1,
+      level: 0,
+      listNames: ["sl_warlock"],
+      damageOnly: true,
+      attackOnly: true,
+      allowedSpellIds: ["s_eldritch_blast"],
+    };
+    const options = await loadSpellChoiceOptions([choice], async () => [
+      { id: "s_eldritch_blast", name: "Eldritch Blast", rolls: [{ effect: "force" }], check: "attack" },
+      { id: "s_poison_spray", name: "Poison Spray", rolls: [{ effect: "poison" }], check: "save" },
+      { id: "s_fire_bolt", name: "Fire Bolt", rolls: [{ effect: "fire" }], check: "attack" },
+    ]);
+
+    expect(options[choice.key]?.map((spell) => spell.id)).toEqual(["s_eldritch_blast"]);
+  });
+
   it("caps any-level class feature searches to the highest available spell slot", async () => {
     const queries: string[] = [];
     const fetchSpells = vi.fn(async (query: string) => {

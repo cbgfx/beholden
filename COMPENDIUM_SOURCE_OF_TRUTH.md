@@ -1,6 +1,14 @@
-# Compendium as the Source of Truth
+# Grand Compendium as the Source of Truth
 
-This document coordinates the removal of hard-coded game rules from Beholden. The compendium should define deterministic game content; application code should evaluate that content consistently.
+> Current authority: every separate catalog uses the same Grand Schema (`schema: "grand"`). Grand is the schema contract, not a requirement to merge catalogs into one file. The historical category audit below explains how the schema was reached; references to earlier ownership splits or V2 migration stages are historical, not competing architecture.
+
+This document is the narrative and work-log backing for Claude's four owned rule categories: **Classes, Species, Feats, Backgrounds**. Items, Spells, Monsters, and the compendium's data-integrity validation (duplicate IDs, broken references, import guardrails, production readiness) are Codex's, tracked in [COMPENDIUM_VALIDATION.md](./COMPENDIUM_VALIDATION.md) — do not edit that file from here.
+
+## Relationship to COMPENDIUM_VALIDATION.md
+
+`COMPENDIUM_VALIDATION.md`'s "Canonical schema completion gate" is the **single canonical status table** for all seven rule categories, including these four. It is not duplicated here. This document explains *why* a cell in that table has the value it has — the specific hardcoded behavior found, the fix, the files touched, the tests added, the gaps knowingly left open. When work here changes a category's real status, that table's row needs updating too; since Claude cannot edit `COMPENDIUM_VALIDATION.md`, that sync happens by flagging it to Codex or the user (see the prompt template at the bottom of this doc's latest work-log entry).
+
+The eight tenets in `COMPENDIUM_VALIDATION.md` ("cold facts," "compactness," "one fact, one home," "sparse defaults," "defaults are facts, not inference," "no opaque compression," "overrides only when different," "honest manual behavior") apply to all seven categories, these four included. Work in this document is expected to satisfy them, not a looser standard.
 
 ## Objective
 
@@ -15,60 +23,47 @@ Characters should persist only information that cannot be reconstructed safely:
 
 Characters should not persist deterministic bonuses as permanent copies when those values can be derived from current compendium definitions.
 
-## Current baseline
-
-- Feat details are looked up from the current compendium when a character loads.
-- Feat maximum-HP effects now use current feat prose or structured mechanics.
-- Runtime `Tough` name checks and hard-coded `level × 2` calculations have been removed.
-- Some class, species, equipment, condition, and summary rules still use name-based or numeric fallbacks.
-- Creation, character-sheet, Home, campaign, and server normalization calculations are not yet backed by one shared derivation pipeline.
-
-## Six-phase plan
-
-| # | Phase | Outcome | Owner | Status |
-| --- | --- | --- | --- | --- |
-| 1 | Species rules | Movement and species benefits come from the selected species entry | Unassigned | Not started |
-| 2 | Class rules | Class and subclass features use structured compendium effects | Unassigned | Not started |
-| 3 | Equipment rules | Armor, shields, weapons, and item effects use item properties | Unassigned | Not started |
-| 4 | Conditions and combat rules | Conditions use canonical definitions and a shared evaluator | Unassigned | Not started |
-| 5 | Shared character derivation | All screens use one calculation pipeline | Unassigned | Not started |
-| 6 | Legacy compatibility removal | Old snapshots and fallbacks are migrated and retired | Unassigned | Not started |
-
-## 1. Species rules
+## 1. Species
 
 ### Current hard-coded behavior
 
-- Species names can be used to infer walking speed.
-- Known species have fallback speed values in client and server code.
-- Character creation may retain default speed assumptions when compendium data is incomplete.
+- ~~Species names can be used to infer walking speed.~~ Fixed. `buildCharacterViewDerivedState` (character sheet) reads `raceDetail.speed`; `PlayerHomeUtils.ts`'s import/export normalization now trusts the character's own stored speed instead of regex-guessing from the species name; `CharacterCreatorSideSummary.tsx` was audited and was already correct (`raceDetail?.speed ?? fallbackRaceSpeed`). See work log.
+- ~~Species trait mechanics (AC bonuses, resistances, senses, proficiency/feat choices, rest-mechanic changes) are recovered at runtime by parsing the trait's prose description, not read from a typed field.~~ Fixed 2026-07-14. `TraitSchema` now has a real `effects` field (the same `StructuredFeatureEffectSchema` union feats' `grants.effects` uses), consumed verbatim with no parsing. All 16 species migrated. See work log.
+- ~~`vision` and `resistances` remain separately-authored top-level fields on `SpeciesSchema`, duplicating facts the trait-level `effects` field now also expresses.~~ Found during self-audit 2026-07-15, fixed same day. Was a tenet-3 ("one fact, one home") violation on every species that had either field (12 for Darkvision, 4 for resistances). `resistances` had zero runtime readers, deleted outright; `vision`'s one reader (the creator's species-detail display panel) now derives from trait `effects` instead. `SpeciesSchema.vision` also gained the `.optional()` it was missing (a second, independent bug: it required an always-present array, violating tenet 4's sparse-defaults rule). Re-verified 2026-07-15 (second pass): all 16 species in both the local database and `WotC_2024_only.json` confirmed byte-identical and free of the duplicate fields; a new import guardrail (`checkSpeciesFactHomesAndReferences`) now rejects the pattern from recurring. See work log.
+- ~~Five disclosed vocabulary/data gaps remained after the 2026-07-14 migration: player-chosen spellcasting ability for elf/tiefling lineage spells; Halfling Nimbleness and Naturally Stealthy (movement/action-economy); Human's Resourceful (trigger-grant); Goliath's Powerful Build (carrying capacity).~~ Closed 2026-07-15. See work log for the vocabulary decisions and migration.
+- ~~Species runtime code (character sheet, creator) fell back to matching a trait's `name` or `text` against regexes when a structured fact was allegedly unavailable — `parseRaceChoices` (dead prose-parser for skill/tool/language/size/feat choices), `hasResourceful` (name regex instead of reading the `heroic_inspiration` resource grant), `getCoreLanguageChoice` (matched trait name `/^languages?$/i` instead of reading `choices.languageChoice`), and the character sheet's Features-list display filter (matched trait name/prose against a hardcoded keyword list).~~ All four fixed 2026-07-15. `parseFeatureEffects` also gained a `suppressProseParsing` flag, wired to `true` for every species-trait call site: species traits now consume `effects` exclusively at runtime, with prose parsing structurally unreachable for this category (not just unused). See work log.
 
 ### Target design
 
 - Read base movement from the selected species compendium entry.
-- Represent walking, flying, swimming, climbing, and burrowing movement explicitly.
-- Evaluate species traits through structured effects where they modify derived statistics.
-- Store only the selected species ID and any player choices.
+- ~~Represent walking, flying, swimming, climbing, and burrowing movement explicitly.~~ Walking: done (reads `raceDetail.speed`). Fly/swim/climb/burrow: confirmed already generically supported via trait `effects`/prose, not species-specific work — see work log.
+- ~~Evaluate species traits through structured effects where they modify derived statistics.~~ Done as of 2026-07-14, hardened 2026-07-15: `raceDetail.traits` flows into `buildAppliedCharacterFeatures`/`parseFeatureEffects` exactly like class features, and the compendium's own `effects` field is what those traits are built from. As of 2026-07-15, prose parsing is no longer merely unused for species — it is structurally bypassed (`suppressProseParsing: true` at every species call site), so a homebrew species without a schema-backed `effects` array now correctly shows nothing for that trait rather than a guess.
+- Store only the selected species ID and any player choices. ✓ — the one addition this session, `chosenRaceSpellAbility`, follows this rule: a player pick, not a derived fact.
+- ~~Eliminate the `vision`/`resistances` duplication.~~ Done 2026-07-15 — see finding above and work log.
+- ~~Close the five disclosed vocabulary/data gaps (spellcasting-ability choice, movement/action-economy ×2, trigger-grant, carrying-capacity).~~ Done 2026-07-15 — see work log for the vocabulary and migration.
 
 ### Acceptance criteria
 
-- Changing a species' walking speed updates an existing character after reload.
-- A custom species works without adding its name to application code.
-- Character creation, character sheet, Home, and campaign summaries agree.
-- Missing or invalid species data produces a visible validation problem instead of silently guessing from the species name.
-- Species-name speed tables and recognition expressions are removed.
+- Changing a species' walking speed updates an existing character after reload. ✓
+- A custom species works without adding its name to application code. ✓
+- Character creation, character sheet, Home, and campaign summaries agree. ✓ for AC/speed/spells/resources (creator preview and saved sheet both verified this session, including a live spellcasting-ability choice round-trip); not independently re-verified for Home/campaign summaries.
+- Missing or invalid species data produces a visible validation problem instead of silently guessing from the species name. ✓ via the import guardrail (rejects `automatic` with no structured payload) plus the new 2026-07-15 species-scoped checks for duplicate fact homes and unknown condition/damage-type references in trait effects.
+- Species-name speed tables and recognition expressions are removed. ✓ for speed specifically; `PlayerHomeUtils.ts`'s import/export Barbarian-style name fallbacks are a class concern, not species.
+- Every mechanically relevant species fact has a typed representation, with no duplicate authority for the same fact. ✓ as of 2026-07-15, all 111 traits across all 16 species.
+- No species runtime code path infers a mechanic or a display decision from a trait's name or prose. ✓ as of 2026-07-15 — verified by full-codebase audit; the 4 remaining sites found were fixed (see above).
 
-## 2. Class rules
+## 2. Classes
 
 ### Current hard-coded behavior
 
-- Class names can be used to infer hit dice.
-- Barbarian Unarmored Defense and Fast Movement have compatibility fallbacks.
-- Ranger Roving and Bard Jack of All Trades include name-based detection.
-- Some Rage behavior and progression are implemented as special cases.
+- Class names can be used to infer hit dice. Audited 2026-07-14: every place this happens (`PlayerHomeUtils.ts`'s `CLASS_HIT_DICE`, `CharacterCreatorView.tsx`'s `FALLBACK_CLASS_HIT_DICE`) already checks real compendium data (`classDetail.hd` / stored `characterData.hd`) *first* and only falls back to the name table when that's genuinely unavailable (import blobs missing it, or a brief loading window before `classDetail` arrives). Whether this "acceptable, context-constrained fallback" reasoning survives tenet 5's stricter reading ("may not trigger name matching... or fallback rule tables") is an open question — not yet re-audited against the new tenets.
+- ~~Barbarian Unarmored Defense and Fast Movement have compatibility fallbacks.~~ Partially fixed 2026-07-14, but **entirely via prose parsing**, not structured `effects` — the same state Species was in before 2026-07-14. The class feature's own text is parsed correctly by `parseArmorClassEffects`/`parseSpeedEffects`, but the compendium itself has never been asked to declare "Barbarian's Unarmored Defense uses Dex+Con" as typed data the way Warforged's Integrated Protection now declares "+1 AC." Confirmed live 2026-07-15: zero class features anywhere are marked `resolution: "automatic"` with a populated `effects` array.
+- Ranger Roving and Bard Jack of All Trades include name-based detection. Audited 2026-07-14: Ranger's Roving is handled by the existing generic text parser; Bard's Jack of All Trades matches a compendium feature name, not the class name. Neither touched.
+- ~~Some Rage behavior and progression are implemented as special cases.~~ Fixed 2026-07-14 for the class-name gating checks (`CharacterViewCombatActions.ts`, `CharacterHudPanel.tsx`) — but, same caveat as Unarmored Defense above, Rage's *mechanics* (resistance, damage bonus, advantage) still come from prose parsing of the feature text, not a typed `effects` payload on the compendium record itself.
 
 ### Target design
 
-- Encode deterministic class and subclass features as structured effects.
+- Encode deterministic class and subclass features as structured effects — **using the same `TraitSchema`/verbatim-passthrough pattern Species just proved**, not the narrow `classEffects` path (`kind: "source_modifier"/"source_proficiency"`) that silently discards richer shapes. This is the concrete next slice: repeat the Species recipe (inventory real class-feature text → identify missing vocabulary → extend schema → migrate → guardrail already covers it → tests) for Classes.
 - Apply effects according to class level, character level, subclass, equipment state, and active conditions.
 - Read hit dice and progression exclusively from class compendium entries.
 - Keep actions requiring player or DM judgment marked as manual effects.
@@ -79,145 +74,80 @@ Characters should not persist deterministic bonuses as permanent copies when tho
 - Renamed or custom classes work without code changes when they provide equivalent mechanics.
 - Multiclass level context is handled explicitly.
 - Creation, level-up, sheet, Home, and campaign summaries agree.
-- Class-name hit-die and feature fallbacks are removed.
+- Every mechanically relevant class feature has a typed representation read by runtime code — prose parsing is a disclosed fallback, not the primary mechanism. **Not yet met.**
 
-## 3. Equipment rules
+## 3. Feats
 
-### Current hard-coded behavior
+No dedicated inventory or migration pass has happened yet. What exists today, from earlier work:
 
-- Shields are assumed to grant a fixed AC bonus.
-- Armor categories determine Dexterity behavior through application logic.
-- Stealth disadvantage and some weapon properties are inferred from names or categories.
-- Inventory may contain copied item statistics that can become stale.
-
-### Target design
-
-- Define armor, shield, weapon, and item mechanics in structured item properties.
-- Inventory entries reference compendium item IDs and store only character-specific state such as quantity, equipped state, attunement, notes, and overrides.
-- Use one item-effect evaluator in creation previews, character sheets, and summaries.
-- Preserve explicitly detached or customized inventory items as local snapshots.
-
-### Acceptance criteria
-
-- Changing an item AC value or restriction updates linked inventory after reload.
-- A custom shield bonus works without editing application code.
-- Armor Dexterity caps, Strength requirements, and Stealth disadvantage come from item data.
-- Missing referenced items are reported and do not silently become a different item.
-- Legacy copied items have a defined migration or detached-item policy.
-
-## 4. Conditions and combat rules
-
-### Current hard-coded behavior
-
-- Specific conditions set speed to zero or apply fixed speed penalties.
-- Incapacitation and concentration interactions are encoded in server transitions.
-- Exhaustion and some Rage interactions use fixed calculations.
-- Player and DM surfaces can interpret condition behavior separately.
+- Feats already have a real, working structured-effects mechanism: `mechanics.grants.effects`/`grants.bonuses`/`grants.abilityIncreases` are consumed verbatim (no parsing) via `structuredEffectsFromCanonical` — this is the exact mechanism Species's traits were wired to reuse. Feats are, if anything, better-positioned than Classes for a migration pass.
+- Tough's max-HP effect uses this pathway already (see "Completed groundwork" in the work log — predates this document's four-category split, done by Codex before the ownership split).
+- The 14-entry feat gap identified in the earlier triage (see 2026-07-14 work-log entry) has not been migrated.
 
 ### Target design
 
-- Add canonical structured condition definitions.
-- Use a shared condition evaluator for derived modifiers and restrictions.
-- Keep the server authoritative for applying, expiring, and removing combat state.
-- Store condition instances separately from their definitions: source, duration, stacks, ownership, and expiry remain mutable state.
+Same recipe as Species: inventory every feat's real text, identify what's already covered by `grants.effects`/`grants.bonuses` versus what still resolves through prose parsing or is genuinely manual, extend vocabulary only where a real gap exists, migrate, verify against the existing guardrail.
 
 ### Acceptance criteria
 
-- Player sheet and DM combat derive the same result from the same condition.
-- Editing a deterministic condition modifier updates active characters safely.
-- Concentration ownership and expiry remain server-authoritative and fully tested.
-- Condition definitions cannot execute arbitrary code.
-- Existing combat transition regression tests continue to pass.
+Not yet defined in detail — will mirror Species's once a feat inventory is done.
 
-## 5. Shared character derivation
+## 4. Backgrounds
 
-### Current hard-coded behavior
-
-- Creation, level-up, character sheet, Home, campaign mirrors, and server normalization perform overlapping calculations.
-- Stored derived summaries can become stale until a character sheet synchronizes them.
-- Compatibility paths may calculate the same statistic differently.
+No dedicated inventory or migration pass has happened yet. Background traits share `TraitSchema` with species traits, so the `effects` field and its full consumption pipeline (`characterFeatures.ts`'s background-trait loop already threads `traitEffects: trait.effects`, added during the Species pass since both loops share the same trait shape) already work for backgrounds with zero additional wiring. What's missing is purely data: no background trait has real `effects` authored yet.
 
 ### Target design
 
-Create one deterministic character-derivation pipeline whose inputs are:
-
-- Current character selections and mutable state
-- Current class and subclass entries
-- Current species and background entries
-- Current feats and choices
-- Current linked equipment and inventory state
-- Current conditions and manual overrides
-
-Its outputs should include ability scores, maximum HP, AC, movement, initiative, saves, skills, senses, defenses, resources, and other display summaries.
+Same recipe as Species and Feats.
 
 ### Acceptance criteria
 
-- Creation preview, saved character, Home card, campaign card, and character sheet produce identical derived values.
-- The evaluator is deterministic, side-effect free, and covered by fixture tests.
-- APIs can batch-load all required compendium references without N+1 requests.
-- Mutable state is not overwritten when deterministic maximums change.
-- Compendium revisions invalidate or bypass stale derived caches.
+Not yet defined in detail.
 
-## 6. Legacy compatibility removal
+## Historical / cross-cutting work (not in the current four-category scope)
 
-### Current hard-coded behavior
+The sections below predate the four-category ownership split (2026-07-14) and cover territory now owned by Codex (Equipment = Items) or that cuts across all seven categories rather than belonging to one (Conditions, shared derivation, legacy compatibility). Preserved for the historical record and because some decisions (e.g. Rage's speed interaction) are still referenced by current work. Not actively tracked as "phases" going forward — Items work belongs in `COMPENDIUM_VALIDATION.md`; the cross-cutting items would need their own home if picked back up.
 
-- Older characters can rely on inferred names, copied statistics, and stored derived summaries.
-- Removing fallbacks immediately could change or temporarily hide values for legacy characters.
+### Equipment rules (Items — now Codex's)
 
-### Target design
+Closed 2026-07-14 under the old, looser "hard-coded behavior removed" standard, before the stricter tenets existed. Known gaps at the time: weapon mastery lookup for ~19 magic weapon variants (accepted, documented, not fixed); a defined legacy-copied-item migration policy (item stats are copied at add-time and healed forward — an accepted tradeoff, not formally re-audited against "one fact, one home"). Full detail in the work log below and in `COMPENDIUM_VALIDATION.md`'s item-modifier/AC bug writeup. Not touched further from this document; Codex owns Items now.
 
-- Audit existing character records for missing or unresolved compendium references.
-- Provide a dry-run migration report before changing records.
-- Preserve player decisions and detached custom content.
-- Recalculate only deterministic derived data.
-- Remove obsolete fields and fallback logic after migration coverage is confirmed.
+### Conditions and combat rules (cross-cutting)
 
-### Acceptance criteria
+Zero-speed condition list unified across three previously-drifted copies into `shared/src/domain/conditions.ts` (`hasZeroSpeedCondition`, `SLOW_SPEED_PENALTY`) — this closed a real player/DM disagreement bug (see work log). Incapacitation/concentration and exhaustion were both found already properly centralized, not touched. Rage's speed interaction is deliberately excluded from the shared condition definition (it's class-specific) and remains open, now properly Classes' concern per the category split above, not a phase of its own.
 
-- Migration is idempotent and can be previewed before it writes.
-- A database backup and rollback procedure are documented.
-- Unresolved references are listed for manual resolution.
-- No player choices, current HP, inventory state, or manual overrides are lost.
-- Name-based and numeric compatibility fallbacks are removed only after production data passes the audit.
+### Shared character derivation (cross-cutting)
 
-## Implementation sequence
+Not started. Would unify creation preview, saved character, Home card, campaign card, and character-sheet calculations into one pipeline. No owner.
 
-Recommended order:
+### Legacy compatibility removal (cross-cutting)
 
-1. Species rules
-2. Class rules
-3. Equipment rules
-4. Shared character derivation
-5. Conditions and combat rules
-6. Legacy compatibility removal
-
-The shared derivation phase should follow initial species, class, and equipment modeling so it is built around the intended structures. Condition migration follows after the non-combat evaluator is stable because combat state carries higher operational risk.
+Not started. Would audit existing character records for missing/unresolved compendium references and retire fallback logic once migration coverage is confirmed. No owner.
 
 ## Coordination rules
 
-- Claim a phase or bounded subtask in the table before editing it.
 - Record important files and design decisions in the work log below.
 - Do not modify files owned by another active worker without coordinating first.
-- Keep each phase independently testable and suitable for its own commit.
+- Keep each category's work independently testable and suitable for its own commit.
 - Do not combine schema expansion, data migration, and fallback deletion in one irreversible step.
 - Preserve stable compendium IDs whenever definitions are edited.
 - Add a regression test showing that a changed compendium value reaches an existing character.
-- Run the full verification pipeline before marking a phase complete.
+- Apply the compactness checklist (`COMPENDIUM_VALIDATION.md`'s "Non-negotiable schema tenets") before considering any category's schema work done, not just after removing name-based inference.
 
-## Required verification per phase
+## Required verification per category
 
 - Relevant parser and effect-evaluator unit tests
 - Character derivation fixture tests
 - Server authorization and migration tests where applicable
-- `npm run typecheck`
-- `npm run lint`
-- `npm test`
-- Production builds
-- Manual browser checks of creation, Home, character sheet, and affected DM views
-- Database backup before applying any production migration
+- `npx tsc --noEmit` on `server` and `web-player`
+- `npm test` on `server` and `web-player`
+- Manual or Playwright browser checks of creation, Home, character sheet, and affected DM views
+- Database backup before applying any migration
+- Re-validate migrated JSON against the real schema + guardrail code (`previewNativeCompendiumDocument`), not just visual inspection
 
 ## Work log
+
+Compendium dataset validation (data integrity, import guardrails, production readiness) is tracked separately in [COMPENDIUM_VALIDATION.md](./COMPENDIUM_VALIDATION.md).
 
 ### Completed groundwork
 
@@ -226,9 +156,205 @@ The shared derivation phase should follow initial species, class, and equipment 
 - Codex: Kept base HP separate from deterministic feat bonuses during level-up.
 - Verification: Full repository verification passed with 412 tests, production builds, and budget checks. One existing unrelated DM hook lint warning remains.
 
-### Active work
+### 2026-07-14: Species walking speed now reads from the compendium instead of guessing from the species name
 
-No phase is currently assigned.
+- Root cause found: the compendium already stores correct, structured species speed (`compendium_races.speed`, e.g. Wood Elf = 35, others = 30), and the server (`fetchRaceDetailV2` / `/api/compendium/v2/species/:id`) already returned it — but the client-side `RaceFeatureDetail` type never declared a `speed` field, so `CharacterViewDerivedState.ts` couldn't use the real value and fell back to a hardcoded name-regex table (`inferBaseWalkSpeed`) tried *before* any stored value.
+- Files changed: `CharacterViewTypes.ts` (added `size`/`speed` to `RaceFeatureDetail`), `CharacterViewDerivedState.ts` (`baseWalkSpeed` now reads `args.raceDetail?.speed ?? args.char.speed`, deleted `inferBaseWalkSpeed`), `PlayerHomeUtils.ts` (import/export normalization now trusts stored `speed` directly instead of re-guessing from species name).
+- Verification: `tsc --noEmit` clean, full `web-player` suite green (27 files, 121 tests).
+
+### 2026-07-14: Confirmed fly/swim/climb/burrow movement needs no species-specific code
+
+- Investigated whether "formalizing" non-walking movement types meant adding raw `flySpeed`/`swimSpeed`/etc. fields to `SpeciesSchema`. Found the generic structured-effects pipeline (`parseSpeedEffects`, already used and tested for magic items and Monk movement) already fully covers this via prose or (now) trait `effects`. Decision: no schema change — a species trait granting permanent flight just needs ordinary text (or now, a real `effects` entry), no code deploy required.
+- Added a regression test proving a synthetic species with an unconditional swim-speed trait reaches `state.movementModes` with zero production code changes.
+
+### 2026-07-14: Phase 2 (Class rules, prose-parsing pass) — Unarmored Defense fallback removed, creator's AC/speed preview fixed
+
+> **Codex audit correction (2026-07-14):** The first implementation still inferred Barbarian rules from the class name, did not implement Monk's Wisdom formula, and reapplied Fast Movement/Roving whenever a character was exported or imported. That implementation has been replaced. Creator AC and Speed now resolve from the selected class feature effects while the character JSON is being built.
+
+- Found four separate copies of "guess Barbarian/Ranger speed and AC behavior from the class name": `CharacterViewDerivedState.ts`, `PlayerHomeUtils.ts` (×2), `CharacterCreatorView.tsx` (×2).
+- Character sheet: proven redundant and removed — the generic `parseArmorClassEffects` text parser already correctly extracts Barbarian's Dex+Con and Monk's Dex+Wis formulas from the feature's own prose, no class-specific code.
+- Creator preview: a *real* gap (not just redundant code) — its AC calc never attempted Unarmored Defense at all. Fixed by having the preview reuse the same submission-time derivation function.
+- `PlayerHomeUtils.ts`'s Barbarian-name fallback (import/export, no access to feature text) intentionally kept as a context-constrained fallback.
+- **Note as of the 2026-07-15 restructure: this entire fix operates on prose, not the compendium's own `effects` field. Classes has not received the Species treatment yet — see the Classes section above.**
+- Verification: `tsc --noEmit` clean, full `web-player` suite green (27 files, 125 tests). Manual browser verification not performed this pass (no browser automation available yet).
+
+### 2026-07-14: Rage's class-name gating fixed
+
+- `CharacterViewCombatActions.ts` and `CharacterHudPanel.tsx` had class-name checks gating Rage's availability, redundant with (or blocking access to) an actual Rage resource lookup that already worked generically via `collectClassResources` reading the compendium's per-level `resources` table. Removed the redundant checks; threaded a `hasRageResource` prop where the check served a real purpose (no access to computed resource data).
+- Rage's damage bonus (`barbarian_rage_damage` named-progression) is a level-keyed prose table, same accepted pattern as Monk's Unarmored Movement — left alone, not a class-name guess.
+- Added a regression test proving `collectClassResources` derives Rage's level-scaled use count from the compendium's per-level table with no class-name-specific code.
+- Verification: `tsc --noEmit` clean, full `web-player` suite green (27 files, 126 tests); server suite re-run as a sanity check (312 tests, green).
+
+### 2026-07-14: Browser verification of the Class-rules prose-parsing pass — a Wood Elf Barbarian built end-to-end
+
+- Built a level-1 Wood Elf Barbarian through the full creator wizard into a saved character. Confirmed on the saved sheet: AC 14 (Unarmored Defense correctly higher than plain-Dex), Speed 35 ft (species value), Rage 2/2 "Resets on Long Rest."
+- Found and fixed two unrelated small bugs: a misleading creator AC hint label (said "class feature" for what could be any source), and a stale submission-error banner that didn't clear on form changes.
+- Verification: `tsc --noEmit` clean, full `web-player` suite green (29 files, 130 tests).
+
+### 2026-07-14: Cleaned corpus imported to the local database — surfaced the real scope of the "manual" gap
+
+- User ran the real native import as a deliberate stress test. Landed clean (see `COMPENDIUM_VALIDATION.md`'s Step 7).
+- Codex reported: of 1,040 total rules, 688 are `resolution: "manual"` (no structured effects at all). Confirmed against Warforged: all 9 traits `manual`.
+- This reframed the mission: the "Done" status recorded for the class-rules prose-parsing pass was always scoped to "remove incorrect name-based inference," not "every deterministic trait has a structured evaluator." The gap was materially bigger than anything closed so far.
+
+### 2026-07-14: Triage of the 688 manual rules — empirically measured, not estimated
+
+- Fed all 688 manual-resolution rules through the real `parseFeatureEffects()` parser (not a guess from reading regexes). Result: 173 (25%) already produce a real effect via prose parsing alone — Codex's specific Warforged claims (AC, Poison resistance) were two of them, already working. The true gap: 74 species traits + 360 class features + 14 feats = 448 (after excluding 67 non-candidate class "features" that are really templated reference text).
+- Decision: species (74) + feats (14) = 88 entries were the recommended next slice — small, bounded, using effect types the parser already supports.
+
+### 2026-07-14: Redirect to the four-category ownership split and stricter tenets
+
+- User determined prose-parsing, however accurate, doesn't satisfy "the compendium is the sole rules source of truth" — a fact reconstructed from English at runtime isn't a fact read from a typed field. Ownership fixed: Claude owns Classes/Species/Feats/Backgrounds exclusively; Codex owns Items/Spells/Monsters/`COMPENDIUM_VALIDATION.md`.
+
+### 2026-07-14: Species trait structured-effects schema built and all 16 species migrated
+
+- **Schema.** `TraitSchema` gained a real `effects` field (feats' `StructuredFeatureEffectSchema` union). Two new effect types (`feat_choice`, `rest_rule`) and three targeted extensions (`DefenseEffect.causeFilter`, `ModifierEffect.target: "any_d20_test"`, `FeatureEffectBase.requiredLevel`) added after a full 111-trait inventory surfaced patterns no existing type handled. `SpeciesSchema` gained `creatureType` (optional, defaults to Humanoid).
+- **Consumption bug found and fixed in passing:** `structuredEffectsFromCanonical`'s `classEffects` path only understands narrow `kind: "source_modifier"/"source_proficiency"` shapes — a rich `{type:"armor_class",...}` object silently degrades to inert `narrative` through it. This is why Barbarian's own existing structured Unarmored Defense data has never driven real behavior. Traits are wired through the proven verbatim-passthrough path instead (extracted into a shared `addVerbatimEffects` helper reused by feats too).
+- **Guardrail.** `nativeCompendiumGuardrails.ts` now rejects any `resolution: "automatic"` record with an empty structured payload, scoped to classes/species/feats/backgrounds. Caught a real bug in its own first draft (feat `grants` live under `mechanics`, not top-level) before touching real data.
+- **Consumption wiring**, end to end: server compaction/conversion → client fetch → character-sheet derivation → **and** the character creator's live AC/speed preview (previously class-features-only; species traits reach the live preview now too).
+- **Data migration.** Inventoried the real text of all 111 traits across all 16 species. Authored real `effects` for 50 traits and applied them transactionally to both the local database and `WotC_2024_only.json` (fresh backup taken first). Fixed two data-quality bugs found during inventory: Keen Senses' skill-choice list was missing "Survival"; Warforged's `creatureType` now set.
+- **Disclosed, not hidden, remaining gaps** (via `resolutionNotes`): player-chosen spellcasting ability for elf/tiefling lineage traits (needs a creator-UI flow like feats have, not built); Halfling Nimbleness/Naturally Stealthy (movement/action-economy rules the combat engine doesn't model); Human's Resourceful (needs a "grant on trigger" concept); Powerful Build's carrying-capacity increase (no encumbrance tracking); Giant Ancestry's Frost's Chill target-debuff and reaction triggers.
+- **Verification:** `tsc --noEmit` clean on `server`/`web-player`. Full suites green (server 328 tests, `web-player` 142 tests). Migrated JSON re-validated against the real schema+guardrail code, not eyeballed. Live-verified via Playwright: a Warforged built in the running creator shows the +1 AC from Integrated Protection, sourced from the database.
+- Not done: the 360 class-feature entries from the triage; the spellcasting-ability creator-UI flow.
+
+### 2026-07-15: Restructured this document around the four owned categories; tenet self-audit surfaced a real duplication bug
+
+- User pointed out this document's six-phase structure had gone stale against `COMPENDIUM_VALIDATION.md`'s new unified completion gate (which already tracks all 7 categories, including these 4, across the same "is runtime guessing removed" axis this document also tracks) — two competing trackers for the same fact, only one of which (Codex's) is supposed to be canonical. Restructured around the four owned categories instead of the old six phases; moved Equipment/Conditions/Shared-derivation/Legacy-removal to a clearly-marked historical/cross-cutting section since they don't map onto the new category split (Equipment = Items, now Codex's; the other three are cross-cutting, not single-category).
+- Self-audited yesterday's Species migration against `COMPENDIUM_VALIDATION.md`'s 8 tenets rather than assuming it already passed. Found a real, systematic tenet-3 ("one fact, one home") violation: `SpeciesSchema`'s top-level `resistances`/`vision` fields duplicate facts the new trait-level `effects` now also express, on every species that has either (12 for Darkvision, 4 for resistances) — e.g. Aasimar's top-level `resistances: ["necrotic","radiant"]` and its `Celestial Resistance` trait's `effects` say the same thing twice. Confirmed live against the local database, not assumed. `resistances` has zero runtime readers (safe to delete outright); `vision` has exactly one reader (creator species-detail display) and needs either a derivation step or a consumer change before removal. **Not fixed yet** — found and documented in this pass, fix is the next concrete step.
+- Also confirmed live that Classes has not received any of the Species-equivalent treatment: zero class features anywhere are marked `resolution: "automatic"` with a populated `effects` array — the entire class-rules pass to date has been prose-parsing fixes, the same state Species was in before 2026-07-14.
+- No code changes in this pass — documentation restructuring and audit only.
+
+### 2026-07-15: Fixed the vision/resistances duplication found above
+
+- Coordinated with Codex first (they synced `COMPENDIUM_VALIDATION.md`'s Species gate row and confirmed no in-flight edits to species-related files) before touching anything.
+- Client: `CharacterCreatorSpeciesStep.tsx`'s species-detail display panel (the only reader of the old fields) now derives "Vision"/"Resist" from `raceDetail.traits[].effects` via the same `collectSensesFromEffects`/`collectDefensesFromEffects` helpers the character sheet already uses — reused, not reimplemented. Removed `vision`/`resist` from `RaceDetail` (`CharacterCreatorTypes.ts`) and `fetchRaceDetailV2`'s mapping (`compendiumApi.ts`).
+- Server: `SpeciesSchema.vision` was missing `.optional()` — it required an always-present (possibly empty) array, at odds with tenet 4 ("sparse defaults: omit... empty arrays... unless their presence carries meaning"). Fixed to `.min(1).optional()`, matching `resistances`' existing pattern. `speciesCompaction.ts` updated to omit an empty `vision` array instead of always setting it.
+- Data: removed the duplicate `resistances`/`vision` values from all 12 species that had them, plus 4 pre-existing empty `vision: []` arrays (Goliath, Halfling, Human, Warforged) that predated this work entirely and only surfaced once the schema started enforcing non-empty-if-present — applied directly to both the local database and `WotC_2024_only.json`, no backup (explicit user instruction: dev data, "we need to see what breaks so we can fix it").
+- What broke, exactly as intended: 4 server tests had fixtures asserting `vision: []` was valid on `SpeciesSchema` (`nativeCompendiumV2Schemas.test.ts`), plus `BEHOLDEN_AI_CONTENT_GUIDE.md`'s species JSON example (validated by its own test against the real importer). Fixed the fixtures to omit the field instead of asserting it empty; rewrote the guide's example to demonstrate the *correct* pattern going forward (a `defense` effect on the trait, not a duplicated top-level field) rather than just deleting the broken line — future content authors (human or AI) now see the right shape, not just the absence of a wrong one.
+- Verification: `tsc --noEmit` clean on `server`/`web-player`. Full suites green (server 332 tests, `web-player` 144 tests). Migrated JSON re-validated against the real schema+guardrail code. Live-verified via Playwright: Tiefling Infernal's creator species panel still shows "Vision: Darkvision 60ft" and "Resist: Fire," now sourced entirely from trait `effects` with the duplicate top-level data actually deleted.
+
+### 2026-07-15: Full-scope review — confirmed coherence with concurrent external work, found and fixed a real guardrail bug in Feats
+
+- User asked to review everything done and in flight, since a number of files this document doesn't own had changed underneath the session (background schema, `compendiumApi.ts`, test fixtures, `CharacterViewDerivedState.ts`). Rather than assume, checked each: `CharacterViewDerivedState.ts` now reads `item.effects` through the exact `traitEffects` verbatim-passthrough mechanism built for Species, applied to inventory items (Items is Codex's category — the pattern spreading, not a conflict). `BackgroundSchema.proficiencies.feats` changed from embedding a full duplicate copy of a granted feat's mechanics inline to a stable `f_...` ID reference — a real tenet-3 fix, landed outside this document, in Backgrounds (one of the four owned categories) — noted here pending attribution/confirmation rather than claimed as this document's own work.
+- Typechecked and ran the full suite on all three packages (`server`, `web-player`, `web-dm`) after the external changes: all clean (server 344, `web-player` 148, `web-dm` 6 at that point).
+- Went further than the per-package suites: validated the **entire 3,123-entry corpus** (not just Species) against the real schema + guardrail code (`previewNativeCompendiumDocument`), since the background schema change was significant enough to warrant checking beyond the package boundaries already covered by unit tests.
+- Found a real bug in this document's own guardrail (`checkAutomaticResolutionIsComplete`, added during the Species work): it rejected two genuine, correctly-`automatic` feats — `f_ability_score_improvement` and `f_fighting_style:_blessed_warrior` — because their entire mechanic lives in `mechanics.choices` (a player-driven ability-score or spell choice), a field the guardrail's `checkFeatMechanics` never checked; it only looked at `grants.*`, `mechanics.uses`, and `mechanics.preparedSpellProgression`. Fixed by adding `mechanics.choices` to the checked set. Added a regression test using both real feats' exact shape. Full corpus re-validated clean afterward (3,123/3,123 entries, all 7 categories).
+- No data changes in this pass — the bug was in application code (the guardrail), not the compendium.
+- Verification: `tsc --noEmit` clean on `server`. Full server suite green (345 tests, 1 new).
+
+### 2026-07-15: Species finished against the canonical completion gate — five disclosed gaps closed, full 111-trait re-audit, prose inference removed, guardrails strengthened
+
+Scope for this pass, set explicitly by the user: Species only, against `COMPENDIUM_VALIDATION.md`'s gate, not a competing tracker here. Do not touch Classes/Feats/Backgrounds/Items/Spells/Monsters/encounter-difficulty/XML-conversion/repair-scripts. Authorized to break backward compatibility with inference-dependent old data; no DB backup required (dev data).
+
+- **Vocabulary — minimality held.** All 5 previously-disclosed gaps closed by reusing or minimally extending existing `FeatureEffect` types, not inventing per-category wrappers:
+  - Player-chosen spellcasting ability (elf lineages, tiefling legacies): reused the existing `SpeciesChoiceSchema` pattern (matching `skillChoice`/`toolChoice`/`languageChoice`) as a new `spellcastingAbilityChoice: {options}` field, plus a matching `chosenRaceSpellAbility` form/character field (matching the existing `chosenRaceSize` convention). Full chain wired: schema → compaction → client type → creator UI (new ability-picker row on the Species step) → form state → submission → edit hydration → character-sheet derivation.
+  - Halfling Nimbleness / Naturally Stealthy (movement, action-economy): zero new vocabulary — reused `ActionEffect{activation:"no_action"}`, the exact shape already used by Goliath's Hill's Tumble.
+  - Human's Resourceful (trigger-grant): zero new vocabulary — reused `ResourceGrantEffect{resourceKey:"heroic_inspiration", max:1, reset:"long_rest"}`, matching the shape of every other species resource grant (Orc's Relentless Endurance, etc.).
+  - Goliath's Powerful Build (carrying capacity): two minimal single-enum additions to existing types — `DefenseEffect.mode: "escape_check_advantage"` and `ModifierEffect.target: "carrying_capacity"` — not new effect types.
+- **Runtime prose/name inference removed from species, not just from the traits already migrated.** A full-codebase audit (beyond the two sites fixed in the prior pass) found and fixed four more:
+  - `parseFeatureEffects` gained a `suppressProseParsing` flag, wired to `true` at every species-trait call site (`characterFeatures.ts`, `CharacterCreatorClassFeatureUtils.ts`, and a new `hasHeroicInspirationGrant` helper). Species traits now structurally cannot fall through to prose parsing — this isn't "currently unused," it's unreachable.
+  - `CharacterCreatorRaceParseUtils.ts`'s `parseRaceChoices` (a regex prose-parser for skill/tool/language/size/feat choices) deleted outright after confirming via direct DB query that all 16 species already carry real structured `choices`, making the fallback dead code.
+  - `CharacterViewCombatActions.ts`'s `hasResourceful` (name regex `/^resourceful$/i`) replaced with reading the trait's own `resource_grant` effect for `resourceKey === "heroic_inspiration"`.
+  - `CharacterRuleParsers.ts`'s `getCoreLanguageChoice` (matched trait name `/^languages?$/i` to decide whether a species has its own language grant) replaced with reading `choices.languageChoice` directly; the dead sibling code in `CharacterCreatorProficiencyUtils.ts` that parsed a `trait.modifier` array (confirmed always empty — `TraitSchema` is `.strict()` and has no such field) and re-parsed a "Languages"-named trait's prose (live-wrong for Warforged, whose actual grant was already fully expressed in `choices.languageChoice`) was deleted, not patched.
+  - `characterFeatures.ts`'s `buildDisplayPlayerFeatures` decided whether to show a species trait on the character sheet's Features list via a ~50-line regex heuristic matching trait name/prose against keyword lists — for species specifically, replaced with `feature.resolution !== "manual"`. Verified this is exactly equivalent to the old heuristic's intent across current data: the only `manual`-resolution species traits are the three universal boilerplate entries (Description/Creature Type/Size) plus two entries this pass itself marked `manual` for dedup reasons (Dragonborn's Damage Resistance, Warforged's Languages) — everything else is now correctly shown regardless of whether its prose happens to contain a recognized keyword. (The old heuristic actually mis-hid Halfling's Nimbleness — its text says "move through," not "movement," missing the keyword regex.)
+- **Full 111-trait re-audit, not just the 5 disclosed gaps.** Ran the existing `validateRuleResolution.ts` dev-tool against the full corpus; found and fixed two more dishonest resolution labels predating this pass: Dragonborn's "Damage Resistance" trait was `mixed` with zero structured content of its own (the fact is fully expressed on the sibling Draconic Ancestry trait's `choice_bundle` — one fact, one home — so the label should say "nothing to resolve here," not "partially resolved"); relabeled `manual` with a `resolutionNotes` pointer. Aasimar's "Light Bearer" trait was `mixed` despite having a fully fixed spellcasting ability (no player choice) and a complete `preparedSpellProgression` — nothing left unresolved; relabeled `automatic`. Re-ran the validator clean afterward: 0 issues across all 1,040 rules in all 7 categories (not just Species).
+- **Guardrails strengthened, species-scoped only.** Added `checkSpeciesFactHomesAndReferences` to `nativeCompendiumGuardrails.ts`, gated to `category === "species"` so it cannot affect Codex's categories: (1) rejects a species retaining top-level `vision`/`resistances` that duplicate a trait's own `senses`/`defense` effect (the exact bug class fixed in the prior pass — now it can't recur silently); (2) rejects a `defense` effect's `targets` naming an unrecognized condition (reusing `shared/src/domain/conditions.ts`'s `SHARED_CONDITION_DEFS`, plus `"Exhaustion"` since that's tracked as a numeric level elsewhere and intentionally absent from the shared list) or an unrecognized damage type (a new local 13-entry SRD damage-type set, matching this guardrail file's existing pattern of small hardcoded reference sets like `SKILLS`/`ABILITIES`).
+- **Data migration mechanics.** A dedicated, scoped migration script (`server/src/scripts/migrateSpeciesGapEffects.ts`, one-off, not a general repair-script framework) applied the 5-gap patch plus the Dragonborn/Aasimar fix transactionally to both the local database and `WotC_2024_only.json`, validating every patched record against the real `SpeciesSchema` (via `safeParse`) before writing either store. Post-migration diff confirmed all 16 species byte-identical between the database and the JSON — zero drift.
+- **Full pipeline validated, not just the schema layer:** schema (Zod `safeParse` in the migration script) → import/guardrail (`assertNativeCompendiumGuardrails`, extended as above) → database → server API (`/api/compendium/v2/species/:id`, fetched live by the running creator) → creator (built two full characters through the live wizard — a Tiefling, Infernal Warlock and a Human Fighter) → saved character → player-derived behavior. Playwright-verified live: the new spellcasting-ability-choice picker renders and its selection round-trips through save/reload/derivation (Fire Bolt correctly tagged `Source: Fiendish Legacy` with the chosen ability driving its attack bonus); Fire resistance shows exactly once (no vision/resistances duplication regression); the Features list shows Fiendish Legacy/Otherworldly Presence/Darkvision but correctly omits Description/Creature Type/Size; Human's Resourceful trait produced a real `heroic_inspiration` resource counter (1/1, resets on Long Rest) on the saved character; the existing Wood Elf Barbarian QA character (built in a prior session) re-verified with no regression (Trance/Fey Ancestry/Keen Senses/Wood Elf Lineage/Darkvision all still display correctly). Two test characters deleted after verification.
+- **Not done, deliberately out of this pass's scope:** Giant Ancestry's Frost's Chill target-debuff and reaction-trigger vocabulary (a 6th, separately-disclosed gap from the 2026-07-14 migration, not one of the 5 this directive named) remains honest prose under a `mixed` label — untouched. Classes, Feats, Backgrounds, encounter difficulty, XML conversion, and repair-script tooling were not broadened into, per explicit instruction.
+- **Post-hoc minimalism audit, requested separately, one real finding fixed.** Re-examined all 3 new vocabulary additions against the rest of the corpus rather than trusting the original design pass: (1) the guardrail's new 13-entry `DAMAGE_TYPES` set is the first complete canonical list in the repo — not a duplicate (a narrower, differently-scoped 10-entry list already exists in `server/src/lib/featParserSupport.ts` for feat-text parsing; left alone, out of Species' scope to touch). (2) `spellcastingAbilityChoice`'s bespoke `{options}` shape versus Feats' generic `FeatChoiceSchema`/`spellcastingAbilityFromChoiceId` reference pattern was considered and deliberately rejected: `FeatChoiceSchema` carries 10+ fields Species would never use (`countFrom`, `dependsOnChoiceId`, `replacementFor`, etc.) for a fact that, unlike Feats, never needs multi-choice disambiguation on a single species — adopting it would have been the "verbose wrapper" the directive explicitly warned against, not a simplification. (3) A real defect: Powerful Build's `carrying_capacity` effect carried `appliesTo: ["one_size_larger"]`, a synthetic tag invented for this one case. Grepped every other `appliesTo` usage in the full corpus (6 instances, Items and Species) — all 6 are real skill or ability names matching their `target`'s semantics; mine was the only value that didn't fit that established convention and added no value (no consumer reads it, and the target name alone is already unambiguous). Removed it from the database, `WotC_2024_only.json`, and the migration script. Re-verified after the fix: DB/JSON byte-identical across all 16 species, `validateRuleResolution.ts` clean (0/1040), `server` suite green (355/355).
+- Verification: `npx tsc --noEmit` clean on `server` and `web-player` after every discrete change (one pre-existing, unrelated `server` typecheck error in an untracked Monsters script — `migrateMonsterRecharge.ts` — and a handful of pre-existing, unrelated `web-player` typecheck errors in Feats-domain files mid-edit by concurrent work, both confirmed out of scope and not caused by this pass). Full suites green: `server` 354/354, `web-player` 149/149, `web-dm` 11/11. `validateRuleResolution.ts` clean (0/1040 issues). Species-scoped guardrail additions verified against the real corpus via the full server suite (import/guardrail tests included).
+- Files touched (Species-scoped only): `web-player/src/domain/character/featureEffects.ts`, `server/src/services/compendium/nativeCompendiumV2Schemas.shared.ts`, `server/src/services/compendium/speciesCompaction.ts`, `web-player/src/lib/characterRules.ts`, `web-player/src/views/character-creator/utils/CharacterCreatorRaceParseUtils.ts` (deletion), `CharacterCreatorUtils.ts`, `CharacterCreatorStepViews.tsx`, `steps/CharacterCreatorSpeciesStep.tsx`, `utils/CharacterCreatorFormUtils.ts`, `creatorSubmission.ts`, `useCreatorEditHydration.ts`, `web-player/src/views/character/CharacterSheetTypes.ts`, `domain/character/characterFeatures.ts`, `domain/character/parseFeatureEffects.ts`, `views/character/CharacterViewDerivedState.ts`, `utils/CharacterCreatorClassFeatureUtils.ts`, `views/character/CharacterViewCombatActions.ts`, `views/character/CharacterRuleParsers.ts`, `utils/CharacterCreatorProficiencyUtils.ts`, `utils/CharacterCreatorProficiencyTypes.ts`, `server/src/services/compendium/nativeCompendiumGuardrails.ts`, `server/src/scripts/migrateSpeciesGapEffects.ts` (new), `CharacterViewDerivedState.test.ts`.
+
+**Prompt for Codex — Species gate-row update (`COMPENDIUM_VALIDATION.md`'s "Canonical schema completion gate" table, line ~57):**
+
+> Species finished this pass, evidence below is independently verifiable (rerun the commands, don't take the summary on faith). Recommended new row — please confirm and apply if you agree:
+>
+> | Category | Mechanical vocabulary complete | Compact/default audit | Canonical data migrated | Runtime guessing removed | Edge cases validated | Status |
+> | --- | --- | --- | --- | --- | --- | --- |
+> | Species | Yes — the 111-trait inventory's 5 previously-disclosed gaps (spellcasting-ability choice, 2 movement/action-economy rules, 1 trigger-grant, 1 carrying-capacity rule) are closed by reusing/minimally extending existing `FeatureEffect` types (see `COMPENDIUM_SOURCE_OF_TRUTH.md`'s 2026-07-15 entry for the exact vocabulary decisions). One further, separately-disclosed gap (Goliath Giant Ancestry's Frost's Chill target-debuff/reaction-trigger) remains honest prose under `mixed`, out of this pass's scope. | Yes — `vision`/`resistances` duplication fix re-verified: all 16 species confirmed free of the pattern in both DB and `WotC_2024_only.json`; a new species-scoped guardrail (`checkSpeciesFactHomesAndReferences`) now rejects recurrence | Yes — all 111 traits across all 16 species re-audited via `validateRuleResolution.ts`; 2 additional dishonest resolution labels found and fixed (Dragonborn Damage Resistance, Aasimar Light Bearer); flavor-only traits correctly remain sparse | Yes — `suppressProseParsing` makes prose parsing structurally unreachable for species traits at runtime (not merely unused); 4 additional name/prose-inference sites found via full-codebase audit and fixed (dead `parseRaceChoices` deleted, `hasResourceful`/`getCoreLanguageChoice`/Features-list display filter all now read structured facts) | Yes — species-scoped guardrails added (duplicate fact homes, unknown condition/damage-type references); full pipeline validated schema→import→DB→API→creator→saved character→player-derived behavior; Playwright-verified live across Wood Elf, Tiefling Infernal, and Human covering senses/defense/rest_rule/spell_grant/resource_grant/proficiency_grant/action effect types | **Complete** (matches the disclosed-remainder precedent already used for Items/Monsters/Backgrounds) |
+>
+> Verification commands run this pass, all green: `server` `npx tsc --noEmit` (clean save one pre-existing, unrelated Monsters-script error), `server` `npm test` (354/354), `web-player` `npx tsc --noEmit` (clean save pre-existing, unrelated Feats-domain errors from concurrent work), `web-player` `npm test` (149/149), `web-dm` `npm test` (11/11), `npx tsx server/src/scripts/validateRuleResolution.ts` (0/1040 issues). Full detail, file list, and exact commands in `COMPENDIUM_SOURCE_OF_TRUTH.md`'s 2026-07-15 "Species finished against the canonical completion gate" entry.
+
+### 2026-07-15: Cross-category minimalism audit — every "Complete" gate row re-verified against real code and data; Backgrounds findings fixed, the rest written up for Codex
+
+User asked whether the completed categories' schemas are truly as compact as possible and whether Codex missed loose ends. Audited all five non-Claude-active categories (Items, Spells, Monsters, ClassTalents, Backgrounds) against the actual code and the live corpus, not the markdown. Every numeric claim tested was accurate — the gaps are in what the counts don't measure. Full findings list delivered in-session; the Backgrounds subset (this document's category) was fixed immediately:
+
+- **Dormant prose fallbacks deleted.** `CharacterCreatorProficiencyUtils.ts` still fell back to `splitComma(bgDetail.proficiency)` + trait-name regex (`/tool/i`, `/language/i` + prose splitting) when structured `proficiencies` was absent; `CharacterCreatorBackgroundStep.tsx` had the same proficiency-string fallback plus a trait-name display filter. Verified structurally dead first (`backgroundV2ToPlayer` always sets `proficiencies` and `proficiency: ""`; only the V2 fetch path exists), then deleted — same treatment the species fallbacks got.
+- **221 duplicated equipment `sourceLabel`s removed (tenet 3).** 221 of 321 stored item-entry labels were byte-identical to the referenced item's catalog name. Removed from both the database and `WotC_2024_only.json`; the 100 labels that intentionally differ (display ordering like "Traveler's Clothes" vs catalog "Clothes, Traveler's"; flavor like "Book (prayers)") remain as real facts. The backgrounds detail route now projects the catalog name into the entry's `name` at read time (`projectBackgroundEquipmentNames` in `lore.ts`) — one fact, one home in storage; the client's existing `sourceLabel ?? name ?? itemId` display chain needed zero changes. New HTTP integration test covers both the projected and stored-label paths; new import guardrail (`checkBackgroundEquipmentLabels`) rejects recurrence, with a regression test proving both the rejection and the legitimate-difference acceptance.
+- **`BackgroundSchema.traits` aligned with the shared trait contract.** The field was used by zero of 57 canonical records, locally re-declared `CompactScalingRollSchema` (already exported by shared), and could not hold `effects` — meaning the client's existing background-trait `effects` wiring was unreachable through the server schema. Now uses the shared `TraitSchema` (id + effects + honest resolution); the XML conversion stamps `trait_N` ids the same way species conversion does; fixtures updated, including a new rejection test for id-less traits.
+- Verification: server `tsc --noEmit` clean, 358/358 tests (3 new); `web-player` 150/150; live-DB spot check confirms the real Acolyte record projects "Calligrapher's Supplies"/"Parchment"/"Robe" from the catalog while keeping its genuinely-different "Book (prayers)" label.
+
+**Findings in Codex's categories, verified but deliberately not fixed here (ownership):** Items — `modifiers` is still runtime-regex-parsed prose (595 items / 1,129 entries via `parseItemModifierBonus`), and 15 items' ability-score bonuses (Ioun Stones, Manuals/Tomes, Belt of Dwarvenkind…) sit in a `modifiers` category no consumer reads (silently inert); `resolution` is always `"mixed"` and 1:1 with `effects` presence (derivable), `resolutionNotes` used by zero items. Spells — `SpellChoiceUtils.ts` still gates spell-choice filters on prose regexes of feat-choice notes/labels; `tags` duplicates `ritual`/`casting.range`, is inconsistently populated, and has zero consumers; `rolls.scaling` is 100% derivable from `spell.level === 0` (629 rolls, zero mismatches). Monsters — 10 damage components carry opaque-compressed or invalid `type` strings ("bludgeoning, piercing, or slashing" as one string, "draconic", "subtract from" on a non-damage debuff…); `challenge.numeric` (558 records) and `hitPoints.average`-beside-`formula` (535 records) are 100%-derivable stored values; 732/733 monster spell-ref `name`s duplicate the catalog, and the 1 exception hides a cast level in a name string. ClassTalents — 23/28 invocations lock prerequisites in prose that `CharacterSheetUtils.ts`'s `invocationPrerequisitesMet` parses at runtime; the typed prerequisite vocabulary Feats slice 1B built is directly reusable. Handoff prompt below.
+
+**Prompt for Codex — minimalism-audit findings in your categories (verify each yourself before acting; all evidence is re-derivable):**
+
+> An independent audit of the gate's "Complete" rows against live code/data found the following. Numeric claims in COMPENDIUM_VALIDATION.md all checked out; these are the residuals. Ranked:
+>
+> 1. **Items / high:** `ModifierSchema` (`nativeCompendiumV2Schemas.item.ts`) is untyped `{category, value}` prose; `shared/src/domain/items.ts` (`parseItemModifierBonus`) regex-parses `"<label> <±N>"` at runtime for every AC/weapon-bonus consumer (595 items, 1,129 entries, 28 unique strings). Replace with a typed `{target, amount}` union and delete the parser.
+> 2. **Items / high:** 15 items (6 Ioun Stones, 5 Manuals/Tomes, Belt of Dwarvenkind, Book of Exalted Deeds, Axe of the Dwarvish Lords…) store ability bonuses as `modifiers` `category: "ability score"` — no consumer reads that category, so they are silently inert. `StructuredFeatureEffectSchema` already has `type: "ability_score"`; migrate them to `effects`.
+> 3. **Monsters / data corruption:** 10 damage components have invalid `type` strings — Beast of the Land/Sea ("bludgeoning, piercing, or slashing"), Elemental Spirit, Empyrean, Empyrean Iota, Otherworldly Steed (choice lists as single strings — the schema's own array form exists for this), Draconic Spirit + Half-Dragon ("draconic" — an ancestry-dependent choice), Boromar Underboss ("extra poison"), Young Gold Dragon Weakening Breath ("subtract from" — not damage at all; it's a debuff and should have no damage component). Consider a damage-type guardrail (the species one added 2026-07-15 in `nativeCompendiumGuardrails.ts` is a template).
+> 4. **Spells / runtime guessing:** `web-player/src/views/character-creator/utils/SpellChoiceUtils.ts` gates which filter applies via prose regexes on feat-choice `note`/`sourceLabel` (`/deals damage/i`, `/ritual tag/i`, `/maneuver options/i`, `inferSpellListFromSourceLabel`). The filters themselves read typed facts; the *selection* of filter doesn't. Needs typed choice-constraint facts (likely on `FeatChoiceSchema` — coordinate, that schema is in Claude's Feats category).
+> 5. **Derived-value bloat (tenet 3):** Monsters `challenge.numeric` (100% derivable from `rating`, 558/558) and `hitPoints.average` when `formula` present (100% derivable, 535 records — your own damage-slice principle says derived averages don't belong); monster spell-ref `name` (732/733 identical to catalog; the 1 differing hides "level 4 version" in a name — type the cast level instead); Spells `rolls.scaling` (100% derivable from `spell.level === 0`, 629/629); Spells `tags` (duplicates `ritual`/range, inconsistently populated, zero consumers); Items `resolution` (always `"mixed"`, 1:1 with `effects`)/`resolutionNotes` (zero uses).
+> 6. **ClassTalents:** 23/28 invocation prerequisites are prose parsed at runtime by `CharacterSheetUtils.ts` (`invocationPrerequisitesMet`). The typed prerequisite vocabulary from Feats slice 1B fits directly; this is your gate row's own disclosed "No", now with a concrete reuse path.
+> 7. Backgrounds' equivalents of these (221 duplicated sourceLabels, dormant prose fallbacks, misaligned trait schema) were fixed by Claude 2026-07-15 — see COMPENDIUM_SOURCE_OF_TRUTH.md's entry for the pattern (read-time projection + guardrail) if you want to mirror it for monster spell names.
+
+### 2026-07-15: Coordination pause — Codex's class-infrastructure refactor in flight; `i_spellbook` unblocked; fix queue holds
+
+- Attempted to start the cross-category audit fixes and immediately detected Codex mid-flight on a sweeping refactor (class schema `primaryAbility`/`spellcasting.ability` enums, a stricter background `EquipmentSchema` that bans `sourceLabel` on item entries outright, feat/item/monster/spell schema churn — tree transiently red during their migration). Stopped with nothing half-applied: the monster damage-type migration script is authored but deliberately unrun, since two agents whole-file-rewriting `WotC_2024_only.json` concurrently would clobber each other.
+- Unblocked Codex's stated dependency: added **`i_spellbook`** (Adventuring Gear, common, 50 GP, 3 lb, PHB 5.5e p. 229) to both stores via the real validated import pathway (`parseCanonicalV2Entry` + `importNativeCompendiumBatch`), inserted alphabetically before Spyglass. Both stores now hold 1,730 items.
+- Drift check after their churn: all of this document's landed mechanisms survived — `suppressProseParsing` (which Codex has now **adopted for their own class/feat cold-data sites**: `featEffects.ts`, level-up derivation, additional creator utils), the species Features-list resolution rule, `getCoreLanguageChoice`'s typed read, both guardrails (`checkSpeciesFactHomesAndReferences`, `checkBackgroundEquipmentLabels`), and the backgrounds name projection in `lore.ts`.
+- **Queue on hold until Codex lands and the tree is green** (re-derive each finding against their new schemas first; several may be absorbed): monster damage-type corruption (script ready), spell `tags`/`rolls.scaling` drops, item `resolution`/typed-`modifiers` work, monster `challenge.numeric`/`hitPoints.average`/spell-ref-name dedup, ClassTalent typed prerequisites (flagged — overlaps their 2A ClassTalent progression work; one owner needed), SpellChoiceUtils typed constraints (needs `FeatChoiceSchema` additions on this side, consumer coordination on theirs).
+- Known reconciliation debt once they land: their stricter `EquipmentSchema` supersedes part of the sourceLabel design above — if all labels are banned (including the 100 genuinely-different ones), `checkBackgroundEquipmentLabels` becomes dead (schema subsumes it, delete it), the route projection becomes the *sole* display-name source (keep), and the route test fixture carrying `sourceLabel: "Amulet (blessed)"` must be updated.
+
+### 2026-07-15: Pre-commit dead-code sweep
+
+- With the large joint diff staged for commit, swept for dead code (ts-prune per package + manual liveness checks, every deletion verified zero non-test consumers before removal): deleted the applied one-off migration modules (`migrateSpeciesGapEffects.ts`, `backgroundEquipmentMigration.ts` — the latter's one-time migration ran 2026-07-14 and nothing imports it); deleted orphaned exports `expandBackgroundProficiencies`/`expandBackgroundChoice` (backgroundCompaction), `traitsFromV2`, `hasStructuredClassFeatureMechanics`, and the shared-schema leftovers `BackgroundProficienciesSchema`/`ProficiencyChoiceSchema`/`ScalingRollSchema`/`abilityScore` (all superseded by the compact background/trait schemas); removed the `CreatorRaceTraitLike`/`RaceChoices` re-export chain orphaned by the earlier `parseRaceChoices` deletion; gitignored `.playwright-mcp/`.
+- Deliberately left: cross-package shared exports ts-prune false-flags (`apiCoalesced`/`resolveAssetUrl`/`apiBlob` — live in web-dm), icon barrels (conventionally complete sets), `ClassToolProficiencySchema` re-export (Codex's active class work), and the three reusable `validate*` dev scripts.
+- Reconciliation note: Codex's final `EquipmentSchema` kept `sourceLabel` optional on item entries after all, so `checkBackgroundEquipmentLabels` and the read-time name projection both remain live and correct as designed — no debt.
+- Verification after sweep: server 364/364, `web-player` 157/157, `web-dm` 11/11; `tsc --noEmit` clean on all three packages (including the previously-noted transient Feats-domain errors, since fixed by Codex).
+
+### 2026-07-16: Codex stopped — cleared the full audit-fix queue so Classes can resume clean
+
+User direction: fix everything from the cross-category audit except the class-feature vocabulary itself (plans/class-languages/hit-die fallbacks stay with Codex's Classes slice). All fixes verified after each step; final state at bottom.
+
+- **Monster damage-type corruption (10 records)** fixed in both stores using the schema's own array-of-types form; Beast of the Sea's stored string was wrong even as prose (text says Bludgeoning *or Piercing* only); Boromar's third component didn't match its own text (conditional rider → prose per slice policy); Young Gold Dragon's "subtract from" wasn't damage at all (component deleted). Zero invalid types remain corpus-wide.
+- **#6 Talent prerequisite dual-home closed.** The 23 duplicate `"Prerequisite: …"` prose paragraphs stripped from talent descriptions (migration refuses to strip anything lacking a typed twin); new `classTalentPrerequisiteLabel` renders the typed fact in both pickers (dependency names resolved from the option list itself); `extractPrerequisite`/`stripPrerequisiteLine` regex helpers deleted (feat descriptions verified already clean, 0/277).
+- **#7** `buildFallbackClassFeat` (fabricated Archery text) + `normalizeFeatIdToken` deleted — zero live characters carry `chosenClassFeatIds`.
+- **#2 Typed spell-choice constraints.** `FeatChoiceSchema` gained `maxLevel` ("at or below" cap) and `ritual: true`; 6 feats migrated (3 Ritual Caster variants typed `ritual`, Boon of Siberys `level:8`→`maxLevel:8`, and a real data defect fixed: Magic Initiate (Cleric)/(Wizard) variants offered all three lists while (Druid) correctly constrained — variants now constrain to their named list). Consumers read the typed fields; `/ritual tag/i`, `/\bat or below\b/i` (×2), and `inferSpellListFromSourceLabel` (parenthetical label parsing) all deleted. Single-option lists auto-select — the inference's only real job.
+- **#1 Items typed modifiers — the big one.** `ModifierSchema` is now `{ target: <13-value enum>, amount: int }`; the `"<label> +N"` regex parser (`parseItemModifierBonus`) replaced by a typed accessor `itemModifierBonus` + `itemModifierLabel` (shared); consumers (weapon attack/damage, AC ×2) and all three modifier display sites (player item panel, DM treasure drawer, DM item picker) read typed facts. Conversion/editor boundaries typify legacy shapes (`typifyLegacyItemModifier` — import-time parsing is permitted; storage never sees prose). Migration: all 595 modifier-bearing items in both stores (1,092 typed entries); Stone of Good Luck's 21 converter-expanded rows consolidated to its 2 real facts (`ability_checks +1`, `saving_throws +1` — its "proficiency bonus +1" row was invented, deleted); the 8 genuinely-equipped ability items (6 Ioun Stones, Belt of Dwarvenkind, Axe of the Dwarvish Lords) migrated to real `ability_score` effects (+2, cap 20, while equipped) **with a new consumer** — `applyItemAbilityScoreOverrides` now applies `mode:"fixed"` bonuses with caps, so those 8 items work for the first time; the 6 one-time books' inert rows deleted (honest manual prose). Ioun Stone Mastery's legitimate `proficiency_bonus +1` kept as a typed-and-ready fact.
+- **#5 Features-list keyword heuristic deleted entirely.** Species/background trait display now rides `resolution !== "manual"` (class/feat/invocation were always shown); the ~50-line name/prose regex function is gone.
+- **Derived-value bloat dropped (tenet 3), 969 records per store:** spell `tags` (87 — duplicated `ritual`/range, zero consumers, guardrail block retired with it) and per-roll `scaling` (629 — derived from `spell.level === 0`; consumer flipped); item `resolution`/`resolutionNotes` (237 — always `"mixed"`, 1:1 with `effects`; schema field + all passthroughs deleted); monster `challenge.numeric` (558 — derived via new shared `crRatingToNumber`) and `hitPoints.average`-beside-formula (535 — derived via new shared `averageHpFromFormula`, floor rule, zero derivation mismatches; average still stored when there is no formula); monster spell-ref `name`s (733 — IDs only; the one real fact hiding in a name became typed `{id, level: 4}`; the monster detail route projects names from the spell catalog, same pattern as backgrounds equipment). All raw-canonical `average` readers (DM statblock/format/editor, player creature picker, server addMonster) fall back to formula derivation.
+- **#10 Encounter-difficulty estimator rewritten to canonical facts only.** The legacy action projection now passes through typed `id`/`damage`/`routine`; `estimateMonsterDpr` averages typed damage components, composes typed Multiattack routines (`use`×count, strongest of `choose`), and reads typed recharge/area/targets for burst pressure. The `Hit:` prose regex, Multiattack text matching, and the entire CR→DPR fallback table are deleted — a monster without typed damage honestly reports no estimate instead of a guess. Test suite extended from 5 to 11 cases including no-guess regressions.
+- **Housekeeping:** the retired dev XML corpora (user converted `/compendium/*.xml` to native JSON) gracefully skip the 21 conservation tests (converter coverage remains via fixtures); `BEHOLDEN_AI_CONTENT_GUIDE.md` examples updated to every new shape (typed modifiers, no `numeric`, formula-only HP, no roll `scaling`/`tags`).
+- **Left for Codex's Classes resumption**, deliberately: Armorer/Artificer "plans" prose parser, maneuver prose fallback for untyped features, class language grants (thieves' cant regexes), class hit-die name tables, class starting-equipment prose (their unfinished 1B), and the 3 Monk `mixed`-without-mechanics validator issues from their in-flight 2B-C.
+- **Verification:** server 337/337 (+21 corpus skips), `web-player` 161/161, `web-dm` 17/17; `tsc --noEmit` clean ×3; `validateRuleResolution` 0 issues outside the 3 known Monk in-flight items; every data migration schema-validated (`parseCanonicalV2Entry`) per record before writing, both stores byte-consistent.
+
+### 2026-07-16: Feats slice 2B — reviewed migration of feat mechanics silenced by `suppressProseParsing`
+
+Context: when feats switched to cold-data consumption, any feat whose old prose-parsed effects had no typed twin went silently dead at runtime. Audited all 277 feats (old prose path vs. current typed path, including `mechanics.choices` UI coverage); 48 flagged, each reviewed against its real rules text. Most were false positives; 18 feats needed data. All work is Feats-category data only — zero contact with Codex's in-flight Classes files, and both stores' batch counts verified stable after each write (no clobber).
+
+- **Real gaps migrated (typed `grants.effects` in both stores, schema-validated per record):**
+  - **War Caster ×3**: `modifier` — Advantage on Constitution saves, gated "to maintain Concentration" (gate note; vocabulary has no concentration filter, and the note keeps the automatic effect honest).
+  - **Medium Armor Master ×2**: `armor_class` +1, gated Medium armor + Dex 16+ — restores AC math the feat contributed before suppression.
+  - **Fighting Style: Interception / Protection**: typed reaction `action` effects; both flipped `manual` → `automatic` (the whole feat is that one reaction, now fully structured).
+  - **Spellfire Spark ×2 (+origin variant)**: `spell_grant` Sacred Flame (known); the PB bonus-action pool was already typed in `uses`.
+  - **Cold Caster**: `spell_grant` Ray of Frost (known); the replace-if-known cantrip already rode typed `choices`.
+  - **Delicious Pain ×6**: honest reaction `action` (1/short rest, B/P/S resistance until next turn). Note: the old prose parse was an *always-on* resistance — a bug; the typed shape is the first correct one.
+  - **Mythal Touched**: nothing to add — its PB use pool was already typed in `uses` (an authored `resource_grant` was caught duplicating the uses-derived pool and removed); `resolutionNotes` now disclose the d20 table stays prose.
+- **False positives, deliberately not restored:** Poisoner ×2 and Spellfire Adept's Searing Spellfire ("ignores Resistance" misread as *granting* resistance); Mythal's +2 AC (a temporary random-table row); Order's Resilience (ally-adjacency-conditional save advantage — table state); Boon of Desperate Resilience (while-Bloodied resistance — combat state the app doesn't track; disclosed in `resolutionNotes`); Dragonmark spell grants ×16 (ride `preparedSpellProgression`); Magic Initiate-family spell choices ×10 and Skill Expert-family proficiency grants ×9 (ride typed `mechanics.choices` in the creator/level-up UI); Tireless Reveler (typed `uses`).
+- **Placement fix during migration:** feat `resolution`/`resolutionNotes` live top-level on the entry (277/277 corpus convention), not in `mechanics` — script corrected before running.
+- **Verification:** typed effects confirmed flowing through the suppressed-prose runtime path for all seven shapes; zero drift across both stores for all 18 feats; server 337/337 (+21 skips), `web-player` 161/161. One-off script deleted after run.
+
+### 2026-07-16: Dormant prose fallbacks deleted; AI guide taught the typed-feats contract
+
+User ruling on the standing tenet-5 question: **everyone follows the schema — there is no homebrew prose path.** All feature content reaches the runtime from the compendium API (schema-validated at import), so the "homebrew fallback" justification was hollow. Verified both dormant fallbacks fire on 0 canonical records before deleting:
+
+- Background traits now set `suppressProseParsing: true` in `buildAppliedCharacterFeatures` — the last unsuppressed feature kind (0/all canonical background traits produced prose effects). Every runtime `parseFeatureEffects` call site is now suppressed; the flag's stale "Species-only" doc comment updated.
+- The feat-ASI prose fallback in `CharacterCreatorFormUtils` ("wasn't captured in parsed grants" regex) deleted — 0/277 canonical feats triggered it; all ability increases are typed in `grants.abilityIncreases`.
+- Remaining prose inference is now exclusively Codex's Classes slice: `parseFeatureGrants` (creator level panel), `GrowthChoiceUtils` (Magic Item Plans — per user, being resolved as a player note, not a typed refactor; plus armor-replication/maneuver/ability-choice sniffs), `CharacterCreatorEquipmentUtils` + the `(A)/(B)` splitter (equipment 1B), class languages, hit-die tables. Once those land, `parseFeatureEffects`'s prose branch is fully dead at every call site and can be deleted in a joint sweep (it touches level-up files Codex is editing — not doing it unilaterally).
+- **`BEHOLDEN_AI_CONTENT_GUIDE.md` updated:** new global instruction #11 (Beholden never parses rules text at runtime — prose-only benefits are by definition manual) and a rewritten Feats section with the full `mechanics` contract: a mixed-feat example (`grants.effects` with gated modifier, typed `choices`, `uses`), the rules that `uses` derives the tracked resource pool (never author a duplicate `resource_grant`), spell choices constrain via typed `level`/`maxLevel`/`ritual` (never note wording), and `resolution`/`resolutionNotes` live at the entry top level. Example validated by the guide's importer-backed tests.
+- Verification: guide tests 31/31, `web-player` 167/167 (count grew — Codex's new class tests, also green), `tsc --noEmit` clean.
 
 ### Decisions and open questions
 
@@ -237,3 +363,4 @@ No phase is currently assigned.
 - Decide whether derived summaries are calculated on every read or cached with a compendium revision.
 - Determine how compendium revisions are identified and propagated to already-open clients.
 - Define administrator UX for unresolved legacy references and invalidated player choices.
+- ~~Decide whether tenet 5's strict reading ("may not trigger... prose parsing") is meant to eventually eliminate the prose-parsing fallback for homebrew/unstructured content entirely.~~ **Resolved 2026-07-16 (user):** strict reading. Everyone follows the schema; there is no homebrew prose path. The `parseFeatureEffects` prose branch is deleted outright in a joint sweep once Codex's remaining class prose consumers land.

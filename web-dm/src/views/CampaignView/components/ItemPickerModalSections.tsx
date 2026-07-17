@@ -7,6 +7,7 @@ import { Select } from "@/ui/Select";
 import { theme, withAlpha } from "@/theme/theme";
 import { titleCase } from "@/lib/format/titleCase";
 import type { CompendiumItemDetail, CompendiumItemRow } from "@/domain/types/compendium";
+import { itemModifierLabel } from "@beholden/shared/domain";
 import {
   KNOWN_TYPES,
   MagicBadge,
@@ -330,7 +331,7 @@ function ItemDetail({ detail }: { detail: CompendiumItemDetail }) {
         {detail.magic && <MagicBadge />}
         {detail.attunement && <Chip label="Requires Attunement" color={theme.colors.accentHighlight} />}
         {detail.rarity && <Chip label={titleCase(detail.rarity)} color={rarityChipColor(detail.rarity)} />}
-        {(detail.modifiers ?? []).map((modifier, index) => <Chip key={index} label={modifier.text} color={theme.colors.colorMagic} />)}
+        {(detail.modifiers ?? []).flatMap((modifier, index) => { const label = itemModifierLabel(modifier); return label ? [<Chip key={index} label={label} color={theme.colors.colorMagic} />] : []; })}
       </div>
       {hasStats && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8 }}>

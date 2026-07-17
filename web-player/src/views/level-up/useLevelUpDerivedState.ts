@@ -1,4 +1,5 @@
 import React from "react";
+import { getInvocationFeatChoices } from "@/domain/character/invocationFeatChoices";
 import { abilityMod, normalizeSpellTrackingKey } from "@/views/character/CharacterSheetUtils";
 import {
   featureMatchesSubclass,
@@ -9,6 +10,7 @@ import {
   getGrowthChoiceDefinitions,
   getMaxSlotLevel,
   getPreparedSpellCount,
+  getSpellSlotsAtLevel,
   getSlotLevelTriggeredSpellChoices,
   getSubclassLevel,
   getSubclassList,
@@ -26,7 +28,7 @@ import {
 import { buildResolvedSpellChoiceEntry, buildSpellListChoiceEntry } from "@/views/character-creator/utils/SpellChoiceUtils";
 import { getFeatSpellcastingAbilityChoice } from "@/views/character-creator/utils/FeatSpellcastingUtils";
 import { deriveAllowedInvocationIds } from "@/views/level-up/LevelUpUtils";
-import { deriveCharProficiencies, stripBracketSuffix } from "@/views/level-up/LevelUpHelpers";
+import { deriveCharProficiencies } from "@/views/level-up/LevelUpHelpers";
 import type {
   LevelUpCharacter as Character,
   LevelUpClassDetail as ClassDetail,
@@ -53,8 +55,9 @@ export function useLevelUpDerivedState(args: {
   chosenFeatOptions: Record<string, string[]>;
   chosenFeatureChoices: Record<string, string[]>;
   chosenFeatDetail: FeatDetail | null;
+  featSummaries: Array<{ id: string; name: string; category?: string | null }>;
   classCantrips: Array<{ id: string; name: string; level?: number | null; text?: string | null }>;
-  classInvocations: Array<{ id: string; name: string; level?: number | null; text?: string | null }>;
+  classInvocations: Array<{ id: string; name: string; level?: number | null; text?: string | null; effects?: unknown[] }>;
 }) {
   const {
     char,
@@ -68,6 +71,7 @@ export function useLevelUpDerivedState(args: {
     chosenFeatOptions,
     chosenFeatureChoices,
     chosenFeatDetail,
+    featSummaries,
     classCantrips,
     classInvocations,
   } = args;
@@ -88,34 +92,27 @@ export function useLevelUpDerivedState(args: {
   const newFeatures = React.useMemo(
     () => autoLevel?.features.filter((f) =>
       !f.optional
-      || (
-        Boolean(subclass)
-        && /\(([^()]+)\)\s*$/.test(f.name)
-        && new RegExp(`\\(${subclass.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\)\\s*$`, "i").test(f.name)
-      )
+      || (Boolean(subclass) && f.subclass === subclass)
     ) ?? [],
     [autoLevel, subclass]
   );
   const isAsiLevel = Boolean(autoLevel?.scoreImprovement ?? hasAsiFeature);
-  const newSlots = autoLevel?.slots ?? null;
+  const newSlots = classDetail ? getSpellSlotsAtLevel(classDetail, nextLevel, subclass) : null;
   const subclassLevel = classDetail ? getSubclassLevel(classDetail) : null;
   const subclassOptions = classDetail ? getSubclassList(classDetail) : [];
   const showSubclassChoice = Boolean(subclassLevel && nextLevel === subclassLevel && subclassOptions.length > 0);
   const needsSubclassChoice = Boolean(subclassLevel && nextLevel >= subclassLevel && subclassOptions.length > 0 && !subclass.trim());
   const subclassOverview = React.useMemo(() => {
-    if (!classDetail || !subclass.trim()) return null;
-    const className = stripBracketSuffix(classDetail.name);
-    const subclassPattern = new RegExp(`^${className.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s+Subclass:\\s+${subclass.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
+    if (!subclass.trim()) return null;
     for (const autolevel of mergedAutolevels) {
-      const feature = autolevel.features.find((entry) => subclassPattern.test(entry.name));
+      const feature = autolevel.features.find((entry) => entry.subclass === subclass);
       if (feature) return feature;
     }
     return null;
-  }, [classDetail, mergedAutolevels, subclass]);
+  }, [mergedAutolevels, subclass]);
   const selectedSubclassFeatures = React.useMemo(() => {
     if (!autoLevel || !subclass.trim()) return [];
-    const subclassSuffix = new RegExp(`\\(${subclass.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\)\\s*$`, "i");
-    return autoLevel.features.filter((feature) => subclassSuffix.test(feature.name));
+    return autoLevel.features.filter((feature) => feature.subclass === subclass);
   }, [autoLevel, subclass]);
   const cantripCount = classDetail ? getCantripCount(classDetail, nextLevel, subclass) : 0;
   const invocTable = classDetail ? getClassFeatureTable(classDetail, "Invocation", nextLevel, subclass) : [];
@@ -127,7 +124,7 @@ export function useLevelUpDerivedState(args: {
     () => (classDetail ? getClassExpertiseChoices(classDetail, nextLevel).filter((choice) => choice.key.startsWith(`classexpertise:${nextLevel}:`)) : []),
     [classDetail, nextLevel]
   );
-  const { charProficiencies, proficientSkills, proficientTools, proficientLanguages, existingExpertise } = deriveCharProficiencies(char);
+  const { charProficiencies, proficientSkills, proficientTools, proficientLanguages, proficientSaves, existingExpertise } = deriveCharProficiencies(char);
   const existingClassSpellNames = React.useMemo(
     () => Array.isArray(char?.characterData?.proficiencies?.spells)
       ? char.characterData.proficiencies.spells
@@ -205,13 +202,14 @@ export function useLevelUpDerivedState(args: {
       parseFeatureEffects({
         source: {
           id: `levelup:${nextLevel}:${index}:${feature.name}`,
-          kind: /\(/.test(feature.name) ? "subclass" : "class",
+          kind: feature.subclass ? "subclass" : "class",
           name: feature.name,
           text: feature.text,
           level: nextLevel,
         },
         text: feature.text,
         classEffects: feature.effects,
+        classChoices: feature.choices,
       })
     ),
     [newFeatures, nextLevel]
@@ -241,6 +239,7 @@ export function useLevelUpDerivedState(args: {
     () => [
       ...collectSpellChoicesFromEffects(parsedNewFeatureEffects)
         .filter((choice) => !/^(level\s+\d+:\s+)?(spellcasting|pact magic)\b/i.test(choice.source.name))
+        .filter((choice) => !choice.ifKnown || existingClassSpellNames.some((name) => name.trim().toLowerCase() === choice.ifKnown!.trim().toLowerCase()))
         .map((choice) => ({
           key: `levelupclassfeature:${nextLevel}:${choice.id}`,
           title: choice.source.name,
@@ -258,23 +257,25 @@ export function useLevelUpDerivedState(args: {
         })),
       ...slotLevelTriggeredSpellChoices,
     ],
-    [nextLevel, maxSpellLevel, parsedNewFeatureEffects, slotLevelTriggeredSpellChoices]
+    [existingClassSpellNames, nextLevel, maxSpellLevel, parsedNewFeatureEffects, slotLevelTriggeredSpellChoices]
   );
   const classFeatureProficiencyChoices = React.useMemo(
     () => collectProficiencyChoiceEffectsFromEffects(parsedNewFeatureEffects)
       .filter((choice) =>
         !choice.expertise
         && choice.choice?.count.kind === "fixed"
-        && ["skill", "tool", "language"].includes(choice.choice?.optionCategory ?? "")
+        && ["skill", "tool", "language", "saving_throw"].includes(choice.choice?.optionCategory ?? "")
+        && (!choice.choice?.ifProficient || proficientSaves.map(normalizeChoiceKey).includes(normalizeChoiceKey(choice.choice.ifProficient)))
       )
       .map((choice) => ({
         key: `classfeature:${choice.id}`,
         sourceLabel: choice.source.name,
-        category: choice.choice?.optionCategory as "skill" | "tool" | "language",
+        category: choice.choice?.optionCategory as "skill" | "tool" | "language" | "saving_throw",
         count: choice.choice?.count.kind === "fixed" ? choice.choice.count.value : 0,
+        options: choice.choice?.options,
       }))
       .filter((choice) => choice.count > 0),
-    [parsedNewFeatureEffects]
+    [parsedNewFeatureEffects, proficientSaves]
   );
   const classFeatureSkillKeys = React.useMemo(
     () => new Set([
@@ -305,6 +306,16 @@ export function useLevelUpDerivedState(args: {
         .map(normalizeChoiceKey),
     ]),
     [chosenFeatureChoices, classFeatureProficiencyChoices, proficientLanguages]
+  );
+  const classFeatureSaveKeys = React.useMemo(
+    () => new Set([
+      ...proficientSaves.map(normalizeChoiceKey),
+      ...classFeatureProficiencyChoices
+        .filter((choice) => choice.category === "saving_throw")
+        .flatMap((choice) => chosenFeatureChoices[choice.key] ?? [])
+        .map(normalizeChoiceKey),
+    ]),
+    [chosenFeatureChoices, classFeatureProficiencyChoices, proficientSaves]
   );
   const growthChoiceDefinitions = React.useMemo(
     () => getGrowthChoiceDefinitions({
@@ -361,14 +372,18 @@ export function useLevelUpDerivedState(args: {
           text: invocation.text ?? "",
         },
         text: invocation.text ?? "",
+        classEffects: invocation.effects,
       })),
     [char?.className, chosenInvocations, classDetail?.name, classInvocations, nextLevel]
   );
   const invocationResolvedSpellChoices = React.useMemo<LevelUpResolvedSpellChoiceEntry[]>(
-    () => collectSpellChoicesFromEffects(selectedInvocationEffects).flatMap((choice) => {
+    () => collectSpellChoicesFromEffects(selectedInvocationEffects).flatMap((rawChoice) => {
+      const invocationId = rawChoice.source.id.replace(/^levelupinvocation:\d+:/, "");
+      const copies = Math.max(1, chosenInvocations.filter((id) => id === invocationId).length);
+      const choice = rawChoice.count.kind === "fixed" ? { ...rawChoice, count: { ...rawChoice.count, value: rawChoice.count.value * copies } } : rawChoice;
       if (choice.count.kind !== "fixed") return [];
       return [{
-        key: `invocation:${choice.id}`,
+        key: `invocation:${choice.choiceId ?? choice.id}`,
         title: choice.source.name,
         sourceLabel: choice.source.name,
         count: choice.count.value,
@@ -377,10 +392,24 @@ export function useLevelUpDerivedState(args: {
         linkedTo: null,
         listNames: choice.spellLists,
         schools: choice.schools,
-        ritualOnly: /\britual tag\b/i.test(choice.note ?? ""),
+        ritualOnly: choice.filters?.ritual === true,
+        damageOnly: choice.filters?.damage === true,
+        attackOnly: choice.filters?.attack === true,
+        allowedSpellIds: choice.filters?.known === true
+          ? [...(char?.characterData?.chosenCantrips ?? []), ...chosenCantrips]
+          : undefined,
+        grantsSpell: choice.mode !== "select",
       }];
     }),
-    [selectedInvocationEffects]
+    [char?.characterData?.chosenCantrips, chosenCantrips, chosenInvocations, selectedInvocationEffects]
+  );
+  const invocationFeatChoices = React.useMemo(
+    () => getInvocationFeatChoices(classInvocations, chosenInvocations, featSummaries),
+    [classInvocations, chosenInvocations, featSummaries],
+  );
+  const allInvocationFeatChoices = React.useMemo(
+    () => getInvocationFeatChoices(classInvocations, classInvocations.map((invocation) => invocation.id), featSummaries),
+    [classInvocations, featSummaries],
   );
   const allowedInvocationIds = React.useMemo(
     () => deriveAllowedInvocationIds({ classCantrips, classInvocations, chosenCantrips, chosenInvocations, nextLevel }),
@@ -439,12 +468,15 @@ export function useLevelUpDerivedState(args: {
     classFeatureSkillKeys,
     classFeatureToolKeys,
     classFeatureLanguageKeys,
+    classFeatureSaveKeys,
     growthChoiceDefinitions,
     appliedPreparedSpellProgressionFeatures,
     preparedSpellProgressionChoiceDefinitions,
     preparedSpellProgressionGrantedKeys,
     selectedInvocationEffects,
     invocationResolvedSpellChoices,
+    invocationFeatChoices,
+    allInvocationFeatChoices,
     allowedInvocationIds,
     featSpellChoiceOptions,
     classFeatureSpellChoiceOptions,

@@ -3,7 +3,7 @@ import { rollDiceExpr } from "@/lib/dice";
 import { normalizeSpellTrackingKey } from "@/views/character/CharacterSheetUtils";
 import type { HpChoice } from "@/views/level-up/LevelUpTypes";
 
-type SpellEntry = { id: string; name: string; level?: number | null };
+type SpellEntry = { id: string; name: string; level?: number | null; repeatable?: boolean };
 
 export function useLevelUpActions(args: {
   hd: number;
@@ -65,7 +65,7 @@ export function useLevelUpActions(args: {
   const availableInvocationChoices = React.useMemo(
     () =>
       classInvocations.filter(
-        (invocation) => !lockedInvocationIds.has(invocation.id) && allowedInvocationIds.has(invocation.id),
+        (invocation) => (!lockedInvocationIds.has(invocation.id) || invocation.repeatable) && allowedInvocationIds.has(invocation.id),
       ),
     [allowedInvocationIds, classInvocations, lockedInvocationIds],
   );

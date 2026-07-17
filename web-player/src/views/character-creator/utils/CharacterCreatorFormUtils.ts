@@ -32,6 +32,7 @@ export interface FormState {
   chosenRaceTools: string[];
   chosenRaceFeatId: string | null;
   chosenRaceSize: string | null;
+  chosenRaceSpellAbility: string | null;
   chosenBgSkills: string[];
   chosenBgOriginFeatId: string | null;
   chosenBgTools: string[];
@@ -70,19 +71,10 @@ export interface FormState {
 
 const DEFAULT_SCORES = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 };
 
-function matchesClassFeatGroup(featName: string, featGroup: string): boolean {
-  const normalizedGroup = featGroup.trim().toLowerCase();
-  if (normalizedGroup === "fighting style") return /^fighting style:/i.test(featName);
-  if (normalizedGroup === "origin") return /^origin:/i.test(featName);
-  if (normalizedGroup === "epic boon" || normalizedGroup === "boon") return /^boon of\b/i.test(featName);
-  const escaped = featGroup.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`^${escaped}:`, "i").test(featName) || new RegExp(`\\b${escaped}\\b`, "i").test(featName);
-}
-
 export function getClassFeatChoices(
   classDetail: ClassDetail | null,
   level: number,
-  featSummaries: Array<{ id: string; name: string }>,
+  featSummaries: Array<{ id: string; name: string; category?: string | null }>,
 ): ClassFeatChoice[] {
   if (!classDetail) return [];
   const choices: ClassFeatChoice[] = [];
@@ -90,14 +82,14 @@ export function getClassFeatChoices(
   for (const al of classDetail.autolevels) {
     if (al.level == null || al.level > level) continue;
     for (const f of al.features) {
-      const match = f.text.match(/gain\s+an?\s+(.+?)\s+feat\s+of\s+your\s+choice/i);
-      const featGroup = match?.[1]?.trim();
-      if (!featGroup) continue;
+      const featChoice = f.choices?.find((choice) => choice.kind === "feat");
+      if (!featChoice || featChoice.kind !== "feat") continue;
+      const featGroup = featChoice.category === "F" ? "Fighting Style" : featChoice.category;
       const key = `${al.level}:${f.name}`;
       if (seen.has(key)) continue;
       seen.add(key);
       const options = featSummaries
-        .filter((feat) => matchesClassFeatGroup(feat.name, featGroup))
+        .filter((feat) => String(feat.category ?? "").toUpperCase() === featChoice.category)
         .map((feat) => ({ id: feat.id, name: feat.name }))
         .sort((a, b) => a.name.localeCompare(b.name));
       choices.push({ featureName: f.name, featGroup, options });
@@ -142,7 +134,6 @@ export function getOptionalGroups(cls: ClassDetail, level: number): { level: num
     if (al.level == null || al.level > level) continue;
     const opts = al.features.filter((f) => {
       if (!f.optional) return false;
-      if (/subclass/i.test(f.name) || /^Becoming\b/i.test(f.name)) return false;
       const featureSubclass = getFeatureSubclassName(f);
       if (featureSubclass) return false;
       return true;
@@ -167,7 +158,7 @@ export function initForm(user: { name?: string } | null, params: URLSearchParams
   return {
     classId: "", raceId: "", bgId: "",
     level: 1, subclass: "", chosenOptionals: [], chosenClassFeatIds: {}, chosenLevelUpFeats: [],
-    chosenRaceSkills: [], chosenRaceLanguages: [], chosenRaceTools: [], chosenRaceFeatId: null, chosenRaceSize: null,
+    chosenRaceSkills: [], chosenRaceLanguages: [], chosenRaceTools: [], chosenRaceFeatId: null, chosenRaceSize: null, chosenRaceSpellAbility: null,
     chosenBgSkills: [], chosenBgOriginFeatId: null,
     chosenBgTools: [], chosenBgLanguages: [], chosenClassEquipmentOption: null, chosenBgEquipmentOption: null, chosenFeatOptions: {}, chosenFeatureChoices: {}, bgAbilityMode: "split", bgAbilityBonuses: {},
     chosenSkills: [], chosenClassLanguages: [], chosenClassTools: [], chosenWeaponMasteries: [], chosenCantrips: [], chosenSpells: [], chosenInvocations: [],
@@ -228,14 +219,9 @@ export function inferAbilityMethodFromScores(scores: Record<string, number>): Ab
 
 export function getPrimaryAbilityKeys(classDetail: ClassDetail | null): string[] {
   if (!classDetail) return [];
-  for (const al of classDetail.autolevels) {
-    if (al.level !== 1) continue;
-    for (const f of al.features) {
-      const m = f.text.match(/Primary Ability:\s*([^\n]+)/i);
-      if (m) return abilityNamesToKeys(m[1].split(/,|\s+and\s+|\s+or\s+/i).map((s) => s.trim()).filter(Boolean));
-    }
-  }
-  return [];
+  const value = classDetail.primaryAbility;
+  const abilities = typeof value === "string" ? [value] : [...(value?.all ?? []), ...(value?.any ?? [])];
+  return abilityNamesToKeys(abilities);
 }
 
 export function deriveFeatGrantedAbilityBonuses(args: {
@@ -256,27 +242,15 @@ export function deriveFeatGrantedAbilityBonuses(args: {
   };
   const applyFeat = (prefix: string, feat: BackgroundFeat | null) => {
     if (!feat) return;
-    const grantedAbilityKeys = new Set<string>();
     for (const [key, value] of Object.entries(feat.parsed.grants.abilityIncreases)) {
       const abilityKey = normalizeAbilityBonusKey(key);
       if (!abilityKey) continue;
-      grantedAbilityKeys.add(abilityKey);
       bonusMap[abilityKey] = (bonusMap[abilityKey] ?? 0) + value;
     }
     for (const choice of feat.parsed.choices) {
       if (choice.type !== "ability_score") continue;
       const selected = chosenFeatOptions[`${prefix}:${choice.id}`] ?? [];
       applyBonus(getSelectedAbilityIncrease(choice, selected));
-    }
-
-    // Fallback for fixed feat wording that wasn't captured in parsed grants.
-    const featText = String(feat.text ?? "");
-    for (const match of featText.matchAll(/(?:increase\s+your|your)\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+score(?:\s+increases?)?\s+by\s+(\d+)/gi)) {
-      const abilityKey = normalizeAbilityBonusKey(match[1] ?? "");
-      if (!abilityKey || grantedAbilityKeys.has(abilityKey)) continue;
-      const amount = Number(match[2]);
-      if (!Number.isFinite(amount) || amount <= 0) continue;
-      bonusMap[abilityKey] = (bonusMap[abilityKey] ?? 0) + amount;
     }
   };
   applyFeat(`bg:${bgOriginFeatDetail?.name ?? ""}`, bgOriginFeatDetail);

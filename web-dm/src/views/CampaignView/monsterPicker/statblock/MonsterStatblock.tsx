@@ -1,3 +1,4 @@
+import { averageHpFromFormula } from "@beholden/shared/domain/monsters";
 import * as React from "react";
 import { parseLeadingNumber } from "@/lib/parse/statDetails";
 import { theme } from "@/theme/theme";
@@ -44,9 +45,7 @@ function isSpellSection(name: unknown): boolean {
 }
 
 function isAttackAction(a: MonsterTextEntry): boolean {
-  if (a?.attack) return true;
-  const text = Array.isArray(a?.text) ? a.text.map(String).join(" ") : String(a?.text ?? "");
-  return /\bto\s+hit\b/i.test(text);
+  return Boolean(asRecord(a.attack));
 }
 
 type ParsedAttackDefaults = { toHit: number | undefined; damage: string | undefined; damageType: string | undefined };
@@ -63,23 +62,7 @@ function parseAttackDefaults(a: MonsterTextEntry): ParsedAttackDefaults {
       damageType: damageType || undefined,
     };
   }
-  if (typeof a.attack === "string") {
-    const parts = a.attack.split(/\|\|?/);
-    const toHit = Number(parts[1]);
-    if (parts.length >= 3) return {
-      toHit: Number.isFinite(toHit) ? toHit : undefined,
-      damage: parts[2]?.trim().replace(/\s+/g, "") || undefined,
-      damageType: parts[0]?.trim().replace(/\s+damage$/i, "").toLowerCase() || undefined,
-    };
-  }
-  const text = Array.isArray(a?.text) ? a.text.map(String).join(" ") : String(a?.text ?? "");
-  const hitMatch = text.match(/(?:Attack Roll:\s*|)([+-]?\d+)(?:\s+to\s+hit|\s*,)/i);
-  const toHit = hitMatch ? parseInt(hitMatch[1], 10) : undefined;
-  const dmgMatch = text.match(/\bHit:\s+\d+\s*\(([^)]+)\)/i);
-  const damage = dmgMatch ? dmgMatch[1].replace(/\s+/g, "") : undefined;
-  const typeMatch = text.match(/\b(piercing|bludgeoning|slashing|fire|cold|lightning|acid|poison|necrotic|radiant|psychic|thunder|force)\b/i);
-  const damageType = typeMatch ? typeMatch[1].toLowerCase() : undefined;
-  return { toHit: Number.isFinite(toHit) ? toHit : undefined, damage, damageType };
+  return { toHit: undefined, damage: undefined, damageType: undefined };
 }
 
 function fmtToHit(n: number | undefined): string {
@@ -156,7 +139,9 @@ export function MonsterStatblock(props: {
     const acRecord = asRecord(m.ac);
     const hpRecord = asRecord(m.hp);
     const acValue = acRecord?.value ?? m.ac ?? m.armor_class;
-    const hpValue = hpRecord?.average ?? m.hp ?? m.hit_points;
+    const hpValue = hpRecord?.average
+      ?? averageHpFromFormula(typeof hpRecord?.formula === "string" ? hpRecord.formula : null)
+      ?? m.hp ?? m.hit_points;
     const raw: Record<string, unknown> = (m.raw_json ?? m) as Record<string, unknown>;
     return {
       ac: readNumber(acValue) ?? NaN,

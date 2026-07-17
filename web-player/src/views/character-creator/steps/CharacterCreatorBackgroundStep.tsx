@@ -6,6 +6,7 @@ import { ABILITY_NAME_TO_KEY, ALL_SKILLS, ALL_TOOLS } from "../constants/Charact
 import { NavButtons } from "../shared/CharacterCreatorParts";
 import { detailBoxStyle, headingStyle, inputStyle, labelStyle, profChipStyle, sourceTagStyle } from "../shared/CharacterCreatorStyles";
 import { abilityNamesToKeys } from "../utils/CharacterCreatorUtils";
+import type { StartingEquipmentOption } from "../utils/CharacterCreatorClassCoreUtils";
 
 type StepResult = { main: React.ReactNode; side: React.ReactNode };
 
@@ -43,6 +44,7 @@ interface BackgroundDetailLike {
     languages: BackgroundLanguagesLike;
     feats: Array<{ name: string }>;
     featChoice: number;
+    featChoiceFrom?: string[];
     abilityScores?: string[];
     abilityScoreChoose?: number;
   };
@@ -56,6 +58,7 @@ interface BackgroundFormLike {
   chosenBgLanguages: string[];
   chosenBgEquipmentOption: string | null;
   chosenFeatOptions: Record<string, string[]>;
+  chosenFeatureChoices: Record<string, string[]>;
   bgAbilityMode: "split" | "even";
   bgAbilityBonuses: Record<string, number>;
 }
@@ -90,7 +93,7 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
   bgOriginFeatSearch: string;
   setBgOriginFeatSearch: (value: string) => void;
   filteredBgFeats: BackgroundFeatSummaryLike[];
-  equipmentOptions: Array<{ id: string; entries: string[]; text: string }>;
+  equipmentOptions: StartingEquipmentOption[];
   onBack: () => void;
   onNext: () => void;
   step: number;
@@ -127,7 +130,13 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
   const bgToolsValid = !bgProf || form.chosenBgTools.length >= bgToolChoice.choose;
   const bgLanguagesValid = !bgProf || form.chosenBgLanguages.length >= bgLanguageChoice.choose;
   const bgFeatValid = !bgProf || bgProf.featChoice <= 0 || Boolean(form.chosenBgOriginFeatId);
-  const bgEquipmentValid = equipmentOptions.length === 0 || Boolean(form.chosenBgEquipmentOption);
+  const selectedEquipmentOption = equipmentOptions.find((option) => option.id === form.chosenBgEquipmentOption);
+  const equipmentItemChoices = selectedEquipmentOption?.structuredEntries?.filter((entry) => entry.kind === "itemChoice") ?? [];
+  const bgEquipmentValid = equipmentOptions.length === 0 || (Boolean(selectedEquipmentOption)
+    && equipmentItemChoices.every((entry) => {
+      const selectedIds = form.chosenFeatureChoices[entry.choiceKey] ?? [];
+      return selectedIds.length === 1 && entry.itemIds.includes(selectedIds[0]);
+    }));
   const nextDisabled =
     !form.bgId
     || !bgDetail
@@ -461,6 +470,32 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                             </div>
                           ))}
                         </div>
+                        {selected && option.structuredEntries?.filter((entry) => entry.kind === "itemChoice").map((entry) => (
+                          <div key={entry.choiceKey} style={{ marginTop: 10 }}>
+                            <div style={{ color: C.text, fontSize: "var(--fs-small)", fontWeight: 700, marginBottom: 6 }}>
+                              Choose {entry.sourceLabel}
+                            </div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                              {entry.itemIds.map((itemId) => {
+                                const isSelected = form.chosenFeatureChoices[entry.choiceKey]?.[0] === itemId;
+                                const label = itemId.replace(/^i_/, "").split("_").map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`).join(" ");
+                                return (
+                                  <button
+                                    key={itemId}
+                                    type="button"
+                                    onClick={() => setForm((prev) => ({
+                                      ...prev,
+                                      chosenFeatureChoices: { ...prev.chosenFeatureChoices, [entry.choiceKey]: [itemId] },
+                                    }))}
+                                    style={choiceButtonStyle(isSelected)}
+                                  >
+                                    {label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     );
                   })}
@@ -480,9 +515,11 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
   const side = bgDetail
     ? (() => {
         const prof = bgDetail.proficiencies;
-        const skills = prof?.skills ?? { fixed: bgDetail.proficiency.split(/[,;]/).map((value) => value.trim()).filter(Boolean), choose: 0, from: null };
+        // Structured facts only — canonical backgrounds always carry `proficiencies`, and their
+        // trait list holds only the synthesized Description/Feat entries (no prose to filter by name).
+        const skills = prof?.skills ?? { fixed: [], choose: 0, from: null };
         const languages = prof?.languages ?? { fixed: [], choose: 0, from: null };
-        const flavorTraits = bgDetail.traits.filter((trait) => !/tool|language|starting equipment/i.test(trait.name)).slice(0, 2);
+        const flavorTraits = bgDetail.traits.slice(0, 2);
 
         return (
           <div style={detailBoxStyle}>

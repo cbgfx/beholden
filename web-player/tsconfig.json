@@ -17,5 +17,5 @@
       "@beholden/shared/icons/*": ["../shared/src/icons/*"]
     }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "vite.config.ts", "../shared/src/types/css-modules.d.ts"]
 }

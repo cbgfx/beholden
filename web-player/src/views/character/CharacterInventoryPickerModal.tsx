@@ -181,7 +181,7 @@ export function InventoryItemPickerModal(props: {
                   return;
                 }
                 if (!detail) return;
-                props.onAdd({ source: "compendium", name: detail.name.replace(/\s*\(\d+\)$/, "").trim(), quantity: qty, itemId: detail.id, rarity: detail.rarity, type: detail.type, attunement: detail.attunement, magic: detail.magic, equippable: detail.equippable, weight: detail.weight, value: detail.value, proficiency: detail.proficiency, ac: detail.ac, stealthDisadvantage: detail.stealthDisadvantage, dmg1: detail.dmg1, dmg2: detail.dmg2, dmgType: detail.dmgType, properties: detail.properties, description: detailText });
+                props.onAdd({ source: "compendium", name: detail.name.replace(/\s*\(\d+\)$/, "").trim(), quantity: qty, itemId: detail.id, rarity: detail.rarity, type: detail.type, attunement: detail.attunement, magic: detail.magic, equippable: detail.equippable, weight: detail.weight, value: detail.value, proficiency: detail.proficiency, ac: detail.ac, stealthDisadvantage: detail.stealthDisadvantage, dmg1: detail.dmg1, dmg2: detail.dmg2, dmgType: detail.dmgType, properties: detail.properties, mastery: detail.mastery, modifiers: detail.modifiers, uses: detail.uses, spells: detail.spells, spellcasting: detail.spellcasting, spellTemplate: detail.spellTemplate, ammo: detail.ammo, weaponAmmo: detail.weaponAmmo, usage: detail.usage, bundle: detail.bundle, container: detail.container, ignoreWeight: detail.ignoreWeight, effects: detail.effects, description: detailText });
               }}
               disabled={createMode ? !customName.trim() : !detail}
               style={addBtnStyle(props.accentColor)}

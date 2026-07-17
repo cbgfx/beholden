@@ -16,8 +16,10 @@ export interface WeaponLike {
   name?: string | null;
   type?: string | null;
   properties?: string[] | null;
+  proficiency?: string | null;
   dmg1?: string | null;
   dmg2?: string | null;
+  magic?: boolean | null;
 }
 
 export type ScalingDice = Extract<AttackEffect["amount"], { kind: "fixed" | "per_scalar" | "named_progression" }>;
@@ -36,7 +38,7 @@ export function hasWeaponProperty(item: WeaponLike | null | undefined, code: str
 }
 
 export function isWeaponLike(item: WeaponLike | null | undefined): boolean {
-  return Boolean(item?.dmg1 || item?.dmg2) || /weapon/i.test(String(item?.type ?? "")) || /\bstaff\b/i.test(String(item?.type ?? ""));
+  return Boolean(item?.dmg1 || item?.dmg2);
 }
 
 export function isMeleeWeaponLike(item: WeaponLike | null | undefined): boolean {
@@ -49,11 +51,13 @@ export function isRangedWeaponLike(item: WeaponLike | null | undefined): boolean
 }
 
 export function isCrossbowWeaponLike(item: WeaponLike | null | undefined): boolean {
-  return /crossbow/i.test(String(item?.name ?? "")) || /crossbow/i.test(String(item?.type ?? ""));
+  const base = String(item?.proficiency ?? "").split(",").at(-1)?.trim() ?? "";
+  return /crossbow/i.test(base);
 }
 
 export function isLongbowOrShortbowLike(item: WeaponLike | null | undefined): boolean {
-  return /\b(?:longbow|shortbow)\b/i.test(String(item?.name ?? ""));
+  const base = String(item?.proficiency ?? "").split(",").at(-1)?.trim() ?? "";
+  return /^(?:longbow|shortbow)$/i.test(base);
 }
 
 export function weaponMatchesFilters(
@@ -87,7 +91,9 @@ export function weaponMatchesFilters(
       case "no_two_handed":
         return !hasWeaponProperty(item, "2H");
       case "thrown_weapon":
-        return hasWeaponProperty(item, "T") || /\bthrown\b/i.test(String(item?.type ?? ""));
+        return hasWeaponProperty(item, "T");
+      case "magic_weapon":
+        return isWeaponLike(item) && item?.magic === true;
       case "no_offhand":
         return context?.hasOtherWeapon === false;
       default:

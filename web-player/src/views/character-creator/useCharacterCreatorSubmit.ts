@@ -107,6 +107,8 @@ export function useCharacterCreatorSubmit(args: {
   fallbackHitDie?: number | null;
   fallbackSpecies?: string | null;
   existingHpCurrent?: number | null;
+  existingExtraFeatIds: string[];
+  existingInvocationFeatIds: string[];
   editId?: string;
   portraitFile: File | null;
   initialCampaignIdsRef: React.MutableRefObject<string[]>;
@@ -141,6 +143,8 @@ export function useCharacterCreatorSubmit(args: {
       fallbackHitDie,
       fallbackSpecies,
       existingHpCurrent,
+      existingExtraFeatIds,
+      existingInvocationFeatIds,
       editId,
       portraitFile,
       initialCampaignIdsRef,
@@ -184,6 +188,8 @@ export function useCharacterCreatorSubmit(args: {
         fallbackHitDie,
         fallbackSpecies,
         existingHpCurrent,
+        existingExtraFeatIds,
+        existingInvocationFeatIds,
         classifyFeatSelection,
       });
 

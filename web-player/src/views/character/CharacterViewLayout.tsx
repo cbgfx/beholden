@@ -102,6 +102,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
               ...derived.grantedSpellData.spells.map((spell) => spell.spellName),
               ...(derived.prof?.spells ?? []).map((spell) => spell.name),
             ])).sort((a, b) => a.localeCompare(b)),
+            hasRageResource: derived.classResourcesWithSpellCasts.some((resource) => resource.key === "rage"),
           }}
           abilitiesProps={{
             scores: derived.scores,

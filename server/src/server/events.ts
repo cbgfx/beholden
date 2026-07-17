@@ -69,6 +69,7 @@ export type BastionsDeltaPayload = {
 
 export type CompendiumChangedPayload =
   | { cleared: true }
+  | { liveReferencesMigrated: true; changedRows: number; changedReferences: number }
   | { imported: number; total: number }
   | {
       nativeImported: true;

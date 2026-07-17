@@ -1,0 +1,1327 @@
+{
+  "format": "beholden.compendium",
+  "schema": "grand",
+  "exportedAt": "2026-07-03T21:47:51.865Z",
+  "items": [
+    {
+      "id": "i_a_staff_of_ice_and_fire",
+      "name": "A Staff Of Ice And Fire",
+      "source": "Tarentha Arcana",
+      "type": "Staff",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "weight": 5,
+      "weapon": {
+        "twoHandedDamage": "1d6",
+        "damageType": "B",
+        "properties": [
+          "M",
+          "2H"
+        ]
+      },
+      "modifiers": [
+        {
+          "target": "melee_attacks",
+          "amount": 2
+        },
+        {
+          "target": "melee_damage",
+          "amount": 2
+        }
+      ],
+      "rolls": [
+        {
+          "formula": "2d6"
+        }
+      ],
+      "description": [
+        "The melee burns hot on one side, and emits frostbite on the other.",
+        "The Staff deals an extra fire or ice damage of 1d6.",
+        "Grants the user Fire and Ice Resistance. Requires Attunement."
+      ]
+    },
+    {
+      "id": "i_adventurers_belt",
+      "name": "Adventurer's Belt",
+      "type": "Adventuring Gear",
+      "rarity": "common",
+      "weight": 5,
+      "value": 55,
+      "description": [
+        "The Adventurer's Belt can fit 4 small items.",
+        "If you have a free hand, you can use an item as a bonus action.",
+        "You cannot give these items to another person as a Bonus Action",
+        "Replacing the items takes 1 minute.",
+        "The belt can be worn around the waist or as a bandolier, up to two on a creature."
+      ]
+    },
+    {
+      "id": "i_armor_of_ambriel",
+      "name": "Armor of Ambriel",
+      "source": "Tarantha Arcana",
+      "type": "Heavy Armor",
+      "rarity": "legendary",
+      "magical": true,
+      "equippable": true,
+      "weight": 35,
+      "armor": {
+        "ac": 19
+      },
+      "description": [
+        "A golden armor, over beautiful white chainmail made of Mithril.",
+        "You're considered Proficient with this armour while wearing it. No AC bonus from Dexterity.",
+        "Prime Aegis: You are immune to Necrotic Damage.",
+        "Holy Retribution: When you succeed a Saving Throw, the caster receives 3 Radiant Damage.",
+        "Grants Fly (Level 3 Transmutation Spell) once per Long Rest."
+      ]
+    },
+    {
+      "id": "i_bigger_dagger",
+      "name": "Bigger Dagger",
+      "source": "Tarentha Arcana",
+      "type": "Melee Weapon",
+      "rarity": "uncommon",
+      "magical": true,
+      "weight": 1,
+      "weapon": {
+        "damage": "1d4",
+        "damageType": "P",
+        "properties": [
+          "F",
+          "L",
+          "T"
+        ]
+      },
+      "modifiers": [
+        {
+          "target": "melee_attacks",
+          "amount": 1
+        },
+        {
+          "target": "melee_damage",
+          "amount": 1
+        }
+      ],
+      "description": "A large dagger that provides +1 to hit and +1 to intimidation. Dagger will grow to be slightly larger than anyone else's dagger in the room. On a failed intimidation check, the knife will turn into a spoon."
+    },
+    {
+      "id": "i_black_feather_pendant",
+      "name": "Black Feather Pendant",
+      "type": "Adventuring Gear",
+      "rarity": "uncommon",
+      "weight": 1,
+      "description": "A pendant of a black feather made of platinum, turned black."
+    },
+    {
+      "id": "i_blood_of_lathander",
+      "name": "Blood of Lathander",
+      "source": "Baldur's Gate 3",
+      "type": "Melee Weapon",
+      "rarity": "legendary",
+      "magical": true,
+      "weight": 4,
+      "proficiency": "simple, mace",
+      "weapon": {
+        "damage": "1d10+3",
+        "damageType": "B"
+      },
+      "modifiers": [
+        {
+          "target": "melee_attacks",
+          "amount": 3
+        },
+        {
+          "target": "melee_damage",
+          "amount": 1
+        }
+      ],
+      "description": [
+        "Lathander's Blessing: Once per Long Rest, when your hit points are reduced to 0, you regain 2-12 hit points. Allies within 9m also regain 1-6 hit points.",
+        "Lathander's Light: Sheds holy light in a 6m radius. In combat, fiends and undead standing in the light are Blinded, unlesss they succeed a Constitution Saving Throw.",
+        "Grants Sunbeam (Level 6 Evocation Spell) once per Long Rest",
+        "Proficiency: simple, mace"
+      ]
+    },
+    {
+      "id": "i_bloodreaver",
+      "name": "Bloodreaver",
+      "source": "Tarentha's Arcana",
+      "type": "Melee Weapon",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "weight": 6,
+      "proficiency": "martial, greatsword",
+      "weapon": {
+        "twoHandedDamage": "2d6",
+        "damageType": "S",
+        "properties": [
+          "2H"
+        ]
+      },
+      "modifiers": [
+        {
+          "target": "melee_attacks",
+          "amount": 2
+        },
+        {
+          "target": "melee_damage",
+          "amount": 2
+        }
+      ],
+      "description": [
+        "You have a +2 bonus to attack and damage rolls made with this Weapon.",
+        "Whenever you reduce a creature to 0 hp with an attack using this melee, you must immediately make another attack with this melee against a target in your melee range",
+        "Heavy: Small creatures have disadvantage on attack rolls with heavy melees. A heavy melee's size and bulk make it too large for a Small creature to use effectively.",
+        "Two-Handed: This melee requires two hands when you attack with it.",
+        "Cursed: Once attuned to this melee, you may not wield another. You refuse to let anyone else hold it, and if it is taken from you, you will stop at nothing to recover it.",
+        "Proficiency: martial, greatsword"
+      ]
+    },
+    {
+      "id": "i_boots_of_aid_and_comfort",
+      "name": "Boots of Aid and Comfort",
+      "source": "Tarentha Arcana",
+      "type": "Wondrous Item",
+      "rarity": "uncommon",
+      "magical": true,
+      "weight": 1,
+      "description": [
+        "Whenever you restore hit points to another creature, that creature also gains 3 temporary hit points.",
+        "A creature can't gain temporary hit points from these boots again until the start of your next turn."
+      ]
+    },
+    {
+      "id": "i_bracers_of_mutual_destruction",
+      "name": "Bracers of Mutual Destruction",
+      "type": "Wondrous",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "equippable": true,
+      "weight": 0,
+      "description": [
+        "As a bonus action the user can inflict twice their player character level in radiant damage in conjunction with a successful attack roll.",
+        "However, when activated this also inflicts two times the user’s level in radiant damage to the player character. One use per day."
+      ]
+    },
+    {
+      "id": "i_cane_of_smi",
+      "name": "Cane of Smi",
+      "source": "Tarentha Arcana",
+      "type": "Melee Weapon",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "weight": 5,
+      "weapon": {
+        "damage": "1d6",
+        "twoHandedDamage": "1d8",
+        "damageType": "B",
+        "properties": [
+          "M",
+          "2H"
+        ]
+      },
+      "description": [
+        "Grants 3 charges per day of the spell: Unseen Servant",
+        "The Staff deals an extra fire melee damage of 1d6.",
+        "Requires Attunement."
+      ]
+    },
+    {
+      "id": "i_cloak_of_illusions",
+      "name": "Cloak of Illusions",
+      "source": "Dungeon Master's Guide p. 158",
+      "type": "Wondrous",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "equippable": true,
+      "weight": 0,
+      "description": [
+        "While you wear this cloak, you can use a bonus action to project an illusion that makes you appear to be standing in a place near your actual location for one round, causing any creature to have disadvantage on attack rolls against you. The illusion disappears if you take damage. This property is suppressed while you are incapacitated, restrained, or otherwise unable to move.",
+        "At the beginning of the day, you have 1d4 charges."
+      ]
+    },
+    {
+      "id": "i_crimson_ponys_axe",
+      "name": "Crimson Pony's Axe",
+      "source": "Tarentha Arcana",
+      "type": "Melee Weapon",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "weight": 4,
+      "proficiency": "martial, battleaxe",
+      "weapon": {
+        "damage": "1d8",
+        "twoHandedDamage": "1d10",
+        "damageType": "S",
+        "properties": [
+          "V"
+        ]
+      },
+      "detail": "Can only be attuned by a creature that believes in the Pink Pony of the North.",
+      "modifiers": [
+        {
+          "target": "melee_attacks",
+          "amount": 1
+        },
+        {
+          "target": "melee_damage",
+          "amount": 1
+        }
+      ],
+      "description": [
+        "You gain a +1 bonus to attack and damage rolls made with this magic weapon.",
+        "Twice per long rest, immediately after you hit a creature with this weapon, you can cast Vicious Mockery as a bonus action targeting that creature. The target hears the infamous chorus of the Pink Pony Inn instead of your own insults.",
+        "Proficiency: martial, battleaxe."
+      ]
+    },
+    {
+      "id": "i_crystal_of_nephil_life",
+      "name": "Crystal of Nephil (Life)",
+      "type": "Wondrous",
+      "rarity": "uncommon",
+      "magical": true,
+      "attunement": true,
+      "equippable": true,
+      "weight": 1,
+      "detail": "Divine (requires attunement)",
+      "description": "Doubles HP and Life Expectancy. Removes all Curses"
+    },
+    {
+      "id": "i_crystal_of_nephil_matter",
+      "name": "Crystal of Nephil (Matter)",
+      "type": "Wondrous",
+      "rarity": "uncommon",
+      "magical": true,
+      "attunement": true,
+      "equippable": true,
+      "weight": 1,
+      "detail": "Divine (requires attunement)",
+      "description": "You gain the abilities of a Master Transmuter while wielding it."
+    },
+    {
+      "id": "i_crystal_of_nephil_mind",
+      "name": "Crystal of Nephil (Mind)",
+      "type": "Wondrous",
+      "rarity": "uncommon",
+      "magical": true,
+      "attunement": true,
+      "equippable": true,
+      "weight": 1,
+      "detail": "Divine (requires attunement)",
+      "description": [
+        "All who attack the user gain Disadvantage.",
+        "Once a day, the user can focus on the crystal and cast Scrying, with -10 Connection Save Modifier."
+      ]
+    },
+    {
+      "id": "i_crystal_of_nephil_nature",
+      "name": "Crystal of Nephil (Nature)",
+      "type": "Wondrous",
+      "rarity": "uncommon",
+      "magical": true,
+      "attunement": true,
+      "equippable": true,
+      "weight": 1,
+      "detail": "Divine (requires attunement)",
+      "description": [
+        "Allows you to speak and command animals.",
+        "Using a Bonus Action, you cast Absorb Elements at 2nd Level. You are healed for 10HP per round when in Nature."
+      ]
+    },
+    {
+      "id": "i_crystal_of_nephil_soul",
+      "name": "Crystal of Nephil (Soul)",
+      "type": "Wondrous",
+      "rarity": "uncommon",
+      "magical": true,
+      "attunement": true,
+      "equippable": true,
+      "weight": 1,
+      "detail": "Divine (requires attunement)",
+      "description": [
+        "Grants passage to the Shadowfell, understanding of Infernal, Abyssal, Celestial and Deep Speech.",
+        "Once per turn, the wielder regenerates half the damage dealt."
+      ]
+    },
+    {
+      "id": "i_crystal_of_nephil_space",
+      "name": "Crystal of Nephil (Space)",
+      "type": "Wondrous",
+      "rarity": "uncommon",
+      "magical": true,
+      "attunement": true,
+      "equippable": true,
+      "weight": 1,
+      "detail": "Divine (requires attunement)",
+      "description": [
+        "Allows for the casting of Teleportation.",
+        "Wherever it lays counts as a Permanent Circle that the attuned creature can teleport to."
+      ]
+    },
+    {
+      "id": "i_cutlass_of_avernus",
+      "name": "Cutlass of Avernus",
+      "source": "Tarentha Arcana",
+      "type": "Melee Weapon",
+      "rarity": "legendary",
+      "magical": true,
+      "attunement": true,
+      "weight": 25,
+      "weapon": {
+        "damage": "1d8",
+        "damageType": "S",
+        "range": "5",
+        "properties": [
+          "1h"
+        ]
+      },
+      "modifiers": [
+        {
+          "target": "melee_damage",
+          "amount": 2
+        }
+      ],
+      "description": [
+        "This beautifully crafted onyx blade houses an intelligent, ever hungry entity. The hilt beats with a blood red glow from under the handle's wraps.",
+        "Dark Aura. When you wield the sword unsheathed, you have advantage on Charisma (Intimidation) checks.",
+        "Devour the Weak. When you slay 25 Creatures, The Cutlass shifts in form into a larger, jagged blade that seeps shadow. Until the wielder's next short or long rest, all attacks deal an extra 2d6 necrotic damage.",
+        "Soul Link. If the wielder attempts to discard it in battle, for another weapon, it may attempt to devour the wielder. The Wielder must succeed on a DC 16 Constitution throw or have its soul devoured, killing them instantly.",
+        "Sentience. It is a sentient, chaotic evil weapon with an Intelligence of 16, a Wisdom of 12, and a Charisma of 18. It has hearing and darkvision out to a range of 60 ft. This weapon can understand Abyssal, Common and can communicate with anyone who's wielding it telepathically. While you are attuned to it, Craven Edge also understands every language you know.",
+        "Personality. It is cold, vicious, and seeks violence at any opportunity. It wishes to be used by merciless creatures who will feed it when ordered to."
+      ]
+    },
+    {
+      "id": "i_dagger_of_shock",
+      "name": "Dagger of Shock",
+      "type": "Melee Weapon",
+      "rarity": "uncommon",
+      "magical": true,
+      "attunement": true,
+      "weight": 1,
+      "proficiency": "simple, dagger",
+      "weapon": {
+        "damage": "1d4",
+        "damageType": "P",
+        "range": "20/60",
+        "properties": [
+          "F",
+          "L",
+          "T"
+        ]
+      },
+      "rolls": [
+        {
+          "formula": "2d8"
+        }
+      ],
+      "description": [
+        "When you attack a creature with this magic melee weapon, that target takes an extra 1d8 lightning damage. .",
+        "You have advantage on the attack roll if the target is wearing armor made of metal. On a hit, it can't take reactions until the start of its next turn.",
+        "Proficiency: simple, dagger"
+      ]
+    },
+    {
+      "id": "i_dark_justicars_armor",
+      "name": "Dark Justicar's Armor",
+      "source": "Baldur's Gate 3",
+      "type": "Medium Armor",
+      "rarity": "rare",
+      "magical": true,
+      "weight": 24,
+      "armor": {
+        "ac": 17
+      },
+      "description": [
+        "Shar's aspect winds its way though the patterns and pauldrons of this half plate, and any light cast nearby seems to almost quiver away from it, afraid.",
+        "For even the light knows that the clank of this armour is swiftly followed by the Dark Justiciar's silent blade.",
+        "Shar's Umbrae: while obscured, the wearer has advantage on stealth, and attack.",
+        "Shar's Aegis: Once per day, can cast Armor of Agathys"
+      ]
+    },
+    {
+      "id": "i_dead_mans_key",
+      "name": "Dead Man's Key",
+      "source": "Tarentha Arcana",
+      "type": "Wondrous",
+      "rarity": "common",
+      "magical": true,
+      "equippable": true,
+      "weight": 1,
+      "detail": "One of Four",
+      "description": "A bizarre Key with skeletal features. Carved into it is an Element."
+    },
+    {
+      "id": "i_drug_arcanum_dust",
+      "name": "Drug, Arcanum Dust",
+      "source": "Tarentha Arcana",
+      "type": "Potion",
+      "rarity": "uncommon",
+      "magical": true,
+      "weight": 0,
+      "value": 12,
+      "description": [
+        "Finely ground enchanted gemstones infused with unstable arcane magic.",
+        "As an action, you consume the dust and immediately gain 15 temporary hit points.",
+        "Immediately after consuming it, you must roll once on the Wild Magic Surge table.",
+        "You may then choose to roll on the Wild Magic Surge table up to two additional times.",
+        "Regardless of how many Wild Magic Surge rolls you choose to make, you gain 2 levels of Exhaustion.",
+        "The dust floods the mind with overwhelming confidence before leaving the body drained. Long-term abuse is known to fracture the mind and trigger uncontrollable magical outbursts."
+      ]
+    },
+    {
+      "id": "i_drug_whisperweed",
+      "name": "Drug, Whisperweed",
+      "source": "Tarentha Arcana",
+      "type": "Potion",
+      "rarity": "uncommon",
+      "weight": 0,
+      "value": 12,
+      "description": [
+        "A dried herb commonly smoked or brewed into tea.",
+        "Upon consumption, the user enters a calm euphoric state for approximately 1 hour.",
+        "During this time, the user may experience vivid dreams, distant whispers, or fleeting visions of departed souls. Whether these visions are genuine glimpses of the afterlife or merely hallucinations is left to the DM.",
+        "Whisperweed has no reliable mechanical benefit, though many mystics, mediums, and grieving families swear by it."
+      ]
+    },
+    {
+      "id": "i_fire_nunchaku",
+      "name": "Fire Nunchaku",
+      "source": "Tarentha Arcana",
+      "type": "Melee Weapon",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "weight": 4,
+      "weapon": {
+        "damage": "1d6",
+        "damageType": "B",
+        "properties": [
+          "M",
+          "2H"
+        ]
+      },
+      "modifiers": [
+        {
+          "target": "melee_attacks",
+          "amount": 1
+        },
+        {
+          "target": "melee_damage",
+          "amount": 3
+        }
+      ],
+      "rolls": [
+        {
+          "formula": "2d8"
+        }
+      ],
+      "description": [
+        "The melee constantly emits burning heat, burning to the touch. (Requires fire resist to use)",
+        "The Nunchaku deals an extra fire damage of 2d8.",
+        "Flame Ring: When spun in a circular manner, a ring of fire surrounds the wielder."
+      ]
+    },
+    {
+      "id": "i_fish_gutter",
+      "name": "Fish Gutter",
+      "source": "Tarentha Arcana",
+      "type": "Melee Weapon",
+      "rarity": "common",
+      "magical": true,
+      "weight": 3,
+      "weapon": {
+        "damage": "1d8+2",
+        "damageType": "S"
+      },
+      "modifiers": [
+        {
+          "target": "melee_damage",
+          "amount": 1
+        },
+        {
+          "target": "melee_attacks",
+          "amount": 1
+        }
+      ],
+      "description": [
+        "When used against Merfolk, your damage is doubled.",
+        "This golden dagger has a serrated edge which was specifically designed to rend scale and flesh."
+      ]
+    },
+    {
+      "id": "i_gold_ingot",
+      "name": "Gold Ingot",
+      "type": "Currency",
+      "rarity": "common",
+      "weight": 27,
+      "value": 1350,
+      "description": "A solid gold ingot."
+    },
+    {
+      "id": "i_golden_scarab_sash",
+      "name": "Golden Scarab Sash",
+      "source": "Tarentha Arcana",
+      "type": "Wondrous",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "equippable": true,
+      "weight": 1,
+      "description": [
+        "Allows the wearer to turn their body and gear into sand.",
+        "The wearer can pass through any nook or cranny that allows sand to flow.",
+        "Can only be used for 1 minute per short rest.",
+        "Covers the wearer with a small coat of armoured sand."
+      ]
+    },
+    {
+      "id": "i_guitar_of_crescendo",
+      "name": "Guitar of Crescendo",
+      "source": "Tarentha Arcana",
+      "type": "Melee Weapon",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "weight": 6,
+      "weapon": {
+        "damage": "1d8+1",
+        "damageType": "S"
+      },
+      "modifiers": [
+        {
+          "target": "melee_damage",
+          "amount": 1
+        },
+        {
+          "target": "melee_attacks",
+          "amount": 1
+        }
+      ],
+      "description": [
+        "A bright cherry red guitar. Gives +15ft range for all bard spells.",
+        "Once per day, can invoke the melody of the Rock God to do an additional 1d8 thunder damage."
+      ]
+    },
+    {
+      "id": "i_hawkeye",
+      "name": "Hawkeye",
+      "source": "Tarentha Arcana",
+      "type": "Ranged Weapon",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "weight": 3,
+      "proficiency": "martial, hand crossbow",
+      "weapon": {
+        "damage": "1d6",
+        "damageType": "P",
+        "range": "30/120",
+        "properties": [
+          "M",
+          "A",
+          "L",
+          "LD"
+        ]
+      },
+      "modifiers": [
+        {
+          "target": "ranged_attacks",
+          "amount": 1
+        },
+        {
+          "target": "ranged_damage",
+          "amount": 1
+        }
+      ],
+      "description": [
+        "You have a +1 bonus to attack and damage rolls made with this bow.",
+        "It doesn't use any ammunition, instead creates magical bolts.",
+        "The wielder can speak three Command Words:",
+        "Poison: adds 1d4 Poison damage",
+        "Pin: pins the creature if they fail a DC12 Strength or Dexterity Saving throw",
+        "Rope: Used as a grappling hook",
+        "Proficiency: martial, hand crossbow",
+        "Requires attunement"
+      ]
+    },
+    {
+      "id": "i_heart_of_anubis",
+      "name": "Heart of Anubis",
+      "source": "Tarentha Arcana",
+      "type": "Wondrous",
+      "rarity": "legendary",
+      "magical": true,
+      "equippable": true,
+      "weight": 1,
+      "description": [
+        "A beautiful blue and gold striped pendant. It is encrusted with an Eye of Horus, where the iris is a sapphire.",
+        "When the holder dies, he is automatically brought back as an Undead creature, maintaining all stats and memories."
+      ]
+    },
+    {
+      "id": "i_helm_of_yurtrus",
+      "name": "Helm of Yurtrus",
+      "type": "Wondrous",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "equippable": true,
+      "weapon": {
+        "damage": "2d4",
+        "damageType": "P"
+      },
+      "detail": "rare, requires attunement",
+      "description": "This helm grants immunity to poison damage and the poisoned condition. It also bestows upon the wearer a bite attack which has a reach of 5 feet. \n\t\tYour proficiency bonus applies to the attack roll. On a hit, the target takes piercing damage equal to 2d4 + your Strength modifier and must succeed on a DC 14 Constitution saving throw or take 2d4 poison damage."
+    },
+    {
+      "id": "i_key_tana",
+      "name": "Key-tana",
+      "source": "Tarentha Arcana",
+      "type": "Melee Weapon",
+      "rarity": "artifact",
+      "magical": true,
+      "attunement": true,
+      "weight": 3,
+      "proficiency": "martial, longsword",
+      "weapon": {
+        "damage": "1d8",
+        "twoHandedDamage": "1d10",
+        "damageType": "S",
+        "properties": [
+          "M",
+          "V"
+        ]
+      },
+      "modifiers": [
+        {
+          "target": "melee_attacks",
+          "amount": 3
+        },
+        {
+          "target": "melee_damage",
+          "amount": 3
+        }
+      ],
+      "description": [
+        "The wielder gains the following properties:",
+        "• Can't be charmed or Frightened",
+        "• Speed increased by +10ft",
+        "• Holy Water within 10ft of the Key-tana are destroyed",
+        "• You take 10d10 psychic damage when you attune to it",
+        "No creature can rest within 300ft of the Sword as long as it is unattuned to.",
+        "Temple of Spirits: While the sword is on your person, you add a d10 to your initiative at the start of every combat. In addition, when you use an action to attack with the sword, you can transfer some or all of its attack bonus to your Armor Class instead. The adjusted bonuses remain in effect until the start of your next turn.",
+        "Spells: While the sword is on your person, you can use an action to cast one of the following spells (save 18) from it: call lightning, divine word, or finger of death. Once you use the sword to cast a spell, you can't cast that spell again from it until the next dawn.",
+        "All three are needed to unlock the Seal of Vecna.",
+        "Versatile: This weapon can be used with one or two hands.",
+        "Proficiency: martial, longsword"
+      ]
+    },
+    {
+      "id": "i_koto_katana",
+      "name": "Koto Katana",
+      "source": "Tarentha Arcana",
+      "type": "Melee Weapon",
+      "rarity": "legendary",
+      "magical": true,
+      "attunement": true,
+      "weight": 2,
+      "weapon": {
+        "damage": "1d8",
+        "twoHandedDamage": "1d10",
+        "damageType": "S",
+        "properties": [
+          "M",
+          "V"
+        ]
+      },
+      "modifiers": [
+        {
+          "target": "melee_attacks",
+          "amount": 1
+        },
+        {
+          "target": "melee_damage",
+          "amount": 1
+        }
+      ],
+      "rolls": [
+        {
+          "formula": "2d8"
+        }
+      ],
+      "description": [
+        "Forged by Shakiko MacLeod in lightning. It releases small, harmless lightning bolts periodically after slaying a creature.",
+        "Upon killing a creature, receive an extra 100XP.",
+        "You have resistance to lightning damage.",
+        "Lightning: Hits for an extra 1d8 lightning damage.",
+        "Immortality: The wielder can only be killed by decapitation."
+      ]
+    },
+    {
+      "id": "i_lute_of_set",
+      "name": "Lute of Set",
+      "source": "Tarentha Arcana",
+      "type": "Melee Weapon",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "weight": 6,
+      "weapon": {
+        "damage": "1d8+1",
+        "damageType": "S"
+      },
+      "modifiers": [
+        {
+          "target": "melee_damage",
+          "amount": 1
+        },
+        {
+          "target": "melee_attacks",
+          "amount": 1
+        }
+      ],
+      "description": [
+        "this lute is shaped like a battle axe. The neck is distinctively snake shaped.",
+        "Once a day, you can strum a specific song to cast: Sending."
+      ]
+    },
+    {
+      "id": "i_moonlight_harp",
+      "name": "Moonlight Harp",
+      "source": "Tarentha Arcana",
+      "type": "Melee Weapon",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "weight": 6,
+      "weapon": {
+        "damage": "1d6+1",
+        "damageType": "S"
+      },
+      "modifiers": [
+        {
+          "target": "melee_damage",
+          "amount": 1
+        },
+        {
+          "target": "melee_attacks",
+          "amount": 1
+        }
+      ],
+      "description": [
+        "The Harp functions as a bow and produces magical sound arrows.",
+        "Once a day, you can strum a specific song to cast: Unearthly Chorus."
+      ]
+    },
+    {
+      "id": "i_necklace_of_loss",
+      "name": "Necklace of Loss",
+      "type": "Wondrous",
+      "rarity": "artifact",
+      "magical": true,
+      "equippable": true,
+      "weight": 1,
+      "description": [
+        "A mirrored onyx amulet with a purple rim. When held close to the ear, one can hear a song coming from a far distance.",
+        "Shaped like a tear, and despite its mirrored finish, you cannot see a reflection in it. From afar it looks worthless, but when held, its value seems great."
+      ]
+    },
+    {
+      "id": "i_necklace_of_stoneskin",
+      "name": "Necklace of Stoneskin",
+      "type": "Wondrous",
+      "rarity": "uncommon",
+      "magical": true,
+      "equippable": true,
+      "weight": 1,
+      "value": 1,
+      "description": [
+        "An uneven stone necklace. It seems like it was crafted by a blind child.",
+        "When worn, will protect the user from death by turning them to stone when reduced to zero hit points. User will pop back with half HP and 2 Exhaustion after 1d4 days on a successful Constitution roll of 15.",
+        "On a failed save, the user will remain as Stone until a restoration spell is cast."
+      ]
+    },
+    {
+      "id": "i_nimbuss_edge",
+      "name": "Nimbus's Edge",
+      "source": "Tarentha Arcana",
+      "type": "Melee Weapon",
+      "rarity": "uncommon",
+      "magical": true,
+      "attunement": true,
+      "weight": 6,
+      "weapon": {
+        "damage": "1d8",
+        "twoHandedDamage": "1d10",
+        "damageType": "S",
+        "properties": [
+          "M",
+          "V"
+        ]
+      },
+      "modifiers": [
+        {
+          "target": "melee_damage",
+          "amount": 1
+        }
+      ],
+      "rolls": [
+        {
+          "formula": "1d8"
+        }
+      ],
+      "description": [
+        "Forged by the tears of an Edge Lord while half naked, it makes sure you become unlikable.",
+        "You begin to distance yourself from all your companions.",
+        "Once a day, roll a Wisdom Saving Throw (DC13), on a fail, become a pain in the ass for the party.",
+        "Materia Attack: After 4 turns, you gain 1d10 extra damage for one turn."
+      ]
+    },
+    {
+      "id": "i_nyxfall_gyre",
+      "name": "Nyxfall Gyre",
+      "source": "Tarentha Arcana",
+      "type": "Rod",
+      "rarity": "artifact",
+      "magical": true,
+      "weight": 8,
+      "description": [
+        "A Pandemonium-forged device engineered to force resonance between unstable planar structures and local reality.",
+        "As an action, you activate the Gyre, creating a howling vortex of shadow-wind that anchors unstable planar phenomena.",
+        "Floating landmasses, planar breaches, drifting fortresses, portals, and similar reality distortions within range become magically stabilized at the DM's discretion.",
+        "The Gyre cannot create planar phenomena; it merely forces existing instability into temporary equilibrium.",
+        "Once activated, the Nyxfall Gyre cannot be used again for 7 days."
+      ]
+    },
+    {
+      "id": "i_oathband_ring",
+      "name": "Oathband Ring",
+      "source": "Tarentha Arcana",
+      "type": "Ring",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "equippable": true,
+      "weight": 0,
+      "description": [
+        "While wearing this ring, you can perform a 4-hour ritual to bind one nonliving object to it.",
+        "Only one object can be bound to the ring at a time. Binding a new object immediately ends the previous bond.",
+        "While the bound object is on the same plane of existence, you can speak the ring's command word to teleport it instantly to an unoccupied space within 5 feet of you."
+      ]
+    },
+    {
+      "id": "i_orb_of_teleportation",
+      "name": "Orb of Teleportation",
+      "source": "Tarentha Arcana",
+      "type": "Wondrous",
+      "rarity": "common",
+      "magical": true,
+      "equippable": true,
+      "weight": 1,
+      "detail": "Ship Upgrade",
+      "description": "When properly installed, allows a Gargantuan structure to teleport once a week up to 50 miles."
+    },
+    {
+      "id": "i_organ_reorganizer",
+      "name": "Organ Reorganizer",
+      "source": "Baldur's Gate 3",
+      "type": "Melee Weapon",
+      "rarity": "rare",
+      "magical": true,
+      "weight": 2,
+      "weapon": {
+        "damage": "1d6+2",
+        "damageType": "P",
+        "properties": [
+          "L",
+          "V"
+        ]
+      },
+      "modifiers": [
+        {
+          "target": "weapon_attacks",
+          "amount": 1
+        }
+      ],
+      "description": "Organ Rearranger: Reduce the number you need to roll a Critical Hit while attacking by 1. When they roll 2 damage or less, reroll the dice, taking the highest result."
+    },
+    {
+      "id": "i_ring_of_dragon_riding",
+      "name": "Ring of Dragon Riding",
+      "type": "Ring",
+      "rarity": "very rare",
+      "magical": true,
+      "attunement": true,
+      "equippable": true,
+      "weight": 0,
+      "description": "You can control and command the Dragon that is bound to this Ring."
+    },
+    {
+      "id": "i_ring_of_fire",
+      "name": "Ring of Fire",
+      "type": "Ring",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "equippable": true,
+      "weight": 0,
+      "description": "Everything that is metal within a 20ft radius suffers from Heat Metal, including the wielder."
+    },
+    {
+      "id": "i_ring_of_tracking",
+      "name": "Ring of Tracking",
+      "type": "Ring",
+      "rarity": "uncommon",
+      "magical": true,
+      "attunement": true,
+      "equippable": true,
+      "weight": 1,
+      "value": 15,
+      "description": "a beautiful gold ring, when attuned to it the user knows the location of the ring at all times."
+    },
+    {
+      "id": "i_rock_of_healing",
+      "name": "Rock of Healing",
+      "type": "Ring",
+      "rarity": "uncommon",
+      "magical": true,
+      "equippable": true,
+      "weight": 1,
+      "value": 12,
+      "description": [
+        "A simple smooth rock with a glyph of healing symbol on it. As a bonus action the rock can be thrown up to 20ft.",
+        "On a hit roll 1d6 and on a 4 or higher the rock heals them for 10hp, on a 3 or lower the rock inflicts 10 bludgeoning damage. Rock has 8 charges."
+      ]
+    },
+    {
+      "id": "i_scroll_of_divinity",
+      "name": "Scroll of Divinity",
+      "type": "Wondrous",
+      "rarity": "common",
+      "magical": true,
+      "equippable": true,
+      "weight": 0,
+      "detail": "Divine",
+      "description": [
+        "You cannot read this. You feel Divine power overflowing from the item as it radiates a golden, pure light.",
+        "At the beginning of the day, you must pass a Wisdom Throw of 17 in order to gain the following benefits:",
+        "• Your strongest Ability Score is increased by your Proficiency Modifier as long as you hold this text.",
+        "• For every subsequent Scroll possessed, your subsequent strongest ability is increased by your Proficiency Modifier.",
+        "At the start of every day, you must roll an Arcana Saving Throw (DC 25) or fall prey to Madness."
+      ]
+    },
+    {
+      "id": "i_scythe_of_ghouls",
+      "name": "Scythe of Ghouls",
+      "source": "Tarentha's Arcana",
+      "type": "Melee Weapon",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "weight": 8,
+      "weapon": {
+        "twoHandedDamage": "1d8",
+        "damageType": "S",
+        "properties": [
+          "2H"
+        ]
+      },
+      "modifiers": [
+        {
+          "target": "melee_attacks",
+          "amount": 2
+        },
+        {
+          "target": "melee_damage",
+          "amount": 2
+        }
+      ],
+      "description": [
+        "The Scythe glows an eerie red glow. It speaks to the wielder.",
+        "When a creature drops to 0 Hit Points within 15ft, the Scythe consumes an action to turn the fallen into a ghoul that obeys you.",
+        "The ghoul cannot be dismissed."
+      ]
+    },
+    {
+      "id": "i_shield_of_devotion",
+      "name": "Shield of Devotion",
+      "source": "Baldur's Gate 3",
+      "type": "Shield",
+      "rarity": "very rare",
+      "magical": true,
+      "equippable": true,
+      "weight": 6,
+      "armor": {
+        "ac": 2,
+        "strength": 0
+      },
+      "modifiers": [
+        {
+          "target": "ac",
+          "amount": 1
+        }
+      ],
+      "description": [
+        "While holding this shield, you have a +1 bonus to AC. This bonus is in addition to the shield's normal bonus to AC.",
+        "Grants Aid (Level 3 Abjuration spell) once per Long Rest."
+      ]
+    },
+    {
+      "id": "i_sir_bearrington",
+      "name": "Sir Bearrington",
+      "type": "Wondrous",
+      "rarity": "uncommon",
+      "magical": true,
+      "equippable": true,
+      "weight": 1,
+      "value": 5,
+      "description": [
+        "a small teddy bear that carries a wooden sword and a small helmet.",
+        "Can be used to keep guard while people sleep, and will wake the owner when danger arrives. In true life or death situations it will defend the user.",
+        "Sir Bearrington has 3hp, +1 to atack and on hit deals 1 bludgeoning damage."
+      ]
+    },
+    {
+      "id": "i_soul_reaver",
+      "name": "Soul Reaver",
+      "source": "Tarentha Arcana",
+      "type": "Melee Weapon",
+      "rarity": "legendary",
+      "magical": true,
+      "attunement": true,
+      "weight": 50,
+      "weapon": {
+        "damage": "1d12",
+        "damageType": "S",
+        "range": "10",
+        "properties": [
+          "2h"
+        ]
+      },
+      "modifiers": [
+        {
+          "target": "melee_attacks",
+          "amount": 2
+        },
+        {
+          "target": "melee_damage",
+          "amount": 2
+        },
+        {
+          "target": "spell_attack",
+          "amount": 2
+        }
+      ],
+      "description": [
+        "A former shell of itself, The Soul Reaver attaches itself to the wielder and compels the creature to kill.",
+        "Vampiric Blade: When the Soul Reaver is used to deal damage, the wielder regenerates half the damage dealt.",
+        "Soul Harvest: 15 Constitution Saving throw  at the beginning of every day to see if the creature gives in to the blood lust of the Blade.",
+        "On a failure, if the blood lust is not fed with one life, take a permanent -10 to HP.",
+        "If the Wielder dies, the Soul Reaver attaches itself to the killer. If the Wielder is killed by the Soul Reaver, the wielder turns into a ghoul."
+      ]
+    },
+    {
+      "id": "i_spear_of_heraldry",
+      "name": "Spear of Heraldry",
+      "source": "Tarentha Arcana",
+      "type": "Wondrous",
+      "rarity": "common",
+      "magical": true,
+      "equippable": true,
+      "weight": 1,
+      "detail": "One of Three",
+      "description": "A staff topped with Magikite used to open the Spirit Temple in Korroset."
+    },
+    {
+      "id": "i_spellthief",
+      "name": "Spellthief",
+      "source": "Baldur's Gate 3",
+      "type": "Ranged Weapon",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "weight": 6,
+      "weapon": {
+        "damage": "1d8+1",
+        "damageType": "P"
+      },
+      "description": "Arcane Vehemence: Once per Short Rest, you regain a Level 1 spell slot when you land a Critical Hit with the Spellthief."
+    },
+    {
+      "id": "i_staff_of_hollow_bones",
+      "name": "Staff of Hollow Bones",
+      "source": "Tarentha Arcana",
+      "type": "Staff",
+      "rarity": "rare",
+      "magical": true,
+      "weight": 5,
+      "weapon": {
+        "damage": "1d6",
+        "twoHandedDamage": "1d8",
+        "damageType": "B",
+        "properties": [
+          "M",
+          "2H"
+        ]
+      },
+      "modifiers": [
+        {
+          "target": "melee_attacks",
+          "amount": 2
+        },
+        {
+          "target": "melee_damage",
+          "amount": 2
+        }
+      ],
+      "rolls": [
+        {
+          "formula": "1d8 + 8"
+        }
+      ],
+      "description": [
+        "The staff is made of bones and glows a eerily pale blue, with a faint scent of death.",
+        "The Staff deals an extra necrotic damage of 1d8.",
+        "Create Undead: As a bonus action, you can use the Create Undead Spell once per day.",
+        "Spare The Dying: Once a day, if the wielder drops to 0 HP, the Staff will cast Spare The Dying.",
+        "After Sparing you, roll a d20, on a 10 or lower, the staff shatters.",
+        "Requires Attunement."
+      ]
+    },
+    {
+      "id": "i_sword_of_beset",
+      "name": "Sword of Beset",
+      "source": "Tarentha Arcana",
+      "type": "Melee Weapon",
+      "rarity": "uncommon",
+      "magical": true,
+      "attunement": true,
+      "weight": 2,
+      "weapon": {
+        "damage": "1d6",
+        "damageType": "S",
+        "properties": [
+          "M",
+          "V"
+        ]
+      },
+      "modifiers": [
+        {
+          "target": "melee_attacks",
+          "amount": 2
+        }
+      ],
+      "description": "This sword charms the wielder into becoming obsessed with the first creature seen after the attunement is complete. The attachment grows stronger with time, and the wielder will do anything to protect their target of obsession."
+    },
+    {
+      "id": "i_talisman_of_vampiric_touch",
+      "name": "Talisman of Vampiric Touch",
+      "source": "Tarentha Arcana",
+      "type": "Wondrous",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "equippable": true,
+      "weight": 1,
+      "description": [
+        "Gives the User access to the Life Drain spell.",
+        "Immortal: The user does not age.",
+        "Weaknesses: The user has the following flaws:",
+        "Sunlight Hypersensitivity. The user takes 20 radiant damage when it starts its turn in sunlight. While in sunlight, it has disadvantage on Attack rolls and Ability Checks.",
+        "Stake to the Heart. If a piercing melee made of wood is driven into the user's heart, the user dies.",
+        "Forbiddance. The vampire can't enter a residence without an invitation from one of the occupants."
+      ]
+    },
+    {
+      "id": "i_the_compass_of_desire",
+      "name": "The Compass of Desire",
+      "source": "Tarentha Arcana",
+      "type": "Wondrous",
+      "rarity": "rare",
+      "magical": true,
+      "attunement": true,
+      "equippable": true,
+      "weight": 5,
+      "description": [
+        "Points to that which the wielder desires most.",
+        "Must make a Wisdom or Constitution Saving Throw higher than 15 per week to point in the desired direction"
+      ]
+    },
+    {
+      "id": "i_tome_of_the_lich",
+      "name": "Tome of the Lich",
+      "type": "Wondrous",
+      "rarity": "artifact",
+      "magical": true,
+      "equippable": true,
+      "weight": 2,
+      "description": [
+        "The tome is bound with blackened leather and blood red cracks.",
+        "It radiates heat, but when touched is cold.",
+        "It details the steps needed to become a Lich:",
+        "1- Create a Phylactery: The object must be prepared with marks of binding made of silver, which costs 5,000g to inscribe. DC20 Arcana",
+        "2- Potion of Transformation: A vial of wyvern's blood, a vial of Gorgon blood, a vial of pure Arsenic, crushed nightshade, the heart of a humanoid sacrifice half your age.",
+        "3- Ritual of Binding: Area of Desecration, inscribe the runes (DC 15 Arcana) in a circle, drink the potion of transformation, and die.",
+        "4- Imprisonment Spell cast on your soul as it leaves the body, binding it to your Phylactery."
+      ]
+    },
+    {
+      "id": "i_tome_of_undead",
+      "name": "Tome of Undead",
+      "type": "Wondrous",
+      "rarity": "very rare",
+      "magical": true,
+      "equippable": true,
+      "weight": 0,
+      "description": [
+        "With this Tome in your hand, you are able to understand and speak to the dead.",
+        "Can speak: Infernal and Abyssal"
+      ]
+    },
+    {
+      "id": "i_vial_of_frozen_woe",
+      "name": "Vial of Frozen Woe",
+      "source": "Tarentha Arcana",
+      "type": "Wondrous",
+      "rarity": "common",
+      "equippable": true,
+      "weight": 1,
+      "description": [
+        "A vial which holds spores of dust from Fellrim.",
+        "The dust, if inhaled, causes the disease of the Frozen Woe to settle in."
+      ]
+    },
+    {
+      "id": "i_wand_of_tomato_throwing",
+      "name": "Wand of Tomato Throwing",
+      "type": "Wondrous",
+      "rarity": "uncommon",
+      "magical": true,
+      "equippable": true,
+      "weight": 1,
+      "value": 8,
+      "description": "This wand made from a bramblewood tree limb fires spectral tomatoes as an action dealing 1 physic damage for each hit. 100ft range."
+    },
+    {
+      "id": "i_wapiras_crown",
+      "name": "Wapira's Crown",
+      "source": "Tarentha Arcana",
+      "type": "Wondrous Item",
+      "rarity": "uncommon",
+      "magical": true,
+      "attunement": true,
+      "detail": "Requires attunement by a spellcaster.",
+      "weight": 2,
+      "description": [
+        "Legends tell of a giant elk and a druid whose friendship transcended death. When the elk sacrificed its life, the druid forged this crown so that its compassion would endure forever.",
+        "**Crowning Glory.** Whenever you restore hit points to another creature with a spell, you regain 1d6 hit points."
+      ]
+    }
+  ]
+}

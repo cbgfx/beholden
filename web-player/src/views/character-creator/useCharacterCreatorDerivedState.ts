@@ -19,6 +19,7 @@ import {
   getClassExpertiseChoices,
   getMaxSlotLevel,
   getSlotLevelTriggeredSpellChoicesUpToLevel,
+  normalizeChoiceKey,
   parseSkillList,
 } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import {
@@ -113,9 +114,14 @@ export function useCharacterCreatorDerivedState(args: {
       .filter((choice) =>
         !choice.expertise
         && choice.choice?.count.kind === "fixed"
-        && ["skill", "tool", "language"].includes(choice.choice?.optionCategory ?? "")
+        && ["skill", "tool", "language", "saving_throw"].includes(choice.choice?.optionCategory ?? "")
+        && (
+          !choice.choice?.ifProficient
+          || (classDetail?.proficiencies?.savingThrows ?? []).map(normalizeChoiceKey).includes(normalizeChoiceKey(choice.choice.ifProficient))
+          || (form.chosenFeatureChoices[`classfeature:${choice.id}`]?.length ?? 0) > 0
+        )
       ),
-    [selectedClassFeatureEffects]
+    [classDetail?.proficiencies?.savingThrows, form.chosenFeatureChoices, selectedClassFeatureEffects]
   );
   const selectedInvocationEffects = React.useMemo(
     () => classInvocations
@@ -129,12 +135,17 @@ export function useCharacterCreatorDerivedState(args: {
           text: invocation.text ?? "",
         },
         text: invocation.text ?? "",
+        classEffects: invocation.effects,
       } satisfies ParseFeatureEffectsInput)),
     [classDetail?.name, classInvocations, form.chosenInvocations, selectedClassSummary?.name]
   );
   const selectedInvocationSpellChoices = React.useMemo(
-    () => collectSpellChoicesFromEffects(selectedInvocationEffects),
-    [selectedInvocationEffects]
+    () => collectSpellChoicesFromEffects(selectedInvocationEffects).map((choice) => {
+      const invocationId = choice.source.id.replace(/^creator-invocation:/, "");
+      const copies = Math.max(1, form.chosenInvocations.filter((id) => id === invocationId).length);
+      return choice.count.kind === "fixed" ? { ...choice, count: { ...choice.count, value: choice.count.value * copies } } : choice;
+    }),
+    [form.chosenInvocations, selectedInvocationEffects]
   );
   const selectedFeatGrantedAbilityBonuses = React.useMemo(() => {
     return deriveFeatGrantedAbilityBonuses({
@@ -178,7 +189,7 @@ export function useCharacterCreatorDerivedState(args: {
     [classDetail]
   );
   const step5CoreLanguageChoice = React.useMemo(
-    () => getCoreLanguageChoiceFromRules(raceDetail, STANDARD_55E_LANGUAGES),
+    () => getCoreLanguageChoiceFromRules(raceDetail?.parsedChoices ?? null, STANDARD_55E_LANGUAGES),
     [raceDetail]
   );
   const step5ClassFeatChoices = React.useMemo(
@@ -276,6 +287,13 @@ export function useCharacterCreatorDerivedState(args: {
   const step6ClassFeatureSpellChoices = React.useMemo<CreatorResolvedSpellChoiceEntry[]>(
     () => selectedClassFeatureSpellChoices.flatMap((effect) => {
       if (effect.count.kind !== "fixed") return [];
+      if (effect.ifKnown) {
+        const known = classCantrips.some((spell) =>
+          form.chosenCantrips.includes(spell.id)
+          && spell.name.trim().toLowerCase() === effect.ifKnown!.trim().toLowerCase()
+        );
+        if (!known) return [];
+      }
       return [{
         key: `classfeature:${effect.id}`,
         title: effect.level === 0 ? "Bonus Cantrip" : effect.level == null ? "Bonus Spell" : `Bonus Level ${effect.level} Spell`,
@@ -287,13 +305,13 @@ export function useCharacterCreatorDerivedState(args: {
         listNames: effect.spellLists,
       }];
     }),
-    [maxSpellLevel, selectedClassFeatureSpellChoices]
+    [classCantrips, form.chosenCantrips, maxSpellLevel, selectedClassFeatureSpellChoices]
   );
   const step6InvocationSpellChoices = React.useMemo<CreatorResolvedSpellChoiceEntry[]>(
     () => selectedInvocationSpellChoices.flatMap((effect) => {
       if (effect.count.kind !== "fixed") return [];
       return [{
-        key: `invocation:${effect.id}`,
+        key: `invocation:${effect.choiceId ?? effect.id}`,
         title: effect.level === 0 ? "Invocation Bonus Cantrip" : effect.level == null ? "Invocation Bonus Spell" : `Invocation Bonus Level ${effect.level} Spell`,
         sourceLabel: effect.source.name,
         count: effect.count.value,
@@ -301,10 +319,16 @@ export function useCharacterCreatorDerivedState(args: {
         note: effect.note ?? effect.summary,
         listNames: effect.spellLists,
         schools: effect.schools,
-        ritualOnly: /\britual tag\b/i.test(effect.note ?? ""),
+        ritualOnly: effect.filters?.ritual === true,
+        damageOnly: effect.filters?.damage === true,
+        attackOnly: effect.filters?.attack === true,
+        allowedSpellIds: effect.filters?.known === true
+          ? form.chosenCantrips
+          : undefined,
+        grantsSpell: effect.mode !== "select",
       }];
     }),
-    [selectedInvocationSpellChoices]
+    [form.chosenCantrips, selectedInvocationSpellChoices]
   );
   const step6SlotGrowthSpellChoices = React.useMemo<CreatorResolvedSpellChoiceEntry[]>(
     () => getSlotLevelTriggeredSpellChoicesUpToLevel(
@@ -410,24 +434,21 @@ export function useCharacterCreatorDerivedState(args: {
   }, [form.chosenLevelUpFeats, levelUpFeatDetails]);
 
   const eligibleInvocationIds = React.useMemo(() => {
-    const chosenCantripNames = classCantrips
-      .filter((spell) => form.chosenCantrips.includes(spell.id))
-      .map((spell) => spell.name);
-    const chosenDamageCantripNames = classCantrips
-      .filter((spell) => form.chosenCantrips.includes(spell.id) && spellLooksLikeDamageSpell(spell))
-      .map((spell) => spell.name);
-    const chosenInvocationNames = classInvocations
-      .filter((invocation) => form.chosenInvocations.includes(invocation.id))
-      .map((invocation) => invocation.name);
+    const selectedCantrips = classCantrips.filter((spell) => form.chosenCantrips.includes(spell.id));
+    const hasDamageCantrip = selectedCantrips.some(spellLooksLikeDamageSpell);
+    const hasAttackDamageCantrip = selectedCantrips.some((spell) =>
+      spellLooksLikeDamageSpell(spell)
+      && (Array.isArray(spell.check) ? spell.check : [spell.check]).includes("attack")
+    );
 
     return new Set(
       classInvocations
         .filter((invocation) =>
-          invocationPrerequisitesMet(invocation.text ?? "", {
+          invocationPrerequisitesMet(invocation.prerequisite, {
             level: form.level,
-            chosenCantripNames,
-            chosenDamageCantripNames,
-            chosenInvocationNames,
+            hasDamageCantrip,
+            hasAttackDamageCantrip,
+            chosenTalentIds: form.chosenInvocations,
           })
         )
         .map((invocation) => invocation.id)

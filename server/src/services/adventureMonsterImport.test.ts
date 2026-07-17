@@ -5,7 +5,7 @@ import { planAdventureMonsterImports } from "./adventureMonsterImport.js";
 test("adventure import reuses an existing monster by canonical name", () => {
   const result = planAdventureMonsterImports([{
     format: "beholden.compendium",
-    version: 2,
+    schema: "grand",
     category: "monsters",
     entries: [
       { id: "ai_goblin", name: "  Goblin  ", classification: {} },

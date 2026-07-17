@@ -23,6 +23,7 @@ function compactChoices(value: unknown): JsonRecord | undefined {
   if (c.skillChoice != null) compact.skillChoice = c.skillChoice;
   if (c.toolChoice != null) compact.toolChoice = c.toolChoice;
   if (c.languageChoice != null) compact.languageChoice = c.languageChoice;
+  if (c.spellcastingAbilityChoice != null) compact.spellcastingAbilityChoice = c.spellcastingAbilityChoice;
   return Object.keys(compact).length > 0 ? compact : undefined;
 }
 
@@ -39,6 +40,8 @@ export function compactTrait(raw: unknown): JsonRecord {
   if (scalingRolls.length > 0) compact.scalingRolls = scalingRolls;
   const psp = list(trait.preparedSpellProgression);
   if (psp.length > 0) compact.preparedSpellProgression = psp;
+  const effects = list(trait.effects);
+  if (effects.length > 0) compact.effects = effects;
   const resolution = trait.resolution;
   if (resolution === "automatic" || resolution === "manual" || resolution === "mixed") {
     compact.resolution = resolution;
@@ -56,17 +59,20 @@ export function compactSpeciesEntry(entry: JsonRecord): JsonRecord {
   const source = text(entry.source);
   if (source) compact.source = source;
   if (entry.size != null) compact.size = entry.size;
+  const creatureType = text(entry.creatureType);
+  if (creatureType) compact.creatureType = creatureType;
   compact.speed = entry.speed;
   if (entry.spellcastingAbility != null) compact.spellcastingAbility = entry.spellcastingAbility;
   const resistances = list(entry.resistances).map(String).filter(Boolean);
   if (resistances.length > 0) compact.resistances = resistances;
-  compact.vision = list(entry.vision).map((raw) => {
+  const vision = list(entry.vision).map((raw) => {
     const v = record(raw);
     const vCompact: JsonRecord = {};
     if (v.type != null) vCompact.type = v.type;
     if (v.range != null) vCompact.range = v.range;
     return vCompact;
   });
+  if (vision.length > 0) compact.vision = vision;
   const choices = compactChoices(entry.choices);
   if (choices !== undefined) compact.choices = choices;
   compact.traits = list(entry.traits).map(compactTrait);

@@ -12,6 +12,48 @@ function text(value: unknown): string | undefined {
   return trimmed || undefined;
 }
 
+export type CanonicalFeatCategory = "O" | "G" | "E" | "F";
+
+const CATEGORY_CODES: Record<string, CanonicalFeatCategory> = {
+  O: "O", Origin: "O",
+  G: "G", General: "G",
+  E: "E", "Epic Boon": "E",
+  F: "F", "Fighting Style": "F",
+};
+
+const CATEGORY_LABELS: Record<CanonicalFeatCategory, string> = {
+  O: "Origin", G: "General", E: "Epic Boon", F: "Fighting Style",
+};
+
+export function canonicalFeatCategory(entry: JsonRecord): CanonicalFeatCategory {
+  const explicit = text(entry.category ?? record(entry.mechanics).category);
+  if (explicit && CATEGORY_CODES[explicit]) return CATEGORY_CODES[explicit];
+  return "G";
+}
+
+export function featCategoryLabel(value: unknown): string {
+  return CATEGORY_LABELS[CATEGORY_CODES[String(value ?? "")] ?? "G"];
+}
+
+export function featPrerequisiteLabel(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return `Level ${value}+`;
+  const facts = record(value);
+  const parts: string[] = [];
+  if (facts.level) parts.push(`Level ${facts.level}+`);
+  const ability = record(facts.ability);
+  if (Array.isArray(ability.any)) parts.push(`${ability.any.map((key) => String(key).toUpperCase()).join(" or ")} ${ability.min ?? 13}+`);
+  if (facts.class) parts.push(`${String(facts.class)} class`);
+  if (facts.feature) parts.push(String(facts.feature).replaceAll("_", " "));
+  if (facts.training) parts.push(String(facts.training).replaceAll("_", " "));
+  if (facts.feat || facts.anyOfFeats) parts.push("required Feat");
+  if (facts.noneOfFeats) parts.push("no other Dragonmark Feat");
+  if (facts.campaign) parts.push(`${facts.campaign} campaign`);
+  if (facts.any) parts.push("one listed requirement");
+  return parts.join(", ");
+}
+
 function compactValue(value: unknown, key = ""): unknown {
   if (value == null || value === false) return undefined;
   if (Array.isArray(value)) {
@@ -45,28 +87,33 @@ export function compactFeatMechanics(mechanics: JsonRecord): JsonRecord {
     repeatable: _repeatable,
     resolution: _resolution,
     resolutionNotes: _resolutionNotes,
+    baseName: _baseName,
+    variant: _variant,
+    notes: _notes,
+    modifierDetails: _modifierDetails,
     ...mechanicalData
   } = mechanics;
-  return record(compactValue(mechanicalData));
+  const compact = record(compactValue(mechanicalData));
+  if (Array.isArray(compact.uses)) {
+    compact.uses = compact.uses.map((value) => {
+      const use = { ...record(value) };
+      if (use.recharge === "long_rest") delete use.recharge;
+      return use;
+    });
+  }
+  return compact;
 }
 
 export function compactFeatEntry(entry: JsonRecord): JsonRecord {
   const mechanics = compactFeatMechanics(record(entry.mechanics));
-  if (
-    mechanics.baseName === entry.name
-    && mechanics.variant === undefined
-  ) {
-    delete mechanics.baseName;
-  }
-
   const compact: JsonRecord = {
     id: entry.id,
     name: entry.name,
   };
   const source = text(entry.source);
   if (source) compact.source = source;
-  const category = text(entry.category);
-  if (category) compact.category = category;
+  const category = canonicalFeatCategory(entry);
+  if (category !== "G") compact.category = category;
   if (entry.prerequisite != null) compact.prerequisite = entry.prerequisite;
   if (entry.repeatable === true) compact.repeatable = true;
   compact.description = String(entry.description ?? "");
@@ -115,6 +162,7 @@ export function expandFeatMechanics(
     preparedSpellProgression: list(mechanics.preparedSpellProgression),
     notes: list(mechanics.notes).map(String),
     modifierDetails: list(mechanics.modifierDetails),
+    rolls: list(mechanics.rolls),
     ...(mechanics.spellcastingAbility !== undefined
       ? { spellcastingAbility: mechanics.spellcastingAbility }
       : {}),

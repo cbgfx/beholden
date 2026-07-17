@@ -2,18 +2,18 @@ import {
   createPartyInventoryItem,
   updatePartyInventoryQuantity,
 } from "@/services/inventoryApi";
+import { api } from "@/services/api";
 import {
   inferStackKey,
   isStackableItem,
   mergeStackedInventoryItem,
   normalizeContainers,
-  parsePackContentsFromDescription,
   uid,
   DEFAULT_CONTAINER_ID,
   PARTY_STASH_CONTAINER_ID,
 } from "@/views/character/CharacterInventoryPanelHelpers";
 import {
-  parseChargesMax,
+  initializeItemUsesMaximum,
   type InventoryContainer,
   type InventoryItem,
   type InventoryPickerPayload,
@@ -53,21 +53,32 @@ export function useCharacterInventoryContainers({
   const addItem = async (payload?: InventoryPickerPayload) => {
     try {
       if (!payload?.name) return;
-      const packEntries = parsePackContentsFromDescription(payload.description ?? "");
-      if (packEntries.length > 0) {
+      if (payload.bundle) {
+        const bundleIds = [payload.bundle.container, ...Object.keys(payload.bundle.items)];
+        const result = await api<{ rows: Array<{ id: string; name: string }> }>("/api/compendium/items/lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: bundleIds }),
+        });
+        const byId = new Map(result.rows.map((entry) => [entry.id, entry]));
+        const containerItem = byId.get(payload.bundle.container);
+        if (!containerItem) throw new Error(`Bundle container ${payload.bundle.container} was not found`);
         let nextContainers = containers;
         const nextItems = [...items];
         for (let index = 0; index < Math.max(1, Number(payload.quantity) || 1); index += 1) {
-          const packContainer = createContainer(payload.name);
+          const packContainer = createContainer(containerItem.name);
           nextContainers = [...nextContainers, packContainer];
-          for (const entry of packEntries) {
+          for (const [itemId, quantity] of Object.entries(payload.bundle.items)) {
+            const entry = byId.get(itemId);
+            if (!entry) throw new Error(`Bundle item ${itemId} was not found`);
             nextItems.push({
               id: uid(),
               name: entry.name,
-              quantity: entry.quantity,
+              quantity,
               equipped: false,
               equipState: "backpack",
               source: "compendium",
+              itemId,
               containerId: packContainer.id,
               properties: [],
             });
@@ -78,7 +89,7 @@ export function useCharacterInventoryContainers({
         return;
       }
       const description = payload.description?.trim() ?? "";
-      const chargesMax = description ? parseChargesMax(description) ?? null : null;
+      const chargesMax = initializeItemUsesMaximum(payload.uses);
       const item: InventoryItem = {
         id: uid(),
         name: payload.name,
@@ -103,13 +114,22 @@ export function useCharacterInventoryContainers({
         dmg2: payload.dmg2 ?? null,
         dmgType: payload.dmgType ?? null,
         properties: payload.properties ?? [],
+        modifiers: payload.modifiers ?? [],
         description: description || undefined,
+        uses: payload.uses ?? null,
+        spells: payload.spells ?? null,
+        spellcasting: payload.spellcasting ?? null,
+        spellTemplate: payload.spellTemplate ?? null,
+        ammo: payload.ammo ?? null,
+        weaponAmmo: payload.weaponAmmo ?? null,
+        usage: payload.usage ?? null,
         chargesMax,
         charges: chargesMax,
+        effects: payload.effects ?? null,
       };
       let nextContainers = containers;
-      if (/^bag of holding\b/i.test(payload.name)) {
-        nextContainers = [...containers, createContainer("Bag of Holding", true)];
+      if (payload.container) {
+        nextContainers = [...containers, createContainer(payload.name, payload.ignoreWeight === true)];
       }
       try {
         if (isStackableItem(item)) {

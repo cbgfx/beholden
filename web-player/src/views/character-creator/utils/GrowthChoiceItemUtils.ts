@@ -81,13 +81,8 @@ export function buildGrowthChoiceItemOptions(
     items
       .filter((item) => matchesDefinitionCategory(item) && matchesNamedItemOption(item.name, option.name))
       .forEach((item) => resolved.push({
-        id: String(item.id),
-        name: item.name,
-        rarity: item.rarity ?? null,
-        type: item.type ?? null,
-        typeKey: item.typeKey ?? null,
-        magic: item.magic,
-        attunement: item.attunement,
+        id: String(item.id), name: item.name, rarity: item.rarity ?? null, type: item.type ?? null,
+        typeKey: item.typeKey ?? null, magic: item.magic, attunement: item.attunement,
       }));
   }
 

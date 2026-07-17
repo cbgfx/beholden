@@ -4,11 +4,8 @@ import type { Express, RequestHandler } from "express";
 import type { ServerContext } from "../../server/context.js";
 import { requireParam } from "../../lib/routeHelpers.js";
 import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
-import { parseBody } from "../../shared/validate.js";
-import { monsterToV2 } from "../../services/compendium/nativeCompendiumV2.js";
-import { mergeCanonicalV2Edit } from "../../services/compendium/canonicalCompendiumEdits.js";
-import { parseStoredCompendiumEntry } from "../../services/compendium/storedCompendium.js";
-import { MonsterBody, buildMonsterRecord } from "./helpers.js";
+import { parseStoredGrandEntry, parseStoredPresentationEntry } from "../../services/compendium/storedCompendium.js";
+import { grandEntryId, saveGrandEntry } from "../../services/compendium/grandEditor.js";
 
 function parseCrFilterValue(raw: unknown): number | null {
   const text = String(raw ?? "").trim();
@@ -77,7 +74,11 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
     if (!row)
       return res.status(404).json({ ok: false, message: "Monster not found in compendium" });
 
-    const m = parseStoredCompendiumEntry("monsters", row.data_json);
+    if (String(req.query.view ?? "").trim().toLowerCase() === "grand") {
+      return res.json(parseStoredGrandEntry("monsters", row.data_json));
+    }
+
+    const m = parseStoredPresentationEntry("monsters", row.data_json);
     if (metricsOnly) {
       return res.json({
         id: row.id,
@@ -86,6 +87,7 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
         xp: m.xp ?? null,
         action: m.action ?? [],
         legendary: m.legendary ?? [],
+        legendaryUses: m.legendaryUses ?? null,
         _summaryOnly: true,
       });
     }
@@ -122,10 +124,25 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
       action: m.action ?? [],
       reaction: m.reaction ?? [],
       legendary: m.legendary ?? [],
+      legendaryUses: m.legendaryUses ?? null,
       spellcasting: m.spellcasting ?? [],
-      spells: m.spells ?? [],
+      // Spell references store only catalog IDs; display names are projected from the
+      // spell catalog at read time (one fact, one home in storage).
+      spells: projectMonsterSpellNames(Array.isArray(m.spells) ? m.spells as Array<Record<string, unknown>> : []),
     });
   });
+
+  function projectMonsterSpellNames(spells: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+    const ids = Array.from(new Set(spells.map((s) => String(s.spellId ?? "")).filter(Boolean)));
+    if (ids.length === 0) return spells;
+    const placeholders = ids.map(() => "?").join(", ");
+    const rows = db.prepare(`SELECT id, name FROM compendium_spells WHERE id IN (${placeholders})`).all(...ids) as Array<{ id: string; name: string }>;
+    const nameById = new Map(rows.map((row) => [row.id, row.name]));
+    return spells.map((s) => {
+      const name = String(s.name ?? "") || nameById.get(String(s.spellId ?? "")) || "";
+      return { ...s, name };
+    });
+  }
 
   app.get("/api/compendium/monsters", (_req, res) => {
     applySharedApiCacheHeaders(res);
@@ -157,7 +174,7 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
       .all(...ids) as Array<{ id: string; name: string; cr: string | null; data_json: string | null }>;
 
     const metricsRows = rows.map((row) => {
-      const parsed = parseStoredCompendiumEntry("monsters", row.data_json);
+      const parsed = parseStoredPresentationEntry("monsters", row.data_json);
       return {
         id: row.id,
         name: row.name,
@@ -173,16 +190,8 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
   });
 
   app.post("/api/compendium/monsters", anyDm, (req, res) => {
-    const b = parseBody(MonsterBody, req);
-    const id = `m_${b.name.toLowerCase().replace(/\s+/g, "_")}`;
-    const { name, nameKey, cr, crNumeric, typeKey, typeFull, size, environment, data } =
-      buildMonsterRecord(id, b);
-    const canonical = monsterToV2({
-      ...data, id, name, nameKey, cr, crNumeric, typeKey, typeFull, size, environment,
-    });
-    db.prepare(
-      "INSERT OR REPLACE INTO compendium_monsters (id, name, name_key, cr, cr_numeric, type_key, type_full, size, environment, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    ).run(id, name, nameKey, cr, crNumeric, typeKey, typeFull, size, environment, JSON.stringify(canonical));
+    const id = grandEntryId("m", (req.body as Record<string, unknown> | undefined)?.name);
+    saveGrandEntry(db, "monsters", req.body, id);
     ctx.broadcast("compendium:changed", { monsterCreated: id });
     res.json({ ok: true, id });
   });
@@ -190,23 +199,10 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
   app.put("/api/compendium/monsters/:monsterId", anyDm, (req, res) => {
     const monsterId = requireParam(req, res, "monsterId");
     if (!monsterId) return;
-    const existing = db.prepare("SELECT data_json FROM compendium_monsters WHERE id = ?").get(monsterId) as { data_json: string } | undefined;
+    const existing = db.prepare("SELECT id FROM compendium_monsters WHERE id = ?").get(monsterId) as { id: string } | undefined;
     if (!existing)
       return res.status(404).json({ ok: false, message: "Monster not found" });
-    const b = parseBody(MonsterBody, req);
-    const { name, nameKey, cr, crNumeric, typeKey, typeFull, size, environment, data } =
-      buildMonsterRecord(monsterId, b);
-    const replacement = monsterToV2({
-      ...data, id: monsterId, name, nameKey, cr, crNumeric, typeKey, typeFull, size, environment,
-    });
-    const canonical = mergeCanonicalV2Edit(
-      "monsters",
-      JSON.parse(existing.data_json) as Record<string, unknown>,
-      replacement,
-    );
-    db.prepare(
-      "UPDATE compendium_monsters SET name = ?, name_key = ?, cr = ?, cr_numeric = ?, type_key = ?, type_full = ?, size = ?, environment = ?, data_json = ? WHERE id = ?"
-    ).run(name, nameKey, cr, crNumeric, typeKey, typeFull, size, environment, JSON.stringify(canonical), monsterId);
+    saveGrandEntry(db, "monsters", req.body, monsterId);
     ctx.broadcast("compendium:changed", { monsterUpdated: monsterId });
     res.json({ ok: true });
   });

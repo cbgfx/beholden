@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useInvocationGrantedFeatChoices } from "@/views/shared/useInvocationGrantedFeatChoices";
 import { useNavigate, useParams } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { normalizeSpellTrackingKey } from "@/views/character/CharacterSheetUtils";
@@ -64,6 +65,9 @@ export function LevelUpView() {
   const [expandedFeatures, setExpandedFeatures] = useState<string[]>([]);
   const [featSearch, setFeatSearch] = useState("");
   const [chosenFeatOptions, setChosenFeatOptions] = useState<Record<string, string[]>>({});
+  React.useEffect(() => {
+    setChosenFeatOptions((char?.characterData?.chosenFeatOptions ?? {}) as Record<string, string[]>);
+  }, [char?.id]);
 
   const {
     hd,
@@ -98,10 +102,13 @@ export function LevelUpView() {
     classFeatureSkillKeys,
     classFeatureToolKeys,
     classFeatureLanguageKeys,
+    classFeatureSaveKeys,
     growthChoiceDefinitions,
     preparedSpellProgressionChoiceDefinitions,
     preparedSpellProgressionGrantedKeys,
     invocationResolvedSpellChoices,
+    invocationFeatChoices,
+    allInvocationFeatChoices,
     allowedInvocationIds,
     featSpellChoiceOptions,
     classFeatureSpellChoiceOptions,
@@ -119,6 +126,7 @@ export function LevelUpView() {
     chosenFeatOptions,
     chosenFeatureChoices,
     chosenFeatDetail,
+    featSummaries,
     classCantrips,
     classInvocations,
   });
@@ -177,6 +185,7 @@ export function LevelUpView() {
     lockedCantripIds,
     lockedSpellIds,
     lockedInvocationIds,
+    lockedInvocationSelectionIds,
     maneuverChoiceEntries,
     planChoiceEntries,
     progressionTableChoiceEntries,
@@ -219,6 +228,15 @@ export function LevelUpView() {
     allowedInvocationIds,
     invocCount,
   });
+  const invocationGrantedFeatChoices = useInvocationGrantedFeatChoices({
+    choices: invocationFeatChoices,
+    selectedOptions: chosenFeatOptions,
+    level: nextLevel,
+  });
+  const invocationFeatSelectionsValid = invocationFeatChoices.every(
+    (choice) => (chosenFeatOptions[choice.key] ?? []).length === choice.count,
+  );
+  const allExtraSelectionsValid = extraFeatSpellSelectionsValid && invocationFeatSelectionsValid && invocationGrantedFeatChoices.valid;
 
   const { filteredFeatSummaries, featPrereqsMet, featRepeatableValid, canConfirm } = React.useMemo(
     () =>
@@ -249,6 +267,11 @@ export function LevelUpView() {
         featSummaries,
         hpGain,
         existingLevelUpFeats: char?.characterData?.chosenLevelUpFeats ?? [],
+        ownedFeatIds: [
+          char?.characterData?.chosenRaceFeatId,
+          char?.characterData?.chosenBgOriginFeatId,
+          ...Object.values(char?.characterData?.chosenClassFeatIds ?? {}),
+        ].map((value) => String(value ?? "")).filter(Boolean),
       }),
     [
       isAsiLevel,
@@ -272,6 +295,9 @@ export function LevelUpView() {
       classDetail?.name,
       char?.className,
       char?.characterData?.chosenLevelUpFeats,
+      char?.characterData?.chosenRaceFeatId,
+      char?.characterData?.chosenBgOriginFeatId,
+      char?.characterData?.chosenClassFeatIds,
       baseScores,
       charProficiencies,
       featSearch,
@@ -313,7 +339,7 @@ export function LevelUpView() {
   const { saving, confirm } = useLevelUpSubmit({
     char,
     canConfirm,
-    extraFeatSpellSelectionsValid,
+    extraFeatSpellSelectionsValid: allExtraSelectionsValid,
     navigate,
     setError,
     nextLevel,
@@ -325,6 +351,8 @@ export function LevelUpView() {
     chosenInvocations,
     chosenExpertise,
     chosenFeatOptions,
+    invocationFeatChoices,
+    allInvocationFeatChoices,
     chosenFeatureChoices,
     expertiseChoices,
     featChoiceEntries,
@@ -493,6 +521,7 @@ export function LevelUpView() {
         existingSkillKeys={classFeatureSkillKeys}
         existingToolKeys={classFeatureToolKeys}
         existingLanguageKeys={classFeatureLanguageKeys}
+        existingSaveKeys={classFeatureSaveKeys}
         cantripChoiceCount={cantripChoiceCount}
         availableCantripChoices={availableCantripChoices}
         displayedChosenCantrips={displayedChosenCantrips}
@@ -514,6 +543,7 @@ export function LevelUpView() {
         availableInvocationChoices={availableInvocationChoices}
         displayedChosenInvocations={displayedChosenInvocations}
         lockedInvocationIds={lockedInvocationIds}
+        lockedInvocationSelectionIds={lockedInvocationSelectionIds}
         allowedInvocationIds={allowedInvocationIds}
         maneuverChoiceEntries={maneuverChoiceEntries}
         planChoiceEntries={planChoiceEntries}
@@ -522,6 +552,8 @@ export function LevelUpView() {
         featResolvedSpellChoices={featResolvedSpellChoices}
         classFeatureResolvedSpellChoices={classFeatureResolvedSpellChoices}
         invocationResolvedSpellChoices={invocationResolvedSpellChoices}
+        invocationFeatChoices={invocationFeatChoices}
+        invocationGrantedFeatChoices={invocationGrantedFeatChoices}
         featSpellChoiceOptions={featSpellChoiceOptions}
         classFeatureSpellChoiceOptions={classFeatureSpellChoiceOptions}
         invocationSpellChoiceOptions={invocationSpellChoiceOptions}
@@ -533,7 +565,7 @@ export function LevelUpView() {
         setChosenInvocations={setChosenInvocations}
         setChosenFeatureChoices={setChosenFeatureChoices}
         setChosenFeatOptions={setChosenFeatOptions}
-        extraFeatSpellSelectionsValid={extraFeatSpellSelectionsValid}
+        extraFeatSpellSelectionsValid={allExtraSelectionsValid}
       />
 
       {/* ── New features ── */}
@@ -567,12 +599,12 @@ export function LevelUpView() {
         >Cancel</button>
         <button
           onClick={confirm}
-          disabled={!canConfirm || !extraFeatSpellSelectionsValid || saving}
+          disabled={!canConfirm || !allExtraSelectionsValid || saving}
           style={{
-            flex: 1, padding: "12px 20px", borderRadius: 10, cursor: canConfirm && !saving ? "pointer" : "not-allowed",
+            flex: 1, padding: "12px 20px", borderRadius: 10, cursor: canConfirm && allExtraSelectionsValid && !saving ? "pointer" : "not-allowed",
             fontSize: "var(--fs-medium)", fontWeight: 800, border: "none",
-            background: canConfirm ? accentColor : "rgba(255,255,255,0.08)",
-            color: canConfirm ? "#fff" : C.muted,
+            background: canConfirm && allExtraSelectionsValid ? accentColor : "rgba(255,255,255,0.08)",
+            color: canConfirm && allExtraSelectionsValid ? "#fff" : C.muted,
             opacity: saving ? 0.6 : 1,
             transition: "background 0.2s",
           }}

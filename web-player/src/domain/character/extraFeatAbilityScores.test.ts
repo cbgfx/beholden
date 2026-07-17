@@ -19,7 +19,7 @@ describe("extra feat ability scores", () => {
     const durable = {
       id: "durable",
       name: "Durable",
-      text: "Increase your Constitution score by 1, to a maximum of 20.",
+      parsed: { grants: { abilityIncreases: { constitution: 1 } } },
     };
     expect(applyExtraFeatAbilityScores(BASE_SCORES, [durable], {}).scores.con).toBe(15);
     expect(applyExtraFeatAbilityScores({ ...BASE_SCORES, con: 20 }, [durable], {}).scores.con).toBe(20);
@@ -29,7 +29,7 @@ describe("extra feat ability scores", () => {
     const feat = {
       id: "physical-boon",
       name: "Physical Boon",
-      text: "Increase your Strength, Dexterity, or Constitution score by 1, to a maximum of 20.",
+      parsed: { choices: [{ id: "ability", type: "ability_score", count: 1, options: ["Strength", "Dexterity", "Constitution"], amount: 1 }] },
     };
     const spec = getExtraFeatAbilityChoiceSpec(feat);
     expect(spec?.options).toEqual(["str", "dex", "con"]);
@@ -43,7 +43,7 @@ describe("extra feat ability scores", () => {
     const feat = {
       id: "epic-boon",
       name: "Epic Boon",
-      text: "Increase one ability score of your choice by 1, to a maximum of 30.",
+      parsed: { choices: [{ id: "ability", type: "ability_score", count: 1, options: null, amount: 1, maximum: 30 }] },
     };
     const result = applyExtraFeatAbilityScores(
       { ...BASE_SCORES, wis: 20 },
@@ -51,5 +51,20 @@ describe("extra feat ability scores", () => {
       { [feat.id]: ["wis"] },
     );
     expect(result.scores.wis).toBe(21);
+  });
+
+  it("supports the canonical ASI split without reading its description", () => {
+    const feat = {
+      id: "asi",
+      name: "Ability Score Improvement",
+      text: "This text is display-only.",
+      parsed: { choices: [{ id: "ability", type: "ability_score", count: 1, options: null, amount: 2, split: true as const }] },
+    };
+    const spec = getExtraFeatAbilityChoiceSpec(feat);
+    expect(spec?.allowedCounts).toEqual([1, 2]);
+    expect(applyExtraFeatAbilityScores(BASE_SCORES, [feat], { asi: ["str"] }).scores.str).toBe(14);
+    const split = applyExtraFeatAbilityScores(BASE_SCORES, [feat], { asi: ["str", "dex"] }).scores;
+    expect(split.str).toBe(13);
+    expect(split.dex).toBe(15);
   });
 });

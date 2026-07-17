@@ -120,14 +120,14 @@ export function parseMonsterSpeed(value: unknown): { walk: number | null; modes:
 }
 
 export function parseSaves(raw: unknown): Partial<Record<MonsterAbilityKey, number>> | undefined {
-  if (!raw || typeof raw !== "object") return undefined;
-  const obj = raw as Record<string, unknown>;
   const out: Partial<Record<MonsterAbilityKey, number>> = {};
-  for (const k of MONSTER_ABILITY_KEYS) {
-    const v = obj[k] ?? obj[k.toUpperCase()] ?? obj[k.charAt(0).toUpperCase() + k.slice(1)];
-    if (v == null) continue;
-    const n = Number(String(v).replace(/[^0-9-]/g, ""));
-    if (Number.isFinite(n)) out[k] = n;
+  for (const entry of Array.isArray(raw) ? raw : []) {
+    if (!entry || typeof entry !== "object") continue;
+    const record = entry as Record<string, unknown>;
+    const key = String(record.name ?? "").trim().toLowerCase().slice(0, 3) as MonsterAbilityKey;
+    if (!MONSTER_ABILITY_KEYS.includes(key)) continue;
+    const bonus = readMonsterNumber(record.bonus);
+    if (bonus != null) out[key] = bonus;
   }
   return Object.keys(out).length ? out : undefined;
 }
@@ -146,25 +146,21 @@ export function proficiencyBonusFromChallengeRating(value: unknown): number {
 }
 
 export function readMonsterSkillBonus(monster: unknown, skillName: string): number | null {
-  const raw = (monster as Record<string, unknown> | null)?.skill ?? (monster as Record<string, unknown> | null)?.skills;
+  const source = monster as Record<string, unknown> | null;
+  const proficiencies = source?.proficiencies && typeof source.proficiencies === "object"
+    ? source.proficiencies as Record<string, unknown>
+    : null;
+  const raw = proficiencies?.skills ?? source?.skills;
   if (!raw) return null;
   if (Array.isArray(raw)) {
     for (const entry of raw) {
-      if (typeof entry === "string") {
-        const match = entry.match(new RegExp(`${skillName}\\s*([+-]?\\d+)`, "i"));
-        if (match) return Number(match[1]);
-      }
       if (entry && typeof entry === "object") {
         const record = entry as Record<string, unknown>;
         if (String(record.name ?? "").trim().toLowerCase() === skillName.toLowerCase()) {
-          return readMonsterNumber(record.bonus ?? record.value ?? record.modifier);
+          return readMonsterNumber(record.bonus);
         }
       }
     }
-  }
-  if (typeof raw === "string") {
-    const match = raw.match(new RegExp(`${skillName}\\s*([+-]?\\d+)`, "i"));
-    if (match) return Number(match[1]);
   }
   if (typeof raw === "object") {
     const record = raw as Record<string, unknown>;
@@ -265,4 +261,29 @@ function parseCrNumber(value: unknown): number {
   }
   const numeric = Number(text);
   return Number.isFinite(numeric) ? numeric : NaN;
+}
+
+/** Average HP from a dice formula per the printed-statblock floor rule:
+ * floor(N * (faces + 1) / 2) + modifier. Returns null when the formula isn't NdF(+/-M). */
+export function averageHpFromFormula(formula: string | null | undefined): number | null {
+  const match = String(formula ?? "").replace(/\s+/g, "").match(/^(\d+)d(\d+)([+-]\d+)?$/i);
+  if (!match) return null;
+  const count = Number(match[1]);
+  const faces = Number(match[2]);
+  const modifier = match[3] ? Number(match[3]) : 0;
+  if (!Number.isFinite(count) || !Number.isFinite(faces) || faces <= 0) return null;
+  return Math.floor((count * (faces + 1)) / 2) + modifier;
+}
+
+/** Numeric CR from its display rating ("1/2" -> 0.5, "10" -> 10). */
+export function crRatingToNumber(rating: string | number | null | undefined): number | null {
+  if (typeof rating === "number") return Number.isFinite(rating) ? rating : null;
+  const text = String(rating ?? "").trim();
+  if (!text) return null;
+  if (text.includes("/")) {
+    const [n = NaN, d = NaN] = text.split("/").map(Number);
+    return Number.isFinite(n) && Number.isFinite(d) && d !== 0 ? n / d : null;
+  }
+  const value = Number(text);
+  return Number.isFinite(value) ? value : null;
 }

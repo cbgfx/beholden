@@ -64,21 +64,22 @@ export function compactSpellEntry(entry: JsonRecord): JsonRecord {
   if (casting) compact.casting = casting;
   if (entry.ritual === true) compact.ritual = true;
 
-  const classes = list(entry.classes).map(String).filter(Boolean);
-  if (classes.length > 0) compact.classes = classes;
-  const tags = list(entry.tags).map(String).filter(Boolean);
-  if (tags.length > 0) compact.tags = tags;
+  const access = list(entry.access).map(String).filter(Boolean);
+  if (access.length > 0) compact.access = access;
+  if (Array.isArray(entry.check) && entry.check.length > 1) {
+    compact.check = entry.check;
+  } else if (["attack", "str", "dex", "con", "int", "wis", "cha"].includes(String(entry.check))) {
+    compact.check = entry.check;
+  }
 
   const rolls = list(entry.rolls).flatMap((raw) => {
     const roll = record(raw);
     const formula = nonEmptyText(roll.formula);
     if (!formula) return [];
     const compactRoll: JsonRecord = { formula };
+    if (typeof roll.effect === "string" || (Array.isArray(roll.effect) && roll.effect.length > 1)) compactRoll.effect = roll.effect;
     const description = nonEmptyText(roll.description);
     if (description) compactRoll.description = description;
-    if (roll.scaling === "character_level" || roll.scaling === "slot_level") {
-      compactRoll.scaling = roll.scaling;
-    }
     if (typeof roll.level === "number") compactRoll.level = roll.level;
     return [compactRoll];
   });

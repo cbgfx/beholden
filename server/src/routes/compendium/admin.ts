@@ -1,18 +1,18 @@
 // server/src/routes/compendium/admin.ts
-// Admin routes: wipe compendium, import XML.
+// Admin routes for the canonical Beholden compendium.
 
 import type { Express } from "express";
 import { ZipArchive } from "archiver";
 import type { ServerContext } from "../../server/context.js";
 import { requireAdmin } from "../../middleware/auth.js";
 import {
-  exportNativeCompendiumBatch,
+  exportNativeCompendiumBundle,
   importNativeCompendiumDocument,
   isNativeCompendiumCategory,
   NATIVE_COMPENDIUM_CATEGORIES,
   previewNativeCompendiumDocument,
 } from "../../services/compendium/nativeCompendium.js";
-import { convertCompendiumXmlToNative } from "../../services/compendium/convertXmlToNative.js";
+import { migrateLiveCompendiumReferences } from "../../services/compendium/liveReferenceMigration.js";
 
 export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
@@ -22,6 +22,7 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
       db.prepare("DELETE FROM compendium_monsters").run();
       db.prepare("DELETE FROM compendium_items").run();
       db.prepare("DELETE FROM compendium_spells").run();
+      db.prepare("DELETE FROM compendium_class_talents").run();
       db.prepare("DELETE FROM compendium_classes").run();
       db.prepare("DELETE FROM compendium_races").run();
       db.prepare("DELETE FROM compendium_backgrounds").run();
@@ -35,16 +36,21 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
     res.json({ ok: true });
   });
 
-  app.post("/api/compendium/convert/xml", requireAdmin, ctx.upload.single("file"), (req, res) => {
-    if (!req.file) return res.status(400).json({ ok: false, message: "No file uploaded" });
-    const xml = req.file.buffer.toString("utf-8");
+  app.get("/api/compendium/live-reference-migration", requireAdmin, (_req, res) => {
     try {
-      const result = convertCompendiumXmlToNative(xml);
-      const { warnings, ...document } = result;
-      return res.json({ ok: true, document, warnings });
+      return res.json({ ok: true, ...migrateLiveCompendiumReferences(db, false) });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "XML conversion failed.";
-      return res.status(400).json({ ok: false, message });
+      return res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Migration preview failed." });
+    }
+  });
+
+  app.post("/api/compendium/live-reference-migration", requireAdmin, (_req, res) => {
+    try {
+      const result = migrateLiveCompendiumReferences(db, true);
+      ctx.broadcast("compendium:changed", { liveReferencesMigrated: true, changedRows: result.changedRows, changedReferences: result.changedReferences });
+      return res.json({ ok: true, ...result });
+    } catch (error) {
+      return res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Live reference migration failed." });
     }
   });
 
@@ -53,13 +59,13 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
     if (!isNativeCompendiumCategory(category)) {
       return res.status(400).json({ ok: false, message: "Unknown compendium category." });
     }
-    const batch = exportNativeCompendiumBatch(db, category);
+    const document = exportNativeCompendiumBundle(db, [category], { includeEmpty: true });
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.setHeader(
       "Content-Disposition",
       `attachment; filename=beholden-compendium-${category}.json`,
     );
-    res.send(JSON.stringify(batch, null, 2));
+    res.send(JSON.stringify(document, null, 2));
   });
 
   app.get("/api/compendium/native/export-all.zip", requireAdmin, async (_req, res, next) => {
@@ -72,8 +78,8 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
     );
     archive.pipe(res);
     for (const category of NATIVE_COMPENDIUM_CATEGORIES) {
-      const batch = exportNativeCompendiumBatch(db, category);
-      archive.append(JSON.stringify(batch, null, 2), {
+      const document = exportNativeCompendiumBundle(db, [category], { includeEmpty: true });
+      archive.append(JSON.stringify(document, null, 2), {
         name: `beholden-compendium-${category}.json`,
       });
     }

@@ -1,6 +1,6 @@
 import React from "react";
 import { C } from "@/lib/theme";
-import { extractPrerequisite, stripPrerequisiteLine } from "@/views/character/CharacterSheetUtils";
+import { classTalentPrerequisiteLabel } from "@/views/character/CharacterSheetUtils";
 import type { LevelUpSpellSummary } from "./LevelUpParts";
 
 function levelGroupLabel(level: number | null | undefined): string {
@@ -19,7 +19,7 @@ function optionLevelLabel(level: number | null | undefined): string | null {
 }
 
 function cleanedDescription(text: string | null | undefined): string {
-  return stripPrerequisiteLine(text).replace(/Source:.*$/ms, "").trim();
+  return String(text ?? "").replace(/Source:.*$/ms, "").trim();
 }
 
 export function LevelUpSpellChoiceList({
@@ -37,13 +37,15 @@ export function LevelUpSpellChoiceList({
   spells: LevelUpSpellSummary[];
   chosen: string[];
   max: number;
-  onToggle: (id: string) => void;
+  onToggle: (id: string, action?: "add" | "remove") => void;
   isAllowed?: (spell: LevelUpSpellSummary) => boolean;
   disabledIds?: string[];
 }) {
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const visibleSpells = React.useMemo(() => spells, [spells]);
   const disabledIdSet = React.useMemo(() => new Set(disabledIds ?? []), [disabledIds]);
+  // Talent prerequisite dependencies resolve their display name from the option list itself.
+  const talentNameById = React.useMemo(() => new Map(spells.map((spell) => [spell.id, spell.name])), [spells]);
   const groupedSpells = React.useMemo(() => {
     const groups = new Map<string, LevelUpSpellSummary[]>();
     for (const spell of visibleSpells) {
@@ -98,19 +100,20 @@ export function LevelUpSpellChoiceList({
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(118px, 1fr))", gap: 6 }}>
               {group.map((spell) => {
                 const active = chosen.includes(spell.id);
+                const selectedCount = chosen.filter((id) => id === spell.id).length;
                 const focused = activeSpell?.id === spell.id;
                 const allowed = isAllowed ? isAllowed(spell) : true;
                 const disabledElsewhere = !active && disabledIdSet.has(spell.id);
                 const blocked = (!active && chosen.length >= max) || !allowed || disabledElsewhere;
-                const prerequisite = extractPrerequisite(spell.text);
+                const prerequisite = classTalentPrerequisiteLabel(spell.prerequisite, (id) => talentNameById.get(id));
                 const levelLabel = optionLevelLabel(spell.level);
-                return (
+                const button = (
                   <button
                     key={spell.id}
                     type="button"
                     onClick={() => {
                       setActiveId(spell.id);
-                      if (!blocked) onToggle(spell.id);
+                      if (!blocked) onToggle(spell.id, active ? "remove" : "add");
                     }}
                     style={{
                       padding: "6px 8px",
@@ -124,7 +127,7 @@ export function LevelUpSpellChoiceList({
                       minHeight: 44,
                     }}
                   >
-                    <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, lineHeight: 1.15 }}>{normalizeOptionName(spell.name)}</div>
+                    <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, lineHeight: 1.15 }}>{normalizeOptionName(spell.name)}{selectedCount > 1 ? ` ×${selectedCount}` : ""}</div>
                     {levelLabel ? (
                       <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginTop: 2 }}>
                         {levelLabel}
@@ -150,6 +153,8 @@ export function LevelUpSpellChoiceList({
                     )}
                   </button>
                 );
+                if (!spell.repeatable || !active) return button;
+                return <div key={spell.id} style={{ display: "flex", gap: 4 }}>{React.cloneElement(button, { key: `${spell.id}:main`, style: { ...button.props.style, flex: 1 } })}<button type="button" disabled={chosen.length >= max || !allowed} onClick={() => onToggle(spell.id, "add")} style={{ borderRadius: 8, border: "1px solid rgba(56,182,255,0.5)", background: "rgba(56,182,255,0.12)", color: C.accentHl, fontWeight: 900, padding: "0 9px" }}>+</button></div>;
               })}
             </div>
           </div>
@@ -173,12 +178,12 @@ export function LevelUpSpellChoiceList({
               </span>
             ) : null}
           </div>
-          {extractPrerequisite(activeSpell.text) && (
+          {classTalentPrerequisiteLabel(activeSpell.prerequisite, (id) => talentNameById.get(id)) && (
             <div style={{ marginTop: 8, fontSize: "var(--fs-small)", lineHeight: 1.45 }}>
               <span style={{ color: C.colorGold, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5 }}>
                 Prerequisite
               </span>
-              <span style={{ color: "rgba(251,191,36,0.92)" }}> {extractPrerequisite(activeSpell.text)}</span>
+              <span style={{ color: "rgba(251,191,36,0.92)" }}> {classTalentPrerequisiteLabel(activeSpell.prerequisite, (id) => talentNameById.get(id))}</span>
             </div>
           )}
           {cleanedDescription(activeSpell.text) && (

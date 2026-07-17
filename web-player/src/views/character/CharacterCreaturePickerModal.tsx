@@ -1,3 +1,4 @@
+import { averageHpFromFormula } from "@beholden/shared/domain/monsters";
 import { useEffect, useState } from "react";
 import { api } from "@/services/api";
 import { C, withAlpha } from "@/lib/theme";
@@ -29,7 +30,11 @@ function parseLeadingNumber(value: unknown): number | null {
   }
   if (value && typeof value === "object") {
     const candidate = value as Record<string, unknown>;
-    return parseLeadingNumber(candidate.value ?? candidate.average ?? candidate.ac ?? candidate.hp);
+    return parseLeadingNumber(
+      candidate.value ?? candidate.average
+        ?? averageHpFromFormula(typeof candidate.formula === "string" ? candidate.formula : null)
+        ?? candidate.ac ?? candidate.hp,
+    );
   }
   return null;
 }

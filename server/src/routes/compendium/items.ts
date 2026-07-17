@@ -5,10 +5,9 @@ import type { ServerContext } from "../../server/context.js";
 import { requireParam } from "../../lib/routeHelpers.js";
 import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { parseBody } from "../../shared/validate.js";
-import { itemToV2 } from "../../services/compendium/nativeCompendiumV2.js";
-import { mergeCanonicalV2Edit } from "../../services/compendium/canonicalCompendiumEdits.js";
-import { parseStoredCompendiumEntry } from "../../services/compendium/storedCompendium.js";
-import { ItemBody, buildItemRecord, normalizeLookupName } from "./helpers.js";
+import { parseStoredGrandEntry, parseStoredPresentationEntry } from "../../services/compendium/storedCompendium.js";
+import { grandEntryId, saveGrandEntry } from "../../services/compendium/grandEditor.js";
+import { normalizeLookupName } from "./helpers.js";
 import { z } from "zod";
 
 export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: RequestHandler) {
@@ -55,8 +54,21 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
       dmg2?: string | null;
       dmgType?: string | null;
       properties?: string[];
+      mastery?: string | null;
+      modifiers?: Array<{ category?: string; text?: string }>;
+      uses?: unknown;
+      spells?: unknown;
+      spellcasting?: unknown;
+      spellTemplate?: unknown;
+      ammo?: string | null;
+      usage?: string | null;
+      weaponAmmo?: string | null;
+      bundle?: unknown;
+      container?: boolean;
+      ignoreWeight?: boolean;
+      effects?: unknown[] | null;
     } = {};
-    data = parseStoredCompendiumEntry("items", row.data_json) as typeof data;
+    data = parseStoredPresentationEntry("items", row.data_json) as typeof data;
     return {
       id: row.id,
       name: row.name,
@@ -75,6 +87,19 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
       dmg2: data.dmg2 ?? null,
       dmgType: data.dmgType ?? null,
       properties: Array.isArray(data.properties) ? data.properties : [],
+      mastery: data.mastery ?? null,
+      modifiers: Array.isArray(data.modifiers) ? data.modifiers : [],
+      uses: data.uses ?? null,
+      spells: data.spells ?? null,
+      spellcasting: data.spellcasting ?? null,
+      spellTemplate: data.spellTemplate ?? null,
+      ammo: data.ammo ?? null,
+      usage: data.usage ?? null,
+      weaponAmmo: data.weaponAmmo ?? null,
+      bundle: data.bundle ?? null,
+      container: data.container === true,
+      ignoreWeight: data.ignoreWeight === true,
+      effects: Array.isArray(data.effects) ? data.effects : null,
     };
   }
 
@@ -244,7 +269,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
       data_json: string;
     }[];
     const mapped = rawRows.map((r) => {
-        const data = parseStoredCompendiumEntry("items", r.data_json);
+        const data = parseStoredPresentationEntry("items", r.data_json);
         return {
           ...(includeField("id") ? { id: r.id } : {}),
           ...(includeField("name") ? { name: r.name } : {}),
@@ -263,6 +288,18 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
           ...(includeField("dmg2") ? { dmg2: data.dmg2 ?? null } : {}),
           ...(includeField("dmgtype") ? { dmgType: data.dmgType ?? null } : {}),
           ...(includeField("properties") ? { properties: data.properties ?? [] } : {}),
+          ...(includeField("modifiers") ? { modifiers: data.modifiers ?? [] } : {}),
+          ...(includeField("uses") ? { uses: data.uses ?? null } : {}),
+          ...(includeField("spells") ? { spells: data.spells ?? null } : {}),
+          ...(includeField("spellcasting") ? { spellcasting: data.spellcasting ?? null } : {}),
+          ...(includeField("spelltemplate") ? { spellTemplate: data.spellTemplate ?? null } : {}),
+          ...(includeField("ammo") ? { ammo: data.ammo ?? null } : {}),
+          ...(includeField("usage") ? { usage: data.usage ?? null } : {}),
+          ...(includeField("weaponammo") ? { weaponAmmo: data.weaponAmmo ?? null } : {}),
+          ...(includeField("container") ? { container: data.container === true } : {}),
+          ...(includeField("ignoreweight") ? { ignoreWeight: data.ignoreWeight === true } : {}),
+          ...(includeField("effects") ? { effects: data.effects ?? null } : {}),
+          ...(includeField("resolution") ? { resolution: data.resolution ?? null } : {}),
         };
       });
     if (withTotal) {
@@ -415,7 +452,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
         const base = rows.get(textRow.id);
         if (!base) continue;
         let text: string[] | null = null;
-        const parsed = parseStoredCompendiumEntry("items", textRow.data_json);
+        const parsed = parseStoredPresentationEntry("items", textRow.data_json);
         if (Array.isArray(parsed.text)) {
           text = parsed.text.map((entry) => String(entry ?? "")).filter(Boolean);
         } else if (typeof parsed.text === "string" && parsed.text.trim()) {
@@ -440,7 +477,10 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
       .get(itemId) as Record<string, unknown> | undefined;
     if (!row)
       return res.status(404).json({ ok: false, message: "Item not found in compendium" });
-    const it = parseStoredCompendiumEntry("items", row.data_json as string);
+    if (String(req.query.view ?? "").trim().toLowerCase() === "grand") {
+      return res.json(parseStoredGrandEntry("items", row.data_json as string));
+    }
+    const it = parseStoredPresentationEntry("items", row.data_json as string);
     res.json({
       id: row.id, name: row.name, nameKey: row.name_key ?? null,
       rarity: row.rarity ?? null, type: row.type ?? null, typeKey: row.type_key ?? null,
@@ -455,20 +495,20 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
       dmgType: it.dmgType ?? null,
       properties: it.properties ?? [],
       modifiers: it.modifiers ?? [],
+      uses: it.uses ?? null,
+      spells: it.spells ?? null,
+      spellcasting: it.spellcasting ?? null,
+      spellTemplate: it.spellTemplate ?? null,
+      ammo: it.ammo ?? null,
+      usage: it.usage ?? null,
+      weaponAmmo: it.weaponAmmo ?? null,
       text: Array.isArray(it.text) ? it.text : (it.text ? [it.text] : []),
     });
   });
 
   app.post("/api/compendium/items", anyDm, (req, res) => {
-    const b = parseBody(ItemBody, req);
-    const id = `i_${b.name.toLowerCase().replace(/\s+/g, "_")}`;
-    const { name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data } = buildItemRecord(b);
-    const canonical = itemToV2({
-      ...data, id, name, nameKey, rarity: rarityVal, type: typeVal, typeKey: typeKeyVal,
-      attunement: Boolean(attunement), magic: Boolean(magic),
-    });
-    db.prepare("INSERT OR REPLACE INTO compendium_items (id, name, name_key, rarity, type, type_key, attunement, magic, weight, value, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(id, name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data.weight ?? null, data.value ?? null, JSON.stringify(canonical));
+    const id = grandEntryId("i", (req.body as Record<string, unknown> | undefined)?.name);
+    saveGrandEntry(db, "items", req.body, id);
     ctx.broadcast("compendium:changed", { itemCreated: id });
     res.json({ ok: true, id });
   });
@@ -476,22 +516,10 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
   app.put("/api/compendium/items/:itemId", anyDm, (req, res) => {
     const itemId = requireParam(req, res, "itemId");
     if (!itemId) return;
-    const existing = db.prepare("SELECT data_json FROM compendium_items WHERE id = ?").get(itemId) as { data_json: string } | undefined;
+    const existing = db.prepare("SELECT id FROM compendium_items WHERE id = ?").get(itemId) as { id: string } | undefined;
     if (!existing)
       return res.status(404).json({ ok: false, message: "Item not found" });
-    const b = parseBody(ItemBody, req);
-    const { name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data } = buildItemRecord(b);
-    const replacement = itemToV2({
-      ...data, id: itemId, name, nameKey, rarity: rarityVal, type: typeVal, typeKey: typeKeyVal,
-      attunement: Boolean(attunement), magic: Boolean(magic),
-    });
-    const canonical = mergeCanonicalV2Edit(
-      "items",
-      JSON.parse(existing.data_json) as Record<string, unknown>,
-      replacement,
-    );
-    db.prepare("UPDATE compendium_items SET name = ?, name_key = ?, rarity = ?, type = ?, type_key = ?, attunement = ?, magic = ?, weight = ?, value = ?, data_json = ? WHERE id = ?")
-      .run(name, nameKey, rarityVal, typeVal, typeKeyVal, attunement, magic, data.weight ?? null, data.value ?? null, JSON.stringify(canonical), itemId);
+    saveGrandEntry(db, "items", req.body, itemId);
     ctx.broadcast("compendium:changed", { itemUpdated: itemId });
     res.json({ ok: true });
   });

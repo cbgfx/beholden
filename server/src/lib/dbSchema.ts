@@ -187,6 +187,14 @@ CREATE TABLE IF NOT EXISTS compendium_spells (
   data_json TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS compendium_class_talents (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  name_key TEXT,
+  kind TEXT NOT NULL,
+  data_json TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS compendium_classes (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -389,6 +397,8 @@ CREATE INDEX IF NOT EXISTS idx_compitem_name_key     ON compendium_items(name_ke
 CREATE INDEX IF NOT EXISTS idx_compspell_name        ON compendium_spells(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_compspell_name_key    ON compendium_spells(name_key);
 CREATE INDEX IF NOT EXISTS idx_compspell_level       ON compendium_spells(level);
+CREATE INDEX IF NOT EXISTS idx_compclasstalent_name  ON compendium_class_talents(name COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_compclasstalent_kind  ON compendium_class_talents(kind);
 CREATE INDEX IF NOT EXISTS idx_compclass_name        ON compendium_classes(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_comprace_name         ON compendium_races(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_compbg_name           ON compendium_backgrounds(name COLLATE NOCASE);

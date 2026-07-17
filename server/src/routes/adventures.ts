@@ -30,7 +30,7 @@ import {
   importNativeCompendiumBatch,
   type NativeCompendiumBatch,
 } from "../services/compendium/nativeCompendium.js";
-import { collectV2MonsterSpellIds } from "../services/compendium/nativeCompendiumV2.js";
+import { collectGrandMonsterSpellIds } from "../services/compendium/grandCompendium.js";
 import { planAdventureMonsterImports } from "../services/adventureMonsterImport.js";
 
 const AdventureCreateBody = z.object({
@@ -264,7 +264,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
     });
 
     const monsterBatch = exportNativeCompendiumBatch(db, "monsters", referencedMonsterIds);
-    const referencedSpellIds = collectV2MonsterSpellIds(monsterBatch.entries);
+    const referencedSpellIds = collectGrandMonsterSpellIds(monsterBatch.entries);
     const referencedItemIds = new Set(
       treasure
         .filter((entry) => entry.source === "compendium" && entry.itemId)
@@ -283,7 +283,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
 
     res.json({
       format: "beholden.adventure",
-      version: 2,
+      schema: "grand",
       compendium,
       adventure: { name: adv.name, status: adv.status, notes, encounters, treasure },
     });

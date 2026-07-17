@@ -1,4 +1,5 @@
-import { type JsonRecord, list, number, record, text } from "./nativeCompendiumV2.helpers.js";
+import { averageHpFromFormula } from "@beholden/shared/domain/monsters";
+import { type JsonRecord, list, number, record, text } from "./grandCompendium.helpers.js";
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
 const MOVEMENT_MODES = ["walk", "burrow", "climb", "fly", "swim"] as const;
@@ -26,16 +27,12 @@ function compactNamedBonuses(value: unknown): JsonRecord[] {
 
 function compactRecharge(value: unknown): JsonRecord | undefined {
   const recharge = record(value);
-  const kind = text(recharge.kind);
-  const source = text(recharge.source);
-  if (!kind || !source) return undefined;
-  return {
-    kind,
-    source,
-    ...(number(recharge.minimumRoll) !== null ? { minimumRoll: number(recharge.minimumRoll) } : {}),
-    ...(number(recharge.uses) !== null ? { uses: number(recharge.uses) } : {}),
-    ...(text(recharge.period) ? { period: text(recharge.period) } : {}),
-  };
+  const roll = number(recharge.roll);
+  if (roll !== null) return { roll };
+  const uses = number(recharge.uses);
+  const period = text(recharge.period);
+  if (uses !== null && period) return { uses, period };
+  return period === "short_rest" || period === "long_rest" ? { period } : undefined;
 }
 
 function compactAttack(value: unknown): JsonRecord | undefined {
@@ -48,9 +45,18 @@ function compactAttack(value: unknown): JsonRecord | undefined {
     ...(text(attack.range) ? { range: text(attack.range) } : {}),
     ...(attack.melee === true ? { melee: true } : {}),
     ...(attack.ranged === true ? { ranged: true } : {}),
-    ...(text(attack.damage) ? { damage: text(attack.damage) } : {}),
-    ...(text(attack.damageType) ? { damageType: text(attack.damageType) } : {}),
   };
+}
+
+function damageComponents(value: unknown): JsonRecord[] {
+  const values = Array.isArray(value) ? value : value && typeof value === "object" ? [value] : [];
+  return values.flatMap((raw) => {
+    const component = record(raw);
+    const roll = text(component.roll);
+    const type = Array.isArray(component.type) ? stringList(component.type) : text(component.type);
+    const hasType = Array.isArray(type) ? type.length >= 2 : Boolean(type);
+    return roll && hasType ? [{ roll, type }] : [];
+  });
 }
 
 export function compactMonsterActions(value: unknown): JsonRecord[] {
@@ -58,7 +64,20 @@ export function compactMonsterActions(value: unknown): JsonRecord[] {
     const action = record(raw);
     const recharge = compactRecharge(action.recharge);
     const attack = compactAttack(action.attack);
-    const attacks = stringList(action.attacks);
+    const damage = damageComponents(action.damage);
+    const routine = list(action.routine).flatMap((rawStep) => {
+      const step = record(rawStep);
+      const use = text(step.use);
+      const choose = stringList(step.choose);
+      if (!use && choose.length < 2) return [];
+      return [{
+        ...(use ? { use } : { choose }),
+        ...(number(step.count) !== null && number(step.count)! > 1 ? { count: number(step.count) } : {}),
+        ...(step.optional === true ? { optional: true } : {}),
+      }];
+    });
+    const replacementSource = record(action.replace);
+    const replacementWith = stringList(replacementSource.with);
     const spellSlots = Object.fromEntries(
       Object.entries(record(action.spellSlots))
         .flatMap(([level, count]) => number(count) !== null ? [[level, number(count)]] : []),
@@ -67,16 +86,23 @@ export function compactMonsterActions(value: unknown): JsonRecord[] {
       id: text(action.id) ?? `action_${index + 1}`,
       name: text(action.name) ?? `Action ${index + 1}`,
       description: text(action.description) ?? "",
-      ...(text(action.category) ? { category: text(action.category) } : {}),
       ...(recharge ? { recharge } : {}),
       ...(Object.keys(spellSlots).length ? { spellSlots } : {}),
       ...(attack ? { attack } : {}),
-      ...(attacks.length ? { attacks } : {}),
+      ...(damage.length === 1 ? { damage: damage[0] } : {}),
+      ...(damage.length > 1 ? { damage } : {}),
+      ...(routine.length ? { routine } : {}),
+      ...(replacementWith.length ? { replace: {
+        ...(number(replacementSource.count) !== null && number(replacementSource.count)! > 1 ? { count: number(replacementSource.count) } : {}),
+        with: replacementWith,
+      } } : {}),
+      ...(text(action.area) ? { area: text(action.area) } : {}),
+      ...(number(action.targets) !== null && number(action.targets)! > 1 ? { targets: number(action.targets) } : {}),
     };
   });
 }
 
-/** Converts verbose or sparse canonical monster data into the sparse V2 representation. */
+/** Converts verbose or sparse canonical monster data into the sparse Grand representation. */
 export function compactMonsterEntry(entry: JsonRecord): JsonRecord {
   const classificationSource = record(entry.classification);
   const environment = stringList(classificationSource.environment);
@@ -91,9 +117,9 @@ export function compactMonsterEntry(entry: JsonRecord): JsonRecord {
   };
 
   const challengeSource = record(entry.challenge);
+  // `numeric` is derived from `rating` at read time (crRatingToNumber), never stored.
   const challenge = {
     ...(text(challengeSource.rating) ? { rating: text(challengeSource.rating) } : {}),
-    ...(number(challengeSource.numeric) !== null ? { numeric: number(challengeSource.numeric) } : {}),
     ...(number(challengeSource.xp) !== null ? { xp: number(challengeSource.xp) } : {}),
   };
 
@@ -128,14 +154,13 @@ export function compactMonsterEntry(entry: JsonRecord): JsonRecord {
     }),
   );
 
+  // Spell references store only the catalog ID (plus a rare typed cast-level override);
+  // display names resolve from the spell catalog at read time.
   const spells = list(entry.spells).flatMap((raw) => {
     const spell = record(raw);
     const id = text(spell.id ?? spell.spellId);
-    const name = text(spell.name);
-    return id || name ? [{
-      ...(id ? { id } : {}),
-      ...(name ? { name } : {}),
-    }] : [];
+    const level = number(spell.level);
+    return id ? [{ id, ...(level !== null ? { level } : {}) }] : [];
   });
 
   const optionalLists = {
@@ -156,14 +181,19 @@ export function compactMonsterEntry(entry: JsonRecord): JsonRecord {
     ...(number(entry.passivePerception) !== null ? { passivePerception: number(entry.passivePerception) } : {}),
     ...(entry.npc === true ? { npc: true } : {}),
     ...(Object.keys(challenge).length ? { challenge } : {}),
-    armorClass: {
-      value: number(armorClassSource.value) ?? 0,
+    ...(number(armorClassSource.value) !== null && number(armorClassSource.value)! > 0 ? { armorClass: {
+      value: number(armorClassSource.value),
       ...(text(armorClassSource.source) ? { source: text(armorClassSource.source) } : {}),
-    },
-    hitPoints: {
-      average: number(hitPointsSource.average) ?? 0,
-      ...(text(hitPointsSource.formula) ? { formula: text(hitPointsSource.formula) } : {}),
-    },
+    } } : {}),
+    // Average is deterministic arithmetic from the formula (floor rule) — stored only
+    // when there is no formula, or when the formula isn't a derivable NdF(+/-M) shape.
+    ...(() => {
+      const formula = text(hitPointsSource.formula);
+      const average = number(hitPointsSource.average);
+      if (formula && averageHpFromFormula(formula) !== null) return { hitPoints: { formula } };
+      if (formula) return { hitPoints: { ...(average !== null && average > 0 ? { average } : {}), formula } };
+      return average !== null && average > 0 ? { hitPoints: { average } } : {};
+    })(),
     ...(Object.keys(movement).length ? { movement } : {}),
     ...(Object.keys(abilities).length ? { abilities } : {}),
     ...(Object.keys(proficiencies).length ? { proficiencies } : {}),
@@ -171,6 +201,11 @@ export function compactMonsterEntry(entry: JsonRecord): JsonRecord {
     ...(stringList(entry.senses).length ? { senses: stringList(entry.senses) } : {}),
     ...(stringList(entry.languages).length ? { languages: stringList(entry.languages) } : {}),
     ...(text(entry.treasure) ? { treasure: text(entry.treasure) } : {}),
+    ...(number(entry.legendaryUses) !== null ? { legendaryUses: number(entry.legendaryUses) } : {}),
+    ...(list(entry.lair).length ? { lair: list(entry.lair).flatMap((raw) => {
+      const lair = record(raw); const name = text(lair.name); const description = text(lair.description);
+      return name && description ? [{ name, description }] : [];
+    }) } : {}),
     ...Object.fromEntries(
       Object.entries(optionalLists).filter(([, entries]) => entries.length > 0),
     ),

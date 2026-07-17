@@ -1,16 +1,4 @@
 import { normalizeLanguageName } from "@/views/character/CharacterSheetUtils";
-import {
-  collectTaggedGrantsFromEffects,
-  parseFeatureEffects,
-} from "@/domain/character/parseFeatureEffects";
-
-export interface FeatureGrants {
-  armor: string[];
-  weapons: string[];
-  tools: string[];
-  skills: string[];
-  languages: string[];
-}
 
 export interface ClassLanguageChoice {
   fixed: string[];
@@ -21,8 +9,9 @@ export interface ClassLanguageChoice {
 
 interface ClassLanguageFeature {
   optional?: boolean;
-  text?: string;
   name?: string;
+  effects?: unknown[];
+  choices?: Array<{ kind?: string; category?: string; count?: number; from?: string | string[] }>;
 }
 
 interface ClassLanguageAutolevel {
@@ -35,27 +24,11 @@ interface ClassLanguageDetailLike {
   autolevels: ClassLanguageAutolevel[];
 }
 
-interface RaceTraitLike {
-  name: string;
-}
-
 interface RaceLanguageDetailLike {
-  traits?: RaceTraitLike[] | null;
-}
-
-export function parseFeatureGrants(text: string): FeatureGrants {
-  const parsed = parseFeatureEffects({
-    source: { id: "text", kind: "other", name: "Feature Text", text },
-    text,
-  });
-  const grants = collectTaggedGrantsFromEffects([parsed]);
-  return {
-    armor: grants.armor.map((item) => item.name),
-    weapons: grants.weapons.map((item) => item.name),
-    tools: grants.tools.map((item) => item.name),
-    skills: grants.skills.map((item) => item.name),
-    languages: grants.languages.map((item) => item.name),
-  };
+  /** Present only when the species already grants its own language choice (e.g. Warforged) —
+   * read from the compendium's structured `choices.languageChoice`, never inferred from a trait
+   * named "Language(s)" or its prose. */
+  languageChoice?: { count: number; from: string[] | null } | null;
 }
 
 export function getClassLanguageChoice(
@@ -71,13 +44,15 @@ export function getClassLanguageChoice(
     if (autolevel.level == null || autolevel.level > level) continue;
     for (const feature of autolevel.features) {
       if (feature.optional) continue;
-      const text = String(feature.text ?? "");
-      if (/know\s+thieves' cant/i.test(text)) {
-        fixed.add("Thieves' Cant");
+      for (const rawEffect of feature.effects ?? []) {
+        const effect = rawEffect as Record<string, unknown>;
+        if (effect.type !== "proficiency_grant" || effect.category !== "language" || !Array.isArray(effect.grants)) continue;
+        effect.grants.forEach((language) => fixed.add(String(language)));
         source = String(feature.name ?? source);
       }
-      if (/one\s+other\s+language\s+of\s+your\s+choice/i.test(text) || /one\s+language\s+of\s+your\s+choice/i.test(text)) {
-        choose = Math.max(choose, 1);
+      for (const choice of feature.choices ?? []) {
+        if (choice.kind !== "proficiency" || choice.category !== "language") continue;
+        choose += Math.max(0, Number(choice.count) || 0);
         source = String(feature.name ?? source);
       }
     }
@@ -90,8 +65,7 @@ export function getCoreLanguageChoice(
   raceDetail: RaceLanguageDetailLike | null,
   standardLanguages: string[],
 ) {
-  const hasExplicitLanguageTrait = (raceDetail?.traits ?? []).some((trait) => /^languages?$/i.test(trait.name));
-  if (hasExplicitLanguageTrait) return null;
+  if (raceDetail?.languageChoice != null) return null;
   return {
     fixed: ["Common"],
     choose: 2,

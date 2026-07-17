@@ -48,7 +48,7 @@ export function renderSpellsStep<T extends { id: string; name: string; level: nu
   invocCount: number;
   classInvocations: T[];
   chosenInvocations: string[];
-  toggleInvocation: (id: string) => void;
+  toggleInvocation: (id: string, action?: "add" | "remove") => void;
   invocationAllowed: (spell: T) => boolean;
   prepCount: number;
   maxSlotLevel: number;
@@ -65,6 +65,7 @@ export function renderSpellsStep<T extends { id: string; name: string; level: nu
     note?: string | null;
     emptyMsg?: string;
     onToggle: (value: string) => void;
+    getOptionLabel?: (value: string) => string;
   }>;
   extraSpellChoices: Array<{
     key: string;
@@ -176,6 +177,7 @@ export function renderSpellsStep<T extends { id: string; name: string; level: nu
             isSelected: (option) => entry.chosen.includes(option),
             isLocked: (_option, isSelected) => !isSelected && entry.chosen.length >= entry.max,
             onToggle: entry.onToggle,
+            getOptionLabel: entry.getOptionLabel,
             note: entry.note,
           })}
           {entry.options.length === 0 && (

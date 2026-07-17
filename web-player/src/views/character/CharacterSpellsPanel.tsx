@@ -15,8 +15,6 @@ import {
   getScaledSpellDamage,
   grantedSpellChargeBtn,
   highestAvailableSlotLevel,
-  parseSpellDamage,
-  parseSpellSave,
   spellSectionArrow,
   spellSectionHeaderBtn,
   SPELL_ROW_GRID,
@@ -30,12 +28,7 @@ type SpellLookupRow = {
 };
 
 function enrichSpellDetail(detail: FetchedSpellDetail): FetchedSpellDetail {
-  const textStr = Array.isArray(detail.text) ? detail.text.join("\n") : String(detail.text ?? "");
-  return {
-    ...detail,
-    damage: parseSpellDamage(textStr),
-    save: parseSpellSave(textStr),
-  };
+  return detail;
 }
 
 function formatResourceResetLabel(reset: ResourceCounter["reset"]): string {
@@ -263,14 +256,12 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
     void onSlotsChange({ ...usedSpellSlots, [key]: next });
   }
 
-  function spellText(d: FetchedSpellDetail): string {
-    return Array.isArray(d.text) ? d.text.join(" ") : String(d.text ?? "");
-  }
   function spellUsesSave(d: FetchedSpellDetail | undefined): boolean {
-    return d ? /(strength|dexterity|constitution|intelligence|wisdom|charisma) saving throw/i.test(spellText(d)) : false;
+    const checks = d ? (Array.isArray(d.check) ? d.check : [d.check]) : [];
+    return checks.some((check) => check && check !== "attack");
   }
   function spellUsesAttack(d: FetchedSpellDetail | undefined): boolean {
-    return d ? /spell attack|ranged spell attack|melee spell attack/i.test(spellText(d)) : false;
+    return d ? (Array.isArray(d.check) ? d.check : [d.check]).includes("attack") : false;
   }
 
   const ORDINALS = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
@@ -627,7 +618,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
                       background: `${dmgColor}15`, textAlign: "center", whiteSpace: "nowrap",
                     }}>
                       <span style={{ fontWeight: 800, fontSize: "var(--fs-subtitle)", color: C.text }}>{scaledDamageText}</span>
-                      <span style={{ fontSize: "var(--fs-small)", marginLeft: 3 }}>{DMG_EMOJI[scaledDamage.type] ?? "◆"}</span>
+                      <span style={{ fontSize: "var(--fs-small)", marginLeft: 3 }}>{scaledDamage.types.map((type) => DMG_EMOJI[type] ?? "◆").join(" ")}</span>
                     </div>
                   ) : <div />}
                 </div>

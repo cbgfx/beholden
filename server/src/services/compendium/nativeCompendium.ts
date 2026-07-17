@@ -1,27 +1,23 @@
 import type Database from "better-sqlite3";
 import { normalizeKey } from "../../lib/text.js";
+import { crRatingToNumber } from "@beholden/shared/domain/monsters";
 import {
-  assertCanonicalV2Entry,
-  backgroundToV2,
-  classToV2,
-  featToV2,
-  itemToV2,
-  monsterToV2,
-  spellFromV2,
-  spellToV2,
-  speciesToV2,
-} from "./nativeCompendiumV2.js";
-import { isCanonicalV2Entry } from "./nativeCompendiumV2.js";
-import { CANONICAL_V2_SCHEMA_VERSION } from "./nativeCompendiumV2Schemas.js";
+  assertGrandCompendiumEntry,
+  projectGrandSpell,
+} from "./grandCompendium.js";
+import { isGrandCompendiumEntry } from "./grandCompendium.js";
+import { GRAND_COMPENDIUM_SCHEMA_VERSION } from "./grandCompendiumSchemas.js";
 import { type JsonRecord, record } from "../../lib/jsonRecord.js";
+import { assertNativeCompendiumGuardrails } from "./nativeCompendiumGuardrails.js";
 
 export const BEHOLDEN_COMPENDIUM_FORMAT = "beholden.compendium";
-export const BEHOLDEN_COMPENDIUM_VERSION = 2;
+export const BEHOLDEN_COMPENDIUM_SCHEMA = "grand";
 
 export const NATIVE_COMPENDIUM_CATEGORIES = [
   "monsters",
   "items",
   "spells",
+  "classTalents",
   "classes",
   "species",
   "backgrounds",
@@ -34,7 +30,7 @@ export type NativeCompendiumCategory = (typeof NATIVE_COMPENDIUM_CATEGORIES)[num
 
 export type NativeCompendiumBatch = {
   format: typeof BEHOLDEN_COMPENDIUM_FORMAT;
-  version: typeof BEHOLDEN_COMPENDIUM_VERSION;
+  schema: typeof BEHOLDEN_COMPENDIUM_SCHEMA;
   category: NativeCompendiumCategory;
   exportedAt: string;
   entries: JsonRecord[];
@@ -42,13 +38,9 @@ export type NativeCompendiumBatch = {
 
 export type NativeCompendiumBundle = {
   format: typeof BEHOLDEN_COMPENDIUM_FORMAT;
-  version: typeof BEHOLDEN_COMPENDIUM_VERSION;
+  schema: typeof BEHOLDEN_COMPENDIUM_SCHEMA;
   exportedAt: string;
-  batches: Array<{
-    category: NativeCompendiumCategory;
-    entries: JsonRecord[];
-  }>;
-};
+} & Partial<Record<NativeCompendiumCategory, JsonRecord[]>>;
 
 export type NativeCompendiumDocument = NativeCompendiumBatch | NativeCompendiumBundle;
 
@@ -153,13 +145,10 @@ function canonicalNameKey(entry: JsonRecord, name: string): string {
 function mergeExportEntry(
   category: NativeCompendiumCategory,
   row: JsonRecord,
-  scalar: JsonRecord,
-  allowSourceConversion: boolean,
 ): JsonRecord {
   const blob = parseJsonRecord(row.data_json);
-  if (isCanonicalV2Entry(category, blob)) return blob;
-  if (allowSourceConversion) return { ...blob, ...scalar };
-  assertCanonicalV2Entry(category, blob, 0);
+  if (isGrandCompendiumEntry(category, blob)) return blob;
+  assertGrandCompendiumEntry(category, blob, 0);
   return blob;
 }
 
@@ -176,8 +165,8 @@ export function parseNativeCompendiumBatch(value: unknown): NativeCompendiumBatc
   if (root.format !== BEHOLDEN_COMPENDIUM_FORMAT) {
     throw new Error(`Expected format "${BEHOLDEN_COMPENDIUM_FORMAT}".`);
   }
-  if (root.version !== BEHOLDEN_COMPENDIUM_VERSION) {
-    throw new Error(`Unsupported Beholden Compendium version: ${String(root.version ?? "missing")}.`);
+  if (root.schema !== BEHOLDEN_COMPENDIUM_SCHEMA) {
+    throw new Error(`Expected Grand Schema compendium (schema "${BEHOLDEN_COMPENDIUM_SCHEMA}").`);
   }
   const category = String(root.category ?? "");
   if (!isNativeCompendiumCategory(category)) {
@@ -188,12 +177,12 @@ export function parseNativeCompendiumBatch(value: unknown): NativeCompendiumBatc
   }
   const entries = root.entries.map((entry, index) => {
     const parsed = asRecord(entry, `Entry ${index + 1}`);
-    if (!isCanonicalV2Entry(category, parsed)) {
-      assertCanonicalV2Entry(category, parsed, index);
+    if (!isGrandCompendiumEntry(category, parsed)) {
+      assertGrandCompendiumEntry(category, parsed, index);
     }
     return parsed;
   });
-  entries.forEach((entry, index) => assertCanonicalV2Entry(category, entry, index));
+  entries.forEach((entry, index) => assertGrandCompendiumEntry(category, entry, index));
   const ids = new Set<string>();
   entries.forEach((entry, index) => {
     const id = requiredText(entry.id, `Entry ${index + 1}.id`);
@@ -204,7 +193,7 @@ export function parseNativeCompendiumBatch(value: unknown): NativeCompendiumBatc
   });
   return {
     format: BEHOLDEN_COMPENDIUM_FORMAT,
-    version: BEHOLDEN_COMPENDIUM_VERSION,
+    schema: BEHOLDEN_COMPENDIUM_SCHEMA,
     category,
     exportedAt: optionalText(root.exportedAt) ?? new Date().toISOString(),
     entries,
@@ -213,37 +202,25 @@ export function parseNativeCompendiumBatch(value: unknown): NativeCompendiumBatc
 
 export function parseNativeCompendiumDocument(value: unknown): NativeCompendiumBatch[] {
   const root = asRecord(value, "Compendium document");
-  if (Array.isArray(root.batches)) {
+  const flatCategories = NATIVE_COMPENDIUM_CATEGORIES.filter((category) => root[category] !== undefined);
+  if (flatCategories.length > 0) {
     if (root.format !== BEHOLDEN_COMPENDIUM_FORMAT) {
       throw new Error(`Expected format "${BEHOLDEN_COMPENDIUM_FORMAT}".`);
     }
-    if (root.version !== BEHOLDEN_COMPENDIUM_VERSION) {
-      throw new Error(`Unsupported Beholden Compendium version: ${String(root.version ?? "missing")}.`);
+    if (root.schema !== BEHOLDEN_COMPENDIUM_SCHEMA) {
+      throw new Error(`Expected Grand Schema compendium (schema "${BEHOLDEN_COMPENDIUM_SCHEMA}").`);
     }
     const exportedAt = optionalText(root.exportedAt) ?? new Date().toISOString();
-    const batches = root.batches.map((rawBatch, index) => {
-      const batch = asRecord(rawBatch, `Batch ${index + 1}`);
+    return flatCategories.map((category) => {
+      if (!Array.isArray(root[category])) throw new Error(`Compendium ${category} must be an array.`);
       return parseNativeCompendiumBatch({
         format: BEHOLDEN_COMPENDIUM_FORMAT,
-        version: BEHOLDEN_COMPENDIUM_VERSION,
-        category: batch.category,
+        schema: BEHOLDEN_COMPENDIUM_SCHEMA,
+        category,
         exportedAt,
-        entries: batch.entries,
+        entries: root[category],
       });
     });
-    const idsByCategory = new Map<NativeCompendiumCategory, Set<string>>();
-    for (const batch of batches) {
-      const seen = idsByCategory.get(batch.category) ?? new Set<string>();
-      for (const entry of batch.entries) {
-        const id = String(entry.id);
-        if (seen.has(id)) {
-          throw new Error(`Compendium bundle duplicates ${batch.category} id "${id}".`);
-        }
-        seen.add(id);
-      }
-      idsByCategory.set(batch.category, seen);
-    }
-    return batches;
   }
   return [parseNativeCompendiumBatch(root)];
 }
@@ -256,6 +233,7 @@ function existingNativeIds(
     monsters: ["SELECT id FROM compendium_monsters"],
     items: ["SELECT id FROM compendium_items"],
     spells: ["SELECT id FROM compendium_spells"],
+    classTalents: ["SELECT id FROM compendium_class_talents"],
     classes: ["SELECT id FROM compendium_classes"],
     species: ["SELECT id FROM compendium_races"],
     backgrounds: ["SELECT id FROM compendium_backgrounds"],
@@ -279,6 +257,7 @@ export function previewNativeCompendiumDocument(
   input: NativeCompendiumDocument | unknown,
 ): NativeCompendiumPreview {
   const batches = parseNativeCompendiumDocument(input);
+  assertNativeCompendiumGuardrails(db, batches);
   const existingByCategory = new Map<NativeCompendiumCategory, Set<string>>();
   const previewBatches = batches.map((batch) => {
     const existing = existingByCategory.get(batch.category)
@@ -306,130 +285,74 @@ export function previewNativeCompendiumDocument(
 export function exportNativeCompendiumBundle(
   db: Database.Database,
   categories: Iterable<NativeCompendiumCategory> = NATIVE_COMPENDIUM_CATEGORIES,
-  options: { includeEmpty?: boolean; allowSourceConversion?: boolean } = {},
+  options: { includeEmpty?: boolean } = {},
 ): NativeCompendiumBundle {
   const exportedAt = new Date().toISOString();
   const batches = Array.from(categories)
-    .map((category) => exportNativeCompendiumBatch(
-      db,
-      category,
-      undefined,
-      options.allowSourceConversion === undefined
-        ? {}
-        : { allowSourceConversion: options.allowSourceConversion },
-    ))
+    .map((category) => exportNativeCompendiumBatch(db, category))
     .filter((batch) => options.includeEmpty || batch.entries.length > 0)
-    .map((batch) => ({ category: batch.category, entries: batch.entries }));
-  return {
+  const document = {
     format: BEHOLDEN_COMPENDIUM_FORMAT,
-    version: BEHOLDEN_COMPENDIUM_VERSION,
+    schema: BEHOLDEN_COMPENDIUM_SCHEMA,
     exportedAt,
-    batches,
-  };
+  } as NativeCompendiumBundle;
+  for (const batch of batches) document[batch.category] = batch.entries;
+  return document;
 }
 
 export function exportNativeCompendiumBatch(
   db: Database.Database,
   category: NativeCompendiumCategory,
   ids?: Iterable<string>,
-  options: { allowSourceConversion?: boolean } = {},
 ): NativeCompendiumBatch {
   let entries: JsonRecord[];
-  const allowSourceConversion = options.allowSourceConversion === true;
 
   switch (category) {
     case "monsters":
       entries = (db.prepare(
         "SELECT id, name, name_key, cr, cr_numeric, type_key, type_full, size, environment, data_json FROM compendium_monsters ORDER BY name COLLATE NOCASE",
-      ).all() as JsonRecord[]).map((row) => mergeExportEntry("monsters", row, {
-        id: row.id,
-        name: row.name,
-        nameKey: row.name_key ?? null,
-        cr: row.cr ?? null,
-        crNumeric: row.cr_numeric ?? null,
-        typeKey: row.type_key ?? null,
-        typeFull: row.type_full ?? null,
-        size: row.size ?? null,
-        environment: row.environment ?? null,
-      }, allowSourceConversion));
+      ).all() as JsonRecord[]).map((row) => mergeExportEntry("monsters", row));
       break;
     case "items":
       entries = (db.prepare(
         "SELECT id, name, name_key, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items ORDER BY name COLLATE NOCASE",
-      ).all() as JsonRecord[]).map((row) => mergeExportEntry("items", row, {
-        id: row.id,
-        name: row.name,
-        nameKey: row.name_key ?? null,
-        rarity: row.rarity ?? null,
-        type: row.type ?? null,
-        typeKey: row.type_key ?? null,
-        attunement: bool(row.attunement),
-        magic: bool(row.magic),
-        equippable: bool(row.equippable),
-        weight: row.weight ?? null,
-        value: row.value ?? null,
-        proficiency: row.proficiency ?? null,
-      }, allowSourceConversion));
+      ).all() as JsonRecord[]).map((row) => mergeExportEntry("items", row));
       break;
     case "spells":
       entries = (db.prepare(
         "SELECT id, name, name_key, level, school, ritual, concentration, components, classes, data_json FROM compendium_spells ORDER BY name COLLATE NOCASE",
-      ).all() as JsonRecord[]).map((row) => mergeExportEntry("spells", row, {
-        id: row.id,
-        name: row.name,
-        nameKey: row.name_key ?? null,
-        level: row.level ?? null,
-        school: row.school ?? null,
-        ritual: bool(row.ritual),
-        concentration: bool(row.concentration),
-        components: row.components ?? null,
-        classes: row.classes ?? null,
-      }, allowSourceConversion));
+      ).all() as JsonRecord[]).map((row) => mergeExportEntry("spells", row));
+      break;
+    case "classTalents":
+      entries = (db.prepare(
+        "SELECT id, name, name_key, kind, data_json FROM compendium_class_talents ORDER BY kind, name COLLATE NOCASE",
+      ).all() as JsonRecord[]).map((row) => mergeExportEntry("classTalents", row));
       break;
     case "classes":
       entries = (db.prepare(
         "SELECT id, name, name_key, hd, data_json FROM compendium_classes ORDER BY name COLLATE NOCASE",
-      ).all() as JsonRecord[]).map((row) => mergeExportEntry("classes", row, {
-        id: row.id,
-        name: row.name,
-        nameKey: row.name_key ?? null,
-        hd: row.hd ?? null,
-      }, allowSourceConversion));
+      ).all() as JsonRecord[]).map((row) => mergeExportEntry("classes", row));
       break;
     case "species":
       entries = (db.prepare(
         "SELECT id, name, name_key, size, speed, data_json FROM compendium_races ORDER BY name COLLATE NOCASE",
-      ).all() as JsonRecord[]).map((row) => mergeExportEntry("species", row, {
-        id: row.id,
-        name: row.name,
-        nameKey: row.name_key ?? null,
-        size: row.size ?? null,
-        speed: row.speed ?? null,
-      }, allowSourceConversion));
+      ).all() as JsonRecord[]).map((row) => mergeExportEntry("species", row));
       break;
     case "backgrounds":
       entries = (db.prepare(
         "SELECT id, name, name_key, data_json FROM compendium_backgrounds ORDER BY name COLLATE NOCASE",
-      ).all() as JsonRecord[]).map((row) => mergeExportEntry("backgrounds", row, {
-        id: row.id,
-        name: row.name,
-        nameKey: row.name_key ?? null,
-      }, allowSourceConversion));
+      ).all() as JsonRecord[]).map((row) => mergeExportEntry("backgrounds", row));
       break;
     case "feats":
       entries = (db.prepare(
         "SELECT id, name, name_key, data_json FROM compendium_feats ORDER BY name COLLATE NOCASE",
-      ).all() as JsonRecord[]).map((row) => mergeExportEntry("feats", row, {
-        id: row.id,
-        name: row.name,
-        nameKey: row.name_key ?? null,
-      }, allowSourceConversion));
+      ).all() as JsonRecord[]).map((row) => mergeExportEntry("feats", row));
       break;
     case "decks":
       entries = (db.prepare(
         "SELECT id, deck_name, deck_key, card_name, card_key, card_text, sort_index FROM compendium_deck_cards ORDER BY deck_name COLLATE NOCASE, sort_index, card_name COLLATE NOCASE",
       ).all() as JsonRecord[]).map((row) => ({
-        schemaVersion: CANONICAL_V2_SCHEMA_VERSION,
+        schemaVersion: GRAND_COMPENDIUM_SCHEMA_VERSION,
         id: row.id,
         deckName: row.deck_name,
         deckKey: row.deck_key,
@@ -443,7 +366,7 @@ export function exportNativeCompendiumBatch(
       const spaces = (db.prepare(
         "SELECT id, name, name_key, squares, label, sort_index FROM compendium_bastion_spaces ORDER BY sort_index, name COLLATE NOCASE",
       ).all() as JsonRecord[]).map((row) => ({
-        schemaVersion: CANONICAL_V2_SCHEMA_VERSION,
+        schemaVersion: GRAND_COMPENDIUM_SCHEMA_VERSION,
         kind: "space",
         id: row.id,
         name: row.name,
@@ -455,7 +378,7 @@ export function exportNativeCompendiumBatch(
       const orders = (db.prepare(
         "SELECT id, order_name, order_key, sort_index FROM compendium_bastion_orders ORDER BY sort_index, order_name COLLATE NOCASE",
       ).all() as JsonRecord[]).map((row) => ({
-        schemaVersion: CANONICAL_V2_SCHEMA_VERSION,
+        schemaVersion: GRAND_COMPENDIUM_SCHEMA_VERSION,
         kind: "order",
         id: row.id,
         name: row.order_name,
@@ -465,7 +388,7 @@ export function exportNativeCompendiumBatch(
       const facilities = (db.prepare(
         "SELECT id, name, name_key, facility_type, minimum_level, prerequisite, orders_json, space, hirelings, allow_multiple, description, data_json FROM compendium_bastion_facilities ORDER BY facility_type, minimum_level, name COLLATE NOCASE",
       ).all() as JsonRecord[]).map((row) => ({
-        schemaVersion: CANONICAL_V2_SCHEMA_VERSION,
+        schemaVersion: GRAND_COMPENDIUM_SCHEMA_VERSION,
         kind: "facility",
         id: row.id,
         name: row.name,
@@ -489,17 +412,9 @@ export function exportNativeCompendiumBatch(
     entries = entries.filter((entry) => wanted.has(String(entry.id ?? "")));
   }
 
-  if (category === "monsters") entries = entries.map(monsterToV2);
-  if (category === "items") entries = entries.map(itemToV2);
-  if (category === "spells") entries = entries.map(spellToV2);
-  if (category === "classes") entries = entries.map(classToV2);
-  if (category === "species") entries = entries.map(speciesToV2);
-  if (category === "backgrounds") entries = entries.map(backgroundToV2);
-  if (category === "feats") entries = entries.map(featToV2);
-
   return {
     format: BEHOLDEN_COMPENDIUM_FORMAT,
-    version: BEHOLDEN_COMPENDIUM_VERSION,
+    schema: BEHOLDEN_COMPENDIUM_SCHEMA,
     category,
     exportedAt: new Date().toISOString(),
     entries,
@@ -524,11 +439,7 @@ export function importNativeCompendiumBatch(
           const classification = record(entry.classification);
           const challenge = record(entry.challenge);
           const cr = optionalText(challenge.rating);
-          const crNumeric = optionalNumber(challenge.numeric)
-            ?? (cr?.includes("/") ? (() => {
-              const [n, d] = cr.split("/").map(Number);
-              return d ? (n ?? 0) / d : null;
-            })() : optionalNumber(cr));
+          const crNumeric = crRatingToNumber(cr);
           stmt.run(
             idOrGenerated(entry, "m_", name),
             name,
@@ -574,7 +485,7 @@ export function importNativeCompendiumBatch(
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Spell ${index + 1} name`);
-          const screenView = spellFromV2(entry);
+          const screenView = projectGrandSpell(entry);
           stmt.run(
             idOrGenerated(entry, "s_", name),
             name,
@@ -587,6 +498,25 @@ export function importNativeCompendiumBatch(
             optionalText(screenView.classes),
             JSON.stringify(entry),
           );
+        }
+        break;
+      }
+      case "classTalents": {
+        const stmt = db.prepare(
+          "INSERT OR REPLACE INTO compendium_class_talents (id, name, name_key, kind, data_json) VALUES (?, ?, ?, ?, ?)",
+        );
+        for (const [index, entry] of entries.entries()) {
+          const name = requiredText(entry.name, `Class talent ${index + 1} name`);
+          const id = idOrGenerated(entry, "ct_", name);
+          stmt.run(
+            id,
+            name,
+            canonicalNameKey(entry, name),
+            requiredText(entry.kind, `Class talent ${index + 1} kind`),
+            JSON.stringify(entry),
+          );
+          // The legacy corpus stored ClassTalents in the spell table under these IDs.
+          db.prepare("DELETE FROM compendium_spells WHERE id = ?").run(id);
         }
         break;
       }
@@ -746,9 +676,16 @@ export function importNativeCompendiumDocument(
   input: NativeCompendiumDocument | unknown,
 ): NativeCompendiumDocumentImportResult {
   const batches = parseNativeCompendiumDocument(input);
-  const results = db.transaction(() =>
-    batches.map((batch) => importNativeCompendiumBatch(db, batch))
-  )();
+  assertNativeCompendiumGuardrails(db, batches);
+  const results = db.transaction(() => {
+    const imported = batches.map((batch) => importNativeCompendiumBatch(db, batch));
+    // Category migrations can change an earlier batch's final count (ClassTalents
+    // removes its legacy Spell rows), so totals must be measured after all writes.
+    return imported.map((result) => ({
+      ...result,
+      total: countNativeCategory(db, result.category),
+    }));
+  })();
   return {
     imported: results.reduce((total, result) => total + result.imported, 0),
     total: results.reduce((total, result) => total + result.total, 0),
@@ -770,6 +707,7 @@ export function countNativeCategory(
     monsters: "compendium_monsters",
     items: "compendium_items",
     spells: "compendium_spells",
+    classTalents: "compendium_class_talents",
     classes: "compendium_classes",
     species: "compendium_races",
     backgrounds: "compendium_backgrounds",

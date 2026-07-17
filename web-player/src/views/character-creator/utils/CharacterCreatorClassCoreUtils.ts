@@ -1,4 +1,4 @@
-import { wordOrNumberToInt, type RaceChoices } from "@/lib/characterRules";
+import { wordOrNumberToInt } from "@/lib/characterRules";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import { abilityMod } from "@/views/character/CharacterSheetUtils";
 import type { ParsedFeatChoiceLike as CreatorParsedFeatChoiceLike } from "./FeatChoiceTypes";
@@ -16,26 +16,50 @@ import {
 } from "../constants/CharacterCreatorConstants";
 
 export { abilityMod, wordOrNumberToInt };
-export type { RaceChoices };
 
 export interface CreatorFeatureLike {
+  id?: string;
   name: string;
   text?: string | null;
   optional?: boolean;
   subclass?: string | null;
   effects?: unknown[];
+  noteTemplate?: { id: string; title: string; text: string } | null;
   preparedSpellProgression?: PreparedSpellProgressionTable[];
+  talent?: { kind: "invocation" | "maneuver" | "metamagic"; known: Record<string, number>; replace?: true; ability?: string[] } | null;
+  choices?: Array<
+    | { kind: "feat"; category: "F"; count?: number; replace?: true }
+    | { kind: "weapon_mastery"; known: Record<string, number>; melee?: true }
+    | { kind: "expertise"; known: Record<string, number>; from?: string[] }
+    | { kind: "proficiency"; category: "skill" | "tool" | "language" | "saving_throw"; count: number; from?: string | string[]; ifProficient?: string }
+    | { id: string; kind: "spell"; lists: string[]; count?: number; level?: number; maxLevel?: number; school?: string; mode: "known" | "prepared" | "spellbook"; replace?: true; perNewSlotLevel?: true; freeCast?: true; ifKnown?: string }
+  >;
 }
 
 export interface CreatorAutolevelLike {
   level: number;
   slots: number[] | null;
+  spellsPrepared?: number | null;
   features?: CreatorFeatureLike[];
   counters?: Array<{ name: string; value: number; reset: string; subclass?: string | null }>;
 }
 
 export interface CreatorClassDetailLike {
   autolevels: CreatorAutolevelLike[];
+  preparedSpellChanges?: "short_rest" | "long_rest" | null;
+  spellcastingList?: string | null;
+  equipmentOptions?: StructuredStartingEquipmentOption[];
+  subclasses?: { level: number; options: Record<string, string> } | null;
+  subclassDetails?: Record<string, string | {
+    name: string;
+    spellcasting?: {
+      ability: string;
+      list: string;
+      progression?: Array<{ level: number; cantrips?: number; prepared?: number; slots?: number[] }>;
+    };
+  }>;
+  spellLists?: Record<string, string>;
+  choices?: Array<{ id: string; name: string; options: Array<{ id: string; name: string; features: string[] }> }>;
 }
 
 export interface ClassExpertiseChoice {
@@ -53,20 +77,17 @@ export interface CreatorItemSummaryLike {
   attunement?: boolean;
 }
 
-export interface CreatorRaceTraitLike {
-  name: string;
-  text: string;
-  preparedSpellProgression?: PreparedSpellProgressionTable[];
-}
-
 export interface StartingEquipmentOption {
   id: string;
   entries: string[];
   text: string;
+  structuredEntries?: StructuredStartingEquipmentEntry[];
 }
 
 export type StructuredStartingEquipmentEntry =
-  | { kind: "item"; name: string; quantity: number }
+  | { kind: "item"; itemId?: string; name?: string; quantity: number; sourceLabel?: string }
+  | { kind: "choiceRef"; choiceKey: "background.tools" | "class.tools"; quantity: number; sourceLabel: string }
+  | { kind: "itemChoice"; choiceKey: string; itemIds: string[]; quantity: number; sourceLabel: string }
   | { kind: "currency"; denomination: "PP" | "GP" | "EP" | "SP" | "CP"; amount: number };
 
 export interface StructuredStartingEquipmentOption {
@@ -128,17 +149,11 @@ export function calcHpMax(hd: number, level: number, conMod: number): number {
 
 export function getFeatureSubclassName(feature: CreatorFeatureLike): string | null {
   const explicit = String(feature.subclass ?? "").trim();
-  if (explicit) return explicit;
-  const namedSubclass = String(feature.name ?? "").match(/\(([^()]+)\)\s*$/);
-  if (namedSubclass?.[1]) return namedSubclass[1].trim();
-  const chooserMatch = String(feature.name ?? "").match(/subclass:\s*(.+)$/i);
-  if (chooserMatch?.[1]) return chooserMatch[1].trim();
-  return null;
+  return explicit || null;
 }
 
-export function isSubclassChoiceFeature(feature: CreatorFeatureLike): boolean {
-  const name = String(feature.name ?? "").trim();
-  return /subclass:/i.test(name) || /^becoming\b/i.test(name);
+export function isSubclassChoiceFeature(_feature: CreatorFeatureLike): boolean {
+  return false;
 }
 
 export function featureMatchesSubclass(feature: CreatorFeatureLike, selectedSubclass: string | null | undefined): boolean {
@@ -149,13 +164,7 @@ export function featureMatchesSubclass(feature: CreatorFeatureLike, selectedSubc
 }
 
 export function getSubclassLevel(cls: CreatorClassDetailLike | null): number | null {
-  if (!cls) return null;
-  for (const al of getMergedAutolevels(cls)) {
-    for (const feature of al.features ?? []) {
-      if (/subclass/i.test(feature.name) && !feature.optional) return al.level;
-    }
-  }
-  return null;
+  return cls?.subclasses?.level ?? null;
 }
 
 export function featuresUpToLevelForSubclass(cls: CreatorClassDetailLike, level: number, selectedSubclass?: string | null) {
@@ -169,16 +178,7 @@ export function featuresUpToLevelForSubclass(cls: CreatorClassDetailLike, level:
 }
 
 export function getSubclassList(cls: CreatorClassDetailLike): string[] {
-  const names: string[] = [];
-  for (const al of getMergedAutolevels(cls)) {
-    for (const feature of al.features ?? []) {
-      if (feature.optional && /subclass:/i.test(feature.name)) {
-        const label = feature.name.replace(/^[^:]+:\s*/i, "").trim();
-        if (label && !names.includes(label)) names.push(label);
-      }
-    }
-  }
-  return names;
+  return Object.values(cls.subclasses?.options ?? {});
 }
 
 export function getSlotsAtLevel(cls: CreatorClassDetailLike, level: number): number[] | null {
@@ -191,7 +191,6 @@ export function getSlotsAtLevel(cls: CreatorClassDetailLike, level: number): num
 
 export function getClassExpertiseChoices(cls: CreatorClassDetailLike | null, level: number): ClassExpertiseChoice[] {
   if (!cls) return [];
-  const SKILL_NAMES = ALL_SKILLS.map((skill) => skill.name);
   const choices: ClassExpertiseChoice[] = [];
   const seen = new Set<string>();
   for (const al of getMergedAutolevels(cls)) {
@@ -199,51 +198,19 @@ export function getClassExpertiseChoices(cls: CreatorClassDetailLike | null, lev
     for (const feature of al.features ?? []) {
       if (feature.optional) continue;
       const name = String(feature.name ?? "").trim();
-      const text = String(feature.text ?? "").trim();
-      if (!name || !text) continue;
+      if (!name) continue;
 
-      let count: number | null = null;
-      let options: string[] | null = null;
-
-      const explicitMatch = text.match(/Choose\s+(one|two|three|four|\d+)\s+of (?:the following )?skills?[^:]*:\s*([^.]+)/i);
-      if (explicitMatch) {
-        count = wordOrNumberToInt(explicitMatch[1] ?? "") ?? 1;
-        options = (explicitMatch[2] ?? "")
-          .split(/,\s*|\s+or\s+/i)
-          .map((s) => s.trim())
-          .map((s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())
-          .filter((s) => SKILL_NAMES.includes(s));
-
-        if (!count || count <= 0) continue;
-        const key = `classexpertise:${al.level}:${name}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        choices.push({ key, source: name, count, options: options && options.length > 0 ? options : null });
-      } else {
-        // Use matchAll so a single feature text can grant expertise at multiple levels
-        // e.g. Bard "Level 2: Expertise" says "two at L2" AND "At Bard level 9, two more".
-        let matchIdx = 0;
-        for (const m of text.matchAll(
-          /gain Expertise in\s+(one|two|three|four|\d+)(?:\s+more)?\s+of your skill proficiencies of your choice/gi,
-        )) {
-          const matchCount = wordOrNumberToInt(m[1] ?? "") ?? 1;
-          if (!matchCount || matchCount <= 0) { matchIdx++; continue; }
-          // Detect "At [Class] level X" immediately before this occurrence
-          const prefix = text.slice(Math.max(0, (m.index ?? 0) - 40), m.index ?? 0);
-          const levelGate = prefix.match(/At\s+\w+\s+level\s+(\d+)/i);
-          const gatedLevel = levelGate ? Number(levelGate[1]) : al.level;
-          if (gatedLevel > level) { matchIdx++; continue; }
-          const matchKey = matchIdx === 0
-            ? `classexpertise:${al.level}:${name}`
-            : `classexpertise:${gatedLevel}:${name}:${matchIdx}`;
-          if (seen.has(matchKey)) { matchIdx++; continue; }
-          seen.add(matchKey);
-          choices.push({ key: matchKey, source: name, count: matchCount, options: null });
-          matchIdx++;
+      const structured = feature.choices?.find((choice) => choice.kind === "expertise");
+      if (structured?.kind === "expertise") {
+        for (const [requiredLevelText, count] of Object.entries(structured.known)) {
+          const requiredLevel = Number(requiredLevelText);
+          if (requiredLevel > level) continue;
+          const key = `classexpertise:${requiredLevel}:${name}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          choices.push({ key, source: name, count, options: structured.from ?? null });
         }
-        continue; // skip the old single-push below
       }
-      continue;
     }
   }
   return choices;

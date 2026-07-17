@@ -65,7 +65,7 @@ export function ItemsBrowserPanel(props: Props) {
   async function handleEditClick(id: string) {
     setEditLoading(id);
     try {
-      const item = await api<ItemForEdit>(`/api/compendium/items/${encodeURIComponent(id)}`);
+      const item = await api<ItemForEdit>(`/api/compendium/items/${encodeURIComponent(id)}?view=grand`);
       setFormTarget({ mode: "edit", item });
     } catch {
       // ignore

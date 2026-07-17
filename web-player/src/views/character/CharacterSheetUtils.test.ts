@@ -1,29 +1,43 @@
 import { describe, expect, it } from "vitest";
-import { featPrerequisitesMet, normalizeAbilityKey } from "@/views/character/CharacterSheetUtils";
+import { featPrerequisitesMet, invocationPrerequisitesMet, normalizeAbilityKey } from "@/views/character/CharacterSheetUtils";
+
+describe("invocationPrerequisitesMet canonical facts", () => {
+  it("requires levels, owned talents, and the exact cantrip capability", () => {
+    const prerequisite = { level: 5, talent: "ct_invocation_pact_of_blade", cantrip: "attack_damage" as const };
+    expect(invocationPrerequisitesMet(prerequisite, { level: 4, hasAttackDamageCantrip: true, chosenTalentIds: ["ct_invocation_pact_of_blade"] })).toBe(false);
+    expect(invocationPrerequisitesMet(prerequisite, { level: 5, hasDamageCantrip: true, chosenTalentIds: ["ct_invocation_pact_of_blade"] })).toBe(false);
+    expect(invocationPrerequisitesMet(prerequisite, { level: 5, hasAttackDamageCantrip: true, chosenTalentIds: [] })).toBe(false);
+    expect(invocationPrerequisitesMet(prerequisite, { level: 5, hasAttackDamageCantrip: true, chosenTalentIds: ["ct_invocation_pact_of_blade"] })).toBe(true);
+  });
+
+  it("never derives a prerequisite from display prose", () => {
+    expect(invocationPrerequisitesMet(null, { level: 1 })).toBe(true);
+  });
+});
 
 describe("featPrerequisitesMet ability requirements", () => {
   it("accepts either ability in a shared-threshold alternative", () => {
-    const text = "Prerequisite: Strength or Dexterity 13+";
-    expect(featPrerequisitesMet(text, { level: 4, scores: { str: 13, dex: 8 } })).toBe(true);
-    expect(featPrerequisitesMet(text, { level: 4, scores: { str: 8, dex: 13 } })).toBe(true);
-    expect(featPrerequisitesMet(text, { level: 4, scores: { str: 8, dex: 8 } })).toBe(false);
+    const prerequisite = { ability: { any: ["str", "dex"] as const } };
+    expect(featPrerequisitesMet(prerequisite, { level: 4, scores: { str: 13, dex: 8 } })).toBe(true);
+    expect(featPrerequisitesMet(prerequisite, { level: 4, scores: { str: 8, dex: 13 } })).toBe(true);
+    expect(featPrerequisitesMet(prerequisite, { level: 4, scores: { str: 8, dex: 8 } })).toBe(false);
   });
 
   it("accepts alternatives with separately written thresholds", () => {
-    const text = "Prerequisite: Strength 13+ or Dexterity 13+";
-    expect(featPrerequisitesMet(text, { level: 4, scores: { str: 13, dex: 8 } })).toBe(true);
-    expect(featPrerequisitesMet(text, { level: 4, scores: { str: 8, dex: 13 } })).toBe(true);
+    const prerequisite = { ability: { any: ["str", "dex"] as const } };
+    expect(featPrerequisitesMet(prerequisite, { level: 4, scores: { str: 13, dex: 8 } })).toBe(true);
+    expect(featPrerequisitesMet(prerequisite, { level: 4, scores: { str: 8, dex: 13 } })).toBe(true);
   });
 
   it("requires every ability joined by and", () => {
-    const text = "Prerequisite: Dexterity 13+ and Wisdom 13+";
-    expect(featPrerequisitesMet(text, { level: 4, scores: { dex: 13, wis: 13 } })).toBe(true);
-    expect(featPrerequisitesMet(text, { level: 4, scores: { dex: 13, wis: 12 } })).toBe(false);
+    const prerequisite = { ability: [{ any: ["dex"] as const }, { any: ["wis"] as const }] };
+    expect(featPrerequisitesMet(prerequisite, { level: 4, scores: { dex: 13, wis: 13 } })).toBe(true);
+    expect(featPrerequisitesMet(prerequisite, { level: 4, scores: { dex: 13, wis: 12 } })).toBe(false);
   });
 
   it("understands the or-higher wording", () => {
-    const text = "Prerequisite: Strength or Dexterity score of 13 or higher";
-    expect(featPrerequisitesMet(text, { level: 4, scores: { str: 13, dex: 8 } })).toBe(true);
+    const prerequisite = { ability: { any: ["str", "dex"] as const } };
+    expect(featPrerequisitesMet(prerequisite, { level: 4, scores: { str: 13, dex: 8 } })).toBe(true);
   });
 });
 

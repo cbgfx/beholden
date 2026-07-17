@@ -15,9 +15,7 @@ import {
   previewNativeCompendiumDocument,
   type NativeCompendiumCategory,
 } from "./nativeCompendium.js";
-import { convertCompendiumXmlToNative } from "./convertXmlToNative.js";
-import { assertCanonicalV2Entry, collectV2MonsterSpellIds } from "./nativeCompendiumV2.js";
-import { mergeCanonicalV2Edit } from "./canonicalCompendiumEdits.js";
+import { assertGrandCompendiumEntry, collectGrandMonsterSpellIds } from "./grandCompendium.js";
 import { compactBackgroundEntry } from "./backgroundCompaction.js";
 import { compactClassEntry } from "./classCompaction.js";
 import { compactFeatEntry } from "./featCompaction.js";
@@ -40,7 +38,7 @@ const samples: Record<NativeCompendiumCategory, Array<Record<string, unknown>>> 
     initiativeBonus: null,
     passivePerception: null,
     npc: false,
-    challenge: { rating: "2", numeric: 2, xp: 450 },
+    challenge: { rating: "2", xp: 450 },
     armorClass: { value: 15, source: null },
     hitPoints: { average: 30, formula: "4d8 + 12" },
     movement: { walk: 30, burrow: null, climb: null, fly: null, swim: null, hover: false },
@@ -56,8 +54,8 @@ const samples: Record<NativeCompendiumCategory, Array<Record<string, unknown>>> 
       description: "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) slashing damage.",
       category: null,
       recharge: null,
-      attack: { toHit: 4, reach: "5ft", range: null, melee: true, ranged: false, damage: "1d8+2", damageType: "slashing" },
-      attacks: [],
+      attack: { toHit: 4, reach: "5ft", range: null, melee: true, ranged: false },
+      damage: { roll: "1d8+2", type: "slashing" },
     }],
     reactions: [],
     legendaryActions: [],
@@ -93,13 +91,20 @@ const samples: Record<NativeCompendiumCategory, Array<Record<string, unknown>>> 
       components: { verbal: true, somatic: true },
       duration: { description: "Instantaneous" },
     },
-    classes: ["Wizard"],
+    access: ["sl_wizard"],
     description: ["Test spell."],
+  }],
+  classTalents: [{
+    id: "ct_invocation_test",
+    name: "Invocation: Test",
+    kind: "invocation",
+    description: ["A test class talent."],
   }],
   classes: [{
     schemaVersion: 2,
     id: "c_test",
     name: "Test Class",
+    spellLists: { sl_wizard: "Wizard" },
     description: "A test class.",
     hitDie: 8,
     startingWealth: null,
@@ -173,7 +178,7 @@ samples.feats = samples.feats.map(compactFeatEntry);
 function batch(category: NativeCompendiumCategory, entries = samples[category]) {
   return {
     format: "beholden.compendium",
-    version: 2,
+    schema: "grand",
     category,
     exportedAt: "2026-06-28T00:00:00.000Z",
     entries,
@@ -191,7 +196,7 @@ test("native compendium round-trips every category", () => {
       assert.equal(result.imported, samples[category].length);
       assert.equal(exported.entries.length, samples[category].length);
       assert.equal(exported.format, "beholden.compendium");
-      assert.equal(exported.version, 2);
+      assert.equal(exported.schema, "grand");
       assert.equal(exported.category, category);
     }
 
@@ -246,7 +251,7 @@ test("native imports replace matching IDs", () => {
   }
 });
 
-test("native v2 remains canonical in storage", () => {
+test("Grand remains canonical in storage", () => {
   const db = new Database(":memory:");
   db.exec(SCHEMA_SQL);
 
@@ -273,41 +278,6 @@ test("native v2 remains canonical in storage", () => {
   }
 });
 
-test("editor replacements preserve canonical-only fields", () => {
-  const monster = samples.monsters[0]!;
-  const replacement = structuredClone(monster);
-  delete replacement.source;
-  delete replacement.description;
-  delete replacement.spellcasting;
-  delete replacement.spells;
-  delete (replacement.classification as Record<string, unknown>).alignment;
-  const existing = compactMonsterEntry({
-    ...monster,
-    source: "Test Source",
-    description: "Canonical description",
-    spellcasting: [{
-      id: "innate",
-      name: "Innate Spellcasting",
-      description: "The guardian casts spells.",
-    }],
-    spells: [{ id: "s_test", name: "Test Spell" }],
-    classification: {
-      ...(monster.classification as Record<string, unknown>),
-      alignment: "Neutral",
-    },
-  });
-  const mergedMonster = mergeCanonicalV2Edit("monsters", existing, replacement);
-
-  assert.equal(mergedMonster.source, "Test Source");
-  assert.equal(mergedMonster.description, "Canonical description");
-  assert.equal((mergedMonster.spellcasting as unknown[]).length, 1);
-  assert.equal((mergedMonster.spells as unknown[]).length, 1);
-  assert.equal(
-    (mergedMonster.classification as Record<string, unknown>).alignment,
-    "Neutral",
-  );
-});
-
 test("native importer accepts a multi-category bundle atomically", () => {
   const source = new Database(":memory:");
   const destination = new Database(":memory:");
@@ -318,7 +288,10 @@ test("native importer accepts a multi-category bundle atomically", () => {
     importNativeCompendiumBatch(source, batch("monsters"));
     importNativeCompendiumBatch(source, batch("items"));
     const bundle = exportNativeCompendiumBundle(source);
-    assert.equal(bundle.batches.length, 2);
+    const serialized = JSON.parse(JSON.stringify(bundle)) as Record<string, unknown>;
+    assert.equal(serialized.batches, undefined);
+    assert.ok(Array.isArray(serialized.monsters));
+    assert.ok(Array.isArray(serialized.items));
 
     const result = importNativeCompendiumDocument(destination, bundle);
     assert.equal(result.imported, 2);
@@ -383,15 +356,10 @@ test("invalid native bundles make no partial writes", () => {
   try {
     const document = {
       format: "beholden.compendium",
-      version: 2,
+      schema: "grand",
       exportedAt: "2026-06-28T00:00:00.000Z",
-      batches: [
-        { category: "items", entries: samples.items },
-        {
-          category: "spells",
-          entries: [{ ...samples.spells[0], level: 10 }],
-        },
-      ],
+      items: samples.items,
+      spells: [{ ...samples.spells[0], level: 10 }],
     };
     assert.throws(
       () => importNativeCompendiumDocument(db, document),
@@ -404,53 +372,300 @@ test("invalid native bundles make no partial writes", () => {
   }
 });
 
-test("XML conversion returns one native V2 bundle without a destination database", () => {
-  const document = convertCompendiumXmlToNative(`
-    <compendium>
-      <monster>
-        <name>Converted Guardian</name>
-        <cr>1</cr>
-        <ac>15</ac>
-        <hp>22</hp>
-        <action>
-          <name>Strike</name>
-          <text>Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) slashing damage.</text>
-        </action>
-      </monster>
-      <item>
-        <name>Converted Key</name>
-        <type>Wondrous Item</type>
-        <magic>1</magic>
-      </item>
-    </compendium>
-  `);
+test("import guardrails reject unresolved references without partial writes", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    const monster = structuredClone(samples.monsters[0]!);
+    monster.spells = [{ id: "s_missing_spell" }];
+    const document = {
+      format: "beholden.compendium", schema: "grand",
+      items: samples.items,
+      monsters: [monster],
+    };
+    assert.throws(() => importNativeCompendiumDocument(db, document), /unknown spell "s_missing_spell"/u);
+    assert.equal(exportNativeCompendiumBatch(db, "items").entries.length, 0);
+    assert.equal(exportNativeCompendiumBatch(db, "monsters").entries.length, 0);
+  } finally { db.close(); }
+});
 
-  assert.equal(document.format, "beholden.compendium");
-  assert.equal(document.version, 2);
-  assert.deepEqual(
-    document.batches.map((entry) => entry.category),
-    ["monsters", "items"],
-  );
-  assert.equal(document.batches[0]?.entries[0]?.name, "Converted Guardian");
-  assert.equal(
-    ((document.batches[0]?.entries[0]?.actions as Array<Record<string, unknown>>)?.[0]?.attack as Record<string, unknown>)?.toHit,
-    4,
-  );
-  assert.equal(document.batches[1]?.entries[0]?.name, "Converted Key");
+test("import guardrails reject unresolved item spell IDs", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    const item = { ...structuredClone(samples.items[0]!), spells: { s_missing_spell: 1 } };
+    const document = {
+      format: "beholden.compendium", schema: "grand",
+      items: [item],
+    };
+    assert.throws(() => importNativeCompendiumDocument(db, document), /unknown spell "s_missing_spell"/u);
+    assert.equal(exportNativeCompendiumBatch(db, "items").entries.length, 0);
+  } finally { db.close(); }
+});
+
+test("import guardrails require explicit, resolvable background item IDs", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    const background = {
+      ...samples.backgrounds[0],
+      equipment: { description: "Starting gear", options: [{ id: "A", entries: [
+        { kind: "item", name: "Imaginary Blade", quantity: 1 },
+      ] }] },
+    };
+    assert.throws(() => importNativeCompendiumDocument(db, batch("backgrounds", [background])), /itemId/u);
+    const unresolved = {
+      ...background,
+      equipment: { description: "Starting gear", options: [{ id: "A", entries: [
+        { kind: "item", itemId: "i_missing_blade", quantity: 1 },
+      ] }] },
+    };
+    assert.throws(() => previewNativeCompendiumDocument(db, batch("backgrounds", [unresolved])), /unknown item id "i_missing_blade"/u);
+  } finally { db.close(); }
+});
+
+test("import guardrails reject a background equipment sourceLabel that duplicates the catalog item name", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    importNativeCompendiumBatch(db, batch("items"));
+    const withEquipment = (sourceLabel: string) => ({
+      ...samples.backgrounds[0],
+      equipment: { options: [{ id: "A", entries: [
+        { kind: "item", itemId: "i_test_blade", quantity: 1, sourceLabel },
+      ] }] },
+    });
+    // A label identical to the catalog name is a duplicated fact — the API projects it at read time.
+    assert.throws(
+      () => previewNativeCompendiumDocument(db, batch("backgrounds", [withEquipment("Test Blade")])),
+      /duplicates the catalog name of i_test_blade/u,
+    );
+    // A label that intentionally differs (flavor/display ordering) is a real fact and passes.
+    const preview = previewNativeCompendiumDocument(db, batch("backgrounds", [withEquipment("Blade (ceremonial)")]));
+    assert.equal(preview.entries, 1);
+  } finally { db.close(); }
+});
+
+test("import guardrails reject unresolved Background Feat references", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    const background = structuredClone(samples.backgrounds[0]!);
+    (background.proficiencies as Record<string, unknown>).feat = "f_missing_origin_feat";
+    assert.throws(() => previewNativeCompendiumDocument(db, batch("backgrounds", [background])), /unknown feat id/u);
+  } finally { db.close(); }
+});
+
+test("import guardrails reject corrupted mechanical vocabulary", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    const cls = structuredClone(samples.classes[0]!);
+    ((cls.proficiencies as Record<string, unknown>).skills as Record<string, unknown>).from = ["Sleight 0f Hand"];
+    assert.throws(() => importNativeCompendiumDocument(db, batch("classes", [cls])), /unknown skill|corrupted mechanical text/u);
+  } finally { db.close(); }
+});
+
+test("import guardrails reject broken spell ability placeholders", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    const spell = { ...samples.spells[0], rolls: [{ formula: "2d8+%0", effect: "healing" }] };
+    assert.throws(() => previewNativeCompendiumDocument(db, batch("spells", [spell])), /broken %0 ability placeholder/u);
+  } finally { db.close(); }
+});
+
+test("import guardrails reject destructive partial class replacements", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    const complete = {
+      ...samples.classes[0],
+      levels: Array.from({ length: 20 }, (_, index) => ({ level: index + 1 })),
+    };
+    importNativeCompendiumBatch(db, batch("classes", [complete]));
+    assert.throws(
+      () => previewNativeCompendiumDocument(db, batch("classes", samples.classes)),
+      /partial replacement \(1\/20 levels\)/u,
+    );
+  } finally { db.close(); }
+});
+
+test("import guardrails reject unknown spell access IDs and fake choice feats", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    const spell = { ...samples.spells[0], access: ["sl_unknown_list"] };
+    assert.throws(() => previewNativeCompendiumDocument(db, batch("spells", [spell])), /unknown spell-list id/u);
+    const feat = { ...samples.feats[0], name: "A Dark Gift feat of your choice" };
+    assert.throws(() => previewNativeCompendiumDocument(db, batch("feats", [feat])), /choice sentence, not a catalog feat/u);
+  } finally { db.close(); }
+});
+
+test("import guardrails reject skills misparsed as saving-throw grants", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    const feat = { ...samples.feats[0], mechanics: { grants: { savingThrows: ["Perception"] } } };
+    assert.throws(() => previewNativeCompendiumDocument(db, batch("feats", [feat])), /non-ability saving throw/u);
+  } finally { db.close(); }
+});
+
+test("import guardrails reject broken and duplicate Feat choice identities", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    const brokenReference = {
+      ...samples.feats[0],
+      mechanics: {
+        choices: [{ id: "spell_1", type: "spell", count: 1, dependsOnChoiceId: "missing_list" }],
+      },
+    };
+    assert.throws(
+      () => previewNativeCompendiumDocument(db, batch("feats", [brokenReference])),
+      /dependsOnChoiceId references unknown choice/u,
+    );
+
+    const duplicateIdentity = {
+      ...samples.feats[0],
+      mechanics: {
+        choices: [
+          { id: "ability_1", type: "ability_score", count: 1, options: ["Strength"], amount: 1 },
+          { id: "ability_1", type: "ability_score", count: 1, options: ["Dexterity"], amount: 1 },
+        ],
+      },
+    };
+    assert.throws(
+      () => previewNativeCompendiumDocument(db, batch("feats", [duplicateIdentity])),
+      /id duplicates "ability_1"/u,
+    );
+  } finally { db.close(); }
+});
+
+test("import guardrails require typed, resolvable Feat prerequisites", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    const prose = { ...samples.feats[0], prerequisite: "Level 4+" };
+    assert.throws(
+      () => previewNativeCompendiumDocument(db, batch("feats", [prose])),
+      /prerequisite/u,
+    );
+    const unresolved = { ...samples.feats[0], prerequisite: { feat: "f_missing" } };
+    assert.throws(
+      () => previewNativeCompendiumDocument(db, batch("feats", [unresolved])),
+      /prerequisite references unknown feat id "f_missing"/u,
+    );
+  } finally { db.close(); }
+});
+
+test("import guardrails accept the canonical known-cantrip replacement target", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    const feat = {
+      ...samples.feats[0],
+      mechanics: {
+        choices: [{
+          id: "replacement_cantrip_1",
+          type: "spell",
+          count: 1,
+          level: 0,
+          dependencyKind: "replacement",
+          replacementFor: "known_cantrip",
+        }],
+      },
+    };
+    assert.doesNotThrow(() => previewNativeCompendiumDocument(db, batch("feats", [feat])));
+  } finally { db.close(); }
+});
+
+test("import guardrails reject a species trait marked automatic with no structured mechanics", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    const species = {
+      ...samples.species[0],
+      traits: [{ id: "t_test", name: "Integrated Protection", description: "You gain a +1 bonus to your Armor Class.", resolution: "automatic" }],
+    };
+    assert.throws(
+      () => previewNativeCompendiumDocument(db, batch("species", [species])),
+      /traits\.0 is marked automatic but has no effects, scalingRolls, or preparedSpellProgression/u,
+    );
+  } finally { db.close(); }
+});
+
+test("import guardrails accept a species trait marked automatic once it carries real structured effects", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    const species = {
+      ...samples.species[0],
+      traits: [{
+        id: "t_test",
+        name: "Integrated Protection",
+        description: "You gain a +1 bonus to your Armor Class.",
+        resolution: "automatic",
+        effects: [{ type: "armor_class", mode: "bonus", bonus: { kind: "fixed", value: 1 } }],
+      }],
+    };
+    assert.doesNotThrow(() => previewNativeCompendiumDocument(db, batch("species", [species])));
+  } finally { db.close(); }
+});
+
+test("import guardrails reject a feat marked automatic with no structured grants", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    const feat: Record<string, unknown> = { ...samples.feats[0], resolution: "automatic" };
+    delete feat.mechanics;
+    assert.throws(
+      () => previewNativeCompendiumDocument(db, batch("feats", [feat])),
+      /is marked automatic but grants no structured mechanics/u,
+    );
+  } finally { db.close(); }
+});
+
+test("import guardrails accept a feat marked automatic once it grants real structured mechanics", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    const feat = { ...samples.feats[0], resolution: "automatic", mechanics: { grants: { skills: ["Athletics"] } } };
+    assert.doesNotThrow(() => previewNativeCompendiumDocument(db, batch("feats", [feat])));
+  } finally { db.close(); }
+});
+
+test("import guardrails accept a feat marked automatic whose only structured mechanics are player choices", () => {
+  // Found via a full-corpus review: Ability Score Improvement and Blessed Warrior are both real
+  // `automatic` feats whose entire mechanic is a `mechanics.choices` entry (no `grants` at all) —
+  // the guardrail's first version only checked `grants`/`uses`/`preparedSpellProgression` and
+  // wrongly flagged both as incomplete.
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+  try {
+    const feat = {
+      ...samples.feats[0],
+      resolution: "automatic",
+      mechanics: {
+        choices: [{ id: "ability_1", type: "ability_score", count: 1, options: ["Strength", "Dexterity"], amount: 2 }],
+      },
+    };
+    assert.doesNotThrow(() => previewNativeCompendiumDocument(db, batch("feats", [feat])));
+  } finally { db.close(); }
 });
 
 test("native batch parser rejects foreign formats and mixed envelopes", () => {
   assert.throws(
-    () => parseNativeCompendiumBatch({ format: "other", version: 2, category: "items", entries: [] }),
+    () => parseNativeCompendiumBatch({ format: "other", schema: "grand", category: "items", entries: [] }),
     /Expected format/u,
   );
   assert.throws(
-    () => parseNativeCompendiumBatch({ format: "beholden.compendium", version: 2, category: "everything", entries: [] }),
+    () => parseNativeCompendiumBatch({ format: "beholden.compendium", schema: "grand", category: "everything", entries: [] }),
     /Unknown compendium category/u,
   );
 });
 
-test("native batch parser rejects earlier non-canonical V2 spell exports", () => {
+test("native batch parser rejects earlier non-Grand spell exports", () => {
   const obsoleteV2Spell: Record<string, unknown> = {
     ...structuredClone(samples.spells[0]!),
     schemaVersion: 2,
@@ -482,8 +697,8 @@ test("native batch parser rejects earlier non-canonical V2 spell exports", () =>
   );
 });
 
-test("v2 monster spell references use id for adventure dependencies", () => {
-  const ids = collectV2MonsterSpellIds([{
+test("Grand monster spell references use id for adventure dependencies", () => {
+  const ids = collectGrandMonsterSpellIds([{
     spells: [
       { id: "s_fire_bolt", name: "Fire Bolt" },
       { id: "s_shield", name: "Shield" },
@@ -493,7 +708,7 @@ test("v2 monster spell references use id for adventure dependencies", () => {
   assert.deepEqual(Array.from(ids), ["s_fire_bolt", "s_shield"]);
 });
 
-test("AI guide native JSON examples match the strict v2 importer", () => {
+test("AI guide native JSON examples match the strict Grand importer", () => {
   const guidePath = fileURLToPath(
     new URL("../../../../BEHOLDEN_AI_CONTENT_GUIDE.md", import.meta.url),
   );
@@ -524,6 +739,6 @@ test("AI guide native JSON examples match the strict v2 importer", () => {
   };
   for (const document of documents) {
     const category = categoryFor(document);
-    if (category) assertCanonicalV2Entry(category, document, 0);
+    if (category) assertGrandCompendiumEntry(category, document, 0);
   }
 });

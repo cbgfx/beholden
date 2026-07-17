@@ -16,6 +16,7 @@ When asked to create Beholden content:
 8. Use UTF-8 JSON. All object keys and string values must use double quotes.
 9. Omit optional fields that add no value. Never add speculative fields in the hope that Beholden will understand them.
 10. If a required compendium ID is unknown, say what is missing instead of fabricating it. If the user accepts a tracker-only combatant, use an empty `baseId` and explain that it will not have a linked stat block.
+11. Beholden never parses rules text for mechanics at runtime. Description prose is player-facing display only. Any benefit the app should apply — ability increases, granted spells, proficiencies, AC or modifier bonuses, resource pools, choices — must be expressed in the entry's typed fields. A benefit that exists only in prose is, by definition, resolved manually at the table.
 
 ## Choose the right output
 
@@ -23,49 +24,50 @@ When asked to create Beholden content:
 |---|---|---|
 | Adventure, encounter set, adventure notes, or adventure treasure | Adventure import JSON with embedded compendium batches | Yes, through **Import Adventure** |
 | Player-owned character | Character import JSON | Yes, through **My Characters → Import** |
-| Monsters, items, spells, classes, species, backgrounds, feats, decks, or bastions | Category-specific Beholden Compendium JSON | Yes, through **Compendium → Import Beholden JSON** |
+| Monsters, items, spells, class talents, classes, species, backgrounds, feats, decks, or bastions | Category-specific Beholden Compendium JSON | Yes, through **Compendium → Import Beholden JSON** |
 | Custom treasure used only by one adventure | Put it in the adventure's `treasure` array | Yes, as part of the adventure |
 
-Beholden JSON is the canonical compendium language. Legacy XML is never imported into the live compendium. A stateless converter reads one XML file and downloads one complete Beholden JSON bundle; that resulting JSON may then be imported through the native Beholden importer.
+Beholden JSON is the canonical compendium language and authored source of truth. Do not produce or request an intermediate XML representation. Translate source material directly into the canonical schema and validate that JSON before import.
 
 Adventure version 2 may embed those exact native batches in its `compendium` array. Embedded entries are imported first and replace matching compendium IDs, so an adventure can carry every monster, item, spell, or other rules entry it needs.
 
 ---
 
-# Native Beholden Compendium
+# Grand Beholden Compendium Schema
 
-Normal editable exports contain exactly one category. This keeps monsters, items, spells, and the other catalogs independently manageable. The legacy XML converter is the exception: it produces one bundle containing all non-empty categories found in that XML.
+Catalogs may contain one or several category arrays. Keeping source catalogs separate is encouraged; the schema does not require combining them.
 
-## Canonical batch envelope
+## Canonical envelope
 
 ```json
 {
   "format": "beholden.compendium",
-  "version": 2,
-  "category": "monsters",
+  "schema": "grand",
   "exportedAt": "2026-06-28T00:00:00.000Z",
-  "entries": []
+  "monsters": [],
+  "items": [],
+  "spells": []
 }
 ```
 
 Valid categories are:
 
 ```text
-monsters, items, spells, classes, species, backgrounds, feats, decks, bastions
+monsters, items, spells, classTalents, classes, species, backgrounds, feats, decks, bastions
 ```
 
 Rules:
 
 - `format` must be exactly `"beholden.compendium"`.
-- `version` must be the number `2`.
-- `category` must contain one valid category and every entry must belong to it.
-- `entries` must be an array of objects.
+- `schema` must be exactly `"grand"`.
+- Each present category property must be one of the valid categories and contain an array of canonical entries.
+- Omit categories that the file does not own; do not add empty arrays merely for completeness.
 - Decks and bastions contain `"schemaVersion": 2`.
   All other categories omit per-entry `schemaVersion`.
 - Imports always overwrite an existing row with the same `id`.
-- Every entry must contain a non-empty stable `id`. Version 2 never invents or repairs missing IDs.
+- Every entry must contain a non-empty stable `id`. Grand Schema imports never invent or repair missing IDs.
 - Entries use one explicit canonical shape. Unknown or legacy-shaped fields are rejected rather than guessed.
-- Never mix categories in one batch. Produce multiple files or multiple embedded batches instead.
+- A file may own multiple categories, but each fact belongs in its matching top-level category array.
 
 Common derived ID prefixes are:
 
@@ -81,29 +83,7 @@ Feat:        f_
 
 Use lowercase underscore keys for newly authored IDs, such as `m_orrery_guardian`. Preserve IDs exactly when editing an exported entry because adventures and characters may already reference them.
 
-## Complete bundle envelope
-
-The native importer also accepts a multi-category bundle. The legacy XML converter always produces this shape as one downloaded JSON file:
-
-```json
-{
-  "format": "beholden.compendium",
-  "version": 2,
-  "exportedAt": "2026-06-28T00:00:00.000Z",
-  "batches": [
-    {
-      "category": "monsters",
-      "entries": []
-    },
-    {
-      "category": "items",
-      "entries": []
-    }
-  ]
-}
-```
-
-Each object in `batches` has exactly one valid `category` and its corresponding `entries`. Empty categories are normally omitted. Importing a bundle is atomic: all batches succeed together or none are applied.
+Multi-category imports are atomic: every populated top-level category array succeeds together or none are applied. Older `batches` documents remain readable for backup compatibility, but new files and exports must use the flat Grand envelope above.
 
 ---
 
@@ -243,21 +223,7 @@ An encounter is a roster and combat tracker. Narrative setup, maps, tactics, haz
 
 For useful monster stat blocks and actions, `baseType` must be `"monster"` and `baseId` must exactly match a monster in the user's compendium.
 
-For XML-imported monsters, Beholden normally derives the ID as:
-
-```text
-m_ + trimmed monster name converted to lowercase, with runs of whitespace collapsed to one space
-```
-
-Examples:
-
-```text
-Animated Armor  →  m_animated armor
-Adult Red Dragon  →  m_adult red dragon
-Goblin [2024]  →  m_goblin [2024]
-```
-
-Spaces and punctuation remain in monster IDs. Do not change spaces to underscores. Compendiums imported from other sources can use different IDs, so an exported ID or an ID supplied by the user is always more reliable.
+Canonical monster IDs use the `m_` prefix followed by a stable lowercase underscore key, such as `m_animated_armor` or `m_adult_red_dragon`. References must use the exact authored ID; never derive a reference from a display name at runtime.
 
 Do not use `"player"` or `"inpc"` in portable adventure files unless the user supplies IDs from the destination campaign. Those IDs are campaign-specific.
 
@@ -379,7 +345,7 @@ stunned, unconscious, concentration, disadvantage, hexed, marked
 
 Standard rarity values are `"common"`, `"uncommon"`, `"rare"`, `"very rare"`, `"legendary"`, and `"artifact"`.
 
-For XML-imported items, IDs normally use `i_` followed by the lowercase normalized name with spaces changed to underscores, for example `i_potion_of_healing`. Use `"compendium"` only if the exact destination item ID is known. Otherwise use `"custom"` and `null`.
+Canonical item IDs use `i_` followed by a stable lowercase underscore key, for example `i_potion_of_healing`. Use `"compendium"` only if the exact destination item ID is known. Otherwise use `"custom"` and `null`.
 
 ## Complete adventure example
 
@@ -390,7 +356,7 @@ For XML-imported items, IDs normally use `i_` followed by the lowercase normaliz
   "compendium": [
     {
       "format": "beholden.compendium",
-      "version": 2,
+      "schema": "grand",
       "category": "monsters",
       "exportedAt": "2026-06-28T00:00:00.000Z",
       "entries": [
@@ -410,7 +376,6 @@ For XML-imported items, IDs normally use `i_` followed by the lowercase normaliz
           "passivePerception": 6,
           "challenge": {
             "rating": "1",
-            "numeric": 1,
             "xp": 200
           },
           "armorClass": {
@@ -418,7 +383,6 @@ For XML-imported items, IDs normally use `i_` followed by the lowercase normaliz
             "source": "brass plating"
           },
           "hitPoints": {
-            "average": 33,
             "formula": "6d8 + 6"
           },
           "movement": {
@@ -453,11 +417,9 @@ For XML-imported items, IDs normally use `i_` followed by the lowercase normaliz
               "attack": {
                 "toHit": 4,
                 "reach": "5ft",
-                "melee": true,
-                "damage": "1d6+2",
-                "damageType": "bludgeoning"
+                "melee": true
               },
-              "attacks": ["Bludgeoning Damage|+4|1d6+2"]
+              "damage": { "roll": "1d6+2", "type": "bludgeoning" }
             }
           ]
         }
@@ -558,7 +520,7 @@ For XML-imported items, IDs normally use `i_` followed by the lowercase normaliz
 Before returning the file, verify:
 
 - `format` is `"beholden.adventure"` and `version` is exactly `2`;
-- every embedded compendium object is a valid version 2 category batch;
+- every embedded compendium object is a valid Grand Schema category batch;
 - every note has both `title` and `text`;
 - every encounter has `name`;
 - every combatant has both `name` and `label`;
@@ -581,7 +543,7 @@ Items use the same native batch pipeline as every other compendium category. The
 ```json
 {
   "format": "beholden.compendium",
-  "version": 2,
+  "schema": "grand",
   "category": "items",
   "exportedAt": "2026-06-28T00:00:00.000Z",
   "entries": [
@@ -604,10 +566,8 @@ Items use the same native batch pipeline as every other compendium category. The
         "properties": ["F", "L", "T"]
       },
       "modifiers": [
-        {
-          "category": "bonus",
-          "value": "+1 bonus to attack and damage rolls"
-        }
+        { "target": "weapon_attacks", "amount": 1 },
+        { "target": "weapon_damage", "amount": 1 }
       ],
       "description": [
         "You gain a +1 bonus to attack and damage rolls made with this magic weapon.",
@@ -618,11 +578,12 @@ Items use the same native batch pipeline as every other compendium category. The
 }
 ```
 
-Version 2 item entries are sparse: omit defaults, nulls, empty arrays, and inapplicable armor/weapon blocks. Older verbose V2 exports remain importable.
+Grand Schema item entries are sparse: omit defaults, nulls, empty arrays, and inapplicable armor/weapon blocks. Older verbose exports are rejected.
 
 | Field | Type | Guidance |
 |---|---|---|
-| `name` | non-empty string | Required; Beholden creates an ID from it |
+| `id` | stable `i_` ID | Required; imports never invent or repair IDs |
+| `name` | non-empty string | Required display name |
 | `type` | non-empty string | Item category; the filter key is derived automatically |
 | `rarity` | non-empty string | Item rarity |
 | `magical` | literal `true` | Omit for nonmagical items |
@@ -633,7 +594,7 @@ Version 2 item entries are sparse: omit defaults, nulls, empty arrays, and inapp
 | `armor` | object | Optional `ac`, `stealthDisadvantage: true`, and `strength` |
 | `weapon` | object | Damage formulas, damage type, range, and properties |
 | `detail` | string | Keep only subtype/detail text not derivable from type, rarity, or attunement |
-| `modifiers` | object[] | Omit when empty; each object has `category` and `value` |
+| `modifiers` | object[] | Omit when empty; each object is a typed fact `{ "target", "amount" }`. Targets: `ac`, `melee_attacks`, `melee_damage`, `ranged_attacks`, `ranged_damage`, `weapon_attacks`, `weapon_damage`, `saving_throws`, `ability_checks`, `spell_attack`, `spell_save_dc`, `initiative`, `proficiency_bonus`. Ability-score changes go in `effects` (`ability_score`), never here |
 | `rolls` | object[] | Omit when empty; each has `formula` and optional `description` |
 | `description` | string or string[] | Prefer a string; use an array only for separate blocks |
 
@@ -670,7 +631,7 @@ Recognized property codes:
 | `S` | Special | `T` | Thrown |
 | `V` | Versatile | `2H` | Two-Handed |
 
-The app's New Item form is a convenience editor; exported native files use the sparse version 2 shape above.
+The app's New Item form is a convenience editor; exported native files use the sparse Grand Schema shape above.
 
 Beholden creates a new item ID as `i_` plus the lowercased name with whitespace changed to underscores. Avoid creating two custom items whose names normalize to the same ID; the newer one replaces the older record.
 
@@ -687,7 +648,7 @@ Beholden creates a new item ID as `i_` plus the lowercased name with whitespace 
 
 # Other native category entries
 
-Wrap each entry below in the canonical batch envelope and set the matching `category`. Use exactly the documented fields: version 2 rejects unknown additions and legacy aliases.
+Wrap each entry below in the canonical batch envelope and set the matching `category`. Use exactly the documented fields: the Grand Schema rejects unknown additions and legacy aliases.
 
 ## Spells
 
@@ -709,17 +670,15 @@ Wrap each entry below in the canonical batch envelope and set the matching `cate
       "description": "Instantaneous"
     }
   },
-  "classes": ["Sorcerer", "Wizard"],
+  "access": ["sl_sorcerer", "sl_wizard"],
   "rolls": [
     {
       "description": "Radiant Damage",
-      "scaling": "slot_level",
       "level": 3,
       "formula": "6d6"
     },
     {
       "description": "Radiant Damage",
-      "scaling": "slot_level",
       "level": 4,
       "formula": "7d6"
     }
@@ -736,14 +695,16 @@ school name: `Abjuration`, `Conjuration`, `Divination`, `Enchantment`,
 `Evocation`, `Illusion`, `Necromancy`, or `Transmutation`. Canonical casting
 times use a number and title-cased unit, such as `1 Action`, `1 Bonus Action`,
 `1 Reaction`, or `10 Minutes`; append a reaction trigger after a comma.
-`classes` contains class names only—never `School: ...` metadata. Put lookup
-groups such as `Ritual Caster`, `Touch Spells`, or `Eldritch Invocations` in
-`tags`. Casting time, range, components, duration, concentration, and dice
+`access` contains stable `sl_` IDs declared once in the owning Class record's
+`spellLists` registry. Casting time, range,
+components, duration, concentration, and dice
 formulas are explicit and are never inferred from rules prose. Omit false
 booleans, absent values, and empty arrays. A material component is `true` when
 it has no useful description, or its description string when it does.
 Concentration and ritual are written only as `true`. A roll's optional
-`scaling` is `character_level` or `slot_level`; its optional `level` is 0-20.
+`level` (0-20) is a character-level tier on a cantrip and a slot level on a
+leveled spell — the scaling basis is derived from the spell's own `level`,
+never stored per row.
 
 ## Classes
 
@@ -798,19 +759,19 @@ automatically assigns `"resolution": "manual"` to each feature; supply an explic
   "name": "Emberkin",
   "size": "M",
   "speed": 30,
-  "resistances": ["fire"],
-  "vision": [],
   "traits": [
     {
       "id": "fire_resistance",
       "name": "Fire Resistance",
-      "description": "You have resistance to fire damage."
+      "description": "You have resistance to fire damage.",
+      "resolution": "automatic",
+      "effects": [{ "type": "defense", "mode": "damage_resistance", "targets": ["Fire"] }]
     }
   ]
 }
 ```
 
-`name`, `speed`, `vision`, and `traits` are required. Trait objects use `id`, `name`, and `description`. Omit nulls, empty collections, and absent optionals (`source`, `size`, `spellcastingAbility`, `resistances`, `choices`).
+`name`, `speed`, and `traits` are required. Trait objects use `id`, `name`, and `description`; a trait with deterministic mechanics should also set `resolution` (`"automatic"` when `effects` fully describes it, `"mixed"` when some remainder stays in prose, `"manual"` only for genuine table adjudication) and an `effects` array of typed facts consumed directly — not recovered by parsing the trait's own `description` at runtime. The top-level `resistances`/`vision` fields are legacy/display-only duplicates of facts a trait's own `effects` should express (a `defense`/`senses` effect) — omit them whenever the equivalent trait exists; they exist only for species not yet migrated to structured traits. Omit nulls, empty collections, and absent optionals (`source`, `size`, `spellcastingAbility`, `resistances`, `vision`, `choices`).
 
 ## Backgrounds
 
@@ -833,9 +794,9 @@ automatically assigns `"resolution": "manual"` to each feature; supply an explic
       {
         "id": "A",
         "entries": [
-          { "kind": "item", "name": "Star Chart", "quantity": 1 },
-          { "kind": "item", "name": "Spyglass", "quantity": 1 },
-          { "kind": "item", "name": "Traveler's Clothes", "quantity": 1 },
+          { "kind": "item", "itemId": "i_star_chart", "quantity": 1 },
+          { "kind": "item", "itemId": "i_spyglass", "quantity": 1 },
+          { "kind": "item", "itemId": "i_travelers_clothes", "quantity": 1 },
           { "kind": "currency", "denomination": "GP", "amount": 15 }
         ]
       },
@@ -850,28 +811,78 @@ automatically assigns `"resolution": "manual"` to each feature; supply an explic
 }
 ```
 
-The surrounding batch already declares V2, so backgrounds do not repeat
+The surrounding document already declares the Grand Schema, so backgrounds do not repeat
 `schemaVersion`. Fixed proficiencies are arrays; use `{ "choose": N, "from":
 [...] }` only for real choices. Omit nulls, empty collections, and zero-valued
 defaults. Equipment with structured options does not repeat its prose list.
-Fixed feats include their parsed mechanics because character creation consumes
-them for automation.
+Fixed feats reference their canonical `f_` IDs; Feat mechanics live only on the
+referenced Feat record and character creation resolves them from that owner.
 
 ## Feats
+
+A feat that is entirely adjudicated at the table needs only prose:
 
 ```json
 {
   "id": "f_orbit_step",
   "name": "Orbit Step",
-  "category": "General",
-  "prerequisite": "Level 4+",
+  "prerequisite": { "level": 4 },
   "description": "Immediately after you take the Dash action, you can teleport up to 10 feet to an unoccupied space you can see.",
   "resolution": "manual",
   "resolutionNotes": ["Resolve the Dash trigger and teleport manually."]
 }
 ```
 
-`name` is required. Write deterministic rules text: specify trigger, action cost, range, target, duration, limits, and reset timing when applicable.
+Any benefit Beholden should apply must live in `mechanics` — the description is
+never parsed. A typical mixed feat:
+
+```json
+{
+  "id": "f_wardbearer",
+  "name": "Wardbearer",
+  "prerequisite": { "level": 4, "feature": "spellcasting" },
+  "description": "You gain the following benefits. Ability Score Increase. Increase your Charisma score by 1, to a maximum of 20. Warded Mind. You have Advantage on Constitution saving throws that you make to maintain Concentration. Lore of Wards. You gain proficiency in Arcana, History, or Religion. Ward Touch. A number of times equal to your Proficiency Bonus, you can end one spell of level 3 or lower on a willing creature you touch; you regain all expended uses when you finish a Long Rest.",
+  "resolution": "mixed",
+  "mechanics": {
+    "grants": {
+      "abilityIncreases": { "charisma": 1 },
+      "effects": [
+        {
+          "type": "modifier",
+          "target": "saving_throw",
+          "mode": "advantage",
+          "appliesTo": ["Constitution"],
+          "gate": { "notes": "Only saving throws made to maintain Concentration" },
+          "summary": "Advantage on Constitution saves to maintain Concentration"
+        }
+      ]
+    },
+    "choices": [
+      { "id": "skill_1", "type": "proficiency", "count": 1, "options": ["Arcana", "History", "Religion"] }
+    ],
+    "uses": [
+      { "count": 1, "countFrom": "proficiency_bonus", "note": "a number of times equal to your Proficiency Bonus" }
+    ]
+  }
+}
+```
+
+- `name` is required. Write deterministic rules text: specify trigger, action
+  cost, range, target, duration, limits, and reset timing when applicable.
+- `grants` holds unconditional facts: `abilityIncreases`, granted `spells`/
+  `cantrips`, proficiency lists, and `effects` (typed shapes such as
+  `modifier`, `armor_class`, `defense`, `spell_grant`, `action`,
+  `resource_grant`; give conditional effects a `gate` so the app stays honest
+  about when they apply).
+- `choices` holds player decisions (`proficiency`, `expertise`,
+  `ability_score`, `spell`, `spell_list`, `weapon_mastery`, `damage_type`).
+  Spell choices constrain with typed fields — `level` (exactly), `maxLevel`
+  ("at or below"), `ritual: true` — never with wording in a note.
+- `uses` describes a limited-use pool; Beholden derives the tracked resource
+  from it. Never author a `resource_grant` effect for the same pool — that
+  duplicates the fact.
+- `resolution` and `resolutionNotes` sit at the top level of the entry, not
+  inside `mechanics`.
 
 Use `"resolution": "automatic"` only when every benefit has been reviewed and is
 fully handled by Beholden. Use `"manual"` when the feat is entirely adjudicated
@@ -1087,7 +1098,7 @@ Class entry:
 }
 ```
 
-`classId` must be an exact compendium ID. XML-imported class, race, background, feat, spell, and item IDs normally follow:
+`classId` must be an exact compendium ID. Canonical class, species, background, feat, spell, and item IDs follow:
 
 ```text
 Class:       c_name_with_underscores
@@ -1324,7 +1335,7 @@ After giving this guide to the AI, use a request like:
 
 For an item:
 
-> Using the Beholden guide, turn our final item design into one importable version 2 Beholden Compendium `items` batch. Resolve any remaining wording into concise player-facing rules and output only the JSON.
+> Using the Beholden guide, turn our final item design into one importable Grand Schema Beholden Compendium `items` batch. Resolve any remaining wording into concise player-facing rules and output only the JSON.
 
 For a character:
 

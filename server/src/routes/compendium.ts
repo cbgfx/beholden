@@ -7,6 +7,7 @@ import { requireAnyDm } from "../middleware/auth.js";
 import { registerMonsterRoutes } from "./compendium/monsters.js";
 import { registerItemRoutes } from "./compendium/items.js";
 import { registerSpellRoutes } from "./compendium/spells.js";
+import { registerClassTalentRoutes } from "./compendium/classTalents.js";
 import { registerLoreRoutes } from "./compendium/lore.js";
 import { registerDeckRoutes } from "./compendium/decks.js";
 import { registerBastionCompendiumRoutes } from "./compendium/bastions.js";
@@ -17,6 +18,7 @@ export function registerCompendiumRoutes(app: Express, ctx: ServerContext) {
   registerMonsterRoutes(app, ctx, anyDm);
   registerItemRoutes(app, ctx, anyDm);
   registerSpellRoutes(app, ctx, anyDm);
+  registerClassTalentRoutes(app, ctx, anyDm);
   registerLoreRoutes(app, ctx);
   registerDeckRoutes(app, ctx);
   registerBastionCompendiumRoutes(app, ctx);

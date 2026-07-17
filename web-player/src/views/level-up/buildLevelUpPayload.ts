@@ -2,11 +2,14 @@ import { normalizeSpellTrackingKey } from "@/views/character/CharacterSheetUtils
 import { collectFeatTaggedEntries } from "@/views/character-creator/utils/FeatGrantUtils";
 import { resolveFeatSpellEntries } from "@/views/character-creator/utils/FeatSpellcastingUtils";
 import type { BuildLevelUpPayloadArgs } from "./LevelUpUtils";
+import { appendMissingFeatureNotes } from "@/domain/character/featureNoteTemplates";
+import type { PlayerNote } from "@/views/character/CharacterSheetTypes";
+import { selectedInvocationFeatIds } from "@/domain/character/invocationFeatChoices";
 
 export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<string, unknown> {
   const {
     char, nextLevel, hpGain, featHpBonus, subclass, chosenCantrips, chosenSpells, chosenInvocations,
-    chosenExpertise, chosenFeatOptions, chosenFeatureChoices, expertiseChoices, chosenFeatDetail, featSourceLabel,
+    chosenExpertise, chosenFeatOptions, invocationFeatChoices = [], allInvocationFeatChoices = invocationFeatChoices, chosenFeatureChoices, expertiseChoices, chosenFeatDetail, featSourceLabel,
     featSpellChoiceOptions = {},
     newFeatures, classDetailName, selectedCantripEntries, selectedSpellEntries, selectedInvocationEntries,
     selectedClassFeatureSpellEntries = [],
@@ -73,6 +76,19 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
     ...chosenExpertise,
     ...chosenFeatOptions,
   };
+  const activeInvocationFeatChoiceKeys = new Set(invocationFeatChoices.map((choice) => choice.key));
+  for (const choice of allInvocationFeatChoices) {
+    if (!activeInvocationFeatChoiceKeys.has(choice.key)) delete nextChosenFeatOptions[choice.key];
+  }
+  const invocationGrantedFeatIds = selectedInvocationFeatIds(invocationFeatChoices, nextChosenFeatOptions);
+  const previousInvocationGrantedFeatIds = selectedInvocationFeatIds(
+    allInvocationFeatChoices,
+    (char.characterData?.chosenFeatOptions ?? {}) as Record<string, string[]>,
+  );
+  const nextExtraFeatIds = Array.from(new Set([
+    ...((char.characterData?.extraFeatIds ?? []) as string[]).filter((id) => !previousInvocationGrantedFeatIds.includes(id)),
+    ...invocationGrantedFeatIds,
+  ]));
   const existingLevelUpFeats = Array.isArray(char.characterData?.chosenLevelUpFeats) ? char.characterData?.chosenLevelUpFeats : [];
   const asiAbilityBonuses = Object.fromEntries(
     Object.entries(asiStats).filter(([, value]) => Number(value) > 0),
@@ -100,6 +116,10 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
   if (chosenFeatDetail) {
     featureNames.add(chosenFeatDetail.name);
   }
+  const newNoteTemplates = newFeatures.map((feature) => feature.noteTemplate).filter(Boolean);
+  const nextPlayerNotes = newNoteTemplates.length > 0
+    ? appendMissingFeatureNotes(char.characterData?.playerNotesList as PlayerNote[] | undefined, newNoteTemplates)
+    : null;
 
   // Deliberately not spreading `...char.characterData` here: it's a snapshot fetched once when
   // the level-up screen opened, and any field we don't explicitly list below should come from
@@ -131,12 +151,14 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
         ? selectedSpellEntries.map((entry) => normalizeSpellTrackingKey(entry.name))
         : char.characterData?.preparedSpells,
     chosenInvocations,
+    extraFeatIds: nextExtraFeatIds,
     chosenFeatOptions: nextChosenFeatOptions,
     chosenFeatureChoices: {
       ...((char.characterData?.chosenFeatureChoices ?? {}) as Record<string, string[]>),
       ...chosenFeatureChoices,
     },
     selectedFeatureNames: Array.from(featureNames),
+    ...(nextPlayerNotes ? { playerNotesList: nextPlayerNotes } : {}),
     proficiencies: {
       ...(proficiencies ?? {}),
       skills: [

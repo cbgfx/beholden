@@ -2,9 +2,9 @@ import React from "react";
 import { api } from "@/services/api";
 import { fetchMyCharacter } from "@/services/actorApi";
 import {
-  fetchBackgroundDetailV2,
-  fetchClassDetailV2,
-  fetchRaceDetailV2,
+  fetchGrandBackgroundDetail,
+  fetchGrandClassDetail,
+  fetchGrandSpeciesDetail,
 } from "@/services/compendiumApi";
 import type {
   Character,
@@ -18,9 +18,11 @@ import type {
 } from "@/views/character/CharacterViewHelpers";
 import { getPrimaryCharacterClassEntry } from "@/views/character/CharacterViewHelpers";
 
-type SpellLookupRow = {
-  query: string;
-  match: { id: string; name: string; level: number | null; text?: string | null } | null;
+type ClassTalentLookupRow = {
+  id: string;
+  name: string;
+  text?: string | null;
+  effects?: unknown[];
 };
 
 type FeatLookupRow = {
@@ -64,7 +66,7 @@ export function useCharacterData(id: string | undefined) {
       return;
     }
     let alive = true;
-    fetchClassDetailV2<ClassRestDetail>(classId)
+    fetchGrandClassDetail<ClassRestDetail>(classId)
       .then((detail) => {
         if (alive) setClassDetail(detail ?? null);
       })
@@ -83,7 +85,7 @@ export function useCharacterData(id: string | undefined) {
       return;
     }
     let alive = true;
-    fetchRaceDetailV2<RaceFeatureDetail>(raceId)
+    fetchGrandSpeciesDetail<RaceFeatureDetail>(raceId)
       .then((detail) => {
         if (alive) setRaceDetail(detail);
       })
@@ -102,7 +104,7 @@ export function useCharacterData(id: string | undefined) {
       return;
     }
     let alive = true;
-    fetchBackgroundDetailV2<BackgroundFeatureDetail>(bgId)
+    fetchGrandBackgroundDetail<BackgroundFeatureDetail>(bgId)
       .then((detail) => {
         if (alive) setBackgroundDetail(detail);
       })
@@ -229,36 +231,16 @@ export function useCharacterData(id: string | undefined) {
     }
     let alive = true;
     (async () => {
-        const unresolvedNames = Array.from(
-          new Set(
-            invocationRefs
-              .filter((entry) => !entry.id && entry.name)
-              .map((entry) => String(entry.name ?? "").trim())
-              .filter(Boolean),
-          ),
+        const talents = await api<ClassTalentLookupRow[]>(
+          "/api/class-talents/search?kind=invocation&limit=150&includeText=1",
         );
-        const directIds = Array.from(
-          new Set(
-            invocationRefs
-              .map((entry) => String(entry.id ?? "").trim())
-              .filter(Boolean),
-          ),
-        );
-        const lookupPayload = await api<{ rows: SpellLookupRow[] }>("/api/spells/lookup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ids: directIds, names: unresolvedNames, includeText: true }),
-        });
-        const lookupByQuery = new Map(
-          (lookupPayload.rows ?? [])
-            .filter((row): row is SpellLookupRow => Boolean(row?.query))
-            .map((row) => [row.query, row.match] as const),
-        );
+        const byId = new Map(talents.map((talent) => [talent.id, talent]));
+        const byName = new Map(talents.map((talent) => [talent.name.trim().toLowerCase(), talent]));
         return invocationRefs.map((ref) => {
             const detail = ref.id
-              ? lookupByQuery.get(ref.id) ?? null
+              ? byId.get(ref.id) ?? null
               : ref.name
-                ? lookupByQuery.get(ref.name) ?? null
+                ? byName.get(ref.name.trim().toLowerCase()) ?? null
                 : null;
             if (!detail) return null;
             const text = Array.isArray(detail.text)
@@ -271,6 +253,7 @@ export function useCharacterData(id: string | undefined) {
               id: String(detail?.id ?? ref.id ?? ref.name ?? ""),
               name: String(detail?.name ?? ref.name ?? ref.id ?? ""),
               text,
+              effects: detail.effects,
             } satisfies InvocationFeatureDetail;
           });
       })()
@@ -278,7 +261,8 @@ export function useCharacterData(id: string | undefined) {
         if (!alive) return;
         const deduped = new Map<string, InvocationFeatureDetail>();
         details
-          .filter((detail): detail is InvocationFeatureDetail => Boolean(detail?.text))
+          .filter((detail) => detail !== null)
+          .filter((detail) => Boolean(detail.text))
           .forEach((detail) => {
             const key = `${detail.id}::${detail.name.toLowerCase()}`;
             if (!deduped.has(key)) deduped.set(key, detail);

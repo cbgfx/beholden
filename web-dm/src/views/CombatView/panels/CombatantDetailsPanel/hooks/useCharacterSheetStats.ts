@@ -69,7 +69,8 @@ export function useCharacterSheetStats(args: {
           cha: Number(player?.cha ?? 10),
         } as const;
 
-    const saves = isMonster ? parseSaves(detail["save"] ?? detail["saves"]) : undefined;
+    const proficiencies = detail["proficiencies"] as { savingThrows?: unknown } | undefined;
+    const saves = isMonster ? parseSaves(proficiencies?.savingThrows) : undefined;
     const infoLines = isMonster ? buildMonsterInfoLines(detail) : [];
 
     return { ac, hpCur, hpMax, tempHp, speed, speedDisplay, abilities, saves, infoLines };

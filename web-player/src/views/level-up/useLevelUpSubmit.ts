@@ -40,6 +40,8 @@ export function useLevelUpSubmit(args: {
   chosenInvocations: string[];
   chosenExpertise: Record<string, string[]>;
   chosenFeatOptions: Record<string, string[]>;
+  invocationFeatChoices: import("@/domain/character/invocationFeatChoices").InvocationFeatChoiceEntry[];
+  allInvocationFeatChoices: import("@/domain/character/invocationFeatChoices").InvocationFeatChoiceEntry[];
   chosenFeatureChoices: Record<string, string[]>;
   expertiseChoices: Array<{ key: string; source: string }>;
   featChoiceEntries: BuildLevelUpPayloadArgs["featChoiceEntries"];
@@ -83,6 +85,8 @@ export function useLevelUpSubmit(args: {
       classDetailName,
       classFeatureResolvedSpellChoices,
       chosenFeatOptions,
+      invocationFeatChoices,
+      allInvocationFeatChoices,
       classFeatureSpellChoiceOptions,
       classFeatureProficiencyChoices,
       chosenFeatureChoices,
@@ -143,6 +147,7 @@ export function useLevelUpSubmit(args: {
       }, {});
 
       const selectedInvocationSpellEntries = invocationResolvedSpellChoices.flatMap((choice) => {
+        if (choice.grantsSpell === false) return [];
         const selected = resolveSelectedSpellOptionEntries(
           chosenFeatOptions[choice.key] ?? [],
           invocationSpellChoiceOptions[choice.key] ?? [],
@@ -188,6 +193,8 @@ export function useLevelUpSubmit(args: {
         chosenInvocations: effectiveChosenInvocations,
         chosenExpertise,
         chosenFeatOptions,
+        invocationFeatChoices,
+        allInvocationFeatChoices,
         chosenFeatureChoices,
         expertiseChoices,
         featChoiceEntries,

@@ -11,7 +11,7 @@ const uploadLimits: NonNullable<Options["limits"]> & { fieldNestingDepth: number
 /**
  * Centralized upload middleware.
  * - LAN-only server, but still enforce a sane ceiling to prevent accidental huge uploads.
- * - Memory storage is required because importXml expects req.file.buffer.
+ * - Memory storage keeps imported compendium data available as req.file.buffer.
  */
 export const upload = multer({
   storage: multer.memoryStorage(),

@@ -59,6 +59,7 @@ export type WeaponFilter =
   | "light_crossbow"
   | "no_two_handed"
   | "thrown_weapon"
+  | "magic_weapon"
   | "no_offhand";
 
 export type ScalingValue =
@@ -102,6 +103,7 @@ export interface ChoiceSpec {
     | "damage_type";
   filters?: Array<"has_proficiency" | WeaponFilter>;
   canReplaceOnReset?: ResetKind;
+  ifProficient?: string;
 }
 
 interface FeatureEffectBase {
@@ -110,6 +112,8 @@ interface FeatureEffectBase {
   summary?: string;
   gate?: EffectGate;
   resolution?: "automatic" | "manual";
+  /** Character level required before this effect applies (e.g. a species trait gained at level 5). Omit for effects active from level 1. */
+  requiredLevel?: number;
 }
 
 export interface ResourceGrantEffect extends FeatureEffectBase {
@@ -117,7 +121,8 @@ export interface ResourceGrantEffect extends FeatureEffectBase {
   resourceKey: string;
   label: string;
   max: ScalingValue;
-  reset: ResetKind;
+  /** Long rest is the default and is omitted in canonical data. */
+  reset?: ResetKind;
   restoreAmount?: "all" | "one" | ScalingValue;
   linkedSpellName?: string;
 }
@@ -139,18 +144,28 @@ export interface SpellGrantEffect extends FeatureEffectBase {
 
 export interface SpellChoiceEffect extends FeatureEffectBase {
   type: "spell_choice";
-  mode: "learn";
+  mode: "learn" | "prepare" | "spellbook" | "select";
+  choiceId?: string;
   count: ScalingValue;
   level: number | null;
   spellLists: string[];
   schools?: string[];
   note?: string;
+  freeCast?: boolean;
+  ifKnown?: string;
+  /** Typed eligibility facts; never infer these from labels or notes. */
+  filters?: { damage?: true; attack?: true; ritual?: true; known?: true };
 }
 
 export interface ProficiencyGrantEffect extends FeatureEffectBase {
   type: "proficiency_grant";
   category: "skill" | "tool" | "language" | "armor" | "weapon" | "saving_throw" | "initiative";
   grants?: string[];
+  weaponFilter?: {
+    melee?: true;
+    martial?: true;
+    excludeProperties?: Array<"heavy" | "two_handed">;
+  };
   choice?: ChoiceSpec;
   expertise?: boolean;
 }
@@ -186,8 +201,12 @@ export interface DefenseEffect extends FeatureEffectBase {
     | "save_advantage"
     | "save_disadvantage"
     | "attack_advantage"
-    | "attack_disadvantage";
+    | "attack_disadvantage"
+    /** Advantage on the ability check made to end/escape a condition (distinct from condition_advantage, which is a saving throw). e.g. Goliath's Powerful Build ending Grappled. */
+    | "escape_check_advantage";
   targets: string[];
+  /** Narrows a condition_immunity to only specific causes (e.g. Warforged's Tireless: exhaustion from dehydration/malnutrition/suffocation only, not every exhaustion source). Omit for an unconditional immunity. */
+  causeFilter?: string[];
 }
 
 export interface ModifierEffect extends FeatureEffectBase {
@@ -201,7 +220,11 @@ export interface ModifierEffect extends FeatureEffectBase {
     | "damage_roll"
     | "spell_attack"
     | "spell_save_dc"
-    | "passive_score";
+    | "passive_score"
+    /** Any d20 Test (attack roll, ability check, or saving throw) — broader than a single target, e.g. Halfling Luck. */
+    | "any_d20_test"
+    /** Carrying capacity only (not other size-dependent rules). e.g. Goliath's Powerful Build. No consumer reads this today — the app has no encumbrance system — but the fact is typed and ready. */
+    | "carrying_capacity";
   mode: "bonus" | "set_minimum" | "advantage" | "disadvantage" | "reroll";
   amount?: ScalingValue;
   appliesTo?: string[];
@@ -250,7 +273,12 @@ export interface ActionEffect extends FeatureEffectBase {
 export interface SensesEffect extends FeatureEffectBase {
   type: "senses";
   mode: "grant" | "bonus";
-  senses: Array<{ kind: "darkvision" | "blindsight" | "tremorsense" | "truesight"; range: number }>;
+  senses: Array<{ kind: "darkvision" | "blindsight" | "tremorsense" | "truesight" | "devils_sight"; range: number }>;
+}
+
+export interface BreathingEffect extends FeatureEffectBase {
+  type: "breathing";
+  medium: "water";
 }
 
 export interface ChoiceBundleEffect extends FeatureEffectBase {
@@ -267,6 +295,22 @@ export interface NarrativeEffect extends FeatureEffectBase {
   type: "narrative";
   category: "reference" | "manual_resolution";
   description: string;
+}
+
+export interface FeatChoiceEffect extends FeatureEffectBase {
+  type: "feat_choice";
+  mode: "learn";
+  choiceId?: string;
+  count: ScalingValue;
+  /** Restricts the pool this choice draws from (e.g. "origin" for Human's Versatile). Omit for any qualifying feat. */
+  category?: "origin" | "general" | "fighting_style" | "epic_boon";
+}
+
+export interface RestRuleEffect extends FeatureEffectBase {
+  type: "rest_rule";
+  mode: "long_rest_duration" | "no_sleep_required";
+  /** Set when mode === "long_rest_duration": the reduced number of hours (e.g. Warforged's Sentry's Rest: 6). */
+  hours?: number;
 }
 
 /**
@@ -314,8 +358,11 @@ export type FeatureEffect =
   | CheckOverrideEffect
   | ActionEffect
   | SensesEffect
+  | BreathingEffect
   | ChoiceBundleEffect
-  | NarrativeEffect;
+  | NarrativeEffect
+  | FeatChoiceEffect
+  | RestRuleEffect;
 
 export interface ParsedFeatureEffects {
   source: FeatureEffectSource;

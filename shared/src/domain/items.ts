@@ -7,6 +7,26 @@ export const KNOWN_ITEM_TYPES = [
   "Wondrous Item", "Adventuring Gear", "Currency", "Other",
 ] as const;
 
+/** Item detail presentation returned by the shared compendium API. */
+export type CompendiumItemDetail = {
+  id: string;
+  name: string;
+  rarity: string | null;
+  type: string | null;
+  attunement: boolean;
+  magic: boolean;
+  weight: number | null;
+  value?: number | null;
+  ac?: number | null;
+  stealthDisadvantage?: boolean;
+  dmg1: string | null;
+  dmg2: string | null;
+  dmgType: string | null;
+  properties: string[];
+  modifiers: Array<{ target?: string; amount?: number }>;
+  text: string | string[];
+};
+
 const ITEM_DAMAGE_TYPE_LABELS: Record<string, string> = {
   B: "Bludgeoning",
   P: "Piercing",
@@ -25,7 +45,6 @@ const ITEM_DAMAGE_TYPE_LABELS: Record<string, string> = {
 
 const ITEM_PROPERTY_LABELS: Record<string, string> = {
   A: "Ammunition",
-  AF: "Ammunition (Firearm)",
   BF: "Burst Fire",
   F: "Finesse",
   H: "Heavy",
@@ -83,4 +102,67 @@ export function currencyCodeForName(name: string | null | undefined): "PP" | "GP
 
 export function isCurrencyName(name: string | null | undefined): boolean {
   return currencyCodeForName(name) != null;
+}
+
+/** An item's passive numeric bonus, stored as a cold fact: the statistic it applies to and
+ * the signed amount. Ability-score changes are `effects` (`ability_score`), never modifiers. */
+export type ItemModifierTarget =
+  | "ac"
+  | "melee_attacks"
+  | "melee_damage"
+  | "ranged_attacks"
+  | "ranged_damage"
+  | "weapon_attacks"
+  | "weapon_damage"
+  | "saving_throws"
+  | "ability_checks"
+  | "spell_attack"
+  | "spell_save_dc"
+  | "initiative"
+  | "proficiency_bonus";
+
+export interface ItemModifierEntry {
+  target?: ItemModifierTarget | string | null;
+  amount?: number | null;
+}
+
+const ITEM_MODIFIER_LABELS: Record<ItemModifierTarget, string> = {
+  ac: "AC",
+  melee_attacks: "Melee attacks",
+  melee_damage: "Melee damage",
+  ranged_attacks: "Ranged attacks",
+  ranged_damage: "Ranged damage",
+  weapon_attacks: "Weapon attacks",
+  weapon_damage: "Weapon damage",
+  saving_throws: "Saving throws",
+  ability_checks: "Ability checks",
+  spell_attack: "Spell attacks",
+  spell_save_dc: "Spell save DC",
+  initiative: "Initiative",
+  proficiency_bonus: "Proficiency Bonus",
+};
+
+/** Sums an item's typed `modifiers` for one target. No label parsing — the compendium stores
+ * `{ target, amount }` facts and every consumer (AC, weapon attack/damage, saves, checks)
+ * reads them through this single accessor. */
+export function itemModifierBonus(
+  modifiers: readonly ItemModifierEntry[] | null | undefined,
+  target: ItemModifierTarget,
+): number {
+  let total = 0;
+  for (const modifier of modifiers ?? []) {
+    if (modifier?.target === target && Number.isFinite(Number(modifier.amount))) {
+      total += Number(modifier.amount);
+    }
+  }
+  return total;
+}
+
+/** Display label for a typed item modifier, e.g. "Melee attacks +1". */
+export function itemModifierLabel(modifier: ItemModifierEntry): string | null {
+  const target = String(modifier?.target ?? "") as ItemModifierTarget;
+  const amount = Number(modifier?.amount);
+  const label = ITEM_MODIFIER_LABELS[target];
+  if (!label || !Number.isFinite(amount) || amount === 0) return null;
+  return `${label} ${amount > 0 ? "+" : ""}${amount}`;
 }

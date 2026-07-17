@@ -13,8 +13,6 @@ import {
   isRangedWeapon,
   isShieldItem,
   isWeaponItem,
-  parseChargesMax,
-  parseItemSpells,
 } from "@/views/character/CharacterInventory";
 import { inventoryPickerDetailStyle, inventoryRarityColor } from "@/views/character/CharacterViewParts";
 import { DEFAULT_CONTAINER_ID, inputStyle } from "@/views/character/CharacterInventoryPanelHelpers";
@@ -91,7 +89,7 @@ export function InventoryItemDrawer(props: {
       properties: isWeaponLike ? draft.properties.map((p) => p.trim()).filter(Boolean) : [],
       description: draft.description.trim() || undefined,
       source: "custom",
-      chargesMax: props.item.chargesMax ?? parseChargesMax(draft.description.trim()) ?? null,
+      chargesMax: props.item.chargesMax ?? null,
     });
   }
 
@@ -269,7 +267,6 @@ function ReadFields({ draft, item, isWeaponLike, isArmorLike, isMeleeWeaponLike,
         </div>
       ) : null}
       {(item.chargesMax ?? 0) > 0 ? <ChargeBoxes item={item} accentColor={accentColor} onChargesChange={onChargesChange} /> : null}
-      <ItemSpells description={draft.description ?? ""} />
       <div style={{ ...inventoryPickerDetailStyle, minHeight: 180 }}>{draft.description || <span style={{ color: C.muted }}>No description.</span>}</div>
     </>
   );
@@ -279,12 +276,6 @@ function ChargeBoxes({ item, accentColor, onChargesChange }: { item: InventoryIt
   const max = item.chargesMax!;
   const cur = item.charges ?? max;
   return <div><div style={sectionLabel}>Charges</div><div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>{Array.from({ length: max }).map((_, i) => { const filled = i < cur; return <button key={i} title={filled ? "Expend charge" : "Regain charge"} onClick={() => onChargesChange(filled ? cur - 1 : i + 1)} style={{ width: 24, height: 24, borderRadius: 4, border: `2px solid ${filled ? accentColor : "rgba(255,255,255,0.2)"}`, background: filled ? `${accentColor}33` : "transparent", cursor: "pointer", padding: 0 }} />; })}<span style={{ fontSize: "var(--fs-small)", color: C.muted, marginLeft: 4 }}>{cur} / {max}</span></div></div>;
-}
-
-function ItemSpells({ description }: { description: string }) {
-  const spells = parseItemSpells(description);
-  if (!spells.length) return null;
-  return <div><div style={sectionLabel}>Spells</div><div style={{ display: "flex", flexDirection: "column", gap: 4 }}>{spells.map((sp) => <div key={sp.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", borderRadius: 6, background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.2)" }}><span style={{ fontSize: "var(--fs-subtitle)", color: "#c4b5fd", fontWeight: 600 }}>{sp.name}</span><span style={{ fontSize: "var(--fs-small)", color: C.muted, fontWeight: 600 }}>{sp.cost} {sp.cost === 1 ? "Charge" : "Charges"}</span></div>)}</div></div>;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

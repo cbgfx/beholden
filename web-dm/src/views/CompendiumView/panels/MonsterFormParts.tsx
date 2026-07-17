@@ -1,29 +1,43 @@
+import { averageHpFromFormula } from "@beholden/shared/domain/monsters";
 import * as React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 
-export type MonsterBlock = { name: string; text: string };
+export type MonsterBlock = { id?: string; name: string; text: string; [key: string]: unknown };
 
 export type MonsterForEdit = {
   id: string;
   name: string;
-  cr: string | null;
-  typeFull: string | null;
-  size: string | null;
-  environment: string | null;
+  cr?: string | null;
+  typeFull?: string | null;
+  size?: string | null;
+  environment?: string | null;
   // These fields mirror raw compendium JSON and can be strings, numbers,
   // arrays, or nested objects depending on the data source — use unknown
   // and narrow with extractLeadingNumber / extractDetails before use.
-  ac: unknown;
-  hp: unknown;
-  speed: unknown;
-  str: number | null; dex: number | null; con: number | null;
-  int: number | null; wis: number | null; cha: number | null;
-  save: unknown; skill: unknown; senses: unknown; languages: unknown;
-  immune: unknown; resist: unknown; vulnerable: unknown; conditionImmune: unknown;
-  trait: MonsterBlock[];
-  action: MonsterBlock[];
-  reaction: MonsterBlock[];
-  legendary: MonsterBlock[];
+  ac?: unknown;
+  hp?: unknown;
+  speed?: unknown;
+  str?: number | null; dex?: number | null; con?: number | null;
+  int?: number | null; wis?: number | null; cha?: number | null;
+  save?: unknown; skill?: unknown; senses: unknown; languages: unknown;
+  immune?: unknown; resist?: unknown; vulnerable?: unknown; conditionImmune?: unknown;
+  trait?: MonsterBlock[];
+  action?: MonsterBlock[];
+  reaction?: MonsterBlock[];
+  legendary?: MonsterBlock[];
+  classification?: { size?: string; type?: string; description?: string; environment?: string[]; [key: string]: unknown };
+  challenge?: { rating?: string; xp?: number };
+  armorClass?: { value: number; source?: string };
+  hitPoints?: { average?: number; formula?: string };
+  movement?: Record<string, number | true>;
+  abilities?: Partial<Record<"str" | "dex" | "con" | "int" | "wis" | "cha", number>>;
+  proficiencies?: Record<string, unknown>;
+  defenses?: Record<string, string[]>;
+  traits?: MonsterBlock[];
+  actions?: MonsterBlock[];
+  reactions?: MonsterBlock[];
+  legendaryActions?: MonsterBlock[];
+  [key: string]: unknown;
 };
 
 export const SIZES = ["Tiny", "Small", "Medium", "Large", "Huge", "Gargantuan"];
@@ -47,7 +61,7 @@ export function toStr(v: unknown): string {
   if (v == null) return "";
   if (typeof v === "object") {
     const obj = v as Record<string, unknown>;
-    const val = obj.value ?? obj.average ?? null;
+    const val = obj.value ?? obj.average ?? averageHpFromFormula(typeof obj.formula === "string" ? obj.formula : null);
     const notes = obj.notes ?? null;
     if (val != null && notes) return `${val} (${notes})`;
     if (val != null) return String(val);
@@ -58,6 +72,7 @@ export function toStr(v: unknown): string {
 export function normalizeBlocks(arr: unknown): MonsterBlock[] {
   if (!Array.isArray(arr)) return [];
   return (arr as Array<Record<string, unknown>>).map((b) => ({
+    ...b,
     name: String(b?.name ?? b?.title ?? ""),
     text: String(b?.text ?? b?.description ?? ""),
   }));

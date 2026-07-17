@@ -13,15 +13,6 @@ export type GroupedSpell = {
   spells: { key: string; display: string; spellId: string | null; meta: any }[];
 };
 
-function extractSpellNamesFromText(text: string): string[] {
-  const out: string[] = [];
-  for (const m of text.matchAll(/\*([^*]+)\*/g)) {
-    const s = m[1].trim();
-    if (s) out.push(s);
-  }
-  return out;
-}
-
 function parseSpellNames(monster: any): string[] {
   const v = monster?.spells ?? monster?.raw_json?.spells;
   if (Array.isArray(v)) {
@@ -41,11 +32,6 @@ function parseSpellNames(monster: any): string[] {
   return [];
 }
 
-function isSpellSection(name: unknown): boolean {
-  const s = String(name ?? "");
-  return /spellcasting/i.test(s) || /innate spellcasting/i.test(s);
-}
-
 export function useMonsterSpells(monster: any | null): {
   spellNames: string[];
   groupedSpells: GroupedSpell[];
@@ -58,25 +44,7 @@ export function useMonsterSpells(monster: any | null): {
   const m = monster;
 
   // Derive spell names from the monster data (stable across renders)
-  const { spellNames, spellTextCombined } = React.useMemo(() => {
-    if (!m) return { spellNames: [] as string[], spellTextCombined: "" };
-
-    const traitArr: any[] = Array.isArray(m.traits ?? m.trait) ? (m.traits ?? m.trait) : [];
-    const actionArr: any[] = Array.isArray(m.actions ?? m.action) ? (m.actions ?? m.action) : [];
-
-    const spellTraits = traitArr.filter((t) => isSpellSection(t?.name ?? t?.title));
-    const spellActions = actionArr.filter((a) => isSpellSection(a?.name ?? a?.title));
-
-    const combined = [...spellTraits, ...spellActions]
-      .map((x: any) => String(x?.text ?? x?.description ?? ""))
-      .filter(Boolean)
-      .join("\n");
-
-    const fromMonster = parseSpellNames(m);
-    const names = fromMonster.length ? fromMonster : extractSpellNamesFromText(combined);
-
-    return { spellNames: names, spellTextCombined: combined };
-  }, [m]);
+  const spellNames = React.useMemo(() => m ? parseSpellNames(m) : [], [m]);
 
   const [spellMetaByName, setSpellMetaByName] = React.useState<Record<string, any>>({});
   const [slotsByLevel, setSlotsByLevel] = React.useState<Record<number, number>>({});
@@ -97,15 +65,7 @@ export function useMonsterSpells(monster: any | null): {
   React.useEffect(() => {
     let cancelled = false;
 
-    const nextSlots: Record<number, number> = {};
-    const slotRegex = /(\d+)(?:st|nd|rd|th)\s+level\s*\((\d+)\s+slots?\)/gi;
-    let match: RegExpExecArray | null;
-    while ((match = slotRegex.exec(spellTextCombined))) {
-      const lvl = Number(match[1]);
-      const cnt = Number(match[2]);
-      if (Number.isFinite(lvl) && Number.isFinite(cnt)) nextSlots[lvl] = cnt;
-    }
-    setSlotsByLevel(nextSlots);
+    setSlotsByLevel({});
 
     async function loadMeta() {
       const out: Record<string, { id: string; name: string; level: number | null }> = {};
@@ -128,7 +88,7 @@ export function useMonsterSpells(monster: any | null): {
     setSpellMetaByName({});
     if (spellNames.length) void loadMeta();
     return () => { cancelled = true; };
-  }, [m?.id, spellTextCombined, spellNames]);
+  }, [m?.id, spellNames]);
 
   const groupedSpells = React.useMemo((): GroupedSpell[] => {
     const byLevel = new Map<number, GroupedSpell>();

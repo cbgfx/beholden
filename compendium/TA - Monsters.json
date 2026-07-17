@@ -1,0 +1,340 @@
+{
+  "format": "beholden.compendium",
+  "schema": "grand",
+  "exportedAt": "2026-07-16T04:24:51.588Z",
+  "monsters": [
+    {
+      "id": "m_galley_galley_ship",
+      "name": "Galley, Galley Ship",
+      "source": "Ghosts of Saltmarsh",
+      "classification": {
+        "size": "G",
+        "type": "construct",
+        "description": "Construct",
+        "alignment": "unaligned",
+        "environment": [
+          "Coastal"
+        ]
+      },
+      "passivePerception": 5,
+      "challenge": {
+        "rating": "6"
+      },
+      "armorClass": {
+        "value": 15
+      },
+      "hitPoints": {
+        "formula": "5d100"
+      },
+      "movement": {
+        "swim": 40
+      },
+      "abilities": {
+        "str": 24,
+        "dex": 4,
+        "con": 20,
+        "int": 1,
+        "wis": 1,
+        "cha": 1
+      },
+      "defenses": {
+        "vulnerabilities": [
+          "acid",
+          "cold",
+          "fire",
+          "lightning"
+        ],
+        "damageImmunities": [
+          "necrotic",
+          "poison",
+          "psychic"
+        ],
+        "conditionImmunities": [
+          "blinded",
+          "charmed",
+          "deafened",
+          "exhaustion",
+          "frightened",
+          "grappled",
+          "incapacitated",
+          "invisible",
+          "paralyzed",
+          "petrified",
+          "poisoned",
+          "restrained"
+        ]
+      },
+      "actions": [
+        {
+          "id": "action_1",
+          "name": "Fire Canon",
+          "description": "Fires one Cannonball (2 Crew, One Round)"
+        }
+      ]
+    },
+    {
+      "id": "m_intoner",
+      "name": "Intoner",
+      "classification": {
+        "size": "M",
+        "type": "humanoid",
+        "description": "humanoid",
+        "environment": [
+          "urban"
+        ]
+      },
+      "initiativeBonus": 5,
+      "passivePerception": 12,
+      "challenge": {
+        "rating": "18"
+      },
+      "armorClass": {
+        "value": 17,
+        "source": "natural armor"
+      },
+      "hitPoints": {
+        "formula": "30d8+90"
+      },
+      "abilities": {
+        "str": 11,
+        "dex": 20,
+        "con": 16,
+        "int": 18,
+        "wis": 14,
+        "cha": 23
+      },
+      "proficiencies": {
+        "savingThrows": [
+          {
+            "name": "Dexterity",
+            "bonus": 11
+          },
+          {
+            "name": "Intelligence",
+            "bonus": 10
+          },
+          {
+            "name": "Charisma",
+            "bonus": 13
+          }
+        ]
+      },
+      "defenses": {
+        "resistances": [
+          "Cold",
+          "Necrotic",
+          "Poison",
+          "Bludgeoning, Piercing, and Slashing from Nonmagical Attacks"
+        ],
+        "conditionImmunities": [
+          "Charmed",
+          "Exhaustion",
+          "Frightened",
+          "Paralyzed",
+          "Poisoned"
+        ]
+      },
+      "senses": [
+        "Darkvision 120ft"
+      ],
+      "languages": [
+        "Common"
+      ],
+      "legendaryUses": 3,
+      "traits": [
+        {
+          "id": "action_1",
+          "name": "Magic Resistance",
+          "description": "The intoner has advantage on saving throws against\n\t\t\t\tspells and other magical effects."
+        },
+        {
+          "id": "action_2",
+          "name": "Phoenix Song",
+          "description": "A destroyed intoner gains a new body as long as its Magnum Opus is known.,If more than 10,000 people remember its Magnum Opus, it takes 1d10 days to reform;,if more than 1,000 people remember, it takes 1d8 weeks to reform;,if more than 100 people remember, it takes 1d6 months to reform;,if fewer than 99 people remember, it takes 1d4 years to reform.,The new body appears within 5 feet of the most recent person to hum or perform its\n\t\t\t\tMagnum Opus."
+        },
+        {
+          "id": "action_3",
+          "name": "Spellcasting",
+          "description": "The intoner casts one of the following spells, requiring no material components and using Charisma as its spellcasting ability (spell save DC 19, +11 to hit with spell attacks):\n\t\t\t\t&#x25CF;At will: minor illusion, prestidigitation, vicious mockery, charm person\n\t\t\t\t&#x25CF;3/day each: counterspell, cure wounds, shatter, suggestion,\tthunderwave (cast as a 3rd-level spell)\n\t\t\t\t&#x25CF;2/day each: confusion, dominate person, modify memory\n\t\t\t\t&#x25CF;1/day each: irresistible dance, mass suggestion, finger of death"
+        },
+        {
+          "id": "action_4",
+          "name": "Standing Ovation",
+          "description": "The presence of the intoner&#x2019;s living phylacteries strengthens it. For each\tconscious creature within a 10-foot radius of the intoner that knows its Magnum\tOpus, the intoner gains +1 to its melee and spell attack rolls."
+        },
+        {
+          "id": "action_5",
+          "name": "Concerto (Recharge 6).",
+          "description": "The intoner directs a creature friendly to the intoner with proficiency with a\n\t\t\t\tmusical instrument to perform its\n\t\t\t\tMagnum Opus, attempting to turn all within earshot into living phylacteries for the\n\t\t\t\tintoner. Until the end of the friendly creature&#x2019;s next turn, neither it nor\n\t\t\t\tthe intoner can take any actions or bonus actions. At the end of the chosen\n\t\t\t\tcreature&#x2019;s turn, all creatures that can hear it must make a DC 17 Wisdom\n\t\t\t\tsaving throw or become infected with the intoner&#x2019;s Magnum Opus, becoming part\n\t\t\t\tof its living phylactery."
+        }
+      ],
+      "actions": [
+        {
+          "id": "action_1",
+          "name": "Siren Shriek",
+          "description": "Melee Spell Attack: +11 to hit, reach 5 ft., one creature. Hit: 10 (3d6) thunder\tdamage. The target must succeed on a DC 17 Wisdom saving throw or be compelled until the end of the intoner&#x2019;s next turn. While compelled by this effect, the\t\t\ttarget has disadvantage on attack rolls on the intoner, and can&#x2019;t willingly\n\t\t\t\t move away from it. If the target fails the saving throw by 5 or more, it is also paralyzed for the same duration. A target that succeeds on the saving throw is immune to the Siren Shriek of all intoners for the next 24 hours",
+          "attack": {
+            "toHit": 11,
+            "reach": "5ft",
+            "melee": true
+          },
+          "damage": {
+            "roll": "3d6",
+            "type": "thunder"
+          }
+        },
+        {
+          "id": "action_2",
+          "name": "Charming Chorus",
+          "description": "The intoner targets one humanoid it can see within 30 feet of it. If the target\n\t\t\t\tcan hear the intoner, it must succeed on a DC\n\t\t\t\t17 Wisdom saving throw or be magically charmed. The charmed target obeys the\n\t\t\t\tintoner&#x2019;s verbal or telepathic commands. If the target suffers any harm or\n\t\t\t\treceives a suicidal command, it can repeat the saving throw, ending the effect on a\n\t\t\t\tsuccess. If the target successfully saves against the effect, or if the effect on it\n\t\t\t\tends, the target is immune to this intoner&#x2019;s Charm for the next 24 hours."
+        }
+      ],
+      "spells": [
+        { "id": "s_minor_illusion" },
+        { "id": "s_prestidigitation" },
+        { "id": "s_vicious_mockery" },
+        { "id": "s_charm_person" },
+        { "id": "s_counterspell" },
+        { "id": "s_cure_wounds" },
+        { "id": "s_shatter" },
+        { "id": "s_suggestion" },
+        { "id": "s_thunderwave", "level": 3 },
+        { "id": "s_confusion" },
+        { "id": "s_dominate_person" },
+        { "id": "s_modify_memory" },
+        { "id": "s_ottos_irresistible_dance" },
+        { "id": "s_mass_suggestion" },
+        { "id": "s_finger_of_death" }
+      ],
+      "legendaryActions": [
+        {
+          "id": "action_1",
+          "name": "Siren Shriek (Costs 2 Actions).",
+          "description": "The intoner uses its Siren Shriek."
+        },
+        {
+          "id": "action_2",
+          "name": "Charming (Costs 2 Actions).",
+          "description": "The intoner uses its Charming Chorus."
+        },
+        {
+          "id": "action_3",
+          "name": "Choral Dirge (Costs 3 Actions).",
+          "description": "Each creature currently charmed by the intoner must make a DC 17 Constitution\n\t\t\t\tsaving throw, taking 36 (8d8) psychic damage on a failed save, or half as much\n\t\t\t\tdamage on a successful one and is no longer charmed. The targets&#x2019; hit point\n\t\t\t\tmaximum is reduced by an amount equal to the damage taken. This reduction lasts\n\t\t\t\tuntil the target finishes a long rest. The target dies if this effect reduces its\n\t\t\t\thit point maximum to 0."
+        }
+      ]
+    },
+    {
+      "id": "m_skilled_crew",
+      "name": "Skilled Crew",
+      "classification": {
+        "size": "M",
+        "type": "humanoid",
+        "description": "humanoid (any race)",
+        "alignment": "any"
+      },
+      "passivePerception": 10,
+      "challenge": {
+        "rating": "1/2"
+      },
+      "armorClass": {
+        "value": 12,
+        "source": "studded leather"
+      },
+      "hitPoints": {
+        "formula": "5d8+5"
+      },
+      "movement": {
+        "walk": 30
+      },
+      "abilities": {
+        "str": 16,
+        "dex": 11,
+        "con": 13,
+        "int": 11,
+        "wis": 10,
+        "cha": 13
+      },
+      "proficiencies": {
+        "skills": [
+          {
+            "name": "Athletics",
+            "bonus": 5
+          },
+          {
+            "name": "Intimidation",
+            "bonus": 3
+          }
+        ]
+      },
+      "languages": [
+        "any one language (usually Common)"
+      ],
+      "traits": [
+        {
+          "id": "action_1",
+          "name": "Source",
+          "description": "Ghosts of Saltmarsh p. 247"
+        },
+        {
+          "id": "action_2",
+          "name": "Cargo Hauler",
+          "description": "The bosun has advantage on Strength checks."
+        },
+        {
+          "id": "action_3",
+          "name": "Sea Legs",
+          "description": "The bosun has advantage on ability checks and saving throws to resist being\n\t\t\t\tknocked prone."
+        }
+      ],
+      "actions": [
+        {
+          "id": "action_1",
+          "name": "Light Hammer",
+          "description": "Melee or Ranged Weapon Attack: +5 to hit, reach 5 ft., or range 20/60 ft., one\n\t\t\t\ttarget. Hit 5 (1d4+3) bludgeoning damage."
+        },
+        {
+          "id": "action_2",
+          "name": "Hook",
+          "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit 7 (1d8+3) piercing\n\t\t\t\tdamage, and the target is grappled (escape DC 13)."
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "i_ship_cannon",
+      "name": "Ship Cannon",
+      "source": "Tarentha Arcana",
+      "type": "Ranged Weapon",
+      "rarity": "common",
+      "weight": 5000,
+      "value": 500,
+      "weapon": {
+        "damage": "8d10",
+        "damageType": "B"
+      },
+      "description": [
+        "A cannon for your ship. Load it with Cannonballs that cost 5 gold pieces each.",
+        "Requires Two Crewmates to operate."
+      ]
+    },
+    {
+      "id": "i_ship_cannon_small",
+      "name": "Ship Cannon (Small)",
+      "source": "Tarentha Arcana",
+      "type": "Ranged Weapon",
+      "rarity": "common",
+      "weight": 5000,
+      "value": 250,
+      "weapon": {
+        "damage": "4d10",
+        "damageType": "B"
+      },
+      "description": [
+        "A cannon for your ship. Load it with Cannonballs that cost 2 gold pieces each.",
+        "Requires Two Crewmates to operate."
+      ]
+    }
+  ]
+}

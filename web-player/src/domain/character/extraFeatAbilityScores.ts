@@ -1,5 +1,4 @@
 import type { AbilityScoreEffect } from "@/domain/character/featureEffects";
-import { parseFeatureEffects } from "@/domain/character/parseFeatureEffects";
 import type { AbilKey } from "@/views/character/CharacterSheetTypes";
 import type { StructuredFeatMechanicsLike } from "@/domain/character/structuredFeatureEffects";
 
@@ -36,13 +35,28 @@ export type ExtraFeatAbilityChoiceSpec = {
 };
 
 function abilityEffects(feat: ExtraFeatDetailLike): AbilityScoreEffect[] {
-  const text = String(feat.text ?? "").trim();
-  if (!text && !feat.parsed) return [];
-  return parseFeatureEffects({
-    source: { id: `extra-feat:${feat.id}`, kind: "feat", name: feat.name, text },
-    text,
-    featMechanics: feat.parsed,
-  }).effects.filter((effect): effect is AbilityScoreEffect => effect.type === "ability_score");
+  const source = { id: `extra-feat:${feat.id}`, kind: "feat" as const, name: feat.name, text: String(feat.text ?? "") };
+  const effects: AbilityScoreEffect[] = [];
+  for (const [name, rawAmount] of Object.entries(feat.parsed?.grants?.abilityIncreases ?? {})) {
+    const ability = name.trim().toLowerCase().slice(0, 3) as AbilKey;
+    const amount = Number(rawAmount);
+    if (!ABILITY_KEYS.includes(ability) || !Number.isFinite(amount)) continue;
+    effects.push({ id: `${source.id}:fixed:${ability}`, source, type: "ability_score", mode: "fixed", ability, choiceCount: 1, amount, maximum: 20 });
+  }
+  for (const [index, choice] of (feat.parsed?.choices ?? []).entries()) {
+    if (choice.type !== "ability_score") continue;
+    const options = (choice.options ?? [])
+      .map((name) => name.trim().toLowerCase().slice(0, 3) as AbilKey)
+      .filter((ability): ability is AbilKey => ABILITY_KEYS.includes(ability));
+    const count = Number(choice.count ?? 1);
+    const amount = Number(choice.amount ?? 1);
+    const maximum = Number(choice.maximum ?? 20);
+    effects.push({ id: `${source.id}:choice:${index}`, source, type: "ability_score", mode: "choice", chooseFrom: options.length ? options : undefined, choiceCount: count, amount, maximum });
+    if (choice.split && count === 1 && amount > 1) {
+      effects.push({ id: `${source.id}:choice:${index}:split`, source, type: "ability_score", mode: "choice", chooseFrom: options.length ? options : undefined, choiceCount: amount, amount: 1, maximum });
+    }
+  }
+  return effects;
 }
 
 export function getExtraFeatAbilityChoiceSpec(feat: ExtraFeatDetailLike | null): ExtraFeatAbilityChoiceSpec | null {

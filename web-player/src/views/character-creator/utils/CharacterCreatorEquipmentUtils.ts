@@ -1,6 +1,5 @@
 import type { ParsedFeatChoiceLike } from "@/lib/characterRules";
 import { parseStartingEquipmentOptions } from "./CharacterCreatorUtils";
-import { MUSICAL_INSTRUMENTS } from "../constants/CharacterCreatorConstants";
 import { normalizeInventoryItemLookupName } from "@/views/character/CharacterInventory";
 import type { StructuredStartingEquipmentOption } from "./CharacterCreatorClassCoreUtils";
 
@@ -19,6 +18,12 @@ export interface ItemSummaryLike {
   dmg2?: string | null;
   dmgType?: string | null;
   properties?: string[];
+  mastery?: string | null;
+  ammo?: "arrow" | "bolt" | "energy-cell" | "firearm-bullet" | "needle" | "sling-bullet" | null;
+  weaponAmmo?: "arrow" | "bolt" | "energy-cell" | "firearm-bullet" | "needle" | "sling-bullet" | null;
+  usage?: "held" | null;
+  effects?: unknown[] | null;
+  modifiers?: Array<{ target?: string; amount?: number }>;
 }
 
 export interface InventoryItemSeedLike {
@@ -89,116 +94,54 @@ function resolveStartingInventoryItem(name: string, items: ItemSummaryLike[]): I
     ?? null;
 }
 
-function currencyCodeFromEntry(entry: string): "PP" | "GP" | "EP" | "SP" | "CP" | null {
-  const normalized = String(entry ?? "")
-    .replace(/\bplatinum pieces?\b/gi, "PP")
-    .replace(/\bgold pieces?\b/gi, "GP")
-    .replace(/\belectrum pieces?\b/gi, "EP")
-    .replace(/\bsilver pieces?\b/gi, "SP")
-    .replace(/\bcopper pieces?\b/gi, "CP")
-    .replace(/\bplatinum\b/gi, "PP")
-    .replace(/\bgold\b/gi, "GP")
-    .replace(/\belectrum\b/gi, "EP")
-    .replace(/\bsilver\b/gi, "SP")
-    .replace(/\bcopper\b/gi, "CP")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toUpperCase();
-  const currencyMatch = normalized.match(/^(\d+)\s*(GP|CP|SP|EP|PP)$/i);
-  return currencyMatch ? (currencyMatch[2].toUpperCase() as "PP" | "GP" | "EP" | "SP" | "CP") : null;
-}
-
-function resolveToolPlaceholder(name: string, grantedTools: string[]): string | null {
-  const normalized = String(name ?? "").trim();
-  if (!normalized) return null;
-
-  const chosenToolReference = /\b(?:same as above|chosen for the tool proficiency above)\b/i.test(normalized);
-  const wantsInstrument = /\bmusical instrument\b/i.test(normalized);
-  const wantsArtisanTool = /\bartisan'?s tools?\b/i.test(normalized);
-  if (!chosenToolReference && !/\bof your choice\b/i.test(normalized)) return null;
-
-  const instrumentChoices = grantedTools.filter((tool) => MUSICAL_INSTRUMENTS.includes(tool));
-  const artisanChoices = grantedTools.filter((tool) => !MUSICAL_INSTRUMENTS.includes(tool));
-
-  if (wantsInstrument && instrumentChoices.length === 1) return instrumentChoices[0];
-  if (wantsArtisanTool && artisanChoices.length === 1) return artisanChoices[0];
-  if (grantedTools.length === 1) return grantedTools[0];
-  return null;
-}
-
-
-function parseEquipmentEntry(entry: string): { quantity: number; name: string } {
-  const qtyMatch = entry.match(/^(\d+)\s*[x×]\s+(.+)$/i) || entry.match(/^(\d+)\s+(.+)$/);
-  if (qtyMatch) return { quantity: Number(qtyMatch[1]) || 1, name: qtyMatch[2].trim() };
-  return { quantity: 1, name: entry.trim() };
-}
-
 export function collectEquipmentLookupNames(
   optionId: string | null,
-  equipmentText: string | undefined,
   grantedTools: string[],
   structuredOptions?: StructuredStartingEquipmentOption[],
 ): string[] {
-  const options = parseStartingEquipmentOptions(equipmentText, structuredOptions);
+  const options = parseStartingEquipmentOptions(structuredOptions);
   const selected = options.find((option) => option.id === optionId);
   if (!selected) return [];
-
-  const names: string[] = [];
-  for (const entry of selected.entries) {
-    const normalized = entry.trim();
-    if (!normalized) continue;
-    if (currencyCodeFromEntry(normalized)) continue;
-
-    const parsed = parseEquipmentEntry(normalized);
-    const resolvedPlaceholder = resolveToolPlaceholder(parsed.name, grantedTools);
-    if (resolvedPlaceholder) {
-      names.push(resolvedPlaceholder);
-      continue;
-    }
-    if (/\b(?:same as above|chosen for the tool proficiency above)\b/i.test(parsed.name)) {
-      continue;
-    }
-    if (/^tool:/i.test(parsed.name)) {
-      const toolName = parsed.name.replace(/^tool:\s*/i, "").trim();
-      if (grantedTools.some((tool) => tool.toLowerCase() === toolName.toLowerCase())) continue;
-      names.push(toolName);
-      continue;
-    }
-
-    names.push(parsed.name);
-  }
-
-  return names;
-}
-function isUnresolvedEquipmentPlaceholder(name: string): boolean {
-  const normalized = String(name ?? "").trim().toLowerCase();
-  if (!normalized) return true;
-  return /\b(?:choose|choice|of your choice|any one|one of your choice|same as above|tool proficiency above)\b/.test(normalized)
-    || /\b(?:artisan'?s tools?|musical instrument|gaming set)\b/.test(normalized)
-    || /\b(?:focus|holy symbol|druidic focus)\b/.test(normalized) && /\bof your choice\b/.test(normalized)
-    || /\bor\b/.test(normalized) && !/\b(?:armor|shield|pack|dagger|club|spear|quarterstaff|crossbow|bow|rapier|scimitar|sickle|mace|javelin|book|robe|clothes|rope|torch|rations|waterskin|bedroll|pot|shovel)\b/.test(normalized);
+  return (selected.structuredEntries ?? []).flatMap((entry) => {
+    if (entry.kind === "choiceRef") return grantedTools;
+    if (entry.kind === "item" && !entry.itemId && entry.name) return [entry.name];
+    return [];
+  });
 }
 
+export function collectEquipmentLookupIds(
+  optionId: string | null,
+  structuredOptions?: StructuredStartingEquipmentOption[],
+): string[] {
+  const selected = structuredOptions?.find((option) => option.id === optionId);
+  if (!selected) return [];
+  return Array.from(new Set(selected.entries.flatMap((entry) =>
+    entry.kind === "item" && entry.itemId ? [entry.itemId]
+      : entry.kind === "itemChoice" ? entry.itemIds
+      : []
+  )));
+}
 export function buildEquipmentItems(
   optionId: string | null,
-  equipmentText: string | undefined,
   prefix: string,
   grantedTools: string[],
   itemIndex: ItemSummaryLike[],
   structuredOptions?: StructuredStartingEquipmentOption[],
+  chosenEquipmentChoices: Record<string, string[]> = {},
 ): InventoryItemSeedLike[] {
-  const options = parseStartingEquipmentOptions(equipmentText, structuredOptions);
+  const options = parseStartingEquipmentOptions(structuredOptions);
   const selected = options.find((option) => option.id === optionId);
   if (!selected) return [];
 
   const seeds: InventoryItemSeedLike[] = [];
   let autoId = 1;
 
-  function pushItem(name: string, quantity: number) {
+  function pushItem(name: string, quantity: number, forcedItemId?: string) {
     const trimmed = name.trim();
     if (!trimmed || quantity <= 0) return;
-    const matched = resolveStartingInventoryItem(trimmed, itemIndex);
-    if (!matched && isUnresolvedEquipmentPlaceholder(trimmed)) return;
+    const matched = forcedItemId
+      ? itemIndex.find((item) => item.id === forcedItemId) ?? null
+      : resolveStartingInventoryItem(trimmed, itemIndex);
     const canonicalName = matched ? matched.name.replace(/\s+\[(?:2024|5\.5e)\]\s*$/i, "").trim() : trimmed;
     const seedBase = {
       name: canonicalName,
@@ -217,8 +160,14 @@ export function buildEquipmentItems(
       dmg2: matched?.dmg2 ?? null,
       dmgType: matched?.dmgType ?? null,
       properties: matched?.properties ?? [],
+      mastery: matched?.mastery ?? null,
+      modifiers: matched?.modifiers ?? [],
+      ammo: matched?.ammo ?? null,
+      weaponAmmo: matched?.weaponAmmo ?? null,
+      usage: matched?.usage ?? null,
+      effects: matched?.effects ?? null,
     };
-    const isWeapon = Boolean(matched?.type && /weapon/i.test(matched.type));
+    const isWeapon = Boolean(matched?.dmg1 || matched?.dmg2);
     if (isWeapon && quantity > 1) {
       for (let index = 0; index < quantity; index += 1) {
         seeds.push({
@@ -253,33 +202,18 @@ export function buildEquipmentItems(
     });
   }
 
-  for (const entry of selected.entries) {
-    const normalized = entry.trim();
-    if (!normalized) continue;
-    const currencyCode = currencyCodeFromEntry(normalized);
-    if (currencyCode) {
-      const amount = Number(normalized.match(/^(\d+)/)?.[1] ?? "0");
-      pushCurrency(currencyCode, amount);
-      continue;
-    }
-
-    const parsed = parseEquipmentEntry(normalized);
-    const resolvedPlaceholder = resolveToolPlaceholder(parsed.name, grantedTools);
-    if (resolvedPlaceholder) {
-      pushItem(resolvedPlaceholder, parsed.quantity);
-      continue;
-    }
-    if (/\b(?:same as above|chosen for the tool proficiency above)\b/i.test(parsed.name)) {
-      continue;
-    }
-    if (/^tool:/i.test(parsed.name)) {
-      const toolName = parsed.name.replace(/^tool:\s*/i, "").trim();
-      if (grantedTools.some((tool) => tool.toLowerCase() === toolName.toLowerCase())) continue;
-      pushItem(toolName, parsed.quantity);
-      continue;
-    }
-
-    pushItem(parsed.name, parsed.quantity);
+  for (const entry of selected.structuredEntries ?? []) {
+      if (entry.kind === "currency") {
+        pushCurrency(entry.denomination, entry.amount);
+      } else if (entry.kind === "item") {
+        pushItem(entry.sourceLabel ?? entry.name ?? entry.itemId ?? "Item", entry.quantity, entry.itemId);
+      } else if (entry.kind === "choiceRef") {
+        const selectedTool = grantedTools.length === 1 ? grantedTools[0] : null;
+        if (selectedTool) pushItem(selectedTool, entry.quantity);
+      } else {
+        const selectedId = (chosenEquipmentChoices[entry.choiceKey] ?? []).find((id) => entry.itemIds.includes(id));
+        if (selectedId) pushItem(entry.sourceLabel, entry.quantity, selectedId);
+      }
   }
 
   return seeds;

@@ -1,7 +1,7 @@
 import React from "react";
 import { C } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
-import { abilityNamesToKeys, parseSkillList } from "../utils/CharacterCreatorUtils";
+import { parseSkillList } from "../utils/CharacterCreatorUtils";
 import { NavButtons } from "../shared/CharacterCreatorParts";
 import { collectPreparedSpellProgressionTables } from "./CharacterCreatorPanelHelpers";
 import {
@@ -28,6 +28,7 @@ interface ClassDetailLike {
   armor: string;
   weapons: string;
   description: string;
+  primaryAbility?: string | { any?: string[]; all?: string[] } | null;
   autolevels: Array<{
     level: number;
     features: Array<{ name: string; text: string; optional: boolean; preparedSpellProgression?: PreparedSpellProgressionTable[] }>;
@@ -36,16 +37,9 @@ interface ClassDetailLike {
 
 function getPrimaryAbilityKeys(classDetail: ClassDetailLike | null): string[] {
   if (!classDetail) return [];
-  for (const al of classDetail.autolevels) {
-    if (al.level !== 1) continue;
-    for (const feature of al.features) {
-      const match = feature.text.match(/Primary Ability:\s*([^\n]+)/i);
-      if (match) {
-        return abilityNamesToKeys(match[1].split(/,|\s+and\s+|\s+or\s+/i).map((s) => s.trim()).filter(Boolean));
-      }
-    }
-  }
-  return [];
+  const fact = classDetail.primaryAbility;
+  if (typeof fact === "string") return [fact];
+  return fact?.any ?? fact?.all ?? [];
 }
 
 export function renderClassStep({
