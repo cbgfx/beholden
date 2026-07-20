@@ -12,6 +12,7 @@ import {
   getEquipState,
   initializeItemUsesMaximum,
   isCurrencyItem,
+  mergeCatalogItem,
   normalizeInventoryItemLookupName,
   type CompendiumItemDetail,
   type InventoryContainer,
@@ -150,39 +151,8 @@ export function useCharacterInventorySync({
       const next = previous.map((item) => {
         const summary = matchInventorySummary(item, itemIndex);
         if (!summary) return item;
-        const chargesMax = item.chargesMax ?? initializeItemUsesMaximum(summary.uses);
-        const patched: InventoryItem = {
-          ...item,
-          name: item.source === "custom" && !item.itemId
-            ? item.name
-            : summary.name.replace(/\s+\[(?:2024|5\.5e)\]\s*$/i, "").trim(),
-          source: item.source === "custom" && !item.itemId ? item.source : "compendium",
-          itemId: item.itemId ?? summary.id,
-          type: item.type ?? summary.type,
-          rarity: item.rarity ?? summary.rarity,
-          magic: item.magic ?? summary.magic,
-          attunement: item.attunement ?? summary.attunement,
-          weight: item.weight ?? summary.weight ?? null,
-          value: item.value ?? summary.value ?? null,
-          ac: item.ac ?? summary.ac ?? null,
-          stealthDisadvantage: item.stealthDisadvantage ?? summary.stealthDisadvantage ?? false,
-          dmg1: item.dmg1 ?? summary.dmg1 ?? null,
-          dmg2: item.dmg2 ?? summary.dmg2 ?? null,
-          dmgType: item.dmgType ?? summary.dmgType ?? null,
-          properties: item.properties?.length ? item.properties : (summary.properties ?? []),
-          mastery: item.mastery ?? summary.mastery ?? null,
-          modifiers: item.modifiers?.length ? item.modifiers : (summary.modifiers ?? []),
-          uses: item.uses ?? summary.uses ?? null,
-          spells: item.spells ?? summary.spells ?? null,
-          spellcasting: item.spellcasting ?? summary.spellcasting ?? null,
-          spellTemplate: item.spellTemplate ?? summary.spellTemplate ?? null,
-          ammo: item.ammo ?? summary.ammo ?? null,
-          weaponAmmo: item.weaponAmmo ?? summary.weaponAmmo ?? null,
-          usage: item.usage ?? summary.usage ?? null,
-          effects: item.effects ?? summary.effects ?? null,
-          chargesMax,
-          charges: item.charges ?? chargesMax,
-        };
+        const chargesMax = initializeItemUsesMaximum(summary.uses) ?? item.chargesMax ?? null;
+        const patched = mergeCatalogItem(item, summary, chargesMax);
         if (JSON.stringify(patched) !== JSON.stringify(item)) {
           changed = true;
           return patched;

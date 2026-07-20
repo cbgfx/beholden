@@ -4,8 +4,9 @@
   "exportedAt": "2026-07-03T21:48:03.683Z",
   "decks": [
     {
-      "schemaVersion": 2,
       "id": "deck_balance_1",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Balance",
@@ -14,8 +15,9 @@
       "sort": 0
     },
     {
-      "schemaVersion": 2,
       "id": "deck_comet_2",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Comet",
@@ -24,8 +26,9 @@
       "sort": 1
     },
     {
-      "schemaVersion": 2,
       "id": "deck_donjon_3",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Donjon",
@@ -34,8 +37,9 @@
       "sort": 2
     },
     {
-      "schemaVersion": 2,
       "id": "deck_euryale_4",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Euryale",
@@ -44,8 +48,9 @@
       "sort": 3
     },
     {
-      "schemaVersion": 2,
       "id": "deck_the_fates_5",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "The Fates",
@@ -54,8 +59,9 @@
       "sort": 4
     },
     {
-      "schemaVersion": 2,
       "id": "deck_flames_6",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Flames",
@@ -64,8 +70,9 @@
       "sort": 5
     },
     {
-      "schemaVersion": 2,
       "id": "deck_fool_7",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Fool",
@@ -74,8 +81,9 @@
       "sort": 6
     },
     {
-      "schemaVersion": 2,
       "id": "deck_gem_8",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Gem",
@@ -84,8 +92,9 @@
       "sort": 7
     },
     {
-      "schemaVersion": 2,
       "id": "deck_idiot_9",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Idiot",
@@ -94,8 +103,9 @@
       "sort": 8
     },
     {
-      "schemaVersion": 2,
       "id": "deck_jester_10",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Jester",
@@ -104,8 +114,9 @@
       "sort": 9
     },
     {
-      "schemaVersion": 2,
       "id": "deck_key_11",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Key",
@@ -114,8 +125,9 @@
       "sort": 10
     },
     {
-      "schemaVersion": 2,
       "id": "deck_knight_12",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Knight",
@@ -124,8 +136,9 @@
       "sort": 11
     },
     {
-      "schemaVersion": 2,
       "id": "deck_moon_13",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Moon",
@@ -134,8 +147,9 @@
       "sort": 12
     },
     {
-      "schemaVersion": 2,
       "id": "deck_rogue_14",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Rogue",
@@ -144,8 +158,9 @@
       "sort": 13
     },
     {
-      "schemaVersion": 2,
       "id": "deck_ruin_15",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Ruin",
@@ -154,8 +169,9 @@
       "sort": 14
     },
     {
-      "schemaVersion": 2,
       "id": "deck_skull_16",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Skull",
@@ -164,8 +180,9 @@
       "sort": 15
     },
     {
-      "schemaVersion": 2,
       "id": "deck_star_17",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Star",
@@ -174,8 +191,9 @@
       "sort": 16
     },
     {
-      "schemaVersion": 2,
       "id": "deck_sun_18",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Sun",
@@ -184,8 +202,9 @@
       "sort": 17
     },
     {
-      "schemaVersion": 2,
       "id": "deck_talons_19",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Talons",
@@ -194,8 +213,9 @@
       "sort": 18
     },
     {
-      "schemaVersion": 2,
       "id": "deck_throne_20",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Throne",
@@ -204,8 +224,9 @@
       "sort": 19
     },
     {
-      "schemaVersion": 2,
       "id": "deck_vizier_21",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "Vizier",
@@ -214,8 +235,9 @@
       "sort": 20
     },
     {
-      "schemaVersion": 2,
       "id": "deck_the_void_22",
+      "ruleset": "5.5e",
+      "schemaVersion": 2,
       "deckName": "Deck",
       "deckKey": "deck",
       "cardName": "The Void",

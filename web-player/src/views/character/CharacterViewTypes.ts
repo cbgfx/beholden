@@ -82,6 +82,13 @@ export interface ClassRestDetail {
   id: string;
   name: string;
   hd: number | null;
+  armor?: string | null;
+  weapons?: string | null;
+  proficiencies?: {
+    savingThrows?: string[];
+    armor?: string[];
+    weapons?: string[];
+  } | null;
   spellAbility?: string | null;
   slotsReset?: string | null;
   autolevels: Array<{

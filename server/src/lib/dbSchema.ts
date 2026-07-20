@@ -147,6 +147,7 @@ CREATE TABLE IF NOT EXISTS combatants (
 -- Scalar columns allow efficient SQL filtering without JSON parsing.
 CREATE TABLE IF NOT EXISTS compendium_monsters (
   id TEXT PRIMARY KEY,
+  ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   name TEXT NOT NULL,
   name_key TEXT,
   cr TEXT,
@@ -160,6 +161,7 @@ CREATE TABLE IF NOT EXISTS compendium_monsters (
 
 CREATE TABLE IF NOT EXISTS compendium_items (
   id TEXT PRIMARY KEY,
+  ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   name TEXT NOT NULL,
   name_key TEXT,
   rarity TEXT,
@@ -176,6 +178,7 @@ CREATE TABLE IF NOT EXISTS compendium_items (
 
 CREATE TABLE IF NOT EXISTS compendium_spells (
   id TEXT PRIMARY KEY,
+  ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   name TEXT NOT NULL,
   name_key TEXT,
   level INTEGER,
@@ -189,6 +192,7 @@ CREATE TABLE IF NOT EXISTS compendium_spells (
 
 CREATE TABLE IF NOT EXISTS compendium_class_talents (
   id TEXT PRIMARY KEY,
+  ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   name TEXT NOT NULL,
   name_key TEXT,
   kind TEXT NOT NULL,
@@ -197,6 +201,7 @@ CREATE TABLE IF NOT EXISTS compendium_class_talents (
 
 CREATE TABLE IF NOT EXISTS compendium_classes (
   id TEXT PRIMARY KEY,
+  ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   name TEXT NOT NULL,
   name_key TEXT,
   hd INTEGER,
@@ -205,6 +210,7 @@ CREATE TABLE IF NOT EXISTS compendium_classes (
 
 CREATE TABLE IF NOT EXISTS compendium_races (
   id TEXT PRIMARY KEY,
+  ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   name TEXT NOT NULL,
   name_key TEXT,
   size TEXT,
@@ -214,6 +220,7 @@ CREATE TABLE IF NOT EXISTS compendium_races (
 
 CREATE TABLE IF NOT EXISTS compendium_backgrounds (
   id TEXT PRIMARY KEY,
+  ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   name TEXT NOT NULL,
   name_key TEXT,
   data_json TEXT NOT NULL
@@ -221,6 +228,7 @@ CREATE TABLE IF NOT EXISTS compendium_backgrounds (
 
 CREATE TABLE IF NOT EXISTS compendium_feats (
   id TEXT PRIMARY KEY,
+  ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   name TEXT NOT NULL,
   name_key TEXT,
   data_json TEXT NOT NULL
@@ -228,6 +236,7 @@ CREATE TABLE IF NOT EXISTS compendium_feats (
 
 CREATE TABLE IF NOT EXISTS compendium_deck_cards (
   id TEXT PRIMARY KEY,
+  ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   deck_name TEXT NOT NULL,
   deck_key TEXT NOT NULL,
   card_name TEXT NOT NULL,
@@ -238,6 +247,7 @@ CREATE TABLE IF NOT EXISTS compendium_deck_cards (
 
 CREATE TABLE IF NOT EXISTS compendium_bastion_spaces (
   id TEXT PRIMARY KEY,
+  ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   name TEXT NOT NULL,
   name_key TEXT NOT NULL,
   squares INTEGER,
@@ -247,6 +257,7 @@ CREATE TABLE IF NOT EXISTS compendium_bastion_spaces (
 
 CREATE TABLE IF NOT EXISTS compendium_bastion_orders (
   id TEXT PRIMARY KEY,
+  ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   order_name TEXT NOT NULL,
   order_key TEXT NOT NULL,
   sort_index INTEGER NOT NULL DEFAULT 0
@@ -254,6 +265,7 @@ CREATE TABLE IF NOT EXISTS compendium_bastion_orders (
 
 CREATE TABLE IF NOT EXISTS compendium_bastion_facilities (
   id TEXT PRIMARY KEY,
+  ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   name TEXT NOT NULL,
   name_key TEXT NOT NULL,
   facility_type TEXT NOT NULL,

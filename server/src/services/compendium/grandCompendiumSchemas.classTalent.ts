@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { StructuredFeatureEffectSchema } from "./grandCompendiumSchemas.shared.js";
+import { RulesetSchema, StructuredFeatureEffectSchema } from "./grandCompendiumSchemas.shared.js";
 
 const ClassTalentRollSchema = z.object({
   formula: z.string().min(1),
@@ -8,6 +8,7 @@ const ClassTalentRollSchema = z.object({
 
 export const ClassTalentSchema = z.object({
   id: z.string().regex(/^ct_[a-z0-9_]+$/u, "ClassTalent IDs must use the canonical ct_ prefix"),
+  ruleset: RulesetSchema,
   name: z.string().min(1),
   source: z.string().min(1).optional(),
   kind: z.enum(["invocation", "maneuver", "metamagic"]),

@@ -26,6 +26,7 @@ export function registerClassTalentRoutes(app: Express, ctx: ServerContext, _any
       const entry = parseStoredGrandEntry("classTalents", row.data_json);
       return {
         id: row.id,
+        ruleset: entry.ruleset,
         name: row.name,
         kind: row.kind,
         level: 0,

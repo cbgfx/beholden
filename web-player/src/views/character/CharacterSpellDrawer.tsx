@@ -8,19 +8,21 @@ export function SpellDrawer({
   onClose,
   charLevel,
   maxSlotLevel,
+  spellMod,
 }: {
   spell: FetchedSpellDetail;
   sourceLabel?: string | null;
   onClose: () => void;
   charLevel?: number;
   maxSlotLevel?: number;
+  spellMod?: number;
 }) {
   const ordinals = ["Cantrip", "1st level", "2nd level", "3rd level", "4th level", "5th level", "6th level", "7th level", "8th level", "9th level"];
   const textArr = Array.isArray(spell.text) ? spell.text : [String(spell.text ?? "")];
   const isConc = Boolean(spell.concentration);
   const isRitual = Boolean(spell.ritual);
   const levelLabel = spell.level === 0 ? "Cantrip" : `${ordinals[spell.level ?? 0] ?? `Level ${spell.level}`} spell`;
-  const scaledDamage = getScaledSpellDamage(spell, charLevel ?? 1, maxSlotLevel ?? Math.max(1, spell.level ?? 1));
+  const scaledDamage = getScaledSpellDamage(spell, charLevel ?? 1, maxSlotLevel ?? Math.max(1, spell.level ?? 1), spellMod);
   const dmgColor = scaledDamage ? (DMG_COLORS[scaledDamage.type] ?? C.text) : undefined;
 
   return (

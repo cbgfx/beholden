@@ -10,7 +10,7 @@ import { FeatSchema } from "./grandCompendiumSchemas.feat.js";
 import { DeckSchema, BastionSchema } from "./grandCompendiumSchemas.misc.js";
 
 export type { NativeCompendiumCategory } from "./grandCompendiumSchemas.shared.js";
-export { GRAND_COMPENDIUM_SCHEMA_VERSION } from "./grandCompendiumSchemas.shared.js";
+export { GRAND_COMPENDIUM_SCHEMA_VERSION, RULESETS, RulesetSchema } from "./grandCompendiumSchemas.shared.js";
 export { MonsterSchema } from "./grandCompendiumSchemas.monster.js";
 export { ItemSchema } from "./grandCompendiumSchemas.item.js";
 export { SpellSchema } from "./grandCompendiumSchemas.spell.js";

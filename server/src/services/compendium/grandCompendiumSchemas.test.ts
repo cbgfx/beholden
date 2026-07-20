@@ -22,6 +22,7 @@ import {
 
 const validMonster = {
   id: "m_test_guardian",
+  ruleset: "5.5e",
   name: "Test Guardian",
   classification: {
     size: "M", type: "construct", description: "Medium construct",
@@ -42,6 +43,7 @@ const validMonster = {
 
 const validItem = {
   id: "i_test_blade",
+  ruleset: "5.5e",
   name: "Test Blade",
   type: "Melee Weapon",
   rarity: "rare",
@@ -58,6 +60,7 @@ const validItem = {
 
 const validSpell = {
   id: "s_test_spark",
+  ruleset: "5.5e",
   name: "Test Spark",
   level: 1,
   school: "Evocation",
@@ -73,6 +76,7 @@ const validSpell = {
 
 const validClass = {
   id: "c_test",
+  ruleset: "5.5e",
   name: "Test Class",
   description: "A test class.",
   hitDie: 8,
@@ -93,6 +97,7 @@ const validClass = {
 
 const validSpecies = {
   id: "r_test",
+  ruleset: "5.5e",
   name: "Test Species",
   size: "M",
   speed: 30,
@@ -101,6 +106,7 @@ const validSpecies = {
 
 const validBackground = {
   id: "bg_test",
+  ruleset: "5.5e",
   name: "Test Background",
   description: "A compact test background.",
   proficiencies: {
@@ -111,12 +117,14 @@ const validBackground = {
 
 const validFeat = {
   id: "f_test",
+  ruleset: "5.5e",
   name: "Test Feat",
   description: "Test feat.",
 };
 
 const validDeck = {
   schemaVersion: 2,
+  ruleset: "5.5e",
   id: "deck:test:one",
   deckName: "Test Deck",
   deckKey: "test",
@@ -126,10 +134,11 @@ const validDeck = {
   sort: 1,
 };
 
-const validBastionSpace = { schemaVersion: 2, kind: "space", id: "bastion-space:test", name: "Test Space", squares: 4, sort: 1 };
-const validBastionOrder = { schemaVersion: 2, kind: "order", id: "bastion-order:test", name: "Test Order", sort: 1 };
+const validBastionSpace = { schemaVersion: 2, ruleset: "5.5e", kind: "space", id: "bastion-space:test", name: "Test Space", squares: 4, sort: 1 };
+const validBastionOrder = { schemaVersion: 2, ruleset: "5.5e", kind: "order", id: "bastion-order:test", name: "Test Order", sort: 1 };
 const validBastionFacility = {
   schemaVersion: 2,
+  ruleset: "5.5e",
   kind: "facility",
   id: "bastion-facility:test",
   name: "Test Facility",
@@ -154,6 +163,13 @@ function passes(schema: { safeParse: (v: unknown) => { success: boolean } }, val
 
 test("MonsterSchema: accepts canonical sample", () => {
   passes(MonsterSchema, validMonster);
+});
+
+test("Grand entries require a supported ruleset", () => {
+  passes(MonsterSchema, { ...validMonster, ruleset: "5e" });
+  const { ruleset: _ruleset, ...missingRuleset } = validMonster;
+  fails(MonsterSchema, missingRuleset);
+  fails(MonsterSchema, { ...validMonster, ruleset: "6e" });
 });
 
 test("MonsterSchema: accepts a reviewed choice of damage types", () => {
@@ -332,6 +348,7 @@ test("ItemSchema: accepts canonical sample", () => {
 test("ItemSchema: accepts an item with every optional field omitted", () => {
   passes(ItemSchema, {
     id: "i_rope",
+    ruleset: "5.5e",
     name: "Rope",
     type: "Adventuring Gear",
     rarity: "common",
@@ -482,6 +499,7 @@ test("SpellSchema: rejects a one-element effect array", () => {
 test("SpellSchema: accepts a spell with all default fields omitted", () => {
   passes(SpellSchema, {
     id: "s_spell_like_feature",
+    ruleset: "5.5e",
     name: "Spell-like Feature",
     description: ["Feature text."],
   });
@@ -517,6 +535,7 @@ test("SpellSchema: rejects fractional level", () => {
 
 test("ClassTalentSchema: accepts a compact invocation", () => {
   passes(ClassTalentSchema, {
+    ruleset: "5.5e",
     id: "ct_invocation_test",
     name: "Invocation: Test",
     kind: "invocation",
@@ -526,6 +545,7 @@ test("ClassTalentSchema: accepts a compact invocation", () => {
 
 test("ClassTalentSchema: accepts typed prerequisites and sparse repeatability", () => {
   passes(ClassTalentSchema, {
+    ruleset: "5.5e",
     id: "ct_invocation_test",
     name: "Invocation: Test",
     kind: "invocation",
@@ -534,6 +554,7 @@ test("ClassTalentSchema: accepts typed prerequisites and sparse repeatability", 
     description: ["Display rules."],
   });
   fails(ClassTalentSchema, {
+    ruleset: "5.5e",
     id: "ct_invocation_test",
     name: "Invocation: Test",
     kind: "invocation",
@@ -544,6 +565,7 @@ test("ClassTalentSchema: accepts typed prerequisites and sparse repeatability", 
 
 test("ClassTalentSchema: accepts deterministic effects without spell-shaped metadata", () => {
   passes(ClassTalentSchema, {
+    ruleset: "5.5e",
     id: "ct_invocation_armor_of_shadows",
     name: "Invocation: Armor of Shadows",
     kind: "invocation",
@@ -554,6 +576,7 @@ test("ClassTalentSchema: accepts deterministic effects without spell-shaped meta
 
 test("ClassTalentSchema: accepts typed persistent Invocation choices", () => {
   passes(ClassTalentSchema, {
+    ruleset: "5.5e",
     id: "ct_invocation_repelling_blast",
     name: "Invocation: Repelling Blast",
     kind: "invocation",
@@ -573,6 +596,7 @@ test("ClassTalentSchema: accepts typed persistent Invocation choices", () => {
 
 test("ClassTalentSchema: accepts a stable Origin Feat choice", () => {
   passes(ClassTalentSchema, {
+    ruleset: "5.5e",
     id: "ct_invocation_lessons_of_the_first_ones",
     name: "Invocation: Lessons of the First Ones",
     kind: "invocation",
@@ -590,6 +614,7 @@ test("ClassTalentSchema: accepts a stable Origin Feat choice", () => {
 
 test("ClassTalentSchema: rejects spell fields and unknown kinds", () => {
   fails(ClassTalentSchema, {
+    ruleset: "5.5e",
     id: "ct_invocation_test",
     name: "Invocation: Test",
     kind: "spell",
@@ -748,6 +773,7 @@ test("ClassSchema: rejects class choices that reference missing features", () =>
 test("ClassSchema: accepts absent optional fields", () => {
   passes(ClassSchema, {
     id: "c_bare",
+    ruleset: "5.5e",
     name: "Bare Class",
     description: "",
     primaryAbility: "str",
@@ -891,7 +917,7 @@ test("SpeciesSchema: stores vision as a trait effect, not a duplicate top-level 
 });
 
 test("SpeciesSchema: accepts absent optional fields", () => {
-  passes(SpeciesSchema, { id: "r_x", name: "Bare", speed: 30, traits: [] });
+  passes(SpeciesSchema, { id: "r_x", ruleset: "5.5e", name: "Bare", speed: 30, traits: [] });
 });
 
 test("SpeciesSchema: rejects the retired top-level vision field", () => {
@@ -1107,6 +1133,21 @@ test("FeatSchema: accepts mechanics with partial grants", () => {
     mechanics: {
       grants: { abilityIncreases: { strength: 1 } },
     },
+  });
+});
+
+test("FeatSchema: accepts spell-linked uses and rejects ambiguous links", () => {
+  passes(FeatSchema, {
+    ...validFeat,
+    mechanics: { uses: [{ count: 1, note: "free cast", grantsSpell: "Shield" }] },
+  });
+  passes(FeatSchema, {
+    ...validFeat,
+    mechanics: { uses: [{ count: 1, note: "free cast", grantsChoiceId: "level_1_spell" }] },
+  });
+  fails(FeatSchema, {
+    ...validFeat,
+    mechanics: { uses: [{ count: 1, note: "free cast", grantsSpell: "Shield", grantsChoiceId: "level_1_spell" }] },
   });
 });
 

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nonnegInt, SIZE, checkUniqueIds } from "./grandCompendiumSchemas.shared.js";
+import { nonnegInt, SIZE, checkUniqueIds, RulesetSchema } from "./grandCompendiumSchemas.shared.js";
 
 const NamedBonusSchema = z
   .object({
@@ -70,6 +70,7 @@ const ActionEntrySchema = z
 export const MonsterSchema = z
   .object({
     id: z.string().min(1),
+    ruleset: RulesetSchema,
     name: z.string().min(1),
     source: z.string().min(1).optional(),
     classification: z

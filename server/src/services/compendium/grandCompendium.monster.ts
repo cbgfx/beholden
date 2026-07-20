@@ -84,6 +84,7 @@ export function projectGrandMonster(entry: JsonRecord): JsonRecord {
   const defenses = record(compact.defenses);
   return {
     id: compact.id,
+    ruleset: compact.ruleset,
     name: compact.name,
     source: compact.source ?? null,
     size: classification.size ?? null,

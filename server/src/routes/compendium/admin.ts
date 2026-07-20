@@ -12,7 +12,6 @@ import {
   NATIVE_COMPENDIUM_CATEGORIES,
   previewNativeCompendiumDocument,
 } from "../../services/compendium/nativeCompendium.js";
-import { migrateLiveCompendiumReferences } from "../../services/compendium/liveReferenceMigration.js";
 
 export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
@@ -34,24 +33,6 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
     })();
     ctx.broadcast("compendium:changed", { cleared: true });
     res.json({ ok: true });
-  });
-
-  app.get("/api/compendium/live-reference-migration", requireAdmin, (_req, res) => {
-    try {
-      return res.json({ ok: true, ...migrateLiveCompendiumReferences(db, false) });
-    } catch (error) {
-      return res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Migration preview failed." });
-    }
-  });
-
-  app.post("/api/compendium/live-reference-migration", requireAdmin, (_req, res) => {
-    try {
-      const result = migrateLiveCompendiumReferences(db, true);
-      ctx.broadcast("compendium:changed", { liveReferencesMigrated: true, changedRows: result.changedRows, changedReferences: result.changedReferences });
-      return res.json({ ok: true, ...result });
-    } catch (error) {
-      return res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Live reference migration failed." });
-    }
   });
 
   app.get("/api/compendium/native/:category/export", requireAdmin, (req, res) => {

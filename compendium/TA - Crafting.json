@@ -5,6 +5,7 @@
   "items": [
     {
       "id": "i_basic_poison",
+      "ruleset": "5.5e",
       "name": "Basic Poison",
       "source": "Tarentha Arcana",
       "type": "Potion",
@@ -20,6 +21,7 @@
     },
     {
       "id": "i_gorgon_blood",
+      "ruleset": "5.5e",
       "name": "Gorgon Blood",
       "source": "Tarentha Arcana",
       "type": "Potion",
@@ -31,6 +33,7 @@
     },
     {
       "id": "i_gorgon_intestines",
+      "ruleset": "5.5e",
       "name": "Gorgon Intestines",
       "source": "Tarentha Arcana",
       "type": "Potion",
@@ -42,6 +45,7 @@
     },
     {
       "id": "i_herb_dreamleaf",
+      "ruleset": "5.5e",
       "name": "Herb, Dreamleaf",
       "source": "Tarentha Arcana",
       "type": "Adventuring Gear",
@@ -51,6 +55,7 @@
     },
     {
       "id": "i_herb_kingsblood",
+      "ruleset": "5.5e",
       "name": "Herb, Kingsblood",
       "source": "Tarentha Arcana",
       "type": "Adventuring Gear",
@@ -60,6 +65,7 @@
     },
     {
       "id": "i_herb_nightshade",
+      "ruleset": "5.5e",
       "name": "Herb, Nightshade",
       "source": "Tarentha Arcana",
       "type": "Adventuring Gear",
@@ -69,6 +75,7 @@
     },
     {
       "id": "i_herb_silverweed",
+      "ruleset": "5.5e",
       "name": "Herb, Silverweed",
       "source": "Tarentha Arcana",
       "type": "Adventuring Gear",
@@ -79,6 +86,7 @@
     },
     {
       "id": "i_herb_sourgrass",
+      "ruleset": "5.5e",
       "name": "Herb, Sourgrass",
       "source": "Tarentha Arcana",
       "type": "Adventuring Gear",
@@ -88,6 +96,7 @@
     },
     {
       "id": "i_leather_dragon_scale",
+      "ruleset": "5.5e",
       "name": "Leather, Dragon Scale",
       "source": "Tarentha Arcana",
       "type": "Adventuring Gear",
@@ -98,6 +107,7 @@
     },
     {
       "id": "i_leather_scales",
+      "ruleset": "5.5e",
       "name": "Leather, Scales",
       "source": "Tarentha Arcana",
       "type": "Adventuring Gear",
@@ -107,6 +117,7 @@
     },
     {
       "id": "i_leather_smoldering_hide",
+      "ruleset": "5.5e",
       "name": "Leather, Smoldering Hide",
       "source": "Tarentha Arcana",
       "type": "Adventuring Gear",
@@ -117,6 +128,7 @@
     },
     {
       "id": "i_ore_adamntine",
+      "ruleset": "5.5e",
       "name": "Ore, Adamntine",
       "source": "Tarentha Arcana",
       "type": "Adventuring Gear",
@@ -127,6 +139,7 @@
     },
     {
       "id": "i_ore_black_platinum",
+      "ruleset": "5.5e",
       "name": "Ore, Black Platinum",
       "source": "Tarentha Arcana",
       "type": "Adventuring Gear",
@@ -138,6 +151,7 @@
     },
     {
       "id": "i_ore_darksteel",
+      "ruleset": "5.5e",
       "name": "Ore, Darksteel",
       "source": "Tarentha Arcana",
       "type": "Adventuring Gear",
@@ -149,6 +163,7 @@
     },
     {
       "id": "i_ore_magikite",
+      "ruleset": "5.5e",
       "name": "Ore, Magikite",
       "type": "Adventuring Gear",
       "rarity": "common",
@@ -161,6 +176,7 @@
     },
     {
       "id": "i_ore_mithral",
+      "ruleset": "5.5e",
       "name": "Ore, Mithral",
       "source": "Tarentha Arcana",
       "type": "Adventuring Gear",
@@ -171,6 +187,7 @@
     },
     {
       "id": "i_stone_to_flesh_oil",
+      "ruleset": "5.5e",
       "name": "Stone To Flesh Oil.",
       "source": "Tarentha Arcana",
       "type": "Potion",
@@ -186,6 +203,7 @@
     },
     {
       "id": "i_wood_darkwood",
+      "ruleset": "5.5e",
       "name": "Wood, Darkwood",
       "source": "Tarentha Arcana",
       "type": "Adventuring Gear",
@@ -197,6 +215,7 @@
     },
     {
       "id": "i_wood_ironwood",
+      "ruleset": "5.5e",
       "name": "Wood, Ironwood",
       "source": "Tarentha Arcana",
       "type": "Adventuring Gear",

@@ -86,9 +86,17 @@ export function ItemFormModal(props: Props) {
         description: description.length ? description : "",
       };
       if (isEdit) {
-        await api(`/api/compendium/items/${encodeURIComponent(props.item!.id)}`, { method: "PUT", body: JSON.stringify(body) });
+        await api(`/api/compendium/items/${encodeURIComponent(props.item!.id)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
       } else {
-        await api("/api/compendium/items", { method: "POST", body: JSON.stringify(body) });
+        await api("/api/compendium/items", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
       }
       props.onSaved();
     } catch (err: unknown) {

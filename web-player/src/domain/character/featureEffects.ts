@@ -130,6 +130,7 @@ export interface ResourceGrantEffect extends FeatureEffectBase {
 export interface SpellGrantEffect extends FeatureEffectBase {
   type: "spell_grant";
   spellName: string;
+  spellId?: string;
   spellList?: string | null;
   mode: "known" | "always_prepared" | "at_will" | "free_cast" | "expanded_list";
   requiredLevel?: number;

@@ -24,17 +24,18 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
   });
 
   const selectItemByExact = db.prepare(
-    "SELECT id, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items WHERE name_key = ? ORDER BY name_key ASC LIMIT 1",
+    "SELECT id, ruleset, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items WHERE name_key = ? ORDER BY name_key ASC LIMIT 1",
   );
   const selectItemByPrefix = db.prepare(
-    "SELECT id, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
+    "SELECT id, ruleset, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
   );
   const selectItemByContains = db.prepare(
-    "SELECT id, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
+    "SELECT id, ruleset, name, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
   );
 
   function mapLookupRow(row: {
     id: string;
+    ruleset?: "5e" | "5.5e";
     name: string;
     rarity: string | null;
     type: string | null;
@@ -48,6 +49,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     data_json: string | null;
   }) {
     let data: {
+      ruleset?: "5e" | "5.5e";
       ac?: number | null;
       stealthDisadvantage?: boolean;
       dmg1?: string | null;
@@ -71,6 +73,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     data = parseStoredPresentationEntry("items", row.data_json) as typeof data;
     return {
       id: row.id,
+      ruleset: data.ruleset ?? row.ruleset,
       name: row.name,
       rarity: row.rarity ?? null,
       type: row.type ?? null,
@@ -221,10 +224,11 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     const useCompact = compact && !includeStats;
 
     if (useCompact) {
-      const baseSql = `SELECT id, name, rarity, type, type_key, attunement, magic FROM compendium_items${whereSql} ORDER BY name COLLATE NOCASE`;
+      const baseSql = `SELECT id, ruleset, name, rarity, type, type_key, attunement, magic FROM compendium_items${whereSql} ORDER BY name COLLATE NOCASE`;
       const paginatedSql = limit != null ? `${baseSql} LIMIT ${limit} OFFSET ${offset}` : baseSql;
       const rows = db.prepare(paginatedSql).all(...whereParams) as {
         id: string;
+        ruleset: "5e" | "5.5e";
         name: string;
         rarity: string | null;
         type: string | null;
@@ -234,6 +238,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
       }[];
       const mapped = rows.map((r) => ({
           ...(includeField("id") ? { id: r.id } : {}),
+          ...(includeField("ruleset") ? { ruleset: r.ruleset } : {}),
           ...(includeField("name") ? { name: r.name } : {}),
           ...(includeField("rarity") ? { rarity: r.rarity ?? null } : {}),
           ...(includeField("type") ? { type: r.type ?? null } : {}),
@@ -272,6 +277,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
         const data = parseStoredPresentationEntry("items", r.data_json);
         return {
           ...(includeField("id") ? { id: r.id } : {}),
+          ...(includeField("ruleset") ? { ruleset: data.ruleset } : {}),
           ...(includeField("name") ? { name: r.name } : {}),
           ...(includeField("rarity") ? { rarity: r.rarity ?? null } : {}),
           ...(includeField("type") ? { type: r.type ?? null } : {}),
@@ -483,6 +489,8 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     const it = parseStoredPresentationEntry("items", row.data_json as string);
     res.json({
       id: row.id, name: row.name, nameKey: row.name_key ?? null,
+      ruleset: it.ruleset,
+      source: it.source ?? null,
       rarity: row.rarity ?? null, type: row.type ?? null, typeKey: row.type_key ?? null,
       attunement: Boolean(row.attunement), magic: Boolean(row.magic), equippable: Boolean(row.equippable),
       weight: (row.weight as number | null) ?? it.weight ?? null,

@@ -5,11 +5,13 @@ import {
   ABILITY,
   SpeciesChoiceSchema,
   TraitSchema,
+  RulesetSchema,
 } from "./grandCompendiumSchemas.shared.js";
 
 export const SpeciesSchema = z
   .object({
     id: z.string().min(1),
+    ruleset: RulesetSchema,
     name: z.string().min(1),
     source: z.string().min(1).optional(),
     size: SIZE.optional(),

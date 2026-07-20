@@ -24,6 +24,7 @@ export function projectGrandSpell(entry: JsonRecord): JsonRecord {
   const duration = record(casting.duration);
   return {
     id: canonical.id,
+    ruleset: canonical.ruleset,
     name: canonical.name,
     source: canonical.source ?? null,
     level: canonical.level ?? null,

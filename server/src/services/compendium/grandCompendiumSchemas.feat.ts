@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FeatMechanicsSchema } from "./grandCompendiumSchemas.shared.js";
+import { FeatMechanicsSchema, RulesetSchema } from "./grandCompendiumSchemas.shared.js";
 
 /** General is the canonical default and is omitted for compactness. */
 export const FEAT_CATEGORIES = ["O", "E", "F"] as const;
@@ -35,6 +35,7 @@ export const FeatPrerequisiteSchema = z.union([
 export const FeatSchema = z
   .object({
     id: z.string().min(1),
+    ruleset: RulesetSchema,
     name: z.string().min(1),
     source: z.string().min(1).optional(),
     category: z.enum(FEAT_CATEGORIES).optional(),

@@ -5,8 +5,6 @@ import { api, apiBlob } from "@/services/api";
 import { Panel } from "@/ui/Panel";
 import {
   CompendiumAdminFeedback,
-  LiveReferenceMigration,
-  type LiveReferenceMigrationResult,
   NativeCompendiumActions,
   NativeCompendiumDescription,
   NativeImportPreview,
@@ -49,35 +47,7 @@ export function CompendiumAdminPanel() {
   const [nativeCategory, setNativeCategory] = React.useState<NativeCompendiumCategory>("monsters");
   const [busy, setBusy] = React.useState(false);
   const [nativeMsg, setNativeMsg] = React.useState("");
-  const [referencePreview, setReferencePreview] = React.useState<LiveReferenceMigrationResult | null>(null);
 
-  async function previewReferenceMigration() {
-    setBusy(true);
-    setNativeMsg("");
-    setReferencePreview(null);
-    try {
-      setReferencePreview(await api<LiveReferenceMigrationResult>("/api/compendium/live-reference-migration"));
-    } catch (error: unknown) {
-      setNativeMsg(toErrorMessage(error));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function applyReferenceMigration() {
-    if (!referencePreview || !window.confirm(`Migrate ${referencePreview.changedReferences} live compendium references across ${referencePreview.changedRows} rows?`)) return;
-    setBusy(true);
-    setNativeMsg("");
-    try {
-      const result = await api<LiveReferenceMigrationResult>("/api/compendium/live-reference-migration", { method: "POST" });
-      setNativeMsg(`Migrated ${result.changedReferences} references across ${result.changedRows} rows.`);
-      setReferencePreview(null);
-    } catch (error: unknown) {
-      setNativeMsg(toErrorMessage(error));
-    } finally {
-      setBusy(false);
-    }
-  }
   async function exportNativeCategory() {
     setBusy(true);
     setNativeMsg("");
@@ -202,12 +172,6 @@ export function CompendiumAdminPanel() {
           onDelete={() => void deleteCompendium()}
         />
         {nativePreview ? <NativeImportPreview preview={nativePreview} /> : null}
-        <LiveReferenceMigration
-          busy={busy}
-          preview={referencePreview}
-          onPreview={() => void previewReferenceMigration()}
-          onApply={() => void applyReferenceMigration()}
-        />
         <CompendiumAdminFeedback msg={nativeMsg} />
       </Panel>
     </div>

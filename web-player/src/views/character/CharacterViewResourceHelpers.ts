@@ -1,5 +1,5 @@
 import { normalizeResourceKey } from "@/views/character/CharacterSheetUtils";
-import type { ResourceCounter } from "@/views/character/CharacterSheetTypes";
+import type { GrantedSpellCast, ResourceCounter } from "@/views/character/CharacterSheetTypes";
 import type { ClassRestDetail } from "./CharacterViewTypes";
 
 function normalizeSubclassLookupName(name: string | null | undefined): string {
@@ -43,8 +43,13 @@ export function collectClassResources(classDetail: ClassRestDetail | null, level
 export function mergeResourceState(saved: ResourceCounter[] | undefined, derived: ResourceCounter[]): ResourceCounter[] {
   const savedList = Array.isArray(saved) ? saved : [];
   const savedByKey = new Map(savedList.map((resource) => [resource.key || normalizeResourceKey(resource.name), resource]));
+  // A resource's key can change underneath a saved character — a class/feat migrating from a
+  // counter table to a structured effect, or a compendium id getting canonicalized, both change
+  // the derived key without changing what the resource actually is. Name is the fallback match so
+  // a stale-keyed saved entry still carries its current/max forward instead of showing twice.
+  const savedByName = new Map(savedList.map((resource) => [normalizeResourceKey(resource.name), resource]));
   const merged = derived.map((resource) => {
-    const existing = savedByKey.get(resource.key);
+    const existing = savedByKey.get(resource.key) ?? savedByName.get(normalizeResourceKey(resource.name));
     return {
       ...resource,
       restoreAmount: existing?.restoreAmount ?? resource.restoreAmount,
@@ -52,12 +57,27 @@ export function mergeResourceState(saved: ResourceCounter[] | undefined, derived
     };
   });
   const derivedKeys = new Set(merged.map((resource) => resource.key));
+  const derivedNames = new Set(merged.map((resource) => normalizeResourceKey(resource.name)));
   const extras = savedList.filter((resource) => {
     if (derivedKeys.has(resource.key || normalizeResourceKey(resource.name))) return false;
+    if (derivedNames.has(normalizeResourceKey(resource.name))) return false;
     if (/\(Level \d+:/i.test(resource.name ?? "")) return false;
     return true;
   });
   return [...merged, ...extras];
+}
+
+export function isSpellLinkedResource(args: {
+  resource: ResourceCounter;
+  grantedSpells: GrantedSpellCast[];
+  spellLinkedResourceKeys: Set<string>;
+}): boolean {
+  if (args.spellLinkedResourceKeys.has(args.resource.key)) return true;
+  const resourceName = normalizeResourceKey(args.resource.name);
+  return args.grantedSpells.some((spell) =>
+    spell.resourceKey === args.resource.key
+    || resourceName === normalizeResourceKey(`${spell.spellName} (${spell.sourceName})`)
+  );
 }
 
 export function shouldResetOnRest(resetCode: string | undefined, restType: "short" | "long"): boolean {

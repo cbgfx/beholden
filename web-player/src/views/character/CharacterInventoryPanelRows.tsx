@@ -20,10 +20,7 @@ import {
   requiresTwoHands,
 } from "@/views/character/CharacterInventory";
 import { inventoryEquipBtn, inventoryRarityColor } from "@/views/character/CharacterViewParts";
-
-interface InventoryPanelCharacterData {
-  proficiencies?: unknown;
-}
+import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 
 export interface PartyStashItem {
   id: string;
@@ -79,10 +76,10 @@ export function PartyStashItemRow({ item, onTake, onDelete, onQuantity }: {
   );
 }
 
-export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, expanded, onToggleExpanded, onCycleMain, onToggleOffhand, onToggleWorn, onRemove, onQty, ammoItems = [], onLinkAmmo }: {
+export function ItemRow({ item, accentColor, proficiencies, parsedFeatureEffects, expanded, onToggleExpanded, onCycleMain, onToggleOffhand, onToggleWorn, onRemove, onQty, ammoItems = [], onLinkAmmo }: {
   item: InventoryItem;
   accentColor: string;
-  charData: InventoryPanelCharacterData | null;
+  proficiencies?: ProficiencyMap;
   parsedFeatureEffects?: ParsedFeatureEffects[] | null;
   expanded: boolean;
   onToggleExpanded: (id: string) => void;
@@ -104,8 +101,8 @@ export function ItemRow({ item, accentColor, charData, parsedFeatureEffects, exp
   const mainLabel = requiresTwoHands(item) ? "2H" : state === "mainhand-2h" ? "2H" : "1H";
   const equipped = state !== "backpack";
   const canEquipItem = isWeapon || isArmor || isWearable || offhandAllowed;
-  const lacksArmorProficiency = equipped && (isArmor || isShieldItem(item)) && !hasArmorProficiency(item, charData?.proficiencies as never);
-  const mastered = isWeapon && hasWeaponMastery(item, charData?.proficiencies as never);
+  const lacksArmorProficiency = equipped && (isArmor || isShieldItem(item)) && !hasArmorProficiency(item, proficiencies);
+  const mastered = isWeapon && hasWeaponMastery(item, proficiencies);
   const masteryName = mastered ? getWeaponMasteryName(item) : null;
   const meta = [item.type ?? null, item.attunement ? "Attunement" : null].filter(Boolean).join(" • ");
   const compatibleAmmo = ammoItems.filter((entry) => isCompatibleAmmunition(item, entry));

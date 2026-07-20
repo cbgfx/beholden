@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { RulesetSchema } from "./grandCompendiumSchemas.shared.js";
 import {
   nonnegInt,
   TraitSchema,
@@ -29,6 +30,7 @@ export const EquipmentSchema = z.object({
 export const BackgroundSchema = z
   .object({
     id: z.string().min(1),
+    ruleset: RulesetSchema,
     name: z.string().min(1),
     source: z.string().min(1).optional(),
     description: z.string(),

@@ -72,6 +72,7 @@ export function buildGrantedSpellDataFromEffects(
         spells.push({
           key: `granted-spell:${effect.resourceKey}`,
           spellName: effect.spellName,
+          spellId: effect.spellId,
           sourceName: effect.source.name,
           mode: "limited",
           note: `Free cast ${resource.max} time${resource.max === 1 ? "" : "s"} per ${resource.reset === "S" ? "Short Rest" : resource.reset === "SL" ? "Short or Long Rest" : "Long Rest"}. No spell slot required.`,
@@ -85,6 +86,7 @@ export function buildGrantedSpellDataFromEffects(
         spells.push({
           key: effect.id,
           spellName: effect.spellName,
+          spellId: effect.spellId,
           sourceName: effect.source.name,
           mode: "at_will",
           note: effect.riderSummary ?? "",
@@ -97,6 +99,7 @@ export function buildGrantedSpellDataFromEffects(
         spells.push({
           key: effect.id,
           spellName: effect.spellName,
+          spellId: effect.spellId,
           sourceName: effect.source.name,
           mode: "known",
           note: effect.riderSummary
@@ -110,6 +113,7 @@ export function buildGrantedSpellDataFromEffects(
         spells.push({
           key: effect.id,
           spellName: effect.spellName,
+          spellId: effect.spellId,
           sourceName: effect.source.name,
           mode: "always_prepared",
           note: effect.riderSummary ? `Always prepared. ${effect.riderSummary}` : "Always prepared.",
@@ -121,6 +125,7 @@ export function buildGrantedSpellDataFromEffects(
         spells.push({
           key: effect.id,
           spellName: effect.spellName,
+          spellId: effect.spellId,
           sourceName: effect.source.name,
           mode: "expanded_list",
           note: "Added to your spell list.",

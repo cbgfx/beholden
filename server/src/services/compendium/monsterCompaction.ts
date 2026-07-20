@@ -173,6 +173,7 @@ export function compactMonsterEntry(entry: JsonRecord): JsonRecord {
 
   return {
     id: text(entry.id) ?? "",
+    ruleset: text(entry.ruleset) ?? "5.5e",
     name: text(entry.name) ?? "",
     ...(text(entry.source) ? { source: text(entry.source) } : {}),
     ...(Object.keys(classification).length ? { classification } : {}),

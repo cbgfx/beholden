@@ -7,6 +7,7 @@ import { ensureTreasureEncounterColumn } from "./treasureEncounterColumnMigratio
 import { ensureUserLastLoginColumn } from "./userLastLoginColumnMigration.js";
 import { ensureImageVersionColumns } from "./imageVersionColumnMigration.js";
 import { displayNoteTitle } from "./dbConverters.js";
+import { ensureCompendiumRulesetColumns } from "./compendiumRulesetColumnMigration.js";
 
 export type Db = Database.Database;
 
@@ -20,6 +21,7 @@ export function openDb(dbPath: string): Db {
   db.pragma("foreign_keys = ON");
   db.pragma("journal_size_limit = 16777216");
   db.exec(SCHEMA_SQL);
+  ensureCompendiumRulesetColumns(db);
   ensureTreasureEncounterColumn(db);
   ensureUserLastLoginColumn(db);
   ensureImageVersionColumns(db);

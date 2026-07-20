@@ -27,6 +27,7 @@ import { compactSpellEntry } from "./spellCompaction.js";
 const samples: Record<NativeCompendiumCategory, Array<Record<string, unknown>>> = {
   monsters: [{
     schemaVersion: 2,
+    ruleset: "5.5e",
     id: "m_test_guardian",
     name: "Test Guardian",
     source: null,
@@ -64,6 +65,7 @@ const samples: Record<NativeCompendiumCategory, Array<Record<string, unknown>>> 
   }],
   items: [{
     schemaVersion: 2,
+    ruleset: "5.5e",
     id: "i_test_blade",
     name: "Test Blade",
     source: null,
@@ -81,6 +83,7 @@ const samples: Record<NativeCompendiumCategory, Array<Record<string, unknown>>> 
     description: ["Test rules."],
   }],
   spells: [{
+    ruleset: "5.5e",
     id: "s_test_spark",
     name: "Test Spark",
     level: 1,
@@ -95,6 +98,7 @@ const samples: Record<NativeCompendiumCategory, Array<Record<string, unknown>>> 
     description: ["Test spell."],
   }],
   classTalents: [{
+    ruleset: "5.5e",
     id: "ct_invocation_test",
     name: "Invocation: Test",
     kind: "invocation",
@@ -102,6 +106,7 @@ const samples: Record<NativeCompendiumCategory, Array<Record<string, unknown>>> 
   }],
   classes: [{
     schemaVersion: 2,
+    ruleset: "5.5e",
     id: "c_test",
     name: "Test Class",
     spellLists: { sl_wizard: "Wizard" },
@@ -127,10 +132,12 @@ const samples: Record<NativeCompendiumCategory, Array<Record<string, unknown>>> 
   }],
   species: [{
     schemaVersion: 2,
+    ruleset: "5.5e",
     id: "r_test", name: "Test Species", source: null,
     size: "M", speed: 30, spellcastingAbility: null, resistances: [], vision: [], choices: {}, traits: [],
   }],
   backgrounds: [{
+    ruleset: "5.5e",
     id: "bg_test",
     name: "Test Background",
     description: "A compact background.",
@@ -138,12 +145,14 @@ const samples: Record<NativeCompendiumCategory, Array<Record<string, unknown>>> 
   }],
   feats: [{
     schemaVersion: 2,
+    ruleset: "5.5e",
     id: "f_test", name: "Test Feat", source: null,
     category: "General", prerequisite: null, repeatable: false,
     description: "Test feat.", mechanics: {},
   }],
   decks: [{
     schemaVersion: 2,
+    ruleset: "5.5e",
     id: "deck:test:one",
     deckName: "Test Deck",
     deckKey: "test",
@@ -153,10 +162,11 @@ const samples: Record<NativeCompendiumCategory, Array<Record<string, unknown>>> 
     sort: 1,
   }],
   bastions: [
-    { schemaVersion: 2, kind: "space", id: "bastion-space:test", name: "Test Space", squares: 4, sort: 1 },
-    { schemaVersion: 2, kind: "order", id: "bastion-order:test", name: "Test Order", sort: 1 },
+    { schemaVersion: 2, ruleset: "5.5e", kind: "space", id: "bastion-space:test", name: "Test Space", squares: 4, sort: 1 },
+    { schemaVersion: 2, ruleset: "5.5e", kind: "order", id: "bastion-order:test", name: "Test Order", sort: 1 },
     {
       schemaVersion: 2,
+      ruleset: "5.5e",
       kind: "facility",
       id: "bastion-facility:test",
       name: "Test Facility",
@@ -202,6 +212,8 @@ test("native compendium round-trips every category", () => {
 
     const monster = exportNativeCompendiumBatch(db, "monsters").entries[0];
     assert.equal(monster?.name, "Test Guardian");
+    assert.equal(monster?.ruleset, "5.5e");
+    assert.equal((db.prepare("SELECT ruleset FROM compendium_monsters WHERE id = ?").get("m_test_guardian") as { ruleset: string }).ruleset, "5.5e");
     assert.ok(Array.isArray(monster?.actions));
     assert.equal(
       exportNativeCompendiumBatch(db, "monsters", ["m_test_guardian"]).entries.length,

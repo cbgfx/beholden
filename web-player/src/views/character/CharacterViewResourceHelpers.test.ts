@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { collectClassResources } from "./CharacterViewResourceHelpers";
+import { collectClassResources, isSpellLinkedResource, mergeResourceState } from "./CharacterViewResourceHelpers";
 import type { ClassRestDetail } from "./CharacterViewTypes";
+import type { ResourceCounter } from "./CharacterSheetTypes";
 
 describe("collectClassResources", () => {
   it("handles compact class records without autolevels", () => {
@@ -40,5 +41,67 @@ describe("collectClassResources", () => {
     expect(collectClassResources(classDetail, 3)).toEqual([
       { key: "rage", name: "Rage", current: 3, max: 3, reset: "L", restoreAmount: "all" },
     ]);
+  });
+});
+
+describe("mergeResourceState", () => {
+  it("does not duplicate a resource whose saved key predates a class/feat migration to a new key format, and carries its current value forward", () => {
+    // Reproduces the real bug: a class feature migrated from a counter-table resource (saved
+    // under normalizeResourceKey's hyphenated slug, e.g. "beguiling-magic") to a structured
+    // resource_grant effect (derived key is the effect's own snake_case resourceKey, "beguiling_magic").
+    // Same resource, same name, two different key formats — only the name still ties them together.
+    const saved: ResourceCounter[] = [
+      { key: "beguiling-magic", name: "Beguiling Magic", current: 0, max: 1, reset: "L", restoreAmount: "all" },
+    ];
+    const derived: ResourceCounter[] = [
+      { key: "beguiling_magic", name: "Beguiling Magic", current: 1, max: 1, reset: "L", restoreAmount: "all" },
+    ];
+
+    const result = mergeResourceState(saved, derived);
+
+    expect(result).toEqual([
+      { key: "beguiling_magic", name: "Beguiling Magic", current: 0, max: 1, reset: "L", restoreAmount: "all" },
+    ]);
+  });
+
+  it("keeps a genuinely different saved resource that has no derived counterpart", () => {
+    const saved: ResourceCounter[] = [
+      { key: "custom-boon", name: "Custom Boon", current: 1, max: 2, reset: "L", restoreAmount: "all" },
+    ];
+    const derived: ResourceCounter[] = [
+      { key: "bardic_inspiration", name: "Bardic Inspiration", current: 4, max: 4, reset: "SL", restoreAmount: "all" },
+    ];
+
+    const result = mergeResourceState(saved, derived);
+
+    expect(result).toEqual([
+      { key: "bardic_inspiration", name: "Bardic Inspiration", current: 4, max: 4, reset: "SL", restoreAmount: "all" },
+      { key: "custom-boon", name: "Custom Boon", current: 1, max: 2, reset: "L", restoreAmount: "all" },
+    ]);
+  });
+});
+
+describe("isSpellLinkedResource", () => {
+  it("hides both current feat-use pools and Alarion's legacy Misty Step tracker", () => {
+    const grantedSpells = [{
+      key: "granted-spell:feat:fey:use:1",
+      spellName: "Misty Step",
+      sourceName: "Fey-Touched (Intelligence)",
+      mode: "limited" as const,
+      note: "Free cast once per Long Rest.",
+      resourceKey: "feat:fey:use:1",
+    }];
+    const spellLinkedResourceKeys = new Set(["feat:fey:use:1", "feat:fey:use:2"]);
+
+    expect(isSpellLinkedResource({
+      resource: { key: "feat:fey:use:2", name: "Fey-Touched (Intelligence) (2)", current: 1, max: 1, reset: "L" },
+      grantedSpells,
+      spellLinkedResourceKeys,
+    })).toBe(true);
+    expect(isSpellLinkedResource({
+      resource: { key: "fey-touched-intelligence-misty-step", name: "Misty Step (Fey-Touched (Intelligence))", current: 1, max: 1, reset: "L" },
+      grantedSpells,
+      spellLinkedResourceKeys,
+    })).toBe(true);
   });
 });

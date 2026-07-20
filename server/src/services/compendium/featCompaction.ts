@@ -108,6 +108,7 @@ export function compactFeatEntry(entry: JsonRecord): JsonRecord {
   const mechanics = compactFeatMechanics(record(entry.mechanics));
   const compact: JsonRecord = {
     id: entry.id,
+    ruleset: entry.ruleset ?? "5.5e",
     name: entry.name,
   };
   const source = text(entry.source);

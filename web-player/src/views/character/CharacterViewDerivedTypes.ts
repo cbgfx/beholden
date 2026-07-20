@@ -61,6 +61,7 @@ export type CharacterViewDerivedState = {
   classFeaturesList: ClassFeaturesListResult;
   parsedFeatureEffects: ParsedFeatureEffectsResult[];
   grantedSpellData: GrantedSpellDataResult;
+  spellLinkedResourceKeys: Set<string>;
   classResourcesWithSpellCasts: ResourceCounter[];
   polymorphName: string;
   rageActive: boolean;

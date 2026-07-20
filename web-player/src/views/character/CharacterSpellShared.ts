@@ -40,21 +40,35 @@ export function highestAvailableSlotLevel(levelSlots: number[] | null | undefine
   return 0;
 }
 
-export function getScaledSpellDamage(detail: FetchedSpellDetail, charLevel: number, maxSlotLevel: number): { dice: string; type: string; types: string[] } | null {
-  void maxSlotLevel;
+export function getScaledSpellDamage(
+  detail: FetchedSpellDetail,
+  charLevel: number,
+  maxSlotLevel: number,
+  spellMod?: number,
+): { dice: string; type: string; types: string[] } | null {
   const damageTypes = new Set(Object.keys(DMG_COLORS));
   const rolls = (detail.rolls ?? []).filter((roll) => {
     const effects = Array.isArray(roll.effect) ? roll.effect : [roll.effect];
     return effects.some((effect) => effect && damageTypes.has(effect));
   });
   if (!rolls.length) return null;
-  // Cantrip rows scale by character level (their `level` is the tier threshold); leveled spells'
-  // rows are slot-keyed. Whether a row is character-scaled is derived from the spell's own level —
-  // a fact, not a per-row stored flag.
-  const eligible = rolls.filter((roll) => detail.level !== 0 || (roll.level ?? 0) <= charLevel);
+  // Cantrip rows scale by character level (their `level` is the tier threshold, e.g. 5/11/17) —
+  // take the highest tier reached. Leveled spells' rows are slot-keyed (the level they're cast or
+  // upcast at) — take the row for the target slot level, never just the last (highest) authored
+  // row, or a base-level display would show the spell's max upcast instead of its base roll.
+  const targetLevel = detail.level === 0 ? charLevel : (maxSlotLevel || detail.level || 0);
+  const eligible = rolls.filter((roll) => (roll.level ?? detail.level ?? 0) <= targetLevel);
   const roll = eligible.at(-1) ?? rolls[0];
   const types = (Array.isArray(roll.effect) ? roll.effect : [roll.effect]).filter((effect): effect is string => Boolean(effect));
-  return { dice: roll.formula, type: types[0] ?? "", types };
+  // A handful of healing rolls (Healing Word, Cure Wounds, ...) are authored with a literal
+  // "SPELL" token meaning "add the caster's spellcasting ability modifier" — no roll parser
+  // anywhere resolves that token, so it was rendering to the player as literal, meaningless text.
+  // Substitute the real number here rather than leaving it for a dice-expression parser to choke on.
+  const hasSpellMod = /SPELL/i.test(roll.formula);
+  const dice = hasSpellMod
+    ? `${roll.formula.replace(/[+-]?SPELL/gi, "")}${spellMod == null ? "" : `${spellMod >= 0 ? "+" : ""}${spellMod}`}`
+    : roll.formula;
+  return { dice, type: types[0] ?? "", types };
 }
 
 export function abbrevTime(time: string): string {
@@ -128,7 +142,7 @@ export const DMG_COLORS: Record<string, string> = {
 };
 
 export const DMG_EMOJI: Record<string, string> = {
-  healing: "+",
+  healing: "♥",
   temp_hp: "◇",
   fire: "🔥",
   cold: "❄️",

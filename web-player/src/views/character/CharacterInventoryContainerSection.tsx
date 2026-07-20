@@ -3,13 +3,9 @@ import { IconWeight } from "@/icons";
 import { DraggableList } from "@/ui/DraggableList";
 import { subLabelStyle, stepperBtn } from "@/views/character/CharacterInventoryPanelHelpers";
 import { ItemRow } from "@/views/character/CharacterInventoryPanelRows";
-import type { CharacterDataLike, InventoryContainer, InventoryItem } from "@/views/character/CharacterInventory";
+import type { InventoryContainer, InventoryItem } from "@/views/character/CharacterInventory";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
-
-type ContainerCharData = CharacterDataLike & {
-  inventory?: InventoryItem[];
-  inventoryContainers?: InventoryContainer[];
-};
+import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 
 const emptyContainerStyle = {
   padding: "8px 10px",
@@ -26,7 +22,7 @@ interface InventoryContainerSectionProps {
   isDefault: boolean;
   isCollapsed: boolean;
   accentColor: string;
-  charData: ContainerCharData | null;
+  proficiencies?: ProficiencyMap;
   parsedFeatureEffects?: ParsedFeatureEffects[] | null;
   expandedItemId: string | null;
   onToggleCollapsed: () => void;
@@ -52,7 +48,7 @@ export function InventoryContainerSection({
   isDefault,
   isCollapsed,
   accentColor,
-  charData,
+  proficiencies,
   parsedFeatureEffects,
   expandedItemId,
   onToggleCollapsed,
@@ -177,7 +173,7 @@ export function InventoryContainerSection({
               <ItemRow
                 item={it}
                 accentColor={accentColor}
-                charData={charData}
+                proficiencies={proficiencies}
                 parsedFeatureEffects={parsedFeatureEffects}
                 expanded={expandedItemId === it.id}
                 onToggleExpanded={onToggleExpandedItem}

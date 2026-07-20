@@ -34,6 +34,7 @@ import type { ServerContext } from "../../server/context.js";
 
 const CANONICAL_MONSTER = {
   schemaVersion: 2,
+  ruleset: "5.5e",
   id: "m_compat_cave_bear",
   name: "Cave Bear",
   source: "PHB",
@@ -113,6 +114,7 @@ const CANONICAL_MONSTER = {
 
 const CANONICAL_ITEM = {
   schemaVersion: 2,
+  ruleset: "5.5e",
   id: "i_compat_amulet_health",
   name: "Amulet of Health",
   source: "DMG",
@@ -145,6 +147,7 @@ const CANONICAL_ITEM = {
 
 const CANONICAL_SPELL = {
   schemaVersion: 2,
+  ruleset: "5.5e",
   id: "s_compat_fireball",
   name: "Compat Fireball",
   source: "XGE",
@@ -164,6 +167,7 @@ const CANONICAL_SPELL = {
 };
 
 const CANONICAL_CLASS_TALENT = {
+  ruleset: "5.5e",
   id: "ct_invocation_compat_test",
   name: "Invocation: Compat Test",
   kind: "invocation",
@@ -174,6 +178,7 @@ const CANONICAL_CLASS_TALENT = {
 };
 
 const CANONICAL_BACKGROUND = {
+  ruleset: "5.5e",
   id: "bg_compat_acolyte",
   name: "Compat Acolyte",
   description: "A compact test background.",
@@ -195,6 +200,7 @@ const CANONICAL_BACKGROUND = {
 // Full Grand class — includes all current Grand fields.
 const CANONICAL_CLASS = {
   schemaVersion: 2,
+  ruleset: "5.5e",
   id: "c_compat_fighter",
   name: "Compat Fighter",
   spellLists: { sl_sorcerer: "Sorcerer", sl_wizard: "Wizard" },

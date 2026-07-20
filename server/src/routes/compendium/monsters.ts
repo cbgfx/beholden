@@ -82,6 +82,7 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
     if (metricsOnly) {
       return res.json({
         id: row.id,
+        ruleset: m.ruleset,
         name: row.name,
         cr: row.cr ?? m.cr ?? null,
         xp: m.xp ?? null,
@@ -93,6 +94,7 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
     }
     res.json({
       id: row.id,
+      ruleset: m.ruleset,
       name: row.name,
       nameKey: row.name_key ?? m.nameKey ?? m.name_key ?? null,
       cr: row.cr ?? m.cr ?? null,

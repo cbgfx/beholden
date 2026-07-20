@@ -145,6 +145,8 @@ export type ItemSpellTemplates = ItemSpellTemplate | ItemSpellTemplate[];
 export interface CompendiumItemDetail {
   id: string;
   name: string;
+  ruleset?: "5e" | "5.5e";
+  source?: string | null;
   rarity: string | null;
   type: string | null;
   attunement: boolean;
@@ -204,6 +206,56 @@ export interface ItemSummaryRow {
   container?: boolean;
   ignoreWeight?: boolean;
   effects?: unknown[] | null;
+}
+
+/** Merges a stored inventory item with its live catalog record. Catalog-linked items are read
+ * live, not frozen at add-time: every definitional fact (AC, damage, modifiers, spell grants,
+ * ...) is overwritten from the current catalog record every time it's fetched, so a compendium
+ * fix reaches every character that holds the item without a manual backfill. Only genuinely
+ * player-owned state — quantity, equip/container placement, and the item's *current* charge
+ * count — stays local; those aren't touched here. Custom items (no itemId, source "custom") are
+ * exempt: there's no catalog record to defer to. */
+export function mergeCatalogItem(item: InventoryItem, summary: ItemSummaryRow, chargesMax: number | null): InventoryItem {
+  const isLinked = item.source !== "custom" || Boolean(item.itemId);
+  function catalog<T>(fromCatalog: T | null | undefined, fromStored: T | null | undefined): T | null | undefined {
+    return isLinked && fromCatalog != null ? fromCatalog : fromStored;
+  }
+  const resolvedChargesMax = isLinked ? chargesMax : (item.chargesMax ?? chargesMax);
+  const resolvedCharges = item.charges == null
+    ? resolvedChargesMax
+    : resolvedChargesMax == null ? item.charges : Math.min(item.charges, resolvedChargesMax);
+  return {
+    ...item,
+    name: item.source === "custom" && !item.itemId
+      ? item.name
+      : summary.name.replace(/\s+\[(?:2024|5\.5e)\]\s*$/i, "").trim(),
+    source: item.source === "custom" && !item.itemId ? item.source : "compendium",
+    itemId: item.itemId ?? summary.id,
+    type: catalog(summary.type, item.type),
+    rarity: catalog(summary.rarity, item.rarity),
+    magic: catalog(summary.magic, item.magic) ?? undefined,
+    attunement: catalog(summary.attunement, item.attunement) ?? undefined,
+    weight: catalog(summary.weight, item.weight) ?? null,
+    value: catalog(summary.value, item.value) ?? null,
+    ac: catalog(summary.ac, item.ac) ?? null,
+    stealthDisadvantage: catalog(summary.stealthDisadvantage, item.stealthDisadvantage) ?? false,
+    dmg1: catalog(summary.dmg1, item.dmg1) ?? null,
+    dmg2: catalog(summary.dmg2, item.dmg2) ?? null,
+    dmgType: catalog(summary.dmgType, item.dmgType) ?? null,
+    properties: catalog(summary.properties, item.properties) ?? [],
+    mastery: catalog(summary.mastery, item.mastery) ?? null,
+    modifiers: catalog(summary.modifiers, item.modifiers) ?? [],
+    uses: item.uses ?? summary.uses ?? null,
+    spells: catalog(summary.spells, item.spells) ?? null,
+    spellcasting: catalog(summary.spellcasting, item.spellcasting) ?? null,
+    spellTemplate: catalog(summary.spellTemplate, item.spellTemplate) ?? null,
+    ammo: catalog(summary.ammo, item.ammo) ?? null,
+    weaponAmmo: catalog(summary.weaponAmmo, item.weaponAmmo) ?? null,
+    usage: catalog(summary.usage, item.usage) ?? null,
+    effects: catalog(summary.effects, item.effects) ?? null,
+    chargesMax: resolvedChargesMax,
+    charges: resolvedCharges,
+  };
 }
 
 export type EquipState = "backpack" | "mainhand-1h" | "mainhand-2h" | "offhand" | "worn";

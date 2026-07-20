@@ -6,6 +6,7 @@ import {
   StructuredFeatureEffectSchema,
   CompactScalingRollSchema,
   PreparedSpellProgressionSchema,
+  RulesetSchema,
   checkUniqueIds,
 } from "./grandCompendiumSchemas.shared.js";
 import { EquipmentSchema } from "./grandCompendiumSchemas.background.js";
@@ -157,6 +158,7 @@ const SubclassSpellcastingProgressionRowSchema = z.object({
 export const ClassSchema = z
   .object({
     id: z.string().min(1),
+    ruleset: RulesetSchema,
     name: z.string().min(1),
     source: z.string().min(1).optional(),
     description: z.string(),

@@ -1,9 +1,10 @@
 import { z } from "zod";
-import { GRAND_COMPENDIUM_SCHEMA_VERSION, nonnegInt } from "./grandCompendiumSchemas.shared.js";
+import { GRAND_COMPENDIUM_SCHEMA_VERSION, nonnegInt, RulesetSchema } from "./grandCompendiumSchemas.shared.js";
 
 export const DeckSchema = z
   .object({
     schemaVersion: z.literal(GRAND_COMPENDIUM_SCHEMA_VERSION),
+    ruleset: RulesetSchema,
     id: z.string().min(1),
     deckName: z.string().min(1),
     deckKey: z.string().min(1),
@@ -17,6 +18,7 @@ export const DeckSchema = z
 const BastionSpaceSchema = z
   .object({
     schemaVersion: z.literal(GRAND_COMPENDIUM_SCHEMA_VERSION),
+    ruleset: RulesetSchema,
     kind: z.literal("space"),
     id: z.string().min(1),
     name: z.string().min(1),
@@ -31,6 +33,7 @@ const BastionSpaceSchema = z
 const BastionOrderSchema = z
   .object({
     schemaVersion: z.literal(GRAND_COMPENDIUM_SCHEMA_VERSION),
+    ruleset: RulesetSchema,
     kind: z.literal("order"),
     id: z.string().min(1),
     name: z.string().min(1),
@@ -44,6 +47,7 @@ const BastionOrderSchema = z
 const BastionFacilitySchema = z
   .object({
     schemaVersion: z.literal(GRAND_COMPENDIUM_SCHEMA_VERSION),
+    ruleset: RulesetSchema,
     kind: z.literal("facility"),
     id: z.string().min(1),
     name: z.string().min(1),

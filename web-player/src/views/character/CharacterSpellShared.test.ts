@@ -29,4 +29,33 @@ describe("typed spell display rolls", () => {
     };
     expect(getScaledSpellDamage(spell, 20, 9)?.dice).toBe("1d4+1");
   });
+
+  it("resolves the literal SPELL token to the caster's actual spellcasting modifier", () => {
+    // Reproduces the real bug: Healing Word's roll formula is authored as "2d4+SPELL" (meaning
+    // "add the caster's spellcasting modifier"), but nothing substituted a real number for it —
+    // the player just saw the literal text "+SPELL" with no way to know what it meant.
+    const healingWord = {
+      id: "s_healing_word", name: "Healing Word", level: 1,
+      rolls: [{ formula: "2d4+SPELL", level: 1, effect: "healing" }],
+    };
+    expect(getScaledSpellDamage(healingWord, 7, 1, 3)?.dice).toBe("2d4+3");
+    expect(getScaledSpellDamage(healingWord, 7, 1, -1)?.dice).toBe("2d4-1");
+    expect(getScaledSpellDamage(healingWord, 7, 1, 0)?.dice).toBe("2d4+0");
+    // No modifier supplied: strip the unresolvable token rather than show it as literal text.
+    expect(getScaledSpellDamage(healingWord, 7, 1)?.dice).toBe("2d4");
+  });
+
+  it("shows a leveled spell's roll for the target slot level, not its highest authored upcast", () => {
+    // Reproduces the real bug: Healing Word displayed under a level-7 character's 1st-level
+    // slots section showed 18d4 (the level-9 upcast row) instead of 2d4 (the base roll), because
+    // the selector always took the last authored row regardless of what level was being shown.
+    const healingWord = {
+      id: "s_healing_word", name: "Healing Word", level: 1,
+      rolls: [1, 2, 3, 4, 5, 6, 7, 8, 9].map((level) => ({
+        formula: `${level * 2}d4+SPELL`, level, effect: "healing",
+      })),
+    };
+    expect(getScaledSpellDamage(healingWord, 7, 1, 3)?.dice).toBe("2d4+3");
+    expect(getScaledSpellDamage(healingWord, 7, 3, 3)?.dice).toBe("6d4+3");
+  });
 });

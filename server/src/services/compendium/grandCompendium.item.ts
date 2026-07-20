@@ -10,6 +10,7 @@ export function projectGrandItem(entry: JsonRecord): JsonRecord {
     : null;
   return {
     id: compact.id,
+    ruleset: compact.ruleset,
     name: compact.name,
     source: compact.source ?? null,
     type: compact.type,

@@ -31,6 +31,8 @@ export interface StructuredFeatMechanicsLike {
     minimum?: number | null;
     recharge?: ResetKind | null;
     note?: string;
+    grantsSpell?: string;
+    grantsChoiceId?: string;
   }>;
   choices?: Array<{
     id?: string;
@@ -189,22 +191,36 @@ export function structuredEffectsFromCanonical(args: {
     addVerbatimEffects(grants.effects ?? [], add);
   }
 
-  for (const [index, use] of (args.featMechanics?.uses ?? []).entries()) {
+  const featUses = args.featMechanics?.uses ?? [];
+  for (const [index, use] of featUses.entries()) {
     const max = use.countFrom === "proficiency_bonus"
       ? { kind: "proficiency_bonus" as const, min: use.minimum ?? undefined }
       : use.countFrom === "ability_modifier" && ability(use.ability)
         ? { kind: "ability_mod" as const, ability: ability(use.ability)!, min: use.minimum ?? undefined }
         : fixed(Number(use.count ?? 1));
+    const resourceKey = `${args.source.id}:use:${index + 1}`;
     effects.push({
       id: createFeatureEffectId(args.source, "resource_grant", effects.length),
       source: args.source,
       type: "resource_grant",
-      resourceKey: `${args.source.id}:use:${index + 1}`,
-      label: String(use.note ?? args.source.name),
+      resourceKey,
+      // The feature/feat's own name is the resource's title; `note` is explanatory prose
+      // ("can cast it once without a spell slot"), not a label. Only fall back to it when a
+      // single source grants more than one use pool and the name alone would collide.
+      label: featUses.length > 1 ? `${args.source.name} (${index + 1})` : args.source.name,
       max,
       reset: use.recharge ?? "long_rest",
       restoreAmount: "all",
     });
+    if (use.grantsSpell) {
+      add({
+        type: "spell_grant",
+        spellName: use.grantsSpell,
+        mode: "free_cast",
+        castsWithoutSlot: true,
+        resourceKey,
+      });
+    }
   }
 
   return effects;

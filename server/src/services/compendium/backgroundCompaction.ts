@@ -154,6 +154,7 @@ export function compactBackgroundEntry(entry: JsonRecord): JsonRecord {
 
   return {
     id: text(entry.id),
+    ruleset: text(entry.ruleset) ?? "5.5e",
     name: text(entry.name),
     ...(source ? { source } : {}),
     description: splitDescription.description,
@@ -169,4 +170,3 @@ export function compactBackgroundEntry(entry: JsonRecord): JsonRecord {
     ...(remainingTraits.length > 0 ? { traits: remainingTraits } : {}),
   };
 }
-

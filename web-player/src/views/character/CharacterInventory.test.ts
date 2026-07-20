@@ -4,6 +4,7 @@ import {
   getItemSpells,
   fixedItemUsesMaximum,
   initializeItemUsesMaximum,
+  mergeCatalogItem,
   recoverItemCharges,
   getWeaponMasteryName,
   hasWeaponProficiency,
@@ -19,7 +20,16 @@ import {
   weaponDamageDice,
   weaponDamageModifierBonus,
   type InventoryItem,
+  type ItemSummaryRow,
 } from "@/views/character/CharacterInventory";
+
+function summary(overrides: Partial<ItemSummaryRow>): ItemSummaryRow {
+  return {
+    id: "i_item", name: "Item", rarity: "common", type: "Wondrous", typeKey: "wondrous",
+    attunement: false, magic: false,
+    ...overrides,
+  };
+}
 
 function item(overrides: Partial<InventoryItem>): InventoryItem {
   return {
@@ -165,5 +175,69 @@ describe("character inventory calculations", () => {
     const mundane = item({});
     expect(weaponAttackModifierBonus(mundane, false)).toBe(0);
     expect(weaponDamageModifierBonus(mundane, false)).toBe(0);
+  });
+});
+
+describe("mergeCatalogItem", () => {
+  it("overwrites a stale stored value with the current catalog fact for a catalog-linked item", () => {
+    // Reproduces the real bug: a Longbow +1 saved before the item's typed-modifiers migration
+    // landed had `modifiers: undefined` frozen on the character forever — the old healing effect
+    // only filled in *missing* fields, so a catalog fix never reached an already-saved item.
+    const longbowPlus1 = item({ itemId: "i_longbow_plus_1", source: "compendium", modifiers: undefined, ac: null });
+    const catalog = summary({
+      id: "i_longbow_plus_1", name: "Longbow +1", type: "Ranged Weapon", rarity: "uncommon", magic: true,
+      modifiers: [{ target: "ranged_attacks", amount: 1 }, { target: "ranged_damage", amount: 1 }],
+    });
+    const merged = mergeCatalogItem(longbowPlus1, catalog, null);
+    expect(merged.modifiers).toEqual([{ target: "ranged_attacks", amount: 1 }, { target: "ranged_damage", amount: 1 }]);
+    expect(merged.rarity).toBe("uncommon");
+  });
+
+  it("preserves player-owned state (quantity, equip state, id) across a catalog refresh", () => {
+    const dagger = item({
+      id: "instance-1", itemId: "i_dagger", source: "compendium", quantity: 3,
+      equipped: true, equipState: "mainhand-1h", containerId: "pack-1",
+    });
+    const catalog = summary({ id: "i_dagger", name: "Dagger", type: "Simple Melee Weapon", dmg1: "1d4" });
+    const merged = mergeCatalogItem(dagger, catalog, null);
+    expect(merged.id).toBe("instance-1");
+    expect(merged.quantity).toBe(3);
+    expect(merged.equipped).toBe(true);
+    expect(merged.equipState).toBe("mainhand-1h");
+    expect(merged.containerId).toBe("pack-1");
+    expect(merged.dmg1).toBe("1d4");
+  });
+
+  it("hydrates Staff of Defense spells and its live 10-charge maximum onto a stale copy", () => {
+    const staff = item({
+      itemId: "i_staff_of_defense",
+      source: "compendium",
+      description: "The existing player-owned description is already populated.",
+      uses: null,
+      spells: null,
+      chargesMax: null,
+      charges: null,
+    });
+    const catalog = summary({
+      id: "i_staff_of_defense",
+      name: "Staff of Defense",
+      uses: { max: 10, recover: "1d6+4", depletion: { destroy: 1 } },
+      spells: { s_mage_armor: 1, s_shield: 2 },
+    });
+
+    const merged = mergeCatalogItem(staff, catalog, initializeItemUsesMaximum(catalog.uses));
+    expect(merged.uses).toEqual(catalog.uses);
+    expect(merged.spells).toEqual({ s_mage_armor: 1, s_shield: 2 });
+    expect(merged.chargesMax).toBe(10);
+    expect(merged.charges).toBe(10);
+  });
+
+  it("never overwrites a true custom item's data even if its name happens to match a catalog row", () => {
+    const custom = item({ source: "custom", ac: 15, description: "A DM-crafted relic." });
+    const catalog = summary({ id: "i_relic", name: "Item", ac: 12 });
+    const merged = mergeCatalogItem(custom, catalog, null);
+    expect(merged.source).toBe("custom");
+    expect(merged.ac).toBe(15);
+    expect(merged.description).toBe("A DM-crafted relic.");
   });
 });

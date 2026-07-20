@@ -5,6 +5,7 @@
   "items": [
     {
       "id": "i_a_staff_of_ice_and_fire",
+      "ruleset": "5.5e",
       "name": "A Staff Of Ice And Fire",
       "source": "Tarentha Arcana",
       "type": "Staff",
@@ -43,6 +44,7 @@
     },
     {
       "id": "i_adventurers_belt",
+      "ruleset": "5.5e",
       "name": "Adventurer's Belt",
       "type": "Adventuring Gear",
       "rarity": "common",
@@ -58,6 +60,7 @@
     },
     {
       "id": "i_armor_of_ambriel",
+      "ruleset": "5.5e",
       "name": "Armor of Ambriel",
       "source": "Tarantha Arcana",
       "type": "Heavy Armor",
@@ -78,6 +81,7 @@
     },
     {
       "id": "i_bigger_dagger",
+      "ruleset": "5.5e",
       "name": "Bigger Dagger",
       "source": "Tarentha Arcana",
       "type": "Melee Weapon",
@@ -107,6 +111,7 @@
     },
     {
       "id": "i_black_feather_pendant",
+      "ruleset": "5.5e",
       "name": "Black Feather Pendant",
       "type": "Adventuring Gear",
       "rarity": "uncommon",
@@ -115,6 +120,7 @@
     },
     {
       "id": "i_blood_of_lathander",
+      "ruleset": "5.5e",
       "name": "Blood of Lathander",
       "source": "Baldur's Gate 3",
       "type": "Melee Weapon",
@@ -145,6 +151,7 @@
     },
     {
       "id": "i_bloodreaver",
+      "ruleset": "5.5e",
       "name": "Bloodreaver",
       "source": "Tarentha's Arcana",
       "type": "Melee Weapon",
@@ -181,6 +188,7 @@
     },
     {
       "id": "i_boots_of_aid_and_comfort",
+      "ruleset": "5.5e",
       "name": "Boots of Aid and Comfort",
       "source": "Tarentha Arcana",
       "type": "Wondrous Item",
@@ -194,6 +202,7 @@
     },
     {
       "id": "i_bracers_of_mutual_destruction",
+      "ruleset": "5.5e",
       "name": "Bracers of Mutual Destruction",
       "type": "Wondrous",
       "rarity": "rare",
@@ -208,6 +217,7 @@
     },
     {
       "id": "i_cane_of_smi",
+      "ruleset": "5.5e",
       "name": "Cane of Smi",
       "source": "Tarentha Arcana",
       "type": "Melee Weapon",
@@ -232,6 +242,7 @@
     },
     {
       "id": "i_cloak_of_illusions",
+      "ruleset": "5.5e",
       "name": "Cloak of Illusions",
       "source": "Dungeon Master's Guide p. 158",
       "type": "Wondrous",
@@ -247,6 +258,7 @@
     },
     {
       "id": "i_crimson_ponys_axe",
+      "ruleset": "5.5e",
       "name": "Crimson Pony's Axe",
       "source": "Tarentha Arcana",
       "type": "Melee Weapon",
@@ -282,6 +294,7 @@
     },
     {
       "id": "i_crystal_of_nephil_life",
+      "ruleset": "5.5e",
       "name": "Crystal of Nephil (Life)",
       "type": "Wondrous",
       "rarity": "uncommon",
@@ -294,6 +307,7 @@
     },
     {
       "id": "i_crystal_of_nephil_matter",
+      "ruleset": "5.5e",
       "name": "Crystal of Nephil (Matter)",
       "type": "Wondrous",
       "rarity": "uncommon",
@@ -306,6 +320,7 @@
     },
     {
       "id": "i_crystal_of_nephil_mind",
+      "ruleset": "5.5e",
       "name": "Crystal of Nephil (Mind)",
       "type": "Wondrous",
       "rarity": "uncommon",
@@ -321,6 +336,7 @@
     },
     {
       "id": "i_crystal_of_nephil_nature",
+      "ruleset": "5.5e",
       "name": "Crystal of Nephil (Nature)",
       "type": "Wondrous",
       "rarity": "uncommon",
@@ -336,6 +352,7 @@
     },
     {
       "id": "i_crystal_of_nephil_soul",
+      "ruleset": "5.5e",
       "name": "Crystal of Nephil (Soul)",
       "type": "Wondrous",
       "rarity": "uncommon",
@@ -351,6 +368,7 @@
     },
     {
       "id": "i_crystal_of_nephil_space",
+      "ruleset": "5.5e",
       "name": "Crystal of Nephil (Space)",
       "type": "Wondrous",
       "rarity": "uncommon",
@@ -366,6 +384,7 @@
     },
     {
       "id": "i_cutlass_of_avernus",
+      "ruleset": "5.5e",
       "name": "Cutlass of Avernus",
       "source": "Tarentha Arcana",
       "type": "Melee Weapon",
@@ -398,6 +417,7 @@
     },
     {
       "id": "i_dagger_of_shock",
+      "ruleset": "5.5e",
       "name": "Dagger of Shock",
       "type": "Melee Weapon",
       "rarity": "uncommon",
@@ -428,6 +448,7 @@
     },
     {
       "id": "i_dark_justicars_armor",
+      "ruleset": "5.5e",
       "name": "Dark Justicar's Armor",
       "source": "Baldur's Gate 3",
       "type": "Medium Armor",
@@ -446,6 +467,7 @@
     },
     {
       "id": "i_dead_mans_key",
+      "ruleset": "5.5e",
       "name": "Dead Man's Key",
       "source": "Tarentha Arcana",
       "type": "Wondrous",
@@ -458,6 +480,7 @@
     },
     {
       "id": "i_drug_arcanum_dust",
+      "ruleset": "5.5e",
       "name": "Drug, Arcanum Dust",
       "source": "Tarentha Arcana",
       "type": "Potion",
@@ -476,6 +499,7 @@
     },
     {
       "id": "i_drug_whisperweed",
+      "ruleset": "5.5e",
       "name": "Drug, Whisperweed",
       "source": "Tarentha Arcana",
       "type": "Potion",
@@ -491,6 +515,7 @@
     },
     {
       "id": "i_fire_nunchaku",
+      "ruleset": "5.5e",
       "name": "Fire Nunchaku",
       "source": "Tarentha Arcana",
       "type": "Melee Weapon",
@@ -529,6 +554,7 @@
     },
     {
       "id": "i_fish_gutter",
+      "ruleset": "5.5e",
       "name": "Fish Gutter",
       "source": "Tarentha Arcana",
       "type": "Melee Weapon",
@@ -556,6 +582,7 @@
     },
     {
       "id": "i_gold_ingot",
+      "ruleset": "5.5e",
       "name": "Gold Ingot",
       "type": "Currency",
       "rarity": "common",
@@ -565,6 +592,7 @@
     },
     {
       "id": "i_golden_scarab_sash",
+      "ruleset": "5.5e",
       "name": "Golden Scarab Sash",
       "source": "Tarentha Arcana",
       "type": "Wondrous",
@@ -582,6 +610,7 @@
     },
     {
       "id": "i_guitar_of_crescendo",
+      "ruleset": "5.5e",
       "name": "Guitar of Crescendo",
       "source": "Tarentha Arcana",
       "type": "Melee Weapon",
@@ -610,6 +639,7 @@
     },
     {
       "id": "i_hawkeye",
+      "ruleset": "5.5e",
       "name": "Hawkeye",
       "source": "Tarentha Arcana",
       "type": "Ranged Weapon",
@@ -652,6 +682,7 @@
     },
     {
       "id": "i_heart_of_anubis",
+      "ruleset": "5.5e",
       "name": "Heart of Anubis",
       "source": "Tarentha Arcana",
       "type": "Wondrous",
@@ -666,6 +697,7 @@
     },
     {
       "id": "i_helm_of_yurtrus",
+      "ruleset": "5.5e",
       "name": "Helm of Yurtrus",
       "type": "Wondrous",
       "rarity": "rare",
@@ -681,6 +713,7 @@
     },
     {
       "id": "i_key_tana",
+      "ruleset": "5.5e",
       "name": "Key-tana",
       "source": "Tarentha Arcana",
       "type": "Melee Weapon",
@@ -724,6 +757,7 @@
     },
     {
       "id": "i_koto_katana",
+      "ruleset": "5.5e",
       "name": "Koto Katana",
       "source": "Tarentha Arcana",
       "type": "Melee Weapon",
@@ -765,6 +799,7 @@
     },
     {
       "id": "i_lute_of_set",
+      "ruleset": "5.5e",
       "name": "Lute of Set",
       "source": "Tarentha Arcana",
       "type": "Melee Weapon",
@@ -793,6 +828,7 @@
     },
     {
       "id": "i_moonlight_harp",
+      "ruleset": "5.5e",
       "name": "Moonlight Harp",
       "source": "Tarentha Arcana",
       "type": "Melee Weapon",
@@ -821,6 +857,7 @@
     },
     {
       "id": "i_necklace_of_loss",
+      "ruleset": "5.5e",
       "name": "Necklace of Loss",
       "type": "Wondrous",
       "rarity": "artifact",
@@ -834,6 +871,7 @@
     },
     {
       "id": "i_necklace_of_stoneskin",
+      "ruleset": "5.5e",
       "name": "Necklace of Stoneskin",
       "type": "Wondrous",
       "rarity": "uncommon",
@@ -849,6 +887,7 @@
     },
     {
       "id": "i_nimbuss_edge",
+      "ruleset": "5.5e",
       "name": "Nimbus's Edge",
       "source": "Tarentha Arcana",
       "type": "Melee Weapon",
@@ -885,6 +924,7 @@
     },
     {
       "id": "i_nyxfall_gyre",
+      "ruleset": "5.5e",
       "name": "Nyxfall Gyre",
       "source": "Tarentha Arcana",
       "type": "Rod",
@@ -901,6 +941,7 @@
     },
     {
       "id": "i_oathband_ring",
+      "ruleset": "5.5e",
       "name": "Oathband Ring",
       "source": "Tarentha Arcana",
       "type": "Ring",
@@ -917,6 +958,7 @@
     },
     {
       "id": "i_orb_of_teleportation",
+      "ruleset": "5.5e",
       "name": "Orb of Teleportation",
       "source": "Tarentha Arcana",
       "type": "Wondrous",
@@ -929,6 +971,7 @@
     },
     {
       "id": "i_organ_reorganizer",
+      "ruleset": "5.5e",
       "name": "Organ Reorganizer",
       "source": "Baldur's Gate 3",
       "type": "Melee Weapon",
@@ -953,6 +996,7 @@
     },
     {
       "id": "i_ring_of_dragon_riding",
+      "ruleset": "5.5e",
       "name": "Ring of Dragon Riding",
       "type": "Ring",
       "rarity": "very rare",
@@ -964,6 +1008,7 @@
     },
     {
       "id": "i_ring_of_fire",
+      "ruleset": "5.5e",
       "name": "Ring of Fire",
       "type": "Ring",
       "rarity": "rare",
@@ -975,6 +1020,7 @@
     },
     {
       "id": "i_ring_of_tracking",
+      "ruleset": "5.5e",
       "name": "Ring of Tracking",
       "type": "Ring",
       "rarity": "uncommon",
@@ -987,6 +1033,7 @@
     },
     {
       "id": "i_rock_of_healing",
+      "ruleset": "5.5e",
       "name": "Rock of Healing",
       "type": "Ring",
       "rarity": "uncommon",
@@ -1001,6 +1048,7 @@
     },
     {
       "id": "i_scroll_of_divinity",
+      "ruleset": "5.5e",
       "name": "Scroll of Divinity",
       "type": "Wondrous",
       "rarity": "common",
@@ -1018,6 +1066,7 @@
     },
     {
       "id": "i_scythe_of_ghouls",
+      "ruleset": "5.5e",
       "name": "Scythe of Ghouls",
       "source": "Tarentha's Arcana",
       "type": "Melee Weapon",
@@ -1050,6 +1099,7 @@
     },
     {
       "id": "i_shield_of_devotion",
+      "ruleset": "5.5e",
       "name": "Shield of Devotion",
       "source": "Baldur's Gate 3",
       "type": "Shield",
@@ -1074,6 +1124,7 @@
     },
     {
       "id": "i_sir_bearrington",
+      "ruleset": "5.5e",
       "name": "Sir Bearrington",
       "type": "Wondrous",
       "rarity": "uncommon",
@@ -1089,6 +1140,7 @@
     },
     {
       "id": "i_soul_reaver",
+      "ruleset": "5.5e",
       "name": "Soul Reaver",
       "source": "Tarentha Arcana",
       "type": "Melee Weapon",
@@ -1128,6 +1180,7 @@
     },
     {
       "id": "i_spear_of_heraldry",
+      "ruleset": "5.5e",
       "name": "Spear of Heraldry",
       "source": "Tarentha Arcana",
       "type": "Wondrous",
@@ -1140,6 +1193,7 @@
     },
     {
       "id": "i_spellthief",
+      "ruleset": "5.5e",
       "name": "Spellthief",
       "source": "Baldur's Gate 3",
       "type": "Ranged Weapon",
@@ -1155,6 +1209,7 @@
     },
     {
       "id": "i_staff_of_hollow_bones",
+      "ruleset": "5.5e",
       "name": "Staff of Hollow Bones",
       "source": "Tarentha Arcana",
       "type": "Staff",
@@ -1196,6 +1251,7 @@
     },
     {
       "id": "i_sword_of_beset",
+      "ruleset": "5.5e",
       "name": "Sword of Beset",
       "source": "Tarentha Arcana",
       "type": "Melee Weapon",
@@ -1221,6 +1277,7 @@
     },
     {
       "id": "i_talisman_of_vampiric_touch",
+      "ruleset": "5.5e",
       "name": "Talisman of Vampiric Touch",
       "source": "Tarentha Arcana",
       "type": "Wondrous",
@@ -1240,6 +1297,7 @@
     },
     {
       "id": "i_the_compass_of_desire",
+      "ruleset": "5.5e",
       "name": "The Compass of Desire",
       "source": "Tarentha Arcana",
       "type": "Wondrous",
@@ -1255,6 +1313,7 @@
     },
     {
       "id": "i_tome_of_the_lich",
+      "ruleset": "5.5e",
       "name": "Tome of the Lich",
       "type": "Wondrous",
       "rarity": "artifact",
@@ -1273,6 +1332,7 @@
     },
     {
       "id": "i_tome_of_undead",
+      "ruleset": "5.5e",
       "name": "Tome of Undead",
       "type": "Wondrous",
       "rarity": "very rare",
@@ -1286,6 +1346,7 @@
     },
     {
       "id": "i_vial_of_frozen_woe",
+      "ruleset": "5.5e",
       "name": "Vial of Frozen Woe",
       "source": "Tarentha Arcana",
       "type": "Wondrous",
@@ -1299,6 +1360,7 @@
     },
     {
       "id": "i_wand_of_tomato_throwing",
+      "ruleset": "5.5e",
       "name": "Wand of Tomato Throwing",
       "type": "Wondrous",
       "rarity": "uncommon",
@@ -1310,6 +1372,7 @@
     },
     {
       "id": "i_wapiras_crown",
+      "ruleset": "5.5e",
       "name": "Wapira's Crown",
       "source": "Tarentha Arcana",
       "type": "Wondrous Item",

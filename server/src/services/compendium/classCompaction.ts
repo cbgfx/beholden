@@ -84,6 +84,7 @@ export function compactClassEntry(entry: JsonRecord): JsonRecord {
   const proficiencies = record(entry.proficiencies);
   const compact: JsonRecord = {
     id: entry.id,
+    ruleset: entry.ruleset ?? "5.5e",
     name: entry.name,
   };
   const source = text(entry.source);

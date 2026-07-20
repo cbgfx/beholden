@@ -7,6 +7,7 @@ import {
 } from "@/views/character/CharacterViewColumns";
 import { CharacterSheetHeader } from "@/views/character/CharacterSheetHeader";
 import { abilityMod, formatModifier } from "@/views/character/CharacterSheetUtils";
+import { isSpellLinkedResource } from "@/views/character/CharacterViewResourceHelpers";
 import { getExhaustionD20Penalty } from "@/views/character/CharacterExhaustion";
 import { Wrap } from "@/views/character/CharacterViewParts";
 import { CharacterViewOverlays } from "@/views/character/CharacterViewOverlays";
@@ -192,6 +193,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
           <CharacterInventoryColumn inventoryProps={{
             char,
             charData: char.characterData,
+            proficiencies: derived.prof,
             parsedFeatureEffects: derived.parsedFeatureEffects,
             accentColor: derived.accentColor,
             campaignId: char.campaigns[0]?.campaignId ?? null,
@@ -208,7 +210,13 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
             hitDieSize={derived.hitDieSize}
             hitDieConMod={derived.conMod}
             exhaustion={currentData.exhaustion ?? 0}
-            classResources={derived.classResourcesWithSpellCasts}
+            classResources={derived.classResourcesWithSpellCasts.filter((resource) => {
+              return !isSpellLinkedResource({
+                resource,
+                grantedSpells: derived.grantedSpellData.spells,
+                spellLinkedResourceKeys: derived.spellLinkedResourceKeys,
+              });
+            })}
             playerNotesList={notes.playerNotesList}
             allSharedNotes={notes.allSharedNotes}
             classFeaturesList={derived.classFeaturesList}

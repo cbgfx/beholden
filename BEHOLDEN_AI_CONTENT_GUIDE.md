@@ -35,6 +35,11 @@ Adventure version 2 may embed those exact native batches in its `compendium` arr
 
 # Grand Beholden Compendium Schema
 
+For the exhaustive field-by-field contract—including every nested object, union,
+closed enum, literal value, and structured-effect variant—see
+`GRAND_COMPENDIUM_SCHEMA_REFERENCE.md`. This guide focuses on authoring workflow,
+examples, and design guidance; the schema reference is the definitive shape list.
+
 Catalogs may contain one or several category arrays. Keeping source catalogs separate is encouraged; the schema does not require combining them.
 
 ## Canonical envelope
@@ -64,6 +69,7 @@ Rules:
 - Omit categories that the file does not own; do not add empty arrays merely for completeness.
 - Decks and bastions contain `"schemaVersion": 2`.
   All other categories omit per-entry `schemaVersion`.
+- Every entry contains `"ruleset": "5e"` or `"ruleset": "5.5e"`.
 - Imports always overwrite an existing row with the same `id`.
 - Every entry must contain a non-empty stable `id`. Grand Schema imports never invent or repair missing IDs.
 - Entries use one explicit canonical shape. Unknown or legacy-shaped fields are rejected rather than guessed.
@@ -362,6 +368,7 @@ Canonical item IDs use `i_` followed by a stable lowercase underscore key, for e
       "entries": [
         {
           "id": "m_orrery_guardian",
+          "ruleset": "5.5e",
           "name": "Orrery Guardian",
           "source": "The Silent Orrery",
           "classification": {
@@ -549,6 +556,7 @@ Items use the same native batch pipeline as every other compendium category. The
   "entries": [
     {
       "id": "i_gloamglass_dagger",
+      "ruleset": "5.5e",
       "name": "Gloamglass Dagger",
       "source": "The Silent Orrery",
       "type": "Melee Weapon",
@@ -655,6 +663,7 @@ Wrap each entry below in the canonical batch envelope and set the matching `cate
 ```json
 {
   "id": "s_starfall_lance",
+  "ruleset": "5.5e",
   "name": "Starfall Lance",
   "level": 3,
   "school": "Evocation",
@@ -711,6 +720,7 @@ never stored per row.
 ```json
 {
   "id": "c_wayfinder",
+  "ruleset": "5.5e",
   "name": "Wayfinder",
   "source": "Homebrew",
   "description": "Wayfinders explore dangerous frontiers and guide others through them.",
@@ -756,6 +766,7 @@ automatically assigns `"resolution": "manual"` to each feature; supply an explic
 ```json
 {
   "id": "r_emberkin",
+  "ruleset": "5.5e",
   "name": "Emberkin",
   "size": "M",
   "speed": 30,
@@ -778,6 +789,7 @@ automatically assigns `"resolution": "manual"` to each feature; supply an explic
 ```json
 {
   "id": "bg_stargazer",
+  "ruleset": "5.5e",
   "name": "Stargazer",
   "description": "You chart the night sky and interpret the movements of distant stars.",
   "proficiencies": {
@@ -825,6 +837,7 @@ A feat that is entirely adjudicated at the table needs only prose:
 ```json
 {
   "id": "f_orbit_step",
+  "ruleset": "5.5e",
   "name": "Orbit Step",
   "prerequisite": { "level": 4 },
   "description": "Immediately after you take the Dash action, you can teleport up to 10 feet to an unoccupied space you can see.",
@@ -839,6 +852,7 @@ never parsed. A typical mixed feat:
 ```json
 {
   "id": "f_wardbearer",
+  "ruleset": "5.5e",
   "name": "Wardbearer",
   "prerequisite": { "level": 4, "feature": "spellcasting" },
   "description": "You gain the following benefits. Ability Score Increase. Increase your Charisma score by 1, to a maximum of 20. Warded Mind. You have Advantage on Constitution saving throws that you make to maintain Concentration. Lore of Wards. You gain proficiency in Arcana, History, or Religion. Ward Touch. A number of times equal to your Proficiency Bonus, you can end one spell of level 3 or lower on a willing creature you touch; you regain all expended uses when you finish a Long Rest.",
@@ -900,6 +914,7 @@ The `"decks"` category contains one entry per card:
 ```json
 {
   "schemaVersion": 2,
+  "ruleset": "5.5e",
   "id": "deck:omens:the-comet",
   "deckName": "Deck of Omens",
   "deckKey": "omens",
@@ -921,6 +936,7 @@ Space:
 ```json
 {
   "schemaVersion": 2,
+  "ruleset": "5.5e",
   "kind": "space",
   "id": "bastion-space:roomy",
   "name": "Roomy",
@@ -936,6 +952,7 @@ Order:
 ```json
 {
   "schemaVersion": 2,
+  "ruleset": "5.5e",
   "kind": "order",
   "id": "bastion-order:craft",
   "name": "Craft",
@@ -949,6 +966,7 @@ Facility:
 ```json
 {
   "schemaVersion": 2,
+  "ruleset": "5.5e",
   "kind": "facility",
   "id": "bastion-facility:observatory",
   "name": "Observatory",

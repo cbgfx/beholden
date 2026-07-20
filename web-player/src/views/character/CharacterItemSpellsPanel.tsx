@@ -182,7 +182,7 @@ export function ItemSpellsPanel({
 
                   {groupSpells.map((spell, i) => {
                     const detail = details[spell.id];
-                    const damage = detail ? getScaledSpellDamage(detail, 1, Math.max(1, detail.level ?? 1)) : null;
+                    const damage = detail ? getScaledSpellDamage(detail, 1, Math.max(1, detail.level ?? 1), spellMod) : null;
                     const dmgColor = damage ? (DMG_COLORS[damage.type] ?? C.text) : null;
                     const concentration = detail ? Boolean(detail.concentration) : false;
                     const checks = detail ? (Array.isArray(detail.check) ? detail.check : [detail.check]) : [];
@@ -252,7 +252,7 @@ export function ItemSpellsPanel({
         );
       })}
       {selectedSpell && (
-        <SpellDrawer spell={selectedSpell} onClose={() => setSelectedSpell(null)} />
+        <SpellDrawer spell={selectedSpell} onClose={() => setSelectedSpell(null)} spellMod={spellMod} />
       )}
     </>
   );

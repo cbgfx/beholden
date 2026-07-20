@@ -27,6 +27,7 @@ import { CollapsiblePanel, panelHeaderAddBtn } from "@/views/character/Character
 import { useCharacterInventoryContainers } from "@/views/character/useCharacterInventoryContainers";
 import { useCharacterInventoryItems } from "@/views/character/useCharacterInventoryItems";
 import { useCharacterInventorySync } from "@/views/character/useCharacterInventorySync";
+import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 
 type InventoryPanelCharacterData = CharacterDataLike & {
   inventory?: InventoryItem[];
@@ -36,6 +37,7 @@ type InventoryPanelCharacterData = CharacterDataLike & {
 export function InventoryPanel({
   char,
   charData,
+  proficiencies,
   parsedFeatureEffects,
   accentColor,
   campaignId,
@@ -43,6 +45,7 @@ export function InventoryPanel({
 }: {
   char: { strScore: number | null };
   charData: InventoryPanelCharacterData | null;
+  proficiencies?: ProficiencyMap;
   parsedFeatureEffects?: ParsedFeatureEffects[] | null;
   accentColor: string;
   campaignId?: string | null;
@@ -107,7 +110,7 @@ export function InventoryPanel({
                   <ItemRow
                     item={item}
                     accentColor={accentColor}
-                    charData={charData}
+                    proficiencies={proficiencies}
                     parsedFeatureEffects={parsedFeatureEffects}
                     expanded={sync.expandedItemId === item.id}
                     onToggleExpanded={itemActions.toggleExpandedItem}
@@ -136,7 +139,7 @@ export function InventoryPanel({
               isDefault={isDefault}
               isCollapsed={sync.collapsedContainerIds.includes(container.id)}
               accentColor={accentColor}
-              charData={charData}
+              proficiencies={proficiencies}
               parsedFeatureEffects={parsedFeatureEffects}
               expandedItemId={sync.expandedItemId}
               onToggleCollapsed={() => itemActions.toggleContainerCollapsed(container.id)}

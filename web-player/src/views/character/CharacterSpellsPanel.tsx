@@ -377,7 +377,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
                 }}
               >
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: "var(--fs-subtitle)", color: C.text }}>{entry.searchName}</div>
+                  <div style={{ fontWeight: 700, fontSize: "var(--fs-subtitle)", color: C.text }}>{detail?.name ?? entry.searchName}</div>
                   <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginTop: 1 }}>{entry.sourceName}</div>
                   {entry.note ? (
                     <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginTop: 4, lineHeight: 1.45 }}>{entry.note}</div>
@@ -504,7 +504,12 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
 
             {groupEntries.map((e, i) => {
               const d = details[e.key];
-              const scaledDamage = d ? getScaledSpellDamage(d, charLevel, maxSpellSlotLevel) : null;
+              const entryAbility = e.ability ?? null;
+              const entrySpellMod = entryAbility ? abilityModFor(entryAbility) : spellMod;
+              // Leveled spells' rolls are slot-keyed (level 1 Healing Word has a separate row per
+              // upcast level 1-9) — show the row for THIS section's slot level, not the character's
+              // overall max slot level, or a 1st-level slot listing shows the 9th-level upcast roll.
+              const scaledDamage = d ? getScaledSpellDamage(d, charLevel, level > 0 ? level : maxSpellSlotLevel, entrySpellMod) : null;
               const spellDamageBonus = spellDamageBonuses[e.key] ?? 0;
               const scaledDamageText = scaledDamage
                 ? `${scaledDamage.dice}${spellDamageBonus === 0 ? "" : `${spellDamageBonus > 0 ? "+" : ""}${spellDamageBonus}`}`
@@ -513,8 +518,6 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
                 const conc = d ? Boolean(d.concentration) : false;
                 const usesSave = spellUsesSave(d);
                 const usesAtk = spellUsesAttack(d);
-                const entryAbility = e.ability ?? null;
-                const entrySpellMod = entryAbility ? abilityModFor(entryAbility) : spellMod;
                 const entrySaveDc = 8 + pb + entrySpellMod + spellSaveDcBonus;
                 const entrySpellAtk = pb + entrySpellMod;
                 const isCantrip = level === 0;
@@ -631,7 +634,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
       })}
       </div>
       {selectedSpell && (
-        <SpellDrawer spell={selectedSpell.detail} sourceLabel={selectedSpell.source ?? null} onClose={() => setSelectedSpell(null)} charLevel={charLevel} maxSlotLevel={maxSpellSlotLevel} />
+        <SpellDrawer spell={selectedSpell.detail} sourceLabel={selectedSpell.source ?? null} onClose={() => setSelectedSpell(null)} charLevel={charLevel} maxSlotLevel={maxSpellSlotLevel} spellMod={spellMod} />
       )}
     </CollapsiblePanel>
     {addSpellOpen && (

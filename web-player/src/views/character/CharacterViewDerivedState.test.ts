@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCharacterViewDerivedState } from "@/views/character/CharacterViewDerivedState";
+import { buildCharacterViewDerivedState, mergeFixedClassProficiencies } from "@/views/character/CharacterViewDerivedState";
 import type { CharacterViewDerivedStateArgs } from "@/views/character/CharacterViewDerivedTypes";
 
 function buildArgs(): CharacterViewDerivedStateArgs {
@@ -88,6 +88,52 @@ function buildArgs(): CharacterViewDerivedStateArgs {
 }
 
 describe("buildCharacterViewDerivedState", () => {
+  it("reconciles fixed class armor proficiencies missing from a legacy character", () => {
+    const proficiencies = mergeFixedClassProficiencies(undefined, {
+      id: "c_barbarian",
+      name: "Barbarian",
+      hd: 12,
+      proficiencies: {
+        savingThrows: ["str", "con"],
+        armor: ["Light Armor", "Medium Armor", "Shields"],
+        weapons: ["Simple Weapons", "Martial Weapons"],
+      },
+      autolevels: [],
+    });
+
+    expect(proficiencies?.armor.map((entry) => entry.name)).toEqual(["Light Armor", "Medium Armor", "Shields"]);
+    expect(proficiencies?.weapons.map((entry) => entry.name)).toEqual(["Simple Weapons", "Martial Weapons"]);
+    expect(proficiencies?.saves.map((entry) => entry.name)).toEqual(["str", "con"]);
+  });
+
+  it("does not penalize a Barbarian wearing medium armor when stored proficiencies are missing", () => {
+    const args = buildArgs();
+    args.char.characterData!.inventory = [{
+      id: "half-plate",
+      name: "Adamantine Half Plate Armor",
+      quantity: 1,
+      equipped: true,
+      equipState: "worn",
+      type: "Medium Armor",
+      ac: 15,
+    }];
+    args.classDetail = {
+      id: "c_barbarian",
+      name: "Barbarian",
+      hd: 12,
+      proficiencies: {
+        savingThrows: ["str", "con"],
+        armor: ["Light Armor", "Medium Armor", "Shields"],
+        weapons: ["Simple Weapons", "Martial Weapons"],
+      },
+      autolevels: [],
+    };
+
+    const state = buildCharacterViewDerivedState(args);
+    expect(state.nonProficientArmorPenalty).toBe(false);
+    expect(state.prof?.armor.map((entry) => entry.name)).toContain("Medium Armor");
+  });
+
   it("combines feats, equipped items, armor, shield, and manual overrides", () => {
     const state = buildCharacterViewDerivedState(buildArgs());
 
@@ -136,6 +182,97 @@ describe("buildCharacterViewDerivedState", () => {
     // Baseline (no modifiers) is 17 — see the test above. Armor +1 and Shield +1 each add another
     // point of AC on top of that.
     expect(state.effectiveAc).toBe(19);
+  });
+
+  it("adds an attuned held item's typed AC bonus, including Staff of Defense", () => {
+    const args = buildArgs();
+    args.char.characterData!.inventory!.push({
+      id: "i_staff_of_defense",
+      name: "Staff of Defense",
+      quantity: 1,
+      equipped: true,
+      equipState: "mainhand-1h",
+      attunement: true,
+      attuned: true,
+      modifiers: [{ target: "ac", amount: 1 }],
+    });
+
+    expect(buildCharacterViewDerivedState(args).effectiveAc).toBe(18);
+  });
+
+  it("does not add an unattuned held item's typed AC bonus", () => {
+    const args = buildArgs();
+    args.char.characterData!.inventory!.push({
+      id: "i_staff_of_defense",
+      name: "Staff of Defense",
+      quantity: 1,
+      equipped: true,
+      equipState: "mainhand-1h",
+      attunement: true,
+      attuned: false,
+      modifiers: [{ target: "ac", amount: 1 }],
+    });
+
+    expect(buildCharacterViewDerivedState(args).effectiveAc).toBe(17);
+  });
+
+  it("links Magic Initiate's chosen level 1 spell to its 1/1 free cast", () => {
+    const args = buildArgs();
+    args.char.characterData!.proficiencies = {
+      skills: [], expertise: [], saves: [], armor: [], weapons: [], tools: [], languages: [],
+      spells: [{ id: "s_shield", name: "Shield", source: "Origin: Magic Initiate" }],
+      invocations: [], maneuvers: [], plans: [],
+    };
+    args.char.characterData!.chosenFeatOptions = {
+      "bg:Origin: Magic Initiate:spell_from_same_list_3": ["s_shield"],
+    };
+    args.bgOriginFeatDetail = {
+      id: "f_origin_magic_initiate",
+      name: "Origin: Magic Initiate",
+      text: "Choose a level 1 spell and cast it once without a spell slot.",
+      parsed: {
+        uses: [{ count: 1, note: "can cast it once without a spell slot", grantsChoiceId: "spell_from_same_list_3" }],
+      },
+    };
+
+    const state = buildCharacterViewDerivedState(args);
+    expect(state.grantedSpellData.spells).toContainEqual(expect.objectContaining({
+      spellId: "s_shield",
+      spellName: "Shield",
+      sourceName: "Origin: Magic Initiate",
+      mode: "limited",
+      resourceKey: expect.stringContaining(":use:1"),
+    }));
+    expect(state.grantedSpellData.resources).toContainEqual(expect.objectContaining({
+      name: "Origin: Magic Initiate",
+      current: 1,
+      max: 1,
+    }));
+    expect(state.spellLinkedResourceKeys).toContain(state.grantedSpellData.spells[0]?.resourceKey);
+  });
+
+  it("marks unresolved choice-based free casts as spell-linked instead of generic Resources", () => {
+    const args = buildArgs();
+    args.levelUpFeatDetails = [{
+      level: 4,
+      featId: "f_fey_touched_intelligence",
+      feat: {
+        id: "f_fey_touched_intelligence",
+        name: "Fey-Touched (Intelligence)",
+        text: "Choose a spell and cast each spell once without a slot.",
+        parsed: {
+          grants: { spells: ["Misty Step"] },
+          uses: [
+            { count: 1, note: "Misty Step", grantsSpell: "Misty Step" },
+            { count: 1, note: "chosen spell", grantsChoiceId: "spell_school_1" },
+          ],
+        },
+      },
+    }];
+
+    const state = buildCharacterViewDerivedState(args);
+    expect(state.spellLinkedResourceKeys.size).toBe(2);
+    expect(state.classResourcesWithSpellCasts.filter((resource) => state.spellLinkedResourceKeys.has(resource.key))).toHaveLength(2);
   });
 
   it("derives Barbarian's Unarmored Defense from its canonical effect, never its prose", () => {

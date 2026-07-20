@@ -5,6 +5,7 @@
   "monsters": [
     {
       "id": "m_galley_galley_ship",
+      "ruleset": "5.5e",
       "name": "Galley, Galley Ship",
       "source": "Ghosts of Saltmarsh",
       "classification": {
@@ -74,6 +75,7 @@
     },
     {
       "id": "m_intoner",
+      "ruleset": "5.5e",
       "name": "Intoner",
       "classification": {
         "size": "M",
@@ -190,21 +192,52 @@
         }
       ],
       "spells": [
-        { "id": "s_minor_illusion" },
-        { "id": "s_prestidigitation" },
-        { "id": "s_vicious_mockery" },
-        { "id": "s_charm_person" },
-        { "id": "s_counterspell" },
-        { "id": "s_cure_wounds" },
-        { "id": "s_shatter" },
-        { "id": "s_suggestion" },
-        { "id": "s_thunderwave", "level": 3 },
-        { "id": "s_confusion" },
-        { "id": "s_dominate_person" },
-        { "id": "s_modify_memory" },
-        { "id": "s_ottos_irresistible_dance" },
-        { "id": "s_mass_suggestion" },
-        { "id": "s_finger_of_death" }
+        {
+          "id": "s_minor_illusion"
+        },
+        {
+          "id": "s_prestidigitation"
+        },
+        {
+          "id": "s_vicious_mockery"
+        },
+        {
+          "id": "s_charm_person"
+        },
+        {
+          "id": "s_counterspell"
+        },
+        {
+          "id": "s_cure_wounds"
+        },
+        {
+          "id": "s_shatter"
+        },
+        {
+          "id": "s_suggestion"
+        },
+        {
+          "id": "s_thunderwave",
+          "level": 3
+        },
+        {
+          "id": "s_confusion"
+        },
+        {
+          "id": "s_dominate_person"
+        },
+        {
+          "id": "s_modify_memory"
+        },
+        {
+          "id": "s_ottos_irresistible_dance"
+        },
+        {
+          "id": "s_mass_suggestion"
+        },
+        {
+          "id": "s_finger_of_death"
+        }
       ],
       "legendaryActions": [
         {
@@ -226,6 +259,7 @@
     },
     {
       "id": "m_skilled_crew",
+      "ruleset": "5.5e",
       "name": "Skilled Crew",
       "classification": {
         "size": "M",
@@ -304,6 +338,7 @@
   "items": [
     {
       "id": "i_ship_cannon",
+      "ruleset": "5.5e",
       "name": "Ship Cannon",
       "source": "Tarentha Arcana",
       "type": "Ranged Weapon",
@@ -321,6 +356,7 @@
     },
     {
       "id": "i_ship_cannon_small",
+      "ruleset": "5.5e",
       "name": "Ship Cannon (Small)",
       "source": "Tarentha Arcana",
       "type": "Ranged Weapon",

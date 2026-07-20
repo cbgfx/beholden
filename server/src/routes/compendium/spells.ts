@@ -40,17 +40,17 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
   });
 
   const selectSpellByExact = db.prepare(
-    "SELECT id, name, level, concentration FROM compendium_spells WHERE name_key = ? ORDER BY name_key ASC LIMIT 1",
+    "SELECT id, ruleset, name, level, concentration FROM compendium_spells WHERE name_key = ? ORDER BY name_key ASC LIMIT 1",
   );
   const selectSpellByPrefix = db.prepare(
-    "SELECT id, name, level, concentration FROM compendium_spells WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
+    "SELECT id, ruleset, name, level, concentration FROM compendium_spells WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
   );
   const selectSpellByContains = db.prepare(
-    "SELECT id, name, level, concentration FROM compendium_spells WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
+    "SELECT id, ruleset, name, level, concentration FROM compendium_spells WHERE name_key LIKE ? ORDER BY LENGTH(name_key) ASC, name_key ASC LIMIT 1",
   );
 
-  type SpellBasicRow = { id: string; name: string; level: number | null; concentration: number };
-  function lookupSpellByName(rawName: string): { id: string; name: string; level: number | null; concentration: boolean } | null {
+  type SpellBasicRow = { id: string; ruleset: "5e" | "5.5e"; name: string; level: number | null; concentration: number };
+  function lookupSpellByName(rawName: string): { id: string; ruleset: "5e" | "5.5e"; name: string; level: number | null; concentration: boolean } | null {
     const normalized = normalizeLookupName(rawName);
     if (!normalized) return null;
 
@@ -93,8 +93,8 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
 
     const shouldSelectDataJson = includeText || (!compact && !lite);
     const baseSelect = shouldSelectDataJson
-      ? "SELECT id, name, level, school, ritual, concentration, components, classes, data_json FROM compendium_spells WHERE 1=1"
-      : "SELECT id, name, level, school, ritual, concentration, components, classes FROM compendium_spells WHERE 1=1";
+      ? "SELECT id, ruleset, name, level, school, ritual, concentration, components, classes, data_json FROM compendium_spells WHERE 1=1"
+      : "SELECT id, ruleset, name, level, school, ritual, concentration, components, classes FROM compendium_spells WHERE 1=1";
     const parts: string[] = [baseSelect];
     const countParts: string[] = ["SELECT count(*) AS n FROM compendium_spells WHERE 1=1"];
     const params: unknown[] = [];
@@ -151,7 +151,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     parts.push(`LIMIT ${limit} OFFSET ${offset}`);
 
     const rows = db.prepare(parts.join(" ")).all(...params) as {
-      id: string; name: string; level: number | null; school: string | null;
+      id: string; ruleset: "5e" | "5.5e"; name: string; level: number | null; school: string | null;
       ritual: number; concentration: number; components: string | null; classes: string | null; data_json?: string;
     }[];
     const outRows = rows.map((row) => {
@@ -161,6 +161,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
       if (lite) {
         const out: Record<string, unknown> = {
           id: row.id,
+          ruleset: row.ruleset,
           name: row.name,
           level: row.level,
           school: row.school ?? null,
@@ -181,7 +182,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
         return out;
       }
       const out: Record<string, unknown> = {
-        id: row.id, name: row.name, level: row.level, school: row.school,
+        id: row.id, ruleset: row.ruleset, name: row.name, level: row.level, school: row.school,
         time: s.time ?? null,
         ritual: row.ritual === 1, concentration: row.concentration === 1,
         components: row.components ?? s.components ?? null,
@@ -228,12 +229,13 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     if (ids.length > 0) {
       const placeholders = ids.map(() => "?").join(", ");
       const idRows = db.prepare(
-        `SELECT id, name, level, concentration FROM compendium_spells WHERE id IN (${placeholders})`,
+        `SELECT id, ruleset, name, level, concentration FROM compendium_spells WHERE id IN (${placeholders})`,
       ).all(...ids) as SpellBasicRow[];
       const idRowById = new Map(idRows.map((row) => [
         row.id,
         {
           id: row.id,
+          ruleset: row.ruleset,
           name: row.name,
           level: row.level,
           concentration: row.concentration === 1,
@@ -330,9 +332,10 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     const spellId = requireParam(req, res, "spellId");
     if (!spellId) return;
     const row = db
-      .prepare("SELECT id, name, name_key, level, school, ritual, concentration, components, classes, data_json FROM compendium_spells WHERE id = ?")
+      .prepare("SELECT id, ruleset, name, name_key, level, school, ritual, concentration, components, classes, data_json FROM compendium_spells WHERE id = ?")
       .get(spellId) as {
       id: string;
+      ruleset: "5e" | "5.5e";
       name: string;
       name_key: string | null;
       level: number | null;
@@ -352,6 +355,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     res.json({
       ...data,
       id: row.id,
+      ruleset: data.ruleset ?? row.ruleset,
       name: row.name,
       nameKey: row.name_key ?? (typeof data.nameKey === "string" ? data.nameKey : null),
       name_key: row.name_key ?? (typeof data.name_key === "string" ? data.name_key : null),

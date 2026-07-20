@@ -52,6 +52,7 @@ function compactCasting(value: unknown): JsonRecord | undefined {
 export function compactSpellEntry(entry: JsonRecord): JsonRecord {
   const compact: JsonRecord = {
     id: entry.id,
+    ruleset: entry.ruleset ?? "5.5e",
     name: entry.name,
   };
   const source = nonEmptyText(entry.source);

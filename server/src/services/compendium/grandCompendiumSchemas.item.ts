@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nonnegInt, StructuredFeatureEffectSchema } from "./grandCompendiumSchemas.shared.js";
+import { nonnegInt, RulesetSchema, StructuredFeatureEffectSchema } from "./grandCompendiumSchemas.shared.js";
 
 /** Every passive numeric bonus an item applies to a d20-facing statistic. Cold facts:
  * consumers sum `amount` by `target`; no label parsing. Ability-score changes are NOT
@@ -164,6 +164,7 @@ const ItemBundleSchema = z
 export const ItemSchema = z
   .object({
     id: z.string().min(1),
+    ruleset: RulesetSchema,
     name: z.string().min(1),
     source: z.string().min(1).optional(),
     type: z.string().min(1),

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { RulesetSchema } from "./grandCompendiumSchemas.shared.js";
 const SpellRollSchema = z
   .object({
     formula: z.string().min(1),
@@ -37,6 +38,7 @@ const SpellDurationSchema = z
 export const SpellSchema = z
   .object({
     id: z.string().min(1),
+    ruleset: RulesetSchema,
     name: z.string().min(1),
     source: z.string().min(1).optional(),
     level: z.number().int().min(0).max(9).optional(),

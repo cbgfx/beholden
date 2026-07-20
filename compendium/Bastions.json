@@ -4,9 +4,10 @@
   "exportedAt": "2026-07-03T21:48:06.913Z",
   "bastions": [
     {
+      "id": "bastion_space_cramped",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "space",
-      "id": "bastion_space_cramped",
       "name": "Cramped",
       "nameKey": "cramped",
       "squares": 4,
@@ -14,9 +15,10 @@
       "sort": 0
     },
     {
+      "id": "bastion_space_roomy",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "space",
-      "id": "bastion_space_roomy",
       "name": "Roomy",
       "nameKey": "roomy",
       "squares": 16,
@@ -24,9 +26,10 @@
       "sort": 1
     },
     {
+      "id": "bastion_space_vast",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "space",
-      "id": "bastion_space_vast",
       "name": "Vast",
       "nameKey": "vast",
       "squares": 36,
@@ -34,65 +37,73 @@
       "sort": 2
     },
     {
+      "id": "bastion_order_craft",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "order",
-      "id": "bastion_order_craft",
       "name": "Craft",
       "nameKey": "craft",
       "sort": 0
     },
     {
+      "id": "bastion_order_empower",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "order",
-      "id": "bastion_order_empower",
       "name": "Empower",
       "nameKey": "empower",
       "sort": 1
     },
     {
+      "id": "bastion_order_harvest",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "order",
-      "id": "bastion_order_harvest",
       "name": "Harvest",
       "nameKey": "harvest",
       "sort": 2
     },
     {
+      "id": "bastion_order_maintain",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "order",
-      "id": "bastion_order_maintain",
       "name": "Maintain",
       "nameKey": "maintain",
       "sort": 3
     },
     {
+      "id": "bastion_order_recruit",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "order",
-      "id": "bastion_order_recruit",
       "name": "Recruit",
       "nameKey": "recruit",
       "sort": 4
     },
     {
+      "id": "bastion_order_research",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "order",
-      "id": "bastion_order_research",
       "name": "Research",
       "nameKey": "research",
       "sort": 5
     },
     {
+      "id": "bastion_order_trade",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "order",
-      "id": "bastion_order_trade",
       "name": "Trade",
       "nameKey": "trade",
       "sort": 6
     },
     {
+      "id": "bastion_facility_bedroom",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_bedroom",
       "name": "Bedroom",
       "nameKey": "bedroom",
       "facilityType": "basic",
@@ -105,9 +116,10 @@
       "description": "A basic facility with nonmagical furnishings and decor appropriate for sleeping quarters."
     },
     {
+      "id": "bastion_facility_courtyard",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_courtyard",
       "name": "Courtyard",
       "nameKey": "courtyard",
       "facilityType": "basic",
@@ -120,9 +132,10 @@
       "description": "A basic facility with nonmagical furnishings and decor appropriate for an open-air space."
     },
     {
+      "id": "bastion_facility_dining_room",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_dining_room",
       "name": "Dining Room",
       "nameKey": "dining-room",
       "facilityType": "basic",
@@ -135,9 +148,10 @@
       "description": "A basic facility with nonmagical furnishings and decor appropriate for dining."
     },
     {
+      "id": "bastion_facility_kitchen",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_kitchen",
       "name": "Kitchen",
       "nameKey": "kitchen",
       "facilityType": "basic",
@@ -150,9 +164,10 @@
       "description": "A basic facility with nonmagical furnishings and decor appropriate for preparing food."
     },
     {
+      "id": "bastion_facility_parlor",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_parlor",
       "name": "Parlor",
       "nameKey": "parlor",
       "facilityType": "basic",
@@ -165,9 +180,10 @@
       "description": "A basic facility with nonmagical furnishings and decor appropriate for social gatherings."
     },
     {
+      "id": "bastion_facility_storage",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_storage",
       "name": "Storage",
       "nameKey": "storage",
       "facilityType": "basic",
@@ -180,9 +196,10 @@
       "description": "A basic facility with nonmagical furnishings and decor appropriate for storing goods."
     },
     {
+      "id": "bastion_facility_arcane_study",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_arcane_study",
       "name": "Arcane Study",
       "nameKey": "arcane-study",
       "facilityType": "special",
@@ -197,9 +214,10 @@
       "description": "An Arcane Study is a place of quiet research that contains one or more desks and bookshelves.\n\nArcane Study Charm. After spending a Long Rest in your Bastion, you gain a magical Charm that lasts for 7 days or until you use it. The Charm allows you to cast Identify without expending a spell slot or using Material components. You can’t gain this Charm again while you still have it.\n\nCraft Options:\n- Craft: Arcane Focus. Work takes 7 days and costs no money.\n- Craft: Book. Work takes 7 days and costs 10 GP.\n- Craft: Magic Item (Arcana). If you are level 9+, a hireling can craft a Common or Uncommon magic item from the Arcana tables, using chapter 7 crafting rules."
     },
     {
+      "id": "bastion_facility_armory",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_armory",
       "name": "Armory",
       "nameKey": "armory",
       "facilityType": "special",
@@ -214,9 +232,10 @@
       "description": "An Armory contains mannequins for displaying armor, hooks for holding shields, racks for storing weapons, and chests for holding ammunition.\n\nTrade: Stock Armory. Costs 100 GP plus an extra 100 GP for each Bastion Defender. If your Bastion has a Smithy, total cost is halved.\n\nWhile stocked, Bastion Defenders are harder to kill during events: roll 1d8 in place of each d6 when determining defender losses. Stock is expended after the event."
     },
     {
+      "id": "bastion_facility_barrack",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_barrack",
       "name": "Barrack",
       "nameKey": "barrack",
       "facilityType": "special",
@@ -231,9 +250,10 @@
       "description": "A Barrack serves as sleeping quarters for up to twelve Bastion Defenders. A Bastion can have more than one.\n\nRecruit: Bastion Defenders. Each Recruit order adds up to four Bastion Defenders at no cost, provided the Barrack is not full.\n\nEnlarging the Facility. You can enlarge your Barrack to a Vast facility by spending 2,000 GP. A Vast Barrack can accommodate up to twenty-five Bastion Defenders."
     },
     {
+      "id": "bastion_facility_garden",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_garden",
       "name": "Garden",
       "nameKey": "garden",
       "facilityType": "special",
@@ -248,9 +268,10 @@
       "description": "A Bastion can have more than one Garden. Each Garden has a type: Decorative, Food, Herb, or Poison.\n\nHarvest: Garden Growth. Work takes 7 days and costs no money.\n\nGarden Types:\n- Decorative: ten floral bouquets worth 5 GP each, ten vials of perfume, or ten candles\n- Food: 100 days worth of rations\n- Herb: herbs for ten healer’s kits or one potion of healing\n- Poison: plants for two vials of antitoxin or one vial of basic poison\n\nA Garden can be changed to another type in 21 days. Enlarging to Vast costs 2,000 GP; a Vast Garden counts as two Roomy Gardens and gains one additional hireling."
     },
     {
+      "id": "bastion_facility_library",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_library",
       "name": "Library",
       "nameKey": "library",
       "facilityType": "special",
@@ -265,9 +286,10 @@
       "description": "A Library contains a collection of books plus one or more desks and reading chairs.\n\nResearch: Topical Lore. Work takes 7 days. The hireling learns up to three accurate pieces of information about a topic previously unknown to you. The DM determines the information learned."
     },
     {
+      "id": "bastion_facility_sanctuary",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_sanctuary",
       "name": "Sanctuary",
       "nameKey": "sanctuary",
       "facilityType": "special",
@@ -282,9 +304,10 @@
       "description": "Icons of your religion are displayed in this facility, which includes a quiet place for worship.\n\nSanctuary Charm. After spending a Long Rest in your Bastion, you gain a magical Charm that allows you to cast Healing Word once without expending a spell slot. The Charm lasts 7 days or until used.\n\nCraft: Sacred Focus. Work takes 7 days and costs no money. Produces a Druidic Focus (wooden staff) or Holy Symbol."
     },
     {
+      "id": "bastion_facility_smithy",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_smithy",
       "name": "Smithy",
       "nameKey": "smithy",
       "facilityType": "special",
@@ -299,9 +322,10 @@
       "description": "This Smithy contains a forge, an anvil, and tools needed to craft weapons, armor, and other equipment.\n\nCraft Options:\n- Craft: Smith’s Tools. Craft anything made with Smith’s Tools using Player’s Handbook rules.\n- Craft: Magic Item (Armament). If you are level 9+, hirelings can craft a Common or Uncommon magic item from the Armaments tables, using chapter 7 crafting rules."
     },
     {
+      "id": "bastion_facility_storehouse",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_storehouse",
       "name": "Storehouse",
       "nameKey": "storehouse",
       "facilityType": "special",
@@ -316,9 +340,10 @@
       "description": "A Storehouse is a cool, dark space meant to contain trade goods and other nonmagical items.\n\nTrade: Goods. Over 7 days, the hireling either procures nonmagical items up to a value cap or sells goods in storage. Value caps increase with level:\n- 500 GP base\n- 2,000 GP at level 9\n- 5,000 GP at level 13\n\nSale profit bonus:\n- 10% base\n- 20% at level 9\n- 50% at level 13\n- 100% at level 17"
     },
     {
+      "id": "bastion_facility_workshop",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_workshop",
       "name": "Workshop",
       "nameKey": "workshop",
       "facilityType": "special",
@@ -333,9 +358,10 @@
       "description": "This Workshop is a creative space where useful items can be crafted. It comes equipped with six different kinds of Artisan’s Tools.\n\nCraft Options:\n- Craft: Adventuring Gear. Craft anything that can be made with the tools chosen for the Workshop.\n- Craft: Magic Item (Implement). If you are level 9+, hirelings can craft a Common or Uncommon magic item from the Implements tables, using chapter 7 crafting rules.\n\nSource of Inspiration. After spending an entire Short Rest in your Workshop, you gain Heroic Inspiration. You can’t gain this again until you finish a Long Rest.\n\nEnlarging the Facility. Enlarging to Vast costs 2,000 GP and adds two hirelings and three additional Artisan’s Tools."
     },
     {
+      "id": "bastion_facility_gaming_hall",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_gaming_hall",
       "name": "Gaming Hall",
       "nameKey": "gaming-hall",
       "facilityType": "special",
@@ -350,9 +376,10 @@
       "description": "A Gaming Hall offers recreational activities like chess and games of darts, cards, or dice.\n\nTrade: Gambling Hall. Over 7 days, the hall becomes a gambling den. At the end, roll 1d100 to determine winnings:\n01–50: 1d6 × 10 GP\n51–85: 2d6 × 10 GP\n86–95: 4d6 × 10 GP\n96–00: 10d6 × 10 GP"
     },
     {
+      "id": "bastion_facility_greenhouse",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_greenhouse",
       "name": "Greenhouse",
       "nameKey": "greenhouse",
       "facilityType": "special",
@@ -367,9 +394,10 @@
       "description": "A Greenhouse is an enclosure where rare plants and fungi are nurtured in a controlled climate.\n\nFruit of Restoration. One plant grows three magical fruits. Each fruit grants the effect of Lesser Restoration. Fruits lose magic within 24 hours of being picked. The plant regrows them daily at dawn.\n\nHarvest Options:\n- Harvest: Healing Herbs. Create a Potion of Healing (greater) in 7 days at no cost.\n- Harvest: Poison. Extract one application of Assassin’s Blood, Malice, Pale Tincture, or Truth Serum in 7 days at no cost."
     },
     {
+      "id": "bastion_facility_laboratory",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_laboratory",
       "name": "Laboratory",
       "nameKey": "laboratory",
       "facilityType": "special",
@@ -384,9 +412,10 @@
       "description": "A Laboratory contains storage space for alchemical supplies and workspaces for crafting concoctions.\n\nCraft Options:\n- Craft: Alchemist’s Supplies. Craft anything made with Alchemist’s Supplies.\n- Craft: Poison. Craft Burnt Othur Fumes, Essence of Ether, or Torpor. Work takes 7 days and costs half the poison’s listed cost.\n\n*Certain orders have additional prerequisites."
     },
     {
+      "id": "bastion_facility_sacristy",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_sacristy",
       "name": "Sacristy",
       "nameKey": "sacristy",
       "facilityType": "special",
@@ -401,9 +430,10 @@
       "description": "A Sacristy serves as a preparation and storage room for sacred items and religious vestments.\n\nCraft Options:\n- Craft: Holy Water. Work takes 7 days and costs no money. You may spend up to 500 GP to increase its damage by 1d8 per 100 GP.\n- Craft: Magic Item (Relic). Craft a Common or Uncommon magic item from the Relics tables, using chapter 7 crafting rules.\n\nSpell Refreshment. After an entire Short Rest in your Bastion, you can regain one expended spell slot of level 5 or lower. You can’t gain this benefit again until you finish a Long Rest."
     },
     {
+      "id": "bastion_facility_scriptorium",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_scriptorium",
       "name": "Scriptorium",
       "nameKey": "scriptorium",
       "facilityType": "special",
@@ -418,9 +448,10 @@
       "description": "A Scriptorium contains desks and writing supplies.\n\nCraft Options:\n- Craft: Book Replica. Copy a nonmagical book using a blank book. Work takes 7 days.\n- Craft: Spell Scroll. Scribe a Cleric or Wizard Spell Scroll of level 3 or lower.\n- Craft: Paperwork. Create up to fifty copies of a broadsheet, pamphlet, or similar loose-leaf product in 7 days at 1 GP per copy, with optional distribution within 50 miles.\n\n*Certain orders have additional prerequisites."
     },
     {
+      "id": "bastion_facility_stable",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_stable",
       "name": "Stable",
       "nameKey": "stable",
       "facilityType": "special",
@@ -435,9 +466,10 @@
       "description": "A Bastion can have more than one Stable. Each Stable starts with one Riding Horse or Camel and two Ponies or Mules. It houses three Large animals, or equivalent smaller creatures.\n\nAfter a Beast that can serve as a mount spends at least 14 days here, Animal Handling checks regarding it have Advantage.\n\nTrade: Animals. Over 7 days, buy or sell mounts at normal cost. Sale profit bonus:\n- 20% base\n- 50% at level 13\n- 100% at level 17\n\nEnlarging the Facility. Enlarging to Vast costs 2,000 GP and allows housing up to six Large animals."
     },
     {
+      "id": "bastion_facility_teleportation_circle",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_teleportation_circle",
       "name": "Teleportation Circle",
       "nameKey": "teleportation-circle",
       "facilityType": "special",
@@ -452,9 +484,10 @@
       "description": "This room contains a permanent teleportation circle.\n\nRecruit: Spellcaster. Roll any die. On odd, the Friendly NPC spellcaster declines. On even, they arrive via the circle.\n\nWhile you are in your Bastion, you can ask the spellcaster to cast one Wizard spell:\n- level 4 or lower normally\n- level 8 or lower at level 17+\n\nYou must pay costly Material components. The spellcaster stays 14 days or until they cast a spell for you."
     },
     {
+      "id": "bastion_facility_theater",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_theater",
       "name": "Theater",
       "nameKey": "theater",
       "facilityType": "special",
@@ -469,9 +502,10 @@
       "description": "The Theater contains a stage, backstage area, and seating for a small audience.\n\nEmpower: Theatrical Event. Rehearsals take 14 days, followed by at least 7 days of performances.\n\nCharacters can contribute as Composer/Writer, Conductor/Director, or Performer. At the end of rehearsals, contributors make DC 15 Charisma (Performance) checks. If more succeed than fail, each contributor gains a Theater die:\n- d6 base\n- d8 at level 13\n- d10 at level 17\n\nThe die can be added to one D20 Test after rolling."
     },
     {
+      "id": "bastion_facility_training_area",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_training_area",
       "name": "Training Area",
       "nameKey": "training-area",
       "facilityType": "special",
@@ -486,9 +520,10 @@
       "description": "A Bastion can have more than one Training Area. One hireling is an expert trainer and the others are training partners.\n\nTrainer types:\n- Battle Expert\n- Skills Expert\n- Tools Expert\n- Unarmed Combat Expert\n- Weapon Expert\n\nEmpower: Training. Over 7 days, any character who trains here at least 8 hours each day gains the benefit associated with the current trainer for 7 days."
     },
     {
+      "id": "bastion_facility_trophy_room",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_trophy_room",
       "name": "Trophy Room",
       "nameKey": "trophy-room",
       "facilityType": "special",
@@ -503,9 +538,10 @@
       "description": "This room houses mementos, trophies, weapons, and trinkets.\n\nResearch Options:\n- Research: Lore. Over 7 days, the hireling learns up to three accurate pieces of information about a topic.\n- Research: Trinket Trophy. Over 7 days, roll any die. On even, the hireling finds a Common magic item from the Implements table. On odd, nothing useful is found."
     },
     {
+      "id": "bastion_facility_archive",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_archive",
       "name": "Archive",
       "nameKey": "archive",
       "facilityType": "special",
@@ -520,9 +556,10 @@
       "description": "An Archive is a repository of valuable books, maps, and scrolls, often attached to a Library.\n\nResearch: Helpful Lore. Work takes 7 days. The hireling gains knowledge as if they had cast Legend Lore, then shares it with you.\n\nReference Book. The Archive contains one rare reference book that grants Advantage on a corresponding Intelligence study action in your Bastion.\n\nEnlarging the Facility. Enlarging to Vast costs 2,000 GP and grants two additional reference books."
     },
     {
+      "id": "bastion_facility_meditation_chamber",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_meditation_chamber",
       "name": "Meditation Chamber",
       "nameKey": "meditation-chamber",
       "facilityType": "special",
@@ -537,9 +574,10 @@
       "description": "A Meditation Chamber is a relaxing space that helps align mind, body, and spirit.\n\nEmpower: Inner Peace. The next time you roll for a Bastion event, you can roll twice and choose either result.\n\nFortify Self. If you meditate here for 7 straight days without leaving the Bastion, you gain Advantage on two randomly determined saving throw types for the next 7 days."
     },
     {
+      "id": "bastion_facility_menagerie",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_menagerie",
       "name": "Menagerie",
       "nameKey": "menagerie",
       "facilityType": "special",
@@ -554,9 +592,10 @@
       "description": "A Menagerie has enclosures big enough to contain up to four Large creatures. Four Small or Medium creatures can occupy the same space as one Large creature.\n\nRecruit: Creature. In 7 days, add a creature from the Menagerie Creatures table by paying its listed cost.\n\nCreatures in the Menagerie count as Bastion Defenders unless you decide otherwise."
     },
     {
+      "id": "bastion_facility_observatory",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_observatory",
       "name": "Observatory",
       "nameKey": "observatory",
       "facilityType": "special",
@@ -571,9 +610,10 @@
       "description": "Situated atop your Bastion, your Observatory contains a telescope aimed at the night sky.\n\nObservatory Charm. After a Long Rest here, you gain a Charm allowing you to cast Contact Other Plane once without expending a spell slot. The Charm lasts 7 days or until used.\n\nEmpower: Eldritch Discovery. Over 7 consecutive nights, explore the mysteries of the stars. At the end, roll a die; on odd, grant one Charm of Darkvision, Heroism, or Vitality to a creature on the same plane."
     },
     {
+      "id": "bastion_facility_pub",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_pub",
       "name": "Pub",
       "nameKey": "pub",
       "facilityType": "special",
@@ -588,9 +628,10 @@
       "description": "A Pub is a social space such as a bar, coffee shop, or tea room. The bartender maintains a spy network.\n\nResearch: Information Gathering. Over the next 7 days, spies report important events within 10 miles and can reveal the location of a familiar creature within 50 miles, if not protected by magic or beyond their reach.\n\nPub Special. The Pub has one magical beverage on tap, chosen from:\n- Bigby’s Burden\n- Kiss of the Spider Queen\n- Moonlight Serenade\n- Positive Reinforcement\n- Sterner Stuff\n\nEnlarging the Facility. Enlarging to Vast costs 2,000 GP, allows two magical beverages on tap at once, and increases hirelings to 4."
     },
     {
+      "id": "bastion_facility_reliquary",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_reliquary",
       "name": "Reliquary",
       "nameKey": "reliquary",
       "facilityType": "special",
@@ -605,9 +646,10 @@
       "description": "This vault holds sacred objects.\n\nReliquary Charm. After spending a Long Rest in your Bastion, you gain a magical Charm that allows you to cast Greater Restoration once without expending a spell slot or Material components. The Charm lasts 7 days or until used.\n\nHarvest: Talisman. In 7 days and at no cost, the hireling prepares a Tiny, nonmagical object of religious significance. It can replace one spell’s Material components costing 1,000 GP or less, and is not consumed if the spell normally consumes them. After use, it must be returned to the Reliquary and prepared again with another Harvest order."
     },
     {
+      "id": "bastion_facility_demiplane",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_demiplane",
       "name": "Demiplane",
       "nameKey": "demiplane",
       "facilityType": "special",
@@ -622,9 +664,10 @@
       "description": "A door appears on a flat, solid surface in one of your Bastion’s other facilities and leads to an extradimensional stone room. Only you and Bastion hirelings can open it.\n\nEmpower: Arcane Resilience. For 7 days, magical runes grant you Temporary Hit Points equal to five times your level after an entire Long Rest in the Demiplane.\n\nFabrication. Once per Long Rest, while in the Demiplane, you can create a small nonmagical object worth no more than 5 GP from allowed materials."
     },
     {
+      "id": "bastion_facility_guildhall",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_guildhall",
       "name": "Guildhall",
       "nameKey": "guildhall",
       "facilityType": "special",
@@ -639,9 +682,10 @@
       "description": "A Guildhall comes with a guild that you lead as guild master. Your guild has roughly fifty members who live and work outside the Bastion.\n\nRecruit: Guild Assignment. Assign guild members to a special task. Sample guilds include Adventurers’, Bakers’, Brewers’, Masons’, Shipbuilders’, and Thieves’ Guilds, each with a specific assignment outcome."
     },
     {
+      "id": "bastion_facility_sanctum",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_sanctum",
       "name": "Sanctum",
       "nameKey": "sanctum",
       "facilityType": "special",
@@ -656,9 +700,10 @@
       "description": "A Sanctum is a place of solace and healing.\n\nSanctum Charm. After a Long Rest in your Bastion, you gain a magical Charm allowing you to cast Heal once without a spell slot. The Charm lasts 7 days or until used.\n\nEmpower: Fortifying Rites. For 7 days, the beneficiary of the rites gains Temporary Hit Points equal to your level after each Long Rest.\n\nSanctum Recall. You always have Word of Recall prepared, and the Sanctum can be its destination. One creature arriving there via the spell also gains the benefit of Heal."
     },
     {
+      "id": "bastion_facility_war_room",
+      "ruleset": "5.5e",
       "schemaVersion": 2,
       "kind": "facility",
-      "id": "bastion_facility_war_room",
       "name": "War Room",
       "nameKey": "war-room",
       "facilityType": "special",

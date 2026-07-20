@@ -139,6 +139,7 @@ export function compactItemEntry(entry: JsonRecord): JsonRecord {
 
   return {
     id,
+    ruleset: text(entry.ruleset) ?? "5.5e",
     name,
     ...(sourceAndDescription.source ? { source: sourceAndDescription.source } : {}),
     type,

@@ -157,10 +157,37 @@ describe("structured canonical feature effects", () => {
       expect.objectContaining({ type: "spell_grant", spellName: "Misty Step", mode: "known" }),
       expect.objectContaining({ type: "ability_score", ability: "cha", amount: 1 }),
       expect.objectContaining({
+        // Real canonical `uses[].note` is explanatory prose ("a number of Luck Points equal to
+        // your Proficiency Bonus" on the actual f_lucky record), not a title — the resource's
+        // label is the feature's own name, matching every other resource in the app.
         type: "resource_grant",
-        label: "Luck Points",
+        label: "Lucky",
         max: { kind: "proficiency_bonus", min: undefined },
         reset: "long_rest",
+      }),
+    ]));
+  });
+
+  it("links a fixed feat free-cast pool to its granted spell", () => {
+    const effects = structuredEffectsFromCanonical({
+      source: { ...source, id: "feat:boon", kind: "feat", name: "Boon of Revelry" },
+      featMechanics: {
+        grants: { spells: ["Otto's Irresistible Dance"] },
+        uses: [{ count: 1, note: "can cast it once without a spell slot", grantsSpell: "Otto's Irresistible Dance" }],
+      },
+    });
+
+    expect(effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "resource_grant",
+        resourceKey: "feat:boon:use:1",
+        label: "Boon of Revelry",
+      }),
+      expect.objectContaining({
+        type: "spell_grant",
+        spellName: "Otto's Irresistible Dance",
+        mode: "free_cast",
+        resourceKey: "feat:boon:use:1",
       }),
     ]));
   });

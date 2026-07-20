@@ -1,4 +1,4 @@
-import type { AbilKey, CharacterData, ResourceCounter } from "@/views/character/CharacterSheetTypes";
+import type { AbilKey, CharacterData, ProficiencyMap, ResourceCounter } from "@/views/character/CharacterSheetTypes";
 import { hasZeroSpeedCondition, itemModifierBonus, SLOW_SPEED_PENALTY } from "@beholden/shared/domain";
 import {
   applyItemAbilityScoreOverrides,
@@ -55,10 +55,75 @@ import {
   buildTransformedCombatStats,
 } from "@/views/character/CharacterViewDerivedComputations";
 import type { CharacterViewDerivedState, CharacterViewDerivedStateArgs } from "@/views/character/CharacterViewDerivedTypes";
+import type { AppliedCharacterFeatureEntry } from "@/domain/character/characterFeatures";
+import type { TaggedItem } from "@/views/character/CharacterSheetTypes";
+import type { ClassRestDetail } from "@/views/character/CharacterViewHelpers";
+
+function emptyProficiencyMap(): ProficiencyMap {
+  return {
+    skills: [], expertise: [], saves: [], armor: [], weapons: [], tools: [], languages: [],
+    spells: [], invocations: [], maneuvers: [], plans: [],
+  };
+}
+
+/** Fixed class proficiencies are canonical class facts. Reconcile them at read time so
+ * older or partially saved characters cannot lose armor/weapon/save proficiency. */
+export function mergeFixedClassProficiencies(
+  stored: ProficiencyMap | undefined,
+  classDetail: ClassRestDetail | null,
+): ProficiencyMap | undefined {
+  if (!stored && !classDetail) return undefined;
+  const merged = stored
+    ? Object.fromEntries(Object.entries(stored).map(([key, values]) => [key, [...values]])) as unknown as ProficiencyMap
+    : emptyProficiencyMap();
+  if (!classDetail) return merged;
+
+  const add = (target: TaggedItem[], name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed || target.some((entry) => entry.name.trim().toLowerCase() === trimmed.toLowerCase())) return;
+    target.push({ name: trimmed, source: classDetail.name });
+  };
+  const split = (value: string | null | undefined) => String(value ?? "").split(",").map((entry) => entry.trim()).filter(Boolean);
+  const armor = classDetail.proficiencies?.armor ?? split(classDetail.armor);
+  const weapons = classDetail.proficiencies?.weapons ?? split(classDetail.weapons);
+  for (const name of armor) add(merged.armor, name);
+  for (const name of weapons) add(merged.weapons, name);
+  for (const name of classDetail.proficiencies?.savingThrows ?? []) add(merged.saves, name);
+  return merged;
+}
+
+export function resolveChosenFeatSpell(args: {
+  feature: AppliedCharacterFeatureEntry;
+  choiceId: string;
+  chosenFeatOptions: Record<string, string[]>;
+  knownSpells: TaggedItem[];
+}): TaggedItem | null {
+  const directPrefixes = [
+    args.feature.id.startsWith("levelupfeat:") ? args.feature.id : null,
+    args.feature.id.startsWith("race-feat:") ? `race:${args.feature.name}` : null,
+    args.feature.id.startsWith("bg-feat:") ? `bg:${args.feature.name}` : null,
+    args.feature.id.startsWith("class-feat:") ? `classfeat:${args.feature.name}` : null,
+    args.feature.id.startsWith("extra-feat:") ? `extra-feat:${args.feature.name}` : null,
+  ].filter((value): value is string => Boolean(value));
+  const directKeys = directPrefixes.map((prefix) => `${prefix}:${args.choiceId}`);
+  const fallbackKeys = Object.keys(args.chosenFeatOptions)
+    .filter((key) => key.endsWith(`:${args.choiceId}`));
+  const selected = [...directKeys, ...fallbackKeys]
+    .flatMap((key) => args.chosenFeatOptions[key] ?? []);
+  if (selected.length === 0) return null;
+
+  const selectedKeys = new Set(selected.map((value) => String(value).trim().toLowerCase()));
+  return args.knownSpells.find((spell) =>
+    (spell.id && selectedKeys.has(String(spell.id).trim().toLowerCase()))
+    || selectedKeys.has(spell.name.trim().toLowerCase())) ?? null;
+}
 
 export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateArgs): CharacterViewDerivedState {
   const currentCharacterData: CharacterData = args.char.characterData ?? {};
-  const prof = normalizeProficiencies(currentCharacterData.proficiencies);
+  const prof = mergeFixedClassProficiencies(
+    normalizeProficiencies(currentCharacterData.proficiencies),
+    args.classDetail,
+  );
   const pb = proficiencyBonus(args.char.level);
   const hd = currentCharacterData.hd ?? null;
   const hitDieSize = hd ?? args.classDetail?.hd ?? null;
@@ -112,8 +177,9 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   };
   const appliedFeatures = buildAppliedCharacterFeatures(featureArgs);
   const classFeaturesList = buildDisplayPlayerFeatures(featureArgs);
-  const parsedFeatureEffects = appliedFeatures.map((feature, index) =>
-    parseFeatureEffects({
+  const spellLinkedResourceKeys = new Set<string>();
+  const parsedFeatureEffects = appliedFeatures.map((feature, index) => {
+    const parsed = parseFeatureEffects({
       source: { id: `feature:${index}:${feature.id}`, kind: feature.kind, name: feature.name, text: feature.text },
       text: feature.text,
       suppressStructuredSpellGrants: Boolean(feature.preparedSpellProgression?.length),
@@ -121,8 +187,32 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
       classChoices: feature.classChoices,
       traitEffects: feature.traitEffects,
       featMechanics: feature.featMechanics,
-    } satisfies ParseFeatureEffectsInput)
-  );
+    } satisfies ParseFeatureEffectsInput);
+    for (const [useIndex, use] of (feature.featMechanics?.uses ?? []).entries()) {
+      if (use.grantsSpell || use.grantsChoiceId) {
+        spellLinkedResourceKeys.add(`${parsed.source.id}:use:${useIndex + 1}`);
+      }
+      if (!use.grantsChoiceId) continue;
+      const spell = resolveChosenFeatSpell({
+        feature,
+        choiceId: use.grantsChoiceId,
+        chosenFeatOptions: currentCharacterData.chosenFeatOptions ?? {},
+        knownSpells: prof?.spells ?? [],
+      });
+      if (!spell) continue;
+      parsed.effects.push({
+        id: `${parsed.source.id}:spell_grant:${parsed.effects.length + 1}`,
+        source: parsed.source,
+        type: "spell_grant",
+        spellName: spell.name,
+        spellId: spell.id,
+        mode: "free_cast",
+        castsWithoutSlot: true,
+        resourceKey: `${parsed.source.id}:use:${useIndex + 1}`,
+      });
+    }
+    return parsed;
+  });
   const parsedItemEffects = inventory
     .filter((item) => isInventoryItemActiveForCharacterEffects(item))
     .map((item, index) => {
@@ -218,6 +308,9 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   // carries for this specific item (e.g. a Shield +1 adds another +1) — see itemModifierBonus.
   const shieldBonus = wornShield ? 2 + itemModifierBonus(wornShield.modifiers, "ac") : 0;
   const wornArmor = inventory.find((item) => getEquipState(item) === "worn" && isArmorItem(item) && (item.ac ?? 0) > 0);
+  const otherEquippedAcBonus = inventory
+    .filter((item) => item !== wornArmor && item !== wornShield && isInventoryItemActiveForCharacterEffects(item))
+    .reduce((total, item) => total + itemModifierBonus(item.modifiers, "ac"), 0);
   const speedArmorState = !wornArmor ? "no_armor" : /\bheavy armor\b/i.test(wornArmor.type ?? "") ? "any" : "not_heavy";
   const armorWithoutProficiency = Boolean(wornArmor && !hasArmorProficiency(wornArmor, prof ?? undefined));
   const shieldWithoutProficiency = Boolean(wornShield && !hasArmorProficiency(wornShield, prof ?? undefined));
@@ -270,7 +363,11 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     scores: scoresByAbility,
   });
   const naturalAc = 10 + dexMod;
-  const effectiveAc = Math.max(naturalAc, wornArmorAc ?? 0, unarmoredDefenseAc ?? 0) + featureAcBonus + (overrides.acBonus ?? 0) + shieldBonus;
+  const effectiveAc = Math.max(naturalAc, wornArmorAc ?? 0, unarmoredDefenseAc ?? 0)
+    + featureAcBonus
+    + otherEquippedAcBonus
+    + (overrides.acBonus ?? 0)
+    + shieldBonus;
   const speedBonus = deriveSpeedBonusFromEffects(parsedAllEffects, { armorState: speedArmorState, raging: rageActive, level: args.char.level });
   const baseWalkSpeed = args.raceDetail?.speed ?? args.char.speed;
   let effectiveSpeed = (baseWalkSpeed ?? 0) + speedBonus;
@@ -377,6 +474,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     classFeaturesList,
     parsedFeatureEffects: parsedAllEffects,
     grantedSpellData,
+    spellLinkedResourceKeys,
     classResourcesWithSpellCasts,
     polymorphName,
     rageActive,

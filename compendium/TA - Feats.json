@@ -5,6 +5,7 @@
   "feats": [
     {
       "id": "f_mark_of_silver_talon",
+      "ruleset": "5.5e",
       "name": "Mark of Silver Talon",
       "source": "Tarentha Arcana",
       "description": "**Silver Talon Form.** Once per long rest, you can partially transform into your wolf form for 1 minute. While transformed, your walking speed increases by 5 feet, you can use your Claw Attack, and you have advantage on Charisma (Intimidation) checks.\n\n**Moonmarked.** You have advantage on Wisdom (Perception) checks that rely on smell.\n\n**Moonlight Resilience.** Once per long rest, when you would be reduced to 0 hit points while standing in direct moonlight, you can instead drop to 1 hit point.",
@@ -12,6 +13,7 @@
     },
     {
       "id": "f_mark_of_silver_talon_improved",
+      "ruleset": "5.5e",
       "name": "Mark of Silver Talon (Improved)",
       "source": "Tarentha Arcana",
       "description": "**Silver Talon Form.** Once per long rest, you can partially transform into your wolf form for 1 minute. While transformed, your walking speed increases by 5 feet, you can use your Claw Attack, and you have advantage on Charisma (Intimidation) checks.\n\n**Moonmarked.** You have advantage on Wisdom (Perception) checks that rely on smell.\n\n**Moonlight Resilience.** Once per long rest, when you would be reduced to 0 hit points while standing in direct moonlight, you can instead drop to 1 hit point.\n\n**Pact Sense.** You gain Darkvision out to a range of 60 feet. If you already have Darkvision, its range increases by 60 feet.",

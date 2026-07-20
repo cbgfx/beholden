@@ -54,6 +54,7 @@ export function compactTrait(raw: unknown): JsonRecord {
 export function compactSpeciesEntry(entry: JsonRecord): JsonRecord {
   const compact: JsonRecord = {
     id: entry.id,
+    ruleset: entry.ruleset ?? "5.5e",
     name: entry.name,
   };
   const source = text(entry.source);

@@ -65,7 +65,8 @@ export function InventoryItemDrawer(props: {
     draft.rarity || draft.type || draft.description || draft.weight != null || draft.value != null ||
     (isArmorLike && draft.ac != null) || (isWeaponLike && draft.dmg1) || (isWeaponLike && draft.dmg2) ||
     (isWeaponLike && draft.dmgType) || (isWeaponLike && draft.properties.length > 0) || draft.stealthDisadvantage ||
-    draft.attunement || draft.attuned || draft.magic || (isMeleeWeaponLike && draft.silvered) || (props.item.chargesMax ?? 0) > 0
+    draft.attunement || draft.attuned || draft.magic || (isMeleeWeaponLike && draft.silvered) || (props.item.chargesMax ?? 0) > 0 ||
+    Boolean(props.detail?.source)
   );
   const canEnableAttuned = draft.attuned || props.otherAttunedCount < 3;
   const currentContainerId = props.item.containerId ?? DEFAULT_CONTAINER_ID;
@@ -140,7 +141,7 @@ export function InventoryItemDrawer(props: {
           ) : props.busy ? (
             <div style={{ color: C.muted, padding: "8px 2px" }}>Loading...</div>
           ) : hasAnyDetails ? (
-            <ReadFields draft={draft} item={props.item} isWeaponLike={isWeaponLike} isArmorLike={isArmorLike} isMeleeWeaponLike={isMeleeWeaponLike} accentColor={props.accentColor} onChargesChange={props.onChargesChange} />
+            <ReadFields draft={draft} item={props.item} source={props.detail?.source} ruleset={props.detail?.ruleset} isWeaponLike={isWeaponLike} isArmorLike={isArmorLike} isMeleeWeaponLike={isMeleeWeaponLike} accentColor={props.accentColor} onChargesChange={props.onChargesChange} />
           ) : (
             <div style={{ border: `1px solid ${C.panelBorder}`, borderRadius: 12, padding: 14, color: C.muted, minHeight: 96, display: "flex", alignItems: "center" }}>No details yet. Use Edit to add player-specific notes or item data.</div>
           )}
@@ -235,6 +236,8 @@ function TogglePill({ active, label, color, disabled, onClick }: { active: boole
 type ReadFieldsProps = {
   draft: InventoryDraft;
   item: InventoryItem;
+  source?: string | null;
+  ruleset?: "5e" | "5.5e";
   isWeaponLike: boolean;
   isArmorLike: boolean;
   isMeleeWeaponLike: boolean;
@@ -242,7 +245,7 @@ type ReadFieldsProps = {
   onChargesChange: (charges: number) => void | Promise<void>;
 };
 
-function ReadFields({ draft, item, isWeaponLike, isArmorLike, isMeleeWeaponLike, accentColor, onChargesChange }: ReadFieldsProps) {
+function ReadFields({ draft, item, source, ruleset, isWeaponLike, isArmorLike, isMeleeWeaponLike, accentColor, onChargesChange }: ReadFieldsProps) {
   return (
     <>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -267,7 +270,13 @@ function ReadFields({ draft, item, isWeaponLike, isArmorLike, isMeleeWeaponLike,
         </div>
       ) : null}
       {(item.chargesMax ?? 0) > 0 ? <ChargeBoxes item={item} accentColor={accentColor} onChargesChange={onChargesChange} /> : null}
-      <div style={{ ...inventoryPickerDetailStyle, minHeight: 180 }}>{draft.description || <span style={{ color: C.muted }}>No description.</span>}</div>
+      <div style={{ ...inventoryPickerDetailStyle, minHeight: 60 }}>{draft.description || <span style={{ color: C.muted }}>No description.</span>}</div>
+      {source ? (
+        <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
+          Source: {source}
+          {ruleset ? <span> · Ruleset: {ruleset}</span> : null}
+        </div>
+      ) : null}
     </>
   );
 }

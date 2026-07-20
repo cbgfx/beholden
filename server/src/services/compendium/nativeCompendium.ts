@@ -310,49 +310,50 @@ export function exportNativeCompendiumBatch(
   switch (category) {
     case "monsters":
       entries = (db.prepare(
-        "SELECT id, name, name_key, cr, cr_numeric, type_key, type_full, size, environment, data_json FROM compendium_monsters ORDER BY name COLLATE NOCASE",
+        "SELECT id, ruleset, name, name_key, cr, cr_numeric, type_key, type_full, size, environment, data_json FROM compendium_monsters ORDER BY name COLLATE NOCASE",
       ).all() as JsonRecord[]).map((row) => mergeExportEntry("monsters", row));
       break;
     case "items":
       entries = (db.prepare(
-        "SELECT id, name, name_key, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items ORDER BY name COLLATE NOCASE",
+        "SELECT id, ruleset, name, name_key, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items ORDER BY name COLLATE NOCASE",
       ).all() as JsonRecord[]).map((row) => mergeExportEntry("items", row));
       break;
     case "spells":
       entries = (db.prepare(
-        "SELECT id, name, name_key, level, school, ritual, concentration, components, classes, data_json FROM compendium_spells ORDER BY name COLLATE NOCASE",
+        "SELECT id, ruleset, name, name_key, level, school, ritual, concentration, components, classes, data_json FROM compendium_spells ORDER BY name COLLATE NOCASE",
       ).all() as JsonRecord[]).map((row) => mergeExportEntry("spells", row));
       break;
     case "classTalents":
       entries = (db.prepare(
-        "SELECT id, name, name_key, kind, data_json FROM compendium_class_talents ORDER BY kind, name COLLATE NOCASE",
+        "SELECT id, ruleset, name, name_key, kind, data_json FROM compendium_class_talents ORDER BY kind, name COLLATE NOCASE",
       ).all() as JsonRecord[]).map((row) => mergeExportEntry("classTalents", row));
       break;
     case "classes":
       entries = (db.prepare(
-        "SELECT id, name, name_key, hd, data_json FROM compendium_classes ORDER BY name COLLATE NOCASE",
+        "SELECT id, ruleset, name, name_key, hd, data_json FROM compendium_classes ORDER BY name COLLATE NOCASE",
       ).all() as JsonRecord[]).map((row) => mergeExportEntry("classes", row));
       break;
     case "species":
       entries = (db.prepare(
-        "SELECT id, name, name_key, size, speed, data_json FROM compendium_races ORDER BY name COLLATE NOCASE",
+        "SELECT id, ruleset, name, name_key, size, speed, data_json FROM compendium_races ORDER BY name COLLATE NOCASE",
       ).all() as JsonRecord[]).map((row) => mergeExportEntry("species", row));
       break;
     case "backgrounds":
       entries = (db.prepare(
-        "SELECT id, name, name_key, data_json FROM compendium_backgrounds ORDER BY name COLLATE NOCASE",
+        "SELECT id, ruleset, name, name_key, data_json FROM compendium_backgrounds ORDER BY name COLLATE NOCASE",
       ).all() as JsonRecord[]).map((row) => mergeExportEntry("backgrounds", row));
       break;
     case "feats":
       entries = (db.prepare(
-        "SELECT id, name, name_key, data_json FROM compendium_feats ORDER BY name COLLATE NOCASE",
+        "SELECT id, ruleset, name, name_key, data_json FROM compendium_feats ORDER BY name COLLATE NOCASE",
       ).all() as JsonRecord[]).map((row) => mergeExportEntry("feats", row));
       break;
     case "decks":
       entries = (db.prepare(
-        "SELECT id, deck_name, deck_key, card_name, card_key, card_text, sort_index FROM compendium_deck_cards ORDER BY deck_name COLLATE NOCASE, sort_index, card_name COLLATE NOCASE",
+        "SELECT id, ruleset, deck_name, deck_key, card_name, card_key, card_text, sort_index FROM compendium_deck_cards ORDER BY deck_name COLLATE NOCASE, sort_index, card_name COLLATE NOCASE",
       ).all() as JsonRecord[]).map((row) => ({
         schemaVersion: GRAND_COMPENDIUM_SCHEMA_VERSION,
+        ruleset: row.ruleset,
         id: row.id,
         deckName: row.deck_name,
         deckKey: row.deck_key,
@@ -364,9 +365,10 @@ export function exportNativeCompendiumBatch(
       break;
     case "bastions": {
       const spaces = (db.prepare(
-        "SELECT id, name, name_key, squares, label, sort_index FROM compendium_bastion_spaces ORDER BY sort_index, name COLLATE NOCASE",
+        "SELECT id, ruleset, name, name_key, squares, label, sort_index FROM compendium_bastion_spaces ORDER BY sort_index, name COLLATE NOCASE",
       ).all() as JsonRecord[]).map((row) => ({
         schemaVersion: GRAND_COMPENDIUM_SCHEMA_VERSION,
+        ruleset: row.ruleset,
         kind: "space",
         id: row.id,
         name: row.name,
@@ -376,9 +378,10 @@ export function exportNativeCompendiumBatch(
         sort: row.sort_index,
       }));
       const orders = (db.prepare(
-        "SELECT id, order_name, order_key, sort_index FROM compendium_bastion_orders ORDER BY sort_index, order_name COLLATE NOCASE",
+        "SELECT id, ruleset, order_name, order_key, sort_index FROM compendium_bastion_orders ORDER BY sort_index, order_name COLLATE NOCASE",
       ).all() as JsonRecord[]).map((row) => ({
         schemaVersion: GRAND_COMPENDIUM_SCHEMA_VERSION,
+        ruleset: row.ruleset,
         kind: "order",
         id: row.id,
         name: row.order_name,
@@ -386,9 +389,10 @@ export function exportNativeCompendiumBatch(
         sort: row.sort_index,
       }));
       const facilities = (db.prepare(
-        "SELECT id, name, name_key, facility_type, minimum_level, prerequisite, orders_json, space, hirelings, allow_multiple, description, data_json FROM compendium_bastion_facilities ORDER BY facility_type, minimum_level, name COLLATE NOCASE",
+        "SELECT id, ruleset, name, name_key, facility_type, minimum_level, prerequisite, orders_json, space, hirelings, allow_multiple, description, data_json FROM compendium_bastion_facilities ORDER BY facility_type, minimum_level, name COLLATE NOCASE",
       ).all() as JsonRecord[]).map((row) => ({
         schemaVersion: GRAND_COMPENDIUM_SCHEMA_VERSION,
+        ruleset: row.ruleset,
         kind: "facility",
         id: row.id,
         name: row.name,
@@ -432,7 +436,7 @@ export function importNativeCompendiumBatch(
     switch (batch.category) {
       case "monsters": {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_monsters (id, name, name_key, cr, cr_numeric, type_key, type_full, size, environment, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_monsters (id, ruleset, name, name_key, cr, cr_numeric, type_key, type_full, size, environment, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Monster ${index + 1} name`);
@@ -442,6 +446,7 @@ export function importNativeCompendiumBatch(
           const crNumeric = crRatingToNumber(cr);
           stmt.run(
             idOrGenerated(entry, "m_", name),
+            requiredText(entry.ruleset, `Monster ${index + 1} ruleset`),
             name,
             canonicalNameKey(entry, name),
             cr,
@@ -457,12 +462,13 @@ export function importNativeCompendiumBatch(
       }
       case "items": {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_items (id, name, name_key, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_items (id, ruleset, name, name_key, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Item ${index + 1} name`);
           stmt.run(
             idOrGenerated(entry, "i_", name),
+            requiredText(entry.ruleset, `Item ${index + 1} ruleset`),
             name,
             canonicalNameKey(entry, name),
             optionalText(entry.rarity)?.toLowerCase() ?? null,
@@ -481,13 +487,14 @@ export function importNativeCompendiumBatch(
       }
       case "spells": {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_spells (id, name, name_key, level, school, ritual, concentration, components, classes, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_spells (id, ruleset, name, name_key, level, school, ritual, concentration, components, classes, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Spell ${index + 1} name`);
           const screenView = projectGrandSpell(entry);
           stmt.run(
             idOrGenerated(entry, "s_", name),
+            requiredText(entry.ruleset, `Spell ${index + 1} ruleset`),
             name,
             canonicalNameKey(entry, name),
             optionalNumber(entry.level),
@@ -503,13 +510,14 @@ export function importNativeCompendiumBatch(
       }
       case "classTalents": {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_class_talents (id, name, name_key, kind, data_json) VALUES (?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_class_talents (id, ruleset, name, name_key, kind, data_json) VALUES (?, ?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Class talent ${index + 1} name`);
           const id = idOrGenerated(entry, "ct_", name);
           stmt.run(
             id,
+            requiredText(entry.ruleset, `Class talent ${index + 1} ruleset`),
             name,
             canonicalNameKey(entry, name),
             requiredText(entry.kind, `Class talent ${index + 1} kind`),
@@ -522,12 +530,13 @@ export function importNativeCompendiumBatch(
       }
       case "classes": {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_classes (id, name, name_key, hd, data_json) VALUES (?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_classes (id, ruleset, name, name_key, hd, data_json) VALUES (?, ?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Class ${index + 1} name`);
           stmt.run(
             idOrGenerated(entry, "c_", name),
+            requiredText(entry.ruleset, `Class ${index + 1} ruleset`),
             name,
             canonicalNameKey(entry, name),
             optionalNumber(entry.hitDie),
@@ -538,12 +547,13 @@ export function importNativeCompendiumBatch(
       }
       case "species": {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_races (id, name, name_key, size, speed, data_json) VALUES (?, ?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_races (id, ruleset, name, name_key, size, speed, data_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Species ${index + 1} name`);
           stmt.run(
             idOrGenerated(entry, "r_", name),
+            requiredText(entry.ruleset, `Species ${index + 1} ruleset`),
             name,
             canonicalNameKey(entry, name),
             optionalText(entry.size),
@@ -555,12 +565,13 @@ export function importNativeCompendiumBatch(
       }
       case "backgrounds": {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_backgrounds (id, name, name_key, data_json) VALUES (?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_backgrounds (id, ruleset, name, name_key, data_json) VALUES (?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Background ${index + 1} name`);
           stmt.run(
             idOrGenerated(entry, "bg_", name),
+            requiredText(entry.ruleset, `Background ${index + 1} ruleset`),
             name,
             canonicalNameKey(entry, name),
             JSON.stringify(entry),
@@ -570,12 +581,13 @@ export function importNativeCompendiumBatch(
       }
       case "feats": {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_feats (id, name, name_key, data_json) VALUES (?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_feats (id, ruleset, name, name_key, data_json) VALUES (?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Feat ${index + 1} name`);
           stmt.run(
             idOrGenerated(entry, "f_", name),
+            requiredText(entry.ruleset, `Feat ${index + 1} ruleset`),
             name,
             canonicalNameKey(entry, name),
             JSON.stringify(entry),
@@ -585,7 +597,7 @@ export function importNativeCompendiumBatch(
       }
       case "decks": {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_deck_cards (id, deck_name, deck_key, card_name, card_key, card_text, sort_index) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_deck_cards (id, ruleset, deck_name, deck_key, card_name, card_key, card_text, sort_index) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const deckName = requiredText(entry.deckName ?? entry.deck_name, `Deck card ${index + 1} deckName`);
@@ -596,6 +608,7 @@ export function importNativeCompendiumBatch(
             ?? makeId("", cardName).replace(/_/gu, "-");
           stmt.run(
             optionalText(entry.id) ?? `deck:${deckKey}:${cardKey}`,
+            requiredText(entry.ruleset, `Deck card ${index + 1} ruleset`),
             deckName,
             deckKey,
             cardName,
@@ -608,13 +621,13 @@ export function importNativeCompendiumBatch(
       }
       case "bastions": {
         const spaceStmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_bastion_spaces (id, name, name_key, squares, label, sort_index) VALUES (?, ?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_bastion_spaces (id, ruleset, name, name_key, squares, label, sort_index) VALUES (?, ?, ?, ?, ?, ?, ?)",
         );
         const orderStmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_bastion_orders (id, order_name, order_key, sort_index) VALUES (?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_bastion_orders (id, ruleset, order_name, order_key, sort_index) VALUES (?, ?, ?, ?, ?)",
         );
         const facilityStmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_bastion_facilities (id, name, name_key, facility_type, minimum_level, prerequisite, orders_json, space, hirelings, allow_multiple, description, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_bastion_facilities (id, ruleset, name, name_key, facility_type, minimum_level, prerequisite, orders_json, space, hirelings, allow_multiple, description, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const kind = requiredText(entry.kind, `Bastion entry ${index + 1} kind`);
@@ -623,6 +636,7 @@ export function importNativeCompendiumBatch(
           if (kind === "space") {
             spaceStmt.run(
               idOrGenerated(entry, "bastion-space:", name),
+              requiredText(entry.ruleset, `Bastion entry ${index + 1} ruleset`),
               name,
               nameKey,
               optionalNumber(entry.squares),
@@ -632,6 +646,7 @@ export function importNativeCompendiumBatch(
           } else if (kind === "order") {
             orderStmt.run(
               idOrGenerated(entry, "bastion-order:", name),
+              requiredText(entry.ruleset, `Bastion entry ${index + 1} ruleset`),
               name,
               nameKey,
               integer(entry.sort ?? entry.sortIndex, index),
@@ -642,6 +657,7 @@ export function importNativeCompendiumBatch(
               : [];
             facilityStmt.run(
               idOrGenerated(entry, "bastion-facility:", name),
+              requiredText(entry.ruleset, `Bastion entry ${index + 1} ruleset`),
               name,
               nameKey,
               optionalText(entry.facilityType ?? entry.type) ?? "special",

@@ -43,13 +43,6 @@ export type NativePreviewResult = {
   }>;
 };
 
-export type LiveReferenceMigrationResult = {
-  ok: true;
-  changedRows: number;
-  changedReferences: number;
-  changes: Array<{ table: string; rowId: string; field: string; path: string; from: string; to: string }>;
-};
-
 const cardStyle: React.CSSProperties = {
   border: `1px solid ${theme.colors.panelBorder}`,
   borderRadius: 12,
@@ -273,43 +266,6 @@ export function NativeImportPreview({ preview }: { preview: NativePreviewResult 
         ))}
       </div>
     </div>
-  );
-}
-
-export function LiveReferenceMigration(props: {
-  busy: boolean;
-  preview: LiveReferenceMigrationResult | null;
-  onPreview: () => void;
-  onApply: () => void;
-}) {
-  const ready = props.preview !== null;
-  return (
-    <section style={{ ...cardStyle, marginTop: 14 }}>
-      <div style={{ color: theme.colors.colorGold, fontWeight: 900, letterSpacing: "0.08em", fontSize: "var(--fs-small)", textTransform: "uppercase" }}>
-        Live reference migration
-      </div>
-      <div style={{ marginTop: 4, color: theme.colors.text, fontWeight: 800 }}>Reconnect characters and campaigns after canonical ID changes</div>
-      <div style={{ marginTop: 4, color: theme.colors.muted, fontSize: "var(--fs-small)", lineHeight: 1.45 }}>
-        Run this after importing the canonical compendium. Preview is read-only; Apply updates matching character, combat, treasure, party-inventory, NPC, and Bastion references in one transaction.
-      </div>
-      {props.preview ? (
-        <div style={{ marginTop: 10, color: theme.colors.text }}>
-          Found <strong>{props.preview.changedReferences}</strong> references across <strong>{props.preview.changedRows}</strong> rows.
-          {props.preview.changes.slice(0, 8).map((change, index) => (
-            <div key={`${change.table}:${change.rowId}:${change.path}:${index}`} style={{ marginTop: 4, color: theme.colors.muted, fontSize: "var(--fs-tiny)", overflowWrap: "anywhere" }}>
-              {change.table}.{change.field}: {change.from} → {change.to}
-            </div>
-          ))}
-          {props.preview.changes.length > 8 ? <div style={{ marginTop: 4, color: theme.colors.muted, fontSize: "var(--fs-tiny)" }}>…and {props.preview.changes.length - 8} more.</div> : null}
-        </div>
-      ) : null}
-      <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <Button onClick={props.onPreview} disabled={props.busy}>{props.busy ? "Working..." : "Preview reference migration"}</Button>
-        <Button onClick={props.onApply} disabled={props.busy || !ready || props.preview?.changedReferences === 0} style={ready ? { background: theme.colors.colorGold } : undefined}>
-          {props.busy ? "Working..." : "Apply reference migration"}
-        </Button>
-      </div>
-    </section>
   );
 }
 

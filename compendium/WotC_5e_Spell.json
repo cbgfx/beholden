@@ -5,6 +5,7 @@
   "spells": [
     {
       "id": "s_abi_dalzims_horrid_wilting",
+      "ruleset": "5e",
       "name": "Abi-Dalzim's Horrid Wilting",
       "source": "Xanathar's Guide to Everything p. 150, Elemental Evil Player's Companion p. 15",
       "level": 8,
@@ -38,6 +39,7 @@
     },
     {
       "id": "s_absorb_elements",
+      "ruleset": "5e",
       "name": "Absorb Elements",
       "source": "Xanathar's Guide to Everything p. 150, Elemental Evil Player's Companion p. 15",
       "level": 1,
@@ -114,6 +116,7 @@
     },
     {
       "id": "s_aganazzars_scorcher",
+      "ruleset": "5e",
       "name": "Aganazzar's Scorcher",
       "source": "Xanathar's Guide to Everything p. 150, Elemental Evil Player's Companion p. 15",
       "level": 2,
@@ -184,6 +187,7 @@
     },
     {
       "id": "s_air_bubble",
+      "ruleset": "5e",
       "name": "Air Bubble",
       "source": "Spelljammer: Adventures in Space - Astral Adventurer's Guide p. 22",
       "level": 2,
@@ -212,6 +216,7 @@
     },
     {
       "id": "s_antagonize",
+      "ruleset": "5e",
       "name": "Antagonize",
       "source": "The Book of Many Things p. 50",
       "level": 3,
@@ -271,6 +276,7 @@
     },
     {
       "id": "s_ashardalons_stride",
+      "ruleset": "5e",
       "name": "Ashardalon's Stride",
       "source": "Fizban's Treasury of Dragons p. 19",
       "level": 3,
@@ -337,6 +343,7 @@
     },
     {
       "id": "s_beast_bond",
+      "ruleset": "5e",
       "name": "Beast Bond",
       "source": "Xanathar's Guide to Everything p. 150, Elemental Evil Player's Companion p. 15",
       "level": 1,
@@ -365,6 +372,7 @@
     },
     {
       "id": "s_bones_of_the_earth",
+      "ruleset": "5e",
       "name": "Bones of the Earth",
       "source": "Xanathar's Guide to Everything p. 150, Elemental Evil Player's Companion p. 15",
       "level": 6,
@@ -398,6 +406,7 @@
     },
     {
       "id": "s_booming_blade",
+      "ruleset": "5e",
       "name": "Booming Blade",
       "source": "Tasha's Cauldron of Everything p. 106, Sword Coast Adventurer's Guide p. 142",
       "level": 0,
@@ -449,6 +458,7 @@
     },
     {
       "id": "s_borrowed_knowledge",
+      "ruleset": "5e",
       "name": "Borrowed Knowledge",
       "source": "Strixhaven: A Curriculum of Chaos p. 37",
       "level": 2,
@@ -477,6 +487,7 @@
     },
     {
       "id": "s_branding_smite",
+      "ruleset": "5e",
       "name": "Branding Smite",
       "source": "Player's Handbook (2014) p. 219",
       "level": 2,
@@ -549,6 +560,7 @@
     },
     {
       "id": "s_catapult",
+      "ruleset": "5e",
       "name": "Catapult",
       "source": "Xanathar's Guide to Everything p. 150, Elemental Evil Player's Companion p. 15",
       "level": 1,
@@ -623,6 +635,7 @@
     },
     {
       "id": "s_catnap",
+      "ruleset": "5e",
       "name": "Catnap",
       "source": "Xanathar's Guide to Everything p. 151",
       "level": 3,
@@ -651,6 +664,7 @@
     },
     {
       "id": "s_cause_fear",
+      "ruleset": "5e",
       "name": "Cause Fear",
       "source": "Xanathar's Guide to Everything p. 151",
       "level": 1,
@@ -678,6 +692,7 @@
     },
     {
       "id": "s_ceremony",
+      "ruleset": "5e",
       "name": "Ceremony",
       "source": "Xanathar's Guide to Everything p. 151",
       "level": 1,
@@ -711,6 +726,7 @@
     },
     {
       "id": "s_chaos_bolt",
+      "ruleset": "5e",
       "name": "Chaos Bolt",
       "source": "Xanathar's Guide to Everything p. 151, Guildmasters' Guide to Ravnica",
       "level": 1,
@@ -790,6 +806,7 @@
     },
     {
       "id": "s_control_flames",
+      "ruleset": "5e",
       "name": "Control Flames",
       "source": "Xanathar's Guide to Everything p. 152, Elemental Evil Player's Companion p. 16",
       "level": 0,
@@ -821,6 +838,7 @@
     },
     {
       "id": "s_control_winds",
+      "ruleset": "5e",
       "name": "Control Winds",
       "source": "Xanathar's Guide to Everything p. 152, Elemental Evil Player's Companion p. 16",
       "level": 5,
@@ -853,6 +871,7 @@
     },
     {
       "id": "s_create_bonfire",
+      "ruleset": "5e",
       "name": "Create Bonfire",
       "source": "Xanathar's Guide to Everything p. 152, Elemental Evil Player's Companion p. 16",
       "level": 0,
@@ -906,6 +925,7 @@
     },
     {
       "id": "s_create_homunculus",
+      "ruleset": "5e",
       "name": "Create Homunculus",
       "source": "Xanathar's Guide to Everything p. 152",
       "level": 6,
@@ -937,6 +957,7 @@
     },
     {
       "id": "s_create_magen",
+      "ruleset": "5e",
       "name": "Create Magen",
       "source": "Icewind Dale: Rime of the Frostmaiden p. 318",
       "level": 7,
@@ -962,6 +983,7 @@
     },
     {
       "id": "s_create_spelljamming_helm",
+      "ruleset": "5e",
       "name": "Create Spelljamming Helm",
       "source": "Spelljammer: Adventures in Space - Astral Adventurer's Guide p. 22",
       "level": 5,
@@ -988,6 +1010,7 @@
     },
     {
       "id": "s_crown_of_stars",
+      "ruleset": "5e",
       "name": "Crown of Stars",
       "source": "Xanathar's Guide to Everything p. 152",
       "level": 7,
@@ -1021,6 +1044,7 @@
     },
     {
       "id": "s_danse_macabre",
+      "ruleset": "5e",
       "name": "Danse Macabre",
       "source": "Xanathar's Guide to Everything p. 153",
       "level": 5,
@@ -1048,6 +1072,7 @@
     },
     {
       "id": "s_dawn",
+      "ruleset": "5e",
       "name": "Dawn",
       "source": "Xanathar's Guide to Everything p. 153",
       "level": 5,
@@ -1081,6 +1106,7 @@
     },
     {
       "id": "s_distort_value",
+      "ruleset": "5e",
       "name": "Distort Value",
       "source": "Acquisitions Incorporated p. 75",
       "level": 1,
@@ -1108,6 +1134,7 @@
     },
     {
       "id": "s_draconic_transformation",
+      "ruleset": "5e",
       "name": "Draconic Transformation",
       "source": "Fizban's Treasury of Dragons p. 19",
       "level": 7,
@@ -1145,6 +1172,7 @@
     },
     {
       "id": "s_dream_of_the_blue_veil",
+      "ruleset": "5e",
       "name": "Dream of the Blue Veil",
       "source": "Tasha's Cauldron of Everything p. 106",
       "level": 7,
@@ -1173,6 +1201,7 @@
     },
     {
       "id": "s_druid_grove",
+      "ruleset": "5e",
       "name": "Druid Grove",
       "source": "Xanathar's Guide to Everything p. 154",
       "level": 6,
@@ -1204,6 +1233,7 @@
     },
     {
       "id": "s_dust_devil",
+      "ruleset": "5e",
       "name": "Dust Devil",
       "source": "Xanathar's Guide to Everything p. 154, Elemental Evil Player's Companion p. 17",
       "level": 2,
@@ -1276,6 +1306,7 @@
     },
     {
       "id": "s_earth_tremor",
+      "ruleset": "5e",
       "name": "Earth Tremor",
       "source": "Xanathar's Guide to Everything p. 155, Elemental Evil Player's Companion p. 17",
       "level": 1,
@@ -1353,6 +1384,7 @@
     },
     {
       "id": "s_earthbind",
+      "ruleset": "5e",
       "name": "Earthbind",
       "source": "Xanathar's Guide to Everything p. 154, Elemental Evil Player's Companion p. 17",
       "level": 2,
@@ -1381,6 +1413,7 @@
     },
     {
       "id": "s_elemental_bane",
+      "ruleset": "5e",
       "name": "Elemental Bane",
       "source": "Xanathar's Guide to Everything p. 155, Elemental Evil Player's Companion p. 17",
       "level": 4,
@@ -1417,6 +1450,7 @@
     },
     {
       "id": "s_encode_thoughts",
+      "ruleset": "5e",
       "name": "Encode Thoughts",
       "source": "Guildmasters' Guide to Ravnica p. 47",
       "level": 0,
@@ -1436,7 +1470,8 @@
       ]
     },
     {
-      "id": "s_enemies_abound",
+      "id": "s_enemies_abound_5e",
+      "ruleset": "5e",
       "name": "Enemies Abound",
       "source": "Xanathar's Guide to Everything p. 155",
       "level": 3,
@@ -1465,6 +1500,7 @@
     },
     {
       "id": "s_enervation",
+      "ruleset": "5e",
       "name": "Enervation",
       "source": "Xanathar's Guide to Everything p. 155",
       "level": 5,
@@ -1515,6 +1551,7 @@
     },
     {
       "id": "s_erupting_earth",
+      "ruleset": "5e",
       "name": "Erupting Earth",
       "source": "Xanathar's Guide to Everything p. 155, Elemental Evil Player's Companion p. 17",
       "level": 3,
@@ -1581,6 +1618,7 @@
     },
     {
       "id": "s_far_step",
+      "ruleset": "5e",
       "name": "Far Step",
       "source": "Xanathar's Guide to Everything p. 155",
       "level": 5,
@@ -1607,6 +1645,7 @@
     },
     {
       "id": "s_fast_friends",
+      "ruleset": "5e",
       "name": "Fast Friends",
       "source": "Acquisitions Incorporated p. 75",
       "level": 3,
@@ -1635,6 +1674,7 @@
     },
     {
       "id": "s_feeblemind",
+      "ruleset": "5e",
       "name": "Feeblemind",
       "source": "Player's Handbook (2014) p. 239",
       "level": 8,
@@ -1669,6 +1709,7 @@
     },
     {
       "id": "s_find_greater_steed",
+      "ruleset": "5e",
       "name": "Find Greater Steed",
       "source": "Xanathar's Guide to Everything p. 156",
       "level": 4,
@@ -1693,6 +1734,7 @@
     },
     {
       "id": "s_fizbans_platinum_shield",
+      "ruleset": "5e",
       "name": "Fizban's Platinum Shield",
       "source": "Fizban's Treasury of Dragons p. 20",
       "level": 6,
@@ -1724,6 +1766,7 @@
     },
     {
       "id": "s_flame_arrows",
+      "ruleset": "5e",
       "name": "Flame Arrows",
       "source": "Xanathar's Guide to Everything p. 156, Elemental Evil Player's Companion p. 18",
       "level": 3,
@@ -1761,6 +1804,7 @@
     },
     {
       "id": "s_flock_of_familiars",
+      "ruleset": "5e",
       "name": "Flock of Familiars",
       "source": "Lost Laboratory of Kwalish p. 57",
       "level": 2,
@@ -1788,6 +1832,7 @@
     },
     {
       "id": "s_frost_fingers",
+      "ruleset": "5e",
       "name": "Frost Fingers",
       "source": "Icewind Dale: Rime of the Frostmaiden p. 318",
       "level": 1,
@@ -1860,6 +1905,7 @@
     },
     {
       "id": "s_frostbite",
+      "ruleset": "5e",
       "name": "Frostbite",
       "source": "Xanathar's Guide to Everything p. 156, Elemental Evil Player's Companion p. 18",
       "level": 0,
@@ -1912,6 +1958,7 @@
     },
     {
       "id": "s_galders_speedy_courier",
+      "ruleset": "5e",
       "name": "Galder's Speedy Courier",
       "source": "Lost Laboratory of Kwalish p. 57",
       "level": 4,
@@ -1939,6 +1986,7 @@
     },
     {
       "id": "s_galders_tower",
+      "ruleset": "5e",
       "name": "Galder's Tower",
       "source": "Lost Laboratory of Kwalish p. 57",
       "level": 3,
@@ -1967,6 +2015,7 @@
     },
     {
       "id": "s_gate_seal",
+      "ruleset": "5e",
       "name": "Gate Seal",
       "source": "Planescape: Adventures in the Multiverse - Sigil and the Outlands p. 12",
       "level": 4,
@@ -1995,6 +2044,7 @@
     },
     {
       "id": "s_gift_of_gab",
+      "ruleset": "5e",
       "name": "Gift of Gab",
       "source": "Acquisitions Incorporated p. 76",
       "level": 2,
@@ -2022,6 +2072,7 @@
     },
     {
       "id": "s_green_flame_blade",
+      "ruleset": "5e",
       "name": "Green-Flame Blade",
       "source": "Tasha's Cauldron of Everything p. 107, Sword Coast Adventurer's Guide p. 143",
       "level": 0,
@@ -2051,6 +2102,7 @@
     },
     {
       "id": "s_guardian_of_nature",
+      "ruleset": "5e",
       "name": "Guardian of Nature",
       "source": "Xanathar's Guide to Everything p. 157",
       "level": 4,
@@ -2086,6 +2138,7 @@
     },
     {
       "id": "s_gust",
+      "ruleset": "5e",
       "name": "Gust",
       "source": "Xanathar's Guide to Everything p. 157, Elemental Evil Player's Companion p. 19, Wayfinder's Guide to Eberron p. 107, Eberron: Rising from the Last War p. 50",
       "level": 0,
@@ -2116,6 +2169,7 @@
     },
     {
       "id": "s_healing_spirit",
+      "ruleset": "5e",
       "name": "Healing Spirit",
       "source": "Xanathar's Guide to Everything p. 157",
       "level": 2,
@@ -2185,6 +2239,7 @@
     },
     {
       "id": "s_holy_weapon",
+      "ruleset": "5e",
       "name": "Holy Weapon",
       "source": "Xanathar's Guide to Everything p. 157",
       "level": 5,
@@ -2212,6 +2267,7 @@
     },
     {
       "id": "s_illusory_dragon",
+      "ruleset": "5e",
       "name": "Illusory Dragon",
       "source": "Xanathar's Guide to Everything p. 157",
       "level": 8,
@@ -2242,6 +2298,7 @@
     },
     {
       "id": "s_immolation",
+      "ruleset": "5e",
       "name": "Immolation",
       "source": "Xanathar's Guide to Everything p. 158, Elemental Evil Player's Companion p. 19",
       "level": 5,
@@ -2268,6 +2325,7 @@
     },
     {
       "id": "s_incite_greed",
+      "ruleset": "5e",
       "name": "Incite Greed",
       "source": "Acquisitions Incorporated p. 76",
       "level": 3,
@@ -2297,6 +2355,7 @@
     },
     {
       "id": "s_infernal_calling",
+      "ruleset": "5e",
       "name": "Infernal Calling",
       "source": "Xanathar's Guide to Everything p. 158",
       "level": 5,
@@ -2331,6 +2390,7 @@
     },
     {
       "id": "s_infestation",
+      "ruleset": "5e",
       "name": "Infestation",
       "source": "Xanathar's Guide to Everything p. 158",
       "level": 0,
@@ -2360,6 +2420,7 @@
     },
     {
       "id": "s_infusion_arcane_propulsion_armor_level_14",
+      "ruleset": "5e",
       "name": "Infusion: Arcane Propulsion Armor (Level 14)",
       "source": "Tasha's Cauldron of Everything p. 20",
       "level": 0,
@@ -2384,6 +2445,7 @@
     },
     {
       "id": "s_infusion_armor_of_magical_strength",
+      "ruleset": "5e",
       "name": "Infusion: Armor of Magical Strength",
       "source": "Tasha's Cauldron of Everything p. 20",
       "level": 0,
@@ -2412,6 +2474,7 @@
     },
     {
       "id": "s_infusion_boots_of_the_winding_path_level_6",
+      "ruleset": "5e",
       "name": "Infusion: Boots of the Winding Path (Level 6)",
       "source": "Eberron: Rising from the Last War p. 62, Tasha's Cauldron of Everything p. 21",
       "level": 0,
@@ -2433,6 +2496,7 @@
     },
     {
       "id": "s_infusion_enhanced_arcane_focus",
+      "ruleset": "5e",
       "name": "Infusion: Enhanced Arcane Focus",
       "source": "Eberron: Rising from the Last War p. 62, Tasha's Cauldron of Everything p. 21",
       "level": 0,
@@ -2453,6 +2517,7 @@
     },
     {
       "id": "s_infusion_enhanced_defense",
+      "ruleset": "5e",
       "name": "Infusion: Enhanced Defense",
       "source": "Eberron: Rising from the Last War p. 62, Tasha's Cauldron of Everything p. 21",
       "level": 0,
@@ -2473,6 +2538,7 @@
     },
     {
       "id": "s_infusion_enhanced_weapon",
+      "ruleset": "5e",
       "name": "Infusion: Enhanced Weapon",
       "source": "Eberron: Rising from the Last War p. 62, Tasha's Cauldron of Everything p. 21",
       "level": 0,
@@ -2493,6 +2559,7 @@
     },
     {
       "id": "s_infusion_helm_of_awareness_level_10",
+      "ruleset": "5e",
       "name": "Infusion: Helm of Awareness (Level 10)",
       "source": "Tasha's Cauldron of Everything p. 21",
       "level": 0,
@@ -2513,6 +2580,7 @@
     },
     {
       "id": "s_infusion_homunculus_servant",
+      "ruleset": "5e",
       "name": "Infusion: Homunculus Servant",
       "source": "Eberron: Rising from the Last War p. 62, Tasha's Cauldron of Everything p. 21",
       "level": 0,
@@ -2539,6 +2607,7 @@
     },
     {
       "id": "s_infusion_mind_sharpener",
+      "ruleset": "5e",
       "name": "Infusion: Mind Sharpener",
       "source": "Tasha's Cauldron of Everything p. 22",
       "level": 0,
@@ -2558,6 +2627,7 @@
     },
     {
       "id": "s_infusion_radiant_weapon_level_6",
+      "ruleset": "5e",
       "name": "Infusion: Radiant Weapon (Level 6)",
       "source": "Eberron: Rising from the Last War p. 62, Tasha's Cauldron of Everything p. 22",
       "level": 0,
@@ -2585,6 +2655,7 @@
     },
     {
       "id": "s_infusion_repeating_shot",
+      "ruleset": "5e",
       "name": "Infusion: Repeating Shot",
       "source": "Eberron: Rising from the Last War p. 62, Tasha's Cauldron of Everything p. 22",
       "level": 0,
@@ -2605,6 +2676,7 @@
     },
     {
       "id": "s_infusion_replicate_magic_item",
+      "ruleset": "5e",
       "name": "Infusion: Replicate Magic Item",
       "source": "Eberron: Rising from the Last War p. 63, Tasha's Cauldron of Everything p. 22",
       "level": 0,
@@ -2628,6 +2700,7 @@
     },
     {
       "id": "s_infusion_repulsion_shield_level_6",
+      "ruleset": "5e",
       "name": "Infusion: Repulsion Shield (Level 6)",
       "source": "Eberron: Rising from the Last War p. 63, Tasha's Cauldron of Everything p. 23",
       "level": 0,
@@ -2649,6 +2722,7 @@
     },
     {
       "id": "s_infusion_resistant_armor_level_6",
+      "ruleset": "5e",
       "name": "Infusion: Resistant Armor (Level 6)",
       "source": "Eberron: Rising from the Last War p. 63, Tasha's Cauldron of Everything p. 23",
       "level": 0,
@@ -2670,6 +2744,7 @@
     },
     {
       "id": "s_infusion_returning_weapon",
+      "ruleset": "5e",
       "name": "Infusion: Returning Weapon",
       "source": "Eberron: Rising from the Last War p. 63, Tasha's Cauldron of Everything p. 23",
       "level": 0,
@@ -2690,6 +2765,7 @@
     },
     {
       "id": "s_infusion_spell_refueling_ring_level_6",
+      "ruleset": "5e",
       "name": "Infusion: Spell-Refueling Ring (Level 6)",
       "source": "Tasha's Cauldron of Everything p. 23",
       "level": 0,
@@ -2710,6 +2786,7 @@
     },
     {
       "id": "s_intellect_fortress",
+      "ruleset": "5e",
       "name": "Intellect Fortress",
       "source": "Tasha's Cauldron of Everything p. 107",
       "level": 3,
@@ -2739,6 +2816,7 @@
     },
     {
       "id": "s_investiture_of_flame",
+      "ruleset": "5e",
       "name": "Investiture of Flame",
       "source": "Xanathar's Guide to Everything p. 159, Elemental Evil Player's Companion p. 19",
       "level": 6,
@@ -2771,6 +2849,7 @@
     },
     {
       "id": "s_investiture_of_ice",
+      "ruleset": "5e",
       "name": "Investiture of Ice",
       "source": "Xanathar's Guide to Everything p. 159, Elemental Evil Player's Companion p. 19",
       "level": 6,
@@ -2810,6 +2889,7 @@
     },
     {
       "id": "s_investiture_of_stone",
+      "ruleset": "5e",
       "name": "Investiture of Stone",
       "source": "Xanathar's Guide to Everything p. 159, Elemental Evil Player's Companion p. 19",
       "level": 6,
@@ -2844,6 +2924,7 @@
     },
     {
       "id": "s_investiture_of_wind",
+      "ruleset": "5e",
       "name": "Investiture of Wind",
       "source": "Xanathar's Guide to Everything p. 160, Elemental Evil Player's Companion p. 20",
       "level": 6,
@@ -2882,6 +2963,7 @@
     },
     {
       "id": "s_invulnerability",
+      "ruleset": "5e",
       "name": "Invulnerability",
       "source": "Xanathar's Guide to Everything p. 160",
       "level": 9,
@@ -2908,6 +2990,7 @@
     },
     {
       "id": "s_jims_glowing_coin",
+      "ruleset": "5e",
       "name": "Jim's Glowing Coin",
       "source": "Acquisitions Incorporated p. 76",
       "level": 2,
@@ -2932,6 +3015,7 @@
     },
     {
       "id": "s_jims_magic_missile",
+      "ruleset": "5e",
       "name": "Jim's Magic Missile",
       "source": "Acquisitions Incorporated p. 76",
       "level": 1,
@@ -2959,6 +3043,7 @@
     },
     {
       "id": "s_kinetic_jaunt",
+      "ruleset": "5e",
       "name": "Kinetic Jaunt",
       "source": "Strixhaven: A Curriculum of Chaos p. 37",
       "level": 2,
@@ -2992,6 +3077,7 @@
     },
     {
       "id": "s_life_transference",
+      "ruleset": "5e",
       "name": "Life Transference",
       "source": "Xanathar's Guide to Everything p. 160",
       "level": 3,
@@ -3055,6 +3141,7 @@
     },
     {
       "id": "s_lightning_lure",
+      "ruleset": "5e",
       "name": "Lightning Lure",
       "source": "Tasha's Cauldron of Everything p. 107, Sword Coast Adventurer's Guide p. 143",
       "level": 0,
@@ -3105,6 +3192,7 @@
     },
     {
       "id": "s_maddening_darkness",
+      "ruleset": "5e",
       "name": "Maddening Darkness",
       "source": "Xanathar's Guide to Everything p. 160",
       "level": 8,
@@ -3137,6 +3225,7 @@
     },
     {
       "id": "s_maelstrom",
+      "ruleset": "5e",
       "name": "Maelstrom",
       "source": "Xanathar's Guide to Everything p. 160, Elemental Evil Player's Companion p. 20",
       "level": 5,
@@ -3170,6 +3259,7 @@
     },
     {
       "id": "s_magic_stone",
+      "ruleset": "5e",
       "name": "Magic Stone",
       "source": "Xanathar's Guide to Everything p. 160, Elemental Evil Player's Companion p. 20",
       "level": 0,
@@ -3202,6 +3292,7 @@
     },
     {
       "id": "s_mass_polymorph",
+      "ruleset": "5e",
       "name": "Mass Polymorph",
       "source": "Xanathar's Guide to Everything p. 160",
       "level": 9,
@@ -3230,6 +3321,7 @@
     },
     {
       "id": "s_maximilians_earthen_grasp",
+      "ruleset": "5e",
       "name": "Maximilian's Earthen Grasp",
       "source": "Xanathar's Guide to Everything p. 161, Elemental Evil Player's Companion p. 20",
       "level": 2,
@@ -3265,6 +3357,7 @@
     },
     {
       "id": "s_melfs_minute_meteors",
+      "ruleset": "5e",
       "name": "Melf's Minute Meteors",
       "source": "Xanathar's Guide to Everything p. 161, Elemental Evil Player's Companion p. 20",
       "level": 3,
@@ -3300,6 +3393,7 @@
     },
     {
       "id": "s_mental_prison",
+      "ruleset": "5e",
       "name": "Mental Prison",
       "source": "Xanathar's Guide to Everything p. 161",
       "level": 6,
@@ -3327,6 +3421,7 @@
     },
     {
       "id": "s_mighty_fortress",
+      "ruleset": "5e",
       "name": "Mighty Fortress",
       "source": "Xanathar's Guide to Everything p. 161",
       "level": 8,
@@ -3352,6 +3447,7 @@
     },
     {
       "id": "s_mold_earth",
+      "ruleset": "5e",
       "name": "Mold Earth",
       "source": "Xanathar's Guide to Everything p. 162, Elemental Evil Player's Companion p. 21",
       "level": 0,
@@ -3382,6 +3478,7 @@
     },
     {
       "id": "s_motivational_speech",
+      "ruleset": "5e",
       "name": "Motivational Speech",
       "source": "Acquisitions Incorporated p. 77",
       "level": 3,
@@ -3408,6 +3505,7 @@
     },
     {
       "id": "s_nathairs_mischief",
+      "ruleset": "5e",
       "name": "Nathair's Mischief",
       "source": "Fizban's Treasury of Dragons p. 20",
       "level": 2,
@@ -3439,6 +3537,7 @@
     },
     {
       "id": "s_negative_energy_flood",
+      "ruleset": "5e",
       "name": "Negative Energy Flood",
       "source": "Xanathar's Guide to Everything p. 163",
       "level": 5,
@@ -3469,6 +3568,7 @@
     },
     {
       "id": "s_power_word_pain",
+      "ruleset": "5e",
       "name": "Power Word Pain",
       "source": "Xanathar's Guide to Everything p. 163",
       "level": 7,
@@ -3494,6 +3594,7 @@
     },
     {
       "id": "s_primal_savagery",
+      "ruleset": "5e",
       "name": "Primal Savagery",
       "source": "Xanathar's Guide to Everything p. 163",
       "level": 0,
@@ -3540,6 +3641,7 @@
     },
     {
       "id": "s_primordial_ward",
+      "ruleset": "5e",
       "name": "Primordial Ward",
       "source": "Xanathar's Guide to Everything p. 163, Elemental Evil Player's Companion p. 21",
       "level": 6,
@@ -3566,6 +3668,7 @@
     },
     {
       "id": "s_psychic_scream",
+      "ruleset": "5e",
       "name": "Psychic Scream",
       "source": "Xanathar's Guide to Everything p. 163",
       "level": 9,
@@ -3598,6 +3701,7 @@
     },
     {
       "id": "s_pyrotechnics",
+      "ruleset": "5e",
       "name": "Pyrotechnics",
       "source": "Xanathar's Guide to Everything p. 163, Elemental Evil Player's Companion p. 21",
       "level": 2,
@@ -3629,6 +3733,7 @@
     },
     {
       "id": "s_raulothims_psychic_lance",
+      "ruleset": "5e",
       "name": "Raulothim's Psychic Lance",
       "source": "Fizban's Treasury of Dragons p. 21",
       "level": 4,
@@ -3688,6 +3793,7 @@
     },
     {
       "id": "s_rimes_binding_ice",
+      "ruleset": "5e",
       "name": "Rime's Binding Ice",
       "source": "Fizban's Treasury of Dragons p. 21",
       "level": 2,
@@ -3756,6 +3862,7 @@
     },
     {
       "id": "s_scatter",
+      "ruleset": "5e",
       "name": "Scatter",
       "source": "Xanathar's Guide to Everything p. 164",
       "level": 6,
@@ -3781,6 +3888,7 @@
     },
     {
       "id": "s_shadow_blade",
+      "ruleset": "5e",
       "name": "Shadow Blade",
       "source": "Xanathar's Guide to Everything p. 164",
       "level": 2,
@@ -3831,6 +3939,7 @@
     },
     {
       "id": "s_shadow_of_moil",
+      "ruleset": "5e",
       "name": "Shadow of Moil",
       "source": "Xanathar's Guide to Everything p. 164",
       "level": 4,
@@ -3863,6 +3972,7 @@
     },
     {
       "id": "s_shape_water",
+      "ruleset": "5e",
       "name": "Shape Water",
       "source": "Xanathar's Guide to Everything p. 164, Elemental Evil Player's Companion p. 21, Explorer's Guide to Wildemount",
       "level": 0,
@@ -3894,6 +4004,7 @@
     },
     {
       "id": "s_sickening_radiance",
+      "ruleset": "5e",
       "name": "Sickening Radiance",
       "source": "Xanathar's Guide to Everything p. 164",
       "level": 4,
@@ -3927,6 +4038,7 @@
     },
     {
       "id": "s_silvery_barbs",
+      "ruleset": "5e",
       "name": "Silvery Barbs",
       "source": "Strixhaven: A Curriculum of Chaos p. 38",
       "level": 1,
@@ -3952,6 +4064,7 @@
     },
     {
       "id": "s_skill_empowerment",
+      "ruleset": "5e",
       "name": "Skill Empowerment",
       "source": "Xanathar's Guide to Everything p. 165",
       "level": 5,
@@ -3980,6 +4093,7 @@
     },
     {
       "id": "s_skywrite",
+      "ruleset": "5e",
       "name": "Skywrite",
       "source": "Xanathar's Guide to Everything p. 165, Elemental Evil Player's Companion p. 22",
       "level": 2,
@@ -4010,6 +4124,7 @@
     },
     {
       "id": "s_snare",
+      "ruleset": "5e",
       "name": "Snare",
       "source": "Xanathar's Guide to Everything p. 165",
       "level": 1,
@@ -4038,6 +4153,7 @@
     },
     {
       "id": "s_snillocs_snowball_swarm",
+      "ruleset": "5e",
       "name": "Snilloc's Snowball Swarm",
       "source": "Xanathar's Guide to Everything p. 165, Elemental Evil Player's Companion p. 22",
       "level": 2,
@@ -4108,6 +4224,7 @@
     },
     {
       "id": "s_soul_cage",
+      "ruleset": "5e",
       "name": "Soul Cage",
       "source": "Xanathar's Guide to Everything p. 165",
       "level": 6,
@@ -4143,6 +4260,7 @@
     },
     {
       "id": "s_spirit_of_death",
+      "ruleset": "5e",
       "name": "Spirit of Death",
       "source": "The Book of Many Things p. 50",
       "level": 4,
@@ -4172,6 +4290,7 @@
     },
     {
       "id": "s_spirit_shroud",
+      "ruleset": "5e",
       "name": "Spirit Shroud",
       "source": "Tasha's Cauldron of Everything p. 108",
       "level": 3,
@@ -4223,6 +4342,7 @@
     },
     {
       "id": "s_spray_of_cards",
+      "ruleset": "5e",
       "name": "Spray of Cards",
       "source": "The Book of Many Things p. 50",
       "level": 2,
@@ -4287,6 +4407,7 @@
     },
     {
       "id": "s_storm_sphere",
+      "ruleset": "5e",
       "name": "Storm Sphere",
       "source": "Xanathar's Guide to Everything p. 166, Elemental Evil Player's Companion p. 22",
       "level": 4,
@@ -4327,6 +4448,7 @@
     },
     {
       "id": "s_summon_greater_demon",
+      "ruleset": "5e",
       "name": "Summon Greater Demon",
       "source": "Xanathar's Guide to Everything p. 166",
       "level": 4,
@@ -4360,6 +4482,7 @@
     },
     {
       "id": "s_summon_lesser_demons",
+      "ruleset": "5e",
       "name": "Summon Lesser Demons",
       "source": "Xanathar's Guide to Everything p. 167",
       "level": 3,
@@ -4390,6 +4513,7 @@
     },
     {
       "id": "s_summon_shadowspawn",
+      "ruleset": "5e",
       "name": "Summon Shadowspawn",
       "source": "Tasha's Cauldron of Everything p. 113",
       "level": 3,
@@ -4418,6 +4542,7 @@
     },
     {
       "id": "s_sword_burst",
+      "ruleset": "5e",
       "name": "Sword Burst",
       "source": "Tasha's Cauldron of Everything p. 115, Sword Coast Adventurer's Guide p. 143",
       "level": 0,
@@ -4468,6 +4593,7 @@
     },
     {
       "id": "s_tashas_caustic_brew",
+      "ruleset": "5e",
       "name": "Tasha's Caustic Brew",
       "source": "Tasha's Cauldron of Everything p. 115",
       "level": 1,
@@ -4544,6 +4670,7 @@
     },
     {
       "id": "s_tashas_mind_whip",
+      "ruleset": "5e",
       "name": "Tasha's Mind Whip",
       "source": "Tasha's Cauldron of Everything p. 115",
       "level": 2,
@@ -4575,6 +4702,7 @@
     },
     {
       "id": "s_tashas_otherworldly_guise",
+      "ruleset": "5e",
       "name": "Tasha's Otherworldly Guise",
       "source": "Tasha's Cauldron of Everything p. 116",
       "level": 6,
@@ -4609,6 +4737,7 @@
     },
     {
       "id": "s_temple_of_the_gods",
+      "ruleset": "5e",
       "name": "Temple of the Gods",
       "source": "Xanathar's Guide to Everything p. 167",
       "level": 7,
@@ -4640,6 +4769,7 @@
     },
     {
       "id": "s_tensers_transformation",
+      "ruleset": "5e",
       "name": "Tenser's Transformation",
       "source": "Xanathar's Guide to Everything p. 168",
       "level": 6,
@@ -4679,6 +4809,7 @@
     },
     {
       "id": "s_thunder_step",
+      "ruleset": "5e",
       "name": "Thunder Step",
       "source": "Xanathar's Guide to Everything p. 168",
       "level": 3,
@@ -4742,6 +4873,7 @@
     },
     {
       "id": "s_tidal_wave",
+      "ruleset": "5e",
       "name": "Tidal Wave",
       "source": "Xanathar's Guide to Everything p. 168, Elemental Evil Player's Companion p. 22",
       "level": 3,
@@ -4777,6 +4909,7 @@
     },
     {
       "id": "s_tiny_servant",
+      "ruleset": "5e",
       "name": "Tiny Servant",
       "source": "Xanathar's Guide to Everything p. 168",
       "level": 3,
@@ -4803,6 +4936,7 @@
     },
     {
       "id": "s_transmute_rock",
+      "ruleset": "5e",
       "name": "Transmute Rock",
       "source": "Xanathar's Guide to Everything p. 169, Elemental Evil Player's Companion p. 22",
       "level": 5,
@@ -4840,6 +4974,7 @@
     },
     {
       "id": "s_vortex_warp",
+      "ruleset": "5e",
       "name": "Vortex Warp",
       "source": "Strixhaven: A Curriculum of Chaos p. 38",
       "level": 2,
@@ -4867,6 +5002,7 @@
     },
     {
       "id": "s_wall_of_light",
+      "ruleset": "5e",
       "name": "Wall of Light",
       "source": "Xanathar's Guide to Everything p. 170",
       "level": 5,
@@ -4924,6 +5060,7 @@
     },
     {
       "id": "s_wall_of_sand",
+      "ruleset": "5e",
       "name": "Wall of Sand",
       "source": "Xanathar's Guide to Everything p. 170, Elemental Evil Player's Companion p. 23",
       "level": 3,
@@ -4952,6 +5089,7 @@
     },
     {
       "id": "s_wall_of_water",
+      "ruleset": "5e",
       "name": "Wall of Water",
       "source": "Xanathar's Guide to Everything p. 170, Elemental Evil Player's Companion p. 23, Volo's Guide to Monsters p. 116, Mythic Odysseys of Theros",
       "level": 3,
@@ -4981,6 +5119,7 @@
     },
     {
       "id": "s_warding_wind",
+      "ruleset": "5e",
       "name": "Warding Wind",
       "source": "Xanathar's Guide to Everything p. 170, Elemental Evil Player's Companion p. 23",
       "level": 2,
@@ -5010,6 +5149,7 @@
     },
     {
       "id": "s_warp_sense",
+      "ruleset": "5e",
       "name": "Warp Sense",
       "source": "Planescape: Adventures in the Multiverse - Sigil and the Outlands p. 12",
       "level": 2,
@@ -5038,6 +5178,7 @@
     },
     {
       "id": "s_watery_sphere",
+      "ruleset": "5e",
       "name": "Watery Sphere",
       "source": "Xanathar's Guide to Everything p. 170, Elemental Evil Player's Companion p. 23",
       "level": 4,
@@ -5069,6 +5210,7 @@
     },
     {
       "id": "s_whirlwind",
+      "ruleset": "5e",
       "name": "Whirlwind",
       "source": "Xanathar's Guide to Everything p. 171, Elemental Evil Player's Companion p. 24",
       "level": 7,
@@ -5108,6 +5250,7 @@
     },
     {
       "id": "s_wither_and_bloom",
+      "ruleset": "5e",
       "name": "Wither and Bloom",
       "source": "Strixhaven: A Curriculum of Chaos p. 38",
       "level": 2,
@@ -5170,6 +5313,7 @@
     },
     {
       "id": "s_wrath_of_nature",
+      "ruleset": "5e",
       "name": "Wrath of Nature",
       "source": "Xanathar's Guide to Everything p. 171",
       "level": 5,
@@ -5210,6 +5354,7 @@
     },
     {
       "id": "s_zephyr_strike",
+      "ruleset": "5e",
       "name": "Zephyr Strike",
       "source": "Xanathar's Guide to Everything p. 171",
       "level": 1,

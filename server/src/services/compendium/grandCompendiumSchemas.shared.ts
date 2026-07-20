@@ -14,6 +14,8 @@ export type NativeCompendiumCategory =
   | "bastions";
 
 export const GRAND_COMPENDIUM_SCHEMA_VERSION = 2 as const;
+export const RULESETS = ["5e", "5.5e"] as const;
+export const RulesetSchema = z.enum(RULESETS);
 
 // ── Primitives ────────────────────────────────────────────────────────────────
 
@@ -163,7 +165,14 @@ export const FeatMechanicsSchema = z
       /** long_rest is the documented default and is omitted. */
       recharge: z.enum(["short_rest", "short_or_long_rest"]).optional(),
       note: z.string(),
-    }).strict()).optional(),
+      /** This use pool lets you free-cast a specific fixed spell already listed in
+       * `grants.spells`/`grants.cantrips`. Mutually exclusive with `grantsChoiceId`. Runtime
+       * surfaces it in Granted Spells with a charge badge instead of an unlabeled resource. */
+      grantsSpell: z.string().min(1).optional(),
+      /** This use pool lets you free-cast whichever spell the player picked for the named
+       * `choices[].id` (a `type: "spell"` choice). Mutually exclusive with `grantsSpell`. */
+      grantsChoiceId: z.string().min(1).optional(),
+    }).strict().refine((value) => !(value.grantsSpell && value.grantsChoiceId), "grantsSpell and grantsChoiceId are mutually exclusive")).optional(),
     preparedSpellProgression: z.array(PreparedSpellProgressionSchema).optional(),
     rolls: z.array(z.object({
       description: z.string().min(1).optional(),
