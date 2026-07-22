@@ -90,6 +90,30 @@ describe("structured canonical feature effects", () => {
     ]));
   });
 
+  it("maps table-facing selections without turning them into proficiencies", () => {
+    const effects = structuredEffectsFromCanonical({
+      source: { ...source, name: "Natural Explorer" },
+      classChoices: [{
+        id: "fc_ranger_favored_terrain_1",
+        kind: "selection",
+        label: "Favored Terrain",
+        count: 1,
+        options: ["Forest", "Underdark"],
+      }],
+    });
+
+    expect(effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "proficiency_grant",
+        category: "selection",
+        choice: expect.objectContaining({
+          optionCategory: "selection",
+          options: ["Forest", "Underdark"],
+        }),
+      }),
+    ]));
+  });
+
   it("preserves a conditional replacement proficiency choice", () => {
     const effects = structuredEffectsFromCanonical({
       source: { ...source, name: "Unfettered Mind" },

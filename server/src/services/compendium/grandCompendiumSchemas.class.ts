@@ -26,6 +26,13 @@ const MulticlassSpellcastingSchema = z.discriminatedUnion("progression", [
 
 const ClassFeatureChoiceSchema = z.discriminatedUnion("kind", [
   z.object({
+    id: z.string().regex(/^fc_[a-z0-9_]+$/u),
+    kind: z.literal("selection"),
+    label: z.string().min(1),
+    count: z.number().int().positive().default(1),
+    options: z.array(z.string().min(1)).min(2),
+  }).strict(),
+  z.object({
     kind: z.literal("feat"),
     category: z.literal("F"),
     count: z.number().int().positive().optional(),

@@ -25,7 +25,7 @@ type ProgressionChoiceEntry = {
 type ClassFeatureProficiencyChoiceEntry = {
   key: string;
   sourceLabel: string;
-  category: "skill" | "tool" | "language" | "saving_throw";
+  category: "skill" | "tool" | "language" | "saving_throw" | "selection";
   count: number;
   options?: string[];
 };
@@ -210,12 +210,14 @@ export function LevelUpChoicesSection(props: {
             choice.category === "skill" ? props.existingSkillKeys
             : choice.category === "tool" ? props.existingToolKeys
             : choice.category === "saving_throw" ? props.existingSaveKeys
+            : choice.category === "selection" ? new Set<string>()
             : props.existingLanguageKeys;
           const hasNonDuplicateOption = options.some((option) => !existingKeys.has(normalizeChoiceKey(option)));
           const title =
             choice.category === "skill" ? "Bonus Proficiencies"
             : choice.category === "tool" ? "Bonus Tool Proficiencies"
             : choice.category === "saving_throw" ? "Saving Throw Proficiency"
+            : choice.category === "selection" ? choice.sourceLabel
             : "Bonus Languages";
           return (
             <div key={choice.key}>

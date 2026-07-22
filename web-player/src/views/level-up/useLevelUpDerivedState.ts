@@ -282,13 +282,13 @@ export function useLevelUpDerivedState(args: {
       .filter((choice) =>
         !choice.expertise
         && choice.choice?.count.kind === "fixed"
-        && ["skill", "tool", "language", "saving_throw"].includes(choice.choice?.optionCategory ?? "")
+        && ["skill", "tool", "language", "saving_throw", "selection"].includes(choice.choice?.optionCategory ?? "")
         && (!choice.choice?.ifProficient || proficientSaves.map(normalizeChoiceKey).includes(normalizeChoiceKey(choice.choice.ifProficient)))
       )
       .map((choice) => ({
         key: `classfeature:${choice.id}`,
         sourceLabel: choice.source.name,
-        category: choice.choice?.optionCategory as "skill" | "tool" | "language" | "saving_throw",
+        category: choice.choice?.optionCategory as "skill" | "tool" | "language" | "saving_throw" | "selection",
         count: choice.choice?.count.kind === "fixed" ? choice.choice.count.value : 0,
         options: choice.choice?.options,
       }))

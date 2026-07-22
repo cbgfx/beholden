@@ -675,6 +675,14 @@ Feature IDs are unique across the class. Note-template IDs are unique across the
 ### Feature choices
 
 ```text
+SelectionFeatureChoice = {
+  id: string matching /^fc_[a-z0-9_]+$/
+  kind: "selection"
+  label: non-empty string
+  count?: positive integer // defaults to 1
+  options: non-empty string[] // at least 2
+}
+
 FeatFeatureChoice = {
   kind: "feat"
   category: "F"

@@ -7643,6 +7643,28 @@
               "resolution": "mixed",
               "choices": [
                 {
+                  "id": "fc_ranger_favored_enemy_1",
+                  "kind": "selection",
+                  "label": "Favored Enemy",
+                  "count": 1,
+                  "options": [
+                    "Aberrations",
+                    "Beasts",
+                    "Celestials",
+                    "Constructs",
+                    "Dragons",
+                    "Elementals",
+                    "Fey",
+                    "Fiends",
+                    "Giants",
+                    "Monstrosities",
+                    "Oozes",
+                    "Plants",
+                    "Undead",
+                    "Two Humanoid Peoples"
+                  ]
+                },
+                {
                   "kind": "proficiency",
                   "category": "language",
                   "count": 1
@@ -7657,7 +7679,25 @@
               "name": "Natural Explorer",
               "description": "You are particularly familiar with one type of natural environment and are\n\t\t\t\t\tadept at traveling and surviving in such regions. Choose one type of favored\n\t\t\t\t\tterrain: arctic, coast, desert, forest, grassland, mountain, swamp, or the\n\t\t\t\t\tUnderdark. When you make an Intelligence or Wisdom check related to your favored\n\t\t\t\t\tterrain, your proficiency bonus is doubled if you are using a skill that you're\n\t\t\t\t\tproficient in.\n\t\t\t\t\tWhile traveling for an hour or more in your favored terrain, you gain the\n\t\t\t\t\tfollowing benefits:\n\n\t\t\t\t\t• Difficult terrain doesn't slow your group's travel.\n\n\t\t\t\t\t• Your group can't become lost except by magical means.\n\n\t\t\t\t\t• Even when you are engaged in another activity while traveling (such as\n\t\t\t\t\tforaging, navigating, or tracking), you remain alert to danger.\n\n\t\t\t\t\t• If you are traveling alone, you can move stealthily at a normal pace.\n\n\t\t\t\t\t• When you forage, you find twice as much food as you normally would.\n\n\t\t\t\t\t• While tracking other creatures, you also learn their exact number, their\n\t\t\t\t\tsizes, and how long ago they passed through the area.\n\n\t\t\t\t\tYou choose additional favored terrain types at 6th and 10th level.",
               "source": "Player's Handbook (2014) p. 91",
-              "resolution": "manual"
+              "resolution": "automatic",
+              "choices": [
+                {
+                  "id": "fc_ranger_favored_terrain_1",
+                  "kind": "selection",
+                  "label": "Favored Terrain",
+                  "count": 1,
+                  "options": [
+                    "Arctic",
+                    "Coast",
+                    "Desert",
+                    "Forest",
+                    "Grassland",
+                    "Mountain",
+                    "Swamp",
+                    "Underdark"
+                  ]
+                }
+              ]
             },
             {
               "id": "cf_ranger_1_deft_explorer",
@@ -8316,6 +8356,28 @@
               "resolution": "mixed",
               "choices": [
                 {
+                  "id": "fc_ranger_favored_enemy_6",
+                  "kind": "selection",
+                  "label": "Favored Enemy",
+                  "count": 1,
+                  "options": [
+                    "Aberrations",
+                    "Beasts",
+                    "Celestials",
+                    "Constructs",
+                    "Dragons",
+                    "Elementals",
+                    "Fey",
+                    "Fiends",
+                    "Giants",
+                    "Monstrosities",
+                    "Oozes",
+                    "Plants",
+                    "Undead",
+                    "Two Humanoid Peoples"
+                  ]
+                },
+                {
                   "kind": "proficiency",
                   "category": "language",
                   "count": 1
@@ -8330,7 +8392,25 @@
               "name": "Natural Explorer Improvement (1)",
               "description": "At 6th level, you gain an additional favored terrain.",
               "source": "Player's Handbook (2014) p. 89",
-              "resolution": "manual"
+              "resolution": "automatic",
+              "choices": [
+                {
+                  "id": "fc_ranger_favored_terrain_6",
+                  "kind": "selection",
+                  "label": "Favored Terrain",
+                  "count": 1,
+                  "options": [
+                    "Arctic",
+                    "Coast",
+                    "Desert",
+                    "Forest",
+                    "Grassland",
+                    "Mountain",
+                    "Swamp",
+                    "Underdark"
+                  ]
+                }
+              ]
             },
             {
               "id": "cf_ranger_6_deft_explorer_roving",
@@ -8496,7 +8576,25 @@
               "name": "Natural Explorer Improvement (2)",
               "description": "You gain an additional favored terrain.",
               "source": "Player's Handbook (2014) p. 89",
-              "resolution": "manual"
+              "resolution": "automatic",
+              "choices": [
+                {
+                  "id": "fc_ranger_favored_terrain_10",
+                  "kind": "selection",
+                  "label": "Favored Terrain",
+                  "count": 1,
+                  "options": [
+                    "Arctic",
+                    "Coast",
+                    "Desert",
+                    "Forest",
+                    "Grassland",
+                    "Mountain",
+                    "Swamp",
+                    "Underdark"
+                  ]
+                }
+              ]
             },
             {
               "id": "cf_ranger_10_deft_explorer_tireless",
@@ -8661,6 +8759,28 @@
               "source": "Player's Handbook (2014) p. 89",
               "resolution": "mixed",
               "choices": [
+                {
+                  "id": "fc_ranger_favored_enemy_14",
+                  "kind": "selection",
+                  "label": "Favored Enemy",
+                  "count": 1,
+                  "options": [
+                    "Aberrations",
+                    "Beasts",
+                    "Celestials",
+                    "Constructs",
+                    "Dragons",
+                    "Elementals",
+                    "Fey",
+                    "Fiends",
+                    "Giants",
+                    "Monstrosities",
+                    "Oozes",
+                    "Plants",
+                    "Undead",
+                    "Two Humanoid Peoples"
+                  ]
+                },
                 {
                   "kind": "proficiency",
                   "category": "language",

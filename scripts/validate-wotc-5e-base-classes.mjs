@@ -65,6 +65,10 @@ const canny = rangerFeatures.find((feature) => feature.name === "Deft Explorer: 
 requireFact(canny?.choices?.some((choice) => choice.kind === "expertise") && canny.choices.some((choice) => choice.kind === "proficiency" && choice.category === "language" && choice.count === 2), "Ranger: Deft Explorer (Canny) choices are incomplete.");
 for (const name of ["Favored Enemy", "Favored Enemy Improvement (1)", "Favored Enemy Improvement (2)"]) {
   requireFact(rangerFeatures.find((feature) => feature.name === name)?.choices?.some((choice) => choice.kind === "proficiency" && choice.category === "language"), `Ranger: ${name} is missing its language choice.`);
+  requireFact(rangerFeatures.find((feature) => feature.name === name)?.choices?.some((choice) => choice.kind === "selection" && choice.options?.length === 14), `Ranger: ${name} is missing its favored-enemy selection.`);
+}
+for (const name of ["Natural Explorer", "Natural Explorer Improvement (1)", "Natural Explorer Improvement (2)"]) {
+  requireFact(rangerFeatures.find((feature) => feature.name === name)?.choices?.some((choice) => choice.kind === "selection" && choice.options?.length === 8), `Ranger: ${name} is missing its favored-terrain selection.`);
 }
 const primalAwareness = rangerFeatures.find((feature) => feature.name === "Primal Awareness");
 requireFact(primalAwareness?.effects?.filter((effect) => effect.type === "spell_grant").length === 5, "Ranger: Primal Awareness must grant five scaling spells.");

@@ -79,7 +79,7 @@ function findCreatorSubmissionProblem(args: {
     .filter((choice) =>
       !choice.expertise
       && choice.choice?.count.kind === "fixed"
-      && ["skill", "tool", "language"].includes(choice.choice?.optionCategory ?? "")
+      && ["skill", "tool", "language", "selection"].includes(choice.choice?.optionCategory ?? "")
     )
     .find((choice) => (form.chosenFeatureChoices[`classfeature:${choice.id}`] ?? []).length < (choice.choice?.count.kind === "fixed" ? choice.choice.count.value : 0));
   if (incompleteFeatureChoice) return `Complete the ${incompleteFeatureChoice.source.name} choice before saving.`;

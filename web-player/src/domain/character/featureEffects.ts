@@ -100,7 +100,9 @@ interface ChoiceSpec {
     | "spell"
     | "feat"
     | "subclass_option"
-    | "damage_type";
+    | "damage_type"
+    | "selection";
+  choiceLabel?: string;
   filters?: Array<"has_proficiency" | WeaponFilter>;
   canReplaceOnReset?: ResetKind;
   ifProficient?: string;
@@ -160,7 +162,7 @@ export interface SpellChoiceEffect extends FeatureEffectBase {
 
 export interface ProficiencyGrantEffect extends FeatureEffectBase {
   type: "proficiency_grant";
-  category: "skill" | "tool" | "language" | "armor" | "weapon" | "saving_throw" | "initiative";
+  category: "skill" | "tool" | "language" | "armor" | "weapon" | "saving_throw" | "initiative" | "selection";
   grants?: string[];
   weaponFilter?: {
     melee?: true;

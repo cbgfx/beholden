@@ -114,7 +114,7 @@ export function useCharacterCreatorDerivedState(args: {
       .filter((choice) =>
         !choice.expertise
         && choice.choice?.count.kind === "fixed"
-        && ["skill", "tool", "language", "saving_throw"].includes(choice.choice?.optionCategory ?? "")
+        && ["skill", "tool", "language", "saving_throw", "selection"].includes(choice.choice?.optionCategory ?? "")
         && (
           !choice.choice?.ifProficient
           || (classDetail?.proficiencies?.savingThrows ?? []).map(normalizeChoiceKey).includes(normalizeChoiceKey(choice.choice.ifProficient))

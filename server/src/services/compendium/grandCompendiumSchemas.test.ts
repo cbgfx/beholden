@@ -754,6 +754,18 @@ test("ClassSchema: accepts an already-known-spell fallback choice", () => {
   });
 });
 
+test("ClassSchema: accepts a persisted table-facing selection", () => {
+  passes(ClassSchema, {
+    ...validClass,
+    levels: [{ level: 1, features: [{
+      id: "natural_explorer",
+      name: "Natural Explorer",
+      description: "Choose a favored terrain.",
+      choices: [{ id: "fc_ranger_favored_terrain_1", kind: "selection", label: "Favored Terrain", count: 1, options: ["Forest", "Underdark"] }],
+    }] }],
+  });
+});
+
 test("ClassSchema: accepts explicit subclass ownership and choice branches", () => {
   passes(ClassSchema, {
     ...validClass,

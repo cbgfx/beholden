@@ -207,9 +207,31 @@ function addRemainingBaseMechanics(cls) {
   for (const name of ["Favored Enemy", "Favored Enemy Improvement (1)", "Favored Enemy Improvement (2)"]) {
     const feature = findBaseFeatures(cls, name)[0]?.feature;
     if (!feature) continue;
-    feature.choices = [{ kind: "proficiency", category: "language", count: 1 }];
+    const suffix = name === "Favored Enemy" ? "1" : name.endsWith("(1)") ? "6" : "14";
+    feature.choices = [
+      {
+        id: `fc_ranger_favored_enemy_${suffix}`,
+        kind: "selection",
+        label: "Favored Enemy",
+        count: 1,
+        options: [
+          "Aberrations", "Beasts", "Celestials", "Constructs", "Dragons", "Elementals", "Fey",
+          "Fiends", "Giants", "Monstrosities", "Oozes", "Plants", "Undead", "Two Humanoid Peoples",
+        ],
+      },
+      { kind: "proficiency", category: "language", count: 1 },
+    ];
     feature.resolution = "mixed";
     feature.resolutionNotes = ["The associated language is structured; record the favored creature type or humanoid peoples in Edit."];
+  }
+
+  const terrains = ["Arctic", "Coast", "Desert", "Forest", "Grassland", "Mountain", "Swamp", "Underdark"];
+  for (const [name, suffix] of [["Natural Explorer", "1"], ["Natural Explorer Improvement (1)", "6"], ["Natural Explorer Improvement (2)", "10"]]) {
+    const feature = findBaseFeatures(cls, name)[0]?.feature;
+    if (!feature) continue;
+    feature.choices = [{ id: `fc_ranger_favored_terrain_${suffix}`, kind: "selection", label: "Favored Terrain", count: 1, options: terrains }];
+    feature.resolution = "automatic";
+    delete feature.resolutionNotes;
   }
 
   const primalAwareness = findBaseFeatures(cls, "Primal Awareness")[0]?.feature;

@@ -111,6 +111,19 @@ export function structuredEffectsFromCanonical(args: {
 
   for (const rawChoice of args.classChoices ?? []) {
     const choice = record(rawChoice);
+    if (choice.kind === "selection") {
+      add({
+        type: "proficiency_grant",
+        category: "selection",
+        choice: {
+          count: fixed(Number(choice.count ?? 1)),
+          optionCategory: "selection",
+          options: Array.isArray(choice.options) ? choice.options.map(String) : [],
+          choiceLabel: String(choice.label ?? args.source.name),
+        },
+      });
+      continue;
+    }
     if (choice.kind === "proficiency") {
       const category = String(choice.category) as "skill" | "tool" | "language" | "saving_throw";
       const from = Array.isArray(choice.from) ? choice.from.map(String) : [];

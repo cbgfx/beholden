@@ -40,7 +40,7 @@ interface CreatorFormLike {
 interface ClassFeatureProficiencyChoiceLike {
   key: string;
   sourceLabel: string;
-  category: "skill" | "tool" | "language" | "saving_throw";
+  category: "skill" | "tool" | "language" | "saving_throw" | "selection";
   count: number;
   options?: string[];
 }
@@ -381,13 +381,14 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
           : choice.category === "tool" ? ALL_TOOLS
           : choice.category === "saving_throw" ? Object.keys(ABILITY_LABELS)
           : ALL_LANGUAGES;
-        const duplicateKind = choice.category === "saving_throw" ? null : choice.category === "language" ? "language" : choice.category;
+        const duplicateKind = choice.category === "saving_throw" || choice.category === "selection" ? null : choice.category === "language" ? "language" : choice.category;
         const hasNonDuplicateOption = duplicateKind == null || options.some((option) => !duplicateLocked(duplicateKind, option, false));
         return renderChoiceChipGroup({
           title:
             choice.category === "skill" ? "Bonus Proficiencies"
             : choice.category === "tool" ? "Bonus Tool Proficiencies"
             : choice.category === "saving_throw" ? "Saving Throw Proficiency"
+            : choice.category === "selection" ? choice.sourceLabel
             : "Bonus Languages",
           sourceLabel: choice.sourceLabel,
           selectedCount: selected.length,
@@ -477,7 +478,7 @@ export function renderSkillsFromContext(ctx: CharacterCreatorStepRenderContext):
     classFeatureProficiencyChoices: ctx.selectedClassFeatureProficiencyChoices.map((choice) => ({
       key: `classfeature:${choice.id}`,
       sourceLabel: choice.source.name,
-      category: choice.choice?.optionCategory as "skill" | "tool" | "language" | "saving_throw",
+      category: choice.choice?.optionCategory as "skill" | "tool" | "language" | "saving_throw" | "selection",
       count: choice.choice?.count.kind === "fixed" ? choice.choice.count.value : 0,
       options: choice.choice?.options,
     })).filter((choice) => choice.count > 0),

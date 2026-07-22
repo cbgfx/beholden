@@ -12,7 +12,7 @@ import type {
 } from "@/views/level-up/LevelUpTypes";
 
 type NamedEntry = { id: string; name: string };
-type FeatureProficiencyChoice = { key: string; category: "skill" | "tool" | "language" | "armor" | "weapon" | "saving_throw"; sourceLabel: string };
+type FeatureProficiencyChoice = { key: string; category: "skill" | "tool" | "language" | "armor" | "weapon" | "saving_throw" | "selection"; sourceLabel: string };
 type ManeuverChoiceEntry = {
   definition: { sourceLabel: string; sourceKey?: string | null };
   chosenEntries: Array<{ id: string; name: string }>;
