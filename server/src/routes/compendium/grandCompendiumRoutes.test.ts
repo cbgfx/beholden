@@ -42,15 +42,12 @@ const CANONICAL_MONSTER = {
     size: "L",
     type: "beast",
     description: "Large beast",
-    sortName: null,
     alignment: null,
-    ancestry: null,
     environment: ["arctic"],
   },
   description: "A large bear that lives in caves.",
   initiativeBonus: null,
   passivePerception: 13,
-  npc: false,
   challenge: { rating: "2", xp: 450 },
   armorClass: { value: 12, source: null },
   hitPoints: { average: 42, formula: "5d10 + 15" },
@@ -137,7 +134,7 @@ const CANONICAL_ITEM = {
   detail: null,
   modifiers: [{ target: "saving_throws", amount: 1 }],
   effects: [{ type: "ability_score", mode: "set_minimum", ability: "con", choiceCount: 1, amount: 19, gate: { duration: "while_equipped" } }],
-  uses: { max: 7, recover: "1d6+1", depletion: { destroy: 1 } },
+  uses: { max: 7, recover: "1d6+1" },
   spells: { s_compat_fireball: { cost: 5, level: 5 } },
   spellcasting: { dc: 17 },
   // ItemRollSchema: { description, formula } — no name field
@@ -416,7 +413,11 @@ describe("Grand compendium routes — HTTP integration", () => {
     );
     importNativeCompendiumBatch(
       db,
-      makeTestBatch("items", [CANONICAL_ITEM]) as Parameters<typeof importNativeCompendiumBatch>[1],
+      makeTestBatch("items", [
+        CANONICAL_ITEM,
+        { ...CANONICAL_ITEM, id: "i_backpack", name: "Backpack" },
+        { ...CANONICAL_ITEM, id: "i_torch", name: "Torch" },
+      ]) as Parameters<typeof importNativeCompendiumBatch>[1],
     );
     importNativeCompendiumBatch(
       db,
@@ -618,9 +619,23 @@ describe("Grand compendium routes — HTTP integration", () => {
       const { body } = await request("GET", `/api/compendium/items/${CANONICAL_ITEM.id}`) as { body: Record<string, unknown> };
       assert.equal(body.name, "Amulet of Health");
       assert.equal(body.rarity, "rare");
-      assert.deepEqual(body.uses, { max: 7, recover: "1d6+1", depletion: { destroy: 1 } });
+      assert.equal(body.ruleset, "5.5e");
+      assert.equal(body.source, CANONICAL_ITEM.source);
+      assert.deepEqual(body.uses, { max: 7, recover: "1d6+1" });
       assert.deepEqual(body.spells, { s_compat_fireball: { cost: 5, level: 5 } });
       assert.deepEqual(body.spellcasting, { dc: 17 });
+    });
+
+    it("returns bundle and container facts required by the inventory picker", async () => {
+      const grand = await grandEntry(`/api/compendium/items/${CANONICAL_ITEM.id}`);
+      await request("PUT", `/api/compendium/items/${CANONICAL_ITEM.id}`, {
+        ...grand,
+        bundle: { container: "i_backpack", items: { i_torch: 10 } },
+      });
+      const { body } = await request("GET", `/api/compendium/items/${CANONICAL_ITEM.id}`) as { body: Record<string, unknown> };
+      assert.deepEqual(body.bundle, { container: "i_backpack", items: { i_torch: 10 } });
+      assert.equal(body.container, false);
+      assert.equal(body.ignoreWeight, false);
     });
 
     it("returns 404 for an unknown item id", async () => {
@@ -682,7 +697,7 @@ describe("Grand compendium routes — HTTP integration", () => {
       assert.ok(exported, "exported item entry must exist");
       const rolls = exported.rolls as unknown[];
       assert.ok(Array.isArray(rolls) && rolls.length > 0, "rolls must survive PUT");
-      assert.deepEqual(exported.uses, { max: 7, recover: "1d6+1", depletion: { destroy: 1 } }, "uses must survive PUT");
+      assert.deepEqual(exported.uses, { max: 7, recover: "1d6+1" }, "uses must survive PUT");
       assert.deepEqual(exported.spells, { s_compat_fireball: { cost: 5, level: 5 } }, "spells must survive PUT");
       assert.deepEqual(exported.spellcasting, { dc: 17 }, "spellcasting must survive PUT");
     });
@@ -771,7 +786,7 @@ describe("Grand compendium routes — HTTP integration", () => {
     it("returns the canonical class shape for Grand consumers", async () => {
       const { status, body } = await request(
         "GET",
-        `/api/compendium/canonical/classes/${CANONICAL_CLASS.id}`,
+        `/api/compendium/canonical/classes/${CANONICAL_CLASS.id}?ruleset=5.5e`,
       ) as { status: number; body: Record<string, unknown> };
       assert.equal(status, 200);
       assert.ok(Array.isArray(body.levels));
@@ -783,7 +798,7 @@ describe("Grand compendium routes — HTTP integration", () => {
     it("projects equipment item display names from the item catalog at read time", async () => {
       const { status, body } = await request(
         "GET",
-        `/api/compendium/canonical/backgrounds/${CANONICAL_BACKGROUND.id}`,
+        `/api/compendium/canonical/backgrounds/${CANONICAL_BACKGROUND.id}?ruleset=5.5e`,
       ) as { status: number; body: Record<string, unknown> };
       assert.equal(status, 200);
       const options = (body.equipment as { options: Array<{ entries: Array<Record<string, unknown>> }> }).options;

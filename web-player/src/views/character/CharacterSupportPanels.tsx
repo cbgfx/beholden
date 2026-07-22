@@ -18,15 +18,18 @@ export function CharacterSupportPanels(props: {
   hitDiceCurrent: number;
   hitDiceMax: number;
   hitDieSize: number | null;
+  hitDicePools?: Array<{ dieSize: number; max: number; current: number }>;
   hitDieConMod: number;
   exhaustion: number;
   classResources: ResourceCounter[];
+  classPresentation?: Array<{ classEntryId: string; className: string; classLevel: number; subclassName: string | null; hitDieSize: number | null }>;
   playerNotesList: PlayerNote[];
   allSharedNotes: PlayerNote[];
   classFeaturesList: ClassFeatureEntry[];
   expandedNoteIds: string[];
   expandedClassFeatureIds: string[];
   onSaveHitDiceCurrent: (value: number) => Promise<void> | void;
+  onSaveHitDicePoolCurrent?: (dieSize: number, value: number) => Promise<void> | void;
   onShortRest: () => Promise<void> | void;
   onLongRest: () => Promise<void> | void;
   onExhaustionChange: (value: number) => Promise<void> | void;
@@ -55,15 +58,18 @@ export function CharacterSupportPanels(props: {
     hitDiceCurrent,
     hitDiceMax,
     hitDieSize,
+    hitDicePools = [],
     hitDieConMod,
     exhaustion,
     classResources,
+    classPresentation = [],
     playerNotesList,
     allSharedNotes,
     classFeaturesList,
     expandedNoteIds,
     expandedClassFeatureIds,
     onSaveHitDiceCurrent,
+    onSaveHitDicePoolCurrent,
     onShortRest,
     onLongRest,
     onExhaustionChange,
@@ -95,6 +101,19 @@ export function CharacterSupportPanels(props: {
     if (code === "SL") return "Resets on Short or Long Rest";
     return `Reset ${resource.reset}`;
   };
+  const multiclass = classPresentation.length > 1;
+  const classByEntryId = React.useMemo(
+    () => new Map(classPresentation.map((entry) => [entry.classEntryId, entry])),
+    [classPresentation],
+  );
+  const classOrder = React.useMemo(
+    () => new Map(classPresentation.map((entry, index) => [entry.classEntryId, index])),
+    [classPresentation],
+  );
+  const getClassEntryId = (value: string) => {
+    const match = /^class:([^:]+):/.exec(value);
+    return match?.[1] ?? null;
+  };
   const groupedFeatures = React.useMemo(() => {
     const getGroup = (id: string): "class" | "race" | "background" | "feats" => {
       if (id.startsWith("class:") || id.startsWith("invocation:")) return "class";
@@ -107,8 +126,13 @@ export function CharacterSupportPanels(props: {
     };
     for (const feature of classFeaturesList) groups[getGroup(feature.id)].push(feature);
     const sort = (arr: typeof classFeaturesList) => arr.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
-    return { class: sort(groups.class), race: sort(groups.race), background: sort(groups.background), feats: sort(groups.feats) };
-  }, [classFeaturesList]);
+    groups.class.sort((a, b) => {
+      const aOrder = classOrder.get(getClassEntryId(a.id) ?? "") ?? Number.MAX_SAFE_INTEGER;
+      const bOrder = classOrder.get(getClassEntryId(b.id) ?? "") ?? Number.MAX_SAFE_INTEGER;
+      return aOrder - bOrder || a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    });
+    return { class: groups.class, race: sort(groups.race), background: sort(groups.background), feats: sort(groups.feats) };
+  }, [classFeaturesList, classOrder]);
 
   const totalFeatureCount = classFeaturesList.length;
   const exhaustionColor =
@@ -204,13 +228,13 @@ export function CharacterSupportPanels(props: {
                   <span style={{ fontSize: "var(--fs-subtitle)", fontWeight: 900, color: C.text }}>
                     {hitDiceCurrent} / {hitDiceMax}
                   </span>
-                  {hitDieSize != null && (
+                  {hitDicePools.length <= 1 && hitDieSize != null && (
                     <span style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>
                       d{hitDieSize}{hitDieConMod >= 0 ? ` + ${hitDieConMod}` : ` - ${Math.abs(hitDieConMod)}`} per die
                     </span>
                   )}
                 </div>
-                <div style={{ display: "flex", gap: 5 }}>
+                {hitDicePools.length <= 1 ? <div style={{ display: "flex", gap: 5 }}>
                   <button
                     type="button"
                     aria-label="Spend Hit Die"
@@ -229,8 +253,16 @@ export function CharacterSupportPanels(props: {
                   >
                     +
                   </button>
-                </div>
+                </div> : <div />}
               </div>
+              {hitDicePools.length > 1 && <div style={{ display: "grid", gap: 6, padding: "0 10px 8px" }}>
+                {hitDicePools.map((pool) => <div key={pool.dieSize} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto auto", alignItems: "center", gap: 6 }}>
+                  <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 700 }}>d{pool.dieSize}{hitDieConMod >= 0 ? ` + ${hitDieConMod}` : ` - ${Math.abs(hitDieConMod)}`} per die</span>
+                  <button type="button" aria-label={`Spend d${pool.dieSize} Hit Die`} onClick={() => void onSaveHitDicePoolCurrent?.(pool.dieSize, pool.current - 1)} disabled={pool.current <= 0} style={miniPillBtn(pool.current > 0)}>-</button>
+                  <span style={{ color: C.text, fontWeight: 800, minWidth: 38, textAlign: "center" }}>{pool.current}/{pool.max}</span>
+                  <button type="button" aria-label={`Restore d${pool.dieSize} Hit Die`} onClick={() => void onSaveHitDicePoolCurrent?.(pool.dieSize, pool.current + 1)} disabled={pool.current >= pool.max} style={miniPillBtn(pool.current < pool.max)}>+</button>
+                </div>)}
+              </div>}
 
               <div style={{
                 display: "grid",
@@ -302,7 +334,9 @@ export function CharacterSupportPanels(props: {
             </div>
             {classResources.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {classResources.map((resource) => (
+                {classResources.map((resource) => {
+                  const owner = classByEntryId.get(getClassEntryId(resource.key) ?? "");
+                  return (
                   <div
                     key={resource.key}
                     style={{
@@ -319,7 +353,7 @@ export function CharacterSupportPanels(props: {
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: C.text }}>{resource.name}</div>
                       <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>
-                        {formatResetLabel(resource)}
+                        {multiclass && owner ? `${owner.className} ${owner.classLevel} · ` : ""}{formatResetLabel(resource)}
                       </div>
                     </div>
                     <button
@@ -342,7 +376,8 @@ export function CharacterSupportPanels(props: {
                       +
                     </button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <EmptyState textColor={C.muted}>No tracked resources.</EmptyState>
@@ -428,10 +463,17 @@ export function CharacterSupportPanels(props: {
                 <div key={group}>
                   <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5, opacity: 0.6 }}>{label}</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                    {features.map((feature) => {
+                    {features.map((feature, featureIndex) => {
+                      const owner = group === "class" ? classByEntryId.get(getClassEntryId(feature.id) ?? "") : null;
+                      const previousOwner = featureIndex > 0 ? classByEntryId.get(getClassEntryId(features[featureIndex - 1]!.id) ?? "") : null;
+                      const showOwner = multiclass && owner && owner.classEntryId !== previousOwner?.classEntryId;
                       const extraFeatId = feature.id.startsWith("extra-feat:") ? feature.id.slice("extra-feat:".length) : null;
                       return (
-                        <div key={feature.id} style={{ position: "relative" }}>
+                        <React.Fragment key={feature.id}>
+                        {showOwner && <div style={{ color: accentColor, fontSize: "var(--fs-tiny)", fontWeight: 800, marginTop: featureIndex ? 5 : 0 }}>
+                          {owner.className} {owner.classLevel}{owner.subclassName ? ` · ${owner.subclassName}` : ""}
+                        </div>}
+                        <div style={{ position: "relative" }}>
                           <ClassFeatureItem
                             feature={feature}
                             expanded={expandedClassFeatureIds.includes(feature.id)}
@@ -447,6 +489,7 @@ export function CharacterSupportPanels(props: {
                             >×</button>
                           )}
                         </div>
+                        </React.Fragment>
                       );
                     })}
                   </div>

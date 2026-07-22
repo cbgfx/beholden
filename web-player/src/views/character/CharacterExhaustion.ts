@@ -1,4 +1,4 @@
-export const MAX_EXHAUSTION = 6;
+const MAX_EXHAUSTION = 6;
 
 export function getExhaustionD20Penalty(level: number): number {
   return clampExhaustion(level) * 2;

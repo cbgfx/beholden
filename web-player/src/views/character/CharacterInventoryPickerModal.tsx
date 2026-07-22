@@ -211,6 +211,11 @@ export function InventoryItemPickerModal(props: {
                 {detail.type ? <Tag label={detail.type} color={C.muted} /> : null}
                 {hasStealthDisadvantage(detail) ? <Tag label="D" color={C.colorPinkRed} /> : null}
               </div>
+              {(detail.source || detail.ruleset) ? (
+                <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
+                  {[detail.source, detail.ruleset].filter(Boolean).join(" · ")}
+                </div>
+              ) : null}
               {(detail.dmg1 || detail.dmg2 || detail.dmgType || detail.weight != null || detail.value != null || detail.properties.length > 0) ? (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
                   {detail.dmg1 ? <InventoryStat label="One-Handed Damage" value={detail.dmg1} /> : null}

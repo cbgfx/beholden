@@ -33,7 +33,7 @@ export interface Adventure {
   order: number;
 }
 
-export type EncounterStatus = "open" | "closed";
+type EncounterStatus = "open" | "closed";
 
 export interface Encounter {
   id: Id;
@@ -79,11 +79,11 @@ export interface CampaignCharacter {
 
 // Combatants are encounter-scoped instances used by the combat tracker.
 // The server returns a merged view (player combatants hydrate name/hp/ac from the Player record).
-export type CombatantBaseType = "player" | "monster" | "inpc";
+type CombatantBaseType = "player" | "monster" | "inpc";
 
-export type CombatantOverrides = SharedCombatOverrides;
+type CombatantOverrides = SharedCombatOverrides;
 export type ConditionInstance = SharedConditionInstance;
-export type DeathSaves = SharedDeathSaves;
+type DeathSaves = SharedDeathSaves;
 
 export interface EncounterActor {
   id: Id;

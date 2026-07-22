@@ -12,6 +12,8 @@ import {
   statValueStyle,
 } from "../shared/CharacterCreatorStyles";
 import { PreparedSpellProgressionBlock } from "@/views/character/CharacterViewParts";
+import { ABILITY_LABELS } from "@/views/character-creator/constants/CharacterCreatorConstants";
+import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
 
 interface ClassSummaryLike {
   id: string;
@@ -42,12 +44,13 @@ function getPrimaryAbilityKeys(classDetail: ClassDetailLike | null): string[] {
   return fact?.any ?? fact?.all ?? [];
 }
 
-export function renderClassStep({
+function renderClassStep({
   classes,
   classSearch,
   setClassSearch,
   form,
   onSelectClass,
+  onBack,
   onNext,
   classDetail,
   abilityLabels,
@@ -57,6 +60,7 @@ export function renderClassStep({
   setClassSearch: (value: string) => void;
   form: { classId: string };
   onSelectClass: (id: string) => void;
+  onBack: () => void;
   onNext: () => void;
   classDetail: ClassDetailLike | null;
   abilityLabels: Record<string, string>;
@@ -130,7 +134,7 @@ export function renderClassStep({
         </>
       )}
 
-      <NavButtons step={1} onBack={() => {}} onNext={onNext} nextDisabled={!form.classId} />
+      <NavButtons step={2} onBack={onBack} onNext={onNext} nextDisabled={!form.classId} />
     </div>
   );
 
@@ -198,4 +202,39 @@ export function renderClassStep({
   );
 
   return { main, side };
+}
+
+export function renderClassFromContext(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
+  return renderClassStep({
+    classes: ctx.classes,
+    classSearch: ctx.classSearch,
+    setClassSearch: ctx.setClassSearch,
+    form: ctx.form,
+    onSelectClass: (classId) => ctx.setForm((f) => ({
+      ...f,
+      classId,
+      raceId: "",
+      bgId: "",
+      chosenRaceSkills: [],
+      chosenRaceLanguages: [],
+      chosenRaceTools: [],
+      chosenRaceFeatId: null,
+      chosenRaceSize: null,
+      chosenRaceSpellAbility: null,
+      chosenBgSkills: [],
+      chosenBgOriginFeatId: null,
+      chosenBgTools: [],
+      chosenBgLanguages: [],
+      chosenBgEquipmentOption: null,
+      chosenClassTools: [],
+      chosenFeatOptions: {},
+      chosenFeatureChoices: {},
+      bgAbilityMode: "split",
+      bgAbilityBonuses: {},
+    })),
+    onBack: () => ctx.setStep(1),
+    onNext: () => ctx.setStep(3),
+    classDetail: ctx.classDetail,
+    abilityLabels: ABILITY_LABELS,
+  });
 }

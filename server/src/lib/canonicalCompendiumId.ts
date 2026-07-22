@@ -1,4 +1,4 @@
-export const CANONICAL_COMPENDIUM_ID = /^[a-z0-9_]+$/;
+const CANONICAL_COMPENDIUM_ID = /^[a-z0-9_]+$/;
 
 export function canonicalizeCompendiumId(id: string): string {
   return String(id ?? "")

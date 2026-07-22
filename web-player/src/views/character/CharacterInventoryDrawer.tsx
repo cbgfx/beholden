@@ -273,8 +273,7 @@ function ReadFields({ draft, item, source, ruleset, isWeaponLike, isArmorLike, i
       <div style={{ ...inventoryPickerDetailStyle, minHeight: 60 }}>{draft.description || <span style={{ color: C.muted }}>No description.</span>}</div>
       {source ? (
         <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
-          Source: {source}
-          {ruleset ? <span> · Ruleset: {ruleset}</span> : null}
+          Source: {source} · Ruleset: {ruleset ?? "Unknown"}
         </div>
       ) : null}
     </>

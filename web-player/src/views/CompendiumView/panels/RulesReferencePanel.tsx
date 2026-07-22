@@ -1,8 +1,7 @@
 import React from "react";
 import { Panel } from "@/ui/Panel";
 import { C } from "@/lib/theme";
-import { MiniTable } from "@/views/CompendiumView/components/MiniTable";
-import { RulesSectionBox } from "@/views/CompendiumView/components/RulesSectionBox";
+import { MiniTable, RulesSectionBox } from "@beholden/shared/ui";
 import {
   CONDITIONS, EXHAUSTION_2024, TRAVEL_PACE,
   LIFESTYLE, FOOD_LODGING, SCHOOLS_OF_MAGIC, SIGHT_TYPES,

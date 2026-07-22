@@ -106,11 +106,14 @@ export function SpellDrawer({
               Classes: {spell.classes}
             </p>
           )}
-          {sourceLabel && (
+          {spell.source && (
             <p style={{ margin: "8px 0 0", fontSize: "var(--fs-small)", color: C.muted }}>
-              Source: {sourceLabel}
+              Source: {spell.source} · Ruleset: {spell.ruleset ?? "Unknown"}
             </p>
           )}
+          {sourceLabel && sourceLabel !== spell.source ? (
+            <p style={{ margin: 0, fontSize: "var(--fs-small)", color: C.muted }}>Granted by: {sourceLabel}</p>
+          ) : null}
         </div>
       </div>
     </>

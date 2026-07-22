@@ -19,6 +19,7 @@ import {
   type InventoryPickerPayload,
 } from "@/views/character/CharacterInventory";
 import type { InventoryPersistencePayload, CharacterInventorySyncState } from "@/views/character/useCharacterInventorySync";
+import { normalizePackLookupName, parsePackDescription } from "@/views/character/CharacterInventoryBundles";
 
 export function useCharacterInventoryContainers({
   sync,
@@ -79,6 +80,38 @@ export function useCharacterInventoryContainers({
               equipState: "backpack",
               source: "compendium",
               itemId,
+              containerId: packContainer.id,
+              properties: [],
+            });
+          }
+        }
+        await persist(nextItems, nextContainers);
+        sync.setPickerOpen(false);
+        return;
+      }
+      const inferredPack = parsePackDescription(payload.name, payload.description);
+      if (inferredPack) {
+        const result = await api<{ rows: Array<{ id: string; name: string }> }>("/api/compendium/items/lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ names: [inferredPack.containerName, ...inferredPack.items.map((entry) => entry.name)] }),
+        });
+        const rowsByName = new Map(result.rows.map((entry) => [normalizePackLookupName(entry.name), entry]));
+        let nextContainers = containers;
+        const nextItems = [...items];
+        for (let index = 0; index < Math.max(1, Number(payload.quantity) || 1); index += 1) {
+          const packContainer = createContainer(inferredPack.containerName);
+          nextContainers = [...nextContainers, packContainer];
+          for (const requested of inferredPack.items) {
+            const resolved = rowsByName.get(normalizePackLookupName(requested.name));
+            nextItems.push({
+              id: uid(),
+              name: resolved?.name ?? requested.name,
+              quantity: requested.quantity,
+              equipped: false,
+              equipState: "backpack",
+              source: resolved ? "compendium" : "custom",
+              itemId: resolved?.id,
               containerId: packContainer.id,
               properties: [],
             });

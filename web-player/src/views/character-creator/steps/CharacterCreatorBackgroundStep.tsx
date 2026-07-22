@@ -5,8 +5,9 @@ import { PreparedSpellProgressionBlock } from "@/views/character/CharacterViewPa
 import { ABILITY_NAME_TO_KEY, ALL_SKILLS, ALL_TOOLS } from "../constants/CharacterCreatorConstants";
 import { NavButtons } from "../shared/CharacterCreatorParts";
 import { detailBoxStyle, headingStyle, inputStyle, labelStyle, profChipStyle, sourceTagStyle } from "../shared/CharacterCreatorStyles";
-import { abilityNamesToKeys } from "../utils/CharacterCreatorUtils";
+import { abilityNamesToKeys, parseStartingEquipmentOptions } from "../utils/CharacterCreatorUtils";
 import type { StartingEquipmentOption } from "../utils/CharacterCreatorClassCoreUtils";
+import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
 
 type StepResult = { main: React.ReactNode; side: React.ReactNode };
 
@@ -81,7 +82,7 @@ function SourceTag({ value }: { value: string | null | undefined }) {
   return label ? <span style={sourceTagStyle}>{label}</span> : null;
 }
 
-export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
+function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
   availableBackgrounds: BackgroundSummaryLike[];
   filteredBackgrounds: BackgroundSummaryLike[];
   bgSearch: string;
@@ -680,4 +681,34 @@ export function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
   );
 
   return { main, side };
+}
+
+export function renderBackgroundFromContext(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
+  const availableBackgrounds = ctx.bgs;
+  const filtered = ctx.bgSearch
+    ? availableBackgrounds.filter((b) => b.name.toLowerCase().includes(ctx.bgSearch.toLowerCase()))
+    : availableBackgrounds;
+  const equipmentOptions = parseStartingEquipmentOptions(ctx.bgDetail?.equipmentOptions);
+  const originFeats = ctx.featSummaries.filter((f) => /\borigin\b/i.test(f.name));
+  const filteredBgFeats = ctx.bgOriginFeatSearch
+    ? originFeats.filter((f) => f.name.toLowerCase().includes(ctx.bgOriginFeatSearch.toLowerCase()))
+    : originFeats;
+
+  return renderBackgroundStep({
+    availableBackgrounds,
+    filteredBackgrounds: filtered,
+    bgSearch: ctx.bgSearch,
+    setBgSearch: ctx.setBgSearch,
+    form: ctx.form,
+    setForm: ctx.setForm,
+    selectBackground: (id) => ctx.setField("bgId", id),
+    bgDetail: ctx.bgDetail,
+    bgOriginFeatSearch: ctx.bgOriginFeatSearch,
+    setBgOriginFeatSearch: ctx.setBgOriginFeatSearch,
+    filteredBgFeats,
+    equipmentOptions,
+    onBack: () => ctx.setStep(3),
+    onNext: () => ctx.setStep(5),
+    step: ctx.step,
+  });
 }

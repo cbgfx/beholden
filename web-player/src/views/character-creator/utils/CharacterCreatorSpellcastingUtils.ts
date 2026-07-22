@@ -90,13 +90,20 @@ export function getMaxSlotLevel(cls: CreatorClassDetailLike, level: number, sele
   return 0;
 }
 
-export function getPreparedSpellCount(cls: CreatorClassDetailLike, level: number, selectedSubclass?: string | null): number {
+export function getPreparedSpellCount(cls: CreatorClassDetailLike, level: number, selectedSubclass?: string | null, spellcastingAbilityScore?: number | null): number {
   const structured = latestProgressionValue(subclassProgressionAtLevel(cls, level, selectedSubclass), (row) => row.prepared);
   if (structured !== undefined) return structured;
   const classProgression = [...cls.autolevels]
     .filter((row) => row.level <= level && row.spellsPrepared != null)
     .sort((a, b) => b.level - a.level)[0]?.spellsPrepared;
   if (classProgression != null) return classProgression;
+  if (cls.preparedSpellFormula) {
+    const divisor = cls.preparedSpellFormula.classLevelDivisor ?? 1;
+    const quotient = level / divisor;
+    const classContribution = cls.preparedSpellFormula.rounding === "up" ? Math.ceil(quotient) : Math.floor(quotient);
+    const abilityModifier = Math.floor(((spellcastingAbilityScore ?? 10) - 10) / 2);
+    return Math.max(cls.preparedSpellFormula.minimum ?? 1, classContribution + abilityModifier);
+  }
   for (const autolevel of getMergedAutolevels(cls)) {
     if (autolevel.level == null || autolevel.level > level) continue;
     for (const counter of autolevel.counters ?? []) {

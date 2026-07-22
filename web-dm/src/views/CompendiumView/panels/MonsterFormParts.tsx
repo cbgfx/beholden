@@ -1,12 +1,21 @@
-import { averageHpFromFormula } from "@beholden/shared/domain/monsters";
 import * as React from "react";
 import { theme, withAlpha } from "@/theme/theme";
+import { MonsterActionMechanicsEditor } from "./MonsterActionMechanicsEditor";
 
 export type MonsterBlock = { id?: string; name: string; text: string; [key: string]: unknown };
+export type MonsterLairBlock = { name: string; description: string };
+export type MonsterSpellReference = { id: string; level?: number };
 
 export type MonsterForEdit = {
   id: string;
+  ruleset?: "5e" | "5.5e";
   name: string;
+  source?: string;
+  description?: string;
+  initiativeBonus?: number;
+  passivePerception?: number;
+  treasure?: string;
+  legendaryUses?: number;
   cr?: string | null;
   typeFull?: string | null;
   size?: string | null;
@@ -25,7 +34,7 @@ export type MonsterForEdit = {
   action?: MonsterBlock[];
   reaction?: MonsterBlock[];
   legendary?: MonsterBlock[];
-  classification?: { size?: string; type?: string; description?: string; environment?: string[]; [key: string]: unknown };
+  classification?: { size?: string; type?: string; description?: string; alignment?: string; environment?: string[]; [key: string]: unknown };
   challenge?: { rating?: string; xp?: number };
   armorClass?: { value: number; source?: string };
   hitPoints?: { average?: number; formula?: string };
@@ -37,6 +46,9 @@ export type MonsterForEdit = {
   actions?: MonsterBlock[];
   reactions?: MonsterBlock[];
   legendaryActions?: MonsterBlock[];
+  lair?: MonsterLairBlock[];
+  spellcasting?: MonsterBlock[];
+  spells?: MonsterSpellReference[];
   [key: string]: unknown;
 };
 
@@ -56,18 +68,6 @@ export const TYPES = [
   "aberration", "beast", "celestial", "construct", "dragon", "elemental",
   "fey", "fiend", "giant", "humanoid", "monstrosity", "ooze", "plant", "undead",
 ];
-
-export function toStr(v: unknown): string {
-  if (v == null) return "";
-  if (typeof v === "object") {
-    const obj = v as Record<string, unknown>;
-    const val = obj.value ?? obj.average ?? averageHpFromFormula(typeof obj.formula === "string" ? obj.formula : null);
-    const notes = obj.notes ?? null;
-    if (val != null && notes) return `${val} (${notes})`;
-    if (val != null) return String(val);
-  }
-  return String(v);
-}
 
 export function normalizeBlocks(arr: unknown): MonsterBlock[] {
   if (!Array.isArray(arr)) return [];
@@ -133,14 +133,15 @@ export function AbilityInput({ label, value, onChange }: { label: string; value:
   );
 }
 
-export function BlockEditor({ label, blocks, onChange }: {
+export function BlockEditor({ label, help, blocks, onChange }: {
   label: string;
+  help?: string;
   blocks: MonsterBlock[];
   onChange: (b: MonsterBlock[]) => void;
 }) {
   function addBlock() { onChange([...blocks, { name: "", text: "" }]); }
   function removeBlock(i: number) { onChange(blocks.filter((_, idx) => idx !== i)); }
-  function updateBlock(i: number, field: keyof MonsterBlock, val: string) {
+  function updateBlock(i: number, field: keyof MonsterBlock, val: unknown) {
     onChange(blocks.map((b, idx) => idx === i ? { ...b, [field]: val } : b));
   }
 
@@ -160,6 +161,7 @@ export function BlockEditor({ label, blocks, onChange }: {
           + Add
         </button>
       </div>
+      {help ? <div style={{ color: theme.colors.muted, fontSize: "var(--fs-tiny)", lineHeight: 1.45, margin: "-2px 0 8px" }}>{help}</div> : null}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {blocks.map((b, i) => (
           <div key={i} style={{
@@ -192,6 +194,7 @@ export function BlockEditor({ label, blocks, onChange }: {
               rows={3}
               style={{ ...baseInput, resize: "vertical", fontFamily: "inherit" }}
             />
+            <MonsterActionMechanicsEditor block={b} onChange={(next) => onChange(blocks.map((row, idx) => idx === i ? next : row))} />
           </div>
         ))}
         {blocks.length === 0 && (

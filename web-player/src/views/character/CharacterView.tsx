@@ -25,7 +25,7 @@ export function CharacterView() {
   const ui = useCharacterViewUiState();
   const data = useCharacterData(id);
   const {
-    char, setChar, classDetail, raceDetail, backgroundDetail, bgOriginFeatDetail,
+    char, setChar, classDetail, classSelections, raceDetail, backgroundDetail, bgOriginFeatDetail,
     raceFeatDetail, classFeatDetails, levelUpFeatDetails, extraFeatDetails,
     invocationDetails, loading, error, fetchChar, characterData, primaryClassEntry,
   } = data;
@@ -42,6 +42,7 @@ export function CharacterView() {
     ? buildCharacterViewDerivedState({
         char,
         classDetail,
+        classSelections,
         raceDetail,
         backgroundDetail,
         bgOriginFeatDetail,
@@ -56,7 +57,7 @@ export function CharacterView() {
       })
     : null,
     [
-      loading, error, char, classDetail, raceDetail, backgroundDetail, bgOriginFeatDetail,
+      loading, error, char, classDetail, classSelections, raceDetail, backgroundDetail, bgOriginFeatDetail,
       raceFeatDetail, classFeatDetails, levelUpFeatDetails, extraFeatDetails,
       invocationDetails, primaryClassEntry?.subclass, polymorphCondition, polymorphMonsterState,
     ],
@@ -96,10 +97,13 @@ export function CharacterView() {
     char,
     setChar,
     classDetail,
+    spellSlotState: derived.spellSlotState,
+    classSpellcastingStates: derived.classSpellcastingStates,
     raceDetail,
     currentCharacterData: currentData,
     classResourcesWithSpellCasts: derived.classResourcesWithSpellCasts,
     hitDiceMax: derived.hitDiceMax,
+    hitDicePools: derived.hitDicePools,
     inventory: derived.inventory,
     effectiveHpMaxWithoutOverrides: derived.effectiveHpMaxWithoutOverrides,
     overrides: derived.overrides,

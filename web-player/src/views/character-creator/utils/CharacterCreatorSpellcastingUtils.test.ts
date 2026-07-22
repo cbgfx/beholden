@@ -40,6 +40,25 @@ describe("structured subclass spellcasting progression", () => {
   });
 });
 
+describe("5e prepared-spell formulas", () => {
+  it("adds the casting ability modifier to full-caster class level", () => {
+    const cleric = {
+      autolevels: [{ level: 5, slots: [4, 4, 3, 2], features: [] }],
+      preparedSpellFormula: { classLevelDivisor: 1, rounding: "down", minimum: 1 },
+    };
+    expect(getPreparedSpellCount(cleric as never, 5, null, 16)).toBe(8);
+  });
+
+  it("uses half class level for Paladin-style preparation and enforces the minimum", () => {
+    const paladin = {
+      autolevels: [{ level: 5, slots: [0, 4, 2], features: [] }],
+      preparedSpellFormula: { classLevelDivisor: 2, rounding: "down", minimum: 1 },
+    };
+    expect(getPreparedSpellCount(paladin as never, 5, null, 16)).toBe(5);
+    expect(getPreparedSpellCount(paladin as never, 2, null, 6)).toBe(1);
+  });
+});
+
 describe("getSlotLevelTriggeredSpellChoices", () => {
   it("reads the Illusion Savant slot-growth choice from canonical facts", () => {
     const cls = {

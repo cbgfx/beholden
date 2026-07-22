@@ -74,6 +74,7 @@ export function syncCharacterDerivedColumns(db: Db): void {
     const normalized = normalizeCharacterSheetForStorage({
       name: readCharacter.name,
       playerName: ownerName,
+      ruleset: readCharacter.ruleset,
       className: readCharacter.className,
       species: readCharacter.species,
       level: readCharacter.level,

@@ -67,9 +67,7 @@ export function compactSpellEntry(entry: JsonRecord): JsonRecord {
 
   const access = list(entry.access).map(String).filter(Boolean);
   if (access.length > 0) compact.access = access;
-  if (Array.isArray(entry.check) && entry.check.length > 1) {
-    compact.check = entry.check;
-  } else if (["attack", "str", "dex", "con", "int", "wis", "cha"].includes(String(entry.check))) {
+  if (["attack", "str", "dex", "con", "int", "wis", "cha"].includes(String(entry.check))) {
     compact.check = entry.check;
   }
 

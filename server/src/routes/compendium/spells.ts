@@ -16,8 +16,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
   const { db } = ctx;
   const MAX_SPELL_SEARCH_LIMIT = 250;
   const MAX_SPELL_LOOKUP_NAMES = 250;
-  const displayAccess = (value: unknown): string | null => {
-    const registry = readSpellAccessRegistry(db);
+  const displayAccessWith = (registry: Map<string, string>, value: unknown): string | null => {
     const labels = String(value ?? "").split(",").map((entry) => entry.trim()).filter(Boolean).map((id) => registry.get(id) ?? id);
     return labels.join(", ") || null;
   };
@@ -154,6 +153,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
       id: string; ruleset: "5e" | "5.5e"; name: string; level: number | null; school: string | null;
       ritual: number; concentration: number; components: string | null; classes: string | null; data_json?: string;
     }[];
+    const accessRegistry = readSpellAccessRegistry(db);
     const outRows = rows.map((row) => {
       const s = shouldSelectDataJson
         ? parseStoredPresentationEntry("spells", row.data_json)
@@ -168,7 +168,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
           ritual: row.ritual === 1,
           concentration: row.concentration === 1,
           components: row.components ?? null,
-          classes: displayAccess(row.classes),
+          classes: displayAccessWith(accessRegistry, row.classes),
         };
         out.time = s.time ?? null;
         out.range = s.range ?? null;
@@ -186,7 +186,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
         time: s.time ?? null,
         ritual: row.ritual === 1, concentration: row.concentration === 1,
         components: row.components ?? s.components ?? null,
-        classes: displayAccess(row.classes ?? s.classes),
+        classes: displayAccessWith(accessRegistry, row.classes ?? s.classes),
       };
       if (includeText) {
         const textArr: string[] = Array.isArray(s.text) ? s.text : (s.text ? [s.text] : []);
@@ -284,6 +284,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
           classes: string | null;
           data_json: string | null;
         }>;
+        const lookupAccessRegistry = readSpellAccessRegistry(db);
         const detailById = new Map(
           textRows.map((row) => {
             let time: string | null = null;
@@ -305,13 +306,14 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
               ritual: row.ritual === 1,
               concentration: row.concentration === 1,
               components: row.components ?? null,
-              classes: displayAccess(row.classes),
+              classes: displayAccessWith(lookupAccessRegistry, row.classes),
               time,
               range,
               duration,
               text,
               rolls: Array.isArray(parsed.rolls) ? parsed.rolls : [],
               check: parsed.check ?? null,
+              source: parsed.source ?? null,
             }] as const;
           }),
         );
@@ -364,7 +366,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
       ritual: row.ritual === 1,
       concentration: row.concentration === 1,
       components: row.components ?? data.components ?? null,
-      classes: displayAccess(row.classes ?? data.classes),
+      classes: displayAccessWith(readSpellAccessRegistry(db), row.classes ?? data.classes),
     });
   });
 

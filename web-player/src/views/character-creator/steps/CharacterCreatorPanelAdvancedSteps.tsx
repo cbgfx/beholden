@@ -12,13 +12,30 @@ import {
   smallBtnStyle,
   sourceTagStyle,
 } from "../shared/CharacterCreatorStyles";
+import {
+  ABILITY_KEYS,
+  ABILITY_LABELS,
+  POINT_BUY_BUDGET,
+  POINT_BUY_COSTS,
+  STANDARD_ARRAY,
+} from "@/views/character-creator/constants/CharacterCreatorConstants";
+import { abilityMod } from "@/views/character-creator/utils/CharacterCreatorUtils";
+import {
+  getPrimaryAbilityKeys,
+  pointBuySpent,
+  resolvedScores,
+  type FormState,
+} from "@/views/character-creator/utils/CharacterCreatorFormUtils";
+import { buildProficiencyMap as buildProficiencyMapFromUtils } from "@/views/character-creator/utils/CharacterCreatorProficiencyUtils";
+import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
+import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
 
 interface TaggedItemLike {
   name: string;
   source: string;
 }
 
-export function renderAbilityScoresStep({
+function renderAbilityScoresStep({
   form,
   setAbilityMethod,
   setStandardAssign,
@@ -158,13 +175,44 @@ export function renderAbilityScoresStep({
         </div>
       ) : null}
 
-      <NavButtons step={4} onBack={onBack} onNext={onNext} />
+      <NavButtons step={5} onBack={onBack} onNext={onNext} />
     </div>
   );
   return { main, side };
 }
 
-export function renderDerivedStatsStep({
+export function renderAbilityScoresFromContext(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
+  const usedIndices = Object.values(ctx.form.standardAssign).filter((v) => v >= 0);
+  const spent = pointBuySpent(ctx.form.pbScores);
+  const remaining = POINT_BUY_BUDGET - spent;
+  const primaryKeys = getPrimaryAbilityKeys(ctx.classDetail);
+  const bgBonuses = ctx.form.bgAbilityBonuses;
+  const hasBgBonuses = Object.keys(bgBonuses).length > 0;
+
+  return renderAbilityScoresStep({
+    form: ctx.form,
+    setAbilityMethod: (method) => ctx.setField("abilityMethod", method),
+    setStandardAssign: (key, idx) => ctx.setForm((f) => ({ ...f, standardAssign: { ...f.standardAssign, [key]: idx } })),
+    setPointBuyScore: (key, score) => ctx.setForm((f) => ({ ...f, pbScores: { ...f.pbScores, [key]: score } })),
+    usedIndices,
+    remaining,
+    primaryKeys,
+    bgBonuses,
+    hasBgBonuses,
+    backgroundName: ctx.bgDetail?.name,
+    abilityLabels: ABILITY_LABELS,
+    abilityKeys: ABILITY_KEYS,
+    standardArray: STANDARD_ARRAY,
+    pointBuyBudget: POINT_BUY_BUDGET,
+    pointBuyCosts: POINT_BUY_COSTS,
+    abilityMod,
+    onBack: () => ctx.setStep(4),
+    onNext: () => ctx.setStep(6),
+    side: ctx.sideSummary,
+  });
+}
+
+function renderDerivedStatsStep({
   level,
   hpMax,
   ac,
@@ -241,8 +289,59 @@ export function renderDerivedStatsStep({
           ))}
         </div>
       ) : null}
-      <NavButtons step={8} onBack={onBack} onNext={onNext} />
+      <NavButtons step={9} onBack={onBack} onNext={onNext} />
     </div>
   );
   return { main, side };
+}
+
+export function renderDerivedStatsFromContext(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
+  const scores = resolvedScores(ctx.form, ctx.selectedFeatAbilityBonuses);
+  const conMod = abilityMod(scores.con ?? 10);
+  const dexMod = abilityMod(scores.dex ?? 10);
+  const hd = ctx.effectiveHitDie;
+  const prof: ProficiencyMap = buildProficiencyMapFromUtils({
+    form: ctx.form,
+    classDetail: ctx.classDetail,
+    raceDetail: ctx.raceDetail,
+    bgDetail: ctx.bgDetail,
+    classCantrips: ctx.classCantrips,
+    classSpells: ctx.classSpells,
+    classInvocations: ctx.classInvocations,
+    bgOriginFeatDetail: ctx.bgOriginFeatDetail,
+    raceFeatDetail: ctx.raceFeatDetail,
+    classFeatDetails: ctx.classFeatDetails,
+    levelUpFeatDetails: ctx.levelUpFeatDetails,
+    spellChoiceOptionsByKey: ctx.featSpellChoiceOptions,
+    itemChoiceOptionsByKey: ctx.growthOptionEntriesByKey,
+  });
+  const sections = [
+    { label: "Skills", items: prof.skills },
+    { label: "Expertise", items: prof.expertise },
+    { label: "Saves", items: prof.saves },
+    { label: "Armor", items: prof.armor },
+    { label: "Weapons", items: prof.weapons },
+    { label: "Tools", items: prof.tools },
+    { label: "Languages", items: prof.languages },
+    { label: "Maneuvers", items: prof.maneuvers },
+    { label: "Magic Item Plans", items: prof.plans },
+    { label: "Spells", items: prof.spells },
+    { label: "Invocations", items: prof.invocations },
+  ].filter((s) => s.items.length > 0);
+
+  return renderDerivedStatsStep({
+    level: ctx.form.level,
+    hpMax: ctx.form.hpMax,
+    ac: ctx.form.ac,
+    speed: ctx.form.speed,
+    setField: (key, value) => ctx.setField(key as keyof FormState, value as never),
+    hd,
+    conMod,
+    dexMod,
+    raceSpeed: ctx.raceDetail?.speed ?? 30,
+    sections,
+    onBack: () => ctx.setStep(8),
+    onNext: () => ctx.setStep(10),
+    side: ctx.sideSummary,
+  });
 }

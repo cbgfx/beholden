@@ -257,7 +257,7 @@ export function invocationPrerequisitesMet(
   return true;
 }
 
-export interface FeatPrerequisiteFacts {
+interface FeatPrerequisiteFacts {
   level?: number;
   ability?: { any: readonly AbilKey[]; min?: number } | ReadonlyArray<{ any: readonly AbilKey[]; min?: number }>;
   class?: "paladin";

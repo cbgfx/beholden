@@ -5,6 +5,7 @@ import {
   fetchClassCatalog,
   fetchFeatCatalog,
   fetchRaceCatalog,
+  type Ruleset,
 } from "@/services/compendiumApi";
 import type {
   BgSummary,
@@ -12,7 +13,7 @@ import type {
   ClassSummary,
   RaceSummary,
 } from "@/views/character-creator/utils/CharacterCreatorTypes";
-export function useCreatorCompendiumCatalogs() {
+export function useCreatorCompendiumCatalogs(ruleset: Ruleset | undefined) {
   const [classes, setClasses] = React.useState<ClassSummary[]>([]);
   const [races, setRaces] = React.useState<RaceSummary[]>([]);
   const [bgs, setBgs] = React.useState<BgSummary[]>([]);
@@ -22,10 +23,14 @@ export function useCreatorCompendiumCatalogs() {
   const [campaigns, setCampaigns] = React.useState<Campaign[]>([]);
 
   React.useEffect(() => {
-    fetchClassCatalog().then((rows) => setClasses(rows as ClassSummary[])).catch(() => {});
-    fetchRaceCatalog().then((rows) => setRaces(rows as RaceSummary[])).catch(() => {});
-    fetchBackgroundCatalog().then((rows) => setBgs(rows as BgSummary[])).catch(() => {});
-    fetchFeatCatalog().then((rows) => setFeatSummaries(rows)).catch(() => {});
+    if (!ruleset) return;
+    fetchClassCatalog(ruleset).then((rows) => setClasses(rows as ClassSummary[])).catch(() => {});
+    fetchRaceCatalog(ruleset).then((rows) => setRaces(rows as RaceSummary[])).catch(() => {});
+    fetchBackgroundCatalog(ruleset).then((rows) => setBgs(rows as BgSummary[])).catch(() => {});
+    fetchFeatCatalog(ruleset).then((rows) => setFeatSummaries(rows)).catch(() => {});
+  }, [ruleset]);
+
+  React.useEffect(() => {
     api<Campaign[]>("/api/me/campaigns").then(setCampaigns).catch(() => {});
   }, []);
 

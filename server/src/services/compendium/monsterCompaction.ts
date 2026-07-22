@@ -59,7 +59,7 @@ function damageComponents(value: unknown): JsonRecord[] {
   });
 }
 
-export function compactMonsterActions(value: unknown): JsonRecord[] {
+function compactMonsterActions(value: unknown): JsonRecord[] {
   return list(value).map((raw, index) => {
     const action = record(raw);
     const recharge = compactRecharge(action.recharge);
@@ -110,9 +110,7 @@ export function compactMonsterEntry(entry: JsonRecord): JsonRecord {
     ...(text(classificationSource.size) ? { size: text(classificationSource.size) } : {}),
     ...(text(classificationSource.type) ? { type: text(classificationSource.type) } : {}),
     ...(text(classificationSource.description) ? { description: text(classificationSource.description) } : {}),
-    ...(text(classificationSource.sortName) ? { sortName: text(classificationSource.sortName) } : {}),
     ...(text(classificationSource.alignment) ? { alignment: text(classificationSource.alignment) } : {}),
-    ...(text(classificationSource.ancestry) ? { ancestry: text(classificationSource.ancestry) } : {}),
     ...(environment.length ? { environment } : {}),
   };
 
@@ -180,7 +178,6 @@ export function compactMonsterEntry(entry: JsonRecord): JsonRecord {
     ...(text(entry.description) ? { description: text(entry.description) } : {}),
     ...(number(entry.initiativeBonus) !== null ? { initiativeBonus: number(entry.initiativeBonus) } : {}),
     ...(number(entry.passivePerception) !== null ? { passivePerception: number(entry.passivePerception) } : {}),
-    ...(entry.npc === true ? { npc: true } : {}),
     ...(Object.keys(challenge).length ? { challenge } : {}),
     ...(number(armorClassSource.value) !== null && number(armorClassSource.value)! > 0 ? { armorClass: {
       value: number(armorClassSource.value),

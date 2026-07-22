@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { C } from "@/lib/theme";
 
-export const LS_KEY = "beholden:lastOpened";
+const LS_KEY = "beholden:lastOpened";
 export const CHARACTER_EXPORT_FORMAT = "beholden.character";
 export const CHARACTER_EXPORT_VERSION = 1;
 
@@ -51,13 +51,13 @@ export function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
-export function optionalString(value: unknown): string | undefined {
+function optionalString(value: unknown): string | undefined {
   if (value == null) return undefined;
   const text = String(value).trim();
   return text ? text : undefined;
 }
 
-export function intOrFallback(value: unknown, fallback: number): number {
+function intOrFallback(value: unknown, fallback: number): number {
   const parsed = Math.round(Number(value));
   return Number.isFinite(parsed) ? parsed : fallback;
 }
@@ -71,7 +71,7 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-export function parseAbilityScore(value: unknown): number | null | undefined {
+function parseAbilityScore(value: unknown): number | null | undefined {
   if (value === null) return null;
   if (value === undefined) return undefined;
   const parsed = Math.round(Number(value));
@@ -105,7 +105,7 @@ function calcBaseHp(hitDie: number, level: number, conMod: number): number {
   return Math.max(1, hitDie + conMod + Math.max(0, level - 1) * (Math.floor(hitDie / 2) + 1 + conMod));
 }
 
-export function finalizeDerivedSheetSummaries(raw: Record<string, unknown>, characterData: Record<string, unknown> | null | undefined): { ac: number; speed: number } {
+function finalizeDerivedSheetSummaries(raw: Record<string, unknown>, characterData: Record<string, unknown> | null | undefined): { ac: number; speed: number } {
   void characterData;
   return {
     ac: intOrFallback(raw.ac, 10),
@@ -209,7 +209,7 @@ export function buildCharacterCreatePayload(raw: unknown): Record<string, unknow
   };
 }
 
-export function sanitizeFilenamePart(value: string): string {
+function sanitizeFilenamePart(value: string): string {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -219,7 +219,7 @@ export function sanitizeFilenamePart(value: string): string {
 
 export function buildExportFilename(name: string): string {
   const stamp = new Date().toISOString().slice(0, 10);
-  return `${sanitizeFilenamePart(name)}-${stamp}.beholden-character.json`;
+  return `${sanitizeFilenamePart(name)}-${stamp}.json`;
 }
 
 export const exportIconButtonStyle: CSSProperties = {

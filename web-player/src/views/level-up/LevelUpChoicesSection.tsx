@@ -60,6 +60,7 @@ export function LevelUpChoicesSection(props: {
   nextLevel: number;
   accentColor: string;
   progressionTableChoiceEntries: ProgressionChoiceEntry[];
+  classChoiceGroups: Array<{ key: string; name: string; options: Array<{ id: string; name: string }> }>;
   classFeatureProficiencyChoices: ClassFeatureProficiencyChoiceEntry[];
   chosenFeatureChoices: Record<string, string[]>;
   existingSkillKeys: Set<string>;
@@ -151,6 +152,25 @@ export function LevelUpChoicesSection(props: {
   return (
     <Section title={`Spell And Feature Choices at Level ${props.nextLevel}`} accent={props.accentColor}>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {props.classChoiceGroups.map((group) => {
+          const selected = props.chosenFeatureChoices[group.key]?.[0] ?? "";
+          return (
+            <div key={group.key}>
+              <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text, marginBottom: 8 }}>{group.name}</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {group.options.map((option) => (
+                  <ChoiceBtn
+                    key={option.id}
+                    active={selected === option.id}
+                    onClick={() => props.setChosenFeatureChoices((current) => ({ ...current, [group.key]: selected === option.id ? [] : [option.id] }))}
+                  >
+                    {option.name}
+                  </ChoiceBtn>
+                ))}
+              </div>
+            </div>
+          );
+        })}
         {props.progressionTableChoiceEntries.map((entry) => (
           <div key={entry.definition.key}>
             <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text, marginBottom: 8 }}>

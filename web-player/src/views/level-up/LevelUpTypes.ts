@@ -2,11 +2,11 @@ import type { ParsedFeatChoiceLike, ParsedFeatDetailLike } from "@/views/charact
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import type { CharacterClassEntry } from "@/views/character/CharacterSheetTypes";
 
-export interface AutoLevel {
+interface AutoLevel {
   level: number;
   scoreImprovement: boolean;
   slots: number[] | null;
-  features: { name: string; text: string; optional: boolean; subclass?: string | null; effects?: unknown[]; noteTemplate?: { id: string; title: string; text: string } | null; choices?: import("@/views/character-creator/utils/CharacterCreatorClassCoreUtils").CreatorFeatureLike["choices"]; preparedSpellProgression?: PreparedSpellProgressionTable[] }[];
+  features: { id?: string; name: string; text: string; optional: boolean; subclass?: string | null; effects?: unknown[]; noteTemplate?: { id: string; title: string; text: string } | null; choices?: import("@/views/character-creator/utils/CharacterCreatorClassCoreUtils").CreatorFeatureLike["choices"]; preparedSpellProgression?: PreparedSpellProgressionTable[] }[];
   counters: { name: string; value: number; reset: string }[];
 }
 
@@ -15,7 +15,20 @@ export interface LevelUpClassDetail {
   name: string;
   hd: number | null;
   spellLists?: Record<string, string>;
+  choices?: Array<{ id: string; name: string; options: Array<{ id: string; name: string; features: string[] }> }>;
   autolevels: AutoLevel[];
+  multiclass?: {
+    requirements: { ability: import("@/domain/character/multiclassEligibility").MulticlassAbilityRequirement; minimum?: number };
+    skills?: { choose: number; from?: string[] };
+    armor?: string[];
+    weapons?: string[];
+    tools?: { fixed?: string[]; choices?: Array<{ count: number; from: string[] }>; notes?: string[] };
+    spellcasting?: { progression: "full" | "half" | "third" | "pact"; rounding?: "down" | "up" };
+  };
+  spellAbility?: string | null;
+  slotsReset?: string | null;
+  preparedSpellFormula?: { classLevelDivisor?: 1 | 2; rounding?: "down" | "up"; minimum?: number } | null;
+  subclassDetails?: Record<string, string | { name: string; spellcasting?: { ability: string; list: string; progression?: Array<{ level: number; cantrips?: number; prepared?: number; slots?: number[] }> } }>;
 }
 
 export interface LevelUpSpellSummary {
@@ -23,7 +36,7 @@ export interface LevelUpSpellSummary {
   name: string;
   level?: number | null;
   text?: string | null;
-  check?: string | string[] | null;
+  check?: string | null;
   rolls?: Array<{ effect?: string | string[] | null }>;
   prerequisite?: import("@/views/character/CharacterSheetUtils").ClassTalentPrerequisite | null;
   repeatable?: boolean;
@@ -42,6 +55,7 @@ export type LevelUpFeatDetail = ParsedFeatDetailLike<ParsedFeatChoiceLike> & { i
 export interface LevelUpCharacter {
   id: string;
   name: string;
+  ruleset: "5e" | "5.5e";
   className: string;
   level: number;
   hpMax: number;
@@ -59,6 +73,7 @@ export interface LevelUpCharacter {
     chosenCantrips?: string[];
     chosenSpells?: string[];
     chosenInvocations?: string[];
+    classSpellSelections?: Record<string, { chosenCantrips?: string[]; chosenSpells?: string[]; preparedSpells?: string[]; chosenInvocations?: string[] }>;
     chosenFeatOptions?: Record<string, string[]>;
     chosenFeatureChoices?: Record<string, string[]>;
     proficiencies?: {

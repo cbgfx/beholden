@@ -19,6 +19,7 @@ interface CharacterSheetDtoInput {
   userId: string;
   name: string;
   playerName: string;
+  ruleset: "5e" | "5.5e";
   className: string;
   species: string;
   level: number;
@@ -114,6 +115,7 @@ export function toCharacterSheetDto(
     sheet: {
       name: character.name,
       playerName: character.playerName,
+      ruleset: character.ruleset,
       className: character.className,
       species: character.species,
       level: character.level,

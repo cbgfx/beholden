@@ -23,6 +23,6 @@ export type SortMode = "az" | "crAsc" | "crDesc";
 
 export type { AttackOverride } from "@/domain/types/domain";
 
-export type AttackOverridesByActionName = Record<string, AttackOverride>;
+type AttackOverridesByActionName = Record<string, AttackOverride>;
 
 export type AttackOverridesByMonsterId = Record<string, AttackOverridesByActionName>;

@@ -5,12 +5,12 @@
 
 export type Id = string;
 
-export interface Timestamps {
+interface Timestamps {
   createdAt: number;
   updatedAt: number;
 }
 
-export interface StoredOptionalAbilities {
+interface StoredOptionalAbilities {
   str?: number;
   dex?: number;
   con?: number;
@@ -19,7 +19,7 @@ export interface StoredOptionalAbilities {
   cha?: number;
 }
 
-export interface StoredSheetAbilities {
+interface StoredSheetAbilities {
   strScore: number | null;
   dexScore: number | null;
   conScore: number | null;
@@ -28,7 +28,7 @@ export interface StoredSheetAbilities {
   chaScore: number | null;
 }
 
-export interface StoredActorVitals {
+interface StoredActorVitals {
   hpMax: number;
   hpCurrent: number;
   ac: number;
@@ -39,6 +39,7 @@ export interface StoredCharacterSheetState
     StoredSheetAbilities {
   name: string;
   playerName: string;
+  ruleset: "5e" | "5.5e";
   className: string;
   species: string;
   level: number;
@@ -160,13 +161,6 @@ export interface StoredDeathSaves {
 // Collections
 // ---------------------------------------------------------------------------
 
-export interface StoredUser extends Timestamps {
-  id: Id;
-  username: string;
-  name: string;
-  isAdmin: boolean;
-}
-
 export interface StoredCampaign extends Timestamps {
   id: Id;
   name: string;
@@ -266,6 +260,7 @@ export interface StoredCharacterSheet extends Timestamps, StoredActorVitals, Sto
   userId: Id;
   name: string;
   playerName: string;
+  ruleset: "5e" | "5.5e";
   className: string;
   species: string;
   level: number;

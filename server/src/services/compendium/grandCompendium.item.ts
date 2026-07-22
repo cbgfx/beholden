@@ -1,5 +1,5 @@
 import { type JsonRecord, record, list } from "./grandCompendium.helpers.js";
-import { expandedItemDetail, itemTypeKey } from "./itemCompaction.js";
+import { itemTypeKey } from "./itemCompaction.js";
 
 export function projectGrandItem(entry: JsonRecord): JsonRecord {
   const compact = entry;
@@ -43,7 +43,6 @@ export function projectGrandItem(entry: JsonRecord): JsonRecord {
     properties: list(weapon.properties).map(String),
     mastery: weapon.mastery ?? null,
     weaponAmmo: weapon.ammo ?? null,
-    detail: expandedItemDetail(compact),
     // Typed facts served as stored: consumers sum `amount` by `target`, no label parsing.
     modifiers: list(compact.modifiers),
     rolls: list(compact.rolls).map((raw) => {

@@ -32,6 +32,11 @@ export function useLevelUpSubmit(args: {
   navigate: NavigateFunction;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
   nextLevel: number;
+  nextClassLevel: number;
+  targetClassEntryId: string;
+  targetClassId: string | null;
+  isAddingClass: boolean;
+  multiclassProficiencies: { skills: string[]; tools: string[]; armor: string[]; weapons: string[] };
   hpGain: number | null;
   featHpBonus: number;
   subclass: string;
@@ -96,6 +101,11 @@ export function useLevelUpSubmit(args: {
       planChoiceEntries,
       growthOptionEntriesByKey,
       nextLevel,
+      nextClassLevel,
+      targetClassEntryId,
+      targetClassId,
+      isAddingClass,
+      multiclassProficiencies,
       hpGain,
       featHpBonus,
       subclass,
@@ -185,6 +195,11 @@ export function useLevelUpSubmit(args: {
       const payload = buildLevelUpPayload({
         char,
         nextLevel,
+        nextClassLevel,
+        targetClassEntryId,
+        targetClassId,
+        isAddingClass,
+        multiclassProficiencies,
         hpGain: hpGain ?? 0,
         featHpBonus,
         subclass,

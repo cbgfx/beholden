@@ -2,7 +2,7 @@ import type { TaggedItem } from "@/views/character/CharacterSheetTypes";
 import { classifyFeatSelection } from "./CharacterCreatorUtils";
 import type { ParsedFeatChoiceLike as FeatGrantChoiceLike, ParsedFeatDetailLike as FeatGrantDetailLike } from "./FeatChoiceTypes";
 
-export interface FeatGrantTaggedEntry extends TaggedItem {}
+interface FeatGrantTaggedEntry extends TaggedItem {}
 
 export interface FeatGrantCollections {
   skills: FeatGrantTaggedEntry[];

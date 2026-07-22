@@ -19,6 +19,7 @@ export interface ClassDetail {
   proficiency: string;
   slotsReset: string;
   preparedSpellChanges?: "short_rest" | "long_rest" | null;
+  preparedSpellFormula?: { classLevelDivisor?: 1 | 2; rounding?: "down" | "up"; minimum?: number } | null;
   spellAbility?: string | null;
   spellcastingList?: string | null;
   wealth?: number | null;
@@ -33,12 +34,17 @@ export interface ClassDetail {
     tools: ClassToolProficiency;
   };
   description: string;
+  choices?: Array<{
+    id: string;
+    name: string;
+    options: Array<{ id: string; name: string; features: string[] }>;
+  }>;
   equipmentOptions?: import("./CharacterCreatorClassCoreUtils").StructuredStartingEquipmentOption[];
   descriptions?: string[];
   autolevels: {
     level: number; scoreImprovement: boolean; spellsPrepared?: number | null;
     slots: number[] | null;
-    features: { name: string; text: string; optional: boolean; subclass?: string | null; effects?: unknown[]; noteTemplate?: { id: string; title: string; text: string } | null; choices?: Array<
+    features: { id?: string; name: string; text: string; optional: boolean; subclass?: string | null; effects?: unknown[]; noteTemplate?: { id: string; title: string; text: string } | null; choices?: Array<
       | { kind: "feat"; category: "F"; count?: number; replace?: true }
       | { kind: "weapon_mastery"; known: Record<string, number>; melee?: true }
       | { kind: "expertise"; known: Record<string, number>; from?: string[] }
@@ -56,7 +62,7 @@ export interface SpellSummary {
   school: string | null;
   classes: string | null;
   text: string | null;
-  check?: string | string[] | null;
+  check?: string | null;
   rolls?: Array<{ effect?: string | string[] | null }>;
   prerequisite?: import("@/views/character/CharacterSheetUtils").ClassTalentPrerequisite | null;
   repeatable?: boolean;
@@ -113,7 +119,7 @@ export interface LevelUpFeatDetail {
   feat: ParsedFeatDetailLike<ParsedFeatChoiceLike>;
 }
 
-export interface StructuredBgProficiencies {
+interface StructuredBgProficiencies {
   skills: ProficiencyChoice;
   tools: ProficiencyChoice;
   languages: ProficiencyChoice;

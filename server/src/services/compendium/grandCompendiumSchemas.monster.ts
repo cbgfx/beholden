@@ -78,9 +78,7 @@ export const MonsterSchema = z
         size: SIZE.optional(),
         type: z.string().min(1).optional(),
         description: z.string().min(1).optional(),
-        sortName: z.string().min(1).optional(),
         alignment: z.string().min(1).optional(),
-        ancestry: z.string().min(1).optional(),
         environment: z.array(z.string().min(1)).min(1).optional(),
       })
       .strict()
@@ -89,7 +87,6 @@ export const MonsterSchema = z
     description: z.string().min(1).optional(),
     initiativeBonus: z.number().int().optional(),
     passivePerception: nonnegInt.optional(),
-    npc: z.literal(true).optional(),
     challenge: z
       .object({
         rating: z.string().min(1).optional(),

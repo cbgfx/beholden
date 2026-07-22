@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { estimateMonsterDpr } from "./monsterDpr";
+import { estimateMonsterDpr, estimateMonsterEffectiveHp, estimatePartyDpr, labelForRoundsToTpk } from "./monsterDpr";
 import type { MonsterDetail } from "@/domain/types/compendium";
 
 function monster(action: Record<string, unknown>, extraActions: Array<Record<string, unknown>> = []): MonsterDetail {
@@ -16,23 +16,55 @@ function monster(action: Record<string, unknown>, extraActions: Array<Record<str
 
 describe("monster DPR target pressure", () => {
   it("uses canonical area facts instead of action prose", () => {
-    expect(estimateMonsterDpr(monster({ area: "cone" }))?.burstFactor).toBe(1.2);
+    expect(estimateMonsterDpr(monster({ area: "cone" }))?.burstFactor).toBe(1.25);
   });
 
   it("uses canonical selected-target counts", () => {
-    expect(estimateMonsterDpr(monster({ targets: 3 }))?.burstFactor).toBe(1.2);
+    expect(estimateMonsterDpr(monster({ targets: 3 }))?.burstFactor).toBe(1.3);
   });
 
   it("does not infer area pressure from geometry words in prose", () => {
     expect(estimateMonsterDpr(monster({ text: "Hit: 10 (2d6 + 3) force damage in a cone." }))?.burstFactor).toBe(1);
   });
 
-  it("uses canonical recharge facts", () => {
-    expect(estimateMonsterDpr(monster({ recharge: { roll: 5 } }))?.burstFactor).toBe(1.35);
+  it("uses the actual recharge probability over the three-round danger window", () => {
+    const result = estimateMonsterDpr(monster({ recharge: { roll: 5 } }));
+    expect(result?.dpr).toBeCloseTo(10 * (1 + 2 / 3) / 3);
+    expect(result?.burstFactor).toBe(1);
   });
 
   it("does not infer recharge from prose", () => {
     expect(estimateMonsterDpr(monster({ text: "Recharge 5–6. Hit: 10 (2d6 + 3) force damage." }))?.burstFactor).toBe(1);
+  });
+
+  it("does not apply a weak recharge action's pressure to a stronger unrelated routine", () => {
+    const result = estimateMonsterDpr(monster({ damage: { roll: "1", type: "force" }, recharge: { roll: 5 } }, [
+      { id: "claw", name: "Claw", damage: { roll: "2d10", type: "slashing" } },
+      { id: "multiattack", name: "Multiattack", routine: [{ use: "claw", count: 2 }] },
+    ]));
+    expect(result?.dpr).toBe(22);
+    expect(result?.burstFactor).toBe(1);
+  });
+});
+
+describe("projected difficulty labels", () => {
+  it("uses Beholden's established names", () => {
+    expect([9, 7, 4, 2.5, 1.25, .5].map(labelForRoundsToTpk)).toEqual([
+      "Too Easy", "Easy", "Medium", "Hard", "Lethal", "TPK",
+    ]);
+  });
+});
+
+describe("encounter durability inputs", () => {
+  it("estimates party output from participating character levels", () => {
+    expect(estimatePartyDpr([1, 5, 11])).toBe(61);
+  });
+
+  it("applies a small capped durability adjustment for unknown defense coverage", () => {
+    const detail = monster({});
+    detail.hp = "100 (10d10 + 45)";
+    (detail as Record<string, unknown>).resist = "fire, cold";
+    expect(estimateMonsterEffectiveHp(detail)).toBeCloseTo(110);
   });
 });
 
@@ -72,9 +104,30 @@ describe("monster DPR from canonical damage facts", () => {
     expect(result?.dpr).toBe(20);
   });
 
-  it("applies the legendary factor to typed damage", () => {
+  it("adds one conservative typed legendary action instead of a generic multiplier", () => {
     const detail = monster({});
-    (detail as Record<string, unknown>).legendary = [{ name: "Lash", text: "One Burst attack." }];
-    expect(estimateMonsterDpr(detail)?.dpr).toBe(10 * 1.25);
+    (detail as Record<string, unknown>).legendary = [{ name: "Lash", damage: { roll: "2d6+3", type: "force" } }];
+    expect(estimateMonsterDpr(detail)?.dpr).toBe(20);
+  });
+
+  it("uses party AC, hit probability, and critical dice for attack damage", () => {
+    const detail = monster({ attack: { toHit: 5, melee: true } });
+    // AC 16: 50% hit chance, plus the critical hit's extra 2d6 (7 × 5%).
+    expect(estimateMonsterDpr(detail, { armorClasses: [16] })?.dpr).toBeCloseTo(5.35);
+  });
+
+  it("averages attack accuracy across the participating party", () => {
+    const detail = monster({ attack: { toHit: 5, melee: true } });
+    expect(estimateMonsterDpr(detail, { armorClasses: [11, 21] })?.dpr).toBeCloseTo(5.35);
+  });
+
+  it("assumes a +0 party save for explicit save DC damage", () => {
+    const detail = monster({ description: "Dexterity Saving Throw: DC 16. Failure: damage. Success: no damage." });
+    expect(estimateMonsterDpr(detail)?.dpr).toBeCloseTo(7.5);
+  });
+
+  it("includes half damage when the explicit success clause says so", () => {
+    const detail = monster({ description: "Dexterity Saving Throw: DC 16. Failure: damage. Success: Half damage." });
+    expect(estimateMonsterDpr(detail)?.dpr).toBeCloseTo(8.75);
   });
 });

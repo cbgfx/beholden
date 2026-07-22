@@ -1,4 +1,4 @@
-export interface PreparedSpellProgressionRow {
+interface PreparedSpellProgressionRow {
   level: number;
   spells: string[];
 }

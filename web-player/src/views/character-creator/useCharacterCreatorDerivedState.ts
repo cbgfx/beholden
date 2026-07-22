@@ -438,7 +438,7 @@ export function useCharacterCreatorDerivedState(args: {
     const hasDamageCantrip = selectedCantrips.some(spellLooksLikeDamageSpell);
     const hasAttackDamageCantrip = selectedCantrips.some((spell) =>
       spellLooksLikeDamageSpell(spell)
-      && (Array.isArray(spell.check) ? spell.check : [spell.check]).includes("attack")
+      && spell.check === "attack"
     );
 
     return new Set(

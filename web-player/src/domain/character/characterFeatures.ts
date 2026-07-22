@@ -10,7 +10,7 @@ import {
 } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import type { CreatorFeatureLike } from "@/views/character-creator/utils/CharacterCreatorClassCoreUtils";
 
-export interface CharacterFeatureLike {
+interface CharacterFeatureLike {
   name: string;
   text?: string | null;
   optional?: boolean;
@@ -23,18 +23,23 @@ export interface CharacterFeatureLike {
   resolutionNotes?: string[];
 }
 
-export interface CharacterAutolevelLike {
+interface CharacterAutolevelLike {
   level: number | null;
   features?: CharacterFeatureLike[];
 }
 
-export interface CharacterClassDetailLike {
+interface CharacterClassDetailLike {
   id: string;
   spellAbility?: string | null;
   autolevels: CharacterAutolevelLike[];
 }
 
-export interface CharacterTraitLike {
+interface CharacterClassFeatureSelectionLike {
+  entry: { id: string; level: number; subclass?: string | null };
+  detail: CharacterClassDetailLike;
+}
+
+interface CharacterTraitLike {
   name: string;
   text: string;
   scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>;
@@ -45,18 +50,18 @@ export interface CharacterTraitLike {
   resolutionNotes?: string[];
 }
 
-export interface CharacterRaceDetailLike {
+interface CharacterRaceDetailLike {
   id: string;
   spellAbility?: string | null;
   traits: CharacterTraitLike[];
 }
 
-export interface CharacterBackgroundDetailLike {
+interface CharacterBackgroundDetailLike {
   id: string;
   traits: CharacterTraitLike[];
 }
 
-export interface CharacterFeatDetailLike {
+interface CharacterFeatDetailLike {
   id?: string;
   name: string;
   text?: string | null;
@@ -64,13 +69,13 @@ export interface CharacterFeatDetailLike {
   parsed?: StructuredFeatMechanicsLike;
 }
 
-export interface CharacterLevelUpFeatDetailLike {
+interface CharacterLevelUpFeatDetailLike {
   level: number;
   featId: string;
   feat: CharacterFeatDetailLike;
 }
 
-export interface CharacterInvocationDetailLike {
+interface CharacterInvocationDetailLike {
   id: string;
   name: string;
   text: string;
@@ -85,12 +90,17 @@ export interface AppliedCharacterFeatureEntry extends ClassFeatureEntry {
   traitEffects?: unknown[];
   featMechanics?: StructuredFeatMechanicsLike;
   spellcastingAbility?: "str" | "dex" | "con" | "int" | "wis" | "cha" | null;
+  /** Progression rows for class/subclass features advance with this owning class, not total level. */
+  progressionLevel?: number;
 }
 
 interface BuildAppliedCharacterFeaturesArgs {
   charData: CharacterData | null | undefined;
   characterLevel: number;
+  /** Level in the class represented by classDetail; defaults to characterLevel for legacy callers. */
+  classLevel?: number;
   classDetail: CharacterClassDetailLike | null;
+  classSelections?: CharacterClassFeatureSelectionLike[];
   raceDetail: CharacterRaceDetailLike | null;
   backgroundDetail: CharacterBackgroundDetailLike | null;
   bgOriginFeatDetail: CharacterFeatDetailLike | null;
@@ -157,7 +167,9 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
   const {
     charData,
     characterLevel,
+    classLevel = characterLevel,
     classDetail,
+    classSelections,
     raceDetail,
     backgroundDetail,
     bgOriginFeatDetail,
@@ -167,7 +179,6 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
     invocationDetails,
   } = args;
 
-  const selectedSubclass = String(charData?.classes?.[0]?.subclass ?? "").trim();
   const chosenOptionals = new Set(charData?.chosenOptionals ?? []);
   const chosenOptionalsNormalized = new Set(
     Array.from(chosenOptionals)
@@ -194,17 +205,30 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
     dedupeKeys.add(dedupeKey);
   };
 
-  for (const autolevel of classDetail?.autolevels ?? []) {
-    if (autolevel.level == null || autolevel.level > characterLevel) continue;
-    for (const feature of autolevel.features ?? []) {
+  const selectedClasses = classSelections?.length
+    ? classSelections
+    : classDetail
+      ? [{ entry: { id: String(charData?.classes?.[0]?.id ?? classDetail.id), level: classLevel, subclass: charData?.classes?.[0]?.subclass }, detail: classDetail }]
+      : [];
+  let unarmoredDefenseClaimed = false;
+  let bestExtraAttack: { rank: number; feature: AppliedCharacterFeatureEntry } | null = null;
+  for (const selection of selectedClasses) {
+    const selectedSubclass = String(selection.entry.subclass ?? "").trim();
+    for (const autolevel of selection.detail.autolevels ?? []) {
+      if (autolevel.level == null || autolevel.level > selection.entry.level) continue;
+      for (const feature of autolevel.features ?? []) {
       if (!featureMatchesSubclass(feature, selectedSubclass) || isSubclassChoiceFeature(feature)) continue;
       const name = String(feature.name ?? "").trim();
       const text = cleanedText(feature.text);
       if (!name || !text) continue;
       const isSubclassFeature = Boolean(getFeatureSubclassName(feature));
       if (feature.optional && !isSubclassFeature && !isOptionalFeatureChosen(name, chosenOptionals, chosenOptionalsNormalized)) continue;
-      addFeature({
-        id: `class:${classDetail?.id}:${name}`,
+      if (/^unarmored defense$/i.test(name)) {
+        if (unarmoredDefenseClaimed) continue;
+        unarmoredDefenseClaimed = true;
+      }
+      const appliedFeature: AppliedCharacterFeatureEntry = {
+        id: `class:${selection.entry.id}:${selection.detail.id}:${name}`,
         kind: "class",
         name,
         text,
@@ -212,12 +236,22 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
         scalingRolls: feature.scalingRolls,
         classEffects: feature.effects,
         classChoices: feature.choices,
-        spellcastingAbility: normalizeAbilityKey(classDetail?.spellAbility),
+        spellcastingAbility: normalizeAbilityKey(selection.detail.spellAbility),
+        progressionLevel: selection.entry.level,
         resolution: feature.resolution,
         resolutionNotes: feature.resolutionNotes,
-      });
+      };
+      if (/^extra attack(?:\s|$)/i.test(name)) {
+        const numericRank = name.match(/^extra attack\s*\((\d+)\)$/i)?.[1];
+        const rank = numericRank ? Number(numericRank) : 1;
+        if (!bestExtraAttack || rank > bestExtraAttack.rank) bestExtraAttack = { rank, feature: appliedFeature };
+        continue;
+      }
+      addFeature(appliedFeature);
+      }
     }
   }
+  addFeature(bestExtraAttack?.feature);
 
   // A species' spellcasting ability is either a single fixed value (e.g. Aasimar: Cha) or a
   // player choice among several (e.g. elf lineages, tiefling legacies: Int/Wis/Cha) — the choice

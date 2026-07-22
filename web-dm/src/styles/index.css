@@ -159,3 +159,28 @@
     display: none;
   }
 }
+@media (max-width: 760px) {
+  .monster-form-modal {
+    height: calc(100vh - 8px) !important;
+    border-radius: 10px !important;
+  }
+
+  .monster-form-workspace {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .monster-form-nav {
+    display: none;
+  }
+
+  .monster-form-editor {
+    padding: 14px 12px 24px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .spell-form-workspace {
+    grid-template-columns: minmax(0, 1fr) !important;
+    padding: 14px 12px 24px !important;
+  }
+}

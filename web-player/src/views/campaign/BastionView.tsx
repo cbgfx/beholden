@@ -3,19 +3,17 @@ import { useParams } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { api, jsonInit } from "@/services/api";
 import { useWs } from "@/services/ws";
-import { IconBastions } from "@beholden/shared/icons";
-import { HeaderActionLink, Panel, SectionTitle, SubsectionLabel } from "@beholden/shared/ui";
-import { Select } from "@/ui/Select";
+import { Panel, SubsectionLabel } from "@beholden/shared/ui";
 import type { Bastion, BastionCompendiumResponse, BastionResponse, CompendiumFacility } from "./BastionViewShared";
 import {
-  accentButtonStyle,
   inputStyle,
   normalizeOrder,
-  orderListWithMaintain,
-  pillStyle,
   sortFacilitiesByLevelThenName,
 } from "./BastionViewShared";
 import { FacilityRows } from "./BastionFacilityRows";
+import { BastionHeader } from "./BastionHeader";
+import { BastionFacilityDetailPanel } from "./BastionFacilityDetailPanel";
+import { BastionOwnerFacilityGroup } from "./BastionOwnerFacilityGroup";
 
 export function BastionView() {
   const { id: campaignId, bastionId } = useParams<{ id: string; bastionId: string }>();
@@ -275,101 +273,30 @@ export function BastionView() {
   return (
     <div style={{ height: "100%", overflowY: "auto", background: C.bg, color: C.text }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 24px 48px" }}>
-        <HeaderActionLink to={campaignId ? `/campaigns/${campaignId}` : "/"} color={C.muted} padding="0 0 20px" borderRadius={0} fontSize="var(--fs-small)">
-          {"<- Back to Campaign"}
-        </HeaderActionLink>
-
-        {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: 16,
-            marginBottom: 20,
-            padding: "14px 16px 18px",
-            borderRadius: 14,
-            border: "1px solid rgba(251,191,36,0.20)",
-            background:
-              "radial-gradient(130% 160% at 0% 0%, rgba(251,191,36,0.16) 0%, rgba(56,182,255,0.08) 45%, rgba(255,255,255,0.02) 100%)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
-          }}
-        >
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 40,
-                  height: 40,
-                  borderRadius: 10,
-                  border: `1px solid rgba(251,191,36,0.52)`,
-                  background: "linear-gradient(180deg, rgba(251,191,36,0.26), rgba(251,191,36,0.10))",
-                  color: C.colorGold,
-                  flexShrink: 0,
-                  boxShadow: "0 0 0 1px rgba(0,0,0,0.28), 0 10px 24px rgba(251,191,36,0.18)",
-                }}
-              >
-                <IconBastions size={22} />
-              </span>
-              <SectionTitle
-                color={C.text}
-                style={{
-                  textTransform: "none",
-                  letterSpacing: -0.2,
-                  fontSize: "clamp(2.15rem, 2.5vw, 2.65rem)",
-                  fontWeight: 900,
-                  marginBottom: 0,
-                  lineHeight: 1.05,
-                  textShadow: "0 2px 16px rgba(56,182,255,0.15)",
-                }}
-              >
-                {bastion.name}
-              </SectionTitle>
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-              <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>Level {bastion.level}</span>
-              <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>|</span>
-              <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>Slots {playerSpecialUsed}/{ownSpecialSlots}</span>
-              <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>|</span>
-              <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>Hirelings {hirelingsTotal}</span>
-              <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>|</span>
-              <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>
-                Defenders {defendersTotal} ({bastion.defendersArmed ?? 0} armed / {bastion.defendersUnarmed ?? 0} unarmed)
-              </span>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-            {saving && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, opacity: 0.6 }}>Saving...</span>}
-            {!saving && saveMessage && (
-              <span style={{ fontSize: "var(--fs-tiny)", color: saveMessage.ok ? C.muted : C.colorPinkRed }}>
-                {saveMessage.text}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => mutateBastionAndSave((b) => {
-                const nextMaintain = !b.maintainOrder;
-                return {
-                  ...b,
-                  maintainOrder: nextMaintain,
-                  facilities: nextMaintain
-                    ? b.facilities.map((facility) => (
-                      facility.source === "player" && facility.ownerPlayerId && editableOwnerIdSet.has(facility.ownerPlayerId)
-                        ? { ...facility, order: "Maintain" }
-                        : facility
-                    ))
-                    : b.facilities,
-                };
-              })}
-              style={pillStyle(bastion.maintainOrder)}
-            >
-              Maintain
-            </button>
-          </div>
-        </div>
+        <BastionHeader
+          bastion={bastion}
+          campaignId={campaignId}
+          playerSpecialUsed={playerSpecialUsed}
+          ownSpecialSlots={ownSpecialSlots}
+          hirelingsTotal={hirelingsTotal}
+          defendersTotal={defendersTotal}
+          saving={saving}
+          saveMessage={saveMessage}
+          onToggleMaintain={() => mutateBastionAndSave((b) => {
+            const nextMaintain = !b.maintainOrder;
+            return {
+              ...b,
+              maintainOrder: nextMaintain,
+              facilities: nextMaintain
+                ? b.facilities.map((facility) => (
+                  facility.source === "player" && facility.ownerPlayerId && editableOwnerIdSet.has(facility.ownerPlayerId)
+                    ? { ...facility, order: "Maintain" }
+                    : facility
+                ))
+                : b.facilities,
+            };
+          })}
+        />
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
@@ -385,110 +312,29 @@ export function BastionView() {
               }}
             >
               <div>
-                {editableOwnerIds.map((ownerId) => {
-                  const owner = bastion.assignedPlayers?.find((e) => e.id === ownerId);
-                  const rows = playerFacilities.filter((f) => f.ownerPlayerId === ownerId);
-                  const ownerOptions = availableOptionsByOwner.get(ownerId) ?? [];
-                  return (
-                    <div key={`owner:${ownerId}`} style={{ marginBottom: 16 }}>
-                      <div style={{ marginBottom: 8, fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted }}>
-                        {owner?.characterName || "Assigned Character"}
-                        <span style={{ fontWeight: 400, marginLeft: 6 }}>Lv {owner?.level ?? 1}</span>
-                      </div>
-                      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                        <Select
-                          value={addKeyByOwner[ownerId] ?? ""}
-                          onChange={(e) => setAddKeyByOwner((prev) => ({ ...prev, [ownerId]: e.target.value }))}
-                          style={{ flex: 1 }}
-                        >
-                          <option value="">Add facility...</option>
-                          {ownerOptions.map((f) => (
-                            <option key={`${ownerId}:${f.key}`} value={f.key}>
-                              {f.name} ({f.type}, lvl {f.minimumLevel})
-                            </option>
-                          ))}
-                        </Select>
-                        <button
-                          onClick={() => addPlayerFacility(ownerId)}
-                          disabled={!(addKeyByOwner[ownerId] ?? "")}
-                          style={accentButtonStyle(Boolean(addKeyByOwner[ownerId] ?? ""))}
-                        >
-                          Add
-                        </button>
-                      </div>
-                      <FacilityRows
-                        rows={rows}
-                        onUpdate={updateFacility}
-                        onRemove={removePlayerFacility}
-                        facilitiesByKey={facilitiesByKey}
-                        selectedFacilityId={selectedFacility?.id ?? null}
-                        onSelectFacility={(facilityId) => setSelectedFacilityId(facilityId)}
-                      />
-                    </div>
-                  );
-                })}
+                {editableOwnerIds.map((ownerId) => (
+                  <BastionOwnerFacilityGroup
+                    key={`owner:${ownerId}`}
+                    ownerId={ownerId}
+                    owner={bastion.assignedPlayers?.find((e) => e.id === ownerId)}
+                    rows={playerFacilities.filter((f) => f.ownerPlayerId === ownerId)}
+                    ownerOptions={availableOptionsByOwner.get(ownerId) ?? []}
+                    addKey={addKeyByOwner[ownerId] ?? ""}
+                    onAddKeyChange={(value) => setAddKeyByOwner((prev) => ({ ...prev, [ownerId]: value }))}
+                    onAdd={() => addPlayerFacility(ownerId)}
+                    onUpdate={updateFacility}
+                    onRemove={removePlayerFacility}
+                    facilitiesByKey={facilitiesByKey}
+                    selectedFacilityId={selectedFacility?.id ?? null}
+                    onSelectFacility={(facilityId) => setSelectedFacilityId(facilityId)}
+                  />
+                ))}
               </div>
-              <Panel style={{ padding: "10px 12px", minHeight: 220 }}>
-                <SubsectionLabel>Facility Details</SubsectionLabel>
-                {selectedFacility ? (
-                  (() => {
-                    const definition = selectedFacility.definition ?? facilitiesByKey.get(selectedFacility.facilityKey) ?? null;
-                    const owner = selectedFacility.ownerPlayerId
-                      ? bastion.assignedPlayers?.find((entry) => entry.id === selectedFacility.ownerPlayerId)
-                      : null;
-                    return (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        <div style={{ fontSize: "var(--fs-medium)", fontWeight: 800, color: C.text }}>
-                          {definition?.name ?? selectedFacility.facilityKey}
-                        </div>
-                        <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
-                          {definition ? `${definition.type === "special" ? "Special" : "Basic"} facility` : "Facility"}
-                          {definition ? ` - Min level ${definition.minimumLevel}` : ""}
-                        </div>
-                        {owner ? (
-                          <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
-                            Owner: {owner.characterName} (Lv {owner.level})
-                          </div>
-                        ) : null}
-                        {definition?.prerequisite ? (
-                          <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
-                            Prerequisite: {definition.prerequisite}
-                          </div>
-                        ) : null}
-                        {definition?.hirelings != null ? (
-                          <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
-                            Hirelings: {definition.hirelings}
-                          </div>
-                        ) : null}
-                        {definition?.orders?.length ? (
-                          <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
-                            Orders: {orderListWithMaintain(definition.orders).join(", ")}
-                          </div>
-                        ) : null}
-                        <div
-                          style={{
-                            marginTop: 4,
-                            border: `1px solid ${C.panelBorder}`,
-                            borderRadius: 8,
-                            padding: "10px 12px",
-                            background: "rgba(255,255,255,0.02)",
-                            fontSize: "var(--fs-small)",
-                            color: C.muted,
-                            lineHeight: 1.6,
-                            whiteSpace: "pre-wrap",
-                          }}
-                        >
-                          {definition?.description?.trim() || "No compendium description available for this facility."}
-                        </div>
-                      </div>
-                    );
-                  })()
-                ) : (
-                  <div style={{ fontSize: "var(--fs-small)", color: C.muted, opacity: 0.75 }}>
-                    Select a facility on the left to view its description and details.
-                  </div>
-                )}
-              </Panel>
+              <BastionFacilityDetailPanel
+                selectedFacility={selectedFacility}
+                facilitiesByKey={facilitiesByKey}
+                assignedPlayers={bastion.assignedPlayers}
+              />
             </div>
           </Panel>
           {/* DM Extra Facilities */}

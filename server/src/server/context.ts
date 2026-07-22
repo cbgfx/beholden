@@ -9,7 +9,7 @@ import type path from "node:path";
 
 export type Id = string;
 
-export interface RuntimeConfig {
+interface RuntimeConfig {
   appName: string;
   host: string;
   port: number;

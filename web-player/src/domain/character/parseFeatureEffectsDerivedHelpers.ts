@@ -33,7 +33,7 @@ export function isEffectActive(effect: FeatureEffect, opts?: EffectStateContext)
   return true;
 }
 
-export function hasWeaponProperty(item: WeaponLike | null | undefined, code: string): boolean {
+function hasWeaponProperty(item: WeaponLike | null | undefined, code: string): boolean {
   return (item?.properties ?? []).some((property) => String(property ?? "").trim().toUpperCase() === code.toUpperCase());
 }
 
@@ -50,12 +50,12 @@ export function isRangedWeaponLike(item: WeaponLike | null | undefined): boolean
   return /ranged/i.test(String(item?.type ?? ""));
 }
 
-export function isCrossbowWeaponLike(item: WeaponLike | null | undefined): boolean {
+function isCrossbowWeaponLike(item: WeaponLike | null | undefined): boolean {
   const base = String(item?.proficiency ?? "").split(",").at(-1)?.trim() ?? "";
   return /crossbow/i.test(base);
 }
 
-export function isLongbowOrShortbowLike(item: WeaponLike | null | undefined): boolean {
+function isLongbowOrShortbowLike(item: WeaponLike | null | undefined): boolean {
   const base = String(item?.proficiency ?? "").split(",").at(-1)?.trim() ?? "";
   return /^(?:longbow|shortbow)$/i.test(base);
 }
@@ -102,7 +102,7 @@ export function weaponMatchesFilters(
   });
 }
 
-export function clampScalingValue(value: number, scaling: Extract<ScalingValue, { min?: number; max?: number }>): number {
+function clampScalingValue(value: number, scaling: Extract<ScalingValue, { min?: number; max?: number }>): number {
   const withMin = scaling.min != null ? Math.max(scaling.min, value) : value;
   return scaling.max != null ? Math.min(scaling.max, withMin) : withMin;
 }

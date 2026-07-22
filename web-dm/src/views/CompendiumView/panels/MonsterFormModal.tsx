@@ -91,17 +91,20 @@ export function MonsterFormModal(props: {
         inset: 0,
         zIndex: 1000,
         display: "flex",
-        alignItems: "flex-start",
+        alignItems: "stretch",
         justifyContent: "center",
         background: theme.colors.scrim,
         overflowY: "auto",
-        padding: "40px 16px",
+        padding: 12,
       }}
     >
       <form
+        className="monster-form-modal"
         onSubmit={handleSubmit}
         style={{
-          width: "min(800px, 100%)",
+          width: "min(1440px, 100%)",
+          height: "calc(100vh - 24px)",
+          margin: "0 auto",
           background: theme.colors.modalBg,
           border: `1px solid ${theme.colors.panelBorder}`,
           borderRadius: 16,
@@ -131,24 +134,39 @@ export function MonsterFormModal(props: {
           </button>
         </div>
 
-        <div
-          style={{
-            padding: "16px 20px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 20,
-            overflowY: "auto",
-            maxHeight: "calc(90vh - 120px)",
-          }}
-        >
-          <MonsterIdentitySection form={form} setField={setField} />
-          <MonsterCombatStatsSection form={form} setField={setField} />
-          <MonsterAbilityScoresSection form={form} setField={setField} />
-          <MonsterProficienciesSection form={form} setField={setField} />
-          <MonsterDamageConditionsSection form={form} setField={setField} />
-          <MonsterBlocksSection form={form} setField={setField} />
+        <div className="monster-form-workspace" style={{ display: "grid", gridTemplateColumns: "210px minmax(0, 1fr)", flex: 1, minHeight: 0 }}>
+          <nav className="monster-form-nav" style={{ padding: "18px 14px", borderRight: `1px solid ${theme.colors.panelBorder}`, overflowY: "auto" }}>
+            <div style={{ color: theme.colors.muted, fontSize: "var(--fs-tiny)", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Monster sections</div>
+            {[
+              ["identity", "Identity"], ["combat", "Combat Stats"], ["abilities", "Abilities"],
+              ["proficiencies", "Proficiencies"], ["defenses", "Defenses"], ["blocks", "Traits & Actions"],
+            ].map(([id, label]) => (
+              <a key={id} href={`#monster-form-${id}`} style={{ display: "block", padding: "8px 10px", borderRadius: 7, color: theme.colors.text, textDecoration: "none", fontSize: "var(--fs-small)", fontWeight: 650 }}>{label}</a>
+            ))}
+            <div style={{ marginTop: 18, color: theme.colors.muted, fontSize: "var(--fs-tiny)", lineHeight: 1.5 }}>
+              Fields are saved directly as Grand Monster data. Empty optional fields are omitted.
+            </div>
+          </nav>
+          <div
+            className="monster-form-editor"
+            style={{
+              padding: "20px 26px 32px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 26,
+              overflowY: "auto",
+              scrollBehavior: "smooth",
+            }}
+          >
+            <section id="monster-form-identity"><MonsterIdentitySection form={form} setField={setField} /></section>
+            <section id="monster-form-combat"><MonsterCombatStatsSection form={form} setField={setField} /></section>
+            <section id="monster-form-abilities"><MonsterAbilityScoresSection form={form} setField={setField} /></section>
+            <section id="monster-form-proficiencies"><MonsterProficienciesSection form={form} setField={setField} /></section>
+            <section id="monster-form-defenses"><MonsterDamageConditionsSection form={form} setField={setField} /></section>
+            <section id="monster-form-blocks"><MonsterBlocksSection form={form} setField={setField} /></section>
 
-          {error ? <div style={{ color: theme.colors.red, fontSize: "var(--fs-subtitle)" }}>{error}</div> : null}
+            {error ? <div style={{ color: theme.colors.red, fontSize: "var(--fs-subtitle)" }}>{error}</div> : null}
+          </div>
         </div>
 
         <div

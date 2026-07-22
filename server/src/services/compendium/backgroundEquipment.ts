@@ -1,4 +1,4 @@
-export type BackgroundEquipmentEntry =
+type BackgroundEquipmentEntry =
   | { kind: "item"; name: string; quantity: number }
   | { kind: "currency"; denomination: "PP" | "GP" | "EP" | "SP" | "CP"; amount: number };
 

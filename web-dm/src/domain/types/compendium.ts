@@ -1,6 +1,6 @@
 export type JsonRecord = Record<string, unknown>;
 
-export type MonsterStatValue = number | string | null | JsonRecord;
+type MonsterStatValue = number | string | null | JsonRecord;
 
 export type MonsterTextEntry = {
   name?: string;

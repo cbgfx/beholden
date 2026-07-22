@@ -1,5 +1,6 @@
 export * from "./actors";
 export * from "./conditions";
+export * from "./characterClasses";
 export * from "./items";
 export * from "./monsters";
 export * from "./compendium/expandSchool";

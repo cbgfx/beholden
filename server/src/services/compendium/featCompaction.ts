@@ -12,7 +12,7 @@ function text(value: unknown): string | undefined {
   return trimmed || undefined;
 }
 
-export type CanonicalFeatCategory = "O" | "G" | "E" | "F";
+type CanonicalFeatCategory = "O" | "G" | "E" | "F";
 
 const CATEGORY_CODES: Record<string, CanonicalFeatCategory> = {
   O: "O", Origin: "O",
@@ -25,7 +25,7 @@ const CATEGORY_LABELS: Record<CanonicalFeatCategory, string> = {
   O: "Origin", G: "General", E: "Epic Boon", F: "Fighting Style",
 };
 
-export function canonicalFeatCategory(entry: JsonRecord): CanonicalFeatCategory {
+function canonicalFeatCategory(entry: JsonRecord): CanonicalFeatCategory {
   const explicit = text(entry.category ?? record(entry.mechanics).category);
   if (explicit && CATEGORY_CODES[explicit]) return CATEGORY_CODES[explicit];
   return "G";
@@ -79,7 +79,7 @@ function compactValue(value: unknown, key = ""): unknown {
   return value;
 }
 
-export function compactFeatMechanics(mechanics: JsonRecord): JsonRecord {
+function compactFeatMechanics(mechanics: JsonRecord): JsonRecord {
   const {
     category: _category,
     source: _source,

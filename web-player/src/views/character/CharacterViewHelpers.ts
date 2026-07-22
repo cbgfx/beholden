@@ -12,6 +12,7 @@ import {
 import { getPolymorphCondition } from "@beholden/shared/domain";
 import { getEquipState, type InventoryItem } from "@/views/character/CharacterInventory";
 import { resolveStoredCompendiumClassId } from "@/domain/character/classIds";
+import { normalizeCharacterClassEntries } from "@beholden/shared/domain/characterClasses";
 import type { ExtraFeatAbilityApplication } from "@/domain/character/extraFeatAbilityScores";
 import type { PolymorphConditionData } from "./CharacterViewTypes";
 
@@ -21,6 +22,7 @@ export {
   type Character,
   type ClassCounterDef,
   type ClassRestDetail,
+  type CharacterClassDetailSelection,
   type LoreTraitDetail,
   type RaceFeatureDetail,
   type BackgroundFeatureDetail,
@@ -36,6 +38,7 @@ export {
 } from "./CharacterViewTypes";
 
 export {
+  coalesceSharedClassResources,
   collectClassResources,
   mergeResourceState,
   shouldResetOnRest,
@@ -243,21 +246,10 @@ export function normalizeCharacterClasses(
   rawData: CharacterData | null | undefined,
 ): CharacterClassEntry[] {
   const entries = Array.isArray(rawData?.classes) ? rawData.classes : [];
-  return entries
-    .map((entry, index) => {
-      const level = Math.max(1, Math.floor(Number(entry?.level ?? NaN) || 0));
-      const classId = resolveStoredCompendiumClassId(entry) || null;
-      const className = typeof entry?.className === "string" && entry.className.trim().length > 0 ? entry.className.trim() : null;
-      if (!classId && !className) return null;
-      return {
-        id: typeof entry?.id === "string" && entry.id.trim().length > 0 ? entry.id.trim() : `class_${index}_${classId ?? className ?? "entry"}`,
-        classId,
-        className,
-        level,
-        subclass: typeof entry?.subclass === "string" && entry.subclass.trim().length > 0 ? entry.subclass.trim() : null,
-      } satisfies CharacterClassEntry;
-    })
-    .filter(Boolean) as CharacterClassEntry[];
+  return normalizeCharacterClassEntries(entries.map((entry) => ({
+    ...entry,
+    classId: resolveStoredCompendiumClassId(entry) || null,
+  })));
 }
 
 export function getPrimaryCharacterClassEntry(

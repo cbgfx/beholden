@@ -51,11 +51,14 @@ function renameLegacyKinds(value: unknown): boolean {
  */
 export function normalizeLegacyCompendiumEffectKinds(db: Db): void {
   for (const table of COMPENDIUM_TABLES) {
+    // classes/races/backgrounds/feats can have two rows sharing the same `id` (one per
+    // ruleset, composite PRIMARY KEY (id, ruleset)) -- always scope the UPDATE by both
+    // columns, or this would silently overwrite both rulesets' rows with one's content.
     const rows = db
-      .prepare(`SELECT id, data_json FROM ${table} WHERE data_json LIKE '%legacy_%'`)
-      .all() as Array<{ id: string; data_json: string }>;
+      .prepare(`SELECT id, ruleset, data_json FROM ${table} WHERE data_json LIKE '%legacy_%'`)
+      .all() as Array<{ id: string; ruleset: string; data_json: string }>;
     if (rows.length === 0) continue;
-    const update = db.prepare(`UPDATE ${table} SET data_json = ? WHERE id = ?`);
+    const update = db.prepare(`UPDATE ${table} SET data_json = ? WHERE id = ? AND ruleset = ?`);
     for (const row of rows) {
       let parsed: unknown;
       try {
@@ -64,7 +67,7 @@ export function normalizeLegacyCompendiumEffectKinds(db: Db): void {
         continue;
       }
       if (!renameLegacyKinds(parsed)) continue;
-      update.run(JSON.stringify(parsed), row.id);
+      update.run(JSON.stringify(parsed), row.id, row.ruleset);
     }
   }
 }

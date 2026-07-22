@@ -1,6 +1,7 @@
 import React from "react";
 import { C } from "@/lib/theme";
 import { normalizeChoiceKey } from "../utils/CharacterCreatorUtils";
+import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
 import { ABILITY_LABELS, ALL_LANGUAGES, ALL_SKILLS, ALL_TOOLS } from "../constants/CharacterCreatorConstants";
 import { NavButtons } from "../shared/CharacterCreatorParts";
 import { detailBoxStyle, headingStyle, labelStyle, profChipStyle, sourceTagStyle } from "../shared/CharacterCreatorStyles";
@@ -422,7 +423,7 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
 
       {!hasAnything && classFeatureProficiencyChoices.length === 0 && <p style={{ color: C.muted, fontSize: "var(--fs-medium)" }}>There are no skill, language, mastery, or expertise choices at this level.</p>}
       <NavButtons
-        step={5}
+        step={7}
         onBack={onBack}
         onNext={onNext}
         nextDisabled={
@@ -453,4 +454,59 @@ export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
   );
 
   return { main, side };
+}
+
+export function renderSkillsFromContext(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
+  return renderSkillsStep({
+    form: ctx.form,
+    setForm: ctx.setForm,
+    classDetailName: ctx.classDetail?.name ?? null,
+    bgDetailName: ctx.bgDetail?.name ?? null,
+    skillList: ctx.step5SkillList,
+    numSkills: ctx.step5NumSkills,
+    classToolProficiency: ctx.step5ClassToolProficiency,
+    bgLangChoice: ctx.step5BgLangChoice,
+    coreLanguageChoice: ctx.step5CoreLanguageChoice,
+    classLanguageChoice: ctx.step5ClassLanguageChoice,
+    classFeatChoices: ctx.step5ClassFeatChoices,
+    classExpertiseChoices: ctx.step5ClassExpertiseChoices,
+    classSelectedFeatChoices: ctx.step5ChoiceState.classSelectedFeatChoices,
+    selectedClassFeatEntries: ctx.step5ChoiceState.selectedClassFeatEntries,
+    bgFeatChoices: ctx.step5ChoiceState.bgFeatChoices,
+    raceFeatChoices: ctx.step5ChoiceState.raceFeatChoices,
+    classFeatureProficiencyChoices: ctx.selectedClassFeatureProficiencyChoices.map((choice) => ({
+      key: `classfeature:${choice.id}`,
+      sourceLabel: choice.source.name,
+      category: choice.choice?.optionCategory as "skill" | "tool" | "language" | "saving_throw",
+      count: choice.choice?.count.kind === "fixed" ? choice.choice.count.value : 0,
+      options: choice.choice?.options,
+    })).filter((choice) => choice.count > 0),
+    weaponMasteryChoice: ctx.step5WeaponMasteryChoice,
+    weaponOptions: ctx.step5WeaponOptions,
+    chosenFeatureChoices: ctx.form.chosenFeatureChoices,
+    setChosenFeatureChoices: (updater) =>
+      ctx.setForm((prev) => ({
+        ...prev,
+        chosenFeatureChoices: typeof updater === "function" ? updater(prev.chosenFeatureChoices) : updater,
+      })),
+    choiceState: {
+      missingClassFeatChoices: ctx.step5ChoiceState.missingClassFeatChoices,
+      missingClassExpertiseChoices: ctx.step5ChoiceState.missingClassExpertiseChoices,
+      missingFeatOptionSelections: ctx.step5ChoiceState.missingFeatOptionSelections,
+      missingCoreLanguages: ctx.step5ChoiceState.missingCoreLanguages,
+      missingClassLanguages: ctx.step5ChoiceState.missingClassLanguages,
+      missingWeaponMasteries: ctx.step5ChoiceState.missingWeaponMasteries,
+      missingClassToolChoices: ctx.step5ChoiceState.missingClassToolChoices ?? false,
+      hasAnything: ctx.step5ChoiceState.hasAnything,
+      takenSkillKeys: ctx.step5ChoiceState.takenSkillKeys,
+      takenToolKeys: ctx.step5ChoiceState.takenToolKeys,
+      takenLanguageKeys: ctx.step5ChoiceState.takenLanguageKeys,
+      takenExpertiseKeys: ctx.step5ChoiceState.takenExpertiseKeys,
+    },
+    getClassFeatChoiceLabel: ctx.getClassFeatChoiceLabel,
+    getClassFeatOptionLabel: ctx.getClassFeatOptionLabel,
+    sideSummary: ctx.sideSummary,
+    onBack: () => ctx.setStep(6),
+    onNext: () => ctx.setStep(8),
+  });
 }

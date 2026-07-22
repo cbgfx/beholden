@@ -199,39 +199,47 @@ CREATE TABLE IF NOT EXISTS compendium_class_talents (
   data_json TEXT NOT NULL
 );
 
+-- id alone is NOT unique across rulesets: 2014 and 2024 content generate the same id for
+-- same-named classes/species/backgrounds/feats (e.g. both produce "c_barbarian"), and these
+-- 4 categories -- unlike items/monsters/spells -- must keep fully independent rows per
+-- ruleset. The primary key is composite so both can coexist safely.
 CREATE TABLE IF NOT EXISTS compendium_classes (
-  id TEXT PRIMARY KEY,
+  id TEXT NOT NULL,
   ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   name TEXT NOT NULL,
   name_key TEXT,
   hd INTEGER,
-  data_json TEXT NOT NULL
+  data_json TEXT NOT NULL,
+  PRIMARY KEY (id, ruleset)
 );
 
 CREATE TABLE IF NOT EXISTS compendium_races (
-  id TEXT PRIMARY KEY,
+  id TEXT NOT NULL,
   ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   name TEXT NOT NULL,
   name_key TEXT,
   size TEXT,
   speed INTEGER,
-  data_json TEXT NOT NULL
+  data_json TEXT NOT NULL,
+  PRIMARY KEY (id, ruleset)
 );
 
 CREATE TABLE IF NOT EXISTS compendium_backgrounds (
-  id TEXT PRIMARY KEY,
+  id TEXT NOT NULL,
   ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   name TEXT NOT NULL,
   name_key TEXT,
-  data_json TEXT NOT NULL
+  data_json TEXT NOT NULL,
+  PRIMARY KEY (id, ruleset)
 );
 
 CREATE TABLE IF NOT EXISTS compendium_feats (
-  id TEXT PRIMARY KEY,
+  id TEXT NOT NULL,
   ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   name TEXT NOT NULL,
   name_key TEXT,
-  data_json TEXT NOT NULL
+  data_json TEXT NOT NULL,
+  PRIMARY KEY (id, ruleset)
 );
 
 CREATE TABLE IF NOT EXISTS compendium_deck_cards (
@@ -285,6 +293,7 @@ CREATE TABLE IF NOT EXISTS user_characters (
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL DEFAULT '',
   player_name TEXT NOT NULL DEFAULT '',
+  ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   class_name TEXT NOT NULL DEFAULT '',
   species TEXT NOT NULL DEFAULT '',
   level INTEGER NOT NULL DEFAULT 1,

@@ -3,8 +3,10 @@ import { Select } from "@/ui/Select";
 import { C } from "@/lib/theme";
 import { NavButtons } from "../shared/CharacterCreatorParts";
 import { headingStyle, inputStyle, labelStyle } from "../shared/CharacterCreatorStyles";
+import type { FormState } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
+import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
 
-export function renderIdentityStep({
+function renderIdentityStep({
   form,
   setField,
   portraitInputRef,
@@ -159,9 +161,23 @@ export function renderIdentityStep({
           </div>
         </div>
       </div>
-      <NavButtons step={9} onBack={onBack} onNext={onNext} nextDisabled={!String(form.characterName ?? "").trim()} />
+      <NavButtons step={10} onBack={onBack} onNext={onNext} nextDisabled={!String(form.characterName ?? "").trim()} />
     </div>
   );
 
   return { main, side };
+}
+
+export function renderIdentityFromContext(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
+  return renderIdentityStep({
+    form: ctx.form as unknown as Record<string, unknown> & { [key: string]: unknown },
+    setField: (key, value) => ctx.setField(key as keyof FormState, value as never),
+    portraitInputRef: ctx.portraitInputRef,
+    portraitPreview: ctx.portraitPreview,
+    setPortraitFile: ctx.setPortraitFile,
+    setPortraitPreview: ctx.setPortraitPreview,
+    onBack: () => ctx.setStep(9),
+    onNext: () => ctx.setStep(11),
+    side: ctx.sideSummary,
+  });
 }

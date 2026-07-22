@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { collectClassResources, isSpellLinkedResource, mergeResourceState } from "./CharacterViewResourceHelpers";
+import { coalesceSharedClassResources, collectClassResources, isSpellLinkedResource, mergeResourceState } from "./CharacterViewResourceHelpers";
 import type { ClassRestDetail } from "./CharacterViewTypes";
 import type { ResourceCounter } from "./CharacterSheetTypes";
 
@@ -40,6 +40,19 @@ describe("collectClassResources", () => {
     ]);
     expect(collectClassResources(classDetail, 3)).toEqual([
       { key: "rage", name: "Rage", current: 3, max: 3, reset: "L", restoreAmount: "all" },
+    ]);
+  });
+});
+
+describe("coalesceSharedClassResources", () => {
+  it("uses one Channel Divinity pool with the highest explicitly granted use count", () => {
+    expect(coalesceSharedClassResources([
+      { key: "class:cleric:channel_divinity", name: "Channel Divinity", current: 2, max: 2, reset: "S", restoreAmount: "all" },
+      { key: "class:paladin:channel_divinity", name: "Channel Divinity", current: 1, max: 1, reset: "S", restoreAmount: "all" },
+      { key: "class:paladin:lay_on_hands", name: "Lay on Hands", current: 15, max: 15, reset: "L", restoreAmount: "all" },
+    ])).toEqual([
+      { key: "class:paladin:lay_on_hands", name: "Lay on Hands", current: 15, max: 15, reset: "L", restoreAmount: "all" },
+      { key: "class:shared:channel_divinity", name: "Channel Divinity", current: 2, max: 2, reset: "S", restoreAmount: "all" },
     ]);
   });
 });

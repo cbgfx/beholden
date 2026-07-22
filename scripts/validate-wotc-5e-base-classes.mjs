@@ -1,0 +1,76 @@
+import fs from "node:fs";
+import path from "node:path";
+
+const input = process.argv[2];
+if (!input) throw new Error("Usage: node scripts/validate-wotc-5e-base-classes.mjs <compendium.json>");
+const document = JSON.parse(fs.readFileSync(path.resolve(input), "utf8"));
+const classes = document.classes ?? [];
+const byName = new Map(classes.map((entry) => [entry.name, entry]));
+const fail = (message) => { throw new Error(message); };
+const requireFact = (condition, message) => { if (!condition) fail(message); };
+
+requireFact(classes.length === 13, `Expected 13 classes, found ${classes.length}.`);
+for (const cls of classes) {
+  requireFact(cls.primaryAbility, `${cls.name}: missing primaryAbility.`);
+  requireFact(cls.multiclass?.requirements, `${cls.name}: missing multiclass requirements.`);
+}
+
+for (const name of ["Bard", "Cleric", "Druid", "Paladin", "Ranger", "Sorcerer", "Warlock", "Wizard", "Artificer"]) {
+  const cls = byName.get(name);
+  requireFact(cls?.spellcasting?.list === `sl_${name.toLowerCase()}`, `${name}: missing canonical spell-list access.`);
+  requireFact(cls.levels.some((level) => level.spellSlots), `${name}: missing spell-slot progression.`);
+  requireFact(cls.levels.every((level) => level.level === 1 || level.spellSlots || name === "Paladin" || name === "Ranger"), `${name}: incomplete spell-slot progression.`);
+}
+
+for (const name of ["Barbarian", "Fighter", "Monk", "Rogue"]) {
+  const cls = byName.get(name);
+  requireFact(!cls?.spellcasting, `${name}: base class must not have spellcasting.`);
+  requireFact(cls.levels.every((level) => !level.spellSlots), `${name}: base class must not have spell slots.`);
+}
+
+for (const [className, expectedCount] of [["Fighter", 11], ["Paladin", 7], ["Ranger", 7]]) {
+  const cls = byName.get(className);
+  const choice = cls?.choices?.find((entry) => entry.id === `cc_${className.toLowerCase()}_fighting_style`);
+  requireFact(choice?.options?.length === expectedCount, `${className}: incomplete Fighting Style choice group.`);
+  for (const option of choice.options) {
+    requireFact(option.features.length === 1, `${className}: Fighting Style ${option.name} must resolve to one feature.`);
+    requireFact(cls.levels.flatMap((level) => level.features ?? []).some((feature) => feature.id === option.features[0]), `${className}: Fighting Style ${option.name} references a missing feature.`);
+  }
+}
+for (const [className, styleName] of [["Fighter", "Archery"], ["Paladin", "Defense"], ["Ranger", "Two-Weapon Fighting"]]) {
+  const feature = byName.get(className)?.levels.flatMap((level) => level.features ?? []).find((entry) => entry.name === `Fighting Style: ${styleName}` && !entry.subclass);
+  requireFact(feature?.resolution === "automatic" && feature.effects?.length > 0, `${className}: ${styleName} is not structured.`);
+}
+
+const wizard = byName.get("Wizard");
+requireFact(wizard.levels.every((level) => (level.features ?? []).some((feature) => feature.choices?.some((choice) => choice.mode === "spellbook"))), "Wizard: missing per-level spellbook acquisition.");
+
+const warlockPactBoon = classes.find((entry) => entry.name === "Warlock")?.choices?.find((entry) => entry.id === "cc_warlock_pact_boon");
+requireFact(warlockPactBoon?.options?.length === 4, "Warlock: Pact Boon must expose four mutually exclusive options.");
+
+const rangerChoices = classes.find((entry) => entry.name === "Ranger")?.choices ?? [];
+for (const id of [
+  "cc_ranger_favored_enemy",
+  "cc_ranger_natural_explorer",
+  "cc_ranger_primeval_awareness",
+  "cc_ranger_hide_in_plain_sight",
+]) {
+  requireFact(rangerChoices.find((entry) => entry.id === id)?.options?.length === 2, `Ranger: missing optional-feature replacement choice ${id}.`);
+}
+const barbarianPrimalKnowledge = byName.get("Barbarian")?.levels.flatMap((level) => level.features ?? []).filter((feature) => feature.name === "Primal Knowledge");
+requireFact(barbarianPrimalKnowledge?.length === 2 && barbarianPrimalKnowledge.every((feature) => feature.choices?.some((choice) => choice.kind === "proficiency" && choice.category === "skill")), "Barbarian: Primal Knowledge skill choices are incomplete.");
+
+const rangerFeatures = byName.get("Ranger")?.levels.flatMap((level) => level.features ?? []) ?? [];
+const canny = rangerFeatures.find((feature) => feature.name === "Deft Explorer: Canny");
+requireFact(canny?.choices?.some((choice) => choice.kind === "expertise") && canny.choices.some((choice) => choice.kind === "proficiency" && choice.category === "language" && choice.count === 2), "Ranger: Deft Explorer (Canny) choices are incomplete.");
+for (const name of ["Favored Enemy", "Favored Enemy Improvement (1)", "Favored Enemy Improvement (2)"]) {
+  requireFact(rangerFeatures.find((feature) => feature.name === name)?.choices?.some((choice) => choice.kind === "proficiency" && choice.category === "language"), `Ranger: ${name} is missing its language choice.`);
+}
+const primalAwareness = rangerFeatures.find((feature) => feature.name === "Primal Awareness");
+requireFact(primalAwareness?.effects?.filter((effect) => effect.type === "spell_grant").length === 5, "Ranger: Primal Awareness must grant five scaling spells.");
+requireFact(primalAwareness?.effects?.filter((effect) => effect.type === "resource_grant").length === 5, "Ranger: Primal Awareness must track one free cast per spell.");
+requireFact(byName.get("Warlock")?.multiclass?.spellcasting?.progression === "pact", "Warlock: missing Pact Magic contribution.");
+requireFact(byName.get("Paladin")?.spellcasting?.preparedFormula?.classLevelDivisor === 2, "Paladin: incorrect prepared-spell formula.");
+requireFact(byName.get("Cleric")?.spellcasting?.preparedFormula?.classLevelDivisor === 1, "Cleric: incorrect prepared-spell formula.");
+
+console.log("5e base-class enrichment validation passed.");

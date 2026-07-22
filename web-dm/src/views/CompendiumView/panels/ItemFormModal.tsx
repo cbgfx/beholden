@@ -1,199 +1,40 @@
-import React from "react";
-import { theme, withAlpha } from "@/theme/theme";
+import * as React from "react";
 import { api } from "@/services/api";
-import { Input } from "@/ui/Input";
-import { Select } from "@/ui/Select";
-import { TextArea } from "@/ui/TextArea";
-import { ITEM_RARITY_ORDER, KNOWN_ITEM_TYPES } from "@beholden/shared/domain";
-import { CheckRow, FieldGrid, FormField } from "@beholden/shared/ui";
+import { theme, withAlpha } from "@/theme/theme";
+import { Button } from "@/ui/Button";
+import { ItemBasicsView } from "./ItemFormBasics";
+import { ItemMechanicsView } from "./ItemFormMechanics";
+import { ItemSpellsView } from "./ItemFormSpells";
+import { buildItemPayload, emptyItemForm, itemToForm, type ItemForEdit, type ItemFormData } from "./ItemFormModel";
 
-export type ItemForEdit = {
-  id: string;
-  name: string;
-  rarity: string;
-  type: string;
-  attunement?: true | string;
-  magical?: true;
-  description: string | string[];
-  [key: string]: unknown;
-};
+export type { ItemForEdit } from "./ItemFormModel";
+type ItemFormTab = "basics" | "mechanics" | "spells";
+const TABS: Array<{ id: ItemFormTab; label: string }> = [{ id: "basics", label: "Basics" }, { id: "mechanics", label: "Mechanics" }, { id: "spells", label: "Spells" }];
 
-const RARITIES = ["", ...ITEM_RARITY_ORDER];
-const KNOWN_TYPES = [...KNOWN_ITEM_TYPES];
-
-type Props = {
-  item: ItemForEdit | null;
-  onClose: () => void;
-  onSaved: () => void;
-};
-
-const fieldLabelStyle: React.CSSProperties = {
-  textTransform: "uppercase",
-  letterSpacing: "0.06em",
-  fontSize: "var(--fs-small)",
-  fontWeight: 600,
-  color: theme.colors.muted,
-};
-
-const checkStyle: React.CSSProperties = {
-  fontSize: "var(--fs-subtitle)",
-  color: theme.colors.text,
-};
-
-
-export function ItemFormModal(props: Props) {
-  const onClose = props.onClose;
-  const isEdit = props.item != null;
-
-  const [name, setName] = React.useState(props.item?.name ?? "");
-  const [rarity, setRarity] = React.useState(props.item?.rarity ?? "");
-  const [type, setType] = React.useState(props.item?.type ?? "");
-  const [attunement, setAttunement] = React.useState(Boolean(props.item?.attunement));
-  const [magic, setMagic] = React.useState(props.item?.magical === true);
-  const [text, setText] = React.useState(() => {
-    const t = props.item?.description ?? "";
-    return Array.isArray(t) ? t.join("\n\n") : t;
-  });
-
-  const [saving, setSaving] = React.useState(false);
-  const [error, setError] = React.useState("");
-
-  React.useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim() || !rarity.trim() || !type.trim()) {
-      setError("Name, rarity, and type are required Grand facts.");
-      return;
-    }
-    setSaving(true);
-    setError("");
+export function ItemFormModal({ item, onClose, onSaved }: { item: ItemForEdit | null; onClose: () => void; onSaved: () => void }) {
+  const create = item == null;
+  const [form, setForm] = React.useState<ItemFormData>(() => item ? itemToForm(item) : emptyItemForm());
+  const [tab, setTab] = React.useState<ItemFormTab>("basics");
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const set = <K extends keyof ItemFormData>(key: K, value: ItemFormData[K]) => setForm((current) => ({ ...current, [key]: value }));
+  React.useEffect(() => { const escape = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); }; window.addEventListener("keydown", escape); return () => window.removeEventListener("keydown", escape); }, [onClose]);
+  async function save(event: React.FormEvent) {
+    event.preventDefault(); setBusy(true); setError(null);
     try {
-      const description = text.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
-      const body = {
-        ...(props.item ?? {}),
-        name: name.trim(),
-        rarity: rarity.trim(),
-        type: type.trim(),
-        ...(attunement ? { attunement: props.item?.attunement || true } : { attunement: undefined }),
-        ...(magic ? { magical: true } : { magical: undefined }),
-        description: description.length ? description : "",
-      };
-      if (isEdit) {
-        await api(`/api/compendium/items/${encodeURIComponent(props.item!.id)}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-      } else {
-        await api("/api/compendium/items", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-      }
-      props.onSaved();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Save failed.");
-    } finally {
-      setSaving(false);
-    }
+      if (!form.name.trim() || !form.type.trim() || !form.rarity.trim()) { setTab("basics"); throw new Error("Name, type, and rarity are required."); }
+      const body = buildItemPayload(form, item);
+      await api(create ? "/api/compendium/items" : `/api/compendium/items/${encodeURIComponent(item!.id)}`, { method: create ? "POST" : "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      onSaved();
+    } catch (reason) { setError(String((reason as Error)?.message ?? reason)); } finally { setBusy(false); }
   }
-
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1200,
-        background: withAlpha(theme.colors.shadowColor, 0.72),
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-      onClick={props.onClose}
-    >
-      <form
-        onSubmit={handleSubmit}
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: theme.colors.panelBg,
-          borderRadius: 16,
-          border: `1px solid ${theme.colors.panelBorder}`,
-          padding: 24,
-          width: 540,
-          maxWidth: "95vw",
-          maxHeight: "90vh",
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-          color: theme.colors.text,
-        }}
-      >
-        <div style={{ fontWeight: 800, fontSize: "var(--fs-title)" }}>
-          {isEdit ? `Edit: "${props.item!.name}"` : "New Item"}
-        </div>
-
-        <FormField label="Name *" labelStyle={fieldLabelStyle}>
-          <Input value={name} onChange={(e) => setName(e.target.value)} required />
-        </FormField>
-
-        <FieldGrid columns="1fr 1fr" gap={12}>
-          <FormField label="Rarity" labelStyle={fieldLabelStyle}>
-            <Select value={rarity} onChange={(e) => setRarity(e.target.value)}>
-              <option value="">None</option>
-              {RARITIES.filter(Boolean).map((r) => (
-                <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
-              ))}
-            </Select>
-          </FormField>
-          <FormField label="Type" labelStyle={fieldLabelStyle}>
-            <Input value={type} onChange={(e) => setType(e.target.value)} list="item-type-list" placeholder="e.g. Wondrous Item" />
-            <datalist id="item-type-list">
-              {KNOWN_TYPES.map((t) => <option key={t} value={t} />)}
-            </datalist>
-          </FormField>
-        </FieldGrid>
-
-        <div style={{ display: "flex", gap: 20 }}>
-          <CheckRow label="Requires Attunement" checked={attunement} onChange={setAttunement} style={checkStyle} />
-          <CheckRow label="Magic Item" checked={magic} onChange={setMagic} style={checkStyle} />
-        </div>
-
-        <FormField label="Description (blank lines = new paragraph)" labelStyle={fieldLabelStyle}>
-          <TextArea value={text} onChange={(e) => setText(e.target.value)} rows={8} style={{ resize: "vertical", fontFamily: "inherit", lineHeight: 1.5 }} />
-        </FormField>
-
-        {error && <div style={{ color: theme.colors.red, fontSize: "var(--fs-subtitle)" }}>{error}</div>}
-
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button type="button" onClick={props.onClose} style={btnStyle("secondary")}>Cancel</button>
-          <button type="submit" disabled={saving} style={btnStyle("primary")}>
-            {saving ? "Saving..." : isEdit ? "Save Changes" : "Create Item"}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-function btnStyle(variant: "primary" | "secondary"): React.CSSProperties {
-  const isPrimary = variant === "primary";
-  return {
-    padding: "8px 20px",
-    borderRadius: 10,
-    fontWeight: 700,
-    cursor: "pointer",
-    fontSize: "var(--fs-medium)",
-    border: `1px solid ${isPrimary ? theme.colors.accentPrimary : theme.colors.panelBorder}`,
-    background: isPrimary ? theme.colors.accentPrimary : "transparent",
-    color: isPrimary ? theme.colors.textDark : theme.colors.text,
-  };
+  const mechanicCount = Number(form.isWeapon) + Number(form.isArmor) + Number(form.usesEnabled) + form.modifiers.length + form.rolls.length;
+  return <div onClick={(event) => { if (event.target === event.currentTarget) onClose(); }} style={{ position: "fixed", inset: 0, zIndex: 1000, background: withAlpha("#000", .72), padding: 12 }}>
+    <form onSubmit={save} style={{ width: "min(1240px, 100%)", height: "calc(100vh - 24px)", margin: "auto", background: "rgba(10,18,33,.985)", border: "1px solid rgba(120,150,200,.2)", borderRadius: 14, boxShadow: "0 26px 80px rgba(0,0,0,.58)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <header style={{ padding: "14px 20px 0", borderBottom: `1px solid ${theme.colors.panelBorder}` }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: 12 }}><strong>{create ? "New Item" : `Edit: ${item!.name}`}</strong><button type="button" aria-label="Close" onClick={onClose} style={{ border: 0, background: "transparent", color: theme.colors.muted, fontSize: 24, cursor: "pointer" }}>×</button></div><nav aria-label="Item editor sections" style={{ display: "flex", gap: 4 }}>{TABS.map((entry) => { const active = tab === entry.id; const count = entry.id === "mechanics" ? mechanicCount : entry.id === "spells" ? form.spells.length : 0; return <button key={entry.id} type="button" onClick={() => setTab(entry.id)} style={{ border: 0, borderBottom: `2px solid ${active ? theme.colors.accentHighlight : "transparent"}`, background: active ? withAlpha(theme.colors.accentHighlight, .08) : "transparent", color: active ? theme.colors.accentHighlight : theme.colors.muted, padding: "9px 14px", cursor: "pointer", fontWeight: 750, borderRadius: "7px 7px 0 0" }}>{entry.label}{count ? ` · ${count}` : ""}</button>; })}</nav></header>
+      <main style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 16 }}>{tab === "basics" ? <ItemBasicsView form={form} set={set} /> : tab === "mechanics" ? <ItemMechanicsView form={form} set={set} /> : <ItemSpellsView form={form} set={set} />}</main>
+      {error ? <div style={{ margin: "0 20px 8px", padding: 8, color: theme.colors.red, background: withAlpha(theme.colors.red, .1), borderRadius: 8 }}>{error}</div> : null}
+      <footer style={{ padding: "12px 20px", borderTop: `1px solid ${theme.colors.panelBorder}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}><span style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{form.name.trim() || "Unnamed item"} · {form.type || "No type"}</span><div style={{ display: "flex", gap: 8 }}><Button type="button" variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button><Button type="submit" variant="primary" disabled={busy}>{busy ? "Saving…" : create ? "Create Item" : "Save Changes"}</Button></div></footer>
+    </form>
+  </div>;
 }

@@ -53,6 +53,7 @@ function findCreatorSubmissionProblem(args: {
   bgDetail: BgDetail | null;
 }): string | null {
   const { form, classDetail, raceDetail, bgDetail } = args;
+  if (!form.ruleset) return "Choose a ruleset before saving.";
   // These details drive derived proficiencies (armor/weapons/skills/etc). They're fetched
   // asynchronously from `form.classId`/`raceId`/`bgId`, so submitting before they resolve
   // would silently save an incomplete proficiency map — block until they're ready.

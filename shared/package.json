@@ -8,6 +8,7 @@
     "./domain": "./src/domain/index.ts",
     "./domain/actors": "./src/domain/actors.ts",
     "./domain/conditions": "./src/domain/conditions.ts",
+    "./domain/characterClasses": "./src/domain/characterClasses.ts",
     "./domain/monsters": "./src/domain/monsters.ts",
     "./domain/*": "./src/domain/*",
     "./icons": "./src/icons/index.tsx",

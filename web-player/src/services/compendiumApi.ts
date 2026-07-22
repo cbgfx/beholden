@@ -11,9 +11,17 @@ type CatalogFields =
   | "repeatable"
   | "abilities";
 
+export type Ruleset = "5e" | "5.5e";
+
 function withFields(path: string, fields: readonly CatalogFields[]): string {
   if (!fields.length) return path;
   const query = `fields=${encodeURIComponent(fields.join(","))}`;
+  return path.includes("?") ? `${path}&${query}` : `${path}?${query}`;
+}
+
+function withRuleset(path: string, ruleset: Ruleset | undefined): string {
+  if (!ruleset) return path;
+  const query = `ruleset=${encodeURIComponent(ruleset)}`;
   return path.includes("?") ? `${path}&${query}` : `${path}?${query}`;
 }
 
@@ -44,19 +52,19 @@ export type FeatCatalogRow = {
   abilities?: string[];
 };
 
-export function fetchClassCatalog(fields: readonly CatalogFields[] = ["id", "name", "hd"]) {
-  return api<ClassCatalogRow[]>(withFields("/api/compendium/classes", fields));
+export function fetchClassCatalog(ruleset?: Ruleset, fields: readonly CatalogFields[] = ["id", "name", "hd"]) {
+  return api<ClassCatalogRow[]>(withRuleset(withFields("/api/compendium/classes", fields), ruleset));
 }
 
-export function fetchRaceCatalog(fields: readonly CatalogFields[] = ["id", "name", "size", "speed"]) {
-  return api<RaceCatalogRow[]>(withFields("/api/compendium/races", fields));
+export function fetchRaceCatalog(ruleset?: Ruleset, fields: readonly CatalogFields[] = ["id", "name", "size", "speed"]) {
+  return api<RaceCatalogRow[]>(withRuleset(withFields("/api/compendium/races", fields), ruleset));
 }
 
-export function fetchBackgroundCatalog(fields: readonly CatalogFields[] = ["id", "name"]) {
-  return api<BackgroundCatalogRow[]>(withFields("/api/compendium/backgrounds", fields));
+export function fetchBackgroundCatalog(ruleset?: Ruleset, fields: readonly CatalogFields[] = ["id", "name"]) {
+  return api<BackgroundCatalogRow[]>(withRuleset(withFields("/api/compendium/backgrounds", fields), ruleset));
 }
 
-export function fetchFeatCatalog(fields: readonly CatalogFields[] = [
+export function fetchFeatCatalog(ruleset?: Ruleset, fields: readonly CatalogFields[] = [
   "id",
   "name",
   "category",
@@ -64,7 +72,7 @@ export function fetchFeatCatalog(fields: readonly CatalogFields[] = [
   "repeatable",
   "abilities",
 ]) {
-  return api<FeatCatalogRow[]>(withFields("/api/compendium/feats", fields));
+  return api<FeatCatalogRow[]>(withRuleset(withFields("/api/compendium/feats", fields), ruleset));
 }
 
 type JsonRecord = Record<string, any>;
@@ -114,6 +122,7 @@ export function classGrandToPlayerView(entry: JsonRecord): JsonRecord {
     spellcastingList: spellcasting.list ?? null,
     slotsReset: spellcasting.slotRecovery === "short_rest" ? "S" : "L",
     preparedSpellChanges: spellcasting.preparedSpellChanges ?? null,
+    preparedSpellFormula: spellcasting.preparedFormula ?? null,
     autolevels: (entry.levels ?? []).map((level: JsonRecord) => {
       const slotEntries = Object.entries(level.spellSlots ?? {}).map(([key, value]) => [Number(key), Number(value)] as const);
       const maxSlot = slotEntries.reduce((max, [slot]) => Math.max(max, slot), 0);
@@ -158,7 +167,6 @@ function traitsGrandToPlayerView(traits: JsonRecord[]): JsonRecord[] {
     id: trait.id,
     name: trait.name,
     text: trait.description,
-    category: trait.category,
     modifier: (trait.modifiers ?? []).map((modifier: JsonRecord) => String(modifier.value ?? "")),
     modifierDetails: trait.modifiers ?? [],
     scalingRolls: trait.scalingRolls ?? [],
@@ -171,13 +179,13 @@ function traitsGrandToPlayerView(traits: JsonRecord[]): JsonRecord[] {
   }));
 }
 
-export async function fetchGrandClassDetail<T>(id: string): Promise<T> {
-  const canonical = await api<JsonRecord>(`/api/compendium/canonical/classes/${encodeURIComponent(id)}`);
+export async function fetchGrandClassDetail<T>(id: string, ruleset: Ruleset): Promise<T> {
+  const canonical = await api<JsonRecord>(`/api/compendium/canonical/classes/${encodeURIComponent(id)}?ruleset=${ruleset}`);
   return classGrandToPlayerView(canonical) as T;
 }
 
-export async function fetchGrandSpeciesDetail<T>(id: string): Promise<T> {
-  const entry = await api<JsonRecord>(`/api/compendium/canonical/species/${encodeURIComponent(id)}`);
+export async function fetchGrandSpeciesDetail<T>(id: string, ruleset: Ruleset): Promise<T> {
+  const entry = await api<JsonRecord>(`/api/compendium/canonical/species/${encodeURIComponent(id)}?ruleset=${ruleset}`);
   return {
     id: entry.id,
     name: entry.name,
@@ -299,10 +307,10 @@ export function backgroundGrandToPlayerView<T>(entry: JsonRecord, resolvedFeats:
   } as T;
 }
 
-export async function fetchGrandBackgroundDetail<T>(id: string): Promise<T> {
-  const entry = await api<JsonRecord>(`/api/compendium/canonical/backgrounds/${encodeURIComponent(id)}`);
+export async function fetchGrandBackgroundDetail<T>(id: string, ruleset: Ruleset): Promise<T> {
+  const entry = await api<JsonRecord>(`/api/compendium/canonical/backgrounds/${encodeURIComponent(id)}?ruleset=${ruleset}`);
   const featIds = typeof entry.proficiencies?.feat === "string" ? [entry.proficiencies.feat] : [];
   const feats = await Promise.all(featIds.map((featId: string) =>
-    api<JsonRecord>(`/api/compendium/feats/${encodeURIComponent(featId)}`)));
+    api<JsonRecord>(`/api/compendium/feats/${encodeURIComponent(featId)}?ruleset=${ruleset}`)));
   return backgroundGrandToPlayerView<T>(entry, feats);
 }

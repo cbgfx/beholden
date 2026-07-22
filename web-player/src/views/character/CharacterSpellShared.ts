@@ -4,6 +4,8 @@ import { C } from "@/lib/theme";
 export interface FetchedSpellDetail {
   id: string;
   name: string;
+  ruleset?: "5e" | "5.5e";
+  source?: string | null;
   level: number | null;
   school?: string | null;
   time?: string | null;
@@ -16,7 +18,7 @@ export interface FetchedSpellDetail {
   classes?: string | null;
   damage?: { dice: string; type: string } | null;
   save?: string | null;
-  check?: string | string[] | null;
+  check?: string | null;
   rolls?: Array<{ formula: string; effect?: string | string[] | null; level?: number | null }>;
 }
 

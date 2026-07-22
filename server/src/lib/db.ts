@@ -8,6 +8,8 @@ import { ensureUserLastLoginColumn } from "./userLastLoginColumnMigration.js";
 import { ensureImageVersionColumns } from "./imageVersionColumnMigration.js";
 import { displayNoteTitle } from "./dbConverters.js";
 import { ensureCompendiumRulesetColumns } from "./compendiumRulesetColumnMigration.js";
+import { ensureCharacterRulesetColumn } from "./characterRulesetColumnMigration.js";
+import { ensureCompendiumCompositePrimaryKey } from "./compendiumPrimaryKeyMigration.js";
 
 export type Db = Database.Database;
 
@@ -22,6 +24,8 @@ export function openDb(dbPath: string): Db {
   db.pragma("journal_size_limit = 16777216");
   db.exec(SCHEMA_SQL);
   ensureCompendiumRulesetColumns(db);
+  ensureCompendiumCompositePrimaryKey(db);
+  ensureCharacterRulesetColumn(db);
   ensureTreasureEncounterColumn(db);
   ensureUserLastLoginColumn(db);
   ensureImageVersionColumns(db);

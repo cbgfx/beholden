@@ -19,6 +19,7 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   const MAX_FEAT_LOOKUP_IDS = 300;
   const FeatLookupBody = z.object({
     ids: z.array(z.string()).max(MAX_FEAT_LOOKUP_IDS),
+    ruleset: z.enum(["5e", "5.5e"]).optional(),
   });
   const parseRequestedFields = (value: unknown): Set<string> =>
     new Set(
@@ -29,6 +30,8 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     );
   const includeField = (fields: Set<string>, ...aliases: string[]) =>
     fields.size === 0 || aliases.some((alias) => fields.has(alias.toLowerCase()));
+  const parseRulesetFilter = (value: unknown): "5e" | "5.5e" | null =>
+    value === "5e" || value === "5.5e" ? value : null;
 
   /** Read-time projection: fill each background equipment item entry's display name from the
    * item catalog. Canonical records store only the item ID (one fact, one home) plus an optional
@@ -64,7 +67,13 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
       applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
       const id = requireParam(req, res, "id");
       if (!id) return;
-      const row = db.prepare(`SELECT data_json FROM ${table} WHERE id = ?`).get(id) as
+      // classes/species/backgrounds/feats have a composite PRIMARY KEY (id, ruleset) -- id
+      // alone no longer identifies a unique row. Every real caller of this route already has
+      // a locked character ruleset in scope (character creator, level-up), so this is safe
+      // to require rather than guess.
+      const ruleset = parseRulesetFilter(req.query.ruleset);
+      if (!ruleset) return res.status(400).json({ ok: false, message: "ruleset query param is required (5e or 5.5e)" });
+      const row = db.prepare(`SELECT data_json FROM ${table} WHERE id = ? AND ruleset = ?`).get(id, ruleset) as
         | { data_json: string }
         | undefined;
       if (!row) return res.status(404).json({ ok: false, message: "Not found" });
@@ -75,10 +84,13 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   }
 
   function buildFeatDetailFromRow(row: { id: string; name: string; data_json: string }) {
+    const presentation = parseStoredPresentationEntry("feats", row.data_json);
+    const canonical = parseStoredGrandEntry("feats", row.data_json);
     return {
-      ...parseStoredPresentationEntry("feats", row.data_json),
+      ...presentation,
       id: row.id,
       name: row.name,
+      ruleset: presentation.ruleset ?? canonical.ruleset,
     };
   }
 
@@ -87,11 +99,13 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     applySharedApiCacheHeaders(res);
     const fields = parseRequestedFields(req.query.fields);
     const wantHd = includeField(fields, "hd");
+    const ruleset = parseRulesetFilter(req.query.ruleset);
     const rows = db.prepare(
       `SELECT id, name${wantHd ? ", hd" : ""}
        FROM compendium_classes
+       ${ruleset ? "WHERE ruleset = ?" : ""}
        ORDER BY name COLLATE NOCASE`,
-    ).all() as Array<{ id: string; name: string; hd?: number | null }>;
+    ).all(...(ruleset ? [ruleset] : [])) as Array<{ id: string; name: string; hd?: number | null }>;
     res.json(rows.map((row) => {
       return {
         ...(includeField(fields, "id") ? { id: row.id } : {}),
@@ -107,11 +121,13 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     const fields = parseRequestedFields(req.query.fields);
     const wantSize = includeField(fields, "size");
     const wantSpeed = includeField(fields, "speed");
+    const ruleset = parseRulesetFilter(req.query.ruleset);
     const rows = db.prepare(
       `SELECT id, name${wantSize ? ", size" : ""}${wantSpeed ? ", speed" : ""}
        FROM compendium_races
+       ${ruleset ? "WHERE ruleset = ?" : ""}
        ORDER BY name COLLATE NOCASE`,
-    ).all() as Array<{ id: string; name: string; size?: string | null; speed?: number | null }>;
+    ).all(...(ruleset ? [ruleset] : [])) as Array<{ id: string; name: string; size?: string | null; speed?: number | null }>;
     res.json(rows.map((row) => {
       return {
         ...(includeField(fields, "id") ? { id: row.id } : {}),
@@ -126,11 +142,13 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   app.get("/api/compendium/backgrounds", requireAuth, (req, res) => {
     applySharedApiCacheHeaders(res);
     const fields = parseRequestedFields(req.query.fields);
+    const ruleset = parseRulesetFilter(req.query.ruleset);
     const rows = db.prepare(
       `SELECT id, name
        FROM compendium_backgrounds
+       ${ruleset ? "WHERE ruleset = ?" : ""}
        ORDER BY name COLLATE NOCASE`,
-    ).all() as Array<{ id: string; name: string }>;
+    ).all(...(ruleset ? [ruleset] : [])) as Array<{ id: string; name: string }>;
     res.json(rows.map((row) => {
       return {
         ...(includeField(fields, "id") ? { id: row.id } : {}),
@@ -150,11 +168,13 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
       "source",
       "abilities",
     ].some((field) => includeField(fields, field));
+    const ruleset = parseRulesetFilter(req.query.ruleset);
     const rows = db.prepare(
       `SELECT id, name${wantMetadata ? ", data_json" : ""}
        FROM compendium_feats
+       ${ruleset ? "WHERE ruleset = ?" : ""}
        ORDER BY name COLLATE NOCASE`,
-    ).all() as Array<{ id: string; name: string; data_json?: string }>;
+    ).all(...(ruleset ? [ruleset] : [])) as Array<{ id: string; name: string; data_json?: string }>;
     res.json(rows.map((row) => {
       let data: any = {};
       if (wantMetadata) {
@@ -201,11 +221,15 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const featId = requireParam(req, res, "featId");
     if (!featId) return;
-    const row = db.prepare("SELECT id, name, data_json FROM compendium_feats WHERE id = ?").get(featId) as {
-      id: string;
-      name: string;
-      data_json: string;
-    } | undefined;
+    // Unlike the canonical classes/species/backgrounds routes, this one is also called from
+    // web-dm's general compendium browser with no character/ruleset context at all -- ruleset
+    // stays optional here. When supplied, filter by it; otherwise prefer the 5.5e row if a
+    // feat id happens to exist in both rulesets.
+    const ruleset = parseRulesetFilter(req.query.ruleset);
+    const row = (ruleset
+      ? db.prepare("SELECT id, name, data_json FROM compendium_feats WHERE id = ? AND ruleset = ?").get(featId, ruleset)
+      : db.prepare("SELECT id, name, data_json FROM compendium_feats WHERE id = ? ORDER BY CASE WHEN ruleset = '5.5e' THEN 0 ELSE 1 END LIMIT 1").get(featId)
+    ) as { id: string; name: string; data_json: string } | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Feat not found" });
     res.json(buildFeatDetailFromRow(row));
   });
@@ -216,11 +240,13 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     if (ids.length === 0) return res.json({ rows: [] });
 
     const placeholders = ids.map(() => "?").join(", ");
-    const rows = db.prepare(
-      `SELECT id, name, data_json
-       FROM compendium_feats
-       WHERE id IN (${placeholders})`,
-    ).all(...ids) as Array<{ id: string; name: string; data_json: string }>;
+    // ids can collide across rulesets (composite PK). When the caller supplies its ruleset,
+    // filter by it; otherwise sort 5.5e first so it "wins" the Map.set below for any id that
+    // happens to exist in both.
+    const rows = (body.ruleset
+      ? db.prepare(`SELECT id, name, data_json FROM compendium_feats WHERE id IN (${placeholders}) AND ruleset = ?`).all(...ids, body.ruleset)
+      : db.prepare(`SELECT id, name, data_json FROM compendium_feats WHERE id IN (${placeholders}) ORDER BY CASE WHEN ruleset = '5.5e' THEN 1 ELSE 0 END`).all(...ids)
+    ) as Array<{ id: string; name: string; data_json: string }>;
     const byId = new Map<string, unknown>();
     for (const row of rows) {
       try {

@@ -16,7 +16,7 @@ import { useCharacterSheetStats } from "@/views/CombatView/panels/CombatantDetai
 import { PlayerDeathSaves } from "@/views/CampaignView/components/PlayerDeathSaves";
 import { putEncounterCombatant } from "@/services/encounterApi";
 
-export type CombatantDetailsCtx = {
+type CombatantDetailsCtx = {
   isNarrow: boolean;
   selectedMonster: MonsterDetail | null;
   playerName: string | null;

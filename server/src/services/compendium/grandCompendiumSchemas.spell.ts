@@ -64,10 +64,7 @@ export const SpellSchema = z
       .optional(),
     ritual: z.literal(true).optional(),
     access: z.array(z.string().regex(/^sl_[a-z0-9_]+$/u)).min(1).optional(),
-    check: z.union([
-      z.enum(["attack", "str", "dex", "con", "int", "wis", "cha"]),
-      z.array(z.enum(["attack", "str", "dex", "con", "int", "wis", "cha"])).min(2),
-    ]).optional(),
+    check: z.enum(["attack", "str", "dex", "con", "int", "wis", "cha"]).optional(),
     rolls: z.array(SpellRollSchema).min(1).optional(),
     description: z.array(z.string().min(1)).min(1),
   })

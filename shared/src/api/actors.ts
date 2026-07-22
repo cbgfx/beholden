@@ -38,6 +38,7 @@ export interface CharacterCampaignAssignmentDto {
 export interface CharacterSheetSnapshotDto {
   name: string;
   playerName: string;
+  ruleset: "5e" | "5.5e";
   className: string;
   species: string;
   level: number;
@@ -158,6 +159,7 @@ export interface FlatCharacterSheetDto {
   userId: string;
   name: string;
   playerName: string;
+  ruleset: "5e" | "5.5e";
   className: string;
   species: string;
   level: number;
@@ -250,6 +252,7 @@ export function flattenCharacterSheetDto(dto: CharacterSheetDto): FlatCharacterS
     userId: dto.userId,
     name: dto.sheet.name,
     playerName: dto.sheet.playerName,
+    ruleset: dto.sheet.ruleset,
     className: dto.sheet.className,
     species: dto.sheet.species,
     level: dto.sheet.level,

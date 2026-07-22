@@ -16,7 +16,7 @@ export const CAMPAIGN_CHARACTER_COLS =
   "shared_notes, created_at, updated_at";
 
 export const CHARACTER_SHEET_COLS =
-  "id, user_id, name, player_name, class_name, species, level, hp_max, hp_current, ac, speed, " +
+  "id, user_id, name, player_name, ruleset, class_name, species, level, hp_max, hp_current, ac, speed, " +
   "str_score, dex_score, con_score, int_score, wis_score, cha_score, color, death_saves_success, death_saves_fail, " +
   "image_url, image_updated_at, character_data_json, shared_notes, " +
   "created_at, updated_at";

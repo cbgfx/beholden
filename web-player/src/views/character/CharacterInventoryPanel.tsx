@@ -1,5 +1,6 @@
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
 import { C } from "@/lib/theme";
+import { IconKnapsack } from "@/icons";
 import { DraggableList } from "@/ui/DraggableList";
 import {
   formatWeight,
@@ -87,8 +88,27 @@ export function InventoryPanel({
         color={accentColor}
         storageKey="inventory"
         summary={`${sync.items.length} items · ${Math.round(derived.carriedWeight * 10) / 10} / ${derived.carryCapacity} lb`}
-        actions={<button type="button" onClick={() => sync.setPickerOpen(true)} title="Add item" style={panelHeaderAddBtn(accentColor)}>+</button>}
       >
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, paddingBottom: 10, marginBottom: 10, borderBottom: `1px solid ${C.panelBorder}` }}>
+          <button
+            type="button"
+            onClick={() => { void containerActions.addContainer(DEFAULT_CONTAINER_ID); }}
+            title="+"
+            style={{ ...panelHeaderAddBtn(accentColor), gap: 6, height: 30, fontSize: "var(--fs-small)" }}
+          >
+            <span aria-hidden="true" style={{ fontSize: "var(--fs-title)" }}>+</span><IconKnapsack size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={() => sync.setPickerOpen(true)}
+            title="Add item"
+            style={{ ...panelHeaderAddBtn(accentColor), gap: 6, height: 30, fontSize: "var(--fs-small)" }}
+          >
+            <span aria-hidden="true" style={{ fontSize: "var(--fs-title)" }}>+</span>
+            Item
+          </button>
+        </div>
+
         <InventoryCurrencyBar
           currencyTotals={derived.currencyTotals}
           carriedWeight={derived.carriedWeight}
@@ -148,7 +168,6 @@ export function InventoryPanel({
               onResetName={() => sync.setContainers(normalizeContainers(charData?.inventoryContainers ?? sync.containers))}
               onToggleIgnoreWeight={() => containerActions.toggleContainerIgnoreWeight(container.id)}
               onRemove={!isDefault ? () => containerActions.removeContainer(container.id) : undefined}
-              onAdd={() => containerActions.addContainer(container.id)}
               onReorder={(ids) => void itemActions.reorderItemsByIds(ids, (item) => {
                 if (getEquipState(item) !== "backpack" || isCurrencyItem(item)) return false;
                 const itemContainerId = item.containerId

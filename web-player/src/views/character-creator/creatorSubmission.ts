@@ -260,6 +260,7 @@ export async function buildCreatorSubmissionBody(args: {
   const body = {
     name: form.characterName.trim(),
     playerName: optionalText(form.playerName),
+    ruleset: form.ruleset ?? "5.5e",
     className,
     species,
     level: form.level,
@@ -316,7 +317,7 @@ export async function buildCreatorSubmissionBody(args: {
       chosenCantrips: form.chosenCantrips,
       chosenSpells: form.chosenSpells,
       preparedSpells:
-        classDetail && classDetail.slotsReset !== "S" && getPreparedSpellCount(classDetail, form.level, form.subclass) > 0
+        classDetail && classDetail.slotsReset !== "S" && getPreparedSpellCount(classDetail, form.level, form.subclass, scores[String(classDetail.spellAbility ?? "").toLowerCase()]) > 0
           ? form.chosenSpells
             .map((id) => classSpells.find((spell) => spell.id === id)?.name ?? "")
             .filter(Boolean)

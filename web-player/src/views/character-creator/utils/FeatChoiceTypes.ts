@@ -1,4 +1,4 @@
-export type FeatChoiceType =
+type FeatChoiceType =
   | "proficiency"
   | "expertise"
   | "ability_score"

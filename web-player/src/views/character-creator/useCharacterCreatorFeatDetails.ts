@@ -10,6 +10,7 @@ import type {
 } from "@/views/character-creator/utils/FeatChoiceTypes";
 
 export function useCharacterCreatorFeatDetails(args: {
+  ruleset: "5e" | "5.5e" | null;
   chosenRaceFeatId: string | null;
   chosenBgOriginFeatId: string | null;
   chosenClassFeatIds: Record<string, string>;
@@ -21,6 +22,7 @@ export function useCharacterCreatorFeatDetails(args: {
   setFeatDetailCache: React.Dispatch<React.SetStateAction<Record<string, BackgroundFeat>>>;
 }) {
   const {
+    ruleset,
     chosenRaceFeatId,
     chosenBgOriginFeatId,
     chosenClassFeatIds,
@@ -55,7 +57,7 @@ export function useCharacterCreatorFeatDetails(args: {
       ),
     );
 
-    if (ids.length === 0) {
+    if (ids.length === 0 || !ruleset) {
       setRaceFeatDetail(null);
       setBgOriginFeatDetail(null);
       setClassFeatDetails({});
@@ -69,7 +71,7 @@ export function useCharacterCreatorFeatDetails(args: {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
+        body: JSON.stringify({ ids, ruleset }),
       },
     )
       .then((payload) => {
@@ -122,6 +124,7 @@ export function useCharacterCreatorFeatDetails(args: {
     chosenClassFeatIds,
     chosenLevelUpFeats,
     chosenRaceFeatId,
+    ruleset,
     setBgOriginFeatDetail,
     setClassFeatDetails,
     setFeatDetailCache,

@@ -153,6 +153,11 @@ export function ItemDetailPanel(props: { itemId: string }) {
           }}>
             {textParagraphs.join("\n\n") || <span style={{ color: C.muted }}>No description.</span>}
           </div>
+          {item.source ? (
+            <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>
+              Source: {item.source} · Ruleset: {item.ruleset ?? "Unknown"}
+            </div>
+          ) : null}
         </>
       )}
     </Panel>

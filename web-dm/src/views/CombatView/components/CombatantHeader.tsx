@@ -18,12 +18,20 @@ type Props = {
   onOpenSpellBook: () => void;
   onOpenAdventureNotes: () => void;
   difficulty?: {
-    label: string;
+    officialDifficulty: string;
+    projectedThreat: string;
     roundsToTpk: number;
     partyHpMax: number;
     hostileDpr: number;
+    projectedDpr: number;
     burstFactor: number;
-    adjustedXp?: number;
+    encounterXp: number;
+    lowBudget: number;
+    moderateBudget: number;
+    highBudget: number;
+    monsterSurvivalRounds: number;
+    expectedPartyDamageRatio: number;
+    roundsToFirstDown: number;
   };
 };
 
@@ -50,7 +58,7 @@ export function CombatantHeader(props: Props) {
             Back
           </Button>
           <span style={{ fontSize: "var(--fs-title)", fontWeight: 900, color: theme.colors.text, minWidth: 0 }}>{title}</span>
-          {props.difficulty?.label ? (
+          {props.difficulty?.projectedThreat ? (
             <span
               style={{
                 fontSize: "var(--fs-subtitle)",
@@ -63,15 +71,18 @@ export function CombatantHeader(props: Props) {
                 whiteSpace: "nowrap",
               }}
               title={
-                `Difficulty (Adj. XP + CR ceiling + DPR)\n` +
-                (Number.isFinite(props.difficulty.adjustedXp) ? `Adjusted XP: ${Math.round(props.difficulty.adjustedXp!).toLocaleString()}\n` : "") +
+                `Difficulty: ${props.difficulty.projectedThreat}\n` +
                 `Party HP: ${Math.round(props.difficulty.partyHpMax).toLocaleString()}\n` +
-                `Hostile DPR: ${Math.round(props.difficulty.hostileDpr).toLocaleString()}\n` +
-                (props.difficulty.burstFactor > 1 ? `Burst factor: ×${props.difficulty.burstFactor.toFixed(2)}\n` : "") +
-                (Number.isFinite(props.difficulty.roundsToTpk) ? `Rounds to TPK: ${props.difficulty.roundsToTpk.toFixed(1)}` : "∞ rounds to TPK")
+                `Sustained DPR: ${Math.round(props.difficulty.hostileDpr).toLocaleString()}\n` +
+                `Projected DPR: ${Math.round(props.difficulty.projectedDpr).toLocaleString()}\n` +
+                (props.difficulty.burstFactor > 1 ? `Encounter pressure factor: ×${props.difficulty.burstFactor.toFixed(2)}\n` : "") +
+                (Number.isFinite(props.difficulty.monsterSurvivalRounds) ? `Estimated monster survival: ${props.difficulty.monsterSurvivalRounds.toFixed(1)} rounds\n` : "") +
+                (Number.isFinite(props.difficulty.roundsToFirstDown) ? `Estimated first character down: ${props.difficulty.roundsToFirstDown.toFixed(1)} rounds\n` : "") +
+                (Number.isFinite(props.difficulty.expectedPartyDamageRatio) ? `Expected party HP lost: ${Math.round(props.difficulty.expectedPartyDamageRatio * 100)}%\n` : "") +
+                (Number.isFinite(props.difficulty.roundsToTpk) ? `Rounds to party collapse: ${props.difficulty.roundsToTpk.toFixed(1)}` : "Rounds to party collapse: ∞")
               }
             >
-              {props.difficulty.label}
+              {props.difficulty.projectedThreat}
             </span>
           ) : null}
         </div>

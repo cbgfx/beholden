@@ -2,6 +2,69 @@ import { describe, expect, it } from "vitest";
 import { buildLevelUpPayload } from "./buildLevelUpPayload";
 
 describe("buildLevelUpPayload", () => {
+  it("increments the selected class level independently from total character level", () => {
+    const payload = buildLevelUpPayload({
+      char: {
+        hpMax: 38,
+        hpCurrent: 38,
+        className: "Fighter",
+        characterData: {
+          classes: [
+            { id: "class_fighter", classId: "c_fighter", className: "Fighter", level: 3 },
+            { id: "class_wizard", classId: "c_wizard", className: "Wizard", level: 2 },
+          ],
+        },
+      },
+      nextLevel: 6,
+      nextClassLevel: 4,
+      hpGain: 8,
+      featHpBonus: 0,
+      subclass: "sc_fighter_champion",
+      chosenCantrips: [], chosenSpells: [], chosenInvocations: [], chosenExpertise: {}, chosenFeatOptions: {},
+      chosenFeatureChoices: {}, expertiseChoices: [], featChoiceEntries: [], chosenFeatDetail: null, featSourceLabel: "",
+      newFeatures: [], classDetailName: "Fighter", selectedCantripEntries: [], selectedSpellEntries: [], selectedInvocationEntries: [],
+      baseScores: {}, asiMode: null, asiStats: {}, featAbilityBonuses: {},
+    } as never) as { level: number; characterData: { classes: Array<{ classId: string; level: number }> } };
+
+    expect(payload.level).toBe(6);
+    expect(payload.characterData.classes).toEqual([
+      expect.objectContaining({ classId: "c_fighter", level: 4 }),
+      expect.objectContaining({ classId: "c_wizard", level: 2 }),
+    ]);
+  });
+
+  it("can advance a non-primary class", () => {
+    const payload = buildLevelUpPayload({
+      char: { hpMax: 38, hpCurrent: 38, className: "Fighter", characterData: { classes: [
+        { id: "class_fighter", classId: "c_fighter", className: "Fighter", level: 3 },
+        { id: "class_wizard", classId: "c_wizard", className: "Wizard", level: 2 },
+      ] } },
+      nextLevel: 6, nextClassLevel: 3, targetClassEntryId: "class_wizard", targetClassId: "c_wizard", hpGain: 5, featHpBonus: 0,
+      subclass: "", chosenCantrips: [], chosenSpells: [], chosenInvocations: [], chosenExpertise: {}, chosenFeatOptions: {}, chosenFeatureChoices: {},
+      expertiseChoices: [], featChoiceEntries: [], chosenFeatDetail: null, featSourceLabel: "", newFeatures: [], classDetailName: "Wizard",
+      selectedCantripEntries: [], selectedSpellEntries: [], selectedInvocationEntries: [], baseScores: {}, asiMode: null, asiStats: {}, featAbilityBonuses: {},
+    } as never) as { characterData: { classes: Array<{ id: string; level: number }> } };
+    expect(payload.characterData.classes).toEqual([
+      expect.objectContaining({ id: "class_fighter", level: 3 }),
+      expect.objectContaining({ id: "class_wizard", level: 3 }),
+    ]);
+  });
+
+  it("adds a level-one class with only its reduced multiclass proficiencies", () => {
+    const payload = buildLevelUpPayload({
+      char: { hpMax: 30, hpCurrent: 30, className: "Fighter", characterData: { classes: [{ id: "class_fighter", classId: "c_fighter", className: "Fighter", level: 3 }] } },
+      nextLevel: 4, nextClassLevel: 1, targetClassEntryId: "class_bard", targetClassId: "c_bard", isAddingClass: true,
+      multiclassProficiencies: { skills: ["Persuasion"], tools: ["Lute"], armor: ["Light Armor"], weapons: [] },
+      hpGain: 5, featHpBonus: 0, subclass: "", chosenCantrips: [], chosenSpells: [], chosenInvocations: [], chosenExpertise: {}, chosenFeatOptions: {}, chosenFeatureChoices: {},
+      expertiseChoices: [], featChoiceEntries: [], chosenFeatDetail: null, featSourceLabel: "", newFeatures: [], classDetailName: "Bard",
+      selectedCantripEntries: [], selectedSpellEntries: [], selectedInvocationEntries: [], baseScores: {}, asiMode: null, asiStats: {}, featAbilityBonuses: {},
+    } as never) as { characterData: { classes: Array<{ id: string; classId: string; level: number }>; proficiencies: { skills: Array<{ name: string }>; tools: Array<{ name: string }>; armor: Array<{ name: string }> } } };
+    expect(payload.characterData.classes).toContainEqual(expect.objectContaining({ id: "class_bard", classId: "c_bard", level: 1 }));
+    expect(payload.characterData.proficiencies.skills).toContainEqual(expect.objectContaining({ name: "Persuasion" }));
+    expect(payload.characterData.proficiencies.tools).toContainEqual(expect.objectContaining({ name: "Lute" }));
+    expect(payload.characterData.proficiencies.armor).toContainEqual(expect.objectContaining({ name: "Light Armor" }));
+  });
+
   it("preserves accumulated Wizard spellbook entries while leveling", () => {
     const payload = buildLevelUpPayload({
       char: {

@@ -7,7 +7,7 @@ export { buildLevelUpPayload } from "./buildLevelUpPayload";
 
 type LevelUpFeatDetailLike = SharedLevelUpFeatDetailLike<LevelUpFeatChoiceLike> & { id: string };
 
-export interface LevelUpTaggedEntry {
+interface LevelUpTaggedEntry {
   name: string;
   source: string;
   id?: string;
@@ -15,7 +15,7 @@ export interface LevelUpTaggedEntry {
   sourceKey?: string | null;
 }
 
-export interface LevelUpFeature {
+interface LevelUpFeature {
   name: string;
   text?: string;
   noteTemplate?: { id: string; title: string; text: string } | null;
@@ -32,6 +32,7 @@ export interface BuildLevelUpPayloadArgs {
       chosenCantrips?: string[];
       chosenSpells?: string[];
       chosenInvocations?: string[];
+      classSpellSelections?: Record<string, { chosenCantrips?: string[]; chosenSpells?: string[]; preparedSpells?: string[]; chosenInvocations?: string[] }>;
       chosenFeatOptions?: Record<string, string[]>;
       chosenFeatureChoices?: Record<string, string[]>;
       selectedFeatureNames?: string[];
@@ -53,6 +54,11 @@ export interface BuildLevelUpPayloadArgs {
     } | null;
   };
   nextLevel: number;
+  nextClassLevel?: number;
+  targetClassEntryId?: string;
+  targetClassId?: string | null;
+  isAddingClass?: boolean;
+  multiclassProficiencies?: { skills: string[]; tools: string[]; armor: string[]; weapons: string[] };
   hpGain: number;
   featHpBonus: number;
   subclass: string;
@@ -85,22 +91,22 @@ export interface BuildLevelUpPayloadArgs {
   featAbilityBonuses: Record<string, number>;
 }
 
-export interface LevelUpSpellLike {
+interface LevelUpSpellLike {
   id: string;
   name: string;
   level?: number | null;
   text?: string | null;
-  check?: string | string[] | null;
+  check?: string | null;
   rolls?: Array<{ effect?: string | string[] | null }>;
   prerequisite?: import("@/views/character/CharacterSheetUtils").ClassTalentPrerequisite | null;
 }
 
-export interface LevelUpFeatSummaryLike {
+interface LevelUpFeatSummaryLike {
   id: string;
   name: string;
 }
 
-export type LevelUpFeatPrereqProfLike = ProficiencyMap;
+type LevelUpFeatPrereqProfLike = ProficiencyMap;
 
 export interface DeriveAllowedInvocationIdsArgs {
   classCantrips: LevelUpSpellLike[];
@@ -169,7 +175,7 @@ export function deriveAllowedInvocationIds(args: DeriveAllowedInvocationIdsArgs)
   const hasDamageCantrip = selectedCantrips.some(spellLooksLikeDamageSpell);
   const hasAttackDamageCantrip = selectedCantrips.some((spell) =>
     spellLooksLikeDamageSpell(spell)
-    && (Array.isArray(spell.check) ? spell.check : [spell.check]).includes("attack")
+    && spell.check === "attack"
   );
 
   return new Set(
@@ -312,4 +318,3 @@ export function deriveLevelUpValidation(args: DeriveLevelUpValidationArgs) {
     canConfirm,
   };
 }
-

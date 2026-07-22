@@ -17,6 +17,7 @@ import { useLevelUpChoiceSelections } from "@/views/level-up/useLevelUpChoiceSel
 import { useLevelUpSelectionSanitizers } from "@/views/level-up/useLevelUpSelectionSanitizers";
 import { useLevelUpSubmit } from "@/views/level-up/useLevelUpSubmit";
 import { useLevelUpActions } from "@/views/level-up/useLevelUpActions";
+import { describeMulticlassRequirement, multiclassRequirementMet } from "@/domain/character/multiclassEligibility";
 
 export function LevelUpView() {
   const { id } = useParams<{ id: string }>();
@@ -29,8 +30,17 @@ export function LevelUpView() {
     error,
     setError,
     nextLevel,
+    nextClassLevel,
     mergedAutolevels,
     primaryClassEntry,
+    classEntries,
+    classCatalog,
+    ownedClassDetails,
+    targetClassKey,
+    setTargetClassKey,
+    targetClassId,
+    selectedClassEntry,
+    isAddingClass,
     subclass,
     setSubclass,
     chosenCantrips,
@@ -56,10 +66,21 @@ export function LevelUpView() {
   const [hpChoice, setHpChoice] = useState<HpChoice>(null);
   const [rolledHp, setRolledHp] = useState<number | null>(null);
   const [manualHp, setManualHp] = useState<string>("");
+  React.useEffect(() => {
+    setHpChoice(null);
+    setRolledHp(null);
+    setManualHp("");
+  }, [targetClassKey]);
 
   // ASI
   const [asiMode, setAsiMode] = useState<AsiMode>(null);
   const [asiStats, setAsiStats] = useState<Record<string, number>>({});
+  const [chosenMulticlassSkills, setChosenMulticlassSkills] = useState<string[]>([]);
+  const [chosenMulticlassTools, setChosenMulticlassTools] = useState<string[]>([]);
+  React.useEffect(() => {
+    setChosenMulticlassSkills([]);
+    setChosenMulticlassTools([]);
+  }, [targetClassKey]);
 
   // Feature expand
   const [expandedFeatures, setExpandedFeatures] = useState<string[]>([]);
@@ -74,6 +95,7 @@ export function LevelUpView() {
     conMod,
     hpAverage,
     usesFlexiblePreparedSpellsModel,
+    classChoiceGroups,
     newFeatures,
     isAsiLevel,
     newSlots,
@@ -119,6 +141,7 @@ export function LevelUpView() {
     classDetail,
     mergedAutolevels,
     nextLevel,
+    nextClassLevel,
     primaryClassEntry,
     subclass,
     chosenCantrips,
@@ -238,7 +261,7 @@ export function LevelUpView() {
   );
   const allExtraSelectionsValid = extraFeatSpellSelectionsValid && invocationFeatSelectionsValid && invocationGrantedFeatChoices.valid;
 
-  const { filteredFeatSummaries, featPrereqsMet, featRepeatableValid, canConfirm } = React.useMemo(
+  const { filteredFeatSummaries, featPrereqsMet, featRepeatableValid, canConfirm: baseCanConfirm } = React.useMemo(
     () =>
       deriveLevelUpValidation({
         isAsiLevel,
@@ -306,6 +329,24 @@ export function LevelUpView() {
     ]
   );
 
+  const multiclassRequirements = React.useMemo(() => {
+    if (!isAddingClass || !classDetail) return [];
+    return [
+      ...classEntries.map((entry) => ({ name: entry.className ?? ownedClassDetails[entry.id]?.name ?? "Current class", detail: ownedClassDetails[entry.id] })),
+      { name: classDetail.name, detail: classDetail },
+    ].flatMap(({ name, detail }) => {
+      const requirement = detail?.multiclass?.requirements;
+      if (!requirement) return [];
+      return [{ name, label: describeMulticlassRequirement(requirement.ability, requirement.minimum ?? 13), met: multiclassRequirementMet(requirement.ability, requirement.minimum, baseScores) }];
+    });
+  }, [baseScores, classDetail, classEntries, isAddingClass, ownedClassDetails]);
+  const multiclassEligible = multiclassRequirements.every((requirement) => requirement.met);
+  const multiclassSkillCount = isAddingClass ? classDetail?.multiclass?.skills?.choose ?? 0 : 0;
+  const multiclassToolCount = isAddingClass ? (classDetail?.multiclass?.tools?.choices ?? []).reduce((sum, choice) => sum + choice.count, 0) : 0;
+  const multiclassChoicesComplete = chosenMulticlassSkills.length === multiclassSkillCount && chosenMulticlassTools.length === multiclassToolCount;
+  const classChoicesComplete = classChoiceGroups.every((group) => Boolean(chosenFeatureChoices[group.key]?.[0]));
+  const canConfirm = baseCanConfirm && multiclassEligible && multiclassChoicesComplete && classChoicesComplete;
+
   const {
     availableCantripChoices,
     availableSpellChoices,
@@ -343,6 +384,16 @@ export function LevelUpView() {
     navigate,
     setError,
     nextLevel,
+    nextClassLevel,
+    targetClassEntryId: selectedClassEntry?.id ?? `class_${String(targetClassId ?? classDetail?.id ?? "new").replace(/^c_/, "")}`,
+    targetClassId: targetClassId ?? classDetail?.id ?? null,
+    isAddingClass,
+    multiclassProficiencies: {
+      skills: chosenMulticlassSkills,
+      tools: [...(classDetail?.multiclass?.tools?.fixed ?? []), ...chosenMulticlassTools],
+      armor: classDetail?.multiclass?.armor ?? [],
+      weapons: classDetail?.multiclass?.weapons ?? [],
+    },
     hpGain,
     featHpBonus,
     subclass,
@@ -412,6 +463,18 @@ export function LevelUpView() {
       </div>
 
       {/* ── HP gain ── */}
+      <Section title="Class level" accent={accentColor}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {classEntries.map((entry) => <ChoiceBtn key={entry.id} active={targetClassKey === entry.id} onClick={() => setTargetClassKey(entry.id)} accent={accentColor}>{entry.className ?? ownedClassDetails[entry.id]?.name ?? "Class"} {entry.level} → {entry.level + 1}</ChoiceBtn>)}
+          {classCatalog.filter((option) => !classEntries.some((entry) => entry.classId === option.id)).map((option) => <ChoiceBtn key={option.id} active={targetClassKey === `new:${option.id}`} onClick={() => setTargetClassKey(`new:${option.id}`)} accent={accentColor}>Add {option.name}</ChoiceBtn>)}
+        </div>
+        {isAddingClass && <div style={{ marginTop: 12, display: "grid", gap: 8, fontSize: "var(--fs-small)" }}>
+          {multiclassRequirements.map((requirement) => <div key={`${requirement.name}:${requirement.label}`} style={{ color: requirement.met ? C.green : C.red }}>{requirement.met ? "✓" : "✕"} {requirement.name}: {requirement.label}</div>)}
+          {multiclassSkillCount > 0 && <div><div style={{ color: C.muted, marginBottom: 6 }}>Choose {multiclassSkillCount} skill proficiency</div><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{(classDetail?.multiclass?.skills?.from ?? []).map((name) => <ChoiceBtn key={name} active={chosenMulticlassSkills.includes(name)} onClick={() => setChosenMulticlassSkills((current) => current.includes(name) ? current.filter((value) => value !== name) : current.length < multiclassSkillCount ? [...current, name] : current)}>{name}</ChoiceBtn>)}</div></div>}
+          {multiclassToolCount > 0 && <div><div style={{ color: C.muted, marginBottom: 6 }}>Choose {multiclassToolCount} tool proficiency</div><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{Array.from(new Set((classDetail?.multiclass?.tools?.choices ?? []).flatMap((choice) => choice.from))).map((name) => <ChoiceBtn key={name} active={chosenMulticlassTools.includes(name)} onClick={() => setChosenMulticlassTools((current) => current.includes(name) ? current.filter((value) => value !== name) : current.length < multiclassToolCount ? [...current, name] : current)}>{name}</ChoiceBtn>)}</div></div>}
+        </div>}
+      </Section>
+
       <LevelUpHpSection
         nextLevel={nextLevel}
         hd={hd}
@@ -512,10 +575,11 @@ export function LevelUpView() {
       />
 
       <LevelUpChoicesSection
-        show={cantripCount > 0 || prepCount > 0 || invocCount > 0 || featSpellListChoices.length > 0 || featResolvedSpellChoices.length > 0 || classFeatureResolvedSpellChoices.length > 0 || classFeatureProficiencyChoices.length > 0 || invocationResolvedSpellChoices.length > 0 || maneuverChoiceEntries.length > 0 || planChoiceEntries.length > 0 || progressionTableChoiceEntries.length > 0}
+        show={classChoiceGroups.length > 0 || cantripCount > 0 || prepCount > 0 || invocCount > 0 || featSpellListChoices.length > 0 || featResolvedSpellChoices.length > 0 || classFeatureResolvedSpellChoices.length > 0 || classFeatureProficiencyChoices.length > 0 || invocationResolvedSpellChoices.length > 0 || maneuverChoiceEntries.length > 0 || planChoiceEntries.length > 0 || progressionTableChoiceEntries.length > 0}
         nextLevel={nextLevel}
         accentColor={accentColor}
         progressionTableChoiceEntries={progressionTableChoiceEntries}
+        classChoiceGroups={classChoiceGroups}
         classFeatureProficiencyChoices={classFeatureProficiencyChoices}
         chosenFeatureChoices={chosenFeatureChoices}
         existingSkillKeys={classFeatureSkillKeys}

@@ -22,8 +22,9 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
   const currentData = derived.currentCharacterData;
   const exhaustionPenalty = getExhaustionD20Penalty(currentData.exhaustion ?? 0);
   const identityLabels = [
-    char.className,
-    currentData.classes?.[0]?.subclass,
+    ...(derived.classPresentation.length
+      ? derived.classPresentation.map((entry) => `${entry.className} ${entry.classLevel}${entry.subclassName ? ` · ${entry.subclassName}` : ""}`)
+      : [char.className]),
     char.species,
   ].filter((item): item is string => Boolean(item));
 
@@ -103,7 +104,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
               ...derived.grantedSpellData.spells.map((spell) => spell.spellName),
               ...(derived.prof?.spells ?? []).map((spell) => spell.name),
             ])).sort((a, b) => a.localeCompare(b)),
-            hasRageResource: derived.classResourcesWithSpellCasts.some((resource) => resource.key === "rage"),
+            hasRageResource: derived.classResourcesWithSpellCasts.some((resource) => /^rage$/i.test(resource.name)),
           }}
           abilitiesProps={{
             scores: derived.scores,
@@ -171,6 +172,8 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
               scores: derived.scores,
               accentColor: derived.accentColor,
               classDetail: data.classDetail,
+              spellSlotState: derived.spellSlotState,
+              classSpellcastingStates: derived.classSpellcastingStates,
               charLevel: char.level,
               preparedLimit: derived.preparedSpellLimit,
               usesFlexiblePreparedList: derived.usesFlexiblePreparedList,
@@ -208,6 +211,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
             hitDiceCurrent={derived.hitDiceCurrent}
             hitDiceMax={derived.hitDiceMax}
             hitDieSize={derived.hitDieSize}
+            hitDicePools={derived.hitDicePools}
             hitDieConMod={derived.conMod}
             exhaustion={currentData.exhaustion ?? 0}
             classResources={derived.classResourcesWithSpellCasts.filter((resource) => {
@@ -217,12 +221,14 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
                 spellLinkedResourceKeys: derived.spellLinkedResourceKeys,
               });
             })}
+            classPresentation={derived.classPresentation}
             playerNotesList={notes.playerNotesList}
             allSharedNotes={notes.allSharedNotes}
             classFeaturesList={derived.classFeaturesList}
             expandedNoteIds={ui.expandedNoteIds}
             expandedClassFeatureIds={ui.expandedClassFeatureIds}
             onSaveHitDiceCurrent={runtime.saveHitDiceCurrent}
+            onSaveHitDicePoolCurrent={runtime.saveHitDicePoolCurrent}
             onShortRest={runtime.handleShortRest}
             onLongRest={runtime.handleLongRest}
             onExhaustionChange={(value) => { void notes.saveCharacterData({ exhaustion: value }); }}

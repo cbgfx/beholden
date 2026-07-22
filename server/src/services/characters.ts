@@ -54,6 +54,28 @@ export function getAssignments(db: Database.Database, charId: string): Assignmen
     .all(charId) as Assignment[];
 }
 
+export function getAssignmentsForCharacters(
+  db: Database.Database,
+  charIds: string[],
+): Map<string, Assignment[]> {
+  const byChar = new Map<string, Assignment[]>();
+  if (charIds.length === 0) return byChar;
+  const rows = db
+    .prepare(`
+      SELECT p.character_id, p.campaign_id, p.id AS player_id, ca.name AS campaign_name
+      FROM players p
+      JOIN campaigns ca ON ca.id = p.campaign_id
+      WHERE p.character_id IN (${charIds.map(() => "?").join(",")})
+    `)
+    .all(...charIds) as Array<Assignment & { character_id: string }>;
+  for (const { character_id, ...assignment } of rows) {
+    const list = byChar.get(character_id);
+    if (list) list.push(assignment);
+    else byChar.set(character_id, [assignment]);
+  }
+  return byChar;
+}
+
 export function assignmentsToJson(assignments: Assignment[]) {
   return assignments.map((a) => ({
     id: `${a.campaign_id}:${a.player_id}`,
@@ -95,6 +117,7 @@ export function buildCharacterSheetState(char: StoredCharacterSheet): StoredChar
   return {
     name: char.name,
     playerName: char.playerName,
+    ruleset: char.ruleset,
     className: char.className,
     species: char.species,
     level: char.level,
@@ -174,6 +197,7 @@ export function characterSheetDbColumns(sheet: StoredCharacterSheetState) {
   return {
     name: sheet.name,
     playerName: sheet.playerName,
+    ruleset: sheet.ruleset,
     className: sheet.className,
     species: sheet.species,
     level: sheet.level,
@@ -416,7 +440,7 @@ export function syncAssignedPlayerRows(
   }
 }
 
-export function syncPlayerCombatantSnapshots(
+function syncPlayerCombatantSnapshots(
   db: Database.Database,
   playerId: string,
 ): void {

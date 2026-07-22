@@ -19,7 +19,7 @@ export interface FeatureEffectSource {
   text?: string | null;
 }
 
-export type EffectDuration =
+type EffectDuration =
   | "instant"
   | "passive"
   | "while_equipped"
@@ -44,7 +44,7 @@ export type ResetKind =
   | "never"
   | "special";
 
-export type RoundingMode = "up" | "down";
+type RoundingMode = "up" | "down";
 
 export type WeaponFilter =
   | "simple_weapon"
@@ -77,7 +77,7 @@ export type ScalingDice =
   | { kind: "per_scalar"; scalar: ScalingValue; die: string }
   | { kind: "named_progression"; key: string };
 
-export interface EffectGate {
+interface EffectGate {
   duration?: EffectDuration;
   /** "not_unarmored" = armor must be worn (Defense fighting style, etc.) */
   armorState?: "any" | "no_armor" | "not_heavy" | "not_unarmored";
@@ -88,7 +88,7 @@ export interface EffectGate {
   notes?: string;
 }
 
-export interface ChoiceSpec {
+interface ChoiceSpec {
   count: ScalingValue;
   options?: string[];
   optionCategory?:
@@ -116,7 +116,7 @@ interface FeatureEffectBase {
   requiredLevel?: number;
 }
 
-export interface ResourceGrantEffect extends FeatureEffectBase {
+interface ResourceGrantEffect extends FeatureEffectBase {
   type: "resource_grant";
   resourceKey: string;
   label: string;
@@ -127,7 +127,7 @@ export interface ResourceGrantEffect extends FeatureEffectBase {
   linkedSpellName?: string;
 }
 
-export interface SpellGrantEffect extends FeatureEffectBase {
+interface SpellGrantEffect extends FeatureEffectBase {
   type: "spell_grant";
   spellName: string;
   spellId?: string;
@@ -171,13 +171,13 @@ export interface ProficiencyGrantEffect extends FeatureEffectBase {
   expertise?: boolean;
 }
 
-export interface WeaponMasteryEffect extends FeatureEffectBase {
+interface WeaponMasteryEffect extends FeatureEffectBase {
   type: "weapon_mastery";
   grants?: string[];
   choice?: ChoiceSpec;
 }
 
-export interface ArmorClassEffect extends FeatureEffectBase {
+interface ArmorClassEffect extends FeatureEffectBase {
   type: "armor_class";
   mode: "base_formula" | "minimum_floor" | "bonus";
   base?: number;
@@ -192,7 +192,7 @@ export interface SpeedEffect extends FeatureEffectBase {
   movementMode?: "walk" | "fly" | "swim" | "climb" | "burrow";
 }
 
-export interface DefenseEffect extends FeatureEffectBase {
+interface DefenseEffect extends FeatureEffectBase {
   type: "defense";
   mode:
     | "damage_resistance"
@@ -231,7 +231,7 @@ export interface ModifierEffect extends FeatureEffectBase {
   appliesTo?: string[];
 }
 
-export interface HitPointEffect extends FeatureEffectBase {
+interface HitPointEffect extends FeatureEffectBase {
   type: "hit_points";
   mode: "max_bonus" | "temp_hp" | "drop_to_floor" | "heal_pool";
   amount: ScalingValue | ScalingDice;
@@ -256,13 +256,13 @@ export interface AttackEffect extends FeatureEffectBase {
   frequency?: "once_per_turn" | "first_hit_each_turn" | "once_per_rage" | "special";
 }
 
-export interface CheckOverrideEffect extends FeatureEffectBase {
+interface CheckOverrideEffect extends FeatureEffectBase {
   type: "check_override";
   skills: string[];
   useAbility: AbilKey;
 }
 
-export interface ActionEffect extends FeatureEffectBase {
+interface ActionEffect extends FeatureEffectBase {
   type: "action";
   activation: "action" | "bonus_action" | "reaction" | "no_action";
   reset?: ResetKind;
@@ -277,12 +277,12 @@ export interface SensesEffect extends FeatureEffectBase {
   senses: Array<{ kind: "darkvision" | "blindsight" | "tremorsense" | "truesight" | "devils_sight"; range: number }>;
 }
 
-export interface BreathingEffect extends FeatureEffectBase {
+interface BreathingEffect extends FeatureEffectBase {
   type: "breathing";
   medium: "water";
 }
 
-export interface ChoiceBundleEffect extends FeatureEffectBase {
+interface ChoiceBundleEffect extends FeatureEffectBase {
   type: "choice_bundle";
   choice: ChoiceSpec;
   options: Array<{
@@ -292,13 +292,13 @@ export interface ChoiceBundleEffect extends FeatureEffectBase {
   }>;
 }
 
-export interface NarrativeEffect extends FeatureEffectBase {
+interface NarrativeEffect extends FeatureEffectBase {
   type: "narrative";
   category: "reference" | "manual_resolution";
   description: string;
 }
 
-export interface FeatChoiceEffect extends FeatureEffectBase {
+interface FeatChoiceEffect extends FeatureEffectBase {
   type: "feat_choice";
   mode: "learn";
   choiceId?: string;
@@ -307,7 +307,7 @@ export interface FeatChoiceEffect extends FeatureEffectBase {
   category?: "origin" | "general" | "fighting_style" | "epic_boon";
 }
 
-export interface RestRuleEffect extends FeatureEffectBase {
+interface RestRuleEffect extends FeatureEffectBase {
   type: "rest_rule";
   mode: "long_rest_duration" | "no_sleep_required";
   /** Set when mode === "long_rest_duration": the reduced number of hours (e.g. Warforged's Sentry's Rest: 6). */

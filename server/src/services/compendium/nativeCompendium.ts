@@ -225,6 +225,11 @@ export function parseNativeCompendiumDocument(value: unknown): NativeCompendiumB
   return [parseNativeCompendiumBatch(root)];
 }
 
+// classes/species/backgrounds/feats have a composite PRIMARY KEY (id, ruleset) -- bare id
+// membership isn't enough to tell "already exists" from "new" for these 4 categories, so
+// their ids are read alongside ruleset and composite-keyed as "ruleset:id".
+const RULESET_SCOPED_CATEGORIES = new Set<NativeCompendiumCategory>(["classes", "species", "backgrounds", "feats"]);
+
 function existingNativeIds(
   db: Database.Database,
   category: NativeCompendiumCategory,
@@ -234,10 +239,10 @@ function existingNativeIds(
     items: ["SELECT id FROM compendium_items"],
     spells: ["SELECT id FROM compendium_spells"],
     classTalents: ["SELECT id FROM compendium_class_talents"],
-    classes: ["SELECT id FROM compendium_classes"],
-    species: ["SELECT id FROM compendium_races"],
-    backgrounds: ["SELECT id FROM compendium_backgrounds"],
-    feats: ["SELECT id FROM compendium_feats"],
+    classes: ["SELECT id, ruleset FROM compendium_classes"],
+    species: ["SELECT id, ruleset FROM compendium_races"],
+    backgrounds: ["SELECT id, ruleset FROM compendium_backgrounds"],
+    feats: ["SELECT id, ruleset FROM compendium_feats"],
     decks: ["SELECT id FROM compendium_deck_cards"],
     bastions: [
       "SELECT id FROM compendium_bastion_spaces",
@@ -245,6 +250,13 @@ function existingNativeIds(
       "SELECT id FROM compendium_bastion_facilities",
     ],
   };
+  if (RULESET_SCOPED_CATEGORIES.has(category)) {
+    return new Set(
+      queries[category].flatMap((sql) =>
+        (db.prepare(sql).all() as Array<{ id: string; ruleset: string }>).map((row) => `${row.ruleset}:${row.id}`)
+      ),
+    );
+  }
   return new Set(
     queries[category].flatMap((sql) =>
       (db.prepare(sql).all() as Array<{ id: string }>).map((row) => row.id)
@@ -263,10 +275,12 @@ export function previewNativeCompendiumDocument(
     const existing = existingByCategory.get(batch.category)
       ?? existingNativeIds(db, batch.category);
     existingByCategory.set(batch.category, existing);
-    const replacements = batch.entries.reduce(
-      (total, entry) => total + (existing.has(String(entry.id)) ? 1 : 0),
-      0,
-    );
+    const replacements = batch.entries.reduce((total, entry) => {
+      const key = RULESET_SCOPED_CATEGORIES.has(batch.category)
+        ? `${String(entry.ruleset)}:${String(entry.id)}`
+        : String(entry.id);
+      return total + (existing.has(key) ? 1 : 0);
+    }, 0);
     return {
       category: batch.category,
       entries: batch.entries.length,
@@ -709,7 +723,7 @@ export function importNativeCompendiumDocument(
   };
 }
 
-export function countNativeCategory(
+function countNativeCategory(
   db: Database.Database,
   category: NativeCompendiumCategory,
 ): number {

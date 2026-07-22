@@ -3,6 +3,7 @@ import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgres
 import type { CreatorFeatureLike } from "@/views/character-creator/utils/CharacterCreatorClassCoreUtils";
 import type { StructuredFeatMechanicsLike } from "@/domain/character/structuredFeatureEffects";
 import type { SharedPolymorphCondition } from "@beholden/shared/domain";
+import type { CharacterClassEntry } from "@beholden/shared/domain";
 
 /** Total XP required to reach each level (index = level). Index 0 unused. */
 export const XP_TO_LEVEL = [0, 0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 260000, 300000, 355000];
@@ -40,6 +41,7 @@ export interface Character {
   id: string;
   name: string;
   playerName: string;
+  ruleset: "5e" | "5.5e";
   className: string;
   species: string;
   level: number;
@@ -89,8 +91,28 @@ export interface ClassRestDetail {
     armor?: string[];
     weapons?: string[];
   } | null;
+  multiclass?: {
+    skills?: { choose: number; from?: string[] } | null;
+    armor?: string[];
+    weapons?: string[];
+    tools?: { fixed?: string[]; choices?: Array<{ count: number; from: string[] }>; notes?: string[] } | null;
+    spellcasting?: {
+      progression: "full" | "half" | "third" | "pact";
+      rounding?: "down" | "up";
+    } | null;
+  } | null;
+  subclassDetails?: Record<string, string | {
+    name: string;
+    spellcasting?: {
+      ability: string;
+      list: string;
+      contribution?: "third";
+      progression?: Array<{ level: number; cantrips?: number; prepared?: number; slots?: number[] }>;
+    };
+  }>;
   spellAbility?: string | null;
   slotsReset?: string | null;
+  preparedSpellFormula?: { classLevelDivisor?: 1 | 2; rounding?: "down" | "up"; minimum?: number } | null;
   autolevels: Array<{
     level: number;
     slots: number[] | null;
@@ -156,6 +178,11 @@ export interface InvocationFeatureDetail {
   name: string;
   text: string;
   effects?: unknown[];
+}
+
+export interface CharacterClassDetailSelection {
+  entry: CharacterClassEntry;
+  detail: ClassRestDetail;
 }
 
 export interface ClassFeatFeatureDetail {

@@ -27,15 +27,13 @@ function compactChoices(value: unknown): JsonRecord | undefined {
   return Object.keys(compact).length > 0 ? compact : undefined;
 }
 
-export function compactTrait(raw: unknown): JsonRecord {
+function compactTrait(raw: unknown): JsonRecord {
   const trait = record(raw);
   const compact: JsonRecord = {
     id: trait.id,
     name: trait.name,
     description: String(trait.description ?? ""),
   };
-  const category = text(trait.category);
-  if (category) compact.category = category;
   const scalingRolls = list(trait.scalingRolls).map(compactScalingRoll);
   if (scalingRolls.length > 0) compact.scalingRolls = scalingRolls;
   const psp = list(trait.preparedSpellProgression);

@@ -47,10 +47,6 @@ export function cleanFeatureText(text: string | null | undefined): string {
   return String(text ?? "").replace(/Source:.*$/ms, "").trim();
 }
 
-export function stripBracketSuffix(value: string | null | undefined): string {
-  return String(value ?? "").replace(/\s*\[[^\]]+\]\s*$/u, "").trim();
-}
-
 export function hasKeys(value: Record<string, unknown>): boolean {
   return Object.keys(value).length > 0;
 }

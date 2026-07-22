@@ -7,23 +7,23 @@ import type { EncounterActorDto, NoteDto, TreasureDto } from "@beholden/shared/a
 
 export type Id = string;
 
-export type HelloPayload = { ok: true; time: number };
+type HelloPayload = { ok: true; time: number };
 
-export type CampaignsChangedPayload = { campaignId: Id };
-export type AdventuresDeltaPayload = {
+type CampaignsChangedPayload = { campaignId: Id };
+type AdventuresDeltaPayload = {
   campaignId: Id;
   action: "upsert" | "delete" | "refresh";
   adventureId?: Id;
 };
 
-export type EncountersDeltaPayload = {
+type EncountersDeltaPayload = {
   campaignId: Id;
   adventureId: Id;
   action: "upsert" | "delete" | "refresh";
   encounterId?: Id;
 };
 
-export type NotesDeltaPayload = {
+type NotesDeltaPayload = {
   campaignId: Id;
   adventureId?: Id | null;
   action: "upsert" | "delete" | "refresh";
@@ -31,20 +31,20 @@ export type NotesDeltaPayload = {
   note?: NoteDto;
 };
 
-export type PlayersDeltaPayload = {
+type PlayersDeltaPayload = {
   campaignId: Id;
   action: "upsert" | "delete" | "refresh";
   playerId?: Id;
   characterId?: Id | null;
 };
 
-export type InpcsDeltaPayload = {
+type InpcsDeltaPayload = {
   campaignId: Id;
   action: "upsert" | "delete" | "refresh";
   inpcId?: Id;
 };
 
-export type TreasureDeltaPayload = {
+type TreasureDeltaPayload = {
   campaignId: Id;
   adventureId?: Id | null;
   encounterId?: Id | null;
@@ -53,21 +53,21 @@ export type TreasureDeltaPayload = {
   treasure?: TreasureDto;
 };
 
-export type PartyInventoryDeltaPayload = {
+type PartyInventoryDeltaPayload = {
   campaignId: Id;
   action: "upsert" | "delete" | "refresh";
   itemId?: Id;
 };
-export type PartyCurrencyDeltaPayload = {
+type PartyCurrencyDeltaPayload = {
   campaignId: Id;
 };
-export type BastionsDeltaPayload = {
+type BastionsDeltaPayload = {
   campaignId: Id;
   action: "upsert" | "delete" | "refresh";
   bastionId?: Id;
 };
 
-export type CompendiumChangedPayload =
+type CompendiumChangedPayload =
   | { cleared: true }
   | { liveReferencesMigrated: true; changedRows: number; changedReferences: number }
   | { imported: number; total: number }
@@ -97,32 +97,32 @@ export type CompendiumChangedPayload =
   | { spellUpdated: string }
   | { spellDeleted: string };
 
-export type EncounterCombatantsDeltaPayload = {
+type EncounterCombatantsDeltaPayload = {
   encounterId: Id;
   action: "upsert" | "delete" | "refresh";
   combatantId?: Id;
   combatant?: EncounterActorDto;
 };
 
-export type EncounterCombatStateChangedPayload = { encounterId: Id };
+type EncounterCombatStateChangedPayload = { encounterId: Id };
 
-export type SavePendingPayload = Record<string, never>;
-export type SaveCompletePayload = Record<string, never>;
+type SavePendingPayload = Record<string, never>;
+type SaveCompletePayload = Record<string, never>;
 
-export type InitiativePromptPayload = {
+type InitiativePromptPayload = {
   campaignId: Id;
   encounterId: Id;
   prompts: Array<{ characterId: Id; combatantId: Id }>;
 };
 
-export type InitiativeFulfilledPayload = {
+type InitiativeFulfilledPayload = {
   campaignId: Id;
   encounterId: Id;
   combatantId: Id;
   characterId: Id;
 };
 
-export type ConcentrationCheckPayload = {
+type ConcentrationCheckPayload = {
   campaignId: Id;
   encounterId: Id;
   characterId: Id;
@@ -130,7 +130,7 @@ export type ConcentrationCheckPayload = {
   dc: number;
 };
 
-export type XpAwardedPayload = {
+type XpAwardedPayload = {
   campaignId: Id;
   characterId: Id;
   xpAdded: number;

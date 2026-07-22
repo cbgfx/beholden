@@ -4,15 +4,15 @@ export interface SharedSpellSummary {
   level?: number | null;
   text?: string | null;
   rolls?: Array<{ effect?: string | string[] | null }>;
-  check?: string | string[] | null;
+  check?: string | null;
 }
 
 function spellLooksLikeDamageSpell(spell: SharedSpellSummary): boolean {
   return (spell.rolls ?? []).some((roll) => Array.isArray(roll.effect) || (roll.effect && roll.effect !== "healing" && roll.effect !== "temp_hp"));
 }
 
-function spellUsesAttackRoll(spell: SharedSpellSummary & { check?: string | string[] | null }): boolean {
-  return (Array.isArray(spell.check) ? spell.check : [spell.check]).includes("attack");
+function spellUsesAttackRoll(spell: SharedSpellSummary & { check?: string | null }): boolean {
+  return spell.check === "attack";
 }
 
 export interface SharedSpellListChoiceEntry {

@@ -36377,16 +36377,6 @@
       "description": "You have a +3 bonus to attack and damage rolls made with this magic weapon. On a critical hit against a target in an astral body (as with the astral projection spell), you can cut the silvery cord that tethers the target to its material body, instead of dealing damage.\n\nTwo-Handed: This weapon requires two hands when you attack with it.\n\nHeavy: Creatures that are Small or Tiny have disadvantage on attack rolls with heavy weapons. A heavy weapon's size and bulk make it too large for a Small or Tiny creature to use effectively.\n\nProficiency: martial, longsword"
     },
     {
-      "id": "i_silver_plated_steel_longsword_with_jet_set_in_hilt",
-      "ruleset": "5e",
-      "name": "Silver-plated steel longsword with jet set in hilt",
-      "source": "Dungeon Master's Guide (2014) p. 135",
-      "type": "Currency",
-      "rarity": "common",
-      "value": 750,
-      "description": ""
-    },
-    {
       "id": "i_silvered_hooked_shortspear",
       "ruleset": "5e",
       "name": "Silvered Hooked Shortspear",

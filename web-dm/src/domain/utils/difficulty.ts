@@ -1,149 +1,94 @@
-import { labelForRoundsToTpk } from "@/domain/utils/monsterDpr";
+import { labelForRoundsToTpk, type ProjectedThreatLabel } from "./monsterDpr";
 
-type DifficultyLabel = "Too Easy" | "Easy" | "Medium" | "Hard" | "Deadly" | "TPK";
+type OfficialDifficultyLabel = "No Party" | "No Hostiles" | "Low" | "Moderate" | "High";
+type EncounterThreatLabel = "Unavailable" | ProjectedThreatLabel;
 
-// ── XP thresholds by character level (DMG p.82) ──────────────────────────────
-// [easy, medium, hard, deadly]
-const XP_THRESHOLDS: Record<number, [number, number, number, number]> = {
-  1:  [25,   50,    75,    100  ],
-  2:  [50,   100,   150,   200  ],
-  3:  [75,   150,   225,   400  ],
-  4:  [125,  250,   375,   500  ],
-  5:  [250,  500,   750,   1100 ],
-  6:  [300,  600,   900,   1400 ],
-  7:  [350,  750,   1100,  1700 ],
-  8:  [450,  900,   1400,  2100 ],
-  9:  [550,  1100,  1600,  2400 ],
-  10: [600,  1200,  1900,  2800 ],
-  11: [800,  1600,  2400,  3600 ],
-  12: [1000, 2000,  3000,  4500 ],
-  13: [1100, 2200,  3400,  5100 ],
-  14: [1250, 2500,  3800,  5700 ],
-  15: [1400, 2800,  4300,  6400 ],
-  16: [1600, 3200,  4800,  7200 ],
-  17: [2000, 3900,  5900,  8800 ],
-  18: [2100, 4200,  6300,  9500 ],
-  19: [2400, 4900,  7300,  10900],
-  20: [2800, 5700,  8500,  12700],
+// 2024 DMG / Free Rules XP budget per character: [low, moderate, high].
+const XP_BUDGETS: Record<number, [number, number, number]> = {
+  1: [50, 75, 100], 2: [100, 150, 200], 3: [150, 225, 400], 4: [250, 375, 500],
+  5: [500, 750, 1100], 6: [600, 1000, 1400], 7: [750, 1300, 1700], 8: [1000, 1700, 2100],
+  9: [1300, 2000, 2600], 10: [1600, 2300, 3100], 11: [1900, 2900, 4100], 12: [2200, 3700, 4700],
+  13: [2600, 4200, 5400], 14: [2900, 4900, 6200], 15: [3300, 5400, 7800], 16: [3800, 6100, 9800],
+  17: [4500, 7200, 11700], 18: [5000, 8700, 14200], 19: [5500, 10700, 17200], 20: [6400, 13200, 22000],
 };
 
-const DIFFICULTY_ORDER: DifficultyLabel[] = ["Too Easy", "Easy", "Medium", "Hard", "Deadly", "TPK"];
-
-// ── DMG monster-count action economy multipliers ──────────────────────────────
-const MONSTER_COUNT_MULTIPLIER_TIERS: number[] = [1.0, 1.5, 2.0, 2.5, 3.0, 4.0];
-const MONSTER_COUNT_MULTIPLIERS: Array<[number, number]> = [
-  [1,  1.0],
-  [2,  1.5],
-  [6,  2.0],
-  [10, 2.5],
-  [14, 3.0],
-  [Infinity, 4.0],
-];
-
-/**
- * DMG monster-count multiplier, adjusted for party size.
- * Small parties (1–2) get one tier up; large parties (6+) get one tier down.
- */
-function monsterCountMultiplier(count: number, partySize: number): number {
-  if (count <= 0) return 1.0;
-  let base = 4.0;
-  for (const [max, mult] of MONSTER_COUNT_MULTIPLIERS) {
-    if (count <= max) { base = mult; break; }
-  }
-  const tiers = MONSTER_COUNT_MULTIPLIER_TIERS;
-  let idx = tiers.indexOf(base);
-  if (idx === -1) idx = tiers.length - 1;
-  if (partySize <= 2) idx = Math.min(idx + 1, tiers.length - 1);
-  if (partySize >= 6) idx = Math.max(idx - 1, 0);
-  return tiers[idx];
-}
-
-function xpDifficultyLabel(totalXp: number, playerLevels: number[]): DifficultyLabel {
-  if (!playerLevels.length || totalXp <= 0) return "Too Easy";
-  let easy = 0, medium = 0, hard = 0, deadly = 0;
-  for (const lvl of playerLevels) {
-    const clamped = Math.min(20, Math.max(1, Math.round(lvl)));
-    const t = XP_THRESHOLDS[clamped] ?? XP_THRESHOLDS[1];
-    easy   += t[0];
-    medium += t[1];
-    hard   += t[2];
-    deadly += t[3];
-  }
-  if (totalXp >= deadly * 2) return "TPK";
-  if (totalXp >= deadly)     return "Deadly";
-  if (totalXp >= hard)       return "Hard";
-  if (totalXp >= medium)     return "Medium";
-  if (totalXp >= easy)       return "Easy";
-  return "Too Easy";
-}
-
-function worseDifficulty(a: DifficultyLabel, b: DifficultyLabel): DifficultyLabel {
-  return DIFFICULTY_ORDER.indexOf(a) >= DIFFICULTY_ORDER.indexOf(b) ? a : b;
-}
-
-/**
- * CR ceiling check — catches glass-ceiling scenarios like CR 20 vs level 6 party.
- */
-function crCeilingLabel(maxCr: number, avgPartyLevel: number): DifficultyLabel {
-  if (avgPartyLevel <= 0 || maxCr <= 0) return "Too Easy";
-  const ratio = maxCr / avgPartyLevel;
-  if (ratio >= 5.0) return "TPK";
-  if (ratio >= 3.0) return "Deadly";
-  if (ratio >= 2.0) return "Hard";
-  if (ratio >= 1.5) return "Medium";
-  if (ratio >= 1.0) return "Easy";
-  return "Too Easy";
-}
-
 export type EncounterDifficulty = {
-  label: DifficultyLabel;
+  officialDifficulty: OfficialDifficultyLabel;
+  projectedThreat: EncounterThreatLabel;
   roundsToTpk: number;
   partyHpMax: number;
   hostileDpr: number;
+  projectedDpr: number;
   burstFactor: number;
-  adjustedXp: number;
+  encounterXp: number;
+  lowBudget: number;
+  moderateBudget: number;
+  highBudget: number;
+  monsterSurvivalRounds: number;
+  expectedPartyDamageRatio: number;
+  roundsToFirstDown: number;
 };
+
+function partyBudgets(playerLevels: number[]): [number, number, number] {
+  return playerLevels.reduce<[number, number, number]>((total, level) => {
+    const row = XP_BUDGETS[Math.min(20, Math.max(1, Math.round(level)))] ?? XP_BUDGETS[1];
+    return [total[0] + row[0], total[1] + row[1], total[2] + row[2]];
+  }, [0, 0, 0]);
+}
 
 export function calcEncounterDifficulty(args: {
   partyHpMax: number;
   hostileDpr: number;
+  projectedDpr?: number;
   burstFactor?: number;
   totalXp?: number;
   playerLevels?: number[];
-  monsterCount?: number;
-  maxMonsterCr?: number;
+  partyHpValues?: number[];
+  monsterEffectiveHp?: number;
+  partyDpr?: number;
 }): EncounterDifficulty {
+  const playerLevels = (args.playerLevels ?? []).filter((level) => Number.isFinite(level) && level > 0);
+  const [lowBudget, moderateBudget, highBudget] = partyBudgets(playerLevels);
+  const encounterXp = typeof args.totalXp === "number" && Number.isFinite(args.totalXp) ? Math.max(0, Math.round(args.totalXp)) : 0;
+  const officialDifficulty: OfficialDifficultyLabel = !playerLevels.length
+    ? "No Party"
+    : encounterXp <= 0
+      ? "No Hostiles"
+      : encounterXp <= lowBudget
+        ? "Low"
+        : encounterXp <= moderateBudget
+          ? "Moderate"
+          : "High";
+
   const partyHpMax = Math.max(0, Math.round(args.partyHpMax ?? 0));
   const hostileDprRaw = typeof args.hostileDpr === "number" && Number.isFinite(args.hostileDpr) ? Math.max(0, args.hostileDpr) : 0;
-  const burstFactor = typeof args.burstFactor === "number" && Number.isFinite(args.burstFactor) ? Math.max(1, args.burstFactor) : 1.0;
+  const legacyBurstFactor = typeof args.burstFactor === "number" && Number.isFinite(args.burstFactor) ? Math.max(1, args.burstFactor) : 1;
+  const projectedDpr = typeof args.projectedDpr === "number" && Number.isFinite(args.projectedDpr)
+    ? Math.max(0, args.projectedDpr)
+    : hostileDprRaw * legacyBurstFactor;
+  const burstFactor = hostileDprRaw > 0 ? Math.max(1, projectedDpr / hostileDprRaw) : 1;
+  const roundsToTpk = projectedDpr > 0 ? partyHpMax / projectedDpr : Number.POSITIVE_INFINITY;
+  const partyHpValues = (args.partyHpValues ?? []).filter((hp) => Number.isFinite(hp) && hp > 0);
+  const partyDpr = typeof args.partyDpr === "number" && Number.isFinite(args.partyDpr) ? Math.max(0, args.partyDpr) : 0;
+  const monsterEffectiveHp = typeof args.monsterEffectiveHp === "number" && Number.isFinite(args.monsterEffectiveHp) ? Math.max(0, args.monsterEffectiveHp) : 0;
+  const monsterSurvivalRounds = partyDpr > 0 ? monsterEffectiveHp / partyDpr : Number.POSITIVE_INFINITY;
+  const activeRounds = Number.isFinite(monsterSurvivalRounds) ? Math.max(.5, monsterSurvivalRounds) : Number.POSITIVE_INFINITY;
+  const expectedDamageBeforeDefeat = Number.isFinite(activeRounds) ? projectedDpr * activeRounds * (activeRounds <= 1 ? .85 : .65) : Number.POSITIVE_INFINITY;
+  const expectedPartyDamageRatio = partyHpMax > 0 ? expectedDamageBeforeDefeat / partyHpMax : Number.POSITIVE_INFINITY;
+  const lowestHp = partyHpValues.length ? Math.min(...partyHpValues) : 0;
+  const focusedDpr = partyHpValues.length ? projectedDpr * Math.min(.6, 1.5 / partyHpValues.length) : 0;
+  const roundsToFirstDown = lowestHp > 0 && focusedDpr > 0 ? lowestHp / focusedDpr : Number.POSITIVE_INFINITY;
+  const simulatedThreat: EncounterThreatLabel = expectedPartyDamageRatio <= .2 ? "Too Easy"
+    : expectedPartyDamageRatio <= .4 ? "Easy"
+      : expectedPartyDamageRatio <= .65 ? "Medium"
+        : expectedPartyDamageRatio <= .95 ? "Hard"
+          : expectedPartyDamageRatio <= 1.25 ? "Lethal"
+            : "TPK";
+  const projectedThreat: EncounterThreatLabel = !playerLevels.length || partyHpMax <= 0
+    ? "Unavailable"
+    : partyDpr > 0 && monsterEffectiveHp > 0
+      ? simulatedThreat
+      : labelForRoundsToTpk(roundsToTpk);
 
-  const hostileDpr = hostileDprRaw * burstFactor;
-  const roundsToTpk = hostileDpr > 0 ? partyHpMax / hostileDpr : Number.POSITIVE_INFINITY;
-
-  const rawXp = typeof args.totalXp === "number" && Number.isFinite(args.totalXp) ? Math.max(0, args.totalXp) : 0;
-  const partySize = args.playerLevels?.length ?? 0;
-  const mult = monsterCountMultiplier(args.monsterCount ?? 0, partySize);
-  const adjustedXp = Math.round(rawXp * mult);
-  const adjustedXpLabel = (adjustedXp > 0 && args.playerLevels?.length)
-    ? xpDifficultyLabel(adjustedXp, args.playerLevels)
-    : "Too Easy";
-
-  const avgPartyLevel = args.playerLevels?.length
-    ? args.playerLevels.reduce((s, l) => s + l, 0) / args.playerLevels.length
-    : 0;
-  const maxCr = typeof args.maxMonsterCr === "number" && Number.isFinite(args.maxMonsterCr) ? args.maxMonsterCr : 0;
-  const crLabel = crCeilingLabel(maxCr, avgPartyLevel);
-
-  const dprLabel = labelForRoundsToTpk(roundsToTpk);
-
-  const label = worseDifficulty(worseDifficulty(adjustedXpLabel, crLabel), dprLabel);
-
-  return {
-    label,
-    roundsToTpk,
-    partyHpMax,
-    hostileDpr: hostileDprRaw,
-    burstFactor,
-    adjustedXp,
-  };
+  return { officialDifficulty, projectedThreat, roundsToTpk, partyHpMax, hostileDpr: hostileDprRaw, projectedDpr, burstFactor, encounterXp, lowBudget, moderateBudget, highBudget, monsterSurvivalRounds, expectedPartyDamageRatio, roundsToFirstDown };
 }

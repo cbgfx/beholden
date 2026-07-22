@@ -19,6 +19,9 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
     selectedPlanEntries = [],
     baseScores, asiMode, asiStats, featAbilityBonuses,
   } = args;
+  const targetClassLevel = args.nextClassLevel ?? nextLevel;
+  const targetClassEntryId = args.targetClassEntryId ?? char.characterData?.classes?.[0]?.id
+    ?? `class_${String(char.className ?? "").trim().toLowerCase().replace(/\s+/g, "_") || "primary"}`;
 
   // hpMax stores base HP. Deterministic feat bonuses are derived from the
   // current compendium definition when the sheet loads.
@@ -37,6 +40,8 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
   const existingManeuverEntries = _arr(proficiencies?.maneuvers);
   const existingPlanEntries = _arr(proficiencies?.plans);
   const classSource = classDetailName ?? char.className;
+  const multiclassProficiencies = args.isAddingClass ? args.multiclassProficiencies : undefined;
+  const multiclassTagged = (names: string[] | undefined) => (names ?? []).map((name) => ({ name, source: classSource, sourceKey: `class:${targetClassEntryId}` }));
   const selectedExpertiseEntries = expertiseChoices.flatMap((choice) =>
     (chosenExpertise[choice.key] ?? []).map((name) => ({ name, source: choice.source }))
   );
@@ -127,20 +132,29 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
   // not from a stale copy that could clobber concurrent edits (inventory, notes, etc.).
   const nextCharacterData = {
     classes: Array.isArray(char.characterData?.classes) && char.characterData.classes.length > 0
-      ? char.characterData.classes.map((entry, index) =>
-          index === 0
+      ? [
+          ...char.characterData.classes.map((entry) =>
+          entry.id === targetClassEntryId
             ? {
                 ...entry,
-                level: nextLevel,
+                level: targetClassLevel,
                 subclass: subclass || null,
               }
             : entry
-        )
+          ),
+          ...(args.isAddingClass ? [{
+            id: targetClassEntryId,
+            classId: args.targetClassId ?? null,
+            className: classDetailName ?? "Class",
+            level: 1,
+            subclass: null,
+          }] : []),
+        ]
       : [{
           id: `class_${String(char.className ?? "").trim().toLowerCase().replace(/\s+/g, "_") || "primary"}`,
           classId: null,
           className: char.className,
-          level: nextLevel,
+          level: targetClassLevel,
           subclass: subclass || null,
         }],
     chosenLevelUpFeats: nextLevelUpFeats,
@@ -151,6 +165,17 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
         ? selectedSpellEntries.map((entry) => normalizeSpellTrackingKey(entry.name))
         : char.characterData?.preparedSpells,
     chosenInvocations,
+    classSpellSelections: {
+      ...((char.characterData?.classSpellSelections ?? {}) as Record<string, unknown>),
+      [targetClassEntryId]: {
+        chosenCantrips,
+        chosenSpells,
+        preparedSpells: classDetailName && chosenSpells.length > 0 && !String((char as { className?: string }).className ?? "").toLowerCase().includes("warlock")
+          ? selectedSpellEntries.map((entry) => normalizeSpellTrackingKey(entry.name))
+          : ((char.characterData?.classSpellSelections as Record<string, { preparedSpells?: string[] }> | undefined)?.[targetClassEntryId]?.preparedSpells ?? []),
+        chosenInvocations,
+      },
+    },
     extraFeatIds: nextExtraFeatIds,
     chosenFeatOptions: nextChosenFeatOptions,
     chosenFeatureChoices: {
@@ -163,11 +188,13 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
       ...(proficiencies ?? {}),
       skills: [
         ...existingSkillEntries.filter((entry) => entry.source !== featSourceLabel),
+        ...multiclassTagged(multiclassProficiencies?.skills),
         ...(selectedFeatEntries?.skills ?? []),
         ...(selectedFeatureProficiencyEntries.skills ?? []),
       ],
       tools: [
         ...existingToolEntries.filter((entry) => entry.source !== featSourceLabel),
+        ...multiclassTagged(multiclassProficiencies?.tools),
         ...(selectedFeatEntries?.tools ?? []),
         ...(selectedFeatureProficiencyEntries.tools ?? []),
       ],
@@ -178,11 +205,13 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
       ],
       armor: [
         ...existingArmorEntries.filter((entry) => entry.source !== featSourceLabel),
+        ...multiclassTagged(multiclassProficiencies?.armor),
         ...(selectedFeatEntries?.armor ?? []),
         ...(selectedFeatureProficiencyEntries.armor ?? []),
       ],
       weapons: [
         ...existingWeaponEntries.filter((entry) => entry.source !== featSourceLabel),
+        ...multiclassTagged(multiclassProficiencies?.weapons),
         ...(selectedFeatEntries?.weapons ?? []),
         ...(selectedFeatureProficiencyEntries.weapons ?? []),
       ],
@@ -197,8 +226,8 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
           // history, not merely the currently prepared selection. Removing the class source
           // here caused Wizards to forget every unprepared spell on level-up.
           existingSpells.filter((entry) => entry.source !== featSourceLabel),
-          selectedCantripEntries,
-          selectedSpellEntries,
+          selectedCantripEntries.map((entry) => ({ ...entry, classEntryId: targetClassEntryId, sourceKey: `class:${targetClassEntryId}` })),
+          selectedSpellEntries.map((entry) => ({ ...entry, classEntryId: targetClassEntryId, sourceKey: `class:${targetClassEntryId}` })),
           selectedClassFeatureSpellEntries,
           selectedInvocationSpellEntries,
           selectedFeatSpellEntries,
@@ -206,7 +235,7 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
       ],
       invocations: [
         ...existingInvocations.filter((entry) => entry.source !== classSource),
-        ...selectedInvocationEntries,
+        ...selectedInvocationEntries.map((entry) => ({ ...entry, classEntryId: targetClassEntryId, sourceKey: `class:${targetClassEntryId}` })),
       ],
       expertise: [
         ...existingExpertiseEntries.filter((entry) => !expertiseChoices.some((choice) => choice.source === entry.source) && entry.source !== featSourceLabel),

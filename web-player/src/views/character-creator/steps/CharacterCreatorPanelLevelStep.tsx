@@ -3,7 +3,13 @@ import { Select } from "@/ui/Select";
 import { C } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import { ABILITY_KEYS, ABILITY_LABELS } from "@/views/character-creator/constants/CharacterCreatorConstants";
-import { type StartingEquipmentOption } from "../utils/CharacterCreatorUtils";
+import {
+  featuresUpToLevelForSubclass,
+  getSubclassLevel,
+  getSubclassList,
+  parseStartingEquipmentOptions,
+  type StartingEquipmentOption,
+} from "../utils/CharacterCreatorUtils";
 import { NavButtons } from "../shared/CharacterCreatorParts";
 import {
   detailBoxStyle,
@@ -13,13 +19,17 @@ import {
   sourceTagStyle,
 } from "../shared/CharacterCreatorStyles";
 import { PreparedSpellProgressionBlock } from "@/views/character/CharacterViewParts";
+import { getOptionalGroups, resolvedScores } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
+import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
 
 interface OptionalGroupLike {
   level: number;
-  features: Array<{ name: string; text: string; preparedSpellProgression?: PreparedSpellProgressionTable[] }>;
+  name: string;
+  exclusive: boolean;
+  features: Array<{ name: string; text: string; selectionNames: string[]; preparedSpellProgression?: PreparedSpellProgressionTable[] }>;
 }
 
-export function renderLevelStep({
+function renderLevelStep({
   level,
   subclass,
   setSubclass,
@@ -49,7 +59,7 @@ export function renderLevelStep({
   subclassList: string[];
   optGroups: OptionalGroupLike[];
   chosenOptionals: string[];
-  toggleOptional: (name: string, exclusive: boolean, groupFeatures: string[]) => void;
+  toggleOptional: (selectionNames: string[], exclusive: boolean, groupFeatures: string[]) => void;
   classEquipmentOptions: StartingEquipmentOption[];
   chosenClassEquipmentOption: string | null;
   chooseClassEquipmentOption: (id: string) => void;
@@ -90,21 +100,20 @@ export function renderLevelStep({
       )}
 
       {optGroups.map((grp) => {
-        const names = grp.features.map((f) => f.name);
-        const isPickOne = grp.features.length <= 4;
+        const names = grp.features.flatMap((feature) => feature.selectionNames);
         return (
-          <div key={grp.level} style={{ marginBottom: 20 }}>
+          <div key={`${grp.level}:${grp.name}`} style={{ marginBottom: 20 }}>
             <div style={{ ...labelStyle, marginBottom: 8 }}>
-              Level {grp.level} — {isPickOne ? "Choose one" : "Choose any"}
+              Level {grp.level} — {grp.name}: {grp.exclusive ? "Choose one" : "Choose any"}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {grp.features.map((f) => {
-                const chosen = chosenOptionals.includes(f.name);
+                const chosen = f.selectionNames.every((name) => chosenOptionals.includes(name));
                 return (
                   <button
                     key={f.name}
                     type="button"
-                    onClick={() => toggleOptional(f.name, isPickOne, names)}
+                    onClick={() => toggleOptional(f.selectionNames, grp.exclusive, names)}
                     style={{
                       textAlign: "left",
                       padding: "11px 14px",
@@ -298,7 +307,7 @@ export function renderLevelStep({
       )}
 
       <NavButtons
-        step={5}
+        step={6}
         onBack={onBack}
         onNext={onNext}
         nextDisabled={
@@ -335,3 +344,111 @@ export function renderLevelStep({
   return { main, side };
 }
 
+export function renderLevelFromContext(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
+  const subclassList = ctx.classDetail ? getSubclassList(ctx.classDetail) : [];
+  const scNeeded = ctx.classDetail ? (getSubclassLevel(ctx.classDetail) ?? 99) : 99;
+  const showSubclass = Boolean(ctx.classDetail && ctx.form.level >= scNeeded && subclassList.length > 0);
+  const features = (ctx.classDetail ? featuresUpToLevelForSubclass(ctx.classDetail, ctx.form.level, ctx.form.subclass) : []).map((f) => ({ ...f, text: f.text ?? "" }));
+  const optGroups = ctx.classDetail
+    ? getOptionalGroups(ctx.classDetail, ctx.form.level)
+        .map((group) => ({
+          ...group,
+          features: group.features.filter((feature) => !/ability score improvement/i.test(feature.name.trim())),
+        }))
+        .filter((group) => group.features.length > 0)
+    : [];
+  const classEquipmentOptions = parseStartingEquipmentOptions(ctx.classDetail?.equipmentOptions);
+  const scoresBeforeLevelUpAsi = resolvedScores(ctx.form, ctx.selectedFeatGrantedAbilityBonuses);
+  const levelUpScores = ctx.levelUpFeatLevels.reduce<Record<number, Record<string, number>>>((acc, level) => {
+    const previousLevel = ctx.levelUpFeatLevels.filter((candidate) => candidate < level).sort((a, b) => a - b).pop();
+    const previousScores = previousLevel != null ? acc[previousLevel] : scoresBeforeLevelUpAsi;
+    const nextScores = { ...previousScores };
+    const previousEntry = previousLevel != null ? ctx.form.chosenLevelUpFeats.find((entry) => entry.level === previousLevel) : null;
+    if (previousEntry?.type === "asi") {
+      for (const [ability, bonus] of Object.entries(previousEntry.abilityBonuses ?? {})) {
+        nextScores[ability] = Math.min(20, (nextScores[ability] ?? 10) + bonus);
+      }
+    }
+    acc[level] = nextScores;
+    return acc;
+  }, {});
+  function toggleOptional(selectionNames: string[], exclusive: boolean, groupFeatures: string[]) {
+    ctx.setForm((f) => {
+      let next = [...f.chosenOptionals];
+      const selected = selectionNames.every((name) => next.includes(name));
+      if (exclusive) {
+        next = next.filter((n) => !groupFeatures.includes(n));
+        if (!selected) next.push(...selectionNames);
+      } else {
+        next = selected ? next.filter((n) => !selectionNames.includes(n)) : [...next, ...selectionNames];
+      }
+      return { ...f, chosenOptionals: Array.from(new Set(next)) };
+    });
+  }
+
+  return renderLevelStep({
+    level: ctx.form.level,
+    subclass: ctx.form.subclass,
+    setSubclass: (value) => ctx.setField("subclass", value),
+    showSubclass,
+    subclassList,
+    optGroups,
+    chosenOptionals: ctx.form.chosenOptionals,
+    toggleOptional,
+    classEquipmentOptions,
+    chosenClassEquipmentOption: ctx.form.chosenClassEquipmentOption,
+    chooseClassEquipmentOption: (id) => ctx.setForm((f) => ({ ...f, chosenClassEquipmentOption: id })),
+    className: ctx.classDetail?.name ?? null,
+    features,
+    levelUpFeatChoices: ctx.levelUpFeatLevels.map((level) => {
+      const entry = ctx.form.chosenLevelUpFeats.find((candidate) => candidate.level === level);
+      return {
+        level,
+        mode: entry?.type ?? null,
+        selectedFeatId: entry?.featId ?? null,
+        options: ctx.availableLevelUpFeats,
+        asiBonuses: entry?.abilityBonuses ?? {},
+      };
+    }),
+    levelUpScores,
+    toggleLevelUpChoiceMode: (level, mode) => ctx.setForm((f) => ({
+      ...f,
+      chosenLevelUpFeats: [
+        ...f.chosenLevelUpFeats.filter((entry) => entry.level !== level),
+        { level, type: mode as "feat" | "asi" | undefined, featId: null, abilityBonuses: {} },
+      ].sort((a, b) => a.level - b.level),
+      chosenFeatOptions: Object.fromEntries(Object.entries(f.chosenFeatOptions).filter(([key]) => !key.startsWith(`levelupfeat:${level}:`))),
+    })),
+    toggleLevelUpAsiPoint: (level, ability) => ctx.setForm((f) => {
+      const existing = f.chosenLevelUpFeats.find((entry) => entry.level === level);
+      const bonuses = { ...(existing?.abilityBonuses ?? {}) };
+      const assigned = Object.values(bonuses).reduce((sum, value) => sum + value, 0);
+      const current = bonuses[ability] ?? 0;
+      if (current >= 2) bonuses[ability] = current - 1;
+      else if (current > 0 && assigned >= 2) {
+        if (current === 1) delete bonuses[ability];
+        else bonuses[ability] = current - 1;
+      } else if (assigned < 2) bonuses[ability] = current + 1;
+      return {
+        ...f,
+        chosenLevelUpFeats: [
+          ...f.chosenLevelUpFeats.filter((entry) => entry.level !== level),
+          { level, type: "asi" as const, featId: null, abilityBonuses: bonuses },
+        ].sort((a, b) => a.level - b.level),
+      };
+    }),
+    chooseLevelUpFeat: (level, featId) => ctx.setForm((f) => ({
+      ...f,
+      chosenLevelUpFeats: [
+        ...f.chosenLevelUpFeats.filter((entry) => entry.level !== level),
+        { level, type: "feat" as const, featId: featId || null, abilityBonuses: {} },
+      ].sort((a, b) => a.level - b.level),
+      chosenFeatOptions: featId
+        ? f.chosenFeatOptions
+        : Object.fromEntries(Object.entries(f.chosenFeatOptions).filter(([key]) => !key.startsWith(`levelupfeat:${level}:`))),
+    })),
+    levelUpFeatConflict: Boolean(ctx.levelUpFeatConflict),
+    onBack: () => ctx.setStep(5),
+    onNext: () => ctx.setStep(7),
+  });
+}

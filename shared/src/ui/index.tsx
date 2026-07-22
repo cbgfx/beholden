@@ -13,6 +13,8 @@ export { FieldGrid } from "./FieldGrid";
 export { Tag } from "./Tag";
 export { StatCard } from "./StatCard";
 export { MiniStat } from "./MiniStat";
+export { MiniTable } from "./MiniTable";
+export { RulesSectionBox } from "./RulesSectionBox";
 export { EmptyState } from "./EmptyState";
 export { NoteRow } from "./NoteRow";
 export { NoteList } from "./NoteList";

@@ -116,7 +116,10 @@ export function compactClassEntry(entry: JsonRecord): JsonRecord {
   const spellcasting = record(entry.spellcasting);
   if (spellcasting.ability != null) {
     const spellcastingCompact: JsonRecord = { ability: spellcasting.ability };
+    if (spellcasting.list != null) spellcastingCompact.list = spellcasting.list;
     if (spellcasting.slotRecovery && spellcasting.slotRecovery !== "long_rest") spellcastingCompact.slotRecovery = spellcasting.slotRecovery;
+    if (spellcasting.preparedSpellChanges) spellcastingCompact.preparedSpellChanges = spellcasting.preparedSpellChanges;
+    if (spellcasting.preparedFormula) spellcastingCompact.preparedFormula = spellcasting.preparedFormula;
     compact.spellcasting = spellcastingCompact;
   }
   compact.levels = list(entry.levels).map(compactLevel);

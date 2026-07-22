@@ -1,0 +1,494 @@
+{
+    "generatedAt":  "2026-07-22T02:18:26.4169065Z",
+    "classes":  {
+                    "Barbarian":  {
+                                      "subclassesFound":  {
+                                                              "sc_barbarian_path_of_the_berserker":  "Path of the Berserker",
+                                                              "sc_barbarian_path_of_the_totem_warrior":  "Path of the Totem Warrior",
+                                                              "sc_barbarian_path_of_the_battlerager":  "Path of the Battlerager",
+                                                              "sc_barbarian_path_of_the_ancestral_guardian":  "Path of the Ancestral Guardian",
+                                                              "sc_barbarian_path_of_the_storm_herald":  "Path of the Storm Herald",
+                                                              "sc_barbarian_path_of_the_zealot":  "Path of the Zealot",
+                                                              "sc_barbarian_path_of_the_beast":  "Path of the Beast",
+                                                              "sc_barbarian_path_of_wild_magic":  "Path of Wild Magic",
+                                                              "sc_barbarian_path_of_the_giant":  "Path of the Giant"
+                                                          },
+                                      "assignedFeatureCounts":  {
+                                                                    "sc_barbarian_path_of_the_berserker":  5,
+                                                                    "sc_barbarian_path_of_the_totem_warrior":  21,
+                                                                    "sc_barbarian_path_of_the_battlerager":  5,
+                                                                    "sc_barbarian_path_of_the_ancestral_guardian":  5,
+                                                                    "sc_barbarian_path_of_the_storm_herald":  5,
+                                                                    "sc_barbarian_path_of_the_zealot":  6,
+                                                                    "sc_barbarian_path_of_the_beast":  5,
+                                                                    "sc_barbarian_path_of_wild_magic":  6,
+                                                                    "sc_barbarian_path_of_the_giant":  6
+                                                                },
+                                      "unclassifiedFeatures":  [
+                                                                   "L3: Primal Knowledge",
+                                                                   "L7: Instinctive Pounce",
+                                                                   "L10: Primal Knowledge"
+                                                               ],
+                                      "unknownSubclassFeatures":  [
+
+                                                                  ],
+                                      "selectionLevel":  3,
+                                      "baseBlockBoundaryNote":  null
+                                  },
+                    "Bard":  {
+                                 "subclassesFound":  {
+                                                         "sc_bard_college_of_lore":  "College of Lore",
+                                                         "sc_bard_college_of_valor":  "College of Valor",
+                                                         "sc_bard_college_of_glamour":  "College of Glamour",
+                                                         "sc_bard_college_of_swords":  "College of Swords",
+                                                         "sc_bard_college_of_whispers":  "College of Whispers",
+                                                         "sc_bard_college_of_creation":  "College of Creation",
+                                                         "sc_bard_college_of_eloquence":  "College of Eloquence",
+                                                         "sc_bard_college_of_spirits":  "College of Spirits"
+                                                     },
+                                 "assignedFeatureCounts":  {
+                                                               "sc_bard_college_of_lore":  5,
+                                                               "sc_bard_college_of_valor":  5,
+                                                               "sc_bard_college_of_glamour":  5,
+                                                               "sc_bard_college_of_swords":  8,
+                                                               "sc_bard_college_of_whispers":  5,
+                                                               "sc_bard_college_of_creation":  5,
+                                                               "sc_bard_college_of_eloquence":  6,
+                                                               "sc_bard_college_of_spirits":  6
+                                                           },
+                                 "unclassifiedFeatures":  [
+                                                              "L2: Magical Inspiration",
+                                                              "L4: Bardic Versatility",
+                                                              "L8: Bardic Versatility",
+                                                              "L12: Bardic Versatility",
+                                                              "L16: Bardic Versatility",
+                                                              "L19: Bardic Versatility"
+                                                          ],
+                                 "unknownSubclassFeatures":  [
+
+                                                             ],
+                                 "selectionLevel":  3,
+                                 "baseBlockBoundaryNote":  null
+                             },
+                    "Cleric":  {
+                                   "subclassesFound":  {
+                                                           "sc_cleric_knowledge_domain":  "Knowledge Domain",
+                                                           "sc_cleric_life_domain":  "Life Domain",
+                                                           "sc_cleric_light_domain":  "Light Domain",
+                                                           "sc_cleric_nature_domain":  "Nature Domain",
+                                                           "sc_cleric_tempest_domain":  "Tempest Domain",
+                                                           "sc_cleric_trickery_domain":  "Trickery Domain",
+                                                           "sc_cleric_war_domain":  "War Domain",
+                                                           "sc_cleric_death_domain":  "Death Domain",
+                                                           "sc_cleric_arcana_domain":  "Arcana Domain",
+                                                           "sc_cleric_forge_domain":  "Forge Domain",
+                                                           "sc_cleric_grave_domain":  "Grave Domain",
+                                                           "sc_cleric_order_domain":  "Order Domain",
+                                                           "sc_cleric_peace_domain":  "Peace Domain",
+                                                           "sc_cleric_twilight_domain":  "Twilight Domain"
+                                                       },
+                                   "assignedFeatureCounts":  {
+                                                                 "sc_cleric_knowledge_domain":  6,
+                                                                 "sc_cleric_life_domain":  7,
+                                                                 "sc_cleric_light_domain":  7,
+                                                                 "sc_cleric_nature_domain":  7,
+                                                                 "sc_cleric_tempest_domain":  7,
+                                                                 "sc_cleric_trickery_domain":  6,
+                                                                 "sc_cleric_war_domain":  7,
+                                                                 "sc_cleric_death_domain":  7,
+                                                                 "sc_cleric_arcana_domain":  6,
+                                                                 "sc_cleric_forge_domain":  7,
+                                                                 "sc_cleric_grave_domain":  7,
+                                                                 "sc_cleric_order_domain":  7,
+                                                                 "sc_cleric_peace_domain":  7,
+                                                                 "sc_cleric_twilight_domain":  8
+                                                             },
+                                   "unclassifiedFeatures":  [
+                                                                "L2: Channel Divinity: Harness Divine Power",
+                                                                "L4: Cantrip Versatility",
+                                                                "L8: Cantrip Versatility",
+                                                                "L8: Blessed Strike",
+                                                                "L12: Cantrip Versatility",
+                                                                "L16: Cantrip Versatility",
+                                                                "L19: Cantrip Versatility"
+                                                            ],
+                                   "unknownSubclassFeatures":  [
+
+                                                               ],
+                                   "selectionLevel":  1,
+                                   "baseBlockBoundaryNote":  null
+                               },
+                    "Druid":  {
+                                  "subclassesFound":  {
+                                                          "sc_druid_circle_of_the_land":  "Circle of the Land",
+                                                          "sc_druid_circle_of_the_moon":  "Circle of the Moon",
+                                                          "sc_druid_circle_of_dreams":  "Circle of Dreams",
+                                                          "sc_druid_circle_of_the_shepherd":  "Circle of the Shepherd",
+                                                          "sc_druid_circle_of_spores":  "Circle of Spores",
+                                                          "sc_druid_circle_of_stars":  "Circle of Stars",
+                                                          "sc_druid_circle_of_wildfire":  "Circle of Wildfire"
+                                                      },
+                                  "assignedFeatureCounts":  {
+                                                                "sc_druid_circle_of_the_land":  15,
+                                                                "sc_druid_circle_of_the_moon":  6,
+                                                                "sc_druid_circle_of_dreams":  5,
+                                                                "sc_druid_circle_of_the_shepherd":  6,
+                                                                "sc_druid_circle_of_spores":  7,
+                                                                "sc_druid_circle_of_stars":  6,
+                                                                "sc_druid_circle_of_wildfire":  6
+                                                            },
+                                  "unclassifiedFeatures":  [
+                                                               "L2: Wild Companion",
+                                                               "L4: Cantrip Versatility",
+                                                               "L8: Cantrip Versatility",
+                                                               "L12: Cantrip Versatility",
+                                                               "L16: Cantrip Versatility",
+                                                               "L19: Cantrip Versatility"
+                                                           ],
+                                  "unknownSubclassFeatures":  [
+
+                                                              ],
+                                  "selectionLevel":  2,
+                                  "baseBlockBoundaryNote":  null
+                              },
+                    "Fighter":  {
+                                    "subclassesFound":  {
+                                                            "sc_fighter_battle_master":  "Battle Master",
+                                                            "sc_fighter_champion":  "Champion",
+                                                            "sc_fighter_eldritch_knight":  "Eldritch Knight",
+                                                            "sc_fighter_purple_dragon_knight_banneret":  "Purple Dragon Knight (Banneret)",
+                                                            "sc_fighter_arcane_archer":  "Arcane Archer",
+                                                            "sc_fighter_cavalier":  "Cavalier",
+                                                            "sc_fighter_samurai":  "Samurai",
+                                                            "sc_fighter_psi_warrior":  "Psi Warrior",
+                                                            "sc_fighter_rune_knight":  "Rune Knight"
+                                                        },
+                                    "assignedFeatureCounts":  {
+                                                                  "sc_fighter_battle_master":  12,
+                                                                  "sc_fighter_champion":  12,
+                                                                  "sc_fighter_eldritch_knight":  7,
+                                                                  "sc_fighter_purple_dragon_knight_banneret":  7,
+                                                                  "sc_fighter_arcane_archer":  10,
+                                                                  "sc_fighter_cavalier":  8,
+                                                                  "sc_fighter_samurai":  7,
+                                                                  "sc_fighter_psi_warrior":  6,
+                                                                  "sc_fighter_rune_knight":  8
+                                                              },
+                                    "unclassifiedFeatures":  [
+                                                                 "L1: Fighting Style: Blind Fighting",
+                                                                 "L1: Fighting Style: Interception",
+                                                                 "L1: Fighting Style: Superior Technique",
+                                                                 "L1: Fighting Style: Thrown Weapon Fighting",
+                                                                 "L1: Fighting Style: Unarmed Fighting",
+                                                                 "L4: Martial Versatility",
+                                                                 "L6: Martial Versatility",
+                                                                 "L8: Martial Versatility",
+                                                                 "L10: Fighting Style: Blind Fighting",
+                                                                 "L10: Fighting Style: Interception",
+                                                                 "L10: Fighting Style: Superior Technique",
+                                                                 "L10: Fighting Style: Thrown Weapon Fighting",
+                                                                 "L10: Fighting Style: Unarmed Fighting",
+                                                                 "L12: Martial Versatility",
+                                                                 "L14: Martial Versatility",
+                                                                 "L16: Martial Versatility",
+                                                                 "L19: Martial Versatility"
+                                                             ],
+                                    "unknownSubclassFeatures":  [
+
+                                                                ],
+                                    "selectionLevel":  3,
+                                    "baseBlockBoundaryNote":  null
+                                },
+                    "Monk":  {
+                                 "subclassesFound":  {
+                                                         "sc_monk_way_of_shadow":  "Way of Shadow",
+                                                         "sc_monk_way_of_the_four_elements":  "Way of the Four Elements",
+                                                         "sc_monk_way_of_the_open_hand":  "Way of the Open Hand",
+                                                         "sc_monk_way_of_the_long_death":  "Way of the Long Death",
+                                                         "sc_monk_way_of_the_drunken_master":  "Way of the Drunken Master",
+                                                         "sc_monk_way_of_the_kensei":  "Way of the Kensei",
+                                                         "sc_monk_way_of_the_sun_soul":  "Way of the Sun Soul",
+                                                         "sc_monk_way_of_mercy":  "Way of Mercy",
+                                                         "sc_monk_way_of_the_astral_self":  "Way of the Astral Self",
+                                                         "sc_monk_way_of_the_ascendant_dragon":  "Way of the Ascendant Dragon"
+                                                     },
+                                 "assignedFeatureCounts":  {
+                                                               "sc_monk_way_of_shadow":  5,
+                                                               "sc_monk_way_of_the_four_elements":  6,
+                                                               "sc_monk_way_of_the_open_hand":  5,
+                                                               "sc_monk_way_of_the_long_death":  5,
+                                                               "sc_monk_way_of_the_drunken_master":  6,
+                                                               "sc_monk_way_of_the_kensei":  5,
+                                                               "sc_monk_way_of_the_sun_soul":  5,
+                                                               "sc_monk_way_of_mercy":  7,
+                                                               "sc_monk_way_of_the_astral_self":  6,
+                                                               "sc_monk_way_of_the_ascendant_dragon":  6
+                                                           },
+                                 "unclassifiedFeatures":  [
+                                                              "L2: Dedicated Weapon",
+                                                              "L3: Ki-Fueled Attack",
+                                                              "L4: Quickened Healing",
+                                                              "L5: Focused Aim"
+                                                          ],
+                                 "unknownSubclassFeatures":  [
+
+                                                             ],
+                                 "selectionLevel":  3,
+                                 "baseBlockBoundaryNote":  null
+                             },
+                    "Paladin":  {
+                                    "subclassesFound":  {
+                                                            "sc_paladin_oath_of_devotion":  "Oath of Devotion",
+                                                            "sc_paladin_oath_of_the_ancients":  "Oath of the Ancients",
+                                                            "sc_paladin_oath_of_vengeance":  "Oath of Vengeance",
+                                                            "sc_paladin_oathbreaker":  "Oathbreaker",
+                                                            "sc_paladin_oath_of_the_crown":  "Oath of the Crown",
+                                                            "sc_paladin_oath_of_conquest":  "Oath of Conquest",
+                                                            "sc_paladin_oath_of_redemption":  "Oath of Redemption",
+                                                            "sc_paladin_oath_of_glory":  "Oath of Glory",
+                                                            "sc_paladin_oath_of_the_watchers":  "Oath of the Watchers"
+                                                        },
+                                    "assignedFeatureCounts":  {
+                                                                  "sc_paladin_oath_of_devotion":  8,
+                                                                  "sc_paladin_oath_of_the_ancients":  8,
+                                                                  "sc_paladin_oath_of_vengeance":  8,
+                                                                  "sc_paladin_oathbreaker":  7,
+                                                                  "sc_paladin_oath_of_the_crown":  8,
+                                                                  "sc_paladin_oath_of_conquest":  8,
+                                                                  "sc_paladin_oath_of_redemption":  8,
+                                                                  "sc_paladin_oath_of_glory":  8,
+                                                                  "sc_paladin_oath_of_the_watchers":  8
+                                                              },
+                                    "unclassifiedFeatures":  [
+                                                                 "L2: Fighting Style: Blessed Warrior",
+                                                                 "L2: Fighting Style: Blind Fighting",
+                                                                 "L2: Fighting Style: Interception",
+                                                                 "L4: Martial Versatility",
+                                                                 "L8: Martial Versatility",
+                                                                 "L12: Martial Versatility",
+                                                                 "L16: Martial Versatility",
+                                                                 "L19: Martial Versatility"
+                                                             ],
+                                    "unknownSubclassFeatures":  [
+
+                                                                ],
+                                    "selectionLevel":  3,
+                                    "baseBlockBoundaryNote":  null
+                                },
+                    "Ranger":  {
+                                   "subclassesFound":  {
+                                                           "sc_ranger_beast_master":  "Beast Master",
+                                                           "sc_ranger_hunter":  "Hunter",
+                                                           "sc_ranger_gloom_stalker":  "Gloom Stalker",
+                                                           "sc_ranger_horizon_walker":  "Horizon Walker",
+                                                           "sc_ranger_monster_slayer":  "Monster Slayer",
+                                                           "sc_ranger_fey_wanderer":  "Fey Wanderer",
+                                                           "sc_ranger_swarmkeeper":  "Swarmkeeper",
+                                                           "sc_ranger_drakewarden":  "Drakewarden"
+                                                       },
+                                   "assignedFeatureCounts":  {
+                                                                 "sc_ranger_beast_master":  7,
+                                                                 "sc_ranger_hunter":  16,
+                                                                 "sc_ranger_gloom_stalker":  7,
+                                                                 "sc_ranger_horizon_walker":  7,
+                                                                 "sc_ranger_monster_slayer":  7,
+                                                                 "sc_ranger_fey_wanderer":  7,
+                                                                 "sc_ranger_swarmkeeper":  6,
+                                                                 "sc_ranger_drakewarden":  6
+                                                             },
+                                   "unclassifiedFeatures":  [
+                                                                "L1: Deft Explorer",
+                                                                "L1: Deft Explorer: Canny",
+                                                                "L1: Favored Foe",
+                                                                "L2: Fighting Style: Blind Fighting",
+                                                                "L2: Fighting Style: Druidic Warrior",
+                                                                "L2: Fighting Style: Thrown Weapon Fighting",
+                                                                "L2: Spellcasting Focus",
+                                                                "L4: Martial Versatility",
+                                                                "L6: Deft Explorer: Roving",
+                                                                "L8: Martial Versatility",
+                                                                "L10: Deft Explorer: Tireless",
+                                                                "L10: Nature\u0027s Veil",
+                                                                "L12: Martial Versatility",
+                                                                "L16: Martial Versatility",
+                                                                "L19: Martial Versatility"
+                                                            ],
+                                   "unknownSubclassFeatures":  [
+
+                                                               ],
+                                   "selectionLevel":  3,
+                                   "baseBlockBoundaryNote":  null
+                               },
+                    "Rogue":  {
+                                  "subclassesFound":  {
+                                                          "sc_rogue_arcane_trickster":  "Arcane Trickster",
+                                                          "sc_rogue_assassin":  "Assassin",
+                                                          "sc_rogue_thief":  "Thief",
+                                                          "sc_rogue_inquisitive":  "Inquisitive",
+                                                          "sc_rogue_mastermind":  "Mastermind",
+                                                          "sc_rogue_scout":  "Scout",
+                                                          "sc_rogue_swashbuckler":  "Swashbuckler",
+                                                          "sc_rogue_phantom":  "Phantom",
+                                                          "sc_rogue_soulknife":  "Soulknife"
+                                                      },
+                                  "assignedFeatureCounts":  {
+                                                                "sc_rogue_arcane_trickster":  6,
+                                                                "sc_rogue_assassin":  6,
+                                                                "sc_rogue_thief":  6,
+                                                                "sc_rogue_inquisitive":  7,
+                                                                "sc_rogue_mastermind":  6,
+                                                                "sc_rogue_scout":  6,
+                                                                "sc_rogue_swashbuckler":  6,
+                                                                "sc_rogue_phantom":  6,
+                                                                "sc_rogue_soulknife":  10
+                                                            },
+                                  "unclassifiedFeatures":  [
+                                                               "L3: Steady Aim"
+                                                           ],
+                                  "unknownSubclassFeatures":  [
+
+                                                              ],
+                                  "selectionLevel":  3,
+                                  "baseBlockBoundaryNote":  null
+                              },
+                    "Sorcerer":  {
+                                     "subclassesFound":  {
+                                                             "sc_sorcerer_draconic_bloodline":  "Draconic Bloodline",
+                                                             "sc_sorcerer_wild_magic":  "Wild Magic",
+                                                             "sc_sorcerer_divine_soul":  "Divine Soul",
+                                                             "sc_sorcerer_shadow_magic":  "Shadow Magic",
+                                                             "sc_sorcerer_storm_sorcery":  "Storm Sorcery",
+                                                             "sc_sorcerer_aberrant_mind":  "Aberrant Mind",
+                                                             "sc_sorcerer_clockwork_soul":  "Clockwork Soul",
+                                                             "sc_sorcerer_lunar_magic":  "Lunar Magic"
+                                                         },
+                                     "assignedFeatureCounts":  {
+                                                                   "sc_sorcerer_draconic_bloodline":  6,
+                                                                   "sc_sorcerer_wild_magic":  6,
+                                                                   "sc_sorcerer_divine_soul":  6,
+                                                                   "sc_sorcerer_shadow_magic":  6,
+                                                                   "sc_sorcerer_storm_sorcery":  7,
+                                                                   "sc_sorcerer_aberrant_mind":  7,
+                                                                   "sc_sorcerer_clockwork_soul":  6,
+                                                                   "sc_sorcerer_lunar_magic":  7
+                                                               },
+                                     "unclassifiedFeatures":  [
+                                                                  "L3: Metamagic: Seeking Spell",
+                                                                  "L3: Metamagic: Transmuted Spell",
+                                                                  "L4: Sorcerous Versatility",
+                                                                  "L5: Magical Guidance",
+                                                                  "L8: Sorcerous Versatility",
+                                                                  "L10: Metamagic: Seeking Spell",
+                                                                  "L10: Metamagic: Transmuted Spell",
+                                                                  "L12: Sorcerous Versatility",
+                                                                  "L16: Sorcerous Versatility",
+                                                                  "L17: Metamagic: Seeking Spell",
+                                                                  "L17: Metamagic: Transmuted Spell",
+                                                                  "L19: Sorcerous Versatility"
+                                                              ],
+                                     "unknownSubclassFeatures":  [
+
+                                                                 ],
+                                     "selectionLevel":  1,
+                                     "baseBlockBoundaryNote":  null
+                                 },
+                    "Warlock":  {
+                                    "subclassesFound":  {
+                                                            "sc_warlock_the_archfey":  "The Archfey",
+                                                            "sc_warlock_the_fiend":  "The Fiend",
+                                                            "sc_warlock_the_great_old_one":  "The Great Old One",
+                                                            "sc_warlock_the_undying":  "The Undying",
+                                                            "sc_warlock_the_celestial":  "The Celestial",
+                                                            "sc_warlock_the_hexblade":  "The Hexblade",
+                                                            "sc_warlock_the_fathomless":  "The Fathomless",
+                                                            "sc_warlock_the_genie":  "The Genie",
+                                                            "sc_warlock_the_undead":  "The Undead"
+                                                        },
+                                    "assignedFeatureCounts":  {
+                                                                  "sc_warlock_the_archfey":  6,
+                                                                  "sc_warlock_the_fiend":  6,
+                                                                  "sc_warlock_the_great_old_one":  6,
+                                                                  "sc_warlock_the_undying":  6,
+                                                                  "sc_warlock_the_celestial":  7,
+                                                                  "sc_warlock_the_hexblade":  7,
+                                                                  "sc_warlock_the_fathomless":  8,
+                                                                  "sc_warlock_the_genie":  6,
+                                                                  "sc_warlock_the_undead":  6
+                                                              },
+                                    "unclassifiedFeatures":  [
+                                                                 "L3: Pact Boon: Pact of the Talisman",
+                                                                 "L4: Eldritch Versatility",
+                                                                 "L8: Eldritch Versatility",
+                                                                 "L12: Eldritch Versatility",
+                                                                 "L16: Eldritch Versatility",
+                                                                 "L19: Eldritch Versatility"
+                                                             ],
+                                    "unknownSubclassFeatures":  [
+
+                                                                ],
+                                    "selectionLevel":  1,
+                                    "baseBlockBoundaryNote":  null
+                                },
+                    "Wizard":  {
+                                   "subclassesFound":  {
+                                                           "sc_wizard_school_of_abjuration":  "School of Abjuration",
+                                                           "sc_wizard_school_of_conjuration":  "School of Conjuration",
+                                                           "sc_wizard_school_of_divination":  "School of Divination",
+                                                           "sc_wizard_school_of_enchantment":  "School of Enchantment",
+                                                           "sc_wizard_school_of_evocation":  "School of Evocation",
+                                                           "sc_wizard_school_of_illusion":  "School of Illusion",
+                                                           "sc_wizard_school_of_necromancy":  "School of Necromancy",
+                                                           "sc_wizard_school_of_transmutation":  "School of Transmutation",
+                                                           "sc_wizard_war_magic":  "War Magic",
+                                                           "sc_wizard_bladesinging":  "Bladesinging",
+                                                           "sc_wizard_order_of_scribes":  "Order of Scribes"
+                                                       },
+                                   "assignedFeatureCounts":  {
+                                                                 "sc_wizard_school_of_abjuration":  6,
+                                                                 "sc_wizard_school_of_conjuration":  6,
+                                                                 "sc_wizard_school_of_divination":  6,
+                                                                 "sc_wizard_school_of_enchantment":  6,
+                                                                 "sc_wizard_school_of_evocation":  6,
+                                                                 "sc_wizard_school_of_illusion":  6,
+                                                                 "sc_wizard_school_of_necromancy":  6,
+                                                                 "sc_wizard_school_of_transmutation":  6,
+                                                                 "sc_wizard_war_magic":  6,
+                                                                 "sc_wizard_bladesinging":  8,
+                                                                 "sc_wizard_order_of_scribes":  6
+                                                             },
+                                   "unclassifiedFeatures":  [
+                                                                "L3: Cantrip Formulas"
+                                                            ],
+                                   "unknownSubclassFeatures":  [
+
+                                                               ],
+                                   "selectionLevel":  2,
+                                   "baseBlockBoundaryNote":  null
+                               },
+                    "Artificer":  {
+                                      "subclassesFound":  {
+                                                              "sc_artificer_alchemist":  "Alchemist",
+                                                              "sc_artificer_armorer":  "Armorer",
+                                                              "sc_artificer_artillerist":  "Artillerist",
+                                                              "sc_artificer_battle_smith":  "Battle Smith"
+                                                          },
+                                      "assignedFeatureCounts":  {
+                                                                    "sc_artificer_alchemist":  7,
+                                                                    "sc_artificer_armorer":  8,
+                                                                    "sc_artificer_artillerist":  7,
+                                                                    "sc_artificer_battle_smith":  8
+                                                                },
+                                      "unclassifiedFeatures":  [
+
+                                                               ],
+                                      "unknownSubclassFeatures":  [
+
+                                                                  ],
+                                      "selectionLevel":  3,
+                                      "baseBlockBoundaryNote":  null
+                                  }
+                },
+    "notes":  [
+                  "Eldritch Knight/Arcane Trickster spellcasting.list is set to \u0027sl_wizard\u0027 (the schema requires this field; it\u0027s not optional). This matches the exact ID WotC_2024_only.json already uses for these same two subclasses, but no spellLists entry actually exists yet anywhere in WotC_5e_only.json -- not even base Wizard has one (verified). That\u0027s a separate worker\u0027s territory per this task\u0027s ownership boundary; the ID is a forward reference, not fabricated content, and will resolve once base 5e spell-list data lands."
+              ]
+}

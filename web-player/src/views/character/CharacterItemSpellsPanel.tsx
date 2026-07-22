@@ -185,9 +185,9 @@ export function ItemSpellsPanel({
                     const damage = detail ? getScaledSpellDamage(detail, 1, Math.max(1, detail.level ?? 1), spellMod) : null;
                     const dmgColor = damage ? (DMG_COLORS[damage.type] ?? C.text) : null;
                     const concentration = detail ? Boolean(detail.concentration) : false;
-                    const checks = detail ? (Array.isArray(detail.check) ? detail.check : [detail.check]) : [];
-                    const usesSave = checks.some((check) => check && check !== "attack");
-                    const usesAtk = checks.includes("attack");
+                    const check = detail?.check;
+                    const usesSave = Boolean(check && check !== "attack");
+                    const usesAtk = check === "attack";
                     const compactComponents = detail?.components ? detail.components.replace(/\s*\([^)]*\)/g, "").trim() : null;
 
                     return (

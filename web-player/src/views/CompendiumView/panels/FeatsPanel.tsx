@@ -10,7 +10,7 @@ const COLORS = {
   accentHighlight: C.accentHl, colorMagic: C.colorMagic, colorGold: C.colorGold, green: C.green,
 };
 const ICON = <IconInspiration size={27} />;
-const fetchRows = () => fetchFeatCatalog(["id", "name", "category", "prerequisite", "repeatable", "abilities"]);
+const fetchRows = () => fetchFeatCatalog(undefined, ["id", "name", "category", "prerequisite", "repeatable", "abilities"]);
 
 export function FeatsPanel(props: { selectedFeatId?: string | null; onSelectFeat?: (id: string) => void }) {
   return (

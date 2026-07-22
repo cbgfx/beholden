@@ -11,7 +11,7 @@ interface GrowthFeatureLike {
 }
 interface GrowthClassDetailLike { autolevels: Array<{ level: number | null; features?: GrowthFeatureLike[] }> }
 
-export interface GrowthChoiceAbilityDefinition { key: string; title: string; options: AbilKey[] }
+interface GrowthChoiceAbilityDefinition { key: string; title: string; options: AbilKey[] }
 export interface GrowthChoiceDefinition {
   key: string;
   sourceKey: string;

@@ -127,7 +127,7 @@ export function CharacterCreatorView() {
   const [classSearch, setClassSearch] = React.useState("");
   const [raceSearch, setRaceSearch] = React.useState("");
   const [bgSearch, setBgSearch] = React.useState("");
-  const catalogs = useCreatorCompendiumCatalogs();
+  const catalogs = useCreatorCompendiumCatalogs(form.ruleset ?? undefined);
   const classes = catalogs.classes;
   const races = catalogs.races;
   const bgs = catalogs.bgs;
@@ -247,8 +247,9 @@ export function CharacterCreatorView() {
       }));
     }
     setClassFeatDetails({});
-    fetchGrandClassDetail<ClassDetail>(form.classId).then(setClassDetail).catch(() => {});
-  }, [form.classId, isEditing]);
+    if (!form.ruleset) return;
+    fetchGrandClassDetail<ClassDetail>(form.classId, form.ruleset).then(setClassDetail).catch(() => {});
+  }, [form.classId, form.ruleset, isEditing]);
 
   // Load spell lists once classDetail is known
   React.useEffect(() => {
@@ -281,10 +282,12 @@ export function CharacterCreatorView() {
       }));
     }
     setRaceFeatDetail(null);
-    fetchGrandSpeciesDetail<RaceDetail>(form.raceId).then(setRaceDetail).catch(() => {});
-  }, [form.raceId, isEditing]);
+    if (!form.ruleset) return;
+    fetchGrandSpeciesDetail<RaceDetail>(form.raceId, form.ruleset).then(setRaceDetail).catch(() => {});
+  }, [form.raceId, form.ruleset, isEditing]);
 
   useCharacterCreatorFeatDetails({
+    ruleset: form.ruleset,
     chosenRaceFeatId: form.chosenRaceFeatId,
     chosenBgOriginFeatId: form.chosenBgOriginFeatId,
     chosenClassFeatIds: form.chosenClassFeatIds,
@@ -330,8 +333,9 @@ export function CharacterCreatorView() {
         bgAbilityBonuses: {},
       }));
     }
-    fetchGrandBackgroundDetail<BgDetail>(form.bgId).then(setBgDetail).catch(() => {});
-  }, [form.bgId, isEditing]);
+    if (!form.ruleset) return;
+    fetchGrandBackgroundDetail<BgDetail>(form.bgId, form.ruleset).then(setBgDetail).catch(() => {});
+  }, [form.bgId, form.ruleset, isEditing]);
 
   // Auto-select directly-granted background feats (e.g. Charlatan → Skilled)
   React.useEffect(() => {
@@ -439,12 +443,12 @@ export function CharacterCreatorView() {
   const handleSubmitWithChecks = React.useCallback(async () => {
     if (selectedFeatSpellcastingAbilityChoices.some((entry) => entry.chosen.length < entry.max)) {
       setError("Choose a spellcasting ability for each feat-granted spell before saving.");
-      setStep(7);
+      setStep(8);
       return;
     }
     if (!invocationGrantedFeatChoices.valid) {
       setError("Complete every choice for the Origin Feat granted by your Invocation before saving.");
-      setStep(7);
+      setStep(8);
       return;
     }
     await handleSubmit();

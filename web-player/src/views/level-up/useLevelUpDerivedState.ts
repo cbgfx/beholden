@@ -48,6 +48,7 @@ export function useLevelUpDerivedState(args: {
   classDetail: ClassDetail | null;
   mergedAutolevels: ClassDetail["autolevels"];
   nextLevel: number;
+  nextClassLevel: number;
   primaryClassEntry: PrimaryClassLike | null;
   subclass: string;
   chosenCantrips: string[];
@@ -64,6 +65,7 @@ export function useLevelUpDerivedState(args: {
     classDetail,
     mergedAutolevels,
     nextLevel,
+    nextClassLevel,
     primaryClassEntry,
     subclass,
     chosenCantrips,
@@ -82,26 +84,39 @@ export function useLevelUpDerivedState(args: {
   const hpAverage = Math.floor(hd / 2) + 1 + conMod;
 
   const autoLevel = React.useMemo(
-    () => mergedAutolevels.find((al) => al.level === nextLevel) ?? null,
-    [mergedAutolevels, nextLevel]
+    () => mergedAutolevels.find((al) => al.level === nextClassLevel) ?? null,
+    [mergedAutolevels, nextClassLevel]
   );
   const hasAsiFeature = Boolean(
     autoLevel?.features?.some((feature) => /ability score improvement/i.test(feature.name))
   );
   const usesFlexiblePreparedSpellsModel = usesFlexiblePreparedSpells(classDetail);
+  const classChoiceGroups = React.useMemo(() => {
+    if (!classDetail || !autoLevel) return [];
+    const featureIds = new Set(autoLevel.features.map((feature) => feature.id).filter(Boolean));
+    return (classDetail.choices ?? []).flatMap((choice) => {
+      const options = choice.options.filter((option) => option.features.some((featureId) => featureIds.has(featureId)));
+      return options.length >= 2 ? [{ key: `classchoice:${classDetail.id}:${choice.id}`, name: choice.name, options }] : [];
+    });
+  }, [autoLevel, classDetail]);
+  const selectedClassChoiceFeatureIds = React.useMemo(() => new Set(classChoiceGroups.flatMap((group) => {
+    const selectedOptionId = chosenFeatureChoices[group.key]?.[0];
+    return group.options.find((option) => option.id === selectedOptionId)?.features ?? [];
+  })), [classChoiceGroups, chosenFeatureChoices]);
   const newFeatures = React.useMemo(
     () => autoLevel?.features.filter((f) =>
       !f.optional
       || (Boolean(subclass) && f.subclass === subclass)
+      || (Boolean(f.id) && selectedClassChoiceFeatureIds.has(String(f.id)))
     ) ?? [],
-    [autoLevel, subclass]
+    [autoLevel, selectedClassChoiceFeatureIds, subclass]
   );
   const isAsiLevel = Boolean(autoLevel?.scoreImprovement ?? hasAsiFeature);
-  const newSlots = classDetail ? getSpellSlotsAtLevel(classDetail, nextLevel, subclass) : null;
+  const newSlots = classDetail ? getSpellSlotsAtLevel(classDetail, nextClassLevel, subclass) : null;
   const subclassLevel = classDetail ? getSubclassLevel(classDetail) : null;
   const subclassOptions = classDetail ? getSubclassList(classDetail) : [];
-  const showSubclassChoice = Boolean(subclassLevel && nextLevel === subclassLevel && subclassOptions.length > 0);
-  const needsSubclassChoice = Boolean(subclassLevel && nextLevel >= subclassLevel && subclassOptions.length > 0 && !subclass.trim());
+  const showSubclassChoice = Boolean(subclassLevel && nextClassLevel === subclassLevel && subclassOptions.length > 0);
+  const needsSubclassChoice = Boolean(subclassLevel && nextClassLevel >= subclassLevel && subclassOptions.length > 0 && !subclass.trim());
   const subclassOverview = React.useMemo(() => {
     if (!subclass.trim()) return null;
     for (const autolevel of mergedAutolevels) {
@@ -114,15 +129,18 @@ export function useLevelUpDerivedState(args: {
     if (!autoLevel || !subclass.trim()) return [];
     return autoLevel.features.filter((feature) => feature.subclass === subclass);
   }, [autoLevel, subclass]);
-  const cantripCount = classDetail ? getCantripCount(classDetail, nextLevel, subclass) : 0;
-  const invocTable = classDetail ? getClassFeatureTable(classDetail, "Invocation", nextLevel, subclass) : [];
-  const invocCount = invocTable.length > 0 ? tableValueAtLevel(invocTable, nextLevel) : 0;
-  const prepCount = classDetail ? getPreparedSpellCount(classDetail, nextLevel, subclass) : 0;
-  const maxSpellLevel = classDetail ? getMaxSlotLevel(classDetail, nextLevel, subclass) : 0;
-  const spellcaster = classDetail ? isSpellcaster(classDetail, nextLevel, subclass) : false;
+  const cantripCount = classDetail ? getCantripCount(classDetail, nextClassLevel, subclass) : 0;
+  const invocTable = classDetail ? getClassFeatureTable(classDetail, "Invocation", nextClassLevel, subclass) : [];
+  const invocCount = invocTable.length > 0 ? tableValueAtLevel(invocTable, nextClassLevel) : 0;
+  const spellAbilityScore = classDetail?.spellAbility
+    ? char?.[`${classDetail.spellAbility.toLowerCase()}Score` as "strScore" | "dexScore" | "conScore" | "intScore" | "wisScore" | "chaScore"]
+    : null;
+  const prepCount = classDetail ? getPreparedSpellCount(classDetail, nextClassLevel, subclass, spellAbilityScore) : 0;
+  const maxSpellLevel = classDetail ? getMaxSlotLevel(classDetail, nextClassLevel, subclass) : 0;
+  const spellcaster = classDetail ? isSpellcaster(classDetail, nextClassLevel, subclass) : false;
   const expertiseChoices = React.useMemo(
-    () => (classDetail ? getClassExpertiseChoices(classDetail, nextLevel).filter((choice) => choice.key.startsWith(`classexpertise:${nextLevel}:`)) : []),
-    [classDetail, nextLevel]
+    () => (classDetail ? getClassExpertiseChoices(classDetail, nextClassLevel).filter((choice) => choice.key.startsWith(`classexpertise:${nextClassLevel}:`)) : []),
+    [classDetail, nextClassLevel]
   );
   const { charProficiencies, proficientSkills, proficientTools, proficientLanguages, proficientSaves, existingExpertise } = deriveCharProficiencies(char);
   const existingClassSpellNames = React.useMemo(
@@ -205,7 +223,7 @@ export function useLevelUpDerivedState(args: {
           kind: feature.subclass ? "subclass" : "class",
           name: feature.name,
           text: feature.text,
-          level: nextLevel,
+          level: nextClassLevel,
         },
         text: feature.text,
         classEffects: feature.effects,
@@ -218,8 +236,8 @@ export function useLevelUpDerivedState(args: {
     () =>
       getSlotLevelTriggeredSpellChoices(
         classDetail,
-        Math.max(0, nextLevel - 1),
-        nextLevel,
+        Math.max(0, nextClassLevel - 1),
+        nextClassLevel,
         subclass || primaryClassEntry?.subclass || null,
       ).map((choice) => ({
         key: `levelupslotgrowth:${nextLevel}:${choice.key}`,
@@ -233,7 +251,7 @@ export function useLevelUpDerivedState(args: {
         schools: choice.schools,
         ritualOnly: false,
       })),
-    [classDetail, nextLevel, primaryClassEntry?.subclass, subclass]
+    [classDetail, nextClassLevel, nextLevel, primaryClassEntry?.subclass, subclass]
   );
   const classFeatureResolvedSpellChoices = React.useMemo<LevelUpResolvedSpellChoiceEntry[]>(
     () => [
@@ -322,15 +340,15 @@ export function useLevelUpDerivedState(args: {
       classId: String(primaryClassEntry?.classId ?? ""),
       className: classDetail?.name ?? char?.className ?? null,
       classDetail,
-      level: nextLevel,
+      level: nextClassLevel,
       selectedSubclass: subclass || primaryClassEntry?.subclass || null,
     }),
-    [char?.className, classDetail, nextLevel, primaryClassEntry?.classId, primaryClassEntry?.subclass, subclass]
+    [char?.className, classDetail, nextClassLevel, primaryClassEntry?.classId, primaryClassEntry?.subclass, subclass]
   );
   const appliedPreparedSpellProgressionFeatures = React.useMemo(
     () =>
       (classDetail?.autolevels ?? [])
-        .filter((autolevel) => autolevel.level != null && autolevel.level <= nextLevel)
+        .filter((autolevel) => autolevel.level != null && autolevel.level <= nextClassLevel)
         .flatMap((autolevel) =>
           (autolevel.features ?? [])
             .filter((feature) =>
@@ -344,7 +362,7 @@ export function useLevelUpDerivedState(args: {
               preparedSpellProgression: feature.preparedSpellProgression,
             }))
         ),
-    [classDetail?.autolevels, nextLevel, primaryClassEntry?.classId, primaryClassEntry?.subclass, subclass]
+    [classDetail?.autolevels, nextClassLevel, primaryClassEntry?.classId, primaryClassEntry?.subclass, subclass]
   );
   const preparedSpellProgressionChoiceDefinitions = React.useMemo(
     () => buildPreparedSpellProgressionChoiceDefinitions(appliedPreparedSpellProgressionFeatures),
@@ -354,11 +372,11 @@ export function useLevelUpDerivedState(args: {
     () => new Set(
       buildPreparedSpellProgressionGrants(
         appliedPreparedSpellProgressionFeatures,
-        nextLevel,
+        nextClassLevel,
         chosenFeatureChoices,
       ).map((entry) => normalizeSpellTrackingKey(entry.spellName))
     ),
-    [appliedPreparedSpellProgressionFeatures, chosenFeatureChoices, nextLevel]
+    [appliedPreparedSpellProgressionFeatures, chosenFeatureChoices, nextClassLevel]
   );
   const selectedInvocationEffects = React.useMemo(
     () => classInvocations
@@ -412,8 +430,8 @@ export function useLevelUpDerivedState(args: {
     [classInvocations, featSummaries],
   );
   const allowedInvocationIds = React.useMemo(
-    () => deriveAllowedInvocationIds({ classCantrips, classInvocations, chosenCantrips, chosenInvocations, nextLevel }),
-    [chosenCantrips, chosenInvocations, classCantrips, classInvocations, nextLevel]
+    () => deriveAllowedInvocationIds({ classCantrips, classInvocations, chosenCantrips, chosenInvocations, nextLevel: nextClassLevel }),
+    [chosenCantrips, chosenInvocations, classCantrips, classInvocations, nextClassLevel]
   );
   const {
     featSpellChoiceOptions,
@@ -436,6 +454,7 @@ export function useLevelUpDerivedState(args: {
     autoLevel,
     hasAsiFeature,
     usesFlexiblePreparedSpellsModel,
+    classChoiceGroups,
     newFeatures,
     isAsiLevel,
     newSlots,

@@ -36,7 +36,10 @@ export function assertNativeCompendiumGuardrails(db: Database.Database, batches:
     ["classes", new Set(rows(db, "SELECT id FROM compendium_classes").map((row) => row.id))],
     ["species", new Set(rows(db, "SELECT id FROM compendium_races").map((row) => row.id))],
     ["backgrounds", new Set(rows(db, "SELECT id FROM compendium_backgrounds").map((row) => row.id))],
-    ["feats", new Set(rows(db, "SELECT id FROM compendium_feats").map((row) => row.id))],
+    // feat ids alone aren't unique across rulesets (composite PK (id, ruleset)) -- keyed here
+    // as "ruleset:id" so feat-reference checks only match a feat from the SAME ruleset as the
+    // entry referencing it, not an unrelated same-id feat from the other ruleset.
+    ["feats", new Set((db.prepare("SELECT id, ruleset FROM compendium_feats").all() as Array<{ id: string; ruleset: string }>).map((row) => `${row.ruleset}:${row.id}`))],
     ["decks", new Set(rows(db, "SELECT id FROM compendium_deck_cards").map((row) => row.id))],
     ["bastions", new Set([
       ...rows(db, "SELECT id FROM compendium_bastion_spaces").map((row) => row.id),
@@ -46,7 +49,8 @@ export function assertNativeCompendiumGuardrails(db: Database.Database, batches:
   ]);
   const spellNames = new Set(rows(db, "SELECT id, name FROM compendium_spells").map((row) => normalized(row.name)));
   for (const batch of batches) for (const entry of batch.entries) {
-    ids.get(batch.category)!.add(String(entry.id));
+    if (batch.category === "feats") ids.get("feats")!.add(`${String(entry.ruleset)}:${String(entry.id)}`);
+    else ids.get(batch.category)!.add(String(entry.id));
     if (batch.category === "spells") spellNames.add(normalized(entry.name));
   }
   const spellIds = ids.get("spells")!;
@@ -78,9 +82,9 @@ export function assertNativeCompendiumGuardrails(db: Database.Database, batches:
     if (!reference || itemIds.has(reference)) return;
     issues.push(`${owner}.${path} references unknown item id ${JSON.stringify(reference)}`);
   };
-  const requireFeat = (value: unknown, owner: string, path: string) => {
+  const requireFeat = (value: unknown, owner: string, path: string, ruleset: string) => {
     const reference = String(value ?? "").trim();
-    if (!reference || featIds.has(reference)) return;
+    if (!reference || featIds.has(`${ruleset}:${reference}`)) return;
     issues.push(`${owner}.${path} references unknown feat id ${JSON.stringify(reference)}`);
   };
   const requireTalent = (value: unknown, owner: string, path: string) => {
@@ -153,7 +157,7 @@ export function assertNativeCompendiumGuardrails(db: Database.Database, batches:
     if (batch.category === "classes") {
       const skills = ((entry.proficiencies as JsonRecord | undefined)?.skills as JsonRecord | undefined)?.from;
       if (Array.isArray(skills)) for (const skill of skills) if (!SKILLS.has(normalized(skill))) issues.push(`${owner}.proficiencies.skills.from contains unknown skill ${JSON.stringify(skill)}`);
-      const existing = db.prepare("SELECT data_json FROM compendium_classes WHERE id = ?").get(String(entry.id)) as { data_json?: string } | undefined;
+      const existing = db.prepare("SELECT data_json FROM compendium_classes WHERE id = ? AND ruleset = ?").get(String(entry.id), String(entry.ruleset)) as { data_json?: string } | undefined;
       if (existing?.data_json) {
         const stored = JSON.parse(existing.data_json) as JsonRecord;
         const existingLevels = Array.isArray(stored.levels) ? stored.levels.length : 0;
@@ -163,10 +167,10 @@ export function assertNativeCompendiumGuardrails(db: Database.Database, batches:
     }
     if (batch.category === "backgrounds") {
       const proficiencies = entry.proficiencies as JsonRecord | undefined;
-      if (proficiencies?.feat) requireFeat(proficiencies.feat, owner, "proficiencies.feat");
+      if (proficiencies?.feat) requireFeat(proficiencies.feat, owner, "proficiencies.feat", String(entry.ruleset));
       const featChoice = proficiencies?.featChoice as JsonRecord | undefined;
       if (featChoice && typeof featChoice === "object" && Array.isArray(featChoice.from)) {
-        featChoice.from.forEach((featId, index) => requireFeat(featId, owner, `proficiencies.featChoice.from.${index}`));
+        featChoice.from.forEach((featId, index) => requireFeat(featId, owner, `proficiencies.featChoice.from.${index}`, String(entry.ruleset)));
       }
       checkBackgroundEquipmentLabels(entry, owner, itemNamesById, issues);
     }
@@ -249,8 +253,9 @@ function checkFeatIdentityAndChoices(entry: JsonRecord, owner: string, featIds: 
       ? (prerequisite.any as JsonRecord[]).map((alternative) => alternative.feat)
       : []),
   ].filter((value) => value != null && String(value).trim() !== "").map(String);
+  const ruleset = String(entry.ruleset);
   for (const featId of prerequisiteFeatIds) {
-    if (!featIds.has(featId)) issues.push(`${owner}.prerequisite references unknown feat id ${JSON.stringify(featId)}`);
+    if (!featIds.has(`${ruleset}:${featId}`)) issues.push(`${owner}.prerequisite references unknown feat id ${JSON.stringify(featId)}`);
   }
   if (entry.category !== undefined && !FEAT_CATEGORIES.has(String(entry.category))) {
     issues.push(`${owner}.category must be omitted for General or one of ${[...FEAT_CATEGORIES].join(", ")}`);

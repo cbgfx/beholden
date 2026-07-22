@@ -5,6 +5,7 @@ import type {
 } from "@beholden/shared/domain";
 import type { InventoryContainer, InventoryItem } from "@/views/character/CharacterInventory";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
+import type { CharacterClassEntry as SharedCharacterClassEntry } from "@beholden/shared/domain/characterClasses";
 
 export type AbilKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
 
@@ -14,6 +15,7 @@ export interface TaggedItem {
   id?: string;
   ability?: AbilKey | null;
   sourceKey?: string | null;
+  classEntryId?: string | null;
   weaponFilter?: {
     melee?: true;
     martial?: true;
@@ -102,13 +104,7 @@ export interface CharacterCampaign {
   playerId: string | null;
 }
 
-export interface CharacterClassEntry {
-  id: string;
-  classId?: string | null;
-  className?: string | null;
-  level: number;
-  subclass?: string | null;
-}
+export type CharacterClassEntry = SharedCharacterClassEntry;
 
 export interface CharacterData {
   classes?: CharacterClassEntry[];
@@ -131,6 +127,7 @@ export interface CharacterData {
   derivedAc?: number;
   derivedHpMax?: number;
   hitDiceCurrent?: number | null;
+  hitDiceCurrentBySize?: Record<string, number>;
   xp?: number;
   chosenOptionals?: string[];
   selectedFeatureNames?: string[];
@@ -143,6 +140,12 @@ export interface CharacterData {
   chosenCantrips?: string[];
   chosenSpells?: string[];
   chosenInvocations?: string[];
+  classSpellSelections?: Record<string, {
+    chosenCantrips?: string[];
+    chosenSpells?: string[];
+    preparedSpells?: string[];
+    chosenInvocations?: string[];
+  }>;
   resources?: ResourceCounter[];
   proficiencies?: ProficiencyMap;
   inventory?: InventoryItem[];

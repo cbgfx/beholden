@@ -11,6 +11,8 @@ export const KNOWN_ITEM_TYPES = [
 export type CompendiumItemDetail = {
   id: string;
   name: string;
+  ruleset?: "5e" | "5.5e";
+  source?: string | null;
   rarity: string | null;
   type: string | null;
   attunement: boolean;

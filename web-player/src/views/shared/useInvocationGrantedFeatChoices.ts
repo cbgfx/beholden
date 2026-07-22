@@ -7,8 +7,8 @@ import { selectedInvocationFeatIds, type InvocationFeatChoiceEntry } from "@/dom
 import type { ParsedFeatChoiceLike, ParsedFeatDetailLike } from "@/views/character-creator/utils/FeatChoiceTypes";
 
 type Detail = ParsedFeatDetailLike<ParsedFeatChoiceLike> & { id: string };
-export type NestedFeatChoiceGroup = { key: string; title: string; sourceLabel: string; count: number; options: string[]; note?: string | null };
-export type NestedFeatSpellChoice = ReturnType<typeof buildResolvedSpellChoiceEntry>;
+type NestedFeatChoiceGroup = { key: string; title: string; sourceLabel: string; count: number; options: string[]; note?: string | null };
+type NestedFeatSpellChoice = ReturnType<typeof buildResolvedSpellChoiceEntry>;
 
 export function useInvocationGrantedFeatChoices(args: {
   choices: InvocationFeatChoiceEntry[];

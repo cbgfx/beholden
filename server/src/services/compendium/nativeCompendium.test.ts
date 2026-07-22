@@ -4,6 +4,7 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { SCHEMA_SQL } from "../../lib/dbSchema.js";
+import { ensureCompendiumCompositePrimaryKey } from "../../lib/compendiumPrimaryKeyMigration.js";
 import {
   NATIVE_COMPENDIUM_CATEGORIES,
   exportNativeCompendiumBatch,
@@ -33,12 +34,11 @@ const samples: Record<NativeCompendiumCategory, Array<Record<string, unknown>>> 
     source: null,
     classification: {
       size: "M", type: "construct", description: "Medium construct",
-      sortName: null, alignment: null, ancestry: null, environment: [],
+      alignment: null, environment: [],
     },
     description: null,
     initiativeBonus: null,
     passivePerception: null,
-    npc: false,
     challenge: { rating: "2", xp: 450 },
     armorClass: { value: 15, source: null },
     hitPoints: { average: 30, formula: "4d8 + 12" },
@@ -77,7 +77,6 @@ const samples: Record<NativeCompendiumCategory, Array<Record<string, unknown>>> 
       oneHandedDamage: "1d8", twoHandedDamage: "1d10", damageType: "S",
       range: null, properties: ["V"],
     },
-    detail: null,
     modifiers: [],
     rolls: [],
     description: ["Test rules."],
@@ -247,7 +246,6 @@ test("native imports replace matching IDs", () => {
         oneHandedDamage: "1d8", twoHandedDamage: "1d10", damageType: "S",
         range: null, properties: ["V"],
       },
-      detail: null,
       modifiers: [],
       rolls: [],
       description: ["Replacement rules."],
@@ -258,6 +256,67 @@ test("native imports replace matching IDs", () => {
     assert.equal(exported.entries[0]?.name, "Test Blade, Revised");
     assert.equal(exported.entries[0]?.rarity, "legendary");
     assert.equal(exported.entries[0]?.description, "Replacement rules.");
+  } finally {
+    db.close();
+  }
+});
+
+test("ruleset-scoped classes with the same id survive independently", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+
+  try {
+    const class55 = structuredClone(samples.classes[0]!);
+    const class5 = { ...structuredClone(samples.classes[0]!), ruleset: "5e", name: "Test Class (2014)" };
+    importNativeCompendiumBatch(db, batch("classes", [class55]));
+    importNativeCompendiumBatch(db, batch("classes", [class5]));
+
+    const rows = db.prepare(
+      "SELECT id, ruleset, name FROM compendium_classes WHERE id = ? ORDER BY ruleset",
+    ).all(String(class55.id)) as Array<{ id: string; ruleset: string; name: string }>;
+    assert.deepEqual(rows, [
+      { id: class55.id, ruleset: "5.5e", name: class55.name },
+      { id: class55.id, ruleset: "5e", name: class5.name },
+    ]);
+
+    const preview5e = previewNativeCompendiumDocument(db, batch("classes", [{ ...class5, name: "Test Class (2014), Revised" }]));
+    assert.equal(preview5e.replacements, 1);
+    assert.equal(preview5e.additions, 0);
+
+    importNativeCompendiumBatch(db, batch("classes", [{ ...class5, name: "Test Class (2014), Revised" }]));
+    const untouched55 = db.prepare(
+      "SELECT name FROM compendium_classes WHERE id = ? AND ruleset = ?",
+    ).get(String(class55.id), "5.5e") as { name: string };
+    assert.equal(untouched55.name, class55.name);
+    assert.equal(exportNativeCompendiumBatch(db, "classes").entries.length, 2);
+  } finally {
+    db.close();
+  }
+});
+
+test("composite-key migration preserves legacy tables whose ruleset column was appended", () => {
+  const db = new Database(":memory:");
+  try {
+    db.exec(`
+      CREATE TABLE compendium_classes (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, name_key TEXT, hd INTEGER,
+        data_json TEXT NOT NULL, ruleset TEXT NOT NULL DEFAULT '5.5e'
+      );
+      INSERT INTO compendium_classes (id, name, name_key, hd, data_json, ruleset)
+      VALUES ('c_barbarian', 'Barbarian', 'barbarian', 12, '{"id":"c_barbarian"}', '5.5e');
+    `);
+
+    ensureCompendiumCompositePrimaryKey(db);
+
+    const primaryKey = (db.prepare("PRAGMA table_info(compendium_classes)").all() as Array<{ name: string; pk: number }>)
+      .filter((column) => column.pk > 0)
+      .sort((left, right) => left.pk - right.pk)
+      .map((column) => column.name);
+    assert.deepEqual(primaryKey, ["id", "ruleset"]);
+    assert.deepEqual(
+      db.prepare("SELECT id, ruleset, name, hd FROM compendium_classes").get(),
+      { id: "c_barbarian", ruleset: "5.5e", name: "Barbarian", hd: 12 },
+    );
   } finally {
     db.close();
   }

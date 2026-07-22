@@ -14,7 +14,7 @@ function shouldDisplayClassCounterResource(name: string | null | undefined): boo
 }
 
 
-export function collectClassResources(classDetail: ClassRestDetail | null, level: number, selectedSubclass?: string | null): ResourceCounter[] {
+export function collectClassResources(classDetail: ClassRestDetail | null, level: number, selectedSubclass?: string | null, classSourceId?: string): ResourceCounter[] {
   if (!classDetail) return [];
   const latest = new Map<string, ResourceCounter>();
   const autolevels = Array.isArray(classDetail.autolevels) ? classDetail.autolevels : [];
@@ -26,7 +26,7 @@ export function collectClassResources(classDetail: ClassRestDetail | null, level
       const counterSubclass = String(counter.subclass ?? "").trim();
       if (counterSubclass && normalizeSubclassLookupName(counterSubclass) !== normalizeSubclassLookupName(selectedSubclass)) continue;
       if (!name || max <= 0 || !shouldDisplayClassCounterResource(name)) continue;
-      const key = normalizeResourceKey(name);
+      const key = classSourceId ? `class:${classSourceId}:${normalizeResourceKey(name)}` : normalizeResourceKey(name);
       latest.set(key, {
         key,
         name,
@@ -65,6 +65,18 @@ export function mergeResourceState(saved: ResourceCounter[] | undefined, derived
     return true;
   });
   return [...merged, ...extras];
+}
+
+/** 2014 multiclass Channel Divinity grants additional effects, but not an extra pool.
+ * The highest explicitly granted use count across owned classes is the shared maximum. */
+export function coalesceSharedClassResources(resources: ResourceCounter[]): ResourceCounter[] {
+  const channelDivinity = resources.filter((resource) => normalizeResourceKey(resource.name) === "channel-divinity");
+  if (channelDivinity.length <= 1) return resources;
+  const strongest = channelDivinity.reduce((best, resource) => resource.max > best.max ? resource : best);
+  return [
+    ...resources.filter((resource) => normalizeResourceKey(resource.name) !== "channel-divinity"),
+    { ...strongest, key: "class:shared:channel_divinity", current: strongest.max },
+  ];
 }
 
 export function isSpellLinkedResource(args: {

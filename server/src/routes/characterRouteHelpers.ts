@@ -27,7 +27,10 @@ const CharacterBodyBase = z.object({
   syncedSpeed: z.number().int().optional(),
 });
 
-export const CharacterCreateBody = CharacterBodyBase.extend({ name: z.string().trim().min(1) });
+export const CharacterCreateBody = CharacterBodyBase.extend({
+  name: z.string().trim().min(1),
+  ruleset: z.enum(["5e", "5.5e"]),
+});
 export const CharacterUpdateBody = CharacterBodyBase;
 
 export const AssignBody = z.object({
@@ -58,6 +61,7 @@ export function toCharacterSheetDtoInput(
     userId: string;
     name: string;
     playerName: string;
+    ruleset: "5e" | "5.5e";
     className: string;
     species: string;
     level: number;
@@ -102,6 +106,7 @@ export function toCharacterSheetDtoInput(
     userId: character.userId,
     name: character.name,
     playerName: character.playerName,
+    ruleset: character.ruleset,
     className: character.className,
     species: character.species,
     level: character.level,

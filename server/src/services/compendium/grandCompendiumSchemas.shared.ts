@@ -104,7 +104,7 @@ export const StructuredFeatureEffectSchema = z.union([
   }).passthrough(),
 ]);
 
-export const FeatChoiceSchema = z
+const FeatChoiceSchema = z
   .object({
     id: z.string(),
     type: z.enum([
@@ -208,7 +208,6 @@ export const TraitSchema = z
     id: z.string().min(1),
     name: z.string().min(1),
     description: z.string(),
-    category: z.string().min(1).optional(),
     scalingRolls: z.array(CompactScalingRollSchema).min(1).optional(),
     preparedSpellProgression: z.array(PreparedSpellProgressionSchema).min(1).optional(),
     /** Verbatim FeatureEffect-shaped facts, consumed the same way feats' grants.effects are: no parsing. */

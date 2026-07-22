@@ -35,25 +35,13 @@ const ItemRollSchema = z
   })
   .strict();
 
-export const WEAPON_MASTERY = z.enum(["Cleave", "Graze", "Nick", "Push", "Sap", "Slow", "Topple", "Vex"]);
-export const AMMO_FAMILY = z.enum(["arrow", "bolt", "energy-cell", "firearm-bullet", "needle", "sling-bullet"]);
+const WEAPON_MASTERY = z.enum(["Cleave", "Graze", "Nick", "Push", "Sap", "Slow", "Topple", "Vex"]);
+const AMMO_FAMILY = z.enum(["arrow", "bolt", "energy-cell", "firearm-bullet", "needle", "sling-bullet"]);
 
 const UseAmountSchema = z.union([
   z.number().int().positive(),
   z.string().regex(/^\d+d\d+(?:\+\d+)?$/u, "Expected a compact dice formula such as 1d6+1"),
 ]);
-
-const D20ResultSchema = z.number().int().min(1).max(20);
-
-const DepletionRollSchema = z
-  .object({
-    destroy: z.union([z.literal(true), D20ResultSchema]).optional(),
-    mundane: z.union([z.literal(true), D20ResultSchema]).optional(),
-    loseProperties: z.union([z.literal(true), D20ResultSchema]).optional(),
-    regain: z.record(z.string().regex(/^(?:[1-9]|1\d|20)$/u), UseAmountSchema).optional(),
-  })
-  .strict()
-  .refine((value) => Object.keys(value).length > 0);
 
 const ItemUsesSchema = z.union([
   UseAmountSchema,
@@ -61,10 +49,9 @@ const ItemUsesSchema = z.union([
     .object({
       max: UseAmountSchema,
       recover: z.union([z.literal(false), UseAmountSchema]).optional(),
-      depletion: z.union([z.enum(["destroy", "mundane", "loseProperties"]), DepletionRollSchema]).optional(),
     })
     .strict()
-    .refine((value) => value.recover !== undefined || value.depletion !== undefined),
+    .refine((value) => value.recover !== undefined),
 ]);
 
 const SpellCostSchema = z.union([nonnegInt, z.literal("level")]);
@@ -207,7 +194,6 @@ export const ItemSchema = z
       .strict()
       .refine((value) => Object.keys(value).length > 0)
       .optional(),
-    detail: z.string().min(1).optional(),
     modifiers: z.array(ModifierSchema).min(1).optional(),
     rolls: z.array(ItemRollSchema).min(1).optional(),
     description: z.union([z.string(), z.array(z.string()).min(1)]),
@@ -217,8 +203,8 @@ export const ItemSchema = z
     if (item.weapon && item.armor) {
       ctx.addIssue({ code: "custom", path: ["weapon"], message: "An item cannot be both weapon and armor" });
     }
-    if (item.ammo && item.type !== "Ammo") {
-      ctx.addIssue({ code: "custom", path: ["ammo"], message: "An ammunition family requires type Ammo" });
+    if (item.ammo && item.type !== "Ammunition") {
+      ctx.addIssue({ code: "custom", path: ["ammo"], message: "An ammunition family requires type Ammunition" });
     }
     if (item.weapon?.ammo && !item.weapon.properties?.includes("A")) {
       ctx.addIssue({ code: "custom", path: ["weapon", "ammo"], message: "Weapon ammunition requires property A" });

@@ -18,7 +18,7 @@ export interface PreparedSpellProgressionChoiceDefinition {
 }
 
 export function buildPreparedSpellProgressionGrants(
-  features: Array<Pick<AppliedCharacterFeatureEntry, "id" | "name" | "preparedSpellProgression" | "spellcastingAbility">>,
+  features: Array<Pick<AppliedCharacterFeatureEntry, "id" | "name" | "preparedSpellProgression" | "spellcastingAbility" | "progressionLevel">>,
   characterLevel: number,
   chosenFeatureChoices: Record<string, string[]> | null | undefined = {},
 ): ProgressionGrantedSpellEntry[] {
@@ -50,7 +50,7 @@ export function buildPreparedSpellProgressionGrants(
 
     for (const table of tablesToApply) {
       for (const row of table.rows ?? []) {
-        if (row.level > characterLevel) continue;
+        if (row.level > (feature.progressionLevel ?? characterLevel)) continue;
         for (const spellName of row.spells ?? []) {
           // Reject table-row data misidentified as spell names (e.g. "1/4 | No")
           if (/[|]/.test(spellName) || /^[\d/]+$/.test(spellName.trim()) || /^(yes|no)$/i.test(spellName.trim())) continue;

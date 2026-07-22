@@ -12,6 +12,7 @@ import { importCampaignDocument } from "../routes/exportImportHelpers.js";
 const BASE_SHEET: StoredCharacterSheetState = {
   name: "Test Bard",
   playerName: "Player",
+  ruleset: "5.5e",
   className: "Bard",
   species: "Human",
   level: 6,
@@ -123,6 +124,39 @@ test("character AC normalization does not infer rules from embedded inventory", 
     }],
   });
   assert.equal(normalized.sheet.ac, BASE_SHEET.ac);
+});
+
+test("character class normalization derives total level from canonical class entries", () => {
+  const normalized = normalizeCharacterSheetForStorage(BASE_SHEET, {
+    classes: [
+      { id: "class_fighter", classId: "c_fighter", className: "Fighter", level: 3, subclass: "sc_fighter_battle_master" },
+      { id: "class_wizard", classId: "c_wizard", className: "Wizard", level: 2 },
+    ],
+  });
+
+  assert.equal(normalized.sheet.level, 5);
+  assert.equal(normalized.sheet.className, "Bard");
+  assert.deepEqual(normalized.characterData?.classes, [
+    { id: "class_fighter", classId: "c_fighter", className: "Fighter", level: 3, subclass: "sc_fighter_battle_master" },
+    { id: "class_wizard", classId: "c_wizard", className: "Wizard", level: 2, subclass: null },
+  ]);
+});
+
+test("character class normalization merges duplicate class records without losing levels", () => {
+  const normalized = normalizeCharacterSheetForStorage(BASE_SHEET, {
+    classes: [
+      { id: "fighter_primary", classId: "c_fighter", className: "Fighter", level: 2 },
+      { id: "fighter_duplicate", classId: "c_fighter", className: "Fighter", level: 3, subclass: "sc_fighter_champion" },
+      { classId: "c_wizard", className: "Wizard", level: 0 },
+      { level: 10 },
+    ],
+  });
+
+  assert.equal(normalized.sheet.level, 6);
+  assert.deepEqual(normalized.characterData?.classes, [
+    { id: "fighter_primary", classId: "c_fighter", className: "Fighter", level: 5, subclass: "sc_fighter_champion" },
+    { id: "class_c_wizard", classId: "c_wizard", className: "Wizard", level: 1, subclass: null },
+  ]);
 });
 
 test("character home reads use the canonical sheet AC override when the campaign copy is stale", () => {

@@ -13,6 +13,7 @@ export type FeatCatalogRow = {
 export type FeatDetail = {
   id: string;
   name: string;
+  ruleset?: "5e" | "5.5e";
   text?: string | null;
   prerequisite?: string | null;
   parsed?: {
@@ -102,7 +103,7 @@ export function FeatDetailPanel({ featId, fetchFeat, colors, PanelComponent }: {
   return (
     <PanelComponent
       title={feat?.name ?? "Feat"}
-      actions={<div style={{ color: colors.muted, fontSize: "var(--fs-small)" }}>{busy ? "Loading..." : parsed?.source ?? ""}</div>}
+      actions={<div style={{ color: colors.muted, fontSize: "var(--fs-small)" }}>{busy ? "Loading..." : parsed?.source ? `Source: ${parsed.source} · Ruleset: ${feat?.ruleset ?? "Unknown"}` : ""}</div>}
       style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
       bodyStyle={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 10 }}
     >

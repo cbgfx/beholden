@@ -16,6 +16,33 @@ import type { CompendiumMonsterRow } from "@/lib/monsterPicker/types";
 import { getLongRestOverrides, getLongRestRecovery } from "@/views/character/CharacterRestRecovery";
 import { recoverItemCharges } from "@/views/character/CharacterInventory";
 import { parseFeatureEffects } from "@/domain/character/parseFeatureEffects";
+import type { MulticlassSpellSlotState } from "@/domain/character/multiclassSpellcasting";
+import { normalizeSpellTrackingKey } from "@/views/character/CharacterSheetUtils";
+
+export function scopePreparedSpellsByClass(args: {
+  preparedSpellKeys: string[];
+  classStates: Array<{ classEntryId: string; preparedLimit: number }>;
+  trackedSpells: Array<{ name: string; classEntryId?: string | null }>;
+  existing?: Record<string, { preparedSpells?: string[]; [key: string]: unknown }>;
+}) {
+  const result = { ...(args.existing ?? {}) };
+  const ownerByKey = new Map(args.trackedSpells
+    .filter((spell) => spell.classEntryId)
+    .map((spell) => [normalizeSpellTrackingKey(spell.name), spell.classEntryId!]));
+  const fallbackClassId = args.classStates.find((state) => state.preparedLimit > 0)?.classEntryId
+    ?? args.classStates[0]?.classEntryId;
+  for (const state of args.classStates) {
+    const selected = args.preparedSpellKeys.filter((key) => {
+      const owner = ownerByKey.get(key);
+      return owner === state.classEntryId || (!owner && state.classEntryId === fallbackClassId);
+    });
+    result[state.classEntryId] = {
+      ...(result[state.classEntryId] ?? {}),
+      preparedSpells: state.preparedLimit > 0 ? selected.slice(0, state.preparedLimit) : selected,
+    };
+  }
+  return result;
+}
 
 /** True when a species trait grants the well-known "heroic_inspiration" resource (e.g. Human's
  * Resourceful) — read from the trait's own structured effects, never from its name. */
@@ -35,10 +62,13 @@ export function buildCharacterRuntimeActions(args: {
   char: Character;
   setChar: React.Dispatch<React.SetStateAction<Character | null>>;
   classDetail: ClassRestDetail | null;
+  spellSlotState?: MulticlassSpellSlotState;
+  classSpellcastingStates?: Array<{ classEntryId: string; preparedLimit: number; preparedSpells: string[] }>;
   raceDetail: RaceFeatureDetail | null;
   currentCharacterData: CharacterData;
   classResourcesWithSpellCasts: ResourceCounter[];
   hitDiceMax: number;
+  hitDicePools?: Array<{ dieSize: number; max: number; current: number }>;
   inventory: CharacterData["inventory"];
   effectiveHpMaxWithoutOverrides: number;
   overrides: SheetOverrides;
@@ -60,10 +90,13 @@ export function buildCharacterRuntimeActions(args: {
     char,
     setChar,
     classDetail,
+    spellSlotState,
+    classSpellcastingStates = [],
     raceDetail,
     currentCharacterData,
     classResourcesWithSpellCasts,
     hitDiceMax,
+    hitDicePools = [],
     inventory,
     effectiveHpMaxWithoutOverrides,
     overrides,
@@ -91,6 +124,13 @@ export function buildCharacterRuntimeActions(args: {
     const next = Math.max(0, Math.min(hitDiceMax, Math.floor(nextValue)));
     await saveCharacterData({ hitDiceCurrent: next });
   };
+  const saveHitDicePoolCurrent = async (dieSize: number, nextValue: number) => {
+    const pool = hitDicePools.find((entry) => entry.dieSize === dieSize);
+    if (!pool) return;
+    const current = Math.max(0, Math.min(pool.max, Math.floor(nextValue)));
+    const hitDiceCurrentBySize = Object.fromEntries(hitDicePools.map((entry) => [String(entry.dieSize), entry.dieSize === dieSize ? current : entry.current]));
+    await saveCharacterData({ hitDiceCurrentBySize, hitDiceCurrent: Object.values(hitDiceCurrentBySize).reduce((sum, value) => sum + value, 0) });
+  };
 
   const saveResources = async (nextResources: ResourceCounter[]) => {
     await saveCharacterData({ resources: nextResources });
@@ -106,7 +146,13 @@ export function buildCharacterRuntimeActions(args: {
     const userChosen = unique.filter((entry) => !forcedPreparedSpellKeys.has(entry));
     const limitedUserChosen = preparedSpellLimit > 0 ? userChosen.slice(0, preparedSpellLimit) : userChosen;
     const limited = [...forced, ...limitedUserChosen];
-    await saveCharacterData({ preparedSpells: limited });
+    const classSpellSelections = scopePreparedSpellsByClass({
+      preparedSpellKeys: limited,
+      classStates: classSpellcastingStates,
+      trackedSpells: currentCharacterData.proficiencies?.spells ?? [],
+      existing: currentCharacterData.classSpellSelections,
+    });
+    await saveCharacterData({ preparedSpells: limited, classSpellSelections });
   };
 
   const baseProficiencies = currentCharacterData.proficiencies ?? {
@@ -132,7 +178,7 @@ export function buildCharacterRuntimeActions(args: {
     if (existing.some((entry) => normalizeSpellName(entry.name) === normalized)) return;
     const nextSpells = [
       ...existing,
-      { name: spellName, source: classDetail?.name ?? char.className ?? "Manual", ...(spell.id ? { id: String(spell.id) } : {}) },
+      { name: spellName, source: classDetail?.name ?? char.className ?? "Manual", classEntryId: classSpellcastingStates[0]?.classEntryId ?? null, sourceKey: classSpellcastingStates[0] ? `class:${classSpellcastingStates[0].classEntryId}` : null, ...(spell.id ? { id: String(spell.id) } : {}) },
     ].sort((a, b) => a.name.localeCompare(b.name));
     const nextPreparedSpells = (() => {
       if (!usesFlexiblePreparedList || !spell.level || spell.level <= 0) return currentCharacterData.preparedSpells;
@@ -185,9 +231,11 @@ export function buildCharacterRuntimeActions(args: {
           }
         : resource,
     );
-    const slotsReset = classDetail?.slotsReset ?? "L";
-    if (/S/i.test(slotsReset)) {
-      await saveCharacterData({ resources: nextResources, usedSpellSlots: {} });
+    const pactPrefixes = (spellSlotState?.pactPools ?? []).map((pool) => `${pool.key}:`);
+    if (pactPrefixes.length > 0 || /S/i.test(classDetail?.slotsReset ?? "L")) {
+      const usedSpellSlots = Object.fromEntries(Object.entries(currentCharacterData.usedSpellSlots ?? {})
+        .filter(([key]) => !pactPrefixes.some((prefix) => key.startsWith(prefix))));
+      await saveCharacterData({ resources: nextResources, usedSpellSlots });
     } else {
       await saveResources(nextResources);
     }
@@ -200,8 +248,13 @@ export function buildCharacterRuntimeActions(args: {
         : resource,
     );
     const recovery = getLongRestRecovery(hitDiceMax, currentCharacterData.exhaustion ?? 0);
-    const slotsReset = classDetail?.slotsReset ?? "L";
-    const nextUsedSpellSlots = /S/i.test(slotsReset) ? (currentCharacterData.usedSpellSlots ?? {}) : {};
+    let hitDiceToRestore = Math.max(0, recovery.hitDiceCurrent - hitDicePools.reduce((sum, pool) => sum + pool.current, 0));
+    const recoveredHitDiceBySize = Object.fromEntries(hitDicePools.map((pool) => {
+      const restored = Math.min(pool.max - pool.current, hitDiceToRestore);
+      hitDiceToRestore -= restored;
+      return [String(pool.dieSize), pool.current + restored];
+    }));
+    const nextUsedSpellSlots = {};
     const nextInventory = (inventory ?? []).map((item) => recoverItemCharges(item));
     const hasResourceful = hasHeroicInspirationGrant(raceDetail);
     const nextOverrides = getLongRestOverrides(Boolean(overrides.inspiration), hasResourceful);
@@ -210,6 +263,7 @@ export function buildCharacterRuntimeActions(args: {
       hpCurrent: effectiveHpMaxWithoutOverrides,
       characterData: {
         hitDiceCurrent: recovery.hitDiceCurrent,
+        hitDiceCurrentBySize: recoveredHitDiceBySize,
         exhaustion: recovery.exhaustion,
         resources: nextResources,
         usedSpellSlots: nextUsedSpellSlots,
@@ -233,6 +287,7 @@ export function buildCharacterRuntimeActions(args: {
       characterData: {
         ...prev.characterData,
         hitDiceCurrent: recovery.hitDiceCurrent,
+        hitDiceCurrentBySize: recoveredHitDiceBySize,
         exhaustion: recovery.exhaustion,
         resources: nextResources,
         usedSpellSlots: nextUsedSpellSlots,
@@ -384,6 +439,7 @@ export function buildCharacterRuntimeActions(args: {
     saveXp,
     saveHitDiceCurrent,
     saveResources,
+    saveHitDicePoolCurrent,
     saveUsedSpellSlots,
     savePreparedSpells,
     addTrackedSpell,

@@ -47,6 +47,7 @@ export interface CreatorAutolevelLike {
 export interface CreatorClassDetailLike {
   autolevels: CreatorAutolevelLike[];
   preparedSpellChanges?: "short_rest" | "long_rest" | null;
+  preparedSpellFormula?: { classLevelDivisor?: 1 | 2; rounding?: "down" | "up"; minimum?: number } | null;
   spellcastingList?: string | null;
   equipmentOptions?: StructuredStartingEquipmentOption[];
   subclasses?: { level: number; options: Record<string, string> } | null;
@@ -84,7 +85,7 @@ export interface StartingEquipmentOption {
   structuredEntries?: StructuredStartingEquipmentEntry[];
 }
 
-export type StructuredStartingEquipmentEntry =
+type StructuredStartingEquipmentEntry =
   | { kind: "item"; itemId?: string; name?: string; quantity: number; sourceLabel?: string }
   | { kind: "choiceRef"; choiceKey: "background.tools" | "class.tools"; quantity: number; sourceLabel: string }
   | { kind: "itemChoice"; choiceKey: string; itemIds: string[]; quantity: number; sourceLabel: string }

@@ -10,6 +10,7 @@ import type {
   SheetOverrides,
   EditableSheetOverrideField,
   PolymorphConditionData,
+  CharacterClassDetailSelection,
 } from "@/views/character/CharacterViewHelpers";
 import type { AbilKey, CharacterData, ResourceCounter } from "@/views/character/CharacterSheetTypes";
 import type { InventoryItem } from "@/views/character/CharacterInventory";
@@ -23,7 +24,7 @@ type GrantedSpellDataResult = ReturnType<typeof import("@/domain/character/parse
 type MovementModesResult = ReturnType<typeof import("@/domain/character/parseFeatureEffects").collectMovementModesFromEffects>;
 type MonsterSpeedModes = ReturnType<typeof import("@beholden/shared/domain").parseMonsterSpeed>["modes"];
 
-export type TransformedMonsterState = {
+type TransformedMonsterState = {
   monster: any | null;
   busy: boolean;
   error: string | null;
@@ -32,6 +33,7 @@ export type TransformedMonsterState = {
 export type CharacterViewDerivedStateArgs = {
   char: Character;
   classDetail: ClassRestDetail | null;
+  classSelections?: CharacterClassDetailSelection[];
   raceDetail: RaceFeatureDetail | null;
   backgroundDetail: BackgroundFeatureDetail | null;
   bgOriginFeatDetail: FeatFeatureDetail | null;
@@ -53,6 +55,39 @@ export type CharacterViewDerivedState = {
   hitDieSize: number | null;
   hitDiceMax: number;
   hitDiceCurrent: number;
+  hitDicePools: Array<{ dieSize: number; max: number; current: number }>;
+  classPresentation: Array<{
+    classEntryId: string;
+    className: string;
+    classLevel: number;
+    subclassName: string | null;
+    hitDieSize: number | null;
+  }>;
+  spellcastingSources: Array<{
+    classEntryId: string;
+    classId: string;
+    className: string;
+    classLevel: number;
+    subclass: string | null;
+    ability: string | null;
+    slotsReset: string | null;
+    contribution: "full" | "half" | "third" | "pact" | null;
+  }>;
+  spellSlotState: import("@/domain/character/multiclassSpellcasting").MulticlassSpellSlotState;
+  classSpellcastingStates: Array<{
+    classEntryId: string;
+    className: string;
+    classLevel: number;
+    ability: "str" | "dex" | "con" | "int" | "wis" | "cha" | null;
+    saveDc: number | null;
+    attackBonus: number | null;
+    preparedLimit: number;
+    preparedSpells: string[];
+    chosenCantrips: string[];
+    chosenSpells: string[];
+    chosenInvocations: string[];
+    pactMagic: boolean;
+  }>;
   inventory: InventoryItem[];
   baseScores: Record<AbilKey, number | null>;
   scores: Record<AbilKey, number | null>;

@@ -4,9 +4,11 @@ import {
   applyItemAbilityScoreOverrides,
   buildAbilityScoreExplanations,
   collectClassResources,
+  coalesceSharedClassResources,
   isInventoryItemActiveForCharacterEffects,
   mergeResourceState,
   normalizeProficiencies,
+  getPrimaryCharacterClassEntry,
   stripEditionTag,
   XP_TO_LEVEL,
   type EditableSheetOverrideField,
@@ -34,6 +36,7 @@ import {
 import {
   abilityMod,
   getInitiativeBonus,
+  normalizeAbilityKey,
   normalizeSpellTrackingKey,
   proficiencyBonus,
 } from "@/views/character/CharacterSheetUtils";
@@ -57,7 +60,8 @@ import {
 import type { CharacterViewDerivedState, CharacterViewDerivedStateArgs } from "@/views/character/CharacterViewDerivedTypes";
 import type { AppliedCharacterFeatureEntry } from "@/domain/character/characterFeatures";
 import type { TaggedItem } from "@/views/character/CharacterSheetTypes";
-import type { ClassRestDetail } from "@/views/character/CharacterViewHelpers";
+import type { CharacterClassDetailSelection, ClassRestDetail } from "@/views/character/CharacterViewHelpers";
+import { deriveMulticlassSpellSlots } from "@/domain/character/multiclassSpellcasting";
 
 function emptyProficiencyMap(): ProficiencyMap {
   return {
@@ -92,7 +96,54 @@ export function mergeFixedClassProficiencies(
   return merged;
 }
 
-export function resolveChosenFeatSpell(args: {
+export function mergeAllClassProficiencies(
+  stored: ProficiencyMap | undefined,
+  selections: CharacterClassDetailSelection[],
+): ProficiencyMap | undefined {
+  if (selections.length === 0) return stored;
+  let merged = mergeFixedClassProficiencies(stored, selections[0]!.detail);
+  for (const selection of selections.slice(1)) {
+    const grants = selection.detail.multiclass;
+    if (!grants) continue;
+    merged ??= emptyProficiencyMap();
+    const add = (target: TaggedItem[], name: string) => {
+      const trimmed = String(name ?? "").trim();
+      if (!trimmed || target.some((entry) => entry.name.trim().toLowerCase() === trimmed.toLowerCase())) return;
+      target.push({ name: trimmed, source: selection.detail.name });
+    };
+    for (const name of grants.armor ?? []) add(merged.armor, name);
+    for (const name of grants.weapons ?? []) add(merged.weapons, name);
+    for (const name of grants.tools?.fixed ?? []) add(merged.tools, name);
+  }
+  return merged;
+}
+
+export function buildHitDicePools(
+  selections: CharacterClassDetailSelection[],
+  legacyCurrent?: number,
+  currentBySize?: Record<string, number>,
+): Array<{ dieSize: number; max: number; current: number }> {
+  const maximumByDie = new Map<number, number>();
+  for (const { entry, detail } of selections) {
+    const dieSize = Math.floor(Number(detail.hd));
+    if (!Number.isFinite(dieSize) || dieSize <= 0) continue;
+    maximumByDie.set(dieSize, (maximumByDie.get(dieSize) ?? 0) + Math.max(0, entry.level));
+  }
+  const pools = Array.from(maximumByDie, ([dieSize, max]) => ({ dieSize, max, current: max }));
+  if (currentBySize) {
+    for (const pool of pools) pool.current = Math.max(0, Math.min(pool.max, Math.floor(Number(currentBySize[String(pool.dieSize)] ?? pool.max) || 0)));
+    return pools;
+  }
+  if (legacyCurrent == null || pools.length === 0) return pools;
+  let remaining = Math.max(0, Math.min(pools.reduce((sum, pool) => sum + pool.max, 0), Math.floor(Number(legacyCurrent) || 0)));
+  for (const pool of pools) {
+    pool.current = Math.min(pool.max, remaining);
+    remaining -= pool.current;
+  }
+  return pools;
+}
+
+function resolveChosenFeatSpell(args: {
   feature: AppliedCharacterFeatureEntry;
   choiceId: string;
   chosenFeatOptions: Record<string, string[]>;
@@ -120,15 +171,64 @@ export function resolveChosenFeatSpell(args: {
 
 export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateArgs): CharacterViewDerivedState {
   const currentCharacterData: CharacterData = args.char.characterData ?? {};
-  const prof = mergeFixedClassProficiencies(
+  const primaryClassLevel = getPrimaryCharacterClassEntry(currentCharacterData)?.level ?? args.char.level;
+  const classSelections = args.classSelections?.length ? args.classSelections : [];
+  const classPresentation = classSelections.map(({ entry, detail }) => {
+    const selectedSubclass = String(entry.subclass ?? "").trim();
+    const subclass = selectedSubclass
+      ? detail.subclassDetails?.[selectedSubclass]
+        ?? Object.values(detail.subclassDetails ?? {}).find((option) => typeof option !== "string" && option.name === selectedSubclass)
+      : null;
+    return {
+      classEntryId: entry.id,
+      className: detail.name || entry.className || "Class",
+      classLevel: entry.level,
+      subclassName: subclass
+        ? (typeof subclass === "string" ? subclass : subclass.name)
+        : selectedSubclass || null,
+      hitDieSize: Number.isFinite(Number(detail.hd)) ? Number(detail.hd) : null,
+    };
+  });
+  const prof = classSelections.length > 0 ? mergeAllClassProficiencies(
     normalizeProficiencies(currentCharacterData.proficiencies),
-    args.classDetail,
-  );
+    classSelections,
+  ) : mergeFixedClassProficiencies(normalizeProficiencies(currentCharacterData.proficiencies), args.classDetail);
   const pb = proficiencyBonus(args.char.level);
   const hd = currentCharacterData.hd ?? null;
   const hitDieSize = hd ?? args.classDetail?.hd ?? null;
-  const hitDiceMax = Math.max(0, args.char.level);
-  const hitDiceCurrent = Math.max(0, Math.min(hitDiceMax, Math.floor(Number(currentCharacterData.hitDiceCurrent ?? hitDiceMax) || 0)));
+  const hitDicePools = buildHitDicePools(classSelections, currentCharacterData.hitDiceCurrent ?? undefined, currentCharacterData.hitDiceCurrentBySize);
+  const hitDiceMax = hitDicePools.length > 0 ? hitDicePools.reduce((sum, pool) => sum + pool.max, 0) : Math.max(0, args.char.level);
+  const hitDiceCurrent = hitDicePools.length > 0
+    ? hitDicePools.reduce((sum, pool) => sum + pool.current, 0)
+    : Math.max(0, Math.min(hitDiceMax, Math.floor(Number(currentCharacterData.hitDiceCurrent ?? hitDiceMax) || 0)));
+  const getSubclassSpellcasting = ({ entry, detail }: CharacterClassDetailSelection) => {
+    const selected = String(entry.subclass ?? "").trim();
+    if (!selected) return null;
+    const value = detail.subclassDetails?.[selected]
+      ?? Object.values(detail.subclassDetails ?? {}).find((option) => typeof option !== "string" && option.name === selected);
+    return value && typeof value !== "string" ? value.spellcasting ?? null : null;
+  };
+  const spellcastingSelections = classSelections.filter((selection) => Boolean(
+    selection.detail.spellAbility
+    || selection.detail.multiclass?.spellcasting
+    || getSubclassSpellcasting(selection),
+  ));
+  const spellcastingSources = spellcastingSelections
+    .map((selection) => {
+      const { entry, detail } = selection;
+      const subclassSpellcasting = getSubclassSpellcasting(selection);
+      return {
+      classEntryId: entry.id,
+      classId: detail.id,
+      className: detail.name,
+      classLevel: entry.level,
+      subclass: entry.subclass ?? null,
+      ability: detail.spellAbility ?? subclassSpellcasting?.ability ?? null,
+      slotsReset: detail.slotsReset ?? null,
+      contribution: detail.multiclass?.spellcasting?.progression ?? subclassSpellcasting?.contribution ?? null,
+      };
+    });
+  const spellSlotState = deriveMulticlassSpellSlots(classSelections);
   const inventory = currentCharacterData.inventory ?? [];
   const overrides = args.char.overrides ?? currentCharacterData.sheetOverrides ?? { tempHp: 0, acBonus: 0, hpMaxBonus: 0 };
   const baseScores: Record<AbilKey, number | null> = {
@@ -165,7 +265,9 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   const featureArgs = {
     charData: currentCharacterData,
     characterLevel: args.char.level,
+    classLevel: primaryClassLevel,
     classDetail: args.classDetail,
+    classSelections,
     raceDetail: args.raceDetail,
     backgroundDetail: args.backgroundDetail,
     bgOriginFeatDetail: args.bgOriginFeatDetail,
@@ -246,8 +348,11 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   })();
   const derivedResources = (() => {
     const byKey = new Map<string, ResourceCounter>();
+    const classResources = coalesceSharedClassResources(classSelections.length > 0
+        ? classSelections.flatMap(({ entry, detail }) => collectClassResources(detail, entry.level, entry.subclass, entry.id))
+        : collectClassResources(args.classDetail, primaryClassLevel, args.subclass));
     for (const resource of [
-      ...collectClassResources(args.classDetail, args.char.level, args.subclass),
+      ...classResources,
       ...grantedSpellData.resources,
     ]) {
       if (!byKey.has(resource.key)) byKey.set(resource.key, resource);
@@ -265,24 +370,60 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     conditionImmunities: effectDefenses.conditionImmunities,
     vulnerabilities: [] as string[],
   };
-  const isPactMagic = args.classDetail?.slotsReset === "S";
-  const usesFlexiblePreparedList = usesFlexiblePreparedSpells(args.classDetail);
-  const preparedSpellLimit = args.classDetail && !isPactMagic
-    ? getPreparedSpellCount(args.classDetail, args.char.level, args.subclass ?? "")
-    : 0;
+  const classPreparationRules = spellcastingSelections.map((selection) => {
+    const { entry, detail } = selection;
+    const pactMagic = detail.multiclass?.spellcasting?.progression === "pact" || detail.slotsReset === "S";
+    const flexible = usesFlexiblePreparedSpells(detail);
+    return {
+      entry,
+      detail,
+      pactMagic,
+      flexible,
+      limit: flexible && !pactMagic ? getPreparedSpellCount(detail, entry.level, entry.subclass ?? "", detail.spellAbility ? scores[normalizeAbilityKey(detail.spellAbility) ?? "int"] : null) : 0,
+    };
+  });
+  const usesFlexiblePreparedList = classPreparationRules.length > 0
+    ? classPreparationRules.some((rule) => rule.flexible)
+    : usesFlexiblePreparedSpells(args.classDetail);
+  const preparedSpellLimit = classPreparationRules.length > 0
+    ? classPreparationRules.reduce((sum, rule) => sum + rule.limit, 0)
+    : args.classDetail && args.classDetail.slotsReset !== "S"
+      ? getPreparedSpellCount(args.classDetail, primaryClassLevel, args.subclass ?? "", args.classDetail.spellAbility ? scores[normalizeAbilityKey(args.classDetail.spellAbility) ?? "int"] : null)
+      : 0;
   const forcedPreparedSpellKeys = new Set(
     grantedSpellData.spells
       .filter((entry) => entry.mode === "always_prepared")
       .map((entry) => normalizeSpellTrackingKey(entry.spellName))
   );
   const knownSpellKeys = new Set((prof?.spells ?? []).map((entry) => normalizeSpellTrackingKey(entry.name)));
-  const preparedSpells = buildPreparedSpells({
+  const legacyPreparedSpells = buildPreparedSpells({
     currentCharacterData,
     usesFlexiblePreparedList,
     preparedSpellLimit,
     knownSpellKeys,
     forcedPreparedSpellKeys,
   });
+  const classSpellcastingStates = classPreparationRules.map(({ entry, detail, pactMagic, limit }, index) => {
+    const ability = normalizeAbilityKey(detail.spellAbility ?? getSubclassSpellcasting({ entry, detail })?.ability);
+    const scoped = currentCharacterData.classSpellSelections?.[entry.id];
+    return {
+      classEntryId: entry.id,
+      className: detail.name,
+      classLevel: entry.level,
+      ability,
+      saveDc: ability ? 8 + pb + abilityMod(scores[ability]) : null,
+      attackBonus: ability ? pb + abilityMod(scores[ability]) : null,
+      preparedLimit: limit,
+      preparedSpells: scoped?.preparedSpells ?? (index === 0 ? legacyPreparedSpells : []),
+      chosenCantrips: scoped?.chosenCantrips ?? (index === 0 ? currentCharacterData.chosenCantrips ?? [] : []),
+      chosenSpells: scoped?.chosenSpells ?? (index === 0 ? currentCharacterData.chosenSpells ?? [] : []),
+      chosenInvocations: scoped?.chosenInvocations ?? (index === 0 ? currentCharacterData.chosenInvocations ?? [] : []),
+      pactMagic,
+    };
+  });
+  const preparedSpells = currentCharacterData.classSpellSelections
+    ? Array.from(new Set(classSpellcastingStates.flatMap((state) => state.preparedSpells)))
+    : legacyPreparedSpells;
   const grantedSpellNotesByKey = new Map(
     grantedSpellData.spells.map((entry) => [normalizeSpellTrackingKey(entry.spellName), entry.note ?? null] as const)
   );
@@ -320,9 +461,10 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   const dexMod = abilityMod(scores.dex);
   const conMod = abilityMod(scores.con);
   const hasJackOfAllTrades = Boolean(
-    args.classDetail?.autolevels
-      ?.filter((autolevel) => autolevel.level <= args.char.level)
-      .some((autolevel) => (autolevel.features ?? []).some((feature) => /jack of all trades/i.test(feature.name)))
+    (classSelections.length > 0 ? classSelections : args.classDetail ? [{ entry: { level: primaryClassLevel }, detail: args.classDetail }] : [])
+      .some(({ entry, detail }) => detail.autolevels
+        ?.filter((autolevel) => autolevel.level <= entry.level)
+        .some((autolevel) => (autolevel.features ?? []).some((feature) => /jack of all trades/i.test(feature.name))))
   );
   const scoresByAbility: Record<AbilKey, number | null> = {
     str: scores.str,
@@ -466,6 +608,11 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     hitDieSize,
     hitDiceMax,
     hitDiceCurrent,
+    hitDicePools,
+    classPresentation,
+    spellcastingSources,
+    spellSlotState,
+    classSpellcastingStates,
     inventory,
     baseScores,
     scores,

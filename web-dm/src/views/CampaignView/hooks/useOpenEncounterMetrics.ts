@@ -2,28 +2,23 @@ import * as React from "react";
 import { api } from "@/services/api";
 import { getMonsterXp } from "@/domain/utils/xp";
 import { calcEncounterDifficulty } from "@/domain/utils/difficulty";
-import { estimateMonsterDpr } from "@/domain/utils/monsterDpr";
-import { parseCrToNumberOrNull } from "@/domain/utils/crParsing";
+import { estimateMonsterDpr, estimateMonsterEffectiveHp, estimatePartyDpr } from "@/domain/utils/monsterDpr";
 import type { Action } from "@/store/actions";
 import type { CampaignCharacter, INpc } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
 
 type DifficultyRow = {
-  label: string;
+  officialDifficulty: string;
+  projectedThreat: string;
   rtk: number;
   partyHpMax: number;
   hostileDpr: number;
+  projectedDpr: number;
   burstFactor: number;
-  adjustedXp: number;
+  encounterXp: number;
 };
 
 type EncounterLike = { id: string; name: string; status: string };
-
-function parseCrFromDetail(detail: MonsterDetail | null | undefined): number | null {
-  if (!detail) return null;
-  const raw = (detail as any).cr ?? (detail as any).raw_json?.cr ?? (detail as any).raw_json?.challenge_rating;
-  return parseCrToNumberOrNull(raw);
-}
 
 export function useOpenEncounterMetrics(args: {
   selectedAdventureId: string | null;
@@ -66,7 +61,7 @@ export function useOpenEncounterMetrics(args: {
       const summary = await api<{
         rows: Array<{
           encounterId: string;
-          baseType: "monster" | "inpc";
+          baseType: "player" | "monster" | "inpc";
           baseId: string;
           friendly: boolean;
         }>;
@@ -77,7 +72,7 @@ export function useOpenEncounterMetrics(args: {
       const nextDiff: Record<string, DifficultyRow> = {};
       const rowsByEncounter = new Map<string, Array<{
         encounterId: string;
-        baseType: "monster" | "inpc";
+        baseType: "player" | "monster" | "inpc";
         baseId: string;
         friendly: boolean;
       }>>();
@@ -86,11 +81,6 @@ export function useOpenEncounterMetrics(args: {
         list.push(row);
         rowsByEncounter.set(row.encounterId, list);
       }
-
-      const partyHpMax = players.reduce((sum, p) => sum + (p.hpMax ?? 0), 0);
-      const playerLevels = players
-        .map((p) => Number(p.level ?? 1))
-        .filter((n) => Number.isFinite(n) && n > 0);
 
       // Ensure we have monster details for all referenced monsters in one batch pass.
       const monsterIds = new Set<string>();
@@ -128,12 +118,17 @@ export function useOpenEncounterMetrics(args: {
         try {
           let totalXp = 0;
           let hostileDpr = 0;
-          let burstFactor = 1.0;
-          let monsterCount = 0;
-          let maxMonsterCr = 0;
+          let projectedDpr = 0;
+          let monsterEffectiveHp = 0;
 
           const encounterRows = rowsByEncounter.get(encId) ?? [];
+          const encounterPlayerIds = new Set(encounterRows.filter((row) => row.baseType === "player").map((row) => String(row.baseId)));
+          const encounterPlayers = players.filter((player) => encounterPlayerIds.has(String(player.id)));
+          const partyHpMax = encounterPlayers.reduce((sum, player) => sum + (player.hpMax ?? 0), 0);
+          const playerLevels = encounterPlayers.map((player) => Number(player.level ?? 1)).filter((level) => Number.isFinite(level) && level > 0);
+          const armorClasses = encounterPlayers.map((player) => Number(player.ac)).filter((ac) => Number.isFinite(ac) && ac > 0);
           for (const row of encounterRows) {
+            if (row.baseType === "player") continue;
             if (row.friendly) continue;
             let monsterId: string | null = null;
             if (row.baseType === "monster") {
@@ -148,8 +143,6 @@ export function useOpenEncounterMetrics(args: {
             }
             if (!monsterId) continue;
 
-            monsterCount += 1;
-
             const detail = details?.[monsterId];
 
             const xp = getMonsterXp(detail);
@@ -157,18 +150,14 @@ export function useOpenEncounterMetrics(args: {
               totalXp += xp;
             }
 
-            const estimate = estimateMonsterDpr(detail);
+            const estimate = estimateMonsterDpr(detail, { armorClasses, partySize: encounterPlayers.length });
             if (estimate?.dpr != null && Number.isFinite(estimate.dpr)) {
-              hostileDpr += Math.max(0, estimate.dpr);
+              const dpr = Math.max(0, estimate.dpr);
+              hostileDpr += dpr;
+              projectedDpr += dpr * Math.max(1, estimate.burstFactor);
             }
-            if (estimate?.burstFactor != null && Number.isFinite(estimate.burstFactor)) {
-              burstFactor = Math.max(burstFactor, estimate.burstFactor);
-            }
+            monsterEffectiveHp += estimateMonsterEffectiveHp(detail);
 
-            const cr = parseCrFromDetail(detail);
-            if (cr != null && cr > maxMonsterCr) {
-              maxMonsterCr = cr;
-            }
           }
 
           nextXp[encId] = Math.max(0, Math.round(totalXp));
@@ -176,19 +165,22 @@ export function useOpenEncounterMetrics(args: {
           const diff = calcEncounterDifficulty({
             partyHpMax,
             hostileDpr,
-            burstFactor,
+            projectedDpr,
             totalXp,
             playerLevels,
-            monsterCount,
-            maxMonsterCr,
+            partyHpValues: encounterPlayers.map((player) => Number(player.hpMax)).filter((hp) => Number.isFinite(hp) && hp > 0),
+            monsterEffectiveHp,
+            partyDpr: estimatePartyDpr(playerLevels),
           });
           nextDiff[encId] = {
-            label: diff.label,
+            officialDifficulty: diff.officialDifficulty,
+            projectedThreat: diff.projectedThreat,
             rtk: diff.roundsToTpk,
             partyHpMax: diff.partyHpMax,
             hostileDpr: diff.hostileDpr,
+            projectedDpr: diff.projectedDpr,
             burstFactor: diff.burstFactor,
-            adjustedXp: diff.adjustedXp,
+            encounterXp: diff.encounterXp,
           };
         } catch {
           // ignore
@@ -223,8 +215,8 @@ export function useOpenEncounterMetrics(args: {
       if (typeof xp === "number" && Number.isFinite(xp) && xp > 0) {
         parts.push(`${xp.toLocaleString()} XP`);
       }
-      if (diff?.label) {
-        parts.push(diff.label);
+      if (diff?.projectedThreat && diff.projectedThreat !== "Unavailable") {
+        parts.push(diff.projectedThreat);
       }
 
       return {

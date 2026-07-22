@@ -1,4 +1,8 @@
 import type { StoredCharacterSheetState } from "../server/userData.js";
+import {
+  characterLevelFromClasses,
+  normalizeCharacterClassEntries,
+} from "@beholden/shared/domain/characterClasses";
 
 function optionalText(value: unknown): string | undefined {
   if (value == null) return undefined;
@@ -22,6 +26,11 @@ function primaryClass(characterData: Record<string, unknown> | null): Record<str
   return characterData.classes.map(record).find(Boolean) ?? null;
 }
 
+function normalizeClassData(characterData: Record<string, unknown> | null): Record<string, unknown> | null {
+  if (!characterData || !Array.isArray(characterData.classes)) return characterData;
+  return { ...characterData, classes: normalizeCharacterClassEntries(characterData.classes) };
+}
+
 /**
  * Persist only authored or client-derived facts. Rules are resolved by the player
  * from canonical compendium data; the server must never reconstruct them from names.
@@ -30,21 +39,24 @@ export function normalizeCharacterSheetForStorage(
   sheet: StoredCharacterSheetState,
   characterData: Record<string, unknown> | null,
 ): { sheet: StoredCharacterSheetState; characterData: Record<string, unknown> | null } {
-  const selectedClass = primaryClass(characterData);
+  const normalizedCharacterData = normalizeClassData(characterData);
+  const selectedClass = primaryClass(normalizedCharacterData);
   const className = sheet.className && sheet.className !== sheet.name
     ? sheet.className
     : optionalText(selectedClass?.className) ?? sheet.className;
-  const species = sheet.species || optionalText(characterData?.raceName) || sheet.species;
-  const derivedAc = positiveInt(characterData?.derivedAc);
+  const species = sheet.species || optionalText(normalizedCharacterData?.raceName) || sheet.species;
+  const derivedAc = positiveInt(normalizedCharacterData?.derivedAc);
+  const derivedLevel = characterLevelFromClasses(normalizedCharacterData?.classes);
 
   return {
     sheet: {
       ...sheet,
       className,
       species,
+      level: derivedLevel > 0 ? derivedLevel : sheet.level,
       ac: derivedAc ?? sheet.ac,
     },
-    characterData,
+    characterData: normalizedCharacterData,
   };
 }
 

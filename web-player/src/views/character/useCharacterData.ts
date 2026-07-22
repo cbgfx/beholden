@@ -15,8 +15,9 @@ import type {
   LevelUpFeatDetail,
   InvocationFeatureDetail,
   ClassFeatFeatureDetail,
+  CharacterClassDetailSelection,
 } from "@/views/character/CharacterViewHelpers";
-import { getPrimaryCharacterClassEntry } from "@/views/character/CharacterViewHelpers";
+import { getPrimaryCharacterClassEntry, normalizeCharacterClasses } from "@/views/character/CharacterViewHelpers";
 
 type ClassTalentLookupRow = {
   id: string;
@@ -33,6 +34,7 @@ type FeatLookupRow = {
 export function useCharacterData(id: string | undefined) {
   const [char, setChar] = React.useState<Character | null>(null);
   const [classDetail, setClassDetail] = React.useState<ClassRestDetail | null>(null);
+  const [classSelections, setClassSelections] = React.useState<CharacterClassDetailSelection[]>([]);
   const [raceDetail, setRaceDetail] = React.useState<RaceFeatureDetail | null>(null);
   const [backgroundDetail, setBackgroundDetail] = React.useState<BackgroundFeatureDetail | null>(null);
   const [bgOriginFeatDetail, setBgOriginFeatDetail] = React.useState<FeatFeatureDetail | null>(null);
@@ -46,6 +48,7 @@ export function useCharacterData(id: string | undefined) {
 
   const characterData = char?.characterData;
   const primaryClassEntry = getPrimaryCharacterClassEntry(characterData);
+  const classEntries = React.useMemo(() => normalizeCharacterClasses(characterData), [characterData]);
 
   const fetchChar = React.useCallback((): Promise<void> => {
     if (!id) return Promise.resolve();
@@ -60,32 +63,40 @@ export function useCharacterData(id: string | undefined) {
   }, [fetchChar]);
 
   React.useEffect(() => {
-    const classId = primaryClassEntry?.classId;
-    if (!classId) {
+    const loadableEntries = classEntries.filter((entry) => Boolean(entry.classId));
+    if (loadableEntries.length === 0 || !char?.ruleset) {
       setClassDetail(null);
+      setClassSelections([]);
       return;
     }
+    const ruleset = char.ruleset;
     let alive = true;
-    fetchGrandClassDetail<ClassRestDetail>(classId)
-      .then((detail) => {
-        if (alive) setClassDetail(detail ?? null);
+    Promise.all(loadableEntries.map(async (entry) => ({
+      entry,
+      detail: await fetchGrandClassDetail<ClassRestDetail>(entry.classId!, ruleset).catch(() => null),
+    })))
+      .then((loaded) => {
+        if (!alive) return;
+        const selections = loaded.filter(
+          (value): value is CharacterClassDetailSelection => Boolean(value.detail),
+        );
+        setClassSelections(selections);
+        setClassDetail(selections[0]?.detail ?? null);
       })
-      .catch(() => {
-        if (alive) setClassDetail(null);
-      });
+      .catch(() => undefined);
     return () => {
       alive = false;
     };
-  }, [primaryClassEntry?.classId]);
+  }, [classEntries, char?.ruleset]);
 
   React.useEffect(() => {
     const raceId = characterData?.raceId;
-    if (!raceId) {
+    if (!raceId || !char?.ruleset) {
       setRaceDetail(null);
       return;
     }
     let alive = true;
-    fetchGrandSpeciesDetail<RaceFeatureDetail>(raceId)
+    fetchGrandSpeciesDetail<RaceFeatureDetail>(raceId, char.ruleset)
       .then((detail) => {
         if (alive) setRaceDetail(detail);
       })
@@ -95,16 +106,16 @@ export function useCharacterData(id: string | undefined) {
     return () => {
       alive = false;
     };
-  }, [characterData?.raceId]);
+  }, [characterData?.raceId, char?.ruleset]);
 
   React.useEffect(() => {
     const bgId = characterData?.bgId;
-    if (!bgId) {
+    if (!bgId || !char?.ruleset) {
       setBackgroundDetail(null);
       return;
     }
     let alive = true;
-    fetchGrandBackgroundDetail<BackgroundFeatureDetail>(bgId)
+    fetchGrandBackgroundDetail<BackgroundFeatureDetail>(bgId, char.ruleset)
       .then((detail) => {
         if (alive) setBackgroundDetail(detail);
       })
@@ -114,7 +125,7 @@ export function useCharacterData(id: string | undefined) {
     return () => {
       alive = false;
     };
-  }, [characterData?.bgId]);
+  }, [characterData?.bgId, char?.ruleset]);
 
   React.useEffect(() => {
     const raceFeatId = typeof characterData?.chosenRaceFeatId === "string" ? characterData.chosenRaceFeatId.trim() : "";
@@ -147,7 +158,7 @@ export function useCharacterData(id: string | undefined) {
       ),
     );
 
-    if (ids.length === 0) {
+    if (ids.length === 0 || !char?.ruleset) {
       setRaceFeatDetail(null);
       setBgOriginFeatDetail(null);
       setClassFeatDetails([]);
@@ -160,7 +171,7 @@ export function useCharacterData(id: string | undefined) {
     api<{ rows: FeatLookupRow[] }>("/api/compendium/feats/lookup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids }),
+      body: JSON.stringify({ ids, ruleset: char.ruleset }),
     })
       .then((payload) => {
         if (!alive) return;
@@ -209,6 +220,7 @@ export function useCharacterData(id: string | undefined) {
     characterData?.chosenLevelUpFeats,
     characterData?.chosenRaceFeatId,
     characterData?.extraFeatIds,
+    char?.ruleset,
   ]);
 
   React.useEffect(() => {
@@ -281,6 +293,7 @@ export function useCharacterData(id: string | undefined) {
     char,
     setChar,
     classDetail,
+    classSelections,
     raceDetail,
     backgroundDetail,
     bgOriginFeatDetail,

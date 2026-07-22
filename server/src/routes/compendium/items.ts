@@ -305,7 +305,6 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
           ...(includeField("container") ? { container: data.container === true } : {}),
           ...(includeField("ignoreweight") ? { ignoreWeight: data.ignoreWeight === true } : {}),
           ...(includeField("effects") ? { effects: data.effects ?? null } : {}),
-          ...(includeField("resolution") ? { resolution: data.resolution ?? null } : {}),
         };
       });
     if (withTotal) {
@@ -479,7 +478,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     const itemId = requireParam(req, res, "itemId");
     if (!itemId) return;
     const row = db
-      .prepare("SELECT id, name, name_key, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items WHERE id = ?")
+      .prepare("SELECT id, ruleset, name, name_key, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items WHERE id = ?")
       .get(itemId) as Record<string, unknown> | undefined;
     if (!row)
       return res.status(404).json({ ok: false, message: "Item not found in compendium" });
@@ -489,7 +488,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     const it = parseStoredPresentationEntry("items", row.data_json as string);
     res.json({
       id: row.id, name: row.name, nameKey: row.name_key ?? null,
-      ruleset: it.ruleset,
+      ruleset: it.ruleset ?? row.ruleset,
       source: it.source ?? null,
       rarity: row.rarity ?? null, type: row.type ?? null, typeKey: row.type_key ?? null,
       attunement: Boolean(row.attunement), magic: Boolean(row.magic), equippable: Boolean(row.equippable),
@@ -502,6 +501,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
       dmg2: it.dmg2 ?? null,
       dmgType: it.dmgType ?? null,
       properties: it.properties ?? [],
+      mastery: it.mastery ?? null,
       modifiers: it.modifiers ?? [],
       uses: it.uses ?? null,
       spells: it.spells ?? null,
@@ -510,6 +510,10 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
       ammo: it.ammo ?? null,
       usage: it.usage ?? null,
       weaponAmmo: it.weaponAmmo ?? null,
+      bundle: it.bundle ?? null,
+      container: it.container === true,
+      ignoreWeight: it.ignoreWeight === true,
+      effects: it.effects ?? null,
       text: Array.isArray(it.text) ? it.text : (it.text ? [it.text] : []),
     });
   });

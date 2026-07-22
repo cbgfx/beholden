@@ -308,6 +308,10 @@ test("MonsterSchema: rejects unknown top-level field", () => {
   fails(MonsterSchema, { ...validMonster, alignment: "lawful neutral" });
 });
 
+test("MonsterSchema: rejects the retired npc import marker", () => {
+  fails(MonsterSchema, { ...validMonster, npc: true });
+});
+
 test("MonsterSchema: rejects duplicate action IDs", () => {
   const dup = {
     ...validMonster,
@@ -371,11 +375,11 @@ test("ItemSchema: rejects contradictory weapon and shield facts", () => {
 
 test("ItemSchema: accepts exact ammunition families and rejects inconsistent placement", () => {
   passes(ItemSchema, { ...validItem, weapon: { ...validItem.weapon, properties: ["M", "A"], ammo: "arrow" } });
-  passes(ItemSchema, { ...validItem, type: "Ammo", weapon: undefined, proficiency: undefined, ammo: "arrow" });
+  passes(ItemSchema, { ...validItem, type: "Ammunition", weapon: undefined, proficiency: undefined, ammo: "arrow" });
   passes(ItemSchema, { ...validItem, weapon: undefined, proficiency: undefined, usage: "held" });
   fails(ItemSchema, { ...validItem, weapon: { ...validItem.weapon, ammo: "arrow" } });
   fails(ItemSchema, { ...validItem, ammo: "arrow" });
-  fails(ItemSchema, { ...validItem, type: "Ammo", weapon: undefined, proficiency: undefined, ammo: "rocket" });
+  fails(ItemSchema, { ...validItem, type: "Ammunition", weapon: undefined, proficiency: undefined, ammo: "rocket" });
 });
 
 test("ItemSchema: accepts compact canonical bundles and rejects ambiguous contents", () => {
@@ -407,19 +411,17 @@ test("ItemSchema: accepts shared structured item effects", () => {
   fails(ItemSchema, { ...validItem, resolution: "mixed" });
 });
 
-test("ItemSchema: accepts compact item use pools and typed depletion outcomes", () => {
+test("ItemSchema: accepts compact item use pools and long-rest recovery", () => {
   passes(ItemSchema, { ...validItem, uses: 7 });
-  passes(ItemSchema, { ...validItem, uses: { max: 7, recover: "1d6+1", depletion: { destroy: 1 } } });
-  passes(ItemSchema, { ...validItem, uses: { max: "1d8+1", recover: false, depletion: "mundane" } });
-  passes(ItemSchema, { ...validItem, uses: { max: 20, recover: "2d8+4", depletion: { loseProperties: 1, regain: { "20": "1d8+2" } } } });
+  passes(ItemSchema, { ...validItem, uses: { max: 7, recover: "1d6+1" } });
+  passes(ItemSchema, { ...validItem, uses: { max: "1d8+1", recover: false } });
 });
 
 test("ItemSchema: rejects ambiguous or invalid item use pools", () => {
   fails(ItemSchema, { ...validItem, uses: 0 });
   fails(ItemSchema, { ...validItem, uses: { max: 7 } });
   fails(ItemSchema, { ...validItem, uses: { max: "seven", recover: false } });
-  fails(ItemSchema, { ...validItem, uses: { max: 7, depletion: { destroy: 21 } } });
-  fails(ItemSchema, { ...validItem, uses: { max: 7, depletion: {} } });
+  fails(ItemSchema, { ...validItem, uses: { max: 7, depletion: { destroy: 1 } } });
 });
 
 test("ItemSchema: accepts compact item spell access by canonical ID", () => {
@@ -484,12 +486,16 @@ test("SpellSchema: accepts canonical sample", () => {
   passes(SpellSchema, validSpell);
 });
 
-test("SpellSchema: accepts compact typed checks and mixed damage display", () => {
+test("SpellSchema: accepts a compact typed check and mixed damage display", () => {
   passes(SpellSchema, {
     ...validSpell,
-    check: ["attack", "dex"],
+    check: "dex",
     rolls: [{ formula: "5d6+5d6", effect: ["fire", "radiant"] }],
   });
+});
+
+test("SpellSchema: rejects multiple resolution types", () => {
+  fails(SpellSchema, { ...validSpell, check: ["attack", "dex"] });
 });
 
 test("SpellSchema: rejects a one-element effect array", () => {
@@ -666,6 +672,57 @@ test("ClassSchema: accepts canonical sample", () => {
   passes(ClassSchema, validClass);
 });
 
+test("ClassSchema: accepts typed multiclass requirements and spellcasting contribution", () => {
+  passes(ClassSchema, {
+    ...validClass,
+    multiclass: {
+      requirements: { ability: { any: ["str", "dex"] }, minimum: 13 },
+      armor: ["Light Armor"],
+      spellcasting: { progression: "half", rounding: "up" },
+      exceptions: ["Round this class's contribution up."],
+    },
+  });
+});
+
+test("ClassSchema: accepts a 5e ability-modifier preparation formula", () => {
+  passes(ClassSchema, {
+    ...validClass,
+    spellcasting: {
+      ability: "wis",
+      list: "sl_cleric",
+      preparedSpellChanges: "long_rest",
+      preparedFormula: { classLevelDivisor: 1, rounding: "down", minimum: 1 },
+    },
+  });
+  passes(ClassSchema, {
+    ...validClass,
+    spellcasting: {
+      ability: "cha",
+      list: "sl_paladin",
+      preparedSpellChanges: "long_rest",
+      preparedFormula: { classLevelDivisor: 2, rounding: "down", minimum: 1 },
+    },
+  });
+});
+
+test("ClassSchema: rejects unsupported prepared-spell divisors", () => {
+  fails(ClassSchema, {
+    ...validClass,
+    spellcasting: { ability: "wis", preparedFormula: { classLevelDivisor: 3 } },
+  });
+});
+
+test("ClassSchema: requires multiclass prerequisites and rejects invalid caster contribution", () => {
+  fails(ClassSchema, { ...validClass, multiclass: { armor: ["Light Armor"] } });
+  fails(ClassSchema, {
+    ...validClass,
+    multiclass: {
+      requirements: { ability: "int", minimum: 13 },
+      spellcasting: { progression: "full", rounding: "up" },
+    },
+  });
+});
+
 test("ClassSchema: accepts class with features and resources", () => {
   const withFeatures = {
     ...validClass,
@@ -729,6 +786,7 @@ test("ClassSchema: accepts compact explicit subclass spellcasting progression", 
         spellcasting: {
           ability: "int",
           list: "sl_wizard",
+          contribution: "third",
           progression: [
             { level: 3, cantrips: 2, prepared: 3, slots: [2] },
             { level: 4, prepared: 4, slots: [3] },

@@ -15,6 +15,8 @@ import { PreparedSpellProgressionBlock } from "@/views/character/CharacterViewPa
 import { parseAppliedSpeciesTraitEffects } from "../utils/CharacterCreatorClassFeatureUtils";
 import { collectDefensesFromEffects, collectSensesFromEffects } from "@/domain/character/parseFeatureEffects";
 import { titleCase } from "@/lib/format/titleCase";
+import { ALL_LANGUAGES, ALL_SKILLS, ALL_TOOLS } from "@/views/character-creator/constants/CharacterCreatorConstants";
+import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
 
 interface RaceSummaryLike {
   id: string;
@@ -43,7 +45,7 @@ function SourceTag({ value }: { value: string | null | undefined }) {
   return label ? <span style={sourceTagStyle}>{label}</span> : null;
 }
 
-export function renderSpeciesStep({
+function renderSpeciesStep({
   availableRaces,
   filteredRaces,
   raceSearch,
@@ -111,7 +113,7 @@ export function renderSpeciesStep({
   const missingRaceFeat = Boolean(raceChoices?.hasFeatChoice && !chosenRaceFeatId);
   const missingRaceSpellAbility = Boolean(spellAbilityChoice && !chosenRaceSpellAbility);
   // Derived from the species' own trait effects, not a separately-authored vision/resistances
-  // field — one fact, one home (COMPENDIUM_VALIDATION.md's schema tenets).
+  // field: one fact, one home.
   const raceTraitEffects = raceDetail ? parseAppliedSpeciesTraitEffects(raceDetail) : [];
   const derivedSenses = collectSensesFromEffects(raceTraitEffects);
   const derivedResistances = collectDefensesFromEffects(raceTraitEffects).resistances;
@@ -395,7 +397,7 @@ export function renderSpeciesStep({
         </div>
       )}
 
-      <NavButtons step={2} onBack={onBack} onNext={onNext} nextDisabled={nextDisabled} />
+      <NavButtons step={3} onBack={onBack} onNext={onNext} nextDisabled={nextDisabled} />
     </div>
   );
 
@@ -435,4 +437,71 @@ export function renderSpeciesStep({
   );
 
   return { main, side };
+}
+
+export function renderSpeciesFromContext(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
+  const availableRaces = ctx.races;
+  const filtered = ctx.raceSearch
+    ? availableRaces.filter((r) => r.name.toLowerCase().includes(ctx.raceSearch.toLowerCase()))
+    : availableRaces;
+
+  function toggleRacePick<K extends "chosenRaceSkills" | "chosenRaceLanguages" | "chosenRaceTools">(
+    key: K,
+    item: string,
+    max: number,
+  ) {
+    ctx.setForm((f) => {
+      const cur = f[key] as string[];
+      const sel = cur.includes(item);
+      return {
+        ...f,
+        [key]: sel ? cur.filter((x) => x !== item) : cur.length < max ? [...cur, item] : cur,
+      };
+    });
+  }
+
+  // Species choices (skill/tool/language/size/feat/spellcasting-ability) are read exclusively
+  // from the compendium's own structured `choices` field — never inferred from trait prose at
+  // runtime. A species missing `choices` data has no choices to make, not a guess.
+  const raceChoices = ctx.raceDetail?.parsedChoices ?? null;
+  const allowedFeatIds = new Set(ctx.bgDetail?.proficiencies?.featChoiceFrom ?? []);
+  const originFeats = ctx.featSummaries.filter((f) =>
+    allowedFeatIds.size > 0 ? allowedFeatIds.has(f.id) : /\borigin\b/i.test(f.name));
+  const filteredFeats = ctx.raceFeatSearch
+    ? originFeats.filter((f) => f.name.toLowerCase().includes(ctx.raceFeatSearch.toLowerCase()))
+    : originFeats;
+
+  return renderSpeciesStep({
+    availableRaces,
+    filteredRaces: filtered,
+    raceSearch: ctx.raceSearch,
+    setRaceSearch: ctx.setRaceSearch,
+    selectedRaceId: ctx.form.raceId,
+    selectRace: (id) => ctx.setField("raceId", id),
+    raceDetail: ctx.raceDetail,
+    raceChoices,
+    chosenRaceSize: ctx.form.chosenRaceSize,
+    selectRaceSize: (size) => ctx.setForm((f) => ({ ...f, chosenRaceSize: size })),
+    chosenRaceSpellAbility: ctx.form.chosenRaceSpellAbility,
+    selectRaceSpellAbility: (ability) => ctx.setForm((f) => ({ ...f, chosenRaceSpellAbility: ability })),
+    chosenRaceSkills: ctx.form.chosenRaceSkills,
+    chosenRaceTools: ctx.form.chosenRaceTools,
+    chosenRaceLanguages: ctx.form.chosenRaceLanguages,
+    toggleRacePick,
+    allSkills: ALL_SKILLS.map((skill) => skill.name),
+    allTools: ALL_TOOLS,
+    allLanguages: ALL_LANGUAGES,
+    raceFeatSearch: ctx.raceFeatSearch,
+    setRaceFeatSearch: ctx.setRaceFeatSearch,
+    filteredFeats,
+    chosenRaceFeatId: ctx.form.chosenRaceFeatId,
+    selectRaceFeat: (id, selected) => ctx.setForm((f) => ({
+      ...f,
+      chosenRaceFeatId: selected ? null : id,
+      chosenFeatOptions: Object.fromEntries(Object.entries(f.chosenFeatOptions).filter(([k]) => !k.startsWith("race:"))),
+    })),
+    raceFeatDetail: ctx.raceFeatDetail,
+    onBack: () => ctx.setStep(2),
+    onNext: () => ctx.setStep(4),
+  });
 }

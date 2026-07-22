@@ -16,7 +16,7 @@ const PrerequisiteAlternativeSchema = z.union([
   z.object({ training: z.enum(["martial_weapon", "heavy_weapon", "light_armor", "medium_armor", "heavy_armor", "shield"]) }).strict(),
 ]);
 
-export const FeatPrerequisiteSchema = z.union([
+const FeatPrerequisiteSchema = z.union([
   z.number().int().min(1).max(20),
   z.object({
     level: z.number().int().min(1).max(20).optional(),

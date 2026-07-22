@@ -30,5 +30,8 @@
     "concurrently": "^10.0.3",
     "eslint": "^10.6.0",
     "eslint-plugin-react-hooks": "^7.1.1"
+  },
+  "overrides": {
+    "shell-quote": "^1.9.0"
   }
 }

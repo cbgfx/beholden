@@ -1,3 +1,28 @@
+// Canonical color values shared by web-dm's `theme.colors` and web-player's `C`.
+// Both apps re-export these under their own key names/extras — edit values here, not in either app.
+export const PALETTE: Record<
+  | "bg" | "panelBg" | "panelBorder" | "text" | "textDark" | "muted"
+  | "accentPrimary" | "accentHighlight" | "red" | "green"
+  | "colorMagic" | "colorRitual" | "colorGold" | "colorOrange" | "colorPinkRed",
+  string
+> = {
+  bg: "#0d1525",
+  panelBg: "rgba(255,255,255,0.055)",
+  panelBorder: "rgba(255,255,255,0.13)",
+  text: "#e8edf5",
+  textDark: "#0d1525",
+  muted: "rgba(160,180,220,0.75)",
+  accentPrimary: "#f0a500",
+  accentHighlight: "#38b6ff",
+  red: "#ff5d5d",
+  green: "#5ecb6b",
+  colorMagic: "#a78bfa",
+  colorRitual: "#60a5fa",
+  colorGold: "#fbbf24",
+  colorOrange: "#fb923c",
+  colorPinkRed: "#f87171",
+};
+
 export function withAlpha(color: string, alpha: number): string {
   const a = Math.max(0, Math.min(1, alpha));
   const value = (color || "").trim();

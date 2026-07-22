@@ -65,7 +65,7 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
        FROM combatants c
        JOIN encounters e ON e.id = c.encounter_id
        WHERE e.adventure_id = ?
-         AND c.base_type IN ('monster', 'inpc')`,
+         AND c.base_type IN ('player', 'monster', 'inpc')`,
     ];
     if (encounterIds.length > 0) {
       parts.push(`AND c.encounter_id IN (${encounterIds.map(() => "?").join(",")})`);
@@ -75,7 +75,7 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
 
     const rows = db.prepare(parts.join("\n")).all(...params) as Array<{
       encounter_id: string;
-      base_type: "monster" | "inpc";
+      base_type: "player" | "monster" | "inpc";
       base_id: string;
       live_json: string;
     }>;

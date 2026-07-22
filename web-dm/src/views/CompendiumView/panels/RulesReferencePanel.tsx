@@ -1,8 +1,7 @@
 import React from "react";
 import { Panel } from "@/ui/Panel";
 import { theme } from "@/theme/theme";
-import { MiniTable } from "@/views/CompendiumView/components/MiniTable";
-import { RulesSectionBox } from "@/views/CompendiumView/components/RulesSectionBox";
+import { MiniTable, RulesSectionBox } from "@beholden/shared/ui";
 import {
   CONDITIONS,
   EXHAUSTION_2024,

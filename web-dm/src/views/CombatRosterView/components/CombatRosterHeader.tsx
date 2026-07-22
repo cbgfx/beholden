@@ -10,12 +10,20 @@ type Props = {
   backTo: string;
   totalXp?: number;
   difficulty?: {
-    label: string;
+    officialDifficulty: string;
+    projectedThreat: string;
     roundsToTpk: number;
     partyHpMax: number;
     hostileDpr: number;
+    projectedDpr: number;
     burstFactor: number;
-    adjustedXp?: number;
+    encounterXp: number;
+    lowBudget: number;
+    moderateBudget: number;
+    highBudget: number;
+    monsterSurvivalRounds: number;
+    expectedPartyDamageRatio: number;
+    roundsToFirstDown: number;
   };
 };
 
@@ -30,13 +38,12 @@ export function CombatRosterHeader(props: Props) {
 
   const xp = typeof props.totalXp === "number" && Number.isFinite(props.totalXp) ? Math.max(0, Math.round(props.totalXp)) : null;
   const diff = props.difficulty;
-  const diffLabel = diff?.label ? String(diff.label) : null;
+  const diffLabel = diff?.projectedThreat ? diff.projectedThreat : null;
 
   const rtk = diff && Number.isFinite(diff.roundsToTpk) ? diff.roundsToTpk : null;
   const hostileDpr = diff && Number.isFinite(diff.hostileDpr) ? diff.hostileDpr : null;
   const burst = diff && Number.isFinite(diff.burstFactor) ? diff.burstFactor : null;
   const partyHpMax = diff && Number.isFinite(diff.partyHpMax) ? diff.partyHpMax : null;
-  const adjustedXp = diff?.adjustedXp != null && Number.isFinite(diff.adjustedXp) ? diff.adjustedXp : null;
 
   return (
     <Panel
@@ -77,12 +84,15 @@ export function CombatRosterHeader(props: Props) {
                 borderRadius: 999
               }}
               title={
-                `Difficulty (Adj. XP + CR ceiling + DPR)\n` +
-                (adjustedXp != null ? `Adjusted XP: ${Math.round(adjustedXp).toLocaleString()}\n` : "") +
+                `Difficulty: ${diff?.projectedThreat ?? "Unavailable"}\n` +
                 (partyHpMax != null ? `Party HP: ${Math.round(partyHpMax).toLocaleString()}\n` : "") +
-                (hostileDpr != null ? `Hostile DPR: ${Math.round(hostileDpr).toLocaleString()}\n` : "") +
-                (burst != null && burst > 1 ? `Burst factor: ×${burst.toFixed(2)}\n` : "") +
-                (rtk != null && Number.isFinite(rtk) ? `Rounds to TPK: ${rtk.toFixed(1)}` : "∞ rounds to TPK")
+                (hostileDpr != null ? `Sustained DPR: ${Math.round(hostileDpr).toLocaleString()}\n` : "") +
+                (diff && Number.isFinite(diff.projectedDpr) ? `Projected DPR: ${Math.round(diff.projectedDpr).toLocaleString()}\n` : "") +
+                (burst != null && burst > 1 ? `Encounter pressure factor: ×${burst.toFixed(2)}\n` : "") +
+                (diff && Number.isFinite(diff.monsterSurvivalRounds) ? `Estimated monster survival: ${diff.monsterSurvivalRounds.toFixed(1)} rounds\n` : "") +
+                (diff && Number.isFinite(diff.roundsToFirstDown) ? `Estimated first character down: ${diff.roundsToFirstDown.toFixed(1)} rounds\n` : "") +
+                (diff && Number.isFinite(diff.expectedPartyDamageRatio) ? `Expected party HP lost: ${Math.round(diff.expectedPartyDamageRatio * 100)}%\n` : "") +
+                (rtk != null && Number.isFinite(rtk) ? `Rounds to party collapse: ${rtk.toFixed(1)}` : "Rounds to party collapse: ∞")
               }
             >
               {diffLabel}

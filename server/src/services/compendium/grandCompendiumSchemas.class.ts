@@ -17,6 +17,13 @@ const AbilityRequirementSchema = z.union([
   z.object({ all: z.array(ABILITY).min(2) }).strict(),
 ]);
 
+const MulticlassSpellcastingSchema = z.discriminatedUnion("progression", [
+  z.object({ progression: z.literal("full") }).strict(),
+  z.object({ progression: z.literal("half"), rounding: z.enum(["down", "up"]).optional() }).strict(),
+  z.object({ progression: z.literal("third") }).strict(),
+  z.object({ progression: z.literal("pact") }).strict(),
+]);
+
 const ClassFeatureChoiceSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("feat"),
@@ -168,11 +175,18 @@ export const ClassSchema = z
     primaryAbility: AbilityRequirementSchema.optional(),
     equipment: EquipmentSchema.optional(),
     multiclass: z.object({
+      requirements: z.object({
+        ability: AbilityRequirementSchema,
+        /** 13 is the standard threshold. */
+        minimum: z.number().int().min(1).max(30).optional(),
+      }).strict(),
       skills: z.object({ choose: z.number().int().positive(), from: z.array(z.string()).optional() }).strict().optional(),
       armor: z.array(z.string()).min(1).optional(),
       weapons: z.array(z.string()).min(1).optional(),
       tools: ClassToolProficiencySchema.optional(),
-    }).strict().refine((v) => Object.keys(v).length > 0, "Empty multiclass grants must be omitted").optional(),
+      spellcasting: MulticlassSpellcastingSchema.optional(),
+      exceptions: z.array(z.string().min(1)).min(1).optional(),
+    }).strict().optional(),
     subclasses: z.object({
       level: z.number().int().min(1).max(20),
       options: z.record(z.string().regex(/^sc_[a-z0-9_]+$/u), z.union([
@@ -182,6 +196,7 @@ export const ClassSchema = z
           spellcasting: z.object({
             ability: ABILITY,
             list: z.string().regex(/^sl_[a-z0-9_]+$/u),
+            contribution: z.literal("third").optional(),
             progression: z.array(SubclassSpellcastingProgressionRowSchema).min(1).superRefine((rows, ctx) => {
               const seen = new Set<number>();
               rows.forEach((row, index) => {
@@ -218,6 +233,11 @@ export const ClassSchema = z
         list: z.string().regex(/^sl_[a-z0-9_]+$/u).optional(),
         slotRecovery: RECOVERY.optional(),
         preparedSpellChanges: RECOVERY.optional(),
+        preparedFormula: z.object({
+          classLevelDivisor: z.union([z.literal(1), z.literal(2)]).optional(),
+          rounding: z.enum(["down", "up"]).optional(),
+          minimum: z.number().int().positive().optional(),
+        }).strict().optional(),
       })
       .strict().optional(),
     levels: z.array(ClassLevelSchema),

@@ -7,13 +7,17 @@ import {
 import {
   headingStyle,
 } from "../shared/CharacterCreatorStyles";
-
-export { renderClassStep } from "./CharacterCreatorClassStep";
-export { renderSpeciesStep } from "./CharacterCreatorSpeciesStep";
-export { renderIdentityStep } from "./CharacterCreatorIdentityStep";
-export { renderCampaignsStep } from "./CharacterCreatorCampaignsStep";
-
-export { renderLevelStep } from "./CharacterCreatorPanelLevelStep";
+import {
+  getCantripCount,
+  getClassFeatureTable,
+  getMaxSlotLevel,
+  getPreparedSpellCount,
+  isSpellcaster,
+  tableValueAtLevel,
+} from "@/views/character-creator/utils/CharacterCreatorUtils";
+import { buildSpellStepChoiceState } from "@/views/character-creator/utils/CharacterCreatorSpellStepUtils";
+import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
+import { resolvedScores } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
 
 export function renderSpellsStep<T extends { id: string; name: string; level: number | null; text?: string | null }>({
   isCaster,
@@ -251,8 +255,141 @@ export function renderSpellsStep<T extends { id: string; name: string; level: nu
         </div>
       ))}
       {!hasAnything && <p style={{ color: C.muted, fontSize: "var(--fs-medium)" }}>This class has no spellcasting choices at this level.</p>}
-      <NavButtons step={6} onBack={onBack} onNext={onNext} nextDisabled={nextDisabled} />
+      <NavButtons step={8} onBack={onBack} onNext={onNext} nextDisabled={nextDisabled} />
     </div>
   );
   return { main, side };
+}
+
+export function renderSpellsFromContext(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
+  const cantripCount = ctx.classDetail ? getCantripCount(ctx.classDetail, ctx.form.level, ctx.form.subclass) : 0;
+  const maxSlotLvl = ctx.classDetail ? getMaxSlotLevel(ctx.classDetail, ctx.form.level, ctx.form.subclass) : 0;
+  const isCaster = ctx.classDetail ? isSpellcaster(ctx.classDetail, ctx.form.level, ctx.form.subclass) : false;
+  const invocTable = ctx.classDetail ? getClassFeatureTable(ctx.classDetail, "Invocation", 1, ctx.form.subclass) : [];
+  const invocCount = invocTable.length > 0 ? tableValueAtLevel(invocTable, ctx.form.level) : 0;
+  const creatorScores = resolvedScores(ctx.form, ctx.selectedFeatAbilityBonuses);
+  const spellAbility = String(ctx.classDetail?.spellAbility ?? "").toLowerCase();
+  const prepCount = ctx.classDetail ? getPreparedSpellCount(ctx.classDetail, ctx.form.level, ctx.form.subclass, creatorScores[spellAbility]) : 0;
+  const {
+    extraSpellListChoices,
+    extraSpellChoices,
+    maneuverSpellChoices,
+    planItemChoices,
+    maneuverAbilityChoices,
+    progressionTableChoices,
+    missingExtraSpellSelections,
+    } = buildSpellStepChoiceState({
+      form: ctx.form,
+      setForm: ctx.setForm,
+      step6SpellListChoices: ctx.step6SpellListChoices,
+      step6ResolvedSpellChoices: ctx.step6ResolvedSpellChoices,
+      growthChoiceDefinitions: ctx.growthChoiceDefinitions,
+      preparedSpellProgressionChoiceDefinitions: ctx.preparedSpellProgressionChoiceDefinitions,
+      growthOptionEntriesByKey: ctx.growthOptionEntriesByKey as Record<string, import("@/views/character-creator/utils/CharacterCreatorTypes").ItemSummary[]>,
+    featSpellChoiceOptions: ctx.featSpellChoiceOptions,
+    getGrowthChoiceSelectedAbility: ctx.getGrowthChoiceSelectedAbility,
+  });
+
+  const featSpellcastingAbilityChoices = ctx.selectedFeatSpellcastingAbilityChoices.map((entry) => ({
+    ...entry,
+    onToggle: (value: string) =>
+      ctx.setForm((prev) => {
+        const current = prev.chosenFeatOptions[entry.key] ?? [];
+        const next = current.includes(value)
+          ? current.filter((selected) => selected !== value)
+          : current.length < entry.max
+            ? [...current, value]
+            : current;
+        return {
+          ...prev,
+          chosenFeatOptions: {
+            ...prev.chosenFeatOptions,
+            [entry.key]: next,
+          },
+        };
+      }),
+  }));
+  const missingSpellcastingAbilitySelections = featSpellcastingAbilityChoices.some((entry) => entry.chosen.length < entry.max);
+  const invocationFeatChoices = ctx.invocationFeatChoices
+    .map((choice) => ({
+      key: choice.key,
+      title: choice.title,
+      sourceLabel: choice.sourceLabel,
+      options: choice.options.map((option) => option.id),
+      chosen: ctx.form.chosenFeatOptions[choice.key] ?? [],
+      max: choice.count,
+      emptyMsg: "No eligible Origin Feats found.",
+      getOptionLabel: (id: string) => choice.options.find((option) => option.id === id)?.name ?? id,
+      onToggle: (id: string) => ctx.setForm((prev) => {
+        const current = prev.chosenFeatOptions[choice.key] ?? [];
+        const next = current.includes(id)
+          ? current.filter((selected) => selected !== id)
+          : current.length < choice.count ? [...current, id] : current;
+        return { ...prev, chosenFeatOptions: { ...prev.chosenFeatOptions, [choice.key]: next } };
+      }),
+    }));
+  const missingInvocationFeatSelections = invocationFeatChoices.some((entry) => entry.chosen.length < entry.max);
+  const nestedInvocationFeatGroups = ctx.invocationGrantedFeatChoices.groups.map((choice) => ({
+    key: choice.key, title: choice.title, sourceLabel: choice.sourceLabel, options: choice.options,
+    chosen: ctx.form.chosenFeatOptions[choice.key] ?? [], max: choice.count, note: choice.note,
+    onToggle: (value: string) => ctx.setForm((prev) => {
+      const current = prev.chosenFeatOptions[choice.key] ?? [];
+      const next = current.includes(value) ? current.filter((selected) => selected !== value) : current.length < choice.count ? [...current, value] : current;
+      return { ...prev, chosenFeatOptions: { ...prev.chosenFeatOptions, [choice.key]: next } };
+    }),
+  }));
+  const nestedInvocationFeatSpells = ctx.invocationGrantedFeatChoices.spellChoices.map((choice) => ({
+    key: choice.key, title: choice.title, sourceLabel: choice.sourceLabel,
+    spells: (ctx.invocationGrantedFeatChoices.spellOptions[choice.key] ?? []).map((spell) => ({ ...spell, level: (spell as { level?: number | null }).level ?? null })),
+    chosen: ctx.form.chosenFeatOptions[choice.key] ?? [], max: choice.count, note: choice.note,
+    emptyMsg: choice.linkedTo && (ctx.form.chosenFeatOptions[choice.linkedTo] ?? []).length === 0 ? "Choose the spell list first." : "No eligible spells found.",
+    onToggle: (id: string) => ctx.setForm((prev) => {
+      const current = prev.chosenFeatOptions[choice.key] ?? [];
+      const next = current.includes(id) ? current.filter((selected) => selected !== id) : current.length < choice.count ? [...current, id] : current;
+      return { ...prev, chosenFeatOptions: { ...prev.chosenFeatOptions, [choice.key]: next } };
+    }),
+  }));
+
+  function toggleSpell(id: string, listKey: "chosenCantrips" | "chosenSpells" | "chosenInvocations", max: number) {
+    ctx.setForm((f) => {
+      const current = f[listKey];
+      const next = current.includes(id) ? current.filter((x) => x !== id) : current.length < max ? [...current, id] : current;
+      return { ...f, [listKey]: next };
+    });
+  }
+
+  return renderSpellsStep({
+    isCaster,
+    cantripCount,
+    classCantrips: ctx.classCantrips,
+    chosenCantrips: ctx.form.chosenCantrips,
+    toggleCantrip: (id) => toggleSpell(id, "chosenCantrips", cantripCount),
+    invocCount,
+    classInvocations: ctx.classInvocations.filter((inv) => ctx.eligibleInvocationIds.has(inv.id)),
+    chosenInvocations: ctx.form.chosenInvocations,
+    toggleInvocation: (id, action) => ctx.setForm((form) => {
+      const current = form.chosenInvocations;
+      const talent = ctx.classInvocations.find((entry) => entry.id === id);
+      if (action === "add" && talent?.repeatable && current.length < invocCount) return { ...form, chosenInvocations: [...current, id] };
+      if (action === "remove") {
+        const index = current.lastIndexOf(id);
+        return index < 0 ? form : { ...form, chosenInvocations: current.filter((_, candidate) => candidate !== index) };
+      }
+      return form;
+    }),
+    invocationAllowed: (inv) => ctx.eligibleInvocationIds.has(inv.id),
+    prepCount,
+    maxSlotLevel: maxSlotLvl,
+    classSpells: ctx.classSpells,
+    chosenSpells: ctx.form.chosenSpells,
+    toggleSpell: (id) => toggleSpell(id, "chosenSpells", prepCount),
+    extraSpellListChoices,
+    extraSpellChoices: [...extraSpellChoices, ...nestedInvocationFeatSpells, ...maneuverSpellChoices],
+    extraChoiceGroups: [...featSpellcastingAbilityChoices, ...invocationFeatChoices, ...nestedInvocationFeatGroups, ...maneuverAbilityChoices, ...progressionTableChoices],
+    extraItemChoices: planItemChoices,
+    onBack: () => ctx.setStep(7),
+    onNext: () => ctx.setStep(9),
+    nextDisabled: missingExtraSpellSelections || missingSpellcastingAbilitySelections || missingInvocationFeatSelections || !ctx.invocationGrantedFeatChoices.valid,
+    side: ctx.sideSummary,
+  });
 }

@@ -9,11 +9,8 @@ import { AddSpellDrawer, SpellDrawer } from "@/views/character/CharacterSpellDra
 import {
   type FetchedSpellDetail,
   DMG_COLORS,
-  DMG_EMOJI,
   LEVEL_LABELS,
-  abbrevTime,
   getScaledSpellDamage,
-  grantedSpellChargeBtn,
   highestAvailableSlotLevel,
   spellSectionArrow,
   spellSectionHeaderBtn,
@@ -21,6 +18,9 @@ import {
   SPELL_ROW_GRID_WITH_MARKER,
   spellColumnHeaderStyle,
 } from "@/views/character/CharacterSpellShared";
+import { CharacterSpellsGrantedSection } from "@/views/character/CharacterSpellsGrantedSection";
+import { CharacterSpellRow } from "@/views/character/CharacterSpellRow";
+import type { MulticlassSpellSlotState } from "@/domain/character/multiclassSpellcasting";
 
 type SpellLookupRow = {
   query: string;
@@ -31,17 +31,11 @@ function enrichSpellDetail(detail: FetchedSpellDetail): FetchedSpellDetail {
   return detail;
 }
 
-function formatResourceResetLabel(reset: ResourceCounter["reset"]): string {
-  if (reset === "S") return "Short Rest";
-  if (reset === "SL") return "Short or Long Rest";
-  return "Long Rest";
-}
-
 // ---------------------------------------------------------------------------
 // RichSpellsPanel
 // ---------------------------------------------------------------------------
 
-export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb, scores, accentColor, classDetail, charLevel, preparedLimit = 0, usesFlexiblePreparedList = false, usedSpellSlots, preparedSpells, onSlotsChange, onPreparedChange, onAddSpell, onRemoveSpell, addSpellSourceLabel, onResourceChange, spellcastingBlocked = false, spellDamageBonuses = {}, spellSaveDcBonus = 0 }: {
+export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb, scores, accentColor, classDetail, spellSlotState, classSpellcastingStates = [], charLevel, preparedLimit = 0, usesFlexiblePreparedList = false, usedSpellSlots, preparedSpells, onSlotsChange, onPreparedChange, onAddSpell, onRemoveSpell, addSpellSourceLabel, onResourceChange, spellcastingBlocked = false, spellDamageBonuses = {}, spellSaveDcBonus = 0 }: {
   spells: { name: string; source: string; id?: string; ability?: "str" | "dex" | "con" | "int" | "wis" | "cha" | null }[];
   grantedSpells?: GrantedSpellCast[];
   resources?: ResourceCounter[];
@@ -49,6 +43,8 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
   scores: Record<"str" | "dex" | "con" | "int" | "wis" | "cha", number | null>;
   accentColor: string;
   classDetail: ClassRestDetail | null;
+  spellSlotState?: MulticlassSpellSlotState;
+  classSpellcastingStates?: Array<{ classEntryId: string; className: string; classLevel: number; ability: "str" | "dex" | "con" | "int" | "wis" | "cha" | null; saveDc: number | null; attackBonus: number | null; preparedLimit: number; preparedSpells: string[]; pactMagic: boolean }>;
   charLevel: number;
   preparedLimit?: number;
   usesFlexiblePreparedList?: boolean;
@@ -217,10 +213,11 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
   const spellAtk = pb + spellMod;
 
   // Spell slots for current level
-  const levelSlots = classDetail?.autolevels?.find((al) => al.level === charLevel)?.slots ?? null;
-  const maxSpellSlotLevel = highestAvailableSlotLevel(levelSlots);
+  const levelSlots = spellSlotState ? spellSlotState.sharedSlots : classDetail?.autolevels?.find((al) => al.level === charLevel)?.slots ?? null;
+  const maxPactSlotLevel = Math.max(0, ...(spellSlotState?.pactPools.map((pool) => highestAvailableSlotLevel(pool.slots)) ?? []));
+  const maxSpellSlotLevel = Math.max(highestAvailableSlotLevel(levelSlots), maxPactSlotLevel);
 
-  const isPactMagic = classDetail?.slotsReset === "S";
+  const isPactMagic = !spellSlotState && classDetail?.slotsReset === "S";
   const usesPreparedSpellSelection = usesFlexiblePreparedList;
   const spellRowGrid = usesFlexiblePreparedList ? SPELL_ROW_GRID_WITH_MARKER : SPELL_ROW_GRID;
 
@@ -256,15 +253,15 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
     void onSlotsChange({ ...usedSpellSlots, [key]: next });
   }
 
-  function spellUsesSave(d: FetchedSpellDetail | undefined): boolean {
-    const checks = d ? (Array.isArray(d.check) ? d.check : [d.check]) : [];
-    return checks.some((check) => check && check !== "attack");
+  function togglePactSlot(poolKey: string, slots: number[], slotIndex: number) {
+    const spellLevel = highestAvailableSlotLevel(slots);
+    const key = `${poolKey}:${spellLevel}`;
+    const max = slots[spellLevel] ?? 0;
+    const used = usedSpellSlots[key] ?? 0;
+    const remaining = Math.max(0, max - used);
+    const next = slotIndex < remaining ? Math.max(0, max - slotIndex) : Math.max(0, max - (slotIndex + 1));
+    void onSlotsChange({ ...usedSpellSlots, [key]: next });
   }
-  function spellUsesAttack(d: FetchedSpellDetail | undefined): boolean {
-    return d ? (Array.isArray(d.check) ? d.check : [d.check]).includes("attack") : false;
-  }
-
-  const ORDINALS = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
 
   function toggleSection(key: string) {
     setCollapsedSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -299,7 +296,19 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
     <CollapsiblePanel title="Spells" color={accentColor} storageKey="spells" actions={
       onAddSpell ? <button type="button" onClick={() => setAddSpellOpen(true)} title="Add spell" style={panelHeaderAddBtn(accentColor)}>+</button> : undefined
     }>
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+      {classSpellcastingStates.length > 1 ? (
+        <div style={{ display: "grid", gap: 6, marginBottom: 12 }}>
+          {classSpellcastingStates.map((state) => (
+            <div key={state.classEntryId} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) repeat(3, auto)", gap: 12, alignItems: "center", padding: "7px 10px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <span style={{ minWidth: 0, color: accentColor, fontWeight: 800 }}>{state.className} {state.classLevel}{state.pactMagic ? " · Pact Magic" : ""}</span>
+              <span style={{ color: C.muted, fontSize: "var(--fs-tiny)", fontWeight: 800 }}>{state.ability?.toUpperCase() ?? "—"}</span>
+              <span style={{ color: spellcastingBlocked ? C.colorPinkRed : C.text, fontSize: "var(--fs-small)", fontWeight: 800 }}>DC {state.saveDc == null ? "—" : state.saveDc + spellSaveDcBonus}{spellcastingBlocked ? " X" : ""}</span>
+              <span style={{ color: spellcastingBlocked ? C.colorPinkRed : C.text, fontSize: "var(--fs-small)", fontWeight: 800 }}>ATK {state.attackBonus == null ? "—" : `${state.attackBonus >= 0 ? "+" : ""}${state.attackBonus}`}{spellcastingBlocked ? " X" : ""}</span>
+              {state.preparedLimit > 0 && <span style={{ gridColumn: "1 / -1", color: C.muted, fontSize: "var(--fs-tiny)" }}>Prepared: {Math.min(state.preparedSpells.length, state.preparedLimit)} / {state.preparedLimit}</span>}
+            </div>
+          ))}
+        </div>
+      ) : <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         {([
           { label: "ABILITY", value: spellAbilLabel, highlight: true },
           { label: "SAVE DC",  value: String(saveDc),     highlight: false },
@@ -316,7 +325,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
             </span>
           </div>
         ))}
-      </div>
+      </div>}
       {spellcastingBlocked && (
         <div style={{
           marginBottom: 10,
@@ -331,104 +340,42 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
           You can't cast spells while wearing armor or a shield without proficiency.
         </div>
       )}
-      {classDetail?.slotsReset === "S" && maxSpellSlotLevel > 0 && (
+      {isPactMagic && maxSpellSlotLevel > 0 && (
         <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700, marginBottom: 12 }}>
           Pact Magic: cast Warlock spells using level {maxSpellSlotLevel} slots.
         </div>
       )}
+      {spellSlotState?.pactPools.map((pool) => {
+        const level = highestAvailableSlotLevel(pool.slots);
+        const max = pool.slots[level] ?? 0;
+        const key = `${pool.key}:${level}`;
+        const remaining = Math.max(0, max - (usedSpellSlots[key] ?? 0));
+        return max > 0 ? (
+          <div key={pool.key} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, color: C.muted, fontSize: "var(--fs-tiny)", fontWeight: 700 }}>
+            <span>{pool.className} Pact Magic · level {level} · {remaining}/{max}</span>
+            {Array.from({ length: max }).map((_, index) => (
+              <button key={index} title={index < remaining ? "Expend Pact Magic slot" : "Regain Pact Magic slot"} onClick={() => togglePactSlot(pool.key, pool.slots, index)} style={{ width: 18, height: 18, borderRadius: "50%", padding: 0, cursor: "pointer", border: `2px solid ${index < remaining ? accentColor : "rgba(255,255,255,0.2)"}`, background: index < remaining ? accentColor : "transparent" }} />
+            ))}
+          </div>
+        ) : null;
+      })}
       {usesFlexiblePreparedList && preparedLimit > 0 && (
         <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700, marginBottom: 12 }}>
           Prepared spell list: {Math.min(preparedListCount, preparedLimit)} / {preparedLimit}. Always-prepared spells do not count against this limit.
         </div>
       )}
 
-      {specialGrantedEntries.length > 0 && (
-        <div style={{ marginBottom: 18, opacity: spellcastingBlocked ? 0.65 : 1 }}>
-          <button
-            type="button"
-            onClick={() => toggleSection("granted")}
-            style={spellSectionHeaderBtn("rgba(96,165,250,0.25)")}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span aria-hidden="true" style={spellSectionArrow(Boolean(collapsedSections.granted), C.colorRitual)}>▼</span>
-              <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, color: C.colorRitual, textTransform: "uppercase", letterSpacing: 1 }}>
-                Granted Spells
-              </div>
-            </div>
-          </button>
-          {!collapsedSections.granted && specialGrantedEntries.map((entry) => {
-            const detail = details[entry.key];
-            const resource = entry.resourceKey ? resources.find((item) => item.key === entry.resourceKey) : null;
-            return (
-              <div
-                key={entry.grantKey}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr auto",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "8px 0",
-                  borderBottom: "1px solid rgba(255,255,255,0.04)",
-                  cursor: detail ? "pointer" : "default",
-                }}
-                onClick={(ev) => {
-                  if ((ev.target as HTMLElement).closest("button")) return;
-                  if (detail) setSelectedSpell({ detail, source: entry.sourceName });
-                }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: "var(--fs-subtitle)", color: C.text }}>{detail?.name ?? entry.searchName}</div>
-                  <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginTop: 1 }}>{entry.sourceName}</div>
-                  {entry.note ? (
-                    <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginTop: 4, lineHeight: 1.45 }}>{entry.note}</div>
-                  ) : null}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {(entry.mode === "at_will" || entry.mode === "expanded_list" || entry.mode === "always_prepared" || entry.mode === "known") ? (() => {
-                    const [rgb, text] = entry.mode === "at_will" ? ["96,165,250", "At Will"]
-                      : entry.mode === "expanded_list" ? ["251,191,36", "Expanded"]
-                      : entry.mode === "always_prepared" ? ["196,181,253", "Prepared"]
-                      : ["52,211,153", "Known"];
-                    return (
-                      <div style={{
-                        padding: "5px 8px", borderRadius: 999,
-                        border: `1px solid rgba(${rgb},0.35)`,
-                        background: `rgba(${rgb},0.12)`,
-                        color: `rgb(${rgb})`,
-                        fontSize: "var(--fs-tiny)", fontWeight: 800,
-                        textTransform: "uppercase", letterSpacing: "0.07em",
-                      }}>{text}</div>
-                    );
-                  })() : resource ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => void onResourceChange?.(resource.key, -1)}
-                        disabled={resource.current <= 0}
-                        style={grantedSpellChargeBtn(resource.current > 0)}
-                      >
-                        -
-                      </button>
-                      <div style={{ textAlign: "center", minWidth: 58 }}>
-                        <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text }}>{resource.current}/{resource.max}</div>
-                        <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{formatResourceResetLabel(resource.reset)}</div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => void onResourceChange?.(resource.key, 1)}
-                        disabled={resource.current >= resource.max}
-                        style={grantedSpellChargeBtn(resource.current < resource.max)}
-                      >
-                        +
-                      </button>
-                    </>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <div style={{ opacity: spellcastingBlocked ? 0.65 : 1 }}>
+        <CharacterSpellsGrantedSection
+          entries={specialGrantedEntries}
+          details={details}
+          resources={resources}
+          collapsed={Boolean(collapsedSections.granted)}
+          onToggleCollapse={() => toggleSection("granted")}
+          onSelectSpell={(detail, source) => setSelectedSpell({ detail, source })}
+          onResourceChange={onResourceChange}
+        />
+      </div>
 
       <div style={{ opacity: spellcastingBlocked ? 0.65 : 1 }}>
       {entries.length === 0 && specialGrantedEntries.length === 0 && (
@@ -515,116 +462,40 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
                 ? `${scaledDamage.dice}${spellDamageBonus === 0 ? "" : `${spellDamageBonus > 0 ? "+" : ""}${spellDamageBonus}`}`
                 : null;
               const dmgColor = scaledDamage ? (DMG_COLORS[scaledDamage.type] ?? C.text) : null;
-                const conc = d ? Boolean(d.concentration) : false;
-                const usesSave = spellUsesSave(d);
-                const usesAtk = spellUsesAttack(d);
-                const entrySaveDc = 8 + pb + entrySpellMod + spellSaveDcBonus;
-                const entrySpellAtk = pb + entrySpellMod;
-                const isCantrip = level === 0;
-                const isAlwaysPrepared = e.forcedPrepared;
-                const isPrepared = isCantrip || isAlwaysPrepared || (!usesFlexiblePreparedList && !usesPreparedSpellSelection) || preparedSpells.includes(e.key);
-                const userPreparedCount = preparedSpells.filter((entry) => !forcedPreparedKeys.has(entry)).length;
-                const preparedLocked = usesPreparedSpellSelection
-                  && !isCantrip
-                  && !isAlwaysPrepared
-                  && !isPrepared
-                  && preparedLimit > 0
-                  && userPreparedCount >= preparedLimit;
-                return (
-                <div key={i} style={{
-                  display: "grid",
-                  gridTemplateColumns: spellRowGrid,
-                  alignItems: "center", gap: "0 8px",
-                  padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)",
-                  cursor: d ? "pointer" : "default",
-                }}
-                  onClick={(ev) => {
-                    if ((ev.target as HTMLElement).closest("button")) return;
-                    if (d) setSelectedSpell({ detail: d, source: e.source });
-                  }}
-                >
-                  {/* Prepared radio */}
-                  {usesFlexiblePreparedList && (
-                    <button
-                      onClick={() => {
-                        if (usesPreparedSpellSelection && !isCantrip && !isAlwaysPrepared && !preparedLocked) {
-                          togglePrepared(e.key);
-                        }
-                      }}
-                      title={
-                        !usesPreparedSpellSelection
-                          ? isCantrip
-                            ? "Known cantrip"
-                            : usesFlexiblePreparedList
-                              ? "On your prepared spell list"
-                              : "Known spell"
-                          : isCantrip
-                            ? "Cantrip (always prepared)"
-                            : isAlwaysPrepared
-                              ? "Always prepared"
-                            : isPrepared
-                              ? "Mark unprepared"
-                              : preparedLocked
-                                ? `Prepared limit reached (${preparedLimit})`
-                                : "Mark prepared"
-                      }
-                      style={{
-                        width: 20, height: 20, borderRadius: "50%", padding: 0,
-                        cursor: !usesPreparedSpellSelection || isCantrip || isAlwaysPrepared || preparedLocked ? "default" : "pointer",
-                        border: `2px solid ${
-                          isAlwaysPrepared
-                            ? "rgba(196,181,253,0.95)"
-                            : isPrepared
-                              ? accentColor
-                              : "rgba(255,255,255,0.25)"
-                        }`,
-                        background: isAlwaysPrepared ? "rgba(196,181,253,0.28)" : isPrepared ? accentColor : preparedLocked ? "rgba(255,255,255,0.05)" : "transparent",
-                        opacity: preparedLocked ? 0.65 : 1,
-                        flexShrink: 0,
-                      }}
-                    />
-                  )}
-
-                  {/* Name + meta */}
-                  <div style={{ minWidth: 0 }} title={e.source ? `Source: ${e.source}` : undefined}>
-                    <div style={{ fontWeight: 700, fontSize: "var(--fs-subtitle)", color: isPrepared ? C.text : C.muted }}>
-                      {e.searchName}
-                      {conc && <span title="Concentration" style={{ marginLeft: 5, fontSize: "var(--fs-tiny)", color: C.colorRitual }}>◆</span>}
-                    </div>
-                    <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>
-                      {[d ? `${d.level === 0 ? "Cantrip" : ORDINALS[d.level ?? 0]} ${d.school ?? ""}`.trim() : null, d?.components].filter(Boolean).join("  (") + (d?.components ? ")" : "")}
-                    </div>
-                  </div>
-
-                  {/* Time */}
-                  <div style={{ minWidth: 0, fontSize: "var(--fs-small)", color: C.muted, textAlign: "center", lineHeight: 1.25 }}>
-                    {d ? abbrevTime(d.time ?? "—") : ""}
-                  </div>
-
-                  {/* HIT / SAVE */}
-                  {d && (usesSave || usesAtk) ? (
-                    <div style={{ minWidth: 0, textAlign: "center" }}>
-                      <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700 }}>
-                        {usesSave ? (d.save ?? "SAVE") : "ATK"}
-                      </div>
-                      <div style={{ fontWeight: 900, fontSize: "var(--fs-body)", color: spellcastingBlocked ? C.colorPinkRed : accentColor, lineHeight: 1.2 }}>
-                        {usesSave ? `${entrySaveDc}${spellcastingBlocked ? " X" : ""}` : `+${entrySpellAtk}${spellcastingBlocked ? " X" : ""}`}
-                      </div>
-                    </div>
-                  ) : <div />}
-
-                  {/* Effect */}
-                  {scaledDamage ? (
-                    <div style={{
-                      minWidth: 0,
-                      padding: "4px 7px", borderRadius: 6, border: `1px solid ${dmgColor}55`,
-                      background: `${dmgColor}15`, textAlign: "center", whiteSpace: "nowrap",
-                    }}>
-                      <span style={{ fontWeight: 800, fontSize: "var(--fs-subtitle)", color: C.text }}>{scaledDamageText}</span>
-                      <span style={{ fontSize: "var(--fs-small)", marginLeft: 3 }}>{scaledDamage.types.map((type) => DMG_EMOJI[type] ?? "◆").join(" ")}</span>
-                    </div>
-                  ) : <div />}
-                </div>
+              const entrySaveDc = 8 + pb + entrySpellMod + spellSaveDcBonus;
+              const entrySpellAtk = pb + entrySpellMod;
+              const isCantrip = level === 0;
+              const isAlwaysPrepared = e.forcedPrepared;
+              const isPrepared = isCantrip || isAlwaysPrepared || (!usesFlexiblePreparedList && !usesPreparedSpellSelection) || preparedSpells.includes(e.key);
+              const userPreparedCount = preparedSpells.filter((entry) => !forcedPreparedKeys.has(entry)).length;
+              const preparedLocked = usesPreparedSpellSelection
+                && !isCantrip
+                && !isAlwaysPrepared
+                && !isPrepared
+                && preparedLimit > 0
+                && userPreparedCount >= preparedLimit;
+              return (
+                <CharacterSpellRow
+                  key={i}
+                  entry={e}
+                  detail={d}
+                  isCantrip={isCantrip}
+                  accentColor={accentColor}
+                  spellRowGrid={spellRowGrid}
+                  usesFlexiblePreparedList={usesFlexiblePreparedList}
+                  usesPreparedSpellSelection={usesPreparedSpellSelection}
+                  isPrepared={isPrepared}
+                  preparedLocked={preparedLocked}
+                  preparedLimit={preparedLimit}
+                  entrySaveDc={entrySaveDc}
+                  entrySpellAtk={entrySpellAtk}
+                  scaledDamageText={scaledDamageText}
+                  scaledDamageTypes={scaledDamage?.types ?? []}
+                  dmgColor={dmgColor}
+                  spellcastingBlocked={spellcastingBlocked}
+                  onTogglePrepared={() => togglePrepared(e.key)}
+                  onSelect={() => { if (d) setSelectedSpell({ detail: d, source: e.source }); }}
+                />
               );
             })}
               </>

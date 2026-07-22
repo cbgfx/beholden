@@ -31,7 +31,6 @@ interface InventoryContainerSectionProps {
   onResetName: () => void;
   onToggleIgnoreWeight: () => Promise<void>;
   onRemove?: () => Promise<void>;
-  onAdd: () => Promise<void>;
   onReorder: (ids: string[]) => void;
   onToggleExpandedItem: (id: string) => void;
   onCycleMain: (id: string) => Promise<void>;
@@ -57,7 +56,6 @@ export function InventoryContainerSection({
   onResetName,
   onToggleIgnoreWeight,
   onRemove,
-  onAdd,
   onReorder,
   onToggleExpandedItem,
   onCycleMain,
@@ -123,16 +121,7 @@ export function InventoryContainerSection({
           />
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          {isDefault ? (
-            <button
-              type="button"
-              onClick={() => { void onAdd(); }}
-              title="Add container"
-              style={{ ...stepperBtn, width: 24, height: 24, fontSize: "var(--fs-body)" }}
-            >
-              +
-            </button>
-          ) : (
+          {!isDefault && (
             <>
               <button
                 type="button"

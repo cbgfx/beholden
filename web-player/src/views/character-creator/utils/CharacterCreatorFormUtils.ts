@@ -1,4 +1,5 @@
 import { C } from "@/lib/theme";
+import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import {
   ABILITY_KEYS,
   ABILITY_NAME_TO_KEY,
@@ -16,9 +17,10 @@ import type {
 } from "@/views/character-creator/utils/FeatChoiceTypes";
 
 export type AbilityMethod = "standard" | "pointbuy";
-export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
 
 export interface FormState {
+  ruleset: "5e" | "5.5e" | null;
   classId: string;
   raceId: string;
   bgId: string;
@@ -128,22 +130,64 @@ function getSelectedAbilityIncrease(choice: ParsedFeatChoice, selected: string[]
   return next;
 }
 
-export function getOptionalGroups(cls: ClassDetail, level: number): { level: number; features: { name: string; text: string }[] }[] {
-  const map = new Map<number, { name: string; text: string }[]>();
+export interface OptionalFeatureGroup {
+  level: number;
+  name: string;
+  exclusive: boolean;
+  features: Array<{ name: string; text: string; selectionNames: string[]; preparedSpellProgression?: PreparedSpellProgressionTable[] }>;
+}
+
+export function getOptionalGroups(cls: ClassDetail, level: number): OptionalFeatureGroup[] {
+  const allFeatures = cls.autolevels.flatMap((autolevel) =>
+    autolevel.features.map((feature) => ({ ...feature, level: autolevel.level }))
+  );
+  const byId = new Map(allFeatures.filter((feature) => feature.id).map((feature) => [String(feature.id), feature]));
+  const explicitlyGroupedIds = new Set((cls.choices ?? []).flatMap((choice) => choice.options.flatMap((option) => option.features)));
+  const explicitGroups = (cls.choices ?? []).flatMap<OptionalFeatureGroup>((choice) => {
+    const options = choice.options.flatMap((option) => {
+      const features = option.features.map((featureId) => byId.get(featureId)).filter((feature) => feature != null);
+      if (features.length !== option.features.length || features.length === 0) return [];
+      const optionLevel = Math.max(...features.map((feature) => feature.level));
+      if (optionLevel > level) return [];
+      return [{
+        name: option.name,
+        text: features.map((feature) => feature.text).filter(Boolean).join("\n\n"),
+        selectionNames: features.map((feature) => feature.name),
+        preparedSpellProgression: features.flatMap((feature) => feature.preparedSpellProgression ?? []),
+        level: optionLevel,
+      }];
+    });
+    if (options.length < 2) return [];
+    return [{
+      level: Math.min(...options.map((option) => option.level)),
+      name: choice.name,
+      exclusive: true,
+      features: options.map(({ level: _level, ...option }) => option),
+    }];
+  });
+
+  const map = new Map<number, Array<{ name: string; text: string; selectionNames: string[]; preparedSpellProgression?: PreparedSpellProgressionTable[] }>>();
   for (const al of cls.autolevels) {
     if (al.level == null || al.level > level) continue;
     const opts = al.features.filter((f) => {
       if (!f.optional) return false;
+      if (f.id && explicitlyGroupedIds.has(f.id)) return false;
       const featureSubclass = getFeatureSubclassName(f);
       if (featureSubclass) return false;
       return true;
     });
     if (opts.length > 0) {
       const existing = map.get(al.level) ?? [];
-      map.set(al.level, [...existing, ...opts]);
+      map.set(al.level, [...existing, ...opts.map((feature) => ({ ...feature, selectionNames: [feature.name] }))]);
     }
   }
-  return Array.from(map.entries()).sort((a, b) => a[0] - b[0]).map(([lvl, features]) => ({ level: lvl, features }));
+  const legacyGroups = Array.from(map.entries()).map(([groupLevel, features]) => ({
+    level: groupLevel,
+    name: `Level ${groupLevel}`,
+    exclusive: features.length <= 4,
+    features,
+  }));
+  return [...explicitGroups, ...legacyGroups].sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
 }
 
 export function pointBuySpent(scores: Record<string, number>): number {
@@ -156,6 +200,7 @@ export function pointBuySpent(scores: Record<string, number>): number {
 export function initForm(user: { name?: string } | null, params: URLSearchParams): FormState {
   const preselectedCampaign = params.get("campaign");
   return {
+    ruleset: null,
     classId: "", raceId: "", bgId: "",
     level: 1, subclass: "", chosenOptionals: [], chosenClassFeatIds: {}, chosenLevelUpFeats: [],
     chosenRaceSkills: [], chosenRaceLanguages: [], chosenRaceTools: [], chosenRaceFeatId: null, chosenRaceSize: null, chosenRaceSpellAbility: null,

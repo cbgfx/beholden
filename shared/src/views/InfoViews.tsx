@@ -118,12 +118,12 @@ export function UpdatesView(props: InfoViewProps) {
     <InfoPageLayout title="Future Updates">
       <PanelComponent title="Roadmap" style={{ marginBottom: 12 }}>
         <ul className={styles.updateList}>
-          <li><b>Combat:</b> Lair Action, spell-slot tracking for monsters</li>
-          <li><b>Combat:</b> Difficulty calculator adjustments</li>
-          <li><b>Player:</b> Multiclass</li>
-          <li><b>Player:</b> Monsters in combat list bloody vs not bloody</li>
-          <li><b>NPC Tracker</b></li>
-          <li><b>Bug Fixes:</b> Always with the bug fixes.....</li>
+          <li><b>Next — Player:</b> Monsters in the combat list, including bloodied state</li>
+          <li><b>Next — Player:</b> Multiclassing</li>
+          <li><b>Later — Rulesets:</b> Full 5e support, including Grand Schema content conversion, campaign ruleset selection, and compendium filtering</li>
+          <li><b>Later — Combat:</b> Lair actions</li>
+          <li><b>Ongoing:</b> Bug fixes</li>
+          <li><b>Last — NPC Tracker:</b> A large people, timeline, relationship, organization, and location system</li>
         </ul>
       </PanelComponent>
     </InfoPageLayout>

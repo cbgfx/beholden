@@ -3,7 +3,7 @@ import { getFeatChoiceOptions, normalizeChoiceKey } from "./CharacterCreatorUtil
 import type { ParsedFeatChoiceLike as Step5FeatChoiceLike, ParsedFeatLike as Step5ParsedFeatLike, ParsedFeatDetailLike as Step5BackgroundFeatLike } from "./FeatChoiceTypes";
 import { getFeatSpellcastingAbilityChoice } from "./FeatSpellcastingUtils";
 
-export type { Step5FeatChoiceLike, Step5ParsedFeatLike, Step5BackgroundFeatLike };
+export type { Step5FeatChoiceLike, Step5ParsedFeatLike };
 
 export interface Step5ClassFeatChoiceLike {
   featureName: string;
@@ -30,7 +30,7 @@ export interface Step5LanguageChoiceLike {
   source?: string;
 }
 
-export interface Step5FormLike {
+interface Step5FormLike {
   chosenSkills: string[];
   chosenRaceSkills: string[];
   chosenRaceTools: string[];

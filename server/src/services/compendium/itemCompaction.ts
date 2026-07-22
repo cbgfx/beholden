@@ -39,19 +39,6 @@ function extractSource(blocks: string[], explicitSource: unknown): {
   return { description, ...(source ? { source } : {}) };
 }
 
-function redundantDetail(detail: string, rarity: string, attunement: true | string | undefined): boolean {
-  const normalized = normalizeKey(detail);
-  const normalizedRarity = normalizeKey(rarity);
-  if (normalized === normalizedRarity) return true;
-  if (attunement === true) {
-    return normalized === `${normalizedRarity} (requires attunement)`;
-  }
-  if (typeof attunement === "string") {
-    return normalized === `${normalizedRarity} (requires attunement by ${normalizeKey(attunement)})`;
-  }
-  return false;
-}
-
 /** Converts source or verbose item data into the sparse Grand shape. */
 export function compactItemEntry(entry: JsonRecord): JsonRecord {
   const classification = record(entry.classification);
@@ -125,7 +112,6 @@ export function compactItemEntry(entry: JsonRecord): JsonRecord {
     ? sourceAndDescription.description[0] ?? ""
     : sourceAndDescription.description;
 
-  const detail = text(entry.detail);
   const modifiers = list(entry.modifiers).flatMap(typedItemModifier);
   const rolls = list(entry.rolls).flatMap((raw) => {
     const roll = record(raw);
@@ -162,7 +148,6 @@ export function compactItemEntry(entry: JsonRecord): JsonRecord {
     ...(present(spellTemplate) ? { spellTemplate } : {}),
     ...(Object.keys(armor).length ? { armor } : {}),
     ...(Object.keys(weapon).length ? { weapon } : {}),
-    ...(detail && !redundantDetail(detail, rarity, attunement) ? { detail } : {}),
     ...(modifiers.length ? { modifiers } : {}),
     ...(rolls.length ? { rolls } : {}),
     description,
@@ -171,15 +156,4 @@ export function compactItemEntry(entry: JsonRecord): JsonRecord {
 
 export function itemTypeKey(entry: JsonRecord): string {
   return normalizeKey(record(entry.classification).type ?? entry.type);
-}
-
-export function expandedItemDetail(entry: JsonRecord): string | null {
-  const detail = text(entry.detail);
-  if (detail) return detail;
-  const rarity = text(entry.rarity) ?? "common";
-  if (entry.attunement === true) return `${rarity} (requires attunement)`;
-  if (typeof entry.attunement === "string") {
-    return `${rarity} (requires attunement by ${entry.attunement})`;
-  }
-  return rarity;
 }

@@ -3,9 +3,12 @@ import {
   IconAttack,
   IconConditionByKey,
   IconConditions,
+  IconDownload,
   IconHeal,
   IconHeart,
+  IconImport,
   IconInitiative,
+  IconInspiration,
   IconBastions,
   IconDice,
   IconPlayer,
@@ -20,9 +23,12 @@ export {
   IconAttack,
   IconConditionByKey,
   IconConditions,
+  IconDownload,
   IconHeal,
   IconHeart,
+  IconImport,
   IconInitiative,
+  IconInspiration,
   IconBastions,
   IconDice,
   IconPlayer,
@@ -34,18 +40,9 @@ export {
 
 export type IconProps = Omit<SvgIconProps, "svg" | "className">;
 
-const INSPIRATION_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M255.9 19.77C241.5 109.6 229.4 163 196.2 196.2c-33.2 33.2-86.6 45.3-176.43 59.7C109.6 270.3 163 282.4 196.2 315.7c33.2 33.2 45.3 86.6 59.7 176.5 14.4-89.9 26.5-143.3 59.7-176.6 33.3-33.2 86.7-45.3 176.6-59.7-89.9-14.4-143.3-26.5-176.5-59.7-33.3-33.2-45.4-86.6-59.8-176.43zM423 89c-45.8 33.1-81 56.9-112.4 70.2 5.1 9.4 11 17.4 17.8 24.2 6.8 6.8 14.8 12.7 24.3 17.9 13.4-31.4 37.2-66.6 70.3-112.3zm-333.94.06C122.2 134.8 145.9 169.9 159.2 201.2c9.4-5.1 17.4-11 24.2-17.8 6.8-6.8 12.7-14.8 17.8-24.2-31.3-13.3-66.4-37-112.14-70.14zM352.7 310.5c-9.5 5.2-17.5 11.1-24.3 17.9-6.8 6.8-12.7 14.8-17.9 24.3C342 366 377.2 389.8 423 423c-33.2-45.8-57-81-70.3-112.5zm-193.5.1C145.9 342 122.1 377.2 89 423c45.7-33.1 80.9-56.9 112.3-70.3-5.2-9.5-11.1-17.5-17.9-24.3-6.8-6.8-14.8-12.7-24.2-17.8z"/></svg>';
-const DOWNLOAD_SVG = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
-const IMPORT_SVG = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
+// Knapsack by Lorc, game-icons.net, CC BY 3.0.
+const KNAPSACK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M230.125 18.156V247h49.313V18.156h-49.313zM78.812 21.438l-16 136.906c48.707 30.112 97.637 47.843 148.625 53.094V33.125c-44.244-1.822-88.46-5.89-132.625-11.688zm349.438.28c-43.398 6.814-86.784 10.647-130.125 11.97v175c46.732-7.458 95.816-24.375 148.438-50.844L428.25 21.72zm-1.938 166.532c-44.474 19.847-87.06 32.836-128.187 38.97V247h37.031v143.188h-37.031v8.718c0 34.41-20.516 56.084-43.25 56.28-22.734.2-43.438-21.34-43.438-56.28v-8.72l-27.656.002h-9.343V247h37.001v-17.188c-43.774-4.164-86.14-16.857-127.687-38.062 5.04 92.69 3.66 185.37-5.063 278.063 117.402 32.047 234.788 31.002 352.188 0-6.853-93.858-9.223-187.706-4.563-281.563zm-233.187 77.438V371.5H316.47V265.687H193.124zm20.47 18.156H296v67.5h-82.406v-67.5zm18.686 18.687v30.126h45.032V302.53h-45.03zm-2.155 87.658v8.718c0 28.23 13.32 37.692 24.594 37.594 11.27-.098 24.718-10.018 24.718-37.594v-8.72l-49.313.002z"/></svg>';
 
-export function IconInspiration(p: IconProps) {
-  return <Icon svg={INSPIRATION_SVG} {...p} />;
-}
-
-export function IconDownload(p: IconProps) {
-  return <Icon svg={DOWNLOAD_SVG} {...p} />;
-}
-
-export function IconImport(p: IconProps) {
-  return <Icon svg={IMPORT_SVG} {...p} />;
+export function IconKnapsack(p: IconProps) {
+  return <Icon svg={KNAPSACK_SVG} {...p} />;
 }

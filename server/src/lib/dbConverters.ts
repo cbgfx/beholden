@@ -80,6 +80,7 @@ function readCharacterSheetState(row: Record<string, unknown>): StoredCharacterS
   return {
     name: typeof row.name === "string" ? row.name : "",
     playerName: typeof row.player_name === "string" ? row.player_name : "",
+    ruleset: row.ruleset === "5e" ? "5e" : "5.5e",
     className: typeof row.class_name === "string" ? row.class_name : "",
     species: typeof row.species === "string" ? row.species : "",
     level: typeof row.level === "number" ? row.level : 1,
@@ -334,6 +335,7 @@ export function rowToCharacterSheet(row: Record<string, unknown>): StoredCharact
     userId: row.user_id as string,
     name: sheet.name,
     playerName: sheet.playerName,
+    ruleset: sheet.ruleset,
     className: sheet.className,
     species: sheet.species,
     level: sheet.level,

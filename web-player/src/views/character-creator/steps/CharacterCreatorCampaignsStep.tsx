@@ -1,13 +1,14 @@
 import React from "react";
 import { C } from "@/lib/theme";
 import { headingStyle } from "../shared/CharacterCreatorStyles";
+import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
 
 interface CampaignLike {
   id: string;
   name: string;
 }
 
-export function renderCampaignsStep({
+function renderCampaignsStep({
   campaigns,
   selectedCampaignIds,
   toggleCampaign,
@@ -91,4 +92,21 @@ export function renderCampaignsStep({
   );
 
   return { main, side };
+}
+
+export function renderCampaignsFromContext(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
+  return renderCampaignsStep({
+    campaigns: ctx.campaigns,
+    selectedCampaignIds: ctx.form.campaignIds,
+    toggleCampaign: (id, checked) => ctx.setForm((f) => ({
+      ...f,
+      campaignIds: checked ? [...f.campaignIds, id] : f.campaignIds.filter((campaignId) => campaignId !== id),
+    })),
+    error: ctx.error,
+    busy: ctx.busy,
+    isEditing: ctx.isEditing,
+    onBack: () => ctx.setStep(10),
+    onSubmit: ctx.handleSubmit,
+    side: ctx.sideSummary,
+  });
 }

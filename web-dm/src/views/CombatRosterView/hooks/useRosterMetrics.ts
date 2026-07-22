@@ -2,8 +2,7 @@ import * as React from "react";
 
 import { getMonsterXp } from "@/domain/utils/xp";
 import { calcEncounterDifficulty } from "@/domain/utils/difficulty";
-import { estimateMonsterDpr } from "@/domain/utils/monsterDpr";
-import { parseCrToNumberOrNull } from "@/domain/utils/crParsing";
+import { estimateMonsterDpr, estimateMonsterEffectiveHp, estimatePartyDpr } from "@/domain/utils/monsterDpr";
 import type { EncounterActor, INpc, CampaignCharacter } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
 
@@ -13,11 +12,6 @@ type Props = {
   monsterDetails: Record<string, MonsterDetail>;
   players: CampaignCharacter[];
 };
-
-function parseCrFromDetail(detail: MonsterDetail): number | null {
-  const raw = (detail as any).cr ?? (detail as any).raw_json?.cr ?? (detail as any).raw_json?.challenge_rating;
-  return parseCrToNumberOrNull(raw);
-}
 
 export function useRosterMetrics(props: Props) {
   const xpByCombatantId = React.useMemo(() => {
@@ -50,12 +44,14 @@ export function useRosterMetrics(props: Props) {
   }, [props.combatants, xpByCombatantId]);
 
   const difficulty = React.useMemo(() => {
-    const partyHpMax = props.players.reduce((sum, p) => sum + (p.hpMax ?? 0), 0);
+    const encounterPlayerIds = new Set(props.combatants.filter((combatant) => combatant.baseType === "player").map((combatant) => String(combatant.baseId)));
+    const encounterPlayers = props.players.filter((player) => encounterPlayerIds.has(String(player.id)));
+    const partyHpMax = encounterPlayers.reduce((sum, player) => sum + (player.hpMax ?? 0), 0);
+    const armorClasses = encounterPlayers.map((player) => Number(player.ac)).filter((ac) => Number.isFinite(ac) && ac > 0);
 
     let hostileDpr = 0;
-    let burstFactor = 1.0;
-    let monsterCount = 0;
-    let maxMonsterCr = 0;
+    let projectedDpr = 0;
+    let monsterEffectiveHp = 0;
 
     for (const c of props.combatants) {
       if (c?.baseType === "player") continue;
@@ -70,26 +66,27 @@ export function useRosterMetrics(props: Props) {
       }
       if (!monsterId) continue;
 
-      monsterCount += 1;
-
       const detail = props.monsterDetails[monsterId];
-      const est = estimateMonsterDpr(detail);
-      if (est?.dpr != null && Number.isFinite(est.dpr)) hostileDpr += Math.max(0, est.dpr);
-      if (est?.burstFactor != null && Number.isFinite(est.burstFactor)) burstFactor = Math.max(burstFactor, est.burstFactor);
+      const est = estimateMonsterDpr(detail, { armorClasses, partySize: encounterPlayers.length });
+      if (est?.dpr != null && Number.isFinite(est.dpr)) {
+        const dpr = Math.max(0, est.dpr);
+        hostileDpr += dpr;
+        projectedDpr += dpr * Math.max(1, est.burstFactor);
+      }
+      monsterEffectiveHp += estimateMonsterEffectiveHp(detail);
 
-      const cr = detail ? parseCrFromDetail(detail) : null;
-      if (cr != null && cr > maxMonsterCr) maxMonsterCr = cr;
     }
 
-    const playerLevels = props.players.map((p) => Number(p.level ?? 1)).filter((n) => Number.isFinite(n) && n > 0);
+    const playerLevels = encounterPlayers.map((player) => Number(player.level ?? 1)).filter((level) => Number.isFinite(level) && level > 0);
     return calcEncounterDifficulty({
       partyHpMax,
       hostileDpr,
-      burstFactor,
+      projectedDpr,
       totalXp,
       playerLevels,
-      monsterCount,
-      maxMonsterCr,
+      partyHpValues: encounterPlayers.map((player) => Number(player.hpMax)).filter((hp) => Number.isFinite(hp) && hp > 0),
+      monsterEffectiveHp,
+      partyDpr: estimatePartyDpr(playerLevels),
     });
   }, [props.combatants, props.inpcs, props.monsterDetails, props.players, totalXp]);
 

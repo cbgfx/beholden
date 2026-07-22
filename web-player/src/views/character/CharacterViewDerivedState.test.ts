@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildCharacterViewDerivedState, mergeFixedClassProficiencies } from "@/views/character/CharacterViewDerivedState";
+import { buildCharacterViewDerivedState, buildHitDicePools, mergeAllClassProficiencies, mergeFixedClassProficiencies } from "@/views/character/CharacterViewDerivedState";
 import type { CharacterViewDerivedStateArgs } from "@/views/character/CharacterViewDerivedTypes";
 
 function buildArgs(): CharacterViewDerivedStateArgs {
   return {
     char: {
       id: "character",
+      ruleset: "5.5e",
       name: "Calculation Test",
       playerName: "Player",
       className: "Fighter",
@@ -88,6 +89,45 @@ function buildArgs(): CharacterViewDerivedStateArgs {
 }
 
 describe("buildCharacterViewDerivedState", () => {
+  it("uses full proficiencies for the first class and reduced grants for later classes", () => {
+    const proficiencies = mergeAllClassProficiencies(undefined, [
+      {
+        entry: { id: "fighter-entry", classId: "c_fighter", className: "Fighter", level: 2 },
+        detail: { id: "c_fighter", name: "Fighter", hd: 10, proficiencies: { savingThrows: ["str", "con"], armor: ["All Armor"], weapons: ["Martial Weapons"] }, autolevels: [] },
+      },
+      {
+        entry: { id: "wizard-entry", classId: "c_wizard", className: "Wizard", level: 3 },
+        detail: { id: "c_wizard", name: "Wizard", hd: 6, proficiencies: { savingThrows: ["int", "wis"] }, multiclass: { weapons: ["Daggers"], tools: { fixed: ["Herbalism Kit"] } }, autolevels: [] },
+      },
+    ]);
+
+    expect(proficiencies?.saves.map((entry) => entry.name)).toEqual(["str", "con"]);
+    expect(proficiencies?.weapons.map((entry) => entry.name)).toEqual(["Martial Weapons", "Daggers"]);
+    expect(proficiencies?.tools.map((entry) => entry.name)).toEqual(["Herbalism Kit"]);
+  });
+
+  it("groups multiclass hit dice by die size", () => {
+    expect(buildHitDicePools([
+      { entry: { id: "fighter", classId: "fighter", level: 3 }, detail: { id: "fighter", name: "Fighter", hd: 10, autolevels: [] } },
+      { entry: { id: "wizard", classId: "wizard", level: 2 }, detail: { id: "wizard", name: "Wizard", hd: 6, autolevels: [] } },
+      { entry: { id: "warlock", classId: "warlock", level: 1 }, detail: { id: "warlock", name: "Warlock", hd: 8, autolevels: [] } },
+    ])).toEqual([
+      { dieSize: 10, max: 3, current: 3 },
+      { dieSize: 6, max: 2, current: 2 },
+      { dieSize: 8, max: 1, current: 1 },
+    ]);
+  });
+
+  it("restores persisted multiclass hit-die pools without merging their die sizes", () => {
+    expect(buildHitDicePools([
+      { entry: { id: "fighter", classId: "fighter", level: 3 }, detail: { id: "fighter", name: "Fighter", hd: 10, autolevels: [] } },
+      { entry: { id: "wizard", classId: "wizard", level: 2 }, detail: { id: "wizard", name: "Wizard", hd: 6, autolevels: [] } },
+    ], 4, { "10": 2, "6": 1 })).toEqual([
+      { dieSize: 10, max: 3, current: 2 },
+      { dieSize: 6, max: 2, current: 1 },
+    ]);
+  });
+
   it("reconciles fixed class armor proficiencies missing from a legacy character", () => {
     const proficiencies = mergeFixedClassProficiencies(undefined, {
       id: "c_barbarian",
@@ -280,7 +320,6 @@ describe("buildCharacterViewDerivedState", () => {
     // Proves the generic armor-class text parser (parseArmorClassEffects) already produces the
     // correct base_formula effect — including which two abilities to use and that a shield doesn't
     // disable it — so a hardcoded `/barbarian/i.test(className)` fallback elsewhere is redundant.
-    // See COMPENDIUM_SOURCE_OF_TRUTH.md Phase 2.
     const args = buildArgs();
     args.char.className = "Barbarian";
     args.char.characterData!.inventory = []; // no armor, no shield
@@ -320,8 +359,7 @@ describe("buildCharacterViewDerivedState", () => {
 
   it("derives a species-granted swim speed from a trait's structured effects, never from its prose", () => {
     // the sole source of truth, so a trait's own description text is display-only and is never
-    // parsed to recover mechanics, even when it reads as an unambiguous rule. See
-    // COMPENDIUM_SOURCE_OF_TRUTH.md's Species section.
+    // parsed to recover mechanics, even when it reads as an unambiguous rule.
     const args = buildArgs();
     args.raceDetail = {
       id: "r_test_amphibious",

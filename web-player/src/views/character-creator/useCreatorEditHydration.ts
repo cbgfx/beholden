@@ -146,6 +146,7 @@ export function useCreatorEditHydration(args: {
         const inferredStandardAssign = inferStandardAssignFromScores(fallbackBaseScores);
         setForm((f) => ({
           ...f,
+          ruleset: ch.ruleset,
           classId,
           raceId: cd.raceId ?? "",
           bgId: cd.bgId ?? "",

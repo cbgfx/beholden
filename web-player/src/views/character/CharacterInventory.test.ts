@@ -221,7 +221,7 @@ describe("mergeCatalogItem", () => {
     const catalog = summary({
       id: "i_staff_of_defense",
       name: "Staff of Defense",
-      uses: { max: 10, recover: "1d6+4", depletion: { destroy: 1 } },
+      uses: { max: 10, recover: "1d6+4" },
       spells: { s_mage_armor: 1, s_shield: 2 },
     });
 

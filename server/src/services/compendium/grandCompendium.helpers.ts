@@ -2,7 +2,7 @@ export type { JsonRecord } from "../../lib/jsonRecord.js";
 export { record, list, text, number } from "../../lib/jsonRecord.js";
 
 export const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
-export const ABILITY_NAMES = new Map([
+const ABILITY_NAMES = new Map([
   ["strength", "str"], ["dexterity", "dex"], ["constitution", "con"],
   ["intelligence", "int"], ["wisdom", "wis"], ["charisma", "cha"],
 ]);

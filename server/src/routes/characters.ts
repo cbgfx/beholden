@@ -13,6 +13,7 @@ import { DEFAULT_OVERRIDES } from "../lib/defaults.js";
 import { toCharacterCampaignAssignmentDto, toCharacterSheetDto } from "../lib/apiActors.js";
 import {
   getAssignments,
+  getAssignmentsForCharacters,
   getCharacterSheetOverrides,
   assignmentsToJson,
   getAssignedPlayers,
@@ -83,9 +84,10 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       .prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE user_id = ? ORDER BY updated_at DESC`)
       .all(userId) as Record<string, unknown>[];
 
-    const result = chars.map((c) => {
-      const char = rowToCharacterSheet(c);
-      const assignments = getAssignments(db, char.id);
+    const sheets = chars.map((c) => rowToCharacterSheet(c));
+    const assignmentsByChar = getAssignmentsForCharacters(db, sheets.map((s) => s.id));
+    const result = sheets.map((char) => {
+      const assignments = assignmentsByChar.get(char.id) ?? [];
       return withAbsoluteImageUrl(req, toCharacterSheetDto(
         toCharacterSheetDtoInput(
           mergeLiveStats(db, char, assignments),
@@ -132,6 +134,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const normalized = normalizeCharacterSheetForStorage({
       name: p.name,
       playerName: ownerName,
+      ruleset: p.ruleset,
       className: p.className ?? "",
       species: p.species ?? "",
       level: p.level ?? 1,
@@ -151,12 +154,12 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
 
     db.prepare(`
       INSERT INTO user_characters
-        (id, user_id, name, player_name, class_name, species, level, hp_max, hp_current, ac, speed,
+        (id, user_id, name, player_name, ruleset, class_name, species, level, hp_max, hp_current, ac, speed,
          str_score, dex_score, con_score, int_score, wis_score, cha_score, color, death_saves_success, death_saves_fail,
          image_url, character_data_json, shared_notes, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, '', ?, ?)
     `).run(
-      id, userId, sheetCols.name, sheetCols.playerName, sheetCols.className, sheetCols.species, sheetCols.level,
+      id, userId, sheetCols.name, sheetCols.playerName, sheetCols.ruleset, sheetCols.className, sheetCols.species, sheetCols.level,
       sheetCols.hpMax, sheetCols.hpCurrent, sheetCols.ac, sheetCols.speed,
       sheetCols.strScore, sheetCols.dexScore, sheetCols.conScore, sheetCols.intScore, sheetCols.wisScore, sheetCols.chaScore,
       sheetCols.color, sheetCols.deathSavesSuccess, sheetCols.deathSavesFail,
@@ -194,6 +197,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const nextSheet = {
       name: p.name ?? ex.name,
       playerName: ownerName,
+      ruleset: ex.ruleset,
       className: p.className ?? ex.className,
       species: p.species ?? ex.species,
       level: p.level ?? ex.level,
