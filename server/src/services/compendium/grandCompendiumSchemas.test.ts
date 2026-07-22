@@ -766,6 +766,20 @@ test("ClassSchema: accepts a persisted table-facing selection", () => {
   });
 });
 
+test("ClassSchema: accepts a typed maneuver replacement", () => {
+  passes(ClassSchema, {
+    ...validClass,
+    levels: [{
+      level: 4,
+      features: [{
+        name: "Martial Versatility",
+        description: "Replace one maneuver.",
+        choices: [{ id: "fc_fighter_maneuver_replacement_4", kind: "replacement", target: "maneuver", count: 1 }],
+      }],
+    }],
+  });
+});
+
 test("ClassSchema: accepts explicit subclass ownership and choice branches", () => {
   passes(ClassSchema, {
     ...validClass,

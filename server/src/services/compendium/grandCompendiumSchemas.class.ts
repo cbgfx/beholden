@@ -49,6 +49,12 @@ const ClassFeatureChoiceSchema = z.discriminatedUnion("kind", [
     from: z.array(z.string().min(1)).min(1).optional(),
   }).strict(),
   z.object({
+    id: z.string().regex(/^fc_[a-z0-9_]+$/u),
+    kind: z.literal("replacement"),
+    target: z.enum(["maneuver"]),
+    count: z.number().int().positive().default(1),
+  }).strict(),
+  z.object({
     kind: z.literal("proficiency"),
     category: z.enum(["skill", "tool", "language", "saving_throw"]),
     count: z.number().int().positive(),

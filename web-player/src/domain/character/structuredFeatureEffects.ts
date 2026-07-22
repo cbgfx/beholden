@@ -139,6 +139,14 @@ export function structuredEffectsFromCanonical(args: {
       });
       continue;
     }
+    if (choice.kind === "replacement" && choice.target === "maneuver") {
+      add({
+        type: "selection_replacement",
+        target: "maneuver",
+        count: fixed(Number(choice.count ?? 1)),
+      });
+      continue;
+    }
     if (choice.kind !== "spell") continue;
     const mode = choice.mode === "prepared" ? "prepare" : choice.mode === "spellbook" ? "spellbook" : "learn";
     add({
@@ -156,6 +164,7 @@ export function structuredEffectsFromCanonical(args: {
       ].filter(Boolean).join(" ") || undefined,
       freeCast: choice.freeCast === true || undefined,
       ifKnown: choice.ifKnown ? String(choice.ifKnown) : undefined,
+      canReplace: choice.replace === true || undefined,
     });
     if (choice.freeCast === true) {
       add({

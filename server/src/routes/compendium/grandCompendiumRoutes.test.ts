@@ -279,6 +279,7 @@ describe("Grand compendium routes — HTTP integration", () => {
   let server: http.Server;
   let port: number;
   let db: Database.Database;
+  let compendiumUploadDir: string;
 
   const adminToken = signToken({
     userId: "test-admin",
@@ -358,11 +359,46 @@ describe("Grand compendium routes — HTTP integration", () => {
     });
   }
 
+  function uploadCompendium(url: string, content: string): Promise<{ status: number; body: unknown }> {
+    return new Promise((resolve, reject) => {
+      const boundary = `beholden-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const payload = Buffer.from([
+        `--${boundary}\r\n`,
+        'Content-Disposition: form-data; name="file"; filename="compendium.json"\r\n',
+        "Content-Type: application/json\r\n\r\n",
+        content,
+        `\r\n--${boundary}--\r\n`,
+      ].join(""));
+      const req = http.request({
+        hostname: "127.0.0.1",
+        port,
+        path: url,
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          "Content-Type": `multipart/form-data; boundary=${boundary}`,
+          "Content-Length": payload.length,
+        },
+      }, (res) => {
+        let data = "";
+        res.on("data", (chunk: Buffer) => { data += chunk; });
+        res.on("end", () => {
+          try { resolve({ status: res.statusCode ?? 0, body: JSON.parse(data) }); }
+          catch { resolve({ status: res.statusCode ?? 0, body: data }); }
+        });
+      });
+      req.on("error", reject);
+      req.end(payload);
+    });
+  }
+
   before(async () => {
     db = new Database(":memory:");
     db.exec(SCHEMA_SQL);
 
     const upload = multer({ storage: multer.memoryStorage() });
+    compendiumUploadDir = fs.mkdtempSync(path.join(os.tmpdir(), "beholden-compendium-upload-test-"));
+    const compendiumUpload = multer({ storage: multer.diskStorage({ destination: compendiumUploadDir }) });
     const ctx: ServerContext = {
       runtime: { appName: "test", host: "127.0.0.1", port: 0, dataDir: "" },
       paths: {
@@ -380,6 +416,7 @@ describe("Grand compendium routes — HTTP integration", () => {
       db,
       broadcast: (() => {}) as ServerContext["broadcast"],
       upload,
+      compendiumUpload,
       helpers: {
         now: () => Date.now(),
         uid: () => Math.random().toString(36).slice(2),
@@ -443,6 +480,39 @@ describe("Grand compendium routes — HTTP integration", () => {
       server.close((err) => (err ? reject(err) : resolve())),
     );
     db.close();
+    assert.deepEqual(fs.readdirSync(compendiumUploadDir), []);
+    fs.rmdirSync(compendiumUploadDir);
+  });
+
+  describe("POST /api/compendium/native/preview", () => {
+    it("deletes the disk-backed upload after successful validation", async () => {
+      const result = await uploadCompendium("/api/compendium/native/preview", JSON.stringify(makeTestBatch("monsters", [CANONICAL_MONSTER])));
+      assert.equal(result.status, 200);
+      assert.deepEqual(fs.readdirSync(compendiumUploadDir), []);
+    });
+
+    it("deletes the disk-backed upload after invalid JSON", async () => {
+      const result = await uploadCompendium("/api/compendium/native/preview", "{ definitely not json");
+      assert.equal(result.status, 400);
+      assert.deepEqual(fs.readdirSync(compendiumUploadDir), []);
+    });
+
+    it("deletes the disk-backed upload after schema validation fails", async () => {
+      const invalid = { ...CANONICAL_MONSTER, name: "" };
+      const result = await uploadCompendium("/api/compendium/native/preview", JSON.stringify(makeTestBatch("monsters", [invalid])));
+      assert.equal(result.status, 400);
+      assert.deepEqual(fs.readdirSync(compendiumUploadDir), []);
+    });
+  });
+
+  describe("POST /api/compendium/native/import", () => {
+    it("imports a disk-backed bundle and deletes the temporary upload", async () => {
+      const entry = { ...CANONICAL_MONSTER, id: "m_disk_upload", name: "Disk Upload Monster" };
+      const result = await uploadCompendium("/api/compendium/native/import", JSON.stringify(makeTestBatch("monsters", [entry])));
+      assert.equal(result.status, 200);
+      assert.deepEqual(fs.readdirSync(compendiumUploadDir), []);
+      assert.equal((db.prepare("SELECT COUNT(*) AS n FROM compendium_monsters WHERE id = ?").get(entry.id) as { n: number }).n, 1);
+    });
   });
 
   describe("GET /api/compendium/native/export-all.zip", () => {

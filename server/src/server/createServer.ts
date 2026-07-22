@@ -14,7 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { getRuntimeConfig } from "../config/runtime.js";
-import { upload } from "../lib/upload.js";
+import { createCompendiumUpload, upload } from "../lib/upload.js";
 import { getPaths } from "../config/paths.js";
 import { openDb } from "../lib/db.js";
 import { ensureCombat, nextLabelNumber, createPlayerCombatant } from "../services/combat.js";
@@ -147,6 +147,7 @@ export function createServer() {
     db,
     broadcast,
     upload,
+    compendiumUpload: createCompendiumUpload(paths.dataDir),
     helpers: {
       now,
       uid,

@@ -242,10 +242,11 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
         ...selectedExpertiseEntries,
         ...(selectedFeatEntries?.expertise ?? []),
       ],
-      maneuvers: selectedManeuverEntries.length > 0
+      maneuvers: selectedManeuverEntries.length > 0 || (selectedFeatEntries?.maneuvers.length ?? 0) > 0
         ? [
             ...existingManeuverEntries.filter((entry) => !selectedManeuverEntries.some((selected) => selected.sourceKey && entry.sourceKey === selected.sourceKey)),
             ...selectedManeuverEntries,
+            ...(selectedFeatEntries?.maneuvers ?? []),
           ]
         : existingManeuverEntries,
       plans: selectedPlanEntries.length > 0

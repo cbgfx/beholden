@@ -13,6 +13,7 @@ export interface FeatGrantCollections {
   saves: FeatGrantTaggedEntry[];
   spells: FeatGrantTaggedEntry[];
   expertise: FeatGrantTaggedEntry[];
+  maneuvers: FeatGrantTaggedEntry[];
 }
 
 export function collectFeatTaggedEntries(args: {
@@ -36,6 +37,7 @@ export function collectFeatTaggedEntries(args: {
       ...feat.parsed.grants.spells.map((name) => ({ name, source })),
     ],
     expertise: [],
+    maneuvers: [],
   };
 
   for (const choice of feat.parsed.choices ?? []) {
@@ -52,6 +54,7 @@ export function collectFeatTaggedEntries(args: {
       else if (kind === "weapon") result.weapons.push({ name, source });
       else if (kind === "saving_throw") result.saves.push({ name, source });
       else if (kind === "weapon_mastery") result.weapons.push({ name, source });
+      else if (kind === "maneuver") result.maneuvers.push({ name, source });
       if (choice.type === "expertise") result.expertise.push({ name, source });
       if (choice.type === "spell") result.spells.push({ name, source });
     }

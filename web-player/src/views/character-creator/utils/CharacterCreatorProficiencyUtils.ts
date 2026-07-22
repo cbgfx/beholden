@@ -234,6 +234,7 @@ export function buildProficiencyMap(args: {
       grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
       grants.saves.forEach((entry) => saves.push(entry));
       grants.expertise.forEach((entry) => pushExpertise(entry.name, entry.source));
+      grants.maneuvers.forEach((entry) => maneuvers.push(entry));
       resolveFeatSpellEntries({
         feat,
         sourceLabel: feat.name,
@@ -274,6 +275,7 @@ export function buildProficiencyMap(args: {
       grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
       grants.saves.forEach((entry) => saves.push(entry));
       grants.expertise.forEach((entry) => pushExpertise(entry.name, entry.source));
+      grants.maneuvers.forEach((entry) => maneuvers.push(entry));
       resolveFeatSpellEntries({
         feat,
         sourceLabel: feat.name,
@@ -299,6 +301,7 @@ export function buildProficiencyMap(args: {
       grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
       grants.saves.forEach((entry) => saves.push(entry));
       grants.expertise.forEach((entry) => pushExpertise(entry.name, entry.source));
+      grants.maneuvers.forEach((entry) => maneuvers.push(entry));
       resolveFeatSpellEntries({
         feat: bgOriginFeatDetail,
         sourceLabel: bgOriginFeatDetail.name,
@@ -331,6 +334,7 @@ export function buildProficiencyMap(args: {
       grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
       grants.saves.forEach((entry) => saves.push(entry));
       grants.expertise.forEach((entry) => pushExpertise(entry.name, entry.source));
+      grants.maneuvers.forEach((entry) => maneuvers.push(entry));
       resolveFeatSpellEntries({
         feat: raceFeatDetail,
         sourceLabel: raceFeatDetail.name,
@@ -363,6 +367,7 @@ export function buildProficiencyMap(args: {
     grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
     grants.saves.forEach((entry) => saves.push(entry));
     grants.expertise.forEach((entry) => pushExpertise(entry.name, entry.source));
+    grants.maneuvers.forEach((entry) => maneuvers.push(entry));
     resolveFeatSpellEntries({
       feat,
       sourceLabel: feat.name,
@@ -385,6 +390,7 @@ export function buildProficiencyMap(args: {
     grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
     grants.saves.forEach((entry) => saves.push(entry));
     grants.expertise.forEach((entry) => pushExpertise(entry.name, entry.source));
+    grants.maneuvers.forEach((entry) => maneuvers.push(entry));
     resolveFeatSpellEntries({
       feat,
       sourceLabel: feat.name,

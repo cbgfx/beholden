@@ -67,7 +67,7 @@ export async function buildCreatorSubmissionBody(args: {
   classifyFeatSelection: (
     choice: ParsedFeatChoice<string>,
     value: string,
-  ) => "skill" | "tool" | "language" | "armor" | "weapon" | "saving_throw" | "weapon_mastery" | null;
+  ) => "skill" | "tool" | "language" | "armor" | "weapon" | "saving_throw" | "weapon_mastery" | "maneuver" | null;
 }) {
   const {
     api,

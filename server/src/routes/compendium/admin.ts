@@ -68,19 +68,26 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
   });
 
   function parseUploadedJson(file: Express.Multer.File): unknown {
-    return JSON.parse(file.buffer.toString("utf-8").replace(/^\uFEFF/u, ""));
+    const text = file.buffer
+      ? file.buffer.toString("utf-8")
+      : ctx.fs.readFileSync(file.path, "utf-8");
+    return JSON.parse(text.replace(/^\uFEFF/u, ""));
   }
 
-  app.post("/api/compendium/native/import", requireAdmin, ctx.upload.single("file"), (req, res) => {
-    if (!req.file) return res.status(400).json({ ok: false, message: "No file uploaded" });
-    let document: unknown;
-    try {
-      document = parseUploadedJson(req.file);
-    } catch {
-      return res.status(400).json({ ok: false, message: "Invalid JSON." });
-    }
+  function removeUploadedFile(file: Express.Multer.File | undefined): void {
+    if (!file?.path) return;
+    try { ctx.fs.unlinkSync(file.path); } catch { /* best-effort cleanup after request */ }
+  }
 
+  app.post("/api/compendium/native/import", requireAdmin, ctx.compendiumUpload.single("file"), (req, res) => {
+    if (!req.file) return res.status(400).json({ ok: false, message: "No file uploaded" });
     try {
+      let document: unknown;
+      try {
+        document = parseUploadedJson(req.file);
+      } catch {
+        return res.status(400).json({ ok: false, message: "Invalid JSON." });
+      }
       const out = importNativeCompendiumDocument(db, document);
       ctx.broadcast("compendium:changed", {
         nativeImported: true,
@@ -92,22 +99,26 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
     } catch (error) {
       const message = error instanceof Error ? error.message : "Native compendium import failed.";
       return res.status(400).json({ ok: false, message });
+    } finally {
+      removeUploadedFile(req.file);
     }
   });
 
-  app.post("/api/compendium/native/preview", requireAdmin, ctx.upload.single("file"), (req, res) => {
+  app.post("/api/compendium/native/preview", requireAdmin, ctx.compendiumUpload.single("file"), (req, res) => {
     if (!req.file) return res.status(400).json({ ok: false, message: "No file uploaded" });
-    let document: unknown;
     try {
-      document = parseUploadedJson(req.file);
-    } catch {
-      return res.status(400).json({ ok: false, message: "Invalid JSON." });
-    }
-    try {
+      let document: unknown;
+      try {
+        document = parseUploadedJson(req.file);
+      } catch {
+        return res.status(400).json({ ok: false, message: "Invalid JSON." });
+      }
       return res.json({ ok: true, ...previewNativeCompendiumDocument(db, document) });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Native compendium preview failed.";
       return res.status(400).json({ ok: false, message });
+    } finally {
+      removeUploadedFile(req.file);
     }
   });
 

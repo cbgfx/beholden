@@ -40,6 +40,7 @@ describe("structured canonical feature effects", () => {
         mode: "learn",
         level: 6,
         freeCast: true,
+        canReplace: true,
       }),
       expect.objectContaining({
         type: "resource_grant",
@@ -67,6 +68,21 @@ describe("structured canonical feature effects", () => {
         type: "spell_choice",
         choiceId: "fc_improved_illusions_replacement",
         ifKnown: "Minor Illusion",
+      }),
+    ]));
+  });
+
+  it("maps a typed maneuver replacement without reading feature prose", () => {
+    const effects = structuredEffectsFromCanonical({
+      source: { ...source, name: "Martial Versatility" },
+      classChoices: [{ id: "fc_fighter_maneuver_replacement_4", kind: "replacement", target: "maneuver", count: 1 }],
+    });
+
+    expect(effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "selection_replacement",
+        target: "maneuver",
+        count: { kind: "fixed", value: 1 },
       }),
     ]));
   });

@@ -192,6 +192,7 @@ describe("combat state regression: HP/condition mutation, transitions, and live 
         broadcasts.push({ type, payload });
       }) as unknown) as ServerContext["broadcast"],
       upload,
+      compendiumUpload: upload,
       helpers: {
         now: () => Date.now(),
         uid: () => Math.random().toString(36).slice(2),

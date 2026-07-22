@@ -32,11 +32,7 @@ coverage/
 
 # ===== Data =====
 /data/
-/compendium/*
-!/compendium/*.json
-!/compendium/JSONs/
-/compendium/JSONs/*
-!/compendium/JSONs/*.beholden-compendium.json
+/compendium/
 
 # ===== Misc =====
 *.zip

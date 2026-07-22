@@ -256,6 +256,9 @@ export function useLevelUpDerivedState(args: {
   const classFeatureResolvedSpellChoices = React.useMemo<LevelUpResolvedSpellChoiceEntry[]>(
     () => [
       ...collectSpellChoicesFromEffects(parsedNewFeatureEffects)
+        // Replacement cantrips are handled by unlocking one existing choice in the main
+        // class cantrip picker; rendering them here would incorrectly add another cantrip.
+        .filter((choice) => !(choice.canReplace && choice.level === 0 && choice.mode === "learn"))
         .filter((choice) => !/^(level\s+\d+:\s+)?(spellcasting|pact magic)\b/i.test(choice.source.name))
         .filter((choice) => !choice.ifKnown || existingClassSpellNames.some((name) => name.trim().toLowerCase() === choice.ifKnown!.trim().toLowerCase()))
         .map((choice) => ({
@@ -276,6 +279,12 @@ export function useLevelUpDerivedState(args: {
       ...slotLevelTriggeredSpellChoices,
     ],
     [existingClassSpellNames, nextLevel, maxSpellLevel, parsedNewFeatureEffects, slotLevelTriggeredSpellChoices]
+  );
+  const cantripReplacementCount = React.useMemo(
+    () => collectSpellChoicesFromEffects(parsedNewFeatureEffects)
+      .filter((choice) => choice.canReplace && choice.level === 0 && choice.mode === "learn")
+      .reduce((total, choice) => total + (choice.count.kind === "fixed" ? choice.count.value : 0), 0),
+    [parsedNewFeatureEffects],
   );
   const classFeatureProficiencyChoices = React.useMemo(
     () => collectProficiencyChoiceEffectsFromEffects(parsedNewFeatureEffects)
@@ -336,14 +345,20 @@ export function useLevelUpDerivedState(args: {
     [chosenFeatureChoices, classFeatureProficiencyChoices, proficientSaves]
   );
   const growthChoiceDefinitions = React.useMemo(
-    () => getGrowthChoiceDefinitions({
+    () => {
+      const maneuverReplacementLimit = parsedNewFeatureEffects.flatMap((parsed) => parsed.effects)
+        .filter((effect) => effect.type === "selection_replacement" && effect.target === "maneuver")
+        .reduce((total, effect) => total + (effect.count.kind === "fixed" ? effect.count.value : 0), 0);
+      return getGrowthChoiceDefinitions({
       classId: String(primaryClassEntry?.classId ?? ""),
       className: classDetail?.name ?? char?.className ?? null,
       classDetail,
       level: nextClassLevel,
       selectedSubclass: subclass || primaryClassEntry?.subclass || null,
-    }),
-    [char?.className, classDetail, nextClassLevel, primaryClassEntry?.classId, primaryClassEntry?.subclass, subclass]
+      maneuverReplacementLimit,
+    });
+    },
+    [char?.className, classDetail, nextClassLevel, parsedNewFeatureEffects, primaryClassEntry?.classId, primaryClassEntry?.subclass, subclass]
   );
   const appliedPreparedSpellProgressionFeatures = React.useMemo(
     () =>
@@ -483,6 +498,7 @@ export function useLevelUpDerivedState(args: {
     featResolvedSpellChoices,
     slotLevelTriggeredSpellChoices,
     classFeatureResolvedSpellChoices,
+    cantripReplacementCount,
     classFeatureProficiencyChoices,
     classFeatureSkillKeys,
     classFeatureToolKeys,

@@ -51,6 +51,7 @@ export function useLevelUpChoiceSelections(args: {
   existingClassSpellNames: string[];
   existingClassInvocationNames: string[];
   cantripCount: number;
+  cantripReplacementCount: number;
   maxSpellLevel: number;
   prepCount: number;
   allowedInvocationIds: Set<string>;
@@ -86,6 +87,7 @@ export function useLevelUpChoiceSelections(args: {
     existingClassSpellNames,
     existingClassInvocationNames,
     cantripCount,
+    cantripReplacementCount,
     maxSpellLevel,
     prepCount,
     allowedInvocationIds,
@@ -189,8 +191,8 @@ export function useLevelUpChoiceSelections(args: {
           const spell = classCantrips.find((entry) => entry.id === id);
           return spell ? !preparedSpellProgressionGrantedKeys.has(normalizeSpellTrackingKey(spell.name)) : false;
         })
-        .slice(0, cantripCount),
-    [char?.characterData?.chosenCantrips, cantripCount, classCantrips, existingClassSpellNames, preparedSpellProgressionGrantedKeys]
+        .slice(0, Math.max(0, cantripCount - cantripReplacementCount)),
+    [char?.characterData?.chosenCantrips, cantripCount, cantripReplacementCount, classCantrips, existingClassSpellNames, preparedSpellProgressionGrantedKeys]
   );
   const lockedCantripIds = React.useMemo(() => new Set(lockedCantripSelectionIds), [lockedCantripSelectionIds]);
 
@@ -221,9 +223,10 @@ export function useLevelUpChoiceSelections(args: {
       growthChoiceDefinitions
         .filter((definition) => definition.category === "maneuver")
         .map((definition) => {
-          const existingCount = Array.isArray(char?.characterData?.chosenFeatureChoices?.[definition.key])
-            ? (char?.characterData?.chosenFeatureChoices?.[definition.key] ?? []).length
-            : 0;
+          const existingIds = Array.isArray(char?.characterData?.chosenFeatureChoices?.[definition.key])
+            ? (char?.characterData?.chosenFeatureChoices?.[definition.key] ?? []).map(String)
+            : [];
+          const existingCount = existingIds.length;
           const chosenEntries = resolveSelectedSpellOptionEntries(
             chosenFeatureChoices[definition.key] ?? [],
             growthOptionEntriesByKey[definition.key] ?? []
@@ -231,12 +234,14 @@ export function useLevelUpChoiceSelections(args: {
           return {
             definition,
             remainingCount: Math.max(0, definition.totalCount - existingCount),
+            existingIds,
+            replacementsUsed: chosenEntries.filter((entry) => !existingIds.includes(String(entry.id))).length,
             chosen: chosenEntries.map((spell) => String(spell.id)),
             chosenEntries,
             selectedAbility: getGrowthChoiceSelectedAbility(chosenFeatureChoices, definition),
           };
         })
-        .filter((entry) => entry.remainingCount > 0),
+        .filter((entry) => entry.remainingCount > 0 || entry.definition.replacementLimit > 0),
     [char?.characterData?.chosenFeatureChoices, chosenFeatureChoices, growthChoiceDefinitions, growthOptionEntriesByKey]
   );
 
@@ -281,6 +286,7 @@ export function useLevelUpChoiceSelections(args: {
       && classFeatureProficiencyChoices.every((choice) => (chosenFeatureChoices[choice.key] ?? []).length === choice.count)
       && invocationResolvedSpellChoices.every((choice) => (chosenFeatOptions[choice.key] ?? []).length === choice.count)
       && maneuverChoiceEntries.every((entry) => entry.chosen.length === entry.definition.totalCount)
+      && maneuverChoiceEntries.every((entry) => entry.replacementsUsed <= entry.definition.replacementLimit + entry.remainingCount)
       && planChoiceEntries.every((entry) => entry.chosen.length === entry.definition.totalCount)
       && maneuverChoiceEntries.every((entry) => !entry.definition.abilityChoice || entry.selectedAbility !== null)
       && progressionTableChoiceEntries.every((entry) => entry.chosen.length === 1),

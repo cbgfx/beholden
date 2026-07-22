@@ -31,6 +31,7 @@ export interface CreatorFeatureLike {
     | { kind: "feat"; category: "F"; count?: number; replace?: true }
     | { kind: "weapon_mastery"; known: Record<string, number>; melee?: true }
     | { kind: "expertise"; known: Record<string, number>; from?: string[] }
+    | { id: string; kind: "replacement"; target: "maneuver"; count?: number }
     | { kind: "proficiency"; category: "skill" | "tool" | "language" | "saving_throw"; count: number; from?: string | string[]; ifProficient?: string }
     | { id: string; kind: "spell"; lists: string[]; count?: number; level?: number; maxLevel?: number; school?: string; mode: "known" | "prepared" | "spellbook"; replace?: true; perNewSlotLevel?: true; freeCast?: true; ifKnown?: string }
   >;
@@ -260,7 +261,7 @@ export function getFeatChoiceOptions(choice: CreatorParsedFeatChoiceLike): strin
 export function classifyFeatSelection(
   choice: CreatorParsedFeatChoiceLike,
   value: string,
-): "skill" | "tool" | "language" | "armor" | "weapon" | "saving_throw" | "weapon_mastery" | null {
+): "skill" | "tool" | "language" | "armor" | "weapon" | "saving_throw" | "weapon_mastery" | "maneuver" | null {
   const SKILL_NAMES = ALL_SKILLS.map((skill) => skill.name);
   if (choice.type === "weapon_mastery") return "weapon_mastery";
   if (choice.anyOf?.length === 1) {
@@ -268,6 +269,7 @@ export function classifyFeatSelection(
     if (only === "skill" || only === "tool" || only === "language") return only;
     if (only === "armor" || only === "weapon") return only;
     if (only === "saving_throw" || only === "save") return "saving_throw";
+    if (only === "maneuver") return "maneuver";
   }
   if (SKILL_NAMES.includes(value)) return "skill";
   if (ALL_TOOLS.includes(value)) return "tool";

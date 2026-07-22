@@ -156,8 +156,16 @@ export interface SpellChoiceEffect extends FeatureEffectBase {
   note?: string;
   freeCast?: boolean;
   ifKnown?: string;
+  /** This choice replaces an existing class selection instead of increasing the known total. */
+  canReplace?: boolean;
   /** Typed eligibility facts; never infer these from labels or notes. */
   filters?: { damage?: true; attack?: true; ritual?: true; known?: true };
+}
+
+export interface SelectionReplacementEffect extends FeatureEffectBase {
+  type: "selection_replacement";
+  target: "maneuver";
+  count: ScalingValue;
 }
 
 export interface ProficiencyGrantEffect extends FeatureEffectBase {
@@ -350,6 +358,7 @@ export type FeatureEffect =
   | ResourceGrantEffect
   | SpellGrantEffect
   | SpellChoiceEffect
+  | SelectionReplacementEffect
   | ProficiencyGrantEffect
   | WeaponMasteryEffect
   | ArmorClassEffect

@@ -21,6 +21,7 @@ export interface GrowthChoiceDefinition {
   totalCount: number;
   gainedAtLevel: number;
   replacementSupported: boolean;
+  replacementLimit: number;
   spellChoice?: SharedResolvedSpellChoiceEntry | null;
   itemOptions?: Array<{ name: string; minLevel: number; category?: string | null; repeatableGroup?: string | null; rarity?: string | null }> | null;
   itemCategory?: string | null;
@@ -39,6 +40,7 @@ export function getGrowthChoiceDefinitions(args: {
   classDetail: GrowthClassDetailLike | null;
   level: number;
   selectedSubclass?: string | null;
+  maneuverReplacementLimit?: number;
 }): GrowthChoiceDefinition[] {
   const { classId, classDetail, level, selectedSubclass } = args;
   if (!classDetail || !classId) return [];
@@ -67,6 +69,7 @@ export function getGrowthChoiceDefinitions(args: {
         totalCount,
         gainedAtLevel: Math.max(0, totalCount - previousCount),
         replacementSupported: talent.replace === true,
+        replacementLimit: Math.max(0, args.maneuverReplacementLimit ?? 0),
         spellChoice: {
           key: sourceKey,
           title: "Maneuvers",

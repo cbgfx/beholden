@@ -51,5 +51,6 @@ export interface ServerContext {
   db: Database.Database;
   broadcast: BroadcastFn;
   upload: Multer;
+  compendiumUpload: Multer;
   helpers: Helpers;
 }

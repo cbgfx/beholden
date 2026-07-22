@@ -5,9 +5,29 @@ const input = process.argv[2];
 if (!input) throw new Error("Usage: node scripts/validate-wotc-5e-base-classes.mjs <compendium.json>");
 const document = JSON.parse(fs.readFileSync(path.resolve(input), "utf8"));
 const classes = document.classes ?? [];
+
 const byName = new Map(classes.map((entry) => [entry.name, entry]));
 const fail = (message) => { throw new Error(message); };
 const requireFact = (condition, message) => { if (!condition) fail(message); };
+
+const cantripVersatility = classes.flatMap((cls) => (cls.levels ?? []).flatMap((level) =>
+  (level.features ?? [])
+    .filter((feature) => ["Bardic Versatility", "Cantrip Versatility", "Sorcerous Versatility", "Eldritch Versatility"].includes(feature.name))
+    .map((feature) => ({ cls, feature })),
+));
+requireFact(cantripVersatility.length === 25, `Expected 25 cantrip-versatility features, found ${cantripVersatility.length}.`);
+for (const { cls, feature } of cantripVersatility) {
+  const choice = feature.choices?.find((entry) => entry.kind === "spell" && entry.level === 0 && entry.replace === true);
+  requireFact(choice?.lists?.includes(`sl_${cls.name.toLowerCase()}`), `${cls.name}: ${feature.name} is missing its typed class-cantrip replacement.`);
+}
+
+const fighterMartialVersatility = classes.find((entry) => entry.name === "Fighter")?.levels
+  .flatMap((level) => (level.features ?? []).filter((feature) => feature.name === "Martial Versatility")) ?? [];
+requireFact(fighterMartialVersatility.length === 7, `Fighter: expected 7 Martial Versatility features, found ${fighterMartialVersatility.length}.`);
+for (const feature of fighterMartialVersatility) {
+  requireFact(feature.choices?.some((choice) => choice.kind === "replacement" && choice.target === "maneuver" && choice.count === 1), "Fighter: Martial Versatility is missing its typed maneuver replacement.");
+  requireFact(feature.resolution === "mixed", "Fighter: Martial Versatility must remain mixed until Fighting Style replacement is structured.");
+}
 
 requireFact(classes.length === 13, `Expected 13 classes, found ${classes.length}.`);
 for (const cls of classes) {
@@ -76,5 +96,22 @@ requireFact(primalAwareness?.effects?.filter((effect) => effect.type === "resour
 requireFact(byName.get("Warlock")?.multiclass?.spellcasting?.progression === "pact", "Warlock: missing Pact Magic contribution.");
 requireFact(byName.get("Paladin")?.spellcasting?.preparedFormula?.classLevelDivisor === 2, "Paladin: incorrect prepared-spell formula.");
 requireFact(byName.get("Cleric")?.spellcasting?.preparedFormula?.classLevelDivisor === 1, "Cleric: incorrect prepared-spell formula.");
+
+for (const className of ["Bard", "Cleric", "Druid", "Paladin", "Ranger", "Sorcerer", "Warlock", "Wizard", "Artificer"]) {
+  const spellcastingName = className === "Warlock" ? "Pact Magic" : "Spellcasting";
+  const spellcastingFeature = byName.get(className)?.levels.flatMap((level) => level.features ?? [])
+    .find((feature) => feature.name === spellcastingName && !feature.subclass);
+  requireFact(spellcastingFeature?.resolution === "automatic", `${className}: ${spellcastingName} must reflect its structured progression.`);
+}
+for (const className of ["Fighter", "Paladin", "Ranger"]) {
+  const fightingStyle = byName.get(className)?.levels.flatMap((level) => level.features ?? [])
+    .find((feature) => feature.name === "Fighting Style" && !feature.subclass);
+  requireFact(fightingStyle?.resolution === "automatic", `${className}: Fighting Style selection must be automatic.`);
+}
+for (const [className, featureName] of [["Bard", "Expertise"], ["Rogue", "Expertise"], ["Sorcerer", "Metamagic"], ["Warlock", "Eldritch Invocations"]]) {
+  const structuredFeature = byName.get(className)?.levels.flatMap((level) => level.features ?? [])
+    .find((feature) => feature.name === featureName && !feature.subclass);
+  requireFact(structuredFeature?.resolution === "automatic", `${className}: ${featureName} must reflect its structured choices.`);
+}
 
 console.log("5e base-class enrichment validation passed.");

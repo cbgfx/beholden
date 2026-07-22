@@ -34,11 +34,14 @@ type ManeuverChoiceEntry = {
     key: string;
     title: string;
     totalCount: number;
+    replacementLimit: number;
     sourceLabel?: string | null;
     note?: string | null;
     abilityChoice?: { key: string; options: string[] } | null;
   };
   chosen: string[];
+  existingIds: string[];
+  replacementsUsed: number;
   remainingCount: number;
   selectedAbility: string | null;
 };
@@ -352,13 +355,18 @@ export function LevelUpChoicesSection(props: {
           <div key={entry.definition.key} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <LevelUpSpellChoiceList
               title={entry.definition.title}
-              caption={`Choose ${entry.remainingCount} new`}
+              caption={entry.remainingCount > 0
+                ? `Choose ${entry.remainingCount} new${entry.definition.replacementLimit > 0 ? `; optionally replace ${entry.definition.replacementLimit}` : ""}`
+                : `Optionally replace ${entry.definition.replacementLimit}`}
               spells={(props.growthOptionEntriesByKey[entry.definition.key] ?? []).map((spell) => ({ ...spell, id: String(spell.id), level: null }))}
               chosen={entry.chosen}
               max={entry.definition.totalCount}
               onToggle={(id) => {
                 props.setChosenFeatureChoices((prev) => {
                   const current = prev[entry.definition.key] ?? [];
+                  const addingNew = !current.includes(id) && !entry.existingIds.includes(id);
+                  const replacementLimit = entry.definition.replacementLimit + entry.remainingCount;
+                  if (addingNew && entry.replacementsUsed >= replacementLimit) return prev;
                   const next = current.includes(id)
                     ? current.filter((value) => value !== id)
                     : current.length < entry.definition.totalCount

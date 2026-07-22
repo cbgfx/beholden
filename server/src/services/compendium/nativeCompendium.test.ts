@@ -813,11 +813,3 @@ test("AI guide native JSON examples match the strict Grand importer", () => {
     if (category) assertGrandCompendiumEntry(category, document, 0);
   }
 });
-
-test("shipped 2024 compendium matches the strict Grand importer", () => {
-  const compendiumPath = fileURLToPath(
-    new URL("../../../../compendium/WotC_2024_only.json", import.meta.url),
-  );
-  const document: unknown = JSON.parse(fs.readFileSync(compendiumPath, "utf8"));
-  assert.doesNotThrow(() => parseNativeCompendiumDocument(document));
-});
