@@ -379,7 +379,7 @@ export function LevelUpChoicesSection(props: {
             {entry.definition.abilityChoice ? (
               <div>
                 <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginBottom: 8 }}>
-                  Choose the ability used for maneuver save DCs from {entry.definition.sourceLabel}.
+                  Choose the ability used for {entry.definition.title.toLowerCase()} save DCs from {entry.definition.sourceLabel}.
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {entry.definition.abilityChoice.options.map((option) => {

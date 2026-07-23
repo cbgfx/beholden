@@ -44,7 +44,7 @@ const AdventureUpdateBody = z.object({
 // ── Import schemas ──────────────────────────────────────────────────────────
 
 const CombatantImport = z.object({
-  baseType: z.enum(["player", "monster", "inpc"]).default("monster"),
+  baseType: z.enum(["player", "monster", "inpc", "world"]).default("monster"),
   baseId: z.string().default(""),
   name: z.string(),
   label: z.string(),
@@ -57,6 +57,7 @@ const CombatantImport = z.object({
   ac: z.number().nullable().default(null),
   acDetails: z.string().nullable().default(null),
   attackOverrides: AttackOverrideSchema.default(null),
+  description: z.string().optional(),
   conditions: z.array(ConditionInstanceSchema).default([]),
   overrides: OverridesSchema.default({
     tempHp: DEFAULT_OVERRIDES.tempHp,
@@ -255,6 +256,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
           ac: combatant.ac,
           acDetails: combatant.acDetails,
           attackOverrides: combatant.attackOverrides ?? null,
+          description: combatant.description,
           conditions: combatant.conditions ?? [],
           overrides: combatant.overrides ?? DEFAULT_OVERRIDES,
           sort: combatant.sort,
@@ -358,6 +360,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
             ac: c.ac,
             acDetails: c.acDetails,
             attackOverrides: c.attackOverrides ?? null,
+            ...(c.description !== undefined ? { description: c.description } : {}),
             conditions: (c.conditions ?? []) as StoredConditionInstance[],
             overrides: c.overrides,
             sort: c.sort ?? ci + 1,

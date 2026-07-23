@@ -19,7 +19,7 @@ import {
   sourceTagStyle,
 } from "../shared/CharacterCreatorStyles";
 import { PreparedSpellProgressionBlock } from "@/views/character/CharacterViewParts";
-import { getOptionalGroups, resolvedScores } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
+import { deriveRaceAbilityBonuses, getOptionalGroups, resolvedScores } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
 import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
 
 interface OptionalGroupLike {
@@ -358,7 +358,8 @@ export function renderLevelFromContext(ctx: CharacterCreatorStepRenderContext): 
         .filter((group) => group.features.length > 0)
     : [];
   const classEquipmentOptions = parseStartingEquipmentOptions(ctx.classDetail?.equipmentOptions);
-  const scoresBeforeLevelUpAsi = resolvedScores(ctx.form, ctx.selectedFeatGrantedAbilityBonuses);
+  const raceAbilityBonusesForLevelStep = deriveRaceAbilityBonuses(ctx.raceDetail, ctx.raceDetail?.parsedChoices?.abilityScoreChoice, ctx.form);
+  const scoresBeforeLevelUpAsi = resolvedScores(ctx.form, ctx.selectedFeatGrantedAbilityBonuses, raceAbilityBonusesForLevelStep);
   const levelUpScores = ctx.levelUpFeatLevels.reduce<Record<number, Record<string, number>>>((acc, level) => {
     const previousLevel = ctx.levelUpFeatLevels.filter((candidate) => candidate < level).sort((a, b) => a - b).pop();
     const previousScores = previousLevel != null ? acc[previousLevel] : scoresBeforeLevelUpAsi;

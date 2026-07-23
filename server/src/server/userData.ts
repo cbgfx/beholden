@@ -80,6 +80,7 @@ export interface StoredEncounterActorSnapshot {
   ac: number | null;
   acDetails: string | null;
   attackOverrides: unknown | null;
+  description?: string;
 }
 
 export interface StoredEncounterActorLiveState {
@@ -92,6 +93,8 @@ export interface StoredEncounterActorLiveState {
   usedLegendaryActions?: number;
   usedLegendaryResistances?: number;
   usedSpellSlots?: Record<string, number>;
+  /** Latched after a hostile combatant first takes damage; cleared with the encounter. */
+  engagedWithPlayers?: boolean;
 }
 
 export interface StoredNoteState {
@@ -296,7 +299,7 @@ export interface StoredCondition extends Timestamps {
   sort?: number;
 }
 
-export type StoredEncounterActorBaseType = "player" | "monster" | "inpc";
+export type StoredEncounterActorBaseType = "player" | "monster" | "inpc" | "world";
 
 export interface StoredEncounterActor extends Timestamps {
   id: Id;
@@ -315,6 +318,7 @@ export interface StoredEncounterActor extends Timestamps {
   ac: number | null;
   acDetails: string | null;
   attackOverrides: unknown | null;
+  description?: string;
   conditions: StoredConditionInstance[];
   /** Encounter-scoped death save tracking for player combatants (success/fail). */
   deathSaves?: StoredDeathSaves;
@@ -326,6 +330,6 @@ export interface StoredEncounterActor extends Timestamps {
   usedLegendaryResistances?: number;
   /** Spell slots spent per level. Keys are spell level as string ("1"–"9"), values are count of used slots. */
   usedSpellSlots?: Record<string, number>;
+  engagedWithPlayers?: boolean;
   sort?: number;
 }
-

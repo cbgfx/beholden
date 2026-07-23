@@ -27,6 +27,7 @@ import { compactItemEntry } from "../../services/compendium/itemCompaction.js";
 import { compactMonsterEntry } from "../../services/compendium/monsterCompaction.js";
 import { compactSpellEntry } from "../../services/compendium/spellCompaction.js";
 import type { ServerContext } from "../../server/context.js";
+import { compendiumUploadDirectory, createCompendiumUpload } from "../../lib/upload.js";
 
 // ---------------------------------------------------------------------------
 // Test data — Grand records with fields that should survive a PUT edit
@@ -280,6 +281,7 @@ describe("Grand compendium routes — HTTP integration", () => {
   let port: number;
   let db: Database.Database;
   let compendiumUploadDir: string;
+  let testDataDir: string;
 
   const adminToken = signToken({
     userId: "test-admin",
@@ -397,12 +399,13 @@ describe("Grand compendium routes — HTTP integration", () => {
     db.exec(SCHEMA_SQL);
 
     const upload = multer({ storage: multer.memoryStorage() });
-    compendiumUploadDir = fs.mkdtempSync(path.join(os.tmpdir(), "beholden-compendium-upload-test-"));
-    const compendiumUpload = multer({ storage: multer.diskStorage({ destination: compendiumUploadDir }) });
+    testDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "beholden-compendium-upload-test-"));
+    compendiumUploadDir = compendiumUploadDirectory(testDataDir);
+    const compendiumUpload = createCompendiumUpload(testDataDir);
     const ctx: ServerContext = {
-      runtime: { appName: "test", host: "127.0.0.1", port: 0, dataDir: "" },
+      runtime: { appName: "test", host: "127.0.0.1", port: 0, dataDir: testDataDir },
       paths: {
-        dataDir: "",
+        dataDir: testDataDir,
         dbPath: ":memory:",
         webDistDir: "",
         hasWebDist: false,
@@ -482,13 +485,24 @@ describe("Grand compendium routes — HTTP integration", () => {
     db.close();
     assert.deepEqual(fs.readdirSync(compendiumUploadDir), []);
     fs.rmdirSync(compendiumUploadDir);
+    fs.rmdirSync(path.join(testDataDir, "tmp"));
+    fs.rmdirSync(testDataDir);
   });
 
   describe("POST /api/compendium/native/preview", () => {
-    it("deletes the disk-backed upload after successful validation", async () => {
+    it("stages a validated preview and imports it once without a second upload", async () => {
       const result = await uploadCompendium("/api/compendium/native/preview", JSON.stringify(makeTestBatch("monsters", [CANONICAL_MONSTER])));
       assert.equal(result.status, 200);
+      const previewToken = String((result.body as { previewToken?: unknown }).previewToken ?? "");
+      assert.match(previewToken, /^[0-9a-f-]{36}$/u);
+      assert.equal(fs.readdirSync(compendiumUploadDir).length, 1);
+
+      const imported = await request("POST", "/api/compendium/native/import-preview", { previewToken });
+      assert.equal(imported.status, 200);
       assert.deepEqual(fs.readdirSync(compendiumUploadDir), []);
+
+      const replay = await request("POST", "/api/compendium/native/import-preview", { previewToken });
+      assert.equal(replay.status, 400);
     });
 
     it("deletes the disk-backed upload after invalid JSON", async () => {
@@ -542,6 +556,15 @@ describe("Grand compendium routes — HTTP integration", () => {
           `archive must contain the ${category} batch`,
         );
       }
+    });
+  });
+
+  describe("GET /api/compendium/native/:category/export", () => {
+    it("streams a valid native category document", async () => {
+      const response = await requestBuffer("/api/compendium/native/monsters/export");
+      assert.equal(response.status, 200);
+      const document = JSON.parse(response.body.toString("utf8")) as { monsters?: Array<{ id?: string }> };
+      assert.ok(document.monsters?.some((entry) => entry.id === CANONICAL_MONSTER.id));
     });
   });
 

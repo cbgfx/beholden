@@ -30,8 +30,8 @@ export interface CreatorFeatureLike {
   choices?: Array<
     | { kind: "feat"; category: "F"; count?: number; replace?: true }
     | { kind: "weapon_mastery"; known: Record<string, number>; melee?: true }
-    | { kind: "expertise"; known: Record<string, number>; from?: string[] }
-    | { id: string; kind: "replacement"; target: "maneuver"; count?: number }
+    | { kind: "expertise"; known: Record<string, number>; from?: string[]; replace?: true }
+    | { id: string; kind: "replacement"; target: "maneuver" | "metamagic" | "fighting_style" | "pact_boon"; count?: number }
     | { kind: "proficiency"; category: "skill" | "tool" | "language" | "saving_throw"; count: number; from?: string | string[]; ifProficient?: string }
     | { id: string; kind: "spell"; lists: string[]; count?: number; level?: number; maxLevel?: number; school?: string; mode: "known" | "prepared" | "spellbook"; replace?: true; perNewSlotLevel?: true; freeCast?: true; ifKnown?: string }
   >;
@@ -69,6 +69,8 @@ export interface ClassExpertiseChoice {
   source: string;
   count: number;
   options: string[] | null;
+  /** This choice unlocks re-picking one already-chosen Expertise skill/tool instead of increasing the total known (e.g. Bardic Versatility). */
+  replace?: boolean;
 }
 
 export interface CreatorItemSummaryLike {
@@ -210,7 +212,7 @@ export function getClassExpertiseChoices(cls: CreatorClassDetailLike | null, lev
           const key = `classexpertise:${requiredLevel}:${name}`;
           if (seen.has(key)) continue;
           seen.add(key);
-          choices.push({ key, source: name, count, options: structured.from ?? null });
+          choices.push({ key, source: name, count, options: structured.from ?? null, replace: structured.replace === true });
         }
       }
     }

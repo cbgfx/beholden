@@ -493,4 +493,93 @@ describe("combat state regression: HP/condition mutation, transitions, and live 
       );
     });
   });
+
+  describe("player-safe engaged enemies", () => {
+    it("hides reserves, latches on first damage, and exposes only a qualitative health state", async () => {
+      const t = Date.now();
+      const reserve: StoredEncounterActor = {
+        id: "combatant-engaged-regression",
+        encounterId,
+        baseType: "monster",
+        baseId: "monster-engaged-regression",
+        name: "Reserve Ogre",
+        label: "Bridge Ogre",
+        initiative: 4,
+        friendly: false,
+        color: "red",
+        overrides: { tempHp: 0, acBonus: 0, hpMaxBonus: 0 },
+        hpCurrent: 20,
+        hpMax: 20,
+        hpDetails: null,
+        ac: 12,
+        acDetails: null,
+        attackOverrides: null,
+        conditions: [],
+        createdAt: t,
+        updatedAt: t,
+      };
+      insertCombatant(db, reserve);
+      await dmRequest("PUT", `/api/encounters/${encounterId}/combatants/${playerCombatantId}`, { initiative: 12 });
+
+      const statusUrl = `/api/me/characters/${playerCharacterId}/combat-status`;
+      const before = await request("GET", statusUrl, undefined, playerToken);
+      assert.equal(before.status, 200);
+      assert.ok(!JSON.stringify(before.body).includes(reserve.id));
+
+      await dmRequest("PUT", `/api/encounters/${encounterId}/combatants/${reserve.id}`, { hpDelta: { kind: "damage", amount: 3 } });
+      const damaged = await request("GET", statusUrl, undefined, playerToken);
+      const damagedText = JSON.stringify(damaged.body);
+      assert.match(damagedText, /Bridge Ogre/);
+      assert.match(damagedText, /Damaged/);
+      assert.ok(!damagedText.includes("hpCurrent"));
+      assert.ok(!damagedText.includes("hpMax"));
+
+      await dmRequest("PUT", `/api/encounters/${encounterId}/combatants/${reserve.id}`, { hpDelta: { kind: "heal", amount: 20 } });
+      const healedStorage = db.prepare("SELECT snapshot_json, live_json FROM combatants WHERE id = ?").get(reserve.id) as { snapshot_json: string; live_json: string };
+      assert.equal(JSON.parse(healedStorage.live_json).engagedWithPlayers, true, "the engagement latch must survive healing writes");
+      const healed = await request("GET", statusUrl, undefined, playerToken);
+      assert.match(JSON.stringify(healed.body), /Bridge Ogre/, "healing must not hide an engaged enemy");
+
+      await dmRequest("PUT", `/api/encounters/${encounterId}/combatants/${reserve.id}`, { hpDelta: { kind: "damage", amount: 10 } });
+      const bloodied = await request("GET", statusUrl, undefined, playerToken);
+      assert.match(JSON.stringify(bloodied.body), /Bloodied/);
+
+      await dmRequest("PUT", `/api/encounters/${encounterId}/combatants/${reserve.id}`, { hpDelta: { kind: "damage", amount: 20 } });
+      const down = await request("GET", statusUrl, undefined, playerToken);
+      assert.match(JSON.stringify(down.body), /Down/);
+    });
+  });
+
+  describe("world actions", () => {
+    it("creates a statless turn-order entry and preserves its reminder text", async () => {
+      const created = await dmRequest(
+        "POST",
+        `/api/encounters/${encounterId}/combatants/addWorldAction`,
+        { name: "Falling Meteors", description: "A meteor strikes a random quadrant." },
+      );
+      assert.equal(created.status, 200);
+      const dto = created.body.created as Record<string, unknown>;
+      assert.equal(dto.baseType, "world");
+      const snapshot = dto.snapshot as Record<string, unknown>;
+      const live = dto.live as Record<string, unknown>;
+      assert.equal(snapshot.label, "Falling Meteors");
+      assert.equal(snapshot.description, "A meteor strikes a random quadrant.");
+      assert.equal(snapshot.hpMax, null);
+      assert.equal(snapshot.ac, null);
+      assert.equal(live.hpCurrent, null);
+      assert.equal(live.initiative, null);
+
+      const updated = await dmRequest(
+        "PUT",
+        `/api/encounters/${encounterId}/combatants/${String(dto.id)}`,
+        { initiative: 17, label: "Meteor Shower", description: "Three impacts this round." },
+      );
+      assert.equal(updated.status, 200);
+      const updatedSnapshot = updated.body.snapshot as Record<string, unknown>;
+      const updatedLive = updated.body.live as Record<string, unknown>;
+      assert.equal(updatedSnapshot.label, "Meteor Shower");
+      assert.equal(updatedSnapshot.description, "Three impacts this round.");
+      assert.equal(updatedLive.initiative, 17);
+    });
+  });
 });

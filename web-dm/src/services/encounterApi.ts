@@ -1,10 +1,15 @@
 import { api, jsonInit } from "@/services/api";
+import type { Encounter } from "@/domain/types/domain";
 
 export const encounterPath = (encounterId: string, resource?: string): string =>
   resource ? `/api/encounters/${encounterId}/${resource}` : `/api/encounters/${encounterId}`;
 
 export const encounterCombatantsPath = (encounterId: string, resource?: string): string =>
   encounterPath(encounterId, resource ? `combatants/${resource}` : "combatants");
+
+export function fetchEncounter(encounterId: string, signal?: AbortSignal): Promise<Encounter> {
+  return api<Encounter>(encounterPath(encounterId), signal ? { signal } : undefined);
+}
 
 export function putEncounter<T = unknown>(encounterId: string, payload: unknown): Promise<T> {
   return api<T>(encounterPath(encounterId), jsonInit("PUT", payload));

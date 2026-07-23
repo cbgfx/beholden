@@ -3,6 +3,7 @@ import { type NavigateFunction } from "react-router-dom";
 import { api, jsonInit } from "@/services/api";
 import { resolveSelectedSpellOptionEntries } from "@/views/character-creator/utils/SpellChoiceUtils";
 import { buildLevelUpPayload, type BuildLevelUpPayloadArgs } from "@/views/level-up/LevelUpUtils";
+import type { ExclusiveGroupReplacementChoice } from "@/views/level-up/LevelUpExclusiveChoiceUtils";
 import type {
   AsiMode,
   LevelUpCharacter as Character,
@@ -14,7 +15,7 @@ import type {
 type NamedEntry = { id: string; name: string };
 type FeatureProficiencyChoice = { key: string; category: "skill" | "tool" | "language" | "armor" | "weapon" | "saving_throw" | "selection"; sourceLabel: string };
 type ManeuverChoiceEntry = {
-  definition: { sourceLabel: string; sourceKey?: string | null };
+  definition: { category: "maneuver" | "metamagic" | "plan"; sourceLabel: string; sourceKey?: string | null };
   chosenEntries: Array<{ id: string; name: string }>;
   selectedAbility: "str" | "dex" | "con" | "int" | "wis" | "cha" | null;
 };
@@ -49,6 +50,9 @@ export function useLevelUpSubmit(args: {
   allInvocationFeatChoices: import("@/domain/character/invocationFeatChoices").InvocationFeatChoiceEntry[];
   chosenFeatureChoices: Record<string, string[]>;
   expertiseChoices: Array<{ key: string; source: string }>;
+  expertiseReplacementChoices: Array<{ key: string; source: string }>;
+  fightingStyleReplacementChoice: ExclusiveGroupReplacementChoice | null;
+  pactBoonReplacementChoice: ExclusiveGroupReplacementChoice | null;
   featChoiceEntries: BuildLevelUpPayloadArgs["featChoiceEntries"];
   chosenFeatDetail: FeatDetail | null;
   featSourceLabel: string;
@@ -111,6 +115,9 @@ export function useLevelUpSubmit(args: {
       subclass,
       chosenExpertise,
       expertiseChoices,
+      expertiseReplacementChoices,
+      fightingStyleReplacementChoice,
+      pactBoonReplacementChoice,
       featChoiceEntries,
       chosenFeatDetail,
       featSourceLabel,
@@ -169,15 +176,29 @@ export function useLevelUpSubmit(args: {
         .filter((spell) => effectiveChosenInvocations.includes(spell.id))
         .map((spell) => ({ id: spell.id, name: spell.name, source: classDetailName ?? char.className }));
 
-      const selectedManeuverEntries = maneuverChoiceEntries.flatMap((entry) =>
-        entry.chosenEntries.map((spell) => ({
-          id: String(spell.id),
-          name: spell.name,
-          source: entry.definition.sourceLabel,
-          ability: entry.selectedAbility,
-          sourceKey: entry.definition.sourceKey,
-        }))
-      );
+      const selectedManeuverEntries = maneuverChoiceEntries
+        .filter((entry) => entry.definition.category === "maneuver")
+        .flatMap((entry) =>
+          entry.chosenEntries.map((spell) => ({
+            id: String(spell.id),
+            name: spell.name,
+            source: entry.definition.sourceLabel,
+            ability: entry.selectedAbility,
+            sourceKey: entry.definition.sourceKey,
+          }))
+        );
+
+      const selectedMetamagicEntries = maneuverChoiceEntries
+        .filter((entry) => entry.definition.category === "metamagic")
+        .flatMap((entry) =>
+          entry.chosenEntries.map((spell) => ({
+            id: String(spell.id),
+            name: spell.name,
+            source: entry.definition.sourceLabel,
+            ability: entry.selectedAbility,
+            sourceKey: entry.definition.sourceKey,
+          }))
+        );
 
       const selectedPlanEntries = planChoiceEntries.flatMap((entry) => {
         const byId = new Map((growthOptionEntriesByKey[entry.definition.key] ?? []).map((item) => [String(item.id), item]));
@@ -212,6 +233,9 @@ export function useLevelUpSubmit(args: {
         allInvocationFeatChoices,
         chosenFeatureChoices,
         expertiseChoices,
+        expertiseReplacementChoices,
+        fightingStyleReplacementChoice,
+        pactBoonReplacementChoice,
         featChoiceEntries,
         chosenFeatDetail,
         featSourceLabel,
@@ -225,6 +249,7 @@ export function useLevelUpSubmit(args: {
         selectedInvocationSpellEntries,
         selectedInvocationEntries,
         selectedManeuverEntries,
+        selectedMetamagicEntries,
         selectedPlanEntries,
         baseScores,
         asiMode,

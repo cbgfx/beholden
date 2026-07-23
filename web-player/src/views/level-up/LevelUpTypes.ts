@@ -76,6 +76,7 @@ export interface LevelUpCharacter {
     classSpellSelections?: Record<string, { chosenCantrips?: string[]; chosenSpells?: string[]; preparedSpells?: string[]; chosenInvocations?: string[] }>;
     chosenFeatOptions?: Record<string, string[]>;
     chosenFeatureChoices?: Record<string, string[]>;
+    chosenOptionals?: string[];
     proficiencies?: {
       spells?: Array<{ name: string; source: string }>;
       invocations?: Array<{ name: string; source: string }>;

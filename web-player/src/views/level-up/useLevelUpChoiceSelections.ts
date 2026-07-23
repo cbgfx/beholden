@@ -221,7 +221,7 @@ export function useLevelUpChoiceSelections(args: {
   const maneuverChoiceEntries = React.useMemo(
     () =>
       growthChoiceDefinitions
-        .filter((definition) => definition.category === "maneuver")
+        .filter((definition) => definition.category === "maneuver" || definition.category === "metamagic")
         .map((definition) => {
           const existingIds = Array.isArray(char?.characterData?.chosenFeatureChoices?.[definition.key])
             ? (char?.characterData?.chosenFeatureChoices?.[definition.key] ?? []).map(String)

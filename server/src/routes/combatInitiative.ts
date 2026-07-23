@@ -118,8 +118,42 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
       // default false
     }
 
+    const engagedRows = db.prepare(`
+      SELECT
+        c.id,
+        json_extract(c.snapshot_json, '$.label') AS label,
+        json_extract(c.live_json, '$.hpCurrent') AS hpCurrent,
+        json_extract(c.snapshot_json, '$.hpMax') AS hpMax,
+        COALESCE(json_extract(c.live_json, '$.overrides.hpMaxBonus'), 0) AS hpMaxBonus
+      FROM combatants c
+      WHERE c.encounter_id = ?
+        AND COALESCE(json_extract(c.snapshot_json, '$.friendly'), 0) = 0
+        AND json_extract(c.live_json, '$.engagedWithPlayers') = 1
+      ORDER BY COALESCE(c.sort, 9999), c.created_at
+    `).all(row.encounterId) as Array<{
+      id: string;
+      label: string | null;
+      hpCurrent: number | null;
+      hpMax: number | null;
+      hpMaxBonus: number | null;
+    }>;
+
+    const engagedEnemies = engagedRows.flatMap((enemy) => {
+      if (enemy.hpCurrent == null || enemy.hpMax == null) return [];
+      const current = Number(enemy.hpCurrent);
+      const maximum = Number(enemy.hpMax) + Number(enemy.hpMaxBonus ?? 0);
+      if (!Number.isFinite(current) || !Number.isFinite(maximum) || maximum <= 0) return [];
+      const health = current <= 0 ? "Down" : current * 2 <= maximum ? "Bloodied" : "Damaged";
+      return [{ id: enemy.id, name: enemy.label || "Enemy", health }];
+    });
+
     res.json({
-      combat: { encounterId: row.encounterId, combatantId: row.combatantId, usedReaction },
+      combat: {
+        encounterId: row.encounterId,
+        combatantId: row.combatantId,
+        usedReaction,
+        engagedEnemies,
+      },
     });
   });
 

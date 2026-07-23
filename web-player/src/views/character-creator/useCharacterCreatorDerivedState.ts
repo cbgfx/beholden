@@ -1,6 +1,7 @@
 import React from "react";
 import {
   invocationPrerequisitesMet,
+  resolvePactBoonFromChosenOptionals,
   spellLooksLikeDamageSpell,
 } from "@/views/character/CharacterSheetUtils";
 import {
@@ -48,6 +49,7 @@ import {
   getWeaponMasteryChoice as getWeaponMasteryChoiceFromUtils,
   parseAppliedClassFeatureEffects,
 } from "@/views/character-creator/utils/CharacterCreatorProficiencyUtils";
+import { parseAppliedSpeciesTraitEffects } from "@/views/character-creator/utils/CharacterCreatorClassFeatureUtils";
 import {
   deriveFeatGrantedAbilityBonuses,
   deriveTotalFeatAbilityBonuses,
@@ -104,6 +106,14 @@ export function useCharacterCreatorDerivedState(args: {
     () => collectSpellChoicesFromEffects(selectedClassFeatureEffects)
       .filter((choice) => !/^(level\s+\d+:\s+)?(spellcasting|pact magic)\b/i.test(choice.source.name)),
     [selectedClassFeatureEffects]
+  );
+  const selectedRaceTraitEffects = React.useMemo(
+    () => parseAppliedSpeciesTraitEffects(raceDetail),
+    [raceDetail]
+  );
+  const selectedRaceTraitSpellChoices = React.useMemo(
+    () => collectSpellChoicesFromEffects(selectedRaceTraitEffects),
+    [selectedRaceTraitEffects]
   );
   const maxSpellLevel = React.useMemo(
     () => classDetail ? getMaxSlotLevel(classDetail, form.level, form.subclass) : 0,
@@ -201,7 +211,9 @@ export function useCharacterCreatorDerivedState(args: {
     [classDetail, form.level]
   );
   const step5ClassExpertiseChoices = React.useMemo(
-    () => getClassExpertiseChoices(classDetail, form.level),
+    // "replace" groups (e.g. Bardic Versatility) only make sense as a level-up swap of an
+    // already-chosen skill; direct creation just picks the final held set, so they're a no-op here.
+    () => getClassExpertiseChoices(classDetail, form.level).filter((choice) => !choice.replace),
     [classDetail, form.level]
   );
   const step5WeaponMasteryChoice = React.useMemo(
@@ -307,6 +319,21 @@ export function useCharacterCreatorDerivedState(args: {
     }),
     [classCantrips, form.chosenCantrips, maxSpellLevel, selectedClassFeatureSpellChoices]
   );
+  const step6RaceTraitSpellChoices = React.useMemo<CreatorResolvedSpellChoiceEntry[]>(
+    () => selectedRaceTraitSpellChoices.flatMap((effect) => {
+      if (effect.count.kind !== "fixed") return [];
+      return [{
+        key: `racetrait:${effect.id}`,
+        title: effect.level === 0 ? "Species Cantrip" : effect.level == null ? "Species Spell" : `Species Level ${effect.level} Spell`,
+        sourceLabel: effect.source.name,
+        count: effect.count.value,
+        level: effect.level,
+        note: effect.summary,
+        listNames: effect.spellLists,
+      }];
+    }),
+    [selectedRaceTraitSpellChoices]
+  );
   const step6InvocationSpellChoices = React.useMemo<CreatorResolvedSpellChoiceEntry[]>(
     () => selectedInvocationSpellChoices.flatMap((effect) => {
       if (effect.count.kind !== "fixed") return [];
@@ -353,10 +380,11 @@ export function useCharacterCreatorDerivedState(args: {
     () => [
       ...step6FeatResolvedSpellChoices,
       ...step6ClassFeatureSpellChoices,
+      ...step6RaceTraitSpellChoices,
       ...step6InvocationSpellChoices,
       ...step6SlotGrowthSpellChoices,
     ],
-    [step6ClassFeatureSpellChoices, step6FeatResolvedSpellChoices, step6InvocationSpellChoices, step6SlotGrowthSpellChoices]
+    [step6ClassFeatureSpellChoices, step6FeatResolvedSpellChoices, step6InvocationSpellChoices, step6RaceTraitSpellChoices, step6SlotGrowthSpellChoices]
   );
   const selectedFeatSpellcastingAbilityChoices = React.useMemo(
     () => buildSelectedFeatSpellcastingAbilityChoices({
@@ -441,6 +469,8 @@ export function useCharacterCreatorDerivedState(args: {
       && spell.check === "attack"
     );
 
+    const chosenPactBoon = resolvePactBoonFromChosenOptionals(form.chosenOptionals);
+
     return new Set(
       classInvocations
         .filter((invocation) =>
@@ -449,11 +479,12 @@ export function useCharacterCreatorDerivedState(args: {
             hasDamageCantrip,
             hasAttackDamageCantrip,
             chosenTalentIds: form.chosenInvocations,
+            chosenPactBoon,
           })
         )
         .map((invocation) => invocation.id)
     );
-  }, [classCantrips, classInvocations, form.chosenCantrips, form.chosenInvocations, form.level]);
+  }, [classCantrips, classInvocations, form.chosenCantrips, form.chosenInvocations, form.chosenOptionals, form.level]);
 
   return {
     selectedClassSummary,

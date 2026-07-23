@@ -1,7 +1,7 @@
 import React from "react";
 
 import { IconCompendiumAlt } from "@/icons";
-import { api, apiBlob } from "@/services/api";
+import { api, apiBlob, jsonInit } from "@/services/api";
 import { Panel } from "@/ui/Panel";
 import {
   CompendiumAdminFeedback,
@@ -44,6 +44,7 @@ export function CompendiumAdminPanel() {
   const [nativeFile, setNativeFile] = React.useState<File | null>(null);
   const [previewedNativeFile, setPreviewedNativeFile] = React.useState<File | null>(null);
   const [nativePreview, setNativePreview] = React.useState<NativePreviewResult | null>(null);
+  const [nativePreviewToken, setNativePreviewToken] = React.useState<string | null>(null);
   const [nativeCategory, setNativeCategory] = React.useState<NativeCompendiumCategory>("monsters");
   const [busy, setBusy] = React.useState(false);
   const [nativeMsg, setNativeMsg] = React.useState("");
@@ -79,21 +80,20 @@ export function CompendiumAdminPanel() {
   }
 
   async function importNative() {
-    if (!nativeFile || previewedNativeFile !== nativeFile) return;
+    if (!nativeFile || previewedNativeFile !== nativeFile || !nativePreviewToken) return;
     setBusy(true);
     setNativeMsg("");
     try {
-      const form = new FormData();
-      form.append("file", nativeFile);
-      const result = await api<NativeImportResult>("/api/compendium/native/import", {
-        method: "POST",
-        body: form,
-      });
+      const result = await api<NativeImportResult>(
+        "/api/compendium/native/import-preview",
+        jsonInit("POST", { previewToken: nativePreviewToken }),
+      );
       setNativeMsg(
         `Imported ${result.imported} entries across ${result.batches.length} ${result.batches.length === 1 ? "batch" : "batches"}.`,
       );
       setPreviewedNativeFile(null);
       setNativePreview(null);
+      setNativePreviewToken(null);
       if (result.batches.length === 1 && result.batches[0]) {
         setNativeCategory(result.batches[0].category);
       }
@@ -111,6 +111,7 @@ export function CompendiumAdminPanel() {
     setNativeMsg("");
     setPreviewedNativeFile(null);
     setNativePreview(null);
+    setNativePreviewToken(null);
     try {
       const form = new FormData();
       form.append("file", nativeFile);
@@ -119,6 +120,7 @@ export function CompendiumAdminPanel() {
         body: form,
       });
       setNativePreview(preview);
+      setNativePreviewToken(preview.previewToken);
       setPreviewedNativeFile(nativeFile);
     } catch (error: unknown) {
       setNativeMsg(toErrorMessage(error));
@@ -157,12 +159,13 @@ export function CompendiumAdminPanel() {
           busy={busy}
           category={nativeCategory}
           fileName={nativeFile?.name ?? null}
-          previewReady={previewedNativeFile === nativeFile}
+          previewReady={previewedNativeFile === nativeFile && nativePreviewToken !== null}
           onCategoryChange={setNativeCategory}
           onFileChange={(file) => {
             setNativeFile(file);
             setPreviewedNativeFile(null);
             setNativePreview(null);
+            setNativePreviewToken(null);
             setNativeMsg("");
           }}
           onExport={() => void exportNativeCategory()}

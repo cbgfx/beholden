@@ -42,6 +42,7 @@ Everything runs on a single Node.js server with a local SQLite database. No clou
 - Role-based access: Admin, DM, Player
 - Admins manage users and campaign memberships
 - Players are redirected to the player app automatically; DMs access the full DM interface
+- During active combat, players can open an Engaged Enemies drawer showing damaged hostile combatants as Damaged, Bloodied, or Down without exposing exact HP.
 
 ---
 
@@ -106,6 +107,13 @@ The server serves both apps and the API from a single port (default `5174`):
 - Player app: `http://localhost:5174/player/`
 - API: `http://localhost:5174/api/`
 
+Both app footers display the running server version. Beholden checks the version on the
+repository's `main` branch once per day. When a newer version is available, an
+administrator can select **Update Available** to launch `update-beholden.bat`, which performs
+a fast-forward-only pull, installs dependencies, and rebuilds the applications. Restart the
+running server after the batch file finishes. Local tracked changes that conflict with an
+update are left untouched and cause the pull to stop instead of being overwritten.
+
 ### 5. First login
 
 On first run a default admin account is created:
@@ -135,7 +143,8 @@ Change the password immediately via Admin -> Users, or set `BEHOLDEN_ADMIN_USER`
 | `BEHOLDEN_SUPPORT` | `false` | Show a support link in the UI |
 | `BEHOLDEN_RATE_LIMIT_WINDOW_MS` | `900000` | Rate limit window in ms |
 | `BEHOLDEN_RATE_LIMIT_MAX` | `5000` | Max requests per window |
-| `BEHOLDEN_LOG_EGRESS` | `-` | Set to `true` to log per-request egress bytes + duration |
+| `BEHOLDEN_LOG_EGRESS` | `-` | Set to `true` to log large per-request wire egress after compression |
+| `BEHOLDEN_LOG_EGRESS_MIN_BYTES` | `1048576` | Minimum compressed response bytes logged when egress logging is enabled; use `0` temporarily to log every response |
 | `BEHOLDEN_DEBUG` | - | Set to `true` for verbose server logs |
 
 ---

@@ -66,7 +66,7 @@ import { deriveMulticlassSpellSlots } from "@/domain/character/multiclassSpellca
 function emptyProficiencyMap(): ProficiencyMap {
   return {
     skills: [], expertise: [], saves: [], armor: [], weapons: [], tools: [], languages: [],
-    spells: [], invocations: [], maneuvers: [], plans: [],
+    spells: [], invocations: [], maneuvers: [], metamagic: [], plans: [],
   };
 }
 

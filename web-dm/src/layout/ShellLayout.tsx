@@ -5,15 +5,18 @@ import { useStore } from "@/store";
 import { TopBar } from "@/layout/TopBar";
 import { api } from "@/services/api";
 import { FooterGrid, TopBarFrame } from "@beholden/shared/ui";
+import { useAuth } from "@/contexts/AuthContext";
 
 function useUpdateCheck() {
-  const [updateAvailable, setUpdateAvailable] = React.useState(false);
+  const [state, setState] = React.useState({ currentVersion: "1.4.0", updateAvailable: false });
+  const [updating, setUpdating] = React.useState(false);
+  const [message, setMessage] = React.useState("");
   React.useEffect(() => {
     let cancelled = false;
     const checkForUpdate = () => {
-      api<{ ok: boolean; updateAvailable?: boolean }>("/api/update-check")
+      api<{ ok: boolean; currentVersion?: string; updateAvailable?: boolean }>("/api/update-check")
         .then((r) => {
-          if (!cancelled && r.ok && r.updateAvailable) setUpdateAvailable(true);
+          if (!cancelled) setState({ currentVersion: r.currentVersion ?? "1.4.0", updateAvailable: r.ok && r.updateAvailable === true });
         })
         .catch(() => {});
     };
@@ -26,11 +29,24 @@ function useUpdateCheck() {
       if (timeoutId !== undefined) window.clearTimeout(timeoutId);
     };
   }, []);
-  return updateAvailable;
+  const startUpdate = React.useCallback(async () => {
+    if (!window.confirm("Pull and build the latest Beholden release now?")) return;
+    setUpdating(true);
+    try {
+      const result = await api<{ message?: string }>("/api/update", { method: "POST" });
+      setMessage(result.message ?? "Update started. Restart Beholden when it finishes.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not start the update.");
+    } finally {
+      setUpdating(false);
+    }
+  }, []);
+  return { ...state, updating, message, startUpdate };
 }
 
 export function ShellLayout(props: { children: React.ReactNode }) {
   const { state } = useStore();
+  const { user } = useAuth();
 
   function parseBool(v: unknown): boolean | undefined {
     if (typeof v === "boolean") return v;
@@ -45,7 +61,7 @@ export function ShellLayout(props: { children: React.ReactNode }) {
   const supportFromVite = parseBool((import.meta as any).env?.VITE_BEHOLDEN_SUPPORT);
   const showSupport = (supportFromVite ?? supportFromMeta ?? false) === true;
 
-  const updateAvailable = useUpdateCheck();
+  const update = useUpdateCheck();
   const ips = state.meta?.ips ?? [];
   const lanIps = ips.filter((ip) => ip.startsWith("192.168."));
   const primaryIp = lanIps[0] ?? null;
@@ -121,31 +137,31 @@ export function ShellLayout(props: { children: React.ReactNode }) {
         ) : null}
         right={
           <>
-            {updateAvailable && (
-              <a
-                href="https://github.com/cbgfx/beholden"
-                target="_blank"
-                rel="noreferrer"
-                style={{ color: theme.colors.accentPrimary, textDecoration: "none", fontWeight: 600, fontSize: "var(--fs-medium)" }}
-              >
-                Update available →
-              </a>
-            )}
+            {update.updateAvailable && (user?.isAdmin ? (
+              <button type="button" onClick={update.startUpdate} disabled={update.updating} style={{ border: 0, padding: 0, background: "none", cursor: "pointer", color: theme.colors.accentPrimary, fontWeight: 600 }}>
+                {update.updating ? "Starting update…" : "Update Available"}
+              </button>
+            ) : <span style={{ color: theme.colors.accentPrimary, fontWeight: 600 }}>Update Available</span>)}
+            {update.message && <div>{update.message}</div>}
             {primaryIp && (
               <div style={{ display: "grid", gap: 6, justifyItems: "end" }}>
                 <code>http://{primaryIp}:{state.meta?.port}</code>
-                {otherIps.length > 0 && (
-                  <details>
-                    <summary style={{ cursor: "pointer", userSelect: "none" }}>more</summary>
-                    <div style={{ marginTop: 6, display: "grid", gap: 4, justifyItems: "end" }}>
-                      {otherIps.map((ip) => (
-                        <code key={ip}>http://{ip}:{state.meta?.port}</code>
-                      ))}
-                    </div>
-                  </details>
-                )}
+                <div style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "flex-end" }}>
+                  {otherIps.length > 0 && (
+                    <details>
+                      <summary style={{ cursor: "pointer", userSelect: "none" }}>more</summary>
+                      <div style={{ marginTop: 6, display: "grid", gap: 4, justifyItems: "end" }}>
+                        {otherIps.map((ip) => (
+                          <code key={ip}>http://{ip}:{state.meta?.port}</code>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+                  <span>v{update.currentVersion}</span>
+                </div>
               </div>
             )}
+            {!primaryIp && <div>v{update.currentVersion}</div>}
           </>
         }
       />

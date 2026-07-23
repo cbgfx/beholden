@@ -1,7 +1,7 @@
 import { C } from "@/lib/theme";
 import { ABILITY_KEYS, ABILITY_LABELS } from "@/views/character-creator/constants/CharacterCreatorConstants";
 import { abilityMod } from "@/views/character-creator/utils/CharacterCreatorUtils";
-import { resolvedScores } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
+import { deriveRaceAbilityBonuses, resolvedScores } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
 import { detailBoxStyle } from "@/views/character-creator/shared/CharacterCreatorStyles";
 import type { FormState } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
 import type { ClassDetail, BgDetail, RaceDetail } from "@/views/character-creator/utils/CharacterCreatorTypes";
@@ -31,7 +31,8 @@ export function CharacterCreatorSideSummary({
   fallbackRaceSpeed,
   fallbackBgName,
 }: CharacterCreatorSideSummaryProps) {
-  const scores = resolvedScores(form, featAbilityBonuses);
+  const raceAbilityBonuses = deriveRaceAbilityBonuses(raceDetail, raceDetail?.parsedChoices?.abilityScoreChoice, form);
+  const scores = resolvedScores(form, featAbilityBonuses, raceAbilityBonuses);
   const className = classDetail?.name ?? fallbackClassName;
   const classHd = classDetail?.hd ?? fallbackClassHd ?? null;
   const raceName = raceDetail?.name ?? fallbackRaceName;

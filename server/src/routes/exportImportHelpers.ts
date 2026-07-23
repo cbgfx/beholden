@@ -345,6 +345,7 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
           deathSaves: (raw["deathSaves"] as StoredEncounterActor["deathSaves"]) ?? DEFAULT_DEATH_SAVES,
           usedSpellSlots: (raw["usedSpellSlots"] as Record<string, number> | undefined) ?? {},
           attackOverrides: (raw["attackOverrides"] as StoredEncounterActor["attackOverrides"]) ?? null,
+          ...(typeof raw["description"] === "string" ? { description: raw["description"] } : {}),
           createdAt: Number(raw["createdAt"] ?? Date.now()),
           updatedAt: Number(raw["updatedAt"] ?? Date.now()),
         };

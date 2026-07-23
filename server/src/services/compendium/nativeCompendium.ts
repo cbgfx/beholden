@@ -270,6 +270,13 @@ export function previewNativeCompendiumDocument(
 ): NativeCompendiumPreview {
   const batches = parseNativeCompendiumDocument(input);
   assertNativeCompendiumGuardrails(db, batches);
+  return previewValidatedNativeCompendiumBatches(db, batches);
+}
+
+export function previewValidatedNativeCompendiumBatches(
+  db: Database.Database,
+  batches: NativeCompendiumBatch[],
+): NativeCompendiumPreview {
   const existingByCategory = new Map<NativeCompendiumCategory, Set<string>>();
   const previewBatches = batches.map((batch) => {
     const existing = existingByCategory.get(batch.category)
@@ -312,6 +319,103 @@ export function exportNativeCompendiumBundle(
   } as NativeCompendiumBundle;
   for (const batch of batches) document[batch.category] = batch.entries;
   return document;
+}
+
+const exportQueries: Partial<Record<NativeCompendiumCategory, string>> = {
+  monsters: "SELECT id, ruleset, name, name_key, cr, cr_numeric, type_key, type_full, size, environment, data_json FROM compendium_monsters ORDER BY name COLLATE NOCASE",
+  items: "SELECT id, ruleset, name, name_key, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json FROM compendium_items ORDER BY name COLLATE NOCASE",
+  spells: "SELECT id, ruleset, name, name_key, level, school, ritual, concentration, components, classes, data_json FROM compendium_spells ORDER BY name COLLATE NOCASE",
+  classTalents: "SELECT id, ruleset, name, name_key, kind, data_json FROM compendium_class_talents ORDER BY kind, name COLLATE NOCASE",
+  classes: "SELECT id, ruleset, name, name_key, hd, data_json FROM compendium_classes ORDER BY name COLLATE NOCASE",
+  species: "SELECT id, ruleset, name, name_key, size, speed, data_json FROM compendium_races ORDER BY name COLLATE NOCASE",
+  backgrounds: "SELECT id, ruleset, name, name_key, data_json FROM compendium_backgrounds ORDER BY name COLLATE NOCASE",
+  feats: "SELECT id, ruleset, name, name_key, data_json FROM compendium_feats ORDER BY name COLLATE NOCASE",
+};
+
+/** Iterates exported entries without retaining a category-sized database result array. */
+export function* iterateNativeCompendiumEntries(
+  db: Database.Database,
+  category: NativeCompendiumCategory,
+): Generator<JsonRecord> {
+  const query = exportQueries[category];
+  if (query) {
+    for (const row of db.prepare(query).iterate() as Iterable<JsonRecord>) {
+      yield mergeExportEntry(category, row);
+    }
+    return;
+  }
+
+  if (category === "decks") {
+    const rows = db.prepare(
+      "SELECT id, ruleset, deck_name, deck_key, card_name, card_key, card_text, sort_index FROM compendium_deck_cards ORDER BY deck_name COLLATE NOCASE, sort_index, card_name COLLATE NOCASE",
+    ).iterate() as Iterable<JsonRecord>;
+    for (const row of rows) {
+      yield {
+        schemaVersion: GRAND_COMPENDIUM_SCHEMA_VERSION,
+        ruleset: row.ruleset,
+        id: row.id,
+        deckName: row.deck_name,
+        deckKey: row.deck_key,
+        cardName: row.card_name,
+        cardKey: row.card_key ?? null,
+        text: row.card_text ?? null,
+        sort: row.sort_index,
+      };
+    }
+    return;
+  }
+
+  const spaces = db.prepare(
+    "SELECT id, ruleset, name, name_key, squares, label, sort_index FROM compendium_bastion_spaces ORDER BY sort_index, name COLLATE NOCASE",
+  ).iterate() as Iterable<JsonRecord>;
+  for (const row of spaces) {
+    yield {
+      schemaVersion: GRAND_COMPENDIUM_SCHEMA_VERSION,
+      ruleset: row.ruleset,
+      kind: "space",
+      id: row.id,
+      name: row.name,
+      nameKey: row.name_key,
+      squares: row.squares ?? null,
+      label: row.label ?? null,
+      sort: row.sort_index,
+    };
+  }
+  const orders = db.prepare(
+    "SELECT id, ruleset, order_name, order_key, sort_index FROM compendium_bastion_orders ORDER BY sort_index, order_name COLLATE NOCASE",
+  ).iterate() as Iterable<JsonRecord>;
+  for (const row of orders) {
+    yield {
+      schemaVersion: GRAND_COMPENDIUM_SCHEMA_VERSION,
+      ruleset: row.ruleset,
+      kind: "order",
+      id: row.id,
+      name: row.order_name,
+      nameKey: row.order_key,
+      sort: row.sort_index,
+    };
+  }
+  const facilities = db.prepare(
+    "SELECT id, ruleset, name, name_key, facility_type, minimum_level, prerequisite, orders_json, space, hirelings, allow_multiple, description, data_json FROM compendium_bastion_facilities ORDER BY facility_type, minimum_level, name COLLATE NOCASE",
+  ).iterate() as Iterable<JsonRecord>;
+  for (const row of facilities) {
+    yield {
+      schemaVersion: GRAND_COMPENDIUM_SCHEMA_VERSION,
+      ruleset: row.ruleset,
+      kind: "facility",
+      id: row.id,
+      name: row.name,
+      nameKey: row.name_key,
+      facilityType: row.facility_type,
+      minimumLevel: row.minimum_level,
+      prerequisite: row.prerequisite ?? null,
+      orders: parseJsonArray(row.orders_json),
+      space: row.space ?? null,
+      hirelings: row.hirelings ?? null,
+      allowMultiple: bool(row.allow_multiple),
+      description: row.description ?? null,
+    };
+  }
 }
 
 export function exportNativeCompendiumBatch(
@@ -439,11 +543,10 @@ export function exportNativeCompendiumBatch(
   };
 }
 
-export function importNativeCompendiumBatch(
+function importParsedNativeCompendiumBatch(
   db: Database.Database,
-  input: NativeCompendiumBatch | unknown,
+  batch: NativeCompendiumBatch,
 ): NativeCompendiumImportResult {
-  const batch = parseNativeCompendiumBatch(input);
   const entries = batch.entries;
 
   db.transaction(() => {
@@ -701,16 +804,20 @@ export function importNativeCompendiumBatch(
   };
 }
 
-export function importNativeCompendiumDocument(
+export function importNativeCompendiumBatch(
   db: Database.Database,
-  input: NativeCompendiumDocument | unknown,
+  input: NativeCompendiumBatch | unknown,
+): NativeCompendiumImportResult {
+  return importParsedNativeCompendiumBatch(db, parseNativeCompendiumBatch(input));
+}
+
+/** Imports server-staged batches that already passed schema and cross-reference validation. */
+export function importValidatedNativeCompendiumBatches(
+  db: Database.Database,
+  batches: NativeCompendiumBatch[],
 ): NativeCompendiumDocumentImportResult {
-  const batches = parseNativeCompendiumDocument(input);
-  assertNativeCompendiumGuardrails(db, batches);
   const results = db.transaction(() => {
-    const imported = batches.map((batch) => importNativeCompendiumBatch(db, batch));
-    // Category migrations can change an earlier batch's final count (ClassTalents
-    // removes its legacy Spell rows), so totals must be measured after all writes.
+    const imported = batches.map((batch) => importParsedNativeCompendiumBatch(db, batch));
     return imported.map((result) => ({
       ...result,
       total: countNativeCategory(db, result.category),
@@ -721,6 +828,15 @@ export function importNativeCompendiumDocument(
     total: results.reduce((total, result) => total + result.total, 0),
     batches: results,
   };
+}
+
+export function importNativeCompendiumDocument(
+  db: Database.Database,
+  input: NativeCompendiumDocument | unknown,
+): NativeCompendiumDocumentImportResult {
+  const batches = parseNativeCompendiumDocument(input);
+  assertNativeCompendiumGuardrails(db, batches);
+  return importValidatedNativeCompendiumBatches(db, batches);
 }
 
 function countNativeCategory(

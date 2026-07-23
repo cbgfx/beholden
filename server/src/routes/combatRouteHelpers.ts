@@ -30,8 +30,14 @@ export const AddInpcBody = z.object({
   inpcId: z.string(),
 });
 
+export const AddWorldActionBody = z.object({
+  name: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(4000).optional(),
+});
+
 export const CombatantUpdateBody = z.object({
   label: z.string().optional(),
+  description: z.string().max(4000).optional(),
   initiative: z.number().nullable().optional(),
   friendly: z.boolean().optional(),
   color: z.string().optional(),

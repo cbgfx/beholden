@@ -18,6 +18,7 @@ import { deriveCreatorSheetFacts } from "@/views/character-creator/utils/Charact
 import { parseAppliedClassFeatureEffects, parseAppliedSpeciesTraitEffects } from "@/views/character-creator/utils/CharacterCreatorClassFeatureUtils";
 import {
   deriveFeatGrantedAbilityBonuses,
+  deriveRaceAbilityBonuses,
   deriveTotalFeatAbilityBonuses,
   resolvedScores,
   type FormState,
@@ -195,7 +196,8 @@ export async function buildCreatorSubmissionBody(args: {
     submitFeatGrantedAbilityBonuses,
     form.chosenLevelUpFeats,
   );
-  const scores = resolvedScores(form, submitFeatAbilityBonuses);
+  const submitRaceAbilityBonuses = deriveRaceAbilityBonuses(raceDetail, raceDetail?.parsedChoices?.abilityScoreChoice, form);
+  const scores = resolvedScores(form, submitFeatAbilityBonuses, submitRaceAbilityBonuses);
   const selectedFeatureNames = buildAppliedCharacterFeatures({
     charData: {
       classes: [{
@@ -305,6 +307,9 @@ export async function buildCreatorSubmissionBody(args: {
       chosenRaceFeatId: form.chosenRaceFeatId,
       chosenRaceSize: form.chosenRaceSize,
       chosenRaceSpellAbility: form.chosenRaceSpellAbility,
+      chosenRaceAbilityChoices: form.chosenRaceAbilityChoices,
+      raceAbilityMode: form.raceAbilityMode,
+      raceAbilityBonuses: form.raceAbilityBonuses,
       chosenBgOriginFeatId: form.chosenBgOriginFeatId,
       chosenSkills: form.chosenSkills,
       chosenClassLanguages: form.chosenClassLanguages,

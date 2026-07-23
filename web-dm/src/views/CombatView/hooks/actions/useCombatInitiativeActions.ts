@@ -24,9 +24,9 @@ export function useCombatInitiativeActions({
 }: Args) {
   const rollInitiativeForMonsters = React.useCallback(async () => {
     if (!encounterId) return;
-    // Roll initiative for monsters + iNPCs that do not have a value yet.
+    // Roll initiative for monsters, iNPCs, and world actions that do not have a value yet.
     const targets = orderedCombatants.filter((c) => {
-      if (c.baseType !== "monster" && c.baseType !== "inpc") return false;
+      if (c.baseType !== "monster" && c.baseType !== "inpc" && c.baseType !== "world") return false;
       if (c.initiative == null) return true;
       return !Number.isFinite(Number(c.initiative));
     });
@@ -38,6 +38,7 @@ export function useCombatInitiativeActions({
     // Ensure monster details are available (for Dex mod).
     const localCache: Record<string, MonsterDetail> = { ...monsterCache };
     for (const c of targets) {
+      if (c.baseType === "world") continue;
       const monsterId = c.baseType === "inpc" ? (inpcsById[c.baseId]?.monsterId ?? null) : c.baseId;
       if (!monsterId) continue;
       if (!localCache[monsterId]) {
@@ -53,6 +54,11 @@ export function useCombatInitiativeActions({
 
     // Apply initiative to monsters/iNPCs.
     for (const c of targets) {
+      if (c.baseType === "world") {
+        const init = 1 + Math.floor(Math.random() * 20);
+        try { await putEncounterCombatant(encounterId, c.id, { initiative: init }); } catch { /* manual fallback */ }
+        continue;
+      }
       const monsterId = c.baseType === "inpc" ? (inpcsById[c.baseId]?.monsterId ?? null) : c.baseId;
       const d = monsterId ? localCache[monsterId] ?? null : null;
       const mod = dexModFromMonster(d);

@@ -120,7 +120,7 @@ export function useLevelUpChoiceData(args: {
 
   React.useEffect(() => {
     const spellBackedDefinitions = growthChoiceDefinitions.filter((definition) => definition.spellChoice);
-    const includeSpecialSpellRows = growthChoiceDefinitions.some((definition) => definition.category === "maneuver");
+    const includeSpecialSpellRows = growthChoiceDefinitions.some((definition) => definition.category === "maneuver" || definition.category === "metamagic");
     let alive = true;
     if (growthChoiceDefinitions.length === 0) {
       setGrowthOptionEntriesByKey((prev) => hasKeys(prev) ? {} : prev);

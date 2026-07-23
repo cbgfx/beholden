@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useStore } from "@/store";
 import { api } from "@/services/api";
 import { fetchCampaignCharacters } from "@/services/actorApi";
-import type { CampaignCharacter, INpc } from "@/domain/types/domain";
+import type { CampaignCharacter, Encounter, INpc } from "@/domain/types/domain";
 import { useConfirm } from "@/confirm/ConfirmContext";
 import { CombatRosterHeader } from "@/views/CombatRosterView/components/CombatRosterHeader";
 import { useEncounterCombatants } from "@/views/CombatView/hooks/useEncounterCombatants";
@@ -14,6 +14,7 @@ import { useEnsureRosterMonsterDetails } from "@/views/CombatRosterView/hooks/us
 import { useRosterMetrics } from "@/views/CombatRosterView/hooks/useRosterMetrics";
 import { useEncounterActions } from "@/app/useEncounterActions";
 import { useCampaignActions } from "@/app/useCampaignActions";
+import { fetchEncounter } from "@/services/encounterApi";
 
 export function CombatRosterView() {
   const { campaignId, encounterId } = useParams();
@@ -21,6 +22,23 @@ export function CombatRosterView() {
   const { state, dispatch } = useStore();
   const confirm = useConfirm();
   const { refresh } = useEncounterCombatants(encounterId, dispatch);
+  const [loadedEncounter, setLoadedEncounter] = React.useState<Encounter | null>(null);
+
+  React.useEffect(() => {
+    if (!encounterId) return;
+    const controller = new AbortController();
+    void fetchEncounter(encounterId, controller.signal)
+      .then((loaded) => {
+        setLoadedEncounter(loaded);
+        dispatch({ type: "upsertEncounter", encounter: loaded });
+      })
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          console.error("Failed to load encounter", error);
+        }
+      });
+    return () => controller.abort();
+  }, [dispatch, encounterId]);
 
   const combatants = React.useMemo(() => {
     if (!encounterId) return [];
@@ -29,8 +47,8 @@ export function CombatRosterView() {
 
   const encounter = React.useMemo(() => {
     if (!encounterId) return null;
-    return state.encounters.find((e) => e.id === encounterId) ?? null;
-  }, [encounterId, state.encounters]);
+    return state.encounters.find((e) => e.id === encounterId) ?? loadedEncounter;
+  }, [encounterId, loadedEncounter, state.encounters]);
 
   useEnsureRosterMonsterDetails({ combatants, inpcs: state.inpcs, monsterDetails: state.monsterDetails, dispatch });
 
@@ -77,7 +95,7 @@ export function CombatRosterView() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <CombatRosterHeader
-        backTo={encounter ? `/campaign/${encounter.campaignId}` : "/"}
+        backTo={campaignId ? `/campaign/${campaignId}` : "/"}
         title={encounter ? `Combat Roster: ${encounter.name}` : "Combat Roster"}
         totalXp={totalXp}
         difficulty={difficulty}
@@ -107,6 +125,7 @@ export function CombatRosterView() {
           xpByCombatantId={xpByCombatantId}
           playersById={playersById}
           onAddMonster={encounterActions.addMonster}
+          onAddWorldAction={encounterActions.addWorldAction}
           onAddAllPlayers={encounterActions.addAllPlayers}
           onOpenCombat={() => encounterId && nav(campaignId ? `/campaign/${campaignId}/combat/${encounterId}` : `/combat/${encounterId}`)}
           onEditCombatant={(combatantId) =>

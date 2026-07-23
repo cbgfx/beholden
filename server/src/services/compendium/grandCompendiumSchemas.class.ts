@@ -47,11 +47,13 @@ const ClassFeatureChoiceSchema = z.discriminatedUnion("kind", [
     kind: z.literal("expertise"),
     known: z.record(z.string().regex(/^(?:[1-9]|1[0-9]|20)$/u), z.number().int().positive()),
     from: z.array(z.string().min(1)).min(1).optional(),
+    /** This entry unlocks re-picking one previously chosen Expertise skill/tool instead of increasing the total known (e.g. Bardic Versatility). */
+    replace: z.literal(true).optional(),
   }).strict(),
   z.object({
     id: z.string().regex(/^fc_[a-z0-9_]+$/u),
     kind: z.literal("replacement"),
-    target: z.enum(["maneuver"]),
+    target: z.enum(["maneuver", "metamagic", "fighting_style", "pact_boon"]),
     count: z.number().int().positive().default(1),
   }).strict(),
   z.object({

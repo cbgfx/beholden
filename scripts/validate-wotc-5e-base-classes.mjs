@@ -26,7 +26,58 @@ const fighterMartialVersatility = classes.find((entry) => entry.name === "Fighte
 requireFact(fighterMartialVersatility.length === 7, `Fighter: expected 7 Martial Versatility features, found ${fighterMartialVersatility.length}.`);
 for (const feature of fighterMartialVersatility) {
   requireFact(feature.choices?.some((choice) => choice.kind === "replacement" && choice.target === "maneuver" && choice.count === 1), "Fighter: Martial Versatility is missing its typed maneuver replacement.");
-  requireFact(feature.resolution === "mixed", "Fighter: Martial Versatility must remain mixed until Fighting Style replacement is structured.");
+  requireFact(feature.choices?.some((choice) => choice.kind === "replacement" && choice.target === "fighting_style" && choice.count === 1), "Fighter: Martial Versatility is missing its typed Fighting Style replacement.");
+  requireFact(feature.resolution === "automatic", "Fighter: Martial Versatility should be automatic now that both its maneuver and Fighting Style branches are structured.");
+}
+
+for (const className of ["Paladin", "Ranger"]) {
+  const martialVersatility = byName.get(className)?.levels
+    .flatMap((level) => (level.features ?? []).filter((feature) => feature.name === "Martial Versatility")) ?? [];
+  requireFact(martialVersatility.length === 5, `${className}: expected 5 Martial Versatility features, found ${martialVersatility.length}.`);
+  for (const feature of martialVersatility) {
+    requireFact(feature.choices?.some((choice) => choice.kind === "replacement" && choice.target === "fighting_style" && choice.count === 1), `${className}: Martial Versatility is missing its typed Fighting Style replacement.`);
+    requireFact(feature.resolution === "automatic", `${className}: Martial Versatility should be automatic now that its Fighting Style branch is structured.`);
+  }
+}
+
+const mysticArcanumSpellLevelByFeatureLevel = { 11: 6, 13: 7, 15: 8, 17: 9 };
+const warlockMysticArcanum = byName.get("Warlock")?.levels
+  .flatMap((level) => (level.features ?? []).filter((feature) => /^Mystic Arcanum \(/.test(feature.name)).map((feature) => ({ level: level.level, feature }))) ?? [];
+requireFact(warlockMysticArcanum.length === 4, `Warlock: expected 4 Mystic Arcanum features, found ${warlockMysticArcanum.length}.`);
+for (const { level, feature } of warlockMysticArcanum) {
+  const expectedSpellLevel = mysticArcanumSpellLevelByFeatureLevel[level];
+  const choice = feature.choices?.find((entry) => entry.kind === "spell" && entry.level === expectedSpellLevel && entry.replace === true && entry.freeCast === true);
+  requireFact(choice?.lists?.includes("sl_warlock"), `Warlock: Mystic Arcanum at level ${level} is missing its typed level-${expectedSpellLevel} spell choice.`);
+  requireFact(feature.resolution === "mixed", `Warlock: Mystic Arcanum at level ${level} should be mixed until ongoing replacement is structured.`);
+}
+
+const warlockEldritchVersatility = byName.get("Warlock")?.levels
+  .flatMap((level) => (level.features ?? []).filter((feature) => feature.name === "Eldritch Versatility").map((feature) => ({ level: level.level, feature }))) ?? [];
+requireFact(warlockEldritchVersatility.length === 5, `Warlock: expected 5 Eldritch Versatility features, found ${warlockEldritchVersatility.length}.`);
+for (const { level, feature } of warlockEldritchVersatility) {
+  requireFact(feature.choices?.some((choice) => choice.kind === "replacement" && choice.target === "pact_boon" && choice.count === 1), "Warlock: Eldritch Versatility is missing its typed Pact Boon replacement.");
+  const expectedResolution = level < 12 ? "automatic" : "mixed";
+  requireFact(feature.resolution === expectedResolution, `Warlock: Eldritch Versatility at level ${level} should be ${expectedResolution}.`);
+}
+
+const bardBardicVersatility = byName.get("Bard")?.levels
+  .flatMap((level) => (level.features ?? []).filter((feature) => feature.name === "Bardic Versatility")) ?? [];
+requireFact(bardBardicVersatility.length === 5, `Bard: expected 5 Bardic Versatility features, found ${bardBardicVersatility.length}.`);
+for (const feature of bardBardicVersatility) {
+  requireFact(feature.choices?.some((choice) => choice.kind === "expertise" && choice.replace === true), "Bard: Bardic Versatility is missing its typed Expertise replacement.");
+  requireFact(feature.resolution === "automatic", "Bard: Bardic Versatility should be automatic now that both its cantrip and Expertise branches are structured.");
+}
+
+const sorcererMetamagic = byName.get("Sorcerer")?.levels
+  .flatMap((level) => (level.features ?? []).filter((feature) => feature.id === "cf_sorcerer_3_metamagic")) ?? [];
+requireFact(sorcererMetamagic.length === 1 && sorcererMetamagic[0].talent?.replace === true, "Sorcerer: base Metamagic feature is missing its typed replace fact.");
+
+const sorcererSorcerousVersatility = byName.get("Sorcerer")?.levels
+  .flatMap((level) => (level.features ?? []).filter((feature) => feature.name === "Sorcerous Versatility")) ?? [];
+requireFact(sorcererSorcerousVersatility.length === 5, `Sorcerer: expected 5 Sorcerous Versatility features, found ${sorcererSorcerousVersatility.length}.`);
+for (const feature of sorcererSorcerousVersatility) {
+  requireFact(feature.choices?.some((choice) => choice.kind === "replacement" && choice.target === "metamagic" && choice.count === 1), "Sorcerer: Sorcerous Versatility is missing its typed metamagic replacement.");
+  requireFact(feature.resolution === "automatic", "Sorcerer: Sorcerous Versatility should be automatic now that both its cantrip and Metamagic branches are structured.");
 }
 
 requireFact(classes.length === 13, `Expected 13 classes, found ${classes.length}.`);

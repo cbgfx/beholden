@@ -34,6 +34,7 @@ export interface ProficiencyMap {
   spells: TaggedItem[];
   invocations: TaggedItem[];
   maneuvers: TaggedItem[];
+  metamagic: TaggedItem[];
   plans: TaggedItem[];
 }
 

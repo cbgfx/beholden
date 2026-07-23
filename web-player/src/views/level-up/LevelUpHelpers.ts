@@ -97,7 +97,7 @@ export function deriveCharProficiencies(char: Character | null): {
     skills: _arr(_cp?.skills), expertise: _arr(_cp?.expertise), saves: _arr(_cp?.saves),
     tools: _arr(_cp?.tools), languages: _arr(_cp?.languages), armor: _arr(_cp?.armor),
     weapons: _arr(_cp?.weapons), spells: _arr(_cp?.spells), invocations: _arr(_cp?.invocations),
-    maneuvers: _arr(_cp?.maneuvers), plans: _arr(_cp?.plans),
+    maneuvers: _arr(_cp?.maneuvers), metamagic: _arr(_cp?.metamagic), plans: _arr(_cp?.plans),
   } as ProficiencyMap;
   return {
     charProficiencies,

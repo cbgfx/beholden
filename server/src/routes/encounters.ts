@@ -39,6 +39,16 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
     });
   };
 
+  app.get("/api/encounters/:encounterId", memberOrAdmin(db), (req, res) => {
+    const encounterId = requireParam(req, res, "encounterId");
+    if (!encounterId) return;
+    const row = db
+      .prepare(`SELECT ${ENCOUNTER_COLS} FROM encounters WHERE id = ?`)
+      .get(encounterId) as Record<string, unknown> | undefined;
+    if (!row) return res.status(404).json({ ok: false, message: "Encounter not found" });
+    res.json(rowToEncounter(row));
+  });
+
   app.get("/api/adventures/:adventureId/encounters", memberOrAdmin(db), (req, res) => {
     const adventureId = requireParam(req, res, "adventureId");
     if (!adventureId) return;

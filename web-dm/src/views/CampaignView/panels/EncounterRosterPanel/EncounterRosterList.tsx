@@ -1,6 +1,6 @@
 import { theme, withAlpha } from "@/theme/theme";
 import { IconButton } from "@/ui/IconButton";
-import { IconINPC, IconMonster, IconPlayer, IconTrash } from "@/icons";
+import { IconINPC, IconMonster, IconPlayer, IconTrash, IconWorldAction } from "@/icons";
 import { resolveAssetUrl } from "@/services/api";
 
 import type { CombatantVM } from "@/views/CampaignView/panels/EncounterRosterPanel/utils";
@@ -16,14 +16,17 @@ export function EncounterRosterList(props: {
       {props.combatants.map((c) => {
         const isPlayer = c.baseType === "player";
         const isINpc = c.baseType === "inpc";
+        const isWorld = c.baseType === "world";
 
-        const iconColor = isPlayer
+        const iconColor = isWorld
+          ? theme.colors.accentWarning
+          : isPlayer
           ? theme.colors.blue
           : c.friendly
             ? theme.colors.green
             : theme.colors.red;
 
-        const icon = isPlayer ? <IconPlayer /> : isINpc ? <IconINPC /> : <IconMonster />;
+        const icon = isWorld ? <IconWorldAction /> : isPlayer ? <IconPlayer /> : isINpc ? <IconINPC /> : <IconMonster />;
         const meta = formatCombatantMeta(c);
         const imageUrl = resolveAssetUrl(c.imageUrl);
 

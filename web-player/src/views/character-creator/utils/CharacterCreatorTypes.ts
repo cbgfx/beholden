@@ -94,6 +94,8 @@ export interface RaceDetail {
   id: string; name: string; size: string | null; speed: number | null;
   creatureType?: string | null;
   spellAbility?: string | null;
+  /** Fixed 2014-race Ability Score Increase amounts, keyed by ability. Absent for 2024 species. */
+  abilityScoreIncrease?: Record<string, number> | null;
   parsedChoices?: RaceChoices;
   traits: { name: string; text: string; category: string | null; modifier: string[]; scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>; preparedSpellProgression?: PreparedSpellProgressionTable[]; effects?: unknown[] }[];
 }

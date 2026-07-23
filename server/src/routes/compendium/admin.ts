@@ -3,18 +3,34 @@
 
 import type { Express } from "express";
 import { ZipArchive } from "archiver";
+import { finished } from "node:stream/promises";
 import type { ServerContext } from "../../server/context.js";
 import { requireAdmin } from "../../middleware/auth.js";
 import {
-  exportNativeCompendiumBundle,
   importNativeCompendiumDocument,
+  importValidatedNativeCompendiumBatches,
   isNativeCompendiumCategory,
   NATIVE_COMPENDIUM_CATEGORIES,
-  previewNativeCompendiumDocument,
+  parseNativeCompendiumDocument,
+  previewValidatedNativeCompendiumBatches,
 } from "../../services/compendium/nativeCompendium.js";
+import { assertNativeCompendiumGuardrails } from "../../services/compendium/nativeCompendiumGuardrails.js";
+import { compendiumUploadDirectory } from "../../lib/upload.js";
+import { consumeCompendiumPreview, stageCompendiumPreview } from "../../services/compendium/stagedCompendiumPreview.js";
+import { nativeCompendiumExportFilename, streamNativeCompendiumCategory } from "../../services/compendium/nativeCompendiumStreaming.js";
 
 export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
+  const previewDirectory = compendiumUploadDirectory(ctx.paths.dataDir);
+
+  function broadcastImport(out: ReturnType<typeof importNativeCompendiumDocument>): void {
+    ctx.broadcast("compendium:changed", {
+      nativeImported: true,
+      category: out.batches.length === 1 ? out.batches[0]?.category ?? "unknown" : "bundle",
+      imported: out.imported,
+      total: out.total,
+    });
+  }
 
   app.delete("/api/compendium", requireAdmin, (_req, res) => {
     db.transaction(() => {
@@ -35,18 +51,19 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
     res.json({ ok: true });
   });
 
-  app.get("/api/compendium/native/:category/export", requireAdmin, (req, res) => {
+  app.get("/api/compendium/native/:category/export", requireAdmin, (req, res, next) => {
     const category = String(req.params.category ?? "");
     if (!isNativeCompendiumCategory(category)) {
       return res.status(400).json({ ok: false, message: "Unknown compendium category." });
     }
-    const document = exportNativeCompendiumBundle(db, [category], { includeEmpty: true });
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.setHeader(
       "Content-Disposition",
       `attachment; filename=beholden-compendium-${category}.json`,
     );
-    res.send(JSON.stringify(document, null, 2));
+    const stream = streamNativeCompendiumCategory(db, category);
+    stream.on("error", next);
+    stream.pipe(res);
   });
 
   app.get("/api/compendium/native/export-all.zip", requireAdmin, async (_req, res, next) => {
@@ -59,10 +76,10 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
     );
     archive.pipe(res);
     for (const category of NATIVE_COMPENDIUM_CATEGORIES) {
-      const document = exportNativeCompendiumBundle(db, [category], { includeEmpty: true });
-      archive.append(JSON.stringify(document, null, 2), {
-        name: `beholden-compendium-${category}.json`,
-      });
+      const stream = streamNativeCompendiumCategory(db, category);
+      archive.append(stream, { name: nativeCompendiumExportFilename(category) });
+      // Do not queue multiple active SQLite iterators behind the archive.
+      await finished(stream);
     }
     await archive.finalize();
   });
@@ -89,18 +106,30 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
         return res.status(400).json({ ok: false, message: "Invalid JSON." });
       }
       const out = importNativeCompendiumDocument(db, document);
-      ctx.broadcast("compendium:changed", {
-        nativeImported: true,
-        category: out.batches.length === 1 ? out.batches[0]?.category ?? "unknown" : "bundle",
-        imported: out.imported,
-        total: out.total,
-      });
+      broadcastImport(out);
       return res.json({ ok: true, ...out });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Native compendium import failed.";
       return res.status(400).json({ ok: false, message });
     } finally {
       removeUploadedFile(req.file);
+    }
+  });
+
+  app.post("/api/compendium/native/import-preview", requireAdmin, (req, res) => {
+    const previewToken = String(req.body?.previewToken ?? "");
+    try {
+      const out = consumeCompendiumPreview(previewDirectory, previewToken, (batches) => {
+        // Schema parsing is reused from preview. Guardrails are intentionally refreshed
+        // because referenced compendium rows may have changed during the preview window.
+        assertNativeCompendiumGuardrails(db, batches);
+        return importValidatedNativeCompendiumBatches(db, batches);
+      });
+      broadcastImport(out);
+      return res.json({ ok: true, ...out });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Staged compendium import failed.";
+      return res.status(400).json({ ok: false, message });
     }
   });
 
@@ -113,7 +142,11 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
       } catch {
         return res.status(400).json({ ok: false, message: "Invalid JSON." });
       }
-      return res.json({ ok: true, ...previewNativeCompendiumDocument(db, document) });
+      const batches = parseNativeCompendiumDocument(document);
+      assertNativeCompendiumGuardrails(db, batches);
+      const preview = previewValidatedNativeCompendiumBatches(db, batches);
+      const previewToken = stageCompendiumPreview(previewDirectory, req.file.path, batches);
+      return res.json({ ok: true, ...preview, previewToken });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Native compendium preview failed.";
       return res.status(400).json({ ok: false, message });

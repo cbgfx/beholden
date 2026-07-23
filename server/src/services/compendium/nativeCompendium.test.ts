@@ -11,6 +11,7 @@ import {
   exportNativeCompendiumBundle,
   importNativeCompendiumBatch,
   importNativeCompendiumDocument,
+  iterateNativeCompendiumEntries,
   parseNativeCompendiumBatch,
   parseNativeCompendiumDocument,
   previewNativeCompendiumDocument,
@@ -207,6 +208,7 @@ test("native compendium round-trips every category", () => {
       assert.equal(exported.format, "beholden.compendium");
       assert.equal(exported.schema, "grand");
       assert.equal(exported.category, category);
+      assert.deepEqual(Array.from(iterateNativeCompendiumEntries(db, category)), exported.entries);
     }
 
     const monster = exportNativeCompendiumBatch(db, "monsters").entries[0];

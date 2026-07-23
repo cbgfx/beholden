@@ -74,8 +74,8 @@ export function CampaignView(props: {
     const roster = combatants.filter((combatant) => combatant.encounterId === selectedEncounterId);
     return {
       players: roster.filter((combatant) => combatant.baseType === "player").length,
-      friendlies: roster.filter((combatant) => combatant.baseType !== "player" && combatant.friendly).length,
-      hostiles: roster.filter((combatant) => combatant.baseType !== "player" && !combatant.friendly).length,
+      friendlies: roster.filter((combatant) => combatant.baseType !== "player" && combatant.baseType !== "world" && combatant.friendly).length,
+      hostiles: roster.filter((combatant) => combatant.baseType !== "player" && combatant.baseType !== "world" && !combatant.friendly).length,
     };
   }, [combatants, selectedEncounterId]);
 

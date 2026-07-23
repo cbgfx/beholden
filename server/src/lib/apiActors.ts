@@ -209,6 +209,7 @@ export function toEncounterActorDto(
       ac: actor.ac,
       acDetails: actor.acDetails,
       attackOverrides: actor.attackOverrides,
+      ...(actor.description !== undefined ? { description: actor.description } : {}),
     },
     live,
     createdAt: actor.createdAt,

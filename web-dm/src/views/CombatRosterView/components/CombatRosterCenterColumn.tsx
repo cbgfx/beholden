@@ -10,6 +10,7 @@ type Props = {
   xpByCombatantId: Record<string, number>;
   playersById?: Record<string, { imageUrl?: string | null }>;
   onAddMonster: (monsterId: string, qty: number, opts?: AddMonsterOptions) => Promise<void>;
+  onAddWorldAction: (name: string, description?: string) => Promise<void>;
   onAddAllPlayers: () => Promise<void>;
   onOpenCombat: () => void;
   onEditCombatant: (combatantId: string) => void;
@@ -25,6 +26,7 @@ export function CombatRosterCenterColumn(props: Props) {
         xpByCombatantId={props.xpByCombatantId}
         playersById={props.playersById}
         onAddMonster={props.onAddMonster}
+        onAddWorldAction={props.onAddWorldAction}
         onAddAllPlayers={props.onAddAllPlayers}
         onOpenCombat={props.onOpenCombat}
         onEditCombatant={props.onEditCombatant}

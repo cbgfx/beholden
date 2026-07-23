@@ -3,7 +3,7 @@
 import type { EncounterActor } from "@/domain/types/domain";
 import { hasIncapacitatingCondition } from "@beholden/shared/domain";
 import { theme, withAlpha } from "@/theme/theme";
-import { IconINPC, IconMonster, IconPlayer, IconSkull, IconInitiative } from "@/icons";
+import { IconWorldAction, IconINPC, IconMonster, IconPlayer, IconSkull, IconInitiative } from "@/icons";
 import { InitiativeInput } from "@/views/CombatView/panels/CombatOrderPanel/components/InitiativeInput";
 import { TurnBadge } from "@/views/CombatView/panels/CombatOrderPanel/components/TurnBadge";
 import { resolveAssetUrl } from "@/services/api";
@@ -27,7 +27,8 @@ function CombatantAvatar(props: {
     : withAlpha(iconColor, 0.40);
 
   // Explicit JSX — don't use dynamic component variables with these icon types
-  const iconEl = isDead ? <IconSkull size={22} />
+  const iconEl = baseType === "world" ? <IconWorldAction size={22} />
+    : isDead ? <IconSkull size={22} />
     : baseType === "player" ? <IconPlayer size={22} />
     : baseType === "inpc" ? <IconINPC size={22} />
     : <IconMonster size={22} />;
@@ -82,6 +83,7 @@ export function CombatOrderRow(props: {
   const isTarget = c.id === props.targetId;
   const targetAccent = theme.colors.accentPrimary;
   const bulkMode = Boolean(props.bulkMode);
+  const isWorld = c.baseType === "world";
 
   const hpCurrent = Number(c.hpCurrent ?? 0);
   const rawHpMax = Number(c.hpMax ?? 1);
@@ -94,11 +96,12 @@ export function CombatOrderRow(props: {
   const ac = Math.max(0, Number(c.ac ?? 0) + acBonus);
   const displayName = (c.label || c.name || "(Unnamed)").trim();
   const friendly = Boolean(c.friendly);
-  const isDead = hpCurrent <= 0;
+  const isDead = !isWorld && hpCurrent <= 0;
   const isIncapacitated = hasIncapacitatingCondition(c.conditions);
   const dim = isDead && c.baseType !== "player";
 
-  const iconColor = isDead ? theme.colors.muted
+  const iconColor = isWorld ? theme.colors.accentWarning
+    : isDead ? theme.colors.muted
     : c.baseType === "player" ? theme.colors.blue
     : c.color || (friendly ? theme.colors.green : theme.colors.red);
   const activeAccent = iconColor;
@@ -169,7 +172,7 @@ export function CombatOrderRow(props: {
       }}>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px" }}>
-          {bulkMode && (
+          {bulkMode && !isWorld && (
             <div style={{
               flexShrink: 0, width: 18, height: 18, borderRadius: 4,
               border: `2px solid ${props.isBulkSelected ? theme.colors.accentWarning : theme.colors.muted}`,
@@ -196,7 +199,7 @@ export function CombatOrderRow(props: {
               </span>
               {playerName && <span style={{ fontSize: "var(--fs-small)", color: theme.colors.muted }}>({playerName})</span>}
               {statusBadge}
-              <button
+              {!isWorld && <button
                 disabled={isIncapacitated}
                 title={isIncapacitated ? "Reaction unavailable while incapacitated" : c.usedReaction ? "Reaction used — click to restore" : "Reaction available — click to mark used"}
                 onClick={(e) => { e.stopPropagation(); if (!isIncapacitated) props.onToggleReaction(c.id); }}
@@ -212,13 +215,13 @@ export function CombatOrderRow(props: {
                 }}
               >
                 ⚡R
-              </button>
+              </button>}
             </div>
             <div style={{ marginTop: 2 }}>{initDisplay}</div>
           </div>
 
           {/* AC + HP — --fs-body for readability */}
-          <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 12 }}>
+          {!isWorld && <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
               <span style={{ opacity: 0.5, fontSize: "var(--fs-small)" }}>🛡</span>
               <span style={{ fontWeight: 900, fontSize: "var(--fs-body)", color: theme.colors.text, fontVariantNumeric: "tabular-nums" }}>{ac}</span>
@@ -227,11 +230,11 @@ export function CombatOrderRow(props: {
               <span style={{ opacity: 0.5, fontSize: "var(--fs-small)" }}>♥</span>
               <span style={{ fontWeight: 900, fontSize: "var(--fs-body)", color: theme.colors.text, fontVariantNumeric: "tabular-nums" }}>{hpCurrent}/{hpMax}</span>
             </span>
-          </div>
+          </div>}
         </div>
 
         {/* HP bar — flush at bottom of row */}
-        <div style={{ height: 4, background: withAlpha(theme.colors.shadowColor, 0.5), position: "relative" }}>
+        {!isWorld && <div style={{ height: 4, background: withAlpha(theme.colors.shadowColor, 0.5), position: "relative" }}>
           <div style={{ position: "absolute", inset: 0, width: `${pct * 100}%`, background: barColor, transition: "width 150ms ease" }} />
           {tempHp > 0 && (
             <div style={{
@@ -240,7 +243,7 @@ export function CombatOrderRow(props: {
               background: theme.colors.accentHighlight, opacity: 0.8,
             }} />
           )}
-        </div>
+        </div>}
       </div>
     </div>
   );

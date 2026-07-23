@@ -164,7 +164,7 @@ export interface SpellChoiceEffect extends FeatureEffectBase {
 
 export interface SelectionReplacementEffect extends FeatureEffectBase {
   type: "selection_replacement";
-  target: "maneuver";
+  target: "maneuver" | "metamagic" | "fighting_style" | "pact_boon";
   count: ScalingValue;
 }
 

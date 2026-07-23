@@ -1,7 +1,8 @@
 import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 import type { CharacterClassEntry } from "@/views/character/CharacterSheetTypes";
-import { featPrerequisitesMet, invocationPrerequisitesMet, spellLooksLikeDamageSpell } from "@/views/character/CharacterSheetUtils";
+import { featPrerequisitesMet, invocationPrerequisitesMet, resolvePactBoonFromChosenOptionals, spellLooksLikeDamageSpell } from "@/views/character/CharacterSheetUtils";
 import type { ParsedFeatChoiceLike as LevelUpFeatChoiceLike, ParsedFeatDetailLike as SharedLevelUpFeatDetailLike } from "@/views/character-creator/utils/FeatChoiceTypes";
+import type { ExclusiveGroupReplacementChoice } from "@/views/level-up/LevelUpExclusiveChoiceUtils";
 
 export { buildLevelUpPayload } from "./buildLevelUpPayload";
 
@@ -35,6 +36,7 @@ export interface BuildLevelUpPayloadArgs {
       classSpellSelections?: Record<string, { chosenCantrips?: string[]; chosenSpells?: string[]; preparedSpells?: string[]; chosenInvocations?: string[] }>;
       chosenFeatOptions?: Record<string, string[]>;
       chosenFeatureChoices?: Record<string, string[]>;
+      chosenOptionals?: string[];
       selectedFeatureNames?: string[];
       proficiencies?: {
         spells?: LevelUpTaggedEntry[];
@@ -47,6 +49,7 @@ export interface BuildLevelUpPayloadArgs {
         weapons?: LevelUpTaggedEntry[];
         saves?: LevelUpTaggedEntry[];
         maneuvers?: LevelUpTaggedEntry[];
+        metamagic?: LevelUpTaggedEntry[];
         plans?: LevelUpTaggedEntry[];
         [k: string]: unknown;
       };
@@ -71,6 +74,9 @@ export interface BuildLevelUpPayloadArgs {
   allInvocationFeatChoices?: import("@/domain/character/invocationFeatChoices").InvocationFeatChoiceEntry[];
   chosenFeatureChoices: Record<string, string[]>;
   expertiseChoices: Array<{ key: string; source: string }>;
+  expertiseReplacementChoices?: Array<{ key: string; source: string }>;
+  fightingStyleReplacementChoice?: ExclusiveGroupReplacementChoice | null;
+  pactBoonReplacementChoice?: ExclusiveGroupReplacementChoice | null;
   featChoiceEntries: LevelUpFeatChoiceLike[];
   chosenFeatDetail: LevelUpFeatDetailLike | null;
   featSourceLabel: string;
@@ -84,6 +90,7 @@ export interface BuildLevelUpPayloadArgs {
   selectedInvocationSpellEntries?: LevelUpTaggedEntry[];
   selectedInvocationEntries: LevelUpTaggedEntry[];
   selectedManeuverEntries?: LevelUpTaggedEntry[];
+  selectedMetamagicEntries?: LevelUpTaggedEntry[];
   selectedPlanEntries?: LevelUpTaggedEntry[];
   baseScores: Record<string, number>;
   asiMode: "asi" | "feat" | null;
@@ -114,6 +121,7 @@ export interface DeriveAllowedInvocationIdsArgs {
   chosenCantrips: string[];
   chosenInvocations: string[];
   nextLevel: number;
+  chosenOptionals?: string[];
 }
 
 export interface DeriveFeatAbilityBonusesArgs {
@@ -145,6 +153,7 @@ export interface DeriveLevelUpValidationArgs {
   invocCount: number;
   chosenInvocations: string[];
   expertiseChoices: Array<{ key: string; count: number }>;
+  expertiseReplacementChoices: Array<{ key: string; count: number }>;
   chosenExpertise: Record<string, string[]>;
   chosenFeatDetail: {
     id: string;
@@ -170,13 +179,14 @@ export interface DeriveLevelUpValidationArgs {
 }
 
 export function deriveAllowedInvocationIds(args: DeriveAllowedInvocationIdsArgs): Set<string> {
-  const { classCantrips, classInvocations, chosenCantrips, chosenInvocations, nextLevel } = args;
+  const { classCantrips, classInvocations, chosenCantrips, chosenInvocations, nextLevel, chosenOptionals } = args;
   const selectedCantrips = classCantrips.filter((spell) => chosenCantrips.includes(spell.id));
   const hasDamageCantrip = selectedCantrips.some(spellLooksLikeDamageSpell);
   const hasAttackDamageCantrip = selectedCantrips.some((spell) =>
     spellLooksLikeDamageSpell(spell)
     && spell.check === "attack"
   );
+  const chosenPactBoon = resolvePactBoonFromChosenOptionals(chosenOptionals);
 
   return new Set(
     classInvocations
@@ -186,6 +196,7 @@ export function deriveAllowedInvocationIds(args: DeriveAllowedInvocationIdsArgs)
           hasDamageCantrip,
           hasAttackDamageCantrip,
           chosenTalentIds: chosenInvocations,
+          chosenPactBoon,
         })
       )
       .map((invocation) => invocation.id)
@@ -240,7 +251,7 @@ export function deriveHpGain(hpChoice: "roll" | "average" | "manual" | null, hpA
 export function deriveLevelUpValidation(args: DeriveLevelUpValidationArgs) {
   const {
     isAsiLevel, asiMode, asiStats, needsSubclassChoice, subclass, cantripCount, chosenCantrips, spellcaster,
-    prepCount, chosenSpells, invocCount, chosenInvocations, expertiseChoices, chosenExpertise, chosenFeatDetail,
+    prepCount, chosenSpells, invocCount, chosenInvocations, expertiseChoices, expertiseReplacementChoices, chosenExpertise, chosenFeatDetail,
     featChoiceEntries, chosenFeatOptions, nextLevel, className, level, scores, prof, featSearch, featSummaries, hpGain, existingLevelUpFeats, ownedFeatIds,
   } = args;
 
@@ -279,6 +290,10 @@ export function deriveLevelUpValidation(args: DeriveLevelUpValidationArgs) {
   const spellsValid = !spellcaster || prepCount === 0 || chosenSpells.length <= prepCount;
   const invocationsValid = invocCount === 0 || chosenInvocations.length === invocCount;
   const expertiseValid = expertiseChoices.every((choice) => (chosenExpertise[choice.key] ?? []).length === choice.count);
+  const expertiseReplacementValid = expertiseReplacementChoices.every((choice) =>
+    (chosenExpertise[choice.key] ?? []).length === choice.count
+    && (chosenExpertise[`${choice.key}:target`] ?? []).length === choice.count
+  );
   const featValid =
     asiMode !== "feat" ||
     (
@@ -300,6 +315,7 @@ export function deriveLevelUpValidation(args: DeriveLevelUpValidationArgs) {
     spellsValid &&
     invocationsValid &&
     expertiseValid &&
+    expertiseReplacementValid &&
     featValid;
 
   return {
@@ -314,6 +330,7 @@ export function deriveLevelUpValidation(args: DeriveLevelUpValidationArgs) {
     spellsValid,
     invocationsValid,
     expertiseValid,
+    expertiseReplacementValid,
     featValid,
     canConfirm,
   };

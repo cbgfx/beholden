@@ -5,6 +5,7 @@ import { NoteEditDrawer } from "@/views/character/CharacterViewParts";
 import { SHEET_COLOR_PRESETS } from "@/views/character/CharacterViewHelpers";
 import { getExhaustionD20Penalty } from "@/views/character/CharacterExhaustion";
 import type { CharacterViewModel } from "@/views/character/CharacterViewModel";
+import { EngagedEnemiesDrawer } from "@/views/character/EngagedEnemiesDrawer";
 
 export function CharacterViewOverlays({ model }: { model: CharacterViewModel }) {
   const {
@@ -94,6 +95,12 @@ export function CharacterViewOverlays({ model }: { model: CharacterViewModel }) 
             return next;
           });
         }}
+      />
+
+      <EngagedEnemiesDrawer
+        open={ui.engagedEnemiesDrawerOpen}
+        enemies={live.combatStatus?.engagedEnemies ?? []}
+        onClose={() => ui.setEngagedEnemiesDrawerOpen(false)}
       />
     </>
   );

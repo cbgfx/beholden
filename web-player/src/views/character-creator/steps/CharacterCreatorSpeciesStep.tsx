@@ -15,7 +15,7 @@ import { PreparedSpellProgressionBlock } from "@/views/character/CharacterViewPa
 import { parseAppliedSpeciesTraitEffects } from "../utils/CharacterCreatorClassFeatureUtils";
 import { collectDefensesFromEffects, collectSensesFromEffects } from "@/domain/character/parseFeatureEffects";
 import { titleCase } from "@/lib/format/titleCase";
-import { ALL_LANGUAGES, ALL_SKILLS, ALL_TOOLS } from "@/views/character-creator/constants/CharacterCreatorConstants";
+import { ABILITY_KEYS, ABILITY_LABELS, ALL_LANGUAGES, ALL_SKILLS, ALL_TOOLS } from "@/views/character-creator/constants/CharacterCreatorConstants";
 import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
 
 interface RaceSummaryLike {
@@ -28,6 +28,7 @@ interface RaceDetailLike {
   name: string;
   speed: number | null;
   size: string | null;
+  abilityScoreIncrease?: Record<string, number> | null;
   traits: Array<{ name: string; text: string; modifier: string[]; preparedSpellProgression?: PreparedSpellProgressionTable[]; effects?: unknown[] }>;
 }
 
@@ -38,6 +39,7 @@ interface RaceChoiceSetLike {
   toolChoice: { count: number; from: string[] | null } | null;
   languageChoice: { count: number; from: string[] | null } | null;
   spellcastingAbilityChoice: { options: string[] } | null;
+  abilityScoreChoice: { count: number; amount: number; from: string[] | null; flexible?: boolean } | null;
 }
 
 function SourceTag({ value }: { value: string | null | undefined }) {
@@ -62,6 +64,12 @@ function renderSpeciesStep({
   chosenRaceTools,
   chosenRaceLanguages,
   toggleRacePick,
+  chosenRaceAbilityChoices,
+  toggleRaceAbilityChoice,
+  raceAbilityMode,
+  setRaceAbilityMode,
+  raceAbilityBonuses,
+  setRaceAbilityBonus,
   allSkills,
   allTools,
   allLanguages,
@@ -90,6 +98,12 @@ function renderSpeciesStep({
   chosenRaceTools: string[];
   chosenRaceLanguages: string[];
   toggleRacePick: (key: "chosenRaceSkills" | "chosenRaceLanguages" | "chosenRaceTools", item: string, max: number) => void;
+  chosenRaceAbilityChoices: string[];
+  toggleRaceAbilityChoice: (ability: string, max: number) => void;
+  raceAbilityMode: "split" | "even";
+  setRaceAbilityMode: (mode: "split" | "even") => void;
+  raceAbilityBonuses: Record<string, number>;
+  setRaceAbilityBonus: (ability: string, amount: number | null) => void;
   allSkills: string[];
   allTools: string[];
   allLanguages: string[];
@@ -112,6 +126,15 @@ function renderSpeciesStep({
   const missingRaceLanguages = Boolean(languageChoice && chosenRaceLanguages.length < languageChoice.count);
   const missingRaceFeat = Boolean(raceChoices?.hasFeatChoice && !chosenRaceFeatId);
   const missingRaceSpellAbility = Boolean(spellAbilityChoice && !chosenRaceSpellAbility);
+  const abilityChoice = raceChoices?.abilityScoreChoice ?? null;
+  const abilityEvenTarget = abilityChoice?.flexible
+    ? Math.min((abilityChoice.from ?? ABILITY_KEYS).length, Math.max(1, abilityChoice.count))
+    : abilityChoice?.count ?? 0;
+  const missingRaceAbilityChoice = abilityChoice
+    ? abilityChoice.flexible
+      ? (raceAbilityMode === "split" ? Object.keys(raceAbilityBonuses).length !== 2 : Object.keys(raceAbilityBonuses).length !== abilityEvenTarget)
+      : chosenRaceAbilityChoices.length < abilityChoice.count
+    : false;
   // Derived from the species' own trait effects, not a separately-authored vision/resistances
   // field: one fact, one home.
   const raceTraitEffects = raceDetail ? parseAppliedSpeciesTraitEffects(raceDetail) : [];
@@ -120,6 +143,7 @@ function renderSpeciesStep({
   const nextDisabled =
     !selectedRaceId
     || missingRaceSize
+    || missingRaceAbilityChoice
     || missingRaceSkills
     || missingRaceTools
     || missingRaceLanguages
@@ -183,8 +207,132 @@ function renderSpeciesStep({
         </>
       )}
 
-      {raceDetail && raceChoices && (raceChoices.hasChosenSize || skillChoice || toolChoice || languageChoice || raceChoices.hasFeatChoice || spellAbilityChoice) && (
+      {raceDetail && raceChoices && (raceChoices.hasChosenSize || skillChoice || toolChoice || languageChoice || raceChoices.hasFeatChoice || spellAbilityChoice || abilityChoice) && (
         <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 18 }}>
+          {abilityChoice && (() => {
+            const abilityPool = (abilityChoice.from ?? ABILITY_KEYS).map((key) => ({ key, label: ABILITY_LABELS[key as keyof typeof ABILITY_LABELS] ?? key.toUpperCase() }));
+
+            if (!abilityChoice.flexible) {
+              return (
+                <div>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ ...labelStyle, margin: 0 }}>Ability Score Increase <SourceTag value={raceDetail.name} /></div>
+                    <span style={{ fontSize: "var(--fs-small)", color: chosenRaceAbilityChoices.length >= abilityChoice.count ? C.accentHl : C.muted }}>
+                      {chosenRaceAbilityChoices.length} / {abilityChoice.count}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {abilityPool.map(({ key, label }) => {
+                      const sel = chosenRaceAbilityChoices.includes(key);
+                      const locked = !sel && chosenRaceAbilityChoices.length >= abilityChoice.count;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          disabled={locked}
+                          onClick={() => toggleRaceAbilityChoice(key, abilityChoice.count)}
+                          style={{
+                            padding: "6px 16px",
+                            borderRadius: 6,
+                            fontSize: "var(--fs-subtitle)",
+                            cursor: locked ? "default" : "pointer",
+                            border: `1px solid ${sel ? C.accentHl : "rgba(255,255,255,0.12)"}`,
+                            background: sel ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
+                            color: sel ? C.accentHl : locked ? "rgba(160,180,220,0.35)" : C.text,
+                            fontWeight: sel ? 700 : 400,
+                          }}
+                        >
+                          {label}
+                          {sel && abilityChoice.amount !== 1 && <span style={{ marginLeft: 5, fontWeight: 800 }}>+{abilityChoice.amount}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            }
+
+            const mode = raceAbilityMode;
+            const bonuses = raceAbilityBonuses;
+            const bonusCount = Object.keys(bonuses).length;
+            const splitDone = bonusCount === 2;
+            const evenDone = bonusCount === abilityEvenTarget;
+
+            function handleSplitClick(key: string) {
+              const current = bonuses[key];
+              if (current) { setRaceAbilityBonus(key, null); return; }
+              if (bonusCount >= 2) return;
+              setRaceAbilityBonus(key, Object.values(bonuses).includes(2) ? 1 : 2);
+            }
+            function handleEvenClick(key: string) {
+              if (bonuses[key]) { setRaceAbilityBonus(key, null); return; }
+              if (bonusCount < abilityEvenTarget) setRaceAbilityBonus(key, 1);
+            }
+
+            return (
+              <div>
+                <div style={{ marginBottom: 8 }}>
+                  <span style={{ ...labelStyle, display: "inline", margin: 0 }}>Ability Score Increase </span>
+                  <SourceTag value={raceDetail.name} />
+                </div>
+                <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                  {(["split", "even"] as const).map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setRaceAbilityMode(option)}
+                      style={{
+                        padding: "4px 12px",
+                        borderRadius: 20,
+                        cursor: "pointer",
+                        fontSize: "var(--fs-small)",
+                        fontWeight: 600,
+                        border: `1px solid ${mode === option ? C.accentHl : "rgba(255,255,255,0.15)"}`,
+                        background: mode === option ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.04)",
+                        color: mode === option ? C.accentHl : C.muted,
+                      }}
+                    >
+                      {option === "split" ? "+2 / +1" : (abilityEvenTarget < abilityPool.length ? `+1 x${abilityEvenTarget}` : "+1 each")}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 8 }}>
+                  {mode === "split"
+                    ? splitDone ? "All bonuses assigned" : !Object.values(bonuses).includes(2) ? "Click to assign +2" : "Click another for +1"
+                    : evenDone ? "All bonuses assigned" : `Click abilities to assign +1 (${bonusCount}/${abilityEvenTarget})`}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {abilityPool.map(({ key, label }) => {
+                    const bonus = bonuses[key];
+                    const sel = bonus != null;
+                    const canSelect = mode === "split" ? (!sel && bonusCount < 2) : (!sel && bonusCount < abilityEvenTarget);
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => (mode === "split" ? handleSplitClick(key) : handleEvenClick(key))}
+                        style={{
+                          padding: "6px 16px",
+                          borderRadius: 6,
+                          cursor: canSelect || sel ? "pointer" : "default",
+                          border: `1px solid ${sel ? C.accentHl : canSelect ? "rgba(56,182,255,0.35)" : "rgba(255,255,255,0.12)"}`,
+                          background: sel ? "rgba(56,182,255,0.2)" : "rgba(255,255,255,0.055)",
+                          color: sel ? C.accentHl : canSelect ? "rgba(56,182,255,0.7)" : C.muted,
+                          fontSize: "var(--fs-subtitle)",
+                          fontWeight: sel ? 700 : 400,
+                          opacity: !canSelect && !sel ? 0.45 : 1,
+                        }}
+                      >
+                        {label}
+                        {sel && <span style={{ marginLeft: 5, fontWeight: 800 }}>+{bonus}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
           {spellAbilityChoice && (
             <div>
               <div style={{ ...labelStyle, marginBottom: 8 }}>Spellcasting Ability <SourceTag value={raceDetail.name} /></div>
@@ -405,6 +553,16 @@ function renderSpeciesStep({
     <div style={detailBoxStyle}>
       <div style={{ fontWeight: 700, fontSize: "var(--fs-body)", color: C.accentHl, marginBottom: 10 }}>{raceDetail.name}</div>
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 10 }}>
+        {raceDetail.abilityScoreIncrease && Object.keys(raceDetail.abilityScoreIncrease).length > 0 && (
+          <div>
+            <div style={statLabelStyle}>Ability Bonus</div>
+            <div style={statValueStyle}>
+              {Object.entries(raceDetail.abilityScoreIncrease)
+                .map(([key, amount]) => `${(ABILITY_LABELS[key as keyof typeof ABILITY_LABELS] ?? key.toUpperCase()).slice(0, 3).toUpperCase()} +${amount}`)
+                .join(", ")}
+            </div>
+          </div>
+        )}
         {raceDetail.speed != null && <div><div style={statLabelStyle}>Speed</div><div style={statValueStyle}>{raceDetail.speed} ft</div></div>}
         {raceDetail.size && <div><div style={statLabelStyle}>Size</div><div style={statValueStyle}>{raceDetail.size}</div></div>}
         {derivedSenses.length > 0 && <div><div style={statLabelStyle}>Vision</div><div style={statValueStyle}>{derivedSenses.map((s) => `${titleCase(s.kind)} ${s.range}ft`).join(", ")}</div></div>}
@@ -488,6 +646,20 @@ export function renderSpeciesFromContext(ctx: CharacterCreatorStepRenderContext)
     chosenRaceTools: ctx.form.chosenRaceTools,
     chosenRaceLanguages: ctx.form.chosenRaceLanguages,
     toggleRacePick,
+    chosenRaceAbilityChoices: ctx.form.chosenRaceAbilityChoices,
+    toggleRaceAbilityChoice: (ability, max) => ctx.setForm((f) => {
+      const cur = f.chosenRaceAbilityChoices;
+      const sel = cur.includes(ability);
+      return { ...f, chosenRaceAbilityChoices: sel ? cur.filter((x) => x !== ability) : cur.length < max ? [...cur, ability] : cur };
+    }),
+    raceAbilityMode: ctx.form.raceAbilityMode,
+    setRaceAbilityMode: (mode) => ctx.setForm((f) => ({ ...f, raceAbilityMode: mode, raceAbilityBonuses: {} })),
+    raceAbilityBonuses: ctx.form.raceAbilityBonuses,
+    setRaceAbilityBonus: (ability, amount) => ctx.setForm((f) => {
+      const next = { ...f.raceAbilityBonuses };
+      if (amount == null) delete next[ability]; else next[ability] = amount;
+      return { ...f, raceAbilityBonuses: next };
+    }),
     allSkills: ALL_SKILLS.map((skill) => skill.name),
     allTools: ALL_TOOLS,
     allLanguages: ALL_LANGUAGES,

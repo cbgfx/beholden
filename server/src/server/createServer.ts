@@ -23,6 +23,7 @@ import { now, uid } from "../lib/runtime.js";
 import { normalizeKey, parseLeadingInt } from "../lib/text.js";
 import { normalizeHp } from "../services/compendium/normalizeHp.js";
 import { createBroadcaster, createWsServer, sendWsEvent } from "./ws.js";
+import { createEgressLoggingMiddleware, egressLogMinBytes } from "./egressLogging.js";
 import type { ServerContext } from "./context.js";
 import type { BroadcastFn } from "./events.js";
 import { multerErrorMiddleware, zodErrorMiddleware } from "../shared/validate.js";
@@ -77,47 +78,18 @@ export function createServer() {
   app.disable("x-powered-by");
   app.set("etag", "strong");
 
-  // Compress API/static responses to cut egress for large JSON payloads.
-  app.use(compression({ threshold: 1024 }));
-
   const logEgress = String(process.env.BEHOLDEN_LOG_EGRESS ?? "").trim().toLowerCase();
   const shouldLogEgress = logEgress === "1" || logEgress === "true" || logEgress === "yes";
   if (shouldLogEgress) {
-    app.use((req, res, next) => {
-      const startedAt = Date.now();
-      let bytes = 0;
-
-      const originalWrite = res.write.bind(res);
-      const originalEnd = res.end.bind(res);
-
-      res.write = ((chunk: unknown, ...args: unknown[]) => {
-        if (chunk != null) {
-          bytes += Buffer.isBuffer(chunk)
-            ? chunk.length
-            : Buffer.byteLength(String(chunk));
-        }
-        return (originalWrite as (...writeArgs: unknown[]) => unknown)(chunk, ...args);
-      }) as typeof res.write;
-
-      res.end = ((chunk?: unknown, ...args: unknown[]) => {
-        if (chunk != null) {
-          bytes += Buffer.isBuffer(chunk)
-            ? chunk.length
-            : Buffer.byteLength(String(chunk));
-        }
-        return (originalEnd as (...endArgs: unknown[]) => unknown)(chunk, ...args);
-      }) as typeof res.end;
-
-      res.on("finish", () => {
-        const durationMs = Date.now() - startedAt;
-        const mb = (bytes / (1024 * 1024)).toFixed(3);
-        const encoding = res.getHeader("content-encoding") ?? "identity";
-        console.log(`[egress] ${req.method} ${req.originalUrl} -> ${res.statusCode} ${bytes}B (${mb}MB) ${durationMs}ms enc=${encoding}`);
-      });
-
-      next();
-    });
+    // Register before compression so the bytes observed here are the compressed bytes
+    // written to the HTTP response rather than the larger source JSON/body.
+    app.use(createEgressLoggingMiddleware({
+      minBytes: egressLogMinBytes(process.env.BEHOLDEN_LOG_EGRESS_MIN_BYTES),
+    }));
   }
+
+  // Compress API/static responses to cut egress for large JSON payloads.
+  app.use(compression({ threshold: 1024 }));
 
   app.use(express.json({ limit: process.env.BEHOLDEN_JSON_LIMIT ?? "2mb" }));
 

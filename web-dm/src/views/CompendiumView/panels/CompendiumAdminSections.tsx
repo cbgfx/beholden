@@ -32,6 +32,7 @@ export type NativeImportResult = {
 
 export type NativePreviewResult = {
   ok: true;
+  previewToken: string;
   entries: number;
   additions: number;
   replacements: number;

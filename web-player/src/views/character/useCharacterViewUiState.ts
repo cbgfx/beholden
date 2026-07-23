@@ -21,6 +21,7 @@ export function useCharacterViewUiState() {
   const [expandedClassFeatureIds, setExpandedClassFeatureIds] = useState<string[]>([]);
   const [noteDrawer, setNoteDrawer] = useState<{ scope: "player" | "shared"; note: PlayerNote | null } | null>(null);
   const [infoDrawerOpen, setInfoDrawerOpen] = useState(false);
+  const [engagedEnemiesDrawerOpen, setEngagedEnemiesDrawerOpen] = useState(false);
   const [overridesDraft, setOverridesDraft] = useState<SheetOverrides>({ tempHp: 0, acBonus: 0, hpMaxBonus: 0 });
   const [abilityOverridesDraft, setAbilityOverridesDraft] = useState<Partial<Record<AbilKey, number>>>({});
   const [colorDraft, setColorDraft] = useState(C.accentHl);
@@ -45,6 +46,7 @@ export function useCharacterViewUiState() {
     xpPopupOpen, setXpPopupOpen, xpInput, setXpInput, dsSaving, setDsSaving,
     expandedNoteIds, setExpandedNoteIds, expandedClassFeatureIds, setExpandedClassFeatureIds,
     noteDrawer, setNoteDrawer, infoDrawerOpen, setInfoDrawerOpen,
+    engagedEnemiesDrawerOpen, setEngagedEnemiesDrawerOpen,
     overridesDraft, setOverridesDraft, abilityOverridesDraft, setAbilityOverridesDraft,
     colorDraft, setColorDraft, overridesSaving, setOverridesSaving,
     concentrationAlert, setConcentrationAlert, featPickerOpen, setFeatPickerOpen,

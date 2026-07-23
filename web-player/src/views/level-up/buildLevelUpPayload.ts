@@ -5,17 +5,21 @@ import type { BuildLevelUpPayloadArgs } from "./LevelUpUtils";
 import { appendMissingFeatureNotes } from "@/domain/character/featureNoteTemplates";
 import type { PlayerNote } from "@/views/character/CharacterSheetTypes";
 import { selectedInvocationFeatIds } from "@/domain/character/invocationFeatChoices";
+import { applyExclusiveGroupReplacement } from "@/views/level-up/LevelUpExclusiveChoiceUtils";
 
 export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<string, unknown> {
   const {
     char, nextLevel, hpGain, featHpBonus, subclass, chosenCantrips, chosenSpells, chosenInvocations,
-    chosenExpertise, chosenFeatOptions, invocationFeatChoices = [], allInvocationFeatChoices = invocationFeatChoices, chosenFeatureChoices, expertiseChoices, chosenFeatDetail, featSourceLabel,
+    chosenExpertise, chosenFeatOptions, invocationFeatChoices = [], allInvocationFeatChoices = invocationFeatChoices, chosenFeatureChoices, expertiseChoices, expertiseReplacementChoices = [],
+    fightingStyleReplacementChoice = null, pactBoonReplacementChoice = null,
+    chosenFeatDetail, featSourceLabel,
     featSpellChoiceOptions = {},
     newFeatures, classDetailName, selectedCantripEntries, selectedSpellEntries, selectedInvocationEntries,
     selectedClassFeatureSpellEntries = [],
     selectedFeatureProficiencyEntries = {},
     selectedInvocationSpellEntries = [],
     selectedManeuverEntries = [],
+    selectedMetamagicEntries = [],
     selectedPlanEntries = [],
     baseScores, asiMode, asiStats, featAbilityBonuses,
   } = args;
@@ -38,12 +42,30 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
   const existingWeaponEntries = _arr(proficiencies?.weapons);
   const existingSaveEntries = _arr(proficiencies?.saves);
   const existingManeuverEntries = _arr(proficiencies?.maneuvers);
+  const existingMetamagicEntries = _arr(proficiencies?.metamagic);
   const existingPlanEntries = _arr(proficiencies?.plans);
   const classSource = classDetailName ?? char.className;
   const multiclassProficiencies = args.isAddingClass ? args.multiclassProficiencies : undefined;
   const multiclassTagged = (names: string[] | undefined) => (names ?? []).map((name) => ({ name, source: classSource, sourceKey: `class:${targetClassEntryId}` }));
   const selectedExpertiseEntries = expertiseChoices.flatMap((choice) =>
     (chosenExpertise[choice.key] ?? []).map((name) => ({ name, source: choice.source }))
+  );
+  const replacedExpertiseNames = new Set(
+    expertiseReplacementChoices
+      .flatMap((choice) => chosenExpertise[`${choice.key}:target`] ?? [])
+      .map((name) => name.trim().toLowerCase())
+  );
+  const selectedExpertiseReplacementEntries = expertiseReplacementChoices.flatMap((choice) =>
+    (chosenExpertise[choice.key] ?? []).map((name) => ({ name, source: choice.source }))
+  );
+  const existingChosenOptionals = Array.isArray(char.characterData?.chosenOptionals) ? char.characterData.chosenOptionals : [];
+  const nextChosenOptionals = [fightingStyleReplacementChoice, pactBoonReplacementChoice].reduce(
+    (optionals, choice) => applyExclusiveGroupReplacement({
+      chosenOptionals: optionals,
+      choice,
+      selectedOptionId: choice ? chosenFeatureChoices[choice.key]?.[0] ?? null : null,
+    }),
+    existingChosenOptionals,
   );
   const mergeTaggedEntries = <T extends { name?: string; source?: string }>(...groups: T[][]): T[] => {
     const merged = new Map<string, T>();
@@ -182,6 +204,7 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
       ...((char.characterData?.chosenFeatureChoices ?? {}) as Record<string, string[]>),
       ...chosenFeatureChoices,
     },
+    chosenOptionals: nextChosenOptionals,
     selectedFeatureNames: Array.from(featureNames),
     ...(nextPlayerNotes ? { playerNotesList: nextPlayerNotes } : {}),
     proficiencies: {
@@ -238,8 +261,11 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
         ...selectedInvocationEntries.map((entry) => ({ ...entry, classEntryId: targetClassEntryId, sourceKey: `class:${targetClassEntryId}` })),
       ],
       expertise: [
-        ...existingExpertiseEntries.filter((entry) => !expertiseChoices.some((choice) => choice.source === entry.source) && entry.source !== featSourceLabel),
+        ...existingExpertiseEntries
+          .filter((entry) => !expertiseChoices.some((choice) => choice.source === entry.source) && entry.source !== featSourceLabel)
+          .filter((entry) => !replacedExpertiseNames.has(String(entry.name ?? "").trim().toLowerCase())),
         ...selectedExpertiseEntries,
+        ...selectedExpertiseReplacementEntries,
         ...(selectedFeatEntries?.expertise ?? []),
       ],
       maneuvers: selectedManeuverEntries.length > 0 || (selectedFeatEntries?.maneuvers.length ?? 0) > 0
@@ -249,6 +275,12 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
             ...(selectedFeatEntries?.maneuvers ?? []),
           ]
         : existingManeuverEntries,
+      metamagic: selectedMetamagicEntries.length > 0
+        ? [
+            ...existingMetamagicEntries.filter((entry) => !selectedMetamagicEntries.some((selected) => selected.sourceKey && entry.sourceKey === selected.sourceKey)),
+            ...selectedMetamagicEntries,
+          ]
+        : existingMetamagicEntries,
       plans: selectedPlanEntries.length > 0
         ? [
             ...existingPlanEntries.filter((entry) => !selectedPlanEntries.some((selected) => selected.sourceKey && entry.sourceKey === selected.sourceKey)),

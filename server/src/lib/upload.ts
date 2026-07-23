@@ -22,10 +22,14 @@ export const upload = multer({
 
 /** Large compendium bundles are spooled to disk so the request body is not retained in RAM. */
 export function createCompendiumUpload(dataDir: string) {
-  const destination = path.join(dataDir, "tmp", "compendium-uploads");
+  const destination = compendiumUploadDirectory(dataDir);
   fs.mkdirSync(destination, { recursive: true });
   return multer({
     storage: multer.diskStorage({ destination }),
     limits: uploadLimits,
   });
+}
+
+export function compendiumUploadDirectory(dataDir: string): string {
+  return path.join(dataDir, "tmp", "compendium-uploads");
 }

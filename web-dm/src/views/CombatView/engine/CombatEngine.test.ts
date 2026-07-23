@@ -57,6 +57,15 @@ describe("turn navigation skip rules (behaviors 7 & 8)", () => {
     expect(next.activeId).toBe("p1");
   });
 
+  it("keeps a statless world action in normal turn cycling", () => {
+    const ordered = [
+      combatant({ id: "m1", initiative: 20 }),
+      combatant({ id: "world-1", baseType: "world", hpCurrent: null, initiative: 12 }),
+      combatant({ id: "p1", baseType: "player", initiative: 5 }),
+    ];
+    expect(nextTurn(ordered, { round: 1, activeId: "m1" }).activeId).toBe("world-1");
+  });
+
   it("wraps to the next round and re-skips a downed monster going backward too", () => {
     const ordered = [
       combatant({ id: "p1", baseType: "player", hpCurrent: 10, initiative: 20 }),

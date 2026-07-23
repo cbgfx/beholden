@@ -79,7 +79,7 @@ export interface CampaignCharacter {
 
 // Combatants are encounter-scoped instances used by the combat tracker.
 // The server returns a merged view (player combatants hydrate name/hp/ac from the Player record).
-type CombatantBaseType = "player" | "monster" | "inpc";
+type CombatantBaseType = "player" | "monster" | "inpc" | "world";
 
 type CombatantOverrides = SharedCombatOverrides;
 export type ConditionInstance = SharedConditionInstance;
@@ -109,6 +109,7 @@ export interface EncounterActor {
   ac: number | null;
   acDetails: string | null;
   attackOverrides: unknown | null;
+  description?: string;
   conditions: ConditionInstance[];
   deathSaves?: DeathSaves | null;
   usedReaction?: boolean;

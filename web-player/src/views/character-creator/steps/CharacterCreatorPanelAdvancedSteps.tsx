@@ -21,6 +21,7 @@ import {
 } from "@/views/character-creator/constants/CharacterCreatorConstants";
 import { abilityMod } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import {
+  deriveRaceAbilityBonuses,
   getPrimaryAbilityKeys,
   pointBuySpent,
   resolvedScores,
@@ -296,7 +297,8 @@ function renderDerivedStatsStep({
 }
 
 export function renderDerivedStatsFromContext(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
-  const scores = resolvedScores(ctx.form, ctx.selectedFeatAbilityBonuses);
+  const raceAbilityBonuses = deriveRaceAbilityBonuses(ctx.raceDetail, ctx.raceDetail?.parsedChoices?.abilityScoreChoice, ctx.form);
+  const scores = resolvedScores(ctx.form, ctx.selectedFeatAbilityBonuses, raceAbilityBonuses);
   const conMod = abilityMod(scores.con ?? 10);
   const dexMod = abilityMod(scores.dex ?? 10);
   const hd = ctx.effectiveHitDie;
@@ -324,6 +326,7 @@ export function renderDerivedStatsFromContext(ctx: CharacterCreatorStepRenderCon
     { label: "Tools", items: prof.tools },
     { label: "Languages", items: prof.languages },
     { label: "Maneuvers", items: prof.maneuvers },
+    { label: "Metamagic", items: prof.metamagic },
     { label: "Magic Item Plans", items: prof.plans },
     { label: "Spells", items: prof.spells },
     { label: "Invocations", items: prof.invocations },

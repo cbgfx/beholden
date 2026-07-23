@@ -227,6 +227,7 @@ export function classTalentPrerequisiteLabel(
   }
   if (prerequisite.cantrip === "damage") parts.push("a Warlock cantrip that deals damage");
   if (prerequisite.cantrip === "attack_damage") parts.push("a Warlock cantrip that deals damage via an attack roll");
+  if (prerequisite.pactBoon) parts.push(`Pact of the ${prerequisite.pactBoon.charAt(0).toUpperCase()}${prerequisite.pactBoon.slice(1)}`);
   return parts.length > 0 ? parts.join(", ") : null;
 }
 
@@ -234,10 +235,27 @@ export function spellLooksLikeDamageSpell(spell: { name?: string | null; text?: 
   return (spell.rolls ?? []).some((roll) => Array.isArray(roll.effect) || (roll.effect && roll.effect !== "healing" && roll.effect !== "temp_hp"));
 }
 
+export type PactBoon = "blade" | "chain" | "tome" | "talisman";
+
 export interface ClassTalentPrerequisite {
   level?: number;
   talent?: string;
   cantrip?: "damage" | "attack_damage";
+  /** 2014-only: see the schema comment on `ClassTalentSchema.prerequisite.pactBoon`. */
+  pactBoon?: PactBoon;
+}
+
+/** 2014's Pact Boon is a class `choices` pick (not a `ct_` talent id), so its selection lives
+ * in `chosenOptionals` as a `cf_..._pact_of_the_<x>` feature id rather than in the chosen-
+ * invocations list. Extracts which boon (if any) that implies. 5.5e represents Pact Boons as
+ * invocations instead, so this always returns null for 5.5e characters — harmless, since their
+ * invocations gate on `prerequisite.talent`/`chosenTalentIds`, not `pactBoon`. */
+export function resolvePactBoonFromChosenOptionals(chosenOptionals: string[] | null | undefined): PactBoon | null {
+  for (const id of chosenOptionals ?? []) {
+    const match = /pact_of_the_(blade|chain|tome|talisman)/.exec(id);
+    if (match) return match[1] as PactBoon;
+  }
+  return null;
 }
 
 export function invocationPrerequisitesMet(
@@ -247,6 +265,7 @@ export function invocationPrerequisitesMet(
     hasDamageCantrip?: boolean;
     hasAttackDamageCantrip?: boolean;
     chosenTalentIds?: string[];
+    chosenPactBoon?: PactBoon | null;
   }
 ): boolean {
   if (!prerequisite) return true;
@@ -254,6 +273,7 @@ export function invocationPrerequisitesMet(
   if (prerequisite.talent && !(opts.chosenTalentIds ?? []).includes(prerequisite.talent)) return false;
   if (prerequisite.cantrip === "damage" && !opts.hasDamageCantrip) return false;
   if (prerequisite.cantrip === "attack_damage" && !opts.hasAttackDamageCantrip) return false;
+  if (prerequisite.pactBoon && prerequisite.pactBoon !== opts.chosenPactBoon) return false;
   return true;
 }
 

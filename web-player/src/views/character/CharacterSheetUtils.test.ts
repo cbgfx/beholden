@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { featPrerequisitesMet, invocationPrerequisitesMet, normalizeAbilityKey } from "@/views/character/CharacterSheetUtils";
+import { featPrerequisitesMet, invocationPrerequisitesMet, normalizeAbilityKey, resolvePactBoonFromChosenOptionals } from "@/views/character/CharacterSheetUtils";
 
 describe("invocationPrerequisitesMet canonical facts", () => {
   it("requires levels, owned talents, and the exact cantrip capability", () => {
@@ -12,6 +12,28 @@ describe("invocationPrerequisitesMet canonical facts", () => {
 
   it("never derives a prerequisite from display prose", () => {
     expect(invocationPrerequisitesMet(null, { level: 1 })).toBe(true);
+  });
+
+  it("gates 2014's pactBoon prerequisite on the resolved Pact Boon fact, independent of chosenTalentIds", () => {
+    const prerequisite = { level: 12, pactBoon: "blade" as const };
+    expect(invocationPrerequisitesMet(prerequisite, { level: 12, chosenPactBoon: "chain" })).toBe(false);
+    expect(invocationPrerequisitesMet(prerequisite, { level: 12, chosenPactBoon: null })).toBe(false);
+    expect(invocationPrerequisitesMet(prerequisite, { level: 12, chosenPactBoon: "blade" })).toBe(true);
+    // A 5.5e invocation with no pactBoon prerequisite is unaffected by the fact being present or absent.
+    expect(invocationPrerequisitesMet({ talent: "ct_invocation_pact_of_the_blade" }, { level: 5, chosenTalentIds: ["ct_invocation_pact_of_the_blade"], chosenPactBoon: null })).toBe(true);
+  });
+});
+
+describe("resolvePactBoonFromChosenOptionals", () => {
+  it("extracts the chosen 2014 Pact Boon from a cf_ feature id", () => {
+    expect(resolvePactBoonFromChosenOptionals(["cf_warlock_3_pact_boon_pact_of_the_blade"])).toBe("blade");
+    expect(resolvePactBoonFromChosenOptionals(["cf_fighter_1_fighting_style_defense", "cf_warlock_3_pact_boon_pact_of_the_chain"])).toBe("chain");
+  });
+
+  it("returns null when no Pact Boon feature is present, including for 5.5e characters (which choose it as an invocation instead)", () => {
+    expect(resolvePactBoonFromChosenOptionals([])).toBeNull();
+    expect(resolvePactBoonFromChosenOptionals(undefined)).toBeNull();
+    expect(resolvePactBoonFromChosenOptionals(["cf_fighter_1_fighting_style_defense"])).toBeNull();
   });
 });
 

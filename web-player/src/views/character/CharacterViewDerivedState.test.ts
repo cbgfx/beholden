@@ -261,7 +261,7 @@ describe("buildCharacterViewDerivedState", () => {
     args.char.characterData!.proficiencies = {
       skills: [], expertise: [], saves: [], armor: [], weapons: [], tools: [], languages: [],
       spells: [{ id: "s_shield", name: "Shield", source: "Origin: Magic Initiate" }],
-      invocations: [], maneuvers: [], plans: [],
+      invocations: [], maneuvers: [], metamagic: [], plans: [],
     };
     args.char.characterData!.chosenFeatOptions = {
       "bg:Origin: Magic Initiate:spell_from_same_list_3": ["s_shield"],

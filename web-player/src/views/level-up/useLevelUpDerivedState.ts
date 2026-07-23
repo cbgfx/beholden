@@ -29,6 +29,7 @@ import { buildResolvedSpellChoiceEntry, buildSpellListChoiceEntry } from "@/view
 import { getFeatSpellcastingAbilityChoice } from "@/views/character-creator/utils/FeatSpellcastingUtils";
 import { deriveAllowedInvocationIds } from "@/views/level-up/LevelUpUtils";
 import { deriveCharProficiencies } from "@/views/level-up/LevelUpHelpers";
+import { getExclusiveGroupReplacementChoice } from "@/views/level-up/LevelUpExclusiveChoiceUtils";
 import type {
   LevelUpCharacter as Character,
   LevelUpClassDetail as ClassDetail,
@@ -138,9 +139,17 @@ export function useLevelUpDerivedState(args: {
   const prepCount = classDetail ? getPreparedSpellCount(classDetail, nextClassLevel, subclass, spellAbilityScore) : 0;
   const maxSpellLevel = classDetail ? getMaxSlotLevel(classDetail, nextClassLevel, subclass) : 0;
   const spellcaster = classDetail ? isSpellcaster(classDetail, nextClassLevel, subclass) : false;
-  const expertiseChoices = React.useMemo(
+  const currentLevelExpertiseChoices = React.useMemo(
     () => (classDetail ? getClassExpertiseChoices(classDetail, nextClassLevel).filter((choice) => choice.key.startsWith(`classexpertise:${nextClassLevel}:`)) : []),
     [classDetail, nextClassLevel]
+  );
+  const expertiseChoices = React.useMemo(
+    () => currentLevelExpertiseChoices.filter((choice) => !choice.replace),
+    [currentLevelExpertiseChoices]
+  );
+  const expertiseReplacementChoices = React.useMemo(
+    () => currentLevelExpertiseChoices.filter((choice) => choice.replace),
+    [currentLevelExpertiseChoices]
   );
   const { charProficiencies, proficientSkills, proficientTools, proficientLanguages, proficientSaves, existingExpertise } = deriveCharProficiencies(char);
   const existingClassSpellNames = React.useMemo(
@@ -346,8 +355,10 @@ export function useLevelUpDerivedState(args: {
   );
   const growthChoiceDefinitions = React.useMemo(
     () => {
-      const maneuverReplacementLimit = parsedNewFeatureEffects.flatMap((parsed) => parsed.effects)
-        .filter((effect) => effect.type === "selection_replacement" && effect.target === "maneuver")
+      const replacementEffects = parsedNewFeatureEffects.flatMap((parsed) => parsed.effects)
+        .filter((effect) => effect.type === "selection_replacement");
+      const replacementLimitFor = (target: "maneuver" | "metamagic") => replacementEffects
+        .filter((effect) => effect.target === target)
         .reduce((total, effect) => total + (effect.count.kind === "fixed" ? effect.count.value : 0), 0);
       return getGrowthChoiceDefinitions({
       classId: String(primaryClassEntry?.classId ?? ""),
@@ -355,10 +366,37 @@ export function useLevelUpDerivedState(args: {
       classDetail,
       level: nextClassLevel,
       selectedSubclass: subclass || primaryClassEntry?.subclass || null,
-      maneuverReplacementLimit,
+      maneuverReplacementLimit: replacementLimitFor("maneuver"),
+      metamagicReplacementLimit: replacementLimitFor("metamagic"),
     });
     },
     [char?.className, classDetail, nextClassLevel, parsedNewFeatureEffects, primaryClassEntry?.classId, primaryClassEntry?.subclass, subclass]
+  );
+  const chosenOptionals = React.useMemo(
+    () => Array.isArray(char?.characterData?.chosenOptionals) ? char.characterData.chosenOptionals : [],
+    [char?.characterData?.chosenOptionals]
+  );
+  const fightingStyleReplacementAvailable = React.useMemo(
+    () => parsedNewFeatureEffects.flatMap((parsed) => parsed.effects)
+      .some((effect) => effect.type === "selection_replacement" && effect.target === "fighting_style"),
+    [parsedNewFeatureEffects]
+  );
+  const pactBoonReplacementAvailable = React.useMemo(
+    () => parsedNewFeatureEffects.flatMap((parsed) => parsed.effects)
+      .some((effect) => effect.type === "selection_replacement" && effect.target === "pact_boon"),
+    [parsedNewFeatureEffects]
+  );
+  const fightingStyleReplacementChoice = React.useMemo(
+    () => fightingStyleReplacementAvailable && classDetail
+      ? getExclusiveGroupReplacementChoice({ choices: classDetail.choices, autolevels: mergedAutolevels, groupName: "Fighting Style", level: nextClassLevel, chosenOptionals })
+      : null,
+    [chosenOptionals, classDetail, fightingStyleReplacementAvailable, mergedAutolevels, nextClassLevel]
+  );
+  const pactBoonReplacementChoice = React.useMemo(
+    () => pactBoonReplacementAvailable && classDetail
+      ? getExclusiveGroupReplacementChoice({ choices: classDetail.choices, autolevels: mergedAutolevels, groupName: "Pact Boon", level: nextClassLevel, chosenOptionals })
+      : null,
+    [chosenOptionals, classDetail, mergedAutolevels, nextClassLevel, pactBoonReplacementAvailable]
   );
   const appliedPreparedSpellProgressionFeatures = React.useMemo(
     () =>
@@ -445,8 +483,8 @@ export function useLevelUpDerivedState(args: {
     [classInvocations, featSummaries],
   );
   const allowedInvocationIds = React.useMemo(
-    () => deriveAllowedInvocationIds({ classCantrips, classInvocations, chosenCantrips, chosenInvocations, nextLevel: nextClassLevel }),
-    [chosenCantrips, chosenInvocations, classCantrips, classInvocations, nextClassLevel]
+    () => deriveAllowedInvocationIds({ classCantrips, classInvocations, chosenCantrips, chosenInvocations, nextLevel: nextClassLevel, chosenOptionals }),
+    [chosenCantrips, chosenInvocations, classCantrips, classInvocations, nextClassLevel, chosenOptionals]
   );
   const {
     featSpellChoiceOptions,
@@ -485,6 +523,10 @@ export function useLevelUpDerivedState(args: {
     maxSpellLevel,
     spellcaster,
     expertiseChoices,
+    expertiseReplacementChoices,
+    fightingStyleReplacementChoice,
+    pactBoonReplacementChoice,
+    chosenOptionals,
     charProficiencies,
     proficientSkills,
     proficientTools,

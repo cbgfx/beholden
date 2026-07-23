@@ -193,6 +193,7 @@ export async function fetchGrandSpeciesDetail<T>(id: string, ruleset: Ruleset): 
     speed: entry.speed,
     creatureType: entry.creatureType ?? "Humanoid",
     spellAbility: entry.spellcastingAbility,
+    abilityScoreIncrease: entry.abilityScoreIncrease ?? null,
     parsedChoices: entry.choices ?? {},
     traits: traitsGrandToPlayerView(entry.traits ?? []),
   } as T;

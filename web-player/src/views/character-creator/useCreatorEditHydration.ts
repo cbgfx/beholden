@@ -25,6 +25,9 @@ type CreatorCharacterData = Record<string, unknown> & {
   chosenRaceFeatId?: string | null;
   chosenRaceSize?: string | null;
   chosenRaceSpellAbility?: string | null;
+  chosenRaceAbilityChoices?: string[];
+  raceAbilityMode?: "split" | "even";
+  raceAbilityBonuses?: Record<string, number>;
   chosenSkills?: string[];
   chosenBgOriginFeatId?: string | null;
   chosenClassLanguages?: string[];
@@ -92,6 +95,8 @@ export function useCreatorEditHydration(args: {
         });
         const recordedBgBonuses =
           cd.bgAbilityBonuses && typeof cd.bgAbilityBonuses === "object" ? cd.bgAbilityBonuses : {};
+        const recordedRaceAbilityBonuses =
+          cd.raceAbilityBonuses && typeof cd.raceAbilityBonuses === "object" ? cd.raceAbilityBonuses : {};
         const recordedAsiBonuses = Array.isArray(cd.chosenLevelUpFeats)
           ? cd.chosenLevelUpFeats.reduce((acc: Record<string, number>, entry) => {
               if (!entry?.abilityBonuses || typeof entry.abilityBonuses !== "object") return acc;
@@ -173,6 +178,11 @@ export function useCreatorEditHydration(args: {
           chosenRaceFeatId: cd.chosenRaceFeatId ?? null,
           chosenRaceSize: cd.chosenRaceSize ?? null,
           chosenRaceSpellAbility: cd.chosenRaceSpellAbility ?? null,
+          chosenRaceAbilityChoices: Array.isArray(cd.chosenRaceAbilityChoices)
+            ? cd.chosenRaceAbilityChoices.filter((v): v is string => typeof v === "string")
+            : [],
+          raceAbilityMode: cd.raceAbilityMode === "even" ? "even" : "split",
+          raceAbilityBonuses: recordedRaceAbilityBonuses,
           chosenSkills: cd.chosenSkills ?? [],
           chosenBgOriginFeatId: cd.chosenBgOriginFeatId ?? null,
           chosenClassLanguages: cd.chosenClassLanguages ?? [],

@@ -159,6 +159,7 @@ function readEncounterActorSnapshot(
       ? snapshot.acDetails ?? null
       : null,
     attackOverrides: snapshot.attackOverrides ?? null,
+    ...(typeof snapshot.description === "string" ? { description: snapshot.description } : {}),
   };
 }
 
@@ -180,6 +181,7 @@ function readEncounterActorLiveState(
       ? { usedLegendaryResistances: live.usedLegendaryResistances }
       : {}),
     ...(live.usedSpellSlots ? { usedSpellSlots: live.usedSpellSlots } : {}),
+    ...(live.engagedWithPlayers === true ? { engagedWithPlayers: true } : {}),
   };
 }
 
@@ -468,7 +470,9 @@ export function rowToEncounterActor(row: Record<string, unknown>): StoredEncount
     conditions: live.conditions,
     ...(live.deathSaves ? { deathSaves: live.deathSaves } : {}),
     ...(live.usedSpellSlots ? { usedSpellSlots: live.usedSpellSlots } : {}),
+    ...(live.engagedWithPlayers === true ? { engagedWithPlayers: true } : {}),
     attackOverrides: snapshot.attackOverrides,
+    ...(snapshot.description !== undefined ? { description: snapshot.description } : {}),
     ...readTimestamps(row),
   };
 }

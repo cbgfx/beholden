@@ -4,7 +4,8 @@ import { useWs, useWsStatus } from "@/services/ws";
 
 type ActiveBastion = { id: string; name: string; campaignId: string };
 type InitiativePrompt = { encounterId: string; combatantId: string };
-type CombatStatus = { encounterId: string; combatantId: string; usedReaction: boolean };
+export type EngagedEnemy = { id: string; name: string; health: "Damaged" | "Bloodied" | "Down" };
+type CombatStatus = { encounterId: string; combatantId: string; usedReaction: boolean; engagedEnemies: EngagedEnemy[] };
 
 export function useCharacterLiveUpdates(
   characterId: string | undefined,
@@ -152,8 +153,8 @@ export function useCharacterLiveUpdates(
       const payload = message.payload as { characterId: string };
       if (payload.characterId === characterId) onXpAwarded();
     } else if (message.type === "encounter:combatantsDelta") {
-      const payload = message.payload as { combatantId?: string };
-      if (combatStatusRef.current && payload.combatantId === combatStatusRef.current.combatantId) {
+      const payload = message.payload as { encounterId?: string };
+      if (combatStatusRef.current && payload.encounterId === combatStatusRef.current.encounterId) {
         void refreshCombatStatus();
       }
     } else if (message.type === "encounters:delta") {

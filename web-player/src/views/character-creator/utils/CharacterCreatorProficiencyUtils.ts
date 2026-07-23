@@ -36,6 +36,7 @@ import {
 import type { ProficiencyMap, TaggedItem } from "@/views/character/CharacterSheetTypes";
 import {
   parseAppliedClassFeatureEffects,
+  parseAppliedSpeciesTraitEffects,
   getWeaponMasteryChoice,
 } from "./CharacterCreatorClassFeatureUtils";
 import type {
@@ -126,6 +127,7 @@ export function buildProficiencyMap(args: {
   const spells: TaggedItem[] = [];
   const invocations: TaggedItem[] = [];
   const maneuvers: TaggedItem[] = [];
+  const metamagic: TaggedItem[] = [];
   const plans: TaggedItem[] = [];
 
   const pushArmor = (name: string, source: string) => {
@@ -318,6 +320,13 @@ export function buildProficiencyMap(args: {
     if (!coreLanguageChoice) form.chosenRaceLanguages.forEach((name) => pushLanguage(name, raceName));
     form.chosenRaceTools.forEach((name) => pushTool(name, raceName));
 
+    const raceTraitSpellChoices = collectSpellChoicesFromEffects(parseAppliedSpeciesTraitEffects(raceDetail));
+    raceTraitSpellChoices.forEach((choice) => {
+      const key = `racetrait:${choice.id}`;
+      resolveSelectedSpellOptionEntries(form.chosenFeatOptions[key] ?? [], spellChoiceOptionsByKey[key] ?? [])
+        .forEach((spell) => spells.push({ id: String(spell.id), name: spell.name, source: choice.source.name }));
+    });
+
     if (raceFeatDetail) {
       const grants = collectFeatTaggedEntries({
         feat: raceFeatDetail,
@@ -345,7 +354,7 @@ export function buildProficiencyMap(args: {
     }
   }
 
-  const classExpertiseChoices = getClassExpertiseChoices(classDetail as never, form.level);
+  const classExpertiseChoices = getClassExpertiseChoices(classDetail as never, form.level).filter((choice) => !choice.replace);
   for (const choice of classExpertiseChoices) {
     const selected = form.chosenFeatOptions[choice.key] ?? [];
     selected.forEach((name) => pushExpertise(name, choice.source));
@@ -448,10 +457,11 @@ export function buildProficiencyMap(args: {
   });
   growthChoiceDefinitions.forEach((definition) => {
     const selectedIds = getGrowthChoiceSelectedIds(form.chosenFeatureChoices, definition);
-    if (definition.category === "maneuver") {
+    if (definition.category === "maneuver" || definition.category === "metamagic") {
       const selectedAbility = getGrowthChoiceSelectedAbility(form.chosenFeatureChoices, definition);
+      const target = definition.category === "maneuver" ? maneuvers : metamagic;
       resolveSelectedSpellOptionEntries(selectedIds, spellChoiceOptionsByKey[definition.key] ?? [])
-        .forEach((spell) => maneuvers.push({
+        .forEach((spell) => target.push({
           id: String(spell.id),
           name: spell.name,
           source: definition.sourceLabel,
@@ -485,6 +495,7 @@ export function buildProficiencyMap(args: {
     spells: dedupeTaggedItems(spells, normalizeSpellTrackingName),
     invocations: dedupeTaggedItems(invocations),
     maneuvers: dedupeTaggedItems(maneuvers),
+    metamagic: dedupeTaggedItems(metamagic),
     plans: dedupeTaggedItems(plans),
   };
 }

@@ -44,6 +44,14 @@ export function useEncounterActions(
     } catch (e) { apiErr(e); }
   }, [encounterId, refreshEncounter]);
 
+  const addWorldAction = React.useCallback(async (name: string, description?: string) => {
+    if (!encounterId) return;
+    try {
+      await postEncounterCombatants(encounterId, "addWorldAction", { name, description });
+      await refreshEncounter?.();
+    } catch (e) { apiErr(e); }
+  }, [encounterId, refreshEncounter]);
+
   const removeCombatant = React.useCallback(async (combatantId: string) => {
     if (!encounterId) return;
     try {
@@ -60,5 +68,5 @@ export function useEncounterActions(
     } catch (e) { apiErr(e); }
   }, [encounterId, refreshEncounter]);
 
-  return { addAllPlayers, addPlayerToEncounter, addMonster, removeCombatant, addINpcToEncounter };
+  return { addAllPlayers, addPlayerToEncounter, addMonster, addWorldAction, removeCombatant, addINpcToEncounter };
 }

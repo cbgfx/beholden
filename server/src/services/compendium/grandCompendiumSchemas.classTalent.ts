@@ -16,6 +16,10 @@ export const ClassTalentSchema = z.object({
     level: z.number().int().min(1).max(20).optional(),
     talent: z.string().regex(/^ct_[a-z0-9_]+$/u).optional(),
     cantrip: z.enum(["damage", "attack_damage"]).optional(),
+    /** 2014-only: gates on a chosen Warlock Pact Boon. 5.5e represents Pact Boons as
+     * invocations themselves and gates on `talent` instead — this field exists because 2014
+     * Pact Boon is a separate class `choices` pick, not a `ct_` talent id. */
+    pactBoon: z.enum(["blade", "chain", "tome", "talisman"]).optional(),
   }).strict().refine((value) => Object.keys(value).length > 0, "Empty prerequisite must be omitted").optional(),
   repeatable: z.literal(true).optional(),
   /** Deterministic mechanics consumed directly; description remains display/reference text only. */

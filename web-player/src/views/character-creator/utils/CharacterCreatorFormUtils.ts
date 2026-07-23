@@ -35,6 +35,11 @@ export interface FormState {
   chosenRaceFeatId: string | null;
   chosenRaceSize: string | null;
   chosenRaceSpellAbility: string | null;
+  /** The player-choice portion of a 2014 race's Ability Score Increase (simple, non-flexible pattern). */
+  chosenRaceAbilityChoices: string[];
+  /** The 2024-background-style "2-and-1 OR three +1s" flexible pattern (Aasimar, Goliath, Orc). */
+  raceAbilityMode: "split" | "even";
+  raceAbilityBonuses: Record<string, number>;
   chosenBgSkills: string[];
   chosenBgOriginFeatId: string | null;
   chosenBgTools: string[];
@@ -204,6 +209,7 @@ export function initForm(user: { name?: string } | null, params: URLSearchParams
     classId: "", raceId: "", bgId: "",
     level: 1, subclass: "", chosenOptionals: [], chosenClassFeatIds: {}, chosenLevelUpFeats: [],
     chosenRaceSkills: [], chosenRaceLanguages: [], chosenRaceTools: [], chosenRaceFeatId: null, chosenRaceSize: null, chosenRaceSpellAbility: null,
+    chosenRaceAbilityChoices: [], raceAbilityMode: "split", raceAbilityBonuses: {},
     chosenBgSkills: [], chosenBgOriginFeatId: null,
     chosenBgTools: [], chosenBgLanguages: [], chosenClassEquipmentOption: null, chosenBgEquipmentOption: null, chosenFeatOptions: {}, chosenFeatureChoices: {}, bgAbilityMode: "split", bgAbilityBonuses: {},
     chosenSkills: [], chosenClassLanguages: [], chosenClassTools: [], chosenWeaponMasteries: [], chosenCantrips: [], chosenSpells: [], chosenInvocations: [],
@@ -219,7 +225,30 @@ export function initForm(user: { name?: string } | null, params: URLSearchParams
   };
 }
 
-export function resolvedScores(form: FormState, featAbilityBonuses?: Record<string, number>): Record<string, number> {
+/** Combines a 2014 race's fixed Ability Score Increase with whatever the player chose for its
+ * simple-choice or flexible-choice portion. A 2024 species has no `abilityScoreIncrease` and
+ * contributes nothing here — its ability bonuses come from the background instead. */
+export function deriveRaceAbilityBonuses(
+  raceDetail: { abilityScoreIncrease?: Record<string, number> | null } | null,
+  raceAbilityChoice: { amount: number; flexible?: boolean } | null | undefined,
+  form: Pick<FormState, "chosenRaceAbilityChoices" | "raceAbilityBonuses">,
+): Record<string, number> {
+  const bonuses: Record<string, number> = {};
+  for (const [ability, amount] of Object.entries(raceDetail?.abilityScoreIncrease ?? {})) {
+    bonuses[ability] = (bonuses[ability] ?? 0) + amount;
+  }
+  if (!raceAbilityChoice?.flexible) {
+    for (const ability of form.chosenRaceAbilityChoices) {
+      bonuses[ability] = (bonuses[ability] ?? 0) + (raceAbilityChoice?.amount ?? 1);
+    }
+  }
+  for (const [ability, amount] of Object.entries(form.raceAbilityBonuses)) {
+    bonuses[ability] = (bonuses[ability] ?? 0) + amount;
+  }
+  return bonuses;
+}
+
+export function resolvedScores(form: FormState, featAbilityBonuses?: Record<string, number>, raceAbilityBonuses?: Record<string, number>): Record<string, number> {
   let base: Record<string, number>;
   if (form.abilityMethod === "pointbuy") base = { ...form.pbScores };
   else {
@@ -231,6 +260,9 @@ export function resolvedScores(form: FormState, featAbilityBonuses?: Record<stri
   }
   for (const [k, v] of Object.entries(form.bgAbilityBonuses)) {
     if (k in base) base[k] = (base[k] ?? 0) + v;
+  }
+  for (const [k, v] of Object.entries(raceAbilityBonuses ?? {})) {
+    if (k in base) base[k] = Math.min(20, (base[k] ?? 0) + v);
   }
   for (const [k, v] of Object.entries(featAbilityBonuses ?? {})) {
     if (k in base) base[k] = Math.min(20, (base[k] ?? 0) + v);

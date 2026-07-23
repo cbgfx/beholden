@@ -19,6 +19,7 @@ export function useLevelUpSelectionSanitizers(args: {
   setChosenSpells: React.Dispatch<React.SetStateAction<string[]>>;
   setChosenInvocations: React.Dispatch<React.SetStateAction<string[]>>;
   expertiseChoices: Array<{ key: string; source: string; options?: string[] | null; count: number }>;
+  expertiseReplacementChoices: Array<{ key: string; source: string; options?: string[] | null; count: number }>;
   proficientSkills: string[];
   existingExpertise: string[];
   setChosenExpertise: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
@@ -39,6 +40,7 @@ export function useLevelUpSelectionSanitizers(args: {
     setChosenSpells,
     setChosenInvocations,
     expertiseChoices,
+    expertiseReplacementChoices,
     proficientSkills,
     existingExpertise,
     setChosenExpertise,
@@ -107,4 +109,30 @@ export function useLevelUpSelectionSanitizers(args: {
       return changed ? next : prev;
     });
   }, [char?.characterData?.proficiencies?.expertise, expertiseChoices, proficientSkills, existingExpertise, setChosenExpertise]);
+
+  React.useEffect(() => {
+    if (expertiseReplacementChoices.length === 0) return;
+    setChosenExpertise((prev) => {
+      let changed = false;
+      const next: Record<string, string[]> = { ...prev };
+      const existingKeys = new Set(existingExpertise.map((name) => normalizeChoiceKey(name)));
+      const proficientSkillKeys = new Set(proficientSkills.map((skill) => normalizeChoiceKey(skill)));
+      for (const choice of expertiseReplacementChoices) {
+        const targetKey = `${choice.key}:target`;
+        const currentTarget = (prev[targetKey] ?? []).filter((skill) => existingKeys.has(normalizeChoiceKey(skill))).slice(0, 1);
+        if (currentTarget.length === 0) delete next[targetKey]; else next[targetKey] = currentTarget;
+        if (currentTarget.length !== (prev[targetKey] ?? []).length) changed = true;
+
+        const options = (choice.options ?? proficientSkills).filter((skill) => proficientSkillKeys.has(normalizeChoiceKey(skill)));
+        const target = currentTarget[0];
+        const validNewSkill = (skill: string) =>
+          options.some((option) => normalizeChoiceKey(option) === normalizeChoiceKey(skill))
+          && (!existingKeys.has(normalizeChoiceKey(skill)) || (target && normalizeChoiceKey(skill) === normalizeChoiceKey(target)));
+        const currentNew = (prev[choice.key] ?? []).filter(validNewSkill).slice(0, choice.count);
+        if (currentNew.length === 0) delete next[choice.key]; else next[choice.key] = currentNew;
+        if (currentNew.length !== (prev[choice.key] ?? []).length) changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [existingExpertise, expertiseReplacementChoices, proficientSkills, setChosenExpertise]);
 }

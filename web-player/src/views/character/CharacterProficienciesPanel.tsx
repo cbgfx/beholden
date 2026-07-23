@@ -35,6 +35,7 @@ export function CharacterProficienciesPanel({
     { label: "Armor", items: prof.armor, color: C.colorMagic },
     { label: "Weapons", items: prof.weapons, color: C.colorPinkRed },
     { label: "Maneuvers", items: prof.maneuvers, color: C.accentHl },
+    { label: "Metamagic", items: prof.metamagic, color: C.accentHl },
     { label: "Magic Item Plans", items: prof.plans, color: C.colorRitual },
     { label: "Tools", items: allToolNames.map((name) => ({ name, source: hasEntry(customTools, name) ? "Custom" : (prof.tools.find((entry) => normalize(entry.name) === normalize(name))?.source ?? "Class/Feature"), isCustom: hasEntry(customTools, name) })), color: C.colorOrange },
     { label: "Expertise", items: prof.expertise, color: accentColor },

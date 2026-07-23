@@ -23,6 +23,7 @@ import {
   AddInpcBody,
   AddMonsterBody,
   AddPlayerBody,
+  AddWorldActionBody,
   CombatantUpdateBody,
   CombatStateBody,
 } from "./combatRouteHelpers.js";
@@ -454,6 +455,49 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true, created });
   });
 
+  // World actions are turn-order entries for hazards, lairs, weather, and other
+  // encounter events. They deliberately have no creature statistics.
+  app.post("/api/encounters/:encounterId/combatants/addWorldAction", dmOrAdmin(db), (req, res) => {
+    const encounterId = requireParam(req, res, "encounterId");
+    if (!encounterId) return;
+    const encounter = db.prepare("SELECT id FROM encounters WHERE id = ?").get(encounterId);
+    if (!encounter) return res.status(404).json({ ok: false, message: "Encounter not found" });
+
+    const body = parseBody(AddWorldActionBody, req);
+    const t = now();
+    const created: StoredEncounterActor = {
+      id: uid(),
+      encounterId,
+      baseType: "world",
+      baseId: uid(),
+      name: body.name,
+      label: body.name,
+      ...(body.description ? { description: body.description } : {}),
+      initiative: null,
+      friendly: true,
+      color: "#f59e0b",
+      overrides: { ...DEFAULT_OVERRIDES },
+      hpCurrent: null,
+      hpMax: null,
+      hpDetails: null,
+      ac: null,
+      acDetails: null,
+      attackOverrides: null,
+      conditions: [],
+      createdAt: t,
+      updatedAt: t,
+    };
+    ensureCombat(db, encounterId);
+    insertCombatant(db, created);
+    ctx.broadcast("encounter:combatantsDelta", {
+      encounterId,
+      action: "upsert",
+      combatantId: created.id,
+      combatant: toEncounterActorDto(created),
+    });
+    res.json({ ok: true, created: toEncounterActorDto(created) });
+  });
+
   // ── Add iNPC ──────────────────────────────────────────────────────────────
   app.post("/api/encounters/:encounterId/combatants/addInpc", dmOrAdmin(db), (req, res) => {
     const encounterId = requireParam(req, res, "encounterId");
@@ -553,6 +597,11 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
       const merged: StoredEncounterActor = {
         ...existing,
         label: body.label ?? existing.label,
+        ...(body.description !== undefined
+          ? { description: body.description.trim() }
+          : existing.description !== undefined
+            ? { description: existing.description }
+            : {}),
         initiative: body.initiative !== undefined ? body.initiative : (existing.initiative ?? null),
         friendly: body.friendly ?? existing.friendly,
         color: body.color ?? existing.color,
@@ -569,6 +618,12 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         usedLegendaryActions: body.usedLegendaryActions ?? existing.usedLegendaryActions ?? 0,
         usedLegendaryResistances: body.usedLegendaryResistances ?? existing.usedLegendaryResistances ?? 0,
         usedSpellSlots: body.usedSpellSlots ?? existing.usedSpellSlots ?? {},
+        engagedWithPlayers: existing.engagedWithPlayers === true || (
+          existing.friendly === false && (
+            body.hpDelta?.kind === "damage" ||
+            (requestedHp !== null && existing.hpCurrent !== null && requestedHp < existing.hpCurrent)
+          )
+        ),
         updatedAt: t,
       };
       const next = applyCombatantTransition(merged, existing);

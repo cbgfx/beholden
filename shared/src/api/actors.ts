@@ -116,7 +116,7 @@ export interface CampaignCharacterDto {
   updatedAt?: number;
 }
 
-export type EncounterActorBaseTypeDto = "player" | "monster" | "inpc";
+export type EncounterActorBaseTypeDto = "player" | "monster" | "inpc" | "world";
 
 export interface EncounterActorSnapshotDto {
   name: string;
@@ -129,6 +129,7 @@ export interface EncounterActorSnapshotDto {
   ac: number | null;
   acDetails: string | null;
   attackOverrides: unknown | null;
+  description?: string;
 }
 
 export interface EncounterActorLiveDto {
@@ -236,6 +237,7 @@ export interface FlatEncounterActorDto {
   ac: number | null;
   acDetails: string | null;
   attackOverrides: unknown | null;
+  description?: string;
   conditions: ActorConditionInstanceDto[];
   deathSaves?: ActorDeathSavesDto | null;
   usedReaction?: boolean;
@@ -335,6 +337,7 @@ export function flattenEncounterActorDto(dto: EncounterActorDto): FlatEncounterA
     attackOverrides: dto.snapshot.attackOverrides,
     conditions: dto.live.conditions,
   };
+  if (dto.snapshot.description !== undefined) flat.description = dto.snapshot.description;
   if (dto.snapshot.playerName !== undefined) flat.playerName = dto.snapshot.playerName;
   if (dto.live.overrides !== undefined) flat.overrides = dto.live.overrides;
   if (dto.live.deathSaves !== undefined) flat.deathSaves = dto.live.deathSaves;

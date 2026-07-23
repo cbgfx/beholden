@@ -192,6 +192,20 @@ export const SpeciesChoiceSchema = z
     hasFeatChoice: z.literal(true).optional(),
     /** Present only when a species trait's spell(s) use a player-chosen governing ability (e.g. elf lineages, tiefling legacies: "Int, Wis, or Cha"). Omit for species with a single fixed `spellcastingAbility`. */
     spellcastingAbilityChoice: z.object({ options: z.array(ABILITY).min(2) }).strict().optional(),
+    /** The player-choice portion of a 2014 race's Ability Score Increase, on top of any fixed
+     * amounts on `abilityScoreIncrease`. Omit for a race with no choice at all (e.g. Dwarf). */
+    abilityScoreChoice: z.object({
+      count: z.number().int().positive(),
+      amount: z.number().int().positive(),
+      /** null = any of the six abilities. */
+      from: z.array(ABILITY).nullable(),
+      /** True for the "increase one score by 2 and a different by 1, OR three different scores
+       * by 1" pattern (Aasimar, Goliath, Orc) — `count` gives the "three scores" target and the
+       * "2 and 1" alternative is always implied alongside it, mirroring the 2024 background
+       * ability-choice UI. Omit for a race that only ever offers the plain N-abilities pick
+       * (e.g. Half-Elf's two free +1s, Warforged's one free +1). */
+      flexible: z.literal(true).optional(),
+    }).strict().optional(),
   })
   .strict();
 

@@ -7,7 +7,7 @@ import type {
   AsiMode,
   HpChoice,
 } from "@/views/level-up/LevelUpTypes";
-import { AsiAbilityGrid, BackBtn, ChoiceBtn, ExpertiseSelectionSection, FeatSelectionSection, LevelUpHpSection, Section, Wrap } from "@/views/level-up/LevelUpParts";
+import { AsiAbilityGrid, BackBtn, ChoiceBtn, ExclusiveChoiceReplacementSection, ExpertiseReplacementSection, ExpertiseSelectionSection, FeatSelectionSection, LevelUpHpSection, Section, Wrap } from "@/views/level-up/LevelUpParts";
 import { LevelUpChoicesSection, LevelUpFeaturesSection, LevelUpSpellSlotsSection, LevelUpSubclassSection } from "@/views/level-up/LevelUpSections";
 import { deriveFeatAbilityBonuses, deriveHpGain, deriveLevelUpValidation } from "@/views/level-up/LevelUpUtils";
 import { deriveFeatHitPointMaxBonus } from "@/domain/character/featEffects";
@@ -110,6 +110,9 @@ export function LevelUpView() {
     maxSpellLevel,
     spellcaster,
     expertiseChoices,
+    expertiseReplacementChoices,
+    fightingStyleReplacementChoice,
+    pactBoonReplacementChoice,
     charProficiencies,
     proficientSkills,
     existingExpertise,
@@ -171,6 +174,7 @@ export function LevelUpView() {
     setChosenSpells,
     setChosenInvocations,
     expertiseChoices,
+    expertiseReplacementChoices,
     proficientSkills,
     existingExpertise,
     setChosenExpertise,
@@ -279,6 +283,7 @@ export function LevelUpView() {
         invocCount,
         chosenInvocations: effectiveChosenInvocations,
         expertiseChoices,
+        expertiseReplacementChoices,
         chosenExpertise,
         chosenFeatDetail,
         featChoiceEntries,
@@ -312,6 +317,7 @@ export function LevelUpView() {
       invocCount,
       effectiveChosenInvocations,
       expertiseChoices,
+      expertiseReplacementChoices,
       chosenExpertise,
       chosenFeatDetail,
       featChoiceEntries,
@@ -408,6 +414,9 @@ export function LevelUpView() {
     allInvocationFeatChoices,
     chosenFeatureChoices,
     expertiseChoices,
+    expertiseReplacementChoices,
+    fightingStyleReplacementChoice,
+    pactBoonReplacementChoice,
     featChoiceEntries,
     chosenFeatDetail,
     featSourceLabel,
@@ -561,6 +570,45 @@ export function LevelUpView() {
             onToggleExpertise={(choiceKey, skill, count) =>
               toggleMultiChoice(choiceKey, skill, count, setChosenExpertise)
             }
+          />
+        </Section>
+      )}
+
+      {expertiseReplacementChoices.length > 0 && (
+        <Section title={`Expertise Replacement at Level ${nextLevel}`} accent={accentColor}>
+          <ExpertiseReplacementSection
+            accentColor={accentColor}
+            replacementChoices={expertiseReplacementChoices}
+            chosenExpertise={chosenExpertise}
+            proficientSkills={proficientSkills}
+            existingExpertise={existingExpertise}
+            onToggleExpertise={(choiceKey, skill, count) =>
+              toggleMultiChoice(choiceKey, skill, count, setChosenExpertise)
+            }
+          />
+        </Section>
+      )}
+
+      {fightingStyleReplacementChoice && fightingStyleReplacementChoice.options.length > 0 && (
+        <Section title={`Fighting Style at Level ${nextLevel}`} accent={accentColor}>
+          <ExclusiveChoiceReplacementSection
+            accentColor={accentColor}
+            title="Optionally replace your Fighting Style"
+            choice={fightingStyleReplacementChoice}
+            chosenFeatureChoices={chosenFeatureChoices}
+            onSelect={(choiceKey, optionId) => setChosenFeatureChoices((prev) => ({ ...prev, [choiceKey]: [optionId] }))}
+          />
+        </Section>
+      )}
+
+      {pactBoonReplacementChoice && pactBoonReplacementChoice.options.length > 0 && (
+        <Section title={`Pact Boon at Level ${nextLevel}`} accent={accentColor}>
+          <ExclusiveChoiceReplacementSection
+            accentColor={accentColor}
+            title="Optionally replace your Pact Boon"
+            choice={pactBoonReplacementChoice}
+            chosenFeatureChoices={chosenFeatureChoices}
+            onSelect={(choiceKey, optionId) => setChosenFeatureChoices((prev) => ({ ...prev, [choiceKey]: [optionId] }))}
           />
         </Section>
       )}

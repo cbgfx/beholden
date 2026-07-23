@@ -66,13 +66,15 @@ function useServerMeta() {
 }
 
 function useUpdateCheck() {
-  const [updateAvailable, setUpdateAvailable] = React.useState(false);
+  const [state, setState] = React.useState({ currentVersion: "1.4.0", updateAvailable: false });
+  const [updating, setUpdating] = React.useState(false);
+  const [message, setMessage] = React.useState("");
   React.useEffect(() => {
     let cancelled = false;
     const checkForUpdate = () => {
-      api<{ ok: boolean; updateAvailable?: boolean }>("/api/update-check")
+      api<{ ok: boolean; currentVersion?: string; updateAvailable?: boolean }>("/api/update-check")
         .then((r) => {
-          if (!cancelled && r.ok && r.updateAvailable) setUpdateAvailable(true);
+          if (!cancelled) setState({ currentVersion: r.currentVersion ?? "1.4.0", updateAvailable: r.ok && r.updateAvailable === true });
         })
         .catch(() => {});
     };
@@ -85,7 +87,19 @@ function useUpdateCheck() {
       if (timeoutId !== undefined) window.clearTimeout(timeoutId);
     };
   }, []);
-  return updateAvailable;
+  const startUpdate = React.useCallback(async () => {
+    if (!window.confirm("Pull and build the latest Beholden release now?")) return;
+    setUpdating(true);
+    try {
+      const result = await api<{ message?: string }>("/api/update", { method: "POST" });
+      setMessage(result.message ?? "Update started. Restart Beholden when it finishes.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not start the update.");
+    } finally {
+      setUpdating(false);
+    }
+  }, []);
+  return { ...state, updating, message, startUpdate };
 }
 
 function topbarToolButtonStyle(active = false, accent = C.accentHl, muted = C.muted): React.CSSProperties {
@@ -109,7 +123,7 @@ function topbarToolButtonStyle(active = false, accent = C.accentHl, muted = C.mu
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const meta = useServerMeta();
-  const updateAvailable = useUpdateCheck();
+  const update = useUpdateCheck();
   const showSupport = meta?.support === true;
   const connected = useWsStatus();
   const lastChar = useLastCharacter();
@@ -290,11 +304,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             Support Beholden
           </a>
         ) : null}
-        right={updateAvailable ? (
-          <a href="https://github.com/cbgfx/beholden" target="_blank" rel="noreferrer" style={{ color: C.accent, textDecoration: "none", fontWeight: 600 }}>
-            Update available →
-          </a>
-        ) : null}
+        right={
+          <>
+            {update.updateAvailable && (user?.isAdmin ? (
+              <button type="button" onClick={update.startUpdate} disabled={update.updating} style={{ border: 0, padding: 0, background: "none", cursor: "pointer", color: C.accent, fontWeight: 600 }}>
+                {update.updating ? "Starting update…" : "Update Available"}
+              </button>
+            ) : <span style={{ color: C.accent, fontWeight: 600 }}>Update Available</span>)}
+            {update.message && <div>{update.message}</div>}
+            <div>v{update.currentVersion}</div>
+          </>
+        }
       />
     </div>
   );

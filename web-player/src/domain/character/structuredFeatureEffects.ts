@@ -139,10 +139,10 @@ export function structuredEffectsFromCanonical(args: {
       });
       continue;
     }
-    if (choice.kind === "replacement" && choice.target === "maneuver") {
+    if (choice.kind === "replacement" && typeof choice.target === "string" && ["maneuver", "metamagic", "fighting_style", "pact_boon"].includes(choice.target)) {
       add({
         type: "selection_replacement",
-        target: "maneuver",
+        target: choice.target as "maneuver" | "metamagic" | "fighting_style" | "pact_boon",
         count: fixed(Number(choice.count ?? 1)),
       });
       continue;

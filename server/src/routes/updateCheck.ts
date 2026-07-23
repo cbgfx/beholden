@@ -3,11 +3,13 @@ import type { ServerContext } from "../server/context.js";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawn } from "node:child_process";
+import { requireAdmin } from "../middleware/auth.js";
 
 const GITHUB_RAW_URL =
   "https://raw.githubusercontent.com/cbgfx/beholden/main/server/package.json";
 
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const REQUEST_TIMEOUT_MS = 5_000;
 
 interface CacheEntry {
@@ -82,7 +84,34 @@ export function registerUpdateCheckRoutes(app: Express, _ctx: ServerContext) {
       });
     } catch {
       // Silently fail — don't block users if GitHub is unreachable
-      res.json({ ok: false, updateAvailable: false });
+      res.json({ ok: false, currentVersion: CURRENT_VERSION, updateAvailable: false });
+    }
+  });
+
+  app.post("/api/update", requireAdmin, (_req, res) => {
+    if (process.platform !== "win32") {
+      return res.status(501).json({ ok: false, message: "The automatic updater is only available on Windows." });
+    }
+
+    const scriptPath = path.join(_ctx.paths.repoRootDir, "update-beholden.bat");
+    if (!fs.existsSync(scriptPath)) {
+      return res.status(500).json({ ok: false, message: "The updater script is missing." });
+    }
+
+    try {
+      const child = spawn("cmd.exe", ["/d", "/s", "/c", scriptPath], {
+        cwd: _ctx.paths.repoRootDir,
+        detached: true,
+        stdio: "ignore",
+        windowsHide: true,
+      });
+      child.unref();
+      return res.status(202).json({
+        ok: true,
+        message: "Update started. Restart Beholden after the updater finishes.",
+      });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Could not start the updater." });
     }
   });
 }

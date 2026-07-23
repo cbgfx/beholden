@@ -99,7 +99,7 @@ export function buildSpellStepChoiceState(args: {
   }));
 
   const maneuverSpellChoices = growthChoiceDefinitions
-    .filter((definition) => definition.category === "maneuver")
+    .filter((definition) => definition.category === "maneuver" || definition.category === "metamagic")
     .map((definition) => ({
       key: definition.key,
       title: definition.title,
@@ -113,7 +113,7 @@ export function buildSpellStepChoiceState(args: {
       chosenNames: resolveSelectedSpellOptionEntries(form.chosenFeatureChoices[definition.key] ?? [], growthOptionEntriesByKey[definition.key] ?? []).map((spell) => spell.name),
       max: definition.totalCount,
       note: definition.note,
-      emptyMsg: "No maneuver options found in compendium.",
+      emptyMsg: `No ${definition.title.toLowerCase()} options found in compendium.`,
       onToggle: (id: string) => setForm((f) => {
         const current = f.chosenFeatureChoices[definition.key] ?? [];
         const next = current.includes(id)
@@ -159,7 +159,7 @@ export function buildSpellStepChoiceState(args: {
         return selectedAbility ? [ABILITY_LABELS[selectedAbility as AbilityKey]] : [];
       })(),
       max: 1,
-      note: "This sets the save DC ability for maneuvers from this feature.",
+      note: `This sets the save DC ability for ${definition.title.toLowerCase()} from this feature.`,
       emptyMsg: "No ability options found.",
       onToggle: (value: string) => setForm((f) => {
         const entry = definition.abilityChoice;

@@ -234,6 +234,7 @@ export function normalizeProficiencies(rawProf: CharacterData["proficiencies"] |
     spells: sanitizedTrackedSpells,
     invocations: dedupeTaggedItems(rawProf.invocations),
     maneuvers: dedupeTaggedItems(rawProf.maneuvers),
+    metamagic: dedupeTaggedItems(rawProf.metamagic),
     plans: dedupeTaggedItems(rawProf.plans),
   };
 }

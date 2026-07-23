@@ -8,6 +8,8 @@ export interface RaceChoices {
   hasFeatChoice: boolean;
   /** Present only when a species trait's spell(s) use a player-chosen governing ability (elf lineages, tiefling legacies). */
   spellcastingAbilityChoice: { options: string[] } | null;
+  /** The player-choice portion of a 2014 race's Ability Score Increase. */
+  abilityScoreChoice: { count: number; amount: number; from: string[] | null; flexible?: boolean } | null;
 }
 
 export function wordOrNumberToInt(value: string): number | null {

@@ -7,7 +7,7 @@ export type TurnableCombatant = {
   initiative: number | null;
   label: string;
   name: string;
-  baseType: "player" | "monster" | "inpc";
+  baseType: "player" | "monster" | "inpc" | "world";
   hpCurrent: number | null;
 };
 
@@ -52,6 +52,7 @@ function clampRound(n: number): number {
 }
 
 function isSelectable(c: TurnableCombatant): boolean {
+  if (c.baseType === "world") return true;
   // Monsters and iNPCs at 0 HP are dead and should be skipped.
   // Players at 0 HP are making death saves and must remain in turn order.
   if (c.baseType === "player") return true;

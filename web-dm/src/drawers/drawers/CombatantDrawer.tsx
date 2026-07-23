@@ -9,6 +9,7 @@ import { MonsterActions } from "@/views/CombatView/components/MonsterActions";
 import type { AttackOverride } from "@/domain/types/domain";
 import type { MonsterDetail } from "@/domain/types/compendium";
 import { putEncounterCombatant } from "@/services/encounterApi";
+import { TextArea } from "@/ui/TextArea";
 
 type CombatantDrawerState = Exclude<Extract<DrawerState, { type: "editCombatant"; encounterId: string; combatantId: string }>, null>;
 
@@ -19,6 +20,7 @@ export function CombatantDrawer(props: {
 }): DrawerContent {
   const { state } = useStore();
   const [label, setLabel] = React.useState("");
+  const [description, setDescription] = React.useState("");
   const [friendly, setFriendly] = React.useState(false);
   const [ac, setAc] = React.useState("");
   const [hpMax, setHpMax] = React.useState("");
@@ -30,6 +32,7 @@ export function CombatantDrawer(props: {
     const d = props.drawer;
     const c = state.combatants.find((x) => x.id === d.combatantId);
     setLabel(c ? String(c.label) : "");
+    setDescription(c?.description ?? "");
     setFriendly(Boolean(c?.friendly));
     setAc(c?.ac != null ? String(c.ac) : "");
     setHpMax(c?.hpMax != null ? String(c.hpMax) : "");
@@ -49,6 +52,7 @@ export function CombatantDrawer(props: {
     const d = props.drawer;
     await putEncounterCombatant(d.encounterId, d.combatantId, {
       label,
+      description,
       friendly,
       ac: ac !== "" ? Number(ac) : undefined,
       hpMax: hpMax !== "" ? Number(hpMax) : undefined,
@@ -56,7 +60,10 @@ export function CombatantDrawer(props: {
       attackOverrides
     });
     props.close();
-  }, [ac, attackOverrides, friendly, hpCur, hpMax, label, props]);
+  }, [ac, attackOverrides, description, friendly, hpCur, hpMax, label, props]);
+
+  const combatant = state.combatants.find((entry) => entry.id === props.drawer.combatantId);
+  const isWorld = combatant?.baseType === "world";
 
   return {
     body: (
@@ -66,7 +73,12 @@ export function CombatantDrawer(props: {
           <Input value={label} onChange={(e) => setLabel(e.target.value)} />
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        {isWorld ? (
+          <div>
+            <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Description or reminder</div>
+            <TextArea value={description} onChange={(event) => setDescription(event.target.value)} rows={8} />
+          </div>
+        ) : <><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <div>
             <div style={{ color: theme.colors.muted, marginBottom: 6 }}>AC</div>
             <Input value={ac} onChange={(e) => setAc(e.target.value)} placeholder="10" />
@@ -86,6 +98,8 @@ export function CombatantDrawer(props: {
           <input type="checkbox" checked={friendly} onChange={(e) => setFriendly(e.target.checked)} />
           Friendly
         </label>
+
+        </>}
 
         {baseMonster ? (
   <>

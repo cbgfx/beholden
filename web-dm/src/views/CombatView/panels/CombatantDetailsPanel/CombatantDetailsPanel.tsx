@@ -87,6 +87,7 @@ export function CombatantDetailsPanel(props: Props) {
   const selected = combatant ?? null;
   const isMonster = selected?.baseType === "monster" || (selected?.baseType === "inpc" && !!ctx.selectedMonster);
   const isPlayer = selected?.baseType === "player";
+  const isWorld = selected?.baseType === "world";
   const titleMain = selected ? (selected.label || selected.name || "(Unnamed)") : "No selection";
 
   const polymorphCond = (selected?.conditions ?? []).find((c) => c.key === "polymorphed") as
@@ -168,7 +169,7 @@ export function CombatantDetailsPanel(props: Props) {
         </div>
       }
       actions={
-        !selected ? null : (
+        !selected || isWorld ? null : (
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <IconButton title="Transform / Polymorph" onClick={ctx.onOpenPolymorph}>
               <IconWerewolf size={18} title="Transform" />
@@ -189,7 +190,24 @@ export function CombatantDetailsPanel(props: Props) {
         <div style={{ color: theme.colors.muted }}>Select a combatant.</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {isPolymorphed ? (
+          {isWorld ? (
+            <div style={{ display: "grid", gap: 10 }}>
+              <div style={{ color: theme.colors.accentWarning, fontSize: "var(--fs-small)", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                World Action
+              </div>
+              <div
+                style={{
+                  color: selected.description ? theme.colors.text : theme.colors.muted,
+                  whiteSpace: "pre-wrap",
+                  lineHeight: 1.35,
+                  fontSize: "clamp(1.5rem, 2.2vw, 2.25rem)",
+                  fontWeight: 700,
+                }}
+              >
+                {selected.description || "No description or reminder has been added."}
+              </div>
+            </div>
+          ) : isPolymorphed ? (
             <div
               style={{
                 display: "flex", alignItems: "center", gap: 8,
@@ -226,7 +244,7 @@ export function CombatantDetailsPanel(props: Props) {
             </div>
           ) : null}
 
-          {sheetStats ? <CharacterSheetPanel stats={sheetStats} compact={isMonster} /> : null}
+          {!isWorld && sheetStats ? <CharacterSheetPanel stats={sheetStats} compact={isMonster} /> : null}
 
           {isPlayer && (selected.hpCurrent ?? 1) <= 0 ? (
             <div
@@ -250,13 +268,13 @@ export function CombatantDetailsPanel(props: Props) {
             </div>
           ) : null}
 
-          <CombatantConditionsSection
+          {!isWorld && <CombatantConditionsSection
             selected={selected}
             role={role}
             roster={ctx.roster ?? []}
             currentRound={ctx.currentRound}
             onCommit={(next) => ctx.onUpdate({ conditions: next })}
-          />
+          />}
 
           {ctx.selectedMonster ? (
             <MonsterActions

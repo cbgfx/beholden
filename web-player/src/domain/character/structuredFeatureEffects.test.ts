@@ -87,6 +87,21 @@ describe("structured canonical feature effects", () => {
     ]));
   });
 
+  it("maps a typed metamagic replacement without reading feature prose", () => {
+    const effects = structuredEffectsFromCanonical({
+      source: { ...source, name: "Sorcerous Versatility" },
+      classChoices: [{ id: "fc_sorcerer_metamagic_replacement_4", kind: "replacement", target: "metamagic", count: 1 }],
+    });
+
+    expect(effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "selection_replacement",
+        target: "metamagic",
+        count: { kind: "fixed", value: 1 },
+      }),
+    ]));
+  });
+
   it("maps constrained class proficiency choices without prose", () => {
     const effects = structuredEffectsFromCanonical({
       source: { ...source, name: "Blessings of Knowledge" },

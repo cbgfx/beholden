@@ -25,7 +25,7 @@ function serializeEncounterActorLive(live: StoredEncounterActorLiveState): strin
 function buildEncounterActorSnapshot(
   actor: Pick<
     StoredEncounterActor,
-    "name" | "label" | "friendly" | "color" | "hpMax" | "hpDetails" | "ac" | "acDetails" | "attackOverrides"
+    "name" | "label" | "friendly" | "color" | "hpMax" | "hpDetails" | "ac" | "acDetails" | "attackOverrides" | "description"
   >,
   patch: Partial<StoredEncounterActorSnapshot> = {},
 ): StoredEncounterActorSnapshot {
@@ -39,6 +39,9 @@ function buildEncounterActorSnapshot(
     ac: patch.ac ?? actor.ac,
     acDetails: patch.acDetails !== undefined ? patch.acDetails : actor.acDetails,
     attackOverrides: patch.attackOverrides !== undefined ? patch.attackOverrides : actor.attackOverrides,
+    ...(patch.description ?? actor.description
+      ? { description: patch.description ?? actor.description }
+      : {}),
   };
 }
 
@@ -54,6 +57,7 @@ export function buildEncounterActorLive(
     | "usedLegendaryActions"
     | "usedLegendaryResistances"
     | "usedSpellSlots"
+    | "engagedWithPlayers"
   >,
   patch: Partial<StoredEncounterActorLiveState> = {},
 ): StoredEncounterActorLiveState {
@@ -70,6 +74,9 @@ export function buildEncounterActorLive(
       patch.usedLegendaryResistances ?? actor.usedLegendaryResistances ?? 0,
     ...(patch.usedSpellSlots ?? actor.usedSpellSlots
       ? { usedSpellSlots: patch.usedSpellSlots ?? actor.usedSpellSlots ?? {} }
+      : {}),
+    ...(patch.engagedWithPlayers ?? actor.engagedWithPlayers
+      ? { engagedWithPlayers: true }
       : {}),
   };
 }

@@ -3,7 +3,7 @@ import type { EncounterActor } from "@/domain/types/domain";
 export type CombatantVM = {
   id: string;
   label: string;
-  baseType: "player" | "monster" | "inpc";
+  baseType: "player" | "monster" | "inpc" | "world";
   friendly?: boolean; // only meaningful for monsters
   hpMax?: number;
   hpCurrent?: number;
@@ -19,8 +19,7 @@ export function mapCombatantsToVM(
 ): CombatantVM[] {
   return combatants.map((c) => {
     // API payloads use baseType: "player" | "monster" | "inpc"
-    const baseType: CombatantVM["baseType"] =
-      c.baseType === "inpc" ? "inpc" : c.baseType === "player" ? "player" : "monster";
+    const baseType: CombatantVM["baseType"] = c.baseType;
 
     const id = String(c.id);
 
@@ -38,6 +37,7 @@ export function mapCombatantsToVM(
 }
 
 export function formatCombatantMeta(c: CombatantVM): string {
+  if (c.baseType === "world") return "World Action";
   const isPlayer = c.baseType === "player";
   const hpPart = c.hpCurrent != null && c.hpMax != null ? `HP ${c.hpCurrent}/${c.hpMax}` : "";
   const xpPart =

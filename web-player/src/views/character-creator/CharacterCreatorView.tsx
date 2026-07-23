@@ -37,6 +37,7 @@ import { StepHeader } from "@/views/character-creator/shared/CharacterCreatorPar
 import { CharacterCreatorSideSummary } from "@/views/character-creator/shared/CharacterCreatorSideSummary";
 import { getStep5ChoiceState } from "@/views/character-creator/utils/CharacterCreatorStep5Utils";
 import {
+  deriveRaceAbilityBonuses,
   getClassFeatChoiceLabel,
   getClassFeatOptionLabel,
   initForm,
@@ -277,6 +278,7 @@ export function CharacterCreatorView() {
       setForm(f => ({
         ...f,
         chosenRaceSkills: [], chosenRaceLanguages: [], chosenRaceTools: [], chosenRaceFeatId: null, chosenRaceSize: null,
+        chosenRaceAbilityChoices: [], raceAbilityMode: "split", raceAbilityBonuses: {},
         chosenClassLanguages: [],
         chosenFeatOptions: Object.fromEntries(Object.entries(f.chosenFeatOptions).filter(([k]) => !k.startsWith("race:"))),
       }));
@@ -386,7 +388,8 @@ export function CharacterCreatorView() {
   // Auto-calculate HP, AC, speed when class/race/scores change
   React.useEffect(() => {
     const hd = effectiveHitDie;
-    const scores = resolvedScores(form, selectedFeatAbilityBonuses);
+    const raceAbilityBonuses = deriveRaceAbilityBonuses(raceDetail, raceDetail?.parsedChoices?.abilityScoreChoice, form);
+    const scores = resolvedScores(form, selectedFeatAbilityBonuses, raceAbilityBonuses);
     const conMod = abilityMod(scores.con ?? 10);
     const hp = calcHpMax(hd, form.level, conMod);
     const baseSpeed = raceDetail?.speed ?? races.find((race) => race.id === form.raceId)?.speed ?? 30;

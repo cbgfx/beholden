@@ -9,6 +9,7 @@ import { EncounterRosterHeaderActions } from "@/views/CampaignView/panels/Encoun
 import { EncounterRosterList } from "@/views/CampaignView/panels/EncounterRosterPanel/EncounterRosterList";
 import type { CombatantVM } from "@/views/CampaignView/panels/EncounterRosterPanel/utils";
 import { mapCombatantsToVM } from "@/views/CampaignView/panels/EncounterRosterPanel/utils";
+import { WorldActionModal } from "@/views/CampaignView/panels/EncounterRosterPanel/WorldActionModal";
 
 export function EncounterRosterPanel(props: {
   selectedEncounter: { id: string; name: string } | null;
@@ -26,6 +27,7 @@ export function EncounterRosterPanel(props: {
     qty: number,
     opts?: AddMonsterOptions
   ) => void;
+  onAddWorldAction: (name: string, description?: string) => Promise<void> | void;
 
   onAddAllPlayers: () => void;
   onOpenCombat: () => void;
@@ -33,6 +35,7 @@ export function EncounterRosterPanel(props: {
   onRemoveCombatant: (combatantId: string) => void;
 }) {
   const [pickerOpen, setPickerOpen] = React.useState(false);
+  const [worldActionOpen, setWorldActionOpen] = React.useState(false);
 
   // Map raw combatants -> VM used by this panel (keeps CampaignView simple)
   const combatantsVM: CombatantVM[] = React.useMemo(
@@ -66,7 +69,10 @@ export function EncounterRosterPanel(props: {
           />
 
           {/* Add monsters */}
-          <div style={{ display: "grid", gap: 6, paddingTop: 8, borderTop: `1px solid ${theme.colors.panelBorder}` }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, paddingTop: 8, borderTop: `1px solid ${theme.colors.panelBorder}` }}>
+            <Button onClick={() => setWorldActionOpen(true)}>
+              + World Action
+            </Button>
             <Button onClick={() => setPickerOpen(true)}>
               + Monster
             </Button>
@@ -76,6 +82,11 @@ export function EncounterRosterPanel(props: {
             isOpen={pickerOpen}
             onClose={() => setPickerOpen(false)}
             onAddMonster={(id, qty, opts) => props.onAddMonster(id, qty, opts)}
+          />
+          <WorldActionModal
+            isOpen={worldActionOpen}
+            onClose={() => setWorldActionOpen(false)}
+            onAdd={props.onAddWorldAction}
           />
         </div>
       )}

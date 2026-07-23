@@ -166,6 +166,7 @@ export function buildCharacterRuntimeActions(args: {
     spells: [],
     invocations: [],
     maneuvers: [],
+    metamagic: [],
     plans: [],
   };
   const normalizeSpellName = (name: string) => name.replace(/\s*\[[^\]]+\]\s*$/u, "").trim().toLowerCase();

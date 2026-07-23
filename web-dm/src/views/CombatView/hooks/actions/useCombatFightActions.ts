@@ -44,6 +44,11 @@ export function useCombatFightActions({
         continue;
       }
 
+      if (c.baseType === "world") {
+        await putEncounterCombatant(encounterId, c.id, { initiative: null });
+        continue;
+      }
+
       // Non-player combatants (monsters, iNPCs): restore HP to max and clear conditions/initiative.
       const overrides = c.overrides ?? null;
       const hpBonus = normalizeHpMaxBonus(overrides?.hpMaxBonus) ?? 0;

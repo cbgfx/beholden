@@ -32,6 +32,38 @@ export interface LevelUpExpertiseChoice {
   options: string[] | null;
 }
 
+/** Renders a typed `selection_replacement` choice for a class-level exclusive option group
+ * (Fighting Style, Pact Boon): shows the currently-held option and lets the player switch to a
+ * different one from the same group. Optional — leaving it untouched keeps the current pick. */
+export function ExclusiveChoiceReplacementSection(props: {
+  accentColor: string;
+  title: string;
+  choice: { key: string; currentOptionId: string | null; options: Array<{ id: string; name: string }> };
+  chosenFeatureChoices: Record<string, string[]>;
+  onSelect: (choiceKey: string, optionId: string) => void;
+}) {
+  const { accentColor, title, choice, chosenFeatureChoices, onSelect } = props;
+  const pending = chosenFeatureChoices[choice.key]?.[0] ?? choice.currentOptionId;
+
+  return (
+    <div>
+      <div style={{ fontSize: "var(--fs-body)", fontWeight: 800, color: "#fff", marginBottom: 8 }}>{title}</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {choice.options.map((option) => (
+          <ChoiceBtn
+            key={option.id}
+            active={pending === option.id}
+            onClick={() => onSelect(choice.key, option.id)}
+            accent={accentColor}
+          >
+            {option.name}
+          </ChoiceBtn>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function Wrap({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ height: "100%", overflowY: "auto", background: C.bg, color: C.text }}>
@@ -243,6 +275,86 @@ export function ExpertiseSelectionSection(props: {
                 );
               })}
             </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Renders a typed `{kind:"expertise", replace:true}` choice (e.g. Bardic Versatility): pick which
+ * currently-held Expertise skill to give up, then pick its replacement. Net Expertise count never
+ * changes — this is a swap, not an additional pick. */
+export function ExpertiseReplacementSection(props: {
+  accentColor: string;
+  replacementChoices: LevelUpExpertiseChoice[];
+  chosenExpertise: Record<string, string[]>;
+  proficientSkills: string[];
+  existingExpertise: string[];
+  onToggleExpertise: (choiceKey: string, skill: string, count: number) => void;
+}) {
+  const { accentColor, replacementChoices, chosenExpertise, proficientSkills, existingExpertise, onToggleExpertise } = props;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {replacementChoices.map((choice) => {
+        const targetKey = `${choice.key}:target`;
+        const target = chosenExpertise[targetKey]?.[0] ?? null;
+        const selected = chosenExpertise[choice.key] ?? [];
+        const proficientSkillKeys = new Set(proficientSkills.map((skill) => normalizeChoiceKey(skill)));
+        const existingExpertiseKeys = new Set(existingExpertise.map((skill) => normalizeChoiceKey(skill)));
+        const newSkillOptions = (choice.options ?? proficientSkills)
+          .filter((skill) => proficientSkillKeys.has(normalizeChoiceKey(skill)))
+          .filter((skill) =>
+            !existingExpertiseKeys.has(normalizeChoiceKey(skill))
+            || normalizeChoiceKey(skill) === (target ? normalizeChoiceKey(target) : "")
+            || selected.some((entry) => normalizeChoiceKey(entry) === normalizeChoiceKey(skill))
+          );
+        return (
+          <div key={choice.key}>
+            <div style={{ fontSize: "var(--fs-body)", fontWeight: 800, color: "#fff", marginBottom: 8 }}>{choice.source}</div>
+            <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginBottom: 6 }}>Replace this Expertise:</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+              {existingExpertise.map((skill) => (
+                <ChoiceBtn
+                  key={skill}
+                  active={target !== null && normalizeChoiceKey(target) === normalizeChoiceKey(skill)}
+                  onClick={() => {
+                    // Single-select: switching directly to a different skill requires clearing the
+                    // old pick first — toggleMultiChoice alone would no-op since count is already met.
+                    if (target && normalizeChoiceKey(target) !== normalizeChoiceKey(skill)) onToggleExpertise(targetKey, target, 1);
+                    onToggleExpertise(targetKey, skill, 1);
+                  }}
+                  accent={accentColor}
+                >
+                  {skill}
+                </ChoiceBtn>
+              ))}
+            </div>
+            {target ? (
+              <>
+                <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginBottom: 6 }}>Replace with:</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {newSkillOptions.map((skill) => {
+                    const isSelected = selected.some((entry) => normalizeChoiceKey(entry) === normalizeChoiceKey(skill));
+                    const currentPick = selected[0] ?? null;
+                    return (
+                      <ChoiceBtn
+                        key={skill}
+                        active={isSelected}
+                        onClick={() => {
+                          if (currentPick && normalizeChoiceKey(currentPick) !== normalizeChoiceKey(skill)) onToggleExpertise(choice.key, currentPick, choice.count);
+                          onToggleExpertise(choice.key, skill, choice.count);
+                        }}
+                        accent={accentColor}
+                      >
+                        {skill}
+                      </ChoiceBtn>
+                    );
+                  })}
+                </div>
+              </>
+            ) : null}
           </div>
         );
       })}

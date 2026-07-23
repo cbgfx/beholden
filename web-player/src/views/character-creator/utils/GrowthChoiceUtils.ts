@@ -15,7 +15,7 @@ interface GrowthChoiceAbilityDefinition { key: string; title: string; options: A
 export interface GrowthChoiceDefinition {
   key: string;
   sourceKey: string;
-  category: "maneuver" | "plan";
+  category: "maneuver" | "metamagic" | "plan";
   title: string;
   sourceLabel: string;
   totalCount: number;
@@ -29,6 +29,11 @@ export interface GrowthChoiceDefinition {
   note?: string | null;
 }
 
+const TALENT_GROWTH_KIND: Record<"maneuver" | "metamagic", { category: "maneuver" | "metamagic"; title: string; sourceKeySuffix: string }> = {
+  maneuver: { category: "maneuver", title: "Maneuvers", sourceKeySuffix: "maneuvers" },
+  metamagic: { category: "metamagic", title: "Metamagic", sourceKeySuffix: "metamagic" },
+};
+
 function slugify(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
@@ -41,16 +46,22 @@ export function getGrowthChoiceDefinitions(args: {
   level: number;
   selectedSubclass?: string | null;
   maneuverReplacementLimit?: number;
+  metamagicReplacementLimit?: number;
 }): GrowthChoiceDefinition[] {
   const { classId, classDetail, level, selectedSubclass } = args;
   if (!classDetail || !classId) return [];
+  const replacementLimitByKind: Record<"maneuver" | "metamagic", number> = {
+    maneuver: args.maneuverReplacementLimit ?? 0,
+    metamagic: args.metamagicReplacementLimit ?? 0,
+  };
   const definitions: GrowthChoiceDefinition[] = [];
   for (const row of classDetail.autolevels) {
     if (row.level == null || row.level > level) continue;
     for (const feature of row.features ?? []) {
       if (!featureMatchesSubclass(feature, selectedSubclass) || feature.optional) continue;
       const talent = feature.talent;
-      if (talent?.kind !== "maneuver") continue;
+      if (talent?.kind !== "maneuver" && talent?.kind !== "metamagic") continue;
+      const kind = TALENT_GROWTH_KIND[talent.kind];
       const progression = Object.entries(talent.known)
         .map(([requiredLevel, count]) => [Number(requiredLevel), Number(count)] as const)
         .filter(([requiredLevel, count]) => Number.isInteger(requiredLevel) && Number.isInteger(count))
@@ -59,30 +70,30 @@ export function getGrowthChoiceDefinitions(args: {
       if (totalCount <= 0) continue;
       const previousCount = progression.filter(([requiredLevel]) => requiredLevel < level).at(-1)?.[1] ?? 0;
       const subclassKey = slugify(getFeatureSubclassName(feature) ?? selectedSubclass ?? args.className ?? "class");
-      const sourceKey = `class:${slugify(classId)}:subclass:${subclassKey || "class"}:feature:${slugify(feature.name)}:maneuvers`;
+      const sourceKey = `class:${slugify(classId)}:subclass:${subclassKey || "class"}:feature:${slugify(feature.name)}:${kind.sourceKeySuffix}`;
       definitions.push({
         key: sourceKey,
         sourceKey,
-        category: "maneuver",
-        title: "Maneuvers",
+        category: kind.category,
+        title: kind.title,
         sourceLabel: feature.name,
         totalCount,
         gainedAtLevel: Math.max(0, totalCount - previousCount),
         replacementSupported: talent.replace === true,
-        replacementLimit: Math.max(0, args.maneuverReplacementLimit ?? 0),
+        replacementLimit: Math.max(0, replacementLimitByKind[talent.kind]),
         spellChoice: {
           key: sourceKey,
-          title: "Maneuvers",
+          title: kind.title,
           sourceLabel: feature.name,
           count: totalCount,
           level: 0,
-          note: "Choose maneuvers you know from this feature.",
+          note: `Choose ${kind.title.toLowerCase()} you know from this feature.`,
           linkedTo: null,
           listNames: [],
-          talentKind: "maneuver",
+          talentKind: talent.kind,
         },
         abilityChoice: talent.ability?.length
-          ? { key: `${sourceKey}:ability`, title: "Maneuver Save Ability", options: talent.ability as AbilKey[] }
+          ? { key: `${sourceKey}:ability`, title: `${kind.title.replace(/s$/, "")} Save Ability`, options: talent.ability as AbilKey[] }
           : null,
       });
     }
@@ -118,7 +129,7 @@ export function sanitizeGrowthChoiceSelections(args: {
       if (ability.length) next[definition.abilityChoice.key] = ability; else delete next[definition.abilityChoice.key];
     }
   }
-  for (const key of Object.keys(next)) if (!validKeys.has(key) && (key.includes(":maneuvers") || key.includes(":plans"))) delete next[key];
+  for (const key of Object.keys(next)) if (!validKeys.has(key) && (key.includes(":maneuvers") || key.includes(":metamagic") || key.includes(":plans"))) delete next[key];
   return next;
 }
 

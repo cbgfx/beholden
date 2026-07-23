@@ -47,6 +47,8 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
         portraitUploading={ui.portraitUploading}
         onSelectPortrait={() => ui.portraitFileRef.current?.click()}
         onOpenInfo={() => ui.setInfoDrawerOpen(true)}
+        onOpenEngagedEnemies={() => ui.setEngagedEnemiesDrawerOpen(true)}
+        showEngagedEnemies={live.combatStatus !== null}
         sheetView={ui.sheetView}
         onSheetViewChange={(view) => {
           ui.setSheetView(view);

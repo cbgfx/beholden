@@ -19,6 +19,19 @@ export const SpeciesSchema = z
     /** Omit when Humanoid (the documented default for every 2024 species but Warforged). */
     creatureType: z.string().min(1).optional(),
     spellcastingAbility: ABILITY.optional(),
+    /** Fixed 2014-race Ability Score Increase amounts (e.g. Dwarf: `{con: 2, wis: 1}`).
+     * Player-chosen amounts on top of this live on `choices.abilityScoreChoice`. Omit entirely
+     * for a 2024 species, which grants no ability score increase of its own. */
+    abilityScoreIncrease: z.object({
+      str: z.number().int().optional(),
+      dex: z.number().int().optional(),
+      con: z.number().int().optional(),
+      int: z.number().int().optional(),
+      wis: z.number().int().optional(),
+      cha: z.number().int().optional(),
+    }).strict()
+      .refine((value) => Object.keys(value).length > 0, "Empty abilityScoreIncrease must be omitted")
+      .optional(),
     choices: SpeciesChoiceSchema
       .refine((value) => Object.keys(value).length > 0, "Empty choices must be omitted")
       .optional(),

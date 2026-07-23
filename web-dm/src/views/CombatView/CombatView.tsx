@@ -302,7 +302,7 @@ export function CombatView() {
           targetId={target?.id ?? null}
           onOpenConditions={onOpenConditions}
           delta={delta}
-          deltaDisabled={!bulkMode && !target}
+          deltaDisabled={!bulkMode && (!target || target.baseType === "world")}
           onChangeDelta={setDelta}
           onApplyDamage={handleApplyDamage}
           onApplyHeal={handleApplyHeal}
@@ -330,7 +330,7 @@ export function CombatView() {
             <CombatDeltaControls
               value={delta}
               targetId={target?.id ?? null}
-              disabled={!bulkMode && !target}
+              disabled={!bulkMode && (!target || target.baseType === "world")}
               onChange={setDelta}
               onApplyDamage={handleApplyDamage}
               onApplyHeal={handleApplyHeal}
