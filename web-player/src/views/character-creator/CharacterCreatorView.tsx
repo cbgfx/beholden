@@ -188,6 +188,7 @@ export function CharacterCreatorView() {
     [classInvocations, featSummaries, form.chosenInvocations],
   );
   const invocationGrantedFeatChoices = useInvocationGrantedFeatChoices({
+    ruleset: form.ruleset ?? "5.5e",
     choices: invocationFeatChoices,
     selectedOptions: form.chosenFeatOptions,
     level: form.level,

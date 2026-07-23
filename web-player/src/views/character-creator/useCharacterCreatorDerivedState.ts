@@ -444,8 +444,8 @@ export function useCharacterCreatorDerivedState(args: {
     [classDetail, form.level]
   );
   const availableLevelUpFeats = React.useMemo(
-    () => featSummaries.filter((feat) => form.level >= 19 || !/^boon of\b/i.test(feat.name)),
-    [featSummaries, form.level]
+    () => featSummaries.filter((feat) => form.ruleset !== "5.5e" || form.level >= 19 || !/^boon of\b/i.test(feat.name)),
+    [featSummaries, form.level, form.ruleset]
   );
   const levelUpFeatConflict = React.useMemo(() => {
     const counts = new Map<string, number>();

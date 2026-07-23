@@ -663,7 +663,7 @@ test("import guardrails reject a species trait marked automatic with no structur
     };
     assert.throws(
       () => previewNativeCompendiumDocument(db, batch("species", [species])),
-      /traits\.0 is marked automatic but has no effects, scalingRolls, or preparedSpellProgression/u,
+      /traits\.0 is marked automatic but has no effects, scalingRolls, preparedSpellProgression, or species-level ability score increase/u,
     );
   } finally { db.close(); }
 });

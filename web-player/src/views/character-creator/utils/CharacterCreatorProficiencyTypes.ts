@@ -76,6 +76,7 @@ export interface CreatorClassDetailLike {
 }
 
 export interface CreatorRaceDetailLike {
+  id?: string;
   name: string;
   speed?: number | null;
   traits: Array<{ name: string; text: string; modifier: string[]; effects?: unknown[] }>;

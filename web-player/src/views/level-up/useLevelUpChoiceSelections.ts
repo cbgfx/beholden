@@ -140,6 +140,29 @@ export function useLevelUpChoiceSelections(args: {
     });
   }, [chosenFeatDetail, featChoiceOptionsByKey, featResolvedSpellChoices, featSpellChoiceOptions, featSpellListChoices, nextLevel, setChosenFeatOptions]);
 
+  // Eldritch Versatility's Mystic Arcanum "revisit" entries reuse the historical choice key each
+  // spell was originally picked under. Seed the current pick from the character's saved history
+  // so the picker opens with it already selected, matching every other already-answered choice —
+  // players can leave it alone or pick a different spell of the same level.
+  React.useEffect(() => {
+    const historical = char?.characterData?.chosenFeatOptions;
+    if (!historical) return;
+    const revisitKeys = classFeatureResolvedSpellChoices
+      .map((choice) => choice.key)
+      .filter((key) => Array.isArray(historical[key]) && historical[key].length > 0);
+    if (revisitKeys.length === 0) return;
+    setChosenFeatOptions((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const key of revisitKeys) {
+        if (key in next) continue;
+        next[key] = historical[key];
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [char, classFeatureResolvedSpellChoices, setChosenFeatOptions]);
+
   React.useEffect(() => {
     setChosenFeatOptions((prev) => {
       const sanitized = sanitizeSpellChoiceSelections({

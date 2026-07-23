@@ -45,7 +45,10 @@ import {
   hasArmorProficiency,
   hasStealthDisadvantage,
   isArmorItem,
+  isRangedWeapon,
   isShieldItem,
+  isWeaponItem,
+  requiresTwoHands,
 } from "@/views/character/CharacterInventory";
 import { getPreparedSpellCount, usesFlexiblePreparedSpells } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import {
@@ -424,15 +427,12 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   const preparedSpells = currentCharacterData.classSpellSelections
     ? Array.from(new Set(classSpellcastingStates.flatMap((state) => state.preparedSpells)))
     : legacyPreparedSpells;
-  const grantedSpellNotesByKey = new Map(
-    grantedSpellData.spells.map((entry) => [normalizeSpellTrackingKey(entry.spellName), entry.note ?? null] as const)
-  );
   const invocationSpellDamageBonuses = buildInvocationSpellDamageBonuses({
+    ruleset: args.char.ruleset,
     invocationDetails: args.invocationDetails,
     prof: prof ?? undefined,
     currentCharacterData,
     scoresCha: scores.cha,
-    grantedSpellNotesByKey,
   });
 
   const accentColor = args.char.color ?? "#38b6ff";
@@ -444,6 +444,14 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   const xpEarned = currentCharacterData.xp ?? 0;
   const xpNeeded = XP_TO_LEVEL[args.char.level + 1] ?? 0;
   const wornShield = inventory.find((item) => getEquipState(item) === "offhand" && isShieldItem(item));
+  const dualWielding = ["mainhand-1h", "offhand"].every((equipState) =>
+    inventory.some((item) =>
+      getEquipState(item) === equipState
+      && isWeaponItem(item)
+      && !isRangedWeapon(item)
+      && !requiresTwoHands(item)
+    )
+  );
   // Every shield grants a flat +2 (that's a rule keyed off the item's structured `type`, not
   // inferred from its name) plus whatever magic enchantment bonus the compendium's `modifiers`
   // carries for this specific item (e.g. a Shield +1 adds another +1) — see itemModifierBonus.
@@ -495,6 +503,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   });
   const featureAcBonus = deriveArmorClassBonusFromEffects(parsedAllEffects, {
     armorEquipped: Boolean(wornArmor),
+    dualWielding,
     armorCategory:
       wornArmor && /\bheavy\b/i.test(wornArmor.type ?? "") ? "heavy"
       : wornArmor && /\bmedium\b/i.test(wornArmor.type ?? "") ? "medium"

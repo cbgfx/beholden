@@ -320,7 +320,17 @@ export function buildProficiencyMap(args: {
     if (!coreLanguageChoice) form.chosenRaceLanguages.forEach((name) => pushLanguage(name, raceName));
     form.chosenRaceTools.forEach((name) => pushTool(name, raceName));
 
-    const raceTraitSpellChoices = collectSpellChoicesFromEffects(parseAppliedSpeciesTraitEffects(raceDetail));
+    const parsedRaceTraits = parseAppliedSpeciesTraitEffects(raceDetail, form.chosenFeatureChoices);
+    const raceTraitGrants = collectTaggedGrantsFromEffects(parsedRaceTraits);
+    raceTraitGrants.armor.forEach((entry) => pushArmor(entry.name, entry.source));
+    raceTraitGrants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
+    raceTraitGrants.tools.forEach((entry) => pushTool(entry.name, entry.source));
+    raceTraitGrants.skills.forEach((entry) => skills.push(entry));
+    raceTraitGrants.expertise.forEach((entry) => pushExpertise(entry.name, entry.source));
+    raceTraitGrants.saves.forEach((entry) => saves.push(entry));
+    raceTraitGrants.languages.forEach((entry) => pushLanguage(entry.name, entry.source));
+
+    const raceTraitSpellChoices = collectSpellChoicesFromEffects(parsedRaceTraits);
     raceTraitSpellChoices.forEach((choice) => {
       const key = `racetrait:${choice.id}`;
       resolveSelectedSpellOptionEntries(form.chosenFeatOptions[key] ?? [], spellChoiceOptionsByKey[key] ?? [])

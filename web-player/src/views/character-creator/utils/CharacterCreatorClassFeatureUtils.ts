@@ -22,6 +22,7 @@ import type {
   CreatorRaceDetailLike,
   CreatorWeaponMasteryChoice,
 } from "./CharacterCreatorProficiencyTypes";
+import { resolveSpeciesTraitEffects } from "@/domain/character/speciesTraitChoices";
 
 export function parseAppliedClassFeatureEffects(
   classDetail: CreatorClassDetailLike | null,
@@ -66,6 +67,7 @@ export function parseAppliedClassFeatureEffects(
  */
 export function parseAppliedSpeciesTraitEffects(
   raceDetail: CreatorRaceDetailLike | null,
+  chosenFeatureChoices?: Record<string, string[]>,
 ): ParsedFeatureEffects[] {
   if (!raceDetail) return [];
   const parsed: ParsedFeatureEffects[] = [];
@@ -80,7 +82,12 @@ export function parseAppliedSpeciesTraitEffects(
         text: trait.text,
       },
       text: trait.text,
-      traitEffects: trait.effects,
+      traitEffects: resolveSpeciesTraitEffects(
+        String(raceDetail.id ?? ""),
+        trait.name,
+        trait.effects,
+        chosenFeatureChoices,
+      ),
     } satisfies ParseFeatureEffectsInput));
   }
   return parsed;

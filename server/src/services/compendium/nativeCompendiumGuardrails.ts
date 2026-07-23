@@ -319,21 +319,93 @@ function checkAutomaticResolutionIsComplete(
   };
 
   if (category === "species" && Array.isArray(entry.traits)) {
-    (entry.traits as JsonRecord[]).forEach((trait, index) => checkTrait(trait, `traits.${index}`));
+    checkSpeciesTraitResolutionIsComplete(entry, owner, issues);
   }
   if (category === "backgrounds" && Array.isArray(entry.traits)) {
     (entry.traits as JsonRecord[]).forEach((trait, index) => checkTrait(trait, `traits.${index}`));
   }
   if (category === "classes" && Array.isArray(entry.levels)) {
-    for (const [levelIndex, level] of (entry.levels as JsonRecord[]).entries()) {
-      if (!Array.isArray(level.features)) continue;
-      for (const [featureIndex, feature] of (level.features as JsonRecord[]).entries()) {
-        checkTrait(feature as JsonRecord, `levels.${levelIndex}.features.${featureIndex}`);
-      }
-    }
+    checkClassFeatureResolutionIsComplete(entry, owner, issues);
   }
   if (category === "feats") {
     checkFeatMechanics(entry, "");
+  }
+}
+
+/**
+ * A class feature's `automatic` mechanics don't always live on the feature itself — the schema
+ * spreads class-scoped structure across four homes: the feature's own `effects`/`scalingRolls`/
+ * `preparedSpellProgression`/`choices`/`talent`; the enclosing `ClassLevelSchema`'s
+ * `abilityScoreImprovement`/`spellSlots`/`cantripsKnown`/`spellsPrepared` (e.g. the "Ability Score
+ * Improvement" and "Spellcasting"/"Pact Magic" header features); a class-wide `ClassSchema.choices`
+ * group sharing the feature's name (e.g. "Fighting Style", granted through named sub-feature
+ * options rather than the header's own fields); or a `talent.known`/`choices[].known` cumulative
+ * level-count map on a different feature in the same class (e.g. "Additional Invocation" at 5th
+ * level is a reminder — the counts already live on 2nd-level "Eldritch Invocations").
+ */
+function checkClassFeatureResolutionIsComplete(entry: JsonRecord, owner: string, issues: string[]): void {
+  const hasNonEmptyArray = (value: unknown): boolean => Array.isArray(value) && value.length > 0;
+  const levels = entry.levels as JsonRecord[];
+
+  const classChoiceGroupNames = new Set(
+    (Array.isArray(entry.choices) ? entry.choices as JsonRecord[] : []).map((choice) => String(choice.name)),
+  );
+
+  const knownMapLevels = new Set<string>();
+  for (const level of levels) for (const feature of (Array.isArray(level.features) ? level.features as JsonRecord[] : [])) {
+    const talent = feature.talent && typeof feature.talent === "object" ? feature.talent as JsonRecord : null;
+    if (talent?.known && typeof talent.known === "object") Object.keys(talent.known as JsonRecord).forEach((lvl) => knownMapLevels.add(lvl));
+    for (const choice of (Array.isArray(feature.choices) ? feature.choices as JsonRecord[] : [])) {
+      if (choice.known && typeof choice.known === "object") Object.keys(choice.known as JsonRecord).forEach((lvl) => knownMapLevels.add(lvl));
+    }
+  }
+
+  for (const [levelIndex, level] of levels.entries()) {
+    if (!Array.isArray(level.features)) continue;
+    for (const [featureIndex, rawFeature] of (level.features as JsonRecord[]).entries()) {
+      const feature = rawFeature as JsonRecord;
+      if (feature.resolution !== "automatic") continue;
+      const hasLevelProgression = feature.name === "Ability Score Improvement"
+        ? level.abilityScoreImprovement === true
+        : (feature.name === "Spellcasting" || feature.name === "Pact Magic")
+          ? Boolean(level.spellSlots) || level.cantripsKnown != null || level.spellsPrepared != null
+          : false;
+      const hasMechanics = hasNonEmptyArray(feature.effects)
+        || hasNonEmptyArray(feature.scalingRolls)
+        || hasNonEmptyArray(feature.preparedSpellProgression)
+        || hasNonEmptyArray(feature.choices)
+        || Boolean(feature.talent && typeof feature.talent === "object")
+        || hasLevelProgression
+        || classChoiceGroupNames.has(String(feature.name))
+        || knownMapLevels.has(String(level.level));
+      if (!hasMechanics) {
+        issues.push(`${owner}.levels.${levelIndex}.features.${featureIndex} is marked automatic but has no effects, scalingRolls, preparedSpellProgression, choices, talent, or class-level progression`);
+      }
+    }
+  }
+}
+
+/**
+ * A 2014 species' "Ability Score Increase" trait is a header: the fixed amounts live on the
+ * species' own `abilityScoreIncrease`, and any player-chosen portion lives on
+ * `choices.abilityScoreChoice` — both siblings of `traits`, not fields on the trait itself.
+ */
+function checkSpeciesTraitResolutionIsComplete(entry: JsonRecord, owner: string, issues: string[]): void {
+  const hasNonEmptyArray = (value: unknown): boolean => Array.isArray(value) && value.length > 0;
+  const choices = entry.choices && typeof entry.choices === "object" && !Array.isArray(entry.choices) ? entry.choices as JsonRecord : null;
+  const hasAbilityScoreIncrease = Boolean(entry.abilityScoreIncrease && typeof entry.abilityScoreIncrease === "object")
+    || Boolean(choices?.abilityScoreChoice && typeof choices.abilityScoreChoice === "object");
+
+  for (const [index, rawTrait] of (entry.traits as JsonRecord[]).entries()) {
+    const trait = rawTrait as JsonRecord;
+    if (trait.resolution !== "automatic") continue;
+    const hasMechanics = hasNonEmptyArray(trait.effects)
+      || hasNonEmptyArray(trait.scalingRolls)
+      || hasNonEmptyArray(trait.preparedSpellProgression)
+      || (trait.name === "Ability Score Increase" && hasAbilityScoreIncrease);
+    if (!hasMechanics) {
+      issues.push(`${owner}.traits.${index} is marked automatic but has no effects, scalingRolls, preparedSpellProgression, or species-level ability score increase`);
+    }
   }
 }
 

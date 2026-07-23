@@ -140,6 +140,7 @@ export interface DeriveFeatAbilityBonusesArgs {
 }
 
 export interface DeriveLevelUpValidationArgs {
+  ruleset: "5e" | "5.5e";
   isAsiLevel: boolean;
   asiMode: "asi" | "feat" | null;
   asiStats: Record<string, number>;
@@ -252,11 +253,11 @@ export function deriveLevelUpValidation(args: DeriveLevelUpValidationArgs) {
   const {
     isAsiLevel, asiMode, asiStats, needsSubclassChoice, subclass, cantripCount, chosenCantrips, spellcaster,
     prepCount, chosenSpells, invocCount, chosenInvocations, expertiseChoices, expertiseReplacementChoices, chosenExpertise, chosenFeatDetail,
-    featChoiceEntries, chosenFeatOptions, nextLevel, className, level, scores, prof, featSearch, featSummaries, hpGain, existingLevelUpFeats, ownedFeatIds,
+    featChoiceEntries, chosenFeatOptions, nextLevel, className, level, scores, prof, featSearch, featSummaries, hpGain, existingLevelUpFeats, ownedFeatIds, ruleset,
   } = args;
 
   const availableFeatSummaries = featSummaries.filter(
-    (feat) => nextLevel >= 19 || !/^boon of\b/i.test(feat.name)
+    (feat) => ruleset !== "5.5e" || nextLevel >= 19 || !/^boon of\b/i.test(feat.name)
   );
   const needle = featSearch.trim().toLowerCase();
   const filteredFeatSummaries = !needle

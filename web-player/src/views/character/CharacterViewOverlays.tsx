@@ -19,6 +19,7 @@ export function CharacterViewOverlays({ model }: { model: CharacterViewModel }) 
     <>
       <CharacterFeatPickerModal
         isOpen={ui.featPickerOpen}
+        ruleset={model.char.ruleset}
         accentColor={derived.accentColor}
         currentFeatIds={currentCharacterData.extraFeatIds ?? []}
         existingFeatureNames={derived.classFeaturesList.map((feature) => feature.name)}

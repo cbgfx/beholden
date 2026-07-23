@@ -258,6 +258,7 @@ export function LevelUpView() {
     invocCount,
   });
   const invocationGrantedFeatChoices = useInvocationGrantedFeatChoices({
+    ruleset: char?.ruleset ?? "5.5e",
     choices: invocationFeatChoices,
     selectedOptions: chosenFeatOptions,
     level: nextLevel,
@@ -270,6 +271,7 @@ export function LevelUpView() {
   const { filteredFeatSummaries, featPrereqsMet, featRepeatableValid, canConfirm: baseCanConfirm } = React.useMemo(
     () =>
       deriveLevelUpValidation({
+        ruleset: char?.ruleset ?? "5.5e",
         isAsiLevel,
         asiMode,
         asiStats,
@@ -325,6 +327,7 @@ export function LevelUpView() {
       nextLevel,
       classDetail?.name,
       char?.className,
+      char?.ruleset,
       char?.characterData?.chosenLevelUpFeats,
       char?.characterData?.chosenRaceFeatId,
       char?.characterData?.chosenBgOriginFeatId,

@@ -17,6 +17,7 @@ import { collectDefensesFromEffects, collectSensesFromEffects } from "@/domain/c
 import { titleCase } from "@/lib/format/titleCase";
 import { ABILITY_KEYS, ABILITY_LABELS, ALL_LANGUAGES, ALL_SKILLS, ALL_TOOLS } from "@/views/character-creator/constants/CharacterCreatorConstants";
 import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
+import { collectSpeciesTraitChoiceBundles } from "@/domain/character/speciesTraitChoices";
 
 interface RaceSummaryLike {
   id: string;
@@ -25,6 +26,7 @@ interface RaceSummaryLike {
 }
 
 interface RaceDetailLike {
+  id: string;
   name: string;
   speed: number | null;
   size: string | null;
@@ -79,6 +81,8 @@ function renderSpeciesStep({
   chosenRaceFeatId,
   selectRaceFeat,
   raceFeatDetail,
+  chosenFeatureChoices,
+  selectTraitChoice,
   onBack,
   onNext,
 }: {
@@ -113,6 +117,8 @@ function renderSpeciesStep({
   chosenRaceFeatId: string | null;
   selectRaceFeat: (id: string, selected: boolean) => void;
   raceFeatDetail: { name: string; text?: string | null } | null;
+  chosenFeatureChoices: Record<string, string[]>;
+  selectTraitChoice: (key: string, optionId: string) => void;
   onBack: () => void;
   onNext: () => void;
 }): { main: React.ReactNode; side: React.ReactNode } {
@@ -135,9 +141,11 @@ function renderSpeciesStep({
       ? (raceAbilityMode === "split" ? Object.keys(raceAbilityBonuses).length !== 2 : Object.keys(raceAbilityBonuses).length !== abilityEvenTarget)
       : chosenRaceAbilityChoices.length < abilityChoice.count
     : false;
+  const traitChoiceBundles = collectSpeciesTraitChoiceBundles(raceDetail);
+  const missingTraitChoice = traitChoiceBundles.some((bundle) => !chosenFeatureChoices[bundle.key]?.[0]);
   // Derived from the species' own trait effects, not a separately-authored vision/resistances
   // field: one fact, one home.
-  const raceTraitEffects = raceDetail ? parseAppliedSpeciesTraitEffects(raceDetail) : [];
+  const raceTraitEffects = raceDetail ? parseAppliedSpeciesTraitEffects(raceDetail, chosenFeatureChoices) : [];
   const derivedSenses = collectSensesFromEffects(raceTraitEffects);
   const derivedResistances = collectDefensesFromEffects(raceTraitEffects).resistances;
   const nextDisabled =
@@ -148,7 +156,8 @@ function renderSpeciesStep({
     || missingRaceTools
     || missingRaceLanguages
     || missingRaceFeat
-    || missingRaceSpellAbility;
+    || missingRaceSpellAbility
+    || missingTraitChoice;
 
   const main = (
     <div>
@@ -332,6 +341,36 @@ function renderSpeciesStep({
               </div>
             );
           })()}
+
+          {traitChoiceBundles.map((bundle) => (
+            <div key={bundle.key}>
+              <div style={{ ...labelStyle, marginBottom: 8 }}>{bundle.traitName}</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {bundle.options.map((option) => {
+                  const selected = chosenFeatureChoices[bundle.key]?.[0] === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => selectTraitChoice(bundle.key, option.id)}
+                      style={{
+                        padding: "6px 16px",
+                        borderRadius: 6,
+                        fontSize: "var(--fs-subtitle)",
+                        cursor: "pointer",
+                        border: `1px solid ${selected ? C.accentHl : "rgba(255,255,255,0.12)"}`,
+                        background: selected ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
+                        color: selected ? C.accentHl : C.text,
+                        fontWeight: selected ? 700 : 400,
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
 
           {spellAbilityChoice && (
             <div>
@@ -635,7 +674,13 @@ export function renderSpeciesFromContext(ctx: CharacterCreatorStepRenderContext)
     raceSearch: ctx.raceSearch,
     setRaceSearch: ctx.setRaceSearch,
     selectedRaceId: ctx.form.raceId,
-    selectRace: (id) => ctx.setField("raceId", id),
+    selectRace: (id) => ctx.setForm((form) => ({
+      ...form,
+      raceId: id,
+      chosenFeatureChoices: Object.fromEntries(
+        Object.entries(form.chosenFeatureChoices).filter(([key]) => !key.startsWith("species:"))
+      ),
+    })),
     raceDetail: ctx.raceDetail,
     raceChoices,
     chosenRaceSize: ctx.form.chosenRaceSize,
@@ -673,6 +718,11 @@ export function renderSpeciesFromContext(ctx: CharacterCreatorStepRenderContext)
       chosenFeatOptions: Object.fromEntries(Object.entries(f.chosenFeatOptions).filter(([k]) => !k.startsWith("race:"))),
     })),
     raceFeatDetail: ctx.raceFeatDetail,
+    chosenFeatureChoices: ctx.form.chosenFeatureChoices,
+    selectTraitChoice: (key, optionId) => ctx.setForm((form) => ({
+      ...form,
+      chosenFeatureChoices: { ...form.chosenFeatureChoices, [key]: [optionId] },
+    })),
     onBack: () => ctx.setStep(2),
     onNext: () => ctx.setStep(4),
   });

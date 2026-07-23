@@ -11,25 +11,27 @@ type NestedFeatChoiceGroup = { key: string; title: string; sourceLabel: string; 
 type NestedFeatSpellChoice = ReturnType<typeof buildResolvedSpellChoiceEntry>;
 
 export function useInvocationGrantedFeatChoices(args: {
+  ruleset: "5e" | "5.5e";
   choices: InvocationFeatChoiceEntry[];
   selectedOptions: Record<string, string[]>;
   level: number;
 }) {
-  const { choices, selectedOptions, level } = args;
+  const { ruleset, choices, selectedOptions, level } = args;
   const featIds = React.useMemo(() => selectedInvocationFeatIds(choices, selectedOptions), [choices, selectedOptions]);
   const [details, setDetails] = React.useState<Detail[]>([]);
   const [spellOptions, setSpellOptions] = React.useState<Record<string, Array<{ id: string; name: string }>>>({});
 
   React.useEffect(() => {
     if (featIds.length === 0) { setDetails([]); return; }
+    setDetails([]);
     let alive = true;
     api<{ rows: Array<{ id: string; feat: Detail | null }> }>("/api/compendium/feats/lookup", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: featIds }),
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: featIds, ruleset }),
     }).then((payload) => {
       if (alive) setDetails((payload.rows ?? []).flatMap((row) => row.feat ? [{ ...row.feat, id: row.id }] : []));
     }).catch(() => { if (alive) setDetails([]); });
     return () => { alive = false; };
-  }, [featIds.join("|")]);
+  }, [featIds, ruleset]);
 
   const nested = React.useMemo(() => {
     const groups: NestedFeatChoiceGroup[] = [];

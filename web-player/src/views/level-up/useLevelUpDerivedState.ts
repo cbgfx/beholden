@@ -30,6 +30,7 @@ import { getFeatSpellcastingAbilityChoice } from "@/views/character-creator/util
 import { deriveAllowedInvocationIds } from "@/views/level-up/LevelUpUtils";
 import { deriveCharProficiencies } from "@/views/level-up/LevelUpHelpers";
 import { getExclusiveGroupReplacementChoice } from "@/views/level-up/LevelUpExclusiveChoiceUtils";
+import { getMysticArcanumRevisitChoices } from "@/views/level-up/MysticArcanumRevisitUtils";
 import type {
   LevelUpCharacter as Character,
   LevelUpClassDetail as ClassDetail,
@@ -262,6 +263,16 @@ export function useLevelUpDerivedState(args: {
       })),
     [classDetail, nextClassLevel, nextLevel, primaryClassEntry?.subclass, subclass]
   );
+  const mysticArcanumRevisitChoices = React.useMemo(
+    () => getMysticArcanumRevisitChoices({
+      ruleset: char?.ruleset ?? "5.5e",
+      className: classDetail?.name ?? null,
+      newFeatureNames: newFeatures.map((f) => f.name),
+      autolevels: mergedAutolevels,
+      nextClassLevel,
+    }),
+    [char?.ruleset, classDetail?.name, mergedAutolevels, newFeatures, nextClassLevel]
+  );
   const classFeatureResolvedSpellChoices = React.useMemo<LevelUpResolvedSpellChoiceEntry[]>(
     () => [
       ...collectSpellChoicesFromEffects(parsedNewFeatureEffects)
@@ -286,8 +297,9 @@ export function useLevelUpDerivedState(args: {
           ritualOnly: false,
         })),
       ...slotLevelTriggeredSpellChoices,
+      ...mysticArcanumRevisitChoices,
     ],
-    [existingClassSpellNames, nextLevel, maxSpellLevel, parsedNewFeatureEffects, slotLevelTriggeredSpellChoices]
+    [existingClassSpellNames, nextLevel, maxSpellLevel, parsedNewFeatureEffects, slotLevelTriggeredSpellChoices, mysticArcanumRevisitChoices]
   );
   const cantripReplacementCount = React.useMemo(
     () => collectSpellChoicesFromEffects(parsedNewFeatureEffects)

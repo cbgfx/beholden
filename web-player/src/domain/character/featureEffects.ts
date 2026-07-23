@@ -81,6 +81,8 @@ interface EffectGate {
   duration?: EffectDuration;
   /** "not_unarmored" = armor must be worn (Defense fighting style, etc.) */
   armorState?: "any" | "no_armor" | "not_heavy" | "not_unarmored";
+  /** Equipment configuration required for the effect to apply. */
+  equipmentState?: "dual_wielding";
   shieldAllowed?: boolean;
   weaponTag?: "melee" | "ranged" | "finesse" | "light" | "simple" | "martial";
   attackAbility?: AbilKey;

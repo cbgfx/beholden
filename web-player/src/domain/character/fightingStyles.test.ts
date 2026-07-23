@@ -74,6 +74,19 @@ describe("Fighting Style runtime contracts", () => {
     expect(deriveArmorClassBonusFromEffects([parsed], { armorEquipped: false })).toBe(0);
   });
 
+  it("applies Dual Wielder's AC bonus only while wielding two melee weapons", () => {
+    const parsed = parseStyle("Dual Wielder", {
+      type: "armor_class",
+      mode: "bonus",
+      resolution: "automatic",
+      bonus: { kind: "fixed", value: 1 },
+      gate: { equipmentState: "dual_wielding" },
+    });
+
+    expect(deriveArmorClassBonusFromEffects([parsed], { dualWielding: true })).toBe(1);
+    expect(deriveArmorClassBonusFromEffects([parsed], { dualWielding: false })).toBe(0);
+  });
+
   it("adds the ability modifier to Two-Weapon Fighting's Light-weapon extra attack", () => {
     const parsed = parseStyle("Two-Weapon Fighting", {
       type: "attack",

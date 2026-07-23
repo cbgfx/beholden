@@ -187,6 +187,23 @@ describe("buildProficiencyMap – class tool proficiency", () => {
     expect(map.tools.map((t) => t.name)).toContain("Drum");
   });
 
+  it("includes fixed language grants from structured species traits", () => {
+    const form = makeBaseForm();
+    const raceDetail = {
+      id: "r_dragonborn",
+      name: "Dragonborn",
+      traits: [{
+        name: "Languages",
+        text: "You know Common and Draconic.",
+        modifier: [],
+        effects: [{ type: "proficiency_grant", category: "language", grants: ["Common", "Draconic"] }],
+      }],
+    };
+    const map = buildProficiencyMap({ ...BASE_MAP_ARGS, form, classDetail: null, raceDetail, bgDetail: null });
+
+    expect(map.languages.map((entry) => entry.name)).toEqual(["Common", "Draconic"]);
+  });
+
 });
 
 // ── getStep5ChoiceState – takenToolKeys and missingClassToolChoices ──────────

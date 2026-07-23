@@ -221,7 +221,7 @@ export function canEquipOffhand(
 ): boolean {
   if (isShieldOrHeld(item)) return true;
   if (!isWeaponItem(item)) return false;
-  if (!requiresTwoHands(item)) return true;
+  if (!isRangedWeapon(item) && !requiresTwoHands(item) && hasItemProperty(item, "L")) return true;
   if (canUseWeaponForBonusAttackFromEffects(parsedFeatureEffects ?? [], item)) return true;
   return false;
 }

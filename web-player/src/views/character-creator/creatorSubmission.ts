@@ -155,7 +155,7 @@ export async function buildCreatorSubmissionBody(args: {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: missingFeatIds }),
+        body: JSON.stringify({ ids: missingFeatIds, ruleset: form.ruleset }),
       },
     );
     for (const row of payload.rows ?? []) {

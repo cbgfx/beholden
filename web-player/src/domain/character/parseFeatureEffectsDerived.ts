@@ -285,6 +285,7 @@ export function deriveArmorClassBonusFromEffects(
   opts?: {
     armorEquipped?: boolean;
     armorCategory?: "light" | "medium" | "heavy" | "shield" | "none";
+    dualWielding?: boolean;
     level?: number | null;
     scores?: Partial<Record<AbilKey, number | null>>;
   }
@@ -296,6 +297,7 @@ export function deriveArmorClassBonusFromEffects(
       const gateArmorState = effect.gate?.armorState ?? "any";
       if (gateArmorState === "not_unarmored" && !opts?.armorEquipped) continue;
       if (gateArmorState === "no_armor" && opts?.armorEquipped) continue;
+      if (effect.gate?.equipmentState === "dual_wielding" && !opts?.dualWielding) continue;
       if (effect.gate?.notes?.startsWith("medium_armor_dex_cap:")) {
         if (opts?.armorCategory !== "medium") continue;
         const minimumDex = Number(effect.gate.notes.split(":")[1] ?? 0);

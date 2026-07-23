@@ -9,6 +9,7 @@ import {
   isSubclassChoiceFeature,
 } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import type { CreatorFeatureLike } from "@/views/character-creator/utils/CharacterCreatorClassCoreUtils";
+import { resolveSpeciesTraitEffects } from "@/domain/character/speciesTraitChoices";
 
 interface CharacterFeatureLike {
   name: string;
@@ -265,7 +266,12 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
       text: trait.text,
       preparedSpellProgression: trait.preparedSpellProgression,
       scalingRolls: trait.scalingRolls,
-      traitEffects: trait.effects,
+      traitEffects: resolveSpeciesTraitEffects(
+        String(raceDetail?.id ?? ""),
+        trait.name,
+        trait.effects,
+        charData?.chosenFeatureChoices,
+      ),
       spellcastingAbility: raceSpellAbility,
       resolution: trait.resolution,
       resolutionNotes: trait.resolutionNotes,

@@ -25,6 +25,7 @@ function choiceInstruction(spec: NonNullable<ReturnType<typeof getExtraFeatAbili
 
 export function CharacterFeatPickerModal(props: {
   isOpen: boolean;
+  ruleset: "5e" | "5.5e";
   accentColor: string;
   currentFeatIds: string[];
   existingFeatureNames: string[];
@@ -42,6 +43,13 @@ export function CharacterFeatPickerModal(props: {
   const detailCache = useRef<Record<string, FeatDetail>>({});
 
   useEffect(() => {
+    setAllFeats([]);
+    setSelectedId(null);
+    setSelectedDetail(null);
+    detailCache.current = {};
+  }, [props.ruleset]);
+
+  useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -53,11 +61,11 @@ export function CharacterFeatPickerModal(props: {
   useEffect(() => {
     if (!props.isOpen || allFeats.length > 0) return;
     setBusy(true);
-    api<FeatRow[]>("/api/compendium/feats?fields=id,name")
+    api<FeatRow[]>(`/api/compendium/feats?fields=id,name&ruleset=${encodeURIComponent(props.ruleset)}`)
       .then((rows) => setAllFeats((rows ?? []).sort((a, b) => a.name.localeCompare(b.name))))
       .catch(() => {})
       .finally(() => setBusy(false));
-  }, [allFeats.length, props.isOpen]);
+  }, [allFeats.length, props.isOpen, props.ruleset]);
 
   useEffect(() => {
     if (!props.isOpen) {
@@ -85,7 +93,7 @@ export function CharacterFeatPickerModal(props: {
     api<{ rows: Array<{ id: string; feat: FeatDetail | null }> }>("/api/compendium/feats/lookup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: [selectedId] }),
+      body: JSON.stringify({ ids: [selectedId], ruleset: props.ruleset }),
     })
       .then((payload) => {
         if (!alive) return;
@@ -100,7 +108,7 @@ export function CharacterFeatPickerModal(props: {
         if (alive) setDetailBusy(false);
       });
     return () => { alive = false; };
-  }, [selectedId]);
+  }, [props.ruleset, selectedId]);
 
   const existingNamesLower = useMemo(
     () => new Set(props.existingFeatureNames.map((name) => name.toLowerCase().trim())),

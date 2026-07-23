@@ -5,7 +5,7 @@ import {
   deriveModifierBonusFromEffects,
   deriveModifierStateFromEffects,
 } from "@/domain/character/parseFeatureEffects";
-import { abilityMod, getPassiveScore, getSkillBonus, normalizeSpellTrackingKey, spellLooksLikeDamageSpell } from "@/views/character/CharacterSheetUtils";
+import { abilityMod, getPassiveScore, getSkillBonus, normalizeSpellTrackingKey } from "@/views/character/CharacterSheetUtils";
 
 type ParsedFeatureEffects = ReturnType<typeof import("@/domain/character/parseFeatureEffects").parseFeatureEffects>;
 
@@ -36,17 +36,17 @@ export function buildPreparedSpells({
 }
 
 export function buildInvocationSpellDamageBonuses({
+  ruleset,
   invocationDetails,
   prof,
   currentCharacterData,
   scoresCha,
-  grantedSpellNotesByKey,
 }: {
+  ruleset: "5e" | "5.5e";
   invocationDetails: Array<{ name?: string | null; text?: string | null }>;
   prof: ProficiencyMap | undefined;
   currentCharacterData: { chosenFeatOptions?: Record<string, unknown> };
   scoresCha: number | null;
-  grantedSpellNotesByKey: Map<string, string | null>;
 }) {
   const hasAgonizingBlast = invocationDetails.some((invocation) => {
     const name = String(invocation.name ?? "");
@@ -67,20 +67,15 @@ export function buildInvocationSpellDamageBonuses({
   const chaMod = abilityMod(scoresCha);
   if (chaMod === 0) return bySpellKey;
 
-  const damageCantripEntries = (prof?.spells ?? []).filter((spell) =>
-    spellLooksLikeDamageSpell({
-      name: spell.name,
-      text: grantedSpellNotesByKey.get(normalizeSpellTrackingKey(spell.name)) ?? null,
-    }) || /eldritch blast/i.test(String(spell.name ?? ""))
-  );
-
   const eldritchBlastEntry = (prof?.spells ?? []).find((spell) => /eldritch blast/i.test(String(spell.name ?? "")));
-  if (selectedTokens.size === 0 && eldritchBlastEntry) {
-    bySpellKey[normalizeSpellTrackingKey(eldritchBlastEntry.name)] = chaMod;
+  // 2014 Agonizing Blast is fixed to Eldritch Blast. The 2024 invocation requires an
+  // explicit eligible-cantrip selection; never let a missing 2024 choice silently fall
+  // back to Eldritch Blast merely because the names happen to overlap.
+  if (ruleset === "5e") {
+    if (eldritchBlastEntry) bySpellKey[normalizeSpellTrackingKey(eldritchBlastEntry.name)] = chaMod;
     return bySpellKey;
   }
-  if (selectedTokens.size === 0 && damageCantripEntries.length === 1) {
-    bySpellKey[normalizeSpellTrackingKey(damageCantripEntries[0].name)] = chaMod;
+  if (selectedTokens.size === 0) {
     return bySpellKey;
   }
   for (const spell of prof?.spells ?? []) {
@@ -91,11 +86,6 @@ export function buildInvocationSpellDamageBonuses({
     if (selectedTokens.has(spellId) || selectedTokens.has(spellName.toLowerCase()) || selectedTokens.has(normalizedName)) {
       bySpellKey[normalizedName] = chaMod;
     }
-  }
-  if (Object.keys(bySpellKey).length === 0 && eldritchBlastEntry) {
-    bySpellKey[normalizeSpellTrackingKey(eldritchBlastEntry.name)] = chaMod;
-  } else if (Object.keys(bySpellKey).length === 0 && damageCantripEntries.length === 1) {
-    bySpellKey[normalizeSpellTrackingKey(damageCantripEntries[0].name)] = chaMod;
   }
   return bySpellKey;
 }

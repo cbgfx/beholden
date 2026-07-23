@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canEquipOffhand,
   getEquipState,
   getItemSpells,
   fixedItemUsesMaximum,
@@ -206,6 +207,29 @@ describe("mergeCatalogItem", () => {
     expect(merged.equipState).toBe("mainhand-1h");
     expect(merged.containerId).toBe("pack-1");
     expect(merged.dmg1).toBe("1d4");
+  });
+
+  it("only permits Light melee weapons offhand unless a feature grants the exception", () => {
+    const lightMelee = item({ dmg1: "1d6", type: "Martial Melee Weapon", properties: ["L"] });
+    const longsword = item({ dmg1: "1d8", type: "Martial Melee Weapon", properties: ["V"] });
+    const dualWielder = {
+      source: { id: "dual-wielder", kind: "feat" as const, name: "Dual Wielder" },
+      effects: [{
+        id: "dual-wielder:0",
+        source: { id: "dual-wielder", kind: "feat" as const, name: "Dual Wielder" },
+        type: "attack" as const,
+        mode: "triggered_attack" as const,
+        gate: { weaponFilters: ["melee_weapon" as const, "no_two_handed" as const] },
+      }],
+      choices: [],
+      uses: [],
+      resources: [],
+      sourceModifiers: [],
+    };
+
+    expect(canEquipOffhand(lightMelee, [])).toBe(true);
+    expect(canEquipOffhand(longsword, [])).toBe(false);
+    expect(canEquipOffhand(longsword, [dualWielder])).toBe(true);
   });
 
   it("hydrates Staff of Defense spells and its live 10-charge maximum onto a stale copy", () => {
