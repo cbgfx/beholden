@@ -4,7 +4,7 @@ import { nonnegInt, RulesetSchema, StructuredFeatureEffectSchema } from "./grand
 /** Every passive numeric bonus an item applies to a d20-facing statistic. Cold facts:
  * consumers sum `amount` by `target`; no label parsing. Ability-score changes are NOT
  * modifiers — they are `effects` (`ability_score`), and one-time consumables stay prose. */
-export const ITEM_MODIFIER_TARGETS = [
+const ITEM_MODIFIER_TARGETS = [
   "ac",
   "melee_attacks",
   "melee_damage",

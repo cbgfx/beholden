@@ -132,7 +132,7 @@ export function ShellLayout(props: { children: React.ReactNode }) {
               fontWeight: 800,
             }}
           >
-            Support Beholden
+            Donate ❤️
           </a>
         ) : null}
         right={

@@ -194,6 +194,7 @@ export function PlayerHomeView() {
                   campaign={c}
                   characters={characters}
                   onOpen={openCampaign}
+                  onAssigned={reload}
                 />
               ))}
             </div>

@@ -3,7 +3,7 @@ import { canonicalizeCompendiumId } from "../../lib/canonicalCompendiumId.js";
 
 type JsonRecord = Record<string, unknown>;
 
-export function spellAccessId(label: string): string {
+function spellAccessId(label: string): string {
   return `sl_${canonicalizeCompendiumId(label)}`;
 }
 

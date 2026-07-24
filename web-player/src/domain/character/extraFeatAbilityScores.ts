@@ -2,7 +2,7 @@ import type { AbilityScoreEffect } from "@/domain/character/featureEffects";
 import type { AbilKey } from "@/views/character/CharacterSheetTypes";
 import type { StructuredFeatMechanicsLike } from "@/domain/character/structuredFeatureEffects";
 
-export const ABILITY_KEYS: AbilKey[] = ["str", "dex", "con", "int", "wis", "cha"];
+const ABILITY_KEYS: AbilKey[] = ["str", "dex", "con", "int", "wis", "cha"];
 
 export const ABILITY_LABELS: Record<AbilKey, string> = {
   str: "Strength",

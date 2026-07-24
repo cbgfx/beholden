@@ -76,11 +76,12 @@ export function PartyStashItemRow({ item, onTake, onDelete, onQuantity }: {
   );
 }
 
-export function ItemRow({ item, accentColor, proficiencies, parsedFeatureEffects, expanded, onToggleExpanded, onCycleMain, onToggleOffhand, onToggleWorn, onRemove, onQty, ammoItems = [], onLinkAmmo }: {
+export function ItemRow({ item, accentColor, proficiencies, parsedFeatureEffects, ruleset, expanded, onToggleExpanded, onCycleMain, onToggleOffhand, onToggleWorn, onRemove, onQty, ammoItems = [], onLinkAmmo }: {
   item: InventoryItem;
   accentColor: string;
   proficiencies?: ProficiencyMap;
   parsedFeatureEffects?: ParsedFeatureEffects[] | null;
+  ruleset?: "5e" | "5.5e";
   expanded: boolean;
   onToggleExpanded: (id: string) => void;
   onCycleMain: (id: string) => void;
@@ -102,7 +103,7 @@ export function ItemRow({ item, accentColor, proficiencies, parsedFeatureEffects
   const equipped = state !== "backpack";
   const canEquipItem = isWeapon || isArmor || isWearable || offhandAllowed;
   const lacksArmorProficiency = equipped && (isArmor || isShieldItem(item)) && !hasArmorProficiency(item, proficiencies);
-  const mastered = isWeapon && hasWeaponMastery(item, proficiencies);
+  const mastered = isWeapon && hasWeaponMastery(item, proficiencies, ruleset);
   const masteryName = mastered ? getWeaponMasteryName(item) : null;
   const meta = [item.type ?? null, item.attunement ? "Attunement" : null].filter(Boolean).join(" • ");
   const compatibleAmmo = ammoItems.filter((entry) => isCompatibleAmmunition(item, entry));

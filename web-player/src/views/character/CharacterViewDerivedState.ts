@@ -65,10 +65,11 @@ import type { AppliedCharacterFeatureEntry } from "@/domain/character/characterF
 import type { TaggedItem } from "@/views/character/CharacterSheetTypes";
 import type { CharacterClassDetailSelection, ClassRestDetail } from "@/views/character/CharacterViewHelpers";
 import { deriveMulticlassSpellSlots } from "@/domain/character/multiclassSpellcasting";
+import { getExhaustionHpMaxMultiplier, hasExhaustionAbilityCheckDisadvantage, hasExhaustionAttackAndSaveDisadvantage } from "@/views/character/CharacterExhaustion";
 
 function emptyProficiencyMap(): ProficiencyMap {
   return {
-    skills: [], expertise: [], saves: [], armor: [], weapons: [], tools: [], languages: [],
+    skills: [], expertise: [], saves: [], armor: [], weapons: [], weaponMasteries: [], tools: [], languages: [],
     spells: [], invocations: [], maneuvers: [], metamagic: [], plans: [],
   };
 }
@@ -192,10 +193,16 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
       hitDieSize: Number.isFinite(Number(detail.hd)) ? Number(detail.hd) : null,
     };
   });
-  const prof = classSelections.length > 0 ? mergeAllClassProficiencies(
+  let prof = classSelections.length > 0 ? mergeAllClassProficiencies(
     normalizeProficiencies(currentCharacterData.proficiencies),
     classSelections,
   ) : mergeFixedClassProficiencies(normalizeProficiencies(currentCharacterData.proficiencies), args.classDetail);
+  // Characters saved before weaponMasteries existed on ProficiencyMap only have it on the raw
+  // top-level chosenWeaponMasteries field (persisted at creation/level-up, previously never read
+  // back). Fall back to it here rather than losing their mastery picks until their next re-save.
+  if (prof && prof.weaponMasteries.length === 0 && currentCharacterData.chosenWeaponMasteries?.length) {
+    prof = { ...prof, weaponMasteries: currentCharacterData.chosenWeaponMasteries };
+  }
   const pb = proficiencyBonus(args.char.level);
   const hd = currentCharacterData.hd ?? null;
   const hitDieSize = hd ?? args.classDetail?.hd ?? null;
@@ -436,11 +443,16 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   });
 
   const accentColor = args.char.color ?? "#38b6ff";
+  const exhaustion = currentCharacterData.exhaustion ?? 0;
+  const exhaustionHpMaxMultiplier = getExhaustionHpMaxMultiplier(args.char.ruleset, exhaustion);
   const conScoreDeltaPerLevel = abilityMod(scores.con) - abilityMod(args.char.conScore);
   const featureHpMaxBonus = deriveHitPointMaxBonusFromEffects(parsedAllEffects, { level: args.char.level, scores });
   const conScoreDeltaWithoutOverrides = abilityMod(itemAdjustedScores.con) - abilityMod(args.char.conScore);
-  const effectiveHpMaxWithoutOverrides = Math.max(1, args.char.hpMax + (conScoreDeltaWithoutOverrides * args.char.level) + featureHpMaxBonus);
-  const effectiveHpMax = Math.max(1, args.char.hpMax + (conScoreDeltaPerLevel * args.char.level) + featureHpMaxBonus + (overrides.hpMaxBonus ?? 0));
+  const effectiveHpMaxWithoutOverrides = Math.max(1, Math.floor((args.char.hpMax + (conScoreDeltaWithoutOverrides * args.char.level) + featureHpMaxBonus) * exhaustionHpMaxMultiplier));
+  // The exhaustion multiplier applies only to the "natural" max, not the manual override bonus —
+  // otherwise `effectiveHpMax - overrides.hpMaxBonus` (how callers recover the pre-override value,
+  // e.g. to sync it to the DM's view) would no longer equal the actual natural max.
+  const effectiveHpMax = Math.max(1, Math.floor((args.char.hpMax + (conScoreDeltaPerLevel * args.char.level) + featureHpMaxBonus) * exhaustionHpMaxMultiplier) + (overrides.hpMaxBonus ?? 0));
   const xpEarned = currentCharacterData.xp ?? 0;
   const xpNeeded = XP_TO_LEVEL[args.char.level + 1] ?? 0;
   const wornShield = inventory.find((item) => getEquipState(item) === "offhand" && isShieldItem(item));
@@ -578,6 +590,8 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   } = buildModifierStateMaps({
     parsedFeatureEffects: parsedAllEffects,
     raging: rageActive,
+    exhaustionAbilityCheckDisadvantage: hasExhaustionAbilityCheckDisadvantage(args.char.ruleset, exhaustion),
+    exhaustionSaveDisadvantage: hasExhaustionAttackAndSaveDisadvantage(args.char.ruleset, exhaustion),
   });
   const rageDamageBonus = deriveAttackDamageBonusFromEffects(parsedAllEffects, {
     level: args.char.level,

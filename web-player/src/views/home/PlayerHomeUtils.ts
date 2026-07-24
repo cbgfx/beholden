@@ -35,6 +35,7 @@ export interface UserCharacter {
   id: string;
   name: string;
   playerName: string;
+  ruleset?: "5e" | "5.5e";
   className: string;
   species: string;
   level: number;
@@ -46,7 +47,7 @@ export interface UserCharacter {
   campaigns: CharacterCampaign[];
 }
 
-export function asRecord(value: unknown): Record<string, unknown> | null {
+function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return value as Record<string, unknown>;
 }
@@ -67,7 +68,7 @@ function positiveIntOrUndefined(value: unknown): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-export function clamp(value: number, min: number, max: number): number {
+function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 

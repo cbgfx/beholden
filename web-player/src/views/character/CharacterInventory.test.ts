@@ -8,6 +8,7 @@ import {
   mergeCatalogItem,
   recoverItemCharges,
   getWeaponMasteryName,
+  hasWeaponMastery,
   hasWeaponProficiency,
   isArmorItem,
   isAmmunitionItem,
@@ -85,10 +86,25 @@ describe("character inventory calculations", () => {
     expect(isWearableItem(item({ name: "Nameless Relic", type: "Wondrous", equippable: true }))).toBe(true);
   });
 
+  it("only shows Weapon Mastery for weapons specifically chosen for it, not every proficient weapon", () => {
+    const prof = {
+      weapons: [{ name: "Martial Weapons", source: "Fighter" }],
+      armor: [],
+      weaponMasteries: ["Longsword"],
+    };
+    expect(hasWeaponMastery(item({ name: "Longsword" }), prof, "5.5e")).toBe(true);
+    expect(hasWeaponMastery(item({ name: "Greatsword" }), prof, "5.5e")).toBe(false);
+  });
+
+  it("never shows Weapon Mastery on 5e characters, even if the underlying item carries a mastery value", () => {
+    const prof = { weapons: [], armor: [], weaponMasteries: ["Longsword"] };
+    expect(hasWeaponMastery(item({ name: "Longsword" }), prof, "5e")).toBe(false);
+  });
+
   it("matches a magic weapon through its canonical base proficiency", () => {
     const magicLongsword = item({ name: "Sword of Kas", dmg1: "1d8", properties: ["M", "V"], proficiency: "martial, longsword" });
-    expect(hasWeaponProficiency(magicLongsword, { weapons: [{ name: "Longsword", source: "Class" }], armor: [] })).toBe(true);
-    expect(hasWeaponProficiency(magicLongsword, { weapons: [{ name: "Rapier", source: "Class" }], armor: [] })).toBe(false);
+    expect(hasWeaponProficiency(magicLongsword, { weapons: [{ name: "Longsword", source: "Class" }], armor: [], weaponMasteries: [] })).toBe(true);
+    expect(hasWeaponProficiency(magicLongsword, { weapons: [{ name: "Rapier", source: "Class" }], armor: [], weaponMasteries: [] })).toBe(false);
   });
 
   it("applies typed filtered weapon proficiency without reading its label", () => {
@@ -96,7 +112,7 @@ describe("character inventory calculations", () => {
       name: "Display text only",
       source: "Training in War and Song",
       weaponFilter: { melee: true as const, martial: true as const, excludeProperties: ["heavy", "two_handed"] as Array<"heavy" | "two_handed"> },
-    }], armor: [] };
+    }], armor: [], weaponMasteries: [] };
     expect(hasWeaponProficiency(item({ type: "Martial Melee Weapon", dmg1: "1d8", properties: ["M", "F"] }), training)).toBe(true);
     expect(hasWeaponProficiency(item({ type: "Martial Melee Weapon", dmg1: "2d6", properties: ["M", "H", "2H"] }), training)).toBe(false);
     expect(hasWeaponProficiency(item({ type: "Martial Ranged Weapon", dmg1: "1d8", properties: ["M", "A"] }), training)).toBe(false);

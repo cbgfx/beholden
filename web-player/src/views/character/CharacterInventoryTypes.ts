@@ -1,7 +1,7 @@
 import type { CharacterData, ProficiencyMap, TaggedItem } from "@/views/character/CharacterSheetTypes";
 
 export type TaggedItemLike = TaggedItem;
-export type ProficiencyMapLike = Pick<ProficiencyMap, "weapons" | "armor">;
+export type ProficiencyMapLike = Pick<ProficiencyMap, "weapons" | "armor" | "weaponMasteries">;
 export type CharacterDataLike = Pick<CharacterData, "proficiencies" | "inventoryContainers">;
 
 export interface CharacterLike {

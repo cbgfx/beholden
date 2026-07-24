@@ -124,7 +124,8 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
         json_extract(c.snapshot_json, '$.label') AS label,
         json_extract(c.live_json, '$.hpCurrent') AS hpCurrent,
         json_extract(c.snapshot_json, '$.hpMax') AS hpMax,
-        COALESCE(json_extract(c.live_json, '$.overrides.hpMaxBonus'), 0) AS hpMaxBonus
+        COALESCE(json_extract(c.live_json, '$.overrides.hpMaxBonus'), 0) AS hpMaxBonus,
+        json_extract(c.live_json, '$.conditions') AS conditionsJson
       FROM combatants c
       WHERE c.encounter_id = ?
         AND COALESCE(json_extract(c.snapshot_json, '$.friendly'), 0) = 0
@@ -136,6 +137,7 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
       hpCurrent: number | null;
       hpMax: number | null;
       hpMaxBonus: number | null;
+      conditionsJson: string | null;
     }>;
 
     const engagedEnemies = engagedRows.flatMap((enemy) => {
@@ -144,7 +146,14 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
       const maximum = Number(enemy.hpMax) + Number(enemy.hpMaxBonus ?? 0);
       if (!Number.isFinite(current) || !Number.isFinite(maximum) || maximum <= 0) return [];
       const health = current <= 0 ? "Down" : current * 2 <= maximum ? "Bloodied" : "Damaged";
-      return [{ id: enemy.id, name: enemy.label || "Enemy", health }];
+      let conditions: string[] = [];
+      try {
+        const parsed = enemy.conditionsJson ? JSON.parse(enemy.conditionsJson) : [];
+        if (Array.isArray(parsed)) conditions = parsed.map((c) => String(c?.key ?? "")).filter(Boolean);
+      } catch {
+        // no conditions
+      }
+      return [{ id: enemy.id, name: enemy.label || "Enemy", health, conditions }];
     });
 
     res.json({

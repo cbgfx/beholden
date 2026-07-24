@@ -1,21 +1,45 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { C } from "@/lib/theme";
+import { api, jsonInit } from "@/services/api";
+import { Select } from "@/ui/Select";
 import { accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
 import type { Campaign, UserCharacter } from "./PlayerHomeUtils";
 
-export function CampaignCard({ campaign: c, characters, onOpen }: {
+export function CampaignCard({ campaign: c, characters, onOpen, onAssigned }: {
   campaign: Campaign;
   characters: UserCharacter[];
   onOpen: (id: string) => void;
+  onAssigned: () => Promise<void>;
 }) {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [selectedCharId, setSelectedCharId] = useState("");
+  const [assigning, setAssigning] = useState(false);
   const accent = c.color ?? C.colorGold;
 
   const assignedChars = characters.filter((ch) =>
     ch.campaigns.some((cc) => cc.campaignId === c.id)
   );
+  const unassignedChars = characters.filter((ch) =>
+    !ch.campaigns.some((cc) => cc.campaignId === c.id)
+  );
+
+  async function handleAssign() {
+    if (!selectedCharId) return;
+    setAssigning(true);
+    try {
+      await api(`/api/me/characters/${selectedCharId}/assign`, jsonInit("POST", { campaignIds: [c.id] }));
+      await onAssigned();
+      setAssignOpen(false);
+      setSelectedCharId("");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAssigning(false);
+    }
+  }
 
   const initials = c.name
     .split(/\s+/)
@@ -94,20 +118,78 @@ export function CampaignCard({ campaign: c, characters, onOpen }: {
       </div>
 
       {/* Footer */}
-      <div style={{ padding: "0 12px 14px", display: "flex", gap: 8 }}>
-        <button
-          style={{ ...accentButtonStyle(C.colorGold, { textColor: C.textDark, borderColor: "transparent", padding: "8px 18px", fontSize: "var(--fs-subtitle)" }), background: C.colorGold, flex: 1 }}
-          onClick={() => onOpen(c.id)}
-        >
-          Open
-        </button>
-        <button
-          style={{ ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}
-          onClick={() => navigate(`/characters/new?campaign=${c.id}`)}
-        >
-          + Assign
-        </button>
-      </div>
+      {assignOpen ? (
+        <div style={{ padding: "0 12px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
+          {unassignedChars.length > 0 ? (
+            <>
+              <Select
+                value={selectedCharId}
+                onChange={(e) => setSelectedCharId(e.target.value)}
+                style={{ width: "100%" }}
+                autoFocus
+              >
+                <option value="">Choose a character…</option>
+                {unassignedChars.map((ch) => (
+                  <option key={ch.id} value={ch.id}>{ch.name}</option>
+                ))}
+              </Select>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  disabled={!selectedCharId || assigning}
+                  style={{
+                    ...accentButtonStyle(C.colorGold, { textColor: C.textDark, borderColor: "transparent", padding: "6px 14px", fontSize: "var(--fs-small)" }),
+                    background: C.colorGold, flex: 1,
+                    opacity: !selectedCharId || assigning ? 0.6 : 1,
+                    cursor: !selectedCharId || assigning ? "not-allowed" : "pointer",
+                  }}
+                  onClick={() => void handleAssign()}
+                >
+                  {assigning ? "Assigning…" : "Assign"}
+                </button>
+                <button
+                  style={{ ...ghostButtonStyle({ textColor: C.muted, borderColor: "rgba(255,255,255,0.18)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}
+                  onClick={() => { setAssignOpen(false); setSelectedCharId(""); }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>All your characters are already in this campaign.</span>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  style={{ ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flex: 1 }}
+                  onClick={() => navigate(`/characters/new?campaign=${c.id}`)}
+                >
+                  Create new character
+                </button>
+                <button
+                  style={{ ...ghostButtonStyle({ textColor: C.muted, borderColor: "rgba(255,255,255,0.18)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}
+                  onClick={() => setAssignOpen(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        <div style={{ padding: "0 12px 14px", display: "flex", gap: 8 }}>
+          <button
+            style={{ ...accentButtonStyle(C.colorGold, { textColor: C.textDark, borderColor: "transparent", padding: "8px 18px", fontSize: "var(--fs-subtitle)" }), background: C.colorGold, flex: 1 }}
+            onClick={() => onOpen(c.id)}
+          >
+            Open
+          </button>
+          <button
+            style={{ ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}
+            onClick={() => setAssignOpen(true)}
+          >
+            + Assign
+          </button>
+        </div>
+      )}
     </div>
   );
 }

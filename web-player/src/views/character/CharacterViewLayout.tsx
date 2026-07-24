@@ -20,7 +20,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
     handleRemoveExtraFeat,
   } = model;
   const currentData = derived.currentCharacterData;
-  const exhaustionPenalty = getExhaustionD20Penalty(currentData.exhaustion ?? 0);
+  const exhaustionPenalty = getExhaustionD20Penalty(char.ruleset, currentData.exhaustion ?? 0);
   const identityLabels = [
     ...(derived.classPresentation.length
       ? derived.classPresentation.map((entry) => `${entry.className} ${entry.classLevel}${entry.subclassName ? ` · ${entry.subclassName}` : ""}`)
@@ -216,6 +216,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
             hitDicePools={derived.hitDicePools}
             hitDieConMod={derived.conMod}
             exhaustion={currentData.exhaustion ?? 0}
+            ruleset={char.ruleset}
             classResources={derived.classResourcesWithSpellCasts.filter((resource) => {
               return !isSpellLinkedResource({
                 resource,

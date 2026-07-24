@@ -4,7 +4,7 @@ import type {
   SharedDeathSaves,
 } from "@beholden/shared/domain";
 
-export type Id = string;
+type Id = string;
 
 export interface Meta {
   ok: true;
@@ -82,7 +82,7 @@ export interface CampaignCharacter {
 type CombatantBaseType = "player" | "monster" | "inpc" | "world";
 
 type CombatantOverrides = SharedCombatOverrides;
-export type ConditionInstance = SharedConditionInstance;
+type ConditionInstance = SharedConditionInstance;
 type DeathSaves = SharedDeathSaves;
 
 export interface EncounterActor {

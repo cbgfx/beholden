@@ -104,8 +104,18 @@ export function weaponDamageModifierBonus(
     + itemModifierBonus(item?.modifiers, isRanged ? "ranged_damage" : "melee_damage");
 }
 
-export function hasWeaponMastery(item: Pick<InventoryItem, "proficiency" | "name"> | null | undefined, prof: ProficiencyMapLike | undefined): boolean {
-  return Boolean(item) && hasWeaponProficiency(item as InventoryItem, prof);
+// Weapon Mastery is a 2024-only mechanic, and only applies to the specific weapons a character has
+// chosen mastery for (`prof.weaponMasteries`) — not every weapon they merely have proficiency with.
+// 5e (2014) items can also carry a `mastery` value baked in (they're shared/deduped against their
+// 5.5e equivalents at import time), so this must be gated on the character's ruleset too.
+export function hasWeaponMastery(
+  item: Pick<InventoryItem, "name"> | null | undefined,
+  prof: ProficiencyMapLike | undefined,
+  ruleset?: "5e" | "5.5e",
+): boolean {
+  if (ruleset === "5e" || !item) return false;
+  const itemName = normalizeWeaponProficiencyName(item.name).toLowerCase();
+  return (prof?.weaponMasteries ?? []).some((name) => normalizeWeaponProficiencyName(name).toLowerCase() === itemName);
 }
 
 function isShieldOrHeld(item: InventoryItem): boolean {

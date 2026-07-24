@@ -13,7 +13,7 @@ export function CharacterViewOverlays({ model }: { model: CharacterViewModel }) 
     handleAddFeat, applyPolymorphSelf,
   } = model;
   const { currentCharacterData } = derived;
-  const initiativePenalty = getExhaustionD20Penalty(currentCharacterData.exhaustion ?? 0);
+  const initiativePenalty = getExhaustionD20Penalty(model.char.ruleset, currentCharacterData.exhaustion ?? 0);
 
   return (
     <>

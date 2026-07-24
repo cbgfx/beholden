@@ -24,6 +24,7 @@ interface InventoryContainerSectionProps {
   accentColor: string;
   proficiencies?: ProficiencyMap;
   parsedFeatureEffects?: ParsedFeatureEffects[] | null;
+  ruleset?: "5e" | "5.5e";
   expandedItemId: string | null;
   onToggleCollapsed: () => void;
   onNameChange: (name: string) => void;
@@ -49,6 +50,7 @@ export function InventoryContainerSection({
   accentColor,
   proficiencies,
   parsedFeatureEffects,
+  ruleset,
   expandedItemId,
   onToggleCollapsed,
   onNameChange,
@@ -164,6 +166,7 @@ export function InventoryContainerSection({
                 accentColor={accentColor}
                 proficiencies={proficiencies}
                 parsedFeatureEffects={parsedFeatureEffects}
+                ruleset={ruleset}
                 expanded={expandedItemId === it.id}
                 onToggleExpanded={onToggleExpandedItem}
                 onCycleMain={onCycleMain}

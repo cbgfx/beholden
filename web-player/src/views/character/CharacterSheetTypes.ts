@@ -29,6 +29,9 @@ export interface ProficiencyMap {
   saves: TaggedItem[];
   armor: TaggedItem[];
   weapons: TaggedItem[];
+  /** Weapon names (2024 rules) the character has actually chosen Weapon Mastery for — distinct
+   * from `weapons`, which also contains broad category proficiencies (e.g. "Martial Weapons"). */
+  weaponMasteries: string[];
   tools: TaggedItem[];
   languages: TaggedItem[];
   spells: TaggedItem[];
@@ -136,6 +139,7 @@ export interface CharacterData {
   chosenLevelUpFeats?: Array<{ level: number; featId?: string | null; type?: "asi" | "feat"; abilityBonuses?: Record<string, number> }>;
   chosenSkills?: string[];
   chosenClassLanguages?: string[];
+  chosenWeaponMasteries?: string[];
   chosenFeatOptions?: Record<string, string[]>;
   chosenFeatureChoices?: Record<string, string[]>;
   chosenCantrips?: string[];

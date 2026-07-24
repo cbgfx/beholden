@@ -21,6 +21,7 @@ export function CharacterSupportPanels(props: {
   hitDicePools?: Array<{ dieSize: number; max: number; current: number }>;
   hitDieConMod: number;
   exhaustion: number;
+  ruleset?: "5e" | "5.5e";
   classResources: ResourceCounter[];
   classPresentation?: Array<{ classEntryId: string; className: string; classLevel: number; subclassName: string | null; hitDieSize: number | null }>;
   playerNotesList: PlayerNote[];
@@ -61,6 +62,7 @@ export function CharacterSupportPanels(props: {
     hitDicePools = [],
     hitDieConMod,
     exhaustion,
+    ruleset,
     classResources,
     classPresentation = [],
     playerNotesList,
@@ -137,7 +139,7 @@ export function CharacterSupportPanels(props: {
   const totalFeatureCount = classFeaturesList.length;
   const exhaustionColor =
     exhaustion === 0 ? C.muted : exhaustion <= 2 ? "#f59e0b" : exhaustion <= 4 ? "#f97316" : "#dc2626";
-  const activeExhaustionEffects = getExhaustionEffects(exhaustion);
+  const activeExhaustionEffects = getExhaustionEffects(ruleset, exhaustion);
   const upkeepSummary = classResources.length > 0
     ? `${classResources.reduce((sum, resource) => sum + resource.current, 0)} / ${classResources.reduce((sum, resource) => sum + resource.max, 0)} resources`
     : `${hitDiceCurrent} / ${hitDiceMax} hit dice`;

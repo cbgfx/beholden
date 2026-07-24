@@ -11,11 +11,3 @@ export interface RaceChoices {
   /** The player-choice portion of a 2014 race's Ability Score Increase. */
   abilityScoreChoice: { count: number; amount: number; from: string[] | null; flexible?: boolean } | null;
 }
-
-export function wordOrNumberToInt(value: string): number | null {
-  const lowered = value.trim().toLowerCase();
-  const numeric = Number.parseInt(lowered, 10);
-  if (Number.isFinite(numeric)) return numeric;
-  const words: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6 };
-  return words[lowered] ?? null;
-}

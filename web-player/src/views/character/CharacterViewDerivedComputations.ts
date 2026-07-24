@@ -167,9 +167,15 @@ export function buildSkillBonuses({
 export function buildModifierStateMaps({
   parsedFeatureEffects,
   raging,
+  exhaustionAbilityCheckDisadvantage = false,
+  exhaustionSaveDisadvantage = false,
 }: {
   parsedFeatureEffects: ParsedFeatureEffects[];
   raging: boolean;
+  /** 2014 exhaustion tier 1+: disadvantage on all ability checks (including skill checks). */
+  exhaustionAbilityCheckDisadvantage?: boolean;
+  /** 2014 exhaustion tier 3+: disadvantage on all saving throws. */
+  exhaustionSaveDisadvantage?: boolean;
 }) {
   const abilityCheckAdvantages: Partial<Record<AbilKey, boolean>> = {};
   const abilityCheckDisadvantages: Partial<Record<AbilKey, boolean>> = {};
@@ -180,9 +186,9 @@ export function buildModifierStateMaps({
     const abilityCheckState = deriveModifierStateFromEffects(parsedFeatureEffects, "ability_check", { appliesTo: abilityName, raging });
     const saveState = deriveModifierStateFromEffects(parsedFeatureEffects, "saving_throw", { appliesTo: abilityName, raging });
     if (abilityCheckState.advantage) abilityCheckAdvantages[ability] = true;
-    if (abilityCheckState.disadvantage) abilityCheckDisadvantages[ability] = true;
+    if (abilityCheckState.disadvantage || exhaustionAbilityCheckDisadvantage) abilityCheckDisadvantages[ability] = true;
     if (saveState.advantage) saveAdvantages[ability] = true;
-    if (saveState.disadvantage) saveDisadvantages[ability] = true;
+    if (saveState.disadvantage || exhaustionSaveDisadvantage) saveDisadvantages[ability] = true;
   });
   const skillAdvantages = Object.fromEntries(
     ALL_SKILLS
@@ -191,7 +197,7 @@ export function buildModifierStateMaps({
   ) as Record<string, boolean>;
   const skillDisadvantages = Object.fromEntries(
     ALL_SKILLS
-      .filter(({ name }) => deriveModifierStateFromEffects(parsedFeatureEffects, "skill_check", { appliesTo: name, raging }).disadvantage)
+      .filter(({ name }) => exhaustionAbilityCheckDisadvantage || deriveModifierStateFromEffects(parsedFeatureEffects, "skill_check", { appliesTo: name, raging }).disadvantage)
       .map(({ name }) => [name, true]),
   ) as Record<string, boolean>;
   return {

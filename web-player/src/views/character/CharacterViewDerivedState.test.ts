@@ -184,6 +184,31 @@ describe("buildCharacterViewDerivedState", () => {
     expect(state.tempHp).toBe(4);
   });
 
+  it("halves the natural hit point maximum under 2014 exhaustion tier 4+, without also halving the manual override bonus", () => {
+    const baseline = buildArgs();
+    const baselineState = buildCharacterViewDerivedState(baseline);
+    const overrideBonus = baseline.char.overrides!.hpMaxBonus ?? 0;
+    const naturalMax = baselineState.effectiveHpMax - overrideBonus;
+
+    const exhausted = buildArgs();
+    exhausted.char.ruleset = "5e";
+    exhausted.char.characterData!.exhaustion = 4;
+    const exhaustedState = buildCharacterViewDerivedState(exhausted);
+
+    expect(exhaustedState.effectiveHpMax).toBe(Math.floor(naturalMax * 0.5) + overrideBonus);
+  });
+
+  it("does not halve hit point maximum under 2024 exhaustion at any tier", () => {
+    const baseline = buildArgs();
+    const baselineState = buildCharacterViewDerivedState(baseline);
+
+    const exhausted = buildArgs();
+    exhausted.char.characterData!.exhaustion = 6;
+    const exhaustedState = buildCharacterViewDerivedState(exhausted);
+
+    expect(exhaustedState.effectiveHpMax).toBe(baselineState.effectiveHpMax);
+  });
+
   it("does not apply an unattuned item's ability override", () => {
     const args = buildArgs();
     const gauntlets = args.char.characterData?.inventory?.[0];
@@ -259,7 +284,7 @@ describe("buildCharacterViewDerivedState", () => {
   it("links Magic Initiate's chosen level 1 spell to its 1/1 free cast", () => {
     const args = buildArgs();
     args.char.characterData!.proficiencies = {
-      skills: [], expertise: [], saves: [], armor: [], weapons: [], tools: [], languages: [],
+      skills: [], expertise: [], saves: [], armor: [], weapons: [], weaponMasteries: [], tools: [], languages: [],
       spells: [{ id: "s_shield", name: "Shield", source: "Origin: Magic Initiate" }],
       invocations: [], maneuvers: [], metamagic: [], plans: [],
     };

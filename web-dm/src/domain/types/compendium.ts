@@ -1,4 +1,4 @@
-export type JsonRecord = Record<string, unknown>;
+type JsonRecord = Record<string, unknown>;
 
 type MonsterStatValue = number | string | null | JsonRecord;
 
@@ -35,14 +35,6 @@ export type MonsterDetail = {
   spells?: JsonRecord | string[] | null;
   type?: string | null;
   raw_json: JsonRecord;
-};
-
-export type SpellSummary = {
-  id: string;
-  name: string;
-  level: number;
-  school?: string;
-  time?: string;
 };
 
 export type SpellDetail = JsonRecord & {

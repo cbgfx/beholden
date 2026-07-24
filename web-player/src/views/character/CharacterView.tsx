@@ -160,12 +160,13 @@ export function CharacterView() {
 
   const exhaustion = currentData.exhaustion ?? 0;
   const combatProps = {
+    ruleset: char.ruleset,
     effectiveAc: derived.transformedCombatStats?.effectiveAc ?? derived.effectiveAc,
     speed: derived.transformedCombatStats?.speed ?? derived.effectiveSpeed,
     movementModes: derived.transformedCombatStats?.movementModes ?? derived.movementModes,
     level: char.level,
     initiativeBonus: (derived.transformedCombatStats?.initiativeBonus ?? derived.initiativeBonus)
-      - getExhaustionD20Penalty(exhaustion),
+      - getExhaustionD20Penalty(char.ruleset, exhaustion),
     strScore: derived.transformedCombatStats?.strScore ?? derived.scores.str,
     dexScore: derived.transformedCombatStats?.dexScore ?? derived.scores.dex,
     pb: derived.transformedCombatStats?.pb ?? derived.pb,

@@ -75,7 +75,7 @@ function choiceButtonStyle(selected: boolean, locked: boolean, duplicate: boolea
   };
 }
 
-export function renderSkillsStep<TForm extends CreatorFormLike>(args: {
+function renderSkillsStep<TForm extends CreatorFormLike>(args: {
   form: TForm;
   setForm: React.Dispatch<React.SetStateAction<TForm>>;
   classDetailName: string | null;

@@ -8,6 +8,7 @@ const prof = {
   saves: [],
   armor: [],
   weapons: [],
+  weaponMasteries: [],
   tools: [],
   languages: [],
   spells: [

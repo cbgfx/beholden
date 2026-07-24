@@ -1,4 +1,3 @@
-import { wordOrNumberToInt } from "@/lib/characterRules";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import { abilityMod } from "@/views/character/CharacterSheetUtils";
 import type { ParsedFeatChoiceLike as CreatorParsedFeatChoiceLike } from "./FeatChoiceTypes";
@@ -15,7 +14,7 @@ import {
   WEAPON_PROFICIENCY_OPTIONS,
 } from "../constants/CharacterCreatorConstants";
 
-export { abilityMod, wordOrNumberToInt };
+export { abilityMod };
 
 export interface CreatorFeatureLike {
   id?: string;

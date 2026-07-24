@@ -164,8 +164,6 @@ export const ClassToolProficiencySchema = z
   })
   .strict();
 
-export type ClassToolProficiency = z.infer<typeof ClassToolProficiencySchema>;
-
 const SubclassSpellcastingProgressionRowSchema = z.object({
   level: z.number().int().min(1).max(20),
   cantrips: nonnegInt.optional(),

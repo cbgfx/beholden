@@ -1,2 +1,2 @@
-export type { AbilityKey, CharacterSheetStats } from "@/components/CharacterSheet/types";
+export type { CharacterSheetStats } from "@/components/CharacterSheet/types";
 export { CharacterSheetPanel } from "@/components/CharacterSheet/CharacterSheetPanel";

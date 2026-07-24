@@ -161,6 +161,7 @@ export function buildCharacterRuntimeActions(args: {
     saves: [],
     armor: [],
     weapons: [],
+    weaponMasteries: [],
     tools: [],
     languages: [],
     spells: [],

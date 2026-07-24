@@ -7,8 +7,6 @@ import type os from "node:os";
 import type fs from "node:fs";
 import type path from "node:path";
 
-export type Id = string;
-
 interface RuntimeConfig {
   appName: string;
   host: string;
@@ -27,7 +25,7 @@ export interface Paths {
   repoRootDir: string;
 }
 
-export interface Helpers {
+interface Helpers {
   now: () => number;
   uid: () => string;
   normalizeKey: (s: string) => string;

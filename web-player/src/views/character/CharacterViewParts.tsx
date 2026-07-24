@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { C, withAlpha } from "@/lib/theme";
-import { MiniStat as SharedMiniStat, Panel as SharedPanel, ghostButtonStyle } from "@beholden/shared/ui";
+import { Panel as SharedPanel, ghostButtonStyle } from "@beholden/shared/ui";
 
 export { PreparedSpellProgressionBlock, ClassFeatureItem } from "./CharacterViewFeatureParts";
 export { NoteEditDrawer } from "./CharacterViewNoteDrawer";
@@ -186,23 +186,6 @@ export function HexBtn({ variant, active, title, disabled, onClick, children }: 
     >
       {children}
     </button>
-  );
-}
-
-export function MiniStat({ label, value, accent, icon }: { label: string; value: string; accent?: string; icon?: React.ReactNode }) {
-  return (
-    <SharedMiniStat
-      label={label}
-      value={value}
-      accent={accent}
-      icon={icon}
-      theme={{
-        mutedColor: C.muted,
-        textColor: C.text,
-        borderColor: "rgba(255,255,255,0.09)",
-        background: "rgba(255,255,255,0.04)",
-      }}
-    />
   );
 }
 

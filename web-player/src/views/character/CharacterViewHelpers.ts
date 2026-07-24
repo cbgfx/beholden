@@ -229,6 +229,7 @@ export function normalizeProficiencies(rawProf: CharacterData["proficiencies"] |
     saves: dedupeTaggedItems(rawProf.saves),
     armor: sanitizedArmor,
     weapons: sanitizedWeapons,
+    weaponMasteries: Array.isArray(rawProf.weaponMasteries) ? rawProf.weaponMasteries : [],
     tools: sanitizedTools,
     languages: sanitizedLanguages,
     spells: sanitizedTrackedSpells,

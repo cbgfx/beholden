@@ -17,6 +17,12 @@ export function shouldBreakConcentration(args: {
   return Number(args.hpCurrent) <= 0 || conditionsBreakConcentration(args.conditions);
 }
 
+// Conditions that still make sense to display on a combatant at 0 HP ("Down" — the same threshold
+// used for health status everywhere else, e.g. the Engaged Enemies panel). Everything else clears
+// automatically: a downed/unconscious creature isn't meaningfully Frightened, Invisible, Charmed,
+// Marked, etc. anymore, and leaving those badges on just clutters every "Down" combatant's display.
+const DOWNED_PERSISTENT_CONDITION_KEYS = new Set(["unconscious", "prone", "poisoned", "restrained", "petrified"]);
+
 export function applyConditionConsequences(args: {
   previousHpCurrent?: number | null;
   hpCurrent: number | null | undefined;
@@ -26,6 +32,9 @@ export function applyConditionConsequences(args: {
   const healedFromZero = Number(args.previousHpCurrent) <= 0 && Number(args.hpCurrent) > 0;
   if (healedFromZero && conditions.some((condition) => condition.key === "unconscious")) {
     conditions = conditions.filter((condition) => condition.key !== "unconscious");
+  }
+  if (Number(args.hpCurrent) <= 0) {
+    conditions = conditions.filter((condition) => DOWNED_PERSISTENT_CONDITION_KEYS.has(condition.key));
   }
   if (
     conditions.some((condition) => condition.key === "unconscious")

@@ -1,4 +1,4 @@
-export type AbilityKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
+type AbilityKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
 
 export type CharacterSheetStats = {
   ac: number;

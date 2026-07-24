@@ -14,7 +14,7 @@ import { buildAppliedCharacterFeatures, buildPreparedSpellProgressionChoiceDefin
 import {
   ALL_LANGUAGES,
   STANDARD_55E_LANGUAGES,
-  WEAPON_MASTERY_KINDS,
+  getEligibleWeaponMasteryKinds,
 } from "@/views/character-creator/constants/CharacterCreatorConstants";
 import {
   getClassExpertiseChoices,
@@ -220,7 +220,10 @@ export function useCharacterCreatorDerivedState(args: {
     () => getWeaponMasteryChoiceFromUtils(classDetail, form.level),
     [classDetail, form.level]
   );
-  const step5WeaponOptions = React.useMemo(() => [...WEAPON_MASTERY_KINDS].sort((a, b) => a.localeCompare(b)), []);
+  const step5WeaponOptions = React.useMemo(
+    () => getEligibleWeaponMasteryKinds(classDetail?.proficiencies?.weapons).sort((a, b) => a.localeCompare(b)),
+    [classDetail]
+  );
   const step5ChoiceState = React.useMemo(() => getStep5ChoiceState({
     form,
     bgDetail,

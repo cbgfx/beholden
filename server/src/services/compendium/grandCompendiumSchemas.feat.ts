@@ -2,7 +2,7 @@ import { z } from "zod";
 import { FeatMechanicsSchema, RulesetSchema } from "./grandCompendiumSchemas.shared.js";
 
 /** General is the canonical default and is omitted for compactness. */
-export const FEAT_CATEGORIES = ["O", "E", "F"] as const;
+const FEAT_CATEGORIES = ["O", "E", "F"] as const;
 
 const AbilityPrerequisiteSchema = z.object({
   any: z.array(z.enum(["str", "dex", "con", "int", "wis", "cha"])).min(1),

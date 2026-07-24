@@ -10,7 +10,7 @@ import {
 import { IconInitiative, IconShield, IconSpeed } from "@/icons";
 import { CollapsiblePanel, Tooltip } from "@/views/character/CharacterViewParts";
 import { abilityMod, formatModifier } from "@/views/character/CharacterSheetUtils";
-import { getExhaustedSpeed, getExhaustionD20Penalty } from "@/views/character/CharacterExhaustion";
+import { getExhaustedSpeed, getExhaustionD20Penalty, hasExhaustionAttackAndSaveDisadvantage } from "@/views/character/CharacterExhaustion";
 import {
   type InventoryItem,
   type ProficiencyMapLike,
@@ -35,6 +35,7 @@ import {
 
 
 export interface CharacterCombatPanelsProps {
+  ruleset?: "5e" | "5.5e";
   effectiveAc: number;
   speed: number;
   movementModes?: Array<{ mode: "fly" | "swim" | "climb" | "burrow"; speed: number | null }>;
@@ -63,6 +64,7 @@ export interface CharacterCombatPanelsProps {
 }
 
 export function CharacterCombatPanels({
+  ruleset,
   effectiveAc,
   speed,
   movementModes = [],
@@ -89,10 +91,11 @@ export function CharacterCombatPanels({
   onToggleReaction = null,
   incapacitated = false,
 }: CharacterCombatPanelsProps) {
-  const exhaustionPenalty = getExhaustionD20Penalty(exhaustion);
-  const displaySpeed = getExhaustedSpeed(speed, exhaustion);
+  const exhaustionPenalty = getExhaustionD20Penalty(ruleset, exhaustion);
+  const displaySpeed = getExhaustedSpeed(ruleset, speed, exhaustion);
+  const exhaustionAttackDisadvantage = hasExhaustionAttackAndSaveDisadvantage(ruleset, exhaustion);
   const speedAccent = exhaustion >= 6 ? "#dc2626" : exhaustion > 0 ? "#f59e0b" : undefined;
-  const attackDisadvantage = nonProficientArmorPenalty || hasDisadvantage;
+  const attackDisadvantage = nonProficientArmorPenalty || hasDisadvantage || exhaustionAttackDisadvantage;
   const actionItems = inventory.filter((it) => getEquipState(it) !== "backpack" && isWeaponItem(it) && (!it.attunement || it.attuned));
   const heldShield = inventory.some((it) =>
     getEquipState(it) !== "backpack"
@@ -303,7 +306,7 @@ export function CharacterCombatPanels({
             const dmg = weaponDamageDice(it, attackState);
             const ability = weaponAbilityMod(it, { strScore, dexScore }, parsedFeatureEffects);
             const proficient = hasWeaponProficiency(it, prof ?? undefined);
-            const masteryKnown = hasWeaponMastery(it, prof ?? undefined);
+            const masteryKnown = hasWeaponMastery(it, prof ?? undefined, ruleset);
             const masteryName = masteryKnown ? getWeaponMasteryName(it) : null;
             const ranged = isRangedWeapon(it);
             const linkedAmmoCandidate = ranged && it.linkedAmmoId ? inventory.find((entry) => entry.id === it.linkedAmmoId) ?? null : null;

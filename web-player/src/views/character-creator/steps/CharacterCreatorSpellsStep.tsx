@@ -19,7 +19,7 @@ import { buildSpellStepChoiceState } from "@/views/character-creator/utils/Chara
 import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
 import { deriveRaceAbilityBonuses, resolvedScores } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
 
-export function renderSpellsStep<T extends { id: string; name: string; level: number | null; text?: string | null }>({
+function renderSpellsStep<T extends { id: string; name: string; level: number | null; text?: string | null }>({
   isCaster,
   cantripCount,
   classCantrips,

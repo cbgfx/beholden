@@ -140,8 +140,20 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
           <div style={{ fontSize: "var(--fs-body)", fontWeight: 800, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {ch.name}
           </div>
-          <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginTop: 2 }}>
-            {[ch.className, ch.species].filter(Boolean).join(" · ")}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+            <span style={{ fontSize: "var(--fs-small)", color: C.muted, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {[ch.className, ch.species].filter(Boolean).join(" · ")}
+            </span>
+            {ch.ruleset && (
+              <span style={{
+                fontSize: "var(--fs-tiny)", fontWeight: 800, padding: "1px 6px", borderRadius: 20, flexShrink: 0,
+                background: ch.ruleset === "5e" ? "rgba(148,163,184,0.15)" : "rgba(96,165,250,0.15)",
+                border: `1px solid ${ch.ruleset === "5e" ? "rgba(148,163,184,0.4)" : "rgba(96,165,250,0.4)"}`,
+                color: ch.ruleset === "5e" ? "#94a3b8" : "#60a5fa",
+              }}>
+                {ch.ruleset}
+              </span>
+            )}
           </div>
           <div style={{ fontSize: "var(--fs-small)", color, fontWeight: 700, marginTop: 1 }}>Level {ch.level}</div>
         </div>

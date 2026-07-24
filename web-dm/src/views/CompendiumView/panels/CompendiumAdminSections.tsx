@@ -4,7 +4,7 @@ import { Button } from "@/ui/Button";
 import { Select } from "@/ui/Select";
 import { theme } from "@/theme/theme";
 
-export const NATIVE_COMPENDIUM_CATEGORIES = [
+const NATIVE_COMPENDIUM_CATEGORIES = [
   "monsters",
   "items",
   "spells",

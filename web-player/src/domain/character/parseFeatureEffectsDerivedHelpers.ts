@@ -37,16 +37,16 @@ function hasWeaponProperty(item: WeaponLike | null | undefined, code: string): b
   return (item?.properties ?? []).some((property) => String(property ?? "").trim().toUpperCase() === code.toUpperCase());
 }
 
-export function isWeaponLike(item: WeaponLike | null | undefined): boolean {
+function isWeaponLike(item: WeaponLike | null | undefined): boolean {
   return Boolean(item?.dmg1 || item?.dmg2);
 }
 
-export function isMeleeWeaponLike(item: WeaponLike | null | undefined): boolean {
+function isMeleeWeaponLike(item: WeaponLike | null | undefined): boolean {
   if (!isWeaponLike(item)) return false;
   return !/ranged/i.test(String(item?.type ?? ""));
 }
 
-export function isRangedWeaponLike(item: WeaponLike | null | undefined): boolean {
+function isRangedWeaponLike(item: WeaponLike | null | undefined): boolean {
   return /ranged/i.test(String(item?.type ?? ""));
 }
 

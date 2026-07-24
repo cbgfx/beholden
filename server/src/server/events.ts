@@ -5,7 +5,7 @@
 
 import type { EncounterActorDto, NoteDto, TreasureDto } from "@beholden/shared/api";
 
-export type Id = string;
+type Id = string;
 
 type HelloPayload = { ok: true; time: number };
 

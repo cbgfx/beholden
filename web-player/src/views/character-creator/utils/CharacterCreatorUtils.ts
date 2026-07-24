@@ -8,21 +8,13 @@ export {
   getClassExpertiseChoices,
   getFeatureSubclassName,
   getFeatChoiceOptions,
-  getMergedAutolevels,
   getSubclassList,
   getSubclassLevel,
   isSubclassChoiceFeature,
   normalizeChoiceKey,
-  normalizeSubclassName,
   parseSkillList,
-  wordOrNumberToInt,
 } from "./CharacterCreatorClassCoreUtils";
-export type {
-  ClassExpertiseChoice,
-  CreatorClassDetailLike,
-  CreatorItemSummaryLike,
-  StartingEquipmentOption,
-} from "./CharacterCreatorClassCoreUtils";
+export type { StartingEquipmentOption } from "./CharacterCreatorClassCoreUtils";
 
 export {
   getCantripCount,
@@ -37,7 +29,6 @@ export {
   tableValueAtLevel,
   usesFlexiblePreparedSpells,
 } from "./CharacterCreatorSpellcastingUtils";
-export type { SlotLevelTriggeredSpellChoiceDef } from "./CharacterCreatorSpellcastingUtils";
 
 export { parseStartingEquipmentOptions } from "./CharacterCreatorRaceParseUtils";
 

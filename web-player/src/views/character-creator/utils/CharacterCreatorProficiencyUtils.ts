@@ -502,6 +502,7 @@ export function buildProficiencyMap(args: {
     tools: dedupeTaggedItems(tools).filter((entry) => !isProficiencyNoiseToken(entry.name)),
     languages: dedupeTaggedItems(languages, normalizeLanguageName).filter((entry) => !isProficiencyNoiseToken(entry.name)),
     weapons: dedupeTaggedItems(weapons, normalizeWeaponProficiencyName),
+    weaponMasteries: Array.from(new Set(form.chosenWeaponMasteries.map((name) => normalizeWeaponProficiencyName(name)))),
     spells: dedupeTaggedItems(spells, normalizeSpellTrackingName),
     invocations: dedupeTaggedItems(invocations),
     maneuvers: dedupeTaggedItems(maneuvers),

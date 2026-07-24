@@ -44,7 +44,7 @@ export function InventoryPanel({
   campaignId,
   onSave,
 }: {
-  char: { strScore: number | null };
+  char: { strScore: number | null; ruleset?: "5e" | "5.5e" };
   charData: InventoryPanelCharacterData | null;
   proficiencies?: ProficiencyMap;
   parsedFeatureEffects?: ParsedFeatureEffects[] | null;
@@ -132,6 +132,7 @@ export function InventoryPanel({
                     accentColor={accentColor}
                     proficiencies={proficiencies}
                     parsedFeatureEffects={parsedFeatureEffects}
+                    ruleset={char.ruleset}
                     expanded={sync.expandedItemId === item.id}
                     onToggleExpanded={itemActions.toggleExpandedItem}
                     onCycleMain={itemActions.cycleMainHand}
@@ -161,6 +162,7 @@ export function InventoryPanel({
               accentColor={accentColor}
               proficiencies={proficiencies}
               parsedFeatureEffects={parsedFeatureEffects}
+              ruleset={char.ruleset}
               expandedItemId={sync.expandedItemId}
               onToggleCollapsed={() => itemActions.toggleContainerCollapsed(container.id)}
               onNameChange={(name) => sync.setContainers((previous) => previous.map((entry) => entry.id === container.id ? { ...entry, name } : entry))}

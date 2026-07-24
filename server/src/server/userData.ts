@@ -3,7 +3,7 @@
 // These are richer than the client domain types — they include internal fields
 // like sort, createdAt, updatedAt, and server-only state.
 
-export type Id = string;
+type Id = string;
 
 interface Timestamps {
   createdAt: number;

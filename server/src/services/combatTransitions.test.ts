@@ -41,6 +41,36 @@ test("zero HP removes concentration while preserving unrelated conditions", () =
   assert.deepEqual(next.conditions, [{ key: "prone" }]);
 });
 
+test("dropping to 0 HP clears conditions that don't make sense on a downed combatant, but keeps physical/persistent ones", () => {
+  const next = applyCombatantTransition(actor({
+    hpCurrent: 0,
+    conditions: [
+      { key: "frightened" }, { key: "invisible" }, { key: "charmed" }, { key: "marked", casterId: "x" },
+      { key: "poisoned" }, { key: "restrained" }, { key: "petrified" },
+    ],
+  }));
+  assert.deepEqual(
+    next.conditions,
+    [{ key: "poisoned" }, { key: "restrained" }, { key: "petrified" }],
+  );
+});
+
+test("a combatant already at 0 HP has a newly-added irrelevant condition stripped again (idempotent, not just on the transition edge)", () => {
+  const next = applyCombatantTransition(
+    actor({ hpCurrent: 0, conditions: [{ key: "poisoned" }, { key: "frightened" }] }),
+    actor({ hpCurrent: 0, conditions: [{ key: "poisoned" }] }),
+  );
+  assert.deepEqual(next.conditions, [{ key: "poisoned" }]);
+});
+
+test("healing a downed combatant above 0 does not resurrect conditions that were cleared while they were down", () => {
+  const next = applyCombatantTransition(
+    actor({ hpCurrent: 5, conditions: [{ key: "poisoned" }] }),
+    actor({ hpCurrent: 0, conditions: [{ key: "poisoned" }] }),
+  );
+  assert.deepEqual(next.conditions, [{ key: "poisoned" }]);
+});
+
 for (const key of ["incapacitated", "paralyzed", "petrified", "stunned", "unconscious"]) {
   test(`${key} removes concentration`, () => {
     const next = applyCombatantTransition(actor({
