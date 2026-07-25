@@ -1,0 +1,36 @@
+.question {
+  margin-bottom: var(--space-gap);
+}
+
+.questionTitle {
+  font-weight: 900;
+  margin-bottom: var(--gap-4);
+  font-size: var(--fs-large);
+}
+
+.questionBody {
+  color: var(--text);
+  line-height: 1.55;
+  font-size: var(--fs-body);
+}
+
+.aboutSection {
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.list {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.7;
+}
+
+.updateList {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.8;
+}
+
+.aboutListItem {
+  margin-bottom: var(--gap-4);
+}

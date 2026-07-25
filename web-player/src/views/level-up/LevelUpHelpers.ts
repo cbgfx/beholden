@@ -1,0 +1,132 @@
+import type { LevelUpCharacter as Character, LevelUpClassDetail as ClassDetail, LevelUpSpellSummary as SpellSummary } from "@/views/level-up/LevelUpTypes";
+import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
+
+interface NamedOptionEntry {
+  id: string;
+  name: string;
+}
+
+function normalizeSpellSelectionKey(value: string | null | undefined): string {
+  return String(value ?? "")
+    .replace(/\s*\[[^\]]+\]\s*$/u, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+export function reconcileSelectedSpellIds(
+  selected: string[],
+  options: SpellSummary[],
+  knownSpellNames: string[] = [],
+): string[] {
+  const byId = new Map(options.map((spell) => [String(spell.id), String(spell.id)]));
+  const byName = new Map(options.map((spell) => [normalizeSpellSelectionKey(spell.name), String(spell.id)]));
+  const resolved: string[] = [];
+  const repeatableIds = new Set(options.filter((option) => option.repeatable).map((option) => String(option.id)));
+  const add = (id: string) => { if (repeatableIds.has(id) || !resolved.includes(id)) resolved.push(id); };
+
+  for (const entry of selected) {
+    const direct = byId.get(String(entry));
+    if (direct) {
+      add(direct);
+      continue;
+    }
+    const bySavedName = byName.get(normalizeSpellSelectionKey(entry));
+    if (bySavedName) add(bySavedName);
+  }
+
+  for (const name of knownSpellNames) {
+    const matched = byName.get(normalizeSpellSelectionKey(name));
+    if (matched) add(matched);
+  }
+
+  return resolved;
+}
+
+export function cleanFeatureText(text: string | null | undefined): string {
+  return String(text ?? "").replace(/Source:.*$/ms, "").trim();
+}
+
+export function hasKeys(value: Record<string, unknown>): boolean {
+  return Object.keys(value).length > 0;
+}
+
+function sameStringArrays(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((entry, index) => entry === b[index]);
+}
+
+export function sameSelectionMap(
+  a: Record<string, string[]>,
+  b: Record<string, string[]>,
+): boolean {
+  const aKeys = Object.keys(a).sort();
+  const bKeys = Object.keys(b).sort();
+  if (!sameStringArrays(aKeys, bKeys)) return false;
+  return aKeys.every((key) => sameStringArrays(a[key] ?? [], b[key] ?? []));
+}
+
+export function sameSpellChoiceOptionMap<T extends NamedOptionEntry>(
+  a: Record<string, T[]>,
+  b: Record<string, T[]>,
+): boolean {
+  const aKeys = Object.keys(a).sort();
+  const bKeys = Object.keys(b).sort();
+  if (!sameStringArrays(aKeys, bKeys)) return false;
+  return aKeys.every((key) => {
+    const aValues = (a[key] ?? []).map((spell) => `${spell.id}:${spell.name}`);
+    const bValues = (b[key] ?? []).map((spell) => `${spell.id}:${spell.name}`);
+    return sameStringArrays(aValues, bValues);
+  });
+}
+
+export function deriveCharProficiencies(char: Character | null): {
+  charProficiencies: ProficiencyMap;
+  proficientSkills: string[];
+  proficientTools: string[];
+  proficientLanguages: string[];
+  proficientSaves: string[];
+  existingExpertise: string[];
+} {
+  const _cp = char?.characterData?.proficiencies;
+  const _arr = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
+  const toNames = (arr: unknown[]): string[] =>
+    arr
+      .map((entry) => typeof entry === "string" ? entry : (entry as { name?: string })?.name)
+      .filter((entry): entry is string => Boolean(entry));
+  const charProficiencies = {
+    skills: _arr(_cp?.skills), expertise: _arr(_cp?.expertise), saves: _arr(_cp?.saves),
+    tools: _arr(_cp?.tools), languages: _arr(_cp?.languages), armor: _arr(_cp?.armor),
+    weapons: _arr(_cp?.weapons), spells: _arr(_cp?.spells), invocations: _arr(_cp?.invocations),
+    maneuvers: _arr(_cp?.maneuvers), metamagic: _arr(_cp?.metamagic), infusions: _arr(_cp?.infusions), plans: _arr(_cp?.plans),
+  } as ProficiencyMap;
+  return {
+    charProficiencies,
+    proficientSkills: toNames(_arr(_cp?.skills)),
+    proficientTools: toNames(_arr(_cp?.tools)),
+    proficientLanguages: toNames(_arr(_cp?.languages)),
+    proficientSaves: toNames(_arr(_cp?.saves)),
+    existingExpertise: toNames(_arr(_cp?.expertise)),
+  };
+}
+
+export function mergeAutoLevels(classDetail: ClassDetail | null): ClassDetail["autolevels"] {
+  if (!classDetail) return [];
+  const byLevel = new Map<number, ClassDetail["autolevels"][number]>();
+  for (const autolevel of classDetail.autolevels ?? []) {
+    const existing = byLevel.get(autolevel.level);
+    if (!existing) {
+      byLevel.set(autolevel.level, {
+        ...autolevel,
+        features: [...(autolevel.features ?? [])],
+        counters: [...(autolevel.counters ?? [])],
+        slots: autolevel.slots ? [...autolevel.slots] : autolevel.slots,
+      });
+      continue;
+    }
+    existing.scoreImprovement = Boolean(existing.scoreImprovement || autolevel.scoreImprovement);
+    existing.features = [...(existing.features ?? []), ...(autolevel.features ?? [])];
+    existing.counters = [...(existing.counters ?? []), ...(autolevel.counters ?? [])];
+    if (autolevel.slots && autolevel.slots.length > 0) existing.slots = [...autolevel.slots];
+  }
+  return Array.from(byLevel.values()).sort((a, b) => a.level - b.level);
+}

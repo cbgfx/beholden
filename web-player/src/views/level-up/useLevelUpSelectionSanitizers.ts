@@ -1,0 +1,140 @@
+import React from "react";
+import { normalizeChoiceKey } from "@/views/character-creator/utils/CharacterCreatorUtils";
+import { reconcileSelectedSpellIds } from "@/views/level-up/LevelUpHelpers";
+import type { LevelUpCharacter as Character, LevelUpSpellSummary as SpellSummary } from "@/views/level-up/LevelUpTypes";
+
+export function useLevelUpSelectionSanitizers(args: {
+  char: Character | null;
+  classCantrips: SpellSummary[];
+  classSpells: SpellSummary[];
+  classInvocations: SpellSummary[];
+  existingClassSpellNames: string[];
+  existingClassInvocationNames: string[];
+  cantripCount: number;
+  maxSpellLevel: number;
+  prepCount: number;
+  allowedInvocationIds: Set<string>;
+  invocCount: number;
+  setChosenCantrips: React.Dispatch<React.SetStateAction<string[]>>;
+  setChosenSpells: React.Dispatch<React.SetStateAction<string[]>>;
+  setChosenInvocations: React.Dispatch<React.SetStateAction<string[]>>;
+  expertiseChoices: Array<{ key: string; source: string; options?: string[] | null; count: number }>;
+  expertiseReplacementChoices: Array<{ key: string; source: string; options?: string[] | null; count: number }>;
+  proficientSkills: string[];
+  existingExpertise: string[];
+  setChosenExpertise: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
+}) {
+  const {
+    char,
+    classCantrips,
+    classSpells,
+    classInvocations,
+    existingClassSpellNames,
+    existingClassInvocationNames,
+    cantripCount,
+    maxSpellLevel,
+    prepCount,
+    allowedInvocationIds,
+    invocCount,
+    setChosenCantrips,
+    setChosenSpells,
+    setChosenInvocations,
+    expertiseChoices,
+    expertiseReplacementChoices,
+    proficientSkills,
+    existingExpertise,
+    setChosenExpertise,
+  } = args;
+
+  React.useEffect(() => {
+    setChosenCantrips((prev) => {
+      const next = reconcileSelectedSpellIds(prev, classCantrips, existingClassSpellNames).slice(0, cantripCount);
+      return next.length === prev.length && next.every((id, index) => id === prev[index]) ? prev : next;
+    });
+  }, [classCantrips, cantripCount, existingClassSpellNames, setChosenCantrips]);
+
+  React.useEffect(() => {
+    if (maxSpellLevel === 0) return;
+    setChosenSpells((prev) => {
+      const next = reconcileSelectedSpellIds(prev, classSpells, existingClassSpellNames)
+        .filter((id) => {
+          const spell = classSpells.find((entry) => entry.id === id);
+          const spellLevel = Number(spell?.level ?? 0);
+          return Boolean(spell) && spellLevel > 0 && spellLevel <= maxSpellLevel;
+        })
+        .slice(0, prepCount);
+      return next.length === prev.length && next.every((id, index) => id === prev[index]) ? prev : next;
+    });
+  }, [classSpells, existingClassSpellNames, maxSpellLevel, prepCount, setChosenSpells]);
+
+  React.useEffect(() => {
+    setChosenInvocations((prev) => {
+      const next = reconcileSelectedSpellIds(prev, classInvocations, existingClassInvocationNames)
+        .filter((id) => allowedInvocationIds.has(id))
+        .slice(0, invocCount);
+      return next.length === prev.length && next.every((id, index) => id === prev[index]) ? prev : next;
+    });
+  }, [allowedInvocationIds, classInvocations, existingClassInvocationNames, invocCount, setChosenInvocations]);
+
+  React.useEffect(() => {
+    if (expertiseChoices.length === 0) return;
+    setChosenExpertise((prev) => {
+      let changed = false;
+      const next: Record<string, string[]> = { ...prev };
+      const taken = new Set(existingExpertise.map((name) => normalizeChoiceKey(name)));
+      const proficientSkillKeys = new Set(proficientSkills.map((skill) => normalizeChoiceKey(skill)));
+      const existingExpertiseEntries = Array.isArray(char?.characterData?.proficiencies?.expertise)
+        ? char.characterData.proficiencies.expertise
+        : [];
+      for (const choice of expertiseChoices) {
+        const options = (choice.options ?? proficientSkills).filter((skill) => proficientSkillKeys.has(normalizeChoiceKey(skill)));
+        const current = prev[choice.key] ?? [];
+        // Validate the existing selection against the option list only -- entries seeded from
+        // existingExpertise below are legitimately part of this choice's count and must not be
+        // re-purged just because they're "already known" (that's precisely why they were seeded).
+        const validCurrent = current
+          .filter((skill) => options.some((option) => normalizeChoiceKey(option) === normalizeChoiceKey(skill)))
+          .slice(0, choice.count);
+        const finalSelection = validCurrent.length > 0
+          ? validCurrent
+          : existingExpertiseEntries
+            .filter((entry) => typeof entry !== "string" && entry?.source === choice.source)
+            .map((entry) => entry.name)
+            .filter((skill) => options.some((option) => normalizeChoiceKey(option) === normalizeChoiceKey(skill)))
+            .filter((skill) => !taken.has(normalizeChoiceKey(skill)))
+            .slice(0, choice.count);
+        finalSelection.forEach((skill) => taken.add(normalizeChoiceKey(skill)));
+        if (finalSelection.length === 0) delete next[choice.key];
+        else next[choice.key] = finalSelection;
+        if (finalSelection.length !== current.length || finalSelection.some((skill, index) => skill !== current[index])) changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [char?.characterData?.proficiencies?.expertise, expertiseChoices, proficientSkills, existingExpertise, setChosenExpertise]);
+
+  React.useEffect(() => {
+    if (expertiseReplacementChoices.length === 0) return;
+    setChosenExpertise((prev) => {
+      let changed = false;
+      const next: Record<string, string[]> = { ...prev };
+      const existingKeys = new Set(existingExpertise.map((name) => normalizeChoiceKey(name)));
+      const proficientSkillKeys = new Set(proficientSkills.map((skill) => normalizeChoiceKey(skill)));
+      for (const choice of expertiseReplacementChoices) {
+        const targetKey = `${choice.key}:target`;
+        const currentTarget = (prev[targetKey] ?? []).filter((skill) => existingKeys.has(normalizeChoiceKey(skill))).slice(0, 1);
+        if (currentTarget.length === 0) delete next[targetKey]; else next[targetKey] = currentTarget;
+        if (currentTarget.length !== (prev[targetKey] ?? []).length) changed = true;
+
+        const options = (choice.options ?? proficientSkills).filter((skill) => proficientSkillKeys.has(normalizeChoiceKey(skill)));
+        const target = currentTarget[0];
+        const validNewSkill = (skill: string) =>
+          options.some((option) => normalizeChoiceKey(option) === normalizeChoiceKey(skill))
+          && (!existingKeys.has(normalizeChoiceKey(skill)) || (target && normalizeChoiceKey(skill) === normalizeChoiceKey(target)));
+        const currentNew = (prev[choice.key] ?? []).filter(validNewSkill).slice(0, choice.count);
+        if (currentNew.length === 0) delete next[choice.key]; else next[choice.key] = currentNew;
+        if (currentNew.length !== (prev[choice.key] ?? []).length) changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [existingExpertise, expertiseReplacementChoices, proficientSkills, setChosenExpertise]);
+}

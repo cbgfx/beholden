@@ -1,0 +1,62 @@
+import { SpellsPanel } from "@/views/CompendiumView/panels/SpellsPanel";
+import { RulesReferencePanel } from "@/views/CompendiumView/panels/RulesReferencePanel";
+import { CompendiumAdminPanel } from "@/views/CompendiumView/panels/CompendiumAdminPanel";
+import { MonsterBrowserPanel } from "@/views/CompendiumView/panels/MonsterBrowserPanel";
+import { ItemsBrowserPanel } from "@/views/CompendiumView/panels/ItemsBrowserPanel";
+import { FeatsPanel } from "@/views/CompendiumView/panels/FeatsPanel";
+import { AiHelpPanel } from "@/views/CompendiumView/panels/AiHelpPanel";
+import type { CompendiumSection } from "@/views/CompendiumView/CompendiumView";
+import { useAuth } from "@/contexts/AuthContext";
+
+export function CompendiumCenterColumn(props: {
+  activeSection: CompendiumSection;
+  selectedSpellId: string | null;
+  selectedSpellRuleset: "5e" | "5.5e" | null;
+  onSelectSpell: (id: string, ruleset?: "5e" | "5.5e" | null) => void;
+  selectedMonsterId: string | null;
+  onSelectMonster: (id: string) => void;
+  selectedItemId: string | null;
+  onSelectItem: (id: string) => void;
+  selectedFeatId: string | null;
+  onSelectFeat: (id: string) => void;
+}) {
+  const { user } = useAuth();
+  const isAdmin = Boolean(user?.isAdmin);
+
+  return (
+    <div style={{ minWidth: 0, minHeight: 0, height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      {props.activeSection === "monsters" && (
+        <MonsterBrowserPanel
+          selectedMonsterId={props.selectedMonsterId}
+          onSelectMonster={props.onSelectMonster}
+          editable
+        />
+      )}
+      {props.activeSection === "spells" && (
+        <SpellsPanel
+          embedded
+          editable
+          selectedSpellId={props.selectedSpellId}
+          selectedSpellRuleset={props.selectedSpellRuleset}
+          onSelectSpell={props.onSelectSpell}
+        />
+      )}
+      {props.activeSection === "items" && (
+        <ItemsBrowserPanel
+          editable
+          selectedItemId={props.selectedItemId}
+          onSelectItem={props.onSelectItem}
+        />
+      )}
+      {props.activeSection === "feats" && (
+        <FeatsPanel
+          selectedFeatId={props.selectedFeatId}
+          onSelectFeat={props.onSelectFeat}
+        />
+      )}
+      {props.activeSection === "rules" && <RulesReferencePanel />}
+      {props.activeSection === "ai-help" && <AiHelpPanel />}
+      {isAdmin && props.activeSection === "compendium" && <CompendiumAdminPanel />}
+    </div>
+  );
+}

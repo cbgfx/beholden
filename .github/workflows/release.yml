@@ -1,0 +1,57 @@
+name: Release (tag)
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      # If you use a root package.json that installs everything, keep this.
+      # If you don't, see the "Monorepo split" section below.
+      - name: Install (root)
+        run: npm ci
+
+      - name: Verify and build
+        run: npm run verify
+
+      - name: Create release package zip
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+
+          mkdir -p release_package
+
+          for workspace in server shared web-dm web-player; do
+            mkdir -p "release_package/${workspace}"
+            rsync -a --exclude=node_modules "${workspace}/" "release_package/${workspace}/"
+          done
+
+          # Include root docs/config if you want
+          for f in README.md LICENSE package.json package-lock.json start.bat; do
+            if [ -f "$f" ]; then cp "$f" release_package/; fi
+          done
+
+          ZIP_NAME="beholden-${VERSION}.zip"
+          (cd release_package && zip -r "../${ZIP_NAME}" .)
+          echo "ZIP_NAME=${ZIP_NAME}" >> $GITHUB_ENV
+
+      - name: Create GitHub Release + Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ZIP_NAME }}
+          generate_release_notes: true

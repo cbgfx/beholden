@@ -1,0 +1,37 @@
+{
+  "name": "beholden",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "server",
+    "web-dm",
+    "web-player"
+  ],
+  "scripts": {
+    "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:web-dm\" \"npm:dev:web-player\"",
+    "dev:server": "npm -w server run dev",
+    "dev:web-dm": "npm -w web-dm run dev",
+    "dev:web-player": "npm -w web-player run dev",
+    "db:maintenance": "npm -w server run db:maintenance --",
+    "typecheck": "npm -w server run typecheck && npm -w web-dm run typecheck && npm -w web-player run typecheck",
+    "lint": "eslint \"{server,shared,web-dm,web-player}/src/**/*.{ts,tsx}\" --cache --cache-location .eslintcache",
+    "build": "npm -w server run build && npm -w web-dm run build && npm -w web-player run build",
+    "build:web-dm": "npm -w web-dm run build",
+    "build:web-player": "npm -w web-player run build",
+    "start": "npm -w server run start",
+    "test": "npm -w server run test && npm -w web-player run test && npm -w web-dm run test",
+    "check:payload-budgets": "node server/scripts/check-payload-budgets.mjs",
+    "check:bundle-budgets": "node server/scripts/check-bundle-budgets.mjs",
+    "verify": "npm run typecheck && npm run lint && npm test && npm run build && npm run check:payload-budgets && npm run check:bundle-budgets"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.62.0",
+    "@typescript-eslint/parser": "^8.62.0",
+    "concurrently": "^10.0.3",
+    "eslint": "^10.6.0",
+    "eslint-plugin-react-hooks": "^7.1.1"
+  },
+  "overrides": {
+    "shell-quote": "^1.9.0"
+  }
+}

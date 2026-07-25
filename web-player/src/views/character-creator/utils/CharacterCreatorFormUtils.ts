@@ -1,0 +1,366 @@
+import { C } from "@/lib/theme";
+import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
+import {
+  ABILITY_KEYS,
+  ABILITY_NAME_TO_KEY,
+  STANDARD_ARRAY,
+  POINT_BUY_COSTS,
+} from "@/views/character-creator/constants/CharacterCreatorConstants";
+import {
+  abilityNamesToKeys,
+  featureMatchesSubclass,
+  getFeatureSubclassName,
+} from "@/views/character-creator/utils/CharacterCreatorUtils";
+import type { ClassDetail, ClassFeatChoice, LevelUpFeatDetail, LevelUpFeatSelection } from "@/views/character-creator/utils/CharacterCreatorTypes";
+import type {
+  ParsedFeatChoiceLike as ParsedFeatChoice,
+  ParsedFeatDetailLike as BackgroundFeat,
+} from "@/views/character-creator/utils/FeatChoiceTypes";
+
+export type AbilityMethod = "standard" | "pointbuy";
+export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+
+export interface FormState {
+  ruleset: "5e" | "5.5e" | null;
+  classId: string;
+  raceId: string;
+  bgId: string;
+  level: number;
+  subclass: string;
+  chosenOptionals: string[];
+  chosenClassFeatIds: Record<string, string>;
+  chosenLevelUpFeats: LevelUpFeatSelection[];
+  chosenRaceSkills: string[];
+  chosenRaceLanguages: string[];
+  chosenRaceTools: string[];
+  chosenRaceFeatId: string | null;
+  chosenRaceSize: string | null;
+  chosenRaceSpellAbility: string | null;
+  /** The player-choice portion of a 2014 race's Ability Score Increase (simple, non-flexible pattern). */
+  chosenRaceAbilityChoices: string[];
+  /** The 2024-background-style "2-and-1 OR three +1s" flexible pattern (Aasimar, Goliath, Orc). */
+  raceAbilityMode: "split" | "even";
+  raceAbilityBonuses: Record<string, number>;
+  chosenBgSkills: string[];
+  chosenBgOriginFeatId: string | null;
+  chosenBgTools: string[];
+  chosenBgLanguages: string[];
+  chosenClassEquipmentOption: string | null;
+  chosenBgEquipmentOption: string | null;
+  chosenFeatOptions: Record<string, string[]>;
+  chosenFeatureChoices: Record<string, string[]>;
+  bgAbilityMode: "split" | "even";
+  bgAbilityBonuses: Record<string, number>;
+  chosenSkills: string[];
+  chosenClassLanguages: string[];
+  chosenClassTools: string[];
+  chosenWeaponMasteries: string[];
+  chosenCantrips: string[];
+  chosenSpells: string[];
+  chosenInvocations: string[];
+  abilityMethod: AbilityMethod;
+  standardAssign: Record<string, number>;
+  pbScores: Record<string, number>;
+  hpMax: string;
+  ac: string;
+  speed: string;
+  characterName: string;
+  playerName: string;
+  alignment: string;
+  hair: string;
+  skin: string;
+  heightText: string;
+  age: string;
+  weight: string;
+  gender: string;
+  color: string;
+  campaignIds: string[];
+}
+
+const DEFAULT_SCORES = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 };
+
+export function getClassFeatChoices(
+  classDetail: ClassDetail | null,
+  level: number,
+  featSummaries: Array<{ id: string; name: string; category?: string | null }>,
+  selectedSubclass?: string | null,
+): ClassFeatChoice[] {
+  if (!classDetail) return [];
+  const choices: ClassFeatChoice[] = [];
+  const seen = new Set<string>();
+  for (const al of classDetail.autolevels) {
+    if (al.level == null || al.level > level) continue;
+    for (const f of al.features) {
+      if (!featureMatchesSubclass(f, selectedSubclass)) continue;
+      const featChoice = f.choices?.find((choice) => choice.kind === "feat");
+      if (!featChoice || featChoice.kind !== "feat") continue;
+      const featGroup = featChoice.category === "F" ? "Fighting Style" : featChoice.category;
+      const key = `${al.level}:${f.name}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const options = featSummaries
+        .filter((feat) => String(feat.category ?? "").toUpperCase() === featChoice.category)
+        .map((feat) => ({ id: feat.id, name: feat.name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      choices.push({ featureName: f.name, featGroup, options });
+    }
+  }
+  return choices;
+}
+
+export function getClassFeatChoiceLabel(featGroup: string): string {
+  if (/^fighting style$/i.test(featGroup)) return "Fighting Style";
+  return `${featGroup} Choice`;
+}
+
+export function getClassFeatOptionLabel(optionName: string, featGroup: string): string {
+  let label = optionName.replace(/\s*\[(?:5\.5e|2024)\]\s*$/i, "").trim();
+  if (new RegExp(`^${featGroup.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*:\\s*`, "i").test(label)) {
+    label = label.replace(new RegExp(`^${featGroup.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*:\\s*`, "i"), "").trim();
+  }
+  return label;
+}
+
+function toAbilityKey(value: string): string | null {
+  const lowered = String(value ?? "").trim().toLowerCase();
+  return ABILITY_NAME_TO_KEY[lowered] ?? null;
+}
+
+function getSelectedAbilityIncrease(choice: ParsedFeatChoice, selected: string[]): Record<string, number> {
+  if (choice.type !== "ability_score") return {};
+  const amount = Math.max(1, Number(choice.amount ?? 1) || 1);
+  const next: Record<string, number> = {};
+  for (const raw of selected) {
+    const key = toAbilityKey(raw);
+    if (!key) continue;
+    next[key] = (next[key] ?? 0) + amount;
+  }
+  return next;
+}
+
+export interface OptionalFeatureGroup {
+  level: number;
+  name: string;
+  exclusive: boolean;
+  features: Array<{ name: string; text: string; selectionNames: string[]; preparedSpellProgression?: PreparedSpellProgressionTable[] }>;
+}
+
+export function getOptionalGroups(cls: ClassDetail, level: number): OptionalFeatureGroup[] {
+  const allFeatures = cls.autolevels.flatMap((autolevel) =>
+    autolevel.features.map((feature) => ({ ...feature, level: autolevel.level }))
+  );
+  const byId = new Map(allFeatures.filter((feature) => feature.id).map((feature) => [String(feature.id), feature]));
+  const explicitlyGroupedIds = new Set((cls.choices ?? []).flatMap((choice) => choice.options.flatMap((option) => option.features)));
+  const explicitGroups = (cls.choices ?? []).flatMap<OptionalFeatureGroup>((choice) => {
+    const options = choice.options.flatMap((option) => {
+      const features = option.features.map((featureId) => byId.get(featureId)).filter((feature) => feature != null);
+      if (features.length !== option.features.length || features.length === 0) return [];
+      const optionLevel = Math.max(...features.map((feature) => feature.level));
+      if (optionLevel > level) return [];
+      return [{
+        name: option.name,
+        text: features.map((feature) => feature.text).filter(Boolean).join("\n\n"),
+        selectionNames: features.map((feature) => feature.name),
+        preparedSpellProgression: features.flatMap((feature) => feature.preparedSpellProgression ?? []),
+        level: optionLevel,
+      }];
+    });
+    if (options.length < 2) return [];
+    return [{
+      level: Math.min(...options.map((option) => option.level)),
+      name: choice.name,
+      exclusive: true,
+      features: options.map(({ level: _level, ...option }) => option),
+    }];
+  });
+
+  const map = new Map<number, Array<{ name: string; text: string; selectionNames: string[]; preparedSpellProgression?: PreparedSpellProgressionTable[] }>>();
+  for (const al of cls.autolevels) {
+    if (al.level == null || al.level > level) continue;
+    const opts = al.features.filter((f) => {
+      if (!f.optional) return false;
+      if (f.id && explicitlyGroupedIds.has(f.id)) return false;
+      const featureSubclass = getFeatureSubclassName(f);
+      if (featureSubclass) return false;
+      return true;
+    });
+    if (opts.length > 0) {
+      const existing = map.get(al.level) ?? [];
+      map.set(al.level, [...existing, ...opts.map((feature) => ({ ...feature, selectionNames: [feature.name] }))]);
+    }
+  }
+  const legacyGroups = Array.from(map.entries()).map(([groupLevel, features]) => ({
+    level: groupLevel,
+    name: `Level ${groupLevel}`,
+    exclusive: features.length <= 4,
+    features,
+  }));
+  return [...explicitGroups, ...legacyGroups].sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+}
+
+export function pointBuySpent(scores: Record<string, number>): number {
+  return ABILITY_KEYS.reduce((sum, k) => {
+    const s = Math.min(15, Math.max(8, scores[k] ?? 8));
+    return sum + (POINT_BUY_COSTS[s] ?? 0);
+  }, 0);
+}
+
+export function initForm(user: { name?: string } | null, params: URLSearchParams): FormState {
+  const preselectedCampaign = params.get("campaign");
+  return {
+    ruleset: null,
+    classId: "", raceId: "", bgId: "",
+    level: 1, subclass: "", chosenOptionals: [], chosenClassFeatIds: {}, chosenLevelUpFeats: [],
+    chosenRaceSkills: [], chosenRaceLanguages: [], chosenRaceTools: [], chosenRaceFeatId: null, chosenRaceSize: null, chosenRaceSpellAbility: null,
+    chosenRaceAbilityChoices: [], raceAbilityMode: "split", raceAbilityBonuses: {},
+    chosenBgSkills: [], chosenBgOriginFeatId: null,
+    chosenBgTools: [], chosenBgLanguages: [], chosenClassEquipmentOption: null, chosenBgEquipmentOption: null, chosenFeatOptions: {}, chosenFeatureChoices: {}, bgAbilityMode: "split", bgAbilityBonuses: {},
+    chosenSkills: [], chosenClassLanguages: [], chosenClassTools: [], chosenWeaponMasteries: [], chosenCantrips: [], chosenSpells: [], chosenInvocations: [],
+    abilityMethod: "standard",
+    standardAssign: { str: -1, dex: -1, con: -1, int: -1, wis: -1, cha: -1 },
+    pbScores: { ...DEFAULT_SCORES },
+    hpMax: "", ac: "10", speed: "30",
+    characterName: "", playerName: user?.name ?? "",
+    alignment: "", hair: "", skin: "", heightText: "",
+    age: "", weight: "", gender: "",
+    color: C.accentHl,
+    campaignIds: preselectedCampaign ? [preselectedCampaign] : [],
+  };
+}
+
+/** Combines a 2014 race's fixed Ability Score Increase with whatever the player chose for its
+ * simple-choice or flexible-choice portion. A 2024 species has no `abilityScoreIncrease` and
+ * contributes nothing here — its ability bonuses come from the background instead. */
+export function deriveRaceAbilityBonuses(
+  raceDetail: { abilityScoreIncrease?: Record<string, number> | null } | null,
+  raceAbilityChoice: { amount: number; flexible?: boolean } | null | undefined,
+  form: Pick<FormState, "chosenRaceAbilityChoices" | "raceAbilityBonuses">,
+): Record<string, number> {
+  const bonuses: Record<string, number> = {};
+  for (const [ability, amount] of Object.entries(raceDetail?.abilityScoreIncrease ?? {})) {
+    bonuses[ability] = (bonuses[ability] ?? 0) + amount;
+  }
+  if (!raceAbilityChoice?.flexible) {
+    for (const ability of form.chosenRaceAbilityChoices) {
+      bonuses[ability] = (bonuses[ability] ?? 0) + (raceAbilityChoice?.amount ?? 1);
+    }
+  }
+  for (const [ability, amount] of Object.entries(form.raceAbilityBonuses)) {
+    bonuses[ability] = (bonuses[ability] ?? 0) + amount;
+  }
+  return bonuses;
+}
+
+export function resolvedScores(form: FormState, featAbilityBonuses?: Record<string, number>, raceAbilityBonuses?: Record<string, number>): Record<string, number> {
+  let base: Record<string, number>;
+  if (form.abilityMethod === "pointbuy") base = { ...form.pbScores };
+  else {
+    base = {};
+    for (const k of ABILITY_KEYS) {
+      const idx = form.standardAssign[k];
+      base[k] = idx >= 0 ? STANDARD_ARRAY[idx] : 8;
+    }
+  }
+  for (const [k, v] of Object.entries(form.bgAbilityBonuses)) {
+    if (k in base) base[k] = (base[k] ?? 0) + v;
+  }
+  for (const [k, v] of Object.entries(raceAbilityBonuses ?? {})) {
+    if (k in base) base[k] = Math.min(20, (base[k] ?? 0) + v);
+  }
+  for (const [k, v] of Object.entries(featAbilityBonuses ?? {})) {
+    if (k in base) base[k] = Math.min(20, (base[k] ?? 0) + v);
+  }
+  return base;
+}
+
+function normalizeAbilityBonusKey(rawKey: string): string | null {
+  const normalized = String(rawKey ?? "").trim().toLowerCase();
+  if (!normalized) return null;
+  if ((ABILITY_KEYS as readonly string[]).includes(normalized)) return normalized;
+  return ABILITY_NAME_TO_KEY[normalized] ?? null;
+}
+
+export function inferStandardAssignFromScores(scores: Record<string, number>): Record<string, number> | null {
+  const available = STANDARD_ARRAY.map((value, index) => ({ value, index }));
+  const assign: Record<string, number> = { str: -1, dex: -1, con: -1, int: -1, wis: -1, cha: -1 };
+  for (const key of ABILITY_KEYS) {
+    const score = Number(scores[key] ?? NaN);
+    const matchIndex = available.findIndex((entry) => entry.value === score);
+    if (matchIndex < 0) return null;
+    assign[key] = available[matchIndex].index;
+    available.splice(matchIndex, 1);
+  }
+  return assign;
+}
+
+export function inferAbilityMethodFromScores(scores: Record<string, number>): AbilityMethod {
+  return inferStandardAssignFromScores(scores) ? "standard" : "pointbuy";
+}
+
+export function getPrimaryAbilityKeys(classDetail: ClassDetail | null): string[] {
+  if (!classDetail) return [];
+  const value = classDetail.primaryAbility;
+  const abilities = typeof value === "string" ? [value] : [...(value?.all ?? []), ...(value?.any ?? [])];
+  // `primaryAbility` is already stored as short keys ("str"/"cha"/...) in the compendium, for
+  // both rulesets -- abilityNamesToKeys() expects full words ("strength") and silently drops
+  // anything else, which made this always resolve to an empty list. Pass short keys through as-is.
+  return abilities
+    .map((name) => name.toLowerCase())
+    .flatMap((name) => (ABILITY_KEYS.includes(name as (typeof ABILITY_KEYS)[number]) ? [name] : abilityNamesToKeys([name])));
+}
+
+export function deriveFeatGrantedAbilityBonuses(args: {
+  bgOriginFeatDetail: BackgroundFeat | null;
+  raceFeatDetail: BackgroundFeat | null;
+  classFeatDetails: Record<string, BackgroundFeat | null>;
+  levelUpFeatDetails: LevelUpFeatDetail[];
+  chosenFeatOptions: Record<string, string[]>;
+}): Record<string, number> {
+  const { bgOriginFeatDetail, raceFeatDetail, classFeatDetails, levelUpFeatDetails, chosenFeatOptions } = args;
+  const bonusMap: Record<string, number> = {};
+  const applyBonus = (bonus: Record<string, number>) => {
+    for (const [key, value] of Object.entries(bonus)) {
+      const abilityKey = normalizeAbilityBonusKey(key);
+      if (!abilityKey) continue;
+      bonusMap[abilityKey] = (bonusMap[abilityKey] ?? 0) + value;
+    }
+  };
+  const applyFeat = (prefix: string, feat: BackgroundFeat | null) => {
+    if (!feat) return;
+    for (const [key, value] of Object.entries(feat.parsed.grants.abilityIncreases)) {
+      const abilityKey = normalizeAbilityBonusKey(key);
+      if (!abilityKey) continue;
+      bonusMap[abilityKey] = (bonusMap[abilityKey] ?? 0) + value;
+    }
+    for (const choice of feat.parsed.choices) {
+      if (choice.type !== "ability_score") continue;
+      const selected = chosenFeatOptions[`${prefix}:${choice.id}`] ?? [];
+      applyBonus(getSelectedAbilityIncrease(choice, selected));
+    }
+  };
+  applyFeat(`bg:${bgOriginFeatDetail?.name ?? ""}`, bgOriginFeatDetail);
+  applyFeat(`race:${raceFeatDetail?.name ?? ""}`, raceFeatDetail);
+  for (const [featureName, feat] of Object.entries(classFeatDetails)) {
+    applyFeat(`classfeat:${featureName}`, feat);
+  }
+  for (const detail of levelUpFeatDetails) {
+    applyFeat(`levelupfeat:${detail.level}:${detail.featId}`, detail.feat as BackgroundFeat);
+  }
+  return bonusMap;
+}
+
+export function deriveTotalFeatAbilityBonuses(
+  granted: Record<string, number>,
+  chosenLevelUpFeats: LevelUpFeatSelection[],
+): Record<string, number> {
+  const bonusMap = { ...granted };
+  for (const entry of chosenLevelUpFeats) {
+    if (entry?.type !== "asi" || !entry.abilityBonuses) continue;
+    for (const [key, value] of Object.entries(entry.abilityBonuses)) {
+      const abilityKey = normalizeAbilityBonusKey(key);
+      if (!abilityKey) continue;
+      bonusMap[abilityKey] = (bonusMap[abilityKey] ?? 0) + value;
+    }
+  }
+  return bonusMap;
+}

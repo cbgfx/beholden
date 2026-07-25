@@ -1,0 +1,38 @@
+/* web-player app-specific styles */
+/* All tokens and base resets come from @beholden/shared via main.tsx */
+
+.character-panel__actions {
+  opacity: 0.62;
+  transition: opacity 120ms ease;
+}
+
+.character-panel:hover > div > .character-panel__actions,
+.character-panel:focus-within > div > .character-panel__actions {
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .character-panel__actions {
+    opacity: 0.38;
+  }
+}
+
+.character-row-action,
+.noteRowActions {
+  opacity: 1;
+  transition: opacity 140ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .character-inventory-row .character-row-action,
+  .noteInteractiveRow .noteRowActions {
+    opacity: 0.18;
+  }
+
+  .character-inventory-row:hover .character-row-action,
+  .character-inventory-row:focus-within .character-row-action,
+  .noteInteractiveRow:hover .noteRowActions,
+  .noteInteractiveRow:focus-within .noteRowActions {
+    opacity: 1;
+  }
+}

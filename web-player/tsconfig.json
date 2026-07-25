@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@beholden/shared/domain/*": ["../shared/src/domain/*"],
+      "@beholden/shared/ui/*": ["../shared/src/ui/*"],
+      "@beholden/shared/api/*": ["../shared/src/api/*"],
+      "@beholden/shared/icons/*": ["../shared/src/icons/*"]
+    }
+  },
+  "include": ["src", "vite.config.ts", "../shared/src/types/css-modules.d.ts"]
+}

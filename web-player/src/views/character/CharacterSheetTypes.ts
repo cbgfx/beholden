@@ -1,0 +1,174 @@
+import type {
+  SharedCombatOverrides,
+  SharedConditionInstance,
+  SharedDeathSaves,
+} from "@beholden/shared/domain";
+import type { InventoryContainer, InventoryItem } from "@/views/character/CharacterInventory";
+import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
+import type { CharacterClassEntry as SharedCharacterClassEntry } from "@beholden/shared/domain/characterClasses";
+
+export type AbilKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
+
+export interface TaggedItem {
+  name: string;
+  source: string;
+  id?: string;
+  ability?: AbilKey | null;
+  sourceKey?: string | null;
+  classEntryId?: string | null;
+  weaponFilter?: {
+    melee?: true;
+    martial?: true;
+    excludeProperties?: Array<"heavy" | "two_handed">;
+  };
+}
+
+export interface ProficiencyMap {
+  skills: TaggedItem[];
+  expertise: TaggedItem[];
+  saves: TaggedItem[];
+  armor: TaggedItem[];
+  weapons: TaggedItem[];
+  /** Weapon names (2024 rules) the character has actually chosen Weapon Mastery for — distinct
+   * from `weapons`, which also contains broad category proficiencies (e.g. "Martial Weapons"). */
+  weaponMasteries: string[];
+  tools: TaggedItem[];
+  languages: TaggedItem[];
+  spells: TaggedItem[];
+  invocations: TaggedItem[];
+  maneuvers: TaggedItem[];
+  metamagic: TaggedItem[];
+  infusions: TaggedItem[];
+  plans: TaggedItem[];
+}
+
+export interface PlayerNote {
+  id: string;
+  title: string;
+  text: string;
+}
+
+export interface ClassFeatureEntry {
+  id: string;
+  name: string;
+  text: string;
+  scalingRolls?: Array<{
+    description: string | null;
+    level: number | null;
+    formula: string;
+  }>;
+  preparedSpellProgression?: PreparedSpellProgressionTable[];
+  resolution?: "automatic" | "manual" | "mixed";
+  resolutionNotes?: string[];
+  hidden?: boolean;
+}
+
+export interface ResourceCounter {
+  key: string;
+  name: string;
+  current: number;
+  max: number;
+  reset: string;
+  restoreAmount?: "all" | "one" | number;
+}
+
+export interface CharacterCreature {
+  id: string;
+  monsterId: string;
+  name: string;
+  label?: string | null;
+  friendly?: boolean;
+  hpMax: number;
+  hpCurrent: number;
+  hpDetails?: string | null;
+  ac: number;
+  acDetails?: string | null;
+  notes?: string | null;
+}
+
+export interface GrantedSpellCast {
+  key: string;
+  spellName: string;
+  sourceName: string;
+  mode: "at_will" | "limited" | "known" | "always_prepared" | "expanded_list";
+  note: string;
+  spellId?: string;
+  ability?: AbilKey | null;
+  resourceKey?: string;
+  reset?: string;
+}
+
+export interface ConditionInstance extends SharedConditionInstance {
+  casterName?: string | null;
+  sourceName?: string | null;
+}
+
+export interface CharacterCampaign {
+  id: string;
+  campaignId: string;
+  campaignName: string;
+  playerId: string | null;
+}
+
+export type CharacterClassEntry = SharedCharacterClassEntry;
+
+export interface CharacterData {
+  classes?: CharacterClassEntry[];
+  raceId?: string;
+  bgId?: string;
+  alignment?: string | null;
+  hair?: string | null;
+  skin?: string | null;
+  height?: string | null;
+  age?: string | null;
+  weight?: string | null;
+  gender?: string | null;
+  sheetOverrides?: SharedCombatOverrides | null;
+  chosenRaceFeatId?: string | null;
+  /** Player's choice among a species trait's several possible spellcasting abilities (e.g. elf lineages: Int/Wis/Cha). Absent when the species has a single fixed ability or none. */
+  chosenRaceSpellAbility?: string | null;
+  chosenBgOriginFeatId?: string | null;
+  abilityMethod?: string;
+  hd?: number | null;
+  derivedAc?: number;
+  derivedHpMax?: number;
+  hitDiceCurrent?: number | null;
+  hitDiceCurrentBySize?: Record<string, number>;
+  xp?: number;
+  chosenOptionals?: string[];
+  selectedFeatureNames?: string[];
+  chosenClassFeatIds?: Record<string, string>;
+  chosenLevelUpFeats?: Array<{ level: number; featId?: string | null; type?: "asi" | "feat"; abilityBonuses?: Record<string, number> }>;
+  chosenSkills?: string[];
+  chosenClassLanguages?: string[];
+  chosenWeaponMasteries?: string[];
+  chosenFeatOptions?: Record<string, string[]>;
+  chosenFeatureChoices?: Record<string, string[]>;
+  chosenCantrips?: string[];
+  chosenSpells?: string[];
+  chosenInvocations?: string[];
+  classSpellSelections?: Record<string, {
+    chosenCantrips?: string[];
+    chosenSpells?: string[];
+    preparedSpells?: string[];
+    chosenInvocations?: string[];
+  }>;
+  resources?: ResourceCounter[];
+  proficiencies?: ProficiencyMap;
+  inventory?: InventoryItem[];
+  inventoryContainers?: InventoryContainer[];
+  creatures?: CharacterCreature[];
+  playerNotesList?: PlayerNote[];
+  usedSpellSlots?: Record<string, number>;
+  preparedSpells?: string[];
+  customResistances?: string[];
+  customImmunities?: string[];
+  customTools?: string[];
+  customLanguages?: string[];
+  deathSaves?: SharedDeathSaves;
+  extraFeatIds?: string[];
+  extraFeatAbilityChoices?: Record<string, string[]>;
+  exhaustion?: number;
+  concentrationSpell?: string | null;
+}
+

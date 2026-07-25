@@ -1,0 +1,77 @@
+:root {
+  /*
+    Global color tokens — keep in sync with theme.ts.
+    Used by CSS-only components (ConfirmDialog, CombatView pills, etc.)
+  */
+
+  /* ── Base ──────────────────────────────────────────────────────── */
+  --bg:            #0d1525;
+  --text:          #e8edf5;
+  --muted:         rgba(160, 180, 220, 0.72);
+  --accent-600:    #f0a500;
+  --danger:        #ff5d5d;
+  --bloody:        #ff8c42;
+  --health:        #5ecb6b;
+
+  /* ── Surfaces ───────────────────────────────────────────────────── */
+  --bg-panel:   rgba(255, 255, 255, 0.055);
+  --bg-raised:  rgba(0, 0, 0, 0.30);
+  --border:     rgba(255, 255, 255, 0.13);
+
+  /* Backward-compatible aliases used by inline-styled views */
+  --accent:       var(--accent-600);
+  --red:          var(--danger);
+  --panel-bg:     var(--bg-panel);
+  --panel-border: var(--border);
+  --radius-panel: 14px;
+  --radius-ctrl:  10px;
+
+  /* ── Typography ─────────────────────────────────────────────────── */
+  /*
+    Old scale had --fs-large, --fs-medium, --fs-small all at 14-15px —
+    no real hierarchy. New scale has clear steps:
+
+      hero     30px  App title
+      title    20px  Panel headers
+      large    17px  Primary row text (character names, encounter names)
+      body     15px  Default body / description text
+      medium   14px  Secondary labels (class, level, XP metadata)
+      small    12px  Tertiary info (timestamps, subtle metadata)
+      tiny     10px  Badges, chips, micro labels
+  */
+  --fs-hero:     30px;   /* app title */
+  --fs-title:    18px;   /* panel section headers, big numerics (AC/HP), dialog headings */
+  --fs-stat:     var(--fs-title); /* alias — big numerics share the same step */
+  --fs-large:    17px;   /* primary row names */
+  --fs-body:     15px;   /* default body text */
+  --fs-base:     var(--fs-body); /* alias for base.css */
+  --fs-medium:   14px;   /* secondary labels */
+  --fs-subtitle: 13px;   /* compact secondary text */
+  --fs-small:    12px;   /* tertiary metadata */
+  --fs-pill:     var(--fs-small); /* alias — chips and tags share this step */
+  --fs-tiny:     10px;   /* micro badges */
+
+  /* ── Spacing ─────────────────────────────────────────────────────── */
+  --gap-2:      2px;
+  --gap-4:      4px;
+  --gap-6:      6px;
+  --gap-8:      8px;
+  --gap-10:     10px;
+  --space-page: 14px;
+  --space-gap:  14px;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --space-page: 8px;
+    --space-gap:  8px;
+    --fs-hero:    22px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --space-page: 6px;
+    --space-gap:  6px;
+  }
+}

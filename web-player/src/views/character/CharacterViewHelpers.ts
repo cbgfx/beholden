@@ -1,0 +1,283 @@
+import type { AbilKey, CharacterClassEntry, CharacterData, ProficiencyMap } from "@/views/character/CharacterSheetTypes";
+import {
+  dedupeTaggedItems,
+  isLikelyTrackedSpellName,
+  normalizeArmorProficiencyName,
+  normalizeLanguageName,
+  normalizeSpellTrackingName,
+  splitArmorProficiencyNames,
+  splitWeaponProficiencyNames,
+  normalizeWeaponProficiencyName,
+} from "@/views/character/CharacterSheetUtils";
+import { getPolymorphCondition } from "@beholden/shared/domain";
+import { getEquipState, type InventoryItem } from "@/views/character/CharacterInventory";
+import { resolveStoredCompendiumClassId } from "@/domain/character/classIds";
+import { normalizeCharacterClassEntries } from "@beholden/shared/domain/characterClasses";
+import type { ExtraFeatAbilityApplication } from "@/domain/character/extraFeatAbilityScores";
+import type { PolymorphConditionData } from "./CharacterViewTypes";
+
+export {
+  XP_TO_LEVEL,
+  SHEET_COLOR_PRESETS,
+  type Character,
+  type ClassRestDetail,
+  type CharacterClassDetailSelection,
+  type RaceFeatureDetail,
+  type BackgroundFeatureDetail,
+  type FeatFeatureDetail,
+  type LevelUpFeatDetail,
+  type InvocationFeatureDetail,
+  type ClassFeatFeatureDetail,
+  type SheetOverrides,
+  type PolymorphConditionData,
+  type EditableSheetOverrideField,
+} from "./CharacterViewTypes";
+
+export {
+  coalesceSharedClassResources,
+  collectClassResources,
+  mergeResourceState,
+  shouldResetOnRest,
+} from "./CharacterViewResourceHelpers";
+
+// ---------------------------------------------------------------------------
+// Inventory / ability score helpers
+// ---------------------------------------------------------------------------
+
+const ABILITY_SCORE_NAMES: Record<AbilKey, string> = {
+  str: "Strength",
+  dex: "Dexterity",
+  con: "Constitution",
+  int: "Intelligence",
+  wis: "Wisdom",
+  cha: "Charisma",
+};
+
+type ItemAbilityScoreOverride = {
+  ability: AbilKey;
+  value: number;
+  mode: "set" | "minimum" | "bonus";
+  /** For "bonus": the score cannot be raised above this cap (e.g. Ioun Stones' 20). */
+  maximum?: number;
+};
+
+export function isInventoryItemActiveForCharacterEffects(item: InventoryItem): boolean {
+  return getEquipState(item) !== "backpack" && (!item.attunement || Boolean(item.attuned));
+}
+
+function parseItemAbilityScoreOverrides(item: InventoryItem): ItemAbilityScoreOverride[] {
+  return (Array.isArray(item.effects) ? item.effects : []).flatMap((raw) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
+    const effect = raw as Record<string, unknown>;
+    if (effect.type !== "ability_score") return [];
+    const ability = String(effect.ability ?? "") as AbilKey;
+    const value = Number(effect.amount);
+    if (!(ability in ABILITY_SCORE_NAMES) || !Number.isFinite(value)) return [];
+    const overrides: ItemAbilityScoreOverride[] = [];
+    // set_minimum: score can't fall below `amount` (Amulet of Health).
+    if (effect.mode === "set_minimum") overrides.push({ ability, value, mode: "minimum" });
+    // fixed: flat increase while equipped, capped at `maximum` (Ioun Stones, Belt of Dwarvenkind).
+    if (effect.mode === "fixed") {
+      const maximum = Number(effect.maximum);
+      overrides.push({ ability, value, mode: "bonus", ...(Number.isFinite(maximum) ? { maximum } : {}) });
+    }
+    return overrides;
+  });
+}
+
+export function applyItemAbilityScoreOverrides(
+  baseScores: Record<AbilKey, number | null>,
+  inventory: InventoryItem[],
+): Record<AbilKey, number | null> {
+  const activeOverrides = inventory
+    .filter(isInventoryItemActiveForCharacterEffects)
+    .flatMap((item) => parseItemAbilityScoreOverrides(item));
+  const nextScores = { ...baseScores };
+  for (const ability of Object.keys(baseScores) as AbilKey[]) {
+    const base = baseScores[ability];
+    const setValues = activeOverrides.filter((entry) => entry.ability === ability && entry.mode === "set").map((entry) => entry.value);
+    const bonusOverrides = activeOverrides.filter((entry) => entry.ability === ability && entry.mode === "bonus");
+    const minimumValues = activeOverrides.filter((entry) => entry.ability === ability && entry.mode === "minimum").map((entry) => entry.value);
+    let current = base;
+    if (setValues.length > 0) current = Math.max(...setValues);
+    for (const bonus of bonusOverrides) {
+      if (current == null) continue;
+      const raised = current + bonus.value;
+      // The cap limits what the bonus can raise the score TO; a score already above it is untouched.
+      current = bonus.maximum != null ? Math.max(current, Math.min(raised, bonus.maximum)) : raised;
+    }
+    if (minimumValues.length > 0) current = Math.max(current ?? Number.NEGATIVE_INFINITY, ...minimumValues);
+    nextScores[ability] = Number.isFinite(current ?? NaN) ? current : base;
+  }
+  return nextScores;
+}
+
+export function buildAbilityScoreExplanations(
+  baseScores: Record<AbilKey, number | null>,
+  effectiveScores: Record<AbilKey, number | null>,
+  inventory: InventoryItem[],
+  extraFeatApplications: ExtraFeatAbilityApplication[] = [],
+): Record<AbilKey, string> {
+  const activeItems = inventory.filter(isInventoryItemActiveForCharacterEffects);
+  return Object.fromEntries(
+    (Object.keys(baseScores) as AbilKey[]).map((ability) => {
+      const base = baseScores[ability];
+      const finalScore = effectiveScores[ability];
+      const parts: string[] = [];
+      parts.push(`${ABILITY_SCORE_NAMES[ability]} base score: ${base ?? "not set"}.`);
+      for (const application of extraFeatApplications.filter((entry) => entry.ability === ability)) {
+        parts.push(`${application.featName}: +${application.amount} (maximum ${application.maximum}).`);
+      }
+      for (const item of activeItems) {
+        for (const override of parseItemAbilityScoreOverrides(item)) {
+          if (override.ability !== ability) continue;
+          const verb = override.mode === "minimum" ? `sets ${ABILITY_SCORE_NAMES[ability]} to at least ${override.value}` : `sets ${ABILITY_SCORE_NAMES[ability]} to ${override.value}`;
+          parts.push(`${item.name}: ${verb}.`);
+        }
+      }
+      parts.push(`${ABILITY_SCORE_NAMES[ability]} final score: ${finalScore ?? "not set"}.`);
+      return [ability, parts.join("\n")];
+    })
+  ) as Record<AbilKey, string>;
+}
+
+// ---------------------------------------------------------------------------
+// Proficiency normalization
+// ---------------------------------------------------------------------------
+
+export function normalizeProficiencies(rawProf: CharacterData["proficiencies"] | undefined): ProficiencyMap | undefined {
+  if (!rawProf) return undefined;
+  const isCountWord = (value: string): boolean =>
+    /^(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)$/i.test(value.trim());
+  const isNoiseToken = (value: string): boolean => {
+    const normalized = value.trim().toLowerCase();
+    return (
+      normalized === "this"
+      || normalized === "that"
+      || normalized === "these"
+      || normalized === "those"
+      || normalized === "extra"
+      || normalized === "another"
+      || normalized === "any"
+      || normalized === "language"
+      || normalized === "languages"
+      || normalized === "tool"
+      || normalized === "tools"
+      || normalized === "skill"
+      || normalized === "skills"
+      || isCountWord(normalized)
+    );
+  };
+  const isNamedPlaceholder = (value: string): boolean => {
+    const normalized = value.trim().toLowerCase();
+    return (
+      normalized === ""
+      || normalized === "none"
+      || normalized === "n/a"
+      || normalized === "-"
+      || normalized === "—"
+      || isNoiseToken(normalized)
+    );
+  };
+  const isExpertiseChoicePlaceholder = (value: string): boolean =>
+    /\b(?:choose|choice|of your choice)\b/i.test(value)
+    || /\b(?:one|two|three|four|five|six|\d+)\s+(?:more\s+)?of your skill proficiencies\b/i.test(value);
+  const isToolChoicePlaceholder = (value: string): boolean =>
+    /^(?:\d+|one|two|three|four|five|six)\s+musical instruments?$/i.test(value.trim())
+    || /\b(?:choose|choice|of your choice|any one type)\b/i.test(value);
+  const sanitizedTrackedSpells = dedupeTaggedItems(rawProf.spells, normalizeSpellTrackingName)
+    .filter((entry) => isLikelyTrackedSpellName(entry.name));
+  const sanitizedArmor = dedupeTaggedItems(
+    (rawProf.armor ?? []).flatMap((entry) =>
+      splitArmorProficiencyNames(entry?.name ?? "").map((name) => ({ ...entry, name }))
+    ),
+    normalizeArmorProficiencyName,
+  );
+  const sanitizedWeapons = dedupeTaggedItems(
+    (rawProf.weapons ?? []).flatMap((entry) =>
+      splitWeaponProficiencyNames(entry?.name ?? "").map((name) => ({ ...entry, name }))
+    ),
+    normalizeWeaponProficiencyName,
+  );
+  const sanitizedTools = dedupeTaggedItems(rawProf.tools)
+    .filter((entry) => {
+      const name = String(entry.name ?? "");
+      return !isNamedPlaceholder(name) && !isToolChoicePlaceholder(name) && !/\bof your choice\b/i.test(name);
+    });
+  const sanitizedExpertise = dedupeTaggedItems(rawProf.expertise)
+    .filter((entry) => {
+      const name = String(entry.name ?? "");
+      return !isExpertiseChoicePlaceholder(name) && !isNamedPlaceholder(name) && !/\bof your choice\b/i.test(name);
+    });
+  const sanitizedLanguages = dedupeTaggedItems(rawProf.languages, normalizeLanguageName)
+    .filter((entry) => {
+      const name = String(entry.name ?? "");
+      return !isNamedPlaceholder(name) && !/\bof your choice\b/i.test(name);
+    });
+  return {
+    ...rawProf,
+    skills: dedupeTaggedItems(rawProf.skills)
+      .filter((entry) => {
+        const name = String(entry.name ?? "");
+        return !isNamedPlaceholder(name) && !/\bof your choice\b/i.test(name);
+      }),
+    expertise: sanitizedExpertise,
+    saves: dedupeTaggedItems(rawProf.saves),
+    armor: sanitizedArmor,
+    weapons: sanitizedWeapons,
+    weaponMasteries: Array.isArray(rawProf.weaponMasteries) ? rawProf.weaponMasteries : [],
+    tools: sanitizedTools,
+    languages: sanitizedLanguages,
+    spells: sanitizedTrackedSpells,
+    invocations: dedupeTaggedItems(rawProf.invocations),
+    maneuvers: dedupeTaggedItems(rawProf.maneuvers),
+    metamagic: dedupeTaggedItems(rawProf.metamagic),
+    infusions: dedupeTaggedItems(rawProf.infusions),
+    plans: dedupeTaggedItems(rawProf.plans),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Character class utilities
+// ---------------------------------------------------------------------------
+
+export function normalizeCharacterClasses(
+  rawData: CharacterData | null | undefined,
+): CharacterClassEntry[] {
+  const entries = Array.isArray(rawData?.classes) ? rawData.classes : [];
+  return normalizeCharacterClassEntries(entries.map((entry) => ({
+    ...entry,
+    classId: resolveStoredCompendiumClassId(entry) || null,
+  })));
+}
+
+export function getPrimaryCharacterClassEntry(
+  rawData: CharacterData | null | undefined,
+): CharacterClassEntry | null {
+  return normalizeCharacterClasses(rawData)[0] ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// General utilities
+// ---------------------------------------------------------------------------
+
+export function uid(): string {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+export function stripEditionTag(value: string | null | undefined): string {
+  return String(value ?? "")
+    .replace(/\s*\[(?:5\.5e|2024|5e|5\.0)\]\s*$/i, "")
+    .trim();
+}
+
+export function parseLeadingNumberLoose(value: unknown): number {
+  const text = String(value ?? "").trim();
+  if (!text) return NaN;
+  const match = text.match(/-?\d+(?:\.\d+)?/);
+  return match ? Number(match[0]) : NaN;
+}
+
+export function getPolymorphConditionData(conditions: unknown[] | undefined): PolymorphConditionData | null {
+  return getPolymorphCondition(conditions as never) as PolymorphConditionData | null;
+}

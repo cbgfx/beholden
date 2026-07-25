@@ -1,0 +1,71 @@
+type FeatChoiceType =
+  | "proficiency"
+  | "expertise"
+  | "ability_score"
+  | "spell"
+  | "spell_list"
+  | "weapon_mastery"
+  | "damage_type"
+  | "spellcasting_ability";
+
+export interface ParsedFeatChoiceLike<TOption = string> {
+  id: string;
+  type: FeatChoiceType;
+  count: number;
+  countFrom?: "proficiency_bonus";
+  options: TOption[] | null;
+  anyOf?: string[];
+  amount?: number | null;
+  split?: true;
+  maximum?: number | null;
+  level?: number | null;
+  linkedTo?: string | null;
+  dependsOnChoiceId?: string | null;
+  dependencyKind?: "spell_list" | "ability_score" | "replacement" | null;
+  replacementFor?: string | null;
+  distinct?: boolean;
+  note?: string | null;
+}
+
+interface ParsedFeatGrantsLike {
+  skills: string[];
+  tools: string[];
+  languages: string[];
+  armor: string[];
+  weapons: string[];
+  savingThrows: string[];
+  spells: string[];
+  cantrips: string[];
+  abilityIncreases: Record<string, number>;
+  bonuses?: Array<{ target: string; value: number }>;
+}
+
+export interface ParsedFeatLike<TChoice extends ParsedFeatChoiceLike<any> = ParsedFeatChoiceLike> {
+  resolution?: "automatic" | "manual" | "mixed";
+  resolutionNotes?: string[];
+  category?: string | null;
+  baseName?: string;
+  variant?: string | null;
+  prerequisite?: import("@/views/character/CharacterSheetUtils").FeatPrerequisite | null;
+  repeatable?: boolean;
+  source?: string | null;
+  grants: ParsedFeatGrantsLike;
+  choices: TChoice[];
+  uses?: Array<{
+    count?: number;
+    countFrom?: "proficiency_bonus" | "ability_modifier";
+    ability?: string | null;
+    minimum?: number | null;
+    recharge?: "short_rest" | "long_rest" | "short_or_long_rest" | null;
+    note?: string;
+  }>;
+  spellcastingAbility?: string | null;
+  spellcastingAbilityFromChoiceId?: string | null;
+}
+
+export interface ParsedFeatDetailLike<TChoice extends ParsedFeatChoiceLike<any> = ParsedFeatChoiceLike> {
+  id?: string;
+  name: string;
+  text?: string | null;
+  parsed: ParsedFeatLike<TChoice>;
+}

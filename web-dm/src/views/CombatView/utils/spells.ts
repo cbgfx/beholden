@@ -1,0 +1,57 @@
+import type { MonsterDetail } from "@/views/CombatView/types";
+
+type NamedSpellEntry = { name?: unknown };
+
+export function parseMonsterSpells(detail: MonsterDetail | null): string[] {
+  if (!detail) return [];
+
+  // The server imports monsters from compendium XML and preserves `spells` as either:
+  // - an array of spell names
+  // - a CSV/semicolon-separated string
+  // And we may receive them either on the top-level monster record or inside `raw_json`.
+  const raw = detail.raw_json ?? {};
+  const v = raw["spells"] ?? detail.spells;
+
+  const out: string[] = [];
+  const push = (name: unknown) => {
+    const s = String(name ?? "").trim();
+    if (!s) return;
+    // Some sources may pack multiple spells into one string.
+    for (const part of s.split(/[,;]/g)) {
+      const n = part.trim();
+      if (n) out.push(n);
+    }
+  };
+
+  if (Array.isArray(v)) {
+    for (const item of v) {
+      // Sometimes the array contains objects; prefer a `name` field.
+      if (item && typeof item === "object" && "name" in item) push((item as NamedSpellEntry).name);
+      else push(item);
+    }
+  } else if (typeof v === "string") {
+    push(v);
+  }
+
+  // De-dupe while keeping stable order.
+  const seen = new Set<string>();
+  const uniq: string[] = [];
+  for (const s of out) {
+    const key = s.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    uniq.push(s);
+  }
+  return uniq;
+}
+
+export function sortSpellNames(names: string[], levelCache: Record<string, number | null | undefined>): string[] {
+  const rows = [...names];
+  rows.sort((a, b) => {
+    const al = levelCache[a.trim().toLowerCase()] ?? 99;
+    const bl = levelCache[b.trim().toLowerCase()] ?? 99;
+    if (al !== bl) return al - bl;
+    return a.localeCompare(b);
+  });
+  return rows;
+}

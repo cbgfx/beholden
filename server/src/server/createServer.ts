@@ -1,0 +1,278 @@
+/**
+ * createServer.ts
+ *
+ * Orchestration only — wires dependencies together and starts the server.
+ * Business logic lives in dedicated modules:
+ *   - security.ts  → CORS, basic auth, rate limiting
+ *   - routes/*     → API handlers
+ */
+
+import express from "express";
+import compression from "compression";
+import os from "node:os";
+import fs from "node:fs";
+import path from "node:path";
+
+import { getRuntimeConfig } from "../config/runtime.js";
+import { createCompendiumUpload, upload } from "../lib/upload.js";
+import { getPaths } from "../config/paths.js";
+import { openDb } from "../lib/db.js";
+import { ensureCombat, nextLabelNumber, createPlayerCombatant } from "../services/combat.js";
+import { seedDefaultConditions } from "../services/conditions.js";
+import { now, uid } from "../lib/runtime.js";
+import { normalizeKey, parseLeadingInt } from "../lib/text.js";
+import { normalizeHp } from "../services/compendium/normalizeHp.js";
+import { createBroadcaster, createWsServer, sendWsEvent } from "./ws.js";
+import { createEgressLoggingMiddleware, egressLogMinBytes } from "./egressLogging.js";
+import type { ServerContext } from "./context.js";
+import type { BroadcastFn } from "./events.js";
+import { multerErrorMiddleware, zodErrorMiddleware } from "../shared/validate.js";
+
+import {
+  createInMemoryRateLimiter,
+  getRateLimitConfig,
+  corsMiddleware,
+  getAllowedOriginHosts,
+} from "./security.js";
+
+import { hashPassword, verifyToken } from "../lib/jwtAuth.js";
+import { requireAuth } from "../middleware/auth.js";
+import { registerAuthRoutes } from "../routes/authRoutes.js";
+import { registerAdminRoutes } from "../routes/adminRoutes.js";
+import { registerHealthRoutes } from "../routes/health.js";
+import { registerMetaRoutes } from "../routes/meta.js";
+import { registerCompendiumRoutes } from "../routes/compendium.js";
+import { registerCampaignRoutes } from "../routes/campaigns.js";
+import { registerCampaignBootstrapRoute } from "../routes/campaignBootstrap.js";
+import { registerPlayerRoutes } from "../routes/players.js";
+import { registerCharacterRoutes } from "../routes/characters.js";
+import { registerInpcRoutes } from "../routes/inpcs.js";
+import { registerAdventureRoutes } from "../routes/adventures.js";
+import { registerEncounterRoutes } from "../routes/encounters.js";
+import { registerNoteRoutes } from "../routes/notes.js";
+import { registerCombatRoutes } from "../routes/combat.js";
+import { registerReorderRoutes } from "../routes/reorder.js";
+import { registerTreasureRoutes } from "../routes/treasure.js";
+import { registerExportImportRoutes } from "../routes/exportImport.js";
+import { registerUpdateCheckRoutes } from "../routes/updateCheck.js";
+import { registerWebUiRoutes } from "../routes/webUi.js";
+import { registerPartyInventoryRoutes } from "../routes/partyInventory.js";
+import { registerBastionRoutes } from "../routes/bastions.js";
+
+export function createServer() {
+  const runtime = getRuntimeConfig();
+  const paths = getPaths({ dataDir: runtime.dataDir, ...(runtime.dbPath != null ? { dbPath: runtime.dbPath } : {}) });
+
+  // --- database -------------------------------------------------------------
+  const db = openDb(paths.dbPath);
+  seedAdminUser(db, hashPassword, uid, now);
+
+  // --- broadcast ------------------------------------------------------------
+  // Stable closure so ctx.broadcast never needs to be reassigned and no
+  // request in the startup window can capture the noop by value.
+  let realBroadcast: BroadcastFn = (() => { /* noop until WS ready */ }) as BroadcastFn;
+  const broadcast: BroadcastFn = ((type: never, payload: never) => realBroadcast(type, payload)) as BroadcastFn;
+
+  // --- app ------------------------------------------------------------------
+  const app = express();
+  app.disable("x-powered-by");
+  app.set("etag", "strong");
+
+  const logEgress = String(process.env.BEHOLDEN_LOG_EGRESS ?? "").trim().toLowerCase();
+  const shouldLogEgress = logEgress === "1" || logEgress === "true" || logEgress === "yes";
+  if (shouldLogEgress) {
+    // Register before compression so the bytes observed here are the compressed bytes
+    // written to the HTTP response rather than the larger source JSON/body.
+    app.use(createEgressLoggingMiddleware({
+      minBytes: egressLogMinBytes(process.env.BEHOLDEN_LOG_EGRESS_MIN_BYTES),
+    }));
+  }
+
+  // Compress API/static responses to cut egress for large JSON payloads.
+  app.use(compression({ threshold: 1024 }));
+
+  app.use(express.json({ limit: process.env.BEHOLDEN_JSON_LIMIT ?? "2mb" }));
+
+  // CORS — must be before basic auth so preflight and 401s carry the header
+  app.use(corsMiddleware(getAllowedOriginHosts()));
+
+  // JWT auth — required for all API routes except health check and login.
+  app.use("/api", (req, res, next) => {
+    if (req.path === "/health") return next();
+    if (req.path === "/auth/login" && req.method === "POST") return next();
+    requireAuth(req, res, next);
+  });
+
+  // Rate limiting
+  const rateLimit = getRateLimitConfig();
+  if (rateLimit.enabled) {
+    app.use(createInMemoryRateLimiter({ windowMs: rateLimit.windowMs, max: rateLimit.max }));
+  }
+
+  // --- context --------------------------------------------------------------
+  const ctx: ServerContext = {
+    runtime,
+    paths,
+    os,
+    fs,
+    path,
+    db,
+    broadcast,
+    upload,
+    compendiumUpload: createCompendiumUpload(paths.dataDir),
+    helpers: {
+      now,
+      uid,
+      normalizeKey,
+      parseLeadingInt,
+      normalizeHp,
+      ensureCombat: (encounterId) => ensureCombat(db, encounterId),
+      nextLabelNumber: (encounterId, baseName) => nextLabelNumber(db, encounterId, baseName),
+      createPlayerCombatant,
+      seedDefaultConditions: (campaignId) => seedDefaultConditions(db, campaignId),
+    },
+  };
+
+  // --- campaign images (static) --------------------------------------------
+  const campaignImagesDir = path.join(paths.dataDir, "campaign-images");
+  fs.mkdirSync(campaignImagesDir, { recursive: true });
+  app.use("/campaign-images", express.static(campaignImagesDir, {
+    maxAge: "1h",
+    etag: true,
+    lastModified: true,
+    setHeaders: (res) => {
+      if (res.req.url?.includes("?v=")) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    },
+  }));
+
+  // --- player images (static) ----------------------------------------------
+  const playerImagesDir = path.join(paths.dataDir, "player-images");
+  fs.mkdirSync(playerImagesDir, { recursive: true });
+  app.use("/player-images", express.static(playerImagesDir, {
+    maxAge: "1h",
+    etag: true,
+    lastModified: true,
+    setHeaders: (res) => {
+      if (res.req.url?.includes("?v=")) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    },
+  }));
+
+  // --- character portrait images (static) -----------------------------------
+  const characterImagesDir = path.join(paths.dataDir, "character-images");
+  fs.mkdirSync(characterImagesDir, { recursive: true });
+  app.use("/character-images", express.static(characterImagesDir, {
+    maxAge: "1h",
+    etag: true,
+    lastModified: true,
+    setHeaders: (res) => {
+      if (res.req.url?.includes("?v=")) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    },
+  }));
+
+  // --- routes ---------------------------------------------------------------
+  registerAuthRoutes(app, ctx);
+  registerAdminRoutes(app, ctx);
+  registerHealthRoutes(app, ctx);
+  registerMetaRoutes(app, ctx);
+  registerCompendiumRoutes(app, ctx);
+  registerCampaignRoutes(app, ctx);
+  registerCampaignBootstrapRoute(app, ctx);
+  registerPlayerRoutes(app, ctx);
+  registerCharacterRoutes(app, ctx);
+  registerInpcRoutes(app, ctx);
+  registerAdventureRoutes(app, ctx);
+  registerEncounterRoutes(app, ctx);
+  registerNoteRoutes(app, ctx);
+  registerCombatRoutes(app, ctx);
+  registerReorderRoutes(app, ctx);
+  registerTreasureRoutes(app, ctx);
+  registerExportImportRoutes(app, ctx);
+  registerUpdateCheckRoutes(app, ctx);
+  registerWebUiRoutes(app, ctx);
+  registerPartyInventoryRoutes(app, ctx);
+  registerBastionRoutes(app, ctx);
+
+  // --- error handling -------------------------------------------------------
+  app.use(multerErrorMiddleware);
+  app.use(zodErrorMiddleware);
+  app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    console.error(err);
+    res.status(500).json({ ok: false, message: "Internal server error" });
+  });
+
+  // --- start ----------------------------------------------------------------
+  const httpServer = app.listen(runtime.port, runtime.host, () => {
+    console.log(`[beholden] API listening on http://${runtime.host}:${runtime.port}`);
+  });
+  let reportedServerError = false;
+  const reportServerError = (error: Error & { code?: string }) => {
+    if (reportedServerError) return;
+    reportedServerError = true;
+    if (error.code === "EADDRINUSE") {
+      console.error(
+        `[beholden] Cannot start: port ${runtime.port} is already in use. `
+        + "Close the older Beholden window/process, then try again.",
+      );
+    } else {
+      console.error("[beholden] Server failed:", error);
+    }
+    process.exitCode = 1;
+  };
+  httpServer.on("error", reportServerError);
+
+  const wss = createWsServer({
+    httpServer,
+    path: "/ws",
+    onConnectionHello: (ws) => {
+      sendWsEvent(ws, "hello", { ok: true, time: now() });
+    },
+    authorize: (req) => {
+      const search = (req.url ?? "").replace(/^[^?]*/, "");
+      const token = new URLSearchParams(search).get("token") ?? "";
+      return token.length > 0 && verifyToken(token) !== null;
+    },
+  });
+  // ws mirrors errors from the attached HTTP server. Handle that mirror so a
+  // port collision produces one concise startup message instead of an
+  // unhandled WebSocketServer error and stack trace.
+  wss.on("error", reportServerError);
+
+  realBroadcast = createBroadcaster(wss);
+
+  let closed = false;
+  const close = async () => {
+    if (closed) return;
+    closed = true;
+
+    await new Promise<void>((resolve) => {
+      wss.close(() => resolve());
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      httpServer.close((err) => (err ? reject(err) : resolve()));
+    });
+
+    db.close();
+  };
+
+  return { app, httpServer, wss, close };
+}
+
+function seedAdminUser(
+  db: ReturnType<typeof openDb>,
+  hashPw: (pw: string) => string,
+  genUid: () => string,
+  genNow: () => number,
+): void {
+  const count = (db.prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number }).n;
+  if (count > 0) return;
+
+  const username = process.env.BEHOLDEN_ADMIN_USER ?? "admin";
+  const password = process.env.BEHOLDEN_ADMIN_PASS ?? "admin";
+  const id = genUid();
+  const t = genNow();
+  db.prepare(
+    "INSERT INTO users (id, username, passhash, name, is_admin, created_at, updated_at) VALUES (?, ?, ?, ?, 1, ?, ?)"
+  ).run(id, username, hashPw(password), "Administrator", t, t);
+  console.log(`[beholden] Created default admin: ${username} / ${password}  ← change this password!`);
+}

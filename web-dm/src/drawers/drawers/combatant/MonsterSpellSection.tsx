@@ -1,0 +1,184 @@
+import React from "react";
+import { api } from "@/services/api";
+import { theme, withAlpha } from "@/theme/theme";
+import { SpellDetailCard } from "@/drawers/drawers/combatant/SpellDetailCard";
+import { ordinal } from "@/lib/format/ordinal";
+import { SectionTitle } from "@/ui/SectionTitle";
+
+type SpellLookupRow = {
+  query: string;
+  match: { id: string; name: string; level: number | null } | null;
+};
+
+export function MonsterSpellSection(props: { monster: any }) {
+  const baseMonster = props.monster;
+  // A monster's spell references aren't individually ruleset-tagged -- the monster's own
+  // ruleset field is the implicit ruleset for every spell it knows.
+  const monsterRuleset: "5e" | "5.5e" | undefined =
+    baseMonster?.ruleset === "5e" || baseMonster?.ruleset === "5.5e" ? baseMonster.ruleset : undefined;
+
+  const spellNames = React.useMemo(() => {
+    const v = baseMonster?.raw_json?.spells ?? baseMonster?.spells;
+    if (Array.isArray(v)) {
+      return v
+        .map((x: any) => (x && typeof x === "object" && "name" in x ? String(x.name ?? "").trim() : String(x ?? "").trim()))
+        .filter(Boolean);
+    }
+    if (typeof v === "string") return v.split(/[,;]/g).map((x) => x.trim()).filter(Boolean);
+    return [] as string[];
+  }, [baseMonster]);
+
+  const [spellOpen, setSpellOpen] = React.useState(false);
+  const [spellLoading, setSpellLoading] = React.useState(false);
+  const [spellError, setSpellError] = React.useState<string | null>(null);
+  const [spellDetail, setSpellDetail] = React.useState<any | null>(null);
+  const [spellMetaByName, setSpellMetaByName] = React.useState<Record<string, any>>({});
+  const slotsByLevel = React.useMemo(() => {
+    const slots: Record<number, number> = {};
+    const spellcasting = Array.isArray(baseMonster?.spellcasting) ? baseMonster.spellcasting : [];
+    for (const entry of spellcasting) {
+      const typedSlots = entry?.spellSlots;
+      if (!typedSlots || typeof typedSlots !== "object" || Array.isArray(typedSlots)) continue;
+      for (const [level, count] of Object.entries(typedSlots)) {
+        const parsedLevel = Number(level);
+        const parsedCount = Number(count);
+        if (Number.isInteger(parsedLevel) && Number.isInteger(parsedCount) && parsedCount >= 0) slots[parsedLevel] = parsedCount;
+      }
+    }
+    return slots;
+  }, [baseMonster]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setSpellOpen(false);
+    setSpellLoading(false);
+    setSpellError(null);
+    setSpellDetail(null);
+    setSpellMetaByName({});
+    if (!baseMonster) return;
+
+    async function loadMeta() {
+      const out: Record<string, { id: string; name: string; level: number | null }> = {};
+      try {
+        const payload = await api<{ rows: SpellLookupRow[] }>("/api/spells/lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ names: spellNames, ruleset: monsterRuleset }),
+        });
+        for (const row of payload.rows ?? []) {
+          if (!row?.match?.id) continue;
+          out[row.query] = row.match;
+        }
+      } catch {
+        // ignore
+      }
+      if (!cancelled) setSpellMetaByName(out);
+    }
+
+    if (spellNames.length) void loadMeta();
+    return () => {
+      cancelled = true;
+    };
+  }, [baseMonster, spellNames, monsterRuleset]);
+
+  const grouped = React.useMemo(() => {
+    const byLevel = new Map<number, { level: number; spells: { key: string; display: string; spellId: string | null }[] }>();
+    for (const key of spellNames) {
+      const meta = spellMetaByName[key] ?? null;
+      const lvl = meta?.level != null ? Number(meta.level) : null;
+      if (!Number.isFinite(lvl as number)) continue;
+      const level = lvl as number;
+      if (!byLevel.has(level)) byLevel.set(level, { level, spells: [] });
+      byLevel.get(level)!.spells.push({ key, display: String(meta.name ?? key), spellId: meta?.id ? String(meta.id) : null });
+    }
+
+    const levels = Array.from(byLevel.keys()).sort((a, b) => a - b);
+    return levels.map((level) => {
+      const slot = slotsByLevel[level];
+      const title = level === 0 ? "Cantrips (at will)" : slot ? `${ordinal(level)} level (${slot} slots)` : `${ordinal(level)} level`;
+      const spells = (byLevel.get(level)?.spells ?? []).sort((a, b) => a.display.localeCompare(b.display));
+      return { level, title, spells };
+    });
+  }, [spellNames, spellMetaByName, slotsByLevel]);
+
+  const openSpell = React.useCallback(async (ref: { id?: string | null; name: string }) => {
+    setSpellOpen(true);
+    setSpellLoading(true);
+    setSpellError(null);
+    setSpellDetail(null);
+
+    try {
+      const rulesetParam = monsterRuleset ? `?ruleset=${monsterRuleset}` : "";
+      const directId = ref.id ? String(ref.id) : "";
+      if (directId) {
+        const full = await api<any>(`/api/spells/${directId}${rulesetParam}`);
+        setSpellDetail(full);
+        return;
+      }
+      const payload = await api<{ rows: SpellLookupRow[] }>("/api/spells/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ names: [ref.name], ruleset: monsterRuleset }),
+      });
+      const best = payload.rows?.[0]?.match ?? null;
+      if (!best?.id) {
+        setSpellError("Spell not found in compendium.");
+        setSpellLoading(false);
+        return;
+      }
+      const full = await api<any>(`/api/spells/${best.id}${rulesetParam}`);
+      setSpellDetail(full);
+    } catch {
+      setSpellError("Spell not found in compendium.");
+    } finally {
+      setSpellLoading(false);
+    }
+  }, [monsterRuleset]);
+
+  if (!spellNames.length) return null;
+
+  return (
+    <div style={{ display: "grid", gap: 6 }}>
+      <SectionTitle>Spells</SectionTitle>
+
+      {grouped.length ? (
+        <div style={{ display: "grid", gap: 8 }}>
+          {grouped.map((g) => (
+            <div key={g.level} style={{ display: "grid", gap: 4 }}>
+              <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-medium)" }}>{g.title}</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                {g.spells.map((s) => (
+                  <button
+                    key={`${g.level}_${s.key}`}
+                    type="button"
+                    onClick={() => openSpell({ id: s.spellId, name: s.key })}
+                    style={{
+                      border: `1px solid ${theme.colors.panelBorder}`,
+                      background: withAlpha(theme.colors.panelBg, 0.14),
+                      color: theme.colors.text,
+                      padding: "6px 10px",
+                      borderRadius: 999,
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      fontSize: "var(--fs-medium)"
+                    }}
+                  >
+                    {s.display}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <SpellDetailCard
+        open={spellOpen}
+        loading={spellLoading}
+        error={spellError}
+        detail={spellDetail}
+        onClose={() => setSpellOpen(false)}
+      />
+    </div>
+  );
+}

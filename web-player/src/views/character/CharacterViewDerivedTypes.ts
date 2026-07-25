@@ -1,0 +1,158 @@
+import type {
+  Character,
+  ClassRestDetail,
+  RaceFeatureDetail,
+  BackgroundFeatureDetail,
+  FeatFeatureDetail,
+  LevelUpFeatDetail,
+  InvocationFeatureDetail,
+  ClassFeatFeatureDetail,
+  SheetOverrides,
+  EditableSheetOverrideField,
+  PolymorphConditionData,
+  CharacterClassDetailSelection,
+} from "@/views/character/CharacterViewHelpers";
+import type { AbilKey, CharacterData, ResourceCounter } from "@/views/character/CharacterSheetTypes";
+import type { InventoryItem } from "@/views/character/CharacterInventory";
+
+type NormalizeProficienciesResult = ReturnType<typeof import("@/views/character/CharacterViewHelpers").normalizeProficiencies>;
+type ScoreExplanationsResult = ReturnType<typeof import("@/views/character/CharacterViewHelpers").buildAbilityScoreExplanations>;
+type AppliedFeaturesResult = ReturnType<typeof import("@/domain/character/characterFeatures").buildAppliedCharacterFeatures>;
+type ClassFeaturesListResult = ReturnType<typeof import("@/domain/character/characterFeatures").buildDisplayPlayerFeatures>;
+type ParsedFeatureEffectsResult = ReturnType<typeof import("@/domain/character/parseFeatureEffects").parseFeatureEffects>;
+type GrantedSpellDataResult = ReturnType<typeof import("@/domain/character/parseFeatureEffects").buildGrantedSpellDataFromEffects>;
+type MovementModesResult = ReturnType<typeof import("@/domain/character/parseFeatureEffects").collectMovementModesFromEffects>;
+type MonsterSpeedModes = ReturnType<typeof import("@beholden/shared/domain").parseMonsterSpeed>["modes"];
+
+type TransformedMonsterState = {
+  monster: any | null;
+  busy: boolean;
+  error: string | null;
+};
+
+export type CharacterViewDerivedStateArgs = {
+  char: Character;
+  classDetail: ClassRestDetail | null;
+  classSelections?: CharacterClassDetailSelection[];
+  raceDetail: RaceFeatureDetail | null;
+  backgroundDetail: BackgroundFeatureDetail | null;
+  bgOriginFeatDetail: FeatFeatureDetail | null;
+  raceFeatDetail: FeatFeatureDetail | null;
+  classFeatDetails: ClassFeatFeatureDetail[];
+  levelUpFeatDetails: LevelUpFeatDetail[];
+  invocationDetails: InvocationFeatureDetail[];
+  extraFeatDetails: FeatFeatureDetail[];
+  subclass: string | null;
+  polymorphCondition: PolymorphConditionData | null;
+  polymorphMonsterState: TransformedMonsterState;
+};
+
+export type CharacterViewDerivedState = {
+  currentCharacterData: CharacterData;
+  prof: NormalizeProficienciesResult;
+  pb: number;
+  hd: number | null;
+  hitDieSize: number | null;
+  hitDiceMax: number;
+  hitDiceCurrent: number;
+  hitDicePools: Array<{ dieSize: number; max: number; current: number }>;
+  classPresentation: Array<{
+    classEntryId: string;
+    className: string;
+    classLevel: number;
+    subclassName: string | null;
+    hitDieSize: number | null;
+  }>;
+  spellcastingSources: Array<{
+    classEntryId: string;
+    classId: string;
+    className: string;
+    classLevel: number;
+    subclass: string | null;
+    ability: string | null;
+    slotsReset: string | null;
+    contribution: "full" | "half" | "third" | "pact" | null;
+  }>;
+  spellSlotState: import("@/domain/character/multiclassSpellcasting").MulticlassSpellSlotState;
+  classSpellcastingStates: Array<{
+    classEntryId: string;
+    className: string;
+    classLevel: number;
+    ability: "str" | "dex" | "con" | "int" | "wis" | "cha" | null;
+    saveDc: number | null;
+    attackBonus: number | null;
+    preparedLimit: number;
+    preparedSpells: string[];
+    chosenCantrips: string[];
+    chosenSpells: string[];
+    chosenInvocations: string[];
+    pactMagic: boolean;
+  }>;
+  inventory: InventoryItem[];
+  baseScores: Record<AbilKey, number | null>;
+  scores: Record<AbilKey, number | null>;
+  scoreExplanations: ScoreExplanationsResult;
+  appliedFeatures: AppliedFeaturesResult;
+  classFeaturesList: ClassFeaturesListResult;
+  parsedFeatureEffects: ParsedFeatureEffectsResult[];
+  grantedSpellData: GrantedSpellDataResult;
+  spellLinkedResourceKeys: Set<string>;
+  classResourcesWithSpellCasts: ResourceCounter[];
+  polymorphName: string;
+  rageActive: boolean;
+  parsedDefenses: {
+    resistances: string[];
+    damageImmunities: string[];
+    conditionImmunities: string[];
+    vulnerabilities: string[];
+  };
+  usesFlexiblePreparedList: boolean;
+  preparedSpellLimit: number;
+  preparedSpells: string[];
+  invocationSpellDamageBonuses: Record<string, number>;
+  accentColor: string;
+  overrides: SheetOverrides;
+  effectiveHpMax: number;
+  effectiveHpMaxWithoutOverrides: number;
+  xpEarned: number;
+  xpNeeded: number;
+  nonProficientArmorPenalty: boolean;
+  hasDisadvantage: boolean;
+  stealthDisadvantage: boolean;
+  dexMod: number;
+  conMod: number;
+  hasJackOfAllTrades: boolean;
+  effectiveAc: number;
+  effectiveSpeed: number;
+  movementModes: MovementModesResult;
+  tempHp: number;
+  passivePerc: number;
+  passiveInv: number;
+  initiativeBonus: number;
+  spellSaveDcBonus: number;
+  transformedCombatStats: {
+    effectiveAc: number;
+    speed: number;
+    movementModes: MonsterSpeedModes;
+    initiativeBonus: number;
+    pb: number;
+    passivePerc: number;
+    passiveInv: number;
+    dexScore: number;
+    strScore: number | null;
+    className: string;
+  } | null;
+  saveBonuses: Partial<Record<AbilKey, number>>;
+  skillBonuses: Record<string, number>;
+  abilityCheckAdvantages: Partial<Record<AbilKey, boolean>>;
+  abilityCheckDisadvantages: Partial<Record<AbilKey, boolean>>;
+  saveAdvantages: Partial<Record<AbilKey, boolean>>;
+  saveDisadvantages: Partial<Record<AbilKey, boolean>>;
+  skillAdvantages: Record<string, boolean>;
+  skillDisadvantages: Record<string, boolean>;
+  rageDamageBonus: number;
+  unarmedRageDamageBonus: number;
+  senses: string[];
+  editableOverrideFields: EditableSheetOverrideField[];
+  identityFields: [string, string][];
+};

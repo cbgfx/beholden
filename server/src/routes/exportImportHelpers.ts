@@ -1,0 +1,370 @@
+import type { Db } from "../lib/db.js";
+import { insertCombatant } from "../services/combat.js";
+import { DEFAULT_DEATH_SAVES, DEFAULT_OVERRIDES } from "../lib/defaults.js";
+import { seedDefaultConditions } from "../services/conditions.js";
+import { campaignLiveDbColumns, campaignSheetDbColumns } from "../services/characters.js";
+import { replaceBastionAssignments } from "./bastions/helpers.js";
+import { cleanStoredImageUrl } from "../lib/dbConverters.js";
+import type {
+  StoredConditionInstance,
+  StoredDeathSaves,
+  StoredEncounterActor,
+
+  StoredOverrides,
+  StoredTreasureState,
+} from "../server/userData.js";
+
+export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid: () => string): string {
+  const campaign = doc["campaign"];
+  if (!campaign || typeof campaign !== "object" || !("id" in campaign)) {
+    throw new Error("Missing campaign.id");
+  }
+
+  const c = campaign as Record<string, unknown>;
+  const campaignId = String(c["id"]);
+
+  db.transaction(() => {
+    db.prepare("DELETE FROM campaigns WHERE id = ?").run(campaignId);
+
+    db.prepare(`
+      INSERT INTO campaigns (id, name, color, image_url, image_updated_at, shared_notes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      campaignId,
+      String(c["name"] ?? ""),
+      (c["color"] as string | null) ?? null,
+      cleanStoredImageUrl(c["imageUrl"]),
+      Number(c["updatedAt"] ?? Date.now()),
+      String(c["sharedNotes"] ?? ""),
+      Number(c["createdAt"] ?? Date.now()),
+      Number(c["updatedAt"] ?? Date.now()),
+    );
+
+    const adventures = toArray(doc["adventures"]);
+    const adventureIds = new Set(adventures.map((adventure) => String(adventure["id"])));
+    for (const adventure of adventures) {
+      db.prepare(`
+        INSERT OR IGNORE INTO adventures (id, campaign_id, name, status, sort, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        String(adventure["id"]),
+        campaignId,
+        String(adventure["name"] ?? ""),
+        String(adventure["status"] ?? "active"),
+        Number(adventure["sort"] ?? 0),
+        Number(adventure["createdAt"] ?? Date.now()),
+        Number(adventure["updatedAt"] ?? Date.now()),
+      );
+    }
+
+    const encounters = toArray(doc["encounters"]);
+    for (const encounter of encounters) {
+      const combat = encounter["combat"] as Record<string, unknown> | undefined;
+      db.prepare(`
+        INSERT OR IGNORE INTO encounters
+          (id, campaign_id, adventure_id, name, status, sort,
+           combat_round, combat_active_combatant_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        String(encounter["id"]),
+        campaignId,
+        String(encounter["adventureId"] ?? ""),
+        String(encounter["name"] ?? ""),
+        String(encounter["status"] ?? "Open"),
+        Number(encounter["sort"] ?? 0),
+        combat?.round != null ? Number(combat.round) : null,
+        combat?.activeCombatantId != null ? String(combat.activeCombatantId) : null,
+        Number(encounter["createdAt"] ?? Date.now()),
+        Number(encounter["updatedAt"] ?? Date.now()),
+      );
+    }
+
+    const players = toArray(doc["players"]);
+    const existingUserIds = new Set(
+      (db.prepare("SELECT id FROM users").all() as Array<{ id: string }>).map((r) => r.id)
+    );
+    const existingCharacterIds = new Set(
+      (db.prepare("SELECT id FROM user_characters").all() as Array<{ id: string }>).map((r) => r.id)
+    );
+    for (const player of players) {
+      const sheetCols = campaignSheetDbColumns({
+        playerName: String(player["playerName"] ?? ""),
+        characterName: String(player["characterName"] ?? ""),
+        class: String(player["class"] ?? ""),
+        species: String(player["species"] ?? ""),
+        level: Number(player["level"] ?? 1),
+        hpMax: Number(player["hpMax"] ?? 10),
+        ac: Number(player["ac"] ?? 10),
+        ...(player["speed"] != null ? { speed: Number(player["speed"]) } : {}),
+        ...(player["str"] != null ? { str: Number(player["str"]) } : {}),
+        ...(player["dex"] != null ? { dex: Number(player["dex"]) } : {}),
+        ...(player["con"] != null ? { con: Number(player["con"]) } : {}),
+        ...(player["int"] != null ? { int: Number(player["int"]) } : {}),
+        ...(player["wis"] != null ? { wis: Number(player["wis"]) } : {}),
+        ...(player["cha"] != null ? { cha: Number(player["cha"]) } : {}),
+        ...(player["color"] != null ? { color: player["color"] as string | null } : {}),
+        ...(player["syncedAc"] != null ? { syncedAc: Number(player["syncedAc"]) } : {}),
+      });
+      const liveCols = campaignLiveDbColumns({
+        hpCurrent: Number(player["hpCurrent"] ?? 10),
+        overrides: (player["overrides"] as StoredOverrides | undefined) ?? DEFAULT_OVERRIDES,
+        conditions: (player["conditions"] as StoredConditionInstance[] | undefined) ?? [],
+        ...(player["deathSaves"] != null ? { deathSaves: player["deathSaves"] as StoredDeathSaves } : {}),
+      });
+      const requestedUserId = (player["userId"] as string | null) ?? null;
+      const requestedCharacterId = (player["characterId"] as string | null) ?? null;
+      const userExists = requestedUserId ? existingUserIds.has(requestedUserId) : false;
+      const characterExists = requestedCharacterId ? existingCharacterIds.has(requestedCharacterId) : false;
+      db.prepare(`
+        INSERT OR IGNORE INTO players
+          (id, campaign_id, user_id, character_id,
+           player_name, character_name, class_name, species, level, hp_max, hp_current, ac, speed,
+           str, dex, con, int, wis, cha, color, synced_ac, death_saves_success, death_saves_fail,
+           live_json, image_url, image_updated_at, shared_notes, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        String(player["id"]),
+        campaignId,
+        userExists ? requestedUserId : null,
+        characterExists ? requestedCharacterId : null,
+        sheetCols.playerName,
+        sheetCols.characterName,
+        sheetCols.className,
+        sheetCols.species,
+        sheetCols.level,
+        sheetCols.hpMax,
+        liveCols.hpCurrent,
+        sheetCols.ac,
+        sheetCols.speed,
+        sheetCols.str,
+        sheetCols.dex,
+        sheetCols.con,
+        sheetCols.int,
+        sheetCols.wis,
+        sheetCols.cha,
+        sheetCols.color,
+        sheetCols.syncedAc,
+        liveCols.deathSavesSuccess,
+        liveCols.deathSavesFail,
+        liveCols.liveJson,
+        cleanStoredImageUrl(player["imageUrl"]),
+        Number(player["updatedAt"] ?? Date.now()),
+        String(player["sharedNotes"] ?? ""),
+        Number(player["createdAt"] ?? Date.now()),
+        Number(player["updatedAt"] ?? Date.now()),
+      );
+    }
+
+    const inpcs = toArray(doc["inpcs"]);
+    for (const inpc of inpcs) {
+      db.prepare(`
+        INSERT OR IGNORE INTO inpcs
+          (id, campaign_id, monster_id, name, label, friendly,
+           hp_max, hp_current, hp_details, ac, ac_details, sort, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        String(inpc["id"]),
+        campaignId,
+        String(inpc["monsterId"] ?? ""),
+        String(inpc["name"] ?? ""),
+        (inpc["label"] as string | null) ?? null,
+        Boolean(inpc["friendly"]) ? 1 : 0,
+        Number(inpc["hpMax"] ?? 1),
+        Number(inpc["hpCurrent"] ?? 1),
+        (inpc["hpDetails"] as string | null) ?? null,
+        Number(inpc["ac"] ?? 10),
+        (inpc["acDetails"] as string | null) ?? null,
+        inpc["sort"] != null ? Number(inpc["sort"]) : null,
+        Number(inpc["createdAt"] ?? Date.now()),
+        Number(inpc["updatedAt"] ?? Date.now()),
+      );
+    }
+
+    const notes = toArray(doc["notes"]);
+    for (const note of notes) {
+      const title = String(note["title"] ?? "");
+      const text = String(note["text"] ?? "");
+      const requestedAdventureId = (note["adventureId"] as string | null) ?? null;
+      db.prepare(`
+        INSERT OR IGNORE INTO notes (id, campaign_id, adventure_id, title, text, sort, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        String(note["id"]),
+        campaignId,
+        requestedAdventureId && adventureIds.has(requestedAdventureId) ? requestedAdventureId : null,
+        title,
+        text,
+        Number(note["sort"] ?? 0),
+        Number(note["createdAt"] ?? Date.now()),
+        Number(note["updatedAt"] ?? Date.now()),
+      );
+    }
+
+    const treasure = toArray(doc["treasure"]);
+    for (const entry of treasure) {
+      const requestedAdventureId = (entry["adventureId"] as string | null) ?? null;
+      const treasureState: StoredTreasureState = {
+        source: entry["source"] === "custom" ? "custom" : "compendium",
+        itemId: (entry["itemId"] as string | null) ?? null,
+        name: String(entry["name"] ?? "New Item"),
+        rarity: (entry["rarity"] as string | null) ?? null,
+        type: (entry["type"] as string | null) ?? null,
+        type_key: ((entry["type_key"] ?? entry["typeKey"]) as string | null) ?? null,
+        attunement: Boolean(entry["attunement"]),
+        magic: Boolean(entry["magic"]),
+        text: String(entry["text"] ?? ""),
+        qty: Math.max(1, Math.round(Number(entry["qty"] ?? 1))) || 1,
+      };
+      db.prepare(`
+        INSERT OR IGNORE INTO treasure
+          (id, campaign_id, adventure_id, source, item_id, name, rarity, type, type_key,
+           attunement, magic, text, qty, sort, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        String(entry["id"]),
+        campaignId,
+        requestedAdventureId && adventureIds.has(requestedAdventureId) ? requestedAdventureId : null,
+        treasureState.source,
+        treasureState.itemId,
+        treasureState.name,
+        treasureState.rarity,
+        treasureState.type,
+        treasureState.type_key,
+        treasureState.attunement ? 1 : 0,
+        treasureState.magic ? 1 : 0,
+        treasureState.text,
+        treasureState.qty,
+        Number(entry["sort"] ?? 0),
+        Number(entry["createdAt"] ?? Date.now()),
+        Number(entry["updatedAt"] ?? Date.now()),
+      );
+    }
+
+    const partyInventory = toArray(doc["partyInventory"]);
+    for (const item of partyInventory) {
+      db.prepare(`
+        INSERT OR IGNORE INTO party_inventory
+          (id, campaign_id, name, quantity, weight, notes, source, item_id, rarity, type, description, sort, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        String(item["id"]),
+        campaignId,
+        String(item["name"] ?? "New Item"),
+        Number(item["quantity"] ?? 1),
+        item["weight"] != null ? Number(item["weight"]) : null,
+        String(item["notes"] ?? ""),
+        (item["source"] as string | null) ?? null,
+        (item["itemId"] as string | null) ?? null,
+        (item["rarity"] as string | null) ?? null,
+        (item["type"] as string | null) ?? null,
+        (item["description"] as string | null) ?? null,
+        Number(item["sort"] ?? 0),
+        Number(item["createdAt"] ?? Date.now()),
+        Number(item["updatedAt"] ?? Date.now()),
+      );
+    }
+
+    const conditions = toArray(doc["conditions"]);
+    for (const condition of conditions) {
+      db.prepare(`
+        INSERT OR IGNORE INTO conditions (id, campaign_id, key, name, description, sort, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        String(condition["id"]),
+        campaignId,
+        String(condition["key"] ?? ""),
+        String(condition["name"] ?? ""),
+        (condition["description"] as string | null) ?? null,
+        condition["sort"] != null ? Number(condition["sort"]) : null,
+        Number(condition["createdAt"] ?? Date.now()),
+        Number(condition["updatedAt"] ?? Date.now()),
+      );
+    }
+
+    const bastions = toArray(doc["bastions"]);
+    for (const bastion of bastions) {
+      db.prepare(`
+        INSERT OR IGNORE INTO bastions
+          (id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, notes, maintain_order, facilities_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        String(bastion["id"]),
+        campaignId,
+        String(bastion["name"] ?? "Bastion"),
+        Boolean(bastion["active"]) ? 1 : 0,
+        Boolean(bastion["walled"]) ? 1 : 0,
+        Math.max(0, Math.floor(Number(bastion["defendersArmed"] ?? 0))),
+        Math.max(0, Math.floor(Number(bastion["defendersUnarmed"] ?? 0))),
+        String(bastion["notes"] ?? ""),
+        Boolean(bastion["maintainOrder"]) ? 1 : 0,
+        JSON.stringify(Array.isArray(bastion["facilities"]) ? bastion["facilities"] : []),
+        Number(bastion["createdAt"] ?? Date.now()),
+        Number(bastion["updatedAt"] ?? Date.now()),
+      );
+      replaceBastionAssignments(
+        db,
+        String(bastion["id"]),
+        Array.isArray(bastion["assignedPlayerIds"]) ? bastion["assignedPlayerIds"].map(String) : [],
+        Array.isArray(bastion["assignedCharacterIds"]) ? bastion["assignedCharacterIds"].map(String) : [],
+      );
+    }
+
+    const combats = toArray(doc["combats"]);
+    for (const combat of combats) {
+      const encounterId = String(combat["encounterId"]);
+      db.prepare("UPDATE encounters SET combat_round=?, combat_active_combatant_id=? WHERE id=?").run(
+        Number(combat["round"] ?? 1),
+        (combat["activeCombatantId"] as string | null) ?? null,
+        encounterId,
+      );
+
+      const combatants = Array.isArray(combat["combatants"])
+        ? (combat["combatants"] as Record<string, unknown>[])
+        : [];
+      for (const [index, raw] of combatants.entries()) {
+        const combatant: StoredEncounterActor = {
+          id: String(raw["id"] ?? uid()),
+          encounterId,
+          baseType: (raw["baseType"] as StoredEncounterActor["baseType"]) ?? "monster",
+          baseId: String(raw["baseId"] ?? ""),
+          name: String(raw["name"] ?? ""),
+          label: String(raw["label"] ?? ""),
+          initiative: raw["initiative"] != null ? Number(raw["initiative"]) : null,
+          friendly: Boolean(raw["friendly"]),
+          color: String(raw["color"] ?? "#cccccc"),
+          hpCurrent: raw["hpCurrent"] != null ? Number(raw["hpCurrent"]) : null,
+          hpMax: raw["hpMax"] != null ? Number(raw["hpMax"]) : null,
+          hpDetails: (raw["hpDetails"] as string | null) ?? null,
+          ac: raw["ac"] != null ? Number(raw["ac"]) : null,
+          acDetails: (raw["acDetails"] as string | null) ?? null,
+          sort: raw["sort"] != null ? Number(raw["sort"]) : index + 1,
+          usedReaction: Boolean(raw["usedReaction"]),
+          usedLegendaryActions: Number(raw["usedLegendaryActions"] ?? 0),
+          overrides: (raw["overrides"] as StoredEncounterActor["overrides"]) ?? DEFAULT_OVERRIDES,
+          conditions: Array.isArray(raw["conditions"]) ? raw["conditions"] : [],
+          deathSaves: (raw["deathSaves"] as StoredEncounterActor["deathSaves"]) ?? DEFAULT_DEATH_SAVES,
+          usedSpellSlots: (raw["usedSpellSlots"] as Record<string, number> | undefined) ?? {},
+          attackOverrides: (raw["attackOverrides"] as StoredEncounterActor["attackOverrides"]) ?? null,
+          ...(typeof raw["description"] === "string" ? { description: raw["description"] } : {}),
+          createdAt: Number(raw["createdAt"] ?? Date.now()),
+          updatedAt: Number(raw["updatedAt"] ?? Date.now()),
+        };
+        try {
+          insertCombatant(db, combatant);
+        } catch {
+          // Skip duplicates on re-import
+        }
+      }
+    }
+
+    seedDefaultConditions(db, campaignId);
+  })();
+
+  return campaignId;
+}
+
+function toArray(value: unknown): Record<string, unknown>[] {
+  if (!value || typeof value !== "object") return [];
+  if (Array.isArray(value)) return value as Record<string, unknown>[];
+  return Object.values(value as Record<string, unknown>) as Record<string, unknown>[];
+}
