@@ -60,7 +60,7 @@ describe("buildCharacterCreatePayload", () => {
     expect(buildCharacterCreatePayload({ name: "Default" }).ruleset).toBe("5.5e");
   });
 
-  it("uses the effective derived HP maximum for the imported character summary", () => {
+  it("preserves base HP while allowing current HP up to the derived maximum", () => {
     const payload = buildCharacterCreatePayload({
       format: "beholden.character",
       version: 1,
@@ -80,6 +80,31 @@ describe("buildCharacterCreatePayload", () => {
     });
 
     expect(payload.hpCurrent).toBe(108);
-    expect(payload.hpMax).toBe(111);
+    expect(payload.hpMax).toBe(87);
+  });
+
+  it("does not fold a Tough-style derived bonus into base HP on repeated transfers", () => {
+    const exported = {
+      name: "Darius Blackmont",
+      ruleset: "5e",
+      level: 12,
+      hpMax: 87,
+      hpCurrent: 111,
+      conScore: 15,
+      characterData: {
+        hd: 8,
+        derivedHpMax: 111,
+        extraFeatIds: ["f_tough"],
+        classes: [{ className: "Rogue", level: 12 }],
+      },
+    };
+
+    const once = normalizeCharacterTransfer(exported);
+    const twice = normalizeCharacterTransfer(once);
+
+    expect(once.hpMax).toBe(87);
+    expect(once.hpCurrent).toBe(111);
+    expect(twice.hpMax).toBe(87);
+    expect(twice.hpCurrent).toBe(111);
   });
 });

@@ -177,7 +177,10 @@ export function normalizeCharacterTransfer(raw: Record<string, unknown>): Record
     className,
     species,
     level,
-    hpMax: effectiveHpMax,
+    // hpMax is the character's persisted base maximum. derivedHpMax is only
+    // used to validate the current-HP snapshot during transfer; promoting it
+    // to hpMax would make feat/item bonuses get applied again after import.
+    hpMax,
     hpCurrent,
     ac: finalized.ac,
     speed: finalized.speed,
