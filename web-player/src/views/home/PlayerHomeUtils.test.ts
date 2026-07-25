@@ -107,4 +107,28 @@ describe("buildCharacterCreatePayload", () => {
     expect(twice.hpMax).toBe(87);
     expect(twice.hpCurrent).toBe(111);
   });
+
+  it("repairs v1 exports that promoted derived HP into base HP", () => {
+    const payload = buildCharacterCreatePayload({
+      format: "beholden.character",
+      version: 1,
+      character: {
+        name: "Darius Blackmont",
+        ruleset: "5e",
+        level: 12,
+        hpMax: 111,
+        hpCurrent: 111,
+        conScore: 15,
+        characterData: {
+          hd: 8,
+          derivedHpMax: 111,
+          extraFeatIds: ["f_tough"],
+          classes: [{ className: "Rogue", level: 12 }],
+        },
+      },
+    });
+
+    expect(payload.hpMax).toBe(87);
+    expect(payload.hpCurrent).toBe(111);
+  });
 });

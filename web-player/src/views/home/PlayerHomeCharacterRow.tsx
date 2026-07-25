@@ -30,7 +30,11 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
   const [isHovered, setIsHovered] = useState(false);
 
   const color = ch.color ?? C.accentHl;
-  const hpPct = ch.hpMax > 0 ? Math.max(0, Math.min(100, Math.round((ch.hpCurrent / ch.hpMax) * 100))) : 0;
+  const storedDerivedHpMax = Number(ch.characterData?.derivedHpMax);
+  const displayedHpMax = Number.isFinite(storedDerivedHpMax) && storedDerivedHpMax >= 1
+    ? Math.floor(storedDerivedHpMax)
+    : ch.hpMax;
+  const hpPct = displayedHpMax > 0 ? Math.max(0, Math.min(100, Math.round((ch.hpCurrent / displayedHpMax) * 100))) : 0;
   const hpColor = hpPct <= 0 ? "#6b7280" : hpPct < 25 ? C.colorPinkRed : hpPct < 50 ? C.colorOrange : hpPct < 75 ? C.colorGold : "#4ade80";
   const hpLabel = hpPct <= 0 ? "Down" : hpPct < 25 ? "Critical" : hpPct < 50 ? "Bloodied" : hpPct < 75 ? "Bloody" : "Healthy";
 
@@ -172,7 +176,7 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
           <span style={{ fontSize: "var(--fs-small)", color: hpColor, fontWeight: 700 }}>{hpLabel}</span>
-          <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>{ch.hpCurrent} / {ch.hpMax}</span>
+          <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>{ch.hpCurrent} / {displayedHpMax}</span>
         </div>
         <HealthBar
           current={ch.hpCurrent}

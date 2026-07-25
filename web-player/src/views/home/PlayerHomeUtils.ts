@@ -41,6 +41,7 @@ export interface UserCharacter {
   level: number;
   hpMax: number;
   hpCurrent: number;
+  characterData?: Record<string, unknown> | null;
   ac: number;
   color: string | null;
   imageUrl: string | null;
@@ -146,7 +147,10 @@ function cloneCharacterDataWithFixes(
   return next;
 }
 
-export function normalizeCharacterTransfer(raw: Record<string, unknown>): Record<string, unknown> {
+export function normalizeCharacterTransfer(
+  raw: Record<string, unknown>,
+  options: { repairLegacyDerivedHpExport?: boolean } = {},
+): Record<string, unknown> {
   const characterData = parseCharacterData(raw.characterData);
   const primaryClass = primaryClassRecord(characterData);
   const name = optionalString(raw.name);
@@ -164,8 +168,18 @@ export function normalizeCharacterTransfer(raw: Record<string, unknown>): Record
   const conMod = conScore == null ? 0 : Math.floor((conScore - 10) / 2);
   const importedHpMax = Math.max(0, intOrFallback(raw.hpMax, 0));
   const inferredBaseHp = hitDie ? calcBaseHp(hitDie, level, conMod) : 0;
-  const hpMax = importedHpMax > 0 && importedHpMax < inferredBaseHp ? inferredBaseHp : importedHpMax;
   const storedDerivedHpMax = Number(characterData?.derivedHpMax);
+  const isLegacyDerivedHpPromotion =
+    options.repairLegacyDerivedHpExport === true
+    && inferredBaseHp > 0
+    && importedHpMax > inferredBaseHp
+    && Number.isFinite(storedDerivedHpMax)
+    && importedHpMax === Math.floor(storedDerivedHpMax);
+  const hpMax = isLegacyDerivedHpPromotion
+    ? inferredBaseHp
+    : importedHpMax > 0 && importedHpMax < inferredBaseHp
+      ? inferredBaseHp
+      : importedHpMax;
   const effectiveHpMax = Number.isFinite(storedDerivedHpMax) && storedDerivedHpMax >= 1
     ? Math.floor(storedDerivedHpMax)
     : hpMax;
@@ -191,7 +205,14 @@ export function normalizeCharacterTransfer(raw: Record<string, unknown>): Record
 export function buildCharacterCreatePayload(raw: unknown): Record<string, unknown> {
   const root = asRecord(raw);
   if (!root) throw new Error("Import file must be a JSON object.");
-  const candidate = normalizeCharacterTransfer(asRecord(root.character) ?? root);
+  const wrappedCharacter = asRecord(root.character);
+  const isLegacyBeholdenExport =
+    wrappedCharacter != null
+    && root.format === CHARACTER_EXPORT_FORMAT
+    && intOrFallback(root.version, 1) <= 1;
+  const candidate = normalizeCharacterTransfer(wrappedCharacter ?? root, {
+    repairLegacyDerivedHpExport: isLegacyBeholdenExport,
+  });
   const name = optionalString(candidate.name);
   if (!name) throw new Error("Import file is missing `name`.");
 
