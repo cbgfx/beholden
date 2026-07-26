@@ -99,6 +99,20 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
     }
   }
 
+  async function setActive(isActive: boolean) {
+    try {
+      await api(`/api/me/characters/${ch.id}/activity`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive }),
+      });
+      await onRefresh();
+    } catch (err) {
+      console.error(err);
+      onError(`Could not ${isActive ? "restore" : "archive"} character.`);
+    }
+  }
+
   return (
     <div
       onMouseEnter={() => setIsHovered(true)}
@@ -230,6 +244,13 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
           </button>
           <button style={{ ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flex: 1, flexShrink: 0 }} onClick={() => navigate(`/characters/${ch.id}/edit`)}>
             Edit
+          </button>
+
+          <button
+            style={{ ...ghostButtonStyle({ textColor: C.muted, borderColor: "rgba(148,163,184,0.25)", padding: "6px 12px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}
+            onClick={() => void setActive(!ch.isActive)}
+          >
+            {ch.isActive ? "Archive" : "Restore"}
           </button>
 
           <button

@@ -17,6 +17,8 @@ function escapeHtml(value: string): string {
 
 function renderInlineMarkdown(value: string): string {
   return escapeHtml(value)
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_match, label: string, href: string) =>
+      /^\s*javascript:/i.test(href) ? label : `<a href="${href}" rel="noreferrer">${label}</a>`)
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/__([^_]+)__/g, "<u>$1</u>")
     .replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
@@ -81,6 +83,7 @@ function nodeText(node: Node): string {
   if (tag === "strong" || tag === "b") return `**${children}**`;
   if (tag === "em" || tag === "i") return `*${children}*`;
   if (tag === "u") return `__${children}__`;
+  if (tag === "a") return `[${children}](${node.getAttribute("href") ?? ""})`;
   return children;
 }
 

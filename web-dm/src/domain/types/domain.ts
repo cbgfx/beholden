@@ -20,10 +20,16 @@ export interface Campaign {
   id: Id;
   name: string;
   color?: string | null;
+  binderId?: Id | null;
+  currentDate?: {
+    text: string | null;
+    sort: number | null;
+  };
   updatedAt?: number;
   playerCount?: number;
   imageUrl?: string | null;
   sharedNotes?: string;
+  isActive: boolean;
 }
 
 export interface Adventure {

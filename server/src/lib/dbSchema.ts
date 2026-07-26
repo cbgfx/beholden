@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
   image_updated_at INTEGER,
   shared_notes TEXT NOT NULL DEFAULT '',
   party_currency_json TEXT NOT NULL DEFAULT '{"PP":0,"GP":0,"SP":0,"CP":0}',
+  is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -322,6 +323,7 @@ CREATE TABLE IF NOT EXISTS user_characters (
   image_updated_at INTEGER,
   character_data_json TEXT,
   shared_notes TEXT NOT NULL DEFAULT '',
+  is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );

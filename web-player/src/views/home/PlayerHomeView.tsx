@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "@/services/api";
 import { createMyCharacter, fetchMyCharacters } from "@/services/actorApi";
 import { C } from "@/lib/theme";
-import { IconImport } from "@/icons";
+import { IconCampaign, IconImport, IconPlayers } from "@/icons";
 import { accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
 import {
   buildCharacterCreatePayload,
@@ -26,6 +26,7 @@ export function PlayerHomeView() {
   const [importMsg, setImportMsg] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [lastOpened, setLastOpened] = useState<Record<string, number>>(readLastOpened);
+  const [characterTab, setCharacterTab] = useState<"active" | "archived">("active");
 
   const reload = useCallback(() => {
     return Promise.all([
@@ -56,8 +57,10 @@ export function PlayerHomeView() {
   }
 
   const sortedCharacters = useMemo(() =>
-    [...characters].sort((a, b) => (lastOpened[b.id] ?? 0) - (lastOpened[a.id] ?? 0)),
-  [characters, lastOpened]);
+    characters
+      .filter((character) => character.isActive === (characterTab === "active"))
+      .sort((a, b) => (lastOpened[b.id] ?? 0) - (lastOpened[a.id] ?? 0)),
+  [characters, characterTab, lastOpened]);
 
   const sortedCampaigns = useMemo(() =>
     [...campaigns].sort((a, b) => (lastOpened[b.id] ?? 0) - (lastOpened[a.id] ?? 0)),
@@ -98,7 +101,10 @@ export function PlayerHomeView() {
 
         {/* ── My Characters ── */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <h2 style={{ margin: 0, fontSize: "var(--fs-hero)", fontWeight: 800 }}>My Characters</h2>
+          <h2 style={{ margin: 0, fontSize: "var(--fs-hero)", fontWeight: 800, display: "flex", alignItems: "center", gap: 12 }}>
+            <IconPlayers size={38} />
+            My Characters
+          </h2>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <label
               style={{
@@ -151,16 +157,37 @@ export function PlayerHomeView() {
             </button>
           </div>
         </div>
+        <div style={{ display: "flex", gap: 12, margin: "-6px 0 14px", fontSize: "var(--fs-small)" }}>
+          {(["active", "archived"] as const).map((tab) => (
+            <a
+              key={tab}
+              href={`#characters-${tab}`}
+              onClick={(event) => {
+                event.preventDefault();
+                setCharacterTab(tab);
+              }}
+              style={{
+                color: characterTab === tab ? C.text : C.muted,
+                textDecoration: characterTab === tab ? "underline" : "none",
+                textUnderlineOffset: 3,
+              }}
+            >
+              {tab === "active" ? "Active" : "Archived"} ({characters.filter((character) => character.isActive === (tab === "active")).length})
+            </a>
+          ))}
+        </div>
 
         {loading && <p style={{ color: C.muted }}>Loading…</p>}
         {error && <p style={{ color: C.red }}>{error}</p>}
         {!error && importMsg && <p style={{ color: C.muted }}>{importMsg}</p>}
 
-        {!loading && !error && characters.length === 0 && (
-          <p style={{ color: C.muted, fontSize: "var(--fs-medium)" }}>No characters yet. Create one to get started.</p>
+        {!loading && !error && sortedCharacters.length === 0 && (
+          <p style={{ color: C.muted, fontSize: "var(--fs-medium)" }}>
+            {characterTab === "active" ? "No active characters. Create one to get started." : "No archived characters."}
+          </p>
         )}
 
-        {!loading && characters.length > 0 && (
+        {!loading && sortedCharacters.length > 0 && (
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
@@ -182,7 +209,10 @@ export function PlayerHomeView() {
         {/* ── Your Campaigns ── */}
         {!loading && campaigns.length > 0 && (
           <>
-            <h2 style={{ margin: "0 0 20px", fontSize: "var(--fs-hero)", fontWeight: 800 }}>My Campaigns</h2>
+            <h2 style={{ margin: "0 0 20px", fontSize: "var(--fs-hero)", fontWeight: 800, display: "flex", alignItems: "center", gap: 12 }}>
+              <IconCampaign size={38} />
+              My Campaigns
+            </h2>
             <div style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",

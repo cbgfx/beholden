@@ -9,6 +9,8 @@ export function Drawer(props: {
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  width?: string;
+  hideFooter?: boolean;
 }) {
   const { isOpen, onClose } = props;
   useEffect(() => {
@@ -34,7 +36,7 @@ export function Drawer(props: {
           top: 0,
           right: 0,
           height: "100%",
-          width: "min(520px, 92vw)",
+          width: props.width ?? "min(520px, 92vw)",
           background: theme.colors.drawerBg,
           borderLeft: `1px solid ${theme.colors.panelBorder}`,
           display: "flex",
@@ -49,9 +51,11 @@ export function Drawer(props: {
 
         <div style={{ padding: 14, overflow: "auto", flex: 1 }}>{props.children}</div>
 
-        <div style={{ padding: 14, borderTop: `1px solid ${theme.colors.panelBorder}`, position: "sticky", bottom: 0, background: theme.colors.drawerBg }}>
-          {props.footer ?? <Button onClick={props.onClose}>Done</Button>}
-        </div>
+        {!props.hideFooter ? (
+          <div style={{ padding: 14, borderTop: `1px solid ${theme.colors.panelBorder}`, position: "sticky", bottom: 0, background: theme.colors.drawerBg }}>
+            {props.footer ?? <Button onClick={props.onClose}>Done</Button>}
+          </div>
+        ) : null}
       </div>
     </div>
   );

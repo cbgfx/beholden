@@ -69,6 +69,7 @@ export interface CharacterSheetDto {
   sharedNotes: string;
   characterData: Record<string, unknown> | null;
   campaigns: CharacterCampaignAssignmentDto[];
+  isActive: boolean;
   campaignSharedNotes?: string;
   sheet: CharacterSheetSnapshotDto;
   live: CharacterSheetLiveDto;
@@ -177,6 +178,7 @@ export interface FlatCharacterSheetDto {
   color: string | null;
   imageUrl: string | null;
   characterData: Record<string, unknown> | null;
+  isActive: boolean;
   campaigns: CharacterCampaignAssignmentDto[];
   campaignSharedNotes?: string;
   conditions?: ActorConditionInstanceDto[];
@@ -271,6 +273,7 @@ export function flattenCharacterSheetDto(dto: CharacterSheetDto): FlatCharacterS
     color: dto.sheet.color,
     imageUrl: dto.imageUrl,
     characterData: dto.characterData,
+    isActive: dto.isActive,
     campaigns: dto.campaigns,
     conditions: dto.live.conditions,
     sharedNotes: dto.sharedNotes,

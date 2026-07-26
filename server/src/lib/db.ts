@@ -10,6 +10,15 @@ import { displayNoteTitle } from "./dbConverters.js";
 import { ensureCompendiumRulesetColumns } from "./compendiumRulesetColumnMigration.js";
 import { ensureCharacterRulesetColumn } from "./characterRulesetColumnMigration.js";
 import { ensureCompendiumCompositePrimaryKey } from "./compendiumPrimaryKeyMigration.js";
+import { BINDER_SCHEMA_SQL } from "./binderSchema.js";
+import { ensureActivityColumns } from "./activityMigration.js";
+import {
+  ensureBinderCampaignColumns,
+  ensureBinderColumns,
+  ensureBinderRecordTypes,
+  ensureBinderLocationNaming,
+  ensureBinderUnsetConventions,
+} from "./binderCampaignMigration.js";
 
 export type Db = Database.Database;
 
@@ -23,6 +32,17 @@ export function openDb(dbPath: string): Db {
   db.pragma("foreign_keys = ON");
   db.pragma("journal_size_limit = 16777216");
   db.exec(SCHEMA_SQL);
+  ensureActivityColumns(db);
+  // Binder tables must exist before SQLite can add campaigns.binder_id with
+  // its foreign-key reference on upgraded databases.
+  ensureBinderLocationNaming(db);
+  db.exec(BINDER_SCHEMA_SQL);
+  ensureBinderColumns(db);
+  ensureBinderRecordTypes(db);
+  ensureBinderUnsetConventions(db);
+  // Recreate Binder indexes/triggers that may have belonged to a rebuilt table.
+  db.exec(BINDER_SCHEMA_SQL);
+  ensureBinderCampaignColumns(db);
   ensureCompendiumRulesetColumns(db);
   ensureCompendiumCompositePrimaryKey(db);
   ensureCharacterRulesetColumn(db);

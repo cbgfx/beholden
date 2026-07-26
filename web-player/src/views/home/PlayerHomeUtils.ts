@@ -45,6 +45,7 @@ export interface UserCharacter {
   ac: number;
   color: string | null;
   imageUrl: string | null;
+  isActive: boolean;
   campaigns: CharacterCampaign[];
 }
 

@@ -1,6 +1,6 @@
 
-import React, { useCallback, useEffect, useRef } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useMatch } from "react-router-dom";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useMatch, useParams } from "react-router-dom";
 import { ShellLayout } from "@/layout/ShellLayout";
 import { theme } from "@/theme/theme";
 import { StoreProvider, useStore } from "@/store";
@@ -20,6 +20,14 @@ import type { State } from "@/store/state";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LoginView } from "@/views/LoginView";
 import { useWsScope } from "@/services/ws";
+import {
+  createBinder,
+  deleteBinder,
+  fetchBinders,
+  updateBinderIdentity,
+  type BinderSummary,
+} from "@/services/binderApi";
+import { BinderNameModal } from "@/views/HomeView/BinderNameModal";
 
 const HomeView = React.lazy(() => import("@/views/HomeView").then(m => ({ default: m.HomeView })));
 const CompendiumView = React.lazy(() => import("@/views/CompendiumView/CompendiumView").then(m => ({ default: m.CompendiumView })));
@@ -31,22 +39,66 @@ const FaqView = React.lazy(() => import("@/views/Info/FaqView").then(m => ({ def
 const UpdatesView = React.lazy(() => import("@/views/Info/UpdatesView").then(m => ({ default: m.UpdatesView })));
 const AdminView = React.lazy(() => import("@/views/AdminView/AdminView").then(m => ({ default: m.AdminView })));
 const ProfileView = React.lazy(() => import("@/views/ProfileView").then(m => ({ default: m.ProfileView })));
+const BinderView = React.lazy(() => import("@/views/BinderView/BinderView").then(m => ({ default: m.BinderView })));
+
+function BinderRoute({ binders, campaigns, loaded, canEdit, onBinderChanged }: { binders: BinderSummary[]; campaigns: Campaign[]; loaded: boolean; canEdit: (binder: BinderSummary) => boolean; onBinderChanged: () => Promise<void> }) {
+  const { binderId } = useParams<{ binderId: string }>();
+  if (!loaded) return null;
+  const binder = binders.find((item) => item.id === binderId);
+  return binder
+    ? <BinderView binder={binder} campaigns={campaigns.filter((campaign) => campaign.binderId === binder.id)} canEdit={canEdit(binder)} onRecordsChanged={onBinderChanged} />
+    : <Navigate to="/" replace />;
+}
 
 function AppInner() {
   const { state, dispatch } = useStore();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const confirm = useConfirm();
   const importAdventureFileRef = useRef<HTMLInputElement>(null);
   const campaignRequestRef = useRef<AbortController | null>(null);
   const adventureRequestRef = useRef<AbortController | null>(null);
   const encounterRequestRef = useRef<AbortController | null>(null);
+  const [binders, setBinders] = useState<BinderSummary[]>([]);
+  const [bindersLoaded, setBindersLoaded] = useState(false);
+  const [binderModal, setBinderModal] = useState<{ mode: "create" } | { mode: "rename"; binder: BinderSummary } | null>(null);
 
   const refreshAll = useCallback(async () => {
-    const [m, c] = await Promise.all([api<Meta>("/api/meta"), api<Campaign[]>("/api/campaigns")]);
+    const [m, c, binderRows] = await Promise.all([
+      api<Meta>("/api/meta"),
+      api<Campaign[]>("/api/campaigns"),
+      fetchBinders(),
+    ]);
     dispatch({ type: "setMeta", meta: m });
     dispatch({ type: "setCampaigns", campaigns: c });
     dispatch({ type: "autoSelectFirstCampaign", campaigns: c });
+    setBinders(binderRows);
+    setBindersLoaded(true);
   }, [dispatch]);
+
+  const handleCreateBinder = useCallback(async (name: string, color: string, currentDate: number) => {
+    const created = await createBinder(name, color, currentDate);
+    setBinders((current) => [created, ...current.filter((item) => item.id !== created.id)]);
+  }, []);
+
+  const handleEditBinder = useCallback(async (binderId: string, name: string, color: string, currentDate: number) => {
+    const updated = await updateBinderIdentity(binderId, name, color, currentDate);
+    setBinders((current) => current.map((item) => item.id === updated.id ? updated : item));
+  }, []);
+
+  const handleDeleteBinder = useCallback(async (binderId: string) => {
+    const binder = binders.find((item) => item.id === binderId);
+    if (!binder) return;
+    if (!(await confirm({
+      title: "Delete Binder",
+      message: `Delete “${binder.name}”? Attached campaigns will be kept and detached.`,
+      confirmLabel: "Delete Binder",
+      intent: "danger",
+    }))) return;
+    await deleteBinder(binderId);
+    setBinders((current) => current.filter((item) => item.id !== binderId));
+    await refreshAll();
+  }, [binders, confirm, refreshAll]);
 
   const refreshCampaign = useCallback(async (cid: string) => {
     if (!cid) return;
@@ -220,6 +272,18 @@ function AppInner() {
   return (
     <ShellLayout>
       <DrawerHost refreshAll={refreshAll} refreshCampaign={refreshCampaign} refreshAdventure={refreshAdventure} refreshEncounter={refreshEncounter} />
+      <BinderNameModal
+        isOpen={binderModal !== null}
+        title={binderModal?.mode === "rename" ? "Edit Binder" : "Create Binder"}
+        initialName={binderModal?.mode === "rename" ? binderModal.binder.name : ""}
+        initialColor={binderModal?.mode === "rename" ? binderModal.binder.color : "#38b6ff"}
+        initialCurrentDate={binderModal?.mode === "rename" ? binderModal.binder.currentDate.sort : null}
+        submitLabel={binderModal?.mode === "rename" ? "Save Changes" : "Create Binder"}
+        onClose={() => setBinderModal(null)}
+        onSubmit={(name, color, currentDate) => binderModal?.mode === "rename"
+          ? handleEditBinder(binderModal.binder.id, name, color, currentDate)
+          : handleCreateBinder(name, color, currentDate)}
+      />
       <input
         ref={importAdventureFileRef}
         type="file"
@@ -234,7 +298,11 @@ function AppInner() {
           path="/"
           element={
             <HomeView
-              campaigns={state.campaigns.map((c) => ({ id: c.id, name: c.name, updatedAt: c.updatedAt, playerCount: c.playerCount, imageUrl: c.imageUrl }))}
+              campaigns={state.campaigns.map((c) => ({ id: c.id, name: c.name, updatedAt: c.updatedAt, playerCount: c.playerCount, imageUrl: c.imageUrl, isActive: c.isActive }))}
+              binders={binders.map((binder) => ({
+                ...binder,
+                canEdit: user?.isAdmin === true || binder.ownerUserId === user?.id,
+              }))}
               onCreateCampaign={() => dispatch({ type: "openDrawer", drawer: { type: "createCampaign" } })}
               onOpenCampaign={(campaignId) => {
                 dispatch({ type: "selectCampaign", campaignId });
@@ -244,7 +312,27 @@ function AppInner() {
               onEditCampaign={(campaignId) => dispatch({ type: "openDrawer", drawer: { type: "editCampaign", campaignId } })}
               onDeleteCampaign={deleteCampaign}
               onRefresh={refreshAll}
+              onCreateBinder={() => setBinderModal({ mode: "create" })}
+              onOpenBinder={(binderId) => navigate(`/binder/${binderId}`)}
+              onEditBinder={(binderId) => {
+                const binder = binders.find((item) => item.id === binderId);
+                if (binder) setBinderModal({ mode: "rename", binder });
+              }}
+              onDeleteBinder={handleDeleteBinder}
             />}
+        />
+
+        <Route
+          path="/binder/:binderId/*"
+          element={
+            <BinderRoute
+              binders={binders}
+              campaigns={state.campaigns}
+              loaded={bindersLoaded}
+              canEdit={(binder) => user?.isAdmin === true || binder.ownerUserId === user?.id}
+              onBinderChanged={refreshAll}
+            />
+          }
         />
 
         <Route

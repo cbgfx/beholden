@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
-import { IconPencil, IconTrash, IconDownload, IconCamera, IconUsers } from "@/icons";
+import { IconPencil, IconTrash, IconDownload, IconCamera, IconPlayers } from "@/icons";
 import { api, resolveAssetUrl } from "@/services/api";
 
 export type CampaignSummary = {
@@ -10,6 +10,7 @@ export type CampaignSummary = {
   updatedAt?: number;
   playerCount?: number;
   imageUrl?: string | null;
+  isActive: boolean;
 };
 
 type Props = {
@@ -26,19 +27,19 @@ const card: React.CSSProperties = {
   borderRadius: theme.radius.panel,
   overflow: "hidden",
   display: "grid",
-  gridTemplateRows: "170px 1fr auto",
+  gridTemplateRows: "112px 1fr auto",
   boxShadow: "0 4px 28px rgba(0,0,0,0.4)",
   transition: "border-color 0.15s, box-shadow 0.15s",
 };
 
 const cardBody: React.CSSProperties = {
-  padding: "16px 18px 10px",
+  padding: "11px 14px 8px",
   display: "grid",
-  gap: 8,
+  gap: 5,
 };
 
 const cardFooter: React.CSSProperties = {
-  padding: "0 12px 12px",
+  padding: "0 10px 10px",
   display: "flex",
   gap: 8,
   alignItems: "center",
@@ -128,7 +129,7 @@ export function CampaignCard({ campaign: c, onOpen, onEdit, onDelete, onRefresh 
       <div
         style={{
           position: "relative",
-          height: 170,
+          height: 112,
           overflow: "hidden",
           borderBottom: `1px solid ${theme.colors.panelBorder}`,
           cursor: "pointer",
@@ -165,7 +166,7 @@ export function CampaignCard({ campaign: c, onOpen, onEdit, onDelete, onRefresh 
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 52,
+              fontSize: 40,
               fontWeight: 900,
               color: "rgba(240,165,0,0.22)",
               letterSpacing: 4,
@@ -229,7 +230,7 @@ export function CampaignCard({ campaign: c, onOpen, onEdit, onDelete, onRefresh 
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
           {c.playerCount !== undefined && (
             <div style={{ fontSize: "var(--fs-medium)", color: theme.colors.muted, display: "flex", alignItems: "center", gap: 6 }}>
-              <IconUsers size={14} />
+              <IconPlayers size={16} />
               {c.playerCount === 1 ? "1 Player" : `${c.playerCount} Players`}
             </div>
           )}

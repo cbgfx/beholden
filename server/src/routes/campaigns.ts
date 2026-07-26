@@ -19,6 +19,7 @@ import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
 const CampaignUpsertBody = z.object({
   name: z.string().trim().optional(),
   color: z.string().trim().nullable().optional(),
+  isActive: z.boolean().optional(),
 });
 
 export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
@@ -29,7 +30,8 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     const user = req.user!;
     const rows = user.isAdmin
       ? db.prepare(`
-          SELECT c.id, c.name, c.color, c.image_url, c.image_updated_at, c.shared_notes, c.created_at, c.updated_at,
+          SELECT c.id, c.name, c.color, c.image_url, c.image_updated_at, c.shared_notes,
+                 c.binder_id, c.current_date_text, c.current_date_sort, c.is_active, c.created_at, c.updated_at,
                  COUNT(p.id) AS player_count
           FROM campaigns c
           LEFT JOIN players p ON p.campaign_id = c.id
@@ -37,7 +39,8 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
           ORDER BY c.updated_at DESC
         `).all() as Record<string, unknown>[]
       : db.prepare(`
-          SELECT c.id, c.name, c.color, c.image_url, c.image_updated_at, c.shared_notes, c.created_at, c.updated_at,
+          SELECT c.id, c.name, c.color, c.image_url, c.image_updated_at, c.shared_notes,
+                 c.binder_id, c.current_date_text, c.current_date_sort, c.is_active, c.created_at, c.updated_at,
                  COUNT(p.id) AS player_count
           FROM campaigns c
           LEFT JOIN players p ON p.campaign_id = c.id
@@ -56,11 +59,18 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   app.get("/api/me/campaigns", (req, res) => {
     const user = req.user!;
     const rows = db.prepare(`
-        SELECT c.id, c.name, c.color, c.image_url, c.image_updated_at, c.shared_notes, c.created_at, c.updated_at,
+        SELECT c.id, c.name, c.color, c.image_url, c.image_updated_at, c.shared_notes,
+               c.binder_id, c.current_date_text, c.current_date_sort, c.is_active, c.created_at, c.updated_at,
                COUNT(p.id) AS player_count
         FROM campaigns c
         LEFT JOIN players p ON p.campaign_id = c.id
-        WHERE c.id IN (SELECT campaign_id FROM campaign_membership WHERE user_id = ?)
+        WHERE c.is_active = 1
+          AND EXISTS (
+            SELECT 1
+            FROM campaign_membership cm
+            WHERE cm.campaign_id = c.id
+              AND cm.user_id = ?
+          )
         GROUP BY c.id
         ORDER BY c.updated_at DESC
       `).all(user.userId) as Record<string, unknown>[];
@@ -81,21 +91,38 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     ).run(id, name, color, t, t);
     ctx.helpers.seedDefaultConditions(id);
     ctx.broadcast("campaigns:changed", { campaignId: id });
-    res.json(withAbsoluteImageUrl(req, { id, name, color, imageUrl: null, sharedNotes: "", createdAt: t, updatedAt: t }));
+    res.json(withAbsoluteImageUrl(req, {
+      id,
+      name,
+      color,
+      imageUrl: null,
+      sharedNotes: "",
+      binderId: null,
+      currentDate: { text: null, sort: null },
+      isActive: true,
+      createdAt: t,
+      updatedAt: t,
+    }));
   });
 
   app.put("/api/campaigns/:campaignId", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
-    const row = db.prepare("SELECT id, name, color, image_url, image_updated_at, shared_notes, created_at, updated_at FROM campaigns WHERE id = ?").get(campaignId) as Record<string, unknown> | undefined;
+    const row = db.prepare(`
+      SELECT id, name, color, image_url, image_updated_at, shared_notes,
+             binder_id, current_date_text, current_date_sort, is_active, created_at, updated_at
+      FROM campaigns WHERE id = ?
+    `).get(campaignId) as Record<string, unknown> | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Campaign not found" });
     const body = parseBody(CampaignUpsertBody, req);
     const name = (body.name ?? "").toString().trim() || (row.name as string);
     const color = body.color !== undefined ? (body.color ?? null) : (row.color as string | null ?? null);
+    const isActive = body.isActive ?? row.is_active !== 0;
     const t = now();
-    db.prepare("UPDATE campaigns SET name = ?, color = ?, updated_at = ? WHERE id = ?").run(name, color, t, campaignId);
+    db.prepare("UPDATE campaigns SET name = ?, color = ?, is_active = ?, updated_at = ? WHERE id = ?")
+      .run(name, color, isActive ? 1 : 0, t, campaignId);
     ctx.broadcast("campaigns:changed", { campaignId });
-    res.json(withAbsoluteImageUrl(req, { ...rowToCampaign(row), name, color, updatedAt: t }));
+    res.json(withAbsoluteImageUrl(req, { ...rowToCampaign(row), name, color, isActive, updatedAt: t }));
   });
 
   app.delete("/api/campaigns/:campaignId", requireAdmin, (req, res) => {

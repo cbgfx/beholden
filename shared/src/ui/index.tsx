@@ -16,7 +16,7 @@ export { MiniStat } from "./MiniStat";
 export { MiniTable } from "./MiniTable";
 export { RulesSectionBox } from "./RulesSectionBox";
 export { EmptyState } from "./EmptyState";
-export { NoteRow } from "./NoteRow";
+export { NoteRow, MarkdownRichText } from "./NoteRow";
 export { NoteList } from "./NoteList";
 export { NoteEditorFields } from "./NoteEditorFields";
 export { WysiwygNoteEditor } from "./WysiwygNoteEditor";

@@ -1,42 +1,104 @@
 import { useMemo, useRef, useState } from "react";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
-import { IconPlus } from "@/icons";
+import { IconBinder, IconCampaign, IconPlus } from "@/icons";
 import { api } from "@/services/api";
 import { CampaignCard } from "@/views/HomeView/CampaignCard";
+import { BinderCard } from "@/views/HomeView/BinderCard";
 import type { CampaignSummary } from "@/views/HomeView/CampaignCard";
+import type { BinderSummary } from "@/services/binderApi";
+import { importBinder } from "@/services/binderApi";
+
+type HomeBinderSummary = BinderSummary & { canEdit: boolean };
 
 type Props = {
   campaigns: CampaignSummary[];
+  binders: HomeBinderSummary[];
   onCreateCampaign: () => void;
   onOpenCampaign: (campaignId: string) => void;
   onEditCampaign: (campaignId: string) => void;
   onDeleteCampaign: (campaignId: string) => Promise<void> | void;
   onRefresh: () => Promise<void> | void;
+  onCreateBinder: () => void;
+  onOpenBinder: (binderId: string) => void;
+  onEditBinder: (binderId: string) => void;
+  onDeleteBinder: (binderId: string) => Promise<void> | void;
 };
+
+function SectionHeading({
+  icon,
+  title,
+  count,
+  subtitle,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  count: number;
+  subtitle: string;
+}) {
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: "var(--fs-hero)",
+          fontWeight: 900,
+          margin: 0,
+          color: theme.colors.text,
+          display: "flex",
+          alignItems: "center",
+          gap: 13,
+        }}
+      >
+        {icon}
+        <span>
+          {title}&nbsp;
+          {count > 0 ? <span style={{ color: theme.colors.muted }}>({count})</span> : null}
+        </span>
+      </div>
+      <div style={{ marginTop: 2, color: theme.colors.muted, fontSize: "var(--fs-subtitle)" }}>
+        {subtitle}
+      </div>
+    </div>
+  );
+}
 
 export function HomeView({
   campaigns,
+  binders,
   onCreateCampaign,
   onOpenCampaign,
   onEditCampaign,
   onDeleteCampaign,
   onRefresh,
+  onCreateBinder,
+  onOpenBinder,
+  onEditBinder,
+  onDeleteBinder,
 }: Props) {
-  const sorted = useMemo(() => {
-    return [...campaigns].sort((a, b) => {
+  const [campaignTab, setCampaignTab] = useState<"active" | "archived">("active");
+  const sortedCampaigns = useMemo(() => {
+    return campaigns.filter((campaign) => campaign.isActive === (campaignTab === "active")).sort((a, b) => {
       const ta = a.updatedAt ?? 0;
       const tb = b.updatedAt ?? 0;
       if (tb !== ta) return tb - ta;
       return a.name.localeCompare(b.name);
     });
-  }, [campaigns]);
+  }, [campaigns, campaignTab]);
+  const sortedBinders = useMemo(
+    () => [...binders].sort((a, b) => b.updatedAt - a.updatedAt || a.name.localeCompare(b.name)),
+    [binders],
+  );
 
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importBusy, setImportBusy] = useState(false);
-  const [importMsg, setImportMsg] = useState<string>("");
+  const [importMsg, setImportMsg] = useState("");
   const [importFailed, setImportFailed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [binderImportFile, setBinderImportFile] = useState<File | null>(null);
+  const [binderImportBusy, setBinderImportBusy] = useState(false);
+  const [binderImportMsg, setBinderImportMsg] = useState("");
+  const [binderImportFailed, setBinderImportFailed] = useState(false);
+  const binderFileInputRef = useRef<HTMLInputElement>(null);
 
   async function importCampaign() {
     if (!importFile) return;
@@ -51,34 +113,75 @@ export function HomeView({
       setImportFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       await onRefresh();
-    } catch (e: unknown) {
+    } catch (error: unknown) {
       setImportFailed(true);
-      setImportMsg(String((e as any)?.message ?? e));
+      setImportMsg(error instanceof Error ? error.message : String(error));
     } finally {
       setImportBusy(false);
     }
   }
 
-  const msgColor = importFailed ? theme.colors.red : theme.colors.green;
+  async function handleBinderImport() {
+    if (!binderImportFile) return;
+    setBinderImportBusy(true);
+    setBinderImportMsg("");
+    setBinderImportFailed(false);
+    try {
+      const result = await importBinder(binderImportFile);
+      setBinderImportMsg(`${result.name} imported with ${result.recordCount} records.`);
+      setBinderImportFile(null);
+      if (binderFileInputRef.current) binderFileInputRef.current.value = "";
+      await onRefresh();
+    } catch (error: unknown) {
+      setBinderImportFailed(true);
+      setBinderImportMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBinderImportBusy(false);
+    }
+  }
 
   return (
-    <div style={{ width: "100%", minHeight: "100%", display: "grid", justifyItems: "center", alignContent: "start", padding: "36px 28px 60px", gap: 32 }}>
-      <div style={{ width: "100%", maxWidth: 1040, display: "grid", gap: 28 }}>
-
-        {/* Header */}
-        <div>
-          <div style={{ fontSize: "var(--fs-hero)", fontWeight: 900, margin: 0, color: theme.colors.text }}>
-            Campaigns&nbsp;
-            {campaigns.length > 0 && (
-              <span style={{ color: theme.colors.muted }}>({campaigns.length})</span>
-            )}
-          </div>
-          <div style={{ marginTop: 6, color: theme.colors.muted, fontSize: "var(--fs-body)" }}>
-            Jump back into an existing world, or start a new one.
-          </div>
+    <div
+      style={{
+        width: "100%",
+        minHeight: "100%",
+        display: "grid",
+        justifyItems: "center",
+        alignContent: "start",
+        padding: "20px 28px 36px",
+      }}
+    >
+      <div style={{ width: "100%", maxWidth: 1040, display: "grid", gap: 14 }}>
+        <SectionHeading
+          icon={<IconCampaign size={34} />}
+          title="Campaigns"
+          count={campaigns.length}
+          subtitle="Jump back into an existing campaign, or start a new one."
+        />
+        <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "var(--fs-small)" }}>
+          {(["active", "archived"] as const).map((tab) => {
+            const count = campaigns.filter((campaign) => campaign.isActive === (tab === "active")).length;
+            return (
+              <a
+                key={tab}
+                href={`#campaigns-${tab}`}
+                onClick={(event) => {
+                  event.preventDefault();
+                  setCampaignTab(tab);
+                }}
+                style={{
+                  color: campaignTab === tab ? theme.colors.text : theme.colors.muted,
+                  textDecoration: campaignTab === tab ? "underline" : "none",
+                  textUnderlineOffset: 3,
+                  cursor: "pointer",
+                }}
+              >
+                {tab === "active" ? "Active" : "Archived"} ({count})
+              </a>
+            );
+          })}
         </div>
 
-        {/* Action bar */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <Button onClick={onCreateCampaign} title="Create a new campaign">
             <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
@@ -110,8 +213,8 @@ export function HomeView({
               ref={fileInputRef}
               type="file"
               accept=".json,application/json"
-              onChange={(e) => {
-                setImportFile(e.target.files?.[0] ?? null);
+              onChange={(event) => {
+                setImportFile(event.target.files?.[0] ?? null);
                 setImportMsg("");
                 setImportFailed(false);
               }}
@@ -120,30 +223,119 @@ export function HomeView({
             {importFile ? importFile.name : "Choose file…"}
           </label>
 
-          <Button variant="ghost" onClick={importCampaign} disabled={!importFile || importBusy} title="Import selected campaign file">
+          <Button
+            variant="ghost"
+            onClick={importCampaign}
+            disabled={!importFile || importBusy}
+            title="Import selected campaign file"
+          >
             {importBusy ? "Importing…" : "Import"}
           </Button>
 
-          {importMsg ? <span style={{ fontSize: "var(--fs-small)", color: msgColor }}>{importMsg}</span> : null}
+          {importMsg ? (
+            <span style={{ fontSize: "var(--fs-small)", color: importFailed ? theme.colors.red : theme.colors.green }}>
+              {importMsg}
+            </span>
+          ) : null}
         </div>
 
-        {/* Campaign grid */}
-        {sorted.length > 0 ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 20 }}>
-            {sorted.map((c) => (
+        {sortedCampaigns.length > 0 ? (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 16 }}>
+            {sortedCampaigns.map((campaign) => (
               <CampaignCard
-                key={c.id}
-                campaign={c}
-                onOpen={() => onOpenCampaign(c.id)}
-                onEdit={() => onEditCampaign(c.id)}
-                onDelete={() => onDeleteCampaign(c.id)}
+                key={campaign.id}
+                campaign={campaign}
+                onOpen={() => onOpenCampaign(campaign.id)}
+                onEdit={() => onEditCampaign(campaign.id)}
+                onDelete={() => onDeleteCampaign(campaign.id)}
                 onRefresh={onRefresh}
               />
             ))}
           </div>
         ) : (
           <div style={{ color: theme.colors.muted, fontSize: "var(--fs-body)", padding: "48px 0", textAlign: "center" }}>
-            No campaigns yet — create one above to get started.
+            {campaignTab === "active" ? "No active campaigns yet — create one above to get started." : "No archived campaigns."}
+          </div>
+        )}
+
+        <div style={{ height: 1, background: theme.colors.panelBorder, margin: "8px 0 2px" }} />
+
+        <div style={{ display: "grid", justifyItems: "start", gap: 10 }}>
+          <SectionHeading
+            icon={<IconBinder size={34} />}
+            title="Binders"
+            count={binders.length}
+            subtitle="Build and organize the shared setting lore behind your campaigns."
+          />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <Button onClick={onCreateBinder} title="Create a new Binder">
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                <IconPlus size={14} />
+                New Binder
+              </span>
+            </Button>
+            <div style={{ width: 1, height: 24, background: theme.colors.panelBorder, margin: "0 4px" }} />
+            <label
+              style={{
+                padding: "7px 14px",
+                borderRadius: theme.radius.control,
+                border: `1px solid ${theme.colors.panelBorder}`,
+                background: theme.colors.inputBg,
+                color: binderImportFile ? theme.colors.text : theme.colors.muted,
+                fontSize: "var(--fs-subtitle)",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                maxWidth: 200,
+                textOverflow: "ellipsis",
+              }}
+              title={binderImportFile?.name ?? "Choose a Binder JSON file"}
+            >
+              <input
+                ref={binderFileInputRef}
+                type="file"
+                accept=".json,application/json"
+                onChange={(event) => {
+                  setBinderImportFile(event.target.files?.[0] ?? null);
+                  setBinderImportMsg("");
+                  setBinderImportFailed(false);
+                }}
+                style={{ display: "none" }}
+              />
+              {binderImportFile?.name ?? "Choose file…"}
+            </label>
+            <Button
+              variant="ghost"
+              onClick={handleBinderImport}
+              disabled={!binderImportFile || binderImportBusy}
+              title="Import selected Binder file"
+            >
+              {binderImportBusy ? "Importing…" : "Import"}
+            </Button>
+            {binderImportMsg ? (
+              <span style={{ fontSize: "var(--fs-small)", color: binderImportFailed ? theme.colors.red : theme.colors.green }}>
+                {binderImportMsg}
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        {sortedBinders.length > 0 ? (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 16 }}>
+            {sortedBinders.map((binder) => (
+              <BinderCard
+                key={binder.id}
+                binder={binder}
+                canEdit={binder.canEdit}
+                onOpen={() => onOpenBinder(binder.id)}
+                onEdit={() => onEditBinder(binder.id)}
+                onDelete={() => onDeleteBinder(binder.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div style={{ color: theme.colors.muted, fontSize: "var(--fs-body)", padding: "38px 0", textAlign: "center" }}>
+            No Binders yet — create one above to start organizing your setting.
           </div>
         )}
       </div>

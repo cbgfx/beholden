@@ -58,6 +58,9 @@ import { registerUpdateCheckRoutes } from "../routes/updateCheck.js";
 import { registerWebUiRoutes } from "../routes/webUi.js";
 import { registerPartyInventoryRoutes } from "../routes/partyInventory.js";
 import { registerBastionRoutes } from "../routes/bastions.js";
+import { registerBinderRoutes } from "../routes/binders.js";
+import { registerBinderReferenceRoutes } from "../routes/binderReferences.js";
+import { registerBinderMortalRoutes } from "../routes/binderMortals.js";
 
 export function createServer() {
   const runtime = getRuntimeConfig();
@@ -156,6 +159,18 @@ export function createServer() {
       if (res.req.url?.includes("?v=")) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
     },
   }));
+  const binderMortalImagesDir = path.join(paths.dataDir, "binder-mortal-images");
+  fs.mkdirSync(binderMortalImagesDir, { recursive: true });
+  app.use("/binder-mortal-images", express.static(binderMortalImagesDir, {
+    maxAge: "1y",
+    immutable: true,
+  }));
+  const binderDeityImagesDir = path.join(paths.dataDir, "binder-deity-images");
+  fs.mkdirSync(binderDeityImagesDir, { recursive: true });
+  app.use("/binder-deity-images", express.static(binderDeityImagesDir, {
+    maxAge: "1y",
+    immutable: true,
+  }));
 
   // --- character portrait images (static) -----------------------------------
   const characterImagesDir = path.join(paths.dataDir, "character-images");
@@ -188,6 +203,9 @@ export function createServer() {
   registerTreasureRoutes(app, ctx);
   registerExportImportRoutes(app, ctx);
   registerUpdateCheckRoutes(app, ctx);
+  registerBinderRoutes(app, ctx);
+  registerBinderReferenceRoutes(app, ctx);
+  registerBinderMortalRoutes(app, ctx);
   registerWebUiRoutes(app, ctx);
   registerPartyInventoryRoutes(app, ctx);
   registerBastionRoutes(app, ctx);

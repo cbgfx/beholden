@@ -39,7 +39,6 @@ function renderIdentityStep({
     { key: "heightText", label: "Height", placeholder: "6'2\"" },
     { key: "age", label: "Age", placeholder: "32" },
     { key: "weight", label: "Weight", placeholder: "190 lb" },
-    { key: "gender", label: "Gender", placeholder: "Female" },
   ];
 
   function handlePortraitChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -136,6 +135,18 @@ function renderIdentityStep({
                 />
               </div>
             ))}
+            <div>
+              <label style={labelStyle}>Gender *</label>
+              <Select
+                value={String(form.gender ?? "")}
+                onChange={(e) => setField("gender", e.target.value)}
+                style={{ width: "100%" }}
+              >
+                <option value="" disabled>— select —</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </Select>
+            </div>
           </div>
           <div>
             <label style={labelStyle}>Color</label>
@@ -161,7 +172,7 @@ function renderIdentityStep({
           </div>
         </div>
       </div>
-      <NavButtons step={10} onBack={onBack} onNext={onNext} nextDisabled={!String(form.characterName ?? "").trim()} />
+      <NavButtons step={10} onBack={onBack} onNext={onNext} nextDisabled={!String(form.characterName ?? "").trim() || !String(form.gender ?? "")} />
     </div>
   );
 

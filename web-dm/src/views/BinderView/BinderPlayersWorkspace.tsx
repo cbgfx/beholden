@@ -1,0 +1,148 @@
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { fetchBinderMortals, fetchMortalOptions, type BinderMortal, type MortalOptions } from "@/services/binderMortalApi";
+import { Input } from "@/ui/Input";
+import { Button } from "@/ui/Button";
+import { theme, withAlpha } from "@/theme/theme";
+
+const NONE = "__none__";
+type FilterKey = "className" | "race" | "status" | "campaign" | "player";
+type Filters = Record<FilterKey, string[]>;
+const emptyFilters = (): Filters => ({ className: [], race: [], status: [], campaign: [], player: [] });
+
+function ageOf(mortal: BinderMortal, currentDate: number | null) {
+  const born = Number(mortal.birthDate?.replaceAll(",", ""));
+  const end = mortal.deathDate ? Number(mortal.deathDate.replaceAll(",", "")) : currentDate;
+  return mortal.birthDate && Number.isFinite(born) && end !== null && Number.isFinite(end)
+    ? Math.max(0, end - born)
+    : null;
+}
+
+function matches(value: string | null | undefined, selected: string[]) {
+  return !selected.length || selected.some((item) => item === NONE ? !value : item === value);
+}
+
+function PlayerFilter(props: {
+  label: string;
+  options: Array<{ value: string; label: string }>;
+  selected: string[];
+  onAdd: (value: string) => void;
+}) {
+  const display = `${props.label}: ${props.selected.length ? "Add…" : "All"}`;
+  const [query, setQuery] = useState(display);
+  const [open, setOpen] = useState(false);
+  useEffect(() => setQuery(display), [display]);
+  const needle = query === display ? "" : query.trim().toLocaleLowerCase();
+  const options = props.options
+    .filter((option) => !props.selected.includes(option.value) && option.label.toLocaleLowerCase().includes(needle))
+    .slice(0, 20);
+
+  return <div style={{ position: "relative", width: 165 }}>
+    <Input
+      value={query}
+      aria-label={props.label}
+      autoComplete="off"
+      onFocus={(event) => { setOpen(true); event.currentTarget.select(); }}
+      onClick={(event) => { setOpen(true); event.currentTarget.select(); }}
+      onBlur={() => window.setTimeout(() => { setOpen(false); setQuery(display); }, 120)}
+      onChange={(event) => { setQuery(event.target.value); setOpen(true); }}
+      style={{ width: "100%" }}
+    />
+    {open ? <div style={{ position: "absolute", zIndex: 220, top: "calc(100% + 4px)", left: 0, width: "max-content", minWidth: "100%", maxWidth: 300, maxHeight: 260, overflowY: "auto", padding: 4, border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.control, background: "#0d1525", boxShadow: "0 12px 28px rgba(0,0,0,.65)" }}>
+      {options.map((option) => <button key={option.value} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { props.onAdd(option.value); setOpen(false); }} style={{ display: "block", width: "100%", padding: "8px 10px", border: 0, borderRadius: 6, background: "transparent", color: theme.colors.text, textAlign: "left", cursor: "pointer", font: "inherit", whiteSpace: "nowrap" }}>{option.label}</button>)}
+      {!options.length ? <div style={{ padding: "8px 10px", color: theme.colors.muted }}>No matches</div> : null}
+    </div> : null}
+  </div>;
+}
+
+export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: { binderId: string; binderCurrentDate: number | null; accent: string }) {
+  const navigate = useNavigate();
+  const [players, setPlayers] = useState<MortalOptions["players"]>([]);
+  const [mortals, setMortals] = useState<BinderMortal[]>([]);
+  const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([fetchMortalOptions(binderId), fetchBinderMortals(binderId)])
+      .then(([options, mortalRecords]) => {
+        setPlayers(options.players);
+        setMortals(mortalRecords);
+        setError(null);
+      })
+      .catch((cause) => setError(cause instanceof Error ? cause.message : "Unable to load players."))
+      .finally(() => setLoading(false));
+  }, [binderId]);
+
+  const playersById = useMemo(() => new Map(players.map((player) => [player.id, player])), [players]);
+  const pcs = useMemo(() => mortals.filter((mortal) => mortal.mortalType === "player_character"), [mortals]);
+  const choices = useMemo(() => {
+    const unique = (values: Array<[string, string]>) => [...new Map(values).entries()]
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    return {
+      className: [{ value: NONE, label: "None" }, ...unique(players.filter((p) => p.className).map((p) => [p.className!, p.className!]))],
+      race: [{ value: NONE, label: "None" }, ...unique(pcs.filter((p) => p.race).map((p) => [p.race!.id, p.race!.name]))],
+      status: [{ value: "alive", label: "Alive" }, { value: "dead", label: "Dead" }],
+      campaign: [{ value: NONE, label: "None" }, ...unique(players.filter((p) => p.campaignName).map((p) => [p.campaignName!, p.campaignName!]))],
+      player: [{ value: NONE, label: "None" }, ...unique(players.filter((p) => p.playerName).map((p) => [p.playerName!, p.playerName!]))],
+    } satisfies Record<FilterKey, Array<{ value: string; label: string }>>;
+  }, [pcs, players]);
+
+  const filtered = useMemo(() => pcs.filter((mortal) => {
+    const linked = mortal.player ? playersById.get(mortal.player.id) : undefined;
+    return mortal.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())
+      && matches(linked?.className, filters.className)
+      && matches(mortal.race?.id, filters.race)
+      && matches(mortal.lifeStatus ?? "alive", filters.status)
+      && matches(linked?.campaignName, filters.campaign)
+      && matches(linked?.playerName, filters.player);
+  }), [filters, pcs, playersById, query]);
+
+  const columns = "minmax(220px,1.4fr) minmax(150px,1fr) minmax(140px,.85fr) 90px 90px minmax(190px,1.2fr) minmax(160px,1fr)";
+  const headers = ["Name", "Class", "Race", "Age", "DoA", "Campaign", "Player"];
+  const labels: Record<FilterKey, string> = { className: "Class", race: "Race", status: "DoA", campaign: "Campaign", player: "Player" };
+  const cell = { color: theme.colors.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
+
+  return <div style={{ display: "grid", gap: 12 }}>
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+      <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search players…" style={{ width: 260 }} />
+      {(Object.keys(labels) as FilterKey[]).map((key) => <PlayerFilter key={key} label={labels[key]} selected={filters[key]} options={choices[key]} onAdd={(value) => setFilters((current) => current[key].includes(value) ? current : { ...current, [key]: [...current[key], value] })} />)}
+      {Object.values(filters).some((values) => values.length) ? <Button variant="ghost" onClick={() => setFilters(emptyFilters())}>Clear</Button> : null}
+    </div>
+    {Object.entries(filters).some(([, values]) => values.length) ? <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+      {(Object.entries(filters) as Array<[FilterKey, string[]]>).flatMap(([key, values]) => values.map((value) => {
+        const choice = choices[key].find((item) => item.value === value);
+        return <button key={`${key}:${value}`} type="button" onClick={() => setFilters((current) => ({ ...current, [key]: current[key].filter((item) => item !== value) }))} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "2px 7px", border: `1px solid ${withAlpha(accent, 0.48)}`, borderRadius: 999, background: withAlpha(accent, 0.12), color: theme.colors.text, cursor: "pointer", font: "inherit", fontSize: "var(--fs-tiny)", lineHeight: 1.35, fontWeight: 900 }}>
+          <span style={{ color: accent }}>{labels[key]}</span> {choice?.label ?? value}<span aria-hidden style={{ color: theme.colors.red, fontSize: 14 }}>×</span>
+        </button>;
+      }))}
+    </div> : null}
+    <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflowX: "auto" }}>
+      <div style={{ minWidth: 1120, display: "grid", gridTemplateColumns: columns, gap: 12, padding: "12px 15px", background: `linear-gradient(90deg, ${withAlpha(accent, 0.15)}, rgba(255,255,255,0.055))`, boxShadow: `inset 0 2px 0 ${withAlpha(accent, 0.75)}` }}>
+        {headers.map((column) => <div key={column} style={{ fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>{column}</div>)}
+      </div>
+      {loading ? <div style={{ padding: 42, textAlign: "center", color: theme.colors.muted }}>Loading…</div>
+        : error ? <div role="alert" style={{ padding: 42, textAlign: "center", color: theme.colors.red }}>{error}</div>
+        : filtered.length ? filtered.map((mortal) => {
+          const player = mortal.player ? playersById.get(mortal.player.id) : undefined;
+          const age = ageOf(mortal, binderCurrentDate);
+          const dead = mortal.lifeStatus === "dead";
+          return <button key={mortal.id} type="button" onClick={() => navigate(`/binder/${binderId}/mortals/${mortal.id}`)} style={{ minWidth: 1120, width: "100%", display: "grid", gridTemplateColumns: columns, gap: 12, padding: "12px 15px", border: 0, borderTop: `1px solid ${theme.colors.panelBorder}`, background: "transparent", color: theme.colors.text, alignItems: "center", textAlign: "left", cursor: "pointer", font: "inherit" }}>
+            <span title={mortal.name} style={{ ...cell, color: theme.colors.text, fontWeight: 750, display: "flex", alignItems: "center", gap: 9 }}>
+              {mortal.imageUrl ? <img src={`${mortal.imageUrl}${mortal.imageUpdatedAt ? `?v=${mortal.imageUpdatedAt}` : ""}`} alt="" style={{ width: 34, height: 34, borderRadius: 6, objectFit: "cover", flex: "0 0 auto" }} /> : <span style={{ width: 34, height: 34, borderRadius: 6, background: withAlpha(accent, 0.12), flex: "0 0 auto" }} />}
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{mortal.name}</span>
+            </span>
+            <span title={player?.className || "None"} style={cell}>{player?.className || "None"}</span>
+            <span title={mortal.race?.name ?? "None"} style={cell}>{mortal.race?.name ?? "None"}</span>
+            <span style={cell}>{age ?? "None"}</span>
+            <span style={{ justifySelf: "start", display: "inline-flex", padding: "2px 7px", borderRadius: 5, color: "#fff", background: dead ? theme.colors.red : theme.colors.green, fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 800 }}>{dead ? "Dead" : "Alive"}</span>
+            <span title={player?.campaignName || "None"} style={cell}>{player?.campaignName || "None"}</span>
+            <span title={player?.playerName || "None"} style={cell}>{player?.playerName || "None"}</span>
+          </button>;
+        }) : <div style={{ padding: 48, textAlign: "center", color: theme.colors.muted }}>{pcs.length ? "No Player Characters match the current filters." : "No Player Character Mortals exist in this Binder."}</div>}
+    </div>
+  </div>;
+}

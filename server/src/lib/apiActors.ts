@@ -37,6 +37,7 @@ interface CharacterSheetDtoInput {
   imageUrl: string | null;
   characterData: Record<string, unknown> | null;
   sharedNotes: string;
+  isActive?: boolean;
   campaigns?: CharacterCampaignAssignmentDto[];
   campaignSharedNotes?: string;
   conditions?: Array<Record<string, unknown>>;
@@ -111,6 +112,7 @@ export function toCharacterSheetDto(
     sharedNotes: character.sharedNotes ?? "",
     characterData: character.characterData ?? null,
     campaigns: character.campaigns ?? [],
+    isActive: character.isActive !== false,
     ...(character.campaignSharedNotes !== undefined ? { campaignSharedNotes: character.campaignSharedNotes } : {}),
     sheet: {
       name: character.name,

@@ -263,6 +263,12 @@ export function rowToCampaign(row: Record<string, unknown>): StoredCampaign {
     color: (row.color as string | null) ?? null,
     imageUrl: readVersionedImageUrl(row),
     sharedNotes: (row.shared_notes as string | null) ?? "",
+    isActive: row.is_active !== 0,
+    binderId: typeof row.binder_id === "string" ? row.binder_id : null,
+    currentDate: {
+      text: typeof row.current_date_text === "string" ? row.current_date_text : null,
+      sort: typeof row.current_date_sort === "number" ? row.current_date_sort : null,
+    },
     ...readTimestamps(row),
   };
 }
@@ -356,6 +362,7 @@ export function rowToCharacterSheet(row: Record<string, unknown>): StoredCharact
     characterData: normalizedCharacterData,
     ...(sheet.deathSaves ? { deathSaves: sheet.deathSaves } : {}),
     sharedNotes: (row.shared_notes as string | null) ?? "",
+    isActive: row.is_active !== 0,
     ...readTimestamps(row),
   };
 }

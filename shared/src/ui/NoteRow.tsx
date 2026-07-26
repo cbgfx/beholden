@@ -3,7 +3,7 @@ import { ExpandableNoteItem } from "./ExpandableNoteItem";
 
 function renderInlineRichText(text: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
-  const pattern = /(\*\*[^*]+\*\*|__[^_]+__|\*[^*\n]+\*)/g;
+  const pattern = /(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|__[^_]+__|\*[^*\n]+\*)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   let key = 0;
@@ -15,7 +15,13 @@ function renderInlineRichText(text: string): React.ReactNode[] {
       nodes.push(<React.Fragment key={`txt-${key++}`}>{text.slice(lastIndex, index)}</React.Fragment>);
     }
 
-    if (token.startsWith("**") && token.endsWith("**")) {
+    const link = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    if (link) {
+      const href = /^\s*javascript:/i.test(link[2]) ? undefined : link[2];
+      nodes.push(href
+        ? <a key={`a-${key++}`} href={href} rel="noreferrer" style={{ color: "currentColor", textDecoration: "underline" }}>{link[1]}</a>
+        : <React.Fragment key={`raw-${key++}`}>{link[1]}</React.Fragment>);
+    } else if (token.startsWith("**") && token.endsWith("**")) {
       nodes.push(<b key={`b-${key++}`}>{token.slice(2, -2)}</b>);
     } else if (token.startsWith("__") && token.endsWith("__")) {
       nodes.push(<u key={`u-${key++}`}>{token.slice(2, -2)}</u>);
@@ -160,6 +166,10 @@ function renderNoteRichText(text: string): React.ReactNode {
   }
 
   return out;
+}
+
+export function MarkdownRichText({ text }: { text: string }) {
+  return <>{renderNoteRichText(text)}</>;
 }
 
 export function NoteRow({

@@ -615,7 +615,9 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   ];
   const identityFields = [
     ["Alignment", currentCharacterData.alignment],
-    ["Gender", currentCharacterData.gender],
+    ["Gender", typeof currentCharacterData.gender === "string"
+      ? currentCharacterData.gender.charAt(0).toUpperCase() + currentCharacterData.gender.slice(1).toLocaleLowerCase()
+      : currentCharacterData.gender],
     ["Age", currentCharacterData.age],
     ["Height", currentCharacterData.height],
     ["Weight", currentCharacterData.weight],

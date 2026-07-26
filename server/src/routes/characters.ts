@@ -2,6 +2,7 @@
 // Player-owned characters: campaign-agnostic CRUD + campaign assignment.
 
 import type { Express } from "express";
+import { z } from "zod";
 import type { ServerContext } from "../server/context.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
@@ -94,6 +95,19 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
         ),
       )),
     );
+  });
+
+  app.patch("/api/me/characters/:id/activity", requireAuth, (req, res) => {
+    const charId = requireParam(req, res, "id");
+    if (!charId) return;
+    const body = parseBody(z.object({ isActive: z.boolean() }).strict(), req);
+    const result = db.prepare(`
+      UPDATE user_characters
+      SET is_active = ?, updated_at = ?
+      WHERE id = ? AND user_id = ?
+    `).run(body.isActive ? 1 : 0, now(), charId, req.user!.userId);
+    if (result.changes === 0) return res.status(404).json({ ok: false, message: "Not found" });
+    res.json({ ok: true, isActive: body.isActive });
   });
 
   // Create a new user-owned character (no campaign required)

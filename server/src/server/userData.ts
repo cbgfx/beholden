@@ -170,6 +170,12 @@ export interface StoredCampaign extends Timestamps {
   color: string | null;
   imageUrl?: string | null;
   sharedNotes: string;
+  isActive: boolean;
+  binderId: string | null;
+  currentDate: {
+    text: string | null;
+    sort: number | null;
+  };
 }
 
 export interface StoredAdventure extends Timestamps {
@@ -273,6 +279,7 @@ export interface StoredCharacterSheet extends Timestamps, StoredActorVitals, Sto
   characterData: Record<string, unknown> | null;
   deathSaves?: StoredDeathSaves;
   sharedNotes: string;
+  isActive?: boolean;
 }
 
 export interface StoredINpc extends Timestamps {

@@ -91,6 +91,7 @@ export function toCharacterSheetDtoInput(
     imageUrl: string | null;
     characterData: Record<string, unknown> | null;
     sharedNotes: string;
+    isActive?: boolean;
     createdAt: number;
     updatedAt: number;
     deathSaves?: { success: number; fail: number } | undefined;
@@ -136,6 +137,7 @@ export function toCharacterSheetDtoInput(
     imageUrl: character.imageUrl,
     characterData: character.characterData,
     sharedNotes: character.sharedNotes ?? "",
+    isActive: character.isActive !== false,
     campaigns,
     ...(character.conditions ? { conditions: character.conditions } : {}),
     ...(character.overrides ? { overrides: character.overrides } : {}),

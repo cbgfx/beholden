@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { api, jsonInit } from "@/services/api";
+import { IconPlayers } from "@/icons";
 import { Select } from "@/ui/Select";
 import { accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
 import type { Campaign, UserCharacter } from "./PlayerHomeUtils";
@@ -96,7 +97,8 @@ export function CampaignCard({ campaign: c, characters, onOpen, onAssigned }: {
         <div style={{ fontSize: "var(--fs-title)", fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {c.name}
         </div>
-        <div style={{ fontSize: "var(--fs-subtitle)", color: C.muted }}>
+        <div style={{ fontSize: "var(--fs-subtitle)", color: C.muted, display: "flex", alignItems: "center", gap: 6 }}>
+          <IconPlayers size={16} />
           {c.playerCount} player{c.playerCount !== 1 ? "s" : ""}
         </div>
 

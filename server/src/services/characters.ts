@@ -49,7 +49,7 @@ export function getAssignments(db: Database.Database, charId: string): Assignmen
       SELECT p.campaign_id, p.id AS player_id, ca.name AS campaign_name
       FROM players p
       JOIN campaigns ca ON ca.id = p.campaign_id
-      WHERE p.character_id = ?
+      WHERE p.character_id = ? AND ca.is_active = 1
     `)
     .all(charId) as Assignment[];
 }
@@ -66,6 +66,7 @@ export function getAssignmentsForCharacters(
       FROM players p
       JOIN campaigns ca ON ca.id = p.campaign_id
       WHERE p.character_id IN (${charIds.map(() => "?").join(",")})
+        AND ca.is_active = 1
     `)
     .all(...charIds) as Array<Assignment & { character_id: string }>;
   for (const { character_id, ...assignment } of rows) {
