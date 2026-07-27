@@ -408,8 +408,6 @@ CREATE INDEX IF NOT EXISTS idx_adventures_campaign   ON adventures(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_encounters_adventure  ON encounters(adventure_id);
 CREATE INDEX IF NOT EXISTS idx_encounters_campaign   ON encounters(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_inpcs_campaign        ON inpcs(campaign_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_inpcs_campaign_binder_mortal
-  ON inpcs(campaign_id, binder_mortal_id) WHERE binder_mortal_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_notes_campaign        ON notes(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_notes_adventure       ON notes(adventure_id);
 CREATE INDEX IF NOT EXISTS idx_treasure_campaign     ON treasure(campaign_id);

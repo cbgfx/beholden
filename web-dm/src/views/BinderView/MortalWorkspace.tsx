@@ -10,6 +10,8 @@ import { MortalRecordModal } from "@/views/BinderView/MortalRecordModal";
 import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
 import { fetchBinderRecordOptions, syncBinderMentions, type BinderRecordOption } from "@/services/binderLoreApi";
 import { RelationshipPanel } from "./RelationshipPanel";
+import { BacklinksPanel } from "./BacklinksPanel";
+import { useValidMentionIds } from "./useValidMentionIds";
 
 const mortalTableColumns = "minmax(210px, 1.45fr) minmax(120px, 0.7fr) minmax(135px, 0.85fr) minmax(170px, 1fr) minmax(175px, 1fr) 130px 72px 96px 72px";
 const NONE_FILTER = "__none__";
@@ -97,6 +99,7 @@ function InlineRichTextField(props: {
   canEdit: boolean;
   onSave: (value: string | null) => Promise<void>;
   mentions?: Array<{ id: string; label: string; href: string; type?: string }>;
+  validMentionIds?: Set<string>;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(props.value ?? "");
@@ -124,7 +127,7 @@ function InlineRichTextField(props: {
         }}>Save</Button>
       </div>
     </div> : <div style={{ minHeight: 54, marginTop: 7, padding: "7px 8px", color: props.value ? theme.colors.text : theme.colors.muted, lineHeight: 1.55 }}>
-      {props.value ? <MarkdownRichText text={props.value} /> : `No ${props.label.toLocaleLowerCase()} yet.`}
+      {props.value ? <MarkdownRichText text={props.value} validMentionIds={props.validMentionIds} /> : `No ${props.label.toLocaleLowerCase()} yet.`}
     </div>}
   </section>;
 }
@@ -259,6 +262,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
   }, [reload]);
 
   const selected = props.recordId ? records.find((record) => record.id === props.recordId) : undefined;
+  const validMentionIds = useValidMentionIds(props.binderId, selected?.notes, selected?.dmNotes);
 
   async function save(input: BinderMortalInput, image: File | null) {
     let saved: BinderMortal | null = null;
@@ -344,17 +348,18 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
                 </div>
               ))}
             </div>
-            <InlineRichTextField label="Notes" value={selected.notes} mentions={mentions} canEdit={props.canEdit} onSave={async (notes) => {
+            <InlineRichTextField label="Notes" value={selected.notes} mentions={mentions} validMentionIds={validMentionIds} canEdit={props.canEdit} onSave={async (notes) => {
               await updateBinderMortal(props.binderId, selected.id, { notes });
               await syncBinderMentions(props.binderId, selected.id, "description", notes);
               await reload();
             }} />
-            <InlineRichTextField label="DM Notes" value={selected.dmNotes} mentions={mentions} canEdit={props.canEdit} onSave={async (dmNotes) => {
+            <InlineRichTextField label="DM Notes" value={selected.dmNotes} mentions={mentions} validMentionIds={validMentionIds} canEdit={props.canEdit} onSave={async (dmNotes) => {
               await updateBinderMortal(props.binderId, selected.id, { dmNotes });
               await syncBinderMentions(props.binderId, selected.id, "dm_notes", dmNotes);
               await reload();
             }} />
             <RelationshipPanel binderId={props.binderId} recordId={selected.id} records={loreRecords} canEdit={props.canEdit} />
+            <BacklinksPanel binderId={props.binderId} recordId={selected.id} />
           </div>
         </article>
       </div>

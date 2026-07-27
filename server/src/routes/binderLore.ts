@@ -59,6 +59,9 @@ const MentionSyncBody = z.object({
   sourceField: z.string().trim().min(1).max(100),
   text: z.string().max(200_000).nullable(),
 }).strict();
+const RecordExistsBody = z.object({
+  ids: z.array(z.string().trim().min(1)).max(200),
+}).strict();
 
 type RecordRow = {
   id: string; binder_id: string; record_type: string; name: string;
@@ -189,6 +192,38 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
     res.json(rows.filter((row) => !types.length || types.includes(row.record_type)).map((row) => ({
       id: row.id, binderId: row.binder_id, type: row.record_type, name: row.name,
       route: routeFor(row.record_type, binderId, row.id),
+    })));
+  });
+  app.post("/api/binders/:binderId/records/exists", reader, (req, res) => {
+    const binderId = requireParam(req, res, "binderId");
+    if (!binderId) return;
+    const body = parseBody(RecordExistsBody, req);
+    if (!body.ids.length) return res.json({ existingIds: [] });
+    const placeholders = body.ids.map(() => "?").join(",");
+    const rows = ctx.db.prepare(
+      `SELECT id FROM binder_records WHERE binder_id = ? AND id IN (${placeholders})`,
+    ).all(binderId, ...body.ids) as Array<{ id: string }>;
+    res.json({ existingIds: rows.map((row) => row.id) });
+  });
+  app.get("/api/binders/:binderId/records/:recordId/backlinks", reader, (req, res) => {
+    const binderId = requireParam(req, res, "binderId");
+    const recordId = requireParam(req, res, "recordId");
+    if (!binderId || !recordId) return;
+    const rows = ctx.db.prepare(`
+      SELECT br.id AS source_record_id, br.name AS source_name, br.record_type AS source_type,
+             GROUP_CONCAT(DISTINCT m.source_field) AS fields
+      FROM binder_record_mentions m
+      JOIN binder_records br ON br.id = m.source_record_id AND br.binder_id = ?
+      WHERE m.target_record_id = ?
+      GROUP BY br.id
+      ORDER BY br.name COLLATE NOCASE
+    `).all(binderId, recordId) as Array<{ source_record_id: string; source_name: string; source_type: string; fields: string }>;
+    res.json(rows.map((row) => ({
+      id: row.source_record_id,
+      name: row.source_name,
+      type: row.source_type,
+      route: routeFor(row.source_type, binderId, row.source_record_id),
+      fields: row.fields.split(","),
     })));
   });
   app.put("/api/binders/:binderId/mentions", owner, (req, res) => {

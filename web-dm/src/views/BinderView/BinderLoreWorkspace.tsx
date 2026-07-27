@@ -12,6 +12,8 @@ import { Input } from "@/ui/Input";
 import { theme, withAlpha } from "@/theme/theme";
 import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
 import { RelationshipPanel } from "./RelationshipPanel";
+import { BacklinksPanel } from "./BacklinksPanel";
+import { useValidMentionIds } from "./useValidMentionIds";
 
 type CampaignOption = { id: string; name: string };
 type CompendiumOption = { id: string; name: string };
@@ -168,6 +170,7 @@ export function BinderLoreWorkspace(props: {
   const selected = props.type === "items"
     ? items.find((row) => row.id === props.recordId)
     : events.find((row) => row.id === props.recordId);
+  const validMentionIds = useValidMentionIds(props.binderId, selected?.description);
   const list = props.type === "items" ? items : events;
   const singular = props.type === "items" ? "Item" : "Event";
   const columns = props.type === "items" ? "2fr 1.2fr 1fr 1fr" : "2fr .8fr 1.4fr 1fr";
@@ -182,8 +185,9 @@ export function BinderLoreWorkspace(props: {
             if (props.type === "items") await deleteBinderItem(props.binderId, selected.id); else await deleteBinderEvent(props.binderId, selected.id);
             navigate(`/binder/${props.binderId}/${props.type}`); await reload(); await props.onRecordsChanged();
           }}>Delete</Button></div> : null}</header>
-        {"description" in selected && selected.description ? <MarkdownRichText text={selected.description} /> : null}
+        {"description" in selected && selected.description ? <MarkdownRichText text={selected.description} validMentionIds={validMentionIds} /> : null}
         <RelationshipPanel binderId={props.binderId} recordId={selected.id} records={records} canEdit={props.canEdit} />
+        <BacklinksPanel binderId={props.binderId} recordId={selected.id} />
       </article>
       {editor ? props.type === "items"
         ? <ItemEditor binderId={props.binderId} item={selected as BinderItem} records={records} compendium={compendium} onSaved={async () => { await reload(); await props.onRecordsChanged(); }} onClose={() => setEditor(null)} />

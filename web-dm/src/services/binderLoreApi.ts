@@ -51,3 +51,22 @@ export const deleteBinderRelationship = (binderId: string, id: string) =>
   api<{ ok: true }>(`${base(binderId)}/relationships/${id}`, { method: "DELETE" });
 export const syncBinderMentions = (binderId: string, sourceRecordId: string, sourceField: string, text: string | null) =>
   api<{ ok: true }>(`${base(binderId)}/mentions`, jsonInit("PUT", { sourceRecordId, sourceField, text }));
+export type BinderBacklink = { id: string; name: string; type: string; route: string; fields: string[] };
+export const fetchBinderBacklinks = (binderId: string, recordId: string) =>
+  api<BinderBacklink[]>(`${base(binderId)}/records/${recordId}/backlinks`);
+
+const MENTION_ID_PATTERN = /\[[^\]]+\]\(\/binder\/[^/]+\/[^/]+\/([^/?#)]+)\)/g;
+export function extractMentionIds(...texts: Array<string | null | undefined>): string[] {
+  const ids = new Set<string>();
+  for (const text of texts) {
+    if (!text) continue;
+    MENTION_ID_PATTERN.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = MENTION_ID_PATTERN.exec(text)) !== null) ids.add(decodeURIComponent(match[1]!));
+  }
+  return [...ids];
+}
+export const checkBinderRecordsExist = (binderId: string, ids: string[]) =>
+  ids.length
+    ? api<{ existingIds: string[] }>(`${base(binderId)}/records/exists`, jsonInit("POST", { ids })).then((res) => new Set(res.existingIds))
+    : Promise.resolve(new Set<string>());

@@ -19,6 +19,8 @@ import { ReferenceRecordModal } from "@/views/BinderView/ReferenceRecordModal";
 import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
 import { fetchBinderRecordOptions, syncBinderMentions, type BinderRecordOption } from "@/services/binderLoreApi";
 import { RelationshipPanel } from "./RelationshipPanel";
+import { BacklinksPanel } from "./BacklinksPanel";
+import { useValidMentionIds } from "./useValidMentionIds";
 
 const LABELS: Record<BinderReferenceType, { plural: string; singular: string; usage: string }> = {
   races: { plural: "Races", singular: "Race", usage: "Mortals" },
@@ -107,6 +109,7 @@ export function ReferenceWorkspace(props: {
         : undefined;
 
   const selected = props.recordId ? records.find((record) => record.id === props.recordId) : undefined;
+  const validMentionIds = useValidMentionIds(props.binderId, selected?.description);
 
   useEffect(() => {
     if (!selected) return;
@@ -249,7 +252,7 @@ export function ReferenceWorkspace(props: {
                       <Button disabled={inlineSaving} onClick={async () => { await saveInline({ description: inlineDescription }); setEditingDescription(false); }}>Save</Button>
                     </div>
                   </div> : <div style={{ minHeight: 72, marginTop: 7, padding: "8px 9px", color: selected.description ? theme.colors.text : theme.colors.muted, fontSize: "var(--fs-body)", lineHeight: 1.55 }}>
-                    {selected.description ? <MarkdownRichText text={selected.description} /> : "No description yet."}
+                    {selected.description ? <MarkdownRichText text={selected.description} validMentionIds={validMentionIds} /> : "No description yet."}
                   </div>}
                 </section>
               ) : null}
@@ -270,6 +273,7 @@ export function ReferenceWorkspace(props: {
                 <div style={{ fontSize: "var(--fs-body)", marginTop: 7 }}>{selected.usageCount || "None"}</div>
               </section>
               <RelationshipPanel binderId={props.binderId} recordId={selected.id} records={loreRecords} canEdit={props.canEdit} />
+              <BacklinksPanel binderId={props.binderId} recordId={selected.id} />
             </div>
           </article>
         </div>
