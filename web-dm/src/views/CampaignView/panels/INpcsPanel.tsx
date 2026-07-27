@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";
 import { theme } from "@/theme/theme";
@@ -27,6 +28,7 @@ type Props = {
 };
 
 export function INpcsPanel(props: Props) {
+  const navigate = useNavigate();
   const [isPickerOpen, setIsPickerOpen] = React.useState(false);
   const [binderChoiceOpen, setBinderChoiceOpen] = React.useState(false);
   const [importOpen, setImportOpen] = React.useState(false);
@@ -169,6 +171,9 @@ export function INpcsPanel(props: Props) {
                 }
                 menuItems={[
                   { label: "Edit iNPC", onClick: () => props.onEditINpc(i.id) },
+                  ...(i.binderMortalId && props.binderId
+                    ? [{ label: "Binder", onClick: () => navigate(`/binder/${props.binderId}/mortals/${i.binderMortalId}`) }]
+                    : []),
                   { label: "Delete iNPC", danger: true, onClick: () => props.onDeleteINpc(i.id) },
                 ]}
               />

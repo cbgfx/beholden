@@ -1,5 +1,16 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { ExpandableNoteItem } from "./ExpandableNoteItem";
+
+const mentionLinkStyle: React.CSSProperties = {
+  color: "#7dd3fc",
+  background: "rgba(125,211,252,0.14)",
+  padding: "1px 6px",
+  borderRadius: 5,
+  fontWeight: 700,
+  textDecoration: "none",
+  whiteSpace: "nowrap",
+};
 
 function renderInlineRichText(text: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
@@ -18,8 +29,11 @@ function renderInlineRichText(text: string): React.ReactNode[] {
     const link = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
     if (link) {
       const href = /^\s*javascript:/i.test(link[2]) ? undefined : link[2];
+      const isMention = href?.startsWith("/binder/");
       nodes.push(href
-        ? <a key={`a-${key++}`} href={href} rel="noreferrer" style={{ color: "currentColor", textDecoration: "underline" }}>{link[1]}</a>
+        ? isMention
+          ? <Link key={`m-${key++}`} to={href} style={mentionLinkStyle}>{link[1]}</Link>
+          : <a key={`a-${key++}`} href={href} rel="noreferrer" style={{ color: "currentColor", textDecoration: "underline" }}>{link[1]}</a>
         : <React.Fragment key={`raw-${key++}`}>{link[1]}</React.Fragment>);
     } else if (token.startsWith("**") && token.endsWith("**")) {
       nodes.push(<b key={`b-${key++}`}>{token.slice(2, -2)}</b>);

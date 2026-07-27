@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { IconPlus, IconTrash } from "@/icons";
+import { IconPencil, IconPlus, IconTrash } from "@/icons";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { useConfirm } from "@/confirm/ConfirmContext";
@@ -229,7 +229,12 @@ export function ReferenceWorkspace(props: {
               </div>
               {showDescription ? (
                 <section>
-                  <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>Description</div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                    <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>Description</div>
+                    {props.canEdit && !editingDescription ? <button type="button" onClick={() => setEditingDescription(true)} title="Edit description" style={{ display: "inline-flex", alignItems: "center", gap: 5, border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}>
+                      <IconPencil size={13} /> Edit
+                    </button> : null}
+                  </div>
                   {editingDescription && props.canEdit ? <div style={{ display: "grid", gap: 9, marginTop: 7 }}>
                     <WysiwygNoteEditor
                       value={inlineDescription}
@@ -243,13 +248,9 @@ export function ReferenceWorkspace(props: {
                       <Button variant="ghost" onClick={() => { setInlineDescription(selected.description ?? ""); setEditingDescription(false); }}>Cancel</Button>
                       <Button disabled={inlineSaving} onClick={async () => { await saveInline({ description: inlineDescription }); setEditingDescription(false); }}>Save</Button>
                     </div>
-                  </div> : <button
-                    type="button"
-                    onClick={() => { if (props.canEdit) setEditingDescription(true); }}
-                    style={{ display: "block", width: "100%", minHeight: 72, marginTop: 7, padding: "8px 9px", border: "1px solid transparent", borderRadius: theme.radius.control, background: "transparent", color: selected.description ? theme.colors.text : theme.colors.muted, font: "inherit", fontSize: "var(--fs-body)", lineHeight: 1.55, textAlign: "left", cursor: props.canEdit ? "text" : "default" }}
-                  >
-                    {selected.description ? <MarkdownRichText text={selected.description} /> : "Click to add a description…"}
-                  </button>}
+                  </div> : <div style={{ minHeight: 72, marginTop: 7, padding: "8px 9px", color: selected.description ? theme.colors.text : theme.colors.muted, fontSize: "var(--fs-body)", lineHeight: 1.55 }}>
+                    {selected.description ? <MarkdownRichText text={selected.description} /> : "No description yet."}
+                  </div>}
                 </section>
               ) : null}
               {parentLabel ? (
@@ -290,7 +291,7 @@ export function ReferenceWorkspace(props: {
         </div>
 
         <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: showDescription ? "minmax(190px, 1fr) minmax(260px, 2fr) 140px" : "minmax(240px, 1fr) 160px", gap: 12, padding: "12px 15px", background: `linear-gradient(90deg, ${withAlpha(props.accent, 0.15)}, rgba(255,255,255,0.055))`, boxShadow: `inset 0 2px 0 ${withAlpha(props.accent, 0.75)}`, borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
+          <div style={{ display: "grid", gridTemplateColumns: showDescription ? "minmax(190px, 1fr) minmax(260px, 2fr) 140px" : "minmax(240px, 1fr) 160px", gap: 12, padding: "12px 15px", background: withAlpha(props.accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
             {(showDescription ? ["Name", "Description", labels.usage] : ["Name", labels.usage]).map((column) => (
               <div key={column} style={{ color: theme.colors.text, fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>{column}</div>
             ))}

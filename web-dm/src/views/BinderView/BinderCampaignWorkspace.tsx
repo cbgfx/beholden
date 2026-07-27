@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { IconCampaign } from "@/icons";
+import { IconCampaign, IconPencil } from "@/icons";
 import { Button } from "@/ui/Button";
 import { theme, withAlpha } from "@/theme/theme";
 import type { Campaign } from "@/domain/types/domain";
@@ -19,7 +19,12 @@ function CampaignRichText(props: {
 
   return (
     <section style={{ paddingTop: 20, borderTop: `1px solid ${withAlpha(props.accent, 0.18)}` }}>
-      <h2 style={{ margin: "0 0 10px", color: theme.colors.text, fontSize: "var(--fs-title)" }}>{props.label}</h2>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
+        <h2 style={{ margin: 0, color: theme.colors.text, fontSize: "var(--fs-title)" }}>{props.label}</h2>
+        {!editing ? <button type="button" onClick={() => setEditing(true)} title={`Edit ${props.label.toLocaleLowerCase()}`} style={{ display: "inline-flex", alignItems: "center", gap: 5, border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}>
+          <IconPencil size={13} /> Edit
+        </button> : null}
+      </div>
       {editing ? (
         <div style={{ display: "grid", gap: 10 }}>
           <WysiwygNoteEditor
@@ -46,13 +51,9 @@ function CampaignRichText(props: {
           </div>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          style={{ display: "block", width: "100%", minHeight: 90, padding: "8px 2px", border: 0, background: "transparent", color: props.value ? theme.colors.text : theme.colors.muted, font: "inherit", fontSize: "var(--fs-body)", lineHeight: 1.65, textAlign: "left", cursor: "text" }}
-        >
-          {props.value ? <MarkdownRichText text={props.value} /> : `Click to add ${props.label.toLocaleLowerCase()}…`}
-        </button>
+        <div style={{ minHeight: 90, padding: "8px 2px", color: props.value ? theme.colors.text : theme.colors.muted, fontSize: "var(--fs-body)", lineHeight: 1.65 }}>
+          {props.value ? <MarkdownRichText text={props.value} /> : `No ${props.label.toLocaleLowerCase()} yet.`}
+        </div>
       )}
     </section>
   );

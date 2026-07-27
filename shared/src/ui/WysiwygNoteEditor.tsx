@@ -17,8 +17,13 @@ function escapeHtml(value: string): string {
 
 function renderInlineMarkdown(value: string): string {
   return escapeHtml(value)
-    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_match, label: string, href: string) =>
-      /^\s*javascript:/i.test(href) ? label : `<a href="${href}" rel="noreferrer">${label}</a>`)
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_match, label: string, href: string) => {
+      if (/^\s*javascript:/i.test(href)) return label;
+      const mentionStyle = href.startsWith("/binder/")
+        ? ' style="color:#7dd3fc;background:rgba(125,211,252,0.14);padding:1px 6px;border-radius:5px;font-weight:700;text-decoration:none;"'
+        : "";
+      return `<a href="${href}" rel="noreferrer"${mentionStyle}>${label}</a>`;
+    })
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/__([^_]+)__/g, "<u>$1</u>")
     .replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
@@ -437,6 +442,10 @@ export function WysiwygNoteEditor(props: {
           suppressContentEditableWarning
           role="textbox"
           aria-multiline="true"
+          onClick={(event) => {
+            const anchor = (event.target as HTMLElement).closest("a");
+            if (anchor) event.preventDefault();
+          }}
           onFocus={() => {
             focusedRef.current = true;
             setIsFocused(true);

@@ -88,8 +88,7 @@ function EmptyTable({ item, accent }: { item: NavItem; accent: string }) {
           gridTemplateColumns: `repeat(${item.columns.length}, minmax(130px, 1fr))`,
           minWidth: 680,
           padding: "11px 14px",
-          background: `linear-gradient(90deg, ${withAlpha(accent, 0.15)}, rgba(255,255,255,0.055))`,
-          boxShadow: `inset 0 2px 0 ${withAlpha(accent, 0.75)}`,
+          background: withAlpha(accent, 0.08),
           borderBottom: `1px solid ${theme.colors.panelBorder}`,
         }}
       >
@@ -108,7 +107,7 @@ function CampaignTable({ binderId, campaigns, accent }: { binderId: string; camp
   const columns = "minmax(280px, 1.5fr) minmax(180px, 1fr) minmax(130px, 0.7fr) minmax(220px, 1.15fr)";
   return (
     <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
-      <div style={{ display: "grid", gridTemplateColumns: columns, gap: 18, padding: "12px 15px", background: `linear-gradient(90deg, ${withAlpha(accent, 0.15)}, rgba(255,255,255,0.055))`, boxShadow: `inset 0 2px 0 ${withAlpha(accent, 0.75)}`, borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
+      <div style={{ display: "grid", gridTemplateColumns: columns, gap: 18, padding: "12px 15px", background: withAlpha(accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
         {["Name", "Current date", "Players", "Open Campaign"].map((column) => (
           <div key={column} style={{ color: theme.colors.text, fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>{column}</div>
         ))}
@@ -203,12 +202,12 @@ export function BinderView({ binder, campaigns, canEdit, onRecordsChanged }: { b
                         borderRadius: theme.radius.control,
                         color: active || hovered ? theme.colors.text : "rgba(232,237,245,0.76)",
                         background: active
-                          ? withAlpha(accent, 0.15)
+                          ? `linear-gradient(90deg, ${withAlpha(accent, 0.12)}, ${withAlpha(accent, 0.025)} 30%, transparent 62%), ${withAlpha(theme.colors.shadowColor, 0.14)}`
                           : hovered
                             ? withAlpha(accent, 0.08)
                             : "transparent",
-                        border: `1px solid ${active ? withAlpha(accent, 0.42) : hovered ? withAlpha(accent, 0.2) : "transparent"}`,
-                        boxShadow: active ? `inset 3px 0 0 ${accent}` : "none",
+                        border: `1px solid ${hovered && !active ? withAlpha(accent, 0.2) : "transparent"}`,
+                        boxShadow: active ? `inset 3px 0 0 ${withAlpha(accent, 0.78)}` : "none",
                         transform: hovered && !active ? "translateX(3px)" : "none",
                         textDecoration: "none",
                         fontSize: "var(--fs-body)",

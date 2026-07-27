@@ -194,7 +194,7 @@ export function BinderLoreWorkspace(props: {
   return <div style={{ display: "grid", gap: 12 }}>
     {props.canEdit ? <div style={{ display: "flex", justifyContent: "flex-end" }}><Button onClick={() => setEditor("new")}>+ New {singular}</Button></div> : null}
     <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
-      <div style={{ display: "grid", gridTemplateColumns: columns, gap: 12, padding: "11px 14px", background: `linear-gradient(90deg,${withAlpha(props.accent,.18)},rgba(255,255,255,.04))`, borderTop: `3px solid ${props.accent}` }}>
+      <div style={{ display: "grid", gridTemplateColumns: columns, gap: 12, padding: "11px 14px", background: withAlpha(props.accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
         {headers.map((header) => <strong key={header}>{header}</strong>)}
       </div>
       {list.map((row) => {

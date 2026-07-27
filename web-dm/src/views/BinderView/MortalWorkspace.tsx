@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { IconCakeSlice, IconDna1, IconOrganigram, IconPencil, IconPlus, IconShield, IconTrash, IconVillage } from "@/icons";
 import { Button } from "@/ui/Button";
@@ -11,7 +11,7 @@ import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
 import { fetchBinderRecordOptions, syncBinderMentions, type BinderRecordOption } from "@/services/binderLoreApi";
 import { RelationshipPanel } from "./RelationshipPanel";
 
-const mortalTableColumns = "minmax(210px, 1.45fr) minmax(135px, 0.85fr) minmax(170px, 1fr) minmax(175px, 1fr) 130px 88px 96px 72px";
+const mortalTableColumns = "minmax(210px, 1.45fr) minmax(120px, 0.7fr) minmax(135px, 0.85fr) minmax(170px, 1fr) minmax(175px, 1fr) 130px 72px 96px 72px";
 const NONE_FILTER = "__none__";
 
 type MortalFilters = {
@@ -103,7 +103,12 @@ function InlineRichTextField(props: {
   const [saving, setSaving] = useState(false);
   useEffect(() => setDraft(props.value ?? ""), [props.value]);
   return <section>
-    <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase" }}>{props.label}</div>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+      <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase" }}>{props.label}</div>
+      {props.canEdit && !editing ? <button type="button" onClick={() => setEditing(true)} title={`Edit ${props.label.toLocaleLowerCase()}`} style={{ display: "inline-flex", alignItems: "center", gap: 5, border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}>
+        <IconPencil size={13} /> Edit
+      </button> : null}
+    </div>
     {editing ? <div style={{ display: "grid", gap: 9, marginTop: 7 }}>
       <WysiwygNoteEditor value={draft} onChange={setDraft} mentions={props.mentions} placeholder={`Add ${props.label.toLocaleLowerCase()}…`} minHeight={220} theme={{ radius: theme.radius.control, panelBorder: theme.colors.panelBorder, inputBg: theme.colors.inputBg, text: theme.colors.text }} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
@@ -118,9 +123,9 @@ function InlineRichTextField(props: {
           }
         }}>Save</Button>
       </div>
-    </div> : <button type="button" onClick={() => { if (props.canEdit) setEditing(true); }} style={{ display: "block", width: "100%", minHeight: 54, marginTop: 7, padding: "7px 8px", border: "1px solid transparent", borderRadius: theme.radius.control, background: "transparent", color: props.value ? theme.colors.text : theme.colors.muted, font: "inherit", lineHeight: 1.55, textAlign: "left", cursor: props.canEdit ? "text" : "default" }}>
-      {props.value ? <MarkdownRichText text={props.value} /> : `Click to add ${props.label.toLocaleLowerCase()}…`}
-    </button>}
+    </div> : <div style={{ minHeight: 54, marginTop: 7, padding: "7px 8px", color: props.value ? theme.colors.text : theme.colors.muted, lineHeight: 1.55 }}>
+      {props.value ? <MarkdownRichText text={props.value} /> : `No ${props.label.toLocaleLowerCase()} yet.`}
+    </div>}
   </section>;
 }
 
@@ -283,17 +288,29 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
 
   if (selected) {
     const age = mortalAge(selected, props.binderCurrentDate);
-    const facts = ([
-      ["Race", selected.race?.name ?? "None"],
-      ["Gender", selected.gender ? selected.gender[0]!.toUpperCase() + selected.gender.slice(1) : "Needs gender"],
-      ["Age", age === null ? "None" : String(age)],
-      ["Location", selected.location?.name ?? "None"],
-      ["Organizations", selected.organizations.map((organization) => organization.name).join(", ") || "None"],
-      ["Position", selected.position?.name ?? "None"],
-      ...(selected.mortalType === "player_character"
-        ? [["Player", selected.player?.playerName || "None"] as [string, string]]
+    const genderColor = selected.gender === "male" ? "#7dd3fc" : selected.gender === "female" ? "#f9a8d4" : null;
+    const linkedPlayer = selected.player ? options.players.find((player) => player.id === selected.player!.id) : undefined;
+    const facts: Array<{ key: string; icon: React.ReactNode; label: string; node: React.ReactNode }> = [
+      ...(linkedPlayer?.className ? [{ key: "class", icon: <IconShield size={16} />, label: "Class", node: linkedPlayer.className as React.ReactNode }] : []),
+      ...(selected.position ? [{ key: "position", icon: <IconShield size={16} />, label: "Position", node: selected.position.name as React.ReactNode }] : []),
+      ...(selected.organizations.length ? [{ key: "organizations", icon: <IconOrganigram size={16} />, label: "Organizations", node: selected.organizations.map((organization) => organization.name).join(", ") as React.ReactNode }] : []),
+      ...(selected.location ? [{ key: "location", icon: <IconVillage size={16} />, label: "Location", node: selected.location.name as React.ReactNode }] : []),
+      ...(selected.race ? [{ key: "race", icon: <IconDna1 size={16} />, label: "Race", node: selected.race.name as React.ReactNode }] : []),
+      ...(age !== null ? [{ key: "age", icon: <IconCakeSlice size={16} />, label: "Age", node: String(age) as React.ReactNode }] : []),
+      {
+        key: "gender", icon: null, label: "Gender",
+        node: genderColor
+          ? <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: genderColor, background: withAlpha(genderColor, 0.16), fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 750 }}>{selected.gender === "male" ? "Male" : "Female"}</span>
+          : <span style={{ color: theme.colors.red }}>Needs gender</span>,
+      },
+      {
+        key: "status", icon: null, label: "Status",
+        node: <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 5, color: "#fff", background: selected.lifeStatus === "dead" ? theme.colors.red : theme.colors.green, fontSize: "var(--fs-small)", fontWeight: 800 }}>{selected.lifeStatus === "dead" ? "Dead" : "Alive"}</span>,
+      },
+      ...(selected.mortalType === "player_character" && selected.player?.playerName
+        ? [{ key: "player", icon: null, label: "Player", node: selected.player.playerName as React.ReactNode }]
         : []),
-    ] as Array<[string, string]>).filter(([, value]) => value !== "None");
+    ];
     const mentions = loreRecords.filter((row) => row.id !== selected.id).map((row) => ({
       id: row.id, label: row.name, href: row.route, type: row.type,
     }));
@@ -305,7 +322,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
           <div style={{ padding: 20, display: "grid", gap: 16, maxWidth: 1240 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "start" }}>
               <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-                <button type="button" onClick={() => { if (props.canEdit) setModalRecord(selected); }} title={props.canEdit ? "Edit portrait" : undefined} style={{ width: 84, height: 84, padding: 0, border: `1px dashed ${theme.colors.panelBorder}`, borderRadius: theme.radius.control, overflow: "hidden", background: withAlpha(props.accent, 0.1), color: theme.colors.muted, cursor: props.canEdit ? "pointer" : "default", flex: "0 0 auto" }}>
+                <button type="button" onClick={() => { if (props.canEdit) setModalRecord(selected); }} title={props.canEdit ? "Edit portrait" : undefined} style={{ width: 84, height: 84, padding: 0, border: `1px solid ${withAlpha(props.accent, 0.3)}`, borderRadius: theme.radius.control, overflow: "hidden", background: withAlpha(props.accent, 0.1), color: theme.colors.muted, cursor: props.canEdit ? "pointer" : "default", flex: "0 0 auto" }}>
                   {selected.imageUrl
                     ? <img src={`${selected.imageUrl}${selected.imageUpdatedAt ? `?v=${selected.imageUpdatedAt}` : ""}`} alt={`${selected.name} portrait`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     : <span style={{ fontSize: "var(--fs-small)", opacity: 0.72 }}>Portrait</span>}
@@ -318,23 +335,14 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
               </div> : null}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", columnGap: 30, rowGap: 0 }}>
-              {facts.map(([label, value]) => <div key={label} style={{ minHeight: 42, padding: "8px 2px", display: "grid", gridTemplateColumns: label === "Gender" ? "1fr" : "105px minmax(0, 1fr)", gap: 10, alignItems: "center", borderBottom: `1px solid ${withAlpha(props.accent, 0.14)}` }}>
-                {label !== "Gender" ? <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, display: "inline-flex", alignItems: "center", gap: 6 }}>
-                  {label === "Race" ? <IconDna1 size={16} />
-                    : label === "Age" ? <IconCakeSlice size={16} />
-                      : label === "Location" ? <IconVillage size={16} />
-                        : label === "Organizations" ? <IconOrganigram size={16} />
-                          : label === "Position" ? <IconShield size={16} />
-                            : null}
-                  {label}
-                </div> : null}
-                {label === "Age" ? <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span>{value}</span>
-                  <span style={{ padding: "2px 7px", borderRadius: 5, color: "#fff", background: selected.lifeStatus === "dead" ? theme.colors.red : theme.colors.green, fontSize: "var(--fs-small)", fontWeight: 800 }}>{selected.lifeStatus === "dead" ? "Dead" : "Alive"}</span>
-                </div> : label === "Gender" ? <div>
-                  <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: selected.gender === "male" ? "#7dd3fc" : "#f9a8d4", background: withAlpha(selected.gender === "male" ? "#7dd3fc" : "#f9a8d4", 0.16), fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 750 }}>{value}</span>
-                </div> : <div style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{value}</div>}
-              </div>)}
+              {facts.map(({ key, icon, label, node }) => (
+                <div key={key} style={{ minHeight: 42, padding: "8px 2px", display: "grid", gridTemplateColumns: "105px minmax(0, 1fr)", gap: 10, alignItems: "center", borderBottom: `1px solid ${withAlpha(props.accent, 0.14)}` }}>
+                  <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    {icon}{label}
+                  </div>
+                  <div style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{node}</div>
+                </div>
+              ))}
             </div>
             <InlineRichTextField label="Notes" value={selected.notes} mentions={mentions} canEdit={props.canEdit} onSave={async (notes) => {
               await updateBinderMortal(props.binderId, selected.id, { notes });
@@ -414,13 +422,14 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
         </div>
       ) : null}
       <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflowX: "auto", overflowY: "hidden" }}>
-        <div style={{ minWidth: 1120, display: "grid", gridTemplateColumns: mortalTableColumns, gap: 12, padding: "12px 15px", background: `linear-gradient(90deg, ${withAlpha(props.accent, 0.15)}, rgba(255,255,255,0.055))`, boxShadow: `inset 0 2px 0 ${withAlpha(props.accent, 0.75)}` }}>
-          {["Name", "Position", "Organization", "Location", "Species", "Status", "Gender", "Age"].map((column) => <div key={column} style={{ fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>{column}</div>)}
+        <div style={{ minWidth: 1120, display: "grid", gridTemplateColumns: mortalTableColumns, gap: 12, padding: "12px 15px", background: withAlpha(props.accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
+          {["Name", "Class", "Position", "Organization", "Location", "Species", "Age", "Gender", "Status"].map((column) => <div key={column} style={{ fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>{column}</div>)}
         </div>
         {loading ? <div style={{ padding: 42, textAlign: "center", color: theme.colors.muted }}>Loading…</div>
           : error ? <div role="alert" style={{ padding: 42, textAlign: "center", color: theme.colors.red }}>{error}</div>
           : filteredRecords.length ? filteredRecords.map((record) => {
             const age = mortalAge(record, props.binderCurrentDate);
+            const className = record.player ? options.players.find((player) => player.id === record.player!.id)?.className : undefined;
             const genderColor = record.gender === "male" ? "#7dd3fc" : record.gender === "female" ? "#f9a8d4" : null;
             const cell = { color: theme.colors.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
             return <button key={record.id} type="button" onClick={() => navigate(`/binder/${props.binderId}/mortals/${record.id}`)} onMouseEnter={() => setHoveredId(record.id)} onMouseLeave={() => setHoveredId(null)} style={{ minWidth: 1120, width: "100%", display: "grid", gridTemplateColumns: mortalTableColumns, alignItems: "center", gap: 12, padding: "11px 15px", border: 0, borderTop: `1px solid ${theme.colors.panelBorder}`, background: hoveredId === record.id ? withAlpha(props.accent, 0.08) : "transparent", color: theme.colors.text, textAlign: "left", cursor: "pointer", font: "inherit" }}>
@@ -428,13 +437,14 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
                 {record.imageUrl ? <img src={`${record.imageUrl}${record.imageUpdatedAt ? `?v=${record.imageUpdatedAt}` : ""}`} alt="" style={{ width: 34, height: 34, borderRadius: 6, objectFit: "cover", flex: "0 0 auto" }} /> : <span style={{ width: 34, height: 34, borderRadius: 6, background: withAlpha(props.accent, 0.12), flex: "0 0 auto" }} />}
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{record.name}</span>
               </span>
+              <span title={className || "None"} style={cell}>{className || "None"}</span>
               <span title={record.organizations.flatMap((organization) => organization.position?.name ?? []).join(", ") || "None"} style={cell}>{record.organizations.flatMap((organization) => organization.position?.name ?? []).join(", ") || "None"}</span>
               <span title={record.organizations.map((organization) => organization.name).join(", ") || "None"} style={cell}>{record.organizations.map((organization) => organization.name).join(", ") || "None"}</span>
               <span title={record.location?.name ?? "None"} style={cell}>{record.location?.name ?? "None"}</span>
               <span title={record.race?.name ?? "None"} style={cell}>{record.race?.name ?? "None"}</span>
-              <span style={{ justifySelf: "start", display: "inline-flex", padding: "2px 7px", borderRadius: 5, color: "#fff", background: record.lifeStatus === "dead" ? theme.colors.red : theme.colors.green, fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 800 }}>{record.lifeStatus === "dead" ? "Dead" : "Alive"}</span>
-              <span>{genderColor ? <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: genderColor, background: withAlpha(genderColor, 0.16), fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 750 }}>{record.gender === "male" ? "Male" : "Female"}</span> : <span style={{ ...cell, color: theme.colors.red }}>Needs gender</span>}</span>
               <span style={cell}>{age ?? "None"}</span>
+              <span>{genderColor ? <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: genderColor, background: withAlpha(genderColor, 0.16), fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 750 }}>{record.gender === "male" ? "Male" : "Female"}</span> : <span style={{ ...cell, color: theme.colors.red }}>Needs gender</span>}</span>
+              <span style={{ justifySelf: "start", display: "inline-flex", padding: "2px 7px", borderRadius: 5, color: "#fff", background: record.lifeStatus === "dead" ? theme.colors.red : theme.colors.green, fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 800 }}>{record.lifeStatus === "dead" ? "Dead" : "Alive"}</span>
             </button>;
           }) : <div style={{ padding: 48, textAlign: "center", color: theme.colors.muted }}>{records.length ? "No Mortals match the current filters." : query ? "No Mortals match your search." : "No Mortals yet."}</div>}
       </div>

@@ -139,9 +139,10 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
     if (!campaignId) return;
     const { mortalId } = parseBody(BinderMortalInpcBody, req);
     const source = db.prepare(`
-      SELECT m.id, m.name, npc.monster_id
+      SELECT m.id, br.name, npc.monster_id
       FROM campaigns c
-      JOIN mortals m ON m.binder_id = c.binder_id AND m.id = ?
+      JOIN binder_records br ON br.binder_id = c.binder_id AND br.id = ?
+      JOIN mortals m ON m.id = br.id
       JOIN binder_npcs npc ON npc.mortal_id = m.id
       WHERE c.id = ? AND c.binder_id IS NOT NULL
     `).get(mortalId, campaignId) as { id: string; name: string; monster_id: string | null } | undefined;
