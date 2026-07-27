@@ -6,6 +6,7 @@ export type BinderRecordOption = {
   type: string;
   name: string;
   route: string;
+  icon: string | null;
 };
 export type BinderAssociation = { id: string; name?: string; type?: string; role: string | null; description: string | null };
 export type BinderItem = {

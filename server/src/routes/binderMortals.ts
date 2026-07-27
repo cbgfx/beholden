@@ -270,13 +270,17 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
     const records = db.prepare(`
-      SELECT id, record_type AS type, name
-      FROM binder_records
-      WHERE binder_id = ? AND record_type IN (
+      SELECT br.id, br.record_type AS type, br.name,
+             COALESCE(o.icon, p.icon, poi.icon) AS icon
+      FROM binder_records br
+      LEFT JOIN binder_organizations o ON o.id = br.id AND br.record_type = 'organization'
+      LEFT JOIN binder_positions p ON p.id = br.id AND br.record_type = 'position'
+      LEFT JOIN binder_points_of_interest poi ON poi.id = br.id AND br.record_type = 'poi'
+      WHERE br.binder_id = ? AND br.record_type IN (
         'race', 'position', 'organization', 'continent', 'country', 'location', 'poi'
       )
-      ORDER BY name_key, id
-    `).all(binderId) as Array<{ id: string; type: string; name: string }>;
+      ORDER BY br.name_key, br.id
+    `).all(binderId) as Array<{ id: string; type: string; name: string; icon: string | null }>;
     const playerRows = db.prepare(`
       SELECT p.id, p.player_name AS playerName, p.character_name AS characterName,
              p.class_name AS className,

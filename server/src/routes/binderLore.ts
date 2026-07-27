@@ -64,7 +64,7 @@ const RecordExistsBody = z.object({
 }).strict();
 
 type RecordRow = {
-  id: string; binder_id: string; record_type: string; name: string;
+  id: string; binder_id: string; record_type: string; name: string; icon?: string | null;
 };
 
 function requireBinderRecord(
@@ -183,14 +183,19 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
       ? req.query.types.split(",").map((value) => value.trim()).filter(Boolean)
       : [];
     const rows = ctx.db.prepare(`
-      SELECT id, binder_id, record_type, name
-      FROM binder_records
-      WHERE binder_id = ?
-        AND (? = '' OR name_key LIKE ?)
-      ORDER BY name_key, id LIMIT 500
+      SELECT br.id, br.binder_id, br.record_type, br.name,
+             COALESCE(o.icon, p.icon, poi.icon) AS icon
+      FROM binder_records br
+      LEFT JOIN binder_organizations o ON o.id = br.id AND br.record_type = 'organization'
+      LEFT JOIN binder_positions p ON p.id = br.id AND br.record_type = 'position'
+      LEFT JOIN binder_points_of_interest poi ON poi.id = br.id AND br.record_type = 'poi'
+      WHERE br.binder_id = ?
+        AND (? = '' OR br.name_key LIKE ?)
+      ORDER BY br.name_key, br.id LIMIT 500
     `).all(binderId, query, `%${query}%`) as RecordRow[];
     res.json(rows.filter((row) => !types.length || types.includes(row.record_type)).map((row) => ({
       id: row.id, binderId: row.binder_id, type: row.record_type, name: row.name,
+      icon: row.icon ?? null,
       route: routeFor(row.record_type, binderId, row.id),
     })));
   });

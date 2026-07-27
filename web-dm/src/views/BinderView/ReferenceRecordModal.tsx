@@ -5,11 +5,17 @@ import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { TextArea } from "@/ui/TextArea";
 import { theme, withAlpha } from "@/theme/theme";
-import { EntityIcon, IconPicker, getDefaultEntityIcon } from "@/components/iconPicker";
+import { IconPicker } from "@/components/iconPicker";
+import { SearchableSelect } from "@/components/SearchableSelect";
 import type {
   BinderReferenceInput,
   BinderReferenceRecord,
 } from "@/services/binderReferenceApi";
+
+const PARENT_TYPE_LABELS: Record<string, string> = {
+  location: "Location",
+  poi: "Point of Interest",
+};
 
 export function ReferenceRecordModal(props: {
   isOpen: boolean;
@@ -28,8 +34,6 @@ export function ReferenceRecordModal(props: {
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState<string | null>(null);
   const [parentId, setParentId] = useState("");
-  const [parentQuery, setParentQuery] = useState("");
-  const [parentOpen, setParentOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,7 +43,6 @@ export function ReferenceRecordModal(props: {
     setDescription(props.record?.description ?? "");
     setIcon(props.record?.icon ?? null);
     setParentId(props.record?.parent?.id ?? "");
-    setParentQuery(props.record?.parent?.name ?? "");
     setError(null);
   }, [props.isOpen, props.record]);
 
@@ -104,34 +107,18 @@ export function ReferenceRecordModal(props: {
         {props.parentLabel ? (
           <div style={{ display: "grid", gap: 7 }}>
             <label htmlFor="binder-reference-parent" style={labelStyle}>{props.parentLabel}</label>
-            <div style={{ position: "relative" }}>
-              <Input
-                id="binder-reference-parent"
-                value={parentQuery}
-                onFocus={() => setParentOpen(true)}
-                onBlur={() => window.setTimeout(() => {
-                  setParentOpen(false);
-                  setParentQuery(props.parentOptions?.find((option) => option.id === parentId)?.name ?? "");
-                }, 120)}
-                onChange={(event) => { setParentQuery(event.target.value); setParentId(""); setParentOpen(true); }}
-                placeholder="None"
-                disabled={saving}
-                autoComplete="off"
-              />
-              {parentOpen && !saving ? (
-                <div style={{ position: "absolute", zIndex: 30, top: "calc(100% + 4px)", left: 0, right: 0, maxHeight: 230, overflowY: "auto", border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.control, background: "#0d1525", boxShadow: "0 12px 28px rgba(0,0,0,.65)" }}>
-                  <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { setParentId(""); setParentQuery(""); setParentOpen(false); }} style={optionStyle}>None</button>
-                  {(props.parentOptions ?? [])
-                    .filter((option) => option.name.toLocaleLowerCase().includes(parentQuery.trim().toLocaleLowerCase()))
-                    .map((option) => (
-                      <button key={option.id} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { setParentId(option.id); setParentQuery(option.name); setParentOpen(false); }} style={{ ...optionStyle, display: "flex", alignItems: "center", gap: 8 }}>
-                        {option.type === "poi" ? <EntityIcon icon={option.icon ?? getDefaultEntityIcon("points-of-interest")} size={16} /> : null}
-                        <span>{option.name}{props.parentLabel === "Parent" ? <span style={{ color: theme.colors.muted }}> · {option.type === "location" ? "Location" : option.type === "poi" ? "Point of Interest" : option.type}</span> : null}</span>
-                      </button>
-                    ))}
-                </div>
-              ) : null}
-            </div>
+            <SearchableSelect
+              id="binder-reference-parent"
+              value={parentId}
+              onChange={setParentId}
+              disabled={saving}
+              options={(props.parentOptions ?? []).map((option) => ({
+                id: option.id,
+                name: option.name,
+                icon: option.icon,
+                meta: props.parentLabel === "Parent" ? PARENT_TYPE_LABELS[option.type] ?? option.type : undefined,
+              }))}
+            />
           </div>
         ) : null}
 
@@ -164,15 +151,3 @@ export function ReferenceRecordModal(props: {
     </Modal>
   );
 }
-
-const optionStyle: React.CSSProperties = {
-  display: "block",
-  width: "100%",
-  padding: "9px 12px",
-  border: 0,
-  background: "transparent",
-  color: theme.colors.text,
-  textAlign: "left",
-  cursor: "pointer",
-  font: "inherit",
-};

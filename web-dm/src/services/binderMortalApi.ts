@@ -50,7 +50,7 @@ export type BinderMortalInput = {
 };
 
 export type MortalOptions = {
-  records: Array<{ id: string; type: "race" | "position" | "organization" | "continent" | "country" | "location" | "poi"; name: string }>;
+  records: Array<{ id: string; type: "race" | "position" | "organization" | "continent" | "country" | "location" | "poi"; name: string; icon: string | null }>;
   players: Array<{
     id: string;
     playerName: string;

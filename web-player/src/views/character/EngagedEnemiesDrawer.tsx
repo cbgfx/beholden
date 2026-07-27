@@ -1,7 +1,18 @@
 import { C } from "@/lib/theme";
 import { RightDrawer } from "@/ui/RightDrawer";
 import { conditionLabel } from "@beholden/shared/domain/conditions";
+import { ABILITY_LABELS } from "@/views/character/CharacterSheetConstants";
+import type { AbilKey } from "@/views/character/CharacterSheetTypes";
 import type { EngagedEnemy } from "@/views/character/useCharacterLiveUpdates";
+
+function conditionText(condition: { key: string; hexAbility?: string }): string {
+  const label = conditionLabel(condition.key);
+  if (condition.key === "hexed" && condition.hexAbility) {
+    const abilityLabel = ABILITY_LABELS[condition.hexAbility as AbilKey] ?? condition.hexAbility.toUpperCase();
+    return `${label} (${abilityLabel})`;
+  }
+  return label;
+}
 
 const healthColor: Record<EngagedEnemy["health"], string> = {
   Damaged: "#f59e0b",
@@ -33,9 +44,9 @@ export function EngagedEnemiesDrawer(props: {
                 </div>
                 {enemy.conditions && enemy.conditions.length > 0 && (
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {enemy.conditions.map((key) => (
-                      <span key={key} style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: C.colorPinkRed, border: `1px solid ${C.colorPinkRed}`, borderRadius: 6, padding: "1px 6px" }}>
-                        {conditionLabel(key)}
+                    {enemy.conditions.map((condition) => (
+                      <span key={condition.key} style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: C.colorPinkRed, border: `1px solid ${C.colorPinkRed}`, borderRadius: 6, padding: "1px 6px" }}>
+                        {conditionText(condition)}
                       </span>
                     ))}
                   </div>

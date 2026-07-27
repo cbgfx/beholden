@@ -146,10 +146,19 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
       const maximum = Number(enemy.hpMax) + Number(enemy.hpMaxBonus ?? 0);
       if (!Number.isFinite(current) || !Number.isFinite(maximum) || maximum <= 0) return [];
       const health = current <= 0 ? "Down" : current * 2 <= maximum ? "Bloodied" : "Damaged";
-      let conditions: string[] = [];
+      let conditions: Array<{ key: string; hexAbility?: string }> = [];
       try {
         const parsed = enemy.conditionsJson ? JSON.parse(enemy.conditionsJson) : [];
-        if (Array.isArray(parsed)) conditions = parsed.map((c) => String(c?.key ?? "")).filter(Boolean);
+        if (Array.isArray(parsed)) {
+          conditions = parsed
+            .map((c) => {
+              const key = String(c?.key ?? "");
+              if (!key) return null;
+              const hexAbility = typeof c?.hexAbility === "string" ? c.hexAbility : undefined;
+              return hexAbility ? { key, hexAbility } : { key };
+            })
+            .filter((c): c is { key: string; hexAbility?: string } => c !== null);
+        }
       } catch {
         // no conditions
       }

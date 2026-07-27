@@ -4,7 +4,8 @@ import { useWs, useWsStatus } from "@/services/ws";
 
 type ActiveBastion = { id: string; name: string; campaignId: string };
 type InitiativePrompt = { encounterId: string; combatantId: string };
-export type EngagedEnemy = { id: string; name: string; health: "Damaged" | "Bloodied" | "Down"; conditions?: string[] };
+export type EngagedEnemyCondition = { key: string; hexAbility?: string };
+export type EngagedEnemy = { id: string; name: string; health: "Damaged" | "Bloodied" | "Down"; conditions?: EngagedEnemyCondition[] };
 type CombatStatus = { encounterId: string; combatantId: string; usedReaction: boolean; engagedEnemies: EngagedEnemy[] };
 
 export function useCharacterLiveUpdates(

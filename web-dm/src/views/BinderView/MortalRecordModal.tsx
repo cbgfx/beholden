@@ -5,9 +5,10 @@ import { Input } from "@/ui/Input";
 import { Select } from "@/ui/Select";
 import { TextArea } from "@/ui/TextArea";
 import { theme } from "@/theme/theme";
+import { SearchableSelect, type SearchableSelectOption } from "@/components/SearchableSelect";
 import type { BinderMortal, BinderMortalInput, MortalOptions, MortalType } from "@/services/binderMortalApi";
 
-type Option = { id: string; name: string };
+type Option = SearchableSelectOption;
 
 function SearchableOption(props: {
   id: string;
@@ -17,44 +18,11 @@ function SearchableOption(props: {
   disabled?: boolean;
   onChange: (id: string) => void;
 }) {
-  const selected = props.options.find((option) => option.id === props.selectedId);
-  const [query, setQuery] = useState(selected?.name ?? "");
-  const [open, setOpen] = useState(false);
-  useEffect(() => setQuery(selected?.name ?? ""), [props.selectedId, selected?.name]);
-  const filtered = props.options.filter((option) => option.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).slice(0, 12);
   return <div style={propertyRowStyle}>
     <label htmlFor={props.id} style={propertyLabelStyle}>{props.label}</label>
-    <div style={{ position: "relative" }}>
-      <Input
-        id={props.id}
-        value={query}
-        onFocus={() => setOpen(true)}
-        onBlur={() => window.setTimeout(() => { setOpen(false); setQuery(selected?.name ?? ""); }, 120)}
-        onChange={(event) => { setQuery(event.target.value); props.onChange(""); setOpen(true); }}
-        placeholder="None"
-        disabled={props.disabled}
-        autoComplete="off"
-      />
-      {open && !props.disabled ? <div style={{ position: "absolute", zIndex: 200, top: "calc(100% + 4px)", left: 0, right: 0, maxHeight: 240, overflowY: "auto", border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.control, background: "#0d1525", boxShadow: "0 12px 28px rgba(0,0,0,.65)" }}>
-        <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { props.onChange(""); setQuery(""); setOpen(false); }} style={optionStyle}>None</button>
-        {filtered.map((option) => <button key={option.id} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { props.onChange(option.id); setQuery(option.name); setOpen(false); }} style={optionStyle}>{option.name}</button>)}
-        {!filtered.length ? <div style={{ padding: "10px 12px", color: theme.colors.muted }}>No matches</div> : null}
-      </div> : null}
-    </div>
+    <SearchableSelect id={props.id} value={props.selectedId} onChange={props.onChange} options={props.options} disabled={props.disabled} />
   </div>;
 }
-
-const optionStyle: React.CSSProperties = {
-  display: "block",
-  width: "100%",
-  padding: "9px 12px",
-  border: 0,
-  background: "transparent",
-  color: theme.colors.text,
-  textAlign: "left",
-  cursor: "pointer",
-  font: "inherit",
-};
 
 const labelStyle: React.CSSProperties = {
   color: theme.colors.muted,
@@ -278,7 +246,7 @@ export function MortalRecordModal(props: {
       </div>
       {property("Type", <Select style={{ width: "100%" }} value={mortalType} onChange={(event) => setMortalType(event.target.value as MortalType)} disabled={saving}><option value="npc">NPC</option><option value="player_character">Player Character</option></Select>)}
       {mortalType === "player_character"
-        ? property("Existing player", <Select style={{ width: "100%" }} value={playerId} onChange={(event) => linkPlayer(event.target.value)} disabled={saving}><option value="">None</option>{availablePlayers.map((player) => <option key={player.id} value={player.id}>{playerLabel(player)}</option>)}</Select>)
+        ? property("Existing player", <SearchableSelect value={playerId} onChange={linkPlayer} disabled={saving} options={availablePlayers.map((player) => ({ id: player.id, name: playerLabel(player) }))} />)
         : <SearchableOption id="mortal-monster" label={`Statblock${props.requireNpcStatblock ? " *" : ""}`} selectedId={monsterId} options={props.options.monsters ?? []} onChange={setMonsterId} disabled={saving} />}
       <SearchableOption id="mortal-race" label="Race" selectedId={raceId} options={grouped.races} onChange={setRaceId} disabled={saving} />
       {property("Gender", <Select value={gender} onChange={(event) => setGender(event.target.value as typeof gender)} disabled={saving}><option value="" disabled>Select gender</option><option value="male">Male</option><option value="female">Female</option></Select>)}

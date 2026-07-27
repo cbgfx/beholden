@@ -11,6 +11,7 @@ import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { theme, withAlpha } from "@/theme/theme";
 import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
 
@@ -23,14 +24,8 @@ function Field(props: { label: string; children: React.ReactNode }) {
   </label>;
 }
 
-function Select(props: { value: string; onChange: (value: string) => void; options: Array<{ id: string; name: string }>; none?: string }) {
-  return <select value={props.value} onChange={(event) => props.onChange(event.target.value)} style={{
-    width: "100%", minHeight: 42, padding: "8px 11px", borderRadius: theme.radius.control,
-    border: `1px solid ${theme.colors.panelBorder}`, background: theme.colors.inputBg, color: theme.colors.text,
-  }}>
-    <option value="">{props.none ?? "None"}</option>
-    {props.options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
-  </select>;
+function Select(props: { value: string; onChange: (value: string) => void; options: Array<{ id: string; name: string; icon?: string | null }>; none?: string }) {
+  return <SearchableSelect value={props.value} onChange={props.onChange} options={props.options} noneLabel={props.none} placeholder={props.none} />;
 }
 
 function MultiRecords(props: {
@@ -40,7 +35,9 @@ function MultiRecords(props: {
   const available = props.options.filter((option) => !props.value.some((row) => row.id === option.id));
   return <div style={{ display: "grid", gap: 7 }}>
     <div style={{ display: "flex", gap: 7 }}>
-      <Select value={selected} onChange={setSelected} options={available.map((row) => ({ id: row.id, name: `${row.name} · ${row.type}` }))} />
+      <div style={{ flex: "1 1 auto" }}>
+        <Select value={selected} onChange={setSelected} options={available.map((row) => ({ id: row.id, name: `${row.name} · ${row.type}`, icon: row.icon }))} />
+      </div>
       <Button variant="ghost" disabled={!selected} onClick={() => {
         const option = props.options.find((row) => row.id === selected);
         if (option) props.onChange([...props.value, { id: option.id, name: option.name, type: option.type, role: null, description: null }]);
@@ -115,7 +112,7 @@ function EventEditor(props: {
   const [records, setRecords] = useState<BinderAssociation[]>(props.event?.records ?? []);
   const [campaigns, setCampaigns] = useState<BinderAssociation[]>(props.event?.campaigns ?? []);
   const [saving, setSaving] = useState(false);
-  const campaignRecords = props.campaigns.map((row) => ({ id: row.id, binderId: props.binderId, type: "campaign", name: row.name, route: "" }));
+  const campaignRecords = props.campaigns.map((row) => ({ id: row.id, binderId: props.binderId, type: "campaign", name: row.name, route: "", icon: null }));
   const mentions = props.records.map((row) => ({ id: row.id, label: row.name, href: row.route, type: row.type }));
   return <Drawer title={props.event ? "Edit Event" : "New Event"} onClose={props.onClose}>
     <div style={{ display: "grid", gap: 14 }}>

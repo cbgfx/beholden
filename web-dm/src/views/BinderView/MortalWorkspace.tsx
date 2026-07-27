@@ -260,6 +260,23 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     return () => window.clearTimeout(timer);
   }, [reload]);
 
+  // Binder has no live websocket layer yet, so a linked Player's portrait (or any other
+  // field) changed elsewhere — e.g. the player uploading it from their own device — never
+  // appears here until something re-fetches. Refresh whenever this tab regains focus/visibility,
+  // which covers the common "switch away, let the player upload, switch back" flow.
+  useEffect(() => {
+    const onFocus = () => void reload();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void reload();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [reload]);
+
   const selected = props.recordId ? records.find((record) => record.id === props.recordId) : undefined;
   const validMentionIds = useValidMentionIds(props.binderId, selected?.notes, selected?.dmNotes);
 

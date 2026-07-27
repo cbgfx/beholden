@@ -21,7 +21,7 @@ import {
 import { ReferenceRecordModal } from "@/views/BinderView/ReferenceRecordModal";
 import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
 import { fetchBinderRecordOptions, syncBinderMentions, type BinderRecordOption } from "@/services/binderLoreApi";
-import { Select } from "@/ui/Select";
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { EntityIcon, IconPicker, getDefaultEntityIcon, ICON_ENABLED_REFERENCE_TYPES } from "@/components/iconPicker";
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
@@ -113,12 +113,15 @@ function DeityDomainsSection(props: {
       </div>
       {props.canEdit ? (
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-          <Select value={addId} onChange={(event) => setAddId(event.target.value)} style={{ flex: "1 1 auto" }} disabled={busy || !available.length}>
-            <option value="">{available.length ? "Add a domain…" : "No more domains to add"}</option>
-            {available.map((option) => (
-              <option key={option.id} value={option.id}>{option.name}</option>
-            ))}
-          </Select>
+          <div style={{ flex: "1 1 auto" }}>
+            <SearchableSelect
+              value={addId}
+              onChange={setAddId}
+              disabled={busy || !available.length}
+              placeholder={available.length ? "Add a domain…" : "No more domains to add"}
+              options={available.map((option) => ({ id: option.id, name: option.name }))}
+            />
+          </div>
           <Button onClick={() => void add()} disabled={!addId || busy}>Add</Button>
         </div>
       ) : null}
@@ -158,12 +161,16 @@ function OrganizationLeaderSection(props: {
       </div>
       {picking ? (
         <div style={{ display: "flex", gap: 8, marginTop: 9 }}>
-          <Select value={pickId} onChange={(event) => setPickId(event.target.value)} style={{ flex: "1 1 auto" }} disabled={busy}>
-            <option value="">Choose a Mortal…</option>
-            {props.options.map((option) => (
-              <option key={option.id} value={option.id}>{option.name}</option>
-            ))}
-          </Select>
+          <div style={{ flex: "1 1 auto" }}>
+            <SearchableSelect
+              value={pickId}
+              onChange={setPickId}
+              disabled={busy}
+              placeholder="Choose a Mortal…"
+              options={props.options.map((option) => ({ id: option.id, name: option.name }))}
+              autoFocus
+            />
+          </div>
           <Button onClick={() => void setLeader(pickId || null)} disabled={busy || !pickId}>Set</Button>
           <Button variant="ghost" onClick={() => { setPicking(false); setPickId(""); }} disabled={busy}>Cancel</Button>
         </div>
