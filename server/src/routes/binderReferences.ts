@@ -88,6 +88,8 @@ const ReferenceCreateBody = z.object({
   name: z.string().trim().min(1).max(160),
   description: optionalDescription,
   parentId: z.string().trim().min(1).nullable().optional(),
+  /** Only meaningful for `organizations` — an id from `mortals` in the same Binder. */
+  leaderId: z.string().trim().min(1).nullable().optional(),
 }).strict();
 
 const ReferencePatchBody = ReferenceCreateBody.partial().refine(
@@ -111,6 +113,8 @@ type ReferenceRow = {
   parent_name?: string | null;
   image_url?: string | null;
   image_updated_at?: number | null;
+  leader_mortal_id?: string | null;
+  leader_name?: string | null;
 };
 
 function parentType(row: ReferenceRow): RecordType | null {
@@ -138,6 +142,7 @@ function dto(row: ReferenceRow, links?: { domains?: ReferenceLink[]; deities?: R
       name: row.parent_name ?? "",
       type: parentType(row),
     } : null,
+    leader: row.leader_mortal_id ? { id: row.leader_mortal_id, name: row.leader_name ?? "" } : null,
     usageCount: row.usage_count,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -158,14 +163,18 @@ function selectSql(type: ReferenceType): string {
         ? ", r.location_id, r.country_id, r.parent_poi_id, parent_br.name AS parent_name"
         : type === "deities"
           ? ", r.image_url, r.image_updated_at"
-          : "";
+          : type === "organizations"
+            ? ", r.leader_mortal_id, leader_br.name AS leader_name"
+            : "";
   const parentJoin = type === "countries"
     ? "LEFT JOIN binder_records parent_br ON parent_br.id = r.continent_id"
     : type === "locations"
       ? "LEFT JOIN binder_records parent_br ON parent_br.id = r.country_id"
       : type === "points-of-interest"
         ? "LEFT JOIN binder_records parent_br ON parent_br.id = COALESCE(r.location_id, r.country_id, r.parent_poi_id)"
-        : "";
+        : type === "organizations"
+          ? "LEFT JOIN binder_records leader_br ON leader_br.id = r.leader_mortal_id"
+          : "";
   return `
     SELECT r.id, br.binder_id, br.name, r.description, br.visibility,
            br.created_at, br.updated_at, ${entry.usageSql} AS usage_count
@@ -199,7 +208,20 @@ function resolveParent(
   return parent;
 }
 
-function insertTypedRecord(db: ServerContext["db"], table: string, type: ReferenceType, id: string, description: string | null, parent: ReturnType<typeof resolveParent>, t: number) {
+function resolveLeaderMortal(
+  db: ServerContext["db"],
+  binderId: string,
+  leaderIdValue: string | null | undefined,
+): string | null {
+  if (!leaderIdValue) return null;
+  const mortal = db.prepare(`
+    SELECT m.id FROM mortals m JOIN binder_records br ON br.id = m.id WHERE m.id = ? AND br.binder_id = ?
+  `).get(leaderIdValue, binderId) as { id: string } | undefined;
+  if (!mortal) throw Object.assign(new Error("Leader must be a Mortal from this Binder"), { status: 400 });
+  return mortal.id;
+}
+
+function insertTypedRecord(db: ServerContext["db"], table: string, type: ReferenceType, id: string, description: string | null, parent: ReturnType<typeof resolveParent>, t: number, leaderId?: string | null) {
   if (type === "countries") {
     db.prepare(`INSERT INTO binder_countries (id, continent_id, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
       .run(id, parent?.id ?? null, description, t, t);
@@ -209,6 +231,9 @@ function insertTypedRecord(db: ServerContext["db"], table: string, type: Referen
   } else if (type === "points-of-interest") {
     db.prepare(`INSERT INTO binder_points_of_interest (id, location_id, country_id, parent_poi_id, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
       .run(id, parent?.record_type === "location" ? parent.id : null, parent?.record_type === "country" ? parent.id : null, parent?.record_type === "poi" ? parent.id : null, description, t, t);
+  } else if (type === "organizations") {
+    db.prepare(`INSERT INTO binder_organizations (id, description, leader_mortal_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
+      .run(id, description, leaderId ?? null, t, t);
   } else {
     db.prepare(`INSERT INTO ${table} (id, description, created_at, updated_at) VALUES (?, ?, ?, ?)`)
       .run(id, description, t, t);
@@ -226,6 +251,10 @@ function updateParent(db: ServerContext["db"], type: ReferenceType, id: string, 
     parent?.record_type === "poi" ? parent.id : null,
     id,
   );
+}
+
+function updateLeader(db: ServerContext["db"], id: string, leaderId: string | null) {
+  db.prepare("UPDATE binder_organizations SET leader_mortal_id = ? WHERE id = ?").run(leaderId, id);
 }
 
 export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) {
@@ -292,6 +321,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     const body = parseBody(ReferenceCreateBody, req);
     const entry = config[typeResult.data];
     const parent = resolveParent(db, binderId, typeResult.data, body.parentId);
+    const leaderId = typeResult.data === "organizations" ? resolveLeaderMortal(db, binderId, body.leaderId) : null;
     const id = ctx.helpers.uid();
     const t = ctx.helpers.now();
     db.transaction(() => {
@@ -300,7 +330,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
           id, binder_id, record_type, name, name_key, visibility, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(id, binderId, entry.recordType, body.name, ctx.helpers.normalizeKey(body.name), "dm", t, t);
-      insertTypedRecord(db, entry.table, typeResult.data, id, body.description ?? null, parent, t);
+      insertTypedRecord(db, entry.table, typeResult.data, id, body.description ?? null, parent, t, leaderId);
     })();
     const row = db.prepare(`${selectSql(typeResult.data)} WHERE r.id = ?`).get(id) as ReferenceRow;
     res.status(201).json(dtoWithLinks(typeResult.data, row));
@@ -320,6 +350,9 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     const body = parseBody(ReferencePatchBody, req);
     const parent = body.parentId !== undefined
       ? resolveParent(db, binderId, typeResult.data, body.parentId, recordId)
+      : undefined;
+    const leaderId = body.leaderId !== undefined && typeResult.data === "organizations"
+      ? resolveLeaderMortal(db, binderId, body.leaderId)
       : undefined;
     const t = ctx.helpers.now();
     db.transaction(() => {
@@ -341,6 +374,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
         db.prepare(`UPDATE ${config[typeResult.data].table} SET updated_at = ? WHERE id = ?`).run(t, recordId);
       }
       if (body.parentId !== undefined) updateParent(db, typeResult.data, recordId, parent ?? null);
+      if (leaderId !== undefined) updateLeader(db, recordId, leaderId);
     })();
     const row = db.prepare(`${selectSql(typeResult.data)} WHERE r.id = ?`).get(recordId) as ReferenceRow;
     res.json(dtoWithLinks(typeResult.data, row));

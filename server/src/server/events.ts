@@ -136,6 +136,9 @@ type XpAwardedPayload = {
   xpAdded: number;
 };
 
+/** Every row in the database was just replaced by an admin import. Clients hard-reload on this. */
+type DatabaseImportedPayload = { at: number };
+
 export interface ServerEventMap {
   hello: HelloPayload;
 
@@ -161,6 +164,8 @@ export interface ServerEventMap {
 
   "save:pending": SavePendingPayload;
   "save:complete": SaveCompletePayload;
+
+  "database:imported": DatabaseImportedPayload;
 }
 
 export type ServerEventType = keyof ServerEventMap;

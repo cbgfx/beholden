@@ -50,5 +50,6 @@ export interface ServerContext {
   broadcast: BroadcastFn;
   upload: Multer;
   compendiumUpload: Multer;
+  dbImportUpload: Multer;
   helpers: Helpers;
 }

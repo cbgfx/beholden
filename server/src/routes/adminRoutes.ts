@@ -9,6 +9,7 @@ import { hashPassword } from "../lib/jwtAuth.js";
 import { syncOwnedPlayerName } from "../services/characters.js";
 import { requireAuth, requireAdmin } from "../middleware/auth.js";
 import { rowToUser } from "../lib/db.js";
+import { importDatabaseFile } from "../services/databaseTransfer.js";
 
 const CreateUserBody = z.object({
   username: z.string().trim().min(1).max(64),
@@ -32,6 +33,40 @@ const MembershipBody = z.object({
 export function registerAdminRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { now, uid } = ctx.helpers;
+
+  // Streams a consistent snapshot of the live database (safe under WAL mode) as a download.
+  app.get("/api/admin/database/export", requireAuth, requireAdmin, (_req, res, next) => {
+    const tmpFile = ctx.path.join(ctx.os.tmpdir(), `beholden-export-${uid()}.db`);
+    db.backup(tmpFile)
+      .then(() => {
+        const stamp = new Date(now()).toISOString().slice(0, 10);
+        res.download(tmpFile, `beholden-${stamp}.db`, (err) => {
+          ctx.fs.unlink(tmpFile, () => {});
+          if (err && !res.headersSent) next(err);
+        });
+      })
+      .catch((cause) => {
+        ctx.fs.unlink(tmpFile, () => {});
+        next(cause as Error);
+      });
+  });
+
+  // Replaces every row in the live database with an uploaded snapshot, in place.
+  // A pre-import backup is written automatically; see services/databaseTransfer.ts.
+  app.post("/api/admin/database/import", requireAuth, requireAdmin, ctx.dbImportUpload.single("file"), (req, res) => {
+    if (!req.file) return res.status(400).json({ ok: false, message: "No file uploaded" });
+    const uploadedPath = req.file.path;
+    try {
+      const result = importDatabaseFile(ctx, uploadedPath);
+      ctx.broadcast("database:imported", { at: now() });
+      res.json({ ok: true, ...result });
+    } catch (cause) {
+      const status = typeof (cause as { status?: unknown })?.status === "number" ? (cause as { status: number }).status : 500;
+      res.status(status).json({ ok: false, message: cause instanceof Error ? cause.message : String(cause) });
+    } finally {
+      ctx.fs.unlink(uploadedPath, () => {});
+    }
+  });
 
   app.get("/api/admin/users", requireAuth, requireAdmin, (_req, res) => {
     const rows = db

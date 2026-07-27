@@ -33,3 +33,17 @@ export function createCompendiumUpload(dataDir: string) {
 export function compendiumUploadDirectory(dataDir: string): string {
   return path.join(dataDir, "tmp", "compendium-uploads");
 }
+
+/** Full database backups can be much larger than a compendium batch; spool to disk with a higher ceiling. */
+export function createDatabaseUpload(dataDir: string) {
+  const destination = databaseUploadDirectory(dataDir);
+  fs.mkdirSync(destination, { recursive: true });
+  return multer({
+    storage: multer.diskStorage({ destination }),
+    limits: { ...uploadLimits, fileSize: 1024 * 1024 * 1024 }, // 1GB
+  });
+}
+
+export function databaseUploadDirectory(dataDir: string): string {
+  return path.join(dataDir, "tmp", "database-uploads");
+}

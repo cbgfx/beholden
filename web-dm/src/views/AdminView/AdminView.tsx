@@ -6,12 +6,14 @@ import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
 import { UsersAdminPanel } from "./UsersAdminPanel";
 import { CampaignsAdminPanel } from "./CampaignsAdminPanel";
+import { DatabaseAdminPanel } from "./DatabaseAdminPanel";
 
-type Tab = "users" | "campaigns";
+type Tab = "users" | "campaigns" | "database";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "users", label: "Users" },
   { id: "campaigns", label: "Campaign Memberships" },
+  { id: "database", label: "Database" },
 ];
 
 export function AdminView() {
@@ -94,6 +96,7 @@ export function AdminView() {
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
         {tab === "users" && <UsersAdminPanel />}
         {tab === "campaigns" && <CampaignsAdminPanel />}
+        {tab === "database" && <DatabaseAdminPanel />}
       </div>
     </div>
   );

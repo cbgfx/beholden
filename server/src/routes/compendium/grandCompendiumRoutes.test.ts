@@ -420,6 +420,7 @@ describe("Grand compendium routes — HTTP integration", () => {
       broadcast: (() => {}) as ServerContext["broadcast"],
       upload,
       compendiumUpload,
+      dbImportUpload: upload,
       helpers: {
         now: () => Date.now(),
         uid: () => Math.random().toString(36).slice(2),

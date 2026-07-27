@@ -19,12 +19,16 @@ export type BinderReferenceRecord = {
   domains?: BinderReferenceLink[];
   /** Only present on `domains` records. */
   deities?: BinderReferenceLink[];
+  /** Only meaningful on `organizations` records — the Mortal who leads it, if any. */
+  leader: BinderReferenceLink | null;
 };
 
 export type BinderReferenceInput = {
   name: string;
   description: string | null;
   parentId?: string | null;
+  /** Only meaningful for `organizations` — a Mortal id from this Binder, or null to clear. */
+  leaderId?: string | null;
 };
 
 function base(binderId: string, type: BinderReferenceType) {

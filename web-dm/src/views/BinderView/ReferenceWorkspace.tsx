@@ -125,6 +125,70 @@ function DeityDomainsSection(props: {
   );
 }
 
+function OrganizationLeaderSection(props: {
+  binderId: string;
+  organizationId: string;
+  leader: BinderReferenceLink | null;
+  options: BinderRecordOption[];
+  canEdit: boolean;
+  onChanged: () => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [pickId, setPickId] = useState("");
+
+  async function setLeader(leaderId: string | null) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await updateBinderReference(props.binderId, "organizations", props.organizationId, { leaderId });
+      setPicking(false);
+      setPickId("");
+      await props.onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section>
+      <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+        Leader
+      </div>
+      {picking ? (
+        <div style={{ display: "flex", gap: 8, marginTop: 9 }}>
+          <Select value={pickId} onChange={(event) => setPickId(event.target.value)} style={{ flex: "1 1 auto" }} disabled={busy}>
+            <option value="">Choose a Mortal…</option>
+            {props.options.map((option) => (
+              <option key={option.id} value={option.id}>{option.name}</option>
+            ))}
+          </Select>
+          <Button onClick={() => void setLeader(pickId || null)} disabled={busy || !pickId}>Set</Button>
+          <Button variant="ghost" onClick={() => { setPicking(false); setPickId(""); }} disabled={busy}>Cancel</Button>
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 7 }}>
+          <span style={{ fontSize: "var(--fs-body)", color: props.leader ? theme.colors.text : theme.colors.muted }}>
+            {props.leader?.name ?? "None"}
+          </span>
+          {props.canEdit ? (
+            <>
+              <button type="button" onClick={() => setPicking(true)} style={{ border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}>
+                {props.leader ? "Change" : "Set leader"}
+              </button>
+              {props.leader ? (
+                <button type="button" onClick={() => void setLeader(null)} disabled={busy} style={{ border: 0, background: "transparent", color: theme.colors.muted, cursor: busy ? "default" : "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}>
+                  Clear
+                </button>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function ReferenceWorkspace(props: {
   binderId: string;
   type: BinderReferenceType;
@@ -134,7 +198,9 @@ export function ReferenceWorkspace(props: {
   onRecordsChanged: () => Promise<void>;
 }) {
   const labels = LABELS[props.type];
-  const showDescription = !["races", "positions"].includes(props.type);
+  const showDescription = !["races", "positions", "organizations"].includes(props.type);
+  const showLeader = props.type === "organizations";
+  const hasMiddleColumn = showDescription || showLeader;
   const navigate = useNavigate();
   const confirm = useConfirm();
   const [records, setRecords] = useState<BinderReferenceRecord[]>([]);
@@ -359,6 +425,16 @@ export function ReferenceWorkspace(props: {
                   </button>
                 </section>
               ) : null}
+              {showLeader ? (
+                <OrganizationLeaderSection
+                  binderId={props.binderId}
+                  organizationId={selected.id}
+                  leader={selected.leader}
+                  options={loreRecords.filter((option) => option.type === "mortal")}
+                  canEdit={props.canEdit}
+                  onChanged={reload}
+                />
+              ) : null}
               {props.type === "deities" ? (
                 <DeityDomainsSection
                   binderId={props.binderId}
@@ -398,8 +474,8 @@ export function ReferenceWorkspace(props: {
         </div>
 
         <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: showDescription ? "minmax(190px, 1fr) minmax(260px, 2fr) 140px" : "minmax(240px, 1fr) 160px", gap: 12, padding: "12px 15px", background: withAlpha(props.accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
-            {(showDescription ? ["Name", "Description", labels.usage] : ["Name", labels.usage]).map((column) => (
+          <div style={{ display: "grid", gridTemplateColumns: hasMiddleColumn ? "minmax(190px, 1fr) minmax(260px, 2fr) 140px" : "minmax(240px, 1fr) 160px", gap: 12, padding: "12px 15px", background: withAlpha(props.accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
+            {(showDescription ? ["Name", "Description", labels.usage] : showLeader ? ["Name", "Leader", labels.usage] : ["Name", labels.usage]).map((column) => (
               <div key={column} style={{ color: theme.colors.text, fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>{column}</div>
             ))}
           </div>
@@ -419,7 +495,7 @@ export function ReferenceWorkspace(props: {
                 style={{
                   width: "100%",
                   display: "grid",
-                  gridTemplateColumns: showDescription ? "minmax(190px, 1fr) minmax(260px, 2fr) 140px" : "minmax(240px, 1fr) 160px",
+                  gridTemplateColumns: hasMiddleColumn ? "minmax(190px, 1fr) minmax(260px, 2fr) 140px" : "minmax(240px, 1fr) 160px",
                   gap: 12,
                   padding: "13px 15px",
                   border: 0,
@@ -441,6 +517,7 @@ export function ReferenceWorkspace(props: {
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{record.name}</span>
                 </span>
                 {showDescription ? <span style={{ color: record.description ? theme.colors.muted : "rgba(160,180,220,0.48)", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{record.description ?? "None"}</span> : null}
+                {showLeader ? <span style={{ color: record.leader ? theme.colors.muted : "rgba(160,180,220,0.48)", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{record.leader?.name ?? "None"}</span> : null}
                 <span style={{ color: theme.colors.muted }}>{record.usageCount}</span>
               </button>
             );

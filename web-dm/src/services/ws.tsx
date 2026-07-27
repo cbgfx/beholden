@@ -149,6 +149,12 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
     let reconnectAttempt = 0;
 
     const dispatch = (msg: WsMessage) => {
+      // The live database was just wholesale-replaced by an admin import — every
+      // in-memory store is stale in ways too broad to patch. Reload instead of dispatching.
+      if (msg.type === "database:imported") {
+        window.location.reload();
+        return;
+      }
       for (const h of subscribers.current) h(msg);
     };
 
