@@ -15,6 +15,8 @@ export function CampaignMainColumn(props: {
   onDeletePlayer: (playerId: string) => void;
   onAddPlayerToEncounter: (playerId: string) => void;
   selectedCampaignId: string | null;
+  binderId?: string | null;
+  campaignCurrentDate?: number | null;
   onAddINpcFromMonster: (monsterId: string, qty: number, opts?: AddMonsterOptions) => void;
   onEditINpc: (inpcId: string) => void;
   onDeleteINpc: (inpcId: string) => void;
@@ -36,6 +38,8 @@ export function CampaignMainColumn(props: {
       <INpcsPanel
         inpcs={props.inpcs}
         selectedCampaignId={props.selectedCampaignId}
+        binderId={props.binderId}
+        currentDate={props.campaignCurrentDate}
         selectedEncounterId={props.selectedEncounterId}
         onAddINpcFromMonster={props.onAddINpcFromMonster}
         onEditINpc={props.onEditINpc}

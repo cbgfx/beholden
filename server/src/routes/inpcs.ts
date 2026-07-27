@@ -20,6 +20,10 @@ const InpcCreateBody = z.object({
   acDetails: z.string().nullable().optional(),
 });
 
+const BinderMortalInpcBody = z.object({
+  mortalId: z.string().min(1),
+});
+
 const InpcUpdateBody = z.object({
   name: z.string().optional(),
   label: z.string().nullable().optional(),
@@ -114,7 +118,7 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
       );
 
       created.push({
-        id, campaignId, monsterId, name, label, friendly,
+        id, campaignId, monsterId, binderMortalId: null, name, label, friendly,
         hpMax, hpCurrent, hpDetails,
         ac, acDetails,
         createdAt: t, updatedAt: t,
@@ -128,6 +132,48 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
       emitInpcChange({ campaignId, action: "refresh" });
     }
     res.json(created.length === 1 ? created[0] : { ok: true, created });
+  });
+
+  app.post("/api/campaigns/:campaignId/inpcs/from-binder", dmOrAdmin(db), (req, res) => {
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
+    const { mortalId } = parseBody(BinderMortalInpcBody, req);
+    const source = db.prepare(`
+      SELECT m.id, m.name, npc.monster_id
+      FROM campaigns c
+      JOIN mortals m ON m.binder_id = c.binder_id AND m.id = ?
+      JOIN binder_npcs npc ON npc.mortal_id = m.id
+      WHERE c.id = ? AND c.binder_id IS NOT NULL
+    `).get(mortalId, campaignId) as { id: string; name: string; monster_id: string | null } | undefined;
+    if (!source) return res.status(400).json({ ok: false, message: "That NPC does not belong to this campaign's Binder." });
+    if (!source.monster_id) return res.status(400).json({ ok: false, message: "Important NPCs require a linked statblock." });
+    const duplicate = db.prepare("SELECT id FROM inpcs WHERE campaign_id = ? AND binder_mortal_id = ?").get(campaignId, mortalId);
+    if (duplicate) return res.status(409).json({ ok: false, message: "That Binder NPC is already an Important NPC in this campaign." });
+
+    let ac = 10;
+    let hpMax = 10;
+    let acDetails: string | null = null;
+    let hpDetails: string | null = null;
+    if (source.monster_id) {
+      const row = db.prepare("SELECT data_json FROM compendium_monsters WHERE id = ?").get(source.monster_id) as { data_json: string } | undefined;
+      if (row) {
+        const monster = JSON.parse(row.data_json);
+        ac = extractLeadingNumber(monster?.ac) ?? ac;
+        hpMax = extractLeadingNumber(monster?.hp) ?? hpMax;
+        acDetails = extractDetails(monster?.ac);
+        hpDetails = extractDetails(monster?.hp);
+      }
+    }
+    const id = uid();
+    const t = now();
+    db.prepare(`
+      INSERT INTO inpcs
+        (id, campaign_id, monster_id, binder_mortal_id, name, label, friendly, hp_max, hp_current, hp_details, ac, ac_details, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, NULL, 1, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, campaignId, source.monster_id, mortalId, source.name, hpMax, hpMax, hpDetails, ac, acDetails, t, t);
+    emitInpcChange({ campaignId, action: "upsert", inpcId: id });
+    const created = db.prepare(`SELECT ${INPC_COLS} FROM inpcs WHERE id = ?`).get(id) as Record<string, unknown>;
+    res.status(201).json(rowToINpc(created));
   });
 
   app.put("/api/inpcs/:inpcId", dmOrAdmin(db), (req, res) => {

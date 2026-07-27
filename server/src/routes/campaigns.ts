@@ -21,6 +21,12 @@ const CampaignUpsertBody = z.object({
   color: z.string().trim().nullable().optional(),
   isActive: z.boolean().optional(),
 });
+const CampaignBinderContentBody = z.object({
+  campaignStory: z.string().max(500_000).nullable().optional(),
+  campaignNotes: z.string().max(500_000).nullable().optional(),
+}).strict().refine((body) => Object.keys(body).length > 0, {
+  message: "Campaign Story or Campaign Notes is required",
+});
 
 export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
@@ -30,7 +36,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     const user = req.user!;
     const rows = user.isAdmin
       ? db.prepare(`
-          SELECT c.id, c.name, c.color, c.image_url, c.image_updated_at, c.shared_notes,
+          SELECT c.id, c.name, c.color, c.image_url, c.image_updated_at, c.shared_notes, c.campaign_story, c.campaign_notes,
                  c.binder_id, c.current_date_text, c.current_date_sort, c.is_active, c.created_at, c.updated_at,
                  COUNT(p.id) AS player_count
           FROM campaigns c
@@ -39,7 +45,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
           ORDER BY c.updated_at DESC
         `).all() as Record<string, unknown>[]
       : db.prepare(`
-          SELECT c.id, c.name, c.color, c.image_url, c.image_updated_at, c.shared_notes,
+          SELECT c.id, c.name, c.color, c.image_url, c.image_updated_at, c.shared_notes, c.campaign_story, c.campaign_notes,
                  c.binder_id, c.current_date_text, c.current_date_sort, c.is_active, c.created_at, c.updated_at,
                  COUNT(p.id) AS player_count
           FROM campaigns c
@@ -109,7 +115,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
     const row = db.prepare(`
-      SELECT id, name, color, image_url, image_updated_at, shared_notes,
+      SELECT id, name, color, image_url, image_updated_at, shared_notes, campaign_story, campaign_notes,
              binder_id, current_date_text, current_date_sort, is_active, created_at, updated_at
       FROM campaigns WHERE id = ?
     `).get(campaignId) as Record<string, unknown> | undefined;
@@ -123,6 +129,25 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
       .run(name, color, isActive ? 1 : 0, t, campaignId);
     ctx.broadcast("campaigns:changed", { campaignId });
     res.json(withAbsoluteImageUrl(req, { ...rowToCampaign(row), name, color, isActive, updatedAt: t }));
+  });
+
+  app.patch("/api/campaigns/:campaignId/binder-content", dmOrAdmin(db), (req, res) => {
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
+    const body = parseBody(CampaignBinderContentBody, req);
+    const existing = db.prepare("SELECT campaign_story, campaign_notes FROM campaigns WHERE id = ?").get(campaignId) as
+      | { campaign_story: string | null; campaign_notes: string | null }
+      | undefined;
+    if (!existing) return res.status(404).json({ ok: false, message: "Campaign not found" });
+    const clean = (value: string | null | undefined, fallback: string | null) =>
+      value === undefined ? fallback : value?.trim() || null;
+    const campaignStory = clean(body.campaignStory, existing.campaign_story);
+    const campaignNotes = clean(body.campaignNotes, existing.campaign_notes);
+    const t = now();
+    db.prepare("UPDATE campaigns SET campaign_story = ?, campaign_notes = ?, updated_at = ? WHERE id = ?")
+      .run(campaignStory, campaignNotes, t, campaignId);
+    ctx.broadcast("campaigns:changed", { campaignId });
+    res.json({ ok: true, campaignId, campaignStory, campaignNotes, updatedAt: t });
   });
 
   app.delete("/api/campaigns/:campaignId", requireAdmin, (req, res) => {

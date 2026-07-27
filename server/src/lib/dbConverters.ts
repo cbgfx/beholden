@@ -263,6 +263,8 @@ export function rowToCampaign(row: Record<string, unknown>): StoredCampaign {
     color: (row.color as string | null) ?? null,
     imageUrl: readVersionedImageUrl(row),
     sharedNotes: (row.shared_notes as string | null) ?? "",
+    campaignStory: typeof row.campaign_story === "string" ? row.campaign_story : null,
+    campaignNotes: typeof row.campaign_notes === "string" ? row.campaign_notes : null,
     isActive: row.is_active !== 0,
     binderId: typeof row.binder_id === "string" ? row.binder_id : null,
     currentDate: {
@@ -371,7 +373,8 @@ export function rowToINpc(row: Record<string, unknown>): StoredINpc {
   return {
     id: row.id as string,
     campaignId: row.campaign_id as string,
-    monsterId: row.monster_id as string,
+    monsterId: (row.monster_id as string | null) ?? null,
+    binderMortalId: (row.binder_mortal_id as string | null) ?? null,
     name: row.name as string,
     label: (row.label as string | null) ?? null,
     friendly: Boolean(row.friendly),

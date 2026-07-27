@@ -170,6 +170,8 @@ export interface StoredCampaign extends Timestamps {
   color: string | null;
   imageUrl?: string | null;
   sharedNotes: string;
+  campaignStory: string | null;
+  campaignNotes: string | null;
   isActive: boolean;
   binderId: string | null;
   currentDate: {
@@ -285,7 +287,8 @@ export interface StoredCharacterSheet extends Timestamps, StoredActorVitals, Sto
 export interface StoredINpc extends Timestamps {
   id: Id;
   campaignId: Id;
-  monsterId: string;
+    monsterId: string | null;
+    binderMortalId: string | null;
   name: string;
   label: string | null;
   friendly: boolean;

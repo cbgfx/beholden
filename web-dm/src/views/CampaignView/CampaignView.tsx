@@ -148,6 +148,8 @@ export function CampaignView(props: {
         onAddPlayerToEncounter={props.onAddPlayerToEncounter}
         inpcs={inpcs}
         selectedCampaignId={state.selectedCampaignId}
+        binderId={selectedCampaign?.binderId}
+        campaignCurrentDate={selectedCampaign?.currentDate?.sort}
         onAddINpcFromMonster={props.onAddINpcFromMonster}
         onEditINpc={props.onEditINpc}
         onDeleteINpc={props.onDeleteINpc}

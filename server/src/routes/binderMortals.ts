@@ -6,6 +6,11 @@ import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { convertMortalSubtype, createMortal } from "../services/binders/mortals.js";
 import { ACCEPTED_IMAGE_TYPES, deleteImageFiles, resizeToWebP } from "../lib/imageHelpers.js";
+import {
+  hydrateLinkedMortalFromCharacter,
+  syncLinkedCharacterAgeFromMortal,
+  syncLinkedCharacterPortraitFromMortal,
+} from "../services/binders/linkedCharacterSync.js";
 import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
 
 const optionalText = (max: number) => z.string().max(max).nullable().optional().transform((value) => {
@@ -372,9 +377,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
           UPDATE binder_player_characters SET player_id = ?, character_id = ?, updated_at = ?
           WHERE mortal_id = ?
         `).run(linkedPlayer?.playerId ?? null, linkedPlayer?.characterId ?? null, now, id);
-        if (linkedPlayer?.imageUrl) {
-          db.prepare("UPDATE mortals SET image_url = ?, image_updated_at = ? WHERE id = ?").run(linkedPlayer.imageUrl, now, id);
-        }
+        hydrateLinkedMortalFromCharacter(db, id, now);
       }
     })();
     const row = db.prepare(`${SELECT_MORTAL} WHERE m.id = ?`).get(id) as MortalRow;
@@ -407,6 +410,10 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
     const linkedPlayer = nextType === "player_character"
       ? playerLink(ctx, binderId, body.playerId === undefined ? existing.player_id : body.playerId, mortalId)
       : { playerId: null, characterId: null, imageUrl: null };
+    const linkChanged = nextType === "player_character" && (
+      (linkedPlayer?.playerId ?? null) !== (existing.player_id ?? null)
+      || (linkedPlayer?.characterId ?? null) !== (existing.character_id ?? null)
+    );
     if ((body.playerId ?? existing.player_id) && nextType === "player_character" && !linkedPlayer) {
       return res.status(400).json({ ok: false, message: "Player must belong to a Campaign in this Binder" });
     }
@@ -455,14 +462,17 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
           UPDATE binder_player_characters SET player_id = ?, character_id = ?, updated_at = ?
           WHERE mortal_id = ?
         `).run(linkedPlayer?.playerId ?? null, linkedPlayer?.characterId ?? null, now, mortalId);
-        if (body.playerId !== undefined && linkedPlayer?.imageUrl && !existing.image_url) {
-          db.prepare("UPDATE mortals SET image_url = ?, image_updated_at = ? WHERE id = ?").run(linkedPlayer.imageUrl, now, mortalId);
-        }
+        if (linkChanged) hydrateLinkedMortalFromCharacter(db, mortalId, now);
+        else if (body.birthDate !== undefined) syncLinkedCharacterAgeFromMortal(db, mortalId, now);
       } else {
         db.prepare(`
           UPDATE binder_npcs SET monster_id = ?, updated_at = ?
           WHERE mortal_id = ?
         `).run(nextMonsterId, now, mortalId);
+        db.prepare(`
+          UPDATE inpcs SET name = ?, monster_id = ?, updated_at = ?
+          WHERE binder_mortal_id = ?
+        `).run(name, nextMonsterId, now, mortalId);
       }
     })();
     const row = db.prepare(`${SELECT_MORTAL} WHERE m.id = ?`).get(mortalId) as MortalRow;
@@ -488,6 +498,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
     const imageUrl = `/binder-mortal-images/${filename}`;
     const now = ctx.helpers.now();
     db.prepare("UPDATE mortals SET image_url = ?, image_updated_at = ?, updated_at = ? WHERE id = ?").run(imageUrl, now, now, mortalId);
+    syncLinkedCharacterPortraitFromMortal(db, mortalId, imageUrl, now);
     res.json({ ok: true, imageUrl: absolutizePublicUrlForRequest(req, imageUrl) });
   });
 

@@ -85,6 +85,22 @@ function renderNoteRichText(text: string): React.ReactNode {
       continue;
     }
 
+    const toggle = trimmed.match(/^:::toggle\s+(.+)$/);
+    if (toggle) {
+      let end = i + 1;
+      while (end < lines.length && lines[end]?.trim() !== ":::") end += 1;
+      out.push(
+        <details key={`toggle-${i}`} open style={{ margin: "8px 0 12px" }}>
+          <summary style={{ cursor: "pointer", fontWeight: 800, fontSize: "calc(var(--fs-subtitle) + 2px)", marginBottom: 8 }}>
+            {renderInlineRichText(toggle[1])}
+          </summary>
+          <div style={{ paddingLeft: 26 }}>{renderNoteRichText(lines.slice(i + 1, end).join("\n"))}</div>
+        </details>
+      );
+      i = end < lines.length ? end + 1 : end;
+      continue;
+    }
+
     const nextLine = lines[i + 1] ?? "";
     if (trimmed.includes("|") && isTableDivider(nextLine)) {
       const headers = parseTableCells(line);

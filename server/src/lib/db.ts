@@ -12,6 +12,8 @@ import { ensureCharacterRulesetColumn } from "./characterRulesetColumnMigration.
 import { ensureCompendiumCompositePrimaryKey } from "./compendiumPrimaryKeyMigration.js";
 import { BINDER_SCHEMA_SQL } from "./binderSchema.js";
 import { ensureActivityColumns } from "./activityMigration.js";
+import { ensureInpcBinderMortalLink } from "./inpcBinderMigration.js";
+import { reconcileLinkedCharacterIdentities } from "../services/binders/linkedCharacterSync.js";
 import {
   ensureBinderCampaignColumns,
   ensureBinderColumns,
@@ -37,12 +39,14 @@ export function openDb(dbPath: string): Db {
   // its foreign-key reference on upgraded databases.
   ensureBinderLocationNaming(db);
   db.exec(BINDER_SCHEMA_SQL);
+  ensureInpcBinderMortalLink(db);
   ensureBinderColumns(db);
   ensureBinderRecordTypes(db);
   ensureBinderUnsetConventions(db);
   // Recreate Binder indexes/triggers that may have belonged to a rebuilt table.
   db.exec(BINDER_SCHEMA_SQL);
   ensureBinderCampaignColumns(db);
+  reconcileLinkedCharacterIdentities(db);
   ensureCompendiumRulesetColumns(db);
   ensureCompendiumCompositePrimaryKey(db);
   ensureCharacterRulesetColumn(db);

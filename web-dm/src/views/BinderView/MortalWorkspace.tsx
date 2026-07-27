@@ -8,6 +8,8 @@ import { theme, withAlpha } from "@/theme/theme";
 import { createBinderMortal, deleteBinderMortal, fetchBinderMortals, fetchMortalOptions, updateBinderMortal, uploadBinderMortalImage, type BinderMortal, type BinderMortalInput, type MortalOptions } from "@/services/binderMortalApi";
 import { MortalRecordModal } from "@/views/BinderView/MortalRecordModal";
 import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
+import { fetchBinderRecordOptions, syncBinderMentions, type BinderRecordOption } from "@/services/binderLoreApi";
+import { RelationshipPanel } from "./RelationshipPanel";
 
 const mortalTableColumns = "minmax(210px, 1.45fr) minmax(135px, 0.85fr) minmax(170px, 1fr) minmax(175px, 1fr) 130px 88px 96px 72px";
 const NONE_FILTER = "__none__";
@@ -94,6 +96,7 @@ function InlineRichTextField(props: {
   value: string | null;
   canEdit: boolean;
   onSave: (value: string | null) => Promise<void>;
+  mentions?: Array<{ id: string; label: string; href: string; type?: string }>;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(props.value ?? "");
@@ -102,7 +105,7 @@ function InlineRichTextField(props: {
   return <section>
     <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase" }}>{props.label}</div>
     {editing ? <div style={{ display: "grid", gap: 9, marginTop: 7 }}>
-      <WysiwygNoteEditor value={draft} onChange={setDraft} placeholder={`Add ${props.label.toLocaleLowerCase()}…`} minHeight={220} theme={{ radius: theme.radius.control, panelBorder: theme.colors.panelBorder, inputBg: theme.colors.inputBg, text: theme.colors.text }} />
+      <WysiwygNoteEditor value={draft} onChange={setDraft} mentions={props.mentions} placeholder={`Add ${props.label.toLocaleLowerCase()}…`} minHeight={220} theme={{ radius: theme.radius.control, panelBorder: theme.colors.panelBorder, inputBg: theme.colors.inputBg, text: theme.colors.text }} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
         <Button variant="ghost" onClick={() => { setDraft(props.value ?? ""); setEditing(false); }}>Cancel</Button>
         <Button disabled={saving} onClick={async () => {
@@ -133,6 +136,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
   const confirm = useConfirm();
   const [records, setRecords] = useState<BinderMortal[]>([]);
   const [options, setOptions] = useState<MortalOptions>({ records: [], players: [], monsters: [] });
+  const [loreRecords, setLoreRecords] = useState<BinderRecordOption[]>([]);
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<MortalFilters>(emptyFilters);
   const [savedViews, setSavedViews] = useState<SavedMortalView[]>([]);
@@ -229,12 +233,14 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     setLoading(true);
     setError(null);
     try {
-      const [mortals, mortalOptions] = await Promise.all([
+      const [mortals, mortalOptions, allRecords] = await Promise.all([
         fetchBinderMortals(props.binderId, query),
         fetchMortalOptions(props.binderId),
+        fetchBinderRecordOptions(props.binderId),
       ]);
       setRecords(mortals);
       setOptions(mortalOptions);
+      setLoreRecords(allRecords);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to load Mortals.");
     } finally {
@@ -288,6 +294,9 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
         ? [["Player", selected.player?.playerName || "None"] as [string, string]]
         : []),
     ] as Array<[string, string]>).filter(([, value]) => value !== "None");
+    const mentions = loreRecords.filter((row) => row.id !== selected.id).map((row) => ({
+      id: row.id, label: row.name, href: row.route, type: row.type,
+    }));
     return <>
       <div style={{ display: "grid", gap: 16 }}>
         <button type="button" onClick={() => navigate(`/binder/${props.binderId}/mortals`)} style={{ width: "fit-content", border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: 0, fontSize: "var(--fs-medium)" }}>← All Mortals</button>
@@ -327,14 +336,17 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
                 </div> : <div style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{value}</div>}
               </div>)}
             </div>
-            <InlineRichTextField label="Notes" value={selected.notes} canEdit={props.canEdit} onSave={async (notes) => {
+            <InlineRichTextField label="Notes" value={selected.notes} mentions={mentions} canEdit={props.canEdit} onSave={async (notes) => {
               await updateBinderMortal(props.binderId, selected.id, { notes });
+              await syncBinderMentions(props.binderId, selected.id, "description", notes);
               await reload();
             }} />
-            <InlineRichTextField label="DM Notes" value={selected.dmNotes} canEdit={props.canEdit} onSave={async (dmNotes) => {
+            <InlineRichTextField label="DM Notes" value={selected.dmNotes} mentions={mentions} canEdit={props.canEdit} onSave={async (dmNotes) => {
               await updateBinderMortal(props.binderId, selected.id, { dmNotes });
+              await syncBinderMentions(props.binderId, selected.id, "dm_notes", dmNotes);
               await reload();
             }} />
+            <RelationshipPanel binderId={props.binderId} recordId={selected.id} records={loreRecords} canEdit={props.canEdit} />
           </div>
         </article>
       </div>

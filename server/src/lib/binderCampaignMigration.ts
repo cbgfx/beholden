@@ -189,7 +189,7 @@ export function ensureBinderRecordTypes(db: Db): void {
   const definition = db.prepare(`
     SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'binder_records'
   `).pluck().get() as string | undefined;
-  if (definition?.includes("'domain'") && definition.includes("'location'")) return;
+  if (definition?.includes("'domain'") && definition.includes("'location'") && definition.includes("'item'")) return;
 
   db.pragma("foreign_keys = OFF");
   db.pragma("legacy_alter_table = ON");
@@ -202,7 +202,7 @@ export function ensureBinderRecordTypes(db: Db): void {
           binder_id TEXT NOT NULL REFERENCES binders(id) ON DELETE CASCADE,
           record_type TEXT NOT NULL CHECK(record_type IN (
             'mortal', 'deity', 'race', 'position', 'domain', 'organization',
-            'continent', 'country', 'location', 'poi', 'event'
+            'continent', 'country', 'location', 'poi', 'item', 'event'
           )),
           name TEXT NOT NULL,
           name_key TEXT NOT NULL,
@@ -309,6 +309,12 @@ export function ensureBinderCampaignColumns(db: Db): void {
   }
   if (!columns.has("current_date_sort")) {
     db.exec("ALTER TABLE campaigns ADD COLUMN current_date_sort INTEGER");
+  }
+  if (!columns.has("campaign_story")) {
+    db.exec("ALTER TABLE campaigns ADD COLUMN campaign_story TEXT");
+  }
+  if (!columns.has("campaign_notes")) {
+    db.exec("ALTER TABLE campaigns ADD COLUMN campaign_notes TEXT");
   }
   db.exec("CREATE INDEX IF NOT EXISTS idx_campaigns_binder ON campaigns(binder_id, updated_at DESC)");
 }

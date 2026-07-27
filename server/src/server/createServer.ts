@@ -61,6 +61,7 @@ import { registerBastionRoutes } from "../routes/bastions.js";
 import { registerBinderRoutes } from "../routes/binders.js";
 import { registerBinderReferenceRoutes } from "../routes/binderReferences.js";
 import { registerBinderMortalRoutes } from "../routes/binderMortals.js";
+import { registerBinderLoreRoutes } from "../routes/binderLore.js";
 
 export function createServer() {
   const runtime = getRuntimeConfig();
@@ -206,6 +207,7 @@ export function createServer() {
   registerBinderRoutes(app, ctx);
   registerBinderReferenceRoutes(app, ctx);
   registerBinderMortalRoutes(app, ctx);
+  registerBinderLoreRoutes(app, ctx);
   registerWebUiRoutes(app, ctx);
   registerPartyInventoryRoutes(app, ctx);
   registerBastionRoutes(app, ctx);

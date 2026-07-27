@@ -21,7 +21,8 @@ const TABLES = [
   "binder_continents", "binder_countries", "binder_locations", "binder_points_of_interest",
   "mortals", "binder_npcs", "binder_player_characters", "deities", "deity_domains",
   "binder_organizations", "organization_memberships", "binder_events", "binder_event_tags",
-  "binder_event_tag_links", "binder_event_records", "binder_record_mentions",
+  "binder_event_tag_links", "binder_event_records", "binder_event_campaigns", "binder_items",
+  "binder_relationships", "binder_record_mentions",
 ] as const;
 
 const TABLE_FILTER: Record<(typeof TABLES)[number], string> = {
@@ -44,6 +45,9 @@ const TABLE_FILTER: Record<(typeof TABLES)[number], string> = {
   binder_event_tags: "binder_id = ?",
   binder_event_tag_links: "event_id IN (SELECT id FROM binder_records WHERE binder_id = ?)",
   binder_event_records: "event_id IN (SELECT id FROM binder_records WHERE binder_id = ?)",
+  binder_event_campaigns: "event_id IN (SELECT id FROM binder_records WHERE binder_id = ?)",
+  binder_items: "id IN (SELECT id FROM binder_records WHERE binder_id = ?)",
+  binder_relationships: "binder_id = ?",
   binder_record_mentions: "source_record_id IN (SELECT id FROM binder_records WHERE binder_id = ?)",
 };
 
@@ -153,6 +157,33 @@ export function importBinderDocument(db: Db, raw: unknown, ownerUserId: string, 
     for (const row of rows("binder_event_tags")) db.prepare("INSERT INTO binder_event_tags VALUES (?, ?, ?, ?, ?, ?)").run(tag(row.id), binderId, row.name, helpers.normalizeKey(String(row.name)), now, now);
     for (const row of rows("binder_event_tag_links")) db.prepare("INSERT INTO binder_event_tag_links VALUES (?, ?)").run(map(row.event_id), tag(row.tag_id));
     for (const row of rows("binder_event_records")) db.prepare("INSERT INTO binder_event_records VALUES (?, ?, ?, ?, ?, ?)").run(helpers.uid(), map(row.event_id), map(row.record_id), row.role ?? null, text(row.description), row.sort ?? 0);
+    // Campaigns are instance-local. Associations without a matching campaign
+    // are intentionally left detached, matching Binder import semantics.
+    for (const row of rows("binder_event_campaigns")) {
+      const campaign = db.prepare("SELECT id FROM campaigns WHERE id = ? AND binder_id = ?").get(row.campaign_id, binderId);
+      if (campaign) db.prepare("INSERT INTO binder_event_campaigns VALUES (?, ?, ?, ?, ?)").run(helpers.uid(), map(row.event_id), row.campaign_id, row.role ?? null, text(row.description));
+    }
+    for (const row of rows("binder_items")) db.prepare(`
+      INSERT INTO binder_items (
+        id,description,dm_notes,compendium_item_id,holder_mortal_id,location_record_id,created_at,updated_at
+      ) VALUES (?,?,?,?,?,?,?,?)
+    `).run(
+      map(row.id), text(row.description), text(row.dm_notes),
+      row.compendium_item_id && db.prepare("SELECT 1 FROM compendium_items WHERE id=?").get(row.compendium_item_id)
+        ? row.compendium_item_id : null,
+      map(row.holder_mortal_id), map(row.location_record_id), now, now,
+    );
+    for (const row of rows("binder_relationships")) db.prepare(`
+      INSERT INTO binder_relationships (
+        id,binder_id,source_record_id,target_record_id,category,source_label,target_label,is_symmetric,
+        start_date_text,start_date_sort,end_date_text,end_date_sort,notes,created_at,updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).run(
+      helpers.uid(), binderId, map(row.source_record_id), map(row.target_record_id), row.category,
+      row.source_label ?? null, row.target_label ?? null, row.is_symmetric ?? 0,
+      row.start_date_text ?? null, row.start_date_sort ?? null, row.end_date_text ?? null,
+      row.end_date_sort ?? null, text(row.notes), now, now,
+    );
     for (const row of rows("binder_record_mentions")) db.prepare(`
       INSERT INTO binder_record_mentions (id,source_record_id,source_field,target_record_id,target_external_id,label,occurrence_key,created_at)
       VALUES (?,?,?,?,?,?,?,?)

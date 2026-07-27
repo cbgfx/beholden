@@ -26,6 +26,10 @@ import {
 import { ACCEPTED_IMAGE_TYPES, resizeToWebP } from "../lib/imageHelpers.js";
 import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
 import { withAbsoluteImageUrl } from "../lib/routeImageUrl.js";
+import {
+  syncLinkedMortalAgeFromCharacter,
+  syncLinkedMortalPortraitFromCharacter,
+} from "../services/binders/linkedCharacterSync.js";
 import { preserveProficienciesOnLevelUp } from "../lib/levelUpProficiencies.js";
 import {
   AssignBody,
@@ -231,6 +235,9 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       characterDataForStorage ? JSON.stringify(characterDataForStorage) : null,
       t, charId, userId
     );
+    if (p.characterData !== undefined && Object.prototype.hasOwnProperty.call(p.characterData ?? {}, "age")) {
+      syncLinkedMortalAgeFromCharacter(db, charId, characterDataForStorage, t);
+    }
 
     const nextChar = {
       ...ex,
@@ -389,6 +396,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       db.prepare("UPDATE players SET image_url = ?, image_updated_at = ?, updated_at = ? WHERE id = ?").run(imageUrl, t, t, player_id);
       emitPlayerChange({ campaignId: campaign_id, action: "upsert", playerId: player_id, characterId: charId });
     }
+    syncLinkedMortalPortraitFromCharacter(db, charId, imageUrl, t);
     res.json({ ok: true, imageUrl: absolutizePublicUrlForRequest(req, imageUrl) });
   });
 
@@ -407,6 +415,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       db.prepare("UPDATE players SET image_url = NULL, image_updated_at = ?, updated_at = ? WHERE id = ?").run(t, t, player_id);
       emitPlayerChange({ campaignId: campaign_id, action: "upsert", playerId: player_id, characterId: charId });
     }
+    syncLinkedMortalPortraitFromCharacter(db, charId, null, t);
     res.json({ ok: true });
   });
 }

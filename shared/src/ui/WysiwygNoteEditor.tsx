@@ -53,6 +53,16 @@ function markdownToHtml(value: string): string {
       continue;
     }
 
+    const toggle = trimmed.match(/^:::toggle\s+(.+)$/);
+    if (toggle) {
+      let end = i + 1;
+      while (end < lines.length && lines[end]?.trim() !== ":::") end += 1;
+      const body = lines.slice(i + 1, end).join("\n");
+      out.push(`<details open><summary>${renderInlineMarkdown(toggle[1])}</summary>${markdownToHtml(body)}</details>`);
+      i = end < lines.length ? end + 1 : end;
+      continue;
+    }
+
     if (/^[-*]\s+/.test(trimmed)) {
       const items: string[] = [];
       while (i < lines.length) {
@@ -92,6 +102,16 @@ function blockToMarkdown(node: Node): string {
   if (!(node instanceof HTMLElement)) return "";
 
   const tag = node.tagName.toLowerCase();
+  if (tag === "details") {
+    const summary = Array.from(node.children).find((child) => child.tagName.toLowerCase() === "summary");
+    const title = summary ? Array.from(summary.childNodes).map(nodeText).join("").trim() : "Toggle";
+    const body = Array.from(node.childNodes)
+      .filter((child) => child !== summary)
+      .map(blockToMarkdown)
+      .filter(Boolean)
+      .join("\n");
+    return `:::toggle ${title}\n${body}\n:::`;
+  }
   const text = Array.from(node.childNodes).map(nodeText).join("").trimEnd();
 
   if (tag === "h1") return `# ${text}`;
@@ -200,11 +220,13 @@ export function WysiwygNoteEditor(props: {
   minHeight?: number;
   theme: EditorTheme;
   style?: React.CSSProperties;
+  mentions?: Array<{ id: string; label: string; href: string; type?: string }>;
 }) {
   const { onChange, value } = props;
   const editorRef = React.useRef<HTMLDivElement>(null);
   const focusedRef = React.useRef(false);
   const htmlRef = React.useRef("");
+  const savedRangeRef = React.useRef<Range | null>(null);
   const [isFocused, setIsFocused] = React.useState(false);
   const [isEmpty, setIsEmpty] = React.useState(() => !value.trim());
   const buttonStyle = toolbarButtonStyle(props.theme);
@@ -258,6 +280,93 @@ export function WysiwygNoteEditor(props: {
     editorRef.current?.focus();
   }, [emitChange]);
 
+  const saveSelection = React.useCallback(() => {
+    const editor = editorRef.current;
+    const range = editor ? selectionRangeInEditor(editor) : null;
+    if (range) savedRangeRef.current = range.cloneRange();
+  }, []);
+
+  const insertMention = React.useCallback((id: string) => {
+    const editor = editorRef.current;
+    const mention = props.mentions?.find((option) => option.id === id);
+    const selection = window.getSelection();
+    const range = savedRangeRef.current;
+    if (!editor || !mention || !selection || !range || !editor.contains(range.commonAncestorContainer)) return;
+    range.deleteContents();
+    const anchor = document.createElement("a");
+    anchor.href = mention.href;
+    anchor.dataset.binderRecordId = mention.id;
+    anchor.textContent = `@${mention.label}`;
+    range.insertNode(anchor);
+    const spacer = document.createTextNode(" ");
+    anchor.after(spacer);
+    range.setStartAfter(spacer);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    savedRangeRef.current = range.cloneRange();
+    emitChange();
+    editor.focus();
+  }, [emitChange, props.mentions]);
+
+  const toggleHeading = React.useCallback(() => {
+    const editor = editorRef.current;
+    const range = editor ? selectionRangeInEditor(editor) : null;
+    if (!editor || !range) {
+      editor?.focus();
+      return;
+    }
+    const start = range.startContainer.nodeType === Node.ELEMENT_NODE
+      ? range.startContainer as HTMLElement
+      : range.startContainer.parentElement;
+    const existing = start?.closest("details");
+    if (existing && editor.contains(existing)) {
+      const summary = Array.from(existing.children).find((child) => child.tagName.toLowerCase() === "summary");
+      const heading = document.createElement("h2");
+      heading.innerHTML = summary?.innerHTML || "Toggle";
+      existing.parentNode?.insertBefore(heading, existing);
+      for (const child of Array.from(existing.childNodes)) {
+        if (child !== summary) existing.parentNode?.insertBefore(child, existing);
+      }
+      existing.remove();
+      selectNodeContents(heading);
+      emitChange();
+      editor.focus();
+      return;
+    }
+
+    const block = start?.closest("h1,h2,h3,h4,h5,h6,p,div");
+    if (!block || block === editor || !editor.contains(block)) return;
+    const details = document.createElement("details");
+    details.open = true;
+    const summary = document.createElement("summary");
+    summary.innerHTML = block.innerHTML || "Toggle heading";
+    details.appendChild(summary);
+
+    const headingMatch = block.tagName.match(/^H([1-6])$/);
+    if (headingMatch) {
+      const level = Number(headingMatch[1]);
+      let sibling = block.nextSibling;
+      while (sibling) {
+        const next = sibling.nextSibling;
+        const siblingLevel = sibling instanceof HTMLElement
+          ? Number(sibling.tagName.match(/^H([1-6])$/)?.[1] ?? 99)
+          : 99;
+        if (siblingLevel <= level) break;
+        details.appendChild(sibling);
+        sibling = next;
+      }
+    } else {
+      const paragraph = document.createElement("p");
+      paragraph.appendChild(document.createElement("br"));
+      details.appendChild(paragraph);
+    }
+    block.parentNode?.replaceChild(details, block);
+    selectNodeContents(summary);
+    emitChange();
+    editor.focus();
+  }, [emitChange]);
+
   return (
     <div
       style={{
@@ -283,8 +392,26 @@ export function WysiwygNoteEditor(props: {
         <button type="button" title="Italic" aria-label="Italic" onMouseDown={(e) => e.preventDefault()} onClick={() => applyInlineFormat("em")} style={{ ...buttonStyle, fontStyle: "italic" }}>I</button>
         <button type="button" title="Underline" aria-label="Underline" onMouseDown={(e) => e.preventDefault()} onClick={() => applyInlineFormat("u")} style={{ ...buttonStyle, textDecoration: "underline" }}>U</button>
         <button type="button" title="Heading" aria-label="Heading" onMouseDown={(e) => e.preventDefault()} onClick={() => runBlockCommand("formatBlock", "h2")} style={buttonStyle}>H</button>
+        <button type="button" title="Toggle heading" aria-label="Toggle heading" onMouseDown={(e) => e.preventDefault()} onClick={toggleHeading} style={{ ...buttonStyle, minWidth: 42 }}>▸ H</button>
         <button type="button" title="Bullet list" aria-label="Bullet list" onMouseDown={(e) => e.preventDefault()} onClick={() => runBlockCommand("insertUnorderedList")} style={buttonStyle}>•</button>
         <button type="button" title="Divider" aria-label="Divider" onMouseDown={(e) => e.preventDefault()} onClick={() => runBlockCommand("insertHorizontalRule")} style={buttonStyle}>-</button>
+        {props.mentions?.length ? <select
+          aria-label="Mention Binder record"
+          title="Mention Binder record"
+          defaultValue=""
+          onMouseDown={saveSelection}
+          onChange={(event) => {
+            const id = event.target.value;
+            event.target.value = "";
+            if (id) insertMention(id);
+          }}
+          style={{ ...buttonStyle, minWidth: 116, padding: "0 6px" }}
+        >
+          <option value="">@ Mention</option>
+          {props.mentions.map((mention) => <option key={mention.id} value={mention.id}>
+            {mention.label}{mention.type ? ` · ${mention.type}` : ""}
+          </option>)}
+        </select> : null}
       </div>
       <div style={{ position: "relative" }}>
         {isEmpty && !isFocused ? (
@@ -320,6 +447,8 @@ export function WysiwygNoteEditor(props: {
             emitChange();
           }}
           onInput={emitChange}
+          onKeyUp={saveSelection}
+          onMouseUp={saveSelection}
           onPaste={(event) => {
             event.preventDefault();
             const text = event.clipboardData.getData("text/plain");

@@ -17,7 +17,7 @@ type Args = {
   setTargetId: (id: string | null) => void;
   setRound: (n: number | ((prev: number) => number)) => void;
   persistCombatState: (next: { round: number; activeId: string | null }) => Promise<void>;
-  inpcsById: Record<string, { monsterId?: string } | undefined>;
+  inpcsById: Record<string, { monsterId?: string | null } | undefined>;
   delta: string;
   setDelta: (v: string) => void;
   target: EncounterActor | null;

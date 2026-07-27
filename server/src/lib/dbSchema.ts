@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS campaigns (
   image_url TEXT,
   image_updated_at INTEGER,
   shared_notes TEXT NOT NULL DEFAULT '',
+  campaign_story TEXT,
+  campaign_notes TEXT,
   party_currency_json TEXT NOT NULL DEFAULT '{"PP":0,"GP":0,"SP":0,"CP":0}',
   is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
   created_at INTEGER NOT NULL,
@@ -73,7 +75,8 @@ CREATE TABLE IF NOT EXISTS players (
 CREATE TABLE IF NOT EXISTS inpcs (
   id TEXT PRIMARY KEY,
   campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
-  monster_id TEXT NOT NULL,
+  monster_id TEXT,
+  binder_mortal_id TEXT,
   name TEXT NOT NULL,
   label TEXT,
   friendly INTEGER NOT NULL DEFAULT 1,
@@ -405,6 +408,8 @@ CREATE INDEX IF NOT EXISTS idx_adventures_campaign   ON adventures(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_encounters_adventure  ON encounters(adventure_id);
 CREATE INDEX IF NOT EXISTS idx_encounters_campaign   ON encounters(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_inpcs_campaign        ON inpcs(campaign_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_inpcs_campaign_binder_mortal
+  ON inpcs(campaign_id, binder_mortal_id) WHERE binder_mortal_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_notes_campaign        ON notes(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_notes_adventure       ON notes(adventure_id);
 CREATE INDEX IF NOT EXISTS idx_treasure_campaign     ON treasure(campaign_id);

@@ -6,7 +6,7 @@ import { normalizeKey } from "../../lib/text.js";
 import { uid } from "../../lib/runtime.js";
 
 type Row = Record<string, string>;
-type Kind = "race" | "position" | "domain" | "continent" | "country" | "location" | "poi" | "organization" | "deity" | "mortal" | "event";
+type Kind = "race" | "position" | "domain" | "continent" | "country" | "location" | "poi" | "organization" | "deity" | "mortal" | "item" | "event";
 type Candidate = {
   kind: Kind;
   externalId: string;
@@ -41,7 +41,7 @@ const DATABASES: Array<{ match: RegExp; name: string; kind?: Kind; nameColumn?: 
   { match: /^Mortals .+_all\.csv$/i, name: "Mortals", kind: "mortal", nameColumn: "Name", subtype: "npc" },
   { match: /^Player Characters .+_all\.csv$/i, name: "Player Characters", kind: "mortal", nameColumn: "Name", subtype: "player_character" },
   { match: /^Timeline .+_all\.csv$/i, name: "Events", kind: "event", nameColumn: "Event" },
-  { match: /^Items .+_all\.csv$/i, name: "Items", ignore: "Binder Items are not implemented in the current schema." },
+  { match: /^Items .+_all\.csv$/i, name: "Items", kind: "item", nameColumn: "Name" },
   { match: /^Loot Table .+_all\.csv$/i, name: "Loot Table", ignore: "Explicitly excluded as legacy data." },
   { match: /^HOME .+_all\.csv$/i, name: "HOME", ignore: "Not Binder lore data." },
   { match: /^People .+_all\.csv$/i, name: "Workspace People", ignore: "Not Binder lore data." },
@@ -334,6 +334,17 @@ export function importNotionZip(db: Db, binderId: string, buffer: Buffer, commit
         if (domainId) db.prepare("INSERT OR IGNORE INTO deity_domains (deity_id, domain_id) VALUES (?, ?)").run(id, domainId);
         else summary.unresolved.push({ source: candidate.name, field: "Domains", value: externalId });
       }
+    }
+    for (const candidate of candidatesByKind("item")) {
+      const id = idByExternal.get(candidate.externalId)!;
+      const compendium = db.prepare("SELECT id FROM compendium_items WHERE name_key = ? ORDER BY ruleset DESC LIMIT 1")
+        .get(normalizeKey(candidate.name)) as { id: string } | undefined;
+      db.prepare(`
+        INSERT INTO binder_items (
+          id, description, dm_notes, compendium_item_id, holder_mortal_id,
+          location_record_id, created_at, updated_at
+        ) VALUES (?, ?, NULL, ?, NULL, NULL, ?, ?)
+      `).run(id, description(candidate), compendium?.id ?? null, now, now);
     }
     for (const candidate of candidatesByKind("event")) {
       const id = idByExternal.get(candidate.externalId)!;

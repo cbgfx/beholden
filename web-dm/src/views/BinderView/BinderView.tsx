@@ -24,6 +24,8 @@ import type { BinderReferenceType } from "@/services/binderReferenceApi";
 import { ReferenceWorkspace } from "@/views/BinderView/ReferenceWorkspace";
 import { MortalWorkspace } from "@/views/BinderView/MortalWorkspace";
 import { BinderPlayersWorkspace } from "@/views/BinderView/BinderPlayersWorkspace";
+import { BinderCampaignWorkspace } from "@/views/BinderView/BinderCampaignWorkspace";
+import { BinderLoreWorkspace } from "@/views/BinderView/BinderLoreWorkspace";
 
 type NavItem = {
   id: string;
@@ -102,21 +104,23 @@ function EmptyTable({ item, accent }: { item: NavItem; accent: string }) {
   );
 }
 
-function CampaignTable({ campaigns, accent }: { campaigns: Campaign[]; accent: string }) {
+function CampaignTable({ binderId, campaigns, accent }: { binderId: string; campaigns: Campaign[]; accent: string }) {
+  const columns = "minmax(280px, 1.5fr) minmax(180px, 1fr) minmax(130px, 0.7fr) minmax(220px, 1.15fr)";
   return (
     <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(240px, 1fr) 180px 110px", padding: "12px 15px", background: `linear-gradient(90deg, ${withAlpha(accent, 0.15)}, rgba(255,255,255,0.055))`, boxShadow: `inset 0 2px 0 ${withAlpha(accent, 0.75)}`, borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
-        {["Name", "Current date", "Players"].map((column) => (
+      <div style={{ display: "grid", gridTemplateColumns: columns, gap: 18, padding: "12px 15px", background: `linear-gradient(90deg, ${withAlpha(accent, 0.15)}, rgba(255,255,255,0.055))`, boxShadow: `inset 0 2px 0 ${withAlpha(accent, 0.75)}`, borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
+        {["Name", "Current date", "Players", "Open Campaign"].map((column) => (
           <div key={column} style={{ color: theme.colors.text, fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>{column}</div>
         ))}
       </div>
       {campaigns.length ? campaigns.map((campaign) => (
         <Link
           key={campaign.id}
-          to={`/campaign/${campaign.id}`}
+          to={`/binder/${binderId}/campaigns/${campaign.id}`}
           style={{
             display: "grid",
-            gridTemplateColumns: "minmax(240px, 1fr) 180px 110px",
+            gridTemplateColumns: columns,
+            gap: 18,
             padding: "12px 14px",
             color: theme.colors.text,
             textDecoration: "none",
@@ -126,6 +130,7 @@ function CampaignTable({ campaigns, accent }: { campaigns: Campaign[]; accent: s
           <span style={{ fontWeight: 700 }}>{campaign.name}</span>
           <span style={{ color: theme.colors.muted }}>{campaign.currentDate?.text ?? "—"}</span>
           <span style={{ color: theme.colors.muted }}>{campaign.playerCount ?? 0}</span>
+          <span style={{ color: accent, fontWeight: 750, whiteSpace: "nowrap" }}>Open Campaign →</span>
         </Link>
       )) : (
         <div style={{ padding: "48px 20px", color: theme.colors.muted, textAlign: "center" }}>
@@ -147,7 +152,10 @@ export function BinderView({ binder, campaigns, canEdit, onRecordsChanged }: { b
   const routeSection = location.pathname.split("/")[3] ?? "overview";
   const routeRecordId = location.pathname.split("/")[4];
   const activeItem = ALL_ITEMS.find((item) => item.id === routeSection);
-  const title = activeItem?.label ?? binder.name;
+  const selectedCampaign = routeSection === "campaigns" && routeRecordId
+    ? campaigns.find((campaign) => campaign.id === routeRecordId)
+    : undefined;
+  const title = selectedCampaign?.name ?? activeItem?.label ?? binder.name;
   const accent = binder.color || theme.colors.accentHighlight;
 
   return (
@@ -254,7 +262,9 @@ export function BinderView({ binder, campaigns, canEdit, onRecordsChanged }: { b
               </div>
             </>
           ) : activeItem.id === "campaigns" ? (
-            <CampaignTable campaigns={campaigns} accent={accent} />
+            selectedCampaign
+              ? <BinderCampaignWorkspace campaign={selectedCampaign} accent={activeItem.color} />
+              : <CampaignTable binderId={binder.id} campaigns={campaigns} accent={accent} />
           ) : activeItem.id === "mortals" ? (
             <MortalWorkspace binderId={binder.id} binderCurrentDate={binder.currentDate.sort} recordId={routeRecordId} accent={activeItem.color} canEdit={canEdit} onRecordsChanged={onRecordsChanged} />
           ) : activeItem.id === "players" ? (
@@ -266,6 +276,16 @@ export function BinderView({ binder, campaigns, canEdit, onRecordsChanged }: { b
               recordId={routeRecordId}
               accent={activeItem.color}
               canEdit={canEdit}
+              onRecordsChanged={onRecordsChanged}
+            />
+          ) : activeItem.id === "items" || activeItem.id === "events" ? (
+            <BinderLoreWorkspace
+              binderId={binder.id}
+              type={activeItem.id}
+              recordId={routeRecordId}
+              accent={activeItem.color}
+              canEdit={canEdit}
+              campaigns={campaigns.map((campaign) => ({ id: campaign.id, name: campaign.name }))}
               onRecordsChanged={onRecordsChanged}
             />
           ) : (

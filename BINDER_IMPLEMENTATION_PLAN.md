@@ -1412,3 +1412,75 @@ character link, encounter, combatant, or lore record is deleted or detached.
 - Campaign rosters and assignments are unaffected; an assigned character still
   appears inside its Campaign.
 - DM APIs retain both states so archive management remains possible.
+
+## Implemented core lore slice: Items, Events, relationships, and mentions
+
+The first core relational slice is now implemented in the DM application:
+
+- `binder_items` stores setting identity separately from Compendium mechanics.
+  Its Compendium Item, current holder, and location links are nullable and use
+  `ON DELETE SET NULL`.
+- Item create/edit uses a Compendium Item selector by ID and displays the
+  current Compendium name without copying mechanical fields.
+- `binder_events` now has DM CRUD with optional dates and multi-select
+  associations to Binder records and attached Campaigns. Association roles and
+  descriptions are represented by the API even though the initial compact UI
+  does not yet expose every per-association annotation.
+- `binder_relationships` stores only non-structural lore relationships. Same-
+  Binder validation and foreign keys prevent cross-Binder links.
+- `family` is a normalized relationship category with free display labels such
+  as `cousin`, `half-brother`, or `adoptive aunt`. This avoids an exhaustive and
+  brittle family-type enum while keeping Family filterable.
+- Symmetric relationships are canonicalized to one row; directional categories
+  support separate source/target labels.
+- the shared rich-text editor now offers an `@ Mention` picker. Mentions render
+  as ordinary internal links, contain the stable Binder record ID, and are
+  indexed in `binder_record_mentions`.
+- relationship panels are available on Mortal, typed reference, Item, and Event
+  detail pages.
+- Notion Items are no longer discarded. They import as Binder Items and link to
+  an exact-name Compendium Item when one exists.
+- native Binder JSON import/export includes Items, relationships, Event campaign
+  associations, and mention indexes. Missing instance-local Compendium or
+  Campaign targets remain safely unset.
+
+Still deliberately deferred: player exposure/editing, combat selection,
+full-text search, collaborative editing, and advanced media.
+
+### Linked Player Character identity synchronization
+
+A Binder Player Character linked to a real Beholden character now shares its
+age and portrait bidirectionally:
+
+- Character age updates calculate the Mortal date of birth using the linked
+  Player row's Campaign current date. If that Campaign has no current date, the
+  Binder current date is used.
+- Mortal date-of-birth updates recalculate the linked character's age using the
+  same date context.
+- Character portrait upload/removal updates the Mortal portrait reference.
+- Mortal portrait upload updates the canonical character and all Campaign
+  Player projections linked to that character.
+- Creating or changing a link immediately hydrates the Mortal from the selected
+  character.
+- startup reconciliation repairs links created before live synchronization was
+  introduced, using the most recently updated portrait/identity side.
+
+The character sheet and Mortal remain separate mechanical and lore records;
+only these explicitly shared identity fields synchronize.
+
+### Campaign Important NPC projection
+
+- `inpcs.binder_mortal_id` is the nullable link from a campaign Important NPC
+  to its canonical Binder Mortal.
+- When a campaign has a Binder, adding an Important NPC offers **Import from
+  Binder** or **Create new**. Creating first commits a complete NPC Mortal and
+  then creates the campaign gameplay projection.
+- HP, AC overrides, friendliness, and encounter participation remain
+  campaign-level gameplay state. Identity and lore remain on the Mortal.
+- Mortal name and nullable statblock changes update linked Important NPC
+  projections.
+- A Binder NPC may appear in several campaigns, but only once per campaign.
+- Campaigns without a Binder retain the existing statblock workflow.
+- Campaign creation does not silently create a Binder. Binder assignment stays
+  explicit so Binders can be intentionally shared and unused Binders are not
+  created accidentally.

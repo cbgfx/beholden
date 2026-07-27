@@ -17,6 +17,8 @@ import {
 } from "@/services/binderReferenceApi";
 import { ReferenceRecordModal } from "@/views/BinderView/ReferenceRecordModal";
 import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
+import { fetchBinderRecordOptions, syncBinderMentions, type BinderRecordOption } from "@/services/binderLoreApi";
+import { RelationshipPanel } from "./RelationshipPanel";
 
 const LABELS: Record<BinderReferenceType, { plural: string; singular: string; usage: string }> = {
   races: { plural: "Races", singular: "Race", usage: "Mortals" },
@@ -43,6 +45,7 @@ export function ReferenceWorkspace(props: {
   const navigate = useNavigate();
   const confirm = useConfirm();
   const [records, setRecords] = useState<BinderReferenceRecord[]>([]);
+  const [loreRecords, setLoreRecords] = useState<BinderRecordOption[]>([]);
   const [parentOptions, setParentOptions] = useState<Array<{ id: string; name: string; type: string }>>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -71,6 +74,10 @@ export function ReferenceWorkspace(props: {
     const timer = window.setTimeout(() => void reload(), 180);
     return () => window.clearTimeout(timer);
   }, [reload]);
+
+  useEffect(() => {
+    void fetchBinderRecordOptions(props.binderId).then(setLoreRecords);
+  }, [props.binderId, records.length]);
 
   useEffect(() => {
     const sourceTypes: BinderReferenceType[] = props.type === "countries"
@@ -106,7 +113,7 @@ export function ReferenceWorkspace(props: {
     setInlineName(selected.name);
     setInlineDescription(selected.description ?? "");
     setEditingDescription(false);
-  }, [selected?.id, selected?.name, selected?.description]);
+  }, [selected]);
 
   async function saveInline(changes: Partial<BinderReferenceInput>) {
     if (!selected || inlineSaving) return;
@@ -123,6 +130,9 @@ export function ReferenceWorkspace(props: {
           ? changes.description?.trim() || null
           : selected.description,
       });
+      if (changes.description !== undefined) {
+        await syncBinderMentions(props.binderId, selected.id, "description", changes.description?.trim() || null);
+      }
       await reload();
     } finally {
       setInlineSaving(false);
@@ -167,6 +177,9 @@ export function ReferenceWorkspace(props: {
   }
 
   if (selected) {
+    const mentions = loreRecords.filter((row) => row.id !== selected.id).map((row) => ({
+      id: row.id, label: row.name, href: row.route, type: row.type,
+    }));
     return (
       <>
         <div style={{ display: "grid", gap: 16 }}>
@@ -221,6 +234,7 @@ export function ReferenceWorkspace(props: {
                     <WysiwygNoteEditor
                       value={inlineDescription}
                       onChange={setInlineDescription}
+                      mentions={mentions}
                       placeholder="Add a description…"
                       minHeight={240}
                       theme={{ radius: theme.radius.control, panelBorder: theme.colors.panelBorder, inputBg: theme.colors.inputBg, text: theme.colors.text }}
@@ -254,6 +268,7 @@ export function ReferenceWorkspace(props: {
                 <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>{labels.usage}</div>
                 <div style={{ fontSize: "var(--fs-body)", marginTop: 7 }}>{selected.usageCount || "None"}</div>
               </section>
+              <RelationshipPanel binderId={props.binderId} recordId={selected.id} records={loreRecords} canEdit={props.canEdit} />
             </div>
           </article>
         </div>

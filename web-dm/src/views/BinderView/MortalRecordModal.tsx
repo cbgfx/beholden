@@ -83,6 +83,7 @@ export function MortalRecordModal(props: {
   record: BinderMortal | null;
   binderCurrentDate: number | null;
   options: MortalOptions;
+  requireNpcStatblock?: boolean;
   onClose: () => void;
   onSave: (input: BinderMortalInput, image: File | null) => Promise<void>;
 }) {
@@ -122,7 +123,7 @@ export function MortalRecordModal(props: {
     setMortalType(props.record?.mortalType ?? "npc");
     setRaceId(matchingRace?.id ?? props.record?.race?.id ?? "");
     const linkedGender = linkedPlayer?.gender === "male" || linkedPlayer?.gender === "female" ? linkedPlayer.gender : null;
-    setGender(linkedGender ?? props.record?.gender ?? "");
+    setGender(linkedGender ?? props.record?.gender ?? (props.record ? "" : "male"));
     const linkedAge = Number(linkedPlayer?.age?.replaceAll(",", ""));
     const linkedYear = linkedPlayer?.campaignCurrentDate ?? props.binderCurrentDate;
     const linkedBirthDate = Number.isFinite(linkedAge) && linkedYear !== null && Number.isFinite(linkedYear)
@@ -165,6 +166,10 @@ export function MortalRecordModal(props: {
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!name.trim() || !gender) return;
+    if (props.requireNpcStatblock && mortalType === "npc" && !monsterId) {
+      setError("Choose a statblock before creating this Important NPC.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -230,7 +235,7 @@ export function MortalRecordModal(props: {
     {error ? <div role="alert" style={{ color: theme.colors.red, fontSize: "var(--fs-small)", textAlign: "right" }}>{error}</div> : null}
     <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
       <Button type="button" variant="ghost" onClick={props.onClose} disabled={saving}>Cancel</Button>
-      <Button type="submit" form="binder-mortal-form" disabled={saving || !name.trim() || !gender}>{saving ? "Saving…" : props.record ? "Save Changes" : "Create Mortal"}</Button>
+      <Button type="submit" form="binder-mortal-form" disabled={saving || !name.trim() || !gender || Boolean(props.requireNpcStatblock && mortalType === "npc" && !monsterId)}>{saving ? "Saving…" : props.record ? "Save Changes" : props.requireNpcStatblock ? "Create Important NPC" : "Create Mortal"}</Button>
     </div>
   </div>;
 
@@ -274,7 +279,7 @@ export function MortalRecordModal(props: {
       {property("Type", <Select style={{ width: "100%" }} value={mortalType} onChange={(event) => setMortalType(event.target.value as MortalType)} disabled={saving}><option value="npc">NPC</option><option value="player_character">Player Character</option></Select>)}
       {mortalType === "player_character"
         ? property("Existing player", <Select style={{ width: "100%" }} value={playerId} onChange={(event) => linkPlayer(event.target.value)} disabled={saving}><option value="">None</option>{availablePlayers.map((player) => <option key={player.id} value={player.id}>{playerLabel(player)}</option>)}</Select>)
-        : <SearchableOption id="mortal-monster" label="Statblock" selectedId={monsterId} options={props.options.monsters ?? []} onChange={setMonsterId} disabled={saving} />}
+        : <SearchableOption id="mortal-monster" label={`Statblock${props.requireNpcStatblock ? " *" : ""}`} selectedId={monsterId} options={props.options.monsters ?? []} onChange={setMonsterId} disabled={saving} />}
       <SearchableOption id="mortal-race" label="Race" selectedId={raceId} options={grouped.races} onChange={setRaceId} disabled={saving} />
       {property("Gender", <Select value={gender} onChange={(event) => setGender(event.target.value as typeof gender)} disabled={saving}><option value="" disabled>Select gender</option><option value="male">Male</option><option value="female">Female</option></Select>)}
       {property("Age", <div style={{ display: "flex", alignItems: "center", gap: 9 }}>

@@ -22,7 +22,7 @@ export const CHARACTER_SHEET_COLS =
   "is_active, created_at, updated_at";
 
 export const INPC_COLS =
-  "id, campaign_id, monster_id, name, label, friendly, " +
+  "id, campaign_id, monster_id, binder_mortal_id, name, label, friendly, " +
   "hp_max, hp_current, hp_details, ac, ac_details, sort, created_at, updated_at";
 
 export const NOTE_COLS =

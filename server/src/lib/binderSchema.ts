@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS binder_records (
     'country',
     'location',
     'poi',
+    'item',
     'event'
   )),
   name TEXT NOT NULL,
@@ -239,6 +240,48 @@ CREATE TABLE IF NOT EXISTS binder_events (
   updated_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS binder_items (
+  id TEXT PRIMARY KEY REFERENCES binder_records(id) ON DELETE CASCADE,
+  description TEXT,
+  dm_notes TEXT,
+  compendium_item_id TEXT REFERENCES compendium_items(id) ON DELETE SET NULL,
+  holder_mortal_id TEXT REFERENCES mortals(id) ON DELETE SET NULL,
+  location_record_id TEXT REFERENCES binder_records(id) ON DELETE SET NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+-- Non-structural lore links only. Structural facts such as residence,
+-- membership, position, place hierarchy and event participation stay in
+-- their typed tables.
+CREATE TABLE IF NOT EXISTS binder_relationships (
+  id TEXT PRIMARY KEY,
+  binder_id TEXT NOT NULL REFERENCES binders(id) ON DELETE CASCADE,
+  source_record_id TEXT NOT NULL REFERENCES binder_records(id) ON DELETE CASCADE,
+  target_record_id TEXT NOT NULL REFERENCES binder_records(id) ON DELETE CASCADE,
+  category TEXT NOT NULL CHECK(category IN (
+    'family', 'friend', 'enemy', 'rival', 'ally', 'mentor', 'student',
+    'spouse', 'parent', 'child', 'sibling', 'other'
+  )),
+  source_label TEXT,
+  target_label TEXT,
+  is_symmetric INTEGER NOT NULL DEFAULT 0 CHECK(is_symmetric IN (0, 1)),
+  start_date_text TEXT,
+  start_date_sort INTEGER,
+  end_date_text TEXT,
+  end_date_sort INTEGER,
+  notes TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  CHECK(source_record_id <> target_record_id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_binder_relationship_unique
+  ON binder_relationships(
+    binder_id, source_record_id, target_record_id, category,
+    IFNULL(source_label, ''), IFNULL(target_label, '')
+  );
+
 CREATE TABLE IF NOT EXISTS binder_event_tags (
   id TEXT PRIMARY KEY,
   binder_id TEXT NOT NULL REFERENCES binders(id) ON DELETE CASCADE,
@@ -360,6 +403,16 @@ CREATE INDEX IF NOT EXISTS idx_org_membership_position
   ON organization_memberships(position_id, organization_id);
 CREATE INDEX IF NOT EXISTS idx_binder_events_date
   ON binder_events(date_sort, id);
+CREATE INDEX IF NOT EXISTS idx_binder_items_compendium
+  ON binder_items(compendium_item_id);
+CREATE INDEX IF NOT EXISTS idx_binder_items_holder
+  ON binder_items(holder_mortal_id);
+CREATE INDEX IF NOT EXISTS idx_binder_items_location
+  ON binder_items(location_record_id);
+CREATE INDEX IF NOT EXISTS idx_binder_relationship_source
+  ON binder_relationships(binder_id, source_record_id);
+CREATE INDEX IF NOT EXISTS idx_binder_relationship_target
+  ON binder_relationships(binder_id, target_record_id);
 CREATE INDEX IF NOT EXISTS idx_binder_event_tags_name
   ON binder_event_tags(binder_id, name_key);
 CREATE INDEX IF NOT EXISTS idx_binder_event_tag_links_tag

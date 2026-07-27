@@ -29,6 +29,8 @@ export interface Campaign {
   playerCount?: number;
   imageUrl?: string | null;
   sharedNotes?: string;
+  campaignStory?: string | null;
+  campaignNotes?: string | null;
   isActive: boolean;
 }
 
@@ -133,7 +135,8 @@ export interface EncounterActor {
 export interface INpc {
   id: Id;
   campaignId: Id;
-  monsterId: Id;
+  monsterId: Id | null;
+  binderMortalId?: Id | null;
   name: string;
   label?: string | null;
   friendly: boolean;

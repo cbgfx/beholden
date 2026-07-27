@@ -8,7 +8,7 @@ import { putEncounterCombatant } from "@/services/encounterApi";
 type Args = {
   encounterId: string | undefined;
   orderedCombatants: EncounterActor[];
-  inpcsById: Record<string, { monsterId?: string } | undefined>;
+  inpcsById: Record<string, { monsterId?: string | null } | undefined>;
   monsterCache: Record<string, MonsterDetail>;
   setMonsterCache: (next: Record<string, MonsterDetail>) => void;
   refresh: () => Promise<void>;

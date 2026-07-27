@@ -51,3 +51,10 @@ export function importBinder(file: File): Promise<{ binderId: string; name: stri
   body.append("file", file);
   return api("/api/binders/import", { method: "POST", body });
 }
+
+export function updateCampaignBinderContent(
+  campaignId: string,
+  changes: { campaignStory?: string | null; campaignNotes?: string | null },
+): Promise<{ ok: true; campaignStory: string | null; campaignNotes: string | null; updatedAt: number }> {
+  return api(`/api/campaigns/${campaignId}/binder-content`, jsonInit("PATCH", changes));
+}
