@@ -31,7 +31,10 @@ test("native Binder export/import remaps lore relationships and stable mentions"
       )
     `).run();
     db.prepare("INSERT INTO binder_npcs VALUES ('mortal', NULL, 1, 1)").run();
-    db.prepare("INSERT INTO binder_organizations VALUES ('org', NULL, NULL, 'mortal', NULL, 1, 1)").run();
+    db.prepare(`
+      INSERT INTO binder_organizations (id, description, dm_notes, leader_mortal_id, headquarters_record_id, created_at, updated_at, icon)
+      VALUES ('org', NULL, NULL, 'mortal', NULL, 1, 1, NULL)
+    `).run();
     db.prepare(`
       INSERT INTO organization_memberships
         (id, organization_id, mortal_id, position_id, is_primary, created_at, updated_at)

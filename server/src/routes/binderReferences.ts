@@ -15,6 +15,9 @@ type RecordType =
   | "race" | "position" | "domain" | "organization" | "deity"
   | "continent" | "country" | "location" | "poi";
 
+/** Reference types with a nullable `icon` column, storing an Iconify identifier (e.g. `game-icons:castle`). */
+const ICON_ENABLED_TYPES = new Set<ReferenceType>(["organizations", "positions", "points-of-interest"]);
+
 const config: Record<ReferenceType, {
   table:
     | "binder_races" | "binder_positions" | "binder_domains" | "binder_organizations"
@@ -90,6 +93,8 @@ const ReferenceCreateBody = z.object({
   parentId: z.string().trim().min(1).nullable().optional(),
   /** Only meaningful for `organizations` — an id from `mortals` in the same Binder. */
   leaderId: z.string().trim().min(1).nullable().optional(),
+  /** Only meaningful for `organizations`, `positions`, `points-of-interest` — an Iconify id, e.g. `game-icons:castle`. */
+  icon: z.string().trim().min(1).max(160).nullable().optional(),
 }).strict();
 
 const ReferencePatchBody = ReferenceCreateBody.partial().refine(
@@ -115,6 +120,7 @@ type ReferenceRow = {
   image_updated_at?: number | null;
   leader_mortal_id?: string | null;
   leader_name?: string | null;
+  icon?: string | null;
 };
 
 function parentType(row: ReferenceRow): RecordType | null {
@@ -143,6 +149,7 @@ function dto(row: ReferenceRow, links?: { domains?: ReferenceLink[]; deities?: R
       type: parentType(row),
     } : null,
     leader: row.leader_mortal_id ? { id: row.leader_mortal_id, name: row.leader_name ?? "" } : null,
+    icon: row.icon ?? null,
     usageCount: row.usage_count,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -155,7 +162,8 @@ function dto(row: ReferenceRow, links?: { domains?: ReferenceLink[]; deities?: R
 
 function selectSql(type: ReferenceType): string {
   const entry = config[type];
-  const parentColumns = type === "countries"
+  const iconColumn = ICON_ENABLED_TYPES.has(type) ? ", r.icon" : "";
+  const parentColumns = (type === "countries"
     ? ", r.continent_id, parent_br.name AS parent_name"
     : type === "locations"
       ? ", r.country_id, parent_br.name AS parent_name"
@@ -165,7 +173,7 @@ function selectSql(type: ReferenceType): string {
           ? ", r.image_url, r.image_updated_at"
           : type === "organizations"
             ? ", r.leader_mortal_id, leader_br.name AS leader_name"
-            : "";
+            : "") + iconColumn;
   const parentJoin = type === "countries"
     ? "LEFT JOIN binder_records parent_br ON parent_br.id = r.continent_id"
     : type === "locations"
@@ -221,7 +229,7 @@ function resolveLeaderMortal(
   return mortal.id;
 }
 
-function insertTypedRecord(db: ServerContext["db"], table: string, type: ReferenceType, id: string, description: string | null, parent: ReturnType<typeof resolveParent>, t: number, leaderId?: string | null) {
+function insertTypedRecord(db: ServerContext["db"], table: string, type: ReferenceType, id: string, description: string | null, parent: ReturnType<typeof resolveParent>, t: number, leaderId?: string | null, icon?: string | null) {
   if (type === "countries") {
     db.prepare(`INSERT INTO binder_countries (id, continent_id, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
       .run(id, parent?.id ?? null, description, t, t);
@@ -229,11 +237,14 @@ function insertTypedRecord(db: ServerContext["db"], table: string, type: Referen
     db.prepare(`INSERT INTO binder_locations (id, country_id, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
       .run(id, parent?.id ?? null, description, t, t);
   } else if (type === "points-of-interest") {
-    db.prepare(`INSERT INTO binder_points_of_interest (id, location_id, country_id, parent_poi_id, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-      .run(id, parent?.record_type === "location" ? parent.id : null, parent?.record_type === "country" ? parent.id : null, parent?.record_type === "poi" ? parent.id : null, description, t, t);
+    db.prepare(`INSERT INTO binder_points_of_interest (id, location_id, country_id, parent_poi_id, description, created_at, updated_at, icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(id, parent?.record_type === "location" ? parent.id : null, parent?.record_type === "country" ? parent.id : null, parent?.record_type === "poi" ? parent.id : null, description, t, t, icon ?? null);
   } else if (type === "organizations") {
-    db.prepare(`INSERT INTO binder_organizations (id, description, leader_mortal_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
-      .run(id, description, leaderId ?? null, t, t);
+    db.prepare(`INSERT INTO binder_organizations (id, description, leader_mortal_id, created_at, updated_at, icon) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(id, description, leaderId ?? null, t, t, icon ?? null);
+  } else if (type === "positions") {
+    db.prepare(`INSERT INTO binder_positions (id, description, created_at, updated_at, icon) VALUES (?, ?, ?, ?, ?)`)
+      .run(id, description, t, t, icon ?? null);
   } else {
     db.prepare(`INSERT INTO ${table} (id, description, created_at, updated_at) VALUES (?, ?, ?, ?)`)
       .run(id, description, t, t);
@@ -255,6 +266,10 @@ function updateParent(db: ServerContext["db"], type: ReferenceType, id: string, 
 
 function updateLeader(db: ServerContext["db"], id: string, leaderId: string | null) {
   db.prepare("UPDATE binder_organizations SET leader_mortal_id = ? WHERE id = ?").run(leaderId, id);
+}
+
+function updateIcon(db: ServerContext["db"], table: string, id: string, icon: string | null) {
+  db.prepare(`UPDATE ${table} SET icon = ? WHERE id = ?`).run(icon, id);
 }
 
 export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) {
@@ -322,6 +337,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     const entry = config[typeResult.data];
     const parent = resolveParent(db, binderId, typeResult.data, body.parentId);
     const leaderId = typeResult.data === "organizations" ? resolveLeaderMortal(db, binderId, body.leaderId) : null;
+    const icon = ICON_ENABLED_TYPES.has(typeResult.data) ? body.icon ?? null : null;
     const id = ctx.helpers.uid();
     const t = ctx.helpers.now();
     db.transaction(() => {
@@ -330,7 +346,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
           id, binder_id, record_type, name, name_key, visibility, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(id, binderId, entry.recordType, body.name, ctx.helpers.normalizeKey(body.name), "dm", t, t);
-      insertTypedRecord(db, entry.table, typeResult.data, id, body.description ?? null, parent, t, leaderId);
+      insertTypedRecord(db, entry.table, typeResult.data, id, body.description ?? null, parent, t, leaderId, icon);
     })();
     const row = db.prepare(`${selectSql(typeResult.data)} WHERE r.id = ?`).get(id) as ReferenceRow;
     res.status(201).json(dtoWithLinks(typeResult.data, row));
@@ -354,6 +370,9 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     const leaderId = body.leaderId !== undefined && typeResult.data === "organizations"
       ? resolveLeaderMortal(db, binderId, body.leaderId)
       : undefined;
+    const icon = body.icon !== undefined && ICON_ENABLED_TYPES.has(typeResult.data)
+      ? body.icon ?? null
+      : undefined;
     const t = ctx.helpers.now();
     db.transaction(() => {
       db.prepare(`
@@ -375,6 +394,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
       }
       if (body.parentId !== undefined) updateParent(db, typeResult.data, recordId, parent ?? null);
       if (leaderId !== undefined) updateLeader(db, recordId, leaderId);
+      if (icon !== undefined) updateIcon(db, config[typeResult.data].table, recordId, icon);
     })();
     const row = db.prepare(`${selectSql(typeResult.data)} WHERE r.id = ?`).get(recordId) as ReferenceRow;
     res.json(dtoWithLinks(typeResult.data, row));

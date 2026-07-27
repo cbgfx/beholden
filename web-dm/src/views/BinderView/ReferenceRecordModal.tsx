@@ -5,6 +5,7 @@ import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { TextArea } from "@/ui/TextArea";
 import { theme, withAlpha } from "@/theme/theme";
+import { EntityIcon, IconPicker, getDefaultEntityIcon } from "@/components/iconPicker";
 import type {
   BinderReferenceInput,
   BinderReferenceRecord,
@@ -16,14 +17,16 @@ export function ReferenceRecordModal(props: {
   record: BinderReferenceRecord | null;
   accent: string;
   showDescription: boolean;
+  showIcon?: boolean;
   useDrawer?: boolean;
   parentLabel?: string;
-  parentOptions?: Array<{ id: string; name: string; type: string }>;
+  parentOptions?: Array<{ id: string; name: string; type: string; icon?: string | null }>;
   onClose: () => void;
   onSave: (input: BinderReferenceInput) => Promise<void>;
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [icon, setIcon] = useState<string | null>(null);
   const [parentId, setParentId] = useState("");
   const [parentQuery, setParentQuery] = useState("");
   const [parentOpen, setParentOpen] = useState(false);
@@ -34,6 +37,7 @@ export function ReferenceRecordModal(props: {
     if (!props.isOpen) return;
     setName(props.record?.name ?? "");
     setDescription(props.record?.description ?? "");
+    setIcon(props.record?.icon ?? null);
     setParentId(props.record?.parent?.id ?? "");
     setParentQuery(props.record?.parent?.name ?? "");
     setError(null);
@@ -49,6 +53,7 @@ export function ReferenceRecordModal(props: {
         name: name.trim(),
         description: props.showDescription ? description.trim() || null : null,
         parentId: props.parentLabel ? parentId || null : undefined,
+        icon: props.showIcon ? icon : undefined,
       });
       props.onClose();
     } catch (cause) {
@@ -79,6 +84,8 @@ export function ReferenceRecordModal(props: {
             disabled={saving}
           />
         </div>
+
+        {props.showIcon ? <IconPicker value={icon} onChange={setIcon} label="Icon" /> : null}
 
         {props.showDescription ? (
           <div style={{ display: "grid", gap: 7 }}>
@@ -117,8 +124,9 @@ export function ReferenceRecordModal(props: {
                   {(props.parentOptions ?? [])
                     .filter((option) => option.name.toLocaleLowerCase().includes(parentQuery.trim().toLocaleLowerCase()))
                     .map((option) => (
-                      <button key={option.id} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { setParentId(option.id); setParentQuery(option.name); setParentOpen(false); }} style={optionStyle}>
-                        {option.name}{props.parentLabel === "Parent" ? <span style={{ color: theme.colors.muted }}> · {option.type === "location" ? "Location" : option.type === "poi" ? "Point of Interest" : option.type}</span> : null}
+                      <button key={option.id} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { setParentId(option.id); setParentQuery(option.name); setParentOpen(false); }} style={{ ...optionStyle, display: "flex", alignItems: "center", gap: 8 }}>
+                        {option.type === "poi" ? <EntityIcon icon={option.icon ?? getDefaultEntityIcon("points-of-interest")} size={16} /> : null}
+                        <span>{option.name}{props.parentLabel === "Parent" ? <span style={{ color: theme.colors.muted }}> · {option.type === "location" ? "Location" : option.type === "poi" ? "Point of Interest" : option.type}</span> : null}</span>
                       </button>
                     ))}
                 </div>

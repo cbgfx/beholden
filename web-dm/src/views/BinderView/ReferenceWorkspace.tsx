@@ -22,6 +22,7 @@ import { ReferenceRecordModal } from "@/views/BinderView/ReferenceRecordModal";
 import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
 import { fetchBinderRecordOptions, syncBinderMentions, type BinderRecordOption } from "@/services/binderLoreApi";
 import { Select } from "@/ui/Select";
+import { EntityIcon, IconPicker, getDefaultEntityIcon, ICON_ENABLED_REFERENCE_TYPES } from "@/components/iconPicker";
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
 
@@ -200,12 +201,13 @@ export function ReferenceWorkspace(props: {
   const labels = LABELS[props.type];
   const showDescription = !["races", "positions", "organizations"].includes(props.type);
   const showLeader = props.type === "organizations";
+  const showIcon = ICON_ENABLED_REFERENCE_TYPES.has(props.type);
   const hasMiddleColumn = showDescription || showLeader;
   const navigate = useNavigate();
   const confirm = useConfirm();
   const [records, setRecords] = useState<BinderReferenceRecord[]>([]);
   const [loreRecords, setLoreRecords] = useState<BinderRecordOption[]>([]);
-  const [parentOptions, setParentOptions] = useState<Array<{ id: string; name: string; type: string }>>([]);
+  const [parentOptions, setParentOptions] = useState<Array<{ id: string; name: string; type: string; icon: string | null }>>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -253,7 +255,7 @@ export function ReferenceWorkspace(props: {
     void Promise.all(sourceTypes.map(async (type) => {
       const values = await fetchBinderReferences(props.binderId, type);
       const recordType = type === "locations" ? "location" : type === "points-of-interest" ? "poi" : type.slice(0, -1);
-      return values.map((record) => ({ id: record.id, name: record.name, type: recordType }));
+      return values.map((record) => ({ id: record.id, name: record.name, type: recordType, icon: recordType === "poi" ? record.icon : null }));
     })).then((groups) => setParentOptions(groups.flat().filter((option) => option.id !== props.recordId)));
   }, [props.binderId, props.type, props.recordId, records.length]);
 
@@ -289,6 +291,7 @@ export function ReferenceWorkspace(props: {
         description: changes.description !== undefined
           ? changes.description?.trim() || null
           : selected.description,
+        ...(changes.icon !== undefined ? { icon: changes.icon } : {}),
       });
       if (changes.description !== undefined) {
         await syncBinderMentions(props.binderId, selected.id, "description", changes.description?.trim() || null);
@@ -387,6 +390,22 @@ export function ReferenceWorkspace(props: {
                   </div>
                 ) : null}
               </div>
+              {showIcon ? (
+                props.canEdit ? (
+                  <IconPicker
+                    value={selected.icon}
+                    onChange={(icon) => void saveInline({ icon })}
+                    label="Icon"
+                  />
+                ) : (
+                  <section>
+                    <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>Icon</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 7 }}>
+                      <EntityIcon icon={selected.icon ?? getDefaultEntityIcon(props.type)} size={22} />
+                    </div>
+                  </section>
+                )
+              ) : null}
               {showDescription ? (
                 <section>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -456,7 +475,7 @@ export function ReferenceWorkspace(props: {
             </div>
           </article>
         </div>
-        <ReferenceRecordModal isOpen={modalRecord !== null} singularLabel={labels.singular} record={modalRecord === "new" ? null : modalRecord} accent={props.accent} showDescription={showDescription} useDrawer={["continents", "countries", "locations", "points-of-interest"].includes(props.type)} parentLabel={parentLabel} parentOptions={parentOptions} onClose={() => setModalRecord(null)} onSave={save} />
+        <ReferenceRecordModal isOpen={modalRecord !== null} singularLabel={labels.singular} record={modalRecord === "new" ? null : modalRecord} accent={props.accent} showDescription={showDescription} showIcon={showIcon} useDrawer={["continents", "countries", "locations", "points-of-interest"].includes(props.type)} parentLabel={parentLabel} parentOptions={parentOptions} onClose={() => setModalRecord(null)} onSave={save} />
       </>
     );
   }
@@ -513,7 +532,9 @@ export function ReferenceWorkspace(props: {
                     ? record.imageUrl
                       ? <img src={`${record.imageUrl}${record.imageUpdatedAt ? `?v=${record.imageUpdatedAt}` : ""}`} alt="" style={{ width: 34, height: 34, borderRadius: 6, objectFit: "cover", flex: "0 0 auto" }} />
                       : <span style={{ width: 34, height: 34, borderRadius: 6, background: withAlpha(props.accent, 0.12), flex: "0 0 auto" }} />
-                    : null}
+                    : showIcon
+                      ? <EntityIcon icon={record.icon ?? getDefaultEntityIcon(props.type)} size={22} />
+                      : null}
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{record.name}</span>
                 </span>
                 {showDescription ? <span style={{ color: record.description ? theme.colors.muted : "rgba(160,180,220,0.48)", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{record.description ?? "None"}</span> : null}
@@ -528,7 +549,7 @@ export function ReferenceWorkspace(props: {
           )}
         </div>
       </div>
-      <ReferenceRecordModal isOpen={modalRecord !== null} singularLabel={labels.singular} record={modalRecord === "new" ? null : modalRecord} accent={props.accent} showDescription={showDescription} useDrawer={["continents", "countries", "locations", "points-of-interest"].includes(props.type)} parentLabel={parentLabel} parentOptions={parentOptions} onClose={() => setModalRecord(null)} onSave={save} />
+      <ReferenceRecordModal isOpen={modalRecord !== null} singularLabel={labels.singular} record={modalRecord === "new" ? null : modalRecord} accent={props.accent} showDescription={showDescription} showIcon={showIcon} useDrawer={["continents", "countries", "locations", "points-of-interest"].includes(props.type)} parentLabel={parentLabel} parentOptions={parentOptions} onClose={() => setModalRecord(null)} onSave={save} />
     </>
   );
 }

@@ -369,6 +369,31 @@ describe("Binder routes", () => {
       );
     }
 
+    for (const type of ["organizations", "positions", "points-of-interest"] as const) {
+      const created = await fetch(`${base}/api/binders/${binder.id}/reference/${type}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-test-user": "owner" },
+        body: JSON.stringify({ name: `Iconic ${type}`, icon: "game-icons:castle" }),
+      });
+      assert.equal(created.status, 201, await created.clone().text());
+      const record = await created.json() as { id: string; icon: string | null };
+      assert.equal(record.icon, "game-icons:castle");
+
+      const listed = await fetch(`${base}/api/binders/${binder.id}/reference/${type}`, {
+        headers: { "x-test-user": "owner" },
+      });
+      const list = await listed.json() as Array<{ id: string; icon: string | null }>;
+      assert.equal(list.find((row) => row.id === record.id)?.icon, "game-icons:castle");
+
+      const cleared = await fetch(`${base}/api/binders/${binder.id}/reference/${type}/${record.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json", "x-test-user": "owner" },
+        body: JSON.stringify({ icon: null }),
+      });
+      assert.equal(cleared.status, 200);
+      assert.equal((await cleared.json() as { icon: string | null }).icon, null);
+    }
+
     createMortal(db, {
       binderId: binder.id,
       name: "Referenced mortal",

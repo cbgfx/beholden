@@ -21,6 +21,23 @@ export function ensureBinderColumns(db: Db): void {
       ADD COLUMN leader_mortal_id TEXT REFERENCES mortals(id) ON DELETE SET NULL
     `);
   }
+  if (!organizationColumns.has("icon")) {
+    db.exec("ALTER TABLE binder_organizations ADD COLUMN icon TEXT");
+  }
+
+  const positionColumns = new Set(
+    (db.prepare("PRAGMA table_info(binder_positions)").all() as Array<{ name: string }>).map((row) => row.name),
+  );
+  if (!positionColumns.has("icon")) {
+    db.exec("ALTER TABLE binder_positions ADD COLUMN icon TEXT");
+  }
+
+  const poiColumns = new Set(
+    (db.prepare("PRAGMA table_info(binder_points_of_interest)").all() as Array<{ name: string }>).map((row) => row.name),
+  );
+  if (!poiColumns.has("icon")) {
+    db.exec("ALTER TABLE binder_points_of_interest ADD COLUMN icon TEXT");
+  }
 
   const locationColumns = new Set(
     (db.prepare("PRAGMA table_info(binder_locations)").all() as Array<{ name: string }>).map((row) => row.name),

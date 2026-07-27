@@ -21,6 +21,8 @@ export type BinderReferenceRecord = {
   deities?: BinderReferenceLink[];
   /** Only meaningful on `organizations` records — the Mortal who leads it, if any. */
   leader: BinderReferenceLink | null;
+  /** Only meaningful on `organizations`, `positions`, `points-of-interest` — an Iconify id, e.g. `game-icons:castle`. */
+  icon: string | null;
 };
 
 export type BinderReferenceInput = {
@@ -29,6 +31,8 @@ export type BinderReferenceInput = {
   parentId?: string | null;
   /** Only meaningful for `organizations` — a Mortal id from this Binder, or null to clear. */
   leaderId?: string | null;
+  /** Only meaningful for `organizations`, `positions`, `points-of-interest` — an Iconify id, or null to clear. */
+  icon?: string | null;
 };
 
 function base(binderId: string, type: BinderReferenceType) {

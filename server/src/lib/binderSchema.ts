@@ -65,7 +65,8 @@ CREATE TABLE IF NOT EXISTS binder_positions (
   id TEXT PRIMARY KEY REFERENCES binder_records(id) ON DELETE CASCADE,
   description TEXT,
   created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
+  updated_at INTEGER NOT NULL,
+  icon TEXT
 );
 
 CREATE TABLE IF NOT EXISTS binder_domains (
@@ -107,6 +108,7 @@ CREATE TABLE IF NOT EXISTS binder_points_of_interest (
   description TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
+  icon TEXT,
   CHECK (
     (CASE WHEN location_id IS NULL THEN 0 ELSE 1 END) +
     (CASE WHEN country_id IS NULL THEN 0 ELSE 1 END) +
@@ -202,7 +204,8 @@ CREATE TABLE IF NOT EXISTS binder_organizations (
   leader_mortal_id TEXT REFERENCES mortals(id) ON DELETE SET NULL,
   headquarters_record_id TEXT REFERENCES binder_records(id) ON DELETE SET NULL,
   created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
+  updated_at INTEGER NOT NULL,
+  icon TEXT
 );
 
 CREATE TABLE IF NOT EXISTS organization_memberships (

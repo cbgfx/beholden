@@ -116,7 +116,7 @@ export function importBinderDocument(db: Db, raw: unknown, ownerUserId: string, 
 
     const simple = [
       ["binder_races", "id, description, created_at, updated_at"],
-      ["binder_positions", "id, description, created_at, updated_at"],
+      ["binder_positions", "id, description, created_at, updated_at, icon"],
       ["binder_domains", "id, description, created_at, updated_at"],
       ["binder_continents", "id, description, created_at, updated_at"],
       ["binder_events", "id, description, date_text, date_sort, end_date_text, end_date_sort, created_at, updated_at"],
@@ -136,7 +136,7 @@ export function importBinderDocument(db: Db, raw: unknown, ownerUserId: string, 
       INSERT INTO binder_locations (id, country_id, continent_id, description, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(map(row.id), map(row.country_id), map(row.continent_id), text(row.description), now, now);
-    for (const row of rows("binder_points_of_interest")) db.prepare("INSERT INTO binder_points_of_interest VALUES (?, ?, ?, ?, ?, ?, ?)").run(map(row.id), map(row.location_id), map(row.country_id), map(row.parent_poi_id), text(row.description), now, now);
+    for (const row of rows("binder_points_of_interest")) db.prepare("INSERT INTO binder_points_of_interest (id, location_id, country_id, parent_poi_id, description, created_at, updated_at, icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(map(row.id), map(row.location_id), map(row.country_id), map(row.parent_poi_id), text(row.description), now, now, row.icon ?? null);
     for (const row of rows("mortals")) db.prepare(`
       INSERT INTO mortals (id,race_id,gender,life_status,birth_date_text,birth_date_sort,death_date_text,death_date_sort,description,backstory,dm_notes,image_url,image_updated_at,residence_record_id,position_id,mortal_type,created_at,updated_at)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
@@ -148,7 +148,7 @@ export function importBinderDocument(db: Db, raw: unknown, ownerUserId: string, 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(map(row.id), row.rank ?? null, text(row.description), text(row.dm_notes), text(row.image_url), row.image_updated_at ?? null, map(row.primary_location_record_id), now, now);
     for (const row of rows("deity_domains")) db.prepare("INSERT INTO deity_domains VALUES (?, ?)").run(map(row.deity_id), map(row.domain_id));
-    for (const row of rows("binder_organizations")) db.prepare("INSERT INTO binder_organizations VALUES (?, ?, ?, ?, ?, ?, ?)").run(map(row.id), text(row.description), text(row.dm_notes), map(row.leader_mortal_id), map(row.headquarters_record_id), now, now);
+    for (const row of rows("binder_organizations")) db.prepare("INSERT INTO binder_organizations (id, description, dm_notes, leader_mortal_id, headquarters_record_id, created_at, updated_at, icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(map(row.id), text(row.description), text(row.dm_notes), map(row.leader_mortal_id), map(row.headquarters_record_id), now, now, row.icon ?? null);
     for (const row of rows("organization_memberships")) db.prepare(`
       INSERT INTO organization_memberships (id,organization_id,mortal_id,position_id,role_label,start_date_text,start_date_sort,end_date_text,end_date_sort,notes,is_primary,created_at,updated_at)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)

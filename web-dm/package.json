@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@beholden/shared": "*",
+    "@iconify-json/game-icons": "^1.2.4",
+    "@iconify/react": "^6.0.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.0"
