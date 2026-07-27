@@ -3,11 +3,13 @@ import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { Select } from "@/ui/Select";
 import { api, jsonInit } from "@/services/api";
-import { fetchBinders, type BinderSummary } from "@/services/binderApi";
+import { fetchBinders, createBinder, type BinderSummary } from "@/services/binderApi";
 import { useStore, type DrawerState } from "@/store";
 import type { DrawerContent } from "@/drawers/types";
 import { putEncounter } from "@/services/encounterApi";
 import { ENTITY_COLOR_PRESETS } from "@/theme/colorPresets";
+
+const NEW_BINDER_VALUE = "__new_binder__";
 
 type NameDrawerState = Exclude<
   Extract<
@@ -36,6 +38,11 @@ export function NameDrawer(props: {
   const [binderId, setBinderId] = React.useState("");
   const [currentDateText, setCurrentDateText] = React.useState("");
   const [isActive, setIsActive] = React.useState(true);
+  const [creatingNewBinder, setCreatingNewBinder] = React.useState(false);
+  const [newBinderName, setNewBinderName] = React.useState("");
+  const [newBinderDate, setNewBinderDate] = React.useState("");
+  const [newBinderBusy, setNewBinderBusy] = React.useState(false);
+  const [newBinderError, setNewBinderError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const d = props.drawer;
@@ -44,6 +51,10 @@ export function NameDrawer(props: {
     setBinderId("");
     setCurrentDateText("");
     setIsActive(true);
+    setCreatingNewBinder(false);
+    setNewBinderName("");
+    setNewBinderDate("");
+    setNewBinderError(null);
     switch (d.type) {
       case "editCampaign": {
         const c = state.campaigns.find((x) => x.id === d.campaignId);
@@ -71,8 +82,10 @@ export function NameDrawer(props: {
     }
   }, [props.drawer, state.adventures, state.campaigns, state.encounters]);
 
+  const showBinderSection = props.drawer.type === "editCampaign" || props.drawer.type === "createCampaign";
+
   React.useEffect(() => {
-    if (props.drawer.type !== "editCampaign") return;
+    if (!showBinderSection) return;
     let cancelled = false;
     fetchBinders()
       .then((rows) => {
@@ -84,7 +97,31 @@ export function NameDrawer(props: {
     return () => {
       cancelled = true;
     };
-  }, [props.drawer]);
+  }, [showBinderSection]);
+
+  const handleCreateBinder = React.useCallback(async () => {
+    const trimmedName = newBinderName.trim();
+    const trimmedDate = newBinderDate.trim();
+    const parsedDate = Number(trimmedDate);
+    if (!trimmedName || !trimmedDate || !Number.isInteger(parsedDate)) {
+      setNewBinderError("Enter a name and a whole-number current date.");
+      return;
+    }
+    setNewBinderBusy(true);
+    setNewBinderError(null);
+    try {
+      const created = await createBinder(trimmedName, "#38b6ff", parsedDate);
+      setBinders((current) => [created, ...current]);
+      setBinderId(created.id);
+      setCreatingNewBinder(false);
+      setNewBinderName("");
+      setNewBinderDate("");
+    } catch (cause) {
+      setNewBinderError(cause instanceof Error ? cause.message : "Unable to create Binder.");
+    } finally {
+      setNewBinderBusy(false);
+    }
+  }, [newBinderName, newBinderDate]);
 
   const submit = React.useCallback(async () => {
     const d = props.drawer;
@@ -94,10 +131,15 @@ export function NameDrawer(props: {
     };
 
     switch (d.type) {
-      case "createCampaign":
-        await api(`/api/campaigns`, jsonInit("POST", { name: safeName("New Campaign"), color }));
+      case "createCampaign": {
+        const created = await api<{ id: string }>(`/api/campaigns`, jsonInit("POST", { name: safeName("New Campaign"), color }));
+        if (binderId) {
+          await api(`/api/campaigns/${created.id}/binder`, jsonInit("PUT", { binderId, currentDateText: null, currentDateSort: null }));
+        }
+        await props.refreshAll();
         props.close();
         return;
+      }
       case "editCampaign": {
         await api(`/api/campaigns/${d.campaignId}`, jsonInit("PUT", { name: safeName("Campaign"), color, isActive }));
         await api(`/api/campaigns/${d.campaignId}/binder`, jsonInit("PUT", {
@@ -186,7 +228,7 @@ export function NameDrawer(props: {
           </div>
         )}
 
-        {props.drawer.type === "editCampaign" && (
+        {showBinderSection && (
           <>
             <div
               style={{
@@ -202,14 +244,77 @@ export function NameDrawer(props: {
             </div>
             <div style={{ display: "grid", gap: 10 }}>
               <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>Binder</div>
-              <Select style={{ width: "100%" }} value={binderId} onChange={(event) => setBinderId(event.target.value)}>
+              <Select
+                style={{ width: "100%" }}
+                value={creatingNewBinder ? NEW_BINDER_VALUE : binderId}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (value === NEW_BINDER_VALUE) {
+                    setCreatingNewBinder(true);
+                    return;
+                  }
+                  setCreatingNewBinder(false);
+                  setBinderId(value);
+                }}
+              >
                 <option value="">No Binder</option>
                 {binders.map((binder) => (
                   <option key={binder.id} value={binder.id}>{binder.name}</option>
                 ))}
+                <option value={NEW_BINDER_VALUE}>+ New Binder…</option>
               </Select>
-            </div>
 
+              {creatingNewBinder && (
+                <div
+                  style={{
+                    display: "grid",
+                    gap: 8,
+                    padding: 12,
+                    borderRadius: 10,
+                    background: "rgba(148,163,184,0.08)",
+                    border: "1px solid rgba(148,163,184,0.18)",
+                  }}
+                >
+                  <Input
+                    value={newBinderName}
+                    onChange={(event) => setNewBinderName(event.target.value)}
+                    placeholder="Binder name"
+                    autoFocus
+                  />
+                  <Input
+                    value={newBinderDate}
+                    onChange={(event) => setNewBinderDate(event.target.value)}
+                    placeholder="Current date (e.g. 2438)"
+                  />
+                  {newBinderError ? (
+                    <div style={{ fontSize: "var(--fs-small)", color: "#f87171" }}>{newBinderError}</div>
+                  ) : null}
+                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setCreatingNewBinder(false);
+                        setNewBinderError(null);
+                        setBinderId("");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleCreateBinder}
+                      disabled={newBinderBusy || !newBinderName.trim() || !newBinderDate.trim()}
+                    >
+                      {newBinderBusy ? "Creating…" : "Create Binder"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {props.drawer.type === "editCampaign" && (
+          <>
             <div style={{ display: "grid", gap: 10 }}>
               <div style={{ display: "grid", gap: 8 }}>
                 <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>Current date</div>

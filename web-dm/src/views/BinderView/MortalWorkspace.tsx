@@ -9,7 +9,6 @@ import { createBinderMortal, deleteBinderMortal, fetchBinderMortals, fetchMortal
 import { MortalRecordModal } from "@/views/BinderView/MortalRecordModal";
 import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
 import { fetchBinderRecordOptions, syncBinderMentions, type BinderRecordOption } from "@/services/binderLoreApi";
-import { RelationshipPanel } from "./RelationshipPanel";
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
 
@@ -358,7 +357,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
               await syncBinderMentions(props.binderId, selected.id, "dm_notes", dmNotes);
               await reload();
             }} />
-            <RelationshipPanel binderId={props.binderId} recordId={selected.id} records={loreRecords} canEdit={props.canEdit} />
+            {/* RelationshipPanel hidden pending redesign — see RelationshipPanel.tsx */}
             <BacklinksPanel binderId={props.binderId} recordId={selected.id} />
           </div>
         </article>

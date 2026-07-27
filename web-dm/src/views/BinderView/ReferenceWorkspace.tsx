@@ -6,19 +6,22 @@ import { Input } from "@/ui/Input";
 import { useConfirm } from "@/confirm/ConfirmContext";
 import { theme, withAlpha } from "@/theme/theme";
 import {
+  addDeityDomain,
   createBinderReference,
   deleteBinderReference,
   fetchBinderReferences,
+  removeDeityDomain,
   updateBinderReference,
   uploadBinderReferenceImage,
   type BinderReferenceInput,
+  type BinderReferenceLink,
   type BinderReferenceRecord,
   type BinderReferenceType,
 } from "@/services/binderReferenceApi";
 import { ReferenceRecordModal } from "@/views/BinderView/ReferenceRecordModal";
 import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
 import { fetchBinderRecordOptions, syncBinderMentions, type BinderRecordOption } from "@/services/binderLoreApi";
-import { RelationshipPanel } from "./RelationshipPanel";
+import { Select } from "@/ui/Select";
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
 
@@ -33,6 +36,94 @@ const LABELS: Record<BinderReferenceType, { plural: string; singular: string; us
   locations: { plural: "Locations", singular: "Location", usage: "Related records" },
   "points-of-interest": { plural: "Points of Interest", singular: "Point of Interest", usage: "Related records" },
 };
+
+function DeityDomainsSection(props: {
+  binderId: string;
+  deityId: string;
+  domains: BinderReferenceLink[];
+  options: BinderRecordOption[];
+  accent: string;
+  canEdit: boolean;
+  onChanged: () => Promise<void>;
+}) {
+  const [addId, setAddId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const assignedIds = new Set(props.domains.map((domain) => domain.id));
+  const available = props.options.filter((option) => !assignedIds.has(option.id));
+
+  async function add() {
+    if (!addId || busy) return;
+    setBusy(true);
+    try {
+      await addDeityDomain(props.binderId, props.deityId, addId);
+      setAddId("");
+      await props.onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(domainId: string) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await removeDeityDomain(props.binderId, props.deityId, domainId);
+      await props.onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section>
+      <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+        Domains
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 9 }}>
+        {props.domains.length ? props.domains.map((domain) => (
+          <span
+            key={domain.id}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "5px 6px 5px 11px",
+              borderRadius: 999,
+              background: withAlpha(props.accent, 0.14),
+              border: `1px solid ${withAlpha(props.accent, 0.3)}`,
+              fontSize: "var(--fs-small)",
+            }}
+          >
+            {domain.name}
+            {props.canEdit ? (
+              <button
+                type="button"
+                onClick={() => void remove(domain.id)}
+                disabled={busy}
+                aria-label={`Remove ${domain.name}`}
+                title={`Remove ${domain.name}`}
+                style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 16, height: 16, border: 0, borderRadius: "50%", background: withAlpha("#ffffff", 0.12), color: theme.colors.text, cursor: busy ? "default" : "pointer", padding: 0, lineHeight: 1, fontSize: 12 }}
+              >
+                ×
+              </button>
+            ) : null}
+          </span>
+        )) : <span style={{ color: theme.colors.muted, fontSize: "var(--fs-body)" }}>None</span>}
+      </div>
+      {props.canEdit ? (
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <Select value={addId} onChange={(event) => setAddId(event.target.value)} style={{ flex: "1 1 auto" }} disabled={busy || !available.length}>
+            <option value="">{available.length ? "Add a domain…" : "No more domains to add"}</option>
+            {available.map((option) => (
+              <option key={option.id} value={option.id}>{option.name}</option>
+            ))}
+          </Select>
+          <Button onClick={() => void add()} disabled={!addId || busy}>Add</Button>
+        </div>
+      ) : null}
+    </section>
+  );
+}
 
 export function ReferenceWorkspace(props: {
   binderId: string;
@@ -268,11 +359,23 @@ export function ReferenceWorkspace(props: {
                   </button>
                 </section>
               ) : null}
-              <section>
-                <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>{labels.usage}</div>
-                <div style={{ fontSize: "var(--fs-body)", marginTop: 7 }}>{selected.usageCount || "None"}</div>
-              </section>
-              <RelationshipPanel binderId={props.binderId} recordId={selected.id} records={loreRecords} canEdit={props.canEdit} />
+              {props.type === "deities" ? (
+                <DeityDomainsSection
+                  binderId={props.binderId}
+                  deityId={selected.id}
+                  domains={selected.domains ?? []}
+                  options={loreRecords.filter((option) => option.type === "domain")}
+                  accent={props.accent}
+                  canEdit={props.canEdit}
+                  onChanged={reload}
+                />
+              ) : (
+                <section>
+                  <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>{labels.usage}</div>
+                  <div style={{ fontSize: "var(--fs-body)", marginTop: 7 }}>{selected.usageCount || "None"}</div>
+                </section>
+              )}
+              {/* RelationshipPanel hidden pending redesign — see RelationshipPanel.tsx */}
               <BacklinksPanel binderId={props.binderId} recordId={selected.id} />
             </div>
           </article>

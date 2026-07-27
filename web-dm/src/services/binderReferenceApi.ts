@@ -3,6 +3,7 @@ import { api, jsonInit } from "@/services/api";
 export type BinderReferenceType =
   | "races" | "positions" | "domains" | "organizations" | "deities"
   | "continents" | "countries" | "locations" | "points-of-interest";
+export type BinderReferenceLink = { id: string; name: string };
 export type BinderReferenceRecord = {
   id: string;
   binderId: string;
@@ -14,6 +15,10 @@ export type BinderReferenceRecord = {
   updatedAt: number;
   imageUrl: string | null;
   imageUpdatedAt: number | null;
+  /** Only present on `deities` records. */
+  domains?: BinderReferenceLink[];
+  /** Only present on `domains` records. */
+  deities?: BinderReferenceLink[];
 };
 
 export type BinderReferenceInput = {
@@ -58,6 +63,22 @@ export function deleteBinderReference(
   recordId: string,
 ): Promise<{ ok: true; clearedReferences: number }> {
   return api(`${base(binderId, type)}/${recordId}`, { method: "DELETE" });
+}
+
+export function addDeityDomain(
+  binderId: string,
+  deityId: string,
+  domainId: string,
+): Promise<{ ok: true; domains: BinderReferenceLink[] }> {
+  return api(`${base(binderId, "deities")}/${deityId}/domains/${domainId}`, { method: "POST" });
+}
+
+export function removeDeityDomain(
+  binderId: string,
+  deityId: string,
+  domainId: string,
+): Promise<{ ok: true; domains: BinderReferenceLink[] }> {
+  return api(`${base(binderId, "deities")}/${deityId}/domains/${domainId}`, { method: "DELETE" });
 }
 
 export async function uploadBinderReferenceImage(

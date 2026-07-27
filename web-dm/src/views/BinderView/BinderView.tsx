@@ -51,15 +51,6 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
     ],
   },
   {
-    label: "Reference",
-    items: [
-      { id: "races", label: "Races", icon: <IconDna1 size={20} />, color: "#fb923c", columns: ["Name", "Description", "Mortals"] },
-      { id: "positions", label: "Positions", icon: <IconShield size={20} />, color: "#fbbf24", columns: ["Name", "Organizations", "Members"] },
-      { id: "organizations", label: "Organizations", icon: <IconOrganigram size={20} />, color: "#60a5fa", columns: ["Name", "Members", "Headquarters", "Visibility"] },
-      { id: "domains", label: "Domains", icon: <IconSpells size={20} />, color: "#c084fc", columns: ["Name", "Deities", "Description"] },
-    ],
-  },
-  {
     label: "Places",
     items: [
       { id: "continents", label: "Continents", icon: <IconAntarctica size={20} />, color: "#34d399", columns: ["Name", "Countries", "Description"] },
@@ -73,6 +64,15 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
     items: [
       { id: "items", label: "Items", icon: <IconChest size={20} />, color: "#f59e0b", columns: ["Name", "Holder", "Location", "Visibility"] },
       { id: "events", label: "Events", icon: <IconEncounter size={20} />, color: "#f43f5e", columns: ["Title", "Date", "Related records", "Campaigns", "Visibility"] },
+    ],
+  },
+  {
+    label: "Reference",
+    items: [
+      { id: "races", label: "Races", icon: <IconDna1 size={20} />, color: "#fb923c", columns: ["Name", "Description", "Mortals"] },
+      { id: "positions", label: "Positions", icon: <IconShield size={20} />, color: "#fbbf24", columns: ["Name", "Organizations", "Members"] },
+      { id: "organizations", label: "Organizations", icon: <IconOrganigram size={20} />, color: "#60a5fa", columns: ["Name", "Members", "Headquarters", "Visibility"] },
+      { id: "domains", label: "Domains", icon: <IconSpells size={20} />, color: "#c084fc", columns: ["Name", "Deities", "Description"] },
     ],
   },
 ];

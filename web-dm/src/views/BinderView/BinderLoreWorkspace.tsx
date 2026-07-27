@@ -11,7 +11,6 @@ import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { theme, withAlpha } from "@/theme/theme";
 import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
-import { RelationshipPanel } from "./RelationshipPanel";
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
 
@@ -186,7 +185,7 @@ export function BinderLoreWorkspace(props: {
             navigate(`/binder/${props.binderId}/${props.type}`); await reload(); await props.onRecordsChanged();
           }}>Delete</Button></div> : null}</header>
         {"description" in selected && selected.description ? <MarkdownRichText text={selected.description} validMentionIds={validMentionIds} /> : null}
-        <RelationshipPanel binderId={props.binderId} recordId={selected.id} records={records} canEdit={props.canEdit} />
+        {/* RelationshipPanel hidden pending redesign — see RelationshipPanel.tsx */}
         <BacklinksPanel binderId={props.binderId} recordId={selected.id} />
       </article>
       {editor ? props.type === "items"

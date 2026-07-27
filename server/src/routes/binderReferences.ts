@@ -125,7 +125,9 @@ function parentId(row: ReferenceRow): string | null {
   return row.continent_id ?? row.country_id ?? row.location_id ?? row.parent_poi_id ?? null;
 }
 
-function dto(row: ReferenceRow) {
+type ReferenceLink = { id: string; name: string };
+
+function dto(row: ReferenceRow, links?: { domains?: ReferenceLink[]; deities?: ReferenceLink[] }) {
   return {
     id: row.id,
     binderId: row.binder_id,
@@ -141,6 +143,8 @@ function dto(row: ReferenceRow) {
     updatedAt: row.updated_at,
     imageUrl: row.image_url ?? null,
     imageUpdatedAt: row.image_updated_at ?? null,
+    ...(links?.domains ? { domains: links.domains } : {}),
+    ...(links?.deities ? { deities: links.deities } : {}),
   };
 }
 
@@ -229,6 +233,27 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
   const reader = binderReaderOrAdmin(db);
   const owner = binderOwnerOrAdmin(db);
 
+  const domainsForDeityStmt = db.prepare(`
+    SELECT br.id, br.name
+    FROM deity_domains dd
+    JOIN binder_records br ON br.id = dd.domain_id
+    WHERE dd.deity_id = ?
+    ORDER BY br.name_key
+  `);
+  const deitiesForDomainStmt = db.prepare(`
+    SELECT br.id, br.name
+    FROM deity_domains dd
+    JOIN binder_records br ON br.id = dd.deity_id
+    WHERE dd.domain_id = ?
+    ORDER BY br.name_key
+  `);
+  const domainsForDeity = (deityId: string) => domainsForDeityStmt.all(deityId) as ReferenceLink[];
+  const deitiesForDomain = (domainId: string) => deitiesForDomainStmt.all(domainId) as ReferenceLink[];
+  const dtoWithLinks = (type: ReferenceType, row: ReferenceRow) =>
+    type === "deities" ? dto(row, { domains: domainsForDeity(row.id) })
+      : type === "domains" ? dto(row, { deities: deitiesForDomain(row.id) })
+        : dto(row);
+
   app.get("/api/binders/:binderId/reference/:referenceType", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
@@ -242,7 +267,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
       ORDER BY br.name_key, br.id
       LIMIT 500
     `).all(binderId, query, `%${query}%`) as ReferenceRow[];
-    res.json(rows.map(dto));
+    res.json(rows.map((row) => dtoWithLinks(typeResult.data, row)));
   });
 
   app.get("/api/binders/:binderId/reference/:referenceType/:recordId", reader, (req, res) => {
@@ -256,7 +281,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
       WHERE br.binder_id = ? AND r.id = ?
     `).get(binderId, recordId) as ReferenceRow | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Binder record not found" });
-    res.json(dto(row));
+    res.json(dtoWithLinks(typeResult.data, row));
   });
 
   app.post("/api/binders/:binderId/reference/:referenceType", owner, (req, res) => {
@@ -278,7 +303,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
       insertTypedRecord(db, entry.table, typeResult.data, id, body.description ?? null, parent, t);
     })();
     const row = db.prepare(`${selectSql(typeResult.data)} WHERE r.id = ?`).get(id) as ReferenceRow;
-    res.status(201).json(dto(row));
+    res.status(201).json(dtoWithLinks(typeResult.data, row));
   });
 
   app.patch("/api/binders/:binderId/reference/:referenceType/:recordId", owner, (req, res) => {
@@ -318,7 +343,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
       if (body.parentId !== undefined) updateParent(db, typeResult.data, recordId, parent ?? null);
     })();
     const row = db.prepare(`${selectSql(typeResult.data)} WHERE r.id = ?`).get(recordId) as ReferenceRow;
-    res.json(dto(row));
+    res.json(dtoWithLinks(typeResult.data, row));
   });
 
   app.delete("/api/binders/:binderId/reference/:referenceType/:recordId", owner, (req, res) => {
@@ -359,5 +384,29 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     const now = ctx.helpers.now();
     db.prepare("UPDATE deities SET image_url = ?, image_updated_at = ?, updated_at = ? WHERE id = ?").run(imageUrl, now, now, recordId);
     res.json({ ok: true, imageUrl });
+  });
+
+  app.post("/api/binders/:binderId/reference/deities/:deityId/domains/:domainId", owner, (req, res) => {
+    const binderId = requireParam(req, res, "binderId");
+    const deityId = requireParam(req, res, "deityId");
+    const domainId = requireParam(req, res, "domainId");
+    if (!binderId || !deityId || !domainId) return;
+    const deity = db.prepare("SELECT 1 FROM binder_records WHERE id = ? AND binder_id = ? AND record_type = 'deity'").get(deityId, binderId);
+    if (!deity) return res.status(404).json({ ok: false, message: "Deity not found" });
+    const domain = db.prepare("SELECT 1 FROM binder_records WHERE id = ? AND binder_id = ? AND record_type = 'domain'").get(domainId, binderId);
+    if (!domain) return res.status(404).json({ ok: false, message: "Domain not found" });
+    db.prepare("INSERT OR IGNORE INTO deity_domains (deity_id, domain_id) VALUES (?, ?)").run(deityId, domainId);
+    res.json({ ok: true, domains: domainsForDeity(deityId) });
+  });
+
+  app.delete("/api/binders/:binderId/reference/deities/:deityId/domains/:domainId", owner, (req, res) => {
+    const binderId = requireParam(req, res, "binderId");
+    const deityId = requireParam(req, res, "deityId");
+    const domainId = requireParam(req, res, "domainId");
+    if (!binderId || !deityId || !domainId) return;
+    const deity = db.prepare("SELECT 1 FROM binder_records WHERE id = ? AND binder_id = ? AND record_type = 'deity'").get(deityId, binderId);
+    if (!deity) return res.status(404).json({ ok: false, message: "Deity not found" });
+    db.prepare("DELETE FROM deity_domains WHERE deity_id = ? AND domain_id = ?").run(deityId, domainId);
+    res.json({ ok: true, domains: domainsForDeity(deityId) });
   });
 }

@@ -47,14 +47,15 @@ Catalogs may contain one or several category arrays. Keeping source catalogs sep
 
 ## Canonical envelope
 
+Every compendium batch is one object per category:
+
 ```json
 {
   "format": "beholden.compendium",
   "schema": "grand",
+  "category": "monsters",
   "exportedAt": "2026-06-28T00:00:00.000Z",
-  "monsters": [],
-  "items": [],
-  "spells": []
+  "entries": []
 }
 ```
 
@@ -68,15 +69,30 @@ Rules:
 
 - `format` must be exactly `"beholden.compendium"`.
 - `schema` must be exactly `"grand"`.
-- Each present category property must be one of the valid categories and contain an array of canonical entries.
-- Omit categories that the file does not own; do not add empty arrays merely for completeness.
+- `category` must be exactly one of the valid categories above.
+- `entries` is an array of canonical entries for that one category. Do not mix entries from different categories in one `entries` array.
 - Decks and bastions contain `"schemaVersion": 2`.
   All other categories omit per-entry `schemaVersion`.
 - Every entry contains `"ruleset": "5e"` or `"ruleset": "5.5e"`.
 - Imports always overwrite an existing row with the same `id`.
 - Every entry must contain a non-empty stable `id`. Grand Schema imports never invent or repair missing IDs.
 - Entries use one explicit canonical shape. Unknown or legacy-shaped fields are rejected rather than guessed.
-- A file may own multiple categories, but each fact belongs in its matching top-level category array.
+- A file authoring multiple categories needs one batch object per category (an array of batch objects, or one file per category).
+- **This is the only shape accepted when embedding compendium batches in an adventure's `compendium` array** (see Adventure import below) — every batch element there must be exactly this `category`/`entries` object.
+
+For a **standalone top-level compendium import only** (Compendium → Import Beholden JSON, not an adventure's embedded `compendium` array), Beholden also accepts an alternative flat document where each category is a top-level array property instead of a separate `category`/`entries` batch:
+
+```json
+{
+  "format": "beholden.compendium",
+  "schema": "grand",
+  "exportedAt": "2026-06-28T00:00:00.000Z",
+  "monsters": [],
+  "items": []
+}
+```
+
+A file may own multiple categories this way; each populated array imports atomically together. Prefer the `category`/`entries` shape above unless bundling several categories in one flat document is genuinely convenient — it is the shape every worked example in this guide uses, the shape Beholden's own per-category export produces, and the only shape accepted inside an adventure.
 
 Common derived ID prefixes are:
 
@@ -92,7 +108,7 @@ Feat:        f_
 
 Use lowercase underscore keys for newly authored IDs, such as `m_orrery_guardian`. Preserve IDs exactly when editing an exported entry because adventures and characters may already reference them.
 
-Multi-category imports are atomic: every populated top-level category array succeeds together or none are applied. Older `batches` documents remain readable for backup compatibility, but new files and exports must use the flat Grand envelope above.
+Multi-category imports are atomic: every populated category in one file succeeds together or none are applied.
 
 ## Notation
 
@@ -103,6 +119,7 @@ Multi-category imports are atomic: every populated top-level category array succ
 - Unless a shape explicitly says otherwise, objects are strict and unknown fields fail validation.
 - `nonnegative integer` means an integer at least 0; `positive integer` means an integer at least 1.
 - Every entry requires `ruleset: "5e" | "5.5e"`.
+- `description` is not uniform across categories — check each category's own shape. `Spell.description` and `ClassTalent.description` require a non-empty string array; `Item.description` accepts a string or a string array; `Feat.description`, `Class.description`, `Background.description`, and `Trait.description` (species/background traits) are all a single required string. Do not copy the array form into a category that wants a plain string, or vice versa.
 
 ## Shared closed values
 
@@ -224,26 +241,18 @@ Recommended weapon property codes:
 
 `weapon.properties` and `weapon.damageType` are strings at schema level. Recommended damage codes are `A`, `B`, `C`, `F`, `FC`, `L`, `N`, `P`, `PS`, `PY`, `R`, `S`, and `T`.
 
-### Charges and depletion
+### Charges
 
 ```text
 UseAmount = positive integer | dice string matching /^\d+d\d+(?:\+\d+)?$/
 
 ItemUses = UseAmount | {
   max: UseAmount
-  recover?: false | UseAmount
-  depletion?: "destroy" | "mundane" | "loseProperties" | DepletionRoll
-}
-
-DepletionRoll = {
-  destroy?: true | integer 1..20
-  mundane?: true | integer 1..20
-  loseProperties?: true | integer 1..20
-  regain?: { [d20 result "1".."20"]: UseAmount }
+  recover: false | UseAmount
 }
 ```
 
-The object form of `ItemUses` must contain `recover` or `depletion`. `DepletionRoll` must contain at least one field.
+Use the bare `UseAmount` form for a simple maximum with no explicit recovery rule. Use the object form when recovery timing matters: `recover: false` means the item never recharges (e.g. it is consumed to destruction), and any other `UseAmount` is how many charges return — pair it with a `resource_grant` structured effect (`reset`) or spend note in the description to say when. The object form must include `recover`; there is no separate charge-depletion/destruction sub-schema — a one-shot consumable that is used up is simply prose plus `uses: { max: 1, recover: false }`.
 
 ### Item spell access
 
@@ -533,7 +542,7 @@ ClassTalent = {
   ruleset: Ruleset
   name: non-empty string
   source?: non-empty string
-  kind: "invocation" | "maneuver" | "metamagic"
+  kind: "invocation" | "maneuver" | "metamagic" | "infusion"
   prerequisite?: {
     level?: integer 1..20
     talent?: class-talent ID matching /^ct_[a-z0-9_]+$/
@@ -651,7 +660,7 @@ ClassFeature = {
   source?: non-empty string
   subclass?: subclass ID matching /^sc_[a-z0-9_]+$/
   talent?: {
-    kind: "invocation" | "maneuver" | "metamagic"
+    kind: "invocation" | "maneuver" | "metamagic" | "infusion"
     known: { [character level "1".."20"]: positive integer }
     replace?: true
     ability?: Ability[] // at least 2
@@ -700,6 +709,14 @@ ExpertiseFeatureChoice = {
   kind: "expertise"
   known: { [character level "1".."20"]: positive integer }
   from?: non-empty string[]
+  replace?: true               // unlocks re-picking a previously chosen Expertise skill/tool
+}
+
+ReplacementFeatureChoice = {
+  id: string matching /^fc_[a-z0-9_]+$/
+  kind: "replacement"
+  target: "maneuver" | "metamagic" | "fighting_style" | "pact_boon"
+  count?: positive integer     // defaults to 1
 }
 
 ProficiencyFeatureChoice = {
@@ -1125,6 +1142,7 @@ EffectGate = {
              "until_start_of_next_turn" | "until_end_of_next_turn" |
              "for_1_minute" | "special"
   armorState?: "any" | "no_armor" | "not_heavy" | "not_unarmored"
+  equipmentState?: "dual_wielding"
   shieldAllowed?: boolean
   weaponTag?: "melee" | "ranged" | "finesse" | "light" | "simple" | "martial"
   attackAbility?: Ability
@@ -1142,6 +1160,8 @@ ResetKind = "short_rest" | "long_rest" | "short_or_long_rest" | "initiative" |
 ```
 
 Canonical source data may omit generated `id` and `source` when the ingestion path supplies them, but fully materialized runtime effects contain both.
+
+Note the two different `resolution` fields are not interchangeable: an individual effect's own `resolution` (inside `EffectBase`, above) accepts only `"automatic"` or `"manual"` — never `"mixed"`. The three-value `Resolution` type (`"automatic" | "manual" | "mixed"`) applies only to the *entry-level* `resolution` field on a `Feat`, `Trait`, or `ClassFeature` (its own field, sitting beside `effects`, summarizing the whole entry).
 
 ### Scaling values, dice, and choices
 
@@ -1394,7 +1414,7 @@ Before importing a Grand document:
 }
 ```
 
-New files use adventure `version` 2. Version 1 remains accepted for old files but cannot carry native compendium batches. `adventure.name` is required. Arrays may be empty, but they must contain objects of the shapes below when present.
+`version` is required and must be exactly `1` or `2`; the import is rejected if it is missing. Use `2` for new files. `adventure.name` is required. Arrays may be empty, but they must contain objects of the shapes below when present.
 
 `compendium` is an array of complete native Beholden Compendium batch objects. Importing the adventure imports these batches first with normal overwrite semantics, then creates the adventure. Use it for any content the adventure must bring with it.
 
@@ -1484,6 +1504,7 @@ An encounter is a roster and combat tracker. Narrative setup, maps, tactics, haz
     "hpMaxBonus": 0,
     "inspiration": false
   },
+  "description": null,
   "sort": 1
 }
 ```
@@ -1505,6 +1526,7 @@ An encounter is a roster and combat tracker. Narrative setup, maps, tactics, haz
 | `attackOverrides` | object \| null | no | `null` |
 | `conditions` | condition[] | no | `[]` |
 | `overrides` | overrides object | no | Zeroed values shown above |
+| `description` | string | no | DM-only tracker note for this specific combatant |
 | `sort` | number | no | Import order |
 
 ### Linking monsters correctly
@@ -1557,11 +1579,11 @@ Valid built-in condition keys are:
 
 ```text
 blinded, charmed, deafened, frightened, grappled, incapacitated,
-invisible, paralyzed, petrified, poisoned, prone, restrained,
+invisible, paralyzed, petrified, poisoned, prone, restrained, slow,
 stunned, unconscious, concentration, disadvantage, hexed, marked
 ```
 
-`hexed` may also have `hexAbility` set to `"str"`, `"dex"`, `"con"`, `"int"`, `"wis"`, or `"cha"`. `hexed` and `marked` may have a `casterId`, but portable files normally cannot know that generated combatant ID. Prefer `conditions: []` unless the encounter begins with a deliberate condition whose references are not required.
+`hexed` may also have `hexAbility` set to `"str"`, `"dex"`, `"con"`, `"int"`, `"wis"`, or `"cha"`. `hexed` and `marked` may have a `casterId` and a `concentrationId`, but portable files normally cannot know those generated combatant/session IDs. Prefer `conditions: []` unless the encounter begins with a deliberate condition whose references are not required.
 
 ### Overrides
 
@@ -2342,7 +2364,7 @@ Every bastion entry requires `kind` and `name`. Valid kinds are `"space"`, `"ord
 }
 ```
 
-The importer also accepts the character object without the outer envelope, but the canonical envelope is preferred. `format` and `version` identify the file for people and future tooling.
+The importer also accepts the character object without the outer envelope, but the canonical envelope is preferred. `format` and `version` identify the file for people and future tooling. Unlike adventures, character exports have only ever used `"version": 1` — there is no version 2 for character files; always write `1`.
 
 ## Imported top-level character fields
 
@@ -2481,11 +2503,16 @@ Provide all categories, even if some are empty:
   "spells": [],
   "invocations": [],
   "maneuvers": [],
+  "metamagic": [],
+  "infusions": [],
+  "weaponMasteries": [],
   "plans": []
 }
 ```
 
-Each tagged proficiency has:
+`weaponMasteries` is the one exception to the tagged-item shape below: it is a plain array of weapon name strings the character has chosen Weapon Mastery for (2024 rules), distinct from `weapons`, which holds broad category proficiencies like "Martial Weapons" as tagged items.
+
+Every other category — including `metamagic` and `invocations` — is an array of tagged proficiency objects:
 
 | Field | Type | Required |
 |---|---|---:|
@@ -2494,6 +2521,8 @@ Each tagged proficiency has:
 | `id` | string | no |
 | `ability` | `"str"` \| `"dex"` \| `"con"` \| `"int"` \| `"wis"` \| `"cha"` \| null | no |
 | `sourceKey` | string \| null | no |
+| `classEntryId` | string \| null | no |
+| `weaponFilter` | `{ melee?: true, martial?: true, excludeProperties?: ("heavy" \| "two_handed")[] }` | no |
 
 ### Inventory
 
@@ -2533,9 +2562,14 @@ Optional inventory fields:
 ```text
 proficiency, equipState, containerId, notes, source, itemId, rarity, type,
 attunement, attuned, magic, silvered, equippable, weight, value, ac,
-stealthDisadvantage, dmg1, dmg2, dmgType, properties, description,
-chargesMax, charges
+stealthDisadvantage, dmg1, dmg2, dmgType, properties, mastery, description,
+chargesMax, charges, ammo, weaponAmmo, usage, linkedAmmoId,
+modifiers, uses, spells, spellcasting, spellTemplate, effects
 ```
+
+`modifiers`, `uses`, `spells`, `spellcasting`, `spellTemplate`, and `effects` carry the same shapes as the matching fields on a compendium `Item` (see the Item schema above) — an inventory row can embed full item mechanics directly instead of only referencing `itemId`. `ammo` mirrors an item's top-level ammo family; `weaponAmmo` and `linkedAmmoId` track loaded/linked ammunition for a specific weapon instance.
+
+The inventory item's weapon-facing fields use different names than the compendium `Item.weapon` object: it is `dmg1`/`dmg2`/`dmgType` here, not `damage`/`twoHandedDamage`/`damageType`. Do not copy field names across the two shapes.
 
 Inventory container:
 
