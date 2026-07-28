@@ -193,8 +193,14 @@ export function InventoryItemPickerModal(props: {
             <>
               <input value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder="Item name" style={{ ...inputStyle, flex: "0 0 auto", width: "100%" }} />
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                <input value={customRarity} onChange={(e) => setCustomRarity(e.target.value)} placeholder="Rarity" style={{ ...inputStyle, flex: "0 0 auto", width: "100%" }} />
-                <input value={customType} onChange={(e) => setCustomType(e.target.value)} placeholder="Type" style={{ ...inputStyle, flex: "0 0 auto", width: "100%" }} />
+                <Select value={customRarity} onChange={(e) => setCustomRarity(e.target.value)} style={{ width: "100%" }}>
+                  <option value="">No rarity</option>
+                  {rarityOptions.filter((r) => r !== "all").map((r) => <option key={r} value={r}>{titleCase(r)}</option>)}
+                </Select>
+                <Select value={customType} onChange={(e) => setCustomType(e.target.value)} style={{ width: "100%" }}>
+                  <option value="">No type</option>
+                  {typeOptions.filter((t) => t !== "all").map((t) => <option key={t} value={t}>{t}</option>)}
+                </Select>
               </div>
               <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
                 <label style={inventoryCheckboxLabel}><input type="checkbox" checked={customAttunement} onChange={(e) => setCustomAttunement(e.target.checked)} />Requires Attunement</label>
