@@ -77,6 +77,27 @@ describe("mergeResourceState", () => {
     ]);
   });
 
+  it("drops a stale item-charge resource (e.g. a Staff of Defense) instead of showing it alongside the item's own charge tracker", () => {
+    // Reproduces a real save: an older version of the app synthesized a class-style Resource for
+    // an item's charges ("Staff of Defense Charges"). Item charges are tracked on the inventory
+    // item itself (item.charges/chargesMax) and shown via the Item Spells panel's charge dots --
+    // they must never also appear in the generic Resources list.
+    const saved: ResourceCounter[] = [
+      { key: "bardic-inspiration", name: "Bardic Inspiration", current: 4, max: 4, reset: "SL", restoreAmount: "all" },
+      { key: "staff-of-defense-charges", name: "Staff of Defense Charges", current: 9, max: 10, reset: "L", restoreAmount: "all" },
+    ];
+    const derived: ResourceCounter[] = [
+      { key: "bardic_inspiration", name: "Bardic Inspiration", current: 4, max: 4, reset: "SL", restoreAmount: "all" },
+    ];
+    const itemNames = new Set(["staff-of-defense"]);
+
+    const result = mergeResourceState(saved, derived, itemNames);
+
+    expect(result).toEqual([
+      { key: "bardic_inspiration", name: "Bardic Inspiration", current: 4, max: 4, reset: "SL", restoreAmount: "all" },
+    ]);
+  });
+
   it("keeps a genuinely different saved resource that has no derived counterpart", () => {
     const saved: ResourceCounter[] = [
       { key: "custom-boon", name: "Custom Boon", current: 1, max: 2, reset: "L", restoreAmount: "all" },

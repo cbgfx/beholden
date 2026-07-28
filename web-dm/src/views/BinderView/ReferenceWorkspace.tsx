@@ -137,6 +137,7 @@ function OrganizationLeaderSection(props: {
   canEdit: boolean;
   onChanged: () => Promise<void>;
 }) {
+  const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
   const [pickId, setPickId] = useState("");
@@ -176,9 +177,17 @@ function OrganizationLeaderSection(props: {
         </div>
       ) : (
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 7 }}>
-          <span style={{ fontSize: "var(--fs-body)", color: props.leader ? theme.colors.text : theme.colors.muted }}>
-            {props.leader?.name ?? "None"}
-          </span>
+          {props.leader ? (
+            <button
+              type="button"
+              onClick={() => navigate(`/binder/${props.binderId}/mortals/${props.leader!.id}`)}
+              style={{ border: 0, background: "transparent", color: theme.colors.text, cursor: "pointer", padding: 0, font: "inherit", fontSize: "var(--fs-body)", textDecoration: "underline", textUnderlineOffset: 3 }}
+            >
+              {props.leader.name}
+            </button>
+          ) : (
+            <span style={{ fontSize: "var(--fs-body)", color: theme.colors.muted }}>None</span>
+          )}
           {props.canEdit ? (
             <>
               <button type="button" onClick={() => setPicking(true)} style={{ border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}>

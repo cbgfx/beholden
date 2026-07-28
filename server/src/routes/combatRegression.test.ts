@@ -496,29 +496,41 @@ describe("combat state regression: HP/condition mutation, transitions, and live 
   });
 
   describe("player-safe engaged enemies", () => {
-    it("hides reserves, latches on first damage, and exposes only a qualitative health state", async () => {
+    function makeReserveEnemy(overrides: Partial<StoredEncounterActor> & { id: string }): StoredEncounterActor {
       const t = Date.now();
-      const reserve: StoredEncounterActor = {
-        id: "combatant-engaged-regression",
+      return {
         encounterId,
         baseType: "monster",
-        baseId: "monster-engaged-regression",
-        name: "Reserve Ogre",
-        label: "Bridge Ogre",
-        initiative: 4,
+        baseId: `monster-${overrides.id}`,
+        name: "Reserve Enemy",
+        label: "Reserve Enemy",
+        initiative: 5,
         friendly: false,
         color: "red",
         overrides: { tempHp: 0, acBonus: 0, hpMaxBonus: 0 },
-        hpCurrent: 20,
-        hpMax: 20,
+        hpCurrent: 11,
+        hpMax: 11,
         hpDetails: null,
-        ac: 12,
+        ac: 13,
         acDetails: null,
         attackOverrides: null,
         conditions: [],
         createdAt: t,
         updatedAt: t,
+        ...overrides,
       };
+    }
+
+    it("hides reserves, latches on first damage, and exposes only a qualitative health state", async () => {
+      const reserve = makeReserveEnemy({
+        id: "combatant-engaged-regression",
+        name: "Reserve Ogre",
+        label: "Bridge Ogre",
+        initiative: 4,
+        hpCurrent: 20,
+        hpMax: 20,
+        ac: 12,
+      });
       insertCombatant(db, reserve);
       await dmRequest("PUT", `/api/encounters/${encounterId}/combatants/${playerCombatantId}`, { initiative: 12 });
 
@@ -548,6 +560,96 @@ describe("combat state regression: HP/condition mutation, transitions, and live 
       await dmRequest("PUT", `/api/encounters/${encounterId}/combatants/${reserve.id}`, { hpDelta: { kind: "damage", amount: 20 } });
       const down = await request("GET", statusUrl, undefined, playerToken);
       assert.match(JSON.stringify(down.body), /Down/);
+    });
+
+    it("engages a reserve the moment a player marks it (Hunter's Mark), before any damage lands", async () => {
+      const reserve = makeReserveEnemy({
+        id: "combatant-marked-regression",
+        name: "Reserve Wolf",
+        label: "Shadow Wolf",
+        initiative: 6,
+      });
+      insertCombatant(db, reserve);
+
+      const statusUrl = `/api/me/characters/${playerCharacterId}/combat-status`;
+      const before = await request("GET", statusUrl, undefined, playerToken);
+      assert.ok(!JSON.stringify(before.body).includes(reserve.id));
+
+      await dmRequest(
+        "PUT", `/api/encounters/${encounterId}/combatants/${reserve.id}`,
+        { conditions: [{ key: "marked", casterId: playerCombatantId }] },
+      );
+      const markedStorage = db.prepare("SELECT live_json FROM combatants WHERE id = ?").get(reserve.id) as { live_json: string };
+      assert.equal(JSON.parse(markedStorage.live_json).engagedWithPlayers, true, "being marked must engage a reserve on its own, without damage");
+
+      const marked = await request("GET", statusUrl, undefined, playerToken);
+      assert.match(JSON.stringify(marked.body), /Shadow Wolf/, "a marked enemy must show up even at full health");
+    });
+
+    it("engages a reserve marked with any ordinary condition (e.g. Poisoned), not just Hunter's Mark", async () => {
+      const reserve = makeReserveEnemy({
+        id: "combatant-poisoned-regression",
+        name: "Reserve Bandit",
+        label: "Lurking Bandit",
+        initiative: 7,
+      });
+      insertCombatant(db, reserve);
+
+      const statusUrl = `/api/me/characters/${playerCharacterId}/combat-status`;
+      const before = await request("GET", statusUrl, undefined, playerToken);
+      assert.ok(!JSON.stringify(before.body).includes(reserve.id));
+
+      await dmRequest(
+        "PUT", `/api/encounters/${encounterId}/combatants/${reserve.id}`,
+        { conditions: [{ key: "poisoned" }] },
+      );
+      const poisonedStorage = db.prepare("SELECT live_json FROM combatants WHERE id = ?").get(reserve.id) as { live_json: string };
+      assert.equal(JSON.parse(poisonedStorage.live_json).engagedWithPlayers, true, "any ordinary condition must engage a reserve on its own, without damage");
+
+      const poisoned = await request("GET", statusUrl, undefined, playerToken);
+      assert.match(JSON.stringify(poisoned.body), /Lurking Bandit/, "a poisoned enemy must show up even at full health");
+    });
+
+    it("does not engage a reserve that is only invisible", async () => {
+      const reserve = makeReserveEnemy({
+        id: "combatant-invisible-regression",
+        name: "Reserve Assassin",
+        label: "Hidden Assassin",
+        initiative: 8,
+      });
+      insertCombatant(db, reserve);
+
+      const statusUrl = `/api/me/characters/${playerCharacterId}/combat-status`;
+      await dmRequest(
+        "PUT", `/api/encounters/${encounterId}/combatants/${reserve.id}`,
+        { conditions: [{ key: "invisible" }] },
+      );
+      const invisibleStorage = db.prepare("SELECT live_json FROM combatants WHERE id = ?").get(reserve.id) as { live_json: string };
+      assert.notEqual(JSON.parse(invisibleStorage.live_json).engagedWithPlayers, true, "invisible alone must not engage a reserve");
+
+      const afterInvisible = await request("GET", statusUrl, undefined, playerToken);
+      assert.ok(!JSON.stringify(afterInvisible.body).includes(reserve.id), "an invisible-only enemy must stay hidden");
+    });
+
+    it("does not engage a reserve that is only concentrating", async () => {
+      const reserve = makeReserveEnemy({
+        id: "combatant-concentration-regression",
+        name: "Reserve Cultist",
+        label: "Chanting Cultist",
+        initiative: 9,
+      });
+      insertCombatant(db, reserve);
+
+      const statusUrl = `/api/me/characters/${playerCharacterId}/combat-status`;
+      await dmRequest(
+        "PUT", `/api/encounters/${encounterId}/combatants/${reserve.id}`,
+        { conditions: [{ key: "concentration" }] },
+      );
+      const concentrationStorage = db.prepare("SELECT live_json FROM combatants WHERE id = ?").get(reserve.id) as { live_json: string };
+      assert.notEqual(JSON.parse(concentrationStorage.live_json).engagedWithPlayers, true, "concentration alone must not engage a reserve");
+
+      const afterConcentration = await request("GET", statusUrl, undefined, playerToken);
+      assert.ok(!JSON.stringify(afterConcentration.body).includes(reserve.id), "a concentration-only enemy must stay hidden");
     });
   });
 

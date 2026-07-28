@@ -80,9 +80,8 @@ export function CharacterSpellsGrantedSection({
               ) : null}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {(entry.mode === "at_will" || entry.mode === "expanded_list" || entry.mode === "always_prepared" || entry.mode === "known") ? (() => {
+              {(entry.mode === "at_will" || entry.mode === "always_prepared" || entry.mode === "known") ? (() => {
                 const [rgb, text] = entry.mode === "at_will" ? ["96,165,250", "At Will"]
-                  : entry.mode === "expanded_list" ? ["251,191,36", "Expanded"]
                   : entry.mode === "always_prepared" ? ["196,181,253", "Prepared"]
                   : ["52,211,153", "Known"];
                 return (

@@ -133,6 +133,8 @@ CREATE TABLE IF NOT EXISTS mortals (
   image_updated_at INTEGER,
   residence_record_id TEXT REFERENCES binder_records(id) ON DELETE SET NULL,
   position_id TEXT REFERENCES binder_positions(id) ON DELETE SET NULL,
+  /** Free-text Class, only meaningful for player_character mortals without a live linked character (see mortalClassColumnMigration.ts). */
+  class_name TEXT,
   mortal_type TEXT NOT NULL CHECK(mortal_type IN ('npc', 'player_character')),
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL

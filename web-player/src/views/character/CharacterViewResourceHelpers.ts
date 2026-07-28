@@ -40,7 +40,26 @@ export function collectClassResources(classDetail: ClassRestDetail | null, level
   return Array.from(latest.values());
 }
 
-export function mergeResourceState(saved: ResourceCounter[] | undefined, derived: ResourceCounter[]): ResourceCounter[] {
+const ITEM_RESOURCE_SUFFIX = /\s+(charges|uses|use)$/i;
+
+/** Item charges (Staff of Defense, a wand's uses, etc.) are tracked on the inventory item itself
+ * (`item.charges`/`chargesMax`) and surfaced only via the Item Spells panel's charge dots — they
+ * are never a class-style Resource. Older saves could persist a synthesized "<Item> Charges"
+ * resource for the same item; matching by name (with or without that suffix) catches those stale
+ * entries even though nothing derives a resource for them anymore. */
+function isInventoryItemResourceName(name: string, itemNames: ReadonlySet<string>): boolean {
+  if (itemNames.size === 0) return false;
+  const normalized = normalizeResourceKey(name);
+  if (itemNames.has(normalized)) return true;
+  const withoutSuffix = name.replace(ITEM_RESOURCE_SUFFIX, "").trim();
+  return withoutSuffix !== name && itemNames.has(normalizeResourceKey(withoutSuffix));
+}
+
+export function mergeResourceState(
+  saved: ResourceCounter[] | undefined,
+  derived: ResourceCounter[],
+  itemNames: ReadonlySet<string> = new Set(),
+): ResourceCounter[] {
   const savedList = Array.isArray(saved) ? saved : [];
   const savedByKey = new Map(savedList.map((resource) => [resource.key || normalizeResourceKey(resource.name), resource]));
   // A resource's key can change underneath a saved character — a class/feat migrating from a
@@ -62,6 +81,7 @@ export function mergeResourceState(saved: ResourceCounter[] | undefined, derived
     if (derivedKeys.has(resource.key || normalizeResourceKey(resource.name))) return false;
     if (derivedNames.has(normalizeResourceKey(resource.name))) return false;
     if (/\(Level \d+:/i.test(resource.name ?? "")) return false;
+    if (isInventoryItemResourceName(resource.name ?? "", itemNames)) return false;
     return true;
   });
   return [...merged, ...extras];

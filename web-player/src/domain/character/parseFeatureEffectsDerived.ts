@@ -121,16 +121,10 @@ export function buildGrantedSpellDataFromEffects(
         continue;
       }
 
-      if (effect.mode === "expanded_list") {
-        spells.push({
-          key: effect.id,
-          spellName: effect.spellName,
-          spellId: effect.spellId,
-          sourceName: effect.source.name,
-          mode: "expanded_list",
-          note: "Added to your spell list.",
-        });
-      }
+      // "expanded_list" spells (e.g. a Warlock patron's Expanded Spell List) aren't a free grant --
+      // they widen the pool of spells a player can pick from when learning/preparing spells
+      // normally, so they're surfaced through the actual spell-choice picker (see
+      // getExpandedSpellListNames) rather than listed here as something already possessed.
     }
   }
 

@@ -129,7 +129,12 @@ export function useCharacterData(id: string | undefined) {
 
   React.useEffect(() => {
     const raceFeatId = typeof characterData?.chosenRaceFeatId === "string" ? characterData.chosenRaceFeatId.trim() : "";
-    const bgFeatId = typeof characterData?.chosenBgOriginFeatId === "string" ? characterData.chosenBgOriginFeatId.trim() : "";
+    const chosenBgFeatId = typeof characterData?.chosenBgOriginFeatId === "string" ? characterData.chosenBgOriginFeatId.trim() : "";
+    // Self-heal characters saved before fixed (non-choice) background feats were auto-selected —
+    // e.g. Criminal → Alert — where chosenBgOriginFeatId was never persisted.
+    const fixedBgFeats = backgroundDetail?.proficiencies?.feats ?? [];
+    const bgFeatChoice = backgroundDetail?.proficiencies?.featChoice ?? 0;
+    const bgFeatId = chosenBgFeatId || (bgFeatChoice <= 0 && fixedBgFeats.length === 1 ? fixedBgFeats[0].id : "");
     const classFeatEntries = Object.entries(characterData?.chosenClassFeatIds ?? {}).filter(
       ([, featId]) => typeof featId === "string" && featId.trim().length > 0,
     );
@@ -215,6 +220,7 @@ export function useCharacterData(id: string | undefined) {
       alive = false;
     };
   }, [
+    backgroundDetail,
     characterData?.chosenBgOriginFeatId,
     characterData?.chosenClassFeatIds,
     characterData?.chosenLevelUpFeats,

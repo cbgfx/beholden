@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { api } from "@/services/api";
 import { fetchMyCharacter } from "@/services/actorApi";
 import { fetchClassCatalog, fetchGrandClassDetail, fetchFeatCatalog, type ClassCatalogRow } from "@/services/compendiumApi";
-import { getSpellcastingClassName } from "@/views/character-creator/utils/CharacterCreatorUtils";
+import { fetchSpellsByName, mergeSpellsById } from "@/services/spellLookup";
+import { getExpandedSpellListNames, getSpellcastingClassName } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import { mergeAutoLevels } from "@/views/level-up/LevelUpHelpers";
 import type {
   LevelUpCharacter as Character,
@@ -121,8 +122,12 @@ export function useLevelUpInitialData(id: string | undefined) {
     api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&level=0&limit=120&includeText=1&lite=1&excludeSpecial=1${rulesetParam}`)
       .then(setClassCantrips)
       .catch(() => setClassCantrips([]));
-    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&minLevel=1&maxLevel=9&limit=220&includeText=1&lite=1&excludeSpecial=1${rulesetParam}`)
-      .then(setClassSpells)
+    const expandedSpellNames = getExpandedSpellListNames(classDetail, nextClassLevel, subclass);
+    Promise.all([
+      api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&minLevel=1&maxLevel=9&limit=220&includeText=1&lite=1&excludeSpecial=1${rulesetParam}`),
+      fetchSpellsByName(expandedSpellNames, ruleset),
+    ])
+      .then(([baseSpells, expandedSpells]) => setClassSpells(mergeSpellsById(baseSpells, expandedSpells)))
       .catch(() => setClassSpells([]));
     if (/warlock/i.test(classDetail.name)) {
       api<SpellSummary[]>(`/api/class-talents/search?kind=invocation&limit=150&includeText=1${rulesetParam}`)

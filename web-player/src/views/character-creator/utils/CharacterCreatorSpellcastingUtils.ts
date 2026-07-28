@@ -21,6 +21,26 @@ export interface SlotLevelTriggeredSpellChoiceDef {
   note?: string | null;
 }
 
+/** Spell names added to a class's spell list by a subclass's "Expanded Spell List"-style feature
+ * (e.g. Warlock patrons), gated by each spell's own `requiredLevel` (the class level at which the
+ * character has spell slots of that spell's level). These aren't free grants -- they widen the
+ * pool a player can pick from when learning/preparing spells normally, so callers should merge
+ * the names into the same spell-search results used for the base class list, not display them
+ * as a separate grant. */
+export function getExpandedSpellListNames(cls: CreatorClassDetailLike, level: number, selectedSubclass?: string | null): string[] {
+  const names = new Set<string>();
+  for (const feature of featuresUpToLevelForSubclass(cls, level, selectedSubclass)) {
+    for (const effect of feature.effects ?? []) {
+      const e = effect as { type?: unknown; mode?: unknown; spellName?: unknown; requiredLevel?: unknown };
+      if (e.type !== "spell_grant" || e.mode !== "expanded_list" || typeof e.spellName !== "string") continue;
+      const requiredLevel = typeof e.requiredLevel === "number" ? e.requiredLevel : null;
+      if (requiredLevel != null && requiredLevel > level) continue;
+      names.add(e.spellName);
+    }
+  }
+  return Array.from(names);
+}
+
 export function tableValueAtLevel(table: [number, number][], level: number): number {
   let result = 0;
   for (const [lvl, val] of table) {

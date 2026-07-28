@@ -3,11 +3,14 @@ import { api } from "@/services/api";
 import { C } from "@/lib/theme";
 import { CollapsiblePanel } from "@/views/character/CharacterViewParts";
 import { type InventoryItem, type ParsedItemSpell, getEquipState, getItemSpells } from "@/views/character/CharacterInventory";
+import type { ConditionInstance } from "@/views/character/CharacterSheetTypes";
+import { normalizeSpellTrackingKey } from "@/views/character/CharacterSheetUtils";
 import {
   FetchedSpellDetail,
   DMG_COLORS,
   DMG_EMOJI,
   LEVEL_LABELS,
+  SELF_CAST_SPELL_CONDITIONS,
   SPELL_ROW_GRID_WITH_MARKER,
   abbrevTime,
   getScaledSpellDamage,
@@ -30,6 +33,8 @@ export function ItemSpellsPanel({
   onChargeChange,
   spellcastingBlocked = false,
   spellSaveDcBonus = 0,
+  conditions = [],
+  onToggleCondition,
 }: {
   items: InventoryItem[];
   pb: number;
@@ -40,6 +45,8 @@ export function ItemSpellsPanel({
   onChargeChange: (itemId: string, charges: number) => void;
   spellcastingBlocked?: boolean;
   spellSaveDcBonus?: number;
+  conditions?: ConditionInstance[];
+  onToggleCondition?: (key: string) => Promise<void> | void;
 }) {
   const [details, setDetails] = React.useState<Record<string, FetchedSpellDetail>>({});
   const [selectedSpell, setSelectedSpell] = React.useState<FetchedSpellDetail | null>(null);
@@ -189,6 +196,23 @@ export function ItemSpellsPanel({
                     const usesSave = Boolean(check && check !== "attack");
                     const usesAtk = check === "attack";
                     const compactComponents = detail?.components ? detail.components.replace(/\s*\([^)]*\)/g, "").trim() : null;
+                    const selfCastConditionKey = detail ? SELF_CAST_SPELL_CONDITIONS[normalizeSpellTrackingKey(detail.name)] : undefined;
+                    const isSelfCastActive = Boolean(selfCastConditionKey) && conditions.some((condition) => condition.key === selfCastConditionKey);
+                    const chargeCost = spell.cost === "level" ? (detail?.level ?? 1) : spell.cost;
+                    const canAffordCast = charges >= chargeCost;
+                    const castToggle = selfCastConditionKey && onToggleCondition
+                      ? {
+                          active: isSelfCastActive,
+                          disabled: !isSelfCastActive && !canAffordCast,
+                          onToggle: () => {
+                            if (!isSelfCastActive) {
+                              if (!canAffordCast) return;
+                              onChargeChange(item.id, charges - chargeCost);
+                            }
+                            void onToggleCondition(selfCastConditionKey);
+                          },
+                        }
+                      : undefined;
 
                     return (
                       <div
@@ -241,6 +265,25 @@ export function ItemSpellsPanel({
                             <span style={{ fontWeight: 800, fontSize: "var(--fs-subtitle)", color: C.text }}>{damage.dice}</span>
                             <span style={{ fontSize: "var(--fs-small)", marginLeft: 3 }}>{damage.types.map((type) => DMG_EMOJI[type] ?? "◆").join(" ")}</span>
                           </div>
+                        ) : castToggle ? (
+                          <button
+                            type="button"
+                            disabled={castToggle.disabled}
+                            onClick={(event) => { event.stopPropagation(); castToggle.onToggle(); }}
+                            title={castToggle.active ? "End this spell's effect" : castToggle.disabled ? "Not enough charges remaining" : "Cast this spell"}
+                            style={{
+                              minWidth: 0,
+                              padding: "4px 10px", borderRadius: 6,
+                              cursor: castToggle.disabled ? "default" : "pointer",
+                              border: `1px solid ${castToggle.active ? "rgba(248,113,113,0.5)" : castToggle.disabled ? "rgba(255,255,255,0.15)" : accentColor + "88"}`,
+                              background: castToggle.active ? "rgba(248,113,113,0.12)" : castToggle.disabled ? "rgba(255,255,255,0.04)" : `${accentColor}22`,
+                              color: castToggle.active ? "#fca5a5" : castToggle.disabled ? C.muted : accentColor,
+                              opacity: castToggle.disabled ? 0.6 : 1,
+                              fontWeight: 800, fontSize: "var(--fs-tiny)", textTransform: "uppercase", letterSpacing: "0.04em",
+                            }}
+                          >
+                            {castToggle.active ? "End" : "Cast"}
+                          </button>
                         ) : <div />}
                       </div>
                     );

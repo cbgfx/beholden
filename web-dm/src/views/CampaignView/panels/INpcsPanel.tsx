@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";
 import { theme } from "@/theme/theme";
-import { IconBinder, IconINPC, IconPlus } from "@/icons";
+import { IconINPC, IconPlus } from "@/icons";
 import { PlayerRow } from "@/views/CampaignView/components/PlayerRow";
 import { MonsterPickerModal } from "@/views/CampaignView/monsterPicker/MonsterPickerModal";
 import type { AddMonsterOptions, INpc } from "@/domain/types/domain";
@@ -158,29 +158,15 @@ export function INpcsPanel(props: Props) {
                 }
                 subtitle={subtitle}
                 primaryAction={
-                  (i.binderMortalId && props.binderId) || props.selectedEncounterId ? (
-                    <div style={{ display: "flex", gap: 4 }}>
-                      {i.binderMortalId && props.binderId ? (
-                        <IconButton
-                          title="Open in Binder"
-                          onClick={(e) => (e.stopPropagation(), navigate(`/binder/${props.binderId}/mortals/${i.binderMortalId}`))}
-                          variant="ghost"
-                          size="sm"
-                        >
-                          <IconBinder />
-                        </IconButton>
-                      ) : null}
-                      {props.selectedEncounterId ? (
-                        <IconButton
-                          title="Add to Encounter"
-                          onClick={(e) => (e.stopPropagation(), props.onAddINpcToEncounter(i.id))}
-                          variant="ghost"
-                          size="sm"
-                        >
-                          <IconPlus />
-                        </IconButton>
-                      ) : null}
-                    </div>
+                  props.selectedEncounterId ? (
+                    <IconButton
+                      title="Add to Encounter"
+                      onClick={(e) => (e.stopPropagation(), props.onAddINpcToEncounter(i.id))}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      <IconPlus />
+                    </IconButton>
                   ) : null
                 }
                 menuItems={[

@@ -281,6 +281,38 @@ describe("buildCharacterViewDerivedState", () => {
     expect(buildCharacterViewDerivedState(args).effectiveAc).toBe(17);
   });
 
+  it("adds an attuned held item's typed spell save DC bonus, e.g. Reveler's Concertina", () => {
+    const args = buildArgs();
+    args.char.characterData!.inventory!.push({
+      id: "i_revelers_concertina",
+      name: "Reveler's Concertina",
+      quantity: 1,
+      equipped: true,
+      equipState: "mainhand-1h",
+      attunement: true,
+      attuned: true,
+      modifiers: [{ target: "spell_save_dc", amount: 2 }],
+    });
+
+    expect(buildCharacterViewDerivedState(args).spellSaveDcBonus).toBe(2);
+  });
+
+  it("does not add an unattuned held item's typed spell save DC bonus", () => {
+    const args = buildArgs();
+    args.char.characterData!.inventory!.push({
+      id: "i_revelers_concertina",
+      name: "Reveler's Concertina",
+      quantity: 1,
+      equipped: true,
+      equipState: "mainhand-1h",
+      attunement: true,
+      attuned: false,
+      modifiers: [{ target: "spell_save_dc", amount: 2 }],
+    });
+
+    expect(buildCharacterViewDerivedState(args).spellSaveDcBonus).toBe(0);
+  });
+
   it("links Magic Initiate's chosen level 1 spell to its 1/1 free cast", () => {
     const args = buildArgs();
     args.char.characterData!.proficiencies = {

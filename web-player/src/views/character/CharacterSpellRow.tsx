@@ -28,12 +28,12 @@ export function CharacterSpellRow({
   isPrepared,
   preparedLocked,
   preparedLimit,
-  entrySaveDc,
   entrySpellAtk,
   scaledDamageText,
   scaledDamageTypes,
   dmgColor,
   spellcastingBlocked,
+  castToggle,
   onTogglePrepared,
   onSelect,
 }: {
@@ -47,12 +47,13 @@ export function CharacterSpellRow({
   isPrepared: boolean;
   preparedLocked: boolean;
   preparedLimit: number;
-  entrySaveDc: number;
   entrySpellAtk: number;
   scaledDamageText: string | null;
   scaledDamageTypes: string[];
   dmgColor: string | null;
   spellcastingBlocked: boolean;
+  /** Present only for spells with a known self-toggle effect (e.g. Mage Armor) — renders a CAST/END button in the Effect column. */
+  castToggle?: { active: boolean; disabled?: boolean; onToggle: () => void };
   onTogglePrepared: () => void;
   onSelect: () => void;
 }) {
@@ -137,10 +138,10 @@ export function CharacterSpellRow({
       {d && (usesSave || usesAtk) ? (
         <div style={{ minWidth: 0, textAlign: "center" }}>
           <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700 }}>
-            {usesSave ? (d.save ?? "SAVE") : "ATK"}
+            {usesSave ? "SAVE" : "ATK"}
           </div>
           <div style={{ fontWeight: 900, fontSize: "var(--fs-body)", color: spellcastingBlocked ? C.colorPinkRed : accentColor, lineHeight: 1.2 }}>
-            {usesSave ? `${entrySaveDc}${spellcastingBlocked ? " X" : ""}` : `+${entrySpellAtk}${spellcastingBlocked ? " X" : ""}`}
+            {usesSave ? `${(d.check ?? "").toUpperCase()}${spellcastingBlocked ? " X" : ""}` : `+${entrySpellAtk}${spellcastingBlocked ? " X" : ""}`}
           </div>
         </div>
       ) : <div />}
@@ -155,6 +156,25 @@ export function CharacterSpellRow({
           <span style={{ fontWeight: 800, fontSize: "var(--fs-subtitle)", color: C.text }}>{scaledDamageText}</span>
           <span style={{ fontSize: "var(--fs-small)", marginLeft: 3 }}>{scaledDamageTypes.map((type) => DMG_EMOJI[type] ?? "◆").join(" ")}</span>
         </div>
+      ) : castToggle ? (
+        <button
+          type="button"
+          disabled={castToggle.disabled}
+          onClick={(event) => { event.stopPropagation(); castToggle.onToggle(); }}
+          title={castToggle.active ? "End this spell's effect" : castToggle.disabled ? "No spell slots remaining" : "Cast this spell"}
+          style={{
+            minWidth: 0,
+            padding: "4px 10px", borderRadius: 6,
+            cursor: castToggle.disabled ? "default" : "pointer",
+            border: `1px solid ${castToggle.active ? "rgba(248,113,113,0.5)" : castToggle.disabled ? "rgba(255,255,255,0.15)" : accentColor + "88"}`,
+            background: castToggle.active ? "rgba(248,113,113,0.12)" : castToggle.disabled ? "rgba(255,255,255,0.04)" : `${accentColor}22`,
+            color: castToggle.active ? "#fca5a5" : castToggle.disabled ? C.muted : accentColor,
+            opacity: castToggle.disabled ? 0.6 : 1,
+            fontWeight: 800, fontSize: "var(--fs-tiny)", textTransform: "uppercase", letterSpacing: "0.04em",
+          }}
+        >
+          {castToggle.active ? "End" : "Cast"}
+        </button>
       ) : <div />}
     </div>
   );

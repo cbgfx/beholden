@@ -71,6 +71,7 @@ export function MortalRecordModal(props: {
   const [locationId, setLocationId] = useState("");
   const [organizationId, setOrganizationId] = useState("");
   const [positionId, setPositionId] = useState("");
+  const [className, setClassName] = useState("");
   const [playerId, setPlayerId] = useState("");
   const [monsterId, setMonsterId] = useState("");
   const [notes, setNotes] = useState("");
@@ -102,6 +103,7 @@ export function MortalRecordModal(props: {
     setLocationId(props.record?.location?.id ?? "");
     setOrganizationId(props.record?.organization?.id ?? "");
     setPositionId(props.record?.position?.id ?? "");
+    setClassName(props.record?.className ?? "");
     setPlayerId(props.record?.player?.id ?? "");
     setMonsterId(props.record?.monsterId ?? "");
     setNotes(props.record?.notes ?? "");
@@ -151,6 +153,7 @@ export function MortalRecordModal(props: {
         locationId: locationId || null,
         organizationId: organizationId || null,
         positionId: positionId || null,
+        className: mortalType === "player_character" ? className.trim() || null : null,
         notes: notes.trim() || null,
         dmNotes: dmNotes.trim() || null,
         playerId: mortalType === "player_character" ? playerId || null : null,
@@ -248,6 +251,12 @@ export function MortalRecordModal(props: {
       {mortalType === "player_character"
         ? property("Existing player", <SearchableSelect value={playerId} onChange={linkPlayer} disabled={saving} options={availablePlayers.map((player) => ({ id: player.id, name: playerLabel(player) }))} />)
         : <SearchableOption id="mortal-monster" label={`Statblock${props.requireNpcStatblock ? " *" : ""}`} selectedId={monsterId} options={props.options.monsters ?? []} onChange={setMonsterId} disabled={saving} />}
+      {mortalType === "player_character" && (() => {
+        const linkedClassName = playerId ? props.options.players.find((player) => player.id === playerId)?.className : null;
+        return property("Class", linkedClassName
+          ? <Input value={linkedClassName} disabled readOnly title="Derived from the linked player character" />
+          : <Input value={className} onChange={(event) => setClassName(event.target.value)} placeholder="e.g. Wizard" disabled={saving} />);
+      })()}
       <SearchableOption id="mortal-race" label="Race" selectedId={raceId} options={grouped.races} onChange={setRaceId} disabled={saving} />
       {property("Gender", <Select value={gender} onChange={(event) => setGender(event.target.value as typeof gender)} disabled={saving}><option value="" disabled>Select gender</option><option value="male">Male</option><option value="female">Female</option></Select>)}
       {property("Age", <div style={{ display: "flex", alignItems: "center", gap: 9 }}>

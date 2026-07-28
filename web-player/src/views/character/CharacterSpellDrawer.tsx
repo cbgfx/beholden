@@ -9,6 +9,8 @@ export function SpellDrawer({
   charLevel,
   maxSlotLevel,
   spellMod,
+  removable,
+  onRemove,
 }: {
   spell: FetchedSpellDetail;
   sourceLabel?: string | null;
@@ -16,6 +18,9 @@ export function SpellDrawer({
   charLevel?: number;
   maxSlotLevel?: number;
   spellMod?: number;
+  /** True for spells you tracked yourself (via Add Spell), as opposed to ones granted by class/race/feat. */
+  removable?: boolean;
+  onRemove?: () => void;
 }) {
   const ordinals = ["Cantrip", "1st level", "2nd level", "3rd level", "4th level", "5th level", "6th level", "7th level", "8th level", "9th level"];
   const textArr = Array.isArray(spell.text) ? spell.text : [String(spell.text ?? "")];
@@ -113,6 +118,22 @@ export function SpellDrawer({
           )}
           {sourceLabel && sourceLabel !== spell.source ? (
             <p style={{ margin: 0, fontSize: "var(--fs-small)", color: C.muted }}>Granted by: {sourceLabel}</p>
+          ) : null}
+          {removable && onRemove ? (
+            <button
+              type="button"
+              onClick={onRemove}
+              style={{
+                marginTop: 10, alignSelf: "flex-start",
+                padding: "8px 12px", borderRadius: 8, cursor: "pointer",
+                border: "1px solid rgba(248,113,113,0.35)",
+                background: "rgba(248,113,113,0.10)",
+                color: "#fca5a5",
+                fontWeight: 700, fontSize: "var(--fs-small)",
+              }}
+            >
+              Remove from spell list
+            </button>
           ) : null}
         </div>
       </div>

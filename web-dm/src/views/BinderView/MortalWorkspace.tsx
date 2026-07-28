@@ -311,7 +311,10 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     const genderColor = selected.gender === "male" ? "#7dd3fc" : selected.gender === "female" ? "#f9a8d4" : null;
     const linkedPlayer = selected.player ? options.players.find((player) => player.id === selected.player!.id) : undefined;
     const facts: Array<{ key: string; icon: React.ReactNode; label: string; node: React.ReactNode }> = [
-      ...(linkedPlayer?.className ? [{ key: "class", icon: <IconShield size={16} />, label: "Class", node: linkedPlayer.className as React.ReactNode }] : []),
+      ...(() => {
+        const displayClassName = selected.mortalType === "player_character" ? (linkedPlayer?.className || selected.className) : null;
+        return displayClassName ? [{ key: "class", icon: <IconShield size={16} />, label: "Class", node: displayClassName as React.ReactNode }] : [];
+      })(),
       ...(selected.position ? [{ key: "position", icon: <IconShield size={16} />, label: "Position", node: selected.position.name as React.ReactNode }] : []),
       ...(selected.organizations.length ? [{ key: "organizations", icon: <IconOrganigram size={16} />, label: "Organizations", node: selected.organizations.map((organization) => organization.name).join(", ") as React.ReactNode }] : []),
       ...(selected.location ? [{ key: "location", icon: <IconVillage size={16} />, label: "Location", node: selected.location.name as React.ReactNode }] : []),
@@ -450,7 +453,8 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
           : error ? <div role="alert" style={{ padding: 42, textAlign: "center", color: theme.colors.red }}>{error}</div>
           : filteredRecords.length ? filteredRecords.map((record) => {
             const age = mortalAge(record, props.binderCurrentDate);
-            const className = record.player ? options.players.find((player) => player.id === record.player!.id)?.className : undefined;
+            const linkedClassName = record.player ? options.players.find((player) => player.id === record.player!.id)?.className : undefined;
+            const className = record.mortalType === "player_character" ? (linkedClassName || record.className || undefined) : undefined;
             const genderColor = record.gender === "male" ? "#7dd3fc" : record.gender === "female" ? "#f9a8d4" : null;
             const cell = { color: theme.colors.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
             return <button key={record.id} type="button" onClick={() => navigate(`/binder/${props.binderId}/mortals/${record.id}`)} onMouseEnter={() => setHoveredId(record.id)} onMouseLeave={() => setHoveredId(null)} style={{ minWidth: 1120, width: "100%", display: "grid", gridTemplateColumns: mortalTableColumns, alignItems: "center", gap: 12, padding: "11px 15px", border: 0, borderTop: `1px solid ${theme.colors.panelBorder}`, background: hoveredId === record.id ? withAlpha(props.accent, 0.08) : "transparent", color: theme.colors.text, textAlign: "left", cursor: "pointer", font: "inherit" }}>

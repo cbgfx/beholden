@@ -261,6 +261,7 @@ export function buildCharacterRuntimeActions(args: {
     const nextInventory = (inventory ?? []).map((item) => recoverItemCharges(item));
     const hasResourceful = hasHeroicInspirationGrant(raceDetail);
     const nextOverrides = getLongRestOverrides(Boolean(overrides.inspiration), hasResourceful);
+    const nextConditions = (char.conditions ?? []).filter((condition) => condition.key !== "mage_armor");
 
     await putMyCharacter(char.id, {
       hpCurrent: effectiveHpMaxWithoutOverrides,
@@ -277,6 +278,9 @@ export function buildCharacterRuntimeActions(args: {
     const nextDeathSaves = { success: 0, fail: 0 };
     await patchMyCharacter(char.id, "deathSaves", nextDeathSaves);
     await patchMyCharacter(char.id, "overrides", nextOverrides);
+    if (nextConditions.length !== (char.conditions ?? []).length) {
+      await patchMyCharacter(char.id, "conditions", { conditions: nextConditions });
+    }
 
     if (hasResourceful && !(overrides.inspiration ?? false)) {
       await patchMyCharacter(char.id, "inspiration", { inspiration: true });
@@ -287,6 +291,7 @@ export function buildCharacterRuntimeActions(args: {
       hpCurrent: effectiveHpMaxWithoutOverrides,
       deathSaves: nextDeathSaves,
       overrides: nextOverrides,
+      conditions: nextConditions,
       characterData: {
         ...prev.characterData,
         hitDiceCurrent: recovery.hitDiceCurrent,

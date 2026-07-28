@@ -9,11 +9,13 @@ import {
   fetchGrandClassDetail,
   fetchGrandSpeciesDetail,
 } from "@/services/compendiumApi";
+import { fetchSpellsByName, mergeSpellsById } from "@/services/spellLookup";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   abilityMod,
   calcHpMax,
   classifyFeatSelection,
+  getExpandedSpellListNames,
   getSpellcastingClassName,
   parseStartingEquipmentOptions,
 } from "@/views/character-creator/utils/CharacterCreatorUtils";
@@ -262,7 +264,11 @@ export function CharacterCreatorView() {
     const ruleset = form.ruleset ?? "5.5e";
     const rulesetParam = `&ruleset=${encodeURIComponent(ruleset)}`;
     api<SpellSummary[]>(`/api/spells/search?classes=${name}&level=0&limit=120&includeText=1&lite=1&excludeSpecial=1${rulesetParam}`).then(setClassCantrips).catch(() => {});
-    api<SpellSummary[]>(`/api/spells/search?classes=${name}&minLevel=1&maxLevel=9&limit=220&includeText=1&compact=1&lite=1&excludeSpecial=1${rulesetParam}`).then(setClassSpells).catch(() => {});
+    const expandedSpellNames = getExpandedSpellListNames(classDetail, form.level, form.subclass);
+    Promise.all([
+      api<SpellSummary[]>(`/api/spells/search?classes=${name}&minLevel=1&maxLevel=9&limit=220&includeText=1&compact=1&lite=1&excludeSpecial=1${rulesetParam}`),
+      fetchSpellsByName(expandedSpellNames, ruleset),
+    ]).then(([baseSpells, expandedSpells]) => setClassSpells(mergeSpellsById(baseSpells, expandedSpells))).catch(() => {});
     // Eldritch Invocations are ClassTalents, not spells.
     if (/warlock/i.test(classDetail.name)) {
       api<SpellSummary[]>(`/api/class-talents/search?kind=invocation&limit=150&includeText=1${rulesetParam}`).then(setClassInvocations).catch(() => {});
@@ -349,10 +355,9 @@ export function CharacterCreatorView() {
     if (!prof || prof.featChoice > 0 || prof.feats.length === 0) {
       return;
     }
-    // Fixed background feats are already carried on the background detail itself.
-    // Only true "choose a feat" backgrounds should populate chosenBgOriginFeatId.
-    setForm((f) => (f.chosenBgOriginFeatId == null ? f : { ...f, chosenBgOriginFeatId: null }));
-    return;
+    const fixedFeatId = prof.feats[0]?.id;
+    if (!fixedFeatId) return;
+    setForm((f) => (f.chosenBgOriginFeatId === fixedFeatId ? f : { ...f, chosenBgOriginFeatId: fixedFeatId }));
   }, [bgDetail]);
 
   // Auto-select the first feat for backgrounds that explicitly grant a feat choice.

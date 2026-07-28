@@ -2,7 +2,7 @@ import React from "react";
 import { api } from "@/services/api";
 import { C } from "@/lib/theme";
 import { CollapsiblePanel, panelHeaderAddBtn } from "@/views/character/CharacterViewParts";
-import type { GrantedSpellCast, ResourceCounter } from "@/views/character/CharacterSheetTypes";
+import type { ConditionInstance, GrantedSpellCast, ResourceCounter } from "@/views/character/CharacterSheetTypes";
 import type { ClassRestDetail } from "@/views/character/SpellSlotsPanel";
 import { normalizeAbilityKey, normalizeSpellTrackingKey, normalizeSpellTrackingName } from "@/views/character/CharacterSheetUtils";
 import { AddSpellDrawer, SpellDrawer } from "@/views/character/CharacterSpellDrawers";
@@ -10,6 +10,7 @@ import {
   type FetchedSpellDetail,
   DMG_COLORS,
   LEVEL_LABELS,
+  SELF_CAST_SPELL_CONDITIONS,
   getScaledSpellDamage,
   highestAvailableSlotLevel,
   spellSectionArrow,
@@ -35,7 +36,7 @@ function enrichSpellDetail(detail: FetchedSpellDetail): FetchedSpellDetail {
 // RichSpellsPanel
 // ---------------------------------------------------------------------------
 
-export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb, scores, accentColor, classDetail, ruleset, spellSlotState, classSpellcastingStates = [], charLevel, preparedLimit = 0, usesFlexiblePreparedList = false, usedSpellSlots, preparedSpells, onSlotsChange, onPreparedChange, onAddSpell, onRemoveSpell, addSpellSourceLabel, onResourceChange, spellcastingBlocked = false, spellDamageBonuses = {}, spellSaveDcBonus = 0 }: {
+export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb, scores, accentColor, classDetail, ruleset, spellSlotState, classSpellcastingStates = [], charLevel, preparedLimit = 0, usesFlexiblePreparedList = false, usedSpellSlots, preparedSpells, onSlotsChange, onPreparedChange, onAddSpell, onRemoveSpell, addSpellSourceLabel, onResourceChange, spellcastingBlocked = false, spellDamageBonuses = {}, spellSaveDcBonus = 0, conditions = [], onToggleCondition }: {
   spells: { name: string; source: string; id?: string; ability?: "str" | "dex" | "con" | "int" | "wis" | "cha" | null }[];
   grantedSpells?: GrantedSpellCast[];
   resources?: ResourceCounter[];
@@ -60,9 +61,11 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
   spellcastingBlocked?: boolean;
   spellDamageBonuses?: Record<string, number>;
   spellSaveDcBonus?: number;
+  conditions?: ConditionInstance[];
+  onToggleCondition?: (key: string) => Promise<void> | void;
 }) {
   const [details, setDetails] = React.useState<Record<string, FetchedSpellDetail>>({});
-  const [selectedSpell, setSelectedSpell] = React.useState<{ detail: FetchedSpellDetail; source?: string | null } | null>(null);
+  const [selectedSpell, setSelectedSpell] = React.useState<{ detail: FetchedSpellDetail; source?: string | null; rawName: string; removable: boolean } | null>(null);
   const [collapsedSections, setCollapsedSections] = React.useState<Record<string, boolean>>({});
   const [addSpellOpen, setAddSpellOpen] = React.useState(false);
   const [spellSearch, setSpellSearch] = React.useState("");
@@ -87,7 +90,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
     grantKey: sp.key,
   })), [grantedSpells]);
   const specialGrantedEntries = React.useMemo(
-    () => grantedEntries.filter((entry) => entry.mode === "at_will" || entry.mode === "expanded_list" || entry.mode === "limited"),
+    () => grantedEntries.filter((entry) => entry.mode === "at_will" || entry.mode === "limited"),
     [grantedEntries]
   );
   const entries = React.useMemo(() => {
@@ -374,7 +377,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
           resources={resources}
           collapsed={Boolean(collapsedSections.granted)}
           onToggleCollapse={() => toggleSection("granted")}
-          onSelectSpell={(detail, source) => setSelectedSpell({ detail, source })}
+          onSelectSpell={(detail, source) => setSelectedSpell({ detail, source, rawName: detail.name, removable: false })}
           onResourceChange={onResourceChange}
         />
       </div>
@@ -464,7 +467,6 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
                 ? `${scaledDamage.dice}${spellDamageBonus === 0 ? "" : `${spellDamageBonus > 0 ? "+" : ""}${spellDamageBonus}`}`
                 : null;
               const dmgColor = scaledDamage ? (DMG_COLORS[scaledDamage.type] ?? C.text) : null;
-              const entrySaveDc = 8 + pb + entrySpellMod + spellSaveDcBonus;
               const entrySpellAtk = pb + entrySpellMod;
               const isCantrip = level === 0;
               const isAlwaysPrepared = e.forcedPrepared;
@@ -476,6 +478,21 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
                 && !isPrepared
                 && preparedLimit > 0
                 && userPreparedCount >= preparedLimit;
+              const selfCastConditionKey = SELF_CAST_SPELL_CONDITIONS[e.key];
+              const isSelfCastActive = Boolean(selfCastConditionKey) && conditions.some((condition) => condition.key === selfCastConditionKey);
+              const castToggle = selfCastConditionKey && onToggleCondition
+                ? {
+                    active: isSelfCastActive,
+                    disabled: !isSelfCastActive && remaining <= 0,
+                    onToggle: () => {
+                      if (!isSelfCastActive) {
+                        if (remaining <= 0) return;
+                        void onSlotsChange({ ...usedSpellSlots, [String(level)]: usedCount + 1 });
+                      }
+                      void onToggleCondition(selfCastConditionKey);
+                    },
+                  }
+                : undefined;
               return (
                 <CharacterSpellRow
                   key={i}
@@ -489,14 +506,14 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
                   isPrepared={isPrepared}
                   preparedLocked={preparedLocked}
                   preparedLimit={preparedLimit}
-                  entrySaveDc={entrySaveDc}
                   entrySpellAtk={entrySpellAtk}
                   scaledDamageText={scaledDamageText}
                   scaledDamageTypes={scaledDamage?.types ?? []}
                   dmgColor={dmgColor}
                   spellcastingBlocked={spellcastingBlocked}
+                  castToggle={castToggle}
                   onTogglePrepared={() => togglePrepared(e.key)}
-                  onSelect={() => { if (d) setSelectedSpell({ detail: d, source: e.source }); }}
+                  onSelect={() => { if (d) setSelectedSpell({ detail: d, source: e.source, rawName: e.rawName, removable: e.removable }); }}
                 />
               );
             })}
@@ -507,7 +524,16 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
       })}
       </div>
       {selectedSpell && (
-        <SpellDrawer spell={selectedSpell.detail} sourceLabel={selectedSpell.source ?? null} onClose={() => setSelectedSpell(null)} charLevel={charLevel} maxSlotLevel={maxSpellSlotLevel} spellMod={spellMod} />
+        <SpellDrawer
+          spell={selectedSpell.detail}
+          sourceLabel={selectedSpell.source ?? null}
+          onClose={() => setSelectedSpell(null)}
+          charLevel={charLevel}
+          maxSlotLevel={maxSpellSlotLevel}
+          spellMod={spellMod}
+          removable={selectedSpell.removable}
+          onRemove={selectedSpell.removable && onRemoveSpell ? () => { void onRemoveSpell(selectedSpell.rawName); setSelectedSpell(null); } : undefined}
+        />
       )}
     </CollapsiblePanel>
     {addSpellOpen && (

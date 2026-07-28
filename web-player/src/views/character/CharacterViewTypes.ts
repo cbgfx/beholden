@@ -158,6 +158,11 @@ export interface BackgroundFeatureDetail {
   id: string;
   name: string;
   traits: LoreTraitDetail[];
+  /** Fixed (non-choice) origin feat grant, e.g. Criminal → Alert. */
+  proficiencies?: {
+    feats?: Array<{ id: string; name: string }>;
+    featChoice?: number;
+  };
 }
 
 export interface FeatFeatureDetail {

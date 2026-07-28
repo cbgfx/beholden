@@ -25,6 +25,13 @@ export interface FetchedSpellDetail {
 export const SPELL_ROW_GRID_WITH_MARKER = "24px minmax(0, 1fr) 108px 68px 92px";
 export const SPELL_ROW_GRID = "minmax(0, 1fr) 108px 68px 92px";
 
+/** Spells (by normalized tracking key) with a self-toggle effect surfaced as a CAST/END button
+ * in a spell row's Effect column, backed by a condition the DM and player can both see. Shared
+ * between the class Spells panel (spends a spell slot) and item-granted spells (spends a charge). */
+export const SELF_CAST_SPELL_CONDITIONS: Record<string, string> = {
+  magearmor: "mage_armor",
+};
+
 export const spellColumnHeaderStyle: React.CSSProperties = {
   minWidth: 0,
   color: C.muted,

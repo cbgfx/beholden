@@ -19,6 +19,7 @@ export type { StartingEquipmentOption } from "./CharacterCreatorClassCoreUtils";
 export {
   getCantripCount,
   getClassFeatureTable,
+  getExpandedSpellListNames,
   getMaxSlotLevel,
   getPreparedSpellCount,
   getSpellSlotsAtLevel,

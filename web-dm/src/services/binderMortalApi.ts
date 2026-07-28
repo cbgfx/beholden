@@ -22,6 +22,8 @@ export type BinderMortal = {
     isPrimary: boolean;
   }>;
   position: { id: string; name: string } | null;
+  /** Free-text Class, only set for player_character mortals; overridden by the linked player's live class when linked. */
+  className: string | null;
   notes: string | null;
   dmNotes: string | null;
   imageUrl: string | null;
@@ -43,6 +45,7 @@ export type BinderMortalInput = {
   locationId: string | null;
   organizationId: string | null;
   positionId: string | null;
+  className: string | null;
   notes: string | null;
   dmNotes: string | null;
   playerId: string | null;

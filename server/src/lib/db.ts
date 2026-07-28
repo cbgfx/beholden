@@ -6,6 +6,7 @@ import { extractMonsterTreasureTraits } from "./monsterTreasureMigration.js";
 import { ensureTreasureEncounterColumn } from "./treasureEncounterColumnMigration.js";
 import { ensureUserLastLoginColumn } from "./userLastLoginColumnMigration.js";
 import { ensureImageVersionColumns } from "./imageVersionColumnMigration.js";
+import { ensureMortalClassColumn } from "./mortalClassColumnMigration.js";
 import { displayNoteTitle } from "./dbConverters.js";
 import { ensureCompendiumRulesetColumns } from "./compendiumRulesetColumnMigration.js";
 import { ensureCharacterRulesetColumn } from "./characterRulesetColumnMigration.js";
@@ -46,6 +47,7 @@ export function openDb(dbPath: string): Db {
   // Recreate Binder indexes/triggers that may have belonged to a rebuilt table.
   db.exec(BINDER_SCHEMA_SQL);
   ensureBinderCampaignColumns(db);
+  ensureMortalClassColumn(db);
   reconcileLinkedCharacterIdentities(db);
   ensureCompendiumRulesetColumns(db);
   ensureCompendiumCompositePrimaryKey(db);

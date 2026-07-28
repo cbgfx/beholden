@@ -20,6 +20,7 @@ export const SHARED_CONDITION_DEFS: SharedConditionDef[] = [
   { key: "disadvantage", name: "Disadvantage" },
   { key: "hexed", name: "Hexed", needsCaster: true },
   { key: "marked", name: "Marked", needsCaster: true },
+  { key: "mage_armor", name: "Mage Armor" },
 ];
 
 export function conditionLabel(key: string): string {

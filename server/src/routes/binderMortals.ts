@@ -28,6 +28,7 @@ const MortalBody = z.object({
   locationId: z.string().trim().min(1).nullable().optional(),
   organizationId: z.string().trim().min(1).nullable().optional(),
   positionId: z.string().trim().min(1).nullable().optional(),
+  className: optionalText(160),
   notes: optionalText(200_000),
   dmNotes: optionalText(200_000),
   playerId: z.string().trim().min(1).nullable().optional(),
@@ -52,6 +53,7 @@ type MortalRow = {
   death_date_text: string | null;
   residence_record_id: string | null;
   location_name: string | null;
+  class_name: string | null;
   description: string | null;
   backstory: string | null;
   dm_notes: string | null;
@@ -106,7 +108,7 @@ const SELECT_MORTAL = `
   SELECT m.id, br.binder_id, br.name, m.mortal_type, m.race_id,
          race_record.name AS race_name, m.gender, m.life_status,
          m.birth_date_text, m.death_date_text, m.residence_record_id,
-         location_record.name AS location_name, m.description, m.backstory,
+         location_record.name AS location_name, m.class_name, m.description, m.backstory,
          m.dm_notes, m.image_url, m.image_updated_at, npc.monster_id,
          pc.character_id, pc.player_id, player.player_name,
          player.character_name AS player_character_name,
@@ -184,6 +186,7 @@ function dto(row: MortalRow, db: ServerContext["db"]) {
     organization: row.organization_id ? { id: row.organization_id, name: row.organization_name! } : null,
     organizations,
     position: row.position_id ? { id: row.position_id, name: row.position_name! } : null,
+    className: row.mortal_type === "player_character" ? row.class_name : null,
     notes: resolveImportedBinderLinks(row.description ?? row.backstory, row.binder_id, db),
     dmNotes: row.dm_notes,
     imageUrl: row.image_url,
@@ -372,9 +375,9 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
     db.transaction(() => {
       db.prepare(`
         UPDATE mortals SET birth_date_text = ?, death_date_text = ?,
-          life_status = ?, position_id = ?,
+          life_status = ?, position_id = ?, class_name = ?,
           residence_record_id = ?, updated_at = ? WHERE id = ?
-      `).run(body.birthDate ?? null, body.deathDate ?? null, body.deathDate ? "dead" : "alive", body.positionId ?? null, body.locationId ?? null, now, id);
+      `).run(body.birthDate ?? null, body.deathDate ?? null, body.deathDate ? "dead" : "alive", body.positionId ?? null, body.className ?? null, body.locationId ?? null, now, id);
       replacePrimaryMembership(ctx, id, body.organizationId ?? null, body.positionId ?? null, now);
       if (body.mortalType === "player_character") {
         db.prepare(`
@@ -444,7 +447,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
         UPDATE mortals SET
           race_id = ?, gender = ?, life_status = ?, description = ?, dm_notes = ?,
           backstory = NULL, birth_date_text = ?, death_date_text = ?,
-          position_id = ?,
+          position_id = ?, class_name = ?,
           residence_record_id = ?, updated_at = ?
         WHERE id = ?
       `).run(
@@ -456,6 +459,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
         body.birthDate === undefined ? existing.birth_date_text : body.birthDate,
         body.deathDate === undefined ? existing.death_date_text : body.deathDate,
         nextPositionId ?? null,
+        body.className === undefined ? existing.class_name : body.className,
         body.locationId === undefined ? existing.residence_record_id : body.locationId,
         now,
         mortalId,

@@ -165,6 +165,8 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
               onChargeChange: runtime.handleItemChargeChange,
               spellcastingBlocked: derived.nonProficientArmorPenalty,
               spellSaveDcBonus: derived.spellSaveDcBonus,
+              conditions: char.conditions ?? [],
+              onToggleCondition: runtime.toggleCondition,
             }}
             richSpellsProps={{
               spells: derived.prof?.spells ?? [],
@@ -191,6 +193,8 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
               spellcastingBlocked: derived.nonProficientArmorPenalty,
               spellDamageBonuses: derived.invocationSpellDamageBonuses,
               spellSaveDcBonus: derived.spellSaveDcBonus,
+              conditions: char.conditions ?? [],
+              onToggleCondition: runtime.toggleCondition,
             }}
           />
         )}

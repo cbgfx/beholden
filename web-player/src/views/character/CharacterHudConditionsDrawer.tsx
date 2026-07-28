@@ -8,7 +8,8 @@ interface ConditionDef {
   name: string;
 }
 
-const HIDDEN_CONDITION_KEYS = new Set(["hexed", "marked"]);
+// mage_armor is only ever toggled from the Cast button on the Mage Armor spell row, never picked manually.
+const HIDDEN_CONDITION_KEYS = new Set(["hexed", "marked", "mage_armor"]);
 
 export function CharacterHudConditionsDrawer(props: {
   condPickerOpen: boolean;

@@ -37,6 +37,7 @@ import {
   abilityMod,
   getInitiativeBonus,
   normalizeAbilityKey,
+  normalizeResourceKey,
   normalizeSpellTrackingKey,
   proficiencyBonus,
 } from "@/views/character/CharacterSheetUtils";
@@ -369,7 +370,8 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     }
     return Array.from(byKey.values());
   })();
-  const classResourcesWithSpellCasts = mergeResourceState(currentCharacterData.resources, derivedResources);
+  const inventoryItemNames = new Set(inventory.map((item) => normalizeResourceKey(item.name)).filter(Boolean));
+  const classResourcesWithSpellCasts = mergeResourceState(currentCharacterData.resources, derivedResources, inventoryItemNames);
   const polymorphName = stripEditionTag(args.polymorphCondition?.polymorphName ?? "");
   const rageActive = (args.char.conditions ?? []).some((condition) => condition.key === "rage");
   const effectDefenses = collectDefensesFromEffects(parsedAllEffects, { raging: rageActive });
@@ -526,7 +528,12 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     scores: scoresByAbility,
   });
   const naturalAc = 10 + dexMod;
-  const effectiveAc = Math.max(naturalAc, wornArmorAc ?? 0, unarmoredDefenseAc ?? 0)
+  // Mage Armor: AC 13 + Dex modifier while unarmored. Doesn't stack with real armor — folded
+  // into the same "best base AC" comparison as natural/worn/Unarmored Defense, same as those.
+  const mageArmorAc = !wornArmor && (args.char.conditions ?? []).some((condition) => condition.key === "mage_armor")
+    ? 13 + dexMod
+    : null;
+  const effectiveAc = Math.max(naturalAc, wornArmorAc ?? 0, unarmoredDefenseAc ?? 0, mageArmorAc ?? 0)
     + featureAcBonus
     + otherEquippedAcBonus
     + (overrides.acBonus ?? 0)
@@ -555,11 +562,14 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   });
   const initiativeBonus = getInitiativeBonus(scores.dex, args.char.level, { jackOfAllTrades: hasJackOfAllTrades })
     + deriveModifierBonusFromEffects(parsedAllEffects, "initiative", { level: args.char.level, scores: scoresByAbility, raging: rageActive });
+  const itemSpellSaveDcBonus = inventory
+    .filter((item) => isInventoryItemActiveForCharacterEffects(item))
+    .reduce((total, item) => total + itemModifierBonus(item.modifiers, "spell_save_dc"), 0);
   const spellSaveDcBonus = deriveModifierBonusFromEffects(parsedAllEffects, "spell_save_dc", {
     level: args.char.level,
     scores: scoresByAbility,
     raging: rageActive,
-  });
+  }) + itemSpellSaveDcBonus;
   const transformedCombatStats = buildTransformedCombatStats({
     monster: args.polymorphMonsterState.monster,
     effectiveAc,

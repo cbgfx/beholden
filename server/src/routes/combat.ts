@@ -30,6 +30,12 @@ import {
   type EndedConcentration,
 } from "../services/combatTransitions.js";
 
+// A condition placed on an enemy is itself evidence a player has engaged it (Hunter's Mark,
+// Poisoned, Prone, Restrained, ...) — except "invisible", which is the opposite of visibility, and
+// "concentration", which just tracks the enemy's own spellcasting and says nothing about the
+// players' awareness of it.
+const NON_ENGAGING_CONDITION_KEYS = new Set(["invisible", "concentration"]);
+
 export function registerCombatRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { now } = ctx.helpers;
@@ -398,7 +404,8 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
         engagedWithPlayers: existing.engagedWithPlayers === true || (
           existing.friendly === false && (
             body.hpDelta?.kind === "damage" ||
-            (requestedHp !== null && existing.hpCurrent !== null && requestedHp < existing.hpCurrent)
+            (requestedHp !== null && existing.hpCurrent !== null && requestedHp < existing.hpCurrent) ||
+            requestedConditions.some((condition) => !NON_ENGAGING_CONDITION_KEYS.has(condition.key))
           )
         ),
         updatedAt: t,
