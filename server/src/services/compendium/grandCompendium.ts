@@ -2,7 +2,7 @@ import {
   CATEGORY_SCHEMAS,
   formatGrandCompendiumIssues,
   isGrandCompendiumEntry,
-} from "./grandCompendiumSchemas.js";
+} from "@beholden/shared/domain/compendium/grandCompendiumSchemas";
 import { type JsonRecord, record, list, text } from "./grandCompendium.helpers.js";
 
 export type { JsonRecord };

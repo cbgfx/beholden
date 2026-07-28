@@ -6,6 +6,7 @@ import { extractMonsterTreasureTraits } from "./monsterTreasureMigration.js";
 import { ensureTreasureEncounterColumn } from "./treasureEncounterColumnMigration.js";
 import { ensureUserLastLoginColumn } from "./userLastLoginColumnMigration.js";
 import { ensureImageVersionColumns } from "./imageVersionColumnMigration.js";
+import { ensureCompendiumContentHashColumns } from "./compendiumContentHashColumnMigration.js";
 import { ensureMortalClassColumn } from "./mortalClassColumnMigration.js";
 import { displayNoteTitle } from "./dbConverters.js";
 import { ensureCompendiumRulesetColumns } from "./compendiumRulesetColumnMigration.js";
@@ -55,6 +56,7 @@ export function openDb(dbPath: string): Db {
   ensureTreasureEncounterColumn(db);
   ensureUserLastLoginColumn(db);
   ensureImageVersionColumns(db);
+  ensureCompendiumContentHashColumns(db);
   db.function("note_display_title", { deterministic: true }, displayNoteTitle);
 
   // Linked campaign rows are projections of canonical character sheets.

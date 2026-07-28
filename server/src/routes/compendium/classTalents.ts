@@ -32,7 +32,9 @@ export function registerClassTalentRoutes(app: Express, ctx: ServerContext, _any
         ruleset: entry.ruleset,
         name: row.name,
         kind: row.kind,
-        level: 0,
+        // Class talents (invocations, maneuvers, metamagic, infusions) aren't leveled spells —
+        // `null` here (not 0) keeps the shared spell-picker UI from grouping them under "Cantrips".
+        level: null,
         prerequisite: entry.prerequisite ?? null,
         repeatable: entry.repeatable === true,
         effects: entry.effects ?? [],

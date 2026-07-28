@@ -160,7 +160,8 @@ CREATE TABLE IF NOT EXISTS compendium_monsters (
   type_full TEXT,
   size TEXT,
   environment TEXT,
-  data_json TEXT NOT NULL
+  data_json TEXT NOT NULL,
+  content_hash TEXT
 );
 
 CREATE TABLE IF NOT EXISTS compendium_items (
@@ -177,7 +178,8 @@ CREATE TABLE IF NOT EXISTS compendium_items (
   weight REAL,
   value REAL,
   proficiency TEXT,
-  data_json TEXT NOT NULL
+  data_json TEXT NOT NULL,
+  content_hash TEXT
 );
 
 -- Unlike items/monsters, spell text and mechanics genuinely differ between 2014 and 2024 for
@@ -195,6 +197,7 @@ CREATE TABLE IF NOT EXISTS compendium_spells (
   components TEXT,
   classes TEXT,
   data_json TEXT NOT NULL,
+  content_hash TEXT,
   PRIMARY KEY (id, ruleset)
 );
 
@@ -208,6 +211,7 @@ CREATE TABLE IF NOT EXISTS compendium_class_talents (
   name_key TEXT,
   kind TEXT NOT NULL,
   data_json TEXT NOT NULL,
+  content_hash TEXT,
   PRIMARY KEY (id, ruleset)
 );
 
@@ -222,6 +226,7 @@ CREATE TABLE IF NOT EXISTS compendium_classes (
   name_key TEXT,
   hd INTEGER,
   data_json TEXT NOT NULL,
+  content_hash TEXT,
   PRIMARY KEY (id, ruleset)
 );
 
@@ -233,6 +238,7 @@ CREATE TABLE IF NOT EXISTS compendium_races (
   size TEXT,
   speed INTEGER,
   data_json TEXT NOT NULL,
+  content_hash TEXT,
   PRIMARY KEY (id, ruleset)
 );
 
@@ -242,6 +248,7 @@ CREATE TABLE IF NOT EXISTS compendium_backgrounds (
   name TEXT NOT NULL,
   name_key TEXT,
   data_json TEXT NOT NULL,
+  content_hash TEXT,
   PRIMARY KEY (id, ruleset)
 );
 
@@ -251,6 +258,7 @@ CREATE TABLE IF NOT EXISTS compendium_feats (
   name TEXT NOT NULL,
   name_key TEXT,
   data_json TEXT NOT NULL,
+  content_hash TEXT,
   PRIMARY KEY (id, ruleset)
 );
 

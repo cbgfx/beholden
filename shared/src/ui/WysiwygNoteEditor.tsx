@@ -223,6 +223,7 @@ export function WysiwygNoteEditor(props: {
   onChange: (value: string) => void;
   placeholder?: string;
   minHeight?: number;
+  maxHeight?: number;
   theme: EditorTheme;
   style?: React.CSSProperties;
   mentions?: Array<{ id: string; label: string; href: string; type?: string }>;
@@ -466,6 +467,9 @@ export function WysiwygNoteEditor(props: {
           }}
           style={{
             minHeight: props.minHeight ?? 180,
+            // Long notes must scroll inside this box rather than growing it past the viewport --
+            // otherwise the toolbar above scrolls away with the page instead of staying put.
+            maxHeight: props.maxHeight ?? Math.max(props.minHeight ?? 180, 420),
             padding: "10px 12px",
             color: props.theme.text,
             outline: "none",

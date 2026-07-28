@@ -1,17 +1,7 @@
 import { z, ZodIssueCode } from "zod";
 import type { RefinementCtx } from "zod";
 
-export type NativeCompendiumCategory =
-  | "monsters"
-  | "items"
-  | "spells"
-  | "classTalents"
-  | "classes"
-  | "species"
-  | "backgrounds"
-  | "feats"
-  | "decks"
-  | "bastions";
+export type { NativeCompendiumCategory } from "./nativeCompendiumKey.js";
 
 export const GRAND_COMPENDIUM_SCHEMA_VERSION = 2 as const;
 const RULESETS = ["5e", "5.5e"] as const;

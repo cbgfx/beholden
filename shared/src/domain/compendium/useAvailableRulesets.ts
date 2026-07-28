@@ -10,7 +10,9 @@ type CompendiumRulesetsResponse = Record<string, Ruleset[]>;
  * useItemSearch/useSpellSearch hooks (those embed the same logic directly).
  *
  * The filter should be hidden entirely when only one ruleset has content -- nothing to choose
- * between -- and default to 5.5e when both are present.
+ * between. Defaults to "all rulesets" (not a specific one) even when both are present: many
+ * categories (items especially) don't have a complete duplicate catalog per ruleset, so silently
+ * picking one hides content that only exists under the other with no visible indication why.
  */
 export function useAvailableRulesets(api: ApiFn, category: string, enabled = true) {
   const [availableRulesets, setAvailableRulesets] = React.useState<Ruleset[]>([]);
@@ -25,7 +27,7 @@ export function useAvailableRulesets(api: ApiFn, category: string, enabled = tru
         if (!alive) return;
         const available = Array.isArray(data?.[category]) ? data[category]! : [];
         setAvailableRulesets(available);
-        setRulesetFilter(available.length > 1 ? (available.includes("5.5e") ? "5.5e" : available[0]!) : "");
+        setRulesetFilter("");
       })
       .catch(() => {
         if (!alive) return;

@@ -6,7 +6,7 @@ import {
   importNativeCompendiumDocument,
   type NativeCompendiumCategory,
 } from "./nativeCompendium.js";
-import { CATEGORY_SCHEMAS } from "./grandCompendiumSchemas.js";
+import { CATEGORY_SCHEMAS } from "@beholden/shared/domain/compendium/grandCompendiumSchemas";
 
 type JsonRecord = Record<string, unknown>;
 

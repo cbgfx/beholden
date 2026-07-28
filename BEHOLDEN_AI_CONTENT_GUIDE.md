@@ -38,7 +38,7 @@ Adventure version 2 may embed those exact native batches in its `compendium` arr
 This section is the exhaustive, field-by-field authoring contract for every Grand
 Compendium category — every nested object, union, closed enum, literal value, and
 structured-effect variant. It is derived directly from the Zod schemas in
-`server/src/services/compendium/grandCompendiumSchemas*.ts` and the structured-effect
+`shared/src/domain/compendium/grandCompendiumSchemas*.ts` and the structured-effect
 runtime contract in `web-player/src/domain/character/featureEffects.ts`. It answers:
 which fields exist, which are required, what shape they have, and what exact closed
 values are accepted?

@@ -16,7 +16,7 @@ import {
   parseGrandCompendiumEntry,
   formatGrandCompendiumIssues,
   type NativeCompendiumCategory,
-} from "./grandCompendiumSchemas.js";
+} from "@beholden/shared/domain/compendium/grandCompendiumSchemas";
 
 // ── Canonical samples (mirror nativeCompendium.test.ts) ──────────────────────
 

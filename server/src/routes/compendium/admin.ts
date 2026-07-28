@@ -13,8 +13,11 @@ import {
   NATIVE_COMPENDIUM_CATEGORIES,
   parseNativeCompendiumDocument,
   previewValidatedNativeCompendiumBatches,
+  resolveNativeCompendiumManifest,
+  type NativeCompendiumManifestRequest,
 } from "../../services/compendium/nativeCompendium.js";
 import { assertNativeCompendiumGuardrails } from "../../services/compendium/nativeCompendiumGuardrails.js";
+import { record } from "../../lib/jsonRecord.js";
 import { compendiumUploadDirectory } from "../../lib/upload.js";
 import { consumeCompendiumPreview, stageCompendiumPreview } from "../../services/compendium/stagedCompendiumPreview.js";
 import { nativeCompendiumExportFilename, streamNativeCompendiumCategory } from "../../services/compendium/nativeCompendiumStreaming.js";
@@ -129,6 +132,30 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
       return res.json({ ok: true, ...out });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Staged compendium import failed.";
+      return res.status(400).json({ ok: false, message });
+    }
+  });
+
+  app.post("/api/compendium/native/manifest", requireAdmin, (req, res) => {
+    try {
+      const body = record(req.body);
+      const hashesInput = record(body.hashes);
+      const hashes: Record<string, string> = {};
+      for (const [key, value] of Object.entries(hashesInput)) {
+        if (typeof value !== "string") {
+          return res.status(400).json({ ok: false, message: `Manifest hash for "${key}" must be a string.` });
+        }
+        hashes[key] = value;
+      }
+      const request: NativeCompendiumManifestRequest = {
+        version: Number(body.version),
+        category: String(body.category ?? "") as NativeCompendiumManifestRequest["category"],
+        hashes,
+      };
+      const result = resolveNativeCompendiumManifest(db, request);
+      return res.json({ ok: true, ...result });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Compendium manifest lookup failed.";
       return res.status(400).json({ ok: false, message });
     }
   });

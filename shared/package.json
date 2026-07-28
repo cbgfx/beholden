@@ -10,6 +10,10 @@
     "./domain/conditions": "./src/domain/conditions.ts",
     "./domain/characterClasses": "./src/domain/characterClasses.ts",
     "./domain/monsters": "./src/domain/monsters.ts",
+    "./domain/compendium/grandCompendiumSchemas": "./src/domain/compendium/grandCompendiumSchemas.ts",
+    "./domain/compendium/nativeCompendiumKey": "./src/domain/compendium/nativeCompendiumKey.ts",
+    "./domain/compendium/computeContentHash": "./src/domain/compendium/computeContentHash.ts",
+    "./domain/compendium/computeContentHashSync": "./src/domain/compendium/computeContentHashSync.ts",
     "./domain/*": "./src/domain/*",
     "./icons": "./src/icons/index.tsx",
     "./icons/*": "./src/icons/*",
@@ -40,6 +44,9 @@
         "./src/views/*"
       ]
     }
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",

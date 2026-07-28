@@ -9,6 +9,28 @@ import {
   parseSaves,
   buildMonsterInfoLines,
 } from "@/utils/compendiumFormat";
+import { hasZeroSpeedCondition, SLOW_SPEED_PENALTY } from "@beholden/shared/domain";
+
+/** Zeroes every movement mode (walk/fly/swim/climb/burrow) in a monster's raw speed value —
+ * used when a condition sets Speed to 0, so e.g. a flying creature that's Paralyzed doesn't
+ * still show its fly speed. The server pre-formats monster speed as a display string (e.g.
+ * "walk 0 ft., fly 40 ft. (hover)"), so the common case is zeroing the numbers inside that
+ * string rather than an object of raw mode values — but the object/number shapes are handled
+ * too, since parseSpeedVal/parseSpeedDisplay themselves accept any of the three. */
+function zeroMonsterSpeed(rawSpeed: unknown): unknown {
+  if (rawSpeed == null) return rawSpeed;
+  if (typeof rawSpeed === "number") return 0;
+  if (typeof rawSpeed === "string") return rawSpeed.replace(/\d+(?=\s*ft\.)/gi, "0");
+  if (typeof rawSpeed === "object") {
+    return Object.fromEntries(
+      Object.entries(rawSpeed as Record<string, unknown>).map(([mode, value]) => [
+        mode,
+        typeof value === "number" ? 0 : typeof value === "string" ? value.replace(/\d+/g, "0") : value,
+      ])
+    );
+  }
+  return rawSpeed;
+}
 
 export function useCharacterSheetStats(args: {
   combatant: EncounterActor | null;
@@ -41,11 +63,22 @@ export function useCharacterSheetStats(args: {
     // Fall back to selectedMonster itself if raw_json is absent —
     // mirrors MonsterStatblock's `m.raw_json ?? m` pattern.
     const detail = (selectedMonster?.raw_json ?? selectedMonster ?? {}) as Record<string, unknown>;
-    const rawSpeed = detail["speed"] ?? selectedMonster?.speed;
+    const rawSpeedBase = detail["speed"] ?? selectedMonster?.speed;
+
+    const conditions = combatant.conditions ?? [];
+    const zeroSpeed = hasZeroSpeedCondition(conditions);
+    const slowed = !zeroSpeed && conditions.some((condition) => condition.key === "slow");
+    const rawSpeed = zeroSpeed ? zeroMonsterSpeed(rawSpeedBase) : rawSpeedBase;
 
     const speed = isMonster
       ? parseSpeedVal(rawSpeed)
-      : (() => { const n = Number(player?.speed); return Number.isFinite(n) && n >= 0 ? n : 30; })();
+      : zeroSpeed
+        ? 0
+        : (() => {
+            const n = Number(player?.speed);
+            const base = Number.isFinite(n) && n >= 0 ? n : 30;
+            return slowed ? Math.max(0, base - SLOW_SPEED_PENALTY) : base;
+          })();
 
     const speedDisplay = isMonster
       ? parseSpeedDisplay(rawSpeed)

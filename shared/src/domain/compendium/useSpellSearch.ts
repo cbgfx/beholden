@@ -38,7 +38,9 @@ export function useCompendiumSpellSearch(api: ApiFn) {
   const [busy, setBusy] = React.useState(false);
 
   // Ruleset filter is hidden entirely (and left unapplied) when a category has content in only
-  // one ruleset -- nothing to choose between. Defaults to 5.5e when both are present.
+  // one ruleset -- nothing to choose between. Defaults to "all rulesets" even when both are
+  // present: spells don't have a complete duplicate catalog per ruleset, so silently picking one
+  // would hide spells that only exist under the other.
   React.useEffect(() => {
     const controller = new AbortController();
     let alive = true;
@@ -47,7 +49,7 @@ export function useCompendiumSpellSearch(api: ApiFn) {
         if (!alive) return;
         const available = Array.isArray(data?.spells) ? data.spells : [];
         setAvailableRulesets(available);
-        setRulesetFilter(available.length > 1 ? (available.includes("5.5e") ? "5.5e" : available[0]!) : "");
+        setRulesetFilter("");
       })
       .catch(() => {
         if (!alive) return;

@@ -66,7 +66,9 @@ export function useCompendiumItemSearch(
   }, [api, refreshKey, enabled]);
 
   // Ruleset filter is hidden entirely (and left unapplied) when a category has content in only
-  // one ruleset -- nothing to choose between. Defaults to 5.5e when both are present.
+  // one ruleset -- nothing to choose between. Defaults to "all rulesets" even when both are
+  // present: items in particular don't have a complete duplicate catalog per ruleset, so
+  // silently picking one would hide items that only exist under the other.
   React.useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
@@ -76,7 +78,7 @@ export function useCompendiumItemSearch(
         if (!alive) return;
         const available = Array.isArray(data?.items) ? data.items : [];
         setAvailableRulesets(available);
-        setRulesetFilter(available.length > 1 ? (available.includes("5.5e") ? "5.5e" : available[0]!) : "");
+        setRulesetFilter("");
       })
       .catch(() => {
         if (!alive) return;

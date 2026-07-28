@@ -4,6 +4,8 @@ import { fetchBinderMortals, fetchMortalOptions, type BinderMortal, type MortalO
 import { Input } from "@/ui/Input";
 import { Button } from "@/ui/Button";
 import { theme, withAlpha } from "@/theme/theme";
+import { BinderListEmpty, BinderListError, BinderListHeader, BinderListLoading, BinderRecordThumbnail, useBinderListSort } from "@/components/BinderListTable";
+import { SearchableMultiFilter } from "@/components/SearchableSelect";
 
 const NONE = "__none__";
 type FilterKey = "className" | "race" | "status" | "campaign" | "player";
@@ -23,39 +25,6 @@ function matches(value: string | null | undefined, selected: string[]) {
   return !selected.length || selected.some((item) => item === NONE ? !value : item === value);
 }
 
-function PlayerFilter(props: {
-  label: string;
-  options: Array<{ value: string; label: string }>;
-  selected: string[];
-  onAdd: (value: string) => void;
-}) {
-  const display = `${props.label}: ${props.selected.length ? "Add…" : "All"}`;
-  const [query, setQuery] = useState(display);
-  const [open, setOpen] = useState(false);
-  useEffect(() => setQuery(display), [display]);
-  const needle = query === display ? "" : query.trim().toLocaleLowerCase();
-  const options = props.options
-    .filter((option) => !props.selected.includes(option.value) && option.label.toLocaleLowerCase().includes(needle))
-    .slice(0, 20);
-
-  return <div style={{ position: "relative", width: 165 }}>
-    <Input
-      value={query}
-      aria-label={props.label}
-      autoComplete="off"
-      onFocus={(event) => { setOpen(true); event.currentTarget.select(); }}
-      onClick={(event) => { setOpen(true); event.currentTarget.select(); }}
-      onBlur={() => window.setTimeout(() => { setOpen(false); setQuery(display); }, 120)}
-      onChange={(event) => { setQuery(event.target.value); setOpen(true); }}
-      style={{ width: "100%" }}
-    />
-    {open ? <div style={{ position: "absolute", zIndex: 220, top: "calc(100% + 4px)", left: 0, width: "max-content", minWidth: "100%", maxWidth: 300, maxHeight: 260, overflowY: "auto", padding: 4, border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.control, background: "#0d1525", boxShadow: "0 12px 28px rgba(0,0,0,.65)" }}>
-      {options.map((option) => <button key={option.value} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { props.onAdd(option.value); setOpen(false); }} style={{ display: "block", width: "100%", padding: "8px 10px", border: 0, borderRadius: 6, background: "transparent", color: theme.colors.text, textAlign: "left", cursor: "pointer", font: "inherit", whiteSpace: "nowrap" }}>{option.label}</button>)}
-      {!options.length ? <div style={{ padding: "8px 10px", color: theme.colors.muted }}>No matches</div> : null}
-    </div> : null}
-  </div>;
-}
-
 export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: { binderId: string; binderCurrentDate: number | null; accent: string }) {
   const navigate = useNavigate();
   const [players, setPlayers] = useState<MortalOptions["players"]>([]);
@@ -64,16 +33,7 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-
-  function toggleSort(key: SortKey) {
-    if (key === sortKey) setSortDir((dir) => (dir === "asc" ? "desc" : "asc"));
-    else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
-  }
+  const { sortKey, sortDir, toggleSort } = useBinderListSort<SortKey>("name");
 
   useEffect(() => {
     setLoading(true);
@@ -150,7 +110,7 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
   return <div style={{ display: "grid", gap: 12 }}>
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
       <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search players…" style={{ width: 260 }} />
-      {(Object.keys(labels) as FilterKey[]).map((key) => <PlayerFilter key={key} label={labels[key]} selected={filters[key]} options={choices[key]} onAdd={(value) => setFilters((current) => current[key].includes(value) ? current : { ...current, [key]: [...current[key], value] })} />)}
+      {(Object.keys(labels) as FilterKey[]).map((key) => <SearchableMultiFilter key={key} label={labels[key]} selected={filters[key]} options={choices[key]} onAdd={(value) => setFilters((current) => current[key].includes(value) ? current : { ...current, [key]: [...current[key], value] })} />)}
       {Object.values(filters).some((values) => values.length) ? <Button variant="ghost" onClick={() => setFilters(emptyFilters())}>Clear</Button> : null}
     </div>
     {Object.entries(filters).some(([, values]) => values.length) ? <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
@@ -162,21 +122,21 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
       }))}
     </div> : null}
     <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflowX: "auto" }}>
-      <div style={{ minWidth: 1120, display: "grid", gridTemplateColumns: columns, gap: 12, padding: "12px 15px", background: withAlpha(accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
-        {headers.map(({ label, key }) => (
-          <button key={key} type="button" title={`Sort by ${label}`} onClick={() => toggleSort(key)} style={{ display: "inline-flex", alignItems: "center", gap: 6, justifySelf: "start", border: 0, background: "transparent", padding: 0, margin: 0, color: sortKey === key ? accent : theme.colors.text, fontSize: "var(--fs-subtitle)", fontWeight: 750, font: "inherit", cursor: "pointer" }}>
-            {label}
-            <span aria-hidden style={{ fontSize: 11, color: accent, opacity: sortKey === key ? 1 : 0.25 }}>{sortKey === key && sortDir === "desc" ? "▼" : "▲"}</span>
-          </button>
-        ))}
-      </div>
-      {loading ? <div style={{ padding: 42, textAlign: "center", color: theme.colors.muted }}>Loading…</div>
-        : error ? <div role="alert" style={{ padding: 42, textAlign: "center", color: theme.colors.red }}>{error}</div>
+      <BinderListHeader
+        columns={headers.map(({ label, key }) => ({ key, label, sortable: true }))}
+        gridTemplateColumns={columns}
+        accent={accent}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSort={(key) => toggleSort(key as SortKey)}
+      />
+      {loading ? <BinderListLoading />
+        : error ? <BinderListError message={error} />
         : sorted.length ? sorted.map(({ mortal, player, age }) => {
           const dead = mortal.lifeStatus === "dead";
           return <button key={mortal.id} type="button" onClick={() => navigate(`/binder/${binderId}/mortals/${mortal.id}`)} style={{ minWidth: 1120, width: "100%", display: "grid", gridTemplateColumns: columns, gap: 12, padding: "12px 15px", border: 0, borderTop: `1px solid ${theme.colors.panelBorder}`, background: "transparent", color: theme.colors.text, alignItems: "center", textAlign: "left", cursor: "pointer", font: "inherit" }}>
             <span title={mortal.name} style={{ ...cell, color: theme.colors.text, fontWeight: 750, display: "flex", alignItems: "center", gap: 9 }}>
-              {mortal.imageUrl ? <img src={`${mortal.imageUrl}${mortal.imageUpdatedAt ? `?v=${mortal.imageUpdatedAt}` : ""}`} alt="" style={{ width: 34, height: 34, borderRadius: 6, objectFit: "cover", flex: "0 0 auto" }} /> : <span style={{ width: 34, height: 34, borderRadius: 6, background: withAlpha(accent, 0.12), flex: "0 0 auto" }} />}
+              <BinderRecordThumbnail imageUrl={mortal.imageUrl} imageUpdatedAt={mortal.imageUpdatedAt} accent={accent} />
               <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{mortal.name}</span>
             </span>
             <span title={player?.className || "None"} style={cell}>{player?.className || "None"}</span>
@@ -186,7 +146,7 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
             <span title={player?.campaignName || "None"} style={cell}>{player?.campaignName || "None"}</span>
             <span title={player?.playerName || "None"} style={cell}>{player?.playerName || "None"}</span>
           </button>;
-        }) : <div style={{ padding: 48, textAlign: "center", color: theme.colors.muted }}>{pcs.length ? "No Player Characters match the current filters." : "No Player Character Mortals exist in this Binder."}</div>}
+        }) : <BinderListEmpty>{pcs.length ? "No Player Characters match the current filters." : "No Player Character Mortals exist in this Binder."}</BinderListEmpty>}
     </div>
   </div>;
 }

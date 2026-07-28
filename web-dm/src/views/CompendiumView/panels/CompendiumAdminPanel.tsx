@@ -3,6 +3,7 @@ import React from "react";
 import { IconCompendiumAlt } from "@/icons";
 import { api, apiBlob, jsonInit } from "@/services/api";
 import { Panel } from "@/ui/Panel";
+import { filterNativeCompendiumDocumentForUpload } from "@/services/compendiumManifest";
 import {
   CompendiumAdminFeedback,
   NativeCompendiumActions,
@@ -113,8 +114,9 @@ export function CompendiumAdminPanel() {
     setNativePreview(null);
     setNativePreviewToken(null);
     try {
+      const uploadFile = await buildManifestFilteredUpload(nativeFile);
       const form = new FormData();
-      form.append("file", nativeFile);
+      form.append("file", uploadFile);
       const preview = await api<NativePreviewResult>("/api/compendium/native/preview", {
         method: "POST",
         body: form,
@@ -126,6 +128,24 @@ export function CompendiumAdminPanel() {
       setNativeMsg(toErrorMessage(error));
     } finally {
       setBusy(false);
+    }
+  }
+
+  /** Diffs the picked file against the server's stored content before uploading it, so entries
+   * already present byte-identically never cross the network -- see compendiumManifest.ts. Falls
+   * back to the original file untouched on any failure (invalid JSON, network hiccup): this is a
+   * pure upload-size optimization and must never block or alter a valid import. The returned
+   * File keeps the original name so server-side messages/filenames stay unchanged. */
+  async function buildManifestFilteredUpload(file: File): Promise<File> {
+    try {
+      const parsed = JSON.parse(await file.text());
+      const { document, skipped, total } = await filterNativeCompendiumDocumentForUpload(parsed);
+      if (skipped > 0) {
+        setNativeMsg(`Skipped uploading ${skipped} of ${total} entries already up to date on the server.`);
+      }
+      return new File([JSON.stringify(document)], file.name, { type: "application/json" });
+    } catch {
+      return file;
     }
   }
 

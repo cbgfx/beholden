@@ -36,11 +36,17 @@ export type NativePreviewResult = {
   entries: number;
   additions: number;
   replacements: number;
+  /** Of `replacements`, how many actually differ in content from what's already stored. */
+  changed: number;
+  /** Of `replacements`, how many are byte-identical to what's stored -- importing is a no-op. */
+  unchanged: number;
   batches: Array<{
     category: NativeCompendiumCategory;
     entries: number;
     additions: number;
     replacements: number;
+    changed: number;
+    unchanged: number;
   }>;
 };
 
@@ -61,6 +67,8 @@ export function NativeCompendiumDescription() {
     <div style={{ color: theme.colors.muted, lineHeight: 1.55, maxWidth: 1050 }}>
       Export a category to edit it, or import a category or complete bundle. Beholden JSON is portable,
       human-readable, and always replaces entries with matching IDs.
+      <br />
+      Get the Compendiums from here: <a href="https://github.com/CompendiumCoder/jsoncompendium">JSON Compendium by ComepndiumCoder</a>
     </div>
   );
 }
@@ -209,8 +217,9 @@ export function NativeImportPreview({ preview }: { preview: NativePreviewResult 
   const number = new Intl.NumberFormat();
   const totals = [
     { label: "Total entries", value: preview.entries, color: theme.colors.text },
-    { label: "New entries", value: preview.additions, color: theme.colors.green },
-    { label: "Replacements", value: preview.replacements, color: theme.colors.colorGold },
+    { label: "New", value: preview.additions, color: theme.colors.green },
+    { label: "Changed", value: preview.changed, color: theme.colors.colorGold },
+    { label: "Unchanged (no-op)", value: preview.unchanged, color: theme.colors.muted },
   ];
 
   return (
@@ -228,7 +237,7 @@ export function NativeImportPreview({ preview }: { preview: NativePreviewResult 
         Valid Grand Schema file — ready to import
       </div>
 
-      <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+      <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 8 }}>
         {totals.map((total) => (
           <div key={total.label} style={{ ...cardStyle, padding: "10px 12px", background: "rgba(0,0,0,0.16)" }}>
             <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{total.label}</div>
@@ -261,8 +270,13 @@ export function NativeImportPreview({ preview }: { preview: NativePreviewResult 
               {number.format(batch.additions)} new
             </span>
             <span style={{ color: theme.colors.colorGold, fontSize: "var(--fs-tiny)", textAlign: "right" }}>
-              {number.format(batch.replacements)} replaced
+              {number.format(batch.changed)} changed
             </span>
+            {batch.unchanged > 0 ? (
+              <span style={{ gridColumn: "1 / -1", color: theme.colors.muted, fontSize: "var(--fs-tiny)" }}>
+                {number.format(batch.unchanged)} unchanged (no-op)
+              </span>
+            ) : null}
           </div>
         ))}
       </div>

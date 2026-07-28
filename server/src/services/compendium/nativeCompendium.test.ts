@@ -7,6 +7,7 @@ import { SCHEMA_SQL } from "../../lib/dbSchema.js";
 import { ensureCompendiumCompositePrimaryKey } from "../../lib/compendiumPrimaryKeyMigration.js";
 import {
   NATIVE_COMPENDIUM_CATEGORIES,
+  NATIVE_COMPENDIUM_MANIFEST_VERSION,
   exportNativeCompendiumBatch,
   exportNativeCompendiumBundle,
   importNativeCompendiumBatch,
@@ -15,8 +16,12 @@ import {
   parseNativeCompendiumBatch,
   parseNativeCompendiumDocument,
   previewNativeCompendiumDocument,
+  resolveNativeCompendiumManifest,
+  resolveNativeContentHashes,
   type NativeCompendiumCategory,
 } from "./nativeCompendium.js";
+import { nativeEntryKey } from "@beholden/shared/domain/compendium/nativeCompendiumKey";
+import { computeContentHashSync } from "@beholden/shared/domain/compendium/computeContentHashSync";
 import { assertGrandCompendiumEntry, collectGrandMonsterSpellIds } from "./grandCompendium.js";
 import { compactBackgroundEntry } from "./backgroundCompaction.js";
 import { compactClassEntry } from "./classCompaction.js";
@@ -263,6 +268,158 @@ test("native imports replace matching IDs", () => {
   }
 });
 
+test("native import skips writing rows that are byte-identical to what's already stored", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+
+  try {
+    const first = importNativeCompendiumBatch(db, batch("items"));
+    assert.equal(first.imported, 1);
+
+    // Re-importing the exact same file should be a no-op write, not a rewrite.
+    const noop = importNativeCompendiumBatch(db, batch("items"));
+    assert.equal(noop.imported, 0);
+    assert.equal(noop.total, 1);
+
+    // A real edit alongside a genuinely new entry: only those two get written.
+    const revised = importNativeCompendiumBatch(db, batch("items", [
+      compactItemEntry({
+        schemaVersion: 2,
+        id: "i_test_blade",
+        name: "Test Blade, Revised",
+        source: null,
+        classification: { type: "Melee Weapon", typeKey: "melee_weapon", rarity: "legendary", magical: true },
+        attunement: { required: true, requirements: null },
+        equipment: { equippable: true, weight: 3, value: 1000, proficiency: "Martial Weapons" },
+        armor: { armorClass: null, stealthDisadvantage: false, strengthRequirement: null },
+        weapon: {
+          oneHandedDamage: "1d8", twoHandedDamage: "1d10", damageType: "S",
+          range: null, properties: ["V"],
+        },
+        modifiers: [],
+        rolls: [],
+        description: ["Replacement rules."],
+      }),
+      compactItemEntry({
+        schemaVersion: 2,
+        id: "i_new_blade",
+        name: "New Blade",
+        source: null,
+        classification: { type: "Melee Weapon", typeKey: "melee_weapon", rarity: "common", magical: false },
+        attunement: { required: false, requirements: null },
+        equipment: { equippable: true, weight: 3, value: 10, proficiency: "Martial Weapons" },
+        armor: { armorClass: null, stealthDisadvantage: false, strengthRequirement: null },
+        weapon: {
+          oneHandedDamage: "1d8", twoHandedDamage: "1d10", damageType: "S",
+          range: null, properties: ["V"],
+        },
+        modifiers: [],
+        rolls: [],
+        description: ["Brand new."],
+      }),
+    ]));
+    assert.equal(revised.imported, 2);
+    assert.equal(revised.total, 2);
+  } finally {
+    db.close();
+  }
+});
+
+test("native import persists content_hash for content-comparable categories", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+
+  try {
+    importNativeCompendiumBatch(db, batch("items"));
+    const row = db.prepare(
+      "SELECT content_hash, data_json FROM compendium_items WHERE id = ?",
+    ).get("i_test_blade") as { content_hash: string | null; data_json: string };
+    assert.ok(row.content_hash);
+    assert.equal(row.content_hash, computeContentHashSync(JSON.parse(row.data_json)));
+  } finally {
+    db.close();
+  }
+});
+
+test("resolveNativeContentHashes backfills content_hash for rows written before the column existed", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+
+  try {
+    importNativeCompendiumBatch(db, batch("items"));
+    // Simulate a pre-migration row: content_hash is NULL even though data_json is populated.
+    db.prepare("UPDATE compendium_items SET content_hash = NULL WHERE id = ?").run("i_test_blade");
+    assert.equal(
+      (db.prepare("SELECT content_hash FROM compendium_items WHERE id = ?").get("i_test_blade") as { content_hash: string | null }).content_hash,
+      null,
+    );
+
+    const resolved = resolveNativeContentHashes(db, "items");
+    const key = nativeEntryKey("items", { id: "i_test_blade", ruleset: "5.5e" });
+    assert.ok(resolved.get(key));
+
+    // The computed hash is persisted, not just returned -- a second call sees it already set.
+    const persisted = (db.prepare("SELECT content_hash FROM compendium_items WHERE id = ?").get("i_test_blade") as { content_hash: string | null }).content_hash;
+    assert.equal(persisted, resolved.get(key));
+  } finally {
+    db.close();
+  }
+});
+
+test("resolveNativeCompendiumManifest reports only new and changed entries for upload", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+
+  try {
+    importNativeCompendiumBatch(db, batch("items"));
+    const existingKey = nativeEntryKey("items", { id: "i_test_blade", ruleset: "5.5e" });
+    const newKey = nativeEntryKey("items", { id: "i_brand_new", ruleset: "5.5e" });
+
+    const result = resolveNativeCompendiumManifest(db, {
+      version: NATIVE_COMPENDIUM_MANIFEST_VERSION,
+      category: "items",
+      hashes: {
+        [existingKey]: computeContentHashSync(samples.items[0]),
+        [newKey]: "does-not-matter-its-new",
+      },
+    });
+
+    assert.deepEqual(result.upload, [newKey]);
+
+    // A genuinely different hash for the already-stored entry also needs upload.
+    const changedResult = resolveNativeCompendiumManifest(db, {
+      version: NATIVE_COMPENDIUM_MANIFEST_VERSION,
+      category: "items",
+      hashes: { [existingKey]: "a-different-hash" },
+    });
+    assert.deepEqual(changedResult.upload, [existingKey]);
+  } finally {
+    db.close();
+  }
+});
+
+test("resolveNativeCompendiumManifest rejects unsupported versions and categories", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+
+  try {
+    assert.throws(
+      () => resolveNativeCompendiumManifest(db, { version: 999, category: "items", hashes: {} }),
+      /Unsupported compendium manifest version/,
+    );
+    assert.throws(
+      () => resolveNativeCompendiumManifest(db, {
+        version: NATIVE_COMPENDIUM_MANIFEST_VERSION,
+        category: "decks",
+        hashes: {},
+      }),
+      /does not support manifest diffing/,
+    );
+  } finally {
+    db.close();
+  }
+});
+
 test("ruleset-scoped classes with the same id survive independently", () => {
   const db = new Database(":memory:");
   db.exec(SCHEMA_SQL);
@@ -475,6 +632,8 @@ test("native preview validates without writing and counts replacements", () => {
 
   try {
     importNativeCompendiumBatch(db, batch("items"));
+    // samples.items[0] re-uploaded byte-identical -- a no-op "replacement" -- alongside one
+    // genuinely new item.
     const preview = previewNativeCompendiumDocument(db, batch("items", [
       samples.items[0]!,
       {
@@ -488,14 +647,38 @@ test("native preview validates without writing and counts replacements", () => {
       entries: 2,
       additions: 1,
       replacements: 1,
+      changed: 0,
+      unchanged: 1,
       batches: [{
         category: "items",
         entries: 2,
         additions: 1,
         replacements: 1,
+        changed: 0,
+        unchanged: 1,
       }],
     });
     assert.equal(exportNativeCompendiumBatch(db, "items").entries.length, 1);
+  } finally {
+    db.close();
+  }
+});
+
+test("native preview distinguishes a real content change from a no-op re-upload", () => {
+  const db = new Database(":memory:");
+  db.exec(SCHEMA_SQL);
+
+  try {
+    importNativeCompendiumBatch(db, batch("items"));
+    // Same id as an already-imported item, but with a changed field -- a real edit, not a no-op.
+    const preview = previewNativeCompendiumDocument(db, batch("items", [
+      { ...samples.items[0]!, name: `${samples.items[0]!.name} (Revised)` },
+    ]));
+
+    assert.equal(preview.additions, 0);
+    assert.equal(preview.replacements, 1);
+    assert.equal(preview.changed, 1);
+    assert.equal(preview.unchanged, 0);
   } finally {
     db.close();
   }

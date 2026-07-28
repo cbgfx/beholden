@@ -6,27 +6,21 @@ import {
   projectGrandSpell,
 } from "./grandCompendium.js";
 import { isGrandCompendiumEntry } from "./grandCompendium.js";
-import { GRAND_COMPENDIUM_SCHEMA_VERSION } from "./grandCompendiumSchemas.js";
+import { GRAND_COMPENDIUM_SCHEMA_VERSION } from "@beholden/shared/domain/compendium/grandCompendiumSchemas";
 import { type JsonRecord, record } from "../../lib/jsonRecord.js";
 import { assertNativeCompendiumGuardrails } from "./nativeCompendiumGuardrails.js";
+import {
+  NATIVE_COMPENDIUM_CATEGORIES,
+  isNativeCompendiumCategory,
+  nativeEntryKey,
+  type NativeCompendiumCategory,
+} from "@beholden/shared/domain/compendium/nativeCompendiumKey";
+import { computeContentHashSync } from "@beholden/shared/domain/compendium/computeContentHashSync";
+
+export { NATIVE_COMPENDIUM_CATEGORIES, isNativeCompendiumCategory, type NativeCompendiumCategory };
 
 export const BEHOLDEN_COMPENDIUM_FORMAT = "beholden.compendium";
 export const BEHOLDEN_COMPENDIUM_SCHEMA = "grand";
-
-export const NATIVE_COMPENDIUM_CATEGORIES = [
-  "monsters",
-  "items",
-  "spells",
-  "classTalents",
-  "classes",
-  "species",
-  "backgrounds",
-  "feats",
-  "decks",
-  "bastions",
-] as const;
-
-export type NativeCompendiumCategory = (typeof NATIVE_COMPENDIUM_CATEGORIES)[number];
 
 export type NativeCompendiumBatch = {
   format: typeof BEHOLDEN_COMPENDIUM_FORMAT;
@@ -59,16 +53,21 @@ export type NativeCompendiumDocumentImportResult = {
 export type NativeCompendiumPreview = {
   entries: number;
   additions: number;
+  /** additions excluded; equals changed + unchanged. Kept for backward compatibility. */
   replacements: number;
+  /** Of the replacements, how many actually differ in content from what's already stored. */
+  changed: number;
+  /** Of the replacements, how many are byte-identical to what's already stored (a no-op). */
+  unchanged: number;
   batches: Array<{
     category: NativeCompendiumCategory;
     entries: number;
     additions: number;
     replacements: number;
+    changed: number;
+    unchanged: number;
   }>;
 };
-
-const categorySet = new Set<string>(NATIVE_COMPENDIUM_CATEGORIES);
 
 function asRecord(value: unknown, label: string): JsonRecord {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -156,10 +155,6 @@ function stringList(value: unknown): string[] {
   return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
 }
 
-export function isNativeCompendiumCategory(value: string): value is NativeCompendiumCategory {
-  return categorySet.has(value);
-}
-
 export function parseNativeCompendiumBatch(value: unknown): NativeCompendiumBatch {
   const root = asRecord(value, "Compendium document");
   if (root.format !== BEHOLDEN_COMPENDIUM_FORMAT) {
@@ -225,43 +220,136 @@ export function parseNativeCompendiumDocument(value: unknown): NativeCompendiumB
   return [parseNativeCompendiumBatch(root)];
 }
 
-// classes/species/backgrounds/feats/spells have a composite PRIMARY KEY (id, ruleset) -- bare id
-// membership isn't enough to tell "already exists" from "new" for these categories, so
-// their ids are read alongside ruleset and composite-keyed as "ruleset:id".
-const RULESET_SCOPED_CATEGORIES = new Set<NativeCompendiumCategory>(["classes", "species", "backgrounds", "feats", "spells", "classTalents"]);
+/** Categories whose rows carry a single `data_json` blob that is exactly `JSON.stringify(entry)`
+ * as written at import time (see importParsedNativeCompendiumBatch) -- an incoming entry can be
+ * compared against it directly to tell a real content change from a no-op re-upload. "decks" and
+ * "bastions" store their fields denormalized across columns (bastions across three separate
+ * tables) with no single comparable blob, so they fall back to presence-only detection below. */
+const CONTENT_COMPARABLE_QUERIES: Partial<Record<NativeCompendiumCategory, string>> = {
+  monsters: "SELECT id, ruleset, data_json FROM compendium_monsters",
+  items: "SELECT id, ruleset, data_json FROM compendium_items",
+  spells: "SELECT id, ruleset, data_json FROM compendium_spells",
+  classTalents: "SELECT id, ruleset, data_json FROM compendium_class_talents",
+  classes: "SELECT id, ruleset, data_json FROM compendium_classes",
+  species: "SELECT id, ruleset, data_json FROM compendium_races",
+  backgrounds: "SELECT id, ruleset, data_json FROM compendium_backgrounds",
+  feats: "SELECT id, ruleset, data_json FROM compendium_feats",
+};
 
-function existingNativeIds(
+const PRESENCE_ONLY_QUERIES: Partial<Record<NativeCompendiumCategory, string[]>> = {
+  decks: ["SELECT id, ruleset FROM compendium_deck_cards"],
+  bastions: [
+    "SELECT id, ruleset FROM compendium_bastion_spaces",
+    "SELECT id, ruleset FROM compendium_bastion_orders",
+    "SELECT id, ruleset FROM compendium_bastion_facilities",
+  ],
+};
+
+/** Table names for the same 8 categories as CONTENT_COMPARABLE_QUERIES -- used by the manifest
+ * endpoint to backfill `content_hash` on rows written before that column existed. Decks/bastions
+ * are out of scope for the manifest feature. */
+const CONTENT_HASH_TABLE_NAMES: Partial<Record<NativeCompendiumCategory, string>> = {
+  monsters: "compendium_monsters",
+  items: "compendium_items",
+  spells: "compendium_spells",
+  classTalents: "compendium_class_talents",
+  classes: "compendium_classes",
+  species: "compendium_races",
+  backgrounds: "compendium_backgrounds",
+  feats: "compendium_feats",
+};
+
+/** Maps each existing row's identity key to its stored `data_json` (for content comparison), or
+ * `null` when the category doesn't support that (see CONTENT_COMPARABLE_QUERIES above). */
+function existingNativeContent(
   db: Database.Database,
   category: NativeCompendiumCategory,
-): Set<string> {
-  const queries: Record<NativeCompendiumCategory, string[]> = {
-    monsters: ["SELECT id FROM compendium_monsters"],
-    items: ["SELECT id FROM compendium_items"],
-    spells: ["SELECT id, ruleset FROM compendium_spells"],
-    classTalents: ["SELECT id, ruleset FROM compendium_class_talents"],
-    classes: ["SELECT id, ruleset FROM compendium_classes"],
-    species: ["SELECT id, ruleset FROM compendium_races"],
-    backgrounds: ["SELECT id, ruleset FROM compendium_backgrounds"],
-    feats: ["SELECT id, ruleset FROM compendium_feats"],
-    decks: ["SELECT id FROM compendium_deck_cards"],
-    bastions: [
-      "SELECT id FROM compendium_bastion_spaces",
-      "SELECT id FROM compendium_bastion_orders",
-      "SELECT id FROM compendium_bastion_facilities",
-    ],
-  };
-  if (RULESET_SCOPED_CATEGORIES.has(category)) {
-    return new Set(
-      queries[category].flatMap((sql) =>
-        (db.prepare(sql).all() as Array<{ id: string; ruleset: string }>).map((row) => `${row.ruleset}:${row.id}`)
-      ),
-    );
+): Map<string, string | null> {
+  const contentQuery = CONTENT_COMPARABLE_QUERIES[category];
+  if (contentQuery) {
+    const rows = db.prepare(contentQuery).all() as Array<{ id: string; ruleset: string; data_json: string }>;
+    return new Map(rows.map((row) => [nativeEntryKey(category, row), row.data_json]));
   }
-  return new Set(
-    queries[category].flatMap((sql) =>
-      (db.prepare(sql).all() as Array<{ id: string }>).map((row) => row.id)
-    ),
-  );
+  const presenceQueries = PRESENCE_ONLY_QUERIES[category] ?? [];
+  const map = new Map<string, string | null>();
+  for (const sql of presenceQueries) {
+    for (const row of db.prepare(sql).all() as Array<{ id: string; ruleset: string }>) {
+      map.set(nativeEntryKey(category, row), null);
+    }
+  }
+  return map;
+}
+
+/** Native compendium manifest version: the client and server must agree on this before a manifest
+ * exchange is honored, leaving room to change the hashing algorithm/payload shape later without
+ * an old client and a new server silently talking past each other. */
+export const NATIVE_COMPENDIUM_MANIFEST_VERSION = 1;
+
+export type NativeCompendiumManifestRequest = {
+  version: number;
+  category: NativeCompendiumCategory;
+  /** nativeEntryKey(category, {id, ruleset}) -> contentHash, for every entry the client is about
+   * to import. */
+  hashes: Record<string, string>;
+};
+
+export type NativeCompendiumManifestResult = {
+  /** Keys (nativeEntryKey format) the client should actually include in its upload -- either
+   * absent server-side (new) or present with a different contentHash (changed). */
+  upload: string[];
+};
+
+/** Maps each existing row's identity key to its `content_hash`, computing and persisting it on
+ * the fly for any row written before that column existed (see
+ * compendiumContentHashColumnMigration.ts) -- a strictly opportunistic, one-time-per-row cost.
+ * Only the 8 content-comparable categories are supported; decks/bastions are out of scope for
+ * the manifest feature. */
+export function resolveNativeContentHashes(
+  db: Database.Database,
+  category: NativeCompendiumCategory,
+): Map<string, string> {
+  const table = CONTENT_HASH_TABLE_NAMES[category];
+  if (!table) return new Map();
+  return db.transaction(() => {
+    const rows = db.prepare(
+      `SELECT rowid, id, ruleset, data_json, content_hash FROM ${table}`,
+    ).all() as Array<{ rowid: number; id: string; ruleset: string; data_json: string; content_hash: string | null }>;
+    const backfill = db.prepare(`UPDATE ${table} SET content_hash = ? WHERE rowid = ?`);
+    const result = new Map<string, string>();
+    for (const row of rows) {
+      let hash = row.content_hash;
+      if (!hash) {
+        hash = computeContentHashSync(parseJsonRecord(row.data_json));
+        backfill.run(hash, row.rowid);
+      }
+      result.set(nativeEntryKey(category, row), hash);
+    }
+    return result;
+  })();
+}
+
+/** Compares a client's manifest of `{key: contentHash}` against what's actually stored and
+ * returns only the keys that need a real upload (new or changed). Rejects unsupported manifest
+ * versions and categories with no content-hash support (decks/bastions) explicitly rather than
+ * silently telling the client to upload everything or nothing. */
+export function resolveNativeCompendiumManifest(
+  db: Database.Database,
+  request: NativeCompendiumManifestRequest,
+): NativeCompendiumManifestResult {
+  if (request.version !== NATIVE_COMPENDIUM_MANIFEST_VERSION) {
+    throw new Error(`Unsupported compendium manifest version: ${request.version}.`);
+  }
+  if (!isNativeCompendiumCategory(request.category)) {
+    throw new Error(`Unknown compendium category: ${request.category}.`);
+  }
+  if (!CONTENT_HASH_TABLE_NAMES[request.category]) {
+    throw new Error(`Compendium category "${request.category}" does not support manifest diffing.`);
+  }
+  const stored = resolveNativeContentHashes(db, request.category);
+  const upload = Object.entries(request.hashes)
+    .filter(([key, hash]) => stored.get(key) !== hash)
+    .map(([key]) => key);
+  return { upload };
 }
 
 export function previewNativeCompendiumDocument(
@@ -277,28 +365,41 @@ export function previewValidatedNativeCompendiumBatches(
   db: Database.Database,
   batches: NativeCompendiumBatch[],
 ): NativeCompendiumPreview {
-  const existingByCategory = new Map<NativeCompendiumCategory, Set<string>>();
+  const existingByCategory = new Map<NativeCompendiumCategory, Map<string, string | null>>();
   const previewBatches = batches.map((batch) => {
     const existing = existingByCategory.get(batch.category)
-      ?? existingNativeIds(db, batch.category);
+      ?? existingNativeContent(db, batch.category);
     existingByCategory.set(batch.category, existing);
-    const replacements = batch.entries.reduce((total, entry) => {
-      const key = RULESET_SCOPED_CATEGORIES.has(batch.category)
-        ? `${String(entry.ruleset)}:${String(entry.id)}`
-        : String(entry.id);
-      return total + (existing.has(key) ? 1 : 0);
-    }, 0);
+    let additions = 0;
+    let changed = 0;
+    let unchanged = 0;
+    for (const entry of batch.entries) {
+      const key = nativeEntryKey(batch.category, { id: String(entry.id), ruleset: entry.ruleset ? String(entry.ruleset) : undefined });
+      if (!existing.has(key)) {
+        additions++;
+        continue;
+      }
+      const storedJson = existing.get(key)!;
+      // storedJson is null for categories with no single comparable blob (decks, bastions) --
+      // treated as changed, matching the old presence-only "exists = replacement" behavior.
+      if (storedJson !== null && storedJson === JSON.stringify(entry)) unchanged++;
+      else changed++;
+    }
     return {
       category: batch.category,
       entries: batch.entries.length,
-      additions: batch.entries.length - replacements,
-      replacements,
+      additions,
+      replacements: changed + unchanged,
+      changed,
+      unchanged,
     };
   });
   return {
     entries: previewBatches.reduce((total, batch) => total + batch.entries, 0),
     additions: previewBatches.reduce((total, batch) => total + batch.additions, 0),
     replacements: previewBatches.reduce((total, batch) => total + batch.replacements, 0),
+    changed: previewBatches.reduce((total, batch) => total + batch.changed, 0),
+    unchanged: previewBatches.reduce((total, batch) => total + batch.unchanged, 0),
     batches: previewBatches,
   };
 }
@@ -543,26 +644,43 @@ export function exportNativeCompendiumBatch(
   };
 }
 
+/** True when this entry is byte-identical to what's already stored for its (id, ruleset) --
+ * lets the writer below skip the INSERT OR REPLACE entirely instead of rewriting a no-op row. */
+function isUnchangedNativeEntry(
+  existing: Map<string, string | null>,
+  category: NativeCompendiumCategory,
+  entry: JsonRecord,
+  resolvedId: string,
+): boolean {
+  const key = nativeEntryKey(category, { id: resolvedId, ruleset: entry.ruleset ? String(entry.ruleset) : undefined });
+  const stored = existing.get(key);
+  return stored != null && stored === JSON.stringify(entry);
+}
+
 function importParsedNativeCompendiumBatch(
   db: Database.Database,
   batch: NativeCompendiumBatch,
 ): NativeCompendiumImportResult {
   const entries = batch.entries;
+  const existing = CONTENT_COMPARABLE_QUERIES[batch.category] ? existingNativeContent(db, batch.category) : null;
+  let skipped = 0;
 
   db.transaction(() => {
     switch (batch.category) {
       case "monsters": {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_monsters (id, ruleset, name, name_key, cr, cr_numeric, type_key, type_full, size, environment, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_monsters (id, ruleset, name, name_key, cr, cr_numeric, type_key, type_full, size, environment, data_json, content_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Monster ${index + 1} name`);
+          const id = idOrGenerated(entry, "m_", name);
+          if (existing && isUnchangedNativeEntry(existing, batch.category, entry, id)) { skipped++; continue; }
           const classification = record(entry.classification);
           const challenge = record(entry.challenge);
           const cr = optionalText(challenge.rating);
           const crNumeric = crRatingToNumber(cr);
           stmt.run(
-            idOrGenerated(entry, "m_", name),
+            id,
             requiredText(entry.ruleset, `Monster ${index + 1} ruleset`),
             name,
             canonicalNameKey(entry, name),
@@ -573,18 +691,21 @@ function importParsedNativeCompendiumBatch(
             optionalText(classification.size),
             stringList(classification.environment).join(", ") || null,
             JSON.stringify(entry),
+            computeContentHashSync(entry),
           );
         }
         break;
       }
       case "items": {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_items (id, ruleset, name, name_key, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_items (id, ruleset, name, name_key, rarity, type, type_key, attunement, magic, equippable, weight, value, proficiency, data_json, content_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Item ${index + 1} name`);
+          const id = idOrGenerated(entry, "i_", name);
+          if (existing && isUnchangedNativeEntry(existing, batch.category, entry, id)) { skipped++; continue; }
           stmt.run(
-            idOrGenerated(entry, "i_", name),
+            id,
             requiredText(entry.ruleset, `Item ${index + 1} ruleset`),
             name,
             canonicalNameKey(entry, name),
@@ -598,19 +719,22 @@ function importParsedNativeCompendiumBatch(
             optionalNumber(entry.value),
             optionalText(entry.proficiency),
             JSON.stringify(entry),
+            computeContentHashSync(entry),
           );
         }
         break;
       }
       case "spells": {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_spells (id, ruleset, name, name_key, level, school, ritual, concentration, components, classes, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_spells (id, ruleset, name, name_key, level, school, ritual, concentration, components, classes, data_json, content_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Spell ${index + 1} name`);
+          const id = idOrGenerated(entry, "s_", name);
+          if (existing && isUnchangedNativeEntry(existing, batch.category, entry, id)) { skipped++; continue; }
           const screenView = projectGrandSpell(entry);
           stmt.run(
-            idOrGenerated(entry, "s_", name),
+            id,
             requiredText(entry.ruleset, `Spell ${index + 1} ruleset`),
             name,
             canonicalNameKey(entry, name),
@@ -621,17 +745,23 @@ function importParsedNativeCompendiumBatch(
             optionalText(screenView.components),
             optionalText(screenView.classes),
             JSON.stringify(entry),
+            computeContentHashSync(entry),
           );
         }
         break;
       }
       case "classTalents": {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_class_talents (id, ruleset, name, name_key, kind, data_json) VALUES (?, ?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_class_talents (id, ruleset, name, name_key, kind, data_json, content_hash) VALUES (?, ?, ?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Class talent ${index + 1} name`);
           const id = idOrGenerated(entry, "ct_", name);
+          // The legacy corpus stored ClassTalents in the spell table under these IDs -- this
+          // cleanup is idempotent and cheap, so it always runs even when the row itself is
+          // unchanged and its own write gets skipped below.
+          db.prepare("DELETE FROM compendium_spells WHERE id = ?").run(id);
+          if (existing && isUnchangedNativeEntry(existing, batch.category, entry, id)) { skipped++; continue; }
           stmt.run(
             id,
             requiredText(entry.ruleset, `Class talent ${index + 1} ruleset`),
@@ -639,75 +769,86 @@ function importParsedNativeCompendiumBatch(
             canonicalNameKey(entry, name),
             requiredText(entry.kind, `Class talent ${index + 1} kind`),
             JSON.stringify(entry),
+            computeContentHashSync(entry),
           );
-          // The legacy corpus stored ClassTalents in the spell table under these IDs.
-          db.prepare("DELETE FROM compendium_spells WHERE id = ?").run(id);
         }
         break;
       }
       case "classes": {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_classes (id, ruleset, name, name_key, hd, data_json) VALUES (?, ?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_classes (id, ruleset, name, name_key, hd, data_json, content_hash) VALUES (?, ?, ?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Class ${index + 1} name`);
+          const id = idOrGenerated(entry, "c_", name);
+          if (existing && isUnchangedNativeEntry(existing, batch.category, entry, id)) { skipped++; continue; }
           stmt.run(
-            idOrGenerated(entry, "c_", name),
+            id,
             requiredText(entry.ruleset, `Class ${index + 1} ruleset`),
             name,
             canonicalNameKey(entry, name),
             optionalNumber(entry.hitDie),
             JSON.stringify(entry),
+            computeContentHashSync(entry),
           );
         }
         break;
       }
       case "species": {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_races (id, ruleset, name, name_key, size, speed, data_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_races (id, ruleset, name, name_key, size, speed, data_json, content_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Species ${index + 1} name`);
+          const id = idOrGenerated(entry, "r_", name);
+          if (existing && isUnchangedNativeEntry(existing, batch.category, entry, id)) { skipped++; continue; }
           stmt.run(
-            idOrGenerated(entry, "r_", name),
+            id,
             requiredText(entry.ruleset, `Species ${index + 1} ruleset`),
             name,
             canonicalNameKey(entry, name),
             optionalText(entry.size),
             optionalNumber(entry.speed),
             JSON.stringify(entry),
+            computeContentHashSync(entry),
           );
         }
         break;
       }
       case "backgrounds": {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_backgrounds (id, ruleset, name, name_key, data_json) VALUES (?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_backgrounds (id, ruleset, name, name_key, data_json, content_hash) VALUES (?, ?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Background ${index + 1} name`);
+          const id = idOrGenerated(entry, "bg_", name);
+          if (existing && isUnchangedNativeEntry(existing, batch.category, entry, id)) { skipped++; continue; }
           stmt.run(
-            idOrGenerated(entry, "bg_", name),
+            id,
             requiredText(entry.ruleset, `Background ${index + 1} ruleset`),
             name,
             canonicalNameKey(entry, name),
             JSON.stringify(entry),
+            computeContentHashSync(entry),
           );
         }
         break;
       }
       case "feats": {
         const stmt = db.prepare(
-          "INSERT OR REPLACE INTO compendium_feats (id, ruleset, name, name_key, data_json) VALUES (?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO compendium_feats (id, ruleset, name, name_key, data_json, content_hash) VALUES (?, ?, ?, ?, ?, ?)",
         );
         for (const [index, entry] of entries.entries()) {
           const name = requiredText(entry.name, `Feat ${index + 1} name`);
+          const id = idOrGenerated(entry, "f_", name);
+          if (existing && isUnchangedNativeEntry(existing, batch.category, entry, id)) { skipped++; continue; }
           stmt.run(
-            idOrGenerated(entry, "f_", name),
+            id,
             requiredText(entry.ruleset, `Feat ${index + 1} ruleset`),
             name,
             canonicalNameKey(entry, name),
             JSON.stringify(entry),
+            computeContentHashSync(entry),
           );
         }
         break;
@@ -799,7 +940,9 @@ function importParsedNativeCompendiumBatch(
 
   return {
     category: batch.category,
-    imported: batch.entries.length,
+    // Rows actually written (additions + real changes) -- entries that were byte-identical to
+    // what's already stored got skipped above rather than rewritten as a no-op.
+    imported: batch.entries.length - skipped,
     total: countNativeCategory(db, batch.category),
   };
 }

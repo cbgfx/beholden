@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { resolveAssetUrl } from "@/services/api";
 import { IconCakeSlice, IconDna1, IconPencil, IconPlus, IconTrash, IconVillage } from "@/icons";
 import { EntityIcon } from "@/components/iconPicker/EntityIcon";
 import { getDefaultEntityIcon } from "@/components/iconPicker/entityIconDefaults";
@@ -7,6 +8,8 @@ import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { useConfirm } from "@/confirm/ConfirmContext";
 import { theme, withAlpha } from "@/theme/theme";
+import { BinderListEmpty, BinderListError, BinderListHeader, BinderListLoading, BinderRecordThumbnail, compareValues, useBinderListSort } from "@/components/BinderListTable";
+import { SearchableMultiFilter } from "@/components/SearchableSelect";
 import { createBinderMortal, deleteBinderMortal, fetchBinderMortals, fetchMortalOptions, updateBinderMortal, uploadBinderMortalImage, type BinderMortal, type BinderMortalInput, type MortalOptions } from "@/services/binderMortalApi";
 import { MortalRecordModal } from "@/views/BinderView/MortalRecordModal";
 import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
@@ -16,6 +19,7 @@ import { useValidMentionIds } from "./useValidMentionIds";
 
 const mortalTableColumns = "minmax(210px, 1.45fr) minmax(135px, 0.85fr) minmax(170px, 1fr) minmax(175px, 1fr) 130px 72px 96px 72px";
 const NONE_FILTER = "__none__";
+type MortalSortKey = "name" | "position" | "organization" | "location" | "species" | "age" | "gender" | "status";
 
 type MortalFilters = {
   position: string[];
@@ -155,6 +159,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
   const [error, setError] = useState<string | null>(null);
   const [modalRecord, setModalRecord] = useState<BinderMortal | "new" | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const { sortKey, sortDir, toggleSort } = useBinderListSort<MortalSortKey>("name");
   const savedViewsKey = `binder:${props.binderId}:mortal-views`;
 
   useEffect(() => {
@@ -220,6 +225,22 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     && matchesFilter(record.gender, filters.gender)
     && matchesFilter(record.player ? "true" : "false", filters.linked)
   ), [records, filters]);
+  const sortedRecords = useMemo(() => {
+    const sortValue = (record: BinderMortal): string | number | null => {
+      switch (sortKey) {
+        case "name": return record.name;
+        case "position": return record.organizations.flatMap((organization) => organization.position?.name ?? []).join(", ");
+        case "organization": return record.organizations.map((organization) => organization.name).join(", ");
+        case "location": return record.location?.name ?? null;
+        case "species": return record.race?.name ?? null;
+        case "age": return mortalAge(record, props.binderCurrentDate);
+        case "gender": return record.gender ?? null;
+        case "status": return record.lifeStatus === "dead" ? 1 : 0;
+        default: return null;
+      }
+    };
+    return [...filteredRecords].sort((a, b) => compareValues(sortValue(a), sortValue(b), sortDir));
+  }, [filteredRecords, sortKey, sortDir, props.binderCurrentDate]);
   const filterOptions = useMemo(() => ({
     positions: options.records.filter((item) => item.type === "position"),
     organizations: options.records.filter((item) => item.type === "organization"),
@@ -355,7 +376,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
               <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
                 <button type="button" onClick={() => { if (props.canEdit) setModalRecord(selected); }} title={props.canEdit ? "Edit portrait" : undefined} style={{ width: 84, height: 84, padding: 0, border: `1px solid ${withAlpha(props.accent, 0.3)}`, borderRadius: theme.radius.control, overflow: "hidden", background: withAlpha(props.accent, 0.1), color: theme.colors.muted, cursor: props.canEdit ? "pointer" : "default", flex: "0 0 auto" }}>
                   {selected.imageUrl
-                    ? <img src={`${selected.imageUrl}${selected.imageUpdatedAt ? `?v=${selected.imageUpdatedAt}` : ""}`} alt={`${selected.name} portrait`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ? <img src={`${resolveAssetUrl(selected.imageUrl)}${selected.imageUpdatedAt ? `?v=${selected.imageUpdatedAt}` : ""}`} alt={`${selected.name} portrait`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     : <span style={{ fontSize: "var(--fs-small)", opacity: 0.72 }}>Portrait</span>}
                 </button>
                 <h2 style={{ margin: 0, fontSize: "calc(var(--fs-hero) * 0.9)" }}>{selected.name}</h2>
@@ -423,13 +444,13 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
           ["gender", "Gender", 135],
           ["linked", "Linked", 130],
         ] as Array<[keyof MortalFilters, string, number]>).map(([key, label, width]) => (
-          <SearchableFilter
+          <SearchableMultiFilter
             key={key}
             label={label}
-            value=""
             width={width}
-            onChange={(value) => { setFilters(addFilterValue(filters, key, value)); setSelectedViewId(""); }}
-            options={[{ value: "", label: filters[key].length ? "Add…" : "All" }, ...filterChoices[key].filter((choice) => !filters[key].includes(choice.value))]}
+            selected={filters[key]}
+            options={filterChoices[key]}
+            onAdd={(value) => { setFilters(addFilterValue(filters, key, value)); setSelectedViewId(""); }}
           />
         ))}
         {Object.values(filters).some((values) => values.length) ? <Button variant="ghost" onClick={() => { setFilters(emptyFilters()); setSelectedViewId(""); }}>Clear</Button> : null}
@@ -454,32 +475,32 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
         </div>
       ) : null}
       <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflowX: "auto", overflowY: "hidden" }}>
-        <div style={{ minWidth: 1120, display: "grid", gridTemplateColumns: mortalTableColumns, gap: 12, padding: "12px 15px", background: withAlpha(props.accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
-          {([
-            { label: "Name", icon: null },
-            { label: "Position", icon: <EntityIcon icon={getDefaultEntityIcon("positions")} size={14} /> },
-            { label: "Organization", icon: <EntityIcon icon={getDefaultEntityIcon("organizations")} size={14} /> },
-            { label: "Location", icon: null },
-            { label: "Species", icon: null },
-            { label: "Age", icon: null },
-            { label: "Gender", icon: null },
-            { label: "Status", icon: null },
-          ]).map((column) => (
-            <div key={column.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>
-              {column.icon}
-              {column.label}
-            </div>
-          ))}
-        </div>
-        {loading ? <div style={{ padding: 42, textAlign: "center", color: theme.colors.muted }}>Loading…</div>
-          : error ? <div role="alert" style={{ padding: 42, textAlign: "center", color: theme.colors.red }}>{error}</div>
-          : filteredRecords.length ? filteredRecords.map((record) => {
+        <BinderListHeader
+          columns={[
+            { key: "name", label: "Name", sortable: true },
+            { key: "position", label: "Position", icon: <EntityIcon icon={getDefaultEntityIcon("positions")} size={14} />, sortable: true },
+            { key: "organization", label: "Organization", icon: <EntityIcon icon={getDefaultEntityIcon("organizations")} size={14} />, sortable: true },
+            { key: "location", label: "Location", sortable: true },
+            { key: "species", label: "Species", sortable: true },
+            { key: "age", label: "Age", sortable: true },
+            { key: "gender", label: "Gender", sortable: true },
+            { key: "status", label: "Status", sortable: true },
+          ]}
+          gridTemplateColumns={mortalTableColumns}
+          accent={props.accent}
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onSort={(key) => toggleSort(key as MortalSortKey)}
+        />
+        {loading ? <BinderListLoading />
+          : error ? <BinderListError message={error} />
+          : sortedRecords.length ? sortedRecords.map((record) => {
             const age = mortalAge(record, props.binderCurrentDate);
             const genderColor = record.gender === "male" ? "#7dd3fc" : record.gender === "female" ? "#f9a8d4" : null;
             const cell = { color: theme.colors.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
             return <button key={record.id} type="button" onClick={() => navigate(`/binder/${props.binderId}/mortals/${record.id}`)} onMouseEnter={() => setHoveredId(record.id)} onMouseLeave={() => setHoveredId(null)} style={{ minWidth: 1120, width: "100%", display: "grid", gridTemplateColumns: mortalTableColumns, alignItems: "center", gap: 12, padding: "11px 15px", border: 0, borderTop: `1px solid ${theme.colors.panelBorder}`, background: hoveredId === record.id ? withAlpha(props.accent, 0.08) : "transparent", color: theme.colors.text, textAlign: "left", cursor: "pointer", font: "inherit" }}>
               <span title={record.name} style={{ ...cell, color: theme.colors.text, fontWeight: 750, display: "flex", alignItems: "center", gap: 9 }}>
-                {record.imageUrl ? <img src={`${record.imageUrl}${record.imageUpdatedAt ? `?v=${record.imageUpdatedAt}` : ""}`} alt="" style={{ width: 34, height: 34, borderRadius: 6, objectFit: "cover", flex: "0 0 auto" }} /> : <span style={{ width: 34, height: 34, borderRadius: 6, background: withAlpha(props.accent, 0.12), flex: "0 0 auto" }} />}
+                <BinderRecordThumbnail imageUrl={record.imageUrl} imageUpdatedAt={record.imageUpdatedAt} accent={props.accent} />
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{record.name}</span>
               </span>
               <span title={record.organizations.flatMap((organization) => organization.position?.name ?? []).join(", ") || "None"} style={{ ...cell, display: "flex", alignItems: "center", gap: 6 }}>
@@ -496,7 +517,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
               <span>{genderColor ? <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: genderColor, background: withAlpha(genderColor, 0.16), fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 750 }}>{record.gender === "male" ? "Male" : "Female"}</span> : <span style={{ ...cell, color: theme.colors.red }}>Needs gender</span>}</span>
               <span style={{ justifySelf: "start", display: "inline-flex", padding: "2px 7px", borderRadius: 5, color: "#fff", background: record.lifeStatus === "dead" ? theme.colors.red : theme.colors.green, fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 800 }}>{record.lifeStatus === "dead" ? "Dead" : "Alive"}</span>
             </button>;
-          }) : <div style={{ padding: 48, textAlign: "center", color: theme.colors.muted }}>{records.length ? "No Mortals match the current filters." : query ? "No Mortals match your search." : "No Mortals yet."}</div>}
+          }) : <BinderListEmpty>{records.length ? "No Mortals match the current filters." : query ? "No Mortals match your search." : "No Mortals yet."}</BinderListEmpty>}
       </div>
     </div>
     {modal}

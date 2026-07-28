@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { resolveAssetUrl } from "@/services/api";
 import { IconPencil, IconPlus, IconTrash } from "@/icons";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { useConfirm } from "@/confirm/ConfirmContext";
 import { theme, withAlpha } from "@/theme/theme";
+import { BinderListEmpty, BinderListError, BinderListHeader, BinderListLoading, BinderRecordThumbnail, compareValues, useBinderListSort } from "@/components/BinderListTable";
 import {
   addDeityDomain,
   createBinderReference,
@@ -27,6 +29,8 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import { EntityIcon, IconPicker, getDefaultEntityIcon, ICON_ENABLED_REFERENCE_TYPES } from "@/components/iconPicker";
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
+
+type ReferenceSortKey = "name" | "middle" | "usage";
 
 const LABELS: Record<BinderReferenceType, { plural: string; singular: string; usage: string }> = {
   races: { plural: "Races", singular: "Race", usage: "Mortals" },
@@ -233,6 +237,21 @@ export function ReferenceWorkspace(props: {
   const [error, setError] = useState<string | null>(null);
   const [modalRecord, setModalRecord] = useState<BinderReferenceRecord | "new" | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const { sortKey, sortDir, toggleSort } = useBinderListSort<ReferenceSortKey>("name");
+  const rankOrder = useMemo(() => new Map(DEITY_RANKS.map((rank, index) => [rank, index])), []);
+  const sortedRecords = useMemo(() => {
+    const sortValue = (record: BinderReferenceRecord): string | number | null => {
+      if (sortKey === "name") return record.name;
+      if (sortKey === "middle") {
+        return isDeities ? (record.domains?.map((domain) => domain.name).join(", ") ?? null)
+          : showDescriptionColumn ? record.description
+          : showLeader ? (record.leader?.name ?? null)
+          : null;
+      }
+      return isDeities ? (record.rank ? rankOrder.get(record.rank) ?? -1 : -1) : record.usageCount;
+    };
+    return [...records].sort((a, b) => compareValues(sortValue(a), sortValue(b), sortDir));
+  }, [records, sortKey, sortDir, isDeities, showDescriptionColumn, showLeader, rankOrder]);
   const [inlineName, setInlineName] = useState("");
   const [inlineDescription, setInlineDescription] = useState("");
   const [editingDescription, setEditingDescription] = useState(false);
@@ -376,7 +395,7 @@ export function ReferenceWorkspace(props: {
               <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "start" }}>
                 {props.type === "deities" ? <>
                   <button type="button" onClick={() => { if (props.canEdit) portraitInputRef.current?.click(); }} title={props.canEdit ? "Change portrait" : undefined} style={{ width: 72, height: 72, padding: 0, border: `1px dashed ${theme.colors.panelBorder}`, borderRadius: theme.radius.control, overflow: "hidden", background: withAlpha(props.accent, 0.1), cursor: props.canEdit ? "pointer" : "default", flex: "0 0 auto" }}>
-                    {selected.imageUrl ? <img src={`${selected.imageUrl}${selected.imageUpdatedAt ? `?v=${selected.imageUpdatedAt}` : ""}`} alt={`${selected.name} portrait`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
+                    {selected.imageUrl ? <img src={`${resolveAssetUrl(selected.imageUrl)}${selected.imageUpdatedAt ? `?v=${selected.imageUpdatedAt}` : ""}`} alt={`${selected.name} portrait`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
                   </button>
                   <input ref={portraitInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={async (event) => {
                     const image = event.target.files?.[0];
@@ -545,16 +564,26 @@ export function ReferenceWorkspace(props: {
         </div>
 
         <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: hasMiddleColumn ? "minmax(190px, 1fr) minmax(260px, 2fr) 140px" : "minmax(240px, 1fr) 160px", gap: 12, padding: "12px 15px", background: withAlpha(props.accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
-            {(isDeities ? ["Name", "Domains", "Rank"] : showDescriptionColumn ? ["Name", "Description", labels.usage] : showLeader ? ["Name", "Leader", labels.usage] : ["Name", labels.usage]).map((column) => (
-              <div key={column} style={{ color: theme.colors.text, fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>{column}</div>
-            ))}
-          </div>
+          <BinderListHeader
+            columns={[
+              { key: "name", label: "Name", sortable: true },
+              ...(isDeities ? [{ key: "middle", label: "Domains", sortable: true }]
+                : showDescriptionColumn ? [{ key: "middle", label: "Description", sortable: true }]
+                : showLeader ? [{ key: "middle", label: "Leader", sortable: true }]
+                : []),
+              { key: "usage", label: isDeities ? "Rank" : labels.usage, sortable: true },
+            ]}
+            gridTemplateColumns={hasMiddleColumn ? "minmax(190px, 1fr) minmax(260px, 2fr) 140px" : "minmax(240px, 1fr) 160px"}
+            accent={props.accent}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onSort={(key) => toggleSort(key as ReferenceSortKey)}
+          />
           {loading ? (
-            <div style={{ padding: 42, textAlign: "center", color: theme.colors.muted }}>Loading…</div>
+            <BinderListLoading />
           ) : error ? (
-            <div role="alert" style={{ padding: 42, textAlign: "center", color: theme.colors.red }}>{error}</div>
-          ) : records.length ? records.map((record) => {
+            <BinderListError message={error} />
+          ) : sortedRecords.length ? sortedRecords.map((record) => {
             const hovered = hoveredId === record.id;
             return (
               <button
@@ -580,10 +609,8 @@ export function ReferenceWorkspace(props: {
                 }}
               >
                 <span style={{ fontWeight: 750, display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
-                  {props.type === "deities"
-                    ? record.imageUrl
-                      ? <img src={`${record.imageUrl}${record.imageUpdatedAt ? `?v=${record.imageUpdatedAt}` : ""}`} alt="" style={{ width: 34, height: 34, borderRadius: 6, objectFit: "cover", flex: "0 0 auto" }} />
-                      : <span style={{ width: 34, height: 34, borderRadius: 6, background: withAlpha(props.accent, 0.12), flex: "0 0 auto" }} />
+                  {isDeities
+                    ? <BinderRecordThumbnail imageUrl={record.imageUrl} imageUpdatedAt={record.imageUpdatedAt} accent={props.accent} />
                     : showIcon
                       ? <EntityIcon icon={record.icon ?? getDefaultEntityIcon(props.type)} size={22} />
                       : null}
@@ -610,9 +637,9 @@ export function ReferenceWorkspace(props: {
               </button>
             );
           }) : (
-            <div style={{ padding: 48, textAlign: "center", color: theme.colors.muted, fontSize: "var(--fs-medium)" }}>
+            <BinderListEmpty>
               {query ? `No ${labels.plural.toLowerCase()} match your search.` : `No ${labels.plural.toLowerCase()} yet.`}
-            </div>
+            </BinderListEmpty>
           )}
         </div>
       </div>
