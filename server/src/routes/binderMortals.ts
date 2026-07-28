@@ -66,8 +66,10 @@ type MortalRow = {
   player_character_name: string | null;
   organization_id: string | null;
   organization_name: string | null;
+  organization_icon: string | null;
   position_id: string | null;
   position_name: string | null;
+  position_icon: string | null;
   created_at: number;
   updated_at: number;
 };
@@ -113,8 +115,9 @@ const SELECT_MORTAL = `
          pc.character_id, pc.player_id, player.player_name,
          player.character_name AS player_character_name,
          membership.organization_id, organization_record.name AS organization_name,
+         organization_icon.icon AS organization_icon,
          COALESCE(membership.position_id, m.position_id) AS position_id,
-         position_record.name AS position_name,
+         position_record.name AS position_name, position_icon.icon AS position_icon,
          br.created_at, br.updated_at
   FROM mortals m
   JOIN binder_records br ON br.id = m.id
@@ -126,23 +129,28 @@ const SELECT_MORTAL = `
   LEFT JOIN organization_memberships membership
     ON membership.mortal_id = m.id AND membership.is_primary = 1
   LEFT JOIN binder_records organization_record ON organization_record.id = membership.organization_id
+  LEFT JOIN binder_organizations organization_icon ON organization_icon.id = membership.organization_id
   LEFT JOIN binder_records position_record ON position_record.id = COALESCE(membership.position_id, m.position_id)
+  LEFT JOIN binder_positions position_icon ON position_icon.id = COALESCE(membership.position_id, m.position_id)
 `;
 
 function dto(row: MortalRow, db: ServerContext["db"]) {
   const organizations = db.prepare(`
-    SELECT om.organization_id AS id, organization_record.name,
-           om.position_id AS positionId, position_record.name AS positionName,
+    SELECT om.organization_id AS id, organization_record.name, organization_icon.icon AS icon,
+           om.position_id AS positionId, position_record.name AS positionName, position_icon.icon AS positionIcon,
            om.is_primary AS isPrimary
     FROM organization_memberships om
     JOIN binder_records organization_record ON organization_record.id = om.organization_id
+    LEFT JOIN binder_organizations organization_icon ON organization_icon.id = om.organization_id
     LEFT JOIN binder_records position_record ON position_record.id = om.position_id
+    LEFT JOIN binder_positions position_icon ON position_icon.id = om.position_id
     WHERE om.mortal_id = ?
     ORDER BY om.is_primary DESC, organization_record.name_key, om.id
   `).all(row.id).map((membership: any) => ({
     id: membership.id,
     name: membership.name,
-    position: membership.positionId ? { id: membership.positionId, name: membership.positionName } : null,
+    icon: membership.icon,
+    position: membership.positionId ? { id: membership.positionId, name: membership.positionName, icon: membership.positionIcon } : null,
     isPrimary: membership.isPrimary === 1,
   }));
   const continent = row.residence_record_id ? db.prepare(`
@@ -183,9 +191,9 @@ function dto(row: MortalRow, db: ServerContext["db"]) {
     deathDate: row.death_date_text,
     location: row.residence_record_id ? { id: row.residence_record_id, name: row.location_name! } : null,
     continent: continent ?? null,
-    organization: row.organization_id ? { id: row.organization_id, name: row.organization_name! } : null,
+    organization: row.organization_id ? { id: row.organization_id, name: row.organization_name!, icon: row.organization_icon } : null,
     organizations,
-    position: row.position_id ? { id: row.position_id, name: row.position_name! } : null,
+    position: row.position_id ? { id: row.position_id, name: row.position_name!, icon: row.position_icon } : null,
     className: row.mortal_type === "player_character" ? row.class_name : null,
     notes: resolveImportedBinderLinks(row.description ?? row.backstory, row.binder_id, db),
     dmNotes: row.dm_notes,

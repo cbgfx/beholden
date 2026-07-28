@@ -7,9 +7,12 @@ import { TextArea } from "@/ui/TextArea";
 import { theme, withAlpha } from "@/theme/theme";
 import { IconPicker } from "@/components/iconPicker";
 import { SearchableSelect } from "@/components/SearchableSelect";
-import type {
-  BinderReferenceInput,
-  BinderReferenceRecord,
+import {
+  DEITY_RANK_COLORS,
+  DEITY_RANKS,
+  type BinderReferenceInput,
+  type BinderReferenceRecord,
+  type DeityRank,
 } from "@/services/binderReferenceApi";
 
 const PARENT_TYPE_LABELS: Record<string, string> = {
@@ -24,6 +27,7 @@ export function ReferenceRecordModal(props: {
   accent: string;
   showDescription: boolean;
   showIcon?: boolean;
+  showRank?: boolean;
   useDrawer?: boolean;
   parentLabel?: string;
   parentOptions?: Array<{ id: string; name: string; type: string; icon?: string | null }>;
@@ -33,6 +37,7 @@ export function ReferenceRecordModal(props: {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState<string | null>(null);
+  const [rank, setRank] = useState<DeityRank | null>(null);
   const [parentId, setParentId] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +47,7 @@ export function ReferenceRecordModal(props: {
     setName(props.record?.name ?? "");
     setDescription(props.record?.description ?? "");
     setIcon(props.record?.icon ?? null);
+    setRank(props.record?.rank ?? null);
     setParentId(props.record?.parent?.id ?? "");
     setError(null);
   }, [props.isOpen, props.record]);
@@ -57,6 +63,7 @@ export function ReferenceRecordModal(props: {
         description: props.showDescription ? description.trim() || null : null,
         parentId: props.parentLabel ? parentId || null : undefined,
         icon: props.showIcon ? icon : undefined,
+        rank: props.showRank ? rank : undefined,
       });
       props.onClose();
     } catch (cause) {
@@ -89,6 +96,38 @@ export function ReferenceRecordModal(props: {
         </div>
 
         {props.showIcon ? <IconPicker value={icon} onChange={setIcon} label="Icon" /> : null}
+
+        {props.showRank ? (
+          <div style={{ display: "grid", gap: 7 }}>
+            <div style={labelStyle}>Rank</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {DEITY_RANKS.map((option) => {
+                const active = rank === option;
+                const color = DEITY_RANK_COLORS[option];
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    disabled={saving}
+                    onClick={() => setRank(active ? null : option)}
+                    style={{
+                      padding: "4px 12px",
+                      borderRadius: 999,
+                      border: `1.5px solid ${color}`,
+                      background: active ? color : withAlpha(color, 0.14),
+                      color: active ? "#0b0e14" : color,
+                      fontWeight: 800,
+                      fontSize: "var(--fs-small)",
+                      cursor: saving ? "default" : "pointer",
+                    }}
+                  >
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
 
         {props.showDescription ? (
           <div style={{ display: "grid", gap: 7 }}>

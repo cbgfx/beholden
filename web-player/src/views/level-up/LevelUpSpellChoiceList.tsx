@@ -22,6 +22,10 @@ function cleanedDescription(text: string | null | undefined): string {
   return String(text ?? "").replace(/Source:.*$/ms, "").trim();
 }
 
+function normalizeSpellName(name: string): string {
+  return String(name ?? "").trim().toLowerCase();
+}
+
 export function LevelUpSpellChoiceList({
   title,
   caption,
@@ -31,6 +35,7 @@ export function LevelUpSpellChoiceList({
   onToggle,
   isAllowed,
   disabledIds,
+  disabledNames,
 }: {
   title: string;
   caption: string;
@@ -40,10 +45,12 @@ export function LevelUpSpellChoiceList({
   onToggle: (id: string, action?: "add" | "remove") => void;
   isAllowed?: (spell: LevelUpSpellSummary) => boolean;
   disabledIds?: string[];
+  disabledNames?: string[];
 }) {
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const visibleSpells = React.useMemo(() => spells, [spells]);
   const disabledIdSet = React.useMemo(() => new Set(disabledIds ?? []), [disabledIds]);
+  const disabledNameSet = React.useMemo(() => new Set((disabledNames ?? []).map(normalizeSpellName)), [disabledNames]);
   // Talent prerequisite dependencies resolve their display name from the option list itself.
   const talentNameById = React.useMemo(() => new Map(spells.map((spell) => [spell.id, spell.name])), [spells]);
   const groupedSpells = React.useMemo(() => {
@@ -103,7 +110,7 @@ export function LevelUpSpellChoiceList({
                 const selectedCount = chosen.filter((id) => id === spell.id).length;
                 const focused = activeSpell?.id === spell.id;
                 const allowed = isAllowed ? isAllowed(spell) : true;
-                const disabledElsewhere = !active && disabledIdSet.has(spell.id);
+                const disabledElsewhere = !active && (disabledIdSet.has(spell.id) || disabledNameSet.has(normalizeSpellName(spell.name)));
                 const blocked = (!active && chosen.length >= max) || !allowed || disabledElsewhere;
                 const prerequisite = classTalentPrerequisiteLabel(spell.prerequisite, (id) => talentNameById.get(id));
                 const levelLabel = optionLevelLabel(spell.level);

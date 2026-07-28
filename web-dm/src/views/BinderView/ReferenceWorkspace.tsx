@@ -9,6 +9,8 @@ import {
   addDeityDomain,
   createBinderReference,
   deleteBinderReference,
+  DEITY_RANK_COLORS,
+  DEITY_RANKS,
   fetchBinderReferences,
   removeDeityDomain,
   updateBinderReference,
@@ -215,7 +217,9 @@ export function ReferenceWorkspace(props: {
   onRecordsChanged: () => Promise<void>;
 }) {
   const labels = LABELS[props.type];
+  const isDeities = props.type === "deities";
   const showDescription = !["races", "positions", "organizations"].includes(props.type);
+  const showDescriptionColumn = showDescription && !isDeities;
   const showLeader = props.type === "organizations";
   const showIcon = ICON_ENABLED_REFERENCE_TYPES.has(props.type);
   const hasMiddleColumn = showDescription || showLeader;
@@ -308,6 +312,7 @@ export function ReferenceWorkspace(props: {
           ? changes.description?.trim() || null
           : selected.description,
         ...(changes.icon !== undefined ? { icon: changes.icon } : {}),
+        ...(changes.rank !== undefined ? { rank: changes.rank } : {}),
       });
       if (changes.description !== undefined) {
         await syncBinderMentions(props.binderId, selected.id, "description", changes.description?.trim() || null);
@@ -422,6 +427,37 @@ export function ReferenceWorkspace(props: {
                   </section>
                 )
               ) : null}
+              {isDeities ? (
+                <section>
+                  <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>Rank</div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 7 }}>
+                    {DEITY_RANKS.map((rank) => {
+                      const active = selected.rank === rank;
+                      const color = DEITY_RANK_COLORS[rank];
+                      return (
+                        <button
+                          key={rank}
+                          type="button"
+                          disabled={!props.canEdit}
+                          onClick={() => void saveInline({ rank: active ? null : rank })}
+                          style={{
+                            padding: "4px 12px",
+                            borderRadius: 999,
+                            border: `1.5px solid ${color}`,
+                            background: active ? color : withAlpha(color, 0.14),
+                            color: active ? "#0b0e14" : color,
+                            fontWeight: 800,
+                            fontSize: "var(--fs-small)",
+                            cursor: props.canEdit ? "pointer" : "default",
+                          }}
+                        >
+                          {rank}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              ) : null}
               {showDescription ? (
                 <section>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -491,7 +527,7 @@ export function ReferenceWorkspace(props: {
             </div>
           </article>
         </div>
-        <ReferenceRecordModal isOpen={modalRecord !== null} singularLabel={labels.singular} record={modalRecord === "new" ? null : modalRecord} accent={props.accent} showDescription={showDescription} showIcon={showIcon} useDrawer={["continents", "countries", "locations", "points-of-interest"].includes(props.type)} parentLabel={parentLabel} parentOptions={parentOptions} onClose={() => setModalRecord(null)} onSave={save} />
+        <ReferenceRecordModal isOpen={modalRecord !== null} singularLabel={labels.singular} record={modalRecord === "new" ? null : modalRecord} accent={props.accent} showDescription={showDescription} showIcon={showIcon} showRank={isDeities} useDrawer={["continents", "countries", "locations", "points-of-interest"].includes(props.type)} parentLabel={parentLabel} parentOptions={parentOptions} onClose={() => setModalRecord(null)} onSave={save} />
       </>
     );
   }
@@ -510,7 +546,7 @@ export function ReferenceWorkspace(props: {
 
         <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
           <div style={{ display: "grid", gridTemplateColumns: hasMiddleColumn ? "minmax(190px, 1fr) minmax(260px, 2fr) 140px" : "minmax(240px, 1fr) 160px", gap: 12, padding: "12px 15px", background: withAlpha(props.accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
-            {(showDescription ? ["Name", "Description", labels.usage] : showLeader ? ["Name", "Leader", labels.usage] : ["Name", labels.usage]).map((column) => (
+            {(isDeities ? ["Name", "Domains", "Rank"] : showDescriptionColumn ? ["Name", "Description", labels.usage] : showLeader ? ["Name", "Leader", labels.usage] : ["Name", labels.usage]).map((column) => (
               <div key={column} style={{ color: theme.colors.text, fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>{column}</div>
             ))}
           </div>
@@ -553,9 +589,24 @@ export function ReferenceWorkspace(props: {
                       : null}
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{record.name}</span>
                 </span>
-                {showDescription ? <span style={{ color: record.description ? theme.colors.muted : "rgba(160,180,220,0.48)", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{record.description ?? "None"}</span> : null}
-                {showLeader ? <span style={{ color: record.leader ? theme.colors.muted : "rgba(160,180,220,0.48)", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{record.leader?.name ?? "None"}</span> : null}
-                <span style={{ color: theme.colors.muted }}>{record.usageCount}</span>
+                {isDeities ? (
+                  <span title={record.domains?.map((domain) => domain.name).join(", ") || "None"} style={{ color: record.domains?.length ? theme.colors.muted : "rgba(160,180,220,0.48)", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                    {record.domains?.map((domain) => domain.name).join(", ") || "None"}
+                  </span>
+                ) : showDescriptionColumn ? (
+                  <span style={{ color: record.description ? theme.colors.muted : "rgba(160,180,220,0.48)", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{record.description ?? "None"}</span>
+                ) : showLeader ? (
+                  <span style={{ color: record.leader ? theme.colors.muted : "rgba(160,180,220,0.48)", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{record.leader?.name ?? "None"}</span>
+                ) : null}
+                {isDeities ? (
+                  record.rank ? (
+                    <span style={{ fontWeight: 800, color: DEITY_RANK_COLORS[record.rank] }}>
+                      {record.rank}
+                    </span>
+                  ) : <span style={{ color: "rgba(160,180,220,0.48)" }}>None</span>
+                ) : (
+                  <span style={{ color: theme.colors.muted }}>{record.usageCount}</span>
+                )}
               </button>
             );
           }) : (
@@ -565,7 +616,7 @@ export function ReferenceWorkspace(props: {
           )}
         </div>
       </div>
-      <ReferenceRecordModal isOpen={modalRecord !== null} singularLabel={labels.singular} record={modalRecord === "new" ? null : modalRecord} accent={props.accent} showDescription={showDescription} showIcon={showIcon} useDrawer={["continents", "countries", "locations", "points-of-interest"].includes(props.type)} parentLabel={parentLabel} parentOptions={parentOptions} onClose={() => setModalRecord(null)} onSave={save} />
+      <ReferenceRecordModal isOpen={modalRecord !== null} singularLabel={labels.singular} record={modalRecord === "new" ? null : modalRecord} accent={props.accent} showDescription={showDescription} showIcon={showIcon} showRank={isDeities} useDrawer={["continents", "countries", "locations", "points-of-interest"].includes(props.type)} parentLabel={parentLabel} parentOptions={parentOptions} onClose={() => setModalRecord(null)} onSave={save} />
     </>
   );
 }

@@ -4,6 +4,16 @@ export type BinderReferenceType =
   | "races" | "positions" | "domains" | "organizations" | "deities"
   | "continents" | "countries" | "locations" | "points-of-interest";
 export type BinderReferenceLink = { id: string; name: string };
+
+export const DEITY_RANKS = ["Demi God", "Lesser God", "Greater God", "Overpower"] as const;
+export type DeityRank = typeof DEITY_RANKS[number];
+export const DEITY_RANK_COLORS: Record<DeityRank, string> = {
+  "Demi God": "#8a8f98",
+  "Lesser God": "#e5484d",
+  "Greater God": "#3b82f6",
+  "Overpower": "#30a46c",
+};
+
 export type BinderReferenceRecord = {
   id: string;
   binderId: string;
@@ -23,6 +33,8 @@ export type BinderReferenceRecord = {
   leader: BinderReferenceLink | null;
   /** Only meaningful on `organizations`, `positions`, `points-of-interest` — an Iconify id, e.g. `game-icons:castle`. */
   icon: string | null;
+  /** Only meaningful on `deities` records. */
+  rank: DeityRank | null;
 };
 
 export type BinderReferenceInput = {
@@ -33,6 +45,8 @@ export type BinderReferenceInput = {
   leaderId?: string | null;
   /** Only meaningful for `organizations`, `positions`, `points-of-interest` — an Iconify id, or null to clear. */
   icon?: string | null;
+  /** Only meaningful for `deities`, or null to clear. */
+  rank?: DeityRank | null;
 };
 
 function base(binderId: string, type: BinderReferenceType) {

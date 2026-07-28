@@ -221,6 +221,7 @@ export function LevelUpView() {
     effectiveChosenSpells,
     effectiveChosenInvocations,
     globallyChosenSpellChoiceIds,
+    globallyChosenSpellChoiceNames,
   } = useLevelUpChoiceSelections({
     char,
     nextLevel,
@@ -643,6 +644,7 @@ export function LevelUpView() {
         availableCantripChoices={availableCantripChoices}
         displayedChosenCantrips={displayedChosenCantrips}
         globallyChosenSpellChoiceIds={globallyChosenSpellChoiceIds}
+        globallyChosenSpellChoiceNames={globallyChosenSpellChoiceNames}
         lockedCantripIds={lockedCantripIds}
         classCantrips={classCantrips}
         preparedSpellProgressionGrantedKeys={preparedSpellProgressionGrantedKeys}

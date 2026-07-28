@@ -354,25 +354,33 @@ export function useLevelUpChoiceSelections(args: {
     [displayedChosenInvocations, lockedInvocationSelectionIds]
   );
 
-  const selectedFeatResolvedSpellIds = React.useMemo(
+  const selectedFeatResolvedSpells = React.useMemo(
     () =>
       featResolvedSpellChoices.flatMap((choice) =>
         resolveSelectedSpellOptionEntries(
           chosenFeatOptions[choice.key] ?? [],
           featSpellChoiceOptions[choice.key] ?? [],
-        ).map((spell) => String(spell.id))
+        )
       ),
     [chosenFeatOptions, featResolvedSpellChoices, featSpellChoiceOptions]
   );
-  const selectedClassFeatureResolvedSpellIds = React.useMemo(
+  const selectedClassFeatureResolvedSpells = React.useMemo(
     () =>
       classFeatureResolvedSpellChoices.flatMap((choice) =>
         resolveSelectedSpellOptionEntries(
           chosenFeatOptions[choice.key] ?? [],
           classFeatureSpellChoiceOptions[choice.key] ?? [],
-        ).map((spell) => String(spell.id))
+        )
       ),
     [chosenFeatOptions, classFeatureResolvedSpellChoices, classFeatureSpellChoiceOptions]
+  );
+  const selectedFeatResolvedSpellIds = React.useMemo(
+    () => selectedFeatResolvedSpells.map((spell) => String(spell.id)),
+    [selectedFeatResolvedSpells]
+  );
+  const selectedClassFeatureResolvedSpellIds = React.useMemo(
+    () => selectedClassFeatureResolvedSpells.map((spell) => String(spell.id)),
+    [selectedClassFeatureResolvedSpells]
   );
   const globallyChosenSpellChoiceIds = React.useMemo(
     () =>
@@ -389,6 +397,37 @@ export function useLevelUpChoiceSelections(args: {
       displayedChosenSpells,
       selectedClassFeatureResolvedSpellIds,
       selectedFeatResolvedSpellIds,
+    ]
+  );
+  // Name-based backstop alongside the id-based set above: the same spell can surface under a
+  // different compendium row id depending on which class-list query matched it (e.g. a feature's
+  // "choose any class's spell list" search vs. the character's own class spell list), so id
+  // equality alone can miss an already-known cantrip/spell. Comparing normalized names catches it
+  // regardless of which row id the option happened to resolve to.
+  const normalizeSpellName = (name: string) => String(name ?? "").trim().toLowerCase();
+  const classCantripNameById = React.useMemo(() => new Map(classCantrips.map((spell) => [String(spell.id), spell.name])), [classCantrips]);
+  const classSpellNameById = React.useMemo(() => new Map(classSpells.map((spell) => [String(spell.id), spell.name])), [classSpells]);
+  const classInvocationNameById = React.useMemo(() => new Map(classInvocations.map((spell) => [String(spell.id), spell.name])), [classInvocations]);
+  const globallyChosenSpellChoiceNames = React.useMemo(
+    () =>
+      new Set([
+        ...existingClassSpellNames,
+        ...displayedChosenCantrips.map((id) => classCantripNameById.get(id)),
+        ...displayedChosenSpells.map((id) => classSpellNameById.get(id)),
+        ...displayedChosenInvocations.map((id) => classInvocationNameById.get(id)),
+        ...selectedFeatResolvedSpells.map((spell) => spell.name),
+        ...selectedClassFeatureResolvedSpells.map((spell) => spell.name),
+      ].filter((name): name is string => Boolean(name)).map(normalizeSpellName)),
+    [
+      existingClassSpellNames,
+      displayedChosenCantrips,
+      displayedChosenSpells,
+      displayedChosenInvocations,
+      classCantripNameById,
+      classSpellNameById,
+      classInvocationNameById,
+      selectedFeatResolvedSpells,
+      selectedClassFeatureResolvedSpells,
     ]
   );
 
@@ -412,5 +451,6 @@ export function useLevelUpChoiceSelections(args: {
     effectiveChosenSpells,
     effectiveChosenInvocations,
     globallyChosenSpellChoiceIds,
+    globallyChosenSpellChoiceNames,
   };
 }

@@ -87,6 +87,8 @@ const optionalDescription = z.string().max(200_000).nullable().optional().transf
   return value.trim() === "" ? null : value;
 });
 
+const DEITY_RANKS = ["Demi God", "Lesser God", "Greater God", "Overpower"] as const;
+
 const ReferenceCreateBody = z.object({
   name: z.string().trim().min(1).max(160),
   description: optionalDescription,
@@ -95,6 +97,8 @@ const ReferenceCreateBody = z.object({
   leaderId: z.string().trim().min(1).nullable().optional(),
   /** Only meaningful for `organizations`, `positions`, `points-of-interest` — an Iconify id, e.g. `game-icons:castle`. */
   icon: z.string().trim().min(1).max(160).nullable().optional(),
+  /** Only meaningful for `deities`. */
+  rank: z.enum(DEITY_RANKS).nullable().optional(),
 }).strict();
 
 const ReferencePatchBody = ReferenceCreateBody.partial().refine(
@@ -121,6 +125,7 @@ type ReferenceRow = {
   leader_mortal_id?: string | null;
   leader_name?: string | null;
   icon?: string | null;
+  rank?: string | null;
 };
 
 function parentType(row: ReferenceRow): RecordType | null {
@@ -150,6 +155,7 @@ function dto(row: ReferenceRow, links?: { domains?: ReferenceLink[]; deities?: R
     } : null,
     leader: row.leader_mortal_id ? { id: row.leader_mortal_id, name: row.leader_name ?? "" } : null,
     icon: row.icon ?? null,
+    rank: row.rank ?? null,
     usageCount: row.usage_count,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -170,7 +176,7 @@ function selectSql(type: ReferenceType): string {
       : type === "points-of-interest"
         ? ", r.location_id, r.country_id, r.parent_poi_id, parent_br.name AS parent_name"
         : type === "deities"
-          ? ", r.image_url, r.image_updated_at"
+          ? ", r.image_url, r.image_updated_at, r.rank"
           : type === "organizations"
             ? ", r.leader_mortal_id, leader_br.name AS leader_name"
             : "") + iconColumn;
@@ -229,8 +235,11 @@ function resolveLeaderMortal(
   return mortal.id;
 }
 
-function insertTypedRecord(db: ServerContext["db"], table: string, type: ReferenceType, id: string, description: string | null, parent: ReturnType<typeof resolveParent>, t: number, leaderId?: string | null, icon?: string | null) {
-  if (type === "countries") {
+function insertTypedRecord(db: ServerContext["db"], table: string, type: ReferenceType, id: string, description: string | null, parent: ReturnType<typeof resolveParent>, t: number, leaderId?: string | null, icon?: string | null, rank?: string | null) {
+  if (type === "deities") {
+    db.prepare(`INSERT INTO deities (id, description, rank, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
+      .run(id, description, rank ?? null, t, t);
+  } else if (type === "countries") {
     db.prepare(`INSERT INTO binder_countries (id, continent_id, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
       .run(id, parent?.id ?? null, description, t, t);
   } else if (type === "locations") {
@@ -338,6 +347,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     const parent = resolveParent(db, binderId, typeResult.data, body.parentId);
     const leaderId = typeResult.data === "organizations" ? resolveLeaderMortal(db, binderId, body.leaderId) : null;
     const icon = ICON_ENABLED_TYPES.has(typeResult.data) ? body.icon ?? null : null;
+    const rank = typeResult.data === "deities" ? body.rank ?? null : null;
     const id = ctx.helpers.uid();
     const t = ctx.helpers.now();
     db.transaction(() => {
@@ -346,7 +356,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
           id, binder_id, record_type, name, name_key, visibility, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(id, binderId, entry.recordType, body.name, ctx.helpers.normalizeKey(body.name), "dm", t, t);
-      insertTypedRecord(db, entry.table, typeResult.data, id, body.description ?? null, parent, t, leaderId, icon);
+      insertTypedRecord(db, entry.table, typeResult.data, id, body.description ?? null, parent, t, leaderId, icon, rank);
     })();
     const row = db.prepare(`${selectSql(typeResult.data)} WHERE r.id = ?`).get(id) as ReferenceRow;
     res.status(201).json(dtoWithLinks(typeResult.data, row));
@@ -395,6 +405,9 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
       if (body.parentId !== undefined) updateParent(db, typeResult.data, recordId, parent ?? null);
       if (leaderId !== undefined) updateLeader(db, recordId, leaderId);
       if (icon !== undefined) updateIcon(db, config[typeResult.data].table, recordId, icon);
+      if (body.rank !== undefined && typeResult.data === "deities") {
+        db.prepare("UPDATE deities SET rank = ?, updated_at = ? WHERE id = ?").run(body.rank ?? null, t, recordId);
+      }
     })();
     const row = db.prepare(`${selectSql(typeResult.data)} WHERE r.id = ?`).get(recordId) as ReferenceRow;
     res.json(dtoWithLinks(typeResult.data, row));

@@ -1,6 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { IconCakeSlice, IconDna1, IconOrganigram, IconPencil, IconPlus, IconShield, IconTrash, IconVillage } from "@/icons";
+import { IconCakeSlice, IconDna1, IconPencil, IconPlus, IconTrash, IconVillage } from "@/icons";
+import { EntityIcon } from "@/components/iconPicker/EntityIcon";
+import { getDefaultEntityIcon } from "@/components/iconPicker/entityIconDefaults";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { useConfirm } from "@/confirm/ConfirmContext";
@@ -12,7 +14,7 @@ import { fetchBinderRecordOptions, syncBinderMentions, type BinderRecordOption }
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
 
-const mortalTableColumns = "minmax(210px, 1.45fr) minmax(120px, 0.7fr) minmax(135px, 0.85fr) minmax(170px, 1fr) minmax(175px, 1fr) 130px 72px 96px 72px";
+const mortalTableColumns = "minmax(210px, 1.45fr) minmax(135px, 0.85fr) minmax(170px, 1fr) minmax(175px, 1fr) 130px 72px 96px 72px";
 const NONE_FILTER = "__none__";
 
 type MortalFilters = {
@@ -236,8 +238,13 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     linked: [{ value: "true", label: "True" }, { value: "false", label: "False" }],
   }), [filterOptions]);
 
+  const hasLoadedRef = useRef(false);
   const reload = useCallback(async () => {
-    setLoading(true);
+    // Only show the full-page loading state for the true first load. This also runs on every
+    // window focus/visibility regain (see below) to pick up changes made elsewhere without a
+    // manual refresh — flashing the whole list back to "Loading…" on every one of those would
+    // make the page feel like it reloads whenever the tab regains focus.
+    if (!hasLoadedRef.current) setLoading(true);
     setError(null);
     try {
       const [mortals, mortalOptions, allRecords] = await Promise.all([
@@ -248,6 +255,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
       setRecords(mortals);
       setOptions(mortalOptions);
       setLoreRecords(allRecords);
+      hasLoadedRef.current = true;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to load Mortals.");
     } finally {
@@ -313,10 +321,10 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     const facts: Array<{ key: string; icon: React.ReactNode; label: string; node: React.ReactNode }> = [
       ...(() => {
         const displayClassName = selected.mortalType === "player_character" ? (linkedPlayer?.className || selected.className) : null;
-        return displayClassName ? [{ key: "class", icon: <IconShield size={16} />, label: "Class", node: displayClassName as React.ReactNode }] : [];
+        return displayClassName ? [{ key: "class", icon: null, label: "Class", node: displayClassName as React.ReactNode }] : [];
       })(),
-      ...(selected.position ? [{ key: "position", icon: <IconShield size={16} />, label: "Position", node: selected.position.name as React.ReactNode }] : []),
-      ...(selected.organizations.length ? [{ key: "organizations", icon: <IconOrganigram size={16} />, label: "Organizations", node: selected.organizations.map((organization) => organization.name).join(", ") as React.ReactNode }] : []),
+      ...(selected.position ? [{ key: "position", icon: <EntityIcon icon={selected.position.icon ?? getDefaultEntityIcon("positions")} size={16} />, label: "Position", node: selected.position.name as React.ReactNode }] : []),
+      ...(selected.organizations.length ? [{ key: "organizations", icon: <EntityIcon icon={selected.organizations[0]?.icon ?? getDefaultEntityIcon("organizations")} size={16} />, label: "Organizations", node: selected.organizations.map((organization) => organization.name).join(", ") as React.ReactNode }] : []),
       ...(selected.location ? [{ key: "location", icon: <IconVillage size={16} />, label: "Location", node: selected.location.name as React.ReactNode }] : []),
       ...(selected.race ? [{ key: "race", icon: <IconDna1 size={16} />, label: "Race", node: selected.race.name as React.ReactNode }] : []),
       ...(age !== null ? [{ key: "age", icon: <IconCakeSlice size={16} />, label: "Age", node: String(age) as React.ReactNode }] : []),
@@ -447,14 +455,26 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
       ) : null}
       <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflowX: "auto", overflowY: "hidden" }}>
         <div style={{ minWidth: 1120, display: "grid", gridTemplateColumns: mortalTableColumns, gap: 12, padding: "12px 15px", background: withAlpha(props.accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
-          {["Name", "Class", "Position", "Organization", "Location", "Species", "Age", "Gender", "Status"].map((column) => <div key={column} style={{ fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>{column}</div>)}
+          {([
+            { label: "Name", icon: null },
+            { label: "Position", icon: <EntityIcon icon={getDefaultEntityIcon("positions")} size={14} /> },
+            { label: "Organization", icon: <EntityIcon icon={getDefaultEntityIcon("organizations")} size={14} /> },
+            { label: "Location", icon: null },
+            { label: "Species", icon: null },
+            { label: "Age", icon: null },
+            { label: "Gender", icon: null },
+            { label: "Status", icon: null },
+          ]).map((column) => (
+            <div key={column.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>
+              {column.icon}
+              {column.label}
+            </div>
+          ))}
         </div>
         {loading ? <div style={{ padding: 42, textAlign: "center", color: theme.colors.muted }}>Loading…</div>
           : error ? <div role="alert" style={{ padding: 42, textAlign: "center", color: theme.colors.red }}>{error}</div>
           : filteredRecords.length ? filteredRecords.map((record) => {
             const age = mortalAge(record, props.binderCurrentDate);
-            const linkedClassName = record.player ? options.players.find((player) => player.id === record.player!.id)?.className : undefined;
-            const className = record.mortalType === "player_character" ? (linkedClassName || record.className || undefined) : undefined;
             const genderColor = record.gender === "male" ? "#7dd3fc" : record.gender === "female" ? "#f9a8d4" : null;
             const cell = { color: theme.colors.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
             return <button key={record.id} type="button" onClick={() => navigate(`/binder/${props.binderId}/mortals/${record.id}`)} onMouseEnter={() => setHoveredId(record.id)} onMouseLeave={() => setHoveredId(null)} style={{ minWidth: 1120, width: "100%", display: "grid", gridTemplateColumns: mortalTableColumns, alignItems: "center", gap: 12, padding: "11px 15px", border: 0, borderTop: `1px solid ${theme.colors.panelBorder}`, background: hoveredId === record.id ? withAlpha(props.accent, 0.08) : "transparent", color: theme.colors.text, textAlign: "left", cursor: "pointer", font: "inherit" }}>
@@ -462,9 +482,14 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
                 {record.imageUrl ? <img src={`${record.imageUrl}${record.imageUpdatedAt ? `?v=${record.imageUpdatedAt}` : ""}`} alt="" style={{ width: 34, height: 34, borderRadius: 6, objectFit: "cover", flex: "0 0 auto" }} /> : <span style={{ width: 34, height: 34, borderRadius: 6, background: withAlpha(props.accent, 0.12), flex: "0 0 auto" }} />}
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{record.name}</span>
               </span>
-              <span title={className || "None"} style={cell}>{className || "None"}</span>
-              <span title={record.organizations.flatMap((organization) => organization.position?.name ?? []).join(", ") || "None"} style={cell}>{record.organizations.flatMap((organization) => organization.position?.name ?? []).join(", ") || "None"}</span>
-              <span title={record.organizations.map((organization) => organization.name).join(", ") || "None"} style={cell}>{record.organizations.map((organization) => organization.name).join(", ") || "None"}</span>
+              <span title={record.organizations.flatMap((organization) => organization.position?.name ?? []).join(", ") || "None"} style={{ ...cell, display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ display: "inline-flex", opacity: 0.65, flex: "0 0 auto" }}><EntityIcon icon={record.organizations[0]?.position?.icon ?? getDefaultEntityIcon("positions")} size={14} /></span>
+                {record.organizations.flatMap((organization) => organization.position?.name ?? []).join(", ") || "None"}
+              </span>
+              <span title={record.organizations.map((organization) => organization.name).join(", ") || "None"} style={{ ...cell, display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ display: "inline-flex", opacity: 0.65, flex: "0 0 auto" }}><EntityIcon icon={record.organizations[0]?.icon ?? getDefaultEntityIcon("organizations")} size={14} /></span>
+                {record.organizations.map((organization) => organization.name).join(", ") || "None"}
+              </span>
               <span title={record.location?.name ?? "None"} style={cell}>{record.location?.name ?? "None"}</span>
               <span title={record.race?.name ?? "None"} style={cell}>{record.race?.name ?? "None"}</span>
               <span style={cell}>{age ?? "None"}</span>

@@ -82,8 +82,19 @@ export function MortalRecordModal(props: {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const syncedRecordKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!props.isOpen) return;
+    if (!props.isOpen) {
+      syncedRecordKeyRef.current = null;
+      return;
+    }
+    // A background reload (e.g. this tab regaining focus after the native file picker closes)
+    // hands down new `options`/`grouped.races` references without the record actually changing.
+    // Only re-sync form state on an open/record transition, not on every such reference change —
+    // otherwise an in-progress portrait selection gets silently wiped mid-edit.
+    const recordKey = props.record?.id ?? "new";
+    if (syncedRecordKeyRef.current === recordKey) return;
+    syncedRecordKeyRef.current = recordKey;
     const linkedPlayer = props.options.players.find((player) => player.id === props.record?.player?.id);
     const matchingRace = linkedPlayer
       ? grouped.races.find((race) => race.name.toLocaleLowerCase() === linkedPlayer.species?.trim().toLocaleLowerCase())

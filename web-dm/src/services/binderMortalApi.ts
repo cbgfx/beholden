@@ -14,14 +14,15 @@ export type BinderMortal = {
   deathDate: string | null;
   location: { id: string; name: string } | null;
   continent: { id: string; name: string } | null;
-  organization: { id: string; name: string } | null;
+  organization: { id: string; name: string; icon: string | null } | null;
   organizations: Array<{
     id: string;
     name: string;
-    position: { id: string; name: string } | null;
+    icon: string | null;
+    position: { id: string; name: string; icon: string | null } | null;
     isPrimary: boolean;
   }>;
-  position: { id: string; name: string } | null;
+  position: { id: string; name: string; icon: string | null } | null;
   /** Free-text Class, only set for player_character mortals; overridden by the linked player's live class when linked. */
   className: string | null;
   notes: string | null;

@@ -74,6 +74,7 @@ export function LevelUpChoicesSection(props: {
   availableCantripChoices: SpellSummary[];
   displayedChosenCantrips: string[];
   globallyChosenSpellChoiceIds: Set<string>;
+  globallyChosenSpellChoiceNames: Set<string>;
   lockedCantripIds: Set<string>;
   classCantrips: SpellSummary[];
   preparedSpellProgressionGrantedKeys: Set<string>;
@@ -136,6 +137,7 @@ export function LevelUpChoicesSection(props: {
         spells={(optionsByKey[choice.key] ?? []).map((spell) => ({ ...spell, id: String(spell.id) }))}
         chosen={resolvedSelectedIds}
         disabledIds={Array.from(props.globallyChosenSpellChoiceIds).filter((id) => !resolvedSelectedIds.includes(id))}
+        disabledNames={Array.from(props.globallyChosenSpellChoiceNames)}
         max={choice.count}
         onToggle={(id) => {
           props.setChosenFeatOptions((prev) => {
@@ -272,6 +274,7 @@ export function LevelUpChoicesSection(props: {
             spells={props.availableCantripChoices}
             chosen={props.displayedChosenCantrips}
             disabledIds={Array.from(props.globallyChosenSpellChoiceIds).filter((id) => !props.displayedChosenCantrips.includes(id))}
+            disabledNames={Array.from(props.globallyChosenSpellChoiceNames)}
             max={props.cantripChoiceCount}
             onToggle={(id) =>
               props.toggleSelection(id, props.displayedChosenCantrips, (updater) => {
@@ -296,6 +299,7 @@ export function LevelUpChoicesSection(props: {
             spells={props.availableSpellChoices}
             chosen={props.displayedChosenSpells}
             disabledIds={Array.from(props.globallyChosenSpellChoiceIds).filter((id) => !props.displayedChosenSpells.includes(id))}
+            disabledNames={Array.from(props.globallyChosenSpellChoiceNames)}
             max={props.spellChoiceCount}
             onToggle={(id) =>
               props.toggleSelection(id, props.displayedChosenSpells, (updater) => {
@@ -337,6 +341,7 @@ export function LevelUpChoicesSection(props: {
             spells={props.availableInvocationChoices}
             chosen={props.displayedChosenInvocations}
             disabledIds={Array.from(props.globallyChosenSpellChoiceIds).filter((id) => !props.displayedChosenInvocations.includes(id))}
+            disabledNames={Array.from(props.globallyChosenSpellChoiceNames)}
             max={props.invocationChoiceCount}
             onToggle={(id, action) => props.setChosenInvocations(() => {
               const unlocked = props.displayedChosenInvocations;
