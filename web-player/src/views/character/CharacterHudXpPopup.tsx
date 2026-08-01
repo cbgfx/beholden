@@ -4,6 +4,7 @@ import { C } from "@/lib/theme";
 export function CharacterHudXpPopup(props: {
   xpEarned: number;
   xpNeeded: number;
+  xpLevelStart: number;
   xpInput: string;
   xpPopupOpen: boolean;
   setXpInput: (value: string) => void;
@@ -11,7 +12,7 @@ export function CharacterHudXpPopup(props: {
   saveXp: (value: number) => Promise<void>;
   accentColor: string;
 }) {
-  const { xpEarned, xpNeeded, xpInput, xpPopupOpen, setXpInput, setXpPopupOpen, saveXp, accentColor } = props;
+  const { xpEarned, xpNeeded, xpLevelStart, xpInput, xpPopupOpen, setXpInput, setXpPopupOpen, saveXp, accentColor } = props;
   const xpPopupRef = useRef<HTMLDivElement | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -53,7 +54,10 @@ export function CharacterHudXpPopup(props: {
           {xpEarned.toLocaleString()} / {xpNeeded.toLocaleString()} xp
         </span>
         <div style={{ width: "100%", minWidth: 80, height: 3, borderRadius: 2, background: "rgba(255,255,255,0.10)", overflow: "hidden" }}>
-          <div style={{ height: "100%", borderRadius: 2, background: accentColor, width: `${Math.min(100, Math.max(0, (xpEarned / xpNeeded) * 100))}%`, transition: "width 0.5s ease" }} />
+          {/* Progress through the CURRENT level's XP band, not raw xpEarned/xpNeeded -- otherwise
+              hitting a level (xpEarned === xpLevelStart) shows an already-mostly-full bar instead
+              of an empty one. */}
+          <div style={{ height: "100%", borderRadius: 2, background: accentColor, width: `${Math.min(100, Math.max(0, ((xpEarned - xpLevelStart) / (xpNeeded - xpLevelStart)) * 100))}%`, transition: "width 0.5s ease" }} />
         </div>
       </button>
       {xpPopupOpen && (

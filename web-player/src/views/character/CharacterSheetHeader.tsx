@@ -46,6 +46,7 @@ export function CharacterSheetHeader(props: {
   activeBastion: { id: string; name: string; campaignId: string } | null;
   xpEarned: number;
   xpNeeded: number;
+  xpLevelStart: number;
   xpInput: string;
   xpPopupOpen: boolean;
   setXpInput: (value: string) => void;
@@ -68,6 +69,7 @@ export function CharacterSheetHeader(props: {
     activeBastion,
     xpEarned,
     xpNeeded,
+    xpLevelStart,
     xpInput,
     xpPopupOpen,
     setXpInput,
@@ -214,6 +216,7 @@ export function CharacterSheetHeader(props: {
         <CharacterHudXpPopup
           xpEarned={xpEarned}
           xpNeeded={xpNeeded}
+          xpLevelStart={xpLevelStart}
           xpInput={xpInput}
           xpPopupOpen={xpPopupOpen}
           setXpInput={setXpInput}

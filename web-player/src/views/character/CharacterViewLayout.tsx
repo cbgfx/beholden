@@ -57,6 +57,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
         activeBastion={live.activeBastion}
         xpEarned={derived.xpEarned}
         xpNeeded={derived.xpNeeded}
+        xpLevelStart={derived.xpLevelStart}
         xpInput={ui.xpInput}
         xpPopupOpen={ui.xpPopupOpen}
         setXpInput={ui.setXpInput}

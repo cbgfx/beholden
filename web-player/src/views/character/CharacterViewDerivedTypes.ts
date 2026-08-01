@@ -116,6 +116,7 @@ export type CharacterViewDerivedState = {
   effectiveHpMaxWithoutOverrides: number;
   xpEarned: number;
   xpNeeded: number;
+  xpLevelStart: number;
   nonProficientArmorPenalty: boolean;
   hasDisadvantage: boolean;
   stealthDisadvantage: boolean;

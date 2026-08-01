@@ -457,6 +457,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   const effectiveHpMax = Math.max(1, Math.floor((args.char.hpMax + (conScoreDeltaPerLevel * args.char.level) + featureHpMaxBonus) * exhaustionHpMaxMultiplier) + (overrides.hpMaxBonus ?? 0));
   const xpEarned = currentCharacterData.xp ?? 0;
   const xpNeeded = XP_TO_LEVEL[args.char.level + 1] ?? 0;
+  const xpLevelStart = XP_TO_LEVEL[args.char.level] ?? 0;
   const wornShield = inventory.find((item) => getEquipState(item) === "offhand" && isShieldItem(item));
   const dualWielding = ["mainhand-1h", "offhand"].every((equipState) =>
     inventory.some((item) =>
@@ -671,6 +672,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     effectiveHpMaxWithoutOverrides,
     xpEarned,
     xpNeeded,
+    xpLevelStart,
     nonProficientArmorPenalty,
     hasDisadvantage,
     stealthDisadvantage,
