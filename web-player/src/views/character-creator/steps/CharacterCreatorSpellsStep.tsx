@@ -145,6 +145,11 @@ function renderSpellsStep<T extends { id: string; name: string; level: number | 
           onToggle={toggleCantrip}
         />
       )}
+      {invocCount > 0 && chosenInvocations.length < invocCount && (
+        <div style={{ marginTop: -12, marginBottom: 16, fontSize: "var(--fs-small)", color: C.colorPinkRed }}>
+          Choose {invocCount - chosenInvocations.length} more Eldritch Invocation{invocCount - chosenInvocations.length === 1 ? "" : "s"} to continue. (A slot can go empty on its own if a build change — Pact Boon, cantrips, etc. — makes a previously-chosen invocation ineligible.)
+        </div>
+      )}
       {invocCount > 0 && classInvocations.length > 0 && (
         <SpellPicker
           title="Eldritch Invocations"
@@ -390,7 +395,7 @@ export function renderSpellsFromContext(ctx: CharacterCreatorStepRenderContext):
     extraItemChoices: planItemChoices,
     onBack: () => ctx.setStep(7),
     onNext: () => ctx.setStep(9),
-    nextDisabled: missingExtraSpellSelections || missingSpellcastingAbilitySelections || missingInvocationFeatSelections || !ctx.invocationGrantedFeatChoices.valid,
+    nextDisabled: missingExtraSpellSelections || missingSpellcastingAbilitySelections || missingInvocationFeatSelections || !ctx.invocationGrantedFeatChoices.valid || (invocCount > 0 && ctx.form.chosenInvocations.length < invocCount),
     side: ctx.sideSummary,
   });
 }

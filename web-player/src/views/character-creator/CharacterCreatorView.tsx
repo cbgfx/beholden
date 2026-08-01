@@ -15,9 +15,11 @@ import {
   abilityMod,
   calcHpMax,
   classifyFeatSelection,
+  getClassFeatureTable,
   getExpandedSpellListNames,
   getSpellcastingClassName,
   parseStartingEquipmentOptions,
+  tableValueAtLevel,
 } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import {
   getGrowthChoiceSelectedAbility,
@@ -451,6 +453,9 @@ export function CharacterCreatorView() {
     setError,
   });
 
+  const invocTable = classDetail ? getClassFeatureTable(classDetail, "Invocation", 1, form.subclass) : [];
+  const invocCount = invocTable.length > 0 ? tableValueAtLevel(invocTable, form.level) : 0;
+
   const handleSubmitWithChecks = React.useCallback(async () => {
     if (selectedFeatSpellcastingAbilityChoices.some((entry) => entry.chosen.length < entry.max)) {
       setError("Choose a spellcasting ability for each feat-granted spell before saving.");
@@ -462,8 +467,16 @@ export function CharacterCreatorView() {
       setStep(8);
       return;
     }
+    if (invocCount > 0 && form.chosenInvocations.length < invocCount) {
+      // A prerequisite check (Pact Boon, a damage cantrip, etc.) can silently drop a
+      // previously-chosen invocation when the build changes elsewhere -- Eldritch Versatility's
+      // own text requires replacing it, so block the save instead of leaving the slot empty.
+      setError(`Choose ${invocCount - form.chosenInvocations.length} more Eldritch Invocation(s) before saving — a build change made a previous choice ineligible.`);
+      setStep(8);
+      return;
+    }
     await handleSubmit();
-  }, [handleSubmit, invocationGrantedFeatChoices.valid, selectedFeatSpellcastingAbilityChoices]);
+  }, [form.chosenInvocations.length, handleSubmit, invocCount, invocationGrantedFeatChoices.valid, selectedFeatSpellcastingAbilityChoices]);
 
   // ── Step renderers ──────────────────────────────────────────────────────────
 
