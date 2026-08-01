@@ -207,7 +207,11 @@ export function buildProficiencyMap(args: {
         if (choice.category === "saving_throw") saves.push({ name: value, source: choice.source.name });
       });
     });
-    const classFeatureSpellChoices = collectSpellChoicesFromEffects(parsedClassFeatures);
+    const classFeatureSpellChoices = collectSpellChoicesFromEffects(parsedClassFeatures)
+      // Replacement cantrips (Eldritch/Cantrip/Bardic/Sorcerous Versatility) aren't a bonus spell
+      // grant — they're resolved by the player directly re-picking from the main cantrip list, so
+      // they must not also be tagged in here or they'd double the character's known cantrips.
+      .filter((choice) => !(choice.canReplace && choice.level === 0 && choice.mode === "learn"));
     classFeatureSpellChoices.forEach((choice) => {
       const key = `classfeature:${choice.id}`;
       const fallbackOptions =

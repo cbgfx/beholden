@@ -9,7 +9,6 @@ export function useLevelUpSelectionSanitizers(args: {
   classSpells: SpellSummary[];
   classInvocations: SpellSummary[];
   existingClassSpellNames: string[];
-  existingClassInvocationNames: string[];
   cantripCount: number;
   maxSpellLevel: number;
   prepCount: number;
@@ -30,7 +29,6 @@ export function useLevelUpSelectionSanitizers(args: {
     classSpells,
     classInvocations,
     existingClassSpellNames,
-    existingClassInvocationNames,
     cantripCount,
     maxSpellLevel,
     prepCount,
@@ -69,12 +67,14 @@ export function useLevelUpSelectionSanitizers(args: {
 
   React.useEffect(() => {
     setChosenInvocations((prev) => {
-      const next = reconcileSelectedSpellIds(prev, classInvocations, existingClassInvocationNames)
+      // No by-name fallback here either (see lockedInvocationSelectionIds in
+      // useLevelUpChoiceSelections.ts) -- only ids the player actually chose should survive.
+      const next = reconcileSelectedSpellIds(prev, classInvocations)
         .filter((id) => allowedInvocationIds.has(id))
         .slice(0, invocCount);
       return next.length === prev.length && next.every((id, index) => id === prev[index]) ? prev : next;
     });
-  }, [allowedInvocationIds, classInvocations, existingClassInvocationNames, invocCount, setChosenInvocations]);
+  }, [allowedInvocationIds, classInvocations, invocCount, setChosenInvocations]);
 
   React.useEffect(() => {
     if (expertiseChoices.length === 0) return;

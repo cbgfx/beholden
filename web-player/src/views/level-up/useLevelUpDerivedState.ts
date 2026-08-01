@@ -165,14 +165,6 @@ export function useLevelUpDerivedState(args: {
       : [],
     [char?.characterData?.proficiencies?.spells, char?.className, classDetail?.name]
   );
-  const existingClassInvocationNames = React.useMemo(
-    () => Array.isArray(char?.characterData?.proficiencies?.invocations)
-      ? char.characterData.proficiencies.invocations
-        .filter((entry) => entry.source === (classDetail?.name ?? char.className))
-        .map((entry) => entry.name)
-      : [],
-    [char?.characterData?.proficiencies?.invocations, char?.className, classDetail?.name]
-  );
   const featChoiceEntries = React.useMemo(
     () => {
       if (!chosenFeatDetail) return [];
@@ -286,7 +278,10 @@ export function useLevelUpDerivedState(args: {
         .filter((choice) => !/^(level\s+\d+:\s+)?(spellcasting|pact magic)\b/i.test(choice.source.name))
         .filter((choice) => !choice.ifKnown || existingClassSpellNames.some((name) => name.trim().toLowerCase() === choice.ifKnown!.trim().toLowerCase()))
         .map((choice) => ({
-          key: `levelupclassfeature:${nextLevel}:${choice.id}`,
+          // Prefer the compendium's stable choice id (choiceId) over the synthesized effect id:
+          // it's what MysticArcanumRevisitUtils's revisit key already reuses to reopen this exact
+          // pick at a later level-up, and the synthesized id was never guaranteed to match it.
+          key: `levelupclassfeature:${nextLevel}:${choice.choiceId ?? choice.id}`,
           title: choice.source.name,
           sourceLabel: choice.source.name,
           count: choice.count.kind === "fixed" ? choice.count.value : 0,
@@ -557,7 +552,6 @@ export function useLevelUpDerivedState(args: {
     proficientLanguages,
     existingExpertise,
     existingClassSpellNames,
-    existingClassInvocationNames,
     featChoiceEntries,
     featSourceLabel,
     featSpellListChoices,

@@ -49,7 +49,6 @@ export function useLevelUpChoiceSelections(args: {
   classSpells: SpellSummary[];
   classInvocations: SpellSummary[];
   existingClassSpellNames: string[];
-  existingClassInvocationNames: string[];
   cantripCount: number;
   cantripReplacementCount: number;
   maxSpellLevel: number;
@@ -85,7 +84,6 @@ export function useLevelUpChoiceSelections(args: {
     classSpells,
     classInvocations,
     existingClassSpellNames,
-    existingClassInvocationNames,
     cantripCount,
     cantripReplacementCount,
     maxSpellLevel,
@@ -234,10 +232,14 @@ export function useLevelUpChoiceSelections(args: {
 
   const lockedInvocationSelectionIds = React.useMemo(
     () =>
-      reconcileSelectedSpellIds(char?.characterData?.chosenInvocations ?? [], classInvocations, existingClassInvocationNames)
+      // Deliberately omitting the by-name fallback (unlike cantrips/spells): invocations are a
+      // single flat id space with no cross-list ambiguity, so there's no legitimate case where an
+      // invocation the player never chose should get silently adopted just because its name shows
+      // up in proficiencies.invocations (a derived display list, not the choice record).
+      reconcileSelectedSpellIds(char?.characterData?.chosenInvocations ?? [], classInvocations)
         .filter((id) => allowedInvocationIds.has(id))
         .slice(0, invocCount),
-    [allowedInvocationIds, char?.characterData?.chosenInvocations, classInvocations, existingClassInvocationNames, invocCount]
+    [allowedInvocationIds, char?.characterData?.chosenInvocations, classInvocations, invocCount]
   );
   const lockedInvocationIds = React.useMemo(() => new Set(lockedInvocationSelectionIds), [lockedInvocationSelectionIds]);
 

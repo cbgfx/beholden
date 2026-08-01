@@ -104,7 +104,11 @@ export function useCharacterCreatorDerivedState(args: {
   );
   const selectedClassFeatureSpellChoices = React.useMemo(
     () => collectSpellChoicesFromEffects(selectedClassFeatureEffects)
-      .filter((choice) => !/^(level\s+\d+:\s+)?(spellcasting|pact magic)\b/i.test(choice.source.name)),
+      .filter((choice) => !/^(level\s+\d+:\s+)?(spellcasting|pact magic)\b/i.test(choice.source.name))
+      // Replacement cantrips (Eldritch/Cantrip/Bardic/Sorcerous Versatility) are handled by
+      // freely re-picking from the main cantrip list, not by an additive picker here — rendering
+      // them here would incorrectly grant an extra cantrip beyond the class's known-cantrip count.
+      .filter((choice) => !(choice.canReplace && choice.level === 0 && choice.mode === "learn")),
     [selectedClassFeatureEffects]
   );
   const selectedRaceTraitEffects = React.useMemo(
