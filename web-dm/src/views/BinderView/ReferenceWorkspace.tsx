@@ -554,7 +554,7 @@ export function ReferenceWorkspace(props: {
                       <Button disabled={inlineSaving} onClick={async () => { await saveInline({ description: inlineDescription }); setEditingDescription(false); }}>Save</Button>
                     </div>
                   </div> : <div style={{ minHeight: 72, marginTop: 7, padding: "8px 9px", color: selected.description ? theme.colors.text : theme.colors.muted, fontSize: "var(--fs-body)", lineHeight: 1.55 }}>
-                    {selected.description ? <MarkdownRichText text={selected.description} validMentionIds={validMentionIds} /> : "No description yet."}
+                    {selected.description ? <MarkdownRichText text={selected.description} validMentionIds={validMentionIds} binderId={props.binderId} /> : "No description yet."}
                   </div>}
                 </section>
               ) : null}
@@ -567,7 +567,7 @@ export function ReferenceWorkspace(props: {
                   {editingDmNotes && props.canEdit ? <div style={{ display: "grid", gap: 9, marginTop: 7 }}>
                     <WysiwygNoteEditor value={inlineDmNotes} onChange={setInlineDmNotes} mentions={mentions} placeholder="Add notes that are always hidden from players…" minHeight={180} theme={{ radius: theme.radius.control, panelBorder: theme.colors.panelBorder, inputBg: theme.colors.inputBg, text: theme.colors.text }}/>
                     <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><Button variant="ghost" onClick={() => { setInlineDmNotes(selected.dmNotes ?? ""); setEditingDmNotes(false); }}>Cancel</Button><Button disabled={inlineSaving} onClick={async () => { await saveInline({ dmNotes: inlineDmNotes }); setEditingDmNotes(false); }}>Save</Button></div>
-                  </div> : <div style={{ minHeight: 54, marginTop: 7, padding: "8px 9px", color: selected.dmNotes ? theme.colors.text : theme.colors.muted, lineHeight: 1.55 }}>{selected.dmNotes ? <MarkdownRichText text={selected.dmNotes} validMentionIds={validMentionIds}/> : "No DM notes yet."}</div>}
+                  </div> : <div style={{ minHeight: 54, marginTop: 7, padding: "8px 9px", color: selected.dmNotes ? theme.colors.text : theme.colors.muted, lineHeight: 1.55 }}>{selected.dmNotes ? <MarkdownRichText text={selected.dmNotes} validMentionIds={validMentionIds} binderId={props.binderId}/> : "No DM notes yet."}</div>}
                 </section>
               ) : null}
               {parentLabel ? (

@@ -12,6 +12,7 @@ function CampaignRichText(props: {
   value: string | null;
   accent: string;
   mentions: Array<{ id: string; label: string; href: string; type?: string }>;
+  binderId: string;
   onSave: (value: string | null) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
@@ -55,7 +56,7 @@ function CampaignRichText(props: {
         </div>
       ) : (
         <div style={{ minHeight: 90, padding: "8px 2px", color: props.value ? theme.colors.text : theme.colors.muted, fontSize: "var(--fs-body)", lineHeight: 1.65 }}>
-          {props.value ? <MarkdownRichText text={props.value} /> : `No ${props.label.toLocaleLowerCase()} yet.`}
+          {props.value ? <MarkdownRichText text={props.value} binderId={props.binderId} /> : `No ${props.label.toLocaleLowerCase()} yet.`}
         </div>
       )}
     </section>
@@ -85,11 +86,11 @@ export function BinderCampaignWorkspace(props: { binderId: string; campaign: Cam
         </div>
       </div>
       <div style={{ display: "grid", gap: 34 }}>
-        <CampaignRichText label="Campaign Story" value={story} accent={props.accent} mentions={mentions} onSave={async (campaignStory) => {
+        <CampaignRichText binderId={props.binderId} label="Campaign Story" value={story} accent={props.accent} mentions={mentions} onSave={async (campaignStory) => {
           const result = await updateCampaignBinderContent(props.campaign.id, { campaignStory });
           setStory(result.campaignStory);
         }} />
-        <CampaignRichText label="Campaign Notes" value={notes} accent={props.accent} mentions={mentions} onSave={async (campaignNotes) => {
+        <CampaignRichText binderId={props.binderId} label="Campaign Notes" value={notes} accent={props.accent} mentions={mentions} onSave={async (campaignNotes) => {
           const result = await updateCampaignBinderContent(props.campaign.id, { campaignNotes });
           setNotes(result.campaignNotes);
         }} />

@@ -117,6 +117,7 @@ function InlineRichTextField(props: {
   onSave: (value: string | null) => Promise<void>;
   mentions?: Array<{ id: string; label: string; href: string; type?: string }>;
   validMentionIds?: Set<string>;
+  binderId: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(props.value ?? "");
@@ -144,7 +145,7 @@ function InlineRichTextField(props: {
         }}>Save</Button>
       </div>
     </div> : <div style={{ minHeight: 54, marginTop: 7, padding: "7px 8px", color: props.value ? theme.colors.text : theme.colors.muted, lineHeight: 1.55 }}>
-      {props.value ? <MarkdownRichText text={props.value} validMentionIds={props.validMentionIds} /> : `No ${props.label.toLocaleLowerCase()} yet.`}
+      {props.value ? <MarkdownRichText text={props.value} validMentionIds={props.validMentionIds} binderId={props.binderId} /> : `No ${props.label.toLocaleLowerCase()} yet.`}
     </div>}
   </section>;
 }
@@ -423,12 +424,12 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
                 </div>
               ))}
             </div>
-            <InlineRichTextField label="Notes" value={selected.notes} mentions={mentions} validMentionIds={validMentionIds} canEdit={props.canEdit} onSave={async (notes) => {
+            <InlineRichTextField binderId={props.binderId} label="Notes" value={selected.notes} mentions={mentions} validMentionIds={validMentionIds} canEdit={props.canEdit} onSave={async (notes) => {
               await updateBinderMortal(props.binderId, selected.id, { notes });
               await syncBinderMentions(props.binderId, selected.id, "description", notes);
               await reload();
             }} />
-            <InlineRichTextField label="DM Notes" value={selected.dmNotes} mentions={mentions} validMentionIds={validMentionIds} canEdit={props.canEdit} onSave={async (dmNotes) => {
+            <InlineRichTextField binderId={props.binderId} label="DM Notes" value={selected.dmNotes} mentions={mentions} validMentionIds={validMentionIds} canEdit={props.canEdit} onSave={async (dmNotes) => {
               await updateBinderMortal(props.binderId, selected.id, { dmNotes });
               await syncBinderMentions(props.binderId, selected.id, "dm_notes", dmNotes);
               await reload();

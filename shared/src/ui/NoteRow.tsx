@@ -22,7 +22,7 @@ const deletedMentionStyle: React.CSSProperties = {
   whiteSpace: "nowrap",
 };
 
-function renderInlineRichText(text: string, validMentionIds?: Set<string>): React.ReactNode[] {
+function renderInlineRichText(text: string, validMentionIds?: Set<string>, binderId?: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
   const pattern = /(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|__[^_]+__|\*[^*\n]+\*)/g;
   let lastIndex = 0;
@@ -38,7 +38,10 @@ function renderInlineRichText(text: string, validMentionIds?: Set<string>): Reac
 
     const link = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
     if (link) {
-      const href = /^\s*javascript:/i.test(link[2]) ? undefined : link[2];
+      const rawHref = /^\s*javascript:/i.test(link[2]) ? undefined : link[2];
+      const href = rawHref && binderId && rawHref.startsWith("/binder/")
+        ? rawHref.replace(/^\/binder\/[^/]+/, `/binder/${binderId}`)
+        : rawHref;
       const isMention = href?.startsWith("/binder/");
       const mentionId = isMention ? href!.slice(href!.lastIndexOf("/") + 1) : undefined;
       const isDeletedMention = isMention && validMentionIds && !validMentionIds.has(mentionId!);
@@ -83,7 +86,7 @@ function isTableDivider(line: string): boolean {
   return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
 }
 
-function renderNoteRichText(text: string, validMentionIds?: Set<string>): React.ReactNode {
+function renderNoteRichText(text: string, validMentionIds?: Set<string>, binderId?: string): React.ReactNode {
   const lines = text.replace(/\r/g, "").split("\n");
   const out: React.ReactNode[] = [];
   let i = 0;
@@ -120,9 +123,9 @@ function renderNoteRichText(text: string, validMentionIds?: Set<string>): React.
       out.push(
         <details key={`toggle-${i}`} open style={{ margin: "8px 0 12px" }}>
           <summary style={{ cursor: "pointer", fontWeight: 800, fontSize: "calc(var(--fs-subtitle) + 2px)", marginBottom: 8 }}>
-            {renderInlineRichText(toggle[1], validMentionIds)}
+            {renderInlineRichText(toggle[1], validMentionIds, binderId)}
           </summary>
-          <div style={{ paddingLeft: 26 }}>{renderNoteRichText(lines.slice(i + 1, end).join("\n"), validMentionIds)}</div>
+          <div style={{ paddingLeft: 26 }}>{renderNoteRichText(lines.slice(i + 1, end).join("\n"), validMentionIds, binderId)}</div>
         </details>
       );
       i = end < lines.length ? end + 1 : end;
@@ -147,7 +150,7 @@ function renderNoteRichText(text: string, validMentionIds?: Set<string>): React.
               <tr>
                 {headers.map((cell, index) => (
                   <th key={`th-${i}-${index}`} style={{ padding: "7px 9px", textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.22)", color: "currentColor", fontWeight: 800 }}>
-                    {renderInlineRichText(cell, validMentionIds)}
+                    {renderInlineRichText(cell, validMentionIds, binderId)}
                   </th>
                 ))}
               </tr>
@@ -157,7 +160,7 @@ function renderNoteRichText(text: string, validMentionIds?: Set<string>): React.
                 <tr key={`tr-${i}-${rowIndex}`}>
                   {headers.map((_, cellIndex) => (
                     <td key={`td-${i}-${rowIndex}-${cellIndex}`} style={{ padding: "7px 9px", borderBottom: "1px solid rgba(255,255,255,0.09)", verticalAlign: "top" }}>
-                      {renderInlineRichText(row[cellIndex] ?? "", validMentionIds)}
+                      {renderInlineRichText(row[cellIndex] ?? "", validMentionIds, binderId)}
                     </td>
                   ))}
                 </tr>
@@ -175,7 +178,7 @@ function renderNoteRichText(text: string, validMentionIds?: Set<string>): React.
       const level = Math.min(6, heading[1].length);
       out.push(
         <div key={`h-${i}`} style={headingStyleByLevel[level]}>
-          {renderInlineRichText(heading[2], validMentionIds)}
+          {renderInlineRichText(heading[2], validMentionIds, binderId)}
         </div>
       );
       i += 1;
@@ -189,7 +192,7 @@ function renderNoteRichText(text: string, validMentionIds?: Set<string>): React.
         const raw = lines[j] ?? "";
         const t = raw.trim();
         if (!/^[-*]\s+/.test(t)) break;
-        items.push(<li key={`li-${j}`}>{renderInlineRichText(t.replace(/^[-*]\s+/, ""), validMentionIds)}</li>);
+        items.push(<li key={`li-${j}`}>{renderInlineRichText(t.replace(/^[-*]\s+/, ""), validMentionIds, binderId)}</li>);
         j += 1;
       }
       out.push(
@@ -203,7 +206,7 @@ function renderNoteRichText(text: string, validMentionIds?: Set<string>): React.
 
     out.push(
       <div key={`p-${i}`} style={{ margin: "0 0 6px" }}>
-        {renderInlineRichText(line, validMentionIds)}
+        {renderInlineRichText(line, validMentionIds, binderId)}
       </div>
     );
     i += 1;
@@ -212,8 +215,8 @@ function renderNoteRichText(text: string, validMentionIds?: Set<string>): React.
   return out;
 }
 
-export function MarkdownRichText({ text, validMentionIds }: { text: string; validMentionIds?: Set<string> }) {
-  return <>{renderNoteRichText(text, validMentionIds)}</>;
+export function MarkdownRichText({ text, validMentionIds, binderId }: { text: string; validMentionIds?: Set<string>; binderId?: string }) {
+  return <>{renderNoteRichText(text, validMentionIds, binderId)}</>;
 }
 
 export function NoteRow({

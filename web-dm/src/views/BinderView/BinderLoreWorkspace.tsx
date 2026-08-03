@@ -201,7 +201,7 @@ export function BinderLoreWorkspace(props: {
             if (props.type === "items") await deleteBinderItem(props.binderId, selected.id); else await deleteBinderEvent(props.binderId, selected.id);
             navigate(`/binder/${props.binderId}/${props.type}`); await reload(); await props.onRecordsChanged();
           }}>Delete</Button></div> : null}</header>
-        {"description" in selected && selected.description ? <MarkdownRichText text={selected.description} validMentionIds={validMentionIds} /> : null}
+        {"description" in selected && selected.description ? <MarkdownRichText text={selected.description} validMentionIds={validMentionIds} binderId={props.binderId} /> : null}
         <BacklinksPanel binderId={props.binderId} recordId={selected.id} />
       </article>
       {editor ? props.type === "items"
