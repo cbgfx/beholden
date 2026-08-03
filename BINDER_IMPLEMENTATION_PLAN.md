@@ -78,7 +78,8 @@ Implemented:
 - automatic creation of a linked Binder Player Mortal when a newly assigned
   character resolves to exactly one attached Binder, mapping name, class,
   exact-name Race, gender, age, portrait, character identity, and Campaign
-  player identity;
+  player identity; existing Campaign Player-linked Mortals are adopted rather
+  than duplicated, and Character Creator requires age and gender;
 - Campaign Important NPC projection from Binder NPC Mortals, with canonical
   name, HP, AC, statblock-link, and attack-override synchronization across all
   linked campaigns and encounters;

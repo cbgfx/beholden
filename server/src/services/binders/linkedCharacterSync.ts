@@ -95,6 +95,38 @@ export function syncLinkedMortalPortraitFromCharacter(
   `).run(imageUrl, imageUpdatedAt, imageUpdatedAt, characterId);
 }
 
+/** Character name is shared by the sheet, its campaign projections, and every linked Binder Mortal. */
+export function syncLinkedMortalNameFromCharacter(
+  db: Db,
+  characterId: string,
+  name: string,
+  nameKey: string,
+  updatedAt: number,
+): void {
+  db.prepare(`
+    UPDATE binder_records
+    SET name = ?, name_key = ?, updated_at = ?
+    WHERE id IN (
+      SELECT mortal_id FROM binder_player_characters WHERE character_id = ?
+    )
+  `).run(name, nameKey, updatedAt, characterId);
+}
+
+/** A Binder rename of a linked PC updates the canonical sheet and all campaign projections. */
+export function syncLinkedCharacterNameFromMortal(
+  db: Db,
+  mortalId: string,
+  name: string,
+  updatedAt: number,
+): void {
+  const linked = linkedRowForMortal(db, mortalId);
+  if (!linked) return;
+  db.prepare("UPDATE user_characters SET name = ?, updated_at = ? WHERE id = ?")
+    .run(name, updatedAt, linked.character_id);
+  db.prepare("UPDATE players SET character_name = ?, updated_at = ? WHERE character_id = ?")
+    .run(name, updatedAt, linked.character_id);
+}
+
 export function syncLinkedCharacterPortraitFromMortal(
   db: Db,
   mortalId: string,

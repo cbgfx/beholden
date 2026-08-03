@@ -25,6 +25,7 @@ export type BinderMortal = {
   position: { id: string; name: string; icon: string | null } | null;
   /** Free-text Class, only set for player_character mortals; overridden by the linked player's live class when linked. */
   className: string | null;
+  personal: { hair: string | null; height: string | null; weight: string | null; skin: string | null } | null;
   notes: string | null;
   dmNotes: string | null;
   imageUrl: string | null;

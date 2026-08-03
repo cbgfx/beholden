@@ -9,6 +9,7 @@ import { ACCEPTED_IMAGE_TYPES, deleteImageFiles, resizeToWebP } from "../lib/ima
 import {
   hydrateLinkedMortalFromCharacter,
   syncLinkedCharacterAgeFromMortal,
+  syncLinkedCharacterNameFromMortal,
   syncLinkedCharacterPortraitFromMortal,
 } from "../services/binders/linkedCharacterSync.js";
 import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
@@ -79,6 +80,7 @@ type MortalRow = {
   player_id: string | null;
   player_name: string | null;
   player_character_name: string | null;
+  character_data_json: string | null;
   organization_id: string | null;
   organization_name: string | null;
   organization_icon: string | null;
@@ -131,6 +133,7 @@ const SELECT_MORTAL = `
          npc.attack_overrides_json,
          pc.character_id, pc.player_id, player.player_name,
          player.character_name AS player_character_name,
+         character.character_data_json,
          membership.organization_id, organization_record.name AS organization_name,
          organization_icon.icon AS organization_icon,
          COALESCE(membership.position_id, m.position_id) AS position_id,
@@ -142,6 +145,7 @@ const SELECT_MORTAL = `
   LEFT JOIN binder_npcs npc ON npc.mortal_id = m.id
   LEFT JOIN binder_player_characters pc ON pc.mortal_id = m.id
   LEFT JOIN players player ON player.id = pc.player_id
+  LEFT JOIN user_characters character ON character.id = pc.character_id
   LEFT JOIN binder_records location_record ON location_record.id = m.residence_record_id
   LEFT JOIN organization_memberships membership
     ON membership.mortal_id = m.id AND membership.is_primary = 1
@@ -152,6 +156,13 @@ const SELECT_MORTAL = `
 `;
 
 function dto(row: MortalRow, db: ServerContext["db"]) {
+  let characterData: Record<string, unknown> = {};
+  try { characterData = JSON.parse(row.character_data_json ?? "{}") as Record<string, unknown>; }
+  catch { /* malformed optional character data contributes no personal fields */ }
+  const personalText = (key: "hair" | "height" | "weight" | "skin") => {
+    const value = characterData[key];
+    return typeof value === "string" && value.trim() ? value.trim() : null;
+  };
   const organizations = db.prepare(`
     SELECT om.organization_id AS id, organization_record.name, organization_icon.icon AS icon,
            om.position_id AS positionId, position_record.name AS positionName, position_icon.icon AS positionIcon,
@@ -212,6 +223,12 @@ function dto(row: MortalRow, db: ServerContext["db"]) {
     organizations,
     position: row.position_id ? { id: row.position_id, name: row.position_name!, icon: row.position_icon } : null,
     className: row.mortal_type === "player_character" ? row.class_name : null,
+    personal: row.mortal_type === "player_character" ? {
+      hair: personalText("hair"),
+      height: personalText("height"),
+      weight: personalText("weight"),
+      skin: personalText("skin"),
+    } : null,
     notes: resolveImportedBinderLinks(row.description ?? row.backstory, row.binder_id, db),
     dmNotes: row.dm_notes,
     imageUrl: row.image_url,
@@ -514,6 +531,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
         `).run(linkedPlayer?.playerId ?? null, linkedPlayer?.characterId ?? null, now, mortalId);
         if (linkChanged) hydrateLinkedMortalFromCharacter(db, mortalId, now);
         else if (body.birthDate !== undefined) syncLinkedCharacterAgeFromMortal(db, mortalId, now);
+        if (body.name !== undefined) syncLinkedCharacterNameFromMortal(db, mortalId, name, now);
       } else {
         db.prepare(`
           UPDATE binder_npcs SET monster_id = ?, updated_at = ?

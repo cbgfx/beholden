@@ -28,6 +28,7 @@ import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
 import { withAbsoluteImageUrl } from "../lib/routeImageUrl.js";
 import {
   syncLinkedMortalAgeFromCharacter,
+  syncLinkedMortalNameFromCharacter,
   syncLinkedMortalPortraitFromCharacter,
 } from "../services/binders/linkedCharacterSync.js";
 import { preserveForeignClassProficiencies, preserveProficienciesOnLevelUp } from "../lib/levelUpProficiencies.js";
@@ -312,6 +313,9 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     );
     if (p.characterData !== undefined && Object.prototype.hasOwnProperty.call(p.characterData ?? {}, "age")) {
       syncLinkedMortalAgeFromCharacter(db, charId, characterDataForStorage, t);
+    }
+    if (p.name !== undefined) {
+      syncLinkedMortalNameFromCharacter(db, charId, sheetCols.name, ctx.helpers.normalizeKey(sheetCols.name), t);
     }
 
     const nextChar = {

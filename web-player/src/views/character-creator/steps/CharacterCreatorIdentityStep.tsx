@@ -33,11 +33,11 @@ function renderIdentityStep({
     "Lawful Neutral", "True Neutral", "Chaotic Neutral",
     "Lawful Evil", "Neutral Evil", "Chaotic Evil",
   ];
-  const detailFields: Array<{ key: string; label: string; placeholder: string }> = [
+  const detailFields: Array<{ key: string; label: string; placeholder: string; required?: boolean; type?: string }> = [
     { key: "hair", label: "Hair", placeholder: "Black, braided" },
     { key: "skin", label: "Skin", placeholder: "Tan, scarred" },
     { key: "heightText", label: "Height", placeholder: "6'2\"" },
-    { key: "age", label: "Age", placeholder: "32" },
+    { key: "age", label: "Age *", placeholder: "32", required: true, type: "number" },
     { key: "weight", label: "Weight", placeholder: "190 lb" },
   ];
 
@@ -124,10 +124,12 @@ function renderIdentityStep({
                 ))}
               </Select>
             </div>
-            {detailFields.map(({ key, label, placeholder }) => (
+            {detailFields.map(({ key, label, placeholder, required, type }) => (
               <div key={key}>
                 <label style={labelStyle}>{label}</label>
                 <input
+                  type={type}
+                  required={required}
                   value={String(form[key] ?? "")}
                   onChange={(e) => setField(key, e.target.value)}
                   placeholder={placeholder}
@@ -172,7 +174,7 @@ function renderIdentityStep({
           </div>
         </div>
       </div>
-      <NavButtons step={10} onBack={onBack} onNext={onNext} nextDisabled={!String(form.characterName ?? "").trim() || !String(form.gender ?? "")} />
+      <NavButtons step={10} onBack={onBack} onNext={onNext} nextDisabled={!String(form.characterName ?? "").trim() || !String(form.gender ?? "") || !Number.isInteger(Number(form.age)) || Number(form.age) <= 0} />
     </div>
   );
 

@@ -53,7 +53,7 @@ type CreatorCharacterData = Record<string, unknown> & {
   hair?: string;
   skin?: string;
   height?: string;
-  age?: string;
+  age?: string | number;
   weight?: string;
   gender?: string;
 };
@@ -243,7 +243,7 @@ export function useCreatorEditHydration(args: {
           hair: typeof cd.hair === "string" ? cd.hair : "",
           skin: typeof cd.skin === "string" ? cd.skin : "",
           heightText: typeof cd.height === "string" ? cd.height : "",
-          age: typeof cd.age === "string" ? cd.age : "",
+          age: typeof cd.age === "string" || typeof cd.age === "number" ? String(cd.age) : "",
           weight: typeof cd.weight === "string" ? cd.weight : "",
           gender: typeof cd.gender === "string" ? cd.gender : "",
           color: ch.color ?? C.accentHl,

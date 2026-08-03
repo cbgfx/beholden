@@ -351,6 +351,10 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
       ...(selected.location ? [{ key: "location", icon: <IconVillage size={16} />, label: "Location", node: selected.location.name as React.ReactNode }] : []),
       ...(selected.race ? [{ key: "race", icon: <IconDna1 size={16} />, label: "Race", node: selected.race.name as React.ReactNode }] : []),
       ...(age !== null ? [{ key: "age", icon: <IconCakeSlice size={16} />, label: "Age", node: String(age) as React.ReactNode }] : []),
+      ...(selected.personal?.height ? [{ key: "height", icon: null, label: "Height", node: selected.personal.height as React.ReactNode }] : []),
+      ...(selected.personal?.weight ? [{ key: "weight", icon: null, label: "Weight", node: selected.personal.weight as React.ReactNode }] : []),
+      ...(selected.personal?.hair ? [{ key: "hair", icon: null, label: "Hair", node: selected.personal.hair as React.ReactNode }] : []),
+      ...(selected.personal?.skin ? [{ key: "skin", icon: null, label: "Skin", node: selected.personal.skin as React.ReactNode }] : []),
       {
         key: "gender", icon: null, label: "Gender",
         node: genderColor

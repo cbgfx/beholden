@@ -3,8 +3,10 @@ import { afterEach, test } from "node:test";
 import { openDb, type Db } from "../../lib/db.js";
 import {
   syncLinkedCharacterAgeFromMortal,
+  syncLinkedCharacterNameFromMortal,
   syncLinkedCharacterPortraitFromMortal,
   syncLinkedMortalAgeFromCharacter,
+  syncLinkedMortalNameFromCharacter,
   syncLinkedMortalPortraitFromCharacter,
 } from "./linkedCharacterSync.js";
 import { ensureLinkedBinderMortalForCharacter } from "./linkedPlayerIdentity.js";
@@ -55,6 +57,18 @@ test("linked portrait URL and version move in both directions", () => {
   assert.equal(database.prepare("SELECT image_url FROM players WHERE id='p'").pluck().get(), "/binder.webp");
 });
 
+test("linked character name moves in both directions and updates campaign projections", () => {
+  const database = fixture();
+  syncLinkedMortalNameFromCharacter(database, "ch", "Lykos Storming", "lykos storming", 20);
+  assert.deepEqual(
+    database.prepare("SELECT name,name_key FROM binder_records WHERE id='m'").get(),
+    { name: "Lykos Storming", name_key: "lykos storming" },
+  );
+  syncLinkedCharacterNameFromMortal(database, "m", "Lykos", 21);
+  assert.equal(database.prepare("SELECT name FROM user_characters WHERE id='ch'").pluck().get(), "Lykos");
+  assert.equal(database.prepare("SELECT character_name FROM players WHERE id='p'").pluck().get(), "Lykos");
+});
+
 test("campaign assignment can create and hydrate one canonical Binder Player Mortal", () => {
   const database = fixture();
   database.prepare("DELETE FROM binder_records WHERE id='m'").run();
@@ -73,4 +87,26 @@ test("campaign assignment can create and hydrate one canonical Binder Player Mor
   assert.equal(ensureLinkedBinderMortalForCharacter(database, "ch", {
     uid: () => "should-not-run", now: () => 31, normalizeKey: (value) => value,
   }), "auto-mortal");
+});
+
+test("auto-link adopts an existing Campaign Player Mortal and infers gender and species without duplicating it", () => {
+  const database = fixture();
+  database.prepare("UPDATE user_characters SET species='Elf',class_name='Wizard',character_data_json='{\"age\":25,\"gender\":\"male\"}' WHERE id='ch'").run();
+  database.prepare("INSERT INTO binder_records (id,binder_id,record_type,name,name_key,created_at,updated_at) VALUES ('race-elf','b','race','Elf','elf',1,1)").run();
+  database.prepare("INSERT INTO binder_races (id,description,created_at,updated_at) VALUES ('race-elf',NULL,1,1)").run();
+  database.prepare("UPDATE binder_player_characters SET character_id=NULL WHERE mortal_id='m'").run();
+
+  const mortalId = ensureLinkedBinderMortalForCharacter(database, "ch", {
+    uid: () => "duplicate-must-not-be-created", now: () => 40, normalizeKey: (value) => value.trim().toLocaleLowerCase(),
+  });
+
+  assert.equal(mortalId, "m");
+  assert.equal(database.prepare("SELECT COUNT(*) FROM mortals").pluck().get(), 1);
+  assert.deepEqual(database.prepare(`
+    SELECT m.gender,m.race_id,m.class_name,m.birth_date_sort,bpc.character_id
+    FROM mortals m JOIN binder_player_characters bpc ON bpc.mortal_id=m.id WHERE m.id='m'
+  `).get(), {
+    gender: "male", race_id: "race-elf", class_name: "Wizard",
+    birth_date_sort: 2375, character_id: "ch",
+  });
 });
