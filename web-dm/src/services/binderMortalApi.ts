@@ -30,6 +30,11 @@ export type BinderMortal = {
   imageUrl: string | null;
   imageUpdatedAt: number | null;
   monsterId: string | null;
+  npcMechanics: {
+    hpMax: number | null; hpCurrent: number | null; hpDetails: string | null;
+    ac: number | null; acDetails: string | null;
+    attackOverrides: Record<string, { toHit?: number; damage?: string; damageType?: string }> | null;
+  } | null;
   characterId: string | null;
   player: { id: string; playerName: string | null; characterName: string | null } | null;
   createdAt: number;
@@ -51,6 +56,12 @@ export type BinderMortalInput = {
   dmNotes: string | null;
   playerId: string | null;
   monsterId: string | null;
+  hpMax?: number;
+  hpCurrent?: number;
+  hpDetails?: string | null;
+  ac?: number;
+  acDetails?: string | null;
+  attackOverrides?: Record<string, { toHit?: number; damage?: string; damageType?: string }> | null;
 };
 
 export type MortalOptions = {

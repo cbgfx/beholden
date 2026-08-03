@@ -655,6 +655,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     scoreExplanations,
     appliedFeatures,
     classFeaturesList,
+    acquisitionLevels: (currentCharacterData.acquisitionLevels ?? {}) as Record<string, number | null>,
     parsedFeatureEffects: parsedAllEffects,
     grantedSpellData,
     spellLinkedResourceKeys,

@@ -1,9 +1,10 @@
 /** Surfaces the Warlock's already-known Mystic Arcanum spell picks so Eldritch Versatility (at
  * levels 12, 16, and 19) can re-offer them for editing, not just the choices newly unlocked at
  * the current level. Each entry reuses the exact historical choice key its spell was originally
- * stored under (`levelupclassfeature:<level it first unlocked>:<choice id>`), so picking a
- * different spell here updates that same record instead of creating a duplicate — and leaving it
- * untouched changes nothing. */
+ * stored under (`classfeature:<compendium choice id>`, the same canonical key the creator/editor
+ * and useLevelUpDerivedState.ts's class-feature spell choices use), so picking a different spell
+ * here updates that same record instead of creating a duplicate — and leaving it untouched
+ * changes nothing. */
 
 import type { LevelUpResolvedSpellChoiceEntry } from "@/views/level-up/LevelUpTypes";
 
@@ -36,7 +37,7 @@ export function getMysticArcanumRevisitChoices(args: {
       const choice = feature.choices?.find((entry) => entry.kind === "spell" && entry.id);
       if (!choice || !choice.id || choice.level == null) continue;
       entries.push({
-        key: `levelupclassfeature:${autolevel.level}:${choice.id}`,
+        key: `classfeature:${choice.id}`,
         title: `${feature.name} (Eldritch Versatility)`,
         sourceLabel: feature.name,
         count: 1,

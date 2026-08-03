@@ -31,6 +31,7 @@ interface OptionalGroupLike {
 
 function renderLevelStep({
   level,
+  setLevel,
   subclass,
   setSubclass,
   showSubclass,
@@ -53,6 +54,7 @@ function renderLevelStep({
   onNext,
 }: {
   level: number;
+  setLevel: (value: number) => void;
   subclass: string;
   setSubclass: (value: string) => void;
   showSubclass: boolean | null;
@@ -86,7 +88,17 @@ function renderLevelStep({
       <h2 style={headingStyle}>Class Details</h2>
       <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 20 }}>
         <label style={{ color: C.muted, fontWeight: 600 }}>Level</label>
-        <div style={{ ...inputStyle, width: 80, opacity: 0.68, cursor: "default" }}>{level}</div>
+        <input
+          type="number"
+          min={1}
+          max={20}
+          value={level}
+          onChange={(e) => {
+            const next = Math.min(20, Math.max(1, Math.round(Number(e.target.value) || 1)));
+            setLevel(next);
+          }}
+          style={{ ...inputStyle, width: 80 }}
+        />
       </div>
 
       {showSubclass && (
@@ -389,6 +401,7 @@ export function renderLevelFromContext(ctx: CharacterCreatorStepRenderContext): 
 
   return renderLevelStep({
     level: ctx.form.level,
+    setLevel: (value) => ctx.setField("level", value),
     subclass: ctx.form.subclass,
     setSubclass: (value) => ctx.setField("subclass", value),
     showSubclass,

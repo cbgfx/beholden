@@ -27,6 +27,10 @@ export function canAccessBinder(db: Db, userId: string, binderId: string): boole
       AND (
         b.owner_user_id = ?
         OR EXISTS (
+          SELECT 1 FROM binder_memberships bm
+          WHERE bm.binder_id = b.id AND bm.user_id = ?
+        )
+        OR EXISTS (
           SELECT 1
           FROM campaigns c
           JOIN campaign_membership cm ON cm.campaign_id = c.id
@@ -35,6 +39,18 @@ export function canAccessBinder(db: Db, userId: string, binderId: string): boole
             AND cm.role = 'dm'
         )
       )
+  `).get(binderId, userId, userId, userId));
+}
+
+export function canEditBinder(db: Db, userId: string, binderId: string): boolean {
+  return Boolean(db.prepare(`
+    SELECT 1 FROM binders b
+    WHERE b.id = ? AND (
+      b.owner_user_id = ? OR EXISTS (
+        SELECT 1 FROM binder_memberships bm
+        WHERE bm.binder_id = b.id AND bm.user_id = ? AND bm.role = 'collaborator'
+      )
+    )
   `).get(binderId, userId, userId));
 }
 
@@ -45,6 +61,18 @@ export function binderOwnerOrAdmin(db: Db): Middleware {
     if (user.isAdmin) return next();
     const binderId = binderParam(req);
     if (!binderId || !ownsBinder(db, user.userId, binderId)) {
+      return res.status(404).json({ ok: false, message: "Binder not found" });
+    }
+    next();
+  };
+}
+
+export function binderEditorOrAdmin(db: Db): Middleware {
+  return (req, res, next) => {
+    const user = req.user!;
+    if (user.isAdmin) return next();
+    const binderId = binderParam(req);
+    if (!binderId || !canEditBinder(db, user.userId, binderId)) {
       return res.status(404).json({ ok: false, message: "Binder not found" });
     }
     next();

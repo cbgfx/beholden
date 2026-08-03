@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { z } from "zod";
 import type { ServerContext } from "../server/context.js";
-import { binderOwnerOrAdmin, binderReaderOrAdmin } from "../middleware/binderAuth.js";
+import { binderEditorOrAdmin, binderReaderOrAdmin } from "../middleware/binderAuth.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { ACCEPTED_IMAGE_TYPES, deleteImageFiles, resizeToWebP } from "../lib/imageHelpers.js";
@@ -284,7 +284,7 @@ function updateIcon(db: ServerContext["db"], table: string, id: string, icon: st
 export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const reader = binderReaderOrAdmin(db);
-  const owner = binderOwnerOrAdmin(db);
+  const owner = binderEditorOrAdmin(db);
 
   const domainsForDeityStmt = db.prepare(`
     SELECT br.id, br.name

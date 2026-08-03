@@ -95,6 +95,21 @@ export function ensureBinderColumns(db: Db): void {
     ON binder_player_characters(player_id) WHERE player_id IS NOT NULL
   `);
 
+  const npcColumns = new Set(
+    (db.prepare("PRAGMA table_info(binder_npcs)").all() as Array<{ name: string }>).map((row) => row.name),
+  );
+  const npcMechanicsColumns: Array<[string, string]> = [
+    ["hp_max", "INTEGER"],
+    ["hp_current", "INTEGER"],
+    ["hp_details", "TEXT"],
+    ["ac", "INTEGER"],
+    ["ac_details", "TEXT"],
+    ["attack_overrides_json", "TEXT"],
+  ];
+  for (const [name, sqlType] of npcMechanicsColumns) {
+    if (!npcColumns.has(name)) db.exec(`ALTER TABLE binder_npcs ADD COLUMN ${name} ${sqlType}`);
+  }
+
   const membershipColumns = new Set(
     (db.prepare("PRAGMA table_info(organization_memberships)").all() as Array<{ name: string }>).map((row) => row.name),
   );

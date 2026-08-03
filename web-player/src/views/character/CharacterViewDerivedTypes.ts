@@ -94,6 +94,7 @@ export type CharacterViewDerivedState = {
   scoreExplanations: ScoreExplanationsResult;
   appliedFeatures: AppliedFeaturesResult;
   classFeaturesList: ClassFeaturesListResult;
+  acquisitionLevels: Record<string, number | null>;
   parsedFeatureEffects: ParsedFeatureEffectsResult[];
   grantedSpellData: GrantedSpellDataResult;
   spellLinkedResourceKeys: Set<string>;

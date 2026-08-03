@@ -222,6 +222,76 @@ export function syncCombatantToPlayer(
   return { campaignId: player.campaignId, characterId: player.characterId ?? null };
 }
 
+export type BinderNpcSyncResult = {
+  mortalId: string;
+  campaignIds: string[];
+  encounterIds: string[];
+};
+
+/**
+ * Binder-backed iNPCs are projections of one canonical NPC, like campaign
+ * Player rows are projections of a character sheet. Persist shared mechanics
+ * and HP once, then repair every linked campaign and encounter projection.
+ */
+export function syncCombatantToBinderNpc(
+  db: Database.Database,
+  combatant: StoredEncounterActor,
+  t: number,
+): BinderNpcSyncResult | null {
+  if (combatant.baseType !== "inpc") return null;
+  const link = db.prepare(`
+    SELECT i.binder_mortal_id
+    FROM inpcs i JOIN binder_npcs npc ON npc.mortal_id = i.binder_mortal_id
+    WHERE i.id = ? AND i.binder_mortal_id IS NOT NULL
+  `).get(combatant.baseId) as { binder_mortal_id: string } | undefined;
+  if (!link) return null;
+
+  const attackOverridesJson = combatant.attackOverrides == null
+    ? null
+    : JSON.stringify(combatant.attackOverrides);
+  db.prepare(`
+    UPDATE binder_npcs SET
+      hp_max = ?, hp_current = ?, hp_details = ?, ac = ?, ac_details = ?,
+      attack_overrides_json = ?, updated_at = ?
+    WHERE mortal_id = ?
+  `).run(
+    combatant.hpMax, combatant.hpCurrent, combatant.hpDetails,
+    combatant.ac, combatant.acDetails, attackOverridesJson, t, link.binder_mortal_id,
+  );
+  db.prepare(`
+    UPDATE inpcs SET
+      hp_max = ?, hp_current = ?, hp_details = ?, ac = ?, ac_details = ?, updated_at = ?
+    WHERE binder_mortal_id = ?
+  `).run(
+    combatant.hpMax, combatant.hpCurrent, combatant.hpDetails,
+    combatant.ac, combatant.acDetails, t, link.binder_mortal_id,
+  );
+  db.prepare(`
+    UPDATE combatants SET
+      snapshot_json = json_set(
+        snapshot_json,
+        '$.hpMax', ?, '$.hpDetails', ?, '$.ac', ?, '$.acDetails', ?,
+        '$.attackOverrides', json(?)
+      ),
+      live_json = json_set(live_json, '$.hpCurrent', ?),
+      updated_at = ?
+    WHERE base_type = 'inpc'
+      AND base_id IN (SELECT id FROM inpcs WHERE binder_mortal_id = ?)
+  `).run(
+    combatant.hpMax, combatant.hpDetails, combatant.ac, combatant.acDetails,
+    JSON.stringify(combatant.attackOverrides ?? null), combatant.hpCurrent, t, link.binder_mortal_id,
+  );
+  const campaignIds = (db.prepare(
+    "SELECT DISTINCT campaign_id FROM inpcs WHERE binder_mortal_id = ?",
+  ).all(link.binder_mortal_id) as Array<{ campaign_id: string }>).map((row) => row.campaign_id);
+  const encounterIds = (db.prepare(`
+    SELECT DISTINCT c.encounter_id
+    FROM combatants c JOIN inpcs i ON c.base_type = 'inpc' AND c.base_id = i.id
+    WHERE i.binder_mortal_id = ?
+  `).all(link.binder_mortal_id) as Array<{ encounter_id: string }>).map((row) => row.encounter_id);
+  return { mortalId: link.binder_mortal_id, campaignIds, encounterIds };
+}
+
 /**
  * For player combatants, rehydrate mutable persistent fields from the canonical
  * players row so encounter-scoped updates never push stale snapshot values back.
@@ -230,6 +300,37 @@ export function hydratePlayerCombatant(
   db: Database.Database,
   combatant: StoredEncounterActor
 ): StoredEncounterActor {
+  if (combatant.baseType === "inpc") {
+    const npc = db.prepare(`
+      SELECT br.name, npc.hp_max, npc.hp_current, npc.hp_details, npc.ac,
+             npc.ac_details, npc.attack_overrides_json
+      FROM inpcs i
+      JOIN binder_npcs npc ON npc.mortal_id = i.binder_mortal_id
+      JOIN binder_records br ON br.id = npc.mortal_id
+      WHERE i.id = ? AND i.binder_mortal_id IS NOT NULL
+    `).get(combatant.baseId) as {
+      name: string; hp_max: number | null; hp_current: number | null;
+      hp_details: string | null; ac: number | null; ac_details: string | null;
+      attack_overrides_json: string | null;
+    } | undefined;
+    if (!npc) return combatant;
+    let attackOverrides = combatant.attackOverrides;
+    if (npc.attack_overrides_json) {
+      try { attackOverrides = JSON.parse(npc.attack_overrides_json); } catch { /* retain projection */ }
+    } else if (npc.attack_overrides_json === null) {
+      attackOverrides = null;
+    }
+    return {
+      ...combatant,
+      name: npc.name,
+      hpMax: npc.hp_max ?? combatant.hpMax,
+      hpCurrent: npc.hp_current ?? combatant.hpCurrent,
+      hpDetails: npc.hp_details,
+      ac: npc.ac ?? combatant.ac,
+      acDetails: npc.ac_details,
+      attackOverrides,
+    };
+  }
   if (combatant.baseType !== "player") return combatant;
   const pRow = db
     .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`)

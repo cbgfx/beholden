@@ -206,6 +206,105 @@ describe("buildProficiencyMap – class tool proficiency", () => {
 
 });
 
+// ── buildProficiencyMap – multiclass proficiency preservation ───────────────
+
+describe("buildProficiencyMap – multiclass proficiency preservation", () => {
+  const BASE_MAP_ARGS = {
+    classCantrips: [],
+    classSpells: [],
+    classInvocations: [],
+    bgOriginFeatDetail: null,
+    raceFeatDetail: null,
+    classFeatDetails: {},
+    levelUpFeatDetails: [],
+  };
+
+  const existingProficiencies = {
+    skills: [{ name: "Athletics", source: "Fighter" }, { name: "Arcana", source: "Test Class" }],
+    tools: [{ name: "Smith's Tools", source: "Fighter" }],
+    spells: [{ id: "s_shield", name: "Shield", source: "Fighter", level: 3 }],
+  };
+
+  it("carries a second class's proficiencies through when editing a multiclass character", () => {
+    const form = makeBaseForm();
+    const classDetail = makeClassDetail(undefined);
+    const map = buildProficiencyMap({
+      ...BASE_MAP_ARGS,
+      form,
+      classDetail,
+      raceDetail: null,
+      bgDetail: null,
+      existingClasses: [{ className: "Test Class" }, { className: "Fighter" }],
+      existingProficiencies,
+    });
+    expect(map.skills.map((s) => s.name)).toContain("Athletics");
+    expect(map.tools.map((t) => t.name)).toContain("Smith's Tools");
+    const shieldEntry = map.spells.find((s) => s.name === "Shield");
+    expect(shieldEntry?.level).toBe(3);
+  });
+
+  it("does not duplicate an entry the primary class already recomputed", () => {
+    const form = makeBaseForm({ chosenClassTools: [] });
+    const classDetail = makeClassDetail(undefined);
+    const map = buildProficiencyMap({
+      ...BASE_MAP_ARGS,
+      form,
+      classDetail,
+      raceDetail: null,
+      bgDetail: null,
+      existingClasses: [{ className: "Test Class" }, { className: "Fighter" }],
+      existingProficiencies,
+    });
+    // "Arcana" is tagged with the primary class's own name -- it isn't in otherClassNames, so it
+    // must come from the primary class's own (re)computation, not the preserved-entry merge.
+    expect(map.skills.filter((s) => s.name === "Arcana")).toHaveLength(0);
+  });
+
+  it("does nothing for a single-class character (no second class entry)", () => {
+    const form = makeBaseForm();
+    const classDetail = makeClassDetail(undefined);
+    const map = buildProficiencyMap({
+      ...BASE_MAP_ARGS,
+      form,
+      classDetail,
+      raceDetail: null,
+      bgDetail: null,
+      existingClasses: [{ className: "Test Class" }],
+      existingProficiencies,
+    });
+    expect(map.skills.map((s) => s.name)).not.toContain("Athletics");
+    expect(map.tools.map((t) => t.name)).not.toContain("Smith's Tools");
+  });
+
+  it("preserves a secondary-class feature grant by stable ownership even when its source is not the class name", () => {
+    const map = buildProficiencyMap({
+      ...BASE_MAP_ARGS,
+      form: makeBaseForm(),
+      classDetail: makeClassDetail(undefined),
+      raceDetail: null,
+      bgDetail: null,
+      existingClasses: [{ id: "class_primary", className: "Test Class" }, { id: "class_warlock", className: "Warlock" }],
+      existingProficiencies: { spells: [{ id: "s_hex", name: "Hex", source: "Pact Magic", classEntryId: "class_warlock" }] },
+      primaryClassEntryId: "class_primary",
+    });
+    expect(map.spells).toContainEqual(expect.objectContaining({ name: "Hex", classEntryId: "class_warlock" }));
+  });
+
+  it("tags freshly rebuilt primary-class grants with stable ownership", () => {
+    const map = buildProficiencyMap({
+      ...BASE_MAP_ARGS,
+      form: makeBaseForm({ chosenClassTools: ["Lute"] }),
+      classDetail: makeClassDetail(BARD_TOOLS),
+      raceDetail: null,
+      bgDetail: null,
+      primaryClassEntryId: "class_bard",
+    });
+    expect(map.tools.find((entry) => entry.name === "Lute")).toEqual(expect.objectContaining({
+      classEntryId: "class_bard", sourceKey: "class:class_bard",
+    }));
+  });
+});
+
 // ── getStep5ChoiceState – takenToolKeys and missingClassToolChoices ──────────
 
 describe("getStep5ChoiceState – class tool proficiency", () => {

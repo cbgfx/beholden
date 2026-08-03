@@ -139,13 +139,18 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
     if (!campaignId) return;
     const { mortalId } = parseBody(BinderMortalInpcBody, req);
     const source = db.prepare(`
-      SELECT m.id, br.name, npc.monster_id
+      SELECT m.id, br.name, npc.monster_id, npc.hp_max, npc.hp_current,
+             npc.hp_details, npc.ac, npc.ac_details
       FROM campaigns c
       JOIN binder_records br ON br.binder_id = c.binder_id AND br.id = ?
       JOIN mortals m ON m.id = br.id
       JOIN binder_npcs npc ON npc.mortal_id = m.id
       WHERE c.id = ? AND c.binder_id IS NOT NULL
-    `).get(mortalId, campaignId) as { id: string; name: string; monster_id: string | null } | undefined;
+    `).get(mortalId, campaignId) as {
+      id: string; name: string; monster_id: string | null;
+      hp_max: number | null; hp_current: number | null; hp_details: string | null;
+      ac: number | null; ac_details: string | null;
+    } | undefined;
     if (!source) return res.status(400).json({ ok: false, message: "That NPC does not belong to this campaign's Binder." });
     if (!source.monster_id) return res.status(400).json({ ok: false, message: "Important NPCs require a linked statblock." });
     const duplicate = db.prepare("SELECT id FROM inpcs WHERE campaign_id = ? AND binder_mortal_id = ?").get(campaignId, mortalId);
@@ -165,13 +170,25 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
         hpDetails = extractDetails(monster?.hp);
       }
     }
+    ac = source.ac ?? ac;
+    hpMax = source.hp_max ?? hpMax;
+    acDetails = source.ac_details ?? acDetails;
+    hpDetails = source.hp_details ?? hpDetails;
+    const hpCurrent = source.hp_current ?? hpMax;
     const id = uid();
     const t = now();
-    db.prepare(`
-      INSERT INTO inpcs
-        (id, campaign_id, monster_id, binder_mortal_id, name, label, friendly, hp_max, hp_current, hp_details, ac, ac_details, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, NULL, 1, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, campaignId, source.monster_id, mortalId, source.name, hpMax, hpMax, hpDetails, ac, acDetails, t, t);
+    db.transaction(() => {
+      db.prepare(`
+        UPDATE binder_npcs SET
+          hp_max = ?, hp_current = ?, hp_details = ?, ac = ?, ac_details = ?, updated_at = ?
+        WHERE mortal_id = ?
+      `).run(hpMax, hpCurrent, hpDetails, ac, acDetails, t, mortalId);
+      db.prepare(`
+        INSERT INTO inpcs
+          (id, campaign_id, monster_id, binder_mortal_id, name, label, friendly, hp_max, hp_current, hp_details, ac, ac_details, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, NULL, 1, ?, ?, ?, ?, ?, ?, ?)
+      `).run(id, campaignId, source.monster_id, mortalId, source.name, hpMax, hpCurrent, hpDetails, ac, acDetails, t, t);
+    })();
     emitInpcChange({ campaignId, action: "upsert", inpcId: id });
     const created = db.prepare(`SELECT ${INPC_COLS} FROM inpcs WHERE id = ?`).get(id) as Record<string, unknown>;
     res.status(201).json(rowToINpc(created));
@@ -198,13 +215,55 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
     const ac = b.ac ?? existing.ac;
     const acDetails = b.acDetails !== undefined ? b.acDetails : existing.acDetails;
 
-    db.prepare(`
-      UPDATE inpcs SET
-        name=?, label=?, friendly=?, hp_max=?, hp_current=?, hp_details=?, ac=?, ac_details=?, updated_at=?
-      WHERE id=?
-    `).run(name, label, friendly ? 1 : 0, hpMax, hpCurrent, hpDetails, ac, acDetails, t, inpcId);
+    if (existing.binderMortalId) {
+      db.transaction(() => {
+        db.prepare("UPDATE binder_records SET name = ?, name_key = ?, updated_at = ? WHERE id = ?")
+          .run(name, ctx.helpers.normalizeKey(name), t, existing.binderMortalId);
+        db.prepare(`
+          UPDATE binder_npcs SET
+            hp_max=?, hp_current=?, hp_details=?, ac=?, ac_details=?, updated_at=?
+          WHERE mortal_id=?
+        `).run(hpMax, hpCurrent, hpDetails, ac, acDetails, t, existing.binderMortalId);
+        db.prepare(`
+          UPDATE inpcs SET
+            name=?, monster_id=(SELECT monster_id FROM binder_npcs WHERE mortal_id=?),
+            hp_max=?, hp_current=?, hp_details=?, ac=?, ac_details=?, updated_at=?
+          WHERE binder_mortal_id=?
+        `).run(name, existing.binderMortalId, hpMax, hpCurrent, hpDetails, ac, acDetails, t, existing.binderMortalId);
+        db.prepare(`
+          UPDATE combatants SET
+            snapshot_json=json_set(snapshot_json, '$.name', ?, '$.hpMax', ?, '$.hpDetails', ?, '$.ac', ?, '$.acDetails', ?),
+            live_json=json_set(live_json, '$.hpCurrent', ?), updated_at=?
+          WHERE base_type='inpc' AND base_id IN (
+            SELECT id FROM inpcs WHERE binder_mortal_id=?
+          )
+        `).run(name, hpMax, hpDetails, ac, acDetails, hpCurrent, t, existing.binderMortalId);
+        db.prepare("UPDATE inpcs SET label=?, friendly=?, updated_at=? WHERE id=?")
+          .run(label, friendly ? 1 : 0, t, inpcId);
+      })();
+    } else {
+      db.prepare(`
+        UPDATE inpcs SET
+          name=?, label=?, friendly=?, hp_max=?, hp_current=?, hp_details=?, ac=?, ac_details=?, updated_at=?
+        WHERE id=?
+      `).run(name, label, friendly ? 1 : 0, hpMax, hpCurrent, hpDetails, ac, acDetails, t, inpcId);
+    }
 
-    emitInpcChange({ campaignId: existing.campaignId, action: "upsert", inpcId });
+    if (existing.binderMortalId) {
+      const campaignIds = db.prepare("SELECT DISTINCT campaign_id FROM inpcs WHERE binder_mortal_id = ?")
+        .all(existing.binderMortalId) as Array<{ campaign_id: string }>;
+      for (const row of campaignIds) emitInpcChange({ campaignId: row.campaign_id, action: "refresh" });
+      const encounterIds = db.prepare(`
+        SELECT DISTINCT c.encounter_id
+        FROM combatants c JOIN inpcs i ON c.base_type='inpc' AND c.base_id=i.id
+        WHERE i.binder_mortal_id=?
+      `).all(existing.binderMortalId) as Array<{ encounter_id: string }>;
+      for (const row of encounterIds) {
+        ctx.broadcast("encounter:combatantsDelta", { encounterId: row.encounter_id, action: "refresh" });
+      }
+    } else {
+      emitInpcChange({ campaignId: existing.campaignId, action: "upsert", inpcId });
+    }
     const updated = db.prepare(`SELECT ${INPC_COLS} FROM inpcs WHERE id = ?`).get(inpcId) as Record<string, unknown>;
     res.json(rowToINpc(updated));
   });

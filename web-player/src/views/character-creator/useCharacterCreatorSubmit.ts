@@ -25,6 +25,7 @@ import type {
 } from "@/views/character-creator/utils/FeatChoiceTypes";
 import type { FormState } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
 import type { ParsedFeatChoiceLike as ParsedFeatChoice } from "@/views/character-creator/utils/FeatChoiceTypes";
+import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 
 type NamedOption = { id: string; name: string };
 
@@ -81,7 +82,7 @@ function findCreatorSubmissionProblem(args: {
       && choice.choice?.count.kind === "fixed"
       && ["skill", "tool", "language", "selection"].includes(choice.choice?.optionCategory ?? "")
     )
-    .find((choice) => (form.chosenFeatureChoices[`classfeature:${choice.id}`] ?? []).length < (choice.choice?.count.kind === "fixed" ? choice.choice.count.value : 0));
+    .find((choice) => (form.chosenFeatureChoices[`classfeature:${choice.choiceId ?? choice.id}`] ?? []).length < (choice.choice?.count.kind === "fixed" ? choice.choice.count.value : 0));
   if (incompleteFeatureChoice) return `Complete the ${incompleteFeatureChoice.source.name} choice before saving.`;
 
   return null;
@@ -110,6 +111,12 @@ export function useCharacterCreatorSubmit(args: {
   existingHpCurrent?: number | null;
   existingExtraFeatIds: string[];
   existingInvocationFeatIds: string[];
+  existingSpells?: Array<{ id?: string; level?: number | null }>;
+  existingInvocations?: Array<{ id?: string; level?: number | null }>;
+  existingAcquisitionLevels?: Record<string, number | null>;
+  existingClasses?: Array<{ id?: string; classId?: string | null; className?: string | null; level?: number; subclass?: string | null }>;
+  existingSelectedFeatureNames?: string[];
+  existingProficiencies?: Partial<ProficiencyMap>;
   editId?: string;
   portraitFile: File | null;
   initialCampaignIdsRef: React.MutableRefObject<string[]>;
@@ -146,6 +153,12 @@ export function useCharacterCreatorSubmit(args: {
       existingHpCurrent,
       existingExtraFeatIds,
       existingInvocationFeatIds,
+      existingSpells,
+      existingInvocations,
+      existingAcquisitionLevels,
+      existingClasses = [],
+      existingSelectedFeatureNames,
+      existingProficiencies,
       editId,
       portraitFile,
       initialCampaignIdsRef,
@@ -191,8 +204,22 @@ export function useCharacterCreatorSubmit(args: {
         existingHpCurrent,
         existingExtraFeatIds,
         existingInvocationFeatIds,
+        existingSpells,
+        existingInvocations,
+        existingAcquisitionLevels,
+        existingClasses,
+        existingSelectedFeatureNames,
+        existingProficiencies,
         classifyFeatSelection,
       });
+
+      const previousTotalLevel = existingClasses.reduce((sum, entry) => sum + Math.max(0, Number(entry.level) || 0), 0);
+      if (isEditing && previousTotalLevel > 0 && Number(body.level) < previousTotalLevel) {
+        const confirmed = window.confirm(
+          `Lower this character from level ${previousTotalLevel} to ${body.level}? Abilities acquired above the new level will be removed.`,
+        );
+        if (!confirmed) return false;
+      }
 
       let charId: string;
       if (isEditing && editId) {

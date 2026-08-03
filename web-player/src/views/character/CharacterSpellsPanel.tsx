@@ -37,7 +37,7 @@ function enrichSpellDetail(detail: FetchedSpellDetail): FetchedSpellDetail {
 // ---------------------------------------------------------------------------
 
 export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb, scores, accentColor, classDetail, ruleset, spellSlotState, classSpellcastingStates = [], charLevel, preparedLimit = 0, usesFlexiblePreparedList = false, usedSpellSlots, preparedSpells, onSlotsChange, onPreparedChange, onAddSpell, onRemoveSpell, addSpellSourceLabel, onResourceChange, spellcastingBlocked = false, spellDamageBonuses = {}, spellSaveDcBonus = 0, conditions = [], onToggleCondition }: {
-  spells: { name: string; source: string; id?: string; ability?: "str" | "dex" | "con" | "int" | "wis" | "cha" | null }[];
+  spells: { name: string; source: string; id?: string; level?: number | null; ability?: "str" | "dex" | "con" | "int" | "wis" | "cha" | null }[];
   grantedSpells?: GrantedSpellCast[];
   resources?: ResourceCounter[];
   pb: number;
@@ -75,6 +75,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
   const trackedEntries = React.useMemo(() => spells.map((sp) => ({
     rawName: sp.name,
     source: sp.source,
+    level: sp.level ?? null,
     spellId: sp.id ? String(sp.id) : null,
     ability: sp.ability ?? null,
     searchName: normalizeSpellTrackingName(sp.name),

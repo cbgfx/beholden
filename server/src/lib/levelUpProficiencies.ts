@@ -37,3 +37,31 @@ export function preserveProficienciesOnLevelUp(
 
   return { ...nextCharacterData, proficiencies };
 }
+
+/** A single-class progression editor cannot author another class's grants. Preserve entries with
+ * explicit stable ownership for those classes even during same-level edits or level-downs. */
+export function preserveForeignClassProficiencies(
+  existingCharacterData: Record<string, unknown> | null | undefined,
+  nextCharacterData: Record<string, unknown> | null,
+  editedClassEntryId: string | undefined,
+): Record<string, unknown> | null {
+  if (!editedClassEntryId || !existingCharacterData || !nextCharacterData) return nextCharacterData;
+  const existing = existingCharacterData.proficiencies;
+  if (!existing || typeof existing !== "object") return nextCharacterData;
+  const incoming = nextCharacterData.proficiencies;
+  const incomingMap = incoming && typeof incoming === "object" ? incoming as Record<string, unknown> : {};
+  const next = { ...incomingMap };
+  for (const [key, value] of Object.entries(existing as Record<string, unknown>)) {
+    if (!Array.isArray(value)) continue;
+    const foreign = value.filter((entry) => {
+      if (!entry || typeof entry !== "object") return false;
+      const record = entry as Record<string, unknown>;
+      const owner = typeof record.classEntryId === "string" ? record.classEntryId
+        : typeof record.sourceKey === "string" && record.sourceKey.startsWith("class:") ? record.sourceKey.slice(6)
+        : null;
+      return owner !== null && owner !== editedClassEntryId;
+    });
+    next[key] = mergeEntries(foreign, incomingMap[key]);
+  }
+  return { ...nextCharacterData, proficiencies: next };
+}

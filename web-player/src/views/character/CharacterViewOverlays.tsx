@@ -74,6 +74,7 @@ export function CharacterViewOverlays({ model }: { model: CharacterViewModel }) 
 
       <CharacterInfoDrawer
         open={ui.infoDrawerOpen}
+        characterId={model.char.id}
         accentColor={derived.accentColor}
         identityFields={derived.identityFields}
         editableOverrideFields={derived.editableOverrideFields}

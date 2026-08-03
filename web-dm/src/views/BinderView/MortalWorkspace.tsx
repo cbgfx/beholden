@@ -223,7 +223,9 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     && matchesFilter(record.race?.id, filters.species)
     && matchesFilter(record.lifeStatus ?? "alive", filters.status)
     && matchesFilter(record.gender, filters.gender)
-    && matchesFilter(record.player ? "true" : "false", filters.linked)
+    // "Linked" means linked to anything external, not just a player character -- an NPC-type
+    // mortal is linked via its statblock (monsterId), not a player record.
+    && matchesFilter(record.player || record.monsterId ? "true" : "false", filters.linked)
   ), [records, filters]);
   const sortedRecords = useMemo(() => {
     const sortValue = (record: BinderMortal): string | number | null => {

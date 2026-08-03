@@ -230,6 +230,7 @@ export function useLevelUpDerivedState(args: {
           name: feature.name,
           text: feature.text,
           level: nextClassLevel,
+          rawFeatureId: feature.id,
         },
         text: feature.text,
         classEffects: feature.effects,
@@ -278,10 +279,14 @@ export function useLevelUpDerivedState(args: {
         .filter((choice) => !/^(level\s+\d+:\s+)?(spellcasting|pact magic)\b/i.test(choice.source.name))
         .filter((choice) => !choice.ifKnown || existingClassSpellNames.some((name) => name.trim().toLowerCase() === choice.ifKnown!.trim().toLowerCase()))
         .map((choice) => ({
-          // Prefer the compendium's stable choice id (choiceId) over the synthesized effect id:
-          // it's what MysticArcanumRevisitUtils's revisit key already reuses to reopen this exact
-          // pick at a later level-up, and the synthesized id was never guaranteed to match it.
-          key: `levelupclassfeature:${nextLevel}:${choice.choiceId ?? choice.id}`,
+          // Canonical key: `classfeature:<compendium choice id>`, the same scheme the creator/
+          // editor and MysticArcanumRevisitUtils use for this exact choice. The compendium's raw
+          // choiceId is already unique per feature occurrence (e.g. distinct ids per level for a
+          // repeatable feature like Eldritch Versatility), so no level number needs to be baked
+          // into the key -- doing so previously produced a different key per entry point for what
+          // is conceptually the same pick, causing edits made in one flow to be invisible to the
+          // other. Never key class-feature spell choices any other way.
+          key: `classfeature:${choice.choiceId ?? choice.id}`,
           title: choice.source.name,
           sourceLabel: choice.source.name,
           count: choice.count.kind === "fixed" ? choice.count.value : 0,
@@ -315,7 +320,7 @@ export function useLevelUpDerivedState(args: {
         && (!choice.choice?.ifProficient || proficientSaves.map(normalizeChoiceKey).includes(normalizeChoiceKey(choice.choice.ifProficient)))
       )
       .map((choice) => ({
-        key: `classfeature:${choice.id}`,
+        key: `classfeature:${choice.choiceId ?? choice.id}`,
         sourceLabel: choice.source.name,
         category: choice.choice?.optionCategory as "skill" | "tool" | "language" | "saving_throw" | "selection",
         count: choice.choice?.count.kind === "fixed" ? choice.choice.count.value : 0,

@@ -132,7 +132,7 @@ export function useCharacterCreatorDerivedState(args: {
         && (
           !choice.choice?.ifProficient
           || (classDetail?.proficiencies?.savingThrows ?? []).map(normalizeChoiceKey).includes(normalizeChoiceKey(choice.choice.ifProficient))
-          || (form.chosenFeatureChoices[`classfeature:${choice.id}`]?.length ?? 0) > 0
+          || (form.chosenFeatureChoices[`classfeature:${choice.choiceId ?? choice.id}`]?.length ?? 0) > 0
         )
       ),
     [classDetail?.proficiencies?.savingThrows, form.chosenFeatureChoices, selectedClassFeatureEffects]
@@ -314,7 +314,10 @@ export function useCharacterCreatorDerivedState(args: {
         if (!known) return [];
       }
       return [{
-        key: `classfeature:${effect.id}`,
+        // Canonical key: `classfeature:<compendium choice id>` -- same scheme the level-up wizard
+        // and MysticArcanumRevisitUtils use, so a pick made through either flow is visible to the
+        // other instead of being invisible under a different key.
+        key: `classfeature:${effect.choiceId ?? effect.id}`,
         title: effect.level === 0 ? "Bonus Cantrip" : effect.level == null ? "Bonus Spell" : `Bonus Level ${effect.level} Spell`,
         sourceLabel: effect.source.name,
         count: effect.count.value,

@@ -46,7 +46,7 @@ function BinderRoute({ binders, campaigns, loaded, canEdit, onBinderChanged }: {
   if (!loaded) return null;
   const binder = binders.find((item) => item.id === binderId);
   return binder
-    ? <BinderView binder={binder} campaigns={campaigns.filter((campaign) => campaign.binderId === binder.id)} canEdit={canEdit(binder)} onRecordsChanged={onBinderChanged} />
+    ? <BinderView binder={binder} campaigns={campaigns.filter((campaign) => campaign.binderId === binder.id)} canEdit={canEdit(binder)} canManage={binder.accessRole === "owner"} onRecordsChanged={onBinderChanged} />
     : <Navigate to="/" replace />;
 }
 
@@ -301,7 +301,7 @@ function AppInner() {
               campaigns={state.campaigns.map((c) => ({ id: c.id, name: c.name, updatedAt: c.updatedAt, playerCount: c.playerCount, imageUrl: c.imageUrl, isActive: c.isActive }))}
               binders={binders.map((binder) => ({
                 ...binder,
-                canEdit: user?.isAdmin === true || binder.ownerUserId === user?.id,
+                canEdit: user?.isAdmin === true || binder.accessRole === "owner" || binder.accessRole === "collaborator",
               }))}
               onCreateCampaign={() => dispatch({ type: "openDrawer", drawer: { type: "createCampaign" } })}
               onOpenCampaign={(campaignId) => {
@@ -329,7 +329,7 @@ function AppInner() {
               binders={binders}
               campaigns={state.campaigns}
               loaded={bindersLoaded}
-              canEdit={(binder) => user?.isAdmin === true || binder.ownerUserId === user?.id}
+              canEdit={(binder) => user?.isAdmin === true || binder.accessRole === "owner" || binder.accessRole === "collaborator"}
               onBinderChanged={refreshAll}
             />
           }

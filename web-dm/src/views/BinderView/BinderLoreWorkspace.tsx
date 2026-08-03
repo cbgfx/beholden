@@ -109,6 +109,7 @@ function EventEditor(props: {
   const [description, setDescription] = useState(props.event?.description ?? "");
   const [dateText, setDateText] = useState(props.event?.dateText ?? "");
   const [endDateText, setEndDateText] = useState(props.event?.endDateText ?? "");
+  const [tags, setTags] = useState(props.event?.tags.map((tag) => tag.name).join(", ") ?? "");
   const [records, setRecords] = useState<BinderAssociation[]>(props.event?.records ?? []);
   const [campaigns, setCampaigns] = useState<BinderAssociation[]>(props.event?.campaigns ?? []);
   const [saving, setSaving] = useState(false);
@@ -119,6 +120,7 @@ function EventEditor(props: {
       <Field label="Title"><Input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} /></Field>
       <Field label="Date"><Input value={dateText} onChange={(event) => setDateText(event.target.value)} placeholder="None" /></Field>
       <Field label="End date"><Input value={endDateText} onChange={(event) => setEndDateText(event.target.value)} placeholder="None" /></Field>
+      <Field label="Tags"><Input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="War, politics, prophecy" /></Field>
       <Field label="Related records"><MultiRecords options={props.records.filter((row) => row.id !== props.event?.id)} value={records} onChange={setRecords} /></Field>
       <Field label="Campaigns"><MultiRecords options={campaignRecords} value={campaigns} onChange={setCampaigns} /></Field>
       <div><strong>Description</strong><WysiwygNoteEditor value={description} onChange={setDescription} mentions={mentions} minHeight={260} theme={{ radius: theme.radius.control, panelBorder: theme.colors.panelBorder, inputBg: theme.colors.inputBg, text: theme.colors.text }} /></div>
@@ -127,7 +129,7 @@ function EventEditor(props: {
           setSaving(true);
           try {
             const number = (value: string) => /^-?\d+$/.test(value.trim()) ? Number(value) : null;
-            const input = { title, description: description || null, dateText: dateText || null, dateSort: number(dateText), endDateText: endDateText || null, endDateSort: number(endDateText), records, campaigns };
+            const input = { title, description: description || null, dateText: dateText || null, dateSort: number(dateText), endDateText: endDateText || null, endDateSort: number(endDateText), tags: tags.split(",").map((tag) => tag.trim()).filter(Boolean), records, campaigns };
             if (props.event) await updateBinderEvent(props.binderId, props.event.id, input); else await createBinderEvent(props.binderId, input);
             await props.onSaved(); props.onClose();
           } finally { setSaving(false); }
@@ -147,6 +149,11 @@ export function BinderLoreWorkspace(props: {
   const [records, setRecords] = useState<BinderRecordOption[]>([]);
   const [compendium, setCompendium] = useState<CompendiumOption[]>([]);
   const [editor, setEditor] = useState<"new" | "edit" | null>(null);
+  const [timelineQuery, setTimelineQuery] = useState("");
+  const [timelineRecordId, setTimelineRecordId] = useState("");
+  const [timelineTag, setTimelineTag] = useState("");
+  const [timelineCampaignId, setTimelineCampaignId] = useState("");
+  const [timelinePlaceId, setTimelinePlaceId] = useState("");
   const reload = useCallback(async () => {
     const [recordRows, loreRows] = await Promise.all([
       fetchBinderRecordOptions(props.binderId),
@@ -168,6 +175,19 @@ export function BinderLoreWorkspace(props: {
     : events.find((row) => row.id === props.recordId);
   const validMentionIds = useValidMentionIds(props.binderId, selected?.description);
   const list = props.type === "items" ? items : events;
+  const timelineEvents = events.filter((event) => {
+    const query = timelineQuery.trim().toLocaleLowerCase();
+    const textMatch = !query || event.title.toLocaleLowerCase().includes(query)
+      || (event.description ?? "").toLocaleLowerCase().includes(query)
+      || event.records.some((record) => (record.name ?? "").toLocaleLowerCase().includes(query));
+    return textMatch
+      && (!timelineRecordId || event.records.some((record) => record.id === timelineRecordId))
+      && (!timelineTag || event.tags.some((tag) => tag.id === timelineTag))
+      && (!timelineCampaignId || event.campaigns.some((campaign) => campaign.id === timelineCampaignId))
+      && (!timelinePlaceId || event.records.some((record) => record.id === timelinePlaceId));
+  });
+  const timelineTags = Array.from(new Map(events.flatMap((event) => event.tags).map((tag) => [tag.id, tag])).values());
+  const places = records.filter((record) => ["continent", "country", "location", "poi"].includes(record.type));
   const singular = props.type === "items" ? "Item" : "Event";
   const columns = props.type === "items" ? "2fr 1.2fr 1fr 1fr" : "2fr .8fr 1.4fr 1fr";
   const headers = props.type === "items" ? ["Name", "Compendium", "Holder", "Location"] : ["Title", "Date", "Related records", "Campaigns"];
@@ -192,8 +212,24 @@ export function BinderLoreWorkspace(props: {
   }
 
   return <div style={{ display: "grid", gap: 12 }}>
-    {props.canEdit ? <div style={{ display: "flex", justifyContent: "flex-end" }}><Button onClick={() => setEditor("new")}>+ New {singular}</Button></div> : null}
-    <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
+    <div style={{ display: "flex", gap: 8, justifyContent: "space-between", flexWrap: "wrap" }}>
+      {props.type === "events" ? <div style={{ display: "flex", gap: 8, flex: 1, flexWrap: "wrap" }}>
+        <Input value={timelineQuery} onChange={(event) => setTimelineQuery(event.target.value)} placeholder="Filter timeline…" style={{ maxWidth: 300 }} />
+        <SearchableSelect value={timelineRecordId} onChange={setTimelineRecordId} options={records} placeholder="All related records" />
+        <SearchableSelect value={timelineTag} onChange={setTimelineTag} options={timelineTags} placeholder="All tags" />
+        <SearchableSelect value={timelineCampaignId} onChange={setTimelineCampaignId} options={props.campaigns} placeholder="All Campaigns" />
+        <SearchableSelect value={timelinePlaceId} onChange={setTimelinePlaceId} options={places} placeholder="All places" />
+      </div> : <span />}
+      {props.canEdit ? <Button onClick={() => setEditor("new")}>+ New {singular}</Button> : null}
+    </div>
+    {props.type === "events" ? <div style={{ display: "grid", gap: 0, borderLeft: `2px solid ${withAlpha(props.accent, .45)}`, marginLeft: 72 }}>
+      {timelineEvents.map((event) => <button key={event.id} type="button" onClick={() => navigate(`/binder/${props.binderId}/events/${event.id}`)} style={{ position: "relative", display: "grid", gridTemplateColumns: "110px minmax(0,1fr)", gap: 14, margin: "0 0 12px 20px", padding: 14, border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, background: theme.colors.panelBg, color: theme.colors.text, textAlign: "left", cursor: "pointer" }}>
+        <span style={{ position: "absolute", left: -27, top: 20, width: 12, height: 12, borderRadius: "50%", background: props.accent, boxShadow: `0 0 0 4px ${theme.colors.panelBg}` }} />
+        <strong style={{ color: event.dateSort === null ? theme.colors.muted : props.accent }}>{event.dateText ?? "Undated"}{event.endDateText ? ` – ${event.endDateText}` : ""}</strong>
+        <span><strong style={{ fontSize: "var(--fs-title)" }}>{event.title}</strong><span style={{ display: "block", marginTop: 5, color: theme.colors.muted }}>{event.records.map((record) => record.name).join(", ") || "No related records"}</span></span>
+      </button>)}
+      {!timelineEvents.length ? <div style={{ padding: 35, color: theme.colors.muted }}>No matching events.</div> : null}
+    </div> : <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
       <div style={{ display: "grid", gridTemplateColumns: columns, gap: 12, padding: "11px 14px", background: withAlpha(props.accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
         {headers.map((header) => <strong key={header}>{header}</strong>)}
       </div>
@@ -207,7 +243,7 @@ export function BinderLoreWorkspace(props: {
         </button>;
       })}
       {!list.length ? <div style={{ padding: 40, textAlign: "center", color: theme.colors.muted }}>No {props.type} yet.</div> : null}
-    </div>
+    </div>}
     {editor ? props.type === "items"
       ? <ItemEditor binderId={props.binderId} records={records} compendium={compendium} onSaved={async () => { await reload(); await props.onRecordsChanged(); }} onClose={() => setEditor(null)} />
       : <EventEditor binderId={props.binderId} records={records} campaigns={props.campaigns} onSaved={async () => { await reload(); await props.onRecordsChanged(); }} onClose={() => setEditor(null)} /> : null}

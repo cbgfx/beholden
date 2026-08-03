@@ -131,8 +131,7 @@ export function UpdatesView(props: InfoViewProps) {
       <PanelComponent title="Roadmap" style={{ marginBottom: 12 }}>
         <ul className={styles.updateList}>
           <li><b>Ongoing:</b> Bug fixes</li>
-          <li><b>Level Change:</b> Level up or down from Create/Edit Character</li>
-          <li><b>NPC Tracker:</b> A large people, timeline, relationship, organization, and location system</li>
+          <li><b>Binder:</b>Timeline and Relationships</li>
         </ul>
       </PanelComponent>
     </InfoPageLayout>

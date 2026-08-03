@@ -12,6 +12,7 @@ interface LevelUpTaggedEntry {
   name: string;
   source: string;
   id?: string;
+  level?: number | null;
   ability?: "str" | "dex" | "con" | "int" | "wis" | "cha" | null;
   sourceKey?: string | null;
 }

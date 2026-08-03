@@ -9,9 +9,11 @@ import {
   type FormState,
 } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
 import type { LevelUpFeatSelection } from "@/views/character-creator/utils/CharacterCreatorTypes";
+import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 
 type CreatorCharacterData = Record<string, unknown> & {
-  classes?: Array<{ id?: string; classId?: string | null; className?: string | null; subclass?: string | null }>;
+  classes?: Array<{ id?: string; classId?: string | null; className?: string | null; level?: number; subclass?: string | null }>;
+  selectedFeatureNames?: string[];
   bgAbilityBonuses?: Record<string, number>;
   chosenLevelUpFeats?: Array<{ level?: number; featId?: string; type?: string; abilityBonuses?: Record<string, number> }>;
   abilityMethod?: "pointbuy" | "standard" | string;
@@ -41,6 +43,8 @@ type CreatorCharacterData = Record<string, unknown> & {
   chosenSpells?: string[];
   chosenInvocations?: string[];
   extraFeatIds?: string[];
+  proficiencies?: Partial<ProficiencyMap>;
+  acquisitionLevels?: Record<string, number | null>;
   hd?: number | null;
   bgAbilityMode?: "split" | "even";
   standardAssign?: Record<string, number>;
@@ -66,6 +70,16 @@ export function useCreatorEditHydration(args: {
     hpCurrent: number | null;
     extraFeatIds: string[];
     invocationFeatIds: string[];
+    existingSpells: Array<{ id?: string; level?: number | null }>;
+    existingInvocations: Array<{ id?: string; level?: number | null }>;
+    existingAcquisitionLevels: Record<string, number | null>;
+    /** Every class entry the character had, including any beyond the primary one this editor
+     * exposes (FormState only tracks a single classId/level -- there's no UI for a second class
+     * here). Submission needs this to put untouched classes back rather than silently dropping
+     * them when it rebuilds characterData.classes from the form. */
+    existingClasses: Array<{ id?: string; classId?: string | null; className?: string | null; level?: number; subclass?: string | null }>;
+    existingSelectedFeatureNames: string[];
+    existingProficiencies: Partial<ProficiencyMap>;
   }) => void;
 }) {
   const { editId, setForm, setEditLoading, initialCampaignIdsRef, onHydrated } = args;
@@ -92,6 +106,12 @@ export function useCreatorEditHydration(args: {
           hpCurrent: hydratedHpCurrent,
           extraFeatIds: Array.isArray(cd.extraFeatIds) ? cd.extraFeatIds.filter((id): id is string => typeof id === "string") : [],
           invocationFeatIds,
+          existingSpells: cd.proficiencies?.spells ?? [],
+          existingInvocations: cd.proficiencies?.invocations ?? [],
+          existingAcquisitionLevels: cd.acquisitionLevels ?? {},
+          existingClasses: Array.isArray(cd.classes) ? cd.classes : [],
+          existingSelectedFeatureNames: Array.isArray(cd.selectedFeatureNames) ? cd.selectedFeatureNames : [],
+          existingProficiencies: cd.proficiencies ?? {},
         });
         const recordedBgBonuses =
           cd.bgAbilityBonuses && typeof cd.bgAbilityBonuses === "object" ? cd.bgAbilityBonuses : {};
@@ -155,7 +175,9 @@ export function useCreatorEditHydration(args: {
           classId,
           raceId: cd.raceId ?? "",
           bgId: cd.bgId ?? "",
-          level: ch.level ?? 1,
+          // This editor operates on the primary class. Total character level is reconstructed at
+          // submission by adding untouched secondary class entries.
+          level: Number(primaryClassEntry?.level) || ch.level || 1,
           subclass: typeof primaryClassEntry?.subclass === "string" ? primaryClassEntry.subclass : "",
           chosenOptionals: cd.chosenOptionals ?? [],
           chosenClassFeatIds: cd.chosenClassFeatIds ?? {},

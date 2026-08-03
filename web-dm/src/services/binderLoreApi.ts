@@ -18,7 +18,7 @@ export type BinderItem = {
 export type BinderEvent = {
   id: string; title: string; description: string | null; dateText: string | null; dateSort: number | null;
   endDateText: string | null; endDateSort: number | null;
-  records: BinderAssociation[]; campaigns: BinderAssociation[];
+  records: BinderAssociation[]; campaigns: BinderAssociation[]; tags: Array<{ id: string; name: string }>;
 };
 export type BinderRelationship = {
   id: string; sourceRecordId: string; sourceName: string; sourceType: string;

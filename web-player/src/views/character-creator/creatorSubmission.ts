@@ -1,4 +1,4 @@
-import type { CharacterData } from "@/views/character/CharacterSheetTypes";
+import type { CharacterData, ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 import type {
   BgDetail,
   ClassDetail,
@@ -29,8 +29,19 @@ import { buildCreatorStartingInventory } from "@/views/character-creator/creator
 import { deriveFeatHitPointMaxBonus } from "@/domain/character/featEffects";
 import { appendMissingFeatureNotes } from "@/domain/character/featureNoteTemplates";
 import { reconcileInvocationExtraFeatIds } from "@/domain/character/invocationFeatChoices";
+import { tagAcquisitionLevelMap } from "@/domain/character/spellAcquisition";
 
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
+
+export function resolveCreatorTotalLevel(
+  primaryClassLevel: number,
+  existingClasses: Array<{ level?: number }>,
+): number {
+  return primaryClassLevel + existingClasses.slice(1).reduce(
+    (sum, entry) => sum + Math.max(0, Number(entry.level) || 0),
+    0,
+  );
+}
 
 function optionalText(value: string | undefined): string {
   return (value ?? "").trim();
@@ -65,6 +76,12 @@ export async function buildCreatorSubmissionBody(args: {
   existingHpCurrent?: number | null;
   existingExtraFeatIds: string[];
   existingInvocationFeatIds: string[];
+  existingSpells?: Array<{ id?: string; level?: number | null }>;
+  existingInvocations?: Array<{ id?: string; level?: number | null }>;
+  existingAcquisitionLevels?: Record<string, number | null>;
+  existingClasses?: Array<{ id?: string; classId?: string | null; className?: string | null; level?: number; subclass?: string | null }>;
+  existingSelectedFeatureNames?: string[];
+  existingProficiencies?: Partial<ProficiencyMap>;
   classifyFeatSelection: (
     choice: ParsedFeatChoice<string>,
     value: string,
@@ -94,6 +111,12 @@ export async function buildCreatorSubmissionBody(args: {
     existingHpCurrent,
     existingExtraFeatIds,
     existingInvocationFeatIds,
+    existingSpells,
+    existingInvocations,
+    existingAcquisitionLevels,
+    existingClasses = [],
+    existingSelectedFeatureNames = [],
+    existingProficiencies,
     classifyFeatSelection,
   } = args;
 
@@ -133,6 +156,22 @@ export async function buildCreatorSubmissionBody(args: {
     existingInvocationFeatIds,
     invocationFeatIds,
   );
+
+  // Preserve when each Pact Boon/Fighting Style pick and invocation-granted feat was acquired,
+  // same preserve-or-stamp rule as spells/invocations (tagAcquisitionLevel): editing an existing
+  // character keeps prior tags, only genuinely new picks get stamped with the current build level.
+  const submittedAcquisitionLevels = {
+    ...tagAcquisitionLevelMap(
+      form.chosenOptionals.map((name) => `optional:${name}`),
+      existingAcquisitionLevels,
+      form.level,
+    ),
+    ...tagAcquisitionLevelMap(
+      submittedExtraFeatIds.map((id) => `extraFeat:${id}`),
+      existingAcquisitionLevels,
+      form.level,
+    ),
+  };
 
   const submitFeatDetailById = new Map<string, FeatDetail<ParsedFeatChoice<string>>>(
     Object.entries(featDetailCache)
@@ -222,6 +261,19 @@ export async function buildCreatorSubmissionBody(args: {
     invocationDetails: [],
     extraFeatDetails: submitInvocationFeatDetails,
   }).map((feature) => feature.name);
+  // This computation is inherently scoped to the primary class only (classDetail is a single
+  // class's data, and this editor never loads a second class's detail) -- so before saving,
+  // reunite it with any existing selected-feature names it has no way to derive, i.e. anything
+  // that isn't even a possible name for THIS class. Otherwise a multiclass character's other
+  // class's optional-feature picks (Fighting Style, Pact Boon, ...) go from "selected" to
+  // "unselected" the moment this editor is used for literally anything unrelated.
+  const primaryClassFeatureNameUniverse = new Set(
+    (classDetail?.autolevels ?? []).flatMap((autolevel) => autolevel.features.map((feature) => feature.name)),
+  );
+  const preservedOtherClassFeatureNames = existingSelectedFeatureNames.filter(
+    (name) => !primaryClassFeatureNameUniverse.has(name),
+  );
+  const finalSelectedFeatureNames = Array.from(new Set([...selectedFeatureNames, ...preservedOtherClassFeatureNames]));
   const startingInventory = await buildCreatorStartingInventory({
     form,
     bgDetail,
@@ -259,13 +311,14 @@ export async function buildCreatorSubmissionBody(args: {
         .map((feature) => feature.noteTemplate))
     : [];
 
+  const totalLevel = resolveCreatorTotalLevel(form.level, existingClasses);
   const body = {
     name: form.characterName.trim(),
     playerName: optionalText(form.playerName),
     ruleset: form.ruleset ?? "5.5e",
     className,
     species,
-    level: form.level,
+    level: totalLevel,
     hpMax,
     hpCurrent: preservedHpCurrent,
     ac: Number(form.ac) || 10,
@@ -273,14 +326,24 @@ export async function buildCreatorSubmissionBody(args: {
     strScore: scores.str, dexScore: scores.dex, conScore: scores.con,
     intScore: scores.int, wisScore: scores.wis, chaScore: scores.cha,
     color: form.color,
+    progressionClassEntryId: existingClasses[0]?.id ?? `class_${form.classId}`,
     characterData: {
-      classes: [{
-        id: `class_${form.classId}`,
-        classId: form.classId,
-        className: className || null,
-        level: form.level,
-        subclass: form.subclass || null,
-      }],
+      // This editor only ever exposes/edits the character's primary class (FormState has a single
+      // classId/level, no concept of a second class) -- existingClasses[0] is that same primary
+      // slot the form was hydrated from, so it's replaced with the form's current values, but any
+      // *other* class entries (existingClasses[1+], a multiclass character's second/third class)
+      // must be carried through unchanged. Overwriting the whole array here previously deleted
+      // every class but the one being edited on every single save of a multiclass character.
+      classes: [
+        {
+          id: `class_${form.classId}`,
+          classId: form.classId,
+          className: className || null,
+          level: form.level,
+          subclass: form.subclass || null,
+        },
+        ...existingClasses.slice(1),
+      ],
       raceId: form.raceId,
       bgId: form.bgId,
       abilityMethod: form.abilityMethod,
@@ -298,7 +361,7 @@ export async function buildCreatorSubmissionBody(args: {
       hd: hitDie,
       derivedHpMax: effectiveHpMax,
       chosenOptionals: form.chosenOptionals,
-      selectedFeatureNames,
+      selectedFeatureNames: finalSelectedFeatureNames,
       chosenClassFeatIds: form.chosenClassFeatIds,
       chosenLevelUpFeats: form.chosenLevelUpFeats,
       chosenRaceSkills: form.chosenRaceSkills,
@@ -329,6 +392,7 @@ export async function buildCreatorSubmissionBody(args: {
             .map(normalizeSpellTrackingKey)
           : undefined,
       chosenInvocations: form.chosenInvocations,
+      acquisitionLevels: submittedAcquisitionLevels,
       ...((isEditing || submittedExtraFeatIds.length > 0) ? { extraFeatIds: submittedExtraFeatIds } : {}),
       ...(initialFeatureNotes.length > 0 ? { playerNotesList: initialFeatureNotes } : {}),
       ...(startingInventory ? { inventory: startingInventory } : {}),
@@ -347,6 +411,11 @@ export async function buildCreatorSubmissionBody(args: {
         extraFeatDetails: submitInvocationFeatDetails,
         spellChoiceOptionsByKey: featSpellChoiceOptions,
         itemChoiceOptionsByKey: growthOptionEntriesByKey,
+        existingSpells,
+        existingInvocations,
+        existingClasses,
+        existingProficiencies,
+        primaryClassEntryId: existingClasses[0]?.id ?? `class_${form.classId}`,
       }),
     },
   };

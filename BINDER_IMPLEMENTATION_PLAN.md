@@ -1,17 +1,52 @@
 # Binder Technical Implementation Plan
 
-Status: backend foundation and initial DM CRUD slices in progress.
+Status: the core DM Binder, shared ownership, canonical NPC combat integration,
+search, timeline, dashboard, transfer, and health tools are implemented.
+Player-facing Binder is the next planned product phase.
+
+### Completed product roadmap
+
+1. Binder collaborators with `owner`, `collaborator`, and `viewer` access. *(Implemented.)*
+2. A canonical Binder NPC statblock editor building on shared iNPC/combat mechanics. *(Implemented.)*
+3. Global Binder search over records, aliases, relationship labels, and Event tags. *(Implemented.)*
+4. A chronological Event timeline with text, related-record, tag, Campaign, and
+   place filters, dated ordering, and an undated section. *(Implemented; Event
+   tags are editable in the DM Event editor.)*
+5. A useful Binder dashboard for recent activity, incomplete records, timeline
+   proximity, review queues, category totals, and quick creation. *(Implemented.)*
+6. Native transfer hardening, zero-write preview, local-link warnings, and
+   expanded round-trip coverage. *(Implemented for the current schema.)*
+7. Binder health/data-quality diagnostics and guided cleanup. *(Implemented: broken
+   mentions, duplicate names, NPCs without statblocks, unplaced Mortals, unplaced
+   POIs, and invalid Event date ranges, with direct record links.)*
+
+Explicitly on hold:
+
+- expanded Organization membership/Position-history workflows;
+- expanded Place hierarchy browsing, reparenting, and generated descendant views.
+
+The existing Organization memberships and Place hierarchy remain supported; the
+hold applies only to deeper UI and workflow expansion.
+
+### Next product phase
+
+Player-Facing Binder will add campaign-scoped, read-only lore sharing first.
+Player editing is a separate follow-up after the read projection and authorization
+matrix are proven. See [Player-Facing Binder plan](#player-facing-binder-plan).
 
 ### Implementation progress
 
-Completed in the first backend foundation pass:
+Implemented:
 
 - core Binder SQLite tables and indexes;
 - idempotent nullable Campaign `binder_id` and campaign date migration;
 - narrow `binder_records` identity registry;
 - explicit `mortals.mortal_type` plus mandatory `binder_npcs` or `binder_player_characters` service transactions;
 - nullable NPC `monster_id` and nullable Player Character `character_id`;
-- typed core tables for Deities, Races, Positions, Organizations/memberships, Continents, Countries, Locations, POIs, Events/associations, mentions, and import audit/identity;
+- typed core tables and DM CRUD workspaces for Deities, Races, Positions,
+  Domains, Organizations/memberships, Continents, Countries, Locations, Points
+  of Interest, Items, Events/associations, relationships, mentions, and import
+  audit/identity;
 - normalized Binder-scoped Event tags and Event/tag links;
 - Binder owner/admin authorization;
 - automatic read access for DMs on an attached Campaign;
@@ -24,20 +59,37 @@ Completed in the first backend foundation pass:
 - shared Campaign, Binder, and Players icon treatment across the DM and player home pages;
 - Campaign edit controls for nullable Binder assignment and structured campaign current date;
 - Binder workspace shell with grouped navigation and stable section routes;
-- attached Campaign table and structured empty-table states for typed record categories;
+- attached Campaign and Binder-player workspaces;
 - Binder theme colors persisted in SQLite and applied to cards, workspace navigation, hover states, and table accents.
 - pre-CRUD unset-state convention enforced: optional Binder scalars/foreign keys
   use `NULL`, optional associations use zero rows, and Player Character sheet
   links are nullable with `ON DELETE SET NULL`.
-- complete first typed CRUD vertical slice for Binder Races, Positions, and
-  Domains: authorized/searchable APIs, themed list tables, create/edit forms,
-  generated detail views, usage counts, and guarded deletion. Player-sharing
-  visibility remains deferred and is not exposed in these DM-only forms.
+- authorized/searchable APIs, themed list tables, create/edit forms, generated
+  detail views, usage counts, associations, images where supported, and guarded
+  deletion for all core typed categories;
 - Mortal CRUD and generated detail pages, including explicit NPC/Player
   Character classification, searchable nullable Race/Location/Organization/
   Position fields, primary membership projection, structured gender and life
   status, birth/death dates, one Notes field, portraits, optional campaign
-  Player/fake-PC linkage, atomic subtype conversion, search, and deletion.
+  Player/fake-PC linkage, unlinked Player Character class names, atomic subtype
+  conversion, search, and deletion;
+- bidirectional age and portrait synchronization between linked Binder Player
+  Characters and canonical character sheets, including startup reconciliation;
+- automatic creation of a linked Binder Player Mortal when a newly assigned
+  character resolves to exactly one attached Binder, mapping name, class,
+  exact-name Race, gender, age, portrait, character identity, and Campaign
+  player identity;
+- Campaign Important NPC projection from Binder NPC Mortals, with canonical
+  name, HP, AC, statblock-link, and attack-override synchronization across all
+  linked campaigns and encounters;
+- Binder Items with optional Compendium mechanics, holder, and location links;
+- Binder Events with record, tag, and attached-Campaign associations;
+- typed non-structural relationships, including normalized family relationships;
+- stable record-ID `@` mentions, link rendering, mention indexing, deleted-target
+  detection, and backlinks;
+- canonical versioned Binder JSON export/import with record-ID remapping,
+  relationship and mention preservation, and safe detachment of instance-local
+  Campaign and Compendium references;
 - development-only Notion ZIP importer CLI with direct ZIP parsing, database
   inventory, typed page-ID correlation, dry-run by default, explicit ignored
   and unresolved-data reporting, placeholder `None` suppression, Markdown
@@ -47,33 +99,32 @@ Completed in the first backend foundation pass:
   distinct unresolved forward relations.
 - the reviewed Notion ZIP was committed locally to Tarentha on 2026-07-25:
   751 structured records were imported and `currentDate` was set to 2438.
-  Unsupported Items remain reported and unimported, Loot Table remains
-  intentionally ignored, unresolved relations remain unset, the completed
-  fingerprint prevents an accidental duplicate import, and
-  `PRAGMA foreign_key_check` reports no violations.
+  Items now import as Binder Items and receive an exact-name Compendium link
+  when available. Loot Table remains intentionally ignored, unresolved
+  relations remain unset, the completed fingerprint prevents an accidental
+  duplicate import, and `PRAGMA foreign_key_check` reports no violations.
 
 Not yet implemented:
 
-- typed CRUD routes for the remaining Binder record categories;
-- a production Notion import UI (intentionally omitted; the current importer is
-  a local-only CLI because this migration will not ship);
-- typed CRUD and generated record pages behind the Binder workspace navigation;
-- stable mention editing/rendering;
-- all explicitly deferred secondary phases.
+- player-facing Binder lore sharing;
+- linked-player field editing, intentionally after read-only sharing;
+- DM-side Event association role/description controls;
+- advanced authenticated Binder media handling;
+- custom calendars, full-text body search, public publishing, and collaborative
+  rich-text editing;
+- a production Notion import UI, intentionally omitted because the migration is
+  supported as a local-only CLI rather than a shipping interchange format.
 
 ### Next implementation slice
 
-1. Implement Organizations and membership/Position history using the completed
-   reference CRUD conventions.
-2. Implement Places in hierarchy order: Continents, Countries, Locations, POIs.
-3. Implement Deities and their Domain associations.
-4. Implement Events after the related typed records are stable.
-5. Add stable internal mention resolution using the existing text storage/rendering conventions.
-6. Review the supplied Notion dry-run report, commit it locally when approved,
-   and use the resulting records to drive the remaining typed CRUD slices.
-7. Add canonical Binder JSON import/export after the core schema stabilizes;
-   reuse the Notion transform output rather than making Notion ZIP the canonical
-   interchange format.
+1. Implement Player-Facing Binder Phase 1: schema, DM sharing controls, and
+   server-side player projections.
+2. Add the read-only player Binder shell, navigation, search, timeline, and
+   generated record pages.
+3. Complete the player authorization/leakage test matrix and UI verification.
+4. Consider linked-player field editing only after the read-only phase is stable.
+5. Keep advanced media, custom calendars, FTS, unauthenticated publishing, and
+   collaborative rich-text editing outside this phase.
 
 This plan is based on an inspection of the current Beholden source tree and the supplied `Notion.zip` export. Binder is the product term throughout. Binder belongs in the existing DM application and existing backend; it does not require a third frontend or a new service.
 
@@ -92,7 +143,9 @@ The recommended architecture is:
 - Store internal rich-text mentions by stable record ID in a versioned structured document, never by name or permanent raw URL.
 - Enforce all player visibility and field-level editing on the server with response projection and endpoint-specific allowlists.
 - Import Notion in two stages: deterministic dry-run/validation, followed by one SQLite transaction plus staged file promotion.
-- Deliver a deliberately narrow first phase: Binder/campaign assignment, core typed lore records, explicit Mortal subtypes, Events, stable mentions, and Notion preview/import. Player sharing/editing, combat, advanced media, custom calendars, Binder collaborators, and full-text search follow only after the imported core is stable.
+- Keep player-facing delivery server-projected and campaign-scoped. Advanced
+  media, custom calendars, full-text body search, and public publishing remain
+  separate phases.
 
 ### Approved initial implementation scope
 
@@ -108,7 +161,9 @@ The initial implementation includes only:
 - basic stable internal record-ID mentions using existing editor/storage conventions where practical;
 - Notion ZIP preview and import.
 
-The initial implementation explicitly excludes player sharing/editing, combat integration, advanced media handling, custom calendars, Binder collaborators, FTS, public publishing, and secondary integration systems.
+The completed DM release excludes player sharing/editing, advanced media
+handling, custom calendars, FTS, public publishing, and secondary integration
+systems. Combat integration and Binder collaborators have since shipped.
 
 ## 2. Existing architecture assessment
 
@@ -240,7 +295,10 @@ Indexes:
 
 `owner_user_id` is explicit and authoritative. Deleting a user who owns a Binder is restricted until ownership is transferred or the Binder is explicitly deleted.
 
-Binder collaborators are deferred. In the initial implementation, the Binder owner and global administrators are the only Binder writers/readers. A future `binder_membership` table may follow the existing campaign-membership convention when multi-DM Binder collaboration is designed.
+`binder_memberships` is implemented with `collaborator` and `viewer` roles.
+Owners and administrators manage membership. Collaborators can mutate lore;
+viewers receive the complete read-only DM projection. This viewer role is for
+trusted Binder collaborators and is not the player-facing visibility mechanism.
 
 ### Stable record identity
 
@@ -280,17 +338,14 @@ The typed row uses the same ID as its registry row and references it with `ON DE
 
 Constraint: `UNIQUE(record_id, alias_key)`. Index: `idx_binder_alias_lookup(alias_key, record_id)`.
 
-#### `binder_record_campaign_visibility`
+#### Record visibility policy
 
-Explicitly identifies which attached campaigns can see a record whose visibility is `campaign`.
-
-| Column | Definition |
-|---|---|
-| `record_id` | `TEXT NOT NULL REFERENCES binder_records(id) ON DELETE CASCADE` |
-| `campaign_id` | `TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE` |
-| primary key | `(record_id, campaign_id)` |
-
-The service verifies the campaign belongs to the same Binder. No rows means no player can see a `campaign` record; this fail-closed rule avoids accidental broad exposure.
+Player-Facing Binder uses the existing `binder_records.visibility` column and
+does not add a record-to-Campaign visibility table. A record is either Private
+(`dm`) or Public (`public`) to authenticated players in every Campaign currently
+attached to its Binder. In this product, Public never means internet-accessible.
+The unused `campaign` value remains schema-compatible but is not exposed by the
+Phase 1 UI or player API.
 
 ### Campaign changes
 
@@ -749,10 +804,14 @@ Generated pages query:
 
 - Administrator: existing global access.
 - Binder owner: full lore access, collaborators, transfer, import, and deletion.
-- Binder editor/viewer roles are deferred.
+- Binder collaborator: full lore read/write access without ownership operations.
+- Binder viewer: full lore read access without mutation. This is a trusted DM-side
+  collaborator role, not Campaign-player access.
 - Campaign DM: automatically receives read access when any Campaign they manage is attached to the Binder. This does not grant edit, import, assignment, ownership-transfer, or delete access.
-- Campaign player: can read records explicitly shared to a campaign in which they have `campaign_membership`.
-- Linked character owner: campaign-player read access plus explicit patch rights on their linked Mortal.
+- Campaign player: planned; can read Public records from the Binder attached to
+  a Campaign in which they are a member.
+- Linked character owner: planned after read-only sharing; Campaign-player access
+  plus narrowly allowlisted patch rights on their linked Mortal.
 
 ### Server-side access predicates
 
@@ -766,10 +825,14 @@ Add middleware/service helpers:
 
 Record read rules:
 
-1. Admin and owner can read the complete DM projection in the initial implementation.
+1. Admin, owner, collaborator, viewer, and attached-Campaign DM access continue
+   through existing DM projection rules.
 2. `dm` visibility: no player projection.
-3. `campaign` visibility: user must have membership in a campaign listed in `binder_record_campaign_visibility`, and that campaign must still be attached to the record’s Binder.
-4. `public` visibility: initially any authenticated user who can reach the Binder through an attached campaign. Whether unauthenticated public sharing is desired is a later product decision.
+3. `public` visibility: user must have membership in a Campaign currently
+   attached to the record's Binder. It grants read-only access through that
+   Campaign and never unauthenticated internet access.
+4. `campaign` visibility is not exposed in Phase 1 and is treated as `dm` by
+   player endpoints.
 
 ### Response projection
 
@@ -817,6 +880,120 @@ DM-only endpoints remain separate. Do not accept a generic `{field, value}` patc
 
 Include `updatedAt` in detail DTOs and require `If-Unmodified-Since`-style request data or an `expectedUpdatedAt` field for rich-text saves. Return `409 Conflict` on stale edits so a DM and player cannot silently overwrite each other.
 
+### Player-Facing Binder plan
+
+#### Product boundary
+
+The first player release is authenticated, read-only, and reached through a
+specific Campaign. It is not a mirror of the DM Binder and does not grant a
+Campaign player the collaborator `viewer` role. The route always contains the
+Campaign ID so the server can establish membership before resolving the Binder.
+
+Phase 1 includes:
+
+- a Public/Private icon toggle immediately to the left of Edit on every DM
+  record detail page;
+- a player Binder home with visible category counts and recently updated lore;
+- visible-record search, Event timeline, and generated record detail pages;
+- safe rendering of visible relationships, associations, backlinks, and mentions;
+- read-only access to Public records for members of every Campaign currently
+  attached to the Binder, regardless of which character they have selected.
+
+Phase 1 excludes:
+
+- player editing of Binder records;
+- unauthenticated or link-based public pages;
+- arbitrary Binder file uploads and protected media delivery;
+- collaborator management, transfer, import/export, health tools, DM Notes, and
+  incomplete-record queues in the player application;
+- real-time collaborative editing or player comments.
+
+#### Data behavior
+
+No new visibility table is required. The toggle updates the existing
+`binder_records.visibility` field as follows:
+
+- `dm`: Private; no Campaign-player access;
+- `public`: Public; read-only access for authenticated players in every Campaign
+  currently attached to the Binder;
+- `campaign`: unused in Phase 1 and treated as Private.
+
+Attaching a new Campaign automatically gives its players access to all existing
+Public records. Detaching it removes that access immediately without changing
+the records. Native Binder transfer preserves each record's visibility value.
+
+#### DM workflow
+
+Every DM record detail header places a compact visibility icon button directly
+to the left of Edit. Use a globe icon for Public and a lock icon for Private,
+with visible hover text, an accessible label, and a confirmation when changing
+Private to Public. The toggle is available only to users with edit permission;
+read-only Binder viewers and Campaign players see no visibility control or status
+icon. Public means all attached Campaigns, so the DM never selects Campaigns one
+by one.
+
+#### Server projection
+
+Create player-specific queries and DTOs; do not reuse DM detail objects and
+delete fields afterward. Each query starts from Campaign membership, attached
+Binder, and `visibility = 'public'`.
+
+Player projections must always omit DM Notes at the SQL/DTO boundary, regardless
+of record type or visibility. They also omit ownership and membership metadata,
+import/audit identity, canonical NPC combat overrides, hidden associations,
+hidden relationship endpoints, hidden backlinks, and inaccessible mention
+targets. A visible Event includes only visible participants. A visible record
+does not make its linked Race, Organization, Place, holder, or Event visible;
+each related record must independently pass the visibility predicate.
+
+Mentions to hidden records render as neutral text using the stored label, without
+an ID, route, type, or existence signal. Inaccessible detail routes return 404.
+Search and counts apply the visibility predicate in SQL rather than filtering a
+complete Binder result in application code.
+
+#### Player application
+
+Add Binder entry points inside an attached Campaign rather than to the global
+player home. The initial navigation contains Overview, People, Places,
+Organizations, Items, and Timeline; empty categories remain hidden. Detail
+pages reuse shared display components where safe but consume player DTOs only.
+No edit controls are rendered in Phase 1.
+
+#### Delivery order and exit criteria
+
+1. Visibility service, Public/Private header control, and transfer rules.
+2. Player authorization middleware plus list, search, timeline, and detail
+   projection tests for every record type.
+3. Player Binder shell and generated pages.
+4. Leakage tests for hidden direct links, relations, Events, mentions, counts,
+   search, cross-Campaign substitution, detachment, and WebSocket invalidations.
+5. Browser verification in both DM and player applications at desktop and narrow
+   widths.
+
+Phase 1 exits only when a Private record cannot be inferred through any player
+endpoint and the DM UI makes it unmistakable that Public shares read-only lore
+with every Campaign attached to the Binder.
+
+#### Later linked-player editing
+
+The first linked-player identity slice is implemented independently of Public
+lore sharing. A character owner automatically receives their linked Binder
+Player identity in Character Information, even when that Mortal is Private. A
+link icon beside Identity opens editing for personal fields only: gender, age,
+description, and backstory. Name and portrait continue through the canonical
+character workflows and synchronize to Binder; world-owned Race, Position,
+Organization, Location, life status, and DM Notes remain DM-controlled.
+
+Authorization joins the requested character to `user_characters.user_id` and
+then to its exact `binder_player_characters.character_id`; knowing another
+Mortal ID grants nothing. DM Notes are never selected into the player DTO. Do
+not ship a generic player record PATCH endpoint.
+
+New character assignment automatically creates the linked Mortal only when all
+assigned Campaigns with Binders resolve to one distinct Binder. An existing link
+is retained. If assignments span different Binders, the server does not silently
+choose one; resolving that exceptional case remains an explicit DM workflow.
+
 ## 6. API structure
 
 ### Binder collection and administration
@@ -859,7 +1036,7 @@ Each supports paginated/filterable `GET`, typed `POST`, typed detail `GET`, `PAT
 - Organization memberships.
 - Deity domains.
 - Event record/campaign associations.
-- record visibility campaigns.
+- record Public/Private visibility.
 - relationships.
 - aliases and media.
 
@@ -1165,7 +1342,11 @@ No existing campaign is auto-assigned. No Notes are deleted or transformed. No c
 - New player Binder routes are additive.
 - Combatant `base_type` is unchanged in the first Binder release.
 
-When encounter integration ships, prefer adding a new `binder_npc` base type or a source descriptor that snapshots a Mortal plus optional monster mechanics. Existing combatants remain snapshots and are not retroactively linked.
+Binder NPCs enter encounters through their campaign Important NPC projection.
+Unlike ordinary monster combatants, linked Binder NPC mechanics and HP remain
+canonical: edits write back to `binder_npcs` and refresh every linked iNPC and
+combatant projection. Initiative, friendliness/labels, and other genuinely
+campaign- or encounter-local presentation state remain local.
 
 ### Export/backup compatibility
 
@@ -1212,22 +1393,20 @@ Exit: existing databases migrate safely and the backend can create/read/update t
 
 Exit: core generated pages are stable and repeated imports are deterministic with approved counts and relations.
 
-### Phase 2 — deferred sharing and integrations
+### Phase 2 — Player-Facing Binder
 
-- Player read sharing and server-side projections.
-- Linked player editing and conflict handling.
-- Combat/encounter NPC selection.
-- Advanced media.
-- Binder collaborators.
-- Custom calendars.
-- Secondary campaign/character/compendium integrations.
+- Campaign-scoped player read sharing and server-side projections are planned
+  next, using the phased plan in Section 5.
+- Linked-player editing and conflict handling remain a later subphase.
+- Canonical Binder NPC combat/encounter synchronization and Binder collaborators
+  are implemented.
+- Advanced media, custom calendars, and secondary integrations remain deferred.
 
 ### Deferred unless evidence requires them
 
 - unauthenticated public Binder pages;
 - FTS5 body search;
 - custom calendar definitions and UI;
-- Binder collaborators and shared ownership;
 - advanced authenticated Binder media;
 - pantheon/group schema;
 - arbitrary relationship types;
@@ -1264,7 +1443,10 @@ Binder CRUD or the Notion import.
 
 ### Authorization integration tests
 
-For the initial release, build a matrix for admin, owner, unrelated DM, and unauthenticated request. Extend it with editor, viewer, campaign player, unrelated player, and linked character owner when those deferred roles and player APIs are implemented.
+The DM matrix covers admin, owner, collaborator, viewer, attached-Campaign DM,
+unrelated DM, and unauthenticated requests. Player-Facing Binder extends it with
+Campaign player, unrelated player, cross-Campaign substitution, detached
+Campaign, and—only in the later edit phase—linked character owner cases.
 
 For every list/detail/mutation/media/search endpoint test:
 
@@ -1372,7 +1554,9 @@ SQLite foreign keys to compendium tables require their current key shape to rema
 
 ### Meaning of “public”
 
-The current product is login-gated. Treat public as broadly shared to authenticated Binder participants until unauthenticated publishing is deliberately designed.
+The current product is login-gated. `public` means read-only to authenticated
+players in every Campaign attached to the Binder. It never means public on the
+internet; unauthenticated publishing would require a separate product decision.
 
 ## 14. Resolved product and import decisions
 
@@ -1386,7 +1570,10 @@ The decisions needed for the core and supplied Notion import are resolved:
 6. Exported POIs may import with no parent. They remain fully editable and can later be assigned to a Location, Country, or another POI without re-importing.
 7. Notion Event `Type` values import as normalized structured Event tags.
 
-Still deferred and non-blocking: player visibility semantics, linked-player edit fields/workflow, collaborators, unauthenticated publishing, custom calendars, advanced media, pantheons, and other secondary integrations.
+Player visibility semantics are now specified in Section 5. Linked-player editing,
+unauthenticated publishing, custom calendars, advanced media, pantheons, and
+other secondary integrations remain deferred and non-blocking. Collaborators
+and canonical NPC combat integration are implemented.
 
 ## 15. Definition of done for the first production release
 
@@ -1444,8 +1631,9 @@ The first core relational slice is now implemented in the DM application:
   associations, and mention indexes. Missing instance-local Compendium or
   Campaign targets remain safely unset.
 
-Still deliberately deferred: player exposure/editing, combat selection,
-full-text search, collaborative editing, and advanced media.
+Player exposure is now planned as a read-only Campaign-scoped phase. Player
+editing, full-text body search, collaborative editing, and advanced media remain
+deferred. Canonical Binder NPC combat selection and synchronization are implemented.
 
 ### Linked Player Character identity synchronization
 
@@ -1479,6 +1667,15 @@ only these explicitly shared identity fields synchronize.
   campaign-level gameplay state. Identity and lore remain on the Mortal.
 - Mortal name and nullable statblock changes update linked Important NPC
   projections.
+- Binder NPC max/current HP, HP details, AC/details, and attack overrides are
+  canonical. Editing them from an iNPC or combatant updates the Binder and every
+  linked campaign/encounter projection. Changing the Compendium statblock resets
+  those mechanics to the new template, after which they can be customized again.
+- The Mortal editor exposes those canonical mechanics directly. Attack overrides
+  use the same action-name keyed representation as combat, and native Binder
+  transfer preserves the customized values.
+- Campaign label and friendliness remain local; encounter initiative remains
+  encounter-local.
 - A Binder NPC may appear in several campaigns, but only once per campaign.
 - Campaigns without a Binder retain the existing statblock workflow.
 - Campaign creation does not silently create a Binder. Binder assignment stays

@@ -9,6 +9,7 @@ import { rowToCampaignCharacter, rowToEncounterActor, ENCOUNTER_ACTOR_COLS } fro
 import {
   ensureCombat,
   syncCombatantToPlayer,
+  syncCombatantToBinderNpc,
   hydratePlayerCombatant,
   loadCombatants,
   updateEncounterActor,
@@ -300,6 +301,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
       if (ended) endedConcentrations.push(ended);
       updateEncounterActor(db, next, t);
       const synced = syncCombatantToPlayer(db, next, t);
+      const syncedBinderNpc = syncCombatantToBinderNpc(db, next, t);
       if (synced) {
         if (ended && synced.characterId) {
           db.prepare(`
@@ -313,6 +315,15 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
           action: "upsert",
           playerId: next.baseId,
         });
+      }
+      if (syncedBinderNpc) {
+        for (const campaignId of syncedBinderNpc.campaignIds) {
+          ctx.broadcast("inpcs:delta", { campaignId, action: "refresh" });
+        }
+        for (const syncedEncounterId of syncedBinderNpc.encounterIds) {
+          if (syncedEncounterId === encounterId) continue;
+          ctx.broadcast("encounter:combatantsDelta", { encounterId: syncedEncounterId, action: "refresh" });
+        }
       }
       ctx.broadcast("encounter:combatantsDelta", {
         encounterId,
@@ -416,6 +427,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
 
       // Sync player record for player-type combatants
       const synced = syncCombatantToPlayer(db, next, t);
+      const syncedBinderNpc = syncCombatantToBinderNpc(db, next, t);
       if (synced) {
         if (losesConcentration && synced.characterId) {
           db.prepare(`
@@ -445,6 +457,15 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
             characterName: existing.label || existing.name,
             dc: concentrationSaveDc(existing.hpCurrent - requestedHp),
           });
+        }
+      }
+      if (syncedBinderNpc) {
+        for (const campaignId of syncedBinderNpc.campaignIds) {
+          ctx.broadcast("inpcs:delta", { campaignId, action: "refresh" });
+        }
+        for (const syncedEncounterId of syncedBinderNpc.encounterIds) {
+          if (syncedEncounterId === encounterId) continue;
+          ctx.broadcast("encounter:combatantsDelta", { encounterId: syncedEncounterId, action: "refresh" });
         }
       }
 

@@ -82,6 +82,36 @@ export function exportBinderDocument(db: Db, binderId: string) {
 
 type Helpers = { uid: () => string; now: () => number; normalizeKey: (value: string) => string };
 
+export function previewBinderDocument(db: Db, raw: unknown) {
+  const doc = NativeBinderDocument.parse(raw);
+  const counts = new Map<string, number>();
+  for (const record of doc.records) {
+    const type = String(record.record_type);
+    counts.set(type, (counts.get(type) ?? 0) + 1);
+  }
+  const npcRows = doc.data.binder_npcs ?? [];
+  const itemRows = doc.data.binder_items ?? [];
+  const eventCampaignRows = doc.data.binder_event_campaigns ?? [];
+  const missingMonsterLinks = npcRows.filter((row) => row.monster_id && !db.prepare("SELECT 1 FROM compendium_monsters WHERE id=?").get(row.monster_id)).length;
+  const missingItemLinks = itemRows.filter((row) => row.compendium_item_id && !db.prepare("SELECT 1 FROM compendium_items WHERE id=?").get(row.compendium_item_id)).length;
+  return {
+    name: doc.binder.name,
+    recordCount: doc.records.length,
+    counts: [...counts].sort(([a], [b]) => a.localeCompare(b)).map(([type, count]) => ({ type, count })),
+    associations: {
+      relationships: (doc.data.binder_relationships ?? []).length,
+      mentions: (doc.data.binder_record_mentions ?? []).length,
+      memberships: (doc.data.organization_memberships ?? []).length,
+      eventRecords: (doc.data.binder_event_records ?? []).length,
+    },
+    warnings: [
+      ...(missingMonsterLinks ? [`${missingMonsterLinks} Compendium monster link(s) are unavailable and will be detached.`] : []),
+      ...(missingItemLinks ? [`${missingItemLinks} Compendium item link(s) are unavailable and will be detached.`] : []),
+      ...(eventCampaignRows.length ? [`${eventCampaignRows.length} Campaign association(s) are instance-local and will be detached.`] : []),
+    ],
+  };
+}
+
 export function importBinderDocument(db: Db, raw: unknown, ownerUserId: string, helpers: Helpers) {
   const doc = NativeBinderDocument.parse(raw);
   const idMap = new Map<string, string>();
@@ -138,10 +168,22 @@ export function importBinderDocument(db: Db, raw: unknown, ownerUserId: string, 
     `).run(map(row.id), map(row.country_id), map(row.continent_id), text(row.description), now, now);
     for (const row of rows("binder_points_of_interest")) db.prepare("INSERT INTO binder_points_of_interest (id, location_id, country_id, parent_poi_id, description, created_at, updated_at, icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(map(row.id), map(row.location_id), map(row.country_id), map(row.parent_poi_id), text(row.description), now, now, row.icon ?? null);
     for (const row of rows("mortals")) db.prepare(`
-      INSERT INTO mortals (id,race_id,gender,life_status,birth_date_text,birth_date_sort,death_date_text,death_date_sort,description,backstory,dm_notes,image_url,image_updated_at,residence_record_id,position_id,mortal_type,created_at,updated_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `).run(map(row.id), map(row.race_id), row.gender ?? null, row.death_date_text ? "dead" : "alive", row.birth_date_text ?? null, row.birth_date_sort ?? null, row.death_date_text ?? null, row.death_date_sort ?? null, text(row.description), text(row.backstory), text(row.dm_notes), null, null, map(row.residence_record_id), map(row.position_id), row.mortal_type, now, now);
-    for (const row of rows("binder_npcs")) db.prepare("INSERT INTO binder_npcs VALUES (?, NULL, ?, ?)").run(map(row.mortal_id), now, now);
+      INSERT INTO mortals (id,race_id,gender,life_status,birth_date_text,birth_date_sort,death_date_text,death_date_sort,description,backstory,dm_notes,image_url,image_updated_at,residence_record_id,position_id,class_name,mortal_type,created_at,updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).run(map(row.id), map(row.race_id), row.gender ?? null, row.life_status ?? (row.death_date_text ? "dead" : "alive"), row.birth_date_text ?? null, row.birth_date_sort ?? null, row.death_date_text ?? null, row.death_date_sort ?? null, text(row.description), text(row.backstory), text(row.dm_notes), null, null, map(row.residence_record_id), map(row.position_id), text(row.class_name), row.mortal_type, now, now);
+    for (const row of rows("binder_npcs")) db.prepare(`
+      INSERT INTO binder_npcs (
+        mortal_id, monster_id, hp_max, hp_current, hp_details, ac, ac_details,
+        attack_overrides_json, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      map(row.mortal_id),
+      row.monster_id && db.prepare("SELECT 1 FROM compendium_monsters WHERE id=?").get(row.monster_id)
+        ? row.monster_id : null,
+      row.hp_max ?? null, row.hp_current ?? null,
+      text(row.hp_details), row.ac ?? null, text(row.ac_details),
+      row.attack_overrides_json == null ? null : String(row.attack_overrides_json), now, now,
+    );
     for (const row of rows("binder_player_characters")) db.prepare("INSERT INTO binder_player_characters VALUES (?, NULL, NULL, ?, ?)").run(map(row.mortal_id), now, now);
     for (const row of rows("deities")) db.prepare(`
       INSERT INTO deities (id, rank, description, dm_notes, image_url, image_updated_at, primary_location_record_id, created_at, updated_at)

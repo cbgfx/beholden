@@ -86,13 +86,17 @@ export function ClassFeatureItem(props: {
   expanded: boolean;
   accentColor: string;
   onToggle: () => void;
+  /** Level this was acquired at, when known (Pact Boon/Fighting Style picks, invocation-granted
+   * feats) -- see acquisitionLevels on characterData. Absent/null renders no tooltip, same as
+   * CharacterSpellRow's "Granted by" tooltip for spells with no level tag. */
+  acquisitionLevel?: number | null;
 }) {
-  const { feature, expanded, accentColor } = props;
+  const { feature, expanded, accentColor, acquisitionLevel } = props;
   return (
     <ExpandableNoteItem
       title={(
         <>
-          <span>{feature.name}</span>
+          <span title={acquisitionLevel != null ? `Chosen at level ${acquisitionLevel}` : undefined}>{feature.name}</span>
           {feature.resolution ? (
             <span
               title={feature.resolutionNotes?.join(" ") || undefined}

@@ -48,6 +48,7 @@ export function parseAppliedClassFeatureEffects(
           level: autolevel.level,
           parentName: classDetail.name,
           text: feature.text,
+          rawFeatureId: feature.id,
         },
         text: feature.text,
         classEffects: feature.effects,

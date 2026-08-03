@@ -7,7 +7,7 @@ import { CampaignCard } from "@/views/HomeView/CampaignCard";
 import { BinderCard } from "@/views/HomeView/BinderCard";
 import type { CampaignSummary } from "@/views/HomeView/CampaignCard";
 import type { BinderSummary } from "@/services/binderApi";
-import { importBinder } from "@/services/binderApi";
+import { importBinder, previewBinderImport, type BinderImportPreview } from "@/services/binderApi";
 
 type HomeBinderSummary = BinderSummary & { canEdit: boolean };
 
@@ -98,6 +98,7 @@ export function HomeView({
   const [binderImportBusy, setBinderImportBusy] = useState(false);
   const [binderImportMsg, setBinderImportMsg] = useState("");
   const [binderImportFailed, setBinderImportFailed] = useState(false);
+  const [binderPreview, setBinderPreview] = useState<BinderImportPreview | null>(null);
   const binderFileInputRef = useRef<HTMLInputElement>(null);
 
   async function importCampaign() {
@@ -130,6 +131,7 @@ export function HomeView({
       const result = await importBinder(binderImportFile);
       setBinderImportMsg(`${result.name} imported with ${result.recordCount} records.`);
       setBinderImportFile(null);
+      setBinderPreview(null);
       if (binderFileInputRef.current) binderFileInputRef.current.value = "";
       await onRefresh();
     } catch (error: unknown) {
@@ -296,9 +298,21 @@ export function HomeView({
                 type="file"
                 accept=".json,application/json"
                 onChange={(event) => {
-                  setBinderImportFile(event.target.files?.[0] ?? null);
+                  const file = event.target.files?.[0] ?? null;
+                  setBinderImportFile(file);
+                  setBinderPreview(null);
                   setBinderImportMsg("");
                   setBinderImportFailed(false);
+                  if (file) {
+                    setBinderImportBusy(true);
+                    void previewBinderImport(file).then((preview) => {
+                      setBinderPreview(preview);
+                      setBinderImportMsg(`Preview: ${preview.name}, ${preview.recordCount} records${preview.warnings.length ? ` — ${preview.warnings.length} warning(s)` : ""}.`);
+                    }).catch((error: unknown) => {
+                      setBinderImportFailed(true);
+                      setBinderImportMsg(error instanceof Error ? error.message : String(error));
+                    }).finally(() => setBinderImportBusy(false));
+                  }
                 }}
                 style={{ display: "none" }}
               />
@@ -307,7 +321,7 @@ export function HomeView({
             <Button
               variant="ghost"
               onClick={handleBinderImport}
-              disabled={!binderImportFile || binderImportBusy}
+              disabled={!binderImportFile || !binderPreview || binderImportBusy}
               title="Import selected Binder file"
             >
               {binderImportBusy ? "Importing…" : "Import"}
@@ -317,6 +331,7 @@ export function HomeView({
                 {binderImportMsg}
               </span>
             ) : null}
+            {binderPreview?.warnings.length ? <span title={binderPreview.warnings.join("\n")} style={{ color: theme.colors.accentWarning, fontSize: "var(--fs-small)" }}>Review warnings</span> : null}
           </div>
         </div>
 

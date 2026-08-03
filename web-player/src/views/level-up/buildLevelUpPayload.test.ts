@@ -112,6 +112,93 @@ describe("buildLevelUpPayload", () => {
     ]);
   });
 
+  it("tags a Pact Boon replacement with the new level while an untouched Fighting Style pick keeps its old tag", () => {
+    const pactBoonChoice = {
+      key: "classchoicereplacement:cc_warlock_pact_boon",
+      groupId: "cc_warlock_pact_boon",
+      groupName: "Pact Boon",
+      currentOptionId: "cco_pact_of_the_chain",
+      currentSelectionNames: ["Pact Boon: Pact of the Chain"],
+      options: [
+        { id: "cco_pact_of_the_chain", name: "Pact of the Chain", selectionNames: ["Pact Boon: Pact of the Chain"] },
+        { id: "cco_pact_of_the_blade", name: "Pact of the Blade", selectionNames: ["Pact Boon: Pact of the Blade"] },
+      ],
+    };
+    const payload = buildLevelUpPayload({
+      char: {
+        hpMax: 40,
+        hpCurrent: 40,
+        className: "Warlock",
+        characterData: {
+          classes: [{ className: "Warlock", classId: "c_warlock", level: 8 }],
+          chosenOptionals: ["Pact Boon: Pact of the Chain", "Fighting Style: Archery"],
+          acquisitionLevels: {
+            "optional:Pact Boon: Pact of the Chain": 3,
+            "optional:Fighting Style: Archery": 1,
+          },
+        },
+      },
+      nextLevel: 9,
+      nextClassLevel: 9,
+      hpGain: 5,
+      featHpBonus: 0,
+      subclass: "",
+      chosenCantrips: [], chosenSpells: [], chosenInvocations: [],
+      chosenExpertise: {}, chosenFeatOptions: {},
+      chosenFeatureChoices: { "classchoicereplacement:cc_warlock_pact_boon": ["cco_pact_of_the_blade"] },
+      expertiseChoices: [], featChoiceEntries: [], chosenFeatDetail: null, featSourceLabel: "",
+      newFeatures: [], classDetailName: "Warlock", selectedCantripEntries: [], selectedSpellEntries: [], selectedInvocationEntries: [],
+      pactBoonReplacementChoice: pactBoonChoice,
+      baseScores: {}, asiMode: null, asiStats: {}, featAbilityBonuses: {},
+    } as never) as { characterData: { chosenOptionals: string[]; acquisitionLevels: Record<string, number | null> } };
+
+    expect(payload.characterData.chosenOptionals).toEqual(
+      expect.arrayContaining(["Pact Boon: Pact of the Blade", "Fighting Style: Archery"]),
+    );
+    expect(payload.characterData.acquisitionLevels).toEqual({
+      "optional:Pact Boon: Pact of the Blade": 9,
+      "optional:Fighting Style: Archery": 1,
+    });
+  });
+
+  it("carries acquisition level through for both carried-forward and newly-tagged spell entries", () => {
+    // Mirrors what useLevelUpSubmit.ts's tagAcquisitionLevel produces: a carried-forward spell
+    // keeps its original level, a brand-new one is tagged with this level-up's level.
+    const payload = buildLevelUpPayload({
+      char: {
+        hpMax: 40,
+        hpCurrent: 40,
+        className: "Wizard",
+        characterData: {
+          classes: [{ className: "Wizard", classId: "c_wizard", level: 6 }],
+          proficiencies: {
+            spells: [{ id: "s_fireball", name: "Fireball", source: "Wizard", level: 5 }],
+          },
+        },
+      },
+      nextLevel: 7,
+      nextClassLevel: 7,
+      hpGain: 5,
+      featHpBonus: 0,
+      subclass: "",
+      chosenCantrips: [], chosenSpells: ["s_fireball", "s_lightning_bolt"], chosenInvocations: [],
+      chosenExpertise: {}, chosenFeatOptions: {}, chosenFeatureChoices: {},
+      expertiseChoices: [], featChoiceEntries: [], chosenFeatDetail: null, featSourceLabel: "",
+      newFeatures: [], classDetailName: "Wizard", selectedCantripEntries: [],
+      selectedSpellEntries: [
+        { id: "s_fireball", name: "Fireball", source: "Wizard", level: 5 },
+        { id: "s_lightning_bolt", name: "Lightning Bolt", source: "Wizard", level: 7 },
+      ],
+      selectedInvocationEntries: [],
+      baseScores: {}, asiMode: null, asiStats: {}, featAbilityBonuses: {},
+    } as never) as { characterData: { proficiencies: { spells: Array<{ name: string; level?: number | null }> } } };
+
+    expect(payload.characterData.proficiencies.spells).toEqual([
+      expect.objectContaining({ name: "Fireball", level: 5 }),
+      expect.objectContaining({ name: "Lightning Bolt", level: 7 }),
+    ]);
+  });
+
   it("adds a feature note template once without replacing player text", () => {
     const note = { id: "nt_artificer_plans_known", title: "Plans Known", text: "Plan 1: Bag of Holding" };
     const base = {

@@ -189,8 +189,13 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
 
     const { inpcId } = parseBody(AddInpcBody, req);
     const iRow = db
-      .prepare("SELECT id, name, label, friendly, hp_max, hp_current, hp_details, ac, ac_details FROM inpcs WHERE id = ?")
-      .get(inpcId) as Record<string, unknown> | undefined;
+      .prepare(`
+        SELECT i.id, i.name, i.label, i.friendly, i.hp_max, i.hp_current,
+               i.hp_details, i.ac, i.ac_details, npc.attack_overrides_json
+        FROM inpcs i
+        LEFT JOIN binder_npcs npc ON npc.mortal_id = i.binder_mortal_id
+        WHERE i.id = ?
+      `).get(inpcId) as Record<string, unknown> | undefined;
     if (!iRow)
       return res.status(404).json({ ok: false, message: "iNPC not found" });
 
@@ -215,7 +220,9 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
       hpDetails: (iRow.hp_details as string | null) ?? null,
       ac: Number(iRow.ac ?? 10),
       acDetails: (iRow.ac_details as string | null) ?? null,
-      attackOverrides: null,
+      attackOverrides: typeof iRow.attack_overrides_json === "string"
+        ? JSON.parse(iRow.attack_overrides_json)
+        : null,
       conditions: [],
       createdAt: t,
       updatedAt: t,

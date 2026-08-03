@@ -14,6 +14,8 @@ import { PartyMemberProficienciesColumn } from "./PartyMemberProficienciesColumn
 
 export interface NamedEntry {
   name: string;
+  id?: string;
+  level?: number | null;
 }
 
 export interface Proficiencies {
@@ -150,6 +152,14 @@ export function PartyMemberView() {
     return map;
   }, [prof?.invocations, prof?.spells]);
 
+  const spellLevelLookup = React.useMemo(() => {
+    const map = new Map<string, number | null>();
+    for (const entry of [...(prof?.spells ?? []), ...(prof?.invocations ?? [])]) {
+      if (entry.id) map.set(entry.id, entry.level ?? null);
+    }
+    return map;
+  }, [prof?.invocations, prof?.spells]);
+
   const classFeatures: FeatureEntry[] = React.useMemo(() => {
     const detailed = Array.isArray(cd?.selectedFeatures)
       ? cd.selectedFeatures
@@ -271,9 +281,9 @@ export function PartyMemberView() {
             {(cantrips.length > 0 || spells.length > 0 || invocations.length > 0) ? (
               <Panel>
                 <SubsectionLabel>Spells</SubsectionLabel>
-                {cantrips.length > 0 ? <SpellGroup label="Cantrips" items={cantrips} color={color} lookup={spellNameLookup} /> : null}
-                {spells.length > 0 ? <SpellGroup label="Spells" items={spells} color={color} lookup={spellNameLookup} /> : null}
-                {invocations.length > 0 ? <SpellGroup label="Invocations" items={invocations} color={color} lookup={spellNameLookup} /> : null}
+                {cantrips.length > 0 ? <SpellGroup label="Cantrips" items={cantrips} color={color} lookup={spellNameLookup} levelLookup={spellLevelLookup} /> : null}
+                {spells.length > 0 ? <SpellGroup label="Spells" items={spells} color={color} lookup={spellNameLookup} levelLookup={spellLevelLookup} /> : null}
+                {invocations.length > 0 ? <SpellGroup label="Invocations" items={invocations} color={color} lookup={spellNameLookup} levelLookup={spellLevelLookup} /> : null}
               </Panel>
             ) : null}
           </div>
@@ -283,22 +293,32 @@ export function PartyMemberView() {
   );
 }
 
-function SpellGroup({ label, items, color, lookup }: { label: string; items: string[]; color: string; lookup: Map<string, string> }) {
+function SpellGroup({ label, items, color, lookup, levelLookup }: { label: string; items: string[]; color: string; lookup: Map<string, string>; levelLookup?: Map<string, number | null> }) {
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: "rgba(160,180,220,0.4)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>
         {label}
       </div>
       <div style={{ display: "flex", flexDirection: "column" }}>
-        {items.map((spellId, index) => (
-          <CollectionRow
-            key={`${label}:${spellId}:${index}`}
-            borderColor="rgba(255,255,255,0.04)"
-            padding="3px 0"
-            leading={<span style={{ width: 5, height: 5, borderRadius: "50%", background: color, flexShrink: 0, opacity: 0.65 }} />}
-            main={<span style={{ color: C.text, fontSize: "var(--fs-subtitle)", fontWeight: 700 }}>{formatPartySpellName(spellId, lookup)}</span>}
-          />
-        ))}
+        {items.map((spellId, index) => {
+          const level = levelLookup?.get(spellId);
+          return (
+            <CollectionRow
+              key={`${label}:${spellId}:${index}`}
+              borderColor="rgba(255,255,255,0.04)"
+              padding="3px 0"
+              leading={<span style={{ width: 5, height: 5, borderRadius: "50%", background: color, flexShrink: 0, opacity: 0.65 }} />}
+              main={
+                <span
+                  title={level != null ? `Learned at level ${level}` : undefined}
+                  style={{ color: C.text, fontSize: "var(--fs-subtitle)", fontWeight: 700 }}
+                >
+                  {formatPartySpellName(spellId, lookup)}
+                </span>
+              }
+            />
+          );
+        })}
       </div>
     </div>
   );

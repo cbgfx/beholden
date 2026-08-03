@@ -2,6 +2,7 @@ import React from "react";
 import { type NavigateFunction } from "react-router-dom";
 import { api, jsonInit } from "@/services/api";
 import { resolveSelectedSpellOptionEntries } from "@/views/character-creator/utils/SpellChoiceUtils";
+import { buildAcquisitionLevelIndex, tagAcquisitionLevel } from "@/domain/character/spellAcquisition";
 import { buildLevelUpPayload, type BuildLevelUpPayloadArgs } from "@/views/level-up/LevelUpUtils";
 import type { ExclusiveGroupReplacementChoice } from "@/views/level-up/LevelUpExclusiveChoiceUtils";
 import type {
@@ -135,21 +136,39 @@ export function useLevelUpSubmit(args: {
 
     setSaving(true);
     try {
-      const selectedCantripEntries = classCantrips
-        .filter((spell) => effectiveChosenCantrips.includes(spell.id))
-        .map((spell) => ({ id: spell.id, name: spell.name, source: classDetailName ?? char.className }));
+      // Preserve each entry's original acquisition level across saves instead of re-stamping
+      // everything with this level-up's level -- effectiveChosen* already mixes carried-forward
+      // ids with newly-picked ones, so without this every existing pick would look "just learned."
+      const existingSpellsById = buildAcquisitionLevelIndex(char.characterData?.proficiencies?.spells);
+      const existingInvocationsById = buildAcquisitionLevelIndex(char.characterData?.proficiencies?.invocations);
 
-      const selectedSpellEntries = classSpells
-        .filter((spell) => effectiveChosenSpells.includes(spell.id))
-        .map((spell) => ({ id: spell.id, name: spell.name, source: classDetailName ?? char.className }));
+      const selectedCantripEntries = tagAcquisitionLevel(
+        classCantrips
+          .filter((spell) => effectiveChosenCantrips.includes(spell.id))
+          .map((spell) => ({ id: spell.id, name: spell.name, source: classDetailName ?? char.className })),
+        existingSpellsById,
+        nextClassLevel,
+      );
 
-      const selectedClassFeatureSpellEntries = classFeatureResolvedSpellChoices.flatMap((choice) => {
-        const selected = resolveSelectedSpellOptionEntries(
-          chosenFeatOptions[choice.key] ?? [],
-          classFeatureSpellChoiceOptions[choice.key] ?? [],
-        );
-        return selected.map((spell) => ({ id: String(spell.id), name: spell.name, source: choice.sourceLabel ?? choice.title }));
-      });
+      const selectedSpellEntries = tagAcquisitionLevel(
+        classSpells
+          .filter((spell) => effectiveChosenSpells.includes(spell.id))
+          .map((spell) => ({ id: spell.id, name: spell.name, source: classDetailName ?? char.className })),
+        existingSpellsById,
+        nextClassLevel,
+      );
+
+      const selectedClassFeatureSpellEntries = tagAcquisitionLevel(
+        classFeatureResolvedSpellChoices.flatMap((choice) => {
+          const selected = resolveSelectedSpellOptionEntries(
+            chosenFeatOptions[choice.key] ?? [],
+            classFeatureSpellChoiceOptions[choice.key] ?? [],
+          );
+          return selected.map((spell) => ({ id: String(spell.id), name: spell.name, source: choice.sourceLabel ?? choice.title }));
+        }),
+        existingSpellsById,
+        nextClassLevel,
+      );
 
       const selectedFeatureProficiencyEntries = classFeatureProficiencyChoices.reduce<Partial<Record<"skills" | "tools" | "languages" | "armor" | "weapons" | "saves", Array<{ name: string; source: string }>>>>((acc, choice) => {
         const selected = (chosenFeatureChoices[choice.key] ?? []).map((name) => ({ name, source: choice.sourceLabel }));
@@ -163,18 +182,26 @@ export function useLevelUpSubmit(args: {
         return acc;
       }, {});
 
-      const selectedInvocationSpellEntries = invocationResolvedSpellChoices.flatMap((choice) => {
-        if (choice.grantsSpell === false) return [];
-        const selected = resolveSelectedSpellOptionEntries(
-          chosenFeatOptions[choice.key] ?? [],
-          invocationSpellChoiceOptions[choice.key] ?? [],
-        );
-        return selected.map((spell) => ({ id: String(spell.id), name: spell.name, source: choice.sourceLabel ?? choice.title }));
-      });
+      const selectedInvocationSpellEntries = tagAcquisitionLevel(
+        invocationResolvedSpellChoices.flatMap((choice) => {
+          if (choice.grantsSpell === false) return [];
+          const selected = resolveSelectedSpellOptionEntries(
+            chosenFeatOptions[choice.key] ?? [],
+            invocationSpellChoiceOptions[choice.key] ?? [],
+          );
+          return selected.map((spell) => ({ id: String(spell.id), name: spell.name, source: choice.sourceLabel ?? choice.title }));
+        }),
+        existingSpellsById,
+        nextClassLevel,
+      );
 
-      const selectedInvocationEntries = classInvocations
-        .filter((spell) => effectiveChosenInvocations.includes(spell.id))
-        .map((spell) => ({ id: spell.id, name: spell.name, source: classDetailName ?? char.className }));
+      const selectedInvocationEntries = tagAcquisitionLevel(
+        classInvocations
+          .filter((spell) => effectiveChosenInvocations.includes(spell.id))
+          .map((spell) => ({ id: spell.id, name: spell.name, source: classDetailName ?? char.className })),
+        existingInvocationsById,
+        nextClassLevel,
+      );
 
       const selectedManeuverEntries = maneuverChoiceEntries
         .filter((entry) => entry.definition.category === "maneuver")

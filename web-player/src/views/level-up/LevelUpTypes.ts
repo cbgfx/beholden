@@ -77,9 +77,11 @@ export interface LevelUpCharacter {
     chosenFeatOptions?: Record<string, string[]>;
     chosenFeatureChoices?: Record<string, string[]>;
     chosenOptionals?: string[];
+    extraFeatIds?: string[];
+    acquisitionLevels?: Record<string, number | null>;
     proficiencies?: {
-      spells?: Array<{ name: string; source: string }>;
-      invocations?: Array<{ name: string; source: string }>;
+      spells?: Array<{ id?: string; name: string; source: string; level?: number | null }>;
+      invocations?: Array<{ id?: string; name: string; source: string; level?: number | null }>;
       skills?: Array<{ name: string; source: string }>;
       expertise?: Array<{ name: string; source: string }>;
       [k: string]: unknown;

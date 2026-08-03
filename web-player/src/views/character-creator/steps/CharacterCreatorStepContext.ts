@@ -78,7 +78,7 @@ export type CharacterCreatorStepRenderContext = {
   step6SpellListChoices: CreatorSpellListChoiceEntry[];
   step6ResolvedSpellChoices: CreatorResolvedSpellChoiceEntry[];
   selectedFeatSpellcastingAbilityChoices: SelectedFeatSpellcastingAbilityChoiceEntry[];
-  selectedClassFeatureProficiencyChoices: Array<{ id: string; source: { name: string }; choice?: { optionCategory?: string; options?: string[]; count: { kind: string; value: number } } }>;
+  selectedClassFeatureProficiencyChoices: Array<{ id: string; choiceId?: string | null; source: { name: string }; choice?: { optionCategory?: string; options?: string[]; count: { kind: string; value: number } } }>;
   selectedFeatGrantedAbilityBonuses: Record<string, number>;
   selectedFeatAbilityBonuses: Record<string, number>;
   levelUpFeatLevels: number[];

@@ -27,6 +27,9 @@ export function CharacterSupportPanels(props: {
   playerNotesList: PlayerNote[];
   allSharedNotes: PlayerNote[];
   classFeaturesList: ClassFeatureEntry[];
+  /** id->level map for chosenOptionals (Pact Boon, Fighting Style, ...) and invocation-granted
+   * feats -- see characterData.acquisitionLevels. Keyed `optional:<name>` / `extraFeat:<featId>`. */
+  acquisitionLevels?: Record<string, number | null>;
   expandedNoteIds: string[];
   expandedClassFeatureIds: string[];
   onSaveHitDiceCurrent: (value: number) => Promise<void> | void;
@@ -68,6 +71,7 @@ export function CharacterSupportPanels(props: {
     playerNotesList,
     allSharedNotes,
     classFeaturesList,
+    acquisitionLevels = {},
     expandedNoteIds,
     expandedClassFeatureIds,
     onSaveHitDiceCurrent,
@@ -470,6 +474,9 @@ export function CharacterSupportPanels(props: {
                       const previousOwner = featureIndex > 0 ? classByEntryId.get(getClassEntryId(features[featureIndex - 1]!.id) ?? "") : null;
                       const showOwner = multiclass && owner && owner.classEntryId !== previousOwner?.classEntryId;
                       const extraFeatId = feature.id.startsWith("extra-feat:") ? feature.id.slice("extra-feat:".length) : null;
+                      const acquisitionLevel = extraFeatId != null
+                        ? acquisitionLevels[`extraFeat:${extraFeatId}`]
+                        : acquisitionLevels[`optional:${feature.name}`];
                       return (
                         <React.Fragment key={feature.id}>
                         {showOwner && <div style={{ color: accentColor, fontSize: "var(--fs-tiny)", fontWeight: 800, marginTop: featureIndex ? 5 : 0 }}>
@@ -481,6 +488,7 @@ export function CharacterSupportPanels(props: {
                             expanded={expandedClassFeatureIds.includes(feature.id)}
                             accentColor={accentColor}
                             onToggle={() => onToggleClassFeatureExpanded(feature.id)}
+                            acquisitionLevel={acquisitionLevel}
                           />
                           {extraFeatId && onRemoveExtraFeat && (
                             <button

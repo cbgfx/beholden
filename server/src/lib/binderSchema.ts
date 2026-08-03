@@ -19,6 +19,18 @@ CREATE TABLE IF NOT EXISTS binders (
   updated_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS binder_memberships (
+  binder_id TEXT NOT NULL REFERENCES binders(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK(role IN ('collaborator', 'viewer')),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (binder_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_binder_memberships_user
+  ON binder_memberships(user_id, binder_id);
+
 CREATE TABLE IF NOT EXISTS binder_records (
   id TEXT PRIMARY KEY,
   binder_id TEXT NOT NULL REFERENCES binders(id) ON DELETE CASCADE,
@@ -143,6 +155,12 @@ CREATE TABLE IF NOT EXISTS mortals (
 CREATE TABLE IF NOT EXISTS binder_npcs (
   mortal_id TEXT PRIMARY KEY REFERENCES mortals(id) ON DELETE CASCADE,
   monster_id TEXT REFERENCES compendium_monsters(id) ON DELETE SET NULL,
+  hp_max INTEGER,
+  hp_current INTEGER,
+  hp_details TEXT,
+  ac INTEGER,
+  ac_details TEXT,
+  attack_overrides_json TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );

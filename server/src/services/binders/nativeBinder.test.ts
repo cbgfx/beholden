@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { openDb } from "../../lib/db.js";
 import { normalizeKey } from "../../lib/text.js";
-import { exportBinderDocument, importBinderDocument } from "./nativeBinder.js";
+import { exportBinderDocument, importBinderDocument, previewBinderDocument } from "./nativeBinder.js";
 
 test("native Binder export/import remaps lore relationships and stable mentions", () => {
   const db = openDb(":memory:");
@@ -24,13 +24,19 @@ test("native Binder export/import remaps lore relationships and stable mentions"
     addRecord.run("org", "organization", "Silver Talon", "silver talon");
     db.prepare("INSERT INTO binder_races VALUES ('race', NULL, 1, 1)").run();
     db.prepare(`
-      INSERT INTO mortals VALUES (
+      INSERT INTO mortals (
+        id, race_id, gender, life_status, birth_date_text, birth_date_sort,
+        death_date_text, death_date_sort, description, backstory, dm_notes,
+        image_url, image_updated_at, residence_record_id, position_id,
+        class_name, mortal_type, created_at, updated_at
+      ) VALUES (
         'mortal', 'race', 'female', 'alive', '2400', 2400, NULL, NULL,
         '<p>Member of <span data-binder-record-id="org">Silver Talon</span>.</p>',
-        NULL, 'Private', NULL, NULL, NULL, NULL, 'npc', 1, 1
+        NULL, 'Private', NULL, NULL, NULL, NULL, 'Ranger', 'npc', 1, 1
       )
     `).run();
-    db.prepare("INSERT INTO binder_npcs VALUES ('mortal', NULL, 1, 1)").run();
+    db.prepare("INSERT INTO binder_npcs (mortal_id, monster_id, created_at, updated_at) VALUES ('mortal', NULL, 1, 1)").run();
+    db.prepare(`UPDATE binder_npcs SET hp_max=100,hp_current=73,hp_details='20d8+10',ac=18,ac_details='plate',attack_overrides_json='{"Rapier":{"toHit":9}}' WHERE mortal_id='mortal'`).run();
     db.prepare(`
       INSERT INTO binder_organizations (id, description, dm_notes, leader_mortal_id, headquarters_record_id, created_at, updated_at, icon)
       VALUES ('org', NULL, NULL, 'mortal', NULL, 1, 1, NULL)
@@ -48,6 +54,11 @@ test("native Binder export/import remaps lore relationships and stable mentions"
 
     const exported = exportBinderDocument(db, "source");
     assert.ok(exported);
+    const binderCountBeforePreview = db.prepare("SELECT COUNT(*) FROM binders").pluck().get();
+    const preview = previewBinderDocument(db, exported);
+    assert.equal(preview.recordCount, 3);
+    assert.deepEqual(preview.counts, [{ type: "mortal", count: 1 }, { type: "organization", count: 1 }, { type: "race", count: 1 }]);
+    assert.equal(db.prepare("SELECT COUNT(*) FROM binders").pluck().get(), binderCountBeforePreview);
     let sequence = 0;
     const imported = importBinderDocument(db, exported, "owner", {
       uid: () => `new-${++sequence}`,
@@ -58,10 +69,10 @@ test("native Binder export/import remaps lore relationships and stable mentions"
     assert.notEqual(imported.binderId, "source");
     assert.equal(imported.recordCount, 3);
     const importedMortal = db.prepare(`
-      SELECT m.id, m.race_id, m.description
+      SELECT m.id, m.race_id, m.description, m.class_name
       FROM mortals m JOIN binder_records r ON r.id = m.id
       WHERE r.binder_id = ? AND r.name = 'Aela'
-    `).get(imported.binderId) as { id: string; race_id: string; description: string };
+    `).get(imported.binderId) as { id: string; race_id: string; description: string; class_name: string };
     const importedOrg = db.prepare(`
       SELECT o.id, o.leader_mortal_id
       FROM binder_organizations o JOIN binder_records r ON r.id = o.id
@@ -70,6 +81,11 @@ test("native Binder export/import remaps lore relationships and stable mentions"
     assert.notEqual(importedMortal.id, "mortal");
     assert.notEqual(importedMortal.race_id, "race");
     assert.equal(importedOrg.leader_mortal_id, importedMortal.id);
+    assert.equal(importedMortal.class_name, "Ranger");
+    assert.deepEqual(
+      db.prepare("SELECT hp_max,hp_current,ac,attack_overrides_json FROM binder_npcs WHERE mortal_id=?").get(importedMortal.id),
+      { hp_max: 100, hp_current: 73, ac: 18, attack_overrides_json: '{"Rapier":{"toHit":9}}' },
+    );
     assert.match(importedMortal.description, new RegExp(importedOrg.id));
     assert.doesNotMatch(importedMortal.description, /data-binder-record-id="org"/);
     assert.equal(

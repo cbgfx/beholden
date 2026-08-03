@@ -7,6 +7,7 @@ import {
   syncLinkedMortalAgeFromCharacter,
   syncLinkedMortalPortraitFromCharacter,
 } from "./linkedCharacterSync.js";
+import { ensureLinkedBinderMortalForCharacter } from "./linkedPlayerIdentity.js";
 
 let db: Db | null = null;
 afterEach(() => { db?.close(); db = null; });
@@ -52,4 +53,24 @@ test("linked portrait URL and version move in both directions", () => {
     { image_url: "/binder.webp", image_updated_at: 21 },
   );
   assert.equal(database.prepare("SELECT image_url FROM players WHERE id='p'").pluck().get(), "/binder.webp");
+});
+
+test("campaign assignment can create and hydrate one canonical Binder Player Mortal", () => {
+  const database = fixture();
+  database.prepare("DELETE FROM binder_records WHERE id='m'").run();
+  const mortalId = ensureLinkedBinderMortalForCharacter(database, "ch", {
+    uid: () => "auto-mortal", now: () => 30, normalizeKey: (value) => value.trim().toLocaleLowerCase(),
+  });
+  assert.equal(mortalId, "auto-mortal");
+  assert.deepEqual(database.prepare(`
+    SELECT br.binder_id,m.mortal_type,m.birth_date_sort,m.image_url,bpc.character_id,bpc.player_id
+    FROM binder_records br JOIN mortals m ON m.id=br.id
+    JOIN binder_player_characters bpc ON bpc.mortal_id=m.id WHERE m.id='auto-mortal'
+  `).get(), {
+    binder_id: "b", mortal_type: "player_character", birth_date_sort: 2380,
+    image_url: "/character.webp", character_id: "ch", player_id: "p",
+  });
+  assert.equal(ensureLinkedBinderMortalForCharacter(database, "ch", {
+    uid: () => "should-not-run", now: () => 31, normalizeKey: (value) => value,
+  }), "auto-mortal");
 });

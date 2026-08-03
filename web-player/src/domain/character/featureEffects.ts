@@ -17,6 +17,11 @@ export interface FeatureEffectSource {
   level?: number | null;
   parentName?: string | null;
   text?: string | null;
+  /** The compendium's own feature id (e.g. "cf_ranger_1_deft_explorer"), when known -- stable
+   * across every entry point (level-up, creator/editor) that parses this same feature, unlike
+   * `id` above which each entry point synthesizes differently. Used to build canonical choice
+   * keys for choice kinds (proficiency grants) that have no id of their own in the compendium. */
+  rawFeatureId?: string | null;
 }
 
 type EffectDuration =
@@ -181,6 +186,12 @@ export interface ProficiencyGrantEffect extends FeatureEffectBase {
   };
   choice?: ChoiceSpec;
   expertise?: boolean;
+  /** Stable choice identity for building canonical `chosenFeatureChoices` keys -- see
+   * FeatureEffectSource.rawFeatureId. The compendium has no id of its own for a "proficiency"
+   * kind choice (unlike "spell" choices), so this is synthesized from the feature's own stable id
+   * plus this choice's position within that feature's `choices` array -- identical regardless of
+   * which entry point (level-up vs. creator/editor) parsed it. */
+  choiceId?: string | null;
 }
 
 interface WeaponMasteryEffect extends FeatureEffectBase {

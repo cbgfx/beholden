@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { z } from "zod";
 import type { ServerContext } from "../server/context.js";
-import { binderOwnerOrAdmin, binderReaderOrAdmin } from "../middleware/binderAuth.js";
+import { binderEditorOrAdmin, binderReaderOrAdmin } from "../middleware/binderAuth.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { convertMortalSubtype, createMortal } from "../services/binders/mortals.js";
@@ -12,6 +12,7 @@ import {
   syncLinkedCharacterPortraitFromMortal,
 } from "../services/binders/linkedCharacterSync.js";
 import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
+import { extractDetails, extractLeadingNumber } from "../lib/text.js";
 
 const optionalText = (max: number) => z.string().max(max).nullable().optional().transform((value) => {
   if (value === undefined || value === null) return value;
@@ -33,6 +34,14 @@ const MortalBody = z.object({
   dmNotes: optionalText(200_000),
   playerId: z.string().trim().min(1).nullable().optional(),
   monsterId: z.string().trim().min(1).nullable().optional(),
+  hpMax: z.number().int().min(1).optional(),
+  hpCurrent: z.number().int().min(0).optional(),
+  hpDetails: optionalText(500),
+  ac: z.number().int().min(0).optional(),
+  acDetails: optionalText(500),
+  attackOverrides: z.record(z.string(), z.object({
+    toHit: z.number().optional(), damage: z.string().optional(), damageType: z.string().optional(),
+  }).strict()).nullable().optional(),
 }).strict();
 
 const MortalPatchBody = MortalBody.partial().refine(
@@ -60,6 +69,12 @@ type MortalRow = {
   image_url: string | null;
   image_updated_at: number | null;
   monster_id: string | null;
+  hp_max: number | null;
+  hp_current: number | null;
+  hp_details: string | null;
+  ac: number | null;
+  ac_details: string | null;
+  attack_overrides_json: string | null;
   character_id: string | null;
   player_id: string | null;
   player_name: string | null;
@@ -112,6 +127,8 @@ const SELECT_MORTAL = `
          m.birth_date_text, m.death_date_text, m.residence_record_id,
          location_record.name AS location_name, m.class_name, m.description, m.backstory,
          m.dm_notes, m.image_url, m.image_updated_at, npc.monster_id,
+         npc.hp_max, npc.hp_current, npc.hp_details, npc.ac, npc.ac_details,
+         npc.attack_overrides_json,
          pc.character_id, pc.player_id, player.player_name,
          player.character_name AS player_character_name,
          membership.organization_id, organization_record.name AS organization_name,
@@ -200,6 +217,11 @@ function dto(row: MortalRow, db: ServerContext["db"]) {
     imageUrl: row.image_url,
     imageUpdatedAt: row.image_updated_at,
     monsterId: row.monster_id,
+    npcMechanics: row.mortal_type === "npc" ? {
+      hpMax: row.hp_max, hpCurrent: row.hp_current, hpDetails: row.hp_details,
+      ac: row.ac, acDetails: row.ac_details,
+      attackOverrides: row.attack_overrides_json ? JSON.parse(row.attack_overrides_json) : null,
+    } : null,
     characterId: row.character_id,
     player: row.player_id ? {
       id: row.player_id,
@@ -262,7 +284,7 @@ function replacePrimaryMembership(ctx: ServerContext, mortalId: string, organiza
 export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const reader = binderReaderOrAdmin(db);
-  const owner = binderOwnerOrAdmin(db);
+  const owner = binderEditorOrAdmin(db);
 
   app.get("/api/binders/:binderId/mortals", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
@@ -393,6 +415,18 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
           WHERE mortal_id = ?
         `).run(linkedPlayer?.playerId ?? null, linkedPlayer?.characterId ?? null, now, id);
         hydrateLinkedMortalFromCharacter(db, id, now);
+      } else {
+        const monsterRow = body.monsterId
+          ? db.prepare("SELECT data_json FROM compendium_monsters WHERE id=?").get(body.monsterId) as { data_json: string } | undefined
+          : undefined;
+        const monster = monsterRow ? JSON.parse(monsterRow.data_json) : null;
+        const hpMax = body.hpMax ?? extractLeadingNumber(monster?.hp) ?? 1;
+        const hpCurrent = Math.min(body.hpCurrent ?? hpMax, hpMax);
+        const hpDetails = body.hpDetails ?? extractDetails(monster?.hp);
+        const ac = body.ac ?? extractLeadingNumber(monster?.ac) ?? 10;
+        const acDetails = body.acDetails ?? extractDetails(monster?.ac);
+        db.prepare(`UPDATE binder_npcs SET hp_max=?,hp_current=?,hp_details=?,ac=?,ac_details=?,attack_overrides_json=?,updated_at=? WHERE mortal_id=?`)
+          .run(hpMax, hpCurrent, hpDetails, ac, acDetails, body.attackOverrides ? JSON.stringify(body.attackOverrides) : null, now, id);
       }
     })();
     const row = db.prepare(`${SELECT_MORTAL} WHERE m.id = ?`).get(id) as MortalRow;
@@ -489,6 +523,55 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
           UPDATE inpcs SET name = ?, monster_id = ?, updated_at = ?
           WHERE binder_mortal_id = ?
         `).run(name, nextMonsterId, now, mortalId);
+        if (body.monsterId !== undefined && nextMonsterId !== existing.monster_id) {
+          const monsterRow = nextMonsterId
+            ? db.prepare("SELECT data_json FROM compendium_monsters WHERE id = ?").get(nextMonsterId) as { data_json: string } | undefined
+            : undefined;
+          const monster = monsterRow ? JSON.parse(monsterRow.data_json) : null;
+          const hpMax = extractLeadingNumber(monster?.hp) ?? 1;
+          const ac = extractLeadingNumber(monster?.ac) ?? 10;
+          const hpDetails = extractDetails(monster?.hp);
+          const acDetails = extractDetails(monster?.ac);
+          db.prepare(`
+            UPDATE binder_npcs SET hp_max=?, hp_current=?, hp_details=?, ac=?, ac_details=?,
+              attack_overrides_json=NULL, updated_at=? WHERE mortal_id=?
+          `).run(hpMax, hpMax, hpDetails, ac, acDetails, now, mortalId);
+          db.prepare(`
+            UPDATE inpcs SET hp_max=?, hp_current=?, hp_details=?, ac=?, ac_details=?, updated_at=?
+            WHERE binder_mortal_id=?
+          `).run(hpMax, hpMax, hpDetails, ac, acDetails, now, mortalId);
+          db.prepare(`
+            UPDATE combatants SET
+              snapshot_json=json_set(snapshot_json, '$.name', ?, '$.hpMax', ?, '$.hpDetails', ?, '$.ac', ?, '$.acDetails', ?, '$.attackOverrides', json('null')),
+              live_json=json_set(live_json, '$.hpCurrent', ?), updated_at=?
+            WHERE base_type='inpc' AND base_id IN (SELECT id FROM inpcs WHERE binder_mortal_id=?)
+          `).run(name, hpMax, hpDetails, ac, acDetails, hpMax, now, mortalId);
+        } else {
+          db.prepare(`
+            UPDATE combatants SET snapshot_json=json_set(snapshot_json, '$.name', ?), updated_at=?
+            WHERE base_type='inpc' AND base_id IN (SELECT id FROM inpcs WHERE binder_mortal_id=?)
+          `).run(name, now, mortalId);
+        }
+        const mechanicsChanged = body.hpMax !== undefined || body.hpCurrent !== undefined
+          || body.hpDetails !== undefined || body.ac !== undefined || body.acDetails !== undefined
+          || body.attackOverrides !== undefined;
+        if (mechanicsChanged) {
+          const canonical = db.prepare("SELECT * FROM binder_npcs WHERE mortal_id=?").get(mortalId) as Record<string, any>;
+          const hpMax = body.hpMax ?? canonical.hp_max ?? 1;
+          const hpCurrent = Math.min(body.hpCurrent ?? canonical.hp_current ?? hpMax, hpMax);
+          const hpDetails = body.hpDetails !== undefined ? body.hpDetails : canonical.hp_details;
+          const ac = body.ac ?? canonical.ac ?? 10;
+          const acDetails = body.acDetails !== undefined ? body.acDetails : canonical.ac_details;
+          const attacks = body.attackOverrides !== undefined
+            ? (body.attackOverrides === null ? null : JSON.stringify(body.attackOverrides))
+            : canonical.attack_overrides_json;
+          db.prepare(`UPDATE binder_npcs SET hp_max=?,hp_current=?,hp_details=?,ac=?,ac_details=?,attack_overrides_json=?,updated_at=? WHERE mortal_id=?`)
+            .run(hpMax, hpCurrent, hpDetails, ac, acDetails, attacks, now, mortalId);
+          db.prepare(`UPDATE inpcs SET hp_max=?,hp_current=?,hp_details=?,ac=?,ac_details=?,updated_at=? WHERE binder_mortal_id=?`)
+            .run(hpMax, hpCurrent, hpDetails, ac, acDetails, now, mortalId);
+          db.prepare(`UPDATE combatants SET snapshot_json=json_set(snapshot_json,'$.hpMax',?,'$.hpDetails',?,'$.ac',?,'$.acDetails',?,'$.attackOverrides',json(?)),live_json=json_set(live_json,'$.hpCurrent',?),updated_at=? WHERE base_type='inpc' AND base_id IN (SELECT id FROM inpcs WHERE binder_mortal_id=?)`)
+            .run(hpMax, hpDetails, ac, acDetails, JSON.stringify(body.attackOverrides ?? (attacks ? JSON.parse(attacks) : null)), hpCurrent, now, mortalId);
+        }
       }
     })();
     const row = db.prepare(`${SELECT_MORTAL} WHERE m.id = ?`).get(mortalId) as MortalRow;

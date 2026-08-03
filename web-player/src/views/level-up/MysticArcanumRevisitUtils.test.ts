@@ -47,7 +47,7 @@ describe("getMysticArcanumRevisitChoices", () => {
     })).toEqual([]);
   });
 
-  it("surfaces every arcanum slot already unlocked below the current level, keyed to its original unlock level", () => {
+  it("surfaces every arcanum slot already unlocked below the current level, keyed by its compendium choice id", () => {
     const choices = getMysticArcanumRevisitChoices({
       ruleset: "5e",
       className: "Warlock",
@@ -57,9 +57,9 @@ describe("getMysticArcanumRevisitChoices", () => {
     });
     // 6th (11) and 7th (13) are unlocked below 16; 8th (15) unlocked below 16 too; 9th (17) is not.
     expect(choices.map((c) => c.key)).toEqual([
-      "levelupclassfeature:11:fc_warlock_mystic_arcanum_6",
-      "levelupclassfeature:13:fc_warlock_mystic_arcanum_7",
-      "levelupclassfeature:15:fc_warlock_mystic_arcanum_8",
+      "classfeature:fc_warlock_mystic_arcanum_6",
+      "classfeature:fc_warlock_mystic_arcanum_7",
+      "classfeature:fc_warlock_mystic_arcanum_8",
     ]);
     expect(choices.every((c) => c.count === 1)).toBe(true);
   });
@@ -73,7 +73,7 @@ describe("getMysticArcanumRevisitChoices", () => {
       nextClassLevel: 12,
     });
     expect(choices).toHaveLength(1);
-    expect(choices[0].key).toBe("levelupclassfeature:11:fc_warlock_mystic_arcanum_6");
+    expect(choices[0].key).toBe("classfeature:fc_warlock_mystic_arcanum_6");
     expect(choices[0].level).toBe(6);
     expect(choices[0].listNames).toEqual(["sl_warlock"]);
   });

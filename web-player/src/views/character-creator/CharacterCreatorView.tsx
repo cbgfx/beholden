@@ -15,12 +15,17 @@ import {
   abilityMod,
   calcHpMax,
   classifyFeatSelection,
+  getCantripCount,
   getClassFeatureTable,
   getExpandedSpellListNames,
+  getMaxSlotLevel,
+  getPreparedSpellCount,
   getSpellcastingClassName,
+  getSubclassLevel,
   parseStartingEquipmentOptions,
   tableValueAtLevel,
 } from "@/views/character-creator/utils/CharacterCreatorUtils";
+import { trimAcquiredIdsForLevel } from "@/domain/character/spellAcquisition";
 import {
   getGrowthChoiceSelectedAbility,
 } from "@/views/character-creator/utils/GrowthChoiceUtils";
@@ -37,6 +42,7 @@ import type {
   RaceDetail,
   SpellSummary,
 } from "@/views/character-creator/utils/CharacterCreatorTypes";
+import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 import { StepHeader } from "@/views/character-creator/shared/CharacterCreatorParts";
 import { CharacterCreatorSideSummary } from "@/views/character-creator/shared/CharacterCreatorSideSummary";
 import { getStep5ChoiceState } from "@/views/character-creator/utils/CharacterCreatorStep5Utils";
@@ -44,6 +50,7 @@ import {
   deriveRaceAbilityBonuses,
   getClassFeatChoiceLabel,
   getClassFeatOptionLabel,
+  getOptionalGroups,
   initForm,
   resolvedScores,
   type FormState,
@@ -126,6 +133,12 @@ export function CharacterCreatorView() {
     hpCurrent: number | null;
     extraFeatIds: string[];
     invocationFeatIds: string[];
+    existingSpells: Array<{ id?: string; level?: number | null }>;
+    existingInvocations: Array<{ id?: string; level?: number | null }>;
+    existingAcquisitionLevels: Record<string, number | null>;
+    existingClasses: Array<{ id?: string; classId?: string | null; className?: string | null; level?: number; subclass?: string | null }>;
+    existingSelectedFeatureNames: string[];
+    existingProficiencies: Partial<ProficiencyMap>;
   } | null>(null);
 
   // Search states for long lists (hoisted to avoid Rules-of-Hooks violations in inner fns)
@@ -204,7 +217,7 @@ export function CharacterCreatorView() {
   React.useEffect(() => {
     if (selectedClassFeatureProficiencyChoices.length === 0) return;
     const currentChoices = selectedClassFeatureProficiencyChoices.map((choice) => ({
-      key: `classfeature:${choice.id}`,
+      key: `classfeature:${choice.choiceId ?? choice.id}`,
       sourceLabel: choice.source.name,
     }));
     setForm((current) => {
@@ -418,6 +431,97 @@ export function CharacterCreatorView() {
     setForm((f) => (f.hpMax === hpStr && f.ac === acStr && f.speed === speedStr ? f : { ...f, hpMax: hpStr, ac: acStr, speed: speedStr }));
   }, [effectiveHitDie, effectiveClassName, classDetail, raceDetail, races, form, resolvedRaceFeatDetail?.name, resolvedBgOriginFeatDetail?.name, featSummaries, selectedClassFeatDetails, selectedFeatAbilityBonuses, levelUpFeatDetails, bgDetail?.proficiencies?.feats, bgDetail?.traits]);
 
+  // Trim cantrips/spells that no longer fit once the level field (creation or edit-time) drops --
+  // unlike invocations and level-up feats, nothing else caps these against the *current* count/max
+  // spell level, so a lowered level otherwise leaves the character over-provisioned.
+  React.useEffect(() => {
+    if (!classDetail) return;
+    const cantripCount = getCantripCount(classDetail, form.level, form.subclass);
+    const raceAbilityBonuses = deriveRaceAbilityBonuses(raceDetail, raceDetail?.parsedChoices?.abilityScoreChoice, form);
+    const scores = resolvedScores(form, selectedFeatAbilityBonuses, raceAbilityBonuses);
+    const spellAbility = String(classDetail.spellAbility ?? "").toLowerCase();
+    const prepCount = getPreparedSpellCount(classDetail, form.level, form.subclass, scores[spellAbility as keyof typeof scores]);
+    const maxSpellLevel = getMaxSlotLevel(classDetail, form.level, form.subclass);
+    const usesSpellbook = classDetail.autolevels.some((autolevel) =>
+      (autolevel.level ?? 0) <= form.level && autolevel.features.some((feature) =>
+        (feature.choices ?? []).some((choice) => choice.kind === "spell" && choice.mode === "spellbook"),
+      ),
+    );
+    const classCantripIds = new Set(classCantrips.map((spell) => spell.id));
+    const classSpellById = new Map(classSpells.map((spell) => [spell.id, spell]));
+    // When there's more to trim than fits, drop the most-recently-acquired first instead of
+    // whatever happens to be last in the array -- uses the *original* loaded character's tags
+    // (editSummaryFallback, set once at hydration, not live-updated), so this reflects real
+    // acquisition history rather than incidental array order. Anything not in that history (added
+    // this editing session) sorts as form.level, i.e. "just learned" -- trimmed first if over cap.
+    const existingSpellLevelById = new Map((editSummaryFallback?.existingSpells ?? []).map((entry) => [entry.id, entry.level ?? form.level]));
+    const levelOf = (id: string) => existingSpellLevelById.get(id) ?? form.level;
+    setForm((f) => {
+      // Only drop entries for not-currently-available ids once classCantrips/classSpells have
+      // actually loaded -- both start empty while their async fetch is in flight (kicked off by
+      // a separate effect keyed on the same classDetail change), so filtering against them before
+      // they resolve would misread "not loaded yet" as "not available" and wipe every real
+      // cantrip/spell the character already has. Count-based trimming below doesn't have this
+      // problem since it doesn't depend on the lists having loaded.
+      const filteredCantrips = classCantrips.length > 0
+        ? f.chosenCantrips.filter((id) => classCantripIds.has(id))
+        : f.chosenCantrips;
+      const nextCantrips = filteredCantrips.length > cantripCount
+        ? [...filteredCantrips].sort((a, b) => levelOf(a) - levelOf(b)).slice(0, cantripCount)
+        : filteredCantrips;
+      const filteredSpells = classSpells.length > 0
+        ? f.chosenSpells.filter((id) => {
+            const spell = classSpellById.get(id);
+            const level = Number(spell?.level ?? 0);
+            return Boolean(spell) && level > 0 && level <= maxSpellLevel;
+          })
+        : f.chosenSpells;
+      // A spellbook is accumulated knowledge, not the currently prepared list. Down-leveling may
+      // remove spells learned above the target level, but must never truncate the remaining book
+      // to the prepared-spell allowance.
+      const nextSpells = trimAcquiredIdsForLevel(filteredSpells, levelOf, form.level, usesSpellbook ? null : prepCount);
+      const sameArray = (a: string[], b: string[]) => a.length === b.length && a.every((id, index) => id === b[index]);
+      if (sameArray(nextCantrips, f.chosenCantrips) && sameArray(nextSpells, f.chosenSpells)) return f;
+      return { ...f, chosenCantrips: nextCantrips, chosenSpells: nextSpells };
+    });
+  }, [classDetail, classCantrips, classSpells, form, raceDetail, selectedFeatAbilityBonuses, editSummaryFallback]);
+
+  // Trim invocations down to the current level's count when it exceeds the allowance -- the
+  // eligibility sanitizer (useCharacterCreatorSanitizers.ts) only drops entries that no longer
+  // individually qualify, it doesn't cap by count, so a level-down could otherwise leave more
+  // invocations selected than the new level allows even though each one still qualifies. Same
+  // level-aware drop-most-recent-first logic as the cantrip/spell trim above.
+  React.useEffect(() => {
+    if (!classDetail) return;
+    const invocTableForTrim = getClassFeatureTable(classDetail, "Invocation", 1, form.subclass);
+    const invocCountForTrim = invocTableForTrim.length > 0 ? tableValueAtLevel(invocTableForTrim, form.level) : 0;
+    const existingInvocationLevelById = new Map((editSummaryFallback?.existingInvocations ?? []).map((entry) => [entry.id, entry.level ?? form.level]));
+    const invocationLevelOf = (id: string) => existingInvocationLevelById.get(id) ?? form.level;
+    setForm((f) => {
+      if (f.chosenInvocations.length <= invocCountForTrim) return f;
+      const nextInvocations = [...f.chosenInvocations].sort((a, b) => invocationLevelOf(a) - invocationLevelOf(b)).slice(0, invocCountForTrim);
+      return { ...f, chosenInvocations: nextInvocations };
+    });
+  }, [classDetail, form, editSummaryFallback]);
+
+  // Clear subclass / optional-group picks (Pact Boon, Fighting Style, etc.) once level drops below
+  // the level that grants them -- mirrors the invocation-eligibility sanitizer above, so a
+  // level-down can't leave subclass features active past what the level actually qualifies for.
+  React.useEffect(() => {
+    if (!classDetail) return;
+    const subclassLevel = getSubclassLevel(classDetail);
+    const needsSubclassClear = Boolean(form.subclass) && subclassLevel != null && form.level < subclassLevel;
+    const validOptionalNames = new Set(
+      getOptionalGroups(classDetail, form.level).flatMap((group) => group.features.flatMap((feature) => feature.selectionNames))
+    );
+    setForm((f) => {
+      const nextSubclass = needsSubclassClear ? "" : f.subclass;
+      const nextOptionals = f.chosenOptionals.filter((name) => validOptionalNames.has(name));
+      if (nextSubclass === f.subclass && nextOptionals.length === f.chosenOptionals.length) return f;
+      return { ...f, subclass: nextSubclass, chosenOptionals: nextOptionals };
+    });
+  }, [classDetail, form.level, form.subclass]);
+
   function set<K extends keyof FormState>(key: K, val: FormState[K]) {
     setForm((f) => ({ ...f, [key]: val }));
   }
@@ -445,6 +549,12 @@ export function CharacterCreatorView() {
     existingHpCurrent: editSummaryFallback?.hpCurrent ?? null,
     existingExtraFeatIds: editSummaryFallback?.extraFeatIds ?? [],
     existingInvocationFeatIds: editSummaryFallback?.invocationFeatIds ?? [],
+    existingSpells: editSummaryFallback?.existingSpells ?? [],
+    existingInvocations: editSummaryFallback?.existingInvocations ?? [],
+    existingAcquisitionLevels: editSummaryFallback?.existingAcquisitionLevels ?? {},
+    existingClasses: editSummaryFallback?.existingClasses ?? [],
+    existingSelectedFeatureNames: editSummaryFallback?.existingSelectedFeatureNames ?? [],
+    existingProficiencies: editSummaryFallback?.existingProficiencies ?? {},
     editId,
     portraitFile,
     initialCampaignIdsRef,

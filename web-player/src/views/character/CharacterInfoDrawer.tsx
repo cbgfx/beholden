@@ -1,9 +1,17 @@
+import { useEffect, useMemo, useState } from "react";
 import { C } from "@/lib/theme";
+import { api, jsonInit } from "@/services/api";
 import type { EditableSheetOverrideField, SheetOverrides } from "@/views/character/CharacterViewHelpers";
 import type { AbilKey } from "@/views/character/CharacterSheetTypes";
 
+const identityInputStyle = {
+  padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)",
+  background: "rgba(255,255,255,0.05)", color: C.text, font: "inherit", resize: "vertical" as const,
+};
+
 export function CharacterInfoDrawer(props: {
   open: boolean;
+  characterId: string;
   accentColor: string;
   identityFields: Array<[string, string]>;
   editableOverrideFields: EditableSheetOverrideField[];
@@ -18,6 +26,22 @@ export function CharacterInfoDrawer(props: {
   onOverrideChange: (key: EditableSheetOverrideField["key"], value: number) => void;
   onAbilityOverrideChange: (key: AbilKey, value: number | null) => void;
 }) {
+  type LinkedIdentity = { id: string; name: string; gender: string | null; age: number | null; description: string | null; backstory: string | null };
+  const [linked, setLinked] = useState<LinkedIdentity | null>(null);
+  const [linkedOpen, setLinkedOpen] = useState(false);
+  const [linkedSaving, setLinkedSaving] = useState(false);
+  const [linkedDraft, setLinkedDraft] = useState({ gender: "", age: "", description: "", backstory: "" });
+  useEffect(() => {
+    if (!props.open) return;
+    api<LinkedIdentity>(`/api/me/characters/${props.characterId}/binder-identity`).then((value) => {
+      setLinked(value);
+      setLinkedDraft({ gender: value.gender ?? "", age: value.age == null ? "" : String(value.age), description: value.description ?? "", backstory: value.backstory ?? "" });
+    }).catch(() => setLinked(null));
+  }, [props.characterId, props.open]);
+  const displayedIdentityFields = useMemo(() => {
+    if (!linked || props.identityFields.some(([label]) => label === "Age") || linked.age == null) return props.identityFields;
+    return [...props.identityFields, ["Age", String(linked.age)] as [string, string]];
+  }, [linked, props.identityFields]);
   if (!props.open) return null;
   return (
     <>
@@ -72,10 +96,15 @@ export function CharacterInfoDrawer(props: {
 
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
           <div>
-            <div style={{ fontSize: "var(--fs-small)", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: props.accentColor, marginBottom: 12 }}>Identity</div>
-            {props.identityFields.length > 0 ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <div style={{ fontSize: "var(--fs-small)", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: props.accentColor }}>Identity</div>
+              {linked ? <button type="button" title="Edit linked Binder identity" aria-label="Edit linked Binder identity" onClick={() => setLinkedOpen((value) => !value)} style={{ border: 0, padding: 2, background: "transparent", color: props.accentColor, cursor: "pointer", display: "inline-flex" }}>
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/></svg>
+              </button> : null}
+            </div>
+            {displayedIdentityFields.length > 0 ? (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
-                {props.identityFields.map(([label, value]) => (
+                {displayedIdentityFields.map(([label, value]) => (
                   <div key={label} style={{ padding: "10px 12px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
                     <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</div>
                     <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: C.text, lineHeight: 1.25 }}>{value}</div>
@@ -87,6 +116,22 @@ export function CharacterInfoDrawer(props: {
                 No character information filled in yet.
               </div>
             )}
+            {linked && linkedOpen ? <div style={{ marginTop: 12, display: "grid", gap: 10, padding: 14, borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <strong style={{ color: C.text }}>Linked Binder identity · {linked.name}</strong>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <label style={{ display: "grid", gap: 5, color: C.muted }}>Gender<input value={linkedDraft.gender} onChange={(event) => setLinkedDraft((value) => ({ ...value, gender: event.target.value }))} style={identityInputStyle} /></label>
+                <label style={{ display: "grid", gap: 5, color: C.muted }}>Age<input type="number" min={0} value={linkedDraft.age} onChange={(event) => setLinkedDraft((value) => ({ ...value, age: event.target.value }))} style={identityInputStyle} /></label>
+              </div>
+              <label style={{ display: "grid", gap: 5, color: C.muted }}>Description<textarea rows={3} value={linkedDraft.description} onChange={(event) => setLinkedDraft((value) => ({ ...value, description: event.target.value }))} style={identityInputStyle} /></label>
+              <label style={{ display: "grid", gap: 5, color: C.muted }}>Backstory<textarea rows={5} value={linkedDraft.backstory} onChange={(event) => setLinkedDraft((value) => ({ ...value, backstory: event.target.value }))} style={identityInputStyle} /></label>
+              <button type="button" disabled={linkedSaving} onClick={async () => {
+                setLinkedSaving(true);
+                try {
+                  await api(`/api/me/characters/${props.characterId}/binder-identity`, jsonInit("PATCH", { gender: linkedDraft.gender.trim() || null, age: linkedDraft.age.trim() ? Number(linkedDraft.age) : null, description: linkedDraft.description || null, backstory: linkedDraft.backstory || null }));
+                  setLinked((value) => value ? { ...value, gender: linkedDraft.gender || null, age: linkedDraft.age ? Number(linkedDraft.age) : null, description: linkedDraft.description || null, backstory: linkedDraft.backstory || null } : value);
+                } finally { setLinkedSaving(false); }
+              }} style={{ justifySelf: "end", padding: "9px 14px", borderRadius: 10, border: 0, background: props.accentColor, color: "#fff", fontWeight: 800, cursor: "pointer" }}>{linkedSaving ? "Saving…" : "Save Binder Identity"}</button>
+            </div> : null}
           </div>
 
           <div>

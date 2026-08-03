@@ -109,12 +109,19 @@ export function structuredEffectsFromCanonical(args: {
     }
   }
 
-  for (const rawChoice of args.classChoices ?? []) {
-    const choice = record(rawChoice);
+  const rawClassChoices = args.classChoices ?? [];
+  for (let choiceIndex = 0; choiceIndex < rawClassChoices.length; choiceIndex += 1) {
+    const choice = record(rawClassChoices[choiceIndex]);
+    // The compendium gives "proficiency"/"selection" choices no id of their own (unlike "spell"
+    // choices), so synthesize one from the feature's own stable compendium id + position -- the
+    // same value regardless of which entry point (level-up vs. creator/editor) parsed this
+    // feature, letting both sides key `chosenFeatureChoices` identically for this choice.
+    const choiceId = args.source.rawFeatureId ? `${args.source.rawFeatureId}:choice:${choiceIndex}` : null;
     if (choice.kind === "selection") {
       add({
         type: "proficiency_grant",
         category: "selection",
+        choiceId,
         choice: {
           count: fixed(Number(choice.count ?? 1)),
           optionCategory: "selection",
@@ -130,6 +137,7 @@ export function structuredEffectsFromCanonical(args: {
       add({
         type: "proficiency_grant",
         category,
+        choiceId,
         choice: {
           count: fixed(Number(choice.count ?? 1)),
           optionCategory: category === "saving_throw" ? undefined : category,

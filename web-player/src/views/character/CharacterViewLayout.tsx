@@ -234,6 +234,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
             playerNotesList={notes.playerNotesList}
             allSharedNotes={notes.allSharedNotes}
             classFeaturesList={derived.classFeaturesList}
+            acquisitionLevels={derived.acquisitionLevels}
             expandedNoteIds={ui.expandedNoteIds}
             expandedClassFeatureIds={ui.expandedClassFeatureIds}
             onSaveHitDiceCurrent={runtime.saveHitDiceCurrent}

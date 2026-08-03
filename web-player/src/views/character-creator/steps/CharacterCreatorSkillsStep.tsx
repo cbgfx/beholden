@@ -476,7 +476,7 @@ export function renderSkillsFromContext(ctx: CharacterCreatorStepRenderContext):
     bgFeatChoices: ctx.step5ChoiceState.bgFeatChoices,
     raceFeatChoices: ctx.step5ChoiceState.raceFeatChoices,
     classFeatureProficiencyChoices: ctx.selectedClassFeatureProficiencyChoices.map((choice) => ({
-      key: `classfeature:${choice.id}`,
+      key: `classfeature:${choice.choiceId ?? choice.id}`,
       sourceLabel: choice.source.name,
       category: choice.choice?.optionCategory as "skill" | "tool" | "language" | "saving_throw" | "selection",
       count: choice.choice?.count.kind === "fixed" ? choice.choice.count.value : 0,

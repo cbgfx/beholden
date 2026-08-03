@@ -5,6 +5,7 @@ import type { BuildLevelUpPayloadArgs } from "./LevelUpUtils";
 import { appendMissingFeatureNotes } from "@/domain/character/featureNoteTemplates";
 import type { PlayerNote } from "@/views/character/CharacterSheetTypes";
 import { selectedInvocationFeatIds } from "@/domain/character/invocationFeatChoices";
+import { tagAcquisitionLevelMap } from "@/domain/character/spellAcquisition";
 import { applyExclusiveGroupReplacement } from "@/views/level-up/LevelUpExclusiveChoiceUtils";
 
 export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<string, unknown> {
@@ -118,6 +119,23 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
     ...((char.characterData?.extraFeatIds ?? []) as string[]).filter((id) => !previousInvocationGrantedFeatIds.includes(id)),
     ...invocationGrantedFeatIds,
   ]));
+
+  // Same preserve-or-stamp rule as spells/invocations: a Pact Boon/Fighting Style pick or
+  // invocation-granted feat that already has a tag keeps it; only something new this level-up
+  // gets stamped with the class level being leveled to.
+  const existingAcquisitionLevels = (char.characterData?.acquisitionLevels ?? {}) as Record<string, number | null>;
+  const nextAcquisitionLevels = {
+    ...tagAcquisitionLevelMap(
+      nextChosenOptionals.map((name) => `optional:${name}`),
+      existingAcquisitionLevels,
+      targetClassLevel,
+    ),
+    ...tagAcquisitionLevelMap(
+      nextExtraFeatIds.map((id) => `extraFeat:${id}`),
+      existingAcquisitionLevels,
+      targetClassLevel,
+    ),
+  };
   const existingLevelUpFeats = Array.isArray(char.characterData?.chosenLevelUpFeats) ? char.characterData?.chosenLevelUpFeats : [];
   const asiAbilityBonuses = Object.fromEntries(
     Object.entries(asiStats).filter(([, value]) => Number(value) > 0),
@@ -201,6 +219,7 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
       },
     },
     extraFeatIds: nextExtraFeatIds,
+    acquisitionLevels: nextAcquisitionLevels,
     chosenFeatOptions: nextChosenFeatOptions,
     chosenFeatureChoices: {
       ...((char.characterData?.chosenFeatureChoices ?? {}) as Record<string, string[]>),

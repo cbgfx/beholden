@@ -1,4 +1,5 @@
 import { collectFeatTaggedEntries } from "./FeatGrantUtils";
+import { buildAcquisitionLevelIndex, tagAcquisitionLevel } from "@/domain/character/spellAcquisition";
 import {
   ABILITY_SCORE_NAMES,
   ALL_LANGUAGES,
@@ -92,6 +93,20 @@ export function buildProficiencyMap(args: {
   extraFeatDetails?: CreatorBackgroundFeatLike[];
   spellChoiceOptionsByKey?: Record<string, CreatorSpellSummaryLike[]>;
   itemChoiceOptionsByKey?: Record<string, Array<{ id: string; name: string }>>;
+  /** The character's previously saved spell/invocation entries (editing an existing character
+   * only) -- used to preserve each entry's acquisition level across saves instead of re-stamping
+   * everything with the current build level. See tagAcquisitionLevel. */
+  existingSpells?: Array<{ id?: string; level?: number | null }>;
+  existingInvocations?: Array<{ id?: string; level?: number | null }>;
+  /** Every class entry the character had before this save, including any beyond the primary one
+   * this form exposes (see creatorSubmission.ts's `classes` comment). Together with
+   * `existingProficiencies`, used to carry a multiclass character's *other* class's proficiencies
+   * through untouched -- this function otherwise only ever computes grants for the single
+   * `classDetail` passed in, so a second class's skills/tools/spells/etc. would silently vanish
+   * on every save without this. */
+  existingClasses?: Array<{ id?: string; classId?: string | null; className?: string | null }>;
+  existingProficiencies?: Partial<ProficiencyMap>;
+  primaryClassEntryId?: string;
 }): ProficiencyMap {
   const {
     form,
@@ -108,6 +123,11 @@ export function buildProficiencyMap(args: {
     extraFeatDetails = [],
     spellChoiceOptionsByKey = {},
     itemChoiceOptionsByKey = {},
+    existingSpells,
+    existingInvocations,
+    existingClasses = [],
+    existingProficiencies,
+    primaryClassEntryId,
   } = args;
 
   const className = classDetail?.name ?? "";
@@ -196,7 +216,7 @@ export function buildProficiencyMap(args: {
     classFeatureGrants.languages.forEach((entry) => pushLanguage(entry.name, entry.source));
     const classFeatureProficiencyChoices = collectProficiencyChoiceEffectsFromEffects(parsedClassFeatures);
     classFeatureProficiencyChoices.forEach((choice) => {
-      const choiceKey = `classfeature:${choice.id}`;
+      const choiceKey = `classfeature:${choice.choiceId ?? choice.id}`;
       const selected = form.chosenFeatureChoices[choiceKey] ?? [];
       selected.forEach((value) => {
         if (choice.category === "skill") skills.push({ name: value, source: choice.source.name });
@@ -213,13 +233,16 @@ export function buildProficiencyMap(args: {
       // they must not also be tagged in here or they'd double the character's known cantrips.
       .filter((choice) => !(choice.canReplace && choice.level === 0 && choice.mode === "learn"));
     classFeatureSpellChoices.forEach((choice) => {
-      const key = `classfeature:${choice.id}`;
+      // Canonical key: `classfeature:<compendium choice id>` -- must match
+      // useCharacterCreatorDerivedState.ts's step6ClassFeatureSpellChoices key exactly, since this
+      // reads back whatever the picker there wrote to form.chosenFeatOptions.
+      const key = `classfeature:${choice.choiceId ?? choice.id}`;
       const fallbackOptions =
         choice.level === 0 ? classCantrips
         : choice.level != null && choice.level > 0 ? classSpells.filter((spell) => Number(spell.level ?? 0) === choice.level)
         : classSpells;
       resolveSelectedSpellOptionEntries(form.chosenFeatOptions[key] ?? [], spellChoiceOptionsByKey[key] ?? fallbackOptions)
-        .forEach((spell) => spells.push({ id: String(spell.id), name: spell.name, source: choice.source.name }));
+        .forEach((spell) => spells.push({ id: String(spell.id), name: spell.name, source: choice.source.name, level: choice.source.level }));
     });
 
     for (const [featureName, feat] of Object.entries(classFeatDetails)) {
@@ -246,6 +269,18 @@ export function buildProficiencyMap(args: {
         getChoiceKey: (choice) => `classfeat:${featureName}:${choice.id}`,
         spellChoiceOptionsByKey,
       }).forEach((entry) => spells.push(entry));
+    }
+  }
+
+  // Everything collected before race/background processing is owned by the class currently
+  // displayed in this single-class editor. Persist that stable owner so a later multiclass edit
+  // can preserve it without guessing from mutable display labels such as "Expertise".
+  if (primaryClassEntryId) {
+    for (const list of [skills, expertise, saves, armor, weapons, tools, languages, spells, invocations, maneuvers, metamagic, infusions, plans]) {
+      for (const entry of list) {
+        entry.classEntryId ??= primaryClassEntryId;
+        entry.sourceKey ??= `class:${primaryClassEntryId}`;
+      }
     }
   }
 
@@ -496,6 +531,51 @@ export function buildProficiencyMap(args: {
     }
   });
 
+  // Carry a multiclass character's *other* class's proficiencies through untouched. Everything
+  // above this point was computed from `classDetail` alone (the one class this form edits), so a
+  // second/third class's skills, tools, spells, etc. have no way to be regenerated here -- without
+  // this they'd be silently dropped from every category on every save. Matching by `source` (every
+  // TaggedItem already carries one) rather than re-deriving the other class's grants means this
+  // works without needing that class's own compendium data loaded.
+  if (existingProficiencies) {
+    const otherClassNames = new Set(
+      existingClasses.slice(1).map((entry) => entry.className).filter((name): name is string => Boolean(name)),
+    );
+    const otherClassEntryIds = new Set(
+      existingClasses.slice(1).map((entry) => entry.id).filter((id): id is string => Boolean(id)),
+    );
+    if (otherClassNames.size > 0 || otherClassEntryIds.size > 0) {
+      const preserveOtherClass = (list?: TaggedItem[]) =>
+        (list ?? []).filter((entry) =>
+          Boolean(entry.classEntryId && otherClassEntryIds.has(entry.classEntryId))
+          || Boolean(entry.sourceKey?.startsWith("class:") && otherClassEntryIds.has(entry.sourceKey.slice(6)))
+          || otherClassNames.has(entry.source),
+        );
+      skills.push(...preserveOtherClass(existingProficiencies.skills));
+      expertise.push(...preserveOtherClass(existingProficiencies.expertise));
+      saves.push(...preserveOtherClass(existingProficiencies.saves));
+      armor.push(...preserveOtherClass(existingProficiencies.armor));
+      weapons.push(...preserveOtherClass(existingProficiencies.weapons));
+      tools.push(...preserveOtherClass(existingProficiencies.tools));
+      languages.push(...preserveOtherClass(existingProficiencies.languages));
+      spells.push(...preserveOtherClass(existingProficiencies.spells));
+      invocations.push(...preserveOtherClass(existingProficiencies.invocations));
+      maneuvers.push(...preserveOtherClass(existingProficiencies.maneuvers));
+      metamagic.push(...preserveOtherClass(existingProficiencies.metamagic));
+      infusions.push(...preserveOtherClass(existingProficiencies.infusions));
+      plans.push(...preserveOtherClass(existingProficiencies.plans));
+    }
+  }
+
+  // Preserve each spell/invocation's original acquisition level across saves (editing an existing
+  // character) instead of re-stamping every entry with the current build level -- see
+  // tagAcquisitionLevel. For a brand-new character there's nothing to preserve, so everything
+  // falls back to form.level (or the feature's own precise unlock level, where already set above).
+  const existingSpellsById = buildAcquisitionLevelIndex(existingSpells);
+  const existingInvocationsById = buildAcquisitionLevelIndex(existingInvocations);
+  const taggedSpells = tagAcquisitionLevel(spells, existingSpellsById, form.level);
+  const taggedInvocations = tagAcquisitionLevel(invocations, existingInvocationsById, form.level);
+
   return {
     skills: dedupeTaggedItems(skills).filter((entry) => !isProficiencyNoiseToken(entry.name)),
     expertise: dedupeTaggedItems(expertise).filter((entry) => !isProficiencyNoiseToken(entry.name)),
@@ -505,8 +585,8 @@ export function buildProficiencyMap(args: {
     languages: dedupeTaggedItems(languages, normalizeLanguageName).filter((entry) => !isProficiencyNoiseToken(entry.name)),
     weapons: dedupeTaggedItems(weapons, normalizeWeaponProficiencyName),
     weaponMasteries: Array.from(new Set(form.chosenWeaponMasteries.map((name) => normalizeWeaponProficiencyName(name)))),
-    spells: dedupeTaggedItems(spells, normalizeSpellTrackingName),
-    invocations: dedupeTaggedItems(invocations),
+    spells: dedupeTaggedItems(taggedSpells, normalizeSpellTrackingName),
+    invocations: dedupeTaggedItems(taggedInvocations),
     maneuvers: dedupeTaggedItems(maneuvers),
     metamagic: dedupeTaggedItems(metamagic),
     infusions: dedupeTaggedItems(infusions),

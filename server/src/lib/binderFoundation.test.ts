@@ -281,6 +281,12 @@ describe("Binder routes", () => {
     assert.equal(created.status, 201);
     const binder = await created.json() as { id: string; name: string };
     assert.equal(binder.name, "Tarentha");
+    const healthResponse = await fetch(`${base}/api/binders/${binder.id}/health`, { headers: { "x-test-user": "owner" } });
+    assert.equal(healthResponse.status, 200);
+    const health = await healthResponse.json() as { healthy: boolean; issueCount: number; groups: unknown[] };
+    assert.equal(health.healthy, true);
+    assert.equal(health.issueCount, 0);
+    assert.equal(health.groups.length, 6);
 
     const hidden = await fetch(`${base}/api/binders/${binder.id}`, {
       headers: { "x-test-user": "other" },

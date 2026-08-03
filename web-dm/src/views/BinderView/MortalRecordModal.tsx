@@ -74,6 +74,13 @@ export function MortalRecordModal(props: {
   const [className, setClassName] = useState("");
   const [playerId, setPlayerId] = useState("");
   const [monsterId, setMonsterId] = useState("");
+  const [hpMax, setHpMax] = useState("1");
+  const [hpCurrent, setHpCurrent] = useState("1");
+  const [hpDetails, setHpDetails] = useState("");
+  const [ac, setAc] = useState("10");
+  const [acDetails, setAcDetails] = useState("");
+  const [attackOverridesText, setAttackOverridesText] = useState("");
+  const [mechanicsDirty, setMechanicsDirty] = useState(false);
   const [notes, setNotes] = useState("");
   const [dmNotes, setDmNotes] = useState("");
   const [image, setImage] = useState<File | null>(null);
@@ -117,6 +124,13 @@ export function MortalRecordModal(props: {
     setClassName(props.record?.className ?? "");
     setPlayerId(props.record?.player?.id ?? "");
     setMonsterId(props.record?.monsterId ?? "");
+    setHpMax(String(props.record?.npcMechanics?.hpMax ?? 1));
+    setHpCurrent(String(props.record?.npcMechanics?.hpCurrent ?? props.record?.npcMechanics?.hpMax ?? 1));
+    setHpDetails(props.record?.npcMechanics?.hpDetails ?? "");
+    setAc(String(props.record?.npcMechanics?.ac ?? 10));
+    setAcDetails(props.record?.npcMechanics?.acDetails ?? "");
+    setAttackOverridesText(props.record?.npcMechanics?.attackOverrides ? JSON.stringify(props.record.npcMechanics.attackOverrides, null, 2) : "");
+    setMechanicsDirty(false);
     setNotes(props.record?.notes ?? "");
     setDmNotes(props.record?.dmNotes ?? "");
     setImage(null);
@@ -154,6 +168,11 @@ export function MortalRecordModal(props: {
     setSaving(true);
     setError(null);
     try {
+      let attackOverrides: BinderMortalInput["attackOverrides"] = null;
+      if (mortalType === "npc" && attackOverridesText.trim()) {
+        try { attackOverrides = JSON.parse(attackOverridesText) as NonNullable<BinderMortalInput["attackOverrides"]>; }
+        catch { setError("Attack overrides must be valid JSON."); setSaving(false); return; }
+      }
       await props.onSave({
         name: name.trim(),
         mortalType,
@@ -169,6 +188,14 @@ export function MortalRecordModal(props: {
         dmNotes: dmNotes.trim() || null,
         playerId: mortalType === "player_character" ? playerId || null : null,
         monsterId: mortalType === "npc" ? monsterId || null : null,
+        ...(mortalType === "npc" && mechanicsDirty ? {
+          hpMax: Math.max(1, Number(hpMax) || 1),
+          hpCurrent: Math.max(0, Number(hpCurrent) || 0),
+          hpDetails: hpDetails.trim() || null,
+          ac: Math.max(0, Number(ac) || 0),
+          acDetails: acDetails.trim() || null,
+          attackOverrides,
+        } : {}),
       }, image);
       props.onClose();
     } catch (cause) {
@@ -261,7 +288,19 @@ export function MortalRecordModal(props: {
       {property("Type", <Select style={{ width: "100%" }} value={mortalType} onChange={(event) => setMortalType(event.target.value as MortalType)} disabled={saving}><option value="npc">NPC</option><option value="player_character">Player Character</option></Select>)}
       {mortalType === "player_character"
         ? property("Existing player", <SearchableSelect value={playerId} onChange={linkPlayer} disabled={saving} options={availablePlayers.map((player) => ({ id: player.id, name: playerLabel(player) }))} />)
-        : <SearchableOption id="mortal-monster" label={`Statblock${props.requireNpcStatblock ? " *" : ""}`} selectedId={monsterId} options={props.options.monsters ?? []} onChange={setMonsterId} disabled={saving} />}
+        : <SearchableOption id="mortal-monster" label={`Statblock${props.requireNpcStatblock ? " *" : ""}`} selectedId={monsterId} options={props.options.monsters ?? []} onChange={(id) => { setMonsterId(id); setMechanicsDirty(false); setAttackOverridesText(""); }} disabled={saving} />}
+      {mortalType === "npc" ? <details open={Boolean(props.record)} style={{ margin: "8px 0", borderTop: `1px solid ${theme.colors.panelBorder}`, paddingTop: 10 }}>
+        <summary style={{ color: theme.colors.muted, cursor: "pointer", fontWeight: 750 }}>Canonical mechanics</summary>
+        <div style={{ display: "grid", gap: 5, marginTop: 8 }}>
+          {property("Max HP", <Input type="number" min={1} value={hpMax} onChange={(event) => { setHpMax(event.target.value); setMechanicsDirty(true); }} disabled={saving} />)}
+          {property("Current HP", <Input type="number" min={0} value={hpCurrent} onChange={(event) => { setHpCurrent(event.target.value); setMechanicsDirty(true); }} disabled={saving} />)}
+          {property("HP details", <Input value={hpDetails} onChange={(event) => { setHpDetails(event.target.value); setMechanicsDirty(true); }} placeholder="Hit dice or source" disabled={saving} />)}
+          {property("AC", <Input type="number" min={0} value={ac} onChange={(event) => { setAc(event.target.value); setMechanicsDirty(true); }} disabled={saving} />)}
+          {property("AC details", <Input value={acDetails} onChange={(event) => { setAcDetails(event.target.value); setMechanicsDirty(true); }} placeholder="Armor or source" disabled={saving} />)}
+          <div style={{ display: "grid", gap: 6, marginTop: 6 }}><div style={labelStyle}>Attack overrides</div><TextArea value={attackOverridesText} onChange={(event) => { setAttackOverridesText(event.target.value); setMechanicsDirty(true); }} rows={5} placeholder={'{"Rapier":{"toHit":9,"damage":"1d8+5","damageType":"piercing"}}'} disabled={saving} /></div>
+          <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>These values belong to the Binder NPC and update every linked iNPC and combatant.</div>
+        </div>
+      </details> : null}
       {mortalType === "player_character" && (() => {
         const linkedClassName = playerId ? props.options.players.find((player) => player.id === playerId)?.className : null;
         return property("Class", linkedClassName

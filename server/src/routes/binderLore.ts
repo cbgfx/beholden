@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { z } from "zod";
 import type { ServerContext } from "../server/context.js";
-import { binderOwnerOrAdmin, binderReaderOrAdmin } from "../middleware/binderAuth.js";
+import { binderEditorOrAdmin, binderReaderOrAdmin } from "../middleware/binderAuth.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 
@@ -33,6 +33,7 @@ const EventBody = z.object({
   dateSort: z.number().int().nullable().optional(),
   endDateText: optionalText(100),
   endDateSort: z.number().int().nullable().optional(),
+  tags: z.array(z.string().trim().min(1).max(80)).max(50).optional(),
   records: z.array(association).max(500).optional(),
   campaigns: z.array(association).max(100).optional(),
 }).strict();
@@ -137,7 +138,34 @@ function eventDto(db: ServerContext["db"], row: Record<string, unknown>) {
     FROM binder_event_campaigns bec JOIN campaigns c ON c.id = bec.campaign_id
     WHERE bec.event_id = ? ORDER BY c.name
   `).all(id);
-  return { ...row, records, campaigns };
+  const tags = db.prepare(`
+    SELECT et.id, et.name
+    FROM binder_event_tag_links etl
+    JOIN binder_event_tags et ON et.id = etl.tag_id
+    WHERE etl.event_id = ? ORDER BY et.name_key
+  `).all(id);
+  return { ...row, records, campaigns, tags };
+}
+
+function replaceEventTags(ctx: ServerContext, binderId: string, eventId: string, tags?: string[]) {
+  if (!tags) return;
+  ctx.db.prepare("DELETE FROM binder_event_tag_links WHERE event_id = ?").run(eventId);
+  const now = ctx.helpers.now();
+  const find = ctx.db.prepare("SELECT id FROM binder_event_tags WHERE binder_id = ? AND name_key = ?");
+  const create = ctx.db.prepare("INSERT INTO binder_event_tags (id,binder_id,name,name_key,created_at,updated_at) VALUES (?,?,?,?,?,?)");
+  const link = ctx.db.prepare("INSERT OR IGNORE INTO binder_event_tag_links (event_id,tag_id) VALUES (?,?)");
+  const seen = new Set<string>();
+  for (const name of tags) {
+    const key = ctx.helpers.normalizeKey(name);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    let row = find.get(binderId, key) as { id: string } | undefined;
+    if (!row) {
+      row = { id: ctx.helpers.uid() };
+      create.run(row.id, binderId, name.trim(), key, now, now);
+    }
+    link.run(eventId, row.id);
+  }
 }
 
 function replaceEventAssociations(
@@ -173,7 +201,7 @@ function replaceEventAssociations(
 
 export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
   const reader = binderReaderOrAdmin(ctx.db);
-  const owner = binderOwnerOrAdmin(ctx.db);
+  const owner = binderEditorOrAdmin(ctx.db);
 
   app.get("/api/binders/:binderId/records", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
@@ -190,9 +218,16 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
       LEFT JOIN binder_positions p ON p.id = br.id AND br.record_type = 'position'
       LEFT JOIN binder_points_of_interest poi ON poi.id = br.id AND br.record_type = 'poi'
       WHERE br.binder_id = ?
-        AND (? = '' OR br.name_key LIKE ?)
+        AND (? = '' OR br.name_key LIKE ?
+          OR EXISTS (SELECT 1 FROM binder_record_aliases a WHERE a.record_id=br.id AND a.alias_key LIKE ?)
+          OR EXISTS (SELECT 1 FROM binder_relationships rel WHERE rel.binder_id=br.binder_id
+            AND (rel.source_record_id=br.id OR rel.target_record_id=br.id)
+            AND (LOWER(COALESCE(rel.source_label,'')) LIKE ? OR LOWER(COALESCE(rel.target_label,'')) LIKE ?))
+          OR EXISTS (SELECT 1 FROM binder_event_tag_links etl JOIN binder_event_tags et ON et.id=etl.tag_id
+            WHERE etl.event_id=br.id AND et.name_key LIKE ?)
+        )
       ORDER BY br.name_key, br.id LIMIT 500
-    `).all(binderId, query, `%${query}%`) as RecordRow[];
+    `).all(binderId, query, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`) as RecordRow[];
     res.json(rows.filter((row) => !types.length || types.includes(row.record_type)).map((row) => ({
       id: row.id, binderId: row.binder_id, type: row.record_type, name: row.name,
       icon: row.icon ?? null,
@@ -315,6 +350,7 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
       ctx.db.prepare("INSERT INTO binder_events (id,description,date_text,date_sort,end_date_text,end_date_sort,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)")
         .run(id, body.description ?? null, body.dateText ?? null, body.dateSort ?? null, body.endDateText ?? null, body.endDateSort ?? null, t, t);
       replaceEventAssociations(ctx, binderId, id, body.records, body.campaigns);
+      replaceEventTags(ctx, binderId, id, body.tags);
       syncMentionField(ctx, binderId, id, "description", body.description);
     })();
     const row = ctx.db.prepare("SELECT br.id,br.name AS title,be.description,be.date_text AS dateText,be.date_sort AS dateSort,be.end_date_text AS endDateText,be.end_date_sort AS endDateSort FROM binder_events be JOIN binder_records br ON br.id=be.id WHERE br.id=?").get(id) as Record<string, unknown>;
@@ -334,6 +370,7 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
           body.dateSort !== undefined ? body.dateSort : old.date_sort, body.endDateText !== undefined ? body.endDateText : old.end_date_text,
           body.endDateSort !== undefined ? body.endDateSort : old.end_date_sort, t, id);
       replaceEventAssociations(ctx, binderId, id, body.records, body.campaigns);
+      replaceEventTags(ctx, binderId, id, body.tags);
       syncMentionField(ctx, binderId, id, "description", body.description !== undefined ? body.description : old.description as string | null);
     })();
     const row = ctx.db.prepare("SELECT br.id,br.name AS title,be.description,be.date_text AS dateText,be.date_sort AS dateSort,be.end_date_text AS endDateText,be.end_date_sort AS endDateSort FROM binder_events be JOIN binder_records br ON br.id=be.id WHERE br.id=?").get(id) as Record<string, unknown>;

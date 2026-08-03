@@ -30,7 +30,7 @@ import {
   syncLinkedMortalAgeFromCharacter,
   syncLinkedMortalPortraitFromCharacter,
 } from "../services/binders/linkedCharacterSync.js";
-import { preserveProficienciesOnLevelUp } from "../lib/levelUpProficiencies.js";
+import { preserveForeignClassProficiencies, preserveProficienciesOnLevelUp } from "../lib/levelUpProficiencies.js";
 import {
   AssignBody,
   CharacterCreateBody,
@@ -42,6 +42,14 @@ import {
   makeEmitPlayerChange,
 } from "./characterRouteHelpers.js";
 import { registerCharacterFieldPatchRoutes } from "./characterFieldPatchRoutes.js";
+import { ensureLinkedBinderMortalForCharacter } from "../services/binders/linkedPlayerIdentity.js";
+
+const LinkedIdentityPatch = z.object({
+  gender: z.string().trim().max(80).nullable().optional(),
+  age: z.number().int().min(0).max(10_000).nullable().optional(),
+  description: z.string().max(200_000).nullable().optional(),
+  backstory: z.string().max(200_000).nullable().optional(),
+}).strict().refine((body) => Object.keys(body).length > 0);
 
 export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
@@ -99,6 +107,68 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
         ),
       )),
     );
+  });
+
+  app.get("/api/me/characters/:id/binder-identity", requireAuth, (req, res) => {
+    const charId = requireParam(req, res, "id");
+    if (!charId) return;
+    const row = db.prepare(`
+      SELECT bpc.mortal_id AS id, br.name, m.gender, m.description, m.backstory,
+             m.image_url AS imageUrl, m.birth_date_sort AS birthDateSort,
+             COALESCE(c.current_date_sort, b.current_date_sort) AS referenceYear,
+             uc.character_data_json AS characterData
+      FROM user_characters uc
+      JOIN binder_player_characters bpc ON bpc.character_id=uc.id
+      JOIN mortals m ON m.id=bpc.mortal_id
+      JOIN binder_records br ON br.id=m.id
+      JOIN binders b ON b.id=br.binder_id
+      LEFT JOIN players p ON p.id=bpc.player_id
+      LEFT JOIN campaigns c ON c.id=p.campaign_id
+      WHERE uc.id=? AND uc.user_id=?
+    `).get(charId, req.user!.userId) as Record<string, unknown> | undefined;
+    if (!row) return res.status(404).json({ ok: false, message: "Linked Binder identity not found" });
+    let characterData: Record<string, unknown> = {};
+    try { characterData = JSON.parse(String(row.characterData ?? "{}")) as Record<string, unknown>; } catch { /* optional data */ }
+    const storedAge = typeof characterData.age === "number" || typeof characterData.age === "string"
+      ? Number(characterData.age) : Number.NaN;
+    const calculatedAge = row.referenceYear != null && row.birthDateSort != null
+      ? Number(row.referenceYear) - Number(row.birthDateSort) : null;
+    res.json({
+      id: row.id, name: row.name, gender: row.gender, description: row.description,
+      backstory: row.backstory, imageUrl: row.imageUrl,
+      age: Number.isFinite(storedAge) ? storedAge : calculatedAge,
+    });
+  });
+
+  app.patch("/api/me/characters/:id/binder-identity", requireAuth, (req, res) => {
+    const charId = requireParam(req, res, "id");
+    if (!charId) return;
+    const body = parseBody(LinkedIdentityPatch, req);
+    const linked = db.prepare(`
+      SELECT bpc.mortal_id AS mortalId, uc.character_data_json AS characterData
+      FROM user_characters uc JOIN binder_player_characters bpc ON bpc.character_id=uc.id
+      WHERE uc.id=? AND uc.user_id=?
+    `).get(charId, req.user!.userId) as { mortalId: string; characterData: string | null } | undefined;
+    if (!linked) return res.status(404).json({ ok: false, message: "Linked Binder identity not found" });
+    const t = now();
+    db.transaction(() => {
+      const current = db.prepare("SELECT gender,description,backstory FROM mortals WHERE id=?").get(linked.mortalId) as Record<string, unknown>;
+      db.prepare("UPDATE mortals SET gender=?,description=?,backstory=?,updated_at=? WHERE id=?").run(
+        body.gender !== undefined ? body.gender : current.gender,
+        body.description !== undefined ? body.description : current.description,
+        body.backstory !== undefined ? body.backstory : current.backstory,
+        t, linked.mortalId,
+      );
+      if (body.age !== undefined) {
+        let data: Record<string, unknown> = {};
+        try { data = JSON.parse(linked.characterData ?? "{}") as Record<string, unknown>; } catch { /* replace malformed optional data */ }
+        if (body.age === null) delete data.age; else data.age = body.age;
+        db.prepare("UPDATE user_characters SET character_data_json=?,updated_at=? WHERE id=?")
+          .run(Object.keys(data).length ? JSON.stringify(data) : null, t, charId);
+        syncLinkedMortalAgeFromCharacter(db, charId, data, t);
+      }
+    })();
+    res.json({ ok: true });
   });
 
   app.patch("/api/me/characters/:id/activity", requireAuth, (req, res) => {
@@ -179,10 +249,15 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       p.characterData !== undefined
         ? (p.characterData === null ? null : { ...(ex.characterData ?? {}), ...p.characterData })
         : ex.characterData;
-    const mergedCharacterData = preserveProficienciesOnLevelUp(
+    const levelSafeCharacterData = preserveProficienciesOnLevelUp(
       ex.characterData,
       requestedCharacterData,
       p.level !== undefined && p.level > ex.level,
+    );
+    const mergedCharacterData = preserveForeignClassProficiencies(
+      ex.characterData,
+      levelSafeCharacterData,
+      p.progressionClassEntryId,
     );
     const nextSheet = {
       name: p.name ?? ex.name,
@@ -342,6 +417,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       emitPlayerChange({ campaignId, action: "upsert", playerId, characterId: charId });
       results.push({ campaignId, playerId });
     }
+
+    ensureLinkedBinderMortalForCharacter(db, charId, ctx.helpers);
 
     res.json({ ok: true, results });
   });

@@ -4,13 +4,14 @@ import type { ServerContext } from "../server/context.js";
 import { requireAnyDm } from "../middleware/auth.js";
 import {
   binderOwnerOrAdmin,
+  binderEditorOrAdmin,
   binderReaderOrAdmin,
   ownsBinder,
 } from "../middleware/binderAuth.js";
 import { dmOrAdmin } from "../middleware/campaignAuth.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
-import { exportBinderDocument, importBinderDocument } from "../services/binders/nativeBinder.js";
+import { exportBinderDocument, importBinderDocument, previewBinderDocument } from "../services/binders/nativeBinder.js";
 
 const optionalText = (max: number) => z.string().max(max).nullable().optional().transform((value) => {
   if (value === undefined || value === null) return value;
@@ -42,6 +43,11 @@ const CampaignBinderBody = z.object({
   currentDateSort: z.number().int().nullable().optional(),
 }).strict();
 
+const BinderMemberBody = z.object({
+  username: z.string().trim().min(1).max(64),
+  role: z.enum(["collaborator", "viewer"]),
+}).strict();
+
 type BinderRow = {
   id: string;
   owner_user_id: string;
@@ -57,7 +63,10 @@ type BinderRow = {
   record_count?: number;
 };
 
-function binderDto(row: BinderRow) {
+function binderDto(row: BinderRow, db?: ServerContext["db"], userId?: string, isAdmin = false) {
+  const membership = db && userId
+    ? db.prepare("SELECT role FROM binder_memberships WHERE binder_id=? AND user_id=?").get(row.id, userId) as { role: "collaborator" | "viewer" } | undefined
+    : undefined;
   return {
     id: row.id,
     ownerUserId: row.owner_user_id,
@@ -72,6 +81,7 @@ function binderDto(row: BinderRow) {
     recordCount: row.record_count ?? 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    accessRole: isAdmin || row.owner_user_id === userId ? "owner" : membership?.role ?? "viewer",
   };
 }
 
@@ -83,9 +93,20 @@ const BINDER_SELECT = `
   FROM binders b
 `;
 
+function recordRoute(binderId: string, type: string, id: string): string {
+  const sections: Record<string, string> = {
+    mortal: "mortals", deity: "deities", race: "races", position: "positions",
+    domain: "domains", organization: "organizations", continent: "continents",
+    country: "countries", location: "locations", poi: "points-of-interest",
+    item: "items", event: "events",
+  };
+  return `/binder/${binderId}/${sections[type] ?? type}/${id}`;
+}
+
 export function registerBinderRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const ownerOnly = binderOwnerOrAdmin(db);
+  const editor = binderEditorOrAdmin(db);
   const reader = binderReaderOrAdmin(db);
   const anyDm = requireAnyDm(db);
 
@@ -95,6 +116,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
       : db.prepare(`
           ${BINDER_SELECT}
           WHERE b.owner_user_id = ?
+             OR EXISTS (SELECT 1 FROM binder_memberships bm WHERE bm.binder_id=b.id AND bm.user_id=?)
              OR EXISTS (
                SELECT 1
                FROM campaigns c
@@ -104,8 +126,8 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
                  AND cm.role = 'dm'
              )
           ORDER BY b.updated_at DESC
-        `).all(req.user!.userId, req.user!.userId);
-    res.json((rows as BinderRow[]).map(binderDto));
+        `).all(req.user!.userId, req.user!.userId, req.user!.userId);
+    res.json((rows as BinderRow[]).map((row) => binderDto(row, db, req.user!.userId, req.user!.isAdmin)));
   });
 
   app.post("/api/binders/import", anyDm, ctx.upload.single("file"), (req, res) => {
@@ -120,6 +142,18 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
         : error instanceof z.ZodError
           ? `Invalid Binder export: ${error.issues[0]?.message ?? "schema validation failed"}`
           : error instanceof Error ? error.message : "Binder import failed";
+      res.status(400).json({ ok: false, message });
+    }
+  });
+
+  app.post("/api/binders/import/preview", anyDm, ctx.upload.single("file"), (req, res) => {
+    if (!req.file) return res.status(400).json({ ok: false, message: "Binder JSON file is required" });
+    try {
+      res.json(previewBinderDocument(db, JSON.parse(req.file.buffer.toString("utf8")) as unknown));
+    } catch (error) {
+      const message = error instanceof SyntaxError ? "The selected file is not valid JSON"
+        : error instanceof z.ZodError ? `Invalid Binder export: ${error.issues[0]?.message ?? "schema validation failed"}`
+        : error instanceof Error ? error.message : "Binder preview failed";
       res.status(400).json({ ok: false, message });
     }
   });
@@ -146,7 +180,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
       t,
     );
     const row = db.prepare(`${BINDER_SELECT} WHERE b.id = ?`).get(id) as BinderRow;
-    res.status(201).json(binderDto(row));
+    res.status(201).json(binderDto(row, db, req.user!.userId, req.user!.isAdmin));
   });
 
   app.get("/api/binders/:binderId", reader, (req, res) => {
@@ -154,7 +188,61 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     if (!binderId) return;
     const row = db.prepare(`${BINDER_SELECT} WHERE b.id = ?`).get(binderId) as BinderRow | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Binder not found" });
-    res.json(binderDto(row));
+    res.json(binderDto(row, db, req.user!.userId, req.user!.isAdmin));
+  });
+
+  app.get("/api/binders/:binderId/dashboard", reader, (req, res) => {
+    const binderId = requireParam(req, res, "binderId");
+    if (!binderId) return;
+    const binder = db.prepare("SELECT current_date_sort FROM binders WHERE id=?").get(binderId) as { current_date_sort: number | null } | undefined;
+    if (!binder) return res.status(404).json({ ok: false, message: "Binder not found" });
+    const counts = db.prepare(`SELECT record_type AS type, COUNT(*) AS count FROM binder_records WHERE binder_id=? GROUP BY record_type ORDER BY record_type`).all(binderId);
+    const recent = (db.prepare(`SELECT id,name,record_type AS type,updated_at AS updatedAt FROM binder_records WHERE binder_id=? ORDER BY updated_at DESC,id LIMIT 8`).all(binderId) as Array<any>)
+      .map((row) => ({ ...row, route: recordRoute(binderId, row.type, row.id) }));
+    const nearbyEvents = (db.prepare(`
+      SELECT br.id,br.name,be.date_text AS dateText,be.date_sort AS dateSort,
+             ABS(be.date_sort-?) AS distance
+      FROM binder_events be JOIN binder_records br ON br.id=be.id
+      WHERE br.binder_id=? AND be.date_sort IS NOT NULL
+      ORDER BY distance,be.date_sort LIMIT 6
+    `).all(binder.current_date_sort ?? 0, binderId) as Array<any>)
+      .map((row) => ({ ...row, route: recordRoute(binderId, "event", row.id) }));
+    const incomplete = (db.prepare(`
+      SELECT br.id,br.name,br.record_type AS type
+      FROM binder_records br WHERE br.binder_id=? AND (
+        (br.record_type='mortal' AND COALESCE((SELECT description FROM mortals WHERE id=br.id),'')='') OR
+        (br.record_type='deity' AND COALESCE((SELECT description FROM deities WHERE id=br.id),'')='') OR
+        (br.record_type='organization' AND COALESCE((SELECT description FROM binder_organizations WHERE id=br.id),'')='') OR
+        (br.record_type='item' AND COALESCE((SELECT description FROM binder_items WHERE id=br.id),'')='') OR
+        (br.record_type='event' AND COALESCE((SELECT description FROM binder_events WHERE id=br.id),'')='')
+      ) ORDER BY br.updated_at DESC LIMIT 8
+    `).all(binderId) as Array<any>).map((row) => ({ ...row, route: recordRoute(binderId, row.type, row.id) }));
+    const unlinkedNpcCount = Number(db.prepare(`
+      SELECT COUNT(*) FROM binder_npcs npc JOIN binder_records br ON br.id=npc.mortal_id
+      WHERE br.binder_id=? AND NOT EXISTS (SELECT 1 FROM inpcs i WHERE i.binder_mortal_id=npc.mortal_id)
+    `).pluck().get(binderId) ?? 0);
+    const undatedEventCount = Number(db.prepare(`SELECT COUNT(*) FROM binder_events be JOIN binder_records br ON br.id=be.id WHERE br.binder_id=? AND be.date_sort IS NULL`).pluck().get(binderId) ?? 0);
+    res.json({ counts, recent, nearbyEvents, incomplete, unlinkedNpcCount, undatedEventCount });
+  });
+
+  app.get("/api/binders/:binderId/health", reader, (req, res) => {
+    const binderId = requireParam(req, res, "binderId");
+    if (!binderId) return;
+    type IssueRow = { id: string; name: string; type: string; detail: string };
+    const queries: Array<{ code: string; severity: "warning" | "info"; title: string; sql: string }> = [
+      { code: "broken_mentions", severity: "warning", title: "Broken mentions", sql: `SELECT br.id,br.name,br.record_type type,'Mention target is missing' detail FROM binder_record_mentions m JOIN binder_records br ON br.id=m.source_record_id WHERE br.binder_id=? AND m.target_record_id IS NULL` },
+      { code: "duplicate_names", severity: "info", title: "Duplicate names", sql: `SELECT MIN(id) id,name,record_type type,COUNT(*)||' records share this name' detail FROM binder_records WHERE binder_id=? GROUP BY record_type,name_key HAVING COUNT(*)>1` },
+      { code: "npc_mechanics", severity: "warning", title: "NPCs without mechanics", sql: `SELECT br.id,br.name,br.record_type type,'No Compendium statblock is linked' detail FROM binder_npcs npc JOIN binder_records br ON br.id=npc.mortal_id WHERE br.binder_id=? AND npc.monster_id IS NULL` },
+      { code: "unplaced_mortals", severity: "info", title: "Unplaced Mortals", sql: `SELECT br.id,br.name,br.record_type type,'No location is assigned' detail FROM mortals m JOIN binder_records br ON br.id=m.id WHERE br.binder_id=? AND m.residence_record_id IS NULL` },
+      { code: "unplaced_pois", severity: "info", title: "Unplaced Points of Interest", sql: `SELECT br.id,br.name,br.record_type type,'No parent place is assigned' detail FROM binder_points_of_interest p JOIN binder_records br ON br.id=p.id WHERE br.binder_id=? AND p.location_id IS NULL AND p.country_id IS NULL AND p.parent_poi_id IS NULL` },
+      { code: "event_dates", severity: "warning", title: "Invalid Event ranges", sql: `SELECT br.id,br.name,br.record_type type,'End date precedes start date' detail FROM binder_events e JOIN binder_records br ON br.id=e.id WHERE br.binder_id=? AND e.date_sort IS NOT NULL AND e.end_date_sort IS NOT NULL AND e.end_date_sort<e.date_sort` },
+    ];
+    const groups = queries.map((query) => {
+      const rows = db.prepare(query.sql).all(binderId) as IssueRow[];
+      return { code: query.code, severity: query.severity, title: query.title, issues: rows.map((row) => ({ ...row, route: recordRoute(binderId, row.type, row.id) })) };
+    });
+    const issueCount = groups.reduce((sum, group) => sum + group.issues.length, 0);
+    res.json({ healthy: issueCount === 0, issueCount, groups });
   });
 
   app.get("/api/binders/:binderId/export", reader, (req, res) => {
@@ -166,7 +254,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     res.json(document);
   });
 
-  app.patch("/api/binders/:binderId", ownerOnly, (req, res) => {
+  app.patch("/api/binders/:binderId", editor, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
     const body = parseBody(BinderPatchBody, req);
@@ -198,7 +286,45 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
       binderId,
     );
     const row = db.prepare(`${BINDER_SELECT} WHERE b.id = ?`).get(binderId) as BinderRow;
-    res.json(binderDto(row));
+    res.json(binderDto(row, db, req.user!.userId, req.user!.isAdmin));
+  });
+
+  app.get("/api/binders/:binderId/members", ownerOnly, (req, res) => {
+    const binderId = requireParam(req, res, "binderId");
+    if (!binderId) return;
+    const owner = db.prepare(`SELECT u.id,u.username,u.name FROM binders b JOIN users u ON u.id=b.owner_user_id WHERE b.id=?`).get(binderId) as Record<string, unknown>;
+    const members = db.prepare(`
+      SELECT u.id,u.username,u.name,bm.role,bm.created_at,bm.updated_at
+      FROM binder_memberships bm JOIN users u ON u.id=bm.user_id
+      WHERE bm.binder_id=? ORDER BY u.name COLLATE NOCASE
+    `).all(binderId) as Array<Record<string, unknown>>;
+    res.json([{ ...owner, role: "owner" }, ...members.map((row) => ({
+      id: row.id, username: row.username, name: row.name, role: row.role,
+      createdAt: row.created_at, updatedAt: row.updated_at,
+    }))]);
+  });
+
+  app.put("/api/binders/:binderId/members", ownerOnly, (req, res) => {
+    const binderId = requireParam(req, res, "binderId");
+    if (!binderId) return;
+    const body = parseBody(BinderMemberBody, req);
+    const user = db.prepare("SELECT id,username,name FROM users WHERE LOWER(username)=LOWER(?)").get(body.username) as { id: string; username: string; name: string } | undefined;
+    if (!user) return res.status(404).json({ ok: false, message: "User not found" });
+    const binder = db.prepare("SELECT owner_user_id FROM binders WHERE id=?").get(binderId) as { owner_user_id: string };
+    if (user.id === binder.owner_user_id) return res.status(400).json({ ok: false, message: "The owner already has full access" });
+    const t = ctx.helpers.now();
+    db.prepare(`INSERT INTO binder_memberships (binder_id,user_id,role,created_at,updated_at) VALUES (?,?,?,?,?)
+      ON CONFLICT(binder_id,user_id) DO UPDATE SET role=excluded.role,updated_at=excluded.updated_at`)
+      .run(binderId, user.id, body.role, t, t);
+    res.json({ ...user, role: body.role, updatedAt: t });
+  });
+
+  app.delete("/api/binders/:binderId/members/:userId", ownerOnly, (req, res) => {
+    const binderId = requireParam(req, res, "binderId");
+    const userId = requireParam(req, res, "userId");
+    if (!binderId || !userId) return;
+    db.prepare("DELETE FROM binder_memberships WHERE binder_id=? AND user_id=?").run(binderId, userId);
+    res.json({ ok: true });
   });
 
   app.delete("/api/binders/:binderId", ownerOnly, (req, res) => {

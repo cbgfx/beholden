@@ -14,6 +14,7 @@ export interface SpellRowEntry {
   key: string;
   searchName: string;
   source: string;
+  level?: number | null;
   forcedPrepared: boolean;
 }
 
@@ -119,7 +120,7 @@ export function CharacterSpellRow({
       )}
 
       {/* Name + meta */}
-      <div style={{ minWidth: 0 }} title={entry.source ? `Granted by: ${entry.source}` : undefined}>
+      <div style={{ minWidth: 0 }} title={entry.source ? `Granted by: ${entry.source}${entry.level != null ? ` (Level ${entry.level})` : ""}` : undefined}>
         <div style={{ fontWeight: 700, fontSize: "var(--fs-subtitle)", color: isPrepared ? C.text : C.muted }}>
           {entry.searchName}
           {conc && <span title="Concentration" style={{ marginLeft: 5, fontSize: "var(--fs-tiny)", color: C.colorRitual }}>◆</span>}

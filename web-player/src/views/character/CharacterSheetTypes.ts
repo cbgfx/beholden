@@ -13,6 +13,10 @@ export interface TaggedItem {
   name: string;
   source: string;
   id?: string;
+  /** Character (spells) or class (invocations, via level-up) level this was acquired at, when
+   * known. `null`/absent means either genuinely untracked (legacy data) or not level-relevant
+   * (e.g. skills). Never guess a value here -- an honest gap beats a fabricated one. */
+  level?: number | null;
   ability?: AbilKey | null;
   sourceKey?: string | null;
   classEntryId?: string | null;
@@ -168,6 +172,9 @@ export interface CharacterData {
   deathSaves?: SharedDeathSaves;
   extraFeatIds?: string[];
   extraFeatAbilityChoices?: Record<string, string[]>;
+  /** id->level map for chosenOptionals (`optional:<name>`) and extraFeatIds (`extraFeat:<id>`)
+   * entries -- see spellAcquisition.ts's tagAcquisitionLevelMap. */
+  acquisitionLevels?: Record<string, number | null>;
   exhaustion?: number;
   concentrationSpell?: string | null;
 }

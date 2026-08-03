@@ -26,6 +26,10 @@ import { MortalWorkspace } from "@/views/BinderView/MortalWorkspace";
 import { BinderPlayersWorkspace } from "@/views/BinderView/BinderPlayersWorkspace";
 import { BinderCampaignWorkspace } from "@/views/BinderView/BinderCampaignWorkspace";
 import { BinderLoreWorkspace } from "@/views/BinderView/BinderLoreWorkspace";
+import { BinderMembersPanel } from "@/views/BinderView/BinderMembersPanel";
+import { BinderGlobalSearch } from "@/views/BinderView/BinderGlobalSearch";
+import { BinderDashboardView } from "@/views/BinderView/BinderDashboard";
+import { BinderHealthWorkspace } from "@/views/BinderView/BinderHealthWorkspace";
 
 type NavItem = {
   id: string;
@@ -74,6 +78,10 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
       { id: "organizations", label: "Organizations", icon: <IconOrganigram size={20} />, color: "#60a5fa", columns: ["Name", "Members", "Headquarters", "Visibility"] },
       { id: "domains", label: "Domains", icon: <IconSpells size={20} />, color: "#c084fc", columns: ["Name", "Deities", "Description"] },
     ],
+  },
+  {
+    label: "Maintenance",
+    items: [{ id: "health", label: "Binder Health", icon: <IconShield size={20} />, color: "#22c55e", columns: [] }],
   },
 ];
 
@@ -145,7 +153,7 @@ const REFERENCE_TYPES = new Set<BinderReferenceType>([
   "continents", "countries", "locations", "points-of-interest",
 ]);
 
-export function BinderView({ binder, campaigns, canEdit, onRecordsChanged }: { binder: BinderSummary; campaigns: Campaign[]; canEdit: boolean; onRecordsChanged: () => Promise<void> }) {
+export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsChanged }: { binder: BinderSummary; campaigns: Campaign[]; canEdit: boolean; canManage: boolean; onRecordsChanged: () => Promise<void> }) {
   const location = useLocation();
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
   const routeSection = location.pathname.split("/")[3] ?? "overview";
@@ -244,21 +252,14 @@ export function BinderView({ binder, campaigns, canEdit, onRecordsChanged }: { b
                 {binder.currentDate.text ? `Setting date: ${binder.currentDate.text}` : "No setting date set"}
               </div> : null}
             </div>
+            <BinderGlobalSearch binderId={binder.id} />
           </header>
 
           {!activeItem ? (
             <>
               {binder.description ? <div style={{ color: theme.colors.muted, lineHeight: 1.5 }}>{binder.description}</div> : null}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
-                <Link to={`/binder/${binder.id}/campaigns`} style={{ padding: 16, borderRadius: theme.radius.panel, border: `1px solid ${theme.colors.panelBorder}`, background: theme.colors.panelBg, color: theme.colors.text, textDecoration: "none" }}>
-                  <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>Campaigns</div>
-                  <div style={{ fontSize: 28, fontWeight: 850, marginTop: 3 }}>{campaigns.length}</div>
-                </Link>
-                <div style={{ padding: 16, borderRadius: theme.radius.panel, border: `1px solid ${theme.colors.panelBorder}`, background: theme.colors.panelBg }}>
-                  <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>Records</div>
-                  <div style={{ fontSize: 28, fontWeight: 850, marginTop: 3 }}>{binder.recordCount}</div>
-                </div>
-              </div>
+              <BinderDashboardView binderId={binder.id} accent={accent} canEdit={canEdit} />
+              {canManage ? <BinderMembersPanel binderId={binder.id} /> : null}
             </>
           ) : activeItem.id === "campaigns" ? (
             selectedCampaign
@@ -268,6 +269,8 @@ export function BinderView({ binder, campaigns, canEdit, onRecordsChanged }: { b
             <MortalWorkspace binderId={binder.id} binderCurrentDate={binder.currentDate.sort} recordId={routeRecordId} accent={activeItem.color} canEdit={canEdit} onRecordsChanged={onRecordsChanged} />
           ) : activeItem.id === "players" ? (
             <BinderPlayersWorkspace binderId={binder.id} binderCurrentDate={binder.currentDate.sort} accent={activeItem.color} />
+          ) : activeItem.id === "health" ? (
+            <BinderHealthWorkspace binderId={binder.id} accent={activeItem.color} />
           ) : REFERENCE_TYPES.has(activeItem.id as BinderReferenceType) ? (
             <ReferenceWorkspace
               binderId={binder.id}

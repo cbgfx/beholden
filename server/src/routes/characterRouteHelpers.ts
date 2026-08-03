@@ -37,6 +37,7 @@ const CharacterBodyBase = z.object({
   syncedAc: z.number().int().min(1).optional(),
   syncedHpMax: z.number().int().min(1).optional(),
   syncedSpeed: z.number().int().optional(),
+  progressionClassEntryId: z.string().trim().min(1).optional(),
 });
 
 export const CharacterCreateBody = CharacterBodyBase.extend({
