@@ -43,7 +43,10 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
     const envSet = new Set<string>();
     for (const row of envRows) {
       for (const part of row.environment.split(",").map((v) => v.trim()).filter(Boolean)) {
-        envSet.add(part);
+        const environment = part.toLocaleLowerCase();
+        // "any"/"all" describe the absence of a habitat restriction; the UI already
+        // represents that with its synthetic "All environments" option.
+        if (environment !== "any" && environment !== "all") envSet.add(environment);
       }
     }
     res.json({

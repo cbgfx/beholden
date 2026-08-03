@@ -52,6 +52,13 @@ const LinkedIdentityPatch = z.object({
   backstory: z.string().max(200_000).nullable().optional(),
 }).strict().refine((body) => Object.keys(body).length > 0);
 
+function identityRequirementError(characterData: Record<string, unknown> | null | undefined): string | null {
+  const age = Number(String(characterData?.age ?? "").trim());
+  if (!Number.isInteger(age) || age <= 0 || age > 10_000) return "Character age is required and must be a positive whole number";
+  if (characterData?.gender !== "male" && characterData?.gender !== "female") return "Character gender is required";
+  return null;
+}
+
 export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { uid, now } = ctx.helpers;
@@ -190,6 +197,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const userId = req.user!.userId;
     const ownerName = accountNameFor(userId);
     const p = parseBody(CharacterCreateBody, req);
+    const identityError = identityRequirementError(p.characterData);
+    if (identityError) return res.status(400).json({ ok: false, message: identityError });
     const id = uid();
     const t = now();
     const normalized = normalizeCharacterSheetForStorage({
@@ -250,6 +259,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       p.characterData !== undefined
         ? (p.characterData === null ? null : { ...(ex.characterData ?? {}), ...p.characterData })
         : ex.characterData;
+    const identityError = identityRequirementError(requestedCharacterData);
+    if (identityError) return res.status(400).json({ ok: false, message: identityError });
     const levelSafeCharacterData = preserveProficienciesOnLevelUp(
       ex.characterData,
       requestedCharacterData,

@@ -161,7 +161,10 @@ export function importBinderDocument(db: Db, raw: unknown, ownerUserId: string, 
         return row[name] ?? null;
       }));
     }
-    for (const row of rows("binder_countries")) db.prepare("INSERT INTO binder_countries VALUES (?, ?, ?, ?, ?)").run(map(row.id), map(row.continent_id), text(row.description), now, now);
+    for (const row of rows("binder_countries")) db.prepare(`
+      INSERT INTO binder_countries (id, continent_id, description, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(map(row.id), map(row.continent_id), text(row.description), now, now);
     for (const row of rows("binder_locations")) db.prepare(`
       INSERT INTO binder_locations (id, country_id, continent_id, description, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -184,7 +187,12 @@ export function importBinderDocument(db: Db, raw: unknown, ownerUserId: string, 
       text(row.hp_details), row.ac ?? null, text(row.ac_details),
       row.attack_overrides_json == null ? null : String(row.attack_overrides_json), now, now,
     );
-    for (const row of rows("binder_player_characters")) db.prepare("INSERT INTO binder_player_characters VALUES (?, NULL, NULL, ?, ?)").run(map(row.mortal_id), now, now);
+    // Characters and Campaign player rows are installation-local. Preserve the Mortal as a
+    // normal unlinked PC and let the user explicitly relink it in the destination installation.
+    for (const row of rows("binder_player_characters")) db.prepare(`
+      INSERT INTO binder_player_characters (mortal_id, character_id, player_id, created_at, updated_at)
+      VALUES (?, NULL, NULL, ?, ?)
+    `).run(map(row.mortal_id), now, now);
     for (const row of rows("deities")) db.prepare(`
       INSERT INTO deities (id, rank, description, dm_notes, image_url, image_updated_at, primary_location_record_id, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)

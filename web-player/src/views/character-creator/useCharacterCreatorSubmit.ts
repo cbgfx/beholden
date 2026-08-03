@@ -57,6 +57,7 @@ function findCreatorSubmissionProblem(args: {
   if (!form.ruleset) return "Choose a ruleset before saving.";
   const age = Number(String(form.age ?? "").trim());
   if (!Number.isInteger(age) || age <= 0) return "Enter a valid age before saving.";
+  if (form.gender !== "male" && form.gender !== "female") return "Choose a gender before saving.";
   // These details drive derived proficiencies (armor/weapons/skills/etc). They're fetched
   // asynchronously from `form.classId`/`raceId`/`bgId`, so submitting before they resolve
   // would silently save an incomplete proficiency map — block until they're ready.

@@ -140,6 +140,7 @@ function renderIdentityStep({
             <div>
               <label style={labelStyle}>Gender *</label>
               <Select
+                required
                 value={String(form.gender ?? "")}
                 onChange={(e) => setField("gender", e.target.value)}
                 style={{ width: "100%" }}

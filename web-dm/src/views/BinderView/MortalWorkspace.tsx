@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { resolveAssetUrl } from "@/services/api";
-import { IconCakeSlice, IconDna1, IconPencil, IconPlus, IconTrash, IconVillage } from "@/icons";
+import { IconCakeSlice, IconDna1, IconOrganigram, IconPencil, IconPlayer, IconPlus, IconShield, IconTrash, IconVillage } from "@/icons";
 import { EntityIcon } from "@/components/iconPicker/EntityIcon";
-import { getDefaultEntityIcon } from "@/components/iconPicker/entityIconDefaults";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { useConfirm } from "@/confirm/ConfirmContext";
@@ -19,6 +18,10 @@ import { useValidMentionIds } from "./useValidMentionIds";
 
 const mortalTableColumns = "minmax(210px, 1.45fr) minmax(135px, 0.85fr) minmax(170px, 1fr) minmax(175px, 1fr) 130px 72px 96px 72px";
 const NONE_FILTER = "__none__";
+
+function OrganizationIcon(props: { icon?: string | null; size: number }) {
+  return props.icon ? <EntityIcon icon={props.icon} size={props.size} /> : <IconOrganigram size={props.size} />;
+}
 type MortalSortKey = "name" | "position" | "organization" | "location" | "species" | "age" | "gender" | "status";
 
 type MortalFilters = {
@@ -344,10 +347,13 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     const facts: Array<{ key: string; icon: React.ReactNode; label: string; node: React.ReactNode }> = [
       ...(() => {
         const displayClassName = selected.mortalType === "player_character" ? (linkedPlayer?.className || selected.className) : null;
-        return displayClassName ? [{ key: "class", icon: null, label: "Class", node: displayClassName as React.ReactNode }] : [];
+        return displayClassName ? [{ key: "class", icon: <EntityIcon icon="game-icons:doubled" size={16} />, label: "Class", node: displayClassName as React.ReactNode }] : [];
       })(),
-      ...(selected.position ? [{ key: "position", icon: <EntityIcon icon={selected.position.icon ?? getDefaultEntityIcon("positions")} size={16} />, label: "Position", node: selected.position.name as React.ReactNode }] : []),
-      ...(selected.organizations.length ? [{ key: "organizations", icon: <EntityIcon icon={selected.organizations[0]?.icon ?? getDefaultEntityIcon("organizations")} size={16} />, label: "Organizations", node: selected.organizations.map((organization) => organization.name).join(", ") as React.ReactNode }] : []),
+      ...(selected.position ? [{ key: "position", icon: <IconShield size={16} />, label: "Position", node: selected.position.name as React.ReactNode }] : []),
+      ...(selected.organizations.length ? [{
+        key: "organizations", icon: <OrganizationIcon size={16} />, label: "Org",
+        node: <span style={{ display: "flex", flexWrap: "wrap", gap: "5px 14px" }}>{selected.organizations.map((organization) => <span key={organization.id} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><OrganizationIcon icon={organization.icon} size={14} />{organization.name}</span>)}</span>,
+      }] : []),
       ...(selected.location ? [{ key: "location", icon: <IconVillage size={16} />, label: "Location", node: selected.location.name as React.ReactNode }] : []),
       ...(selected.race ? [{ key: "race", icon: <IconDna1 size={16} />, label: "Race", node: selected.race.name as React.ReactNode }] : []),
       ...(age !== null ? [{ key: "age", icon: <IconCakeSlice size={16} />, label: "Age", node: String(age) as React.ReactNode }] : []),
@@ -356,17 +362,17 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
       ...(selected.personal?.hair ? [{ key: "hair", icon: null, label: "Hair", node: selected.personal.hair as React.ReactNode }] : []),
       ...(selected.personal?.skin ? [{ key: "skin", icon: null, label: "Skin", node: selected.personal.skin as React.ReactNode }] : []),
       {
-        key: "gender", icon: null, label: "Gender",
+        key: "gender", icon: <EntityIcon icon="game-icons:logic-gate-or" size={16} />, label: "Gender",
         node: genderColor
           ? <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: genderColor, background: withAlpha(genderColor, 0.16), fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 750 }}>{selected.gender === "male" ? "Male" : "Female"}</span>
           : <span style={{ color: theme.colors.red }}>Needs gender</span>,
       },
       {
-        key: "status", icon: null, label: "Status",
+        key: "status", icon: <EntityIcon icon="game-icons:half-dead" size={16} />, label: "Status",
         node: <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 5, color: "#fff", background: selected.lifeStatus === "dead" ? theme.colors.red : theme.colors.green, fontSize: "var(--fs-small)", fontWeight: 800 }}>{selected.lifeStatus === "dead" ? "Dead" : "Alive"}</span>,
       },
       ...(selected.mortalType === "player_character" && selected.player?.playerName
-        ? [{ key: "player", icon: null, label: "Player", node: selected.player.playerName as React.ReactNode }]
+        ? [{ key: "player", icon: <IconPlayer size={16} />, label: "Player", node: selected.player.playerName as React.ReactNode }]
         : []),
     ];
     const mentions = loreRecords.filter((row) => row.id !== selected.id).map((row) => ({
@@ -484,8 +490,8 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
         <BinderListHeader
           columns={[
             { key: "name", label: "Name", sortable: true },
-            { key: "position", label: "Position", icon: <EntityIcon icon={getDefaultEntityIcon("positions")} size={14} />, sortable: true },
-            { key: "organization", label: "Organization", icon: <EntityIcon icon={getDefaultEntityIcon("organizations")} size={14} />, sortable: true },
+            { key: "position", label: "Position", icon: <IconShield size={14} />, sortable: true },
+            { key: "organization", label: "Org", icon: <IconOrganigram size={14} />, sortable: true },
             { key: "location", label: "Location", sortable: true },
             { key: "species", label: "Species", sortable: true },
             { key: "age", label: "Age", sortable: true },
@@ -510,11 +516,11 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{record.name}</span>
               </span>
               <span title={record.organizations.flatMap((organization) => organization.position?.name ?? []).join(", ") || "None"} style={{ ...cell, display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ display: "inline-flex", opacity: 0.65, flex: "0 0 auto" }}><EntityIcon icon={record.organizations[0]?.position?.icon ?? getDefaultEntityIcon("positions")} size={14} /></span>
+                <span style={{ display: "inline-flex", opacity: 0.65, flex: "0 0 auto" }}><IconShield size={14} /></span>
                 {record.organizations.flatMap((organization) => organization.position?.name ?? []).join(", ") || "None"}
               </span>
               <span title={record.organizations.map((organization) => organization.name).join(", ") || "None"} style={{ ...cell, display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ display: "inline-flex", opacity: 0.65, flex: "0 0 auto" }}><EntityIcon icon={record.organizations[0]?.icon ?? getDefaultEntityIcon("organizations")} size={14} /></span>
+                <span style={{ display: "inline-flex", opacity: 0.65, flex: "0 0 auto" }}><OrganizationIcon icon={record.organizations[0]?.icon} size={14} /></span>
                 {record.organizations.map((organization) => organization.name).join(", ") || "None"}
               </span>
               <span title={record.location?.name ?? "None"} style={cell}>{record.location?.name ?? "None"}</span>
