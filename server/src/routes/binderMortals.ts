@@ -307,14 +307,37 @@ function compendiumMonsterMechanics(dataJson: string | null | undefined) {
 }
 
 function replaceMemberships(ctx: ServerContext, mortalId: string, organizationIds: string[], now: number) {
-  ctx.db.prepare("DELETE FROM organization_memberships WHERE mortal_id = ?").run(mortalId);
+  const selectedIds = [...new Set(organizationIds)];
+  const existing = ctx.db.prepare(`
+    SELECT id, organization_id
+    FROM organization_memberships
+    WHERE mortal_id = ?
+    ORDER BY is_primary DESC, created_at, id
+  `).all(mortalId) as Array<{ id: string; organization_id: string }>;
+  const selected = new Set(selectedIds);
+  const remove = ctx.db.prepare("DELETE FROM organization_memberships WHERE id = ?");
+  for (const membership of existing) {
+    if (!selected.has(membership.organization_id)) remove.run(membership.id);
+  }
+
+  const retainedByOrganization = new Map<string, string>();
+  for (const membership of existing) {
+    if (selected.has(membership.organization_id) && !retainedByOrganization.has(membership.organization_id)) {
+      retainedByOrganization.set(membership.organization_id, membership.id);
+    }
+  }
+  ctx.db.prepare("UPDATE organization_memberships SET is_primary = 0, updated_at = ? WHERE mortal_id = ?")
+    .run(now, mortalId);
   const insert = ctx.db.prepare(`
     INSERT INTO organization_memberships (
       id, organization_id, mortal_id, is_primary, created_at, updated_at
     ) VALUES (?, ?, ?, ?, ?, ?)
   `);
-  [...new Set(organizationIds)].forEach((organizationId, index) => {
-    insert.run(ctx.helpers.uid(), organizationId, mortalId, index === 0 ? 1 : 0, now, now);
+  const setPrimary = ctx.db.prepare("UPDATE organization_memberships SET is_primary = ?, updated_at = ? WHERE id = ?");
+  selectedIds.forEach((organizationId, index) => {
+    const retainedId = retainedByOrganization.get(organizationId);
+    if (retainedId) setPrimary.run(index === 0 ? 1 : 0, now, retainedId);
+    else insert.run(ctx.helpers.uid(), organizationId, mortalId, index === 0 ? 1 : 0, now, now);
   });
 }
 
