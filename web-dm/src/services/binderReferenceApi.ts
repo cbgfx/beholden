@@ -79,6 +79,27 @@ export function updateBinderReference(
   return api(`${base(binderId, type)}/${recordId}`, jsonInit("PATCH", input));
 }
 
+export function fetchBinderLeaderCharacterOptions(binderId: string): Promise<Array<{ id: string; name: string }>> {
+  return api(`/api/binders/${binderId}/leader-character-options`);
+}
+
+export function setBinderOrganizationLeaderCharacter(
+  binderId: string,
+  organizationId: string,
+  characterId: string,
+): Promise<{ ok: true; mortalId: string }> {
+  return api(`/api/binders/${binderId}/organizations/${organizationId}/leader-character`, jsonInit("POST", { characterId }));
+}
+
+export type BinderOrganizationMember = { id: string; name: string; position: string | null; role: string | null };
+
+export function fetchBinderOrganizationMembers(
+  binderId: string,
+  organizationId: string,
+): Promise<BinderOrganizationMember[]> {
+  return api(`/api/binders/${binderId}/organizations/${organizationId}/members`);
+}
+
 export function deleteBinderReference(
   binderId: string,
   type: BinderReferenceType,

@@ -120,14 +120,28 @@ export function importBinderDocument(db: Db, raw: unknown, ownerUserId: string, 
   for (const tag of doc.data.binder_event_tags ?? []) tagMap.set(String(tag.id), helpers.uid());
   const map = (value: unknown) => value == null ? null : idMap.get(String(value)) ?? null;
   const tag = (value: unknown) => value == null ? null : tagMap.get(String(value)) ?? null;
+  const now = helpers.now();
+  const binderId = helpers.uid();
+  const importedRecordIds = new Set(idMap.values());
   const text = (value: unknown) => {
     if (value == null) return null;
     let result = String(value);
-    for (const [oldId, newId] of idMap) result = result.replaceAll(oldId, newId);
+    for (const [oldId, newId] of idMap) {
+      const escapedId = oldId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      result = result.replace(new RegExp(`(?<![A-Za-z0-9-])${escapedId}(?![A-Za-z0-9-])`, "g"), newId);
+    }
+    // Native exports can contain links written while records lived in an older
+    // Binder (or even several older Binders after earlier imports). The target
+    // record is the stable part. Once it has been remapped, point its route at
+    // the Binder being created now.
+    result = result.replace(
+      /\/binder\/[^/]+\/([^/]+)\/([^/?#)]+)/g,
+      (whole, section: string, recordId: string) => importedRecordIds.has(decodeURIComponent(recordId))
+        ? `/binder/${binderId}/${section}/${recordId}`
+        : whole,
+    );
     return result;
   };
-  const now = helpers.now();
-  const binderId = helpers.uid();
   const rows = (table: string) => doc.data[table] ?? [];
 
   db.transaction(() => {
@@ -237,7 +251,7 @@ export function importBinderDocument(db: Db, raw: unknown, ownerUserId: string, 
     for (const row of rows("binder_record_mentions")) db.prepare(`
       INSERT INTO binder_record_mentions (id,source_record_id,source_field,target_record_id,target_external_id,label,occurrence_key,created_at)
       VALUES (?,?,?,?,?,?,?,?)
-    `).run(helpers.uid(), map(row.source_record_id), row.source_field, map(row.target_record_id), row.target_external_id ?? null, row.label, row.occurrence_key, now);
+    `).run(helpers.uid(), map(row.source_record_id), row.source_field, map(row.target_record_id), row.target_external_id ?? null, row.label, text(row.occurrence_key), now);
   })();
   return { binderId, name: doc.binder.name, recordCount: doc.records.length };
 }

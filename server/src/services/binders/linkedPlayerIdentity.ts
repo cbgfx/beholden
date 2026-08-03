@@ -6,6 +6,7 @@ export function ensureLinkedBinderMortalForCharacter(
   db: Db,
   characterId: string,
   helpers: { uid: () => string; now: () => number; normalizeKey: (value: string) => string },
+  targetBinderId?: string,
 ): string | null {
   const directLink = db.prepare(`
     SELECT bpc.mortal_id,br.binder_id
@@ -17,7 +18,8 @@ export function ensureLinkedBinderMortalForCharacter(
     FROM players p JOIN campaigns c ON c.id = p.campaign_id
     WHERE p.character_id = ? AND c.binder_id IS NOT NULL
   `).all(characterId) as Array<{ binderId: string }>;
-  if (!directLink && binders.length !== 1) return null;
+  if (targetBinderId && directLink && directLink.binder_id !== targetBinderId) return null;
+  if (!directLink && !targetBinderId && binders.length !== 1) return null;
 
   const character = db.prepare(`
     SELECT name, class_name AS className, species, character_data_json AS characterData,
@@ -30,7 +32,7 @@ export function ensureLinkedBinderMortalForCharacter(
   if (!character) return null;
   let data: Record<string, unknown> = {};
   try { data = JSON.parse(character.characterData ?? "{}") as Record<string, unknown>; } catch { /* optional data */ }
-  const binderId = directLink?.binder_id ?? binders[0]!.binderId;
+  const binderId = targetBinderId ?? directLink?.binder_id ?? binders[0]!.binderId;
   const race = character.species.trim() ? db.prepare(`
     SELECT br.id FROM binder_races r JOIN binder_records br ON br.id = r.id
     WHERE br.binder_id = ? AND (br.name_key = ? OR EXISTS (

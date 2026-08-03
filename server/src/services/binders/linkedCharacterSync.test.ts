@@ -89,6 +89,20 @@ test("campaign assignment can create and hydrate one canonical Binder Player Mor
   }), "auto-mortal");
 });
 
+test("an explicit Binder selection can adopt an unassigned character", () => {
+  const database = fixture();
+  database.prepare("INSERT INTO user_characters (id,user_id,name,class_name,species,character_data_json,created_at,updated_at) VALUES ('free','u','Traveler','Cleric','Human','{\"age\":30,\"gender\":\"female\"}',1,1)").run();
+  const mortalId = ensureLinkedBinderMortalForCharacter(database, "free", {
+    uid: () => "free-mortal", now: () => 32, normalizeKey: (value) => value.trim().toLocaleLowerCase(),
+  }, "b");
+  assert.equal(mortalId, "free-mortal");
+  assert.deepEqual(database.prepare(`
+    SELECT br.binder_id,bpc.character_id,bpc.player_id,m.gender,m.class_name
+    FROM binder_records br JOIN mortals m ON m.id=br.id
+    JOIN binder_player_characters bpc ON bpc.mortal_id=m.id WHERE m.id='free-mortal'
+  `).get(), { binder_id: "b", character_id: "free", player_id: null, gender: "female", class_name: "Cleric" });
+});
+
 test("auto-link adopts an existing Campaign Player Mortal and infers gender and species without duplicating it", () => {
   const database = fixture();
   database.prepare("UPDATE user_characters SET species='Elf',class_name='Wizard',character_data_json='{\"age\":25,\"gender\":\"male\"}' WHERE id='ch'").run();

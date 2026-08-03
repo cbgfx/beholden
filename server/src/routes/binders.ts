@@ -331,7 +331,28 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
     const campaigns = db.prepare("SELECT id FROM campaigns WHERE binder_id = ?").all(binderId) as Array<{ id: string }>;
-    const result = db.prepare("DELETE FROM binders WHERE id = ?").run(binderId);
+    const result = db.transaction(() => {
+      // These hierarchy links intentionally use RESTRICT for ordinary record
+      // deletion. When deleting the entire Binder, however, every linked place
+      // is going away together. Clear the internal hierarchy first so SQLite's
+      // cascade order cannot trip over a child that still references its parent.
+      db.prepare(`
+        UPDATE binder_points_of_interest
+        SET location_id = NULL, country_id = NULL, parent_poi_id = NULL
+        WHERE id IN (SELECT id FROM binder_records WHERE binder_id = ?)
+      `).run(binderId);
+      db.prepare(`
+        UPDATE binder_locations
+        SET country_id = NULL, continent_id = NULL
+        WHERE id IN (SELECT id FROM binder_records WHERE binder_id = ?)
+      `).run(binderId);
+      db.prepare(`
+        UPDATE binder_countries
+        SET continent_id = NULL
+        WHERE id IN (SELECT id FROM binder_records WHERE binder_id = ?)
+      `).run(binderId);
+      return db.prepare("DELETE FROM binders WHERE id = ?").run(binderId);
+    })();
     if (result.changes === 0) return res.status(404).json({ ok: false, message: "Binder not found" });
     for (const campaign of campaigns) {
       ctx.broadcast("campaigns:changed", { campaignId: campaign.id });

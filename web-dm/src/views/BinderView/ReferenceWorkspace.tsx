@@ -14,10 +14,14 @@ import {
   DEITY_RANK_COLORS,
   DEITY_RANKS,
   fetchBinderReferences,
+  fetchBinderLeaderCharacterOptions,
+  fetchBinderOrganizationMembers,
   removeDeityDomain,
+  setBinderOrganizationLeaderCharacter,
   updateBinderReference,
   uploadBinderReferenceImage,
   type BinderReferenceInput,
+  type BinderOrganizationMember,
   type BinderReferenceLink,
   type BinderReferenceRecord,
   type BinderReferenceType,
@@ -147,12 +151,22 @@ function OrganizationLeaderSection(props: {
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
   const [pickId, setPickId] = useState("");
+  const [characterOptions, setCharacterOptions] = useState<Array<{ id: string; name: string }>>([]);
+
+  useEffect(() => {
+    if (!picking) return;
+    void fetchBinderLeaderCharacterOptions(props.binderId).then(setCharacterOptions).catch(() => setCharacterOptions([]));
+  }, [picking, props.binderId]);
 
   async function setLeader(leaderId: string | null) {
     if (busy) return;
     setBusy(true);
     try {
-      await updateBinderReference(props.binderId, "organizations", props.organizationId, { leaderId });
+      if (leaderId?.startsWith("character:")) {
+        await setBinderOrganizationLeaderCharacter(props.binderId, props.organizationId, leaderId.slice("character:".length));
+      } else {
+        await updateBinderReference(props.binderId, "organizations", props.organizationId, { leaderId });
+      }
       setPicking(false);
       setPickId("");
       await props.onChanged();
@@ -174,7 +188,10 @@ function OrganizationLeaderSection(props: {
               onChange={setPickId}
               disabled={busy}
               placeholder="Choose a Mortal…"
-              options={props.options.map((option) => ({ id: option.id, name: option.name }))}
+              options={[
+                ...props.options.map((option) => ({ id: option.id, name: option.name })),
+                ...characterOptions.map((option) => ({ id: `character:${option.id}`, name: `${option.name} (unassigned PC)` })),
+              ]}
               autoFocus
             />
           </div>
@@ -212,6 +229,32 @@ function OrganizationLeaderSection(props: {
   );
 }
 
+function OrganizationMembersSection(props: { binderId: string; organizationId: string; count: number }) {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [members, setMembers] = useState<BinderOrganizationMember[] | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => { setOpen(false); setMembers(null); }, [props.organizationId]);
+
+  async function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (!next || members !== null || loading) return;
+    setLoading(true);
+    try { setMembers(await fetchBinderOrganizationMembers(props.binderId, props.organizationId)); }
+    finally { setLoading(false); }
+  }
+
+  return <section>
+    <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>Members</div>
+    {props.count ? <button type="button" onClick={() => void toggle()} aria-expanded={open} style={{ marginTop: 7, padding: 0, border: 0, background: "transparent", color: theme.colors.text, cursor: "pointer", font: "inherit", fontSize: "var(--fs-body)", textDecoration: "underline", textUnderlineOffset: 3 }}>{props.count} {open ? "▴" : "▾"}</button> : <div style={{ fontSize: "var(--fs-body)", marginTop: 7 }}>None</div>}
+    {open ? <div style={{ display: "grid", gap: 2, marginTop: 8, padding: 8, border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.control, background: theme.colors.inputBg }}>
+      {loading ? <div style={{ color: theme.colors.muted, padding: 6 }}>Loading…</div> : (members ?? []).map((member) => <button key={member.id} type="button" onClick={() => navigate(`/binder/${props.binderId}/mortals/${member.id}`)} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "7px 8px", border: 0, borderRadius: 6, background: "transparent", color: theme.colors.text, cursor: "pointer", font: "inherit", textAlign: "left" }}><span>{member.name}</span>{member.position || member.role ? <span style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{member.position ?? member.role}</span> : null}</button>)}
+    </div> : null}
+  </section>;
+}
+
 export function ReferenceWorkspace(props: {
   binderId: string;
   type: BinderReferenceType;
@@ -222,9 +265,9 @@ export function ReferenceWorkspace(props: {
 }) {
   const labels = LABELS[props.type];
   const isDeities = props.type === "deities";
-  const showDescription = !["races", "positions", "organizations"].includes(props.type);
-  const showDescriptionColumn = showDescription && !isDeities;
+  const showDescription = !["races", "positions"].includes(props.type);
   const showLeader = props.type === "organizations";
+  const showDescriptionColumn = showDescription && !isDeities && !showLeader;
   const showIcon = ICON_ENABLED_REFERENCE_TYPES.has(props.type);
   const hasMiddleColumn = showDescription || showLeader;
   const navigate = useNavigate();
@@ -525,7 +568,9 @@ export function ReferenceWorkspace(props: {
                   onChanged={reload}
                 />
               ) : null}
-              {props.type === "deities" ? (
+              {props.type === "organizations" ? (
+                <OrganizationMembersSection binderId={props.binderId} organizationId={selected.id} count={selected.usageCount} />
+              ) : props.type === "deities" ? (
                 <DeityDomainsSection
                   binderId={props.binderId}
                   deityId={selected.id}

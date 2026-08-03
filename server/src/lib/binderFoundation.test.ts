@@ -501,6 +501,32 @@ describe("Binder routes", () => {
     assert.equal(deletedMortalResponse.status, 200);
     assert.equal(db.prepare("SELECT 1 FROM mortals WHERE id = ?").get(createdMortal.id), undefined);
 
+    db.transaction(() => {
+      const insertRecord = db!.prepare(`
+        INSERT INTO binder_records (id,binder_id,record_type,name,name_key,visibility,created_at,updated_at)
+        VALUES (?,?,?,?,?,'dm',1,1)
+      `);
+      insertRecord.run("delete-continent", binder.id, "continent", "Continent", "continent");
+      insertRecord.run("delete-country", binder.id, "country", "Country", "country");
+      insertRecord.run("delete-location", binder.id, "location", "Location", "location");
+      insertRecord.run("delete-poi-parent", binder.id, "poi", "Parent POI", "parent poi");
+      insertRecord.run("delete-poi-child", binder.id, "poi", "Child POI", "child poi");
+      db!.prepare("INSERT INTO binder_continents (id,created_at,updated_at) VALUES ('delete-continent',1,1)").run();
+      db!.prepare("INSERT INTO binder_countries (id,continent_id,created_at,updated_at) VALUES ('delete-country','delete-continent',1,1)").run();
+      db!.prepare("INSERT INTO binder_locations (id,country_id,continent_id,created_at,updated_at) VALUES ('delete-location','delete-country','delete-continent',1,1)").run();
+      db!.prepare("INSERT INTO binder_points_of_interest (id,location_id,created_at,updated_at) VALUES ('delete-poi-parent','delete-location',1,1)").run();
+      db!.prepare("INSERT INTO binder_points_of_interest (id,parent_poi_id,created_at,updated_at) VALUES ('delete-poi-child','delete-poi-parent',1,1)").run();
+    })();
+
+    const deletedBinder = await fetch(`${base}/api/binders/${binder.id}`, {
+      method: "DELETE",
+      headers: { "x-test-user": "owner" },
+    });
+    assert.equal(deletedBinder.status, 200, await deletedBinder.clone().text());
+    assert.deepEqual(await deletedBinder.json(), { ok: true, detachedCampaigns: 1 });
+    assert.equal(db.prepare("SELECT 1 FROM binders WHERE id = ?").get(binder.id), undefined);
+    assert.equal(db.prepare("SELECT binder_id FROM campaigns WHERE id = 'campaign'").pluck().get(), null);
+
     const dmCreated = await fetch(`${base}/api/binders`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-test-user": "other" },

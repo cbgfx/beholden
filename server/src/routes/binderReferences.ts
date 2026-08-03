@@ -5,6 +5,7 @@ import { binderEditorOrAdmin, binderReaderOrAdmin } from "../middleware/binderAu
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { ACCEPTED_IMAGE_TYPES, deleteImageFiles, resizeToWebP } from "../lib/imageHelpers.js";
+import { ensureLinkedBinderMortalForCharacter } from "../services/binders/linkedPlayerIdentity.js";
 
 const ReferenceType = z.enum([
   "races", "positions", "domains", "organizations", "deities",
@@ -285,6 +286,76 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
   const { db } = ctx;
   const reader = binderReaderOrAdmin(db);
   const owner = binderEditorOrAdmin(db);
+
+  app.get("/api/binders/:binderId/leader-character-options", owner, (req, res) => {
+    const binderId = requireParam(req, res, "binderId");
+    if (!binderId) return;
+    const rows = db.prepare(`
+      SELECT uc.id, uc.name
+      FROM user_characters uc
+      JOIN binders b ON b.id = ?
+      WHERE (uc.user_id = b.owner_user_id OR EXISTS (
+        SELECT 1 FROM binder_memberships bm
+        WHERE bm.binder_id = b.id AND bm.user_id = uc.user_id AND bm.role = 'collaborator'
+      ))
+      AND NOT EXISTS (
+        SELECT 1 FROM binder_player_characters pc WHERE pc.character_id = uc.id
+      )
+      ORDER BY uc.name COLLATE NOCASE, uc.id
+    `).all(binderId) as Array<{ id: string; name: string }>;
+    res.json(rows);
+  });
+
+  app.post("/api/binders/:binderId/organizations/:organizationId/leader-character", owner, (req, res) => {
+    const binderId = requireParam(req, res, "binderId");
+    const organizationId = requireParam(req, res, "organizationId");
+    if (!binderId || !organizationId) return;
+    const { characterId } = parseBody(z.object({ characterId: z.string().trim().min(1) }).strict(), req);
+    const eligible = db.prepare(`
+      SELECT 1 FROM user_characters uc JOIN binders b ON b.id=?
+      WHERE uc.id=? AND (uc.user_id=b.owner_user_id OR EXISTS (
+        SELECT 1 FROM binder_memberships bm
+        WHERE bm.binder_id=b.id AND bm.user_id=uc.user_id AND bm.role='collaborator'
+      )) AND NOT EXISTS (
+        SELECT 1 FROM binder_player_characters pc WHERE pc.character_id=uc.id
+      )
+    `).get(binderId, characterId);
+    if (!eligible) return res.status(400).json({ ok: false, message: "Character is unavailable or already linked to a Binder" });
+    const organization = db.prepare(`
+      SELECT 1 FROM binder_organizations o JOIN binder_records br ON br.id=o.id
+      WHERE o.id=? AND br.binder_id=?
+    `).get(organizationId, binderId);
+    if (!organization) return res.status(404).json({ ok: false, message: "Organization not found" });
+    let mortalId: string | null = null;
+    db.transaction(() => {
+      mortalId = ensureLinkedBinderMortalForCharacter(db, characterId, ctx.helpers, binderId);
+      if (!mortalId) throw new Error("Could not link character to this Binder");
+      db.prepare("UPDATE binder_organizations SET leader_mortal_id=?,updated_at=? WHERE id=?")
+        .run(mortalId, ctx.helpers.now(), organizationId);
+    })();
+    res.json({ ok: true, mortalId });
+  });
+
+  app.get("/api/binders/:binderId/organizations/:organizationId/members", reader, (req, res) => {
+    const binderId = requireParam(req, res, "binderId");
+    const organizationId = requireParam(req, res, "organizationId");
+    if (!binderId || !organizationId) return;
+    const exists = db.prepare(`
+      SELECT 1 FROM binder_organizations o JOIN binder_records br ON br.id=o.id
+      WHERE o.id=? AND br.binder_id=?
+    `).get(organizationId, binderId);
+    if (!exists) return res.status(404).json({ ok: false, message: "Organization not found" });
+    const members = db.prepare(`
+      SELECT mortal_record.id, mortal_record.name,
+             position_record.name AS position, membership.role_label AS role
+      FROM organization_memberships membership
+      JOIN binder_records mortal_record ON mortal_record.id=membership.mortal_id
+      LEFT JOIN binder_records position_record ON position_record.id=membership.position_id
+      WHERE membership.organization_id=?
+      ORDER BY mortal_record.name_key, mortal_record.id
+    `).all(organizationId);
+    res.json(members);
+  });
 
   const domainsForDeityStmt = db.prepare(`
     SELECT br.id, br.name

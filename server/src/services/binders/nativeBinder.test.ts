@@ -36,7 +36,7 @@ test("native Binder export/import remaps lore relationships and stable mentions"
         class_name, mortal_type, created_at, updated_at
       ) VALUES (
         'mortal', 'race', 'female', 'alive', '2400', 2400, NULL, NULL,
-        '<p>Member of <span data-binder-record-id="org">Silver Talon</span>.</p>',
+        '<p>Member of <span data-binder-record-id="org">Silver Talon</span>.</p> [@Silver Talon](/binder/older-live-binder/organizations/org)',
         NULL, 'Private', NULL, NULL, NULL, NULL, 'Ranger', 'npc', 1, 1
       )
     `).run();
@@ -110,6 +110,8 @@ test("native Binder export/import remaps lore relationships and stable mentions"
     );
     assert.match(importedMortal.description, new RegExp(importedOrg.id));
     assert.doesNotMatch(importedMortal.description, /data-binder-record-id="org"/);
+    assert.match(importedMortal.description, new RegExp(`/binder/${imported.binderId}/organizations/${importedOrg.id}`));
+    assert.doesNotMatch(importedMortal.description, /older-live-binder/);
     assert.equal(
       db.prepare("SELECT COUNT(*) FROM organization_memberships WHERE organization_id = ? AND mortal_id = ?")
         .pluck().get(importedOrg.id, importedMortal.id),
