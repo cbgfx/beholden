@@ -6,6 +6,7 @@ import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { ACCEPTED_IMAGE_TYPES, deleteImageFiles, resizeToWebP } from "../lib/imageHelpers.js";
 import { ensureLinkedBinderMortalForCharacter } from "../services/binders/linkedPlayerIdentity.js";
+import { syncMentionField } from "./binderLore.js";
 
 const ReferenceType = z.enum([
   "races", "positions", "domains", "organizations", "deities",
@@ -94,6 +95,7 @@ const ReferenceCreateBody = z.object({
   name: z.string().trim().min(1).max(160),
   visibility: z.enum(["dm", "public"]).optional(),
   description: optionalDescription,
+  dmNotes: optionalDescription,
   parentId: z.string().trim().min(1).nullable().optional(),
   /** Only meaningful for `organizations` — an id from `mortals` in the same Binder. */
   leaderId: z.string().trim().min(1).nullable().optional(),
@@ -113,6 +115,7 @@ type ReferenceRow = {
   binder_id: string;
   name: string;
   description: string | null;
+  dm_notes?: string | null;
   visibility: "dm" | "campaign" | "public";
   created_at: number;
   updated_at: number;
@@ -151,6 +154,7 @@ function dto(row: ReferenceRow, links?: { domains?: ReferenceLink[]; deities?: R
     name: row.name,
     visibility: row.visibility,
     description: row.description,
+    dmNotes: row.dm_notes ?? null,
     parent: parentId(row) ? {
       id: parentId(row)!,
       name: row.parent_name ?? "",
@@ -179,7 +183,7 @@ function selectSql(type: ReferenceType): string {
       : type === "points-of-interest"
         ? ", r.location_id, r.country_id, r.parent_poi_id, parent_br.name AS parent_name"
         : type === "deities"
-          ? ", r.image_url, r.image_updated_at, r.rank"
+          ? ", r.image_url, r.image_updated_at, r.rank, r.dm_notes"
           : type === "organizations"
             ? ", r.leader_mortal_id, leader_br.name AS leader_name"
             : "") + iconColumn;
@@ -238,10 +242,10 @@ function resolveLeaderMortal(
   return mortal.id;
 }
 
-function insertTypedRecord(db: ServerContext["db"], table: string, type: ReferenceType, id: string, description: string | null, parent: ReturnType<typeof resolveParent>, t: number, leaderId?: string | null, icon?: string | null, rank?: string | null) {
+function insertTypedRecord(db: ServerContext["db"], table: string, type: ReferenceType, id: string, description: string | null, parent: ReturnType<typeof resolveParent>, t: number, leaderId?: string | null, icon?: string | null, rank?: string | null, dmNotes?: string | null) {
   if (type === "deities") {
-    db.prepare(`INSERT INTO deities (id, description, rank, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
-      .run(id, description, rank ?? null, t, t);
+    db.prepare(`INSERT INTO deities (id, description, dm_notes, rank, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(id, description, dmNotes ?? null, rank ?? null, t, t);
   } else if (type === "countries") {
     db.prepare(`INSERT INTO binder_countries (id, continent_id, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
       .run(id, parent?.id ?? null, description, t, t);
@@ -421,6 +425,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     const leaderId = typeResult.data === "organizations" ? resolveLeaderMortal(db, binderId, body.leaderId) : null;
     const icon = ICON_ENABLED_TYPES.has(typeResult.data) ? body.icon ?? null : null;
     const rank = typeResult.data === "deities" ? body.rank ?? null : null;
+    const defaultVisibility = ["continents", "countries", "locations"].includes(typeResult.data) ? "public" : "dm";
     const id = ctx.helpers.uid();
     const t = ctx.helpers.now();
     db.transaction(() => {
@@ -428,8 +433,10 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
         INSERT INTO binder_records (
           id, binder_id, record_type, name, name_key, visibility, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(id, binderId, entry.recordType, body.name, ctx.helpers.normalizeKey(body.name), body.visibility ?? "dm", t, t);
-      insertTypedRecord(db, entry.table, typeResult.data, id, body.description ?? null, parent, t, leaderId, icon, rank);
+      `).run(id, binderId, entry.recordType, body.name, ctx.helpers.normalizeKey(body.name), body.visibility ?? defaultVisibility, t, t);
+      insertTypedRecord(db, entry.table, typeResult.data, id, body.description ?? null, parent, t, leaderId, icon, rank, body.dmNotes ?? null);
+      syncMentionField(ctx, binderId, id, "description", body.description);
+      if (typeResult.data === "deities") syncMentionField(ctx, binderId, id, "dm_notes", body.dmNotes);
     })();
     const row = db.prepare(`${selectSql(typeResult.data)} WHERE r.id = ?`).get(id) as ReferenceRow;
     res.status(201).json(dtoWithLinks(typeResult.data, row));
@@ -482,6 +489,11 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
       if (body.rank !== undefined && typeResult.data === "deities") {
         db.prepare("UPDATE deities SET rank = ?, updated_at = ? WHERE id = ?").run(body.rank ?? null, t, recordId);
       }
+      if (body.dmNotes !== undefined && typeResult.data === "deities") {
+        db.prepare("UPDATE deities SET dm_notes = ?, updated_at = ? WHERE id = ?").run(body.dmNotes ?? null, t, recordId);
+      }
+      if (body.description !== undefined) syncMentionField(ctx, binderId, recordId, "description", body.description);
+      if (body.dmNotes !== undefined && typeResult.data === "deities") syncMentionField(ctx, binderId, recordId, "dm_notes", body.dmNotes);
     })();
     const row = db.prepare(`${selectSql(typeResult.data)} WHERE r.id = ?`).get(recordId) as ReferenceRow;
     res.json(dtoWithLinks(typeResult.data, row));

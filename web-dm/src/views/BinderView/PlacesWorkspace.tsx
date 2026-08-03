@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { IconPlus } from "@/icons";
-import { EntityIcon, getDefaultEntityIcon } from "@/components/iconPicker";
+import { IconAntarctica, IconFlyingFlag, IconPlus, IconTargeted, IconVillage } from "@/icons";
+import { EntityIcon } from "@/components/iconPicker";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { theme, withAlpha } from "@/theme/theme";
@@ -17,6 +17,13 @@ const LABELS: Record<PlaceType, { singular: string; plural: string; recordType: 
   "points-of-interest": { singular: "Point of Interest", plural: "Points of Interest", recordType: "poi" },
 };
 type PlaceRow = BinderReferenceRecord & { referenceType: PlaceType };
+
+function PlaceIcon({ row }: { row: PlaceRow }) {
+  if (row.referenceType === "continents") return <IconAntarctica size={22}/>;
+  if (row.referenceType === "countries") return <IconFlyingFlag size={22}/>;
+  if (row.referenceType === "locations") return <IconVillage size={22}/>;
+  return row.icon ? <EntityIcon icon={row.icon} size={22}/> : <IconTargeted size={22}/>;
+}
 
 export function PlacesWorkspace(props: { binderId: string; accent: string; canEdit: boolean; onRecordsChanged: () => Promise<void> }) {
   const navigate = useNavigate();
@@ -54,7 +61,7 @@ export function PlacesWorkspace(props: { binderId: string; accent: string; canEd
   }
 
   return <>
-    <div style={{ display: "grid", gap: 13 }}>
+    <div style={{ display: "grid", gap: 8 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: 8, flex: "1 1 520px" }}>
           <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search places…" style={{ width: "min(360px,100%)" }}/>
@@ -68,9 +75,9 @@ export function PlacesWorkspace(props: { binderId: string; accent: string; canEd
         </div> : null}
       </div>
       <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(240px,1.4fr) 170px minmax(220px,1fr) 110px", gap: 12, padding: "12px 15px", background: withAlpha(props.accent,.08), borderBottom: `1px solid ${theme.colors.panelBorder}`, fontWeight: 750 }}><span style={{ color: props.accent }}>Name ▲</span><span>Type</span><span>Parent</span><span>Related</span></div>
-        {loading ? <div style={{ padding: 42, textAlign: "center", color: theme.colors.muted }}>Loading…</div> : error ? <div style={{ padding: 42, textAlign: "center", color: theme.colors.red }}>{error}</div> : visible.length ? visible.map((row) => <button key={row.id} type="button" onClick={() => navigate(`/binder/${props.binderId}/${row.referenceType}/${row.id}`)} style={{ width: "100%", display: "grid", gridTemplateColumns: "minmax(240px,1.4fr) 170px minmax(220px,1fr) 110px", gap: 12, alignItems: "center", padding: "12px 15px", border: 0, borderBottom: `1px solid ${theme.colors.panelBorder}`, background: "transparent", color: theme.colors.text, textAlign: "left", cursor: "pointer", font: "inherit" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0, fontWeight: 750 }}><EntityIcon icon={row.icon ?? getDefaultEntityIcon(row.referenceType)} size={22}/><span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.name}</span></span>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(240px,1.4fr) 170px minmax(220px,1fr) 110px", gap: 10, padding: "8px 12px", background: withAlpha(props.accent,.08), borderBottom: `1px solid ${theme.colors.panelBorder}`, fontSize: "var(--fs-small)", fontWeight: 750 }}><span style={{ color: props.accent }}>Name ▲</span><span>Type</span><span>Parent</span><span>Related</span></div>
+        {loading ? <div style={{ padding: 42, textAlign: "center", color: theme.colors.muted }}>Loading…</div> : error ? <div style={{ padding: 42, textAlign: "center", color: theme.colors.red }}>{error}</div> : visible.length ? visible.map((row) => <button key={row.id} type="button" onClick={() => navigate(`/binder/${props.binderId}/${row.referenceType}/${row.id}`)} style={{ width: "100%", display: "grid", gridTemplateColumns: "minmax(240px,1.4fr) 170px minmax(220px,1fr) 110px", gap: 10, alignItems: "center", padding: "7px 12px", border: 0, borderBottom: `1px solid ${theme.colors.panelBorder}`, background: "transparent", color: theme.colors.text, textAlign: "left", cursor: "pointer", font: "inherit", fontSize: "var(--fs-small)" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0, fontWeight: 750 }}><span style={{ display: "grid", placeItems: "center", color: props.accent, flex: "0 0 auto" }}><PlaceIcon row={row}/></span><span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.name}</span></span>
           <span style={{ color: theme.colors.muted }}>{LABELS[row.referenceType].singular}</span><span style={{ color: row.parent ? theme.colors.muted : "rgba(160,180,220,.48)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.parent?.name ?? "None"}</span><span style={{ color: theme.colors.muted }}>{row.usageCount}</span>
         </button>) : <div style={{ padding: 48, textAlign: "center", color: theme.colors.muted }}>No Places match the current search.</div>}
       </div>

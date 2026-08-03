@@ -134,7 +134,7 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
         : error ? <BinderListError message={error} />
         : sorted.length ? sorted.map(({ mortal, player, age }) => {
           const dead = mortal.lifeStatus === "dead";
-          return <button key={mortal.id} type="button" onClick={() => navigate(`/binder/${binderId}/mortals/${mortal.id}`)} style={{ minWidth: 1120, width: "100%", display: "grid", gridTemplateColumns: columns, gap: 12, padding: "12px 15px", border: 0, borderTop: `1px solid ${theme.colors.panelBorder}`, background: "transparent", color: theme.colors.text, alignItems: "center", textAlign: "left", cursor: "pointer", font: "inherit" }}>
+          return <button key={mortal.id} type="button" onClick={() => navigate(`/binder/${binderId}/mortals/${mortal.id}`)} style={{ minWidth: 1120, width: "100%", display: "grid", gridTemplateColumns: columns, gap: 10, padding: "6px 12px", border: 0, borderTop: `1px solid ${theme.colors.panelBorder}`, background: "transparent", color: theme.colors.text, alignItems: "center", textAlign: "left", cursor: "pointer", font: "inherit", fontSize: "var(--fs-small)" }}>
             <span title={mortal.name} style={{ ...cell, color: theme.colors.text, fontWeight: 750, display: "flex", alignItems: "center", gap: 9 }}>
               <BinderRecordThumbnail imageUrl={mortal.imageUrl} imageUpdatedAt={mortal.imageUpdatedAt} accent={accent} />
               <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{mortal.name}</span>

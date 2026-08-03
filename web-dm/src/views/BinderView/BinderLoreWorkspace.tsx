@@ -229,7 +229,7 @@ export function BinderLoreWorkspace(props: {
       </button>)}
       {!timelineEvents.length ? <div style={{ padding: 35, color: theme.colors.muted }}>No matching events.</div> : null}
     </div> : <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
-      <div style={{ display: "grid", gridTemplateColumns: columns, gap: 12, padding: "11px 14px", background: withAlpha(props.accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
+      <div style={{ display: "grid", gridTemplateColumns: columns, gap: 10, padding: "8px 12px", background: withAlpha(props.accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}`, fontSize: "var(--fs-small)" }}>
         {headers.map((header) => <strong key={header}>{header}</strong>)}
       </div>
       {list.map((row) => {
@@ -237,7 +237,7 @@ export function BinderLoreWorkspace(props: {
         const cells = props.type === "items"
           ? [item.name, item.compendium_item_name ?? "None", item.holder_name ?? "None", item.location_name ?? "None"]
           : [event.title, event.dateText ?? "None", event.records.map((entry) => entry.name).join(", ") || "None", event.campaigns.map((entry) => entry.name).join(", ") || "None"];
-        return <button key={row.id} type="button" onClick={() => navigate(`/binder/${props.binderId}/${props.type}/${row.id}`)} style={{ width: "100%", display: "grid", gridTemplateColumns: columns, gap: 12, padding: "12px 14px", border: 0, borderTop: `1px solid ${theme.colors.panelBorder}`, background: "transparent", color: theme.colors.text, textAlign: "left", cursor: "pointer" }}>
+        return <button key={row.id} type="button" onClick={() => navigate(`/binder/${props.binderId}/${props.type}/${row.id}`)} style={{ width: "100%", display: "grid", gridTemplateColumns: columns, gap: 10, padding: "7px 12px", border: 0, borderTop: `1px solid ${theme.colors.panelBorder}`, background: "transparent", color: theme.colors.text, textAlign: "left", cursor: "pointer", fontSize: "var(--fs-small)" }}>
           {cells.map((cell, index) => <span key={index} style={{ color: index ? theme.colors.muted : theme.colors.text, fontWeight: index ? 500 : 750 }}>{cell}</span>)}
         </button>;
       })}

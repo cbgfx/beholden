@@ -221,7 +221,7 @@ export function importNotionZip(db: Db, binderId: string, buffer: Buffer, commit
   };
   const insertRecord = db.prepare(`
     INSERT INTO binder_records (id, binder_id, record_type, name, name_key, visibility, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, 'dm', ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const insertExternal = db.prepare(`
     INSERT INTO binder_external_ids (id, binder_id, source, external_type, external_id, record_id, import_run_id)
@@ -237,7 +237,8 @@ export function importNotionZip(db: Db, binderId: string, buffer: Buffer, commit
 
     for (const candidate of inspected.candidates) {
       const id = idByExternal.get(candidate.externalId)!;
-      insertRecord.run(id, binderId, candidate.kind, candidate.name, normalizeKey(candidate.name), now, now);
+      const visibility = ["continent", "country", "location"].includes(candidate.kind) ? "public" : "dm";
+      insertRecord.run(id, binderId, candidate.kind, candidate.name, normalizeKey(candidate.name), visibility, now, now);
       insertExternal.run(uid(), binderId, candidate.kind, candidate.externalId, id, runId);
     }
     const simple: Array<[Kind, string]> = [["race", "binder_races"], ["position", "binder_positions"], ["domain", "binder_domains"], ["continent", "binder_continents"]];

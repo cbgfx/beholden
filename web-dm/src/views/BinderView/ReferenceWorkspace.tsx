@@ -306,7 +306,9 @@ export function ReferenceWorkspace(props: {
   }, [records, sortKey, sortDir, isDeities, showDescriptionColumn, showLeader, rankOrder]);
   const [inlineName, setInlineName] = useState("");
   const [inlineDescription, setInlineDescription] = useState("");
+  const [inlineDmNotes, setInlineDmNotes] = useState("");
   const [editingDescription, setEditingDescription] = useState(false);
+  const [editingDmNotes, setEditingDmNotes] = useState(false);
   const [inlineSaving, setInlineSaving] = useState(false);
   const portraitInputRef = useRef<HTMLInputElement>(null);
 
@@ -360,13 +362,15 @@ export function ReferenceWorkspace(props: {
 
   const selected = props.recordId ? records.find((record) => record.id === props.recordId) : undefined;
   const isPlaceType = ["continents", "countries", "locations", "points-of-interest"].includes(props.type);
-  const validMentionIds = useValidMentionIds(props.binderId, selected?.description);
+  const validMentionIds = useValidMentionIds(props.binderId, selected?.description, selected?.dmNotes);
 
   useEffect(() => {
     if (!selected) return;
     setInlineName(selected.name);
     setInlineDescription(selected.description ?? "");
+    setInlineDmNotes(selected.dmNotes ?? "");
     setEditingDescription(false);
+    setEditingDmNotes(false);
   }, [selected]);
 
   async function saveInline(changes: Partial<BinderReferenceInput>) {
@@ -385,10 +389,14 @@ export function ReferenceWorkspace(props: {
           : selected.description,
         ...(changes.icon !== undefined ? { icon: changes.icon } : {}),
         ...(changes.rank !== undefined ? { rank: changes.rank } : {}),
+        ...(changes.dmNotes !== undefined ? { dmNotes: changes.dmNotes?.trim() || null } : {}),
         ...(changes.visibility !== undefined ? { visibility: changes.visibility } : {}),
       });
       if (changes.description !== undefined) {
         await syncBinderMentions(props.binderId, selected.id, "description", changes.description?.trim() || null);
+      }
+      if (changes.dmNotes !== undefined) {
+        await syncBinderMentions(props.binderId, selected.id, "dm_notes", changes.dmNotes?.trim() || null);
       }
       await reload();
     } finally {
@@ -488,9 +496,8 @@ export function ReferenceWorkspace(props: {
                     >
                       <VisibilityIcon visible={selected.visibility === "public"} size={19} />
                     </button>
-                    <Button variant="danger" onClick={() => void remove(selected)}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><IconTrash size={15} /> Delete</span>
-                    </Button>
+                    <button type="button" aria-label={`Edit ${labels.singular}`} title="Edit" onClick={() => setModalRecord(selected)} style={{ width: 38, height: 36, display: "grid", placeItems: "center", padding: 0, borderRadius: theme.radius.control, border: `1px solid ${theme.colors.panelBorder}`, background: "transparent", color: theme.colors.text, cursor: "pointer" }}><IconPencil size={17}/></button>
+                    <button type="button" aria-label={`Delete ${labels.singular}`} title="Delete" onClick={() => void remove(selected)} style={{ width: 38, height: 36, display: "grid", placeItems: "center", padding: 0, borderRadius: theme.radius.control, border: `1px solid ${withAlpha(theme.colors.red, .65)}`, background: theme.colors.red, color: "#101521", cursor: "pointer" }}><IconTrash size={17}/></button>
                   </div>
                 ) : null}
               </div>
@@ -551,6 +558,18 @@ export function ReferenceWorkspace(props: {
                   </div>}
                 </section>
               ) : null}
+              {isDeities ? (
+                <section>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                    <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>DM Notes</div>
+                    {props.canEdit && !editingDmNotes ? <button type="button" onClick={() => setEditingDmNotes(true)} title="Edit DM notes" style={{ display: "inline-flex", alignItems: "center", gap: 5, border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}><IconPencil size={13}/> Edit</button> : null}
+                  </div>
+                  {editingDmNotes && props.canEdit ? <div style={{ display: "grid", gap: 9, marginTop: 7 }}>
+                    <WysiwygNoteEditor value={inlineDmNotes} onChange={setInlineDmNotes} mentions={mentions} placeholder="Add notes that are always hidden from players…" minHeight={180} theme={{ radius: theme.radius.control, panelBorder: theme.colors.panelBorder, inputBg: theme.colors.inputBg, text: theme.colors.text }}/>
+                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><Button variant="ghost" onClick={() => { setInlineDmNotes(selected.dmNotes ?? ""); setEditingDmNotes(false); }}>Cancel</Button><Button disabled={inlineSaving} onClick={async () => { await saveInline({ dmNotes: inlineDmNotes }); setEditingDmNotes(false); }}>Save</Button></div>
+                  </div> : <div style={{ minHeight: 54, marginTop: 7, padding: "8px 9px", color: selected.dmNotes ? theme.colors.text : theme.colors.muted, lineHeight: 1.55 }}>{selected.dmNotes ? <MarkdownRichText text={selected.dmNotes} validMentionIds={validMentionIds}/> : "No DM notes yet."}</div>}
+                </section>
+              ) : null}
               {parentLabel ? (
                 <section>
                   <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>{parentLabel}</div>
@@ -591,7 +610,7 @@ export function ReferenceWorkspace(props: {
             </div>
           </article>
         </div>
-        <ReferenceRecordModal isOpen={modalRecord !== null} singularLabel={labels.singular} record={modalRecord === "new" ? null : modalRecord} accent={props.accent} showDescription={showDescription} showIcon={showIcon} showRank={isDeities} useDrawer={["continents", "countries", "locations", "points-of-interest"].includes(props.type)} parentLabel={parentLabel} parentOptions={parentOptions} onClose={() => setModalRecord(null)} onSave={save} />
+        <ReferenceRecordModal isOpen={modalRecord !== null} singularLabel={labels.singular} record={modalRecord === "new" ? null : modalRecord} accent={props.accent} showDescription={showDescription} showIcon={showIcon} showRank={isDeities} showDmNotes={isDeities} useDrawer={["continents", "countries", "locations", "points-of-interest"].includes(props.type)} parentLabel={parentLabel} parentOptions={parentOptions} onClose={() => setModalRecord(null)} onSave={save} />
       </>
     );
   }
@@ -641,8 +660,8 @@ export function ReferenceWorkspace(props: {
                   width: "100%",
                   display: "grid",
                   gridTemplateColumns: hasMiddleColumn ? "minmax(190px, 1fr) minmax(260px, 2fr) 140px" : "minmax(240px, 1fr) 160px",
-                  gap: 12,
-                  padding: "13px 15px",
+                  gap: 10,
+                  padding: "7px 12px",
                   border: 0,
                   borderBottom: `1px solid ${theme.colors.panelBorder}`,
                   background: hovered ? withAlpha(props.accent, 0.08) : "transparent",
@@ -650,6 +669,7 @@ export function ReferenceWorkspace(props: {
                   cursor: "pointer",
                   textAlign: "left",
                   font: "inherit",
+                  fontSize: "var(--fs-small)",
                   transition: "background 120ms ease",
                 }}
               >
@@ -688,7 +708,7 @@ export function ReferenceWorkspace(props: {
           )}
         </div>
       </div>
-      <ReferenceRecordModal isOpen={modalRecord !== null} singularLabel={labels.singular} record={modalRecord === "new" ? null : modalRecord} accent={props.accent} showDescription={showDescription} showIcon={showIcon} showRank={isDeities} useDrawer={["continents", "countries", "locations", "points-of-interest"].includes(props.type)} parentLabel={parentLabel} parentOptions={parentOptions} onClose={() => setModalRecord(null)} onSave={save} />
+      <ReferenceRecordModal isOpen={modalRecord !== null} singularLabel={labels.singular} record={modalRecord === "new" ? null : modalRecord} accent={props.accent} showDescription={showDescription} showIcon={showIcon} showRank={isDeities} showDmNotes={isDeities} useDrawer={["continents", "countries", "locations", "points-of-interest"].includes(props.type)} parentLabel={parentLabel} parentOptions={parentOptions} onClose={() => setModalRecord(null)} onSave={save} />
     </>
   );
 }

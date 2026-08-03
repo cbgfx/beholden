@@ -1,4 +1,4 @@
-import { api, jsonInit } from "@/services/api";
+import { api, apiBlob, jsonInit } from "@/services/api";
 
 export type BinderSummary = {
   id: string;
@@ -43,8 +43,8 @@ export function deleteBinder(binderId: string): Promise<{ ok: true; detachedCamp
   return api(`/api/binders/${binderId}`, { method: "DELETE" });
 }
 
-export function exportBinder(binderId: string): Promise<unknown> {
-  return api(`/api/binders/${binderId}/export`);
+export function exportBinder(binderId: string, includePictures = false): Promise<Blob> {
+  return apiBlob(`/api/binders/${binderId}/export${includePictures ? "?images=1" : ""}`);
 }
 
 export function importBinder(file: File): Promise<{ binderId: string; name: string; recordCount: number }> {

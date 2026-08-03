@@ -94,7 +94,7 @@ function routeFor(type: string, binderId: string, id: string) {
   return `/binder/${binderId}/${section[type] ?? type}/${id}`;
 }
 
-function syncMentionField(ctx: ServerContext, binderId: string, sourceRecordId: string, sourceField: string, value: string | null | undefined) {
+export function syncMentionField(ctx: ServerContext, binderId: string, sourceRecordId: string, sourceField: string, value: string | null | undefined) {
   ctx.db.prepare("DELETE FROM binder_record_mentions WHERE source_record_id=? AND source_field=?").run(sourceRecordId, sourceField);
   if (!value) return;
   const pattern = /\[([^\]]+)\]\(\/binder\/[^/]+\/[^/]+\/([^/?#)]+)[^)]*\)/g;

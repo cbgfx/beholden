@@ -4,7 +4,7 @@ import { IconBinder, IconCampaign, IconGender, IconPlayers, IconShield } from "@
 import { GameIcon } from "@/icons/GameIcon";
 import { C } from "@/lib/theme";
 import { api } from "@/services/api";
-import { MarkdownRichText, SearchableMultiFilter } from "@beholden/shared/ui";
+import { BINDER_MORTAL_COLUMNS, BinderDataTableHeader, BinderDataTableRow, BinderDataTableThumbnail, ImageLightbox, MarkdownRichText, SearchableMultiFilter } from "@beholden/shared/ui";
 
 type Mortal = {
   id: string; name: string; mortalType: "npc" | "player_character";
@@ -27,7 +27,7 @@ type PublicRecord = { id: string; type: "deity" | "continent" | "country" | "loc
 type MortalFilters = { position: string[]; organization: string[]; location: string[]; species: string[]; gender: string[]; status: string[] };
 const emptyFilters = (): MortalFilters => ({ position: [], organization: [], location: [], species: [], gender: [], status: [] });
 type MortalSortKey = "name" | "position" | "organization" | "location" | "species" | "age" | "gender" | "status";
-const MORTAL_COLUMNS = "minmax(210px,1.45fr) minmax(135px,.85fr) minmax(170px,1fr) minmax(175px,1fr) 130px 72px 96px 72px 38px";
+const MORTAL_COLUMNS = BINDER_MORTAL_COLUMNS;
 
 function ageOf(mortal: Mortal, currentDate: number | null) {
   if (mortal.age !== null) return String(mortal.age);
@@ -47,6 +47,14 @@ function StatusPill({ status }: { status: string | null }) {
   return <span style={{ display: "inline-flex", padding: "2px 9px", borderRadius: 6, color: "#fff", background: color, fontSize: "var(--fs-small)", lineHeight: 1.35, fontWeight: 850 }}>{dead ? "Dead" : "Alive"}</span>;
 }
 
+function PublicPlaceIcon({ record, size = 22 }: { record: PublicRecord; size?: number }) {
+  if (record.icon) return <GameIcon icon={record.icon} size={size}/>;
+  if (record.type === "continent") return <GameIcon icon="game-icons:antarctica" size={size}/>;
+  if (record.type === "country") return <GameIcon icon="game-icons:flying-flag" size={size}/>;
+  if (record.type === "location") return <GameIcon icon="game-icons:village" size={size}/>;
+  return <GameIcon icon="game-icons:targeted" size={size}/>;
+}
+
 export function PlayerBinderView() {
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -58,6 +66,7 @@ export function PlayerBinderView() {
   const [sortKey, setSortKey] = useState<MortalSortKey>("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [error, setError] = useState<string | null>(null);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   useEffect(() => {
     api<PlayerBinder>(`/api/me/characters/${id}/binder`).then((value) => {
@@ -148,7 +157,7 @@ export function PlayerBinderView() {
                 <div style={{ height: 4, background: accent }}/>
                 <div style={{ padding: 24, display: "grid", gap: 26, maxWidth: 1240 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-                    {selectedPublicRecord.type === "deity" ? <div style={{ width: 84, height: 84, border: `1px dashed ${accent}55`, borderRadius: 10, overflow: "hidden", background: `${accent}12`, flex: "0 0 auto" }}>{selectedPublicRecord.imageUrl ? <img src={`${selectedPublicRecord.imageUrl}${selectedPublicRecord.imageUpdatedAt ? `?v=${selectedPublicRecord.imageUpdatedAt}` : ""}`} alt={`${selectedPublicRecord.name} portrait`} style={{ width: "100%", height: "100%", objectFit: "cover" }}/> : null}</div> : <span style={{ width: 54, height: 54, display: "grid", placeItems: "center", color: accent }}>{selectedPublicRecord.icon ? <GameIcon icon={selectedPublicRecord.icon} size={34}/> : <GameIcon icon="game-icons:village" size={34}/>}</span>}
+                    {selectedPublicRecord.type === "deity" ? <div style={{ width: 84, height: 84, border: `1px dashed ${accent}55`, borderRadius: 10, overflow: "hidden", background: `${accent}12`, flex: "0 0 auto" }}>{selectedPublicRecord.imageUrl ? <img src={`${selectedPublicRecord.imageUrl}${selectedPublicRecord.imageUpdatedAt ? `?v=${selectedPublicRecord.imageUpdatedAt}` : ""}`} alt={`${selectedPublicRecord.name} portrait`} style={{ width: "100%", height: "100%", objectFit: "cover" }}/> : null}</div> : <span style={{ width: 54, height: 54, display: "grid", placeItems: "center", color: accent }}><PublicPlaceIcon record={selectedPublicRecord} size={34}/></span>}
                     <h2 style={{ margin: 0, fontSize: "calc(var(--fs-hero) * .9)" }}>{selectedPublicRecord.name}</h2>
                   </div>
                   {selectedPublicRecord.type === "deity" ? <section><div style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: ".06em" }}>Rank</div><div style={{ marginTop: 9, width: "min(280px,100%)", padding: "10px 12px", border: "1px solid rgba(255,255,255,.12)", borderRadius: 9, background: "rgba(0,0,0,.18)", color: selectedPublicRecord.rank === "Greater God" ? "#3b82f6" : selectedPublicRecord.rank === "Lesser God" ? "#e5484d" : selectedPublicRecord.rank === "Overpower" ? "#30a46c" : C.muted, fontWeight: 800 }}>{selectedPublicRecord.rank ?? "None"}</div></section> : null}
@@ -170,7 +179,7 @@ export function PlayerBinderView() {
                 </div>
                 {filteredPublicRecords.map((record) => <button key={record.id} type="button" onClick={() => setSelectedId(record.id)} style={{ width: "100%", display: "grid", gridTemplateColumns: section === "deities" ? "minmax(220px,1fr) minmax(300px,2fr) 150px" : "minmax(240px,1.2fr) 150px minmax(220px,1fr)", gap: 12, alignItems: "center", padding: "13px 15px", border: 0, borderBottom: "1px solid rgba(255,255,255,.08)", background: "transparent", color: C.text, textAlign: "left", cursor: "pointer", font: "inherit" }}>
                   <span style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 10, fontWeight: 750 }}>
-                    {record.imageUrl ? <img src={`${record.imageUrl}${record.imageUpdatedAt ? `?v=${record.imageUpdatedAt}` : ""}`} alt="" style={{ width: 38, height: 38, borderRadius: 6, objectFit: "cover", flex: "0 0 auto" }}/> : record.type === "deity" ? <span style={{ width: 38, height: 38, borderRadius: 6, background: `${accent}1f`, flex: "0 0 auto" }}/> : <span style={{ width: 38, height: 38, display: "grid", placeItems: "center", color: C.muted, flex: "0 0 auto" }}>{record.icon ? <GameIcon icon={record.icon} size={22}/> : <GameIcon icon="game-icons:village" size={22}/>}</span>}
+                    {record.imageUrl ? <img src={`${record.imageUrl}${record.imageUpdatedAt ? `?v=${record.imageUpdatedAt}` : ""}`} alt="" style={{ width: 38, height: 38, borderRadius: 6, objectFit: "cover", flex: "0 0 auto" }}/> : record.type === "deity" ? <span style={{ width: 38, height: 38, borderRadius: 6, background: `${accent}1f`, flex: "0 0 auto" }}/> : <span style={{ width: 38, height: 38, display: "grid", placeItems: "center", color: accent, flex: "0 0 auto" }}><PublicPlaceIcon record={record}/></span>}
                     <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{record.name}</span>
                   </span>
                   <span style={{ color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{section === "deities" ? record.domains?.join(", ") || "None" : record.type === "poi" ? "Point of Interest" : record.type[0]!.toUpperCase()+record.type.slice(1)}</span>
@@ -186,7 +195,7 @@ export function PlayerBinderView() {
                 <div style={{ height: 4, background: accent }}/>
                 <div style={{ padding: 20, display: "grid", gap: 16, maxWidth: 1240 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                    <div style={{ width: 84, height: 84, border: `1px solid ${accent}4d`, borderRadius: 10, overflow: "hidden", background: `${accent}1a`, display: "grid", placeItems: "center", color: C.muted, flex: "0 0 auto" }}>{portraitSrc(selected) ? <img src={portraitSrc(selected)!} alt={`${selected.name} portrait`} style={{ width: "100%", height: "100%", objectFit: "cover" }}/> : <span style={{ fontSize: "var(--fs-small)", opacity: .72 }}>Portrait</span>}</div>
+                    <button type="button" disabled={!portraitSrc(selected)} onClick={() => setLightboxSrc(portraitSrc(selected))} title={portraitSrc(selected) ? "View full portrait" : undefined} style={{ width: 84, height: 84, padding: 0, border: `1px solid ${accent}4d`, borderRadius: 10, overflow: "hidden", background: `${accent}1a`, display: "grid", placeItems: "center", color: C.muted, flex: "0 0 auto", cursor: portraitSrc(selected) ? "zoom-in" : "default" }}>{portraitSrc(selected) ? <img src={portraitSrc(selected)!} alt={`${selected.name} portrait`} style={{ width: "100%", height: "100%", objectFit: "cover" }}/> : <span style={{ fontSize: "var(--fs-small)", opacity: .72 }}>Portrait</span>}</button>
                     <h2 style={{ margin: 0, fontSize: "calc(var(--fs-hero) * .9)" }}>{selected.name}</h2>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", columnGap: 30, rowGap: 0 }}>
@@ -209,23 +218,29 @@ export function PlayerBinderView() {
               {Object.entries(filters).some(([,values]) => values.length) ? <div style={{ display:"flex",gap:7,flexWrap:"wrap",marginBottom:14 }}>{(Object.entries(filters) as Array<[keyof MortalFilters,string[]]>).flatMap(([key,values]) => values.map((value) => <button key={`${key}:${value}`} type="button" onClick={() => setFilters((current) => ({...current,[key]:current[key].filter((item) => item !== value)}))} style={{ display:"inline-flex",gap:5,padding:"2px 7px",border:`1px solid ${accent}7a`,borderRadius:999,background:`${accent}1f`,color:C.text,cursor:"pointer",font:"inherit",fontSize:"var(--fs-tiny)",fontWeight:800 }}><span style={{color:accent}}>{key[0]!.toUpperCase()+key.slice(1)}</span>{value} <span style={{color:"#ff5c65"}}>×</span></button>))}</div> : null}
               <div style={{ border: "1px solid rgba(255,255,255,.09)", borderRadius: 13, overflowX: "auto" }}>
                 <div style={{ minWidth: 1160 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: MORTAL_COLUMNS, gap: 12, padding: "12px 15px", background: `${accent}14`, borderBottom: "1px solid rgba(255,255,255,.09)" }}>
-                    {([
+                  <BinderDataTableHeader
+                    gridTemplateColumns={MORTAL_COLUMNS}
+                    accent={accent}
+                    theme={{ text: C.text, muted: C.muted, border: "rgba(255,255,255,.09)" }}
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={(key) => toggleSort(key as MortalSortKey)}
+                    columns={[...([
                       ["name","Name",null],["position","Position",<IconShield size={14}/>],["organization","Organization",<GameIcon icon="game-icons:organigram" size={14}/>],["location","Location",<GameIcon icon="game-icons:village" size={14}/>],["species","Species",<GameIcon icon="game-icons:dna1" size={14}/>],["age","Age",<GameIcon icon="game-icons:cake-slice" size={14}/>],["gender","Gender",<IconGender size={14}/>],["status","Status",<GameIcon icon="game-icons:half-dead" size={14}/>],
-                    ] as Array<[MortalSortKey,string,React.ReactNode]>).map(([key,label,icon]) => <button key={key} type="button" onClick={() => toggleSort(key)} style={{ display: "inline-flex", alignItems: "center", gap: 6, justifySelf: "start", border: 0, padding: 0, background: "transparent", color: sortKey === key ? accent : C.text, cursor: "pointer", font: "inherit", fontWeight: 750 }}>{icon}{label}<span style={{ fontSize: 11, color: accent, opacity: sortKey === key ? 1 : .25 }}>{sortKey === key && sortDir === "desc" ? "▼" : "▲"}</span></button>)}<span />
-                  </div>
+                    ] as Array<[MortalSortKey,string,React.ReactNode]>).map(([key,label,icon]) => ({ key, label, icon, sortable: true })), { key: "visibility", label: "" }]}
+                  />
                   {sorted.map((mortal) => {
                     const genderColor = mortal.gender === "female" ? "#f9a8d4" : mortal.gender === "male" ? "#7dd3fc" : null;
                     const cell = { color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
-                    return <button key={mortal.id} type="button" onClick={() => setSelectedId(mortal.id)} style={{ minWidth: 1160, width: "100%", display: "grid", gridTemplateColumns: MORTAL_COLUMNS, gap: 12, alignItems: "center", padding: "11px 15px", border: 0, borderTop: "1px solid rgba(255,255,255,.08)", background: "transparent", color: C.text, cursor: "pointer", textAlign: "left", font: "inherit" }}>
-                      <span style={{ ...cell, color: C.text, display: "flex", alignItems: "center", gap: 9, fontWeight: 750 }}>{portraitSrc(mortal) ? <img src={portraitSrc(mortal)!} alt="" style={{ width: 34, height: 34, borderRadius: 6, objectFit: "cover" }}/> : <span style={{ width: 34, height: 34, borderRadius: 6, background: `${accent}1f`, flex: "0 0 auto" }}/>}<span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{mortal.name}</span>{mortal.id === data.linkedMortalId ? <small style={{ color: accent }}>(You)</small> : null}</span>
+                    return <BinderDataTableRow key={mortal.id} onClick={() => setSelectedId(mortal.id)} gridTemplateColumns={MORTAL_COLUMNS} theme={{ text: C.text, muted: C.muted, border: "rgba(255,255,255,.08)" }}>
+                      <span style={{ ...cell, color: C.text, display: "flex", alignItems: "center", gap: 9, fontWeight: 750 }}><BinderDataTableThumbnail imageUrl={mortal.imageUrl} imageUpdatedAt={mortal.imageUpdatedAt} accent={accent}/><span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{mortal.name}</span>{mortal.id === data.linkedMortalId ? <small style={{ color: accent }}>(You)</small> : null}</span>
                       <span style={{...cell,display:"flex",gap:6,alignItems:"center"}}>{mortal.positionIcon ? <GameIcon icon={mortal.positionIcon} size={14}/> : <IconShield size={14}/>} {mortal.position || "None"}</span>
                       <span style={{...cell,display:"flex",gap:6,alignItems:"center"}}>{mortal.organizationIcon ? <GameIcon icon={mortal.organizationIcon} size={14}/> : <GameIcon icon="game-icons:organigram" size={14}/>} {mortal.organization || "None"}</span>
                       <span style={{...cell,display:"flex",gap:6,alignItems:"center"}}><GameIcon icon="game-icons:village" size={14}/>{mortal.location || "None"}</span>
                       <span style={cell}>{mortal.species || "None"}</span><span style={cell}>{ageOf(mortal,data.binder.currentDateSort) || "None"}</span>
                       <span>{genderColor ? <span style={{ display:"inline-flex",padding:"2px 7px",borderRadius:999,color:genderColor,background:`${genderColor}29`,fontSize:"var(--fs-small)",fontWeight:750 }}>{mortal.gender === "female" ? "Female" : "Male"}</span> : <span style={{color:"#ff5c65"}}>Needs gender</span>}</span>
                       <StatusPill status={mortal.lifeStatus}/><span />
-                    </button>;
+                    </BinderDataTableRow>;
                   })}
                   {!sorted.length ? <div style={{ padding: 48, textAlign: "center", color: C.muted }}>No Mortals match the current filters.</div> : null}
                 </div>
@@ -234,6 +249,7 @@ export function PlayerBinderView() {
           )}
         </section>
       </div>
+      <ImageLightbox src={lightboxSrc} alt={selected ? `${selected.name} portrait` : "Portrait"} onClose={() => setLightboxSrc(null)} />
     </main>
   );
 }

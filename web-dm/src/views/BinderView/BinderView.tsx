@@ -164,8 +164,8 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
   const accent = binder.color || theme.colors.accentHighlight;
 
   return (
-    <div style={{ height: "100%", overflow: "auto", padding: "20px 18px 36px" }}>
-      <div style={{ width: "100%", display: "grid", gridTemplateColumns: "260px minmax(0, 1fr)", gap: 28 }}>
+    <div style={{ height: "100%", overflow: "auto", padding: "14px 14px 28px" }}>
+      <div style={{ width: "100%", display: "grid", gridTemplateColumns: "246px minmax(0, 1fr)", gap: 20 }}>
         <aside
           style={{
             position: "sticky",
@@ -173,10 +173,10 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
             alignSelf: "start",
             display: "grid",
             gridTemplateRows: "auto minmax(0, 1fr) auto",
-            gap: 14,
+            gap: 10,
             maxHeight: "calc(100dvh - 190px)",
             minHeight: 0,
-            padding: 14,
+            padding: 10,
             borderRadius: theme.radius.panel,
             border: `1px solid ${withAlpha(accent, 0.14)}`,
             background: "rgba(0,0,0,0.13)",
@@ -188,7 +188,7 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
             <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{binder.name}</span>
           </Link>
 
-          <nav style={{ display: "grid", gap: 15, minHeight: 0, overflowY: "auto", scrollbarGutter: "stable", paddingRight: 3 }}>
+          <nav style={{ display: "grid", gap: 10, minHeight: 0, overflowY: "auto", scrollbarGutter: "stable", paddingRight: 3 }}>
             {NAV_GROUPS.filter((group) => group.label !== "Maintenance").map((group, groupIndex) => (
               <div key={`${group.label}-${groupIndex}`} style={{ display: "grid", gap: 4 }}>
                 {group.label ? (
@@ -207,7 +207,7 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
                         display: "flex",
                         alignItems: "center",
                         gap: 8,
-                        padding: "9px 10px",
+                        padding: "7px 9px",
                         borderRadius: theme.radius.control,
                         color: active || hovered ? theme.colors.text : "rgba(232,237,245,0.76)",
                         background: active
@@ -256,8 +256,8 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
           </div>
         </aside>
 
-        <main style={{ minWidth: 0, display: "grid", alignContent: "start", gap: 16 }}>
-          <header style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "end", minHeight: 56 }}>
+        <main style={{ minWidth: 0, display: "grid", alignContent: "start", gap: 11 }}>
+          <header style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "end", minHeight: 44 }}>
             <div>
               <h1 style={{ margin: 0, color: theme.colors.text, fontSize: "calc(var(--fs-hero) * 1.08)", textShadow: `0 0 28px ${withAlpha(accent, 0.13)}` }}>{title}</h1>
               {!activeItem ? <div style={{ color: withAlpha(accent, 0.8), marginTop: 4, fontSize: "var(--fs-medium)" }}>

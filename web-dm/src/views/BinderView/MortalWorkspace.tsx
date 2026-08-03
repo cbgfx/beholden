@@ -10,13 +10,14 @@ import { theme, withAlpha } from "@/theme/theme";
 import { BinderListEmpty, BinderListError, BinderListHeader, BinderListLoading, BinderRecordThumbnail, compareValues, useBinderListSort } from "@/components/BinderListTable";
 import { SearchableMultiFilter } from "@/components/SearchableSelect";
 import { createBinderMortal, deleteBinderMortal, fetchBinderMortals, fetchMortalOptions, updateBinderMortal, uploadBinderMortalImage, type BinderMortal, type BinderMortalInput, type MortalOptions } from "@/services/binderMortalApi";
+import { BINDER_MORTAL_COLUMNS, BinderDataTableRow, ImageLightbox } from "@beholden/shared/ui";
 import { MortalRecordModal } from "@/views/BinderView/MortalRecordModal";
 import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
 import { fetchBinderRecordOptions, syncBinderMentions, type BinderRecordOption } from "@/services/binderLoreApi";
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
 
-const mortalTableColumns = "minmax(210px, 1.45fr) minmax(135px, 0.85fr) minmax(170px, 1fr) minmax(175px, 1fr) 130px 72px 96px 72px 38px";
+const mortalTableColumns = BINDER_MORTAL_COLUMNS;
 const NONE_FILTER = "__none__";
 
 function OrganizationIcon(props: { icon?: string | null; size: number }) {
@@ -170,6 +171,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
   const [error, setError] = useState<string | null>(null);
   const [modalRecord, setModalRecord] = useState<BinderMortal | "new" | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const { sortKey, sortDir, toggleSort } = useBinderListSort<MortalSortKey>("name");
   const savedViewsKey = `binder:${props.binderId}:mortal-views`;
 
@@ -398,7 +400,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
           <div style={{ padding: 20, display: "grid", gap: 16, maxWidth: 1240 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "start" }}>
               <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-                <button type="button" onClick={() => { if (props.canEdit) setModalRecord(selected); }} title={props.canEdit ? "Edit portrait" : undefined} style={{ width: 84, height: 84, padding: 0, border: `1px solid ${withAlpha(props.accent, 0.3)}`, borderRadius: theme.radius.control, overflow: "hidden", background: withAlpha(props.accent, 0.1), color: theme.colors.muted, cursor: props.canEdit ? "pointer" : "default", flex: "0 0 auto" }}>
+                <button type="button" disabled={!selected.imageUrl} onClick={() => { if (selected.imageUrl) setLightboxSrc(`${resolveAssetUrl(selected.imageUrl)}${selected.imageUpdatedAt ? `?v=${selected.imageUpdatedAt}` : ""}`); }} title={selected.imageUrl ? "View full portrait" : undefined} style={{ width: 84, height: 84, padding: 0, border: `1px solid ${withAlpha(props.accent, 0.3)}`, borderRadius: theme.radius.control, overflow: "hidden", background: withAlpha(props.accent, 0.1), color: theme.colors.muted, cursor: selected.imageUrl ? "zoom-in" : "default", flex: "0 0 auto" }}>
                   {selected.imageUrl
                     ? <img src={`${resolveAssetUrl(selected.imageUrl)}${selected.imageUpdatedAt ? `?v=${selected.imageUpdatedAt}` : ""}`} alt={`${selected.name} portrait`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     : <span style={{ fontSize: "var(--fs-small)", opacity: 0.72 }}>Portrait</span>}
@@ -436,11 +438,12 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
         </article>
       </div>
       {modal}
+      <ImageLightbox src={lightboxSrc} alt={`${selected.name} portrait`} onClose={() => setLightboxSrc(null)} />
     </>;
   }
 
   return <>
-    <div style={{ display: "grid", gap: 13 }}>
+    <div style={{ display: "grid", gap: 8 }}>
       <div style={{ display: "flex", gap: 9, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", flex: "1 1 auto" }}>
           <Input value={query} onChange={(event) => { setQuery(event.target.value); setSelectedViewId(""); }} placeholder="Search mortals…" style={{ width: 280 }} />
@@ -457,7 +460,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
         </div>
         {props.canEdit ? <Button onClick={() => setModalRecord("new")}><span style={{ display: "inline-flex", gap: 7 }}><IconPlus size={14} /> New Mortal</span></Button> : null}
       </div>
-      <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", padding: "7px 0 1px" }}>
+      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
         {([
           ["position", "Position", 150],
           ["organization", "Organization", 175],
@@ -524,7 +527,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
             const genderColor = record.gender === "male" ? "#7dd3fc" : record.gender === "female" ? "#f9a8d4" : null;
             const cell = { color: theme.colors.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
             const open = () => navigate(`/binder/${props.binderId}/mortals/${record.id}`);
-            return <div key={record.id} role="button" tabIndex={0} onClick={open} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") open(); }} onMouseEnter={() => setHoveredId(record.id)} onMouseLeave={() => setHoveredId(null)} style={{ minWidth: 1160, width: "100%", display: "grid", gridTemplateColumns: mortalTableColumns, alignItems: "center", gap: 12, padding: "11px 15px", border: 0, borderTop: `1px solid ${theme.colors.panelBorder}`, background: hoveredId === record.id ? withAlpha(props.accent, 0.08) : "transparent", color: theme.colors.text, textAlign: "left", cursor: "pointer", font: "inherit" }}>
+            return <BinderDataTableRow key={record.id} as="div" onClick={open} onMouseEnter={() => setHoveredId(record.id)} onMouseLeave={() => setHoveredId(null)} gridTemplateColumns={mortalTableColumns} background={hoveredId === record.id ? withAlpha(props.accent, 0.08) : "transparent"} theme={{ text: theme.colors.text, muted: theme.colors.muted, border: theme.colors.panelBorder }}>
               <span title={record.name} style={{ ...cell, color: theme.colors.text, fontWeight: 750, display: "flex", alignItems: "center", gap: 9 }}>
                 <BinderRecordThumbnail imageUrl={record.imageUrl} imageUpdatedAt={record.imageUpdatedAt} accent={props.accent} />
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{record.name}</span>
@@ -542,8 +545,8 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
               <span style={cell}>{age ?? "None"}</span>
               <span>{genderColor ? <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: genderColor, background: withAlpha(genderColor, 0.16), fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 750 }}>{record.gender === "male" ? "Male" : "Female"}</span> : <span style={{ ...cell, color: theme.colors.red }}>Needs gender</span>}</span>
               <span style={{ justifySelf: "start", display: "inline-flex", padding: "2px 7px", borderRadius: 5, color: "#fff", background: record.lifeStatus === "dead" ? theme.colors.red : theme.colors.green, fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 800 }}>{record.lifeStatus === "dead" ? "Dead" : "Alive"}</span>
-              {props.canEdit ? <button type="button" aria-label={`${record.visibility === "public" ? "Make private" : "Make public"}: ${record.name}`} title={record.visibility === "public" ? "Public — click to make private" : "Private — click to make public"} onClick={async (event) => { event.stopPropagation(); await updateBinderMortal(props.binderId, record.id, { visibility: record.visibility === "public" ? "dm" : "public" }); await reload(); await props.onRecordsChanged(); }} style={{ width: 32, height: 30, display: "grid", placeItems: "center", padding: 0, borderRadius: 7, border: `1px solid ${record.visibility === "public" ? withAlpha(props.accent, 0.65) : theme.colors.panelBorder}`, background: record.visibility === "public" ? withAlpha(props.accent, 0.16) : "rgba(255,255,255,0.03)", color: record.visibility === "public" ? props.accent : theme.colors.muted, cursor: "pointer" }}><VisibilityIcon visible={record.visibility === "public"} /></button> : <span />}
-            </div>;
+              {props.canEdit ? <button type="button" aria-label={`${record.visibility === "public" ? "Make private" : "Make public"}: ${record.name}`} title={record.visibility === "public" ? "Public — click to make private" : "Private — click to make public"} onClick={async (event) => { event.stopPropagation(); await updateBinderMortal(props.binderId, record.id, { visibility: record.visibility === "public" ? "dm" : "public" }); await reload(); await props.onRecordsChanged(); }} style={{ width: 28, height: 26, display: "grid", placeItems: "center", padding: 0, borderRadius: 6, border: `1px solid ${record.visibility === "public" ? withAlpha(props.accent, 0.65) : theme.colors.panelBorder}`, background: record.visibility === "public" ? withAlpha(props.accent, 0.16) : "rgba(255,255,255,0.03)", color: record.visibility === "public" ? props.accent : theme.colors.muted, cursor: "pointer" }}><VisibilityIcon visible={record.visibility === "public"} size={16}/></button> : <span />}
+            </BinderDataTableRow>;
           }) : <BinderListEmpty>{records.length ? "No Mortals match the current filters." : query ? "No Mortals match your search." : "No Mortals yet."}</BinderListEmpty>}
       </div>
     </div>

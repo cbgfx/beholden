@@ -29,6 +29,11 @@ The existing Organization memberships and Place hierarchy remain supported. A
 unified Places workspace and collapsed generated Related Records view are now
 implemented; the hold applies only to deeper hierarchy-management workflows.
 
+New Continents, Countries, and Locations default to Public visibility because
+they form the shared setting map. Points of Interest default to Private because
+they are more likely to represent discoverable or secret places. Explicit DM
+visibility changes and imported native visibility values always take precedence.
+
 ### Next product phase
 
 Player-Facing Binder will add campaign-scoped, read-only lore sharing first.

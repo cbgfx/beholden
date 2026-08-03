@@ -210,7 +210,7 @@ export function importBinderDocument(db: Db, raw: unknown, ownerUserId: string, 
     for (const row of rows("deities")) db.prepare(`
       INSERT INTO deities (id, rank, description, dm_notes, image_url, image_updated_at, primary_location_record_id, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(map(row.id), row.rank ?? null, text(row.description), text(row.dm_notes), text(row.image_url), row.image_updated_at ?? null, map(row.primary_location_record_id), now, now);
+    `).run(map(row.id), row.rank ?? null, text(row.description), text(row.dm_notes), null, null, map(row.primary_location_record_id), now, now);
     for (const row of rows("deity_domains")) db.prepare("INSERT INTO deity_domains VALUES (?, ?)").run(map(row.deity_id), map(row.domain_id));
     for (const row of rows("binder_organizations")) db.prepare("INSERT INTO binder_organizations (id, description, dm_notes, leader_mortal_id, headquarters_record_id, created_at, updated_at, icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(map(row.id), text(row.description), text(row.dm_notes), map(row.leader_mortal_id), map(row.headquarters_record_id), now, now, row.icon ?? null);
     for (const row of rows("organization_memberships")) db.prepare(`
@@ -253,5 +253,5 @@ export function importBinderDocument(db: Db, raw: unknown, ownerUserId: string, 
       VALUES (?,?,?,?,?,?,?,?)
     `).run(helpers.uid(), map(row.source_record_id), row.source_field, map(row.target_record_id), row.target_external_id ?? null, row.label, text(row.occurrence_key), now);
   })();
-  return { binderId, name: doc.binder.name, recordCount: doc.records.length };
+  return { binderId, name: doc.binder.name, recordCount: doc.records.length, recordIdMap: Object.fromEntries(idMap) };
 }

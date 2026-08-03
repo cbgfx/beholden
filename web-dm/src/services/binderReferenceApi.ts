@@ -20,6 +20,8 @@ export type BinderReferenceRecord = {
   visibility: "dm" | "public";
   name: string;
   description: string | null;
+  /** DM-only notes; currently used by Deities and never included in player-facing responses. */
+  dmNotes: string | null;
   parent: { id: string; name: string; type: "continent" | "country" | "location" | "poi" } | null;
   usageCount: number;
   createdAt: number;
@@ -41,6 +43,8 @@ export type BinderReferenceRecord = {
 export type BinderReferenceInput = {
   name: string;
   description: string | null;
+  /** Only meaningful for `deities`. */
+  dmNotes?: string | null;
   visibility?: "dm" | "public";
   parentId?: string | null;
   /** Only meaningful for `organizations` — a Mortal id from this Binder, or null to clear. */

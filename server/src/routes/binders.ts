@@ -12,6 +12,42 @@ import { dmOrAdmin } from "../middleware/campaignAuth.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { exportBinderDocument, importBinderDocument, previewBinderDocument } from "../services/binders/nativeBinder.js";
+import * as archiverModule from "archiver";
+import { unzipSync } from "fflate";
+
+const createArchive = ((archiverModule as unknown as { default?: unknown }).default ?? archiverModule) as unknown as (
+  format: "zip",
+  options?: { zlib?: { level: number } },
+) => import("archiver").Archiver;
+
+function parseBinderUpload(file: Express.Multer.File) {
+  const isZip = file.mimetype === "application/zip" || file.originalname.toLowerCase().endsWith(".zip");
+  if (!isZip) return { raw: JSON.parse(file.buffer.toString("utf8")) as unknown, images: new Map<string, Uint8Array>() };
+  const entries = unzipSync(new Uint8Array(file.buffer));
+  const binderJson = entries["binder.json"];
+  if (!binderJson) throw new Error("Binder ZIP does not contain binder.json");
+  return { raw: JSON.parse(Buffer.from(binderJson).toString("utf8")) as unknown, images: new Map(Object.entries(entries).filter(([name]) => name.startsWith("images/"))) };
+}
+
+function restoreBinderImages(ctx: ServerContext, binderId: string, recordIdMap: Record<string, string>, images: Map<string, Uint8Array>) {
+  const now = ctx.helpers.now();
+  for (const [archivePath, bytes] of images) {
+    const match = /^images\/(mortals|deities)\/([^/.]+)(\.[a-z0-9]+)$/i.exec(archivePath);
+    if (!match) continue;
+    const newId = recordIdMap[match[2]!];
+    if (!newId) continue;
+    const kind = match[1]!;
+    const extension = match[3]!.toLowerCase();
+    const directoryName = kind === "mortals" ? "binder-mortal-images" : "binder-deity-images";
+    const directory = ctx.path.join(ctx.paths.dataDir, directoryName);
+    ctx.fs.mkdirSync(directory, { recursive: true });
+    const filename = `${newId}-${now}${extension}`;
+    ctx.fs.writeFileSync(ctx.path.join(directory, filename), bytes);
+    const url = `/${directoryName}/${filename}`;
+    const table = kind === "mortals" ? "mortals" : "deities";
+    ctx.db.prepare(`UPDATE ${table} SET image_url=?, image_updated_at=?, updated_at=? WHERE id=? AND id IN (SELECT id FROM binder_records WHERE binder_id=?)`).run(url, now, now, newId, binderId);
+  }
+}
 
 const optionalText = (max: number) => z.string().max(max).nullable().optional().transform((value) => {
   if (value === undefined || value === null) return value;
@@ -131,11 +167,12 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.post("/api/binders/import", anyDm, ctx.upload.single("file"), (req, res) => {
-    if (!req.file) return res.status(400).json({ ok: false, message: "Binder JSON file is required" });
+    if (!req.file) return res.status(400).json({ ok: false, message: "Binder JSON or ZIP file is required" });
     try {
-      const raw = JSON.parse(req.file.buffer.toString("utf8")) as unknown;
-      const result = importBinderDocument(db, raw, req.user!.userId, ctx.helpers);
-      res.status(201).json(result);
+      const upload = parseBinderUpload(req.file);
+      const result = importBinderDocument(db, upload.raw, req.user!.userId, ctx.helpers);
+      restoreBinderImages(ctx, result.binderId, result.recordIdMap, upload.images);
+      res.status(201).json({ binderId: result.binderId, name: result.name, recordCount: result.recordCount });
     } catch (error) {
       const message = error instanceof SyntaxError
         ? "The selected file is not valid JSON"
@@ -147,9 +184,11 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
   });
 
   app.post("/api/binders/import/preview", anyDm, ctx.upload.single("file"), (req, res) => {
-    if (!req.file) return res.status(400).json({ ok: false, message: "Binder JSON file is required" });
+    if (!req.file) return res.status(400).json({ ok: false, message: "Binder JSON or ZIP file is required" });
     try {
-      res.json(previewBinderDocument(db, JSON.parse(req.file.buffer.toString("utf8")) as unknown));
+      const upload = parseBinderUpload(req.file);
+      const preview = previewBinderDocument(db, upload.raw);
+      res.json({ ...preview, imageCount: upload.images.size });
     } catch (error) {
       const message = error instanceof SyntaxError ? "The selected file is not valid JSON"
         : error instanceof z.ZodError ? `Invalid Binder export: ${error.issues[0]?.message ?? "schema validation failed"}`
@@ -250,8 +289,30 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     if (!binderId) return;
     const document = exportBinderDocument(db, binderId);
     if (!document) return res.status(404).json({ ok: false, message: "Binder not found" });
-    res.setHeader("Content-Disposition", `attachment; filename=binder_${binderId}.json`);
-    res.json(document);
+    if (req.query.images !== "1") {
+      res.setHeader("Content-Disposition", `attachment; filename=binder_${binderId}.json`);
+      return res.json(document);
+    }
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename=binder_${binderId}.zip`);
+    const archive = createArchive("zip", { zlib: { level: 9 } });
+    archive.on("error", (error: Error) => { if (!res.headersSent) res.status(500); res.end(error.message); });
+    archive.pipe(res);
+    archive.append(JSON.stringify(document, null, 2), { name: "binder.json" });
+    const imageRows = db.prepare(`
+      SELECT br.id, br.record_type, COALESCE(m.image_url,d.image_url) image_url
+      FROM binder_records br
+      LEFT JOIN mortals m ON m.id=br.id LEFT JOIN deities d ON d.id=br.id
+      WHERE br.binder_id=? AND COALESCE(m.image_url,d.image_url) IS NOT NULL
+    `).all(binderId) as Array<{ id: string; record_type: string; image_url: string }>;
+    for (const row of imageRows) {
+      const relative = row.image_url.replace(/^\/+/, "");
+      const absolute = ctx.path.resolve(ctx.paths.dataDir, relative.replace(/^binder-(?:mortal|deity)-images[\\/]/, (value) => value));
+      if (!absolute.startsWith(ctx.path.resolve(ctx.paths.dataDir)) || !ctx.fs.existsSync(absolute)) continue;
+      const extension = ctx.path.extname(absolute) || ".webp";
+      archive.file(absolute, { name: `images/${row.record_type === "mortal" ? "mortals" : "deities"}/${row.id}${extension}` });
+    }
+    void archive.finalize();
   });
 
   app.patch("/api/binders/:binderId", editor, (req, res) => {

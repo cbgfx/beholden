@@ -28,6 +28,7 @@ export function ReferenceRecordModal(props: {
   showDescription: boolean;
   showIcon?: boolean;
   showRank?: boolean;
+  showDmNotes?: boolean;
   useDrawer?: boolean;
   parentLabel?: string;
   parentOptions?: Array<{ id: string; name: string; type: string; icon?: string | null }>;
@@ -36,6 +37,7 @@ export function ReferenceRecordModal(props: {
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [dmNotes, setDmNotes] = useState("");
   const [icon, setIcon] = useState<string | null>(null);
   const [rank, setRank] = useState<DeityRank | null>(null);
   const [parentId, setParentId] = useState("");
@@ -46,6 +48,7 @@ export function ReferenceRecordModal(props: {
     if (!props.isOpen) return;
     setName(props.record?.name ?? "");
     setDescription(props.record?.description ?? "");
+    setDmNotes(props.record?.dmNotes ?? "");
     setIcon(props.record?.icon ?? null);
     setRank(props.record?.rank ?? null);
     setParentId(props.record?.parent?.id ?? "");
@@ -64,6 +67,7 @@ export function ReferenceRecordModal(props: {
         parentId: props.parentLabel ? parentId || null : undefined,
         icon: props.showIcon ? icon : undefined,
         rank: props.showRank ? rank : undefined,
+        dmNotes: props.showDmNotes ? dmNotes.trim() || null : undefined,
       });
       props.onClose();
     } catch (cause) {
@@ -118,6 +122,13 @@ export function ReferenceRecordModal(props: {
               disabled={saving}
               placeholder="Optional"
             />
+          </div>
+        ) : null}
+
+        {props.showDmNotes ? (
+          <div style={{ display: "grid", gap: 7 }}>
+            <label htmlFor="binder-reference-dm-notes" style={labelStyle}>DM Notes</label>
+            <TextArea id="binder-reference-dm-notes" value={dmNotes} onChange={(event) => setDmNotes(event.target.value)} rows={6} disabled={saving} placeholder="Always hidden from players" />
           </div>
         ) : null}
 

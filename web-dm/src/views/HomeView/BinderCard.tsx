@@ -36,12 +36,12 @@ export function BinderCard({ binder, canEdit, onOpen, onEdit, onDelete }: Props)
   const accent = binder.color || theme.colors.accentHighlight;
 
   async function handleExport() {
-    const data = await exportBinder(binder.id);
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const includePictures = window.confirm("Include Mortal and Deity pictures?\n\nOK: portable ZIP with pictures\nCancel: lightweight JSON without pictures");
+    const blob = await exportBinder(binder.id, includePictures);
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `${binder.name || binder.id}-${localDateStamp()}.binder.json`;
+    anchor.download = `${binder.name || binder.id}-${localDateStamp()}.binder.${includePictures ? "zip" : "json"}`;
     anchor.click();
     URL.revokeObjectURL(url);
   }
@@ -121,7 +121,7 @@ export function BinderCard({ binder, canEdit, onOpen, onEdit, onDelete }: Props)
         <Button onClick={onOpen} title="Open Binder" style={{ flex: 1, minWidth: 0 }}>
           Open
         </Button>
-        <button type="button" onClick={handleExport} style={iconButton} title="Export Binder JSON" aria-label="Export Binder">
+        <button type="button" onClick={handleExport} style={iconButton} title="Export Binder" aria-label="Export Binder">
           <IconDownload size={17} />
         </button>
         {canEdit ? (

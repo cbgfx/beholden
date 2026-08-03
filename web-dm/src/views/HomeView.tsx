@@ -291,12 +291,12 @@ export function HomeView({
                 maxWidth: 200,
                 textOverflow: "ellipsis",
               }}
-              title={binderImportFile?.name ?? "Choose a Binder JSON file"}
+              title={binderImportFile?.name ?? "Choose a Binder JSON or ZIP file"}
             >
               <input
                 ref={binderFileInputRef}
                 type="file"
-                accept=".json,application/json"
+                accept=".json,.zip,application/json,application/zip"
                 onChange={(event) => {
                   const file = event.target.files?.[0] ?? null;
                   setBinderImportFile(file);
