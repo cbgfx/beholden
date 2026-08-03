@@ -4,7 +4,7 @@ import type { StoredEncounterActor } from "../server/userData.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { dmOrAdmin } from "../middleware/campaignAuth.js";
-import { rowToCampaignCharacter, CAMPAIGN_CHARACTER_COLS } from "../lib/db.js";
+import { rowToCampaignCharacter, CAMPAIGN_CHARACTER_COLS, getCampaignCharacterRow } from "../lib/db.js";
 import { ensureCombat, insertCombatant, createPlayerCombatant } from "../services/combat.js";
 import { addMonsterCombatants } from "../services/combat.addMonster.js";
 import { DEFAULT_OVERRIDES } from "../lib/defaults.js";
@@ -62,9 +62,7 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
       return res.status(404).json({ ok: false, message: "Encounter not found" });
 
     const { playerId } = parseBody(AddPlayerBody, req);
-    const pRow = db
-      .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`)
-      .get(playerId) as Record<string, unknown> | undefined;
+    const pRow = getCampaignCharacterRow(db, playerId);
     if (!pRow)
       return res.status(404).json({ ok: false, message: "Player not found" });
     const p = rowToCampaignCharacter(pRow);

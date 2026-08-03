@@ -8,14 +8,7 @@ import type {
   SpellSummary,
 } from "@/views/character-creator/utils/CharacterCreatorTypes";
 import type { SharedSpellSummary } from "@/views/character-creator/utils/SpellChoiceUtils";
-
-function selectionMapChanged(nextMap: Record<string, string[]>, currentMap: Record<string, string[]>): boolean {
-  return Object.keys(nextMap).length !== Object.keys(currentMap).length
-    || Object.entries(nextMap).some(([key, values]) => {
-      const current = currentMap[key] ?? [];
-      return values.length !== current.length || values.some((value, index) => value !== current[index]);
-    });
-}
+import { sameSelectionMap } from "@/lib/selectionMaps";
 
 export function useCharacterCreatorSanitizers(args: {
   setForm: React.Dispatch<React.SetStateAction<FormState>>;
@@ -79,7 +72,7 @@ export function useCharacterCreatorSanitizers(args: {
         resolvedSpellChoices: step6ResolvedSpellChoices,
         spellOptionsByKey: featSpellChoiceOptions,
       });
-      const changed = selectionMapChanged(nextChosenFeatOptions, f.chosenFeatOptions);
+      const changed = !sameSelectionMap(nextChosenFeatOptions, f.chosenFeatOptions);
       return changed ? { ...f, chosenFeatOptions: nextChosenFeatOptions } : f;
     });
   }, [featSpellChoiceOptions, setForm, step6ResolvedSpellChoices, step6SpellListChoices]);
@@ -92,7 +85,7 @@ export function useCharacterCreatorSanitizers(args: {
         currentSelections: f.chosenFeatureChoices,
         optionEntriesByKey: growthOptionEntriesByKey as never,
       });
-      const changed = selectionMapChanged(nextChosenFeatureChoices, f.chosenFeatureChoices);
+      const changed = !sameSelectionMap(nextChosenFeatureChoices, f.chosenFeatureChoices);
       return changed ? { ...f, chosenFeatureChoices: nextChosenFeatureChoices } : f;
     });
   }, [growthChoiceDefinitions, growthOptionEntriesByKey, setForm]);
@@ -112,7 +105,7 @@ export function useCharacterCreatorSanitizers(args: {
       for (const key of Object.keys(nextSelections)) {
         if (key.includes(":prepared-spell-progression:") && !validKeys.has(key)) delete nextSelections[key];
       }
-      const changed = selectionMapChanged(nextSelections, f.chosenFeatureChoices);
+      const changed = !sameSelectionMap(nextSelections, f.chosenFeatureChoices);
       return changed ? { ...f, chosenFeatureChoices: nextSelections } : f;
     });
   }, [preparedSpellProgressionChoiceDefinitions, setForm]);

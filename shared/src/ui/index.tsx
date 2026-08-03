@@ -11,7 +11,6 @@ export type { SearchableMultiFilterTheme } from "./SearchableMultiFilter";
 export { TextArea } from "./TextArea";
 export { Select } from "./Select";
 export { FormField, CheckRow } from "./FormField";
-export { FieldGrid } from "./FieldGrid";
 export { Tag } from "./Tag";
 export { StatCard } from "./StatCard";
 export { MiniStat } from "./MiniStat";

@@ -1,18 +1,38 @@
 // server/src/services/combat.ts
 import type Database from "better-sqlite3";
+import type { z } from "zod";
 import { now, uid } from "../lib/runtime.js";
-import { rowToEncounterActor, rowToCampaignCharacter, ENCOUNTER_ACTOR_COLS, CAMPAIGN_CHARACTER_COLS } from "../lib/db.js";
+import { rowToEncounterActor, rowToCampaignCharacter, ENCOUNTER_ACTOR_COLS, getCampaignCharacterRow } from "../lib/db.js";
 import type {
   StoredEncounterActor,
   StoredCampaignCharacter,
   StoredEncounterActorLiveState,
   StoredEncounterActorSnapshot,
+  StoredConditionInstance,
+  StoredOverrides,
 } from "../server/userData.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
 import { campaignLiveDbColumns } from "./characters.js";
-import { removeConditionsOwnedBy, type EndedConcentration } from "./combatTransitions.js";
+import {
+  removeConditionsOwnedBy,
+  applyCombatantTransition,
+  detectEndedConcentration,
+  shouldBreakConcentration,
+  type EndedConcentration,
+} from "./combatTransitions.js";
 import { toEncounterActorDto } from "../lib/apiActors.js";
 import type { BroadcastFn } from "../server/events.js";
+import type { CombatantUpdateBody } from "../routes/combatRouteHelpers.js";
+import { resolveActorDamage, resolveActorHealing } from "@beholden/shared/domain/actors";
+import { concentrationSaveDc } from "@beholden/shared/domain/conditions";
+
+type CombatantUpdateBodyType = z.infer<typeof CombatantUpdateBody>;
+
+// A condition placed on an enemy is itself evidence a player has engaged it (Hunter's Mark,
+// Poisoned, Prone, Restrained, ...) — except "invisible", which is the opposite of visibility, and
+// "concentration", which just tracks the enemy's own spellcasting and says nothing about the
+// players' awareness of it.
+const NON_ENGAGING_CONDITION_KEYS = new Set(["invisible", "concentration"]);
 
 function serializeEncounterActorSnapshot(snapshot: StoredEncounterActorSnapshot): string {
   return JSON.stringify(snapshot);
@@ -177,9 +197,7 @@ export function syncCombatantToPlayer(
   t: number
 ): { campaignId: string; characterId: string | null } | null {
   if (combatant.baseType !== "player") return null;
-  const pRow = db
-    .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`)
-    .get(combatant.baseId) as Record<string, unknown> | undefined;
+  const pRow = getCampaignCharacterRow(db, combatant.baseId);
   if (!pRow) return null;
   const player = rowToCampaignCharacter(pRow);
   const overrides = combatant.overrides ?? DEFAULT_OVERRIDES;
@@ -332,9 +350,7 @@ export function hydratePlayerCombatant(
     };
   }
   if (combatant.baseType !== "player") return combatant;
-  const pRow = db
-    .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`)
-    .get(combatant.baseId) as Record<string, unknown> | undefined;
+  const pRow = getCampaignCharacterRow(db, combatant.baseId);
   if (!pRow) return combatant;
   const player = rowToCampaignCharacter(pRow);
   return {
@@ -398,4 +414,179 @@ export function sweepDependentConditions(
       combatant: toEncounterActorDto(next),
     });
   }
+}
+
+/**
+ * Applies a full combatant PATCH: authoritative HP-delta resolution, field merge, transition
+ * rules, player/binder-NPC sync, concentration-break/notify, and the Hex/Hunter's Mark caster
+ * spell-name tracking on the linked character sheet. Returns null if the combatant doesn't exist.
+ *
+ * Deliberately excludes `fulfillInitiativePrompt` (route-level: it needs the full ServerContext,
+ * which nothing else in this file takes) — the route calls that itself using this function's
+ * returned `next`/`synced`.
+ */
+export function updateCombatant(
+  db: Database.Database,
+  broadcast: BroadcastFn,
+  encounterId: string,
+  combatantId: string,
+  body: CombatantUpdateBodyType,
+  t: number,
+): { next: StoredEncounterActor; synced: ReturnType<typeof syncCombatantToPlayer> } | null {
+  const existingRow = db
+    .prepare(`SELECT ${ENCOUNTER_ACTOR_COLS} FROM combatants WHERE id = ? AND encounter_id = ?`)
+    .get(combatantId, encounterId) as Record<string, unknown> | undefined;
+  if (!existingRow) return null;
+
+  const existing = hydratePlayerCombatant(db, rowToEncounterActor(existingRow));
+
+  // Resolve damage/heal against `existing`, which was just re-read (and, for player-type
+  // combatants, re-hydrated from the live `players` row) in this request — never against
+  // whatever the client had cached when it computed its own preview. This is what keeps a
+  // concurrent change (e.g. the player granting themselves temp HP) from being silently
+  // overwritten by a damage request that was resolved against stale data.
+  const resolvedHpDelta = body.hpDelta
+    ? (body.hpDelta.kind === "heal"
+        ? resolveActorHealing(existing, body.hpDelta.amount)
+        : resolveActorDamage(existing, body.hpDelta.amount))
+    : null;
+
+  const deathSaves = body.deathSaves
+    ? {
+        success: Math.max(0, Math.floor(body.deathSaves.success)),
+        fail: Math.max(0, Math.floor(body.deathSaves.fail)),
+      }
+    : existing.deathSaves;
+
+  const requestedHp = resolvedHpDelta?.hpCurrent ?? body.hpCurrent ?? existing.hpCurrent;
+  const requestedConditions = (resolvedHpDelta?.conditions ?? body.conditions ?? existing.conditions ?? []) as StoredConditionInstance[];
+  const losesConcentration = shouldBreakConcentration({ hpCurrent: requestedHp, conditions: requestedConditions });
+
+  const merged: StoredEncounterActor = {
+    ...existing,
+    label: body.label ?? existing.label,
+    ...(body.description !== undefined
+      ? { description: body.description.trim() }
+      : existing.description !== undefined
+        ? { description: existing.description }
+        : {}),
+    initiative: body.initiative !== undefined ? body.initiative : (existing.initiative ?? null),
+    friendly: body.friendly ?? existing.friendly,
+    color: body.color ?? existing.color,
+    hpCurrent: requestedHp,
+    hpMax: body.hpMax ?? existing.hpMax,
+    hpDetails: body.hpDetails !== undefined ? body.hpDetails : existing.hpDetails,
+    ac: body.ac ?? existing.ac,
+    acDetails: body.acDetails !== undefined ? body.acDetails : existing.acDetails,
+    attackOverrides: body.attackOverrides !== undefined ? (body.attackOverrides as unknown | null) : existing.attackOverrides,
+    overrides: (resolvedHpDelta?.overrides ?? body.overrides ?? existing.overrides) as StoredOverrides,
+    conditions: requestedConditions,
+    ...(deathSaves !== undefined ? { deathSaves } : {}),
+    usedReaction: body.usedReaction ?? existing.usedReaction ?? false,
+    usedLegendaryActions: body.usedLegendaryActions ?? existing.usedLegendaryActions ?? 0,
+    usedLegendaryResistances: body.usedLegendaryResistances ?? existing.usedLegendaryResistances ?? 0,
+    usedSpellSlots: body.usedSpellSlots ?? existing.usedSpellSlots ?? {},
+    engagedWithPlayers: existing.engagedWithPlayers === true || (
+      existing.friendly === false && (
+        body.hpDelta?.kind === "damage" ||
+        (requestedHp !== null && existing.hpCurrent !== null && requestedHp < existing.hpCurrent) ||
+        requestedConditions.some((condition) => !NON_ENGAGING_CONDITION_KEYS.has(condition.key))
+      )
+    ),
+    updatedAt: t,
+  };
+  const next = applyCombatantTransition(merged, existing);
+
+  updateEncounterActor(db, next, t);
+
+  // Sync player record for player-type combatants
+  const synced = syncCombatantToPlayer(db, next, t);
+  const syncedBinderNpc = syncCombatantToBinderNpc(db, next, t);
+  if (synced) {
+    if (losesConcentration && synced.characterId) {
+      db.prepare(`
+        UPDATE user_characters
+        SET character_data_json = json_set(COALESCE(character_data_json, '{}'), '$.concentrationSpell', NULL), updated_at = ?
+        WHERE id = ?
+      `).run(t, synced.characterId);
+    }
+    broadcast("players:delta", {
+      campaignId: synced.campaignId,
+      action: next.baseType === "player" ? "upsert" : "refresh",
+      ...(next.baseType === "player" ? { playerId: next.baseId } : {}),
+    });
+    // Notify a concentrating player that they need to make a CON save
+    if (
+      synced.characterId &&
+      (resolvedHpDelta || body.hpCurrent !== undefined) &&
+      existing.hpCurrent !== null &&
+      requestedHp !== null &&
+      requestedHp < existing.hpCurrent &&
+      existing.conditions.some((c) => c.key === "concentration")
+    ) {
+      broadcast("concentration:check", {
+        campaignId: synced.campaignId,
+        encounterId,
+        characterId: synced.characterId,
+        characterName: existing.label || existing.name,
+        dc: concentrationSaveDc(existing.hpCurrent - requestedHp),
+      });
+    }
+  }
+  if (syncedBinderNpc) {
+    for (const campaignId of syncedBinderNpc.campaignIds) {
+      broadcast("inpcs:delta", { campaignId, action: "refresh" });
+    }
+    for (const syncedEncounterId of syncedBinderNpc.encounterIds) {
+      if (syncedEncounterId === encounterId) continue;
+      broadcast("encounter:combatantsDelta", { encounterId: syncedEncounterId, action: "refresh" });
+    }
+  }
+
+  broadcast("encounter:combatantsDelta", {
+    encounterId,
+    action: "upsert",
+    combatantId: next.id,
+    combatant: toEncounterActorDto(next),
+  });
+
+  const ended = detectEndedConcentration(next.id, existing.conditions, next.conditions);
+  if (ended) sweepDependentConditions(db, broadcast, encounterId, ended, t, next.id);
+
+  // Applying a concentration-dependent effect records the spell on a linked player caster.
+  // This keeps the player sheet and combat HUD label aligned with the authoritative ownership.
+  for (const condition of next.conditions) {
+    const spellName = condition.key === "hexed"
+      ? "Hex"
+      : condition.key === "marked"
+        ? "Hunter's Mark"
+        : null;
+    if (!spellName || !condition.casterId) continue;
+    const wasPresent = existing.conditions.some((previous) =>
+      previous.key === condition.key
+      && previous.casterId === condition.casterId
+      && previous.hexAbility === condition.hexAbility
+    );
+    if (wasPresent) continue;
+    const casterPlayer = db.prepare(`
+      SELECT p.character_id, p.campaign_id
+      FROM combatants c
+      JOIN players p ON p.id = c.base_id
+      WHERE c.id = ? AND c.encounter_id = ? AND c.base_type = 'player'
+      LIMIT 1
+    `).get(condition.casterId, encounterId) as { character_id: string | null; campaign_id: string } | undefined;
+    if (!casterPlayer?.character_id) continue;
+    db.prepare(`
+      UPDATE user_characters
+      SET character_data_json = json_set(COALESCE(character_data_json, '{}'), '$.concentrationSpell', ?), updated_at = ?
+      WHERE id = ?
+    `).run(spellName, t, casterPlayer.character_id);
+    broadcast("players:delta", {
+      campaignId: casterPlayer.campaign_id,
+      action: "refresh",
+      characterId: casterPlayer.character_id,
+    });
+  }
+
+  return { next, synced };
 }

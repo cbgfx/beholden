@@ -3,6 +3,7 @@ import { Button } from "@/ui/Button";
 import { IconBinder, IconDownload, IconPencil, IconTrash } from "@/icons";
 import { theme, withAlpha } from "@/theme/theme";
 import { exportBinder, type BinderSummary } from "@/services/binderApi";
+import { BinderExportModal } from "./BinderExportModal";
 
 type Props = {
   binder: BinderSummary;
@@ -34,16 +35,30 @@ function localDateStamp(date = new Date()): string {
 
 export function BinderCard({ binder, canEdit, onOpen, onEdit, onDelete }: Props) {
   const accent = binder.color || theme.colors.accentHighlight;
+  const [exportOpen, setExportOpen] = React.useState(false);
+  const [exporting, setExporting] = React.useState<"json" | "zip" | null>(null);
+  const [exportError, setExportError] = React.useState<string | null>(null);
 
-  async function handleExport() {
-    const includePictures = window.confirm("Include Mortal and Deity pictures?\n\nOK: portable ZIP with pictures\nCancel: lightweight JSON without pictures");
-    const blob = await exportBinder(binder.id, includePictures);
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${binder.name || binder.id}-${localDateStamp()}.binder.${includePictures ? "zip" : "json"}`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+  async function handleExport(includePictures: boolean) {
+    setExporting(includePictures ? "zip" : "json");
+    setExportError(null);
+    try {
+      const blob = await exportBinder(binder.id, includePictures);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${binder.name || binder.id}-${localDateStamp()}.binder.${includePictures ? "zip" : "json"}`;
+      anchor.style.display = "none";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+      setExportOpen(false);
+    } catch (cause) {
+      setExportError(cause instanceof Error ? cause.message : "Unable to export Binder.");
+    } finally {
+      setExporting(null);
+    }
   }
 
   return (
@@ -121,7 +136,7 @@ export function BinderCard({ binder, canEdit, onOpen, onEdit, onDelete }: Props)
         <Button onClick={onOpen} title="Open Binder" style={{ flex: 1, minWidth: 0 }}>
           Open
         </Button>
-        <button type="button" onClick={handleExport} style={iconButton} title="Export Binder" aria-label="Export Binder">
+        <button type="button" onClick={() => { setExportError(null); setExportOpen(true); }} style={iconButton} title="Export Binder" aria-label="Export Binder">
           <IconDownload size={17} />
         </button>
         {canEdit ? (
@@ -146,6 +161,14 @@ export function BinderCard({ binder, canEdit, onOpen, onEdit, onDelete }: Props)
           </>
         ) : null}
       </div>
+      <BinderExportModal
+        isOpen={exportOpen}
+        binderName={binder.name}
+        exporting={exporting}
+        error={exportError}
+        onClose={() => setExportOpen(false)}
+        onExport={(includePictures) => void handleExport(includePictures)}
+      />
     </article>
   );
 }

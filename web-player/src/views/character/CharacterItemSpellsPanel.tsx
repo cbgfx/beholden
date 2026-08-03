@@ -1,4 +1,5 @@
 import React from "react";
+import { ordinal } from "@beholden/shared/domain";
 import { api } from "@/services/api";
 import { C } from "@/lib/theme";
 import { CollapsiblePanel } from "@/views/character/CharacterViewParts";
@@ -111,7 +112,6 @@ export function ItemSpellsPanel({
   );
   const saveDc = 8 + pb + spellMod + spellSaveDcBonus;
   const spellAtk = pb + spellMod;
-  const ordinals = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
 
   return (
     <>
@@ -238,7 +238,7 @@ export function ItemSpellsPanel({
                             {concentration && <span title="Concentration" style={{ marginLeft: 5, fontSize: "var(--fs-tiny)", color: C.colorRitual }}>◆</span>}
                           </div>
                           <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>
-                            {detail ? `${detail.level === 0 ? "Cantrip" : ordinals[detail.level ?? 0] ?? ""} ${detail.school ?? ""}`.trim() : ""}
+                            {detail ? `${detail.level === 0 ? "Cantrip" : ordinal(detail.level ?? 0)} ${detail.school ?? ""}`.trim() : ""}
                             {compactComponents ? ` (${compactComponents})` : ""}
                           </div>
                         </div>

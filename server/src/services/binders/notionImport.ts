@@ -209,6 +209,7 @@ export function importNotionZip(db: Db, binderId: string, buffer: Buffer, commit
   const runId = uid();
   const idByExternal = new Map<string, string>();
   for (const candidate of inspected.candidates) idByExternal.set(candidate.externalId, uid());
+  const kindByExternal = new Map(inspected.candidates.map((candidate) => [candidate.externalId, candidate.kind]));
   const candidatesByKind = (kind: Kind) => inspected.candidates.filter((candidate) => candidate.kind === kind);
   const resolve = (candidate: Candidate, field: string): string | null => {
     const raw = candidate.row[field] ?? "";
@@ -283,7 +284,10 @@ export function importNotionZip(db: Db, binderId: string, buffer: Buffer, commit
     for (const candidate of candidatesByKind("mortal")) {
       const id = idByExternal.get(candidate.externalId)!;
       const raceId = resolve(candidate, candidate.subtype === "player_character" ? "Races" : "Race");
-      const locationId = resolve(candidate, "Location");
+      const locationExternalId = notionIdFromUrl(candidate.row.Location ?? "");
+      const locationId = locationExternalId && ["location", "poi"].includes(kindByExternal.get(locationExternalId) ?? "")
+        ? resolve(candidate, "Location")
+        : null;
       const birth = numericDate(candidate.row.DoB);
       const death = numericDate(candidate.row.DoD);
       const gender = normalizeKey(candidate.row.Gender);

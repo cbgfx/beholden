@@ -1,3 +1,1 @@
-
-// Canonical size order for the dropdown.
-export const SIZE_LABELS = ["Tiny", "Small", "Medium", "Large", "Huge", "Gargantuan"] as const;
+export { SIZE_LABELS } from "@beholden/shared/domain/compendium/monsterPicker";

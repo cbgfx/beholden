@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   nonnegInt,
+  isNonEmptyObject,
   RECOVERY,
   ABILITY,
   StructuredFeatureEffectSchema,
@@ -143,7 +144,7 @@ const ClassLevelSchema = z
     cantripsKnown: nonnegInt.optional(),
     spellsPrepared: nonnegInt.optional(),
     spellSlots: z.record(z.string(), nonnegInt)
-      .refine((v) => Object.keys(v).length > 0, "Empty spellSlots must be omitted")
+      .refine(isNonEmptyObject, "Empty spellSlots must be omitted")
       .optional(),
     features: z.array(ClassFeatureSchema).min(1).optional(),
     resources: z.array(ClassResourceSchema).min(1).optional(),
@@ -224,7 +225,7 @@ export const ClassSchema = z
           }).strict().optional(),
         }).strict(),
       ]))
-        .refine((v) => Object.keys(v).length > 0, "Subclass options must not be empty"),
+        .refine(isNonEmptyObject, "Subclass options must not be empty"),
     }).strict().optional(),
     choices: z.array(ClassChoiceSchema).min(1).optional(),
     spellLists: z.record(z.string().regex(/^sl_[a-z0-9_]+$/u), z.string().min(1)).optional(),

@@ -6,6 +6,7 @@ import { ZipArchive } from "archiver";
 import { finished } from "node:stream/promises";
 import type { ServerContext } from "../../server/context.js";
 import { requireAdmin } from "../../middleware/auth.js";
+import { errorMessage } from "../../lib/errors.js";
 import {
   importNativeCompendiumDocument,
   importValidatedNativeCompendiumBatches,
@@ -112,7 +113,7 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
       broadcastImport(out);
       return res.json({ ok: true, ...out });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Native compendium import failed.";
+      const message = errorMessage(error, "Native compendium import failed.");
       return res.status(400).json({ ok: false, message });
     } finally {
       removeUploadedFile(req.file);
@@ -131,7 +132,7 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
       broadcastImport(out);
       return res.json({ ok: true, ...out });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Staged compendium import failed.";
+      const message = errorMessage(error, "Staged compendium import failed.");
       return res.status(400).json({ ok: false, message });
     }
   });
@@ -155,7 +156,7 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
       const result = resolveNativeCompendiumManifest(db, request);
       return res.json({ ok: true, ...result });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Compendium manifest lookup failed.";
+      const message = errorMessage(error, "Compendium manifest lookup failed.");
       return res.status(400).json({ ok: false, message });
     }
   });
@@ -175,7 +176,7 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
       const previewToken = stageCompendiumPreview(previewDirectory, req.file.path, batches);
       return res.json({ ok: true, ...preview, previewToken });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Native compendium preview failed.";
+      const message = errorMessage(error, "Native compendium preview failed.");
       return res.status(400).json({ ok: false, message });
     } finally {
       removeUploadedFile(req.file);

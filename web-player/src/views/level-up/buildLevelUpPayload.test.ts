@@ -249,4 +249,172 @@ describe("buildLevelUpPayload", () => {
     expect(payload.characterData.extraFeatIds).toEqual(["f_tough"]);
     expect(payload.characterData.chosenFeatOptions[choice.key]).toBeUndefined();
   });
+
+  it("drops a replaced feat's skill/tool/language/armor/weapon/save grants and keeps everything else", () => {
+    const priorFeatEntry = (category: string) => ({ name: `${category} from old feat`, source: "Old Feat" });
+    const classEntry = (category: string) => ({ name: `${category} from class`, source: "Fighter" });
+    const payload = buildLevelUpPayload({
+      char: {
+        hpMax: 40, hpCurrent: 40, className: "Fighter",
+        characterData: {
+          classes: [{ className: "Fighter", classId: "c_fighter", level: 5 }],
+          proficiencies: {
+            skills: [priorFeatEntry("skill"), classEntry("skill")],
+            tools: [priorFeatEntry("tool"), classEntry("tool")],
+            languages: [priorFeatEntry("language"), classEntry("language")],
+            armor: [priorFeatEntry("armor"), classEntry("armor")],
+            weapons: [priorFeatEntry("weapon"), classEntry("weapon")],
+            saves: [priorFeatEntry("save"), classEntry("save")],
+          },
+        },
+      },
+      nextLevel: 6, hpGain: 5, featHpBonus: 0, subclass: "",
+      chosenCantrips: [], chosenSpells: [], chosenInvocations: [], chosenExpertise: {}, chosenFeatOptions: {},
+      chosenFeatureChoices: {}, expertiseChoices: [], featChoiceEntries: [], chosenFeatDetail: null,
+      featSourceLabel: "Old Feat",
+      selectedFeatureProficiencyEntries: {
+        skills: [{ name: "New Feat skill", source: "New Feat" }],
+        tools: [{ name: "New Feat tool", source: "New Feat" }],
+        languages: [{ name: "New Feat language", source: "New Feat" }],
+        armor: [{ name: "New Feat armor", source: "New Feat" }],
+        weapons: [{ name: "New Feat weapon", source: "New Feat" }],
+        saves: [{ name: "New Feat save", source: "New Feat" }],
+      },
+      newFeatures: [], classDetailName: "Fighter", selectedCantripEntries: [], selectedSpellEntries: [], selectedInvocationEntries: [],
+      baseScores: {}, asiMode: null, asiStats: {}, featAbilityBonuses: {},
+    } as never) as {
+      characterData: { proficiencies: Record<"skills" | "tools" | "languages" | "armor" | "weapons" | "saves", Array<{ name: string; source: string }>> };
+    };
+
+    const singular: Record<"skills" | "tools" | "languages" | "armor" | "weapons" | "saves", string> = {
+      skills: "skill", tools: "tool", languages: "language", armor: "armor", weapons: "weapon", saves: "save",
+    };
+    for (const category of ["skills", "tools", "languages", "armor", "weapons", "saves"] as const) {
+      const names = payload.characterData.proficiencies[category].map((entry) => entry.name);
+      const label = singular[category];
+      expect(names).toContain(`${label} from class`);
+      expect(names).toContain(`New Feat ${label}`);
+      expect(names).not.toContain(`${label} from old feat`);
+    }
+  });
+
+  it("fully rebuilds invocations from the class source but leaves other-sourced invocations alone", () => {
+    const payload = buildLevelUpPayload({
+      char: {
+        hpMax: 50, hpCurrent: 50, className: "Warlock",
+        characterData: {
+          classes: [{ className: "Warlock", classId: "c_warlock", level: 8 }],
+          proficiencies: {
+            invocations: [
+              { id: "ct_old_a", name: "Old Invocation A", source: "Warlock" },
+              { id: "ct_feat_granted", name: "Feat-Granted Invocation", source: "Some Feat" },
+            ],
+          },
+        },
+      },
+      nextLevel: 9, nextClassLevel: 9, hpGain: 5, featHpBonus: 0, subclass: "",
+      chosenCantrips: [], chosenSpells: [], chosenInvocations: ["ct_new_b"], chosenExpertise: {}, chosenFeatOptions: {},
+      chosenFeatureChoices: {}, expertiseChoices: [], featChoiceEntries: [], chosenFeatDetail: null, featSourceLabel: "",
+      newFeatures: [], classDetailName: "Warlock", selectedCantripEntries: [], selectedSpellEntries: [],
+      selectedInvocationEntries: [{ id: "ct_new_b", name: "New Invocation B", source: "Warlock" }],
+      baseScores: {}, asiMode: null, asiStats: {}, featAbilityBonuses: {},
+    } as never) as { characterData: { proficiencies: { invocations: Array<{ name: string; source: string }> } } };
+
+    const names = payload.characterData.proficiencies.invocations.map((entry) => entry.name);
+    expect(names).toContain("Feat-Granted Invocation");
+    expect(names).toContain("New Invocation B");
+    expect(names).not.toContain("Old Invocation A");
+  });
+
+  it("expertise: drops a freshly-repicked source's old grant and a replaced entry by name, keeps the rest", () => {
+    const payload = buildLevelUpPayload({
+      char: {
+        hpMax: 40, hpCurrent: 40, className: "Rogue",
+        characterData: {
+          classes: [{ className: "Rogue", classId: "c_rogue", level: 5 }],
+          proficiencies: {
+            expertise: [
+              { name: "Stealth", source: "Rogue" },
+              { name: "Old Expertise Feat Pick", source: "Some Feat" },
+              { name: "Thieves' Tools", source: "Background" },
+            ],
+          },
+        },
+      },
+      nextLevel: 6, hpGain: 5, featHpBonus: 0, subclass: "",
+      chosenCantrips: [], chosenSpells: [], chosenInvocations: [],
+      chosenExpertise: { "expertise:cc_rogue_expertise": ["Athletics"], "expertise:cc_rogue_expertise:target": ["Thieves' Tools"] },
+      chosenFeatOptions: {}, chosenFeatureChoices: {},
+      expertiseChoices: [{ key: "expertise:cc_rogue_expertise", source: "Rogue" }],
+      expertiseReplacementChoices: [{ key: "expertise:cc_rogue_expertise", source: "Rogue" }],
+      featChoiceEntries: [], chosenFeatDetail: null, featSourceLabel: "",
+      newFeatures: [], classDetailName: "Rogue", selectedCantripEntries: [], selectedSpellEntries: [], selectedInvocationEntries: [],
+      baseScores: {}, asiMode: null, asiStats: {}, featAbilityBonuses: {},
+    } as never) as { characterData: { proficiencies: { expertise: Array<{ name: string; source: string }> } } };
+
+    const names = payload.characterData.proficiencies.expertise.map((entry) => entry.name);
+    // "Stealth" (source Rogue) is dropped because Rogue is an active expertiseChoices source this
+    // level-up -- that slot is being freshly re-picked, not accumulated.
+    expect(names).not.toContain("Stealth");
+    // "Thieves' Tools" is dropped because it's the explicit replacement target, even though its
+    // source ("Background") doesn't match any active choice.
+    expect(names).not.toContain("Thieves' Tools");
+    // Feat-sourced entries are untouched here since featSourceLabel is "" this level-up.
+    expect(names).toContain("Old Expertise Feat Pick");
+  });
+
+  it("maneuvers/metamagic/infusions/plans: pass through untouched when nothing new is selected", () => {
+    const payload = buildLevelUpPayload({
+      char: {
+        hpMax: 40, hpCurrent: 40, className: "Battle Master",
+        characterData: {
+          proficiencies: {
+            maneuvers: [{ name: "Trip Attack", source: "Battle Master", sourceKey: "growth:maneuver:1" }],
+            metamagic: [{ name: "Quickened Spell", source: "Sorcerer", sourceKey: "growth:metamagic:1" }],
+            infusions: [{ name: "Enhanced Weapon", source: "Artificer", sourceKey: "growth:infusion:1" }],
+            plans: [{ name: "Bag of Holding", source: "Artificer", sourceKey: "growth:plan:1" }],
+          },
+        },
+      },
+      nextLevel: 6, hpGain: 5, featHpBonus: 0, subclass: "",
+      chosenCantrips: [], chosenSpells: [], chosenInvocations: [], chosenExpertise: {}, chosenFeatOptions: {},
+      chosenFeatureChoices: {}, expertiseChoices: [], featChoiceEntries: [], chosenFeatDetail: null, featSourceLabel: "",
+      newFeatures: [], classDetailName: "Fighter", selectedCantripEntries: [], selectedSpellEntries: [], selectedInvocationEntries: [],
+      baseScores: {}, asiMode: null, asiStats: {}, featAbilityBonuses: {},
+    } as never) as {
+      characterData: { proficiencies: Record<"maneuvers" | "metamagic" | "infusions" | "plans", Array<{ name: string }>> };
+    };
+
+    expect(payload.characterData.proficiencies.maneuvers).toEqual([expect.objectContaining({ name: "Trip Attack" })]);
+    expect(payload.characterData.proficiencies.metamagic).toEqual([expect.objectContaining({ name: "Quickened Spell" })]);
+    expect(payload.characterData.proficiencies.infusions).toEqual([expect.objectContaining({ name: "Enhanced Weapon" })]);
+    expect(payload.characterData.proficiencies.plans).toEqual([expect.objectContaining({ name: "Bag of Holding" })]);
+  });
+
+  it("maneuvers: a newly selected entry replaces only the existing entry sharing its sourceKey", () => {
+    const payload = buildLevelUpPayload({
+      char: {
+        hpMax: 40, hpCurrent: 40, className: "Battle Master",
+        characterData: {
+          proficiencies: {
+            maneuvers: [
+              { name: "Trip Attack", source: "Battle Master", sourceKey: "growth:maneuver:1" },
+              { name: "Feinting Attack", source: "Battle Master", sourceKey: "growth:maneuver:2" },
+            ],
+          },
+        },
+      },
+      nextLevel: 7, hpGain: 5, featHpBonus: 0, subclass: "",
+      chosenCantrips: [], chosenSpells: [], chosenInvocations: [], chosenExpertise: {}, chosenFeatOptions: {},
+      chosenFeatureChoices: {}, expertiseChoices: [], featChoiceEntries: [], chosenFeatDetail: null, featSourceLabel: "",
+      selectedManeuverEntries: [{ name: "Disarming Attack", source: "Battle Master", sourceKey: "growth:maneuver:1" }],
+      newFeatures: [], classDetailName: "Fighter", selectedCantripEntries: [], selectedSpellEntries: [], selectedInvocationEntries: [],
+      baseScores: {}, asiMode: null, asiStats: {}, featAbilityBonuses: {},
+    } as never) as { characterData: { proficiencies: { maneuvers: Array<{ name: string }> } } };
+
+    const names = payload.characterData.proficiencies.maneuvers.map((entry) => entry.name);
+    expect(names).toContain("Disarming Attack");
+    expect(names).toContain("Feinting Attack");
+    expect(names).not.toContain("Trip Attack");
+  });
 });

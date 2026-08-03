@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { RulesetSchema } from "./grandCompendiumSchemas.shared.js";
+import { isNonEmptyObject, RulesetSchema } from "./grandCompendiumSchemas.shared.js";
 const SpellRollSchema = z
   .object({
     formula: z.string().min(1),
@@ -25,7 +25,7 @@ const SpellComponentsSchema = z
     material: z.union([z.literal(true), z.string().min(1)]).optional(),
   })
   .strict()
-  .refine((value) => Object.keys(value).length > 0, "Empty components must be omitted");
+  .refine(isNonEmptyObject, "Empty components must be omitted");
 
 const SpellDurationSchema = z
   .object({
@@ -33,7 +33,7 @@ const SpellDurationSchema = z
     concentration: z.literal(true).optional(),
   })
   .strict()
-  .refine((value) => Object.keys(value).length > 0, "Empty duration must be omitted");
+  .refine(isNonEmptyObject, "Empty duration must be omitted");
 
 export const SpellSchema = z
   .object({
@@ -60,7 +60,7 @@ export const SpellSchema = z
         duration: SpellDurationSchema.optional(),
       })
       .strict()
-      .refine((value) => Object.keys(value).length > 0, "Empty casting data must be omitted")
+      .refine(isNonEmptyObject, "Empty casting data must be omitted")
       .optional(),
     ritual: z.literal(true).optional(),
     access: z.array(z.string().regex(/^sl_[a-z0-9_]+$/u)).min(1).optional(),

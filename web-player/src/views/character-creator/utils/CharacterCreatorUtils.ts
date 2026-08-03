@@ -31,6 +31,6 @@ export {
   usesFlexiblePreparedSpells,
 } from "./CharacterCreatorSpellcastingUtils";
 
-export { parseStartingEquipmentOptions } from "./CharacterCreatorRaceParseUtils";
+export { parseStartingEquipmentOptions } from "./CharacterCreatorEquipmentParseUtils";
 
 export { getGrowthChoiceDefinitions } from "./GrowthChoiceUtils";

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { RulesetSchema, StructuredFeatureEffectSchema } from "./grandCompendiumSchemas.shared.js";
+import { isNonEmptyObject, RulesetSchema, StructuredFeatureEffectSchema } from "./grandCompendiumSchemas.shared.js";
 
 const ClassTalentRollSchema = z.object({
   formula: z.string().min(1),
@@ -20,7 +20,7 @@ export const ClassTalentSchema = z.object({
      * invocations themselves and gates on `talent` instead — this field exists because 2014
      * Pact Boon is a separate class `choices` pick, not a `ct_` talent id. */
     pactBoon: z.enum(["blade", "chain", "tome", "talisman"]).optional(),
-  }).strict().refine((value) => Object.keys(value).length > 0, "Empty prerequisite must be omitted").optional(),
+  }).strict().refine(isNonEmptyObject, "Empty prerequisite must be omitted").optional(),
   repeatable: z.literal(true).optional(),
   /** Deterministic mechanics consumed directly; description remains display/reference text only. */
   effects: z.array(StructuredFeatureEffectSchema).min(1).optional(),

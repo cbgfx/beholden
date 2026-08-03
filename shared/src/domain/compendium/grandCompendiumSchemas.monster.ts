@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nonnegInt, SIZE, checkUniqueIds, RulesetSchema } from "./grandCompendiumSchemas.shared.js";
+import { nonnegInt, SIZE, checkUniqueIds, isNonEmptyObject, RulesetSchema } from "./grandCompendiumSchemas.shared.js";
 
 const NamedBonusSchema = z
   .object({
@@ -82,7 +82,7 @@ export const MonsterSchema = z
         environment: z.array(z.string().min(1)).min(1).optional(),
       })
       .strict()
-      .refine((value) => Object.keys(value).length > 0)
+      .refine(isNonEmptyObject)
       .optional(),
     description: z.string().min(1).optional(),
     initiativeBonus: z.number().int().optional(),
@@ -93,7 +93,7 @@ export const MonsterSchema = z
         xp: z.number().min(0).optional(),
       })
       .strict()
-      .refine((value) => Object.keys(value).length > 0)
+      .refine(isNonEmptyObject)
       .optional(),
     armorClass: z
       .object({
@@ -122,7 +122,7 @@ export const MonsterSchema = z
         hover: z.literal(true).optional(),
       })
       .strict()
-      .refine((value) => Object.keys(value).length > 0)
+      .refine(isNonEmptyObject)
       .optional(),
     abilities: z
       .object({
@@ -134,7 +134,7 @@ export const MonsterSchema = z
         cha: z.number().int().min(1).max(30).optional(),
       })
       .strict()
-      .refine((value) => Object.keys(value).length > 0)
+      .refine(isNonEmptyObject)
       .optional(),
     proficiencies: z
       .object({
@@ -142,7 +142,7 @@ export const MonsterSchema = z
         skills: z.array(NamedBonusSchema).min(1).optional(),
       })
       .strict()
-      .refine((value) => Object.keys(value).length > 0)
+      .refine(isNonEmptyObject)
       .optional(),
     defenses: z
       .object({
@@ -152,7 +152,7 @@ export const MonsterSchema = z
         conditionImmunities: z.array(z.string().min(1)).min(1).optional(),
       })
       .strict()
-      .refine((value) => Object.keys(value).length > 0)
+      .refine(isNonEmptyObject)
       .optional(),
     senses: z.array(z.string().min(1)).min(1).optional(),
     languages: z.array(z.string().min(1)).min(1).optional(),

@@ -10,7 +10,8 @@ import {
   resolveSelectedSpellOptionEntries,
   sanitizeSpellChoiceSelections,
 } from "@/views/character-creator/utils/SpellChoiceUtils";
-import { hasKeys, reconcileSelectedSpellIds, sameSelectionMap } from "@/views/level-up/LevelUpHelpers";
+import { reconcileSelectedSpellIds } from "@/views/level-up/LevelUpHelpers";
+import { hasKeys, sameSelectionMap } from "@/lib/selectionMaps";
 import type {
   LevelUpCharacter as Character,
   LevelUpFeatDetail as FeatDetail,
@@ -20,6 +21,18 @@ import type {
 } from "@/views/level-up/LevelUpTypes";
 
 type GrowthOptionEntry = { id: string; name: string; rarity?: string | null; type?: string | null; magic?: boolean; attunement?: boolean };
+
+function resolveLockedSelectionIds(
+  selectedIds: string[],
+  options: SpellSummary[],
+  count: number,
+  include: (id: string, option: SpellSummary | undefined) => boolean,
+  existingNames?: string[],
+): string[] {
+  return reconcileSelectedSpellIds(selectedIds, options, existingNames)
+    .filter((id) => include(id, options.find((entry) => entry.id === id)))
+    .slice(0, Math.max(0, count));
+}
 
 export function useLevelUpChoiceSelections(args: {
   char: Character | null;
@@ -207,25 +220,25 @@ export function useLevelUpChoiceSelections(args: {
 
   const lockedCantripSelectionIds = React.useMemo(
     () =>
-      reconcileSelectedSpellIds(char?.characterData?.chosenCantrips ?? [], classCantrips, existingClassSpellNames)
-        .filter((id) => {
-          const spell = classCantrips.find((entry) => entry.id === id);
-          return spell ? !preparedSpellProgressionGrantedKeys.has(normalizeSpellTrackingKey(spell.name)) : false;
-        })
-        .slice(0, Math.max(0, cantripCount - cantripReplacementCount)),
+      resolveLockedSelectionIds(
+        char?.characterData?.chosenCantrips ?? [], classCantrips, cantripCount - cantripReplacementCount,
+        (_id, spell) => Boolean(spell) && !preparedSpellProgressionGrantedKeys.has(normalizeSpellTrackingKey(spell!.name)),
+        existingClassSpellNames,
+      ),
     [char?.characterData?.chosenCantrips, cantripCount, cantripReplacementCount, classCantrips, existingClassSpellNames, preparedSpellProgressionGrantedKeys]
   );
   const lockedCantripIds = React.useMemo(() => new Set(lockedCantripSelectionIds), [lockedCantripSelectionIds]);
 
   const lockedSpellSelectionIds = React.useMemo(
     () =>
-      reconcileSelectedSpellIds(char?.characterData?.chosenSpells ?? [], classSpells, existingClassSpellNames)
-        .filter((id) => {
-          const spell = classSpells.find((entry) => entry.id === id);
+      resolveLockedSelectionIds(
+        char?.characterData?.chosenSpells ?? [], classSpells, prepCount,
+        (_id, spell) => {
           const spellLevel = Number(spell?.level ?? 0);
           return Boolean(spell) && spellLevel > 0 && spellLevel <= maxSpellLevel && !preparedSpellProgressionGrantedKeys.has(normalizeSpellTrackingKey(spell!.name));
-        })
-        .slice(0, prepCount),
+        },
+        existingClassSpellNames,
+      ),
     [char?.characterData?.chosenSpells, classSpells, existingClassSpellNames, maxSpellLevel, prepCount, preparedSpellProgressionGrantedKeys]
   );
   const lockedSpellIds = React.useMemo(() => new Set(lockedSpellSelectionIds), [lockedSpellSelectionIds]);
@@ -236,9 +249,10 @@ export function useLevelUpChoiceSelections(args: {
       // single flat id space with no cross-list ambiguity, so there's no legitimate case where an
       // invocation the player never chose should get silently adopted just because its name shows
       // up in proficiencies.invocations (a derived display list, not the choice record).
-      reconcileSelectedSpellIds(char?.characterData?.chosenInvocations ?? [], classInvocations)
-        .filter((id) => allowedInvocationIds.has(id))
-        .slice(0, invocCount),
+      resolveLockedSelectionIds(
+        char?.characterData?.chosenInvocations ?? [], classInvocations, invocCount,
+        (id) => allowedInvocationIds.has(id),
+      ),
     [allowedInvocationIds, char?.characterData?.chosenInvocations, classInvocations, invocCount]
   );
   const lockedInvocationIds = React.useMemo(() => new Set(lockedInvocationSelectionIds), [lockedInvocationSelectionIds]);

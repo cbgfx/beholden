@@ -10,18 +10,12 @@ import {
   parseFeatureEffects,
   type ParseFeatureEffectsInput,
 } from "@/domain/character/parseFeatureEffects";
+import type { SpellChoiceEffect } from "@/domain/character/featureEffects";
 import { buildAppliedCharacterFeatures, buildPreparedSpellProgressionChoiceDefinitions } from "@/domain/character/characterFeatures";
 import {
-  ALL_LANGUAGES,
-  STANDARD_55E_LANGUAGES,
-  getEligibleWeaponMasteryKinds,
-} from "@/views/character-creator/constants/CharacterCreatorConstants";
-import {
-  getClassExpertiseChoices,
   getMaxSlotLevel,
   getSlotLevelTriggeredSpellChoicesUpToLevel,
   normalizeChoiceKey,
-  parseSkillList,
 } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import {
   getGrowthChoiceDefinitions,
@@ -44,20 +38,72 @@ import type {
   RaceDetail,
   SpellSummary,
 } from "@/views/character-creator/utils/CharacterCreatorTypes";
-import { getStep5ChoiceState, getFeatChoiceOptionsForStep5 } from "@/views/character-creator/utils/CharacterCreatorStep5Utils";
-import {
-  getWeaponMasteryChoice as getWeaponMasteryChoiceFromUtils,
-  parseAppliedClassFeatureEffects,
-} from "@/views/character-creator/utils/CharacterCreatorProficiencyUtils";
+import { getFeatChoiceOptionsForStep5 } from "@/views/character-creator/utils/CharacterCreatorStep5Utils";
+import { parseAppliedClassFeatureEffects } from "@/views/character-creator/utils/CharacterCreatorProficiencyUtils";
 import { parseAppliedSpeciesTraitEffects } from "@/views/character-creator/utils/CharacterCreatorClassFeatureUtils";
 import {
   deriveFeatGrantedAbilityBonuses,
   deriveTotalFeatAbilityBonuses,
-  getClassFeatChoices,
   type FormState,
 } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
-import { getClassLanguageChoice as getClassLanguageChoiceFromRules, getCoreLanguageChoice as getCoreLanguageChoiceFromRules } from "@/views/character/CharacterRuleParsers";
 import { useCreatorChoiceData } from "@/views/character-creator/useCreatorChoiceData";
+import { useCreatorProficiencyChoices } from "@/views/character-creator/useCreatorProficiencyChoices";
+
+/**
+ * Assembles a `CreatorResolvedSpellChoiceEntry[]` from a list of fixed-count spell-choice effects,
+ * shared by the class-feature/race-trait/invocation sources (the 3 of creator's 5 spell-choice
+ * sources whose per-entry construction is genuinely identical apart from the options below). The
+ * other 2 sources (feat choices, slot-growth choices) already delegate to their own shared
+ * utilities and don't fit this shape -- they're left as-is.
+ */
+export function buildFixedCountSpellChoiceEntries(
+  effects: SpellChoiceEffect[],
+  opts: {
+    keyPrefix: string;
+    resolveKeyId: (effect: SpellChoiceEffect) => string;
+    /** Produces "<word> Cantrip" / "<word> Spell" / "<word> Level N Spell" from this word. */
+    titleWord: string;
+    /** Only the class-feature source filters by whether the referenced spell/cantrip is already known. */
+    ifKnownPool?: { classCantrips: SpellSummary[]; chosenCantripIds: string[] };
+    /** Only the class-feature source caps unleveled choices to the class's max slot level. */
+    maxSpellLevel?: number;
+    noteFrom?: (effect: SpellChoiceEffect) => string | undefined;
+    /** Only the invocation source carries these (schools/ritual/damage/attack/allowedSpellIds/grantsSpell). */
+    extraFields?: (effect: SpellChoiceEffect) => Partial<CreatorResolvedSpellChoiceEntry>;
+  },
+): CreatorResolvedSpellChoiceEntry[] {
+  return effects.flatMap((effect) => {
+    if (effect.count.kind !== "fixed") return [];
+    if (opts.ifKnownPool && effect.ifKnown) {
+      const known = opts.ifKnownPool.classCantrips.some((spell) =>
+        opts.ifKnownPool!.chosenCantripIds.includes(spell.id)
+        && spell.name.trim().toLowerCase() === effect.ifKnown!.trim().toLowerCase()
+      );
+      if (!known) return [];
+    }
+    return [{
+      // Canonical key: `<prefix>:<compendium choice id>`. The class-feature prefix in particular
+      // must match the level-up wizard and MysticArcanumRevisitUtils exactly (not be namespaced
+      // any further) -- a pick made through any of those flows must be visible to the others
+      // instead of being invisible under a different key.
+      key: `${opts.keyPrefix}:${opts.resolveKeyId(effect)}`,
+      title: effect.level === 0
+        ? `${opts.titleWord} Cantrip`
+        : effect.level == null
+          ? `${opts.titleWord} Spell`
+          : `${opts.titleWord} Level ${effect.level} Spell`,
+      sourceLabel: effect.source.name,
+      count: effect.count.value,
+      level: effect.level,
+      ...(opts.maxSpellLevel !== undefined
+        ? { maxLevel: effect.level === null && opts.maxSpellLevel > 0 ? opts.maxSpellLevel : null }
+        : {}),
+      note: opts.noteFrom ? opts.noteFrom(effect) : effect.summary,
+      listNames: effect.spellLists,
+      ...(opts.extraFields ? opts.extraFields(effect) : {}),
+    }];
+  });
+}
 
 export function useCharacterCreatorDerivedState(args: {
   classes: ClassSummary[];
@@ -91,12 +137,6 @@ export function useCharacterCreatorDerivedState(args: {
   const selectedClassSummary = React.useMemo(
     () => classes.find((c) => c.id === form.classId) ?? null,
     [classes, form.classId]
-  );
-  const selectedClassFeatDetails = React.useMemo(
-    () => Object.entries(form.chosenClassFeatIds)
-      .map(([featureName]) => classFeatDetails[featureName])
-      .filter(Boolean),
-    [form.chosenClassFeatIds, classFeatDetails]
   );
   const selectedClassFeatureEffects = React.useMemo(
     () => parseAppliedClassFeatureEffects(classDetail, form.level, form.subclass, form.chosenOptionals),
@@ -173,96 +213,31 @@ export function useCharacterCreatorDerivedState(args: {
   const selectedFeatAbilityBonuses = React.useMemo(() => {
     return deriveTotalFeatAbilityBonuses(selectedFeatGrantedAbilityBonuses, form.chosenLevelUpFeats);
   }, [form.chosenLevelUpFeats, selectedFeatGrantedAbilityBonuses]);
-  const step5SkillList = React.useMemo(
-    () => classDetail ? parseSkillList(classDetail.proficiency) : [],
-    [classDetail]
-  );
-  const step5NumSkills = classDetail?.numSkills ?? 0;
-  const step5BgLangChoice = React.useMemo(
-    () => bgDetail?.proficiencies?.languages ?? { fixed: [], choose: 0, from: null },
-    [bgDetail]
-  );
-  const step5BgSkillFixed = React.useMemo(
-    () => bgDetail?.proficiencies?.skills?.fixed ?? (bgDetail ? parseSkillList(bgDetail.proficiency) : []),
-    [bgDetail]
-  );
-  const step5BgToolFixed = React.useMemo(
-    () => bgDetail?.proficiencies?.tools?.fixed ?? [],
-    [bgDetail]
-  );
-  const step5ClassToolProficiency = React.useMemo(
-    () => {
-      const tools = classDetail?.proficiencies?.tools;
-      if (!tools) return null;
-      return {
-        fixed: Array.isArray(tools.fixed) ? tools.fixed : [],
-        choices: Array.isArray(tools.choices) ? tools.choices : [],
-        notes: Array.isArray(tools.notes) ? tools.notes : [],
-      };
-    },
-    [classDetail]
-  );
-  const step5CoreLanguageChoice = React.useMemo(
-    () => getCoreLanguageChoiceFromRules(raceDetail?.parsedChoices ?? null, STANDARD_55E_LANGUAGES),
-    [raceDetail]
-  );
-  const step5ClassFeatChoices = React.useMemo(
-    () => getClassFeatChoices(classDetail, form.level, featSummaries, form.subclass),
-    [classDetail, form.level, featSummaries, form.subclass]
-  );
-  const step5ClassLanguageChoice = React.useMemo(
-    () => getClassLanguageChoiceFromRules(classDetail, form.level, ALL_LANGUAGES, form.subclass),
-    [classDetail, form.level, form.subclass]
-  );
-  const step5ClassExpertiseChoices = React.useMemo(
-    // "replace" groups (e.g. Bardic Versatility) only make sense as a level-up swap of an
-    // already-chosen skill; direct creation just picks the final held set, so they're a no-op here.
-    () => getClassExpertiseChoices(classDetail, form.level, form.subclass).filter((choice) => !choice.replace),
-    [classDetail, form.level, form.subclass]
-  );
-  const step5WeaponMasteryChoice = React.useMemo(
-    () => getWeaponMasteryChoiceFromUtils(classDetail, form.level),
-    [classDetail, form.level]
-  );
-  const step5WeaponOptions = React.useMemo(
-    () => getEligibleWeaponMasteryKinds(classDetail?.proficiencies?.weapons).sort((a, b) => a.localeCompare(b)),
-    [classDetail]
-  );
-  const step5ChoiceState = React.useMemo(() => getStep5ChoiceState({
-    form,
-    bgDetail,
-    raceDetailName: raceDetail?.name,
-    bgOriginFeatDetail: resolvedBgOriginFeatDetail,
-    bgSkillFixed: step5BgSkillFixed,
-    bgToolFixed: step5BgToolFixed,
-    classToolProficiency: step5ClassToolProficiency,
-    classFeatChoices: step5ClassFeatChoices,
-    classFeatDetails,
-    raceFeatDetail: resolvedRaceFeatDetail,
-    levelUpFeatDetails,
-    classLanguageChoice: step5ClassLanguageChoice,
-    coreLanguageChoice: step5CoreLanguageChoice,
-    classExpertiseChoices: step5ClassExpertiseChoices,
-    weaponMasteryChoice: step5WeaponMasteryChoice,
-    weaponOptions: step5WeaponOptions,
-  }), [
-    classFeatDetails,
-    form,
-    bgDetail,
-    levelUpFeatDetails,
-    raceDetail?.name,
-    resolvedBgOriginFeatDetail,
-    resolvedRaceFeatDetail,
-    step5BgSkillFixed,
-    step5BgToolFixed,
-    step5ClassToolProficiency,
-    step5ClassExpertiseChoices,
+
+  const {
+    step5SkillList,
+    step5NumSkills,
+    step5BgLangChoice,
+    step5CoreLanguageChoice,
     step5ClassFeatChoices,
     step5ClassLanguageChoice,
-    step5CoreLanguageChoice,
+    step5ClassExpertiseChoices,
+    step5ClassToolProficiency,
     step5WeaponMasteryChoice,
     step5WeaponOptions,
-  ]);
+    step5ChoiceState,
+  } = useCreatorProficiencyChoices({
+    form,
+    classDetail,
+    raceDetail,
+    bgDetail,
+    resolvedRaceFeatDetail,
+    resolvedBgOriginFeatDetail,
+    classFeatDetails,
+    levelUpFeatDetails,
+    featSummaries,
+  });
+
   const step6FeatSpellListChoices = React.useMemo<CreatorSpellListChoiceEntry[]>(
     () => step5ChoiceState.allFeatChoices
       .filter(({ choice }) => choice.type === "spell_list")
@@ -304,66 +279,39 @@ export function useCharacterCreatorDerivedState(args: {
     [form.chosenFeatOptions, form.level, step5ChoiceState]
   );
   const step6ClassFeatureSpellChoices = React.useMemo<CreatorResolvedSpellChoiceEntry[]>(
-    () => selectedClassFeatureSpellChoices.flatMap((effect) => {
-      if (effect.count.kind !== "fixed") return [];
-      if (effect.ifKnown) {
-        const known = classCantrips.some((spell) =>
-          form.chosenCantrips.includes(spell.id)
-          && spell.name.trim().toLowerCase() === effect.ifKnown!.trim().toLowerCase()
-        );
-        if (!known) return [];
-      }
-      return [{
-        // Canonical key: `classfeature:<compendium choice id>` -- same scheme the level-up wizard
-        // and MysticArcanumRevisitUtils use, so a pick made through either flow is visible to the
-        // other instead of being invisible under a different key.
-        key: `classfeature:${effect.choiceId ?? effect.id}`,
-        title: effect.level === 0 ? "Bonus Cantrip" : effect.level == null ? "Bonus Spell" : `Bonus Level ${effect.level} Spell`,
-        sourceLabel: effect.source.name,
-        count: effect.count.value,
-        level: effect.level,
-        maxLevel: effect.level === null && maxSpellLevel > 0 ? maxSpellLevel : null,
-        note: effect.summary,
-        listNames: effect.spellLists,
-      }];
+    () => buildFixedCountSpellChoiceEntries(selectedClassFeatureSpellChoices, {
+      keyPrefix: "classfeature",
+      resolveKeyId: (effect) => effect.choiceId ?? effect.id,
+      titleWord: "Bonus",
+      ifKnownPool: { classCantrips, chosenCantripIds: form.chosenCantrips },
+      maxSpellLevel,
     }),
     [classCantrips, form.chosenCantrips, maxSpellLevel, selectedClassFeatureSpellChoices]
   );
   const step6RaceTraitSpellChoices = React.useMemo<CreatorResolvedSpellChoiceEntry[]>(
-    () => selectedRaceTraitSpellChoices.flatMap((effect) => {
-      if (effect.count.kind !== "fixed") return [];
-      return [{
-        key: `racetrait:${effect.id}`,
-        title: effect.level === 0 ? "Species Cantrip" : effect.level == null ? "Species Spell" : `Species Level ${effect.level} Spell`,
-        sourceLabel: effect.source.name,
-        count: effect.count.value,
-        level: effect.level,
-        note: effect.summary,
-        listNames: effect.spellLists,
-      }];
+    () => buildFixedCountSpellChoiceEntries(selectedRaceTraitSpellChoices, {
+      keyPrefix: "racetrait",
+      // Race traits have no `choiceId` fallback -- unlike class-feature/invocation, this source
+      // never used one, and adding one now would silently rename every existing race-trait key.
+      resolveKeyId: (effect) => effect.id,
+      titleWord: "Species",
     }),
     [selectedRaceTraitSpellChoices]
   );
   const step6InvocationSpellChoices = React.useMemo<CreatorResolvedSpellChoiceEntry[]>(
-    () => selectedInvocationSpellChoices.flatMap((effect) => {
-      if (effect.count.kind !== "fixed") return [];
-      return [{
-        key: `invocation:${effect.choiceId ?? effect.id}`,
-        title: effect.level === 0 ? "Invocation Bonus Cantrip" : effect.level == null ? "Invocation Bonus Spell" : `Invocation Bonus Level ${effect.level} Spell`,
-        sourceLabel: effect.source.name,
-        count: effect.count.value,
-        level: effect.level,
-        note: effect.note ?? effect.summary,
-        listNames: effect.spellLists,
+    () => buildFixedCountSpellChoiceEntries(selectedInvocationSpellChoices, {
+      keyPrefix: "invocation",
+      resolveKeyId: (effect) => effect.choiceId ?? effect.id,
+      titleWord: "Invocation Bonus",
+      noteFrom: (effect) => effect.note ?? effect.summary,
+      extraFields: (effect) => ({
         schools: effect.schools,
         ritualOnly: effect.filters?.ritual === true,
         damageOnly: effect.filters?.damage === true,
         attackOnly: effect.filters?.attack === true,
-        allowedSpellIds: effect.filters?.known === true
-          ? form.chosenCantrips
-          : undefined,
+        allowedSpellIds: effect.filters?.known === true ? form.chosenCantrips : undefined,
         grantsSpell: effect.mode !== "select",
-      }];
+      }),
     }),
     [form.chosenCantrips, selectedInvocationSpellChoices]
   );
@@ -499,7 +447,6 @@ export function useCharacterCreatorDerivedState(args: {
 
   return {
     selectedClassSummary,
-    selectedClassFeatDetails,
     selectedClassFeatureProficiencyChoices,
     selectedFeatGrantedAbilityBonuses,
     selectedFeatAbilityBonuses,

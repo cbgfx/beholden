@@ -3,7 +3,7 @@
 
 import type Database from "better-sqlite3";
 import type { BroadcastFn } from "../server/events.js";
-import { rowToCampaignCharacter, rowToCharacterSheet, rowToEncounterActor, CAMPAIGN_CHARACTER_COLS, ENCOUNTER_ACTOR_COLS } from "../lib/db.js";
+import { rowToCampaignCharacter, rowToCharacterSheet, rowToEncounterActor, CAMPAIGN_CHARACTER_COLS, ENCOUNTER_ACTOR_COLS, getCampaignCharacterRow } from "../lib/db.js";
 import { hydratePlayerCombatant } from "./combat.js";
 import { toEncounterActorDto } from "../lib/apiActors.js";
 import { DEFAULT_DEATH_SAVES, DEFAULT_OVERRIDES } from "../lib/defaults.js";
@@ -403,9 +403,7 @@ export function syncAssignedPlayerRows(
   for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
     updateProjectedPlayerRow(db, player_id, snapshot, updatedAt, userId);
     if (livePatch && Object.keys(livePatch).length > 0) {
-      const row = db
-        .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`)
-        .get(player_id) as Record<string, unknown> | undefined;
+      const row = getCampaignCharacterRow(db, player_id);
       if (row) {
         const current = rowToCampaignCharacter(row);
         const effectiveHp = livePatch.hpCurrent ?? current.hpCurrent;

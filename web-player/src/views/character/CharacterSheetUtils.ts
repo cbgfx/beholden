@@ -1,6 +1,7 @@
 import type { TaggedItem } from "@/views/character/CharacterSheetTypes";
 import type { AbilKey, ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 import { C } from "@/lib/theme";
+import { dedupeTaggedEntriesByKey } from "@/domain/character/spellAcquisition";
 
 export function abilityMod(score: number | null | undefined): number {
   return Math.floor(((score ?? 10) - 10) / 2);
@@ -187,20 +188,13 @@ export function dedupeTaggedItems(
   list: TaggedItem[] | null | undefined,
   normalizeName?: (name: string) => string,
 ): TaggedItem[] {
-  const out: TaggedItem[] = [];
-  const seen = new Set<string>();
-  for (const item of list ?? []) {
+  // Normalize the name before dedup so the *displayed* name on the kept entry is consistent too,
+  // not just the dedup key.
+  const normalized = (list ?? []).flatMap((item) => {
     const name = (normalizeName ? normalizeName(item.name) : String(item.name ?? "").trim()).trim();
-    if (!name) continue;
-    const key = name.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push({
-      ...item,
-      name,
-    });
-  }
-  return out;
+    return name ? [{ ...item, name }] : [];
+  });
+  return dedupeTaggedEntriesByKey(normalized, (item) => item.name.toLowerCase());
 }
 
 export function normalizeResourceKey(name: string): string {

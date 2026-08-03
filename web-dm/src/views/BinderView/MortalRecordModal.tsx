@@ -60,7 +60,7 @@ export function MortalRecordModal(props: {
     races: props.options.records.filter((item) => item.type === "race"),
     positions: props.options.records.filter((item) => item.type === "position"),
     organizations: props.options.records.filter((item) => item.type === "organization"),
-    locations: props.options.records.filter((item) => ["continent", "country", "location", "poi"].includes(item.type)),
+    locations: props.options.records.filter((item) => item.type === "location" || item.type === "poi"),
   }), [props.options]);
   const [name, setName] = useState("");
   const [mortalType, setMortalType] = useState<MortalType>("npc");
@@ -250,8 +250,10 @@ export function MortalRecordModal(props: {
       setHpMax(String(monster.hpMax));
       setHpCurrent(String(monster.hpMax));
       setAc(String(monster.ac));
+      setMechanicsDirty(true);
+    } else {
+      setMechanicsDirty(false);
     }
-    setMechanicsDirty(false);
     setAttackOverrides([]);
   }
 

@@ -10,7 +10,7 @@ import { updateCampaignCharacterLive } from "../services/characters.js";
 import { rowToEncounterActor } from "../lib/db.js";
 import { ENCOUNTER_ACTOR_COLS } from "../lib/db.js";
 import { buildEncounterActorLive, updateEncounterActor } from "../services/combat.js";
-import { ACCEPTED_IMAGE_TYPES, resizeToWebP, deleteImageFiles } from "../lib/imageHelpers.js";
+import { prepareUploadedImage, deleteImageFiles } from "../lib/imageHelpers.js";
 import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
 import { withAbsoluteImageUrl } from "../lib/routeImageUrl.js";
 import { requireAdmin } from "../middleware/auth.js";
@@ -246,7 +246,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
     const row = db.prepare("SELECT id FROM campaigns WHERE id = ?").get(campaignId);
-    if (!row) return res.status(404).json({ ok: false });
+    if (!row) return res.status(404).json({ ok: false, message: "Campaign not found" });
     db.prepare("UPDATE campaigns SET updated_at = ? WHERE id = ?").run(now(), campaignId);
     ctx.broadcast("campaigns:changed", { campaignId });
     res.json({ ok: true });
@@ -257,19 +257,10 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
     const row = db.prepare("SELECT id FROM campaigns WHERE id = ?").get(campaignId) as { id: string } | undefined;
-    if (!row) return res.status(404).json({ ok: false, message: "Not found" });
-    if (!req.file) return res.status(400).json({ ok: false, message: "No file" });
-
-    if (!ACCEPTED_IMAGE_TYPES.includes(req.file.mimetype)) {
-      return res.status(400).json({ ok: false, message: "Unsupported image type" });
-    }
-
-    let thumbnail: Buffer;
-    try {
-      thumbnail = await resizeToWebP(req.file.buffer);
-    } catch {
-      return res.status(400).json({ ok: false, message: "Could not process image" });
-    }
+    if (!row) return res.status(404).json({ ok: false, message: "Campaign not found" });
+    const prepared = await prepareUploadedImage(req.file);
+    if (!prepared.ok) return res.status(400).json({ ok: false, message: prepared.message });
+    const thumbnail = prepared.image;
 
     const imagesDir = ctx.path.join(ctx.paths.dataDir, "campaign-images");
     ctx.fs.mkdirSync(imagesDir, { recursive: true });
@@ -307,7 +298,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
     const row = db.prepare("SELECT id FROM campaigns WHERE id = ?").get(campaignId);
-    if (!row) return res.status(404).json({ ok: false });
+    if (!row) return res.status(404).json({ ok: false, message: "Campaign not found" });
 
     const imagesDir = ctx.path.join(ctx.paths.dataDir, "campaign-images");
     deleteImageFiles(ctx, imagesDir, campaignId);

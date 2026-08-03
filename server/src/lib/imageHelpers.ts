@@ -22,6 +22,21 @@ export async function resizeToWebP(buffer: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
+export type PreparedImage =
+  | { ok: true; image: Buffer }
+  | { ok: false; message: "No file" | "Unsupported image type" | "Could not process image" };
+
+/** Validate and normalize an uploaded image without coupling routes to Sharp error handling. */
+export async function prepareUploadedImage(file?: { mimetype: string; buffer: Buffer }): Promise<PreparedImage> {
+  if (!file) return { ok: false, message: "No file" };
+  if (!ACCEPTED_IMAGE_TYPES.includes(file.mimetype)) return { ok: false, message: "Unsupported image type" };
+  try {
+    return { ok: true, image: await resizeToWebP(file.buffer) };
+  } catch {
+    return { ok: false, message: "Could not process image" };
+  }
+}
+
 /** Remove the current canonical image asset for an id. */
 export function deleteImageFiles(
   ctx: Pick<ServerContext, "fs" | "path">,

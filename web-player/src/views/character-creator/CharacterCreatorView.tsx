@@ -159,7 +159,6 @@ export function CharacterCreatorView() {
     : null;
   const {
     selectedClassSummary,
-    selectedClassFeatDetails,
     selectedClassFeatureProficiencyChoices,
     selectedFeatGrantedAbilityBonuses,
     selectedFeatAbilityBonuses,
@@ -408,11 +407,19 @@ export function CharacterCreatorView() {
     }
   }, [classDetail]);
 
+  const creatorResolvedScores = React.useMemo(() => {
+    const raceAbilityBonuses = deriveRaceAbilityBonuses(
+      raceDetail,
+      raceDetail?.parsedChoices?.abilityScoreChoice,
+      form,
+    );
+    return resolvedScores(form, selectedFeatAbilityBonuses, raceAbilityBonuses);
+  }, [form, raceDetail, selectedFeatAbilityBonuses]);
+
   // Auto-calculate HP, AC, speed when class/race/scores change
   React.useEffect(() => {
     const hd = effectiveHitDie;
-    const raceAbilityBonuses = deriveRaceAbilityBonuses(raceDetail, raceDetail?.parsedChoices?.abilityScoreChoice, form);
-    const scores = resolvedScores(form, selectedFeatAbilityBonuses, raceAbilityBonuses);
+    const scores = creatorResolvedScores;
     const conMod = abilityMod(scores.con ?? 10);
     const hp = calcHpMax(hd, form.level, conMod);
     const baseSpeed = raceDetail?.speed ?? races.find((race) => race.id === form.raceId)?.speed ?? 30;
@@ -429,7 +436,7 @@ export function CharacterCreatorView() {
     const acStr = String(ac);
     const speedStr = String(speed);
     setForm((f) => (f.hpMax === hpStr && f.ac === acStr && f.speed === speedStr ? f : { ...f, hpMax: hpStr, ac: acStr, speed: speedStr }));
-  }, [effectiveHitDie, effectiveClassName, classDetail, raceDetail, races, form, resolvedRaceFeatDetail?.name, resolvedBgOriginFeatDetail?.name, featSummaries, selectedClassFeatDetails, selectedFeatAbilityBonuses, levelUpFeatDetails, bgDetail?.proficiencies?.feats, bgDetail?.traits]);
+  }, [effectiveHitDie, effectiveClassName, classDetail, raceDetail, races, form, creatorResolvedScores, resolvedRaceFeatDetail?.name, resolvedBgOriginFeatDetail?.name, featSummaries, levelUpFeatDetails, bgDetail?.proficiencies?.feats, bgDetail?.traits]);
 
   // Trim cantrips/spells that no longer fit once the level field (creation or edit-time) drops --
   // unlike invocations and level-up feats, nothing else caps these against the *current* count/max
@@ -437,8 +444,7 @@ export function CharacterCreatorView() {
   React.useEffect(() => {
     if (!classDetail) return;
     const cantripCount = getCantripCount(classDetail, form.level, form.subclass);
-    const raceAbilityBonuses = deriveRaceAbilityBonuses(raceDetail, raceDetail?.parsedChoices?.abilityScoreChoice, form);
-    const scores = resolvedScores(form, selectedFeatAbilityBonuses, raceAbilityBonuses);
+    const scores = creatorResolvedScores;
     const spellAbility = String(classDetail.spellAbility ?? "").toLowerCase();
     const prepCount = getPreparedSpellCount(classDetail, form.level, form.subclass, scores[spellAbility as keyof typeof scores]);
     const maxSpellLevel = getMaxSlotLevel(classDetail, form.level, form.subclass);
@@ -484,7 +490,7 @@ export function CharacterCreatorView() {
       if (sameArray(nextCantrips, f.chosenCantrips) && sameArray(nextSpells, f.chosenSpells)) return f;
       return { ...f, chosenCantrips: nextCantrips, chosenSpells: nextSpells };
     });
-  }, [classDetail, classCantrips, classSpells, form, raceDetail, selectedFeatAbilityBonuses, editSummaryFallback]);
+  }, [classDetail, classCantrips, classSpells, form, creatorResolvedScores, editSummaryFallback]);
 
   // Trim invocations down to the current level's count when it exceeds the allowance -- the
   // eligibility sanitizer (useCharacterCreatorSanitizers.ts) only drops entries that no longer

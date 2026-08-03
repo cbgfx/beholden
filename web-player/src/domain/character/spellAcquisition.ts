@@ -58,6 +58,30 @@ export function tagAcquisitionLevelMap(
   return next;
 }
 
+/** Dedupes a list of tagged entries by a caller-supplied key, dropping entries whose key is empty
+ * (e.g. no name). `onConflict` controls which occurrence survives when two entries share a key:
+ * "keep-first" (default) keeps the earliest entry's shape as-is; "keep-last" lets a later entry
+ * overwrite an earlier one, which is what a delta-patch (level-up) wants when a freshly-selected
+ * entry should win over a stale duplicate of the same name+source. A plain `Map` naturally
+ * preserves first-insertion order regardless of which value ends up set on a key, so both modes
+ * return entries in first-seen order. This is the one shared primitive behind both the character
+ * creator's name-only dedup (`dedupeTaggedItems`, keep-first) and the level-up wizard's
+ * source+name merge (`mergeTaggedEntries`, keep-last) -- same job, one implementation. */
+export function dedupeTaggedEntriesByKey<T>(
+  entries: T[],
+  keyFn: (entry: T) => string,
+  options: { onConflict?: "keep-first" | "keep-last" } = {},
+): T[] {
+  const onConflict = options.onConflict ?? "keep-first";
+  const seen = new Map<string, T>();
+  for (const entry of entries) {
+    const key = keyFn(entry);
+    if (!key) continue;
+    if (onConflict === "keep-last" || !seen.has(key)) seen.set(key, entry);
+  }
+  return Array.from(seen.values());
+}
+
 /** Drops only selections known to have been acquired above the target, then removes the newest
  * remaining selections when a bounded known-count applies. A null limit represents accumulated
  * knowledge such as a Wizard spellbook. */

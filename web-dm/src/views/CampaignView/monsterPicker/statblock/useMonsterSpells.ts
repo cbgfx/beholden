@@ -1,6 +1,6 @@
 import React from "react";
 import { api } from "@/services/api";
-import { ordinal } from "@/lib/format/ordinal";
+import { ordinal } from "@beholden/shared/domain";
 
 type SpellLookupRow = {
   query: string;

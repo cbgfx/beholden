@@ -14,6 +14,8 @@ import { parseBody } from "../shared/validate.js";
 import { exportBinderDocument, importBinderDocument, previewBinderDocument } from "../services/binders/nativeBinder.js";
 import * as archiverModule from "archiver";
 import { unzipSync } from "fflate";
+import { EntityNameSchema } from "../lib/schemas.js";
+import { errorMessage } from "../lib/errors.js";
 
 const createArchive = ((archiverModule as unknown as { default?: unknown }).default ?? archiverModule) as unknown as (
   format: "zip",
@@ -55,7 +57,7 @@ const optionalText = (max: number) => z.string().max(max).nullable().optional().
 });
 
 const BinderCreateBody = z.object({
-  name: z.string().trim().min(1).max(160),
+  name: EntityNameSchema,
   color: z.string().regex(/^#[0-9a-f]{6}$/i).optional(),
   description: optionalText(200_000),
   currentDateText: z.string().trim().min(1).max(100),
@@ -63,7 +65,7 @@ const BinderCreateBody = z.object({
 }).strict();
 
 const BinderPatchBody = z.object({
-  name: z.string().trim().min(1).max(160).optional(),
+  name: EntityNameSchema.optional(),
   color: z.string().regex(/^#[0-9a-f]{6}$/i).optional(),
   description: optionalText(200_000),
   currentDateText: optionalText(100),
@@ -178,7 +180,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
         ? "The selected file is not valid JSON"
         : error instanceof z.ZodError
           ? `Invalid Binder export: ${error.issues[0]?.message ?? "schema validation failed"}`
-          : error instanceof Error ? error.message : "Binder import failed";
+          : errorMessage(error, "Binder import failed");
       res.status(400).json({ ok: false, message });
     }
   });
@@ -192,7 +194,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     } catch (error) {
       const message = error instanceof SyntaxError ? "The selected file is not valid JSON"
         : error instanceof z.ZodError ? `Invalid Binder export: ${error.issues[0]?.message ?? "schema validation failed"}`
-        : error instanceof Error ? error.message : "Binder preview failed";
+        : errorMessage(error, "Binder preview failed");
       res.status(400).json({ ok: false, message });
     }
   });

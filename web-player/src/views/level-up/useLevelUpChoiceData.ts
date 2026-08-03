@@ -11,7 +11,8 @@ import {
   isItemLookupBodyEmpty,
 } from "@/views/character-creator/utils/ItemLookupUtils";
 import { loadSpellChoiceOptions } from "@/views/character-creator/utils/SpellChoiceUtils";
-import { hasKeys, sameSpellChoiceOptionMap } from "@/views/level-up/LevelUpHelpers";
+import { sameSpellChoiceOptionMap } from "@/views/level-up/LevelUpHelpers";
+import { hasKeys } from "@/lib/selectionMaps";
 
 type OptionEntry = {
   id: string;

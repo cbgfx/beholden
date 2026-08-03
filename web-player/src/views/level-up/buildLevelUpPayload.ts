@@ -5,9 +5,21 @@ import type { BuildLevelUpPayloadArgs } from "./LevelUpUtils";
 import { appendMissingFeatureNotes } from "@/domain/character/featureNoteTemplates";
 import type { PlayerNote } from "@/views/character/CharacterSheetTypes";
 import { selectedInvocationFeatIds } from "@/domain/character/invocationFeatChoices";
-import { tagAcquisitionLevelMap } from "@/domain/character/spellAcquisition";
+import { tagAcquisitionLevelMap, dedupeTaggedEntriesByKey } from "@/domain/character/spellAcquisition";
 import { applyExclusiveGroupReplacement } from "@/views/level-up/LevelUpExclusiveChoiceUtils";
 
+// This builds `characterData.proficiencies` by patching deltas onto the character's EXISTING
+// map, category by category -- deliberately not the same strategy as the character creator's
+// `buildProficiencyMap` (CharacterCreatorProficiencyUtils.ts), which rebuilds the whole map from
+// scratch every save. That's not an oversight: `buildProficiencyMap` needs `raceDetail`/`bgDetail`/
+// `bgOriginFeatDetail`/`raceFeatDetail`/a full `classFeatDetails` record to do a from-scratch
+// rebuild, and level-up has never loaded any of those -- race and background can never change
+// after character creation, so there's nothing for level-up to re-derive there. Making level-up
+// fetch that data just to reuse the creator's rebuild strategy would add real complexity (new
+// compendium fetches, slower saves) to remove a duplication problem, not fix one. The two
+// strategies share their low-level dedup primitive (`dedupeTaggedEntriesByKey`, used by both this
+// file's `mergeTaggedEntries` and the creator's `dedupeTaggedItems`) and are tested per-category
+// below so a fix to one path's category logic doesn't silently leave the other one wrong.
 export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<string, unknown> {
   const {
     char, nextLevel, hpGain, featHpBonus, subclass, chosenCantrips, chosenSpells, chosenInvocations,
@@ -70,14 +82,17 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
     }),
     existingChosenOptionals,
   );
-  const mergeTaggedEntries = <T extends { name?: string; source?: string }>(...groups: T[][]): T[] => {
-    const merged = new Map<string, T>();
-    for (const entry of groups.flat()) {
-      const key = `${String(entry.source ?? "").trim().toLowerCase()}::${String(entry.name ?? "").trim().toLowerCase()}`;
-      if (!key.endsWith("::")) merged.set(key, entry);
-    }
-    return Array.from(merged.values());
-  };
+  const mergeTaggedEntries = <T extends { name?: string; source?: string }>(...groups: T[][]): T[] =>
+    dedupeTaggedEntriesByKey(groups.flat(), (entry) => {
+      const name = String(entry.name ?? "").trim().toLowerCase();
+      if (!name) return "";
+      return `${String(entry.source ?? "").trim().toLowerCase()}::${name}`;
+    }, { onConflict: "keep-last" });
+
+  // The "drop this category's prior grant from featSourceLabel" filter is the same one-liner
+  // repeated across every proficiency category below -- named once so it reads as one idea.
+  const dropFeatSource = <T extends { source?: string }>(entries: T[]): T[] =>
+    entries.filter((entry) => entry.source !== featSourceLabel);
 
   const selectedFeatEntries = chosenFeatDetail
     ? collectFeatTaggedEntries({
@@ -231,36 +246,36 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
     proficiencies: {
       ...(proficiencies ?? {}),
       skills: [
-        ...existingSkillEntries.filter((entry) => entry.source !== featSourceLabel),
+        ...dropFeatSource(existingSkillEntries),
         ...multiclassTagged(multiclassProficiencies?.skills),
         ...(selectedFeatEntries?.skills ?? []),
         ...(selectedFeatureProficiencyEntries.skills ?? []),
       ],
       tools: [
-        ...existingToolEntries.filter((entry) => entry.source !== featSourceLabel),
+        ...dropFeatSource(existingToolEntries),
         ...multiclassTagged(multiclassProficiencies?.tools),
         ...(selectedFeatEntries?.tools ?? []),
         ...(selectedFeatureProficiencyEntries.tools ?? []),
       ],
       languages: [
-        ...existingLanguageEntries.filter((entry) => entry.source !== featSourceLabel),
+        ...dropFeatSource(existingLanguageEntries),
         ...(selectedFeatEntries?.languages ?? []),
         ...(selectedFeatureProficiencyEntries.languages ?? []),
       ],
       armor: [
-        ...existingArmorEntries.filter((entry) => entry.source !== featSourceLabel),
+        ...dropFeatSource(existingArmorEntries),
         ...multiclassTagged(multiclassProficiencies?.armor),
         ...(selectedFeatEntries?.armor ?? []),
         ...(selectedFeatureProficiencyEntries.armor ?? []),
       ],
       weapons: [
-        ...existingWeaponEntries.filter((entry) => entry.source !== featSourceLabel),
+        ...dropFeatSource(existingWeaponEntries),
         ...multiclassTagged(multiclassProficiencies?.weapons),
         ...(selectedFeatEntries?.weapons ?? []),
         ...(selectedFeatureProficiencyEntries.weapons ?? []),
       ],
       saves: [
-        ...existingSaveEntries.filter((entry) => entry.source !== featSourceLabel),
+        ...dropFeatSource(existingSaveEntries),
         ...(selectedFeatEntries?.saves ?? []),
         ...(selectedFeatureProficiencyEntries.saves ?? []),
       ],
@@ -269,7 +284,7 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
           // Class spell proficiencies are the character's accumulated spellbook/known-spell
           // history, not merely the currently prepared selection. Removing the class source
           // here caused Wizards to forget every unprepared spell on level-up.
-          existingSpells.filter((entry) => entry.source !== featSourceLabel),
+          dropFeatSource(existingSpells),
           selectedCantripEntries.map((entry) => ({ ...entry, classEntryId: targetClassEntryId, sourceKey: `class:${targetClassEntryId}` })),
           selectedSpellEntries.map((entry) => ({ ...entry, classEntryId: targetClassEntryId, sourceKey: `class:${targetClassEntryId}` })),
           selectedClassFeatureSpellEntries,

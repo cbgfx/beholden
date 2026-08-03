@@ -63,6 +63,21 @@ export function ensureCanonicalMortalPositions(db: Db): void {
   })();
 }
 
+/** Mortals live at a concrete Location or POI, never directly on a Country or Continent. */
+export function ensureConcreteMortalResidences(db: Db): void {
+  db.exec(`
+    UPDATE mortals
+    SET residence_record_id = NULL
+    WHERE residence_record_id IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM binder_records residence
+        WHERE residence.id = mortals.residence_record_id
+          AND residence.record_type IN ('location', 'poi')
+      )
+  `);
+}
+
 /** Additive Binder fields for databases that received the initial Binder schema. */
 export function ensureBinderColumns(db: Db): void {
   const rows = db.prepare("PRAGMA table_info(binders)").all() as Array<{ name: string }>;

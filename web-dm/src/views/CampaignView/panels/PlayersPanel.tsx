@@ -70,44 +70,23 @@ export function PlayersPanel(props: {
                 p={p}
                 icon={p.hpCurrent > 0 ? <IconPlayer /> : <IconSkull />}
                 onEdit={() => props.onEditPlayer(p.id)}
-                actions={
-                  <>
-                    {props.selectedEncounterId ? (
-                      <IconButton
-                        title={alreadyIn ? "Already in encounter" : "Add to encounter"}
-                        onClick={(e) => (e.stopPropagation(), alreadyIn ? null : props.onAddPlayerToEncounter(p.id))}
-                        disabled={alreadyIn}
-                        variant="ghost"
-                        size="sm"
-                      >
-                        <IconPlus />
-                      </IconButton>
-                    ) : null}
-                    {!props.selectedEncounterId ? (
-                      <div className="campaignRowActions">
-                        <button
-                          type="button"
-                          title={p.userId ? "Remove from Campaign" : "Delete Character"}
-                          onClick={(e) => { e.stopPropagation(); props.onDeletePlayer(p.id); }}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            width: 34,
-                            height: 34,
-                            borderRadius: 8,
-                            border: `1px solid ${theme.colors.red}66`,
-                            background: "rgba(248,113,113,0.14)",
-                            color: theme.colors.red,
-                            cursor: "pointer",
-                          }}
-                        >
-                          <IconTrash size={14} />
-                        </button>
-                      </div>
-                    ) : null}
-                  </>
-                }
+                primaryAction={props.selectedEncounterId ? (
+                  <IconButton
+                    title={alreadyIn ? "Already in encounter" : "Add to encounter"}
+                    onClick={(e) => (e.stopPropagation(), alreadyIn ? null : props.onAddPlayerToEncounter(p.id))}
+                    disabled={alreadyIn}
+                    variant="ghost"
+                    size="sm"
+                  >
+                    <IconPlus />
+                  </IconButton>
+                ) : null}
+                menuItems={!props.selectedEncounterId ? [{
+                  label: p.userId ? "Remove from Campaign" : "Delete Character",
+                  icon: <IconTrash size={14} />,
+                  danger: true,
+                  onClick: () => props.onDeletePlayer(p.id),
+                }] : undefined}
               />
             );
           })}

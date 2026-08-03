@@ -2,7 +2,7 @@ import React from "react";
 import { api } from "@/services/api";
 import { theme, withAlpha } from "@/theme/theme";
 import { SpellDetailCard } from "@/drawers/drawers/combatant/SpellDetailCard";
-import { ordinal } from "@/lib/format/ordinal";
+import { ordinal } from "@beholden/shared/domain";
 import { SectionTitle } from "@/ui/SectionTitle";
 
 type SpellLookupRow = {

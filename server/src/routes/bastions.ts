@@ -2,6 +2,7 @@ import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseJson } from "../lib/db.js";
+import { errorMessage } from "../lib/errors.js";
 import { parseBody } from "../shared/validate.js";
 import { requireAuth } from "../middleware/auth.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
@@ -179,7 +180,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
         assignedPlayerIds,
       });
     } catch (error) {
-      return res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Invalid facilities." });
+      return res.status(400).json({ ok: false, message: errorMessage(error, "Invalid facilities.") });
     }
 
     const id = uid();
@@ -234,7 +235,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
         assignedPlayerIds,
       });
     } catch (error) {
-      return res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Invalid facilities." });
+      return res.status(400).json({ ok: false, message: errorMessage(error, "Invalid facilities.") });
     }
 
     const t = now();
@@ -323,7 +324,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
         assignedPlayerIds,
       });
     } catch (error) {
-      return res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Invalid facilities." });
+      return res.status(400).json({ ok: false, message: errorMessage(error, "Invalid facilities.") });
     }
 
     const t = now();

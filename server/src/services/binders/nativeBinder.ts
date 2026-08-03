@@ -119,6 +119,12 @@ export function importBinderDocument(db: Db, raw: unknown, ownerUserId: string, 
   const tagMap = new Map<string, string>();
   for (const tag of doc.data.binder_event_tags ?? []) tagMap.set(String(tag.id), helpers.uid());
   const map = (value: unknown) => value == null ? null : idMap.get(String(value)) ?? null;
+  const mortalResidenceIds = new Set(doc.records
+    .filter((record) => record.record_type === "location" || record.record_type === "poi")
+    .map((record) => String(record.id)));
+  const mapMortalResidence = (value: unknown) => value != null && mortalResidenceIds.has(String(value))
+    ? map(value)
+    : null;
   const tag = (value: unknown) => value == null ? null : tagMap.get(String(value)) ?? null;
   const now = helpers.now();
   const binderId = helpers.uid();
@@ -187,7 +193,7 @@ export function importBinderDocument(db: Db, raw: unknown, ownerUserId: string, 
     for (const row of rows("mortals")) db.prepare(`
       INSERT INTO mortals (id,race_id,gender,life_status,birth_date_text,birth_date_sort,death_date_text,death_date_sort,description,backstory,dm_notes,image_url,image_updated_at,residence_record_id,position_id,class_name,mortal_type,created_at,updated_at)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `).run(map(row.id), map(row.race_id), row.gender ?? null, row.life_status ?? (row.death_date_text ? "dead" : "alive"), row.birth_date_text ?? null, row.birth_date_sort ?? null, row.death_date_text ?? null, row.death_date_sort ?? null, text(row.description), text(row.backstory), text(row.dm_notes), null, null, map(row.residence_record_id), map(row.position_id), text(row.class_name), row.mortal_type, now, now);
+    `).run(map(row.id), map(row.race_id), row.gender ?? null, row.life_status ?? (row.death_date_text ? "dead" : "alive"), row.birth_date_text ?? null, row.birth_date_sort ?? null, row.death_date_text ?? null, row.death_date_sort ?? null, text(row.description), text(row.backstory), text(row.dm_notes), null, null, mapMortalResidence(row.residence_record_id), map(row.position_id), text(row.class_name), row.mortal_type, now, now);
     for (const row of rows("binder_npcs")) db.prepare(`
       INSERT INTO binder_npcs (
         mortal_id, monster_id, hp_max, hp_current, hp_details, ac, ac_details,

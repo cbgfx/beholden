@@ -3,6 +3,7 @@ import {
   nonnegInt,
   SIZE,
   ABILITY,
+  isNonEmptyObject,
   SpeciesChoiceSchema,
   TraitSchema,
   RulesetSchema,
@@ -30,10 +31,10 @@ export const SpeciesSchema = z
       wis: z.number().int().optional(),
       cha: z.number().int().optional(),
     }).strict()
-      .refine((value) => Object.keys(value).length > 0, "Empty abilityScoreIncrease must be omitted")
+      .refine(isNonEmptyObject, "Empty abilityScoreIncrease must be omitted")
       .optional(),
     choices: SpeciesChoiceSchema
-      .refine((value) => Object.keys(value).length > 0, "Empty choices must be omitted")
+      .refine(isNonEmptyObject, "Empty choices must be omitted")
       .optional(),
     traits: z.array(TraitSchema),
   })

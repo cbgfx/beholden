@@ -4,6 +4,7 @@ import type { ServerContext } from "../server/context.js";
 import { binderEditorOrAdmin, binderReaderOrAdmin } from "../middleware/binderAuth.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
+import { EntityNameSchema } from "../lib/schemas.js";
 
 const optionalText = (max = 200_000) => z.string().max(max).nullable().optional().transform((value) => {
   if (value == null) return value;
@@ -17,7 +18,7 @@ const association = z.object({
 }).strict();
 
 const ItemBody = z.object({
-  name: z.string().trim().min(1).max(160),
+  name: EntityNameSchema,
   description: optionalText(),
   dmNotes: optionalText(),
   compendiumItemId: nullableId,

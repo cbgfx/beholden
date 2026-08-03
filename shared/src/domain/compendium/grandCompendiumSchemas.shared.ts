@@ -14,6 +14,11 @@ export const RECOVERY = z.enum(["short_rest", "long_rest"]);
 export const SIZE = z.enum(["T", "S", "M", "L", "H", "G"]);
 export const ABILITY = z.enum(["str", "dex", "con", "int", "wis", "cha"]);
 
+/** Shared predicate for optional object-shaped payloads that must be omitted when empty. */
+export function isNonEmptyObject(value: object): boolean {
+  return Object.keys(value).length > 0;
+}
+
 // ── Helper ────────────────────────────────────────────────────────────────────
 
 export function checkUniqueIds(

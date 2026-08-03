@@ -23,13 +23,19 @@ import {
   ensureBinderLocationNaming,
   ensureBinderUnsetConventions,
   ensureCanonicalMortalPositions,
+  ensureConcreteMortalResidences,
 } from "./binderCampaignMigration.js";
+import { CAMPAIGN_CHARACTER_COLS } from "./dbColumns.js";
 
 export type Db = Database.Database;
 
 // Re-export columns and converters so existing import sites don't need to change.
 export * from "./dbColumns.js";
 export * from "./dbConverters.js";
+
+export function getCampaignCharacterRow(db: Db, playerId: string): Record<string, unknown> | undefined {
+  return db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(playerId) as Record<string, unknown> | undefined;
+}
 
 export function openDb(dbPath: string): Db {
   const db = new Database(dbPath);
@@ -47,6 +53,7 @@ export function openDb(dbPath: string): Db {
   ensureBinderRecordTypes(db);
   ensureBinderUnsetConventions(db);
   ensureCanonicalMortalPositions(db);
+  ensureConcreteMortalResidences(db);
   // Recreate Binder indexes/triggers that may have belonged to a rebuilt table.
   db.exec(BINDER_SCHEMA_SQL);
   ensureBinderCampaignColumns(db);

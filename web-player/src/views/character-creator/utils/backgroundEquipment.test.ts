@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildEquipmentItems, collectEquipmentLookupIds, collectEquipmentLookupNames } from "./CharacterCreatorEquipmentUtils";
-import { parseStartingEquipmentOptions } from "./CharacterCreatorRaceParseUtils";
+import { parseStartingEquipmentOptions } from "./CharacterCreatorEquipmentParseUtils";
 
 const structured = [
   {

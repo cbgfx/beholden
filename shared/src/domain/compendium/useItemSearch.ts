@@ -4,8 +4,13 @@ import {
   buildItemTypeOptions,
   type ItemSearchRow,
 } from "./itemSearch";
+import {
+  useAvailableCompendiumRulesets,
+  usePaginatedCompendiumSearch,
+  type CompendiumApi,
+} from "./usePaginatedCompendiumSearch";
 
-type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
+type ApiFn = CompendiumApi;
 
 export type UseCompendiumItemSearchOptions = {
   nameSearchValue?: (name: string) => string;
@@ -16,8 +21,6 @@ export type UseCompendiumItemSearchOptions = {
 type ItemFacetOption = { value: string; count: number };
 type ItemFacetsResponse = { rarity: ItemFacetOption[]; type: ItemFacetOption[] };
 type ItemSearchResponse = { rows: ItemSearchRow[]; total: number };
-type Ruleset = "5e" | "5.5e";
-type CompendiumRulesetsResponse = Record<string, Ruleset[]>;
 
 const SEARCH_LIMIT_BASE = 120;
 const SEARCH_LIMIT_FILTERED = 220;
@@ -28,10 +31,7 @@ export function useCompendiumItemSearch(
 ) {
   const { nameSearchValue, includeError = false } = options;
   const enabled = options.enabled ?? true;
-  const [rows, setRows] = React.useState<ItemSearchRow[]>([]);
-  const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [totalCount, setTotalCount] = React.useState(0);
   const [refreshKey, setRefreshKey] = React.useState(0);
   const [facets, setFacets] = React.useState<ItemFacetsResponse>({ rarity: [], type: [] });
 
@@ -40,8 +40,8 @@ export function useCompendiumItemSearch(
   const [typeFilter, setTypeFilter] = React.useState("all");
   const [filterAttunement, setFilterAttunement] = React.useState(false);
   const [filterMagic, setFilterMagic] = React.useState(false);
-  const [availableRulesets, setAvailableRulesets] = React.useState<Ruleset[]>([]);
-  const [rulesetFilter, setRulesetFilter] = React.useState<Ruleset | "">("");
+  const { availableRulesets, rulesetFilter, setRulesetFilter, showRulesetFilter } =
+    useAvailableCompendiumRulesets(api, "items", enabled);
 
   React.useEffect(() => {
     if (!enabled) return;
@@ -69,102 +69,37 @@ export function useCompendiumItemSearch(
   // one ruleset -- nothing to choose between. Defaults to "all rulesets" even when both are
   // present: items in particular don't have a complete duplicate catalog per ruleset, so
   // silently picking one would hide items that only exist under the other.
-  React.useEffect(() => {
-    if (!enabled) return;
-    const controller = new AbortController();
-    let alive = true;
-    api<CompendiumRulesetsResponse>("/api/compendium/rulesets", { signal: controller.signal })
-      .then((data) => {
-        if (!alive) return;
-        const available = Array.isArray(data?.items) ? data.items : [];
-        setAvailableRulesets(available);
-        setRulesetFilter("");
-      })
-      .catch(() => {
-        if (!alive) return;
-        setAvailableRulesets([]);
-        setRulesetFilter("");
-      });
-    return () => {
-      alive = false;
-      controller.abort();
-    };
-  }, [api, enabled]);
-
-  React.useEffect(() => {
-    if (!enabled) return;
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      setBusy(true);
-      if (includeError) setError(null);
-      try {
-        const hasQuery = q.trim().length >= 2;
-        const hasFacetFilters =
-          rarityFilter !== "all" || typeFilter !== "all" || filterAttunement || filterMagic;
-        const limit = hasQuery || hasFacetFilters ? SEARCH_LIMIT_FILTERED : SEARCH_LIMIT_BASE;
-        const baseQuery = [
-          `q=${encodeURIComponent(q)}`,
-          `rarity=${encodeURIComponent(rarityFilter)}`,
-          `type=${encodeURIComponent(typeFilter)}`,
-          `attunement=${filterAttunement ? "1" : "0"}`,
-          `magic=${filterMagic ? "1" : "0"}`,
-          `fields=${encodeURIComponent("id,name,rarity,type,typeKey,attunement,magic")}`,
-          ...(rulesetFilter ? [`ruleset=${encodeURIComponent(rulesetFilter)}`] : []),
-        ].join("&");
-
-        const merged: ItemSearchRow[] = [];
-        let total = 0;
-        let offset = 0;
-        const maxRows = 10000;
-
-        while (!controller.signal.aborted) {
-          const data = await api<ItemSearchResponse>(
-            `/api/compendium/items?compact=1&withTotal=1&limit=${limit}&offset=${offset}&${baseQuery}`,
-            { signal: controller.signal },
-          );
-          if (controller.signal.aborted) return;
-
-          const pageRows = Array.isArray(data?.rows) ? data.rows : [];
-          total = Number.isFinite(data?.total as number) ? Number(data.total) : pageRows.length;
-          merged.push(...pageRows);
-
-          if (pageRows.length === 0) break;
-          offset += pageRows.length;
-          if (offset >= total) break;
-          if (merged.length >= maxRows) break;
-        }
-
-        if (controller.signal.aborted) return;
-        setRows(merged);
-        setTotalCount(total || merged.length);
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        setRows([]);
-        setTotalCount(0);
-        if (includeError) {
-          setError(err instanceof Error ? err.message : "Failed to load items");
-        }
-      } finally {
-        if (!controller.signal.aborted) setBusy(false);
-      }
-    }, 220);
-
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [
-    api,
+  const requestPage = React.useCallback(async (offset: number, signal: AbortSignal) => {
+    if (includeError) setError(null);
+    const hasQuery = q.trim().length >= 2;
+    const hasFacetFilters =
+      rarityFilter !== "all" || typeFilter !== "all" || filterAttunement || filterMagic;
+    const limit = hasQuery || hasFacetFilters ? SEARCH_LIMIT_FILTERED : SEARCH_LIMIT_BASE;
+    const baseQuery = [
+      `q=${encodeURIComponent(q)}`,
+      `rarity=${encodeURIComponent(rarityFilter)}`,
+      `type=${encodeURIComponent(typeFilter)}`,
+      `attunement=${filterAttunement ? "1" : "0"}`,
+      `magic=${filterMagic ? "1" : "0"}`,
+      `fields=${encodeURIComponent("id,name,rarity,type,typeKey,attunement,magic")}`,
+      ...(rulesetFilter ? [`ruleset=${encodeURIComponent(rulesetFilter)}`] : []),
+    ].join("&");
+    const data = await api<ItemSearchResponse>(
+      `/api/compendium/items?compact=1&withTotal=1&limit=${limit}&offset=${offset}&${baseQuery}`,
+      { signal },
+    );
+    const rows = Array.isArray(data?.rows) ? data.rows : [];
+    return { rows, total: Number.isFinite(data?.total) ? Number(data.total) : rows.length };
+  }, [api, filterAttunement, filterMagic, includeError, q, rarityFilter, rulesetFilter, typeFilter]);
+  const onSearchError = React.useCallback((err: unknown) => {
+    if (includeError) setError(err instanceof Error ? err.message : "Failed to load items");
+  }, [includeError]);
+  const { rows, totalCount, busy } = usePaginatedCompendiumSearch({
     enabled,
-    q,
-    rarityFilter,
-    typeFilter,
-    filterAttunement,
-    filterMagic,
-    rulesetFilter,
-    includeError,
     refreshKey,
-  ]);
+    requestPage,
+    onError: onSearchError,
+  });
 
   const rarityOptions = React.useMemo(() => {
     const rowsFromFacets = facets.rarity.map((entry) => ({
@@ -235,7 +170,7 @@ export function useCompendiumItemSearch(
     rulesetFilter,
     setRulesetFilter,
     availableRulesets,
-    showRulesetFilter: availableRulesets.length > 1,
+    showRulesetFilter,
     hasActiveFilters,
     clearFilters,
     rows: visibleRows,

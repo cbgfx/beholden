@@ -7,7 +7,7 @@ import type { ServerContext } from "../server/context.js";
 import type { StoredConditionInstance } from "../server/userData.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
-import { rowToCampaignCharacter, rowToCharacterSheet, CAMPAIGN_CHARACTER_COLS, CHARACTER_SHEET_COLS } from "../lib/db.js";
+import { rowToCampaignCharacter, rowToCharacterSheet, CHARACTER_SHEET_COLS, getCampaignCharacterRow } from "../lib/db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { DEFAULT_OVERRIDES } from "../lib/defaults.js";
 import {
@@ -84,7 +84,7 @@ export function registerCharacterFieldPatchRoutes(app: Express, ctx: ServerConte
     const t = now();
 
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
-      const pRow = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(player_id) as Record<string, unknown>;
+      const pRow = getCampaignCharacterRow(db, player_id)!;
       const player = rowToCampaignCharacter(pRow);
       const previousConditions: StoredConditionInstance[] = Array.isArray(player.conditions) ? player.conditions : [];
 
@@ -142,7 +142,7 @@ export function registerCharacterFieldPatchRoutes(app: Express, ctx: ServerConte
       .run(sheetCols.deathSavesSuccess, sheetCols.deathSavesFail, t, charId);
 
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
-      const pRow = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(player_id) as Record<string, unknown>;
+      const pRow = getCampaignCharacterRow(db, player_id)!;
       const player = rowToCampaignCharacter(pRow);
       updateCampaignCharacterLive(db, player_id, player, { deathSaves }, t);
       emitPlayerChange({ campaignId: campaign_id, action: "upsert", playerId: player_id, characterId: charId });
@@ -187,7 +187,7 @@ export function registerCharacterFieldPatchRoutes(app: Express, ctx: ServerConte
       .run(JSON.stringify(nextCharacterData), t, charId, userId);
 
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
-      const pRow = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(player_id) as Record<string, unknown>;
+      const pRow = getCampaignCharacterRow(db, player_id)!;
       const player = rowToCampaignCharacter(pRow);
       updateCampaignCharacterLive(db, player_id, player, {
         overrides: {
@@ -212,8 +212,7 @@ export function registerCharacterFieldPatchRoutes(app: Express, ctx: ServerConte
     const t = now();
 
     for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
-      const pRow = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`)
-        .get(player_id) as Record<string, unknown> | undefined;
+      const pRow = getCampaignCharacterRow(db, player_id);
       if (!pRow) continue;
       const player = rowToCampaignCharacter(pRow);
       const overrides = { ...(player.overrides ?? DEFAULT_OVERRIDES), inspiration };

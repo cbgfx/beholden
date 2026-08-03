@@ -1,6 +1,6 @@
 import type { EncounterActor } from "@/domain/types/domain";
 import { rollDiceExpr } from "@/views/CombatView/utils/dice";
-import { resolveActorHealing } from "@beholden/shared/domain";
+import { parseHpDelta, resolveActorHealing } from "@beholden/shared/domain";
 
 export type HpDelta = { kind: "damage" | "heal"; amount: number };
 
@@ -8,19 +8,10 @@ export function parseSignedHpDelta(
   input: string,
   defaultKind: HpDelta["kind"]
 ): HpDelta {
-  const raw = String(input ?? "").trim();
-  if (!raw) return { kind: defaultKind, amount: 0 };
-
-  const first = raw[0];
-  const hasPlus = first === "+";
-  const hasMinus = first === "-";
-  const expr = hasPlus || hasMinus ? raw.slice(1) : raw;
-  const amount = rollDiceExpr(expr);
-
-  if (amount <= 0) return { kind: defaultKind, amount: 0 };
-  if (hasPlus) return { kind: "heal", amount };
-  if (hasMinus) return { kind: "damage", amount };
-  return { kind: defaultKind, amount };
+  const parsed = parseHpDelta(input, defaultKind, rollDiceExpr);
+  return parsed.amount > 0
+    ? { kind: parsed.kind, amount: parsed.amount }
+    : { kind: defaultKind, amount: 0 };
 }
 
 /**

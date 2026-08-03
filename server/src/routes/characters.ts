@@ -23,7 +23,7 @@ import {
   syncAssignedPlayerRows,
   updateProjectedPlayerRow,
 } from "../services/characters.js";
-import { ACCEPTED_IMAGE_TYPES, resizeToWebP } from "../lib/imageHelpers.js";
+import { prepareUploadedImage } from "../lib/imageHelpers.js";
 import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
 import { withAbsoluteImageUrl } from "../lib/routeImageUrl.js";
 import {
@@ -562,13 +562,9 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
     if (!requireOwnedCharacter(db, charId, req.user!.userId, res)) return;
-    if (!req.file) return res.status(400).json({ ok: false, message: "No file" });
-    if (!ACCEPTED_IMAGE_TYPES.includes(req.file.mimetype)) {
-      return res.status(400).json({ ok: false, message: "Unsupported image type" });
-    }
-    let thumbnail: Buffer;
-    try { thumbnail = await resizeToWebP(req.file.buffer); }
-    catch { return res.status(400).json({ ok: false, message: "Could not process image" }); }
+    const prepared = await prepareUploadedImage(req.file);
+    if (!prepared.ok) return res.status(400).json({ ok: false, message: prepared.message });
+    const thumbnail = prepared.image;
 
     const imagesDir = ctx.path.join(ctx.paths.dataDir, "character-images");
     ctx.fs.mkdirSync(imagesDir, { recursive: true });

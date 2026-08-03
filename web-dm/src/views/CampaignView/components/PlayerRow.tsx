@@ -37,7 +37,6 @@ export function PlayerRow(props: {
   menuItems?: RowMenuItem[];
   subtitle?: React.ReactNode;
   icon?: React.ReactNode;
-  actions?: React.ReactNode | null;
   onEdit?: () => void;
   variant?: "campaign" | "combatList";
 }) {
@@ -72,8 +71,7 @@ export function PlayerRow(props: {
     ? { background: "transparent", border: "none", borderRadius: 0, padding: "8px 10px" }
     : { background: withAlpha(theme.colors.shadowColor, 0.18), border: `1px solid ${theme.colors.panelBorder}`, borderRadius: 12, padding: "10px 12px" };
 
-  const hasLegacyActions = props.actions !== undefined;
-  const showMenu = !hasLegacyActions && Boolean(props.menuItems?.length);
+  const showMenu = Boolean(props.menuItems?.length);
 
   const metaLine = props.subtitle ?? (
     p.level || p.species || p.class
@@ -162,15 +160,14 @@ export function PlayerRow(props: {
         </div>
 
         {/* Action area */}
-        {props.actions !== null && (
+        {(props.primaryAction != null || showMenu) && (
           <div
             style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 4, marginLeft: "auto" }}
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
             onKeyUp={(e) => e.stopPropagation()}
           >
-            {hasLegacyActions ? props.actions : null}
-            {!hasLegacyActions && props.primaryAction != null ? props.primaryAction : null}
+            {props.primaryAction}
             {showMenu ? <div className="campaignRowActions"><RowMenu items={props.menuItems!} /></div> : null}
           </div>
         )}

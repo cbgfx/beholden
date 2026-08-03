@@ -2,6 +2,7 @@
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { requireParam } from "../lib/routeHelpers.js";
+import { errorMessage } from "../lib/errors.js";
 import { requireAdmin } from "../middleware/auth.js";
 import { memberOrAdmin } from "../middleware/campaignAuth.js";
 import {
@@ -170,7 +171,7 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
     try {
       campaignId = importCampaignDocument(db, doc, ctx.helpers.uid);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Import failed";
+      const message = errorMessage(error, "Import failed");
       return res.status(400).json({ ok: false, message });
     }
 

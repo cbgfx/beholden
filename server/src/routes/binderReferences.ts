@@ -4,9 +4,10 @@ import type { ServerContext } from "../server/context.js";
 import { binderEditorOrAdmin, binderReaderOrAdmin } from "../middleware/binderAuth.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
-import { ACCEPTED_IMAGE_TYPES, deleteImageFiles, resizeToWebP } from "../lib/imageHelpers.js";
+import { deleteImageFiles, prepareUploadedImage } from "../lib/imageHelpers.js";
 import { ensureLinkedBinderMortalForCharacter } from "../services/binders/linkedPlayerIdentity.js";
 import { syncMentionField } from "./binderLore.js";
+import { EntityNameSchema } from "../lib/schemas.js";
 
 const ReferenceType = z.enum([
   "races", "positions", "domains", "organizations", "deities",
@@ -92,7 +93,7 @@ const optionalDescription = z.string().max(200_000).nullable().optional().transf
 const DEITY_RANKS = ["Demi God", "Lesser God", "Greater God", "Overpower"] as const;
 
 const ReferenceCreateBody = z.object({
-  name: z.string().trim().min(1).max(160),
+  name: EntityNameSchema,
   visibility: z.enum(["dm", "public"]).optional(),
   description: optionalDescription,
   dmNotes: optionalDescription,
@@ -524,11 +525,9 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     if (!binderId || !recordId) return;
     const exists = db.prepare("SELECT 1 FROM binder_records WHERE id = ? AND binder_id = ? AND record_type = 'deity'").get(recordId, binderId);
     if (!exists) return res.status(404).json({ ok: false, message: "Deity not found" });
-    if (!req.file) return res.status(400).json({ ok: false, message: "No file" });
-    if (!ACCEPTED_IMAGE_TYPES.includes(req.file.mimetype)) return res.status(400).json({ ok: false, message: "Unsupported image type" });
-    let image: Buffer;
-    try { image = await resizeToWebP(req.file.buffer); }
-    catch { return res.status(400).json({ ok: false, message: "Could not process image" }); }
+    const prepared = await prepareUploadedImage(req.file);
+    if (!prepared.ok) return res.status(400).json({ ok: false, message: prepared.message });
+    const image = prepared.image;
     const imagesDir = ctx.path.join(ctx.paths.dataDir, "binder-deity-images");
     ctx.fs.mkdirSync(imagesDir, { recursive: true });
     deleteImageFiles(ctx, imagesDir, recordId);

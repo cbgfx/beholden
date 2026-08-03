@@ -2,6 +2,9 @@
 // Shared Zod schemas reused across multiple route files.
 import { z } from "zod";
 
+/** Required, normalized display name used by Binder and other named entities. */
+export const EntityNameSchema = z.string().trim().min(1).max(160);
+
 /** A condition applied to a combatant or player. */
 export const ConditionInstanceSchema = z.object({
   key: z.string(),

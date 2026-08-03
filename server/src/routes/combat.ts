@@ -1,10 +1,10 @@
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
-import type { StoredEncounterActor, StoredCombatState, StoredConditionInstance, StoredOverrides } from "../server/userData.js";
+import type { StoredCombatState } from "../server/userData.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
-import { rowToCampaignCharacter, rowToEncounterActor, ENCOUNTER_ACTOR_COLS } from "../lib/db.js";
+import { rowToCampaignCharacter, rowToEncounterActor } from "../lib/db.js";
 
 import {
   ensureCombat,
@@ -13,6 +13,7 @@ import {
   hydratePlayerCombatant,
   loadCombatants,
   updateEncounterActor,
+  updateCombatant,
   sweepDependentConditions,
 } from "../services/combat.js";
 import { DEFAULT_OVERRIDES } from "../lib/defaults.js";
@@ -21,21 +22,12 @@ import { CombatantUpdateBody, CombatStateBody } from "./combatRouteHelpers.js";
 import { registerCombatAddCombatantRoutes } from "./combatAddCombatants.js";
 import { fulfillInitiativePrompt, registerCombatInitiativeRoutes } from "./combatInitiative.js";
 import { registerCombatXpRoutes } from "./combatXp.js";
-import { concentrationSaveDc } from "@beholden/shared/domain/conditions";
-import { resolveActorDamage, resolveActorHealing } from "@beholden/shared/domain/actors";
 import {
   applyCombatantTransition,
   detectEndedConcentration,
   expireConditionsAtRound,
-  shouldBreakConcentration,
   type EndedConcentration,
 } from "../services/combatTransitions.js";
-
-// A condition placed on an enemy is itself evidence a player has engaged it (Hunter's Mark,
-// Poisoned, Prone, Restrained, ...) — except "invisible", which is the opposite of visibility, and
-// "concentration", which just tracks the enemy's own spellcasting and says nothing about the
-// players' awareness of it.
-const NON_ENGAGING_CONDITION_KEYS = new Set(["invisible", "concentration"]);
 
 export function registerCombatRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
@@ -356,163 +348,12 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
       const combatantId = requireParam(req, res, "combatantId");
       if (!combatantId) return;
 
-      const existingRow = db
-        .prepare(`SELECT ${ENCOUNTER_ACTOR_COLS} FROM combatants WHERE id = ? AND encounter_id = ?`)
-        .get(combatantId, encounterId) as Record<string, unknown> | undefined;
-      if (!existingRow)
-        return res.status(404).json({ ok: false, message: "Not found" });
-
-      const existing = hydratePlayerCombatant(db, rowToEncounterActor(existingRow));
       const body = parseBody(CombatantUpdateBody, req);
       const t = now();
 
-      // Resolve damage/heal against `existing`, which was just re-read (and, for player-type
-      // combatants, re-hydrated from the live `players` row) in this request — never against
-      // whatever the client had cached when it computed its own preview. This is what keeps a
-      // concurrent change (e.g. the player granting themselves temp HP) from being silently
-      // overwritten by a damage request that was resolved against stale data.
-      const resolvedHpDelta = body.hpDelta
-        ? (body.hpDelta.kind === "heal"
-            ? resolveActorHealing(existing, body.hpDelta.amount)
-            : resolveActorDamage(existing, body.hpDelta.amount))
-        : null;
-
-      const deathSaves = body.deathSaves
-        ? {
-            success: Math.max(0, Math.floor(body.deathSaves.success)),
-            fail: Math.max(0, Math.floor(body.deathSaves.fail)),
-          }
-        : existing.deathSaves;
-
-      const requestedHp = resolvedHpDelta?.hpCurrent ?? body.hpCurrent ?? existing.hpCurrent;
-      const requestedConditions = (resolvedHpDelta?.conditions ?? body.conditions ?? existing.conditions ?? []) as StoredConditionInstance[];
-      const losesConcentration = shouldBreakConcentration({ hpCurrent: requestedHp, conditions: requestedConditions });
-
-      const merged: StoredEncounterActor = {
-        ...existing,
-        label: body.label ?? existing.label,
-        ...(body.description !== undefined
-          ? { description: body.description.trim() }
-          : existing.description !== undefined
-            ? { description: existing.description }
-            : {}),
-        initiative: body.initiative !== undefined ? body.initiative : (existing.initiative ?? null),
-        friendly: body.friendly ?? existing.friendly,
-        color: body.color ?? existing.color,
-        hpCurrent: requestedHp,
-        hpMax: body.hpMax ?? existing.hpMax,
-        hpDetails: body.hpDetails !== undefined ? body.hpDetails : existing.hpDetails,
-        ac: body.ac ?? existing.ac,
-        acDetails: body.acDetails !== undefined ? body.acDetails : existing.acDetails,
-        attackOverrides: body.attackOverrides !== undefined ? (body.attackOverrides as unknown | null) : existing.attackOverrides,
-        overrides: (resolvedHpDelta?.overrides ?? body.overrides ?? existing.overrides) as StoredOverrides,
-        conditions: requestedConditions,
-        ...(deathSaves !== undefined ? { deathSaves } : {}),
-        usedReaction: body.usedReaction ?? existing.usedReaction ?? false,
-        usedLegendaryActions: body.usedLegendaryActions ?? existing.usedLegendaryActions ?? 0,
-        usedLegendaryResistances: body.usedLegendaryResistances ?? existing.usedLegendaryResistances ?? 0,
-        usedSpellSlots: body.usedSpellSlots ?? existing.usedSpellSlots ?? {},
-        engagedWithPlayers: existing.engagedWithPlayers === true || (
-          existing.friendly === false && (
-            body.hpDelta?.kind === "damage" ||
-            (requestedHp !== null && existing.hpCurrent !== null && requestedHp < existing.hpCurrent) ||
-            requestedConditions.some((condition) => !NON_ENGAGING_CONDITION_KEYS.has(condition.key))
-          )
-        ),
-        updatedAt: t,
-      };
-      const next = applyCombatantTransition(merged, existing);
-
-      updateEncounterActor(db, next, t);
-
-      // Sync player record for player-type combatants
-      const synced = syncCombatantToPlayer(db, next, t);
-      const syncedBinderNpc = syncCombatantToBinderNpc(db, next, t);
-      if (synced) {
-        if (losesConcentration && synced.characterId) {
-          db.prepare(`
-            UPDATE user_characters
-            SET character_data_json = json_set(COALESCE(character_data_json, '{}'), '$.concentrationSpell', NULL), updated_at = ?
-            WHERE id = ?
-          `).run(t, synced.characterId);
-        }
-        ctx.broadcast("players:delta", {
-          campaignId: synced.campaignId,
-          action: next.baseType === "player" ? "upsert" : "refresh",
-          ...(next.baseType === "player" ? { playerId: next.baseId } : {}),
-        });
-        // Notify a concentrating player that they need to make a CON save
-        if (
-          synced.characterId &&
-          (resolvedHpDelta || body.hpCurrent !== undefined) &&
-          existing.hpCurrent !== null &&
-          requestedHp !== null &&
-          requestedHp < existing.hpCurrent &&
-          existing.conditions.some((c) => c.key === "concentration")
-        ) {
-          ctx.broadcast("concentration:check", {
-            campaignId: synced.campaignId,
-            encounterId,
-            characterId: synced.characterId,
-            characterName: existing.label || existing.name,
-            dc: concentrationSaveDc(existing.hpCurrent - requestedHp),
-          });
-        }
-      }
-      if (syncedBinderNpc) {
-        for (const campaignId of syncedBinderNpc.campaignIds) {
-          ctx.broadcast("inpcs:delta", { campaignId, action: "refresh" });
-        }
-        for (const syncedEncounterId of syncedBinderNpc.encounterIds) {
-          if (syncedEncounterId === encounterId) continue;
-          ctx.broadcast("encounter:combatantsDelta", { encounterId: syncedEncounterId, action: "refresh" });
-        }
-      }
-
-      ctx.broadcast("encounter:combatantsDelta", {
-        encounterId,
-        action: "upsert",
-        combatantId: next.id,
-        combatant: toEncounterActorDto(next),
-      });
-
-      const ended = detectEndedConcentration(next.id, existing.conditions, next.conditions);
-      if (ended) sweepDependentConditions(db, ctx.broadcast, encounterId, ended, t, next.id);
-
-      // Applying a concentration-dependent effect records the spell on a linked player caster.
-      // This keeps the player sheet and combat HUD label aligned with the authoritative ownership.
-      for (const condition of next.conditions) {
-        const spellName = condition.key === "hexed"
-          ? "Hex"
-          : condition.key === "marked"
-            ? "Hunter's Mark"
-            : null;
-        if (!spellName || !condition.casterId) continue;
-        const wasPresent = existing.conditions.some((previous) =>
-          previous.key === condition.key
-          && previous.casterId === condition.casterId
-          && previous.hexAbility === condition.hexAbility
-        );
-        if (wasPresent) continue;
-        const casterPlayer = db.prepare(`
-          SELECT p.character_id, p.campaign_id
-          FROM combatants c
-          JOIN players p ON p.id = c.base_id
-          WHERE c.id = ? AND c.encounter_id = ? AND c.base_type = 'player'
-          LIMIT 1
-        `).get(condition.casterId, encounterId) as { character_id: string | null; campaign_id: string } | undefined;
-        if (!casterPlayer?.character_id) continue;
-        db.prepare(`
-          UPDATE user_characters
-          SET character_data_json = json_set(COALESCE(character_data_json, '{}'), '$.concentrationSpell', ?), updated_at = ?
-          WHERE id = ?
-        `).run(spellName, t, casterPlayer.character_id);
-        ctx.broadcast("players:delta", {
-          campaignId: casterPlayer.campaign_id,
-          action: "refresh",
-          characterId: casterPlayer.character_id,
-        });
-      }
+      const result = updateCombatant(db, ctx.broadcast, encounterId, combatantId, body, t);
+      if (!result) return res.status(404).json({ ok: false, message: "Not found" });
+      const { next, synced } = result;
 
       if (body.initiative != null) {
         fulfillInitiativePrompt(ctx, next, synced?.campaignId ?? null);

@@ -1,7 +1,7 @@
 import React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import { titleCase } from "@beholden/shared/domain/text/titleCase";
-import { ordinal } from "@/lib/format/ordinal";
+import { ordinal } from "@beholden/shared/domain";
 import { MonsterSectionPanel } from "@/components/MonsterDisplay/MonsterSectionPanel";
 
 function parseSlotCounts(raw: unknown): Record<number, number> {

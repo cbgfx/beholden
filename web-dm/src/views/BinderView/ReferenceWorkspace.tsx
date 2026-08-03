@@ -33,15 +33,9 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import { EntityIcon, IconPicker, getDefaultEntityIcon, ICON_ENABLED_REFERENCE_TYPES } from "@/components/iconPicker";
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
+import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
 import { RelatedRecordsPanel } from "./RelatedRecordsPanel";
-
-function VisibilityIcon({ visible, size = 18 }: { visible: boolean; size?: number }) {
-  return visible ? (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
-  ) : (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="m3 3 18 18"/><path d="M10.6 6.2A11.8 11.8 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-2.1 2.8M6.6 6.6C3.5 8.4 2 12 2 12s3.5 6 10 6c1.6 0 3-.4 4.2-1"/></svg>
-  );
-}
+import { VisibilityIcon } from "./VisibilityIcon";
 
 type ReferenceSortKey = "name" | "middle" | "usage";
 
@@ -56,6 +50,22 @@ const LABELS: Record<BinderReferenceType, { plural: string; singular: string; us
   locations: { plural: "Locations", singular: "Location", usage: "Related records" },
   "points-of-interest": { plural: "Points of Interest", singular: "Point of Interest", usage: "Related records" },
 };
+
+type ReferenceViewConfig = {
+  isDeities: boolean;
+  showDescription: boolean;
+  showLeader: boolean;
+  showIcon: boolean;
+};
+
+const REFERENCE_VIEW_CONFIG: Record<BinderReferenceType, ReferenceViewConfig> = Object.fromEntries(
+  (Object.keys(LABELS) as BinderReferenceType[]).map((type) => [type, {
+    isDeities: type === "deities",
+    showDescription: type !== "races" && type !== "positions",
+    showLeader: type === "organizations",
+    showIcon: ICON_ENABLED_REFERENCE_TYPES.has(type),
+  }]),
+) as Record<BinderReferenceType, ReferenceViewConfig>;
 
 function DeityDomainsSection(props: {
   binderId: string;
@@ -273,11 +283,8 @@ export function ReferenceWorkspace(props: {
   onRecordsChanged: () => Promise<void>;
 }) {
   const labels = LABELS[props.type];
-  const isDeities = props.type === "deities";
-  const showDescription = !["races", "positions"].includes(props.type);
-  const showLeader = props.type === "organizations";
+  const { isDeities, showDescription, showLeader, showIcon } = REFERENCE_VIEW_CONFIG[props.type];
   const showDescriptionColumn = showDescription && !isDeities && !showLeader;
-  const showIcon = ICON_ENABLED_REFERENCE_TYPES.has(props.type);
   const hasMiddleColumn = showDescription || showLeader;
   const navigate = useNavigate();
   const confirm = useConfirm();
@@ -311,12 +318,14 @@ export function ReferenceWorkspace(props: {
   const [editingDmNotes, setEditingDmNotes] = useState(false);
   const [inlineSaving, setInlineSaving] = useState(false);
   const portraitInputRef = useRef<HTMLInputElement>(null);
+  const hasLoadedRef = useRef(false);
 
   const reload = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     setError(null);
     try {
       setRecords(await fetchBinderReferences(props.binderId, props.type, query));
+      hasLoadedRef.current = true;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : `Unable to load ${labels.plural}.`);
     } finally {
@@ -324,9 +333,19 @@ export function ReferenceWorkspace(props: {
     }
   }, [labels.plural, props.binderId, props.type, query]);
 
+  useDebouncedEffect(reload, 180);
+
   useEffect(() => {
-    const timer = window.setTimeout(() => void reload(), 180);
-    return () => window.clearTimeout(timer);
+    const onFocus = () => void reload();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void reload();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [reload]);
 
   useEffect(() => {

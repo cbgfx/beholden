@@ -10,6 +10,8 @@
     "./domain/conditions": "./src/domain/conditions.ts",
     "./domain/characterClasses": "./src/domain/characterClasses.ts",
     "./domain/monsters": "./src/domain/monsters.ts",
+    "./domain/dice": "./src/domain/dice.ts",
+    "./domain/compendium/monsterPicker": "./src/domain/compendium/monsterPicker.ts",
     "./domain/compendium/grandCompendiumSchemas": "./src/domain/compendium/grandCompendiumSchemas.ts",
     "./domain/compendium/nativeCompendiumKey": "./src/domain/compendium/nativeCompendiumKey.ts",
     "./domain/compendium/computeContentHash": "./src/domain/compendium/computeContentHash.ts",

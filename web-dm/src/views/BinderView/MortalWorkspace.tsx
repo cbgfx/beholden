@@ -8,7 +8,7 @@ import { Input } from "@/ui/Input";
 import { useConfirm } from "@/confirm/ConfirmContext";
 import { theme, withAlpha } from "@/theme/theme";
 import { BinderListEmpty, BinderListError, BinderListHeader, BinderListLoading, BinderRecordThumbnail, compareValues, useBinderListSort } from "@/components/BinderListTable";
-import { SearchableMultiFilter } from "@/components/SearchableSelect";
+import { SearchableMultiFilter, SearchableSelect } from "@/components/SearchableSelect";
 import { createBinderMortal, deleteBinderMortal, fetchBinderMortals, fetchMortalOptions, updateBinderMortal, uploadBinderMortalImage, type BinderMortal, type BinderMortalInput, type MortalOptions } from "@/services/binderMortalApi";
 import { BINDER_MORTAL_COLUMNS, BinderDataTableRow, ImageLightbox } from "@beholden/shared/ui";
 import { MortalRecordModal } from "@/views/BinderView/MortalRecordModal";
@@ -16,6 +16,8 @@ import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
 import { fetchBinderRecordOptions, syncBinderMentions, type BinderRecordOption } from "@/services/binderLoreApi";
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
+import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
+import { VisibilityIcon } from "./VisibilityIcon";
 
 const mortalTableColumns = BINDER_MORTAL_COLUMNS;
 const NONE_FILTER = "__none__";
@@ -24,13 +26,6 @@ function OrganizationIcon(props: { icon?: string | null; size: number }) {
   return props.icon ? <EntityIcon icon={props.icon} size={props.size} /> : <IconOrganigram size={props.size} />;
 }
 
-function VisibilityIcon({ visible, size = 18 }: { visible: boolean; size?: number }) {
-  return visible ? (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
-  ) : (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="m3 3 18 18"/><path d="M10.6 6.2A11.8 11.8 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-2.1 2.8M6.6 6.6C3.5 8.4 2 12 2 12s3.5 6 10 6c1.6 0 3-.4 4.2-1"/></svg>
-  );
-}
 type MortalSortKey = "name" | "position" | "organization" | "location" | "species" | "age" | "gender" | "status";
 
 type MortalFilters = {
@@ -64,41 +59,6 @@ const emptyFilters = (): MortalFilters => ({
 
 function matchesFilter(value: string | null | undefined, filter: string[]): boolean {
   return !filter.length || filter.some((selected) => selected === NONE_FILTER ? !value : value === selected);
-}
-
-function SearchableFilter(props: {
-  label: string;
-  value: string;
-  options: Array<{ value: string; label: string }>;
-  width: number;
-  onChange: (value: string) => void;
-}) {
-  const selected = props.options.find((option) => option.value === props.value) ?? props.options[0];
-  const displayValue = `${props.label}: ${selected?.label ?? "All"}`;
-  const [query, setQuery] = useState(displayValue);
-  const [open, setOpen] = useState(false);
-  useEffect(() => setQuery(displayValue), [displayValue]);
-  const normalizedQuery = query === displayValue ? "" : query.trim().toLocaleLowerCase();
-  const filtered = props.options
-    .filter((option) => option.label.toLocaleLowerCase().includes(normalizedQuery))
-    .slice(0, 20);
-
-  return <div style={{ position: "relative", width: props.width }}>
-    <Input
-      value={query}
-      aria-label={props.label}
-      autoComplete="off"
-      onFocus={(event) => { setOpen(true); event.currentTarget.select(); }}
-      onClick={(event) => { setOpen(true); event.currentTarget.select(); }}
-      onBlur={() => window.setTimeout(() => { setOpen(false); setQuery(displayValue); }, 120)}
-      onChange={(event) => { setQuery(event.target.value); setOpen(true); }}
-      style={{ width: "100%" }}
-    />
-    {open ? <div style={{ position: "absolute", zIndex: 220, top: "calc(100% + 4px)", left: 0, width: "max-content", minWidth: "100%", maxWidth: 300, maxHeight: 260, overflowY: "auto", padding: 4, border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.control, background: "#0d1525", boxShadow: "0 12px 28px rgba(0,0,0,.65)" }}>
-      {filtered.map((option) => <button key={option.value || "all"} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { props.onChange(option.value); setOpen(false); }} style={{ display: "block", width: "100%", padding: "8px 10px", border: 0, borderRadius: 6, background: option.value === props.value ? withAlpha(props.label === "Status" ? "#4ade80" : "#38bdf8", 0.14) : "transparent", color: theme.colors.text, textAlign: "left", cursor: "pointer", font: "inherit", whiteSpace: "nowrap" }}>{option.label}</button>)}
-      {!filtered.length ? <div style={{ padding: "8px 10px", color: theme.colors.muted }}>No matches</div> : null}
-    </div> : null}
-  </div>;
 }
 
 function addFilterValue(filters: MortalFilters, key: keyof MortalFilters, value: string): MortalFilters {
@@ -261,7 +221,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     positions: options.records.filter((item) => item.type === "position"),
     organizations: options.records.filter((item) => item.type === "organization"),
     continents: options.records.filter((item) => item.type === "continent"),
-    locations: options.records.filter((item) => ["continent", "country", "location", "poi"].includes(item.type)),
+    locations: options.records.filter((item) => item.type === "location" || item.type === "poi"),
     species: options.records.filter((item) => item.type === "race"),
   }), [options.records]);
   const filterChoices = useMemo(() => ({
@@ -300,10 +260,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     }
   }, [props.binderId, query]);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => void reload(), 180);
-    return () => window.clearTimeout(timer);
-  }, [reload]);
+  useDebouncedEffect(reload, 180);
 
   // Binder has no live websocket layer yet, so a linked Player's portrait (or any other
   // field) changed elsewhere — e.g. the player uploading it from their own device — never
@@ -363,7 +320,18 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
       ...(selected.position ? [{ key: "position", icon: selected.position.icon ? <EntityIcon icon={selected.position.icon} size={16}/> : <IconShield size={16} />, label: "Position", node: selected.position.name as React.ReactNode }] : []),
       ...(selected.organizations.length ? [{
         key: "organizations", icon: <OrganizationIcon size={16} />, label: "Org",
-        node: <span style={{ display: "flex", flexWrap: "wrap", gap: "5px 14px" }}>{selected.organizations.map((organization) => <span key={organization.id} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><OrganizationIcon icon={organization.icon} size={14} />{organization.name}</span>)}</span>,
+        node: <span style={{ display: "flex", flexWrap: "wrap", gap: "5px 14px" }}>{selected.organizations.map((organization) => (
+          <button
+            key={organization.id}
+            type="button"
+            title={`Open ${organization.name}`}
+            onClick={() => navigate(`/binder/${props.binderId}/organizations/${organization.id}`)}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: 0, border: 0, background: "transparent", color: theme.colors.text, cursor: "pointer", font: "inherit", textAlign: "left" }}
+          >
+            <OrganizationIcon icon={organization.icon} size={14} />
+            <span style={{ textDecoration: "underline", textDecorationColor: withAlpha(props.accent, 0.5), textUnderlineOffset: 3 }}>{organization.name}</span>
+          </button>
+        ))}</span>,
       }] : []),
       ...(selected.location ? [{ key: "location", icon: <IconVillage size={16} />, label: "Location", node: selected.location.name as React.ReactNode }] : []),
       ...(selected.race ? [{ key: "race", icon: <IconDna1 size={16} />, label: "Race", node: selected.race.name as React.ReactNode }] : []),
@@ -448,10 +416,16 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
       <div style={{ display: "flex", gap: 9, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", flex: "1 1 auto" }}>
           <Input value={query} onChange={(event) => { setQuery(event.target.value); setSelectedViewId(""); }} placeholder="Search mortals…" style={{ width: 280 }} />
-          <SearchableFilter label="View" value={selectedViewId} width={170} onChange={applyView} options={[
-            { value: "", label: "Unsaved" },
-            ...savedViews.map((view) => ({ value: view.id, label: view.name })),
-          ]} />
+          <div style={{ width: 170 }}>
+            <SearchableSelect
+              value={selectedViewId}
+              onChange={applyView}
+              placeholder="View: Unsaved"
+              noneLabel="View: Unsaved"
+              maxResults={20}
+              options={savedViews.map((view) => ({ id: view.id, name: `View: ${view.name}` }))}
+            />
+          </div>
           {selectedViewId ? <Button variant="ghost" aria-label="Delete saved view" onClick={() => {
             persistViews(savedViews.filter((view) => view.id !== selectedViewId));
             setSelectedViewId("");

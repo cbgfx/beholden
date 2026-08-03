@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nonnegInt, RulesetSchema, StructuredFeatureEffectSchema } from "./grandCompendiumSchemas.shared.js";
+import { isNonEmptyObject, nonnegInt, RulesetSchema, StructuredFeatureEffectSchema } from "./grandCompendiumSchemas.shared.js";
 
 /** Every passive numeric bonus an item applies to a d20-facing statistic. Cold facts:
  * consumers sum `amount` by `target`; no label parsing. Ability-score changes are NOT
@@ -71,7 +71,7 @@ const ItemSpellAccessSchema = z.union([
       note: z.string().min(1).optional(),
     })
     .strict()
-    .refine((value) => Object.keys(value).length > 0),
+    .refine(isNonEmptyObject),
 ]);
 
 const ItemSpellcastingSchema = z.union([
@@ -130,7 +130,7 @@ const ItemSpellTemplateSchema = z.discriminatedUnion("kind", [
         z.string().regex(/^s_/u),
         z.object({ id: z.string().regex(/^s_/u), level: SpellLevelSchema.optional(), note: z.string().min(1).optional() }).strict(),
       ]),
-    ).refine((value) => Object.keys(value).length > 0),
+    ).refine(isNonEmptyObject),
   }).strict(),
 ]);
 
@@ -143,7 +143,7 @@ const ItemBundleSchema = z
   .object({
     container: z.string().regex(/^i_/u),
     items: z.record(z.string().regex(/^i_/u), z.number().int().positive())
-      .refine((value) => Object.keys(value).length > 0),
+      .refine(isNonEmptyObject),
   })
   .strict()
   .refine((value) => value.items[value.container] === undefined, "Container must not be repeated in bundle items");
@@ -169,7 +169,7 @@ export const ItemSchema = z
     ignoreWeight: z.literal(true).optional(),
     effects: z.array(StructuredFeatureEffectSchema).min(1).optional(),
     uses: ItemUsesSchema.optional(),
-    spells: z.record(z.string().regex(/^s_/u), ItemSpellAccessSchema).refine((value) => Object.keys(value).length > 0).optional(),
+    spells: z.record(z.string().regex(/^s_/u), ItemSpellAccessSchema).refine(isNonEmptyObject).optional(),
     spellcasting: ItemSpellcastingSchema.optional(),
     spellTemplate: ItemSpellTemplatesSchema.optional(),
     armor: z
@@ -179,7 +179,7 @@ export const ItemSchema = z
         strength: nonnegInt.optional(),
       })
       .strict()
-      .refine((value) => Object.keys(value).length > 0)
+      .refine(isNonEmptyObject)
       .optional(),
     weapon: z
       .object({
@@ -192,7 +192,7 @@ export const ItemSchema = z
         ammo: AMMO_FAMILY.optional(),
       })
       .strict()
-      .refine((value) => Object.keys(value).length > 0)
+      .refine(isNonEmptyObject)
       .optional(),
     modifiers: z.array(ModifierSchema).min(1).optional(),
     rolls: z.array(ItemRollSchema).min(1).optional(),

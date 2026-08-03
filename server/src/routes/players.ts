@@ -4,10 +4,10 @@ import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
-import { rowToCampaignCharacter, CAMPAIGN_CHARACTER_COLS, parseJson } from "../lib/db.js";
+import { rowToCampaignCharacter, CAMPAIGN_CHARACTER_COLS, parseJson, getCampaignCharacterRow } from "../lib/db.js";
 import { ConditionInstanceSchema, OverridesSchema } from "../lib/schemas.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";
-import { ACCEPTED_IMAGE_TYPES, resizeToWebP } from "../lib/imageHelpers.js";
+import { prepareUploadedImage } from "../lib/imageHelpers.js";
 import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
 import { withAbsoluteImageUrl } from "../lib/routeImageUrl.js";
 import { toCampaignCharacterDto } from "../lib/apiActors.js";
@@ -321,16 +321,14 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
       t,
     );
     emitPlayerChange({ campaignId, action: "upsert", playerId: id, characterId: null });
-    const row = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(id) as Record<string, unknown>;
+    const row = getCampaignCharacterRow(db, id)!;
     res.json(withAbsoluteImageUrl(req, toCampaignCharacterDto(rowToCampaignCharacter(row))));
   });
 
   app.put("/api/players/:playerId", dmOrAdmin(db), (req, res) => {
     const playerId = requireParam(req, res, "playerId");
     if (!playerId) return;
-    const existingRow = db
-      .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`)
-      .get(playerId) as Record<string, unknown> | undefined;
+    const existingRow = getCampaignCharacterRow(db, playerId);
     if (!existingRow) return res.status(404).json({ ok: false, message: "Not found" });
     const existing = rowToCampaignCharacter(existingRow);
     const p = parseBody(PlayerUpdateBody, req);
@@ -398,7 +396,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
       playerId,
       characterId: existing.characterId ?? null,
     });
-    const updated = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(playerId) as Record<string, unknown>;
+    const updated = getCampaignCharacterRow(db, playerId)!;
     res.json(withAbsoluteImageUrl(req, toCampaignCharacterDto(rowToCampaignCharacter(updated))));
   });
 
@@ -406,7 +404,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
   app.patch("/api/players/:playerId/sharedNotes", dmOrAdmin(db), (req, res) => {
     const playerId = requireParam(req, res, "playerId");
     if (!playerId) return;
-    const existingRow = db.prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`).get(playerId) as Record<string, unknown> | undefined;
+    const existingRow = getCampaignCharacterRow(db, playerId);
     if (!existingRow) return res.status(404).json({ ok: false, message: "Not found" });
     const sharedNotes: string = typeof req.body?.sharedNotes === "string" ? req.body.sharedNotes : "";
     const t = now();
@@ -424,9 +422,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
   app.delete("/api/players/:playerId", dmOrAdmin(db), (req, res) => {
     const playerId = requireParam(req, res, "playerId");
     if (!playerId) return;
-    const existingRow = db
-      .prepare(`SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?`)
-      .get(playerId) as Record<string, unknown> | undefined;
+    const existingRow = getCampaignCharacterRow(db, playerId);
     if (!existingRow) return res.status(404).json({ ok: false, message: "Not found" });
     const existing = rowToCampaignCharacter(existingRow);
 
@@ -475,18 +471,9 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     if (!playerId) return;
     const row = db.prepare("SELECT campaign_id FROM players WHERE id = ?").get(playerId) as { campaign_id: string } | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Not found" });
-    if (!req.file) return res.status(400).json({ ok: false, message: "No file" });
-
-    if (!ACCEPTED_IMAGE_TYPES.includes(req.file.mimetype)) {
-      return res.status(400).json({ ok: false, message: "Unsupported image type" });
-    }
-
-    let thumbnail: Buffer;
-    try {
-      thumbnail = await resizeToWebP(req.file.buffer);
-    } catch {
-      return res.status(400).json({ ok: false, message: "Could not process image" });
-    }
+    const prepared = await prepareUploadedImage(req.file);
+    if (!prepared.ok) return res.status(400).json({ ok: false, message: prepared.message });
+    const thumbnail = prepared.image;
 
     const imagesDir = ctx.path.join(ctx.paths.dataDir, "player-images");
     ctx.fs.mkdirSync(imagesDir, { recursive: true });

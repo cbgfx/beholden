@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FeatMechanicsSchema, RulesetSchema } from "./grandCompendiumSchemas.shared.js";
+import { FeatMechanicsSchema, isNonEmptyObject, RulesetSchema } from "./grandCompendiumSchemas.shared.js";
 
 /** General is the canonical default and is omitted for compactness. */
 const FEAT_CATEGORIES = ["O", "E", "F"] as const;
@@ -29,7 +29,7 @@ const FeatPrerequisiteSchema = z.union([
     noneOfFeats: z.array(z.string().regex(/^f_/u)).min(1).optional(),
     campaign: z.enum(["eberron"]).optional(),
     any: z.array(PrerequisiteAlternativeSchema).min(2).optional(),
-  }).strict().refine((value) => Object.keys(value).length > 0, "Empty prerequisite must be omitted"),
+  }).strict().refine(isNonEmptyObject, "Empty prerequisite must be omitted"),
 ]);
 
 export const FeatSchema = z
@@ -45,7 +45,7 @@ export const FeatSchema = z
     resolution: z.enum(["automatic", "manual", "mixed"]).optional(),
     resolutionNotes: z.array(z.string().min(1)).min(1).optional(),
     mechanics: FeatMechanicsSchema
-      .refine((value) => Object.keys(value).length > 0, "Empty mechanics must be omitted")
+      .refine(isNonEmptyObject, "Empty mechanics must be omitted")
       .optional(),
   })
   .strict();

@@ -1678,6 +1678,9 @@ only these explicitly shared identity fields synchronize.
   canonical. Editing them from an iNPC or combatant updates the Binder and every
   linked campaign/encounter projection. Changing the Compendium statblock resets
   those mechanics to the new template, after which they can be customized again.
+- Selecting a Compendium statblock automatically hydrates and saves its canonical
+  HP and AC. Formula-only HP (for example, `13d10+52`) uses the rules-average
+  result (`123`), never the leading hit-dice count (`13`).
 - The Mortal editor exposes those canonical mechanics directly. Attack overrides
   use the same action-name keyed representation as combat, and native Binder
   transfer preserves the customized values.
@@ -1688,3 +1691,17 @@ only these explicitly shared identity fields synchronize.
 - Campaign creation does not silently create a Binder. Binder assignment stays
   explicit so Binders can be intentionally shared and unused Binders are not
   created accidentally.
+
+### Native Binder export and portable media
+
+- Binder cards open a Beholden-styled export dialog with explicit **Binder JSON**,
+  **ZIP with pictures**, and **Cancel** actions. Cancel no longer doubles as a
+  hidden JSON-export choice.
+- Export filenames include a local `YYYY-MM-DD` date stamp.
+- JSON exports contain Binder data and links without media. ZIP exports contain
+  the same `binder.json` plus Mortal and Deity portraits under stable `images/`
+  paths; import restores those portraits against remapped record IDs.
+- Browser downloads use a document-attached download link and delay object-URL
+  cleanup so Firefox and other browsers have time to begin consuming the Blob.
+- Export failures remain visible inside the dialog instead of becoming an
+  unhandled click error.

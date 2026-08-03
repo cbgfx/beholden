@@ -1,11 +1,14 @@
 import React from "react";
 import { expandSchool } from "./expandSchool";
 import { normalizeSpellSearchRow, type SpellSearchRow } from "./normalizeSpellSearchRow";
+import {
+  useAvailableCompendiumRulesets,
+  usePaginatedCompendiumSearch,
+  type CompendiumApi,
+} from "./usePaginatedCompendiumSearch";
 
-type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
+type ApiFn = CompendiumApi;
 type SpellSearchApiResponse = { rows?: unknown[]; total?: number } | unknown[];
-type Ruleset = "5e" | "5.5e";
-type CompendiumRulesetsResponse = Record<string, Ruleset[]>;
 
 function hasComponent(components: string | null, letter: string): boolean {
   if (!components) return false;
@@ -30,97 +33,37 @@ export function useCompendiumSpellSearch(api: ApiFn) {
   const [filterConcentration, setFilterConcentration] = React.useState(false);
   const [filterRitual, setFilterRitual] = React.useState(false);
 
-  const [availableRulesets, setAvailableRulesets] = React.useState<Ruleset[]>([]);
-  const [rulesetFilter, setRulesetFilter] = React.useState<Ruleset | "">("");
-
-  const [allRows, setAllRows] = React.useState<SpellSearchRow[]>([]);
-  const [totalCount, setTotalCount] = React.useState(0);
-  const [busy, setBusy] = React.useState(false);
+  const { availableRulesets, rulesetFilter, setRulesetFilter, showRulesetFilter } =
+    useAvailableCompendiumRulesets(api, "spells");
 
   // Ruleset filter is hidden entirely (and left unapplied) when a category has content in only
   // one ruleset -- nothing to choose between. Defaults to "all rulesets" even when both are
   // present: spells don't have a complete duplicate catalog per ruleset, so silently picking one
   // would hide spells that only exist under the other.
-  React.useEffect(() => {
-    const controller = new AbortController();
-    let alive = true;
-    api<CompendiumRulesetsResponse>("/api/compendium/rulesets", { signal: controller.signal })
-      .then((data) => {
-        if (!alive) return;
-        const available = Array.isArray(data?.spells) ? data.spells : [];
-        setAvailableRulesets(available);
-        setRulesetFilter("");
-      })
-      .catch(() => {
-        if (!alive) return;
-        setAvailableRulesets([]);
-        setRulesetFilter("");
-      });
-    return () => {
-      alive = false;
-      controller.abort();
-    };
-  }, [api]);
-
-  React.useEffect(() => {
-    const controller = new AbortController();
-    const run = async () => {
-      setBusy(true);
-      try {
-        const lv = level === "all" ? "" : `&level=${encodeURIComponent(level)}`;
-        const rs = rulesetFilter ? `&ruleset=${encodeURIComponent(rulesetFilter)}` : "";
-        const hasQuery = q.trim().length >= 2;
-        const limit = hasQuery ? 180 : 120;
-        const merged: SpellSearchRow[] = [];
-        let total = 0;
-        let offset = 0;
-        const maxRows = 10000;
-
-        while (!controller.signal.aborted) {
-          const res = await api<SpellSearchApiResponse>(
-            `/api/spells/search?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&withTotal=1${lv}${rs}&excludeSpecial=1&compact=1`,
-            { signal: controller.signal },
-          );
-          if (controller.signal.aborted) return;
-          const pageRows = Array.isArray(res)
-            ? res
-            : Array.isArray((res as { rows?: unknown[] }).rows)
-              ? (res as { rows: unknown[] }).rows
-              : [];
-          const pageTotal = Array.isArray(res)
-            ? pageRows.length
-            : Number((res as { total?: unknown }).total);
-          total = Number.isFinite(pageTotal) ? Number(pageTotal) : pageRows.length;
-
-          const cleaned = pageRows
-            .map(normalizeSpellSearchRow)
-            .filter((r): r is SpellSearchRow => Boolean(r));
-          merged.push(...cleaned);
-
-          if (cleaned.length === 0) break;
-          offset += cleaned.length;
-          if (offset >= total) break;
-          if (merged.length >= maxRows) break;
-        }
-
-        if (controller.signal.aborted) return;
-        setAllRows(merged);
-        setTotalCount(total || merged.length);
-      } catch {
-        if (!controller.signal.aborted) {
-          setAllRows([]);
-          setTotalCount(0);
-        }
-      } finally {
-        if (!controller.signal.aborted) setBusy(false);
-      }
-    };
-    const t = window.setTimeout(run, refreshKey === 0 ? 220 : 0);
-    return () => {
-      window.clearTimeout(t);
-      controller.abort();
-    };
-  }, [api, q, level, rulesetFilter, refreshKey]);
+  const requestPage = React.useCallback(async (offset: number, signal: AbortSignal) => {
+    const lv = level === "all" ? "" : `&level=${encodeURIComponent(level)}`;
+    const rs = rulesetFilter ? `&ruleset=${encodeURIComponent(rulesetFilter)}` : "";
+    const limit = q.trim().length >= 2 ? 180 : 120;
+    const res = await api<SpellSearchApiResponse>(
+      `/api/spells/search?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&withTotal=1${lv}${rs}&excludeSpecial=1&compact=1`,
+      { signal },
+    );
+    const rawRows = Array.isArray(res)
+      ? res
+      : Array.isArray((res as { rows?: unknown[] }).rows)
+        ? (res as { rows: unknown[] }).rows
+        : [];
+    const rows = rawRows
+      .map(normalizeSpellSearchRow)
+      .filter((row): row is SpellSearchRow => Boolean(row));
+    const rawTotal = Array.isArray(res) ? rawRows.length : Number((res as { total?: unknown }).total);
+    return { rows, total: Number.isFinite(rawTotal) ? Number(rawTotal) : rawRows.length };
+  }, [api, level, q, rulesetFilter]);
+  const { rows: allRows, totalCount, busy } = usePaginatedCompendiumSearch({
+    debounceMs: refreshKey === 0 ? 220 : 0,
+    refreshKey,
+    requestPage,
+  });
 
   const schoolOptions = React.useMemo(() => {
     const seen = new Set<string>();
@@ -206,7 +149,7 @@ export function useCompendiumSpellSearch(api: ApiFn) {
     rulesetFilter,
     setRulesetFilter,
     availableRulesets,
-    showRulesetFilter: availableRulesets.length > 1,
+    showRulesetFilter,
     hasActiveFilters,
     clearFilters,
     rows,

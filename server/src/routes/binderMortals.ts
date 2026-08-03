@@ -4,16 +4,23 @@ import type { ServerContext } from "../server/context.js";
 import { binderEditorOrAdmin, binderReaderOrAdmin } from "../middleware/binderAuth.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
-import { convertMortalSubtype, createMortal } from "../services/binders/mortals.js";
-import { ACCEPTED_IMAGE_TYPES, deleteImageFiles, resizeToWebP } from "../lib/imageHelpers.js";
+import {
+  createMortal,
+  isValidRace,
+  isBinderRecordType,
+  playerLink,
+  isValidMonster,
+  compendiumMonsterMechanics,
+  replaceMemberships,
+  updateMortal,
+} from "../services/binders/mortals.js";
+import { deleteImageFiles, prepareUploadedImage } from "../lib/imageHelpers.js";
 import {
   hydrateLinkedMortalFromCharacter,
-  syncLinkedCharacterAgeFromMortal,
-  syncLinkedCharacterNameFromMortal,
   syncLinkedCharacterPortraitFromMortal,
 } from "../services/binders/linkedCharacterSync.js";
 import { absolutizePublicUrlForRequest } from "../lib/publicUrl.js";
-import { extractDetails, extractLeadingNumber } from "../lib/text.js";
+import { EntityNameSchema } from "../lib/schemas.js";
 
 const optionalText = (max: number) => z.string().max(max).nullable().optional().transform((value) => {
   if (value === undefined || value === null) return value;
@@ -21,7 +28,7 @@ const optionalText = (max: number) => z.string().max(max).nullable().optional().
 });
 
 const MortalBody = z.object({
-  name: z.string().trim().min(1).max(160),
+  name: EntityNameSchema,
   mortalType: z.enum(["npc", "player_character"]),
   raceId: z.string().trim().min(1).nullable().optional(),
   gender: z.enum(["male", "female"]).nullable().optional(),
@@ -52,7 +59,9 @@ const MortalPatchBody = MortalBody.partial().refine(
   { message: "At least one field is required" },
 );
 
-type MortalRow = {
+export type MortalPatchBodyType = z.infer<typeof MortalPatchBody>;
+
+export type MortalRow = {
   id: string;
   binder_id: string;
   visibility: "dm" | "campaign" | "public";
@@ -250,97 +259,6 @@ function dto(row: MortalRow, db: ServerContext["db"]) {
   };
 }
 
-function isValidRace(ctx: ServerContext, binderId: string, raceId: string | null | undefined): boolean {
-  if (!raceId) return true;
-  return Boolean(ctx.db.prepare(`
-    SELECT 1
-    FROM binder_races race
-    JOIN binder_records br ON br.id = race.id
-    WHERE race.id = ? AND br.binder_id = ?
-  `).get(raceId, binderId));
-}
-
-function isBinderRecordType(ctx: ServerContext, binderId: string, recordId: string | null | undefined, types: string[]): boolean {
-  if (!recordId) return true;
-  const placeholders = types.map(() => "?").join(", ");
-  return Boolean(ctx.db.prepare(`
-    SELECT 1 FROM binder_records
-    WHERE id = ? AND binder_id = ? AND record_type IN (${placeholders})
-  `).get(recordId, binderId, ...types));
-}
-
-function playerLink(ctx: ServerContext, binderId: string, playerId: string | null | undefined, mortalId?: string) {
-  if (!playerId) return { playerId: null, characterId: null, imageUrl: null };
-  return ctx.db.prepare(`
-    SELECT p.id AS playerId, p.character_id AS characterId, p.image_url AS imageUrl
-    FROM players p
-    JOIN campaigns c ON c.id = p.campaign_id
-    LEFT JOIN binder_player_characters linked
-      ON linked.player_id = p.id
-      OR (p.character_id IS NOT NULL AND linked.character_id = p.character_id)
-    WHERE p.id = ? AND c.binder_id = ?
-      AND (linked.mortal_id IS NULL OR linked.mortal_id = ?)
-  `).get(playerId, binderId, mortalId ?? "") as { playerId: string; characterId: string | null; imageUrl: string | null } | undefined;
-}
-
-function isValidMonster(ctx: ServerContext, monsterId: string | null | undefined): boolean {
-  if (!monsterId) return true;
-  return Boolean(ctx.db.prepare("SELECT 1 FROM compendium_monsters WHERE id = ?").get(monsterId));
-}
-
-function compendiumMonsterMechanics(dataJson: string | null | undefined) {
-  let monster: Record<string, any> = {};
-  try { monster = JSON.parse(dataJson ?? "{}"); } catch { /* invalid legacy rows fall back safely */ }
-  const hpMax = extractLeadingNumber(monster.hp)
-    ?? extractLeadingNumber(monster.hitPoints?.average)
-    ?? extractLeadingNumber(monster.hitPoints?.formula)
-    ?? 1;
-  const ac = extractLeadingNumber(monster.ac)
-    ?? extractLeadingNumber(monster.armorClass?.value)
-    ?? 10;
-  return {
-    hpMax,
-    hpDetails: extractDetails(monster.hp) ?? (typeof monster.hitPoints?.formula === "string" ? monster.hitPoints.formula : null),
-    ac,
-    acDetails: extractDetails(monster.ac) ?? (typeof monster.armorClass?.source === "string" ? monster.armorClass.source : null),
-  };
-}
-
-function replaceMemberships(ctx: ServerContext, mortalId: string, organizationIds: string[], now: number) {
-  const selectedIds = [...new Set(organizationIds)];
-  const existing = ctx.db.prepare(`
-    SELECT id, organization_id
-    FROM organization_memberships
-    WHERE mortal_id = ?
-    ORDER BY is_primary DESC, created_at, id
-  `).all(mortalId) as Array<{ id: string; organization_id: string }>;
-  const selected = new Set(selectedIds);
-  const remove = ctx.db.prepare("DELETE FROM organization_memberships WHERE id = ?");
-  for (const membership of existing) {
-    if (!selected.has(membership.organization_id)) remove.run(membership.id);
-  }
-
-  const retainedByOrganization = new Map<string, string>();
-  for (const membership of existing) {
-    if (selected.has(membership.organization_id) && !retainedByOrganization.has(membership.organization_id)) {
-      retainedByOrganization.set(membership.organization_id, membership.id);
-    }
-  }
-  ctx.db.prepare("UPDATE organization_memberships SET is_primary = 0, updated_at = ? WHERE mortal_id = ?")
-    .run(now, mortalId);
-  const insert = ctx.db.prepare(`
-    INSERT INTO organization_memberships (
-      id, organization_id, mortal_id, is_primary, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?)
-  `);
-  const setPrimary = ctx.db.prepare("UPDATE organization_memberships SET is_primary = ?, updated_at = ? WHERE id = ?");
-  selectedIds.forEach((organizationId, index) => {
-    const retainedId = retainedByOrganization.get(organizationId);
-    if (retainedId) setPrimary.run(index === 0 ? 1 : 0, now, retainedId);
-    else insert.run(ctx.helpers.uid(), organizationId, mortalId, index === 0 ? 1 : 0, now, now);
-  });
-}
-
 export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const reader = binderReaderOrAdmin(db);
@@ -446,27 +364,27 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
     const body = parseBody(MortalBody, req);
-    if (!isValidRace(ctx, binderId, body.raceId)) {
+    if (!isValidRace(db, binderId, body.raceId)) {
       return res.status(400).json({ ok: false, message: "Race must belong to this Binder" });
     }
-    if (!isBinderRecordType(ctx, binderId, body.locationId, ["continent", "country", "location", "poi"])) {
-      return res.status(400).json({ ok: false, message: "Location must belong to this Binder" });
+    if (!isBinderRecordType(db, binderId, body.locationId, ["location", "poi"])) {
+      return res.status(400).json({ ok: false, message: "A Mortal's Location must be a Location or Point of Interest in this Binder" });
     }
     const organizationIds = body.organizationIds ?? (body.organizationId ? [body.organizationId] : []);
-    if (organizationIds.some((organizationId) => !isBinderRecordType(ctx, binderId, organizationId, ["organization"]))) {
+    if (organizationIds.some((organizationId) => !isBinderRecordType(db, binderId, organizationId, ["organization"]))) {
       return res.status(400).json({ ok: false, message: "Organization must belong to this Binder" });
     }
-    if (!isBinderRecordType(ctx, binderId, body.positionId, ["position"])) {
+    if (!isBinderRecordType(db, binderId, body.positionId, ["position"])) {
       return res.status(400).json({ ok: false, message: "Position must belong to this Binder" });
     }
     if (!body.gender) {
       return res.status(400).json({ ok: false, message: "Gender must be Male or Female" });
     }
-    const linkedPlayer = body.mortalType === "player_character" ? playerLink(ctx, binderId, body.playerId) : { playerId: null, characterId: null, imageUrl: null };
+    const linkedPlayer = body.mortalType === "player_character" ? playerLink(db, binderId, body.playerId) : { playerId: null, characterId: null, imageUrl: null };
     if (body.playerId && !linkedPlayer) {
       return res.status(400).json({ ok: false, message: "Player must belong to a Campaign in this Binder" });
     }
-    if (body.mortalType === "npc" && !isValidMonster(ctx, body.monsterId)) {
+    if (body.mortalType === "npc" && !isValidMonster(db, body.monsterId)) {
       return res.status(400).json({ ok: false, message: "Statblock must exist in the Compendium" });
     }
     const id = ctx.helpers.uid();
@@ -490,7 +408,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
           life_status = ?, position_id = ?, class_name = ?,
           residence_record_id = ?, updated_at = ? WHERE id = ?
       `).run(body.birthDate ?? null, body.deathDate ?? null, body.deathDate ? "dead" : "alive", body.positionId ?? null, body.className ?? null, body.locationId ?? null, now, id);
-      replaceMemberships(ctx, id, organizationIds, now);
+      replaceMemberships(db, id, organizationIds, now);
       if (body.mortalType === "player_character") {
         db.prepare(`
           UPDATE binder_player_characters SET player_id = ?, character_id = ?, updated_at = ?
@@ -523,7 +441,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
       .get(binderId, mortalId) as MortalRow | undefined;
     if (!existing) return res.status(404).json({ ok: false, message: "Mortal not found" });
     const body = parseBody(MortalPatchBody, req);
-    if (!isValidRace(ctx, binderId, body.raceId)) {
+    if (!isValidRace(db, binderId, body.raceId)) {
       return res.status(400).json({ ok: false, message: "Race must belong to this Binder" });
     }
     const existingOrganizationIds = (db.prepare(
@@ -535,18 +453,18 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
         ? (body.organizationId ? [body.organizationId] : [])
         : existingOrganizationIds;
     const nextPositionId = body.positionId === undefined ? existing.position_id : body.positionId;
-    if (!isBinderRecordType(ctx, binderId, body.locationId, ["continent", "country", "location", "poi"])) {
-      return res.status(400).json({ ok: false, message: "Location must belong to this Binder" });
+    if (!isBinderRecordType(db, binderId, body.locationId, ["location", "poi"])) {
+      return res.status(400).json({ ok: false, message: "A Mortal's Location must be a Location or Point of Interest in this Binder" });
     }
-    if (nextOrganizationIds.some((organizationId) => !isBinderRecordType(ctx, binderId, organizationId, ["organization"]))) {
+    if (nextOrganizationIds.some((organizationId) => !isBinderRecordType(db, binderId, organizationId, ["organization"]))) {
       return res.status(400).json({ ok: false, message: "Organization must belong to this Binder" });
     }
-    if (!isBinderRecordType(ctx, binderId, nextPositionId, ["position"])) {
+    if (!isBinderRecordType(db, binderId, nextPositionId, ["position"])) {
       return res.status(400).json({ ok: false, message: "Position must belong to this Binder" });
     }
     const nextType = body.mortalType ?? existing.mortal_type;
     const linkedPlayer = nextType === "player_character"
-      ? playerLink(ctx, binderId, body.playerId === undefined ? existing.player_id : body.playerId, mortalId)
+      ? playerLink(db, binderId, body.playerId === undefined ? existing.player_id : body.playerId, mortalId)
       : { playerId: null, characterId: null, imageUrl: null };
     const linkChanged = nextType === "player_character" && (
       (linkedPlayer?.playerId ?? null) !== (existing.player_id ?? null)
@@ -558,109 +476,18 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
     const nextMonsterId = nextType === "npc"
       ? (body.monsterId === undefined ? existing.monster_id : body.monsterId)
       : null;
-    if (!isValidMonster(ctx, nextMonsterId)) {
+    if (!isValidMonster(db, nextMonsterId)) {
       return res.status(400).json({ ok: false, message: "Statblock must exist in the Compendium" });
     }
     const now = ctx.helpers.now();
-    db.transaction(() => {
-      if (body.mortalType && body.mortalType !== existing.mortal_type) {
-        convertMortalSubtype(db, mortalId, body.mortalType === "npc"
-          ? { type: "npc", monsterId: nextMonsterId }
-          : { type: "player_character", characterId: null }, now);
-      }
-      const name = body.name ?? existing.name;
-      db.prepare(`
-        UPDATE binder_records
-        SET name = ?, name_key = ?, visibility = ?, updated_at = ?
-        WHERE id = ? AND binder_id = ?
-      `).run(name, ctx.helpers.normalizeKey(name), body.visibility ?? existing.visibility, now, mortalId, binderId);
-      db.prepare(`
-        UPDATE mortals SET
-          race_id = ?, gender = ?, life_status = ?, description = ?, dm_notes = ?,
-          backstory = NULL, birth_date_text = ?, death_date_text = ?,
-          position_id = ?, class_name = ?,
-          residence_record_id = ?, updated_at = ?
-        WHERE id = ?
-      `).run(
-        body.raceId === undefined ? existing.race_id : body.raceId,
-        body.gender === undefined ? existing.gender : body.gender,
-        (body.deathDate === undefined ? existing.death_date_text : body.deathDate) ? "dead" : "alive",
-        body.notes === undefined ? (existing.description ?? existing.backstory) : body.notes,
-        body.dmNotes === undefined ? existing.dm_notes : body.dmNotes,
-        body.birthDate === undefined ? existing.birth_date_text : body.birthDate,
-        body.deathDate === undefined ? existing.death_date_text : body.deathDate,
-        nextPositionId ?? null,
-        body.className === undefined ? existing.class_name : body.className,
-        body.locationId === undefined ? existing.residence_record_id : body.locationId,
-        now,
-        mortalId,
-      );
-      replaceMemberships(ctx, mortalId, nextOrganizationIds, now);
-      if (nextType === "player_character") {
-        db.prepare(`
-          UPDATE binder_player_characters SET player_id = ?, character_id = ?, updated_at = ?
-          WHERE mortal_id = ?
-        `).run(linkedPlayer?.playerId ?? null, linkedPlayer?.characterId ?? null, now, mortalId);
-        if (linkChanged) hydrateLinkedMortalFromCharacter(db, mortalId, now);
-        else if (body.birthDate !== undefined) syncLinkedCharacterAgeFromMortal(db, mortalId, now);
-        if (body.name !== undefined) syncLinkedCharacterNameFromMortal(db, mortalId, name, now);
-      } else {
-        db.prepare(`
-          UPDATE binder_npcs SET monster_id = ?, updated_at = ?
-          WHERE mortal_id = ?
-        `).run(nextMonsterId, now, mortalId);
-        db.prepare(`
-          UPDATE inpcs SET name = ?, monster_id = ?, updated_at = ?
-          WHERE binder_mortal_id = ?
-        `).run(name, nextMonsterId, now, mortalId);
-        if (body.monsterId !== undefined && nextMonsterId !== existing.monster_id) {
-          const monsterRow = nextMonsterId
-            ? db.prepare("SELECT data_json FROM compendium_monsters WHERE id = ?").get(nextMonsterId) as { data_json: string } | undefined
-            : undefined;
-          const mechanics = compendiumMonsterMechanics(monsterRow?.data_json);
-          const { hpMax, ac, hpDetails, acDetails } = mechanics;
-          db.prepare(`
-            UPDATE binder_npcs SET hp_max=?, hp_current=?, hp_details=?, ac=?, ac_details=?,
-              attack_overrides_json=NULL, updated_at=? WHERE mortal_id=?
-          `).run(hpMax, hpMax, hpDetails, ac, acDetails, now, mortalId);
-          db.prepare(`
-            UPDATE inpcs SET hp_max=?, hp_current=?, hp_details=?, ac=?, ac_details=?, updated_at=?
-            WHERE binder_mortal_id=?
-          `).run(hpMax, hpMax, hpDetails, ac, acDetails, now, mortalId);
-          db.prepare(`
-            UPDATE combatants SET
-              snapshot_json=json_set(snapshot_json, '$.name', ?, '$.hpMax', ?, '$.hpDetails', ?, '$.ac', ?, '$.acDetails', ?, '$.attackOverrides', json('null')),
-              live_json=json_set(live_json, '$.hpCurrent', ?), updated_at=?
-            WHERE base_type='inpc' AND base_id IN (SELECT id FROM inpcs WHERE binder_mortal_id=?)
-          `).run(name, hpMax, hpDetails, ac, acDetails, hpMax, now, mortalId);
-        } else {
-          db.prepare(`
-            UPDATE combatants SET snapshot_json=json_set(snapshot_json, '$.name', ?), updated_at=?
-            WHERE base_type='inpc' AND base_id IN (SELECT id FROM inpcs WHERE binder_mortal_id=?)
-          `).run(name, now, mortalId);
-        }
-        const mechanicsChanged = body.hpMax !== undefined || body.hpCurrent !== undefined
-          || body.hpDetails !== undefined || body.ac !== undefined || body.acDetails !== undefined
-          || body.attackOverrides !== undefined;
-        if (mechanicsChanged) {
-          const canonical = db.prepare("SELECT * FROM binder_npcs WHERE mortal_id=?").get(mortalId) as Record<string, any>;
-          const hpMax = body.hpMax ?? canonical.hp_max ?? 1;
-          const hpCurrent = Math.min(body.hpCurrent ?? canonical.hp_current ?? hpMax, hpMax);
-          const hpDetails = body.hpDetails !== undefined ? body.hpDetails : canonical.hp_details;
-          const ac = body.ac ?? canonical.ac ?? 10;
-          const acDetails = body.acDetails !== undefined ? body.acDetails : canonical.ac_details;
-          const attacks = body.attackOverrides !== undefined
-            ? (body.attackOverrides === null ? null : JSON.stringify(body.attackOverrides))
-            : canonical.attack_overrides_json;
-          db.prepare(`UPDATE binder_npcs SET hp_max=?,hp_current=?,hp_details=?,ac=?,ac_details=?,attack_overrides_json=?,updated_at=? WHERE mortal_id=?`)
-            .run(hpMax, hpCurrent, hpDetails, ac, acDetails, attacks, now, mortalId);
-          db.prepare(`UPDATE inpcs SET hp_max=?,hp_current=?,hp_details=?,ac=?,ac_details=?,updated_at=? WHERE binder_mortal_id=?`)
-            .run(hpMax, hpCurrent, hpDetails, ac, acDetails, now, mortalId);
-          db.prepare(`UPDATE combatants SET snapshot_json=json_set(snapshot_json,'$.hpMax',?,'$.hpDetails',?,'$.ac',?,'$.acDetails',?,'$.attackOverrides',json(?)),live_json=json_set(live_json,'$.hpCurrent',?),updated_at=? WHERE base_type='inpc' AND base_id IN (SELECT id FROM inpcs WHERE binder_mortal_id=?)`)
-            .run(hpMax, hpDetails, ac, acDetails, JSON.stringify(body.attackOverrides ?? (attacks ? JSON.parse(attacks) : null)), hpCurrent, now, mortalId);
-        }
-      }
-    })();
+    updateMortal(db, binderId, mortalId, existing, body, {
+      nextOrganizationIds,
+      nextPositionId,
+      nextType,
+      linkedPlayer,
+      nextMonsterId,
+      linkChanged,
+    }, now);
     const row = db.prepare(`${SELECT_MORTAL} WHERE m.id = ?`).get(mortalId) as MortalRow;
     res.json(dto(row, db));
   });
@@ -671,11 +498,9 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
     if (!binderId || !mortalId) return;
     const exists = db.prepare("SELECT 1 FROM binder_records WHERE id = ? AND binder_id = ? AND record_type = 'mortal'").get(mortalId, binderId);
     if (!exists) return res.status(404).json({ ok: false, message: "Mortal not found" });
-    if (!req.file) return res.status(400).json({ ok: false, message: "No file" });
-    if (!ACCEPTED_IMAGE_TYPES.includes(req.file.mimetype)) return res.status(400).json({ ok: false, message: "Unsupported image type" });
-    let image: Buffer;
-    try { image = await resizeToWebP(req.file.buffer); }
-    catch { return res.status(400).json({ ok: false, message: "Could not process image" }); }
+    const prepared = await prepareUploadedImage(req.file);
+    if (!prepared.ok) return res.status(400).json({ ok: false, message: prepared.message });
+    const image = prepared.image;
     const imagesDir = ctx.path.join(ctx.paths.dataDir, "binder-mortal-images");
     ctx.fs.mkdirSync(imagesDir, { recursive: true });
     deleteImageFiles(ctx, imagesDir, mortalId);
