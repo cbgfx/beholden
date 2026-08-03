@@ -20,7 +20,6 @@ export type BinderMortal = {
     id: string;
     name: string;
     icon: string | null;
-    position: { id: string; name: string; icon: string | null } | null;
     isPrimary: boolean;
   }>;
   position: { id: string; name: string; icon: string | null } | null;

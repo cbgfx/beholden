@@ -318,7 +318,7 @@ export function importNotionZip(db: Db, binderId: string, buffer: Buffer, commit
           uid(),
           organizationId,
           idByExternal.get(candidate.externalId),
-          index === 0 ? resolve(candidate, "Position") : null,
+          null,
           index === 0 ? 1 : 0,
           now,
           now,

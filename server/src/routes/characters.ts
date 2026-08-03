@@ -180,8 +180,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       LEFT JOIN organization_memberships membership ON membership.mortal_id=m.id AND membership.is_primary=1
       LEFT JOIN binder_records organization ON organization.id=membership.organization_id
       LEFT JOIN binder_organizations organization_details ON organization_details.id=membership.organization_id
-      LEFT JOIN binder_records position ON position.id=COALESCE(membership.position_id,m.position_id)
-      LEFT JOIN binder_positions position_details ON position_details.id=COALESCE(membership.position_id,m.position_id)
+      LEFT JOIN binder_records position ON position.id=m.position_id
+      LEFT JOIN binder_positions position_details ON position_details.id=m.position_id
       WHERE br.binder_id=? AND (br.visibility='public' OR m.id=?)
       ORDER BY br.name_key, br.id
     `).all(access.binderId, access.linkedMortalId) as Array<Record<string, unknown>>;

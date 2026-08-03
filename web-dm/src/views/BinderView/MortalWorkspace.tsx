@@ -226,8 +226,8 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
 
   const filteredRecords = useMemo(() => records.filter((record) =>
     (!filters.position.length || filters.position.some((position) => position === NONE_FILTER
-      ? record.organizations.every((membership) => !membership.position)
-      : record.organizations.some((membership) => membership.position?.id === position)))
+      ? !record.position
+      : record.position?.id === position))
     && (!filters.organization.length
       || filters.organization.some((organization) => organization === NONE_FILTER
         ? record.organizations.length === 0
@@ -245,7 +245,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     const sortValue = (record: BinderMortal): string | number | null => {
       switch (sortKey) {
         case "name": return record.name;
-        case "position": return record.organizations.flatMap((organization) => organization.position?.name ?? []).join(", ");
+        case "position": return record.position?.name ?? null;
         case "organization": return record.organizations.map((organization) => organization.name).join(", ");
         case "location": return record.location?.name ?? null;
         case "species": return record.race?.name ?? null;
@@ -360,7 +360,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
         const displayClassName = selected.mortalType === "player_character" ? (linkedPlayer?.className || selected.className) : null;
         return displayClassName ? [{ key: "class", icon: <EntityIcon icon="game-icons:doubled" size={16} />, label: "Class", node: displayClassName as React.ReactNode }] : [];
       })(),
-      ...(selected.position ? [{ key: "position", icon: <IconShield size={16} />, label: "Position", node: selected.position.name as React.ReactNode }] : []),
+      ...(selected.position ? [{ key: "position", icon: selected.position.icon ? <EntityIcon icon={selected.position.icon} size={16}/> : <IconShield size={16} />, label: "Position", node: selected.position.name as React.ReactNode }] : []),
       ...(selected.organizations.length ? [{
         key: "organizations", icon: <OrganizationIcon size={16} />, label: "Org",
         node: <span style={{ display: "flex", flexWrap: "wrap", gap: "5px 14px" }}>{selected.organizations.map((organization) => <span key={organization.id} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><OrganizationIcon icon={organization.icon} size={14} />{organization.name}</span>)}</span>,
@@ -533,9 +533,9 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
                 <BinderRecordThumbnail imageUrl={record.imageUrl} imageUpdatedAt={record.imageUpdatedAt} accent={props.accent} />
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{record.name}</span>
               </span>
-              <span title={record.organizations.flatMap((organization) => organization.position?.name ?? []).join(", ") || "None"} style={{ ...cell, display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ display: "inline-flex", opacity: 0.65, flex: "0 0 auto" }}><IconShield size={14} /></span>
-                {record.organizations.flatMap((organization) => organization.position?.name ?? []).join(", ") || "None"}
+              <span title={record.position?.name ?? "None"} style={{ ...cell, display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ display: "inline-flex", opacity: 0.65, flex: "0 0 auto" }}>{record.position?.icon ? <EntityIcon icon={record.position.icon} size={14}/> : <IconShield size={14} />}</span>
+                {record.position?.name ?? "None"}
               </span>
               <span title={record.organizations.map((organization) => organization.name).join(", ") || "None"} style={{ ...cell, display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ display: "inline-flex", opacity: 0.65, flex: "0 0 auto" }}><OrganizationIcon icon={record.organizations[0]?.icon} size={14} /></span>

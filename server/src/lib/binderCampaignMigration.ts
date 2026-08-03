@@ -5,6 +5,31 @@ function campaignColumns(db: Db): Set<string> {
   return new Set(rows.map((row) => row.name));
 }
 
+/** Collapse the old organization-scoped Position copy into the Mortal's one canonical Position. */
+export function ensureCanonicalMortalPositions(db: Db): void {
+  db.transaction(() => {
+    db.exec(`
+      UPDATE mortals
+      SET position_id = (
+        SELECT membership.position_id
+        FROM organization_memberships membership
+        WHERE membership.mortal_id = mortals.id
+          AND membership.is_primary = 1
+          AND membership.position_id IS NOT NULL
+        LIMIT 1
+      )
+      WHERE position_id IS NULL
+        AND EXISTS (
+          SELECT 1 FROM organization_memberships membership
+          WHERE membership.mortal_id = mortals.id
+            AND membership.is_primary = 1
+            AND membership.position_id IS NOT NULL
+        );
+      UPDATE organization_memberships SET position_id = NULL WHERE position_id IS NOT NULL;
+    `);
+  })();
+}
+
 /** Additive Binder fields for databases that received the initial Binder schema. */
 export function ensureBinderColumns(db: Db): void {
   const rows = db.prepare("PRAGMA table_info(binders)").all() as Array<{ name: string }>;

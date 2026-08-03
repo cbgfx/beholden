@@ -36,7 +36,7 @@ const config: Record<ReferenceType, {
   positions: {
     table: "binder_positions",
     recordType: "position",
-    usageSql: "(SELECT COUNT(*) FROM organization_memberships om WHERE om.position_id = r.id)",
+    usageSql: "(SELECT COUNT(*) FROM mortals m WHERE m.position_id = r.id)",
   },
   domains: {
     table: "binder_domains",
@@ -356,7 +356,8 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
              position_record.name AS position, membership.role_label AS role
       FROM organization_memberships membership
       JOIN binder_records mortal_record ON mortal_record.id=membership.mortal_id
-      LEFT JOIN binder_records position_record ON position_record.id=membership.position_id
+      JOIN mortals mortal ON mortal.id=membership.mortal_id
+      LEFT JOIN binder_records position_record ON position_record.id=mortal.position_id
       WHERE membership.organization_id=?
       ORDER BY mortal_record.name_key, mortal_record.id
     `).all(organizationId);

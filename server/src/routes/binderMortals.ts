@@ -138,7 +138,7 @@ const SELECT_MORTAL = `
          character.character_data_json,
          membership.organization_id, organization_record.name AS organization_name,
          organization_icon.icon AS organization_icon,
-         COALESCE(membership.position_id, m.position_id) AS position_id,
+         m.position_id AS position_id,
          position_record.name AS position_name, position_icon.icon AS position_icon,
          br.created_at, br.updated_at
   FROM mortals m
@@ -153,8 +153,8 @@ const SELECT_MORTAL = `
     ON membership.mortal_id = m.id AND membership.is_primary = 1
   LEFT JOIN binder_records organization_record ON organization_record.id = membership.organization_id
   LEFT JOIN binder_organizations organization_icon ON organization_icon.id = membership.organization_id
-  LEFT JOIN binder_records position_record ON position_record.id = COALESCE(membership.position_id, m.position_id)
-  LEFT JOIN binder_positions position_icon ON position_icon.id = COALESCE(membership.position_id, m.position_id)
+  LEFT JOIN binder_records position_record ON position_record.id = m.position_id
+  LEFT JOIN binder_positions position_icon ON position_icon.id = m.position_id
 `;
 
 function dto(row: MortalRow, db: ServerContext["db"]) {
@@ -167,20 +167,16 @@ function dto(row: MortalRow, db: ServerContext["db"]) {
   };
   const organizations = db.prepare(`
     SELECT om.organization_id AS id, organization_record.name, organization_icon.icon AS icon,
-           om.position_id AS positionId, position_record.name AS positionName, position_icon.icon AS positionIcon,
            om.is_primary AS isPrimary
     FROM organization_memberships om
     JOIN binder_records organization_record ON organization_record.id = om.organization_id
     LEFT JOIN binder_organizations organization_icon ON organization_icon.id = om.organization_id
-    LEFT JOIN binder_records position_record ON position_record.id = om.position_id
-    LEFT JOIN binder_positions position_icon ON position_icon.id = om.position_id
     WHERE om.mortal_id = ?
     ORDER BY om.is_primary DESC, organization_record.name_key, om.id
   `).all(row.id).map((membership: any) => ({
     id: membership.id,
     name: membership.name,
     icon: membership.icon,
-    position: membership.positionId ? { id: membership.positionId, name: membership.positionName, icon: membership.positionIcon } : null,
     isPrimary: membership.isPrimary === 1,
   }));
   const continent = row.residence_record_id ? db.prepare(`
@@ -309,14 +305,14 @@ function compendiumMonsterMechanics(dataJson: string | null | undefined) {
   };
 }
 
-function replacePrimaryMembership(ctx: ServerContext, mortalId: string, organizationId: string | null, positionId: string | null, now: number) {
+function replacePrimaryMembership(ctx: ServerContext, mortalId: string, organizationId: string | null, now: number) {
   ctx.db.prepare("DELETE FROM organization_memberships WHERE mortal_id = ? AND is_primary = 1").run(mortalId);
   if (!organizationId) return;
   ctx.db.prepare(`
     INSERT INTO organization_memberships (
       id, organization_id, mortal_id, position_id, is_primary, created_at, updated_at
     ) VALUES (?, ?, ?, ?, 1, ?, ?)
-  `).run(ctx.helpers.uid(), organizationId, mortalId, positionId, now, now);
+  `).run(ctx.helpers.uid(), organizationId, mortalId, null, now, now);
 }
 
 export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
@@ -467,7 +463,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
           life_status = ?, position_id = ?, class_name = ?,
           residence_record_id = ?, updated_at = ? WHERE id = ?
       `).run(body.birthDate ?? null, body.deathDate ?? null, body.deathDate ? "dead" : "alive", body.positionId ?? null, body.className ?? null, body.locationId ?? null, now, id);
-      replacePrimaryMembership(ctx, id, body.organizationId ?? null, body.positionId ?? null, now);
+      replacePrimaryMembership(ctx, id, body.organizationId ?? null, now);
       if (body.mortalType === "player_character") {
         db.prepare(`
           UPDATE binder_player_characters SET player_id = ?, character_id = ?, updated_at = ?
@@ -565,7 +561,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
         now,
         mortalId,
       );
-      replacePrimaryMembership(ctx, mortalId, nextOrganizationId ?? null, nextPositionId ?? null, now);
+      replacePrimaryMembership(ctx, mortalId, nextOrganizationId ?? null, now);
       if (nextType === "player_character") {
         db.prepare(`
           UPDATE binder_player_characters SET player_id = ?, character_id = ?, updated_at = ?

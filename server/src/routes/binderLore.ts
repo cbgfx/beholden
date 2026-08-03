@@ -268,7 +268,7 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
       UNION ALL SELECT br.id,br.name,br.record_type,'Events' FROM binder_event_records er JOIN binder_records br ON br.id=er.event_id WHERE er.record_id=?
       UNION ALL SELECT br.id,br.name,br.record_type,'Mortals' FROM mortals m JOIN binder_records br ON br.id=m.id WHERE m.race_id=?
       UNION ALL SELECT br.id,br.name,br.record_type,'Members' FROM organization_memberships om JOIN binder_records br ON br.id=om.mortal_id WHERE om.organization_id=?
-      UNION ALL SELECT br.id,br.name,br.record_type,'Position Holders' FROM organization_memberships om JOIN binder_records br ON br.id=om.mortal_id WHERE om.position_id=?
+      UNION ALL SELECT br.id,br.name,br.record_type,'Position Holders' FROM mortals m JOIN binder_records br ON br.id=m.id WHERE m.position_id=?
       UNION ALL SELECT br.id,br.name,br.record_type,'Domains' FROM deity_domains dd JOIN binder_records br ON br.id=dd.domain_id WHERE dd.deity_id=?
       UNION ALL SELECT br.id,br.name,br.record_type,'Deities' FROM deity_domains dd JOIN binder_records br ON br.id=dd.deity_id WHERE dd.domain_id=?
       UNION ALL SELECT br.id,br.name,br.record_type,'Led Organizations' FROM binder_organizations o JOIN binder_records br ON br.id=o.id WHERE o.leader_mortal_id=?

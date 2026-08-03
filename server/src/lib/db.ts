@@ -22,6 +22,7 @@ import {
   ensureBinderRecordTypes,
   ensureBinderLocationNaming,
   ensureBinderUnsetConventions,
+  ensureCanonicalMortalPositions,
 } from "./binderCampaignMigration.js";
 
 export type Db = Database.Database;
@@ -45,6 +46,7 @@ export function openDb(dbPath: string): Db {
   ensureBinderColumns(db);
   ensureBinderRecordTypes(db);
   ensureBinderUnsetConventions(db);
+  ensureCanonicalMortalPositions(db);
   // Recreate Binder indexes/triggers that may have belonged to a rebuilt table.
   db.exec(BINDER_SCHEMA_SQL);
   ensureBinderCampaignColumns(db);
