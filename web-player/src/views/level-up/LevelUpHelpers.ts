@@ -1,11 +1,6 @@
 import type { LevelUpCharacter as Character, LevelUpClassDetail as ClassDetail, LevelUpSpellSummary as SpellSummary } from "@/views/level-up/LevelUpTypes";
 import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 
-interface NamedOptionEntry {
-  id: string;
-  name: string;
-}
-
 function normalizeSpellSelectionKey(value: string | null | undefined): string {
   return String(value ?? "")
     .replace(/\s*\[[^\]]+\]\s*$/u, "")
@@ -45,24 +40,6 @@ export function reconcileSelectedSpellIds(
 
 export function cleanFeatureText(text: string | null | undefined): string {
   return String(text ?? "").replace(/Source:.*$/ms, "").trim();
-}
-
-function sameStringArrays(a: string[], b: string[]): boolean {
-  return a.length === b.length && a.every((entry, index) => entry === b[index]);
-}
-
-export function sameSpellChoiceOptionMap<T extends NamedOptionEntry>(
-  a: Record<string, T[]>,
-  b: Record<string, T[]>,
-): boolean {
-  const aKeys = Object.keys(a).sort();
-  const bKeys = Object.keys(b).sort();
-  if (!sameStringArrays(aKeys, bKeys)) return false;
-  return aKeys.every((key) => {
-    const aValues = (a[key] ?? []).map((spell) => `${spell.id}:${spell.name}`);
-    const bValues = (b[key] ?? []).map((spell) => `${spell.id}:${spell.name}`);
-    return sameStringArrays(aValues, bValues);
-  });
 }
 
 export function deriveCharProficiencies(char: Character | null): {

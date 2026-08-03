@@ -48,7 +48,6 @@ export interface LevelUpFeatSummary {
   category?: string | null;
 }
 
-export type InvocationFeatChoiceEntry = import("@/domain/character/invocationFeatChoices").InvocationFeatChoiceEntry;
 
 export type LevelUpFeatDetail = ParsedFeatDetailLike<ParsedFeatChoiceLike> & { id: string };
 
@@ -119,3 +118,5 @@ export interface LevelUpResolvedSpellChoiceEntry {
   allowedSpellIds?: string[];
   grantsSpell?: boolean;
 }
+
+export type { InvocationFeatChoiceEntry } from "@/domain/character/invocationFeatChoices";

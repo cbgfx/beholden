@@ -6,29 +6,29 @@ import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { deleteImageFiles, prepareUploadedImage } from "../lib/imageHelpers.js";
 import { ensureLinkedBinderMortalForCharacter } from "../services/binders/linkedPlayerIdentity.js";
-import { syncMentionField } from "./binderLore.js";
+import { syncMentionField } from "../services/binders/lore.js";
 import { EntityNameSchema } from "../lib/schemas.js";
+import {
+  insertReferenceRecord,
+  referenceSelectSql,
+  resolveOrganizationLeader,
+  resolveReferenceParent,
+  toReferenceDto,
+  updateOrganizationLeader,
+  updateReferenceIcon,
+  updateReferenceParent,
+  type ReferenceConfig,
+} from "../services/binders/references.js";
 
 const ReferenceType = z.enum([
   "races", "positions", "domains", "organizations", "deities",
   "continents", "countries", "locations", "points-of-interest",
 ]);
 type ReferenceType = z.infer<typeof ReferenceType>;
-type RecordType =
-  | "race" | "position" | "domain" | "organization" | "deity"
-  | "continent" | "country" | "location" | "poi";
-
 /** Reference types with a nullable `icon` column, storing an Iconify identifier (e.g. `game-icons:castle`). */
 const ICON_ENABLED_TYPES = new Set<ReferenceType>(["organizations", "positions", "points-of-interest"]);
 
-const config: Record<ReferenceType, {
-  table:
-    | "binder_races" | "binder_positions" | "binder_domains" | "binder_organizations"
-    | "deities" | "binder_continents" | "binder_countries" | "binder_locations"
-    | "binder_points_of_interest";
-  recordType: RecordType;
-  usageSql: string;
-}> = {
+const config: Record<ReferenceType, ReferenceConfig> = {
   races: {
     table: "binder_races",
     recordType: "race",
@@ -134,160 +134,7 @@ type ReferenceRow = {
   rank?: string | null;
 };
 
-function parentType(row: ReferenceRow): RecordType | null {
-  if (row.continent_id) return "continent";
-  if (row.country_id) return "country";
-  if (row.location_id) return "location";
-  if (row.parent_poi_id) return "poi";
-  return null;
-}
-
-function parentId(row: ReferenceRow): string | null {
-  return row.continent_id ?? row.country_id ?? row.location_id ?? row.parent_poi_id ?? null;
-}
-
 type ReferenceLink = { id: string; name: string };
-
-function dto(row: ReferenceRow, links?: { domains?: ReferenceLink[]; deities?: ReferenceLink[] }) {
-  return {
-    id: row.id,
-    binderId: row.binder_id,
-    name: row.name,
-    visibility: row.visibility,
-    description: row.description,
-    dmNotes: row.dm_notes ?? null,
-    parent: parentId(row) ? {
-      id: parentId(row)!,
-      name: row.parent_name ?? "",
-      type: parentType(row),
-    } : null,
-    leader: row.leader_mortal_id ? { id: row.leader_mortal_id, name: row.leader_name ?? "" } : null,
-    icon: row.icon ?? null,
-    rank: row.rank ?? null,
-    usageCount: row.usage_count,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    imageUrl: row.image_url ?? null,
-    imageUpdatedAt: row.image_updated_at ?? null,
-    ...(links?.domains ? { domains: links.domains } : {}),
-    ...(links?.deities ? { deities: links.deities } : {}),
-  };
-}
-
-function selectSql(type: ReferenceType): string {
-  const entry = config[type];
-  const iconColumn = ICON_ENABLED_TYPES.has(type) ? ", r.icon" : "";
-  const parentColumns = (type === "countries"
-    ? ", r.continent_id, parent_br.name AS parent_name"
-    : type === "locations"
-      ? ", r.country_id, parent_br.name AS parent_name"
-      : type === "points-of-interest"
-        ? ", r.location_id, r.country_id, r.parent_poi_id, parent_br.name AS parent_name"
-        : type === "deities"
-          ? ", r.image_url, r.image_updated_at, r.rank, r.dm_notes"
-          : type === "organizations"
-            ? ", r.leader_mortal_id, leader_br.name AS leader_name"
-            : "") + iconColumn;
-  const parentJoin = type === "countries"
-    ? "LEFT JOIN binder_records parent_br ON parent_br.id = r.continent_id"
-    : type === "locations"
-      ? "LEFT JOIN binder_records parent_br ON parent_br.id = r.country_id"
-      : type === "points-of-interest"
-        ? "LEFT JOIN binder_records parent_br ON parent_br.id = COALESCE(r.location_id, r.country_id, r.parent_poi_id)"
-        : type === "organizations"
-          ? "LEFT JOIN binder_records leader_br ON leader_br.id = r.leader_mortal_id"
-          : "";
-  return `
-    SELECT r.id, br.binder_id, br.name, r.description, br.visibility,
-           br.created_at, br.updated_at, ${entry.usageSql} AS usage_count
-           ${parentColumns}
-    FROM ${entry.table} r
-    JOIN binder_records br ON br.id = r.id
-    ${parentJoin}
-  `;
-}
-
-function resolveParent(
-  db: ServerContext["db"],
-  binderId: string,
-  type: ReferenceType,
-  parentIdValue: string | null | undefined,
-  recordId?: string,
-) {
-  if (type === "continents" || !parentIdValue) return null;
-  const allowed: Record<ReferenceType, RecordType[]> = {
-    races: [], positions: [], domains: [], organizations: [], deities: [], continents: [],
-    countries: ["continent"],
-    locations: ["country"],
-    "points-of-interest": ["location", "country", "poi"],
-  };
-  if (parentIdValue === recordId) throw Object.assign(new Error("A Point of Interest cannot contain itself"), { status: 400 });
-  const parent = db.prepare("SELECT id, record_type FROM binder_records WHERE id = ? AND binder_id = ?")
-    .get(parentIdValue, binderId) as { id: string; record_type: RecordType } | undefined;
-  if (!parent || !allowed[type].includes(parent.record_type)) {
-    throw Object.assign(new Error("Parent must be an allowed record from this Binder"), { status: 400 });
-  }
-  return parent;
-}
-
-function resolveLeaderMortal(
-  db: ServerContext["db"],
-  binderId: string,
-  leaderIdValue: string | null | undefined,
-): string | null {
-  if (!leaderIdValue) return null;
-  const mortal = db.prepare(`
-    SELECT m.id FROM mortals m JOIN binder_records br ON br.id = m.id WHERE m.id = ? AND br.binder_id = ?
-  `).get(leaderIdValue, binderId) as { id: string } | undefined;
-  if (!mortal) throw Object.assign(new Error("Leader must be a Mortal from this Binder"), { status: 400 });
-  return mortal.id;
-}
-
-function insertTypedRecord(db: ServerContext["db"], table: string, type: ReferenceType, id: string, description: string | null, parent: ReturnType<typeof resolveParent>, t: number, leaderId?: string | null, icon?: string | null, rank?: string | null, dmNotes?: string | null) {
-  if (type === "deities") {
-    db.prepare(`INSERT INTO deities (id, description, dm_notes, rank, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`)
-      .run(id, description, dmNotes ?? null, rank ?? null, t, t);
-  } else if (type === "countries") {
-    db.prepare(`INSERT INTO binder_countries (id, continent_id, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
-      .run(id, parent?.id ?? null, description, t, t);
-  } else if (type === "locations") {
-    db.prepare(`INSERT INTO binder_locations (id, country_id, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
-      .run(id, parent?.id ?? null, description, t, t);
-  } else if (type === "points-of-interest") {
-    db.prepare(`INSERT INTO binder_points_of_interest (id, location_id, country_id, parent_poi_id, description, created_at, updated_at, icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-      .run(id, parent?.record_type === "location" ? parent.id : null, parent?.record_type === "country" ? parent.id : null, parent?.record_type === "poi" ? parent.id : null, description, t, t, icon ?? null);
-  } else if (type === "organizations") {
-    db.prepare(`INSERT INTO binder_organizations (id, description, leader_mortal_id, created_at, updated_at, icon) VALUES (?, ?, ?, ?, ?, ?)`)
-      .run(id, description, leaderId ?? null, t, t, icon ?? null);
-  } else if (type === "positions") {
-    db.prepare(`INSERT INTO binder_positions (id, description, created_at, updated_at, icon) VALUES (?, ?, ?, ?, ?)`)
-      .run(id, description, t, t, icon ?? null);
-  } else {
-    db.prepare(`INSERT INTO ${table} (id, description, created_at, updated_at) VALUES (?, ?, ?, ?)`)
-      .run(id, description, t, t);
-  }
-}
-
-function updateParent(db: ServerContext["db"], type: ReferenceType, id: string, parent: ReturnType<typeof resolveParent>) {
-  if (type === "countries") db.prepare("UPDATE binder_countries SET continent_id = ? WHERE id = ?").run(parent?.id ?? null, id);
-  if (type === "locations") db.prepare("UPDATE binder_locations SET country_id = ? WHERE id = ?").run(parent?.id ?? null, id);
-  if (type === "points-of-interest") db.prepare(`
-    UPDATE binder_points_of_interest SET location_id = ?, country_id = ?, parent_poi_id = ? WHERE id = ?
-  `).run(
-    parent?.record_type === "location" ? parent.id : null,
-    parent?.record_type === "country" ? parent.id : null,
-    parent?.record_type === "poi" ? parent.id : null,
-    id,
-  );
-}
-
-function updateLeader(db: ServerContext["db"], id: string, leaderId: string | null) {
-  db.prepare("UPDATE binder_organizations SET leader_mortal_id = ? WHERE id = ?").run(leaderId, id);
-}
-
-function updateIcon(db: ServerContext["db"], table: string, id: string, icon: string | null) {
-  db.prepare(`UPDATE ${table} SET icon = ? WHERE id = ?`).run(icon, id);
-}
 
 export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
@@ -382,9 +229,9 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
   const domainsForDeity = (deityId: string) => domainsForDeityStmt.all(deityId) as ReferenceLink[];
   const deitiesForDomain = (domainId: string) => deitiesForDomainStmt.all(domainId) as ReferenceLink[];
   const dtoWithLinks = (type: ReferenceType, row: ReferenceRow) =>
-    type === "deities" ? dto(row, { domains: domainsForDeity(row.id) })
-      : type === "domains" ? dto(row, { deities: deitiesForDomain(row.id) })
-        : dto(row);
+    type === "deities" ? toReferenceDto(row, { domains: domainsForDeity(row.id) })
+      : type === "domains" ? toReferenceDto(row, { deities: deitiesForDomain(row.id) })
+        : toReferenceDto(row);
 
   app.get("/api/binders/:binderId/reference/:referenceType", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
@@ -393,7 +240,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     if (!typeResult.success) return res.status(404).json({ ok: false, message: "Reference type not found" });
     const query = typeof req.query.q === "string" ? ctx.helpers.normalizeKey(req.query.q) : "";
     const rows = db.prepare(`
-      ${selectSql(typeResult.data)}
+      ${referenceSelectSql(typeResult.data, config[typeResult.data], ICON_ENABLED_TYPES.has(typeResult.data))}
       WHERE br.binder_id = ?
         AND (? = '' OR br.name_key LIKE ?)
       ORDER BY br.name_key, br.id
@@ -409,7 +256,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     const typeResult = ReferenceType.safeParse(req.params.referenceType);
     if (!typeResult.success) return res.status(404).json({ ok: false, message: "Reference type not found" });
     const row = db.prepare(`
-      ${selectSql(typeResult.data)}
+      ${referenceSelectSql(typeResult.data, config[typeResult.data], ICON_ENABLED_TYPES.has(typeResult.data))}
       WHERE br.binder_id = ? AND r.id = ?
     `).get(binderId, recordId) as ReferenceRow | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Binder record not found" });
@@ -423,8 +270,8 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     if (!typeResult.success) return res.status(404).json({ ok: false, message: "Reference type not found" });
     const body = parseBody(ReferenceCreateBody, req);
     const entry = config[typeResult.data];
-    const parent = resolveParent(db, binderId, typeResult.data, body.parentId);
-    const leaderId = typeResult.data === "organizations" ? resolveLeaderMortal(db, binderId, body.leaderId) : null;
+    const parent = resolveReferenceParent(db, binderId, typeResult.data, body.parentId);
+    const leaderId = typeResult.data === "organizations" ? resolveOrganizationLeader(db, binderId, body.leaderId) : null;
     const icon = ICON_ENABLED_TYPES.has(typeResult.data) ? body.icon ?? null : null;
     const rank = typeResult.data === "deities" ? body.rank ?? null : null;
     const defaultVisibility = ["continents", "countries", "locations"].includes(typeResult.data) ? "public" : "dm";
@@ -436,11 +283,11 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
           id, binder_id, record_type, name, name_key, visibility, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(id, binderId, entry.recordType, body.name, ctx.helpers.normalizeKey(body.name), body.visibility ?? defaultVisibility, t, t);
-      insertTypedRecord(db, entry.table, typeResult.data, id, body.description ?? null, parent, t, leaderId, icon, rank, body.dmNotes ?? null);
+      insertReferenceRecord(db, entry.table, typeResult.data, id, body.description ?? null, parent, t, leaderId, icon, rank, body.dmNotes ?? null);
       syncMentionField(ctx, binderId, id, "description", body.description);
       if (typeResult.data === "deities") syncMentionField(ctx, binderId, id, "dm_notes", body.dmNotes);
     })();
-    const row = db.prepare(`${selectSql(typeResult.data)} WHERE r.id = ?`).get(id) as ReferenceRow;
+    const row = db.prepare(`${referenceSelectSql(typeResult.data, config[typeResult.data], ICON_ENABLED_TYPES.has(typeResult.data))} WHERE r.id = ?`).get(id) as ReferenceRow;
     res.status(201).json(dtoWithLinks(typeResult.data, row));
   });
 
@@ -451,16 +298,16 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     const typeResult = ReferenceType.safeParse(req.params.referenceType);
     if (!typeResult.success) return res.status(404).json({ ok: false, message: "Reference type not found" });
     const existing = db.prepare(`
-      ${selectSql(typeResult.data)}
+      ${referenceSelectSql(typeResult.data, config[typeResult.data], ICON_ENABLED_TYPES.has(typeResult.data))}
       WHERE br.binder_id = ? AND r.id = ?
     `).get(binderId, recordId) as ReferenceRow | undefined;
     if (!existing) return res.status(404).json({ ok: false, message: "Binder record not found" });
     const body = parseBody(ReferencePatchBody, req);
     const parent = body.parentId !== undefined
-      ? resolveParent(db, binderId, typeResult.data, body.parentId, recordId)
+      ? resolveReferenceParent(db, binderId, typeResult.data, body.parentId, recordId)
       : undefined;
     const leaderId = body.leaderId !== undefined && typeResult.data === "organizations"
-      ? resolveLeaderMortal(db, binderId, body.leaderId)
+      ? resolveOrganizationLeader(db, binderId, body.leaderId)
       : undefined;
     const icon = body.icon !== undefined && ICON_ENABLED_TYPES.has(typeResult.data)
       ? body.icon ?? null
@@ -485,9 +332,9 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
       } else {
         db.prepare(`UPDATE ${config[typeResult.data].table} SET updated_at = ? WHERE id = ?`).run(t, recordId);
       }
-      if (body.parentId !== undefined) updateParent(db, typeResult.data, recordId, parent ?? null);
-      if (leaderId !== undefined) updateLeader(db, recordId, leaderId);
-      if (icon !== undefined) updateIcon(db, config[typeResult.data].table, recordId, icon);
+      if (body.parentId !== undefined) updateReferenceParent(db, typeResult.data, recordId, parent ?? null);
+      if (leaderId !== undefined) updateOrganizationLeader(db, recordId, leaderId);
+      if (icon !== undefined) updateReferenceIcon(db, config[typeResult.data].table, recordId, icon);
       if (body.rank !== undefined && typeResult.data === "deities") {
         db.prepare("UPDATE deities SET rank = ?, updated_at = ? WHERE id = ?").run(body.rank ?? null, t, recordId);
       }
@@ -497,7 +344,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
       if (body.description !== undefined) syncMentionField(ctx, binderId, recordId, "description", body.description);
       if (body.dmNotes !== undefined && typeResult.data === "deities") syncMentionField(ctx, binderId, recordId, "dm_notes", body.dmNotes);
     })();
-    const row = db.prepare(`${selectSql(typeResult.data)} WHERE r.id = ?`).get(recordId) as ReferenceRow;
+    const row = db.prepare(`${referenceSelectSql(typeResult.data, config[typeResult.data], ICON_ENABLED_TYPES.has(typeResult.data))} WHERE r.id = ?`).get(recordId) as ReferenceRow;
     res.json(dtoWithLinks(typeResult.data, row));
   });
 
@@ -508,7 +355,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     const typeResult = ReferenceType.safeParse(req.params.referenceType);
     if (!typeResult.success) return res.status(404).json({ ok: false, message: "Reference type not found" });
     const existing = db.prepare(`
-      ${selectSql(typeResult.data)}
+      ${referenceSelectSql(typeResult.data, config[typeResult.data], ICON_ENABLED_TYPES.has(typeResult.data))}
       WHERE br.binder_id = ? AND r.id = ?
     `).get(binderId, recordId) as ReferenceRow | undefined;
     if (!existing) return res.status(404).json({ ok: false, message: "Binder record not found" });

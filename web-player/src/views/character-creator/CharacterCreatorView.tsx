@@ -3,13 +3,6 @@ import { getInvocationFeatChoices } from "@/domain/character/invocationFeatChoic
 import { useInvocationGrantedFeatChoices } from "@/views/shared/useInvocationGrantedFeatChoices";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { C } from "@/lib/theme";
-import { api } from "@/services/api";
-import {
-  fetchGrandBackgroundDetail,
-  fetchGrandClassDetail,
-  fetchGrandSpeciesDetail,
-} from "@/services/compendiumApi";
-import { fetchSpellsByName, mergeSpellsById } from "@/services/spellLookup";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   abilityMod,
@@ -17,10 +10,8 @@ import {
   classifyFeatSelection,
   getCantripCount,
   getClassFeatureTable,
-  getExpandedSpellListNames,
   getMaxSlotLevel,
   getPreparedSpellCount,
-  getSpellcastingClassName,
   getSubclassLevel,
   parseStartingEquipmentOptions,
   tableValueAtLevel,
@@ -36,11 +27,7 @@ import type {
   ParsedFeatDetailLike as BackgroundFeat,
 } from "@/views/character-creator/utils/FeatChoiceTypes";
 import type {
-  BgDetail,
-  ClassDetail,
   LevelUpFeatDetail,
-  RaceDetail,
-  SpellSummary,
 } from "@/views/character-creator/utils/CharacterCreatorTypes";
 import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 import { StepHeader } from "@/views/character-creator/shared/CharacterCreatorParts";
@@ -63,6 +50,7 @@ import { useCharacterCreatorDerivedState } from "@/views/character-creator/useCh
 import { useCharacterCreatorSanitizers } from "@/views/character-creator/useCharacterCreatorSanitizers";
 import { useCharacterCreatorFeatDetails } from "@/views/character-creator/useCharacterCreatorFeatDetails";
 import { useCharacterCreatorSubmit } from "@/views/character-creator/useCharacterCreatorSubmit";
+import { useCreatorSelectedCompendium } from "@/views/character-creator/useCreatorSelectedCompendium";
 
 
 // ---------------------------------------------------------------------------
@@ -101,8 +89,6 @@ export function CharacterCreatorView() {
   }, [form]);
 
   // Compendium data
-  const [classDetail, setClassDetail] = React.useState<ClassDetail | null>(null);
-  const [raceDetail, setRaceDetail] = React.useState<RaceDetail | null>(null);
   const [raceFeatDetail, setRaceFeatDetail] = React.useState<BackgroundFeat | null>(null);
   const [bgOriginFeatDetail, setBgOriginFeatDetail] = React.useState<BackgroundFeat | null>(null);
   const [featDetailCache, setFeatDetailCache] = React.useState<Record<string, BackgroundFeat>>({});
@@ -110,17 +96,10 @@ export function CharacterCreatorView() {
   const [classFeatDetails, setClassFeatDetails] = React.useState<Record<string, BackgroundFeat>>({});
   const [raceFeatSearch, setRaceFeatSearch] = React.useState("");
   const [bgOriginFeatSearch, setBgOriginFeatSearch] = React.useState("");
-  const [bgDetail, setBgDetail] = React.useState<BgDetail | null>(null);
-  // Spell lists (loaded when class is selected)
-  const [classCantrips, setClassCantrips] = React.useState<SpellSummary[]>([]);
-  const [classSpells, setClassSpells] = React.useState<SpellSummary[]>([]);
-  const [classInvocations, setClassInvocations] = React.useState<SpellSummary[]>([]);
+  const { classDetail, raceDetail, bgDetail, classCantrips, classSpells, classInvocations } = useCreatorSelectedCompendium({ form, setForm, isEditing });
 
   // Track initially-assigned campaigns so we can diff on save in edit mode
   const initialCampaignIdsRef = React.useRef<string[]>([]);
-  const prevClassIdRef = React.useRef<string | null>(null);
-  const prevRaceIdRef = React.useRef<string | null>(null);
-  const prevBgIdRef = React.useRef<string | null>(null);
 
   // Portrait selection (not part of form schema — uploaded separately after save)
   const [portraitFile, setPortraitFile] = React.useState<File | null>(null);
@@ -245,71 +224,11 @@ export function CharacterCreatorView() {
   });
 
   // Load class detail when selected
-  React.useEffect(() => {
-    if (!form.classId) {
-      prevClassIdRef.current = null;
-      setClassDetail(null);
-      setClassFeatDetails({});
-      return;
-    }
-    const prevClassId = prevClassIdRef.current;
-    prevClassIdRef.current = form.classId;
-    const shouldResetClassChoices = !isEditing || (prevClassId !== null && prevClassId !== form.classId);
-    if (shouldResetClassChoices) {
-      setForm((f) => ({
-        ...f,
-        chosenClassFeatIds: {},
-        chosenClassLanguages: [],
-        chosenClassEquipmentOption: null,
-        chosenFeatOptions: Object.fromEntries(Object.entries(f.chosenFeatOptions).filter(([k]) => !k.startsWith("classfeat:"))),
-      }));
-    }
-    setClassFeatDetails({});
-    if (!form.ruleset) return;
-    fetchGrandClassDetail<ClassDetail>(form.classId, form.ruleset).then(setClassDetail).catch(() => {});
-  }, [form.classId, form.ruleset, isEditing]);
+  React.useEffect(() => { setClassFeatDetails({}); }, [form.classId]);
 
   // Load spell lists once classDetail is known
-  React.useEffect(() => {
-    if (!classDetail) { setClassCantrips([]); setClassSpells([]); setClassInvocations([]); return; }
-    const spellcastingClassName = getSpellcastingClassName(classDetail, form.level, form.subclass) ?? classDetail.name;
-    const spellAccessId = Object.entries(classDetail.spellLists ?? {}).find(([, label]) => label === spellcastingClassName)?.[0];
-    const name = encodeURIComponent(spellAccessId ?? spellcastingClassName);
-    const ruleset = form.ruleset ?? "5.5e";
-    const rulesetParam = `&ruleset=${encodeURIComponent(ruleset)}`;
-    api<SpellSummary[]>(`/api/spells/search?classes=${name}&level=0&limit=120&includeText=1&lite=1&excludeSpecial=1${rulesetParam}`).then(setClassCantrips).catch(() => {});
-    const expandedSpellNames = getExpandedSpellListNames(classDetail, form.level, form.subclass);
-    Promise.all([
-      api<SpellSummary[]>(`/api/spells/search?classes=${name}&minLevel=1&maxLevel=9&limit=220&includeText=1&compact=1&lite=1&excludeSpecial=1${rulesetParam}`),
-      fetchSpellsByName(expandedSpellNames, ruleset),
-    ]).then(([baseSpells, expandedSpells]) => setClassSpells(mergeSpellsById(baseSpells, expandedSpells))).catch(() => {});
-    // Eldritch Invocations are ClassTalents, not spells.
-    if (/warlock/i.test(classDetail.name)) {
-      api<SpellSummary[]>(`/api/class-talents/search?kind=invocation&limit=150&includeText=1${rulesetParam}`).then(setClassInvocations).catch(() => {});
-    } else {
-      setClassInvocations([]);
-    }
-  }, [classDetail, form.level, form.subclass, form.ruleset]);
-
   // Load race detail when selected — also reset race choices
-  React.useEffect(() => {
-    if (!form.raceId) { setRaceDetail(null); setRaceFeatDetail(null); return; }
-    const prevRaceId = prevRaceIdRef.current;
-    prevRaceIdRef.current = form.raceId;
-    const shouldResetRaceChoices = !isEditing || (prevRaceId !== null && prevRaceId !== form.raceId);
-    if (shouldResetRaceChoices) {
-      setForm(f => ({
-        ...f,
-        chosenRaceSkills: [], chosenRaceLanguages: [], chosenRaceTools: [], chosenRaceFeatId: null, chosenRaceSize: null,
-        chosenRaceAbilityChoices: [], raceAbilityMode: "split", raceAbilityBonuses: {},
-        chosenClassLanguages: [],
-        chosenFeatOptions: Object.fromEntries(Object.entries(f.chosenFeatOptions).filter(([k]) => !k.startsWith("race:"))),
-      }));
-    }
-    setRaceFeatDetail(null);
-    if (!form.ruleset) return;
-    fetchGrandSpeciesDetail<RaceDetail>(form.raceId, form.ruleset).then(setRaceDetail).catch(() => {});
-  }, [form.raceId, form.ruleset, isEditing]);
+  React.useEffect(() => { setRaceFeatDetail(null); }, [form.raceId]);
 
   useCharacterCreatorFeatDetails({
     ruleset: form.ruleset,
@@ -339,28 +258,7 @@ export function CharacterCreatorView() {
   });
 
   // Load bg detail when selected
-  React.useEffect(() => {
-    if (!form.bgId) { setBgDetail(null); return; }
-    const prevBgId = prevBgIdRef.current;
-    prevBgIdRef.current = form.bgId;
-    const shouldResetBgChoices = !isEditing || (prevBgId !== null && prevBgId !== form.bgId);
-    setBgOriginFeatDetail(null);
-    setBgDetail(null);
-    if (shouldResetBgChoices) {
-      setForm(f => ({
-        ...f,
-        chosenBgTools: [],
-        chosenBgLanguages: [],
-        chosenBgOriginFeatId: null,
-        chosenBgEquipmentOption: null,
-        chosenFeatOptions: Object.fromEntries(Object.entries(f.chosenFeatOptions).filter(([k]) => !k.startsWith("bg:"))),
-        bgAbilityMode: "split",
-        bgAbilityBonuses: {},
-      }));
-    }
-    if (!form.ruleset) return;
-    fetchGrandBackgroundDetail<BgDetail>(form.bgId, form.ruleset).then(setBgDetail).catch(() => {});
-  }, [form.bgId, form.ruleset, isEditing]);
+  React.useEffect(() => { setBgOriginFeatDetail(null); }, [form.bgId]);
 
   // Auto-select directly-granted background feats (e.g. Charlatan → Skilled)
   React.useEffect(() => {

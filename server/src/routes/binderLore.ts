@@ -5,6 +5,9 @@ import { binderEditorOrAdmin, binderReaderOrAdmin } from "../middleware/binderAu
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { EntityNameSchema } from "../lib/schemas.js";
+import { requireBinderRecord, syncMentionField, type BinderRecordRow } from "../services/binders/lore.js";
+export { syncMentionField } from "../services/binders/lore.js";
+import { ITEM_SELECT, replaceEventAssociations, replaceEventTags, toEventDto } from "../services/binders/loreProjection.js";
 
 const optionalText = (max = 200_000) => z.string().max(max).nullable().optional().transform((value) => {
   if (value == null) return value;
@@ -65,26 +68,6 @@ const RecordExistsBody = z.object({
   ids: z.array(z.string().trim().min(1)).max(200),
 }).strict();
 
-type RecordRow = {
-  id: string; binder_id: string; record_type: string; name: string; icon?: string | null;
-};
-
-function requireBinderRecord(
-  db: ServerContext["db"],
-  binderId: string,
-  id: string | null | undefined,
-  allowed?: string[],
-) {
-  if (!id) return null;
-  const row = db.prepare(
-    "SELECT id, binder_id, record_type, name FROM binder_records WHERE id = ? AND binder_id = ?",
-  ).get(id, binderId) as RecordRow | undefined;
-  if (!row || (allowed && !allowed.includes(row.record_type))) {
-    throw Object.assign(new Error("Referenced record is invalid or belongs to another Binder"), { status: 400 });
-  }
-  return row;
-}
-
 function routeFor(type: string, binderId: string, id: string) {
   const section: Record<string, string> = {
     mortal: "mortals", deity: "deities", race: "races", position: "positions",
@@ -93,111 +76,6 @@ function routeFor(type: string, binderId: string, id: string) {
     item: "items", event: "events",
   };
   return `/binder/${binderId}/${section[type] ?? type}/${id}`;
-}
-
-export function syncMentionField(ctx: ServerContext, binderId: string, sourceRecordId: string, sourceField: string, value: string | null | undefined) {
-  ctx.db.prepare("DELETE FROM binder_record_mentions WHERE source_record_id=? AND source_field=?").run(sourceRecordId, sourceField);
-  if (!value) return;
-  const pattern = /\[([^\]]+)\]\(\/binder\/[^/]+\/[^/]+\/([^/?#)]+)[^)]*\)/g;
-  const insert = ctx.db.prepare(`
-    INSERT INTO binder_record_mentions
-      (id,source_record_id,source_field,target_record_id,target_external_id,label,occurrence_key,created_at)
-    VALUES (?,?,?,?,NULL,?,?,?)
-  `);
-  let match: RegExpExecArray | null; let occurrence = 0;
-  while ((match = pattern.exec(value)) !== null) {
-    const target = requireBinderRecord(ctx.db, binderId, decodeURIComponent(match[2]!));
-    if (!target) continue;
-    insert.run(ctx.helpers.uid(), sourceRecordId, sourceField, target.id, match[1]!.replace(/^@/, ""), `${target.id}:${occurrence++}`, ctx.helpers.now());
-  }
-}
-
-function itemSelect() {
-  return `
-    SELECT br.id, br.binder_id, br.name, bi.description, bi.dm_notes,
-           bi.compendium_item_id, ci.name AS compendium_item_name,
-           bi.holder_mortal_id, holder.name AS holder_name,
-           bi.location_record_id, location.name AS location_name,
-           br.created_at, br.updated_at
-    FROM binder_items bi
-    JOIN binder_records br ON br.id = bi.id
-    LEFT JOIN compendium_items ci ON ci.id = bi.compendium_item_id
-    LEFT JOIN binder_records holder ON holder.id = bi.holder_mortal_id
-    LEFT JOIN binder_records location ON location.id = bi.location_record_id
-  `;
-}
-
-function eventDto(db: ServerContext["db"], row: Record<string, unknown>) {
-  const id = String(row.id);
-  const records = db.prepare(`
-    SELECT ber.record_id AS id, br.name, br.record_type AS type, ber.role, ber.description
-    FROM binder_event_records ber JOIN binder_records br ON br.id = ber.record_id
-    WHERE ber.event_id = ? ORDER BY ber.sort, br.name_key
-  `).all(id);
-  const campaigns = db.prepare(`
-    SELECT bec.campaign_id AS id, c.name, bec.role, bec.description
-    FROM binder_event_campaigns bec JOIN campaigns c ON c.id = bec.campaign_id
-    WHERE bec.event_id = ? ORDER BY c.name
-  `).all(id);
-  const tags = db.prepare(`
-    SELECT et.id, et.name
-    FROM binder_event_tag_links etl
-    JOIN binder_event_tags et ON et.id = etl.tag_id
-    WHERE etl.event_id = ? ORDER BY et.name_key
-  `).all(id);
-  return { ...row, records, campaigns, tags };
-}
-
-function replaceEventTags(ctx: ServerContext, binderId: string, eventId: string, tags?: string[]) {
-  if (!tags) return;
-  ctx.db.prepare("DELETE FROM binder_event_tag_links WHERE event_id = ?").run(eventId);
-  const now = ctx.helpers.now();
-  const find = ctx.db.prepare("SELECT id FROM binder_event_tags WHERE binder_id = ? AND name_key = ?");
-  const create = ctx.db.prepare("INSERT INTO binder_event_tags (id,binder_id,name,name_key,created_at,updated_at) VALUES (?,?,?,?,?,?)");
-  const link = ctx.db.prepare("INSERT OR IGNORE INTO binder_event_tag_links (event_id,tag_id) VALUES (?,?)");
-  const seen = new Set<string>();
-  for (const name of tags) {
-    const key = ctx.helpers.normalizeKey(name);
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    let row = find.get(binderId, key) as { id: string } | undefined;
-    if (!row) {
-      row = { id: ctx.helpers.uid() };
-      create.run(row.id, binderId, name.trim(), key, now, now);
-    }
-    link.run(eventId, row.id);
-  }
-}
-
-function replaceEventAssociations(
-  ctx: ServerContext,
-  binderId: string,
-  eventId: string,
-  records?: Array<z.infer<typeof association>>,
-  campaigns?: Array<z.infer<typeof association>>,
-) {
-  if (records) {
-    ctx.db.prepare("DELETE FROM binder_event_records WHERE event_id = ?").run(eventId);
-    const insert = ctx.db.prepare(
-      "INSERT INTO binder_event_records (id,event_id,record_id,role,description,sort) VALUES (?,?,?,?,?,?)",
-    );
-    records.forEach((entry, index) => {
-      requireBinderRecord(ctx.db, binderId, entry.id);
-      if (entry.id === eventId) throw Object.assign(new Error("An Event cannot associate itself"), { status: 400 });
-      insert.run(ctx.helpers.uid(), eventId, entry.id, entry.role ?? null, entry.description ?? null, index);
-    });
-  }
-  if (campaigns) {
-    ctx.db.prepare("DELETE FROM binder_event_campaigns WHERE event_id = ?").run(eventId);
-    const insert = ctx.db.prepare(
-      "INSERT INTO binder_event_campaigns (id,event_id,campaign_id,role,description) VALUES (?,?,?,?,?)",
-    );
-    for (const entry of campaigns) {
-      const campaign = ctx.db.prepare("SELECT id FROM campaigns WHERE id = ? AND binder_id = ?").get(entry.id, binderId);
-      if (!campaign) throw Object.assign(new Error("Campaign must belong to this Binder"), { status: 400 });
-      insert.run(ctx.helpers.uid(), eventId, entry.id, entry.role ?? null, entry.description ?? null);
-    }
-  }
 }
 
 export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
@@ -231,7 +109,7 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
       -- ordinary record selectors. A 500-row cap silently hid later names in
       -- established Binders (for example, Varyan in a 749-record Binder).
       ORDER BY br.name_key, br.id LIMIT 5000
-    `).all(binderId, query, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`) as RecordRow[];
+    `).all(binderId, query, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`) as BinderRecordRow[];
     res.json(rows.filter((row) => !types.length || types.includes(row.record_type)).map((row) => ({
       id: row.id, binderId: row.binder_id, type: row.record_type, name: row.name,
       icon: row.icon ?? null,
@@ -331,7 +209,7 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
 
   app.get("/api/binders/:binderId/items", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); if (!binderId) return;
-    res.json(ctx.db.prepare(`${itemSelect()} WHERE br.binder_id = ? ORDER BY br.name_key`).all(binderId));
+    res.json(ctx.db.prepare(`${ITEM_SELECT} WHERE br.binder_id = ? ORDER BY br.name_key`).all(binderId));
   });
   app.post("/api/binders/:binderId/items", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); if (!binderId) return;
@@ -350,13 +228,13 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
       syncMentionField(ctx, binderId, id, "description", body.description);
       syncMentionField(ctx, binderId, id, "dm_notes", body.dmNotes);
     })();
-    res.status(201).json(ctx.db.prepare(`${itemSelect()} WHERE br.id = ?`).get(id));
+    res.status(201).json(ctx.db.prepare(`${ITEM_SELECT} WHERE br.id = ?`).get(id));
   });
   app.patch("/api/binders/:binderId/items/:recordId", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); const id = requireParam(req, res, "recordId");
     if (!binderId || !id) return;
     const body = parseBody(ItemPatch, req);
-    const old = ctx.db.prepare(`${itemSelect()} WHERE br.id = ? AND br.binder_id = ?`).get(id, binderId) as Record<string, unknown> | undefined;
+    const old = ctx.db.prepare(`${ITEM_SELECT} WHERE br.id = ? AND br.binder_id = ?`).get(id, binderId) as Record<string, unknown> | undefined;
     if (!old) return res.status(404).json({ ok: false, message: "Item not found" });
     requireBinderRecord(ctx.db, binderId, body.holderMortalId, ["mortal"]);
     requireBinderRecord(ctx.db, binderId, body.locationRecordId, ["continent", "country", "location", "poi"]);
@@ -376,7 +254,7 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
       syncMentionField(ctx, binderId, id, "description", body.description !== undefined ? body.description : old.description as string | null);
       syncMentionField(ctx, binderId, id, "dm_notes", body.dmNotes !== undefined ? body.dmNotes : old.dm_notes as string | null);
     })();
-    res.json(ctx.db.prepare(`${itemSelect()} WHERE br.id = ?`).get(id));
+    res.json(ctx.db.prepare(`${ITEM_SELECT} WHERE br.id = ?`).get(id));
   });
   app.delete("/api/binders/:binderId/items/:recordId", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); const id = requireParam(req, res, "recordId");
@@ -394,7 +272,7 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
       FROM binder_events be JOIN binder_records br ON br.id=be.id
       WHERE br.binder_id=? ORDER BY COALESCE(be.date_sort, 9223372036854775807), br.name_key
     `).all(binderId) as Array<Record<string, unknown>>;
-    res.json(rows.map((row) => eventDto(ctx.db, row)));
+    res.json(rows.map((row) => toEventDto(ctx.db, row)));
   });
   app.post("/api/binders/:binderId/events", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); if (!binderId) return;
@@ -409,7 +287,7 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
       syncMentionField(ctx, binderId, id, "description", body.description);
     })();
     const row = ctx.db.prepare("SELECT br.id,br.name AS title,be.description,be.date_text AS dateText,be.date_sort AS dateSort,be.end_date_text AS endDateText,be.end_date_sort AS endDateSort FROM binder_events be JOIN binder_records br ON br.id=be.id WHERE br.id=?").get(id) as Record<string, unknown>;
-    res.status(201).json(eventDto(ctx.db, row));
+    res.status(201).json(toEventDto(ctx.db, row));
   });
   app.patch("/api/binders/:binderId/events/:recordId", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); const id = requireParam(req, res, "recordId"); if (!binderId || !id) return;
@@ -429,7 +307,7 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
       syncMentionField(ctx, binderId, id, "description", body.description !== undefined ? body.description : old.description as string | null);
     })();
     const row = ctx.db.prepare("SELECT br.id,br.name AS title,be.description,be.date_text AS dateText,be.date_sort AS dateSort,be.end_date_text AS endDateText,be.end_date_sort AS endDateSort FROM binder_events be JOIN binder_records br ON br.id=be.id WHERE br.id=?").get(id) as Record<string, unknown>;
-    res.json(eventDto(ctx.db, row));
+    res.json(toEventDto(ctx.db, row));
   });
   app.delete("/api/binders/:binderId/events/:recordId", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); const id = requireParam(req, res, "recordId"); if (!binderId || !id) return;

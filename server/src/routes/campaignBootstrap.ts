@@ -1,6 +1,6 @@
 import type { Express, Request } from "express";
 import type { ServerContext } from "../server/context.js";
-import { requireParam } from "../lib/routeHelpers.js";
+import { requireCampaignExists, requireParam } from "../lib/routeHelpers.js";
 import {
   ADVENTURE_COLS,
   CAMPAIGN_CHARACTER_COLS,
@@ -91,8 +91,7 @@ export function registerCampaignBootstrapRoute(app: Express, ctx: ServerContext)
   app.get("/api/campaigns/:campaignId/bootstrap", dmOrAdmin(ctx.db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
-    const campaign = ctx.db.prepare("SELECT id FROM campaigns WHERE id = ?").get(campaignId);
-    if (!campaign) return res.status(404).json({ ok: false, message: "Campaign not found" });
+    if (!requireCampaignExists(ctx.db, campaignId, res)) return;
 
     const adventures = ctx.db.prepare(`
       SELECT ${ADVENTURE_COLS}

@@ -20,6 +20,7 @@ import { titleCase } from "@beholden/shared/domain/text/titleCase";
 import { ABILITY_KEYS, ABILITY_LABELS, ALL_LANGUAGES, ALL_SKILLS, ALL_TOOLS } from "@/views/character-creator/constants/CharacterCreatorConstants";
 import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
 import { collectSpeciesTraitChoiceBundles } from "@/domain/character/speciesTraitChoices";
+import { CharacterCreatorCatalogPicker } from "./CharacterCreatorCatalogPicker";
 
 interface RaceSummaryLike {
   id: string;
@@ -168,58 +169,9 @@ function renderSpeciesStep({
     <div>
       <h2 style={headingStyle}>Choose a Species</h2>
 
-      {availableRaces.length === 0 ? (
-        <p style={{ color: C.muted }}>No species found in compendium.</p>
-      ) : (
-        <>
-          <input
-            value={raceSearch}
-            onChange={(e) => setRaceSearch(e.target.value)}
-            placeholder="Search species..."
-            style={{ ...inputStyle, width: "100%", marginBottom: 12 }}
-          />
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 6,
-              maxHeight: 340,
-              overflowY: "auto",
-              paddingRight: 4,
-              marginBottom: 4,
-            }}
-          >
-            {filteredRaces.length === 0 && <p style={{ color: C.muted, gridColumn: "1 / -1" }}>No matches.</p>}
-            {filteredRaces.map((r) => {
-              const sel = selectedRaceId === r.id;
-              return (
-                <button
-                  type="button"
-                  key={r.id}
-                  onClick={() => selectRace(r.id)}
-                  style={{
-                    padding: "10px 13px",
-                    borderRadius: 8,
-                    textAlign: "left",
-                    border: `2px solid ${sel ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                    background: sel ? "rgba(56,182,255,0.15)" : "rgba(255,255,255,0.055)",
-                    color: sel ? C.accentHl : C.text,
-                    cursor: "pointer",
-                    fontWeight: sel ? 700 : 500,
-                    fontSize: "var(--fs-subtitle)",
-                    transition: "border-color 0.12s, background 0.12s",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {r.name}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
+      <CharacterCreatorCatalogPicker entries={availableRaces} filteredEntries={filteredRaces}
+        search={raceSearch} setSearch={setRaceSearch} selectedId={selectedRaceId} select={selectRace}
+        emptyLabel="No species found in compendium." searchPlaceholder="Search species..." />
 
       {raceDetail && raceChoices && (raceChoices.hasChosenSize || skillChoice || toolChoice || languageChoice || raceChoices.hasFeatChoice || spellAbilityChoice || abilityChoice) && (
         <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 18 }}>

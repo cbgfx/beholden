@@ -10,6 +10,7 @@ import { syncOwnedPlayerName } from "../services/characters.js";
 import { requireAuth, requireAdmin } from "../middleware/auth.js";
 import { rowToUser } from "../lib/db.js";
 import { importDatabaseFile } from "../services/databaseTransfer.js";
+import { requireCampaignExists } from "../lib/routeHelpers.js";
 
 const CreateUserBody = z.object({
   username: z.string().trim().min(1).max(64),
@@ -187,11 +188,11 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
 
   // Add a user to a campaign.
   app.post("/api/admin/campaigns/:campaignId/members", requireAuth, requireAdmin, (req, res) => {
-    const { campaignId } = req.params;
+    const campaignId = Array.isArray(req.params.campaignId) ? req.params.campaignId[0] : req.params.campaignId;
+    if (!campaignId) return res.status(400).json({ ok: false, message: "Missing route parameter: campaignId" });
     const body = parseBody(MembershipBody, req);
 
-    const campaign = db.prepare("SELECT id FROM campaigns WHERE id = ?").get(campaignId);
-    if (!campaign) return res.status(404).json({ ok: false, message: "Campaign not found" });
+    if (!requireCampaignExists(db, campaignId, res)) return;
 
     const user = db.prepare("SELECT id FROM users WHERE id = ?").get(body.userId) as { id: string } | undefined;
     if (!user) return res.status(404).json({ ok: false, message: "User not found" });

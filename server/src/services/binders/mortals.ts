@@ -1,7 +1,8 @@
 import type { Db } from "../../lib/db.js";
 import { uid } from "../../lib/runtime.js";
 import { normalizeKey, extractDetails, extractLeadingNumber } from "../../lib/text.js";
-import type { MortalRow, MortalPatchBodyType } from "../../routes/binderMortals.js";
+import type { MortalPatchBodyType } from "../../routes/binderMortals.js";
+import type { MortalRow } from "./mortalProjection.js";
 import {
   hydrateLinkedMortalFromCharacter,
   syncLinkedCharacterAgeFromMortal,

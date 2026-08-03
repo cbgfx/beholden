@@ -9,7 +9,7 @@ import {
   ownsBinder,
 } from "../middleware/binderAuth.js";
 import { dmOrAdmin } from "../middleware/campaignAuth.js";
-import { requireParam } from "../lib/routeHelpers.js";
+import { requireCampaignExists, requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { exportBinderDocument, importBinderDocument, previewBinderDocument } from "../services/binders/nativeBinder.js";
 import * as archiverModule from "archiver";
@@ -427,8 +427,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
     const body = parseBody(CampaignBinderBody, req);
-    const campaign = db.prepare("SELECT id FROM campaigns WHERE id = ?").get(campaignId);
-    if (!campaign) return res.status(404).json({ ok: false, message: "Campaign not found" });
+    if (!requireCampaignExists(db, campaignId, res)) return;
 
     if (body.binderId) {
       const binder = db.prepare("SELECT id FROM binders WHERE id = ?").get(body.binderId);

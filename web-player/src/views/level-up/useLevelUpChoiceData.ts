@@ -1,27 +1,6 @@
-import React from "react";
-import { api } from "@/services/api";
-import type { LevelUpFeatDetail, LevelUpResolvedSpellChoiceEntry, LevelUpSpellSummary } from "@/views/level-up/LevelUpTypes";
+import type { LevelUpFeatDetail, LevelUpResolvedSpellChoiceEntry } from "@/views/level-up/LevelUpTypes";
 import type { GrowthChoiceDefinition } from "@/views/character-creator/utils/GrowthChoiceUtils";
-import {
-  buildGrowthChoiceItemOptions,
-} from "@/views/character-creator/utils/GrowthChoiceUtils";
-import {
-  buildGrowthItemLookupBody,
-  fetchCompendiumItemsByLookup,
-  isItemLookupBodyEmpty,
-} from "@/views/character-creator/utils/ItemLookupUtils";
-import { loadSpellChoiceOptions } from "@/views/character-creator/utils/SpellChoiceUtils";
-import { sameSpellChoiceOptionMap } from "@/views/level-up/LevelUpHelpers";
-import { hasKeys } from "@/lib/selectionMaps";
-
-type OptionEntry = {
-  id: string;
-  name: string;
-  rarity?: string | null;
-  type?: string | null;
-  magic?: boolean;
-  attunement?: boolean;
-};
+import { useGrowthChoiceData, useSpellChoiceOptions } from "@/views/character-creator/useChoiceDataLoaders";
 
 export function useLevelUpChoiceData(args: {
   chosenFeatDetail: LevelUpFeatDetail | null;
@@ -31,131 +10,9 @@ export function useLevelUpChoiceData(args: {
   growthChoiceDefinitions: GrowthChoiceDefinition[];
   ruleset?: "5e" | "5.5e" | null;
 }) {
-  const {
-    chosenFeatDetail,
-    featResolvedSpellChoices,
-    classFeatureResolvedSpellChoices,
-    invocationResolvedSpellChoices,
-    growthChoiceDefinitions,
-    ruleset,
-  } = args;
-
-  const [featSpellChoiceOptions, setFeatSpellChoiceOptions] = React.useState<Record<string, LevelUpSpellSummary[]>>({});
-  const [classFeatureSpellChoiceOptions, setClassFeatureSpellChoiceOptions] = React.useState<Record<string, LevelUpSpellSummary[]>>({});
-  const [invocationSpellChoiceOptions, setInvocationSpellChoiceOptions] = React.useState<Record<string, LevelUpSpellSummary[]>>({});
-  const [growthOptionEntriesByKey, setGrowthOptionEntriesByKey] = React.useState<Record<string, OptionEntry[]>>({});
-  const [items, setItems] = React.useState<OptionEntry[]>([]);
-
-  React.useEffect(() => {
-    if (!chosenFeatDetail) {
-      setFeatSpellChoiceOptions((prev) => hasKeys(prev) ? {} : prev);
-      return;
-    }
-    let alive = true;
-    if (featResolvedSpellChoices.length === 0) {
-      setFeatSpellChoiceOptions((prev) => hasKeys(prev) ? {} : prev);
-      return;
-    }
-    loadSpellChoiceOptions(featResolvedSpellChoices, (query) => api<LevelUpSpellSummary[]>(query), { forceIncludeText: true, ruleset }).then((optionsByKey) => {
-      if (alive) {
-        setFeatSpellChoiceOptions((prev) => sameSpellChoiceOptionMap(prev, optionsByKey) ? prev : optionsByKey);
-      }
-    }).catch(() => {
-      if (alive) setFeatSpellChoiceOptions((prev) => hasKeys(prev) ? {} : prev);
-    });
-    return () => { alive = false; };
-  }, [chosenFeatDetail, featResolvedSpellChoices, ruleset]);
-
-  React.useEffect(() => {
-    let alive = true;
-    if (classFeatureResolvedSpellChoices.length === 0) {
-      setClassFeatureSpellChoiceOptions((prev) => hasKeys(prev) ? {} : prev);
-      return;
-    }
-    loadSpellChoiceOptions(classFeatureResolvedSpellChoices, (query) => api<LevelUpSpellSummary[]>(query), { forceIncludeText: true, ruleset }).then((optionsByKey) => {
-      if (alive) {
-        setClassFeatureSpellChoiceOptions((prev) => sameSpellChoiceOptionMap(prev, optionsByKey) ? prev : optionsByKey);
-      }
-    }).catch(() => {
-      if (alive) setClassFeatureSpellChoiceOptions((prev) => hasKeys(prev) ? {} : prev);
-    });
-    return () => { alive = false; };
-  }, [classFeatureResolvedSpellChoices, ruleset]);
-
-  React.useEffect(() => {
-    let alive = true;
-    if (invocationResolvedSpellChoices.length === 0) {
-      setInvocationSpellChoiceOptions((prev) => hasKeys(prev) ? {} : prev);
-      return;
-    }
-    loadSpellChoiceOptions(invocationResolvedSpellChoices, (query) => api<LevelUpSpellSummary[]>(query), { forceIncludeText: true, ruleset }).then((optionsByKey) => {
-      if (alive) {
-        setInvocationSpellChoiceOptions((prev) => sameSpellChoiceOptionMap(prev, optionsByKey) ? prev : optionsByKey);
-      }
-    }).catch(() => {
-      if (alive) setInvocationSpellChoiceOptions((prev) => hasKeys(prev) ? {} : prev);
-    });
-    return () => { alive = false; };
-  }, [invocationResolvedSpellChoices, ruleset]);
-
-  React.useEffect(() => {
-    if (growthChoiceDefinitions.length === 0) {
-      setItems((prev) => (prev.length === 0 ? prev : []));
-      return;
-    }
-    let alive = true;
-    const lookupBody = buildGrowthItemLookupBody(growthChoiceDefinitions);
-    if (isItemLookupBodyEmpty(lookupBody)) {
-      setItems((prev) => (prev.length === 0 ? prev : []));
-      return;
-    }
-    fetchCompendiumItemsByLookup(lookupBody)
-      .then((rows) => {
-        if (!alive) return;
-        setItems(rows);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setItems([]);
-      });
-    return () => { alive = false; };
-  }, [growthChoiceDefinitions]);
-
-  React.useEffect(() => {
-    const spellBackedDefinitions = growthChoiceDefinitions.filter((definition) => definition.spellChoice);
-    const includeSpecialSpellRows = growthChoiceDefinitions.some((definition) => definition.category === "maneuver" || definition.category === "metamagic");
-    let alive = true;
-    if (growthChoiceDefinitions.length === 0) {
-      setGrowthOptionEntriesByKey((prev) => hasKeys(prev) ? {} : prev);
-      return;
-    }
-    const itemBacked = Object.fromEntries(
-      growthChoiceDefinitions
-        .filter((definition) => definition.category === "plan")
-        .map((definition) => [definition.key, buildGrowthChoiceItemOptions(definition, items)])
-    );
-    if (spellBackedDefinitions.length === 0) {
-      setGrowthOptionEntriesByKey((prev) => sameSpellChoiceOptionMap(prev, itemBacked) ? prev : itemBacked);
-      return;
-    }
-    loadSpellChoiceOptions(
-      spellBackedDefinitions.map((definition) => definition.spellChoice!).filter(Boolean),
-      (query) => api<LevelUpSpellSummary[]>(query),
-      { excludeSpecial: !includeSpecialSpellRows, ruleset },
-    ).then((optionsByKey) => {
-      const next = { ...optionsByKey, ...itemBacked };
-      if (alive) setGrowthOptionEntriesByKey((prev) => sameSpellChoiceOptionMap(prev, next) ? prev : next);
-    }).catch(() => {
-      if (alive) setGrowthOptionEntriesByKey((prev) => sameSpellChoiceOptionMap(prev, itemBacked) ? prev : itemBacked);
-    });
-    return () => { alive = false; };
-  }, [growthChoiceDefinitions, items, ruleset]);
-
-  return {
-    featSpellChoiceOptions,
-    classFeatureSpellChoiceOptions,
-    invocationSpellChoiceOptions,
-    growthOptionEntriesByKey,
-    items,
-  };
+  const featSpellChoiceOptions = useSpellChoiceOptions({ choices: args.featResolvedSpellChoices, enabled: !!args.chosenFeatDetail, forceIncludeText: true, ruleset: args.ruleset });
+  const classFeatureSpellChoiceOptions = useSpellChoiceOptions({ choices: args.classFeatureResolvedSpellChoices, forceIncludeText: true, ruleset: args.ruleset });
+  const invocationSpellChoiceOptions = useSpellChoiceOptions({ choices: args.invocationResolvedSpellChoices, forceIncludeText: true, ruleset: args.ruleset });
+  const growth = useGrowthChoiceData({ definitions: args.growthChoiceDefinitions, includeMetamagic: true, ruleset: args.ruleset });
+  return { featSpellChoiceOptions, classFeatureSpellChoiceOptions, invocationSpellChoiceOptions, ...growth };
 }

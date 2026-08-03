@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../shared/validate.js";
-import { requireParam } from "../lib/routeHelpers.js";
+import { requireCampaignExists, requireParam } from "../lib/routeHelpers.js";
 import { rowToCampaign, rowToCampaignCharacter, CAMPAIGN_CHARACTER_COLS } from "../lib/db.js";
 import { DEFAULT_OVERRIDES } from "../lib/defaults.js";
 import { updateCampaignCharacterLive } from "../services/characters.js";
@@ -153,8 +153,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   app.delete("/api/campaigns/:campaignId", requireAdmin, (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
-    const row = db.prepare("SELECT id FROM campaigns WHERE id = ?").get(campaignId);
-    if (!row) return res.status(404).json({ ok: false, message: "Campaign not found" });
+    if (!requireCampaignExists(db, campaignId, res)) return;
 
     // FK CASCADE handles all related rows (adventures → encounters/combatants, players, inpcs, etc.)
     db.prepare("DELETE FROM campaigns WHERE id = ?").run(campaignId);
@@ -171,8 +170,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   app.post("/api/campaigns/:campaignId/fullRest", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
-    const campaignRow = db.prepare("SELECT id FROM campaigns WHERE id = ?").get(campaignId);
-    if (!campaignRow) return res.status(404).json({ ok: false, message: "Campaign not found" });
+    if (!requireCampaignExists(db, campaignId, res)) return;
 
     const t = now();
     const playerRows = db
@@ -245,8 +243,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   app.post("/api/campaigns/:campaignId/touch", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
-    const row = db.prepare("SELECT id FROM campaigns WHERE id = ?").get(campaignId);
-    if (!row) return res.status(404).json({ ok: false, message: "Campaign not found" });
+    if (!requireCampaignExists(db, campaignId, res)) return;
     db.prepare("UPDATE campaigns SET updated_at = ? WHERE id = ?").run(now(), campaignId);
     ctx.broadcast("campaigns:changed", { campaignId });
     res.json({ ok: true });
@@ -256,8 +253,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   app.post("/api/campaigns/:campaignId/image", dmOrAdmin(db), ctx.upload.single("image"), async (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
-    const row = db.prepare("SELECT id FROM campaigns WHERE id = ?").get(campaignId) as { id: string } | undefined;
-    if (!row) return res.status(404).json({ ok: false, message: "Campaign not found" });
+    if (!requireCampaignExists(db, campaignId, res)) return;
     const prepared = await prepareUploadedImage(req.file);
     if (!prepared.ok) return res.status(400).json({ ok: false, message: prepared.message });
     const thumbnail = prepared.image;
@@ -282,8 +278,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   app.patch("/api/campaigns/:campaignId/sharedNotes", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
-    const row = db.prepare("SELECT id FROM campaigns WHERE id = ?").get(campaignId);
-    if (!row) return res.status(404).json({ ok: false, message: "Campaign not found" });
+    if (!requireCampaignExists(db, campaignId, res)) return;
     const sharedNotes: string = typeof req.body?.sharedNotes === "string" ? req.body.sharedNotes : "";
     const t = now();
     db.prepare("UPDATE campaigns SET shared_notes = ?, updated_at = ? WHERE id = ?").run(sharedNotes, t, campaignId);
@@ -297,8 +292,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   app.delete("/api/campaigns/:campaignId/image", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
-    const row = db.prepare("SELECT id FROM campaigns WHERE id = ?").get(campaignId);
-    if (!row) return res.status(404).json({ ok: false, message: "Campaign not found" });
+    if (!requireCampaignExists(db, campaignId, res)) return;
 
     const imagesDir = ctx.path.join(ctx.paths.dataDir, "campaign-images");
     deleteImageFiles(ctx, imagesDir, campaignId);

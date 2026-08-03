@@ -10,6 +10,7 @@ import { normalizeChoiceKey, type StartingEquipmentOption } from "../utils/Chara
 import { parseAppliedSpeciesTraitEffects } from "../utils/CharacterCreatorClassFeatureUtils";
 import { collectTaggedGrantsFromEffects } from "@/domain/character/parseFeatureEffectsDerived";
 import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
+import { CharacterCreatorCatalogPicker } from "./CharacterCreatorCatalogPicker";
 
 type StepResult = { main: React.ReactNode; side: React.ReactNode };
 
@@ -665,60 +666,9 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
   const main = (
     <div>
       <h2 style={headingStyle}>Choose a Background</h2>
-      {availableBackgrounds.length === 0 ? (
-        <p style={{ color: C.muted }}>No backgrounds found in compendium.</p>
-      ) : (
-        <>
-          <input
-            value={bgSearch}
-            onChange={(e) => setBgSearch(e.target.value)}
-            placeholder="Search backgrounds..."
-            style={{ ...inputStyle, width: "100%", marginBottom: 12 }}
-          />
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 6,
-              maxHeight: 340,
-              overflowY: "auto",
-              paddingRight: 4,
-              marginBottom: 4,
-            }}
-          >
-            {filteredBackgrounds.length === 0 && (
-              <p style={{ color: C.muted, gridColumn: "1 / -1" }}>No matches.</p>
-            )}
-            {filteredBackgrounds.map((background) => {
-              const selected = form.bgId === background.id;
-              return (
-                <button
-                  type="button"
-                  key={background.id}
-                  onClick={() => selectBackground(background.id)}
-                  style={{
-                    padding: "10px 13px",
-                    borderRadius: 8,
-                    textAlign: "left",
-                    border: `2px solid ${selected ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                    background: selected ? "rgba(56,182,255,0.15)" : "rgba(255,255,255,0.055)",
-                    color: selected ? C.accentHl : C.text,
-                    cursor: "pointer",
-                    fontWeight: selected ? 700 : 500,
-                    fontSize: "var(--fs-subtitle)",
-                    transition: "border-color 0.12s, background 0.12s",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {background.name}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
+      <CharacterCreatorCatalogPicker entries={availableBackgrounds} filteredEntries={filteredBackgrounds}
+        search={bgSearch} setSearch={setBgSearch} selectedId={form.bgId} select={selectBackground}
+        emptyLabel="No backgrounds found in compendium." searchPlaceholder="Search backgrounds..." />
       {bgChoicesMain}
       <NavButtons
         step={step}

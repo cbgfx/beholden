@@ -9,27 +9,13 @@ import {
 import type {
   CreatorResolvedSpellChoiceEntry,
   CreatorSpellListChoiceEntry,
-  ItemSummary,
 } from "@/views/character-creator/utils/CharacterCreatorTypes";
 import type { FormState } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
+import type { GrowthChoiceDefinition } from "@/views/character-creator/utils/GrowthChoiceUtils";
+import type { ChoiceOption } from "@/views/character-creator/useChoiceDataLoaders";
+import type { AbilKey as AbilityKey } from "@/views/character/CharacterSheetTypes";
 
-type AbilityKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
-
-type GrowthChoiceDefinition = {
-  key: string;
-  title: string;
-  sourceLabel?: string | null;
-  totalCount: number;
-  note?: string | null;
-  category: string;
-  abilityChoice?: {
-    key: string;
-    title: string;
-    options: AbilityKey[];
-  } | null;
-};
-
-type PreparedSpellProgressionChoiceDefinition = {
+export type PreparedSpellProgressionChoiceDefinition = {
   key: string;
   prompt: string;
   sourceName: string;
@@ -45,7 +31,7 @@ export function buildSpellStepChoiceState(args: {
   step6ResolvedSpellChoices: CreatorResolvedSpellChoiceEntry[];
   growthChoiceDefinitions: GrowthChoiceDefinition[];
   preparedSpellProgressionChoiceDefinitions: PreparedSpellProgressionChoiceDefinition[];
-  growthOptionEntriesByKey: Record<string, ItemSummary[]>;
+  growthOptionEntriesByKey: Record<string, ChoiceOption[]>;
   featSpellChoiceOptions: Record<string, SharedSpellSummary[]>;
   getGrowthChoiceSelectedAbility: (choices: Record<string, string[]>, definition: GrowthChoiceDefinition) => string | null;
 }) {

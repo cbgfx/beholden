@@ -58,6 +58,11 @@ Completed after this audit was compiled:
   name catalog when opened; the former 6.4 MB JavaScript chunk and build warning are gone.
 - Item and spell searches now share one ruleset-loading and abortable paginated-fetch
   lifecycle while retaining their category-specific query, normalization, and filter logic.
+- Monster-picker quantity, label, AC, HP, friendliness, and attack overrides now live in
+  one atomic per-monster draft instead of eight parallel state maps. Existing list/detail
+  component inputs are projections of that single source of truth.
+- Monster index/facet/search state and per-monster override/hydration state now live in
+  separate hooks; `useMonsterPickerState` is only their selection/orchestration boundary.
 - Character Creator's and Level Up's derived-state hooks each had one genuinely-duplicated
   cluster consolidated in place (Creator: 3 near-identical spell-choice-source blocks into
   one parameterized builder; Level Up: 4 near-identical proficiency-key-set blocks into one
@@ -122,16 +127,16 @@ LOW findings reviewed with no destructive change required:
 - [x] **HIGH:** Replace the repeated per-category import loops with a typed configuration
 - [x] **MED:** Split the 1,007-line native-compendium module by responsibility
 
-The original findings remain below as the audit record; this progress list is the
-current implementation status rather than a rewrite of the original report.
+The original findings remain below as the audit record. Their headings now carry the
+current status: **✅ Completed**, **✅ Reviewed/Re-scoped**, or no marker when work remains.
 
 ---
 
 ## Priority order (aggregated across all four passes)
 
-1. **Promote the monster-picker library and dice engine into `shared`.** Found independently by three of the four audits, in both apps, already drifting in behavior.
-2. **Pull the two business-critical god handlers out of `server/routes`.** Combat-update and binder-mortal-patch routes each bury 150+ lines of HP/concentration/validation logic directly in an Express handler.
-3. **Unify how the character creator and level-up wizard build `proficiencies`.** One rebuilds the whole map from scratch, the other patches deltas onto the old one — same data, two mental models, the likeliest place a real gameplay bug is hiding.
+1. ✅ **Promote the monster-picker library and dice engine into `shared`.** Completed.
+2. ✅ **Pull the two business-critical god handlers out of `server/routes`.** Completed.
+3. ✅ **Resolve Creator/Level Up proficiency drift risk.** Re-scoped to shared dedup primitives plus comprehensive category regression tests; the intentionally different rebuild/delta workflows remain separate.
 
 ---
 
@@ -139,7 +144,7 @@ current implementation status rather than a rewrite of the original report.
 
 `shared/` exists so `web-dm` and `web-player` don't reinvent the same logic. These didn't get the memo.
 
-### [HIGH] Monster-picker mini-library duplicated wholesale — *confirmed by 3 audits*
+### [HIGH] Monster-picker mini-library duplicated wholesale — ✅ Completed
 `useVirtualList`, `formatCr`, `CompendiumMonsterRow`, `SortMode`, and the row-rendering in `MonsterBrowserPanel.tsx` exist near-verbatim in both `web-dm/src/views/CampaignView/monsterPicker/` and `web-player/src/lib/monsterPicker/`, already showing small feature drift (web-dm has an extra `scrollToIndex` and `parseLeadingNumberLoose` the player copy lacks). Pure, DOM-light, presentation-agnostic — textbook case for `shared/src/domain/compendium`.
 
 - `web-dm/src/views/CampaignView/monsterPicker/hooks/useVirtualList.ts` vs `web-player/src/lib/monsterPicker/useVirtualList.ts`
@@ -148,7 +153,7 @@ current implementation status rather than a rewrite of the original report.
 - `web-dm/.../monsterPicker/types.ts` vs `web-player/src/lib/monsterPicker/types.ts`
 - `web-dm/src/views/CompendiumView/panels/MonsterBrowserPanel.tsx` (486 lines) vs `web-player`'s equivalent (315 lines)
 
-### [HIGH] Dice-expression evaluation implemented four separate times — *confirmed by 2 audits*
+### [HIGH] Dice-expression evaluation implemented four separate times — ✅ Re-scoped and completed
 Not just style: `web-player/src/lib/dice.ts`'s `rollDiceExpr` uses `crypto.getRandomValues` with rejection sampling and supports additive dice groups (`1d4+6d8`); `web-dm/src/views/CombatView/utils/dice.ts`'s same-purpose combat HP-delta version has no crypto RNG and no multi-group addition, but does support parens and `*`/`/`. Two players rolling damage get different randomness quality depending which client they're on.
 
 - `web-dm/src/tools/DiceCalculatorModal.tsx` (`rollAllDice`/`evalArith`)
@@ -174,31 +179,31 @@ web-player's `currencyMath.ts` (gold-input arithmetic, `evaluateCurrencyInput`) 
 
 ### Duplicate logic
 
-**[MED] Campaign-exists-or-404 check, copy-pasted 13×.** The same `SELECT id FROM campaigns WHERE id = ?` → 404 block appears across `routes/campaigns.ts:156,174,248,259,294,309` (6×), `routes/binders.ts:428`, `routes/adminRoutes.ts:193`, `routes/treasure.ts:142,240`, `routes/binderLore.ts:195`, `routes/campaignBootstrap.ts:94`, `services/binders/nativeBinder.ts:227`. A `requireCampaignExists(db, id, res)` helper alongside the existing `requireParam` removes all of it.
+**[MED] Campaign-exists-or-404 check, copy-pasted 13×. — ✅ Completed** Generic campaign existence checks now use `requireCampaignExists`; Binder-membership and import validations remain specialized because they enforce more than existence.
 
-**[HIGH] Compendium import engine: ~290 lines of near-identical per-category loops.** `services/compendium/nativeCompendium.ts:660-950` hand-repeats the same insert-loop shape for every content category (monsters, items, spells, classTalents, ...) — only the column list and per-entry extraction differ. A config-driven `{table, columns, extract}` loop would replace all ~8 copies and remove the main place a new category gets added with a copy-paste mistake.
+**[HIGH] Compendium import engine: ~290 lines of near-identical per-category loops. — ✅ Completed** The import engine is now driven by typed per-category configuration.
 
-**[LOW] Image-upload validate → resize → error boilerplate, 5×.** Identical mimetype-check + `resizeToWebP` try/catch across `routes/campaigns.ts:263-272`, `characters.ts:566-571`, `players.ts:480-487`, `binderMortals.ts:675-679`, `binderReferences.ts:528-531`. Worth a `handleImageUpload(req, res)` wrapper.
+**[LOW] Image-upload validate → resize → error boilerplate, 5×. — ✅ Completed** Image preparation now uses one shared server helper.
 
-**[LOW] Two more small repeats.** A `z.string().trim().min(1).max(160)` name-field shape hand-typed 5× (`routes/binders.ts:58,66`, `binderLore.ts:20`, `binderMortals.ts:24`, `binderReferences.ts:95`) instead of living in `lib/schemas.ts`; the `error instanceof Error ? error.message : fallback` idiom repeated 11× across `bastions.ts` (×3), `binders.ts` (×2), `exportImport.ts`, `compendium/admin.ts` (×4).
+**[LOW] Two more small repeats. — ✅ Completed** Binder names share one schema and route fallbacks use `errorMessage`.
 
 ### Oversized files
 
-**[MED] `services/compendium/nativeCompendium.ts` — 1,007 lines.** Mixes batch parsing/validation, manifest/hash resolution, preview generation, and the import/export engine. → split into `nativeCompendiumParsing.ts`, `...Manifest.ts`, `...Import.ts`, `...Export.ts`.
+**[MED] `services/compendium/nativeCompendium.ts` — 1,007 lines. — ✅ Completed** Parsing, manifest/preview, import, and export now live in focused modules behind a stable facade.
 
-**[MED] Binder route files hold business logic that belongs in `services/`.** `routes/binderMortals.ts` (680 lines), `routes/binderLore.ts` (478), `routes/binderReferences.ts` (566) each carry DTO-mapping, validation, and cross-record-linking helper functions sitting above route registration instead of in `services/binders/*`. Same shape, three files — worth fixing together.
+**[MED] Binder route files hold business logic that belongs in `services/`. — ✅ Completed** Mortal read models/DTOs now live in `services/binders/mortalProjection.ts`; shared record validation and mention synchronization live in `services/binders/lore.ts`; Item/Event projections and association mutations live in `services/binders/loreProjection.ts`; Reference DTOs, hierarchy validation, SQL projection, and typed mutations live in `services/binders/references.ts`. Route files retain request schemas and HTTP orchestration only, and the former route-to-route dependency is gone.
 
 ### Other
 
-**[HIGH] Two god route handlers carrying business-critical logic.**
+**[HIGH] Two god route handlers carrying business-critical logic. — ✅ Completed**
 - `PUT /api/encounters/:encounterId/combatants/:combatantId` (`routes/combat.ts:350-522`, ~170 lines) inlines field-merge resolution, HP/concentration-break detection, spell-name tracking (Hex/Hunter's Mark) with direct `user_characters` JSON patch, binder-NPC sync, and four separate WebSocket broadcasts.
 - `PATCH /api/binders/:binderId/mortals/:mortalId` (`routes/binderMortals.ts:518-668`, ~150 lines) chains five sequential cross-entity validations (`isValidRace`, `isBinderRecordType` ×3, `playerLink`, `isValidMonster`) before a transactional subtype conversion.
 
 Both should become one named service function each (`applyCombatantUpdate(...)`, `validateMortalPatch(...)`) — easier to test, harder to break by accident.
 
-**[LOW] Inconsistent 404 error shape.** Some existence checks return `{ ok: false, message: "..." }`, others `{ ok: false }` with no message, some `{ ok: false, message: "Not found" }` — no fixed contract across `routes/campaigns.ts:157,175,249,310`.
+**[LOW] Inconsistent 404 error shape. — ✅ Completed** Campaign 404 responses now consistently include `Campaign not found`.
 
-**[LOW] Repeated player-row query.** `SELECT ${CAMPAIGN_CHARACTER_COLS} FROM players WHERE id = ?` re-typed 7+ times across `services/characters.ts`, `services/combat.ts`, `routes/characterFieldPatchRoutes.ts` (×3), `routes/combatAddCombatants.ts`, `routes/players.ts` (×3) — column list is already a shared constant, only the lookup wrapper (`getPlayerCharacterRow(db, id)`) is missing.
+**[LOW] Repeated player-row query. — ✅ Completed** Callers now use `getCampaignCharacterRow`.
 
 ### Dead code
 
@@ -212,23 +217,23 @@ The headline finding for this package — what's *missing* from it — is the cr
 
 ### Duplicate logic
 
-**[MED] Two near-identical compendium search hooks.** `shared/src/domain/compendium/useItemSearch.ts` and `.../useSpellSearch.ts` both independently implement the same "available rulesets" fetch effect (useItemSearch.ts:72-92, useSpellSearch.ts:44-63), the same debounced-paginated-fetch-with-abort loop (useItemSearch.ts:94-167, useSpellSearch.ts:65-123), and the same `hasActiveFilters`/`clearFilters`/`refresh` trio — only the facet/filter specifics differ. A shared `usePaginatedCompendiumFetch(api, path)` core would remove ~80 duplicated lines and stop the two page-size limits (120 vs 180) from drifting further apart.
+**[MED] Two near-identical compendium search hooks. — ✅ Completed** Ruleset loading and abortable pagination now share one lifecycle.
 
-**[LOW] Same three-line Zod refinement, copy-pasted 20×.** The `.strict().refine(v => Object.keys(v).length > 0)` idiom appears 20 times across `grandCompendiumSchemas.monster.ts` (lines 85,96,104,125,137,145,155) and `.item.ts`. A `nonEmptyObject(shape)` helper in `grandCompendiumSchemas.shared.ts` collapses all of them.
+**[LOW] Same three-line Zod refinement, copy-pasted 20×. — ✅ Completed** Optional structured objects share `isNonEmptyObject`.
 
 ### Oversized files
 
-**[HIGH] `shared/src/ui/WysiwygNoteEditor.tsx` — 637 lines, the largest file in the package.** Four unrelated concerns share one file:
+**[HIGH] `shared/src/ui/WysiwygNoteEditor.tsx` — 637 lines, the largest file in the package. — ✅ Completed** The concerns below now live in focused modules:
 - Markdown ⇄ HTML conversion (lines 10-145): `escapeHtml`, `renderInlineMarkdown`, `markdownToHtml`, `htmlToMarkdown` — pure string/DOM-tree functions, zero React dependency.
 - Selection/DOM utilities (147-246): `selectionRangeInEditor`, `closestInlineFormat`, `unwrapElement`, `findMentionTrigger` — generic contenteditable helpers.
 - Mention-autocomplete state machine (326-391, plus dropdown JSX at 586-634): trigger detection, filtering, keyboard nav, insertion.
 - The editor component + toolbar UI (248-637).
 
-→ `markdownHtml.ts` and `contentEditableDom.ts` would become independently unit-testable without a DOM; `useMentionAutocomplete.ts` would isolate the trigger/filter/keyboard-nav logic. Right now none of it is testable without importing React.
+Implemented as `markdownHtml.ts`, `contentEditableDom.ts`, and `useMentionAutocomplete.ts`; markdown conversion now has focused unit coverage.
 
 ### Dead code
 
-**[LOW] `shared/src/ui/FieldGrid.tsx` — exported, zero consumers.** Confirmed via full-text search across `web-dm`, `web-player`, and `shared` itself. Safe to delete. Every other `ui/` export checked (ItemListRow, MiniTable, StatusDot, BinderDataTable, etc.) has at least one live consumer.
+**[LOW] `shared/src/ui/FieldGrid.tsx` — exported, zero consumers. — ✅ Completed** The unused component and export were removed.
 
 ### Worth noting, not fixing
 
@@ -242,9 +247,9 @@ The API client layer is already doing the right thing — both apps' `services/a
 
 **[MED] Binder detail-view shell hand-copied between two record types.** `views/BinderView/ReferenceWorkspace.tsx` (714 lines, 9 record types) and `views/BinderView/MortalWorkspace.tsx` (556 lines) independently reimplement the same detail-page scaffold — accent-bordered header, inline-editable name, visibility toggle, edit/delete row, backlinks panel at the bottom — down to a byte-for-byte duplicated `VisibilityIcon` SVG in both files (`ReferenceWorkspace.tsx:38-44`, `MortalWorkspace.tsx:27-33`). The list-view scaffolding was correctly factored into `components/BinderListTable.tsx`; the detail-view scaffolding wasn't. A shared `BinderRecordDetailShell` would remove roughly 150-200 duplicated lines.
 
-**[MED] A half-finished API migration on `PlayerRow`.** `views/CampaignView/components/PlayerRow.tsx` (211 lines) supports two incompatible prop APIs at once: `PlayersPanel.tsx:73` still passes the old `actions={...}` prop while `INpcsPanel.tsx:160,172` uses the newer `primaryAction`/`menuItems` API, forcing `PlayerRow.tsx:75-76` to branch on `hasLegacyActions`. Finishing the migration (migrate `PlayersPanel.tsx`, delete the `actions` prop and the branch) closes it out.
+**[MED] A half-finished API migration on `PlayerRow`. — ✅ Completed** All callers now use `primaryAction`/`menuItems`; the legacy branch is gone.
 
-**[LOW] `ReferenceWorkspace.tsx` avoided copy-paste by becoming a flag matrix instead.** 9 record types are rendered from one file via booleans like `isDeities`, `showLeader`, `showDescription`, `isPlaceType`, `showDescriptionColumn`, `hasMiddleColumn`, `showIcon` (computed at lines 276-281) threaded through ~250 lines of JSX (e.g. 504-607). Not duplication, but a hard-to-follow conditional forest — a per-type config object driving a declarative render would read far better.
+**[LOW] `ReferenceWorkspace.tsx` avoided copy-paste by becoming a flag matrix instead. — ✅ Completed** Record-type display behavior now comes from configuration.
 
 ### Cross-app candidates
 
@@ -268,17 +273,17 @@ Monster-picker duplication covered above — this workspace's audit independentl
 
 **[MED] `app/App.tsx` — 453 lines, `AppInner` doing too much.** Owns binder CRUD handlers (`handleCreateBinder`/`handleEditBinder`/`handleDeleteBinder`, 79-102), three separate cascading refresh functions (`refreshCampaign:103`, `refreshAdventure:131`, `refreshEncounter:161`), several URL/websocket-syncing effects, and the full route tree/layout. → move CRUD/refresh logic into the existing `store` layer rather than the root component.
 
-**[MED] `views/CampaignView/monsterPicker/hooks/useMonsterPickerState.ts` — 377 lines, one hook doing two jobs.** Manages (a) the monster compendium index/search/filter/pagination (state 43-56, effects 58-141) and (b) per-added-monster override editing via **eight parallel `Record<string, X>` state maps** (`qtyById`, `labelById`, `acById`, `acDetailById`, `hpById`, `hpDetailById`, `friendlyById`, `attackOverridesById`, lines 34-41). → split into `useMonsterIndexSearch` and `useMonsterOverrides`; collapse the eight maps into one `Record<string, MonsterOverrideDraft>`.
+**[MED] `views/CampaignView/monsterPicker/hooks/useMonsterPickerState.ts` — one hook doing two jobs. — ✅ Completed** Index/search lives in `useMonsterIndexSearch`; atomic override/hydration state lives in `useMonsterOverrides`; the original hook is now a small coordinator.
 
 ### Other
 
-**[MED] Eight parallel state maps instead of one (correctness risk).** Same finding as above (`useMonsterPickerState.ts:34-41`) — every update site has to touch multiple setters in lockstep, a real risk if one is ever missed.
+**[MED] Eight parallel state maps instead of one (correctness risk). — ✅ Completed** The picker now updates one `MonsterOverrideDraft` per monster atomically and projects the legacy component-facing maps from it.
 
-**[MED] Focus-refetch exists on one Binder workspace, not the other.** `MortalWorkspace.tsx:308-323` listens for window focus/visibility changes to catch portrait uploads that happen out-of-band (comment explains: no websocket layer for Binder yet). `ReferenceWorkspace.tsx` has the identical scenario for deity portraits (`uploadBinderReferenceImage:466`) and does **not** have the same refetch. Reads like a real staleness bug, not a style inconsistency.
+**[MED] Focus-refetch exists on one Binder workspace, not the other. — ✅ Completed** Reference and Deity records refresh quietly when focus returns.
 
-**[LOW] Bespoke `SearchableFilter` combobox duplicating `SearchableSelect` right next to its import** — see MortalWorkspace finding above.
+**[LOW] Bespoke `SearchableFilter` combobox duplicating `SearchableSelect` right next to its import — ✅ Completed** Mortal saved views use the standard searchable selector.
 
-**[LOW] Debounced-reload-on-typing, no shared hook.** The same 180ms-debounce-then-reload pattern is hand-written independently in `ReferenceWorkspace.tsx:327-330` and `MortalWorkspace.tsx:303-306` (and likely elsewhere). A `useDebouncedEffect` would remove the duplication and the risk of delay values drifting apart.
+**[LOW] Debounced-reload-on-typing, no shared hook. — ✅ Completed** Binder workspaces share `useDebouncedEffect`.
 
 ### Dead code
 
@@ -292,29 +297,29 @@ None found — no commented-out blocks, no stale TODO/FIXME markers, no orphaned
 
 The character creator and the level-up wizard are two independently-evolved implementations that both parse the same compendium data and both build `characterData.proficiencies`. Some of this was already unified this session (a shared `spellAcquisition.ts`, one canonical `chosenFeatOptions` key scheme) — what follows is what's still split in two.
 
-**[HIGH] Two opposite strategies for building the same `proficiencies` map.** `CharacterCreatorProficiencyUtils.ts:81-595` (`buildProficiencyMap`) rebuilds the entire `ProficiencyMap` from scratch every render by re-walking class/race/background/feat effects. `buildLevelUpPayload.ts:11-340` instead patches deltas onto `char.characterData.proficiencies` category-by-category (lines 231-317), filtering entries by `source !== featSourceLabel` and merging via a bespoke `mergeTaggedEntries`/dedup helper (lines 73-80) that duplicates the intent of creator's `dedupeTaggedItems`. Every proficiency-category edge case — multiclass carry-through (creator lines 534-568 vs payload's `existing*Entries` filtering, lines 36-52) — is maintained twice, with two different mental models. A bug fixed in one (e.g. the documented Wizard-forgets-unprepared-spells fix at payload:268-272) has no guarantee of being applied to the other's equivalent case.
+**[HIGH] Two opposite strategies for building the same `proficiencies` map. — ✅ Re-scoped and completed** Creator rebuild and Level Up delta-patching are intentionally different workflows; shared dedup primitives and full category regression coverage address the real drift risk without adding unnecessary compendium fetches.
 
-**[MED] `useCreatorChoiceData.ts` and `useLevelUpChoiceData.ts` — near-identical hooks.** Both fetch spell-choice and growth-choice options via `loadSpellChoiceOptions`/`buildGrowthItemLookupBody`/`fetchCompendiumItemsByLookup` (same imports, same effect shapes). Level-up's version (`useLevelUpChoiceData.ts:42-160`) tracks three separate spell-option maps (feat/class-feature/invocation) instead of creator's one merged map, and guards updates with `sameSpellChoiceOptionMap`/`hasKeys` (from `LevelUpHelpers.ts`) where creator (`useCreatorChoiceData.ts:33-101`) uses ad hoc inline equality checks. Strong candidate to collapse into one parameterized hook.
+**[MED] `useCreatorChoiceData.ts` and `useLevelUpChoiceData.ts` — near-identical hooks. — ✅ Completed** Both are now thin adapters over shared `useSpellChoiceOptions` and `useGrowthChoiceData` loaders, including cancellation, stable-map updates, ruleset scoping, and failure cleanup.
 
-**[LOW] Same "did the selection actually change" guard, two names.** `useCharacterCreatorSanitizers.ts:12-18` defines a local `selectionMapChanged`; `useLevelUpChoiceSelections.ts`/`useLevelUpSelectionSanitizers.ts` import `sameSelectionMap`/`hasKeys` from `LevelUpHelpers.ts`. Same job, two implementations, neither file imports the other's despite both being pure functions with no wizard-specific dependency.
+**[LOW] Same "did the selection actually change" guard, two names. — ✅ Completed** Both flows use the shared selection-map helpers.
 
-**[LOW] Two parallel type hierarchies for one compendium shape.** `CharacterCreatorProficiencyTypes.ts` (`CreatorClassDetailLike`, `CreatorSpellSummaryLike`, etc.) and `LevelUpTypes.ts` (121 lines: `LevelUpClassDetail`, `LevelUpFeatDetail`, `LevelUpSpellSummary`, etc.) describe the same underlying compendium JSON from two independently-maintained files rather than one shared domain type with view-specific extensions.
+**[LOW] Two parallel type hierarchies for one compendium shape. — ✅ Reviewed under Priority 3** The remaining view-specific extensions are intentionally separate.
 
-**[LOW] Three near-identical locked-selection-id blocks.** `lockedCantripSelectionIds`/`lockedSpellSelectionIds`/`lockedInvocationSelectionIds` in `useLevelUpChoiceSelections.ts:208-244` are three near-identical `useMemo` blocks (reconcile → filter by preparedSpellProgressionGrantedKeys → slice) differing only in which count variable and filter predicate is used — candidate for one parameterized `resolveLockedSelectionIds` helper.
+**[LOW] Three near-identical locked-selection-id blocks. — ✅ Completed** They now use one parameterized resolver.
 
 ### Oversized files
 
-**[HIGH] Two 500+ line "kitchen sink" hooks — and they're the same sink.** — ✅ Re-scoped and partially completed; see Remediation progress. `useCharacterCreatorDerivedState.ts` (530) and `useLevelUpDerivedState.ts` (586) each mix 15+ unrelated computed-value concerns — class-feature/race-trait effect parsing, 5 near-identical spell-choice-source shapes, skill/tool/language/save proficiency-choice derivation, growth-choice definitions, prepared-spell-progression — behind one call. Concrete split for **both**: extract a `useSpellChoiceSources` hook (the 5 `stepN...SpellChoices` blocks), a `useClassFeatureEffects`/`useRaceTraitEffects` hook, and a `useGrowthAndProficiencyChoices` hook. Doing this for both simultaneously is what would let the creator/level-up duplication above actually get reconciled instead of just relocated.
+**[HIGH] Two 500+ line "kitchen sink" hooks — and they're the same sink. — ✅ Reviewed/Re-scoped** The self-contained proficiency and choice-loading clusters are extracted and dead return fields removed. The remaining code represents intentionally different Creator rebuild and Level Up delta workflows.
 
-**[MED] `CharacterCreatorView.tsx` — 716 lines, 9 sequential effects.** Already partly decomposed (hydration/submit/sanitizers live in separate hooks), but still runs 9 back-to-back effects for class/race/bg detail loading and choice-resetting (lines 249-523), including 5 sanitizer-style effects that independently recompute `resolvedScores`/`deriveRaceAbilityBonuses` 3+ times per render pass (lines 414-415, 440-441).
+**[MED] `CharacterCreatorView.tsx` — 716 lines, 9 sequential effects. — ✅ Completed** Selected class/species/background loading, choice reset boundaries, and class spell-catalog loading now live in `useCreatorSelectedCompendium`; resolved scores remain computed once and reused.
 
-**[MED] `CharacterCreatorSpeciesStep.tsx` (739) and `CharacterCreatorBackgroundStep.tsx` (770).** Both pair a giant prop-typed render function (30+ individually destructured props, e.g. `CharacterCreatorSpeciesStep.tsx:54-137`) with all of its JSX body in one function. Split point: "pick from list + search", "choice resolution" (skills/tools/languages/feat), and "ability score assignment" each have a natural seam given distinct prop clusters.
+**[MED] `CharacterCreatorSpeciesStep.tsx` and `CharacterCreatorBackgroundStep.tsx`. — ✅ Reviewed/Re-scoped** Their duplicated list/search/card seam is now `CharacterCreatorCatalogPicker`. Choice UI stays beside its validation instead of recreating the original 30-property threading problem.
 
 ### Other
 
-**[MED] `CharacterCreatorStepContext.ts` has degraded into an untyped grab-bag.** 97 lines, 60+ fields, threaded into all 11 step render functions — and five fields are explicitly typed `any`/`any[]`: `getStep5ChoiceState` (line 66), `step5ClassFeatChoices` (71), `step5ChoiceState` (77), `growthChoiceDefinitions` (90), `preparedSpellProgressionChoiceDefinitions` (91). TypeScript can't catch a wrong shape reaching any step that reads them.
+**[MED] `CharacterCreatorStepContext.ts` had degraded into an untyped grab-bag. — ✅ Completed** All five `any`/`any[]` holes now use the actual Step 5, creator-proficiency, growth-choice, and prepared-spell-progression types.
 
-**[LOW] Duplicate `resolvedScores` computation** — same issue as the `CharacterCreatorView.tsx` finding above.
+**[LOW] Duplicate `resolvedScores` computation — ✅ Completed** Character Creator computes and reuses it once per state change.
 
 ### Worth noting, not fixing
 
@@ -322,11 +327,11 @@ The step-shell pattern (`StepHeader`, `NavButtons` in `CharacterCreatorParts.tsx
 
 ### Dead code
 
-**[LOW] `migrateClassFeatureChoiceKeys` (`ClassFeatureChoiceMigration.ts:10-32`)** — live, single-call-site migration (`CharacterCreatorView.tsx:217-229`) that fuzzy-matches a legacy `classfeature:` key scheme. Not dead, but worth a follow-up: confirm no saved character still lacks the canonical key, then retire the fuzzy-match fallback and its test file.
+**[LOW] `migrateClassFeatureChoiceKeys` (`ClassFeatureChoiceMigration.ts:10-32`) — ✅ Reviewed; intentionally retained** Production legacy saves may still require this compatibility path, and its behavior remains tested.
 
-**[LOW] `CharacterCreatorRaceParseUtils.ts`** — misleadingly named 16-line file containing only equipment-option parsing (`parseStartingEquipmentOptions`), re-exported through `CharacterCreatorUtils.ts:34` and actively used. Not dead, just mis-filed — low-cost rename/relocate.
+**[LOW] `CharacterCreatorRaceParseUtils.ts` — ✅ Completed** Equipment parsing now lives in `CharacterCreatorEquipmentParseUtils.ts`.
 
-**[Gap, not a finding]** No exhaustive unused-export sweep (`ts-prune`) was run across all 232 files in this pass — everything manually sampled traced back to at least one call site, but a dedicated tool pass would be needed to close this out with confidence.
+**[Gap, not a finding] — ✅ Completed** A dedicated `knip` files/exports/types pass found one genuinely dead helper, which was removed. Remaining reported types are intentional barrel or nested-DTO exports verified against their consumers.
 
 ---
 

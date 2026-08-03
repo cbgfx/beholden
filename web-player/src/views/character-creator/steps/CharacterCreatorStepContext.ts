@@ -18,6 +18,13 @@ import type { ParsedFeatDetailLike as BackgroundFeat } from "@/views/character-c
 import type { SharedSpellSummary } from "@/views/character-creator/utils/SpellChoiceUtils";
 import type { SelectedFeatSpellcastingAbilityChoiceEntry } from "@/views/character-creator/utils/FeatSpellcastingUtils";
 import type { FormState, Step } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
+import type { GrowthChoiceDefinition } from "@/views/character-creator/utils/GrowthChoiceUtils";
+import type { PreparedSpellProgressionChoiceDefinition } from "@/views/character-creator/utils/CharacterCreatorSpellStepUtils";
+import type { Step5ChoiceState } from "@/views/character-creator/utils/CharacterCreatorStep5Utils";
+import { getStep5ChoiceState } from "@/views/character-creator/utils/CharacterCreatorStep5Utils";
+import type { useCreatorProficiencyChoices } from "@/views/character-creator/useCreatorProficiencyChoices";
+
+type CreatorProficiencyChoices = ReturnType<typeof useCreatorProficiencyChoices>;
 
 export type StepRenderResult = { main: React.ReactNode; side: React.ReactNode };
 
@@ -63,18 +70,18 @@ export type CharacterCreatorStepRenderContext = {
   error: string | null;
   busy: boolean;
   isEditing: boolean;
-  getStep5ChoiceState: any;
+  getStep5ChoiceState: typeof getStep5ChoiceState;
   step5SkillList: string[];
   step5NumSkills: number;
   step5BgLangChoice: { fixed: string[]; choose: number; from: string[] | null };
   step5CoreLanguageChoice: ProficiencyChoice | null;
-  step5ClassFeatChoices: any[];
+  step5ClassFeatChoices: CreatorProficiencyChoices["step5ClassFeatChoices"];
   step5ClassLanguageChoice: ProficiencyChoice | null;
-  step5ClassExpertiseChoices: any[];
+  step5ClassExpertiseChoices: CreatorProficiencyChoices["step5ClassExpertiseChoices"];
   step5ClassToolProficiency: { fixed: string[]; choices: Array<{ count: number; from: string[] }>; notes: string[] } | null;
   step5WeaponMasteryChoice: { count: number; source: string } | null;
   step5WeaponOptions: string[];
-  step5ChoiceState: any;
+  step5ChoiceState: Step5ChoiceState;
   step6SpellListChoices: CreatorSpellListChoiceEntry[];
   step6ResolvedSpellChoices: CreatorResolvedSpellChoiceEntry[];
   selectedFeatSpellcastingAbilityChoices: SelectedFeatSpellcastingAbilityChoiceEntry[];
@@ -87,9 +94,9 @@ export type CharacterCreatorStepRenderContext = {
   getClassFeatChoiceLabel: (featGroup: string) => string;
   getClassFeatOptionLabel: (optionName: string, featGroup: string) => string;
   eligibleInvocationIds: Set<string>;
-  growthChoiceDefinitions: any[];
-  preparedSpellProgressionChoiceDefinitions: any[];
-  getGrowthChoiceSelectedAbility: (choices: Record<string, string[]>, definition: any) => string | null;
+  growthChoiceDefinitions: GrowthChoiceDefinition[];
+  preparedSpellProgressionChoiceDefinitions: PreparedSpellProgressionChoiceDefinition[];
+  getGrowthChoiceSelectedAbility: (choices: Record<string, string[]>, definition: GrowthChoiceDefinition) => string | null;
   portraitInputRef: React.RefObject<HTMLInputElement | null>;
   portraitPreview: string | null;
   setPortraitFile: React.Dispatch<React.SetStateAction<File | null>>;

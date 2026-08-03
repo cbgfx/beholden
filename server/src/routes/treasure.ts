@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { Express } from "express";
 import type Database from "better-sqlite3";
 import type { ServerContext } from "../server/context.js";
-import { requireParam } from "../lib/routeHelpers.js";
+import { requireCampaignExists, requireParam } from "../lib/routeHelpers.js";
 import { parseBody } from "../shared/validate.js";
 import { rowToTreasure, nextSortFor, TREASURE_COLS } from "../lib/db.js";
 import { toTreasureDto } from "../lib/apiCollections.js";
@@ -139,8 +139,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
   app.get("/api/campaigns/:campaignId/treasure", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
-    const c = db.prepare("SELECT id FROM campaigns WHERE id = ?").get(campaignId);
-    if (!c) return res.status(404).json({ ok: false, message: "Campaign not found" });
+    if (!requireCampaignExists(db, campaignId, res)) return;
     if (isListView(req.query.view)) return res.json(readTreasureList("campaign", campaignId));
     const rows = db
       .prepare(
@@ -237,8 +236,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
   app.post("/api/campaigns/:campaignId/treasure", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
-    const c = db.prepare("SELECT id FROM campaigns WHERE id = ?").get(campaignId);
-    if (!c) return res.status(404).json({ ok: false, message: "Campaign not found" });
+    if (!requireCampaignExists(db, campaignId, res)) return;
     const b = parseBody(TreasureCreateBody, req);
     const out = createTreasureEntry({
       campaignId, adventureId: null,
