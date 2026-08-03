@@ -226,7 +226,10 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
           OR EXISTS (SELECT 1 FROM binder_event_tag_links etl JOIN binder_event_tags et ON et.id=etl.tag_id
             WHERE etl.event_id=br.id AND et.name_key LIKE ?)
         )
-      ORDER BY br.name_key, br.id LIMIT 500
+      -- This endpoint supplies the client-side mention picker as well as
+      -- ordinary record selectors. A 500-row cap silently hid later names in
+      -- established Binders (for example, Varyan in a 749-record Binder).
+      ORDER BY br.name_key, br.id LIMIT 5000
     `).all(binderId, query, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`) as RecordRow[];
     res.json(rows.filter((row) => !types.length || types.includes(row.record_type)).map((row) => ({
       id: row.id, binderId: row.binder_id, type: row.record_type, name: row.name,

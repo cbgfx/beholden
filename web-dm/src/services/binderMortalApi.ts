@@ -81,7 +81,10 @@ export type MortalOptions = {
     campaignCurrentDate: number | null;
     linkedMortalId: string | null;
   }>;
-  monsters: Array<{ id: string; name: string }>;
+  monsters: Array<{
+    id: string; name: string; hpMax: number; hpDetails: string | null;
+    ac: number; acDetails: string | null;
+  }>;
 };
 
 const base = (binderId: string) => `/api/binders/${binderId}/mortals`;

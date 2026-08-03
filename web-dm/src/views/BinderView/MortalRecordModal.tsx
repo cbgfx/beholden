@@ -240,6 +240,20 @@ export function MortalRecordModal(props: {
     if (player.age) setAgeAndBirth(player.age, player.id);
   }
 
+  function selectStatblock(nextMonsterId: string) {
+    setMonsterId(nextMonsterId);
+    const monster = props.options.monsters.find((item) => item.id === nextMonsterId);
+    if (monster) {
+      setHpMax(String(monster.hpMax));
+      setHpCurrent(String(monster.hpMax));
+      setHpDetails(monster.hpDetails ?? "");
+      setAc(String(monster.ac));
+      setAcDetails(monster.acDetails ?? "");
+    }
+    setMechanicsDirty(false);
+    setAttackOverridesText("");
+  }
+
   const footer = <div style={{ display: "grid", gap: 8, width: "100%" }}>
     {error ? <div role="alert" style={{ color: theme.colors.red, fontSize: "var(--fs-small)", textAlign: "right" }}>{error}</div> : null}
     <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
@@ -288,7 +302,7 @@ export function MortalRecordModal(props: {
       {property("Type", <Select style={{ width: "100%" }} value={mortalType} onChange={(event) => setMortalType(event.target.value as MortalType)} disabled={saving}><option value="npc">NPC</option><option value="player_character">Player Character</option></Select>)}
       {mortalType === "player_character"
         ? property("Existing player", <SearchableSelect value={playerId} onChange={linkPlayer} disabled={saving} options={availablePlayers.map((player) => ({ id: player.id, name: playerLabel(player) }))} />)
-        : <SearchableOption id="mortal-monster" label={`Statblock${props.requireNpcStatblock ? " *" : ""}`} selectedId={monsterId} options={props.options.monsters ?? []} onChange={(id) => { setMonsterId(id); setMechanicsDirty(false); setAttackOverridesText(""); }} disabled={saving} />}
+        : <SearchableOption id="mortal-monster" label={`Statblock${props.requireNpcStatblock ? " *" : ""}`} selectedId={monsterId} options={props.options.monsters ?? []} onChange={selectStatblock} disabled={saving} />}
       {mortalType === "npc" ? <details open={Boolean(props.record)} style={{ margin: "8px 0", borderTop: `1px solid ${theme.colors.panelBorder}`, paddingTop: 10 }}>
         <summary style={{ color: theme.colors.muted, cursor: "pointer", fontWeight: 750 }}>Canonical mechanics</summary>
         <div style={{ display: "grid", gap: 5, marginTop: 8 }}>

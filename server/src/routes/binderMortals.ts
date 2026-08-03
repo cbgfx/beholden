@@ -288,6 +288,24 @@ function isValidMonster(ctx: ServerContext, monsterId: string | null | undefined
   return Boolean(ctx.db.prepare("SELECT 1 FROM compendium_monsters WHERE id = ?").get(monsterId));
 }
 
+function compendiumMonsterMechanics(dataJson: string | null | undefined) {
+  let monster: Record<string, any> = {};
+  try { monster = JSON.parse(dataJson ?? "{}"); } catch { /* invalid legacy rows fall back safely */ }
+  const hpMax = extractLeadingNumber(monster.hp)
+    ?? extractLeadingNumber(monster.hitPoints?.average)
+    ?? extractLeadingNumber(monster.hitPoints?.formula)
+    ?? 1;
+  const ac = extractLeadingNumber(monster.ac)
+    ?? extractLeadingNumber(monster.armorClass?.value)
+    ?? 10;
+  return {
+    hpMax,
+    hpDetails: extractDetails(monster.hp) ?? (typeof monster.hitPoints?.formula === "string" ? monster.hitPoints.formula : null),
+    ac,
+    acDetails: extractDetails(monster.ac) ?? (typeof monster.armorClass?.source === "string" ? monster.armorClass.source : null),
+  };
+}
+
 function replacePrimaryMembership(ctx: ServerContext, mortalId: string, organizationId: string | null, positionId: string | null, now: number) {
   ctx.db.prepare("DELETE FROM organization_memberships WHERE mortal_id = ? AND is_primary = 1").run(mortalId);
   if (!organizationId) return;
@@ -348,23 +366,44 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
       WHERE c.binder_id = ?
       ORDER BY p.character_name COLLATE NOCASE, p.id
     `).all(binderId) as Array<Record<string, unknown>>;
-    const players = playerRows.map((player) => {
+    const groupedPlayerRows = new Map<string, Record<string, unknown> & { campaignNames: string[] }>();
+    for (const player of playerRows) {
+      const characterId = typeof player.characterId === "string" && player.characterId ? player.characterId : null;
+      // Modern rows share the canonical Character id across Campaigns. Legacy
+      // rows predate that link, so collapse only an exact player+character name
+      // match instead of showing the same person once per Campaign.
+      const identityKey = characterId
+        ? `character:${characterId}`
+        : `legacy:${ctx.helpers.normalizeKey(String(player.playerName ?? ""))}:${ctx.helpers.normalizeKey(String(player.characterName ?? ""))}`;
+      const existing = groupedPlayerRows.get(identityKey);
+      if (existing) {
+        const campaignName = String(player.campaignName ?? "");
+        if (campaignName && !existing.campaignNames.includes(campaignName)) existing.campaignNames.push(campaignName);
+        if (!existing.linkedMortalId && player.linkedMortalId) existing.linkedMortalId = player.linkedMortalId;
+        continue;
+      }
+      groupedPlayerRows.set(identityKey, { ...player, campaignNames: [String(player.campaignName ?? "")].filter(Boolean) });
+    }
+    const players = [...groupedPlayerRows.values()].map((player) => {
       let characterData: Record<string, unknown> = {};
       try {
         characterData = JSON.parse(String(player.characterDataJson ?? "{}")) as Record<string, unknown>;
       } catch { /* malformed legacy live data contributes no optional lore defaults */ }
       return {
         ...player,
+        campaignName: player.campaignNames.join(", "),
+        campaignNames: undefined,
         characterDataJson: undefined,
         age: typeof characterData.age === "string" || typeof characterData.age === "number" ? String(characterData.age) : null,
         gender: typeof characterData.gender === "string" ? characterData.gender.toLocaleLowerCase() : null,
       };
     });
-    const monsters = db.prepare(`
-      SELECT id, name
+    const monsterRows = db.prepare(`
+      SELECT id, name, data_json AS dataJson
       FROM compendium_monsters
       ORDER BY name COLLATE NOCASE, id
-    `).all();
+    `).all() as Array<{ id: string; name: string; dataJson: string }>;
+    const monsters = monsterRows.map(({ id, name, dataJson }) => ({ id, name, ...compendiumMonsterMechanics(dataJson) }));
     res.json({ records, players, monsters });
   });
 
@@ -436,12 +475,12 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
         const monsterRow = body.monsterId
           ? db.prepare("SELECT data_json FROM compendium_monsters WHERE id=?").get(body.monsterId) as { data_json: string } | undefined
           : undefined;
-        const monster = monsterRow ? JSON.parse(monsterRow.data_json) : null;
-        const hpMax = body.hpMax ?? extractLeadingNumber(monster?.hp) ?? 1;
+        const mechanics = compendiumMonsterMechanics(monsterRow?.data_json);
+        const hpMax = body.hpMax ?? mechanics.hpMax;
         const hpCurrent = Math.min(body.hpCurrent ?? hpMax, hpMax);
-        const hpDetails = body.hpDetails ?? extractDetails(monster?.hp);
-        const ac = body.ac ?? extractLeadingNumber(monster?.ac) ?? 10;
-        const acDetails = body.acDetails ?? extractDetails(monster?.ac);
+        const hpDetails = body.hpDetails ?? mechanics.hpDetails;
+        const ac = body.ac ?? mechanics.ac;
+        const acDetails = body.acDetails ?? mechanics.acDetails;
         db.prepare(`UPDATE binder_npcs SET hp_max=?,hp_current=?,hp_details=?,ac=?,ac_details=?,attack_overrides_json=?,updated_at=? WHERE mortal_id=?`)
           .run(hpMax, hpCurrent, hpDetails, ac, acDetails, body.attackOverrides ? JSON.stringify(body.attackOverrides) : null, now, id);
       }
@@ -545,11 +584,8 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
           const monsterRow = nextMonsterId
             ? db.prepare("SELECT data_json FROM compendium_monsters WHERE id = ?").get(nextMonsterId) as { data_json: string } | undefined
             : undefined;
-          const monster = monsterRow ? JSON.parse(monsterRow.data_json) : null;
-          const hpMax = extractLeadingNumber(monster?.hp) ?? 1;
-          const ac = extractLeadingNumber(monster?.ac) ?? 10;
-          const hpDetails = extractDetails(monster?.hp);
-          const acDetails = extractDetails(monster?.ac);
+          const mechanics = compendiumMonsterMechanics(monsterRow?.data_json);
+          const { hpMax, ac, hpDetails, acDetails } = mechanics;
           db.prepare(`
             UPDATE binder_npcs SET hp_max=?, hp_current=?, hp_details=?, ac=?, ac_details=?,
               attack_overrides_json=NULL, updated_at=? WHERE mortal_id=?

@@ -425,6 +425,24 @@ describe("Binder routes", () => {
         id, campaign_id, player_name, character_name, live_json, created_at, updated_at
       ) VALUES ('existing-player', 'campaign', 'Jean-Marc', 'Brother Diego', '{}', 1, 1)
     `).run();
+    db.prepare(`
+      INSERT INTO campaigns (id, name, binder_id, created_at, updated_at)
+      VALUES ('second-campaign', 'Real Drama Club', ?, 1, 1)
+    `).run(binder.id);
+    db.prepare(`
+      INSERT INTO players (
+        id, campaign_id, player_name, character_name, live_json, created_at, updated_at
+      ) VALUES ('same-player-other-campaign', 'second-campaign', 'Jean-Marc', 'Brother Diego', '{}', 1, 1)
+    `).run();
+    const mortalOptionsResponse = await fetch(`${base}/api/binders/${binder.id}/mortal-options`, {
+      headers: { "x-test-user": "owner" },
+    });
+    assert.equal(mortalOptionsResponse.status, 200);
+    const mortalOptions = await mortalOptionsResponse.json() as { players: Array<{ playerName: string; characterName: string; campaignName: string }> };
+    const brotherDiegoOptions = mortalOptions.players.filter((player) => player.playerName === "Jean-Marc" && player.characterName === "Brother Diego");
+    assert.equal(brotherDiegoOptions.length, 1);
+    assert.match(brotherDiegoOptions[0]!.campaignName, /Frozen Assets/);
+    assert.match(brotherDiegoOptions[0]!.campaignName, /Real Drama Club/);
 
     const createdMortalResponse = await fetch(`${base}/api/binders/${binder.id}/mortals`, {
       method: "POST",
@@ -523,7 +541,7 @@ describe("Binder routes", () => {
       headers: { "x-test-user": "owner" },
     });
     assert.equal(deletedBinder.status, 200, await deletedBinder.clone().text());
-    assert.deepEqual(await deletedBinder.json(), { ok: true, detachedCampaigns: 1 });
+    assert.deepEqual(await deletedBinder.json(), { ok: true, detachedCampaigns: 2 });
     assert.equal(db.prepare("SELECT 1 FROM binders WHERE id = ?").get(binder.id), undefined);
     assert.equal(db.prepare("SELECT binder_id FROM campaigns WHERE id = 'campaign'").pluck().get(), null);
 
