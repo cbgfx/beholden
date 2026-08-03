@@ -6,6 +6,8 @@ export { SectionTitle } from "./SectionTitle";
 export { SubsectionLabel } from "./SubsectionLabel";
 export { IconButton } from "./IconButton";
 export { Input } from "./Input";
+export { SearchableMultiFilter } from "./SearchableMultiFilter";
+export type { SearchableMultiFilterTheme } from "./SearchableMultiFilter";
 export { TextArea } from "./TextArea";
 export { Select } from "./Select";
 export { FormField, CheckRow } from "./FormField";

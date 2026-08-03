@@ -77,6 +77,12 @@ export default defineConfig({
           proxy.on("error", () => {});
         },
       },
+      "/binder-mortal-images": {
+        target: `http://localhost:${SERVER_PORT}`,
+        configure: (proxy) => {
+          proxy.on("error", () => {});
+        },
+      },
       "/ws": {
         target: `http://localhost:${SERVER_PORT}`,
         ws: true,

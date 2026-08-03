@@ -20,12 +20,6 @@ export type BinderEvent = {
   endDateText: string | null; endDateSort: number | null;
   records: BinderAssociation[]; campaigns: BinderAssociation[]; tags: Array<{ id: string; name: string }>;
 };
-export type BinderRelationship = {
-  id: string; sourceRecordId: string; sourceName: string; sourceType: string;
-  targetRecordId: string; targetName: string; targetType: string;
-  category: string; sourceLabel: string | null; targetLabel: string | null; isSymmetric: number;
-  startDateText: string | null; endDateText: string | null; notes: string | null;
-};
 
 const base = (binderId: string) => `/api/binders/${binderId}`;
 export const fetchBinderRecordOptions = (binderId: string, query = "", types: string[] = []) =>
@@ -44,17 +38,14 @@ export const updateBinderEvent = (binderId: string, id: string, input: Record<st
   api<BinderEvent>(`${base(binderId)}/events/${id}`, jsonInit("PATCH", input));
 export const deleteBinderEvent = (binderId: string, id: string) =>
   api<{ ok: true }>(`${base(binderId)}/events/${id}`, { method: "DELETE" });
-export const fetchBinderRelationships = (binderId: string, recordId?: string) =>
-  api<BinderRelationship[]>(`${base(binderId)}/relationships${recordId ? `?recordId=${encodeURIComponent(recordId)}` : ""}`);
-export const createBinderRelationship = (binderId: string, input: Record<string, unknown>) =>
-  api<{ id: string }>(`${base(binderId)}/relationships`, jsonInit("POST", input));
-export const deleteBinderRelationship = (binderId: string, id: string) =>
-  api<{ ok: true }>(`${base(binderId)}/relationships/${id}`, { method: "DELETE" });
 export const syncBinderMentions = (binderId: string, sourceRecordId: string, sourceField: string, text: string | null) =>
   api<{ ok: true }>(`${base(binderId)}/mentions`, jsonInit("PUT", { sourceRecordId, sourceField, text }));
 export type BinderBacklink = { id: string; name: string; type: string; route: string; fields: string[] };
 export const fetchBinderBacklinks = (binderId: string, recordId: string) =>
   api<BinderBacklink[]>(`${base(binderId)}/records/${recordId}/backlinks`);
+export type BinderRelatedRecord = { id: string; name: string; type: string; relationship: string; route: string };
+export const fetchBinderRelatedRecords = (binderId: string, recordId: string) =>
+  api<BinderRelatedRecord[]>(`${base(binderId)}/records/${recordId}/related`);
 
 const MENTION_ID_PATTERN = /\[[^\]]+\]\(\/binder\/[^/]+\/[^/]+\/([^/?#)]+)\)/g;
 export function extractMentionIds(...texts: Array<string | null | undefined>): string[] {

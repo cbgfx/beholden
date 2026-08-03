@@ -1,7 +1,7 @@
 import { C } from "@/lib/theme";
 import { FormattedText } from "@beholden/shared/ui";
 import { ChoiceBtn } from "./LevelUpParts";
-import type { LevelUpFeatDetail } from "./LevelUpParts";
+import type { LevelUpFeatDetail } from "./LevelUpTypes";
 import type { ParsedFeatChoiceLike as LevelUpFeatChoice } from "@/views/character-creator/utils/FeatChoiceTypes";
 import { formatFeatPrerequisite } from "@/views/character/CharacterSheetUtils";
 import { getFeatChoiceOptions } from "@/views/character-creator/utils/CharacterCreatorUtils";

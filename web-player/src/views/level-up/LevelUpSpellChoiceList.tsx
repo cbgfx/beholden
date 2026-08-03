@@ -1,7 +1,7 @@
 import React from "react";
 import { C } from "@/lib/theme";
 import { classTalentPrerequisiteLabel } from "@/views/character/CharacterSheetUtils";
-import type { LevelUpSpellSummary } from "./LevelUpParts";
+import type { LevelUpSpellSummary } from "./LevelUpTypes";
 
 function levelGroupLabel(level: number | null | undefined): string {
   if (level == null) return "Options";

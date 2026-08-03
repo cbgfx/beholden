@@ -99,33 +99,11 @@ export function ReferenceRecordModal(props: {
 
         {props.showRank ? (
           <div style={{ display: "grid", gap: 7 }}>
-            <div style={labelStyle}>Rank</div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {DEITY_RANKS.map((option) => {
-                const active = rank === option;
-                const color = DEITY_RANK_COLORS[option];
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    disabled={saving}
-                    onClick={() => setRank(active ? null : option)}
-                    style={{
-                      padding: "4px 12px",
-                      borderRadius: 999,
-                      border: `1.5px solid ${color}`,
-                      background: active ? color : withAlpha(color, 0.14),
-                      color: active ? "#0b0e14" : color,
-                      fontWeight: 800,
-                      fontSize: "var(--fs-small)",
-                      cursor: saving ? "default" : "pointer",
-                    }}
-                  >
-                    {option}
-                  </button>
-                );
-              })}
-            </div>
+            <label htmlFor="binder-reference-rank" style={labelStyle}>Rank</label>
+            <select id="binder-reference-rank" value={rank ?? ""} onChange={(event) => setRank(event.target.value ? event.target.value as DeityRank : null)} disabled={saving} style={{ width: "100%", padding: "10px 11px", borderRadius: theme.radius.control, border: `1px solid ${theme.colors.panelBorder}`, background: theme.colors.inputBg, color: rank ? DEITY_RANK_COLORS[rank] : theme.colors.muted, font: "inherit", fontWeight: 800 }}>
+              <option value="">None</option>
+              {DEITY_RANKS.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
           </div>
         ) : null}
 

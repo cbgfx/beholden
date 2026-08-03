@@ -121,7 +121,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
     const row = db.prepare(`
-      SELECT bpc.mortal_id AS id, br.name, m.gender, m.description, m.backstory,
+      SELECT bpc.mortal_id AS id, br.binder_id AS binderId, b.name AS binderName,
+             br.name, m.gender, COALESCE(m.description,m.backstory) AS backstory,
              m.image_url AS imageUrl, m.birth_date_sort AS birthDateSort,
              COALESCE(c.current_date_sort, b.current_date_sort) AS referenceYear,
              uc.character_data_json AS characterData
@@ -142,9 +143,99 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const calculatedAge = row.referenceYear != null && row.birthDateSort != null
       ? Number(row.referenceYear) - Number(row.birthDateSort) : null;
     res.json({
-      id: row.id, name: row.name, gender: row.gender, description: row.description,
-      backstory: row.backstory, imageUrl: row.imageUrl,
+      id: row.id, binderId: row.binderId, binderName: row.binderName,
+      name: row.name, gender: row.gender, backstory: row.backstory, imageUrl: row.imageUrl,
       age: Number.isFinite(storedAge) ? storedAge : calculatedAge,
+    });
+  });
+
+  app.get("/api/me/characters/:id/binder", requireAuth, (req, res) => {
+    const charId = requireParam(req, res, "id");
+    if (!charId) return;
+    const access = db.prepare(`
+      SELECT b.id AS binderId, b.name AS binderName, b.color, b.current_date_sort AS currentDateSort,
+             bpc.mortal_id AS linkedMortalId
+      FROM user_characters uc
+      JOIN binder_player_characters bpc ON bpc.character_id=uc.id
+      JOIN binder_records linked_record ON linked_record.id=bpc.mortal_id
+      JOIN binders b ON b.id=linked_record.binder_id
+      WHERE uc.id=? AND uc.user_id=?
+    `).get(charId, req.user!.userId) as { binderId: string; binderName: string; color: string; currentDateSort: number | null; linkedMortalId: string } | undefined;
+    if (!access) return res.status(404).json({ ok: false, message: "Linked Binder not found" });
+    const mortals = db.prepare(`
+      SELECT m.id, br.name, br.visibility, m.mortal_type AS mortalType,
+             race.name AS species, m.gender, m.life_status AS lifeStatus,
+             m.birth_date_text AS birthDate, m.birth_date_sort AS birthDateSort,
+             m.death_date_sort AS deathDateSort, m.description, m.backstory,
+             m.image_url AS imageUrl, m.image_updated_at AS imageUpdatedAt,
+             location.name AS location,
+             organization.name AS organization,
+             organization_details.icon AS organizationIcon,
+             position.name AS position,
+             position_details.icon AS positionIcon
+      FROM mortals m
+      JOIN binder_records br ON br.id=m.id
+      LEFT JOIN binder_records race ON race.id=m.race_id
+      LEFT JOIN binder_records location ON location.id=m.residence_record_id
+      LEFT JOIN organization_memberships membership ON membership.mortal_id=m.id AND membership.is_primary=1
+      LEFT JOIN binder_records organization ON organization.id=membership.organization_id
+      LEFT JOIN binder_organizations organization_details ON organization_details.id=membership.organization_id
+      LEFT JOIN binder_records position ON position.id=COALESCE(membership.position_id,m.position_id)
+      LEFT JOIN binder_positions position_details ON position_details.id=COALESCE(membership.position_id,m.position_id)
+      WHERE br.binder_id=? AND (br.visibility='public' OR m.id=?)
+      ORDER BY br.name_key, br.id
+    `).all(access.binderId, access.linkedMortalId) as Array<Record<string, unknown>>;
+    const campaigns = db.prepare(`
+      SELECT DISTINCT c.id, c.name, COALESCE(c.current_date_text,b.current_date_text) AS currentDate,
+             c.campaign_story AS story
+      FROM players p
+      JOIN campaigns c ON c.id=p.campaign_id
+      JOIN binders b ON b.id=c.binder_id
+      WHERE p.character_id=? AND c.binder_id=?
+      ORDER BY c.name COLLATE NOCASE, c.id
+    `).all(charId, access.binderId) as Array<Record<string, unknown>>;
+    const publicRecords = db.prepare(`
+      SELECT br.id, br.record_type AS type, br.name,
+             COALESCE(deity.description,continent.description,country.description,location.description,poi.description) AS description,
+             deity.rank, deity.image_url AS imageUrl, deity.image_updated_at AS imageUpdatedAt,
+             CASE WHEN br.record_type='deity' THEN (
+               SELECT GROUP_CONCAT(domain_record.name, '||')
+               FROM deity_domains dd
+               JOIN binder_records domain_record ON domain_record.id=dd.domain_id
+               WHERE dd.deity_id=br.id
+               ORDER BY domain_record.name_key
+             ) END AS domains,
+             COALESCE(country_parent.name,location_parent.name,poi_parent.name) AS parentName,
+             poi.icon
+      FROM binder_records br
+      LEFT JOIN deities deity ON deity.id=br.id
+      LEFT JOIN binder_continents continent ON continent.id=br.id
+      LEFT JOIN binder_countries country ON country.id=br.id
+      LEFT JOIN binder_locations location ON location.id=br.id
+      LEFT JOIN binder_points_of_interest poi ON poi.id=br.id
+      LEFT JOIN binder_records country_parent ON country_parent.id=country.continent_id
+      LEFT JOIN binder_records location_parent ON location_parent.id=location.country_id
+      LEFT JOIN binder_records poi_parent ON poi_parent.id=COALESCE(poi.location_id,poi.country_id,poi.parent_poi_id)
+      WHERE br.binder_id=? AND br.visibility='public'
+        AND br.record_type IN ('deity','continent','country','location','poi')
+      ORDER BY br.record_type,br.name_key,br.id
+    `).all(access.binderId) as Array<Record<string, unknown>>;
+    res.json({
+      binder: { id: access.binderId, name: access.binderName, color: access.color, currentDateSort: access.currentDateSort },
+      linkedMortalId: access.linkedMortalId,
+      campaigns,
+      deities: publicRecords.filter((record) => record.type === "deity").map((record) => ({
+        ...record,
+        domains: record.domains ? String(record.domains).split("||") : [],
+      })),
+      places: publicRecords.filter((record) => record.type !== "deity"),
+      mortals: mortals.map((mortal) => ({
+        ...mortal,
+        age: mortal.birthDateSort != null && (mortal.deathDateSort != null || access.currentDateSort != null)
+          ? Math.max(0, Number(mortal.deathDateSort ?? access.currentDateSort) - Number(mortal.birthDateSort))
+          : null,
+        imageUrl: mortal.imageUrl ? String(mortal.imageUrl) : null,
+      })),
     });
   });
 
@@ -161,10 +252,13 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const t = now();
     db.transaction(() => {
       const current = db.prepare("SELECT gender,description,backstory FROM mortals WHERE id=?").get(linked.mortalId) as Record<string, unknown>;
-      db.prepare("UPDATE mortals SET gender=?,description=?,backstory=?,updated_at=? WHERE id=?").run(
+      db.prepare("UPDATE mortals SET gender=?,description=?,backstory=NULL,updated_at=? WHERE id=?").run(
         body.gender !== undefined ? body.gender : current.gender,
-        body.description !== undefined ? body.description : current.description,
-        body.backstory !== undefined ? body.backstory : current.backstory,
+        body.backstory !== undefined
+          ? body.backstory
+          : body.description !== undefined
+            ? body.description
+            : current.description ?? current.backstory,
         t, linked.mortalId,
       );
       if (body.age !== undefined) {

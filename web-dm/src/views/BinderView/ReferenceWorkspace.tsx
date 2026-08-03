@@ -33,6 +33,15 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import { EntityIcon, IconPicker, getDefaultEntityIcon, ICON_ENABLED_REFERENCE_TYPES } from "@/components/iconPicker";
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
+import { RelatedRecordsPanel } from "./RelatedRecordsPanel";
+
+function VisibilityIcon({ visible, size = 18 }: { visible: boolean; size?: number }) {
+  return visible ? (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+  ) : (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="m3 3 18 18"/><path d="M10.6 6.2A11.8 11.8 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-2.1 2.8M6.6 6.6C3.5 8.4 2 12 2 12s3.5 6 10 6c1.6 0 3-.4 4.2-1"/></svg>
+  );
+}
 
 type ReferenceSortKey = "name" | "middle" | "usage";
 
@@ -350,6 +359,7 @@ export function ReferenceWorkspace(props: {
         : undefined;
 
   const selected = props.recordId ? records.find((record) => record.id === props.recordId) : undefined;
+  const isPlaceType = ["continents", "countries", "locations", "points-of-interest"].includes(props.type);
   const validMentionIds = useValidMentionIds(props.binderId, selected?.description);
 
   useEffect(() => {
@@ -375,6 +385,7 @@ export function ReferenceWorkspace(props: {
           : selected.description,
         ...(changes.icon !== undefined ? { icon: changes.icon } : {}),
         ...(changes.rank !== undefined ? { rank: changes.rank } : {}),
+        ...(changes.visibility !== undefined ? { visibility: changes.visibility } : {}),
       });
       if (changes.description !== undefined) {
         await syncBinderMentions(props.binderId, selected.id, "description", changes.description?.trim() || null);
@@ -429,8 +440,8 @@ export function ReferenceWorkspace(props: {
     return (
       <>
         <div style={{ display: "grid", gap: 16 }}>
-          <button type="button" onClick={() => navigate(`/binder/${props.binderId}/${props.type}`)} style={{ width: "fit-content", border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: 0, fontSize: "var(--fs-medium)" }}>
-            ← All {labels.plural}
+          <button type="button" onClick={() => navigate(`/binder/${props.binderId}/${isPlaceType ? "places" : props.type}`)} style={{ width: "fit-content", border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: 0, fontSize: "var(--fs-medium)" }}>
+            ← All {isPlaceType ? "Places" : labels.plural}
           </button>
           <article style={{ border: `1px solid ${withAlpha(props.accent, 0.3)}`, borderRadius: theme.radius.panel, background: theme.colors.panelBg, overflow: "hidden" }}>
             <div style={{ height: 4, background: props.accent }} />
@@ -467,6 +478,16 @@ export function ReferenceWorkspace(props: {
                 </div>
                 {props.canEdit ? (
                   <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      type="button"
+                      aria-label={selected.visibility === "public" ? `Make ${labels.singular} private` : `Make ${labels.singular} public`}
+                      title={selected.visibility === "public" ? "Public — click to make private" : "Private — click to make public"}
+                      disabled={inlineSaving}
+                      onClick={() => void saveInline({ visibility: selected.visibility === "public" ? "dm" : "public" })}
+                      style={{ width: 38, height: 36, display: "grid", placeItems: "center", padding: 0, borderRadius: theme.radius.control, border: `1px solid ${selected.visibility === "public" ? withAlpha(props.accent, 0.65) : theme.colors.panelBorder}`, background: selected.visibility === "public" ? withAlpha(props.accent, 0.16) : "transparent", color: selected.visibility === "public" ? props.accent : theme.colors.muted, cursor: inlineSaving ? "default" : "pointer" }}
+                    >
+                      <VisibilityIcon visible={selected.visibility === "public"} size={19} />
+                    </button>
                     <Button variant="danger" onClick={() => void remove(selected)}>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><IconTrash size={15} /> Delete</span>
                     </Button>
@@ -492,32 +513,16 @@ export function ReferenceWorkspace(props: {
               {isDeities ? (
                 <section>
                   <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>Rank</div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 7 }}>
-                    {DEITY_RANKS.map((rank) => {
-                      const active = selected.rank === rank;
-                      const color = DEITY_RANK_COLORS[rank];
-                      return (
-                        <button
-                          key={rank}
-                          type="button"
-                          disabled={!props.canEdit}
-                          onClick={() => void saveInline({ rank: active ? null : rank })}
-                          style={{
-                            padding: "4px 12px",
-                            borderRadius: 999,
-                            border: `1.5px solid ${color}`,
-                            background: active ? color : withAlpha(color, 0.14),
-                            color: active ? "#0b0e14" : color,
-                            fontWeight: 800,
-                            fontSize: "var(--fs-small)",
-                            cursor: props.canEdit ? "pointer" : "default",
-                          }}
-                        >
-                          {rank}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {props.canEdit ? <select
+                    aria-label="Deity rank"
+                    value={selected.rank ?? ""}
+                    disabled={inlineSaving}
+                    onChange={(event) => void saveInline({ rank: event.target.value ? event.target.value as typeof selected.rank : null })}
+                    style={{ width: "min(280px, 100%)", marginTop: 7, padding: "9px 11px", borderRadius: theme.radius.control, border: `1px solid ${theme.colors.panelBorder}`, background: theme.colors.inputBg, color: selected.rank ? DEITY_RANK_COLORS[selected.rank] : theme.colors.muted, font: "inherit", fontWeight: 800, cursor: inlineSaving ? "default" : "pointer" }}
+                  >
+                    <option value="">None</option>
+                    {DEITY_RANKS.map((rank) => <option key={rank} value={rank}>{rank}</option>)}
+                  </select> : <div style={{ marginTop: 7, fontWeight: 800, color: selected.rank ? DEITY_RANK_COLORS[selected.rank] : theme.colors.muted }}>{selected.rank ?? "None"}</div>}
                 </section>
               ) : null}
               {showDescription ? (
@@ -580,13 +585,8 @@ export function ReferenceWorkspace(props: {
                   canEdit={props.canEdit}
                   onChanged={reload}
                 />
-              ) : (
-                <section>
-                  <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>{labels.usage}</div>
-                  <div style={{ fontSize: "var(--fs-body)", marginTop: 7 }}>{selected.usageCount || "None"}</div>
-                </section>
-              )}
-              {/* RelationshipPanel hidden pending redesign — see RelationshipPanel.tsx */}
+              ) : null}
+              <RelatedRecordsPanel binderId={props.binderId} recordId={selected.id} />
               <BacklinksPanel binderId={props.binderId} recordId={selected.id} />
             </div>
           </article>

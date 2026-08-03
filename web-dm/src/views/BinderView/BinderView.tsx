@@ -9,11 +9,8 @@ import {
   IconPlayer,
   IconShield,
   IconSpells,
-  IconTargeted,
   IconGreekTemple,
   IconOrganigram,
-  IconAntarctica,
-  IconFlyingFlag,
   IconVillage,
   IconDna1,
 } from "@/icons";
@@ -30,6 +27,7 @@ import { BinderMembersPanel } from "@/views/BinderView/BinderMembersPanel";
 import { BinderGlobalSearch } from "@/views/BinderView/BinderGlobalSearch";
 import { BinderDashboardView } from "@/views/BinderView/BinderDashboard";
 import { BinderHealthWorkspace } from "@/views/BinderView/BinderHealthWorkspace";
+import { PlacesWorkspace } from "@/views/BinderView/PlacesWorkspace";
 
 type NavItem = {
   id: string;
@@ -57,10 +55,7 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
   {
     label: "Places",
     items: [
-      { id: "continents", label: "Continents", icon: <IconAntarctica size={20} />, color: "#34d399", columns: ["Name", "Countries", "Description"] },
-      { id: "countries", label: "Countries", icon: <IconFlyingFlag size={20} />, color: "#2dd4bf", columns: ["Name", "Continent", "Locations", "Description"] },
-      { id: "locations", label: "Locations", icon: <IconVillage size={20} />, color: "#22c55e", columns: ["Name", "Country", "Residents", "Description"] },
-      { id: "points-of-interest", label: "Points of Interest", icon: <IconTargeted size={20} />, color: "#84cc16", columns: ["Name", "Parent", "Type", "Description"] },
+      { id: "places", label: "Places", icon: <IconVillage size={20} />, color: "#22c55e", columns: ["Name", "Type", "Parent", "Related"] },
     ],
   },
   {
@@ -158,7 +153,10 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
   const routeSection = location.pathname.split("/")[3] ?? "overview";
   const routeRecordId = location.pathname.split("/")[4];
-  const activeItem = ALL_ITEMS.find((item) => item.id === routeSection);
+  const routedPlaceType = REFERENCE_TYPES.has(routeSection as BinderReferenceType) && ["continents", "countries", "locations", "points-of-interest"].includes(routeSection)
+    ? routeSection as BinderReferenceType
+    : null;
+  const activeItem = routedPlaceType ? ALL_ITEMS.find((item) => item.id === "places") : ALL_ITEMS.find((item) => item.id === routeSection);
   const selectedCampaign = routeSection === "campaigns" && routeRecordId
     ? campaigns.find((campaign) => campaign.id === routeRecordId)
     : undefined;
@@ -174,7 +172,10 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
             top: 20,
             alignSelf: "start",
             display: "grid",
+            gridTemplateRows: "auto minmax(0, 1fr) auto",
             gap: 14,
+            maxHeight: "calc(100dvh - 190px)",
+            minHeight: 0,
             padding: 14,
             borderRadius: theme.radius.panel,
             border: `1px solid ${withAlpha(accent, 0.14)}`,
@@ -187,8 +188,8 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
             <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{binder.name}</span>
           </Link>
 
-          <nav style={{ display: "grid", gap: 15 }}>
-            {NAV_GROUPS.map((group, groupIndex) => (
+          <nav style={{ display: "grid", gap: 15, minHeight: 0, overflowY: "auto", scrollbarGutter: "stable", paddingRight: 3 }}>
+            {NAV_GROUPS.filter((group) => group.label !== "Maintenance").map((group, groupIndex) => (
               <div key={`${group.label}-${groupIndex}`} style={{ display: "grid", gap: 4 }}>
                 {group.label ? (
                   <div style={{ padding: "2px 10px 5px", color: "rgba(232,237,245,0.55)", fontSize: "var(--fs-small)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -196,7 +197,7 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
                   </div>
                 ) : null}
                 {group.items.map((item) => {
-                  const active = routeSection === item.id;
+                  const active = routeSection === item.id || (item.id === "places" && Boolean(routedPlaceType));
                   const hovered = hoveredNav === item.id;
                   return (
                     <Link
@@ -242,6 +243,17 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
               </div>
             ))}
           </nav>
+
+          <div style={{ display: "grid", gap: 4, paddingTop: 8, borderTop: `1px solid ${withAlpha(accent, 0.16)}`, background: "rgba(7,12,22,0.96)" }}>
+            <div style={{ padding: "2px 10px 5px", color: "rgba(232,237,245,0.55)", fontSize: "var(--fs-small)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em" }}>Maintenance</div>
+            {NAV_GROUPS.find((group) => group.label === "Maintenance")!.items.map((item) => {
+              const active = routeSection === item.id;
+              const hovered = hoveredNav === item.id;
+              return <Link key={item.id} to={`/binder/${binder.id}/${item.id}`} onMouseEnter={() => setHoveredNav(item.id)} onMouseLeave={() => setHoveredNav(null)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: theme.radius.control, color: active || hovered ? theme.colors.text : "rgba(232,237,245,0.76)", background: active ? `linear-gradient(90deg, ${withAlpha(accent, 0.12)}, ${withAlpha(accent, 0.025)} 30%, transparent 62%), ${withAlpha(theme.colors.shadowColor, 0.14)}` : hovered ? withAlpha(accent, 0.08) : "transparent", border: `1px solid ${hovered && !active ? withAlpha(accent, 0.2) : "transparent"}`, boxShadow: active ? `inset 3px 0 0 ${withAlpha(accent, 0.78)}` : "none", textDecoration: "none", fontSize: "var(--fs-body)", fontWeight: active ? 760 : 520, transition: "background 140ms ease, border-color 140ms ease, color 140ms ease" }}>
+                <span style={{ color: item.color, display: "grid", opacity: active || hovered ? 1 : 0.82 }}>{item.icon}</span>{item.label}
+              </Link>;
+            })}
+          </div>
         </aside>
 
         <main style={{ minWidth: 0, display: "grid", alignContent: "start", gap: 16 }}>
@@ -263,7 +275,7 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
             </>
           ) : activeItem.id === "campaigns" ? (
             selectedCampaign
-              ? <BinderCampaignWorkspace campaign={selectedCampaign} accent={activeItem.color} />
+              ? <BinderCampaignWorkspace binderId={binder.id} campaign={selectedCampaign} binderCurrentDate={binder.currentDate.text} accent={activeItem.color} />
               : <CampaignTable binderId={binder.id} campaigns={campaigns} accent={accent} />
           ) : activeItem.id === "mortals" ? (
             <MortalWorkspace binderId={binder.id} binderCurrentDate={binder.currentDate.sort} recordId={routeRecordId} accent={activeItem.color} canEdit={canEdit} onRecordsChanged={onRecordsChanged} />
@@ -271,6 +283,10 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
             <BinderPlayersWorkspace binderId={binder.id} binderCurrentDate={binder.currentDate.sort} accent={activeItem.color} />
           ) : activeItem.id === "health" ? (
             <BinderHealthWorkspace binderId={binder.id} accent={activeItem.color} />
+          ) : activeItem.id === "places" && !routedPlaceType ? (
+            <PlacesWorkspace binderId={binder.id} accent={activeItem.color} canEdit={canEdit} onRecordsChanged={onRecordsChanged} />
+          ) : activeItem.id === "places" && routedPlaceType ? (
+            <ReferenceWorkspace binderId={binder.id} type={routedPlaceType} recordId={routeRecordId} accent={activeItem.color} canEdit={canEdit} onRecordsChanged={onRecordsChanged} />
           ) : REFERENCE_TYPES.has(activeItem.id as BinderReferenceType) ? (
             <ReferenceWorkspace
               binderId={binder.id}

@@ -23,10 +23,11 @@ Player-facing Binder is the next planned product phase.
 Explicitly on hold:
 
 - expanded Organization membership/Position-history workflows;
-- expanded Place hierarchy browsing, reparenting, and generated descendant views.
+- advanced Place hierarchy management: bulk/drag-and-drop reparenting and generated descendant trees.
 
-The existing Organization memberships and Place hierarchy remain supported; the
-hold applies only to deeper UI and workflow expansion.
+The existing Organization memberships and Place hierarchy remain supported. A
+unified Places workspace and collapsed generated Related Records view are now
+implemented; the hold applies only to deeper hierarchy-management workflows.
 
 ### Next product phase
 

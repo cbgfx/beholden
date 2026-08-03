@@ -11,6 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@iconify-json/game-icons": "^1.2.4",
+    "@iconify/react": "^6.0.2",
     "@beholden/shared": "*",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

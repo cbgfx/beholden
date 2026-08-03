@@ -5,6 +5,7 @@ export type MortalType = "npc" | "player_character";
 export type BinderMortal = {
   id: string;
   binderId: string;
+  visibility: "dm" | "campaign" | "public";
   name: string;
   mortalType: MortalType;
   race: { id: string; name: string } | null;
@@ -63,6 +64,7 @@ export type BinderMortalInput = {
   ac?: number;
   acDetails?: string | null;
   attackOverrides?: Record<string, { toHit?: number; damage?: string; damageType?: string }> | null;
+  visibility?: "dm" | "public";
 };
 
 export type MortalOptions = {

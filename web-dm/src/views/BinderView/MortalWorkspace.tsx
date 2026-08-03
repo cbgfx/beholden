@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { resolveAssetUrl } from "@/services/api";
-import { IconCakeSlice, IconDna1, IconOrganigram, IconPencil, IconPlayer, IconPlus, IconShield, IconTrash, IconVillage } from "@/icons";
+import { IconCakeSlice, IconDna1, IconGender, IconOrganigram, IconPencil, IconPlayer, IconPlus, IconShield, IconTrash, IconVillage } from "@/icons";
 import { EntityIcon } from "@/components/iconPicker/EntityIcon";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
@@ -16,11 +16,19 @@ import { fetchBinderRecordOptions, syncBinderMentions, type BinderRecordOption }
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
 
-const mortalTableColumns = "minmax(210px, 1.45fr) minmax(135px, 0.85fr) minmax(170px, 1fr) minmax(175px, 1fr) 130px 72px 96px 72px";
+const mortalTableColumns = "minmax(210px, 1.45fr) minmax(135px, 0.85fr) minmax(170px, 1fr) minmax(175px, 1fr) 130px 72px 96px 72px 38px";
 const NONE_FILTER = "__none__";
 
 function OrganizationIcon(props: { icon?: string | null; size: number }) {
   return props.icon ? <EntityIcon icon={props.icon} size={props.size} /> : <IconOrganigram size={props.size} />;
+}
+
+function VisibilityIcon({ visible, size = 18 }: { visible: boolean; size?: number }) {
+  return visible ? (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+  ) : (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="m3 3 18 18"/><path d="M10.6 6.2A11.8 11.8 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-2.1 2.8M6.6 6.6C3.5 8.4 2 12 2 12s3.5 6 10 6c1.6 0 3-.4 4.2-1"/></svg>
+  );
 }
 type MortalSortKey = "name" | "position" | "organization" | "location" | "species" | "age" | "gender" | "status";
 
@@ -362,7 +370,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
       ...(selected.personal?.hair ? [{ key: "hair", icon: null, label: "Hair", node: selected.personal.hair as React.ReactNode }] : []),
       ...(selected.personal?.skin ? [{ key: "skin", icon: null, label: "Skin", node: selected.personal.skin as React.ReactNode }] : []),
       {
-        key: "gender", icon: <EntityIcon icon="game-icons:logic-gate-or" size={16} />, label: "Gender",
+        key: "gender", icon: <IconGender size={16} />, label: "Gender",
         node: genderColor
           ? <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: genderColor, background: withAlpha(genderColor, 0.16), fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 750 }}>{selected.gender === "male" ? "Male" : "Female"}</span>
           : <span style={{ color: theme.colors.red }}>Needs gender</span>,
@@ -378,6 +386,10 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     const mentions = loreRecords.filter((row) => row.id !== selected.id).map((row) => ({
       id: row.id, label: row.name, href: row.route, type: row.type,
     }));
+    const iconActionStyle = {
+      width: 42, height: 38, padding: 0, borderRadius: theme.radius.control,
+      display: "grid", placeItems: "center", cursor: "pointer",
+    } as const;
     return <>
       <div style={{ display: "grid", gap: 16 }}>
         <button type="button" onClick={() => navigate(`/binder/${props.binderId}/mortals`)} style={{ width: "fit-content", border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: 0, fontSize: "var(--fs-medium)" }}>← All Mortals</button>
@@ -394,8 +406,9 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
                 <h2 style={{ margin: 0, fontSize: "calc(var(--fs-hero) * 0.9)" }}>{selected.name}</h2>
               </div>
               {props.canEdit ? <div style={{ display: "flex", gap: 8 }}>
-                <Button variant="ghost" onClick={() => setModalRecord(selected)}><span style={{ display: "inline-flex", gap: 7 }}><IconPencil size={15} /> Edit</span></Button>
-                <Button variant="danger" onClick={() => void remove(selected)}><span style={{ display: "inline-flex", gap: 7 }}><IconTrash size={15} /> Delete</span></Button>
+                <button type="button" aria-label={selected.visibility === "public" ? "Make Mortal private" : "Make Mortal public"} title={selected.visibility === "public" ? "Public — click to make private" : "Private — click to make public"} onClick={async () => { await updateBinderMortal(props.binderId, selected.id, { visibility: selected.visibility === "public" ? "dm" : "public" }); await reload(); await props.onRecordsChanged(); }} style={{ ...iconActionStyle, border: `1px solid ${selected.visibility === "public" ? withAlpha(props.accent, 0.65) : theme.colors.panelBorder}`, background: selected.visibility === "public" ? withAlpha(props.accent, 0.16) : "transparent", color: selected.visibility === "public" ? props.accent : theme.colors.muted }}><VisibilityIcon visible={selected.visibility === "public"} size={19} /></button>
+                <button type="button" aria-label="Edit Mortal" title="Edit" onClick={() => setModalRecord(selected)} style={{ ...iconActionStyle, border: `1px solid ${theme.colors.panelBorder}`, background: "transparent", color: theme.colors.text }}><IconPencil size={17} /></button>
+                <button type="button" aria-label="Delete Mortal" title="Delete" onClick={() => void remove(selected)} style={{ ...iconActionStyle, border: `1px solid ${withAlpha(theme.colors.red, 0.65)}`, background: theme.colors.red, color: "#101521" }}><IconTrash size={17} /></button>
               </div> : null}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", columnGap: 30, rowGap: 0 }}>
@@ -418,7 +431,6 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
               await syncBinderMentions(props.binderId, selected.id, "dm_notes", dmNotes);
               await reload();
             }} />
-            {/* RelationshipPanel hidden pending redesign — see RelationshipPanel.tsx */}
             <BacklinksPanel binderId={props.binderId} recordId={selected.id} />
           </div>
         </article>
@@ -497,6 +509,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
             { key: "age", label: "Age", sortable: true },
             { key: "gender", label: "Gender", sortable: true },
             { key: "status", label: "Status", sortable: true },
+            { key: "visibility", label: "" },
           ]}
           gridTemplateColumns={mortalTableColumns}
           accent={props.accent}
@@ -510,7 +523,8 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
             const age = mortalAge(record, props.binderCurrentDate);
             const genderColor = record.gender === "male" ? "#7dd3fc" : record.gender === "female" ? "#f9a8d4" : null;
             const cell = { color: theme.colors.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
-            return <button key={record.id} type="button" onClick={() => navigate(`/binder/${props.binderId}/mortals/${record.id}`)} onMouseEnter={() => setHoveredId(record.id)} onMouseLeave={() => setHoveredId(null)} style={{ minWidth: 1120, width: "100%", display: "grid", gridTemplateColumns: mortalTableColumns, alignItems: "center", gap: 12, padding: "11px 15px", border: 0, borderTop: `1px solid ${theme.colors.panelBorder}`, background: hoveredId === record.id ? withAlpha(props.accent, 0.08) : "transparent", color: theme.colors.text, textAlign: "left", cursor: "pointer", font: "inherit" }}>
+            const open = () => navigate(`/binder/${props.binderId}/mortals/${record.id}`);
+            return <div key={record.id} role="button" tabIndex={0} onClick={open} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") open(); }} onMouseEnter={() => setHoveredId(record.id)} onMouseLeave={() => setHoveredId(null)} style={{ minWidth: 1160, width: "100%", display: "grid", gridTemplateColumns: mortalTableColumns, alignItems: "center", gap: 12, padding: "11px 15px", border: 0, borderTop: `1px solid ${theme.colors.panelBorder}`, background: hoveredId === record.id ? withAlpha(props.accent, 0.08) : "transparent", color: theme.colors.text, textAlign: "left", cursor: "pointer", font: "inherit" }}>
               <span title={record.name} style={{ ...cell, color: theme.colors.text, fontWeight: 750, display: "flex", alignItems: "center", gap: 9 }}>
                 <BinderRecordThumbnail imageUrl={record.imageUrl} imageUpdatedAt={record.imageUpdatedAt} accent={props.accent} />
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{record.name}</span>
@@ -528,7 +542,8 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
               <span style={cell}>{age ?? "None"}</span>
               <span>{genderColor ? <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: genderColor, background: withAlpha(genderColor, 0.16), fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 750 }}>{record.gender === "male" ? "Male" : "Female"}</span> : <span style={{ ...cell, color: theme.colors.red }}>Needs gender</span>}</span>
               <span style={{ justifySelf: "start", display: "inline-flex", padding: "2px 7px", borderRadius: 5, color: "#fff", background: record.lifeStatus === "dead" ? theme.colors.red : theme.colors.green, fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 800 }}>{record.lifeStatus === "dead" ? "Dead" : "Alive"}</span>
-            </button>;
+              {props.canEdit ? <button type="button" aria-label={`${record.visibility === "public" ? "Make private" : "Make public"}: ${record.name}`} title={record.visibility === "public" ? "Public — click to make private" : "Private — click to make public"} onClick={async (event) => { event.stopPropagation(); await updateBinderMortal(props.binderId, record.id, { visibility: record.visibility === "public" ? "dm" : "public" }); await reload(); await props.onRecordsChanged(); }} style={{ width: 32, height: 30, display: "grid", placeItems: "center", padding: 0, borderRadius: 7, border: `1px solid ${record.visibility === "public" ? withAlpha(props.accent, 0.65) : theme.colors.panelBorder}`, background: record.visibility === "public" ? withAlpha(props.accent, 0.16) : "rgba(255,255,255,0.03)", color: record.visibility === "public" ? props.accent : theme.colors.muted, cursor: "pointer" }}><VisibilityIcon visible={record.visibility === "public"} /></button> : <span />}
+            </div>;
           }) : <BinderListEmpty>{records.length ? "No Mortals match the current filters." : query ? "No Mortals match your search." : "No Mortals yet."}</BinderListEmpty>}
       </div>
     </div>

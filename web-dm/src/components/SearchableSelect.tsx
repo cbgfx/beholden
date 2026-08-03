@@ -9,6 +9,8 @@ import { useEffect, useState } from "react";
 import { Input } from "@/ui/Input";
 import { theme } from "@/theme/theme";
 import { EntityIcon } from "@/components/iconPicker";
+import { SearchableMultiFilter as SharedSearchableMultiFilter } from "@beholden/shared/ui";
+import { dmSharedInputTheme } from "@/ui/sharedUiTheme";
 
 export type SearchableSelectOption = {
   id: string;
@@ -127,37 +129,5 @@ export function SearchableMultiFilter(props: {
   onAdd: (value: string) => void;
   width?: number;
 }) {
-  const display = `${props.label}: ${props.selected.length ? "Add…" : "All"}`;
-  const [query, setQuery] = useState(display);
-  const [open, setOpen] = useState(false);
-  useEffect(() => setQuery(display), [display]);
-  const needle = query === display ? "" : query.trim().toLocaleLowerCase();
-  const filtered = props.options
-    .filter((option) => !props.selected.includes(option.value) && option.label.toLocaleLowerCase().includes(needle))
-    .slice(0, 20);
-
-  return (
-    <div style={{ position: "relative", width: props.width ?? 165 }}>
-      <Input
-        value={query}
-        aria-label={props.label}
-        autoComplete="off"
-        onFocus={(event) => { setOpen(true); event.currentTarget.select(); }}
-        onClick={(event) => { setOpen(true); event.currentTarget.select(); }}
-        onBlur={() => window.setTimeout(() => { setOpen(false); setQuery(display); }, 120)}
-        onChange={(event) => { setQuery(event.target.value); setOpen(true); }}
-        style={{ width: "100%" }}
-      />
-      {open ? (
-        <div style={{ position: "absolute", zIndex: 220, top: "calc(100% + 4px)", left: 0, width: "max-content", minWidth: "100%", maxWidth: 300, maxHeight: 260, overflowY: "auto", padding: 4, border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.control, background: "#0d1525", boxShadow: "0 12px 28px rgba(0,0,0,.65)" }}>
-          {filtered.map((option) => (
-            <button key={option.value} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { props.onAdd(option.value); setOpen(false); }} style={{ display: "block", width: "100%", padding: "8px 10px", border: 0, borderRadius: 6, background: "transparent", color: theme.colors.text, textAlign: "left", cursor: "pointer", font: "inherit", whiteSpace: "nowrap" }}>
-              {option.label}
-            </button>
-          ))}
-          {!filtered.length ? <div style={{ padding: "8px 10px", color: theme.colors.muted }}>No matches</div> : null}
-        </div>
-      ) : null}
-    </div>
-  );
+  return <SharedSearchableMultiFilter {...props} theme={{ ...dmSharedInputTheme, muted: theme.colors.muted }} />;
 }

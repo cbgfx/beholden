@@ -202,7 +202,6 @@ export function BinderLoreWorkspace(props: {
             navigate(`/binder/${props.binderId}/${props.type}`); await reload(); await props.onRecordsChanged();
           }}>Delete</Button></div> : null}</header>
         {"description" in selected && selected.description ? <MarkdownRichText text={selected.description} validMentionIds={validMentionIds} /> : null}
-        {/* RelationshipPanel hidden pending redesign — see RelationshipPanel.tsx */}
         <BacklinksPanel binderId={props.binderId} recordId={selected.id} />
       </article>
       {editor ? props.type === "items"

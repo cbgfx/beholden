@@ -43,6 +43,7 @@ const MortalBody = z.object({
   attackOverrides: z.record(z.string(), z.object({
     toHit: z.number().optional(), damage: z.string().optional(), damageType: z.string().optional(),
   }).strict()).nullable().optional(),
+  visibility: z.enum(["dm", "public"]).optional(),
 }).strict();
 
 const MortalPatchBody = MortalBody.partial().refine(
@@ -53,6 +54,7 @@ const MortalPatchBody = MortalBody.partial().refine(
 type MortalRow = {
   id: string;
   binder_id: string;
+  visibility: "dm" | "campaign" | "public";
   name: string;
   mortal_type: "npc" | "player_character";
   race_id: string | null;
@@ -124,7 +126,7 @@ function resolveImportedBinderLinks(value: string | null, binderId: string, db: 
 }
 
 const SELECT_MORTAL = `
-  SELECT m.id, br.binder_id, br.name, m.mortal_type, m.race_id,
+  SELECT m.id, br.binder_id, br.name, br.visibility, m.mortal_type, m.race_id,
          race_record.name AS race_name, m.gender, m.life_status,
          m.birth_date_text, m.death_date_text, m.residence_record_id,
          location_record.name AS location_name, m.class_name, m.description, m.backstory,
@@ -210,6 +212,7 @@ function dto(row: MortalRow, db: ServerContext["db"]) {
   return {
     id: row.id,
     binderId: row.binder_id,
+    visibility: row.visibility,
     name: row.name,
     mortalType: row.mortal_type,
     race: row.race_id ? { id: row.race_id, name: row.race_name! } : null,
@@ -538,9 +541,9 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
       const name = body.name ?? existing.name;
       db.prepare(`
         UPDATE binder_records
-        SET name = ?, name_key = ?, updated_at = ?
+        SET name = ?, name_key = ?, visibility = ?, updated_at = ?
         WHERE id = ? AND binder_id = ?
-      `).run(name, ctx.helpers.normalizeKey(name), now, mortalId, binderId);
+      `).run(name, ctx.helpers.normalizeKey(name), body.visibility ?? existing.visibility, now, mortalId, binderId);
       db.prepare(`
         UPDATE mortals SET
           race_id = ?, gender = ?, life_status = ?, description = ?, dm_notes = ?,

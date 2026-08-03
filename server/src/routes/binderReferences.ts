@@ -92,6 +92,7 @@ const DEITY_RANKS = ["Demi God", "Lesser God", "Greater God", "Overpower"] as co
 
 const ReferenceCreateBody = z.object({
   name: z.string().trim().min(1).max(160),
+  visibility: z.enum(["dm", "public"]).optional(),
   description: optionalDescription,
   parentId: z.string().trim().min(1).nullable().optional(),
   /** Only meaningful for `organizations` — an id from `mortals` in the same Binder. */
@@ -148,6 +149,7 @@ function dto(row: ReferenceRow, links?: { domains?: ReferenceLink[]; deities?: R
     id: row.id,
     binderId: row.binder_id,
     name: row.name,
+    visibility: row.visibility,
     description: row.description,
     parent: parentId(row) ? {
       id: parentId(row)!,
@@ -426,7 +428,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
         INSERT INTO binder_records (
           id, binder_id, record_type, name, name_key, visibility, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(id, binderId, entry.recordType, body.name, ctx.helpers.normalizeKey(body.name), "dm", t, t);
+      `).run(id, binderId, entry.recordType, body.name, ctx.helpers.normalizeKey(body.name), body.visibility ?? "dm", t, t);
       insertTypedRecord(db, entry.table, typeResult.data, id, body.description ?? null, parent, t, leaderId, icon, rank);
     })();
     const row = db.prepare(`${selectSql(typeResult.data)} WHERE r.id = ?`).get(id) as ReferenceRow;
@@ -458,11 +460,12 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     db.transaction(() => {
       db.prepare(`
         UPDATE binder_records
-        SET name = ?, name_key = ?, updated_at = ?
+        SET name = ?, name_key = ?, visibility = ?, updated_at = ?
         WHERE id = ? AND binder_id = ?
       `).run(
         body.name ?? existing.name,
         ctx.helpers.normalizeKey(body.name ?? existing.name),
+        body.visibility ?? existing.visibility,
         t,
         recordId,
         binderId,

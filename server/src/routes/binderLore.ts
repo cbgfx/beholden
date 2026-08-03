@@ -248,6 +248,57 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
     ).all(binderId, ...body.ids) as Array<{ id: string }>;
     res.json({ existingIds: rows.map((row) => row.id) });
   });
+
+  app.get("/api/binders/:binderId/records/:recordId/related", reader, (req, res) => {
+    const binderId = requireParam(req, res, "binderId");
+    const recordId = requireParam(req, res, "recordId");
+    if (!binderId || !recordId) return;
+    const source = ctx.db.prepare("SELECT id FROM binder_records WHERE id=? AND binder_id=?").get(recordId, binderId);
+    if (!source) return res.status(404).json({ ok: false, message: "Binder record not found" });
+
+    type RelatedRow = { id: string; name: string; type: string; relationship: string };
+    const rows = ctx.db.prepare(`
+      SELECT br.id,br.name,br.record_type type,'Residents' relationship FROM mortals m JOIN binder_records br ON br.id=m.id WHERE m.residence_record_id=?
+      UNION ALL SELECT br.id,br.name,br.record_type,'Headquarters' FROM binder_organizations o JOIN binder_records br ON br.id=o.id WHERE o.headquarters_record_id=?
+      UNION ALL SELECT br.id,br.name,br.record_type,'Located Items' FROM binder_items i JOIN binder_records br ON br.id=i.id WHERE i.location_record_id=?
+      UNION ALL SELECT br.id,br.name,br.record_type,'Held Items' FROM binder_items i JOIN binder_records br ON br.id=i.id WHERE i.holder_mortal_id=?
+      UNION ALL SELECT br.id,br.name,br.record_type,'Countries' FROM binder_countries c JOIN binder_records br ON br.id=c.id WHERE c.continent_id=?
+      UNION ALL SELECT br.id,br.name,br.record_type,'Locations' FROM binder_locations l JOIN binder_records br ON br.id=l.id WHERE l.country_id=? OR l.continent_id=?
+      UNION ALL SELECT br.id,br.name,br.record_type,'Points of Interest' FROM binder_points_of_interest p JOIN binder_records br ON br.id=p.id WHERE p.location_id=? OR p.country_id=? OR p.parent_poi_id=?
+      UNION ALL SELECT br.id,br.name,br.record_type,'Events' FROM binder_event_records er JOIN binder_records br ON br.id=er.event_id WHERE er.record_id=?
+      UNION ALL SELECT br.id,br.name,br.record_type,'Mortals' FROM mortals m JOIN binder_records br ON br.id=m.id WHERE m.race_id=?
+      UNION ALL SELECT br.id,br.name,br.record_type,'Members' FROM organization_memberships om JOIN binder_records br ON br.id=om.mortal_id WHERE om.organization_id=?
+      UNION ALL SELECT br.id,br.name,br.record_type,'Position Holders' FROM organization_memberships om JOIN binder_records br ON br.id=om.mortal_id WHERE om.position_id=?
+      UNION ALL SELECT br.id,br.name,br.record_type,'Domains' FROM deity_domains dd JOIN binder_records br ON br.id=dd.domain_id WHERE dd.deity_id=?
+      UNION ALL SELECT br.id,br.name,br.record_type,'Deities' FROM deity_domains dd JOIN binder_records br ON br.id=dd.deity_id WHERE dd.domain_id=?
+      UNION ALL SELECT br.id,br.name,br.record_type,'Led Organizations' FROM binder_organizations o JOIN binder_records br ON br.id=o.id WHERE o.leader_mortal_id=?
+      UNION ALL
+        SELECT br.id,br.name,br.record_type,COALESCE(r.source_label,r.category,'Related')
+        FROM binder_relationships r JOIN binder_records br ON br.id=r.target_record_id
+        WHERE r.binder_id=? AND r.source_record_id=?
+      UNION ALL
+        SELECT br.id,br.name,br.record_type,COALESCE(r.target_label,r.category,'Related')
+        FROM binder_relationships r JOIN binder_records br ON br.id=r.source_record_id
+        WHERE r.binder_id=? AND r.target_record_id=?
+    `).all(
+      recordId, recordId, recordId, recordId, recordId,
+      recordId, recordId,
+      recordId, recordId, recordId,
+      recordId, recordId, recordId, recordId, recordId, recordId, recordId,
+      binderId, recordId, binderId, recordId,
+    ) as RelatedRow[];
+
+    const seen = new Set<string>();
+    res.json(rows
+      .filter((row) => {
+        const key = `${row.relationship}:${row.id}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => a.relationship.localeCompare(b.relationship) || a.name.localeCompare(b.name))
+      .map((row) => ({ ...row, route: routeFor(row.type, binderId, row.id) })));
+  });
   app.get("/api/binders/:binderId/records/:recordId/backlinks", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     const recordId = requireParam(req, res, "recordId");

@@ -4,8 +4,6 @@ import { featPrerequisitesMet, invocationPrerequisitesMet, resolvePactBoonFromCh
 import type { ParsedFeatChoiceLike as LevelUpFeatChoiceLike, ParsedFeatDetailLike as SharedLevelUpFeatDetailLike } from "@/views/character-creator/utils/FeatChoiceTypes";
 import type { ExclusiveGroupReplacementChoice } from "@/views/level-up/LevelUpExclusiveChoiceUtils";
 
-export { buildLevelUpPayload } from "./buildLevelUpPayload";
-
 type LevelUpFeatDetailLike = SharedLevelUpFeatDetailLike<LevelUpFeatChoiceLike> & { id: string };
 
 interface LevelUpTaggedEntry {

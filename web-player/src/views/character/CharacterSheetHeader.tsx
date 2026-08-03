@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { C } from "@/lib/theme";
-import { IconBastions, IconPlayer } from "@/icons";
+import { IconBastions, IconBinder, IconPlayer } from "@/icons";
+import { api } from "@/services/api";
 import { CharacterHudXpPopup } from "@/views/character/CharacterHudXpPopup";
 import { stripEditionTag } from "@/views/character/CharacterViewHelpers";
 
@@ -54,6 +55,7 @@ export function CharacterSheetHeader(props: {
   saveXp: (value: number) => Promise<void>;
 }) {
   const navigate = useNavigate();
+  const [binder, setBinder] = useState<{ binderId: string; binderName: string } | null>(null);
   const {
     character,
     identityLabels,
@@ -76,6 +78,14 @@ export function CharacterSheetHeader(props: {
     setXpPopupOpen,
     saveXp,
   } = props;
+
+  useEffect(() => {
+    let active = true;
+    api<{ binderId: string; binderName: string }>(`/api/me/characters/${character.id}/binder-identity`)
+      .then((value) => { if (active) setBinder({ binderId: value.binderId, binderName: value.binderName }); })
+      .catch(() => { if (active) setBinder(null); });
+    return () => { active = false; };
+  }, [character.id]);
 
   return (
     <nav
@@ -224,6 +234,16 @@ export function CharacterSheetHeader(props: {
           saveXp={saveXp}
           accentColor={accentColor}
         />
+        {binder ? (
+          <button
+            type="button"
+            title={`Open Binder: ${binder.binderName}`}
+            onClick={() => navigate(`/characters/${character.id}/binder`)}
+            style={{ appearance: "none", cursor: "pointer", boxSizing: "border-box", height: 32, padding: "0 11px", borderRadius: 8, border: `1px solid ${accentColor}55`, background: `${accentColor}16`, color: accentColor, display: "inline-flex", alignItems: "center", gap: 7, fontSize: "var(--fs-medium)", fontWeight: 800 }}
+          >
+            <IconBinder size={18} /> Binder
+          </button>
+        ) : null}
       </div>
     </nav>
   );

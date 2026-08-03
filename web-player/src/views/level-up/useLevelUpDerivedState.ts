@@ -303,7 +303,7 @@ export function useLevelUpDerivedState(args: {
       ...slotLevelTriggeredSpellChoices,
       ...mysticArcanumRevisitChoices,
     ],
-    [existingClassSpellNames, nextLevel, maxSpellLevel, parsedNewFeatureEffects, slotLevelTriggeredSpellChoices, mysticArcanumRevisitChoices]
+    [existingClassSpellNames, maxSpellLevel, parsedNewFeatureEffects, slotLevelTriggeredSpellChoices, mysticArcanumRevisitChoices]
   );
   const cantripReplacementCount = React.useMemo(
     () => collectSpellChoicesFromEffects(parsedNewFeatureEffects)

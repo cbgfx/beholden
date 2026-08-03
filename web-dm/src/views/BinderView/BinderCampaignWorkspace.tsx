@@ -5,11 +5,13 @@ import { theme, withAlpha } from "@/theme/theme";
 import type { Campaign } from "@/domain/types/domain";
 import { updateCampaignBinderContent } from "@/services/binderApi";
 import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
+import { fetchBinderRecordOptions, type BinderRecordOption } from "@/services/binderLoreApi";
 
 function CampaignRichText(props: {
   label: string;
   value: string | null;
   accent: string;
+  mentions: Array<{ id: string; label: string; href: string; type?: string }>;
   onSave: (value: string | null) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
@@ -30,6 +32,7 @@ function CampaignRichText(props: {
           <WysiwygNoteEditor
             value={draft}
             onChange={setDraft}
+            mentions={props.mentions}
             placeholder={`Add ${props.label.toLocaleLowerCase()}…`}
             minHeight={300}
             theme={{ radius: theme.radius.control, panelBorder: theme.colors.panelBorder, inputBg: theme.colors.inputBg, text: theme.colors.text }}
@@ -59,13 +62,16 @@ function CampaignRichText(props: {
   );
 }
 
-export function BinderCampaignWorkspace(props: { campaign: Campaign; accent: string }) {
+export function BinderCampaignWorkspace(props: { binderId: string; campaign: Campaign; binderCurrentDate: string | null; accent: string }) {
   const [story, setStory] = useState(props.campaign.campaignStory ?? null);
   const [notes, setNotes] = useState(props.campaign.campaignNotes ?? null);
+  const [records, setRecords] = useState<BinderRecordOption[]>([]);
   useEffect(() => {
     setStory(props.campaign.campaignStory ?? null);
     setNotes(props.campaign.campaignNotes ?? null);
   }, [props.campaign.id, props.campaign.campaignStory, props.campaign.campaignNotes]);
+  useEffect(() => { void fetchBinderRecordOptions(props.binderId).then(setRecords); }, [props.binderId]);
+  const mentions = records.map((record) => ({ id: record.id, label: record.name, href: record.route, type: record.type }));
 
   return (
     <article style={{ maxWidth: 1180, padding: "6px 4px 60px" }}>
@@ -74,16 +80,16 @@ export function BinderCampaignWorkspace(props: { campaign: Campaign; accent: str
         <div>
           <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 750 }}>Campaign</div>
           <div style={{ color: withAlpha(props.accent, 0.85), marginTop: 3 }}>
-            {props.campaign.currentDate?.text ? `Current date: ${props.campaign.currentDate.text}` : "No current date set"}
+            {props.campaign.currentDate?.text || props.binderCurrentDate ? `Current date: ${props.campaign.currentDate?.text ?? props.binderCurrentDate}` : "Current Date"}
           </div>
         </div>
       </div>
       <div style={{ display: "grid", gap: 34 }}>
-        <CampaignRichText label="Campaign Story" value={story} accent={props.accent} onSave={async (campaignStory) => {
+        <CampaignRichText label="Campaign Story" value={story} accent={props.accent} mentions={mentions} onSave={async (campaignStory) => {
           const result = await updateCampaignBinderContent(props.campaign.id, { campaignStory });
           setStory(result.campaignStory);
         }} />
-        <CampaignRichText label="Campaign Notes" value={notes} accent={props.accent} onSave={async (campaignNotes) => {
+        <CampaignRichText label="Campaign Notes" value={notes} accent={props.accent} mentions={mentions} onSave={async (campaignNotes) => {
           const result = await updateCampaignBinderContent(props.campaign.id, { campaignNotes });
           setNotes(result.campaignNotes);
         }} />

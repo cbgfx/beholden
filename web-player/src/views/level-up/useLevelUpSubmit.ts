@@ -3,7 +3,8 @@ import { type NavigateFunction } from "react-router-dom";
 import { api, jsonInit } from "@/services/api";
 import { resolveSelectedSpellOptionEntries } from "@/views/character-creator/utils/SpellChoiceUtils";
 import { buildAcquisitionLevelIndex, tagAcquisitionLevel } from "@/domain/character/spellAcquisition";
-import { buildLevelUpPayload, type BuildLevelUpPayloadArgs } from "@/views/level-up/LevelUpUtils";
+import { buildLevelUpPayload } from "@/views/level-up/buildLevelUpPayload";
+import type { BuildLevelUpPayloadArgs } from "@/views/level-up/LevelUpUtils";
 import type { ExclusiveGroupReplacementChoice } from "@/views/level-up/LevelUpExclusiveChoiceUtils";
 import type {
   AsiMode,

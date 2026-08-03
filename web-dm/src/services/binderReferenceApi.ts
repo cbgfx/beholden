@@ -17,6 +17,7 @@ export const DEITY_RANK_COLORS: Record<DeityRank, string> = {
 export type BinderReferenceRecord = {
   id: string;
   binderId: string;
+  visibility: "dm" | "public";
   name: string;
   description: string | null;
   parent: { id: string; name: string; type: "continent" | "country" | "location" | "poi" } | null;
@@ -40,6 +41,7 @@ export type BinderReferenceRecord = {
 export type BinderReferenceInput = {
   name: string;
   description: string | null;
+  visibility?: "dm" | "public";
   parentId?: string | null;
   /** Only meaningful for `organizations` — a Mortal id from this Binder, or null to clear. */
   leaderId?: string | null;

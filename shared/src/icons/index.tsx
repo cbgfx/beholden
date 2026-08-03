@@ -24,6 +24,7 @@ export type { SvgIconProps };
 export const IconTrash = make("trash");
 export const IconPencil = make("pencil");
 export const IconShield = make("shield");
+export const IconGender = (p: Omit<SvgIconProps, "svg">) => <Icon svg={'<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="5"/><path d="m14 6 5-5M15 1h4v4M10 15v7M7 19h6"/></svg>'} {...p} />;
 export const IconEncounter = make("encounter");
 export const IconWorldAction = make("world-action");
 export const IconNotes = make("notes");

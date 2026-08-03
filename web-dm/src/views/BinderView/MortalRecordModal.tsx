@@ -9,6 +9,7 @@ import { SearchableSelect, type SearchableSelectOption } from "@/components/Sear
 import type { BinderMortal, BinderMortalInput, MortalOptions, MortalType } from "@/services/binderMortalApi";
 
 type Option = SearchableSelectOption;
+type AttackOverrideRow = { id: string; name: string; toHit: string; damage: string; damageType: string };
 
 function SearchableOption(props: {
   id: string;
@@ -76,10 +77,8 @@ export function MortalRecordModal(props: {
   const [monsterId, setMonsterId] = useState("");
   const [hpMax, setHpMax] = useState("1");
   const [hpCurrent, setHpCurrent] = useState("1");
-  const [hpDetails, setHpDetails] = useState("");
   const [ac, setAc] = useState("10");
-  const [acDetails, setAcDetails] = useState("");
-  const [attackOverridesText, setAttackOverridesText] = useState("");
+  const [attackOverrides, setAttackOverrides] = useState<AttackOverrideRow[]>([]);
   const [mechanicsDirty, setMechanicsDirty] = useState(false);
   const [notes, setNotes] = useState("");
   const [dmNotes, setDmNotes] = useState("");
@@ -126,10 +125,8 @@ export function MortalRecordModal(props: {
     setMonsterId(props.record?.monsterId ?? "");
     setHpMax(String(props.record?.npcMechanics?.hpMax ?? 1));
     setHpCurrent(String(props.record?.npcMechanics?.hpCurrent ?? props.record?.npcMechanics?.hpMax ?? 1));
-    setHpDetails(props.record?.npcMechanics?.hpDetails ?? "");
     setAc(String(props.record?.npcMechanics?.ac ?? 10));
-    setAcDetails(props.record?.npcMechanics?.acDetails ?? "");
-    setAttackOverridesText(props.record?.npcMechanics?.attackOverrides ? JSON.stringify(props.record.npcMechanics.attackOverrides, null, 2) : "");
+    setAttackOverrides(Object.entries(props.record?.npcMechanics?.attackOverrides ?? {}).map(([attackName, override], index) => ({ id: `${recordKey}:${index}`, name: attackName, toHit: override.toHit === undefined ? "" : String(override.toHit), damage: override.damage ?? "", damageType: override.damageType ?? "" })));
     setMechanicsDirty(false);
     setNotes(props.record?.notes ?? "");
     setDmNotes(props.record?.dmNotes ?? "");
@@ -168,10 +165,16 @@ export function MortalRecordModal(props: {
     setSaving(true);
     setError(null);
     try {
-      let attackOverrides: BinderMortalInput["attackOverrides"] = null;
-      if (mortalType === "npc" && attackOverridesText.trim()) {
-        try { attackOverrides = JSON.parse(attackOverridesText) as NonNullable<BinderMortalInput["attackOverrides"]>; }
-        catch { setError("Attack overrides must be valid JSON."); setSaving(false); return; }
+      const namedAttacks = attackOverrides.filter((attack) => attack.name.trim());
+      const duplicateAttack = namedAttacks.find((attack, index) => namedAttacks.findIndex((candidate) => candidate.name.trim().toLocaleLowerCase() === attack.name.trim().toLocaleLowerCase()) !== index);
+      if (duplicateAttack) { setError(`Attack names must be unique: ${duplicateAttack.name.trim()}`); setSaving(false); return; }
+      const attackOverrideMap: NonNullable<BinderMortalInput["attackOverrides"]> = {};
+      for (const attack of namedAttacks) {
+        attackOverrideMap[attack.name.trim()] = {
+          ...(attack.toHit.trim() ? { toHit: Number(attack.toHit) } : {}),
+          ...(attack.damage.trim() ? { damage: attack.damage.trim() } : {}),
+          ...(attack.damageType.trim() ? { damageType: attack.damageType.trim() } : {}),
+        };
       }
       await props.onSave({
         name: name.trim(),
@@ -191,10 +194,8 @@ export function MortalRecordModal(props: {
         ...(mortalType === "npc" && mechanicsDirty ? {
           hpMax: Math.max(1, Number(hpMax) || 1),
           hpCurrent: Math.max(0, Number(hpCurrent) || 0),
-          hpDetails: hpDetails.trim() || null,
           ac: Math.max(0, Number(ac) || 0),
-          acDetails: acDetails.trim() || null,
-          attackOverrides,
+          attackOverrides: Object.keys(attackOverrideMap).length ? attackOverrideMap : null,
         } : {}),
       }, image);
       props.onClose();
@@ -246,12 +247,10 @@ export function MortalRecordModal(props: {
     if (monster) {
       setHpMax(String(monster.hpMax));
       setHpCurrent(String(monster.hpMax));
-      setHpDetails(monster.hpDetails ?? "");
       setAc(String(monster.ac));
-      setAcDetails(monster.acDetails ?? "");
     }
     setMechanicsDirty(false);
-    setAttackOverridesText("");
+    setAttackOverrides([]);
   }
 
   const footer = <div style={{ display: "grid", gap: 8, width: "100%" }}>
@@ -308,10 +307,24 @@ export function MortalRecordModal(props: {
         <div style={{ display: "grid", gap: 5, marginTop: 8 }}>
           {property("Max HP", <Input type="number" min={1} value={hpMax} onChange={(event) => { setHpMax(event.target.value); setMechanicsDirty(true); }} disabled={saving} />)}
           {property("Current HP", <Input type="number" min={0} value={hpCurrent} onChange={(event) => { setHpCurrent(event.target.value); setMechanicsDirty(true); }} disabled={saving} />)}
-          {property("HP details", <Input value={hpDetails} onChange={(event) => { setHpDetails(event.target.value); setMechanicsDirty(true); }} placeholder="Hit dice or source" disabled={saving} />)}
           {property("AC", <Input type="number" min={0} value={ac} onChange={(event) => { setAc(event.target.value); setMechanicsDirty(true); }} disabled={saving} />)}
-          {property("AC details", <Input value={acDetails} onChange={(event) => { setAcDetails(event.target.value); setMechanicsDirty(true); }} placeholder="Armor or source" disabled={saving} />)}
-          <div style={{ display: "grid", gap: 6, marginTop: 6 }}><div style={labelStyle}>Attack overrides</div><TextArea value={attackOverridesText} onChange={(event) => { setAttackOverridesText(event.target.value); setMechanicsDirty(true); }} rows={5} placeholder={'{"Rapier":{"toHit":9,"damage":"1d8+5","damageType":"piercing"}}'} disabled={saving} /></div>
+          <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}><div style={labelStyle}>Attack overrides</div><Button type="button" variant="ghost" disabled={saving} onClick={() => { setAttackOverrides((rows) => [...rows, { id: crypto.randomUUID(), name: "", toHit: "", damage: "", damageType: "" }]); setMechanicsDirty(true); }}>+ Attack</Button></div>
+            {attackOverrides.length ? attackOverrides.map((attack) => {
+              const update = (field: keyof Omit<AttackOverrideRow, "id">, value: string) => { setAttackOverrides((rows) => rows.map((row) => row.id === attack.id ? { ...row, [field]: value } : row)); setMechanicsDirty(true); };
+              return <div key={attack.id} style={{ display: "grid", gap: 7, padding: 10, border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.control, background: "rgba(255,255,255,0.025)" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 72px 32px", gap: 7 }}>
+                  <Input aria-label="Attack name" value={attack.name} onChange={(event) => update("name", event.target.value)} placeholder="Attack name" disabled={saving} />
+                  <Input aria-label={`${attack.name || "Attack"} to hit`} type="number" value={attack.toHit} onChange={(event) => update("toHit", event.target.value)} placeholder="+Hit" disabled={saving} />
+                  <button type="button" aria-label={`Remove ${attack.name || "attack"}`} title="Remove attack" disabled={saving} onClick={() => { setAttackOverrides((rows) => rows.filter((row) => row.id !== attack.id)); setMechanicsDirty(true); }} style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: 7, background: "transparent", color: theme.colors.red, cursor: "pointer", fontSize: 18 }}>×</button>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 7 }}>
+                  <Input aria-label={`${attack.name || "Attack"} damage`} value={attack.damage} onChange={(event) => update("damage", event.target.value)} placeholder="Damage, e.g. 1d8+5" disabled={saving} />
+                  <Input aria-label={`${attack.name || "Attack"} damage type`} value={attack.damageType} onChange={(event) => update("damageType", event.target.value)} placeholder="Damage type" disabled={saving} />
+                </div>
+              </div>;
+            }) : <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", padding: "4px 0" }}>No attack overrides. The linked statblock attacks remain unchanged.</div>}
+          </div>
           <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>These values belong to the Binder NPC and update every linked iNPC and combatant.</div>
         </div>
       </details> : null}
