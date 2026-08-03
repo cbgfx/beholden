@@ -1,4 +1,5 @@
 import type { Db } from "./db.js";
+import { MORTAL_POSITION_RECOVERY } from "./mortalPositionRecovery.js";
 
 function campaignColumns(db: Db): Set<string> {
   const rows = db.prepare("PRAGMA table_info(campaigns)").all() as Array<{ name: string }>;
@@ -8,25 +9,57 @@ function campaignColumns(db: Db): Set<string> {
 /** Collapse the old organization-scoped Position copy into the Mortal's one canonical Position. */
 export function ensureCanonicalMortalPositions(db: Db): void {
   db.transaction(() => {
-    db.exec(`
-      UPDATE mortals
-      SET position_id = (
-        SELECT membership.position_id
-        FROM organization_memberships membership
-        WHERE membership.mortal_id = mortals.id
-          AND membership.is_primary = 1
-          AND membership.position_id IS NOT NULL
-        LIMIT 1
-      )
-      WHERE position_id IS NULL
-        AND EXISTS (
-          SELECT 1 FROM organization_memberships membership
+    const membershipColumns = new Set(
+      (db.prepare("PRAGMA table_info(organization_memberships)").all() as Array<{ name: string }>).map((row) => row.name),
+    );
+    if (membershipColumns.has("position_id")) {
+      db.exec(`
+        UPDATE mortals
+        SET position_id = (
+          SELECT membership.position_id
+          FROM organization_memberships membership
           WHERE membership.mortal_id = mortals.id
-            AND membership.is_primary = 1
             AND membership.position_id IS NOT NULL
-        );
-      UPDATE organization_memberships SET position_id = NULL WHERE position_id IS NOT NULL;
+          ORDER BY membership.is_primary DESC, membership.created_at ASC
+          LIMIT 1
+        )
+        WHERE position_id IS NULL
+          AND EXISTS (
+            SELECT 1 FROM organization_memberships membership
+            WHERE membership.mortal_id = mortals.id
+              AND membership.position_id IS NOT NULL
+          );
+      `);
+    }
+
+    const restore = db.prepare(`
+      UPDATE mortals
+      SET position_id = ?
+      WHERE id = ?
+        AND position_id IS NULL
+        AND EXISTS (
+          SELECT 1
+          FROM binder_records mortal_record
+          JOIN binder_records position_record
+            ON position_record.id = ?
+           AND position_record.record_type = 'position'
+           AND position_record.binder_id = mortal_record.binder_id
+          WHERE mortal_record.id = mortals.id
+            AND mortal_record.record_type = 'mortal'
+        )
     `);
+    for (const [mortalId, positionId] of MORTAL_POSITION_RECOVERY) {
+      restore.run(positionId, mortalId, positionId);
+    }
+
+    if (membershipColumns.has("position_id")) {
+      db.exec(`
+        DROP INDEX IF EXISTS idx_org_membership_exact;
+        DROP INDEX IF EXISTS idx_org_membership_org_current;
+        DROP INDEX IF EXISTS idx_org_membership_position;
+        ALTER TABLE organization_memberships DROP COLUMN position_id;
+      `);
+    }
   })();
 }
 

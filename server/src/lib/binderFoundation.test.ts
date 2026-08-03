@@ -18,7 +18,7 @@ import {
   convertMortalSubtype,
   createMortal,
 } from "../services/binders/mortals.js";
-import { ensureBinderColumns } from "./binderCampaignMigration.js";
+import { ensureBinderColumns, ensureCanonicalMortalPositions } from "./binderCampaignMigration.js";
 
 let db: Db | null = null;
 let server: Server | null = null;
@@ -137,6 +137,60 @@ describe("Binder schema", () => {
         WHERE type = 'index' AND name = 'idx_binder_organizations_leader'
       `).pluck().get(),
       1,
+    );
+  });
+
+  test("promotes a legacy Position and removes the duplicate membership column", () => {
+    db = openDb(":memory:");
+    seedUser(db, "owner");
+    db.exec(`
+      ALTER TABLE organization_memberships ADD COLUMN position_id TEXT;
+      INSERT INTO binders (id, owner_user_id, name, name_key, created_at, updated_at)
+      VALUES ('binder', 'owner', 'Binder', 'binder', 1, 1);
+      INSERT INTO binder_records (id, binder_id, record_type, name, name_key, visibility, created_at, updated_at)
+      VALUES
+        ('mortal', 'binder', 'mortal', 'Merchant', 'merchant', 'dm', 1, 1),
+        ('position', 'binder', 'position', 'Merchant', 'merchant-position', 'dm', 1, 1),
+        ('organization', 'binder', 'organization', 'Guild', 'guild', 'dm', 1, 1);
+      INSERT INTO mortals (id, life_status, mortal_type, created_at, updated_at)
+      VALUES ('mortal', 'alive', 'npc', 1, 1);
+      INSERT INTO binder_positions (id, created_at, updated_at) VALUES ('position', 1, 1);
+      INSERT INTO binder_organizations (id, created_at, updated_at) VALUES ('organization', 1, 1);
+      INSERT INTO organization_memberships (
+        id, organization_id, mortal_id, position_id, is_primary, created_at, updated_at
+      ) VALUES ('membership', 'organization', 'mortal', 'position', 0, 1, 1);
+    `);
+
+    ensureCanonicalMortalPositions(db);
+
+    assert.equal(db.prepare("SELECT position_id FROM mortals WHERE id = 'mortal'").pluck().get(), "position");
+    assert.equal(
+      db.prepare("SELECT 1 FROM pragma_table_info('organization_memberships') WHERE name = 'position_id'").get(),
+      undefined,
+    );
+  });
+
+  test("restores a blank live Position from the guarded export recovery map", () => {
+    db = openDb(":memory:");
+    seedUser(db, "owner");
+    db.exec(`
+      INSERT INTO binders (id, owner_user_id, name, name_key, created_at, updated_at)
+      VALUES ('binder', 'owner', 'Binder', 'binder', 1, 1);
+      INSERT INTO binder_records (id, binder_id, record_type, name, name_key, visibility, created_at, updated_at)
+      VALUES
+        ('010caf3f-78f6-431a-9dba-b93f474c1af3', 'binder', 'mortal', 'Mortal', 'mortal', 'dm', 1, 1),
+        ('af328059-9977-4058-a2d5-3a5a7312d581', 'binder', 'position', 'Ruler', 'ruler', 'dm', 1, 1);
+      INSERT INTO mortals (id, life_status, mortal_type, created_at, updated_at)
+      VALUES ('010caf3f-78f6-431a-9dba-b93f474c1af3', 'alive', 'npc', 1, 1);
+      INSERT INTO binder_positions (id, created_at, updated_at)
+      VALUES ('af328059-9977-4058-a2d5-3a5a7312d581', 1, 1);
+    `);
+
+    ensureCanonicalMortalPositions(db);
+
+    assert.equal(
+      db.prepare("SELECT position_id FROM mortals WHERE id = '010caf3f-78f6-431a-9dba-b93f474c1af3'").pluck().get(),
+      "af328059-9977-4058-a2d5-3a5a7312d581",
     );
   });
 
@@ -473,6 +527,25 @@ describe("Binder routes", () => {
     assert.equal(
       db.prepare("SELECT COUNT(*) FROM binder_npcs WHERE mortal_id = ?").pluck().get(createdMortal.id),
       1,
+    );
+
+    db.exec(`
+      INSERT INTO binder_records (id, binder_id, record_type, name, name_key, visibility, created_at, updated_at)
+      VALUES
+        ('mortal-org-one', '${binder.id}', 'organization', 'First Org', 'first org', 'dm', 1, 1),
+        ('mortal-org-two', '${binder.id}', 'organization', 'Second Org', 'second org', 'dm', 1, 1);
+      INSERT INTO binder_organizations (id, created_at, updated_at) VALUES ('mortal-org-one', 1, 1);
+      INSERT INTO binder_organizations (id, created_at, updated_at) VALUES ('mortal-org-two', 1, 1);
+    `);
+    const multiOrgResponse = await fetch(`${base}/api/binders/${binder.id}/mortals/${createdMortal.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json", "x-test-user": "owner" },
+      body: JSON.stringify({ organizationIds: ["mortal-org-one", "mortal-org-two"] }),
+    });
+    assert.equal(multiOrgResponse.status, 200, await multiOrgResponse.clone().text());
+    assert.deepEqual(
+      (await multiOrgResponse.json() as { organizations: Array<{ id: string }> }).organizations.map((organization) => organization.id),
+      ["mortal-org-one", "mortal-org-two"],
     );
 
     const convertedMortalResponse = await fetch(

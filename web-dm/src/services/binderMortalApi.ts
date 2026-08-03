@@ -50,7 +50,7 @@ export type BinderMortalInput = {
   birthDate: string | null;
   deathDate: string | null;
   locationId: string | null;
-  organizationId: string | null;
+  organizationIds: string[];
   positionId: string | null;
   className: string | null;
   notes: string | null;

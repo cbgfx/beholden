@@ -214,9 +214,9 @@ export function importBinderDocument(db: Db, raw: unknown, ownerUserId: string, 
     for (const row of rows("deity_domains")) db.prepare("INSERT INTO deity_domains VALUES (?, ?)").run(map(row.deity_id), map(row.domain_id));
     for (const row of rows("binder_organizations")) db.prepare("INSERT INTO binder_organizations (id, description, dm_notes, leader_mortal_id, headquarters_record_id, created_at, updated_at, icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(map(row.id), text(row.description), text(row.dm_notes), map(row.leader_mortal_id), map(row.headquarters_record_id), now, now, row.icon ?? null);
     for (const row of rows("organization_memberships")) db.prepare(`
-      INSERT INTO organization_memberships (id,organization_id,mortal_id,position_id,role_label,start_date_text,start_date_sort,end_date_text,end_date_sort,notes,is_primary,created_at,updated_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `).run(helpers.uid(), map(row.organization_id), map(row.mortal_id), null, row.role_label ?? null, row.start_date_text ?? null, row.start_date_sort ?? null, row.end_date_text ?? null, row.end_date_sort ?? null, text(row.notes), row.is_primary ?? 0, now, now);
+      INSERT INTO organization_memberships (id,organization_id,mortal_id,role_label,start_date_text,start_date_sort,end_date_text,end_date_sort,notes,is_primary,created_at,updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+    `).run(helpers.uid(), map(row.organization_id), map(row.mortal_id), row.role_label ?? null, row.start_date_text ?? null, row.start_date_sort ?? null, row.end_date_text ?? null, row.end_date_sort ?? null, text(row.notes), row.is_primary ?? 0, now, now);
     for (const row of rows("binder_record_aliases")) db.prepare("INSERT INTO binder_record_aliases VALUES (?, ?, ?, ?, ?)").run(helpers.uid(), map(row.record_id), row.alias, row.alias_key, row.sort ?? 0);
     for (const row of rows("binder_event_tags")) db.prepare("INSERT INTO binder_event_tags VALUES (?, ?, ?, ?, ?, ?)").run(tag(row.id), binderId, row.name, helpers.normalizeKey(String(row.name)), now, now);
     for (const row of rows("binder_event_tag_links")) db.prepare("INSERT INTO binder_event_tag_links VALUES (?, ?)").run(map(row.event_id), tag(row.tag_id));

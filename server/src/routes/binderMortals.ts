@@ -29,6 +29,7 @@ const MortalBody = z.object({
   deathDate: optionalText(100),
   locationId: z.string().trim().min(1).nullable().optional(),
   organizationId: z.string().trim().min(1).nullable().optional(),
+  organizationIds: z.array(z.string().trim().min(1)).max(100).optional(),
   positionId: z.string().trim().min(1).nullable().optional(),
   className: optionalText(160),
   notes: optionalText(200_000),
@@ -305,14 +306,16 @@ function compendiumMonsterMechanics(dataJson: string | null | undefined) {
   };
 }
 
-function replacePrimaryMembership(ctx: ServerContext, mortalId: string, organizationId: string | null, now: number) {
-  ctx.db.prepare("DELETE FROM organization_memberships WHERE mortal_id = ? AND is_primary = 1").run(mortalId);
-  if (!organizationId) return;
-  ctx.db.prepare(`
+function replaceMemberships(ctx: ServerContext, mortalId: string, organizationIds: string[], now: number) {
+  ctx.db.prepare("DELETE FROM organization_memberships WHERE mortal_id = ?").run(mortalId);
+  const insert = ctx.db.prepare(`
     INSERT INTO organization_memberships (
-      id, organization_id, mortal_id, position_id, is_primary, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, 1, ?, ?)
-  `).run(ctx.helpers.uid(), organizationId, mortalId, null, now, now);
+      id, organization_id, mortal_id, is_primary, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?)
+  `);
+  [...new Set(organizationIds)].forEach((organizationId, index) => {
+    insert.run(ctx.helpers.uid(), organizationId, mortalId, index === 0 ? 1 : 0, now, now);
+  });
 }
 
 export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
@@ -426,7 +429,8 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
     if (!isBinderRecordType(ctx, binderId, body.locationId, ["continent", "country", "location", "poi"])) {
       return res.status(400).json({ ok: false, message: "Location must belong to this Binder" });
     }
-    if (!isBinderRecordType(ctx, binderId, body.organizationId, ["organization"])) {
+    const organizationIds = body.organizationIds ?? (body.organizationId ? [body.organizationId] : []);
+    if (organizationIds.some((organizationId) => !isBinderRecordType(ctx, binderId, organizationId, ["organization"]))) {
       return res.status(400).json({ ok: false, message: "Organization must belong to this Binder" });
     }
     if (!isBinderRecordType(ctx, binderId, body.positionId, ["position"])) {
@@ -463,7 +467,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
           life_status = ?, position_id = ?, class_name = ?,
           residence_record_id = ?, updated_at = ? WHERE id = ?
       `).run(body.birthDate ?? null, body.deathDate ?? null, body.deathDate ? "dead" : "alive", body.positionId ?? null, body.className ?? null, body.locationId ?? null, now, id);
-      replacePrimaryMembership(ctx, id, body.organizationId ?? null, now);
+      replaceMemberships(ctx, id, organizationIds, now);
       if (body.mortalType === "player_character") {
         db.prepare(`
           UPDATE binder_player_characters SET player_id = ?, character_id = ?, updated_at = ?
@@ -499,12 +503,19 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
     if (!isValidRace(ctx, binderId, body.raceId)) {
       return res.status(400).json({ ok: false, message: "Race must belong to this Binder" });
     }
-    const nextOrganizationId = body.organizationId === undefined ? existing.organization_id : body.organizationId;
+    const existingOrganizationIds = (db.prepare(
+      "SELECT organization_id FROM organization_memberships WHERE mortal_id = ? ORDER BY is_primary DESC, created_at, id",
+    ).all(mortalId) as Array<{ organization_id: string }>).map((row) => row.organization_id);
+    const nextOrganizationIds = body.organizationIds !== undefined
+      ? body.organizationIds
+      : body.organizationId !== undefined
+        ? (body.organizationId ? [body.organizationId] : [])
+        : existingOrganizationIds;
     const nextPositionId = body.positionId === undefined ? existing.position_id : body.positionId;
     if (!isBinderRecordType(ctx, binderId, body.locationId, ["continent", "country", "location", "poi"])) {
       return res.status(400).json({ ok: false, message: "Location must belong to this Binder" });
     }
-    if (!isBinderRecordType(ctx, binderId, nextOrganizationId, ["organization"])) {
+    if (nextOrganizationIds.some((organizationId) => !isBinderRecordType(ctx, binderId, organizationId, ["organization"]))) {
       return res.status(400).json({ ok: false, message: "Organization must belong to this Binder" });
     }
     if (!isBinderRecordType(ctx, binderId, nextPositionId, ["position"])) {
@@ -561,7 +572,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
         now,
         mortalId,
       );
-      replacePrimaryMembership(ctx, mortalId, nextOrganizationId ?? null, now);
+      replaceMemberships(ctx, mortalId, nextOrganizationIds, now);
       if (nextType === "player_character") {
         db.prepare(`
           UPDATE binder_player_characters SET player_id = ?, character_id = ?, updated_at = ?

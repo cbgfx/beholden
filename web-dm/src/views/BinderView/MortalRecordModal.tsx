@@ -70,7 +70,8 @@ export function MortalRecordModal(props: {
   const [ageInput, setAgeInput] = useState("");
   const [deathDate, setDeathDate] = useState("");
   const [locationId, setLocationId] = useState("");
-  const [organizationId, setOrganizationId] = useState("");
+  const [organizationIds, setOrganizationIds] = useState<string[]>([]);
+  const [organizationPickerId, setOrganizationPickerId] = useState("");
   const [positionId, setPositionId] = useState("");
   const [className, setClassName] = useState("");
   const [playerId, setPlayerId] = useState("");
@@ -118,7 +119,8 @@ export function MortalRecordModal(props: {
     setBirthDate(linkedBirthDate ?? props.record?.birthDate ?? "");
     setDeathDate(props.record?.deathDate ?? "");
     setLocationId(props.record?.location?.id ?? "");
-    setOrganizationId(props.record?.organization?.id ?? "");
+    setOrganizationIds(props.record?.organizations.map((organization) => organization.id) ?? []);
+    setOrganizationPickerId("");
     setPositionId(props.record?.position?.id ?? "");
     setClassName(props.record?.className ?? "");
     setPlayerId(props.record?.player?.id ?? "");
@@ -184,7 +186,7 @@ export function MortalRecordModal(props: {
         birthDate: birthDate.trim() || null,
         deathDate: deathDate.trim() || null,
         locationId: locationId || null,
-        organizationId: organizationId || null,
+        organizationIds,
         positionId: positionId || null,
         className: mortalType === "player_character" ? className.trim() || null : null,
         notes: notes.trim() || null,
@@ -343,7 +345,29 @@ export function MortalRecordModal(props: {
       {property("Date of birth", <Input value={birthDate} onChange={(event) => setBirthDate(event.target.value)} placeholder="None" disabled={saving} />)}
       {property("Date of death", <Input value={deathDate} onChange={(event) => setDeathDate(event.target.value)} placeholder="None" disabled={saving} />)}
       <SearchableOption id="mortal-location" label="Location" selectedId={locationId} options={grouped.locations} onChange={setLocationId} disabled={saving} />
-      <SearchableOption id="mortal-organization" label="Organization" selectedId={organizationId} options={grouped.organizations} onChange={setOrganizationId} disabled={saving} />
+      {property("Organizations", <div style={{ display: "grid", gap: 7 }}>
+        {organizationIds.length ? <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {organizationIds.map((organizationId) => {
+            const organization = grouped.organizations.find((candidate) => candidate.id === organizationId);
+            if (!organization) return null;
+            return <span key={organizationId} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 7px", border: `1px solid ${theme.colors.panelBorder}`, borderRadius: 999, color: theme.colors.text }}>
+              {organization.name}
+              <button type="button" aria-label={`Remove ${organization.name}`} title={`Remove ${organization.name}`} disabled={saving} onClick={() => setOrganizationIds((ids) => ids.filter((id) => id !== organizationId))} style={{ padding: 0, border: 0, background: "none", color: theme.colors.muted, cursor: "pointer", font: "inherit", lineHeight: 1 }}>×</button>
+            </span>;
+          })}
+        </div> : null}
+        <SearchableSelect
+          id="mortal-organization"
+          value={organizationPickerId}
+          placeholder="Add an organization…"
+          options={grouped.organizations.filter((organization) => !organizationIds.includes(organization.id))}
+          disabled={saving}
+          onChange={(organizationId) => {
+            if (organizationId) setOrganizationIds((ids) => ids.includes(organizationId) ? ids : [...ids, organizationId]);
+            setOrganizationPickerId("");
+          }}
+        />
+      </div>)}
       <SearchableOption id="mortal-position" label="Position" selectedId={positionId} options={grouped.positions} onChange={setPositionId} disabled={saving} />
       {image ? <button type="button" onClick={resetPortraitSelection} disabled={saving} style={{ justifySelf: "start", padding: 0, border: 0, background: "none", color: theme.colors.muted, cursor: "pointer", font: "inherit", fontSize: "var(--fs-small)" }}>Undo portrait selection</button> : null}
       <details open={Boolean(props.record?.notes || props.record?.dmNotes)} style={{ marginTop: 8, borderTop: `1px solid ${theme.colors.panelBorder}`, paddingTop: 10 }}>

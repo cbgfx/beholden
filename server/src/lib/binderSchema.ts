@@ -232,7 +232,6 @@ CREATE TABLE IF NOT EXISTS organization_memberships (
   id TEXT PRIMARY KEY,
   organization_id TEXT NOT NULL REFERENCES binder_organizations(id) ON DELETE CASCADE,
   mortal_id TEXT NOT NULL REFERENCES mortals(id) ON DELETE CASCADE,
-  position_id TEXT REFERENCES binder_positions(id) ON DELETE SET NULL,
   role_label TEXT,
   start_date_text TEXT,
   start_date_sort INTEGER,
@@ -248,7 +247,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_org_membership_exact
   ON organization_memberships(
     organization_id,
     mortal_id,
-    IFNULL(position_id, ''),
     IFNULL(start_date_text, '')
   );
 
@@ -419,11 +417,9 @@ CREATE INDEX IF NOT EXISTS idx_mortals_residence
 CREATE INDEX IF NOT EXISTS idx_mortals_birth
   ON mortals(birth_date_sort);
 CREATE INDEX IF NOT EXISTS idx_org_membership_org_current
-  ON organization_memberships(organization_id, end_date_sort, position_id);
+  ON organization_memberships(organization_id, end_date_sort);
 CREATE INDEX IF NOT EXISTS idx_org_membership_mortal
   ON organization_memberships(mortal_id, start_date_sort);
-CREATE INDEX IF NOT EXISTS idx_org_membership_position
-  ON organization_memberships(position_id, organization_id);
 CREATE INDEX IF NOT EXISTS idx_binder_events_date
   ON binder_events(date_sort, id);
 CREATE INDEX IF NOT EXISTS idx_binder_items_compendium

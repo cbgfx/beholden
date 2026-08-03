@@ -56,8 +56,8 @@ test("native Binder export/import remaps lore relationships and stable mentions"
     `).run();
     db.prepare(`
       INSERT INTO organization_memberships
-        (id, organization_id, mortal_id, position_id, is_primary, created_at, updated_at)
-      VALUES ('membership', 'org', 'mortal', NULL, 1, 1, 1)
+        (id, organization_id, mortal_id, is_primary, created_at, updated_at)
+      VALUES ('membership', 'org', 'mortal', 1, 1, 1)
     `).run();
     db.prepare(`
       INSERT INTO binder_record_mentions

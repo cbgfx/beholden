@@ -312,13 +312,12 @@ export function importNotionZip(db: Db, binderId: string, buffer: Buffer, commit
         .filter((id): id is string => Boolean(id));
       organizationIds.forEach((organizationId, index) => db.prepare(`
           INSERT INTO organization_memberships
-            (id, organization_id, mortal_id, position_id, is_primary, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+            (id, organization_id, mortal_id, is_primary, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?)
         `).run(
           uid(),
           organizationId,
           idByExternal.get(candidate.externalId),
-          null,
           index === 0 ? 1 : 0,
           now,
           now,
