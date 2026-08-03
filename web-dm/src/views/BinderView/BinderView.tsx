@@ -41,7 +41,7 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
   {
     label: "",
     items: [
-      { id: "campaigns", label: "Campaigns", icon: <IconCampaign size={20} />, color: "#3b82f6", columns: ["Name", "Current date", "Players"] },
+      { id: "campaigns", label: "Campaigns", icon: <IconCampaign size={20} />, color: "#3b82f6", columns: ["Name", "Active", "Players"] },
     ],
   },
   {
@@ -108,14 +108,15 @@ function EmptyTable({ item, accent }: { item: NavItem; accent: string }) {
 
 function CampaignTable({ binderId, campaigns, accent }: { binderId: string; campaigns: Campaign[]; accent: string }) {
   const columns = "minmax(280px, 1.5fr) minmax(180px, 1fr) minmax(130px, 0.7fr) minmax(220px, 1.15fr)";
+  const sortedCampaigns = [...campaigns].sort((a, b) => a.name.localeCompare(b.name));
   return (
     <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
       <div style={{ display: "grid", gridTemplateColumns: columns, gap: 18, padding: "12px 15px", background: withAlpha(accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
-        {["Name", "Current date", "Players", "Open Campaign"].map((column) => (
+        {["Name", "Active", "Players", "Open Campaign"].map((column) => (
           <div key={column} style={{ color: theme.colors.text, fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>{column}</div>
         ))}
       </div>
-      {campaigns.length ? campaigns.map((campaign) => (
+      {sortedCampaigns.length ? sortedCampaigns.map((campaign) => (
         <Link
           key={campaign.id}
           to={`/binder/${binderId}/campaigns/${campaign.id}`}
@@ -130,7 +131,11 @@ function CampaignTable({ binderId, campaigns, accent }: { binderId: string; camp
           }}
         >
           <span style={{ fontWeight: 700 }}>{campaign.name}</span>
-          <span style={{ color: theme.colors.muted }}>{campaign.currentDate?.text ?? "—"}</span>
+          <span>
+            <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: campaign.isActive ? theme.colors.green : theme.colors.muted, background: withAlpha(campaign.isActive ? theme.colors.green : theme.colors.muted, 0.16), fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 750 }}>
+              {campaign.isActive ? "Active" : "Inactive"}
+            </span>
+          </span>
           <span style={{ color: theme.colors.muted }}>{campaign.playerCount ?? 0}</span>
           <span style={{ color: accent, fontWeight: 750, whiteSpace: "nowrap" }}>Open Campaign →</span>
         </Link>
