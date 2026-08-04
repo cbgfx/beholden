@@ -57,7 +57,6 @@ import {
   buildInvocationSpellDamageBonuses,
   buildModifierStateMaps,
   buildPassiveScores,
-  buildPreparedSpells,
   buildSkillBonuses,
   buildSaveBonuses,
   buildTransformedCombatStats,
@@ -126,7 +125,6 @@ export function mergeAllClassProficiencies(
 
 export function buildHitDicePools(
   selections: CharacterClassDetailSelection[],
-  legacyCurrent?: number,
   currentBySize?: Record<string, number>,
 ): Array<{ dieSize: number; max: number; current: number }> {
   const maximumByDie = new Map<number, number>();
@@ -136,16 +134,8 @@ export function buildHitDicePools(
     maximumByDie.set(dieSize, (maximumByDie.get(dieSize) ?? 0) + Math.max(0, entry.level));
   }
   const pools = Array.from(maximumByDie, ([dieSize, max]) => ({ dieSize, max, current: max }));
-  if (currentBySize) {
-    for (const pool of pools) pool.current = Math.max(0, Math.min(pool.max, Math.floor(Number(currentBySize[String(pool.dieSize)] ?? pool.max) || 0)));
-    return pools;
-  }
-  if (legacyCurrent == null || pools.length === 0) return pools;
-  let remaining = Math.max(0, Math.min(pools.reduce((sum, pool) => sum + pool.max, 0), Math.floor(Number(legacyCurrent) || 0)));
-  for (const pool of pools) {
-    pool.current = Math.min(pool.max, remaining);
-    remaining -= pool.current;
-  }
+  if (!currentBySize) return pools;
+  for (const pool of pools) pool.current = Math.max(0, Math.min(pool.max, Math.floor(Number(currentBySize[String(pool.dieSize)] ?? pool.max) || 0)));
   return pools;
 }
 
@@ -208,7 +198,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   const pb = proficiencyBonus(args.char.level);
   const hd = currentCharacterData.hd ?? null;
   const hitDieSize = hd ?? args.classDetail?.hd ?? null;
-  const hitDicePools = buildHitDicePools(classSelections, currentCharacterData.hitDiceCurrent ?? undefined, currentCharacterData.hitDiceCurrentBySize);
+  const hitDicePools = buildHitDicePools(classSelections, currentCharacterData.hitDiceCurrentBySize);
   const hitDiceMax = hitDicePools.length > 0 ? hitDicePools.reduce((sum, pool) => sum + pool.max, 0) : Math.max(0, args.char.level);
   const hitDiceCurrent = hitDicePools.length > 0
     ? hitDicePools.reduce((sum, pool) => sum + pool.current, 0)
@@ -403,20 +393,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     : args.classDetail && args.classDetail.slotsReset !== "S"
       ? getPreparedSpellCount(args.classDetail, primaryClassLevel, args.subclass ?? "", args.classDetail.spellAbility ? scores[normalizeAbilityKey(args.classDetail.spellAbility) ?? "int"] : null)
       : 0;
-  const forcedPreparedSpellKeys = new Set(
-    grantedSpellData.spells
-      .filter((entry) => entry.mode === "always_prepared")
-      .map((entry) => normalizeSpellTrackingKey(entry.spellName))
-  );
-  const knownSpellKeys = new Set((prof?.spells ?? []).map((entry) => normalizeSpellTrackingKey(entry.name)));
-  const legacyPreparedSpells = buildPreparedSpells({
-    currentCharacterData,
-    usesFlexiblePreparedList,
-    preparedSpellLimit,
-    knownSpellKeys,
-    forcedPreparedSpellKeys,
-  });
-  const classSpellcastingStates = classPreparationRules.map(({ entry, detail, pactMagic, limit }, index) => {
+  const classSpellcastingStates = classPreparationRules.map(({ entry, detail, pactMagic, limit }) => {
     const ability = normalizeAbilityKey(detail.spellAbility ?? getSubclassSpellcasting({ entry, detail })?.ability);
     const scoped = currentCharacterData.classSpellSelections?.[entry.id];
     return {
@@ -427,16 +404,14 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
       saveDc: ability ? 8 + pb + abilityMod(scores[ability]) : null,
       attackBonus: ability ? pb + abilityMod(scores[ability]) : null,
       preparedLimit: limit,
-      preparedSpells: scoped?.preparedSpells ?? (index === 0 ? legacyPreparedSpells : []),
-      chosenCantrips: scoped?.chosenCantrips ?? (index === 0 ? currentCharacterData.chosenCantrips ?? [] : []),
-      chosenSpells: scoped?.chosenSpells ?? (index === 0 ? currentCharacterData.chosenSpells ?? [] : []),
-      chosenInvocations: scoped?.chosenInvocations ?? (index === 0 ? currentCharacterData.chosenInvocations ?? [] : []),
+      preparedSpells: scoped?.preparedSpells ?? [],
+      chosenCantrips: scoped?.chosenCantrips ?? [],
+      chosenSpells: scoped?.chosenSpells ?? [],
+      chosenInvocations: scoped?.chosenInvocations ?? [],
       pactMagic,
     };
   });
-  const preparedSpells = currentCharacterData.classSpellSelections
-    ? Array.from(new Set(classSpellcastingStates.flatMap((state) => state.preparedSpells)))
-    : legacyPreparedSpells;
+  const preparedSpells = Array.from(new Set(classSpellcastingStates.flatMap((state) => state.preparedSpells)));
   const spellDamageAbilityBonuses = {
     ...buildInvocationSpellDamageBonuses({
       ruleset: args.char.ruleset,

@@ -60,6 +60,7 @@ export function LevelUpView() {
     classCantrips,
     classSpells,
     classInvocations,
+    classSpellOptionsLoaded,
   } = useLevelUpInitialData(id);
 
   // HP
@@ -162,6 +163,7 @@ export function LevelUpView() {
     classCantrips,
     classSpells,
     classInvocations,
+    classSpellOptionsLoaded,
     existingClassSpellNames,
     cantripCount,
     maxSpellLevel,

@@ -122,7 +122,7 @@ describe("buildCharacterViewDerivedState", () => {
     expect(buildHitDicePools([
       { entry: { id: "fighter", classId: "fighter", level: 3 }, detail: { id: "fighter", name: "Fighter", hd: 10, autolevels: [] } },
       { entry: { id: "wizard", classId: "wizard", level: 2 }, detail: { id: "wizard", name: "Wizard", hd: 6, autolevels: [] } },
-    ], 4, { "10": 2, "6": 1 })).toEqual([
+    ], { "10": 2, "6": 1 })).toEqual([
       { dieSize: 10, max: 3, current: 2 },
       { dieSize: 6, max: 2, current: 1 },
     ]);

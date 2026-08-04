@@ -32,6 +32,12 @@ export function useLevelUpInitialData(id: string | undefined) {
   const [chosenFeatDetail, setChosenFeatDetail] = useState<FeatDetail | null>(null);
   const [classCantrips, setClassCantrips] = useState<SpellSummary[]>([]);
   const [classSpells, setClassSpells] = useState<SpellSummary[]>([]);
+  // False while the classCantrips/classSpells/classInvocations fetch below is in flight for the
+  // current classDetail/subclass/level -- distinct from those arrays being empty, which can
+  // legitimately mean "still loading" as much as "no options exist". Sanitizers that prune chosen
+  // spells against these lists must wait for this before treating an empty list as authoritative,
+  // or they'll wipe a hydrated character's real picks before the real options ever arrive.
+  const [classSpellOptionsLoaded, setClassSpellOptionsLoaded] = useState(false);
   const [classInvocations, setClassInvocations] = useState<SpellSummary[]>([]);
   const [chosenFeatId, setChosenFeatId] = useState<string>("");
 
@@ -112,30 +118,33 @@ export function useLevelUpInitialData(id: string | undefined) {
       setClassCantrips([]);
       setClassSpells([]);
       setClassInvocations([]);
+      setClassSpellOptionsLoaded(true);
       return;
     }
+    let alive = true;
+    setClassSpellOptionsLoaded(false);
     const spellcastingClassName = getSpellcastingClassName(classDetail, nextClassLevel, subclass) ?? classDetail.name;
     const spellAccessId = Object.entries(classDetail.spellLists ?? {}).find(([, label]) => label === spellcastingClassName)?.[0];
     const encodedClass = encodeURIComponent(spellAccessId ?? spellcastingClassName);
     const ruleset = char?.ruleset ?? "5.5e";
     const rulesetParam = `&ruleset=${encodeURIComponent(ruleset)}`;
-    api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&level=0&limit=120&includeText=1&lite=1&excludeSpecial=1${rulesetParam}`)
+    const cantripsDone = api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&level=0&limit=120&includeText=1&lite=1&excludeSpecial=1${rulesetParam}`)
       .then(setClassCantrips)
       .catch(() => setClassCantrips([]));
     const expandedSpellNames = getExpandedSpellListNames(classDetail, nextClassLevel, subclass);
-    Promise.all([
+    const spellsDone = Promise.all([
       api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&minLevel=1&maxLevel=9&limit=220&includeText=1&lite=1&excludeSpecial=1${rulesetParam}`),
       fetchSpellsByName(expandedSpellNames, ruleset),
     ])
       .then(([baseSpells, expandedSpells]) => setClassSpells(mergeSpellsById(baseSpells, expandedSpells)))
       .catch(() => setClassSpells([]));
-    if (/warlock/i.test(classDetail.name)) {
-      api<SpellSummary[]>(`/api/class-talents/search?kind=invocation&limit=150&includeText=1${rulesetParam}`)
+    const invocationsDone = /warlock/i.test(classDetail.name)
+      ? api<SpellSummary[]>(`/api/class-talents/search?kind=invocation&limit=150&includeText=1${rulesetParam}`)
         .then(setClassInvocations)
-        .catch(() => setClassInvocations([]));
-    } else {
-      setClassInvocations([]);
-    }
+        .catch(() => setClassInvocations([]))
+      : Promise.resolve(setClassInvocations([]));
+    Promise.all([cantripsDone, spellsDone, invocationsDone]).then(() => { if (alive) setClassSpellOptionsLoaded(true); });
+    return () => { alive = false; };
   }, [classDetail, nextClassLevel, subclass, char?.ruleset]);
 
   useEffect(() => {
@@ -190,5 +199,6 @@ export function useLevelUpInitialData(id: string | undefined) {
     classCantrips,
     classSpells,
     classInvocations,
+    classSpellOptionsLoaded,
   };
 }

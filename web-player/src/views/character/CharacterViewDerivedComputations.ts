@@ -10,32 +10,6 @@ import { abilityMod, getPassiveScore, getSkillBonus, normalizeSpellTrackingKey }
 
 type ParsedFeatureEffects = ReturnType<typeof import("@/domain/character/parseFeatureEffects").parseFeatureEffects>;
 
-export function buildPreparedSpells({
-  currentCharacterData,
-  usesFlexiblePreparedList,
-  preparedSpellLimit,
-  knownSpellKeys,
-  forcedPreparedSpellKeys,
-}: {
-  currentCharacterData: { preparedSpells?: string[]; chosenSpells?: string[] };
-  usesFlexiblePreparedList: boolean;
-  preparedSpellLimit: number;
-  knownSpellKeys: Set<string>;
-  forcedPreparedSpellKeys: Set<string>;
-}) {
-  const saved = Array.isArray(currentCharacterData.preparedSpells)
-    ? currentCharacterData.preparedSpells
-    : (!usesFlexiblePreparedList && preparedSpellLimit > 0 && Array.isArray(currentCharacterData.chosenSpells)
-        ? currentCharacterData.chosenSpells
-        : []);
-  const allowed = new Set([...knownSpellKeys, ...forcedPreparedSpellKeys]);
-  const unique = Array.from(new Set(saved.map((entry) => normalizeSpellTrackingKey(entry)).filter((entry) => allowed.has(entry))));
-  const forced = unique.filter((entry) => forcedPreparedSpellKeys.has(entry));
-  const userChosen = unique.filter((entry) => !forcedPreparedSpellKeys.has(entry));
-  const limitedUserChosen = preparedSpellLimit > 0 ? userChosen.slice(0, preparedSpellLimit) : userChosen;
-  return [...forced, ...limitedUserChosen];
-}
-
 export function buildInvocationSpellDamageBonuses({
   ruleset,
   invocationDetails,

@@ -8,6 +8,11 @@ export function useLevelUpSelectionSanitizers(args: {
   classCantrips: SpellSummary[];
   classSpells: SpellSummary[];
   classInvocations: SpellSummary[];
+  /** False while classCantrips/classSpells/classInvocations are still being fetched for the
+   * current class/level/subclass -- see useLevelUpInitialData.ts. Empty arrays during that
+   * window aren't authoritative, so the reconciliation effects below must not prune against
+   * them yet, or a hydrated character's real picks get wiped before the real options arrive. */
+  classSpellOptionsLoaded: boolean;
   existingClassSpellNames: string[];
   cantripCount: number;
   maxSpellLevel: number;
@@ -28,6 +33,7 @@ export function useLevelUpSelectionSanitizers(args: {
     classCantrips,
     classSpells,
     classInvocations,
+    classSpellOptionsLoaded,
     existingClassSpellNames,
     cantripCount,
     maxSpellLevel,
@@ -45,14 +51,15 @@ export function useLevelUpSelectionSanitizers(args: {
   } = args;
 
   React.useEffect(() => {
+    if (!classSpellOptionsLoaded) return;
     setChosenCantrips((prev) => {
       const next = reconcileSelectedSpellIds(prev, classCantrips, existingClassSpellNames).slice(0, cantripCount);
       return next.length === prev.length && next.every((id, index) => id === prev[index]) ? prev : next;
     });
-  }, [classCantrips, cantripCount, existingClassSpellNames, setChosenCantrips]);
+  }, [classCantrips, classSpellOptionsLoaded, cantripCount, existingClassSpellNames, setChosenCantrips]);
 
   React.useEffect(() => {
-    if (maxSpellLevel === 0) return;
+    if (!classSpellOptionsLoaded || maxSpellLevel === 0) return;
     setChosenSpells((prev) => {
       const next = reconcileSelectedSpellIds(prev, classSpells, existingClassSpellNames)
         .filter((id) => {
@@ -63,9 +70,10 @@ export function useLevelUpSelectionSanitizers(args: {
         .slice(0, prepCount);
       return next.length === prev.length && next.every((id, index) => id === prev[index]) ? prev : next;
     });
-  }, [classSpells, existingClassSpellNames, maxSpellLevel, prepCount, setChosenSpells]);
+  }, [classSpells, classSpellOptionsLoaded, existingClassSpellNames, maxSpellLevel, prepCount, setChosenSpells]);
 
   React.useEffect(() => {
+    if (!classSpellOptionsLoaded) return;
     setChosenInvocations((prev) => {
       // No by-name fallback here either (see lockedInvocationSelectionIds in
       // useLevelUpChoiceSelections.ts) -- only ids the player actually chose should survive.
@@ -74,7 +82,7 @@ export function useLevelUpSelectionSanitizers(args: {
         .slice(0, invocCount);
       return next.length === prev.length && next.every((id, index) => id === prev[index]) ? prev : next;
     });
-  }, [allowedInvocationIds, classInvocations, invocCount, setChosenInvocations]);
+  }, [allowedInvocationIds, classInvocations, classSpellOptionsLoaded, invocCount, setChosenInvocations]);
 
   React.useEffect(() => {
     if (expertiseChoices.length === 0) return;
