@@ -1,34 +1,42 @@
 import React from "react";
 import { C } from "@/lib/theme";
 import { headingStyle } from "../shared/CharacterCreatorStyles";
+import { campaignSelectionHasBinder } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
 import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
 
 interface CampaignLike {
   id: string;
   name: string;
+  binderId: string | null;
 }
 
 function renderCampaignsStep({
   campaigns,
   selectedCampaignIds,
   toggleCampaign,
+  missingGenderOrAge,
   error,
   busy,
   isEditing,
   onBack,
+  onEditIdentity,
   onSubmit,
   side,
 }: {
   campaigns: CampaignLike[];
   selectedCampaignIds: string[];
   toggleCampaign: (id: string, checked: boolean) => void;
+  missingGenderOrAge: boolean;
   error: string | null;
   busy: boolean;
   isEditing: boolean;
   onBack: () => void;
+  onEditIdentity: () => void;
   onSubmit: () => void;
   side: React.ReactNode;
 }): { main: React.ReactNode; side: React.ReactNode } {
+  const requiresGenderAge = campaignSelectionHasBinder(selectedCampaignIds, campaigns);
+  const blockedByIdentity = requiresGenderAge && missingGenderOrAge;
   const main = (
     <div>
       <h2 style={headingStyle}>Assign to Campaigns</h2>
@@ -64,6 +72,18 @@ function renderCampaignsStep({
         })}
       </div>
 
+      {blockedByIdentity && (
+        <div style={{ color: C.red, marginBottom: 10 }}>
+          A campaign you selected uses a Binder, which requires Gender and Age.{" "}
+          <button
+            type="button"
+            onClick={onEditIdentity}
+            style={{ color: C.red, textDecoration: "underline", background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit" }}
+          >
+            Go back and fill those in.
+          </button>
+        </div>
+      )}
       {error && <div style={{ color: C.red, marginBottom: 10 }}>{error}</div>}
 
       <div style={{ display: "flex", gap: 10, justifyContent: "space-between" }}>
@@ -73,15 +93,15 @@ function renderCampaignsStep({
         <button
           type="button"
           onClick={onSubmit}
-          disabled={busy}
+          disabled={busy || blockedByIdentity}
           style={{
             padding: "9px 22px",
             borderRadius: 8,
             fontWeight: 700,
-            cursor: busy ? "not-allowed" : "pointer",
+            cursor: busy || blockedByIdentity ? "not-allowed" : "pointer",
             border: "none",
-            background: busy ? "rgba(255,255,255,0.06)" : C.accentHl,
-            color: busy ? "rgba(160,180,220,0.40)" : C.textDark,
+            background: busy || blockedByIdentity ? "rgba(255,255,255,0.06)" : C.accentHl,
+            color: busy || blockedByIdentity ? "rgba(160,180,220,0.40)" : C.textDark,
             fontSize: "var(--fs-medium)",
           }}
         >
@@ -102,10 +122,12 @@ export function renderCampaignsFromContext(ctx: CharacterCreatorStepRenderContex
       ...f,
       campaignIds: checked ? [...f.campaignIds, id] : f.campaignIds.filter((campaignId) => campaignId !== id),
     })),
+    missingGenderOrAge: !String(ctx.form.gender ?? "") || !Number.isInteger(Number(ctx.form.age)) || Number(ctx.form.age) <= 0,
     error: ctx.error,
     busy: ctx.busy,
     isEditing: ctx.isEditing,
     onBack: () => ctx.setStep(10),
+    onEditIdentity: () => ctx.setStep(10),
     onSubmit: ctx.handleSubmit,
     side: ctx.sideSummary,
   });

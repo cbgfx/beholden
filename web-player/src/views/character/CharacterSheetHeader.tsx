@@ -144,7 +144,7 @@ export function CharacterSheetHeader(props: {
           <IconCharacterInfo size={19} />
         </button>
         {showEngagedEnemies && (
-          <button type="button" onClick={onOpenEngagedEnemies} title="Engaged Enemies" aria-label="Open engaged enemies" style={{ width: 40, height: 32, padding: 0, borderRadius: 8, cursor: "pointer", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <button type="button" onClick={onOpenEngagedEnemies} title="Engaged Enemies" aria-label="Open engaged enemies" style={{ width: 40, height: 32, padding: 0, borderRadius: 8, cursor: "pointer", background: "rgba(255,93,93,0.1)", border: "1px solid rgba(255,93,93,0.35)", color: C.red, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <IconEngagedEnemies size={20} />
           </button>
         )}

@@ -54,10 +54,26 @@ describe("edition-gated invocation mechanics", () => {
 
 const clericSpellcastingStates = [{ className: "Cleric", ability: "wis" as const }];
 
+const noEffectsFeature = {
+  source: { id: "feature:0", kind: "class" as const, name: "Level 5: Sear Undead" },
+  effects: [],
+};
+const potentSpellcastingFeature = {
+  source: { id: "feature:1", kind: "class" as const, name: "Level 7: Blessed Strikes: Potent Spellcasting" },
+  effects: [{
+    id: "feature:1:cantrip_damage",
+    source: { id: "feature:1", kind: "class" as const, name: "Level 7: Blessed Strikes: Potent Spellcasting" },
+    type: "modifier" as const,
+    target: "cantrip_damage" as const,
+    mode: "bonus" as const,
+    amount: { kind: "ability_mod" as const, ability: "wis" as const },
+  }],
+};
+
 describe("buildClassFeatureCantripDamageBonuses", () => {
   it("returns nothing when the character doesn't have Potent Spellcasting", () => {
     expect(buildClassFeatureCantripDamageBonuses({
-      appliedFeatures: [{ name: "Level 5: Sear Undead" }],
+      parsedFeatureEffects: [noEffectsFeature],
       classSpellcastingStates: clericSpellcastingStates,
       prof: { ...prof, spells: [{ name: "Sacred Flame", source: "Cleric", level: 0 }] },
       scores: { wis: 18 },
@@ -66,7 +82,7 @@ describe("buildClassFeatureCantripDamageBonuses", () => {
 
   it("returns nothing when the Wisdom modifier is zero", () => {
     expect(buildClassFeatureCantripDamageBonuses({
-      appliedFeatures: [{ name: "Level 7: Blessed Strikes: Potent Spellcasting" }],
+      parsedFeatureEffects: [potentSpellcastingFeature],
       classSpellcastingStates: clericSpellcastingStates,
       prof: { ...prof, spells: [{ name: "Sacred Flame", source: "Cleric", level: 0 }] },
       scores: { wis: 10 },
@@ -75,7 +91,7 @@ describe("buildClassFeatureCantripDamageBonuses", () => {
 
   it("adds the Wisdom modifier to every Cleric cantrip, but not leveled spells or another class's cantrips", () => {
     expect(buildClassFeatureCantripDamageBonuses({
-      appliedFeatures: [{ name: "Level 7: Blessed Strikes: Potent Spellcasting" }],
+      parsedFeatureEffects: [potentSpellcastingFeature],
       classSpellcastingStates: clericSpellcastingStates,
       prof: {
         ...prof,

@@ -146,6 +146,7 @@ export interface Campaign {
   updatedAt: number;
   playerCount: number;
   imageUrl: string | null;
+  binderId: string | null;
 }
 
 export interface CreatorSpellListChoiceEntry {

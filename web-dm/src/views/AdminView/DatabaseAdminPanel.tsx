@@ -46,7 +46,7 @@ export function DatabaseAdminPanel() {
     try {
       const blob = await exportDatabase();
       const stamp = new Date().toISOString().slice(0, 10);
-      downloadBlob(`beholden-${stamp}.db`, blob);
+      downloadBlob(`beholden-${stamp}.zip`, blob);
     } catch (error) {
       setExportError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -95,7 +95,8 @@ export function DatabaseAdminPanel() {
           <div>
             <h3 style={{ margin: "0 0 4px", fontSize: "var(--fs-medium)", fontWeight: 700 }}>Export</h3>
             <p style={{ margin: 0, fontSize: "var(--fs-subtitle)", color: theme.colors.muted }}>
-              Downloads a consistent snapshot of the entire database — every user, campaign, Binder, and compendium row.
+              Downloads a consistent snapshot of the entire database — every user, campaign, Binder, and compendium row —
+              bundled as a zip together with every campaign, Binder, character, and player image on disk.
             </p>
           </div>
           {exportError ? <div style={{ color: theme.colors.colorPinkRed, fontSize: "var(--fs-subtitle)" }}>{exportError}</div> : null}
@@ -110,16 +111,16 @@ export function DatabaseAdminPanel() {
           <div>
             <h3 style={{ margin: "0 0 4px", fontSize: "var(--fs-medium)", fontWeight: 700 }}>Import</h3>
             <p style={{ margin: 0, fontSize: "var(--fs-subtitle)", color: theme.colors.muted }}>
-              Replaces every row in this database with the contents of an uploaded <code>.db</code> file. A backup of the
-              current database is saved on the server automatically before the swap. Every connected user will be reloaded
-              once this completes.
+              Replaces every row in this database with the contents of an uploaded <code>.zip</code> export (images included)
+              or a plain <code>.db</code> file (an older export, database only). A backup of the current database is saved on
+              the server automatically before the swap. Every connected user will be reloaded once this completes.
             </p>
           </div>
 
           <input
             ref={fileInputRef}
             type="file"
-            accept=".db"
+            accept=".db,.zip"
             disabled={importing}
             onChange={(event) => {
               setSelectedFile(event.target.files?.[0] ?? null);

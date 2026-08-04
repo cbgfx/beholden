@@ -446,7 +446,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
       scoresCha: scores.cha,
     }),
     ...buildClassFeatureCantripDamageBonuses({
-      appliedFeatures,
+      parsedFeatureEffects: parsedAllEffects,
       classSpellcastingStates,
       prof: prof ?? undefined,
       scores,

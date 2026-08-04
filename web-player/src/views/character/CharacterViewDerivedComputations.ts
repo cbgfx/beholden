@@ -5,6 +5,7 @@ import {
   deriveModifierBonusFromEffects,
   deriveModifierStateFromEffects,
 } from "@/domain/character/parseFeatureEffects";
+import { resolveScalingValueInContext } from "@/domain/character/parseFeatureEffectsDerivedHelpers";
 import { abilityMod, getPassiveScore, getSkillBonus, normalizeSpellTrackingKey } from "@/views/character/CharacterSheetUtils";
 
 type ParsedFeatureEffects = ReturnType<typeof import("@/domain/character/parseFeatureEffects").parseFeatureEffects>;
@@ -91,31 +92,37 @@ export function buildInvocationSpellDamageBonuses({
 }
 
 export function buildClassFeatureCantripDamageBonuses({
-  appliedFeatures,
+  parsedFeatureEffects,
   classSpellcastingStates,
   prof,
   scores,
 }: {
-  appliedFeatures: Array<{ name: string }>;
+  parsedFeatureEffects: ParsedFeatureEffects[];
   classSpellcastingStates: Array<{ className: string; ability: AbilKey | null }>;
   prof: ProficiencyMap | undefined;
   scores: Partial<Record<AbilKey, number | null>>;
 }): Record<string, number> {
-  // Cleric's "Potent Spellcasting" (Blessed Strikes, level 7) adds the caster's Wisdom
-  // modifier to the damage of any Cleric cantrip. Detected by feature name, the same way
-  // buildInvocationSpellDamageBonuses (above) detects Agonizing Blast -- there's no structured
-  // "add ability mod to cantrip damage" effect in the schema for either one.
-  const hasPotentSpellcasting = appliedFeatures.some((feature) => /potent spellcasting/i.test(feature.name));
-  if (!hasPotentSpellcasting) return {};
-  const clericState = classSpellcastingStates.find((state) => /^cleric$/i.test(state.className));
-  if (!clericState?.ability) return {};
-  const mod = abilityMod(scores[clericState.ability] ?? null);
-  if (mod === 0) return {};
+  // Cleric's "Potent Spellcasting" (Blessed Strikes, level 7) adds the caster's Wisdom modifier
+  // to the damage of any Cleric cantrip -- a `modifier`/`cantrip_damage` effect on the granting
+  // feature. Scoped to the granting class's own cantrips via the effect's ability (e.g. Wisdom ->
+  // Cleric), since a multiclass caster's other class's cantrips shouldn't get the bonus.
   const bonuses: Record<string, number> = {};
-  for (const spell of prof?.spells ?? []) {
-    if (spell.level !== 0 || !/^cleric$/i.test(String(spell.source ?? ""))) continue;
-    const key = normalizeSpellTrackingKey(spell.name);
-    if (key) bonuses[key] = mod;
+  for (const parsed of parsedFeatureEffects) {
+    for (const effect of parsed.effects) {
+      if (effect.type !== "modifier" || effect.target !== "cantrip_damage" || effect.mode !== "bonus") continue;
+      const amount = resolveScalingValueInContext(effect.amount, { scores });
+      if (!amount) continue;
+      const grantingAbility = effect.amount?.kind === "ability_mod" ? effect.amount.ability : null;
+      const grantingClass = grantingAbility
+        ? classSpellcastingStates.find((state) => state.ability === grantingAbility)
+        : undefined;
+      for (const spell of prof?.spells ?? []) {
+        if (spell.level !== 0) continue;
+        if (grantingClass && !new RegExp(`^${grantingClass.className}$`, "i").test(String(spell.source ?? ""))) continue;
+        const key = normalizeSpellTrackingKey(spell.name);
+        if (key) bonuses[key] = (bonuses[key] ?? 0) + amount;
+      }
+    }
   }
   return bonuses;
 }

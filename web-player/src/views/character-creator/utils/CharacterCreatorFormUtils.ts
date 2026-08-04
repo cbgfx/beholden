@@ -20,6 +20,16 @@ import type {
 export type AbilityMethod = "standard" | "pointbuy";
 export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
 
+/** A Binder-linked campaign expects a Mortal record for every PC, which needs Gender and Age to
+ * be meaningful -- so those fields are only required when at least one selected campaign has a
+ * Binder attached. Campaigns with no Binder never surface those records, so the fields stay optional. */
+export function campaignSelectionHasBinder(
+  campaignIds: string[],
+  campaigns: Array<{ id: string; binderId: string | null }>,
+): boolean {
+  return campaigns.some((campaign) => campaignIds.includes(campaign.id) && Boolean(campaign.binderId));
+}
+
 export interface FormState {
   ruleset: "5e" | "5.5e" | null;
   classId: string;

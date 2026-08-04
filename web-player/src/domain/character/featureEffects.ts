@@ -248,7 +248,10 @@ export interface ModifierEffect extends FeatureEffectBase {
     /** Any d20 Test (attack roll, ability check, or saving throw) — broader than a single target, e.g. Halfling Luck. */
     | "any_d20_test"
     /** Carrying capacity only (not other size-dependent rules). e.g. Goliath's Powerful Build. No consumer reads this today — the app has no encumbrance system — but the fact is typed and ready. */
-    | "carrying_capacity";
+    | "carrying_capacity"
+    /** Every cantrip of the granting class, not a single named spell (e.g. Cleric's Potent
+     * Spellcasting) — distinct from `damage_roll`, which is weapon-attack damage only. */
+    | "cantrip_damage";
   mode: "bonus" | "set_minimum" | "advantage" | "disadvantage" | "reroll";
   amount?: ScalingValue;
   appliesTo?: string[];

@@ -3,6 +3,8 @@
 
 import { z } from "zod";
 import type { Express } from "express";
+import { ZipArchive } from "archiver";
+import { unzipSync } from "fflate";
 import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../shared/validate.js";
 import { hashPassword } from "../lib/jwtAuth.js";
@@ -10,6 +12,7 @@ import { syncOwnedPlayerName } from "../services/characters.js";
 import { requireAuth, requireAdmin } from "../middleware/auth.js";
 import { rowToUser } from "../lib/db.js";
 import { importDatabaseFile } from "../services/databaseTransfer.js";
+import { existingImageDirectories, isDatabaseZipUpload, selectImageEntries, writeImageEntries } from "../services/databaseImageArchive.js";
 import { requireCampaignExists } from "../lib/routeHelpers.js";
 
 const CreateUserBody = z.object({
@@ -35,16 +38,29 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { now, uid } = ctx.helpers;
 
-  // Streams a consistent snapshot of the live database (safe under WAL mode) as a download.
+  // Streams a consistent snapshot of the live database (safe under WAL mode), bundled as a zip
+  // together with every on-disk image directory, so a restore never leaves broken image links.
   app.get("/api/admin/database/export", requireAuth, requireAdmin, (_req, res, next) => {
     const tmpFile = ctx.path.join(ctx.os.tmpdir(), `beholden-export-${uid()}.db`);
     db.backup(tmpFile)
       .then(() => {
         const stamp = new Date(now()).toISOString().slice(0, 10);
-        res.download(tmpFile, `beholden-${stamp}.db`, (err) => {
-          ctx.fs.unlink(tmpFile, () => {});
-          if (err && !res.headersSent) next(err);
+        res.setHeader("Content-Type", "application/zip");
+        res.setHeader("Content-Disposition", `attachment; filename=beholden-${stamp}.zip`);
+        const archive = new ZipArchive({ zlib: { level: 9 } });
+        const cleanup = () => ctx.fs.unlink(tmpFile, () => {});
+        archive.on("error", (error: Error) => {
+          cleanup();
+          if (!res.headersSent) res.status(500);
+          res.end(error.message);
         });
+        archive.on("end", cleanup);
+        archive.pipe(res);
+        archive.file(tmpFile, { name: "beholden.db" });
+        for (const { name, absolutePath } of existingImageDirectories(ctx.paths.dataDir)) {
+          archive.directory(absolutePath, name);
+        }
+        void archive.finalize();
       })
       .catch((cause) => {
         ctx.fs.unlink(tmpFile, () => {});
@@ -52,13 +68,26 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
       });
   });
 
-  // Replaces every row in the live database with an uploaded snapshot, in place.
-  // A pre-import backup is written automatically; see services/databaseTransfer.ts.
+  // Replaces every row in the live database with an uploaded snapshot, in place, and (for a zip
+  // upload) restores the bundled images alongside it. A pre-import backup of the database is
+  // written automatically; see services/databaseTransfer.ts. A plain .db upload (an older export,
+  // before images were bundled) is still accepted, unchanged.
   app.post("/api/admin/database/import", requireAuth, requireAdmin, ctx.dbImportUpload.single("file"), (req, res) => {
     if (!req.file) return res.status(400).json({ ok: false, message: "No file uploaded" });
     const uploadedPath = req.file.path;
+    let dbPathToImport = uploadedPath;
+    let extractedDbPath: string | null = null;
     try {
-      const result = importDatabaseFile(ctx, uploadedPath);
+      if (isDatabaseZipUpload({ mimetype: req.file.mimetype, originalname: req.file.originalname })) {
+        const entries = unzipSync(ctx.fs.readFileSync(uploadedPath));
+        const dbEntry = entries["beholden.db"];
+        if (!dbEntry) return res.status(400).json({ ok: false, message: "Uploaded zip does not contain beholden.db" });
+        extractedDbPath = ctx.path.join(ctx.os.tmpdir(), `beholden-import-${uid()}.db`);
+        ctx.fs.writeFileSync(extractedDbPath, dbEntry);
+        dbPathToImport = extractedDbPath;
+        writeImageEntries(ctx.paths.dataDir, selectImageEntries(entries));
+      }
+      const result = importDatabaseFile(ctx, dbPathToImport);
       ctx.broadcast("database:imported", { at: now() });
       res.json({ ok: true, ...result });
     } catch (cause) {
@@ -66,6 +95,7 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
       res.status(status).json({ ok: false, message: cause instanceof Error ? cause.message : String(cause) });
     } finally {
       ctx.fs.unlink(uploadedPath, () => {});
+      if (extractedDbPath) ctx.fs.unlink(extractedDbPath, () => {});
     }
   });
 

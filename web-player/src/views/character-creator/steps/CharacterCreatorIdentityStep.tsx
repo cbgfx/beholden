@@ -3,11 +3,12 @@ import { Select } from "@/ui/Select";
 import { C } from "@/lib/theme";
 import { NavButtons } from "../shared/CharacterCreatorParts";
 import { headingStyle, inputStyle, labelStyle } from "../shared/CharacterCreatorStyles";
-import type { FormState } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
+import { campaignSelectionHasBinder, type FormState } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
 import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
 
 function renderIdentityStep({
   form,
+  requiresGenderAge,
   setField,
   portraitInputRef,
   portraitPreview,
@@ -18,6 +19,7 @@ function renderIdentityStep({
   side,
 }: {
   form: Record<string, unknown> & { [key: string]: unknown };
+  requiresGenderAge: boolean;
   setField: (key: string, value: string) => void;
   portraitInputRef: React.RefObject<HTMLInputElement | null>;
   portraitPreview: string | null;
@@ -37,7 +39,7 @@ function renderIdentityStep({
     { key: "hair", label: "Hair", placeholder: "Black, braided" },
     { key: "skin", label: "Skin", placeholder: "Tan, scarred" },
     { key: "heightText", label: "Height", placeholder: "6'2\"" },
-    { key: "age", label: "Age *", placeholder: "32", required: true, type: "number" },
+    { key: "age", label: requiresGenderAge ? "Age *" : "Age", placeholder: "32", required: requiresGenderAge, type: "number" },
     { key: "weight", label: "Weight", placeholder: "190 lb" },
   ];
 
@@ -138,9 +140,9 @@ function renderIdentityStep({
               </div>
             ))}
             <div>
-              <label style={labelStyle}>Gender *</label>
+              <label style={labelStyle}>{requiresGenderAge ? "Gender *" : "Gender"}</label>
               <Select
-                required
+                required={requiresGenderAge}
                 value={String(form.gender ?? "")}
                 onChange={(e) => setField("gender", e.target.value)}
                 style={{ width: "100%" }}
@@ -175,7 +177,15 @@ function renderIdentityStep({
           </div>
         </div>
       </div>
-      <NavButtons step={10} onBack={onBack} onNext={onNext} nextDisabled={!String(form.characterName ?? "").trim() || !String(form.gender ?? "") || !Number.isInteger(Number(form.age)) || Number(form.age) <= 0} />
+      <NavButtons
+        step={10}
+        onBack={onBack}
+        onNext={onNext}
+        nextDisabled={
+          !String(form.characterName ?? "").trim()
+          || (requiresGenderAge && (!String(form.gender ?? "") || !Number.isInteger(Number(form.age)) || Number(form.age) <= 0))
+        }
+      />
     </div>
   );
 
@@ -185,6 +195,7 @@ function renderIdentityStep({
 export function renderIdentityFromContext(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
   return renderIdentityStep({
     form: ctx.form as unknown as Record<string, unknown> & { [key: string]: unknown },
+    requiresGenderAge: campaignSelectionHasBinder(ctx.form.campaignIds, ctx.campaigns),
     setField: (key, value) => ctx.setField(key as keyof FormState, value as never),
     portraitInputRef: ctx.portraitInputRef,
     portraitPreview: ctx.portraitPreview,

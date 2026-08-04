@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveRaceAbilityBonuses, getClassFeatChoices, getOptionalGroups, getPrimaryAbilityKeys, initForm, resolvedScores } from "./CharacterCreatorFormUtils";
+import { campaignSelectionHasBinder, deriveRaceAbilityBonuses, getClassFeatChoices, getOptionalGroups, getPrimaryAbilityKeys, initForm, resolvedScores } from "./CharacterCreatorFormUtils";
 import type { ClassDetail } from "./CharacterCreatorTypes";
 
 function classDetail(overrides: Partial<ClassDetail>): ClassDetail {
@@ -52,6 +52,25 @@ describe("getClassFeatChoices", () => {
     expect(result).toHaveLength(1);
     expect(result[0].featGroup).toBe("Fighting Style");
     expect(result[0].options.map((option) => option.id)).toEqual(["f_fighting_style_archery", "f_fighting_style_defense"]);
+  });
+});
+
+describe("campaignSelectionHasBinder", () => {
+  const campaigns = [
+    { id: "c_no_binder", binderId: null },
+    { id: "c_with_binder", binderId: "binder_1" },
+  ];
+
+  it("is false when nothing is selected", () => {
+    expect(campaignSelectionHasBinder([], campaigns)).toBe(false);
+  });
+
+  it("is false when every selected campaign has no Binder", () => {
+    expect(campaignSelectionHasBinder(["c_no_binder"], campaigns)).toBe(false);
+  });
+
+  it("is true as soon as any selected campaign has a Binder", () => {
+    expect(campaignSelectionHasBinder(["c_no_binder", "c_with_binder"], campaigns)).toBe(true);
   });
 });
 
