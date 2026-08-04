@@ -234,7 +234,12 @@ export function buildCharacterRuntimeActions(args: {
     // turn-based rules, not by a refund), so ending it stays a manual condition toggle. The
     // `resource.current > 0` check keeps clicking "-" on an already-empty counter (clamped,
     // nothing actually spent) from applying the condition anyway.
-    if (key === "rage" && delta < 0 && (resource?.current ?? 0) > 0 && !(char.conditions ?? []).some((condition) => condition.key === "rage")) {
+    // A class-scoped resource key (e.g. "class:class_c_barbarian:rage") is the norm, not the
+    // exception -- collectClassResources prefixes it with the owning class entry's id whenever
+    // one is known, so matching the raw key against "rage" would silently never fire for a real
+    // character. Match on name instead, same as toggleCondition("rage") already does below.
+    const isRageResource = resource != null && (/^rage$/i.test(resource.name) || resource.key === "rage");
+    if (isRageResource && delta < 0 && (resource?.current ?? 0) > 0 && !(char.conditions ?? []).some((condition) => condition.key === "rage")) {
       const nextConditions = toggleConditionInstance(char.conditions ?? [], "rage");
       try {
         await patchMyCharacter(char.id, "conditions", { conditions: nextConditions });
