@@ -26,7 +26,7 @@ import { createBroadcaster, createWsServer, sendWsEvent } from "./ws.js";
 import { createEgressLoggingMiddleware, egressLogMinBytes } from "./egressLogging.js";
 import type { ServerContext } from "./context.js";
 import type { BroadcastFn } from "./events.js";
-import { multerErrorMiddleware, zodErrorMiddleware } from "../shared/validate.js";
+import { multerErrorMiddleware, zodErrorMiddleware } from "../lib/validate.js";
 
 import {
   createInMemoryRateLimiter,
@@ -42,26 +42,26 @@ import { registerAdminRoutes } from "../routes/adminRoutes.js";
 import { registerHealthRoutes } from "../routes/health.js";
 import { registerMetaRoutes } from "../routes/meta.js";
 import { registerCompendiumRoutes } from "../routes/compendium.js";
-import { registerCampaignRoutes } from "../routes/campaigns.js";
-import { registerCampaignBootstrapRoute } from "../routes/campaignBootstrap.js";
+import { registerCampaignRoutes } from "../routes/campaigns/core.js";
+import { registerCampaignBootstrapRoute } from "../routes/campaigns/bootstrap.js";
 import { registerPlayerRoutes } from "../routes/players.js";
-import { registerCharacterRoutes } from "../routes/characters.js";
+import { registerCharacterRoutes } from "../routes/characters/core.js";
 import { registerInpcRoutes } from "../routes/inpcs.js";
 import { registerAdventureRoutes } from "../routes/adventures.js";
 import { registerEncounterRoutes } from "../routes/encounters.js";
 import { registerNoteRoutes } from "../routes/notes.js";
-import { registerCombatRoutes } from "../routes/combat.js";
+import { registerCombatRoutes } from "../routes/combat/core.js";
 import { registerReorderRoutes } from "../routes/reorder.js";
-import { registerTreasureRoutes } from "../routes/treasure.js";
-import { registerExportImportRoutes } from "../routes/exportImport.js";
+import { registerTreasureRoutes } from "../routes/treasure/core.js";
+import { registerExportImportRoutes } from "../routes/exportImport/core.js";
 import { registerUpdateCheckRoutes } from "../routes/updateCheck.js";
 import { registerWebUiRoutes } from "../routes/webUi.js";
 import { registerPartyInventoryRoutes } from "../routes/partyInventory.js";
 import { registerBastionRoutes } from "../routes/bastions.js";
-import { registerBinderRoutes } from "../routes/binders.js";
-import { registerBinderReferenceRoutes } from "../routes/binderReferences.js";
-import { registerBinderMortalRoutes } from "../routes/binderMortals.js";
-import { registerBinderLoreRoutes } from "../routes/binderLore.js";
+import { registerBinderRoutes } from "../routes/binders/core.js";
+import { registerBinderReferenceRoutes } from "../routes/binders/references.js";
+import { registerBinderMortalRoutes } from "../routes/binders/mortals.js";
+import { registerBinderLoreRoutes } from "../routes/binders/lore.js";
 
 export function createServer() {
   const runtime = getRuntimeConfig();

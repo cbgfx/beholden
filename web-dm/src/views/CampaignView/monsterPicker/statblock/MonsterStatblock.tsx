@@ -5,7 +5,7 @@ import { theme } from "@/theme/theme";
 import { Input } from "@/ui/Input";
 import { CharacterSheetPanel, type CharacterSheetStats } from "@/components/CharacterSheet";
 import { formatCr } from "@/views/CampaignView/monsterPicker/utils";
-import { parseSpeedVal, parseSpeedDisplay, buildMonsterInfoLines } from "@/utils/compendiumFormat";
+import { parseSpeedVal, parseSpeedDisplay, buildMonsterInfoLines } from "@/lib/compendiumFormat";
 import { useMonsterSpells } from "./useMonsterSpells";
 import { MonsterSpellPanel } from "./MonsterSpellPanel";
 import { MonsterSectionPanel } from "@/components/MonsterDisplay/MonsterSectionPanel";

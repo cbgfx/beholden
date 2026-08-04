@@ -5,7 +5,7 @@
 import { z } from "zod";
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
-import { parseBody } from "../shared/validate.js";
+import { parseBody } from "../lib/validate.js";
 import { verifyPassword, hashPassword, signToken } from "../lib/jwtAuth.js";
 import { requireAuth } from "../middleware/auth.js";
 import { syncOwnedPlayerName } from "../services/characters.js";

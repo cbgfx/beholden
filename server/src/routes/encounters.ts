@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import type { StoredEncounterActor } from "../server/userData.js";
-import { parseBody } from "../shared/validate.js";
+import { parseBody } from "../lib/validate.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { rowToEncounter, nextSortFor, ENCOUNTER_COLS } from "../lib/db.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";

@@ -6,7 +6,7 @@ import type { ServerContext } from "../../server/context.js";
 import { requireParam } from "../../lib/routeHelpers.js";
 import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { requireAuth } from "../../middleware/auth.js";
-import { parseBody } from "../../shared/validate.js";
+import { parseBody } from "../../lib/validate.js";
 import {
   parseStoredGrandEntry,
   parseStoredPresentationEntry,

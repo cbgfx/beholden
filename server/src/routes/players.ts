@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { requireParam } from "../lib/routeHelpers.js";
-import { parseBody } from "../shared/validate.js";
+import { parseBody } from "../lib/validate.js";
 import { rowToCampaignCharacter, CAMPAIGN_CHARACTER_COLS, parseJson, getCampaignCharacterRow } from "../lib/db.js";
 import { ConditionInstanceSchema, OverridesSchema } from "../lib/schemas.js";
 import { DEFAULT_OVERRIDES, DEFAULT_DEATH_SAVES } from "../lib/defaults.js";

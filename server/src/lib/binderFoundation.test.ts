@@ -8,9 +8,9 @@ import os from "node:os";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import { openDb, type Db } from "./db.js";
-import { registerBinderRoutes } from "../routes/binders.js";
-import { registerBinderReferenceRoutes } from "../routes/binderReferences.js";
-import { registerBinderMortalRoutes } from "../routes/binderMortals.js";
+import { registerBinderRoutes } from "../routes/binders/core.js";
+import { registerBinderReferenceRoutes } from "../routes/binders/references.js";
+import { registerBinderMortalRoutes } from "../routes/binders/mortals.js";
 import type { ServerContext } from "../server/context.js";
 import { normalizeKey } from "./text.js";
 import {
@@ -30,7 +30,7 @@ test("formula-only monster HP hydrates to its expected average instead of its di
     { hpMax: 123, hpDetails: "13d10+52", ac: 17, acDetails: null },
   );
 });
-import { ensureBinderColumns, ensureCanonicalMortalPositions } from "./binderCampaignMigration.js";
+import { ensureBinderColumns, ensureCanonicalMortalPositions } from "./migrations/binderCampaignMigration.js";
 
 let db: Db | null = null;
 let server: Server | null = null;

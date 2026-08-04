@@ -8,7 +8,7 @@ import {
   parseSpeedDisplay,
   parseSaves,
   buildMonsterInfoLines,
-} from "@/utils/compendiumFormat";
+} from "@/lib/compendiumFormat";
 import { hasZeroSpeedCondition, SLOW_SPEED_PENALTY } from "@beholden/shared/domain";
 
 /** Zeroes every movement mode (walk/fly/swim/climb/burrow) in a monster's raw speed value —

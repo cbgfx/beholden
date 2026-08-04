@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { requireParam } from "../lib/routeHelpers.js";
-import { parseBody } from "../shared/validate.js";
+import { parseBody } from "../lib/validate.js";
 import { dmOrAdmin } from "../middleware/campaignAuth.js";
 
 const ReorderBody = z.object({

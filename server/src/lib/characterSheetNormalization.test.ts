@@ -5,9 +5,9 @@ import { normalizeCharacterSheetForStorage } from "./characterSheetNormalization
 import { mergeLiveStats, type Assignment } from "../services/characters.js";
 import type { StoredCharacterSheetState, StoredCharacterSheet } from "../server/userData.js";
 import { cleanStoredImageUrl, rowToCampaignCharacter } from "./dbConverters.js";
-import { ensureImageVersionColumns } from "./imageVersionColumnMigration.js";
+import { ensureImageVersionColumns } from "./migrations/imageVersionColumnMigration.js";
 import { SCHEMA_SQL } from "./dbSchema.js";
-import { importCampaignDocument } from "../routes/exportImportHelpers.js";
+import { importCampaignDocument } from "../routes/exportImport/helpers.js";
 
 const BASE_SHEET: StoredCharacterSheetState = {
   name: "Test Bard",

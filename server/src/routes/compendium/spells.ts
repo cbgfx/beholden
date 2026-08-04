@@ -5,7 +5,7 @@ import type { ServerContext } from "../../server/context.js";
 import { requireParam } from "../../lib/routeHelpers.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
-import { parseBody } from "../../shared/validate.js";
+import { parseBody } from "../../lib/validate.js";
 import { parseStoredGrandEntry, parseStoredPresentationEntry } from "../../services/compendium/storedCompendium.js";
 import { grandEntryId, saveGrandEntry } from "../../services/compendium/grandEditor.js";
 import { normalizeLookupName, parseRulesetFilter } from "./helpers.js";

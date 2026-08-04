@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import type { StoredEncounterActor, StoredConditionInstance } from "../server/userData.js";
-import { parseBody } from "../shared/validate.js";
+import { parseBody } from "../lib/validate.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
 import {

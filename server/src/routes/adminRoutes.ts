@@ -6,7 +6,7 @@ import type { Express } from "express";
 import { ZipArchive } from "archiver";
 import { unzipSync } from "fflate";
 import type { ServerContext } from "../server/context.js";
-import { parseBody } from "../shared/validate.js";
+import { parseBody } from "../lib/validate.js";
 import { hashPassword } from "../lib/jwtAuth.js";
 import { syncOwnedPlayerName } from "../services/characters.js";
 import { requireAuth, requireAdmin } from "../middleware/auth.js";

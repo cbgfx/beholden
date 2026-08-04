@@ -1,20 +1,20 @@
 import Database from "better-sqlite3";
 import { SCHEMA_SQL } from "./dbSchema.js";
 import { syncCharacterDerivedColumns } from "./dbCharacterSync.js";
-import { normalizeLegacyCompendiumEffectKinds } from "./compendiumLegacyKindMigration.js";
-import { extractMonsterTreasureTraits } from "./monsterTreasureMigration.js";
-import { ensureTreasureEncounterColumn } from "./treasureEncounterColumnMigration.js";
-import { ensureUserLastLoginColumn } from "./userLastLoginColumnMigration.js";
-import { ensureImageVersionColumns } from "./imageVersionColumnMigration.js";
-import { ensureCompendiumContentHashColumns } from "./compendiumContentHashColumnMigration.js";
-import { ensureMortalClassColumn } from "./mortalClassColumnMigration.js";
+import { normalizeLegacyCompendiumEffectKinds } from "./migrations/compendiumLegacyKindMigration.js";
+import { extractMonsterTreasureTraits } from "./migrations/monsterTreasureMigration.js";
+import { ensureTreasureEncounterColumn } from "./migrations/treasureEncounterColumnMigration.js";
+import { ensureUserLastLoginColumn } from "./migrations/userLastLoginColumnMigration.js";
+import { ensureImageVersionColumns } from "./migrations/imageVersionColumnMigration.js";
+import { ensureCompendiumContentHashColumns } from "./migrations/compendiumContentHashColumnMigration.js";
+import { ensureMortalClassColumn } from "./migrations/mortalClassColumnMigration.js";
 import { displayNoteTitle } from "./dbConverters.js";
-import { ensureCompendiumRulesetColumns } from "./compendiumRulesetColumnMigration.js";
-import { ensureCharacterRulesetColumn } from "./characterRulesetColumnMigration.js";
-import { ensureCompendiumCompositePrimaryKey } from "./compendiumPrimaryKeyMigration.js";
+import { ensureCompendiumRulesetColumns } from "./migrations/compendiumRulesetColumnMigration.js";
+import { ensureCharacterRulesetColumn } from "./migrations/characterRulesetColumnMigration.js";
+import { ensureCompendiumCompositePrimaryKey } from "./migrations/compendiumPrimaryKeyMigration.js";
 import { BINDER_SCHEMA_SQL } from "./binderSchema.js";
-import { ensureActivityColumns } from "./activityMigration.js";
-import { ensureInpcBinderMortalLink } from "./inpcBinderMigration.js";
+import { ensureActivityColumns } from "./migrations/activityMigration.js";
+import { ensureInpcBinderMortalLink } from "./migrations/inpcBinderMigration.js";
 import { reconcileLinkedCharacterIdentities } from "../services/binders/linkedCharacterSync.js";
 import {
   ensureBinderCampaignColumns,
@@ -24,7 +24,7 @@ import {
   ensureBinderUnsetConventions,
   ensureCanonicalMortalPositions,
   ensureConcreteMortalResidences,
-} from "./binderCampaignMigration.js";
+} from "./migrations/binderCampaignMigration.js";
 import { CAMPAIGN_CHARACTER_COLS } from "./dbColumns.js";
 
 export type Db = Database.Database;

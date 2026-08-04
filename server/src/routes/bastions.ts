@@ -3,7 +3,7 @@ import type { ServerContext } from "../server/context.js";
 import { requireParam } from "../lib/routeHelpers.js";
 import { parseJson } from "../lib/db.js";
 import { errorMessage } from "../lib/errors.js";
-import { parseBody } from "../shared/validate.js";
+import { parseBody } from "../lib/validate.js";
 import { requireAuth } from "../middleware/auth.js";
 import { dmOrAdmin, memberOrAdmin } from "../middleware/campaignAuth.js";
 import { BastionCreateSchema, BastionPlayerUpdateSchema, BastionUpdateSchema } from "./bastions/schemas.js";

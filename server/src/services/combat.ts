@@ -22,7 +22,7 @@ import {
 } from "./combatTransitions.js";
 import { toEncounterActorDto } from "../lib/apiActors.js";
 import type { BroadcastFn } from "../server/events.js";
-import type { CombatantUpdateBody } from "../routes/combatRouteHelpers.js";
+import type { CombatantUpdateBody } from "../routes/combat/helpers.js";
 import { resolveActorDamage, resolveActorHealing } from "@beholden/shared/domain/actors";
 import { concentrationSaveDc } from "@beholden/shared/domain/conditions";
 

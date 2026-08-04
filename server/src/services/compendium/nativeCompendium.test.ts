@@ -4,7 +4,7 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { SCHEMA_SQL } from "../../lib/dbSchema.js";
-import { ensureCompendiumCompositePrimaryKey } from "../../lib/compendiumPrimaryKeyMigration.js";
+import { ensureCompendiumCompositePrimaryKey } from "../../lib/migrations/compendiumPrimaryKeyMigration.js";
 import {
   NATIVE_COMPENDIUM_CATEGORIES,
   NATIVE_COMPENDIUM_MANIFEST_VERSION,
