@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildInvocationSpellDamageBonuses } from "./CharacterViewDerivedComputations";
+import { buildClassFeatureCantripDamageBonuses, buildInvocationSpellDamageBonuses } from "./CharacterViewDerivedComputations";
 
 const invocationDetails = [{ name: "Agonizing Blast", text: "Add your Charisma modifier to damage rolls." }];
 const prof = {
@@ -49,5 +49,47 @@ describe("edition-gated invocation mechanics", () => {
       currentCharacterData: { chosenFeatOptions: { "invocation:agonizing-blast": ["spell_fire_bolt"] } },
       scoresCha: 18,
     })).toEqual({ firebolt: 4 });
+  });
+});
+
+const clericSpellcastingStates = [{ className: "Cleric", ability: "wis" as const }];
+
+describe("buildClassFeatureCantripDamageBonuses", () => {
+  it("returns nothing when the character doesn't have Potent Spellcasting", () => {
+    expect(buildClassFeatureCantripDamageBonuses({
+      appliedFeatures: [{ name: "Level 5: Sear Undead" }],
+      classSpellcastingStates: clericSpellcastingStates,
+      prof: { ...prof, spells: [{ name: "Sacred Flame", source: "Cleric", level: 0 }] },
+      scores: { wis: 18 },
+    })).toEqual({});
+  });
+
+  it("returns nothing when the Wisdom modifier is zero", () => {
+    expect(buildClassFeatureCantripDamageBonuses({
+      appliedFeatures: [{ name: "Level 7: Blessed Strikes: Potent Spellcasting" }],
+      classSpellcastingStates: clericSpellcastingStates,
+      prof: { ...prof, spells: [{ name: "Sacred Flame", source: "Cleric", level: 0 }] },
+      scores: { wis: 10 },
+    })).toEqual({});
+  });
+
+  it("adds the Wisdom modifier to every Cleric cantrip, but not leveled spells or another class's cantrips", () => {
+    expect(buildClassFeatureCantripDamageBonuses({
+      appliedFeatures: [{ name: "Level 7: Blessed Strikes: Potent Spellcasting" }],
+      classSpellcastingStates: clericSpellcastingStates,
+      prof: {
+        ...prof,
+        spells: [
+          { name: "Sacred Flame", source: "Cleric", level: 0 },
+          { name: "Toll the Dead", source: "Cleric", level: 0 },
+          { name: "Guiding Bolt", source: "Cleric", level: 1 },
+          { name: "Fire Bolt", source: "Wizard", level: 0 },
+        ],
+      },
+      scores: { wis: 18 },
+    })).toEqual({
+      sacredflame: 4,
+      tollthedead: 4,
+    });
   });
 });

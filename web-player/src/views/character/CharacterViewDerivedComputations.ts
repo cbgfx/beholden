@@ -90,6 +90,36 @@ export function buildInvocationSpellDamageBonuses({
   return bySpellKey;
 }
 
+export function buildClassFeatureCantripDamageBonuses({
+  appliedFeatures,
+  classSpellcastingStates,
+  prof,
+  scores,
+}: {
+  appliedFeatures: Array<{ name: string }>;
+  classSpellcastingStates: Array<{ className: string; ability: AbilKey | null }>;
+  prof: ProficiencyMap | undefined;
+  scores: Partial<Record<AbilKey, number | null>>;
+}): Record<string, number> {
+  // Cleric's "Potent Spellcasting" (Blessed Strikes, level 7) adds the caster's Wisdom
+  // modifier to the damage of any Cleric cantrip. Detected by feature name, the same way
+  // buildInvocationSpellDamageBonuses (above) detects Agonizing Blast -- there's no structured
+  // "add ability mod to cantrip damage" effect in the schema for either one.
+  const hasPotentSpellcasting = appliedFeatures.some((feature) => /potent spellcasting/i.test(feature.name));
+  if (!hasPotentSpellcasting) return {};
+  const clericState = classSpellcastingStates.find((state) => /^cleric$/i.test(state.className));
+  if (!clericState?.ability) return {};
+  const mod = abilityMod(scores[clericState.ability] ?? null);
+  if (mod === 0) return {};
+  const bonuses: Record<string, number> = {};
+  for (const spell of prof?.spells ?? []) {
+    if (spell.level !== 0 || !/^cleric$/i.test(String(spell.source ?? ""))) continue;
+    const key = normalizeSpellTrackingKey(spell.name);
+    if (key) bonuses[key] = mod;
+  }
+  return bonuses;
+}
+
 export function buildTransformedCombatStats({
   monster,
   effectiveAc,

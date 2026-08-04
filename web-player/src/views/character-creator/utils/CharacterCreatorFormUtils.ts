@@ -79,6 +79,15 @@ export interface FormState {
 
 const DEFAULT_SCORES = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 };
 
+// Class autolevel data stores feat-choice categories as the raw compendium code
+// (O/G/E/F), but `/api/compendium/feats` reports each feat's category as the
+// human-readable label (Origin/General/Epic Boon/Fighting Style) — mirrors the
+// server's own code->label mapping in `featCategoryLabel` so the two sides compare
+// the same value instead of a code that can never equal a label.
+const FEAT_CATEGORY_LABELS: Record<string, string> = {
+  O: "Origin", G: "General", E: "Epic Boon", F: "Fighting Style",
+};
+
 export function getClassFeatChoices(
   classDetail: ClassDetail | null,
   level: number,
@@ -94,12 +103,13 @@ export function getClassFeatChoices(
       if (!featureMatchesSubclass(f, selectedSubclass)) continue;
       const featChoice = f.choices?.find((choice) => choice.kind === "feat");
       if (!featChoice || featChoice.kind !== "feat") continue;
+      const categoryLabel = FEAT_CATEGORY_LABELS[featChoice.category] ?? featChoice.category;
       const featGroup = featChoice.category === "F" ? "Fighting Style" : featChoice.category;
       const key = `${al.level}:${f.name}`;
       if (seen.has(key)) continue;
       seen.add(key);
       const options = featSummaries
-        .filter((feat) => String(feat.category ?? "").toUpperCase() === featChoice.category)
+        .filter((feat) => String(feat.category ?? "").toUpperCase() === categoryLabel.toUpperCase())
         .map((feat) => ({ id: feat.id, name: feat.name }))
         .sort((a, b) => a.name.localeCompare(b.name));
       choices.push({ featureName: f.name, featGroup, options });

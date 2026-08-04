@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveRaceAbilityBonuses, getOptionalGroups, getPrimaryAbilityKeys, initForm, resolvedScores } from "./CharacterCreatorFormUtils";
+import { deriveRaceAbilityBonuses, getClassFeatChoices, getOptionalGroups, getPrimaryAbilityKeys, initForm, resolvedScores } from "./CharacterCreatorFormUtils";
 import type { ClassDetail } from "./CharacterCreatorTypes";
 
 function classDetail(overrides: Partial<ClassDetail>): ClassDetail {
@@ -25,6 +25,33 @@ describe("getPrimaryAbilityKeys", () => {
   it("returns an empty list when there's no class detail or no primary ability", () => {
     expect(getPrimaryAbilityKeys(null)).toEqual([]);
     expect(getPrimaryAbilityKeys(classDetail({}))).toEqual([]);
+  });
+});
+
+describe("getClassFeatChoices", () => {
+  it("matches a class's Fighting Style feat choice against the feat catalog's human-readable category label", () => {
+    // `/api/compendium/feats` reports each feat's category as a label ("Fighting Style"),
+    // while class autolevel data stores the raw compendium code ("F") -- this must compare
+    // the two correctly instead of leaving the options list empty.
+    const ranger = classDetail({
+      autolevels: [{
+        level: 2, scoreImprovement: false, slots: null,
+        features: [{
+          name: "Level 2: Fighting Style", text: "", optional: false,
+          choices: [{ kind: "feat", category: "F" }],
+        }],
+        counters: [],
+      }],
+    });
+    const featSummaries = [
+      { id: "f_fighting_style_archery", name: "Fighting Style: Archery", category: "Fighting Style" },
+      { id: "f_fighting_style_defense", name: "Fighting Style: Defense", category: "Fighting Style" },
+      { id: "f_alert", name: "Alert", category: "Origin" },
+    ];
+    const result = getClassFeatChoices(ranger, 2, featSummaries, null);
+    expect(result).toHaveLength(1);
+    expect(result[0].featGroup).toBe("Fighting Style");
+    expect(result[0].options.map((option) => option.id)).toEqual(["f_fighting_style_archery", "f_fighting_style_defense"]);
   });
 });
 

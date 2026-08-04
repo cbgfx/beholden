@@ -247,6 +247,7 @@ export async function buildCreatorSubmissionBody(args: {
         subclass: form.subclass || null,
       }],
       chosenOptionals: form.chosenOptionals,
+      chosenFeatureChoices: form.chosenFeatureChoices,
     } as CharacterData,
     characterLevel: form.level,
     classDetail,

@@ -192,7 +192,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
               addSpellSourceLabel: data.classDetail?.name ?? char.className ?? "Manual",
               onResourceChange: runtime.changeResourceCurrent,
               spellcastingBlocked: derived.nonProficientArmorPenalty,
-              spellDamageBonuses: derived.invocationSpellDamageBonuses,
+              spellDamageBonuses: derived.spellDamageAbilityBonuses,
               spellSaveDcBonus: derived.spellSaveDcBonus,
               conditions: char.conditions ?? [],
               onToggleCondition: runtime.toggleCondition,

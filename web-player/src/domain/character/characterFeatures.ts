@@ -12,6 +12,7 @@ import type { CreatorFeatureLike } from "@/views/character-creator/utils/Charact
 import { resolveSpeciesTraitEffects } from "@/domain/character/speciesTraitChoices";
 
 interface CharacterFeatureLike {
+  id?: string;
   name: string;
   text?: string | null;
   optional?: boolean;
@@ -30,9 +31,20 @@ interface CharacterAutolevelLike {
   features?: CharacterFeatureLike[];
 }
 
+/** A class-level "pick one of these mutually-exclusive named options" group (e.g. Cleric's
+ * Blessed Strikes: Divine Strike vs. Potent Spellcasting) -- distinct from a single feature's
+ * own `choices` (skill/tool/spell picks within one feature). Selection is stored in
+ * `charData.chosenFeatureChoices[\`classchoice:${classId}:${choice.id}\`]`, the same key format
+ * the level-up wizard's `classChoiceGroups` uses. */
+interface CharacterClassChoiceLike {
+  id: string;
+  options: Array<{ id: string; features: string[] }>;
+}
+
 interface CharacterClassDetailLike {
   id: string;
   spellAbility?: string | null;
+  choices?: CharacterClassChoiceLike[];
   autolevels: CharacterAutolevelLike[];
 }
 
@@ -188,6 +200,7 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
       .map((value) => normalizeOptionalFeatureToken(value))
       .filter(Boolean),
   );
+  const chosenFeatureChoices = charData?.chosenFeatureChoices ?? {};
   const byId = new Map<string, AppliedCharacterFeatureEntry>();
   const dedupeKeys = new Set<string>();
 
@@ -217,6 +230,16 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
   let bestExtraAttack: { rank: number; feature: AppliedCharacterFeatureEntry } | null = null;
   for (const selection of selectedClasses) {
     const selectedSubclass = String(selection.entry.subclass ?? "").trim();
+    // Features belonging to a class-level exclusive-choice group (e.g. Cleric's Blessed Strikes:
+    // Divine Strike vs. Potent Spellcasting) are marked `optional` too, but their selection lives
+    // in `chosenFeatureChoices`, not `chosenOptionals` -- `isOptionalFeatureChosen` alone would
+    // never find them, silently dropping the entire pick from the applied-features list.
+    const selectedClassChoiceFeatureIds = new Set(
+      (selection.detail.choices ?? []).flatMap((choice) => {
+        const selectedOptionId = chosenFeatureChoices[`classchoice:${selection.detail.id}:${choice.id}`]?.[0];
+        return choice.options.find((option) => option.id === selectedOptionId)?.features ?? [];
+      })
+    );
     for (const autolevel of selection.detail.autolevels ?? []) {
       if (autolevel.level == null || autolevel.level > selection.entry.level) continue;
       for (const feature of autolevel.features ?? []) {
@@ -225,7 +248,8 @@ export function buildAppliedCharacterFeatures(args: BuildAppliedCharacterFeature
       const text = cleanedText(feature.text);
       if (!name || !text) continue;
       const isSubclassFeature = Boolean(getFeatureSubclassName(feature));
-      if (feature.optional && !isSubclassFeature && !isOptionalFeatureChosen(name, chosenOptionals, chosenOptionalsNormalized)) continue;
+      const isChosenClassChoiceFeature = Boolean(feature.id) && selectedClassChoiceFeatureIds.has(String(feature.id));
+      if (feature.optional && !isSubclassFeature && !isChosenClassChoiceFeature && !isOptionalFeatureChosen(name, chosenOptionals, chosenOptionalsNormalized)) continue;
       if (/^unarmored defense$/i.test(name)) {
         if (unarmoredDefenseClaimed) continue;
         unarmoredDefenseClaimed = true;

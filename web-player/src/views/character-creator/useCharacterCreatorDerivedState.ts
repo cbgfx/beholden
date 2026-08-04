@@ -380,6 +380,7 @@ export function useCharacterCreatorDerivedState(args: {
           subclass: form.subclass || null,
         }] : [],
         chosenOptionals: form.chosenOptionals,
+        chosenFeatureChoices: form.chosenFeatureChoices,
       },
       characterLevel: form.level,
       classDetail,
@@ -393,7 +394,7 @@ export function useCharacterCreatorDerivedState(args: {
       levelUpFeatDetails,
       invocationDetails: [],
     })),
-    [bgDetail, resolvedBgOriginFeatDetail, classDetail, classFeatDetails, form.chosenClassFeatIds, form.chosenOptionals, form.level, form.subclass, levelUpFeatDetails, raceDetail, resolvedRaceFeatDetail, selectedClassSummary?.name, form.classId]
+    [bgDetail, resolvedBgOriginFeatDetail, classDetail, classFeatDetails, form.chosenClassFeatIds, form.chosenFeatureChoices, form.chosenOptionals, form.level, form.subclass, levelUpFeatDetails, raceDetail, resolvedRaceFeatDetail, selectedClassSummary?.name, form.classId]
   );
   const levelUpFeatLevels = React.useMemo(
     () => Array.from(new Set((classDetail?.autolevels ?? [])

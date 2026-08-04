@@ -77,6 +77,26 @@ describe("mergeResourceState", () => {
     ]);
   });
 
+  it("does not duplicate a resource whose saved key AND label predate a compendium label change, carrying its current value forward", () => {
+    // Reproduces the real bug: Light Domain Cleric's Warding Flare resource label was shortened
+    // in the compendium from "Warding Flare (Light Domain)" to "Warding Flare", which changed
+    // both its auto-derived key (normalizeResourceKey(name)) and its name at once -- so neither
+    // the key nor the exact-name fallback matches the saved entry, and it showed up as a second,
+    // stale "Warding Flare" resource alongside the freshly-derived one.
+    const saved: ResourceCounter[] = [
+      { key: "warding-flare-light-domain", name: "Warding Flare (Light Domain)", current: 3, max: 4, reset: "L", restoreAmount: "all" },
+    ];
+    const derived: ResourceCounter[] = [
+      { key: "warding-flare", name: "Warding Flare", current: 4, max: 4, reset: "L", restoreAmount: "all" },
+    ];
+
+    const result = mergeResourceState(saved, derived);
+
+    expect(result).toEqual([
+      { key: "warding-flare", name: "Warding Flare", current: 3, max: 4, reset: "L", restoreAmount: "all" },
+    ]);
+  });
+
   it("drops a stale item-charge resource (e.g. a Staff of Defense) instead of showing it alongside the item's own charge tracker", () => {
     // Reproduces a real save: an older version of the app synthesized a class-style Resource for
     // an item's charges ("Staff of Defense Charges"). Item charges are tracked on the inventory

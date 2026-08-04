@@ -110,7 +110,7 @@ export type CharacterViewDerivedState = {
   usesFlexiblePreparedList: boolean;
   preparedSpellLimit: number;
   preparedSpells: string[];
-  invocationSpellDamageBonuses: Record<string, number>;
+  spellDamageAbilityBonuses: Record<string, number>;
   accentColor: string;
   overrides: SheetOverrides;
   effectiveHpMax: number;

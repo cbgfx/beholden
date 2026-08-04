@@ -66,6 +66,38 @@ test("importDatabaseFile replaces every row in the live db with the uploaded sna
   }
 });
 
+test("importDatabaseFile matches columns by name, not position, when a table's column order diverged between the live and uploaded schemas", () => {
+  // `ALTER TABLE ADD COLUMN` always appends physically, so a long-lived live db and a
+  // freshly-created export commonly end up with identical columns in different physical
+  // order (this happened for real in production: campaigns, binder_continents, mortals,
+  // and 11 other tables). A positional `SELECT *` copy would silently shuffle values
+  // (or trip a NOT NULL constraint, if unlucky) instead of copying them correctly.
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "beholden-db-import-test-"));
+  const liveDb = openDb(":memory:");
+  const uploadedPath = path.join(tmpDir, "uploaded-drift.db");
+  try {
+    seedUserAndCampaign(liveDb, "old-user", "Old Admin", "old-campaign", "Old Campaign");
+    liveDb.exec("CREATE TABLE drift_test (id TEXT PRIMARY KEY, a INTEGER NOT NULL, b TEXT)");
+    liveDb.prepare("INSERT INTO drift_test (id, a, b) VALUES ('row-1', 1, 'live-b')").run();
+
+    const uploadedDb = openDb(uploadedPath);
+    seedUserAndCampaign(uploadedDb, "new-user", "New Admin", "new-campaign", "New Campaign");
+    // Same columns as the live table, deliberately reordered.
+    uploadedDb.exec("CREATE TABLE drift_test (id TEXT PRIMARY KEY, b TEXT, a INTEGER NOT NULL)");
+    uploadedDb.prepare("INSERT INTO drift_test (id, b, a) VALUES ('row-1', 'uploaded-b', 99)").run();
+    uploadedDb.pragma("wal_checkpoint(TRUNCATE)");
+    uploadedDb.close();
+
+    importDatabaseFile(makeCtx(liveDb, tmpDir), uploadedPath);
+
+    const row = liveDb.prepare("SELECT id, a, b FROM drift_test").get();
+    assert.deepEqual(row, { id: "row-1", a: 99, b: "uploaded-b" });
+  } finally {
+    liveDb.close();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
 test("importDatabaseFile rejects an uploaded database with no admin user and leaves the live db untouched", () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "beholden-db-import-test-"));
   const liveDb = openDb(":memory:");

@@ -55,6 +55,14 @@ function isInventoryItemResourceName(name: string, itemNames: ReadonlySet<string
   return withoutSuffix !== name && itemNames.has(normalizeResourceKey(withoutSuffix));
 }
 
+/** Drops a trailing "(Light Domain)"/"(Cleric)"-style qualifier. Compendium resource labels are
+ * sometimes shortened to drop a redundant class/subclass qualifier (e.g. "Warding Flare (Light
+ * Domain)" -> "Warding Flare") without the resource itself changing — the same "qualifier doesn't
+ * change identity" reasoning `coalesceSharedClassResources` already applies across classes. */
+function stripTrailingQualifier(name: string): string {
+  return name.replace(/\s*\([^()]*\)\s*$/, "").trim();
+}
+
 export function mergeResourceState(
   saved: ResourceCounter[] | undefined,
   derived: ResourceCounter[],
@@ -67,8 +75,16 @@ export function mergeResourceState(
   // the derived key without changing what the resource actually is. Name is the fallback match so
   // a stale-keyed saved entry still carries its current/max forward instead of showing twice.
   const savedByName = new Map(savedList.map((resource) => [normalizeResourceKey(resource.name), resource]));
+  // Last resort: the key AND the label both changed together (a qualifier was dropped from the
+  // label, which also changed its auto-derived key) — match with the qualifier stripped from both
+  // sides so that case still carries the saved current/max forward instead of showing twice.
+  const savedByStrippedName = new Map(
+    savedList.map((resource) => [normalizeResourceKey(stripTrailingQualifier(resource.name)), resource])
+  );
   const merged = derived.map((resource) => {
-    const existing = savedByKey.get(resource.key) ?? savedByName.get(normalizeResourceKey(resource.name));
+    const existing = savedByKey.get(resource.key)
+      ?? savedByName.get(normalizeResourceKey(resource.name))
+      ?? savedByStrippedName.get(normalizeResourceKey(stripTrailingQualifier(resource.name)));
     return {
       ...resource,
       restoreAmount: existing?.restoreAmount ?? resource.restoreAmount,
@@ -77,9 +93,11 @@ export function mergeResourceState(
   });
   const derivedKeys = new Set(merged.map((resource) => resource.key));
   const derivedNames = new Set(merged.map((resource) => normalizeResourceKey(resource.name)));
+  const derivedStrippedNames = new Set(merged.map((resource) => normalizeResourceKey(stripTrailingQualifier(resource.name))));
   const extras = savedList.filter((resource) => {
     if (derivedKeys.has(resource.key || normalizeResourceKey(resource.name))) return false;
     if (derivedNames.has(normalizeResourceKey(resource.name))) return false;
+    if (derivedStrippedNames.has(normalizeResourceKey(stripTrailingQualifier(resource.name)))) return false;
     if (/\(Level \d+:/i.test(resource.name ?? "")) return false;
     if (isInventoryItemResourceName(resource.name ?? "", itemNames)) return false;
     return true;

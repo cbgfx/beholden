@@ -125,4 +125,42 @@ describe("class-aware feature progression", () => {
     const displayed = buildDisplayPlayerFeatures(args);
     expect(displayed.map((feature) => feature.name)).toEqual(["Sneak Attack"]);
   });
+
+  it("resolves a class-level exclusive-choice group (e.g. Cleric's Blessed Strikes) from chosenFeatureChoices, not chosenOptionals", () => {
+    // Reproduces a real bug: features gated by a class's `choices` array (selection stored in
+    // chosenFeatureChoices, keyed "classchoice:<classId>:<choiceId>") are marked `optional` the
+    // same way chosenOptionals-gated features are, but isOptionalFeatureChosen only ever checked
+    // chosenOptionals -- so neither option in the group ever made it into the applied list,
+    // regardless of which one the player picked.
+    const classDetail = {
+      id: "c_cleric",
+      choices: [{
+        id: "cc_blessed_strikes",
+        options: [
+          { id: "cco_divine_strike", features: ["level_7_feature_2"] },
+          { id: "cco_potent_spellcasting", features: ["level_7_feature_3"] },
+        ],
+      }],
+      autolevels: [{
+        level: 7,
+        features: [
+          { id: "level_7_feature_1", name: "Blessed Strikes", text: "Choose one of the following options.", optional: false },
+          { id: "level_7_feature_2", name: "Blessed Strikes: Divine Strike", text: "Extra necrotic or radiant damage.", optional: true },
+          { id: "level_7_feature_3", name: "Blessed Strikes: Potent Spellcasting", text: "Add your Wisdom modifier to cantrip damage.", optional: true },
+        ],
+      }],
+    };
+    const args = {
+      charData: {
+        classes: [],
+        chosenFeatureChoices: { "classchoice:c_cleric:cc_blessed_strikes": ["cco_potent_spellcasting"] },
+      },
+      characterLevel: 7,
+      classDetail,
+      raceDetail: null, backgroundDetail: null, bgOriginFeatDetail: null, raceFeatDetail: null, levelUpFeatDetails: [], invocationDetails: [],
+    };
+
+    const applied = buildAppliedCharacterFeatures(args);
+    expect(applied.map((feature) => feature.name)).toEqual(["Blessed Strikes", "Blessed Strikes: Potent Spellcasting"]);
+  });
 });

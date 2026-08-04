@@ -27,6 +27,19 @@ function listUserTables(db: ServerContext["db"]): string[] {
 }
 
 /**
+ * `ALTER TABLE ADD COLUMN` always appends physically, so two databases that
+ * reached the same schema through different migration histories (e.g. a
+ * long-lived live db vs. a freshly-created export) commonly have identical
+ * columns in different physical order. `INSERT INTO t SELECT * FROM other.t`
+ * matches columns positionally, not by name — silently shuffling values
+ * (or violating a NOT NULL constraint, if unlucky) instead of erroring.
+ * Naming the columns explicitly makes the copy immune to that ordering.
+ */
+function tableColumns(db: ServerContext["db"], table: string): string[] {
+  return (db.pragma(`table_info('${table}')`) as Array<{ name: string }>).map((col) => col.name);
+}
+
+/**
  * Validates an uploaded SQLite file by opening it standalone and running it
  * through the exact same migration pipeline the live database went through
  * (`openDb` is idempotent) — this upgrades older exports to the current
@@ -87,8 +100,9 @@ export function importDatabaseFile(ctx: ServerContext, uploadedFilePath: string)
   try {
     const runImport = db.transaction(() => {
       for (const table of tables) {
+        const columns = tableColumns(db, table).map((name) => `"${name}"`).join(", ");
         db.prepare(`DELETE FROM main.${table}`).run();
-        const info = db.prepare(`INSERT INTO main.${table} SELECT * FROM imported.${table}`).run();
+        const info = db.prepare(`INSERT INTO main.${table} (${columns}) SELECT ${columns} FROM imported.${table}`).run();
         rowsImported += info.changes;
       }
     });

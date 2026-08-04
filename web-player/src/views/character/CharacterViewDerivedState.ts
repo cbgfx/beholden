@@ -53,6 +53,7 @@ import {
 } from "@/views/character/CharacterInventory";
 import { getPreparedSpellCount, usesFlexiblePreparedSpells } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import {
+  buildClassFeatureCantripDamageBonuses,
   buildInvocationSpellDamageBonuses,
   buildModifierStateMaps,
   buildPassiveScores,
@@ -436,13 +437,21 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   const preparedSpells = currentCharacterData.classSpellSelections
     ? Array.from(new Set(classSpellcastingStates.flatMap((state) => state.preparedSpells)))
     : legacyPreparedSpells;
-  const invocationSpellDamageBonuses = buildInvocationSpellDamageBonuses({
-    ruleset: args.char.ruleset,
-    invocationDetails: args.invocationDetails,
-    prof: prof ?? undefined,
-    currentCharacterData,
-    scoresCha: scores.cha,
-  });
+  const spellDamageAbilityBonuses = {
+    ...buildInvocationSpellDamageBonuses({
+      ruleset: args.char.ruleset,
+      invocationDetails: args.invocationDetails,
+      prof: prof ?? undefined,
+      currentCharacterData,
+      scoresCha: scores.cha,
+    }),
+    ...buildClassFeatureCantripDamageBonuses({
+      appliedFeatures,
+      classSpellcastingStates,
+      prof: prof ?? undefined,
+      scores,
+    }),
+  };
 
   const accentColor = args.char.color ?? "#38b6ff";
   const exhaustion = currentCharacterData.exhaustion ?? 0;
@@ -666,7 +675,7 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     usesFlexiblePreparedList,
     preparedSpellLimit,
     preparedSpells,
-    invocationSpellDamageBonuses,
+    spellDamageAbilityBonuses,
     accentColor,
     overrides,
     effectiveHpMax,
