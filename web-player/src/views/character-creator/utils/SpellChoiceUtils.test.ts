@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildResolvedSpellChoiceEntry,
   loadSpellChoiceOptions,
+  sanitizeSpellChoiceSelections,
   type SharedResolvedSpellChoiceEntry,
 } from "./SpellChoiceUtils";
 import { resolveFeatSpellEntries } from "./FeatSpellcastingUtils";
@@ -113,5 +114,59 @@ describe("loadSpellChoiceOptions", () => {
     expect(entries).toEqual([
       expect.objectContaining({ name: "Sacred Flame", ability: "cha" }),
     ]);
+  });
+});
+
+describe("sanitizeSpellChoiceSelections", () => {
+  const magicInitiateCantrips: SharedResolvedSpellChoiceEntry = {
+    key: "bg:Magic Initiate (Cleric):cantrips_primary_2",
+    title: "Cantrip Choice",
+    count: 2,
+    level: 0,
+    listNames: ["Cleric"],
+  };
+
+  it("preserves a hydrated character's saved picks while their options are still loading", () => {
+    // spellOptionsByKey has no entry for this choice at all -- the async spell-list fetch
+    // that would populate it hasn't resolved yet. That must be read as "unknown", not "these
+    // picks don't match anything", or a freshly-opened editor would wipe every spell choice
+    // made by a previously-saved character before their options ever arrive.
+    const result = sanitizeSpellChoiceSelections({
+      currentSelections: { [magicInitiateCantrips.key]: ["s_guidance", "s_toll_the_dead"] },
+      spellListChoices: [],
+      resolvedSpellChoices: [magicInitiateCantrips],
+      spellOptionsByKey: {},
+    });
+
+    expect(result[magicInitiateCantrips.key]).toEqual(["s_guidance", "s_toll_the_dead"]);
+  });
+
+  it("prunes picks that no longer match once the real options have loaded", () => {
+    const result = sanitizeSpellChoiceSelections({
+      currentSelections: { [magicInitiateCantrips.key]: ["s_guidance", "s_not_a_real_cleric_cantrip"] },
+      spellListChoices: [],
+      resolvedSpellChoices: [magicInitiateCantrips],
+      spellOptionsByKey: {
+        [magicInitiateCantrips.key]: [
+          { id: "s_guidance", name: "Guidance" },
+          { id: "s_sacred_flame", name: "Sacred Flame" },
+        ],
+      },
+    });
+
+    expect(result[magicInitiateCantrips.key]).toEqual(["s_guidance"]);
+  });
+
+  it("drops a choice once its loaded options are known to contain no matches", () => {
+    // An explicit [] (present in the map) means the fetch completed and found nothing --
+    // distinct from the key being entirely absent (still loading), which must not prune.
+    const result = sanitizeSpellChoiceSelections({
+      currentSelections: { [magicInitiateCantrips.key]: ["s_guidance"] },
+      spellListChoices: [],
+      resolvedSpellChoices: [magicInitiateCantrips],
+      spellOptionsByKey: { [magicInitiateCantrips.key]: [] },
+    });
+
+    expect(result[magicInitiateCantrips.key]).toBeUndefined();
   });
 });

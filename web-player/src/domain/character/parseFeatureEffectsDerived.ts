@@ -57,6 +57,7 @@ export function buildGrantedSpellDataFromEffects(
             effect.restoreAmount === "all" || effect.restoreAmount === "one"
               ? effect.restoreAmount
               : undefined,
+          actionType: effect.actionType,
         });
       }
     }

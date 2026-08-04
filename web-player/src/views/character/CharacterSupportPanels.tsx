@@ -23,6 +23,8 @@ export function CharacterSupportPanels(props: {
   exhaustion: number;
   ruleset?: "5e" | "5.5e";
   classResources: ResourceCounter[];
+  /** null when not in a tracked encounter (no Reaction economy to enforce). */
+  reactionUsed?: boolean | null;
   classPresentation?: Array<{ classEntryId: string; className: string; classLevel: number; subclassName: string | null; hitDieSize: number | null }>;
   playerNotesList: PlayerNote[];
   allSharedNotes: PlayerNote[];
@@ -67,6 +69,7 @@ export function CharacterSupportPanels(props: {
     exhaustion,
     ruleset,
     classResources,
+    reactionUsed = null,
     classPresentation = [],
     playerNotesList,
     allSharedNotes,
@@ -342,6 +345,13 @@ export function CharacterSupportPanels(props: {
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {classResources.map((resource) => {
                   const owner = classByEntryId.get(getClassEntryId(resource.key) ?? "");
+                  // A resource typed `actionType: "reaction"` (Warding Flare, Cosmic Omen, ...)
+                  // IS the Reaction -- once the Reaction's already spent this round, spending
+                  // another use of it isn't legal until it resets, so block it here the same way
+                  // an empty counter blocks the button. Only enforced inside a tracked encounter
+                  // (reactionUsed === true); outside combat there's no round to enforce against.
+                  const reactionBlocked = resource.actionType === "reaction" && reactionUsed === true;
+                  const spendDisabled = resource.current <= 0 || reactionBlocked;
                   return (
                   <div
                     key={resource.key}
@@ -360,13 +370,15 @@ export function CharacterSupportPanels(props: {
                       <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: C.text }}>{resource.name}</div>
                       <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>
                         {multiclass && owner ? `${owner.className} ${owner.classLevel} · ` : ""}{formatResetLabel(resource)}
+                        {reactionBlocked ? " · Reaction used" : ""}
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => void onChangeResourceCurrent(resource.key, -1)}
-                      disabled={resource.current <= 0}
-                      style={miniPillBtn(resource.current > 0)}
+                      disabled={spendDisabled}
+                      title={reactionBlocked ? "Reaction already used this round" : undefined}
+                      style={miniPillBtn(!spendDisabled)}
                     >
                       -
                     </button>

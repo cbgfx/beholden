@@ -134,6 +134,11 @@ interface ResourceGrantEffect extends FeatureEffectBase {
   reset?: ResetKind;
   restoreAmount?: "all" | "one" | ScalingValue;
   linkedSpellName?: string;
+  /** Typed fact: spending a use of this resource is itself the Reaction (e.g. Warding Flare) --
+   * never inferred from prose. Omit for resources that fund a Bonus Action, a no-action rider, or
+   * (like Giant Ancestry, which shares one pool across five differently-costed benefits) more than
+   * one action type depending on a choice this effect can't see. */
+  actionType?: "reaction";
 }
 
 interface SpellGrantEffect extends FeatureEffectBase {

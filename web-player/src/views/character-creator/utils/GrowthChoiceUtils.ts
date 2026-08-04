@@ -122,10 +122,17 @@ export function sanitizeGrowthChoiceSelections(args: {
   const validKeys = new Set<string>();
   for (const definition of args.definitions) {
     validKeys.add(definition.key);
-    const options = args.optionEntriesByKey[definition.key] ?? [];
-    const validIds = new Set(options.map((entry) => String(entry.id)));
-    const selected = (next[definition.key] ?? []).filter((value) => validIds.has(String(value))).slice(0, definition.totalCount);
-    if (selected.length) next[definition.key] = selected; else delete next[definition.key];
+    // Maneuver/metamagic/infusion/plan options load asynchronously (an API fetch or item
+    // lookup) and start out absent from the map while in flight. Treating that absence the
+    // same as "loaded, nothing matches" would prune a hydrated character's saved picks before
+    // their real options ever arrive -- only reconcile once we actually have a (possibly
+    // empty) options list for this definition.
+    if (definition.key in args.optionEntriesByKey) {
+      const options = args.optionEntriesByKey[definition.key] ?? [];
+      const validIds = new Set(options.map((entry) => String(entry.id)));
+      const selected = (next[definition.key] ?? []).filter((value) => validIds.has(String(value))).slice(0, definition.totalCount);
+      if (selected.length) next[definition.key] = selected; else delete next[definition.key];
+    }
     if (definition.abilityChoice) {
       validKeys.add(definition.abilityChoice.key);
       const ability = (next[definition.abilityChoice.key] ?? []).filter((value) => definition.abilityChoice?.options.includes(value as AbilKey)).slice(0, 1);

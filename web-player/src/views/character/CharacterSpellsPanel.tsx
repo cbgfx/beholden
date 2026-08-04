@@ -463,7 +463,11 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
               // upcast level 1-9) — show the row for THIS section's slot level, not the character's
               // overall max slot level, or a 1st-level slot listing shows the 9th-level upcast roll.
               const scaledDamage = d ? getScaledSpellDamage(d, charLevel, level > 0 ? level : maxSpellSlotLevel, entrySpellMod) : null;
-              const spellDamageBonus = spellDamageBonuses[e.key] ?? 0;
+              // spellDamageBonuses (e.g. Potent Spellcasting) covers all of the granting class's
+              // spells, not just cantrips -- it can't tell the difference upstream (see
+              // buildClassFeatureCantripDamageBonuses), so only apply it to rows we've resolved
+              // as actual cantrips here, where the real spell level is known.
+              const spellDamageBonus = level === 0 ? (spellDamageBonuses[e.key] ?? 0) : 0;
               const scaledDamageText = scaledDamage
                 ? `${scaledDamage.dice}${spellDamageBonus === 0 ? "" : `${spellDamageBonus > 0 ? "+" : ""}${spellDamageBonus}`}`
                 : null;

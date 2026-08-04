@@ -120,6 +120,8 @@ export function CharacterView() {
     preparedSpells: derived.preparedSpells,
     forcedPreparedSpellKeys,
     normalizeSpellTrackingKey,
+    reactionUsed: live.combatStatus?.usedReaction ?? null,
+    toggleReaction: live.combatStatus ? live.toggleReaction : null,
   });
   const hpActions = buildCharacterHpActions({
     hpAmount: ui.hpAmount,

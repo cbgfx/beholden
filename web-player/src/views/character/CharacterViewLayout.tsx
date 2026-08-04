@@ -230,6 +230,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
                 spellLinkedResourceKeys: derived.spellLinkedResourceKeys,
               });
             })}
+            reactionUsed={live.combatStatus?.usedReaction ?? null}
             classPresentation={derived.classPresentation}
             playerNotesList={notes.playerNotesList}
             allSharedNotes={notes.allSharedNotes}

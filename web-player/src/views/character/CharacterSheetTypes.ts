@@ -74,6 +74,10 @@ export interface ResourceCounter {
   max: number;
   reset: string;
   restoreAmount?: "all" | "one" | number;
+  /** Set when spending a use of this resource is itself a Reaction (e.g. Warding Flare) -- lets
+   * the UI mark a tracked encounter's Reaction spent automatically. See the source
+   * `ResourceGrantEffect.actionType` doc for why this is only set for single-action resources. */
+  actionType?: "reaction";
 }
 
 export interface CharacterCreature {

@@ -85,6 +85,10 @@ export function buildCharacterRuntimeActions(args: {
   preparedSpells: string[];
   forcedPreparedSpellKeys: Set<string>;
   normalizeSpellTrackingKey: (name: string) => string;
+  /** null when not currently in a tracked encounter (no reaction to mark) -- distinct from
+   * `false`, meaning in combat with the reaction still available. */
+  reactionUsed: boolean | null;
+  toggleReaction: (() => Promise<void>) | null;
 }) {
   const {
     char,
@@ -113,6 +117,8 @@ export function buildCharacterRuntimeActions(args: {
     preparedSpells,
     forcedPreparedSpellKeys,
     normalizeSpellTrackingKey,
+    reactionUsed,
+    toggleReaction,
   } = args;
 
   const saveXp = async (value: number) => {
@@ -215,12 +221,37 @@ export function buildCharacterRuntimeActions(args: {
   };
 
   const changeResourceCurrent = async (key: string, delta: number) => {
-    const nextResources = classResourcesWithSpellCasts.map((resource) =>
-      resource.key !== key
-        ? resource
-        : { ...resource, current: Math.max(0, Math.min(resource.max, resource.current + delta)) },
+    const resource = classResourcesWithSpellCasts.find((entry) => entry.key === key);
+    const nextResources = classResourcesWithSpellCasts.map((entry) =>
+      entry.key !== key
+        ? entry
+        : { ...entry, current: Math.max(0, Math.min(entry.max, entry.current + delta)) },
     );
     await saveResources(nextResources);
+    // Spending a Rage charge starts raging -- the reverse of what toggleCondition("rage")
+    // already does (turning the condition on there spends a charge). Only the spend direction
+    // auto-applies: giving a charge back doesn't mean "stop raging" (rage ends by choice or
+    // turn-based rules, not by a refund), so ending it stays a manual condition toggle. The
+    // `resource.current > 0` check keeps clicking "-" on an already-empty counter (clamped,
+    // nothing actually spent) from applying the condition anyway.
+    if (key === "rage" && delta < 0 && (resource?.current ?? 0) > 0 && !(char.conditions ?? []).some((condition) => condition.key === "rage")) {
+      const nextConditions = toggleConditionInstance(char.conditions ?? [], "rage");
+      try {
+        await patchMyCharacter(char.id, "conditions", { conditions: nextConditions });
+        setChar((prev) => prev ? { ...prev, conditions: nextConditions } : prev);
+      } catch (error) {
+        fetchChar();
+        console.error("Condition update failed:", error);
+      }
+    }
+    // Any resource typed `actionType: "reaction"` (Warding Flare, Cosmic Omen, Glorious Defense,
+    // ...) spends the Reaction itself -- spending a use of it in a tracked encounter marks the
+    // Reaction spent too. `reactionUsed` is null outside combat (nothing to mark); `toggleReaction`
+    // flips whatever the current value is, so only call it when the Reaction is still available --
+    // calling it while already used would incorrectly free it back up.
+    if (resource?.actionType === "reaction" && delta < 0 && (resource.current ?? 0) > 0 && reactionUsed === false && toggleReaction) {
+      await toggleReaction();
+    }
   };
 
   const handleShortRest = async () => {

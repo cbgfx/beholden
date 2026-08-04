@@ -299,8 +299,15 @@ export function sanitizeSpellChoiceSelections(args: {
   }
 
   for (const choice of resolvedSpellChoices) {
+    // Options load asynchronously (a spell-list search hitting the API) and start out absent
+    // from the map while in flight. An absent key means "we don't know yet", not "nothing
+    // matches" -- pruning against it here would treat a hydrated character's saved picks as
+    // invalid before their real options ever arrive, permanently wiping them from the form.
+    // Only reconcile once we have an actual (possibly empty) options list for this choice.
+    const loadedOptions = spellOptionsByKey[choice.key];
+    if (loadedOptions === undefined) continue;
     const current = nextSelections[choice.key] ?? [];
-    const resolved = resolveSelectedSpellOptionEntries(current, spellOptionsByKey[choice.key] ?? []);
+    const resolved = resolveSelectedSpellOptionEntries(current, loadedOptions);
     const filtered = resolved.map((spell) => String(spell.id)).slice(0, choice.count);
     if (filtered.length === 0) delete nextSelections[choice.key];
     else nextSelections[choice.key] = filtered;

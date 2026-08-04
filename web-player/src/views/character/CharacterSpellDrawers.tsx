@@ -26,6 +26,13 @@ function formatSpellLevelLabel(level: number | null | undefined): string {
   return `${level}th Level`;
 }
 
+// "Current Spells" groups by the character level a spell was *learned* at (not its D&D spell
+// level -- a level-7 pick can be a cantrip), so it needs its own label distinct from the D&D
+// spell-level wording `formatSpellLevelLabel` uses for the "Find Spells" search results below.
+function formatAcquiredLevelLabel(level: number | null | undefined): string {
+  return level == null || level < 0 ? "Unknown" : `Level: ${level}`;
+}
+
 export function AddSpellDrawer({
   accentColor,
   entries,
@@ -116,12 +123,12 @@ export function AddSpellDrawer({
 
         {removableEntries.length > 0 && onRemoveSpell && (
           <div>
-            <SubsectionLabel>Current Spells</SubsectionLabel>
+            <SubsectionLabel>Learned at:</SubsectionLabel>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
               {groupedRemovableEntries.map(({ level, spells }) => (
                 <div key={`current:${level}`}>
                   <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
-                    {formatSpellLevelLabel(level)}
+                    {formatAcquiredLevelLabel(level)}
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                     {spells.map((entry) => (

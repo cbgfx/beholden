@@ -98,14 +98,28 @@ export function buildClassFeatureCantripDamageBonuses({
   scores,
 }: {
   parsedFeatureEffects: ParsedFeatureEffects[];
-  classSpellcastingStates: Array<{ className: string; ability: AbilKey | null }>;
+  classSpellcastingStates: Array<{ className: string; classEntryId?: string | null; ability: AbilKey | null }>;
   prof: ProficiencyMap | undefined;
   scores: Partial<Record<AbilKey, number | null>>;
 }): Record<string, number> {
   // Cleric's "Potent Spellcasting" (Blessed Strikes, level 7) adds the caster's Wisdom modifier
   // to the damage of any Cleric cantrip -- a `modifier`/`cantrip_damage` effect on the granting
-  // feature. Scoped to the granting class's own cantrips via the effect's ability (e.g. Wisdom ->
+  // feature. Scoped to the granting class's own spells via the effect's ability (e.g. Wisdom ->
   // Cleric), since a multiclass caster's other class's cantrips shouldn't get the bonus.
+  //
+  // We deliberately don't filter to cantrips (spell level 0) here: `TaggedItem.level` on a
+  // tracked spell records the character level it was *acquired* at, not its D&D spell level, so
+  // it can't tell a cantrip from a leveled spell. The real spell level is only known client-side
+  // once spell details are fetched, so callers (the spells panel) are responsible for only
+  // applying this bonus to rows they've resolved as actual cantrips.
+  //
+  // A tracked spell's `source` isn't always the class name: spells granted through a class
+  // feature choice (e.g. Divine Order: Thaumaturge's bonus cantrip) are tagged with that
+  // feature's own name but carry a matching `classEntryId`, while spells granted through a
+  // background feat (e.g. Magic Initiate (Cleric)) are tagged with the feat's name, which
+  // names the class list it draws from (only as a labeling convention, not a stable id -- there's
+  // no structured link back to the class here). So a spell counts as the granting class's own
+  // when either signal matches; neither alone covers every grant path.
   const bonuses: Record<string, number> = {};
   for (const parsed of parsedFeatureEffects) {
     for (const effect of parsed.effects) {
@@ -116,9 +130,13 @@ export function buildClassFeatureCantripDamageBonuses({
       const grantingClass = grantingAbility
         ? classSpellcastingStates.find((state) => state.ability === grantingAbility)
         : undefined;
+      const classNamePattern = grantingClass ? new RegExp(`\\b${grantingClass.className}\\b`, "i") : null;
       for (const spell of prof?.spells ?? []) {
-        if (spell.level !== 0) continue;
-        if (grantingClass && !new RegExp(`^${grantingClass.className}$`, "i").test(String(spell.source ?? ""))) continue;
+        if (grantingClass) {
+          const matchesClassEntry = grantingClass.classEntryId != null && spell.classEntryId === grantingClass.classEntryId;
+          const matchesSourceName = classNamePattern?.test(String(spell.source ?? "")) ?? false;
+          if (!matchesClassEntry && !matchesSourceName) continue;
+        }
         const key = normalizeSpellTrackingKey(spell.name);
         if (key) bonuses[key] = (bonuses[key] ?? 0) + amount;
       }

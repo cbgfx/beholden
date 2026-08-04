@@ -52,7 +52,7 @@ describe("edition-gated invocation mechanics", () => {
   });
 });
 
-const clericSpellcastingStates = [{ className: "Cleric", ability: "wis" as const }];
+const clericSpellcastingStates = [{ className: "Cleric", classEntryId: "class_c_cleric", ability: "wis" as const }];
 
 const noEffectsFeature = {
   source: { id: "feature:0", kind: "class" as const, name: "Level 5: Sear Undead" },
@@ -89,15 +89,20 @@ describe("buildClassFeatureCantripDamageBonuses", () => {
     })).toEqual({});
   });
 
-  it("adds the Wisdom modifier to every Cleric cantrip, but not leveled spells or another class's cantrips", () => {
+  it("adds the Wisdom modifier to every Cleric spell, but not another class's spells", () => {
+    // `TaggedItem.level` tracks the character level a spell was *acquired* at, not its D&D
+    // spell level, so this function can't itself tell cantrips apart from leveled spells (see
+    // its doc comment) -- that's left to callers that have the real spell level available.
+    // Guiding Bolt (a leveled Cleric spell) still gets a bonus entry here; the spells panel is
+    // responsible for only applying it to rows it resolves as actual cantrips.
     expect(buildClassFeatureCantripDamageBonuses({
       parsedFeatureEffects: [potentSpellcastingFeature],
       classSpellcastingStates: clericSpellcastingStates,
       prof: {
         ...prof,
         spells: [
-          { name: "Sacred Flame", source: "Cleric", level: 0 },
-          { name: "Toll the Dead", source: "Cleric", level: 0 },
+          { name: "Sacred Flame", source: "Cleric", level: 7 },
+          { name: "Toll the Dead", source: "Cleric", level: 7 },
           { name: "Guiding Bolt", source: "Cleric", level: 1 },
           { name: "Fire Bolt", source: "Wizard", level: 0 },
         ],
@@ -105,6 +110,32 @@ describe("buildClassFeatureCantripDamageBonuses", () => {
       scores: { wis: 18 },
     })).toEqual({
       sacredflame: 4,
+      tollthedead: 4,
+      guidingbolt: 4,
+    });
+  });
+
+  it("also covers spells granted through a class feature or background feat choice, not just the base class list", () => {
+    // A tracked spell's `source` is the granting feature/feat's own name, not always the class
+    // name -- e.g. Divine Order: Thaumaturge's bonus cantrip is tagged "Level 1: Divine Order:
+    // Thaumaturge" (but carries the matching classEntryId), and Magic Initiate (Cleric)'s cantrips
+    // are tagged "Magic Initiate (Cleric)" (no classEntryId, but the class name is in the label).
+    expect(buildClassFeatureCantripDamageBonuses({
+      parsedFeatureEffects: [potentSpellcastingFeature],
+      classSpellcastingStates: clericSpellcastingStates,
+      prof: {
+        ...prof,
+        spells: [
+          { name: "Sacred Flame", source: "Level 1: Divine Order: Thaumaturge", classEntryId: "class_c_cleric", level: 7 },
+          { name: "Guidance", source: "Magic Initiate (Cleric)", level: 7 },
+          { name: "Toll the Dead", source: "Magic Initiate (Cleric)", level: 7 },
+          { name: "Burning Hands", source: "Magic Initiate (Wizard)", level: 7 },
+        ],
+      },
+      scores: { wis: 18 },
+    })).toEqual({
+      sacredflame: 4,
+      guidance: 4,
       tollthedead: 4,
     });
   });

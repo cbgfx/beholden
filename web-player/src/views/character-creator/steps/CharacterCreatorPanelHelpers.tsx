@@ -129,6 +129,10 @@ export function renderClassFeatSingleChoicePanel({
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
         {choice.options.map((option) => {
           const selected = selectedId === option.id;
+          // Not locked -- picking a different option still works, it just replaces the
+          // current single pick -- but once something's chosen, the rest should read as
+          // de-emphasized rather than equally live, matching the multi-select panels above.
+          const deemphasized = Boolean(selectedId) && !selected;
           return (
             <button
               key={option.id}
@@ -141,7 +145,7 @@ export function renderClassFeatSingleChoicePanel({
                 cursor: "pointer",
                 border: `1px solid ${selected ? C.accentHl : "rgba(255,255,255,0.12)"}`,
                 background: selected ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
-                color: selected ? C.accentHl : C.text,
+                color: selected ? C.accentHl : deemphasized ? "rgba(160,180,220,0.35)" : C.text,
                 fontWeight: selected ? 700 : 400,
               }}
             >
