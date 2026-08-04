@@ -19,6 +19,7 @@ import { useCampaignActions } from "@/app/useCampaignActions";
 import type { State } from "@/store/state";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LoginView } from "@/views/LoginView";
+import { Button } from "@/ui/Button";
 import { useWsScope } from "@/services/ws";
 import {
   createBinder,
@@ -391,7 +392,7 @@ function AppInner() {
 }
 
 function AuthGate() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, logout } = useAuth();
 
   if (isLoading) {
     return (
@@ -412,10 +413,34 @@ function AuthGate() {
 
   if (!user) return <LoginView />;
 
-  // Pure players (no admin, no DM role) belong in the player app.
+  // Pure players (no admin, no DM role) belong in the player app. In production both apps
+  // share one origin so "/player/" is a real path; in local dev they're separate dev servers,
+  // so redirecting there just bounces back through this same app's catch-all route forever.
+  // Show a clear message instead of silently navigating somewhere that may not exist.
   if (!user.hasDmAccess) {
-    window.location.replace("/player/");
-    return null;
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: theme.colors.bg,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 16,
+          textAlign: "center",
+          padding: 24,
+        }}
+      >
+        <div style={{ color: theme.colors.text, fontSize: "var(--fs-title)", fontWeight: 700 }}>
+          You do not have access to the Dungeon Master app
+        </div>
+        <div style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)", maxWidth: 420 }}>
+          {user.name} isn't an admin or a DM on any campaign. If you're a player, use the Player app instead.
+        </div>
+        <Button variant="primary" onClick={logout}>Sign out</Button>
+      </div>
+    );
   }
 
   return (
