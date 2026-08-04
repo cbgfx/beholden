@@ -73,6 +73,34 @@ Completed after this audit was compiled:
   their handful of confirmed-dead return fields. The cross-wizard "5 spell-choice shapes"
   merge and the remaining 3-way hook split were not attempted — see the note below on why,
   the same reasoning that applied to priority 3.
+- The Binder detail-view scaffold (accent header, name, visibility toggle, edit/delete row)
+  is now one shared `BinderRecordDetailShell`, used by both Reference and Mortal Workspaces.
+  The two files' genuinely different behaviors — Reference's inline-editable name vs.
+  Mortal's plain heading, differing action-button sizes, and Reference's visibility toggle
+  not re-triggering the parent's records-changed callback where Mortal's does — were kept
+  as caller-supplied props rather than silently unified.
+- `ReferenceWorkspace.tsx`'s three record-linking subsections (`DeityDomainsSection`,
+  `OrganizationLeaderSection`, `OrganizationMembersSection`) now live in their own files.
+- Mortal's saved-view state (localStorage-backed named filter presets) now lives in one
+  `useMortalSavedViews` hook instead of being inlined in `MortalWorkspace.tsx`.
+- Monster form editing now separates pure form⇄payload mapping (`monsterFormMapping.ts`,
+  `monsterToForm`/`buildMonsterPayload`) from section rendering (`MonsterFormSections.tsx`);
+  the conversion tests moved with the mapping code.
+- The combatant-conditions drawer's caster/hex-ability/expiry rules and debounced-commit
+  state machine now live in one `useConditionsDrawerState` hook, separate from rendering.
+- `App.tsx`'s Binder CRUD handlers and campaign/adventure/encounter cascading-refresh logic
+  now live in `useBinderActions`/`useCampaignDataRefresh`, matching the existing
+  `useCampaignActions`/`useEncounterActions` hook convention already used elsewhere in `app/`.
+- The combined campaign/adventure/encounter rename drawer is now two components:
+  `CampaignNameDrawer` (color/Binder/current-date/active-status) and a generic
+  `RenameDrawer`. Two props neither one ever read (`refreshCampaign`/`refreshAdventure`,
+  dead since before this pass) were dropped rather than carried into both.
+- `ordinal.ts` and `crParsing.ts`, flagged as unconfirmed cross-app candidates, were
+  checked: ordinal formatting was already moved into `shared` (stale finding — the app
+  code confirms it, `@beholden/shared/domain`'s `ordinal` is what web-dm actually imports
+  today). `crParsing.ts` was NOT moved: `web-player` has no CR-parsing code of any kind to
+  deduplicate against, so moving it now would add indirection with no current second
+  caller — left as a local `web-dm` utility.
 
 Priority 3 was re-scoped after investigation, not implemented as originally written:
 unifying Character Creator's and Level Up's proficiency-map construction into one
@@ -245,7 +273,7 @@ The API client layer is already doing the right thing — both apps' `services/a
 
 ### Duplicate logic
 
-**[MED] Binder detail-view shell hand-copied between two record types.** `views/BinderView/ReferenceWorkspace.tsx` (714 lines, 9 record types) and `views/BinderView/MortalWorkspace.tsx` (556 lines) independently reimplement the same detail-page scaffold — accent-bordered header, inline-editable name, visibility toggle, edit/delete row, backlinks panel at the bottom — down to a byte-for-byte duplicated `VisibilityIcon` SVG in both files (`ReferenceWorkspace.tsx:38-44`, `MortalWorkspace.tsx:27-33`). The list-view scaffolding was correctly factored into `components/BinderListTable.tsx`; the detail-view scaffolding wasn't. A shared `BinderRecordDetailShell` would remove roughly 150-200 duplicated lines.
+**[MED] Binder detail-view shell hand-copied between two record types. — ✅ Completed** `views/BinderView/ReferenceWorkspace.tsx` (714 lines, 9 record types) and `views/BinderView/MortalWorkspace.tsx` (556 lines) independently reimplemented the same detail-page scaffold — accent-bordered header, inline-editable name, visibility toggle, edit/delete row, backlinks panel at the bottom. (The `VisibilityIcon` SVG this finding also cited as duplicated had already been de-duplicated in an earlier pass — see the top-of-doc "duplicated Mortal/Reference visibility icon" entry — so only the header/action-row scaffold itself needed extracting.) Now one shared `views/BinderView/BinderRecordDetailShell.tsx`; see the remediation-progress entry above for how the two files' real behavioral differences were preserved.
 
 **[MED] A half-finished API migration on `PlayerRow`. — ✅ Completed** All callers now use `primaryAction`/`menuItems`; the legacy branch is gone.
 
@@ -253,25 +281,25 @@ The API client layer is already doing the right thing — both apps' `services/a
 
 ### Cross-app candidates
 
-Monster-picker duplication covered above — this workspace's audit independently confirmed it in full. Two more, flagged but not cross-checked yet:
-- `web-dm/src/lib/format/ordinal.ts` — generic `ordinal(n)` formatter, no D&D-specific logic.
-- `web-dm/src/domain/utils/crParsing.ts` (`toNumberOrNull`, `parseCrToNumberOrNull`, `findNearestValue`) — generic CR-string parsing a player-side monster view would plausibly need too.
+Monster-picker duplication covered above — this workspace's audit independently confirmed it in full. Two more were flagged but not cross-checked at the time — now resolved:
+- `web-dm/src/lib/format/ordinal.ts` — **✅ stale finding.** Already moved into `shared` by an earlier pass (see top-of-doc "Ordinal formatting is shared" entry); this file no longer exists locally and web-dm imports `ordinal` from `@beholden/shared/domain`.
+- `web-dm/src/domain/utils/crParsing.ts` (`toNumberOrNull`, `parseCrToNumberOrNull`, `findNearestValue`) — **✅ checked, not moved.** `web-player` has no CR-parsing logic at all (grepped for every likely name, no matches), so there is no current duplication to remove. Left as a local, single-consumer (`xp.ts`) utility rather than moved speculatively.
 
-(Note: `web-dm/src/utils/compendiumFormat.ts` is already just a re-export shim from `@beholden/shared/domain` — good precedent to follow for the above.)
+(Note: `web-dm/src/lib/compendiumFormat.ts` — moved from `utils/` in the folder-schema cleanup pass — is already just a re-export shim from `@beholden/shared/domain` — good precedent to follow for the above.)
 
 ### Oversized files
 
-**[MED] `views/BinderView/ReferenceWorkspace.tsx` — 714 lines.** Mixes 3 non-trivial subsections (`DeityDomainsSection`, `OrganizationLeaderSection`, `OrganizationMembersSection`, lines 60-265, each with their own fetch/mutate state), list-view rendering (618-713), detail-view rendering (444-616), and data loading/reload logic (315-353). → move the three `*Section` components to their own files; extract `ReferenceListView`/`ReferenceDetailView`; keep `ReferenceWorkspace.tsx` as a thin router (mirrors the shared-shell suggestion above).
+**[MED] `views/BinderView/ReferenceWorkspace.tsx` — 714 lines. — ✅ Re-scoped and completed** Mixed 3 non-trivial subsections (`DeityDomainsSection`, `OrganizationLeaderSection`, `OrganizationMembersSection`, each with their own fetch/mutate state), list-view rendering, detail-view rendering, and data loading/reload logic. The three `*Section` components now live in their own files (714 → 500 lines) and use the new `BinderRecordDetailShell`. The further `ReferenceListView`/`ReferenceDetailView` split was deliberately not done: list and detail state (records, the create/edit modal, inline-edit fields) are shared enough between the two that splitting them would mean threading 20+ props across two new files rather than reducing real complexity — a worse trade than the file staying at 500 lines.
 
-**[MED] `views/BinderView/MortalWorkspace.tsx` — 556 lines.** Contains an entire saved-views/localStorage feature (`SavedMortalView`, `persistViews`, `saveView`, `applyView`, lines 47-225), a bespoke `SearchableFilter` combobox (69-102) that duplicates `components/SearchableSelect.tsx` — already imported one line above (line 11) for the other seven filters — plus list/detail rendering. → extract `useMortalSavedViews(binderId)`; replace the custom combobox with `SearchableSelect`/`SearchableMultiFilter`.
+**[MED] `views/BinderView/MortalWorkspace.tsx` — 556 lines. — ✅ Completed** Contained an entire saved-views/localStorage feature (`SavedMortalView`, `persistViews`, `saveView`, `applyView`) inlined alongside list/detail rendering. (The bespoke `SearchableFilter` combobox this finding also cited had already been replaced with `SearchableSelect`/`SearchableMultiFilter` in an earlier pass — stale by the time this pass reached it — so only the saved-views extraction was still needed.) Saved-view state now lives in `useMortalSavedViews(binderId)`; the file also picked up `BinderRecordDetailShell` from the duplication fix above. 556 → 463 lines.
 
-**[MED] `views/CompendiumView/panels/MonsterFormSections.tsx` — 509 lines.** Mixes pure data-transform functions (`monsterToForm:50-108`, `buildMonsterPayload:109-200`) with 6 exported section-rendering components (228-509) and two inline editors (`LairEditor`, `SpellReferenceEditor`). → move mapping functions into `monsterFormMapping.ts`; keep this file for rendering only.
+**[MED] `views/CompendiumView/panels/MonsterFormSections.tsx` — 509 lines. — ✅ Completed** Mixed pure data-transform functions (`monsterToForm`, `buildMonsterPayload`) with 6 exported section-rendering components and two inline editors. Mapping functions (plus their existing test file) moved to `monsterFormMapping.ts`; `MonsterFormSections.tsx` is rendering-only now. 509 → 333 lines rendering / 184 lines mapping.
 
-**[MED] `drawers/drawers/CombatantConditionsDrawer.tsx` — 462 lines.** Mixes condition business rules (`cycleExpiry:36-42`, hex-ability claiming logic 68-90, caster-repeatability rules 17-33), a debounced-commit state machine (refs 52-56, commit logic from 93), and rendering. → extract `useConditionsDrawerState(drawer)`.
+**[MED] `drawers/drawers/CombatantConditionsDrawer.tsx` — 462 lines. — ✅ Completed** Mixed condition business rules (`cycleExpiry`, hex-ability claiming logic, caster-repeatability rules), a debounced-commit state machine, and rendering. Extracted to `useConditionsDrawerState(drawer, refreshEncounter)`. 462 → 263 lines rendering / 237 lines state+rules.
 
-**[MED] `drawers/drawers/NameDrawer.tsx` — 365 lines.** One drawer switches on 6 unrelated `DrawerState` types (declared 14-25) with divergent logic — campaign editing pulls in binder-linking, a full "create new binder" sub-form (233-313), and a color picker; adventure/encounter editing is a one-field rename. Both `submit` (126-173) and the reset effect (47-83) reimplement the same 6-way switch. → split into `CampaignNameDrawer` (binder/color logic) and a generic `RenameDrawer`.
+**[MED] `drawers/drawers/NameDrawer.tsx` — 365 lines. — ✅ Completed** One drawer switched on 6 unrelated `DrawerState` types with divergent logic — campaign editing pulled in Binder-linking, a full "create new Binder" sub-form, and a color picker; adventure/encounter editing was a one-field rename, with both `submit` and the reset effect reimplementing the same 6-way switch. Split into `CampaignNameDrawer` (color/Binder/current-date/active-status) and a generic `RenameDrawer`; the drawer registry now routes the two campaign drawer-state types and the four rename-only types to the two new components respectively. Two props (`refreshCampaign`/`refreshAdventure`) that the original component accepted but never actually read were dropped rather than carried into both new files. 365 → 303 / 105 lines.
 
-**[MED] `app/App.tsx` — 453 lines, `AppInner` doing too much.** Owns binder CRUD handlers (`handleCreateBinder`/`handleEditBinder`/`handleDeleteBinder`, 79-102), three separate cascading refresh functions (`refreshCampaign:103`, `refreshAdventure:131`, `refreshEncounter:161`), several URL/websocket-syncing effects, and the full route tree/layout. → move CRUD/refresh logic into the existing `store` layer rather than the root component.
+**[MED] `app/App.tsx` — 453 lines, `AppInner` doing too much. — ✅ Completed** Owned Binder CRUD handlers (`handleCreateBinder`/`handleEditBinder`/`handleDeleteBinder`), three separate cascading refresh functions (`refreshCampaign`/`refreshAdventure`/`refreshEncounter`), several URL/websocket-syncing effects, and the full route tree/layout. The "existing store layer" this finding pointed at turned out to mean the `app/use*Actions` hook convention already established by `useCampaignActions`/`useEncounterActions`, not the reducer/dispatch `store/` module — Binder CRUD + the global refresh moved to `useBinderActions`, the three cascading refreshes moved to `useCampaignDataRefresh`, both following that existing pattern. 453 → 357 lines.
 
 **[MED] `views/CampaignView/monsterPicker/hooks/useMonsterPickerState.ts` — one hook doing two jobs. — ✅ Completed** Index/search lives in `useMonsterIndexSearch`; atomic override/hydration state lives in `useMonsterOverrides`; the original hook is now a small coordinator.
 

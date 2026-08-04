@@ -18,6 +18,8 @@ import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
 import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
 import { VisibilityIcon } from "./VisibilityIcon";
+import { BinderRecordDetailShell } from "./BinderRecordDetailShell";
+import { emptyMortalFilters as emptyFilters, useMortalSavedViews, type MortalFilters } from "./useMortalSavedViews";
 
 const mortalTableColumns = BINDER_MORTAL_COLUMNS;
 const NONE_FILTER = "__none__";
@@ -27,35 +29,6 @@ function OrganizationIcon(props: { icon?: string | null; size: number }) {
 }
 
 type MortalSortKey = "name" | "position" | "organization" | "location" | "species" | "age" | "gender" | "status";
-
-type MortalFilters = {
-  position: string[];
-  organization: string[];
-  continent: string[];
-  location: string[];
-  species: string[];
-  status: string[];
-  gender: string[];
-  linked: string[];
-};
-
-type SavedMortalView = {
-  id: string;
-  name: string;
-  query: string;
-  filters: MortalFilters;
-};
-
-const emptyFilters = (): MortalFilters => ({
-  position: [],
-  organization: [],
-  continent: [],
-  location: [],
-  species: [],
-  status: [],
-  gender: [],
-  linked: [],
-});
 
 function matchesFilter(value: string | null | undefined, filter: string[]): boolean {
   return !filter.length || filter.some((selected) => selected === NONE_FILTER ? !value : value === selected);
@@ -125,60 +98,20 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
   const [loreRecords, setLoreRecords] = useState<BinderRecordOption[]>([]);
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<MortalFilters>(emptyFilters);
-  const [savedViews, setSavedViews] = useState<SavedMortalView[]>([]);
-  const [selectedViewId, setSelectedViewId] = useState("");
-  const [viewName, setViewName] = useState("");
+  const { savedViews, selectedViewId, viewName, setViewName, save: saveMortalView, apply: applyMortalView, removeSelected: removeSelectedMortalView, clearSelection: clearSelectedMortalView } = useMortalSavedViews(props.binderId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalRecord, setModalRecord] = useState<BinderMortal | "new" | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const { sortKey, sortDir, toggleSort } = useBinderListSort<MortalSortKey>("name");
-  const savedViewsKey = `binder:${props.binderId}:mortal-views`;
 
   useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem(savedViewsKey) ?? "[]") as SavedMortalView[];
-      setSavedViews(Array.isArray(stored) ? stored.map((view) => ({
-        ...view,
-        filters: Object.fromEntries(Object.entries(emptyFilters()).map(([key]) => {
-          const value = (view.filters as unknown as Record<string, string | string[] | undefined>)[key];
-          return [key, Array.isArray(value) ? value : value ? [value] : []];
-        })) as MortalFilters,
-      })) : []);
-    } catch {
-      setSavedViews([]);
-    }
-    setSelectedViewId("");
     setFilters(emptyFilters());
-  }, [savedViewsKey]);
-
-  function persistViews(next: SavedMortalView[]) {
-    setSavedViews(next);
-    localStorage.setItem(savedViewsKey, JSON.stringify(next));
-  }
-
-  function saveView() {
-    const name = viewName.trim();
-    if (!name) return;
-    const existing = savedViews.find((view) => view.name.toLocaleLowerCase() === name.toLocaleLowerCase());
-    const view: SavedMortalView = {
-      id: existing?.id ?? crypto.randomUUID(),
-      name,
-      query,
-      filters,
-    };
-    const next = existing
-      ? savedViews.map((item) => item.id === existing.id ? view : item)
-      : [...savedViews, view];
-    persistViews(next);
-    setSelectedViewId(view.id);
-    setViewName("");
-  }
+  }, [props.binderId]);
 
   function applyView(viewId: string) {
-    setSelectedViewId(viewId);
-    const view = savedViews.find((item) => item.id === viewId);
+    const view = applyMortalView(viewId);
     if (!view) return;
     setQuery(view.query);
     setFilters(view.filters);
@@ -357,31 +290,36 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     const mentions = loreRecords.filter((row) => row.id !== selected.id).map((row) => ({
       id: row.id, label: row.name, href: row.route, type: row.type,
     }));
-    const iconActionStyle = {
-      width: 42, height: 38, padding: 0, borderRadius: theme.radius.control,
-      display: "grid", placeItems: "center", cursor: "pointer",
-    } as const;
+    const toggleVisibility = async () => {
+      await updateBinderMortal(props.binderId, selected.id, { visibility: selected.visibility === "public" ? "dm" : "public" });
+      await reload();
+      await props.onRecordsChanged();
+    };
     return <>
-      <div style={{ display: "grid", gap: 16 }}>
-        <button type="button" onClick={() => navigate(`/binder/${props.binderId}/mortals`)} style={{ width: "fit-content", border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: 0, fontSize: "var(--fs-medium)" }}>← All Mortals</button>
-        <article style={{ border: `1px solid ${withAlpha(props.accent, 0.3)}`, borderRadius: theme.radius.panel, background: theme.colors.panelBg, overflow: "hidden" }}>
-          <div style={{ height: 4, background: props.accent }} />
-          <div style={{ padding: 20, display: "grid", gap: 16, maxWidth: 1240 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "start" }}>
-              <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-                <button type="button" disabled={!selected.imageUrl} onClick={() => { if (selected.imageUrl) setLightboxSrc(`${resolveAssetUrl(selected.imageUrl)}${selected.imageUpdatedAt ? `?v=${selected.imageUpdatedAt}` : ""}`); }} title={selected.imageUrl ? "View full portrait" : undefined} style={{ width: 84, height: 84, padding: 0, border: `1px solid ${withAlpha(props.accent, 0.3)}`, borderRadius: theme.radius.control, overflow: "hidden", background: withAlpha(props.accent, 0.1), color: theme.colors.muted, cursor: selected.imageUrl ? "zoom-in" : "default", flex: "0 0 auto" }}>
-                  {selected.imageUrl
-                    ? <img src={`${resolveAssetUrl(selected.imageUrl)}${selected.imageUpdatedAt ? `?v=${selected.imageUpdatedAt}` : ""}`} alt={`${selected.name} portrait`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    : <span style={{ fontSize: "var(--fs-small)", opacity: 0.72 }}>Portrait</span>}
-                </button>
-                <h2 style={{ margin: 0, fontSize: "calc(var(--fs-hero) * 0.9)" }}>{selected.name}</h2>
-              </div>
-              {props.canEdit ? <div style={{ display: "flex", gap: 8 }}>
-                <button type="button" aria-label={selected.visibility === "public" ? "Make Mortal private" : "Make Mortal public"} title={selected.visibility === "public" ? "Public — click to make private" : "Private — click to make public"} onClick={async () => { await updateBinderMortal(props.binderId, selected.id, { visibility: selected.visibility === "public" ? "dm" : "public" }); await reload(); await props.onRecordsChanged(); }} style={{ ...iconActionStyle, border: `1px solid ${selected.visibility === "public" ? withAlpha(props.accent, 0.65) : theme.colors.panelBorder}`, background: selected.visibility === "public" ? withAlpha(props.accent, 0.16) : "transparent", color: selected.visibility === "public" ? props.accent : theme.colors.muted }}><VisibilityIcon visible={selected.visibility === "public"} size={19} /></button>
-                <button type="button" aria-label="Edit Mortal" title="Edit" onClick={() => setModalRecord(selected)} style={{ ...iconActionStyle, border: `1px solid ${theme.colors.panelBorder}`, background: "transparent", color: theme.colors.text }}><IconPencil size={17} /></button>
-                <button type="button" aria-label="Delete Mortal" title="Delete" onClick={() => void remove(selected)} style={{ ...iconActionStyle, border: `1px solid ${withAlpha(theme.colors.red, 0.65)}`, background: theme.colors.red, color: "#101521" }}><IconTrash size={17} /></button>
-              </div> : null}
-            </div>
+      <BinderRecordDetailShell
+        onBack={() => navigate(`/binder/${props.binderId}/mortals`)}
+        backLabel="Mortals"
+        accent={props.accent}
+        leading={
+          <button type="button" disabled={!selected.imageUrl} onClick={() => { if (selected.imageUrl) setLightboxSrc(`${resolveAssetUrl(selected.imageUrl)}${selected.imageUpdatedAt ? `?v=${selected.imageUpdatedAt}` : ""}`); }} title={selected.imageUrl ? "View full portrait" : undefined} style={{ width: 84, height: 84, padding: 0, border: `1px solid ${withAlpha(props.accent, 0.3)}`, borderRadius: theme.radius.control, overflow: "hidden", background: withAlpha(props.accent, 0.1), color: theme.colors.muted, cursor: selected.imageUrl ? "zoom-in" : "default", flex: "0 0 auto" }}>
+            {selected.imageUrl
+              ? <img src={`${resolveAssetUrl(selected.imageUrl)}${selected.imageUpdatedAt ? `?v=${selected.imageUpdatedAt}` : ""}`} alt={`${selected.name} portrait`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : <span style={{ fontSize: "var(--fs-small)", opacity: 0.72 }}>Portrait</span>}
+          </button>
+        }
+        leadingAlign="center"
+        name={{ editable: false, value: selected.name }}
+        canEdit={props.canEdit}
+        recordLabel="Mortal"
+        visibilityPublic={selected.visibility === "public"}
+        onVisibilityChange={() => void toggleVisibility()}
+        onEdit={() => setModalRecord(selected)}
+        onDelete={() => void remove(selected)}
+        actionButtonSize={{ width: 42, height: 38 }}
+        bodyPadding={20}
+        bodyGap={16}
+        bodyMaxWidth={1240}
+      >
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", columnGap: 30, rowGap: 0 }}>
               {facts.map(({ key, icon, label, node }) => (
                 <div key={key} style={{ minHeight: 42, padding: "8px 2px", display: "grid", gridTemplateColumns: "105px minmax(0, 1fr)", gap: 10, alignItems: "center", borderBottom: `1px solid ${withAlpha(props.accent, 0.14)}` }}>
@@ -403,9 +341,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
               await reload();
             }} />
             <BacklinksPanel binderId={props.binderId} recordId={selected.id} />
-          </div>
-        </article>
-      </div>
+      </BinderRecordDetailShell>
       {modal}
       <ImageLightbox src={lightboxSrc} alt={`${selected.name} portrait`} onClose={() => setLightboxSrc(null)} />
     </>;
@@ -415,7 +351,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     <div style={{ display: "grid", gap: 8 }}>
       <div style={{ display: "flex", gap: 9, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", flex: "1 1 auto" }}>
-          <Input value={query} onChange={(event) => { setQuery(event.target.value); setSelectedViewId(""); }} placeholder="Search mortals…" style={{ width: 280 }} />
+          <Input value={query} onChange={(event) => { setQuery(event.target.value); clearSelectedMortalView(); }} placeholder="Search mortals…" style={{ width: 280 }} />
           <div style={{ width: 170 }}>
             <SearchableSelect
               value={selectedViewId}
@@ -426,12 +362,9 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
               options={savedViews.map((view) => ({ id: view.id, name: `View: ${view.name}` }))}
             />
           </div>
-          {selectedViewId ? <Button variant="ghost" aria-label="Delete saved view" onClick={() => {
-            persistViews(savedViews.filter((view) => view.id !== selectedViewId));
-            setSelectedViewId("");
-          }}><IconTrash size={14} /></Button> : null}
-          <Input value={viewName} onChange={(event) => setViewName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") saveView(); }} placeholder="View name" style={{ width: 140 }} />
-          <Button variant="ghost" disabled={!viewName.trim()} onClick={saveView}>Save view</Button>
+          {selectedViewId ? <Button variant="ghost" aria-label="Delete saved view" onClick={removeSelectedMortalView}><IconTrash size={14} /></Button> : null}
+          <Input value={viewName} onChange={(event) => setViewName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") saveMortalView(query, filters); }} placeholder="View name" style={{ width: 140 }} />
+          <Button variant="ghost" disabled={!viewName.trim()} onClick={() => saveMortalView(query, filters)}>Save view</Button>
         </div>
         {props.canEdit ? <Button onClick={() => setModalRecord("new")}><span style={{ display: "inline-flex", gap: 7 }}><IconPlus size={14} /> New Mortal</span></Button> : null}
       </div>
@@ -452,10 +385,10 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
             width={width}
             selected={filters[key]}
             options={filterChoices[key]}
-            onAdd={(value) => { setFilters(addFilterValue(filters, key, value)); setSelectedViewId(""); }}
+            onAdd={(value) => { setFilters(addFilterValue(filters, key, value)); clearSelectedMortalView(); }}
           />
         ))}
-        {Object.values(filters).some((values) => values.length) ? <Button variant="ghost" onClick={() => { setFilters(emptyFilters()); setSelectedViewId(""); }}>Clear</Button> : null}
+        {Object.values(filters).some((values) => values.length) ? <Button variant="ghost" onClick={() => { setFilters(emptyFilters()); clearSelectedMortalView(); }}>Clear</Button> : null}
       </div>
       {Object.entries(filters).some(([, values]) => values.length) ? (
         <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
@@ -466,7 +399,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
               key={`${key}:${value}`}
               type="button"
               aria-label={`Remove ${label} ${choice?.label ?? value} filter`}
-              onClick={() => { setFilters(removeFilterValue(filters, key, value)); setSelectedViewId(""); }}
+              onClick={() => { setFilters(removeFilterValue(filters, key, value)); clearSelectedMortalView(); }}
               style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "2px 7px", border: `1px solid ${withAlpha(props.accent, 0.48)}`, borderRadius: 999, background: withAlpha(props.accent, 0.12), color: theme.colors.text, cursor: "pointer", font: "inherit", fontSize: "var(--fs-tiny)", lineHeight: 1.35, fontWeight: 900 }}
             >
               <span style={{ color: props.accent }}>{label}</span>

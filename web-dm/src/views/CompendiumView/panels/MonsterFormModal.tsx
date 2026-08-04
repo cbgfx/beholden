@@ -4,16 +4,14 @@ import { api, jsonInit } from "@/services/api";
 import { theme, withAlpha } from "@/theme/theme";
 import type { MonsterForEdit } from "./MonsterFormParts";
 import {
-  buildMonsterPayload,
   MonsterAbilityScoresSection,
   MonsterBlocksSection,
   MonsterCombatStatsSection,
   MonsterDamageConditionsSection,
-  MonsterFormState,
   MonsterIdentitySection,
-  monsterToForm,
   MonsterProficienciesSection,
 } from "./MonsterFormSections";
+import { buildMonsterPayload, MonsterFormState, monsterToForm } from "./monsterFormMapping";
 
 export type { MonsterForEdit } from "./MonsterFormParts";
 

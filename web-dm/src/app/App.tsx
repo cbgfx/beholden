@@ -1,33 +1,23 @@
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useMatch, useParams } from "react-router-dom";
 import { ShellLayout } from "@/layout/ShellLayout";
 import { theme } from "@/theme/theme";
 import { StoreProvider, useStore } from "@/store";
 import { api } from "@/services/api";
-import { fetchEncounterActors } from "@/services/actorApi";
-import { fetchCampaignBootstrap } from "@/services/campaignBootstrapApi";
-import {
-  fetchAdventureNotesList,
-  fetchAdventureTreasureList,
-} from "@/services/collectionApi";
-import type { Campaign, Encounter, EncounterActor, Meta, Note, TreasureEntry } from "@/domain/types/domain";
 import { useAppWebSocket } from "@/app/useAppWebSocket";
 import { DrawerHost } from "@/drawers/DrawerHost";
 import { ConfirmProvider, useConfirm } from "@/confirm/ConfirmContext";
 import { useCampaignActions } from "@/app/useCampaignActions";
+import { useCampaignDataRefresh } from "@/app/useCampaignDataRefresh";
+import { useBinderActions } from "@/app/useBinderActions";
 import type { State } from "@/store/state";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LoginView } from "@/views/LoginView";
 import { Button } from "@/ui/Button";
 import { useWsScope } from "@/services/ws";
-import {
-  createBinder,
-  deleteBinder,
-  fetchBinders,
-  updateBinderIdentity,
-  type BinderSummary,
-} from "@/services/binderApi";
+import type { BinderSummary } from "@/services/binderApi";
+import type { Campaign } from "@/domain/types/domain";
 import { BinderNameModal } from "@/views/HomeView/BinderNameModal";
 
 const HomeView = React.lazy(() => import("@/views/HomeView").then(m => ({ default: m.HomeView })));
@@ -57,122 +47,11 @@ function AppInner() {
   const navigate = useNavigate();
   const confirm = useConfirm();
   const importAdventureFileRef = useRef<HTMLInputElement>(null);
-  const campaignRequestRef = useRef<AbortController | null>(null);
-  const adventureRequestRef = useRef<AbortController | null>(null);
-  const encounterRequestRef = useRef<AbortController | null>(null);
-  const [binders, setBinders] = useState<BinderSummary[]>([]);
-  const [bindersLoaded, setBindersLoaded] = useState(false);
-  const [binderModal, setBinderModal] = useState<{ mode: "create" } | { mode: "rename"; binder: BinderSummary } | null>(null);
-
-  const refreshAll = useCallback(async () => {
-    const [m, c, binderRows] = await Promise.all([
-      api<Meta>("/api/meta"),
-      api<Campaign[]>("/api/campaigns"),
-      fetchBinders(),
-    ]);
-    dispatch({ type: "setMeta", meta: m });
-    dispatch({ type: "setCampaigns", campaigns: c });
-    dispatch({ type: "autoSelectFirstCampaign", campaigns: c });
-    setBinders(binderRows);
-    setBindersLoaded(true);
-  }, [dispatch]);
-
-  const handleCreateBinder = useCallback(async (name: string, color: string, currentDate: number) => {
-    const created = await createBinder(name, color, currentDate);
-    setBinders((current) => [created, ...current.filter((item) => item.id !== created.id)]);
-  }, []);
-
-  const handleEditBinder = useCallback(async (binderId: string, name: string, color: string, currentDate: number) => {
-    const updated = await updateBinderIdentity(binderId, name, color, currentDate);
-    setBinders((current) => current.map((item) => item.id === updated.id ? updated : item));
-  }, []);
-
-  const handleDeleteBinder = useCallback(async (binderId: string) => {
-    const binder = binders.find((item) => item.id === binderId);
-    if (!binder) return;
-    if (!(await confirm({
-      title: "Delete Binder",
-      message: `Delete “${binder.name}”? Attached campaigns will be kept and detached.`,
-      confirmLabel: "Delete Binder",
-      intent: "danger",
-    }))) return;
-    await deleteBinder(binderId);
-    setBinders((current) => current.filter((item) => item.id !== binderId));
-    await refreshAll();
-  }, [binders, confirm, refreshAll]);
-
-  const refreshCampaign = useCallback(async (cid: string) => {
-    if (!cid) return;
-    campaignRequestRef.current?.abort();
-    const controller = new AbortController();
-    campaignRequestRef.current = controller;
-    let data: Awaited<ReturnType<typeof fetchCampaignBootstrap>>;
-    try {
-      data = await fetchCampaignBootstrap(cid, controller.signal);
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      throw error;
-    } finally {
-      if (campaignRequestRef.current === controller) campaignRequestRef.current = null;
-    }
-    if (controller.signal.aborted) return;
-    dispatch({ type: "setAdventures", adventures: data.adventures });
-    dispatch({ type: "setPlayers", players: data.players });
-    dispatch({ type: "setINpcs", inpcs: data.inpcs });
-    dispatch({ type: "setCampaignNotes", notes: data.notes });
-    dispatch({ type: "setCampaignTreasure", treasure: data.treasure });
-  }, [dispatch]);
-
-  useEffect(() => () => {
-    campaignRequestRef.current?.abort();
-    adventureRequestRef.current?.abort();
-    encounterRequestRef.current?.abort();
-  }, []);
-
-  const refreshAdventure = useCallback(async (adventureId: string | null) => {
-    adventureRequestRef.current?.abort();
-    if (!adventureId) {
-      dispatch({ type: "setEncounters", encounters: [] });
-      dispatch({ type: "setAdventureNotes", notes: [] });
-      dispatch({ type: "setAdventureTreasure", treasure: [] });
-      return;
-    }
-    const controller = new AbortController();
-    adventureRequestRef.current = controller;
-    let result: [Encounter[], Note[], TreasureEntry[]];
-    try {
-      result = await Promise.all([
-        api<Encounter[]>(`/api/adventures/${adventureId}/encounters`, { signal: controller.signal }),
-        fetchAdventureNotesList(adventureId, controller.signal) as Promise<Note[]>,
-        fetchAdventureTreasureList(adventureId, controller.signal) as Promise<TreasureEntry[]>,
-      ]);
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      throw error;
-    } finally {
-      if (adventureRequestRef.current === controller) adventureRequestRef.current = null;
-    }
-    if (controller.signal.aborted) return;
-    const [enc, notes, treasure] = result;
-    dispatch({ type: "setEncounters", encounters: enc });
-    dispatch({ type: "setAdventureNotes", notes });
-    dispatch({ type: "setAdventureTreasure", treasure });
-  }, [dispatch]);
-
-  const refreshEncounter = useCallback(async (encounterId: string | null) => {
-    encounterRequestRef.current?.abort();
-    if (!encounterId) { dispatch({ type: "setCombatants", combatants: [] }); return; }
-    const controller = new AbortController();
-    encounterRequestRef.current = controller;
-    try {
-      const combatants = await fetchEncounterActors(encounterId, controller.signal) as EncounterActor[];
-      if (!controller.signal.aborted) dispatch({ type: "setCombatants", combatants });
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === "AbortError")) throw error;
-    } finally {
-      if (encounterRequestRef.current === controller) encounterRequestRef.current = null;
-    }
-  }, [dispatch]);
+  const {
+    binders, bindersLoaded, binderModal, setBinderModal,
+    refreshAll, handleCreateBinder, handleEditBinder, handleDeleteBinder,
+  } = useBinderActions(dispatch, confirm);
+  const { refreshCampaign, refreshAdventure, refreshEncounter } = useCampaignDataRefresh(dispatch);
 
   useEffect(() => { refreshAll(); }, [refreshAll]);
 

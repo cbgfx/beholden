@@ -6,7 +6,8 @@ import type { DrawerState } from "@/store";
 // Type-only imports are erased at build time, so these give us the drawer
 // implementations' prop types below without pulling the (heavy) implementation
 // modules into whatever chunk this file ends up in.
-import type { NameDrawer as NameDrawerFn } from "@/drawers/drawers/NameDrawer";
+import type { CampaignNameDrawer as CampaignNameDrawerFn } from "@/drawers/drawers/CampaignNameDrawer";
+import type { RenameDrawer as RenameDrawerFn } from "@/drawers/drawers/RenameDrawer";
 import type { NoteDrawer as NoteDrawerFn } from "@/drawers/drawers/NoteDrawer";
 import type { PlayerDrawer as PlayerDrawerFn } from "@/drawers/drawers/PlayerDrawer";
 import type { INpcDrawer as INpcDrawerFn } from "@/drawers/drawers/INpcDrawer";
@@ -57,8 +58,11 @@ function lazyDrawer<P extends { close: () => void }>(
   });
 }
 
-const LazyNameDrawer = lazyDrawer<Parameters<typeof NameDrawerFn>[0]>(() =>
-  import("@/drawers/drawers/NameDrawer").then((m) => m.NameDrawer)
+const LazyCampaignNameDrawer = lazyDrawer<Parameters<typeof CampaignNameDrawerFn>[0]>(() =>
+  import("@/drawers/drawers/CampaignNameDrawer").then((m) => m.CampaignNameDrawer)
+);
+const LazyRenameDrawer = lazyDrawer<Parameters<typeof RenameDrawerFn>[0]>(() =>
+  import("@/drawers/drawers/RenameDrawer").then((m) => m.RenameDrawer)
 );
 const LazyNoteDrawer = lazyDrawer<Parameters<typeof NoteDrawerFn>[0]>(() =>
   import("@/drawers/drawers/NoteDrawer").then((m) => m.NoteDrawer)
@@ -103,6 +107,18 @@ export function getDrawerRegistration(
   switch (drawer.type) {
     case "createCampaign":
     case "editCampaign":
+      return {
+        key: drawer.type,
+        element: (
+          <LazyCampaignNameDrawer
+            title={title}
+            drawer={drawer}
+            close={close}
+            refreshAll={props.refreshAll}
+          />
+        )
+      };
+
     case "createAdventure":
     case "editAdventure":
     case "createEncounter":
@@ -110,13 +126,10 @@ export function getDrawerRegistration(
       return {
         key: drawer.type,
         element: (
-          <LazyNameDrawer
+          <LazyRenameDrawer
             title={title}
             drawer={drawer}
             close={close}
-            refreshAll={props.refreshAll}
-            refreshCampaign={props.refreshCampaign}
-            refreshAdventure={props.refreshAdventure}
           />
         )
       };

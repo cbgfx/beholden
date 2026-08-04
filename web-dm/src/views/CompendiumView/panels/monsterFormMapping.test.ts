@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildMonsterPayload, monsterToForm } from "./MonsterFormSections";
+import { buildMonsterPayload, monsterToForm } from "./monsterFormMapping";
 import type { MonsterForEdit } from "./MonsterFormParts";
 
 describe("Monster Grand form conversion", () => {
