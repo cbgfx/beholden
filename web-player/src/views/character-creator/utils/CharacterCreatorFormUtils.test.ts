@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { campaignSelectionHasBinder, deriveRaceAbilityBonuses, getClassFeatChoices, getOptionalGroups, getPrimaryAbilityKeys, initForm, resolvedScores } from "./CharacterCreatorFormUtils";
+import { campaignSelectionHasBinder, deriveRaceAbilityBonuses, getClassFeatChoices, getOptionalGroups, getPrimaryAbilityKeys, initForm, pointBuySpent, resolvedScores } from "./CharacterCreatorFormUtils";
 import type { ClassDetail } from "./CharacterCreatorTypes";
 
 function classDetail(overrides: Partial<ClassDetail>): ClassDetail {
@@ -8,6 +8,15 @@ function classDetail(overrides: Partial<ClassDetail>): ClassDetail {
     armor: "", weapons: "", tools: "", description: "", autolevels: [], ...overrides,
   };
 }
+
+describe("point buy defaults", () => {
+  it("starts every ability at 8 with the full budget unspent", () => {
+    const form = initForm(null, new URLSearchParams());
+
+    expect(form.pbScores).toEqual({ str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 });
+    expect(pointBuySpent(form.pbScores)).toBe(0);
+  });
+});
 
 describe("getPrimaryAbilityKeys", () => {
   it("resolves a single short-key primary ability (compendium storage format for both rulesets)", () => {
