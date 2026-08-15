@@ -1,7 +1,5 @@
 import React from "react";
-import { theme } from "@/theme/theme";
-import { Input } from "@/ui/Input";
-import { useSpellSearch } from "@/views/CompendiumView/hooks/useSpellSearch";
+import { Input, theme, useSpellSearch } from "./ItemEditorHost";
 import { SpellChoiceMenu } from "./SpellFormControls";
 import type { ItemFormData, ItemSpellRow } from "./ItemFormModel";
 import { ItemEmpty, ItemField, ItemPills, itemRemoveStyle, itemSectionStyle, itemSectionTitle, type ItemFormSetter } from "./ItemFormCommon";

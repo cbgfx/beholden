@@ -1,4 +1,5 @@
 import React from "react";
+import type { ClassFeatureEntry } from "@/views/character/CharacterSheetTypes";
 import { C } from "@/lib/theme";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
 import {
@@ -43,10 +44,12 @@ export interface CharacterCombatPanelsProps {
   initiativeBonus: number;
   strScore: number | null;
   dexScore: number | null;
+  chaScore: number | null;
   pb: number;
   passivePerc: number;
   accentColor: string;
   inventory: InventoryItem[];
+  classFeaturesList?: ClassFeatureEntry[];
   prof?: ProficiencyMapLike | null;
   parsedFeatureEffects?: ParsedFeatureEffects[] | null;
   nonProficientArmorPenalty: boolean;
@@ -72,10 +75,12 @@ export function CharacterCombatPanels({
   initiativeBonus,
   strScore,
   dexScore,
+  chaScore,
   pb,
   passivePerc,
   accentColor,
   inventory,
+  classFeaturesList = [],
   prof,
   parsedFeatureEffects,
   nonProficientArmorPenalty,
@@ -97,6 +102,10 @@ export function CharacterCombatPanels({
   const speedAccent = exhaustion >= 6 ? "#dc2626" : exhaustion > 0 ? "#f59e0b" : undefined;
   const attackDisadvantage = nonProficientArmorPenalty || hasDisadvantage || exhaustionAttackDisadvantage;
   const actionItems = inventory.filter((it) => getEquipState(it) !== "backpack" && isWeaponItem(it) && (!it.attunement || it.attuned));
+  const sneakAttackFeature = classFeaturesList.find((feature) => /^sneak attack$/i.test(feature.name.trim()));
+  const sneakAttackRoll = sneakAttackFeature?.scalingRolls
+    ?.filter((roll) => (roll.level ?? 0) <= (sneakAttackFeature.progressionLevel ?? level))
+    .sort((a, b) => (b.level ?? 0) - (a.level ?? 0))[0] ?? null;
   const heldShield = inventory.some((it) =>
     getEquipState(it) !== "backpack"
     && isShieldItem(it)
@@ -304,7 +313,7 @@ export function CharacterCombatPanels({
             const state = getEquipState(it);
             const attackState = state === "mainhand-2h" ? "mainhand-2h" : state === "offhand" ? "offhand" : "mainhand-1h";
             const dmg = weaponDamageDice(it, attackState);
-            const ability = weaponAbilityMod(it, { strScore, dexScore }, parsedFeatureEffects);
+            const ability = weaponAbilityMod(it, { strScore, dexScore, chaScore }, parsedFeatureEffects);
             const proficient = hasWeaponProficiency(it, prof ?? undefined);
             const masteryKnown = hasWeaponMastery(it, prof ?? undefined, ruleset);
             const masteryName = masteryKnown ? getWeaponMasteryName(it) : null;
@@ -321,14 +330,14 @@ export function CharacterCombatPanels({
             });
             const toHit = ability + (proficient ? pb : 0) + attackMagicBonus + featureAttackRollBonus - exhaustionPenalty;
             const damageAbility = attackState === "offhand" && !addsAbilityModToOffhandDamage(it, parsedFeatureEffects) ? 0 : ability;
-            const rageBonus = rageActive && weaponUsesStrength(it) ? rageDamageBonus : 0;
+            const rageBonus = rageActive && !it.pactWeapon && weaponUsesStrength(it) ? rageDamageBonus : 0;
             const featureDamageBonus = deriveAttackDamageBonusFromEffects(parsedFeatureEffects ?? [], {
               level,
               scores: { str: strScore, dex: dexScore },
               // Rage is added separately above to avoid double-counting.
               raging: false,
               isWeapon: true,
-              attackAbility: weaponUsesStrength(it) ? "str" : "dex",
+              attackAbility: it.pactWeapon ? "cha" : weaponUsesStrength(it) ? "str" : "dex",
               item: it,
               hasOtherWeapon: actionItems.some((other) => other.id !== it.id),
             });
@@ -378,6 +387,21 @@ export function CharacterCombatPanels({
               </div>
             );
           })}
+
+          {sneakAttackFeature && sneakAttackRoll ? (
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+              <div>
+                <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text }}>Sneak Attack</div>
+                <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>Once per turn, qualifying weapon hit</div>
+              </div>
+              <div style={{ fontSize: "var(--fs-small)", color: C.muted, textAlign: "center" }}>Weapon</div>
+              <div style={{ fontSize: "var(--fs-small)", color: C.muted, textAlign: "center" }}>-</div>
+              <div>
+                <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: C.text }}>+{sneakAttackRoll.formula}</div>
+                <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>Weapon damage type</div>
+              </div>
+            </div>
+          ) : null}
 
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", padding: "6px 0" }}>
             <div>

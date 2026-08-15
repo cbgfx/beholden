@@ -56,6 +56,7 @@ export interface ClassFeatureEntry {
   id: string;
   name: string;
   text: string;
+  progressionLevel?: number;
   scalingRolls?: Array<{
     description: string | null;
     level: number | null;

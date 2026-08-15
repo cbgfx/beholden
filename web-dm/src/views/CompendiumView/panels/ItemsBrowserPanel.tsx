@@ -6,7 +6,7 @@ import { theme } from "@/theme/theme";
 import { Panel } from "@/ui/Panel";
 import { useVirtualList } from "@/views/CampaignView/monsterPicker/hooks/useVirtualList";
 import { useItemSearch } from "@/views/CompendiumView/hooks/useItemSearch";
-import { ItemFormModal, type ItemForEdit } from "@/views/CompendiumView/panels/ItemFormModal";
+import { ItemFormModal, type ItemForEdit } from "@beholden/shared/views/item-editor/ItemFormModal";
 import { BrowserAddButton } from "./browserParts";
 import { ItemsBrowserFilters, ItemsBrowserList, ItemsBrowserRow } from "./ItemsBrowserSections";
 
@@ -167,6 +167,7 @@ export function ItemsBrowserPanel(props: Props) {
       {formTarget ? (
         <ItemFormModal
           item={formTarget.mode === "edit" ? formTarget.item : null}
+          request={api}
           onClose={() => setFormTarget(null)}
           onSaved={() => {
             setFormTarget(null);

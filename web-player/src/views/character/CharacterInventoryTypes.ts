@@ -6,6 +6,7 @@ export type CharacterDataLike = Pick<CharacterData, "proficiencies" | "inventory
 export interface CharacterLike {
   strScore: number | null;
   dexScore: number | null;
+  chaScore?: number | null;
 }
 
 export interface InventoryItem {
@@ -23,6 +24,7 @@ export interface InventoryItem {
   type?: string | null;
   attunement?: boolean;
   attuned?: boolean;
+  pactWeapon?: boolean;
   magic?: boolean;
   silvered?: boolean;
   equippable?: boolean;

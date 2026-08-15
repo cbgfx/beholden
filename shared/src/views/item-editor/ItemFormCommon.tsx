@@ -1,6 +1,5 @@
 import * as React from "react";
-import { theme, withAlpha } from "@/theme/theme";
-import { togglePillStyle } from "./browserParts";
+import { theme, togglePillStyle, withAlpha } from "./ItemEditorHost";
 import type { ItemFormData } from "./ItemFormModel";
 
 const itemLabelStyle: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 5, color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 650 };

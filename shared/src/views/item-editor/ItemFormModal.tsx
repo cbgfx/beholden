@@ -1,7 +1,5 @@
 import * as React from "react";
-import { api } from "@/services/api";
-import { theme, withAlpha } from "@/theme/theme";
-import { Button } from "@/ui/Button";
+import { Button, ItemEditorProvider, theme, useItemEditorRequest, withAlpha, type ItemEditorRequest } from "./ItemEditorHost";
 import { ItemBasicsView } from "./ItemFormBasics";
 import { ItemMechanicsView } from "./ItemFormMechanics";
 import { ItemSpellsView } from "./ItemFormSpells";
@@ -11,7 +9,12 @@ export type { ItemForEdit } from "./ItemFormModel";
 type ItemFormTab = "basics" | "mechanics" | "spells";
 const TABS: Array<{ id: ItemFormTab; label: string }> = [{ id: "basics", label: "Basics" }, { id: "mechanics", label: "Mechanics" }, { id: "spells", label: "Spells" }];
 
-export function ItemFormModal({ item, onClose, onSaved }: { item: ItemForEdit | null; onClose: () => void; onSaved: () => void }) {
+export function ItemFormModal(props: { item: ItemForEdit | null; onClose: () => void; onSaved: (id?: string) => void; request: ItemEditorRequest; createOnly?: boolean }) {
+  return <ItemEditorProvider request={props.request}><ItemFormModalContent {...props} /></ItemEditorProvider>;
+}
+
+function ItemFormModalContent({ item, onClose, onSaved, createOnly }: { item: ItemForEdit | null; onClose: () => void; onSaved: (id?: string) => void; request: ItemEditorRequest; createOnly?: boolean }) {
+  const api = useItemEditorRequest();
   const create = item == null;
   const [form, setForm] = React.useState<ItemFormData>(() => item ? itemToForm(item) : emptyItemForm());
   const [tab, setTab] = React.useState<ItemFormTab>("basics");
@@ -24,8 +27,9 @@ export function ItemFormModal({ item, onClose, onSaved }: { item: ItemForEdit | 
     try {
       if (!form.name.trim() || !form.type.trim() || !form.rarity.trim()) { setTab("basics"); throw new Error("Name, type, and rarity are required."); }
       const body = buildItemPayload(form, item);
-      await api(create ? "/api/compendium/items" : `/api/compendium/items/${encodeURIComponent(item!.id)}`, { method: create ? "POST" : "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      onSaved();
+      if (createOnly && !create) throw new Error("This editor only permits item creation.");
+      const result = await api<{ id?: string }>(create ? "/api/compendium/items" : `/api/compendium/items/${encodeURIComponent(item!.id)}`, { method: create ? "POST" : "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      onSaved(result?.id);
     } catch (reason) { setError(String((reason as Error)?.message ?? reason)); } finally { setBusy(false); }
   }
   const mechanicCount = Number(form.isWeapon) + Number(form.isArmor) + Number(form.usesEnabled) + form.modifiers.length + form.rolls.length;

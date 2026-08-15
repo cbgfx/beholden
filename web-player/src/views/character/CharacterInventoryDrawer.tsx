@@ -25,6 +25,7 @@ export function InventoryItemDrawer(props: {
   accentColor: string;
   otherAttunedCount: number;
   editMode: boolean;
+  canDesignatePactWeapon: boolean;
   onStartEdit: () => void;
   onCancelEdit: () => void;
   onClose: () => void;
@@ -38,6 +39,7 @@ export function InventoryItemDrawer(props: {
     type: props.item.type ?? props.detail?.type ?? "",
     attunement: props.item.attunement ?? props.detail?.attunement ?? false,
     attuned: props.item.attuned ?? false,
+    pactWeapon: props.item.pactWeapon ?? false,
     magic: props.item.magic ?? props.detail?.magic ?? false,
     silvered: props.item.silvered ?? false,
     weight: props.item.weight ?? props.detail?.weight ?? null,
@@ -78,6 +80,7 @@ export function InventoryItemDrawer(props: {
       type: props.item.type ?? props.detail?.type ?? null,
       attunement: Boolean(draft.attunement),
       attuned: draft.attunement && canEnableAttuned ? Boolean(draft.attuned) : false,
+      pactWeapon: props.canDesignatePactWeapon ? Boolean(draft.pactWeapon) : false,
       magic: Boolean(draft.magic),
       silvered: isMeleeWeaponLike ? Boolean(draft.silvered) : false,
       weight: draft.weight == null || Number.isNaN(draft.weight) ? null : draft.weight,
@@ -134,6 +137,7 @@ export function InventoryItemDrawer(props: {
               isArmorLike={isArmorLike}
               isMeleeWeaponLike={isMeleeWeaponLike}
               canEnableAttuned={canEnableAttuned}
+              canDesignatePactWeapon={props.canDesignatePactWeapon}
               chargesMax={props.item.chargesMax ?? null}
               onSaveCharges={async (v: number | null) => { await props.onSave({ chargesMax: v, charges: v ?? null }); }}
               accentColor={props.accentColor}
@@ -156,6 +160,7 @@ type InventoryDraft = {
   type: string;
   attunement: boolean;
   attuned: boolean;
+  pactWeapon: boolean;
   magic: boolean;
   silvered: boolean;
   weight: number | null;
@@ -176,12 +181,13 @@ type EditFieldsProps = {
   isArmorLike: boolean;
   isMeleeWeaponLike: boolean;
   canEnableAttuned: boolean;
+  canDesignatePactWeapon: boolean;
   chargesMax: number | null;
   onSaveCharges: (value: number | null) => Promise<void>;
   accentColor: string;
 };
 
-function EditFields({ draft, setDraft, isWeaponLike, isArmorLike, isMeleeWeaponLike, canEnableAttuned, chargesMax, onSaveCharges, accentColor }: EditFieldsProps) {
+function EditFields({ draft, setDraft, isWeaponLike, isArmorLike, isMeleeWeaponLike, canEnableAttuned, canDesignatePactWeapon, chargesMax, onSaveCharges, accentColor }: EditFieldsProps) {
   return (
     <>
       <Field label="Title"><input value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} placeholder="Item name" style={fullInput} /></Field>
@@ -203,6 +209,7 @@ function EditFields({ draft, setDraft, isWeaponLike, isArmorLike, isMeleeWeaponL
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <TogglePill active={draft.magic} label="Magic" color={C.colorMagic} onClick={() => setDraft((d) => ({ ...d, magic: !d.magic }))} />
         {draft.attunement ? <TogglePill active={draft.attuned} label="Attuned" color={accentColor} disabled={!draft.attuned && !canEnableAttuned} onClick={() => setDraft((d) => ({ ...d, attuned: !d.attuned }))} /> : null}
+        {canDesignatePactWeapon ? <TogglePill active={draft.pactWeapon} label="Pact Weapon" color={C.colorPinkRed} onClick={() => setDraft((d) => ({ ...d, pactWeapon: !d.pactWeapon }))} /> : null}
         {isMeleeWeaponLike ? <TogglePill active={draft.silvered} label="Silvered" color="#cbd5e1" onClick={() => setDraft((d) => ({ ...d, silvered: !d.silvered }))} /> : null}
         {isArmorLike ? <TogglePill active={draft.stealthDisadvantage} label="Stealth Disadvantage" color={C.red} onClick={() => setDraft((d) => ({ ...d, stealthDisadvantage: !d.stealthDisadvantage }))} /> : null}
       </div>
@@ -252,6 +259,7 @@ function ReadFields({ draft, item, source, ruleset, isWeaponLike, isArmorLike, i
         {draft.magic ? <Tag label="Magic" color={C.colorMagic} /> : null}
         {draft.attunement && !draft.attuned ? <Tag label="Requires Attunement" color={accentColor} /> : null}
         {draft.attuned ? <Tag label="Attuned" color={accentColor} /> : null}
+        {draft.pactWeapon ? <Tag label="Pact Weapon" color={C.colorPinkRed} /> : null}
         {isMeleeWeaponLike && draft.silvered ? <Tag label="Silvered" color="#cbd5e1" /> : null}
         {draft.rarity ? <Tag label={titleCase(draft.rarity)} color={inventoryRarityColor(draft.rarity)} /> : null}
         {draft.type ? <Tag label={draft.type} color={C.muted} /> : null}

@@ -9,6 +9,7 @@ import type { CompendiumItemDetail, InventoryPickerPayload } from "@/views/chara
 import { formatItemDamageType, formatItemProperties, hasStealthDisadvantage } from "@/views/character/CharacterInventory";
 import { INVENTORY_PICKER_ROW_HEIGHT, inputStyle, stepperBtn } from "@/views/character/CharacterInventoryPanelHelpers";
 import { ItemListRow, Tag, togglePillStyle } from "@beholden/shared/ui";
+import { ItemFormModal } from "@beholden/shared/views/item-editor/ItemFormModal";
 import { InventoryStat } from "@/views/character/CharacterInventoryPanelRows";
 import { addBtnStyle, cancelBtnStyle, inventoryCheckboxLabel, inventoryPickerColumnStyle, inventoryPickerDetailStyle, inventoryPickerListStyle, inventoryRarityColor } from "@/views/character/CharacterViewParts";
 
@@ -105,6 +106,25 @@ export function InventoryItemPickerModal(props: {
   }, [props.isOpen, createMode, selectedId, detailCache]);
 
   if (!props.isOpen) return null;
+
+  if (createMode) {
+    return (
+      <ItemFormModal
+        item={null}
+        createOnly
+        request={api}
+        onClose={() => setCreateMode(false)}
+        onSaved={async (id) => {
+          if (!id) return;
+          const created = await api<CompendiumItemDetail>(`/api/compendium/items/${encodeURIComponent(id)}`);
+          const description = Array.isArray(created.text) ? created.text.join("\n\n") : created.text ?? "";
+          props.onAdd({ source: "compendium", name: created.name.replace(/\s*\(\d+\)$/, "").trim(), quantity: 1, itemId: created.id, rarity: created.rarity, type: created.type, attunement: created.attunement, magic: created.magic, equippable: created.equippable, weight: created.weight, value: created.value, proficiency: created.proficiency, ac: created.ac, stealthDisadvantage: created.stealthDisadvantage, dmg1: created.dmg1, dmg2: created.dmg2, dmgType: created.dmgType, properties: created.properties, mastery: created.mastery, modifiers: created.modifiers, uses: created.uses, spells: created.spells, spellcasting: created.spellcasting, spellTemplate: created.spellTemplate, ammo: created.ammo, weaponAmmo: created.weaponAmmo, usage: created.usage, bundle: created.bundle, container: created.container, ignoreWeight: created.ignoreWeight, effects: created.effects, description });
+          setCreateMode(false);
+          refresh();
+        }}
+      />
+    );
+  }
 
   const detailText = detail
     ? (Array.isArray(detail.text) ? detail.text.join("\n\n") : detail.text ?? "")

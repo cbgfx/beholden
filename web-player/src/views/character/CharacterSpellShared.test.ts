@@ -12,6 +12,31 @@ describe("typed spell display rolls", () => {
     expect(getScaledSpellDamage(spell, 7, 0)).toEqual({ dice: "2d8", type: "necrotic", types: ["necrotic"] });
   });
 
+  it("uses Toll the Dead's d8 track unless the missing-hit-points condition is known", () => {
+    const spell = {
+      id: "s_toll_the_dead", name: "Toll the Dead", level: 0,
+      rolls: [
+        ...[0, 5, 11, 17].map((level, index) => ({ formula: `${index + 1}d8`, effect: "necrotic", level })),
+        ...[0, 5, 11, 17].map((level, index) => ({ formula: `${index + 1}d12`, effect: "necrotic", level })),
+      ],
+    };
+    expect(getScaledSpellDamage(spell, 7, 0)?.dice).toBe("2d8");
+  });
+
+  it("infers Booming Blade damage from its authored roll description", () => {
+    const spell = {
+      id: "s_booming_blade", name: "Booming Blade", level: 0,
+      rolls: [0, 5, 11, 17].map((level, index) => ({ formula: `${index + 1}d8`, description: "Thunder Damage", level })),
+    };
+    expect(getScaledSpellDamage(spell, 11, 0)).toEqual({ dice: "3d8", type: "thunder", types: ["thunder"] });
+  });
+
+  it("supplies Green-Flame Blade's missing cantrip scaling rolls", () => {
+    const spell = { id: "s_green_flame_blade", name: "Green-Flame Blade", level: 0, rolls: [] };
+    expect(getScaledSpellDamage(spell, 4, 0)).toBeNull();
+    expect(getScaledSpellDamage(spell, 11, 0)).toEqual({ dice: "2d8", type: "fire", types: ["fire"] });
+  });
+
   it("preserves every icon type for a mixed damage display", () => {
     const spell = {
       id: "s_flame_strike", name: "Flame Strike", level: 5,

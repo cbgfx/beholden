@@ -5,8 +5,11 @@ import { DraggableList } from "@/ui/DraggableList";
 import {
   formatWeight,
   getEquipState,
+  hasItemProperty,
+  hasWeaponProficiency,
   isAmmunitionItem,
   isCurrencyItem,
+  isWeaponItem,
   type CharacterDataLike,
   type InventoryContainer,
   type InventoryItem,
@@ -31,6 +34,8 @@ import { useCharacterInventorySync } from "@/views/character/useCharacterInvento
 import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 
 type InventoryPanelCharacterData = CharacterDataLike & {
+  classes?: Array<{ className?: string | null; subclass?: string | null }>;
+  chosenOptionals?: string[];
   inventory?: InventoryItem[];
   inventoryContainers?: InventoryContainer[];
 };
@@ -44,7 +49,7 @@ export function InventoryPanel({
   campaignId,
   onSave,
 }: {
-  char: { strScore: number | null; ruleset?: "5e" | "5.5e" };
+  char: { strScore: number | null; chaScore: number | null; ruleset?: "5e" | "5.5e" };
   charData: InventoryPanelCharacterData | null;
   proficiencies?: ProficiencyMap;
   parsedFeatureEffects?: ParsedFeatureEffects[] | null;
@@ -75,6 +80,8 @@ export function InventoryPanel({
   const partyCapacityLbs = sync.partyCapacityLbs;
 
   const ammoItems = sync.items.filter(isAmmunitionItem);
+  const hasHexWarrior = (charData?.classes ?? []).some((entry) => /hexblade/i.test(String(entry.subclass ?? "")));
+  const hasPactBlade = (charData?.chosenOptionals ?? []).some((entry) => /pact(?:_|\s)+(?:of(?:_|\s)+)?the(?:_|\s)+blade/i.test(entry));
 
   const stashWeight = sync.partyStashItems.reduce((sum, item) => sum + (item.weight ?? 0) * item.quantity, 0);
   const stashWeightLabel = partyCapacityLbs !== null
@@ -206,6 +213,7 @@ export function InventoryPanel({
             accentColor={accentColor}
             otherAttunedCount={derived.otherAttunedCount}
             editMode={sync.itemEditMode}
+            canDesignatePactWeapon={isWeaponItem(derived.selectedItem) && (hasPactBlade || (hasHexWarrior && !hasItemProperty(derived.selectedItem, "2H") && !hasItemProperty(derived.selectedItem, "H") && hasWeaponProficiency(derived.selectedItem, proficiencies)))}
             onStartEdit={() => sync.setItemEditMode(true)}
             onCancelEdit={() => sync.setItemEditMode(false)}
             onClose={() => sync.setExpandedItemId(null)}

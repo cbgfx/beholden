@@ -202,7 +202,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
 
         {(ui.sheetView === "gear" || ui.sheetView === "all") && (
           <CharacterInventoryColumn inventoryProps={{
-            char,
+            char: { ...char, chaScore: derived.scores.cha },
             charData: char.characterData,
             proficiencies: derived.prof,
             parsedFeatureEffects: derived.parsedFeatureEffects,

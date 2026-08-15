@@ -1,8 +1,5 @@
-import { theme } from "@/theme/theme";
-import { Button } from "@/ui/Button";
-import { Input } from "@/ui/Input";
+import { Button, Input, theme, togglePillStyle } from "./ItemEditorHost";
 import { SpellChoiceMenu } from "./SpellFormControls";
-import { togglePillStyle } from "./browserParts";
 import { AMMO_FAMILIES, ITEM_MODIFIER_TARGETS, WEAPON_MASTERIES, type ItemFormData } from "./ItemFormModel";
 import { ItemColumn, ItemEmpty, ItemField, ItemPills, itemChoices, itemRemoveStyle, itemSectionStyle, itemSectionTitle, type ItemFormSetter } from "./ItemFormCommon";
 

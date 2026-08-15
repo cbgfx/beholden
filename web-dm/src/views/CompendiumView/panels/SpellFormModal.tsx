@@ -4,7 +4,7 @@ import { theme, withAlpha } from "@/theme/theme";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { TextArea } from "@/ui/TextArea";
-import { SpellChoiceMenu } from "./SpellFormControls";
+import { SpellChoiceMenu } from "@beholden/shared/views/item-editor/SpellFormControls";
 import { togglePillStyle } from "./browserParts";
 import {
   ACCESS_OPTIONS, CHECK_OPTIONS, EFFECT_OPTIONS, SCHOOLS,

@@ -20,6 +20,9 @@
     "./icons": "./src/icons/index.tsx",
     "./icons/*": "./src/icons/*",
     "./views": "./src/views/index.tsx",
+    "./views/item-editor/ItemFormModal": "./src/views/item-editor/ItemFormModal.tsx",
+    "./views/item-editor/ItemFormModel": "./src/views/item-editor/ItemFormModel.ts",
+    "./views/item-editor/SpellFormControls": "./src/views/item-editor/SpellFormControls.tsx",
     "./views/*": "./src/views/*",
     "./ui": "./src/ui/index.tsx",
     "./ui/*": "./src/ui/*",
@@ -41,6 +44,15 @@
       ],
       "views": [
         "./src/views/index.tsx"
+      ],
+      "views/item-editor/ItemFormModal": [
+        "./src/views/item-editor/ItemFormModal.tsx"
+      ],
+      "views/item-editor/ItemFormModel": [
+        "./src/views/item-editor/ItemFormModel.ts"
+      ],
+      "views/item-editor/SpellFormControls": [
+        "./src/views/item-editor/SpellFormControls.tsx"
       ],
       "views/*": [
         "./src/views/*"

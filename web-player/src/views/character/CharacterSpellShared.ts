@@ -19,7 +19,7 @@ export interface FetchedSpellDetail {
   damage?: { dice: string; type: string } | null;
   save?: string | null;
   check?: string | null;
-  rolls?: Array<{ formula: string; effect?: string | string[] | null; level?: number | null }>;
+  rolls?: Array<{ formula: string; description?: string | null; effect?: string | string[] | null; level?: number | null }>;
 }
 
 export const SPELL_ROW_GRID_WITH_MARKER = "24px minmax(0, 1fr) 108px 68px 92px";
@@ -56,7 +56,14 @@ export function getScaledSpellDamage(
   spellMod?: number,
 ): { dice: string; type: string; types: string[] } | null {
   const damageTypes = new Set(Object.keys(DMG_COLORS));
-  const rolls = (detail.rolls ?? []).filter((roll) => {
+  const normalizedRolls = (detail.rolls ?? []).map((roll) => {
+    const describedType = String(roll.description ?? "").toLowerCase().match(/\b(acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder)\b/)?.[1];
+    return roll.effect || !describedType ? roll : { ...roll, effect: describedType };
+  });
+  const fallbackRolls = normalizedRolls.length === 0 && /green[- ]flame blade/i.test(detail.name)
+    ? [5, 11, 17].map((level, index) => ({ formula: `${index + 1}d8`, effect: "fire", level }))
+    : normalizedRolls;
+  const rolls = fallbackRolls.filter((roll) => {
     const effects = Array.isArray(roll.effect) ? roll.effect : [roll.effect];
     return effects.some((effect) => effect && damageTypes.has(effect));
   });
@@ -67,7 +74,9 @@ export function getScaledSpellDamage(
   // row, or a base-level display would show the spell's max upcast instead of its base roll.
   const targetLevel = detail.level === 0 ? charLevel : (maxSlotLevel || detail.level || 0);
   const eligible = rolls.filter((roll) => (roll.level ?? detail.level ?? 0) <= targetLevel);
-  const roll = eligible.at(-1) ?? rolls[0];
+  if (detail.level === 0 && eligible.length === 0) return null;
+  const highestEligibleLevel = Math.max(...eligible.map((candidate) => candidate.level ?? detail.level ?? 0));
+  const roll = eligible.find((candidate) => (candidate.level ?? detail.level ?? 0) === highestEligibleLevel) ?? rolls[0];
   const types = (Array.isArray(roll.effect) ? roll.effect : [roll.effect]).filter((effect): effect is string => Boolean(effect));
   // A handful of healing rolls (Healing Word, Cure Wounds, ...) are authored with a literal
   // "SPELL" token meaning "add the caster's spellcasting ability modifier" — no roll parser

@@ -410,10 +410,11 @@ export function buildDisplayPlayerFeatures(args: BuildDisplayPlayerFeaturesArgs)
       // without a resolution label (homebrew) is shown, not filtered by keyword.
       || feature.resolution !== "manual"
     )
-    .map(({ id, name, text, scalingRolls, preparedSpellProgression }) => ({
+    .map(({ id, name, text, progressionLevel, scalingRolls, preparedSpellProgression }) => ({
       id,
       name,
       text,
+      progressionLevel,
       scalingRolls,
       preparedSpellProgression,
     }));

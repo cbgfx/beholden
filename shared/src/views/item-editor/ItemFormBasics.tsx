@@ -1,5 +1,4 @@
-import { Input } from "@/ui/Input";
-import { TextArea } from "@/ui/TextArea";
+import { Input, TextArea } from "./ItemEditorHost";
 import { ITEM_RARITY_ORDER, KNOWN_ITEM_TYPES } from "@beholden/shared/domain";
 import { SpellChoiceMenu } from "./SpellFormControls";
 import { AMMO_FAMILIES, type ItemFormData } from "./ItemFormModel";

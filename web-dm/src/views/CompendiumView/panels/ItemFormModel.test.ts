@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildItemPayload, emptyItemForm, itemToForm, type ItemForEdit } from "./ItemFormModel";
+import { buildItemPayload, emptyItemForm, itemToForm, type ItemForEdit } from "@beholden/shared/views/item-editor/ItemFormModel";
 
 describe("ItemFormModel", () => {
   it("builds conditional weapon, use, modifier, roll, and spell facts", () => {

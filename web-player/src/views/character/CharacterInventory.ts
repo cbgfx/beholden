@@ -279,6 +279,7 @@ export function weaponAbilityMod(
 ): number {
   const strMod = abilityMod(char.strScore);
   const dexMod = abilityMod(char.dexScore);
+  if (item.pactWeapon) return abilityMod(char.chaScore);
   const abilityOverride = deriveAttackAbilityOverrideFromEffects(parsedFeatureEffects ?? [], {
     isWeapon: true,
     isMonkWeapon: isMonkWeapon(item),

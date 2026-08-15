@@ -1,5 +1,5 @@
 import * as React from "react";
-import { theme, withAlpha } from "@/theme/theme";
+import { theme, withAlpha } from "./ItemEditorHost";
 
 export function SpellChoiceMenu({ value, options, onChange, ariaLabel }: {
   value: string;

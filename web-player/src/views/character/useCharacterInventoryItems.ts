@@ -130,7 +130,10 @@ export function useCharacterInventoryItems({
     sync.setItemEditMode(false);
   };
   const saveItemEdits = (id: string, patch: Partial<InventoryItem>) =>
-    containers.persist(items.map((item) => item.id === id ? { ...item, ...patch } : item));
+    containers.persist(items.map((item) => {
+      if (item.id === id) return { ...item, ...patch };
+      return patch.pactWeapon ? { ...item, pactWeapon: false } : item;
+    }));
   const saveCurrencyAmount = async (code: "PP" | "GP" | "SP" | "CP", amount: number) => {
     const value = Math.max(0, Math.floor(Number(amount) || 0));
     const existing = items.find((item) => String(item.name ?? "").trim().toUpperCase() === code);

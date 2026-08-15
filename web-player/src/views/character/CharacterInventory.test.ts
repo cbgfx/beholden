@@ -287,6 +287,11 @@ describe("mergeCatalogItem", () => {
     expect(merged.description).toBe("A DM-crafted relic.");
   });
 
+  it("uses Charisma for a designated pact weapon", () => {
+    const character = { strScore: 12, dexScore: 14, chaScore: 18 };
+    expect(weaponAbilityMod(item({ pactWeapon: true, type: "Martial Melee Weapon" }), character)).toBe(4);
+  });
+
   it("preserves edits to a player-owned copy that retains its catalog item id", () => {
     const renamed = item({
       itemId: "i_rapier_plus_3",

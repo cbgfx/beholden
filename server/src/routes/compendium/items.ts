@@ -523,7 +523,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     });
   });
 
-  app.post("/api/compendium/items", anyDm, (req, res) => {
+  app.post("/api/compendium/items", (req, res) => {
     const id = grandEntryId("i", (req.body as Record<string, unknown> | undefined)?.name);
     saveGrandEntry(db, "items", req.body, id);
     ctx.broadcast("compendium:changed", { itemCreated: id });

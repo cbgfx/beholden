@@ -132,6 +132,7 @@ export function ItemRow({ item, accentColor, proficiencies, parsedFeatureEffects
             {item.name}
             {item.magic ? <Tag label="Magic" color={C.colorMagic} /> : null}
             {item.attuned ? <StatusBadge title="Currently attuned" border="rgba(167,139,250,0.55)" bg="rgba(139,92,246,0.14)" color="#a78bfa">A</StatusBadge> : null}
+            {item.pactWeapon ? <StatusBadge title="Pact Weapon: uses Charisma for attacks and damage" border="rgba(244,114,182,0.55)" bg="rgba(244,114,182,0.14)" color={C.colorPinkRed}>Pact</StatusBadge> : null}
             {linkedAmmo ? <StatusBadge title={`Loaded ammunition: ${linkedAmmo.name}`} border="rgba(52,211,153,0.45)" bg="rgba(52,211,153,0.14)" color="#34d399">{linkedAmmo.name}</StatusBadge> : null}
             {masteryName ? <StatusBadge title={`Weapon Mastery: ${masteryName}`} border="rgba(251,191,36,0.45)" bg="rgba(251,191,36,0.14)" color={C.colorGold}>{masteryName}</StatusBadge> : null}
             {hasStealthDisadvantage(item) ? <StatusBadge title="Disadvantage on Stealth checks" border="rgba(248,113,113,0.55)" bg="rgba(248,113,113,0.14)" color={C.colorPinkRed}>D</StatusBadge> : null}
