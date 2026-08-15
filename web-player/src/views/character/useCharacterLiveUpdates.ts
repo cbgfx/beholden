@@ -6,7 +6,8 @@ type ActiveBastion = { id: string; name: string; campaignId: string };
 type InitiativePrompt = { encounterId: string; combatantId: string };
 type EngagedEnemyCondition = { key: string; hexAbility?: string };
 export type EngagedEnemy = { id: string; name: string; health: "Damaged" | "Bloodied" | "Down"; conditions?: EngagedEnemyCondition[] };
-type CombatStatus = { encounterId: string; combatantId: string; usedReaction: boolean; engagedEnemies: EngagedEnemy[] };
+export type CombatAlly = { id: string; name: string; health: "Healthy" | "Damaged" | "Bloody"; hpPercent?: number };
+type CombatStatus = { encounterId: string; combatantId: string; usedReaction: boolean; engagedEnemies: EngagedEnemy[]; allies: CombatAlly[] };
 
 export function useCharacterLiveUpdates(
   characterId: string | undefined,

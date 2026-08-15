@@ -562,6 +562,39 @@ describe("combat state regression: HP/condition mutation, transitions, and live 
       assert.match(JSON.stringify(down.body), /Down/);
     });
 
+    it("always exposes other allies and includes HP percentage for PCs", async () => {
+      const ally = makeReserveEnemy({
+        id: "combatant-ally-regression",
+        baseType: "player",
+        name: "Friendly Guard",
+        label: "Ser Rowan",
+        initiative: 11,
+        friendly: true,
+        hpCurrent: 20,
+        hpMax: 20,
+      });
+      insertCombatant(db, ally);
+
+      const statusUrl = `/api/me/characters/${playerCharacterId}/combat-status`;
+      const healthy = await request("GET", statusUrl, undefined, playerToken);
+      const healthyCombat = (healthy.body as { combat: { allies: Array<Record<string, unknown>> } }).combat;
+      assert.deepEqual(healthyCombat.allies, [{ id: ally.id, name: "Ser Rowan", health: "Healthy", hpPercent: 100 }]);
+      assert.ok(!JSON.stringify(healthyCombat.allies).includes("hpCurrent"));
+      assert.ok(!JSON.stringify(healthyCombat.allies).includes("hpMax"));
+
+      db.prepare("UPDATE combatants SET live_json = json_set(live_json, '$.hpCurrent', 15) WHERE id = ?").run(ally.id);
+      const damaged = await request("GET", statusUrl, undefined, playerToken);
+      assert.deepEqual((damaged.body as { combat: { allies: Array<Record<string, unknown>> } }).combat.allies[0], {
+        id: ally.id, name: "Ser Rowan", health: "Damaged", hpPercent: 75,
+      });
+
+      db.prepare("UPDATE combatants SET live_json = json_set(live_json, '$.hpCurrent', 10) WHERE id = ?").run(ally.id);
+      const bloody = await request("GET", statusUrl, undefined, playerToken);
+      assert.deepEqual((bloody.body as { combat: { allies: Array<Record<string, unknown>> } }).combat.allies[0], {
+        id: ally.id, name: "Ser Rowan", health: "Bloody", hpPercent: 50,
+      });
+    });
+
     it("engages a reserve the moment a player marks it (Hunter's Mark), before any damage lands", async () => {
       const reserve = makeReserveEnemy({
         id: "combatant-marked-regression",

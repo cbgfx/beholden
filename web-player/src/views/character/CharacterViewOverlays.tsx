@@ -102,6 +102,7 @@ export function CharacterViewOverlays({ model }: { model: CharacterViewModel }) 
       <EngagedEnemiesDrawer
         open={ui.engagedEnemiesDrawerOpen}
         enemies={live.combatStatus?.engagedEnemies ?? []}
+        allies={live.combatStatus?.allies ?? []}
         onClose={() => ui.setEngagedEnemiesDrawerOpen(false)}
       />
     </>

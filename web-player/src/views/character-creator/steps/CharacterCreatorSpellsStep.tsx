@@ -376,7 +376,9 @@ export function renderSpellsFromContext(ctx: CharacterCreatorStepRenderContext):
     toggleInvocation: (id, action) => ctx.setForm((form) => {
       const current = form.chosenInvocations;
       const talent = ctx.classInvocations.find((entry) => entry.id === id);
-      if (action === "add" && talent?.repeatable && current.length < invocCount) return { ...form, chosenInvocations: [...current, id] };
+      if (action === "add" && current.length < invocCount && (!current.includes(id) || talent?.repeatable)) {
+        return { ...form, chosenInvocations: [...current, id] };
+      }
       if (action === "remove") {
         const index = current.lastIndexOf(id);
         return index < 0 ? form : { ...form, chosenInvocations: current.filter((_, candidate) => candidate !== index) };
