@@ -66,6 +66,15 @@ export interface CharacterCombatPanelsProps {
   incapacitated?: boolean;
 }
 
+export function divineFuryDamageForFeature(
+  feature: ClassFeatureEntry | undefined,
+  fallbackLevel: number,
+): string | null {
+  if (!feature || !/(?:^|:\s*)divine fury(?:\s|$)/i.test(feature.name.trim())) return null;
+  const barbarianLevel = Math.max(0, Math.floor(feature.progressionLevel ?? fallbackLevel));
+  return `1d6+${Math.floor(barbarianLevel / 2)}`;
+}
+
 export function CharacterCombatPanels({
   ruleset,
   effectiveAc,
@@ -106,6 +115,8 @@ export function CharacterCombatPanels({
   const sneakAttackRoll = sneakAttackFeature?.scalingRolls
     ?.filter((roll) => (roll.level ?? 0) <= (sneakAttackFeature.progressionLevel ?? level))
     .sort((a, b) => (b.level ?? 0) - (a.level ?? 0))[0] ?? null;
+  const divineFuryFeature = classFeaturesList.find((feature) => /(?:^|:\s*)divine fury(?:\s|$)/i.test(feature.name.trim()));
+  const divineFuryDamage = rageActive ? divineFuryDamageForFeature(divineFuryFeature, level) : null;
   const heldShield = inventory.some((it) =>
     getEquipState(it) !== "backpack"
     && isShieldItem(it)
@@ -399,6 +410,21 @@ export function CharacterCombatPanels({
               <div>
                 <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: C.text }}>+{sneakAttackRoll.formula}</div>
                 <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>Weapon damage type</div>
+              </div>
+            </div>
+          ) : null}
+
+          {divineFuryDamage ? (
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+              <div>
+                <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text }}>Divine Fury</div>
+                <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>First qualifying hit on each of your turns</div>
+              </div>
+              <div style={{ fontSize: "var(--fs-small)", color: C.muted, textAlign: "center" }}>Weapon</div>
+              <div style={{ fontSize: "var(--fs-small)", color: C.muted, textAlign: "center" }}>-</div>
+              <div>
+                <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: C.text }}>+{divineFuryDamage}</div>
+                <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>Necrotic or Radiant</div>
               </div>
             </div>
           ) : null}
