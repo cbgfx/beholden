@@ -150,7 +150,7 @@ function renderSpellsStep<T extends { id: string; name: string; level: number | 
           Choose {invocCount - chosenInvocations.length} more Eldritch Invocation{invocCount - chosenInvocations.length === 1 ? "" : "s"} to continue. (A slot can go empty on its own if a build change — Pact Boon, cantrips, etc. — makes a previously-chosen invocation ineligible.)
         </div>
       )}
-      {invocCount > 0 && classInvocations.length > 0 && (
+      {invocCount > 0 && (
         <SpellPicker
           title="Eldritch Invocations"
           chosen={chosenInvocations}
