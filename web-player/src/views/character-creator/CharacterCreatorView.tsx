@@ -383,7 +383,7 @@ export function CharacterCreatorView() {
   // level-aware drop-most-recent-first logic as the cantrip/spell trim above.
   React.useEffect(() => {
     if (!classDetail) return;
-    const invocTableForTrim = getClassFeatureTable(classDetail, "Invocation", 1, form.subclass);
+    const invocTableForTrim = getClassFeatureTable(classDetail, "Invocation", form.level, form.subclass);
     const invocCountForTrim = invocTableForTrim.length > 0 ? tableValueAtLevel(invocTableForTrim, form.level) : 0;
     const existingInvocationLevelById = new Map((editSummaryFallback?.existingInvocations ?? []).map((entry) => [entry.id, entry.level ?? form.level]));
     const invocationLevelOf = (id: string) => existingInvocationLevelById.get(id) ?? form.level;
@@ -453,7 +453,7 @@ export function CharacterCreatorView() {
     setError,
   });
 
-  const invocTable = classDetail ? getClassFeatureTable(classDetail, "Invocation", 1, form.subclass) : [];
+  const invocTable = classDetail ? getClassFeatureTable(classDetail, "Invocation", form.level, form.subclass) : [];
   const invocCount = invocTable.length > 0 ? tableValueAtLevel(invocTable, form.level) : 0;
 
   const handleSubmitWithChecks = React.useCallback(async () => {

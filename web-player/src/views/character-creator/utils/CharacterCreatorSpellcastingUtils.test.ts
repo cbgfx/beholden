@@ -1,12 +1,37 @@
 import { describe, expect, it } from "vitest";
 import {
   getCantripCount,
+  getClassFeatureTable,
   getMaxSlotLevel,
   getPreparedSpellCount,
   getSlotLevelTriggeredSpellChoices,
   getSpellcastingClassName,
   getSpellSlotsAtLevel,
 } from "./CharacterCreatorSpellcastingUtils";
+
+describe("class talent progression", () => {
+  it("finds the 5e Warlock invocation table for a Hexblade once level 2 is reached", () => {
+    const warlock = {
+      autolevels: [
+        { level: 1, features: [{ name: "Hexblade's Curse", subclass: "The Hexblade" }] },
+        {
+          level: 2,
+          features: [{
+            name: "Eldritch Invocations",
+            talent: { kind: "invocation", known: { 2: 2, 5: 3, 7: 4 } },
+          }],
+        },
+      ],
+    };
+
+    expect(getClassFeatureTable(warlock as never, "Invocation", 1, "The Hexblade")).toEqual([]);
+    expect(getClassFeatureTable(warlock as never, "Invocation", 2, "The Hexblade")).toEqual([
+      [2, 2],
+      [5, 3],
+      [7, 4],
+    ]);
+  });
+});
 
 const eldritchKnight = {
   autolevels: [{ level: 3, slots: null, features: [{ name: "Spellcasting", subclass: "Eldritch Knight", text: "deliberately non-parseable" }] }],

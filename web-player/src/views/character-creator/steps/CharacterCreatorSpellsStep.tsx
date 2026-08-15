@@ -270,7 +270,7 @@ export function renderSpellsFromContext(ctx: CharacterCreatorStepRenderContext):
   const cantripCount = ctx.classDetail ? getCantripCount(ctx.classDetail, ctx.form.level, ctx.form.subclass) : 0;
   const maxSlotLvl = ctx.classDetail ? getMaxSlotLevel(ctx.classDetail, ctx.form.level, ctx.form.subclass) : 0;
   const isCaster = ctx.classDetail ? isSpellcaster(ctx.classDetail, ctx.form.level, ctx.form.subclass) : false;
-  const invocTable = ctx.classDetail ? getClassFeatureTable(ctx.classDetail, "Invocation", 1, ctx.form.subclass) : [];
+  const invocTable = ctx.classDetail ? getClassFeatureTable(ctx.classDetail, "Invocation", ctx.form.level, ctx.form.subclass) : [];
   const invocCount = invocTable.length > 0 ? tableValueAtLevel(invocTable, ctx.form.level) : 0;
   const raceAbilityBonusesForSpells = deriveRaceAbilityBonuses(ctx.raceDetail, ctx.raceDetail?.parsedChoices?.abilityScoreChoice, ctx.form);
   const creatorScores = resolvedScores(ctx.form, ctx.selectedFeatAbilityBonuses, raceAbilityBonusesForSpells);
