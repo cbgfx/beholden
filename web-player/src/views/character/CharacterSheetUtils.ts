@@ -245,8 +245,9 @@ export interface ClassTalentPrerequisite {
  * invocations instead, so this always returns null for 5.5e characters — harmless, since their
  * invocations gate on `prerequisite.talent`/`chosenTalentIds`, not `pactBoon`. */
 export function resolvePactBoonFromChosenOptionals(chosenOptionals: string[] | null | undefined): PactBoon | null {
-  for (const id of chosenOptionals ?? []) {
-    const match = /pact_of_the_(blade|chain|tome|talisman)/.exec(id);
+  for (const value of chosenOptionals ?? []) {
+    const normalized = value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
+    const match = /pact_of_(?:the_)?(blade|chain|tome|talisman)/.exec(normalized);
     if (match) return match[1] as PactBoon;
   }
   return null;
@@ -264,7 +265,11 @@ export function invocationPrerequisitesMet(
 ): boolean {
   if (!prerequisite) return true;
   if ((prerequisite.level ?? 0) > opts.level) return false;
-  if (prerequisite.talent && !(opts.chosenTalentIds ?? []).includes(prerequisite.talent)) return false;
+  if (prerequisite.talent) {
+    const normalizeTalentId = (id: string) => id.toLowerCase().replace(/_of_the_/g, "_of_");
+    const requiredTalent = normalizeTalentId(prerequisite.talent);
+    if (!(opts.chosenTalentIds ?? []).some((id) => normalizeTalentId(id) === requiredTalent)) return false;
+  }
   if (prerequisite.cantrip === "damage" && !opts.hasDamageCantrip) return false;
   if (prerequisite.cantrip === "attack_damage" && !opts.hasAttackDamageCantrip) return false;
   if (prerequisite.pactBoon && prerequisite.pactBoon !== opts.chosenPactBoon) return false;

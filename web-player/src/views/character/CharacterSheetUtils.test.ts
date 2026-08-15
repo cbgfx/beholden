@@ -22,12 +22,28 @@ describe("invocationPrerequisitesMet canonical facts", () => {
     // A 5.5e invocation with no pactBoon prerequisite is unaffected by the fact being present or absent.
     expect(invocationPrerequisitesMet({ talent: "ct_invocation_pact_of_the_blade" }, { level: 5, chosenTalentIds: ["ct_invocation_pact_of_the_blade"], chosenPactBoon: null })).toBe(true);
   });
+
+  it("accepts legacy Pact invocation ids that omit the article", () => {
+    expect(invocationPrerequisitesMet(
+      { talent: "ct_invocation_pact_of_the_blade" },
+      { level: 5, chosenTalentIds: ["ct_invocation_pact_of_blade"] },
+    )).toBe(true);
+    expect(invocationPrerequisitesMet(
+      { talent: "ct_invocation_pact_of_blade" },
+      { level: 5, chosenTalentIds: ["ct_invocation_pact_of_the_blade"] },
+    )).toBe(true);
+  });
 });
 
 describe("resolvePactBoonFromChosenOptionals", () => {
   it("extracts the chosen 2014 Pact Boon from a cf_ feature id", () => {
     expect(resolvePactBoonFromChosenOptionals(["cf_warlock_3_pact_boon_pact_of_the_blade"])).toBe("blade");
     expect(resolvePactBoonFromChosenOptionals(["cf_fighter_1_fighting_style_defense", "cf_warlock_3_pact_boon_pact_of_the_chain"])).toBe("chain");
+  });
+
+  it("extracts Pact Boons saved as character-creator display names", () => {
+    expect(resolvePactBoonFromChosenOptionals(["Pact Boon: Pact of the Blade"])).toBe("blade");
+    expect(resolvePactBoonFromChosenOptionals(["Pact of the Tome"])).toBe("tome");
   });
 
   it("returns null when no Pact Boon feature is present, including for 5.5e characters (which choose it as an invocation instead)", () => {
