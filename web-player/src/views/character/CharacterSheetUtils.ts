@@ -28,7 +28,17 @@ export function proficiencyBonus(level: number): number {
 }
 
 export function hasNamedProficiency(list: Array<Pick<TaggedItem, "name">> | null | undefined, name: string): boolean {
-  return (list ?? []).some((s) => String(s.name).toLowerCase() === name.toLowerCase());
+  const requestedAbility = normalizeAbilityKey(name);
+  return (list ?? []).some((entry) => {
+    const entryName = String(entry.name).trim();
+    if (entryName.toLowerCase() === name.trim().toLowerCase()) return true;
+
+    // Compendium saving-throw grants use canonical abbreviations (for example
+    // "wis"), while the character sheet asks with display names ("Wisdom").
+    // Treat those representations as equivalent without loosening matching for
+    // skills, weapons, or the other proficiency categories that use this helper.
+    return requestedAbility !== null && normalizeAbilityKey(entryName) === requestedAbility;
+  });
 }
 
 function proficiencyValue(level: number, tier: 0 | 0.5 | 1 | 2): number {

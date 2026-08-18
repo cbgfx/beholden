@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { featPrerequisitesMet, invocationPrerequisitesMet, normalizeAbilityKey, resolvePactBoonFromChosenOptionals } from "@/views/character/CharacterSheetUtils";
+import {
+  featPrerequisitesMet,
+  getSaveBonus,
+  hasNamedProficiency,
+  invocationPrerequisitesMet,
+  normalizeAbilityKey,
+  resolvePactBoonFromChosenOptionals,
+} from "@/views/character/CharacterSheetUtils";
 
 describe("invocationPrerequisitesMet canonical facts", () => {
   it("requires levels, owned talents, and the exact cantrip capability", () => {
@@ -89,5 +96,34 @@ describe("normalizeAbilityKey", () => {
   it("does not guess unknown abilities", () => {
     expect(normalizeAbilityKey("highest mental ability")).toBeNull();
     expect(normalizeAbilityKey(null)).toBeNull();
+  });
+});
+
+describe("saving-throw proficiency names", () => {
+  const abilityNames = [
+    ["str", "Strength"],
+    ["dex", "Dexterity"],
+    ["con", "Constitution"],
+    ["int", "Intelligence"],
+    ["wis", "Wisdom"],
+    ["cha", "Charisma"],
+  ] as const;
+  const ironMindProficiencies = {
+    skills: [], expertise: [], saves: [{ name: "wis", source: "Level 7: Iron Mind (Gloom Stalker)" }],
+    armor: [], weapons: [], weaponMasteries: [], tools: [], languages: [], spells: [],
+    invocations: [], maneuvers: [], metamagic: [], infusions: [], plans: [],
+  };
+
+  it.each(abilityNames)("matches %s proficiency to the %s display name", (abbreviation, fullName) => {
+    expect(hasNamedProficiency([{ name: abbreviation }], fullName)).toBe(true);
+  });
+
+  it.each(abilityNames)("matches the %s abbreviation when stored as %s", (abbreviation, fullName) => {
+    expect(hasNamedProficiency([{ name: fullName }], abbreviation)).toBe(true);
+  });
+
+  it("includes Iron Mind in a level 7 Wisdom save", () => {
+    const scores = { str: 12, dex: 18, con: 14, int: 10, wis: 14, cha: 8 };
+    expect(getSaveBonus("Wisdom", "wis", scores, 7, ironMindProficiencies)).toBe(5);
   });
 });
