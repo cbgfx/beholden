@@ -148,15 +148,18 @@ function importParsedNativeCompendiumBatch(db: Database.Database, batch: NativeC
   return { category: batch.category, imported: batch.entries.length - skipped, total: countNativeCategory(db, batch.category) };
 }
 
+// MARK: - Import Native Compendium Batch
 export function importNativeCompendiumBatch(db: Database.Database, input: NativeCompendiumBatch | unknown): NativeCompendiumImportResult {
   return importParsedNativeCompendiumBatch(db, parseNativeCompendiumBatch(input));
 }
 
+// MARK: - Import Validated Native Compendium Batches
 export function importValidatedNativeCompendiumBatches(db: Database.Database, batches: NativeCompendiumBatch[]): NativeCompendiumDocumentImportResult {
   const results = db.transaction(() => batches.map((batch) => importParsedNativeCompendiumBatch(db, batch)).map((result) => ({ ...result, total: countNativeCategory(db, result.category) })))();
   return { imported: results.reduce((sum, result) => sum + result.imported, 0), total: results.reduce((sum, result) => sum + result.total, 0), batches: results };
 }
 
+// MARK: - Import Native Compendium Document
 export function importNativeCompendiumDocument(db: Database.Database, input: NativeCompendiumDocument | unknown): NativeCompendiumDocumentImportResult {
   const batches = parseNativeCompendiumDocument(input);
   assertNativeCompendiumGuardrails(db, batches);

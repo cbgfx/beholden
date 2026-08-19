@@ -26,6 +26,7 @@ export interface CreateMortalInput {
   dmNotes?: string | null;
 }
 
+// MARK: - Create Mortal
 /**
  * Creates the registry row, Mortal row, and exactly one explicit subtype in a
  * single transaction. Callers never create a bare Mortal.
@@ -80,6 +81,7 @@ export function createMortal(
   return ids.recordId;
 }
 
+// MARK: - Convert Mortal Subtype
 /**
  * Converts a Mortal atomically. Mechanical links are optional and never
  * determine the explicit lore subtype.
@@ -110,6 +112,7 @@ export function convertMortalSubtype(
   })();
 }
 
+// MARK: - Assert Mortal Has Exactly One Subtype
 export function assertMortalHasExactlyOneSubtype(db: Db, mortalId: string): void {
   const row = db.prepare(`
     SELECT m.mortal_type,
@@ -137,6 +140,7 @@ export function assertMortalHasExactlyOneSubtype(db: Db, mortalId: string): void
   }
 }
 
+// MARK: - Is Valid Race
 export function isValidRace(db: Db, binderId: string, raceId: string | null | undefined): boolean {
   if (!raceId) return true;
   return Boolean(db.prepare(`
@@ -147,6 +151,7 @@ export function isValidRace(db: Db, binderId: string, raceId: string | null | un
   `).get(raceId, binderId));
 }
 
+// MARK: - Is Binder Record Type
 export function isBinderRecordType(db: Db, binderId: string, recordId: string | null | undefined, types: string[]): boolean {
   if (!recordId) return true;
   const placeholders = types.map(() => "?").join(", ");
@@ -156,6 +161,7 @@ export function isBinderRecordType(db: Db, binderId: string, recordId: string | 
   `).get(recordId, binderId, ...types));
 }
 
+// MARK: - Player Link
 export function playerLink(db: Db, binderId: string, playerId: string | null | undefined, mortalId?: string) {
   if (!playerId) return { playerId: null, characterId: null, imageUrl: null };
   return db.prepare(`
@@ -170,11 +176,13 @@ export function playerLink(db: Db, binderId: string, playerId: string | null | u
   `).get(playerId, binderId, mortalId ?? "") as { playerId: string; characterId: string | null; imageUrl: string | null } | undefined;
 }
 
+// MARK: - Is Valid Monster
 export function isValidMonster(db: Db, monsterId: string | null | undefined): boolean {
   if (!monsterId) return true;
   return Boolean(db.prepare("SELECT 1 FROM compendium_monsters WHERE id = ?").get(monsterId));
 }
 
+// MARK: - Compendium Monster Mechanics
 export function compendiumMonsterMechanics(dataJson: string | null | undefined) {
   let monster: Record<string, any> = {};
   try { monster = JSON.parse(dataJson ?? "{}"); } catch { /* invalid legacy rows fall back safely */ }
@@ -194,6 +202,8 @@ export function compendiumMonsterMechanics(dataJson: string | null | undefined) 
 }
 
 /** Grand statblocks may provide only a hit-dice formula; derive its rules-average HP. */
+
+// MARK: - Average Hit Point Formula
 export function averageHitPointFormula(value: unknown): number | null {
   const match = String(value ?? "").trim().match(/^(\d*)d(\d+)(?:\s*([+-])\s*(\d+))?$/iu);
   if (!match) return null;
@@ -204,6 +214,7 @@ export function averageHitPointFormula(value: unknown): number | null {
   return Math.max(1, Math.floor(count * ((sides + 1) / 2) + modifier));
 }
 
+// MARK: - Replace Memberships
 export function replaceMemberships(db: Db, mortalId: string, organizationIds: string[], now: number) {
   const selectedIds = [...new Set(organizationIds)];
   const existing = db.prepare(`
@@ -239,6 +250,7 @@ export function replaceMemberships(db: Db, mortalId: string, organizationIds: st
   });
 }
 
+// MARK: - Update Mortal
 /**
  * Applies a validated PATCH to a Mortal: subtype conversion (if the type changed), the
  * binder_records/mortals field update, membership replacement, and the player-link or

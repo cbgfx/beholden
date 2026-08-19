@@ -34,6 +34,8 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
   const { now } = ctx.helpers;
 
   // ── Encounter combatants (merged view) ────────────────────────────────────
+
+  // MARK: - GET /api/encounters/:encounterId/combatants
   app.get("/api/encounters/:encounterId/combatants", memberOrAdmin(db), (req, res) => {
     const encounterId = requireParam(req, res, "encounterId");
     if (!encounterId) return;
@@ -127,6 +129,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
     res.json(merged.map((actor) => toEncounterActorDto(actor)));
   });
 
+  // MARK: - GET /api/encounters/:encounterId/combatants/:combatantId
   app.get("/api/encounters/:encounterId/combatants/:combatantId", memberOrAdmin(db), (req, res) => {
     const encounterId = requireParam(req, res, "encounterId");
     if (!encounterId) return;
@@ -223,6 +226,8 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
   });
 
   // ── Persisted combat state (round + active combatant) ─────────────────────
+
+  // MARK: - GET /api/encounters/:encounterId/combatState
   app.get("/api/encounters/:encounterId/combatState", memberOrAdmin(db), (req, res) => {
     const encounterId = requireParam(req, res, "encounterId");
     if (!encounterId) return;
@@ -241,6 +246,7 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
     res.json(state);
   });
 
+  // MARK: - PUT /api/encounters/:encounterId/combatState
   app.put("/api/encounters/:encounterId/combatState", dmOrAdmin(db), (req, res) => {
     const encounterId = requireParam(req, res, "encounterId");
     if (!encounterId) return;

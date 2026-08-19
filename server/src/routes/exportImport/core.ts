@@ -33,6 +33,7 @@ import { BASTION_SELECT } from "../bastions/helpers.js";
 export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
 
+  // MARK: - GET /api/campaigns/:campaignId/export
   app.get("/api/campaigns/:campaignId/export", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -153,6 +154,7 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
     res.send(JSON.stringify(body, null, 2));
   });
 
+  // MARK: - POST /api/campaigns/import
   app.post("/api/campaigns/import", requireAdmin, ctx.upload.single("file"), (req, res) => {
     if (!req.file) return res.status(400).json({ ok: false, message: "No file uploaded" });
 
@@ -179,6 +181,7 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true, campaignId });
   });
 
+  // MARK: - GET /api/user/export
   app.get("/api/user/export", requireAdmin, (_req, res) => {
     const campaigns = (
       db.prepare("SELECT id, name, color, image_url, image_updated_at, shared_notes, created_at, updated_at FROM campaigns").all() as Record<string, unknown>[]

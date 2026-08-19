@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { resolveAssetUrl } from "@/services/api";
-import { IconCakeSlice, IconDna1, IconGender, IconOrganigram, IconPencil, IconPlayer, IconPlus, IconShield, IconTrash, IconVillage } from "@/icons";
+import { IconGender, IconPencil, IconPlayer, IconPlus, IconShield, IconTrash } from "@/icons";
+import { IconCakeSlice, IconDna1, IconOrganigram, IconVillage } from "@/views/BinderView/binderIcons";
 import { EntityIcon } from "@/components/iconPicker/EntityIcon";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";

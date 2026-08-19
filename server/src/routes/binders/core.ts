@@ -148,6 +148,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
   const reader = binderReaderOrAdmin(db);
   const anyDm = requireAnyDm(db);
 
+  // MARK: - GET /api/binders
   app.get("/api/binders", anyDm, (req, res) => {
     const rows = req.user!.isAdmin
       ? db.prepare(`${BINDER_SELECT} ORDER BY b.updated_at DESC`).all()
@@ -168,6 +169,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     res.json((rows as BinderRow[]).map((row) => binderDto(row, db, req.user!.userId, req.user!.isAdmin)));
   });
 
+  // MARK: - POST /api/binders/import
   app.post("/api/binders/import", anyDm, ctx.upload.single("file"), (req, res) => {
     if (!req.file) return res.status(400).json({ ok: false, message: "Binder JSON or ZIP file is required" });
     try {
@@ -185,6 +187,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     }
   });
 
+  // MARK: - POST /api/binders/import/preview
   app.post("/api/binders/import/preview", anyDm, ctx.upload.single("file"), (req, res) => {
     if (!req.file) return res.status(400).json({ ok: false, message: "Binder JSON or ZIP file is required" });
     try {
@@ -199,6 +202,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     }
   });
 
+  // MARK: - POST /api/binders
   app.post("/api/binders", anyDm, (req, res) => {
     const body = parseBody(BinderCreateBody, req);
     const id = ctx.helpers.uid();
@@ -224,6 +228,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     res.status(201).json(binderDto(row, db, req.user!.userId, req.user!.isAdmin));
   });
 
+  // MARK: - GET /api/binders/:binderId
   app.get("/api/binders/:binderId", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
@@ -232,6 +237,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     res.json(binderDto(row, db, req.user!.userId, req.user!.isAdmin));
   });
 
+  // MARK: - GET /api/binders/:binderId/dashboard
   app.get("/api/binders/:binderId/dashboard", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
@@ -266,6 +272,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     res.json({ counts, recent, nearbyEvents, incomplete, unlinkedNpcCount, undatedEventCount });
   });
 
+  // MARK: - GET /api/binders/:binderId/health
   app.get("/api/binders/:binderId/health", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
@@ -286,6 +293,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     res.json({ healthy: issueCount === 0, issueCount, groups });
   });
 
+  // MARK: - GET /api/binders/:binderId/export
   app.get("/api/binders/:binderId/export", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
@@ -317,6 +325,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     void archive.finalize();
   });
 
+  // MARK: - PATCH /api/binders/:binderId
   app.patch("/api/binders/:binderId", editor, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
@@ -352,6 +361,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     res.json(binderDto(row, db, req.user!.userId, req.user!.isAdmin));
   });
 
+  // MARK: - GET /api/binders/:binderId/members
   app.get("/api/binders/:binderId/members", ownerOnly, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
@@ -367,6 +377,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     }))]);
   });
 
+  // MARK: - PUT /api/binders/:binderId/members
   app.put("/api/binders/:binderId/members", ownerOnly, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
@@ -382,6 +393,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     res.json({ ...user, role: body.role, updatedAt: t });
   });
 
+  // MARK: - DELETE /api/binders/:binderId/members/:userId
   app.delete("/api/binders/:binderId/members/:userId", ownerOnly, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     const userId = requireParam(req, res, "userId");
@@ -390,6 +402,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true });
   });
 
+  // MARK: - DELETE /api/binders/:binderId
   app.delete("/api/binders/:binderId", ownerOnly, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
@@ -423,6 +436,7 @@ export function registerBinderRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true, detachedCampaigns: campaigns.length });
   });
 
+  // MARK: - PUT /api/campaigns/:campaignId/binder
   app.put("/api/campaigns/:campaignId/binder", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;

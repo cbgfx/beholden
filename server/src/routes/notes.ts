@@ -40,6 +40,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     });
   };
 
+  // MARK: - GET /api/campaigns/:campaignId/notes
   app.get("/api/campaigns/:campaignId/notes", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -68,6 +69,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     res.json(notes.map(toNoteDto));
   });
 
+  // MARK: - GET /api/adventures/:adventureId/notes
   app.get("/api/adventures/:adventureId/notes", memberOrAdmin(db), (req, res) => {
     const adventureId = requireParam(req, res, "adventureId");
     if (!adventureId) return;
@@ -96,6 +98,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     res.json(notes.map(toNoteDto));
   });
 
+  // MARK: - GET /api/notes/:noteId
   app.get("/api/notes/:noteId", memberOrAdmin(db), (req, res) => {
     const noteId = requireParam(req, res, "noteId");
     if (!noteId) return;
@@ -106,6 +109,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     res.json(toNoteDto(rowToNote(row)));
   });
 
+  // MARK: - POST /api/campaigns/:campaignId/notes
   app.post("/api/campaigns/:campaignId/notes", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -126,6 +130,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     res.json(dto);
   });
 
+  // MARK: - POST /api/adventures/:adventureId/notes
   app.post("/api/adventures/:adventureId/notes", dmOrAdmin(db), (req, res) => {
     const adventureId = requireParam(req, res, "adventureId");
     if (!adventureId) return;
@@ -152,6 +157,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     res.json(dto);
   });
 
+  // MARK: - PUT /api/notes/:noteId
   app.put("/api/notes/:noteId", dmOrAdmin(db), (req, res) => {
     const noteId = requireParam(req, res, "noteId");
     if (!noteId) return;
@@ -175,6 +181,7 @@ export function registerNoteRoutes(app: Express, ctx: ServerContext) {
     res.json(dto);
   });
 
+  // MARK: - DELETE /api/notes/:noteId
   app.delete("/api/notes/:noteId", dmOrAdmin(db), (req, res) => {
     const noteId = requireParam(req, res, "noteId");
     if (!noteId) return;

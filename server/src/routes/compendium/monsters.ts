@@ -29,6 +29,7 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
   const MAX_MONSTER_SEARCH_LIMIT = 200;
   const MAX_MONSTER_METRICS_BATCH = 500;
 
+  // MARK: - GET /api/compendium/monsters/facets
   app.get("/api/compendium/monsters/facets", (_req, res) => {
     applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const typeRows = db
@@ -56,6 +57,7 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
     });
   });
 
+  // MARK: - GET /api/compendium/monsters/:monsterId
   app.get("/api/compendium/monsters/:monsterId", (req, res) => {
     applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const monsterId = requireParam(req, res, "monsterId");
@@ -150,6 +152,7 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
     });
   }
 
+  // MARK: - GET /api/compendium/monsters
   app.get("/api/compendium/monsters", (_req, res) => {
     applySharedApiCacheHeaders(res);
     const rows = db
@@ -167,6 +170,7 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
     })));
   });
 
+  // MARK: - GET /api/compendium/monsters-metrics
   app.get("/api/compendium/monsters-metrics", (req, res) => {
     applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const rawIds = String(req.query.ids ?? "").trim();
@@ -195,6 +199,7 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
     return res.json({ rows: metricsRows });
   });
 
+  // MARK: - POST /api/compendium/monsters
   app.post("/api/compendium/monsters", anyDm, (req, res) => {
     const id = grandEntryId("m", (req.body as Record<string, unknown> | undefined)?.name);
     saveGrandEntry(db, "monsters", req.body, id);
@@ -202,6 +207,7 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
     res.json({ ok: true, id });
   });
 
+  // MARK: - PUT /api/compendium/monsters/:monsterId
   app.put("/api/compendium/monsters/:monsterId", anyDm, (req, res) => {
     const monsterId = requireParam(req, res, "monsterId");
     if (!monsterId) return;
@@ -213,6 +219,7 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
     res.json({ ok: true });
   });
 
+  // MARK: - DELETE /api/compendium/monsters/:monsterId
   app.delete("/api/compendium/monsters/:monsterId", anyDm, (req, res) => {
     const monsterId = requireParam(req, res, "monsterId");
     if (!monsterId) return;
@@ -222,6 +229,8 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
   });
 
   // Monster search
+
+  // MARK: - GET /api/compendium/search
   app.get("/api/compendium/search", (req, res) => {
     applySharedApiCacheHeaders(res);
     const q = String(req.query.q ?? "").trim().toLowerCase();

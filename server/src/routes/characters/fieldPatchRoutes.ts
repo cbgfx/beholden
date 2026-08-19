@@ -44,6 +44,8 @@ export function registerCharacterFieldPatchRoutes(app: Express, ctx: ServerConte
   const emitPlayerChange = makeEmitPlayerChange(ctx);
 
   // Player self-updates their linked campaign-character conditions.
+
+  // MARK: - PATCH /api/me/characters/:id/conditions
   app.patch("/api/me/characters/:id/conditions", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
@@ -118,6 +120,8 @@ export function registerCharacterFieldPatchRoutes(app: Express, ctx: ServerConte
   });
 
   // Player self-updates death saves on both the sheet and any linked campaign characters.
+
+  // MARK: - PATCH /api/me/characters/:id/deathSaves
   app.patch("/api/me/characters/:id/deathSaves", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
@@ -153,6 +157,8 @@ export function registerCharacterFieldPatchRoutes(app: Express, ctx: ServerConte
   });
 
   // Player self-updates character sheet overrides.
+
+  // MARK: - PATCH /api/me/characters/:id/overrides
   app.patch("/api/me/characters/:id/overrides", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
@@ -203,6 +209,8 @@ export function registerCharacterFieldPatchRoutes(app: Express, ctx: ServerConte
   });
 
   // Toggle inspiration on linked campaign characters.
+
+  // MARK: - PATCH /api/me/characters/:id/inspiration
   app.patch("/api/me/characters/:id/inspiration", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
@@ -224,6 +232,8 @@ export function registerCharacterFieldPatchRoutes(app: Express, ctx: ServerConte
   });
 
   // Update shared notes (written to user_characters + synced to all players rows + broadcast)
+
+  // MARK: - PATCH /api/me/characters/:id/sharedNotes
   app.patch("/api/me/characters/:id/sharedNotes", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;

@@ -141,6 +141,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
   const reader = binderReaderOrAdmin(db);
   const owner = binderEditorOrAdmin(db);
 
+  // MARK: - GET /api/binders/:binderId/leader-character-options
   app.get("/api/binders/:binderId/leader-character-options", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
@@ -160,6 +161,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     res.json(rows);
   });
 
+  // MARK: - POST /api/binders/:binderId/organizations/:organizationId/leader-character
   app.post("/api/binders/:binderId/organizations/:organizationId/leader-character", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     const organizationId = requireParam(req, res, "organizationId");
@@ -190,6 +192,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     res.json({ ok: true, mortalId });
   });
 
+  // MARK: - GET /api/binders/:binderId/organizations/:organizationId/members
   app.get("/api/binders/:binderId/organizations/:organizationId/members", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     const organizationId = requireParam(req, res, "organizationId");
@@ -233,6 +236,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
       : type === "domains" ? toReferenceDto(row, { deities: deitiesForDomain(row.id) })
         : toReferenceDto(row);
 
+  // MARK: - GET /api/binders/:binderId/reference/:referenceType
   app.get("/api/binders/:binderId/reference/:referenceType", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
@@ -249,6 +253,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     res.json(rows.map((row) => dtoWithLinks(typeResult.data, row)));
   });
 
+  // MARK: - GET /api/binders/:binderId/reference/:referenceType/:recordId
   app.get("/api/binders/:binderId/reference/:referenceType/:recordId", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     const recordId = requireParam(req, res, "recordId");
@@ -263,6 +268,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     res.json(dtoWithLinks(typeResult.data, row));
   });
 
+  // MARK: - POST /api/binders/:binderId/reference/:referenceType
   app.post("/api/binders/:binderId/reference/:referenceType", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
@@ -291,6 +297,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     res.status(201).json(dtoWithLinks(typeResult.data, row));
   });
 
+  // MARK: - PATCH /api/binders/:binderId/reference/:referenceType/:recordId
   app.patch("/api/binders/:binderId/reference/:referenceType/:recordId", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     const recordId = requireParam(req, res, "recordId");
@@ -348,6 +355,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     res.json(dtoWithLinks(typeResult.data, row));
   });
 
+  // MARK: - DELETE /api/binders/:binderId/reference/:referenceType/:recordId
   app.delete("/api/binders/:binderId/reference/:referenceType/:recordId", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     const recordId = requireParam(req, res, "recordId");
@@ -366,6 +374,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     res.json({ ok: true, clearedReferences: existing.usage_count });
   });
 
+  // MARK: - POST /api/binders/:binderId/reference/deities/:recordId/image
   app.post("/api/binders/:binderId/reference/deities/:recordId/image", owner, ctx.upload.single("image"), async (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     const recordId = requireParam(req, res, "recordId");
@@ -386,6 +395,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     res.json({ ok: true, imageUrl });
   });
 
+  // MARK: - POST /api/binders/:binderId/reference/deities/:deityId/domains/:domainId
   app.post("/api/binders/:binderId/reference/deities/:deityId/domains/:domainId", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     const deityId = requireParam(req, res, "deityId");
@@ -399,6 +409,7 @@ export function registerBinderReferenceRoutes(app: Express, ctx: ServerContext) 
     res.json({ ok: true, domains: domainsForDeity(deityId) });
   });
 
+  // MARK: - DELETE /api/binders/:binderId/reference/deities/:deityId/domains/:domainId
   app.delete("/api/binders/:binderId/reference/deities/:deityId/domains/:domainId", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     const deityId = requireParam(req, res, "deityId");

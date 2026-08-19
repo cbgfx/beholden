@@ -23,6 +23,7 @@ export type Assignment = {
   campaign_name: string;
 };
 
+// MARK: - Sync Owned Player Name
 export function syncOwnedPlayerName(
   db: Database.Database,
   userId: string,
@@ -43,6 +44,7 @@ export function syncOwnedPlayerName(
   return linkedPlayers;
 }
 
+// MARK: - Get Assignments
 export function getAssignments(db: Database.Database, charId: string): Assignment[] {
   return db
     .prepare(`
@@ -54,6 +56,7 @@ export function getAssignments(db: Database.Database, charId: string): Assignmen
     .all(charId) as Assignment[];
 }
 
+// MARK: - Get Assignments For Characters
 export function getAssignmentsForCharacters(
   db: Database.Database,
   charIds: string[],
@@ -77,6 +80,7 @@ export function getAssignmentsForCharacters(
   return byChar;
 }
 
+// MARK: - Assignments To Json
 export function assignmentsToJson(assignments: Assignment[]) {
   return assignments.map((a) => ({
     id: `${a.campaign_id}:${a.player_id}`,
@@ -86,6 +90,7 @@ export function assignmentsToJson(assignments: Assignment[]) {
   }));
 }
 
+// MARK: - Get Assigned Players
 export function getAssignedPlayers(
   db: Database.Database,
   charId: string,
@@ -95,6 +100,7 @@ export function getAssignedPlayers(
     .all(charId) as { player_id: string; campaign_id: string }[];
 }
 
+// MARK: - Get Linked Character Id For Player
 export function getLinkedCharacterIdForPlayer(
   db: Database.Database,
   playerId: string,
@@ -114,6 +120,7 @@ export interface MirroredPlayerSnapshot extends StoredCampaignCharacterSheetStat
  * mutable state lives in players.live_json.
  */
 
+// MARK: - Build Character Sheet State
 export function buildCharacterSheetState(char: StoredCharacterSheet): StoredCharacterSheetState {
   return {
     name: char.name,
@@ -137,6 +144,7 @@ export function buildCharacterSheetState(char: StoredCharacterSheet): StoredChar
   };
 }
 
+// MARK: - Build Mirrored Player Snapshot
 export function buildMirroredPlayerSnapshot(
   char: StoredCharacterSheet,
   syncedAc?: number,
@@ -166,6 +174,7 @@ export function buildMirroredPlayerSnapshot(
   };
 }
 
+// MARK: - Build Campaign Character Live State
 export function buildCampaignCharacterLiveState(
   char: StoredCharacterSheet,
 ): StoredCampaignCharacterLiveState {
@@ -194,6 +203,7 @@ function serializeCampaignCharacterLive(
   return Object.keys(compact).length > 0 ? JSON.stringify(compact) : "{}";
 }
 
+// MARK: - Character Sheet Db Columns
 export function characterSheetDbColumns(sheet: StoredCharacterSheetState) {
   return {
     name: sheet.name,
@@ -218,6 +228,7 @@ export function characterSheetDbColumns(sheet: StoredCharacterSheetState) {
   };
 }
 
+// MARK: - Campaign Sheet Db Columns
 export function campaignSheetDbColumns(snapshot: MirroredPlayerSnapshot) {
   return {
     playerName: snapshot.playerName,
@@ -239,6 +250,7 @@ export function campaignSheetDbColumns(snapshot: MirroredPlayerSnapshot) {
   };
 }
 
+// MARK: - Campaign Live Db Columns
 export function campaignLiveDbColumns(live: StoredCampaignCharacterLiveState) {
   return {
     hpCurrent: live.hpCurrent,
@@ -264,6 +276,7 @@ function buildCampaignCharacterLive(
   };
 }
 
+// MARK: - Update Campaign Character Live
 export function updateCampaignCharacterLive(
   db: Database.Database,
   playerId: string,
@@ -278,6 +291,7 @@ export function updateCampaignCharacterLive(
   ).run(liveCols.hpCurrent, liveCols.deathSavesSuccess, liveCols.deathSavesFail, liveCols.liveJson, updatedAt, playerId);
 }
 
+// MARK: - Update Projected Player Row
 export function updateProjectedPlayerRow(
   db: Database.Database,
   playerId: string,
@@ -330,6 +344,7 @@ export function updateProjectedPlayerRow(
   );
 }
 
+// MARK: - Insert Projected Player Row
 export function insertProjectedPlayerRow(
   db: Database.Database,
   {
@@ -391,6 +406,7 @@ export function insertProjectedPlayerRow(
   );
 }
 
+// MARK: - Sync Assigned Player Rows
 export function syncAssignedPlayerRows(
   db: Database.Database,
   broadcast: BroadcastFn,
@@ -455,6 +471,7 @@ function syncPlayerCombatantSnapshots(
   `).run(playerId, playerId, playerId, playerId);
 }
 
+// MARK: - Broadcast Player Combatant Changes
 export function broadcastPlayerCombatantChanges(
   db: Database.Database,
   broadcast: BroadcastFn,
@@ -483,6 +500,7 @@ export function broadcastPlayerCombatantChanges(
   }
 }
 
+// MARK: - Get Character Sheet Overrides
 export function getCharacterSheetOverrides(
   char: Pick<StoredCharacterSheet, "characterData">,
 ): StoredOverrides | null {
@@ -504,6 +522,8 @@ export function getCharacterSheetOverrides(
 }
 
 /** Overlay live campaign-character state onto a character sheet, resolving caster names in conditions. */
+
+// MARK: - Merge Live Stats
 export function mergeLiveStats(
   db: Database.Database,
   char: ReturnType<typeof rowToCharacterSheet>,

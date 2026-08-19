@@ -82,6 +82,7 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
   const reader = binderReaderOrAdmin(ctx.db);
   const owner = binderEditorOrAdmin(ctx.db);
 
+  // MARK: - GET /api/binders/:binderId/records
   app.get("/api/binders/:binderId/records", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
@@ -116,6 +117,8 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
       route: routeFor(row.record_type, binderId, row.id),
     })));
   });
+
+  // MARK: - POST /api/binders/:binderId/records/exists
   app.post("/api/binders/:binderId/records/exists", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
@@ -128,6 +131,7 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
     res.json({ existingIds: rows.map((row) => row.id) });
   });
 
+  // MARK: - GET /api/binders/:binderId/records/:recordId/related
   app.get("/api/binders/:binderId/records/:recordId/related", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     const recordId = requireParam(req, res, "recordId");
@@ -178,6 +182,8 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
       .sort((a, b) => a.relationship.localeCompare(b.relationship) || a.name.localeCompare(b.name))
       .map((row) => ({ ...row, route: routeFor(row.type, binderId, row.id) })));
   });
+
+  // MARK: - GET /api/binders/:binderId/records/:recordId/backlinks
   app.get("/api/binders/:binderId/records/:recordId/backlinks", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     const recordId = requireParam(req, res, "recordId");
@@ -199,6 +205,8 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
       fields: row.fields.split(","),
     })));
   });
+
+  // MARK: - PUT /api/binders/:binderId/mentions
   app.put("/api/binders/:binderId/mentions", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); if (!binderId) return;
     const body = parseBody(MentionSyncBody, req);
@@ -207,10 +215,13 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true });
   });
 
+  // MARK: - GET /api/binders/:binderId/items
   app.get("/api/binders/:binderId/items", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); if (!binderId) return;
     res.json(ctx.db.prepare(`${ITEM_SELECT} WHERE br.binder_id = ? ORDER BY br.name_key`).all(binderId));
   });
+
+  // MARK: - POST /api/binders/:binderId/items
   app.post("/api/binders/:binderId/items", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); if (!binderId) return;
     const body = parseBody(ItemBody, req);
@@ -230,6 +241,8 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
     })();
     res.status(201).json(ctx.db.prepare(`${ITEM_SELECT} WHERE br.id = ?`).get(id));
   });
+
+  // MARK: - PATCH /api/binders/:binderId/items/:recordId
   app.patch("/api/binders/:binderId/items/:recordId", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); const id = requireParam(req, res, "recordId");
     if (!binderId || !id) return;
@@ -256,6 +269,8 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
     })();
     res.json(ctx.db.prepare(`${ITEM_SELECT} WHERE br.id = ?`).get(id));
   });
+
+  // MARK: - DELETE /api/binders/:binderId/items/:recordId
   app.delete("/api/binders/:binderId/items/:recordId", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); const id = requireParam(req, res, "recordId");
     if (!binderId || !id) return;
@@ -264,6 +279,7 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true });
   });
 
+  // MARK: - GET /api/binders/:binderId/events
   app.get("/api/binders/:binderId/events", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); if (!binderId) return;
     const rows = ctx.db.prepare(`
@@ -274,6 +290,8 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
     `).all(binderId) as Array<Record<string, unknown>>;
     res.json(rows.map((row) => toEventDto(ctx.db, row)));
   });
+
+  // MARK: - POST /api/binders/:binderId/events
   app.post("/api/binders/:binderId/events", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); if (!binderId) return;
     const body = parseBody(EventBody, req); const id = ctx.helpers.uid(); const t = ctx.helpers.now();
@@ -289,6 +307,8 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
     const row = ctx.db.prepare("SELECT br.id,br.name AS title,be.description,be.date_text AS dateText,be.date_sort AS dateSort,be.end_date_text AS endDateText,be.end_date_sort AS endDateSort FROM binder_events be JOIN binder_records br ON br.id=be.id WHERE br.id=?").get(id) as Record<string, unknown>;
     res.status(201).json(toEventDto(ctx.db, row));
   });
+
+  // MARK: - PATCH /api/binders/:binderId/events/:recordId
   app.patch("/api/binders/:binderId/events/:recordId", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); const id = requireParam(req, res, "recordId"); if (!binderId || !id) return;
     const body = parseBody(EventPatch, req);
@@ -309,6 +329,8 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
     const row = ctx.db.prepare("SELECT br.id,br.name AS title,be.description,be.date_text AS dateText,be.date_sort AS dateSort,be.end_date_text AS endDateText,be.end_date_sort AS endDateSort FROM binder_events be JOIN binder_records br ON br.id=be.id WHERE br.id=?").get(id) as Record<string, unknown>;
     res.json(toEventDto(ctx.db, row));
   });
+
+  // MARK: - DELETE /api/binders/:binderId/events/:recordId
   app.delete("/api/binders/:binderId/events/:recordId", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); const id = requireParam(req, res, "recordId"); if (!binderId || !id) return;
     const result = ctx.db.prepare("DELETE FROM binder_records WHERE id=? AND binder_id=? AND record_type='event'").run(id, binderId);
@@ -316,6 +338,7 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true });
   });
 
+  // MARK: - GET /api/binders/:binderId/relationships
   app.get("/api/binders/:binderId/relationships", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); if (!binderId) return;
     const recordId = typeof req.query.recordId === "string" ? req.query.recordId : null;
@@ -331,6 +354,8 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
       ORDER BY r.updated_at DESC
     `).all(binderId, recordId, recordId, recordId));
   });
+
+  // MARK: - POST /api/binders/:binderId/relationships
   app.post("/api/binders/:binderId/relationships", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); if (!binderId) return;
     const body = parseBody(RelationshipBody, req);
@@ -348,6 +373,8 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
         body.startDateText ?? null,body.startDateSort ?? null,body.endDateText ?? null,body.endDateSort ?? null,body.notes ?? null,t,t);
     res.status(201).json({ id });
   });
+
+  // MARK: - DELETE /api/binders/:binderId/relationships/:relationshipId
   app.delete("/api/binders/:binderId/relationships/:relationshipId", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId"); const id = requireParam(req, res, "relationshipId"); if (!binderId || !id) return;
     const result = ctx.db.prepare("DELETE FROM binder_relationships WHERE id=? AND binder_id=?").run(id,binderId);

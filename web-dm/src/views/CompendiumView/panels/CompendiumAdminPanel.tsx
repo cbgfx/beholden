@@ -163,6 +163,27 @@ export function CompendiumAdminPanel() {
     }
   }
 
+  async function generateSrd() {
+    setBusy(true);
+    setNativeMsg("");
+    try {
+      const result = await api<NativeImportResult>(
+        "/api/compendium/srd/generate",
+        jsonInit("POST", {}),
+      );
+      setNativeMsg(
+        result.imported > 0
+          ? `Imported ${result.imported} bundled SRD entries.`
+          : "The bundled SRD is already fully populated.",
+      );
+      await api<unknown>("/api/meta");
+    } catch (error: unknown) {
+      setNativeMsg(toErrorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0, minHeight: 0, overflow: "auto" }}>
       <Panel
@@ -192,6 +213,7 @@ export function CompendiumAdminPanel() {
           onExportAll={() => void exportAllNativeCategories()}
           onPreview={() => void previewNativeImport()}
           onImport={() => void importNative()}
+          onGenerateSrd={() => void generateSrd()}
           onDelete={() => void deleteCompendium()}
         />
         {nativePreview ? <NativeImportPreview preview={nativePreview} /> : null}

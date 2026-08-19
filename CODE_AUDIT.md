@@ -4,6 +4,28 @@ Read-only audit across all four application workspaces (`server`, `shared`, `web
 
 Severity: **HIGH** = correctness risk or high-leverage fix, **MED** = worth scheduling, **LOW** = minor / opportunistic.
 
+## 2026-08-19 follow-up audit
+
+Fresh four-workspace pass covering everything committed since the 2026-08-03 audit above (`a99c4bb`/`e5ba53f` "Code Audit" through `bc24441` "fixed ability name pairs" — 15 commits: Invocations, Pact of the Blade, Rage/Divine Fury, Combat View, point buy, Reactions-as-Resources, ability-name-pairs). Same method: four parallel read-only agent passes, one per workspace, then fixes applied and verified (`typecheck`, `lint`, `test`, `build` all green across `server`/`web-dm`/`web-player`).
+
+Headline: this round of feature work lives almost entirely in `web-player` (character sheet/combat/creator domain code), with a small, correctly-executed move of the item-editor form (`ItemFormModal` and friends) from `web-dm` into `shared` so `web-player` could reuse it for Pact of the Blade's "create a bound weapon" flow. `web-dm` itself was untouched by 14 of the 15 commits. Fixed:
+
+- **[HIGH, security]** `POST /api/compendium/items` (`server/src/routes/compendium/items.ts`) was missing the `anyDm` authorization middleware that every sibling compendium write route has — any authenticated (non-DM) user could create arbitrary global compendium items. Restored `anyDm`. Introduced by an isolated one-line diff in `99472f6`; no test had covered this route's authorization either way.
+- **[MED]** The combat-status endpoint's `engagedEnemies`/`allies` blocks (`server/src/routes/combat/initiative.ts`) duplicated the same HP current/maximum resolution and finiteness guard. Extracted `resolveHpBucket()`; each caller keeps its own health-label vocabulary.
+- **[LOW]** The initiative and reaction routes (same file) each re-ran an identical "does this user own this player combatant" check. Extracted `requireOwnsPlayerCombatant()`.
+- **[MED]** `shared/src/views/item-editor/ItemEditorHost.tsx` — new code added this window — reinvented local `Input`/`TextArea`/`Button` instead of using the existing themed `shared/src/ui` versions one directory up. Swapped in the real components via a small theme adapter; the item-editor forms now get the same hover/press affordance as the rest of the app.
+- **[MED]** `web-player/src/views/character/CharacterInventoryPanel.tsx`'s Pact of the Blade detection (`hasPactBlade`) was a second, looser regex reimplementation of the canonical `resolvePactBoonFromChosenOptionals` (`CharacterSheetUtils.ts`), which had been bug-fixed for exactly this kind of format variant one commit earlier — the fix never propagated to the copy. Now calls the canonical resolver directly.
+- **[LOW]** `web-player/src/views/character/EngagedEnemiesDrawer.tsx`'s new "Allies" section hand-copied the pre-existing "Enemies" card rendering. Extracted a shared `CombatantCard`.
+- **[LOW]** `web-player/src/views/character/CharacterCombatPanels.tsx`'s Divine Fury combat-panel row was copy-pasted from Sneak Attack's block. Extracted `PassiveDamageRow`, reusable for the next per-class passive-damage feature.
+
+Reviewed, not fixed:
+
+- **[LOW]** `CharacterSpellShared.ts`'s one hardcoded Green-Flame Blade special case in `getScaledSpellDamage` — a single instance, not yet a pattern worth generalizing.
+- **[LOW, cross-app, carried over]** `web-dm`'s and `web-player`'s `MonsterBrowserPanel.tsx` panel components (list shell/row rendering/CRUD plumbing) remain two independently maintained files even though the underlying mini-library is shared; some size delta is legitimate (DM has CRUD, player is read-only). Flagged for a future look, not attempted this pass.
+- **[LOW, cross-app, previously reviewed and accepted]** The two `DiceCalculatorModal.tsx` bespoke arithmetic evaluators remain intentionally separate (not behavior-equivalent).
+
+**Follow-up: `npm run check:bundle-budgets` — investigated and fixed.** The DM app's initial JS was 161.16 KiB gzip against a 160 KiB budget, confirmed present as far back as the 2026-08-03 audit's own baseline commit (`a99c4bb`) — not a regression from this round of commits. Root cause: `web-dm/src/icons/index.tsx` is one module exporting both app-shell icons (needed eagerly — `ToolsBar.tsx` imports `IconNameGenerator` etc.) and eight Binder-navigation icons (`IconGreekTemple`, `IconOrganigram`, `IconAntarctica`, `IconFlyingFlag`, `IconVillage`, `IconDna1`, `IconCakeSlice`, plus the fully-unused `IconSpikedHalo`) used only inside the already-lazy `BinderView` route. Because a bundler chunks whole modules, the eager import dragged the Binder-only icons into the initial bundle along with it. Moved the seven live Binder icons to `web-dm/src/views/BinderView/binderIcons.tsx` (colocated with their only consumers: `BinderView.tsx`, `MortalWorkspace.tsx`, `PlacesWorkspace.tsx`), removed the dead `IconSpikedHalo`, and updated the three call sites' imports. DM initial JS is now 158.30 KiB gzip, comfortably under budget.
+
 ## Remediation progress
 
 Completed after this audit was compiled:

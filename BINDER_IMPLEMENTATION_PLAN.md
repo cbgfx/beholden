@@ -1,8 +1,13 @@
 # Binder Technical Implementation Plan
 
 Status: the core DM Binder, shared ownership, canonical NPC combat integration,
-search, timeline, dashboard, transfer, and health tools are implemented.
-Player-facing Binder is the next planned product phase.
+search, timeline, dashboard, transfer, and health tools are implemented. A first
+player-facing slice has also shipped — read-only Mortal/Deity/Place/Campaign
+lore reachable from a player's linked character sheet, plus linked-identity
+field editing — but it is scoped differently than the plan below specifies (see
+"Player-Facing Binder plan" for the gap) and Items/Events were never wired for
+player visibility at all. That reconciliation, not a from-scratch Phase 1, is
+the next planned work; see "Next product phase".
 
 ### Completed product roadmap
 
@@ -19,6 +24,14 @@ Player-facing Binder is the next planned product phase.
 7. Binder health/data-quality diagnostics and guided cleanup. *(Implemented: broken
    mentions, duplicate names, NPCs without statblocks, unplaced Mortals, unplaced
    POIs, and invalid Event date ranges, with direct record links.)*
+8. A first player-facing Binder slice: a Public/Private visibility toggle on DM
+   record pages, and read-only player access to Mortals, Deities, Places, and
+   attached Campaigns, plus linked-identity field editing (gender, age,
+   description, backstory) from the character sheet. *(Implemented, but scoped
+   to the player's one linked character rather than Campaign membership, with
+   no Timeline/Items/Organizations sections and no visibility control on Items
+   or Events — see "Player-Facing Binder plan" for the full gap against the
+   original design.)*
 
 Explicitly on hold:
 
@@ -36,9 +49,26 @@ visibility changes and imported native visibility values always take precedence.
 
 ### Next product phase
 
-Player-Facing Binder will add campaign-scoped, read-only lore sharing first.
-Player editing is a separate follow-up after the read projection and authorization
-matrix are proven. See [Player-Facing Binder plan](#player-facing-binder-plan).
+A first player-facing slice shipped (see item 8 above), but it diverges from
+the plan in this document: it is reached from a player's linked character
+sheet rather than from Campaign membership, it covers Mortals/Deities/Places/
+Campaigns but not Items or Events, and it has no leakage test coverage. The
+next phase is reconciling that gap rather than building Phase 1 from scratch:
+
+1. Decide whether to keep the character-scoped entry point or migrate to the
+   plan's Campaign-scoped model (a player with no linked character currently
+   has no Binder access at all under the shipped design).
+2. Add a `visibility` field to Items and Events (currently hardcoded to `dm`
+   with no update path) and extend player projections to cover them.
+3. Add Timeline and Organizations sections to the player Binder view.
+4. Add the authorization leakage test matrix described in "Delivery order and
+   exit criteria" below — none exists yet for the shipped endpoints.
+5. Add the Private→Public confirmation dialog and per-field edit permissions
+   the original design called for; add `updatedAt`/409-conflict handling to
+   linked-identity edits.
+
+See [Player-Facing Binder plan](#player-facing-binder-plan) for the full
+original design and where the shipped implementation departs from it.
 
 ### Implementation progress
 
@@ -110,12 +140,38 @@ Implemented:
   when available. Loot Table remains intentionally ignored, unresolved
   relations remain unset, the completed fingerprint prevents an accidental
   duplicate import, and `PRAGMA foreign_key_check` reports no violations.
+- a Public/Private visibility icon (globe/lock) directly left of Edit on DM
+  record detail pages, gated to users with edit permission, for Mortals and
+  every typed reference record (Races, Positions, Organizations, Domains,
+  Continents, Countries, Locations, POIs, Deities). It has no confirmation
+  step on Private→Public, and Items and Events have no visibility field at
+  all — both are hardcoded to `dm` at creation with no update path.
+- `GET /api/me/characters/:characterId/binder`: read-only player projection of
+  the Binder reachable through that one character's linked Mortal, covering
+  Mortals, Deities, Places, and attached Campaigns. Access is granted by
+  character ownership plus a `binder_player_characters` link, not by Campaign
+  membership; a player with no linked character has no Binder access. There is
+  no Timeline, Items, or standalone Organizations section, and Mortal
+  description/backstory render as plain text rather than through the mention-
+  aware rich-text renderer used elsewhere in the same view.
+- `PATCH /api/me/characters/:characterId/binder-identity`: linked-Mortal field
+  editing for gender, age, description, and backstory, opened from a link icon
+  beside Identity on the character sheet. All four fields are always editable
+  (no per-field edit-permission gate), and there is no `updatedAt`/409-conflict
+  handling for concurrent DM/player edits.
 
 Not yet implemented:
 
-- player-facing Binder lore sharing;
-- linked-player field editing, intentionally after read-only sharing;
-- DM-side Event association role/description controls;
+- Campaign-scoped player Binder access (the shipped access model is
+  character-linked instead; see above);
+- player visibility and read access for Items and Events, and a player
+  Timeline/Organizations view;
+- authorization leakage test coverage for the player Binder and linked-
+  identity endpoints;
+- per-field edit permissions and optimistic-concurrency handling for linked-
+  player field editing;
+- DM-side Event association role/description controls (the API supports them;
+  the Binder Event editor UI does not expose them);
 - advanced authenticated Binder media handling;
 - custom calendars, full-text body search, public publishing, and collaborative
   rich-text editing;
@@ -124,13 +180,17 @@ Not yet implemented:
 
 ### Next implementation slice
 
-1. Implement Player-Facing Binder Phase 1: schema, DM sharing controls, and
-   server-side player projections.
-2. Add the read-only player Binder shell, navigation, search, timeline, and
-   generated record pages.
-3. Complete the player authorization/leakage test matrix and UI verification.
-4. Consider linked-player field editing only after the read-only phase is stable.
-5. Keep advanced media, custom calendars, FTS, unauthenticated publishing, and
+1. Decide whether player Binder access stays character-linked or moves to the
+   plan's Campaign-scoped model, then close the resulting gap.
+2. Add a `visibility` field to Items and Events, wire their player projections,
+   and add Timeline/Organizations sections to the player Binder view.
+3. Add the player authorization/leakage test matrix that Phase 1 was supposed
+   to ship with — none exists yet.
+4. Add the Private→Public confirmation dialog, per-field edit permissions on
+   linked-identity editing, and `updatedAt`/409-conflict handling.
+5. Add DM-side Event association role/description controls to the Binder Event
+   editor UI.
+6. Keep advanced media, custom calendars, FTS, unauthenticated publishing, and
    collaborative rich-text editing outside this phase.
 
 This plan is based on an inspection of the current Beholden source tree and the supplied `Notion.zip` export. Binder is the product term throughout. Binder belongs in the existing DM application and existing backend; it does not require a third frontend or a new service.
@@ -889,6 +949,22 @@ Include `updatedAt` in detail DTOs and require `If-Unmodified-Since`-style reque
 
 ### Player-Facing Binder plan
 
+**Implementation status:** the design below was not followed as written. What
+shipped is `GET /api/me/characters/:characterId/binder` and
+`PATCH /api/me/characters/:characterId/binder-identity`
+(`server/src/routes/characters/core.ts`), reached from the player's character
+sheet rather than from a Campaign, and gated on that one linked character
+rather than Campaign membership. It covers Mortals, Deities, Places, and
+attached Campaigns; Items and Events were never given a `visibility` field, so
+there is no player Timeline or Items view, and Organizations only appear as a
+field on a Mortal row rather than their own section. The Public/Private toggle
+described below did ship, but only for Mortals and typed reference records —
+not Items or Events — and without the Private→Public confirmation step. No
+leakage test matrix exists for any of it. The section is kept as the original
+design record; treat every claim below about Campaign-scoped access as
+**not** what is currently running, until the reconciliation work in "Next
+product phase" happens.
+
 #### Product boundary
 
 The first player release is authenticated, read-only, and reached through a
@@ -969,32 +1045,50 @@ No edit controls are rendered in Phase 1.
 #### Delivery order and exit criteria
 
 1. Visibility service, Public/Private header control, and transfer rules.
+   *(Shipped for Mortals and typed reference records; not for Items or Events;
+   no confirmation step on Private→Public; transfer rules for the shipped
+   character-scoped model are untested.)*
 2. Player authorization middleware plus list, search, timeline, and detail
-   projection tests for every record type.
-3. Player Binder shell and generated pages.
+   projection tests for every record type. *(No Campaign-based middleware
+   exists — access is character-link-based instead — and no projection tests
+   exist for any record type.)*
+3. Player Binder shell and generated pages. *(Shipped for Mortals, Deities,
+   Places, and Campaigns; no Timeline, Items, or Organizations page.)*
 4. Leakage tests for hidden direct links, relations, Events, mentions, counts,
    search, cross-Campaign substitution, detachment, and WebSocket invalidations.
+   *(Not started.)*
 5. Browser verification in both DM and player applications at desktop and narrow
-   widths.
+   widths. *(Not verified as part of this write-up.)*
 
 Phase 1 exits only when a Private record cannot be inferred through any player
 endpoint and the DM UI makes it unmistakable that Public shares read-only lore
-with every Campaign attached to the Binder.
+with every Campaign attached to the Binder. **Phase 1 has not exited**: no
+leakage tests exist to demonstrate the first half of that bar, and the second
+half doesn't apply as written since the shipped model isn't Campaign-scoped.
 
 #### Later linked-player editing
 
 The first linked-player identity slice is implemented independently of Public
-lore sharing. A character owner automatically receives their linked Binder
-Player identity in Character Information, even when that Mortal is Private. A
-link icon beside Identity opens editing for personal fields only: gender, age,
-description, and backstory. Name and portrait continue through the canonical
-character workflows and synchronize to Binder; world-owned Race, Position,
-Organization, Location, life status, and DM Notes remain DM-controlled.
+lore sharing, as `GET`/`PATCH /api/me/characters/:characterId/binder-identity`
+(`server/src/routes/characters/core.ts`) and
+`web-player/src/views/character/CharacterInfoDrawer.tsx`. A character owner
+automatically receives their linked Binder Player identity in Character
+Information, even when that Mortal is Private. A link icon beside Identity
+opens editing for personal fields only: gender, age, description, and
+backstory. Name and portrait continue through the canonical character
+workflows and synchronize to Binder; world-owned Race, Position, Organization,
+Location, life status, and DM Notes remain DM-controlled.
 
 Authorization joins the requested character to `user_characters.user_id` and
 then to its exact `binder_player_characters.character_id`; knowing another
 Mortal ID grants nothing. DM Notes are never selected into the player DTO. Do
 not ship a generic player record PATCH endpoint.
+
+Two things this section called for are not in the shipped endpoint: per-field
+edit permissions (all four fields are always editable, with no explicit
+edit-boolean gate) and `updatedAt`/409-conflict handling from the Concurrency
+section above, so a DM and player editing the same Mortal at once can silently
+overwrite each other.
 
 New character assignment automatically creates the linked Mortal only when all
 assigned Campaigns with Binders resolve to one distinct Binder. An existing link
@@ -1402,9 +1496,16 @@ Exit: core generated pages are stable and repeated imports are deterministic wit
 
 ### Phase 2 — Player-Facing Binder
 
-- Campaign-scoped player read sharing and server-side projections are planned
-  next, using the phased plan in Section 5.
-- Linked-player editing and conflict handling remain a later subphase.
+- A player read slice shipped, but not the Campaign-scoped design from Section
+  5: access is granted through the player's one linked character
+  (`GET /api/me/characters/:characterId/binder`), covers Mortals/Deities/
+  Places/Campaigns, and has no Timeline, Items, or Organizations page. Whether
+  to migrate this to the Campaign-scoped model is an open decision — see "Next
+  product phase".
+- Linked-player editing shipped
+  (`PATCH /api/me/characters/:characterId/binder-identity`) for gender, age,
+  description, and backstory. Conflict handling (concurrency/409) did not ship
+  with it.
 - Canonical Binder NPC combat/encounter synchronization and Binder collaborators
   are implemented.
 - Advanced media, custom calendars, and secondary integrations remain deferred.
@@ -1431,6 +1532,15 @@ continue to use the same named icons. Bundle only the selected icon data; do not
 depend on the public Iconify API at runtime or import the entire collection into
 the client bundle. This is a code-maintenance improvement, not a prerequisite for
 Binder CRUD or the Notion import.
+
+**Status:** `@iconify/react` is now a runtime dependency in both `web-dm` and
+`web-player`, but the stated constraint was not met: `@iconify-json/game-icons`
+is not bundled, and `web-dm/src/components/iconPicker/gameIconsCollection.ts`
+and `web-player/src/icons/GameIcon.tsx` resolve icon SVGs from the public
+`api.iconify.design` endpoint at runtime — the opposite of "do not depend on
+the public Iconify API at runtime." This should be revisited: either bundle
+the selected icon subset as originally specified, or explicitly accept the
+public-API dependency and drop this note's constraint.
 
 ## 12. Testing strategy
 
@@ -1638,9 +1748,11 @@ The first core relational slice is now implemented in the DM application:
   associations, and mention indexes. Missing instance-local Compendium or
   Campaign targets remain safely unset.
 
-Player exposure is now planned as a read-only Campaign-scoped phase. Player
-editing, full-text body search, collaborative editing, and advanced media remain
-deferred. Canonical Binder NPC combat selection and synchronization are implemented.
+A first read-only player slice and linked-identity editing have since shipped
+(see the "Implemented: player-facing Binder slice" addendum below), though not
+as the Campaign-scoped phase this line originally planned. Full-text body
+search, collaborative editing, and advanced media remain deferred. Canonical
+Binder NPC combat selection and synchronization are implemented.
 
 ### Linked Player Character identity synchronization
 
@@ -1705,3 +1817,43 @@ only these explicitly shared identity fields synchronize.
   cleanup so Firefox and other browsers have time to begin consuming the Blob.
 - Export failures remain visible inside the dialog instead of becoming an
   unhandled click error.
+
+### Implemented: player-facing Binder slice (character-scoped, not Campaign-scoped)
+
+A first player-facing Binder slice shipped shortly after the Section 5 design
+was written, but as a different, narrower design than that section specifies.
+Reconciling the two is open work; see "Next product phase" near the top of
+this document.
+
+- `GET /api/me/characters/:characterId/binder` (`server/src/routes/characters/
+  core.ts`) returns a read-only projection reachable from a player's character
+  sheet. Access requires the requesting user to own that character and the
+  character to be linked (`binder_player_characters.character_id`) to a Mortal;
+  there is no Campaign-membership check and no route that takes a Campaign ID.
+  A player with an unlinked character has no Binder access at all.
+- The projection covers Mortals, Deities, Places, and the character's attached
+  Campaigns. It does not cover Items, Events, or Organizations as their own
+  section — Organization only appears as a field on a Mortal row. Mortal
+  description/backstory render as plain text, not through the mention-aware
+  rich-text renderer the Deity/Place/Campaign sections use.
+- `web-player/src/views/binder/PlayerBinderView.tsx` is the player-side shell,
+  entered from the character sheet with a "← Character Sheet" back link rather
+  than from a Campaign.
+- The DM-side Public/Private visibility toggle (globe/lock icon left of Edit,
+  `web-dm/src/views/BinderView/VisibilityIcon.tsx`) shipped for Mortals and
+  every typed reference record, gated on edit permission as designed. It has
+  no confirmation step on Private→Public, and it was never extended to Items
+  or Events — both remain hardcoded to `dm` visibility with no update path,
+  so they cannot be shared to players regardless of this slice's other gaps.
+- `PATCH /api/me/characters/:characterId/binder-identity` shipped the linked-
+  player editing described in "Later linked-player editing" above: a link icon
+  beside Identity on the character sheet opens gender/age/description/backstory
+  editing. All four fields are always editable rather than gated per-field, and
+  there is no `updatedAt`/409-conflict handling.
+- No authorization leakage tests exist for either endpoint. `npm run test`'s
+  existing Binder coverage (`nativeBinder.test.ts`) is import/export round-trip
+  only and does not exercise either player-facing route.
+- `@iconify/react` was adopted as a runtime dependency in both apps (see the
+  "Pinned follow-up: Game Icons through Iconify" note), but icon SVGs resolve
+  from the public `api.iconify.design` endpoint at runtime rather than a
+  bundled subset, which was the opposite of that note's stated constraint.

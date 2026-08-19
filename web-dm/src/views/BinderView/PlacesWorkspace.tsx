@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { IconAntarctica, IconFlyingFlag, IconPlus, IconTargeted, IconVillage } from "@/icons";
+import { IconPlus, IconTargeted } from "@/icons";
+import { IconAntarctica, IconFlyingFlag, IconVillage } from "@/views/BinderView/binderIcons";
 import { EntityIcon } from "@/components/iconPicker";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";

@@ -51,6 +51,7 @@ const TABLE_FILTER: Record<(typeof TABLES)[number], string> = {
   binder_record_mentions: "source_record_id IN (SELECT id FROM binder_records WHERE binder_id = ?)",
 };
 
+// MARK: - Export Binder Document
 export function exportBinderDocument(db: Db, binderId: string) {
   const binder = db.prepare(`
     SELECT name, color, description, current_date_text, current_date_sort
@@ -82,6 +83,7 @@ export function exportBinderDocument(db: Db, binderId: string) {
 
 type Helpers = { uid: () => string; now: () => number; normalizeKey: (value: string) => string };
 
+// MARK: - Preview Binder Document
 export function previewBinderDocument(db: Db, raw: unknown) {
   const doc = NativeBinderDocument.parse(raw);
   const counts = new Map<string, number>();
@@ -112,6 +114,7 @@ export function previewBinderDocument(db: Db, raw: unknown) {
   };
 }
 
+// MARK: - Import Binder Document
 export function importBinderDocument(db: Db, raw: unknown, ownerUserId: string, helpers: Helpers) {
   const doc = NativeBinderDocument.parse(raw);
   const idMap = new Map<string, string>();

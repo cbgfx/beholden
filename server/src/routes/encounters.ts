@@ -39,6 +39,7 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
     });
   };
 
+  // MARK: - GET /api/encounters/:encounterId
   app.get("/api/encounters/:encounterId", memberOrAdmin(db), (req, res) => {
     const encounterId = requireParam(req, res, "encounterId");
     if (!encounterId) return;
@@ -49,6 +50,7 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
     res.json(rowToEncounter(row));
   });
 
+  // MARK: - GET /api/adventures/:adventureId/encounters
   app.get("/api/adventures/:adventureId/encounters", memberOrAdmin(db), (req, res) => {
     const adventureId = requireParam(req, res, "adventureId");
     if (!adventureId) return;
@@ -60,6 +62,7 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
     res.json(rows.map(rowToEncounter));
   });
 
+  // MARK: - GET /api/adventures/:adventureId/encounters/combatantsSummary
   app.get("/api/adventures/:adventureId/encounters/combatantsSummary", memberOrAdmin(db), (req, res) => {
     const adventureId = requireParam(req, res, "adventureId");
     if (!adventureId) return;
@@ -109,6 +112,7 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
     res.json({ rows: summaryRows });
   });
 
+  // MARK: - GET /api/encounters/:encounterId
   app.get("/api/encounters/:encounterId", memberOrAdmin(db), (req, res) => {
     const encounterId = requireParam(req, res, "encounterId");
     if (!encounterId) return;
@@ -119,6 +123,7 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
     res.json(rowToEncounter(row));
   });
 
+  // MARK: - POST /api/adventures/:adventureId/encounters
   app.post("/api/adventures/:adventureId/encounters", dmOrAdmin(db), (req, res) => {
     const adventureId = requireParam(req, res, "adventureId");
     if (!adventureId) return;
@@ -149,6 +154,7 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
     res.json(rowToEncounter(row));
   });
 
+  // MARK: - PUT /api/encounters/:encounterId
   app.put("/api/encounters/:encounterId", dmOrAdmin(db), (req, res) => {
     const encounterId = requireParam(req, res, "encounterId");
     if (!encounterId) return;
@@ -191,6 +197,7 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
     res.json(rowToEncounter(updated));
   });
 
+  // MARK: - DELETE /api/encounters/:encounterId
   app.delete("/api/encounters/:encounterId", dmOrAdmin(db), (req, res) => {
     const encounterId = requireParam(req, res, "encounterId");
     if (!encounterId) return;
@@ -211,6 +218,8 @@ export function registerEncounterRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Duplicate an encounter — copies the roster with fresh HP/initiative/conditions.
+
+  // MARK: - POST /api/encounters/:encounterId/duplicate
   app.post("/api/encounters/:encounterId/duplicate", dmOrAdmin(db), (req, res) => {
     const encounterId = requireParam(req, res, "encounterId");
     if (!encounterId) return;

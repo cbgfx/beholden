@@ -5,6 +5,7 @@ import type { Db } from "../../lib/db.js";
 import type { Assignment } from "../../services/characters.js";
 import type { ServerContext } from "../../server/context.js";
 
+// MARK: - Make Emit Player Change
 export function makeEmitPlayerChange(ctx: ServerContext) {
   return (args: { campaignId: string; action: "upsert" | "delete" | "refresh"; playerId?: string; characterId?: string | null }) => {
     ctx.broadcast("players:delta", {
@@ -68,6 +69,7 @@ export const OverridesBody = z.object({
   }).optional(),
 });
 
+// MARK: - To Character Sheet Dto Input
 export function toCharacterSheetDtoInput(
   character: {
     id: string;
@@ -149,6 +151,7 @@ export function toCharacterSheetDtoInput(
   };
 }
 
+// MARK: - Require Owned Character
 export function requireOwnedCharacter(db: Db, charId: string, userId: string, res: Response): { id: string } | null {
   const row = db.prepare("SELECT id FROM user_characters WHERE id = ? AND user_id = ?")
     .get(charId, userId) as { id: string } | undefined;
@@ -159,6 +162,7 @@ export function requireOwnedCharacter(db: Db, charId: string, userId: string, re
   return row;
 }
 
+// MARK: - Collect Campaign Shared Notes
 export function collectCampaignSharedNotes(db: Db, assignments: Assignment[], charId: string): string {
   const campaignNotes: unknown[] = [];
   const seenNoteIds = new Set<string>();

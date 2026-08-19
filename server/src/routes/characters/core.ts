@@ -71,6 +71,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   registerCharacterFieldPatchRoutes(app, ctx);
 
   // List all user-owned characters with campaign assignment info
+
+  // MARK: - GET /api/me/characters
   app.get("/api/me/characters", requireAuth, (req, res) => {
     const userId = req.user!.userId;
     const chars = db
@@ -93,6 +95,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Get a single user-owned character
+
+  // MARK: - GET /api/me/characters/:id
   app.get("/api/me/characters/:id", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
@@ -117,6 +121,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     );
   });
 
+  // MARK: - GET /api/me/characters/:id/binder-identity
   app.get("/api/me/characters/:id/binder-identity", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
@@ -149,6 +154,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     });
   });
 
+  // MARK: - GET /api/me/characters/:id/binder
   app.get("/api/me/characters/:id/binder", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
@@ -239,6 +245,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     });
   });
 
+  // MARK: - PATCH /api/me/characters/:id/binder-identity
   app.patch("/api/me/characters/:id/binder-identity", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
@@ -273,6 +280,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true });
   });
 
+  // MARK: - PATCH /api/me/characters/:id/activity
   app.patch("/api/me/characters/:id/activity", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
@@ -287,6 +295,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Create a new user-owned character (no campaign required)
+
+  // MARK: - POST /api/me/characters
   app.post("/api/me/characters", requireAuth, (req, res) => {
     const userId = req.user!.userId;
     const ownerName = accountNameFor(userId);
@@ -336,6 +346,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Update a user-owned character
+
+  // MARK: - PUT /api/me/characters/:id
   app.put("/api/me/characters/:id", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
@@ -449,6 +461,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Delete a user-owned character (cascades to character_campaigns)
+
+  // MARK: - DELETE /api/me/characters/:id
   app.delete("/api/me/characters/:id", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
@@ -465,6 +479,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Assign character to one or more campaigns
+
+  // MARK: - POST /api/me/characters/:id/assign
   app.post("/api/me/characters/:id/assign", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
@@ -533,6 +549,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Unassign character from a campaign
+
+  // MARK: - POST /api/me/characters/:id/unassign
   app.post("/api/me/characters/:id/unassign", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
@@ -558,6 +576,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Upload character portrait image.
+
+  // MARK: - POST /api/me/characters/:id/image
   app.post("/api/me/characters/:id/image", requireAuth, ctx.upload.single("image"), async (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;
@@ -583,6 +603,8 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Remove character portrait image.
+
+  // MARK: - DELETE /api/me/characters/:id/image
   app.delete("/api/me/characters/:id/image", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");
     if (!charId) return;

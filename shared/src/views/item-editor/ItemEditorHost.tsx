@@ -1,5 +1,8 @@
 import * as React from "react";
 import { PALETTE, withAlpha } from "../../ui/colors";
+import { Button as SharedButton } from "../../ui/Button";
+import { Input as SharedInput } from "../../ui/Input";
+import { TextArea as SharedTextArea } from "../../ui/TextArea";
 
 export type ItemEditorRequest = <T = unknown>(path: string, init?: RequestInit) => Promise<T>;
 
@@ -27,23 +30,31 @@ export const theme = {
 
 export { withAlpha };
 
-export const fieldStyle: React.CSSProperties = {
-  width: "100%", padding: "8px 10px", borderRadius: 8,
-  border: `1px solid ${PALETTE.panelBorder}`, background: "rgba(255,255,255,0.045)",
-  color: PALETTE.text, fontSize: "var(--fs-medium)", outline: "none",
+// Adapts the item-editor's local `theme` (nested under `colors`) to the flat shape
+// shared/ui's Input/TextArea/Button expect, so this package's forms get the same
+// themed components — hover/press states included — as the rest of the app instead
+// of a hand-rolled lookalike.
+const uiTheme = {
+  radius: theme.radius,
+  text: theme.colors.text,
+  textDark: theme.colors.textDark,
+  panelBorder: theme.colors.panelBorder,
+  accentPrimary: theme.colors.accentPrimary,
+  red: theme.colors.red,
+  green: theme.colors.green,
+  inputBg: theme.colors.inputBg,
 };
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} style={{ ...fieldStyle, ...props.style }} />;
+  return <SharedInput {...props} theme={uiTheme} />;
 }
 
 export function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} style={{ ...fieldStyle, resize: "vertical", ...props.style }} />;
+  return <SharedTextArea {...props} theme={uiTheme} />;
 }
 
 export function Button({ variant = "primary", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "ghost" | "danger" }) {
-  const color = variant === "danger" ? PALETTE.red : PALETTE.accentPrimary;
-  return <button {...props} style={{ padding: "8px 14px", borderRadius: 8, cursor: props.disabled ? "not-allowed" : "pointer", fontWeight: 700, opacity: props.disabled ? 0.6 : 1, border: variant === "ghost" ? `1px solid ${PALETTE.panelBorder}` : "none", background: variant === "ghost" ? "transparent" : color, color: variant === "ghost" ? PALETTE.text : PALETTE.textDark, ...props.style }} />;
+  return <SharedButton {...props} variant={variant} theme={uiTheme} />;
 }
 
 export function togglePillStyle(active: boolean): React.CSSProperties {

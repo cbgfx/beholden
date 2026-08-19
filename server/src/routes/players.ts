@@ -138,6 +138,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     ) dto.live.concentrationSpell = cs;
   }
 
+  // MARK: - GET /api/campaigns/:campaignId/players
   app.get("/api/campaigns/:campaignId/players", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -153,6 +154,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     }));
   });
 
+  // MARK: - GET /api/campaigns/:campaignId/players/:playerId
   app.get("/api/campaigns/:campaignId/players/:playerId", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     const playerId = requireParam(req, res, "playerId");
@@ -169,6 +171,8 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Player-facing party view — HP is obfuscated (percent only, no raw values).
+
+  // MARK: - GET /api/campaigns/:campaignId/party
   app.get("/api/campaigns/:campaignId/party", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -213,6 +217,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     res.json(party);
   });
 
+  // MARK: - GET /api/campaigns/:campaignId/party/:playerId
   app.get("/api/campaigns/:campaignId/party/:playerId", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     const playerId = requireParam(req, res, "playerId");
@@ -256,6 +261,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     });
   });
 
+  // MARK: - POST /api/campaigns/:campaignId/players
   app.post("/api/campaigns/:campaignId/players", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -325,6 +331,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     res.json(withAbsoluteImageUrl(req, toCampaignCharacterDto(rowToCampaignCharacter(row))));
   });
 
+  // MARK: - PUT /api/players/:playerId
   app.put("/api/players/:playerId", dmOrAdmin(db), (req, res) => {
     const playerId = requireParam(req, res, "playerId");
     if (!playerId) return;
@@ -401,6 +408,8 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
   });
 
   // DM can update a player's shared notes (edit/delete individual notes).
+
+  // MARK: - PATCH /api/players/:playerId/sharedNotes
   app.patch("/api/players/:playerId/sharedNotes", dmOrAdmin(db), (req, res) => {
     const playerId = requireParam(req, res, "playerId");
     if (!playerId) return;
@@ -419,6 +428,7 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true, sharedNotes });
   });
 
+  // MARK: - DELETE /api/players/:playerId
   app.delete("/api/players/:playerId", dmOrAdmin(db), (req, res) => {
     const playerId = requireParam(req, res, "playerId");
     if (!playerId) return;
@@ -466,6 +476,8 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Upload player character image — resized to a thumbnail (max 400px, WebP).
+
+  // MARK: - POST /api/players/:playerId/image
   app.post("/api/players/:playerId/image", dmOrAdmin(db), ctx.upload.single("image"), async (req, res) => {
     const playerId = requireParam(req, res, "playerId");
     if (!playerId) return;
@@ -489,6 +501,8 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Remove player character image.
+
+  // MARK: - DELETE /api/players/:playerId/image
   app.delete("/api/players/:playerId/image", dmOrAdmin(db), (req, res) => {
     const playerId = requireParam(req, res, "playerId");
     if (!playerId) return;

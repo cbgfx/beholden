@@ -38,6 +38,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
     });
   };
 
+  // MARK: - GET /api/me/characters/:characterId/bastions
   app.get("/api/me/characters/:characterId/bastions", requireAuth, (req, res) => {
     const characterId = requireParam(req, res, "characterId");
     if (!characterId) return;
@@ -81,6 +82,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
     });
   });
 
+  // MARK: - GET /api/campaigns/:campaignId/bastions
   app.get("/api/campaigns/:campaignId/bastions", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -120,6 +122,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
     });
   });
 
+  // MARK: - GET /api/campaigns/:campaignId/bastions/:bastionId
   app.get("/api/campaigns/:campaignId/bastions/:bastionId", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     const bastionId = requireParam(req, res, "bastionId");
@@ -157,6 +160,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
     });
   });
 
+  // MARK: - POST /api/campaigns/:campaignId/bastions
   app.post("/api/campaigns/:campaignId/bastions", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -209,6 +213,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true, id });
   });
 
+  // MARK: - PUT /api/campaigns/:campaignId/bastions/:bastionId
   app.put("/api/campaigns/:campaignId/bastions/:bastionId", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     const bastionId = requireParam(req, res, "bastionId");
@@ -261,6 +266,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true });
   });
 
+  // MARK: - PATCH /api/campaigns/:campaignId/bastions/:bastionId/player
   app.patch("/api/campaigns/:campaignId/bastions/:bastionId/player", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     const bastionId = requireParam(req, res, "bastionId");
@@ -342,6 +348,7 @@ export function registerBastionRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true });
   });
 
+  // MARK: - DELETE /api/campaigns/:campaignId/bastions/:bastionId
   app.delete("/api/campaigns/:campaignId/bastions/:bastionId", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     const bastionId = requireParam(req, res, "bastionId");

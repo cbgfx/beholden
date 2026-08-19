@@ -40,6 +40,8 @@ function extractSource(blocks: string[], explicitSource: unknown): {
 }
 
 /** Converts source or verbose item data into the sparse Grand shape. */
+
+// MARK: - Compact Item Entry
 export function compactItemEntry(entry: JsonRecord): JsonRecord {
   const classification = record(entry.classification);
   const oldAttunement = record(entry.attunement);
@@ -154,6 +156,7 @@ export function compactItemEntry(entry: JsonRecord): JsonRecord {
   };
 }
 
+// MARK: - Item Type Key
 export function itemTypeKey(entry: JsonRecord): string {
   return normalizeKey(record(entry.classification).type ?? entry.type);
 }

@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import type { StoredEncounterActor } from "../../server/userData.js";
 import type { ServerContext } from "../../server/context.js";
 import { requireParam } from "../../lib/routeHelpers.js";
@@ -34,10 +34,48 @@ export function fulfillInitiativePrompt(
   });
 }
 
+// Shared HP arithmetic for the combat-status endpoint: resolves current/max HP (max HP plus
+// any bonus) and returns null when either value is missing or the result isn't a usable number,
+// so callers can skip the combatant instead of showing garbage health text.
+function resolveHpBucket(
+  hpCurrent: number | null,
+  hpMax: number | null,
+  hpMaxBonus: number | null,
+): { current: number; maximum: number } | null {
+  if (hpCurrent == null || hpMax == null) return null;
+  const current = Number(hpCurrent);
+  const maximum = Number(hpMax) + Number(hpMaxBonus ?? 0);
+  if (!Number.isFinite(current) || !Number.isFinite(maximum) || maximum <= 0) return null;
+  return { current, maximum };
+}
+
+// A player only submits initiative/reaction updates for their own combatant, unless they're an
+// admin. Shared by the initiative and reaction routes below, which enforce the same rule.
+function requireOwnsPlayerCombatant(
+  db: ServerContext["db"],
+  req: Request,
+  res: Response,
+  existing: { baseId: string },
+): boolean {
+  if (req.user!.isAdmin) return true;
+  const owned = db.prepare(`
+    SELECT 1
+    FROM players p
+    LEFT JOIN user_characters uc ON uc.id = p.character_id
+    WHERE p.id = ? AND (p.user_id = ? OR uc.user_id = ?)
+  `).get(existing.baseId, req.user!.userId, req.user!.userId);
+  if (!owned) {
+    res.status(403).json({ ok: false, message: "You do not own this combatant" });
+    return false;
+  }
+  return true;
+}
+
 export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { now } = ctx.helpers;
 
+  // MARK: - GET /api/me/characters/:characterId/initiative-prompt
   app.get("/api/me/characters/:characterId/initiative-prompt", (req, res) => {
     const characterId = requireParam(req, res, "characterId");
     if (!characterId) return;
@@ -62,6 +100,7 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
     res.json({ prompt: prompt ?? null });
   });
 
+  // MARK: - DELETE /api/me/characters/:characterId/initiative-prompt
   app.delete("/api/me/characters/:characterId/initiative-prompt", (req, res) => {
     const characterId = requireParam(req, res, "characterId");
     if (!characterId) return;
@@ -85,6 +124,7 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
     res.json({ ok: true });
   });
 
+  // MARK: - GET /api/me/characters/:characterId/combat-status
   app.get("/api/me/characters/:characterId/combat-status", (req, res) => {
     const characterId = requireParam(req, res, "characterId");
     if (!characterId) return;
@@ -141,10 +181,9 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
     }>;
 
     const engagedEnemies = engagedRows.flatMap((enemy) => {
-      if (enemy.hpCurrent == null || enemy.hpMax == null) return [];
-      const current = Number(enemy.hpCurrent);
-      const maximum = Number(enemy.hpMax) + Number(enemy.hpMaxBonus ?? 0);
-      if (!Number.isFinite(current) || !Number.isFinite(maximum) || maximum <= 0) return [];
+      const bucket = resolveHpBucket(enemy.hpCurrent, enemy.hpMax, enemy.hpMaxBonus);
+      if (!bucket) return [];
+      const { current, maximum } = bucket;
       const health = current <= 0 ? "Down" : current * 2 <= maximum ? "Bloodied" : "Damaged";
       let conditions: Array<{ key: string; hexAbility?: string }> = [];
       try {
@@ -188,10 +227,9 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
     }>;
 
     const allies = allyRows.flatMap((ally) => {
-      if (ally.hpCurrent == null || ally.hpMax == null) return [];
-      const current = Number(ally.hpCurrent);
-      const maximum = Number(ally.hpMax) + Number(ally.hpMaxBonus ?? 0);
-      if (!Number.isFinite(current) || !Number.isFinite(maximum) || maximum <= 0) return [];
+      const bucket = resolveHpBucket(ally.hpCurrent, ally.hpMax, ally.hpMaxBonus);
+      if (!bucket) return [];
+      const { current, maximum } = bucket;
       const health = current * 2 <= maximum ? "Bloody" : current < maximum ? "Damaged" : "Healthy";
       const hpPercent = ally.baseType === "player"
         ? Math.max(0, Math.min(100, Math.round((current / maximum) * 100)))
@@ -298,17 +336,7 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
         return res.status(403).json({ ok: false, message: "Not a player combatant" });
       }
 
-      if (!req.user!.isAdmin) {
-        const owned = db.prepare(`
-          SELECT 1
-          FROM players p
-          LEFT JOIN user_characters uc ON uc.id = p.character_id
-          WHERE p.id = ? AND (p.user_id = ? OR uc.user_id = ?)
-        `).get(existing.baseId, req.user!.userId, req.user!.userId);
-        if (!owned) {
-          return res.status(403).json({ ok: false, message: "You do not own this combatant" });
-        }
-      }
+      if (!requireOwnsPlayerCombatant(db, req, res, existing)) return;
 
       const updatedAt = now();
       const next: StoredEncounterActor = { ...existing, initiative, updatedAt };
@@ -351,17 +379,7 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
         return res.status(403).json({ ok: false, message: "Not a player combatant" });
       }
 
-      if (!req.user!.isAdmin) {
-        const owned = db.prepare(`
-          SELECT 1
-          FROM players p
-          LEFT JOIN user_characters uc ON uc.id = p.character_id
-          WHERE p.id = ? AND (p.user_id = ? OR uc.user_id = ?)
-        `).get(existing.baseId, req.user!.userId, req.user!.userId);
-        if (!owned) {
-          return res.status(403).json({ ok: false, message: "You do not own this combatant" });
-        }
-      }
+      if (!requireOwnsPlayerCombatant(db, req, res, existing)) return;
 
       const updatedAt = now();
       const next: StoredEncounterActor = { ...existing, usedReaction: rawUsedReaction, updatedAt };

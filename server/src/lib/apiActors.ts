@@ -83,6 +83,7 @@ function toConditionsDto(
   return Array.isArray(value) ? (value as ActorConditionInstanceDto[]) : [];
 }
 
+// MARK: - To Character Campaign Assignment Dto
 export function toCharacterCampaignAssignmentDto(
   assignments: Array<{ id: string; campaignId: string; campaignName: string; playerId: string | null }>,
 ): CharacterCampaignAssignmentDto[] {
@@ -94,6 +95,7 @@ export function toCharacterCampaignAssignmentDto(
   }));
 }
 
+// MARK: - To Character Sheet Dto
 export function toCharacterSheetDto(
   character: CharacterSheetDtoInput,
 ): CharacterSheetDto {
@@ -140,6 +142,7 @@ export function toCharacterSheetDto(
   return dto;
 }
 
+// MARK: - To Campaign Character Dto
 export function toCampaignCharacterDto(character: StoredCampaignCharacter): CampaignCharacterDto {
   const live: CampaignCharacterDto["live"] = {
     hpCurrent: character.hpCurrent,
@@ -180,6 +183,7 @@ export function toCampaignCharacterDto(character: StoredCampaignCharacter): Camp
   };
 }
 
+// MARK: - To Encounter Actor Dto
 export function toEncounterActorDto(
   actor: StoredEncounterActor & { playerName?: string },
 ): EncounterActorDto {

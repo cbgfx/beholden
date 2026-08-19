@@ -40,6 +40,8 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
 
   // Streams a consistent snapshot of the live database (safe under WAL mode), bundled as a zip
   // together with every on-disk image directory, so a restore never leaves broken image links.
+
+  // MARK: - GET /api/admin/database/export
   app.get("/api/admin/database/export", requireAuth, requireAdmin, (_req, res, next) => {
     const tmpFile = ctx.path.join(ctx.os.tmpdir(), `beholden-export-${uid()}.db`);
     db.backup(tmpFile)
@@ -72,6 +74,8 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
   // upload) restores the bundled images alongside it. A pre-import backup of the database is
   // written automatically; see services/databaseTransfer.ts. A plain .db upload (an older export,
   // before images were bundled) is still accepted, unchanged.
+
+  // MARK: - POST /api/admin/database/import
   app.post("/api/admin/database/import", requireAuth, requireAdmin, ctx.dbImportUpload.single("file"), (req, res) => {
     if (!req.file) return res.status(400).json({ ok: false, message: "No file uploaded" });
     const uploadedPath = req.file.path;
@@ -99,6 +103,7 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
     }
   });
 
+  // MARK: - GET /api/admin/users
   app.get("/api/admin/users", requireAuth, requireAdmin, (_req, res) => {
     const rows = db
       .prepare("SELECT id, username, name, is_admin, last_login_at, created_at, updated_at FROM users ORDER BY name ASC")
@@ -106,6 +111,7 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
     res.json(rows.map(rowToUser));
   });
 
+  // MARK: - POST /api/admin/users
   app.post("/api/admin/users", requireAuth, requireAdmin, (req, res) => {
     const body = parseBody(CreateUserBody, req);
     body.username = body.username.toLowerCase();
@@ -122,6 +128,7 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
     res.status(201).json({ id, username: body.username, name: body.name, isAdmin: body.isAdmin, createdAt: t, updatedAt: t });
   });
 
+  // MARK: - PUT /api/admin/users/:userId
   app.put("/api/admin/users/:userId", requireAuth, requireAdmin, (req, res) => {
     const { userId } = req.params;
     if (typeof userId !== "string") {
@@ -167,6 +174,7 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
     res.json(rowToUser(updated));
   });
 
+  // MARK: - DELETE /api/admin/users/:userId
   app.delete("/api/admin/users/:userId", requireAuth, requireAdmin, (req, res) => {
     const { userId } = req.params;
     const target = db
@@ -191,6 +199,8 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
   // ---------------------------------------------------------------------------
 
   // List members of a campaign (includes user details).
+
+  // MARK: - GET /api/admin/campaigns/:campaignId/members
   app.get("/api/admin/campaigns/:campaignId/members", requireAuth, requireAdmin, (req, res) => {
     const { campaignId } = req.params;
     const rows = db.prepare(`
@@ -217,6 +227,8 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Add a user to a campaign.
+
+  // MARK: - POST /api/admin/campaigns/:campaignId/members
   app.post("/api/admin/campaigns/:campaignId/members", requireAuth, requireAdmin, (req, res) => {
     const campaignId = Array.isArray(req.params.campaignId) ? req.params.campaignId[0] : req.params.campaignId;
     if (!campaignId) return res.status(400).json({ ok: false, message: "Missing route parameter: campaignId" });
@@ -240,6 +252,8 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Change a member's role.
+
+  // MARK: - PUT /api/admin/campaigns/:campaignId/members/:membershipId
   app.put("/api/admin/campaigns/:campaignId/members/:membershipId", requireAuth, requireAdmin, (req, res) => {
     const { membershipId } = req.params;
     const body = parseBody(MembershipBody.pick({ role: true }), req);
@@ -250,6 +264,8 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Remove a member from a campaign.
+
+  // MARK: - DELETE /api/admin/campaigns/:campaignId/members/:membershipId
   app.delete("/api/admin/campaigns/:campaignId/members/:membershipId", requireAuth, requireAdmin, (req, res) => {
     const { membershipId } = req.params;
     const result = db.prepare("DELETE FROM campaign_membership WHERE id = ?").run(membershipId);

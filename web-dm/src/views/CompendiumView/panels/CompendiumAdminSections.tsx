@@ -84,6 +84,7 @@ export function NativeCompendiumActions(props: {
   onExportAll: () => void;
   onPreview: () => void;
   onImport: () => void;
+  onGenerateSrd: () => void;
   onDelete: () => void;
 }) {
   return (
@@ -183,6 +184,21 @@ export function NativeCompendiumActions(props: {
             style={props.previewReady ? { background: theme.colors.green } : undefined}
           >
             {props.busy ? "Working..." : "Import now"}
+          </Button>
+        </div>
+      </section>
+
+      <section style={cardStyle}>
+        <div style={{ color: theme.colors.green, fontWeight: 900, letterSpacing: "0.08em", fontSize: "var(--fs-small)", textTransform: "uppercase" }}>
+          Included SRD
+        </div>
+        <div style={{ marginTop: 4, color: theme.colors.text, fontWeight: 800 }}>Populate the 5.5e starter compendium</div>
+        <div style={{ marginTop: 4, color: theme.colors.muted, fontSize: "var(--fs-small)", lineHeight: 1.45 }}>
+          Import the SRD bundled with Beholden. Existing entries and your edits are left untouched.
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <Button onClick={props.onGenerateSrd} disabled={props.busy} style={{ background: theme.colors.green }}>
+            {props.busy ? "Working..." : "Generate SRD"}
           </Button>
         </div>
       </section>

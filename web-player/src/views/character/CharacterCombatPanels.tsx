@@ -75,6 +75,35 @@ export function divineFuryDamageForFeature(
   return `1d6+${Math.floor(barbarianLevel / 2)}`;
 }
 
+// A once/turn conditional bonus-damage feature (Sneak Attack, Divine Fury, and future
+// features of the same shape) rendered as one row in the weapons grid.
+function PassiveDamageRow({
+  name,
+  subtitle,
+  damage,
+  typeLabel,
+}: {
+  name: string;
+  subtitle: string;
+  damage: string;
+  typeLabel: string;
+}) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <div>
+        <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text }}>{name}</div>
+        <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{subtitle}</div>
+      </div>
+      <div style={{ fontSize: "var(--fs-small)", color: C.muted, textAlign: "center" }}>Weapon</div>
+      <div style={{ fontSize: "var(--fs-small)", color: C.muted, textAlign: "center" }}>-</div>
+      <div>
+        <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: C.text }}>+{damage}</div>
+        <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>{typeLabel}</div>
+      </div>
+    </div>
+  );
+}
+
 export function CharacterCombatPanels({
   ruleset,
   effectiveAc,
@@ -400,33 +429,21 @@ export function CharacterCombatPanels({
           })}
 
           {sneakAttackFeature && sneakAttackRoll ? (
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              <div>
-                <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text }}>Sneak Attack</div>
-                <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>Once per turn, qualifying weapon hit</div>
-              </div>
-              <div style={{ fontSize: "var(--fs-small)", color: C.muted, textAlign: "center" }}>Weapon</div>
-              <div style={{ fontSize: "var(--fs-small)", color: C.muted, textAlign: "center" }}>-</div>
-              <div>
-                <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: C.text }}>+{sneakAttackRoll.formula}</div>
-                <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>Weapon damage type</div>
-              </div>
-            </div>
+            <PassiveDamageRow
+              name="Sneak Attack"
+              subtitle="Once per turn, qualifying weapon hit"
+              damage={sneakAttackRoll.formula}
+              typeLabel="Weapon damage type"
+            />
           ) : null}
 
           {divineFuryDamage ? (
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              <div>
-                <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text }}>Divine Fury</div>
-                <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>First qualifying hit on each of your turns</div>
-              </div>
-              <div style={{ fontSize: "var(--fs-small)", color: C.muted, textAlign: "center" }}>Weapon</div>
-              <div style={{ fontSize: "var(--fs-small)", color: C.muted, textAlign: "center" }}>-</div>
-              <div>
-                <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: C.text }}>+{divineFuryDamage}</div>
-                <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>Necrotic or Radiant</div>
-              </div>
-            </div>
+            <PassiveDamageRow
+              name="Divine Fury"
+              subtitle="First qualifying hit on each of your turns"
+              damage={divineFuryDamage}
+              typeLabel="Necrotic or Radiant"
+            />
           ) : null}
 
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", padding: "6px 0" }}>

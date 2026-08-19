@@ -136,6 +136,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     }));
   }
 
+  // MARK: - GET /api/campaigns/:campaignId/treasure
   app.get("/api/campaigns/:campaignId/treasure", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -150,6 +151,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     res.json(treasure.map(toTreasureDto));
   });
 
+  // MARK: - GET /api/adventures/:adventureId/treasure
   app.get("/api/adventures/:adventureId/treasure", memberOrAdmin(db), (req, res) => {
     const adventureId = requireParam(req, res, "adventureId");
     if (!adventureId) return;
@@ -165,6 +167,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     res.json(treasure.map(toTreasureDto));
   });
 
+  // MARK: - GET /api/encounters/:encounterId/treasure
   app.get("/api/encounters/:encounterId/treasure", memberOrAdmin(db), (req, res) => {
     const encounterId = requireParam(req, res, "encounterId");
     if (!encounterId) return;
@@ -180,6 +183,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     res.json(treasure.map(toTreasureDto));
   });
 
+  // MARK: - GET /api/treasure/:treasureId
   app.get("/api/treasure/:treasureId", memberOrAdmin(db), (req, res) => {
     const treasureId = requireParam(req, res, "treasureId");
     if (!treasureId) return;
@@ -190,6 +194,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     res.json(toTreasureDto(hydrateTreasureEntry(db, rowToTreasure(row))));
   });
 
+  // MARK: - PATCH /api/treasure/:treasureId/qty
   app.patch("/api/treasure/:treasureId/qty", dmOrAdmin(db), (req, res) => {
     const treasureId = requireParam(req, res, "treasureId");
     if (!treasureId) return;
@@ -233,6 +238,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
 
   registerTreasureAwardRoute(app, ctx);
 
+  // MARK: - POST /api/campaigns/:campaignId/treasure
   app.post("/api/campaigns/:campaignId/treasure", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -258,6 +264,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     res.json(dto);
   });
 
+  // MARK: - POST /api/adventures/:adventureId/treasure
   app.post("/api/adventures/:adventureId/treasure", dmOrAdmin(db), (req, res) => {
     const adventureId = requireParam(req, res, "adventureId");
     if (!adventureId) return;
@@ -286,6 +293,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     res.json(dto);
   });
 
+  // MARK: - POST /api/encounters/:encounterId/treasure
   app.post("/api/encounters/:encounterId/treasure", dmOrAdmin(db), (req, res) => {
     const encounterId = requireParam(req, res, "encounterId");
     if (!encounterId) return;
@@ -314,6 +322,7 @@ export function registerTreasureRoutes(app: Express, ctx: ServerContext) {
     res.json(dto);
   });
 
+  // MARK: - DELETE /api/treasure/:treasureId
   app.delete("/api/treasure/:treasureId", dmOrAdmin(db), (req, res) => {
     const treasureId = requireParam(req, res, "treasureId");
     if (!treasureId) return;

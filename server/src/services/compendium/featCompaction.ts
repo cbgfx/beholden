@@ -31,10 +31,12 @@ function canonicalFeatCategory(entry: JsonRecord): CanonicalFeatCategory {
   return "G";
 }
 
+// MARK: - Feat Category Label
 export function featCategoryLabel(value: unknown): string {
   return CATEGORY_LABELS[CATEGORY_CODES[String(value ?? "")] ?? "G"];
 }
 
+// MARK: - Feat Prerequisite Label
 export function featPrerequisiteLabel(value: unknown): string | null {
   if (value == null) return null;
   if (typeof value === "string") return value;
@@ -104,6 +106,7 @@ function compactFeatMechanics(mechanics: JsonRecord): JsonRecord {
   return compact;
 }
 
+// MARK: - Compact Feat Entry
 export function compactFeatEntry(entry: JsonRecord): JsonRecord {
   const mechanics = compactFeatMechanics(record(entry.mechanics));
   const compact: JsonRecord = {
@@ -129,6 +132,7 @@ export function compactFeatEntry(entry: JsonRecord): JsonRecord {
   return compact;
 }
 
+// MARK: - Expand Feat Mechanics
 export function expandFeatMechanics(
   mechanicsValue: unknown,
   entry: JsonRecord = {},

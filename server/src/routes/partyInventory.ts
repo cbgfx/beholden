@@ -59,6 +59,8 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
   };
 
   // GET all items
+
+  // MARK: - GET /api/campaigns/:campaignId/party-inventory
   app.get("/api/campaigns/:campaignId/party-inventory", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -107,6 +109,7 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
     res.json({ items, partyCapacityLbs });
   });
 
+  // MARK: - GET /api/campaigns/:campaignId/party-inventory/:itemId
   app.get("/api/campaigns/:campaignId/party-inventory/:itemId", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -119,6 +122,8 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
   });
 
   // POST add item
+
+  // MARK: - POST /api/campaigns/:campaignId/party-inventory
   app.post("/api/campaigns/:campaignId/party-inventory", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -159,6 +164,8 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
   });
 
   // PUT update item
+
+  // MARK: - PUT /api/campaigns/:campaignId/party-inventory/:itemId
   app.put("/api/campaigns/:campaignId/party-inventory/:itemId", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -197,6 +204,8 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
   });
 
   // PATCH quantity only (quick +/- from UI)
+
+  // MARK: - PATCH /api/campaigns/:campaignId/party-inventory/:itemId/quantity
   app.patch("/api/campaigns/:campaignId/party-inventory/:itemId/quantity", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -218,6 +227,8 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
   });
 
   // DELETE item
+
+  // MARK: - DELETE /api/campaigns/:campaignId/party-inventory/:itemId
   app.delete("/api/campaigns/:campaignId/party-inventory/:itemId", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -230,6 +241,8 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
   });
 
   // GET party currency
+
+  // MARK: - GET /api/campaigns/:campaignId/party-currency
   app.get("/api/campaigns/:campaignId/party-currency", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -237,6 +250,8 @@ export function registerPartyInventoryRoutes(app: Express, ctx: ServerContext) {
   });
 
   // PATCH party currency (merge — only provided keys are updated)
+
+  // MARK: - PATCH /api/campaigns/:campaignId/party-currency
   app.patch("/api/campaigns/:campaignId/party-currency", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;

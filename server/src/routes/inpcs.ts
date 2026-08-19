@@ -50,6 +50,7 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
     });
   };
 
+  // MARK: - GET /api/campaigns/:campaignId/inpcs
   app.get("/api/campaigns/:campaignId/inpcs", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -59,6 +60,7 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
     res.json(rows.map(rowToINpc));
   });
 
+  // MARK: - GET /api/campaigns/:campaignId/inpcs/:inpcId
   app.get("/api/campaigns/:campaignId/inpcs/:inpcId", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     const inpcId = requireParam(req, res, "inpcId");
@@ -70,6 +72,7 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
     res.json(rowToINpc(row));
   });
 
+  // MARK: - POST /api/campaigns/:campaignId/inpcs
   app.post("/api/campaigns/:campaignId/inpcs", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -134,6 +137,7 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
     res.json(created.length === 1 ? created[0] : { ok: true, created });
   });
 
+  // MARK: - POST /api/campaigns/:campaignId/inpcs/from-binder
   app.post("/api/campaigns/:campaignId/inpcs/from-binder", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -194,6 +198,7 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
     res.status(201).json(rowToINpc(created));
   });
 
+  // MARK: - PUT /api/inpcs/:inpcId
   app.put("/api/inpcs/:inpcId", dmOrAdmin(db), (req, res) => {
     const inpcId = requireParam(req, res, "inpcId");
     if (!inpcId) return;
@@ -268,6 +273,7 @@ export function registerInpcRoutes(app: Express, ctx: ServerContext) {
     res.json(rowToINpc(updated));
   });
 
+  // MARK: - DELETE /api/inpcs/:inpcId
   app.delete("/api/inpcs/:inpcId", dmOrAdmin(db), (req, res) => {
     const inpcId = requireParam(req, res, "inpcId");
     if (!inpcId) return;

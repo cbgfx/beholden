@@ -1,3 +1,4 @@
+import React from "react";
 import { C } from "@/lib/theme";
 import { RightDrawer } from "@/ui/RightDrawer";
 import { conditionLabel } from "@beholden/shared/domain/conditions";
@@ -26,6 +27,38 @@ const allyHealthColor: Record<CombatAlly["health"], string> = {
   Bloody: "#ef4444",
 };
 
+// One combatant card shared by the Allies and Enemies lists below: name + health badge,
+// dimmed/struck-through when `isDown`, with room for an optional header addon (allies' HP%)
+// and below-name content (allies' HP bar, enemies' condition badges).
+function CombatantCard({
+  name,
+  healthLabel,
+  healthColor: statusColor,
+  headerExtra,
+  isDown,
+  children,
+}: {
+  name: string;
+  healthLabel: string;
+  healthColor: string;
+  headerExtra?: React.ReactNode;
+  isDown?: boolean;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "12px 14px", borderRadius: 8, border: `1px solid ${C.panelBorder}`, background: "rgba(255,255,255,0.035)", opacity: isDown ? 0.55 : 1 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: C.text, fontWeight: 750, textDecoration: isDown ? "line-through" : "none" }}>{name}</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <span style={{ color: statusColor, fontWeight: 800 }}>{healthLabel}</span>
+          {headerExtra}
+        </span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export function EngagedEnemiesDrawer(props: {
   open: boolean;
   enemies: EngagedEnemy[];
@@ -41,20 +74,19 @@ export function EngagedEnemiesDrawer(props: {
       ) : (
         <div style={{ display: "grid", gap: 10, marginBottom: 20 }}>
           {props.allies.map((ally) => (
-            <div key={ally.id} style={{ display: "grid", gap: 8, padding: "12px 14px", borderRadius: 8, border: `1px solid ${C.panelBorder}`, background: "rgba(255,255,255,0.035)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: C.text, fontWeight: 750 }}>{ally.name}</span>
-                <span style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                  <span style={{ color: allyHealthColor[ally.health], fontWeight: 800 }}>{ally.health}</span>
-                  {ally.hpPercent != null && <span style={{ color: C.muted, fontWeight: 700 }}>{ally.hpPercent}%</span>}
-                </span>
-              </div>
+            <CombatantCard
+              key={ally.id}
+              name={ally.name}
+              healthLabel={ally.health}
+              healthColor={allyHealthColor[ally.health]}
+              headerExtra={ally.hpPercent != null ? <span style={{ color: C.muted, fontWeight: 700 }}>{ally.hpPercent}%</span> : null}
+            >
               {ally.hpPercent != null && (
                 <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${ally.hpPercent}%`, borderRadius: 3, background: allyHealthColor[ally.health], transition: "width 0.4s ease" }} />
                 </div>
               )}
-            </div>
+            </CombatantCard>
           ))}
         </div>
       )}
@@ -65,26 +97,25 @@ export function EngagedEnemiesDrawer(props: {
         </div>
       ) : (
         <div style={{ display: "grid", gap: 10 }}>
-          {props.enemies.map((enemy) => {
-            const isDown = enemy.health === "Down";
-            return (
-              <div key={enemy.id} style={{ display: "flex", flexDirection: "column", gap: 4, padding: "12px 14px", borderRadius: 8, border: `1px solid ${C.panelBorder}`, background: "rgba(255,255,255,0.035)", opacity: isDown ? 0.55 : 1 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                  <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: C.text, fontWeight: 750, textDecoration: isDown ? "line-through" : "none" }}>{enemy.name}</span>
-                  <span style={{ flexShrink: 0, color: healthColor[enemy.health], fontWeight: 800 }}>{enemy.health}</span>
+          {props.enemies.map((enemy) => (
+            <CombatantCard
+              key={enemy.id}
+              name={enemy.name}
+              healthLabel={enemy.health}
+              healthColor={healthColor[enemy.health]}
+              isDown={enemy.health === "Down"}
+            >
+              {enemy.conditions && enemy.conditions.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {enemy.conditions.map((condition) => (
+                    <span key={condition.key} style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: C.colorPinkRed, border: `1px solid ${C.colorPinkRed}`, borderRadius: 6, padding: "1px 6px" }}>
+                      {conditionText(condition)}
+                    </span>
+                  ))}
                 </div>
-                {enemy.conditions && enemy.conditions.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {enemy.conditions.map((condition) => (
-                      <span key={condition.key} style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: C.colorPinkRed, border: `1px solid ${C.colorPinkRed}`, borderRadius: 6, padding: "1px 6px" }}>
-                        {conditionText(condition)}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              )}
+            </CombatantCard>
+          ))}
         </div>
       )}
     </RightDrawer>

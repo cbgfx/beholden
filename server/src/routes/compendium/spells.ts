@@ -78,6 +78,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     return contains ? toOut(contains) : null;
   }
 
+  // MARK: - GET /api/spells/search
   app.get("/api/spells/search", requireAuth, (req, res) => {
     applySharedApiCacheHeaders(res);
     const q = String(req.query.q ?? "").trim().toLowerCase();
@@ -219,6 +220,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     return res.json({ rows: outRows, total });
   });
 
+  // MARK: - POST /api/spells/lookup
   app.post("/api/spells/lookup", requireAuth, (req, res) => {
     const body = parseBody(SpellLookupBody, req);
     const includeText = Boolean(body.includeText);
@@ -355,6 +357,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     res.json({ rows });
   });
 
+  // MARK: - GET /api/spells/:spellId
   app.get("/api/spells/:spellId", (req, res) => {
     applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const spellId = requireParam(req, res, "spellId");
@@ -400,6 +403,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     });
   });
 
+  // MARK: - POST /api/spells
   app.post("/api/spells", anyDm, (req, res) => {
     const id = grandEntryId("s", (req.body as Record<string, unknown> | undefined)?.name);
     saveGrandEntry(db, "spells", req.body, id);
@@ -407,6 +411,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     res.json({ ok: true, id });
   });
 
+  // MARK: - PUT /api/spells/:spellId
   app.put("/api/spells/:spellId", anyDm, (req, res) => {
     const spellId = requireParam(req, res, "spellId");
     if (!spellId) return;
@@ -424,6 +429,7 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     res.json({ ok: true });
   });
 
+  // MARK: - DELETE /api/spells/:spellId
   app.delete("/api/spells/:spellId", anyDm, (req, res) => {
     const spellId = requireParam(req, res, "spellId");
     if (!spellId) return;

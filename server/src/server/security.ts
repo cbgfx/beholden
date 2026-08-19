@@ -26,6 +26,7 @@ function parseOriginHost(origin: string): string | null {
   }
 }
 
+// MARK: - Get Allowed Origin Hosts
 export function getAllowedOriginHosts(): Set<string> | null {
   // If the env var is not set we allow all origins (dev / LAN mode).
   // Set BEHOLDEN_ALLOWED_ORIGINS to a comma-separated list to restrict.
@@ -39,6 +40,7 @@ export function getAllowedOriginHosts(): Set<string> | null {
   return set.size ? set : null;
 }
 
+// MARK: - Cors Middleware
 export function corsMiddleware(allowedHosts: Set<string> | null): express.RequestHandler {
   return (req, res, next) => {
     const origin = req.headers.origin;
@@ -97,6 +99,7 @@ function getRateLimitKey(req: express.Request): string {
   return `ip:${getClientIp(req)}`;
 }
 
+// MARK: - Create In Memory Rate Limiter
 export function createInMemoryRateLimiter(opts: { windowMs: number; max: number }) {
   type Bucket = { count: number; resetAt: number };
   const buckets = new Map<string, Bucket>();
@@ -149,6 +152,7 @@ export function createInMemoryRateLimiter(opts: { windowMs: number; max: number 
   };
 }
 
+// MARK: - Get Rate Limit Config
 export function getRateLimitConfig() {
   // Defaults: 5000 requests per 15 minutes.
   // A single active session (campaign load + combat polling) uses ~20-40 req/min

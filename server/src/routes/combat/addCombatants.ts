@@ -15,6 +15,7 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
   const { db } = ctx;
   const { now, uid } = ctx.helpers;
 
+  // MARK: - POST /api/encounters/:encounterId/combatants/addPlayers
   app.post("/api/encounters/:encounterId/combatants/addPlayers", dmOrAdmin(db), (req, res) => {
     const encounterId = requireParam(req, res, "encounterId");
     if (!encounterId) return;
@@ -52,6 +53,8 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
   });
 
   // ── Add single player ─────────────────────────────────────────────────────
+
+  // MARK: - POST /api/encounters/:encounterId/combatants/addPlayer
   app.post("/api/encounters/:encounterId/combatants/addPlayer", dmOrAdmin(db), (req, res) => {
     const encounterId = requireParam(req, res, "encounterId");
     if (!encounterId) return;
@@ -91,6 +94,8 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
   });
 
   // ── Add monster ───────────────────────────────────────────────────────────
+
+  // MARK: - POST /api/encounters/:encounterId/combatants/addMonster
   app.post("/api/encounters/:encounterId/combatants/addMonster", dmOrAdmin(db), (req, res) => {
     const encounterId = requireParam(req, res, "encounterId");
     if (!encounterId) return;
@@ -134,6 +139,8 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
 
   // World actions are turn-order entries for hazards, lairs, weather, and other
   // encounter events. They deliberately have no creature statistics.
+
+  // MARK: - POST /api/encounters/:encounterId/combatants/addWorldAction
   app.post("/api/encounters/:encounterId/combatants/addWorldAction", dmOrAdmin(db), (req, res) => {
     const encounterId = requireParam(req, res, "encounterId");
     if (!encounterId) return;
@@ -176,6 +183,8 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
   });
 
   // ── Add iNPC ──────────────────────────────────────────────────────────────
+
+  // MARK: - POST /api/encounters/:encounterId/combatants/addInpc
   app.post("/api/encounters/:encounterId/combatants/addInpc", dmOrAdmin(db), (req, res) => {
     const encounterId = requireParam(req, res, "encounterId");
     if (!encounterId) return;

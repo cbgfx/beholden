@@ -27,6 +27,7 @@ import {
 import { ItemRow } from "@/views/character/CharacterInventoryPanelRows";
 import { InventoryPartyStashSection } from "@/views/character/CharacterInventoryPartyStashSection";
 import { InventoryItemPickerModal } from "@/views/character/CharacterInventoryPickerModal";
+import { resolvePactBoonFromChosenOptionals } from "@/views/character/CharacterSheetUtils";
 import { CollapsiblePanel, panelHeaderAddBtn } from "@/views/character/CharacterViewParts";
 import { useCharacterInventoryContainers } from "@/views/character/useCharacterInventoryContainers";
 import { useCharacterInventoryItems } from "@/views/character/useCharacterInventoryItems";
@@ -81,7 +82,7 @@ export function InventoryPanel({
 
   const ammoItems = sync.items.filter(isAmmunitionItem);
   const hasHexWarrior = (charData?.classes ?? []).some((entry) => /hexblade/i.test(String(entry.subclass ?? "")));
-  const hasPactBlade = (charData?.chosenOptionals ?? []).some((entry) => /pact(?:_|\s)+(?:of(?:_|\s)+)?the(?:_|\s)+blade/i.test(entry));
+  const hasPactBlade = resolvePactBoonFromChosenOptionals(charData?.chosenOptionals) === "blade";
 
   const stashWeight = sync.partyStashItems.reduce((sum, item) => sum + (item.weight ?? 0) * item.quantity, 0);
   const stashWeightLabel = partyCapacityLbs !== null

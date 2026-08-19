@@ -9,11 +9,8 @@ import {
   IconPlayer,
   IconShield,
   IconSpells,
-  IconGreekTemple,
-  IconOrganigram,
-  IconVillage,
-  IconDna1,
 } from "@/icons";
+import { IconGreekTemple, IconOrganigram, IconVillage, IconDna1 } from "@/views/BinderView/binderIcons";
 import { theme, withAlpha } from "@/theme/theme";
 import type { Campaign } from "@/domain/types/domain";
 import type { BinderSummary } from "@/services/binderApi";

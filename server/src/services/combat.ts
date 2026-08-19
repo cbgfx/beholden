@@ -65,6 +65,7 @@ function buildEncounterActorSnapshot(
   };
 }
 
+// MARK: - Build Encounter Actor Live
 export function buildEncounterActorLive(
   actor: Pick<
     StoredEncounterActor,
@@ -101,6 +102,7 @@ export function buildEncounterActorLive(
   };
 }
 
+// MARK: - Update Encounter Actor
 export function updateEncounterActor(
   db: Database.Database,
   actor: StoredEncounterActor,
@@ -120,12 +122,15 @@ export function updateEncounterActor(
 }
 
 /** Initializes combat state on the encounter row if not already set. */
+
+// MARK: - Ensure Combat
 export function ensureCombat(db: Database.Database, encounterId: string): void {
   db.prepare(
     `UPDATE encounters SET combat_round = COALESCE(combat_round, 1), updated_at = ? WHERE id = ?`
   ).run(now(), encounterId);
 }
 
+// MARK: - Next Label Number
 export function nextLabelNumber(db: Database.Database, encounterId: string, baseName: string): number {
   ensureCombat(db, encounterId);
   const row = db.prepare(
@@ -136,6 +141,7 @@ export function nextLabelNumber(db: Database.Database, encounterId: string, base
   return row.n;
 }
 
+// MARK: - Create Player Combatant
 export function createPlayerCombatant({
   encounterId,
   player,
@@ -170,6 +176,8 @@ export function createPlayerCombatant({
 }
 
 /** Insert a StoredEncounterActor into the combatants table. */
+
+// MARK: - Insert Combatant
 export function insertCombatant(db: Database.Database, c: StoredEncounterActor): void {
   db.prepare(
     `INSERT INTO combatants
@@ -186,6 +194,7 @@ export function insertCombatant(db: Database.Database, c: StoredEncounterActor):
   );
 }
 
+// MARK: - Sync Combatant To Player
 /**
  * Write HP / conditions / overrides / death-saves from a player-type combatant
  * back to the players table. Returns the player's campaignId, or null if the
@@ -246,6 +255,7 @@ export type BinderNpcSyncResult = {
   encounterIds: string[];
 };
 
+// MARK: - Sync Combatant To Binder Npc
 /**
  * Binder-backed iNPCs are projections of one canonical NPC, like campaign
  * Player rows are projections of a character sheet. Persist shared mechanics
@@ -310,6 +320,7 @@ export function syncCombatantToBinderNpc(
   return { mortalId: link.binder_mortal_id, campaignIds, encounterIds };
 }
 
+// MARK: - Hydrate Player Combatant
 /**
  * For player combatants, rehydrate mutable persistent fields from the canonical
  * players row so encounter-scoped updates never push stale snapshot values back.
@@ -369,6 +380,8 @@ export function hydratePlayerCombatant(
 }
 
 /** Load all combatants for an encounter, sorted by position. */
+
+// MARK: - Load Combatants
 export function loadCombatants(db: Database.Database, encounterId: string): StoredEncounterActor[] {
   const rows = db.prepare(
     `SELECT ${ENCOUNTER_ACTOR_COLS} FROM combatants WHERE encounter_id = ? ORDER BY COALESCE(sort, 9999), created_at`
@@ -376,6 +389,7 @@ export function loadCombatants(db: Database.Database, encounterId: string): Stor
   return rows.map(rowToEncounterActor);
 }
 
+// MARK: - Sweep Dependent Conditions
 /**
  * When a caster's concentration ends, strips any conditions it was sustaining (per
  * removeConditionsOwnedBy's ownership rules) from every other combatant in the encounter,
@@ -416,6 +430,7 @@ export function sweepDependentConditions(
   }
 }
 
+// MARK: - Update Combatant
 /**
  * Applies a full combatant PATCH: authoritative HP-delta resolution, field merge, transition
  * rules, player/binder-NPC sync, concentration-break/notify, and the Hex/Hunter's Mark caster

@@ -30,6 +30,7 @@ import type {
   StoredCharacterSheetState,
 } from "../server/userData.js";
 
+// MARK: - Parse Json
 export function parseJson<T>(s: unknown, fallback: T): T {
   if (!s || typeof s !== "string") return fallback;
   try { return JSON.parse(s) as T; } catch { return fallback; }
@@ -51,6 +52,7 @@ function readVersionedImageUrl(row: Record<string, unknown>): string | null {
   return `${url}${url.includes("?") ? "&" : "?"}v=${version}`;
 }
 
+// MARK: - Clean Stored Image Url
 export function cleanStoredImageUrl(value: unknown): string | null {
   if (typeof value !== "string" || !value.trim()) return null;
   const raw = value.trim();
@@ -197,6 +199,7 @@ function titleFromNoteText(text: string | null): string | null {
   return null;
 }
 
+// MARK: - Display Note Title
 export function displayNoteTitle(titleValue: unknown, textValue: unknown): string {
   const title = typeof titleValue === "string" ? titleValue : "Note";
   const text = typeof textValue === "string" ? textValue : "";
@@ -244,6 +247,7 @@ function readPartyInventoryItemState(row: Record<string, unknown>): StoredPartyI
   };
 }
 
+// MARK: - Row To User
 export function rowToUser(row: Record<string, unknown>) {
   return {
     id: row.id as string,
@@ -256,6 +260,7 @@ export function rowToUser(row: Record<string, unknown>) {
   };
 }
 
+// MARK: - Row To Campaign
 export function rowToCampaign(row: Record<string, unknown>): StoredCampaign {
   return {
     id: row.id as string,
@@ -275,6 +280,7 @@ export function rowToCampaign(row: Record<string, unknown>): StoredCampaign {
   };
 }
 
+// MARK: - Row To Adventure
 export function rowToAdventure(row: Record<string, unknown>): StoredAdventure {
   return {
     id: row.id as string,
@@ -286,6 +292,7 @@ export function rowToAdventure(row: Record<string, unknown>): StoredAdventure {
   };
 }
 
+// MARK: - Row To Encounter
 export function rowToEncounter(row: Record<string, unknown>): StoredEncounter {
   return {
     id: row.id as string,
@@ -301,6 +308,7 @@ export function rowToEncounter(row: Record<string, unknown>): StoredEncounter {
   };
 }
 
+// MARK: - Row To Campaign Character
 export function rowToCampaignCharacter(row: Record<string, unknown>): StoredCampaignCharacter {
   const sheet = readCampaignCharacterSheetState(row);
   const live = readCampaignCharacterLiveState(row);
@@ -335,6 +343,7 @@ export function rowToCampaignCharacter(row: Record<string, unknown>): StoredCamp
   };
 }
 
+// MARK: - Row To Character Sheet
 export function rowToCharacterSheet(row: Record<string, unknown>): StoredCharacterSheet {
   const storedSheet = readCharacterSheetState(row);
   const characterData = parseJson(row.character_data_json, null) as Record<string, unknown> | null;
@@ -369,6 +378,7 @@ export function rowToCharacterSheet(row: Record<string, unknown>): StoredCharact
   };
 }
 
+// MARK: - Row To INpc
 export function rowToINpc(row: Record<string, unknown>): StoredINpc {
   return {
     id: row.id as string,
@@ -388,6 +398,7 @@ export function rowToINpc(row: Record<string, unknown>): StoredINpc {
   };
 }
 
+// MARK: - Row To Note
 export function rowToNote(row: Record<string, unknown>): StoredNote {
   const note = readNoteState(row);
   return {
@@ -401,6 +412,7 @@ export function rowToNote(row: Record<string, unknown>): StoredNote {
   };
 }
 
+// MARK: - Row To Treasure
 export function rowToTreasure(row: Record<string, unknown>): StoredTreasure {
   const entry = readTreasureState(row);
   return {
@@ -423,6 +435,7 @@ export function rowToTreasure(row: Record<string, unknown>): StoredTreasure {
   };
 }
 
+// MARK: - Row To Party Inventory Item
 export function rowToPartyInventoryItem(row: Record<string, unknown>): StoredPartyInventoryItem {
   const item = readPartyInventoryItemState(row);
   return {
@@ -442,6 +455,7 @@ export function rowToPartyInventoryItem(row: Record<string, unknown>): StoredPar
   };
 }
 
+// MARK: - Row To Condition
 export function rowToCondition(row: Record<string, unknown>): StoredCondition {
   return {
     id: row.id as string,
@@ -454,6 +468,7 @@ export function rowToCondition(row: Record<string, unknown>): StoredCondition {
   };
 }
 
+// MARK: - Row To Encounter Actor
 export function rowToEncounterActor(row: Record<string, unknown>): StoredEncounterActor {
   const snapshot = readEncounterActorSnapshot(row);
   const live = readEncounterActorLiveState(row);

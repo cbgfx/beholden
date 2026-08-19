@@ -7,6 +7,8 @@ function campaignColumns(db: Db): Set<string> {
 }
 
 /** Collapse the old organization-scoped Position copy into the Mortal's one canonical Position. */
+
+// MARK: - Ensure Canonical Mortal Positions
 export function ensureCanonicalMortalPositions(db: Db): void {
   db.transaction(() => {
     const membershipColumns = new Set(
@@ -64,6 +66,8 @@ export function ensureCanonicalMortalPositions(db: Db): void {
 }
 
 /** Mortals live at a concrete Location or POI, never directly on a Country or Continent. */
+
+// MARK: - Ensure Concrete Mortal Residences
 export function ensureConcreteMortalResidences(db: Db): void {
   db.exec(`
     UPDATE mortals
@@ -79,6 +83,8 @@ export function ensureConcreteMortalResidences(db: Db): void {
 }
 
 /** Additive Binder fields for databases that received the initial Binder schema. */
+
+// MARK: - Ensure Binder Columns
 export function ensureBinderColumns(db: Db): void {
   const rows = db.prepare("PRAGMA table_info(binders)").all() as Array<{ name: string }>;
   const columns = new Set(rows.map((row) => row.name));
@@ -232,6 +238,7 @@ function makeTextColumnNullable(db: Db, table: string, column: string): void {
   `);
 }
 
+// MARK: - Ensure Binder Unset Conventions
 /**
  * Correct the initial pre-CRUD Binder schema so optional values have one
  * representation: SQL NULL. The subtype row remains mandatory, while its
@@ -290,6 +297,8 @@ export function ensureBinderUnsetConventions(db: Db): void {
 }
 
 /** Expand the narrow identity registry when a new approved typed table lands. */
+
+// MARK: - Ensure Binder Record Types
 export function ensureBinderRecordTypes(db: Db): void {
   const definition = db.prepare(`
     SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'binder_records'
@@ -333,6 +342,7 @@ export function ensureBinderRecordTypes(db: Db): void {
   }
 }
 
+// MARK: - Ensure Binder Location Naming
 /**
  * Canonically rename the pre-release Binder "city" storage to "location".
  * This migration preserves local/imported development data and removes the
@@ -404,6 +414,8 @@ export function ensureBinderLocationNaming(db: Db): void {
 }
 
 /** Additive, idempotent Binder fields for databases created before Binder. */
+
+// MARK: - Ensure Binder Campaign Columns
 export function ensureBinderCampaignColumns(db: Db): void {
   const columns = campaignColumns(db);
   if (!columns.has("binder_id")) {

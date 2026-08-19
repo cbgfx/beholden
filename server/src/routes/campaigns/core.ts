@@ -32,6 +32,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
   const { now, uid } = ctx.helpers;
 
+  // MARK: - GET /api/campaigns
   app.get("/api/campaigns", (req, res) => {
     const user = req.user!;
     const rows = user.isAdmin
@@ -62,6 +63,8 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Player-facing: all campaigns the current user is a member of (any role).
+
+  // MARK: - GET /api/me/campaigns
   app.get("/api/me/campaigns", (req, res) => {
     const user = req.user!;
     const rows = db.prepare(`
@@ -86,6 +89,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     })));
   });
 
+  // MARK: - POST /api/campaigns
   app.post("/api/campaigns", requireAdmin, (req, res) => {
     const body = parseBody(CampaignUpsertBody, req);
     const name = (body.name ?? "").toString().trim() || "New Campaign";
@@ -111,6 +115,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     }));
   });
 
+  // MARK: - PUT /api/campaigns/:campaignId
   app.put("/api/campaigns/:campaignId", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -131,6 +136,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     res.json(withAbsoluteImageUrl(req, { ...rowToCampaign(row), name, color, isActive, updatedAt: t }));
   });
 
+  // MARK: - PATCH /api/campaigns/:campaignId/binder-content
   app.patch("/api/campaigns/:campaignId/binder-content", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -150,6 +156,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true, campaignId, campaignStory, campaignNotes, updatedAt: t });
   });
 
+  // MARK: - DELETE /api/campaigns/:campaignId
   app.delete("/api/campaigns/:campaignId", requireAdmin, (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -167,6 +174,8 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Full rest: heal all players + clear player combatant conditions/temp HP.
+
+  // MARK: - POST /api/campaigns/:campaignId/fullRest
   app.post("/api/campaigns/:campaignId/fullRest", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -240,6 +249,8 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Touch — update updatedAt to track last-accessed ordering.
+
+  // MARK: - POST /api/campaigns/:campaignId/touch
   app.post("/api/campaigns/:campaignId/touch", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -250,6 +261,8 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Upload campaign banner image — resized to a thumbnail (max 400px, WebP).
+
+  // MARK: - POST /api/campaigns/:campaignId/image
   app.post("/api/campaigns/:campaignId/image", dmOrAdmin(db), ctx.upload.single("image"), async (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -275,6 +288,8 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Update DM-created shared notes for a campaign.
+
+  // MARK: - PATCH /api/campaigns/:campaignId/sharedNotes
   app.patch("/api/campaigns/:campaignId/sharedNotes", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -289,6 +304,8 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
   });
 
   // Remove campaign banner image.
+
+  // MARK: - DELETE /api/campaigns/:campaignId/image
   app.delete("/api/campaigns/:campaignId/image", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;

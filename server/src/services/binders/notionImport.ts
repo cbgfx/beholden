@@ -78,6 +78,7 @@ function pageName(path: string): string {
   return basename(path).replace(/\s[0-9a-f]{32}\.md$/i, "").trim();
 }
 
+// MARK: - Inspect Notion Zip
 export function inspectNotionZip(buffer: Buffer, db?: Db, binderId?: string): { summary: NotionImportSummary; candidates: Candidate[] } {
   const fingerprint = createHash("sha256").update(buffer).digest("hex");
   const files = unzipSync(new Uint8Array(buffer));
@@ -198,6 +199,7 @@ function description(candidate: Candidate): string | null {
   return value || null;
 }
 
+// MARK: - Import Notion Zip
 export function importNotionZip(db: Db, binderId: string, buffer: Buffer, commit: boolean): NotionImportSummary {
   const binder = db.prepare("SELECT 1 FROM binders WHERE id = ?").get(binderId);
   if (!binder) throw new Error(`Binder not found: ${binderId}`);

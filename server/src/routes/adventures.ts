@@ -125,6 +125,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
     });
   };
 
+  // MARK: - GET /api/campaigns/:campaignId/adventures
   app.get("/api/campaigns/:campaignId/adventures", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -136,6 +137,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
     res.json(rows.map(rowToAdventure));
   });
 
+  // MARK: - GET /api/adventures/:adventureId
   app.get("/api/adventures/:adventureId", memberOrAdmin(db), (req, res) => {
     const adventureId = requireParam(req, res, "adventureId");
     if (!adventureId) return;
@@ -146,6 +148,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
     res.json(rowToAdventure(row));
   });
 
+  // MARK: - POST /api/campaigns/:campaignId/adventures
   app.post("/api/campaigns/:campaignId/adventures", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -166,6 +169,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
 
   // ── Export adventure ──────────────────────────────────────────────────────
 
+  // MARK: - GET /api/adventures/:adventureId/export
   app.get("/api/adventures/:adventureId/export", memberOrAdmin(db), (req, res) => {
     const adventureId = requireParam(req, res, "adventureId");
     if (!adventureId) return;
@@ -293,6 +297,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
 
   // ── Import adventure ──────────────────────────────────────────────────────
 
+  // MARK: - POST /api/campaigns/:campaignId/adventures/import
   app.post("/api/campaigns/:campaignId/adventures/import", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
@@ -418,6 +423,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
 
   // ── CRUD ──────────────────────────────────────────────────────────────────
 
+  // MARK: - PUT /api/adventures/:adventureId
   app.put("/api/adventures/:adventureId", dmOrAdmin(db), (req, res) => {
     const adventureId = requireParam(req, res, "adventureId");
     if (!adventureId) return;
@@ -439,6 +445,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
     res.json({ ...a, name, updatedAt: t });
   });
 
+  // MARK: - DELETE /api/adventures/:adventureId
   app.delete("/api/adventures/:adventureId", dmOrAdmin(db), (req, res) => {
     const adventureId = requireParam(req, res, "adventureId");
     if (!adventureId) return;

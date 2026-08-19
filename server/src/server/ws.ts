@@ -9,6 +9,7 @@ type WsScope = {
   encounterId?: string | null;
 };
 
+// MARK: - Create Ws Server
 export function createWsServer(opts: {
   httpServer: Server;
   path?: string;
@@ -61,11 +62,13 @@ export function createWsServer(opts: {
   return wss;
 }
 
+// MARK: - Send Ws Event
 export function sendWsEvent<K extends ServerEventType>(ws: WebSocket, type: K, payload: ServerEventMap[K]) {
   if (ws.readyState !== ws.OPEN) return;
   ws.send(JSON.stringify({ type, payload }));
 }
 
+// MARK: - Create Broadcaster
 export function createBroadcaster(wss: WebSocketServer | null | undefined): BroadcastFn {
   const refreshCoalesceWindowRaw = Number(process.env.BEHOLDEN_WS_REFRESH_COALESCE_MS ?? 40);
   const refreshCoalesceWindowMs =

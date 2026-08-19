@@ -173,6 +173,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     return contains ? mapLookupRow(contains) : null;
   }
 
+  // MARK: - GET /api/compendium/items
   app.get("/api/compendium/items", (req, res) => {
     applySharedApiCacheHeaders(res);
     const compactRaw = String(req.query.compact ?? "").trim().toLowerCase();
@@ -321,6 +322,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     return res.json(mapped);
   });
 
+  // MARK: - GET /api/compendium/items/facets
   app.get("/api/compendium/items/facets", (_req, res) => {
     applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const rarityRows = db
@@ -339,6 +341,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     });
   });
 
+  // MARK: - POST /api/compendium/items/lookup
   app.post("/api/compendium/items/lookup", (req, res) => {
     const body = parseBody(ItemLookupBody, req);
     const includeText = Boolean(body.includeText);
@@ -478,6 +481,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     res.json({ rows: Array.from(rows.values()) });
   });
 
+  // MARK: - GET /api/compendium/items/:itemId
   app.get("/api/compendium/items/:itemId", (req, res) => {
     applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const itemId = requireParam(req, res, "itemId");
@@ -523,13 +527,15 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     });
   });
 
-  app.post("/api/compendium/items", (req, res) => {
+  // MARK: - POST /api/compendium/items
+  app.post("/api/compendium/items", anyDm, (req, res) => {
     const id = grandEntryId("i", (req.body as Record<string, unknown> | undefined)?.name);
     saveGrandEntry(db, "items", req.body, id);
     ctx.broadcast("compendium:changed", { itemCreated: id });
     res.json({ ok: true, id });
   });
 
+  // MARK: - PUT /api/compendium/items/:itemId
   app.put("/api/compendium/items/:itemId", anyDm, (req, res) => {
     const itemId = requireParam(req, res, "itemId");
     if (!itemId) return;
@@ -541,6 +547,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     res.json({ ok: true });
   });
 
+  // MARK: - DELETE /api/compendium/items/:itemId
   app.delete("/api/compendium/items/:itemId", anyDm, (req, res) => {
     const itemId = requireParam(req, res, "itemId");
     if (!itemId) return;

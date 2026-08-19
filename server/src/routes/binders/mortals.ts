@@ -68,6 +68,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
   const reader = binderReaderOrAdmin(db);
   const owner = binderEditorOrAdmin(db);
 
+  // MARK: - GET /api/binders/:binderId/mortals
   app.get("/api/binders/:binderId/mortals", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
@@ -81,6 +82,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
     res.json(rows.map((row) => dto(row, db)));
   });
 
+  // MARK: - GET /api/binders/:binderId/mortal-options
   app.get("/api/binders/:binderId/mortal-options", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
@@ -154,6 +156,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
     res.json({ records, players, monsters });
   });
 
+  // MARK: - GET /api/binders/:binderId/mortals/:mortalId
   app.get("/api/binders/:binderId/mortals/:mortalId", reader, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     const mortalId = requireParam(req, res, "mortalId");
@@ -164,6 +167,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
     res.json(dto(row, db));
   });
 
+  // MARK: - POST /api/binders/:binderId/mortals
   app.post("/api/binders/:binderId/mortals", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     if (!binderId) return;
@@ -237,6 +241,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
     res.status(201).json(dto(row, db));
   });
 
+  // MARK: - PATCH /api/binders/:binderId/mortals/:mortalId
   app.patch("/api/binders/:binderId/mortals/:mortalId", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     const mortalId = requireParam(req, res, "mortalId");
@@ -296,6 +301,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
     res.json(dto(row, db));
   });
 
+  // MARK: - POST /api/binders/:binderId/mortals/:mortalId/image
   app.post("/api/binders/:binderId/mortals/:mortalId/image", owner, ctx.upload.single("image"), async (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     const mortalId = requireParam(req, res, "mortalId");
@@ -317,6 +323,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true, imageUrl: absolutizePublicUrlForRequest(req, imageUrl) });
   });
 
+  // MARK: - DELETE /api/binders/:binderId/mortals/:mortalId
   app.delete("/api/binders/:binderId/mortals/:mortalId", owner, (req, res) => {
     const binderId = requireParam(req, res, "binderId");
     const mortalId = requireParam(req, res, "mortalId");

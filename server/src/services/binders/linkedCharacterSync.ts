@@ -40,6 +40,8 @@ function numeric(value: unknown): number | null {
 }
 
 /** Character age is a projection onto the linked Mortal's historical date. */
+
+// MARK: - Sync Linked Mortal Age From Character
 export function syncLinkedMortalAgeFromCharacter(
   db: Db,
   characterId: string,
@@ -59,6 +61,8 @@ export function syncLinkedMortalAgeFromCharacter(
 }
 
 /** Binder date of birth is projected back to the canonical character age. */
+
+// MARK: - Sync Linked Character Age From Mortal
 export function syncLinkedCharacterAgeFromMortal(db: Db, mortalId: string, updatedAt: number): void {
   const linked = linkedRowForMortal(db, mortalId);
   if (!linked || linked.reference_year === null) return;
@@ -80,6 +84,7 @@ export function syncLinkedCharacterAgeFromMortal(db: Db, mortalId: string, updat
     .run(Object.keys(data).length ? JSON.stringify(data) : null, updatedAt, linked.character_id);
 }
 
+// MARK: - Sync Linked Mortal Portrait From Character
 export function syncLinkedMortalPortraitFromCharacter(
   db: Db,
   characterId: string,
@@ -96,6 +101,8 @@ export function syncLinkedMortalPortraitFromCharacter(
 }
 
 /** Character name is shared by the sheet, its campaign projections, and every linked Binder Mortal. */
+
+// MARK: - Sync Linked Mortal Name From Character
 export function syncLinkedMortalNameFromCharacter(
   db: Db,
   characterId: string,
@@ -113,6 +120,8 @@ export function syncLinkedMortalNameFromCharacter(
 }
 
 /** A Binder rename of a linked PC updates the canonical sheet and all campaign projections. */
+
+// MARK: - Sync Linked Character Name From Mortal
 export function syncLinkedCharacterNameFromMortal(
   db: Db,
   mortalId: string,
@@ -127,6 +136,7 @@ export function syncLinkedCharacterNameFromMortal(
     .run(name, updatedAt, linked.character_id);
 }
 
+// MARK: - Sync Linked Character Portrait From Mortal
 export function syncLinkedCharacterPortraitFromMortal(
   db: Db,
   mortalId: string,
@@ -142,6 +152,8 @@ export function syncLinkedCharacterPortraitFromMortal(
 }
 
 /** Apply all canonical character identity fields immediately after linking. */
+
+// MARK: - Hydrate Linked Mortal From Character
 export function hydrateLinkedMortalFromCharacter(db: Db, mortalId: string, updatedAt: number): void {
   const linked = linkedRowForMortal(db, mortalId);
   if (!linked) return;
@@ -163,6 +175,8 @@ export function hydrateLinkedMortalFromCharacter(db: Db, mortalId: string, updat
 }
 
 /** Reconcile links created before live two-way synchronization existed. */
+
+// MARK: - Reconcile Linked Character Identities
 export function reconcileLinkedCharacterIdentities(db: Db): void {
   const rows = db.prepare(`
     SELECT bpc.mortal_id, bpc.character_id, m.updated_at AS mortal_updated_at,

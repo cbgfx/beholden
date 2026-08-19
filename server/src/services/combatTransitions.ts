@@ -1,15 +1,18 @@
 import type { StoredConditionInstance, StoredEncounterActor } from "../server/userData.js";
 import { hasIncapacitatingCondition } from "@beholden/shared/domain/conditions";
 
+// MARK: - Conditions Break Concentration
 export function conditionsBreakConcentration(conditions: StoredConditionInstance[]): boolean {
   return hasIncapacitatingCondition(conditions)
     || conditions.some((condition) => condition.key === "rage");
 }
 
+// MARK: - Should Clear Tracked Concentration
 export function shouldClearTrackedConcentration(conditions: StoredConditionInstance[]): boolean {
   return !conditions.some((condition) => condition.key === "concentration");
 }
 
+// MARK: - Should Break Concentration
 export function shouldBreakConcentration(args: {
   hpCurrent: number | null | undefined;
   conditions: StoredConditionInstance[];
@@ -23,6 +26,7 @@ export function shouldBreakConcentration(args: {
 // Marked, etc. anymore, and leaving those badges on just clutters every "Down" combatant's display.
 const DOWNED_PERSISTENT_CONDITION_KEYS = new Set(["unconscious", "prone", "poisoned", "restrained", "petrified"]);
 
+// MARK: - Apply Condition Consequences
 export function applyConditionConsequences(args: {
   previousHpCurrent?: number | null;
   hpCurrent: number | null | undefined;
@@ -45,6 +49,7 @@ export function applyConditionConsequences(args: {
   return conditions;
 }
 
+// MARK: - Expire Conditions At Round
 export function expireConditionsAtRound(
   conditions: StoredConditionInstance[],
   round: number,
@@ -73,6 +78,7 @@ function conditionConcentrationId(condition: StoredConditionInstance | undefined
   return typeof raw === "string" && raw.trim() ? raw : null;
 }
 
+// MARK: - Ensure Concentration Id
 /**
  * Stamps a stable `concentrationId` onto a combatant's own "concentration" condition the first
  * time it appears, so dependent conditions elsewhere can later be tied to this specific session.
@@ -89,6 +95,7 @@ export function ensureConcentrationId(conditions: StoredConditionInstance[]): St
   return next;
 }
 
+// MARK: - Detect Ended Concentration
 /**
  * Detects whether `casterId`'s own "concentration" condition was present before and is gone after
  * — regardless of cause (HP loss, an incapacitating condition, a timed expiry, or simply being
@@ -107,6 +114,7 @@ export function detectEndedConcentration(
   return { casterId, concentrationId: conditionConcentrationId(before) };
 }
 
+// MARK: - Remove Conditions Owned By
 /**
  * Removes conditions owned by an ended concentration source from one combatant's condition list.
  * Conservative by construction:
@@ -133,6 +141,7 @@ export function removeConditionsOwnedBy(
   });
 }
 
+// MARK: - Apply Combatant Transition
 /**
  * Applies authoritative cross-field combat rules after a requested patch has
  * been merged into an encounter actor. Persistence, broadcasts, and response

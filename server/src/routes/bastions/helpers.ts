@@ -21,6 +21,7 @@ export const BASTION_SELECT = `
   b.notes, b.maintain_order, b.facilities_json, b.created_at, b.updated_at
 `;
 
+// MARK: - Replace Bastion Assignments
 export function replaceBastionAssignments(
   db: ServerContext["db"],
   bastionId: string,
@@ -56,6 +57,7 @@ function specialSlotsForLevel(level: number): number {
   return 0;
 }
 
+// MARK: - Read Compendium Facilities
 export function readCompendiumFacilities(db: ServerContext["db"]): BastionCompendiumFacility[] {
   const rows = db.prepare(
     "SELECT name, name_key, facility_type, minimum_level, prerequisite, orders_json, allow_multiple, space, hirelings, description FROM compendium_bastion_facilities ORDER BY minimum_level ASC, name COLLATE NOCASE ASC",
@@ -86,6 +88,7 @@ export function readCompendiumFacilities(db: ServerContext["db"]): BastionCompen
   }));
 }
 
+// MARK: - Read Campaign Player Rows
 export function readCampaignPlayerRows(
   db: ServerContext["db"],
   campaignId: string,
@@ -123,6 +126,7 @@ export function readCampaignPlayerRows(
   });
 }
 
+// MARK: - Role For Campaign
 export function roleForCampaign(
   db: ServerContext["db"],
   campaignId: string,
@@ -135,6 +139,7 @@ export function roleForCampaign(
   return row.role === "dm" ? "dm" : "player";
 }
 
+// MARK: - Parse Facility State
 export function parseFacilityState(raw: unknown): BastionFacilityState[] {
   const list = Array.isArray(raw) ? raw : [];
   return list
@@ -157,6 +162,7 @@ export function parseFacilityState(raw: unknown): BastionFacilityState[] {
     .filter((entry): entry is BastionFacilityState => Boolean(entry));
 }
 
+// MARK: - Normalize And Validate Facilities
 export function normalizeAndValidateFacilities(args: {
   db: ServerContext["db"];
   campaignId: string;
@@ -265,6 +271,7 @@ export function normalizeAndValidateFacilities(args: {
   return { facilities: normalized, level, specialSlots, specialSlotsUsed };
 }
 
+// MARK: - Parse Bastion Row
 export function parseBastionRow(
   row: BastionRow,
   compendiumFacilities: BastionCompendiumFacility[],

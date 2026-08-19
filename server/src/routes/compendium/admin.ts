@@ -22,6 +22,7 @@ import { record } from "../../lib/jsonRecord.js";
 import { compendiumUploadDirectory } from "../../lib/upload.js";
 import { consumeCompendiumPreview, stageCompendiumPreview } from "../../services/compendium/stagedCompendiumPreview.js";
 import { nativeCompendiumExportFilename, streamNativeCompendiumCategory } from "../../services/compendium/nativeCompendiumStreaming.js";
+import { generateDefaultSrdCompendium } from "../../services/compendium/defaultSrdCompendium.js";
 
 export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
@@ -36,6 +37,7 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
     });
   }
 
+  // MARK: - DELETE /api/compendium
   app.delete("/api/compendium", requireAdmin, (_req, res) => {
     db.transaction(() => {
       db.prepare("DELETE FROM compendium_monsters").run();
@@ -55,6 +57,7 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
     res.json({ ok: true });
   });
 
+  // MARK: - GET /api/compendium/native/:category/export
   app.get("/api/compendium/native/:category/export", requireAdmin, (req, res, next) => {
     const category = String(req.params.category ?? "");
     if (!isNativeCompendiumCategory(category)) {
@@ -70,6 +73,7 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
     stream.pipe(res);
   });
 
+  // MARK: - GET /api/compendium/native/export-all.zip
   app.get("/api/compendium/native/export-all.zip", requireAdmin, async (_req, res, next) => {
     const archive = new ZipArchive({ zlib: { level: 9 } });
     archive.on("error", next);
@@ -100,6 +104,7 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
     try { ctx.fs.unlinkSync(file.path); } catch { /* best-effort cleanup after request */ }
   }
 
+  // MARK: - POST /api/compendium/native/import
   app.post("/api/compendium/native/import", requireAdmin, ctx.compendiumUpload.single("file"), (req, res) => {
     if (!req.file) return res.status(400).json({ ok: false, message: "No file uploaded" });
     try {
@@ -120,6 +125,19 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
     }
   });
 
+  // MARK: - POST /api/compendium/srd/generate
+  app.post("/api/compendium/srd/generate", requireAdmin, (_req, res) => {
+    try {
+      const out = generateDefaultSrdCompendium(db);
+      broadcastImport(out);
+      return res.json({ ok: true, ...out });
+    } catch (error) {
+      const message = errorMessage(error, "Bundled SRD import failed.");
+      return res.status(400).json({ ok: false, message });
+    }
+  });
+
+  // MARK: - POST /api/compendium/native/import-preview
   app.post("/api/compendium/native/import-preview", requireAdmin, (req, res) => {
     const previewToken = String(req.body?.previewToken ?? "");
     try {
@@ -137,6 +155,7 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
     }
   });
 
+  // MARK: - POST /api/compendium/native/manifest
   app.post("/api/compendium/native/manifest", requireAdmin, (req, res) => {
     try {
       const body = record(req.body);
@@ -161,6 +180,7 @@ export function registerCompendiumAdminRoutes(app: Express, ctx: ServerContext) 
     }
   });
 
+  // MARK: - POST /api/compendium/native/preview
   app.post("/api/compendium/native/preview", requireAdmin, ctx.compendiumUpload.single("file"), (req, res) => {
     if (!req.file) return res.status(400).json({ ok: false, message: "No file uploaded" });
     try {

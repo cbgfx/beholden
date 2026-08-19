@@ -27,6 +27,7 @@ import { createEgressLoggingMiddleware, egressLogMinBytes } from "./egressLoggin
 import type { ServerContext } from "./context.js";
 import type { BroadcastFn } from "./events.js";
 import { multerErrorMiddleware, zodErrorMiddleware } from "../lib/validate.js";
+import { seedDefaultSrdCompendium } from "../services/compendium/defaultSrdCompendium.js";
 
 import {
   createInMemoryRateLimiter,
@@ -69,6 +70,10 @@ export function createServer() {
 
   // --- database -------------------------------------------------------------
   const db = openDb(paths.dbPath);
+  const seededSrd = seedDefaultSrdCompendium(db);
+  if (seededSrd.imported > 0) {
+    console.log(`[beholden] Imported ${seededSrd.imported} default SRD compendium entries.`);
+  }
   seedAdminUser(db, hashPassword, uid, now);
 
   // --- broadcast ------------------------------------------------------------

@@ -80,6 +80,8 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
       const entry = parseStoredGrandEntry(storedCategory, row.data_json) as Record<string, unknown>;
       return res.json(routeCategory === "backgrounds" ? projectBackgroundEquipmentNames(entry) : entry);
     };
+
+    // MARK: - GET /api/compendium/canonical/${routeCategory}/:id
     app.get(`/api/compendium/canonical/${routeCategory}/:id`, requireAuth, canonicalDetail);
   }
 
@@ -95,6 +97,8 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   }
 
   // --- Classes ---------------------------------------------------------------
+
+  // MARK: - GET /api/compendium/classes
   app.get("/api/compendium/classes", requireAuth, (req, res) => {
     applySharedApiCacheHeaders(res);
     const fields = parseRequestedFields(req.query.fields);
@@ -116,6 +120,8 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   });
 
   // --- Races -----------------------------------------------------------------
+
+  // MARK: - GET /api/compendium/races
   app.get("/api/compendium/races", requireAuth, (req, res) => {
     applySharedApiCacheHeaders(res);
     const fields = parseRequestedFields(req.query.fields);
@@ -139,6 +145,8 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   });
 
   // --- Backgrounds -----------------------------------------------------------
+
+  // MARK: - GET /api/compendium/backgrounds
   app.get("/api/compendium/backgrounds", requireAuth, (req, res) => {
     applySharedApiCacheHeaders(res);
     const fields = parseRequestedFields(req.query.fields);
@@ -158,6 +166,8 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
   });
 
   // --- Feats -----------------------------------------------------------------
+
+  // MARK: - GET /api/compendium/feats
   app.get("/api/compendium/feats", requireAuth, (req, res) => {
     applySharedApiCacheHeaders(res);
     const fields = parseRequestedFields(req.query.fields);
@@ -217,6 +227,7 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     }));
   });
 
+  // MARK: - GET /api/compendium/feats/:featId
   app.get("/api/compendium/feats/:featId", requireAuth, (req, res) => {
     applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const featId = requireParam(req, res, "featId");
@@ -234,6 +245,7 @@ export function registerLoreRoutes(app: Express, ctx: ServerContext) {
     res.json(buildFeatDetailFromRow(row));
   });
 
+  // MARK: - POST /api/compendium/feats/lookup
   app.post("/api/compendium/feats/lookup", requireAuth, (req, res) => {
     const body = parseBody(FeatLookupBody, req);
     const ids = Array.from(new Set(body.ids.map((id) => String(id ?? "").trim()).filter(Boolean)));
