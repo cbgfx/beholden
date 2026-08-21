@@ -19,6 +19,7 @@ export interface ParsedFeatChoiceLike<TOption = string> {
   split?: true;
   maximum?: number | null;
   level?: number | null;
+  schools?: string[];
   linkedTo?: string | null;
   dependsOnChoiceId?: string | null;
   dependencyKind?: "spell_list" | "ability_score" | "replacement" | null;

@@ -171,10 +171,9 @@ export function CharacterCreaturesPanel(props: {
         error={selectedMonsterState.error}
         accentColor={props.accentColor}
         onClose={() => setSelectedCreatureId(null)}
-        onSave={(nextCreature) => {
+        onSave={async (nextCreature) => {
           const nextCreatures = creatures.map((creature) => creature.id === nextCreature.id ? nextCreature : creature);
-          void persist(nextCreatures);
-          setSelectedCreatureId(nextCreature.id);
+          await persist(nextCreatures);
         }}
         onDelete={(creatureId) => {
           const nextCreatures = creatures.filter((creature) => creature.id !== creatureId);

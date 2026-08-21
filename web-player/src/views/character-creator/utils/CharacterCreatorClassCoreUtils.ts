@@ -198,13 +198,22 @@ export function getClassExpertiseChoices(cls: CreatorClassDetailLike | null, lev
 
       const structured = feature.choices?.find((choice) => choice.kind === "expertise");
       if (structured?.kind === "expertise") {
-        for (const [requiredLevelText, count] of Object.entries(structured.known)) {
-          const requiredLevel = Number(requiredLevelText);
-          if (requiredLevel > level) continue;
+        const progression = Object.entries(structured.known)
+          .map(([requiredLevelText, count]) => ({ requiredLevel: Number(requiredLevelText), count }))
+          .sort((a, b) => a.requiredLevel - b.requiredLevel);
+        let previousKnown = 0;
+        for (const { requiredLevel, count } of progression) {
+          if (requiredLevel > level) break;
           const key = `classexpertise:${requiredLevel}:${name}`;
           if (seen.has(key)) continue;
           seen.add(key);
-          choices.push({ key, source: name, count, options: structured.from ?? null, replace: structured.replace === true });
+          // `known` is a cumulative progression target (for example Bard: 2 at level 3,
+          // 4 at level 10), not the number newly granted at every row. Replacement choices
+          // are independent opportunities and therefore keep their stated count.
+          const grantedCount = structured.replace === true ? count : Math.max(0, count - previousKnown);
+          previousKnown = Math.max(previousKnown, count);
+          if (grantedCount === 0) continue;
+          choices.push({ key, source: name, count: grantedCount, options: structured.from ?? null, replace: structured.replace === true });
         }
       }
     }

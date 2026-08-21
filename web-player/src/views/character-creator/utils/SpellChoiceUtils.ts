@@ -56,6 +56,7 @@ export interface SharedSpellChoiceLike {
   maxLevel?: number | null;
   /** Typed Ritual-tag requirement. */
   ritual?: true | null;
+  schools?: string[] | null;
   linkedTo?: string | null;
   dependsOnChoiceId?: string | null;
   dependencyKind?: "spell_list" | "ability_score" | "replacement" | null;
@@ -107,7 +108,8 @@ export function buildResolvedSpellChoiceEntry(args: {
 }): SharedResolvedSpellChoiceEntry {
   const { key, choice, level, sourceLabel, chosenOptions, linkedChoiceKey } = args;
   const directOptions = choice.options ?? [];
-  const schools = directOptions.filter((name) => !FEAT_SPELL_LIST_NAMES.has(name));
+  const legacySchoolOptions = directOptions.filter((name) => !FEAT_SPELL_LIST_NAMES.has(name));
+  const schools = choice.schools?.length ? choice.schools : legacySchoolOptions;
   const effectiveLinkedChoiceKey = linkedChoiceKey ?? (choice.dependsOnChoiceId ? key.replace(`:${choice.id}`, `:${choice.dependsOnChoiceId}`) : null);
   const listNames = effectiveLinkedChoiceKey
     ? (chosenOptions[effectiveLinkedChoiceKey] ?? []).filter((name) => FEAT_SPELL_LIST_NAMES.has(name))
@@ -189,15 +191,19 @@ export async function loadSpellChoiceOptions(
           }
           // A typed `maxLevel` means "at or below" — never sniffed from note prose.
           if (typeof choice.maxLevel === "number" && choice.maxLevel > 0 && choice.level !== 0) {
-            return fetchSpells(buildSearchQuery({
+            // Fetch each level separately. A combined 1..N class-list search can exceed the
+            // server result cap (the 2014 Wizard list does by level 5), silently dropping
+            // alphabetically late options such as Wall of Force from Magical Secrets.
+            const levels = Array.from({ length: choice.maxLevel }, (_, index) => index + 1);
+            const levelGroups = await Promise.all(levels.map((level) => fetchSpells(buildSearchQuery({
               classes: encoded,
-              minLevel: 1,
-              maxLevel: choice.maxLevel,
+              level,
               schoolQuery,
               ritualQuery,
               limit: 220,
               includeText,
-            })).catch(() => []);
+            })).catch(() => [])));
+            return levelGroups.flat();
           }
           if (typeof choice.level === "number") {
             return fetchSpells(buildSearchQuery({
@@ -225,11 +231,22 @@ export async function loadSpellChoiceOptions(
         const query = choice.level === 0
           ? buildSearchQuery({ level: 0, schoolQuery, ritualQuery, limit: 200, includeText })
           : typeof choice.maxLevel === "number" && choice.maxLevel > 0
-            ? buildSearchQuery({ minLevel: 1, maxLevel: choice.maxLevel, schoolQuery, ritualQuery, limit: 280, includeText })
+            ? null
             : typeof choice.level === "number"
               ? buildSearchQuery({ level: choice.level, schoolQuery, ritualQuery, limit: 280, includeText })
               : buildSearchQuery({ schoolQuery, ritualQuery, limit: 280, includeText });
-        groups.push(await fetchSpells(query).catch(() => []));
+        if (query) {
+          groups.push(await fetchSpells(query).catch(() => []));
+        } else {
+          const levels = Array.from({ length: choice.maxLevel! }, (_, index) => index + 1);
+          groups.push(...await Promise.all(levels.map((level) => fetchSpells(buildSearchQuery({
+            level,
+            schoolQuery,
+            ritualQuery,
+            limit: 220,
+            includeText,
+          })).catch(() => []))));
+        }
       }
 
       const byName = new Map<string, SharedSpellSummary>();

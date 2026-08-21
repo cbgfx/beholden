@@ -44,7 +44,7 @@ export function CharacterCreatureDrawer(props: {
   error: string | null;
   accentColor: string;
   onClose: () => void;
-  onSave: (creature: CharacterCreature) => void;
+  onSave: (creature: CharacterCreature) => Promise<void>;
   onDelete: (creatureId: string) => void;
 }) {
   const [draft, setDraft] = useState<CharacterCreature | null>(props.creature);
@@ -98,12 +98,15 @@ export function CharacterCreatureDrawer(props: {
             </button>
             <button
               type="button"
-              onClick={() => props.onSave({
-                ...draft,
-                hpCurrent: Math.max(0, Math.floor(Number(draft.hpCurrent) || 0)),
-                hpMax: Math.max(1, Math.floor(Number(draft.hpMax) || 1)),
-                ac: Math.max(1, Math.floor(Number(draft.ac) || 1)),
-              })}
+              onClick={async () => {
+                await props.onSave({
+                  ...draft,
+                  hpCurrent: Math.max(0, Math.floor(Number(draft.hpCurrent) || 0)),
+                  hpMax: Math.max(1, Math.floor(Number(draft.hpMax) || 1)),
+                  ac: Math.max(1, Math.floor(Number(draft.ac) || 1)),
+                });
+                props.onClose();
+              }}
               style={accentButtonStyle(props.accentColor, {
                 textColor: "#081018",
                 padding: "8px 14px",

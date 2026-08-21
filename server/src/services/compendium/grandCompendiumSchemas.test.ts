@@ -1220,6 +1220,23 @@ test("FeatSchema: accepts mechanics with partial grants", () => {
   });
 });
 
+test("FeatSchema: accepts a school-restricted spell choice", () => {
+  passes(FeatSchema, {
+    ...validFeat,
+    mechanics: {
+      choices: [{
+        id: "fey_touched_spell",
+        type: "spell",
+        count: 1,
+        level: 1,
+        schools: ["Divination", "Enchantment"],
+      }],
+      uses: [{ count: 1, note: "free cast", grantsChoiceId: "fey_touched_spell" }],
+      spellcastingAbility: "cha",
+    },
+  });
+});
+
 test("FeatSchema: accepts spell-linked uses and rejects ambiguous links", () => {
   passes(FeatSchema, {
     ...validFeat,

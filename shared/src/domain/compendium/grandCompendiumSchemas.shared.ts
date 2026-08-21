@@ -121,6 +121,8 @@ const FeatChoiceSchema = z
     maxLevel: z.number().int().min(1).max(9).optional(),
     /** Spell choice only: eligible spells must have the Ritual tag. */
     ritual: z.literal(true).optional(),
+    /** Spell choice only: eligible spells must belong to one of these schools. */
+    schools: z.array(z.string().min(1)).min(1).optional(),
     linkedTo: z.string().min(1).optional(),
     dependsOnChoiceId: z.string().min(1).optional(),
     dependencyKind: z.enum(["spell_list", "ability_score", "replacement"]).optional(),

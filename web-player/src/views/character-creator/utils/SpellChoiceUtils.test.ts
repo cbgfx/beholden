@@ -50,12 +50,25 @@ describe("loadSpellChoiceOptions", () => {
 
     await loadSpellChoiceOptions([magicalDiscoveriesChoice(3)], fetchSpells);
 
-    expect(queries).toHaveLength(3);
+    expect(queries).toHaveLength(9);
     for (const query of queries) {
       const params = new URL(query, "http://beholden.local").searchParams;
-      expect(params.get("maxLevel")).toBe("3");
-      expect(params.has("level")).toBe(false);
+      expect(Number(params.get("level"))).toBeGreaterThanOrEqual(1);
+      expect(Number(params.get("level"))).toBeLessThanOrEqual(3);
+      expect(params.has("maxLevel")).toBe(false);
     }
+  });
+
+  it("does not lose late-alphabet Magical Secrets spells to a combined-search result cap", async () => {
+    const choice = magicalDiscoveriesChoice(5);
+    const options = await loadSpellChoiceOptions([choice], async (query) => {
+      const params = new URL(query, "http://beholden.local").searchParams;
+      return params.get("classes") === "Wizard" && params.get("level") === "5"
+        ? [{ id: "s_wall_of_force", name: "Wall of Force", level: 5 }]
+        : [];
+    });
+
+    expect(options[choice.key]).toContainEqual(expect.objectContaining({ name: "Wall of Force" }));
   });
 
   it("restricts Blessed Warrior choices to Cleric cantrips", () => {
@@ -75,6 +88,26 @@ describe("loadSpellChoiceOptions", () => {
     expect(choice.listNames).toEqual(["Cleric"]);
     expect(choice.level).toBe(0);
     expect(choice.count).toBe(2);
+  });
+
+  it("preserves typed school filters for constrained feat spell choices", () => {
+    const choice = buildResolvedSpellChoiceEntry({
+      key: "feat:fey-touched:spell",
+      choice: {
+        id: "fey_touched_spell",
+        count: 1,
+        options: [],
+        level: 1,
+        schools: ["Divination", "Enchantment"],
+      },
+      level: 4,
+      sourceLabel: "Fey Touched",
+      chosenOptions: {},
+    });
+
+    expect(choice.listNames).toEqual([]);
+    expect(choice.schools).toEqual(["Divination", "Enchantment"]);
+    expect(choice.level).toBe(1);
   });
 
   it("tags Blessed Warrior cantrips with Charisma", () => {
