@@ -37,7 +37,7 @@ function ageOf(mortal: Mortal, currentDate: number | null) {
 
 function portraitSrc(mortal: Mortal) {
   if (!mortal.imageUrl) return null;
-  return `${mortal.imageUrl}${mortal.imageUpdatedAt ? `?v=${mortal.imageUpdatedAt}` : ""}`;
+  return `${mortal.imageUrl}${mortal.imageUpdatedAt ? `${mortal.imageUrl.includes("?") ? "&" : "?"}v=${mortal.imageUpdatedAt}` : ""}`;
 }
 
 function StatusPill({ status }: { status: string | null }) {

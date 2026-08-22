@@ -70,5 +70,5 @@ export function BinderDataTableThumbnail(props: { imageUrl?: string | null; imag
   const size = props.size ?? 28;
   if (!props.imageUrl) return <span style={{ width: size, height: size, borderRadius: 6, background: `color-mix(in srgb, ${props.accent} 12%, transparent)`, flex: "0 0 auto" }} />;
   const base = props.resolveUrl ? props.resolveUrl(props.imageUrl) : props.imageUrl;
-  return <img src={`${base}${props.imageUpdatedAt ? `?v=${props.imageUpdatedAt}` : ""}`} alt="" style={{ width: size, height: size, borderRadius: 6, objectFit: "cover", flex: "0 0 auto" }} />;
+  return <img src={`${base}${props.imageUpdatedAt ? `${base.includes("?") ? "&" : "?"}v=${props.imageUpdatedAt}` : ""}`} alt="" style={{ width: size, height: size, borderRadius: 6, objectFit: "cover", flex: "0 0 auto" }} />;
 }

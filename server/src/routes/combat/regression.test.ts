@@ -108,7 +108,7 @@ describe("combat state regression: HP/condition mutation, transitions, and live 
     db.prepare(`
       INSERT INTO user_characters (id, user_id, name, hp_max, hp_current, character_data_json, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(playerCharacterId, playerUserId, "Hero", 20, 20, "{}", t, t);
+    `).run(playerCharacterId, playerUserId, "Hero", 20, 20, '{"age":20,"gender":"male"}', t, t);
     playerRowId = "player-1";
     db.prepare(`
       INSERT INTO players
@@ -448,6 +448,28 @@ describe("combat state regression: HP/condition mutation, transitions, and live 
       assert.ok(!conditions.some((c) => c.key === "hexed"), "player-ended concentration should sweep its dependent too");
     });
 
+    it("sweeps Hex when the concentrating character is reduced to 0 through the character sheet", async () => {
+      const { body: casterBody } = await dmRequest(
+        "PUT", `/api/encounters/${encounterId}/combatants/${playerCombatantId}`,
+        { hpCurrent: 20, conditions: [{ key: "concentration" }] },
+      );
+      const concentrationId = liveOf(casterBody).conditions?.find((c) => c.key === "concentration")?.concentrationId ?? null;
+      assert.ok(concentrationId);
+
+      await dmRequest(
+        "PUT", `/api/encounters/${encounterId}/combatants/${monster2CombatantId}`,
+        { conditions: [{ key: "hexed", casterId: playerCombatantId, concentrationId, hexAbility: "wis" }] },
+      );
+
+      const { status } = await request(
+        "PUT", `/api/me/characters/${playerCharacterId}`, { hpCurrent: 0 }, playerToken,
+      );
+      assert.equal(status, 200);
+
+      const { body } = await dmRequest("GET", `/api/encounters/${encounterId}/combatants/${monster2CombatantId}`);
+      assert.ok(!(liveOf(body).conditions ?? []).some((condition) => condition.key === "hexed"));
+    });
+
     it("sweeps dependent conditions when the caster's own concentration expires via round progression", async () => {
       const { body: casterBody } = await dmRequest(
         "PUT", `/api/encounters/${encounterId}/combatants/${monsterCombatantId}`,
@@ -563,9 +585,17 @@ describe("combat state regression: HP/condition mutation, transitions, and live 
     });
 
     it("always exposes other allies and includes HP percentage for PCs", async () => {
+      const allyPlayerId = "player-ally-regression";
+      const allyCreatedAt = Date.now();
+      db.prepare(`
+        INSERT INTO players
+          (id, campaign_id, player_name, character_name, hp_max, hp_current, ac, live_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(allyPlayerId, campaignId, "Ally Player", "Ser Rowan", 20, 20, 15, "{}", allyCreatedAt, allyCreatedAt);
       const ally = makeReserveEnemy({
         id: "combatant-ally-regression",
         baseType: "player",
+        baseId: allyPlayerId,
         name: "Friendly Guard",
         label: "Ser Rowan",
         initiative: 11,
@@ -582,16 +612,22 @@ describe("combat state regression: HP/condition mutation, transitions, and live 
       assert.ok(!JSON.stringify(healthyCombat.allies).includes("hpCurrent"));
       assert.ok(!JSON.stringify(healthyCombat.allies).includes("hpMax"));
 
-      db.prepare("UPDATE combatants SET live_json = json_set(live_json, '$.hpCurrent', 15) WHERE id = ?").run(ally.id);
+      db.prepare("UPDATE players SET hp_current = 15 WHERE id = ?").run(allyPlayerId);
       const damaged = await request("GET", statusUrl, undefined, playerToken);
       assert.deepEqual((damaged.body as { combat: { allies: Array<Record<string, unknown>> } }).combat.allies[0], {
         id: ally.id, name: "Ser Rowan", health: "Damaged", hpPercent: 75,
       });
 
-      db.prepare("UPDATE combatants SET live_json = json_set(live_json, '$.hpCurrent', 10) WHERE id = ?").run(ally.id);
+      db.prepare("UPDATE players SET hp_current = 10 WHERE id = ?").run(allyPlayerId);
       const bloody = await request("GET", statusUrl, undefined, playerToken);
       assert.deepEqual((bloody.body as { combat: { allies: Array<Record<string, unknown>> } }).combat.allies[0], {
         id: ally.id, name: "Ser Rowan", health: "Bloody", hpPercent: 50,
+      });
+
+      db.prepare("UPDATE players SET hp_current = 0 WHERE id = ?").run(allyPlayerId);
+      const down = await request("GET", statusUrl, undefined, playerToken);
+      assert.deepEqual((down.body as { combat: { allies: Array<Record<string, unknown>> } }).combat.allies[0], {
+        id: ally.id, name: "Ser Rowan", health: "Down", hpPercent: 0,
       });
     });
 

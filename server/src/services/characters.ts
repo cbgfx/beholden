@@ -15,7 +15,8 @@ import type {
   StoredCharacterSheetState,
   StoredOverrides,
 } from "../server/userData.js";
-import { applyConditionConsequences, shouldBreakConcentration } from "./combatTransitions.js";
+import { applyConditionConsequences, detectEndedConcentration, shouldBreakConcentration } from "./combatTransitions.js";
+import type { EndedConcentration } from "./combatTransitions.js";
 
 export type Assignment = {
   campaign_id: string;
@@ -415,7 +416,8 @@ export function syncAssignedPlayerRows(
   updatedAt: number,
   userId?: string,
   livePatch?: Partial<StoredCampaignCharacterLiveState>,
-) {
+): Array<{ encounterId: string; ended: EndedConcentration }> {
+  const endedConcentrations: Array<{ encounterId: string; ended: EndedConcentration }> = [];
   for (const { player_id, campaign_id } of getAssignedPlayers(db, charId)) {
     updateProjectedPlayerRow(db, player_id, snapshot, updatedAt, userId);
     if (livePatch && Object.keys(livePatch).length > 0) {
@@ -436,11 +438,21 @@ export function syncAssignedPlayerRows(
             WHERE id = ?
           `).run(charId);
         }
+        const nextConditions = losesConcentration
+          ? effectiveConditions.filter((condition) => condition.key !== "concentration")
+          : effectiveConditions;
+        if (losesConcentration) {
+          const combatants = db.prepare(
+            "SELECT id, encounter_id FROM combatants WHERE base_type = 'player' AND base_id = ?",
+          ).all(player_id) as Array<{ id: string; encounter_id: string }>;
+          for (const combatant of combatants) {
+            const ended = detectEndedConcentration(combatant.id, current.conditions ?? [], nextConditions);
+            if (ended) endedConcentrations.push({ encounterId: combatant.encounter_id, ended });
+          }
+        }
         updateCampaignCharacterLive(db, player_id, current, {
           ...livePatch,
-          conditions: losesConcentration
-            ? effectiveConditions.filter((condition) => condition.key !== "concentration")
-            : effectiveConditions,
+          conditions: nextConditions,
         }, updatedAt);
       }
     }
@@ -453,6 +465,7 @@ export function syncAssignedPlayerRows(
     });
     broadcastPlayerCombatantChanges(db, broadcast, player_id);
   }
+  return endedConcentrations;
 }
 
 function syncPlayerCombatantSnapshots(

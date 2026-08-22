@@ -43,6 +43,7 @@ export interface InventoryItem {
   spells?: ItemSpells | null;
   spellcasting?: ItemSpellcasting | null;
   spellTemplate?: ItemSpellTemplates | null;
+  storedSpells?: StoredItemSpell[];
   ammo?: AmmoFamily | null;
   weaponAmmo?: AmmoFamily | null;
   usage?: "held" | null;
@@ -120,7 +121,18 @@ type ItemSpellAccess = number | "level" | {
 export type ItemSpells = Record<string, ItemSpellAccess>;
 export type ItemSpellcasting = "character" | { dc?: number; attack?: number };
 export type AmmoFamily = "arrow" | "bolt" | "energy-cell" | "firearm-bullet" | "needle" | "sling-bullet";
-type ItemSpellTemplate =
+export interface StoredItemSpell {
+  instanceId: string;
+  id: string;
+  name: string;
+  level: number;
+  slotLevel: number;
+  saveDc?: number | null;
+  attackBonus?: number | null;
+  spellcastingAbility?: string | null;
+}
+
+export type ItemSpellTemplate =
   | { kind: "bound"; level?: number; minLevel?: number; maxLevel?: number; list?: string; schools?: string[]; cost?: number | "level"; uses?: number; consume?: true; prepared?: true; dc?: number; attack?: number; stats?: Record<string, { dc?: number; attack?: number }> }
   | { kind: "stored"; capacity: number; minLevel?: number; maxLevel?: number; initial?: string }
   | { kind: "choice"; list: string; level?: number; minLevel?: number; maxLevel?: number; uses?: number; recovery?: "short_rest" | "long_rest" }

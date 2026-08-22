@@ -18,13 +18,14 @@ export function FeatSelectionSection(props: {
   featRepeatableValid: boolean;
   featChoiceEntries: LevelUpFeatChoice[];
   featChoiceOptionsByKey: Record<string, string[]>;
+  featSpellChoiceOptions: Record<string, Array<{ id: string; name: string }>>;
   chosenFeatOptions: Record<string, string[]>;
   nextLevel: number;
   onToggleFeatOption: (choiceKey: string, option: string, count: number) => void;
 }) {
   const {
     accentColor, featSearch, onFeatSearchChange, chosenFeatId, filteredFeatSummaries, onChooseFeat,
-    chosenFeatDetail, featPrereqsMet, featRepeatableValid, featChoiceEntries, featChoiceOptionsByKey, chosenFeatOptions, nextLevel, onToggleFeatOption,
+    chosenFeatDetail, featPrereqsMet, featRepeatableValid, featChoiceEntries, featChoiceOptionsByKey, featSpellChoiceOptions, chosenFeatOptions, nextLevel, onToggleFeatOption,
   } = props;
 
   return (
@@ -110,10 +111,9 @@ export function FeatSelectionSection(props: {
         </div>
       )}
 
-      {chosenFeatDetail && featChoiceEntries.some((choice) => choice.type !== "spell" && choice.type !== "spell_list") && (
+      {chosenFeatDetail && featChoiceEntries.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {featChoiceEntries
-            .filter((choice) => choice.type !== "spell" && choice.type !== "spell_list")
             .map((choice) => {
             const choiceKey = `levelupfeat:${nextLevel}:${chosenFeatDetail.id}:${choice.id}`;
             const selected = chosenFeatOptions[choiceKey] ?? [];
@@ -141,7 +141,11 @@ export function FeatSelectionSection(props: {
                 )}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {options.map((option) => {
-                    const isSelected = selected.includes(option);
+                    const spellOption = choice.type === "spell"
+                      ? (featSpellChoiceOptions[choiceKey] ?? []).find((entry) => entry.name === option)
+                      : null;
+                    const selectionValue = spellOption?.id ?? option;
+                    const isSelected = selected.includes(selectionValue) || selected.includes(option);
                     const blocked = !featPrereqsMet || !featRepeatableValid || (!isSelected && selected.length >= choice.count);
                     return (
                       <ChoiceBtn
@@ -149,7 +153,7 @@ export function FeatSelectionSection(props: {
                         active={isSelected}
                         onClick={() => {
                           if (blocked) return;
-                          onToggleFeatOption(choiceKey, option, choice.count);
+                          onToggleFeatOption(choiceKey, selectionValue, choice.count);
                         }}
                         accent={accentColor}
                       >

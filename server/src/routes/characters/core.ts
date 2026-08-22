@@ -23,6 +23,7 @@ import {
   syncAssignedPlayerRows,
   updateProjectedPlayerRow,
 } from "../../services/characters.js";
+import { sweepDependentConditions } from "../../services/combat.js";
 import { prepareUploadedImage } from "../../lib/imageHelpers.js";
 import { absolutizePublicUrlForRequest } from "../../lib/publicUrl.js";
 import { withAbsoluteImageUrl } from "../../lib/routeImageUrl.js";
@@ -231,16 +232,15 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       linkedMortalId: access.linkedMortalId,
       campaigns,
       deities: publicRecords.filter((record) => record.type === "deity").map((record) => ({
-        ...record,
+        ...withAbsoluteImageUrl(req, record),
         domains: record.domains ? String(record.domains).split("||") : [],
       })),
-      places: publicRecords.filter((record) => record.type !== "deity"),
+      places: publicRecords.filter((record) => record.type !== "deity").map((record) => withAbsoluteImageUrl(req, record)),
       mortals: mortals.map((mortal) => ({
-        ...mortal,
+        ...withAbsoluteImageUrl(req, mortal),
         age: mortal.birthDateSort != null && (mortal.deathDateSort != null || access.currentDateSort != null)
           ? Math.max(0, Number(mortal.deathDateSort ?? access.currentDateSort) - Number(mortal.birthDateSort))
           : null,
-        imageUrl: mortal.imageUrl ? String(mortal.imageUrl) : null,
       })),
     });
   });
@@ -441,7 +441,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       characterData: characterDataForStorage,
     };
     const sheetOverrides = getCharacterSheetOverrides(nextChar);
-    syncAssignedPlayerRows(
+    const endedConcentrations = syncAssignedPlayerRows(
       db,
       ctx.broadcast,
       charId,
@@ -455,6 +455,9 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
           }
         : undefined,
     );
+    for (const { encounterId, ended } of endedConcentrations) {
+      sweepDependentConditions(db, ctx.broadcast, encounterId, ended, t, ended.casterId);
+    }
 
     const updated = db.prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ?`).get(charId) as Record<string, unknown>;
     res.json(withAbsoluteImageUrl(req, toCharacterSheetDto({ ...rowToCharacterSheet(updated), campaigns: [] })));

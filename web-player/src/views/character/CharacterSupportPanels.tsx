@@ -51,6 +51,7 @@ export function CharacterSupportPanels(props: {
   onSavePlayerNotesOrder: (list: PlayerNote[]) => void;
   onSaveSharedNotesOrder: (list: PlayerNote[]) => void;
   showReferenceContent?: boolean;
+  showFeatures?: boolean;
   afterUpkeep?: React.ReactNode;
   polymorphName?: string | null;
   onOpenTransformSelf: () => void;
@@ -94,6 +95,7 @@ export function CharacterSupportPanels(props: {
     onSavePlayerNotesOrder,
     onSaveSharedNotesOrder,
     showReferenceContent = true,
+    showFeatures = showReferenceContent,
     afterUpkeep,
     polymorphName,
     onOpenTransformSelf,
@@ -462,6 +464,10 @@ export function CharacterSupportPanels(props: {
         />
       </NotesPanel>}
 
+        </>
+      )}
+
+      {showFeatures && (
           <CollapsiblePanel
             title="Features"
             color={accentColor}
@@ -523,7 +529,6 @@ export function CharacterSupportPanels(props: {
           <EmptyState textColor={C.muted}>No features yet. Add feats with the + button above.</EmptyState>
         )}
           </CollapsiblePanel>
-        </>
       )}
 
     </div>

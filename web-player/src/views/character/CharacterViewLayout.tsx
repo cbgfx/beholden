@@ -255,6 +255,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
             onSavePlayerNotesOrder={(list) => { void notes.savePlayerNotesList(list); }}
             onSaveSharedNotesOrder={notes.saveSharedNotesList}
             showReferenceContent={ui.sheetView !== "play"}
+            showFeatures={ui.sheetView === "play" || ui.sheetView === "reference" || ui.sheetView === "all"}
             creaturesProps={ui.sheetView === "play" || ui.sheetView === "all" ? {
               charData: char.characterData,
               accentColor: derived.accentColor,

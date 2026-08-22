@@ -25,6 +25,7 @@ const allyHealthColor: Record<CombatAlly["health"], string> = {
   Healthy: "#22c55e",
   Damaged: "#f59e0b",
   Bloody: "#ef4444",
+  Down: "#94a3b8",
 };
 
 // One combatant card shared by the Allies and Enemies lists below: name + health badge,
@@ -80,6 +81,7 @@ export function EngagedEnemiesDrawer(props: {
               healthLabel={ally.health}
               healthColor={allyHealthColor[ally.health]}
               headerExtra={ally.hpPercent != null ? <span style={{ color: C.muted, fontWeight: 700 }}>{ally.hpPercent}%</span> : null}
+              isDown={ally.health === "Down"}
             >
               {ally.hpPercent != null && (
                 <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>

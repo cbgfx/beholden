@@ -209,10 +209,14 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
         c.id,
         c.base_type AS baseType,
         json_extract(c.snapshot_json, '$.label') AS label,
-        json_extract(c.live_json, '$.hpCurrent') AS hpCurrent,
-        json_extract(c.snapshot_json, '$.hpMax') AS hpMax,
-        COALESCE(json_extract(c.live_json, '$.overrides.hpMaxBonus'), 0) AS hpMaxBonus
+        CASE WHEN c.base_type = 'player' THEN COALESCE(p.hp_current, json_extract(c.live_json, '$.hpCurrent')) ELSE json_extract(c.live_json, '$.hpCurrent') END AS hpCurrent,
+        CASE WHEN c.base_type = 'player' THEN COALESCE(p.hp_max, json_extract(c.snapshot_json, '$.hpMax')) ELSE json_extract(c.snapshot_json, '$.hpMax') END AS hpMax,
+        CASE WHEN c.base_type = 'player'
+          THEN COALESCE(json_extract(p.live_json, '$.overrides.hpMaxBonus'), 0)
+          ELSE COALESCE(json_extract(c.live_json, '$.overrides.hpMaxBonus'), 0)
+        END AS hpMaxBonus
       FROM combatants c
+      LEFT JOIN players p ON c.base_type = 'player' AND p.id = c.base_id
       WHERE c.encounter_id = ?
         AND c.id != ?
         AND COALESCE(json_extract(c.snapshot_json, '$.friendly'), 0) = 1
@@ -230,7 +234,7 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
       const bucket = resolveHpBucket(ally.hpCurrent, ally.hpMax, ally.hpMaxBonus);
       if (!bucket) return [];
       const { current, maximum } = bucket;
-      const health = current * 2 <= maximum ? "Bloody" : current < maximum ? "Damaged" : "Healthy";
+      const health = current <= 0 ? "Down" : current * 2 <= maximum ? "Bloody" : current < maximum ? "Damaged" : "Healthy";
       const hpPercent = ally.baseType === "player"
         ? Math.max(0, Math.min(100, Math.round((current / maximum) * 100)))
         : undefined;

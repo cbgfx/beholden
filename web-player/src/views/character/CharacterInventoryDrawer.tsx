@@ -16,6 +16,7 @@ import {
 } from "@/views/character/CharacterInventory";
 import { inventoryPickerDetailStyle, inventoryRarityColor } from "@/views/character/CharacterViewParts";
 import { DEFAULT_CONTAINER_ID, inputStyle } from "@/views/character/CharacterInventoryPanelHelpers";
+import { CharacterStoredSpellManager } from "@/views/character/CharacterStoredSpellManager";
 
 export function InventoryItemDrawer(props: {
   item: InventoryItem;
@@ -68,7 +69,7 @@ export function InventoryItemDrawer(props: {
     (isArmorLike && draft.ac != null) || (isWeaponLike && draft.dmg1) || (isWeaponLike && draft.dmg2) ||
     (isWeaponLike && draft.dmgType) || (isWeaponLike && draft.properties.length > 0) || draft.stealthDisadvantage ||
     draft.attunement || draft.attuned || draft.magic || (isMeleeWeaponLike && draft.silvered) || (props.item.chargesMax ?? 0) > 0 ||
-    Boolean(props.detail?.source)
+    Boolean(props.detail?.source) || Boolean(props.item.spellTemplate)
   );
   const canEnableAttuned = draft.attuned || props.otherAttunedCount < 3;
   const currentContainerId = props.item.containerId ?? DEFAULT_CONTAINER_ID;
@@ -145,7 +146,7 @@ export function InventoryItemDrawer(props: {
           ) : props.busy ? (
             <div style={{ color: C.muted, padding: "8px 2px" }}>Loading...</div>
           ) : hasAnyDetails ? (
-            <ReadFields draft={draft} item={props.item} source={props.detail?.source} ruleset={props.detail?.ruleset} isWeaponLike={isWeaponLike} isArmorLike={isArmorLike} isMeleeWeaponLike={isMeleeWeaponLike} accentColor={props.accentColor} onChargesChange={props.onChargesChange} />
+            <ReadFields draft={draft} item={props.item} source={props.detail?.source} ruleset={props.detail?.ruleset} isWeaponLike={isWeaponLike} isArmorLike={isArmorLike} isMeleeWeaponLike={isMeleeWeaponLike} accentColor={props.accentColor} onChargesChange={props.onChargesChange} onSave={props.onSave} />
           ) : (
             <div style={{ border: `1px solid ${C.panelBorder}`, borderRadius: 12, padding: 14, color: C.muted, minHeight: 96, display: "flex", alignItems: "center" }}>No details yet. Use Edit to add player-specific notes or item data.</div>
           )}
@@ -250,9 +251,10 @@ type ReadFieldsProps = {
   isMeleeWeaponLike: boolean;
   accentColor: string;
   onChargesChange: (charges: number) => void | Promise<void>;
+  onSave: (patch: Partial<InventoryItem>) => Promise<void>;
 };
 
-function ReadFields({ draft, item, source, ruleset, isWeaponLike, isArmorLike, isMeleeWeaponLike, accentColor, onChargesChange }: ReadFieldsProps) {
+function ReadFields({ draft, item, source, ruleset, isWeaponLike, isArmorLike, isMeleeWeaponLike, accentColor, onChargesChange, onSave }: ReadFieldsProps) {
   return (
     <>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -278,6 +280,7 @@ function ReadFields({ draft, item, source, ruleset, isWeaponLike, isArmorLike, i
         </div>
       ) : null}
       {(item.chargesMax ?? 0) > 0 ? <ChargeBoxes item={item} accentColor={accentColor} onChargesChange={onChargesChange} /> : null}
+      <CharacterStoredSpellManager item={item} ruleset={ruleset} accentColor={accentColor} onSave={onSave} />
       <div style={{ ...inventoryPickerDetailStyle, minHeight: 60 }}>{draft.description || <span style={{ color: C.muted }}>No description.</span>}</div>
       {source ? (
         <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>

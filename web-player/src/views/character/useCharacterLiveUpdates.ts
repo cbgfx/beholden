@@ -6,7 +6,7 @@ type ActiveBastion = { id: string; name: string; campaignId: string };
 type InitiativePrompt = { encounterId: string; combatantId: string };
 type EngagedEnemyCondition = { key: string; hexAbility?: string };
 export type EngagedEnemy = { id: string; name: string; health: "Damaged" | "Bloodied" | "Down"; conditions?: EngagedEnemyCondition[] };
-export type CombatAlly = { id: string; name: string; health: "Healthy" | "Damaged" | "Bloody"; hpPercent?: number };
+export type CombatAlly = { id: string; name: string; health: "Healthy" | "Damaged" | "Bloody" | "Down"; hpPercent?: number };
 type CombatStatus = { encounterId: string; combatantId: string; usedReaction: boolean; engagedEnemies: EngagedEnemy[]; allies: CombatAlly[] };
 
 export function useCharacterLiveUpdates(
@@ -149,8 +149,11 @@ export function useCharacterLiveUpdates(
       if (payload.characterId === characterId) {
         setConcentrationAlert({ dc: payload.dc });
       }
-    } else if (message.type === "bastions:delta" || message.type === "players:delta") {
+    } else if (message.type === "bastions:delta") {
       void refreshActiveBastion();
+    } else if (message.type === "players:delta") {
+      void refreshActiveBastion();
+      void refreshCombatStatus();
     } else if (message.type === "xp:awarded") {
       const payload = message.payload as { characterId: string };
       if (payload.characterId === characterId) onXpAwarded();

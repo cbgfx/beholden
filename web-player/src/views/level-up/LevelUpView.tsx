@@ -551,9 +551,10 @@ export function LevelUpView() {
               featPrereqsMet={featPrereqsMet}
               featRepeatableValid={featRepeatableValid}
               featChoiceEntries={featChoiceEntries}
-                featChoiceOptionsByKey={featChoiceOptionsByKey}
-                chosenFeatOptions={chosenFeatOptions}
-                nextLevel={nextLevel}
+              featChoiceOptionsByKey={featChoiceOptionsByKey}
+              featSpellChoiceOptions={featSpellChoiceOptions}
+              chosenFeatOptions={chosenFeatOptions}
+              nextLevel={nextLevel}
               onToggleFeatOption={(choiceKey, option, count) =>
                 toggleMultiChoice(choiceKey, option, count, setChosenFeatOptions)
               }
