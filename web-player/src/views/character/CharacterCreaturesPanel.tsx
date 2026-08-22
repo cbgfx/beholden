@@ -3,9 +3,10 @@ import { C } from "@/lib/theme";
 import { CharacterCreatureDrawer } from "@/views/character/CharacterCreatureDrawer";
 import { CharacterCreaturePickerModal } from "@/views/character/CharacterCreaturePickerModal";
 import { useCompendiumMonster } from "@/views/character/CharacterCompendiumMonsterHooks";
-import { creatureAcPill, creatureHpPill, creatureRoundPill, formatCreatureMonsterSource } from "@/views/character/CharacterCreaturesHelpers";
+import { creatureAcPill, creatureHpPill, formatCreatureMonsterSource } from "@/views/character/CharacterCreaturesHelpers";
 import { CollapsiblePanel, panelHeaderAddBtn } from "@/views/character/CharacterViewParts";
 import type { CharacterCreature, CharacterData } from "@/views/character/CharacterSheetTypes";
+import { IconButton } from "@/ui/IconButton";
 
 export function CharacterCreaturesPanel(props: {
   charData: CharacterData | null;
@@ -110,28 +111,28 @@ export function CharacterCreaturesPanel(props: {
                       </div>
                     </div>
                     <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <button
-                        type="button"
+                      <IconButton
+                        size="sm"
+                        variant="ghost"
                         onClick={(e) => {
                           e.stopPropagation();
                           adjustCreatureHp(creature.id, -1);
                         }}
                         title="Take 1 damage"
-                        style={creatureRoundPill(C.muted)}
                       >
                         -
-                      </button>
-                      <button
-                        type="button"
+                      </IconButton>
+                      <IconButton
+                        size="sm"
+                        variant="ghost"
                         onClick={(e) => {
                           e.stopPropagation();
                           adjustCreatureHp(creature.id, 1);
                         }}
                         title="Heal 1 HP"
-                        style={creatureRoundPill(C.muted)}
                       >
                         +
-                      </button>
+                      </IconButton>
                     </div>
                     <span style={creatureHpPill(creature.hpCurrent, creature.hpMax)}>
                       HP {creature.hpCurrent}/{creature.hpMax}

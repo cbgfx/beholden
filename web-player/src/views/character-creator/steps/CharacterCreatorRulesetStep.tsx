@@ -1,5 +1,5 @@
 import React from "react";
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
 import { NavButtons } from "../shared/CharacterCreatorParts";
 import { headingStyle } from "../shared/CharacterCreatorStyles";
 import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
@@ -43,8 +43,8 @@ function renderRulesetStep({
                 padding: "16px 18px",
                 borderRadius: 10,
                 textAlign: "left",
-                border: `2px solid ${selected ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                background: selected ? "rgba(56,182,255,0.15)" : "rgba(255,255,255,0.055)",
+                border: `2px solid ${selected ? C.accentHl : C.panelBorder}`,
+                background: selected ? withAlpha(C.accentHl, 0.15) : C.panelBg,
                 color: selected ? C.accentHl : C.text,
                 cursor: locked ? "default" : "pointer",
                 opacity: locked && !selected ? 0.5 : 1,

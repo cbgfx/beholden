@@ -1,8 +1,8 @@
 import { C } from "@/lib/theme";
+import { IconButton } from "@/ui/IconButton";
 import type { GrantedSpellCast, ResourceCounter } from "@/views/character/CharacterSheetTypes";
 import {
   type FetchedSpellDetail,
-  grantedSpellChargeBtn,
   spellSectionArrow,
   spellSectionHeaderBtn,
 } from "@/views/character/CharacterSpellShared";
@@ -96,26 +96,26 @@ export function CharacterSpellsGrantedSection({
                 );
               })() : resource ? (
                 <>
-                  <button
-                    type="button"
+                  <IconButton
+                    variant="ghost"
+                    size="sm"
                     onClick={() => void onResourceChange?.(resource.key, -1)}
                     disabled={resource.current <= 0}
-                    style={grantedSpellChargeBtn(resource.current > 0)}
                   >
                     -
-                  </button>
+                  </IconButton>
                   <div style={{ textAlign: "center", minWidth: 58 }}>
                     <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text }}>{resource.current}/{resource.max}</div>
                     <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{formatResourceResetLabel(resource.reset)}</div>
                   </div>
-                  <button
-                    type="button"
+                  <IconButton
+                    variant="ghost"
+                    size="sm"
                     onClick={() => void onResourceChange?.(resource.key, 1)}
                     disabled={resource.current >= resource.max}
-                    style={grantedSpellChargeBtn(resource.current < resource.max)}
                   >
                     +
-                  </button>
+                  </IconButton>
                 </>
               ) : null}
             </div>

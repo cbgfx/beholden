@@ -1,5 +1,6 @@
 import type React from "react";
 import { C } from "@/lib/theme";
+import { Button } from "@/ui/Button";
 
 export function CharacterConcentrationPickerModal(props: {
   open: boolean;
@@ -125,22 +126,9 @@ export function CharacterConcentrationPickerModal(props: {
         </div>
 
         <div style={{ padding: "8px 20px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-          <button
-            type="button"
-            onClick={props.onClose}
-            style={{
-              background: "transparent",
-              border: "1px solid rgba(255,255,255,0.15)",
-              borderRadius: 8,
-              color: C.muted,
-              fontSize: "var(--fs-small)",
-              padding: "6px 14px",
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
+          <Button type="button" variant="ghost" onClick={props.onClose} style={{ padding: "6px 14px", fontSize: "var(--fs-small)" }}>
             Cancel
-          </button>
+          </Button>
         </div>
       </div>
     </div>

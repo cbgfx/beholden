@@ -1,7 +1,8 @@
 import { C } from "@/lib/theme";
 import { IconWeight } from "@/icons";
 import { DraggableList } from "@/ui/DraggableList";
-import { subLabelStyle, stepperBtn } from "@/views/character/CharacterInventoryPanelHelpers";
+import { IconButton } from "@/ui/IconButton";
+import { subLabelStyle } from "@/views/character/CharacterInventoryPanelHelpers";
 import { ItemRow } from "@/views/character/CharacterInventoryPanelRows";
 import type { InventoryContainer, InventoryItem } from "@/views/character/CharacterInventory";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
@@ -125,29 +126,23 @@ export function InventoryContainerSection({
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {!isDefault && (
             <>
-              <button
-                type="button"
+              <IconButton
+                size="sm"
+                variant="ghost"
                 onClick={() => { void onToggleIgnoreWeight(); }}
                 title={container.ignoreWeight ? "Weight ignored" : "Ignore weight"}
-                style={{
-                  ...stepperBtn,
-                  width: 24,
-                  height: 24,
-                  color: container.ignoreWeight ? "rgba(255,255,255,0.2)" : C.muted,
-                  transition: "color 150ms ease",
-                }}
               >
                 <IconWeight size={13} />
-              </button>
+              </IconButton>
               {onRemove && (
-                <button
-                  type="button"
+                <IconButton
+                  size="sm"
+                  variant="ghost"
                   onClick={() => { void onRemove(); }}
                   title="Remove container"
-                  style={{ ...stepperBtn, width: 24, height: 24, fontSize: "var(--fs-body)", color: "rgba(248,113,113,0.7)" }}
                 >
                   ×
-                </button>
+                </IconButton>
               )}
             </>
           )}

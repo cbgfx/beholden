@@ -1,4 +1,4 @@
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
 import { inputStyle } from "../shared/CharacterCreatorStyles";
 
 export function CharacterCreatorCatalogPicker<T extends { id: string; name: string }>(props: {
@@ -21,9 +21,9 @@ export function CharacterCreatorCatalogPicker<T extends { id: string; name: stri
       {filteredEntries.map((entry) => {
         const selected = selectedId === entry.id;
         return <button type="button" key={entry.id} onClick={() => select(entry.id)} style={{
-          padding: "10px 13px", borderRadius: 8, textAlign: "left",
-          border: `2px solid ${selected ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-          background: selected ? "rgba(56,182,255,0.15)" : "rgba(255,255,255,0.055)",
+          padding: "10px 13px", borderRadius: 10, textAlign: "left",
+          border: `2px solid ${selected ? C.accentHl : C.panelBorder}`,
+          background: selected ? withAlpha(C.accentHl, 0.15) : C.panelBg,
           color: selected ? C.accentHl : C.text, cursor: "pointer", fontWeight: selected ? 700 : 500,
           fontSize: "var(--fs-subtitle)", transition: "border-color 0.12s, background 0.12s",
           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",

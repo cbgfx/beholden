@@ -1,4 +1,5 @@
-import { theme } from "@/theme/theme";
+import { theme, withAlpha } from "@/theme/theme";
+import { togglePillStyle } from "@beholden/shared/ui";
 import { Input } from "@/ui/Input";
 import { splitLeadingNumberAndDetail } from "@/lib/parse/statDetails";
 import type { AttackOverridesByMonsterId } from "@/views/CampaignView/monsterPicker/types";
@@ -77,8 +78,8 @@ export function MonsterPickerDetailPane(props: {
             gap: 2,
             padding: 2,
             borderRadius: 999,
-            border: "1px solid rgba(255,255,255,0.15)",
-            background: "rgba(255,255,255,0.05)",
+            border: `1px solid ${theme.colors.panelBorder}`,
+            background: withAlpha(theme.colors.panelBorder, 0.12),
             opacity: disabled ? 0.5 : 1,
           }}
         >
@@ -87,14 +88,9 @@ export function MonsterPickerDetailPane(props: {
             disabled={disabled}
             onClick={() => props.onChangeFriendly(false)}
             style={{
+              ...togglePillStyle(!props.friendly, theme.colors.red, theme.colors.panelBorder, theme.colors.muted),
               minWidth: 82,
-              padding: "4px 10px",
-              borderRadius: 999,
               border: "none",
-              background: !props.friendly ? "rgba(239,68,68,0.22)" : "transparent",
-              color: !props.friendly ? "#ef4444" : theme.colors.muted,
-              fontWeight: 800,
-              fontSize: "var(--fs-small)",
               cursor: disabled ? "not-allowed" : "pointer",
             }}
           >
@@ -105,14 +101,9 @@ export function MonsterPickerDetailPane(props: {
             disabled={disabled}
             onClick={() => props.onChangeFriendly(true)}
             style={{
+              ...togglePillStyle(props.friendly, theme.colors.green, theme.colors.panelBorder, theme.colors.muted),
               minWidth: 82,
-              padding: "4px 10px",
-              borderRadius: 999,
               border: "none",
-              background: props.friendly ? "rgba(34,197,94,0.22)" : "transparent",
-              color: props.friendly ? "#22c55e" : theme.colors.muted,
-              fontWeight: 800,
-              fontSize: "var(--fs-small)",
               cursor: disabled ? "not-allowed" : "pointer",
             }}
           >

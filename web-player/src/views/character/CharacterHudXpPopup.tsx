@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { C } from "@/lib/theme";
+import { Button } from "@/ui/Button";
 
 export function CharacterHudXpPopup(props: {
   xpEarned: number;
@@ -106,24 +107,16 @@ export function CharacterHudXpPopup(props: {
                 textAlign: "center",
               }}
             />
-            <button
+            <Button
+              variant="primary"
               onClick={() => {
                 const v = parseInt(xpInput, 10);
                 if (!isNaN(v) && v >= 0) { setSaveError(null); saveXp(v).catch(() => setSaveError("Save failed")); }
               }}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 6,
-                cursor: "pointer",
-                fontSize: "var(--fs-small)",
-                fontWeight: 700,
-                background: accentColor,
-                border: "none",
-                color: "#fff",
-              }}
+              style={{ padding: "6px 12px", fontSize: "var(--fs-small)" }}
             >
               Save
-            </button>
+            </Button>
           </div>
           <div style={{ display: "flex", gap: 5 }}>
             {[
@@ -131,28 +124,19 @@ export function CharacterHudXpPopup(props: {
               { label: "+1000", amount: 1000 },
               { label: "+Level", amount: Math.max(0, xpNeeded - xpEarned) },
             ].map((quick) => (
-              <button
+              <Button
                 key={quick.label}
+                variant="ghost"
                 onClick={() => {
                   const v = xpEarned + quick.amount;
                   setXpInput(String(v));
                   setSaveError(null);
                   saveXp(v).catch(() => setSaveError("Save failed"));
                 }}
-                style={{
-                  flex: 1,
-                  padding: "4px 0",
-                  borderRadius: 5,
-                  cursor: "pointer",
-                  fontSize: "var(--fs-tiny)",
-                  fontWeight: 700,
-                  background: "rgba(255,255,255,0.07)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  color: C.muted,
-                }}
+                style={{ flex: 1, padding: "4px 0", fontSize: "var(--fs-tiny)" }}
               >
                 {quick.label}
-              </button>
+              </Button>
             ))}
           </div>
           {saveError && (

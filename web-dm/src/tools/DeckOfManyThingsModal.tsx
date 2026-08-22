@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/overlay/Modal";
 import { api } from "@/services/api";
 import { theme, withAlpha } from "@/theme/theme";
+import { Button } from "@/ui/Button";
 
 const SUITS = [
   { symbol: "\u2660", name: "Spades", color: "#e8edf5" },
@@ -189,39 +190,12 @@ export function DeckOfManyThingsModal(props: { isOpen: boolean; onClose: () => v
         </div>
 
         <div style={{ display: "flex", gap: 10 }}>
-          <button
-            onClick={draw}
-            disabled={empty || loadingDeck}
-            style={{
-              background: (empty || loadingDeck) ? withAlpha(theme.colors.text, 0.06) : withAlpha(theme.colors.accentPrimary, 0.15),
-              color: (empty || loadingDeck) ? theme.colors.muted : theme.colors.accentPrimary,
-              border: `1px solid ${(empty || loadingDeck) ? theme.colors.panelBorder : withAlpha(theme.colors.accentPrimary, 0.4)}`,
-              borderRadius: theme.radius.control,
-              padding: "10px 28px",
-              cursor: (empty || loadingDeck) ? "not-allowed" : "pointer",
-              fontWeight: 700,
-              fontSize: 14,
-            }}
-          >
+          <Button type="button" variant="primary" onClick={draw} disabled={empty || loadingDeck}>
             Draw Card
-          </button>
-          <button
-            onClick={reshuffle}
-            disabled={loadingDeck}
-            style={{
-              background: withAlpha(theme.colors.text, 0.07),
-              color: theme.colors.text,
-              border: `1px solid ${theme.colors.panelBorder}`,
-              borderRadius: theme.radius.control,
-              padding: "10px 20px",
-              cursor: loadingDeck ? "not-allowed" : "pointer",
-              fontWeight: 700,
-              fontSize: 14,
-              opacity: loadingDeck ? 0.6 : 1,
-            }}
-          >
+          </Button>
+          <Button type="button" variant="ghost" onClick={reshuffle} disabled={loadingDeck}>
             Reshuffle
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>

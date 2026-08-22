@@ -1,6 +1,6 @@
 import React from "react";
 import { Select } from "@/ui/Select";
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import { ABILITY_KEYS, ABILITY_LABELS } from "@/views/character-creator/constants/CharacterCreatorConstants";
 import {
@@ -131,8 +131,8 @@ function renderLevelStep({
                       padding: "11px 14px",
                       borderRadius: 8,
                       cursor: "pointer",
-                      border: `2px solid ${chosen ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                      background: chosen ? "rgba(56,182,255,0.15)" : "rgba(255,255,255,0.055)",
+                      border: `2px solid ${chosen ? C.accentHl : C.panelBorder}`,
+                      background: chosen ? withAlpha(C.accentHl, 0.15) : C.panelBg,
                       transition: "border-color 0.12s, background 0.12s",
                     }}
                   >
@@ -172,9 +172,9 @@ function renderLevelStep({
                       padding: "7px 14px",
                       borderRadius: 8,
                       cursor: "pointer",
-                      border: `1px solid ${choice.mode === "asi" ? C.accentHl : "rgba(255,255,255,0.14)"}`,
-                      background: choice.mode === "asi" ? "rgba(56,182,255,0.15)" : "rgba(255,255,255,0.055)",
-                      color: choice.mode === "asi" ? C.accentHl : "rgba(160,180,220,0.7)",
+                      border: `1px solid ${choice.mode === "asi" ? C.accentHl : withAlpha(C.panelBorder, 0.14)}`,
+                      background: choice.mode === "asi" ? withAlpha(C.accentHl, 0.15) : C.panelBg,
+                      color: choice.mode === "asi" ? C.accentHl : withAlpha(C.muted, 0.7),
                       fontWeight: choice.mode === "asi" ? 700 : 500,
                       fontSize: "var(--fs-small)",
                     }}
@@ -188,9 +188,9 @@ function renderLevelStep({
                       padding: "7px 14px",
                       borderRadius: 8,
                       cursor: "pointer",
-                      border: `1px solid ${choice.mode === "feat" ? C.accentHl : "rgba(255,255,255,0.14)"}`,
-                      background: choice.mode === "feat" ? "rgba(56,182,255,0.15)" : "rgba(255,255,255,0.055)",
-                      color: choice.mode === "feat" ? C.accentHl : "rgba(160,180,220,0.7)",
+                      border: `1px solid ${choice.mode === "feat" ? C.accentHl : withAlpha(C.panelBorder, 0.14)}`,
+                      background: choice.mode === "feat" ? withAlpha(C.accentHl, 0.15) : C.panelBg,
+                      color: choice.mode === "feat" ? C.accentHl : withAlpha(C.muted, 0.7),
                       fontWeight: choice.mode === "feat" ? 700 : 500,
                       fontSize: "var(--fs-small)",
                     }}
@@ -228,9 +228,9 @@ function renderLevelStep({
                             borderRadius: 8,
                             textAlign: "center",
                             cursor: blocked ? "default" : "pointer",
-                            border: `1px solid ${bonus > 0 ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                            background: bonus > 0 ? "rgba(56,182,255,0.15)" : "rgba(255,255,255,0.055)",
-                            color: blocked && bonus === 0 ? "rgba(160,180,220,0.4)" : C.text,
+                            border: `1px solid ${bonus > 0 ? C.accentHl : C.panelBorder}`,
+                            background: bonus > 0 ? withAlpha(C.accentHl, 0.15) : C.panelBg,
+                            color: blocked && bonus === 0 ? withAlpha(C.muted, 0.4) : C.text,
                           }}
                         >
                           <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginBottom: 3 }}>{ABILITY_LABELS[ability]}</div>
@@ -275,8 +275,8 @@ function renderLevelStep({
                       cursor: "pointer",
                       fontSize: "var(--fs-small)",
                       fontWeight: 600,
-                      border: `1px solid ${selected ? C.accentHl : "rgba(255,255,255,0.15)"}`,
-                      background: selected ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.04)",
+                      border: `1px solid ${selected ? C.accentHl : withAlpha(C.panelBorder, 0.15)}`,
+                      background: selected ? withAlpha(C.accentHl, 0.18) : withAlpha(C.panelBorder, 0.04),
                       color: selected ? C.accentHl : C.muted,
                     }}
                   >

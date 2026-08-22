@@ -1,6 +1,7 @@
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
 import { C } from "@/lib/theme";
 import { IconKnapsack } from "@/icons";
+import { Button } from "@/ui/Button";
 import { DraggableList } from "@/ui/DraggableList";
 import {
   formatWeight,
@@ -28,7 +29,7 @@ import { ItemRow } from "@/views/character/CharacterInventoryPanelRows";
 import { InventoryPartyStashSection } from "@/views/character/CharacterInventoryPartyStashSection";
 import { InventoryItemPickerModal } from "@/views/character/CharacterInventoryPickerModal";
 import { resolvePactBoonFromChosenOptionals } from "@/views/character/CharacterSheetUtils";
-import { CollapsiblePanel, panelHeaderAddBtn } from "@/views/character/CharacterViewParts";
+import { CollapsiblePanel } from "@/views/character/CharacterViewParts";
 import { useCharacterInventoryContainers } from "@/views/character/useCharacterInventoryContainers";
 import { useCharacterInventoryItems } from "@/views/character/useCharacterInventoryItems";
 import { useCharacterInventorySync } from "@/views/character/useCharacterInventorySync";
@@ -98,23 +99,25 @@ export function InventoryPanel({
         summary={`${sync.items.length} items · ${Math.round(derived.carriedWeight * 10) / 10} / ${derived.carryCapacity} lb`}
       >
         <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, paddingBottom: 10, marginBottom: 10, borderBottom: `1px solid ${C.panelBorder}` }}>
-          <button
+          <Button
             type="button"
+            variant="primary"
             onClick={() => { void containerActions.addContainer(DEFAULT_CONTAINER_ID); }}
             title="+"
-            style={{ ...panelHeaderAddBtn(accentColor), gap: 6, height: 30, fontSize: "var(--fs-small)" }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 30, padding: "0 10px", fontSize: "var(--fs-small)" }}
           >
             <span aria-hidden="true" style={{ fontSize: "var(--fs-title)" }}>+</span><IconKnapsack size={15} />
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="primary"
             onClick={() => sync.setPickerOpen(true)}
             title="Add item"
-            style={{ ...panelHeaderAddBtn(accentColor), gap: 6, height: 30, fontSize: "var(--fs-small)" }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 30, padding: "0 10px", fontSize: "var(--fs-small)" }}
           >
             <span aria-hidden="true" style={{ fontSize: "var(--fs-title)" }}>+</span>
             Item
-          </button>
+          </Button>
         </div>
 
         <InventoryCurrencyBar

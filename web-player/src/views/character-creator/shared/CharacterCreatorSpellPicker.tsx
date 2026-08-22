@@ -1,5 +1,6 @@
 import React from "react";
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
+import { IconButton } from "@/ui/IconButton";
 import { inputStyle, labelStyle } from "./CharacterCreatorStyles";
 import { classTalentPrerequisiteLabel, type ClassTalentPrerequisite } from "@/views/character/CharacterSheetUtils";
 
@@ -130,13 +131,13 @@ export function SpellPicker<T extends { id: string; name: string; level: number 
                           borderRadius: 6,
                           fontSize: "var(--fs-small)",
                           cursor: locked ? "default" : "pointer",
-                          border: `1px solid ${sel || active ? C.accentHl : "rgba(255,255,255,0.12)"}`,
+                          border: `1px solid ${sel || active ? C.accentHl : C.panelBorder}`,
                           background: sel
-                            ? "rgba(56,182,255,0.18)"
+                            ? withAlpha(C.accentHl, 0.18)
                             : active
-                              ? "rgba(56,182,255,0.10)"
-                              : "rgba(255,255,255,0.055)",
-                          color: sel ? C.accentHl : locked ? "rgba(160,180,220,0.35)" : C.text,
+                              ? withAlpha(C.accentHl, 0.10)
+                              : C.panelBg,
+                          color: sel ? C.accentHl : locked ? withAlpha(C.muted, 0.35) : C.text,
                           fontWeight: sel ? 700 : 400,
                           textAlign: "left",
                           minWidth: 180,
@@ -174,7 +175,7 @@ export function SpellPicker<T extends { id: string; name: string; level: number 
                     return (
                       <div key={spell.id} style={{ display: "flex", gap: 4, alignItems: "stretch" }}>
                         {React.cloneElement(button, { key: `${spell.id}:main` })}
-                        <button type="button" disabled={chosen.length >= max || !allowed} onClick={() => onToggle(spell.id, "add")} style={{ borderRadius: 6, border: "1px solid rgba(56,182,255,0.5)", background: "rgba(56,182,255,0.12)", color: C.accentHl, fontWeight: 900, padding: "0 10px", cursor: chosen.length >= max ? "default" : "pointer" }}>+</button>
+                        <IconButton variant="accent" size="sm" disabled={chosen.length >= max || !allowed} onClick={() => onToggle(spell.id, "add")}>+</IconButton>
                       </div>
                     );
                   })}
@@ -188,8 +189,8 @@ export function SpellPicker<T extends { id: string; name: string; level: number 
                 marginTop: 10,
                 padding: "12px 14px",
                 borderRadius: 10,
-                border: "1px solid rgba(255,255,255,0.12)",
-                background: "rgba(255,255,255,0.05)",
+                border: `1px solid ${C.panelBorder}`,
+                background: C.panelBg,
               }}
             >
               <div style={{ fontWeight: 800, fontSize: "var(--fs-subtitle)", color: C.accentHl }}>

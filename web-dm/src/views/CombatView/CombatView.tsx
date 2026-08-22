@@ -4,6 +4,7 @@ import { useStore } from "@/store";
 import type { EncounterActor } from "@/domain/types/domain";
 import type { State } from "@/store/state";
 import { theme } from "@/theme/theme";
+import { IconButton } from "@/ui/IconButton";
 
 import { CombatantHeader } from "@/views/CombatView/components/CombatantHeader";
 import { CombatHudBar } from "@/views/CombatView/components/CombatHudBar";
@@ -259,12 +260,9 @@ export function CombatView() {
           <span style={{ color: theme.colors.text, fontWeight: 700 }}>
             ⚠️ <strong>{concentrationAlert.name}</strong> is Concentrating — CON Save DC <strong>{concentrationAlert.dc}</strong>
           </span>
-          <button
-            onClick={dismissConcentrationAlert}
-            style={{ all: "unset", cursor: "pointer", color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-title)", lineHeight: 1 }}
-          >
-            ×
-          </button>
+          <IconButton title="Dismiss" onClick={dismissConcentrationAlert} variant="ghost" size="sm">
+            <span style={{ fontWeight: 900, fontSize: "var(--fs-title)", lineHeight: 1 }}>×</span>
+          </IconButton>
         </div>
       )}
 

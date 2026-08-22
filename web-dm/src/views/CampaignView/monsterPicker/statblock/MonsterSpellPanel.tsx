@@ -1,6 +1,7 @@
 import { theme } from "@/theme/theme";
 import type { GroupedSpell } from "./useMonsterSpells";
 import { MonsterSectionPanel } from "@/components/MonsterDisplay/MonsterSectionPanel";
+import { Button } from "@/ui/Button";
 
 type MonsterSpells = {
   spellNames: string[];
@@ -47,23 +48,21 @@ export function MonsterSpellPanel({ spells }: Props) {
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                 {g.spells.map((s) => (
-                  <button
+                  <Button
                     key={`${g.level}_${s.key}`}
                     type="button"
+                    variant="ghost"
                     onClick={() => onOpenSpell({ id: s.spellId, name: s.display })}
                     style={{
-                      border: `1px solid ${theme.colors.panelBorder}`,
                       background: theme.colors.panelBg,
-                      color: theme.colors.text,
                       padding: "6px 10px",
                       borderRadius: 999,
                       fontWeight: 800,
-                      cursor: "pointer",
                     }}
                     title="Open spell"
                   >
                     {s.display}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -72,25 +71,21 @@ export function MonsterSpellPanel({ spells }: Props) {
       ) : (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
           {fallback.map((name) => (
-            <button
+            <Button
               key={name}
               type="button"
+              variant="ghost"
               onClick={() => onOpenSpell({ name })}
-              style={
-                {
-                  border: `1px solid ${theme.colors.panelBorder}`,
-                  background: theme.colors.panelBg,
-                  color: theme.colors.text,
-                  padding: "6px 10px",
-                  borderRadius: 999,
-                  fontWeight: 800,
-                  cursor: "pointer",
-                } as const
-              }
+              style={{
+                background: theme.colors.panelBg,
+                padding: "6px 10px",
+                borderRadius: 999,
+                fontWeight: 800,
+              }}
               title="Open spell"
             >
               {name}
-            </button>
+            </Button>
           ))}
         </div>
       )}

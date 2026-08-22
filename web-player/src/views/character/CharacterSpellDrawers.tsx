@@ -1,6 +1,7 @@
 import React from "react";
 import { EmptyState, ListShell, SubsectionLabel, Tag } from "@beholden/shared/ui";
 import { C } from "@/lib/theme";
+import { IconButton } from "@/ui/IconButton";
 import { RightDrawer } from "@/ui/RightDrawer";
 import type { FetchedSpellDetail } from "@/views/character/CharacterSpellShared";
 
@@ -134,27 +135,14 @@ export function AddSpellDrawer({
                     {spells.map((entry) => (
                       <div key={entry.key} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                         <Tag label={entry.searchName} color={C.text} />
-                        <button
-                          type="button"
+                        <IconButton
+                          variant="ghost"
+                          size="sm"
                           onClick={() => void onRemoveSpell(entry.rawName)}
                           title={`Remove ${entry.searchName}`}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            width: 24,
-                            height: 24,
-                            borderRadius: "50%",
-                            border: "1px solid rgba(255,255,255,0.10)",
-                            background: "rgba(255,255,255,0.04)",
-                            color: C.muted,
-                            cursor: "pointer",
-                            fontSize: "var(--fs-small)",
-                            fontWeight: 900,
-                          }}
                         >
                           x
-                        </button>
+                        </IconButton>
                       </div>
                     ))}
                   </div>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api } from "@/services/api";
 import { C } from "@/lib/theme";
 import { cancelBtnStyle } from "@/views/character/CharacterViewParts";
+import { Button } from "@/ui/Button";
 
 const RED = "#dc2626";
 const RED_DIM = "rgba(220,38,38,0.18)";
@@ -136,23 +137,15 @@ export function CharacterInitiativePrompt(props: {
           )}
 
           <div style={{ display: "flex", gap: 8 }}>
-            <button
+            <Button
               type="button"
+              variant="primary"
               disabled={total === null || submitting}
               onClick={() => void submit()}
-              style={{
-                flex: 1, padding: "12px 20px", borderRadius: 10,
-                cursor: total === null || submitting ? "not-allowed" : "pointer",
-                background: total !== null ? RED : "rgba(255,255,255,0.05)",
-                border: `1px solid ${total !== null ? RED : "rgba(255,255,255,0.1)"}`,
-                color: "#fff", fontWeight: 800, fontSize: "var(--fs-body)",
-                opacity: total === null || submitting ? 0.45 : 1,
-                boxShadow: total !== null ? `0 0 18px ${RED_GLOW}` : "none",
-                transition: "background 120ms ease, opacity 120ms ease, box-shadow 120ms ease",
-              }}
+              style={{ flex: 1 }}
             >
               {submitting ? "Submitting…" : total !== null ? `Submit ${total}` : "Enter the Fight!"}
-            </button>
+            </Button>
             <button
               type="button"
               onClick={props.onClose}

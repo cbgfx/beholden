@@ -1,7 +1,9 @@
 import type * as React from "react";
 import { Input } from "@/ui/Input";
 import { Select } from "@/ui/Select";
-import { theme, withAlpha } from "@/theme/theme";
+import { theme } from "@/theme/theme";
+import { IconButton } from "@/ui/IconButton";
+import { accentButtonStyle } from "@beholden/shared/ui";
 import type { MonsterBlock } from "./MonsterFormParts";
 
 function FieldRow({ children }: { children: React.ReactNode }) {
@@ -16,10 +18,9 @@ const asRecord = (value: unknown): Record<string, unknown> => value && typeof va
 const asRows = (value: unknown): Record<string, unknown>[] => Array.isArray(value) ? value.map(asRecord) : [];
 const optionalNumber = (value: string) => value === "" ? undefined : Number(value);
 
-const miniButton: React.CSSProperties = {
-  border: `1px solid ${theme.colors.panelBorder}`, borderRadius: 6,
-  background: withAlpha(theme.colors.accentPrimary, 0.12), color: theme.colors.accentPrimary,
-  cursor: "pointer", fontWeight: 700, padding: "3px 8px",
+const miniButtonStyle: React.CSSProperties = {
+  ...accentButtonStyle(theme.colors.accentPrimary, { padding: "3px 8px", fontSize: "var(--fs-small)", borderRadius: 6 }),
+  fontWeight: 700,
 };
 
 export function MonsterActionMechanicsEditor({ block, onChange }: { block: MonsterBlock; onChange: (block: MonsterBlock) => void }) {
@@ -65,8 +66,8 @@ export function MonsterActionMechanicsEditor({ block, onChange }: { block: Monst
         </div>
 
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}><strong style={{ fontSize: "var(--fs-small)" }}>Damage components</strong><button type="button" style={miniButton} onClick={() => set("damage", [...damage, { roll: "", type: "" }])}>+ Damage</button></div>
-          {damage.map((row, index) => <div key={index} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 30px", gap: 6, marginTop: 5 }}><Input value={String(row.roll ?? "")} onChange={(event) => updateDamage(index, "roll", event.target.value)} placeholder="2d10 + 4" /><Input value={Array.isArray(row.type) ? row.type.join(", ") : String(row.type ?? "")} onChange={(event) => updateDamage(index, "type", event.target.value)} placeholder="piercing" /><button type="button" onClick={() => { const rows = damage.filter((_, i) => i !== index); set("damage", rows.length === 0 ? undefined : rows.length === 1 ? rows[0] : rows); }}>×</button></div>)}
+          <div style={{ display: "flex", justifyContent: "space-between" }}><strong style={{ fontSize: "var(--fs-small)" }}>Damage components</strong><button type="button" style={miniButtonStyle} onClick={() => set("damage", [...damage, { roll: "", type: "" }])}>+ Damage</button></div>
+          {damage.map((row, index) => <div key={index} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 30px", gap: 6, marginTop: 5 }}><Input value={String(row.roll ?? "")} onChange={(event) => updateDamage(index, "roll", event.target.value)} placeholder="2d10 + 4" /><Input value={Array.isArray(row.type) ? row.type.join(", ") : String(row.type ?? "")} onChange={(event) => updateDamage(index, "type", event.target.value)} placeholder="piercing" /><IconButton size="sm" variant="ghost" title="Remove damage component" onClick={() => { const rows = damage.filter((_, i) => i !== index); set("damage", rows.length === 0 ? undefined : rows.length === 1 ? rows[0] : rows); }}>×</IconButton></div>)}
         </div>
 
         <FieldRow>
@@ -76,11 +77,11 @@ export function MonsterActionMechanicsEditor({ block, onChange }: { block: Monst
         </FieldRow>
 
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}><strong style={{ fontSize: "var(--fs-small)" }}>Multiattack routine</strong><button type="button" style={miniButton} onClick={() => set("routine", [...routines, { use: "" }])}>+ Step</button></div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}><strong style={{ fontSize: "var(--fs-small)" }}>Multiattack routine</strong><button type="button" style={miniButtonStyle} onClick={() => set("routine", [...routines, { use: "" }])}>+ Step</button></div>
           {routines.map((row, index) => {
             const choose = Array.isArray(row.choose);
             const refs = choose ? (row.choose as string[]).join(", ") : String(row.use ?? "");
-            return <div key={index} style={{ display: "grid", gridTemplateColumns: "110px minmax(0,1fr) 90px 90px 30px", gap: 5, marginTop: 5 }}><Select value={choose ? "choose" : "use"} onChange={(event) => updateRoutine(index, event.target.value === "choose" ? { choose: ["", ""] } : { use: "" })}><option value="use">Use action</option><option value="choose">Choose from</option></Select><Input value={refs} onChange={(event) => updateRoutine(index, { ...row, ...(choose ? { choose: event.target.value.split(",").map((id) => id.trim()) } : { use: event.target.value }) })} placeholder={choose ? "action_a, action_b" : "action_id"} /><Input type="number" min={2} value={typeof row.count === "number" ? row.count : ""} onChange={(event) => updateRoutine(index, { ...row, count: optionalNumber(event.target.value) })} placeholder="Count" /><label><input type="checkbox" checked={row.optional === true} onChange={(event) => updateRoutine(index, { ...row, optional: event.target.checked || undefined })} /> Optional</label><button type="button" onClick={() => set("routine", routines.filter((_, i) => i !== index).length ? routines.filter((_, i) => i !== index) : undefined)}>×</button></div>;
+            return <div key={index} style={{ display: "grid", gridTemplateColumns: "110px minmax(0,1fr) 90px 90px 30px", gap: 5, marginTop: 5 }}><Select value={choose ? "choose" : "use"} onChange={(event) => updateRoutine(index, event.target.value === "choose" ? { choose: ["", ""] } : { use: "" })}><option value="use">Use action</option><option value="choose">Choose from</option></Select><Input value={refs} onChange={(event) => updateRoutine(index, { ...row, ...(choose ? { choose: event.target.value.split(",").map((id) => id.trim()) } : { use: event.target.value }) })} placeholder={choose ? "action_a, action_b" : "action_id"} /><Input type="number" min={2} value={typeof row.count === "number" ? row.count : ""} onChange={(event) => updateRoutine(index, { ...row, count: optionalNumber(event.target.value) })} placeholder="Count" /><label><input type="checkbox" checked={row.optional === true} onChange={(event) => updateRoutine(index, { ...row, optional: event.target.checked || undefined })} /> Optional</label><IconButton size="sm" variant="ghost" title="Remove step" onClick={() => set("routine", routines.filter((_, i) => i !== index).length ? routines.filter((_, i) => i !== index) : undefined)}>×</IconButton></div>;
           })}
         </div>
 
@@ -90,8 +91,8 @@ export function MonsterActionMechanicsEditor({ block, onChange }: { block: Monst
         </div>
 
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}><strong style={{ fontSize: "var(--fs-small)" }}>Spell slots</strong><button type="button" style={miniButton} onClick={() => set("spellSlots", Object.fromEntries([...spellSlots, ["1", 0]]))}>+ Level</button></div>
-          {spellSlots.map(([level, slots], index) => <div key={index} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 30px", gap: 5, marginTop: 5 }}><Input value={level} onChange={(event) => { const rows = [...spellSlots]; rows[index] = [event.target.value, slots]; set("spellSlots", Object.fromEntries(rows)); }} placeholder="Level or pact" /><Input type="number" min={0} value={Number(slots)} onChange={(event) => { const rows = [...spellSlots]; rows[index] = [level, Number(event.target.value)]; set("spellSlots", Object.fromEntries(rows)); }} placeholder="Slots" /><button type="button" onClick={() => { const rows = spellSlots.filter((_, i) => i !== index); set("spellSlots", rows.length ? Object.fromEntries(rows) : undefined); }}>×</button></div>)}
+          <div style={{ display: "flex", justifyContent: "space-between" }}><strong style={{ fontSize: "var(--fs-small)" }}>Spell slots</strong><button type="button" style={miniButtonStyle} onClick={() => set("spellSlots", Object.fromEntries([...spellSlots, ["1", 0]]))}>+ Level</button></div>
+          {spellSlots.map(([level, slots], index) => <div key={index} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 30px", gap: 5, marginTop: 5 }}><Input value={level} onChange={(event) => { const rows = [...spellSlots]; rows[index] = [event.target.value, slots]; set("spellSlots", Object.fromEntries(rows)); }} placeholder="Level or pact" /><Input type="number" min={0} value={Number(slots)} onChange={(event) => { const rows = [...spellSlots]; rows[index] = [level, Number(event.target.value)]; set("spellSlots", Object.fromEntries(rows)); }} placeholder="Slots" /><IconButton size="sm" variant="ghost" title="Remove level" onClick={() => { const rows = spellSlots.filter((_, i) => i !== index); set("spellSlots", rows.length ? Object.fromEntries(rows) : undefined); }}>×</IconButton></div>)}
         </div>
       </div>
     </details>

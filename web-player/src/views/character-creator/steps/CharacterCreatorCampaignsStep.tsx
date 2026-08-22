@@ -1,5 +1,6 @@
 import React from "react";
 import { C } from "@/lib/theme";
+import { Button } from "@/ui/Button";
 import { headingStyle } from "../shared/CharacterCreatorStyles";
 import { campaignSelectionHasBinder } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
 import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
@@ -87,26 +88,12 @@ function renderCampaignsStep({
       {error && <div style={{ color: C.red, marginBottom: 10 }}>{error}</div>}
 
       <div style={{ display: "flex", gap: 10, justifyContent: "space-between" }}>
-        <button type="button" onClick={onBack} style={{ padding: "9px 22px", borderRadius: 8, fontWeight: 700, cursor: "pointer", border: "1px solid rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.08)", color: C.text, fontSize: "var(--fs-medium)" }}>
+        <Button type="button" variant="ghost" onClick={onBack}>
           ← Back
-        </button>
-        <button
-          type="button"
-          onClick={onSubmit}
-          disabled={busy || blockedByIdentity}
-          style={{
-            padding: "9px 22px",
-            borderRadius: 8,
-            fontWeight: 700,
-            cursor: busy || blockedByIdentity ? "not-allowed" : "pointer",
-            border: "none",
-            background: busy || blockedByIdentity ? "rgba(255,255,255,0.06)" : C.accentHl,
-            color: busy || blockedByIdentity ? "rgba(160,180,220,0.40)" : C.textDark,
-            fontSize: "var(--fs-medium)",
-          }}
-        >
+        </Button>
+        <Button type="button" variant="primary" onClick={onSubmit} disabled={busy || blockedByIdentity}>
           {busy ? "Saving…" : isEditing ? "Save Changes ✓" : "Create Character ✓"}
-        </button>
+        </Button>
       </div>
     </div>
   );

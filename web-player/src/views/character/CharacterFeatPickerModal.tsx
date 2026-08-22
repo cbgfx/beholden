@@ -10,6 +10,7 @@ import {
 import type { AbilKey } from "@/views/character/CharacterSheetTypes";
 import { inputStyle } from "@/views/character/CharacterInventoryPanelHelpers";
 import { cancelBtnStyle } from "@/views/character/CharacterViewParts";
+import { Button } from "@/ui/Button";
 
 type FeatRow = { id: string; name: string };
 type FeatDetail = { id: string; name: string; text?: string | null };
@@ -231,25 +232,18 @@ export function CharacterFeatPickerModal(props: {
                   {selectedDetail.text ? <FormattedText text={selectedDetail.text} /> : <span style={{ color: C.muted }}>No description available.</span>}
                 </div>
 
-                <button
+                <Button
                   type="button"
+                  variant="primary"
                   disabled={!canAdd}
                   onClick={() => {
                     if (!selectedFeat || !canAdd) return;
                     props.onAdd(selectedFeat, selectedAbilities);
                     props.onClose();
                   }}
-                  style={{
-                    padding: "10px 14px", borderRadius: 9,
-                    border: `1px solid ${canAdd ? props.accentColor + "88" : "rgba(255,255,255,0.1)"}`,
-                    background: canAdd ? `${props.accentColor}24` : "rgba(255,255,255,0.04)",
-                    color: canAdd ? props.accentColor : C.muted,
-                    cursor: canAdd ? "pointer" : "not-allowed",
-                    fontWeight: 800, fontSize: "var(--fs-body)",
-                  }}
                 >
                   {choiceSpec && !choicesValid ? "Choose ability increase" : `Add ${selectedDetail.name}`}
-                </button>
+                </Button>
               </div>
             ) : (
               <div style={{ color: C.muted, fontSize: "var(--fs-small)", lineHeight: 1.6, paddingTop: 4 }}>

@@ -2,6 +2,7 @@ import React from "react";
 import type { EncounterActor } from "@/domain/types/domain";
 import { theme } from "@/theme/theme";
 import { SectionTitle } from "@/ui/SectionTitle";
+import { IconButton } from "@/ui/IconButton";
 import { conditionIconByKey } from "@/icons/conditions";
 import {
   buildRosterById,
@@ -118,30 +119,18 @@ export function CombatantConditionsSection(props: {
                   </span>
                 )}
 
-                <button
-                  type="button"
+                <IconButton
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     removeConditionAt(idx);
                   }}
                   title="Remove"
-                  style={{
-                    border: `1px solid ${theme.colors.panelBorder}`,
-                    background: "transparent",
-                    color: theme.colors.text,
-                    fontWeight: 900,
-                    borderRadius: 999,
-                    width: 20,
-                    height: 20,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer"
-                  }}
+                  variant="ghost"
+                  size="sm"
                 >
-                  ×
-                </button>
+                  <span style={{ fontWeight: 900, lineHeight: 1 }}>×</span>
+                </IconButton>
               </span>
             );
           })

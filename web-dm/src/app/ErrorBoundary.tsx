@@ -1,5 +1,6 @@
 import * as React from "react";
 import { theme, withAlpha } from "@/theme";
+import { Button } from "@/ui/Button";
 
 type State = { error: Error | null };
 
@@ -74,22 +75,11 @@ export class ErrorBoundary extends React.Component<
               : "Open DevTools -> Console for the full stack trace."}
           </div>
           {dynamicImportError ? (
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              style={{
-                border: `1px solid ${theme.colors.panelBorder}`,
-                borderRadius: 10,
-                background: theme.colors.red,
-                color: "#fff",
-                fontWeight: 800,
-                padding: "10px 14px",
-                marginBottom: 12,
-                cursor: "pointer",
-              }}
-            >
-              Reload app
-            </button>
+            <div style={{ marginBottom: 12 }}>
+              <Button type="button" variant="danger" onClick={() => window.location.reload()}>
+                Reload app
+              </Button>
+            </div>
           ) : null}
           <pre
             style={{

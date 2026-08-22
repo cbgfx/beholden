@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/ui/Button";
 
 export function LoginView() {
   const { login } = useAuth();
@@ -56,17 +57,14 @@ export function LoginView() {
 
           {error && <div style={styles.error}>{error}</div>}
 
-          <button
+          <Button
             type="submit"
+            variant="primary"
             disabled={loading || !username || !password}
-            style={{
-              ...styles.button,
-              opacity: loading || !username || !password ? 0.5 : 1,
-              cursor: loading || !username || !password ? "not-allowed" : "pointer",
-            }}
+            style={{ width: "100%", padding: "10px 0", fontSize: "var(--fs-body)" }}
           >
             {loading ? "Signing in…" : "Sign in"}
-          </button>
+          </Button>
         </form>
       </div>
     </div>
@@ -145,16 +143,5 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid rgba(224,80,80,0.33)",
     color: "var(--red)",
     fontSize: "var(--fs-subtitle)",
-  },
-  button: {
-    width: "100%",
-    padding: "10px 0",
-    background: "var(--accent)",
-    color: "var(--bg)",
-    border: "none",
-    borderRadius: "var(--radius-ctrl)",
-    fontSize: "var(--fs-body)",
-    fontWeight: 700,
-    fontFamily: "inherit",
   },
 };

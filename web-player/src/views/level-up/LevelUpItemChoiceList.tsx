@@ -1,6 +1,6 @@
 import React from "react";
 import { api } from "@/services/api";
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
 
 type ItemDetailPreview = {
   text?: string[] | string | null;
@@ -93,8 +93,8 @@ export function LevelUpItemChoiceList({
                 padding: "10px 12px",
                 borderRadius: 8,
                 cursor: blocked ? "not-allowed" : "pointer",
-                border: `2px solid ${focused ? C.accentHl : "rgba(255,255,255,0.1)"}`,
-                background: focused ? "rgba(56,182,255,0.08)" : "rgba(255,255,255,0.03)",
+                border: `2px solid ${focused ? C.accentHl : withAlpha(C.panelBorder, 0.1)}`,
+                background: focused ? withAlpha(C.accentHl, 0.08) : withAlpha(C.panelBorder, 0.03),
                 color: blocked ? C.muted : C.text,
                 textAlign: "left",
                 opacity: blocked ? 0.6 : 1,
@@ -120,8 +120,8 @@ export function LevelUpItemChoiceList({
             marginTop: 10,
             padding: "12px 14px",
             borderRadius: 10,
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: "rgba(255,255,255,0.05)",
+            border: `1px solid ${C.panelBorder}`,
+            background: C.panelBg,
           }}
         >
           <div style={{ fontWeight: 800, fontSize: "var(--fs-subtitle)", color: C.accentHl }}>

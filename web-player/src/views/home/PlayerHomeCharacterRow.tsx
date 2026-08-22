@@ -5,12 +5,13 @@ import { fetchMyCharacter } from "@/services/actorApi";
 import { C } from "@/lib/theme";
 import { IconDownload, IconPlayer } from "@/icons";
 import type { FlatCharacterSheetDto } from "@beholden/shared/api";
-import { HealthBar, ghostButtonStyle } from "@beholden/shared/ui";
+import { HealthBar } from "@beholden/shared/ui";
+import { Button } from "@/ui/Button";
+import { IconButton } from "@/ui/IconButton";
 import {
   CHARACTER_EXPORT_FORMAT,
   CHARACTER_EXPORT_VERSION,
   buildExportFilename,
-  exportIconButtonStyle,
   normalizeCharacterTransfer,
   type UserCharacter,
 } from "./PlayerHomeUtils";
@@ -221,44 +222,39 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
       {confirmDelete ? (
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <span style={{ fontSize: "var(--fs-small)", color: C.colorPinkRed, flex: 1 }}>Delete this character?</span>
-          <button disabled={deleting} onClick={handleDelete}
-            style={{ ...ghostButtonStyle({ textColor: C.colorPinkRed, borderColor: "rgba(248,113,113,0.45)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}>
+          <Button variant="danger" disabled={deleting} onClick={handleDelete} style={{ flexShrink: 0 }}>
             {deleting ? "…" : "Yes, delete"}
-          </button>
-          <button onClick={() => setConfirmDelete(false)} style={{ ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}>Cancel</button>
+          </Button>
+          <Button variant="ghost" onClick={() => setConfirmDelete(false)} style={{ flexShrink: 0 }}>Cancel</Button>
         </div>
       ) : (
         <div style={{ display: "flex", gap: 6 }}>
-          <button
-            style={{
-              ...exportIconButtonStyle,
-              opacity: exporting ? 0.45 : 1,
-              cursor: exporting ? "not-allowed" : exportIconButtonStyle.cursor,
-            }}
-            onClick={() => void handleExport()}
+          <IconButton
             title="Export character"
-            aria-label="Export character"
+            onClick={() => void handleExport()}
             disabled={exporting}
           >
             <IconDownload size={17} />
-          </button>
-          <button style={{ ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flex: 1, flexShrink: 0 }} onClick={() => navigate(`/characters/${ch.id}/edit`)}>
+          </IconButton>
+          <Button variant="ghost" style={{ flex: 1, flexShrink: 0 }} onClick={() => navigate(`/characters/${ch.id}/edit`)}>
             Edit
-          </button>
+          </Button>
 
-          <button
-            style={{ ...ghostButtonStyle({ textColor: C.muted, borderColor: "rgba(148,163,184,0.25)", padding: "6px 12px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}
+          <Button
+            variant="ghost"
+            style={{ flexShrink: 0 }}
             onClick={() => void setActive(!ch.isActive)}
           >
             {ch.isActive ? "Archive" : "Restore"}
-          </button>
+          </Button>
 
-          <button
-            style={{ ...ghostButtonStyle({ textColor: "rgba(248,113,113,0.7)", borderColor: "rgba(248,113,113,0.25)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flex: 1, flexShrink: 0 }}
+          <Button
+            variant="danger"
+            style={{ flex: 1, flexShrink: 0 }}
             onClick={() => setConfirmDelete(true)}
           >
             Delete
-          </button>
+          </Button>
         </div>
       )}
     </div>

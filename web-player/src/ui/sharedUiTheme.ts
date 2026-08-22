@@ -1,5 +1,16 @@
 import { C, withAlpha } from "@/lib/theme";
 
+export const playerSharedButtonTheme = {
+  radius: 10,
+  text: C.text,
+  textDark: C.textDark,
+  panelBorder: C.panelBorder,
+  accentPrimary: C.accent,
+  red: C.red,
+  green: C.green,
+  bloody: "#ff8c42",
+};
+
 export const playerSharedSelectTheme = {
   radius: 10,
   panelBorder: C.panelBorder,

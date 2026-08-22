@@ -4,6 +4,7 @@ import { theme, withAlpha } from "@/theme/theme";
 import { SpellDetailCard } from "@/drawers/drawers/combatant/SpellDetailCard";
 import { ordinal } from "@beholden/shared/domain";
 import { SectionTitle } from "@/ui/SectionTitle";
+import { Button } from "@/ui/Button";
 
 type SpellLookupRow = {
   query: string;
@@ -148,23 +149,20 @@ export function MonsterSpellSection(props: { monster: any }) {
               <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-medium)" }}>{g.title}</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                 {g.spells.map((s) => (
-                  <button
+                  <Button
                     key={`${g.level}_${s.key}`}
                     type="button"
+                    variant="ghost"
                     onClick={() => openSpell({ id: s.spellId, name: s.key })}
                     style={{
-                      border: `1px solid ${theme.colors.panelBorder}`,
                       background: withAlpha(theme.colors.panelBg, 0.14),
-                      color: theme.colors.text,
                       padding: "6px 10px",
                       borderRadius: 999,
                       fontWeight: 800,
-                      cursor: "pointer",
-                      fontSize: "var(--fs-medium)"
                     }}
                   >
                     {s.display}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>

@@ -3,6 +3,7 @@
 import type { EncounterActor } from "@/domain/types/domain";
 import { hasIncapacitatingCondition } from "@beholden/shared/domain";
 import { theme, withAlpha } from "@/theme/theme";
+import { togglePillStyle } from "@beholden/shared/ui";
 import { IconWorldAction, IconINPC, IconMonster, IconPlayer, IconSkull, IconInitiative } from "@/icons";
 import { InitiativeInput } from "@/views/CombatView/panels/CombatOrderPanel/components/InitiativeInput";
 import { TurnBadge } from "@/views/CombatView/panels/CombatOrderPanel/components/TurnBadge";
@@ -200,16 +201,16 @@ export function CombatOrderRow(props: {
               {playerName && <span style={{ fontSize: "var(--fs-small)", color: theme.colors.muted }}>({playerName})</span>}
               {statusBadge}
               {!isWorld && <button
+                type="button"
                 disabled={isIncapacitated}
                 title={isIncapacitated ? "Reaction unavailable while incapacitated" : c.usedReaction ? "Reaction used — click to restore" : "Reaction available — click to mark used"}
                 onClick={(e) => { e.stopPropagation(); if (!isIncapacitated) props.onToggleReaction(c.id); }}
                 style={{
-                  all: "unset", cursor: isIncapacitated ? "not-allowed" : "pointer",
-                  padding: "1px 6px", borderRadius: 999,
-                  fontSize: "var(--fs-tiny)", fontWeight: 900,
-                  border: `1px solid ${c.usedReaction ? theme.colors.muted : theme.colors.accentWarning}`,
-                  color: c.usedReaction ? theme.colors.muted : theme.colors.accentWarning,
-                  background: c.usedReaction ? "transparent" : `${theme.colors.accentWarning}18`,
+                  ...togglePillStyle(!c.usedReaction, theme.colors.accentWarning, theme.colors.muted, theme.colors.muted),
+                  padding: "1px 6px",
+                  fontSize: "var(--fs-tiny)",
+                  fontWeight: 900,
+                  cursor: isIncapacitated ? "not-allowed" : "pointer",
                   opacity: isIncapacitated || c.usedReaction ? 0.5 : 1,
                   transition: "all 150ms ease",
                 }}

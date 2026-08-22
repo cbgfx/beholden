@@ -17,6 +17,7 @@ import {
 import { inventoryPickerDetailStyle, inventoryRarityColor } from "@/views/character/CharacterViewParts";
 import { DEFAULT_CONTAINER_ID, inputStyle } from "@/views/character/CharacterInventoryPanelHelpers";
 import { CharacterStoredSpellManager } from "@/views/character/CharacterStoredSpellManager";
+import { Button } from "@/ui/Button";
 
 export function InventoryItemDrawer(props: {
   item: InventoryItem;
@@ -112,11 +113,11 @@ export function InventoryItemDrawer(props: {
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           {props.editMode ? (
             <>
-              <button type="button" onClick={props.onCancelEdit} style={plainBtn}>Cancel</button>
-              <button type="button" onClick={() => { void handleSave(); }} style={accentBtn(props.accentColor)}>Save</button>
+              <Button type="button" variant="ghost" onClick={props.onCancelEdit}>Cancel</Button>
+              <Button type="button" variant="primary" onClick={() => { void handleSave(); }}>Save</Button>
             </>
           ) : (
-            <button type="button" onClick={props.onStartEdit} style={accentBtn(props.accentColor)}>Edit</button>
+            <Button type="button" variant="primary" onClick={props.onStartEdit}>Edit</Button>
           )}
         </div>
       }
@@ -307,5 +308,3 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 const sectionLabel: React.CSSProperties = { fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 };
 const fullInput = { ...inputStyle, width: "100%", boxSizing: "border-box" } as React.CSSProperties;
-const plainBtn: React.CSSProperties = { background: "transparent", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 8, color: C.muted, cursor: "pointer", padding: "8px 16px", fontSize: "var(--fs-subtitle)" };
-const accentBtn = (accentColor: string): React.CSSProperties => ({ background: `${accentColor}22`, border: `1px solid ${accentColor}55`, borderRadius: 8, color: accentColor, cursor: "pointer", padding: "8px 16px", fontSize: "var(--fs-subtitle)", fontWeight: 700 });

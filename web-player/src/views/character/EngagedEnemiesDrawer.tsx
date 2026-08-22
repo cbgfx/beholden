@@ -28,6 +28,10 @@ const allyHealthColor: Record<CombatAlly["health"], string> = {
   Down: "#94a3b8",
 };
 
+export function activeEnemiesFirst(enemies: EngagedEnemy[]): EngagedEnemy[] {
+  return [...enemies].sort((left, right) => Number(left.health === "Down") - Number(right.health === "Down"));
+}
+
 // One combatant card shared by the Allies and Enemies lists below: name + health badge,
 // dimmed/struck-through when `isDown`, with room for an optional header addon (allies' HP%)
 // and below-name content (allies' HP bar, enemies' condition badges).
@@ -67,6 +71,7 @@ export function EngagedEnemiesDrawer(props: {
   onClose: () => void;
 }) {
   if (!props.open) return null;
+  const enemies = activeEnemiesFirst(props.enemies);
   return (
     <RightDrawer title="Combat View" onClose={props.onClose}>
       <div style={{ color: C.muted, fontSize: "var(--fs-tiny)", fontWeight: 800, textTransform: "uppercase", marginBottom: 8 }}>Allies</div>
@@ -99,7 +104,7 @@ export function EngagedEnemiesDrawer(props: {
         </div>
       ) : (
         <div style={{ display: "grid", gap: 10 }}>
-          {props.enemies.map((enemy) => (
+          {enemies.map((enemy) => (
             <CombatantCard
               key={enemy.id}
               name={enemy.name}

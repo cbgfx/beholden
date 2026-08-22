@@ -2,7 +2,9 @@
 import * as React from "react";
 import { Input } from "@/ui/Input";
 import { Select } from "@/ui/Select";
-import { theme, withAlpha } from "@/theme/theme";
+import { theme } from "@/theme/theme";
+import { Button } from "@/ui/Button";
+import { accentButtonStyle } from "@beholden/shared/ui";
 import { api } from "@/services/api";
 import { expandSchool } from "@beholden/shared/domain/compendium/expandSchool";
 import { useSpellSearch } from "@/views/CompendiumView/hooks/useSpellSearch";
@@ -33,14 +35,28 @@ function NamedBonusEditor({ label, rows, onChange, namePlaceholder }: {
     <div style={{ flex: 1, minWidth: 280 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
         <span style={{ fontSize: "var(--fs-small)", color: theme.colors.muted, fontWeight: 600 }}>{label}</span>
-        <button type="button" onClick={() => onChange([...rows, { name: "", bonus: "" }])} style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: 6, background: withAlpha(theme.colors.accentPrimary, 0.12), color: theme.colors.accentPrimary, cursor: "pointer", fontWeight: 700 }}>+ Add</button>
+        <button
+          type="button" onClick={() => onChange([...rows, { name: "", bonus: "" }])}
+          style={{
+            ...accentButtonStyle(theme.colors.accentPrimary, { padding: "2px 8px", fontSize: "var(--fs-small)", borderRadius: 6 }),
+            fontWeight: 700,
+          }}
+        >
+          + Add
+        </button>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
         {rows.map((row, index) => (
           <div key={index} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 90px 28px", gap: 5 }}>
             <Input value={row.name} onChange={(event) => update(index, "name", event.target.value)} placeholder={namePlaceholder} />
             <Input type="number" value={row.bonus} onChange={(event) => update(index, "bonus", event.target.value)} placeholder="Bonus" />
-            <button type="button" onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))} aria-label={`Remove ${label} row`} style={{ border: `1px solid ${withAlpha(theme.colors.red, 0.35)}`, borderRadius: 6, background: withAlpha(theme.colors.red, 0.12), color: theme.colors.red, cursor: "pointer" }}>×</button>
+            <Button
+              type="button" variant="danger" onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))}
+              aria-label={`Remove ${label} row`}
+              style={{ padding: 0, borderRadius: 6 }}
+            >
+              ×
+            </Button>
           </div>
         ))}
         {rows.length === 0 ? <div style={{ color: theme.colors.muted, fontSize: "var(--fs-tiny)", fontStyle: "italic" }}>None</div> : null}
@@ -287,8 +303,19 @@ export function MonsterBlocksSection({
 function LairEditor({ blocks, onChange }: { blocks: MonsterLairBlock[]; onChange: (value: MonsterLairBlock[]) => void }) {
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><SectionHeader title="Lair" /><button type="button" onClick={() => onChange([...blocks, { name: "", description: "" }])} style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: 6, background: withAlpha(theme.colors.accentPrimary, 0.12), color: theme.colors.accentPrimary, cursor: "pointer", fontWeight: 700 }}>+ Add</button></div>
-      {blocks.map((block, index) => <div key={index} style={{ display: "grid", gridTemplateColumns: "minmax(180px,.35fr) minmax(0,1fr) 30px", gap: 6, marginBottom: 6 }}><Input value={block.name} onChange={(event) => onChange(blocks.map((row, i) => i === index ? { ...row, name: event.target.value } : row))} placeholder="Lair action name" /><Input value={block.description} onChange={(event) => onChange(blocks.map((row, i) => i === index ? { ...row, description: event.target.value } : row))} placeholder="Description" /><button type="button" onClick={() => onChange(blocks.filter((_, i) => i !== index))} style={{ border: `1px solid ${withAlpha(theme.colors.red, .35)}`, borderRadius: 6, background: withAlpha(theme.colors.red, .12), color: theme.colors.red }}>×</button></div>)}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <SectionHeader title="Lair" />
+        <button
+          type="button" onClick={() => onChange([...blocks, { name: "", description: "" }])}
+          style={{
+            ...accentButtonStyle(theme.colors.accentPrimary, { padding: "2px 8px", fontSize: "var(--fs-small)", borderRadius: 6 }),
+            fontWeight: 700,
+          }}
+        >
+          + Add
+        </button>
+      </div>
+      {blocks.map((block, index) => <div key={index} style={{ display: "grid", gridTemplateColumns: "minmax(180px,.35fr) minmax(0,1fr) 30px", gap: 6, marginBottom: 6 }}><Input value={block.name} onChange={(event) => onChange(blocks.map((row, i) => i === index ? { ...row, name: event.target.value } : row))} placeholder="Lair action name" /><Input value={block.description} onChange={(event) => onChange(blocks.map((row, i) => i === index ? { ...row, description: event.target.value } : row))} placeholder="Description" /><Button type="button" variant="danger" title="Remove" onClick={() => onChange(blocks.filter((_, i) => i !== index))} style={{ padding: 0, borderRadius: 6 }}>×</Button></div>)}
       {!blocks.length ? <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontStyle: "italic" }}>None</div> : null}
     </div>
   );
@@ -318,7 +345,7 @@ function SpellReferenceEditor({ spells, ruleset, onChange }: { spells: MonsterSp
     <div>
       <SectionHeader title="Monster spells" />
       <div style={{ color: theme.colors.muted, fontSize: "var(--fs-tiny)", marginBottom: 8 }}>Search the compendium and add every spell this monster can cast. Cast level is only needed when the stat block specifies an override.</div>
-      {spells.map((spell, index) => <div key={spell.id || index} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 160px 30px", gap: 6, marginBottom: 6, alignItems: "center" }}><div style={{ color: theme.colors.text, fontWeight: 650 }}>{names[spell.id] ?? spell.id}</div><Input type="number" min={1} max={9} value={spell.level ?? ""} onChange={(event) => onChange(spells.map((row, i) => i === index ? { ...row, level: event.target.value ? Number(event.target.value) : undefined } : row))} placeholder="Cast level (optional)" /><button type="button" aria-label={`Remove ${names[spell.id] ?? "spell"}`} onClick={() => onChange(spells.filter((_, i) => i !== index))} style={{ border: `1px solid ${withAlpha(theme.colors.red, .35)}`, borderRadius: 6, background: withAlpha(theme.colors.red, .12), color: theme.colors.red }}>×</button></div>)}
+      {spells.map((spell, index) => <div key={spell.id || index} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 160px 30px", gap: 6, marginBottom: 6, alignItems: "center" }}><div style={{ color: theme.colors.text, fontWeight: 650 }}>{names[spell.id] ?? spell.id}</div><Input type="number" min={1} max={9} value={spell.level ?? ""} onChange={(event) => onChange(spells.map((row, i) => i === index ? { ...row, level: event.target.value ? Number(event.target.value) : undefined } : row))} placeholder="Cast level (optional)" /><Button type="button" variant="danger" aria-label={`Remove ${names[spell.id] ?? "spell"}`} onClick={() => onChange(spells.filter((_, i) => i !== index))} style={{ padding: 0, borderRadius: 6 }}>×</Button></div>)}
       <div style={{ display: "grid", gridTemplateColumns: "minmax(180px,1fr) 150px 180px", gap: 6, marginTop: 10 }}>
         <Input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Search spells by name…" />
         <Select value={level} onChange={(event) => setLevel(event.target.value)}><option value="all">All levels</option><option value="0">Cantrip</option>{Array.from({ length: 9 }, (_, i) => <option key={i + 1} value={String(i + 1)}>Level {i + 1}</option>)}</Select>

@@ -1,5 +1,5 @@
 import React from "react";
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import { PreparedSpellProgressionBlock } from "@/views/character/CharacterViewParts";
 import { ABILITY_NAME_TO_KEY, ALL_LANGUAGES, ALL_SKILLS, ALL_TOOLS } from "../constants/CharacterCreatorConstants";
@@ -73,9 +73,9 @@ function choiceButtonStyle(selected: boolean, locked = false): React.CSSProperti
     borderRadius: 6,
     fontSize: "var(--fs-subtitle)",
     cursor: locked ? "default" : "pointer",
-    border: `1px solid ${selected ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-    background: selected ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
-    color: selected ? C.accentHl : locked ? "rgba(160,180,220,0.35)" : C.text,
+    border: `1px solid ${selected ? C.accentHl : C.panelBorder}`,
+    background: selected ? withAlpha(C.accentHl, 0.18) : C.panelBg,
+    color: selected ? C.accentHl : locked ? withAlpha(C.muted, 0.35) : C.text,
     fontWeight: selected ? 700 : 400,
   };
 }
@@ -260,8 +260,8 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                           borderRadius: 6,
                           fontSize: "var(--fs-subtitle)",
                           cursor: "pointer",
-                          border: `2px solid ${selected ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                          background: selected ? "rgba(56,182,255,0.15)" : "rgba(255,255,255,0.055)",
+                          border: `2px solid ${selected ? C.accentHl : C.panelBorder}`,
+                          background: selected ? withAlpha(C.accentHl, 0.15) : C.panelBg,
                           color: selected ? C.accentHl : C.text,
                           fontWeight: selected ? 700 : 400,
                         }}
@@ -413,8 +413,8 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                           cursor: "pointer",
                           fontSize: "var(--fs-small)",
                           fontWeight: 600,
-                          border: `1px solid ${mode === option ? C.colorMagic : "rgba(255,255,255,0.15)"}`,
-                          background: mode === option ? "rgba(167,139,250,0.18)" : "rgba(255,255,255,0.04)",
+                          border: `1px solid ${mode === option ? C.colorMagic : withAlpha(C.panelBorder, 0.15)}`,
+                          background: mode === option ? withAlpha(C.colorMagic, 0.18) : withAlpha(C.panelBorder, 0.04),
                           color: mode === option ? C.colorMagic : C.muted,
                         }}
                       >
@@ -450,9 +450,9 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                             padding: "6px 16px",
                             borderRadius: 6,
                             cursor: canSelect || isSelected ? "pointer" : "default",
-                            border: `1px solid ${isSelected ? C.colorMagic : canSelect ? "rgba(167,139,250,0.35)" : "rgba(255,255,255,0.12)"}`,
-                            background: isSelected ? "rgba(167,139,250,0.2)" : "rgba(255,255,255,0.055)",
-                            color: isSelected ? C.colorMagic : canSelect ? "rgba(167,139,250,0.7)" : C.muted,
+                            border: `1px solid ${isSelected ? C.colorMagic : canSelect ? withAlpha(C.colorMagic, 0.35) : C.panelBorder}`,
+                            background: isSelected ? withAlpha(C.colorMagic, 0.2) : C.panelBg,
+                            color: isSelected ? C.colorMagic : canSelect ? withAlpha(C.colorMagic, 0.7) : C.muted,
                             fontSize: "var(--fs-subtitle)",
                             fontWeight: isSelected ? 700 : 400,
                             opacity: !canSelect && !isSelected ? 0.45 : 1,
@@ -488,8 +488,8 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                           cursor: "pointer",
                           fontSize: "var(--fs-subtitle)",
                           fontWeight: selected ? 700 : 400,
-                          border: `1px solid ${selected ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                          background: selected ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
+                          border: `1px solid ${selected ? C.accentHl : C.panelBorder}`,
+                          background: selected ? withAlpha(C.accentHl, 0.18) : C.panelBg,
                           color: selected ? C.accentHl : C.text,
                         }}
                       >

@@ -1,5 +1,7 @@
 import React, { useEffect } from "react";
 import { theme, withAlpha } from "@/theme/theme";
+import { IconButton } from "@/ui/IconButton";
+import { IconClose } from "@/icons";
 
 /**
  * Lightweight modal overlay.
@@ -69,20 +71,9 @@ export function Modal(props: {
           }}
         >
           <div style={{ fontWeight: 900, color: theme.colors.text }}>{props.title}</div>
-          <button
-            onClick={props.onClose}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: theme.colors.text,
-              opacity: 0.85,
-              cursor: "pointer",
-              fontWeight: 800
-            }}
-            title="Close"
-          >
-            Close
-          </button>
+          <IconButton onClick={props.onClose} title="Close" variant="ghost">
+            <IconClose />
+          </IconButton>
         </div>
 
         <div style={{ overflow: "hidden" }}>{props.children}</div>

@@ -3,7 +3,8 @@ import { IconPencil, IconTrash } from "@/icons";
 import { expandSchool } from "@beholden/shared/domain/compendium/expandSchool";
 import { theme, withAlpha } from "@/theme/theme";
 import type { SpellSearchRow } from "@/domain/compendium/normalizeSpellSearchRow";
-import { actionBtnStyle } from "./browserParts";
+import { Button } from "@/ui/Button";
+import { IconButton } from "@/ui/IconButton";
 
 export function SpellBrowserRow(props: {
   row: SpellSearchRow;
@@ -80,21 +81,21 @@ export function SpellBrowserRow(props: {
           {props.confirmingDelete ? (
             <>
               <span style={{ fontSize: "var(--fs-small)", color: theme.colors.muted, marginRight: 4 }}>Delete?</span>
-              <button type="button" onClick={props.onConfirmDelete} disabled={props.deleteBusy} style={actionBtnStyle(theme.colors.red)} title="Yes, delete">
+              <Button type="button" variant="danger" onClick={props.onConfirmDelete} disabled={props.deleteBusy} title="Yes, delete">
                 Yes
-              </button>
-              <button type="button" onClick={props.onCancelDelete} style={actionBtnStyle(theme.colors.muted)} title="Cancel">
+              </Button>
+              <Button type="button" variant="ghost" onClick={props.onCancelDelete} title="Cancel">
                 No
-              </button>
+              </Button>
             </>
           ) : (
             <>
-              <button type="button" onClick={props.onEdit} disabled={props.editLoading} style={actionBtnStyle(theme.colors.muted)} title="Edit spell">
+              <IconButton onClick={props.onEdit} disabled={props.editLoading} variant="ghost" size="sm" title="Edit spell">
                 {props.editLoading ? <span style={{ fontSize: "var(--fs-tiny)" }}>...</span> : <IconPencil size={13} />}
-              </button>
-              <button type="button" onClick={props.onDelete} style={actionBtnStyle(theme.colors.muted)} title="Delete spell">
+              </IconButton>
+              <IconButton onClick={props.onDelete} variant="ghost" size="sm" title="Delete spell">
                 <IconTrash size={13} />
-              </button>
+              </IconButton>
             </>
           )}
         </div>

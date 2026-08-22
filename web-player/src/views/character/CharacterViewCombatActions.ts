@@ -44,6 +44,19 @@ export function scopePreparedSpellsByClass(args: {
   return result;
 }
 
+export function hitDicePatchForTotal(
+  nextValue: number,
+  hitDiceMax: number,
+  hitDicePools: Array<{ dieSize: number; max: number; current: number }>,
+): Pick<CharacterData, "hitDiceCurrent" | "hitDiceCurrentBySize"> {
+  const hitDiceCurrent = Math.max(0, Math.min(hitDiceMax, Math.floor(nextValue)));
+  const solePool = hitDicePools.length === 1 ? hitDicePools[0] : null;
+  return {
+    hitDiceCurrent,
+    ...(solePool ? { hitDiceCurrentBySize: { [String(solePool.dieSize)]: hitDiceCurrent } } : {}),
+  };
+}
+
 /** True when a species trait grants the well-known "heroic_inspiration" resource (e.g. Human's
  * Resourceful) — read from the trait's own structured effects, never from its name. */
 function hasHeroicInspirationGrant(raceDetail: RaceFeatureDetail | null): boolean {
@@ -127,8 +140,7 @@ export function buildCharacterRuntimeActions(args: {
   };
 
   const saveHitDiceCurrent = async (nextValue: number) => {
-    const next = Math.max(0, Math.min(hitDiceMax, Math.floor(nextValue)));
-    await saveCharacterData({ hitDiceCurrent: next });
+    await saveCharacterData(hitDicePatchForTotal(nextValue, hitDiceMax, hitDicePools));
   };
   const saveHitDicePoolCurrent = async (dieSize: number, nextValue: number) => {
     const pool = hitDicePools.find((entry) => entry.dieSize === dieSize);

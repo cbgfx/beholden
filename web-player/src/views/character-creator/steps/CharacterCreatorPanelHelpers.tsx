@@ -1,5 +1,5 @@
 import React from "react";
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import { labelStyle, profChipStyle, sourceTagStyle } from "../shared/CharacterCreatorStyles";
 
@@ -86,9 +86,9 @@ export function renderChoiceChipGroup({
                 borderRadius: 6,
                 fontSize: "var(--fs-subtitle)",
                 cursor: locked ? "default" : "pointer",
-                border: `1px solid ${selected ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                background: selected ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
-                color: selected ? C.accentHl : locked ? "rgba(160,180,220,0.35)" : C.text,
+                border: `1px solid ${selected ? C.accentHl : C.panelBorder}`,
+                background: selected ? withAlpha(C.accentHl, 0.18) : C.panelBg,
+                color: selected ? C.accentHl : locked ? withAlpha(C.muted, 0.35) : C.text,
                 fontWeight: selected ? 700 : 400,
               }}
             >
@@ -143,9 +143,9 @@ export function renderClassFeatSingleChoicePanel({
                 borderRadius: 6,
                 fontSize: "var(--fs-subtitle)",
                 cursor: "pointer",
-                border: `1px solid ${selected ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                background: selected ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
-                color: selected ? C.accentHl : deemphasized ? "rgba(160,180,220,0.35)" : C.text,
+                border: `1px solid ${selected ? C.accentHl : C.panelBorder}`,
+                background: selected ? withAlpha(C.accentHl, 0.18) : C.panelBg,
+                color: selected ? C.accentHl : deemphasized ? withAlpha(C.muted, 0.35) : C.text,
                 fontWeight: selected ? 700 : 400,
               }}
             >

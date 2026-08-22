@@ -3,6 +3,7 @@ import React from "react";
 export function IconButton(props: {
   children: React.ReactNode;
   title?: string;
+  "aria-label"?: string;
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   disabled?: boolean;
   variant?: "ghost" | "solid" | "accent";
@@ -13,6 +14,8 @@ export function IconButton(props: {
   textDarkColor: string;
   hoverBackground?: string;
   ghostBackground?: string;
+  style?: React.CSSProperties;
+  className?: string;
 }) {
   const [hovered, setHovered] = React.useState(false);
   const size = props.size ?? "md";
@@ -63,6 +66,8 @@ export function IconButton(props: {
     <button
       type="button"
       title={props.title}
+      aria-label={props["aria-label"]}
+      className={props.className}
       onClick={props.onClick}
       disabled={props.disabled}
       onMouseEnter={() => setHovered(true)}
@@ -81,6 +86,7 @@ export function IconButton(props: {
         opacity: props.disabled ? 0.45 : 1,
         userSelect: "none",
         transition: "background 120ms ease, border-color 120ms ease, color 120ms ease",
+        ...props.style,
       }}
     >
       {props.children}

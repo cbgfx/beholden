@@ -1,16 +1,6 @@
 import React from "react";
 import { C } from "@/lib/theme";
-
-const closeBtn: React.CSSProperties = {
-  background: "transparent",
-  border: "1px solid rgba(255,255,255,0.16)",
-  borderRadius: 6,
-  color: C.muted,
-  cursor: "pointer",
-  padding: "4px 10px",
-  fontSize: "var(--fs-small)",
-  fontWeight: 700,
-};
+import { Button } from "@/ui/Button";
 
 export function RightDrawer({
   onClose,
@@ -56,7 +46,7 @@ export function RightDrawer({
           }}
         >
           <div style={{ minWidth: 0 }}>{title}</div>
-          <button type="button" onClick={onClose} style={closeBtn}>Close</button>
+          <Button variant="ghost" onClick={onClose} style={{ padding: "4px 10px", fontSize: "var(--fs-small)" }}>Close</Button>
         </div>
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "16px 20px" }}>
           {children}

@@ -3,6 +3,7 @@ import { C } from "@/lib/theme";
 import { api, jsonInit } from "@/services/api";
 import type { EditableSheetOverrideField, SheetOverrides } from "@/views/character/CharacterViewHelpers";
 import type { AbilKey } from "@/views/character/CharacterSheetTypes";
+import { Button } from "@/ui/Button";
 
 const identityInputStyle = {
   padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)",
@@ -78,20 +79,9 @@ export function CharacterInfoDrawer(props: {
             <div style={{ fontSize: "var(--fs-hero)", fontWeight: 900, color: C.text, marginBottom: 4 }}>Character Information</div>
             <div style={{ fontSize: "var(--fs-subtitle)", color: C.muted }}>Identity details and sheet overrides.</div>
           </div>
-          <button
-            onClick={props.onClose}
-            style={{
-              padding: "9px 16px",
-              borderRadius: 12,
-              cursor: "pointer",
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              color: C.text,
-              fontWeight: 700,
-            }}
-          >
+          <Button variant="ghost" onClick={props.onClose}>
             Close
-          </button>
+          </Button>
         </div>
 
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
@@ -123,13 +113,13 @@ export function CharacterInfoDrawer(props: {
                 <label style={{ display: "grid", gap: 5, color: C.muted }}>Age<input type="number" min={0} value={linkedDraft.age} onChange={(event) => setLinkedDraft((value) => ({ ...value, age: event.target.value }))} style={identityInputStyle} /></label>
               </div>
               <label style={{ display: "grid", gap: 5, color: C.muted }}>Backstory<textarea rows={5} value={linkedDraft.backstory} onChange={(event) => setLinkedDraft((value) => ({ ...value, backstory: event.target.value }))} style={identityInputStyle} /></label>
-              <button type="button" disabled={linkedSaving} onClick={async () => {
+              <Button type="button" variant="primary" disabled={linkedSaving} onClick={async () => {
                 setLinkedSaving(true);
                 try {
                   await api(`/api/me/characters/${props.characterId}/binder-identity`, jsonInit("PATCH", { gender: linkedDraft.gender.trim() || null, age: linkedDraft.age.trim() ? Number(linkedDraft.age) : null, backstory: linkedDraft.backstory || null }));
                   setLinked((value) => value ? { ...value, gender: linkedDraft.gender || null, age: linkedDraft.age ? Number(linkedDraft.age) : null, backstory: linkedDraft.backstory || null } : value);
                 } finally { setLinkedSaving(false); }
-              }} style={{ justifySelf: "end", padding: "9px 14px", borderRadius: 10, border: 0, background: props.accentColor, color: "#fff", fontWeight: 800, cursor: "pointer" }}>{linkedSaving ? "Saving…" : "Save Binder Identity"}</button>
+              }} style={{ justifySelf: "end" }}>{linkedSaving ? "Saving…" : "Save Binder Identity"}</Button>
             </div> : null}
           </div>
 
@@ -238,36 +228,16 @@ export function CharacterInfoDrawer(props: {
         </div>
 
         <div style={{ padding: "24px 24px calc(24px + env(safe-area-inset-bottom, 0px))", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "flex-end", gap: 12, flexShrink: 0 }}>
-          <button
-            onClick={props.onClose}
-            style={{
-              padding: "11px 18px",
-              borderRadius: 12,
-              cursor: "pointer",
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              color: C.text,
-              fontWeight: 700,
-            }}
-          >
+          <Button variant="ghost" onClick={props.onClose}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
             onClick={() => void props.onSave()}
             disabled={props.overridesSaving}
-            style={{
-              padding: "11px 18px",
-              borderRadius: 12,
-              cursor: props.overridesSaving ? "default" : "pointer",
-              background: props.accentColor,
-              border: "none",
-              color: "#fff",
-              fontWeight: 800,
-              opacity: props.overridesSaving ? 0.7 : 1,
-            }}
           >
             {props.overridesSaving ? "Saving..." : "Save"}
-          </button>
+          </Button>
         </div>
       </div>
     </>

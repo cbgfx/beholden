@@ -1,5 +1,6 @@
 import React from "react";
 import { theme, withAlpha } from "@/theme/theme";
+import { IconButton } from "@/ui/IconButton";
 
 export type RowMenuItem = {
   label: string;
@@ -24,29 +25,9 @@ export function RowMenu(props: { items: RowMenuItem[] }) {
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
-      <button
-        type="button"
-        title="More actions"
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 30,
-          height: 30,
-          borderRadius: 8,
-          border: `1px solid ${theme.colors.panelBorder}`,
-          background: "transparent",
-          color: theme.colors.muted,
-          cursor: "pointer",
-          fontSize: "var(--fs-body)",
-          fontWeight: 900,
-          letterSpacing: 1,
-          lineHeight: 1,
-        }}
-      >
-        ···
-      </button>
+      <IconButton title="More actions" onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }} variant="ghost">
+        <span style={{ fontWeight: 900, letterSpacing: 1, lineHeight: 1 }}>···</span>
+      </IconButton>
 
       {open && (
         <div

@@ -1,4 +1,4 @@
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
 import { FormattedText } from "@beholden/shared/ui";
 import { ChoiceBtn } from "./LevelUpParts";
 import type { LevelUpFeatDetail } from "./LevelUpTypes";
@@ -65,9 +65,9 @@ export function FeatSelectionSection(props: {
                 padding: "10px 12px",
                 borderRadius: 8,
                 cursor: "pointer",
-                border: `2px solid ${active ? accentColor : "rgba(255,255,255,0.1)"}`,
-                background: active ? `${accentColor}18` : "rgba(255,255,255,0.03)",
-                color: active ? "#fff" : C.text,
+                border: `2px solid ${active ? accentColor : withAlpha(C.panelBorder, 0.1)}`,
+                background: active ? `${accentColor}18` : withAlpha(C.panelBorder, 0.03),
+                color: C.text,
                 textAlign: "left",
                 fontSize: "var(--fs-subtitle)",
                 fontWeight: active ? 800 : 600,

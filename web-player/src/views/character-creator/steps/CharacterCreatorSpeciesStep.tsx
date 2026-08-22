@@ -1,5 +1,5 @@
 import React from "react";
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import { NavButtons } from "../shared/CharacterCreatorParts";
 import {
@@ -202,9 +202,9 @@ function renderSpeciesStep({
                             borderRadius: 6,
                             fontSize: "var(--fs-subtitle)",
                             cursor: locked ? "default" : "pointer",
-                            border: `1px solid ${sel ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                            background: sel ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
-                            color: sel ? C.accentHl : locked ? "rgba(160,180,220,0.35)" : C.text,
+                            border: `1px solid ${sel ? C.accentHl : C.panelBorder}`,
+                            background: sel ? withAlpha(C.accentHl, 0.18) : C.panelBg,
+                            color: sel ? C.accentHl : locked ? withAlpha(C.muted, 0.35) : C.text,
                             fontWeight: sel ? 700 : 400,
                           }}
                         >
@@ -253,8 +253,8 @@ function renderSpeciesStep({
                         cursor: "pointer",
                         fontSize: "var(--fs-small)",
                         fontWeight: 600,
-                        border: `1px solid ${mode === option ? C.accentHl : "rgba(255,255,255,0.15)"}`,
-                        background: mode === option ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.04)",
+                        border: `1px solid ${mode === option ? C.accentHl : withAlpha(C.panelBorder, 0.15)}`,
+                        background: mode === option ? withAlpha(C.accentHl, 0.18) : withAlpha(C.panelBorder, 0.04),
                         color: mode === option ? C.accentHl : C.muted,
                       }}
                     >
@@ -281,9 +281,9 @@ function renderSpeciesStep({
                           padding: "6px 16px",
                           borderRadius: 6,
                           cursor: canSelect || sel ? "pointer" : "default",
-                          border: `1px solid ${sel ? C.accentHl : canSelect ? "rgba(56,182,255,0.35)" : "rgba(255,255,255,0.12)"}`,
-                          background: sel ? "rgba(56,182,255,0.2)" : "rgba(255,255,255,0.055)",
-                          color: sel ? C.accentHl : canSelect ? "rgba(56,182,255,0.7)" : C.muted,
+                          border: `1px solid ${sel ? C.accentHl : canSelect ? withAlpha(C.accentHl, 0.35) : C.panelBorder}`,
+                          background: sel ? withAlpha(C.accentHl, 0.2) : C.panelBg,
+                          color: sel ? C.accentHl : canSelect ? withAlpha(C.accentHl, 0.7) : C.muted,
                           fontSize: "var(--fs-subtitle)",
                           fontWeight: sel ? 700 : 400,
                           opacity: !canSelect && !sel ? 0.45 : 1,
@@ -315,8 +315,8 @@ function renderSpeciesStep({
                         borderRadius: 6,
                         fontSize: "var(--fs-subtitle)",
                         cursor: "pointer",
-                        border: `1px solid ${selected ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                        background: selected ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
+                        border: `1px solid ${selected ? C.accentHl : C.panelBorder}`,
+                        background: selected ? withAlpha(C.accentHl, 0.18) : C.panelBg,
                         color: selected ? C.accentHl : C.text,
                         fontWeight: selected ? 700 : 400,
                       }}
@@ -345,8 +345,8 @@ function renderSpeciesStep({
                         borderRadius: 6,
                         fontSize: "var(--fs-subtitle)",
                         cursor: "pointer",
-                        border: `1px solid ${sel ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                        background: sel ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
+                        border: `1px solid ${sel ? C.accentHl : C.panelBorder}`,
+                        background: sel ? withAlpha(C.accentHl, 0.18) : C.panelBg,
                         color: sel ? C.accentHl : C.text,
                         fontWeight: sel ? 700 : 400,
                         textTransform: "uppercase",
@@ -376,8 +376,8 @@ function renderSpeciesStep({
                         borderRadius: 6,
                         fontSize: "var(--fs-subtitle)",
                         cursor: "pointer",
-                        border: `1px solid ${sel ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                        background: sel ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
+                        border: `1px solid ${sel ? C.accentHl : C.panelBorder}`,
+                        background: sel ? withAlpha(C.accentHl, 0.18) : C.panelBg,
                         color: sel ? C.accentHl : C.text,
                         fontWeight: sel ? 700 : 400,
                       }}
@@ -413,9 +413,9 @@ function renderSpeciesStep({
                         borderRadius: 6,
                         fontSize: "var(--fs-subtitle)",
                         cursor: locked ? "default" : "pointer",
-                        border: `1px solid ${sel ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                        background: sel ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
-                        color: sel ? C.accentHl : locked ? "rgba(160,180,220,0.35)" : C.text,
+                        border: `1px solid ${sel ? C.accentHl : C.panelBorder}`,
+                        background: sel ? withAlpha(C.accentHl, 0.18) : C.panelBg,
+                        color: sel ? C.accentHl : locked ? withAlpha(C.muted, 0.35) : C.text,
                         fontWeight: sel ? 700 : 400,
                       }}
                     >
@@ -450,9 +450,9 @@ function renderSpeciesStep({
                         borderRadius: 6,
                         fontSize: "var(--fs-subtitle)",
                         cursor: locked ? "default" : "pointer",
-                        border: `1px solid ${sel ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                        background: sel ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
-                        color: sel ? C.accentHl : locked ? "rgba(160,180,220,0.35)" : C.text,
+                        border: `1px solid ${sel ? C.accentHl : C.panelBorder}`,
+                        background: sel ? withAlpha(C.accentHl, 0.18) : C.panelBg,
+                        color: sel ? C.accentHl : locked ? withAlpha(C.muted, 0.35) : C.text,
                         fontWeight: sel ? 700 : 400,
                       }}
                     >
@@ -492,9 +492,9 @@ function renderSpeciesStep({
                         borderRadius: 6,
                         fontSize: "var(--fs-subtitle)",
                         cursor: locked ? "default" : "pointer",
-                        border: `1px solid ${sel ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                        background: sel ? "rgba(56,182,255,0.18)" : "rgba(255,255,255,0.055)",
-                        color: sel ? C.accentHl : locked ? "rgba(160,180,220,0.35)" : C.text,
+                        border: `1px solid ${sel ? C.accentHl : C.panelBorder}`,
+                        background: sel ? withAlpha(C.accentHl, 0.18) : C.panelBg,
+                        color: sel ? C.accentHl : locked ? withAlpha(C.muted, 0.35) : C.text,
                         fontWeight: sel ? 700 : 400,
                       }}
                     >
@@ -525,11 +525,11 @@ function renderSpeciesStep({
                       onClick={() => selectRaceFeat(feat.id, sel)}
                       style={{
                         padding: "8px 12px",
-                        borderRadius: 8,
+                        borderRadius: 10,
                         textAlign: "left",
                         cursor: "pointer",
-                        border: `2px solid ${sel ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                        background: sel ? "rgba(56,182,255,0.15)" : "rgba(255,255,255,0.055)",
+                        border: `2px solid ${sel ? C.accentHl : C.panelBorder}`,
+                        background: sel ? withAlpha(C.accentHl, 0.15) : C.panelBg,
                         color: sel ? C.accentHl : C.text,
                         fontWeight: sel ? 700 : 400,
                         fontSize: "var(--fs-subtitle)",

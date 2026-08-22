@@ -5,6 +5,8 @@ import { Panel } from "@/ui/Panel";
 import { theme, withAlpha } from "@/theme/theme";
 import { api } from "@/services/api";
 import { IconPencil, IconTrash } from "@/icons";
+import { Button } from "@/ui/Button";
+import { IconButton } from "@/ui/IconButton";
 import type { CompendiumMonsterRow, SortMode } from "@/views/CampaignView/monsterPicker/types";
 import { SIZE_LABELS } from "@/views/CampaignView/monsterPicker/hooks/useMonsterPickerRows";
 import { MonsterPickerFilters } from "@/views/CampaignView/monsterPicker/components/MonsterPickerFilters";
@@ -12,7 +14,7 @@ import { useVirtualList } from "@/views/CampaignView/monsterPicker/hooks/useVirt
 import { formatCr } from "@/views/CampaignView/monsterPicker/utils";
 import { MonsterFormModal, type MonsterForEdit } from "@/views/CompendiumView/panels/MonsterFormModal";
 import { MonsterCreateChoiceModal, MonsterDuplicatePickerModal } from "./MonsterBrowserModals";
-import { actionBtnStyle, BrowserAddButton } from "./browserParts";
+import { BrowserAddButton } from "./browserParts";
 
 const ROW_HEIGHT = 52;
 
@@ -88,21 +90,21 @@ function MonsterBrowserRow(props: {
           {props.confirmingDelete ? (
             <>
               <span style={{ fontSize: "var(--fs-small)", color: theme.colors.muted, marginRight: 2 }}>Delete?</span>
-              <button type="button" onClick={props.onConfirmDelete} disabled={props.deleteBusy} style={actionBtnStyle(theme.colors.red)} title="Yes, delete">
+              <Button type="button" variant="danger" onClick={props.onConfirmDelete} disabled={props.deleteBusy} title="Yes, delete">
                 Yes
-              </button>
-              <button type="button" onClick={props.onCancelDelete} style={actionBtnStyle(theme.colors.muted)} title="Cancel">
+              </Button>
+              <Button type="button" variant="ghost" onClick={props.onCancelDelete} title="Cancel">
                 No
-              </button>
+              </Button>
             </>
           ) : (
             <>
-              <button type="button" onClick={props.onEdit} style={actionBtnStyle(theme.colors.muted)} title="Edit monster">
+              <IconButton onClick={props.onEdit} variant="ghost" size="sm" title="Edit monster">
                 <IconPencil size={13} />
-              </button>
-              <button type="button" onClick={props.onDelete} style={actionBtnStyle(theme.colors.muted)} title="Delete monster">
+              </IconButton>
+              <IconButton onClick={props.onDelete} variant="ghost" size="sm" title="Delete monster">
                 <IconTrash size={13} />
-              </button>
+              </IconButton>
             </>
           )}
         </div>

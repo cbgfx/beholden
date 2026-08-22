@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, jsonInit } from "@/services/api";
+import { Button } from "@/ui/Button";
 
 const fieldStyle: React.CSSProperties = {
   background: "rgba(0,0,0,0.35)",
@@ -101,13 +102,6 @@ export function ProfileView() {
     }
   }
 
-  const btnBase: React.CSSProperties = {
-    padding: "8px 20px", borderRadius: 8, fontWeight: 700, fontSize: "var(--fs-subtitle)",
-    cursor: busy ? "default" : "pointer", border: "none",
-    background: C.accentHl, color: C.bg, opacity: busy ? 0.6 : 1,
-    alignSelf: "flex-start",
-  };
-
   return (
     <div style={{ height: "100%", overflowY: "auto", background: C.bg, color: C.text, fontFamily: "system-ui, Segoe UI, Arial, sans-serif" }}>
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "36px 24px", display: "flex", flexDirection: "column", gap: 28 }}>
@@ -145,7 +139,7 @@ export function ProfileView() {
           {infoErr && <div style={{ color: "rgba(248,113,113,0.9)", fontSize: "var(--fs-subtitle)" }}>{infoErr}</div>}
           {infoMsg && <div style={{ color: "rgba(74,222,128,0.9)", fontSize: "var(--fs-subtitle)" }}>{infoMsg}</div>}
 
-          <button type="submit" style={btnBase} disabled={busy}>Save Profile</button>
+          <Button type="submit" variant="primary" disabled={busy} style={{ alignSelf: "flex-start" }}>Save Profile</Button>
         </form>
 
         {/* Password change */}
@@ -167,7 +161,7 @@ export function ProfileView() {
           {pwErr && <div style={{ color: "rgba(248,113,113,0.9)", fontSize: "var(--fs-subtitle)" }}>{pwErr}</div>}
           {pwMsg && <div style={{ color: "rgba(74,222,128,0.9)", fontSize: "var(--fs-subtitle)" }}>{pwMsg}</div>}
 
-          <button type="submit" style={btnBase} disabled={busy}>Update Password</button>
+          <Button type="submit" variant="primary" disabled={busy} style={{ alignSelf: "flex-start" }}>Update Password</Button>
         </form>
 
       </div>

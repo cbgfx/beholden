@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { ExpandableNoteItem } from "./ExpandableNoteItem";
+import { withAlpha } from "./colors";
 
 const mentionLinkStyle: React.CSSProperties = {
   color: "#7dd3fc",
@@ -271,7 +272,7 @@ export function NoteRow({
                   e.stopPropagation();
                   onDelete();
                 }}
-                style={{ background: "rgba(255,93,93,0.08)", border: "1px solid rgba(255,93,93,0.25)", borderRadius: 5, color: deleteColor, cursor: "pointer", padding: "2px 7px", fontSize: "var(--fs-small)" }}
+                style={{ background: withAlpha(deleteColor, 0.08), border: `1px solid ${withAlpha(deleteColor, 0.25)}`, borderRadius: 5, color: deleteColor, cursor: "pointer", padding: "2px 7px", fontSize: "var(--fs-small)" }}
               >
                 x
               </button>

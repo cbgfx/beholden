@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { theme } from "@/theme/theme";
 import { fetchBinderRelatedRecords, type BinderRelatedRecord } from "@/services/binderLoreApi";
+import { Button } from "@/ui/Button";
 
 export function RelatedRecordsPanel(props: { binderId: string; recordId: string }) {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ export function RelatedRecordsPanel(props: { binderId: string; recordId: string 
     {open && rows.length ? <div style={{ display: "grid", gap: 12, marginTop: 12, padding: 12, border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.control, background: theme.colors.inputBg }}>
       {Object.entries(groups).map(([relationship, records]) => <div key={relationship} style={{ display: "grid", gap: 6 }}>
         <strong style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{relationship}</strong>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>{records.map((record) => <button key={`${relationship}:${record.id}`} type="button" onClick={() => navigate(record.route)} style={{ padding: "5px 8px", border: `1px solid ${theme.colors.panelBorder}`, borderRadius: 7, background: "rgba(255,255,255,.055)", color: theme.colors.text, cursor: "pointer", font: "inherit" }}><b>{record.name}</b> <span style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{record.type}</span></button>)}</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>{records.map((record) => <Button key={`${relationship}:${record.id}`} type="button" variant="ghost" onClick={() => navigate(record.route)} style={{ padding: "5px 8px", borderRadius: 7, font: "inherit" }}><b>{record.name}</b> <span style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{record.type}</span></Button>)}</div>
       </div>)}
     </div> : null}
   </section>;

@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useMatch } from "react-router-dom";
-import { theme, withAlpha } from "@/theme/theme";
+import { theme } from "@/theme/theme";
 import { IconNameGenerator, IconDice, IconDeckOfManyThings, IconBastions } from "@/icons";
+import { IconButton } from "@/ui/IconButton";
 
 const NameGeneratorModal = React.lazy(() =>
   import("@/tools/NameGeneratorModal").then((module) => ({ default: module.NameGeneratorModal })),
@@ -69,29 +70,14 @@ export function ToolsBar() {
         {visibleTools.map(({ id, label, Icon }) => {
           const active = open === id;
           return (
-            <button
-              type="button"
+            <IconButton
               key={id}
               title={label}
               onClick={() => toggle(id)}
-              style={{
-                width: 36,
-                height: 36,
-                background: active ? withAlpha(theme.colors.accentPrimary, 0.14) : "rgba(255,255,255,0.04)",
-                border: `1px solid ${active ? withAlpha(theme.colors.accentPrimary, 0.55) : theme.colors.panelBorder}`,
-                borderRadius: 9,
-                padding: 0,
-                cursor: "pointer",
-                color: active ? theme.colors.accentPrimary : theme.colors.muted,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-                transition: "color 150ms, background 150ms, border-color 150ms",
-              }}
+              variant={active ? "accent" : "ghost"}
             >
               <Icon size={22} title={label} />
-            </button>
+            </IconButton>
           );
         })}
       </div>

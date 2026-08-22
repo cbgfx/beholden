@@ -2,13 +2,14 @@ import React from "react";
 import { api } from "@/services/api";
 import { C } from "@/lib/theme";
 import { Select } from "@/ui/Select";
+import { Button } from "@/ui/Button";
 import { inputStyle } from "@/views/character/CharacterInventoryPanelHelpers";
 import type { InventoryItem, StoredItemSpell } from "@/views/character/CharacterInventoryTypes";
 import { getStoredSpellTemplate, storedSpellLevelsUsed, validStoredSlotLevels } from "./CharacterStoredSpellUtils";
 
 type SpellResult = { id: string; name: string; level: number | null; school?: string | null };
 
-export function CharacterStoredSpellManager({ item, ruleset, accentColor, onSave }: {
+export function CharacterStoredSpellManager({ item, ruleset, onSave }: {
   item: InventoryItem;
   ruleset?: "5e" | "5.5e";
   accentColor: string;
@@ -74,8 +75,8 @@ export function CharacterStoredSpellManager({ item, ruleset, accentColor, onSave
             <div style={{ color: C.text, fontWeight: 800 }}>{spell.name}</div>
             <div style={{ color: C.muted, fontSize: "var(--fs-tiny)" }}>Stored at level {spell.slotLevel}</div>
           </div>
-          <button type="button" onClick={() => { void remove(spell.instanceId); }} style={actionButton(accentColor)}>Cast</button>
-          <button type="button" title="Remove without casting" onClick={() => { void remove(spell.instanceId); }} style={actionButton(C.muted)}>Remove</button>
+          <Button type="button" variant="primary" onClick={() => { void remove(spell.instanceId); }} style={{ padding: "5px 9px", borderRadius: 7 }}>Cast</Button>
+          <Button type="button" variant="ghost" title="Remove without casting" onClick={() => { void remove(spell.instanceId); }} style={{ padding: "5px 9px", borderRadius: 7 }}>Remove</Button>
         </div>
       )) : <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>The ring is empty.</div>}
       {used < template.capacity ? (
@@ -91,7 +92,7 @@ export function CharacterStoredSpellManager({ item, ruleset, accentColor, onSave
               <Select aria-label={`Slot level for ${spell.name}`} value={selected} onChange={(event) => setSlotLevels((current) => ({ ...current, [spell.id]: Number(event.target.value) }))}>
                 {allowed.map((level) => <option key={level} value={level}>Level {level}</option>)}
               </Select>
-              <button type="button" onClick={() => { void store(spell); }} style={actionButton(accentColor)}>Store</button>
+              <Button type="button" variant="primary" onClick={() => { void store(spell); }} style={{ padding: "5px 9px", borderRadius: 7 }}>Store</Button>
             </div>;
           })}
         </div>
@@ -101,4 +102,3 @@ export function CharacterStoredSpellManager({ item, ruleset, accentColor, onSave
 }
 
 const labelStyle: React.CSSProperties = { color: C.muted, fontSize: "var(--fs-small)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" };
-const actionButton = (color: string): React.CSSProperties => ({ background: `${color}18`, border: `1px solid ${color}55`, borderRadius: 7, color, cursor: "pointer", padding: "5px 9px", fontWeight: 700 });

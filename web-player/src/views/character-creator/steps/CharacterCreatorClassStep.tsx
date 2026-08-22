@@ -1,5 +1,5 @@
 import React from "react";
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import { parseSkillList } from "../utils/CharacterCreatorUtils";
 import { NavButtons } from "../shared/CharacterCreatorParts";
@@ -113,10 +113,10 @@ function renderClassStep({
                   onClick={() => onSelectClass(c.id)}
                   style={{
                     padding: "10px 13px",
-                    borderRadius: 8,
+                    borderRadius: 10,
                     textAlign: "left",
-                    border: `2px solid ${sel ? C.accentHl : "rgba(255,255,255,0.12)"}`,
-                    background: sel ? "rgba(56,182,255,0.15)" : "rgba(255,255,255,0.055)",
+                    border: `2px solid ${sel ? C.accentHl : C.panelBorder}`,
+                    background: sel ? withAlpha(C.accentHl, 0.15) : C.panelBg,
                     color: sel ? C.accentHl : C.text,
                     cursor: "pointer",
                     fontWeight: sel ? 700 : 500,

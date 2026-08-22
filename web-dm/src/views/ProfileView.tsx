@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { theme } from "@/theme/theme";
+import { Button } from "@/ui/Button";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, jsonInit } from "@/services/api";
 
@@ -101,14 +102,7 @@ export function ProfileView() {
 
   const btnStyle: React.CSSProperties = {
     padding: "8px 20px",
-    borderRadius: theme.radius.control,
-    fontWeight: 700,
     fontSize: "var(--fs-subtitle)",
-    cursor: busy ? "default" : "pointer",
-    border: "none",
-    background: theme.colors.accentHighlight,
-    color: theme.colors.bg,
-    opacity: busy ? 0.6 : 1,
     alignSelf: "flex-start",
   };
 
@@ -147,7 +141,7 @@ export function ProfileView() {
           {infoErr && <div style={{ color: theme.colors.red, fontSize: "var(--fs-subtitle)" }}>{infoErr}</div>}
           {infoMsg && <div style={{ color: theme.colors.green, fontSize: "var(--fs-subtitle)" }}>{infoMsg}</div>}
 
-          <button type="submit" style={btnStyle} disabled={busy}>Save Profile</button>
+          <Button type="submit" variant="primary" style={btnStyle} disabled={busy}>Save Profile</Button>
         </form>
 
         <form onSubmit={handlePasswordSave} style={sectionStyle}>
@@ -168,7 +162,7 @@ export function ProfileView() {
           {pwErr && <div style={{ color: theme.colors.red, fontSize: "var(--fs-subtitle)" }}>{pwErr}</div>}
           {pwMsg && <div style={{ color: theme.colors.green, fontSize: "var(--fs-subtitle)" }}>{pwMsg}</div>}
 
-          <button type="submit" style={btnStyle} disabled={busy}>Update Password</button>
+          <Button type="submit" variant="primary" style={btnStyle} disabled={busy}>Update Password</Button>
         </form>
 
       </div>

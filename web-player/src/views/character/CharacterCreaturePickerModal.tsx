@@ -4,9 +4,10 @@ import { api } from "@/services/api";
 import { C, withAlpha } from "@/lib/theme";
 import { MonsterStatblock } from "@/views/CompendiumView/panels/MonsterStatblock";
 import type { CharacterCreature } from "@/views/character/CharacterSheetTypes";
-import { addBtnStyle, cancelBtnStyle, inventoryPickerColumnStyle, inventoryPickerListStyle } from "@/views/character/CharacterViewParts";
+import { cancelBtnStyle, inventoryPickerColumnStyle, inventoryPickerListStyle } from "@/views/character/CharacterViewParts";
 import { inputStyle } from "@/views/character/CharacterInventoryPanelHelpers";
 import { ItemListRow } from "@beholden/shared/ui";
+import { Button } from "@/ui/Button";
 
 type CompendiumMonsterRow = {
   id: string;
@@ -172,8 +173,9 @@ export function CharacterCreaturePickerModal(props: {
               {selectedRow?.name ?? "Select a creature"}
             </div>
             <div style={{ flex: 1 }} />
-            <button
+            <Button
               type="button"
+              variant="primary"
               onClick={() => {
                 if (!selectedRow) return;
                 const ac = Math.max(1, parseLeadingNumber(detail?.ac) ?? 10);
@@ -193,10 +195,9 @@ export function CharacterCreaturePickerModal(props: {
                 });
               }}
               disabled={!selectedRow}
-              style={addBtnStyle(props.accentColor)}
             >
               Add
-            </button>
+            </Button>
             <button type="button" onClick={props.onClose} style={cancelBtnStyle}>Close</button>
           </div>
 

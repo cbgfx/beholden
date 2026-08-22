@@ -1,7 +1,8 @@
 import React from "react";
 
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
 import { Select } from "@/ui/Select";
+import { IconButton } from "@/ui/IconButton";
 import { NavButtons } from "../shared/CharacterCreatorParts";
 import {
   detailBoxStyle,
@@ -9,7 +10,6 @@ import {
   inputStyle,
   labelStyle,
   profChipStyle,
-  smallBtnStyle,
   sourceTagStyle,
 } from "../shared/CharacterCreatorStyles";
 import {
@@ -132,9 +132,9 @@ function renderAbilityScoresStep({
               padding: "7px 16px",
               borderRadius: 8,
               cursor: "pointer",
-              border: `1px solid ${form.abilityMethod === m ? C.accentHl : "rgba(255,255,255,0.14)"}`,
-              background: form.abilityMethod === m ? "rgba(56,182,255,0.15)" : "rgba(255,255,255,0.055)",
-              color: form.abilityMethod === m ? C.accentHl : "rgba(160,180,220,0.7)",
+              border: `1px solid ${form.abilityMethod === m ? C.accentHl : withAlpha(C.panelBorder, 0.14)}`,
+              background: form.abilityMethod === m ? withAlpha(C.accentHl, 0.15) : C.panelBg,
+              color: form.abilityMethod === m ? C.accentHl : withAlpha(C.muted, 0.7),
               fontWeight: form.abilityMethod === m ? 700 : 500,
               fontSize: "var(--fs-subtitle)",
             }}
@@ -183,9 +183,9 @@ function renderAbilityScoresStep({
                 <div key={k} style={{ textAlign: "center", padding: "8px", borderRadius: 8, border: `1px solid ${primaryKeys.includes(k) ? "rgba(251,191,36,0.3)" : "transparent"}`, background: primaryKeys.includes(k) ? "rgba(251,191,36,0.05)" : "transparent" }}>
                   <AbilityLabel k={k} />
                   <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}>
-                    <button type="button" disabled={score <= 8} onClick={() => setPointBuyScore(k, score - 1)} style={{ ...smallBtnStyle, opacity: score <= 8 ? 0.4 : 1 }}>−</button>
+                    <IconButton size="sm" disabled={score <= 8} onClick={() => setPointBuyScore(k, score - 1)}>−</IconButton>
                     <span style={{ fontWeight: 700, minWidth: 24 }}>{score}{total !== score ? <span style={{ color: C.colorMagic, fontSize: "var(--fs-small)" }}> ({total})</span> : null}</span>
-                    <button type="button" disabled={score >= 15 || remaining < (pointBuyCosts[score + 1] ?? 99) - (pointBuyCosts[score] ?? 0)} onClick={() => setPointBuyScore(k, score + 1)} style={{ ...smallBtnStyle, opacity: (score >= 15 || remaining < (pointBuyCosts[score + 1] ?? 99) - (pointBuyCosts[score] ?? 0)) ? 0.4 : 1 }}>+</button>
+                    <IconButton size="sm" disabled={score >= 15 || remaining < (pointBuyCosts[score + 1] ?? 99) - (pointBuyCosts[score] ?? 0)} onClick={() => setPointBuyScore(k, score + 1)}>+</IconButton>
                   </div>
                   <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginTop: 2 }}>mod {abilityMod(total) >= 0 ? "+" : ""}{abilityMod(total)}</div>
                 </div>

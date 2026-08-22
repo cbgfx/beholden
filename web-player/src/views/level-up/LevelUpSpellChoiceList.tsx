@@ -1,5 +1,6 @@
 import React from "react";
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
+import { IconButton } from "@/ui/IconButton";
 import { classTalentPrerequisiteLabel } from "@/views/character/CharacterSheetUtils";
 import type { LevelUpSpellSummary } from "./LevelUpTypes";
 
@@ -126,8 +127,8 @@ export function LevelUpSpellChoiceList({
                       padding: "6px 8px",
                       borderRadius: 8,
                       cursor: blocked ? "not-allowed" : "pointer",
-                      border: `2px solid ${active || focused ? C.accentHl : "rgba(255,255,255,0.1)"}`,
-                      background: active ? "rgba(56,182,255,0.14)" : focused ? "rgba(56,182,255,0.08)" : "rgba(255,255,255,0.03)",
+                      border: `2px solid ${active || focused ? C.accentHl : withAlpha(C.panelBorder, 0.1)}`,
+                      background: active ? withAlpha(C.accentHl, 0.14) : focused ? withAlpha(C.accentHl, 0.08) : withAlpha(C.panelBorder, 0.03),
                       color: blocked ? C.muted : C.text,
                       textAlign: "left",
                       opacity: blocked ? 0.6 : 1,
@@ -161,7 +162,7 @@ export function LevelUpSpellChoiceList({
                   </button>
                 );
                 if (!spell.repeatable || !active) return button;
-                return <div key={spell.id} style={{ display: "flex", gap: 4 }}>{React.cloneElement(button, { key: `${spell.id}:main`, style: { ...button.props.style, flex: 1 } })}<button type="button" disabled={chosen.length >= max || !allowed} onClick={() => onToggle(spell.id, "add")} style={{ borderRadius: 8, border: "1px solid rgba(56,182,255,0.5)", background: "rgba(56,182,255,0.12)", color: C.accentHl, fontWeight: 900, padding: "0 9px" }}>+</button></div>;
+                return <div key={spell.id} style={{ display: "flex", gap: 4 }}>{React.cloneElement(button, { key: `${spell.id}:main`, style: { ...button.props.style, flex: 1 } })}<IconButton variant="accent" size="sm" disabled={chosen.length >= max || !allowed} onClick={() => onToggle(spell.id, "add")}>+</IconButton></div>;
               })}
             </div>
           </div>
@@ -173,8 +174,8 @@ export function LevelUpSpellChoiceList({
             marginTop: 10,
             padding: "12px 14px",
             borderRadius: 10,
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: "rgba(255,255,255,0.05)",
+            border: `1px solid ${C.panelBorder}`,
+            background: C.panelBg,
           }}
         >
           <div style={{ fontWeight: 800, fontSize: "var(--fs-subtitle)", color: C.accentHl }}>

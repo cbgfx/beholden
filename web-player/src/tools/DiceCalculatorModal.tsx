@@ -1,6 +1,7 @@
 import React from "react";
 import { C, withAlpha } from "@/lib/theme";
 import { IconDice } from "@/icons";
+import { Button } from "@/ui/Button";
 
 function rollAllDice(expr: string): string {
   return expr.replace(/(\d*)d(\d+)/gi, (_, count, sides) => {
@@ -158,9 +159,9 @@ export function DiceCalculatorModal(props: { isOpen: boolean; onClose: () => voi
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: `1px solid ${C.panelBorder}` }}>
           <IconDice size={24} />
           <div style={{ flex: 1, fontWeight: 900, color: C.text }}>Dice Calculator</div>
-          <button type="button" onClick={props.onClose} style={{ ...calculatorButtonStyle("digit"), minHeight: 34, padding: "0 12px" }}>
+          <Button variant="ghost" onClick={props.onClose} style={{ padding: "0 12px", minHeight: 34 }}>
             Close
-          </button>
+          </Button>
         </div>
 
         <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.panelBorder}`, minHeight: 78 }}>

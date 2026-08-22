@@ -4,6 +4,7 @@ import { IconBinder, IconCampaign, IconGender, IconPlayers, IconShield } from "@
 import { GameIcon } from "@/icons/GameIcon";
 import { C } from "@/lib/theme";
 import { api } from "@/services/api";
+import { Button } from "@/ui/Button";
 import { BINDER_MORTAL_COLUMNS, BinderDataTableHeader, BinderDataTableRow, BinderDataTableThumbnail, ImageLightbox, MarkdownRichText, SearchableMultiFilter } from "@beholden/shared/ui";
 
 type Mortal = {
@@ -125,7 +126,7 @@ export function PlayerBinderView() {
       <header style={{ flex: "0 0 auto", padding: "20px 30px", borderBottom: `1px solid ${accent}55`, display: "flex", alignItems: "center", gap: 14 }}>
         <IconBinder size={38} />
         <div><h1 style={{ margin: 0, fontSize: "var(--fs-hero)" }}>{data.binder.name}</h1><div style={{ color: C.muted }}>Binder</div></div>
-        <button type="button" onClick={() => navigate(`/characters/${id}`)} style={{ marginLeft: "auto", border: "1px solid rgba(255,255,255,.12)", borderRadius: 9, padding: "8px 13px", background: "rgba(255,255,255,.04)", color: C.muted, cursor: "pointer", font: "inherit" }}>← Character Sheet</button>
+        <Button variant="ghost" onClick={() => navigate(`/characters/${id}`)} style={{ marginLeft: "auto" }}>← Character Sheet</Button>
       </header>
       <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "260px minmax(0,1fr)", overflow: "hidden" }}>
         <aside style={{ minHeight: 0, overflowY: "auto", padding: 14, borderRight: "1px solid rgba(255,255,255,.08)" }}>

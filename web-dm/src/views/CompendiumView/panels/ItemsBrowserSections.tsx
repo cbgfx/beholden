@@ -5,7 +5,9 @@ import { IconPencil, IconTrash } from "@/icons";
 import { titleCase } from "@beholden/shared/domain/text/titleCase";
 import { theme, withAlpha } from "@/theme/theme";
 import { Select } from "@/ui/Select";
-import { actionBtnStyle, togglePillStyle } from "./browserParts";
+import { Button } from "@/ui/Button";
+import { IconButton } from "@/ui/IconButton";
+import { togglePillStyle } from "./browserParts";
 import { rarityChipColor } from "@/views/CampaignView/components/ItemPickerModalParts";
 import type { ItemSearchRow } from "@/views/CompendiumView/hooks/useItemSearch";
 
@@ -166,21 +168,21 @@ export function ItemsBrowserRow(props: ItemRowProps) {
           {props.confirmingDelete ? (
             <>
               <span style={{ fontSize: "var(--fs-small)", color: theme.colors.muted, marginRight: 4 }}>Delete?</span>
-              <button type="button" onClick={props.onDeleteConfirm} disabled={props.deleteBusy} style={actionBtnStyle(theme.colors.red)} title="Yes, delete">
+              <Button type="button" variant="danger" onClick={props.onDeleteConfirm} disabled={props.deleteBusy} title="Yes, delete">
                 Yes
-              </button>
-              <button type="button" onClick={props.onDeleteCancel} style={actionBtnStyle(theme.colors.muted)} title="Cancel">
+              </Button>
+              <Button type="button" variant="ghost" onClick={props.onDeleteCancel} title="Cancel">
                 No
-              </button>
+              </Button>
             </>
           ) : (
             <>
-              <button type="button" onClick={props.onEdit} disabled={props.editLoading} style={actionBtnStyle(theme.colors.muted)} title="Edit item">
+              <IconButton onClick={props.onEdit} disabled={props.editLoading} variant="ghost" size="sm" title="Edit item">
                 {props.editLoading ? <span style={{ fontSize: "var(--fs-tiny)" }}>...</span> : <IconPencil size={13} />}
-              </button>
-              <button type="button" onClick={props.onDeleteRequest} style={actionBtnStyle(theme.colors.muted)} title="Delete item">
+              </IconButton>
+              <IconButton onClick={props.onDeleteRequest} variant="ghost" size="sm" title="Delete item">
                 <IconTrash size={13} />
-              </button>
+              </IconButton>
             </>
           )}
         </div>

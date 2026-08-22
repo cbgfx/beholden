@@ -1,7 +1,10 @@
 import * as React from "react";
 
 import { api, jsonInit } from "@/services/api";
-import { theme, withAlpha } from "@/theme/theme";
+import { theme } from "@/theme/theme";
+import { Button } from "@/ui/Button";
+import { IconButton } from "@/ui/IconButton";
+import { IconClose } from "@/icons";
 import type { MonsterForEdit } from "./MonsterFormParts";
 import {
   MonsterAbilityScoresSection,
@@ -70,15 +73,6 @@ export function MonsterFormModal(props: {
     }
   }
 
-  const btnBase: React.CSSProperties = {
-    padding: "7px 16px",
-    borderRadius: 8,
-    fontWeight: 700,
-    cursor: "pointer",
-    fontSize: "var(--fs-subtitle)",
-    border: "none",
-  };
-
   return (
     <div
       onClick={(event) => {
@@ -123,13 +117,9 @@ export function MonsterFormModal(props: {
           <span style={{ fontWeight: 700, fontSize: "var(--fs-body)" }}>
             {isEdit ? `Edit: ${monster!.name}` : isDuplicate ? `Duplicate: ${monster!.name}` : "New Monster"}
           </span>
-          <button
-            type="button"
-            onClick={props.onClose}
-            style={{ background: "none", border: "none", color: theme.colors.muted, cursor: "pointer", fontSize: "var(--fs-hero)", lineHeight: 1 }}
-          >
-            ×
-          </button>
+          <IconButton onClick={props.onClose} title="Close" variant="ghost">
+            <IconClose />
+          </IconButton>
         </div>
 
         <div className="monster-form-workspace" style={{ display: "grid", gridTemplateColumns: "210px minmax(0, 1fr)", flex: 1, minHeight: 0 }}>
@@ -177,20 +167,12 @@ export function MonsterFormModal(props: {
             flexShrink: 0,
           }}
         >
-          <button
-            type="button"
-            onClick={props.onClose}
-            style={{ ...btnBase, background: withAlpha(theme.colors.panelBorder, 0.4), color: theme.colors.text }}
-          >
+          <Button type="button" variant="ghost" onClick={props.onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={busy}
-            style={{ ...btnBase, background: theme.colors.accentPrimary, color: theme.colors.textDark, opacity: busy ? 0.6 : 1 }}
-          >
+          </Button>
+          <Button type="submit" variant="primary" disabled={busy}>
             {busy ? "Saving..." : isEdit ? "Save Changes" : isDuplicate ? "Create Duplicate" : "Create Monster"}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

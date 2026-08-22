@@ -3,6 +3,7 @@ import { useState } from "react";
 import { C } from "@/lib/theme";
 import { titleCase } from "@beholden/shared/domain/text/titleCase";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
+import { Button } from "@/ui/Button";
 import { CollectionRow, QuantityStepper, StatCard, Tag } from "@beholden/shared/ui";
 import type { InventoryItem } from "@/views/character/CharacterInventory";
 import {
@@ -67,8 +68,8 @@ export function PartyStashItemRow({ item, onTake, onDelete, onQuantity }: {
                 fontSize: 13,
               }}
             />
-            <button className="character-row-action" onClick={onTake} title="Take - moves item to your backpack" style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${C.panelBorder}`, borderRadius: 6, color: C.text, cursor: "pointer", fontSize: "var(--fs-tiny)", fontWeight: 700, padding: "3px 8px", flexShrink: 0 }}>Take</button>
-            <button className="character-row-action" onClick={onDelete} title="Remove from stash" style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(248,113,113,0.5)", fontSize: 16, padding: "0 2px", flexShrink: 0, lineHeight: 1 }}>x</button>
+            <Button className="character-row-action" variant="ghost" onClick={onTake} title="Take - moves item to your backpack" style={{ borderRadius: 6, fontSize: "var(--fs-tiny)", fontWeight: 700, padding: "3px 8px", flexShrink: 0 }}>Take</Button>
+            <Button className="character-row-action" variant="danger" onClick={onDelete} title="Remove from stash" style={{ borderRadius: 6, fontSize: 16, padding: "0 8px", flexShrink: 0, lineHeight: 1.8 }}>x</Button>
           </>
         )}
       />
@@ -153,7 +154,7 @@ export function ItemRow({ item, accentColor, proficiencies, parsedFeatureEffects
             onIncrement={canEquipItem ? undefined : () => onQty(item.id, 1)}
             buttonClassName="character-row-action"
           />
-          <button className="character-row-action" onClick={() => onRemove(item.id)} title="Remove" style={{ background: "transparent", border: "none", color: "rgba(255,255,255,0.22)", cursor: "pointer", fontSize: "var(--fs-body)", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>x</button>
+          <Button className="character-row-action" variant="danger" onClick={() => onRemove(item.id)} title="Remove" style={{ borderRadius: 6, fontSize: "var(--fs-body)", padding: "0 8px", lineHeight: 1.8, flexShrink: 0 }}>x</Button>
         </>
       )}
       padding="4px 2px"

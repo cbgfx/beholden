@@ -1,5 +1,5 @@
 import React from "react";
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
 import { abilityMod, formatModifier } from "@/views/character/CharacterSheetUtils";
 import { normalizeChoiceKey } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import { ABILITY_KEYS, ABILITY_LABELS } from "@/views/character-creator/constants/CharacterCreatorConstants";
@@ -94,9 +94,9 @@ export function ChoiceBtn({ active, onClick, accent, children }: {
       onClick={onClick}
       style={{
         flex: 1, padding: "10px 14px", borderRadius: 8, cursor: "pointer",
-        border: `2px solid ${active ? color : "rgba(255,255,255,0.1)"}`,
-        background: active ? `${color}18` : "rgba(255,255,255,0.03)",
-        color: active ? "#fff" : C.muted,
+        border: `2px solid ${active ? color : withAlpha(C.panelBorder, 0.1)}`,
+        background: active ? `${color}18` : withAlpha(C.panelBorder, 0.03),
+        color: active ? C.text : C.muted,
         fontSize: "var(--fs-subtitle)", fontWeight: active ? 700 : 500,
         transition: "border-color 0.15s, background 0.15s",
       }}
@@ -192,8 +192,8 @@ export function AsiAbilityGrid(props: {
             onClick={() => !maxed && onToggle(k)}
             style={{
               padding: "10px 6px", borderRadius: 8, cursor: maxed ? "default" : "pointer",
-              border: `2px solid ${selected ? accentColor : "rgba(255,255,255,0.1)"}`,
-              background: selected ? `${accentColor}18` : "rgba(255,255,255,0.03)",
+              border: `2px solid ${selected ? accentColor : withAlpha(C.panelBorder, 0.1)}`,
+              background: selected ? `${accentColor}18` : withAlpha(C.panelBorder, 0.03),
               color: maxed ? C.muted : C.text, textAlign: "center",
             }}
           >

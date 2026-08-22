@@ -1,5 +1,7 @@
 import * as React from "react";
 import { theme, withAlpha } from "@/theme/theme";
+import { Button } from "@/ui/Button";
+import { accentButtonStyle } from "@beholden/shared/ui";
 import { MonsterActionMechanicsEditor } from "./MonsterActionMechanicsEditor";
 
 export type MonsterBlock = { id?: string; name: string; text: string; [key: string]: unknown };
@@ -152,10 +154,8 @@ export function BlockEditor({ label, help, blocks, onChange }: {
         <button
           type="button" onClick={addBlock}
           style={{
-            fontSize: "var(--fs-small)", fontWeight: 700, padding: "2px 8px", borderRadius: 6, cursor: "pointer",
-            border: `1px solid ${theme.colors.panelBorder}`,
-            background: withAlpha(theme.colors.accentPrimary, 0.15),
-            color: theme.colors.accentPrimary,
+            ...accentButtonStyle(theme.colors.accentPrimary, { padding: "2px 8px", fontSize: "var(--fs-small)", borderRadius: 6 }),
+            fontWeight: 700,
           }}
         >
           + Add
@@ -175,18 +175,16 @@ export function BlockEditor({ label, help, blocks, onChange }: {
                 placeholder="Name"
                 style={{ ...baseInput, flex: 1, fontWeight: 600 }}
               />
-              <button
-                type="button" onClick={() => removeBlock(i)}
+              <Button
+                type="button" variant="danger" onClick={() => removeBlock(i)}
+                title="Remove"
                 style={{
-                  flexShrink: 0, width: 24, height: 24, borderRadius: 6, cursor: "pointer",
-                  border: `1px solid ${withAlpha(theme.colors.red, 0.35)}`,
-                  background: withAlpha(theme.colors.red, 0.12),
-                  color: theme.colors.red, fontSize: "var(--fs-medium)", display: "flex",
-                  alignItems: "center", justifyContent: "center",
+                  flexShrink: 0, width: 24, height: 24, padding: 0, borderRadius: 6,
+                  display: "flex", alignItems: "center", justifyContent: "center",
                 }}
               >
                 ×
-              </button>
+              </Button>
             </div>
             <textarea
               value={b.text} onChange={(e) => updateBlock(i, "text", e.target.value)}

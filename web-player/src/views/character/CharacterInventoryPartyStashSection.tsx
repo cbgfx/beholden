@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
+import { ghostButtonStyle } from "@beholden/shared/ui";
 import { patchPartyCurrency, type PartyCurrencyMap } from "@/services/inventoryApi";
 import { formatWeight } from "@/views/character/CharacterInventory";
-import { addBtnStyle } from "@/views/character/CharacterViewParts";
+import { Button } from "@/ui/Button";
 import { PartyStashItemRow, type PartyStashItem } from "@/views/character/CharacterInventoryPanelRows";
 import { evaluateCurrencyInput } from "@/views/character/currencyMath";
 
@@ -80,10 +81,14 @@ function PartyCurrencyBar({ currency, campaignId, onCurrencyChange, stashWeight,
             onClick={() => { setInput(String(currency[code])); setPopupCode((c) => c === code ? null : code); }}
             style={{
               display: "flex", alignItems: "center", gap: 6,
-              fontSize: "var(--fs-small)", color: C.text,
-              padding: "2px 10px", borderRadius: 999,
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: "rgba(255,255,255,0.04)", cursor: "pointer",
+              ...ghostButtonStyle({
+                textColor: C.text,
+                borderColor: withAlpha(C.panelBorder, 0.5),
+                background: withAlpha(C.panelBorder, 0.14),
+                padding: "2px 10px",
+                fontSize: "var(--fs-small)",
+                borderRadius: 999,
+              }),
             }}
           >
             <span style={{ color: C.muted, fontWeight: 700 }}>{code}</span>
@@ -117,9 +122,9 @@ function PartyCurrencyBar({ currency, campaignId, onCurrencyChange, stashWeight,
                     outline: "none", textAlign: "center",
                   }}
                 />
-                <button type="button" onClick={() => void save(code)} style={addBtnStyle("#6366f1")}>
+                <Button type="button" variant="primary" onClick={() => void save(code)} style={{ padding: "6px 14px", fontSize: "var(--fs-subtitle)", borderRadius: 7 }}>
                   Save
-                </button>
+                </Button>
               </div>
             </div>
           )}

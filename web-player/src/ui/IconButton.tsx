@@ -1,5 +1,5 @@
 import React from "react";
-import { theme, withAlpha } from "@/theme/theme";
+import { C, withAlpha } from "@/lib/theme";
 import { IconButton as SharedIconButton } from "@beholden/shared/ui";
 
 export function IconButton(props: {
@@ -21,12 +21,12 @@ export function IconButton(props: {
       disabled={props.disabled}
       variant={props.variant}
       size={props.size}
-      borderColor={theme.colors.panelBorder}
-      accentColor={"var(--campaign-accent, #a78bfa)"}
-      textColor={theme.colors.text}
-      textDarkColor={theme.colors.textDark}
-      hoverBackground={withAlpha(theme.colors.panelBorder, 0.30)}
-      ghostBackground={withAlpha(theme.colors.panelBorder, 0.12)}
+      borderColor={C.panelBorder}
+      accentColor={C.accentHl}
+      textColor={C.text}
+      textDarkColor={C.textDark}
+      hoverBackground={withAlpha(C.panelBorder, 0.30)}
+      ghostBackground={withAlpha(C.panelBorder, 0.12)}
       style={props.style}
       className={props.className}
     >

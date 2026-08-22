@@ -4,7 +4,7 @@ import { C } from "@/lib/theme";
 import { api, jsonInit } from "@/services/api";
 import { IconPlayers } from "@/icons";
 import { Select } from "@/ui/Select";
-import { accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
+import { Button } from "@/ui/Button";
 import type { Campaign, UserCharacter } from "./PlayerHomeUtils";
 
 export function CampaignCard({ campaign: c, characters, onOpen, onAssigned }: {
@@ -136,60 +136,61 @@ export function CampaignCard({ campaign: c, characters, onOpen, onAssigned }: {
                 ))}
               </Select>
               <div style={{ display: "flex", gap: 6 }}>
-                <button
+                <Button
+                  variant="primary"
                   disabled={!selectedCharId || assigning}
-                  style={{
-                    ...accentButtonStyle(C.colorGold, { textColor: C.textDark, borderColor: "transparent", padding: "6px 14px", fontSize: "var(--fs-small)" }),
-                    background: C.colorGold, flex: 1,
-                    opacity: !selectedCharId || assigning ? 0.6 : 1,
-                    cursor: !selectedCharId || assigning ? "not-allowed" : "pointer",
-                  }}
+                  style={{ flex: 1 }}
                   onClick={() => void handleAssign()}
                 >
                   {assigning ? "Assigning…" : "Assign"}
-                </button>
-                <button
-                  style={{ ...ghostButtonStyle({ textColor: C.muted, borderColor: "rgba(255,255,255,0.18)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}
+                </Button>
+                <Button
+                  variant="ghost"
+                  style={{ flexShrink: 0 }}
                   onClick={() => { setAssignOpen(false); setSelectedCharId(""); }}
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </>
           ) : (
             <>
               <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>All your characters are already in this campaign.</span>
               <div style={{ display: "flex", gap: 6 }}>
-                <button
-                  style={{ ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flex: 1 }}
+                <Button
+                  variant="ghost"
+                  style={{ flex: 1 }}
                   onClick={() => navigate(`/characters/new?campaign=${c.id}`)}
                 >
                   Create new character
-                </button>
-                <button
-                  style={{ ...ghostButtonStyle({ textColor: C.muted, borderColor: "rgba(255,255,255,0.18)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}
+                </Button>
+                <Button
+                  variant="ghost"
+                  style={{ flexShrink: 0 }}
                   onClick={() => setAssignOpen(false)}
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </>
           )}
         </div>
       ) : (
         <div style={{ padding: "0 12px 14px", display: "flex", gap: 8 }}>
-          <button
-            style={{ ...accentButtonStyle(C.colorGold, { textColor: C.textDark, borderColor: "transparent", padding: "8px 18px", fontSize: "var(--fs-subtitle)" }), background: C.colorGold, flex: 1 }}
+          <Button
+            variant="primary"
+            style={{ flex: 1 }}
             onClick={() => onOpen(c.id)}
           >
             Open
-          </button>
-          <button
-            style={{ ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "6px 14px", fontSize: "var(--fs-small)", borderRadius: 7 }), flexShrink: 0 }}
+          </Button>
+          <Button
+            variant="ghost"
+            style={{ flexShrink: 0 }}
             onClick={() => setAssignOpen(true)}
           >
             + Assign
-          </button>
+          </Button>
         </div>
       )}
     </div>

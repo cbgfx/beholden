@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useInvocationGrantedFeatChoices } from "@/views/shared/useInvocationGrantedFeatChoices";
 import { useNavigate, useParams } from "react-router-dom";
 import { C } from "@/lib/theme";
+import { Button } from "@/ui/Button";
 import { normalizeSpellTrackingKey } from "@/views/character/CharacterSheetUtils";
 import type {
   AsiMode,
@@ -709,27 +710,18 @@ export function LevelUpView() {
 
       {/* ── Confirm ── */}
       <div style={{ marginTop: 8, display: "flex", gap: 10 }}>
-        <button
-          onClick={() => navigate(`/characters/${char.id}`)}
-          style={{
-            padding: "12px 20px", borderRadius: 10, cursor: "pointer", fontSize: "var(--fs-medium)", fontWeight: 600,
-            background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: C.muted,
-          }}
-        >Cancel</button>
-        <button
+        <Button type="button" variant="ghost" onClick={() => navigate(`/characters/${char.id}`)}>
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          variant="primary"
           onClick={confirm}
           disabled={!canConfirm || !allExtraSelectionsValid || saving}
-          style={{
-            flex: 1, padding: "12px 20px", borderRadius: 10, cursor: canConfirm && allExtraSelectionsValid && !saving ? "pointer" : "not-allowed",
-            fontSize: "var(--fs-medium)", fontWeight: 800, border: "none",
-            background: canConfirm && allExtraSelectionsValid ? accentColor : "rgba(255,255,255,0.08)",
-            color: canConfirm && allExtraSelectionsValid ? "#fff" : C.muted,
-            opacity: saving ? 0.6 : 1,
-            transition: "background 0.2s",
-          }}
+          style={{ flex: 1 }}
         >
           {saving ? "Saving…" : `⬆ Level Up to ${nextLevel}`}
-        </button>
+        </Button>
       </div>
     </Wrap>
   );

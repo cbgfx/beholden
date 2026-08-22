@@ -7,6 +7,7 @@
 import type { ReactNode } from "react";
 import { IconPencil, IconTrash } from "@/icons";
 import { Input } from "@/ui/Input";
+import { Button } from "@/ui/Button";
 import { theme, withAlpha } from "@/theme/theme";
 import { VisibilityIcon } from "./VisibilityIcon";
 
@@ -91,8 +92,9 @@ export function BinderRecordDetailShell(props: {
             </div>
             {props.canEdit ? (
               <div style={{ display: "flex", gap: 8 }}>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
                   aria-label={props.visibilityPublic ? `Make ${props.recordLabel} private` : `Make ${props.recordLabel} public`}
                   title={props.visibilityPublic ? "Public — click to make private" : "Private — click to make public"}
                   disabled={props.visibilityBusy}
@@ -100,13 +102,13 @@ export function BinderRecordDetailShell(props: {
                   style={{ ...actionButtonStyle, border: `1px solid ${props.visibilityPublic ? withAlpha(props.accent, 0.65) : theme.colors.panelBorder}`, background: props.visibilityPublic ? withAlpha(props.accent, 0.16) : "transparent", color: props.visibilityPublic ? props.accent : theme.colors.muted, cursor: props.visibilityBusy ? "default" : "pointer" }}
                 >
                   <VisibilityIcon visible={props.visibilityPublic} size={19} />
-                </button>
-                <button type="button" aria-label={`Edit ${props.recordLabel}`} title="Edit" onClick={props.onEdit} style={{ ...actionButtonStyle, border: `1px solid ${theme.colors.panelBorder}`, background: "transparent", color: theme.colors.text }}>
+                </Button>
+                <Button type="button" variant="ghost" aria-label={`Edit ${props.recordLabel}`} title="Edit" onClick={props.onEdit} style={{ ...actionButtonStyle, color: theme.colors.text }}>
                   <IconPencil size={17} />
-                </button>
-                <button type="button" aria-label={`Delete ${props.recordLabel}`} title="Delete" onClick={props.onDelete} style={{ ...actionButtonStyle, border: `1px solid ${withAlpha(theme.colors.red, 0.65)}`, background: theme.colors.red, color: "#101521" }}>
+                </Button>
+                <Button type="button" variant="danger" aria-label={`Delete ${props.recordLabel}`} title="Delete" onClick={props.onDelete} style={actionButtonStyle}>
                   <IconTrash size={17} />
-                </button>
+                </Button>
               </div>
             ) : null}
           </div>

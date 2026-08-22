@@ -1,5 +1,5 @@
 import React from "react";
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
 import { normalizeChoiceKey } from "../utils/CharacterCreatorUtils";
 import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
 import { ABILITY_LABELS, ALL_LANGUAGES, ALL_SKILLS, ALL_TOOLS } from "../constants/CharacterCreatorConstants";
@@ -68,9 +68,9 @@ function choiceButtonStyle(selected: boolean, locked: boolean, duplicate: boolea
     borderRadius: 6,
     fontSize: "var(--fs-subtitle)",
     cursor: locked || duplicate ? "default" : "pointer",
-    border: `1px solid ${selected ? C.accentHl : duplicate ? "rgba(160,180,220,0.12)" : "rgba(255,255,255,0.12)"}`,
-    background: selected ? "rgba(56,182,255,0.18)" : duplicate ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.055)",
-    color: selected ? C.accentHl : (locked || duplicate) ? "rgba(160,180,220,0.35)" : C.text,
+    border: `1px solid ${selected ? C.accentHl : duplicate ? withAlpha(C.muted, 0.12) : C.panelBorder}`,
+    background: selected ? withAlpha(C.accentHl, 0.18) : duplicate ? withAlpha(C.panelBorder, 0.03) : C.panelBg,
+    color: selected ? C.accentHl : (locked || duplicate) ? withAlpha(C.muted, 0.35) : C.text,
     fontWeight: selected ? 700 : 400,
   };
 }

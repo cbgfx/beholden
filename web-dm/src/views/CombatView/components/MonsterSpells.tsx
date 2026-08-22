@@ -3,6 +3,7 @@ import { theme, withAlpha } from "@/theme/theme";
 import { titleCase } from "@beholden/shared/domain/text/titleCase";
 import { ordinal } from "@beholden/shared/domain";
 import { MonsterSectionPanel } from "@/components/MonsterDisplay/MonsterSectionPanel";
+import { Button } from "@/ui/Button";
 
 function parseSlotCounts(raw: unknown): Record<number, number> {
   const result: Record<number, number> = {};
@@ -118,23 +119,21 @@ export function MonsterSpells(props: {
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {sec.spells.map((s) => (
-                  <button
+                  <Button
                     key={`${sec.title}:${s}`}
+                    type="button"
+                    variant="ghost"
                     onClick={() => props.onOpenSpell(s)}
                     style={{
-                      all: "unset",
-                      cursor: "pointer",
+                      background: theme.colors.panelBg,
                       padding: "6px 10px",
                       borderRadius: 999,
-                      border: `1px solid ${theme.colors.panelBorder}`,
-                      background: theme.colors.panelBg,
-                      color: theme.colors.text,
                       fontSize: "var(--fs-pill)",
                       fontWeight: 900,
                     }}
                   >
                     {titleCase(s)}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>

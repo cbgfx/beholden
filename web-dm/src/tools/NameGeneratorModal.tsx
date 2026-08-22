@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "@/components/overlay/Modal";
 import { theme, withAlpha } from "@/theme/theme";
+import { Button } from "@/ui/Button";
+import { ghostButtonStyle } from "@beholden/shared/ui";
 import namesData from "@/lib/names.json";
 
 type Gender = "male" | "female" | "fantasy";
@@ -84,17 +86,19 @@ export function NameGeneratorModal(props: { isOpen: boolean; onClose: () => void
           </span>
           {fullName && (
             <button
+              type="button"
               onClick={handleCopy}
               title="Copy name"
               style={{
-                ...btnBase,
-                padding: "5px 12px",
-                background: copied
-                  ? withAlpha(theme.colors.green, 0.15)
-                  : withAlpha(theme.colors.text, 0.08),
-                color: copied ? theme.colors.green : theme.colors.muted,
-                border: `1px solid ${copied ? withAlpha(theme.colors.green, 0.4) : "transparent"}`,
-                fontSize: 12,
+                ...ghostButtonStyle({
+                  textColor: copied ? theme.colors.green : theme.colors.muted,
+                  borderColor: copied ? withAlpha(theme.colors.green, 0.4) : "transparent",
+                  background: copied ? withAlpha(theme.colors.green, 0.15) : withAlpha(theme.colors.text, 0.08),
+                  padding: "5px 12px",
+                  fontSize: "var(--fs-tiny)",
+                  borderRadius: theme.radius.control,
+                }),
+                fontWeight: 700,
               }}
             >
               {copied ? "Copied!" : "Copy"}
@@ -103,18 +107,9 @@ export function NameGeneratorModal(props: { isOpen: boolean; onClose: () => void
         </div>
 
         {/* Regenerate */}
-        <button
-          onClick={() => generate(gender)}
-          style={{
-            ...btnBase,
-            background: withAlpha(theme.colors.accentHighlight, 0.15),
-            color: theme.colors.accentHighlight,
-            border: `1px solid ${withAlpha(theme.colors.accentHighlight, 0.4)}`,
-            padding: "10px 32px",
-          }}
-        >
+        <Button type="button" variant="primary" onClick={() => generate(gender)} style={{ padding: "10px 32px" }}>
           Regenerate
-        </button>
+        </Button>
       </div>
     </Modal>
   );

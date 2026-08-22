@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
 import { IconBastions, IconBinder, IconPlayer } from "@/icons";
+import { Button } from "@/ui/Button";
+import { IconButton } from "@/ui/IconButton";
 import { api } from "@/services/api";
 import { CharacterHudXpPopup } from "@/views/character/CharacterHudXpPopup";
 import { stripEditionTag } from "@/views/character/CharacterViewHelpers";
@@ -140,17 +142,17 @@ export function CharacterSheetHeader(props: {
             ))}
           </div>
         </div>
-        <button type="button" onClick={onOpenInfo} title="Character Information" style={{ width: 40, height: 32, padding: 0, borderRadius: 8, cursor: "pointer", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <IconButton onClick={onOpenInfo} title="Character Information">
           <IconCharacterInfo size={19} />
-        </button>
+        </IconButton>
         {showEngagedEnemies && (
-          <button type="button" onClick={onOpenEngagedEnemies} title="Combat View" aria-label="Open combat view" style={{ width: 40, height: 32, padding: 0, borderRadius: 8, cursor: "pointer", background: "rgba(255,93,93,0.1)", border: "1px solid rgba(255,93,93,0.35)", color: C.red, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <button type="button" onClick={onOpenEngagedEnemies} title="Combat View" aria-label="Open combat view" style={{ width: 40, height: 32, padding: 0, borderRadius: 8, cursor: "pointer", background: withAlpha(C.red, 0.1), border: `1px solid ${withAlpha(C.red, 0.35)}`, color: C.red, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <IconEngagedEnemies size={20} />
           </button>
         )}
-        <button type="button" title="Edit character" onClick={() => navigate(`/characters/${character.id}/edit`)} style={{ appearance: "none", cursor: "pointer", fontFamily: "inherit", height: 32, padding: "0 16px", borderRadius: 8, color: C.muted, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", fontSize: "var(--fs-medium)", fontWeight: 700, flexShrink: 0 }}>
+        <Button variant="ghost" title="Edit character" onClick={() => navigate(`/characters/${character.id}/edit`)} style={{ height: 32, padding: "0 16px", fontSize: "var(--fs-medium)", flexShrink: 0 }}>
           Edit
-        </button>
+        </Button>
       </div>
 
       <div style={{ flex: 1 }} />
@@ -212,15 +214,15 @@ export function CharacterSheetHeader(props: {
         ))}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         {activeBastion && (
-          <button type="button" title={`Bastion: ${activeBastion.name}`} onClick={() => navigate(`/campaigns/${activeBastion.campaignId}/bastions/${activeBastion.id}`)} style={{ appearance: "none", cursor: "pointer", boxSizing: "border-box", height: 32, padding: "0 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.05)", color: C.muted, display: "inline-flex", alignItems: "center", gap: 7, fontSize: "var(--fs-medium)", fontWeight: 700 }}>
+          <Button variant="ghost" title={`Bastion: ${activeBastion.name}`} onClick={() => navigate(`/campaigns/${activeBastion.campaignId}/bastions/${activeBastion.id}`)} style={{ height: 32, padding: "0 12px", display: "inline-flex", alignItems: "center", gap: 7, fontSize: "var(--fs-medium)" }}>
             <IconBastions size={19} />
             {activeBastion.name}
-          </button>
+          </Button>
         )}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontSize: "var(--fs-title)", fontWeight: 800, color: accentColor, whiteSpace: "nowrap" }}>Lv {character.level}</span>
           {xpEarned >= xpNeeded && xpNeeded > 0 && (
-            <button type="button" title="Level up" onClick={() => navigate(`/characters/${character.id}/levelup`)} style={{ padding: "2px 7px", borderRadius: 6, cursor: "pointer", flexShrink: 0, background: `${accentColor}22`, border: `1px solid ${accentColor}66`, color: accentColor, fontWeight: 700, fontSize: "var(--fs-tiny)" }}>↑</button>
+            <IconButton variant="accent" size="sm" title="Level up" onClick={() => navigate(`/characters/${character.id}/levelup`)}>↑</IconButton>
           )}
         </div>
         <CharacterHudXpPopup

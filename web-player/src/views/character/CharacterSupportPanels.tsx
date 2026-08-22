@@ -1,12 +1,13 @@
 import React from "react";
 import { EmptyState, NoteList, NotesPanel } from "@beholden/shared/ui";
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
 import { IconWerewolf } from "@/icons";
+import { Button } from "@/ui/Button";
+import { IconButton } from "@/ui/IconButton";
 import type { ClassFeatureEntry, PlayerNote, ResourceCounter } from "@/views/character/CharacterSheetTypes";
 import { getExhaustionEffects } from "@/views/character/CharacterExhaustion";
 import {
   CollapsiblePanel,
-  panelHeaderAddBtn,
   miniPillBtn,
   restBtnStyle,
   ClassFeatureItem,
@@ -161,21 +162,9 @@ export function CharacterSupportPanels(props: {
         storageKey="recovery"
         summary={`${upkeepSummary}${exhaustion > 0 ? ` · Exhaustion ${exhaustion}` : ""}`}
         actions={
-          <button
-            type="button"
-            onClick={onOpenTransformSelf}
-            title="Transform Self"
-            style={{
-              ...panelHeaderAddBtn(accentColor),
-              minWidth: 34,
-              width: 34,
-              height: 34,
-              padding: 0,
-              borderRadius: 8,
-            }}
-          >
+          <IconButton variant="accent" onClick={onOpenTransformSelf} title="Transform Self">
             <IconWerewolf size={18} />
-          </button>
+          </IconButton>
         }
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -201,19 +190,14 @@ export function CharacterSupportPanels(props: {
                 </div>
               </div>
               {onRevertTransformSelf ? (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
                   onClick={onRevertTransformSelf}
-                  style={{
-                    ...panelHeaderAddBtn(accentColor),
-                    padding: "6px 12px",
-                    minWidth: "auto",
-                    height: "auto",
-                    borderRadius: 999,
-                  }}
+                  style={{ padding: "6px 12px", borderRadius: 999 }}
                 >
                   Revert
-                </button>
+                </Button>
               ) : null}
             </div>
           )}
@@ -414,7 +398,7 @@ export function CharacterSupportPanels(props: {
             title={`Player Notes (${playerNotesList.length})`}
             color={accentColor}
             storageKey="player-notes"
-            actions={<button type="button" onClick={onOpenPlayerNoteCreate} title="Add note" style={panelHeaderAddBtn(accentColor)}>+</button>}
+            actions={<IconButton variant="accent" onClick={onOpenPlayerNoteCreate} title="Add note">+</IconButton>}
           >
         <NoteList
           items={playerNotesList.map((note) => ({ id: note.id, title: note.title || "Untitled", text: note.text }))}
@@ -441,7 +425,7 @@ export function CharacterSupportPanels(props: {
         title={`Shared Notes (${allSharedNotes.length})`}
         color={accentColor}
         storageKey="shared-notes"
-        actions={<button type="button" onClick={onOpenSharedNoteCreate} title="Add shared note" style={panelHeaderAddBtn(accentColor)}>+</button>}
+        actions={<IconButton variant="accent" onClick={onOpenSharedNoteCreate} title="Add shared note">+</IconButton>}
       >
         <NoteList
           items={allSharedNotes.map((note) => ({ id: note.id, title: note.title || "Untitled", text: note.text }))}
@@ -474,7 +458,7 @@ export function CharacterSupportPanels(props: {
             storageKey="player-features"
             summary={`${totalFeatureCount} features`}
             actions={onOpenFeatPicker ? (
-              <button type="button" onClick={onOpenFeatPicker} title="Add feat" style={panelHeaderAddBtn(accentColor)}>+</button>
+              <IconButton variant="accent" onClick={onOpenFeatPicker} title="Add feat">+</IconButton>
             ) : undefined}
           >
         {totalFeatureCount > 0 ? (
@@ -513,7 +497,7 @@ export function CharacterSupportPanels(props: {
                               type="button"
                               title="Remove feat"
                               onClick={() => { void onRemoveExtraFeat(extraFeatId); }}
-                              style={{ position: "absolute", top: 8, right: 10, border: "none", background: "transparent", cursor: "pointer", color: "rgba(248,113,113,0.6)", fontSize: "var(--fs-body)", lineHeight: 1, padding: 0, fontWeight: 700 }}
+                              style={{ position: "absolute", top: 8, right: 10, border: "none", background: "transparent", cursor: "pointer", color: withAlpha(C.red, 0.6), fontSize: "var(--fs-body)", lineHeight: 1, padding: 0, fontWeight: 700 }}
                             >×</button>
                           )}
                         </div>

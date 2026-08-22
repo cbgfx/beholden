@@ -15,20 +15,6 @@ export function creatureHpPill(current: number, max: number): React.CSSPropertie
   };
 }
 
-export function creatureRoundPill(color: string): React.CSSProperties {
-  return {
-    width: 24,
-    height: 24,
-    borderRadius: 999,
-    border: `1px solid ${C.panelBorder}`,
-    background: "transparent",
-    color,
-    cursor: "pointer",
-    fontWeight: 900,
-    flexShrink: 0,
-  };
-}
-
 export function formatCreatureMonsterSource(monsterId: string | undefined): string | null {
   if (!monsterId) return null;
   const trimmed = monsterId.replace(/^m_/, "").replace(/[_-]+/g, " ").trim();

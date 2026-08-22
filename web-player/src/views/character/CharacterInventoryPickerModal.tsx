@@ -3,15 +3,17 @@ import { C, withAlpha } from "@/lib/theme";
 import { titleCase } from "@beholden/shared/domain/text/titleCase";
 import { api } from "@/services/api";
 import { Select } from "@/ui/Select";
+import { Button } from "@/ui/Button";
+import { IconButton } from "@/ui/IconButton";
 import { useVirtualList } from "@/lib/monsterPicker/useVirtualList";
 import { useItemSearch } from "@/views/CompendiumView/hooks/useItemSearch";
 import type { CompendiumItemDetail, InventoryPickerPayload } from "@/views/character/CharacterInventory";
 import { formatItemDamageType, formatItemProperties, hasStealthDisadvantage } from "@/views/character/CharacterInventory";
-import { INVENTORY_PICKER_ROW_HEIGHT, inputStyle, stepperBtn } from "@/views/character/CharacterInventoryPanelHelpers";
+import { INVENTORY_PICKER_ROW_HEIGHT, inputStyle } from "@/views/character/CharacterInventoryPanelHelpers";
 import { ItemListRow, Tag, togglePillStyle } from "@beholden/shared/ui";
 import { ItemFormModal } from "@beholden/shared/views/item-editor/ItemFormModal";
 import { InventoryStat } from "@/views/character/CharacterInventoryPanelRows";
-import { addBtnStyle, cancelBtnStyle, inventoryCheckboxLabel, inventoryPickerColumnStyle, inventoryPickerDetailStyle, inventoryPickerListStyle, inventoryRarityColor } from "@/views/character/CharacterViewParts";
+import { inventoryCheckboxLabel, inventoryPickerColumnStyle, inventoryPickerDetailStyle, inventoryPickerListStyle, inventoryRarityColor } from "@/views/character/CharacterViewParts";
 
 export function InventoryItemPickerModal(props: {
   isOpen: boolean;
@@ -187,12 +189,13 @@ export function InventoryItemPickerModal(props: {
             <div style={{ fontSize: "var(--fs-medium)", fontWeight: 800, color: C.text }}>{createMode ? "Create Item" : detail?.name ?? "Select an item"}</div>
             <div style={{ flex: 1 }} />
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <button type="button" onClick={() => setQty((v) => Math.max(1, v - 1))} style={stepperBtn}>-</button>
+              <IconButton variant="ghost" size="sm" onClick={() => setQty((v) => Math.max(1, v - 1))}>-</IconButton>
               <input type="number" min={1} value={qty} onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))} style={{ ...inputStyle, width: 64, textAlign: "center", flex: "0 0 auto" }} />
-              <button type="button" onClick={() => setQty((v) => v + 1)} style={stepperBtn}>+</button>
+              <IconButton variant="ghost" size="sm" onClick={() => setQty((v) => v + 1)}>+</IconButton>
             </div>
-            <button
+            <Button
               type="button"
+              variant="primary"
               onClick={() => {
                 if (createMode) {
                   const name = customName.trim();
@@ -204,9 +207,9 @@ export function InventoryItemPickerModal(props: {
                 props.onAdd({ source: "compendium", name: detail.name.replace(/\s*\(\d+\)$/, "").trim(), quantity: qty, itemId: detail.id, rarity: detail.rarity, type: detail.type, attunement: detail.attunement, magic: detail.magic, equippable: detail.equippable, weight: detail.weight, value: detail.value, proficiency: detail.proficiency, ac: detail.ac, stealthDisadvantage: detail.stealthDisadvantage, dmg1: detail.dmg1, dmg2: detail.dmg2, dmgType: detail.dmgType, properties: detail.properties, mastery: detail.mastery, modifiers: detail.modifiers, uses: detail.uses, spells: detail.spells, spellcasting: detail.spellcasting, spellTemplate: detail.spellTemplate, ammo: detail.ammo, weaponAmmo: detail.weaponAmmo, usage: detail.usage, bundle: detail.bundle, container: detail.container, ignoreWeight: detail.ignoreWeight, effects: detail.effects, description: detailText });
               }}
               disabled={createMode ? !customName.trim() : !detail}
-              style={addBtnStyle(props.accentColor)}
-            >Add</button>
-            <button type="button" onClick={props.onClose} style={cancelBtnStyle}>Close</button>
+              style={{ padding: "6px 14px", fontSize: "var(--fs-subtitle)", borderRadius: 7 }}
+            >Add</Button>
+            <Button type="button" variant="ghost" onClick={props.onClose} style={{ padding: "6px 14px", fontSize: "var(--fs-subtitle)", borderRadius: 7 }}>Close</Button>
           </div>
 
           {createMode ? (

@@ -1,7 +1,8 @@
 import React from "react";
 import { api } from "@/services/api";
 import { C } from "@/lib/theme";
-import { CollapsiblePanel, panelHeaderAddBtn } from "@/views/character/CharacterViewParts";
+import { IconButton } from "@/ui/IconButton";
+import { CollapsiblePanel } from "@/views/character/CharacterViewParts";
 import type { ConditionInstance, GrantedSpellCast, ResourceCounter } from "@/views/character/CharacterSheetTypes";
 import type { ClassRestDetail } from "@/views/character/SpellSlotsPanel";
 import { normalizeAbilityKey, normalizeSpellTrackingKey, normalizeSpellTrackingName } from "@/views/character/CharacterSheetUtils";
@@ -300,7 +301,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
 
   return (<>
     <CollapsiblePanel title="Spells" color={accentColor} storageKey="spells" actions={
-      onAddSpell ? <button type="button" onClick={() => setAddSpellOpen(true)} title="Add spell" style={panelHeaderAddBtn(accentColor)}>+</button> : undefined
+      onAddSpell ? <IconButton variant="accent" onClick={() => setAddSpellOpen(true)} title="Add spell">+</IconButton> : undefined
     }>
       {classSpellcastingStates.length > 1 ? (
         <div style={{ display: "grid", gap: 6, marginBottom: 12 }}>

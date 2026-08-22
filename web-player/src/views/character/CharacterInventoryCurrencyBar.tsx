@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { C } from "@/lib/theme";
-import { addBtnStyle } from "@/views/character/CharacterViewParts";
 import { formatWeight } from "@/views/character/CharacterInventory";
 import { evaluateCurrencyInput } from "@/views/character/currencyMath";
+import { Button } from "@/ui/Button";
 
 interface InventoryCurrencyBarProps {
   currencyTotals: Record<"PP" | "GP" | "EP" | "SP" | "CP", number>;
@@ -21,6 +21,10 @@ export function InventoryCurrencyBar({
   accentColor,
   onSaveCurrency,
 }: InventoryCurrencyBarProps) {
+  // Buttons now use the canonical shared Button component (fixed app accent), so the
+  // per-character accentColor prop is no longer consumed here — kept in the props contract
+  // since callers still pass it and other consumers of this pattern may want it later.
+  void accentColor;
   const [currencyPopupCode, setCurrencyPopupCode] = useState<"PP" | "GP" | "SP" | "CP" | null>(null);
   const [currencyInput, setCurrencyInput] = useState("");
   const currencyPopupRef = useRef<HTMLDivElement | null>(null);
@@ -131,15 +135,15 @@ export function InventoryCurrencyBar({
                       textAlign: "center",
                     }}
                   />
-                  <button
+                  <Button
                     type="button"
+                    variant="primary"
                     onClick={() => {
                       saveCurrency(code);
                     }}
-                    style={addBtnStyle(accentColor)}
                   >
                     Save
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}

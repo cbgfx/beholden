@@ -1,4 +1,6 @@
 import { C } from "@/lib/theme";
+import { Button } from "@/ui/Button";
+import { IconButton } from "@/ui/IconButton";
 import { ordinal } from "@beholden/shared/domain";
 import type { FetchedSpellDetail } from "@/views/character/CharacterSpellShared";
 import { DMG_COLORS, DMG_EMOJI, getScaledSpellDamage } from "@/views/character/CharacterSpellShared";
@@ -59,10 +61,7 @@ export function SpellDrawer({
                 {isConc && <span style={{ marginLeft: 6, color: C.colorRitual, fontStyle: "normal", fontWeight: 700 }}>concentration</span>}
               </div>
             </div>
-            <button onClick={onClose} style={{
-              background: "none", border: "none", cursor: "pointer",
-              color: C.muted, fontSize: "var(--fs-hero)", lineHeight: 1, padding: "2px 4px", flexShrink: 0,
-            }}>x</button>
+            <IconButton onClick={onClose}>x</IconButton>
           </div>
         </div>
 
@@ -120,20 +119,14 @@ export function SpellDrawer({
             <p style={{ margin: 0, fontSize: "var(--fs-small)", color: C.muted }}>Granted by: {sourceLabel}</p>
           ) : null}
           {removable && onRemove ? (
-            <button
+            <Button
               type="button"
+              variant="danger"
               onClick={onRemove}
-              style={{
-                marginTop: 10, alignSelf: "flex-start",
-                padding: "8px 12px", borderRadius: 8, cursor: "pointer",
-                border: "1px solid rgba(248,113,113,0.35)",
-                background: "rgba(248,113,113,0.10)",
-                color: "#fca5a5",
-                fontWeight: 700, fontSize: "var(--fs-small)",
-              }}
+              style={{ marginTop: 10, alignSelf: "flex-start", padding: "8px 12px", borderRadius: 8, fontSize: "var(--fs-small)" }}
             >
               Remove from spell list
-            </button>
+            </Button>
           ) : null}
         </div>
       </div>

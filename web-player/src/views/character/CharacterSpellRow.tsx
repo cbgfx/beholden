@@ -1,4 +1,5 @@
 import { C } from "@/lib/theme";
+import { Button } from "@/ui/Button";
 import { DMG_EMOJI, abbrevTime, type FetchedSpellDetail } from "@/views/character/CharacterSpellShared";
 
 const ORDINALS = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
@@ -158,24 +159,20 @@ export function CharacterSpellRow({
           <span style={{ fontSize: "var(--fs-small)", marginLeft: 3 }}>{scaledDamageTypes.map((type) => DMG_EMOJI[type] ?? "◆").join(" ")}</span>
         </div>
       ) : castToggle ? (
-        <button
+        <Button
           type="button"
+          variant={castToggle.active ? "danger" : "primary"}
           disabled={castToggle.disabled}
           onClick={(event) => { event.stopPropagation(); castToggle.onToggle(); }}
           title={castToggle.active ? "End this spell's effect" : castToggle.disabled ? "No spell slots remaining" : "Cast this spell"}
           style={{
             minWidth: 0,
             padding: "4px 10px", borderRadius: 6,
-            cursor: castToggle.disabled ? "default" : "pointer",
-            border: `1px solid ${castToggle.active ? "rgba(248,113,113,0.5)" : castToggle.disabled ? "rgba(255,255,255,0.15)" : accentColor + "88"}`,
-            background: castToggle.active ? "rgba(248,113,113,0.12)" : castToggle.disabled ? "rgba(255,255,255,0.04)" : `${accentColor}22`,
-            color: castToggle.active ? "#fca5a5" : castToggle.disabled ? C.muted : accentColor,
-            opacity: castToggle.disabled ? 0.6 : 1,
             fontWeight: 800, fontSize: "var(--fs-tiny)", textTransform: "uppercase", letterSpacing: "0.04em",
           }}
         >
           {castToggle.active ? "End" : "Cast"}
-        </button>
+        </Button>
       ) : <div />}
     </div>
   );

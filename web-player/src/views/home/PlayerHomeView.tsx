@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/services/api";
 import { createMyCharacter, fetchMyCharacters } from "@/services/actorApi";
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
 import { IconCampaign, IconImport, IconPlayers } from "@/icons";
-import { accentButtonStyle, ghostButtonStyle } from "@beholden/shared/ui";
+import { Button } from "@/ui/Button";
 import {
   buildCharacterCreatePayload,
   readLastOpened,
@@ -110,7 +110,7 @@ export function PlayerHomeView() {
               style={{
                 padding: "7px 14px",
                 borderRadius: 10,
-                border: "1px solid rgba(251,191,36,0.35)",
+                border: `1px solid ${withAlpha(C.colorGold, 0.35)}`,
                 background: "rgba(255,255,255,0.02)",
                 color: importFile ? C.text : C.muted,
                 fontSize: "var(--fs-subtitle)",
@@ -126,35 +126,28 @@ export function PlayerHomeView() {
             >
               {importFile ? importFile.name : "Choose file..."}
             </label>
-            <button
+            <Button
+              variant="ghost"
               title="Import selected character file"
               aria-label="Import selected character file"
               disabled={!importFile || importing}
-              style={{
-                ...ghostButtonStyle({ textColor: C.colorGold, borderColor: "rgba(251,191,36,0.35)", padding: "8px 14px", fontSize: "var(--fs-subtitle)" }),
-                minWidth: 100,
-                opacity: !importFile || importing ? 0.6 : 1,
-                cursor: !importFile || importing ? "not-allowed" : "pointer",
-              }}
+              style={{ minWidth: 100 }}
               onClick={() => void handleImportSelected(importFile)}
             >
               <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
                 <IconImport size={14} />
                 {importing ? "Importing..." : "Import"}
               </span>
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="primary"
               title="Create character"
               aria-label="Create character"
-              style={{
-                ...accentButtonStyle(C.colorGold, { textColor: C.textDark, borderColor: "transparent", padding: "8px 12px", fontSize: "var(--fs-subtitle)" }),
-                background: C.colorGold,
-                minWidth: 42,
-              }}
+              style={{ minWidth: 42 }}
               onClick={() => navigate("/characters/new")}
             >
               +
-            </button>
+            </Button>
           </div>
         </div>
         <div style={{ display: "flex", gap: 12, margin: "-6px 0 14px", fontSize: "var(--fs-small)" }}>
