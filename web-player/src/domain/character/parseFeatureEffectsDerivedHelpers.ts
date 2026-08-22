@@ -20,6 +20,7 @@ export interface WeaponLike {
   dmg1?: string | null;
   dmg2?: string | null;
   magic?: boolean | null;
+  pactWeapon?: boolean | null;
 }
 
 export type ScalingDice = Extract<AttackEffect["amount"], { kind: "fixed" | "per_scalar" | "named_progression" }>;
@@ -94,6 +95,8 @@ export function weaponMatchesFilters(
         return hasWeaponProperty(item, "T");
       case "magic_weapon":
         return isWeaponLike(item) && item?.magic === true;
+      case "pact_weapon":
+        return isWeaponLike(item) && item?.pactWeapon === true;
       case "no_offhand":
         return context?.hasOtherWeapon === false;
       default:

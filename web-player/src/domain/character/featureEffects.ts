@@ -65,6 +65,7 @@ export type WeaponFilter =
   | "no_two_handed"
   | "thrown_weapon"
   | "magic_weapon"
+  | "pact_weapon"
   | "no_offhand";
 
 export type ScalingValue =

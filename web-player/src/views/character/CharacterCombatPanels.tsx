@@ -364,7 +364,7 @@ export function CharacterCombatPanels({
             const damageMagicBonus = weaponDamageModifierBonus(it, ranged) + (linkedAmmo ? weaponDamageModifierBonus(linkedAmmo, ranged) : 0);
             const featureAttackRollBonus = deriveAttackRollBonusFromEffects(parsedFeatureEffects ?? [], {
               level,
-              scores: { str: strScore, dex: dexScore },
+              scores: { str: strScore, dex: dexScore, cha: chaScore },
               raging: rageActive,
               item: it,
             });

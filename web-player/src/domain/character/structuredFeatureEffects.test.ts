@@ -352,6 +352,37 @@ describe("structured canonical feature effects", () => {
     })).toBe(0);
   });
 
+  it("applies Lifedrinker Charisma damage only to the designated pact weapon", () => {
+    const parsed = parseFeatureEffects({
+      source: { ...source, id: "invocation:lifedrinker", kind: "invocation", name: "Lifedrinker" },
+      text: "",
+      classEffects: [{
+        type: "attack",
+        mode: "bonus_damage",
+        amount: { kind: "ability_mod", ability: "cha", min: 1 },
+        damageType: "necrotic",
+        gate: { weaponFilters: ["pact_weapon"] },
+      }],
+    });
+    const weapon = { name: "Longsword", type: "Martial Melee Weapon", properties: ["V"], dmg1: "1d8" };
+
+    expect(deriveAttackDamageBonusFromEffects([parsed], {
+      item: { ...weapon, pactWeapon: true },
+      isWeapon: true,
+      scores: { cha: 18 },
+    })).toBe(4);
+    expect(deriveAttackDamageBonusFromEffects([parsed], {
+      item: weapon,
+      isWeapon: true,
+      scores: { cha: 18 },
+    })).toBe(0);
+    expect(deriveAttackDamageBonusFromEffects([parsed], {
+      item: { ...weapon, pactWeapon: true },
+      isWeapon: true,
+      scores: { cha: 8 },
+    })).toBe(1);
+  });
+
   it("passes a trait's own structured effects through verbatim, with no parsing — no name/prose inference involved", () => {
     const effects = structuredEffectsFromCanonical({
       source: { ...source, id: "race:warforged:integrated_protection", kind: "species", name: "Integrated Protection" },
