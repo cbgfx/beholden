@@ -373,7 +373,7 @@ export function CharacterCombatPanels({
             const rageBonus = rageActive && !it.pactWeapon && weaponUsesStrength(it) ? rageDamageBonus : 0;
             const featureDamageBonus = deriveAttackDamageBonusFromEffects(parsedFeatureEffects ?? [], {
               level,
-              scores: { str: strScore, dex: dexScore },
+              scores: { str: strScore, dex: dexScore, cha: chaScore },
               // Rage is added separately above to avoid double-counting.
               raging: false,
               isWeapon: true,
