@@ -11,6 +11,7 @@ type Props = {
   inpcs: INpc[];
   monsterDetails: Record<string, MonsterDetail>;
   players: CampaignCharacter[];
+  ruleset?: "5e" | "5.5e";
 };
 
 export function useRosterMetrics(props: Props) {
@@ -78,6 +79,7 @@ export function useRosterMetrics(props: Props) {
     }
 
     const playerLevels = encounterPlayers.map((player) => Number(player.level ?? 1)).filter((level) => Number.isFinite(level) && level > 0);
+    const hostileCount = props.combatants.filter((combatant) => combatant.baseType !== "player" && combatant.baseType !== "world" && !combatant.friendly).length;
     return calcEncounterDifficulty({
       partyHpMax,
       hostileDpr,
@@ -87,8 +89,10 @@ export function useRosterMetrics(props: Props) {
       partyHpValues: encounterPlayers.map((player) => Number(player.hpMax)).filter((hp) => Number.isFinite(hp) && hp > 0),
       monsterEffectiveHp,
       partyDpr: estimatePartyDpr(playerLevels),
+      ruleset: props.ruleset,
+      hostileCount,
     });
-  }, [props.combatants, props.inpcs, props.monsterDetails, props.players, totalXp]);
+  }, [props.combatants, props.inpcs, props.monsterDetails, props.players, props.ruleset, totalXp]);
 
   return { xpByCombatantId, totalXp, difficulty };
 }

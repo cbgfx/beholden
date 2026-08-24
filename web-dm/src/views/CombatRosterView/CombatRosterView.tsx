@@ -63,6 +63,7 @@ export function CombatRosterView() {
     inpcs: state.inpcs,
     monsterDetails: state.monsterDetails,
     players: state.players,
+    ruleset: state.campaigns.find((campaign) => campaign.id === campaignId)?.ruleset,
   });
 
   // Encounter-scoped actions — keyed to the explicit route encounterId.

@@ -117,6 +117,7 @@ export function CombatView() {
     inpcs: state.inpcs,
     monsterDetails: monsterCache,
     players: state.players,
+    ruleset: state.campaigns.find((campaign) => campaign.id === state.selectedCampaignId)?.ruleset,
   });
 
   const totalEncounterXp = React.useMemo(() => {

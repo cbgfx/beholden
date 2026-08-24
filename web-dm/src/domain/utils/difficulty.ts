@@ -1,6 +1,6 @@
 import { labelForRoundsToTpk, type ProjectedThreatLabel } from "./monsterDpr";
 
-type OfficialDifficultyLabel = "No Party" | "No Hostiles" | "Low" | "Moderate" | "High";
+type OfficialDifficultyLabel = "No Party" | "No Hostiles" | "Easy" | "Medium" | "Hard" | "Deadly" | "Low" | "Moderate" | "High";
 type EncounterThreatLabel = "Unavailable" | ProjectedThreatLabel;
 
 // 2024 DMG / Free Rules XP budget per character: [low, moderate, high].
@@ -10,6 +10,15 @@ const XP_BUDGETS: Record<number, [number, number, number]> = {
   9: [1300, 2000, 2600], 10: [1600, 2300, 3100], 11: [1900, 2900, 4100], 12: [2200, 3700, 4700],
   13: [2600, 4200, 5400], 14: [2900, 4900, 6200], 15: [3300, 5400, 7800], 16: [3800, 6100, 9800],
   17: [4500, 7200, 11700], 18: [5000, 8700, 14200], 19: [5500, 10700, 17200], 20: [6400, 13200, 22000],
+};
+
+// 2014 DMG encounter thresholds per character: [easy, medium, hard, deadly].
+const XP_THRESHOLDS_2014: Record<number, [number, number, number, number]> = {
+  1: [25, 50, 75, 100], 2: [50, 100, 150, 200], 3: [75, 150, 225, 400], 4: [125, 250, 375, 500],
+  5: [250, 500, 750, 1100], 6: [300, 600, 900, 1400], 7: [350, 750, 1100, 1700], 8: [450, 900, 1400, 2100],
+  9: [550, 1100, 1600, 2400], 10: [600, 1200, 1900, 2800], 11: [800, 1600, 2400, 3600], 12: [1000, 2000, 3000, 4500],
+  13: [1100, 2200, 3400, 5100], 14: [1250, 2500, 3800, 5700], 15: [1400, 2800, 4300, 6400], 16: [1600, 3200, 4800, 7200],
+  17: [2000, 3900, 5900, 8800], 18: [2100, 4200, 6300, 9500], 19: [2400, 4900, 7300, 10900], 20: [2800, 5700, 8500, 12700],
 };
 
 export type EncounterDifficulty = {
@@ -36,6 +45,21 @@ function partyBudgets(playerLevels: number[]): [number, number, number] {
   }, [0, 0, 0]);
 }
 
+function partyThresholds2014(playerLevels: number[]): [number, number, number, number] {
+  return playerLevels.reduce<[number, number, number, number]>((total, level) => {
+    const row = XP_THRESHOLDS_2014[Math.min(20, Math.max(1, Math.round(level)))] ?? XP_THRESHOLDS_2014[1];
+    return [total[0] + row[0], total[1] + row[1], total[2] + row[2], total[3] + row[3]];
+  }, [0, 0, 0, 0]);
+}
+
+function encounterMultiplier2014(monsterCount: number, partySize: number): number {
+  const steps = [1, 1.5, 2, 2.5, 3, 4];
+  let index = monsterCount <= 1 ? 0 : monsterCount === 2 ? 1 : monsterCount <= 6 ? 2 : monsterCount <= 10 ? 3 : monsterCount <= 14 ? 4 : 5;
+  if (partySize < 3) index += 1;
+  else if (partySize >= 6) index -= 1;
+  return steps[Math.min(steps.length - 1, Math.max(0, index))]!;
+}
+
 export function calcEncounterDifficulty(args: {
   partyHpMax: number;
   hostileDpr: number;
@@ -46,14 +70,24 @@ export function calcEncounterDifficulty(args: {
   partyHpValues?: number[];
   monsterEffectiveHp?: number;
   partyDpr?: number;
+  ruleset?: "5e" | "5.5e";
+  hostileCount?: number;
 }): EncounterDifficulty {
   const playerLevels = (args.playerLevels ?? []).filter((level) => Number.isFinite(level) && level > 0);
   const [lowBudget, moderateBudget, highBudget] = partyBudgets(playerLevels);
   const encounterXp = typeof args.totalXp === "number" && Number.isFinite(args.totalXp) ? Math.max(0, Math.round(args.totalXp)) : 0;
+  const ruleset = args.ruleset ?? "5.5e";
+  const thresholds2014 = partyThresholds2014(playerLevels);
+  const adjustedXp2014 = encounterXp * encounterMultiplier2014(Math.max(0, Math.round(args.hostileCount ?? 0)), playerLevels.length);
   const officialDifficulty: OfficialDifficultyLabel = !playerLevels.length
     ? "No Party"
     : encounterXp <= 0
       ? "No Hostiles"
+      : ruleset === "5e"
+        ? adjustedXp2014 <= thresholds2014[0] ? "Easy"
+          : adjustedXp2014 <= thresholds2014[1] ? "Medium"
+            : adjustedXp2014 <= thresholds2014[2] ? "Hard"
+              : "Deadly"
       : encounterXp <= lowBudget
         ? "Low"
         : encounterXp <= moderateBudget
@@ -84,7 +118,7 @@ export function calcEncounterDifficulty(args: {
         : expectedPartyDamageRatio <= .95 ? "Hard"
           : expectedPartyDamageRatio <= 1.25 ? "Lethal"
             : "TPK";
-  const projectedThreat: EncounterThreatLabel = !playerLevels.length || partyHpMax <= 0
+  const projectedThreat: EncounterThreatLabel = !playerLevels.length || partyHpMax <= 0 || hostileDprRaw <= 0
     ? "Unavailable"
     : partyDpr > 0 && monsterEffectiveHp > 0
       ? simulatedThreat

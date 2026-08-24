@@ -15,6 +15,19 @@ describe("calcEncounterDifficulty", () => {
     expect([result.lowBudget, result.moderateBudget, result.highBudget]).toEqual([300, 450, 700]);
   });
 
+  it("uses 2014 thresholds and monster-count multipliers for 5e campaigns", () => {
+    const result = calcEncounterDifficulty({
+      partyHpMax: 300,
+      hostileDpr: 0,
+      totalXp: 33_500,
+      playerLevels: [7, 7, 7, 7, 7],
+      hostileCount: 4,
+      ruleset: "5e",
+    });
+    expect(result.officialDifficulty).toBe("Deadly");
+    expect(result.projectedThreat).toBe("Unavailable");
+  });
+
   it("keeps DPR telemetry from overriding the official label", () => {
     const result = calcEncounterDifficulty({ partyHpMax: 10, hostileDpr: 1_000, totalXp: 25, playerLevels: [5] });
     expect(result.officialDifficulty).toBe("Low");

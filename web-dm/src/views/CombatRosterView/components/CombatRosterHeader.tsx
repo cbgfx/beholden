@@ -38,7 +38,7 @@ export function CombatRosterHeader(props: Props) {
 
   const xp = typeof props.totalXp === "number" && Number.isFinite(props.totalXp) ? Math.max(0, Math.round(props.totalXp)) : null;
   const diff = props.difficulty;
-  const diffLabel = diff?.projectedThreat ? diff.projectedThreat : null;
+  const diffLabel = diff?.officialDifficulty ? diff.officialDifficulty : null;
 
   const rtk = diff && Number.isFinite(diff.roundsToTpk) ? diff.roundsToTpk : null;
   const hostileDpr = diff && Number.isFinite(diff.hostileDpr) ? diff.hostileDpr : null;
@@ -84,7 +84,8 @@ export function CombatRosterHeader(props: Props) {
                 borderRadius: 999
               }}
               title={
-                `Difficulty: ${diff?.projectedThreat ?? "Unavailable"}\n` +
+                `Official difficulty: ${diff?.officialDifficulty ?? "Unavailable"}\n` +
+                `Damage projection: ${diff?.projectedThreat ?? "Unavailable"}\n` +
                 (partyHpMax != null ? `Party HP: ${Math.round(partyHpMax).toLocaleString()}\n` : "") +
                 (hostileDpr != null ? `Sustained DPR: ${Math.round(hostileDpr).toLocaleString()}\n` : "") +
                 (diff && Number.isFinite(diff.projectedDpr) ? `Projected DPR: ${Math.round(diff.projectedDpr).toLocaleString()}\n` : "") +

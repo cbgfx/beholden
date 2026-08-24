@@ -68,6 +68,7 @@ export function CampaignView(props: {
     inpcs,
     monsterDetails: state.monsterDetails,
     dispatch,
+    ruleset: selectedCampaign?.ruleset,
   });
   const selectedEncounterCounts = React.useMemo(() => {
     if (!selectedEncounterId) return null;

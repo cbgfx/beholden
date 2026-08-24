@@ -58,7 +58,7 @@ export function CombatantHeader(props: Props) {
             Back
           </Button>
           <span style={{ fontSize: "var(--fs-title)", fontWeight: 900, color: theme.colors.text, minWidth: 0 }}>{title}</span>
-          {props.difficulty?.projectedThreat ? (
+          {props.difficulty?.officialDifficulty ? (
             <span
               style={{
                 fontSize: "var(--fs-subtitle)",
@@ -71,7 +71,8 @@ export function CombatantHeader(props: Props) {
                 whiteSpace: "nowrap",
               }}
               title={
-                `Difficulty: ${props.difficulty.projectedThreat}\n` +
+                `Official difficulty: ${props.difficulty.officialDifficulty}\n` +
+                `Damage projection: ${props.difficulty.projectedThreat}\n` +
                 `Party HP: ${Math.round(props.difficulty.partyHpMax).toLocaleString()}\n` +
                 `Sustained DPR: ${Math.round(props.difficulty.hostileDpr).toLocaleString()}\n` +
                 `Projected DPR: ${Math.round(props.difficulty.projectedDpr).toLocaleString()}\n` +
@@ -82,7 +83,7 @@ export function CombatantHeader(props: Props) {
                 (Number.isFinite(props.difficulty.roundsToTpk) ? `Rounds to party collapse: ${props.difficulty.roundsToTpk.toFixed(1)}` : "Rounds to party collapse: ∞")
               }
             >
-              {props.difficulty.projectedThreat}
+              {props.difficulty.officialDifficulty}
             </span>
           ) : null}
         </div>

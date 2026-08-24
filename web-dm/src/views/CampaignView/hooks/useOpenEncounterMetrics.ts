@@ -27,6 +27,7 @@ export function useOpenEncounterMetrics(args: {
   inpcs: INpc[];
   monsterDetails: Record<string, MonsterDetail>;
   dispatch: (action: Action) => void;
+  ruleset?: "5e" | "5.5e";
 }) {
   const { selectedAdventureId, encounters, players, inpcs, monsterDetails, dispatch } = args;
 
@@ -120,6 +121,7 @@ export function useOpenEncounterMetrics(args: {
           let hostileDpr = 0;
           let projectedDpr = 0;
           let monsterEffectiveHp = 0;
+          let hostileCount = 0;
 
           const encounterRows = rowsByEncounter.get(encId) ?? [];
           const encounterPlayerIds = new Set(encounterRows.filter((row) => row.baseType === "player").map((row) => String(row.baseId)));
@@ -130,6 +132,7 @@ export function useOpenEncounterMetrics(args: {
           for (const row of encounterRows) {
             if (row.baseType === "player") continue;
             if (row.friendly) continue;
+            if (row.baseType === "monster" || row.baseType === "inpc") hostileCount += 1;
             let monsterId: string | null = null;
             if (row.baseType === "monster") {
               monsterId = row.baseId != null ? String(row.baseId) : null;
@@ -171,6 +174,8 @@ export function useOpenEncounterMetrics(args: {
             partyHpValues: encounterPlayers.map((player) => Number(player.hpMax)).filter((hp) => Number.isFinite(hp) && hp > 0),
             monsterEffectiveHp,
             partyDpr: estimatePartyDpr(playerLevels),
+            ruleset: args.ruleset,
+            hostileCount,
           });
           nextDiff[encId] = {
             officialDifficulty: diff.officialDifficulty,
@@ -198,6 +203,7 @@ export function useOpenEncounterMetrics(args: {
     };
   }, [
     dispatch,
+    args.ruleset,
     selectedAdventureId,
     encounters,
     inpcs,
@@ -215,8 +221,8 @@ export function useOpenEncounterMetrics(args: {
       if (typeof xp === "number" && Number.isFinite(xp) && xp > 0) {
         parts.push(`${xp.toLocaleString()} XP`);
       }
-      if (diff?.projectedThreat && diff.projectedThreat !== "Unavailable") {
-        parts.push(diff.projectedThreat);
+      if (diff?.officialDifficulty && diff.officialDifficulty !== "No Party" && diff.officialDifficulty !== "No Hostiles") {
+        parts.push(diff.officialDifficulty);
       }
 
       return {
