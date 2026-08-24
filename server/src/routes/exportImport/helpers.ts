@@ -27,12 +27,13 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
     db.prepare("DELETE FROM campaigns WHERE id = ?").run(campaignId);
 
     db.prepare(`
-      INSERT INTO campaigns (id, name, color, image_url, image_updated_at, shared_notes, campaign_story, campaign_notes, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO campaigns (id, name, color, ruleset, image_url, image_updated_at, shared_notes, campaign_story, campaign_notes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       campaignId,
       String(c["name"] ?? ""),
       (c["color"] as string | null) ?? null,
+      c["ruleset"] === "5e" ? "5e" : "5.5e",
       cleanStoredImageUrl(c["imageUrl"]),
       Number(c["updatedAt"] ?? Date.now()),
       String(c["sharedNotes"] ?? ""),
@@ -329,6 +330,9 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
           encounterId,
           baseType: (raw["baseType"] as StoredEncounterActor["baseType"]) ?? "monster",
           baseId: String(raw["baseId"] ?? ""),
+          ...((raw["baseRuleset"] === "5e" || raw["baseRuleset"] === "5.5e")
+            ? { baseRuleset: raw["baseRuleset"] }
+            : {}),
           name: String(raw["name"] ?? ""),
           label: String(raw["label"] ?? ""),
           initiative: raw["initiative"] != null ? Number(raw["initiative"]) : null,

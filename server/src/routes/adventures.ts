@@ -31,7 +31,7 @@ import {
   type NativeCompendiumBatch,
 } from "../services/compendium/nativeCompendium.js";
 import { collectGrandMonsterSpellIds } from "../services/compendium/grandCompendium.js";
-import { planAdventureMonsterImports } from "../services/adventureMonsterImport.js";
+import { adventureMonsterKey, planAdventureMonsterImports, type MonsterRuleset } from "../services/adventureMonsterImport.js";
 
 const AdventureCreateBody = z.object({
   name: z.string().trim().optional(),
@@ -46,6 +46,7 @@ const AdventureUpdateBody = z.object({
 const CombatantImport = z.object({
   baseType: z.enum(["player", "monster", "inpc", "world"]).default("monster"),
   baseId: z.string().default(""),
+  baseRuleset: z.enum(["5e", "5.5e"]).optional(),
   name: z.string(),
   label: z.string(),
   initiative: z.number().nullable().default(null),
@@ -66,6 +67,25 @@ const CombatantImport = z.object({
     inspiration: DEFAULT_OVERRIDES.inspiration ?? false,
   }),
   sort: z.number().optional(),
+}).superRefine((combatant, ctx) => {
+  if (combatant.baseType === "world") return;
+  if (combatant.baseType !== "monster" && !combatant.baseId.trim()) {
+    ctx.addIssue({ code: "custom", path: ["baseId"], message: `${combatant.baseType} combatants require a destination-campaign baseId.` });
+  }
+  if (combatant.baseType === "monster") {
+    if (combatant.hpMax === null || combatant.hpMax < 1) {
+      ctx.addIssue({ code: "custom", path: ["hpMax"], message: "Monster combatants require a positive hpMax." });
+    }
+    if (combatant.hpCurrent === null || combatant.hpCurrent < 0) {
+      ctx.addIssue({ code: "custom", path: ["hpCurrent"], message: "Monster combatants require a nonnegative hpCurrent." });
+    }
+    if (combatant.hpMax !== null && combatant.hpCurrent !== null && combatant.hpCurrent > combatant.hpMax) {
+      ctx.addIssue({ code: "custom", path: ["hpCurrent"], message: "Monster hpCurrent cannot exceed hpMax." });
+    }
+    if (combatant.ac === null || combatant.ac < 1) {
+      ctx.addIssue({ code: "custom", path: ["ac"], message: "Monster combatants require a positive AC." });
+    }
+  }
 });
 
 const EncounterImport = z.object({
@@ -95,7 +115,7 @@ const TreasureImport = z.object({
   sort: z.number().optional(),
 });
 
-const AdventureImportBody = z.object({
+export const AdventureImportBody = z.object({
   format: z.literal("beholden.adventure").optional(),
   version: z.union([z.literal(1), z.literal(2)]),
   compendium: z.array(z.unknown()).default([]),
@@ -249,6 +269,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
         return {
           baseType: combatant.baseType,
           baseId: combatant.baseId,
+          ...(combatant.baseRuleset ? { baseRuleset: combatant.baseRuleset } : {}),
           name: combatant.name,
           label: combatant.label,
           initiative: combatant.initiative,
@@ -304,7 +325,7 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
 
     const parsed = AdventureImportBody.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ ok: false, message: "Invalid adventure file." });
+      return res.status(400).json({ ok: false, message: parsed.error.issues[0]?.message ?? "Invalid adventure file." });
     }
 
     const { adventure: imp } = parsed.data;
@@ -322,8 +343,44 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
 
     const advId = uid();
     const sort = nextSortFor(db, "adventures", "campaign_id", campaignId);
-    const existingMonsters = db.prepare("SELECT id, name_key FROM compendium_monsters").all() as Array<{ id: string; name_key: string }>;
+    const campaign = db.prepare("SELECT ruleset FROM campaigns WHERE id = ?").get(campaignId) as { ruleset: MonsterRuleset } | undefined;
+    if (!campaign) return res.status(404).json({ ok: false, message: "Campaign not found." });
+    const campaignRuleset: MonsterRuleset = campaign.ruleset === "5e" ? "5e" : "5.5e";
+    const existingMonsters = db.prepare("SELECT id, ruleset, name_key FROM compendium_monsters").all() as Array<{ id: string; ruleset: MonsterRuleset; name_key: string }>;
     const importPlan = planAdventureMonsterImports(parsed.data.compendium, existingMonsters);
+    const importedMonsters = parsed.data.compendium.flatMap((batch) => {
+      if (!batch || typeof batch !== "object" || Array.isArray(batch)) return [];
+      const row = batch as { category?: unknown; entries?: unknown };
+      if (row.category !== "monsters" || !Array.isArray(row.entries)) return [];
+      return row.entries.flatMap((entry) => entry && typeof entry === "object" && !Array.isArray(entry) && typeof (entry as { id?: unknown }).id === "string"
+        ? [{ id: (entry as { id: string }).id, ruleset: ((entry as { ruleset?: unknown }).ruleset === "5e" ? "5e" : "5.5e") as MonsterRuleset }]
+        : []);
+    });
+    const allMonsters = [...existingMonsters, ...importedMonsters];
+    const availableMonsterKeys = new Set(allMonsters.map((monster) => adventureMonsterKey(monster.id, monster.ruleset)));
+    const rulesetsByMonsterId = new Map<string, Set<MonsterRuleset>>();
+    for (const monster of allMonsters) {
+      const set = rulesetsByMonsterId.get(monster.id) ?? new Set<MonsterRuleset>();
+      set.add(monster.ruleset);
+      rulesetsByMonsterId.set(monster.id, set);
+    }
+    const resolveRuleset = (combatant: z.infer<typeof CombatantImport>): MonsterRuleset => {
+      if (combatant.baseRuleset) return combatant.baseRuleset;
+      const candidates = rulesetsByMonsterId.get(combatant.baseId);
+      if (candidates?.has(campaignRuleset)) return campaignRuleset;
+      if (candidates?.size === 1) return [...candidates][0]!;
+      return campaignRuleset;
+    };
+    for (const encounter of imp.encounters) {
+      for (const combatant of encounter.combatants) {
+        if (combatant.baseType !== "monster" || !combatant.baseId) continue;
+        const resolvedRuleset = resolveRuleset(combatant);
+        const resolvedId = importPlan.monsterIdMap.get(adventureMonsterKey(combatant.baseId, resolvedRuleset)) ?? combatant.baseId;
+        if (!availableMonsterKeys.has(adventureMonsterKey(resolvedId, resolvedRuleset))) {
+          return res.status(400).json({ ok: false, message: `Monster combatant “${combatant.label}” references unknown Compendium ID “${combatant.baseId}”.` });
+        }
+      }
+    }
 
     db.transaction(() => {
       for (const batch of importPlan.compendium) {
@@ -353,7 +410,12 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
             id: uid(),
             encounterId: encId,
             baseType: c.baseType,
-            baseId: c.baseType === "monster" ? importPlan.monsterIdMap.get(c.baseId) ?? c.baseId : c.baseId,
+            ...(c.baseType === "monster" ? { baseRuleset: resolveRuleset(c) } : {}),
+            baseId: c.baseType === "world"
+              ? c.baseId || uid()
+              : c.baseType === "monster"
+                ? importPlan.monsterIdMap.get(adventureMonsterKey(c.baseId, resolveRuleset(c))) ?? c.baseId
+                : c.baseId,
             name: c.name,
             label: c.label,
             initiative: c.initiative,

@@ -28,6 +28,7 @@ export function isNativeCompendiumCategory(value: string): value is NativeCompen
 // -- bare id membership isn't enough to tell "already exists" from "new" for these categories, so
 // their ids are read alongside ruleset and composite-keyed as "ruleset:id".
 export const RULESET_SCOPED_CATEGORIES = new Set<NativeCompendiumCategory>([
+  "monsters",
   "classes",
   "species",
   "backgrounds",

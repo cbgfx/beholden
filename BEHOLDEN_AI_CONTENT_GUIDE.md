@@ -2,6 +2,8 @@
 
 This file is the complete handoff contract for an AI helping design content for Beholden. Give the AI this file together with the creative material from the conversation. The Beholden source code is not required.
 
+Last verified against the application schemas and structured-effect runtime: **2026-08-24**.
+
 ## Instructions for the AI
 
 When asked to create Beholden content:
@@ -15,7 +17,7 @@ When asked to create Beholden content:
 7. Use JSON `null`, booleans, and numbers—not the strings `"null"`, `"true"`, or `"10"`.
 8. Use UTF-8 JSON. All object keys and string values must use double quotes.
 9. Omit optional fields that add no value. Never add speculative fields in the hope that Beholden will understand them.
-10. If a required compendium ID is unknown, say what is missing instead of fabricating it. If the user accepts a tracker-only combatant, use an empty `baseId` and explain that it will not have a linked stat block.
+10. Every encounter combatant must be combat-ready. A monster needs positive `hpMax` and `ac`, nonnegative `hpCurrent`, and either an exact resolvable Compendium `baseId` or explicit tracker-only mechanics. If a required stat block or ID is unknown, stop and say what is missing instead of returning an adventure import. Only create a tracker-only combatant after the user explicitly accepts that limitation; it still requires complete HP and AC values.
 11. Beholden never parses rules text for mechanics at runtime. Description prose is player-facing display only. Any benefit the app should apply — ability increases, granted spells, proficiencies, AC or modifier bonuses, resource pools, choices — must be expressed in the entry's typed fields. A benefit that exists only in prose is, by definition, resolved manually at the table.
 
 ## Choose the right output
@@ -107,6 +109,29 @@ Feat:        f_
 ```
 
 Use lowercase underscore keys for newly authored IDs, such as `m_orrery_guardian`. Preserve IDs exactly when editing an exported entry because adventures and characters may already reference them.
+
+When the AI cannot inspect the destination Compendium, derive a best-effort monster ID from the exact monster name as follows:
+
+1. Unicode-normalize the name and remove combining accents.
+2. Lowercase it.
+3. Remove straight and curly apostrophes.
+4. Replace `+` with `_plus_`.
+5. Replace every other run of characters that are not ASCII letters or digits with one underscore.
+6. Collapse repeated underscores and trim leading/trailing underscores.
+7. Prefix the result with `m_`.
+
+Examples:
+
+```text
+Animated Armor             -> m_animated_armor
+Adult Red Dragon           -> m_adult_red_dragon
+Mordenkainen's Sword       -> m_mordenkainens_sword
+Helmed Horror +1           -> m_helmed_horror_plus_1
+```
+
+This is a deterministic fallback, not proof that the destination contains that ID. Say that the ID is inferred when relevant. Beholden validates adventure monster references during import and rejects an inferred ID that does not exist. Never replace a failed guess with an empty `baseId`; request the catalog ID, embed a new monster, or obtain explicit approval for a fully statted tracker-only combatant.
+
+Monster identity is the pair `(id, ruleset)`, not the ID alone. Campaigns declare a default ruleset: `"5e"` for the 2014 rules or `"5.5e"` for the 2024 rules. When both editions contain an ID such as `m_titivilus`, the importer selects the campaign ruleset unless the combatant explicitly supplies `baseRuleset`. Embedded monster entries always carry their own required `ruleset`, and a combatant that refers to one should use the same value. Never assume that equal IDs across rulesets describe interchangeable stat blocks.
 
 Multi-category imports are atomic: every populated category in one file succeeds together or none are applied.
 
@@ -1128,6 +1153,7 @@ EffectBase = {
     level?: number | null
     parentName?: string | null
     text?: string | null
+    rawFeatureId?: string | null
   }
   summary?: string
   gate?: EffectGate
@@ -1153,13 +1179,14 @@ EffectGate = {
 WeaponFilter = "simple_weapon" | "martial_weapon" | "melee_weapon" |
   "ranged_weapon" | "finesse_weapon" | "light_weapon" | "heavy_weapon" |
   "crossbow_weapon" | "longbow_or_shortbow" | "light_crossbow" |
-  "no_two_handed" | "thrown_weapon" | "magic_weapon" | "no_offhand"
+  "no_two_handed" | "thrown_weapon" | "magic_weapon" | "pact_weapon" |
+  "no_offhand"
 
 ResetKind = "short_rest" | "long_rest" | "short_or_long_rest" | "initiative" |
             "turn_start" | "rage_start" | "never" | "special"
 ```
 
-Canonical source data may omit generated `id` and `source` when the ingestion path supplies them, but fully materialized runtime effects contain both.
+Canonical source data may omit generated `id` and `source` when the ingestion path supplies them, but fully materialized runtime effects contain both. `source.rawFeatureId` is the stable ID of the compendium feature that produced the effect (for example `cf_ranger_1_deft_explorer`); include it when known so choice identity remains stable across the creator, editor, and level-up flows.
 
 Note the two different `resolution` fields are not interchangeable: an individual effect's own `resolution` (inside `EffectBase`, above) accepts only `"automatic"` or `"manual"` — never `"mixed"`. The three-value `Resolution` type (`"automatic" | "manual" | "mixed"`) applies only to the *entry-level* `resolution` field on a `Feat`, `Trait`, or `ClassFeature` (its own field, sitting beside `effects`, summarizing the whole entry).
 
@@ -1186,7 +1213,8 @@ ChoiceSpec = {
   options?: string[]
   optionCategory?: "skill" | "tool" | "language" | "weapon" |
                    "weapon_mastery" | "spell" | "feat" |
-                   "subclass_option" | "damage_type"
+                   "subclass_option" | "damage_type" | "selection"
+  choiceLabel?: string
   filters?: ("has_proficiency" | WeaponFilter)[]
   canReplaceOnReset?: ResetKind
   ifProficient?: string
@@ -1214,6 +1242,7 @@ ResourceGrantEffect = EffectBase & {
   reset?: ResetKind
   restoreAmount?: "all" | "one" | ScalingValue
   linkedSpellName?: string
+  actionType?: "reaction"
 }
 
 SpellGrantEffect = EffectBase & {
@@ -1242,13 +1271,14 @@ SpellChoiceEffect = EffectBase & {
   note?: string
   freeCast?: boolean
   ifKnown?: string
+  canReplace?: boolean
   filters?: { damage?: true, attack?: true, ritual?: true, known?: true }
 }
 
 ProficiencyGrantEffect = EffectBase & {
   type: "proficiency_grant"
   category: "skill" | "tool" | "language" | "armor" | "weapon" |
-            "saving_throw" | "initiative"
+            "saving_throw" | "initiative" | "selection"
   grants?: string[]
   weaponFilter?: {
     melee?: true
@@ -1257,6 +1287,7 @@ ProficiencyGrantEffect = EffectBase & {
   }
   choice?: ChoiceSpec
   expertise?: boolean
+  choiceId?: string | null
 }
 
 WeaponMasteryEffect = EffectBase & {
@@ -1293,7 +1324,8 @@ ModifierEffect = EffectBase & {
   type: "modifier"
   target: "ability_check" | "initiative" | "skill_check" | "saving_throw" |
           "attack_roll" | "damage_roll" | "spell_attack" | "spell_save_dc" |
-          "passive_score" | "any_d20_test" | "carrying_capacity"
+          "passive_score" | "any_d20_test" | "carrying_capacity" |
+          "cantrip_damage"
   mode: "bonus" | "set_minimum" | "advantage" | "disadvantage" | "reroll"
   amount?: ScalingValue
   appliesTo?: string[]
@@ -1378,6 +1410,17 @@ RestRuleEffect = EffectBase & {
   hours?: number
 }
 ```
+
+Authoring notes for the newer typed fields:
+
+- Use `ChoiceSpec.optionCategory: "selection"` for a choice among named class selections that are not one of the narrower categories, and provide `choiceLabel` when the UI needs a human-readable noun for that selection.
+- `SpellChoiceEffect.canReplace: true` means the choice replaces an existing class selection rather than increasing the number known.
+- `ProficiencyGrantEffect.category: "selection"` represents a typed non-proficiency selection carried through this shared effect shape. Give a choice-bearing proficiency grant a stable `choiceId` when known; use `null` only when the producer explicitly materializes an unknown identity.
+- `ResourceGrantEffect.actionType: "reaction"` means spending the resource is itself the Reaction. Omit it for Bonus Actions, no-action riders, or shared pools whose benefits use different action types.
+- `ModifierEffect.target: "cantrip_damage"` applies to every cantrip of the granting class. It is distinct from `"damage_roll"`, which is the weapon-attack damage target.
+- `"pact_weapon"` narrows a weapon-gated effect to the character's current pact weapon.
+
+The runtime also has an internal `selection_replacement` effect used after content has been interpreted. It is **not** in the server's accepted structured-effect type enum and must not be authored in import JSON.
 
 `StructuredEffect` is the union of all variants above.
 
@@ -1485,7 +1528,8 @@ An encounter is a roster and combat tracker. Narrative setup, maps, tactics, haz
 ```json
 {
   "baseType": "monster",
-  "baseId": "m_animated armor",
+  "baseId": "m_animated_armor",
+  "baseRuleset": "5.5e",
   "name": "Animated Armor",
   "label": "West Gallery Armor",
   "initiative": null,
@@ -1511,17 +1555,18 @@ An encounter is a roster and combat tracker. Narrative setup, maps, tactics, haz
 
 | Field | Type | Required | Default / meaning |
 |---|---|---:|---|
-| `baseType` | `"player"` \| `"monster"` \| `"inpc"` | no | `"monster"` |
-| `baseId` | string | no | `""`; ID of the linked record |
+| `baseType` | `"player"` \| `"monster"` \| `"inpc"` \| `"world"` | no | `"monster"` |
+| `baseId` | string | conditional | Exact ID of the linked record. May be `""` only for an explicitly approved tracker-only monster with complete HP and AC |
+| `baseRuleset` | `"5e"` \| `"5.5e"` | no | Edition of a linked monster. Emit it whenever known; otherwise the importer uses the campaign ruleset, then a sole unambiguous catalog match |
 | `name` | string | yes | Base display name |
 | `label` | string | yes | Unique battlefield label; may equal `name` for a single creature |
 | `initiative` | number \| null | no | `null`; roll at play time |
 | `friendly` | boolean | no | `false` |
 | `color` | string | no | `"#888888"`; use a CSS hex color |
-| `hpMax` | number \| null | no | `null` |
-| `hpCurrent` | number \| null | no | `null`; normally equal to `hpMax` |
+| `hpMax` | number \| null | monster: yes | Positive maximum HP |
+| `hpCurrent` | number \| null | monster: yes | Nonnegative and no greater than `hpMax`; normally equal to `hpMax` |
 | `hpDetails` | string \| null | no | `null`; e.g. hit-dice expression |
-| `ac` | number \| null | no | `null` |
+| `ac` | number \| null | monster: yes | Positive Armor Class |
 | `acDetails` | string \| null | no | `null`; e.g. `"natural armor"` |
 | `attackOverrides` | object \| null | no | `null` |
 | `conditions` | condition[] | no | `[]` |
@@ -1531,13 +1576,48 @@ An encounter is a roster and combat tracker. Narrative setup, maps, tactics, haz
 
 ### Linking monsters correctly
 
-For useful monster stat blocks and actions, `baseType` must be `"monster"` and `baseId` must exactly match a monster in the user's compendium.
+For useful monster stat blocks and actions, `baseType` must be `"monster"` and `baseId` must exactly match a monster in the user's compendium. A display name, Binder name, prose instruction, or description such as “use this NPC's canonical stat block” is never a mechanical link and must not be used as a substitute.
 
 Canonical monster IDs use the `m_` prefix followed by a stable lowercase underscore key, such as `m_animated_armor` or `m_adult_red_dragon`. References must use the exact authored ID; never derive a reference from a display name at runtime.
 
 Do not use `"player"` or `"inpc"` in portable adventure files unless the user supplies IDs from the destination campaign. Those IDs are campaign-specific.
 
-A monster with `baseId: ""` can still track the supplied name, HP, and AC, but it will not have a linked compendium stat block, actions, CR, XP, or full difficulty data. For a new monster, embed a `"monsters"` Beholden Compendium batch and set the combatant's `baseId` to that entry's exact `id`.
+A monster with `baseId: ""` can track explicitly supplied name, HP, and AC, but it will not have a linked compendium stat block, actions, CR, XP, or full difficulty data. Use this form only after the user explicitly approves a tracker-only combatant. Never emit an empty `baseId` together with null HP or AC. For a new monster, embed a `"monsters"` Beholden Compendium batch and set the combatant's `baseId` to that entry's exact `id`.
+
+If the creative material calls for a Binder NPC whose Binder record has no linked Compendium monster, that NPC does **not** have a usable combat stat block. Do not infer mechanics from its lore, name, portrait, or notes. Stop and request a stat block, or offer to design and embed a new monster entry. Do not silently downgrade it to a statless roster row.
+
+### World Actions
+
+World Actions are portable, statless turn-order entries for lair actions, hazards, weather, countdowns, environmental changes, and recurring encounter reminders. They are created directly with `baseType: "world"`; do not disguise them as monsters. Beholden assigns an internal `baseId` when the imported value is empty.
+
+```json
+{
+  "baseType": "world",
+  "baseId": "",
+  "name": "Temple Pulse",
+  "label": "Temple Pulse",
+  "initiative": 20,
+  "friendly": true,
+  "color": "#f59e0b",
+  "hpMax": null,
+  "hpCurrent": null,
+  "hpDetails": null,
+  "ac": null,
+  "acDetails": null,
+  "attackOverrides": null,
+  "conditions": [],
+  "overrides": {
+    "tempHp": 0,
+    "acBonus": 0,
+    "hpMaxBonus": 0,
+    "inspiration": false
+  },
+  "description": "On initiative count 20, the temple emits a pulse. Each creature in the chamber makes a DC 15 Constitution save or takes 2d6 force damage.",
+  "sort": 1
+}
+```
+
+World Actions intentionally have null HP and AC, cannot be damaged or targeted as creatures, and do not contribute monster XP or difficulty. Put the complete resolution reminder in `description`. Use a fixed `initiative` when the effect occurs at a defined count; otherwise use `null` to roll at combat start.
 
 ### Repeated creatures
 
@@ -1836,6 +1916,11 @@ Before returning the file, verify:
 - every encounter has `name`;
 - every combatant has both `name` and `label`;
 - each creature has its own combatant object and unique label;
+- every monster has positive `hpMax` and `ac`, nonnegative `hpCurrent`, and no null placeholder mechanics;
+- every non-empty monster `baseId` resolves to an existing or embedded Compendium monster;
+- every known monster edition is emitted as `baseRuleset`, and it matches the linked or embedded monster's `ruleset`;
+- an empty monster `baseId` appears only after explicit user approval of a tracker-only combatant;
+- no description or DM note is being used as a substitute for a mechanical stat-block link;
 - `hpCurrent` is not greater than `hpMax`;
 - exact compendium IDs are used only when justified;
 - custom treasure uses `"source": "custom"` and `"itemId": null`;

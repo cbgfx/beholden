@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS mortals (
 
 CREATE TABLE IF NOT EXISTS binder_npcs (
   mortal_id TEXT PRIMARY KEY REFERENCES mortals(id) ON DELETE CASCADE,
-  monster_id TEXT REFERENCES compendium_monsters(id) ON DELETE SET NULL,
+  monster_id TEXT,
   hp_max INTEGER,
   hp_current INTEGER,
   hp_details TEXT,

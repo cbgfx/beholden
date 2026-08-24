@@ -148,6 +148,7 @@ function readEncounterActorSnapshot(
 ): StoredEncounterActorSnapshot {
   const snapshot = parseJson<Partial<StoredEncounterActorSnapshot>>(row.snapshot_json, {});
   return {
+    ...(snapshot.baseRuleset === "5e" || snapshot.baseRuleset === "5.5e" ? { baseRuleset: snapshot.baseRuleset } : {}),
     name: typeof snapshot.name === "string" ? snapshot.name : "",
     label: typeof snapshot.label === "string" ? snapshot.label : "",
     friendly: Boolean(snapshot.friendly),
@@ -265,6 +266,7 @@ export function rowToCampaign(row: Record<string, unknown>): StoredCampaign {
   return {
     id: row.id as string,
     name: row.name as string,
+    ruleset: row.ruleset === "5e" ? "5e" : "5.5e",
     color: (row.color as string | null) ?? null,
     imageUrl: readVersionedImageUrl(row),
     sharedNotes: (row.shared_notes as string | null) ?? "",
@@ -477,6 +479,7 @@ export function rowToEncounterActor(row: Record<string, unknown>): StoredEncount
     encounterId: row.encounter_id as string,
     baseType: row.base_type as StoredEncounterActorBaseType,
     baseId: row.base_id as string,
+    ...(snapshot.baseRuleset ? { baseRuleset: snapshot.baseRuleset } : {}),
     name: snapshot.name,
     label: snapshot.label,
     initiative: live.initiative,

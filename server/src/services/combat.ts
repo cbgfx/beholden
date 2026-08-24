@@ -45,11 +45,12 @@ function serializeEncounterActorLive(live: StoredEncounterActorLiveState): strin
 function buildEncounterActorSnapshot(
   actor: Pick<
     StoredEncounterActor,
-    "name" | "label" | "friendly" | "color" | "hpMax" | "hpDetails" | "ac" | "acDetails" | "attackOverrides" | "description"
+    "baseRuleset" | "name" | "label" | "friendly" | "color" | "hpMax" | "hpDetails" | "ac" | "acDetails" | "attackOverrides" | "description"
   >,
   patch: Partial<StoredEncounterActorSnapshot> = {},
 ): StoredEncounterActorSnapshot {
   return {
+    ...(patch.baseRuleset ?? actor.baseRuleset ? { baseRuleset: patch.baseRuleset ?? actor.baseRuleset } : {}),
     name: patch.name ?? actor.name,
     label: patch.label ?? actor.label,
     friendly: patch.friendly ?? actor.friendly,

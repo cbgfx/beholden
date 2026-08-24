@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
   shared_notes TEXT NOT NULL DEFAULT '',
   campaign_story TEXT,
   campaign_notes TEXT,
+  ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK(ruleset IN ('5e', '5.5e')),
   party_currency_json TEXT NOT NULL DEFAULT '{"PP":0,"GP":0,"SP":0,"CP":0}',
   is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
   created_at INTEGER NOT NULL,
@@ -155,7 +156,7 @@ CREATE TABLE IF NOT EXISTS combatants (
 -- Compendium: full normalized data stored as a JSON blob per row.
 -- Scalar columns allow efficient SQL filtering without JSON parsing.
 CREATE TABLE IF NOT EXISTS compendium_monsters (
-  id TEXT PRIMARY KEY,
+  id TEXT NOT NULL,
   ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')),
   name TEXT NOT NULL,
   name_key TEXT,
@@ -166,7 +167,8 @@ CREATE TABLE IF NOT EXISTS compendium_monsters (
   size TEXT,
   environment TEXT,
   data_json TEXT NOT NULL,
-  content_hash TEXT
+  content_hash TEXT,
+  PRIMARY KEY (id, ruleset)
 );
 
 CREATE TABLE IF NOT EXISTS compendium_items (

@@ -92,6 +92,7 @@ export function useCampaignActions(
     try {
       await postEncounterCombatants(state.selectedEncounterId, "addMonster", {
         monsterId,
+        ruleset: opts?.ruleset,
         qty,
         friendly: Boolean(opts?.friendly ?? false),
         labelBase: opts?.labelBase?.trim() || undefined,

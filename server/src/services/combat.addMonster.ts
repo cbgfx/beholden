@@ -29,6 +29,7 @@ function parseMonsterStats(monsterBlob: unknown): {
 
 export interface AddMonsterParams {
   monsterId: string;
+  ruleset: "5e" | "5.5e";
   monsterName: string;
   monsterBlob: unknown;
   qty: number;
@@ -49,7 +50,7 @@ export function addMonsterCombatants(
   params: AddMonsterParams,
 ): StoredEncounterActor[] {
   const {
-    monsterId, monsterName, monsterBlob, qty, friendly,
+    monsterId, ruleset, monsterName, monsterBlob, qty, friendly,
     labelBase, acOverride, acDetails, hpMaxOverride, hpDetails, attackOverrides,
   } = params;
   const { defaultHp, defaultAc, defaultHpDetails, defaultAcDetails } = parseMonsterStats(monsterBlob);
@@ -71,6 +72,7 @@ export function addMonsterCombatants(
         encounterId,
         baseType: "monster",
         baseId: monsterId,
+        baseRuleset: ruleset,
         name: baseName,
         label,
         initiative: null,

@@ -14,6 +14,15 @@ export function ensureCompendiumCompositePrimaryKey(db: Db): void {
     indexSql: string;
   }> = [
     {
+      name: "compendium_monsters",
+      columns: "id TEXT NOT NULL, ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')), name TEXT NOT NULL, name_key TEXT, cr TEXT, cr_numeric REAL, type_key TEXT, type_full TEXT, size TEXT, environment TEXT, data_json TEXT NOT NULL, content_hash TEXT, PRIMARY KEY (id, ruleset)",
+      columnNames: "id, ruleset, name, name_key, cr, cr_numeric, type_key, type_full, size, environment, data_json, content_hash",
+      indexSql: [
+        "CREATE INDEX IF NOT EXISTS idx_compmonster_name ON compendium_monsters(name COLLATE NOCASE)",
+        "CREATE INDEX IF NOT EXISTS idx_compendium_monsters_ruleset ON compendium_monsters(ruleset)",
+      ].join(";\n"),
+    },
+    {
       name: "compendium_classes",
       columns: "id TEXT NOT NULL, ruleset TEXT NOT NULL DEFAULT '5.5e' CHECK (ruleset IN ('5e', '5.5e')), name TEXT NOT NULL, name_key TEXT, hd INTEGER, data_json TEXT NOT NULL, PRIMARY KEY (id, ruleset)",
       columnNames: "id, ruleset, name, name_key, hd, data_json",

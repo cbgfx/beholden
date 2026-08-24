@@ -1,15 +1,21 @@
+import { nativeEntryKey } from "@beholden/shared/domain/compendium/nativeCompendiumKey";
 import { normalizeKey } from "../lib/text.js";
 
-type ExistingMonster = { id: string; name_key: string };
+export type MonsterRuleset = "5e" | "5.5e";
+type ExistingMonster = { id: string; ruleset: MonsterRuleset; name_key: string };
 type BatchLike = { category?: unknown; entries?: unknown; [key: string]: unknown };
+
+export function adventureMonsterKey(id: string, ruleset: MonsterRuleset): string {
+  return nativeEntryKey("monsters", { id, ruleset });
+}
 
 export function planAdventureMonsterImports(
   compendium: unknown[],
   existingMonsters: ExistingMonster[],
 ): { compendium: unknown[]; monsterIdMap: Map<string, string> } {
   const monsterIdMap = new Map<string, string>();
-  const byId = new Map(existingMonsters.map((monster) => [monster.id, monster.id]));
-  const byName = new Map(existingMonsters.map((monster) => [monster.name_key, monster.id]));
+  const byId = new Map(existingMonsters.map((monster) => [adventureMonsterKey(monster.id, monster.ruleset), monster.id]));
+  const byName = new Map(existingMonsters.map((monster) => [`${monster.ruleset}:${monster.name_key}`, monster.id]));
 
   const planned = compendium.map((rawBatch) => {
     if (!rawBatch || typeof rawBatch !== "object" || Array.isArray(rawBatch)) return rawBatch;
@@ -20,18 +26,20 @@ export function planAdventureMonsterImports(
       if (!rawEntry || typeof rawEntry !== "object" || Array.isArray(rawEntry)) return true;
       const entry = rawEntry as Record<string, unknown>;
       const importedId = typeof entry.id === "string" ? entry.id.trim() : "";
+      const ruleset: MonsterRuleset = entry.ruleset === "5e" ? "5e" : "5.5e";
       const name = typeof entry.name === "string" ? entry.name.trim() : "";
       const nameKey = normalizeKey(name);
-      const existingId = (importedId ? byId.get(importedId) : undefined)
-        ?? (nameKey ? byName.get(nameKey) : undefined);
+      const importedKey = adventureMonsterKey(importedId, ruleset);
+      const existingId = (importedId ? byId.get(importedKey) : undefined)
+        ?? (nameKey ? byName.get(`${ruleset}:${nameKey}`) : undefined);
 
       if (existingId) {
-        if (importedId) monsterIdMap.set(importedId, existingId);
+        if (importedId) monsterIdMap.set(importedKey, existingId);
         return false;
       }
 
-      if (importedId) byId.set(importedId, importedId);
-      if (importedId && nameKey) byName.set(nameKey, importedId);
+      if (importedId) byId.set(importedKey, importedId);
+      if (importedId && nameKey) byName.set(`${ruleset}:${nameKey}`, importedId);
       return true;
     });
 

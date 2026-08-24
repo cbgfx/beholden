@@ -85,6 +85,7 @@ export function MonsterRow(props: {
             const hpNum = parseLeadingNumberLoose(props.hpRaw);
 
             props.onAddMonster(m.id, props.qty, {
+              ruleset: m.ruleset,
               labelBase: props.labelBase,
               ac: Number.isFinite(acNum) ? acNum : undefined,
               acDetails: props.acDetail.trim() || undefined,

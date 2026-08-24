@@ -21,6 +21,7 @@ import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
 import { VisibilityIcon } from "./VisibilityIcon";
 import { BinderRecordDetailShell } from "./BinderRecordDetailShell";
 import { emptyMortalFilters as emptyFilters, useMortalSavedViews, type MortalFilters } from "./useMortalSavedViews";
+import { LinkedMortalStatblock } from "./LinkedMortalStatblock";
 
 const mortalTableColumns = BINDER_MORTAL_COLUMNS;
 const NONE_FILTER = "__none__";
@@ -245,7 +246,10 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
   if (selected) {
     const age = mortalAge(selected, props.binderCurrentDate);
     const genderColor = selected.gender === "male" ? "#7dd3fc" : selected.gender === "female" ? "#f9a8d4" : null;
-    const linkedPlayer = selected.player ? options.players.find((player) => player.id === selected.player!.id) : undefined;
+    const linkedPlayer = selected.player
+      ? options.players.find((player) => player.id === selected.player!.id)
+        ?? options.players.find((player) => selected.characterId && player.characterId === selected.characterId)
+      : undefined;
     const facts: Array<{ key: string; icon: React.ReactNode; label: string; node: React.ReactNode }> = [
       ...(() => {
         const displayClassName = selected.mortalType === "player_character" ? (linkedPlayer?.className || selected.className) : null;
@@ -319,8 +323,10 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
         actionButtonSize={{ width: 42, height: 38 }}
         bodyPadding={20}
         bodyGap={16}
-        bodyMaxWidth={1240}
+        bodyMaxWidth={1680}
       >
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 460px), 1fr))", gap: 24, alignItems: "start" }}>
+          <div style={{ display: "grid", gap: 16, minWidth: 0 }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", columnGap: 30, rowGap: 0 }}>
               {facts.map(({ key, icon, label, node }) => (
                 <div key={key} style={{ minHeight: 42, padding: "8px 2px", display: "grid", gridTemplateColumns: "105px minmax(0, 1fr)", gap: 10, alignItems: "center", borderBottom: `1px solid ${withAlpha(props.accent, 0.14)}` }}>
@@ -342,6 +348,19 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
               await reload();
             }} />
             <BacklinksPanel binderId={props.binderId} recordId={selected.id} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <LinkedMortalStatblock
+              mortalId={selected.id}
+              monsterId={selected.mortalType === "npc" ? selected.monsterId : null}
+              playerLink={selected.mortalType === "player_character" && linkedPlayer
+                ? { campaignId: linkedPlayer.campaignId, playerId: linkedPlayer.id }
+                : null}
+              mechanics={selected.npcMechanics}
+              accent={props.accent}
+            />
+          </div>
+        </div>
       </BinderRecordDetailShell>
       {modal}
       <ImageLightbox src={lightboxSrc} alt={`${selected.name} portrait`} onClose={() => setLightboxSrc(null)} />

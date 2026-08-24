@@ -19,6 +19,7 @@ export interface Meta {
 export interface Campaign {
   id: Id;
   name: string;
+  ruleset: "5e" | "5.5e";
   color?: string | null;
   binderId?: Id | null;
   currentDate?: {
@@ -100,6 +101,7 @@ export interface EncounterActor {
   // Source identity
   baseType: CombatantBaseType;
   baseId: Id;
+  baseRuleset?: "5e" | "5.5e";
 
   // Display
   name: string;
@@ -182,6 +184,7 @@ export type AttackOverride = {
 };
 
 export interface AddMonsterOptions {
+  ruleset?: "5e" | "5.5e";
   /**
    * Optional base label used when creating combatants.
    * The server/UI may suffix this to keep labels unique (e.g. "[2024] 2").

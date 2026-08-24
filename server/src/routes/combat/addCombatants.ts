@@ -100,20 +100,22 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
     const encounterId = requireParam(req, res, "encounterId");
     if (!encounterId) return;
     const encRow = db
-      .prepare("SELECT id FROM encounters WHERE id = ?")
-      .get(encounterId) as { id: string } | undefined;
+      .prepare("SELECT e.id, c.ruleset FROM encounters e JOIN campaigns c ON c.id = e.campaign_id WHERE e.id = ?")
+      .get(encounterId) as { id: string; ruleset: "5e" | "5.5e" } | undefined;
     if (!encRow)
       return res.status(404).json({ ok: false, message: "Encounter not found" });
 
     const body = parseBody(AddMonsterBody, req);
+    const ruleset = body.ruleset ?? encRow.ruleset;
     const monRow = db
-      .prepare("SELECT name, data_json FROM compendium_monsters WHERE id = ?")
-      .get(body.monsterId) as { name: string; data_json: string } | undefined;
+      .prepare("SELECT name, data_json FROM compendium_monsters WHERE id = ? AND ruleset = ?")
+      .get(body.monsterId, ruleset) as { name: string; data_json: string } | undefined;
     if (!monRow)
       return res.status(404).json({ ok: false, message: "Monster not found in compendium" });
 
     const created = addMonsterCombatants(db, encounterId, uid, now(), {
       monsterId: body.monsterId,
+      ruleset,
       monsterName: monRow.name,
       monsterBlob: JSON.parse(monRow.data_json),
       qty: body.qty ?? 1,

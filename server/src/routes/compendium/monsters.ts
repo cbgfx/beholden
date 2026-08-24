@@ -63,11 +63,14 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
     const monsterId = requireParam(req, res, "monsterId");
     if (!monsterId) return;
     const view = String(req.query.view ?? "").trim().toLowerCase();
+    const ruleset = parseRulesetFilter(req.query.ruleset);
     const metricsOnly = view === "metrics" || view === "summary";
-    const row = db
-      .prepare("SELECT id, name, name_key, cr, type_key, type_full, size, environment, data_json FROM compendium_monsters WHERE id = ?")
-      .get(monsterId) as {
+    const rows = db
+      .prepare(`SELECT id, ruleset, name, name_key, cr, type_key, type_full, size, environment, data_json
+                FROM compendium_monsters WHERE id = ?${ruleset ? " AND ruleset = ?" : ""}`)
+      .all(...(ruleset ? [monsterId, ruleset] : [monsterId])) as Array<{
       id: string;
+      ruleset: "5e" | "5.5e";
       name: string;
       name_key: string | null;
       cr: string | null;
@@ -76,7 +79,11 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
       size: string | null;
       environment: string | null;
       data_json: string;
-    } | undefined;
+    }>;
+    if (!ruleset && rows.length > 1) {
+      return res.status(409).json({ ok: false, message: "Monster ID exists in multiple rulesets; specify ?ruleset=5e or ?ruleset=5.5e." });
+    }
+    const row = rows[0];
     if (!row)
       return res.status(404).json({ ok: false, message: "Monster not found in compendium" });
 
@@ -211,7 +218,11 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
   app.put("/api/compendium/monsters/:monsterId", anyDm, (req, res) => {
     const monsterId = requireParam(req, res, "monsterId");
     if (!monsterId) return;
-    const existing = db.prepare("SELECT id FROM compendium_monsters WHERE id = ?").get(monsterId) as { id: string } | undefined;
+    const bodyRuleset = (req.body as { ruleset?: unknown } | undefined)?.ruleset;
+    const ruleset = bodyRuleset === "5e" ? "5e" : bodyRuleset === "5.5e" ? "5.5e" : undefined;
+    const existing = ruleset
+      ? db.prepare("SELECT id FROM compendium_monsters WHERE id = ? AND ruleset = ?").get(monsterId, ruleset)
+      : db.prepare("SELECT id FROM compendium_monsters WHERE id = ?").get(monsterId);
     if (!existing)
       return res.status(404).json({ ok: false, message: "Monster not found" });
     saveGrandEntry(db, "monsters", req.body, monsterId);
@@ -223,7 +234,13 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
   app.delete("/api/compendium/monsters/:monsterId", anyDm, (req, res) => {
     const monsterId = requireParam(req, res, "monsterId");
     if (!monsterId) return;
-    db.prepare("DELETE FROM compendium_monsters WHERE id = ?").run(monsterId);
+    const ruleset = parseRulesetFilter(req.query.ruleset);
+    const matches = db.prepare("SELECT ruleset FROM compendium_monsters WHERE id = ?").all(monsterId) as Array<{ ruleset: string }>;
+    if (!ruleset && matches.length > 1) {
+      return res.status(409).json({ ok: false, message: "Monster ID exists in multiple rulesets; specify the ruleset to delete." });
+    }
+    if (ruleset) db.prepare("DELETE FROM compendium_monsters WHERE id = ? AND ruleset = ?").run(monsterId, ruleset);
+    else db.prepare("DELETE FROM compendium_monsters WHERE id = ?").run(monsterId);
     ctx.broadcast("compendium:changed", { monsterDeleted: monsterId });
     res.json({ ok: true });
   });

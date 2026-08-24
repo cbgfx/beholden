@@ -11,6 +11,8 @@ import { ensureMortalClassColumn } from "./migrations/mortalClassColumnMigration
 import { displayNoteTitle } from "./dbConverters.js";
 import { ensureCompendiumRulesetColumns } from "./migrations/compendiumRulesetColumnMigration.js";
 import { ensureCharacterRulesetColumn } from "./migrations/characterRulesetColumnMigration.js";
+import { ensureCampaignRulesetColumn } from "./migrations/campaignRulesetMigration.js";
+import { removeLegacyBinderNpcMonsterForeignKey } from "./migrations/binderNpcMonsterForeignKeyMigration.js";
 import { ensureCompendiumCompositePrimaryKey } from "./migrations/compendiumPrimaryKeyMigration.js";
 import { BINDER_SCHEMA_SQL } from "./binderSchema.js";
 import { ensureActivityColumns } from "./migrations/activityMigration.js";
@@ -60,8 +62,11 @@ export function openDb(dbPath: string): Db {
   ensureMortalClassColumn(db);
   reconcileLinkedCharacterIdentities(db);
   ensureCompendiumRulesetColumns(db);
+  removeLegacyBinderNpcMonsterForeignKey(db);
   ensureCompendiumCompositePrimaryKey(db);
+  db.exec(BINDER_SCHEMA_SQL);
   ensureCharacterRulesetColumn(db);
+  ensureCampaignRulesetColumn(db);
   ensureTreasureEncounterColumn(db);
   ensureUserLastLoginColumn(db);
   ensureImageVersionColumns(db);

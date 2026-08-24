@@ -16,6 +16,7 @@ export const AddPlayerBody = z.object({
 
 export const AddMonsterBody = z.object({
   monsterId: z.string(),
+  ruleset: z.enum(["5e", "5.5e"]).optional(),
   qty: z.number().int().min(1).max(20).default(1),
   friendly: z.boolean().default(false),
   labelBase: z.string().optional(),

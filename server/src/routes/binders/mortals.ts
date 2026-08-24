@@ -99,7 +99,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
       ORDER BY br.name_key, br.id
     `).all(binderId) as Array<{ id: string; type: string; name: string; icon: string | null }>;
     const playerRows = db.prepare(`
-      SELECT p.id, p.player_name AS playerName, p.character_name AS characterName,
+      SELECT p.id, p.campaign_id AS campaignId, p.player_name AS playerName, p.character_name AS characterName,
              p.class_name AS className,
              p.species, COALESCE(uc.image_url, p.image_url) AS imageUrl,
              uc.character_data_json AS characterDataJson,

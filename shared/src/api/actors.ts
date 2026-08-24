@@ -150,6 +150,7 @@ export interface EncounterActorDto {
   encounterId: ActorId;
   baseType: EncounterActorBaseTypeDto;
   baseId: ActorId;
+  baseRuleset?: "5e" | "5.5e";
   snapshot: EncounterActorSnapshotDto;
   live: EncounterActorLiveDto;
   createdAt?: number;
@@ -226,6 +227,7 @@ export interface FlatEncounterActorDto {
   encounterId: string;
   baseType: EncounterActorBaseTypeDto;
   baseId: string;
+  baseRuleset?: "5e" | "5.5e";
   name: string;
   playerName?: string;
   label: string;
@@ -327,6 +329,7 @@ export function flattenEncounterActorDto(dto: EncounterActorDto): FlatEncounterA
     encounterId: dto.encounterId,
     baseType: dto.baseType,
     baseId: dto.baseId,
+    ...(dto.baseRuleset ? { baseRuleset: dto.baseRuleset } : {}),
     name: dto.snapshot.name,
     label: dto.snapshot.label,
     color: dto.snapshot.color,

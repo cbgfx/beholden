@@ -70,6 +70,7 @@ export type MortalOptions = {
   records: Array<{ id: string; type: "race" | "position" | "organization" | "continent" | "country" | "location" | "poi"; name: string; icon: string | null }>;
   players: Array<{
     id: string;
+    campaignId: string;
     playerName: string;
     characterName: string;
     className: string;

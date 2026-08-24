@@ -204,6 +204,7 @@ export function toEncounterActorDto(
     encounterId: actor.encounterId,
     baseType: actor.baseType,
     baseId: actor.baseId,
+    ...(actor.baseRuleset ? { baseRuleset: actor.baseRuleset } : {}),
     snapshot: {
       name: actor.name,
       label: actor.label,

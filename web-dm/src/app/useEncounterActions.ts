@@ -31,6 +31,7 @@ export function useEncounterActions(
     try {
       await postEncounterCombatants(encounterId, "addMonster", {
         monsterId,
+        ruleset: opts?.ruleset,
         qty,
         friendly: Boolean(opts?.friendly ?? false),
         labelBase: opts?.labelBase?.trim() || undefined,

@@ -20,6 +20,7 @@ const CampaignUpsertBody = z.object({
   name: z.string().trim().optional(),
   color: z.string().trim().nullable().optional(),
   isActive: z.boolean().optional(),
+  ruleset: z.enum(["5e", "5.5e"]).optional(),
 });
 const CampaignBinderContentBody = z.object({
   campaignStory: z.string().max(500_000).nullable().optional(),
@@ -38,7 +39,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     const rows = user.isAdmin
       ? db.prepare(`
           SELECT c.id, c.name, c.color, c.image_url, c.image_updated_at, c.shared_notes, c.campaign_story, c.campaign_notes,
-                 c.binder_id, c.current_date_text, c.current_date_sort, c.is_active, c.created_at, c.updated_at,
+                 c.binder_id, c.current_date_text, c.current_date_sort, c.ruleset, c.is_active, c.created_at, c.updated_at,
                  COUNT(p.id) AS player_count
           FROM campaigns c
           LEFT JOIN players p ON p.campaign_id = c.id
@@ -47,7 +48,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
         `).all() as Record<string, unknown>[]
       : db.prepare(`
           SELECT c.id, c.name, c.color, c.image_url, c.image_updated_at, c.shared_notes, c.campaign_story, c.campaign_notes,
-                 c.binder_id, c.current_date_text, c.current_date_sort, c.is_active, c.created_at, c.updated_at,
+                 c.binder_id, c.current_date_text, c.current_date_sort, c.ruleset, c.is_active, c.created_at, c.updated_at,
                  COUNT(p.id) AS player_count
           FROM campaigns c
           LEFT JOIN players p ON p.campaign_id = c.id
@@ -69,7 +70,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     const user = req.user!;
     const rows = db.prepare(`
         SELECT c.id, c.name, c.color, c.image_url, c.image_updated_at, c.shared_notes,
-               c.binder_id, c.current_date_text, c.current_date_sort, c.is_active, c.created_at, c.updated_at,
+               c.binder_id, c.current_date_text, c.current_date_sort, c.ruleset, c.is_active, c.created_at, c.updated_at,
                COUNT(p.id) AS player_count
         FROM campaigns c
         LEFT JOIN players p ON p.campaign_id = c.id
@@ -94,17 +95,19 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     const body = parseBody(CampaignUpsertBody, req);
     const name = (body.name ?? "").toString().trim() || "New Campaign";
     const color = body.color ?? "#f59e0b";
+    const ruleset = body.ruleset ?? "5.5e";
     const id = uid();
     const t = now();
     db.prepare(
-      `INSERT INTO campaigns (id, name, color, image_url, shared_notes, created_at, updated_at) VALUES (?, ?, ?, NULL, '', ?, ?)`
-    ).run(id, name, color, t, t);
+      `INSERT INTO campaigns (id, name, color, ruleset, image_url, shared_notes, created_at, updated_at) VALUES (?, ?, ?, ?, NULL, '', ?, ?)`
+    ).run(id, name, color, ruleset, t, t);
     ctx.helpers.seedDefaultConditions(id);
     ctx.broadcast("campaigns:changed", { campaignId: id });
     res.json(withAbsoluteImageUrl(req, {
       id,
       name,
       color,
+      ruleset,
       imageUrl: null,
       sharedNotes: "",
       binderId: null,
@@ -121,7 +124,7 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     if (!campaignId) return;
     const row = db.prepare(`
       SELECT id, name, color, image_url, image_updated_at, shared_notes, campaign_story, campaign_notes,
-             binder_id, current_date_text, current_date_sort, is_active, created_at, updated_at
+             binder_id, current_date_text, current_date_sort, ruleset, is_active, created_at, updated_at
       FROM campaigns WHERE id = ?
     `).get(campaignId) as Record<string, unknown> | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "Campaign not found" });
@@ -129,11 +132,12 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     const name = (body.name ?? "").toString().trim() || (row.name as string);
     const color = body.color !== undefined ? (body.color ?? null) : (row.color as string | null ?? null);
     const isActive = body.isActive ?? row.is_active !== 0;
+    const ruleset = body.ruleset ?? (row.ruleset === "5e" ? "5e" : "5.5e");
     const t = now();
-    db.prepare("UPDATE campaigns SET name = ?, color = ?, is_active = ?, updated_at = ? WHERE id = ?")
-      .run(name, color, isActive ? 1 : 0, t, campaignId);
+    db.prepare("UPDATE campaigns SET name = ?, color = ?, ruleset = ?, is_active = ?, updated_at = ? WHERE id = ?")
+      .run(name, color, ruleset, isActive ? 1 : 0, t, campaignId);
     ctx.broadcast("campaigns:changed", { campaignId });
-    res.json(withAbsoluteImageUrl(req, { ...rowToCampaign(row), name, color, isActive, updatedAt: t }));
+    res.json(withAbsoluteImageUrl(req, { ...rowToCampaign(row), name, color, ruleset, isActive, updatedAt: t }));
   });
 
   // MARK: - PATCH /api/campaigns/:campaignId/binder-content

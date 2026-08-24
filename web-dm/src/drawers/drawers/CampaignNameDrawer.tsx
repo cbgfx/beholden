@@ -23,6 +23,7 @@ export function CampaignNameDrawer(props: {
   const { state } = useStore();
   const [name, setName] = React.useState("");
   const [color, setColor] = React.useState<string | null>("#f59e0b");
+  const [ruleset, setRuleset] = React.useState<"5e" | "5.5e">("5.5e");
   const [binders, setBinders] = React.useState<BinderSummary[]>([]);
   const [binderId, setBinderId] = React.useState("");
   const [currentDateText, setCurrentDateText] = React.useState("");
@@ -37,6 +38,7 @@ export function CampaignNameDrawer(props: {
     const d = props.drawer;
     setName("");
     setColor("#f59e0b");
+    setRuleset("5.5e");
     setBinderId("");
     setCurrentDateText("");
     setIsActive(true);
@@ -49,6 +51,7 @@ export function CampaignNameDrawer(props: {
       if (c) {
         setName(c.name);
         setColor(c.color ?? null);
+        setRuleset(c.ruleset ?? "5.5e");
         setBinderId(c.binderId ?? "");
         setCurrentDateText(c.currentDate?.text ?? "");
         setIsActive(c.isActive);
@@ -102,7 +105,7 @@ export function CampaignNameDrawer(props: {
     };
 
     if (d.type === "createCampaign") {
-      const created = await api<{ id: string }>(`/api/campaigns`, jsonInit("POST", { name: safeName("New Campaign"), color }));
+      const created = await api<{ id: string }>(`/api/campaigns`, jsonInit("POST", { name: safeName("New Campaign"), color, ruleset }));
       if (binderId) {
         await api(`/api/campaigns/${created.id}/binder`, jsonInit("PUT", { binderId, currentDateText: null, currentDateSort: null }));
       }
@@ -110,7 +113,7 @@ export function CampaignNameDrawer(props: {
       props.close();
       return;
     }
-    await api(`/api/campaigns/${d.campaignId}`, jsonInit("PUT", { name: safeName("Campaign"), color, isActive }));
+    await api(`/api/campaigns/${d.campaignId}`, jsonInit("PUT", { name: safeName("Campaign"), color, ruleset, isActive }));
     await api(`/api/campaigns/${d.campaignId}/binder`, jsonInit("PUT", {
       binderId: binderId || null,
       currentDateText: currentDateText.trim() || null,
@@ -118,7 +121,7 @@ export function CampaignNameDrawer(props: {
     }));
     await props.refreshAll();
     props.close();
-  }, [name, color, binderId, currentDateText, isActive, props]);
+  }, [name, color, ruleset, binderId, currentDateText, isActive, props]);
 
   return {
     body: (
@@ -139,6 +142,17 @@ export function CampaignNameDrawer(props: {
             }}
             placeholder="Name"
           />
+        </div>
+
+        <div style={{ display: "grid", gap: 10 }}>
+          <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>Ruleset</div>
+          <Select value={ruleset} onChange={(event) => setRuleset(event.target.value as "5e" | "5.5e")}>
+            <option value="5.5e">5.5e (2024)</option>
+            <option value="5e">5e (2014)</option>
+          </Select>
+          <div style={{ fontSize: "var(--fs-small)", opacity: 0.6 }}>
+            Used to resolve Compendium entries when the same ID exists in both rulesets.
+          </div>
         </div>
 
         <div style={{ display: "grid", gap: 10 }}>

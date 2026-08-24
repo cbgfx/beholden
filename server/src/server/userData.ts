@@ -71,6 +71,7 @@ export interface StoredCampaignCharacterLiveState {
 }
 
 export interface StoredEncounterActorSnapshot {
+  baseRuleset?: "5e" | "5.5e";
   name: string;
   label: string;
   friendly: boolean;
@@ -167,6 +168,7 @@ export interface StoredDeathSaves {
 export interface StoredCampaign extends Timestamps {
   id: Id;
   name: string;
+  ruleset: "5e" | "5.5e";
   color: string | null;
   imageUrl?: string | null;
   sharedNotes: string;
@@ -316,6 +318,7 @@ export interface StoredEncounterActor extends Timestamps {
   encounterId: Id;
   baseType: StoredEncounterActorBaseType;
   baseId: string;
+  baseRuleset?: "5e" | "5.5e";
   name: string;
   label: string;
   initiative: number | null;

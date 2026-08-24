@@ -2,6 +2,7 @@ import * as React from "react";
 
 export type CompendiumMonsterRow = {
   id: string;
+  ruleset?: "5e" | "5.5e";
   name: string;
   cr?: number | string;
   type?: string;

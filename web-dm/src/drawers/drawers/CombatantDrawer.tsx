@@ -40,7 +40,7 @@ export function CombatantDrawer(props: {
     setAttackOverrides((c?.attackOverrides as Record<string, AttackOverride>) ?? {});
 
     if (c && c.baseType === "monster" && c.baseId) {
-    api<MonsterDetail>(`/api/compendium/monsters/${c.baseId}`)
+    api<MonsterDetail>(`/api/compendium/monsters/${c.baseId}${c.baseRuleset ? `?ruleset=${c.baseRuleset}` : ""}`)
         .then((m) => setBaseMonster(m))
         .catch(() => setBaseMonster(null));
     } else {
