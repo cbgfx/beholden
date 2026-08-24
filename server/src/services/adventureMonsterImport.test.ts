@@ -29,6 +29,20 @@ test("adventure import accepts an explicitly statted tracker-only monster", () =
   assert.equal(parsed.success, true);
 });
 
+test("adventure import accepts a linked monster without duplicated HP or AC", () => {
+  const parsed = AdventureImportBody.safeParse(adventureWithCombatant({
+    baseType: "monster",
+    baseId: "m_titivilus",
+    baseRuleset: "5e",
+    name: "Titivilus",
+    label: "Titivilus",
+    hpMax: null,
+    hpCurrent: null,
+    ac: null,
+  }));
+  assert.equal(parsed.success, true);
+});
+
 test("adventure import rejects campaign actors without destination IDs", () => {
   for (const baseType of ["player", "inpc"] as const) {
     const parsed = AdventureImportBody.safeParse(adventureWithCombatant({

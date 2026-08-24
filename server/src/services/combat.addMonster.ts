@@ -5,7 +5,7 @@ import { extractLeadingNumber, extractDetails } from "../lib/text.js";
 import { DEFAULT_OVERRIDES } from "../lib/defaults.js";
 import { ensureCombat, insertCombatant, nextLabelNumber } from "./combat.js";
 
-function parseMonsterStats(monsterBlob: unknown): {
+export function parseMonsterStats(monsterBlob: unknown): {
   defaultHp: number | null;
   defaultAc: number | null;
   defaultHpDetails: string | null;

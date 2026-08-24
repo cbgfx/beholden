@@ -17,7 +17,7 @@ When asked to create Beholden content:
 7. Use JSON `null`, booleans, and numbers—not the strings `"null"`, `"true"`, or `"10"`.
 8. Use UTF-8 JSON. All object keys and string values must use double quotes.
 9. Omit optional fields that add no value. Never add speculative fields in the hope that Beholden will understand them.
-10. Every encounter combatant must be combat-ready. A monster needs positive `hpMax` and `ac`, nonnegative `hpCurrent`, and either an exact resolvable Compendium `baseId` or explicit tracker-only mechanics. If a required stat block or ID is unknown, stop and say what is missing instead of returning an adventure import. Only create a tracker-only combatant after the user explicitly accepts that limitation; it still requires complete HP and AC values.
+10. Every encounter combatant must be combat-ready. A linked monster needs an exact resolvable Compendium `baseId`; omit or set `hpMax`, `hpCurrent`, and `ac` to `null` when those values are unknown because Beholden hydrates them from the linked stat block during import. A tracker-only monster with `baseId: ""` must instead supply positive `hpMax` and `ac` plus nonnegative `hpCurrent`. Never ask the user to reproduce published HP or AC merely to link an existing Compendium monster.
 11. Beholden never parses rules text for mechanics at runtime. Description prose is player-facing display only. Any benefit the app should apply — ability increases, granted spells, proficiencies, AC or modifier bonuses, resource pools, choices — must be expressed in the entry's typed fields. A benefit that exists only in prose is, by definition, resolved manually at the table.
 
 ## Choose the right output
@@ -1535,11 +1535,11 @@ An encounter is a roster and combat tracker. Narrative setup, maps, tactics, haz
   "initiative": null,
   "friendly": false,
   "color": "#888888",
-  "hpMax": 33,
-  "hpCurrent": 33,
-  "hpDetails": "6d8 + 6",
-  "ac": 18,
-  "acDetails": "natural armor",
+  "hpMax": null,
+  "hpCurrent": null,
+  "hpDetails": null,
+  "ac": null,
+  "acDetails": null,
   "attackOverrides": null,
   "conditions": [],
   "overrides": {
@@ -1563,10 +1563,10 @@ An encounter is a roster and combat tracker. Narrative setup, maps, tactics, haz
 | `initiative` | number \| null | no | `null`; roll at play time |
 | `friendly` | boolean | no | `false` |
 | `color` | string | no | `"#888888"`; use a CSS hex color |
-| `hpMax` | number \| null | monster: yes | Positive maximum HP |
-| `hpCurrent` | number \| null | monster: yes | Nonnegative and no greater than `hpMax`; normally equal to `hpMax` |
+| `hpMax` | number \| null | tracker-only monster: yes | Positive override; linked monsters hydrate this from the Compendium when omitted or null |
+| `hpCurrent` | number \| null | tracker-only monster: yes | Nonnegative and no greater than `hpMax`; linked monsters default to their hydrated `hpMax` |
 | `hpDetails` | string \| null | no | `null`; e.g. hit-dice expression |
-| `ac` | number \| null | monster: yes | Positive Armor Class |
+| `ac` | number \| null | tracker-only monster: yes | Positive override; linked monsters hydrate this from the Compendium when omitted or null |
 | `acDetails` | string \| null | no | `null`; e.g. `"natural armor"` |
 | `attackOverrides` | object \| null | no | `null` |
 | `conditions` | condition[] | no | `[]` |
@@ -1577,6 +1577,8 @@ An encounter is a roster and combat tracker. Narrative setup, maps, tactics, haz
 ### Linking monsters correctly
 
 For useful monster stat blocks and actions, `baseType` must be `"monster"` and `baseId` must exactly match a monster in the user's compendium. A display name, Binder name, prose instruction, or description such as “use this NPC's canonical stat block” is never a mechanical link and must not be used as a substitute.
+
+Do not copy published HP or AC into a linked combatant merely to make the adventure portable. When `baseId` resolves, Beholden reads missing HP, hit-dice details, AC, and AC details from that exact `(baseId, baseRuleset)` Compendium entry. Explicit combatant values are overrides and should appear only when the encounter intentionally changes the published stat block. If the resolved Compendium entry itself has no usable HP or AC, the importer rejects it with a specific error.
 
 Canonical monster IDs use the `m_` prefix followed by a stable lowercase underscore key, such as `m_animated_armor` or `m_adult_red_dragon`. References must use the exact authored ID; never derive a reference from a display name at runtime.
 
@@ -1916,7 +1918,8 @@ Before returning the file, verify:
 - every encounter has `name`;
 - every combatant has both `name` and `label`;
 - each creature has its own combatant object and unique label;
-- every monster has positive `hpMax` and `ac`, nonnegative `hpCurrent`, and no null placeholder mechanics;
+- every tracker-only monster has positive `hpMax` and `ac` plus nonnegative `hpCurrent`;
+- linked monsters use null/omitted HP and AC for normal Compendium hydration unless an intentional encounter-specific override is required;
 - every non-empty monster `baseId` resolves to an existing or embedded Compendium monster;
 - every known monster edition is emitted as `baseRuleset`, and it matches the linked or embedded monster's `ruleset`;
 - an empty monster `baseId` appears only after explicit user approval of a tracker-only combatant;

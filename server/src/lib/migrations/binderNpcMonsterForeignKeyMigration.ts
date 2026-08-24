@@ -7,6 +7,9 @@ export function removeLegacyBinderNpcMonsterForeignKey(db: Database.Database): v
 
   db.transaction(() => {
     db.exec(`
+      DROP TRIGGER IF EXISTS binder_npcs_require_npc_type;
+      DROP TRIGGER IF EXISTS binder_player_characters_require_pc_type;
+
       CREATE TABLE binder_npcs_new (
         mortal_id TEXT PRIMARY KEY REFERENCES mortals(id) ON DELETE CASCADE,
         monster_id TEXT,

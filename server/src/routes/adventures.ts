@@ -32,6 +32,7 @@ import {
 } from "../services/compendium/nativeCompendium.js";
 import { collectGrandMonsterSpellIds } from "../services/compendium/grandCompendium.js";
 import { adventureMonsterKey, planAdventureMonsterImports, type MonsterRuleset } from "../services/adventureMonsterImport.js";
+import { parseMonsterStats } from "../services/combat.addMonster.js";
 
 const AdventureCreateBody = z.object({
   name: z.string().trim().optional(),
@@ -73,16 +74,17 @@ const CombatantImport = z.object({
     ctx.addIssue({ code: "custom", path: ["baseId"], message: `${combatant.baseType} combatants require a destination-campaign baseId.` });
   }
   if (combatant.baseType === "monster") {
-    if (combatant.hpMax === null || combatant.hpMax < 1) {
+    const trackerOnly = !combatant.baseId.trim();
+    if (trackerOnly && (combatant.hpMax === null || combatant.hpMax < 1)) {
       ctx.addIssue({ code: "custom", path: ["hpMax"], message: "Monster combatants require a positive hpMax." });
     }
-    if (combatant.hpCurrent === null || combatant.hpCurrent < 0) {
+    if (trackerOnly && (combatant.hpCurrent === null || combatant.hpCurrent < 0)) {
       ctx.addIssue({ code: "custom", path: ["hpCurrent"], message: "Monster combatants require a nonnegative hpCurrent." });
     }
     if (combatant.hpMax !== null && combatant.hpCurrent !== null && combatant.hpCurrent > combatant.hpMax) {
       ctx.addIssue({ code: "custom", path: ["hpCurrent"], message: "Monster hpCurrent cannot exceed hpMax." });
     }
-    if (combatant.ac === null || combatant.ac < 1) {
+    if (trackerOnly && (combatant.ac === null || combatant.ac < 1)) {
       ctx.addIssue({ code: "custom", path: ["ac"], message: "Monster combatants require a positive AC." });
     }
   }
@@ -382,7 +384,8 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
       }
     }
 
-    db.transaction(() => {
+    try {
+      db.transaction(() => {
       for (const batch of importPlan.compendium) {
         importNativeCompendiumBatch(db, batch);
       }
@@ -406,26 +409,47 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
         ensureCombat(db, encId);
 
         for (const [ci, c] of enc.combatants.entries()) {
+          const resolvedRuleset = c.baseType === "monster" ? resolveRuleset(c) : undefined;
+          const resolvedBaseId = c.baseType === "world"
+            ? c.baseId || uid()
+            : c.baseType === "monster"
+              ? importPlan.monsterIdMap.get(adventureMonsterKey(c.baseId, resolvedRuleset!)) ?? c.baseId
+              : c.baseId;
+          let hpMax = c.hpMax;
+          let hpCurrent = c.hpCurrent;
+          let hpDetails = c.hpDetails;
+          let ac = c.ac;
+          let acDetails = c.acDetails;
+          if (c.baseType === "monster" && resolvedBaseId) {
+            const monsterRow = db.prepare("SELECT data_json FROM compendium_monsters WHERE id = ? AND ruleset = ?")
+              .get(resolvedBaseId, resolvedRuleset) as { data_json: string } | undefined;
+            if (!monsterRow) throw new Error(`Linked monster “${resolvedBaseId}” (${resolvedRuleset}) was not found after import.`);
+            const defaults = parseMonsterStats(JSON.parse(monsterRow.data_json));
+            hpMax ??= defaults.defaultHp;
+            hpCurrent ??= hpMax;
+            hpDetails ??= defaults.defaultHpDetails;
+            ac ??= defaults.defaultAc;
+            acDetails ??= defaults.defaultAcDetails;
+            if (hpMax === null || hpMax < 1 || ac === null || ac < 1) {
+              throw new Error(`Linked monster “${resolvedBaseId}” (${resolvedRuleset}) has no usable HP or AC in the Compendium.`);
+            }
+          }
           const combatant: StoredEncounterActor = {
             id: uid(),
             encounterId: encId,
             baseType: c.baseType,
-            ...(c.baseType === "monster" ? { baseRuleset: resolveRuleset(c) } : {}),
-            baseId: c.baseType === "world"
-              ? c.baseId || uid()
-              : c.baseType === "monster"
-                ? importPlan.monsterIdMap.get(adventureMonsterKey(c.baseId, resolveRuleset(c))) ?? c.baseId
-                : c.baseId,
+            ...(resolvedRuleset ? { baseRuleset: resolvedRuleset } : {}),
+            baseId: resolvedBaseId,
             name: c.name,
             label: c.label,
             initiative: c.initiative,
             friendly: c.friendly,
             color: c.color,
-            hpMax: c.hpMax,
-            hpCurrent: c.hpCurrent,
-            hpDetails: c.hpDetails,
-            ac: c.ac,
-            acDetails: c.acDetails,
+            hpMax,
+            hpCurrent,
+            hpDetails,
+            ac,
+            acDetails,
             attackOverrides: c.attackOverrides ?? null,
             ...(c.description !== undefined ? { description: c.description } : {}),
             conditions: (c.conditions ?? []) as StoredConditionInstance[],
@@ -464,7 +488,10 @@ export function registerAdventureRoutes(app: Express, ctx: ServerContext) {
           t
         );
       }
-    })();
+      })();
+    } catch (error) {
+      return res.status(400).json({ ok: false, message: error instanceof Error ? error.message : "Adventure import failed." });
+    }
 
     if (importPlan.compendium.length > 0) {
       ctx.broadcast("compendium:changed", {
