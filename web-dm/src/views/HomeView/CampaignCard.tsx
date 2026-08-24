@@ -3,6 +3,7 @@ import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
 import { IconPencil, IconTrash, IconDownload, IconCamera, IconPlayers } from "@/icons";
 import { api, resolveAssetUrl } from "@/services/api";
+import { RulesetTag } from "@/ui/RulesetTag";
 
 export type CampaignSummary = {
   id: string;
@@ -11,6 +12,7 @@ export type CampaignSummary = {
   playerCount?: number;
   imageUrl?: string | null;
   isActive: boolean;
+  ruleset: "5e" | "5.5e";
 };
 
 type Props = {
@@ -224,8 +226,11 @@ export function CampaignCard({ campaign: c, onOpen, onEdit, onDelete, onRefresh 
 
       {/* ── Body ── */}
       <div style={cardBody}>
-        <div style={{ fontSize: "var(--fs-title)", fontWeight: 800, color: theme.colors.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", letterSpacing: -0.3 }}>
-          {c.name}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          <div style={{ fontSize: "var(--fs-title)", fontWeight: 800, color: theme.colors.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", letterSpacing: -0.3 }}>
+            {c.name}
+          </div>
+          <RulesetTag ruleset={c.ruleset} />
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
           {c.playerCount !== undefined && (

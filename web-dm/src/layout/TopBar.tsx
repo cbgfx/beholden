@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsNarrow } from "@/views/CombatView/hooks/useIsNarrow";
 import { HeaderActionButton, HeaderActionLink, StatusDot, navLinkStyle } from "@beholden/shared/ui";
 import { ToolsBar } from "@/layout/ToolsBar";
+import { RulesetTag } from "@/ui/RulesetTag";
 
 function useSaveStatus(): "idle" | "saving" | "saved" {
   const [status, setStatus] = React.useState<"idle" | "saving" | "saved">("idle");
@@ -49,7 +50,8 @@ export function TopBar() {
   const saveStatus = useSaveStatus();
   const isPhone = useIsNarrow("(max-width: 640px)");
   const { campaigns, selectedCampaignId } = state;
-  const selectedName = campaigns.find((c) => c.id === selectedCampaignId)?.name ?? "";
+  const selectedCampaign = campaigns.find((c) => c.id === selectedCampaignId);
+  const selectedName = selectedCampaign?.name ?? "";
   const rootLayoutStyle = isPhone
     ? { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const }
     : {
@@ -128,7 +130,10 @@ export function TopBar() {
       >
         <NavLink to="/" label="Home" />
         {selectedCampaignId && selectedName && (
-          <NavLink to={`/campaign/${selectedCampaignId}`} label={selectedName} />
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <NavLink to={`/campaign/${selectedCampaignId}`} label={selectedName} />
+            <RulesetTag ruleset={selectedCampaign?.ruleset ?? "5.5e"} />
+          </span>
         )}
         <NavLink to="/compendium" label="Compendium" />
         {user?.isAdmin && <NavLink to="/admin" label="Admin" />}

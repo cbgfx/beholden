@@ -178,7 +178,7 @@ function AppInner() {
           path="/"
           element={
             <HomeView
-              campaigns={state.campaigns.map((c) => ({ id: c.id, name: c.name, updatedAt: c.updatedAt, playerCount: c.playerCount, imageUrl: c.imageUrl, isActive: c.isActive }))}
+              campaigns={state.campaigns.map((c) => ({ id: c.id, name: c.name, ruleset: c.ruleset, updatedAt: c.updatedAt, playerCount: c.playerCount, imageUrl: c.imageUrl, isActive: c.isActive }))}
               binders={binders.map((binder) => ({
                 ...binder,
                 canEdit: user?.isAdmin === true || binder.accessRole === "owner" || binder.accessRole === "collaborator",

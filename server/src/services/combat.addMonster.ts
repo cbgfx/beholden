@@ -14,16 +14,22 @@ export function parseMonsterStats(monsterBlob: unknown): {
   const m = monsterBlob as Record<string, unknown>;
   const mHp = m?.hp as Record<string, unknown> | string | number | null | undefined;
   const mAc = m?.ac as unknown;
+  // Current Compendium imports store nested `hitPoints`/`armorClass` (see grandCompendium.monster.ts)
+  // instead of flat `hp`/`ac`; fall back to those so newly-imported monsters still resolve defaults.
+  const hitPoints = m?.hitPoints as Record<string, unknown> | undefined;
+  const armorClass = m?.armorClass as Record<string, unknown> | undefined;
   const average = typeof mHp === "object" && mHp !== null
     ? mHp.average ?? averageHpFromFormula(typeof mHp.formula === "string" ? mHp.formula : null)
     : mHp;
   return {
-    defaultAc: extractLeadingNumber(mAc),
-    defaultHp: extractLeadingNumber(average ?? mHp),
-    defaultAcDetails: extractDetails(mAc),
+    defaultAc: extractLeadingNumber(mAc) ?? extractLeadingNumber(armorClass?.value),
+    defaultHp: extractLeadingNumber(average ?? mHp)
+      ?? extractLeadingNumber(hitPoints?.average)
+      ?? averageHpFromFormula(typeof hitPoints?.formula === "string" ? hitPoints.formula : null),
+    defaultAcDetails: extractDetails(mAc) ?? (typeof armorClass?.source === "string" ? armorClass.source : null),
     defaultHpDetails: (typeof mHp === "object" && mHp !== null
       ? ((mHp.formula ?? mHp.roll) as string | null | undefined)
-      : null) ?? null,
+      : null) ?? (typeof hitPoints?.formula === "string" ? hitPoints.formula : null) ?? null,
   };
 }
 
