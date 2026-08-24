@@ -19,6 +19,7 @@ type Props = {
   onOpenAdventureNotes: () => void;
   difficulty?: {
     officialDifficulty: string;
+    displayDifficulty: string;
     projectedThreat: string;
     roundsToTpk: number;
     partyHpMax: number;
@@ -58,7 +59,7 @@ export function CombatantHeader(props: Props) {
             Back
           </Button>
           <span style={{ fontSize: "var(--fs-title)", fontWeight: 900, color: theme.colors.text, minWidth: 0 }}>{title}</span>
-          {props.difficulty?.officialDifficulty ? (
+          {props.difficulty?.displayDifficulty ? (
             <span
               style={{
                 fontSize: "var(--fs-subtitle)",
@@ -83,7 +84,7 @@ export function CombatantHeader(props: Props) {
                 (Number.isFinite(props.difficulty.roundsToTpk) ? `Rounds to party collapse: ${props.difficulty.roundsToTpk.toFixed(1)}` : "Rounds to party collapse: ∞")
               }
             >
-              {props.difficulty.officialDifficulty}
+              {props.difficulty.displayDifficulty}
             </span>
           ) : null}
         </div>

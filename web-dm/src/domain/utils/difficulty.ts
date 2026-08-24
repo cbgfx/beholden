@@ -23,6 +23,7 @@ const XP_THRESHOLDS_2014: Record<number, [number, number, number, number]> = {
 
 export type EncounterDifficulty = {
   officialDifficulty: OfficialDifficultyLabel;
+  displayDifficulty: ProjectedThreatLabel | "Unavailable";
   projectedThreat: EncounterThreatLabel;
   roundsToTpk: number;
   partyHpMax: number;
@@ -116,13 +117,28 @@ export function calcEncounterDifficulty(args: {
     : expectedPartyDamageRatio <= .4 ? "Easy"
       : expectedPartyDamageRatio <= .65 ? "Medium"
         : expectedPartyDamageRatio <= .95 ? "Hard"
-          : expectedPartyDamageRatio <= 1.25 ? "Lethal"
-            : "TPK";
+          : expectedPartyDamageRatio <= 1.1 ? "Very Hard"
+            : expectedPartyDamageRatio <= 1.25 ? "Deadly"
+              : "TPK";
   const projectedThreat: EncounterThreatLabel = !playerLevels.length || partyHpMax <= 0 || hostileDprRaw <= 0
     ? "Unavailable"
     : partyDpr > 0 && monsterEffectiveHp > 0
       ? simulatedThreat
       : labelForRoundsToTpk(roundsToTpk);
 
-  return { officialDifficulty, projectedThreat, roundsToTpk, partyHpMax, hostileDpr: hostileDprRaw, projectedDpr, burstFactor, encounterXp, lowBudget, moderateBudget, highBudget, monsterSurvivalRounds, expectedPartyDamageRatio, roundsToFirstDown };
+  const threatOrder = ["Too Easy", "Easy", "Medium", "Hard", "Very Hard", "Deadly", "TPK"] as const;
+  const officialFloor: ProjectedThreatLabel | "Unavailable" = officialDifficulty === "High" || officialDifficulty === "Deadly"
+    ? "Deadly"
+    : officialDifficulty === "Hard" ? "Hard"
+      : officialDifficulty === "Moderate" || officialDifficulty === "Medium" ? "Medium"
+        : officialDifficulty === "Low" || officialDifficulty === "Easy" ? "Easy"
+          : officialDifficulty === "No Hostiles" ? "Too Easy"
+            : "Unavailable";
+  const displayDifficulty = projectedThreat === "Unavailable"
+    ? officialFloor
+    : officialFloor === "Unavailable"
+      ? projectedThreat
+      : threatOrder[Math.max(threatOrder.indexOf(projectedThreat), threatOrder.indexOf(officialFloor))]!;
+
+  return { officialDifficulty, displayDifficulty, projectedThreat, roundsToTpk, partyHpMax, hostileDpr: hostileDprRaw, projectedDpr, burstFactor, encounterXp, lowBudget, moderateBudget, highBudget, monsterSurvivalRounds, expectedPartyDamageRatio, roundsToFirstDown };
 }

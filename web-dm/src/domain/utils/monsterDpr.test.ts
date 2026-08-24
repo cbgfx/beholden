@@ -49,8 +49,8 @@ describe("monster DPR target pressure", () => {
 
 describe("projected difficulty labels", () => {
   it("uses Beholden's established names", () => {
-    expect([9, 7, 4, 2.5, 1.25, .5].map(labelForRoundsToTpk)).toEqual([
-      "Too Easy", "Easy", "Medium", "Hard", "Lethal", "TPK",
+    expect([9, 7, 4, 2.5, 2, 1.25, .5].map(labelForRoundsToTpk)).toEqual([
+      "Too Easy", "Easy", "Medium", "Hard", "Very Hard", "Deadly", "TPK",
     ]);
   });
 });

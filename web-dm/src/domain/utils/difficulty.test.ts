@@ -8,6 +8,7 @@ describe("calcEncounterDifficulty", () => {
     expect(calculate(2_000).officialDifficulty).toBe("Low");
     expect(calculate(2_001).officialDifficulty).toBe("Moderate");
     expect(calculate(3_001).officialDifficulty).toBe("High");
+    expect(calculate(3_001).displayDifficulty).toBe("Deadly");
   });
 
   it("adds mixed-level character budgets", () => {
@@ -25,6 +26,7 @@ describe("calcEncounterDifficulty", () => {
       ruleset: "5e",
     });
     expect(result.officialDifficulty).toBe("Deadly");
+    expect(result.displayDifficulty).toBe("Deadly");
     expect(result.projectedThreat).toBe("Unavailable");
   });
 

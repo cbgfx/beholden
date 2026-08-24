@@ -11,6 +11,7 @@ type Props = {
   totalXp?: number;
   difficulty?: {
     officialDifficulty: string;
+    displayDifficulty: string;
     projectedThreat: string;
     roundsToTpk: number;
     partyHpMax: number;
@@ -38,7 +39,7 @@ export function CombatRosterHeader(props: Props) {
 
   const xp = typeof props.totalXp === "number" && Number.isFinite(props.totalXp) ? Math.max(0, Math.round(props.totalXp)) : null;
   const diff = props.difficulty;
-  const diffLabel = diff?.officialDifficulty ? diff.officialDifficulty : null;
+  const diffLabel = diff?.displayDifficulty ? diff.displayDifficulty : null;
 
   const rtk = diff && Number.isFinite(diff.roundsToTpk) ? diff.roundsToTpk : null;
   const hostileDpr = diff && Number.isFinite(diff.hostileDpr) ? diff.hostileDpr : null;

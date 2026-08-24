@@ -1,7 +1,7 @@
 import type { MonsterDetail } from "@/domain/types/compendium";
 import { averageHpFromFormula } from "@beholden/shared/domain/monsters";
 
-export type ProjectedThreatLabel = "Too Easy" | "Easy" | "Medium" | "Hard" | "Lethal" | "TPK";
+export type ProjectedThreatLabel = "Too Easy" | "Easy" | "Medium" | "Hard" | "Very Hard" | "Deadly" | "TPK";
 
 type ActionRecord = Record<string, unknown>;
 
@@ -214,7 +214,8 @@ export function estimatePartyDpr(levels: number[]): number {
 export function labelForRoundsToTpk(rtk: number): ProjectedThreatLabel {
   if (!Number.isFinite(rtk)) return "Too Easy";
   if (rtk <= .75) return "TPK";
-  if (rtk <= 1.5) return "Lethal";
+  if (rtk <= 1.5) return "Deadly";
+  if (rtk <= 2.25) return "Very Hard";
   if (rtk <= 3) return "Hard";
   if (rtk <= 5) return "Medium";
   if (rtk <= 8) return "Easy";

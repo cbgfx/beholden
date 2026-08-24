@@ -9,6 +9,7 @@ import type { MonsterDetail } from "@/domain/types/compendium";
 
 type DifficultyRow = {
   officialDifficulty: string;
+  displayDifficulty: string;
   projectedThreat: string;
   rtk: number;
   partyHpMax: number;
@@ -179,6 +180,7 @@ export function useOpenEncounterMetrics(args: {
           });
           nextDiff[encId] = {
             officialDifficulty: diff.officialDifficulty,
+            displayDifficulty: diff.displayDifficulty,
             projectedThreat: diff.projectedThreat,
             rtk: diff.roundsToTpk,
             partyHpMax: diff.partyHpMax,
@@ -221,8 +223,8 @@ export function useOpenEncounterMetrics(args: {
       if (typeof xp === "number" && Number.isFinite(xp) && xp > 0) {
         parts.push(`${xp.toLocaleString()} XP`);
       }
-      if (diff?.officialDifficulty && diff.officialDifficulty !== "No Party" && diff.officialDifficulty !== "No Hostiles") {
-        parts.push(diff.officialDifficulty);
+      if (diff?.displayDifficulty && diff.displayDifficulty !== "Unavailable") {
+        parts.push(diff.displayDifficulty);
       }
 
       return {
