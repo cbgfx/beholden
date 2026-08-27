@@ -91,7 +91,7 @@ export function ItemsBrowserPanel(props: {
         )}
       </div>
 
-      <ListShell ref={vl.scrollRef} borderColor={C.panelBorder}>
+      <ListShell ref={vl.scrollRef} onScroll={vl.onScroll} borderColor={C.panelBorder}>
         <div style={{ height: padTop }} />
         {rows.slice(start, end).map((item) => (
           <ItemRow
