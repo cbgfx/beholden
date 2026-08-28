@@ -106,10 +106,27 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
       return res.status(404).json({ ok: false, message: "Encounter not found" });
 
     const body = parseBody(AddMonsterBody, req);
-    const ruleset = body.ruleset ?? encRow.ruleset;
-    const monRow = db
-      .prepare("SELECT name, data_json FROM compendium_monsters WHERE id = ? AND ruleset = ?")
-      .get(body.monsterId, ruleset) as { name: string; data_json: string } | undefined;
+    let ruleset = body.ruleset ?? encRow.ruleset;
+    let monRow = db
+      .prepare("SELECT ruleset, name, data_json FROM compendium_monsters WHERE id = ? AND ruleset = ?")
+      .get(body.monsterId, ruleset) as { ruleset: "5e" | "5.5e"; name: string; data_json: string } | undefined;
+
+    // Monster availability is independent of the campaign ruleset. Older clients did not send
+    // the edition badge with add requests, so if the ID does not exist in the campaign edition,
+    // accept the sole matching stat block from the other edition. Explicit client rulesets remain
+    // authoritative, and ambiguous IDs must still be disambiguated by the badge.
+    if (!monRow && body.ruleset == null) {
+      const matches = db
+        .prepare("SELECT ruleset, name, data_json FROM compendium_monsters WHERE id = ?")
+        .all(body.monsterId) as Array<{ ruleset: "5e" | "5.5e"; name: string; data_json: string }>;
+      if (matches.length === 1) {
+        const soleMatch = matches[0]!;
+        monRow = soleMatch;
+        ruleset = soleMatch.ruleset;
+      } else if (matches.length > 1) {
+        return res.status(409).json({ ok: false, message: "Monster exists in multiple rulesets; select an edition badge." });
+      }
+    }
     if (!monRow)
       return res.status(404).json({ ok: false, message: "Monster not found in compendium" });
 

@@ -93,14 +93,33 @@ describe("combat state regression: HP/condition mutation, transitions, and live 
 
     const t = Date.now();
     campaignId = "campaign-1";
-    db.prepare(`INSERT INTO campaigns (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)`)
-      .run(campaignId, "Test Campaign", t, t);
+    db.prepare(`INSERT INTO campaigns (id, name, ruleset, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
+      .run(campaignId, "Test Campaign", "5e", t, t);
     const adventureId = "adventure-1";
     db.prepare(`INSERT INTO adventures (id, campaign_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
       .run(adventureId, campaignId, "Test Adventure", t, t);
     encounterId = "encounter-1";
     db.prepare(`INSERT INTO encounters (id, campaign_id, adventure_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`)
       .run(encounterId, campaignId, adventureId, "Test Encounter", t, t);
+
+    db.prepare(`
+      INSERT INTO compendium_monsters
+        (id, ruleset, name, name_key, cr, data_json)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      "m_red_slaad",
+      "5.5e",
+      "Red Slaad",
+      "red slaad",
+      "5",
+      JSON.stringify({
+        id: "m_red_slaad",
+        ruleset: "5.5e",
+        name: "Red Slaad",
+        armorClass: { value: 14 },
+        hitPoints: { formula: "11d10+33" },
+      }),
+    );
 
     db.prepare(`INSERT INTO users (id, username, passhash, name, is_admin, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?)`)
       .run(playerUserId, "playeruser", "x", "Player User", t, t);
@@ -229,6 +248,24 @@ describe("combat state regression: HP/condition mutation, transitions, and live 
   function liveOf(dto: Record<string, unknown>): { hpCurrent?: number; conditions?: ConditionEntry[]; usedReaction?: boolean } {
     return (dto.live ?? {}) as { hpCurrent?: number; conditions?: ConditionEntry[]; usedReaction?: boolean };
   }
+
+  describe("cross-ruleset monster additions", () => {
+    it("adds the sole available 5.5e monster to a 5e campaign when an older client omits ruleset", async () => {
+      const { status, body } = await dmRequest(
+        "POST",
+        `/api/encounters/${encounterId}/combatants/addMonster`,
+        { monsterId: "m_red_slaad", qty: 1 },
+      );
+
+      assert.equal(status, 200);
+      const created = body.created as Array<Record<string, unknown>>;
+      assert.equal(created.length, 1);
+      assert.equal(created[0]?.baseId, "m_red_slaad");
+      assert.equal(created[0]?.baseRuleset, "5.5e");
+      assert.equal(created[0]?.hpMax, 93);
+      assert.equal(created[0]?.ac, 14);
+    });
+  });
 
   describe("behaviors 1 & 2 — HP/condition mutation returns and broadcasts updated state", () => {
     it("returns and broadcasts the updated HP", async () => {
