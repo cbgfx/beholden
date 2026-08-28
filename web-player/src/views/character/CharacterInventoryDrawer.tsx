@@ -34,6 +34,9 @@ export function InventoryItemDrawer(props: {
   onSave: (patch: Partial<InventoryItem>) => Promise<void>;
   onMoveToContainer: (containerId: string | null) => Promise<void>;
   onChargesChange: (charges: number) => void | Promise<void>;
+  readOnly?: boolean;
+  subtitle?: string;
+  showContainerControl?: boolean;
 }) {
   const merged = React.useMemo(() => ({
     name: props.item.name,
@@ -106,10 +109,10 @@ export function InventoryItemDrawer(props: {
       title={
         <>
           <div style={{ fontWeight: 900, fontSize: "var(--fs-title)", color: C.text }}>{props.item.name}</div>
-          <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginTop: 4 }}>Player-owned copy. Edits here affect only this character.</div>
+          <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginTop: 4 }}>{props.subtitle ?? "Player-owned copy. Edits here affect only this character."}</div>
         </>
       }
-      footer={
+      footer={props.readOnly ? undefined :
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           {props.editMode ? (
             <>
@@ -123,7 +126,7 @@ export function InventoryItemDrawer(props: {
       }
     >
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {getEquipState(props.item) === "backpack" ? (
+          {getEquipState(props.item) === "backpack" && props.showContainerControl !== false ? (
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 8, padding: "10px 12px", border: `1px solid ${C.panelBorder}`, borderRadius: 12, background: "rgba(255,255,255,0.03)" }}>
               <div style={sectionLabel}>Container</div>
               <Select value={currentContainerId} onChange={(e) => { void props.onMoveToContainer(e.target.value); }} style={{ width: "100%" }}>

@@ -4,7 +4,7 @@ import { api } from "@/services/api";
 import { C } from "@/lib/theme";
 import { Button } from "@/ui/Button";
 import { CollapsiblePanel } from "@/views/character/CharacterViewParts";
-import { type InventoryItem, type ParsedItemSpell, getEquipState, getItemSpells } from "@/views/character/CharacterInventory";
+import { type InventoryItem, type ParsedItemSpell, getEquipState, getItemSpells, getStoredItemSpells } from "@/views/character/CharacterInventory";
 import type { ConditionInstance } from "@/views/character/CharacterSheetTypes";
 import { normalizeSpellTrackingKey } from "@/views/character/CharacterSheetUtils";
 import {
@@ -59,8 +59,8 @@ export function ItemSpellsPanel({
       items
         .filter((item) => getEquipState(item) !== "backpack")
         .filter((item) => !item.attunement || item.attuned)
-        .map((item) => ({ item, spells: getItemSpells(item.spells) }))
-        .filter(({ spells }) => spells.length > 0),
+        .map((item) => ({ item, spells: [...getItemSpells(item.spells), ...getStoredItemSpells(item.storedSpells)] }))
+        .filter(({ item, spells }) => spells.length > 0 || (item.chargesMax ?? 0) > 0),
     [items]
   );
 
@@ -160,7 +160,10 @@ export function ItemSpellsPanel({
               </div>
             ) : undefined}
           >
-            {spellcastingBlocked && (
+            {spells.length === 0 ? (
+              <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>Track this item's use with the resource above. It recovers on a Long Rest.</div>
+            ) : null}
+            {spellcastingBlocked && spells.length > 0 && (
               <div style={{
                 marginBottom: 10, padding: "8px 10px", borderRadius: 8,
                 border: "1px solid rgba(248,113,113,0.35)", background: "rgba(248,113,113,0.10)",
@@ -226,11 +229,11 @@ export function ItemSpellsPanel({
                         }}
                         onClick={() => { if (detail) setSelectedSpell(detail); }}
                       >
-                        <div title={`${spell.cost === "level" ? "Spell level" : spell.cost} charge${spell.cost !== 1 ? "s" : ""}`} style={{
+                        <div title={spell.stored ? "Stored spell" : `${spell.cost === "level" ? "Spell level" : spell.cost} charge${spell.cost !== 1 ? "s" : ""}`} style={{
                           width: 20, height: 20, borderRadius: "50%",
                           background: "#dc2626", display: "grid", placeItems: "center", flexShrink: 0,
                         }}>
-                          <span style={{ color: "#fff", fontSize: "var(--fs-tiny)", fontWeight: 900, lineHeight: 1 }}>{spell.cost === "level" ? "L" : spell.cost}</span>
+                          <span style={{ color: "#fff", fontSize: "var(--fs-tiny)", fontWeight: 900, lineHeight: 1 }}>{spell.stored ? "S" : spell.cost === "level" ? "L" : spell.cost}</span>
                         </div>
 
                         <div style={{ minWidth: 0 }}>

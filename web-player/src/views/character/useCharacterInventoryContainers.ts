@@ -14,6 +14,7 @@ import {
 } from "@/views/character/CharacterInventoryPanelHelpers";
 import {
   initializeItemUsesMaximum,
+  resolveItemUses,
   type InventoryContainer,
   type InventoryItem,
   type InventoryPickerPayload,
@@ -122,7 +123,8 @@ export function useCharacterInventoryContainers({
         return;
       }
       const description = payload.description?.trim() ?? "";
-      const chargesMax = initializeItemUsesMaximum(payload.uses);
+      const resolvedUses = resolveItemUses(payload.itemId, payload.uses);
+      const chargesMax = initializeItemUsesMaximum(resolvedUses);
       const item: InventoryItem = {
         id: uid(),
         name: payload.name,
@@ -149,7 +151,7 @@ export function useCharacterInventoryContainers({
         properties: payload.properties ?? [],
         modifiers: payload.modifiers ?? [],
         description: description || undefined,
-        uses: payload.uses ?? null,
+        uses: resolvedUses,
         spells: payload.spells ?? null,
         spellcasting: payload.spellcasting ?? null,
         spellTemplate: payload.spellTemplate ?? null,

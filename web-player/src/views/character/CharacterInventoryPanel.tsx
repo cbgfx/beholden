@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
 import { C } from "@/lib/theme";
 import { IconKnapsack } from "@/icons";
@@ -25,7 +26,7 @@ import {
   normalizeContainers,
   subLabelStyle,
 } from "@/views/character/CharacterInventoryPanelHelpers";
-import { ItemRow } from "@/views/character/CharacterInventoryPanelRows";
+import { ItemRow, type PartyStashItem } from "@/views/character/CharacterInventoryPanelRows";
 import { InventoryPartyStashSection } from "@/views/character/CharacterInventoryPartyStashSection";
 import { InventoryItemPickerModal } from "@/views/character/CharacterInventoryPickerModal";
 import { resolvePactBoonFromChosenOptionals } from "@/views/character/CharacterSheetUtils";
@@ -59,6 +60,7 @@ export function InventoryPanel({
   campaignId?: string | null;
   onSave: (data: { inventory: InventoryItem[]; inventoryContainers: InventoryContainer[] }) => Promise<unknown>;
 }) {
+  const [selectedStashItem, setSelectedStashItem] = useState<PartyStashItem | null>(null);
   const sync = useCharacterInventorySync({
     inventory: charData?.inventory,
     inventoryContainers: charData?.inventoryContainers,
@@ -244,6 +246,7 @@ export function InventoryPanel({
             partyCapacityLbs={partyCapacityLbs}
             currency={sync.partyCurrency}
             campaignId={campaignId}
+            onOpen={setSelectedStashItem}
             onTake={(item) => void itemActions.takeFromPartyStash(item)}
             onDelete={(id) => void itemActions.deleteFromPartyStash(id)}
             onQuantity={(id, quantity) => void itemActions.changePartyStashQty(id, quantity)}
@@ -251,6 +254,40 @@ export function InventoryPanel({
               sync.setPartyCurrency((prev) => ({ ...prev, ...patch }));
             }}
           />
+          {selectedStashItem ? (
+            <InventoryItemDrawer
+              item={{
+                id: selectedStashItem.id,
+                name: selectedStashItem.name,
+                quantity: selectedStashItem.quantity,
+                equipped: false,
+                equipState: "backpack",
+                notes: selectedStashItem.notes,
+                source: selectedStashItem.source ?? "custom",
+                itemId: selectedStashItem.itemId ?? undefined,
+                rarity: selectedStashItem.rarity,
+                type: selectedStashItem.type,
+                weight: selectedStashItem.weight,
+                description: selectedStashItem.description ?? undefined,
+              }}
+              containers={[]}
+              detail={null}
+              busy={false}
+              accentColor={accentColor}
+              otherAttunedCount={0}
+              editMode={false}
+              canDesignatePactWeapon={false}
+              readOnly
+              subtitle="Shared party item. Take it to move it into your character inventory."
+              showContainerControl={false}
+              onStartEdit={() => {}}
+              onCancelEdit={() => {}}
+              onClose={() => setSelectedStashItem(null)}
+              onSave={async () => {}}
+              onMoveToContainer={async () => {}}
+              onChargesChange={() => {}}
+            />
+          ) : null}
         </CollapsiblePanel>
       )}
     </div>

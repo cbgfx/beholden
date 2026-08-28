@@ -36,8 +36,9 @@ export interface PartyStashItem {
   description?: string | null;
 }
 
-export function PartyStashItemRow({ item, onTake, onDelete, onQuantity }: {
+export function PartyStashItemRow({ item, onOpen, onTake, onDelete, onQuantity }: {
   item: PartyStashItem;
+  onOpen: () => void;
   onTake: () => void;
   onDelete: () => void;
   onQuantity: (q: number) => void;
@@ -46,6 +47,7 @@ export function PartyStashItemRow({ item, onTake, onDelete, onQuantity }: {
     <div className="character-inventory-row">
       <CollectionRow
         padding="4px 2px"
+        onClick={onOpen}
         main={(
           <>
             <div style={{ fontSize: "var(--fs-medium)", fontWeight: 600, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
@@ -53,7 +55,7 @@ export function PartyStashItemRow({ item, onTake, onDelete, onQuantity }: {
           </>
         )}
         trailing={(
-          <>
+          <div onClick={(event) => event.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <QuantityStepper
               value={item.quantity}
               onDecrement={() => item.quantity > 1 && onQuantity(item.quantity - 1)}
@@ -70,7 +72,7 @@ export function PartyStashItemRow({ item, onTake, onDelete, onQuantity }: {
             />
             <Button className="character-row-action" variant="ghost" onClick={onTake} title="Take - moves item to your backpack" style={{ borderRadius: 6, fontSize: "var(--fs-tiny)", fontWeight: 700, padding: "3px 8px", flexShrink: 0 }}>Take</Button>
             <Button className="character-row-action" variant="danger" onClick={onDelete} title="Remove from stash" style={{ borderRadius: 6, fontSize: 16, padding: "0 8px", flexShrink: 0, lineHeight: 1.8 }}>x</Button>
-          </>
+          </div>
         )}
       />
     </div>

@@ -197,6 +197,26 @@ export function getItemSpells(spells: ItemSpells | null | undefined): ParsedItem
   });
 }
 
+export function getStoredItemSpells(spells: InventoryItem["storedSpells"]): ParsedItemSpell[] {
+  return (spells ?? []).map((spell) => ({
+    id: spell.id,
+    cost: 0,
+    level: spell.slotLevel,
+    dc: spell.saveDc ?? undefined,
+    attack: spell.attackBonus ?? undefined,
+    stored: true,
+  }));
+}
+
+/** Compatibility for catalog records imported before the Pact Keeper's once-per-rest use was
+ * represented structurally. */
+export function resolveItemUses(itemId: string | null | undefined, uses: ItemUses | null | undefined): ItemUses | null {
+  if (uses != null) return uses;
+  return /^i_rod_of_the_pact_keeper_plus_[123]$/.test(String(itemId ?? ""))
+    ? { max: 1, recover: 1 }
+    : null;
+}
+
 export function fixedItemUsesMaximum(uses: ItemUses | null | undefined): number | null {
   const maximum = uses && typeof uses === "object" ? uses.max : uses;
   return typeof maximum === "number" && Number.isInteger(maximum) && maximum > 0 ? maximum : null;

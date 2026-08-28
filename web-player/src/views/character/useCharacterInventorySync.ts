@@ -13,6 +13,7 @@ import {
   initializeItemUsesMaximum,
   isCurrencyItem,
   mergeCatalogItem,
+  resolveItemUses,
   normalizeInventoryItemLookupName,
   type CompendiumItemDetail,
   type InventoryContainer,
@@ -151,8 +152,9 @@ export function useCharacterInventorySync({
       const next = previous.map((item) => {
         const summary = matchInventorySummary(item, itemIndex);
         if (!summary) return item;
-        const chargesMax = initializeItemUsesMaximum(summary.uses) ?? item.chargesMax ?? null;
-        const patched = mergeCatalogItem(item, summary, chargesMax);
+        const resolvedUses = resolveItemUses(summary.id, summary.uses);
+        const chargesMax = initializeItemUsesMaximum(resolvedUses) ?? item.chargesMax ?? null;
+        const patched = mergeCatalogItem(item, { ...summary, uses: resolvedUses }, chargesMax);
         if (JSON.stringify(patched) !== JSON.stringify(item)) {
           changed = true;
           return patched;

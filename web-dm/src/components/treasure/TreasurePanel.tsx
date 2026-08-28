@@ -141,7 +141,7 @@ export function TreasurePanel(props: { encounterId?: string } = {}) {
       <ItemPickerModal
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
-        onAdd={(payload) => { void addItem(payload).then(() => setIsOpen(false)); }}
+        onAdd={(payload) => { void addItem(payload); }}
       />
       <AwardTreasureModal
         treasure={awardTreasure}

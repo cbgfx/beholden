@@ -24,6 +24,7 @@ export interface InventoryPartyStashSectionProps {
   partyCapacityLbs: number | null;
   currency: PartyCurrencyMap;
   campaignId: string;
+  onOpen: (item: PartyStashItem) => void;
   onTake: (item: PartyStashItem) => void;
   onDelete: (id: string) => void;
   onQuantity: (id: string, quantity: number) => void;
@@ -144,6 +145,7 @@ export function InventoryPartyStashSection({
   partyCapacityLbs,
   currency,
   campaignId,
+  onOpen,
   onTake,
   onDelete,
   onQuantity,
@@ -167,6 +169,7 @@ export function InventoryPartyStashSection({
           <PartyStashItemRow
             key={it.id}
             item={it}
+            onOpen={() => onOpen(it)}
             onTake={() => onTake(it)}
             onDelete={() => onDelete(it.id)}
             onQuantity={(q) => onQuantity(it.id, q)}

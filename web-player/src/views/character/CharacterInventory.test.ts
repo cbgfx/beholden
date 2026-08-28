@@ -3,10 +3,12 @@ import {
   canEquipOffhand,
   getEquipState,
   getItemSpells,
+  getStoredItemSpells,
   fixedItemUsesMaximum,
   initializeItemUsesMaximum,
   mergeCatalogItem,
   recoverItemCharges,
+  resolveItemUses,
   getWeaponMasteryName,
   hasWeaponMastery,
   hasWeaponProficiency,
@@ -166,6 +168,30 @@ describe("character inventory calculations", () => {
       { id: "s_cure_wounds", cost: "level", maxLevel: 4 },
     ]);
     expect(getItemSpells(undefined)).toEqual([]);
+  });
+
+  it("projects spells stored in an item into its spell list", () => {
+    expect(getStoredItemSpells([{
+      instanceId: "stored-1",
+      id: "s_counterspell",
+      name: "Counterspell",
+      level: 3,
+      slotLevel: 4,
+      saveDc: 16,
+    }])).toEqual([{
+      id: "s_counterspell",
+      cost: 0,
+      level: 4,
+      dc: 16,
+      attack: undefined,
+      stored: true,
+    }]);
+  });
+
+  it("backfills the Pact Keeper's singular long-rest use for older catalog records", () => {
+    expect(resolveItemUses("i_rod_of_the_pact_keeper_plus_1", null)).toEqual({ max: 1, recover: 1 });
+    expect(resolveItemUses("i_other_rod", null)).toBeNull();
+    expect(resolveItemUses("i_rod_of_the_pact_keeper_plus_1", 3)).toBe(3);
   });
 
   it("multiplies weight by quantity and ignores extradimensional containers", () => {

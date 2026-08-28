@@ -164,7 +164,7 @@ export function MonsterCarriedLoot(props: {
       <ItemPickerModal
         isOpen={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        onAdd={(payload) => { void addItem(payload).then(() => setPickerOpen(false)); }}
+        onAdd={(payload) => { void addItem(payload); }}
       />
       <AwardTreasureModal
         treasure={awardTreasure}

@@ -210,6 +210,7 @@ export type EquipState = "backpack" | "mainhand-1h" | "mainhand-2h" | "offhand" 
 export interface ParsedItemSpell {
   id: string;
   cost: number | "level";
+  stored?: true;
   level?: number;
   uses?: ItemUseAmount;
   maxLevel?: number;
