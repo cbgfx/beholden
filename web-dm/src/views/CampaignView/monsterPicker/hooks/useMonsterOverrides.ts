@@ -135,6 +135,7 @@ export function useMonsterOverrides(args: {
         draft = initializeDraft(draft, detail);
       }
       await Promise.resolve(onAddMonster(monsterId, qty, {
+        ruleset: options?.ruleset,
         friendly: options?.friendly ?? (draft.friendly ?? false),
         labelBase: (draft.label ?? "").trim() || undefined,
         ac: Number.isFinite(Number(options?.ac ?? draft.ac)) ? Number(options?.ac ?? draft.ac) : undefined,
