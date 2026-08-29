@@ -132,6 +132,6 @@ export function isSpellLinkedResource(args: {
 
 export function shouldResetOnRest(resetCode: string | undefined, restType: "short" | "long"): boolean {
   const code = String(resetCode ?? "").trim().toUpperCase();
-  if (restType === "short") return code === "S";
-  return code === "S" || code === "L";
+  if (restType === "short") return code === "S" || code === "SL";
+  return code === "S" || code === "L" || code === "SL";
 }

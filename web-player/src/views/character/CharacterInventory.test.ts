@@ -257,6 +257,19 @@ describe("mergeCatalogItem", () => {
     expect(merged.dmg1).toBe("1d4");
   });
 
+  it("hydrates wearable equipment classification onto older inventory copies", () => {
+    for (const catalog of [
+      summary({ id: "i_ring", name: "Ring of Protection", type: "Ring", equippable: true }),
+      summary({ id: "i_necklace", name: "Necklace of Adaptation", type: "Wondrous", equippable: true }),
+      summary({ id: "i_cloak", name: "Cloak of Protection", type: "Wondrous", equippable: true }),
+    ]) {
+      const staleCopy = item({ itemId: catalog.id, source: "compendium", equippable: undefined });
+      const merged = mergeCatalogItem(staleCopy, catalog, null);
+      expect(merged.equippable).toBe(true);
+      expect(isWearableItem(merged)).toBe(true);
+    }
+  });
+
   it("only permits Light melee weapons offhand unless a feature grants the exception", () => {
     const lightMelee = item({ dmg1: "1d6", type: "Martial Melee Weapon", properties: ["L"] });
     const longsword = item({ dmg1: "1d8", type: "Martial Melee Weapon", properties: ["V"] });

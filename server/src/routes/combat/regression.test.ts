@@ -267,6 +267,28 @@ describe("combat state regression: HP/condition mutation, transitions, and live 
     });
   });
 
+  describe("character-data persistence", () => {
+    it("preserves player notes during a rest-style partial characterData update", async () => {
+      const notes = [{ id: "note-1", title: "Campaign clue", text: "Do not lose this." }];
+      db.prepare("UPDATE user_characters SET character_data_json = ? WHERE id = ?")
+        .run(JSON.stringify({ age: 20, gender: "male", playerNotesList: notes, concentrationSpell: "Hex" }), playerCharacterId);
+
+      const { status } = await request(
+        "PUT",
+        `/api/me/characters/${playerCharacterId}`,
+        { characterData: { resources: [], concentrationSpell: null } },
+        playerToken,
+      );
+      assert.equal(status, 200);
+
+      const row = db.prepare("SELECT character_data_json FROM user_characters WHERE id = ?")
+        .get(playerCharacterId) as { character_data_json: string };
+      const stored = JSON.parse(row.character_data_json) as Record<string, unknown>;
+      assert.deepEqual(stored.playerNotesList, notes);
+      assert.equal(stored.concentrationSpell, null);
+    });
+  });
+
   describe("behaviors 1 & 2 — HP/condition mutation returns and broadcasts updated state", () => {
     it("returns and broadcasts the updated HP", async () => {
       broadcasts.length = 0;

@@ -182,6 +182,7 @@ export interface ItemSummaryRow {
   typeKey: string | null;
   attunement: boolean;
   magic: boolean;
+  equippable?: boolean;
   weight?: number | null;
   value?: number | null;
   ac?: number | null;

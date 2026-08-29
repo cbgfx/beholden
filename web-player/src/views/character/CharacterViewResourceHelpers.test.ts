@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { coalesceSharedClassResources, collectClassResources, isSpellLinkedResource, mergeResourceState } from "./CharacterViewResourceHelpers";
+import { coalesceSharedClassResources, collectClassResources, isSpellLinkedResource, mergeResourceState, shouldResetOnRest } from "./CharacterViewResourceHelpers";
 import type { ClassRestDetail } from "./CharacterViewTypes";
 import type { ResourceCounter } from "./CharacterSheetTypes";
 
@@ -41,6 +41,13 @@ describe("collectClassResources", () => {
     expect(collectClassResources(classDetail, 3)).toEqual([
       { key: "rage", name: "Rage", current: 3, max: 3, reset: "L", restoreAmount: "all" },
     ]);
+  });
+});
+
+describe("rest resets", () => {
+  it("resets Short-or-Long-Rest resources such as Hexblade's Curse on a Long Rest", () => {
+    expect(shouldResetOnRest("SL", "short")).toBe(true);
+    expect(shouldResetOnRest("SL", "long")).toBe(true);
   });
 });
 

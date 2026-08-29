@@ -309,7 +309,9 @@ export function buildCharacterRuntimeActions(args: {
     const nextInventory = (inventory ?? []).map((item) => recoverItemCharges(item));
     const hasResourceful = hasHeroicInspirationGrant(raceDetail);
     const nextOverrides = getLongRestOverrides(Boolean(overrides.inspiration), hasResourceful);
-    const nextConditions = (char.conditions ?? []).filter((condition) => condition.key !== "mage_armor");
+    const nextConditions = (char.conditions ?? []).filter(
+      (condition) => condition.key !== "mage_armor" && condition.key !== "concentration",
+    );
 
     await putMyCharacter(char.id, {
       hpCurrent: effectiveHpMaxWithoutOverrides,
@@ -320,6 +322,7 @@ export function buildCharacterRuntimeActions(args: {
         resources: nextResources,
         usedSpellSlots: nextUsedSpellSlots,
         inventory: nextInventory,
+        concentrationSpell: null,
       },
     });
 
@@ -348,6 +351,7 @@ export function buildCharacterRuntimeActions(args: {
         resources: nextResources,
         usedSpellSlots: nextUsedSpellSlots,
         inventory: nextInventory,
+        concentrationSpell: null,
         sheetOverrides: nextOverrides,
       },
     } : prev);

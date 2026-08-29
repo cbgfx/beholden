@@ -60,6 +60,7 @@ export function mergeCatalogItem(item: InventoryItem, summary: ItemSummaryRow, c
     rarity: catalog(summary.rarity, item.rarity),
     magic: catalog(summary.magic, item.magic) ?? undefined,
     attunement: catalog(summary.attunement, item.attunement) ?? undefined,
+    equippable: catalog(summary.equippable, item.equippable) ?? undefined,
     weight: catalog(summary.weight, item.weight) ?? null,
     value: catalog(summary.value, item.value) ?? null,
     ac: catalog(summary.ac, item.ac) ?? null,
