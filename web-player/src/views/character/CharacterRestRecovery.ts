@@ -13,12 +13,15 @@ export function getLongRestRecovery(hitDiceMax: number, exhaustion: number): {
 export function getLongRestOverrides(
   inspiration: boolean,
   grantsInspiration: boolean,
+  current: SheetOverrides = { tempHp: 0, acBonus: 0, hpMaxBonus: 0 },
 ): SheetOverrides {
+  const permanent = current.permanent ?? {};
   return {
     tempHp: 0,
-    acBonus: 0,
-    hpMaxBonus: 0,
+    acBonus: permanent.acBonus ? current.acBonus : 0,
+    hpMaxBonus: permanent.hpMaxBonus ? current.hpMaxBonus : 0,
     inspiration: inspiration || grantsInspiration,
-    abilityScores: {},
+    abilityScores: permanent.abilityScores ? { ...(current.abilityScores ?? {}) } : {},
+    ...(Object.values(permanent).some(Boolean) ? { permanent } : {}),
   };
 }

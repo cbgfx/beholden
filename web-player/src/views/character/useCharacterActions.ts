@@ -121,6 +121,9 @@ export function useCharacterActions(args: {
       acBonus: Math.floor(Number(overridesDraft.acBonus) || 0),
       hpMaxBonus: Math.floor(Number(overridesDraft.hpMaxBonus) || 0),
       ...(Object.keys(nextAbilityScores).length > 0 ? { abilityScores: nextAbilityScores } : {}),
+      ...(overridesDraft.permanent && Object.values(overridesDraft.permanent).some(Boolean)
+        ? { permanent: overridesDraft.permanent }
+        : {}),
     };
     const nextColor = colorDraft || C.accentHl;
     setOverridesSaving(true);

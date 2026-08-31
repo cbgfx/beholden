@@ -40,6 +40,12 @@ export interface SharedCombatOverrides {
   hpMaxBonus: number;
   inspiration?: boolean;
   abilityScores?: SharedAbilityScoreOverrides | undefined;
+  /** Manual sheet bonuses selected to survive a long rest. */
+  permanent?: {
+    acBonus?: boolean;
+    hpMaxBonus?: boolean;
+    abilityScores?: boolean;
+  } | undefined;
 }
 
 export function isPolymorphCondition(condition: SharedConditionInstance | null | undefined): condition is SharedPolymorphCondition {

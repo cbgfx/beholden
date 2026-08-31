@@ -44,6 +44,7 @@ export function CharacterSheetHeader(props: {
   onOpenInfo: () => void;
   onOpenEngagedEnemies: () => void;
   showEngagedEnemies: boolean;
+  inCombat: boolean;
   sheetView: SheetView;
   onSheetViewChange: (view: SheetView) => void;
   activeBastion: { id: string; name: string; campaignId: string } | null;
@@ -68,6 +69,7 @@ export function CharacterSheetHeader(props: {
     onOpenInfo,
     onOpenEngagedEnemies,
     showEngagedEnemies,
+    inCombat,
     sheetView,
     onSheetViewChange,
     activeBastion,
@@ -153,6 +155,29 @@ export function CharacterSheetHeader(props: {
         <Button variant="ghost" title="Edit character" onClick={() => navigate(`/characters/${character.id}/edit`)} style={{ height: 32, padding: "0 16px", fontSize: "var(--fs-medium)", flexShrink: 0 }}>
           Edit
         </Button>
+        {inCombat && (
+          <span
+            aria-label="Character is in combat"
+            style={{
+              height: 32,
+              padding: "0 11px",
+              borderRadius: 8,
+              border: `1px solid ${withAlpha(C.red, 0.58)}`,
+              background: withAlpha(C.red, 0.14),
+              color: C.red,
+              display: "inline-flex",
+              alignItems: "center",
+              fontSize: "var(--fs-small)",
+              fontWeight: 900,
+              letterSpacing: "0.09em",
+              whiteSpace: "nowrap",
+              boxShadow: `0 0 18px ${withAlpha(C.red, 0.12)}`,
+              flexShrink: 0,
+            }}
+          >
+            IN COMBAT
+          </span>
+        )}
       </div>
 
       <div style={{ flex: 1 }} />

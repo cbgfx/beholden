@@ -38,9 +38,21 @@ export function Tooltip({ text, children, multiline }: { text: string; children:
   );
 }
 
-export function Wrap({ children, wide, minWidth }: { children: React.ReactNode; wide?: boolean; minWidth?: number | string }) {
+export function Wrap({ children, wide, minWidth, inCombat = false }: { children: React.ReactNode; wide?: boolean; minWidth?: number | string; inCombat?: boolean }) {
   return (
-    <div style={{ height: "100%", overflowY: "auto", overflowX: wide ? "auto" : "hidden", background: C.bg, color: C.text }}>
+    <div style={{
+      height: "100%",
+      boxSizing: "border-box",
+      overflowY: "auto",
+      overflowX: wide ? "auto" : "hidden",
+      background: inCombat
+        ? `linear-gradient(180deg, ${withAlpha(C.red, 0.14)} 0, ${withAlpha(C.red, 0.035)} 120px, ${C.bg} 260px)`
+        : C.bg,
+      color: C.text,
+      border: inCombat ? `2px solid ${withAlpha(C.red, 0.72)}` : "2px solid transparent",
+      boxShadow: inCombat ? `inset 0 0 34px ${withAlpha(C.red, 0.1)}` : "none",
+      transition: "border-color 180ms ease, box-shadow 180ms ease, background 180ms ease",
+    }}>
       <div style={{ maxWidth: wide ? "none" : 1060, minWidth: wide ? (minWidth ?? 1760) : "auto", margin: "0 auto", padding: wide ? "16px" : "28px 20px" }}>
         {children}
       </div>
@@ -222,6 +234,31 @@ export function panelHeaderAddBtn(color: string): React.CSSProperties {
     justifyContent: "center",
     boxShadow: `0 6px 18px ${withAlpha(color, 0.12)}`,
   };
+}
+
+/** Canonical action used at the right edge of character panel headers. */
+export function PanelHeaderActionButton(props: {
+  color: string;
+  title: string;
+  onClick: () => void;
+  children: React.ReactNode;
+  ariaLabel?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={props.onClick}
+      style={panelHeaderAddBtn(props.color)}
+      title={props.title}
+      aria-label={props.ariaLabel ?? props.title}
+    >
+      {props.children}
+    </button>
+  );
+}
+
+export function PanelHeaderAddButton(props: { color: string; title: string; onClick: () => void }) {
+  return <PanelHeaderActionButton {...props}>+</PanelHeaderActionButton>;
 }
 
 export function addBtnStyle(accent: string): React.CSSProperties {

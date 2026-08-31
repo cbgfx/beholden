@@ -1,6 +1,6 @@
 import { AbilityScoresCompact } from "@beholden/shared/ui";
 import { C } from "@/lib/theme";
-import { CollapsiblePanel, ProfDot, Tooltip } from "@/views/character/CharacterViewParts";
+import { CollapsiblePanel, PanelHeaderAddButton, ProfDot, Tooltip } from "@/views/character/CharacterViewParts";
 import type { AbilKey, ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 import { ABILITY_FULL, ABILITY_LABELS, ALL_SKILLS } from "@/views/character/CharacterSheetConstants";
 import { getSaveBonus, getSkillBonus, getSkillProficiencyTier, hasNamedProficiency } from "@/views/character/CharacterSheetUtils";
@@ -27,6 +27,7 @@ export interface CharacterAbilitiesPanelsProps {
   d20TestPenalty?: number;
   mod: (score: number | null) => number;
   fmtMod: (value: number) => string;
+  onOpenPermanentBuffs: () => void;
 }
 
 function getModifierState(hasAdvantage: boolean, hasDisadvantage: boolean): "advantage" | "disadvantage" | null {
@@ -89,6 +90,7 @@ export function CharacterAbilitiesPanels({
   d20TestPenalty = 0,
   mod,
   fmtMod,
+  onOpenPermanentBuffs,
 }: CharacterAbilitiesPanelsProps) {
   const abilityKeys = ["str", "dex", "con", "int", "wis", "cha"] as AbilKey[];
   const derivedPb = Math.max(1, (pb - 1) * 4);
@@ -129,6 +131,7 @@ export function CharacterAbilitiesPanels({
         title="Abilities &amp; Saves"
         color={accentColor}
         storageKey="abilities-saves"
+        actions={<PanelHeaderAddButton color={accentColor} onClick={onOpenPermanentBuffs} title="Permanent buffs" />}
         summary={abilityKeys.map((key) => `${ABILITY_LABELS[key]} ${scores[key] ?? "-"}`).join(" · ")}
       >
         <AbilityScoresCompact

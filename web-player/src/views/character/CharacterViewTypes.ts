@@ -67,6 +67,7 @@ export interface Character {
     hpMaxBonus: number;
     inspiration?: boolean;
     abilityScores?: Partial<Record<AbilKey, number>>;
+    permanent?: SheetOverrides["permanent"];
   };
   deathSaves?: { success: number; fail: number };
   sharedNotes?: string;
@@ -202,6 +203,11 @@ export interface SheetOverrides {
   hpMaxBonus: number;
   inspiration?: boolean;
   abilityScores?: Partial<Record<AbilKey, number>>;
+  permanent?: {
+    acBonus?: boolean;
+    hpMaxBonus?: boolean;
+    abilityScores?: boolean;
+  };
 }
 
 export type PolymorphConditionData = SharedPolymorphCondition & ConditionInstance;

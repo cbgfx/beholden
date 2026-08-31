@@ -43,12 +43,12 @@ export function SpellDetailPanel(props: { spellId: string; ruleset?: "5e" | "5.5
       title={spell ? spell.name : "Spell"}
       actions={<div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{busy ? "Loading…" : header}</div>}
       style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
-      bodyStyle={{ minHeight: 0 }}
+      bodyStyle={{ flex: 1, minHeight: 0, overflow: "hidden" }}
     >
       {!spell ? (
         <div style={{ color: theme.colors.muted, lineHeight: 1.4 }}>Pick a spell on the left to view details.</div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, minHeight: 0 }}>
+        <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 10, minHeight: 0, overflow: "hidden" }}>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
             {spell.time ? <span>Cast: {spell.time}</span> : null}
             {spell.range ? <span>Range: {spell.range}</span> : null}
@@ -61,6 +61,9 @@ export function SpellDetailPanel(props: { spellId: string; ruleset?: "5e" | "5.5
               flex: 1,
               minHeight: 0,
               overflow: "auto",
+              WebkitOverflowScrolling: "touch",
+              touchAction: "pan-y",
+              overscrollBehavior: "contain",
               border: `1px solid ${theme.colors.panelBorder}`,
               borderRadius: 12,
               padding: 10,

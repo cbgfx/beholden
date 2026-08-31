@@ -21,6 +21,7 @@ export function useCharacterViewUiState() {
   const [expandedClassFeatureIds, setExpandedClassFeatureIds] = useState<string[]>([]);
   const [noteDrawer, setNoteDrawer] = useState<{ scope: "player" | "shared"; note: PlayerNote | null } | null>(null);
   const [infoDrawerOpen, setInfoDrawerOpen] = useState(false);
+  const [permanentBuffsDrawerOpen, setPermanentBuffsDrawerOpen] = useState(false);
   const [engagedEnemiesDrawerOpen, setEngagedEnemiesDrawerOpen] = useState(false);
   const [overridesDraft, setOverridesDraft] = useState<SheetOverrides>({ tempHp: 0, acBonus: 0, hpMaxBonus: 0 });
   const [abilityOverridesDraft, setAbilityOverridesDraft] = useState<Partial<Record<AbilKey, number>>>({});
@@ -46,6 +47,7 @@ export function useCharacterViewUiState() {
     xpPopupOpen, setXpPopupOpen, xpInput, setXpInput, dsSaving, setDsSaving,
     expandedNoteIds, setExpandedNoteIds, expandedClassFeatureIds, setExpandedClassFeatureIds,
     noteDrawer, setNoteDrawer, infoDrawerOpen, setInfoDrawerOpen,
+    permanentBuffsDrawerOpen, setPermanentBuffsDrawerOpen,
     engagedEnemiesDrawerOpen, setEngagedEnemiesDrawerOpen,
     overridesDraft, setOverridesDraft, abilityOverridesDraft, setAbilityOverridesDraft,
     colorDraft, setColorDraft, overridesSaving, setOverridesSaving,
@@ -83,6 +85,7 @@ export function useCharacterViewUiSync({
       tempHp: Math.max(0, Math.floor(Number(source.tempHp ?? 0) || 0)),
       acBonus: Math.floor(Number(source.acBonus ?? 0) || 0),
       hpMaxBonus: Math.floor(Number(source.hpMaxBonus ?? 0) || 0),
+      permanent: source.permanent && typeof source.permanent === "object" ? { ...source.permanent } : {},
     });
     setAbilityOverridesDraft((source.abilityScores && typeof source.abilityScores === "object")
       ? Object.fromEntries(

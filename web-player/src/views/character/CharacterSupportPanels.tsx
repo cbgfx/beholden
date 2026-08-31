@@ -3,7 +3,6 @@ import { EmptyState, NoteList, NotesPanel } from "@beholden/shared/ui";
 import { C, withAlpha } from "@/lib/theme";
 import { IconWerewolf } from "@/icons";
 import { Button } from "@/ui/Button";
-import { IconButton } from "@/ui/IconButton";
 import type { ClassFeatureEntry, PlayerNote, ResourceCounter } from "@/views/character/CharacterSheetTypes";
 import { getExhaustionEffects } from "@/views/character/CharacterExhaustion";
 import {
@@ -11,6 +10,8 @@ import {
   miniPillBtn,
   restBtnStyle,
   ClassFeatureItem,
+  PanelHeaderActionButton,
+  PanelHeaderAddButton,
 } from "@/views/character/CharacterViewParts";
 
 export function CharacterSupportPanels(props: {
@@ -162,9 +163,9 @@ export function CharacterSupportPanels(props: {
         storageKey="recovery"
         summary={`${upkeepSummary}${exhaustion > 0 ? ` · Exhaustion ${exhaustion}` : ""}`}
         actions={
-          <IconButton variant="accent" onClick={onOpenTransformSelf} title="Transform Self">
+          <PanelHeaderActionButton color={accentColor} onClick={onOpenTransformSelf} title="Transform Self">
             <IconWerewolf size={18} />
-          </IconButton>
+          </PanelHeaderActionButton>
         }
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -398,7 +399,7 @@ export function CharacterSupportPanels(props: {
             title={`Player Notes (${playerNotesList.length})`}
             color={accentColor}
             storageKey="player-notes"
-            actions={<IconButton variant="accent" onClick={onOpenPlayerNoteCreate} title="Add note">+</IconButton>}
+            actions={<PanelHeaderAddButton color={accentColor} onClick={onOpenPlayerNoteCreate} title="Add note" />}
           >
         <NoteList
           items={playerNotesList.map((note) => ({ id: note.id, title: note.title || "Untitled", text: note.text }))}
@@ -425,7 +426,7 @@ export function CharacterSupportPanels(props: {
         title={`Shared Notes (${allSharedNotes.length})`}
         color={accentColor}
         storageKey="shared-notes"
-        actions={<IconButton variant="accent" onClick={onOpenSharedNoteCreate} title="Add shared note">+</IconButton>}
+        actions={<PanelHeaderAddButton color={accentColor} onClick={onOpenSharedNoteCreate} title="Add shared note" />}
       >
         <NoteList
           items={allSharedNotes.map((note) => ({ id: note.id, title: note.title || "Untitled", text: note.text }))}
@@ -458,7 +459,7 @@ export function CharacterSupportPanels(props: {
             storageKey="player-features"
             summary={`${totalFeatureCount} features`}
             actions={onOpenFeatPicker ? (
-              <IconButton variant="accent" onClick={onOpenFeatPicker} title="Add feat">+</IconButton>
+              <PanelHeaderAddButton color={accentColor} onClick={onOpenFeatPicker} title="Add feat" />
             ) : undefined}
           >
         {totalFeatureCount > 0 ? (

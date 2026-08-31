@@ -29,7 +29,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
   ].filter((item): item is string => Boolean(item));
 
   return (
-    <Wrap wide minWidth={ui.sheetView === "all" ? 1760 : ui.sheetView === "play" ? 1260 : 880}>
+    <Wrap wide inCombat={live.combatStatus !== null} minWidth={ui.sheetView === "all" ? 1760 : ui.sheetView === "play" ? 1260 : 880}>
       <input ref={ui.portraitFileRef} type="file" accept="image/*" hidden onChange={handlePortraitSelected} />
       {ui.concentrationAlert && (
         <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: 10, background: "rgba(240, 165, 0, 0.15)", border: `1px solid ${C.accent}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -49,6 +49,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
         onOpenInfo={() => ui.setInfoDrawerOpen(true)}
         onOpenEngagedEnemies={() => ui.setEngagedEnemiesDrawerOpen(true)}
         showEngagedEnemies={live.combatStatus !== null}
+        inCombat={live.combatStatus !== null}
         sheetView={ui.sheetView}
         onSheetViewChange={(view) => {
           ui.setSheetView(view);
@@ -129,6 +130,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
             d20TestPenalty: exhaustionPenalty,
             mod: abilityMod,
             fmtMod: formatModifier,
+            onOpenPermanentBuffs: () => ui.setPermanentBuffsDrawerOpen(true),
           }}
           defensesProps={{
             resistances: derived.parsedDefenses.resistances,

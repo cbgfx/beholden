@@ -84,6 +84,7 @@ export function buildCharacterRuntimeActions(args: {
   hitDicePools?: Array<{ dieSize: number; max: number; current: number }>;
   inventory: CharacterData["inventory"];
   effectiveHpMaxWithoutOverrides: number;
+  effectiveHpMax: number;
   overrides: SheetOverrides;
   polymorphCondition: PolymorphConditionData | null;
   saveCharacterData: (updatedData: CharacterData) => Promise<Character | null>;
@@ -116,6 +117,7 @@ export function buildCharacterRuntimeActions(args: {
     hitDicePools = [],
     inventory,
     effectiveHpMaxWithoutOverrides,
+    effectiveHpMax,
     overrides,
     polymorphCondition,
     saveCharacterData,
@@ -308,13 +310,16 @@ export function buildCharacterRuntimeActions(args: {
     const nextUsedSpellSlots = {};
     const nextInventory = (inventory ?? []).map((item) => recoverItemCharges(item));
     const hasResourceful = hasHeroicInspirationGrant(raceDetail);
-    const nextOverrides = getLongRestOverrides(Boolean(overrides.inspiration), hasResourceful);
+    const nextOverrides = getLongRestOverrides(Boolean(overrides.inspiration), hasResourceful, overrides);
+    const restedHpMax = nextOverrides.permanent?.hpMaxBonus || nextOverrides.permanent?.abilityScores
+      ? effectiveHpMax
+      : effectiveHpMaxWithoutOverrides;
     const nextConditions = (char.conditions ?? []).filter(
       (condition) => condition.key !== "mage_armor" && condition.key !== "concentration",
     );
 
     await putMyCharacter(char.id, {
-      hpCurrent: effectiveHpMaxWithoutOverrides,
+      hpCurrent: restedHpMax,
       characterData: {
         hitDiceCurrent: recovery.hitDiceCurrent,
         hitDiceCurrentBySize: recoveredHitDiceBySize,
@@ -339,7 +344,7 @@ export function buildCharacterRuntimeActions(args: {
 
     setChar((prev) => prev ? {
       ...prev,
-      hpCurrent: effectiveHpMaxWithoutOverrides,
+      hpCurrent: restedHpMax,
       deathSaves: nextDeathSaves,
       overrides: nextOverrides,
       conditions: nextConditions,

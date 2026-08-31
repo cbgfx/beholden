@@ -4,7 +4,7 @@ import { CharacterCreatureDrawer } from "@/views/character/CharacterCreatureDraw
 import { CharacterCreaturePickerModal } from "@/views/character/CharacterCreaturePickerModal";
 import { useCompendiumMonster } from "@/views/character/CharacterCompendiumMonsterHooks";
 import { creatureAcPill, creatureHpPill, formatCreatureMonsterSource } from "@/views/character/CharacterCreaturesHelpers";
-import { CollapsiblePanel, panelHeaderAddBtn } from "@/views/character/CharacterViewParts";
+import { CollapsiblePanel, PanelHeaderAddButton } from "@/views/character/CharacterViewParts";
 import type { CharacterCreature, CharacterData } from "@/views/character/CharacterSheetTypes";
 import { IconButton } from "@/ui/IconButton";
 
@@ -64,9 +64,7 @@ export function CharacterCreaturesPanel(props: {
         storageKey="creatures"
         summary={orderedCreatures.length > 0 ? orderedCreatures.map((creature) => creature.name).join(", ") : "None"}
         actions={
-          <button type="button" onClick={() => setPickerOpen(true)} style={panelHeaderAddBtn(props.accentColor)} title="Add creature">
-            +
-          </button>
+          <PanelHeaderAddButton color={props.accentColor} onClick={() => setPickerOpen(true)} title="Add creature" />
         }
       >
         {orderedCreatures.length === 0 ? (

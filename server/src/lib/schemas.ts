@@ -42,4 +42,9 @@ export const OverridesSchema = z.object({
   hpMaxBonus: z.number().default(0),
   inspiration: z.boolean().default(false),
   abilityScores: AbilityScoreOverridesSchema.optional(),
+  permanent: z.object({
+    acBonus: z.boolean().optional(),
+    hpMaxBonus: z.boolean().optional(),
+    abilityScores: z.boolean().optional(),
+  }).optional(),
 });

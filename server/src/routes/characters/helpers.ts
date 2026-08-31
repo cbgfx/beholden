@@ -67,6 +67,11 @@ export const OverridesBody = z.object({
     wis: z.number().int().min(1).max(30).optional(),
     cha: z.number().int().min(1).max(30).optional(),
   }).optional(),
+  permanent: z.object({
+    acBonus: z.boolean().optional(),
+    hpMaxBonus: z.boolean().optional(),
+    abilityScores: z.boolean().optional(),
+  }).optional(),
 });
 
 // MARK: - To Character Sheet Dto Input

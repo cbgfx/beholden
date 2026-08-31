@@ -106,6 +106,7 @@ export function CharacterView() {
     hitDicePools: derived.hitDicePools,
     inventory: derived.inventory,
     effectiveHpMaxWithoutOverrides: derived.effectiveHpMaxWithoutOverrides,
+    effectiveHpMax: derived.effectiveHpMax,
     overrides: derived.overrides,
     polymorphCondition,
     saveCharacterData: notes.saveCharacterData,

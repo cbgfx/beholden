@@ -6,6 +6,7 @@ import { SHEET_COLOR_PRESETS } from "@/views/character/CharacterViewHelpers";
 import { getExhaustionD20Penalty } from "@/views/character/CharacterExhaustion";
 import type { CharacterViewModel } from "@/views/character/CharacterViewModel";
 import { EngagedEnemiesDrawer } from "@/views/character/EngagedEnemiesDrawer";
+import { CharacterPermanentBuffsDrawer } from "@/views/character/CharacterPermanentBuffsDrawer";
 
 export function CharacterViewOverlays({ model }: { model: CharacterViewModel }) {
   const {
@@ -96,6 +97,21 @@ export function CharacterViewOverlays({ model }: { model: CharacterViewModel }) 
             else next[key] = Math.floor(value);
             return next;
           });
+        }}
+      />
+
+      <CharacterPermanentBuffsDrawer
+        open={ui.permanentBuffsDrawerOpen}
+        accentColor={derived.accentColor}
+        overridesDraft={ui.overridesDraft}
+        abilityOverridesDraft={ui.abilityOverridesDraft}
+        saving={ui.overridesSaving}
+        onOverridesChange={ui.setOverridesDraft}
+        onAbilityOverridesChange={ui.setAbilityOverridesDraft}
+        onClose={() => ui.setPermanentBuffsDrawerOpen(false)}
+        onSave={async () => {
+          await notes.saveSheetOverrides();
+          ui.setPermanentBuffsDrawerOpen(false);
         }}
       />
 

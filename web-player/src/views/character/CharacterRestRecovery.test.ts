@@ -33,4 +33,21 @@ describe("getLongRestOverrides", () => {
     expect(getLongRestOverrides(true, false).inspiration).toBe(true);
     expect(getLongRestOverrides(false, true).inspiration).toBe(true);
   });
+
+  it("keeps only overrides explicitly marked permanent", () => {
+    expect(getLongRestOverrides(false, false, {
+      tempHp: 8,
+      acBonus: 2,
+      hpMaxBonus: 5,
+      abilityScores: { str: 19 },
+      permanent: { acBonus: true, abilityScores: true },
+    })).toEqual({
+      tempHp: 0,
+      acBonus: 2,
+      hpMaxBonus: 0,
+      inspiration: false,
+      abilityScores: { str: 19 },
+      permanent: { acBonus: true, abilityScores: true },
+    });
+  });
 });

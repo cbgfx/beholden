@@ -174,6 +174,9 @@ export function registerCharacterFieldPatchRoutes(app: Express, ctx: ServerConte
       ? ex.characterData.sheetOverrides as Record<string, unknown>
       : undefined;
     const existingAbilityScores = normalizeAbilityScores(existingSheetOverrides?.abilityScores);
+    const existingPermanent = existingSheetOverrides?.permanent && typeof existingSheetOverrides.permanent === "object"
+      ? existingSheetOverrides.permanent as Record<string, boolean>
+      : undefined;
     const abilityScores = parsed.abilityScores === undefined
       ? existingAbilityScores
       : normalizeAbilityScores(parsed.abilityScores);
@@ -182,6 +185,7 @@ export function registerCharacterFieldPatchRoutes(app: Express, ctx: ServerConte
       acBonus: Math.floor(Number(parsed.acBonus) || 0),
       hpMaxBonus: Math.floor(Number(parsed.hpMaxBonus) || 0),
       ...(abilityScores ? { abilityScores } : {}),
+      ...(parsed.permanent ?? existingPermanent ? { permanent: parsed.permanent ?? existingPermanent } : {}),
     };
     const t = now();
 
