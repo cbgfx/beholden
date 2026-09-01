@@ -3,7 +3,6 @@ import { api } from "@/services/api";
 import { C } from "@/lib/theme";
 import type { AbilKey, CharacterData, PlayerNote } from "@/views/character/CharacterSheetTypes";
 import type { Character, SheetOverrides } from "@/views/character/CharacterViewHelpers";
-import { SHEET_VIEWS, type SheetView } from "@/views/character/CharacterSheetHeader";
 
 export function useCharacterViewUiState() {
   const [hpAmount, setHpAmount] = useState("");
@@ -33,13 +32,17 @@ export function useCharacterViewUiState() {
   const [polymorphApplyingId, setPolymorphApplyingId] = useState<string | null>(null);
   const [portraitUploading, setPortraitUploading] = useState(false);
   const portraitFileRef = useRef<HTMLInputElement>(null);
-  const [sheetView, setSheetView] = useState<SheetView>(() => {
+  // Any sheet-view id: the 4 built-in ones, or a player-created custom view.
+  // Validity (does this id still exist in characterData.sheetViews?) is
+  // resolved at render time in CharacterViewLayout.tsx, with a safe fallback
+  // -- an unknown/stale id here just falls back to a default, never crashes.
+  const [sheetView, setSheetView] = useState<string>(() => {
     try {
-      const saved = localStorage.getItem("character-sheet:view");
-      if (SHEET_VIEWS.some((view) => view.id === saved)) return saved as SheetView;
+      return localStorage.getItem("character-sheet:view") || "play";
     } catch { /* ignore unavailable storage */ }
     return "play";
   });
+  const [layoutEditMode, setLayoutEditMode] = useState(false);
 
   return {
     hpAmount, setHpAmount, hpSaving, setHpSaving, hpError, setHpError, lastRoll, setLastRoll,
@@ -54,6 +57,7 @@ export function useCharacterViewUiState() {
     concentrationAlert, setConcentrationAlert, featPickerOpen, setFeatPickerOpen,
     polymorphDrawerOpen, setPolymorphDrawerOpen, polymorphApplyingId, setPolymorphApplyingId,
     portraitUploading, setPortraitUploading, portraitFileRef, sheetView, setSheetView,
+    layoutEditMode, setLayoutEditMode,
   };
 }
 

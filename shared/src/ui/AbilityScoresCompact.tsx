@@ -115,6 +115,7 @@ export function AbilityScoresCompact({
             return (
               <div
                 key={key}
+                className="character-hover-row"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "28px minmax(44px, auto) minmax(24px, auto) minmax(24px, auto)",

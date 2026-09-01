@@ -29,6 +29,7 @@ export function NoteList(props: {
     },
   });
   const rows = canReorder ? drag.displayItems : props.items;
+  const draggedItem = canReorder && drag.dragId ? props.items.find((item) => item.id === drag.dragId) : null;
 
   if (!props.items.length) {
     return <div style={{ color: props.mutedColor }}>{props.emptyText ?? "No notes yet."}</div>;
@@ -124,6 +125,32 @@ export function NoteList(props: {
           </div>
         );
       })}
+      {draggedItem && drag.pointerPos && (
+        <div
+          aria-hidden
+          style={{
+            position: "fixed",
+            left: drag.pointerPos.x + 14,
+            top: drag.pointerPos.y + 10,
+            zIndex: 1000,
+            pointerEvents: "none",
+            transform: "rotate(-2deg)",
+            maxWidth: 280,
+            padding: "8px 14px",
+            borderRadius: 8,
+            border: "1px solid rgba(255,255,255,0.22)",
+            background: "rgba(18,24,40,0.97)",
+            boxShadow: "0 12px 28px rgba(0,0,0,0.5)",
+            fontWeight: 700,
+            color: props.textColor,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {draggedItem.title || "Untitled"}
+        </div>
+      )}
     </div>
   );
 }

@@ -30,6 +30,7 @@ import { deriveFeatHitPointMaxBonus } from "@/domain/character/featEffects";
 import { appendMissingFeatureNotes } from "@/domain/character/featureNoteTemplates";
 import { reconcileInvocationExtraFeatIds } from "@/domain/character/invocationFeatChoices";
 import { tagAcquisitionLevelMap } from "@/domain/character/spellAcquisition";
+import { createDefaultSheetViews } from "@/views/character/sheetViewLayout";
 
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
 
@@ -397,6 +398,10 @@ export async function buildCreatorSubmissionBody(args: {
       ...((isEditing || submittedExtraFeatIds.length > 0) ? { extraFeatIds: submittedExtraFeatIds } : {}),
       ...(initialFeatureNotes.length > 0 ? { playerNotesList: initialFeatureNotes } : {}),
       ...(startingInventory ? { inventory: startingInventory } : {}),
+      // Only ever set on true creation -- this object gets merge-patched into
+      // characterData on every edit/level-up save too, and re-sending it then
+      // would silently overwrite any layout the player has since customized.
+      ...(!isEditing ? { sheetViews: createDefaultSheetViews() } : {}),
       proficiencies: buildProficiencyMapFromUtils({
         form,
         classDetail,

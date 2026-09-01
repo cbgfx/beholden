@@ -4,6 +4,7 @@ import { api } from "@/services/api";
 import { C } from "@/lib/theme";
 import { Button } from "@/ui/Button";
 import { CollapsiblePanel } from "@/views/character/CharacterViewParts";
+import { PANEL_IDS } from "@/views/character/panelRegistry";
 import { type InventoryItem, type ParsedItemSpell, getEquipState, getItemSpells, getStoredItemSpells } from "@/views/character/CharacterInventory";
 import type { ConditionInstance } from "@/views/character/CharacterSheetTypes";
 import { normalizeSpellTrackingKey } from "@/views/character/CharacterSheetUtils";
@@ -138,7 +139,7 @@ export function ItemSpellsPanel({
             key={item.id}
             title={item.name.replace(/\s*\[.+\]$/, "")}
             color={C.colorMagic}
-            storageKey={`item-spells-${item.id}`}
+            storageKey={`${PANEL_IDS.itemSpells}-${item.id}`}
             actions={chargesMax > 0 ? (
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                 <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginRight: 3 }}>charges {charges}/{chargesMax}</span>
@@ -177,8 +178,8 @@ export function ItemSpellsPanel({
               {[...groups.entries()].sort(([a], [b]) => a - b).map(([level, groupSpells]) => (
                 <div key={level} style={{ marginBottom: 14 }}>
                   <div style={{
-                    fontSize: "var(--fs-small)", fontWeight: 800, color: "#ef4444", textTransform: "uppercase",
-                    letterSpacing: 1, paddingBottom: 5, borderBottom: "1px solid rgba(239,68,68,0.25)", marginBottom: 8,
+                    fontSize: "var(--fs-small)", fontWeight: 800, color: accentColor, textTransform: "uppercase",
+                    letterSpacing: 1, paddingBottom: 5, borderBottom: `1px solid ${accentColor}40`, marginBottom: 8,
                   }}>
                     {level === -1 ? (groupSpells.every((spell) => failedKeysRef.current.has(spell.id)) ? "Unknown level" : "Loading...") : LEVEL_LABELS[level] ?? `Level ${level}`}
                   </div>
@@ -221,6 +222,7 @@ export function ItemSpellsPanel({
                     return (
                       <div
                         key={i}
+                        className="character-hover-row"
                         style={{
                           display: "grid", gridTemplateColumns: SPELL_ROW_GRID_WITH_MARKER,
                           alignItems: "center", gap: "0 8px",
@@ -231,7 +233,7 @@ export function ItemSpellsPanel({
                       >
                         <div title={spell.stored ? "Stored spell" : `${spell.cost === "level" ? "Spell level" : spell.cost} charge${spell.cost !== 1 ? "s" : ""}`} style={{
                           width: 20, height: 20, borderRadius: "50%",
-                          background: "#dc2626", display: "grid", placeItems: "center", flexShrink: 0,
+                          background: accentColor, display: "grid", placeItems: "center", flexShrink: 0,
                         }}>
                           <span style={{ color: "#fff", fontSize: "var(--fs-tiny)", fontWeight: 900, lineHeight: 1 }}>{spell.stored ? "S" : spell.cost === "level" ? "L" : spell.cost}</span>
                         </div>

@@ -41,18 +41,21 @@ export function useCharacterActions(args: {
   // so a stale client-side closure can never clobber fields this call didn't intend to touch.
   const saveCharacterData = React.useCallback(async (updatedData: CharacterData) => {
     if (!char) return null;
+    const characterId = char.id;
     const patch = updatedData.proficiencies
       ? { ...updatedData, proficiencies: normalizeProficiencies(updatedData.proficiencies) }
       : updatedData;
     const normalizedPatch = patch.classes
       ? { ...patch, classes: normalizeCharacterClasses(patch) }
       : patch;
-    const updated = await updateMyCharacter(char.id, {
+    const updated = await updateMyCharacter(characterId, {
       name: char.name,
       characterData: normalizedPatch,
     });
     setChar((prev) =>
-      prev ? { ...prev, characterData: { ...(prev.characterData ?? {}), ...normalizedPatch } } : prev,
+      prev?.id === characterId
+        ? { ...prev, characterData: { ...(prev.characterData ?? {}), ...normalizedPatch } }
+        : prev,
     );
     return updated as Character;
   }, [char, setChar]);
@@ -111,19 +114,24 @@ export function useCharacterActions(args: {
 
   const saveSheetOverrides = React.useCallback(async () => {
     if (!char) return;
+    // `abilityScores` is a bonus now, not an absolute score -- a debuff is a
+    // legitimate negative value, so only finite/non-zero is filtered here;
+    // the 1-30 clamp applies to the *resulting* score, not this delta.
     const nextAbilityScores = Object.fromEntries(
       (Object.entries(abilityOverridesDraft) as [AbilKey, number | undefined][])
         .map(([ability, value]) => [ability, Math.floor(Number(value))] as const)
-        .filter(([, value]) => Number.isFinite(value) && value >= 1 && value <= 30),
+        .filter(([, value]) => Number.isFinite(value) && value !== 0),
     ) as Partial<Record<AbilKey, number>>;
     const nextOverrides = {
       tempHp: Math.max(0, Math.floor(Number(overridesDraft.tempHp) || 0)),
       acBonus: Math.floor(Number(overridesDraft.acBonus) || 0),
       hpMaxBonus: Math.floor(Number(overridesDraft.hpMaxBonus) || 0),
-      ...(Object.keys(nextAbilityScores).length > 0 ? { abilityScores: nextAbilityScores } : {}),
-      ...(overridesDraft.permanent && Object.values(overridesDraft.permanent).some(Boolean)
-        ? { permanent: overridesDraft.permanent }
-        : {}),
+      // Always sent, even empty -- this is a merge-patch endpoint, so omitting
+      // the key when the last bonus was just cleared would leave the server's
+      // stale prior value in place instead of clearing it (this was exactly
+      // the "setting a buff to 0 doesn't save" bug).
+      abilityScores: nextAbilityScores,
+      permanent: overridesDraft.permanent ?? {},
     };
     const nextColor = colorDraft || C.accentHl;
     setOverridesSaving(true);

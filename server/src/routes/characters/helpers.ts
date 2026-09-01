@@ -59,13 +59,16 @@ export const OverridesBody = z.object({
   tempHp: z.number().int(),
   acBonus: z.number().int(),
   hpMaxBonus: z.number().int(),
+  // A bonus stacked on the character's score (Permanent Buffs), not the
+  // absolute score itself -- can legitimately be negative (a curse/debuff).
+  // The 1-30 range applies to the resulting score, computed client-side.
   abilityScores: z.object({
-    str: z.number().int().min(1).max(30).optional(),
-    dex: z.number().int().min(1).max(30).optional(),
-    con: z.number().int().min(1).max(30).optional(),
-    int: z.number().int().min(1).max(30).optional(),
-    wis: z.number().int().min(1).max(30).optional(),
-    cha: z.number().int().min(1).max(30).optional(),
+    str: z.number().int().min(-30).max(30).optional(),
+    dex: z.number().int().min(-30).max(30).optional(),
+    con: z.number().int().min(-30).max(30).optional(),
+    int: z.number().int().min(-30).max(30).optional(),
+    wis: z.number().int().min(-30).max(30).optional(),
+    cha: z.number().int().min(-30).max(30).optional(),
   }).optional(),
   permanent: z.object({
     acBonus: z.boolean().optional(),

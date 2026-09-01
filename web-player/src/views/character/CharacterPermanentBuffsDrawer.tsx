@@ -41,7 +41,7 @@ export function CharacterPermanentBuffsDrawer(props: {
     props.onAbilityOverridesChange((previous) => {
       const next = { ...previous };
       const value = Math.floor(Number(raw));
-      if (!raw.trim() || !Number.isFinite(value) || value < 1 || value > 30) delete next[key];
+      if (!raw.trim() || !Number.isFinite(value) || value === 0) delete next[key];
       else next[key] = value;
       props.onOverridesChange((overrides) => ({
         ...overrides,
@@ -63,9 +63,9 @@ export function CharacterPermanentBuffsDrawer(props: {
         <label style={{ display: "grid", gap: 6 }}><span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 800 }}>MAX HP BONUS</span><input type="number" value={props.overridesDraft.hpMaxBonus} onChange={(event) => setNumeric("hpMaxBonus", event.target.value)} style={inputStyle} /></label>
       </div>
       <div style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-        <div style={{ color: props.accentColor, fontSize: "var(--fs-small)", fontWeight: 900, letterSpacing: "0.08em", marginBottom: 12 }}>ABILITY SCORES</div>
+        <div style={{ color: props.accentColor, fontSize: "var(--fs-small)", fontWeight: 900, letterSpacing: "0.08em", marginBottom: 12 }}>ABILITY SCORE BONUSES</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
-          {ABILITIES.map(([key, label]) => <label key={key} style={{ display: "grid", gap: 5 }}><span style={{ color: C.muted, fontSize: "var(--fs-tiny)", fontWeight: 800 }}>{label}</span><input type="number" min={1} max={30} placeholder="--" value={props.abilityOverridesDraft[key] ?? ""} onChange={(event) => setAbility(key, event.target.value)} style={inputStyle} /></label>)}
+          {ABILITIES.map(([key, label]) => <label key={key} style={{ display: "grid", gap: 5 }}><span style={{ color: C.muted, fontSize: "var(--fs-tiny)", fontWeight: 800 }}>{label}</span><input type="number" placeholder="0" value={props.abilityOverridesDraft[key] ?? ""} onChange={(event) => setAbility(key, event.target.value)} style={inputStyle} /></label>)}
         </div>
       </div>
     </RightDrawer>

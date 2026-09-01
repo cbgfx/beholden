@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { C } from "@/lib/theme";
 import { CollapsiblePanel } from "@/views/character/CharacterViewParts";
+import { PANEL_IDS } from "@/views/character/panelRegistry";
 
 const DAMAGE_TYPE_OPTIONS = [
   "Acid", "Bludgeoning", "Cold", "Fire", "Force", "Lightning",
@@ -181,7 +182,7 @@ export function CharacterDefensesPanel({
     <CollapsiblePanel
       title="Defenses"
       color={accentColor}
-      storageKey="defenses"
+      storageKey={PANEL_IDS.defenses}
       defaultOpen={hasAnything}
       summary={hasAnything
         ? `${resistances.length + customResistances.length} resist · ${damageImmunities.length + conditionImmunities.length + customImmunities.length} immune${senses.length ? ` · ${senses.join(", ")}` : ""}`

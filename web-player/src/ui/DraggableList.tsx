@@ -12,6 +12,7 @@ export function DraggableList(props: {
   renderItem: (item: DragItem) => React.ReactNode;
 }) {
   const drag = usePointerDragReorder({ items: props.items, onReorder: props.onReorder });
+  const draggedItem = drag.dragId ? props.items.find((item) => item.id === drag.dragId) : null;
 
   return (
     <div>
@@ -98,6 +99,29 @@ export function DraggableList(props: {
           </div>
         );
       })}
+      {draggedItem && drag.pointerPos && (
+        <div
+          aria-hidden
+          style={{
+            position: "fixed",
+            left: drag.pointerPos.x + 14,
+            top: drag.pointerPos.y + 10,
+            zIndex: 1000,
+            pointerEvents: "none",
+            transform: "rotate(-2deg)",
+            width: 280,
+            maxWidth: "80vw",
+            padding: "6px 10px",
+            borderRadius: 8,
+            border: `1px solid ${C.panelBorder}`,
+            background: "rgba(18,24,40,0.97)",
+            boxShadow: "0 12px 28px rgba(0,0,0,0.5)",
+            opacity: 0.95,
+          }}
+        >
+          {props.renderItem(draggedItem)}
+        </div>
+      )}
     </div>
   );
 }

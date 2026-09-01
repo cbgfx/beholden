@@ -27,13 +27,17 @@ const ConditionsBody = z.object({
   conditions: z.array(ConditionInstanceSchema).max(100),
 });
 
+// A bonus stacked on the character's score (Permanent Buffs), not the
+// absolute score -- can legitimately be negative, so only finite/non-zero is
+// filtered here, not an absolute 1-30 range (that clamp applies to the
+// resulting score, computed client-side).
 function normalizeAbilityScores(value: unknown): { str?: number; dex?: number; con?: number; int?: number; wis?: number; cha?: number } | undefined {
   if (!value || typeof value !== "object") return undefined;
   const raw = value as Record<string, unknown>;
   const next: { str?: number; dex?: number; con?: number; int?: number; wis?: number; cha?: number } = {};
   for (const key of ["str", "dex", "con", "int", "wis", "cha"] as const) {
     const parsed = Math.floor(Number(raw[key]));
-    if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 30) next[key] = parsed;
+    if (Number.isFinite(parsed) && parsed !== 0 && Math.abs(parsed) <= 30) next[key] = parsed;
   }
   return Object.keys(next).length > 0 ? next : undefined;
 }

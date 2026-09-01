@@ -16,7 +16,7 @@ export function CollectionRow({
   padding?: React.CSSProperties["padding"];
 }) {
   return (
-    <div style={{ borderBottom: `1px solid ${borderColor}` }}>
+    <div className="collectionInteractiveRow" style={{ borderBottom: `1px solid ${borderColor}` }}>
       <div
         onClick={onClick}
         style={{

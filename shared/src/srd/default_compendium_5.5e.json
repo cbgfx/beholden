@@ -40516,7 +40516,6 @@
       "type": "Wondrous",
       "rarity": "uncommon",
       "magical": true,
-      "equippable": true,
       "weight": 5,
       "description": "This bag has an interior space considerably larger than its outside dimensions—roughly 2 feet square and 4 feet deep on the inside. The bag can hold up to 500 pounds, not exceeding a volume of 64 cubic feet. The bag weighs 5 pounds, regardless of its contents. Retrieving an item from the bag requires a Utilize action.\n\tIf the bag is overloaded, pierced, or torn, it is destroyed, and its contents are scattered in the Astral Plane. If the bag is turned inside out, its contents spill forth unharmed, but the bag must be put right before it can be used again. The bag holds enough air for 10 minutes of breathing, divided by the number of breathing creatures inside.\n\tPlacing a Bag of Holding inside an extradimensional space created by a Heward's Handy Haversack, Portable Hole, or similar item instantly destroys both items and opens a gate to the Astral Plane. The gate originates where the one item was placed inside the other. Any creature within a 10-foot-radius Sphere centered on the gate is sucked through it to a random location on the Astral Plane. The gate then closes. The gate is one-way and can't be reopened.",
       "container": true,
@@ -47288,7 +47287,6 @@
       "type": "Wondrous",
       "rarity": "uncommon",
       "magical": true,
-      "equippable": true,
       "description": "This gem contains a mote of elemental energy. When you take a Utilize action to break the gem, an Air Elemental is summoned, and the gem ceases to be magical. The elemental appears in an unoccupied space as close to the broken gem as possible, understands your languages, obeys your commands, and takes its turn immediately after you on your Initiative count. The elemental disappears after 1 hour, when it dies, or when you dismiss it as a Bonus Action."
     },
     {
@@ -47299,7 +47297,6 @@
       "type": "Wondrous",
       "rarity": "uncommon",
       "magical": true,
-      "equippable": true,
       "description": "This gem contains a mote of elemental energy. When you take a Utilize action to break the gem, a Water Elemental is summoned, and the gem ceases to be magical. The elemental appears in an unoccupied space as close to the broken gem as possible, understands your languages, obeys your commands, and takes its turn immediately after you on your Initiative count. The elemental disappears after 1 hour, when it dies, or when you dismiss it as a Bonus Action."
     },
     {
@@ -47310,7 +47307,6 @@
       "type": "Wondrous",
       "rarity": "uncommon",
       "magical": true,
-      "equippable": true,
       "description": "This gem contains a mote of elemental energy. When you take a Utilize action to break the gem, a Fire Elemental is summoned, and the gem ceases to be magical. The elemental appears in an unoccupied space as close to the broken gem as possible, understands your languages, obeys your commands, and takes its turn immediately after you on your Initiative count. The elemental disappears after 1 hour, when it dies, or when you dismiss it as a Bonus Action."
     },
     {
@@ -47321,7 +47317,6 @@
       "type": "Wondrous",
       "rarity": "uncommon",
       "magical": true,
-      "equippable": true,
       "description": "This gem contains a mote of elemental energy. When you take a Utilize action to break the gem, an Earth Elemental is summoned, and the gem ceases to be magical. The elemental appears in an unoccupied space as close to the broken gem as possible, understands your languages, obeys your commands, and takes its turn immediately after you on your Initiative count. The elemental disappears after 1 hour, when it dies, or when you dismiss it as a Bonus Action."
     },
     {
@@ -70610,8 +70605,7 @@
       "rarity": "common",
       "weight": 5,
       "value": 0.2,
-      "description": "A Waterskin holds up to 4 pints. If you don't drink sufficient water, you risk dehydration.",
-      "container": true
+      "description": "A Waterskin holds up to 4 pints. If you don't drink sufficient water, you risk dehydration."
     },
     {
       "id": "i_weavers_tools",

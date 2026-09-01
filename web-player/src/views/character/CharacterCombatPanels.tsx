@@ -10,6 +10,7 @@ import {
 } from "@/domain/character/parseFeatureEffects";
 import { IconInitiative, IconShield, IconSpeed } from "@/icons";
 import { CollapsiblePanel, Tooltip } from "@/views/character/CharacterViewParts";
+import { PANEL_IDS } from "@/views/character/panelRegistry";
 import { abilityMod, formatModifier } from "@/views/character/CharacterSheetUtils";
 import { getExhaustedSpeed, getExhaustionD20Penalty, hasExhaustionAttackAndSaveDisadvantage } from "@/views/character/CharacterExhaustion";
 import {
@@ -89,7 +90,7 @@ function PassiveDamageRow({
   typeLabel: string;
 }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+    <div className="character-hover-row" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
       <div>
         <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text }}>{name}</div>
         <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{subtitle}</div>
@@ -197,7 +198,7 @@ export function CharacterCombatPanels({
       {showStats && <CollapsiblePanel
         title="Combat Stats"
         color={accentColor}
-        storageKey="combat-stats"
+        storageKey={PANEL_IDS.combatStats}
         summary={`AC ${effectiveAc} · Init ${formatModifier(initiativeBonus)} · ${displaySpeed} ft${exhaustion > 0 ? " (exhausted)" : ""} · PP ${passivePerc}`}
         embedded={embeddedStats}
       >
@@ -294,7 +295,7 @@ export function CharacterCombatPanels({
       {showActions && <CollapsiblePanel
         title="Actions"
         color={accentColor}
-        storageKey="actions"
+        storageKey={PANEL_IDS.actions}
         summary={`${actionItems.length + 1} attack${actionItems.length === 0 ? "" : "s"}`}
       >
         {onToggleReaction ? (
@@ -392,7 +393,7 @@ export function CharacterCombatPanels({
             const modeLabel = attackState === "mainhand-2h" ? "2H" : attackState === "offhand" ? "Offhand" : null;
 
             return (
-              <div key={`${it.id}:${attackState}`} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+              <div key={`${it.id}:${attackState}`} className="character-hover-row" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     <span style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.name}</span>

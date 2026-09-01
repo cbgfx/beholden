@@ -7,15 +7,17 @@ import { IconButton } from "@/ui/IconButton";
 import { api } from "@/services/api";
 import { CharacterHudXpPopup } from "@/views/character/CharacterHudXpPopup";
 import { stripEditionTag } from "@/views/character/CharacterViewHelpers";
+import { CharacterViewSwitcher } from "@/views/character/CharacterViewSwitcher";
+import type { SheetViewDef } from "@/views/character/panelRegistry";
 
-export type SheetView = "play" | "gear" | "reference" | "all";
-
-export const SHEET_VIEWS: { id: SheetView; label: string; description: string }[] = [
-  { id: "play", label: "Combat", description: "Character, actions, and upkeep" },
-  { id: "gear", label: "Gear", description: "Character and inventory" },
-  { id: "reference", label: "Reference", description: "Character, notes, and features" },
-  { id: "all", label: "All", description: "The complete four-column sheet" },
-];
+function IconEditCrayon({ size = 16 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+      <path d="M15 5l4 4" />
+    </svg>
+  );
+}
 
 function IconCharacterInfo({ size = 16 }: { size?: number }) {
   return (
@@ -45,8 +47,12 @@ export function CharacterSheetHeader(props: {
   onOpenEngagedEnemies: () => void;
   showEngagedEnemies: boolean;
   inCombat: boolean;
-  sheetView: SheetView;
-  onSheetViewChange: (view: SheetView) => void;
+  sheetViews: SheetViewDef[];
+  activeViewId: string;
+  onSelectView: (id: string) => void;
+  onCreateView: () => void;
+  layoutEditMode: boolean;
+  onToggleLayoutEditMode: () => void;
   activeBastion: { id: string; name: string; campaignId: string } | null;
   xpEarned: number;
   xpNeeded: number;
@@ -70,8 +76,12 @@ export function CharacterSheetHeader(props: {
     onOpenEngagedEnemies,
     showEngagedEnemies,
     inCombat,
-    sheetView,
-    onSheetViewChange,
+    sheetViews,
+    activeViewId,
+    onSelectView,
+    onCreateView,
+    layoutEditMode,
+    onToggleLayoutEditMode,
     activeBastion,
     xpEarned,
     xpNeeded,
@@ -181,30 +191,23 @@ export function CharacterSheetHeader(props: {
       </div>
 
       <div style={{ flex: 1 }} />
-      <div style={{ display: "flex", alignItems: "center", gap: 3, padding: 3, borderRadius: 9, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-        {SHEET_VIEWS.map((view) => {
-          const selected = sheetView === view.id;
-          return (
-            <button
-              key={view.id}
-              type="button"
-              aria-pressed={selected}
-              title={view.description}
-              onClick={() => onSheetViewChange(view.id)}
-              style={{
-                appearance: "none", cursor: "pointer", boxSizing: "border-box",
-                border: 0, fontFamily: "inherit", padding: "5px 13px", borderRadius: 7,
-                color: selected ? "#eaf7ff" : C.muted,
-                background: selected ? `${accentColor}24` : "transparent",
-                boxShadow: selected ? `inset 0 0 0 1px ${accentColor}55` : "none",
-                fontSize: "var(--fs-small)", fontWeight: selected ? 800 : 650,
-                transition: "background 120ms ease, color 120ms ease, box-shadow 120ms ease",
-              }}
-            >
-              {view.label}
-            </button>
-          );
-        })}
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <CharacterViewSwitcher
+          sheetViews={sheetViews}
+          activeViewId={activeViewId}
+          accentColor={accentColor}
+          onSelectView={onSelectView}
+          onCreateView={onCreateView}
+        />
+        {layoutEditMode ? (
+          <Button variant="ghost" title="Done editing layout" onClick={onToggleLayoutEditMode} style={{ height: 32, padding: "0 14px", fontSize: "var(--fs-small)", fontWeight: 800, color: accentColor, borderColor: withAlpha(accentColor, 0.5), background: withAlpha(accentColor, 0.14) }}>
+            Done
+          </Button>
+        ) : (
+          <IconButton onClick={onToggleLayoutEditMode} title="Customize this view's layout">
+            <IconEditCrayon size={16} />
+          </IconButton>
+        )}
       </div>
 
       <div style={{ flex: 1 }} />

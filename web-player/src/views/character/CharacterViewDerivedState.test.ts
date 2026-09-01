@@ -225,14 +225,23 @@ describe("buildCharacterViewDerivedState", () => {
     expect(buildCharacterViewDerivedState(args).scores.str).toBe(12);
   });
 
-  it("applies a valid manual override after feat and item calculations", () => {
+  it("applies Permanent Buffs ability score overrides as a bonus stacked on top of feats and items, not a replacement", () => {
     const args = buildArgs();
-    if (args.char.overrides) args.char.overrides.abilityScores = { str: 20, con: 18 };
+    // Without the buff: str 19 (gauntlets), con 16 (15 base + Durable's +1).
+    if (args.char.overrides) args.char.overrides.abilityScores = { str: 1, con: 2 };
 
     const state = buildCharacterViewDerivedState(args);
     expect(state.scores.str).toBe(20);
     expect(state.scores.con).toBe(18);
     expect(state.effectiveHpMax).toBe(63);
+  });
+
+  it("clamps a Permanent Buffs ability score bonus to the 1-30 range", () => {
+    const args = buildArgs();
+    if (args.char.overrides) args.char.overrides.abilityScores = { str: 100 };
+
+    const state = buildCharacterViewDerivedState(args);
+    expect(state.scores.str).toBe(30);
   });
 
   it("adds a magic shield's and magic armor's enchantment bonus from compendium modifiers, not a flat guess", () => {

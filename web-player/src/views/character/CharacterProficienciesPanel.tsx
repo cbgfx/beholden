@@ -1,6 +1,7 @@
 import React from "react";
 import { C } from "@/lib/theme";
 import { CollapsiblePanel, Tooltip } from "@/views/character/CharacterViewParts";
+import { PANEL_IDS } from "@/views/character/panelRegistry";
 import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 import { formatWeaponProficiencyName } from "@/views/character/CharacterInventory";
 import { ALL_LANGUAGES, ALL_TOOLS } from "@/views/character-creator/constants/CharacterCreatorConstants";
@@ -47,7 +48,7 @@ export function CharacterProficienciesPanel({
     <CollapsiblePanel
       title="Proficiencies &amp; Languages"
       color={accentColor}
-      storageKey="proficiencies"
+      storageKey={PANEL_IDS.proficiencies}
       summary={`${allToolNames.length} tools · ${allLanguageNames.length} languages`}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

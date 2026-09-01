@@ -5,6 +5,7 @@ import { CharacterCreaturePickerModal } from "@/views/character/CharacterCreatur
 import { useCompendiumMonster } from "@/views/character/CharacterCompendiumMonsterHooks";
 import { creatureAcPill, creatureHpPill, formatCreatureMonsterSource } from "@/views/character/CharacterCreaturesHelpers";
 import { CollapsiblePanel, PanelHeaderAddButton } from "@/views/character/CharacterViewParts";
+import { PANEL_IDS } from "@/views/character/panelRegistry";
 import type { CharacterCreature, CharacterData } from "@/views/character/CharacterSheetTypes";
 import { IconButton } from "@/ui/IconButton";
 
@@ -61,7 +62,7 @@ export function CharacterCreaturesPanel(props: {
       <CollapsiblePanel
         title={<>Creatures ({creatures.length})</>}
         color={props.accentColor}
-        storageKey="creatures"
+        storageKey={PANEL_IDS.creatures}
         summary={orderedCreatures.length > 0 ? orderedCreatures.map((creature) => creature.name).join(", ") : "None"}
         actions={
           <PanelHeaderAddButton color={props.accentColor} onClick={() => setPickerOpen(true)} title="Add creature" />
@@ -78,6 +79,7 @@ export function CharacterCreaturesPanel(props: {
               return (
                 <div
                   key={creature.id}
+                  className="character-hover-row"
                   role="button"
                   tabIndex={0}
                   onClick={() => setSelectedCreatureId(creature.id)}

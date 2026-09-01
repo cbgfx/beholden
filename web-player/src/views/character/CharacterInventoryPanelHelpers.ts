@@ -25,10 +25,27 @@ function defaultContainer(): InventoryContainer {
   return { id: DEFAULT_CONTAINER_ID, name: "Backpack", ignoreWeight: false };
 }
 
-export function normalizeContainers(containers: InventoryContainer[] | null | undefined): InventoryContainer[] {
+export function normalizeContainers(containers: InventoryContainer[] | null | undefined, items?: InventoryItem[]): InventoryContainer[] {
   const list = Array.isArray(containers) ? containers.filter(Boolean) : [];
-  const hasDefault = list.some((container) => container.id === DEFAULT_CONTAINER_ID);
-  const next = hasDefault ? list : [defaultContainer(), ...list];
+  const referencedIds = new Set((items ?? []).map((item) => item.containerId).filter(Boolean));
+  // Older compendium data incorrectly marked Waterskin as a container. Heal at
+  // most one empty generated section per uncontained compendium Waterskin item;
+  // a merely empty user-created container named Waterskin must survive.
+  let legacyWaterskinsToHeal = (items ?? []).filter((item) => (
+    !item.containerId
+    && (item.itemId === "i_waterskin"
+      || (item.source === "compendium" && /^waterskin$/i.test(String(item.name ?? "").trim())))
+  )).length;
+  const healed = items ? list.filter((container) => {
+    const isLegacyCandidate = legacyWaterskinsToHeal > 0
+      && container.id !== DEFAULT_CONTAINER_ID
+      && /^waterskin$/i.test(String(container.name ?? "").trim())
+      && !referencedIds.has(container.id);
+    if (isLegacyCandidate) legacyWaterskinsToHeal -= 1;
+    return !isLegacyCandidate;
+  }) : list;
+  const hasDefault = healed.some((container) => container.id === DEFAULT_CONTAINER_ID);
+  const next = hasDefault ? healed : [defaultContainer(), ...healed];
   return next.map((container) => ({
     id: container.id,
     name: String(container.name ?? "").trim() || (container.id === DEFAULT_CONTAINER_ID ? "Backpack" : "Container"),

@@ -6,8 +6,15 @@ import type {
 import type { InventoryContainer, InventoryItem } from "@/views/character/CharacterInventory";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import type { CharacterClassEntry as SharedCharacterClassEntry } from "@beholden/shared/domain/characterClasses";
+import type { SheetViewDef } from "@/views/character/panelRegistry";
 
 export type AbilKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
+
+export interface CharacterCounter {
+  id: string;
+  title: string;
+  numCount: number;
+}
 
 export interface TaggedItem {
   name: string;
@@ -168,6 +175,7 @@ export interface CharacterData {
   inventoryContainers?: InventoryContainer[];
   creatures?: CharacterCreature[];
   playerNotesList?: PlayerNote[];
+  counters?: CharacterCounter[];
   usedSpellSlots?: Record<string, number>;
   preparedSpells?: string[];
   customResistances?: string[];
@@ -182,5 +190,8 @@ export interface CharacterData {
   acquisitionLevels?: Record<string, number | null>;
   exhaustion?: number;
   concentrationSpell?: string | null;
+  /** The character's customizable sheet views (Combat/Gear/Reference/All by
+   * default, plus any the player creates). See panelRegistry.ts. */
+  sheetViews?: SheetViewDef[];
 }
 

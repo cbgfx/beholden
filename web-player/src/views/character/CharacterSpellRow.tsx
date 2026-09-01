@@ -66,7 +66,7 @@ export function CharacterSpellRow({
   const usesAtk = spellUsesAttack(d);
 
   return (
-    <div style={{
+    <div className="character-hover-row" style={{
       display: "grid",
       gridTemplateColumns: spellRowGrid,
       alignItems: "center", gap: "0 8px",

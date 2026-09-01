@@ -2,6 +2,7 @@ import React from "react";
 import { api } from "@/services/api";
 import { C } from "@/lib/theme";
 import { CollapsiblePanel, PanelHeaderAddButton } from "@/views/character/CharacterViewParts";
+import { PANEL_IDS } from "@/views/character/panelRegistry";
 import type { ConditionInstance, GrantedSpellCast, ResourceCounter } from "@/views/character/CharacterSheetTypes";
 import type { ClassRestDetail } from "@/views/character/SpellSlotsPanel";
 import { normalizeAbilityKey, normalizeSpellTrackingKey, normalizeSpellTrackingName } from "@/views/character/CharacterSheetUtils";
@@ -299,7 +300,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
   }, [addSpellOpen, spellSearch, ruleset]);
 
   return (<>
-    <CollapsiblePanel title="Spells" color={accentColor} storageKey="spells" actions={
+    <CollapsiblePanel title="Spells" color={accentColor} storageKey={PANEL_IDS.spells} actions={
       onAddSpell ? <PanelHeaderAddButton color={accentColor} onClick={() => setAddSpellOpen(true)} title="Add spell" /> : undefined
     }>
       {classSpellcastingStates.length > 1 ? (
@@ -376,6 +377,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
           entries={specialGrantedEntries}
           details={details}
           resources={resources}
+          accentColor={accentColor}
           collapsed={Boolean(collapsedSections.granted)}
           onToggleCollapse={() => toggleSection("granted")}
           onSelectSpell={(detail, source) => setSelectedSpell({ detail, source, rawName: detail.name, removable: false })}

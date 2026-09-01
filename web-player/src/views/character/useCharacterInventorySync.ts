@@ -46,7 +46,7 @@ export function useCharacterInventorySync({
   const [items, setItems] = useState<InventoryItem[]>(() =>
     (inventory ?? []).map((item) => ({ ...item, equipState: getEquipState(item), properties: item.properties ?? [] }))
   );
-  const [containers, setContainers] = useState(() => normalizeContainers(inventoryContainers));
+  const [containers, setContainers] = useState(() => normalizeContainers(inventoryContainers, inventory));
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [itemIndex, setItemIndex] = useState<ItemSummaryRow[]>([]);
@@ -120,7 +120,13 @@ export function useCharacterInventorySync({
       properties: item.properties ?? [],
     })));
   }, [inventory]);
-  useEffect(() => setContainers(normalizeContainers(inventoryContainers)), [inventoryContainers]);
+  useEffect(() => {
+    const normalized = normalizeContainers(inventoryContainers, inventory);
+    setContainers(normalized);
+    if (JSON.stringify(normalized) !== JSON.stringify(inventoryContainers ?? [])) {
+      void onSave({ inventory: inventory ?? [], inventoryContainers: normalized });
+    }
+  }, [inventory, inventoryContainers, onSave]);
 
   useEffect(() => {
     const ids = Array.from(new Set(items.map((item) => String(item.itemId ?? "").trim()).filter(Boolean))).sort();

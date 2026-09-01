@@ -228,6 +228,12 @@ describe("character inventory calculations", () => {
 });
 
 describe("mergeCatalogItem", () => {
+  it("unequips a linked non-wearable item when the catalog corrects stale equippable data", () => {
+    const stored = item({ source: "compendium", itemId: "i_bag_of_holding", equippable: true, equipped: true, equipState: "worn" });
+    const catalog = summary({ id: "i_bag_of_holding", name: "Bag of Holding", equippable: false });
+    expect(mergeCatalogItem(stored, catalog, null)).toMatchObject({ equippable: false, equipped: false, equipState: "backpack" });
+  });
+
   it("overwrites a stale stored value with the current catalog fact for a catalog-linked item", () => {
     // Reproduces the real bug: a Longbow +1 saved before the item's typed-modifiers migration
     // landed had `modifiers: undefined` frozen on the character forever — the old healing effect

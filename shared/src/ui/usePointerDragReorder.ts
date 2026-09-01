@@ -11,6 +11,7 @@ export function usePointerDragReorder<T extends { id: string }>(
   const { items, onReorder } = options;
   const [dragId, setDragId] = React.useState<string | null>(null);
   const [orderIds, setOrderIds] = React.useState<string[] | null>(null);
+  const [pointerPos, setPointerPos] = React.useState<{ x: number; y: number } | null>(null);
 
   const orderIdsRef = React.useRef<string[] | null>(null);
   React.useEffect(() => {
@@ -80,11 +81,13 @@ export function usePointerDragReorder<T extends { id: string }>(
     const ids = items.map((item) => item.id);
     setOrderIds(ids);
     orderIdsRef.current = ids;
+    setPointerPos({ x: e.clientX, y: e.clientY });
     dragStateRef.current = { startY: e.clientY, lastOverId: null, changed: false };
   }, [items]);
 
   const onHandlePointerMove = React.useCallback((e: React.PointerEvent) => {
     if (!dragId || !dragStateRef.current) return;
+    setPointerPos({ x: e.clientX, y: e.clientY });
     const state = dragStateRef.current;
     if (Math.abs(e.clientY - state.startY) < 6) return;
     const overId = findOverId(e.clientY, dragId);
@@ -102,6 +105,7 @@ export function usePointerDragReorder<T extends { id: string }>(
 
     setDragId(null);
     setOrderIds(null);
+    setPointerPos(null);
     orderIdsRef.current = null;
 
     if (shouldCommit) onReorder(ids);
@@ -111,6 +115,7 @@ export function usePointerDragReorder<T extends { id: string }>(
     dragId,
     displayItems,
     rowRefs,
+    pointerPos,
     onHandlePointerDown,
     onHandlePointerMove,
     endDrag,

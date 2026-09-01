@@ -251,10 +251,14 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
     const next = { ...itemAdjustedScores };
     const abilityScores = overrides.abilityScores;
     if (!abilityScores || typeof abilityScores !== "object") return next;
+    // Permanent Buffs is a bonus stacked on top of the score (like AC/HP max
+    // bonus), not a replacement -- a +2 buff on an 18 should read 20, not
+    // silently reset a magic-item-adjusted score down to 2.
     for (const ability of Object.keys(next) as AbilKey[]) {
-      const value = Math.floor(Number(abilityScores[ability]));
-      if (!Number.isFinite(value) || value < 1 || value > 30) continue;
-      next[ability] = value;
+      const base = next[ability];
+      const bonus = Math.floor(Number(abilityScores[ability]));
+      if (base == null || !Number.isFinite(bonus) || bonus === 0) continue;
+      next[ability] = Math.max(1, Math.min(30, base + bonus));
     }
     return next;
   })();

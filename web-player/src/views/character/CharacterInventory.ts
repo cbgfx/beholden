@@ -49,7 +49,7 @@ export function mergeCatalogItem(item: InventoryItem, summary: ItemSummaryRow, c
   const resolvedCharges = item.charges == null
     ? resolvedChargesMax
     : resolvedChargesMax == null ? item.charges : Math.min(item.charges, resolvedChargesMax);
-  return {
+  const merged: InventoryItem = {
     ...item,
     name: item.source === "custom"
       ? item.name
@@ -82,6 +82,14 @@ export function mergeCatalogItem(item: InventoryItem, summary: ItemSummaryRow, c
     chargesMax: resolvedChargesMax,
     charges: resolvedCharges,
   };
+  const catalogDisablesWearing = isLinked
+    && summary.equippable === false
+    && !isWeaponItem(merged)
+    && !isArmorItem(merged)
+    && !isShieldItem(merged);
+  return catalogDisablesWearing && getEquipState(merged) === "worn"
+    ? { ...merged, equipped: false, equipState: "backpack" }
+    : merged;
 }
 
 /** Returns the mastery assignment authored on the canonical weapon record. */

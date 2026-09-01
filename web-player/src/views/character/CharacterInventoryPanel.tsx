@@ -31,6 +31,7 @@ import { InventoryPartyStashSection } from "@/views/character/CharacterInventory
 import { InventoryItemPickerModal } from "@/views/character/CharacterInventoryPickerModal";
 import { resolvePactBoonFromChosenOptionals } from "@/views/character/CharacterSheetUtils";
 import { CollapsiblePanel } from "@/views/character/CharacterViewParts";
+import { PANEL_IDS } from "@/views/character/panelRegistry";
 import { useCharacterInventoryContainers } from "@/views/character/useCharacterInventoryContainers";
 import { useCharacterInventoryItems } from "@/views/character/useCharacterInventoryItems";
 import { useCharacterInventorySync } from "@/views/character/useCharacterInventorySync";
@@ -97,7 +98,7 @@ export function InventoryPanel({
       <CollapsiblePanel
         title={<>Inventory{sync.saving && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginLeft: 6, fontWeight: 400, textTransform: "none" }}>saving…</span>}</>}
         color={accentColor}
-        storageKey="inventory"
+        storageKey={PANEL_IDS.inventory}
         summary={`${sync.items.length} items · ${Math.round(derived.carriedWeight * 10) / 10} / ${derived.carryCapacity} lb`}
       >
         <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, paddingBottom: 10, marginBottom: 10, borderBottom: `1px solid ${C.panelBorder}` }}>

@@ -71,7 +71,7 @@ export function PartyStashItemRow({ item, onOpen, onTake, onDelete, onQuantity }
               }}
             />
             <Button className="character-row-action" variant="ghost" onClick={onTake} title="Take - moves item to your backpack" style={{ borderRadius: 6, fontSize: "var(--fs-tiny)", fontWeight: 700, padding: "3px 8px", flexShrink: 0 }}>Take</Button>
-            <Button className="character-row-action" variant="danger" onClick={onDelete} title="Remove from stash" style={{ borderRadius: 6, fontSize: 16, padding: "0 8px", flexShrink: 0, lineHeight: 1.8 }}>x</Button>
+            <button className="character-row-action" onClick={onDelete} title="Remove from stash" style={{ background: "none", border: "none", cursor: "pointer", color: "rgb(248,113,113)", fontSize: 16, padding: "0 2px", flexShrink: 0, lineHeight: 1 }}>×</button>
           </div>
         )}
       />
@@ -156,7 +156,7 @@ export function ItemRow({ item, accentColor, proficiencies, parsedFeatureEffects
             onIncrement={canEquipItem ? undefined : () => onQty(item.id, 1)}
             buttonClassName="character-row-action"
           />
-          <Button className="character-row-action" variant="danger" onClick={() => onRemove(item.id)} title="Remove" style={{ borderRadius: 6, fontSize: "var(--fs-body)", padding: "0 8px", lineHeight: 1.8, flexShrink: 0 }}>x</Button>
+          <button className="character-row-action" onClick={() => onRemove(item.id)} title="Remove" style={{ background: "transparent", border: "none", color: "rgb(248,113,113)", cursor: "pointer", fontSize: "var(--fs-body)", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>×</button>
         </>
       )}
       padding="4px 2px"

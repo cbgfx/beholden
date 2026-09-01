@@ -24,6 +24,7 @@ export function CharacterSpellsGrantedSection({
   entries,
   details,
   resources,
+  accentColor,
   collapsed,
   onToggleCollapse,
   onSelectSpell,
@@ -32,6 +33,7 @@ export function CharacterSpellsGrantedSection({
   entries: GrantedSpellEntry[];
   details: Record<string, FetchedSpellDetail>;
   resources: ResourceCounter[];
+  accentColor: string;
   collapsed: boolean;
   onToggleCollapse: () => void;
   onSelectSpell: (detail: FetchedSpellDetail, source: string) => void;
@@ -43,11 +45,11 @@ export function CharacterSpellsGrantedSection({
       <button
         type="button"
         onClick={onToggleCollapse}
-        style={spellSectionHeaderBtn("rgba(96,165,250,0.25)")}
+        style={spellSectionHeaderBtn(`${accentColor}44`)}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span aria-hidden="true" style={spellSectionArrow(collapsed, C.colorRitual)}>▼</span>
-          <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, color: C.colorRitual, textTransform: "uppercase", letterSpacing: 1 }}>
+          <span aria-hidden="true" style={spellSectionArrow(collapsed, accentColor)}>▼</span>
+          <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, color: accentColor, textTransform: "uppercase", letterSpacing: 1 }}>
             Granted Spells
           </div>
         </div>
@@ -58,6 +60,7 @@ export function CharacterSpellsGrantedSection({
         return (
           <div
             key={`${entry.grantKey}:${entry.mode}:${entry.sourceName}:${index}`}
+            className="character-hover-row"
             style={{
               display: "grid",
               gridTemplateColumns: "1fr auto",
