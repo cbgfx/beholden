@@ -47,6 +47,7 @@ export function CharacterSheetHeader(props: {
   onOpenEngagedEnemies: () => void;
   showEngagedEnemies: boolean;
   inCombat: boolean;
+  isMyTurn: boolean;
   sheetViews: SheetViewDef[];
   activeViewId: string;
   onSelectView: (id: string) => void;
@@ -76,6 +77,7 @@ export function CharacterSheetHeader(props: {
     onOpenEngagedEnemies,
     showEngagedEnemies,
     inCombat,
+    isMyTurn,
     sheetViews,
     activeViewId,
     onSelectView,
@@ -186,6 +188,29 @@ export function CharacterSheetHeader(props: {
             }}
           >
             IN COMBAT
+          </span>
+        )}
+        {isMyTurn && (
+          <span
+            aria-label="It is your turn"
+            style={{
+              height: 32,
+              padding: "0 11px",
+              borderRadius: 8,
+              border: `1px solid ${withAlpha(C.green, 0.58)}`,
+              background: withAlpha(C.green, 0.14),
+              color: C.green,
+              display: "inline-flex",
+              alignItems: "center",
+              fontSize: "var(--fs-small)",
+              fontWeight: 900,
+              letterSpacing: "0.09em",
+              whiteSpace: "nowrap",
+              boxShadow: `0 0 18px ${withAlpha(C.green, 0.2)}`,
+              flexShrink: 0,
+            }}
+          >
+            YOUR TURN
           </span>
         )}
       </div>

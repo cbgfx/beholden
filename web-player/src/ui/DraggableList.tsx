@@ -1,5 +1,6 @@
 import React from "react";
 import { usePointerDragReorder } from "@beholden/shared/ui/usePointerDragReorder";
+import { DragHandleGrip, DragGhostCard } from "@beholden/shared/ui";
 import { C } from "@/lib/theme";
 
 export type DragItem = { id: string };
@@ -70,29 +71,7 @@ export function DraggableList(props: {
                   color: C.muted,
                 }}
               >
-                <span
-                  aria-hidden
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(2, 3px)",
-                    gridAutoRows: "3px",
-                    gap: 2,
-                    opacity: 0.85,
-                  }}
-                >
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <span
-                      key={`grip-dot-${i}`}
-                      style={{
-                        width: 3,
-                        height: 3,
-                        borderRadius: "50%",
-                        background: C.muted,
-                        display: "block",
-                      }}
-                    />
-                  ))}
-                </span>
+                <DragHandleGrip color={C.muted} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>{props.renderItem(it)}</div>
             </div>
@@ -100,27 +79,14 @@ export function DraggableList(props: {
         );
       })}
       {draggedItem && drag.pointerPos && (
-        <div
-          aria-hidden
-          style={{
-            position: "fixed",
-            left: drag.pointerPos.x + 14,
-            top: drag.pointerPos.y + 10,
-            zIndex: 1000,
-            pointerEvents: "none",
-            transform: "rotate(-2deg)",
-            width: 280,
-            maxWidth: "80vw",
-            padding: "6px 10px",
-            borderRadius: 8,
-            border: `1px solid ${C.panelBorder}`,
-            background: "rgba(18,24,40,0.97)",
-            boxShadow: "0 12px 28px rgba(0,0,0,0.5)",
-            opacity: 0.95,
-          }}
+        <DragGhostCard
+          x={drag.pointerPos.x}
+          y={drag.pointerPos.y}
+          borderColor={C.panelBorder}
+          style={{ width: 280, maxWidth: "80vw", padding: "6px 10px", opacity: 0.95 }}
         >
           {props.renderItem(draggedItem)}
-        </div>
+        </DragGhostCard>
       )}
     </div>
   );

@@ -41570,7 +41570,8 @@
       "modifiers": [
         {
           "target": "ranged_damage",
-          "amount": 2
+          "amount": 2,
+          "weaponNames": ["Longbow", "Shortbow"]
         }
       ],
       "description": "While wearing these bracers, you have proficiency with the Longbow and Shortbow, and you gain a +2 bonus to damage rolls made with such weapons."
@@ -41588,7 +41589,9 @@
       "modifiers": [
         {
           "target": "ac",
-          "amount": 2
+          "amount": 2,
+          "requiresNoArmor": true,
+          "requiresNoShield": true
         }
       ],
       "description": "While wearing these bracers, you gain a +2 bonus to Armor Class if you are wearing no armor and using no Shield."
@@ -62377,10 +62380,6 @@
       },
       "modifiers": [
         {
-          "target": "ac",
-          "amount": 5
-        },
-        {
           "target": "melee_attacks",
           "amount": 2
         },
@@ -64107,16 +64106,6 @@
       "attunement": true,
       "equippable": true,
       "weight": 2,
-      "modifiers": [
-        {
-          "target": "ac",
-          "amount": 1
-        },
-        {
-          "target": "saving_throws",
-          "amount": 1
-        }
-      ],
       "description": "This rod has the following properties.\n\nAlertness: While holding the rod, you have Advantage on Wisdom (Perception) checks and on Initiative rolls.\n\nSpells: While holding the rod, you can cast the following spells from it:\n\n\t• Detect Evil and Good\n\t• Detect Magic\n\t• Detect Poison and Disease\n\t• See Invisibility\n\nProtective Aura: As a Magic action, you can plant the haft end of the rod in the ground, whereupon the rod's head sheds Bright Light in a 60-foot radius and Dim Light for an additional 60 feet. While in that Bright Light, you and your allies gain a +1 bonus to Armor Class and saving throws and can sense the location of any Invisible creature that is also in the Bright Light.\n\tThe rod's head stops glowing and the effect ends after 10 minutes or when a creature takes a Magic action to pull the rod from the ground. Once used, this property can't be used again until the next dawn.",
       "spells": {
         "s_detect_evil_and_good": 0,

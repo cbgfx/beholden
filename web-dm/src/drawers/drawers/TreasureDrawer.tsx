@@ -76,7 +76,7 @@ interface CompendiumItem {
   dmg2?: string | null;
   dmgType?: string | null;
   properties?: string[];
-  modifiers?: Array<{ target?: string; amount?: number }>;
+  modifiers?: Array<{ target?: string; amount?: number; weaponNames?: string[] }>;
 }
 
 function Tag({ label, color }: { label: string; color: string }) {

@@ -288,11 +288,15 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
       const conditions = expireConditionsAtRound(combatant.conditions, state.round);
       const conditionsChanged = conditions.length !== combatant.conditions.length;
       const enteringTurn = combatant.id === turnAdvancedTo;
-      if (!conditionsChanged && !(enteringTurn && combatant.usedReaction)) continue;
+      // Legendary actions (not resistances -- those recharge on a long rest,
+      // not each turn) are regained at the start of the legendary creature's
+      // own turn, same trigger as the reaction reset just below.
+      const hasSpentLegendaryActions = (combatant.usedLegendaryActions ?? 0) > 0;
+      if (!conditionsChanged && !(enteringTurn && (combatant.usedReaction || hasSpentLegendaryActions))) continue;
       // applyCombatantTransition re-forces usedReaction back to true if the combatant is (still)
       // incapacitated, so requesting false here is safe even for a downed combatant.
       const next = applyCombatantTransition(
-        { ...combatant, conditions, ...(enteringTurn ? { usedReaction: false } : {}), updatedAt: t },
+        { ...combatant, conditions, ...(enteringTurn ? { usedReaction: false, usedLegendaryActions: 0 } : {}), updatedAt: t },
         combatant,
       );
       const ended = detectEndedConcentration(next.id, combatant.conditions, next.conditions);

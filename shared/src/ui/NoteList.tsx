@@ -1,5 +1,7 @@
 import { NoteRow } from "./NoteRow";
 import { usePointerDragReorder } from "./usePointerDragReorder";
+import { DragHandleGrip } from "./DragHandleGrip";
+import { DragGhostCard } from "./DragGhostCard";
 
 export type NoteListItem = {
   id: string;
@@ -82,29 +84,7 @@ export function NoteList(props: {
                   flex: "0 0 auto",
                 }}
               >
-                <span
-                  aria-hidden
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(2, 3px)",
-                    gridAutoRows: "3px",
-                    gap: 2,
-                    opacity: 0.85,
-                  }}
-                >
-                  {Array.from({ length: 6 }).map((_, index) => (
-                    <span
-                      key={`grip-dot-${item.id}-${index}`}
-                      style={{
-                        width: 3,
-                        height: 3,
-                        borderRadius: "50%",
-                        background: props.mutedColor,
-                        display: "block",
-                      }}
-                    />
-                  ))}
-                </span>
+                <DragHandleGrip color={props.mutedColor} />
               </button>
             ) : null}
 
@@ -126,30 +106,13 @@ export function NoteList(props: {
         );
       })}
       {draggedItem && drag.pointerPos && (
-        <div
-          aria-hidden
-          style={{
-            position: "fixed",
-            left: drag.pointerPos.x + 14,
-            top: drag.pointerPos.y + 10,
-            zIndex: 1000,
-            pointerEvents: "none",
-            transform: "rotate(-2deg)",
-            maxWidth: 280,
-            padding: "8px 14px",
-            borderRadius: 8,
-            border: "1px solid rgba(255,255,255,0.22)",
-            background: "rgba(18,24,40,0.97)",
-            boxShadow: "0 12px 28px rgba(0,0,0,0.5)",
-            fontWeight: 700,
-            color: props.textColor,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
+        <DragGhostCard
+          x={drag.pointerPos.x}
+          y={drag.pointerPos.y}
+          style={{ fontWeight: 700, color: props.textColor, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
         >
           {draggedItem.title || "Untitled"}
-        </div>
+        </DragGhostCard>
       )}
     </div>
   );

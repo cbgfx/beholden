@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { C, withAlpha } from "@/lib/theme";
-import { ghostButtonStyle } from "@beholden/shared/ui";
+import { C } from "@/lib/theme";
 import { patchPartyCurrency, type PartyCurrencyMap } from "@/services/inventoryApi";
 import { formatWeight } from "@/views/character/CharacterInventory";
 import { Button } from "@/ui/Button";
 import { PartyStashItemRow, type PartyStashItem } from "@/views/character/CharacterInventoryPanelRows";
 import { evaluateCurrencyInput } from "@/views/character/currencyMath";
+import { CURRENCY_CODES, currencyColor, currencyPillStyle } from "@/views/character/currencyPillStyles";
 
 const emptyContainerStyle = {
   padding: "8px 10px",
@@ -15,8 +15,6 @@ const emptyContainerStyle = {
   fontSize: "var(--fs-small)",
   background: "rgba(255,255,255,0.02)",
 };
-
-const CURRENCY_CODES = ["PP", "GP", "SP", "CP"] as const;
 
 export interface InventoryPartyStashSectionProps {
   stashItems: PartyStashItem[];
@@ -80,20 +78,10 @@ function PartyCurrencyBar({ currency, campaignId, onCurrencyChange, stashWeight,
           <button
             type="button"
             onClick={() => { setInput(String(currency[code])); setPopupCode((c) => c === code ? null : code); }}
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              ...ghostButtonStyle({
-                textColor: C.text,
-                borderColor: withAlpha(C.panelBorder, 0.5),
-                background: withAlpha(C.panelBorder, 0.14),
-                padding: "2px 10px",
-                fontSize: "var(--fs-small)",
-                borderRadius: 999,
-              }),
-            }}
+            style={currencyPillStyle(code)}
           >
-            <span style={{ color: C.muted, fontWeight: 700 }}>{code}</span>
-            <span style={{ fontWeight: 800, minWidth: 20, textAlign: "right" }}>{currency[code].toLocaleString()}</span>
+            <span style={{ color: currencyColor(code), fontWeight: 800 }}>{code}</span>
+            <span style={{ color: C.text, fontWeight: 800, minWidth: 20, textAlign: "right" }}>{currency[code].toLocaleString()}</span>
           </button>
           {popupCode === code && (
             <div style={{

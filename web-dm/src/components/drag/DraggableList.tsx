@@ -1,5 +1,6 @@
 import React from "react";
 import { usePointerDragReorder } from "@beholden/shared/ui/usePointerDragReorder";
+import { DragHandleGrip } from "@beholden/shared/ui";
 import { theme, withAlpha } from "@/theme/theme";
 
 export type DragItem = { id: string; title?: string; meta?: string };
@@ -85,29 +86,7 @@ export function DraggableList(props: {
                   flex: "0 0 auto",
                 }}
               >
-                <span
-                  aria-hidden
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(2, 3px)",
-                    gridAutoRows: "3px",
-                    gap: 2,
-                    opacity: 0.85,
-                  }}
-                >
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <span
-                      key={`grip-dot-${i}`}
-                      style={{
-                        width: 3,
-                        height: 3,
-                        borderRadius: "50%",
-                        background: theme.colors.muted,
-                        display: "block",
-                      }}
-                    />
-                  ))}
-                </span>
+                <DragHandleGrip color={theme.colors.muted} />
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>

@@ -37,7 +37,7 @@ export interface InventoryItem {
   dmgType?: string | null;
   properties?: string[];
   mastery?: string | null;
-  modifiers?: Array<{ target?: string; amount?: number }>;
+  modifiers?: Array<{ target?: string; amount?: number; weaponNames?: string[]; requiresNoArmor?: true; requiresNoShield?: true }>;
   description?: string;
   uses?: ItemUses | null;
   spells?: ItemSpells | null;
@@ -81,7 +81,7 @@ export interface InventoryPickerPayload {
   dmgType?: string | null;
   properties?: string[];
   mastery?: string | null;
-  modifiers?: Array<{ target?: string; amount?: number }>;
+  modifiers?: Array<{ target?: string; amount?: number; weaponNames?: string[]; requiresNoArmor?: true; requiresNoShield?: true }>;
   description?: string;
   uses?: ItemUses | null;
   spells?: ItemSpells | null;
@@ -159,7 +159,7 @@ export interface CompendiumItemDetail {
   dmgType: string | null;
   properties: string[];
   mastery?: string | null;
-  modifiers?: Array<{ target?: string; amount?: number }>;
+  modifiers?: Array<{ target?: string; amount?: number; weaponNames?: string[]; requiresNoArmor?: true; requiresNoShield?: true }>;
   text: string | string[];
   uses?: ItemUses | null;
   spells?: ItemSpells | null;
@@ -192,7 +192,7 @@ export interface ItemSummaryRow {
   dmgType?: string | null;
   properties?: string[];
   mastery?: string | null;
-  modifiers?: Array<{ target?: string; amount?: number }>;
+  modifiers?: Array<{ target?: string; amount?: number; weaponNames?: string[]; requiresNoArmor?: true; requiresNoShield?: true }>;
   uses?: ItemUses | null;
   spells?: ItemSpells | null;
   spellcasting?: ItemSpellcasting | null;

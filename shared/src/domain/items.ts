@@ -126,6 +126,9 @@ export type ItemModifierTarget =
 export interface ItemModifierEntry {
   target?: ItemModifierTarget | string | null;
   amount?: number | null;
+  weaponNames?: string[] | null;
+  requiresNoArmor?: true | null;
+  requiresNoShield?: true | null;
 }
 
 const ITEM_MODIFIER_LABELS: Record<ItemModifierTarget, string> = {
@@ -150,9 +153,12 @@ const ITEM_MODIFIER_LABELS: Record<ItemModifierTarget, string> = {
 export function itemModifierBonus(
   modifiers: readonly ItemModifierEntry[] | null | undefined,
   target: ItemModifierTarget,
+  context?: { armorEquipped: boolean; shieldEquipped: boolean },
 ): number {
   let total = 0;
   for (const modifier of modifiers ?? []) {
+    if (modifier?.requiresNoArmor && (context === undefined || context.armorEquipped)) continue;
+    if (modifier?.requiresNoShield && (context === undefined || context.shieldEquipped)) continue;
     if (modifier?.target === target && Number.isFinite(Number(modifier.amount))) {
       total += Number(modifier.amount);
     }
@@ -166,5 +172,8 @@ export function itemModifierLabel(modifier: ItemModifierEntry): string | null {
   const amount = Number(modifier?.amount);
   const label = ITEM_MODIFIER_LABELS[target];
   if (!label || !Number.isFinite(amount) || amount === 0) return null;
-  return `${label} ${amount > 0 ? "+" : ""}${amount}`;
+  const scope = modifier.weaponNames?.filter(Boolean).join(", ");
+  const requirements = [modifier.requiresNoArmor ? "no armor" : "", modifier.requiresNoShield ? "no Shield" : ""].filter(Boolean).join(", ");
+  const qualifier = [scope, requirements].filter(Boolean).join("; ");
+  return `${label} ${amount > 0 ? "+" : ""}${amount}${qualifier ? ` (${qualifier})` : ""}`;
 }

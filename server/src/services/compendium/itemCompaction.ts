@@ -5,10 +5,17 @@ function present<T>(value: T | null | undefined): value is T {
   return value !== null && value !== undefined;
 }
 
-function typedItemModifier(raw: unknown): Array<{ target: string; amount: number }> {
+function typedItemModifier(raw: unknown): Array<{ target: string; amount: number; weaponNames?: string[]; requiresNoArmor?: true; requiresNoShield?: true }> {
   const modifier = record(raw);
   if (typeof modifier.target === "string" && typeof modifier.amount === "number") {
-    return [{ target: modifier.target, amount: modifier.amount }];
+    const weaponNames = list(modifier.weaponNames).map(String).filter(Boolean);
+    return [{
+      target: modifier.target,
+      amount: modifier.amount,
+      ...(weaponNames.length ? { weaponNames } : {}),
+      ...(modifier.requiresNoArmor === true ? { requiresNoArmor: true } : {}),
+      ...(modifier.requiresNoShield === true ? { requiresNoShield: true } : {}),
+    }];
   }
   return [];
 }

@@ -242,9 +242,16 @@ export function syncCombatantToPlayer(
     db.prepare(`
       UPDATE user_characters
       SET character_data_json = json_set(COALESCE(character_data_json, '{}'), '$.sheetOverrides', json(?)),
+          death_saves_success = ?, death_saves_fail = ?,
           updated_at = ?
       WHERE id = ?
-    `).run(JSON.stringify(overrides), t, player.characterId);
+    `).run(
+      JSON.stringify(overrides),
+      combatant.deathSaves?.success ?? player.deathSaves?.success ?? null,
+      combatant.deathSaves?.fail ?? player.deathSaves?.fail ?? null,
+      t,
+      player.characterId,
+    );
   }
 
   return { campaignId: player.campaignId, characterId: player.characterId ?? null };

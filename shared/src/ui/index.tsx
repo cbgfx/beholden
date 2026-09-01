@@ -19,6 +19,8 @@ export { RulesSectionBox } from "./RulesSectionBox";
 export { EmptyState } from "./EmptyState";
 export { NoteRow, MarkdownRichText } from "./NoteRow";
 export { NoteList } from "./NoteList";
+export { DragHandleGrip } from "./DragHandleGrip";
+export { DragGhostCard } from "./DragGhostCard";
 export { NoteEditorFields } from "./NoteEditorFields";
 export { WysiwygNoteEditor } from "./WysiwygNoteEditor";
 export { NotesPanel } from "./NotesPanel";

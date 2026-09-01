@@ -5,19 +5,46 @@ import { theme, withAlpha } from "@/theme/theme";
 import { Button } from "@/ui/Button";
 import { IconButton } from "@/ui/IconButton";
 import { IconPencil } from "@/icons";
+import { fetchNoteById } from "@/services/collectionApi";
 
 export function AdventureNotesDrawer(props: { close: () => void }): DrawerContent {
   const { state, dispatch } = useStore();
   const notes = state.adventureNotes;
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(() => new Set());
+  const [noteBodies, setNoteBodies] = React.useState<Record<string, string>>({});
+  const [loadingIds, setLoadingIds] = React.useState<Set<string>>(() => new Set());
+  const [failedIds, setFailedIds] = React.useState<Set<string>>(() => new Set());
 
   function toggle(id: string) {
+    const opening = !expandedIds.has(id);
     setExpandedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+    if (opening && !(id in noteBodies) && !loadingIds.has(id)) {
+      setLoadingIds((previous) => new Set(previous).add(id));
+      setFailedIds((previous) => {
+        const next = new Set(previous);
+        next.delete(id);
+        return next;
+      });
+      void fetchNoteById(id)
+        .then((note) => {
+          setNoteBodies((previous) => ({ ...previous, [id]: note.text ?? "" }));
+        })
+        .catch(() => {
+          setFailedIds((previous) => new Set(previous).add(id));
+        })
+        .finally(() => {
+          setLoadingIds((previous) => {
+            const next = new Set(previous);
+            next.delete(id);
+            return next;
+          });
+        });
+    }
   }
 
   const highlight = theme.colors.accentHighlight;
@@ -30,6 +57,9 @@ export function AdventureNotesDrawer(props: { close: () => void }): DrawerConten
         ) : (
           notes.map((note) => {
             const expanded = expandedIds.has(note.id);
+            const loading = loadingIds.has(note.id);
+            const failed = failedIds.has(note.id);
+            const body = noteBodies[note.id];
             return (
               <div
                 key={note.id}
@@ -61,7 +91,13 @@ export function AdventureNotesDrawer(props: { close: () => void }): DrawerConten
                     className="bh-prewrap"
                     style={{ marginTop: 8, color: theme.colors.muted, lineHeight: 1.5 }}
                   >
-                    {note.text?.trim() ? note.text : <span style={{ fontStyle: "italic" }}>No text.</span>}
+                    {loading
+                      ? <span style={{ fontStyle: "italic" }}>Loading note...</span>
+                      : failed
+                        ? <span style={{ fontStyle: "italic", color: theme.colors.colorPinkRed }}>Could not load note.</span>
+                        : body?.trim()
+                          ? body
+                          : <span style={{ fontStyle: "italic" }}>No text.</span>}
                   </div>
                 )}
               </div>

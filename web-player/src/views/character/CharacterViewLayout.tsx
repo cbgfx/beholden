@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useMemo } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef } from "react";
 import { C } from "@/lib/theme";
 import {
   PinnedVitalsBox,
@@ -62,6 +62,22 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
   const isProtectedView = PROTECTED_VIEW_IDS.has(activeView.id);
   const canDeleteActiveView = sheetViews.length > 1 && !isProtectedView;
   const canResetActiveView = DEFAULT_SHEET_VIEWS.some((view) => view.id === activeView.id);
+
+  const inCombat = live.combatStatus !== null;
+  const isMyTurn = live.combatStatus !== null && live.combatStatus.activeCombatantId === live.combatStatus.combatantId;
+
+  // Jump to the Combat layout the moment combat starts, so players aren't
+  // caught mid-fight on a view that's missing their action economy panels.
+  // Edge-triggered on the false->true transition only -- reloading the sheet
+  // while already in combat should never fight whatever view the player had
+  // open.
+  const wasInCombatRef = useRef(inCombat);
+  useEffect(() => {
+    if (!wasInCombatRef.current && inCombat) {
+      selectView("play");
+    }
+    wasInCombatRef.current = inCombat;
+  }, [inCombat, selectView]);
 
   const handleCreateView = () => {
     const newView: SheetViewDef = { id: uid(), name: "New View", columns: 2, layout: [[], []] };
@@ -281,6 +297,13 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
     }
     return registry[id] ?? null;
   };
+  // The swap above only has somewhere to land if this view actually places
+  // item-spells or spells -- a custom view built without either (nothing
+  // stops that once views are fully player-editable) would otherwise leave
+  // the transformed form entirely un-shown while polymorphed. Pin it next to
+  // the vitals box in that case, same as combat-stats is pinned.
+  const hasSpellsSlot = activeView.layout.some((column) => column.includes(PANEL_IDS.itemSpells) || column.includes(PANEL_IDS.spells));
+  const showPinnedPolymorphForm = polymorphCondition && !hasSpellsSlot;
 
   // Persist a change to just the active view, leaving every other view (and
   // which one is currently selected) untouched.
@@ -333,7 +356,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
   };
 
   return (
-    <Wrap wide inCombat={live.combatStatus !== null} minWidth={activeView.columns * 380}>
+    <Wrap wide inCombat={inCombat} minWidth={activeView.columns * 380}>
       <input ref={ui.portraitFileRef} type="file" accept="image/*" hidden onChange={handlePortraitSelected} />
       {ui.concentrationAlert && (
         <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: 10, background: "rgba(240, 165, 0, 0.15)", border: `1px solid ${C.accent}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -352,8 +375,9 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
         onSelectPortrait={() => ui.portraitFileRef.current?.click()}
         onOpenInfo={() => ui.setInfoDrawerOpen(true)}
         onOpenEngagedEnemies={() => ui.setEngagedEnemiesDrawerOpen(true)}
-        showEngagedEnemies={live.combatStatus !== null}
-        inCombat={live.combatStatus !== null}
+        showEngagedEnemies={inCombat}
+        inCombat={inCombat}
+        isMyTurn={isMyTurn}
         sheetViews={sheetViews}
         activeViewId={activeView.id}
         onSelectView={selectView}
@@ -454,6 +478,9 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
                   hasRageResource: derived.classResourcesWithSpellCasts.some((resource) => /^rage$/i.test(resource.name)),
                 }}
               />
+            )}
+            {columnIndex === 0 && showPinnedPolymorphForm && (
+              <PolymorphedFormPanel polymorphMonsterState={polymorphMonsterState} />
             )}
             {columnIds.map((id) => (
               <Fragment key={id}>

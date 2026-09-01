@@ -65,7 +65,11 @@ export function buildCharacterHpActions(args: {
       if (resolvedKind === "heal") {
         const newHp = Math.min(char.hpCurrent + amt, effectiveHpMax);
         await putMyCharacter(char.id, { hpCurrent: newHp });
-        setChar((prev) => prev ? { ...prev, hpCurrent: newHp } : prev);
+        setChar((prev) => prev ? {
+          ...prev,
+          hpCurrent: newHp,
+          ...(prev.hpCurrent <= 0 && newHp > 0 ? { deathSaves: { success: 0, fail: 0 } } : {}),
+        } : prev);
       } else {
         const currentTemp = Math.max(0, Number(overrides.tempHp ?? 0) || 0);
         const fromTemp = Math.min(currentTemp, amt);

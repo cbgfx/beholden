@@ -290,6 +290,33 @@ describe("buildCharacterViewDerivedState", () => {
     expect(buildCharacterViewDerivedState(args).effectiveAc).toBe(17);
   });
 
+  it("honors generic no-armor and no-shield requirements on item modifiers", () => {
+    const equipped = buildArgs();
+    const baselineEquipped = buildCharacterViewDerivedState(equipped).effectiveAc;
+    equipped.char.characterData!.inventory!.push({
+      id: "bracers",
+      name: "Any Conditional Defense Item",
+      quantity: 1,
+      equipped: true,
+      equipState: "worn",
+      modifiers: [{ target: "ac", amount: 2, requiresNoArmor: true, requiresNoShield: true }],
+    });
+    expect(buildCharacterViewDerivedState(equipped).effectiveAc).toBe(baselineEquipped);
+
+    const unarmored = buildArgs();
+    unarmored.char.characterData!.inventory = [];
+    const baselineUnarmored = buildCharacterViewDerivedState(unarmored).effectiveAc;
+    unarmored.char.characterData!.inventory!.push({
+      id: "conditional-defense",
+      name: "Any Conditional Defense Item",
+      quantity: 1,
+      equipped: true,
+      equipState: "worn",
+      modifiers: [{ target: "ac", amount: 2, requiresNoArmor: true, requiresNoShield: true }],
+    });
+    expect(buildCharacterViewDerivedState(unarmored).effectiveAc).toBe(baselineUnarmored + 2);
+  });
+
   it("adds an attuned held item's typed spell save DC bonus, e.g. Reveler's Concertina", () => {
     const args = buildArgs();
     args.char.characterData!.inventory!.push({

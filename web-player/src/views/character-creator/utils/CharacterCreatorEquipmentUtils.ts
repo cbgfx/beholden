@@ -23,7 +23,7 @@ export interface ItemSummaryLike {
   weaponAmmo?: "arrow" | "bolt" | "energy-cell" | "firearm-bullet" | "needle" | "sling-bullet" | null;
   usage?: "held" | null;
   effects?: unknown[] | null;
-  modifiers?: Array<{ target?: string; amount?: number }>;
+  modifiers?: Array<{ target?: string; amount?: number; weaponNames?: string[] }>;
 }
 
 export interface InventoryItemSeedLike {

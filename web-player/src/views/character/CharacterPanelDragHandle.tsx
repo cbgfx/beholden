@@ -1,3 +1,4 @@
+import { DragHandleGrip } from "@beholden/shared/ui";
 import { C } from "@/lib/theme";
 
 /** Small grip button used both by placed panels (Slice 5 collapses them to
@@ -33,11 +34,7 @@ export function PanelDragHandle(props: {
         padding: 0,
       }}
     >
-      <span aria-hidden style={{ display: "grid", gridTemplateColumns: "repeat(2, 3px)", gridAutoRows: "3px", gap: 2 }}>
-        {Array.from({ length: 6 }).map((_, index) => (
-          <span key={index} style={{ width: 3, height: 3, borderRadius: "50%", background: C.muted }} />
-        ))}
-      </span>
+      <DragHandleGrip color={C.muted} />
     </button>
   );
 }

@@ -137,7 +137,12 @@ export function buildTransformedCombatStats({
   if (!monster) return null;
   const monsterDex = readMonsterNumber(monster.dex) ?? 10;
   const monsterWis = readMonsterNumber(monster.wis) ?? 10;
-  const speedData = parseMonsterSpeed(monster.movement);
+  // The compendium API's monster-by-id response carries the raw `movement`
+  // object (walk/climb/fly/...); `speed` is a display-formatted string
+  // ("walk 40 ft., climb 40 ft.") kept as a fallback in case a caller only
+  // has that -- `parseMonsterSpeed` can still pull the walk number out of it,
+  // just without per-mode breakdown.
+  const speedData = parseMonsterSpeed(monster.movement ?? monster.speed);
   const skillPerception = readMonsterSkillBonus(monster, "Perception");
   return {
     effectiveAc: readMonsterNumber(monster.ac?.value ?? monster.ac ?? monster.armor_class) ?? effectiveAc,

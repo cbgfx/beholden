@@ -31,6 +31,7 @@ import {
   isWeaponItem,
   weaponAttackModifierBonus,
   weaponDamageModifierBonus,
+  wornWeaponModifierBonus,
   weaponAbilityMod,
   weaponDamageDice,
 } from "@/views/character/CharacterInventory";
@@ -361,8 +362,12 @@ export function CharacterCombatPanels({
             const ranged = isRangedWeapon(it);
             const linkedAmmoCandidate = ranged && it.linkedAmmoId ? inventory.find((entry) => entry.id === it.linkedAmmoId) ?? null : null;
             const linkedAmmo = linkedAmmoCandidate && isCompatibleAmmunition(it, linkedAmmoCandidate) ? linkedAmmoCandidate : null;
-            const attackMagicBonus = weaponAttackModifierBonus(it, ranged) + (linkedAmmo ? weaponAttackModifierBonus(linkedAmmo, ranged) : 0);
-            const damageMagicBonus = weaponDamageModifierBonus(it, ranged) + (linkedAmmo ? weaponDamageModifierBonus(linkedAmmo, ranged) : 0);
+            const attackMagicBonus = weaponAttackModifierBonus(it, ranged)
+              + (linkedAmmo ? weaponAttackModifierBonus(linkedAmmo, ranged) : 0)
+              + wornWeaponModifierBonus(inventory, it, ranged, "attacks");
+            const damageMagicBonus = weaponDamageModifierBonus(it, ranged)
+              + (linkedAmmo ? weaponDamageModifierBonus(linkedAmmo, ranged) : 0)
+              + wornWeaponModifierBonus(inventory, it, ranged, "damage");
             const featureAttackRollBonus = deriveAttackRollBonusFromEffects(parsedFeatureEffects ?? [], {
               level,
               scores: { str: strScore, dex: dexScore, cha: chaScore },

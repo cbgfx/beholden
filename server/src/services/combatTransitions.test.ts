@@ -109,12 +109,13 @@ test("unconscious applies prone and makes the reaction unavailable", () => {
 });
 
 test("healing above zero removes unconscious but preserves prone", () => {
-  const previous = actor({ hpCurrent: 0, conditions: [{ key: "unconscious" }, { key: "prone" }] });
+  const previous = actor({ hpCurrent: 0, deathSaves: { success: 2, fail: 1 }, conditions: [{ key: "unconscious" }, { key: "prone" }] });
   const next = applyCombatantTransition(actor({
     hpCurrent: 5,
     conditions: [{ key: "unconscious" }, { key: "prone" }],
   }), previous);
   assert.deepEqual(next.conditions, [{ key: "prone" }]);
+  assert.deepEqual(next.deathSaves, { success: 0, fail: 0 });
 });
 
 test("incapacitating conditions make the reaction unavailable", () => {

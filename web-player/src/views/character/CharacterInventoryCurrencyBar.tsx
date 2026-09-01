@@ -3,6 +3,7 @@ import { C } from "@/lib/theme";
 import { formatWeight } from "@/views/character/CharacterInventory";
 import { evaluateCurrencyInput } from "@/views/character/currencyMath";
 import { Button } from "@/ui/Button";
+import { CURRENCY_CODES, currencyColor, currencyPillStyle, type CurrencyCode } from "@/views/character/currencyPillStyles";
 
 interface InventoryCurrencyBarProps {
   currencyTotals: Record<"PP" | "GP" | "EP" | "SP" | "CP", number>;
@@ -25,11 +26,11 @@ export function InventoryCurrencyBar({
   // per-character accentColor prop is no longer consumed here — kept in the props contract
   // since callers still pass it and other consumers of this pattern may want it later.
   void accentColor;
-  const [currencyPopupCode, setCurrencyPopupCode] = useState<"PP" | "GP" | "SP" | "CP" | null>(null);
+  const [currencyPopupCode, setCurrencyPopupCode] = useState<CurrencyCode | null>(null);
   const [currencyInput, setCurrencyInput] = useState("");
   const currencyPopupRef = useRef<HTMLDivElement | null>(null);
 
-  const saveCurrency = (code: "PP" | "GP" | "SP" | "CP") => {
+  const saveCurrency = (code: CurrencyCode) => {
     const value = evaluateCurrencyInput(currencyInput);
     if (value === null) return;
     void onSaveCurrency(code, value);
@@ -62,7 +63,7 @@ export function InventoryCurrencyBar({
         <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>
           Currency
         </div>
-        {(["PP", "GP", "SP", "CP"] as const).map((code) => (
+        {CURRENCY_CODES.map((code) => (
           <div
             key={code}
             ref={currencyPopupCode === code ? currencyPopupRef : undefined}
@@ -74,21 +75,10 @@ export function InventoryCurrencyBar({
                 setCurrencyInput(String(currencyTotals[code]));
                 setCurrencyPopupCode((current) => current === code ? null : code);
               }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                fontSize: "var(--fs-small)",
-                color: C.text,
-                padding: "2px 10px",
-                borderRadius: 999,
-                border: "1px solid rgba(255,255,255,0.08)",
-                background: "rgba(255,255,255,0.04)",
-                cursor: "pointer",
-              }}
+              style={currencyPillStyle(code)}
             >
-              <span style={{ color: C.muted, fontWeight: 700 }}>{code}</span>
-              <span style={{ fontWeight: 800, minWidth: 20, textAlign: "right" }}>{currencyTotals[code].toLocaleString()}</span>
+              <span style={{ color: currencyColor(code), fontWeight: 800 }}>{code}</span>
+              <span style={{ color: C.text, fontWeight: 800, minWidth: 20, textAlign: "right" }}>{currencyTotals[code].toLocaleString()}</span>
             </button>
             {currencyPopupCode === code && (
               <div

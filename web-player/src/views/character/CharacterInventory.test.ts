@@ -23,6 +23,7 @@ import {
   weaponAttackModifierBonus,
   weaponDamageDice,
   weaponDamageModifierBonus,
+  wornWeaponModifierBonus,
   type InventoryItem,
   type ItemSummaryRow,
 } from "@/views/character/CharacterInventory";
@@ -224,6 +225,33 @@ describe("character inventory calculations", () => {
     const mundane = item({});
     expect(weaponAttackModifierBonus(mundane, false)).toBe(0);
     expect(weaponDamageModifierBonus(mundane, false)).toBe(0);
+  });
+
+  it("applies data-scoped attack and damage modifiers from worn equipment", () => {
+    const bracers = item({
+      id: "bracers",
+      name: "Bracers of Archery",
+      equipState: "worn",
+      equipped: true,
+      modifiers: [
+        { target: "ranged_attacks", amount: 1, weaponNames: ["Longbow", "Shortbow"] },
+        { target: "ranged_damage", amount: 2, weaponNames: ["Longbow", "Shortbow"] },
+      ],
+    });
+    expect(wornWeaponModifierBonus([bracers], item({ id: "longbow", name: "Longbow" }), true, "attacks")).toBe(1);
+    expect(wornWeaponModifierBonus([bracers], item({ id: "shortbow", name: "Shortbow" }), true, "damage")).toBe(2);
+    expect(wornWeaponModifierBonus([bracers], item({ id: "crossbow", name: "Light Crossbow" }), true, "damage")).toBe(0);
+
+    const universal = item({
+      id: "universal",
+      name: "Universal Weapon Charm",
+      equipState: "worn",
+      equipped: true,
+      modifiers: [{ target: "weapon_attacks", amount: 1 }, { target: "weapon_damage", amount: 1 }],
+    });
+    expect(wornWeaponModifierBonus([universal], item({ id: "sword", name: "Longsword" }), false, "attacks")).toBe(1);
+    expect(wornWeaponModifierBonus([universal], item({ id: "bow", name: "Longbow" }), true, "damage")).toBe(1);
+    expect(wornWeaponModifierBonus([{ ...universal, equipState: "backpack", equipped: false }], item({ id: "sword", name: "Longsword" }), false, "attacks")).toBe(0);
   });
 });
 

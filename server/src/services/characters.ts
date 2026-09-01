@@ -265,12 +265,14 @@ function buildCampaignCharacterLive(
   current: Pick<StoredCampaignCharacter, "hpCurrent" | "overrides" | "conditions" | "deathSaves">,
   patch: Partial<StoredCampaignCharacterLiveState>,
 ): StoredCampaignCharacterLiveState {
-  const deathSaves = patch.deathSaves ?? current.deathSaves;
+  const nextHpCurrent = patch.hpCurrent ?? current.hpCurrent;
+  const healedFromZero = Number(current.hpCurrent) <= 0 && Number(nextHpCurrent) > 0;
+  const deathSaves = healedFromZero ? { success: 0, fail: 0 } : patch.deathSaves ?? current.deathSaves;
   const overrides = patch.overrides
     ? { ...(current.overrides ?? DEFAULT_OVERRIDES), ...patch.overrides }
     : current.overrides ?? DEFAULT_OVERRIDES;
   return {
-    hpCurrent: patch.hpCurrent ?? current.hpCurrent,
+    hpCurrent: nextHpCurrent,
     overrides,
     conditions: patch.conditions ?? current.conditions ?? [],
     ...(deathSaves ? { deathSaves } : {}),

@@ -169,10 +169,13 @@ export function applyCombatantTransition(
   if (isNewConcentration) conditions = ensureConcentrationId(conditions);
   const incapacitated = conditionsBreakConcentration(conditions);
   const usedReaction = incapacitated ? true : next.usedReaction;
-  if (conditions === next.conditions && usedReaction === next.usedReaction) return next;
+  const healedFromZero = previous !== undefined && Number(previous.hpCurrent) <= 0 && Number(next.hpCurrent) > 0;
+  const deathSaves = healedFromZero ? { success: 0, fail: 0 } : next.deathSaves;
+  if (conditions === next.conditions && usedReaction === next.usedReaction && deathSaves === next.deathSaves) return next;
   return {
     ...next,
     conditions,
+    ...(deathSaves !== undefined ? { deathSaves } : {}),
     ...(usedReaction !== undefined ? { usedReaction } : {}),
   };
 }

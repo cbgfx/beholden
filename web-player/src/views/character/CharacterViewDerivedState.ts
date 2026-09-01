@@ -462,7 +462,10 @@ export function buildCharacterViewDerivedState(args: CharacterViewDerivedStateAr
   const wornArmor = inventory.find((item) => getEquipState(item) === "worn" && isArmorItem(item) && (item.ac ?? 0) > 0);
   const otherEquippedAcBonus = inventory
     .filter((item) => item !== wornArmor && item !== wornShield && isInventoryItemActiveForCharacterEffects(item))
-    .reduce((total, item) => total + itemModifierBonus(item.modifiers, "ac"), 0);
+    .reduce((total, item) => total + itemModifierBonus(item.modifiers, "ac", {
+      armorEquipped: Boolean(wornArmor),
+      shieldEquipped: Boolean(wornShield),
+    }), 0);
   const speedArmorState = !wornArmor ? "no_armor" : /\bheavy armor\b/i.test(wornArmor.type ?? "") ? "any" : "not_heavy";
   const armorWithoutProficiency = Boolean(wornArmor && !hasArmorProficiency(wornArmor, prof ?? undefined));
   const shieldWithoutProficiency = Boolean(wornShield && !hasArmorProficiency(wornShield, prof ?? undefined));

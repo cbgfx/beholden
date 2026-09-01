@@ -137,7 +137,8 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
     }
 
     const row = db.prepare(`
-      SELECT c.id AS combatantId, c.encounter_id AS encounterId, c.live_json AS liveJson
+      SELECT c.id AS combatantId, c.encounter_id AS encounterId, c.live_json AS liveJson,
+        e.combat_active_combatant_id AS activeCombatantId
       FROM players p
       JOIN combatants c ON c.base_type = 'player' AND c.base_id = p.id
       JOIN encounters e ON e.id = c.encounter_id
@@ -146,7 +147,7 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
         AND COALESCE(e.status, 'Open') != 'Complete'
       ORDER BY c.updated_at DESC
       LIMIT 1
-    `).get(characterId) as { combatantId: string; encounterId: string; liveJson: string } | undefined;
+    `).get(characterId) as { combatantId: string; encounterId: string; liveJson: string; activeCombatantId: string | null } | undefined;
 
     if (!row) return res.json({ combat: null });
 
@@ -245,6 +246,7 @@ export function registerCombatInitiativeRoutes(app: Express, ctx: ServerContext)
       combat: {
         encounterId: row.encounterId,
         combatantId: row.combatantId,
+        activeCombatantId: row.activeCombatantId,
         usedReaction,
         engagedEnemies,
         allies,

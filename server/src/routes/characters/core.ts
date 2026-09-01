@@ -377,6 +377,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       levelSafeCharacterData,
       p.progressionClassEntryId,
     );
+    const healedFromZero = p.hpCurrent !== undefined && Number(ex.hpCurrent) <= 0 && Number(p.hpCurrent) > 0;
     const nextSheet = {
       name: p.name ?? ex.name,
       playerName: ownerName,
@@ -395,7 +396,9 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       wisScore: p.wisScore !== undefined ? p.wisScore : ex.wisScore,
       chaScore: p.chaScore !== undefined ? p.chaScore : ex.chaScore,
       color: p.color !== undefined ? p.color : ex.color,
-      ...(ex.deathSaves ? { deathSaves: ex.deathSaves } : {}),
+      ...(healedFromZero
+        ? { deathSaves: { success: 0, fail: 0 } }
+        : ex.deathSaves ? { deathSaves: ex.deathSaves } : {}),
     };
     const normalized = normalizeCharacterSheetForStorage(nextSheet, mergedCharacterData);
     const hasSyncedDerivedStats = p.syncedHpMax !== undefined || p.syncedAc !== undefined;

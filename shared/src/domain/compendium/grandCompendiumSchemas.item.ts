@@ -25,8 +25,15 @@ const ModifierSchema = z
   .object({
     target: z.enum(ITEM_MODIFIER_TARGETS),
     amount: z.number().int().refine((value) => value !== 0, "A zero modifier must be omitted"),
+    weaponNames: z.array(z.string().min(1)).min(1).optional(),
+    requiresNoArmor: z.literal(true).optional(),
+    requiresNoShield: z.literal(true).optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (modifier) => !modifier.weaponNames || /^(?:melee|ranged|weapon)_(?:attacks|damage)$/u.test(modifier.target),
+    "weaponNames can only scope weapon attack or damage modifiers",
+  );
 
 const ItemRollSchema = z
   .object({

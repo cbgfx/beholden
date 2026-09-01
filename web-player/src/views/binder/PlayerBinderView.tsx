@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { IconBinder, IconCampaign, IconGender, IconPlayers, IconShield } from "@/icons";
 import { GameIcon } from "@/icons/GameIcon";
 import { C } from "@/lib/theme";
@@ -60,8 +60,29 @@ export function PlayerBinderView() {
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [data, setData] = useState<PlayerBinder | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [section, setSection] = useState<"mortals" | "campaigns" | "deities" | "places">("mortals");
+  // `section`/`selectedId` live in the URL, not plain useState -- drilling
+  // into a mortal/campaign/deity/place is a real navigation (pushes a
+  // history entry), so the browser's own Back button steps out of a record
+  // to its list before leaving the Binder entirely, instead of skipping
+  // straight past the list to whatever page opened the Binder.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const section = (searchParams.get("section") as "mortals" | "campaigns" | "deities" | "places" | null) ?? "mortals";
+  const selectedId = searchParams.get("recordId");
+  const setSection = (next: "mortals" | "campaigns" | "deities" | "places") => {
+    setSearchParams((prev) => {
+      const updated = new URLSearchParams(prev);
+      updated.set("section", next);
+      updated.delete("recordId");
+      return updated;
+    });
+  };
+  const setSelectedId = (next: string | null) => {
+    setSearchParams((prev) => {
+      const updated = new URLSearchParams(prev);
+      if (next) updated.set("recordId", next); else updated.delete("recordId");
+      return updated;
+    });
+  };
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<MortalFilters>(emptyFilters);
   const [sortKey, setSortKey] = useState<MortalSortKey>("name");
@@ -72,8 +93,9 @@ export function PlayerBinderView() {
   useEffect(() => {
     api<PlayerBinder>(`/api/me/characters/${id}/binder`).then((value) => {
       setData(value);
-      setSelectedId(null);
-      setSection("mortals");
+      // Reset without pushing a history entry -- this is a fresh load, not a
+      // user drilling in/out of a record.
+      setSearchParams({}, { replace: true });
     }).catch(() => setError("This character is not attached to a Binder."));
   }, [id]);
   const selected = data?.mortals.find((mortal) => mortal.id === selectedId) ?? null;
@@ -135,7 +157,7 @@ export function PlayerBinderView() {
               {group.label ? <div style={{ margin: groupIndex ? "4px 10px 3px" : "0 10px 3px", color: C.muted, fontSize: "var(--fs-tiny)", fontWeight: 850, letterSpacing: ".12em", textTransform: "uppercase" }}>{group.label}</div> : null}
               {group.items.map((item) => {
                 const active = section === item.key;
-                return <button key={item.key} type="button" onClick={() => { setSection(item.key); setSelectedId(null); }} style={{ width: "100%", padding: "9px 10px", borderRadius: 9, border: "1px solid transparent", boxShadow: active ? `inset 3px 0 ${accent}` : "none", background: active ? `${accent}18` : "transparent", color: active ? C.text : C.muted, display: "flex", alignItems: "center", gap: 9, cursor: "pointer", font: "inherit", fontWeight: active ? 800 : 650, textAlign: "left" }}>
+                return <button key={item.key} type="button" onClick={() => setSection(item.key)} style={{ width: "100%", padding: "9px 10px", borderRadius: 9, border: "1px solid transparent", boxShadow: active ? `inset 3px 0 ${accent}` : "none", background: active ? `${accent}18` : "transparent", color: active ? C.text : C.muted, display: "flex", alignItems: "center", gap: 9, cursor: "pointer", font: "inherit", fontWeight: active ? 800 : 650, textAlign: "left" }}>
                   <span style={{ color: item.color, display: "grid", placeItems: "center", flex: "0 0 auto" }}>{item.icon}</span>
                   <span>{item.label}</span>
                   <span style={{ marginLeft: "auto", color: active ? accent : C.muted, fontSize: "var(--fs-small)", fontVariantNumeric: "tabular-nums" }}>{item.count}</span>
@@ -205,7 +227,7 @@ export function PlayerBinderView() {
                       ["Race",selected.species,<GameIcon icon="game-icons:dna1"/>],["Age",ageOf(selected, data.binder.currentDateSort),<GameIcon icon="game-icons:cake-slice"/>],["Gender",selected.gender,<IconGender size={16}/>],["Status",selected.lifeStatus,<GameIcon icon="game-icons:half-dead"/>],
                     ].map(([label,value,icon]) => <div key={String(label)} style={{ minHeight: 42, padding: "8px 2px", borderBottom: `1px solid ${accent}24`, display: "grid", gridTemplateColumns: "105px minmax(0, 1fr)", alignItems: "center", gap: 10 }}><strong style={{ color: C.muted, fontSize: "var(--fs-small)", display: "inline-flex", alignItems: "center", gap: 6 }}>{icon}{label}</strong><span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{label === "Status" ? <StatusPill status={value ? String(value) : null} /> : label === "Gender" && value ? <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: value === "female" ? "#f9a8d4" : "#7dd3fc", background: value === "female" ? "rgba(249,168,212,.16)" : "rgba(125,211,252,.16)", fontWeight: 750 }}>{String(value)[0]!.toUpperCase()+String(value).slice(1)}</span> : value || "None"}</span></div>)}
                   </div>
-                  {(selected.description || selected.backstory) ? <section style={{ marginTop: 24 }}><h3>Notes</h3><div style={{ whiteSpace: "pre-wrap", lineHeight: 1.65 }}>{selected.description || selected.backstory}</div></section> : null}
+                  {(selected.description || selected.backstory) ? <section style={{ marginTop: 24 }}><h3>Notes</h3><div style={{ lineHeight: 1.65 }}><MarkdownRichText text={selected.description || selected.backstory || ""} binderId={data.binder.id}/></div></section> : null}
                 </div>
               </article>
             </>

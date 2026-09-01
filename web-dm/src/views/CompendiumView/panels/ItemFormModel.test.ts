@@ -28,4 +28,12 @@ describe("ItemFormModel", () => {
     expect(buildItemPayload(form, null)).toMatchObject({ type: "Light Armor", armor: { ac: 12 } });
     expect(buildItemPayload(form, null).proficiency).toBeUndefined();
   });
+
+  it("round-trips optional weapon scopes on passive modifiers", () => {
+    const item = { id: "i_bracers", name: "Bracers", type: "Wondrous", rarity: "uncommon", description: "Text", modifiers: [{ target: "ranged_damage", amount: 2, weaponNames: ["Longbow", "Shortbow"], requiresNoArmor: true, requiresNoShield: true }] } as ItemForEdit;
+    const form = itemToForm(item);
+    expect(form.modifiers[0]?.weaponNames).toBe("Longbow, Shortbow");
+    expect(form.modifiers[0]?.requiresNoArmor).toBe(true);
+    expect(buildItemPayload(form, item).modifiers).toEqual(item.modifiers);
+  });
 });

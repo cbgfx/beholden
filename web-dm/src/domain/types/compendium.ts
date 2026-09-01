@@ -68,5 +68,5 @@ export type CompendiumItemDetail = CompendiumItemRow & {
   dmgType?: string | null;
   properties?: string[];
   ac?: number | null;
-  modifiers?: Array<{ target?: string; amount?: number }>;
+  modifiers?: Array<{ target?: string; amount?: number; weaponNames?: string[] }>;
 };

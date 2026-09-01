@@ -54,8 +54,10 @@ export function PlayerRow(props: {
   const imageUrl = resolveAssetUrl(p.imageUrl);
   React.useEffect(() => { setImgError(false); }, [imageUrl]);
 
-  const tempHp = Math.max(0, Number((p as any).tempHp ?? 0) || 0);
-  const acTotal = Number(p.ac ?? 0) + (Number((p as any).acBonus ?? 0) || 0);
+  const tempHp = Math.max(0, Number(p.tempHp ?? 0) || 0);
+  const effectiveCur = cur + tempHp;
+  const effectiveMax = max + tempHp;
+  const acTotal = Number(p.ac ?? 0) + (Number(p.acBonus ?? 0) || 0);
 
   const barColor = isDead
     ? theme.colors.red
@@ -153,8 +155,8 @@ export function PlayerRow(props: {
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
             <IconHeart size={12} style={{ opacity: 0.55, color: theme.colors.muted }} />
             <span style={{ fontWeight: 900, fontSize: "var(--fs-medium)", color: theme.colors.text, fontVariantNumeric: "tabular-nums" }}>
-              {cur}/{max}
-              {tempHp ? <span style={{ color: theme.colors.accentHighlight, marginLeft: 3, fontSize: "var(--fs-small)" }}>+{tempHp}</span> : null}
+              {effectiveCur}/{effectiveMax}
+              {tempHp ? <span title={`${cur}/${max} HP + ${tempHp} temporary HP`} style={{ color: theme.colors.accentHighlight, marginLeft: 4, fontSize: "var(--fs-tiny)" }}>temp</span> : null}
             </span>
           </span>
         </div>

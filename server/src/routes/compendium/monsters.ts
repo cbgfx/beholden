@@ -120,6 +120,7 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
       ac: m.ac ?? null,
       hp: ctx.helpers.normalizeHp(m.hp ?? null),
       speed: m.speed ?? null,
+      movement: m.movement ?? null,
       str: m.str ?? null,
       dex: m.dex ?? null,
       con: m.con ?? null,

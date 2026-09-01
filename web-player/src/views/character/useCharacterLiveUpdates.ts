@@ -7,7 +7,7 @@ type InitiativePrompt = { encounterId: string; combatantId: string };
 type EngagedEnemyCondition = { key: string; hexAbility?: string };
 export type EngagedEnemy = { id: string; name: string; health: "Damaged" | "Bloodied" | "Down"; conditions?: EngagedEnemyCondition[] };
 export type CombatAlly = { id: string; name: string; health: "Healthy" | "Damaged" | "Bloody" | "Down"; hpPercent?: number };
-type CombatStatus = { encounterId: string; combatantId: string; usedReaction: boolean; engagedEnemies: EngagedEnemy[]; allies: CombatAlly[] };
+type CombatStatus = { encounterId: string; combatantId: string; activeCombatantId: string | null; usedReaction: boolean; engagedEnemies: EngagedEnemy[]; allies: CombatAlly[] };
 
 export function useCharacterLiveUpdates(
   characterId: string | undefined,
@@ -163,6 +163,12 @@ export function useCharacterLiveUpdates(
         void refreshCombatStatus();
       }
     } else if (message.type === "encounters:delta") {
+      const payload = message.payload as { encounterId?: string };
+      if (combatStatusRef.current && payload.encounterId === combatStatusRef.current.encounterId) {
+        void refreshCombatStatus();
+      }
+    } else if (message.type === "encounter:combatStateChanged") {
+      // Fired on every turn advance -- refetch so activeCombatantId (and thus "YOUR TURN") stays live.
       const payload = message.payload as { encounterId?: string };
       if (combatStatusRef.current && payload.encounterId === combatStatusRef.current.encounterId) {
         void refreshCombatStatus();

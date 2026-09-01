@@ -71,6 +71,8 @@ export function RecoveryPanel(props: {
     const match = /^class:([^:]+):/.exec(value);
     return match?.[1] ?? null;
   };
+  const bardLevel = classPresentation.find((entry) => entry.className.trim().toLowerCase() === "bard")?.classLevel ?? 0;
+  const bardicInspirationDie = bardLevel >= 15 ? "d12" : bardLevel >= 10 ? "d10" : bardLevel >= 5 ? "d8" : bardLevel >= 1 ? "d6" : null;
 
   const exhaustionColor =
     exhaustion === 0 ? C.muted : exhaustion <= 2 ? "#f59e0b" : exhaustion <= 4 ? "#f97316" : "#dc2626";
@@ -278,7 +280,12 @@ export function RecoveryPanel(props: {
                   }}
                 >
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: C.text }}>{resource.name}</div>
+                    <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: C.text }}>
+                      {resource.name}
+                      {bardicInspirationDie && /^bardic inspiration$/i.test(resource.name.trim()) ? (
+                        <span style={{ marginLeft: 7, color: accentColor, fontWeight: 900 }}>{bardicInspirationDie}</span>
+                      ) : null}
+                    </div>
                     <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>
                       {multiclass && owner ? `${owner.className} ${owner.classLevel} · ` : ""}{formatResetLabel(resource)}
                       {reactionBlocked ? " · Reaction used" : ""}

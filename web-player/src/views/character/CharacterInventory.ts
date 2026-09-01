@@ -206,6 +206,30 @@ export function getItemSpells(spells: ItemSpells | null | undefined): ParsedItem
   });
 }
 
+/** Attack or damage bonuses supplied by other worn items. Optional weapon-name scopes live in
+ * compendium data, so every item uses this same path without item-name checks in combat code. */
+export function wornWeaponModifierBonus(
+  inventory: readonly InventoryItem[],
+  weapon: Pick<InventoryItem, "id" | "name">,
+  isRanged: boolean,
+  kind: "attacks" | "damage",
+): number {
+  const weaponName = normalizeInventoryItemLookupName(weapon.name).toLowerCase();
+  return inventory.reduce((total, item) => {
+    if (item.id === weapon.id || getEquipState(item) !== "worn") return total;
+    const targets = kind === "attacks"
+      ? ["weapon_attacks", isRanged ? "ranged_attacks" : "melee_attacks"]
+      : ["weapon_damage", isRanged ? "ranged_damage" : "melee_damage"];
+    return total + (item.modifiers ?? []).reduce((bonus, modifier) => {
+      if (!targets.includes(String(modifier.target))) return bonus;
+      const scopes = modifier.weaponNames ?? [];
+      if (scopes.length > 0 && !scopes.some((name) => normalizeInventoryItemLookupName(name).toLowerCase() === weaponName)) return bonus;
+      const amount = Number(modifier.amount);
+      return Number.isFinite(amount) ? bonus + amount : bonus;
+    }, 0);
+  }, 0);
+}
+
 export function getStoredItemSpells(spells: InventoryItem["storedSpells"]): ParsedItemSpell[] {
   return (spells ?? []).map((spell) => ({
     id: spell.id,
