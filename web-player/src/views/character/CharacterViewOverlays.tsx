@@ -1,6 +1,6 @@
 import { CharacterInitiativePrompt } from "@/views/character/CharacterInitiativePrompt";
 import { CharacterFeatPickerModal } from "@/views/character/CharacterFeatPickerModal";
-import { CharacterInfoDrawer, CharacterPolymorphDrawer } from "@/views/character/CharacterViewDrawers";
+import { CharacterInfoDrawer, CharacterPolymorphDrawer, CharacterThemeDrawer } from "@/views/character/CharacterViewDrawers";
 import { NoteEditDrawer } from "@/views/character/CharacterViewParts";
 import { SHEET_COLOR_PRESETS } from "@/views/character/CharacterViewHelpers";
 import { getExhaustionD20Penalty } from "@/views/character/CharacterExhaustion";
@@ -80,13 +80,10 @@ export function CharacterViewOverlays({ model }: { model: CharacterViewModel }) 
         identityFields={derived.identityFields}
         editableOverrideFields={derived.editableOverrideFields}
         overridesDraft={ui.overridesDraft}
-        colorDraft={ui.colorDraft}
-        colorPresets={SHEET_COLOR_PRESETS}
         abilityOverridesDraft={ui.abilityOverridesDraft}
         overridesSaving={ui.overridesSaving}
         onClose={() => ui.setInfoDrawerOpen(false)}
         onSave={() => notes.saveSheetOverrides()}
-        onColorChange={ui.setColorDraft}
         onOverrideChange={(key, value) => {
           ui.setOverridesDraft((previous) => ({ ...previous, [key]: value }));
         }}
@@ -98,6 +95,28 @@ export function CharacterViewOverlays({ model }: { model: CharacterViewModel }) 
             return next;
           });
         }}
+      />
+
+      <CharacterThemeDrawer
+        open={ui.themeDrawerOpen}
+        accentColor={derived.accentColor}
+        colorDraft={ui.colorDraft}
+        colorPresets={SHEET_COLOR_PRESETS}
+        appearanceDraft={ui.appearanceDraft}
+        saving={ui.themeSaving}
+        onClose={() => ui.setThemeDrawerOpen(false)}
+        onSave={async () => {
+          ui.setThemeSaving(true);
+          try {
+            await notes.saveThemeColor();
+            await notes.saveCharacterData({ appearance: ui.appearanceDraft });
+          } finally {
+            ui.setThemeSaving(false);
+          }
+          ui.setThemeDrawerOpen(false);
+        }}
+        onColorChange={ui.setColorDraft}
+        onAppearanceChange={ui.setAppearanceDraft}
       />
 
       <CharacterPermanentBuffsDrawer

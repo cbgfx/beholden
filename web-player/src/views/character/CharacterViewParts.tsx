@@ -38,7 +38,7 @@ export function Tooltip({ text, children, multiline }: { text: string; children:
   );
 }
 
-export function Wrap({ children, wide, minWidth, inCombat = false }: { children: React.ReactNode; wide?: boolean; minWidth?: number | string; inCombat?: boolean }) {
+export function Wrap({ children, wide, minWidth, inCombat = false, style, backgroundImage, backgroundSize, backgroundColor = C.bg, textColor = C.text }: { children: React.ReactNode; wide?: boolean; minWidth?: number | string; inCombat?: boolean; style?: React.CSSProperties; backgroundImage?: string; backgroundSize?: string; backgroundColor?: string; textColor?: string }) {
   return (
     <div style={{
       height: "100%",
@@ -46,12 +46,16 @@ export function Wrap({ children, wide, minWidth, inCombat = false }: { children:
       overflowY: "auto",
       overflowX: wide ? "auto" : "hidden",
       background: inCombat
-        ? `linear-gradient(180deg, ${withAlpha(C.red, 0.14)} 0, ${withAlpha(C.red, 0.035)} 120px, ${C.bg} 260px)`
-        : C.bg,
-      color: C.text,
+        ? `linear-gradient(180deg, ${withAlpha(C.red, 0.14)} 0, ${withAlpha(C.red, 0.035)} 120px, ${backgroundColor} 260px)`
+        : backgroundColor,
+      color: textColor,
       border: inCombat ? `2px solid ${withAlpha(C.red, 0.72)}` : "2px solid transparent",
       boxShadow: inCombat ? `inset 0 0 34px ${withAlpha(C.red, 0.1)}` : "none",
       transition: "border-color 180ms ease, box-shadow 180ms ease, background 180ms ease",
+      backgroundImage,
+      backgroundSize: backgroundSize ?? (backgroundImage ? "120px 120px" : undefined),
+      backgroundAttachment: backgroundImage ? "local" : undefined,
+      ...style,
     }}>
       <div style={{ maxWidth: wide ? "none" : 1060, minWidth: wide ? (minWidth ?? 1760) : "auto", margin: "0 auto", padding: wide ? "16px" : "28px 20px" }}>
         {children}
@@ -61,17 +65,18 @@ export function Wrap({ children, wide, minWidth, inCombat = false }: { children:
 }
 
 const PANEL_STYLE: React.CSSProperties = {
-  background: "rgba(255,255,255,0.035)",
-  border: "1px solid rgba(255,255,255,0.09)",
-  borderRadius: 12, padding: "14px 16px",
+  background: "var(--character-panel-bg, rgba(255,255,255,0.035))",
+  border: "1px solid var(--character-panel-border, rgba(255,255,255,0.09))",
+  borderRadius: "var(--character-panel-radius, 12px)", padding: "14px 16px",
+  boxShadow: "var(--character-panel-shadow, none)",
 };
 
 export function Panel({ children, embedded = false }: { children: React.ReactNode; embedded?: boolean }) {
   return (
     <SharedPanel
-      borderColor={embedded ? "transparent" : "rgba(255,255,255,0.09)"}
-      background={embedded ? "transparent" : "rgba(255,255,255,0.035)"}
-      radius={embedded ? 0 : 12}
+      borderColor={embedded ? "transparent" : "var(--character-panel-border, rgba(255,255,255,0.09))"}
+      background={embedded ? "transparent" : "var(--character-panel-bg, rgba(255,255,255,0.035))"}
+      radius={embedded ? 0 : "var(--character-panel-radius, 12px)"}
       padding="14px 16px"
     >
       {children}

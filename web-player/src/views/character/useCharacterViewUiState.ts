@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/services/api";
 import { C } from "@/lib/theme";
-import type { AbilKey, CharacterData, PlayerNote } from "@/views/character/CharacterSheetTypes";
+import type { AbilKey, CharacterAppearance, CharacterData, PlayerNote } from "@/views/character/CharacterSheetTypes";
+import { normalizeAppearance } from "@/views/character/characterAppearance";
 import type { Character, SheetOverrides } from "@/views/character/CharacterViewHelpers";
 
 export function useCharacterViewUiState() {
@@ -20,11 +21,14 @@ export function useCharacterViewUiState() {
   const [expandedClassFeatureIds, setExpandedClassFeatureIds] = useState<string[]>([]);
   const [noteDrawer, setNoteDrawer] = useState<{ scope: "player" | "shared"; note: PlayerNote | null } | null>(null);
   const [infoDrawerOpen, setInfoDrawerOpen] = useState(false);
+  const [themeDrawerOpen, setThemeDrawerOpen] = useState(false);
+  const [themeSaving, setThemeSaving] = useState(false);
   const [permanentBuffsDrawerOpen, setPermanentBuffsDrawerOpen] = useState(false);
   const [engagedEnemiesDrawerOpen, setEngagedEnemiesDrawerOpen] = useState(false);
   const [overridesDraft, setOverridesDraft] = useState<SheetOverrides>({ tempHp: 0, acBonus: 0, hpMaxBonus: 0 });
   const [abilityOverridesDraft, setAbilityOverridesDraft] = useState<Partial<Record<AbilKey, number>>>({});
   const [colorDraft, setColorDraft] = useState(C.accentHl);
+  const [appearanceDraft, setAppearanceDraft] = useState<CharacterAppearance>(normalizeAppearance(undefined));
   const [overridesSaving, setOverridesSaving] = useState(false);
   const [concentrationAlert, setConcentrationAlert] = useState<{ dc: number } | null>(null);
   const [featPickerOpen, setFeatPickerOpen] = useState(false);
@@ -50,10 +54,11 @@ export function useCharacterViewUiState() {
     xpPopupOpen, setXpPopupOpen, xpInput, setXpInput, dsSaving, setDsSaving,
     expandedNoteIds, setExpandedNoteIds, expandedClassFeatureIds, setExpandedClassFeatureIds,
     noteDrawer, setNoteDrawer, infoDrawerOpen, setInfoDrawerOpen,
+    themeDrawerOpen, setThemeDrawerOpen, themeSaving, setThemeSaving,
     permanentBuffsDrawerOpen, setPermanentBuffsDrawerOpen,
     engagedEnemiesDrawerOpen, setEngagedEnemiesDrawerOpen,
     overridesDraft, setOverridesDraft, abilityOverridesDraft, setAbilityOverridesDraft,
-    colorDraft, setColorDraft, overridesSaving, setOverridesSaving,
+    colorDraft, setColorDraft, appearanceDraft, setAppearanceDraft, overridesSaving, setOverridesSaving,
     concentrationAlert, setConcentrationAlert, featPickerOpen, setFeatPickerOpen,
     polymorphDrawerOpen, setPolymorphDrawerOpen, polymorphApplyingId, setPolymorphApplyingId,
     portraitUploading, setPortraitUploading, portraitFileRef, sheetView, setSheetView,
@@ -80,6 +85,7 @@ export function useCharacterViewUiSync({
     setOverridesDraft,
     setAbilityOverridesDraft,
     setColorDraft,
+    setAppearanceDraft,
     setPortraitUploading,
   } = ui;
 
@@ -101,6 +107,10 @@ export function useCharacterViewUiSync({
   useEffect(() => {
     setColorDraft(char?.color ?? C.accentHl);
   }, [char?.color, setColorDraft]);
+
+  useEffect(() => {
+    setAppearanceDraft(normalizeAppearance(characterData?.appearance));
+  }, [characterData?.appearance, setAppearanceDraft]);
 
   return useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

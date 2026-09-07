@@ -12,6 +12,7 @@ export const DATABASE_IMAGE_DIRECTORIES = [
   "binder-mortal-images",
   "binder-deity-images",
   "character-images",
+  "character-banners",
 ] as const;
 
 /** Which of the known image directories actually exist under `dataDir` right now, with their

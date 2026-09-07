@@ -70,7 +70,7 @@ export function CharacterSpellRow({
       display: "grid",
       gridTemplateColumns: spellRowGrid,
       alignItems: "center", gap: "0 8px",
-      padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)",
+      margin: "0 -8px", padding: "7px 8px", borderBottom: "1px solid rgba(255,255,255,0.04)",
       cursor: d ? "pointer" : "default",
     }}
       onClick={(ev) => {
@@ -169,6 +169,9 @@ export function CharacterSpellRow({
             minWidth: 0,
             padding: "4px 10px", borderRadius: 6,
             fontWeight: 800, fontSize: "var(--fs-tiny)", textTransform: "uppercase", letterSpacing: "0.04em",
+            // "Cast" follows the character's accent color like the rest of the
+            // row (ATK/SAVE, damage box); "End" stays the semantic danger red.
+            ...(castToggle.active ? {} : { background: accentColor, color: "#fff" }),
           }}
         >
           {castToggle.active ? "End" : "Cast"}

@@ -190,6 +190,12 @@ export function createServer() {
       if (res.req.url?.includes("?v=")) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
     },
   }));
+  const characterBannersDir = path.join(paths.dataDir, "character-banners");
+  fs.mkdirSync(characterBannersDir, { recursive: true });
+  app.use("/character-banners", express.static(characterBannersDir, {
+    maxAge: "7d",
+    immutable: false,
+  }));
 
   // --- routes ---------------------------------------------------------------
   registerAuthRoutes(app, ctx);

@@ -12,6 +12,7 @@ export interface AuthUser {
   name: string;
   isAdmin: boolean;
   hasDmAccess: boolean;
+  textScale: number;
 }
 
 interface AuthContextValue {

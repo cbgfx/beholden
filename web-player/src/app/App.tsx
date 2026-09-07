@@ -82,6 +82,10 @@ function RoutedViews() {
 function AuthGate() {
   const { user, isLoading } = useAuth();
 
+  React.useEffect(() => {
+    document.documentElement.style.setProperty("--text-scale", String(user?.textScale ?? 1));
+  }, [user?.textScale]);
+
   if (isLoading) {
     return (
       <div

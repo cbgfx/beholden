@@ -66,7 +66,8 @@ export function CharacterSpellsGrantedSection({
               gridTemplateColumns: "1fr auto",
               alignItems: "center",
               gap: 10,
-              padding: "8px 0",
+              margin: "0 -8px",
+              padding: "8px 8px",
               borderBottom: "1px solid rgba(255,255,255,0.04)",
               cursor: detail ? "pointer" : "default",
             }}

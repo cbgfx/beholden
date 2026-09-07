@@ -44,6 +44,8 @@ export function ProfileView() {
   const [currentPw, setCurrentPw]     = React.useState("");
   const [newPw, setNewPw]             = React.useState("");
   const [confirmPw, setConfirmPw]     = React.useState("");
+  const [textScale, setTextScale] = React.useState(user?.textScale ?? 1);
+  const [appearanceMsg, setAppearanceMsg] = React.useState<string | null>(null);
 
   const [infoMsg, setInfoMsg]   = React.useState<string | null>(null);
   const [infoErr, setInfoErr]   = React.useState<string | null>(null);
@@ -67,7 +69,7 @@ export function ProfileView() {
       if (nameChanged)     body.name = displayName.trim();
       if (usernameChanged) { body.username = username.trim(); body.currentPassword = currentPw; }
 
-      const res = await api<{ ok: boolean; token: string; user: { id: string; username: string; name: string; isAdmin: boolean; hasDmAccess: boolean } }>(
+      const res = await api<{ ok: boolean; token: string; user: NonNullable<typeof user> }>(
         "/api/me/profile", jsonInit("PUT", body)
       );
       updateUser(res.user, res.token);
@@ -89,7 +91,7 @@ export function ProfileView() {
 
     setBusy(true);
     try {
-      const res = await api<{ ok: boolean; token: string; user: { id: string; username: string; name: string; isAdmin: boolean; hasDmAccess: boolean } }>(
+      const res = await api<{ ok: boolean; token: string; user: NonNullable<typeof user> }>(
         "/api/me/profile", jsonInit("PUT", { newPassword: newPw })
       );
       updateUser(res.user, res.token);
@@ -100,6 +102,14 @@ export function ProfileView() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function handleAppearanceSave(e: React.FormEvent) {
+    e.preventDefault(); setBusy(true); setAppearanceMsg(null);
+    try {
+      const res = await api<{ ok: boolean; token: string; user: NonNullable<typeof user> }>("/api/me/profile", jsonInit("PUT", { textScale }));
+      updateUser(res.user, res.token); setAppearanceMsg("Saved!");
+    } finally { setBusy(false); }
   }
 
   return (
@@ -140,6 +150,22 @@ export function ProfileView() {
           {infoMsg && <div style={{ color: "rgba(74,222,128,0.9)", fontSize: "var(--fs-subtitle)" }}>{infoMsg}</div>}
 
           <Button type="submit" variant="primary" disabled={busy} style={{ alignSelf: "flex-start" }}>Save Profile</Button>
+        </form>
+
+        <form onSubmit={handleAppearanceSave} style={sectionStyle}>
+          <div style={{ fontWeight: 700, fontSize: "var(--fs-medium)", color: C.accentHl }}>Display</div>
+          <label style={labelStyle}>Text size — {Math.round(textScale * 100)}%</label>
+          <input aria-label="Text size" type="range" min={0.85} max={1.3} step={0.05} value={textScale} onChange={(event) => {
+            const value = Number(event.target.value); setTextScale(value);
+            document.documentElement.style.setProperty("--text-scale", String(value));
+          }} />
+          <div style={{ position: "relative", height: "var(--fs-body)", color: C.muted, fontSize: "var(--fs-small)" }}>
+            <span style={{ position: "absolute", left: 0 }}>Smaller</span>
+            <span style={{ position: "absolute", left: "33.333%", transform: "translateX(-50%)" }}>Default</span>
+            <span style={{ position: "absolute", right: 0 }}>Larger</span>
+          </div>
+          {appearanceMsg ? <div style={{ color: "rgba(74,222,128,0.9)", fontSize: "var(--fs-subtitle)" }}>{appearanceMsg}</div> : null}
+          <Button type="submit" variant="primary" disabled={busy} style={{ alignSelf: "flex-start" }}>Save Display</Button>
         </form>
 
         {/* Password change */}

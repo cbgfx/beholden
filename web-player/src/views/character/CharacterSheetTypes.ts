@@ -193,5 +193,16 @@ export interface CharacterData {
   /** The character's customizable sheet views (Combat/Gear/Reference/All by
    * default, plus any the player creates). See panelRegistry.ts. */
   sheetViews?: SheetViewDef[];
+  /** Character-owned visual treatment. Exported with the character. */
+  appearance?: CharacterAppearance;
+}
+
+export type CharacterBackgroundPattern = "none" | "runes" | "grid" | "stars" | "grain";
+export interface CharacterAppearance {
+  backgroundColor?: string;
+  panelBackgroundColor?: string;
+  textColor?: string;
+  backgroundPattern?: CharacterBackgroundPattern;
+  backgroundIntensity?: number;
 }
 

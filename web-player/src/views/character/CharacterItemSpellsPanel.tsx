@@ -3,7 +3,7 @@ import { ordinal } from "@beholden/shared/domain";
 import { api } from "@/services/api";
 import { C } from "@/lib/theme";
 import { Button } from "@/ui/Button";
-import { CollapsiblePanel } from "@/views/character/CharacterViewParts";
+import { CollapsiblePanel, inventoryRarityColor } from "@/views/character/CharacterViewParts";
 import { PANEL_IDS } from "@/views/character/panelRegistry";
 import { type InventoryItem, type ParsedItemSpell, getEquipState, getItemSpells, getStoredItemSpells } from "@/views/character/CharacterInventory";
 import type { ConditionInstance } from "@/views/character/CharacterSheetTypes";
@@ -138,7 +138,7 @@ export function ItemSpellsPanel({
           <CollapsiblePanel
             key={item.id}
             title={item.name.replace(/\s*\[.+\]$/, "")}
-            color={C.colorMagic}
+            color={inventoryRarityColor(item.rarity ?? null)}
             storageKey={`${PANEL_IDS.itemSpells}-${item.id}`}
             actions={chargesMax > 0 ? (
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
@@ -226,7 +226,7 @@ export function ItemSpellsPanel({
                         style={{
                           display: "grid", gridTemplateColumns: SPELL_ROW_GRID_WITH_MARKER,
                           alignItems: "center", gap: "0 8px",
-                          padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)",
+                          margin: "0 -8px", padding: "7px 8px", borderBottom: "1px solid rgba(255,255,255,0.04)",
                           cursor: detail ? "pointer" : "default",
                         }}
                         onClick={() => { if (detail) setSelectedSpell(detail); }}
@@ -282,6 +282,9 @@ export function ItemSpellsPanel({
                               minWidth: 0,
                               padding: "4px 10px", borderRadius: 6,
                               fontWeight: 800, fontSize: "var(--fs-tiny)", textTransform: "uppercase", letterSpacing: "0.04em",
+                              // "Cast" follows the character's accent color like the rest of the
+                              // row (ATK/SAVE, cost markers); "End" stays the semantic danger red.
+                              ...(castToggle.active ? {} : { background: accentColor, color: "#fff" }),
                             }}
                           >
                             {castToggle.active ? "End" : "Cast"}

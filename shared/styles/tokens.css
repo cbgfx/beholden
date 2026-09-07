@@ -39,17 +39,18 @@
       small    12px  Tertiary info (timestamps, subtle metadata)
       tiny     10px  Badges, chips, micro labels
   */
-  --fs-hero:     30px;   /* app title */
-  --fs-title:    18px;   /* panel section headers, big numerics (AC/HP), dialog headings */
+  --text-scale: 1;
+  --fs-hero:     calc(30px * var(--text-scale));   /* app title */
+  --fs-title:    calc(18px * var(--text-scale));   /* panel section headers, big numerics (AC/HP), dialog headings */
   --fs-stat:     var(--fs-title); /* alias — big numerics share the same step */
-  --fs-large:    17px;   /* primary row names */
-  --fs-body:     15px;   /* default body text */
+  --fs-large:    calc(17px * var(--text-scale));   /* primary row names */
+  --fs-body:     calc(15px * var(--text-scale));   /* default body text */
   --fs-base:     var(--fs-body); /* alias for base.css */
-  --fs-medium:   14px;   /* secondary labels */
-  --fs-subtitle: 13px;   /* compact secondary text */
-  --fs-small:    12px;   /* tertiary metadata */
+  --fs-medium:   calc(14px * var(--text-scale));   /* secondary labels */
+  --fs-subtitle: calc(13px * var(--text-scale));   /* compact secondary text */
+  --fs-small:    calc(12px * var(--text-scale));   /* tertiary metadata */
   --fs-pill:     var(--fs-small); /* alias — chips and tags share this step */
-  --fs-tiny:     10px;   /* micro badges */
+  --fs-tiny:     calc(10px * var(--text-scale));   /* micro badges */
 
   /* ── Spacing ─────────────────────────────────────────────────────── */
   --gap-2:      2px;
@@ -65,7 +66,7 @@
   :root {
     --space-page: 8px;
     --space-gap:  8px;
-    --fs-hero:    22px;
+    --fs-hero:    calc(22px * var(--text-scale));
   }
 }
 

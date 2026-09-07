@@ -25,6 +25,7 @@ import { cloneSheetView, MAX_SHEET_COLUMNS, MIN_SHEET_COLUMNS } from "@/views/ch
 import { useCharacterSheetViews } from "@/views/character/useCharacterSheetViews";
 import type { CharacterViewModel } from "@/views/character/CharacterViewModel";
 import { CharacterLayoutEditorToolbar } from "@/views/character/CharacterLayoutEditorToolbar";
+import { appearanceCssVariables, backgroundPatternImage, normalizeAppearance } from "@/views/character/characterAppearance";
 
 /** Combat (Play) and All can never be deleted, even when other views exist --
  * every other built-in or custom view can be. */
@@ -37,6 +38,10 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
     handleRemoveExtraFeat,
   } = model;
   const currentData = derived.currentCharacterData;
+  // While the Theme drawer is open, preview the unsaved draft directly on the
+  // sheet -- picking colors blind (no feedback until Save) made it impossible
+  // to tell whether a choice "took" at all.
+  const appearance = ui.themeDrawerOpen ? normalizeAppearance(ui.appearanceDraft) : normalizeAppearance(currentData.appearance);
   const exhaustionPenalty = getExhaustionD20Penalty(char.ruleset, currentData.exhaustion ?? 0);
   const identityLabels = [
     ...(derived.classPresentation.length
@@ -356,7 +361,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
   };
 
   return (
-    <Wrap wide inCombat={inCombat} minWidth={activeView.columns * 380}>
+    <Wrap wide inCombat={inCombat} minWidth={activeView.columns * 380} backgroundColor={appearance.backgroundColor} textColor={appearance.textColor} style={appearanceCssVariables(appearance)} backgroundImage={backgroundPatternImage(appearance.backgroundPattern, derived.accentColor, appearance.backgroundIntensity)} backgroundSize={appearance.backgroundPattern === "grid" ? "44px 44px" : appearance.backgroundPattern === "stars" ? "130px 110px" : undefined}>
       <input ref={ui.portraitFileRef} type="file" accept="image/*" hidden onChange={handlePortraitSelected} />
       {ui.concentrationAlert && (
         <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: 10, background: "rgba(240, 165, 0, 0.15)", border: `1px solid ${C.accent}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -374,6 +379,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
         portraitUploading={ui.portraitUploading}
         onSelectPortrait={() => ui.portraitFileRef.current?.click()}
         onOpenInfo={() => ui.setInfoDrawerOpen(true)}
+        onOpenTheme={() => ui.setThemeDrawerOpen(true)}
         onOpenEngagedEnemies={() => ui.setEngagedEnemiesDrawerOpen(true)}
         showEngagedEnemies={inCombat}
         inCombat={inCombat}

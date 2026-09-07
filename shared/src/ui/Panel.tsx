@@ -11,7 +11,7 @@ export function Panel(props: {
   titleColor?: string;
   borderColor?: string;
   background?: string;
-  radius?: number;
+  radius?: React.CSSProperties["borderRadius"];
   padding?: string | number;
   titleFontSize?: string | number;
   titleFontWeight?: number;

@@ -18,12 +18,9 @@ export function CharacterInfoDrawer(props: {
   editableOverrideFields: EditableSheetOverrideField[];
   overridesDraft: SheetOverrides;
   abilityOverridesDraft: Partial<Record<AbilKey, number>>;
-  colorDraft: string;
-  colorPresets: string[];
   overridesSaving: boolean;
   onClose: () => void;
   onSave: () => void | Promise<void>;
-  onColorChange: (value: string) => void;
   onOverrideChange: (key: EditableSheetOverrideField["key"], value: number) => void;
   onAbilityOverrideChange: (key: AbilKey, value: number | null) => void;
 }) {
@@ -121,36 +118,6 @@ export function CharacterInfoDrawer(props: {
                 } finally { setLinkedSaving(false); }
               }} style={{ justifySelf: "end" }}>{linkedSaving ? "Saving…" : "Save Binder Identity"}</Button>
             </div> : null}
-          </div>
-
-          <div>
-            <div style={{ fontSize: "var(--fs-small)", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: props.accentColor, marginBottom: 12 }}>Theme</div>
-            <div style={{ padding: "10px 12px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.08em" }}>Sheet color</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {Array.from(new Set([...props.colorPresets, props.colorDraft])).map((color) => {
-                  const selected = props.colorDraft === color;
-                  return (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => props.onColorChange(color)}
-                      title={color}
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        cursor: "pointer",
-                        padding: 0,
-                        background: color,
-                        border: `2px solid ${selected ? "#ffffff" : "rgba(255,255,255,0.16)"}`,
-                        boxShadow: selected ? `0 0 0 3px ${color}66` : "none",
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            </div>
           </div>
 
           <div>

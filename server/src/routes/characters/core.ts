@@ -608,8 +608,6 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true, imageUrl: absolutizePublicUrlForRequest(req, imageUrl) });
   });
 
-  // Remove character portrait image.
-
   // MARK: - DELETE /api/me/characters/:id/image
   app.delete("/api/me/characters/:id/image", requireAuth, (req, res) => {
     const charId = requireParam(req, res, "id");

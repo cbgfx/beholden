@@ -353,6 +353,7 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT NOT NULL,
   is_admin INTEGER NOT NULL DEFAULT 0,
   last_login_at INTEGER,
+  text_scale REAL NOT NULL DEFAULT 1,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );

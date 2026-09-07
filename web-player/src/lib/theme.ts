@@ -10,7 +10,11 @@ export const C = {
   panelBorder: PALETTE.panelBorder,
 
   // ── Text ─────────────────────────────────────────────────────────
-  text:        PALETTE.text,
+  // A CSS var, not a literal hex: the character sheet's Theme drawer sets
+  // --character-text-color on its root, so every existing `C.text` usage
+  // picks up a per-character override for free. Falls back to the palette
+  // default anywhere that variable isn't set (every other page in the app).
+  text:        `var(--character-text-color, ${PALETTE.text})`,
   textDark:    PALETTE.textDark,
   muted:       PALETTE.muted,
 

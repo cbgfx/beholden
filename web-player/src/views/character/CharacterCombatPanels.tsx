@@ -91,7 +91,7 @@ function PassiveDamageRow({
   typeLabel: string;
 }) {
   return (
-    <div className="character-hover-row" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+    <div className="character-hover-row" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", margin: "0 -8px", padding: "6px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
       <div>
         <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text }}>{name}</div>
         <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{subtitle}</div>
@@ -398,7 +398,7 @@ export function CharacterCombatPanels({
             const modeLabel = attackState === "mainhand-2h" ? "2H" : attackState === "offhand" ? "Offhand" : null;
 
             return (
-              <div key={`${it.id}:${attackState}`} className="character-hover-row" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+              <div key={`${it.id}:${attackState}`} className="character-hover-row" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", margin: "0 -8px", padding: "6px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     <span style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.name}</span>

@@ -133,21 +133,13 @@ export function useCharacterActions(args: {
       abilityScores: nextAbilityScores,
       permanent: overridesDraft.permanent ?? {},
     };
-    const nextColor = colorDraft || C.accentHl;
     setOverridesSaving(true);
     try {
       await patchMyCharacter(char.id, "overrides", nextOverrides);
-      if ((char.color ?? C.accentHl) !== nextColor) {
-        await updateMyCharacter(char.id, {
-          name: char.name,
-          color: nextColor,
-        });
-      }
       setChar((prev) =>
         prev
           ? {
               ...prev,
-              color: nextColor,
               overrides: { ...(prev.overrides ?? {}), ...nextOverrides },
               characterData: {
                 ...(prev.characterData ?? {}),
@@ -160,10 +152,22 @@ export function useCharacterActions(args: {
     } finally {
       setOverridesSaving(false);
     }
-  }, [abilityOverridesDraft, char, colorDraft, overridesDraft, setChar, setInfoDrawerOpen, setOverridesSaving]);
+  }, [abilityOverridesDraft, char, overridesDraft, setChar, setInfoDrawerOpen, setOverridesSaving]);
+
+  const saveThemeColor = React.useCallback(async () => {
+    if (!char) return;
+    const nextColor = colorDraft || C.accentHl;
+    if ((char.color ?? C.accentHl) === nextColor) return;
+    await updateMyCharacter(char.id, {
+      name: char.name,
+      color: nextColor,
+    });
+    setChar((prev) => (prev ? { ...prev, color: nextColor } : prev));
+  }, [char, colorDraft, setChar]);
 
   return {
     saveCharacterData,
+    saveThemeColor,
     savePlayerNotesList,
     saveCustomResistances,
     saveCustomImmunities,

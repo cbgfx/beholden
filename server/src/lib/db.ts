@@ -5,6 +5,7 @@ import { normalizeLegacyCompendiumEffectKinds } from "./migrations/compendiumLeg
 import { extractMonsterTreasureTraits } from "./migrations/monsterTreasureMigration.js";
 import { ensureTreasureEncounterColumn } from "./migrations/treasureEncounterColumnMigration.js";
 import { ensureUserLastLoginColumn } from "./migrations/userLastLoginColumnMigration.js";
+import { ensureUserTextScaleColumn } from "./migrations/userTextScaleMigration.js";
 import { ensureImageVersionColumns } from "./migrations/imageVersionColumnMigration.js";
 import { ensureCompendiumContentHashColumns } from "./migrations/compendiumContentHashColumnMigration.js";
 import { ensureMortalClassColumn } from "./migrations/mortalClassColumnMigration.js";
@@ -69,6 +70,7 @@ export function openDb(dbPath: string): Db {
   ensureCampaignRulesetColumn(db);
   ensureTreasureEncounterColumn(db);
   ensureUserLastLoginColumn(db);
+  ensureUserTextScaleColumn(db);
   ensureImageVersionColumns(db);
   ensureCompendiumContentHashColumns(db);
   db.function("note_display_title", { deterministic: true }, displayNoteTitle);

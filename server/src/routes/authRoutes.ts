@@ -20,6 +20,7 @@ const UpdateProfileBody = z.object({
   username:    z.string().trim().min(1).optional(),
   newPassword: z.string().min(4).optional(),
   currentPassword: z.string().optional(),
+  textScale: z.number().min(0.85).max(1.3).optional(),
 });
 
 export function registerAuthRoutes(app: Express, ctx: ServerContext) {
@@ -35,7 +36,7 @@ export function registerAuthRoutes(app: Express, ctx: ServerContext) {
   app.post("/api/auth/login", (req, res) => {
     const body = parseBody(LoginBody, req);
     const row = db
-      .prepare("SELECT id, username, passhash, name, is_admin FROM users WHERE LOWER(username) = LOWER(?)")
+      .prepare("SELECT id, username, passhash, name, is_admin, text_scale FROM users WHERE LOWER(username) = LOWER(?)")
       .get(body.username) as Record<string, unknown> | undefined;
 
     if (!row || !verifyPassword(body.password, row.passhash as string)) {
@@ -59,6 +60,7 @@ export function registerAuthRoutes(app: Express, ctx: ServerContext) {
         name: row.name,
         isAdmin,
         hasDmAccess: isAdmin || hasDmAccess(row.id as string),
+        textScale: Number(row.text_scale ?? 1),
       },
     });
   });
@@ -90,6 +92,7 @@ export function registerAuthRoutes(app: Express, ctx: ServerContext) {
     if (body.name !== undefined)        { setClauses.push("name = ?");     values.push(body.name); }
     if (body.username !== undefined)    { setClauses.push("username = ?"); values.push(body.username.toLowerCase()); }
     if (body.newPassword !== undefined) { setClauses.push("passhash = ?"); values.push(hashPassword(body.newPassword)); }
+    if (body.textScale !== undefined) { setClauses.push("text_scale = ?"); values.push(body.textScale); }
 
     if (setClauses.length === 0) return res.json({ ok: true });
 
@@ -107,7 +110,7 @@ export function registerAuthRoutes(app: Express, ctx: ServerContext) {
     }
 
     const updated = db
-      .prepare("SELECT id, username, name, is_admin FROM users WHERE id = ?")
+      .prepare("SELECT id, username, name, is_admin, text_scale FROM users WHERE id = ?")
       .get(userId) as Record<string, unknown>;
 
     const isAdmin = Boolean(updated.is_admin);
@@ -122,13 +125,14 @@ export function registerAuthRoutes(app: Express, ctx: ServerContext) {
         name: updated.name,
         isAdmin,
         hasDmAccess: isAdmin || hasDmAccess(userId),
+        textScale: Number(updated.text_scale ?? 1),
       },
     });
   });
 
   app.get("/api/auth/me", requireAuth, (req, res) => {
     const row = db
-      .prepare("SELECT id, username, name, is_admin FROM users WHERE id = ?")
+      .prepare("SELECT id, username, name, is_admin, text_scale FROM users WHERE id = ?")
       .get(req.user!.userId) as Record<string, unknown> | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "User not found" });
     const isAdmin = Boolean(row.is_admin);
@@ -138,6 +142,7 @@ export function registerAuthRoutes(app: Express, ctx: ServerContext) {
       name: row.name,
       isAdmin,
       hasDmAccess: isAdmin || hasDmAccess(row.id as string),
+      textScale: Number(row.text_scale ?? 1),
     });
   });
 }
