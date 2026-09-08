@@ -1,64 +1,9 @@
 import React, { useState } from "react";
+import { rollDiceExpr } from "@beholden/shared/domain/dice";
 import { Modal } from "@/components/overlay/Modal";
 import { theme, withAlpha } from "@/theme/theme";
 
 // ── Dice expression evaluator ───────────────────────────────────────────────
-
-function rollAllDice(expr: string): string {
-  return expr.replace(/(\d*)d(\d+)/gi, (_, count, sides) => {
-    const n = count ? Math.max(0, parseInt(count, 10)) : 1;
-    const s = Math.max(1, parseInt(sides, 10));
-    let sum = 0;
-    for (let i = 0; i < n; i++) sum += Math.floor(Math.random() * s) + 1;
-    return String(sum);
-  });
-}
-
-function evalArith(expr: string): number {
-  const rawTokens = expr.match(/\d+|[+\-*/()]/g);
-  if (!rawTokens) return 0;
-  const tokens: string[] = rawTokens;
-  let pos = 0;
-
-  function parseExpr(): number { return parseAddSub(); }
-
-  function parseAddSub(): number {
-    let result = parseMulDiv();
-    while (pos < tokens.length && (tokens[pos] === "+" || tokens[pos] === "-")) {
-      const op = tokens[pos++];
-      result = op === "+" ? result + parseMulDiv() : result - parseMulDiv();
-    }
-    return result;
-  }
-
-  function parseMulDiv(): number {
-    let result = parsePrimary();
-    while (pos < tokens.length && (tokens[pos] === "*" || tokens[pos] === "/")) {
-      const op = tokens[pos++];
-      const right = parsePrimary();
-      result = op === "*" ? result * right : right !== 0 ? Math.floor(result / right) : 0;
-    }
-    return result;
-  }
-
-  function parsePrimary(): number {
-    if (tokens[pos] === "(") {
-      pos++;
-      const result = parseExpr();
-      if (tokens[pos] === ")") pos++;
-      return result;
-    }
-    if (tokens[pos] === "-") { pos++; return -parsePrimary(); }
-    return Number.isFinite(Number(tokens[pos])) ? Number(tokens[pos++]) : 0;
-  }
-
-  try { return parseExpr(); } catch { return 0; }
-}
-
-function evaluate(expr: string): number {
-  const arith = rollAllDice(expr);
-  return evalArith(arith);
-}
 
 // ── Styles ──────────────────────────────────────────────────────────────────
 
@@ -131,7 +76,7 @@ export function DiceCalculatorModal(props: { isOpen: boolean; onClose: () => voi
 
   function roll() {
     if (!expr.trim()) return;
-    setResult(evaluate(expr));
+    setResult(rollDiceExpr(expr, { calculator: true }));
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {

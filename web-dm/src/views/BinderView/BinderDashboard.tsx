@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchBinderDashboard, type BinderDashboard } from "@/services/binderApi";
 import { theme, withAlpha } from "@/theme/theme";
+import { useBinderResource } from "./useBinderResource";
 
 const TYPE_LABELS: Record<string, string> = { mortal: "Mortals", deity: "Deities", organization: "Organizations", continent: "Continents", country: "Countries", location: "Locations", poi: "POIs", item: "Items", event: "Events", race: "Races", position: "Positions", domain: "Domains" };
 const SECTIONS: Record<string, string> = { mortal: "mortals", deity: "deities", organization: "organizations", continent: "continents", country: "countries", location: "locations", poi: "points-of-interest", item: "items", event: "events", race: "races", position: "positions", domain: "domains" };
@@ -14,8 +14,8 @@ function RecordLinks({ rows }: { rows: Array<{ id: string; name: string; type?: 
 }
 
 export function BinderDashboardView({ binderId, accent, canEdit }: { binderId: string; accent: string; canEdit: boolean }) {
-  const [data, setData] = useState<BinderDashboard | null>(null);
-  useEffect(() => { void fetchBinderDashboard(binderId).then(setData); }, [binderId]);
+  const { data, error } = useBinderResource<BinderDashboard>(binderId, fetchBinderDashboard);
+  if (error) return <div role="alert" style={{ color: theme.colors.red }}>{error}</div>;
   if (!data) return <div style={{ color: theme.colors.muted }}>Loading dashboard…</div>;
   return <div style={{ display: "grid", gap: 14 }}>
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 9 }}>

@@ -62,11 +62,13 @@ export function CharacterFeatPickerModal(props: {
 
   useEffect(() => {
     if (!props.isOpen || allFeats.length > 0) return;
+    const controller = new AbortController();
     setBusy(true);
-    api<FeatRow[]>(`/api/compendium/feats?fields=id,name&ruleset=${encodeURIComponent(props.ruleset)}`)
-      .then((rows) => setAllFeats((rows ?? []).sort((a, b) => a.name.localeCompare(b.name))))
+    api<FeatRow[]>(`/api/compendium/feats?fields=id,name&ruleset=${encodeURIComponent(props.ruleset)}`, { signal: controller.signal })
+      .then((rows) => { if (!controller.signal.aborted) setAllFeats((rows ?? []).sort((a, b) => a.name.localeCompare(b.name))); })
       .catch(() => {})
-      .finally(() => setBusy(false));
+      .finally(() => { if (!controller.signal.aborted) setBusy(false); });
+    return () => controller.abort();
   }, [allFeats.length, props.isOpen, props.ruleset]);
 
   useEffect(() => {

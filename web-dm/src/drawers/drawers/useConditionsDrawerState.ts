@@ -13,8 +13,8 @@ export type ConditionsDrawerState = Exclude<Extract<DrawerState, { type: "combat
 export type ConditionInstance = SharedConditionInstance & { expiresAtRound?: number | null };
 
 // Only these conditions require a caster association.
-export const NEEDS_CASTER_KEYS = new Set(["hexed", "marked"]);
-export const REPEATABLE_CASTER_KEYS = new Set(["hexed", "marked"]);
+const NEEDS_CASTER_KEYS = new Set(["hexed", "marked"]);
+const REPEATABLE_CASTER_KEYS = new Set(["hexed", "marked"]);
 export const HEX_ABILITIES: Array<{ key: SharedAbilityKey; label: string }> = [
   { key: "str", label: "Strength (Str)" },
   { key: "dex", label: "Dexterity (Dex)" },

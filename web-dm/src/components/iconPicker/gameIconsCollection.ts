@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export const GAME_ICONS_PREFIX = "game-icons";
+const GAME_ICONS_PREFIX = "game-icons";
 const COLLECTION_URL = `https://api.iconify.design/collection?prefix=${GAME_ICONS_PREFIX}&info=false`;
 
 type IconifyCollectionResponse = {

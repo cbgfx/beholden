@@ -2,6 +2,26 @@ import { describe, expect, it } from "vitest";
 import { rollDiceExpr, hasDiceTerm } from "@beholden/shared/domain";
 
 describe("rollDiceExpr", () => {
+  it("rejects dice sizes outside the 32-bit sampler and excessive roll counts", () => {
+    expect(rollDiceExpr("d4294967297")).toBe(0);
+    expect(rollDiceExpr("1000000000d1")).toBe(0);
+    expect(rollDiceExpr("6000d1+6000d1")).toBe(0);
+    expect(rollDiceExpr("10000d1")).toBe(10000);
+    expect(rollDiceExpr("d4294967296")).toBeGreaterThanOrEqual(1);
+  });
+
+  it("rejects excessive nesting and input length without overflowing the stack", () => {
+    expect(rollDiceExpr("(".repeat(1000) + "1" + ")".repeat(1000))).toBe(0);
+    expect(rollDiceExpr("-".repeat(1000) + "1")).toBe(0);
+    expect(rollDiceExpr("1+".repeat(3000) + "1")).toBe(0);
+  });
+
+  it("preserves calculator negatives and integer division without changing HP math", () => {
+    expect(rollDiceExpr("2-5", { calculator: true })).toBe(-3);
+    expect(rollDiceExpr("7/2*2", { calculator: true })).toBe(6);
+    expect(rollDiceExpr("2-5")).toBe(0);
+    expect(rollDiceExpr("7/2*2")).toBe(7);
+  });
   it("rolls a flat constant unchanged", () => {
     expect(rollDiceExpr("8")).toBe(8);
   });

@@ -1,3 +1,4 @@
+import { useRichTextDraft } from "./useRichTextDraft";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { resolveAssetUrl } from "@/services/api";
@@ -54,30 +55,20 @@ function InlineRichTextField(props: {
   validMentionIds?: Set<string>;
   binderId: string;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(props.value ?? "");
-  const [saving, setSaving] = useState(false);
-  useEffect(() => setDraft(props.value ?? ""), [props.value]);
+  const { editing, draft, saving, error, setDraft, startEditing, cancel, save } = useRichTextDraft(props.value, props.onSave);
   return <section>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
       <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase" }}>{props.label}</div>
-      {props.canEdit && !editing ? <button type="button" onClick={() => setEditing(true)} title={`Edit ${props.label.toLocaleLowerCase()}`} style={{ display: "inline-flex", alignItems: "center", gap: 5, border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}>
+      {props.canEdit && !editing ? <button type="button" onClick={startEditing} title={`Edit ${props.label.toLocaleLowerCase()}`} style={{ display: "inline-flex", alignItems: "center", gap: 5, border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}>
         <IconPencil size={13} /> Edit
       </button> : null}
     </div>
     {editing ? <div style={{ display: "grid", gap: 9, marginTop: 7 }}>
       <WysiwygNoteEditor value={draft} onChange={setDraft} mentions={props.mentions} placeholder={`Add ${props.label.toLocaleLowerCase()}…`} minHeight={220} theme={{ radius: theme.radius.control, panelBorder: theme.colors.panelBorder, inputBg: theme.colors.inputBg, text: theme.colors.text }} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-        <Button variant="ghost" onClick={() => { setDraft(props.value ?? ""); setEditing(false); }}>Cancel</Button>
-        <Button disabled={saving} onClick={async () => {
-          setSaving(true);
-          try {
-            await props.onSave(draft.trim() || null);
-            setEditing(false);
-          } finally {
-            setSaving(false);
-          }
-        }}>Save</Button>
+        <Button variant="ghost" disabled={saving} onClick={cancel}>Cancel</Button>
+            <Button disabled={saving} onClick={save}>{saving ? "Saving…" : "Save"}</Button>
+            {error ? <div role="alert">{error}</div> : null}
       </div>
     </div> : <div style={{ minHeight: 54, marginTop: 7, padding: "7px 8px", color: props.value ? theme.colors.text : theme.colors.muted, lineHeight: 1.55 }}>
       {props.value ? <MarkdownRichText text={props.value} validMentionIds={props.validMentionIds} binderId={props.binderId} /> : `No ${props.label.toLocaleLowerCase()} yet.`}
@@ -337,12 +328,12 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
                 </div>
               ))}
             </div>
-            <InlineRichTextField binderId={props.binderId} label="Notes" value={selected.notes} mentions={mentions} validMentionIds={validMentionIds} canEdit={props.canEdit} onSave={async (notes) => {
+            <InlineRichTextField key={`${props.binderId}:${selected.id}:notes`} binderId={props.binderId} label="Notes" value={selected.notes} mentions={mentions} validMentionIds={validMentionIds} canEdit={props.canEdit} onSave={async (notes) => {
               await updateBinderMortal(props.binderId, selected.id, { notes });
               await syncBinderMentions(props.binderId, selected.id, "description", notes);
               await reload();
             }} />
-            <InlineRichTextField binderId={props.binderId} label="DM Notes" value={selected.dmNotes} mentions={mentions} validMentionIds={validMentionIds} canEdit={props.canEdit} onSave={async (dmNotes) => {
+            <InlineRichTextField key={`${props.binderId}:${selected.id}:dm-notes`} binderId={props.binderId} label="DM Notes" value={selected.dmNotes} mentions={mentions} validMentionIds={validMentionIds} canEdit={props.canEdit} onSave={async (dmNotes) => {
               await updateBinderMortal(props.binderId, selected.id, { dmNotes });
               await syncBinderMentions(props.binderId, selected.id, "dm_notes", dmNotes);
               await reload();

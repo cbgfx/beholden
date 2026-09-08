@@ -44,6 +44,6 @@ export function createDatabaseUpload(dataDir: string) {
   });
 }
 
-export function databaseUploadDirectory(dataDir: string): string {
+function databaseUploadDirectory(dataDir: string): string {
   return path.join(dataDir, "tmp", "database-uploads");
 }

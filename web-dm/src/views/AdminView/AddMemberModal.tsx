@@ -21,9 +21,14 @@ export function AddMemberModal({ campaignId: _campaignId, campaignName, existing
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api<User[]>("/api/admin/users").then((data) => {
-      setUsers(data.filter((u) => !existingUserIds.has(u.id)));
+    const controller = new AbortController();
+    setError(null);
+    api<User[]>("/api/admin/users", { signal: controller.signal }).then((data) => {
+      if (!controller.signal.aborted) setUsers(data.filter((u) => !existingUserIds.has(u.id)));
+    }).catch((cause) => {
+      if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Unable to load users.");
     });
+    return () => controller.abort();
   }, [existingUserIds]);
 
   async function handleAdd(e: React.FormEvent) {

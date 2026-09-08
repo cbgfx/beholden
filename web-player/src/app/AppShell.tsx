@@ -1,4 +1,5 @@
 import React from "react";
+import { useUpdateCheck } from "@beholden/shared/ui/useUpdateCheck";
 import { NavLink, Link } from "react-router-dom";
 import { C, withAlpha } from "@/lib/theme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -65,42 +66,6 @@ function useServerMeta() {
   return meta;
 }
 
-function useUpdateCheck() {
-  const [state, setState] = React.useState({ currentVersion: "1.5.0", updateAvailable: false });
-  const [updating, setUpdating] = React.useState(false);
-  const [message, setMessage] = React.useState("");
-  React.useEffect(() => {
-    let cancelled = false;
-    const checkForUpdate = () => {
-      api<{ ok: boolean; currentVersion?: string; updateAvailable?: boolean }>("/api/update-check")
-        .then((r) => {
-          if (!cancelled) setState({ currentVersion: r.currentVersion ?? "1.5.0", updateAvailable: r.ok && r.updateAvailable === true });
-        })
-        .catch(() => {});
-    };
-
-    const idleId = window.requestIdleCallback?.(checkForUpdate, { timeout: 3_000 });
-    const timeoutId = idleId === undefined ? window.setTimeout(checkForUpdate, 1_500) : undefined;
-    return () => {
-      cancelled = true;
-      if (idleId !== undefined) window.cancelIdleCallback?.(idleId);
-      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
-    };
-  }, []);
-  const startUpdate = React.useCallback(async () => {
-    if (!window.confirm("Pull and build the latest Beholden release now?")) return;
-    setUpdating(true);
-    try {
-      const result = await api<{ message?: string }>("/api/update", { method: "POST" });
-      setMessage(result.message ?? "Update started. Restart Beholden when it finishes.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not start the update.");
-    } finally {
-      setUpdating(false);
-    }
-  }, []);
-  return { ...state, updating, message, startUpdate };
-}
 
 function topbarToolButtonStyle(active = false, accent = C.accentHl, muted = C.muted): React.CSSProperties {
   return {
@@ -123,7 +88,7 @@ function topbarToolButtonStyle(active = false, accent = C.accentHl, muted = C.mu
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const meta = useServerMeta();
-  const update = useUpdateCheck();
+  const update = useUpdateCheck(api, "1.5.0");
   const showSupport = meta?.support === true;
   const connected = useWsStatus();
   const lastChar = useLastCharacter();

@@ -10,11 +10,17 @@ import { CampaignCard } from "./CampaignCard";
 export function CampaignsAdminPanel() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api<Campaign[]>("/api/campaigns")
-      .then(setCampaigns)
-      .finally(() => setLoading(false));
+    const controller = new AbortController();
+    api<Campaign[]>("/api/campaigns", { signal: controller.signal })
+      .then((rows) => { if (!controller.signal.aborted) setCampaigns(rows); })
+      .catch((cause) => {
+        if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Unable to load campaigns.");
+      })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, []);
 
   return (
@@ -26,7 +32,9 @@ export function CampaignsAdminPanel() {
         </p>
       </div>
 
-      {loading ? (
+      {error ? (
+        <div role="alert" style={{ color: theme.colors.red, padding: 20 }}>{error}</div>
+      ) : loading ? (
         <div style={{ color: theme.colors.muted, padding: 20 }}>Loading…</div>
       ) : campaigns.length === 0 ? (
         <div style={{

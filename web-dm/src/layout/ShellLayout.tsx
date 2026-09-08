@@ -1,4 +1,5 @@
 import React from "react";
+import { useUpdateCheck } from "@beholden/shared/ui/useUpdateCheck";
 import { Link } from "react-router-dom";
 import { theme, withAlpha } from "@/theme/theme";
 import { useStore } from "@/store";
@@ -7,42 +8,6 @@ import { api } from "@/services/api";
 import { FooterGrid, TopBarFrame } from "@beholden/shared/ui";
 import { useAuth } from "@/contexts/AuthContext";
 
-function useUpdateCheck() {
-  const [state, setState] = React.useState({ currentVersion: "1.5.0", updateAvailable: false });
-  const [updating, setUpdating] = React.useState(false);
-  const [message, setMessage] = React.useState("");
-  React.useEffect(() => {
-    let cancelled = false;
-    const checkForUpdate = () => {
-      api<{ ok: boolean; currentVersion?: string; updateAvailable?: boolean }>("/api/update-check")
-        .then((r) => {
-          if (!cancelled) setState({ currentVersion: r.currentVersion ?? "1.5.0", updateAvailable: r.ok && r.updateAvailable === true });
-        })
-        .catch(() => {});
-    };
-
-    const idleId = window.requestIdleCallback?.(checkForUpdate, { timeout: 3_000 });
-    const timeoutId = idleId === undefined ? window.setTimeout(checkForUpdate, 1_500) : undefined;
-    return () => {
-      cancelled = true;
-      if (idleId !== undefined) window.cancelIdleCallback?.(idleId);
-      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
-    };
-  }, []);
-  const startUpdate = React.useCallback(async () => {
-    if (!window.confirm("Pull and build the latest Beholden release now?")) return;
-    setUpdating(true);
-    try {
-      const result = await api<{ message?: string }>("/api/update", { method: "POST" });
-      setMessage(result.message ?? "Update started. Restart Beholden when it finishes.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not start the update.");
-    } finally {
-      setUpdating(false);
-    }
-  }, []);
-  return { ...state, updating, message, startUpdate };
-}
 
 export function ShellLayout(props: { children: React.ReactNode }) {
   const { state } = useStore();
@@ -61,7 +26,7 @@ export function ShellLayout(props: { children: React.ReactNode }) {
   const supportFromVite = parseBool((import.meta as any).env?.VITE_BEHOLDEN_SUPPORT);
   const showSupport = (supportFromVite ?? supportFromMeta ?? false) === true;
 
-  const update = useUpdateCheck();
+  const update = useUpdateCheck(api, "1.5.0");
   const ips = state.meta?.ips ?? [];
   const lanIps = ips.filter((ip) => ip.startsWith("192.168."));
   const primaryIp = lanIps[0] ?? null;

@@ -15,21 +15,25 @@
  * Returns 0 for empty, unparseable, or partially-parseable (trailing garbage)
  * expressions -- deliberately strict, since a silently-wrong partial parse is
  * worse than a visible 0 for something that feeds HP math. Result is always
- * clamped to >= 0.
+ * clamped to >= 0 for HP inputs. Calculator mode retains negative answers
+ * and floors each division, matching the calculator's integer arithmetic.
  *
  * Each individual die roll uses crypto.getRandomValues with rejection
  * sampling (falling back to Math.random in non-crypto environments) to avoid
  * modulo bias -- this matters for fairness at a real table.
  */
-export function rollDiceExpr(expr: string): number {
+export function rollDiceExpr(expr: string, options: { calculator?: boolean } = {}): number {
   const raw = String(expr ?? "")
     .trim()
     .toLowerCase()
     .replace(/\s+/g, "")
     .replace(/[x×]/g, "*");
-  if (!raw) return 0;
+  // Bound work on the UI thread, including the 32-bit rejection sampler.
+  if (!raw || raw.length > 4096) return 0;
 
   let i = 0;
+  let remainingDice = 10000;
+  let depth = 0;
 
   const peek = () => raw[i] ?? "";
   const consume = () => raw[i++] ?? "";
@@ -51,6 +55,8 @@ export function rollDiceExpr(expr: string): number {
     if (!Number.isFinite(count) || !Number.isFinite(sides)) return NaN;
     const c = Math.max(0, Math.floor(count));
     const s = Math.max(1, Math.floor(sides));
+    if (c > remainingDice || s > 0x1_0000_0000) return NaN;
+    remainingDice -= c;
     let total = 0;
     for (let idx = 0; idx < c; idx += 1) total += rollDie(s);
     return total;
@@ -86,16 +92,19 @@ export function rollDiceExpr(expr: string): number {
   };
 
   const parseUnary = (): number => {
-    if (peek() === "+") {
-      consume();
-      return parseUnary();
-    }
-    if (peek() === "-") {
-      consume();
-      const v = parseUnary();
-      return Number.isFinite(v) ? -v : NaN;
-    }
-    return parsePrimary();
+    if (++depth > 64) { depth--; return NaN; }
+    try {
+      if (peek() === "+") {
+        consume();
+        return parseUnary();
+      }
+      if (peek() === "-") {
+        consume();
+        const v = parseUnary();
+        return Number.isFinite(v) ? -v : NaN;
+      }
+      return parsePrimary();
+    } finally { depth--; }
   };
 
   const parseTerm = (): number => {
@@ -108,6 +117,7 @@ export function rollDiceExpr(expr: string): number {
       else {
         if (right === 0) return NaN;
         left /= right;
+        if (options.calculator) left = Math.floor(left);
       }
     }
     return left;
@@ -127,7 +137,7 @@ export function rollDiceExpr(expr: string): number {
 
   const value = parseExpression();
   if (!Number.isFinite(value) || i < raw.length) return 0;
-  return Math.max(0, Math.floor(value));
+  return options.calculator ? Math.floor(value) : Math.max(0, Math.floor(value));
 }
 
 function rollDie(sides: number): number {

@@ -19,7 +19,7 @@ export function ownsBinder(db: Db, userId: string, binderId: string): boolean {
  * A Binder is readable by its owner and by DMs on any attached Campaign.
  * Player membership never grants DM Binder access.
  */
-export function canAccessBinder(db: Db, userId: string, binderId: string): boolean {
+function canAccessBinder(db: Db, userId: string, binderId: string): boolean {
   return Boolean(db.prepare(`
     SELECT 1
     FROM binders b
@@ -42,7 +42,7 @@ export function canAccessBinder(db: Db, userId: string, binderId: string): boole
   `).get(binderId, userId, userId, userId));
 }
 
-export function canEditBinder(db: Db, userId: string, binderId: string): boolean {
+function canEditBinder(db: Db, userId: string, binderId: string): boolean {
   return Boolean(db.prepare(`
     SELECT 1 FROM binders b
     WHERE b.id = ? AND (

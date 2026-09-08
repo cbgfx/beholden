@@ -6,7 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-export const DATABASE_IMAGE_DIRECTORIES = [
+const DATABASE_IMAGE_DIRECTORIES = [
   "campaign-images",
   "player-images",
   "binder-mortal-images",

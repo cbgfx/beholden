@@ -1,67 +1,8 @@
 import React from "react";
+import { rollDiceExpr } from "@beholden/shared/domain/dice";
 import { C, withAlpha } from "@/lib/theme";
 import { IconDice } from "@/icons";
 import { Button } from "@/ui/Button";
-
-function rollAllDice(expr: string): string {
-  return expr.replace(/(\d*)d(\d+)/gi, (_, count, sides) => {
-    const n = count ? Math.max(0, parseInt(count, 10)) : 1;
-    const s = Math.max(1, parseInt(sides, 10));
-    let sum = 0;
-    for (let i = 0; i < n; i++) sum += Math.floor(Math.random() * s) + 1;
-    return String(sum);
-  });
-}
-
-function evalArith(expr: string): number {
-  const tokens: string[] = expr.match(/\d+|[+\-*/()]/g) ?? [];
-  if (tokens.length === 0) return 0;
-  let pos = 0;
-
-  function parseAddSub(): number {
-    let result = parseMulDiv();
-    while (pos < tokens.length && (tokens[pos] === "+" || tokens[pos] === "-")) {
-      const op = tokens[pos++];
-      result = op === "+" ? result + parseMulDiv() : result - parseMulDiv();
-    }
-    return result;
-  }
-
-  function parseMulDiv(): number {
-    let result = parsePrimary();
-    while (pos < tokens.length && (tokens[pos] === "*" || tokens[pos] === "/")) {
-      const op = tokens[pos++];
-      const right = parsePrimary();
-      result = op === "*" ? result * right : right !== 0 ? Math.floor(result / right) : 0;
-    }
-    return result;
-  }
-
-  function parsePrimary(): number {
-    if (tokens[pos] === "(") {
-      pos++;
-      const result = parseAddSub();
-      if (tokens[pos] === ")") pos++;
-      return result;
-    }
-    if (tokens[pos] === "-") {
-      pos++;
-      return -parsePrimary();
-    }
-    const value = Number(tokens[pos++]);
-    return Number.isFinite(value) ? value : 0;
-  }
-
-  try {
-    return parseAddSub();
-  } catch {
-    return 0;
-  }
-}
-
-function evaluate(expr: string): number {
-  return evalArith(rollAllDice(expr));
-}
 
 function calculatorButtonStyle(variant: "dice" | "digit" | "op" | "danger" | "roll" = "digit"): React.CSSProperties {
   const palette = {
@@ -108,7 +49,7 @@ export function DiceCalculatorModal(props: { isOpen: boolean; onClose: () => voi
 
   function roll() {
     if (!expr.trim()) return;
-    setResult(evaluate(expr));
+    setResult(rollDiceExpr(expr, { calculator: true }));
   }
 
   function keyDown(e: React.KeyboardEvent<HTMLInputElement>) {

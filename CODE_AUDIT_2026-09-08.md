@@ -1,5 +1,74 @@
 # Codebase audit — 2026-09-08
 
+## Ninth pass — party currency writes
+
+- Removed the currency popup's independent API call and stale optimistic rollback. Writes now belong to the campaign synchronization controller and apply the server-confirmed balance.
+- Currency writes synchronously reject overlapping submissions and invalidate preceding reads. Reads triggered during a write are deferred to a reconciliation fetch after completion or failure. Retired campaign controllers suppress write results.
+- The popup remains open with a visible error on failure, preserves its input for retry, and disables editing/dismissal while saving. Popup state is keyed by campaign.
+- Added three controller tests for overlapping writes/older reads, failure reconciliation/retry, and completion after campaign disposal.
+- Full verification passed: 371 server + 416 Player + 51 DM tests (838 total), typecheck, lint, builds, payload and bundle budgets, and diff whitespace checks. Browser interaction remains untested.
+- Further findings requiring their own fixes: character item transfer currently spans separate save/delete requests (not an atomic transfer), and full-character inventory saves still need concurrent-edit analysis. Currency changes above do not solve those paths or multi-client server write conflicts.
+
+## Eighth pass — party inventory read ordering
+
+- Extracted party inventory/currency synchronization from character inventory enrichment into a dedicated hook and independently testable campaign-scoped controller.
+- Retired campaign controllers ignore all pending responses. The hook clears inventory, capacity and currency when campaign scope changes or disappears.
+- Per-item request ordering prevents a late upsert from restoring a deleted item or replacing a newer update. Different items still update independently.
+- Full snapshots overtaken by inventory events are discarded and trigger a debounced reconciliation. Accepted snapshots retire older pending item reads. Currency uses latest-request ordering.
+- Kept targeted item reads and the existing debounced full-refresh queue; failed current item reads still fall back to a full refresh. Completed item request tracking is released.
+- Seven controller regression tests cover delete/upsert races, independent items, snapshot reconciliation, snapshot/item ordering, currency ordering, disposal, and fallback.
+- `npm run verify` passed: 371 server + 413 Player + 51 DM tests (835 total), typecheck, lint, builds, payload and bundle budgets. Initial gzip JS remains DM 157.85 KiB and Player 156.03 KiB. `git diff --check` passes. No browser/live-WebSocket smoke testing performed.
+- Scope: these guards cover synchronization reads, not every optimistic mutation callback or server-side concurrent-write conflict.
+
+## Seventh pass — Binder inline drafts
+
+- Replaced duplicated campaign/NPC inline-editor state and save handlers with `useRichTextDraft`.
+- Background value refreshes no longer replace an active draft. A successful save closes the editor only if its draft still matches the submitted text; typing during the request remains available for another save.
+- Save failures now show an alert and preserve the draft. A synchronous guard prevents duplicate submissions and cancellation during an active save; completion after unmount does not update editor state.
+- Campaign workspace state is keyed by Binder/campaign identity, and NPC note editors by Binder/record identity, preventing drafts from carrying into another record. This is not a complete audit of the enclosing NPC reload lifecycle.
+- Added four controlled-hook regression tests. `npm run verify` passed: 371 server + 406 Player + 51 DM tests (828 total), typecheck, lint, builds, payload and bundle budgets. `git diff --check` passes. No manual browser testing in this pass.
+- Campaign-scoped inventory response ordering remains an inspection target from pass six.
+
+## Sixth pass — asynchronous saves and refreshes
+
+- Character creation now clears catalog choices on ruleset changes and ignores results from retired requests. Slow responses for the previous ruleset cannot replace the current class/race/background/feat lists; campaign loading also ignores results after cleanup.
+- Extracted shared profile submission into `useProfileSave`. Account, password, and display forms share a synchronous in-flight guard; closing the view aborts the request and suppresses late account/token updates. This does not roll back a save already received by the server.
+- Fixed the shared debounced refresh queue: synchronous callback exceptions no longer leave it permanently busy, and cleanup cancels timers and prevents queued follow-up work after unmount.
+- Inventory refresh callbacks now return their promises so the queue tracks actual completion. Failed item refreshes no longer pass an Error object as a timer delay.
+- Added eight controlled-hook regression tests covering catalog switching/clearing, competing profile saves, cleanup, retry, synchronous refresh failures, coalescing, and unmount.
+- `npm run verify` passed: 371 server + 406 Player + 47 DM tests (824 total), typecheck, lint, production builds, payload budgets, and bundle budgets. Initial gzip JS: DM 157.85 KiB, Player 156.03 KiB. No manual browser testing in this pass.
+- Further inspection targets: campaign-scoped inventory responses and Binder campaign draft/save lifecycle. These are not covered by the fixes above.
+
+## Fifth pass — behavioral regressions and bounds
+
+- Fixed an infinite rejection-sampling loop for dice with more than 2^32 sides. The shared evaluator now rejects expressions over 4,096 normalized characters, nesting beyond 64 levels, and more than 10,000 total dice per expression. Invalid input still returns zero.
+- Corrected a regression introduced by the earlier calculator deduplication: calculators again retain negative results and floor each division. HP inputs retain their existing nonnegative/final-rounding behavior. Both modes use one parser.
+- Fixed virtual-list ranges when a filter shrinks results below the saved scroll position. Empty results no longer retain a large spacer; short results are visible immediately. Normal large lists still render a bounded window.
+- Replaced the update-submit state guard with a synchronous ref guard, closing the interval before React rerenders. Failed updates release the guard for retry.
+- Added seven regression tests: oversized dice/counts, nesting, calculator/HP semantics, filtered list shrinkage, empty lists, bounded rendering, and repeated update requests before rerender.
+- `npm run verify` passed: 371 server + 398 Player + 47 DM tests (816 total), clean typecheck/lint, builds, payload budgets and bundle budgets. Initial gzip JS: DM 157.85 KiB, Player 155.99 KiB. Browser interaction has not been manually exercised in this pass.
+
+## Fourth pass — completed
+
+- Removed both calculator-local dice parsers in favor of the established shared dice engine.
+- Consolidated DM/Player update checking and guarded update submission against repeat requests.
+- Reduced Knip findings to intentional public facade types and semantic icon aliases; removed the stale forwarding module and accidental exports it identified.
+- Added cancellation/stale-result protection to feat lists, Binder identity, Binder dashboard/health, Binder global search, campaign mentions, and admin campaign/member loads. Previously several rejected promises were unhandled and older searches or Binder IDs could overwrite newer state.
+- Added visible failure states to Binder identity saves and admin/Binder resource loads.
+- Shared Binder resource loading between dashboard and health views.
+- Final clone scan at this stage reports 54 lines (0.05%) across two presentation similarities; forcing those together would add a broad prop abstraction without removing behavior.
+
+## Third pass — completed
+
+- Shared DM/Player monster-browser data loading, filters, pagination, facets and alphabetical indexing through `useMonsterBrowser`; DM editing remains isolated. Facet responses now also respect aborts.
+- Shared the complete account settings form while retaining app-specific theme adapters. Validation, password cleanup, text preview and save errors now have one implementation.
+- Both dice calculators now use the existing shared, strict dice-expression engine. Removed two private arithmetic/dice parsers that disagreed with the rest of the application.
+- Shared update-check/update-start state between DM and Player and prevented repeated update requests while one is already running.
+- Removed the stale nested DM lockfile (`@beholden/web`, React 18, router 6). The repository is an npm workspace and the root lockfile is authoritative.
+- Removed the unused monster-picker forwarding file, an unused DM icon, unused service/type forwarding exports, and made eleven internal helpers private instead of exposing accidental APIs. Public compendium facade types, inventory types, and semantic icon aliases remain intentionally exported.
+- Fixed stale requests in the character feat picker and Binder identity drawer. Binder identity save failures and admin campaign/user loading failures are now visible instead of becoming unhandled or silent rejections.
+- Exact-clone scan now reports 54 duplicated lines (0.05%) in 672 files. The two remaining matches are presentation-shell/prop-shape similarities and should only be extracted when the component boundary improves clarity.
+
 ## Second pass — completed
 
 This section supersedes first-pass findings 1, the authentication-context part of 2, the treasure-row part of 3, and 4 below.

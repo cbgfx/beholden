@@ -1,4 +1,5 @@
 import * as React from "react";
+import { virtualListRange } from "./virtualListRange";
 
 export type CompendiumMonsterRow = {
   id: string;
@@ -41,12 +42,7 @@ export function useVirtualList(args: {
   }, []);
 
   const getRange = React.useCallback(
-    (total: number) => {
-      const start = Math.max(0, Math.floor(scrollTop / args.rowHeight) - args.overscan);
-      const visibleCount = Math.ceil(viewportH / args.rowHeight) + args.overscan * 2;
-      const end = Math.min(total, start + visibleCount);
-      return { start, end, padTop: start * args.rowHeight, padBottom: (total - end) * args.rowHeight };
-    },
+    (total: number) => virtualListRange(total, scrollTop, viewportH, args.rowHeight, args.overscan),
     [scrollTop, viewportH, args.rowHeight, args.overscan]
   );
 

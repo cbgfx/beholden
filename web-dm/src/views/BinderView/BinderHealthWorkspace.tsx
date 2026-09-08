@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchBinderHealth, type BinderHealth } from "@/services/binderApi";
 import { theme, withAlpha } from "@/theme/theme";
+import { useBinderResource } from "./useBinderResource";
 
 export function BinderHealthWorkspace({ binderId, accent }: { binderId: string; accent: string }) {
-  const [health, setHealth] = useState<BinderHealth | null>(null);
-  useEffect(() => { void fetchBinderHealth(binderId).then(setHealth); }, [binderId]);
+  const { data: health, error } = useBinderResource<BinderHealth>(binderId, fetchBinderHealth);
+  if (error) return <div role="alert" style={{ color: theme.colors.red }}>{error}</div>;
   if (!health) return <div style={{ color: theme.colors.muted }}>Checking Binder health…</div>;
   return <div style={{ display: "grid", gap: 14 }}>
     <div style={{ padding: 18, borderRadius: theme.radius.panel, border: `1px solid ${withAlpha(health.healthy ? theme.colors.green : accent,.35)}`, background: withAlpha(health.healthy ? theme.colors.green : accent,.07) }}>

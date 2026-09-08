@@ -2,7 +2,7 @@ import React from "react";
 import { useTextScalePreview } from "./useTextScalePreview";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
-import { api, jsonInit } from "../api/browserClient";
+import { useProfileSave } from "./useProfileSave";
 
 type ProfileTheme = {
   colors: { bg: string; text: string; muted: string; panelBg: string; panelBorder: string;
@@ -65,7 +65,7 @@ export function ProfileSettings({ theme, Button, styles = {} }: {
   const [infoErr, setInfoErr] = React.useState<string | null>(null);
   const [pwMsg, setPwMsg]     = React.useState<string | null>(null);
   const [pwErr, setPwErr]     = React.useState<string | null>(null);
-  const [busy, setBusy]       = React.useState(false);
+  const { busy, save } = useProfileSave(updateUser);
 
   async function handleInfoSave(e: React.FormEvent) {
     e.preventDefault();
@@ -75,22 +75,16 @@ export function ProfileSettings({ theme, Button, styles = {} }: {
     if (!nameChanged && !usernameChanged) { setInfoMsg("No changes."); return; }
     if (usernameChanged && !currentPw) { setInfoErr("Enter your current password to change username."); return; }
 
-    setBusy(true);
     try {
       const body: Record<string, string> = {};
       if (nameChanged)     body.name = displayName.trim();
       if (usernameChanged) { body.username = username.trim(); body.currentPassword = currentPw; }
 
-      const res = await api<{ ok: boolean; token: string; user: NonNullable<typeof user> }>(
-        "/api/me/profile", jsonInit("PUT", body)
-      );
-      updateUser(res.user, res.token);
+      if (!await save(body)) return;
       setInfoMsg("Saved!");
       setCurrentPw("");
     } catch (err: unknown) {
       setInfoErr(String((err as Error)?.message ?? err));
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -101,29 +95,22 @@ export function ProfileSettings({ theme, Button, styles = {} }: {
     if (newPw.length < 4) { setPwErr("Password must be at least 4 characters."); return; }
     if (newPw !== confirmPw) { setPwErr("Passwords do not match."); return; }
 
-    setBusy(true);
     try {
-      const res = await api<{ ok: boolean; token: string; user: NonNullable<typeof user> }>(
-        "/api/me/profile", jsonInit("PUT", { newPassword: newPw })
-      );
-      updateUser(res.user, res.token);
+      if (!await save({ newPassword: newPw })) return;
       setPwMsg("Password updated!");
       setCurrentPw(""); setNewPw(""); setConfirmPw("");
     } catch (err: unknown) {
       setPwErr(String((err as Error)?.message ?? err));
-    } finally {
-      setBusy(false);
     }
   }
 
   async function handleDisplaySave(e: React.FormEvent) {
-    e.preventDefault(); setBusy(true); setDisplayMsg(null); setDisplayErr(null);
+    e.preventDefault(); setDisplayMsg(null); setDisplayErr(null);
     try {
-      const res = await api<{ ok: boolean; token: string; user: NonNullable<typeof user> }>("/api/me/profile", jsonInit("PUT", { textScale }));
-      updateUser(res.user, res.token); setDisplayMsg("Saved!");
+      if (await save({ textScale })) setDisplayMsg("Saved!");
     } catch (err: unknown) {
       setDisplayErr(err instanceof Error ? err.message : "Unable to save display settings.");
-    } finally { setBusy(false); }
+    }
   }
 
   const btnStyle: React.CSSProperties = {

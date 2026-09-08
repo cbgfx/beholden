@@ -1,13 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
-import { useDebouncedSingleflight } from "@beholden/shared/ui";
+import { useEffect, useState } from "react";
 import { api } from "@/services/api";
-import {
-  fetchPartyInventory,
-  fetchPartyInventoryItem,
-  fetchPartyCurrency,
-  type PartyCurrencyMap,
-} from "@/services/inventoryApi";
-import { useWs } from "@/services/ws";
+import { usePartyInventorySync } from "./usePartyInventorySync";
 import {
   getEquipState,
   initializeItemUsesMaximum,
@@ -25,7 +18,7 @@ import {
   normalizeContainers,
   singularizeInventoryLookupName,
 } from "@/views/character/CharacterInventoryPanelHelpers";
-import type { PartyStashItem } from "@/views/character/CharacterInventoryPanelRows";
+
 
 export interface InventoryPersistencePayload {
   inventory: InventoryItem[];
@@ -56,62 +49,7 @@ export function useCharacterInventorySync({
   const [expandedBusy, setExpandedBusy] = useState(false);
   const [expandedDetailCache, setExpandedDetailCache] = useState<Record<string, CompendiumItemDetail>>({});
   const [itemEditMode, setItemEditMode] = useState(false);
-  const [partyStashItems, setPartyStashItems] = useState<PartyStashItem[]>([]);
-  const [partyCapacityLbs, setPartyCapacityLbs] = useState<number | null>(null);
-  const [partyCurrency, setPartyCurrency] = useState<PartyCurrencyMap>({ PP: 0, GP: 0, SP: 0, CP: 0 });
-
-  const fetchPartyStash = useCallback(() => {
-    if (!campaignId) return;
-    fetchPartyInventory(campaignId)
-      .then(({ items, partyCapacityLbs }) => {
-        setPartyStashItems(items as PartyStashItem[]);
-        setPartyCapacityLbs(partyCapacityLbs);
-      })
-      .catch(() => {});
-  }, [campaignId]);
-
-  const fetchCurrency = useCallback(() => {
-    if (!campaignId) return;
-    fetchPartyCurrency(campaignId).then(setPartyCurrency).catch(() => {});
-  }, [campaignId]);
-  const enqueuePartyStashRefresh = useDebouncedSingleflight(fetchPartyStash);
-
-  useEffect(() => { fetchPartyStash(); }, [fetchPartyStash]);
-  useEffect(() => { fetchCurrency(); }, [fetchCurrency]);
-
-  useWs(useCallback((message) => {
-    if (message.type === "partyCurrency:delta") {
-      const payload = (message.payload ?? {}) as { campaignId?: string };
-      if (payload.campaignId === campaignId) fetchCurrency();
-      return;
-    }
-    if (message.type !== "partyInventory:delta") return;
-    const payload = (message.payload ?? {}) as {
-      campaignId?: string;
-      action?: "upsert" | "delete" | "refresh";
-      itemId?: string;
-    };
-    if (payload.campaignId !== campaignId) return;
-    if (payload.action === "delete" && payload.itemId) {
-      setPartyStashItems((previous) => previous.filter((item) => item.id !== payload.itemId));
-      return;
-    }
-    if (payload.action === "upsert" && payload.itemId && campaignId) {
-      void fetchPartyInventoryItem(campaignId, payload.itemId)
-        .then((item) => {
-          setPartyStashItems((previous) => {
-            const index = previous.findIndex((entry) => entry.id === item.id);
-            if (index === -1) return [...previous, item as PartyStashItem];
-            const next = previous.slice();
-            next[index] = item as PartyStashItem;
-            return next;
-          });
-        })
-        .catch(enqueuePartyStashRefresh);
-      return;
-    }
-    enqueuePartyStashRefresh();
-  }, [campaignId, enqueuePartyStashRefresh, fetchCurrency]));
+  const { partyStashItems, setPartyStashItems, partyCapacityLbs, partyCurrency, savePartyCurrency } = usePartyInventorySync(campaignId);
 
   useEffect(() => {
     setItems((inventory ?? []).map((item) => ({
@@ -250,7 +188,7 @@ export function useCharacterInventorySync({
     items, setItems, containers, setContainers, pickerOpen, setPickerOpen, saving, setSaving,
     itemIndex, expandedItemId, setExpandedItemId, collapsedContainerIds, setCollapsedContainerIds,
     expandedDetail, expandedBusy, itemEditMode, setItemEditMode, partyStashItems, setPartyStashItems,
-    partyCapacityLbs, partyCurrency, setPartyCurrency,
+    partyCapacityLbs, partyCurrency, savePartyCurrency,
   };
 }
 

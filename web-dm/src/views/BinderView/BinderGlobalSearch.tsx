@@ -9,10 +9,13 @@ export function BinderGlobalSearch({ binderId }: { binderId: string }) {
   const [query, setQuery] = useState("");
   const [rows, setRows] = useState<BinderRecordOption[]>([]);
   useEffect(() => {
+    let cancelled = false;
     const value = query.trim();
     if (!value) { setRows([]); return; }
-    const timer = window.setTimeout(() => void fetchBinderRecordOptions(binderId, value).then(setRows), 180);
-    return () => window.clearTimeout(timer);
+    const timer = window.setTimeout(() => void fetchBinderRecordOptions(binderId, value)
+      .then((result) => { if (!cancelled) setRows(result); })
+      .catch(() => { if (!cancelled) setRows([]); }), 180);
+    return () => { cancelled = true; window.clearTimeout(timer); };
   }, [binderId, query]);
   return <div style={{ position: "relative", width: "min(420px, 100%)" }}>
     <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search this Binder…" aria-label="Search this Binder" />

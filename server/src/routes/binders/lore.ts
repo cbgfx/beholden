@@ -6,7 +6,6 @@ import { requireParam } from "../../lib/routeHelpers.js";
 import { parseBody } from "../../lib/validate.js";
 import { EntityNameSchema } from "../../lib/schemas.js";
 import { requireBinderRecord, syncMentionField, type BinderRecordRow } from "../../services/binders/lore.js";
-export { syncMentionField } from "../../services/binders/lore.js";
 import { ITEM_SELECT, replaceEventAssociations, replaceEventTags, toEventDto } from "../../services/binders/loreProjection.js";
 
 const optionalText = (max = 200_000) => z.string().max(max).nullable().optional().transform((value) => {

@@ -1,3 +1,4 @@
+import { useRichTextDraft } from "./useRichTextDraft";
 import { useEffect, useState } from "react";
 import { IconCampaign, IconPencil } from "@/icons";
 import { Button } from "@/ui/Button";
@@ -15,16 +16,13 @@ function CampaignRichText(props: {
   binderId: string;
   onSave: (value: string | null) => Promise<void>;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(props.value ?? "");
-  const [saving, setSaving] = useState(false);
-  useEffect(() => setDraft(props.value ?? ""), [props.value]);
+  const { editing, draft, saving, error, setDraft, startEditing, cancel, save } = useRichTextDraft(props.value, props.onSave);
 
   return (
     <section style={{ paddingTop: 20, borderTop: `1px solid ${withAlpha(props.accent, 0.18)}` }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
         <h2 style={{ margin: 0, color: theme.colors.text, fontSize: "var(--fs-title)" }}>{props.label}</h2>
-        {!editing ? <button type="button" onClick={() => setEditing(true)} title={`Edit ${props.label.toLocaleLowerCase()}`} style={{ display: "inline-flex", alignItems: "center", gap: 5, border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}>
+        {!editing ? <button type="button" onClick={startEditing} title={`Edit ${props.label.toLocaleLowerCase()}`} style={{ display: "inline-flex", alignItems: "center", gap: 5, border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}>
           <IconPencil size={13} /> Edit
         </button> : null}
       </div>
@@ -39,19 +37,9 @@ function CampaignRichText(props: {
             theme={{ radius: theme.radius.control, panelBorder: theme.colors.panelBorder, inputBg: theme.colors.inputBg, text: theme.colors.text }}
           />
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-            <Button variant="ghost" disabled={saving} onClick={() => {
-              setDraft(props.value ?? "");
-              setEditing(false);
-            }}>Cancel</Button>
-            <Button disabled={saving} onClick={async () => {
-              setSaving(true);
-              try {
-                await props.onSave(draft.trim() || null);
-                setEditing(false);
-              } finally {
-                setSaving(false);
-              }
-            }}>{saving ? "Saving…" : "Save"}</Button>
+            <Button variant="ghost" disabled={saving} onClick={cancel}>Cancel</Button>
+            <Button disabled={saving} onClick={save}>{saving ? "Saving…" : "Save"}</Button>
+            {error ? <div role="alert">{error}</div> : null}
           </div>
         </div>
       ) : (
@@ -64,6 +52,10 @@ function CampaignRichText(props: {
 }
 
 export function BinderCampaignWorkspace(props: { binderId: string; campaign: Campaign; binderCurrentDate: string | null; accent: string }) {
+  return <CampaignWorkspaceContent key={JSON.stringify([props.binderId, props.campaign.id])} {...props} />;
+}
+
+function CampaignWorkspaceContent(props: { binderId: string; campaign: Campaign; binderCurrentDate: string | null; accent: string }) {
   const [story, setStory] = useState(props.campaign.campaignStory ?? null);
   const [notes, setNotes] = useState(props.campaign.campaignNotes ?? null);
   const [records, setRecords] = useState<BinderRecordOption[]>([]);
@@ -71,7 +63,13 @@ export function BinderCampaignWorkspace(props: { binderId: string; campaign: Cam
     setStory(props.campaign.campaignStory ?? null);
     setNotes(props.campaign.campaignNotes ?? null);
   }, [props.campaign.id, props.campaign.campaignStory, props.campaign.campaignNotes]);
-  useEffect(() => { void fetchBinderRecordOptions(props.binderId).then(setRecords); }, [props.binderId]);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchBinderRecordOptions(props.binderId)
+      .then((value) => { if (!cancelled) setRecords(value); })
+      .catch(() => { if (!cancelled) setRecords([]); });
+    return () => { cancelled = true; };
+  }, [props.binderId]);
   const mentions = records.map((record) => ({ id: record.id, label: record.name, href: record.route, type: record.type }));
 
   return (

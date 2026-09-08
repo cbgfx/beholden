@@ -79,7 +79,7 @@ function pageName(path: string): string {
 }
 
 // MARK: - Inspect Notion Zip
-export function inspectNotionZip(buffer: Buffer, db?: Db, binderId?: string): { summary: NotionImportSummary; candidates: Candidate[] } {
+function inspectNotionZip(buffer: Buffer, db?: Db, binderId?: string): { summary: NotionImportSummary; candidates: Candidate[] } {
   const fingerprint = createHash("sha256").update(buffer).digest("hex");
   const files = unzipSync(new Uint8Array(buffer));
   const markdownById = new Map<string, string>();

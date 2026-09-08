@@ -23,15 +23,23 @@ export function useCreatorCompendiumCatalogs(ruleset: Ruleset | undefined) {
   const [campaigns, setCampaigns] = React.useState<Campaign[]>([]);
 
   React.useEffect(() => {
+    let cancelled = false;
+    setClasses([]);
+    setRaces([]);
+    setBgs([]);
+    setFeatSummaries([]);
     if (!ruleset) return;
-    fetchClassCatalog(ruleset).then((rows) => setClasses(rows as ClassSummary[])).catch(() => {});
-    fetchRaceCatalog(ruleset).then((rows) => setRaces(rows as RaceSummary[])).catch(() => {});
-    fetchBackgroundCatalog(ruleset).then((rows) => setBgs(rows as BgSummary[])).catch(() => {});
-    fetchFeatCatalog(ruleset).then((rows) => setFeatSummaries(rows)).catch(() => {});
+    fetchClassCatalog(ruleset).then((rows) => { if (!cancelled) setClasses(rows as ClassSummary[]); }).catch(() => {});
+    fetchRaceCatalog(ruleset).then((rows) => { if (!cancelled) setRaces(rows as RaceSummary[]); }).catch(() => {});
+    fetchBackgroundCatalog(ruleset).then((rows) => { if (!cancelled) setBgs(rows as BgSummary[]); }).catch(() => {});
+    fetchFeatCatalog(ruleset).then((rows) => { if (!cancelled) setFeatSummaries(rows); }).catch(() => {});
+    return () => { cancelled = true; };
   }, [ruleset]);
 
   React.useEffect(() => {
-    api<Campaign[]>("/api/me/campaigns").then(setCampaigns).catch(() => {});
+    let cancelled = false;
+    api<Campaign[]>("/api/me/campaigns").then((rows) => { if (!cancelled) setCampaigns(rows); }).catch(() => {});
+    return () => { cancelled = true; };
   }, []);
 
   return {

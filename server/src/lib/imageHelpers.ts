@@ -3,7 +3,7 @@
 import sharp from "sharp";
 import type { ServerContext } from "../server/context.js";
 
-export const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
 
 function readIntEnv(name: string, fallback: number, min: number, max: number): number {
   const raw = Number.parseInt(String(process.env[name] ?? ""), 10);
@@ -15,7 +15,7 @@ const IMAGE_MAX_PX = readIntEnv("BEHOLDEN_IMAGE_MAX_PX", 360, 128, 1024);
 const IMAGE_WEBP_QUALITY = readIntEnv("BEHOLDEN_IMAGE_WEBP_QUALITY", 76, 40, 95);
 
 /** Resize an image buffer to max configured bounds, encode as WebP with configurable quality. */
-export async function resizeToWebP(buffer: Buffer): Promise<Buffer> {
+async function resizeToWebP(buffer: Buffer): Promise<Buffer> {
   return sharp(buffer)
     .resize({ width: IMAGE_MAX_PX, height: IMAGE_MAX_PX, fit: "inside", withoutEnlargement: true })
     .webp({ quality: IMAGE_WEBP_QUALITY })

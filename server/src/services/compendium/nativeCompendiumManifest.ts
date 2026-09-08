@@ -9,7 +9,7 @@ import { assertNativeCompendiumGuardrails } from "./nativeCompendiumGuardrails.j
 import { parseNativeCompendiumDocument } from "./nativeCompendiumParsing.js";
 import { parseJsonRecord, type NativeCompendiumBatch, type NativeCompendiumDocument, type NativeCompendiumPreview } from "./nativeCompendiumShared.js";
 
-export const CONTENT_COMPARABLE_QUERIES: Partial<Record<NativeCompendiumCategory, string>> = {
+const CONTENT_COMPARABLE_QUERIES: Partial<Record<NativeCompendiumCategory, string>> = {
   monsters: "SELECT id, ruleset, data_json FROM compendium_monsters",
   items: "SELECT id, ruleset, data_json FROM compendium_items",
   spells: "SELECT id, ruleset, data_json FROM compendium_spells",

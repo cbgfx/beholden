@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { C } from "@/lib/theme";
-import { patchPartyCurrency, type PartyCurrencyMap } from "@/services/inventoryApi";
+import type { PartyCurrencyMap } from "@/services/inventoryApi";
 import { formatWeight } from "@/views/character/CharacterInventory";
 import { Button } from "@/ui/Button";
 import { PartyStashItemRow, type PartyStashItem } from "@/views/character/CharacterInventoryPanelRows";
@@ -26,25 +26,27 @@ export interface InventoryPartyStashSectionProps {
   onTake: (item: PartyStashItem) => void;
   onDelete: (id: string) => void;
   onQuantity: (id: string, quantity: number) => void;
-  onCurrencyChange: (patch: Partial<PartyCurrencyMap>) => void;
+  onCurrencyChange: (patch: Partial<PartyCurrencyMap>) => Promise<boolean>;
 }
 
-function PartyCurrencyBar({ currency, campaignId, onCurrencyChange, stashWeight, partyCapacityLbs }: {
+function PartyCurrencyBar({ currency, onCurrencyChange, stashWeight, partyCapacityLbs }: {
   currency: PartyCurrencyMap;
-  campaignId: string;
-  onCurrencyChange: (patch: Partial<PartyCurrencyMap>) => void;
+  onCurrencyChange: (patch: Partial<PartyCurrencyMap>) => Promise<boolean>;
   stashWeight: number;
   partyCapacityLbs: number | null;
 }) {
   const [popupCode, setPopupCode] = useState<typeof CURRENCY_CODES[number] | null>(null);
   const [input, setInput] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const pending = useRef(false);
   const popupRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!popupCode) return;
     function handlePointerDown(e: MouseEvent) {
       if (popupRef.current && e.target instanceof Node && !popupRef.current.contains(e.target)) {
-        setPopupCode(null);
+        if (!pending.current) setPopupCode(null);
       }
     }
     document.addEventListener("mousedown", handlePointerDown);
@@ -52,14 +54,21 @@ function PartyCurrencyBar({ currency, campaignId, onCurrencyChange, stashWeight,
   }, [popupCode]);
 
   const save = async (code: typeof CURRENCY_CODES[number]) => {
+    if (pending.current) return;
     const value = evaluateCurrencyInput(input);
     if (value === null) return;
     const patch = { [code]: value } as Partial<PartyCurrencyMap>;
-    onCurrencyChange(patch);
-    patchPartyCurrency(campaignId, patch).catch(() => {
-      onCurrencyChange({ [code]: currency[code] });
-    });
-    setPopupCode(null);
+    pending.current = true;
+    setSaving(true);
+    setError(null);
+    try {
+      if (await onCurrencyChange(patch)) setPopupCode(null);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to save currency.");
+    } finally {
+      pending.current = false;
+      setSaving(false);
+    }
   };
 
   const overCapacity = partyCapacityLbs !== null && stashWeight > partyCapacityLbs;
@@ -77,7 +86,8 @@ function PartyCurrencyBar({ currency, campaignId, onCurrencyChange, stashWeight,
         <div key={code} ref={popupCode === code ? popupRef : undefined} style={{ position: "relative" }}>
           <button
             type="button"
-            onClick={() => { setInput(String(currency[code])); setPopupCode((c) => c === code ? null : code); }}
+            disabled={saving}
+            onClick={() => { setError(null); setInput(String(currency[code])); setPopupCode((c) => c === code ? null : code); }}
             style={currencyPillStyle(code)}
           >
             <span style={{ color: currencyColor(code), fontWeight: 800 }}>{code}</span>
@@ -95,13 +105,14 @@ function PartyCurrencyBar({ currency, campaignId, onCurrencyChange, stashWeight,
               <div style={{ display: "flex", gap: 6 }}>
                 <input
                   autoFocus
+                  disabled={saving}
                   type="text"
                   inputMode="numeric"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") void save(code);
-                    if (e.key === "Escape") setPopupCode(null);
+                    if (e.key === "Escape" && !pending.current) setPopupCode(null);
                   }}
                   style={{
                     flex: 1, padding: "6px 8px", borderRadius: 6,
@@ -111,10 +122,11 @@ function PartyCurrencyBar({ currency, campaignId, onCurrencyChange, stashWeight,
                     outline: "none", textAlign: "center",
                   }}
                 />
-                <Button type="button" variant="primary" onClick={() => void save(code)} style={{ padding: "6px 14px", fontSize: "var(--fs-subtitle)", borderRadius: 7 }}>
-                  Save
+                <Button type="button" variant="primary" disabled={saving} onClick={() => void save(code)} style={{ padding: "6px 14px", fontSize: "var(--fs-subtitle)", borderRadius: 7 }}>
+                  {saving ? "Saving…" : "Save"}
                 </Button>
               </div>
+              {error ? <div role="alert" style={{ color: C.red }}>{error}</div> : null}
             </div>
           )}
         </div>
@@ -142,8 +154,8 @@ export function InventoryPartyStashSection({
   return (
     <>
       <PartyCurrencyBar
+        key={campaignId}
         currency={currency}
-        campaignId={campaignId}
         onCurrencyChange={onCurrencyChange}
         stashWeight={stashWeight}
         partyCapacityLbs={partyCapacityLbs}

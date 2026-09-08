@@ -251,9 +251,7 @@ export function InventoryPanel({
             onTake={(item) => void itemActions.takeFromPartyStash(item)}
             onDelete={(id) => void itemActions.deleteFromPartyStash(id)}
             onQuantity={(id, quantity) => void itemActions.changePartyStashQty(id, quantity)}
-            onCurrencyChange={(patch) => {
-              sync.setPartyCurrency((prev) => ({ ...prev, ...patch }));
-            }}
+            onCurrencyChange={sync.savePartyCurrency}
           />
           {selectedStashItem ? (
             <InventoryItemDrawer
