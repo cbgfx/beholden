@@ -96,19 +96,6 @@ export function abbrevTime(time: string): string {
     .replace(/(\d+)\s+minute/i, "$1 min");
 }
 
-export function grantedSpellChargeBtn(enabled: boolean): React.CSSProperties {
-  return {
-    width: 22,
-    height: 22,
-    borderRadius: 999,
-    padding: 0,
-    cursor: enabled ? "pointer" : "not-allowed",
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: enabled ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.03)",
-    color: enabled ? C.text : C.muted,
-    fontWeight: 800,
-  };
-}
 
 export function spellSectionHeaderBtn(borderColor: string, marginBottom = 8): React.CSSProperties {
   return {

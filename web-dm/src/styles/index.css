@@ -184,3 +184,15 @@
     padding: 14px 12px 24px !important;
   }
 }
+/* Shared hover affordance for repeatable/reorderable DM rows. */
+.dm-interactive-row {
+  transition: background-color 120ms ease, filter 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dm-interactive-row:hover {
+    background-color: rgba(255, 255, 255, 0.055) !important;
+    box-shadow: inset 2px 0 0 rgba(240, 165, 0, 0.55);
+    filter: brightness(1.06);
+  }
+}

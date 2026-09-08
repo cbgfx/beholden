@@ -249,6 +249,18 @@ describe("combat state regression: HP/condition mutation, transitions, and live 
     return (dto.live ?? {}) as { hpCurrent?: number; conditions?: ConditionEntry[]; usedReaction?: boolean };
   }
 
+  it("list and detail reads return the same merged player and monster state", async () => {
+    const list = await dmRequest("GET", `/api/encounters/${encounterId}/combatants`);
+    assert.equal(list.status, 200);
+    const actors = list.body as unknown as Array<{ id: string }>;
+    assert.ok(actors.length >= 2);
+    for (const actor of actors) {
+      const detail = await dmRequest("GET", `/api/encounters/${encounterId}/combatants/${actor.id}`);
+      assert.equal(detail.status, 200);
+      assert.deepEqual(detail.body, actor);
+    }
+  });
+
   describe("cross-ruleset monster additions", () => {
     it("adds the sole available 5.5e monster to a 5e campaign when an older client omits ruleset", async () => {
       const { status, body } = await dmRequest(

@@ -1,5 +1,3 @@
-import type { CSSProperties } from "react";
-import { C } from "@/lib/theme";
 
 const LS_KEY = "beholden:lastOpened";
 export const CHARACTER_EXPORT_FORMAT = "beholden.character";
@@ -255,17 +253,3 @@ export function buildExportFilename(name: string): string {
   const stamp = new Date().toISOString().slice(0, 10);
   return `${sanitizeFilenamePart(name)}-${stamp}.json`;
 }
-
-export const exportIconButtonStyle: CSSProperties = {
-  width: 38,
-  height: 38,
-  flexShrink: 0,
-  borderRadius: 9,
-  border: "1px solid rgba(255,255,255,0.18)",
-  background: "rgba(255,255,255,0.07)",
-  color: C.text,
-  display: "inline-grid",
-  placeItems: "center",
-  cursor: "pointer",
-  transition: "background 0.12s, border-color 0.12s",
-};

@@ -8,7 +8,7 @@ import { FooterGrid, TopBarFrame } from "@beholden/shared/ui";
 import { useAuth } from "@/contexts/AuthContext";
 
 function useUpdateCheck() {
-  const [state, setState] = React.useState({ currentVersion: "1.4.0", updateAvailable: false });
+  const [state, setState] = React.useState({ currentVersion: "1.5.0", updateAvailable: false });
   const [updating, setUpdating] = React.useState(false);
   const [message, setMessage] = React.useState("");
   React.useEffect(() => {
@@ -16,7 +16,7 @@ function useUpdateCheck() {
     const checkForUpdate = () => {
       api<{ ok: boolean; currentVersion?: string; updateAvailable?: boolean }>("/api/update-check")
         .then((r) => {
-          if (!cancelled) setState({ currentVersion: r.currentVersion ?? "1.4.0", updateAvailable: r.ok && r.updateAvailable === true });
+          if (!cancelled) setState({ currentVersion: r.currentVersion ?? "1.5.0", updateAvailable: r.ok && r.updateAvailable === true });
         })
         .catch(() => {});
     };

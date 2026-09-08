@@ -73,21 +73,6 @@ export const inputStyle: React.CSSProperties = {
   outline: "none",
 };
 
-export const stepperBtn: React.CSSProperties = {
-  background: "rgba(255,255,255,0.07)",
-  border: "1px solid rgba(255,255,255,0.14)",
-  borderRadius: 4,
-  width: 20,
-  height: 20,
-  color: "var(--c-muted)",
-  cursor: "pointer",
-  fontSize: "var(--fs-subtitle)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 0,
-  lineHeight: 1,
-};
 
 export function inferStackKey(item: Pick<InventoryItem, "name" | "itemId" | "type">): string {
   const itemId = String(item.itemId ?? "").trim();

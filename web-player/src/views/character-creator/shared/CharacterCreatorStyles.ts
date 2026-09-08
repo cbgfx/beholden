@@ -33,19 +33,6 @@ export const labelStyle: React.CSSProperties = {
   fontWeight: 600,
 };
 
-export const smallBtnStyle: React.CSSProperties = {
-  width: 28,
-  height: 28,
-  borderRadius: 6,
-  border: "1px solid rgba(255,255,255,0.18)",
-  background: "rgba(255,255,255,0.08)",
-  color: C.text,
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontWeight: 700,
-};
 
 export const statLabelStyle: React.CSSProperties = {
   color: "rgba(160,180,220,0.5)",

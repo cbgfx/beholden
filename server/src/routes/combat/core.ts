@@ -4,7 +4,7 @@ import type { StoredCombatState } from "../../server/userData.js";
 import { requireParam } from "../../lib/routeHelpers.js";
 import { parseBody } from "../../lib/validate.js";
 import { dmOrAdmin, memberOrAdmin } from "../../middleware/campaignAuth.js";
-import { rowToCampaignCharacter, rowToEncounterActor } from "../../lib/db.js";
+import { MERGED_COMBATANT_SELECT, rowToMergedCombatant } from "./mergedCombatant.js";
 
 import {
   ensureCombat,
@@ -16,7 +16,6 @@ import {
   updateCombatant,
   sweepDependentConditions,
 } from "../../services/combat.js";
-import { DEFAULT_OVERRIDES } from "../../lib/defaults.js";
 import { toEncounterActorDto } from "../../lib/apiActors.js";
 import { CombatantUpdateBody, CombatStateBody } from "./helpers.js";
 import { registerCombatAddCombatantRoutes } from "./addCombatants.js";
@@ -42,89 +41,12 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
     ensureCombat(db, encounterId);
 
     const rows = db.prepare(`
-      SELECT c.*,
-        p.id             AS p_id,
-        p.campaign_id    AS p_campaign_id,
-        p.user_id        AS p_user_id,
-        p.character_id   AS p_character_id,
-        p.player_name    AS p_player_name,
-        p.character_name AS p_character_name,
-        p.class_name     AS p_class_name,
-        p.species        AS p_species,
-        p.level          AS p_level,
-        p.hp_max         AS p_hp_max,
-        p.hp_current     AS p_hp_current,
-        p.ac             AS p_ac,
-        p.speed          AS p_speed,
-        p.str            AS p_str,
-        p.dex            AS p_dex,
-        p.con            AS p_con,
-        p.int            AS p_int,
-        p.wis            AS p_wis,
-        p.cha            AS p_cha,
-        p.color          AS p_color,
-        p.synced_ac      AS p_synced_ac,
-        p.death_saves_success AS p_death_saves_success,
-        p.death_saves_fail    AS p_death_saves_fail,
-        p.live_json      AS p_live_json,
-        p.image_url      AS p_image_url,
-        p.image_updated_at AS p_image_updated_at,
-        p.shared_notes   AS p_shared_notes,
-        p.created_at     AS p_created_at,
-        p.updated_at     AS p_updated_at
-      FROM combatants c
-      LEFT JOIN players p ON c.base_type = 'player' AND p.id = c.base_id
+      ${MERGED_COMBATANT_SELECT}
       WHERE c.encounter_id = ?
       ORDER BY COALESCE(c.sort, 9999), c.created_at
     `).all(encounterId) as Record<string, unknown>[];
 
-    const merged = rows.map((row) => {
-      const c = rowToEncounterActor(row);
-      if (row.base_type !== "player" || row.p_id == null) return c;
-      const player = rowToCampaignCharacter({
-        id: row.p_id,
-        campaign_id: row.p_campaign_id,
-        user_id: row.p_user_id,
-        character_id: row.p_character_id,
-        player_name: row.p_player_name,
-        character_name: row.p_character_name,
-        class_name: row.p_class_name,
-        species: row.p_species,
-        level: row.p_level,
-        hp_max: row.p_hp_max,
-        hp_current: row.p_hp_current,
-        ac: row.p_ac,
-        speed: row.p_speed,
-        str: row.p_str,
-        dex: row.p_dex,
-        con: row.p_con,
-        int: row.p_int,
-        wis: row.p_wis,
-        cha: row.p_cha,
-        color: row.p_color,
-        synced_ac: row.p_synced_ac,
-        death_saves_success: row.p_death_saves_success,
-        death_saves_fail: row.p_death_saves_fail,
-        live_json: row.p_live_json,
-        image_url: row.p_image_url,
-        image_updated_at: row.p_image_updated_at,
-        shared_notes: row.p_shared_notes,
-        created_at: row.p_created_at,
-        updated_at: row.p_updated_at,
-      });
-      return {
-        ...c,
-        name: player.characterName,
-        playerName: player.playerName,
-        label: c.label || player.characterName,
-        hpCurrent: player.hpCurrent,
-        hpMax: player.hpMax,
-        ac: player.ac,
-        conditions: player.conditions ?? [],
-        overrides: player.overrides ?? DEFAULT_OVERRIDES,
-        ...(player.deathSaves ?? c.deathSaves ? { deathSaves: player.deathSaves ?? c.deathSaves } : {}),
-      };
-    });
+    const merged = rows.map(rowToMergedCombatant);
 
     res.json(merged.map((actor) => toEncounterActorDto(actor)));
   });
@@ -138,91 +60,14 @@ export function registerCombatRoutes(app: Express, ctx: ServerContext) {
     ensureCombat(db, encounterId);
 
     const row = db.prepare(`
-      SELECT c.*,
-        p.id             AS p_id,
-        p.campaign_id    AS p_campaign_id,
-        p.user_id        AS p_user_id,
-        p.character_id   AS p_character_id,
-        p.player_name    AS p_player_name,
-        p.character_name AS p_character_name,
-        p.class_name     AS p_class_name,
-        p.species        AS p_species,
-        p.level          AS p_level,
-        p.hp_max         AS p_hp_max,
-        p.hp_current     AS p_hp_current,
-        p.ac             AS p_ac,
-        p.speed          AS p_speed,
-        p.str            AS p_str,
-        p.dex            AS p_dex,
-        p.con            AS p_con,
-        p.int            AS p_int,
-        p.wis            AS p_wis,
-        p.cha            AS p_cha,
-        p.color          AS p_color,
-        p.synced_ac      AS p_synced_ac,
-        p.death_saves_success AS p_death_saves_success,
-        p.death_saves_fail    AS p_death_saves_fail,
-        p.live_json      AS p_live_json,
-        p.image_url      AS p_image_url,
-        p.image_updated_at AS p_image_updated_at,
-        p.shared_notes   AS p_shared_notes,
-        p.created_at     AS p_created_at,
-        p.updated_at     AS p_updated_at
-      FROM combatants c
-      LEFT JOIN players p ON c.base_type = 'player' AND p.id = c.base_id
+      ${MERGED_COMBATANT_SELECT}
       WHERE c.encounter_id = ? AND c.id = ?
       LIMIT 1
     `).get(encounterId, combatantId) as Record<string, unknown> | undefined;
 
     if (!row) return res.status(404).json({ ok: false, message: "Combatant not found" });
 
-    const c = rowToEncounterActor(row);
-    if (row.base_type !== "player" || row.p_id == null) {
-      return res.json(toEncounterActorDto(c));
-    }
-    const player = rowToCampaignCharacter({
-      id: row.p_id,
-      campaign_id: row.p_campaign_id,
-      user_id: row.p_user_id,
-      character_id: row.p_character_id,
-      player_name: row.p_player_name,
-      character_name: row.p_character_name,
-      class_name: row.p_class_name,
-      species: row.p_species,
-      level: row.p_level,
-      hp_max: row.p_hp_max,
-      hp_current: row.p_hp_current,
-      ac: row.p_ac,
-      speed: row.p_speed,
-      str: row.p_str,
-      dex: row.p_dex,
-      con: row.p_con,
-      int: row.p_int,
-      wis: row.p_wis,
-      cha: row.p_cha,
-      color: row.p_color,
-      synced_ac: row.p_synced_ac,
-      death_saves_success: row.p_death_saves_success,
-      death_saves_fail: row.p_death_saves_fail,
-      live_json: row.p_live_json,
-      image_url: row.p_image_url,
-      image_updated_at: row.p_image_updated_at,
-      shared_notes: row.p_shared_notes,
-      created_at: row.p_created_at,
-      updated_at: row.p_updated_at,
-    });
-    return res.json(toEncounterActorDto({
-      ...c,
-      name: player.characterName,
-      playerName: player.playerName,
-      label: c.label || player.characterName,
-      hpCurrent: player.hpCurrent,
-      hpMax: player.hpMax,
-      ac: player.ac,
-      conditions: player.conditions ?? [],
-      overrides: player.overrides ?? DEFAULT_OVERRIDES,
-      ...(player.deathSaves ?? c.deathSaves ? { deathSaves: player.deathSaves ?? c.deathSaves } : {}),
-    }));
+    return res.json(toEncounterActorDto(rowToMergedCombatant(row)));
   });
 
   // ── Persisted combat state (round + active combatant) ─────────────────────

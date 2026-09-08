@@ -2,12 +2,10 @@ import * as React from "react";
 import { Panel } from "@/ui/Panel";
 import { Select } from "@/ui/Select";
 import { C, withAlpha } from "@/lib/theme";
-import { api } from "@/services/api";
-import { useAvailableRulesets } from "@beholden/shared/domain/compendium/useAvailableRulesets";
+import { useMonsterBrowser } from "@beholden/shared/domain/compendium/useMonsterBrowser";
 import { formatCr } from "@/lib/monsterPicker/utils";
 import { useVirtualList } from "@/lib/monsterPicker/useVirtualList";
-import type { CompendiumMonsterRow, SortMode } from "@/lib/monsterPicker/types";
-import { SIZE_LABELS } from "@/lib/monsterPicker/useMonsterPickerRows";
+import type { SortMode } from "@/lib/monsterPicker/types";
 
 const ROW_HEIGHT = 52;
 
@@ -31,156 +29,12 @@ function pillStyle(): React.CSSProperties {
   };
 }
 
-function normalizeSortName(name: string): string {
-  return name
-    .trim()
-    .replace(/^[^a-z0-9]+/i, "")
-    .replace(/^the\s+/i, "")
-    .trim();
-}
 
 export function MonsterBrowserPanel(props: {
   selectedMonsterId: string | null;
   onSelectMonster: (id: string) => void;
 }) {
-  const [rows, setRows] = React.useState<CompendiumMonsterRow[]>([]);
-  const [loading, setLoading] = React.useState(false);
-  const [loadError, setLoadError] = React.useState<string | null>(null);
-  const [totalRows, setTotalRows] = React.useState(0);
-  const [envOptions, setEnvOptions] = React.useState<string[]>(["all"]);
-  const [sizeOptions, setSizeOptions] = React.useState<string[]>(["all"]);
-  const [typeOptions, setTypeOptions] = React.useState<string[]>(["all"]);
-
-  const [compQ, setCompQ] = React.useState("");
-  const [sortMode, setSortMode] = React.useState<SortMode>("az");
-  const [envFilter, setEnvFilter] = React.useState("all");
-  const [sizeFilter, setSizeFilter] = React.useState("all");
-  const [typeFilter, setTypeFilter] = React.useState("all");
-  const [crMin, setCrMin] = React.useState("");
-  const [crMax, setCrMax] = React.useState("");
-  const { rulesetFilter, setRulesetFilter, showRulesetFilter } = useAvailableRulesets(api, "monsters");
-
-  React.useEffect(() => {
-    const controller = new AbortController();
-    api<{ environments: string[]; sizes: string[]; types: string[] }>("/api/compendium/monsters/facets", {
-      signal: controller.signal,
-    })
-      .then((data) => {
-        const nextEnv = Array.isArray(data?.environments) ? data.environments : [];
-        const nextSizesRaw = Array.isArray(data?.sizes) ? data.sizes : [];
-        const nextTypes = Array.isArray(data?.types) ? data.types : [];
-        const sizeOrder = new Map<string, number>(SIZE_LABELS.map((size, index) => [size, index]));
-        const nextSizes = [...nextSizesRaw].sort((a, b) => {
-          const aOrder = sizeOrder.get(a);
-          const bOrder = sizeOrder.get(b);
-          if (aOrder != null && bOrder != null) return aOrder - bOrder;
-          if (aOrder != null) return -1;
-          if (bOrder != null) return 1;
-          return a.localeCompare(b);
-        });
-        setEnvOptions(["all", ...nextEnv]);
-        setSizeOptions(["all", ...nextSizes]);
-        setTypeOptions(["all", ...nextTypes]);
-      })
-      .catch(() => {
-        setEnvOptions(["all"]);
-        setSizeOptions(["all"]);
-        setTypeOptions(["all"]);
-      });
-    return () => controller.abort();
-  }, []);
-
-  React.useEffect(() => {
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      setLoading(true);
-      setLoadError(null);
-      try {
-        const limit =
-          compQ.trim().length >= 2
-          || envFilter !== "all"
-          || sizeFilter !== "all"
-          || typeFilter !== "all"
-          || Boolean(crMin.trim())
-          || Boolean(crMax.trim())
-            ? 200
-            : 120;
-        const merged: CompendiumMonsterRow[] = [];
-        let total = 0;
-        let offset = 0;
-        const maxRows = 10000;
-
-        while (!controller.signal.aborted) {
-          const params = new URLSearchParams({
-            q: compQ,
-            limit: String(limit),
-            offset: String(offset),
-            withTotal: "1",
-            sort: sortMode,
-            fields: "id,name,cr,type,environment",
-          });
-          if (envFilter !== "all") params.set("env", envFilter);
-          if (sizeFilter !== "all") params.set("sizes", sizeFilter);
-          if (typeFilter !== "all") params.set("types", typeFilter);
-          if (crMin.trim()) params.set("crMin", crMin.trim());
-          if (crMax.trim()) params.set("crMax", crMax.trim());
-          if (rulesetFilter) params.set("ruleset", rulesetFilter);
-
-          const result = await api<{ rows: CompendiumMonsterRow[]; total: number }>(
-            `/api/compendium/search?${params.toString()}`,
-            { signal: controller.signal },
-          );
-          if (controller.signal.aborted) return;
-
-          const nextRows = Array.isArray(result?.rows) ? result.rows : [];
-          total = Number.isFinite(result?.total as number) ? Number(result.total) : nextRows.length;
-          merged.push(...nextRows);
-
-          if (nextRows.length === 0) break;
-          offset += nextRows.length;
-          if (offset >= total) break;
-          if (merged.length >= maxRows) break;
-        }
-
-        if (controller.signal.aborted) return;
-        setRows(merged);
-        setTotalRows(total || merged.length);
-      } catch (error) {
-        if (controller.signal.aborted) return;
-        setRows([]);
-        setTotalRows(0);
-        setLoadError(String((error as any)?.message ?? error));
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    }, 220);
-
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [compQ, sortMode, envFilter, sizeFilter, typeFilter, crMin, crMax, rulesetFilter]);
-
-  const filteredRows = rows;
-
-  const lettersInList = React.useMemo(() => {
-    const set = new Set<string>();
-    for (const row of filteredRows) {
-      const first = normalizeSortName(String(row.name ?? "")).charAt(0).toUpperCase();
-      if (first >= "A" && first <= "Z") set.add(first);
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [filteredRows]);
-
-  const letterFirstIndex = React.useMemo(() => {
-    const out: Record<string, number> = {};
-    for (let i = 0; i < filteredRows.length; i += 1) {
-      const first = normalizeSortName(String(filteredRows[i].name ?? "")).charAt(0).toUpperCase();
-      if (!(first >= "A" && first <= "Z")) continue;
-      if (out[first] == null) out[first] = i;
-    }
-    return out;
-  }, [filteredRows]);
+  const { filteredRows, loading, loadError, totalRows, envOptions, sizeOptions, typeOptions, compQ, setCompQ, sortMode, setSortMode, envFilter, setEnvFilter, sizeFilter, setSizeFilter, typeFilter, setTypeFilter, crMin, setCrMin, crMax, setCrMax, rulesetFilter, setRulesetFilter, showRulesetFilter, lettersInList, letterFirstIndex } = useMonsterBrowser();
 
   const vl = useVirtualList({ isEnabled: true, rowHeight: ROW_HEIGHT, overscan: 8 });
   const { start, end, padTop, padBottom } = vl.getRange(filteredRows.length);

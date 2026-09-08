@@ -221,7 +221,7 @@ export function inventoryEquipBtn(active: boolean, color: string): React.CSSProp
   };
 }
 
-export function panelHeaderAddBtn(color: string): React.CSSProperties {
+function panelHeaderAddBtn(color: string): React.CSSProperties {
   return {
     minWidth: 32,
     height: 32,
@@ -266,14 +266,6 @@ export function PanelHeaderAddButton(props: { color: string; title: string; onCl
   return <PanelHeaderActionButton {...props}>+</PanelHeaderActionButton>;
 }
 
-export function addBtnStyle(accent: string): React.CSSProperties {
-  return {
-    background: accent, color: "#000",
-    border: "none", borderRadius: 7,
-    padding: "6px 14px", fontSize: "var(--fs-subtitle)",
-    fontWeight: 700, cursor: "pointer",
-  };
-}
 
 export const cancelBtnStyle: React.CSSProperties = {
   ...ghostButtonStyle({

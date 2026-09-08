@@ -272,6 +272,9 @@ function AppInner() {
 
 function AuthGate() {
   const { user, isLoading, logout } = useAuth();
+  React.useEffect(() => {
+    document.documentElement.style.setProperty("--text-scale", String(user?.textScale ?? 1));
+  }, [user?.textScale]);
 
   if (isLoading) {
     return (

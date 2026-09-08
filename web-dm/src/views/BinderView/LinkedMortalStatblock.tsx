@@ -26,6 +26,8 @@ export function LinkedMortalStatblock(props: {
   const [monster, setMonster] = React.useState<MonsterDetail | null>(null);
   const [player, setPlayer] = React.useState<FlatCampaignCharacterDto | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const campaignId = props.playerLink?.campaignId;
+  const playerId = props.playerLink?.playerId;
 
   React.useEffect(() => {
     let cancelled = false;
@@ -35,15 +37,15 @@ export function LinkedMortalStatblock(props: {
     const request = props.monsterId
       ? api<MonsterDetail>(`/api/compendium/monsters/${encodeURIComponent(props.monsterId)}`)
           .then((result) => { if (!cancelled) setMonster(result); })
-      : props.playerLink
-        ? fetchCampaignCharacter(props.playerLink.campaignId, props.playerLink.playerId)
+      : campaignId && playerId
+        ? fetchCampaignCharacter(campaignId, playerId)
             .then((result) => { if (!cancelled) setPlayer(result); })
         : null;
     if (!request) return () => { cancelled = true; };
     request
       .catch((cause) => { if (!cancelled) setError(cause instanceof Error ? cause.message : "Unable to load statblock."); });
     return () => { cancelled = true; };
-  }, [props.monsterId, props.playerLink?.campaignId, props.playerLink?.playerId]);
+  }, [props.monsterId, campaignId, playerId]);
 
   const displayedMonster = React.useMemo(() => {
     if (!monster) return null;

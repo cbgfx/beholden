@@ -14,9 +14,6 @@ export function usePointerDragReorder<T extends { id: string }>(
   const [pointerPos, setPointerPos] = React.useState<{ x: number; y: number } | null>(null);
 
   const orderIdsRef = React.useRef<string[] | null>(null);
-  React.useEffect(() => {
-    orderIdsRef.current = orderIds;
-  }, [orderIds]);
 
   const dragStateRef = React.useRef<{
     startY: number;
@@ -37,15 +34,15 @@ export function usePointerDragReorder<T extends { id: string }>(
   }, [items, dragId]);
 
   const reorderInState = React.useCallback((fromId: string, toId: string) => {
-    setOrderIds((prev) => {
-      const ids = prev ? [...prev] : items.map((item) => item.id);
-      const from = ids.indexOf(fromId);
-      const to = ids.indexOf(toId);
-      if (from < 0 || to < 0 || from === to) return ids;
-      ids.splice(from, 1);
-      ids.splice(to, 0, fromId);
-      return ids;
-    });
+    const ids = [...(orderIdsRef.current ?? items.map((item) => item.id))];
+    const from = ids.indexOf(fromId);
+    const to = ids.indexOf(toId);
+    if (from < 0 || to < 0 || from === to) return;
+    ids.splice(from, 1);
+    ids.splice(to, 0, fromId);
+    // Pointer-up can run before React commits the last pointer-move render.
+    orderIdsRef.current = ids;
+    setOrderIds(ids);
   }, [items]);
 
   const findOverId = React.useCallback((clientY: number, draggingId: string): string | null => {
@@ -71,6 +68,7 @@ export function usePointerDragReorder<T extends { id: string }>(
   }, [items, orderIds]);
 
   const onHandlePointerDown = React.useCallback((e: React.PointerEvent, id: string) => {
+    if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
     try {
@@ -101,7 +99,8 @@ export function usePointerDragReorder<T extends { id: string }>(
     const state = dragStateRef.current;
     dragStateRef.current = null;
     const ids = orderIdsRef.current ?? orderIds ?? items.map((item) => item.id);
-    const shouldCommit = commit && Boolean(state?.changed);
+    const shouldCommit = commit && Boolean(state?.changed)
+      && ids.some((id, index) => id !== items[index]?.id);
 
     setDragId(null);
     setOrderIds(null);

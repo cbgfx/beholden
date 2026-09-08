@@ -91,12 +91,15 @@ export function PlayerBinderView() {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    setData(null);
+    setError(null);
     api<PlayerBinder>(`/api/me/characters/${id}/binder`).then((value) => {
-      setData(value);
-      // Reset without pushing a history entry -- this is a fresh load, not a
-      // user drilling in/out of a record.
-      setSearchParams({}, { replace: true });
-    }).catch(() => setError("This character is not attached to a Binder."));
+      if (!cancelled) setData(value);
+    }).catch(() => {
+      if (!cancelled) setError("This character is not attached to a Binder.");
+    });
+    return () => { cancelled = true; };
   }, [id]);
   const selected = data?.mortals.find((mortal) => mortal.id === selectedId) ?? null;
   const selectedPublicRecord = (section === "deities" ? data?.deities : data?.places)?.find((record) => record.id === selectedId) ?? null;

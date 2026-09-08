@@ -1,6 +1,6 @@
 import React from "react";
 import { usePointerDragReorder } from "@beholden/shared/ui/usePointerDragReorder";
-import { DragHandleGrip } from "@beholden/shared/ui";
+import { DragGhostCard, DragHandleGrip } from "@beholden/shared/ui";
 import { theme, withAlpha } from "@/theme/theme";
 
 export type DragItem = { id: string; title?: string; meta?: string };
@@ -33,6 +33,7 @@ export function DraggableList(props: {
         return (
           <div
             key={it.id}
+            className="dm-interactive-row"
             ref={(el) => {
               drag.rowRefs.current[it.id] = el;
             }}
@@ -45,7 +46,7 @@ export function DraggableList(props: {
               background: bg,
               border: "1px solid transparent",
               outline: "none",
-              opacity: isDragging ? 0.92 : 1,
+              opacity: isDragging ? 0.32 : 1,
               ...props.getItemStyle?.(it),
             }}
           >
@@ -131,6 +132,13 @@ export function DraggableList(props: {
           </div>
         );
       })}
+      {drag.dragId && drag.pointerPos ? (
+        <DragGhostCard x={drag.pointerPos.x} y={drag.pointerPos.y} borderColor={withAlpha(theme.colors.accentHighlight, 0.5)}>
+          <div style={{ color: theme.colors.text, fontWeight: 750, fontSize: "var(--fs-subtitle)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {props.items.find((item) => item.id === drag.dragId)?.title ?? "Move row"}
+          </div>
+        </DragGhostCard>
+      ) : null}
     </div>
   );
 }
