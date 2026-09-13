@@ -34,7 +34,7 @@ export const TREASURE_COLS =
 
 export const PARTY_INVENTORY_COLS =
   "id, campaign_id, name, quantity, weight, notes, source, item_id, rarity, type, description, " +
-  "sort, created_at, updated_at";
+  "payload_json, sort, created_at, updated_at";
 
 export const CONDITION_COLS =
   "id, campaign_id, key, name, description, sort, created_at, updated_at";

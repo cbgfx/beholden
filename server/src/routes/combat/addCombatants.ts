@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import type { ServerContext } from "../../server/context.js";
 import type { StoredEncounterActor } from "../../server/userData.js";
 import { requireParam } from "../../lib/routeHelpers.js";
@@ -15,15 +15,43 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
   const { db } = ctx;
   const { now, uid } = ctx.helpers;
 
+  // Every add-combatant route begins by resolving the `:encounterId` param to a
+  // real encounter (404 otherwise). The join also hands back the campaign id and
+  // ruleset that individual routes need, so there is one shape and one query
+  // instead of five slightly different preambles.
+  function resolveEncounterForAdd(
+    req: Request,
+    res: Response,
+  ): { encounterId: string; campaignId: string; ruleset: "5e" | "5.5e" } | null {
+    const encounterId = requireParam(req, res, "encounterId");
+    if (!encounterId) return null;
+    const row = db
+      .prepare(
+        "SELECT e.id AS encounterId, e.campaign_id AS campaignId, c.ruleset " +
+        "FROM encounters e JOIN campaigns c ON c.id = e.campaign_id WHERE e.id = ?",
+      )
+      .get(encounterId) as { encounterId: string; campaignId: string; ruleset: "5e" | "5.5e" } | undefined;
+    if (!row) {
+      res.status(404).json({ ok: false, message: "Encounter not found" });
+      return null;
+    }
+    return row;
+  }
+
+  // The single-combatant add routes all announce the new row the same way.
+  const broadcastCombatantUpsert = (encounterId: string, combatant: StoredEncounterActor) =>
+    ctx.broadcast("encounter:combatantsDelta", {
+      encounterId,
+      action: "upsert",
+      combatantId: combatant.id,
+      combatant: toEncounterActorDto(combatant),
+    });
+
   // MARK: - POST /api/encounters/:encounterId/combatants/addPlayers
   app.post("/api/encounters/:encounterId/combatants/addPlayers", dmOrAdmin(db), (req, res) => {
-    const encounterId = requireParam(req, res, "encounterId");
-    if (!encounterId) return;
-    const encRow = db
-      .prepare("SELECT campaign_id FROM encounters WHERE id = ?")
-      .get(encounterId) as { campaign_id: string } | undefined;
-    if (!encRow)
-      return res.status(404).json({ ok: false, message: "Encounter not found" });
+    const enc = resolveEncounterForAdd(req, res);
+    if (!enc) return;
+    const { encounterId } = enc;
 
     ensureCombat(db, encounterId);
 
@@ -36,7 +64,7 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
             SELECT base_id FROM combatants
             WHERE encounter_id = ? AND base_type = 'player'
           )
-      `).all(encRow.campaign_id, encounterId) as Record<string, unknown>[]
+      `).all(enc.campaignId, encounterId) as Record<string, unknown>[]
     ).map(rowToCampaignCharacter);
 
     const t = now();
@@ -56,20 +84,16 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
 
   // MARK: - POST /api/encounters/:encounterId/combatants/addPlayer
   app.post("/api/encounters/:encounterId/combatants/addPlayer", dmOrAdmin(db), (req, res) => {
-    const encounterId = requireParam(req, res, "encounterId");
-    if (!encounterId) return;
-    const encRow = db
-      .prepare("SELECT campaign_id FROM encounters WHERE id = ?")
-      .get(encounterId) as { campaign_id: string } | undefined;
-    if (!encRow)
-      return res.status(404).json({ ok: false, message: "Encounter not found" });
+    const enc = resolveEncounterForAdd(req, res);
+    if (!enc) return;
+    const { encounterId } = enc;
 
     const { playerId } = parseBody(AddPlayerBody, req);
     const pRow = getCampaignCharacterRow(db, playerId);
     if (!pRow)
       return res.status(404).json({ ok: false, message: "Player not found" });
     const p = rowToCampaignCharacter(pRow);
-    if (p.campaignId !== encRow.campaign_id)
+    if (p.campaignId !== enc.campaignId)
       return res.status(400).json({ ok: false, message: "Player not in campaign" });
 
     ensureCombat(db, encounterId);
@@ -84,12 +108,7 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
     const t = now();
     const created = createPlayerCombatant({ encounterId, player: p, t });
     insertCombatant(db, created);
-    ctx.broadcast("encounter:combatantsDelta", {
-      encounterId,
-      action: "upsert",
-      combatantId: created.id,
-      combatant: toEncounterActorDto(created),
-    });
+    broadcastCombatantUpsert(encounterId, created);
     res.json({ ok: true, added: 1 });
   });
 
@@ -97,16 +116,12 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
 
   // MARK: - POST /api/encounters/:encounterId/combatants/addMonster
   app.post("/api/encounters/:encounterId/combatants/addMonster", dmOrAdmin(db), (req, res) => {
-    const encounterId = requireParam(req, res, "encounterId");
-    if (!encounterId) return;
-    const encRow = db
-      .prepare("SELECT e.id, c.ruleset FROM encounters e JOIN campaigns c ON c.id = e.campaign_id WHERE e.id = ?")
-      .get(encounterId) as { id: string; ruleset: "5e" | "5.5e" } | undefined;
-    if (!encRow)
-      return res.status(404).json({ ok: false, message: "Encounter not found" });
+    const enc = resolveEncounterForAdd(req, res);
+    if (!enc) return;
+    const { encounterId } = enc;
 
     const body = parseBody(AddMonsterBody, req);
-    let ruleset = body.ruleset ?? encRow.ruleset;
+    let ruleset = body.ruleset ?? enc.ruleset;
     let monRow = db
       .prepare("SELECT ruleset, name, data_json FROM compendium_monsters WHERE id = ? AND ruleset = ?")
       .get(body.monsterId, ruleset) as { ruleset: "5e" | "5.5e"; name: string; data_json: string } | undefined;
@@ -145,14 +160,7 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
       attackOverrides: body.attackOverrides ?? null,
     });
 
-    for (const combatant of created) {
-      ctx.broadcast("encounter:combatantsDelta", {
-        encounterId,
-        action: "upsert",
-        combatantId: combatant.id,
-        combatant: toEncounterActorDto(combatant),
-      });
-    }
+    for (const combatant of created) broadcastCombatantUpsert(encounterId, combatant);
     res.json({ ok: true, created });
   });
 
@@ -161,10 +169,9 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
 
   // MARK: - POST /api/encounters/:encounterId/combatants/addWorldAction
   app.post("/api/encounters/:encounterId/combatants/addWorldAction", dmOrAdmin(db), (req, res) => {
-    const encounterId = requireParam(req, res, "encounterId");
-    if (!encounterId) return;
-    const encounter = db.prepare("SELECT id FROM encounters WHERE id = ?").get(encounterId);
-    if (!encounter) return res.status(404).json({ ok: false, message: "Encounter not found" });
+    const enc = resolveEncounterForAdd(req, res);
+    if (!enc) return;
+    const { encounterId } = enc;
 
     const body = parseBody(AddWorldActionBody, req);
     const t = now();
@@ -192,12 +199,7 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
     };
     ensureCombat(db, encounterId);
     insertCombatant(db, created);
-    ctx.broadcast("encounter:combatantsDelta", {
-      encounterId,
-      action: "upsert",
-      combatantId: created.id,
-      combatant: toEncounterActorDto(created),
-    });
+    broadcastCombatantUpsert(encounterId, created);
     res.json({ ok: true, created: toEncounterActorDto(created) });
   });
 
@@ -205,13 +207,9 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
 
   // MARK: - POST /api/encounters/:encounterId/combatants/addInpc
   app.post("/api/encounters/:encounterId/combatants/addInpc", dmOrAdmin(db), (req, res) => {
-    const encounterId = requireParam(req, res, "encounterId");
-    if (!encounterId) return;
-    const encRow = db
-      .prepare("SELECT id FROM encounters WHERE id = ?")
-      .get(encounterId) as { id: string } | undefined;
-    if (!encRow)
-      return res.status(404).json({ ok: false, message: "Encounter not found" });
+    const enc = resolveEncounterForAdd(req, res);
+    if (!enc) return;
+    const { encounterId } = enc;
 
     const { inpcId } = parseBody(AddInpcBody, req);
     const iRow = db
@@ -255,12 +253,7 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
     };
     insertCombatant(db, c);
 
-    ctx.broadcast("encounter:combatantsDelta", {
-      encounterId,
-      action: "upsert",
-      combatantId: c.id,
-      combatant: toEncounterActorDto(c),
-    });
+    broadcastCombatantUpsert(encounterId, c);
     res.json({ ok: true, created: c });
   });
 }

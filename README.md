@@ -48,15 +48,36 @@ Everything runs on a single Node.js server with a local SQLite database. No clou
 
 ## Project Structure
 
-```
+```text
 beholden/
-|- server/        -> Express API, SQLite, WebSocket
-|- web-dm/        -> DM React app (Vite)
-|- web-player/    -> Player React app (Vite)
-|- shared/        -> Shared styles
-|- .env           -> Local configuration
-`- start.bat      -> Windows quick-start script
+|-- docs/
+|   |-- guides/       # Content-authoring and user reference
+|   `-- plans/        # Technical implementation plans
+|-- scripts/checks/  # Repository-wide payload and bundle checks
+|-- server/          # Express API, SQLite, WebSocket
+|   `-- src/tests/integration/  # Tests spanning routes and services
+|-- web-dm/          # DM React app
+|   `-- src/tests/integration/  # Cross-feature UI/client tests
+|-- web-player/      # Player React app
+|-- shared/          # Shared API types, domain logic, UI, and styles
+|-- package.json     # Workspace commands
+|-- start.bat        # Windows quick-start entry point
+`-- update-beholden.bat  # Windows updater entry point
 ```
+
+The Player character sheet lives in `web-player/src/views/character/`.
+Its entry view and composition files stay at that level; related implementation
+files are grouped in `combat/`, `creatures/`, `inventory/`, `layout/`, `notes/`,
+`spells/`, and `state/`. Unit tests stay beside the code they cover. Tests spanning
+multiple features belong in the app's `src/tests/integration/` folder.
+
+Reference documents: [AI content guide](docs/guides/ai-content.md) and
+[Binder implementation plan](docs/plans/binder-implementation.md).
+
+Workspace manifests, tool configuration, local environment configuration, and
+Windows launchers remain at their expected root locations. Runtime data and
+compendium source files are separate from application source.
+
 
 ---
 
@@ -139,7 +160,7 @@ Change the password immediately via Admin -> Users, or set `BEHOLDEN_ADMIN_USER`
 | `BEHOLDEN_DB_PATH` | `<data_dir>/beholden.db` | Override the database file path |
 | `BEHOLDEN_ADMIN_USER` | `admin` | Initial admin username (used only on first run) |
 | `BEHOLDEN_ADMIN_PASS` | `admin` | Initial admin password (used only on first run) |
-| `BEHOLDEN_JWT_SECRET` | dev secret | Secret for signing JWTs - **change this in production** |
+| `BEHOLDEN_JWT_SECRET` | Generated per installation | Optional private JWT signing secret. Without it, a durable key is stored as `jwt-secret` in the data directory. Empty values and the old public default are rejected. |
 | `BEHOLDEN_SUPPORT` | `false` | Show a support link in the UI |
 | `BEHOLDEN_RATE_LIMIT_WINDOW_MS` | `900000` | Rate limit window in ms |
 | `BEHOLDEN_RATE_LIMIT_MAX` | `5000` | Max requests per window |
@@ -193,3 +214,7 @@ Adventure version 2 files can embed native compendium batches. Their entries are
 ## License
 
 MIT - free to use, modify, and self-host.
+
+Campaign JSON exports (version 2) include story, private notes, party currency, and portable stash items and require DM/admin access. Replacing a campaign preserves its local memberships; importing into a different installation does not grant memberships from the file. Legacy documents preserve existing narrative/currency fields they omit.
+
+The authentication update requires signing in again. Password resets/changes and administrator role changes invalidate existing sessions. Keep the generated `jwt-secret` private and persistent alongside the data directory; installations sharing a database must share their signing configuration.

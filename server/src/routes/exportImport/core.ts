@@ -4,7 +4,7 @@ import type { ServerContext } from "../../server/context.js";
 import { requireParam } from "../../lib/routeHelpers.js";
 import { errorMessage } from "../../lib/errors.js";
 import { requireAdmin } from "../../middleware/auth.js";
-import { memberOrAdmin } from "../../middleware/campaignAuth.js";
+import { dmOrAdmin } from "../../middleware/campaignAuth.js";
 import {
   rowToCampaign,
   rowToAdventure,
@@ -34,16 +34,16 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
 
   // MARK: - GET /api/campaigns/:campaignId/export
-  app.get("/api/campaigns/:campaignId/export", memberOrAdmin(db), (req, res) => {
+  app.get("/api/campaigns/:campaignId/export", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
 
     const campaignRow = db
-      .prepare("SELECT id, name, color, ruleset, image_url, image_updated_at, shared_notes, created_at, updated_at FROM campaigns WHERE id = ?")
+      .prepare("SELECT id, name, color, ruleset, image_url, image_updated_at, shared_notes, campaign_story, campaign_notes, party_currency_json, created_at, updated_at FROM campaigns WHERE id = ?")
       .get(campaignId) as Record<string, unknown> | undefined;
     if (!campaignRow) return res.status(404).json({ ok: false, message: "Campaign not found" });
 
-    const campaign = rowToCampaign(campaignRow);
+    const campaign = { ...rowToCampaign(campaignRow), partyCurrency: parseJson(campaignRow.party_currency_json, { PP: 0, GP: 0, SP: 0, CP: 0 }) };
     const adventures = Object.fromEntries(
       (db.prepare(`SELECT ${ADVENTURE_COLS} FROM adventures WHERE campaign_id = ?`).all(campaignId) as Record<string, unknown>[])
         .map(rowToAdventure)
@@ -135,7 +135,7 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
     }
 
     const body = {
-      version: 1,
+      version: 2,
       campaign,
       adventures,
       encounters,
@@ -184,7 +184,7 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
   // MARK: - GET /api/user/export
   app.get("/api/user/export", requireAdmin, (_req, res) => {
     const campaigns = (
-      db.prepare("SELECT id, name, color, ruleset, image_url, image_updated_at, shared_notes, created_at, updated_at FROM campaigns").all() as Record<string, unknown>[]
+      db.prepare("SELECT id, name, color, ruleset, image_url, image_updated_at, shared_notes, campaign_story, campaign_notes, party_currency_json, created_at, updated_at FROM campaigns").all() as Record<string, unknown>[]
     ).map(rowToCampaign);
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Content-Disposition", "attachment; filename=userData.json");

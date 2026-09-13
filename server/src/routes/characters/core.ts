@@ -39,6 +39,7 @@ import {
   CharacterUpdateBody,
   UnassignBody,
   collectCampaignSharedNotes,
+  inventoryRevOf,
   requireOwnedCharacter,
   toCharacterSheetDtoInput,
   makeEmitPlayerChange,
@@ -111,15 +112,16 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const assignments = getAssignments(db, char.id);
     const merged = mergeLiveStats(db, char, assignments);
 
-    res.json(
-      withAbsoluteImageUrl(req, toCharacterSheetDto(
+    res.json({
+      ...withAbsoluteImageUrl(req, toCharacterSheetDto(
         toCharacterSheetDtoInput(
           merged,
           toCharacterCampaignAssignmentDto(assignmentsToJson(assignments)),
           collectCampaignSharedNotes(db, assignments, charId),
         ),
       )),
-    );
+      inventoryRev: inventoryRevOf(char.characterData),
+    });
   });
 
   // MARK: - GET /api/me/characters/:id/binder-identity
@@ -361,6 +363,27 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     const p = parseBody(CharacterUpdateBody, req);
     const t = now();
     const ex = rowToCharacterSheet(existing);
+
+    // Optimistic concurrency for inventory: if the caller sent the revision it
+    // last saw and the stored inventory has moved on since (another device, or a
+    // DM treasure award appended an item), reject rather than overwrite.
+    const touchesInventory = Boolean(
+      p.characterData
+      && (Object.prototype.hasOwnProperty.call(p.characterData, "inventory")
+        || Object.prototype.hasOwnProperty.call(p.characterData, "inventoryContainers")),
+    );
+    if (
+      p.expectedInventoryRev !== undefined
+      && touchesInventory
+      && inventoryRevOf(ex.characterData) !== p.expectedInventoryRev
+    ) {
+      return res.status(409).json({
+        ok: false,
+        code: "stale-inventory",
+        message: "Your inventory changed on another device and has been reloaded — please redo that change.",
+      });
+    }
+
     const requestedCharacterData =
       p.characterData !== undefined
         ? (p.characterData === null ? null : { ...(ex.characterData ?? {}), ...p.characterData })
@@ -463,7 +486,11 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
     }
 
     const updated = db.prepare(`SELECT ${CHARACTER_SHEET_COLS} FROM user_characters WHERE id = ?`).get(charId) as Record<string, unknown>;
-    res.json(withAbsoluteImageUrl(req, toCharacterSheetDto({ ...rowToCharacterSheet(updated), campaigns: [] })));
+    const updatedSheet = rowToCharacterSheet(updated);
+    res.json({
+      ...withAbsoluteImageUrl(req, toCharacterSheetDto({ ...updatedSheet, campaigns: [] })),
+      inventoryRev: inventoryRevOf(updatedSheet.characterData),
+    });
   });
 
   // Delete a user-owned character (cascades to character_campaigns)

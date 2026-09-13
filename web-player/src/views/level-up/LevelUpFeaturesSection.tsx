@@ -1,5 +1,5 @@
 import { C } from "@/lib/theme";
-import { LEVEL_LABELS } from "@/views/character/CharacterSpellShared";
+import { LEVEL_LABELS } from "@/views/character/spells/CharacterSpellShared";
 import { Section } from "@/views/level-up/LevelUpParts";
 import { FormattedText } from "@beholden/shared/ui";
 

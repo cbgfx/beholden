@@ -4,6 +4,7 @@ import { syncCharacterDerivedColumns } from "./dbCharacterSync.js";
 import { normalizeLegacyCompendiumEffectKinds } from "./migrations/compendiumLegacyKindMigration.js";
 import { extractMonsterTreasureTraits } from "./migrations/monsterTreasureMigration.js";
 import { ensureTreasureEncounterColumn } from "./migrations/treasureEncounterColumnMigration.js";
+import { ensurePartyInventoryPayloadColumn } from "./migrations/partyInventoryPayloadColumnMigration.js";
 import { ensureUserLastLoginColumn } from "./migrations/userLastLoginColumnMigration.js";
 import { ensureUserTextScaleColumn } from "./migrations/userTextScaleMigration.js";
 import { ensureImageVersionColumns } from "./migrations/imageVersionColumnMigration.js";
@@ -69,6 +70,7 @@ export function openDb(dbPath: string): Db {
   ensureCharacterRulesetColumn(db);
   ensureCampaignRulesetColumn(db);
   ensureTreasureEncounterColumn(db);
+  ensurePartyInventoryPayloadColumn(db);
   ensureUserLastLoginColumn(db);
   ensureUserTextScaleColumn(db);
   ensureImageVersionColumns(db);

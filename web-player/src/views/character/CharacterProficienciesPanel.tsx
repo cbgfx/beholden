@@ -1,9 +1,9 @@
 import React from "react";
 import { C } from "@/lib/theme";
 import { CollapsiblePanel, Tooltip } from "@/views/character/CharacterViewParts";
-import { PANEL_IDS } from "@/views/character/panelRegistry";
+import { PANEL_IDS } from "@/views/character/layout/panelRegistry";
 import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
-import { formatWeaponProficiencyName } from "@/views/character/CharacterInventory";
+import { formatWeaponProficiencyName } from "@/views/character/inventory/CharacterInventory";
 import { ALL_LANGUAGES, ALL_TOOLS } from "@/views/character-creator/constants/CharacterCreatorConstants";
 
 export function CharacterProficienciesPanel({

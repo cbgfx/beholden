@@ -61,6 +61,8 @@ export function CombatView() {
     activeId,
     setActiveId,
     started,
+    error: combatStateError,
+    refresh: retryCombatState,
     persist: persistCombatState,
   } = useServerCombatState(encounterId);
 
@@ -252,6 +254,7 @@ export function CombatView() {
 
   return (
     <div style={{ padding: "var(--space-page)" }}>
+      {combatStateError && <div role="alert">{combatStateError} <button onClick={() => void retryCombatState()}>Retry</button></div>}
       {concentrationAlert && (
         <div style={{
           marginBottom: 10, padding: "10px 14px", borderRadius: 10,

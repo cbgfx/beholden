@@ -36,8 +36,8 @@ import {
   getAllowedOriginHosts,
 } from "./security.js";
 
-import { hashPassword, verifyToken } from "../lib/jwtAuth.js";
-import { requireAuth } from "../middleware/auth.js";
+import { hashPassword, verifyToken, configureSigningSecret, currentTokenUser } from "../lib/jwtAuth.js";
+import { requireCurrentAccount } from "../middleware/auth.js";
 import { registerAuthRoutes } from "../routes/authRoutes.js";
 import { registerAdminRoutes } from "../routes/adminRoutes.js";
 import { registerHealthRoutes } from "../routes/health.js";
@@ -66,6 +66,7 @@ import { registerBinderLoreRoutes } from "../routes/binders/lore.js";
 
 export function createServer() {
   const runtime = getRuntimeConfig();
+  configureSigningSecret(runtime.dataDir);
   const paths = getPaths({ dataDir: runtime.dataDir, ...(runtime.dbPath != null ? { dbPath: runtime.dbPath } : {}) });
 
   // --- database -------------------------------------------------------------
@@ -109,7 +110,7 @@ export function createServer() {
   app.use("/api", (req, res, next) => {
     if (req.path === "/health") return next();
     if (req.path === "/auth/login" && req.method === "POST") return next();
-    requireAuth(req, res, next);
+    requireCurrentAccount(db)(req, res, next);
   });
 
   // Rate limiting
@@ -261,7 +262,7 @@ export function createServer() {
     authorize: (req) => {
       const search = (req.url ?? "").replace(/^[^?]*/, "");
       const token = new URLSearchParams(search).get("token") ?? "";
-      return token.length > 0 && verifyToken(token) !== null;
+      return token.length > 0 && currentTokenUser(db, verifyToken(token)) !== null;
     },
   });
   // ws mirrors errors from the attached HTTP server. Handle that mirror so a

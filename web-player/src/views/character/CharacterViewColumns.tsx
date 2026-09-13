@@ -4,19 +4,19 @@ import { MonsterStatblock } from "@/views/CompendiumView/panels/MonsterStatblock
 import { AbilityScoresPanel } from "@/views/character/CharacterAbilityScoresPanel";
 import { SkillsPanel } from "@/views/character/CharacterSkillsPanel";
 import { CharacterProficienciesPanel } from "@/views/character/CharacterProficienciesPanel";
-import { CharacterCombatPanels } from "@/views/character/CharacterCombatPanels";
-import { CharacterCreaturesPanel } from "@/views/character/CharacterCreaturesPanel";
-import { CharacterDefensesPanel } from "@/views/character/CharacterDefensesPanel";
-import { CharacterHudPanel } from "@/views/character/CharacterHudPanel";
-import { RecoveryPanel } from "@/views/character/CharacterRecoveryPanel";
-import { PlayerNotesPanel } from "@/views/character/CharacterPlayerNotesPanel";
-import { SharedNotesPanel } from "@/views/character/CharacterSharedNotesPanel";
+import { CharacterCombatPanels } from "@/views/character/combat/CharacterCombatPanels";
+import { CharacterCreaturesPanel } from "@/views/character/creatures/CharacterCreaturesPanel";
+import { CharacterDefensesPanel } from "@/views/character/combat/CharacterDefensesPanel";
+import { CharacterHudPanel } from "@/views/character/combat/CharacterHudPanel";
+import { RecoveryPanel } from "@/views/character/combat/CharacterRecoveryPanel";
+import { PlayerNotesPanel } from "@/views/character/notes/CharacterPlayerNotesPanel";
+import { SharedNotesPanel } from "@/views/character/notes/CharacterSharedNotesPanel";
 import { ClassFeaturesPanel } from "@/views/character/CharacterClassFeaturesPanel";
 import { CharacterCountersPanel } from "@/views/character/CharacterCountersPanel";
-import { InventoryPanel } from "@/views/character/CharacterInventoryPanel";
-import { ItemSpellsPanel } from "@/views/character/CharacterItemSpellsPanel";
-import { RichSpellsPanel } from "@/views/character/CharacterSpellsPanel";
-import { PANEL_IDS, type PanelId } from "@/views/character/panelRegistry";
+import { InventoryPanel } from "@/views/character/inventory/CharacterInventoryPanel";
+import { ItemSpellsPanel } from "@/views/character/spells/CharacterItemSpellsPanel";
+import { RichSpellsPanel } from "@/views/character/spells/CharacterSpellsPanel";
+import { PANEL_IDS, type PanelId } from "@/views/character/layout/panelRegistry";
 
 /** A flat map of every currently-buildable movable panel, keyed by its
  * `panelRegistry.ts` id. `CharacterViewLayout.tsx` reads panels out of this

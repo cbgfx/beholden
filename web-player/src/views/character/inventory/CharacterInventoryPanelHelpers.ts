@@ -1,0 +1,101 @@
+import type React from "react";
+import type { InventoryContainer, InventoryItem, ItemSummaryRow } from "@/views/character/inventory/CharacterInventory";
+import { isArmorItem, isWearableItem, isWeaponItem, normalizeInventoryItemLookupName, singularizeInventoryLookupName } from "@/views/character/inventory/CharacterInventory";
+
+export { singularizeInventoryLookupName };
+
+export const INVENTORY_PICKER_ROW_HEIGHT = 52;
+export const DEFAULT_CONTAINER_ID = "backpack-default";
+export const PARTY_STASH_CONTAINER_ID = "party-stash";
+
+export function uid(): string {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+export function matchInventorySummary(item: InventoryItem, itemIndex: ItemSummaryRow[]): ItemSummaryRow | null {
+  if (item.itemId) return itemIndex.find((row) => row.id === item.itemId) ?? null;
+  const normalized = normalizeInventoryItemLookupName(item.name);
+  const singularNormalized = normalizeInventoryItemLookupName(singularizeInventoryLookupName(item.name));
+  return itemIndex.find((row) => normalizeInventoryItemLookupName(row.name) === normalized)
+    ?? itemIndex.find((row) => normalizeInventoryItemLookupName(row.name) === singularNormalized)
+    ?? null;
+}
+
+function defaultContainer(): InventoryContainer {
+  return { id: DEFAULT_CONTAINER_ID, name: "Backpack", ignoreWeight: false };
+}
+
+export function normalizeContainers(containers: InventoryContainer[] | null | undefined, items?: InventoryItem[]): InventoryContainer[] {
+  const list = Array.isArray(containers) ? containers.filter(Boolean) : [];
+  const referencedIds = new Set((items ?? []).map((item) => item.containerId).filter(Boolean));
+  // Older compendium data incorrectly marked Waterskin as a container. Heal at
+  // most one empty generated section per uncontained compendium Waterskin item;
+  // a merely empty user-created container named Waterskin must survive.
+  let legacyWaterskinsToHeal = (items ?? []).filter((item) => (
+    !item.containerId
+    && (item.itemId === "i_waterskin"
+      || (item.source === "compendium" && /^waterskin$/i.test(String(item.name ?? "").trim())))
+  )).length;
+  const healed = items ? list.filter((container) => {
+    const isLegacyCandidate = legacyWaterskinsToHeal > 0
+      && container.id !== DEFAULT_CONTAINER_ID
+      && /^waterskin$/i.test(String(container.name ?? "").trim())
+      && !referencedIds.has(container.id);
+    if (isLegacyCandidate) legacyWaterskinsToHeal -= 1;
+    return !isLegacyCandidate;
+  }) : list;
+  const hasDefault = healed.some((container) => container.id === DEFAULT_CONTAINER_ID);
+  const next = hasDefault ? healed : [defaultContainer(), ...healed];
+  return next.map((container) => ({
+    id: container.id,
+    name: String(container.name ?? "").trim() || (container.id === DEFAULT_CONTAINER_ID ? "Backpack" : "Container"),
+    ignoreWeight: Boolean(container.ignoreWeight),
+  }));
+}
+
+export const subLabelStyle: React.CSSProperties = {
+  fontSize: "var(--fs-tiny)",
+  fontWeight: 700,
+  color: "var(--c-muted)",
+  textTransform: "uppercase",
+  letterSpacing: "0.07em",
+  marginBottom: 6,
+};
+
+export const inputStyle: React.CSSProperties = {
+  flex: 1,
+  background: "rgba(255,255,255,0.07)",
+  border: "1px solid rgba(255,255,255,0.16)",
+  borderRadius: 7,
+  padding: "6px 10px",
+  color: "var(--c-text)",
+  fontSize: "var(--fs-subtitle)",
+  outline: "none",
+};
+
+
+export function inferStackKey(item: Pick<InventoryItem, "name" | "itemId" | "type">): string {
+  const itemId = String(item.itemId ?? "").trim();
+  if (itemId) return `id:${itemId.toLowerCase()}`;
+  const normalizedName = normalizeInventoryItemLookupName(singularizeInventoryLookupName(item.name));
+  const normalizedType = String(item.type ?? "").trim().toLowerCase();
+  return `name:${normalizedName}|type:${normalizedType}`;
+}
+
+export function isStackableItem(item: InventoryItem): boolean {
+  return !isWeaponItem(item) && !isArmorItem(item) && !isWearableItem(item);
+}
+
+export function mergeStackedInventoryItem(existing: InventoryItem, incoming: InventoryItem): InventoryItem {
+  return {
+    ...existing,
+    quantity: Math.max(1, existing.quantity) + Math.max(1, incoming.quantity),
+    source: existing.source ?? incoming.source,
+    itemId: existing.itemId ?? incoming.itemId,
+    rarity: existing.rarity ?? incoming.rarity ?? null,
+    type: existing.type ?? incoming.type ?? null,
+    weight: existing.weight ?? incoming.weight ?? null,
+    description: existing.description ?? incoming.description,
+    notes: existing.notes ?? incoming.notes,
+  };
+}

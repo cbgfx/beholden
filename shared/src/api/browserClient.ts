@@ -49,44 +49,57 @@ const SAME_ORIGIN_IS_DIRECT_PORT = (() => {
   }
 })();
 
+/** An `Error` from a non-OK API response, carrying the HTTP status and any `code` from the body. */
+export interface ApiError extends Error {
+  status?: number;
+  code?: string;
+}
+
 /** Try to pull a human-readable message out of a non-OK response body. */
-async function apiError(res: Response): Promise<Error> {
+async function apiError(res: Response): Promise<ApiError> {
   const contentType = res.headers.get("content-type") ?? "";
   const retryAfter = Number(res.headers.get("retry-after"));
   const retryText = Number.isFinite(retryAfter) && retryAfter > 0
     ? ` Please wait ${Math.ceil(retryAfter)} seconds and try again.`
     : "";
 
+  // Every path stamps the HTTP status (and a body `code`, when present) onto the
+  // returned Error so callers can branch on e.g. a 409 conflict.
+  let code: string | undefined;
+  const finish = (error: Error): ApiError =>
+    Object.assign(error, { status: res.status, ...(code ? { code } : {}) });
+
   try {
     if (!contentType.includes("application/json")) {
       const text = (await res.text()).trim();
       if (text) {
         if (text.startsWith("<!DOCTYPE") || text.startsWith("<html")) {
-          return new Error("Server returned HTML instead of JSON. Check the API/reverse-proxy route for /api.");
+          return finish(new Error("Server returned HTML instead of JSON. Check the API/reverse-proxy route for /api."));
         }
-        return new Error(text.slice(0, 200));
+        return finish(new Error(text.slice(0, 200)));
       }
-      return new Error(`${res.status} ${res.statusText}`);
+      return finish(new Error(`${res.status} ${res.statusText}`));
     }
 
     const body = (await res.json()) as unknown;
     const b = body as Record<string, unknown>;
+    if (typeof b.code === "string") code = b.code;
     const issues = b.issues as Array<{ path: string; message: string }> | undefined;
     if (Array.isArray(issues) && issues.length > 0) {
       const first = issues[0];
       const label = first.path ? `${first.path}: ${first.message}` : first.message;
-      return new Error(label);
+      return finish(new Error(label));
     }
     if (b.error === "rate_limited") {
-      return new Error(`Too many requests.${retryText}`);
+      return finish(new Error(`Too many requests.${retryText}`));
     }
     const msg = b.message ?? b.error;
-    if (msg) return new Error(String(msg));
+    if (msg) return finish(new Error(String(msg)));
   } catch {
     // Ignore JSON parse errors and fall through to status text.
   }
-  if (res.status === 429) return new Error(`Too many requests.${retryText}`);
-  return new Error(`${res.status} ${res.statusText}`);
+  if (res.status === 429) return finish(new Error(`Too many requests.${retryText}`));
+  return finish(new Error(`${res.status} ${res.statusText}`));
 }
 
 function getAuthHeaders(): HeadersInit {
@@ -124,44 +137,26 @@ export async function apiRaw<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+async function fetchApi(path: string, init?: RequestInit): Promise<Response> {
   const merged = mergeInit(init);
-
-  // Non-API paths: just fetch as-is.
-  if (!path.startsWith("/api")) {
-    const res = await fetch(resolveApiPath(path), merged);
-    if (!res.ok) throw await apiError(res);
-    return (await res.json()) as T;
-  }
-
-  if (API_ORIGIN) {
-    const res = await fetch(resolveApiPath(path), merged);
-    if (!res.ok) throw await apiError(res);
-    return (await res.json()) as T;
-  }
-
-  // Prefer same-origin first (works with Vite proxy, reverse proxies, and prod single-port).
-  let proxyError: Error | null = null;
+  const safeRead = ["GET", "HEAD"].includes((init?.method ?? "GET").toUpperCase());
+  const fallback = path.startsWith("/api") && !API_ORIGIN && !SAME_ORIGIN_IS_DIRECT_PORT && safeRead;
+  let response: Response;
   try {
-    const res = await fetch(path, merged);
-
-    // Client errors (4xx) are real, so do not retry.
-    if (res.ok) return (await res.json()) as T;
-    if (res.status < 500) throw await apiError(res);
-
-    proxyError = new Error(`proxy ${res.status}`);
-  } catch (e) {
-    if (isAbortError(e)) throw e;
-    proxyError = e instanceof Error ? e : new Error(String(e));
+    response = await fetch(resolveApiPath(path), merged);
+  } catch (error) {
+    if (!fallback || isAbortError(error)) throw error;
+    response = await fetch(directServerUrl(path), merged);
+    if (!response.ok) throw await apiError(response);
+    return response;
   }
+  if (response.status >= 500 && fallback) response = await fetch(directServerUrl(path), merged);
+  if (!response.ok) throw await apiError(response);
+  return response;
+}
 
-  // In single-port mode, fallback would hit the same host and duplicate failure.
-  if (SAME_ORIGIN_IS_DIRECT_PORT) throw proxyError;
-
-  // Fallback: direct server port (dev split-port mode only).
-  const res2 = await fetch(directServerUrl(path), merged);
-  if (!res2.ok) throw await apiError(res2);
-  return (await res2.json()) as T;
+export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  return (await (await fetchApi(path, init)).json()) as T;
 }
 
 const inFlightReads = new Map<string, Promise<unknown>>();
@@ -177,32 +172,9 @@ export function apiCoalesced<T>(path: string): Promise<T> {
   return request;
 }
 
-/** Authenticated binary download with the same proxy/direct-port fallback as api(). */
+/** Authenticated binary download using the same safe-read transport policy. */
 export async function apiBlob(path: string, init?: RequestInit): Promise<Blob> {
-  const merged = mergeInit(init);
-
-  if (!path.startsWith("/api") || API_ORIGIN) {
-    const res = await fetch(resolveApiPath(path), merged);
-    if (!res.ok) throw await apiError(res);
-    return res.blob();
-  }
-
-  let proxyError: Error | null = null;
-  try {
-    const res = await fetch(path, merged);
-    if (res.ok) return res.blob();
-    if (res.status < 500) throw await apiError(res);
-    proxyError = new Error(`proxy ${res.status}`);
-  } catch (error) {
-    if (isAbortError(error)) throw error;
-    proxyError = error instanceof Error ? error : new Error(String(error));
-  }
-
-  if (SAME_ORIGIN_IS_DIRECT_PORT) throw proxyError;
-
-  const fallback = await fetch(directServerUrl(path), merged);
-  if (!fallback.ok) throw await apiError(fallback);
-  return fallback.blob();
+  return (await fetchApi(path, init)).blob();
 }
 
 export function jsonInit(method: string, body: unknown): RequestInit {

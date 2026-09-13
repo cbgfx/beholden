@@ -30,7 +30,7 @@ import { deriveFeatHitPointMaxBonus } from "@/domain/character/featEffects";
 import { appendMissingFeatureNotes } from "@/domain/character/featureNoteTemplates";
 import { reconcileInvocationExtraFeatIds } from "@/domain/character/invocationFeatChoices";
 import { tagAcquisitionLevelMap } from "@/domain/character/spellAcquisition";
-import { createDefaultSheetViews } from "@/views/character/sheetViewLayout";
+import { createDefaultSheetViews } from "@/views/character/layout/sheetViewLayout";
 
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
 

@@ -3,7 +3,7 @@ import { multiclassRequirementMet } from "./multiclassEligibility";
 import { deriveMulticlassSpellSlots } from "./multiclassSpellcasting";
 import { buildLevelUpPayload } from "@/views/level-up/buildLevelUpPayload";
 import { buildCharacterViewDerivedState } from "@/views/character/CharacterViewDerivedState";
-import { getLongRestRecovery } from "@/views/character/CharacterRestRecovery";
+import { getLongRestRecovery } from "@/views/character/combat/CharacterRestRecovery";
 import { collectClassResources, mergeResourceState } from "@/views/character/CharacterViewResourceHelpers";
 import { normalizeCharacterTransfer } from "@/views/home/PlayerHomeUtils";
 import type { CharacterViewDerivedStateArgs } from "@/views/character/CharacterViewDerivedTypes";

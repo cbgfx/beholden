@@ -3,10 +3,10 @@ import type {
   SharedConditionInstance,
   SharedDeathSaves,
 } from "@beholden/shared/domain";
-import type { InventoryContainer, InventoryItem } from "@/views/character/CharacterInventory";
+import type { InventoryContainer, InventoryItem } from "@/views/character/inventory/CharacterInventory";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import type { CharacterClassEntry as SharedCharacterClassEntry } from "@beholden/shared/domain/characterClasses";
-import type { SheetViewDef } from "@/views/character/panelRegistry";
+import type { SheetViewDef } from "@/views/character/layout/panelRegistry";
 
 export type AbilKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
 

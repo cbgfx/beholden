@@ -3,7 +3,7 @@ import { C, withAlpha } from "@/lib/theme";
 import { Panel as SharedPanel, ghostButtonStyle } from "@beholden/shared/ui";
 
 export { PreparedSpellProgressionBlock, ClassFeatureItem } from "./CharacterViewFeatureParts";
-export { NoteEditDrawer } from "./CharacterViewNoteDrawer";
+export { NoteEditDrawer } from "./notes/CharacterViewNoteDrawer";
 
 export function Tooltip({ text, children, multiline }: { text: string; children: React.ReactNode; multiline?: boolean }) {
   const [visible, setVisible] = useState(false);

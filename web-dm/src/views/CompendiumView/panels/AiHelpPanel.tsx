@@ -2,7 +2,7 @@ import React from "react";
 import { Panel } from "@/ui/Panel";
 import { Button } from "@/ui/Button";
 import { theme } from "@/theme/theme";
-import guideContent from "../../../../../BEHOLDEN_AI_CONTENT_GUIDE.md?raw";
+import guideContent from "../../../../../docs/guides/ai-content.md?raw";
 
 function downloadMd() {
   const blob = new Blob([guideContent], { type: "text/markdown" });

@@ -40,7 +40,17 @@ export function createWsServer(opts: {
       try { ws.close(1008, "Unauthorized"); } catch {}
       return;
     }
+    const check = () => {
+      if (!authorize || authorize(req)) return true;
+      ws.close(1008, "Session expired");
+      return false;
+    };
+    (ws as WebSocket & { __authorize?: () => boolean }).__authorize = check;
+    const timer = setInterval(check, 1000);
+    timer.unref();
+    ws.on("close", () => clearInterval(timer));
     ws.on("message", (raw) => {
+      if (!check()) return;
       try {
         const text = typeof raw === "string" ? raw : raw.toString("utf8");
         const parsed = JSON.parse(text) as { type?: unknown; payload?: unknown };
@@ -136,6 +146,8 @@ function shouldDeliverToScope(
   _type: ServerEventType,
   payload: ServerEventMap[ServerEventType],
 ): boolean {
+  const authorize = (ws as WebSocket & { __authorize?: () => boolean }).__authorize;
+  if (authorize && !authorize()) return false;
   const scope = (ws as WebSocket & { __beholdenScope?: WsScope }).__beholdenScope;
   if (!scope) return true;
   const scopeCampaign = typeof scope.campaignId === "string" && scope.campaignId ? scope.campaignId : null;

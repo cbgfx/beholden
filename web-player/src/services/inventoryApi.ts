@@ -50,6 +50,45 @@ export function updatePartyInventoryQuantity(
   ).then(flattenPartyInventoryItemDto);
 }
 
+/** Party-stash side of an atomic character <-> stash transfer. */
+export type PartyStashTransferOp =
+  | { action: "create"; item: Record<string, unknown> }
+  | { action: "setQuantity"; itemId: string; quantity: number; expectedQuantity: number; expectedStashRev?: string }
+  | { action: "delete"; itemId: string; expectedQuantity: number; expectedStashRev?: string };
+
+export interface PartyInventoryTransferBody {
+  characterId: string;
+  expectedInventoryRev: string;
+  /** The character's full next inventory, with the transferred item already added/removed. */
+  inventory: unknown[];
+  inventoryContainers: unknown[];
+  stash: PartyStashTransferOp;
+}
+
+export interface PartyInventoryTransferResult {
+  ok: true;
+  inventoryRev: string;
+  itemId: string;
+  /** The upserted stash row, or null when the transfer emptied the slot (withdrawal). */
+  stashItem: PartyInventoryItemDto | null;
+}
+
+/**
+ * Move one item between a character sheet and the party stash in a single
+ * server transaction. Replaces the old two-request pattern (character save +
+ * separate stash create/delete) that could duplicate or destroy the item if
+ * the second request failed.
+ */
+export function transferPartyInventoryItem(
+  campaignId: string,
+  body: PartyInventoryTransferBody,
+): Promise<PartyInventoryTransferResult> {
+  return api<PartyInventoryTransferResult>(
+    `/api/campaigns/${campaignId}/party-inventory/transfer`,
+    jsonInit("POST", body),
+  );
+}
+
 export type PartyCurrencyMap = { PP: number; GP: number; SP: number; CP: number };
 
 export function fetchPartyCurrency(campaignId: string): Promise<PartyCurrencyMap> {

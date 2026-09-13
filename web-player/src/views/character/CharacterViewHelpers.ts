@@ -10,7 +10,7 @@ import {
   normalizeWeaponProficiencyName,
 } from "@/views/character/CharacterSheetUtils";
 import { getPolymorphCondition } from "@beholden/shared/domain";
-import { getEquipState, type InventoryItem } from "@/views/character/CharacterInventory";
+import { getEquipState, type InventoryItem } from "@/views/character/inventory/CharacterInventory";
 import { resolveStoredCompendiumClassId } from "@/domain/character/classIds";
 import { normalizeCharacterClassEntries } from "@beholden/shared/domain/characterClasses";
 import type { ExtraFeatAbilityApplication } from "@/domain/character/extraFeatAbilityScores";

@@ -6,7 +6,7 @@ import { z } from "zod";
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../lib/validate.js";
-import { verifyPassword, hashPassword, signToken } from "../lib/jwtAuth.js";
+import { verifyPassword, hashPassword, signToken, credentialVersion } from "../lib/jwtAuth.js";
 import { requireAuth } from "../middleware/auth.js";
 import { syncOwnedPlayerName } from "../services/characters.js";
 
@@ -44,6 +44,7 @@ export function registerAuthRoutes(app: Express, ctx: ServerContext) {
     }
 
     const token = signToken({
+      credentialVersion: credentialVersion(row.passhash as string),
       userId: row.id as string,
       username: row.username as string,
       isAdmin: Boolean(row.is_admin),
@@ -74,8 +75,8 @@ export function registerAuthRoutes(app: Express, ctx: ServerContext) {
       .get(userId) as Record<string, unknown> | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "User not found" });
 
-    // Require current password only when changing username
-    if (body.username) {
+    // Credential changes require proof of the current password.
+    if (body.username !== undefined || body.newPassword !== undefined) {
       if (!body.currentPassword || !verifyPassword(body.currentPassword, row.passhash as string)) {
         return res.status(401).json({ ok: false, message: "Current password is incorrect" });
       }
@@ -110,11 +111,11 @@ export function registerAuthRoutes(app: Express, ctx: ServerContext) {
     }
 
     const updated = db
-      .prepare("SELECT id, username, name, is_admin, text_scale FROM users WHERE id = ?")
+      .prepare("SELECT id, username, name, passhash, is_admin, text_scale FROM users WHERE id = ?")
       .get(userId) as Record<string, unknown>;
 
     const isAdmin = Boolean(updated.is_admin);
-    const newToken = signToken({ userId: updated.id as string, username: updated.username as string, isAdmin });
+    const newToken = signToken({ credentialVersion: credentialVersion(updated.passhash as string), userId: updated.id as string, username: updated.username as string, isAdmin });
 
     res.json({
       ok: true,

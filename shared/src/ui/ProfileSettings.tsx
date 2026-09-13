@@ -91,12 +91,13 @@ export function ProfileSettings({ theme, Button, styles = {} }: {
   async function handlePasswordSave(e: React.FormEvent) {
     e.preventDefault();
     setPwMsg(null); setPwErr(null);
+    if (!currentPw) { setPwErr("Enter your current password."); return; }
     if (!newPw) { setPwErr("Enter a new password."); return; }
     if (newPw.length < 4) { setPwErr("Password must be at least 4 characters."); return; }
     if (newPw !== confirmPw) { setPwErr("Passwords do not match."); return; }
 
     try {
-      if (!await save({ newPassword: newPw })) return;
+      if (!await save({ newPassword: newPw, currentPassword: currentPw })) return;
       setPwMsg("Password updated!");
       setCurrentPw(""); setNewPw(""); setConfirmPw("");
     } catch (err: unknown) {
@@ -171,6 +172,10 @@ export function ProfileSettings({ theme, Button, styles = {} }: {
         <form onSubmit={handlePasswordSave} style={sectionStyle}>
           <div style={{ fontWeight: 700, fontSize: "var(--fs-medium)", color: theme.colors.accentHighlight, marginBottom: 2 }}>Change Password</div>
 
+          <div>
+            <label style={labelStyle}>Current Password</label>
+            <input style={fieldStyle} type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} autoComplete="current-password" />
+          </div>
           <div>
             <label style={labelStyle}>New Password</label>
             <input style={fieldStyle} type="password" value={newPw} onChange={e => setNewPw(e.target.value)}

@@ -36,13 +36,13 @@ jobs:
 
           mkdir -p release_package
 
-          for workspace in server shared web-dm web-player; do
+          for workspace in server shared web-dm web-player docs scripts; do
             mkdir -p "release_package/${workspace}"
             rsync -a --exclude=node_modules "${workspace}/" "release_package/${workspace}/"
           done
 
-          # Include root docs/config if you want
-          for f in README.md LICENSE package.json package-lock.json start.bat; do
+          # Include root entry points and configuration used by workspace commands.
+          for f in README.md LICENSE package.json package-lock.json eslint.config.cjs knip.json start.bat update-beholden.bat; do
             if [ -f "$f" ]; then cp "$f" release_package/; fi
           done
 

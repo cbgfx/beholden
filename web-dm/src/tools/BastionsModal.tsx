@@ -6,7 +6,7 @@ import { useStore } from "@/store";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
-import type { Bastion, BastionCompendiumResponse, BastionFacility, BastionResponse, BastionsResponse, CompendiumFacility } from "@/tools/bastions/types";
+import type { Bastion, BastionCompendiumResponse, BastionFacility, BastionsResponse, CompendiumFacility } from "@/tools/bastions/types";
 import { useBastionAutosave } from "@/tools/bastions/useBastionAutosave";
 import { chipButtonStyle } from "@/tools/bastions/styles";
 import { BastionsSidebar } from "@/tools/bastions/BastionsSidebar";
@@ -37,13 +37,17 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
     () => selectedBastion?.assignedPlayerIds.join(",") ?? "",
     [selectedBastion?.assignedPlayerIds],
   );
-  const { registerLoadedBastions } = useBastionAutosave({
+  const { registerLoadedBastions, updateDraft, forget, retry, readVersion } = useBastionAutosave({
     campaignId,
     isOpen: props.isOpen,
     selectedBastion,
     setSaving,
     setMessage,
   });
+
+  const scopeRef = React.useRef(campaignId);
+  const readSequence = React.useRef(0);
+  React.useEffect(() => { scopeRef.current = campaignId; readSequence.current++; setBastions([]); setSelectedBastionId(null); }, [campaignId]);
 
   const facilitiesByKey = React.useMemo(() => {
     const map = new Map<string, CompendiumFacility>();
@@ -53,6 +57,8 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
 
   const load = React.useCallback(async (preferredBastionId?: string | null) => {
     if (!props.isOpen || !campaignId) return;
+    const sequence = ++readSequence.current;
+    const version = readVersion();
     setLoading(true);
     setMessage("");
     try {
@@ -60,29 +66,20 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
         api<BastionCompendiumResponse>("/api/compendium/bastions"),
         api<BastionsResponse>(`/api/campaigns/${campaignId}/bastions`),
       ]);
+      if (scopeRef.current !== campaignId || sequence !== readSequence.current) return;
       setCompendium(compendiumData);
-      setBastions(bastionData.bastions);
-      registerLoadedBastions(bastionData.bastions);
+      setBastions(registerLoadedBastions(bastionData.bastions, version));
       setSelectedBastionId((prev) => {
         if (preferredBastionId && bastionData.bastions.some((bastion) => bastion.id === preferredBastionId)) return preferredBastionId;
         if (prev && bastionData.bastions.some((bastion) => bastion.id === prev)) return prev;
         return bastionData.bastions[0]?.id ?? null;
       });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Failed to load Bastions.");
+      if (scopeRef.current === campaignId && sequence === readSequence.current) setMessage(error instanceof Error ? error.message : "Failed to load Bastions.");
     } finally {
-      setLoading(false);
+      if (scopeRef.current === campaignId && sequence === readSequence.current) setLoading(false);
     }
-  }, [campaignId, props.isOpen, registerLoadedBastions]);
-
-  async function fetchSingleBastion(nextBastionId: string): Promise<BastionResponse | null> {
-    if (!campaignId) return null;
-    try {
-      return await api<BastionResponse>(`/api/campaigns/${campaignId}/bastions/${nextBastionId}`);
-    } catch {
-      return null;
-    }
-  }
+  }, [campaignId, props.isOpen, registerLoadedBastions, readVersion]);
 
   React.useEffect(() => {
     if (!props.isOpen) return;
@@ -103,27 +100,9 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
         : {};
 
       if (delta.action === "delete" && delta.bastionId) {
+        forget(delta.bastionId);
         setBastions((prev) => prev.filter((entry) => entry.id !== delta.bastionId));
         setSelectedBastionId((prev) => (prev === delta.bastionId ? null : prev));
-        return;
-      }
-
-      if (delta.action === "upsert" && delta.bastionId) {
-        void fetchSingleBastion(delta.bastionId).then((single) => {
-          if (!single?.bastion) return;
-          setBastions((prev) => {
-            const idx = prev.findIndex((entry) => entry.id === single.bastion.id);
-            if (idx === -1) return [...prev, single.bastion];
-            const next = prev.slice();
-            next[idx] = single.bastion;
-            return next;
-          });
-          setSelectedBastionId((prev) => {
-            if (prev === single.bastion.id) return prev;
-            if (!prev) return single.bastion.id;
-            return prev;
-          });
-        });
         return;
       }
 
@@ -143,7 +122,9 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
 
   function updateSelectedDraft(mutator: (bastion: Bastion) => Bastion) {
     if (!selectedBastion) return;
-    setBastions((prev) => prev.map((bastion) => (bastion.id === selectedBastion.id ? mutator(bastion) : bastion)));
+    const draft = mutator(selectedBastion);
+    updateDraft(draft);
+    setBastions((prev) => prev.map((bastion) => bastion.id === draft.id ? draft : bastion));
   }
 
   async function createBastion() {
@@ -172,6 +153,7 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
     setMessage("");
     try {
       await api(`/api/campaigns/${campaignId}/bastions/${selectedBastion.id}`, { method: "DELETE" });
+      forget(selectedBastion.id);
       setBastions((prev) => prev.filter((entry) => entry.id !== selectedBastion.id));
       setSelectedBastionId((prev) => (prev === selectedBastion.id ? null : prev));
     } catch (error) {
@@ -307,8 +289,8 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
           ) : null}
 
           {message ? (
-            <div style={{ marginTop: 10, color: message.toLowerCase().includes("fail") || message.toLowerCase().includes("invalid") ? theme.colors.red : theme.colors.muted }}>
-              {message}
+            <div role="alert" style={{ marginTop: 10, color: message.toLowerCase().includes("fail") || message.toLowerCase().includes("invalid") ? theme.colors.red : theme.colors.muted }}>
+              {message} <Button onClick={retry}>Retry saves</Button>
             </div>
           ) : null}
         </div>

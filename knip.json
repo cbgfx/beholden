@@ -7,28 +7,38 @@
         "src/scripts/*.ts",
         "src/**/*.test.ts"
       ],
-      "project": ["src/**/*.ts"],
-      "ignore": ["dist/**"]
+      "project": [
+        "src/**/*.ts"
+      ],
+      "ignore": [
+        "dist/**"
+      ]
     },
     "web-dm": {
       "entry": [
         "src/main.tsx",
-        "src/**/*.test.ts"
+        "src/**/*.test.{ts,tsx}"
       ],
-      "project": ["src/**/*.{ts,tsx}"]
+      "project": [
+        "src/**/*.{ts,tsx}"
+      ]
     },
     "web-player": {
       "entry": [
         "src/main.tsx",
-        "src/**/*.test.ts"
+        "src/**/*.test.{ts,tsx}"
       ],
-      "project": ["src/**/*.{ts,tsx}"]
+      "project": [
+        "src/**/*.{ts,tsx}"
+      ]
     },
     "shared": {
       "entry": [
         "src/**/index.{ts,tsx}"
       ],
-      "project": ["src/**/*.{ts,tsx}"]
+      "project": [
+        "src/**/*.{ts,tsx}"
+      ]
     }
   }
 }

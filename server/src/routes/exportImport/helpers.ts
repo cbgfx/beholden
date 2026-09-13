@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { Db } from "../../lib/db.js";
 import { insertCombatant } from "../../services/combat.js";
 import { DEFAULT_DEATH_SAVES, DEFAULT_OVERRIDES } from "../../lib/defaults.js";
@@ -20,15 +21,23 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
     throw new Error("Missing campaign.id");
   }
 
+  if (doc["version"] !== undefined && doc["version"] !== 1 && doc["version"] !== 2) throw new Error("Unsupported campaign export version");
   const c = campaign as Record<string, unknown>;
   const campaignId = String(c["id"]);
 
+  if (!campaignId || campaignId === "undefined") throw new Error("Missing campaign.id");
+  const currency = c["partyCurrency"] !== undefined
+    ? z.object({ PP: z.number().int().nonnegative(), GP: z.number().int().nonnegative(), SP: z.number().int().nonnegative(), CP: z.number().int().nonnegative() }).parse(c["partyCurrency"])
+    : undefined;
   db.transaction(() => {
+    const previous = db.prepare("SELECT party_currency_json, campaign_story, campaign_notes FROM campaigns WHERE id = ?").get(campaignId) as Record<string, unknown> | undefined;
+    // Membership is installation-local authority, never granted from an imported file.
+    const memberships = db.prepare("SELECT * FROM campaign_membership WHERE campaign_id = ?").all(campaignId) as Record<string, unknown>[];
     db.prepare("DELETE FROM campaigns WHERE id = ?").run(campaignId);
 
     db.prepare(`
-      INSERT INTO campaigns (id, name, color, ruleset, image_url, image_updated_at, shared_notes, campaign_story, campaign_notes, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO campaigns (id, name, color, ruleset, image_url, image_updated_at, shared_notes, campaign_story, campaign_notes, party_currency_json, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       campaignId,
       String(c["name"] ?? ""),
@@ -37,17 +46,22 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
       cleanStoredImageUrl(c["imageUrl"]),
       Number(c["updatedAt"] ?? Date.now()),
       String(c["sharedNotes"] ?? ""),
-      typeof c["campaignStory"] === "string" ? c["campaignStory"] : null,
-      typeof c["campaignNotes"] === "string" ? c["campaignNotes"] : null,
+      c["campaignStory"] === undefined ? previous?.campaign_story ?? null : z.string().nullable().parse(c["campaignStory"]),
+      c["campaignNotes"] === undefined ? previous?.campaign_notes ?? null : z.string().nullable().parse(c["campaignNotes"]),
+      currency ? JSON.stringify(currency) : previous?.party_currency_json ?? JSON.stringify({ PP: 0, GP: 0, SP: 0, CP: 0 }),
       Number(c["createdAt"] ?? Date.now()),
       Number(c["updatedAt"] ?? Date.now()),
     );
 
+    for (const m of memberships) {
+      db.prepare("INSERT INTO campaign_membership (id, campaign_id, user_id, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)")
+        .run(m.id, campaignId, m.user_id, m.role, m.created_at, m.updated_at);
+    }
     const adventures = toArray(doc["adventures"]);
     const adventureIds = new Set(adventures.map((adventure) => String(adventure["id"])));
     for (const adventure of adventures) {
       db.prepare(`
-        INSERT OR IGNORE INTO adventures (id, campaign_id, name, status, sort, created_at, updated_at)
+        INSERT INTO adventures (id, campaign_id, name, status, sort, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `).run(
         String(adventure["id"]),
@@ -61,17 +75,19 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
     }
 
     const encounters = toArray(doc["encounters"]);
+    const encounterIds = new Set(encounters.map((entry) => String(entry["id"])));
     for (const encounter of encounters) {
+      if (encounter["adventureId"] != null && !adventureIds.has(String(encounter["adventureId"]))) throw new Error("Encounter references an adventure outside this import");
       const combat = encounter["combat"] as Record<string, unknown> | undefined;
       db.prepare(`
-        INSERT OR IGNORE INTO encounters
+        INSERT INTO encounters
           (id, campaign_id, adventure_id, name, status, sort,
            combat_round, combat_active_combatant_id, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         String(encounter["id"]),
         campaignId,
-        String(encounter["adventureId"] ?? ""),
+        encounter["adventureId"] != null ? String(encounter["adventureId"]) : null,
         String(encounter["name"] ?? ""),
         String(encounter["status"] ?? "Open"),
         Number(encounter["sort"] ?? 0),
@@ -119,7 +135,7 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
       const userExists = requestedUserId ? existingUserIds.has(requestedUserId) : false;
       const characterExists = requestedCharacterId ? existingCharacterIds.has(requestedCharacterId) : false;
       db.prepare(`
-        INSERT OR IGNORE INTO players
+        INSERT INTO players
           (id, campaign_id, user_id, character_id,
            player_name, character_name, class_name, species, level, hp_max, hp_current, ac, speed,
            str, dex, con, int, wis, cha, color, synced_ac, death_saves_success, death_saves_fail,
@@ -161,7 +177,7 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
     const inpcs = toArray(doc["inpcs"]);
     for (const inpc of inpcs) {
       db.prepare(`
-        INSERT OR IGNORE INTO inpcs
+        INSERT INTO inpcs
           (id, campaign_id, monster_id, name, label, friendly,
            hp_max, hp_current, hp_details, ac, ac_details, sort, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -189,7 +205,7 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
       const text = String(note["text"] ?? "");
       const requestedAdventureId = (note["adventureId"] as string | null) ?? null;
       db.prepare(`
-        INSERT OR IGNORE INTO notes (id, campaign_id, adventure_id, title, text, sort, created_at, updated_at)
+        INSERT INTO notes (id, campaign_id, adventure_id, title, text, sort, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         String(note["id"]),
@@ -219,7 +235,7 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
         qty: Math.max(1, Math.round(Number(entry["qty"] ?? 1))) || 1,
       };
       db.prepare(`
-        INSERT OR IGNORE INTO treasure
+        INSERT INTO treasure
           (id, campaign_id, adventure_id, source, item_id, name, rarity, type, type_key,
            attunement, magic, text, qty, sort, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -245,10 +261,14 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
 
     const partyInventory = toArray(doc["partyInventory"]);
     for (const item of partyInventory) {
+      const rawPayload = item["payload"];
+      const payloadJson = rawPayload && typeof rawPayload === "object" && !Array.isArray(rawPayload)
+        ? JSON.stringify(rawPayload)
+        : null;
       db.prepare(`
-        INSERT OR IGNORE INTO party_inventory
-          (id, campaign_id, name, quantity, weight, notes, source, item_id, rarity, type, description, sort, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO party_inventory
+          (id, campaign_id, name, quantity, weight, notes, source, item_id, rarity, type, description, payload_json, sort, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         String(item["id"]),
         campaignId,
@@ -261,6 +281,7 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
         (item["rarity"] as string | null) ?? null,
         (item["type"] as string | null) ?? null,
         (item["description"] as string | null) ?? null,
+        payloadJson,
         Number(item["sort"] ?? 0),
         Number(item["createdAt"] ?? Date.now()),
         Number(item["updatedAt"] ?? Date.now()),
@@ -270,7 +291,7 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
     const conditions = toArray(doc["conditions"]);
     for (const condition of conditions) {
       db.prepare(`
-        INSERT OR IGNORE INTO conditions (id, campaign_id, key, name, description, sort, created_at, updated_at)
+        INSERT INTO conditions (id, campaign_id, key, name, description, sort, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         String(condition["id"]),
@@ -287,7 +308,7 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
     const bastions = toArray(doc["bastions"]);
     for (const bastion of bastions) {
       db.prepare(`
-        INSERT OR IGNORE INTO bastions
+        INSERT INTO bastions
           (id, campaign_id, name, active, walled, defenders_armed, defenders_unarmed, notes, maintain_order, facilities_json, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
@@ -315,6 +336,7 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
     const combats = toArray(doc["combats"]);
     for (const combat of combats) {
       const encounterId = String(combat["encounterId"]);
+      if (!encounterIds.has(encounterId)) throw new Error("Combat references an encounter outside this import");
       db.prepare("UPDATE encounters SET combat_round=?, combat_active_combatant_id=? WHERE id=?").run(
         Number(combat["round"] ?? 1),
         (combat["activeCombatantId"] as string | null) ?? null,
@@ -355,11 +377,7 @@ export function importCampaignDocument(db: Db, doc: Record<string, unknown>, uid
           createdAt: Number(raw["createdAt"] ?? Date.now()),
           updatedAt: Number(raw["updatedAt"] ?? Date.now()),
         };
-        try {
-          insertCombatant(db, combatant);
-        } catch {
-          // Skip duplicates on re-import
-        }
+        insertCombatant(db, combatant);
       }
     }
 

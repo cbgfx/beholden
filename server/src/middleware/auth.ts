@@ -2,7 +2,7 @@
 // Express middleware for JWT authentication and admin authorization.
 
 import type { Request, Response, NextFunction } from "express";
-import { verifyToken, type JwtPayload } from "../lib/jwtAuth.js";
+import { verifyToken, currentTokenUser, type JwtPayload } from "../lib/jwtAuth.js";
 import type { Db } from "../lib/db.js";
 
 declare global {
@@ -45,4 +45,14 @@ export function requireAnyDm(db: Db) {
     if (!row) return res.status(403).json({ ok: false, message: "DM access required" });
     next();
   };
+}
+
+/** Production HTTP authorization shares credential revocation with WebSockets. */
+export function requireCurrentAccount(db: Db) {
+  return (req: Request, res: Response, next: NextFunction) => requireAuth(req, res, () => {
+    const user = currentTokenUser(db, req.user ?? null);
+    if (!user) { res.status(401).json({ message: "Session expired. Please sign in again." }); return; }
+    req.user = user;
+    next();
+  });
 }

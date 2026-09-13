@@ -126,6 +126,8 @@ export interface StoredPartyInventoryItemState {
   rarity: string | null;
   type: string | null;
   description: string | null;
+  /** Full portable item state for transfers; null for plain/legacy rows. */
+  payload: Record<string, unknown> | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -245,6 +247,7 @@ export interface StoredPartyInventoryItem extends Timestamps {
   rarity: string | null;
   type: string | null;
   description: string | null;
+  payload: Record<string, unknown> | null;
   sort: number;
 }
 

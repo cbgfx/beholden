@@ -8,7 +8,7 @@ import {
   isValidExtraFeatAbilityChoice,
 } from "@/domain/character/extraFeatAbilityScores";
 import type { AbilKey } from "@/views/character/CharacterSheetTypes";
-import { inputStyle } from "@/views/character/CharacterInventoryPanelHelpers";
+import { inputStyle } from "@/views/character/inventory/CharacterInventoryPanelHelpers";
 import { cancelBtnStyle } from "@/views/character/CharacterViewParts";
 import { Button } from "@/ui/Button";
 

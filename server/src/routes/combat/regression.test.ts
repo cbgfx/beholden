@@ -793,6 +793,35 @@ describe("combat state regression: HP/condition mutation, transitions, and live 
     });
   });
 
+  describe("add-combatant encounter resolution and broadcast (shared helpers)", () => {
+    it("returns 404 for an unknown encounter before doing any work", async () => {
+      const res = await dmRequest(
+        "POST",
+        `/api/encounters/encounter-does-not-exist/combatants/addWorldAction`,
+        { name: "Ghost hazard" },
+      );
+      assert.equal(res.status, 404);
+      assert.equal((res.body as { message?: string }).message, "Encounter not found");
+    });
+
+    it("announces a newly added combatant with a full inline DTO", async () => {
+      broadcasts.length = 0;
+      const created = await dmRequest(
+        "POST",
+        `/api/encounters/${encounterId}/combatants/addWorldAction`,
+        { name: "Lair Action" },
+      );
+      assert.equal(created.status, 200);
+      const id = String((created.body.created as Record<string, unknown>).id);
+      const delta = broadcasts.find(
+        (e) => e.type === "encounter:combatantsDelta" && (e.payload as { combatantId?: string }).combatantId === id,
+      );
+      assert.ok(delta, "an upsert delta must be broadcast for the new combatant");
+      assert.equal(delta!.payload.action, "upsert");
+      assert.equal((delta!.payload.combatant as { id?: string } | undefined)?.id, id);
+    });
+  });
+
   describe("world actions", () => {
     it("creates a statless turn-order entry and preserves its reminder text", async () => {
       const created = await dmRequest(

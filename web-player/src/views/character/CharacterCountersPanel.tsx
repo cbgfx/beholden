@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { C } from "@/lib/theme";
 import type { CharacterCounter } from "@/views/character/CharacterSheetTypes";
 import { CollapsiblePanel, miniPillBtn, PanelHeaderAddButton } from "@/views/character/CharacterViewParts";
-import { PANEL_IDS } from "@/views/character/panelRegistry";
-import { useQueuedPersistedState } from "@/views/character/useQueuedPersistedState";
+import { PANEL_IDS } from "@/views/character/layout/panelRegistry";
+import { useQueuedPersistedState } from "@/views/character/state/useQueuedPersistedState";
 
 function counterId(): string {
   return `counter-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;

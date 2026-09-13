@@ -52,7 +52,7 @@ export function useCombatNavigation({
     if (!next.activeId) return;
     setActiveId(next.activeId);
     if (next.round !== round) setRound(next.round);
-    void persistCombatState({ round: next.round, activeId: next.activeId });
+    void persistCombatState({ round: next.round, activeId: next.activeId }).catch(() => { /* The state owner reports the failure. */ });
   }, [orderedCombatants, canNavigate, round, activeId, setActiveId, setRound, persistCombatState]);
 
   const prevTurn = React.useCallback(() => {
@@ -62,7 +62,7 @@ export function useCombatNavigation({
     if (!next.activeId) return;
     setActiveId(next.activeId);
     if (next.round !== round) setRound(next.round);
-    void persistCombatState({ round: next.round, activeId: next.activeId });
+    void persistCombatState({ round: next.round, activeId: next.activeId }).catch(() => { /* The state owner reports the failure. */ });
   }, [orderedCombatants, canNavigate, round, activeId, setActiveId, setRound, persistCombatState]);
 
   // When initiative becomes fully set (combat "starts"), initialize persisted combat state once.
@@ -73,7 +73,7 @@ export function useCombatNavigation({
       const init = initializeCombat(orderedCombatants);
       setRound(init.round);
       setActiveId(init.activeId);
-      persistCombatState({ round: init.round, activeId: init.activeId });
+      void persistCombatState({ round: init.round, activeId: init.activeId }).catch(() => { /* The state owner reports the failure. */ });
       if (encounterId) {
         (async () => {
           try {

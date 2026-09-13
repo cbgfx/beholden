@@ -91,9 +91,12 @@ export interface PartyInventoryItemContentDto {
   rarity: string | null;
   type: string | null;
   description: string | null;
+  /** Full portable item state carried through a character <-> stash transfer; absent on plain/legacy rows. */
+  payload?: Record<string, unknown> | null;
 }
 
 export interface PartyInventoryMetaDto {
+  revision?: string;
   sort: number;
   createdAt?: number;
   updatedAt?: number;
@@ -113,6 +116,7 @@ export interface PartyInventoryListDto {
 }
 
 export interface FlatPartyInventoryItemDto {
+  revision?: string;
   id: string;
   campaignId: string;
   name: string;
@@ -124,6 +128,7 @@ export interface FlatPartyInventoryItemDto {
   rarity: string | null;
   type: string | null;
   description: string | null;
+  payload?: Record<string, unknown> | null;
   sort: number;
   createdAt?: number;
   updatedAt?: number;
@@ -169,6 +174,7 @@ export function flattenPartyInventoryItemDto(
   const flat: FlatPartyInventoryItemDto = {
     id: dto.id,
     campaignId: dto.campaignId,
+    ...(dto.meta.revision ? { revision: dto.meta.revision } : {}),
     name: dto.item.name,
     quantity: dto.item.quantity,
     weight: dto.item.weight,
@@ -180,6 +186,7 @@ export function flattenPartyInventoryItemDto(
     description: dto.item.description,
     sort: dto.meta.sort,
   };
+  if (dto.item.payload != null) flat.payload = dto.item.payload;
   if (dto.meta.createdAt !== undefined) flat.createdAt = dto.meta.createdAt;
   if (dto.meta.updatedAt !== undefined) flat.updatedAt = dto.meta.updatedAt;
   return flat;

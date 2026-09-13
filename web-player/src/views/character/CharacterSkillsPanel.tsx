@@ -1,6 +1,6 @@
 import { C } from "@/lib/theme";
 import { CollapsiblePanel, ProfDot, Tooltip } from "@/views/character/CharacterViewParts";
-import { PANEL_IDS } from "@/views/character/panelRegistry";
+import { PANEL_IDS } from "@/views/character/layout/panelRegistry";
 import { getModifierState, StateBadge } from "@/views/character/CharacterAbilitiesPanelHelpers";
 import type { AbilKey, ProficiencyMap } from "@/views/character/CharacterSheetTypes";
 import { ABILITY_LABELS, ALL_SKILLS } from "@/views/character/CharacterSheetConstants";

@@ -1,11 +1,11 @@
-import { CharacterInitiativePrompt } from "@/views/character/CharacterInitiativePrompt";
+import { CharacterInitiativePrompt } from "@/views/character/combat/CharacterInitiativePrompt";
 import { CharacterFeatPickerModal } from "@/views/character/CharacterFeatPickerModal";
 import { CharacterInfoDrawer, CharacterPolymorphDrawer, CharacterThemeDrawer } from "@/views/character/CharacterViewDrawers";
 import { NoteEditDrawer } from "@/views/character/CharacterViewParts";
 import { SHEET_COLOR_PRESETS } from "@/views/character/CharacterViewHelpers";
-import { getExhaustionD20Penalty } from "@/views/character/CharacterExhaustion";
+import { getExhaustionD20Penalty } from "@/views/character/combat/CharacterExhaustion";
 import type { CharacterViewModel } from "@/views/character/CharacterViewModel";
-import { EngagedEnemiesDrawer } from "@/views/character/EngagedEnemiesDrawer";
+import { EngagedEnemiesDrawer } from "@/views/character/combat/EngagedEnemiesDrawer";
 import { CharacterPermanentBuffsDrawer } from "@/views/character/CharacterPermanentBuffsDrawer";
 
 export function CharacterViewOverlays({ model }: { model: CharacterViewModel }) {

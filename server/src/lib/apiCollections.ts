@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type {
   NoteDto,
   PartyInventoryItemDto,
@@ -72,8 +73,10 @@ export function toPartyInventoryItemDto(
       rarity: item.rarity,
       type: item.type,
       description: item.description,
+      ...(item.payload ? { payload: item.payload } : {}),
     },
     meta: {
+      revision: createHash("sha256").update(JSON.stringify(item)).digest("hex"),
       sort: item.sort,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,

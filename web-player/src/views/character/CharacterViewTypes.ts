@@ -72,6 +72,8 @@ export interface Character {
   deathSaves?: { success: number; fail: number };
   sharedNotes?: string;
   campaignSharedNotes?: string;
+  /** Server-issued revision of the stored inventory; sent back on inventory PUTs to detect concurrent edits. */
+  inventoryRev?: string;
 }
 
 interface ClassCounterDef {

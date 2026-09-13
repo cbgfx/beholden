@@ -388,6 +388,11 @@ CREATE TABLE IF NOT EXISTS party_inventory (
   rarity TEXT,
   type TEXT,
   description TEXT,
+  -- Full portable item state (JSON) carried through a character <-> stash
+  -- transfer so player customizations (edited damage/AC, remaining charges,
+  -- stored spells) survive the round trip. NULL for rows created before this
+  -- column and for the plain create/edit routes.
+  payload_json TEXT,
   sort INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL

@@ -3,7 +3,7 @@ import { EmptyState } from "@beholden/shared/ui";
 import { C, withAlpha } from "@/lib/theme";
 import type { ClassFeatureEntry } from "@/views/character/CharacterSheetTypes";
 import { CollapsiblePanel, ClassFeatureItem, PanelHeaderAddButton } from "@/views/character/CharacterViewParts";
-import { PANEL_IDS } from "@/views/character/panelRegistry";
+import { PANEL_IDS } from "@/views/character/layout/panelRegistry";
 
 export function ClassFeaturesPanel(props: {
   accentColor: string;

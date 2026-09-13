@@ -73,6 +73,14 @@ export interface CharacterSheetDto {
   campaignSharedNotes?: string;
   sheet: CharacterSheetSnapshotDto;
   live: CharacterSheetLiveDto;
+  /**
+   * Opaque revision of `characterData.inventory` + `.inventoryContainers` as the
+   * server currently stores them. Echo it back as `expectedInventoryRev` on a
+   * `PUT /api/me/characters/:id` that changes inventory so a concurrent edit
+   * from another device or a DM treasure award is rejected (409) instead of
+   * being silently overwritten.
+   */
+  inventoryRev?: string;
   createdAt?: number;
   updatedAt?: number;
 }
@@ -186,6 +194,8 @@ export interface FlatCharacterSheetDto {
   overrides?: ActorOverridesDto;
   deathSaves?: ActorDeathSavesDto;
   sharedNotes?: string;
+  /** See {@link CharacterSheetDto.inventoryRev}. */
+  inventoryRev?: string;
   createdAt?: number;
   updatedAt?: number;
 }
@@ -283,6 +293,7 @@ export function flattenCharacterSheetDto(dto: CharacterSheetDto): FlatCharacterS
   if (dto.campaignSharedNotes !== undefined) flat.campaignSharedNotes = dto.campaignSharedNotes;
   if (dto.live.overrides !== undefined) flat.overrides = dto.live.overrides;
   if (dto.live.deathSaves !== undefined) flat.deathSaves = dto.live.deathSaves;
+  if (dto.inventoryRev !== undefined) flat.inventoryRev = dto.inventoryRev;
   if (dto.createdAt !== undefined) flat.createdAt = dto.createdAt;
   if (dto.updatedAt !== undefined) flat.updatedAt = dto.updatedAt;
   return flat;

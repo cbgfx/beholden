@@ -50,7 +50,7 @@ import {
   isShieldItem,
   isWeaponItem,
   requiresTwoHands,
-} from "@/views/character/CharacterInventory";
+} from "@/views/character/inventory/CharacterInventory";
 import { getPreparedSpellCount, usesFlexiblePreparedSpells } from "@/views/character-creator/utils/CharacterCreatorUtils";
 import {
   buildClassFeatureCantripDamageBonuses,
@@ -66,7 +66,7 @@ import type { AppliedCharacterFeatureEntry } from "@/domain/character/characterF
 import type { TaggedItem } from "@/views/character/CharacterSheetTypes";
 import type { CharacterClassDetailSelection, ClassRestDetail } from "@/views/character/CharacterViewHelpers";
 import { deriveMulticlassSpellSlots } from "@/domain/character/multiclassSpellcasting";
-import { getExhaustionHpMaxMultiplier, hasExhaustionAbilityCheckDisadvantage, hasExhaustionAttackAndSaveDisadvantage } from "@/views/character/CharacterExhaustion";
+import { getExhaustionHpMaxMultiplier, hasExhaustionAbilityCheckDisadvantage, hasExhaustionAttackAndSaveDisadvantage } from "@/views/character/combat/CharacterExhaustion";
 
 function emptyProficiencyMap(): ProficiencyMap {
   return {

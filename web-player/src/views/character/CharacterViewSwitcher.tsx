@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
 import { C, withAlpha } from "@/lib/theme";
-import type { SheetViewDef } from "@/views/character/panelRegistry";
+import type { SheetViewDef } from "@/views/character/layout/panelRegistry";
 
 /**
  * The sheet-view dropdown: lists every view (built-in Combat/Gear/Reference/

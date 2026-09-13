@@ -9,22 +9,22 @@ import {
   buildSupportColumnPanels,
   type CharacterPanelRegistry,
 } from "@/views/character/CharacterViewColumns";
-import { MOVABLE_PANEL_IDS, PANEL_IDS, type PanelId, type SheetViewDef } from "@/views/character/panelRegistry";
-import { DEFAULT_SHEET_VIEWS } from "@/views/character/defaultSheetViews";
+import { MOVABLE_PANEL_IDS, PANEL_IDS, type PanelId, type SheetViewDef } from "@/views/character/layout/panelRegistry";
+import { DEFAULT_SHEET_VIEWS } from "@/views/character/layout/defaultSheetViews";
 import { CharacterSheetHeader } from "@/views/character/CharacterSheetHeader";
 import { abilityMod, formatModifier } from "@/views/character/CharacterSheetUtils";
 import { isSpellLinkedResource } from "@/views/character/CharacterViewResourceHelpers";
-import { getExhaustionD20Penalty } from "@/views/character/CharacterExhaustion";
+import { getExhaustionD20Penalty } from "@/views/character/combat/CharacterExhaustion";
 import { Wrap } from "@/views/character/CharacterViewParts";
 import { CharacterViewOverlays } from "@/views/character/CharacterViewOverlays";
-import { usePanelDragAndDrop, SIDEBAR_ZONE_ID } from "@/views/character/usePanelDragAndDrop";
-import { PanelCard } from "@/views/character/CharacterPanelCard";
-import { PanelDragGhost } from "@/views/character/CharacterPanelDragGhost";
+import { usePanelDragAndDrop, SIDEBAR_ZONE_ID } from "@/views/character/layout/usePanelDragAndDrop";
+import { PanelCard } from "@/views/character/layout/CharacterPanelCard";
+import { PanelDragGhost } from "@/views/character/layout/CharacterPanelDragGhost";
 import { uid } from "@/views/character/CharacterViewHelpers";
-import { cloneSheetView, MAX_SHEET_COLUMNS, MIN_SHEET_COLUMNS } from "@/views/character/sheetViewLayout";
-import { useCharacterSheetViews } from "@/views/character/useCharacterSheetViews";
+import { cloneSheetView, MAX_SHEET_COLUMNS, MIN_SHEET_COLUMNS } from "@/views/character/layout/sheetViewLayout";
+import { useCharacterSheetViews } from "@/views/character/layout/useCharacterSheetViews";
 import type { CharacterViewModel } from "@/views/character/CharacterViewModel";
-import { CharacterLayoutEditorToolbar } from "@/views/character/CharacterLayoutEditorToolbar";
+import { CharacterLayoutEditorToolbar } from "@/views/character/layout/CharacterLayoutEditorToolbar";
 import { appearanceCssVariables, backgroundPatternImage, normalizeAppearance } from "@/views/character/characterAppearance";
 
 /** Combat (Play) and All can never be deleted, even when other views exist --
@@ -200,6 +200,9 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
     inventoryProps: {
       char: { ...char, chaScore: derived.scores.cha },
       charData: char.characterData,
+      characterId: char.id,
+      inventoryRev: char.inventoryRev,
+      onReload: data.reloadChar,
       proficiencies: derived.prof,
       parsedFeatureEffects: derived.parsedFeatureEffects,
       accentColor: derived.accentColor,

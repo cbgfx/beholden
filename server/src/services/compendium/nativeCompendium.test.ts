@@ -1055,7 +1055,7 @@ test("Grand monster spell references use id for adventure dependencies", () => {
 
 test("AI guide native JSON examples match the strict Grand importer", () => {
   const guidePath = fileURLToPath(
-    new URL("../../../../BEHOLDEN_AI_CONTENT_GUIDE.md", import.meta.url),
+    new URL("../../../../docs/guides/ai-content.md", import.meta.url),
   );
   const compendiumSection = fs.readFileSync(guidePath, "utf8").split("\n# Character import")[0] ?? "";
   const documents = Array.from(

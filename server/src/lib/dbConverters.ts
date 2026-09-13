@@ -245,7 +245,20 @@ function readPartyInventoryItemState(row: Record<string, unknown>): StoredPartyI
       typeof row.description === "string" || row.description === null
         ? (row.description as string | null)
         : null,
+    payload: parsePartyInventoryPayload(row.payload_json),
   };
+}
+
+function parsePartyInventoryPayload(raw: unknown): Record<string, unknown> | null {
+  if (typeof raw !== "string" || raw.length === 0) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 // MARK: - Row To User
@@ -452,6 +465,7 @@ export function rowToPartyInventoryItem(row: Record<string, unknown>): StoredPar
     rarity: item.rarity,
     type: item.type,
     description: item.description,
+    payload: item.payload,
     sort: row.sort as number,
     ...readTimestamps(row),
   };

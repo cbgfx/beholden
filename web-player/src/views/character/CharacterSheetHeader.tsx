@@ -5,10 +5,10 @@ import { IconBastions, IconBinder, IconPlayer } from "@/icons";
 import { Button } from "@/ui/Button";
 import { IconButton } from "@/ui/IconButton";
 import { api } from "@/services/api";
-import { CharacterHudXpPopup } from "@/views/character/CharacterHudXpPopup";
+import { CharacterHudXpPopup } from "@/views/character/combat/CharacterHudXpPopup";
 import { stripEditionTag } from "@/views/character/CharacterViewHelpers";
 import { CharacterViewSwitcher } from "@/views/character/CharacterViewSwitcher";
-import type { SheetViewDef } from "@/views/character/panelRegistry";
+import type { SheetViewDef } from "@/views/character/layout/panelRegistry";
 
 function IconEditCrayon({ size = 16 }: { size?: number }) {
   return (

@@ -13,7 +13,7 @@ import type {
   CharacterClassDetailSelection,
 } from "@/views/character/CharacterViewHelpers";
 import type { AbilKey, CharacterData, ResourceCounter } from "@/views/character/CharacterSheetTypes";
-import type { InventoryItem } from "@/views/character/CharacterInventory";
+import type { InventoryItem } from "@/views/character/inventory/CharacterInventory";
 
 type NormalizeProficienciesResult = ReturnType<typeof import("@/views/character/CharacterViewHelpers").normalizeProficiencies>;
 type ScoreExplanationsResult = ReturnType<typeof import("@/views/character/CharacterViewHelpers").buildAbilityScoreExplanations>;
