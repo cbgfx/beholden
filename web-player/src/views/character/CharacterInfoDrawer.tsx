@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { C } from "@/lib/theme";
 import { api, jsonInit } from "@/services/api";
 import type { EditableSheetOverrideField, SheetOverrides } from "@/views/character/CharacterViewHelpers";
@@ -24,6 +25,7 @@ export function CharacterInfoDrawer(props: {
   onOverrideChange: (key: EditableSheetOverrideField["key"], value: number) => void;
   onAbilityOverrideChange: (key: AbilKey, value: number | null) => void;
 }) {
+  const { t } = useTranslation();
   type LinkedIdentity = { id: string; name: string; gender: string | null; age: number | null; backstory: string | null };
   const [linked, setLinked] = useState<LinkedIdentity | null>(null);
   const [linkedError, setLinkedError] = useState<string | null>(null);
@@ -79,19 +81,19 @@ export function CharacterInfoDrawer(props: {
       >
         <div style={{ padding: "20px 24px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div>
-            <div style={{ fontSize: "var(--fs-hero)", fontWeight: 900, color: C.text, marginBottom: 4 }}>Character Information</div>
-            <div style={{ fontSize: "var(--fs-subtitle)", color: C.muted }}>Identity details and sheet overrides.</div>
+            <div style={{ fontSize: "var(--fs-hero)", fontWeight: 900, color: C.text, marginBottom: 4 }}>{t("infoDrawer.title")}</div>
+            <div style={{ fontSize: "var(--fs-subtitle)", color: C.muted }}>{t("infoDrawer.subtitle")}</div>
           </div>
           <Button variant="ghost" onClick={props.onClose}>
-            Close
+            {t("infoDrawer.close")}
           </Button>
         </div>
 
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <div style={{ fontSize: "var(--fs-small)", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: props.accentColor }}>Identity</div>
-              {linked ? <button type="button" title="Edit linked Binder identity" aria-label="Edit linked Binder identity" onClick={() => setLinkedOpen((value) => !value)} style={{ border: 0, padding: 2, background: "transparent", color: props.accentColor, cursor: "pointer", display: "inline-flex" }}>
+              <div style={{ fontSize: "var(--fs-small)", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: props.accentColor }}>{t("infoDrawer.identity")}</div>
+              {linked ? <button type="button" title={t("infoDrawer.editLinkedBinderIdentity")} aria-label={t("infoDrawer.editLinkedBinderIdentity")} onClick={() => setLinkedOpen((value) => !value)} style={{ border: 0, padding: 2, background: "transparent", color: props.accentColor, cursor: "pointer", display: "inline-flex" }}>
                 <svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/></svg>
               </button> : null}
             </div>
@@ -106,16 +108,16 @@ export function CharacterInfoDrawer(props: {
               </div>
             ) : (
               <div style={{ padding: "14px 16px", borderRadius: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: C.muted }}>
-                No character information filled in yet.
+                {t("infoDrawer.noInformationYet")}
               </div>
             )}
             {linked && linkedOpen ? <div style={{ marginTop: 12, display: "grid", gap: 10, padding: 14, borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <strong style={{ color: C.text }}>Linked Binder identity · {linked.name}</strong>
+              <strong style={{ color: C.text }}>{t("infoDrawer.linkedBinderIdentity", { name: linked.name })}</strong>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <label style={{ display: "grid", gap: 5, color: C.muted }}>Gender<select value={linkedDraft.gender} onChange={(event) => setLinkedDraft((value) => ({ ...value, gender: event.target.value }))} style={identityInputStyle}><option value="">Select gender</option><option value="male">Male</option><option value="female">Female</option></select></label>
-                <label style={{ display: "grid", gap: 5, color: C.muted }}>Age<input type="number" min={0} value={linkedDraft.age} onChange={(event) => setLinkedDraft((value) => ({ ...value, age: event.target.value }))} style={identityInputStyle} /></label>
+                <label style={{ display: "grid", gap: 5, color: C.muted }}>{t("infoDrawer.gender")}<select value={linkedDraft.gender} onChange={(event) => setLinkedDraft((value) => ({ ...value, gender: event.target.value }))} style={identityInputStyle}><option value="">{t("infoDrawer.selectGender")}</option><option value="male">{t("infoDrawer.male")}</option><option value="female">{t("infoDrawer.female")}</option></select></label>
+                <label style={{ display: "grid", gap: 5, color: C.muted }}>{t("infoDrawer.age")}<input type="number" min={0} value={linkedDraft.age} onChange={(event) => setLinkedDraft((value) => ({ ...value, age: event.target.value }))} style={identityInputStyle} /></label>
               </div>
-              <label style={{ display: "grid", gap: 5, color: C.muted }}>Backstory<textarea rows={5} value={linkedDraft.backstory} onChange={(event) => setLinkedDraft((value) => ({ ...value, backstory: event.target.value }))} style={identityInputStyle} /></label>
+              <label style={{ display: "grid", gap: 5, color: C.muted }}>{t("infoDrawer.backstory")}<textarea rows={5} value={linkedDraft.backstory} onChange={(event) => setLinkedDraft((value) => ({ ...value, backstory: event.target.value }))} style={identityInputStyle} /></label>
               <Button type="button" variant="primary" disabled={linkedSaving} onClick={async () => {
                 setLinkedSaving(true);
                 setLinkedError(null);
@@ -123,15 +125,15 @@ export function CharacterInfoDrawer(props: {
                   await api(`/api/me/characters/${props.characterId}/binder-identity`, jsonInit("PATCH", { gender: linkedDraft.gender.trim() || null, age: linkedDraft.age.trim() ? Number(linkedDraft.age) : null, backstory: linkedDraft.backstory || null }));
                   setLinked((value) => value ? { ...value, gender: linkedDraft.gender || null, age: linkedDraft.age ? Number(linkedDraft.age) : null, backstory: linkedDraft.backstory || null } : value);
                 } catch (error) {
-                  setLinkedError(error instanceof Error ? error.message : "Unable to save Binder identity.");
+                  setLinkedError(error instanceof Error ? error.message : t("infoDrawer.unableToSaveBinderIdentity"));
                 } finally { setLinkedSaving(false); }
-              }} style={{ justifySelf: "end" }}>{linkedSaving ? "Saving…" : "Save Binder Identity"}</Button>
+              }} style={{ justifySelf: "end" }}>{linkedSaving ? t("infoDrawer.saving") : t("infoDrawer.saveBinderIdentity")}</Button>
               {linkedError ? <div role="alert" style={{ color: C.red }}>{linkedError}</div> : null}
             </div> : null}
           </div>
 
           <div>
-            <div style={{ fontSize: "var(--fs-small)", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: props.accentColor, marginBottom: 12 }}>Overrides</div>
+            <div style={{ fontSize: "var(--fs-small)", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: props.accentColor, marginBottom: 12 }}>{t("infoDrawer.overrides")}</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
               {props.editableOverrideFields.map((field) => (
                 <label key={field.key} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -159,7 +161,7 @@ export function CharacterInfoDrawer(props: {
               ))}
             </div>
             <div style={{ marginTop: 12, padding: "10px 12px", borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.08em" }}>Ability score override</div>
+              <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.08em" }}>{t("infoDrawer.abilityScoreOverride")}</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
                 {([
                   ["str", "STR"],
@@ -206,14 +208,14 @@ export function CharacterInfoDrawer(props: {
 
         <div style={{ padding: "24px 24px calc(24px + env(safe-area-inset-bottom, 0px))", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "flex-end", gap: 12, flexShrink: 0 }}>
           <Button variant="ghost" onClick={props.onClose}>
-            Cancel
+            {t("infoDrawer.cancel")}
           </Button>
           <Button
             variant="primary"
             onClick={() => void props.onSave()}
             disabled={props.overridesSaving}
           >
-            {props.overridesSaving ? "Saving..." : "Save"}
+            {props.overridesSaving ? t("infoDrawer.savingEllipsis") : t("infoDrawer.save")}
           </Button>
         </div>
       </div>

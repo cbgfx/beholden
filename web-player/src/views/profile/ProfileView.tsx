@@ -1,6 +1,7 @@
 import { ProfileSettings } from "@beholden/shared/ui/ProfileSettings";
 import { C } from "@/lib/theme";
 import { Button } from "@/ui/Button";
+import { Select } from "@/ui/Select";
 
 const theme = {
   colors: { bg: C.bg, text: C.text, muted: C.muted, panelBg: "rgba(255,255,255,0.04)",
@@ -15,5 +16,5 @@ const styles = {
   fontFamily: "system-ui, Segoe UI, Arial, sans-serif",
 };
 export function ProfileView() {
-  return <ProfileSettings theme={theme} Button={Button} styles={styles} />;
+  return <ProfileSettings theme={theme} Button={Button} SelectComponent={Select} styles={styles} />;
 }

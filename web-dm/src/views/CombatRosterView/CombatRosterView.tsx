@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useStore } from "@/store";
@@ -17,6 +18,7 @@ import { useCampaignActions } from "@/app/useCampaignActions";
 import { fetchEncounter } from "@/services/encounterApi";
 
 export function CombatRosterView() {
+  const translateUi = useUiTranslation("dmUi");
   const { campaignId, encounterId } = useParams();
   const nav = useNavigate();
   const { state, dispatch } = useStore();
@@ -97,7 +99,7 @@ export function CombatRosterView() {
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <CombatRosterHeader
         backTo={campaignId ? `/campaign/${campaignId}` : "/"}
-        title={encounter ? `Combat Roster: ${encounter.name}` : "Combat Roster"}
+        title={encounter ? translateUi("Combat Roster: {{value1}}", { value1: encounter.name }) : translateUi("Combat Roster")}
         totalXp={totalXp}
         difficulty={difficulty}
       />

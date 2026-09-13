@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { C, withAlpha } from "@/lib/theme";
 import { MonsterBrowserPanel } from "./panels/MonsterBrowserPanel";
 import { MonsterDetailPanel } from "./panels/MonsterDetailPanel";
@@ -15,12 +16,14 @@ import { IconInspiration } from "@/icons";
 
 type Section = "monsters" | "spells" | "items" | "feats" | "rules";
 
-const NAV: { id: Section; label: string; Icon: React.FC<{ size?: number }> }[] = [
-  { id: "monsters", label: "Monsters",       Icon: IconMonster },
-  { id: "spells",   label: "Spells",         Icon: IconSpells },
-  { id: "items",    label: "Items",          Icon: IconChest },
-  { id: "feats",    label: "Feats",          Icon: IconInspiration },
-  { id: "rules",    label: "Rules Reference",Icon: IconNotes },
+// Nav labels are looked up via translation keys (t) rather than stored here directly,
+// since this array is defined outside the component and can't call useTranslation itself.
+const NAV: { id: Section; labelKey: string; Icon: React.FC<{ size?: number }> }[] = [
+  { id: "monsters", labelKey: "compendiumView.navMonsters",       Icon: IconMonster },
+  { id: "spells",   labelKey: "compendiumView.navSpells",         Icon: IconSpells },
+  { id: "items",    labelKey: "compendiumView.navItems",          Icon: IconChest },
+  { id: "feats",    labelKey: "compendiumView.navFeats",          Icon: IconInspiration },
+  { id: "rules",    labelKey: "compendiumView.navRulesReference", Icon: IconNotes },
 ];
 
 function NavButton({ label, Icon, active, onClick }: { label: string; Icon: React.FC<{ size?: number }>; active: boolean; onClick: () => void }) {
@@ -45,6 +48,7 @@ function NavButton({ label, Icon, active, onClick }: { label: string; Icon: Reac
 }
 
 export function CompendiumView() {
+  const { t } = useTranslation();
   const [activeSection, setActiveSection] = React.useState<Section>("monsters");
   const [selectedSpellId, setSelectedSpellId] = React.useState<string | null>(null);
   const [selectedSpellRuleset, setSelectedSpellRuleset] = React.useState<"5e" | "5.5e" | null>(null);
@@ -78,10 +82,10 @@ export function CompendiumView() {
       >
         {/* Left nav */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0, minHeight: 0 }}>
-          <Panel title="Reference" style={{ display: "flex", flexDirection: "column" }}>
+          <Panel title={t("compendiumView.reference")} style={{ display: "flex", flexDirection: "column" }}>
             <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              {NAV.map(({ id, label, Icon }) => (
-                <NavButton key={id} label={label} Icon={Icon} active={activeSection === id} onClick={() => handleSetSection(id)} />
+              {NAV.map(({ id, labelKey, Icon }) => (
+                <NavButton key={id} label={t(labelKey)} Icon={Icon} active={activeSection === id} onClick={() => handleSetSection(id)} />
               ))}
             </nav>
           </Panel>
@@ -120,29 +124,29 @@ export function CompendiumView() {
             {activeSection === "monsters" && (
               selectedMonsterId
                 ? <MonsterDetailPanel monsterId={selectedMonsterId} />
-                : <Panel title="Stat Block" style={{ flex: 1 }} bodyStyle={{ flex: 1 }}>
-                    <div style={{ color: C.muted }}>Select a monster to view its stat block.</div>
+                : <Panel title={t("compendiumView.statBlock")} style={{ flex: 1 }} bodyStyle={{ flex: 1 }}>
+                    <div style={{ color: C.muted }}>{t("compendiumView.selectMonsterPrompt")}</div>
                   </Panel>
             )}
             {activeSection === "spells" && (
               selectedSpellId
                 ? <SpellDetailPanel spellId={selectedSpellId} ruleset={selectedSpellRuleset} />
-                : <Panel title="Spell Detail" style={{ flex: 1 }} bodyStyle={{ flex: 1 }}>
-                    <div style={{ color: C.muted }}>Select a spell to view its description.</div>
+                : <Panel title={t("compendiumView.spellDetail")} style={{ flex: 1 }} bodyStyle={{ flex: 1 }}>
+                    <div style={{ color: C.muted }}>{t("compendiumView.selectSpellPrompt")}</div>
                   </Panel>
             )}
             {activeSection === "items" && (
               selectedItemId
                 ? <ItemDetailPanel itemId={selectedItemId} />
-                : <Panel title="Item Detail" style={{ flex: 1 }} bodyStyle={{ flex: 1 }}>
-                    <div style={{ color: C.muted }}>Select an item to view its details.</div>
+                : <Panel title={t("compendiumView.itemDetail")} style={{ flex: 1 }} bodyStyle={{ flex: 1 }}>
+                    <div style={{ color: C.muted }}>{t("compendiumView.selectItemPrompt")}</div>
                   </Panel>
             )}
             {activeSection === "feats" && (
               selectedFeatId
                 ? <FeatDetailPanel featId={selectedFeatId} />
-                : <Panel title="Feat Detail" style={{ flex: 1 }} bodyStyle={{ flex: 1 }}>
-                    <div style={{ color: C.muted }}>Select a feat to view its details.</div>
+                : <Panel title={t("compendiumView.featDetail")} style={{ flex: 1 }} bodyStyle={{ flex: 1 }}>
+                    <div style={{ color: C.muted }}>{t("compendiumView.selectFeatPrompt")}</div>
                   </Panel>
             )}
           </div>

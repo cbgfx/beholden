@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { usePointerDragReorder } from "@beholden/shared/ui/usePointerDragReorder";
 import { DragHandleGrip, DragGhostCard } from "@beholden/shared/ui";
 import { C } from "@/lib/theme";
@@ -12,6 +13,7 @@ export function DraggableList(props: {
   onReorder: (ids: string[]) => void;
   renderItem: (item: DragItem) => React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const drag = usePointerDragReorder({ items: props.items, onReorder: props.onReorder });
   const draggedItem = drag.dragId ? props.items.find((item) => item.id === drag.dragId) : null;
 
@@ -44,9 +46,9 @@ export function DraggableList(props: {
           >
             <div style={{ padding: 3, display: "flex", alignItems: "flex-start", gap: 5 }}>
               <div
-                title="Drag to reorder"
+                title={t("draggableList.dragToReorder")}
                 role="button"
-                aria-label="Drag to reorder"
+                aria-label={t("draggableList.dragToReorder")}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();

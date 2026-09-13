@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import type { DrawerState } from "@/store";
 import type { DrawerContent } from "@/drawers/types";
@@ -27,6 +28,7 @@ function levelLabel(level: number | null) {
 }
 
 export function SpellDrawer(props: { drawer: SpellDrawerState; close: () => void }): DrawerContent {
+  const translateUi = useUiTranslation("dmUi");
   const [spell, setSpell] = React.useState<SpellFull | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -56,7 +58,7 @@ export function SpellDrawer(props: { drawer: SpellDrawerState; close: () => void
   }, [props.drawer.spellId, props.drawer.ruleset]);
 
   if (busy && !spell) {
-    return { body: <div style={{ color: theme.colors.muted }}>Loading spell…</div> };
+    return { body: <div style={{ color: theme.colors.muted }}>{translateUi("Loading spell…")}</div> };
   }
 
   if (!spell) {
@@ -75,10 +77,10 @@ export function SpellDrawer(props: { drawer: SpellDrawerState; close: () => void
         </div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
-          {spell.time ? <span>Cast: {spell.time}</span> : null}
-          {spell.range ? <span>Range: {spell.range}</span> : null}
-          {spell.duration ? <span>Duration: {spell.duration}</span> : null}
-          {spell.components ? <span>Components: {spell.components}</span> : null}
+          {spell.time ? <span>{translateUi("Cast:")} {spell.time}</span> : null}
+          {spell.range ? <span>{translateUi("Range:")} {spell.range}</span> : null}
+          {spell.duration ? <span>{translateUi("Duration:")} {spell.duration}</span> : null}
+          {spell.components ? <span>{translateUi("Components:")} {spell.components}</span> : null}
         </div>
 
         <div
@@ -95,7 +97,7 @@ export function SpellDrawer(props: { drawer: SpellDrawerState; close: () => void
           {bodyText}
         </div>
 
-        {spell.classes ? <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>Classes: {spell.classes}</div> : null}
+        {spell.classes ? <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{translateUi("Classes:")} {spell.classes}</div> : null}
       </div>
     )
   };

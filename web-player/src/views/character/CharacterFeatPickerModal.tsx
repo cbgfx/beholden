@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { FormattedText } from "@beholden/shared/ui";
 import { api } from "@/services/api";
 import { C } from "@/lib/theme";
@@ -15,14 +16,14 @@ import { Button } from "@/ui/Button";
 type FeatRow = { id: string; name: string };
 type FeatDetail = { id: string; name: string; text?: string | null };
 
-function choiceInstruction(spec: NonNullable<ReturnType<typeof getExtraFeatAbilityChoiceSpec>>): string {
+function choiceInstruction(t: (key: string, options?: Record<string, unknown>) => string, spec: NonNullable<ReturnType<typeof getExtraFeatAbilityChoiceSpec>>): string {
   if (spec.effects.length === 1) {
     const effect = spec.effects[0];
-    return `Choose ${effect.choiceCount} ${effect.choiceCount === 1 ? "ability" : "abilities"} (+${effect.amount} each).`;
+    return t("featPickerModal.chooseAbility", { count: effect.choiceCount, amount: effect.amount });
   }
   return spec.effects
-    .map((effect) => `${effect.choiceCount} ${effect.choiceCount === 1 ? "ability" : "abilities"} at +${effect.amount}`)
-    .join(" or ");
+    .map((effect) => t("featPickerModal.abilityAtBonus", { count: effect.choiceCount, amount: effect.amount }))
+    .join(t("featPickerModal.orSeparator"));
 }
 
 export function CharacterFeatPickerModal(props: {
@@ -35,6 +36,7 @@ export function CharacterFeatPickerModal(props: {
   onAdd: (feat: FeatRow, abilityChoices: string[]) => void;
 }) {
   const { isOpen, onClose } = props;
+  const { t } = useTranslation();
   const [allFeats, setAllFeats] = useState<FeatRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState("");
@@ -144,23 +146,23 @@ export function CharacterFeatPickerModal(props: {
         style={{ background: "#0f1823", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: 20, width: "min(860px, 96vw)", maxHeight: "86vh", display: "flex", flexDirection: "column", gap: 12 }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span id="feat-picker-title" style={{ fontWeight: 800, fontSize: "var(--fs-title)", color: C.text }}>Add Feat</span>
-          <button type="button" onClick={props.onClose} style={cancelBtnStyle}>Close</button>
+          <span id="feat-picker-title" style={{ fontWeight: 800, fontSize: "var(--fs-title)", color: C.text }}>{t("featPickerModal.title")}</span>
+          <button type="button" onClick={props.onClose} style={cancelBtnStyle}>{t("featPickerModal.close")}</button>
         </div>
         <input
           autoFocus
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search feats..."
+          placeholder={t("featPickerModal.searchPlaceholder")}
           style={{ ...inputStyle, width: "100%", boxSizing: "border-box" as const }}
         />
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1.15fr", gap: 14, overflow: "hidden", flex: 1, minHeight: 0 }}>
           <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 3 }}>
             {busy ? (
-              <div style={{ color: C.muted, padding: "8px 2px" }}>Loading...</div>
+              <div style={{ color: C.muted, padding: "8px 2px" }}>{t("featPickerModal.loading")}</div>
             ) : rows.length === 0 ? (
-              <div style={{ color: C.muted, padding: "8px 2px" }}>No feats found.</div>
+              <div style={{ color: C.muted, padding: "8px 2px" }}>{t("featPickerModal.noFeatsFound")}</div>
             ) : rows.map((feat) => {
               const already = props.currentFeatIds.includes(feat.id)
                 || existingNamesLower.has(feat.name.toLowerCase().trim());
@@ -181,7 +183,7 @@ export function CharacterFeatPickerModal(props: {
                   }}
                 >
                   <span>{feat.name}</span>
-                  {already && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>Already have it</span>}
+                  {already && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{t("featPickerModal.alreadyHaveIt")}</span>}
                 </button>
               );
             })}
@@ -189,7 +191,7 @@ export function CharacterFeatPickerModal(props: {
 
           <div style={{ overflowY: "auto", padding: "4px 2px 4px 14px", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
             {detailBusy ? (
-              <div style={{ color: C.muted, fontSize: "var(--fs-small)", padding: 4 }}>Loading...</div>
+              <div style={{ color: C.muted, fontSize: "var(--fs-small)", padding: 4 }}>{t("featPickerModal.loading")}</div>
             ) : selectedDetail ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <div style={{ fontWeight: 800, fontSize: "var(--fs-subtitle)", color: props.accentColor }}>{selectedDetail.name}</div>
@@ -197,7 +199,7 @@ export function CharacterFeatPickerModal(props: {
                 {choiceSpec && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 10, borderRadius: 10, background: `${props.accentColor}10`, border: `1px solid ${props.accentColor}33` }}>
                     <div style={{ color: C.text, fontSize: "var(--fs-small)", fontWeight: 700 }}>
-                      {choiceInstruction(choiceSpec)}
+                      {choiceInstruction(t, choiceSpec)}
                     </div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                       {choiceSpec.options.map((ability) => {
@@ -231,7 +233,7 @@ export function CharacterFeatPickerModal(props: {
                 )}
 
                 <div style={{ fontSize: "var(--fs-small)", color: C.text, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-                  {selectedDetail.text ? <FormattedText text={selectedDetail.text} /> : <span style={{ color: C.muted }}>No description available.</span>}
+                  {selectedDetail.text ? <FormattedText text={selectedDetail.text} /> : <span style={{ color: C.muted }}>{t("featPickerModal.noDescription")}</span>}
                 </div>
 
                 <Button
@@ -244,12 +246,12 @@ export function CharacterFeatPickerModal(props: {
                     props.onClose();
                   }}
                 >
-                  {choiceSpec && !choicesValid ? "Choose ability increase" : `Add ${selectedDetail.name}`}
+                  {choiceSpec && !choicesValid ? t("featPickerModal.chooseAbilityIncrease") : t("featPickerModal.addNamed", { name: selectedDetail.name })}
                 </Button>
               </div>
             ) : (
               <div style={{ color: C.muted, fontSize: "var(--fs-small)", lineHeight: 1.6, paddingTop: 4 }}>
-                Select a feat on the left to preview and add it.
+                {t("featPickerModal.selectFeatPrompt")}
               </div>
             )}
           </div>

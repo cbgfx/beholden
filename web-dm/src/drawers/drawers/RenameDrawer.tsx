@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
@@ -23,6 +24,7 @@ export function RenameDrawer(props: {
   drawer: RenameDrawerState;
   close: () => void;
 }): DrawerContent {
+  const translateUi = useUiTranslation("dmUi");
   const { state } = useStore();
   const [name, setName] = React.useState("");
 
@@ -78,7 +80,7 @@ export function RenameDrawer(props: {
     body: (
       <div style={{ display: "grid", gap: 18 }}>
         <div style={{ display: "grid", gap: 10 }}>
-          <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>Name</div>
+          <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>{translateUi("Name")}</div>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -88,7 +90,7 @@ export function RenameDrawer(props: {
                 submit();
               }
             }}
-            placeholder="Name"
+            placeholder={translateUi("Name")}
           />
         </div>
       </div>
@@ -96,9 +98,9 @@ export function RenameDrawer(props: {
     footer: (
       <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
         <Button variant="ghost" onClick={props.close}>
-          Cancel
+          {translateUi("Cancel")}
         </Button>
-        <Button onClick={submit}>Save</Button>
+        <Button onClick={submit}>{translateUi("Save")}</Button>
       </div>
     )
   };

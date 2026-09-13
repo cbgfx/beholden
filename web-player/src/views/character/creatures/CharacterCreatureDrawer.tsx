@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useEffect, useState } from "react";
 import { C } from "@/lib/theme";
 import { RightDrawer } from "@/ui/RightDrawer";
@@ -47,6 +48,7 @@ export function CharacterCreatureDrawer(props: {
   onSave: (creature: CharacterCreature) => Promise<void>;
   onDelete: (creatureId: string) => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const [draft, setDraft] = useState<CharacterCreature | null>(props.creature);
 
   useEffect(() => {
@@ -80,7 +82,7 @@ export function CharacterCreatureDrawer(props: {
               borderRadius: 8,
             })}
           >
-            Remove Creature
+            {translateUi("Remove Creature")}
           </button>
           <div style={{ display: "flex", gap: 10 }}>
             <button
@@ -94,7 +96,7 @@ export function CharacterCreatureDrawer(props: {
                 borderRadius: 8,
               })}
             >
-              Cancel
+              {translateUi("Cancel")}
             </button>
             <button
               type="button"
@@ -114,7 +116,7 @@ export function CharacterCreatureDrawer(props: {
                 borderRadius: 8,
               })}
             >
-              Save
+              {translateUi("Save")}
             </button>
           </div>
         </div>
@@ -122,56 +124,56 @@ export function CharacterCreatureDrawer(props: {
     >
       <div style={{ display: "grid", gap: 14 }}>
         <div style={{ color: C.muted, fontSize: "var(--fs-small)", lineHeight: 1.5 }}>
-          Manage this creature here. Its compendium stat block stays available below for reference while you track custom HP, AC, notes, and naming.
+          {translateUi("Manage this creature here. Its compendium stat block stays available below for reference while you track custom HP, AC, notes, and naming.")}
         </div>
 
         <div style={{ display: "grid", gap: 12 }}>
           <label style={fieldLabelStyle}>
-            <span>Display Name</span>
+            <span>{translateUi("Display Name")}</span>
             <input value={draft.name} onChange={(e) => setDraft((prev) => prev ? { ...prev, name: e.target.value } : prev)} style={textInputStyle} />
           </label>
           <label style={fieldLabelStyle}>
-            <span>Label</span>
-            <input value={draft.label ?? ""} onChange={(e) => setDraft((prev) => prev ? { ...prev, label: e.target.value } : prev)} placeholder="Familiar, Pact Creature, Ranger Companion..." style={textInputStyle} />
+            <span>{translateUi("Label")}</span>
+            <input value={draft.label ?? ""} onChange={(e) => setDraft((prev) => prev ? { ...prev, label: e.target.value } : prev)} placeholder={translateUi("Familiar, Pact Creature, Ranger Companion...")} style={textInputStyle} />
           </label>
           <label style={{ display: "inline-flex", alignItems: "center", gap: 8, color: C.muted, fontSize: "var(--fs-small)" }}>
             <input type="checkbox" checked={!!draft.friendly} onChange={(e) => setDraft((prev) => prev ? { ...prev, friendly: e.target.checked } : prev)} />
-            Friendly to the party
+            {translateUi("Friendly to the party")}
           </label>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <label style={fieldLabelStyle}>
-              <span>HP Current</span>
+              <span>{translateUi("HP Current")}</span>
               <input type="number" min={0} value={draft.hpCurrent} onChange={(e) => setDraft((prev) => prev ? { ...prev, hpCurrent: Number(e.target.value) || 0 } : prev)} style={numberInputStyle} />
             </label>
             <label style={fieldLabelStyle}>
-              <span>HP Max</span>
+              <span>{translateUi("HP Max")}</span>
               <input type="number" min={1} value={draft.hpMax} onChange={(e) => setDraft((prev) => prev ? { ...prev, hpMax: Number(e.target.value) || 1 } : prev)} style={numberInputStyle} />
             </label>
           </div>
           <label style={fieldLabelStyle}>
-            <span>HP Details</span>
-            <input value={draft.hpDetails ?? ""} onChange={(e) => setDraft((prev) => prev ? { ...prev, hpDetails: e.target.value } : prev)} placeholder="Temporary HP, special notes, form-specific details..." style={textInputStyle} />
+            <span>{translateUi("HP Details")}</span>
+            <input value={draft.hpDetails ?? ""} onChange={(e) => setDraft((prev) => prev ? { ...prev, hpDetails: e.target.value } : prev)} placeholder={translateUi("Temporary HP, special notes, form-specific details...")} style={textInputStyle} />
           </label>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <label style={fieldLabelStyle}>
-              <span>Armor Class</span>
+              <span>{translateUi("Armor Class")}</span>
               <input type="number" min={1} value={draft.ac} onChange={(e) => setDraft((prev) => prev ? { ...prev, ac: Number(e.target.value) || 1 } : prev)} style={numberInputStyle} />
             </label>
             <label style={fieldLabelStyle}>
-              <span>AC Details</span>
-              <input value={draft.acDetails ?? ""} onChange={(e) => setDraft((prev) => prev ? { ...prev, acDetails: e.target.value } : prev)} placeholder="Natural armor, barding, shield..." style={textInputStyle} />
+              <span>{translateUi("AC Details")}</span>
+              <input value={draft.acDetails ?? ""} onChange={(e) => setDraft((prev) => prev ? { ...prev, acDetails: e.target.value } : prev)} placeholder={translateUi("Natural armor, barding, shield...")} style={textInputStyle} />
             </label>
           </div>
           <label style={fieldLabelStyle}>
-            <span>Notes</span>
-            <textarea value={draft.notes ?? ""} onChange={(e) => setDraft((prev) => prev ? { ...prev, notes: e.target.value } : prev)} rows={5} placeholder="Commands, summon duration, ownership, tactics..." style={{ ...textInputStyle, resize: "vertical", minHeight: 120, fontFamily: "inherit", lineHeight: 1.5 }} />
+            <span>{translateUi("Notes")}</span>
+            <textarea value={draft.notes ?? ""} onChange={(e) => setDraft((prev) => prev ? { ...prev, notes: e.target.value } : prev)} rows={5} placeholder={translateUi("Commands, summon duration, ownership, tactics...")} style={{ ...textInputStyle, resize: "vertical", minHeight: 120, fontFamily: "inherit", lineHeight: 1.5 }} />
           </label>
         </div>
 
         <div style={{ height: 1, background: C.panelBorder }} />
 
         {props.busy ? (
-          <div style={{ color: C.muted }}>Loading compendium stat block...</div>
+          <div style={{ color: C.muted }}>{translateUi("Loading compendium stat block...")}</div>
         ) : props.error ? (
           <div style={{ color: C.red }}>{props.error}</div>
         ) : (

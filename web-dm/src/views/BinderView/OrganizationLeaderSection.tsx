@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 // web-dm/src/views/BinderView/OrganizationLeaderSection.tsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -20,6 +21,7 @@ export function OrganizationLeaderSection(props: {
   canEdit: boolean;
   onChanged: () => Promise<void>;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -51,7 +53,7 @@ export function OrganizationLeaderSection(props: {
   return (
     <section>
       <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-        Leader
+        {translateUi("Leader")}
       </div>
       {picking ? (
         <div style={{ display: "flex", gap: 8, marginTop: 9 }}>
@@ -60,7 +62,7 @@ export function OrganizationLeaderSection(props: {
               value={pickId}
               onChange={setPickId}
               disabled={busy}
-              placeholder="Choose a Mortal…"
+              placeholder={translateUi("Choose a Mortal…")}
               options={[
                 ...props.options.map((option) => ({ id: option.id, name: option.name })),
                 ...characterOptions.map((option) => ({ id: `character:${option.id}`, name: `${option.name} (unassigned PC)` })),
@@ -68,8 +70,8 @@ export function OrganizationLeaderSection(props: {
               autoFocus
             />
           </div>
-          <Button onClick={() => void setLeader(pickId || null)} disabled={busy || !pickId}>Set</Button>
-          <Button variant="ghost" onClick={() => { setPicking(false); setPickId(""); }} disabled={busy}>Cancel</Button>
+          <Button onClick={() => void setLeader(pickId || null)} disabled={busy || !pickId}>{translateUi("Set")}</Button>
+          <Button variant="ghost" onClick={() => { setPicking(false); setPickId(""); }} disabled={busy}>{translateUi("Cancel")}</Button>
         </div>
       ) : (
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 7 }}>
@@ -82,16 +84,16 @@ export function OrganizationLeaderSection(props: {
               {props.leader.name}
             </button>
           ) : (
-            <span style={{ fontSize: "var(--fs-body)", color: theme.colors.muted }}>None</span>
+            <span style={{ fontSize: "var(--fs-body)", color: theme.colors.muted }}>{translateUi("None")}</span>
           )}
           {props.canEdit ? (
             <>
               <button type="button" onClick={() => setPicking(true)} style={{ border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}>
-                {props.leader ? "Change" : "Set leader"}
+                {props.leader ? translateUi("Change") : translateUi("Set leader")}
               </button>
               {props.leader ? (
                 <button type="button" onClick={() => void setLeader(null)} disabled={busy} style={{ border: 0, background: "transparent", color: theme.colors.muted, cursor: busy ? "default" : "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}>
-                  Clear
+                  {translateUi("Clear")}
                 </button>
               ) : null}
             </>

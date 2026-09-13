@@ -21,11 +21,25 @@ export function matchInventorySummary(item: InventoryItem, itemIndex: ItemSummar
     ?? null;
 }
 
-function defaultContainer(): InventoryContainer {
-  return { id: DEFAULT_CONTAINER_ID, name: "Backpack", ignoreWeight: false };
+// Default names for player-created containers. Callers with access to a `t` function should pass
+// translated labels; the English fallbacks below only apply when no labels are supplied (e.g. in
+// tests), so behavior for existing callers stays unchanged unless they opt in.
+export interface ContainerNameLabels {
+  backpack: string;
+  container: string;
 }
 
-export function normalizeContainers(containers: InventoryContainer[] | null | undefined, items?: InventoryItem[]): InventoryContainer[] {
+const DEFAULT_CONTAINER_LABELS: ContainerNameLabels = { backpack: "Backpack", container: "Container" };
+
+function defaultContainer(labels: ContainerNameLabels = DEFAULT_CONTAINER_LABELS): InventoryContainer {
+  return { id: DEFAULT_CONTAINER_ID, name: labels.backpack, ignoreWeight: false };
+}
+
+export function normalizeContainers(
+  containers: InventoryContainer[] | null | undefined,
+  items?: InventoryItem[],
+  labels: ContainerNameLabels = DEFAULT_CONTAINER_LABELS,
+): InventoryContainer[] {
   const list = Array.isArray(containers) ? containers.filter(Boolean) : [];
   const referencedIds = new Set((items ?? []).map((item) => item.containerId).filter(Boolean));
   // Older compendium data incorrectly marked Waterskin as a container. Heal at
@@ -45,10 +59,10 @@ export function normalizeContainers(containers: InventoryContainer[] | null | un
     return !isLegacyCandidate;
   }) : list;
   const hasDefault = healed.some((container) => container.id === DEFAULT_CONTAINER_ID);
-  const next = hasDefault ? healed : [defaultContainer(), ...healed];
+  const next = hasDefault ? healed : [defaultContainer(labels), ...healed];
   return next.map((container) => ({
     id: container.id,
-    name: String(container.name ?? "").trim() || (container.id === DEFAULT_CONTAINER_ID ? "Backpack" : "Container"),
+    name: String(container.name ?? "").trim() || (container.id === DEFAULT_CONTAINER_ID ? labels.backpack : labels.container),
     ignoreWeight: Boolean(container.ignoreWeight),
   }));
 }

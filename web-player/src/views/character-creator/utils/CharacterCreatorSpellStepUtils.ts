@@ -1,4 +1,5 @@
 import React from "react";
+import type { TFunction } from "i18next";
 
 import { titleCase } from "@beholden/shared/domain/text/titleCase";
 import { ABILITY_LABELS } from "@/views/character-creator/constants/CharacterCreatorConstants";
@@ -34,6 +35,7 @@ export function buildSpellStepChoiceState(args: {
   growthOptionEntriesByKey: Record<string, ChoiceOption[]>;
   featSpellChoiceOptions: Record<string, SharedSpellSummary[]>;
   getGrowthChoiceSelectedAbility: (choices: Record<string, string[]>, definition: GrowthChoiceDefinition) => string | null;
+  t: TFunction;
 }) {
   const {
     form,
@@ -45,6 +47,7 @@ export function buildSpellStepChoiceState(args: {
     growthOptionEntriesByKey,
     featSpellChoiceOptions,
     getGrowthChoiceSelectedAbility,
+    t,
   } = args;
 
   const extraSpellListChoices = step6SpellListChoices.map((entry) => ({
@@ -55,7 +58,7 @@ export function buildSpellStepChoiceState(args: {
     chosen: form.chosenFeatOptions[entry.key] ?? [],
     max: entry.count,
     note: entry.note,
-    emptyMsg: entry.linkedTo ? "Choose the spell list first." : "No eligible spell options found.",
+    emptyMsg: entry.linkedTo ? t("characterCreatorSpellsStep.chooseSpellListFirst") : t("characterCreatorSpellsStep.noEligibleSpellOptions"),
     onToggle: (value: string) => setForm((f) => {
       const current = f.chosenFeatOptions[entry.key] ?? [];
       const next = current.includes(value)
@@ -74,7 +77,7 @@ export function buildSpellStepChoiceState(args: {
     chosenNames: resolveSelectedSpellOptionEntries(form.chosenFeatOptions[entry.key] ?? [], featSpellChoiceOptions[entry.key] ?? []).map((spell) => spell.name),
     max: entry.count,
     note: entry.note,
-    emptyMsg: entry.linkedTo ? "Choose the spell list first." : "No eligible spell options found.",
+    emptyMsg: entry.linkedTo ? t("characterCreatorSpellsStep.chooseSpellListFirst") : t("characterCreatorSpellsStep.noEligibleSpellOptions"),
     onToggle: (id: string) => setForm((f) => {
       const current = f.chosenFeatOptions[entry.key] ?? [];
       const next = current.includes(id)
@@ -99,7 +102,7 @@ export function buildSpellStepChoiceState(args: {
       chosenNames: resolveSelectedSpellOptionEntries(form.chosenFeatureChoices[definition.key] ?? [], growthOptionEntriesByKey[definition.key] ?? []).map((spell) => spell.name),
       max: definition.totalCount,
       note: definition.note,
-      emptyMsg: `No ${definition.title.toLowerCase()} options found in compendium.`,
+      emptyMsg: t("characterCreatorSpellsStep.noCategoryOptions", { category: definition.title.toLowerCase() }),
       onToggle: (id: string) => setForm((f) => {
         const current = f.chosenFeatureChoices[definition.key] ?? [];
         const next = current.includes(id)
@@ -145,8 +148,8 @@ export function buildSpellStepChoiceState(args: {
         return selectedAbility ? [ABILITY_LABELS[selectedAbility as AbilityKey]] : [];
       })(),
       max: 1,
-      note: `This sets the save DC ability for ${definition.title.toLowerCase()} from this feature.`,
-      emptyMsg: "No ability options found.",
+      note: t("characterCreatorSpellsStep.saveDcAbilityNote", { category: definition.title.toLowerCase() }),
+      emptyMsg: t("characterCreatorSpellsStep.noAbilityOptions"),
       onToggle: (value: string) => setForm((f) => {
         const entry = definition.abilityChoice;
         if (!entry) return f;
@@ -165,8 +168,8 @@ export function buildSpellStepChoiceState(args: {
     options: definition.options.map((option) => titleCase(option)),
     chosen: form.chosenFeatureChoices[definition.key] ?? [],
     max: 1,
-    note: "This determines which ongoing prepared-spell progression applies to this feature.",
-    emptyMsg: "No progression tables found.",
+    note: t("characterCreatorSpellsStep.progressionTableNote"),
+    emptyMsg: t("characterCreatorSpellsStep.noProgressionTables"),
     onToggle: (value: string) => setForm((f) => {
       const current = f.chosenFeatureChoices[definition.key] ?? [];
       const canonicalValue = definition.options.find((option) => titleCase(option) === value) ?? value;

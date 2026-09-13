@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C } from "@/lib/theme";
 import { CollapsiblePanel, ProfDot, Tooltip } from "@/views/character/CharacterViewParts";
 import { PANEL_IDS } from "@/views/character/layout/panelRegistry";
@@ -35,6 +36,7 @@ export function SkillsPanel({
   d20TestPenalty = 0,
   fmtMod,
 }: SkillsPanelProps) {
+  const translateUi = useUiTranslation("playerUi");
   const skillColumns = 2;
   const skillsPerColumn = Math.ceil(ALL_SKILLS.length / skillColumns);
   const orderedSkillsForGrid = Array.from({ length: skillsPerColumn }).flatMap((_, rowIndex) => {
@@ -48,10 +50,10 @@ export function SkillsPanel({
 
   return (
     <CollapsiblePanel
-      title="Skills"
+      title={translateUi("Skills")}
       color={accentColor}
       storageKey={PANEL_IDS.skills}
-      summary={`${new Set([...(prof?.skills ?? []), ...(prof?.expertise ?? [])].map((entry) => entry.name.toLowerCase())).size} proficient`}
+      summary={translateUi("{{count}} proficient", { count: new Set([...(prof?.skills ?? []), ...(prof?.expertise ?? [])].map((entry) => entry.name.toLowerCase())).size })}
     >
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", columnGap: 18, rowGap: 2 }}>
         {orderedSkillsForGrid.map(({ name, abil }) => {
@@ -89,7 +91,7 @@ export function SkillsPanel({
                   textAlign: "center",
                 }}
               >
-                {ABILITY_LABELS[abil]}
+                {translateUi(ABILITY_LABELS[abil])}
               </span>
               <span
                 style={{
@@ -103,14 +105,14 @@ export function SkillsPanel({
                   minWidth: 0,
                 }}
               >
-                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</span>
+                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{translateUi(name)}</span>
                 {isExpertise && (
-                  <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: accentColor }}>EXP</span>
+                  <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: accentColor }}>{translateUi("EXP")}</span>
                 )}
                 <StateBadge
                   state={skillState}
                   accentColor={accentColor}
-                  title={`${skillState === "advantage" ? "Advantage" : "Disadvantage"} on ${name} checks`}
+                  title={translateUi("{{value1}} on {{value2}} checks", { value1: translateUi(skillState === "advantage" ? "Advantage" : "Disadvantage"), value2: translateUi(name) })}
                 />
               </span>
               <span
@@ -123,7 +125,7 @@ export function SkillsPanel({
                 }}
               >
                 {(isProfSkill && (src || expertiseSrc)) || extraSkillBonus !== 0
-                  ? <Tooltip text={[src, expertiseSrc, extraSkillBonus !== 0 ? `Feature bonus ${fmtMod(extraSkillBonus)}` : null].filter(Boolean).join(" - ")}>{fmtMod(bonus)}</Tooltip>
+                  ? <Tooltip text={[src, expertiseSrc, extraSkillBonus !== 0 ? translateUi("Feature bonus {{value1}}", { value1: fmtMod(extraSkillBonus) }) : null].filter(Boolean).join(" - ")}>{fmtMod(bonus)}</Tooltip>
                   : fmtMod(bonus)}
               </span>
             </div>

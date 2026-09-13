@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import { Panel } from "@/ui/Panel";
 import { Select } from "@/ui/Select";
 import { C, withAlpha } from "@/lib/theme";
@@ -34,6 +35,7 @@ export function MonsterBrowserPanel(props: {
   selectedMonsterId: string | null;
   onSelectMonster: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const { filteredRows, loading, loadError, totalRows, envOptions, sizeOptions, typeOptions, compQ, setCompQ, sortMode, setSortMode, envFilter, setEnvFilter, sizeFilter, setSizeFilter, typeFilter, setTypeFilter, crMin, setCrMin, crMax, setCrMax, rulesetFilter, setRulesetFilter, showRulesetFilter, lettersInList, letterFirstIndex } = useMonsterBrowser();
 
   const vl = useVirtualList({ isEnabled: true, rowHeight: ROW_HEIGHT, overscan: 8 });
@@ -47,45 +49,45 @@ export function MonsterBrowserPanel(props: {
 
   return (
     <Panel
-      title="Monsters"
+      title={t("compendiumMonsters.title")}
       actions={
         <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>
-          {loading ? "Loading..." : `${filteredRows.length.toLocaleString()} / ${totalRows.toLocaleString()}`}
+          {loading ? t("compendiumMonsters.loading") : `${filteredRows.length.toLocaleString()} / ${totalRows.toLocaleString()}`}
         </div>
       }
       style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
       bodyStyle={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, gap: 8 }}
     >
       <input
-        value={compQ} placeholder="Search monsters..."
+        value={compQ} placeholder={t("compendiumMonsters.searchPlaceholder")}
         onChange={(e) => setCompQ(e.target.value)}
         style={inputStyle()}
       />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 6 }}>
         <Select style={{ width: "100%" }} value={sortMode} onChange={(e) => setSortMode(e.target.value as SortMode)}>
-          <option value="az">A-Z</option>
-          <option value="crAsc">CR (low to high)</option>
-          <option value="crDesc">CR (high to low)</option>
+          <option value="az">{t("compendiumMonsters.sortAz")}</option>
+          <option value="crAsc">{t("compendiumMonsters.sortCrAsc")}</option>
+          <option value="crDesc">{t("compendiumMonsters.sortCrDesc")}</option>
         </Select>
         <Select style={{ width: "100%" }} value={envFilter} onChange={(e) => setEnvFilter(e.target.value)}>
           {envOptions.map((env) => (
-            <option key={env} value={env}>{env === "all" ? "All environments" : env}</option>
+            <option key={env} value={env}>{env === "all" ? t("compendiumMonsters.allEnvironments") : env}</option>
           ))}
         </Select>
         <Select style={{ width: "100%" }} value={sizeFilter} onChange={(e) => setSizeFilter(e.target.value)}>
           {sizeOptions.map((s) => (
-            <option key={s} value={s}>{s === "all" ? "All sizes" : s}</option>
+            <option key={s} value={s}>{s === "all" ? t("compendiumMonsters.allSizes") : s}</option>
           ))}
         </Select>
         <Select style={{ width: "100%" }} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-          {typeOptions.map((t) => (
-            <option key={t} value={t}>{t === "all" ? "All types" : t.charAt(0).toUpperCase() + t.slice(1)}</option>
+          {typeOptions.map((ty) => (
+            <option key={ty} value={ty}>{ty === "all" ? t("compendiumMonsters.allTypes") : ty.charAt(0).toUpperCase() + ty.slice(1)}</option>
           ))}
         </Select>
         {showRulesetFilter && (
           <Select style={{ width: "100%" }} value={rulesetFilter} onChange={(e) => setRulesetFilter(e.target.value as "5e" | "5.5e" | "")}>
-            <option value="">All rulesets</option>
+            <option value="">{t("compendiumMonsters.allRulesets")}</option>
             <option value="5.5e">5.5e</option>
             <option value="5e">5e</option>
           </Select>
@@ -93,8 +95,8 @@ export function MonsterBrowserPanel(props: {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-        <input value={crMin} onChange={(e) => setCrMin(e.target.value)} placeholder="CR min" style={inputStyle()} />
-        <input value={crMax} onChange={(e) => setCrMax(e.target.value)} placeholder="CR max" style={inputStyle()} />
+        <input value={crMin} onChange={(e) => setCrMin(e.target.value)} placeholder={t("compendiumMonsters.crMin")} style={inputStyle()} />
+        <input value={crMax} onChange={(e) => setCrMax(e.target.value)} placeholder={t("compendiumMonsters.crMax")} style={inputStyle()} />
       </div>
 
       <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
@@ -106,7 +108,7 @@ export function MonsterBrowserPanel(props: {
             {r.label}
           </button>
         ))}
-        <button type="button" style={pillStyle()} onClick={handleClear}>Clear</button>
+        <button type="button" style={pillStyle()} onClick={handleClear}>{t("compendiumMonsters.clear")}</button>
       </div>
 
       {lettersInList.length > 0 && (
@@ -129,16 +131,16 @@ export function MonsterBrowserPanel(props: {
         ref={vl.scrollRef} onScroll={vl.onScroll}
         style={{ flex: 1, minHeight: 0, overflowY: "auto", border: `1px solid ${C.panelBorder}`, borderRadius: 12 }}
       >
-        {loadError && <div style={{ padding: 12, color: C.red }}>Failed to load: {loadError}</div>}
+        {loadError && <div style={{ padding: 12, color: C.red }}>{t("compendiumMonsters.failedToLoad", { error: loadError })}</div>}
         {!loading && !loadError && filteredRows.length === 0 && (
           <div style={{ padding: 12, color: C.muted }}>
-            {totalRows === 0 ? "No compendium data loaded." : "No monsters match the current filters."}
+            {totalRows === 0 ? t("compendiumMonsters.noDataLoaded") : t("compendiumMonsters.noMonstersMatch")}
           </div>
         )}
         {filteredRows.length > 0 && (
           <div style={{ paddingTop: padTop, paddingBottom: padBottom }}>
             {filteredRows.slice(start, end).map((m) => {
-              const crLabel = m.cr != null ? `CR ${formatCr(m.cr)}` : "CR -";
+              const crLabel = m.cr != null ? `CR ${formatCr(m.cr)}` : t("compendiumMonsters.crUnknown");
               const type = m.type ? String(m.type).charAt(0).toUpperCase() + String(m.type).slice(1) : null;
               const active = m.id === props.selectedMonsterId;
               return (

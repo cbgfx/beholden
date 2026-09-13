@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Button } from "@/ui/Button";
 import { theme } from "@/theme/theme";
@@ -38,6 +39,7 @@ export function PolymorphCurrentBanner(props: {
   loading: boolean;
   onRevert: () => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   return (
     <div
       style={{
@@ -54,9 +56,9 @@ export function PolymorphCurrentBanner(props: {
         gap: 10,
       }}
     >
-      <span>Currently: {props.polymorphName}</span>
+      <span>{translateUi("Currently:")} {props.polymorphName}</span>
       <Button variant="danger" onClick={props.onRevert} disabled={props.loading} style={{ padding: "4px 10px", fontSize: "var(--fs-small)" }}>
-        Revert
+        {translateUi("Revert")}
       </Button>
     </div>
   );
@@ -75,24 +77,25 @@ export function PolymorphCreatureList(props: {
   onSelect: (row: CompendiumMonsterRow) => void;
   onTransform: (row: CompendiumMonsterRow) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   return (
     <div>
       <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
-        Select to transform
+        {translateUi("Select to transform")}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
         <input
           value={props.query}
           onChange={(event) => props.onQueryChange(event.target.value)}
-          placeholder="Search beasts..."
+          placeholder={translateUi("Search beasts...")}
           style={inputStyle}
         />
         <select value={props.crMax} onChange={(event) => props.onCrMaxChange(event.target.value)} style={selectStyle}>
-          <option value="">Challenge rating</option>
+          <option value="">{translateUi("Challenge rating")}</option>
           {CR_OPTIONS.filter(Boolean).map((cr) => (
             <option key={cr} value={cr}>
-              CR {"<="} {cr}
+              {translateUi("CR")} {"<="} {cr}
             </option>
           ))}
         </select>
@@ -102,12 +105,12 @@ export function PolymorphCreatureList(props: {
         <select value={props.typeFilter} onChange={(event) => props.onTypeFilterChange(event.target.value)} style={selectStyle}>
           {props.typeOptions.map((type) => (
             <option key={type} value={type}>
-              {type === "all" ? "All types" : titleCase(type)}
+              {type === "all" ? translateUi("All types") : titleCase(type)}
             </option>
           ))}
         </select>
         <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", alignSelf: "center", paddingLeft: 4 }}>
-          {props.rows.length} creature{props.rows.length !== 1 ? "s" : ""}
+          {props.rows.length} {translateUi("creature")}{props.rows.length !== 1 ? "s" : ""}
         </div>
       </div>
 
@@ -120,7 +123,7 @@ export function PolymorphCreatureList(props: {
         }}
       >
         {props.rows.length === 0 ? (
-          <div style={{ padding: 12, color: theme.colors.muted, fontSize: "var(--fs-medium)" }}>No creatures found.</div>
+          <div style={{ padding: 12, color: theme.colors.muted, fontSize: "var(--fs-medium)" }}>{translateUi("No creatures found.")}</div>
         ) : (
           props.rows.map((row) => (
             <PolymorphCreatureRow
@@ -143,6 +146,7 @@ function PolymorphCreatureRow(props: {
   onSelect: () => void;
   onTransform: () => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   return (
     <div
       style={{
@@ -172,7 +176,7 @@ function PolymorphCreatureRow(props: {
       </span>
       <button
         type="button"
-        title={`Transform into ${props.row.name}`}
+        title={translateUi("Transform into {{value1}}", { value1: props.row.name })}
         onClick={props.onTransform}
         style={{
           background: "transparent",

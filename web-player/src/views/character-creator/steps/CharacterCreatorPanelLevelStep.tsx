@@ -1,3 +1,4 @@
+import { UiText } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Select } from "@/ui/Select";
 import { C, withAlpha } from "@/lib/theme";
@@ -85,9 +86,9 @@ function renderLevelStep({
   const trimmedClassName = String(className ?? "").trim();
   const main = (
     <div>
-      <h2 style={headingStyle}>Class Details</h2>
+      <h2 style={headingStyle}>{<UiText text={"Class Details"} namespace="playerUi" />}</h2>
       <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 20 }}>
-        <label style={{ color: C.muted, fontWeight: 600 }}>Level</label>
+        <label style={{ color: C.muted, fontWeight: 600 }}>{<UiText text={"Level"} namespace="playerUi" />}</label>
         <input
           type="number"
           min={1}
@@ -103,9 +104,9 @@ function renderLevelStep({
 
       {showSubclass && (
         <div style={{ marginBottom: 20 }}>
-          <label style={{ ...labelStyle }}>Subclass</label>
+          <label style={{ ...labelStyle }}>{<UiText text={"Subclass"} namespace="playerUi" />}</label>
           <Select value={subclass} onChange={(e) => setSubclass(e.target.value)} style={{ width: 280 }}>
-            <option value="">— Choose subclass —</option>
+            <option value="">{<UiText text={"— Choose subclass —"} namespace="playerUi" />}</option>
             {subclassList.map((s) => <option key={s} value={s}>{s}</option>)}
           </Select>
         </div>
@@ -116,7 +117,7 @@ function renderLevelStep({
         return (
           <div key={`${grp.level}:${grp.name}`} style={{ marginBottom: 20 }}>
             <div style={{ ...labelStyle, marginBottom: 8 }}>
-              Level {grp.level} — {grp.name}: {grp.exclusive ? "Choose one" : "Choose any"}
+              {<UiText text={"Level"} namespace="playerUi" />} {grp.level} — {grp.name}: {grp.exclusive ? <UiText text={"Choose one"} namespace="playerUi" /> : <UiText text={"Choose any"} namespace="playerUi" />}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {grp.features.map((f) => {
@@ -156,14 +157,14 @@ function renderLevelStep({
 
       {levelUpFeatChoices.length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <div style={{ ...labelStyle, marginBottom: 8 }}>Level-Up Feats</div>
+          <div style={{ ...labelStyle, marginBottom: 8 }}>{<UiText text={"Level-Up Feats"} namespace="playerUi" />}</div>
           <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 10 }}>
-            Review feats for each Ability Score Improvement level included in this character.
+            {<UiText text={"Review feats for each Ability Score Improvement level included in this character."} namespace="playerUi" />}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {levelUpFeatChoices.map((choice) => (
               <div key={choice.level}>
-                <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.accentHl, marginBottom: 6 }}>Level {choice.level}</div>
+                <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.accentHl, marginBottom: 6 }}>{<UiText text={"Level"} namespace="playerUi" />} {choice.level}</div>
                 <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
                   <button
                     type="button"
@@ -179,7 +180,7 @@ function renderLevelStep({
                       fontSize: "var(--fs-small)",
                     }}
                   >
-                    Ability Score Improvement
+                    {<UiText text={"Ability Score Improvement"} namespace="playerUi" />}
                   </button>
                   <button
                     type="button"
@@ -195,7 +196,7 @@ function renderLevelStep({
                       fontSize: "var(--fs-small)",
                     }}
                   >
-                    Level-Up Feat
+                    {<UiText text={"Level-Up Feat"} namespace="playerUi" />}
                   </button>
                 </div>
                 <Select
@@ -204,7 +205,7 @@ function renderLevelStep({
                   disabled={choice.mode !== "feat"}
                   style={{ width: "100%", maxWidth: 380, opacity: choice.mode === "feat" ? 1 : 0.55 }}
                 >
-                  <option value="">- Choose feat -</option>
+                  <option value="">{<UiText text={"- Choose feat -"} namespace="playerUi" />}</option>
                   {choice.options.map((feat) => (
                     <option key={feat.id} value={feat.id}>{feat.name}</option>
                   ))}
@@ -238,7 +239,7 @@ function renderLevelStep({
                             {Math.min(20, current + bonus)}
                             {bonus > 0 ? <span style={{ fontSize: "var(--fs-small)", color: C.accentHl }}> +{bonus}</span> : null}
                           </div>
-                          <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{capped && bonus === 0 ? "MAX" : bonus > 0 ? "Click to remove" : "Click to add"}</div>
+                          <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{capped && bonus === 0 ? <UiText text={"MAX"} namespace="playerUi" /> : bonus > 0 ? <UiText text={"Click to remove"} namespace="playerUi" /> : <UiText text={"Click to add"} namespace="playerUi" />}</div>
                         </button>
                       );
                     })}
@@ -249,7 +250,7 @@ function renderLevelStep({
           </div>
           {levelUpFeatConflict && (
             <div style={{ color: C.red, fontSize: "var(--fs-small)", marginTop: 10 }}>
-              A non-repeatable feat has been selected more than once.
+              {<UiText text={"A non-repeatable feat has been selected more than once."} namespace="playerUi" />}
             </div>
           )}
         </div>
@@ -258,7 +259,7 @@ function renderLevelStep({
       {classEquipmentOptions.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ ...labelStyle, marginBottom: 8 }}>
-            Class Starting Equipment {trimmedClassName ? <span style={sourceTagStyle}>{trimmedClassName}</span> : null}
+            {<UiText text={"Class Starting Equipment"} namespace="playerUi" />} {trimmedClassName ? <span style={sourceTagStyle}>{trimmedClassName}</span> : null}
           </div>
           {classEquipmentOptions.length > 0 && (
             <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
@@ -280,7 +281,7 @@ function renderLevelStep({
                       color: selected ? C.accentHl : C.muted,
                     }}
                   >
-                    Option {option.id}
+                    {<UiText text={"Option"} namespace="playerUi" />} {option.id}
                   </button>
                 );
               })}
@@ -298,7 +299,7 @@ function renderLevelStep({
                   }}
                 >
                   <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, color: chosenClassEquipmentOption === option.id ? C.accentHl : C.text, marginBottom: 4 }}>
-                    Option {option.id}
+                    {<UiText text={"Option"} namespace="playerUi" />} {option.id}
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                     {option.entries.map((entry, index) => (
@@ -312,7 +313,7 @@ function renderLevelStep({
           </div>
           {chosenClassEquipmentOption && classEquipmentOptions.length > 0 && (
             <div style={{ color: C.accentHl, fontSize: "var(--fs-small)", marginTop: 8 }}>
-              Inventory will start with class option {chosenClassEquipmentOption}.
+              {<UiText text={"Inventory will start with class option"} namespace="playerUi" />} {chosenClassEquipmentOption}.
             </div>
           )}
         </div>
@@ -338,11 +339,11 @@ function renderLevelStep({
 
   const side = (
     <div style={{ ...detailBoxStyle, maxHeight: 600, overflowY: "auto" }}>
-      <div style={{ fontWeight: 700, marginBottom: 8, fontSize: "var(--fs-subtitle)", color: C.accentHl }}>Class Features — Level {level}</div>
-      {features.length === 0 && <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>No features yet. Select a class first.</div>}
+      <div style={{ fontWeight: 700, marginBottom: 8, fontSize: "var(--fs-subtitle)", color: C.accentHl }}>{<UiText text={"Class Features — Level"} namespace="playerUi" />} {level}</div>
+      {features.length === 0 && <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{<UiText text={"No features yet. Select a class first."} namespace="playerUi" />}</div>}
       {features.map((f) => (
         <div key={`${f.level}:${f.name}`} style={{ marginBottom: 10 }}>
-          <div style={{ fontWeight: 700, fontSize: "var(--fs-small)", color: C.accentHl }}>Lv{f.level} · {f.name}</div>
+          <div style={{ fontWeight: 700, fontSize: "var(--fs-small)", color: C.accentHl }}>{<UiText text={"Lv"} namespace="playerUi" />}{f.level} · {f.name}</div>
           <div style={{ color: "rgba(160,180,220,0.65)", fontSize: "var(--fs-small)", lineHeight: 1.4 }}>
             {f.text.replace(/Source:.*$/m, "").trim()}
           </div>

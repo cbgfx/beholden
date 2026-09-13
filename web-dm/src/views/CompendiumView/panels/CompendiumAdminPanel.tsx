@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 
 import { IconCompendiumAlt } from "@/icons";
@@ -42,6 +43,7 @@ function downloadBlob(filename: string, blob: Blob) {
 }
 
 export function CompendiumAdminPanel() {
+  const translateUi = useUiTranslation("dmUi");
   const [nativeFile, setNativeFile] = React.useState<File | null>(null);
   const [previewedNativeFile, setPreviewedNativeFile] = React.useState<File | null>(null);
   const [nativePreview, setNativePreview] = React.useState<NativePreviewResult | null>(null);
@@ -190,8 +192,8 @@ export function CompendiumAdminPanel() {
         storageKey="compendium-admin-native"
         title={
           <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: "var(--fs-large)" }}>
-            <IconCompendiumAlt size={36} title="Compendium" />
-            <span>Beholden Compendium</span>
+            <IconCompendiumAlt size={36} title={translateUi("Compendium")} />
+            <span>{translateUi("Beholden Compendium")}</span>
           </span>
         }
       >

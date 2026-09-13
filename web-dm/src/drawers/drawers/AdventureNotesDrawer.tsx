@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import type { DrawerContent } from "@/drawers/types";
 import { useStore } from "@/store";
@@ -8,6 +9,7 @@ import { IconPencil } from "@/icons";
 import { fetchNoteById } from "@/services/collectionApi";
 
 export function AdventureNotesDrawer(props: { close: () => void }): DrawerContent {
+  const translateUi = useUiTranslation("dmUi");
   const { state, dispatch } = useStore();
   const notes = state.adventureNotes;
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(() => new Set());
@@ -53,7 +55,7 @@ export function AdventureNotesDrawer(props: { close: () => void }): DrawerConten
     body: (
       <div style={{ display: "grid", alignContent: "start", gap: 8, height: "calc(100vh - 160px)", overflowY: "auto", minHeight: 420 }}>
         {notes.length === 0 ? (
-          <div style={{ color: theme.colors.muted }}>No adventure notes yet.</div>
+          <div style={{ color: theme.colors.muted }}>{translateUi("No adventure notes yet.")}</div>
         ) : (
           notes.map((note) => {
             const expanded = expandedIds.has(note.id);
@@ -79,7 +81,7 @@ export function AdventureNotesDrawer(props: { close: () => void }): DrawerConten
                   </button>
                   <IconButton
                     size="sm"
-                    title="Edit note"
+                    title={translateUi("Edit note")}
                     onClick={() => dispatch({ type: "openDrawer", drawer: { type: "editNote", noteId: note.id } })}
                   >
                     <IconPencil />
@@ -92,12 +94,12 @@ export function AdventureNotesDrawer(props: { close: () => void }): DrawerConten
                     style={{ marginTop: 8, color: theme.colors.muted, lineHeight: 1.5 }}
                   >
                     {loading
-                      ? <span style={{ fontStyle: "italic" }}>Loading note...</span>
+                      ? <span style={{ fontStyle: "italic" }}>{translateUi("Loading note...")}</span>
                       : failed
-                        ? <span style={{ fontStyle: "italic", color: theme.colors.colorPinkRed }}>Could not load note.</span>
+                        ? <span style={{ fontStyle: "italic", color: theme.colors.colorPinkRed }}>{translateUi("Could not load note.")}</span>
                         : body?.trim()
                           ? body
-                          : <span style={{ fontStyle: "italic" }}>No text.</span>}
+                          : <span style={{ fontStyle: "italic" }}>{translateUi("No text.")}</span>}
                   </div>
                 )}
               </div>
@@ -123,10 +125,10 @@ export function AdventureNotesDrawer(props: { close: () => void }): DrawerConten
               })
             }
           >
-            + Add note
+            {translateUi("+ Add note")}
           </Button>
         ) : null}
-        <Button onClick={props.close}>Done</Button>
+        <Button onClick={props.close}>{translateUi("Done")}</Button>
       </div>
     )
   };

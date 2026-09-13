@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
@@ -16,6 +17,8 @@ export function INpcDrawer(props: {
   close: () => void;
   refreshCampaign: (cid: string) => Promise<void>;
 }): DrawerContent {
+  const translateMessage = useUiMessages("dmUi");
+  const translateUi = useUiTranslation("dmUi");
   const { state } = useStore();
   const confirm = useConfirm();
   const inpc = React.useMemo(() => state.inpcs.find((i) => i.id === props.drawer.inpcId) ?? null, [state.inpcs, props.drawer.inpcId]);
@@ -69,64 +72,64 @@ export function INpcDrawer(props: {
     if (!inpc) return;
     if (
       !(await confirm({
-        title: "Delete iNPC",
-        message: "Delete this iNPC? This cannot be undone.",
+        title: translateUi("Delete iNPC"),
+        message: translateMessage("Delete this iNPC? This cannot be undone."),
         intent: "danger"
       }))
     )
       return;
     await api(`/api/inpcs/${inpc.id}`, { method: "DELETE" });
     props.close();
-  }, [confirm, inpc, props]);
+  }, [confirm, inpc, props, translateMessage, translateUi]);
 
   return {
     body: !inpc ? (
-      <div style={{ color: "var(--muted)" }}>iNPC not found.</div>
+      <div style={{ color: "var(--muted)" }}>{translateUi("iNPC not found.")}</div>
     ) : (
       <div style={{ display: "grid", gap: 10 }}>
         <div style={{ display: "grid", gap: 6 }}>
-          <div style={{ fontWeight: 800 }}>Name</div>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="iNPC name" />
+          <div style={{ fontWeight: 800 }}>{translateUi("Name")}</div>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={translateUi("iNPC name")} />
         </div>
 
         <div style={{ display: "grid", gap: 6 }}>
-          <div style={{ fontWeight: 800 }}>Friendly</div>
+          <div style={{ fontWeight: 800 }}>{translateUi("Friendly")}</div>
           <Select value={friendly} onChange={(e) => setFriendly(e.target.value as any)}>
-            <option value="true">Friendly</option>
-            <option value="false">Hostile</option>
+            <option value="true">{translateUi("Friendly")}</option>
+            <option value="false">{translateUi("Hostile")}</option>
           </Select>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <div style={{ display: "grid", gap: 6 }}>
-            <div style={{ fontWeight: 800 }}>HP Max</div>
+            <div style={{ fontWeight: 800 }}>{translateUi("HP Max")}</div>
             <Input value={hpMax} onChange={(e) => setHpMax(e.target.value)} inputMode="numeric" />
           </div>
           <div style={{ display: "grid", gap: 6 }}>
-            <div style={{ fontWeight: 800 }}>HP Current</div>
+            <div style={{ fontWeight: 800 }}>{translateUi("HP Current")}</div>
             <Input value={hpCurrent} onChange={(e) => setHpCurrent(e.target.value)} inputMode="numeric" />
           </div>
         </div>
         <div style={{ display: "grid", gap: 6 }}>
-          <div style={{ fontWeight: 800 }}>HP Details</div>
+          <div style={{ fontWeight: 800 }}>{translateUi("HP Details")}</div>
           <Input value={hpDetails} onChange={(e) => setHpDetails(e.target.value)} placeholder="(25d8+25)" />
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <div style={{ display: "grid", gap: 6 }}>
-            <div style={{ fontWeight: 800 }}>AC</div>
+            <div style={{ fontWeight: 800 }}>{translateUi("AC")}</div>
             <Input value={ac} onChange={(e) => setAc(e.target.value)} inputMode="numeric" />
           </div>
           <div style={{ display: "grid", gap: 6 }}>
-            <div style={{ fontWeight: 800 }}>AC Details</div>
-            <Input value={acDetails} onChange={(e) => setAcDetails(e.target.value)} placeholder="(natural armor)" />
+            <div style={{ fontWeight: 800 }}>{translateUi("AC Details")}</div>
+            <Input value={acDetails} onChange={(e) => setAcDetails(e.target.value)} placeholder={translateUi("(natural armor)")} />
           </div>
         </div>
 
         {/* Read-only monster stat block (attacks/actions/etc.) */}
         {baseMonster ? (
           <div style={{ marginTop: 6 }}>
-            <div style={{ color: theme.colors.muted, marginBottom: 8, fontWeight: 800 }}>Monster Details</div>
+            <div style={{ color: theme.colors.muted, marginBottom: 8, fontWeight: 800 }}>{translateUi("Monster Details")}</div>
             <MonsterPreview monster={baseMonster} />
           </div>
         ) : null}
@@ -136,15 +139,15 @@ export function INpcDrawer(props: {
       <div style={{ display: "flex", gap: 10, justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <Button variant="danger" onClick={deleteINpc} disabled={!inpc}>
-            Delete
+            {translateUi("Delete")}
           </Button>
         </div>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
           <Button variant="ghost" onClick={props.close}>
-            Cancel
+            {translateUi("Cancel")}
           </Button>
           <Button onClick={submit} disabled={!inpc}>
-            Save
+            {translateUi("Save")}
           </Button>
         </div>
       </div>

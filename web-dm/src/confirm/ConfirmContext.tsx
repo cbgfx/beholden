@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 
 import { ConfirmDialog } from "@/components/overlay/ConfirmDialog";
@@ -35,13 +36,15 @@ type Pending = {
 };
 
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
+  const translateMessage = useUiMessages("dmUi");
+  const translateUi = useUiTranslation("dmUi");
   const pendingRef = useRef<Pending | null>(null);
   const [open, setOpen] = useState(false);
   const [options, setOptions] = useState<ConfirmOptions>({
-    title: "Confirm",
-    message: "Are you sure?",
-    confirmLabel: "Delete",
-    cancelLabel: "Cancel",
+    title: translateUi("Confirm"),
+    message: translateMessage("Are you sure?"),
+    confirmLabel: translateMessage("Delete"),
+    cancelLabel: translateMessage("Cancel"),
     intent: "danger",
   });
 
@@ -80,7 +83,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       {children}
       <ConfirmDialog
         open={open}
-        title={options.title ?? "Confirm"}
+        title={options.title ?? translateUi("Confirm")}
         message={options.message}
         confirmLabel={options.confirmLabel ?? "Delete"}
         cancelLabel={options.cancelLabel ?? "Cancel"}

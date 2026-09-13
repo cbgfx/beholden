@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/overlay/Modal";
 import { api } from "@/services/api";
@@ -47,6 +48,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export function DeckOfManyThingsModal(props: { isOpen: boolean; onClose: () => void }) {
+  const translateUi = useUiTranslation("dmUi");
   const [sourceDeck, setSourceDeck] = useState<Card[]>(() => buildStandardDeck());
   const [deck, setDeck] = useState<Card[]>(() => shuffle(buildStandardDeck()));
   const [drawn, setDrawn] = useState<Card[]>([]);
@@ -116,7 +118,7 @@ export function DeckOfManyThingsModal(props: { isOpen: boolean; onClose: () => v
   const currentColor = useMemo(() => (current?.suit?.color ? current.suit.color : theme.colors.accentPrimary), [current]);
 
   return (
-    <Modal isOpen={props.isOpen} onClose={props.onClose} title="Deck of Many Things" width={460} height={440}>
+    <Modal isOpen={props.isOpen} onClose={props.onClose} title={translateUi("Deck of Many Things")} width={460} height={440}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, padding: 24 }}>
         <div
           style={{
@@ -161,13 +163,13 @@ export function DeckOfManyThingsModal(props: { isOpen: boolean; onClose: () => v
                     flex: 1,
                   }}
                 >
-                  {current.text ? current.text : "No description."}
+                  {current.text ? current.text : translateUi("No description.")}
                 </div>
               </div>
             )
           ) : (
             <div style={{ color: theme.colors.muted, fontSize: 13, textAlign: "center", padding: 12 }}>
-              {loadingDeck ? "Loading deck..." : (empty ? "Deck empty" : "Draw a card")}
+              {loadingDeck ? translateUi("Loading deck...") : (empty ? "Deck empty" : "Draw a card")}
             </div>
           )}
         </div>
@@ -185,16 +187,16 @@ export function DeckOfManyThingsModal(props: { isOpen: boolean; onClose: () => v
         )}
 
         <div style={{ display: "flex", gap: 20, fontSize: 13, color: theme.colors.muted }}>
-          <span>{deck.length} remaining</span>
-          <span>{drawn.length} drawn</span>
+          <span>{deck.length} {translateUi("remaining")}</span>
+          <span>{drawn.length} {translateUi("drawn")}</span>
         </div>
 
         <div style={{ display: "flex", gap: 10 }}>
           <Button type="button" variant="primary" onClick={draw} disabled={empty || loadingDeck}>
-            Draw Card
+            {translateUi("Draw Card")}
           </Button>
           <Button type="button" variant="ghost" onClick={reshuffle} disabled={loadingDeck}>
-            Reshuffle
+            {translateUi("Reshuffle")}
           </Button>
         </div>
       </div>

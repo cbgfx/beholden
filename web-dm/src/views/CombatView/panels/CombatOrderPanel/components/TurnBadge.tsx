@@ -1,7 +1,9 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { theme } from "@/theme/theme";
 import { IconTargeted } from "@/icons";
 
 export function TurnBadge(props: { active: boolean; targeted: boolean; activeColor?: string }) {
+  const translateUi = useUiTranslation("dmUi");
   const size = 22;
   const activeColor = props.activeColor ?? theme.colors.accentHighlight;
   const targetColor = theme.colors.accentPrimary;
@@ -12,7 +14,7 @@ export function TurnBadge(props: { active: boolean; targeted: boolean; activeCol
 
   return (
     <div
-      title={props.active ? "Active" : props.targeted ? "Target" : ""}
+      title={props.active ? translateUi("Active") : props.targeted ? translateUi("Target") : ""}
       style={{
         width: size,
         height: size,

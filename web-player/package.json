@@ -13,8 +13,10 @@
   "dependencies": {
     "@beholden/shared": "*",
     "@iconify/react": "^6.0.2",
+    "i18next": "^26.4.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.13",
     "react-router-dom": "^7.18.0"
   },
   "devDependencies": {

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { Button } from "@/ui/Button";
 import { theme, withAlpha } from "@/theme/theme";
 import type { Bastion } from "@/tools/bastions/types";
@@ -10,16 +11,17 @@ export function BastionsSidebar(props: {
   onCreateBastion: () => void;
   onSelectBastion: (id: string) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const { campaignId, bastions, selectedBastionId, saving, onCreateBastion, onSelectBastion } = props;
 
   return (
     <div style={{ borderRight: `1px solid ${theme.colors.panelBorder}`, padding: 12, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
       {!campaignId ? (
-        <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>Select a campaign to manage Bastions.</div>
+        <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{translateUi("Select a campaign to manage Bastions.")}</div>
       ) : (
         <>
           <div style={{ marginTop: 6, fontSize: "var(--fs-small)", fontWeight: 700, color: theme.colors.muted, textTransform: "uppercase", letterSpacing: "0.08em", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span>Bastions ({bastions.length})</span>
+            <span>{translateUi("Bastions (")}{bastions.length})</span>
             <Button onClick={onCreateBastion} disabled={saving}>+</Button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -40,11 +42,11 @@ export function BastionsSidebar(props: {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                   <span style={{ fontWeight: 700, fontSize: "var(--fs-small)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bastion.name}</span>
                   <span style={{ fontSize: "var(--fs-tiny)", color: bastion.active ? theme.colors.green : theme.colors.muted, fontWeight: 700 }}>
-                    {bastion.active ? "Active" : "Inactive"}
+                    {bastion.active ? translateUi("Active") : translateUi("Inactive")}
                   </span>
                 </div>
                 <div style={{ marginTop: 4, fontSize: "var(--fs-tiny)", color: theme.colors.muted }}>
-                  Slots {bastion.specialSlotsUsed}/{bastion.specialSlots}
+                  {translateUi("Slots")} {bastion.specialSlotsUsed}/{bastion.specialSlots}
                 </div>
               </button>
             ))}

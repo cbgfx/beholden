@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { Modal } from "@/components/overlay/Modal";
 import { IconBinder, IconDownload } from "@/icons";
 import { Button } from "@/ui/Button";
@@ -11,9 +12,10 @@ export function BinderExportModal(props: {
   onClose: () => void;
   onExport: (includePictures: boolean) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const busy = props.exporting !== null;
   return (
-    <Modal isOpen={props.isOpen} onClose={busy ? () => undefined : props.onClose} title="Export Binder" width={520} height="auto">
+    <Modal isOpen={props.isOpen} onClose={busy ? () => undefined : props.onClose} title={translateUi("Export Binder")} width={520} height="auto">
       <div style={{ padding: 22, display: "grid", gap: 18 }}>
         <div style={{ display: "flex", gap: 13, alignItems: "center" }}>
           <div style={{ width: 48, height: 48, borderRadius: 13, display: "grid", placeItems: "center", color: theme.colors.accentHighlight, background: withAlpha(theme.colors.accentHighlight, 0.1), border: `1px solid ${withAlpha(theme.colors.accentHighlight, 0.35)}` }}>
@@ -21,27 +23,27 @@ export function BinderExportModal(props: {
           </div>
           <div>
             <div style={{ color: theme.colors.text, fontWeight: 900, fontSize: "var(--fs-large)" }}>{props.binderName}</div>
-            <div style={{ color: theme.colors.muted, marginTop: 3, lineHeight: 1.4 }}>Choose a lightweight data export or a portable archive containing portraits.</div>
+            <div style={{ color: theme.colors.muted, marginTop: 3, lineHeight: 1.4 }}>{translateUi("Choose a lightweight data export or a portable archive containing portraits.")}</div>
           </div>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
           <button type="button" disabled={busy} onClick={() => props.onExport(false)} style={choiceStyle(false, busy)}>
             <IconDownload size={22} />
-            <strong>{props.exporting === "json" ? "Exporting..." : "Binder JSON"}</strong>
-            <span style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", lineHeight: 1.4 }}>Lore and links only. Small and quick to transfer.</span>
+            <strong>{props.exporting === "json" ? translateUi("Exporting...") : translateUi("Binder JSON")}</strong>
+            <span style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", lineHeight: 1.4 }}>{translateUi("Lore and links only. Small and quick to transfer.")}</span>
           </button>
           <button type="button" disabled={busy} onClick={() => props.onExport(true)} style={choiceStyle(true, busy)}>
             <IconDownload size={22} />
-            <strong>{props.exporting === "zip" ? "Bundling..." : "ZIP with pictures"}</strong>
-            <span style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", lineHeight: 1.4 }}>Includes Mortal and Deity portraits for portable re-import.</span>
+            <strong>{props.exporting === "zip" ? translateUi("Bundling...") : translateUi("ZIP with pictures")}</strong>
+            <span style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", lineHeight: 1.4 }}>{translateUi("Includes Mortal and Deity portraits for portable re-import.")}</span>
           </button>
         </div>
 
         {props.error ? <div role="alert" style={{ padding: "10px 12px", borderRadius: theme.radius.control, color: theme.colors.red, background: withAlpha(theme.colors.red, 0.1), border: `1px solid ${withAlpha(theme.colors.red, 0.35)}` }}>{props.error}</div> : null}
 
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <Button type="button" variant="ghost" onClick={props.onClose} disabled={busy}>Cancel</Button>
+          <Button type="button" variant="ghost" onClick={props.onClose} disabled={busy}>{translateUi("Cancel")}</Button>
         </div>
       </div>
     </Modal>

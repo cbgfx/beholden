@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { FormattedText } from "@beholden/shared/ui";
 import { Panel } from "@/ui/Panel";
@@ -7,6 +8,7 @@ import { expandSchool } from "@beholden/shared/domain/compendium/expandSchool";
 import { spellLevelLabel, type CompendiumSpellDetail } from "@beholden/shared/domain/compendium/spellDetail";
 
 export function SpellDetailPanel(props: { spellId: string; ruleset?: "5e" | "5.5e" | null }) {
+  const translateUi = useUiTranslation("dmUi");
   const [spell, setSpell] = React.useState<CompendiumSpellDetail | null>(null);
   const [busy, setBusy] = React.useState(false);
 
@@ -40,20 +42,20 @@ export function SpellDetailPanel(props: { spellId: string; ruleset?: "5e" | "5.5
 
   return (
     <Panel
-      title={spell ? spell.name : "Spell"}
-      actions={<div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{busy ? "Loading…" : header}</div>}
+      title={spell ? spell.name : translateUi("Spell")}
+      actions={<div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{busy ? translateUi("Loading…") : header}</div>}
       style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
       bodyStyle={{ flex: 1, minHeight: 0, overflow: "hidden" }}
     >
       {!spell ? (
-        <div style={{ color: theme.colors.muted, lineHeight: 1.4 }}>Pick a spell on the left to view details.</div>
+        <div style={{ color: theme.colors.muted, lineHeight: 1.4 }}>{translateUi("Pick a spell on the left to view details.")}</div>
       ) : (
         <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 10, minHeight: 0, overflow: "hidden" }}>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
-            {spell.time ? <span>Cast: {spell.time}</span> : null}
-            {spell.range ? <span>Range: {spell.range}</span> : null}
-            {spell.duration ? <span>Duration: {spell.duration}</span> : null}
-            {spell.components ? <span>Components: {spell.components}</span> : null}
+            {spell.time ? <span>{translateUi("Cast:")} {spell.time}</span> : null}
+            {spell.range ? <span>{translateUi("Range:")} {spell.range}</span> : null}
+            {spell.duration ? <span>{translateUi("Duration:")} {spell.duration}</span> : null}
+            {spell.components ? <span>{translateUi("Components:")} {spell.components}</span> : null}
           </div>
 
           <div
@@ -74,8 +76,8 @@ export function SpellDetailPanel(props: { spellId: string; ruleset?: "5e" | "5.5
             <FormattedText text={spell.text} />
           </div>
 
-          {spell.school ? <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>School: {expandSchool(spell.school)}</div> : null}
-          {spell.classes ? <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>Classes: {spell.classes}</div> : null}
+          {spell.school ? <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{translateUi("School:")} {expandSchool(spell.school)}</div> : null}
+          {spell.classes ? <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{translateUi("Classes:")} {spell.classes}</div> : null}
         </div>
       )}
     </Panel>

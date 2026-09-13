@@ -5,6 +5,7 @@ vi.mock("react", () => ({ default: {
   useEffect: () => {},
   useCallback: (fn: unknown) => fn,
 } }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 import { useUpdateCheck } from "@beholden/shared/ui/useUpdateCheck";
 
 afterEach(() => vi.unstubAllGlobals());

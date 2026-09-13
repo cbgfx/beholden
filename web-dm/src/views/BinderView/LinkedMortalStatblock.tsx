@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import type { MonsterDetail } from "@/domain/types/compendium";
 import type { FlatCampaignCharacterDto } from "@beholden/shared/api";
@@ -23,6 +24,8 @@ export function LinkedMortalStatblock(props: {
   mechanics: NpcMechanics | null;
   accent: string;
 }) {
+  const translateMessage = useUiMessages("dmUi");
+  const translateUi = useUiTranslation("dmUi");
   const [monster, setMonster] = React.useState<MonsterDetail | null>(null);
   const [player, setPlayer] = React.useState<FlatCampaignCharacterDto | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -43,9 +46,9 @@ export function LinkedMortalStatblock(props: {
         : null;
     if (!request) return () => { cancelled = true; };
     request
-      .catch((cause) => { if (!cancelled) setError(cause instanceof Error ? cause.message : "Unable to load statblock."); });
+      .catch((cause) => { if (!cancelled) setError(cause instanceof Error ? cause.message : translateMessage("Unable to load statblock.")); });
     return () => { cancelled = true; };
-  }, [props.monsterId, campaignId, playerId]);
+  }, [props.monsterId, campaignId, playerId, translateMessage]);
 
   const displayedMonster = React.useMemo(() => {
     if (!monster) return null;
@@ -88,13 +91,13 @@ export function LinkedMortalStatblock(props: {
   const hasLink = Boolean(props.monsterId || props.playerLink);
 
   return <Panel
-    title="Statblock"
+    title={translateUi("Statblock")}
     titleColor={props.accent}
     storageKey={`binder-mortal-statblock:${props.mortalId}`}
   >
-    {!hasLink ? <div style={{ color: theme.colors.muted }}>No linked statblock</div> : null}
-    {error ? <div style={{ color: theme.colors.red }}>Unable to load statblock: {error}</div> : null}
-    {hasLink && !error && !displayedMonster && !playerStats ? <div style={{ color: theme.colors.muted }}>Loading statblock…</div> : null}
+    {!hasLink ? <div style={{ color: theme.colors.muted }}>{translateUi("No linked statblock")}</div> : null}
+    {error ? <div style={{ color: theme.colors.red }}>{translateUi("Unable to load statblock:")} {error}</div> : null}
+    {hasLink && !error && !displayedMonster && !playerStats ? <div style={{ color: theme.colors.muted }}>{translateUi("Loading statblock…")}</div> : null}
     {displayedMonster ? <MonsterStatblock
       monster={displayedMonster}
       attackOverrides={props.mechanics?.attackOverrides ?? undefined}

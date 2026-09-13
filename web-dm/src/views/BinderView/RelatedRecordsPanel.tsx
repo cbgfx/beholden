@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { theme } from "@/theme/theme";
@@ -5,6 +6,7 @@ import { fetchBinderRelatedRecords, type BinderRelatedRecord } from "@/services/
 import { Button } from "@/ui/Button";
 
 export function RelatedRecordsPanel(props: { binderId: string; recordId: string }) {
+  const translateUi = useUiTranslation("dmUi");
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<BinderRelatedRecord[]>([]);
@@ -21,9 +23,9 @@ export function RelatedRecordsPanel(props: { binderId: string; recordId: string 
   }, {}), [rows]);
 
   return <section>
-    <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: ".06em" }}>Related Records</div>
+    <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: ".06em" }}>{translateUi("Related Records")}</div>
     <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} style={{ marginTop: 7, padding: 0, border: 0, background: "transparent", color: theme.colors.text, cursor: "pointer", font: "inherit", fontSize: "var(--fs-body)", textDecoration: rows.length ? "underline" : "none", textUnderlineOffset: 3 }}>
-      {loading ? "Loading…" : rows.length ? `${rows.length} ${open ? "▴" : "▾"}` : "None"}
+      {loading ? translateUi("Loading…") : rows.length ? `${rows.length} ${open ? "▴" : "▾"}` : translateUi("None")}
     </button>
     {open && rows.length ? <div style={{ display: "grid", gap: 12, marginTop: 12, padding: 12, border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.control, background: theme.colors.inputBg }}>
       {Object.entries(groups).map(([relationship, records]) => <div key={relationship} style={{ display: "grid", gap: 6 }}>

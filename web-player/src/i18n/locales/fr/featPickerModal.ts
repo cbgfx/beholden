@@ -1,0 +1,17 @@
+export default {
+  title: "Ajouter un don",
+  close: "Fermer",
+  searchPlaceholder: "Rechercher des dons...",
+  loading: "Chargement...",
+  noFeatsFound: "Aucun don trouvé.",
+  alreadyHaveIt: "Déjà possédé",
+  noDescription: "Aucune description disponible.",
+  selectFeatPrompt: "Sélectionnez un don à gauche pour l'aperçu et l'ajouter.",
+  chooseAbilityIncrease: "Choisissez une augmentation de caractéristique",
+  addNamed: "Ajouter {{name}}",
+  chooseAbility_one: "Choisissez {{count}} caractéristique (+{{amount}} chacune).",
+  chooseAbility_other: "Choisissez {{count}} caractéristiques (+{{amount}} chacune).",
+  abilityAtBonus_one: "{{count}} caractéristique à +{{amount}}",
+  abilityAtBonus_other: "{{count}} caractéristiques à +{{amount}}",
+  orSeparator: " ou ",
+};

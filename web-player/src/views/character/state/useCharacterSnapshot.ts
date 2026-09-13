@@ -10,12 +10,16 @@ export function useCharacterSnapshot(id: string | undefined) {
   const snapshot = React.useRef<Character | null>(null);
   const active = React.useRef(true);
   const activeId = React.useRef(id);
+  const retireScope = React.useCallback(() => {
+    active.current = false;
+    ++revision.current;
+  }, []);
   React.useEffect(() => {
     active.current = true;
     activeId.current = id;
     // Retire the previous scope, including callbacks retained by old actions.
-    return () => { active.current = false; ++revision.current; };
-  }, [id]);
+    return retireScope;
+  }, [id, retireScope]);
 
   const setChar = React.useCallback<React.Dispatch<React.SetStateAction<Character | null>>>((value) => {
     const previous = snapshot.current;

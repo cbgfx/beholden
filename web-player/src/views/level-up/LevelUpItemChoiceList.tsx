@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { api } from "@/services/api";
 import { C, withAlpha } from "@/lib/theme";
@@ -23,6 +24,7 @@ export function LevelUpItemChoiceList({
   max: number;
   onToggle: (id: string) => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const [details, setDetails] = React.useState<Record<string, ItemDetailPreview>>({});
   const disabledIdSet = React.useMemo(() => new Set(disabledIds ?? []), [disabledIds]);
@@ -107,7 +109,7 @@ export function LevelUpItemChoiceList({
               </div>
               {takenElsewhere && (
                 <div style={{ marginTop: 3, fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700 }}>
-                  Already selected elsewhere
+                  {translateUi("Already selected elsewhere")}
                 </div>
               )}
             </button>
@@ -146,7 +148,7 @@ export function LevelUpItemChoiceList({
         </div>
       )}
       {availableItems.length === 0 && (
-        <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>No eligible options found in compendium.</div>
+        <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>{translateUi("No eligible options found in compendium.")}</div>
       )}
     </div>
   );

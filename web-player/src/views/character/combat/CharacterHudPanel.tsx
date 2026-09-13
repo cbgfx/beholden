@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { SHARED_CONDITION_DEFS } from "@beholden/shared/domain";
 import { C } from "@/lib/theme";
@@ -86,6 +87,7 @@ export interface CharacterHudPanelProps {
 }
 
 export function CharacterHudPanel(props: CharacterHudPanelProps) {
+  const translateUi = useUiTranslation("playerUi");
   const {
     char,
     embedded = false,
@@ -192,8 +194,8 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: "var(--fs-body)", fontWeight: 800, color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.6)", gap: 4 }}>
               <IconHeart size={11} style={{ opacity: 0.8 }} />
               {char.hpCurrent} / {displayHpMax}
-              {tempHp > 0 && <span style={{ fontSize: "var(--fs-small)", color: "#fff", fontWeight: 700 }}>+{tempHp} temp</span>}
-              {hpMaxBonus !== 0 && <span style={{ fontSize: "var(--fs-tiny)", color: "#f59e0b" }}>(max {hpMaxBonus > 0 ? "+" : ""}{hpMaxBonus})</span>}
+              {tempHp > 0 && <span style={{ fontSize: "var(--fs-small)", color: "#fff", fontWeight: 700 }}>+{tempHp} {translateUi("temp")}</span>}
+              {hpMaxBonus !== 0 && <span style={{ fontSize: "var(--fs-tiny)", color: "#f59e0b" }}>{translateUi("(max")} {hpMaxBonus > 0 ? "+" : ""}{hpMaxBonus})</span>}
             </div>
           }
         />
@@ -212,10 +214,10 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
         `}</style>
         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "10px 8px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }}>
-            <HexBtn variant="inspiration" active={inspirationActive} title="Toggle Heroic Inspiration" disabled={false} onClick={handleToggleInspiration}>
+            <HexBtn variant="inspiration" active={inspirationActive} title={translateUi("Toggle Heroic Inspiration")} disabled={false} onClick={handleToggleInspiration}>
               <IconInspiration size={22} />
             </HexBtn>
-            <HexBtn variant="damage" title="Apply damage (Enter)" disabled={hpSaving} onClick={() => handleApplyHp("damage")}>
+            <HexBtn variant="damage" title={translateUi("Apply damage (Enter)")} disabled={hpSaving} onClick={() => handleApplyHp("damage")}>
               <IconAttack size={22} />
             </HexBtn>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, flex: 1, minWidth: 0 }}>
@@ -255,13 +257,13 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
                 }}
               />
               <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, minHeight: 14 }}>
-                {lastRoll !== null ? `rolled ${lastRoll}` : hd !== null ? `HD: ${char.level}d${hd}` : ""}
+                {lastRoll !== null ? translateUi("rolled {{value1}}", { value1: lastRoll }) : hd !== null ? translateUi("HD: {{value1}}d{{value2}}", { value1: char.level, value2: hd }) : ""}
               </span>
             </div>
-            <HexBtn variant="heal" title="Apply heal (Shift+Enter)" disabled={hpSaving} onClick={() => handleApplyHp("heal")}>
+            <HexBtn variant="heal" title={translateUi("Apply heal (Shift+Enter)")} disabled={hpSaving} onClick={() => handleApplyHp("heal")}>
               <IconHeal size={22} />
             </HexBtn>
-            <HexBtn variant="conditions" title="Add / remove conditions" disabled={false} onClick={() => setCondPickerOpen((o) => !o)}>
+            <HexBtn variant="conditions" title={translateUi("Add / remove conditions")} disabled={false} onClick={() => setCondPickerOpen((o) => !o)}>
               <IconConditions size={22} />
             </HexBtn>
           </div>
@@ -278,8 +280,8 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
         {(char.conditions ?? []).length > 0 && (
           <div style={{ marginTop: 2 }}>
             <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: accentColor, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
-              <IconConditions size={10} /> Conditions
-              {condSaving && <span style={{ color: C.muted, fontWeight: 400, textTransform: "none", fontSize: "var(--fs-tiny)" }}>saving...</span>}
+              <IconConditions size={10} /> {translateUi("Conditions")}
+              {condSaving && <span style={{ color: C.muted, fontWeight: 400, textTransform: "none", fontSize: "var(--fs-tiny)" }}>{translateUi("saving...")}</span>}
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {[...(char.conditions ?? [])].sort((a, b) => {
@@ -292,10 +294,10 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
                   {cond.key === "concentration" ? (
                     <span
                       onClick={() => { setConcentrationSearch(""); setConcentrationPickerOpen(true); }}
-                      title="Click to set spell"
+                      title={translateUi("Click to set spell")}
                       style={{ cursor: "pointer" }}
                     >
-                      {concentrationSpell ? concentrationSpell : "Concentrating"}
+                      {concentrationSpell ? concentrationSpell : translateUi("Concentrating")}
                     </span>
                   ) : conditionDisplayLabel(cond)}
                   <button

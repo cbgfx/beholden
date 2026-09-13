@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 import type { AddMonsterOptions } from "@/domain/types/domain";
 import { IconButton } from "@/ui/IconButton";
@@ -12,6 +13,7 @@ export function MonsterPickerModal(props: {
   onClose: () => void;
   onAddMonster: (monsterId: string, qty: number, opts?: AddMonsterOptions) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const [compQ, setCompQ] = React.useState("");
 
   React.useEffect(() => {
@@ -30,8 +32,8 @@ export function MonsterPickerModal(props: {
       onClose={props.onClose}
       title={
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5 }}>
-          <div style={{ fontWeight: 900 }}>Add MONSTERS</div>
-          <IconButton title="Close" variant="ghost" onClick={props.onClose}>
+          <div style={{ fontWeight: 900 }}>{translateUi("Add MONSTERS")}</div>
+          <IconButton title={translateUi("Close")} variant="ghost" onClick={props.onClose}>
             <IconClose />
           </IconButton>
         </div>

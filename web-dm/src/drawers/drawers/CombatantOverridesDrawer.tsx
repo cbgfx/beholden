@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
@@ -17,6 +18,7 @@ export function CombatantOverridesDrawer(props: {
   close: () => void;
   refreshEncounter: (eid: string | null) => Promise<void>;
 }): DrawerContent {
+  const translateUi = useUiTranslation("dmUi");
   const { state } = useStore();
   const [initiative, setInitiative] = React.useState("");
   const [color, setColor] = React.useState("");
@@ -66,25 +68,25 @@ if (!combatant) return;
     body: (
       <div style={{ display: "grid", gap: 12 }}>
         <div>
-          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Initiative</div>
+          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("Initiative")}</div>
           <Input value={initiative} onChange={(e) => setInitiative(digitsOrEmpty(e.target.value))} placeholder="0" />
         </div>
 
         {showMonsterFields ? (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
-              <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Friendly</div>
+              <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("Friendly")}</div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <Button variant={friendly ? "primary" : "ghost"} onClick={() => setFriendly(true)} style={{ padding: "6px 10px" }}>
-                  Friendly
+                  {translateUi("Friendly")}
                 </Button>
                 <Button variant={!friendly ? "danger" : "ghost"} onClick={() => setFriendly(false)} style={{ padding: "6px 10px" }}>
-                  Hostile
+                  {translateUi("Hostile")}
                 </Button>
               </div>
             </div>
             <div>
-              <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Color Label</div>
+              <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("Color Label")}</div>
               <ColorChips value={color} onChange={setColor} />
             </div>
           </div>
@@ -92,17 +94,17 @@ if (!combatant) return;
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <div>
-            <div style={{ color: theme.colors.muted, marginBottom: 6 }}>AC bonus</div>
+            <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("AC bonus")}</div>
             <Input value={acBonus} onChange={(e) => setAcBonus(digitsOrEmpty(e.target.value))} placeholder="0" inputMode="numeric" />
           </div>
           <div>
-            <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Temp HP</div>
+            <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("Temp HP")}</div>
             <Input value={tempHp} onChange={(e) => setTempHp(digitsOrEmpty(e.target.value))} placeholder="0" inputMode="numeric" />
           </div>
         </div>
 
         <div>
-          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>HP Modifier</div>
+          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("HP Modifier")}</div>
           <Input value={hpMaxBonus} onChange={(e) => setHpMaxBonus(digitsOrEmpty(e.target.value))} placeholder="0" inputMode="numeric" />
         </div>
       </div>
@@ -110,9 +112,9 @@ if (!combatant) return;
     footer: (
       <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
         <Button variant="ghost" onClick={props.close}>
-          Cancel
+          {translateUi("Cancel")}
         </Button>
-        <Button onClick={submit}>Save</Button>
+        <Button onClick={submit}>{translateUi("Save")}</Button>
       </div>
     )
   };

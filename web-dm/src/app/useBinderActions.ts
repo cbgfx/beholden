@@ -1,3 +1,4 @@
+import { useUiMessages } from "@beholden/shared/i18n/useUiTranslation";
 // web-dm/src/app/useBinderActions.ts
 // Global refresh (meta + campaigns + binders) plus Binder create/rename/delete handlers and the
 // Binder list/modal state they operate on.
@@ -14,6 +15,7 @@ type ConfirmFn = (options: ConfirmOptions) => Promise<boolean>;
 export type BinderModalState = { mode: "create" } | { mode: "rename"; binder: BinderSummary } | null;
 
 export function useBinderActions(dispatch: Dispatch<Action>, confirm: ConfirmFn) {
+  const translateMessage = useUiMessages("dmUi");
   const [binders, setBinders] = useState<BinderSummary[]>([]);
   const [bindersLoaded, setBindersLoaded] = useState(false);
   const [binderModal, setBinderModal] = useState<BinderModalState>(null);
@@ -47,13 +49,13 @@ export function useBinderActions(dispatch: Dispatch<Action>, confirm: ConfirmFn)
     if (!(await confirm({
       title: "Delete Binder",
       message: `Delete “${binder.name}”? Attached campaigns will be kept and detached.`,
-      confirmLabel: "Delete Binder",
+      confirmLabel: translateMessage("Delete Binder"),
       intent: "danger",
     }))) return;
     await deleteBinder(binderId);
     setBinders((current) => current.filter((item) => item.id !== binderId));
     await refreshAll();
-  }, [binders, confirm, refreshAll]);
+  }, [binders, confirm, refreshAll, translateMessage]);
 
   return {
     binders,

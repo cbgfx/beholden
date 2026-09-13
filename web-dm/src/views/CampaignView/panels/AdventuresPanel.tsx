@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";
 import { DraggableList } from "@/components/drag/DraggableList";
@@ -16,18 +17,19 @@ export function AdventuresPanel(props: {
   onExport: (id: string) => void;
   onImport: () => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const { adventures, selectedAdventureId } = props;
 
   return (
     <Panel
       storageKey="campaign-adventures"
-      title={`Adventures (${adventures.length})`}
+      title={translateUi("Adventures ({{value1}})", { value1: adventures.length })}
       actions={
         <div style={{ display: "inline-flex", gap: 4 }}>
-          <IconButton onClick={props.onImport} title="Import adventure" variant="accent">
+          <IconButton onClick={props.onImport} title={translateUi("Import adventure")} variant="accent">
             <IconImport />
           </IconButton>
-          <IconButton onClick={props.onCreate} title="Add adventure" variant="accent">
+          <IconButton onClick={props.onCreate} title={translateUi("Add adventure")} variant="accent">
             <IconPlus />
           </IconButton>
         </div>
@@ -49,9 +51,9 @@ export function AdventuresPanel(props: {
               <div className="campaignRowActions">
                 <RowMenu
                   items={[
-                    { label: "Edit", icon: <IconPencil size={14} />, onClick: () => props.onEdit(it.id) },
-                    { label: "Export", icon: <IconDownload size={14} />, onClick: () => props.onExport(it.id) },
-                    { label: "Delete", icon: <IconTrash size={14} />, danger: true, onClick: () => props.onDelete(it.id) },
+                    { label: translateUi("Edit"), icon: <IconPencil size={14} />, onClick: () => props.onEdit(it.id) },
+                    { label: translateUi("Export"), icon: <IconDownload size={14} />, onClick: () => props.onExport(it.id) },
+                    { label: translateUi("Delete"), icon: <IconTrash size={14} />, danger: true, onClick: () => props.onDelete(it.id) },
                   ]}
                 />
               </div>
@@ -59,7 +61,7 @@ export function AdventuresPanel(props: {
           )}
         />
       ) : (
-        <div style={{ color: theme.colors.muted }}>No adventures yet.</div>
+        <div style={{ color: theme.colors.muted }}>{translateUi("No adventures yet.")}</div>
       )}
     </Panel>
   );

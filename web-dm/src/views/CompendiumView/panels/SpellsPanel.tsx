@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { EmptyState, ListShell } from "@beholden/shared/ui";
 import { Panel } from "@/ui/Panel";
@@ -31,6 +32,7 @@ function rowKey(id: string, ruleset: "5e" | "5.5e" | null | undefined): string {
 }
 
 export function SpellsPanel(props: SpellsPanelProps) {
+  const translateUi = useUiTranslation("dmUi");
   const { dispatch } = useStore();
   const [activeId, setActiveId] = React.useState("");
   const [activeRuleset, setActiveRuleset] = React.useState<"5e" | "5.5e" | null>(null);
@@ -100,16 +102,16 @@ export function SpellsPanel(props: SpellsPanelProps) {
         storageKey="compendium-spells"
         title={(
           <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: "var(--fs-large)" }}>
-            <IconSpells size={36} title="Spells" />
-            <span>Spells</span>
+            <IconSpells size={36} title={translateUi("Spells")} />
+            <span>{translateUi("Spells")}</span>
           </span>
         )}
         actions={(
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
-              {busy ? "Loading..." : `${rows.length}`}
+              {busy ? translateUi("Loading...") : `${rows.length}`}
             </div>
-            {props.editable && <BrowserAddButton title="New spell" onClick={() => setFormTarget({ mode: "create" })} />}
+            {props.editable && <BrowserAddButton title={translateUi("New spell")} onClick={() => setFormTarget({ mode: "create" })} />}
           </div>
         )}
         style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}
@@ -117,7 +119,7 @@ export function SpellsPanel(props: SpellsPanelProps) {
       >
         <input
           value={q}
-          placeholder="Search..."
+          placeholder={translateUi("Search...")}
           onChange={(event) => setQ(event.target.value)}
           style={{
             background: theme.colors.panelBg,
@@ -130,22 +132,22 @@ export function SpellsPanel(props: SpellsPanelProps) {
         />
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
-          <Select value={level} onChange={(event) => setLevel(event.target.value)} style={{ width: "100%" }} title="Filter by level">
-            <option value="all">All Levels</option>
-            <option value="0">Cantrip</option>
+          <Select value={level} onChange={(event) => setLevel(event.target.value)} style={{ width: "100%" }} title={translateUi("Filter by level")}>
+            <option value="all">{translateUi("All Levels")}</option>
+            <option value="0">{translateUi("Cantrip")}</option>
             {Array.from({ length: 9 }).map((_, index) => {
               const n = index + 1;
-              return <option key={n} value={String(n)}>Level {n}</option>;
+              return <option key={n} value={String(n)}>{translateUi("Level")} {n}</option>;
             })}
           </Select>
-          <Select value={schoolFilter} onChange={(event) => setSchoolFilter(event.target.value)} style={{ width: "100%" }} title="Filter by school">
+          <Select value={schoolFilter} onChange={(event) => setSchoolFilter(event.target.value)} style={{ width: "100%" }} title={translateUi("Filter by school")}>
             {schoolOptions.map((school) => (
-              <option key={school} value={school}>{school === "all" ? "All Schools" : expandSchool(school)}</option>
+              <option key={school} value={school}>{school === "all" ? translateUi("All Schools") : expandSchool(school)}</option>
             ))}
           </Select>
-          <Select value={classFilter} onChange={(event) => setClassFilter(event.target.value)} style={{ width: "100%" }} title="Filter by class">
+          <Select value={classFilter} onChange={(event) => setClassFilter(event.target.value)} style={{ width: "100%" }} title={translateUi("Filter by class")}>
             {classOptions.map((cls) => (
-              <option key={cls} value={cls}>{cls === "all" ? "All Classes" : cls}</option>
+              <option key={cls} value={cls}>{cls === "all" ? translateUi("All Classes") : cls}</option>
             ))}
           </Select>
           {availableRulesets.length > 1 && (
@@ -153,9 +155,9 @@ export function SpellsPanel(props: SpellsPanelProps) {
               value={rulesetFilter}
               onChange={(event) => setRulesetFilter(event.target.value as "5e" | "5.5e" | "")}
               style={{ width: "100%" }}
-              title="Filter by ruleset"
+              title={translateUi("Filter by ruleset")}
             >
-              <option value="">All Rulesets</option>
+              <option value="">{translateUi("All Rulesets")}</option>
               <option value="5.5e">5.5e</option>
               <option value="5e">5e</option>
             </Select>
@@ -172,21 +174,21 @@ export function SpellsPanel(props: SpellsPanelProps) {
               key={label}
               type="button"
               onClick={() => setActive(!active)}
-              title={`${active ? "Showing" : "Hiding"} ${title} component spells`}
+              title={translateUi("{{value1}} {{value2}} component spells", { value1: active ? "Showing" : "Hiding", value2: title })}
               style={togglePillStyle(active, true)}
             >
               {label}
             </button>
           ))}
           <button type="button" onClick={() => setFilterConcentration(!filterConcentration)} style={togglePillStyle(filterConcentration)}>
-            Concentration
+            {translateUi("Concentration")}
           </button>
           <button type="button" onClick={() => setFilterRitual(!filterRitual)} style={togglePillStyle(filterRitual)}>
-            Ritual
+            {translateUi("Ritual")}
           </button>
           {hasActiveFilters && (
             <button type="button" onClick={clearFilters} style={togglePillStyle(false)}>
-              Clear
+              {translateUi("Clear")}
             </button>
           )}
         </div>
@@ -228,7 +230,7 @@ export function SpellsPanel(props: SpellsPanelProps) {
 
           {!rows.length && (
             <EmptyState textColor={theme.colors.muted} style={{ padding: 10 }}>
-              No spells found.
+              {translateUi("No spells found.")}
             </EmptyState>
           )}
         </ListShell>

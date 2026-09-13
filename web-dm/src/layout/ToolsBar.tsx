@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useState } from "react";
 import { useMatch } from "react-router-dom";
 import { theme } from "@/theme/theme";
@@ -27,6 +28,7 @@ const TOOLS: { id: ToolId; label: string; Icon: React.ComponentType<{ size?: num
 ];
 
 export function ToolsBar() {
+  const translateUi = useUiTranslation("dmUi");
   const [open, setOpen] = useState<ToolId | null>(null);
   // Once a tool has been opened, keep its component mounted (never unmount it again) so its
   // own internal state (dice expression, drawn cards, generated name, etc.) survives close/reopen
@@ -72,11 +74,11 @@ export function ToolsBar() {
           return (
             <IconButton
               key={id}
-              title={label}
+              title={translateUi(label)}
               onClick={() => toggle(id)}
               variant={active ? "accent" : "ghost"}
             >
-              <Icon size={22} title={label} />
+              <Icon size={22} title={translateUi(label)} />
             </IconButton>
           );
         })}

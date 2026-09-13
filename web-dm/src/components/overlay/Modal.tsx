@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useEffect } from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import { IconButton } from "@/ui/IconButton";
@@ -16,6 +17,7 @@ export function Modal(props: {
   height?: number | "auto";
   children: React.ReactNode;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const { isOpen, onClose } = props;
   useEffect(() => {
     if (!isOpen) return;
@@ -71,7 +73,7 @@ export function Modal(props: {
           }}
         >
           <div style={{ fontWeight: 900, color: theme.colors.text }}>{props.title}</div>
-          <IconButton onClick={props.onClose} title="Close" variant="ghost">
+          <IconButton onClick={props.onClose} title={translateUi("Close")} variant="ghost">
             <IconClose />
           </IconButton>
         </div>

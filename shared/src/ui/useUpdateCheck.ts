@@ -1,8 +1,10 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 type ApiClient = <T>(path: string, init?: RequestInit) => Promise<T>;
 
 export function useUpdateCheck(api: ApiClient, fallbackVersion: string) {
+  const { t } = useTranslation("shared");
   const [state, setState] = React.useState({ currentVersion: fallbackVersion, updateAvailable: false });
   const [updating, setUpdating] = React.useState(false);
   const [message, setMessage] = React.useState("");
@@ -30,20 +32,20 @@ export function useUpdateCheck(api: ApiClient, fallbackVersion: string) {
   }, [api, fallbackVersion]);
 
   const startUpdate = React.useCallback(async () => {
-    if (pending.current || !window.confirm("Pull and build the latest Beholden release now?")) return;
+    if (pending.current || !window.confirm(t("updateCheck.confirmPrompt"))) return;
     pending.current = true;
     setUpdating(true);
     setMessage("");
     try {
       const result = await api<{ message?: string }>("/api/update", { method: "POST" });
-      setMessage(result.message ?? "Update started. Restart Beholden when it finishes.");
+      setMessage(result.message ?? t("updateCheck.defaultStartedMessage"));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not start the update.");
+      setMessage(error instanceof Error ? error.message : t("updateCheck.defaultErrorMessage"));
     } finally {
       pending.current = false;
       setUpdating(false);
     }
-  }, [api]);
+  }, [api, t]);
 
   return { ...state, updating, message, startUpdate };
 }

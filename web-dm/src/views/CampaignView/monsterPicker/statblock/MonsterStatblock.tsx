@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { averageHpFromFormula } from "@beholden/shared/domain/monsters";
 import * as React from "react";
 import { parseLeadingNumber } from "@/lib/parse/statDetails";
@@ -94,6 +95,7 @@ function AttackOverrideInputs({ name, override, defaults, onChange }: {
   defaults: ParsedAttackDefaults;
   onChange: (name: string, patch: AttackOverride) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const toHitDisplay = override?.toHit != null ? fmtToHit(override.toHit) : fmtToHit(defaults.toHit);
   const damageDisplay = override?.damage ?? defaults.damage ?? "";
   const typeDisplay = override?.damageType ?? defaults.damageType ?? "";
@@ -101,7 +103,7 @@ function AttackOverrideInputs({ name, override, defaults, onChange }: {
   return (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-small)" }}>To Hit</div>
+        <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-small)" }}>{translateUi("To Hit")}</div>
         <Input
           value={toHitDisplay}
           onChange={(e) => {
@@ -112,11 +114,11 @@ function AttackOverrideInputs({ name, override, defaults, onChange }: {
         />
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-small)" }}>Damage</div>
+        <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-small)" }}>{translateUi("Damage")}</div>
         <Input value={damageDisplay} onChange={(e) => onChange(name, { damage: e.target.value })} style={{ width: 92 }} />
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-small)" }}>Type</div>
+        <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-small)" }}>{translateUi("Type")}</div>
         <Input value={typeDisplay} onChange={(e) => onChange(name, { damageType: e.target.value })} style={{ width: 92 }} />
       </div>
     </div>
@@ -129,6 +131,7 @@ export function MonsterStatblock(props: {
   attackOverrides?: Record<string, AttackOverride>;
   onChangeAttack?: (actionName: string, patch: AttackOverride) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const m = props.monster;
 
   // ALL hooks must be called unconditionally before any early return
@@ -164,7 +167,7 @@ export function MonsterStatblock(props: {
 
   // Early return AFTER all hooks
   if (!m) {
-    return <div style={{ color: theme.colors.muted }}>Select a monster to preview its stats.</div>;
+    return <div style={{ color: theme.colors.muted }}>{translateUi("Select a monster to preview its stats.")}</div>;
   }
 
   const type = asRecord(m.type)?.type ?? m.type;
@@ -198,10 +201,10 @@ export function MonsterStatblock(props: {
 
       {spells.groupedSpells.length > 0 && <MonsterSpellPanel spells={spells} />}
 
-      <TextBlock items={nonSpellTraits} title="Traits" />
+      <TextBlock items={nonSpellTraits} title={translateUi("Traits")} />
 
       {nonSpellActions.length > 0 && (
-        <MonsterSectionPanel title="Actions">
+        <MonsterSectionPanel title={translateUi("Actions")}>
           <div style={{ display: "grid", gap: 8 }}>
             {nonSpellActions.map((a, i: number) => {
               const name = String(a.name ?? a.title ?? "");
@@ -226,8 +229,8 @@ export function MonsterStatblock(props: {
         </MonsterSectionPanel>
       )}
 
-      <TextBlock items={nonSpellReactions} title="Reactions" />
-      <TextBlock items={legendary} title="Legendary Actions" />
+      <TextBlock items={nonSpellReactions} title={translateUi("Reactions")} />
+      <TextBlock items={legendary} title={translateUi("Legendary Actions")} />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { DragGhostCard } from "@beholden/shared/ui";
 import { C } from "@/lib/theme";
 import { PANEL_TITLES, type PanelId } from "@/views/character/layout/panelRegistry";
@@ -7,6 +8,7 @@ import { PANEL_TITLES, type PanelId } from "@/views/character/layout/panelRegist
  * this hook started with was missing. Purely visual: `pointer-events: none`
  * so it never itself becomes a drop target. */
 export function PanelDragGhost(props: { id: PanelId; x: number; y: number }) {
+  const translateUi = useUiTranslation("playerUi");
   return (
     <DragGhostCard
       x={props.x}
@@ -21,7 +23,7 @@ export function PanelDragGhost(props: { id: PanelId; x: number; y: number }) {
         whiteSpace: "nowrap",
       }}
     >
-      {PANEL_TITLES[props.id]}
+      {translateUi(PANEL_TITLES[props.id])}
     </DragGhostCard>
   );
 }

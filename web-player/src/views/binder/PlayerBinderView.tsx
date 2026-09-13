@@ -1,4 +1,6 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { IconBinder, IconCampaign, IconGender, IconPlayers, IconShield } from "@/icons";
 import { GameIcon } from "@/icons/GameIcon";
@@ -42,10 +44,11 @@ function portraitSrc(mortal: Mortal) {
 }
 
 function StatusPill({ status }: { status: string | null }) {
-  if (!status) return <span style={{ color: C.muted }}>None</span>;
+  const { t } = useTranslation();
+  if (!status) return <span style={{ color: C.muted }}>{t("playerBinderView.none")}</span>;
   const dead = status === "dead";
   const color = dead ? "#ff5c65" : "#5bd36b";
-  return <span style={{ display: "inline-flex", padding: "2px 9px", borderRadius: 6, color: "#fff", background: color, fontSize: "var(--fs-small)", lineHeight: 1.35, fontWeight: 850 }}>{dead ? "Dead" : "Alive"}</span>;
+  return <span style={{ display: "inline-flex", padding: "2px 9px", borderRadius: 6, color: "#fff", background: color, fontSize: "var(--fs-small)", lineHeight: 1.35, fontWeight: 850 }}>{dead ? t("playerBinderView.statusDead") : t("playerBinderView.statusAlive")}</span>;
 }
 
 function PublicPlaceIcon({ record, size = 22 }: { record: PublicRecord; size?: number }) {
@@ -57,8 +60,25 @@ function PublicPlaceIcon({ record, size = 22 }: { record: PublicRecord; size?: n
 }
 
 export function PlayerBinderView() {
+  const translateUi = useUiTranslation("playerUi");
+  const { t } = useTranslation();
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  // Column/filter labels for mortal fields are looked up by key so the same
+  // translated word is reused everywhere that field name is displayed
+  // (table header, filter chip, filter dropdown).
+  const fieldLabel = (key: keyof MortalFilters | "age"): string => {
+    const labels: Record<keyof MortalFilters | "age", string> = {
+      position: t("playerBinderView.fieldPosition"),
+      organization: t("playerBinderView.fieldOrganization"),
+      location: t("playerBinderView.fieldLocation"),
+      species: t("playerBinderView.fieldSpecies"),
+      age: t("playerBinderView.fieldAge"),
+      gender: t("playerBinderView.fieldGender"),
+      status: t("playerBinderView.fieldStatus"),
+    };
+    return labels[key];
+  };
   const [data, setData] = useState<PlayerBinder | null>(null);
   // `section`/`selectedId` live in the URL, not plain useState -- drilling
   // into a mortal/campaign/deity/place is a real navigation (pushes a
@@ -97,10 +117,10 @@ export function PlayerBinderView() {
     api<PlayerBinder>(`/api/me/characters/${id}/binder`).then((value) => {
       if (!cancelled) setData(value);
     }).catch(() => {
-      if (!cancelled) setError("This character is not attached to a Binder.");
+      if (!cancelled) setError(t("playerBinderView.notAttachedError"));
     });
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, t]);
   const selected = data?.mortals.find((mortal) => mortal.id === selectedId) ?? null;
   const selectedPublicRecord = (section === "deities" ? data?.deities : data?.places)?.find((record) => record.id === selectedId) ?? null;
   const selectedCampaign = data?.campaigns.find((campaign) => campaign.id === selectedId) ?? null;
@@ -135,27 +155,27 @@ export function PlayerBinderView() {
   const accent = data?.binder.color ?? "#38b6ff";
 
   if (error) return <main style={{ padding: 30, color: C.text }}>{error}</main>;
-  if (!data) return <main style={{ padding: 30, color: C.muted }}>Loading Binder…</main>;
+  if (!data) return <main style={{ padding: 30, color: C.muted }}>{t("playerBinderView.loadingBinder")}</main>;
 
   const navGroups: Array<{ label: string | null; items: Array<{ key: typeof section; label: string; count: number; icon: React.ReactNode; color: string }> }> = [
-    { label: null, items: [{ key: "campaigns", label: "Campaigns", count: data.campaigns.length, icon: <IconCampaign size={20}/>, color: "#3b82f6" }] },
-    { label: "People", items: [
-      { key: "mortals", label: "Mortals", count: data.mortals.length, icon: <IconPlayers size={20}/>, color: "#ef5350" },
-      { key: "deities", label: "Deities", count: data.deities.length, icon: <GameIcon icon="game-icons:greek-temple" size={20}/>, color: "#a78bfa" },
+    { label: null, items: [{ key: "campaigns", label: t("playerBinderView.navCampaigns"), count: data.campaigns.length, icon: <IconCampaign size={20}/>, color: "#3b82f6" }] },
+    { label: t("playerBinderView.groupPeople"), items: [
+      { key: "mortals", label: t("playerBinderView.navMortals"), count: data.mortals.length, icon: <IconPlayers size={20}/>, color: "#ef5350" },
+      { key: "deities", label: t("playerBinderView.navDeities"), count: data.deities.length, icon: <GameIcon icon="game-icons:greek-temple" size={20}/>, color: "#a78bfa" },
     ] },
-    { label: "Places", items: [{ key: "places", label: "Places", count: data.places.length, icon: <GameIcon icon="game-icons:village" size={20}/>, color: "#22c55e" }] },
+    { label: t("playerBinderView.groupPlaces"), items: [{ key: "places", label: t("playerBinderView.navPlaces"), count: data.places.length, icon: <GameIcon icon="game-icons:village" size={20}/>, color: "#22c55e" }] },
   ];
 
   return (
     <main style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden", color: C.text }}>
       <header style={{ flex: "0 0 auto", padding: "20px 30px", borderBottom: `1px solid ${accent}55`, display: "flex", alignItems: "center", gap: 14 }}>
         <IconBinder size={38} />
-        <div><h1 style={{ margin: 0, fontSize: "var(--fs-hero)" }}>{data.binder.name}</h1><div style={{ color: C.muted }}>Binder</div></div>
-        <Button variant="ghost" onClick={() => navigate(`/characters/${id}`)} style={{ marginLeft: "auto" }}>← Character Sheet</Button>
+        <div><h1 style={{ margin: 0, fontSize: "var(--fs-hero)" }}>{data.binder.name}</h1><div style={{ color: C.muted }}>{t("playerBinderView.binderSubtitle")}</div></div>
+        <Button variant="ghost" onClick={() => navigate(`/characters/${id}`)} style={{ marginLeft: "auto" }}>{"← "}{t("playerBinderView.characterSheet")}</Button>
       </header>
       <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "260px minmax(0,1fr)", overflow: "hidden" }}>
         <aside style={{ minHeight: 0, overflowY: "auto", padding: 14, borderRight: "1px solid rgba(255,255,255,.08)" }}>
-          <nav aria-label="Binder sections" style={{ display: "grid", gap: 14, padding: 14, border: "1px solid rgba(255,255,255,.08)", borderRadius: 14, background: "rgba(255,255,255,.018)" }}>
+          <nav aria-label={t("playerBinderView.sectionsAriaLabel")} style={{ display: "grid", gap: 14, padding: 14, border: "1px solid rgba(255,255,255,.08)", borderRadius: 14, background: "rgba(255,255,255,.018)" }}>
             {navGroups.map((group, groupIndex) => <div key={group.label ?? "campaigns"} style={{ display: "grid", gap: 4 }}>
               {group.label ? <div style={{ margin: groupIndex ? "4px 10px 3px" : "0 10px 3px", color: C.muted, fontSize: "var(--fs-tiny)", fontWeight: 850, letterSpacing: ".12em", textTransform: "uppercase" }}>{group.label}</div> : null}
               {group.items.map((item) => {
@@ -172,13 +192,13 @@ export function PlayerBinderView() {
         <section style={{ minWidth: 0, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", padding: "24px clamp(18px,3vw,38px) 60px" }}>
           {section === "campaigns" ? (
             selectedCampaign ? <>
-              <button type="button" onClick={() => setSelectedId(null)} style={{ border:0,padding:0,marginBottom:18,background:"transparent",color:C.muted,cursor:"pointer",font:"inherit" }}>← All Campaigns</button>
-              <article style={{ maxWidth:1180,padding:"6px 4px 60px" }}><div style={{display:"flex",gap:13,alignItems:"center",marginBottom:28}}><IconCampaign size={38}/><div><div style={{color:C.muted,fontSize:"var(--fs-small)",textTransform:"uppercase",fontWeight:750}}>Campaign</div><div style={{color:accent,marginTop:3}}>{selectedCampaign.currentDate ? `Current date: ${selectedCampaign.currentDate}` : "Current Date"}</div></div></div><section style={{paddingTop:20,borderTop:`1px solid ${accent}2e`}}><h2>Campaign Story</h2><div style={{lineHeight:1.65,color:selectedCampaign.story ? C.text : C.muted}}>{selectedCampaign.story ? <MarkdownRichText text={selectedCampaign.story} binderId={data.binder.id}/> : "No campaign story yet."}</div></section></article>
-            </> : <><h2 style={{marginTop:0}}>Campaigns</h2><div style={{display:"grid",gap:8}}>{data.campaigns.map((campaign) => <button key={campaign.id} type="button" onClick={() => setSelectedId(campaign.id)} style={{padding:"14px 16px",border:"1px solid rgba(255,255,255,.09)",borderRadius:10,background:"rgba(255,255,255,.025)",color:C.text,textAlign:"left",cursor:"pointer",font:"inherit",fontWeight:800}}>{campaign.name}<span style={{display:"block",marginTop:4,color:C.muted,fontSize:"var(--fs-small)",fontWeight:500}}>{campaign.currentDate ? `Current date: ${campaign.currentDate}` : "Current Date"}</span></button>)}</div></>
+              <button type="button" onClick={() => setSelectedId(null)} style={{ border:0,padding:0,marginBottom:18,background:"transparent",color:C.muted,cursor:"pointer",font:"inherit" }}>{"← "}{t("playerBinderView.allCampaigns")}</button>
+              <article style={{ maxWidth:1180,padding:"6px 4px 60px" }}><div style={{display:"flex",gap:13,alignItems:"center",marginBottom:28}}><IconCampaign size={38}/><div><div style={{color:C.muted,fontSize:"var(--fs-small)",textTransform:"uppercase",fontWeight:750}}>{t("playerBinderView.campaignLabel")}</div><div style={{color:accent,marginTop:3}}>{selectedCampaign.currentDate ? t("playerBinderView.currentDate", { date: selectedCampaign.currentDate }) : t("playerBinderView.currentDateFallback")}</div></div></div><section style={{paddingTop:20,borderTop:`1px solid ${accent}2e`}}><h2>{t("playerBinderView.campaignStory")}</h2><div style={{lineHeight:1.65,color:selectedCampaign.story ? C.text : C.muted}}>{selectedCampaign.story ? <MarkdownRichText text={selectedCampaign.story} binderId={data.binder.id}/> : t("playerBinderView.noCampaignStory")}</div></section></article>
+            </> : <><h2 style={{marginTop:0}}>{t("playerBinderView.navCampaigns")}</h2><div style={{display:"grid",gap:8}}>{data.campaigns.map((campaign) => <button key={campaign.id} type="button" onClick={() => setSelectedId(campaign.id)} style={{padding:"14px 16px",border:"1px solid rgba(255,255,255,.09)",borderRadius:10,background:"rgba(255,255,255,.025)",color:C.text,textAlign:"left",cursor:"pointer",font:"inherit",fontWeight:800}}>{campaign.name}<span style={{display:"block",marginTop:4,color:C.muted,fontSize:"var(--fs-small)",fontWeight:500}}>{campaign.currentDate ? t("playerBinderView.currentDate", { date: campaign.currentDate }) : t("playerBinderView.currentDateFallback")}</span></button>)}</div></>
           ) : section === "deities" || section === "places" ? (
             selectedPublicRecord ? <>
-              <h2 style={{ margin: "0 0 18px", fontSize: "var(--fs-hero)" }}>{section === "deities" ? "Deities" : "Places"}</h2>
-              <button type="button" onClick={() => setSelectedId(null)} style={{ border:0,padding:0,marginBottom:18,background:"transparent",color:C.muted,cursor:"pointer",font:"inherit" }}>← All {section === "deities" ? "Deities" : "Places"}</button>
+              <h2 style={{ margin: "0 0 18px", fontSize: "var(--fs-hero)" }}>{section === "deities" ? t("playerBinderView.navDeities") : t("playerBinderView.navPlaces")}</h2>
+              <button type="button" onClick={() => setSelectedId(null)} style={{ border:0,padding:0,marginBottom:18,background:"transparent",color:C.muted,cursor:"pointer",font:"inherit" }}>{"← "}{section === "deities" ? t("playerBinderView.allDeities") : t("playerBinderView.allPlaces")}</button>
               <article style={{ border: `1px solid ${accent}55`, borderRadius: 15, background: "rgba(255,255,255,.035)", overflow: "hidden" }}>
                 <div style={{ height: 4, background: accent }}/>
                 <div style={{ padding: 24, display: "grid", gap: 26, maxWidth: 1240 }}>
@@ -186,62 +206,62 @@ export function PlayerBinderView() {
                     {selectedPublicRecord.type === "deity" ? <div style={{ width: 84, height: 84, border: `1px dashed ${accent}55`, borderRadius: 10, overflow: "hidden", background: `${accent}12`, flex: "0 0 auto" }}>{selectedPublicRecord.imageUrl ? <img src={`${selectedPublicRecord.imageUrl}${selectedPublicRecord.imageUpdatedAt ? `?v=${selectedPublicRecord.imageUpdatedAt}` : ""}`} alt={`${selectedPublicRecord.name} portrait`} style={{ width: "100%", height: "100%", objectFit: "cover" }}/> : null}</div> : <span style={{ width: 54, height: 54, display: "grid", placeItems: "center", color: accent }}><PublicPlaceIcon record={selectedPublicRecord} size={34}/></span>}
                     <h2 style={{ margin: 0, fontSize: "calc(var(--fs-hero) * .9)" }}>{selectedPublicRecord.name}</h2>
                   </div>
-                  {selectedPublicRecord.type === "deity" ? <section><div style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: ".06em" }}>Rank</div><div style={{ marginTop: 9, width: "min(280px,100%)", padding: "10px 12px", border: "1px solid rgba(255,255,255,.12)", borderRadius: 9, background: "rgba(0,0,0,.18)", color: selectedPublicRecord.rank === "Greater God" ? "#3b82f6" : selectedPublicRecord.rank === "Lesser God" ? "#e5484d" : selectedPublicRecord.rank === "Overpower" ? "#30a46c" : C.muted, fontWeight: 800 }}>{selectedPublicRecord.rank ?? "None"}</div></section> : null}
-                  <section><div style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 12 }}>Description</div><div style={{ minHeight: 72, padding: "8px 9px", color: selectedPublicRecord.description ? C.text : C.muted, lineHeight: 1.55 }}>{selectedPublicRecord.description ? <MarkdownRichText text={selectedPublicRecord.description} binderId={data.binder.id}/> : "No description yet."}</div></section>
-                  {selectedPublicRecord.type === "deity" ? <section><div style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: ".06em" }}>Domains</div><div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 9 }}>{selectedPublicRecord.domains?.length ? selectedPublicRecord.domains.map((domain) => <span key={domain} style={{ padding: "5px 11px", borderRadius: 999, border: `1px solid ${accent}4d`, background: `${accent}24`, fontSize: "var(--fs-small)" }}>{domain}</span>) : <span style={{ color: C.muted }}>None</span>}</div></section> : selectedPublicRecord.parentName ? <section><div style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: ".06em" }}>Parent</div><div style={{ marginTop: 7 }}>{selectedPublicRecord.parentName}</div></section> : null}
-                  <section style={{ paddingTop: 20, borderTop: "1px solid rgba(255,255,255,.09)" }}><h3 style={{ margin: 0 }}>Mentioned in</h3><div style={{ marginTop: 13, color: C.muted }}>None</div></section>
+                  {selectedPublicRecord.type === "deity" ? <section><div style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: ".06em" }}>{t("playerBinderView.rank")}</div><div style={{ marginTop: 9, width: "min(280px,100%)", padding: "10px 12px", border: "1px solid rgba(255,255,255,.12)", borderRadius: 9, background: "rgba(0,0,0,.18)", color: selectedPublicRecord.rank === "Greater God" ? "#3b82f6" : selectedPublicRecord.rank === "Lesser God" ? "#e5484d" : selectedPublicRecord.rank === "Overpower" ? "#30a46c" : C.muted, fontWeight: 800 }}>{selectedPublicRecord.rank ?? t("playerBinderView.none")}</div></section> : null}
+                  <section><div style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 12 }}>{t("playerBinderView.description")}</div><div style={{ minHeight: 72, padding: "8px 9px", color: selectedPublicRecord.description ? C.text : C.muted, lineHeight: 1.55 }}>{selectedPublicRecord.description ? <MarkdownRichText text={selectedPublicRecord.description} binderId={data.binder.id}/> : t("playerBinderView.noDescriptionYet")}</div></section>
+                  {selectedPublicRecord.type === "deity" ? <section><div style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: ".06em" }}>{t("playerBinderView.domains")}</div><div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 9 }}>{selectedPublicRecord.domains?.length ? selectedPublicRecord.domains.map((domain) => <span key={domain} style={{ padding: "5px 11px", borderRadius: 999, border: `1px solid ${accent}4d`, background: `${accent}24`, fontSize: "var(--fs-small)" }}>{domain}</span>) : <span style={{ color: C.muted }}>{t("playerBinderView.none")}</span>}</div></section> : selectedPublicRecord.parentName ? <section><div style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: ".06em" }}>{t("playerBinderView.parent")}</div><div style={{ marginTop: 7 }}>{selectedPublicRecord.parentName}</div></section> : null}
+                  <section style={{ paddingTop: 20, borderTop: "1px solid rgba(255,255,255,.09)" }}><h3 style={{ margin: 0 }}>{t("playerBinderView.mentionedIn")}</h3><div style={{ marginTop: 13, color: C.muted }}>{t("playerBinderView.none")}</div></section>
                 </div>
               </article>
             </> : <>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, marginBottom: 14 }}>
-                <h2 style={{ margin: 0 }}>{section === "deities" ? "Deities" : "Places"}</h2>
-                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${section}…`} style={{ width: 360, maxWidth: "45%", padding: "9px 12px", borderRadius: 9, border: "1px solid rgba(255,255,255,.12)", background: "rgba(0,0,0,.18)", color: C.text, font: "inherit" }}/>
+                <h2 style={{ margin: 0 }}>{section === "deities" ? t("playerBinderView.navDeities") : t("playerBinderView.navPlaces")}</h2>
+                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={section === translateUi("deities") ? t("playerBinderView.searchPlaceholderDeities") : t("playerBinderView.searchPlaceholderPlaces")} style={{ width: 360, maxWidth: "45%", padding: "9px 12px", borderRadius: 9, border: "1px solid rgba(255,255,255,.12)", background: "rgba(0,0,0,.18)", color: C.text, font: "inherit" }}/>
               </div>
               <div style={{ border: "1px solid rgba(255,255,255,.09)", borderRadius: 13, overflow: "hidden" }}>
                 <div style={{ display: "grid", gridTemplateColumns: section === "deities" ? "minmax(220px,1fr) minmax(300px,2fr) 150px" : "minmax(240px,1.2fr) 150px minmax(220px,1fr)", gap: 12, padding: "12px 15px", background: `${accent}14`, borderBottom: "1px solid rgba(255,255,255,.09)", fontWeight: 750 }}>
-                  <span style={{ color: accent }}>Name ▲</span>
-                  <span>{section === "deities" ? "Domains" : "Type"}</span>
-                  <span>{section === "deities" ? "Rank" : "Parent"}</span>
+                  <span style={{ color: accent }}>{t("playerBinderView.nameColumn")} ▲</span>
+                  <span>{section === "deities" ? t("playerBinderView.domains") : t("playerBinderView.type")}</span>
+                  <span>{section === "deities" ? t("playerBinderView.rank") : t("playerBinderView.parent")}</span>
                 </div>
                 {filteredPublicRecords.map((record) => <button key={record.id} type="button" onClick={() => setSelectedId(record.id)} style={{ width: "100%", display: "grid", gridTemplateColumns: section === "deities" ? "minmax(220px,1fr) minmax(300px,2fr) 150px" : "minmax(240px,1.2fr) 150px minmax(220px,1fr)", gap: 12, alignItems: "center", padding: "13px 15px", border: 0, borderBottom: "1px solid rgba(255,255,255,.08)", background: "transparent", color: C.text, textAlign: "left", cursor: "pointer", font: "inherit" }}>
                   <span style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 10, fontWeight: 750 }}>
                     {record.imageUrl ? <img src={`${record.imageUrl}${record.imageUpdatedAt ? `?v=${record.imageUpdatedAt}` : ""}`} alt="" style={{ width: 38, height: 38, borderRadius: 6, objectFit: "cover", flex: "0 0 auto" }}/> : record.type === "deity" ? <span style={{ width: 38, height: 38, borderRadius: 6, background: `${accent}1f`, flex: "0 0 auto" }}/> : <span style={{ width: 38, height: 38, display: "grid", placeItems: "center", color: accent, flex: "0 0 auto" }}><PublicPlaceIcon record={record}/></span>}
                     <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{record.name}</span>
                   </span>
-                  <span style={{ color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{section === "deities" ? record.domains?.join(", ") || "None" : record.type === "poi" ? "Point of Interest" : record.type[0]!.toUpperCase()+record.type.slice(1)}</span>
-                  <span style={{ color: section === "deities" && record.rank === "Greater God" ? "#3b82f6" : section === "deities" && record.rank === "Lesser God" ? "#e5484d" : section === "deities" && record.rank === "Overpower" ? "#30a46c" : C.muted, fontWeight: section === "deities" ? 800 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{section === "deities" ? record.rank ?? "None" : record.parentName ?? "None"}</span>
+                  <span style={{ color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{section === "deities" ? record.domains?.join(", ") || t("playerBinderView.none") : record.type === "poi" ? t("playerBinderView.pointOfInterest") : record.type[0]!.toUpperCase()+record.type.slice(1)}</span>
+                  <span style={{ color: section === "deities" && record.rank === "Greater God" ? "#3b82f6" : section === "deities" && record.rank === "Lesser God" ? "#e5484d" : section === "deities" && record.rank === "Overpower" ? "#30a46c" : C.muted, fontWeight: section === "deities" ? 800 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{section === "deities" ? record.rank ?? t("playerBinderView.none") : record.parentName ?? t("playerBinderView.none")}</span>
                 </button>)}
-                {!filteredPublicRecords.length ? <div style={{ padding: 48, textAlign: "center", color: C.muted }}>No {section} match your search.</div> : null}
+                {!filteredPublicRecords.length ? <div style={{ padding: 48, textAlign: "center", color: C.muted }}>{section === "deities" ? t("playerBinderView.noRecordsMatchDeities") : t("playerBinderView.noRecordsMatchPlaces")}</div> : null}
               </div>
             </>
           ) : selected ? (
             <>
-              <button type="button" onClick={() => setSelectedId(null)} style={{ border: 0, padding: 0, marginBottom: 18, background: "transparent", color: C.muted, cursor: "pointer", font: "inherit" }}>← All Mortals</button>
+              <button type="button" onClick={() => setSelectedId(null)} style={{ border: 0, padding: 0, marginBottom: 18, background: "transparent", color: C.muted, cursor: "pointer", font: "inherit" }}>{"← "}{t("playerBinderView.allMortals")}</button>
               <article style={{ border: `1px solid ${accent}55`, borderRadius: 15, background: "rgba(255,255,255,.035)", overflow: "hidden" }}>
                 <div style={{ height: 4, background: accent }}/>
                 <div style={{ padding: 20, display: "grid", gap: 16, maxWidth: 1240 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                    <button type="button" disabled={!portraitSrc(selected)} onClick={() => setLightboxSrc(portraitSrc(selected))} title={portraitSrc(selected) ? "View full portrait" : undefined} style={{ width: 84, height: 84, padding: 0, border: `1px solid ${accent}4d`, borderRadius: 10, overflow: "hidden", background: `${accent}1a`, display: "grid", placeItems: "center", color: C.muted, flex: "0 0 auto", cursor: portraitSrc(selected) ? "zoom-in" : "default" }}>{portraitSrc(selected) ? <img src={portraitSrc(selected)!} alt={`${selected.name} portrait`} style={{ width: "100%", height: "100%", objectFit: "cover" }}/> : <span style={{ fontSize: "var(--fs-small)", opacity: .72 }}>Portrait</span>}</button>
+                    <button type="button" disabled={!portraitSrc(selected)} onClick={() => setLightboxSrc(portraitSrc(selected))} title={portraitSrc(selected) ? t("playerBinderView.viewFullPortrait") : undefined} style={{ width: 84, height: 84, padding: 0, border: `1px solid ${accent}4d`, borderRadius: 10, overflow: "hidden", background: `${accent}1a`, display: "grid", placeItems: "center", color: C.muted, flex: "0 0 auto", cursor: portraitSrc(selected) ? "zoom-in" : "default" }}>{portraitSrc(selected) ? <img src={portraitSrc(selected)!} alt={t("playerBinderView.portraitAlt", { name: selected.name })} style={{ width: "100%", height: "100%", objectFit: "cover" }}/> : <span style={{ fontSize: "var(--fs-small)", opacity: .72 }}>{t("playerBinderView.portraitFallback")}</span>}</button>
                     <h2 style={{ margin: 0, fontSize: "calc(var(--fs-hero) * .9)" }}>{selected.name}</h2>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", columnGap: 30, rowGap: 0 }}>
                     {[
-                      ["Position",selected.position,selected.positionIcon ? <GameIcon icon={selected.positionIcon} size={16}/> : <IconShield size={16}/>],["Org",selected.organization ? <span style={{display:"inline-flex",alignItems:"center",gap:6}}>{selected.organizationIcon ? <GameIcon icon={selected.organizationIcon} size={14}/> : null}{selected.organization}</span> : null,<GameIcon icon="game-icons:organigram"/>],["Location",selected.location,<GameIcon icon="game-icons:village"/>],
-                      ["Race",selected.species,<GameIcon icon="game-icons:dna1"/>],["Age",ageOf(selected, data.binder.currentDateSort),<GameIcon icon="game-icons:cake-slice"/>],["Gender",selected.gender,<IconGender size={16}/>],["Status",selected.lifeStatus,<GameIcon icon="game-icons:half-dead"/>],
-                    ].map(([label,value,icon]) => <div key={String(label)} style={{ minHeight: 42, padding: "8px 2px", borderBottom: `1px solid ${accent}24`, display: "grid", gridTemplateColumns: "105px minmax(0, 1fr)", alignItems: "center", gap: 10 }}><strong style={{ color: C.muted, fontSize: "var(--fs-small)", display: "inline-flex", alignItems: "center", gap: 6 }}>{icon}{label}</strong><span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{label === "Status" ? <StatusPill status={value ? String(value) : null} /> : label === "Gender" && value ? <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: value === "female" ? "#f9a8d4" : "#7dd3fc", background: value === "female" ? "rgba(249,168,212,.16)" : "rgba(125,211,252,.16)", fontWeight: 750 }}>{String(value)[0]!.toUpperCase()+String(value).slice(1)}</span> : value || "None"}</span></div>)}
+                      [t("playerBinderView.fieldPosition"),selected.position,selected.positionIcon ? <GameIcon icon={selected.positionIcon} size={16}/> : <IconShield size={16}/>],[t("playerBinderView.fieldOrg"),selected.organization ? <span style={{display:"inline-flex",alignItems:"center",gap:6}}>{selected.organizationIcon ? <GameIcon icon={selected.organizationIcon} size={14}/> : null}{selected.organization}</span> : null,<GameIcon icon="game-icons:organigram"/>],[t("playerBinderView.fieldLocation"),selected.location,<GameIcon icon="game-icons:village"/>],
+                      [t("playerBinderView.fieldRace"),selected.species,<GameIcon icon="game-icons:dna1"/>],[t("playerBinderView.fieldAge"),ageOf(selected, data.binder.currentDateSort),<GameIcon icon="game-icons:cake-slice"/>],[t("playerBinderView.fieldGender"),selected.gender,<IconGender size={16}/>],[t("playerBinderView.fieldStatus"),selected.lifeStatus,<GameIcon icon="game-icons:half-dead"/>],
+                    ].map(([label,value,icon]) => <div key={String(label)} style={{ minHeight: 42, padding: "8px 2px", borderBottom: `1px solid ${accent}24`, display: "grid", gridTemplateColumns: "105px minmax(0, 1fr)", alignItems: "center", gap: 10 }}><strong style={{ color: C.muted, fontSize: "var(--fs-small)", display: "inline-flex", alignItems: "center", gap: 6 }}>{icon}{label}</strong><span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{label === t("playerBinderView.fieldStatus") ? <StatusPill status={value ? String(value) : null} /> : label === t("playerBinderView.fieldGender") && value ? <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: value === "female" ? "#f9a8d4" : "#7dd3fc", background: value === "female" ? "rgba(249,168,212,.16)" : "rgba(125,211,252,.16)", fontWeight: 750 }}>{String(value)[0]!.toUpperCase()+String(value).slice(1)}</span> : value || t("playerBinderView.none")}</span></div>)}
                   </div>
-                  {(selected.description || selected.backstory) ? <section style={{ marginTop: 24 }}><h3>Notes</h3><div style={{ lineHeight: 1.65 }}><MarkdownRichText text={selected.description || selected.backstory || ""} binderId={data.binder.id}/></div></section> : null}
+                  {(selected.description || selected.backstory) ? <section style={{ marginTop: 24 }}><h3>{t("playerBinderView.notes")}</h3><div style={{ lineHeight: 1.65 }}><MarkdownRichText text={selected.description || selected.backstory || ""} binderId={data.binder.id}/></div></section> : null}
                 </div>
               </article>
             </>
           ) : (
             <>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, marginBottom: 12 }}><h2 style={{ margin: 0, fontSize: "var(--fs-title)" }}>Mortals</h2><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search mortals…" style={{ width: 300, maxWidth: "45%", padding: "9px 12px", borderRadius: 9, border: "1px solid rgba(255,255,255,.12)", background: "rgba(0,0,0,.18)", color: C.text, font: "inherit" }}/></div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, marginBottom: 12 }}><h2 style={{ margin: 0, fontSize: "var(--fs-title)" }}>{t("playerBinderView.navMortals")}</h2><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("playerBinderView.searchMortalsPlaceholder")} style={{ width: 300, maxWidth: "45%", padding: "9px 12px", borderRadius: 9, border: "1px solid rgba(255,255,255,.12)", background: "rgba(0,0,0,.18)", color: C.text, font: "inherit" }}/></div>
               <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 14 }}>
-                {(Object.keys(emptyFilters()) as Array<keyof MortalFilters>).map((key) => <SearchableMultiFilter key={key} label={key[0]!.toUpperCase()+key.slice(1)} width={key === "organization" ? 175 : 150} selected={filters[key]} options={filterOptions[key].map((value) => ({ value, label: value[0]!.toUpperCase()+value.slice(1) }))} onAdd={(value) => setFilters((current) => ({ ...current, [key]: [...current[key], value] }))} theme={{ radius: 9, panelBorder: "rgba(255,255,255,.12)", inputBg: "#0d1525", text: C.text, muted: C.muted }} />)}
-                {Object.values(filters).some((values) => values.length) ? <button type="button" onClick={() => setFilters(emptyFilters())} style={{ border: 0, background: "transparent", color: accent, cursor: "pointer", font: "inherit", fontWeight: 750 }}>Clear</button> : null}
+                {(Object.keys(emptyFilters()) as Array<keyof MortalFilters>).map((key) => <SearchableMultiFilter key={key} label={fieldLabel(key)} width={key === "organization" ? 175 : 150} selected={filters[key]} options={filterOptions[key].map((value) => ({ value, label: value[0]!.toUpperCase()+value.slice(1) }))} onAdd={(value) => setFilters((current) => ({ ...current, [key]: [...current[key], value] }))} theme={{ radius: 9, panelBorder: "rgba(255,255,255,.12)", inputBg: "#0d1525", text: C.text, muted: C.muted }} />)}
+                {Object.values(filters).some((values) => values.length) ? <button type="button" onClick={() => setFilters(emptyFilters())} style={{ border: 0, background: "transparent", color: accent, cursor: "pointer", font: "inherit", fontWeight: 750 }}>{t("playerBinderView.clear")}</button> : null}
               </div>
-              {Object.entries(filters).some(([,values]) => values.length) ? <div style={{ display:"flex",gap:7,flexWrap:"wrap",marginBottom:14 }}>{(Object.entries(filters) as Array<[keyof MortalFilters,string[]]>).flatMap(([key,values]) => values.map((value) => <button key={`${key}:${value}`} type="button" onClick={() => setFilters((current) => ({...current,[key]:current[key].filter((item) => item !== value)}))} style={{ display:"inline-flex",gap:5,padding:"2px 7px",border:`1px solid ${accent}7a`,borderRadius:999,background:`${accent}1f`,color:C.text,cursor:"pointer",font:"inherit",fontSize:"var(--fs-tiny)",fontWeight:800 }}><span style={{color:accent}}>{key[0]!.toUpperCase()+key.slice(1)}</span>{value} <span style={{color:"#ff5c65"}}>×</span></button>))}</div> : null}
+              {Object.entries(filters).some(([,values]) => values.length) ? <div style={{ display:"flex",gap:7,flexWrap:"wrap",marginBottom:14 }}>{(Object.entries(filters) as Array<[keyof MortalFilters,string[]]>).flatMap(([key,values]) => values.map((value) => <button key={`${key}:${value}`} type="button" onClick={() => setFilters((current) => ({...current,[key]:current[key].filter((item) => item !== value)}))} style={{ display:"inline-flex",gap:5,padding:"2px 7px",border:`1px solid ${accent}7a`,borderRadius:999,background:`${accent}1f`,color:C.text,cursor:"pointer",font:"inherit",fontSize:"var(--fs-tiny)",fontWeight:800 }}><span style={{color:accent}}>{fieldLabel(key)}</span>{value} <span style={{color:"#ff5c65"}}>×</span></button>))}</div> : null}
               <div style={{ border: "1px solid rgba(255,255,255,.09)", borderRadius: 13, overflowX: "auto" }}>
                 <div style={{ minWidth: 1160 }}>
                   <BinderDataTableHeader
@@ -252,30 +272,30 @@ export function PlayerBinderView() {
                     sortDir={sortDir}
                     onSort={(key) => toggleSort(key as MortalSortKey)}
                     columns={[...([
-                      ["name","Name",null],["position","Position",<IconShield size={14}/>],["organization","Organization",<GameIcon icon="game-icons:organigram" size={14}/>],["location","Location",<GameIcon icon="game-icons:village" size={14}/>],["species","Species",<GameIcon icon="game-icons:dna1" size={14}/>],["age","Age",<GameIcon icon="game-icons:cake-slice" size={14}/>],["gender","Gender",<IconGender size={14}/>],["status","Status",<GameIcon icon="game-icons:half-dead" size={14}/>],
+                      ["name",t("playerBinderView.nameColumn"),null],["position",fieldLabel("position"),<IconShield size={14}/>],["organization",fieldLabel("organization"),<GameIcon icon="game-icons:organigram" size={14}/>],["location",fieldLabel("location"),<GameIcon icon="game-icons:village" size={14}/>],["species",fieldLabel("species"),<GameIcon icon="game-icons:dna1" size={14}/>],["age",fieldLabel("age"),<GameIcon icon="game-icons:cake-slice" size={14}/>],["gender",fieldLabel("gender"),<IconGender size={14}/>],["status",fieldLabel("status"),<GameIcon icon="game-icons:half-dead" size={14}/>],
                     ] as Array<[MortalSortKey,string,React.ReactNode]>).map(([key,label,icon]) => ({ key, label, icon, sortable: true })), { key: "visibility", label: "" }]}
                   />
                   {sorted.map((mortal) => {
                     const genderColor = mortal.gender === "female" ? "#f9a8d4" : mortal.gender === "male" ? "#7dd3fc" : null;
                     const cell = { color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
                     return <BinderDataTableRow key={mortal.id} onClick={() => setSelectedId(mortal.id)} gridTemplateColumns={MORTAL_COLUMNS} theme={{ text: C.text, muted: C.muted, border: "rgba(255,255,255,.08)" }}>
-                      <span style={{ ...cell, color: C.text, display: "flex", alignItems: "center", gap: 9, fontWeight: 750 }}><BinderDataTableThumbnail imageUrl={mortal.imageUrl} imageUpdatedAt={mortal.imageUpdatedAt} accent={accent}/><span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{mortal.name}</span>{mortal.id === data.linkedMortalId ? <small style={{ color: accent }}>(You)</small> : null}</span>
-                      <span style={{...cell,display:"flex",gap:6,alignItems:"center"}}>{mortal.positionIcon ? <GameIcon icon={mortal.positionIcon} size={14}/> : <IconShield size={14}/>} {mortal.position || "None"}</span>
-                      <span style={{...cell,display:"flex",gap:6,alignItems:"center"}}>{mortal.organizationIcon ? <GameIcon icon={mortal.organizationIcon} size={14}/> : <GameIcon icon="game-icons:organigram" size={14}/>} {mortal.organization || "None"}</span>
-                      <span style={{...cell,display:"flex",gap:6,alignItems:"center"}}><GameIcon icon="game-icons:village" size={14}/>{mortal.location || "None"}</span>
-                      <span style={cell}>{mortal.species || "None"}</span><span style={cell}>{ageOf(mortal,data.binder.currentDateSort) || "None"}</span>
-                      <span>{genderColor ? <span style={{ display:"inline-flex",padding:"2px 7px",borderRadius:999,color:genderColor,background:`${genderColor}29`,fontSize:"var(--fs-small)",fontWeight:750 }}>{mortal.gender === "female" ? "Female" : "Male"}</span> : <span style={{color:"#ff5c65"}}>Needs gender</span>}</span>
+                      <span style={{ ...cell, color: C.text, display: "flex", alignItems: "center", gap: 9, fontWeight: 750 }}><BinderDataTableThumbnail imageUrl={mortal.imageUrl} imageUpdatedAt={mortal.imageUpdatedAt} accent={accent}/><span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{mortal.name}</span>{mortal.id === data.linkedMortalId ? <small style={{ color: accent }}>{t("playerBinderView.youIndicator")}</small> : null}</span>
+                      <span style={{...cell,display:"flex",gap:6,alignItems:"center"}}>{mortal.positionIcon ? <GameIcon icon={mortal.positionIcon} size={14}/> : <IconShield size={14}/>} {mortal.position || t("playerBinderView.none")}</span>
+                      <span style={{...cell,display:"flex",gap:6,alignItems:"center"}}>{mortal.organizationIcon ? <GameIcon icon={mortal.organizationIcon} size={14}/> : <GameIcon icon="game-icons:organigram" size={14}/>} {mortal.organization || t("playerBinderView.none")}</span>
+                      <span style={{...cell,display:"flex",gap:6,alignItems:"center"}}><GameIcon icon="game-icons:village" size={14}/>{mortal.location || t("playerBinderView.none")}</span>
+                      <span style={cell}>{mortal.species || t("playerBinderView.none")}</span><span style={cell}>{ageOf(mortal,data.binder.currentDateSort) || t("playerBinderView.none")}</span>
+                      <span>{genderColor ? <span style={{ display:"inline-flex",padding:"2px 7px",borderRadius:999,color:genderColor,background:`${genderColor}29`,fontSize:"var(--fs-small)",fontWeight:750 }}>{mortal.gender === "female" ? t("playerBinderView.genderFemale") : t("playerBinderView.genderMale")}</span> : <span style={{color:"#ff5c65"}}>{t("playerBinderView.needsGender")}</span>}</span>
                       <StatusPill status={mortal.lifeStatus}/><span />
                     </BinderDataTableRow>;
                   })}
-                  {!sorted.length ? <div style={{ padding: 48, textAlign: "center", color: C.muted }}>No Mortals match the current filters.</div> : null}
+                  {!sorted.length ? <div style={{ padding: 48, textAlign: "center", color: C.muted }}>{t("playerBinderView.noMortalsMatch")}</div> : null}
                 </div>
               </div>
             </>
           )}
         </section>
       </div>
-      <ImageLightbox src={lightboxSrc} alt={selected ? `${selected.name} portrait` : "Portrait"} onClose={() => setLightboxSrc(null)} />
+      <ImageLightbox src={lightboxSrc} alt={selected ? t("playerBinderView.portraitAlt", { name: selected.name }) : t("playerBinderView.portraitFallback")} onClose={() => setLightboxSrc(null)} />
     </main>
   );
 }

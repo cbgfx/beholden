@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { theme } from "@/theme/theme";
 import { SectionTitle } from "@/ui/SectionTitle";
@@ -9,6 +10,7 @@ export function CharacterSheetDetailsPanel({
   infoLines?: Array<{ label: string; value: string }>;
   compact: boolean;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const info = (infoLines ?? []).filter((line) => line.value?.trim() && line.value.trim() !== "--");
   const [open, setOpen] = React.useState(true);
 
@@ -29,7 +31,7 @@ export function CharacterSheetDetailsPanel({
           onToggle={() => setOpen((value) => !value)}
           style={{ width: "100%", marginBottom: 0 }}
         >
-          Details
+          {translateUi("Details")}
         </SectionTitle>
       </div>
 

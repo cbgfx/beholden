@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Button } from "@/ui/Button";
 import { api, jsonInit } from "@/services/api";
@@ -20,6 +21,7 @@ export function PlayerDrawer(props: {
   close: () => void;
   refreshCampaign: (cid: string) => Promise<void>;
 }): DrawerContent {
+  const translateUi = useUiTranslation("dmUi");
   const { state } = useStore();
   const confirm = useConfirm();
   const close = props.close;
@@ -226,15 +228,15 @@ export function PlayerDrawer(props: {
         <div>
           {props.drawer.type === "editPlayer" ? (
             <Button variant="danger" onClick={deletePlayer}>
-              Delete
+              {translateUi("Delete")}
             </Button>
           ) : null}
         </div>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
           <Button variant="ghost" onClick={props.close}>
-            Cancel
+            {translateUi("Cancel")}
           </Button>
-          <Button onClick={submit}>Save</Button>
+          <Button onClick={submit}>{translateUi("Save")}</Button>
         </div>
       </div>
     )

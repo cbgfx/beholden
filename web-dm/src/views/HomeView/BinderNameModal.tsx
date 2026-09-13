@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Modal } from "@/components/overlay/Modal";
 import { Button } from "@/ui/Button";
@@ -15,6 +16,8 @@ export function BinderNameModal(props: {
   onClose: () => void;
   onSubmit: (name: string, color: string, currentDate: number) => Promise<void>;
 }) {
+  const translateMessage = useUiMessages("dmUi");
+  const translateUi = useUiTranslation("dmUi");
   const [name, setName] = useState(props.initialName ?? "");
   const [color, setColor] = useState(props.initialColor ?? "#38b6ff");
   const [currentDate, setCurrentDate] = useState(props.initialCurrentDate == null ? "" : String(props.initialCurrentDate));
@@ -42,7 +45,7 @@ export function BinderNameModal(props: {
       await props.onSubmit(trimmedName, color, parsedCurrentDate);
       props.onClose();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to save Binder.");
+      setError(cause instanceof Error ? cause.message : translateMessage("Unable to save Binder."));
     } finally {
       setSaving(false);
     }
@@ -63,7 +66,7 @@ export function BinderNameModal(props: {
             textTransform: "uppercase",
           }}
         >
-          Binder name
+          {translateUi("Binder name")}
         </label>
         <Input
           id="binder-name"
@@ -77,15 +80,15 @@ export function BinderNameModal(props: {
 
         <div style={{ marginTop: 18 }}>
           <label htmlFor="binder-current-date" style={{ display: "block", marginBottom: 7, color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-            Current date
+            {translateUi("Current date")}
           </label>
           <Input id="binder-current-date" type="number" step={1} value={currentDate} onChange={(event) => setCurrentDate(event.target.value)} disabled={saving} placeholder="2438" />
-          <div style={{ marginTop: 6, color: theme.colors.muted, fontSize: "var(--fs-small)" }}>Used for ages and setting chronology.</div>
+          <div style={{ marginTop: 6, color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{translateUi("Used for ages and setting chronology.")}</div>
         </div>
 
         <div style={{ marginTop: 18 }}>
           <div style={{ marginBottom: 9, color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-            Theme color
+            {translateUi("Theme color")}
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 9 }}>
             {ENTITY_COLOR_PRESETS.map((preset) => {
@@ -96,7 +99,7 @@ export function BinderNameModal(props: {
                   type="button"
                   onClick={() => setColor(preset)}
                   title={preset}
-                  aria-label={`Use ${preset} Binder theme`}
+                  aria-label={translateUi("Use {{value1}} Binder theme", { value1: preset })}
                   style={{
                     width: 30,
                     height: 30,
@@ -131,7 +134,7 @@ export function BinderNameModal(props: {
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20 }}>
           <Button type="button" variant="ghost" onClick={props.onClose} disabled={saving}>
-            Cancel
+            {translateUi("Cancel")}
           </Button>
           <Button
             type="submit"
@@ -142,7 +145,7 @@ export function BinderNameModal(props: {
               Number(currentDate) === props.initialCurrentDate
             )}
           >
-            {saving ? "Saving…" : props.submitLabel}
+            {saving ? translateUi("Saving…") : props.submitLabel}
           </Button>
         </div>
       </form>

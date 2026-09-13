@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchBinderMortals, fetchMortalOptions, type BinderMortal, type MortalOptions } from "@/services/binderMortalApi";
@@ -26,6 +27,8 @@ function matches(value: string | null | undefined, selected: string[]) {
 }
 
 export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: { binderId: string; binderCurrentDate: number | null; accent: string }) {
+  const translateMessage = useUiMessages("dmUi");
+  const translateUi = useUiTranslation("dmUi");
   const navigate = useNavigate();
   const [players, setPlayers] = useState<MortalOptions["players"]>([]);
   const [mortals, setMortals] = useState<BinderMortal[]>([]);
@@ -43,9 +46,9 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
         setMortals(mortalRecords);
         setError(null);
       })
-      .catch((cause) => setError(cause instanceof Error ? cause.message : "Unable to load players."))
+      .catch((cause) => setError(cause instanceof Error ? cause.message : translateMessage("Unable to load players.")))
       .finally(() => setLoading(false));
-  }, [binderId]);
+  }, [binderId, translateMessage]);
 
   const playersById = useMemo(() => new Map(players.map((player) => [player.id, player])), [players]);
   const pcs = useMemo(() => mortals.filter((mortal) => mortal.mortalType === "player_character"), [mortals]);
@@ -54,13 +57,13 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
       .map(([value, label]) => ({ value, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
     return {
-      className: [{ value: NONE, label: "None" }, ...unique(players.filter((p) => p.className).map((p) => [p.className!, p.className!]))],
-      race: [{ value: NONE, label: "None" }, ...unique(pcs.filter((p) => p.race).map((p) => [p.race!.id, p.race!.name]))],
-      status: [{ value: "alive", label: "Alive" }, { value: "dead", label: "Dead" }],
-      campaign: [{ value: NONE, label: "None" }, ...unique(players.filter((p) => p.campaignName).map((p) => [p.campaignName!, p.campaignName!]))],
-      player: [{ value: NONE, label: "None" }, ...unique(players.filter((p) => p.playerName).map((p) => [p.playerName!, p.playerName!]))],
+      className: [{ value: NONE, label: translateUi("None") }, ...unique(players.filter((p) => p.className).map((p) => [p.className!, p.className!]))],
+      race: [{ value: NONE, label: translateUi("None") }, ...unique(pcs.filter((p) => p.race).map((p) => [p.race!.id, p.race!.name]))],
+      status: [{ value: "alive", label: translateUi("Alive") }, { value: "dead", label: translateUi("Dead") }],
+      campaign: [{ value: NONE, label: translateUi("None") }, ...unique(players.filter((p) => p.campaignName).map((p) => [p.campaignName!, p.campaignName!]))],
+      player: [{ value: NONE, label: translateUi("None") }, ...unique(players.filter((p) => p.playerName).map((p) => [p.playerName!, p.playerName!]))],
     } satisfies Record<FilterKey, Array<{ value: string; label: string }>>;
-  }, [pcs, players]);
+  }, [pcs, players, translateUi]);
 
   const filtered = useMemo(() => pcs.filter((mortal) => {
     const linked = mortal.player ? playersById.get(mortal.player.id) : undefined;
@@ -74,13 +77,13 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
 
   const columns = "minmax(220px,1.4fr) minmax(150px,1fr) minmax(140px,.85fr) 90px 90px minmax(190px,1.2fr) minmax(160px,1fr)";
   const headers: Array<{ label: string; key: SortKey }> = [
-    { label: "Name", key: "name" },
-    { label: "Class", key: "class" },
-    { label: "Race", key: "race" },
-    { label: "Age", key: "age" },
-    { label: "DoA", key: "status" },
-    { label: "Campaign", key: "campaign" },
-    { label: "Player", key: "player" },
+    { label: translateUi("Name"), key: "name" },
+    { label: translateUi("Class"), key: "class" },
+    { label: translateUi("Race"), key: "race" },
+    { label: translateUi("Age"), key: "age" },
+    { label: translateUi("DoA"), key: "status" },
+    { label: translateUi("Campaign"), key: "campaign" },
+    { label: translateUi("Player"), key: "player" },
   ];
   const labels: Record<FilterKey, string> = { className: "Class", race: "Race", status: "DoA", campaign: "Campaign", player: "Player" };
   const cell = { color: theme.colors.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
@@ -109,9 +112,9 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
 
   return <div style={{ display: "grid", gap: 12 }}>
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-      <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search players…" style={{ width: 260 }} />
+      <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={translateUi("Search players…")} style={{ width: 260 }} />
       {(Object.keys(labels) as FilterKey[]).map((key) => <SearchableMultiFilter key={key} label={labels[key]} selected={filters[key]} options={choices[key]} onAdd={(value) => setFilters((current) => current[key].includes(value) ? current : { ...current, [key]: [...current[key], value] })} />)}
-      {Object.values(filters).some((values) => values.length) ? <Button variant="ghost" onClick={() => setFilters(emptyFilters())}>Clear</Button> : null}
+      {Object.values(filters).some((values) => values.length) ? <Button variant="ghost" onClick={() => setFilters(emptyFilters())}>{translateUi("Clear")}</Button> : null}
     </div>
     {Object.entries(filters).some(([, values]) => values.length) ? <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
       {(Object.entries(filters) as Array<[FilterKey, string[]]>).flatMap(([key, values]) => values.map((value) => {
@@ -139,14 +142,14 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
               <BinderRecordThumbnail imageUrl={mortal.imageUrl} imageUpdatedAt={mortal.imageUpdatedAt} accent={accent} />
               <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{mortal.name}</span>
             </span>
-            <span title={player?.className || "None"} style={cell}>{player?.className || "None"}</span>
-            <span title={mortal.race?.name ?? "None"} style={cell}>{mortal.race?.name ?? "None"}</span>
+            <span title={player?.className || translateUi("None")} style={cell}>{player?.className || "None"}</span>
+            <span title={mortal.race?.name ?? translateUi("None")} style={cell}>{mortal.race?.name ?? "None"}</span>
             <span style={cell}>{age ?? "None"}</span>
-            <span style={{ justifySelf: "start", display: "inline-flex", padding: "2px 7px", borderRadius: 5, color: "#fff", background: dead ? theme.colors.red : theme.colors.green, fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 800 }}>{dead ? "Dead" : "Alive"}</span>
-            <span title={player?.campaignName || "None"} style={cell}>{player?.campaignName || "None"}</span>
-            <span title={player?.playerName || "None"} style={cell}>{player?.playerName || "None"}</span>
+            <span style={{ justifySelf: "start", display: "inline-flex", padding: "2px 7px", borderRadius: 5, color: "#fff", background: dead ? theme.colors.red : theme.colors.green, fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 800 }}>{dead ? translateUi("Dead") : translateUi("Alive")}</span>
+            <span title={player?.campaignName || translateUi("None")} style={cell}>{player?.campaignName || "None"}</span>
+            <span title={player?.playerName || translateUi("None")} style={cell}>{player?.playerName || "None"}</span>
           </button>;
-        }) : <BinderListEmpty>{pcs.length ? "No Player Characters match the current filters." : "No Player Character Mortals exist in this Binder."}</BinderListEmpty>}
+        }) : <BinderListEmpty>{pcs.length ? translateUi("No Player Characters match the current filters.") : translateUi("No Player Character Mortals exist in this Binder.")}</BinderListEmpty>}
     </div>
   </div>;
 }

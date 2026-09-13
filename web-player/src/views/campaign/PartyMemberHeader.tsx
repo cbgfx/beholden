@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { C } from "@/lib/theme";
 import { IconPlayer, IconShield, IconSpeed, IconInitiative, IconHeart, IconConditionByKey } from "@/icons";
 import { abilityMod, formatModifier, hpColor } from "@/views/character/CharacterSheetUtils";
@@ -23,6 +24,7 @@ export function PartyMemberHeader({
   topStatsWidth: string | undefined;
   topStatsColumns: string;
 }) {
+  const { t } = useTranslation();
   const m = member;
   const hpC = hpColor(m.hpPercent);
   return (
@@ -60,9 +62,9 @@ export function PartyMemberHeader({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
             <h2 style={{ margin: 0, fontSize: "var(--fs-title)", fontWeight: 900, letterSpacing: -0.5 }}>
-              {m.characterName || "Unnamed"}
+              {m.characterName || t("partyMemberView.unnamedCharacter")}
             </h2>
-            <Tag label={`Level ${m.level}`} color={color} />
+            <Tag label={t("partyMemberView.levelTag", { level: m.level })} color={color} />
           </div>
           <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginTop: 3 }}>
             {[m.className, subclass, m.species].filter(Boolean).join(" - ")}
@@ -73,16 +75,16 @@ export function PartyMemberHeader({
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: topStatsColumns, gap: 8, flexShrink: 0, width: topStatsWidth }}>
-          <MiniStat label="AC" value={String(m.ac)} icon={<IconShield size={11} />} theme={MINI_STAT_THEME} />
-          <MiniStat label="Init" value={formatModifier(abilityMod(m.dexScore))} icon={<IconInitiative size={11} />} theme={MINI_STAT_THEME} />
-          <MiniStat label="Speed" value={m.speed ? `${m.speed}ft` : "--"} icon={<IconSpeed size={11} />} theme={MINI_STAT_THEME} />
+          <MiniStat label={t("partyMemberView.statAc")} value={String(m.ac)} icon={<IconShield size={11} />} theme={MINI_STAT_THEME} />
+          <MiniStat label={t("partyMemberView.statInit")} value={formatModifier(abilityMod(m.dexScore))} icon={<IconInitiative size={11} />} theme={MINI_STAT_THEME} />
+          <MiniStat label={t("partyMemberView.statSpeed")} value={m.speed ? `${m.speed}ft` : "--"} icon={<IconSpeed size={11} />} theme={MINI_STAT_THEME} />
         </div>
       </div>
 
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
           <span style={{ fontSize: "var(--fs-small)", display: "flex", alignItems: "center", gap: 5, color: hpC, fontWeight: 700 }}>
-            <IconHeart size={11} /> Hit Points
+            <IconHeart size={11} /> {t("partyMemberView.hitPointsLabel")}
           </span>
           <span style={{ fontSize: "var(--fs-small)", color: C.muted, fontWeight: 600 }}>{m.hpPercent}%</span>
         </div>

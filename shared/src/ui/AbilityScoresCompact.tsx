@@ -1,4 +1,6 @@
+import { useUiTranslation } from "../i18n/useUiTranslation";
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 export type AbilityKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
 export type AbilityScoreCellContext = {
@@ -73,6 +75,8 @@ export function AbilityScoresCompact({
   renderMod?: (context: AbilityScoreCellContext) => React.ReactNode;
   renderSave?: (context: AbilityScoreCellContext) => React.ReactNode;
 }) {
+  const { t } = useTranslation("shared");
+  const translateUi = useUiTranslation("sharedUi");
   const midpoint = Math.ceil(order.length / 2);
   const columns = [order.slice(0, midpoint), order.slice(midpoint)];
   const columnGap = compact ? 8 : 16;
@@ -92,9 +96,9 @@ export function AbilityScoresCompact({
             }}
           >
             <div />
-            <div style={headerStyle(mutedColor)}>Score</div>
-            <div style={headerStyle(mutedColor)}>Mod</div>
-            <div style={headerStyle(mutedColor)}>Save</div>
+            <div style={headerStyle(mutedColor)}>{t("abilityScores.score")}</div>
+            <div style={headerStyle(mutedColor)}>{t("abilityScores.mod")}</div>
+            <div style={headerStyle(mutedColor)}>{t("abilityScores.save")}</div>
           </div>
           {keys.map((key) => {
             const rawScore = scores[key];
@@ -104,7 +108,7 @@ export function AbilityScoresCompact({
             const highlightedSave = save !== modifier;
             const context: AbilityScoreCellContext = {
               key,
-              label: labels[key] ?? key.toUpperCase(),
+              label: labels[key] === DEFAULT_LABELS[key] ? translateUi(labels[key]) : labels[key] ?? key.toUpperCase(),
               rawScore,
               score,
               modifier,

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 export type BinderSortDir = "asc" | "desc";
 
@@ -42,12 +43,13 @@ export function BinderDataTableHeader(props: {
   sortDir?: BinderSortDir;
   onSort?: (key: string) => void;
 }) {
+  const { t } = useTranslation("shared");
   return <div style={{ minWidth: 1120, display: "grid", gridTemplateColumns: props.gridTemplateColumns, gap: 10, padding: "8px 12px", background: `color-mix(in srgb, ${props.accent} 8%, transparent)`, borderBottom: `1px solid ${props.theme.border}` }}>
     {props.columns.map((column) => {
       const active = props.sortKey === column.key;
       const content = <>{column.icon}{column.label}{column.sortable ? <span aria-hidden style={{ fontSize: 11, color: props.accent, opacity: active ? 1 : .25 }}>{active && props.sortDir === "desc" ? "▼" : "▲"}</span> : null}</>;
       return column.sortable && props.onSort
-        ? <button key={column.key} type="button" title={`Sort by ${column.label}`} onClick={() => props.onSort!(column.key)} style={{ display: "inline-flex", alignItems: "center", gap: 5, justifySelf: "start", border: 0, background: "transparent", padding: 0, margin: 0, color: active ? props.accent : props.theme.text, font: "inherit", fontSize: "calc(var(--fs-small) + 1px)", fontWeight: 750, cursor: "pointer" }}>{content}</button>
+        ? <button key={column.key} type="button" title={t("binderDataTable.sortBy", { label: column.label })} onClick={() => props.onSort!(column.key)} style={{ display: "inline-flex", alignItems: "center", gap: 5, justifySelf: "start", border: 0, background: "transparent", padding: 0, margin: 0, color: active ? props.accent : props.theme.text, font: "inherit", fontSize: "calc(var(--fs-small) + 1px)", fontWeight: 750, cursor: "pointer" }}>{content}</button>
         : <div key={column.key} style={{ display: "flex", alignItems: "center", gap: 5, color: props.theme.text, fontSize: "calc(var(--fs-small) + 1px)", fontWeight: 750 }}>{content}</div>;
     })}
   </div>;

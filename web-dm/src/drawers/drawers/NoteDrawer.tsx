@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Button } from "@/ui/Button";
 import { api, jsonInit } from "@/services/api";
@@ -15,6 +16,7 @@ export function NoteDrawer(props: {
   refreshCampaign: (cid: string) => Promise<void>;
   refreshAdventure: (aid: string | null) => Promise<void>;
 }): DrawerContent {
+  const translateUi = useUiTranslation("dmUi");
   const { state } = useStore();
   const [title, setTitle] = React.useState("");
   const [text, setText] = React.useState("");
@@ -70,7 +72,7 @@ export function NoteDrawer(props: {
   return {
     body: (
       <div style={{ display: "grid", gap: 10 }}>
-        {loading ? <div style={{ fontSize: "var(--fs-small)", opacity: 0.7 }}>Loading note content...</div> : null}
+        {loading ? <div style={{ fontSize: "var(--fs-small)", opacity: 0.7 }}>{translateUi("Loading note content...")}</div> : null}
         <NoteEditorFields
           title={title}
           text={text}
@@ -90,9 +92,9 @@ export function NoteDrawer(props: {
     footer: (
       <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
         <Button variant="ghost" onClick={props.close}>
-          Cancel
+          {translateUi("Cancel")}
         </Button>
-        <Button onClick={submit}>Save</Button>
+        <Button onClick={submit}>{translateUi("Save")}</Button>
       </div>
     )
   };

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useRef, useState } from "react";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
@@ -69,6 +70,7 @@ const iconBtnDanger: React.CSSProperties = {
 };
 
 export function CampaignCard({ campaign: c, onOpen, onEdit, onDelete, onRefresh }: Props) {
+  const translateUi = useUiTranslation("dmUi");
   const [hovered, setHovered] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -142,7 +144,7 @@ export function CampaignCard({ campaign: c, onOpen, onEdit, onDelete, onRefresh 
         onClick={() => imageInputRef.current?.click()}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        title="Click to set banner image"
+        title={translateUi("Click to set banner image")}
       >
         {imageUrl && (
           <img
@@ -202,7 +204,7 @@ export function CampaignCard({ campaign: c, onOpen, onEdit, onDelete, onRefresh 
         {hasImage && hovered && (
           <button
             onClick={handleRemoveImage}
-            title="Remove banner image"
+            title={translateUi("Remove banner image")}
             style={{
               position: "absolute",
               top: 10, right: 10,
@@ -236,7 +238,7 @@ export function CampaignCard({ campaign: c, onOpen, onEdit, onDelete, onRefresh 
           {c.playerCount !== undefined && (
             <div style={{ fontSize: "var(--fs-medium)", color: theme.colors.muted, display: "flex", alignItems: "center", gap: 6 }}>
               <IconPlayers size={16} />
-              {c.playerCount === 1 ? "1 Player" : `${c.playerCount} Players`}
+              {c.playerCount === 1 ? translateUi("1 Player") : translateUi("{{value1}} Players", { value1: c.playerCount })}
             </div>
           )}
         </div>
@@ -247,16 +249,16 @@ export function CampaignCard({ campaign: c, onOpen, onEdit, onDelete, onRefresh 
 
       {/* ── Footer ── */}
       <div style={cardFooter}>
-        <Button onClick={onOpen} title="Open campaign" style={{ flex: 1, minWidth: 0 }}>
-          Open
+        <Button onClick={onOpen} title={translateUi("Open campaign")} style={{ flex: 1, minWidth: 0 }}>
+          {translateUi("Open")}
         </Button>
-        <button onClick={exportCampaign} style={iconBtn} title="Export campaign JSON" aria-label="Export campaign">
+        <button onClick={exportCampaign} style={iconBtn} title={translateUi("Export campaign JSON")} aria-label={translateUi("Export campaign")}>
           <IconDownload size={17} />
         </button>
-        <button onClick={onEdit} style={iconBtn} title="Rename campaign" aria-label="Edit campaign">
+        <button onClick={onEdit} style={iconBtn} title={translateUi("Rename campaign")} aria-label={translateUi("Edit campaign")}>
           <IconPencil size={16} />
         </button>
-        <button onClick={onDelete} style={iconBtnDanger} title="Delete campaign" aria-label="Delete campaign">
+        <button onClick={onDelete} style={iconBtnDanger} title={translateUi("Delete campaign")} aria-label={translateUi("Delete campaign")}>
           <IconTrash size={16} />
         </button>
       </div>

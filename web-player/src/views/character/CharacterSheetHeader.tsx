@@ -1,4 +1,6 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { C, withAlpha } from "@/lib/theme";
 import { IconBastions, IconBinder, IconPlayer } from "@/icons";
@@ -74,7 +76,9 @@ export function CharacterSheetHeader(props: {
   setXpPopupOpen: React.Dispatch<React.SetStateAction<boolean>>;
   saveXp: (value: number) => Promise<void>;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [binder, setBinder] = useState<{ binderId: string; binderName: string } | null>(null);
   const {
     character,
@@ -116,7 +120,7 @@ export function CharacterSheetHeader(props: {
 
   return (
     <nav
-      aria-label="Character sheet sections"
+      aria-label={t("sheetHeader.sectionsAria")}
       style={{
         position: "sticky", top: 0, zIndex: 30,
         display: "flex", alignItems: "center", gap: 10,
@@ -130,7 +134,7 @@ export function CharacterSheetHeader(props: {
         <button
           type="button"
           onClick={onSelectPortrait}
-          title="Change portrait"
+          title={t("sheetHeader.changePortrait")}
           style={{
             width: 58, height: 58, borderRadius: 14, flexShrink: 0, padding: 0,
             background: `${accentColor}18`,
@@ -167,23 +171,23 @@ export function CharacterSheetHeader(props: {
             ))}
           </div>
         </div>
-        <IconButton onClick={onOpenInfo} title="Character Information">
+        <IconButton onClick={onOpenInfo} title={t("sheetHeader.characterInformation")}>
           <IconCharacterInfo size={19} />
         </IconButton>
-        <IconButton onClick={onOpenTheme} title="Theme">
+        <IconButton onClick={onOpenTheme} title={t("sheetHeader.theme")}>
           <IconPalette size={19} />
         </IconButton>
         {showEngagedEnemies && (
-          <button type="button" onClick={onOpenEngagedEnemies} title="Combat View" aria-label="Open combat view" style={{ width: 40, height: 32, padding: 0, borderRadius: 8, cursor: "pointer", background: withAlpha(C.red, 0.1), border: `1px solid ${withAlpha(C.red, 0.35)}`, color: C.red, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <button type="button" onClick={onOpenEngagedEnemies} title={t("sheetHeader.combatView")} aria-label={t("sheetHeader.openCombatView")} style={{ width: 40, height: 32, padding: 0, borderRadius: 8, cursor: "pointer", background: withAlpha(C.red, 0.1), border: `1px solid ${withAlpha(C.red, 0.35)}`, color: C.red, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <IconEngagedEnemies size={20} />
           </button>
         )}
-        <Button variant="ghost" title="Edit character" onClick={() => navigate(`/characters/${character.id}/edit`)} style={{ height: 32, padding: "0 16px", fontSize: "var(--fs-medium)", flexShrink: 0 }}>
-          Edit
+        <Button variant="ghost" title={t("sheetHeader.editCharacter")} onClick={() => navigate(`/characters/${character.id}/edit`)} style={{ height: 32, padding: "0 16px", fontSize: "var(--fs-medium)", flexShrink: 0 }}>
+          {t("sheetHeader.edit")}
         </Button>
         {inCombat && (
           <span
-            aria-label="Character is in combat"
+            aria-label={t("sheetHeader.characterInCombat")}
             style={{
               height: 32,
               padding: "0 11px",
@@ -201,12 +205,12 @@ export function CharacterSheetHeader(props: {
               flexShrink: 0,
             }}
           >
-            IN COMBAT
+            {t("sheetHeader.inCombat")}
           </span>
         )}
         {isMyTurn && (
           <span
-            aria-label="It is your turn"
+            aria-label={t("sheetHeader.itIsYourTurn")}
             style={{
               height: 32,
               padding: "0 11px",
@@ -224,7 +228,7 @@ export function CharacterSheetHeader(props: {
               flexShrink: 0,
             }}
           >
-            YOUR TURN
+            {t("sheetHeader.yourTurn")}
           </span>
         )}
       </div>
@@ -239,11 +243,11 @@ export function CharacterSheetHeader(props: {
           onCreateView={onCreateView}
         />
         {layoutEditMode ? (
-          <Button variant="ghost" title="Done editing layout" onClick={onToggleLayoutEditMode} style={{ height: 32, padding: "0 14px", fontSize: "var(--fs-small)", fontWeight: 800, color: accentColor, borderColor: withAlpha(accentColor, 0.5), background: withAlpha(accentColor, 0.14) }}>
-            Done
+          <Button variant="ghost" title={t("sheetHeader.doneEditingLayout")} onClick={onToggleLayoutEditMode} style={{ height: 32, padding: "0 14px", fontSize: "var(--fs-small)", fontWeight: 800, color: accentColor, borderColor: withAlpha(accentColor, 0.5), background: withAlpha(accentColor, 0.14) }}>
+            {t("sheetHeader.done")}
           </Button>
         ) : (
-          <IconButton onClick={onToggleLayoutEditMode} title="Customize this view's layout">
+          <IconButton onClick={onToggleLayoutEditMode} title={t("sheetHeader.customizeLayout")}>
             <IconEditCrayon size={16} />
           </IconButton>
         )}
@@ -254,7 +258,7 @@ export function CharacterSheetHeader(props: {
           <button
             key={campaign.campaignId}
             type="button"
-            title={`Open campaign: ${campaign.campaignName}`}
+            title={t("sheetHeader.openCampaign", { name: campaign.campaignName })}
             onClick={() => navigate(`/campaigns/${campaign.campaignId}`)}
             style={{
               appearance: "none",
@@ -281,15 +285,15 @@ export function CharacterSheetHeader(props: {
         ))}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         {activeBastion && (
-          <Button variant="ghost" title={`Bastion: ${activeBastion.name}`} onClick={() => navigate(`/campaigns/${activeBastion.campaignId}/bastions/${activeBastion.id}`)} style={{ height: 32, padding: "0 12px", display: "inline-flex", alignItems: "center", gap: 7, fontSize: "var(--fs-medium)" }}>
+          <Button variant="ghost" title={translateUi("Bastion: {{value1}}", { value1: activeBastion.name })} onClick={() => navigate(`/campaigns/${activeBastion.campaignId}/bastions/${activeBastion.id}`)} style={{ height: 32, padding: "0 12px", display: "inline-flex", alignItems: "center", gap: 7, fontSize: "var(--fs-medium)" }}>
             <IconBastions size={19} />
             {activeBastion.name}
           </Button>
         )}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: "var(--fs-title)", fontWeight: 800, color: accentColor, whiteSpace: "nowrap" }}>Lv {character.level}</span>
+          <span style={{ fontSize: "var(--fs-title)", fontWeight: 800, color: accentColor, whiteSpace: "nowrap" }}>{translateUi("Lv")} {character.level}</span>
           {xpEarned >= xpNeeded && xpNeeded > 0 && (
-            <IconButton variant="accent" size="sm" title="Level up" onClick={() => navigate(`/characters/${character.id}/levelup`)}>↑</IconButton>
+            <IconButton variant="accent" size="sm" title={translateUi("Level up")} onClick={() => navigate(`/characters/${character.id}/levelup`)}>↑</IconButton>
           )}
         </div>
         <CharacterHudXpPopup
@@ -306,11 +310,11 @@ export function CharacterSheetHeader(props: {
         {binder ? (
           <button
             type="button"
-            title={`Open Binder: ${binder.binderName}`}
+            title={translateUi("Open Binder: {{value1}}", { value1: binder.binderName })}
             onClick={() => navigate(`/characters/${character.id}/binder`)}
             style={{ appearance: "none", cursor: "pointer", boxSizing: "border-box", height: 32, padding: "0 11px", borderRadius: 8, border: `1px solid ${accentColor}55`, background: `${accentColor}16`, color: accentColor, display: "inline-flex", alignItems: "center", gap: 7, fontSize: "var(--fs-medium)", fontWeight: 800 }}
           >
-            <IconBinder size={18} /> Binder
+            <IconBinder size={18} /> {translateUi("Binder")}
           </button>
         ) : null}
       </div>

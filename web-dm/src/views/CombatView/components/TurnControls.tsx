@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
 
@@ -10,6 +11,7 @@ type Props = {
 };
 
 export function TurnControls({ round, secondsInRound, canNavigate, onPrev, onNext }: Props) {
+  const translateUi = useUiTranslation("dmUi");
   return (
     <div
       style={{
@@ -31,7 +33,7 @@ export function TurnControls({ round, secondsInRound, canNavigate, onPrev, onNex
           borderRadius: 999,
         }}
       >
-        Round {round}
+        {translateUi("Round")} {round}
       </span>
 
       {typeof secondsInRound === "number" && (
@@ -51,10 +53,10 @@ export function TurnControls({ round, secondsInRound, canNavigate, onPrev, onNex
       )}
 
       <Button variant="ghost" onClick={onPrev} disabled={!canNavigate}>
-        Prev (p)
+        {translateUi("Prev (p)")}
       </Button>
       <Button variant="ghost" onClick={onNext} disabled={!canNavigate}>
-        Next (n)
+        {translateUi("Next (n)")}
       </Button>
     </div>
   );

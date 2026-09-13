@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { theme } from "@/theme/theme";
 import { conditionIconByKey } from "@/icons/conditions";
 import { conditionLabel } from "@/domain/conditions";
@@ -9,6 +10,7 @@ export function PlayerConditions({
   conditions: { key: string; casterId?: string | null; hexAbility?: string }[];
   concentrationSpell?: string | null;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   if (!conditions.length) return null;
   return (
     <div style={{ gridColumn: "1 / -1", display: "flex", flexWrap: "wrap", gap: 4, paddingTop: 2 }}>
@@ -24,8 +26,8 @@ export function PlayerConditions({
           <span
             key={`${c.key}-${i}`}
             title={
-              c.key === "concentration" && concentrationSpell
-                ? `Concentration · ${concentrationSpell}`
+              c.key === translateUi("concentration") && concentrationSpell
+                ? translateUi("Concentration · {{value1}}", { value1: concentrationSpell })
                 : `${conditionLabel(c.key)}${hexAbility ? ` · ${hexAbility}` : ""}`
             }
             style={{

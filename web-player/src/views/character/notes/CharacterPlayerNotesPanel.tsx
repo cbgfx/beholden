@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { NoteList } from "@beholden/shared/ui";
 import { C } from "@/lib/theme";
 import type { PlayerNote } from "@/views/character/CharacterSheetTypes";
@@ -14,6 +15,7 @@ export function PlayerNotesPanel(props: {
   onDeletePlayerNote: (id: string) => void;
   onSavePlayerNotesOrder: (list: PlayerNote[]) => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const {
     accentColor,
     playerNotesList,
@@ -27,10 +29,10 @@ export function PlayerNotesPanel(props: {
 
   return (
     <CollapsiblePanel
-      title={`Player Notes (${playerNotesList.length})`}
+      title={translateUi("Player Notes ({{value1}})", { value1: playerNotesList.length })}
       color={accentColor}
       storageKey={PANEL_IDS.playerNotes}
-      actions={<PanelHeaderAddButton color={accentColor} onClick={onOpenPlayerNoteCreate} title="Add note" />}
+      actions={<PanelHeaderAddButton color={accentColor} onClick={onOpenPlayerNoteCreate} title={translateUi("Add note")} />}
     >
       <NoteList
         items={playerNotesList.map((note) => ({ id: note.id, title: note.title || "Untitled", text: note.text }))}
@@ -49,7 +51,7 @@ export function PlayerNotesPanel(props: {
           const byId = Object.fromEntries(playerNotesList.map((n) => [n.id, n]));
           onSavePlayerNotesOrder(ids.map((id) => byId[id]).filter(Boolean));
         }}
-        emptyText="No notes yet."
+        emptyText={translateUi("No notes yet.")}
       />
     </CollapsiblePanel>
   );

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 import type { CampaignCharacter, TreasureEntry } from "@/domain/types/domain";
 import { Modal } from "@/components/overlay/Modal";
@@ -14,6 +15,7 @@ export function AwardTreasureModal(props: {
   onClose: () => void;
   onAward: (playerId: string, quantity: number) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const eligiblePlayers = React.useMemo(
     () => [...props.players]
       .filter((player) => Boolean(player.characterId))
@@ -34,16 +36,16 @@ export function AwardTreasureModal(props: {
   return (
     <Modal
       isOpen={Boolean(props.treasure)}
-      title={props.treasure ? `Award ${props.treasure.name}` : "Award treasure"}
+      title={props.treasure ? translateUi("Award {{value1}}", { value1: props.treasure.name }) : translateUi("Award treasure")}
       onClose={props.onClose}
       width={480}
       height={310}
     >
       <div style={{ padding: 18, display: "grid", gap: 16, overflowY: "auto" }}>
         <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ color: theme.colors.muted, fontWeight: 800 }}>Recipient</span>
+          <span style={{ color: theme.colors.muted, fontWeight: 800 }}>{translateUi("Recipient")}</span>
           <Select value={playerId} onChange={(event) => setPlayerId(event.target.value)}>
-            <option value="party">Party Stash</option>
+            <option value="party">{translateUi("Party Stash")}</option>
             {eligiblePlayers.map((player) => (
               <option key={player.id} value={player.id}>
                 {player.characterName}{player.playerName ? ` (${player.playerName})` : ""}
@@ -54,7 +56,7 @@ export function AwardTreasureModal(props: {
 
         <label style={{ display: "grid", gap: 6 }}>
           <span style={{ color: theme.colors.muted, fontWeight: 800 }}>
-            Quantity available: {maxQuantity}
+            {translateUi("Quantity available:")} {maxQuantity}
           </span>
           <Input
             type="number"
@@ -71,12 +73,12 @@ export function AwardTreasureModal(props: {
         {props.error ? <div style={{ color: theme.colors.red }}>{props.error}</div> : null}
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <Button variant="ghost" onClick={props.onClose} disabled={props.busy}>Cancel</Button>
+          <Button variant="ghost" onClick={props.onClose} disabled={props.busy}>{translateUi("Cancel")}</Button>
           <Button
             onClick={() => props.onAward(playerId, quantity)}
             disabled={props.busy || !playerId}
           >
-            {props.busy ? "Awarding..." : "Award"}
+            {props.busy ? translateUi("Awarding...") : translateUi("Award")}
           </Button>
         </div>
       </div>

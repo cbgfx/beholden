@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { api } from "@/services/api";
 import { C } from "@/lib/theme";
@@ -15,6 +16,7 @@ export function CharacterStoredSpellManager({ item, ruleset, onSave }: {
   accentColor: string;
   onSave: (patch: Partial<InventoryItem>) => Promise<void>;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const template = getStoredSpellTemplate(item.spellTemplate);
   const spells = item.storedSpells ?? [];
   const used = storedSpellLevelsUsed(spells);
@@ -66,37 +68,37 @@ export function CharacterStoredSpellManager({ item, ruleset, onSave }: {
   return (
     <section style={{ display: "grid", gap: 8, padding: 12, border: `1px solid ${C.panelBorder}`, borderRadius: 12, background: "rgba(255,255,255,0.025)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
-        <span style={labelStyle}>Stored Spells</span>
-        <span style={{ color: used > template.capacity ? C.red : C.muted, fontSize: "var(--fs-small)", fontWeight: 800 }}>{used} / {template.capacity} spell levels</span>
+        <span style={labelStyle}>{translateUi("Stored Spells")}</span>
+        <span style={{ color: used > template.capacity ? C.red : C.muted, fontSize: "var(--fs-small)", fontWeight: 800 }}>{used} / {template.capacity} {translateUi("spell levels")}</span>
       </div>
       {spells.length ? spells.map((spell) => (
         <div key={spell.instanceId} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, background: "rgba(255,255,255,0.04)" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ color: C.text, fontWeight: 800 }}>{spell.name}</div>
-            <div style={{ color: C.muted, fontSize: "var(--fs-tiny)" }}>Stored at level {spell.slotLevel}</div>
+            <div style={{ color: C.muted, fontSize: "var(--fs-tiny)" }}>{translateUi("Stored at level")} {spell.slotLevel}</div>
           </div>
-          <Button type="button" variant="primary" onClick={() => { void remove(spell.instanceId); }} style={{ padding: "5px 9px", borderRadius: 7 }}>Cast</Button>
-          <Button type="button" variant="ghost" title="Remove without casting" onClick={() => { void remove(spell.instanceId); }} style={{ padding: "5px 9px", borderRadius: 7 }}>Remove</Button>
+          <Button type="button" variant="primary" onClick={() => { void remove(spell.instanceId); }} style={{ padding: "5px 9px", borderRadius: 7 }}>{translateUi("Cast")}</Button>
+          <Button type="button" variant="ghost" title={translateUi("Remove without casting")} onClick={() => { void remove(spell.instanceId); }} style={{ padding: "5px 9px", borderRadius: 7 }}>{translateUi("Remove")}</Button>
         </div>
-      )) : <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>The ring is empty.</div>}
+      )) : <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{translateUi("The ring is empty.")}</div>}
       {used < template.capacity ? (
         <div style={{ position: "relative", display: "grid", gap: 6 }}>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a spell to store..." style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
-          {loading ? <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>Searching...</div> : null}
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={translateUi("Find a spell to store...")} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
+          {loading ? <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{translateUi("Searching...")}</div> : null}
           {results.map((spell) => {
             const allowed = validStoredSlotLevels(template, spell.level ?? 0, used);
             if (!allowed.length) return null;
             const selected = slotLevels[spell.id] ?? allowed[0];
             return <div key={spell.id} style={{ display: "flex", gap: 8, alignItems: "center", padding: "6px 8px", borderRadius: 8, border: `1px solid ${C.panelBorder}` }}>
-              <span style={{ flex: 1, color: C.text }}>{spell.name} <span style={{ color: C.muted }}>(level {spell.level})</span></span>
-              <Select aria-label={`Slot level for ${spell.name}`} value={selected} onChange={(event) => setSlotLevels((current) => ({ ...current, [spell.id]: Number(event.target.value) }))}>
-                {allowed.map((level) => <option key={level} value={level}>Level {level}</option>)}
+              <span style={{ flex: 1, color: C.text }}>{spell.name} <span style={{ color: C.muted }}>{translateUi("(level")} {spell.level})</span></span>
+              <Select aria-label={translateUi("Slot level for {{value1}}", { value1: spell.name })} value={selected} onChange={(event) => setSlotLevels((current) => ({ ...current, [spell.id]: Number(event.target.value) }))}>
+                {allowed.map((level) => <option key={level} value={level}>{translateUi("Level")} {level}</option>)}
               </Select>
-              <Button type="button" variant="primary" onClick={() => { void store(spell); }} style={{ padding: "5px 9px", borderRadius: 7 }}>Store</Button>
+              <Button type="button" variant="primary" onClick={() => { void store(spell); }} style={{ padding: "5px 9px", borderRadius: 7 }}>{translateUi("Store")}</Button>
             </div>;
           })}
         </div>
-      ) : <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>The ring is full.</div>}
+      ) : <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{translateUi("The ring is full.")}</div>}
     </section>
   );
 }

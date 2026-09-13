@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { WsProvider, useWsScope } from "@/services/ws";
@@ -36,6 +37,7 @@ function WsScopeBridge() {
 }
 
 function RouteLoading() {
+  const { t } = useTranslation();
   return (
     <div
       style={{
@@ -47,7 +49,7 @@ function RouteLoading() {
         fontFamily: "system-ui, Segoe UI, Arial",
       }}
     >
-      Loading...
+      {t("app.loading")}
     </div>
   );
 }
@@ -80,6 +82,7 @@ function RoutedViews() {
 }
 
 function AuthGate() {
+  const { t } = useTranslation();
   const { user, isLoading } = useAuth();
 
   React.useEffect(() => {
@@ -99,7 +102,7 @@ function AuthGate() {
           fontFamily: "system-ui, Segoe UI, Arial",
         }}
       >
-        Loading…
+        {t("app.loading")}
       </div>
     );
   }

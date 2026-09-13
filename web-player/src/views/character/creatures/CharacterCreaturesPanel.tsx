@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useEffect, useMemo, useState } from "react";
 import { C } from "@/lib/theme";
 import { CharacterCreatureDrawer } from "@/views/character/creatures/CharacterCreatureDrawer";
@@ -14,6 +15,7 @@ export function CharacterCreaturesPanel(props: {
   accentColor: string;
   onSave: (data: CharacterData) => Promise<unknown>;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const [creatures, setCreatures] = useState<CharacterCreature[]>(() => props.charData?.creatures ?? []);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selectedCreatureId, setSelectedCreatureId] = useState<string | null>(null);
@@ -60,17 +62,17 @@ export function CharacterCreaturesPanel(props: {
   return (
     <>
       <CollapsiblePanel
-        title={<>Creatures ({creatures.length})</>}
+        title={<>{translateUi("Creatures (")}{creatures.length})</>}
         color={props.accentColor}
         storageKey={PANEL_IDS.creatures}
         summary={orderedCreatures.length > 0 ? orderedCreatures.map((creature) => creature.name).join(", ") : "None"}
         actions={
-          <PanelHeaderAddButton color={props.accentColor} onClick={() => setPickerOpen(true)} title="Add creature" />
+          <PanelHeaderAddButton color={props.accentColor} onClick={() => setPickerOpen(true)} title={translateUi("Add creature")} />
         }
       >
         {orderedCreatures.length === 0 ? (
           <div style={{ color: C.muted, fontSize: "var(--fs-small)", lineHeight: 1.6 }}>
-            No creatures yet. Add companions, familiars, summons, pact creatures, ranger pets, or any other party creature from the compendium.
+            {translateUi("No creatures yet. Add companions, familiars, summons, pact creatures, ranger pets, or any other party creature from the compendium.")}
           </div>
         ) : (
           <div style={{ display: "grid", gap: 8 }}>
@@ -118,7 +120,7 @@ export function CharacterCreaturesPanel(props: {
                           e.stopPropagation();
                           adjustCreatureHp(creature.id, -1);
                         }}
-                        title="Take 1 damage"
+                        title={translateUi("Take 1 damage")}
                       >
                         -
                       </IconButton>
@@ -129,16 +131,16 @@ export function CharacterCreaturesPanel(props: {
                           e.stopPropagation();
                           adjustCreatureHp(creature.id, 1);
                         }}
-                        title="Heal 1 HP"
+                        title={translateUi("Heal 1 HP")}
                       >
                         +
                       </IconButton>
                     </div>
                     <span style={creatureHpPill(creature.hpCurrent, creature.hpMax)}>
-                      HP {creature.hpCurrent}/{creature.hpMax}
+                      {translateUi("HP")} {creature.hpCurrent}/{creature.hpMax}
                     </span>
                     <span style={creatureAcPill(props.accentColor)}>
-                      AC {creature.ac}
+                      {translateUi("AC")} {creature.ac}
                     </span>
                   </div>
                   {creature.notes?.trim() ? (

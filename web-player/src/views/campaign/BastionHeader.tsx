@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { C } from "@/lib/theme";
 import { IconBastions } from "@beholden/shared/icons";
 import { HeaderActionLink, SectionTitle } from "@beholden/shared/ui";
@@ -25,10 +26,11 @@ export function BastionHeader({
   saveMessage: { text: string; ok: boolean } | null;
   onToggleMaintain: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <>
       <HeaderActionLink to={campaignId ? `/campaigns/${campaignId}` : "/"} color={C.muted} padding="0 0 20px" borderRadius={0} fontSize="var(--fs-small)">
-        {"<- Back to Campaign"}
+        {"<- "}{t("bastionView.backToCampaign")}
       </HeaderActionLink>
 
       <div
@@ -81,19 +83,19 @@ export function BastionHeader({
             </SectionTitle>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-            <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>Level {bastion.level}</span>
+            <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>{t("bastionView.levelLabel", { level: bastion.level })}</span>
             <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>|</span>
-            <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>Slots {playerSpecialUsed}/{ownSpecialSlots}</span>
+            <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>{t("bastionView.slotsLabel", { used: playerSpecialUsed, total: ownSpecialSlots })}</span>
             <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>|</span>
-            <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>Hirelings {hirelingsTotal}</span>
+            <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>{t("bastionView.hirelingsLabel", { count: hirelingsTotal })}</span>
             <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>|</span>
             <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>
-              Defenders {defendersTotal} ({bastion.defendersArmed ?? 0} armed / {bastion.defendersUnarmed ?? 0} unarmed)
+              {t("bastionView.defendersLabel", { total: defendersTotal, armed: bastion.defendersArmed ?? 0, unarmed: bastion.defendersUnarmed ?? 0 })}
             </span>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-          {saving && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, opacity: 0.6 }}>Saving...</span>}
+          {saving && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, opacity: 0.6 }}>{t("bastionView.saving")}</span>}
           {!saving && saveMessage && (
             <span style={{ fontSize: "var(--fs-tiny)", color: saveMessage.ok ? C.muted : C.colorPinkRed }}>
               {saveMessage.text}
@@ -104,7 +106,7 @@ export function BastionHeader({
             onClick={onToggleMaintain}
             style={pillStyle(bastion.maintainOrder)}
           >
-            Maintain
+            {t("bastionView.maintainButton")}
           </button>
         </div>
       </div>

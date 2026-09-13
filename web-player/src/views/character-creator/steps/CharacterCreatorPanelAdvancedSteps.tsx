@@ -1,3 +1,5 @@
+import { translateUi } from "@/i18n";
+import { useUiTranslation, UiText } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 
 import { C, withAlpha } from "@/lib/theme";
@@ -84,13 +86,14 @@ function renderAbilityScoresStep({
   side: React.ReactNode;
 }): { main: React.ReactNode; side: React.ReactNode } {
   function AbilityLabel({ k }: { k: string }) {
+  const translateUi = useUiTranslation("playerUi");
     const bonus = bgBonuses[k];
     const raceBonus = raceBonuses[k];
     const isPrimary = primaryKeys.includes(k);
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4, flexWrap: "wrap" }}>
         <span style={{ color: isPrimary ? C.colorGold : C.muted, fontSize: "var(--fs-small)", fontWeight: isPrimary ? 800 : 600 }}>{abilityLabels[k]}</span>
-        {isPrimary ? <span style={{ fontSize: "var(--fs-tiny)", color: C.colorGold, opacity: 0.75 }}>★ Primary</span> : null}
+        {isPrimary ? <span style={{ fontSize: "var(--fs-tiny)", color: C.colorGold, opacity: 0.75 }}>{translateUi("★ Primary")}</span> : null}
         {raceBonus != null ? (
           <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, padding: "1px 6px", borderRadius: 10, background: "rgba(74,222,128,0.18)", border: "1px solid rgba(74,222,128,0.4)", color: C.green }}>
             +{raceBonus} {raceName ?? "species"}
@@ -107,18 +110,18 @@ function renderAbilityScoresStep({
 
   const main = (
     <div>
-      <h2 style={headingStyle}>Ability Scores</h2>
+      <h2 style={headingStyle}>{<UiText text={"Ability Scores"} namespace="playerUi" />}</h2>
       {hasRaceBonuses ? (
         <div style={{ ...detailBoxStyle, marginBottom: 16, padding: "10px 14px" }}>
           <span style={{ fontSize: "var(--fs-small)", color: C.green }}>
-            Species bonuses applied: {Object.entries(raceBonuses).map(([k, v]) => `${abilityLabels[k]} +${v}`).join(", ")}
+            {<UiText text={"Species bonuses applied:"} namespace="playerUi" />} {Object.entries(raceBonuses).map(([k, v]) => `${abilityLabels[k]} +${v}`).join(", ")}
           </span>
         </div>
       ) : null}
       {hasBgBonuses ? (
         <div style={{ ...detailBoxStyle, marginBottom: 16, padding: "10px 14px" }}>
           <span style={{ fontSize: "var(--fs-small)", color: C.colorMagic }}>
-            Background bonuses applied: {Object.entries(bgBonuses).map(([k, v]) => `${abilityLabels[k]} +${v}`).join(", ")}
+            {<UiText text={"Background bonuses applied:"} namespace="playerUi" />} {Object.entries(bgBonuses).map(([k, v]) => `${abilityLabels[k]} +${v}`).join(", ")}
           </span>
         </div>
       ) : null}
@@ -139,14 +142,14 @@ function renderAbilityScoresStep({
               fontSize: "var(--fs-subtitle)",
             }}
           >
-            {m === "standard" ? "Standard Array" : "Point Buy"}
+            {m === "standard" ? <UiText text={"Standard Array"} namespace="playerUi" /> : <UiText text={"Point Buy"} namespace="playerUi" />}
           </button>
         ))}
       </div>
 
       {form.abilityMethod === "standard" ? (
         <div>
-          <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 12 }}>Assign each value to one ability: {standardArray.join(", ")}</div>
+          <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 12 }}>{<UiText text={"Assign each value to one ability:"} namespace="playerUi" />} {standardArray.join(", ")}</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
             {abilityKeys.map((k) => {
               const assigned = form.standardAssign[k];
@@ -160,7 +163,7 @@ function renderAbilityScoresStep({
                     {standardArray.map((v, i) => (!usedIndices.includes(i) || i === assigned ? <option key={i} value={String(i)}>{v}</option> : null))}
                   </Select>
                   <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginTop: 2, textAlign: "center" }}>
-                    {totalVal != null ? <>{baseVal !== totalVal ? <span style={{ color: C.colorMagic, marginRight: 4 }}>{totalVal}</span> : null}{`mod ${abilityMod(totalVal) >= 0 ? "+" : ""}${abilityMod(totalVal)}`}</> : null}
+                    {totalVal != null ? <>{baseVal !== totalVal ? <span style={{ color: C.colorMagic, marginRight: 4 }}>{totalVal}</span> : null}{translateUi("mod {{value1}}{{value2}}", { value1: abilityMod(totalVal) >= 0 ? "+" : "", value2: abilityMod(totalVal) })}</> : null}
                   </div>
                 </div>
               );
@@ -172,7 +175,7 @@ function renderAbilityScoresStep({
       {form.abilityMethod === "pointbuy" ? (
         <div>
           <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
-            <span style={{ color: C.muted, fontSize: "var(--fs-small)" }}>Points remaining:</span>
+            <span style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{<UiText text={"Points remaining:"} namespace="playerUi" />}</span>
             <span style={{ fontWeight: 700, color: remaining < 0 ? C.red : C.accentHl }}>{remaining} / {pointBuyBudget}</span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
@@ -187,7 +190,7 @@ function renderAbilityScoresStep({
                     <span style={{ fontWeight: 700, minWidth: 24 }}>{score}{total !== score ? <span style={{ color: C.colorMagic, fontSize: "var(--fs-small)" }}> ({total})</span> : null}</span>
                     <IconButton size="sm" disabled={score >= 15 || remaining < (pointBuyCosts[score + 1] ?? 99) - (pointBuyCosts[score] ?? 0)} onClick={() => setPointBuyScore(k, score + 1)}>+</IconButton>
                   </div>
-                  <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginTop: 2 }}>mod {abilityMod(total) >= 0 ? "+" : ""}{abilityMod(total)}</div>
+                  <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginTop: 2 }}>{<UiText text={"mod"} namespace="playerUi" />} {abilityMod(total) >= 0 ? "+" : ""}{abilityMod(total)}</div>
                 </div>
               );
             })}
@@ -277,28 +280,28 @@ function renderDerivedStatsStep({
     : `10 + ${dexMod >= 0 ? "+" : ""}${dexMod} DEX (base)`;
   const main = (
     <div>
-      <h2 style={headingStyle}>Combat Stats</h2>
-      <p style={{ color: C.muted, marginBottom: 16 }}>Auto-calculated from your choices — HP Max and Armor Class can be overridden.</p>
+      <h2 style={headingStyle}>{<UiText text={"Combat Stats"} namespace="playerUi" />}</h2>
+      <p style={{ color: C.muted, marginBottom: 16 }}>{<UiText text={"Auto-calculated from your choices — HP Max and Armor Class can be overridden."} namespace="playerUi" />}</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
         <div>
-          <label style={labelStyle}>HP Max</label>
+          <label style={labelStyle}>{<UiText text={"HP Max"} namespace="playerUi" />}</label>
           <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 4 }}>{hpFormulaLabel}</div>
           <input type="number" value={hpMax} onChange={(e) => setField("hpMax", e.target.value)} style={{ ...inputStyle, width: "100%" }} />
         </div>
         <div>
-          <label style={labelStyle}>Armor Class</label>
+          <label style={labelStyle}>{<UiText text={"Armor Class"} namespace="playerUi" />}</label>
           <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 4 }}>{acFormulaLabel}</div>
           <input type="number" value={ac} onChange={(e) => setField("ac", e.target.value)} style={{ ...inputStyle, width: "100%" }} />
         </div>
         <div>
-          <label style={labelStyle}>Speed (ft)</label>
-          <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 4 }}>From species ({raceSpeed} ft)</div>
+          <label style={labelStyle}>{<UiText text={"Speed (ft)"} namespace="playerUi" />}</label>
+          <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 4 }}>{<UiText text={"From species ("} namespace="playerUi" />}{raceSpeed} {<UiText text={"ft)"} namespace="playerUi" />}</div>
           <div style={{ ...inputStyle, width: "100%", opacity: 0.6, cursor: "default" }}>{speed}</div>
         </div>
       </div>
       {sections.length > 0 ? (
         <div style={{ ...detailBoxStyle, marginTop: 24 }}>
-          <div style={{ fontWeight: 700, marginBottom: 12, fontSize: "var(--fs-subtitle)" }}>Your Proficiencies</div>
+          <div style={{ fontWeight: 700, marginBottom: 12, fontSize: "var(--fs-subtitle)" }}>{<UiText text={"Your Proficiencies"} namespace="playerUi" />}</div>
           {sections.map((section) => (
             <div key={section.label} style={{ marginBottom: 10 }}>
               <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>{section.label}</span>
@@ -342,18 +345,18 @@ export function renderDerivedStatsFromContext(ctx: CharacterCreatorStepRenderCon
     itemChoiceOptionsByKey: ctx.growthOptionEntriesByKey,
   });
   const sections = [
-    { label: "Skills", items: prof.skills },
-    { label: "Expertise", items: prof.expertise },
-    { label: "Saves", items: prof.saves },
-    { label: "Armor", items: prof.armor },
-    { label: "Weapons", items: prof.weapons },
-    { label: "Tools", items: prof.tools },
-    { label: "Languages", items: prof.languages },
-    { label: "Maneuvers", items: prof.maneuvers },
-    { label: "Metamagic", items: prof.metamagic },
-    { label: "Magic Item Plans", items: prof.plans },
-    { label: "Spells", items: prof.spells },
-    { label: "Invocations", items: prof.invocations },
+    { label: translateUi("Skills"), items: prof.skills },
+    { label: translateUi("Expertise"), items: prof.expertise },
+    { label: translateUi("Saves"), items: prof.saves },
+    { label: translateUi("Armor"), items: prof.armor },
+    { label: translateUi("Weapons"), items: prof.weapons },
+    { label: translateUi("Tools"), items: prof.tools },
+    { label: translateUi("Languages"), items: prof.languages },
+    { label: translateUi("Maneuvers"), items: prof.maneuvers },
+    { label: translateUi("Metamagic"), items: prof.metamagic },
+    { label: translateUi("Magic Item Plans"), items: prof.plans },
+    { label: translateUi("Spells"), items: prof.spells },
+    { label: translateUi("Invocations"), items: prof.invocations },
   ].filter((s) => s.items.length > 0);
 
   return renderDerivedStatsStep({

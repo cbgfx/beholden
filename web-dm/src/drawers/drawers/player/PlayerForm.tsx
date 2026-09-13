@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { Input } from "@/ui/Input";
 import { theme } from "@/theme/theme";
 import { IconCamera } from "@/icons";
@@ -52,6 +53,7 @@ export function PlayerForm(props: {
   onImageClick?: () => void;
   onImageRemove?: () => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const s = props.state;
   const h = props.handlers;
   const imageUrl = resolveAssetUrl(props.imageUrl);
@@ -61,7 +63,7 @@ export function PlayerForm(props: {
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         <div
           onClick={props.onImageClick}
-          title={props.imageUrl ? "Change photo" : "Add photo"}
+          title={props.imageUrl ? translateUi("Change photo") : translateUi("Add photo")}
           style={{
             width: 72, height: 72, borderRadius: 8, flexShrink: 0,
             background: imageUrl ? "transparent" : theme.colors.inputBg,
@@ -79,14 +81,14 @@ export function PlayerForm(props: {
             type="button" onClick={props.onImageClick}
             style={{ background: "none", border: "none", cursor: "pointer", color: theme.colors.text, fontSize: "var(--fs-medium)", textAlign: "left", padding: 0 }}
           >
-            {imageUrl ? "Change photo" : "Add photo"}
+            {imageUrl ? translateUi("Change photo") : translateUi("Add photo")}
           </button>
           {imageUrl && (
             <button
               type="button" onClick={props.onImageRemove}
               style={{ background: "none", border: "none", cursor: "pointer", color: theme.colors.muted, fontSize: "var(--fs-medium)", textAlign: "left", padding: 0 }}
             >
-              Remove
+              {translateUi("Remove")}
             </button>
           )}
         </div>
@@ -94,62 +96,62 @@ export function PlayerForm(props: {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div>
           <div style={{ color: theme.colors.muted, marginBottom: 6 }}>
-            Player name{props.playerNameLocked ? " (account owner)" : ""}
+            {translateUi("Player name")}{props.playerNameLocked ? translateUi(" (account owner)") : ""}
           </div>
           <Input
             value={s.playerName}
             onChange={(e) => h.setPlayerName(e.target.value)}
             readOnly={props.playerNameLocked}
-            title={props.playerNameLocked ? "This name comes from the linked player account." : undefined}
+            title={props.playerNameLocked ? translateUi("This name comes from the linked player account.") : undefined}
           />
         </div>
         <div>
-          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Character name</div>
+          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("Character name")}</div>
           <Input value={s.characterName} onChange={(e) => h.setCharacterName(e.target.value)} />
         </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div>
-          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Class</div>
+          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("Class")}</div>
           <Input value={s.clazz} onChange={(e) => h.setClazz(e.target.value)} />
         </div>
         <div>
-          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Species</div>
+          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("Species")}</div>
           <Input value={s.species} onChange={(e) => h.setSpecies(e.target.value)} />
         </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div>
-          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Level</div>
+          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("Level")}</div>
           <Input value={s.lvl} onChange={(e) => h.setLvl(digitsOnly(e.target.value))} inputMode="numeric" />
         </div>
         <div>
-          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>AC</div>
+          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("AC")}</div>
           <Input value={s.ac} onChange={(e) => h.setAc(digitsOnly(e.target.value))} inputMode="numeric" />
         </div>
       </div>
 
       <div>
-        <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Speed</div>
+        <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("Speed")}</div>
         <Input value={s.speed} onChange={(e) => h.setSpeed(digitsOnly(e.target.value))} placeholder="30" inputMode="numeric" />
       </div>
 
       <div>
-        <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Ability scores</div>
+        <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("Ability scores")}</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-          <Score label="STR" value={s.pStr} onChange={h.setPStr} />
-          <Score label="DEX" value={s.pDex} onChange={h.setPDex} />
-          <Score label="CON" value={s.pCon} onChange={h.setPCon} />
-          <Score label="INT" value={s.pInt} onChange={h.setPInt} />
-          <Score label="WIS" value={s.pWis} onChange={h.setPWis} />
-          <Score label="CHA" value={s.pCha} onChange={h.setPCha} />
+          <Score label={translateUi("STR")} value={s.pStr} onChange={h.setPStr} />
+          <Score label={translateUi("DEX")} value={s.pDex} onChange={h.setPDex} />
+          <Score label={translateUi("CON")} value={s.pCon} onChange={h.setPCon} />
+          <Score label={translateUi("INT")} value={s.pInt} onChange={h.setPInt} />
+          <Score label={translateUi("WIS")} value={s.pWis} onChange={h.setPWis} />
+          <Score label={translateUi("CHA")} value={s.pCha} onChange={h.setPCha} />
         </div>
       </div>
 
       <div>
-        <div style={{ color: theme.colors.muted, marginBottom: 6 }}>HP</div>
+        <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("HP")}</div>
         <Input
           value={s.hpMax}
           onChange={(e) => {
@@ -162,7 +164,7 @@ export function PlayerForm(props: {
 
         {props.mode === "edit" ? (
           <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
-            <div style={{ color: theme.colors.muted }}>Current HP</div>
+            <div style={{ color: theme.colors.muted }}>{translateUi("Current HP")}</div>
             <Input value={s.hpCur} onChange={(e) => h.setHpCur(digitsOnly(e.target.value))} inputMode="numeric" />
           </div>
         ) : null}

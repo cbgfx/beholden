@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import { IconPlayer, IconHeart, IconShield } from "@/icons";
@@ -40,6 +41,7 @@ export function PlayerRow(props: {
   onEdit?: () => void;
   variant?: "campaign" | "combatList";
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const p = props.p;
   const variant = props.variant ?? "campaign";
   const isCombatList = variant === "combatList";
@@ -77,7 +79,7 @@ export function PlayerRow(props: {
 
   const metaLine = props.subtitle ?? (
     p.level || p.species || p.class
-      ? <>{p.level ? `Lvl ${p.level} ` : ""}{p.species} {p.class}</>
+      ? <>{p.level ? translateUi("Lvl {{value1}} ", { value1: p.level }) : ""}{p.species} {p.class}</>
       : null
   );
 
@@ -101,7 +103,7 @@ export function PlayerRow(props: {
       } : undefined}
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
-      aria-label={clickable ? `Edit ${p.characterName}` : undefined}
+      aria-label={clickable ? translateUi("Edit {{value1}}", { value1: p.characterName }) : undefined}
     >
 
       {/* Top row: avatar · name/meta · stats · actions */}
@@ -156,7 +158,7 @@ export function PlayerRow(props: {
             <IconHeart size={12} style={{ opacity: 0.55, color: theme.colors.muted }} />
             <span style={{ fontWeight: 900, fontSize: "var(--fs-medium)", color: theme.colors.text, fontVariantNumeric: "tabular-nums" }}>
               {effectiveCur}/{effectiveMax}
-              {tempHp ? <span title={`${cur}/${max} HP + ${tempHp} temporary HP`} style={{ color: theme.colors.accentHighlight, marginLeft: 4, fontSize: "var(--fs-tiny)" }}>temp</span> : null}
+              {tempHp ? <span title={translateUi("{{value1}}/{{value2}} HP + {{value3}} temporary HP", { value1: cur, value2: max, value3: tempHp })} style={{ color: theme.colors.accentHighlight, marginLeft: 4, fontSize: "var(--fs-tiny)" }}>{translateUi("temp")}</span> : null}
             </span>
           </span>
         </div>

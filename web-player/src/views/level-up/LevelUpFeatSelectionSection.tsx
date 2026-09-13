@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C, withAlpha } from "@/lib/theme";
 import { FormattedText } from "@beholden/shared/ui";
 import { ChoiceBtn } from "./LevelUpParts";
@@ -23,6 +24,7 @@ export function FeatSelectionSection(props: {
   nextLevel: number;
   onToggleFeatOption: (choiceKey: string, option: string, count: number) => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const {
     accentColor, featSearch, onFeatSearchChange, chosenFeatId, filteredFeatSummaries, onChooseFeat,
     chosenFeatDetail, featPrereqsMet, featRepeatableValid, featChoiceEntries, featChoiceOptionsByKey, featSpellChoiceOptions, chosenFeatOptions, nextLevel, onToggleFeatOption,
@@ -35,7 +37,7 @@ export function FeatSelectionSection(props: {
           type="search"
           value={featSearch}
           onChange={(e) => onFeatSearchChange(e.target.value)}
-          placeholder="Search feats..."
+          placeholder={translateUi("Search feats...")}
           style={{
             flex: "1 1 220px",
             padding: "10px 12px",
@@ -48,7 +50,7 @@ export function FeatSelectionSection(props: {
           }}
         />
         <div style={{ fontSize: "var(--fs-small)", color: chosenFeatId ? accentColor : C.muted }}>
-          {chosenFeatId ? "1 / 1 selected" : "Pick 1 feat"}
+          {chosenFeatId ? translateUi("1 / 1 selected") : translateUi("Pick 1 feat")}
         </div>
       </div>
 
@@ -90,17 +92,17 @@ export function FeatSelectionSection(props: {
           <div style={{ fontSize: "var(--fs-large)", fontWeight: 900, color: "#fff", marginBottom: 8 }}>{chosenFeatDetail.name}</div>
           {formatFeatPrerequisite(chosenFeatDetail.parsed.prerequisite) && (
             <div style={{ fontSize: "var(--fs-small)", color: featPrereqsMet ? C.colorGold : C.colorPinkRed, marginBottom: 8, fontWeight: 700 }}>
-              Prerequisite: {formatFeatPrerequisite(chosenFeatDetail.parsed.prerequisite)}
+              {translateUi("Prerequisite:")} {formatFeatPrerequisite(chosenFeatDetail.parsed.prerequisite)}
             </div>
           )}
           {!featPrereqsMet && (
             <div style={{ fontSize: "var(--fs-small)", color: C.colorPinkRed, marginBottom: 8, fontWeight: 800 }}>
-              Prerequisite not met. This feat can't be chosen right now.
+              {translateUi("Prerequisite not met. This feat can't be chosen right now.")}
             </div>
           )}
           {featPrereqsMet && !featRepeatableValid && (
             <div style={{ fontSize: "var(--fs-small)", color: C.colorPinkRed, marginBottom: 8, fontWeight: 800 }}>
-              This feat has already been taken and isn't repeatable.
+              {translateUi("This feat has already been taken and isn't repeatable.")}
             </div>
           )}
           {chosenFeatDetail.text && (
@@ -123,11 +125,11 @@ export function FeatSelectionSection(props: {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 8, flexWrap: "wrap" }}>
                   <div style={{ fontSize: "var(--fs-medium)", fontWeight: 800, color: "#fff" }}>
                     {choice.type === "ability_score"
-                      ? "Ability Score Choice"
+                      ? translateUi("Ability Score Choice")
                       : choice.type === "spell_list"
-                        ? "Spell List Choice"
+                        ? translateUi("Spell List Choice")
                         : choice.type === "spell"
-                          ? "Spell Choice"
+                          ? translateUi("Spell Choice")
                           : chosenFeatDetail.name}
                   </div>
                   <div style={{ fontSize: "var(--fs-small)", color: selected.length >= choice.count ? accentColor : C.muted }}>
@@ -136,7 +138,7 @@ export function FeatSelectionSection(props: {
                 </div>
                 {choice.type === "spell" && options.length === 0 && (
                   <div style={{ marginBottom: 8, fontSize: "var(--fs-small)", color: C.muted }}>
-                    {(choice.dependsOnChoiceId ?? choice.linkedTo) ? "Choose the spell list first." : "No eligible spell options found."}
+                    {(choice.dependsOnChoiceId ?? choice.linkedTo) ? translateUi("Choose the spell list first.") : translateUi("No eligible spell options found.")}
                   </div>
                 )}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -165,7 +167,7 @@ export function FeatSelectionSection(props: {
                 {(choice.note || choice.dependencyKind === "replacement") && (
                   <div style={{ marginTop: 8, fontSize: "var(--fs-small)", color: C.muted }}>
                     {choice.note}
-                    {choice.dependencyKind === "replacement" && !choice.note ? "Shown only if the granted spell is already known." : null}
+                    {choice.dependencyKind === "replacement" && !choice.note ? translateUi("Shown only if the granted spell is already known.") : null}
                   </div>
                 )}
               </div>

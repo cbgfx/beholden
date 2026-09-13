@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Input } from "./Input";
 
 export type SearchableMultiFilterTheme = {
@@ -18,7 +19,8 @@ export function SearchableMultiFilter(props: {
   width?: number;
   theme: SearchableMultiFilterTheme;
 }) {
-  const display = `${props.label}: ${props.selected.length ? "Add…" : "All"}`;
+  const { t } = useTranslation("shared");
+  const display = `${props.label}: ${props.selected.length ? t("searchableMultiFilter.addOption") : t("searchableMultiFilter.allOption")}`;
   const [query, setQuery] = useState(display);
   const [open, setOpen] = useState(false);
   useEffect(() => setQuery(display), [display]);
@@ -33,7 +35,7 @@ export function SearchableMultiFilter(props: {
       onChange={(event) => { setQuery(event.target.value); setOpen(true); }} />
     {open ? <div style={{ position: "absolute", zIndex: 220, top: "calc(100% + 4px)", left: 0, width: "max-content", minWidth: "100%", maxWidth: 300, maxHeight: 260, overflowY: "auto", padding: 4, border: `1px solid ${props.theme.panelBorder}`, borderRadius: props.theme.radius, background: props.theme.menuBg ?? "#0d1525", boxShadow: "0 12px 28px rgba(0,0,0,.65)" }}>
       {filtered.map((option) => <button key={option.value} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { props.onAdd(option.value); setOpen(false); }} style={{ display: "block", width: "100%", padding: "8px 10px", border: 0, borderRadius: 6, background: "transparent", color: props.theme.text, textAlign: "left", cursor: "pointer", font: "inherit", whiteSpace: "nowrap" }}>{option.label}</button>)}
-      {!filtered.length ? <div style={{ padding: "8px 10px", color: props.theme.muted }}>No matches</div> : null}
+      {!filtered.length ? <div style={{ padding: "8px 10px", color: props.theme.muted }}>{t("searchableMultiFilter.noMatches")}</div> : null}
     </div> : null}
   </div>;
 }

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { C } from "@/lib/theme";
 import { RightDrawer } from "@/ui/RightDrawer";
@@ -70,13 +71,14 @@ export function EngagedEnemiesDrawer(props: {
   allies: CombatAlly[];
   onClose: () => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   if (!props.open) return null;
   const enemies = activeEnemiesFirst(props.enemies);
   return (
-    <RightDrawer title="Combat View" onClose={props.onClose}>
-      <div style={{ color: C.muted, fontSize: "var(--fs-tiny)", fontWeight: 800, textTransform: "uppercase", marginBottom: 8 }}>Allies</div>
+    <RightDrawer title={translateUi("Combat View")} onClose={props.onClose}>
+      <div style={{ color: C.muted, fontSize: "var(--fs-tiny)", fontWeight: 800, textTransform: "uppercase", marginBottom: 8 }}>{translateUi("Allies")}</div>
       {props.allies.length === 0 ? (
-        <div style={{ color: C.muted, lineHeight: 1.6, marginBottom: 20 }}>No other allies are in this encounter.</div>
+        <div style={{ color: C.muted, lineHeight: 1.6, marginBottom: 20 }}>{translateUi("No other allies are in this encounter.")}</div>
       ) : (
         <div style={{ display: "grid", gap: 10, marginBottom: 20 }}>
           {props.allies.map((ally) => (
@@ -97,10 +99,10 @@ export function EngagedEnemiesDrawer(props: {
           ))}
         </div>
       )}
-      <div style={{ color: C.muted, fontSize: "var(--fs-tiny)", fontWeight: 800, textTransform: "uppercase", marginBottom: 8 }}>Enemies</div>
+      <div style={{ color: C.muted, fontSize: "var(--fs-tiny)", fontWeight: 800, textTransform: "uppercase", marginBottom: 8 }}>{translateUi("Enemies")}</div>
       {props.enemies.length === 0 ? (
         <div style={{ color: C.muted, lineHeight: 1.6 }}>
-          No enemies are engaged yet.
+          {translateUi("No enemies are engaged yet.")}
         </div>
       ) : (
         <div style={{ display: "grid", gap: 10 }}>

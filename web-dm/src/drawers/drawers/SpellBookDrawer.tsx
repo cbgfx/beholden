@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import type { DrawerContent } from "@/drawers/types";
 import { Modal } from "@/components/overlay/Modal";
@@ -6,6 +7,7 @@ import { SpellsPanel } from "@/views/CompendiumView/panels/SpellsPanel";
 import { SpellDetailPanel } from "@/views/CompendiumView/panels/SpellDetailPanel";
 
 export function SpellBookDrawer(props: { close: () => void }): DrawerContent {
+  const translateUi = useUiTranslation("dmUi");
   const [selectedSpellId, setSelectedSpellId] = React.useState<string | null>(null);
   const [selectedSpellRuleset, setSelectedSpellRuleset] = React.useState<"5e" | "5.5e" | null>(null);
   const [detailOpen, setDetailOpen] = React.useState(false);
@@ -30,7 +32,7 @@ export function SpellBookDrawer(props: { close: () => void }): DrawerContent {
 
         <Modal
           isOpen={detailOpen}
-          title="Spell"
+          title={translateUi("Spell")}
           width={980}
           height={760}
           onClose={() => setDetailOpen(false)}
@@ -39,12 +41,12 @@ export function SpellBookDrawer(props: { close: () => void }): DrawerContent {
             {selectedSpellId ? (
               <SpellDetailPanel spellId={selectedSpellId} ruleset={selectedSpellRuleset} />
             ) : (
-              <div style={{ opacity: 0.7 }}>Select a spell</div>
+              <div style={{ opacity: 0.7 }}>{translateUi("Select a spell")}</div>
             )}
           </div>
         </Modal>
       </div>
     ),
-    footer: <Button onClick={props.close}>Done</Button>
+    footer: <Button onClick={props.close}>{translateUi("Done")}</Button>
   };
 }

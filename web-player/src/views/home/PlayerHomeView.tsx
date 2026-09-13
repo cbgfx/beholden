@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/services/api";
@@ -16,6 +17,8 @@ import { CharacterRow } from "./PlayerHomeCharacterRow";
 import { CampaignCard } from "./PlayerHomeCampaignCard";
 
 export function PlayerHomeView() {
+  const translateMessage = useUiMessages("playerUi");
+  const translateUi = useUiTranslation("playerUi");
   const navigate = useNavigate();
   const importFileRef = useRef<HTMLInputElement>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -40,9 +43,9 @@ export function PlayerHomeView() {
 
   useEffect(() => {
     reload()
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
+      .catch((e) => setError(e instanceof Error ? e.message : translateMessage("Failed to load")))
       .finally(() => setLoading(false));
-  }, [reload]);
+  }, [reload, translateMessage]);
 
   function openCharacter(id: string) {
     touchLastOpened(id);
@@ -103,7 +106,7 @@ export function PlayerHomeView() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <h2 style={{ margin: 0, fontSize: "var(--fs-hero)", fontWeight: 800, display: "flex", alignItems: "center", gap: 12 }}>
             <IconPlayers size={38} />
-            My Characters
+            {translateUi("My Characters")}
           </h2>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <label
@@ -121,28 +124,28 @@ export function PlayerHomeView() {
                 textOverflow: "ellipsis",
                 display: "inline-block",
               }}
-              title={importFile ? importFile.name : "Choose a character JSON file"}
+              title={importFile ? importFile.name : translateUi("Choose a character JSON file")}
               onClick={() => importFileRef.current?.click()}
             >
-              {importFile ? importFile.name : "Choose file..."}
+              {importFile ? importFile.name : translateUi("Choose file...")}
             </label>
             <Button
               variant="ghost"
-              title="Import selected character file"
-              aria-label="Import selected character file"
+              title={translateUi("Import selected character file")}
+              aria-label={translateUi("Import selected character file")}
               disabled={!importFile || importing}
               style={{ minWidth: 100 }}
               onClick={() => void handleImportSelected(importFile)}
             >
               <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
                 <IconImport size={14} />
-                {importing ? "Importing..." : "Import"}
+                {importing ? translateUi("Importing...") : translateUi("Import")}
               </span>
             </Button>
             <Button
               variant="primary"
-              title="Create character"
-              aria-label="Create character"
+              title={translateUi("Create character")}
+              aria-label={translateUi("Create character")}
               style={{ minWidth: 42 }}
               onClick={() => navigate("/characters/new")}
             >
@@ -165,18 +168,18 @@ export function PlayerHomeView() {
                 textUnderlineOffset: 3,
               }}
             >
-              {tab === "active" ? "Active" : "Archived"} ({characters.filter((character) => character.isActive === (tab === "active")).length})
+              {tab === "active" ? translateUi("Active") : translateUi("Archived")} ({characters.filter((character) => character.isActive === (tab === "active")).length})
             </a>
           ))}
         </div>
 
-        {loading && <p style={{ color: C.muted }}>Loading…</p>}
+        {loading && <p style={{ color: C.muted }}>{translateUi("Loading…")}</p>}
         {error && <p style={{ color: C.red }}>{error}</p>}
         {!error && importMsg && <p style={{ color: C.muted }}>{importMsg}</p>}
 
         {!loading && !error && sortedCharacters.length === 0 && (
           <p style={{ color: C.muted, fontSize: "var(--fs-medium)" }}>
-            {characterTab === "active" ? "No active characters. Create one to get started." : "No archived characters."}
+            {characterTab === "active" ? translateUi("No active characters. Create one to get started.") : translateUi("No archived characters.")}
           </p>
         )}
 
@@ -204,7 +207,7 @@ export function PlayerHomeView() {
           <>
             <h2 style={{ margin: "0 0 20px", fontSize: "var(--fs-hero)", fontWeight: 800, display: "flex", alignItems: "center", gap: 12 }}>
               <IconCampaign size={38} />
-              My Campaigns
+              {translateUi("My Campaigns")}
             </h2>
             <div style={{
               display: "grid",

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { NoteRow } from "./NoteRow";
 import { usePointerDragReorder } from "./usePointerDragReorder";
 import { DragHandleGrip } from "./DragHandleGrip";
@@ -22,6 +23,7 @@ export function NoteList(props: {
   onReorder?: (ids: string[]) => void;
   emptyText?: string;
 }) {
+  const { t } = useTranslation("shared");
   const canReorder = Boolean(props.onReorder) && props.items.length > 1;
   const drag = usePointerDragReorder({
     items: props.items,
@@ -34,7 +36,7 @@ export function NoteList(props: {
   const draggedItem = canReorder && drag.dragId ? props.items.find((item) => item.id === drag.dragId) : null;
 
   if (!props.items.length) {
-    return <div style={{ color: props.mutedColor }}>{props.emptyText ?? "No notes yet."}</div>;
+    return <div style={{ color: props.mutedColor }}>{props.emptyText ?? t("noteList.emptyText")}</div>;
   }
 
   return (
@@ -59,8 +61,8 @@ export function NoteList(props: {
             {canReorder ? (
               <button
                 type="button"
-                title="Drag to reorder"
-                aria-label="Drag to reorder"
+                title={t("noteList.dragToReorder")}
+                aria-label={t("noteList.dragToReorder")}
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
@@ -90,7 +92,7 @@ export function NoteList(props: {
 
             <div style={{ flex: 1, minWidth: 0 }}>
               <NoteRow
-                title={item.title || "Untitled"}
+                title={item.title || t("noteList.untitled")}
                 text={item.text}
                 expanded={expanded}
                 accentColor={props.accentColor}
@@ -111,7 +113,7 @@ export function NoteList(props: {
           y={drag.pointerPos.y}
           style={{ fontWeight: 700, color: props.textColor, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
         >
-          {draggedItem.title || "Untitled"}
+          {draggedItem.title || t("noteList.untitled")}
         </DragGhostCard>
       )}
     </div>

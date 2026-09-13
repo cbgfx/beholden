@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 import { EmptyState, ListShell } from "@beholden/shared/ui";
 import { useMonsterBrowser } from "@beholden/shared/domain/compendium/useMonsterBrowser";
@@ -29,6 +30,7 @@ function MonsterBrowserRow(props: {
   onCancelDelete: () => void;
   deleteBusy: boolean;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const monster = props.row;
   const [hovered, setHovered] = React.useState(false);
   const crLabel = monster.cr != null ? `CR ${formatCr(monster.cr)}` : "CR -";
@@ -88,20 +90,20 @@ function MonsterBrowserRow(props: {
         >
           {props.confirmingDelete ? (
             <>
-              <span style={{ fontSize: "var(--fs-small)", color: theme.colors.muted, marginRight: 2 }}>Delete?</span>
-              <Button type="button" variant="danger" onClick={props.onConfirmDelete} disabled={props.deleteBusy} title="Yes, delete">
-                Yes
+              <span style={{ fontSize: "var(--fs-small)", color: theme.colors.muted, marginRight: 2 }}>{translateUi("Delete?")}</span>
+              <Button type="button" variant="danger" onClick={props.onConfirmDelete} disabled={props.deleteBusy} title={translateUi("Yes, delete")}>
+                {translateUi("Yes")}
               </Button>
-              <Button type="button" variant="ghost" onClick={props.onCancelDelete} title="Cancel">
-                No
+              <Button type="button" variant="ghost" onClick={props.onCancelDelete} title={translateUi("Cancel")}>
+                {translateUi("No")}
               </Button>
             </>
           ) : (
             <>
-              <IconButton onClick={props.onEdit} variant="ghost" size="sm" title="Edit monster">
+              <IconButton onClick={props.onEdit} variant="ghost" size="sm" title={translateUi("Edit monster")}>
                 <IconPencil size={13} />
               </IconButton>
-              <IconButton onClick={props.onDelete} variant="ghost" size="sm" title="Delete monster">
+              <IconButton onClick={props.onDelete} variant="ghost" size="sm" title={translateUi("Delete monster")}>
                 <IconTrash size={13} />
               </IconButton>
             </>
@@ -117,6 +119,7 @@ export function MonsterBrowserPanel(props: {
   onSelectMonster: (id: string) => void;
   editable?: boolean;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const { filteredRows, loading, loadError, totalRows, envOptions, sizeOptions, typeOptions, refresh, compQ, setCompQ, sortMode, setSortMode, envFilter, setEnvFilter, sizeFilter, setSizeFilter, typeFilter, setTypeFilter, crMin, setCrMin, crMax, setCrMax, rulesetFilter, setRulesetFilter, showRulesetFilter, lettersInList, letterFirstIndex } = useMonsterBrowser();
 
   const vl = useVirtualList({ isEnabled: true, rowHeight: ROW_HEIGHT, overscan: 8 });
@@ -184,13 +187,13 @@ export function MonsterBrowserPanel(props: {
     <>
       <Panel
         storageKey="compendium-monsters"
-        title="Monsters"
+        title={translateUi("Monsters")}
         actions={
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
-              {loading ? "Loading..." : `${filteredRows.length.toLocaleString()} / ${totalRows.toLocaleString()}`}
+              {loading ? translateUi("Loading...") : `${filteredRows.length.toLocaleString()} / ${totalRows.toLocaleString()}`}
             </div>
-            {props.editable && <BrowserAddButton title="New monster" onClick={() => setShowCreateChoice(true)} />}
+            {props.editable && <BrowserAddButton title={translateUi("New monster")} onClick={() => setShowCreateChoice(true)} />}
           </div>
         }
         style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
@@ -264,12 +267,12 @@ export function MonsterBrowserPanel(props: {
         <ListShell ref={vl.scrollRef} onScroll={vl.onScroll as React.UIEventHandler<HTMLDivElement>} style={{ borderColor: theme.colors.panelBorder }}>
           {loadError && (
             <EmptyState textColor={theme.colors.red} style={{ padding: 12 }}>
-              Failed to load: {loadError}
+              {translateUi("Failed to load:")} {loadError}
             </EmptyState>
           )}
           {!loading && !loadError && filteredRows.length === 0 && (
             <EmptyState textColor={theme.colors.muted} style={{ padding: 12 }}>
-              {totalRows === 0 ? "No compendium data loaded. Import canonical Beholden JSON in the Compendium section." : "No monsters match the current filters."}
+              {totalRows === 0 ? translateUi("No compendium data loaded. Import canonical Beholden JSON in the Compendium section.") : translateUi("No monsters match the current filters.")}
             </EmptyState>
           )}
           {filteredRows.length > 0 && (

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useState } from "react";
 import { useInvocationGrantedFeatChoices } from "@/views/shared/useInvocationGrantedFeatChoices";
 import { useNavigate, useParams } from "react-router-dom";
@@ -21,6 +22,7 @@ import { useLevelUpActions } from "@/views/level-up/useLevelUpActions";
 import { describeMulticlassRequirement, multiclassRequirementMet } from "@/domain/character/multiclassEligibility";
 
 export function LevelUpView() {
+  const translateUi = useUiTranslation("playerUi");
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -447,12 +449,12 @@ export function LevelUpView() {
     featAbilityBonuses,
   });
 
-  if (loading) return <Wrap><p style={{ color: C.muted }}>Loading…</p></Wrap>;
+  if (loading) return <Wrap><p style={{ color: C.muted }}>{translateUi("Loading…")}</p></Wrap>;
   if (error || !char) return <Wrap><p style={{ color: C.red }}>{error ?? "Character not found."}</p></Wrap>;
   if (nextLevel > 20) {
     return (
       <Wrap>
-        <p style={{ color: C.muted }}>Already at max level (20).</p>
+        <p style={{ color: C.muted }}>{translateUi("Already at max level (20).")}</p>
         <BackBtn onClick={() => navigate(`/characters/${char.id}`)} />
       </Wrap>
     );
@@ -471,22 +473,22 @@ export function LevelUpView() {
         <div>
           <h1 style={{ margin: 0, fontSize: "var(--fs-title)", fontWeight: 900, color: C.text }}>{char.name}</h1>
           <div style={{ fontSize: "var(--fs-subtitle)", color: accentColor, fontWeight: 700, marginTop: 2 }}>
-            Level {char.level} → <span style={{ color: "#fff" }}>{nextLevel}</span>
+            {translateUi("Level")} {char.level} → <span style={{ color: "#fff" }}>{nextLevel}</span>
             {classDetail && <span style={{ color: C.muted, fontWeight: 400 }}> · {classDetail.name}</span>}
           </div>
         </div>
       </div>
 
       {/* ── HP gain ── */}
-      <Section title="Class level" accent={accentColor}>
+      <Section title={translateUi("Class level")} accent={accentColor}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {classEntries.map((entry) => <ChoiceBtn key={entry.id} active={targetClassKey === entry.id} onClick={() => setTargetClassKey(entry.id)} accent={accentColor}>{entry.className ?? ownedClassDetails[entry.id]?.name ?? "Class"} {entry.level} → {entry.level + 1}</ChoiceBtn>)}
-          {classCatalog.filter((option) => !classEntries.some((entry) => entry.classId === option.id)).map((option) => <ChoiceBtn key={option.id} active={targetClassKey === `new:${option.id}`} onClick={() => setTargetClassKey(`new:${option.id}`)} accent={accentColor}>Add {option.name}</ChoiceBtn>)}
+          {classCatalog.filter((option) => !classEntries.some((entry) => entry.classId === option.id)).map((option) => <ChoiceBtn key={option.id} active={targetClassKey === `new:${option.id}`} onClick={() => setTargetClassKey(`new:${option.id}`)} accent={accentColor}>{translateUi("Add")} {option.name}</ChoiceBtn>)}
         </div>
         {isAddingClass && <div style={{ marginTop: 12, display: "grid", gap: 8, fontSize: "var(--fs-small)" }}>
           {multiclassRequirements.map((requirement) => <div key={`${requirement.name}:${requirement.label}`} style={{ color: requirement.met ? C.green : C.red }}>{requirement.met ? "✓" : "✕"} {requirement.name}: {requirement.label}</div>)}
-          {multiclassSkillCount > 0 && <div><div style={{ color: C.muted, marginBottom: 6 }}>Choose {multiclassSkillCount} skill proficiency</div><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{(classDetail?.multiclass?.skills?.from ?? []).map((name) => <ChoiceBtn key={name} active={chosenMulticlassSkills.includes(name)} onClick={() => setChosenMulticlassSkills((current) => current.includes(name) ? current.filter((value) => value !== name) : current.length < multiclassSkillCount ? [...current, name] : current)}>{name}</ChoiceBtn>)}</div></div>}
-          {multiclassToolCount > 0 && <div><div style={{ color: C.muted, marginBottom: 6 }}>Choose {multiclassToolCount} tool proficiency</div><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{Array.from(new Set((classDetail?.multiclass?.tools?.choices ?? []).flatMap((choice) => choice.from))).map((name) => <ChoiceBtn key={name} active={chosenMulticlassTools.includes(name)} onClick={() => setChosenMulticlassTools((current) => current.includes(name) ? current.filter((value) => value !== name) : current.length < multiclassToolCount ? [...current, name] : current)}>{name}</ChoiceBtn>)}</div></div>}
+          {multiclassSkillCount > 0 && <div><div style={{ color: C.muted, marginBottom: 6 }}>{translateUi("Choose")} {multiclassSkillCount} {translateUi("skill proficiency")}</div><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{(classDetail?.multiclass?.skills?.from ?? []).map((name) => <ChoiceBtn key={name} active={chosenMulticlassSkills.includes(name)} onClick={() => setChosenMulticlassSkills((current) => current.includes(name) ? current.filter((value) => value !== name) : current.length < multiclassSkillCount ? [...current, name] : current)}>{name}</ChoiceBtn>)}</div></div>}
+          {multiclassToolCount > 0 && <div><div style={{ color: C.muted, marginBottom: 6 }}>{translateUi("Choose")} {multiclassToolCount} {translateUi("tool proficiency")}</div><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{Array.from(new Set((classDetail?.multiclass?.tools?.choices ?? []).flatMap((choice) => choice.from))).map((name) => <ChoiceBtn key={name} active={chosenMulticlassTools.includes(name)} onClick={() => setChosenMulticlassTools((current) => current.includes(name) ? current.filter((value) => value !== name) : current.length < multiclassToolCount ? [...current, name] : current)}>{name}</ChoiceBtn>)}</div></div>}
         </div>}
       </Section>
 
@@ -510,9 +512,9 @@ export function LevelUpView() {
 
       {/* ── ASI ── */}
       {isAsiLevel && (
-        <Section title="Ability Score Improvement" accent={accentColor}>
+        <Section title={translateUi("Ability Score Improvement")} accent={accentColor}>
           <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginBottom: 12 }}>
-            +2 to one ability score, +1 to two different scores, or take a feat.
+            {translateUi("+2 to one ability score, +1 to two different scores, or take a feat.")}
           </div>
 
           {/* Mode selection */}
@@ -523,7 +525,7 @@ export function LevelUpView() {
                 active={asiMode === m}
                 onClick={() => { clearAsi(); setAsiMode(m); }}
               >
-                {m === "asi" ? "Improve Abilities" : "Take a Feat"}
+                {m === "asi" ? translateUi("Improve Abilities") : translateUi("Take a Feat")}
               </ChoiceBtn>
             ))}
           </div>
@@ -565,7 +567,7 @@ export function LevelUpView() {
       )}
 
       {expertiseChoices.length > 0 && (
-        <Section title={`Expertise at Level ${nextLevel}`} accent={accentColor}>
+        <Section title={translateUi("Expertise at Level {{value1}}", { value1: nextLevel })} accent={accentColor}>
           <ExpertiseSelectionSection
             accentColor={accentColor}
             expertiseChoices={expertiseChoices}
@@ -580,7 +582,7 @@ export function LevelUpView() {
       )}
 
       {expertiseReplacementChoices.length > 0 && (
-        <Section title={`Expertise Replacement at Level ${nextLevel}`} accent={accentColor}>
+        <Section title={translateUi("Expertise Replacement at Level {{value1}}", { value1: nextLevel })} accent={accentColor}>
           <ExpertiseReplacementSection
             accentColor={accentColor}
             replacementChoices={expertiseReplacementChoices}
@@ -595,10 +597,10 @@ export function LevelUpView() {
       )}
 
       {fightingStyleReplacementChoice && fightingStyleReplacementChoice.options.length > 0 && (
-        <Section title={`Fighting Style at Level ${nextLevel}`} accent={accentColor}>
+        <Section title={translateUi("Fighting Style at Level {{value1}}", { value1: nextLevel })} accent={accentColor}>
           <ExclusiveChoiceReplacementSection
             accentColor={accentColor}
-            title="Optionally replace your Fighting Style"
+            title={translateUi("Optionally replace your Fighting Style")}
             choice={fightingStyleReplacementChoice}
             chosenFeatureChoices={chosenFeatureChoices}
             onSelect={(choiceKey, optionId) => setChosenFeatureChoices((prev) => ({ ...prev, [choiceKey]: [optionId] }))}
@@ -607,10 +609,10 @@ export function LevelUpView() {
       )}
 
       {pactBoonReplacementChoice && pactBoonReplacementChoice.options.length > 0 && (
-        <Section title={`Pact Boon at Level ${nextLevel}`} accent={accentColor}>
+        <Section title={translateUi("Pact Boon at Level {{value1}}", { value1: nextLevel })} accent={accentColor}>
           <ExclusiveChoiceReplacementSection
             accentColor={accentColor}
-            title="Optionally replace your Pact Boon"
+            title={translateUi("Optionally replace your Pact Boon")}
             choice={pactBoonReplacementChoice}
             chosenFeatureChoices={chosenFeatureChoices}
             onSelect={(choiceKey, optionId) => setChosenFeatureChoices((prev) => ({ ...prev, [choiceKey]: [optionId] }))}
@@ -711,7 +713,7 @@ export function LevelUpView() {
       {/* ── Confirm ── */}
       <div style={{ marginTop: 8, display: "flex", gap: 10 }}>
         <Button type="button" variant="ghost" onClick={() => navigate(`/characters/${char.id}`)}>
-          Cancel
+          {translateUi("Cancel")}
         </Button>
         <Button
           type="button"
@@ -720,7 +722,7 @@ export function LevelUpView() {
           disabled={!canConfirm || !allExtraSelectionsValid || saving}
           style={{ flex: 1 }}
         >
-          {saving ? "Saving…" : `⬆ Level Up to ${nextLevel}`}
+          {saving ? translateUi("Saving…") : translateUi("⬆ Level Up to {{value1}}", { value1: nextLevel })}
         </Button>
       </div>
     </Wrap>

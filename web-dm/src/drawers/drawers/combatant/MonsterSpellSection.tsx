@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { api } from "@/services/api";
 import { theme, withAlpha } from "@/theme/theme";
@@ -12,6 +13,7 @@ type SpellLookupRow = {
 };
 
 export function MonsterSpellSection(props: { monster: any }) {
+  const translateUi = useUiTranslation("dmUi");
   const baseMonster = props.monster;
   // A monster's spell references aren't individually ruleset-tagged -- the monster's own
   // ruleset field is the implicit ruleset for every spell it knows.
@@ -140,7 +142,7 @@ export function MonsterSpellSection(props: { monster: any }) {
 
   return (
     <div style={{ display: "grid", gap: 6 }}>
-      <SectionTitle>Spells</SectionTitle>
+      <SectionTitle>{translateUi("Spells")}</SectionTitle>
 
       {grouped.length ? (
         <div style={{ display: "grid", gap: 8 }}>

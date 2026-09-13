@@ -1,8 +1,10 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { useTextScalePreview } from "./useTextScalePreview";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { useProfileSave } from "./useProfileSave";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 type ProfileTheme = {
   colors: { bg: string; text: string; muted: string; panelBg: string; panelBorder: string;
@@ -10,11 +12,13 @@ type ProfileTheme = {
   radius: { control: number; panel: number };
 };
 
-export function ProfileSettings({ theme, Button, styles = {} }: {
+export function ProfileSettings({ theme, Button, SelectComponent, styles = {} }: {
   theme: ProfileTheme;
   Button: React.ComponentType<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" }>;
+  SelectComponent?: React.ComponentType<React.SelectHTMLAttributes<HTMLSelectElement>>;
   styles?: { field?: React.CSSProperties; label?: React.CSSProperties; section?: React.CSSProperties; button?: React.CSSProperties; fontFamily?: string };
 }) {
+  const { t } = useTranslation("shared");
   const fieldStyle: React.CSSProperties = {
     background: theme.colors.panelBg,
     color: theme.colors.text,
@@ -26,7 +30,7 @@ export function ProfileSettings({ theme, Button, styles = {} }: {
     fontFamily: "inherit",
     boxSizing: "border-box",
   };
-  
+
   const labelStyle: React.CSSProperties = {
     fontSize: "var(--fs-small)",
     fontWeight: 600,
@@ -34,7 +38,7 @@ export function ProfileSettings({ theme, Button, styles = {} }: {
     marginBottom: 5,
     display: "block",
   };
-  
+
   const sectionStyle: React.CSSProperties = {
     background: theme.colors.panelBg,
     border: `1px solid ${theme.colors.panelBorder}`,
@@ -44,8 +48,8 @@ export function ProfileSettings({ theme, Button, styles = {} }: {
     flexDirection: "column",
     gap: 14,
   };
-  
-  
+
+
   const { user, updateUser } = useAuth();
   const navigate = useNavigate();
   Object.assign(fieldStyle, styles.field);
@@ -72,8 +76,8 @@ export function ProfileSettings({ theme, Button, styles = {} }: {
     setInfoMsg(null); setInfoErr(null);
     const nameChanged     = displayName.trim() !== (user?.name ?? "");
     const usernameChanged = username.trim() !== (user?.username ?? "");
-    if (!nameChanged && !usernameChanged) { setInfoMsg("No changes."); return; }
-    if (usernameChanged && !currentPw) { setInfoErr("Enter your current password to change username."); return; }
+    if (!nameChanged && !usernameChanged) { setInfoMsg(t("profileSettings.noChanges")); return; }
+    if (usernameChanged && !currentPw) { setInfoErr(t("profileSettings.currentPasswordRequiredError")); return; }
 
     try {
       const body: Record<string, string> = {};
@@ -81,7 +85,7 @@ export function ProfileSettings({ theme, Button, styles = {} }: {
       if (usernameChanged) { body.username = username.trim(); body.currentPassword = currentPw; }
 
       if (!await save(body)) return;
-      setInfoMsg("Saved!");
+      setInfoMsg(t("profileSettings.saved"));
       setCurrentPw("");
     } catch (err: unknown) {
       setInfoErr(String((err as Error)?.message ?? err));
@@ -91,14 +95,14 @@ export function ProfileSettings({ theme, Button, styles = {} }: {
   async function handlePasswordSave(e: React.FormEvent) {
     e.preventDefault();
     setPwMsg(null); setPwErr(null);
-    if (!currentPw) { setPwErr("Enter your current password."); return; }
-    if (!newPw) { setPwErr("Enter a new password."); return; }
-    if (newPw.length < 4) { setPwErr("Password must be at least 4 characters."); return; }
-    if (newPw !== confirmPw) { setPwErr("Passwords do not match."); return; }
+    if (!currentPw) { setPwErr(t("profileSettings.enterCurrentPassword")); return; }
+    if (!newPw) { setPwErr(t("profileSettings.enterNewPassword")); return; }
+    if (newPw.length < 4) { setPwErr(t("profileSettings.passwordTooShort")); return; }
+    if (newPw !== confirmPw) { setPwErr(t("profileSettings.passwordsDoNotMatch")); return; }
 
     try {
       if (!await save({ newPassword: newPw, currentPassword: currentPw })) return;
-      setPwMsg("Password updated!");
+      setPwMsg(t("profileSettings.passwordUpdated"));
       setCurrentPw(""); setNewPw(""); setConfirmPw("");
     } catch (err: unknown) {
       setPwErr(String((err as Error)?.message ?? err));
@@ -108,9 +112,9 @@ export function ProfileSettings({ theme, Button, styles = {} }: {
   async function handleDisplaySave(e: React.FormEvent) {
     e.preventDefault(); setDisplayMsg(null); setDisplayErr(null);
     try {
-      if (await save({ textScale })) setDisplayMsg("Saved!");
+      if (await save({ textScale })) setDisplayMsg(t("profileSettings.saved"));
     } catch (err: unknown) {
-      setDisplayErr(err instanceof Error ? err.message : "Unable to save display settings.");
+      setDisplayErr(err instanceof Error ? err.message : t("profileSettings.unableToSaveDisplay"));
     }
   }
 
@@ -127,71 +131,72 @@ export function ProfileSettings({ theme, Button, styles = {} }: {
 
         <button type="button" onClick={() => navigate(-1)}
           style={{ background: "none", border: "none", color: theme.colors.muted, cursor: "pointer", fontSize: "var(--fs-subtitle)", alignSelf: "flex-start", padding: 0 }}>
-          ← Back
+          {"← "}{t("profileSettings.back")}
         </button>
 
-        <h1 style={{ margin: 0, fontSize: "var(--fs-hero)", fontWeight: 800 }}>Account Settings</h1>
+        <h1 style={{ margin: 0, fontSize: "var(--fs-hero)", fontWeight: 800 }}>{t("profileSettings.title")}</h1>
 
         <form onSubmit={handleInfoSave} style={sectionStyle}>
-          <div style={{ fontWeight: 700, fontSize: "var(--fs-medium)", color: theme.colors.accentHighlight, marginBottom: 2 }}>Profile</div>
+          <div style={{ fontWeight: 700, fontSize: "var(--fs-medium)", color: theme.colors.accentHighlight, marginBottom: 2 }}>{t("profileSettings.profileSection")}</div>
 
           <div>
-            <label style={labelStyle}>Display Name</label>
-            <input style={fieldStyle} value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Your display name" />
+            <label style={labelStyle}>{t("profileSettings.displayName")}</label>
+            <input style={fieldStyle} value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder={t("profileSettings.displayNamePlaceholder")} />
           </div>
 
           <div>
-            <label style={labelStyle}>Username</label>
-            <input style={fieldStyle} value={username} onChange={e => setUsername(e.target.value)} placeholder="username" autoComplete="username" />
+            <label style={labelStyle}>{t("profileSettings.username")}</label>
+            <input style={fieldStyle} value={username} onChange={e => setUsername(e.target.value)} placeholder={t("profileSettings.usernamePlaceholder")} autoComplete="username" />
           </div>
 
           {username.trim() !== (user?.username ?? "") && (
             <div>
-              <label style={labelStyle}>Current Password <span style={{ color: theme.colors.red }}>*</span></label>
+              <label style={labelStyle}>{t("profileSettings.currentPassword")} <span style={{ color: theme.colors.red }}>*</span></label>
               <input style={fieldStyle} type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)}
-                placeholder="Required to change username" autoComplete="current-password" />
+                placeholder={t("profileSettings.currentPasswordRequiredPlaceholder")} autoComplete="current-password" />
             </div>
           )}
 
           {infoErr && <div style={{ color: theme.colors.red, fontSize: "var(--fs-subtitle)" }}>{infoErr}</div>}
           {infoMsg && <div style={{ color: theme.colors.green, fontSize: "var(--fs-subtitle)" }}>{infoMsg}</div>}
 
-          <Button type="submit" variant="primary" style={btnStyle} disabled={busy}>Save Profile</Button>
+          <Button type="submit" variant="primary" style={btnStyle} disabled={busy}>{t("profileSettings.saveProfile")}</Button>
         </form>
 
         <form onSubmit={handleDisplaySave} style={sectionStyle}>
-          <div style={{ fontWeight: 700, fontSize: "var(--fs-medium)", color: theme.colors.accentHighlight }}>Display</div>
-          <label style={labelStyle}>Text size — {Math.round(textScale * 100)}%</label>
-          <input aria-label="Text size" type="range" min={0.85} max={1.3} step={0.05} value={textScale} onChange={(event) => previewTextScale(Number(event.target.value))} />
-          <div style={{ position: "relative", height: "var(--fs-body)", color: theme.colors.muted, fontSize: "var(--fs-small)" }}><span style={{ position: "absolute", left: 0 }}>Smaller</span><span style={{ position: "absolute", left: "33.333%", transform: "translateX(-50%)" }}>Default</span><span style={{ position: "absolute", right: 0 }}>Larger</span></div>
+          <div style={{ fontWeight: 700, fontSize: "var(--fs-medium)", color: theme.colors.accentHighlight }}>{t("profileSettings.displaySection")}</div>
+          <label style={labelStyle}>{t("profileSettings.textSize", { percent: Math.round(textScale * 100) })}</label>
+          <input aria-label={t("profileSettings.textSizeAria")} type="range" min={0.85} max={1.3} step={0.05} value={textScale} onChange={(event) => previewTextScale(Number(event.target.value))} />
+          <div style={{ position: "relative", height: "var(--fs-body)", color: theme.colors.muted, fontSize: "var(--fs-small)" }}><span style={{ position: "absolute", left: 0 }}>{t("profileSettings.smaller")}</span><span style={{ position: "absolute", left: "33.333%", transform: "translateX(-50%)" }}>{t("profileSettings.default")}</span><span style={{ position: "absolute", right: 0 }}>{t("profileSettings.larger")}</span></div>
+          <LanguageSwitcher labelStyle={labelStyle} fieldStyle={fieldStyle} SelectComponent={SelectComponent} />
           {displayMsg ? <div style={{ color: theme.colors.green, fontSize: "var(--fs-subtitle)" }}>{displayMsg}</div> : null}
           {displayErr ? <div role="alert" style={{ color: theme.colors.red }}>{displayErr}</div> : null}
-          <Button type="submit" variant="primary" style={btnStyle} disabled={busy}>Save Display</Button>
+          <Button type="submit" variant="primary" style={btnStyle} disabled={busy}>{t("profileSettings.saveDisplay")}</Button>
         </form>
 
         <form onSubmit={handlePasswordSave} style={sectionStyle}>
-          <div style={{ fontWeight: 700, fontSize: "var(--fs-medium)", color: theme.colors.accentHighlight, marginBottom: 2 }}>Change Password</div>
+          <div style={{ fontWeight: 700, fontSize: "var(--fs-medium)", color: theme.colors.accentHighlight, marginBottom: 2 }}>{t("profileSettings.changePasswordSection")}</div>
 
           <div>
-            <label style={labelStyle}>Current Password</label>
+            <label style={labelStyle}>{t("profileSettings.currentPassword")}</label>
             <input style={fieldStyle} type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} autoComplete="current-password" />
           </div>
           <div>
-            <label style={labelStyle}>New Password</label>
+            <label style={labelStyle}>{t("profileSettings.newPassword")}</label>
             <input style={fieldStyle} type="password" value={newPw} onChange={e => setNewPw(e.target.value)}
-              placeholder="At least 4 characters" autoComplete="new-password" />
+              placeholder={t("profileSettings.newPasswordPlaceholder")} autoComplete="new-password" />
           </div>
 
           <div>
-            <label style={labelStyle}>Confirm New Password</label>
+            <label style={labelStyle}>{t("profileSettings.confirmNewPassword")}</label>
             <input style={fieldStyle} type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)}
-              placeholder="Repeat new password" autoComplete="new-password" />
+              placeholder={t("profileSettings.confirmNewPasswordPlaceholder")} autoComplete="new-password" />
           </div>
 
           {pwErr && <div style={{ color: theme.colors.red, fontSize: "var(--fs-subtitle)" }}>{pwErr}</div>}
           {pwMsg && <div style={{ color: theme.colors.green, fontSize: "var(--fs-subtitle)" }}>{pwMsg}</div>}
 
-          <Button type="submit" variant="primary" style={btnStyle} disabled={busy}>Update Password</Button>
+          <Button type="submit" variant="primary" style={btnStyle} disabled={busy}>{t("profileSettings.updatePassword")}</Button>
         </form>
 
       </div>

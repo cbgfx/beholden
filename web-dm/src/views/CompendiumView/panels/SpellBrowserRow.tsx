@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { IconPencil, IconTrash } from "@/icons";
 import { expandSchool } from "@beholden/shared/domain/compendium/expandSchool";
@@ -19,6 +20,7 @@ export function SpellBrowserRow(props: {
   onCancelDelete: () => void;
   confirmingDelete: boolean;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const [hovered, setHovered] = React.useState(false);
   const levelLabel = props.row.level == null ? "?" : props.row.level === 0 ? "0" : String(props.row.level);
   const safeName = typeof props.row.name === "string" ? props.row.name : String((props.row as { name?: unknown }).name ?? "");
@@ -80,20 +82,20 @@ export function SpellBrowserRow(props: {
         >
           {props.confirmingDelete ? (
             <>
-              <span style={{ fontSize: "var(--fs-small)", color: theme.colors.muted, marginRight: 4 }}>Delete?</span>
-              <Button type="button" variant="danger" onClick={props.onConfirmDelete} disabled={props.deleteBusy} title="Yes, delete">
-                Yes
+              <span style={{ fontSize: "var(--fs-small)", color: theme.colors.muted, marginRight: 4 }}>{translateUi("Delete?")}</span>
+              <Button type="button" variant="danger" onClick={props.onConfirmDelete} disabled={props.deleteBusy} title={translateUi("Yes, delete")}>
+                {translateUi("Yes")}
               </Button>
-              <Button type="button" variant="ghost" onClick={props.onCancelDelete} title="Cancel">
-                No
+              <Button type="button" variant="ghost" onClick={props.onCancelDelete} title={translateUi("Cancel")}>
+                {translateUi("No")}
               </Button>
             </>
           ) : (
             <>
-              <IconButton onClick={props.onEdit} disabled={props.editLoading} variant="ghost" size="sm" title="Edit spell">
+              <IconButton onClick={props.onEdit} disabled={props.editLoading} variant="ghost" size="sm" title={translateUi("Edit spell")}>
                 {props.editLoading ? <span style={{ fontSize: "var(--fs-tiny)" }}>...</span> : <IconPencil size={13} />}
               </IconButton>
-              <IconButton onClick={props.onDelete} variant="ghost" size="sm" title="Delete spell">
+              <IconButton onClick={props.onDelete} variant="ghost" size="sm" title={translateUi("Delete spell")}>
                 <IconTrash size={13} />
               </IconButton>
             </>

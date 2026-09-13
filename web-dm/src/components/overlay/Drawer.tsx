@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 
 import React, { useEffect } from "react";
 import { theme } from "@/theme/theme";
@@ -12,6 +13,7 @@ export function Drawer(props: {
   width?: string;
   hideFooter?: boolean;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const { isOpen, onClose } = props;
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -46,14 +48,14 @@ export function Drawer(props: {
       >
         <div style={{ padding: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
           <div style={{ fontSize: "var(--fs-medium)", fontWeight: 900, color: theme.colors.text }}>{props.title}</div>
-          <Button variant="ghost" onClick={props.onClose}>Close</Button>
+          <Button variant="ghost" onClick={props.onClose}>{translateUi("Close")}</Button>
         </div>
 
         <div style={{ padding: 14, overflow: "auto", flex: 1 }}>{props.children}</div>
 
         {!props.hideFooter ? (
           <div style={{ padding: 14, borderTop: `1px solid ${theme.colors.panelBorder}`, position: "sticky", bottom: 0, background: theme.colors.drawerBg }}>
-            {props.footer ?? <Button onClick={props.onClose}>Done</Button>}
+            {props.footer ?? <Button onClick={props.onClose}>{translateUi("Done")}</Button>}
           </div>
         ) : null}
       </div>

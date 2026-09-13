@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { theme, withAlpha } from "@/theme/theme";
 import { IconButton } from "@/ui/IconButton";
 import { IconINPC, IconMonster, IconPlayer, IconTrash, IconWorldAction } from "@/icons";
@@ -11,6 +12,7 @@ export function EncounterRosterList(props: {
   onEditCombatant: (combatantId: string) => void;
   onRemoveCombatant: (combatantId: string) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   return (
     <div style={{ display: "grid", gap: 8 }}>
       {props.combatants.map((c) => {
@@ -64,17 +66,17 @@ export function EncounterRosterList(props: {
             </div>
 
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <IconButton title="Edit" variant="ghost" onClick={() => props.onEditCombatant(c.id)}>
+              <IconButton title={translateUi("Edit")} variant="ghost" onClick={() => props.onEditCombatant(c.id)}>
                 <span style={{ fontWeight: 900 }}>✎</span>
               </IconButton>
-              <IconButton title="Remove" variant="ghost" onClick={() => props.onRemoveCombatant(c.id)}>
+              <IconButton title={translateUi("Remove")} variant="ghost" onClick={() => props.onRemoveCombatant(c.id)}>
                 <IconTrash />
               </IconButton>
             </div>
           </div>
         );
       })}
-      {!props.combatants.length ? <div style={{ color: theme.colors.muted }}>No combatants yet.</div> : null}
+      {!props.combatants.length ? <div style={{ color: theme.colors.muted }}>{translateUi("No combatants yet.")}</div> : null}
     </div>
   );
 }

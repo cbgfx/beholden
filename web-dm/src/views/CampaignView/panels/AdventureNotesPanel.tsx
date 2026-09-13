@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { IconButton } from "@/ui/IconButton";
 import { theme } from "@/theme/theme";
 import { IconPlus } from "@/icons";
@@ -14,16 +15,17 @@ export function AdventureNotesPanel(props: {
   onDelete: (noteId: string) => void;
   onReorder: (ids: string[]) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const notes = props.notes;
 
   return (
     <NotesPanel
       storageKey="campaign-adventure-notes"
-      title={`Adventure Notes (${notes.length})`}
+      title={translateUi("Adventure Notes ({{value1}})", { value1: notes.length })}
       color={`var(--campaign-accent, ${theme.colors.accentPrimary})`}
       borderColor="transparent"
       actions={
-        <IconButton onClick={props.onAdd} disabled={!props.selectedAdventureId} title="Add note" variant="accent">
+        <IconButton onClick={props.onAdd} disabled={!props.selectedAdventureId} title={translateUi("Add note")} variant="accent">
           <IconPlus />
         </IconButton>
       }
@@ -40,10 +42,10 @@ export function AdventureNotesPanel(props: {
           onEdit={props.onEdit}
           onDelete={props.onDelete}
           onReorder={props.onReorder}
-          emptyText="No adventure notes yet."
+          emptyText={translateUi("No adventure notes yet.")}
         />
       ) : (
-        <div style={{ color: theme.colors.muted }}>Select an adventure.</div>
+        <div style={{ color: theme.colors.muted }}>{translateUi("Select an adventure.")}</div>
       )}
     </NotesPanel>
   );

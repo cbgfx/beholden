@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Button } from "@/ui/Button";
 import { IconBinder, IconDownload, IconPencil, IconTrash } from "@/icons";
@@ -34,6 +35,7 @@ function localDateStamp(date = new Date()): string {
 }
 
 export function BinderCard({ binder, canEdit, onOpen, onEdit, onDelete }: Props) {
+  const translateUi = useUiTranslation("dmUi");
   const accent = binder.color || theme.colors.accentHighlight;
   const [exportOpen, setExportOpen] = React.useState(false);
   const [exporting, setExporting] = React.useState<"json" | "zip" | null>(null);
@@ -105,7 +107,7 @@ export function BinderCard({ binder, canEdit, onOpen, onEdit, onDelete }: Props)
               {binder.name}
             </div>
             <div style={{ color: theme.colors.muted, marginTop: 2, fontSize: "var(--fs-subtitle)" }}>
-              {binder.currentDate.text ? `Current date: ${binder.currentDate.text}` : "No current date set"}
+              {binder.currentDate.text ? translateUi("Current date: {{value1}}", { value1: binder.currentDate.text }) : translateUi("No current date set")}
             </div>
           </div>
         </div>
@@ -127,21 +129,21 @@ export function BinderCard({ binder, canEdit, onOpen, onEdit, onDelete }: Props)
         ) : null}
 
         <div style={{ display: "flex", gap: 16, color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
-          <span>{binder.campaignCount} {binder.campaignCount === 1 ? "Campaign" : "Campaigns"}</span>
-          <span>{binder.recordCount} {binder.recordCount === 1 ? "Record" : "Records"}</span>
+          <span>{binder.campaignCount} {binder.campaignCount === 1 ? translateUi("Campaign") : translateUi("Campaigns")}</span>
+          <span>{binder.recordCount} {binder.recordCount === 1 ? translateUi("Record") : translateUi("Records")}</span>
         </div>
       </div>
 
       <div style={{ padding: "0 10px 10px", display: "flex", alignItems: "center", gap: 8 }}>
-        <Button onClick={onOpen} title="Open Binder" style={{ flex: 1, minWidth: 0 }}>
-          Open
+        <Button onClick={onOpen} title={translateUi("Open Binder")} style={{ flex: 1, minWidth: 0 }}>
+          {translateUi("Open")}
         </Button>
-        <button type="button" onClick={() => { setExportError(null); setExportOpen(true); }} style={iconButton} title="Export Binder" aria-label="Export Binder">
+        <button type="button" onClick={() => { setExportError(null); setExportOpen(true); }} style={iconButton} title={translateUi("Export Binder")} aria-label={translateUi("Export Binder")}>
           <IconDownload size={17} />
         </button>
         {canEdit ? (
           <>
-            <button type="button" onClick={onEdit} style={iconButton} title="Edit Binder" aria-label="Edit Binder">
+            <button type="button" onClick={onEdit} style={iconButton} title={translateUi("Edit Binder")} aria-label={translateUi("Edit Binder")}>
               <IconPencil size={16} />
             </button>
             <button
@@ -153,8 +155,8 @@ export function BinderCard({ binder, canEdit, onOpen, onEdit, onDelete }: Props)
                 background: "rgba(255,93,93,0.1)",
                 borderColor: "rgba(255,93,93,0.35)",
               }}
-              title="Delete Binder"
-              aria-label="Delete Binder"
+              title={translateUi("Delete Binder")}
+              aria-label={translateUi("Delete Binder")}
             >
               <IconTrash size={16} />
             </button>

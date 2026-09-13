@@ -1,4 +1,7 @@
+import { useStableI18n } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import type { SharedConditionInstance } from "@beholden/shared/domain";
 import { EmptyState } from "@beholden/shared/ui";
@@ -50,15 +53,16 @@ interface CampaignBastionResponse {
   bastion: CampaignBastionSummary;
 }
 
-function hpLabel(pct: number): string {
-  if (pct <= 0) return "Down";
-  if (pct < 25) return "Critical";
-  if (pct < 50) return "Bloodied";
-  if (pct < 75) return "Bloody";
-  return "Healthy";
+function hpLabel(pct: number, t: TFunction): string {
+  if (pct <= 0) return t("campaignPartyView.hpDown");
+  if (pct < 25) return t("campaignPartyView.hpCritical");
+  if (pct < 50) return t("campaignPartyView.hpBloodied");
+  if (pct < 75) return t("campaignPartyView.hpBloody");
+  return t("campaignPartyView.hpHealthy");
 }
 
 function MemberCard({ m, campaignId }: { m: PartyMember; campaignId: string }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const color = m.color ?? C.accentHl;
   const hpC = hpColor(m.hpPercent);
@@ -109,12 +113,12 @@ function MemberCard({ m, campaignId }: { m: PartyMember; campaignId: string }) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 800, fontSize: "var(--fs-body)", color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {m.characterName || "Unnamed"}
+            {m.characterName || t("campaignPartyView.unnamedCharacter")}
           </div>
           <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginTop: 2 }}>
             {[m.className, m.species].filter(Boolean).join(" · ")}
           </div>
-          <div style={{ fontSize: "var(--fs-small)", color, fontWeight: 700, marginTop: 1 }}>Level {m.level}</div>
+          <div style={{ fontSize: "var(--fs-small)", color, fontWeight: 700, marginTop: 1 }}>{t("campaignPartyView.levelLabel", { level: m.level })}</div>
           {m.playerName ? (
             <div style={{ fontSize: "var(--fs-small)", color: "rgba(160,180,220,0.4)", marginTop: 1 }}>{m.playerName}</div>
           ) : null}
@@ -132,13 +136,13 @@ function MemberCard({ m, campaignId }: { m: PartyMember; campaignId: string }) {
           }}
         >
           <span style={{ fontSize: "var(--fs-body)", fontWeight: 900, color: C.text }}>{m.ac}</span>
-          <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 600 }}>AC</span>
+          <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 600 }}>{t("campaignPartyView.acAbbreviation")}</span>
         </div>
       </div>
 
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-          <span style={{ fontSize: "var(--fs-small)", color: hpC, fontWeight: 700 }}>{hpLabel(m.hpPercent)}</span>
+          <span style={{ fontSize: "var(--fs-small)", color: hpC, fontWeight: 700 }}>{hpLabel(m.hpPercent, t)}</span>
           <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>{m.hpPercent}%</span>
         </div>
         <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
@@ -183,6 +187,8 @@ function MemberCard({ m, campaignId }: { m: PartyMember; campaignId: string }) {
 }
 
 export function CampaignPartyView() {
+  const { t } = useTranslation();
+  const i18n = useStableI18n();
   const { id: campaignId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [party, setParty] = React.useState<PartyMember[]>([]);
@@ -196,9 +202,9 @@ export function CampaignPartyView() {
     if (!campaignId) return;
     api<PartyMember[]>(`/api/campaigns/${campaignId}/party`)
       .then(setParty)
-      .catch((e) => setError(e?.message ?? "Failed to load party"))
+      .catch((e) => setError(e?.message ?? i18n.t("campaignPartyView.loadPartyError")))
       .finally(() => setLoading(false));
-  }, [campaignId]);
+  }, [campaignId, i18n]);
 
   const fetchPartyMember = React.useCallback(async (playerId: string): Promise<PartyMember | null> => {
     if (!campaignId || !playerId) return null;
@@ -310,9 +316,9 @@ export function CampaignPartyView() {
   );
 
   const inner = (() => {
-    if (loading) return <EmptyState textColor={C.muted}>Loading…</EmptyState>;
+    if (loading) return <EmptyState textColor={C.muted}>{t("campaignPartyView.loading")}</EmptyState>;
     if (error) return <EmptyState textColor={C.colorPinkRed}>{error}</EmptyState>;
-    if (party.length === 0) return <EmptyState textColor={C.muted}>No players in this campaign yet.</EmptyState>;
+    if (party.length === 0) return <EmptyState textColor={C.muted}>{t("campaignPartyView.emptyParty")}</EmptyState>;
     return (
       <div
         style={{
@@ -336,18 +342,18 @@ export function CampaignPartyView() {
           onClick={() => navigate("/")}
           style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: "var(--fs-subtitle)", padding: 0, marginBottom: 20 }}
         >
-          ← Back
+          {"← "}{t("campaignPartyView.back")}
         </button>
         <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 28 }}>
-          <h1 style={{ margin: 0, fontSize: "var(--fs-hero)", fontWeight: 900 }}>{campaignName || "Campaign"}</h1>
-          <span style={{ fontSize: "var(--fs-medium)", color: C.muted }}>— Party</span>
+          <h1 style={{ margin: 0, fontSize: "var(--fs-hero)", fontWeight: 900 }}>{campaignName || t("campaignPartyView.campaignFallbackTitle")}</h1>
+          <span style={{ fontSize: "var(--fs-medium)", color: C.muted }}>{"— "}{t("campaignPartyView.partySuffix")}</span>
         </div>
         {inner}
 
         {bastions.length > 0 ? (
           <div style={{ marginTop: 24 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
-              <h2 style={{ margin: 0, fontSize: "var(--fs-title)", fontWeight: 900 }}>Bastions</h2>
+              <h2 style={{ margin: 0, fontSize: "var(--fs-title)", fontWeight: 900 }}>{t("campaignPartyView.bastionsHeading")}</h2>
               <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>({bastions.length})</span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
@@ -367,7 +373,7 @@ export function CampaignPartyView() {
                 >
                   <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800 }}>{bastion.name}</div>
                   <div style={{ marginTop: 4, fontSize: "var(--fs-small)", color: C.muted }}>
-                    Level {bastion.level} • Slots {bastion.specialSlotsUsed}/{bastion.specialSlots}
+                    {t("campaignPartyView.bastionSummary", { level: bastion.level, used: bastion.specialSlotsUsed, total: bastion.specialSlots })}
                   </div>
                 </button>
               ))}

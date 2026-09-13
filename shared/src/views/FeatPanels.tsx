@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { EmptyState, FormattedText, ListShell, togglePillStyle } from "../ui";
 import { useAvailableRulesets, type Ruleset } from "../domain/compendium/useAvailableRulesets";
@@ -71,6 +72,7 @@ export function FeatDetailPanel({ featId, fetchFeat, colors, PanelComponent }: {
   colors: FeatColors;
   PanelComponent: React.ComponentType<PanelLikeProps>;
 }) {
+  const translateUi = useUiTranslation("sharedUi");
   const [feat, setFeat] = React.useState<FeatDetail | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [fetchError, setFetchError] = React.useState<string | null>(null);
@@ -103,26 +105,26 @@ export function FeatDetailPanel({ featId, fetchFeat, colors, PanelComponent }: {
 
   return (
     <PanelComponent
-      title={feat?.name ?? "Feat"}
-      actions={<div style={{ color: colors.muted, fontSize: "var(--fs-small)" }}>{busy ? "Loading..." : parsed?.source ? `Source: ${parsed.source} · Ruleset: ${feat?.ruleset ?? "Unknown"}` : ""}</div>}
+      title={feat?.name ?? translateUi("Feat")}
+      actions={<div style={{ color: colors.muted, fontSize: "var(--fs-small)" }}>{busy ? translateUi("Loading...") : parsed?.source ? translateUi("Source: {{value1}} · Ruleset: {{value2}}", { value1: parsed.source, value2: feat?.ruleset ?? "Unknown" }) : ""}</div>}
       style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
       bodyStyle={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 10 }}
     >
       {fetchError ? (
         <div style={{ color: "#ef4444" }}>{fetchError}</div>
       ) : !feat ? (
-        <div style={{ color: colors.muted }}>Select a feat to view its details.</div>
+        <div style={{ color: colors.muted }}>{translateUi("Select a feat to view its details.")}</div>
       ) : (
         <>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {parsed?.category && <Tag color={colors.accentHighlight}>{parsed.category}</Tag>}
-            {parsed?.repeatable && <Tag color={colors.colorGold}>Repeatable</Tag>}
+            {parsed?.repeatable && <Tag color={colors.colorGold}>{translateUi("Repeatable")}</Tag>}
             {abilityIncreases.map((value) => <Tag key={value} color={colors.green}>{value}</Tag>)}
           </div>
 
           {feat.prerequisite && (
             <div style={{ padding: "8px 10px", borderRadius: 9, border: `1px solid ${colors.panelBorder}`, color: colors.muted, fontSize: "var(--fs-small)" }}>
-              <b style={{ color: colors.text }}>Prerequisite:</b> {feat.prerequisite}
+              <b style={{ color: colors.text }}>{translateUi("Prerequisite:")}</b> {feat.prerequisite}
             </div>
           )}
 
@@ -138,7 +140,7 @@ export function FeatDetailPanel({ featId, fetchFeat, colors, PanelComponent }: {
             border: `1px solid ${colors.panelBorder}`, borderRadius: 12,
             padding: 12, whiteSpace: "pre-wrap", lineHeight: 1.55,
           }}>
-            {feat.text ? <FormattedText text={feat.text} /> : <span style={{ color: colors.muted }}>No description available.</span>}
+            {feat.text ? <FormattedText text={feat.text} /> : <span style={{ color: colors.muted }}>{translateUi("No description available.")}</span>}
           </div>
         </>
       )}
@@ -159,6 +161,7 @@ export function FeatsPanel(props: {
   PanelComponent: React.ComponentType<PanelLikeProps>;
   SelectComponent: React.ComponentType<React.SelectHTMLAttributes<HTMLSelectElement> & { children?: React.ReactNode }>;
 }) {
+  const translateUi = useUiTranslation("sharedUi");
   const { icon, colors, fetchRows, api, panelStorageKey, PanelComponent, SelectComponent } = props;
   const [rows, setRows] = React.useState<FeatCatalogRow[]>([]);
   const [busy, setBusy] = React.useState(true);
@@ -216,15 +219,15 @@ export function FeatsPanel(props: {
 
   return (
     <PanelComponent
-      title={<span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: "var(--fs-large)" }}>{icon}<span>Feats</span></span>}
-      actions={<div style={{ color: colors.muted, fontSize: "var(--fs-small)" }}>{busy ? "Loading..." : filtered.length}</div>}
+      title={<span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: "var(--fs-large)" }}>{icon}<span>{translateUi("Feats")}</span></span>}
+      actions={<div style={{ color: colors.muted, fontSize: "var(--fs-small)" }}>{busy ? translateUi("Loading...") : filtered.length}</div>}
       storageKey={panelStorageKey}
       style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}
       bodyStyle={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, gap: 8 }}
     >
       <input
         value={query}
-        placeholder="Search feats or prerequisites..."
+        placeholder={translateUi("Search feats or prerequisites...")}
         onChange={(event) => setQuery(event.target.value)}
         style={{
           background: colors.panelBg, color: colors.text, border: `1px solid ${colors.panelBorder}`,
@@ -234,21 +237,21 @@ export function FeatsPanel(props: {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
         <SelectComponent value={category} onChange={(event) => setCategory(event.target.value)} style={{ width: "100%" }}>
-          <option value="all">All Categories</option>
+          <option value="all">{translateUi("All Categories")}</option>
           {categories.map((value) => <option key={value} value={value}>{value}</option>)}
         </SelectComponent>
         <SelectComponent value={ability} onChange={(event) => setAbility(event.target.value)} style={{ width: "100%" }}>
-          <option value="all">All Ability Increases</option>
+          <option value="all">{translateUi("All Ability Increases")}</option>
           {abilities.map((value) => <option key={value} value={value}>{value}</option>)}
         </SelectComponent>
         <SelectComponent value={prerequisite} onChange={(event) => setPrerequisite(event.target.value as "all" | "yes" | "no")} style={{ width: "100%" }}>
-          <option value="all">Any Prerequisite</option>
-          <option value="yes">Has Prerequisite</option>
-          <option value="no">No Prerequisite</option>
+          <option value="all">{translateUi("Any Prerequisite")}</option>
+          <option value="yes">{translateUi("Has Prerequisite")}</option>
+          <option value="no">{translateUi("No Prerequisite")}</option>
         </SelectComponent>
         {showRulesetFilter && (
           <SelectComponent value={rulesetFilter} onChange={(event) => setRulesetFilter(event.target.value as Ruleset | "")} style={{ width: "100%" }}>
-            <option value="">All Rulesets</option>
+            <option value="">{translateUi("All Rulesets")}</option>
             <option value="5.5e">5.5e</option>
             <option value="5e">5e</option>
           </SelectComponent>
@@ -257,10 +260,10 @@ export function FeatsPanel(props: {
 
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
         <button type="button" onClick={() => setRepeatableOnly((value) => !value)} style={togglePillStyle(repeatableOnly, colors.accentHighlight, colors.panelBorder, colors.muted)}>
-          Repeatable
+          {translateUi("Repeatable")}
         </button>
         {hasActiveFilters && (
-          <button type="button" onClick={clearFilters} style={togglePillStyle(false, colors.accentHighlight, colors.panelBorder, colors.muted)}>Clear</button>
+          <button type="button" onClick={clearFilters} style={togglePillStyle(false, colors.accentHighlight, colors.panelBorder, colors.muted)}>{translateUi("Clear")}</button>
         )}
       </div>
 
@@ -290,7 +293,7 @@ export function FeatsPanel(props: {
           );
         })}
         {!busy && filtered.length === 0 && (
-          <EmptyState textColor={colors.muted} style={{ padding: 10 }}>No feats found.</EmptyState>
+          <EmptyState textColor={colors.muted} style={{ padding: 10 }}>{translateUi("No feats found.")}</EmptyState>
         )}
       </ListShell>
     </PanelComponent>

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Input } from "@/ui/Input";
 import { theme, withAlpha } from "@/theme/theme";
@@ -41,6 +42,7 @@ function LegendaryDots({
   used: number;
   onChange: (n: number) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
       {Array.from({ length: total }).map((_, i) => {
@@ -48,7 +50,7 @@ function LegendaryDots({
         return (
           <button
             key={i}
-            title={spent ? "Spent — click to restore one" : "Click to spend one legendary action"}
+            title={spent ? translateUi("Spent — click to restore one") : translateUi("Click to spend one legendary action")}
             onClick={() => onChange(spent ? used - 1 : used + 1)}
             style={{
               all: "unset",
@@ -66,7 +68,7 @@ function LegendaryDots({
       })}
       {used > 0 ? (
         <button
-          title="Restore all legendary actions"
+          title={translateUi("Restore all legendary actions")}
           onClick={() => onChange(0)}
           style={{
             all: "unset",
@@ -99,6 +101,7 @@ function ActionSection({
   attackOverrides?: Record<string, AttackOverride> | null;
   onChangeAttack?: (actionName: string, patch: AttackOverride) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   if (!items.length) return null;
 
   return (
@@ -121,7 +124,7 @@ function ActionSection({
                 <div style={{ fontWeight: 900, fontSize: "var(--fs-medium)", marginBottom: 6 }}>{name}</div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-small)" }}>To Hit</div>
+                    <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-small)" }}>{translateUi("To Hit")}</div>
                     <Input
                       value={toHitVal}
                       onChange={(e) => {
@@ -133,7 +136,7 @@ function ActionSection({
                     />
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-small)" }}>Damage</div>
+                    <div style={{ color: theme.colors.muted, fontWeight: 900, fontSize: "var(--fs-small)" }}>{translateUi("Damage")}</div>
                     <Input value={dmgVal} onChange={(e) => onChangeAttack(name, { damage: e.target.value })} placeholder={dmgPlaceholder} style={{ width: 92 }} />
                   </div>
                 </div>
@@ -156,6 +159,7 @@ export function MonsterActions(props: {
   usedLegendaryActions?: number;
   onChangeLegendaryUsed?: (n: number) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const actions = Array.isArray(props.monster.action) ? (props.monster.action as MonsterActionEntry[]) : [];
   const reactions = Array.isArray(props.monster.reaction) ? (props.monster.reaction as MonsterActionEntry[]) : [];
   const legendaryRaw = React.useMemo(
@@ -183,17 +187,17 @@ export function MonsterActions(props: {
   return (
     <div style={{ display: "grid", gap: 10 }}>
       <ActionSection
-        title="Actions"
+        title={translateUi("Actions")}
         items={actions}
         editable
         attackOverrides={props.attackOverrides}
         onChangeAttack={props.onChangeAttack}
       />
-      <ActionSection title="Reactions" items={reactions} />
+      <ActionSection title={translateUi("Reactions")} items={reactions} />
 
       {showLegendary ? (
         <MonsterSectionPanel
-          title="Legendary Actions"
+          title={translateUi("Legendary Actions")}
           actions={
             props.onChangeLegendaryUsed ? (
               <LegendaryDots total={legendaryCount} used={props.usedLegendaryActions ?? 0} onChange={props.onChangeLegendaryUsed} />

@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { markdownToHtml, htmlToMarkdown } from "./markdownHtml";
 import {
   selectionRangeInEditor,
@@ -44,6 +45,7 @@ export function WysiwygNoteEditor(props: {
   style?: React.CSSProperties;
   mentions?: MentionOption[];
 }) {
+  const { t } = useTranslation("shared");
   const { onChange, value } = props;
   const editorRef = React.useRef<HTMLDivElement>(null);
   const focusedRef = React.useRef(false);
@@ -118,7 +120,7 @@ export function WysiwygNoteEditor(props: {
     if (existing && editor.contains(existing)) {
       const summary = Array.from(existing.children).find((child) => child.tagName.toLowerCase() === "summary");
       const heading = document.createElement("h2");
-      heading.innerHTML = summary?.innerHTML || "Toggle";
+      heading.innerHTML = summary?.innerHTML || t("wysiwygEditor.toggleFallback");
       existing.parentNode?.insertBefore(heading, existing);
       for (const child of Array.from(existing.childNodes)) {
         if (child !== summary) existing.parentNode?.insertBefore(child, existing);
@@ -135,7 +137,7 @@ export function WysiwygNoteEditor(props: {
     const details = document.createElement("details");
     details.open = true;
     const summary = document.createElement("summary");
-    summary.innerHTML = block.innerHTML || "Toggle heading";
+    summary.innerHTML = block.innerHTML || t("wysiwygEditor.toggleHeading");
     details.appendChild(summary);
 
     const headingMatch = block.tagName.match(/^H([1-6])$/);
@@ -160,7 +162,7 @@ export function WysiwygNoteEditor(props: {
     selectNodeContents(summary);
     emitChange();
     editor.focus();
-  }, [emitChange]);
+  }, [emitChange, t]);
 
   return (
     <div
@@ -184,16 +186,16 @@ export function WysiwygNoteEditor(props: {
           flexWrap: "wrap",
         }}
       >
-        <button type="button" title="Bold" aria-label="Bold" onMouseDown={(e) => e.preventDefault()} onClick={() => applyInlineFormat("strong")} style={buttonStyle}>B</button>
-        <button type="button" title="Italic" aria-label="Italic" onMouseDown={(e) => e.preventDefault()} onClick={() => applyInlineFormat("em")} style={{ ...buttonStyle, fontStyle: "italic" }}>I</button>
-        <button type="button" title="Underline" aria-label="Underline" onMouseDown={(e) => e.preventDefault()} onClick={() => applyInlineFormat("u")} style={{ ...buttonStyle, textDecoration: "underline" }}>U</button>
-        <button type="button" title="Heading" aria-label="Heading" onMouseDown={(e) => e.preventDefault()} onClick={() => runBlockCommand("formatBlock", "h2")} style={buttonStyle}>H</button>
-        <button type="button" title="Toggle heading" aria-label="Toggle heading" onMouseDown={(e) => e.preventDefault()} onClick={toggleHeading} style={{ ...buttonStyle, minWidth: 42 }}>▸ H</button>
-        <button type="button" title="Bullet list" aria-label="Bullet list" onMouseDown={(e) => e.preventDefault()} onClick={() => runBlockCommand("insertUnorderedList")} style={buttonStyle}>•</button>
-        <button type="button" title="Divider" aria-label="Divider" onMouseDown={(e) => e.preventDefault()} onClick={() => runBlockCommand("insertHorizontalRule")} style={buttonStyle}>-</button>
+        <button type="button" title={t("wysiwygEditor.bold")} aria-label={t("wysiwygEditor.bold")} onMouseDown={(e) => e.preventDefault()} onClick={() => applyInlineFormat("strong")} style={buttonStyle}>B</button>
+        <button type="button" title={t("wysiwygEditor.italic")} aria-label={t("wysiwygEditor.italic")} onMouseDown={(e) => e.preventDefault()} onClick={() => applyInlineFormat("em")} style={{ ...buttonStyle, fontStyle: "italic" }}>I</button>
+        <button type="button" title={t("wysiwygEditor.underline")} aria-label={t("wysiwygEditor.underline")} onMouseDown={(e) => e.preventDefault()} onClick={() => applyInlineFormat("u")} style={{ ...buttonStyle, textDecoration: "underline" }}>U</button>
+        <button type="button" title={t("wysiwygEditor.heading")} aria-label={t("wysiwygEditor.heading")} onMouseDown={(e) => e.preventDefault()} onClick={() => runBlockCommand("formatBlock", "h2")} style={buttonStyle}>H</button>
+        <button type="button" title={t("wysiwygEditor.toggleHeading")} aria-label={t("wysiwygEditor.toggleHeading")} onMouseDown={(e) => e.preventDefault()} onClick={toggleHeading} style={{ ...buttonStyle, minWidth: 42 }}>▸ H</button>
+        <button type="button" title={t("wysiwygEditor.bulletList")} aria-label={t("wysiwygEditor.bulletList")} onMouseDown={(e) => e.preventDefault()} onClick={() => runBlockCommand("insertUnorderedList")} style={buttonStyle}>•</button>
+        <button type="button" title={t("wysiwygEditor.divider")} aria-label={t("wysiwygEditor.divider")} onMouseDown={(e) => e.preventDefault()} onClick={() => runBlockCommand("insertHorizontalRule")} style={buttonStyle}>-</button>
         {props.mentions?.length ? <select
-          aria-label="Mention Binder record"
-          title="Mention Binder record"
+          aria-label={t("wysiwygEditor.mentionBinderRecord")}
+          title={t("wysiwygEditor.mentionBinderRecord")}
           defaultValue=""
           onMouseDown={mention.saveSelection}
           onChange={(event) => {
@@ -203,7 +205,7 @@ export function WysiwygNoteEditor(props: {
           }}
           style={{ ...buttonStyle, minWidth: 116, padding: "0 6px" }}
         >
-          <option value="">@ Mention</option>
+          <option value="">{t("wysiwygEditor.mentionOptionLabel")}</option>
           {props.mentions.map((option) => <option key={option.id} value={option.id}>
             {option.label}{option.type ? ` · ${option.type}` : ""}
           </option>)}
@@ -224,7 +226,7 @@ export function WysiwygNoteEditor(props: {
               lineHeight: 1.5,
             }}
           >
-            {props.placeholder ?? "Write..."}
+            {props.placeholder ?? t("wysiwygEditor.placeholder")}
           </div>
         ) : null}
         <div
@@ -285,7 +287,7 @@ export function WysiwygNoteEditor(props: {
       {mention.mentionTrigger && mention.mentionDropdownPos && mention.filteredMentions.length > 0 ? (
         <div
           role="listbox"
-          aria-label="Mention suggestions"
+          aria-label={t("wysiwygEditor.mentionSuggestions")}
           style={{
             position: "fixed",
             top: mention.mentionDropdownPos.top,

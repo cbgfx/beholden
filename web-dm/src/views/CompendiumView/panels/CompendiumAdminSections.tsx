@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 
 import { Button } from "@/ui/Button";
@@ -63,12 +64,12 @@ function categoryLabel(category: NativeCompendiumCategory) {
 }
 
 export function NativeCompendiumDescription() {
+  const translateUi = useUiTranslation("dmUi");
   return (
     <div style={{ color: theme.colors.muted, lineHeight: 1.55, maxWidth: 1050 }}>
-      Export a category to edit it, or import a category or complete bundle. Beholden JSON is portable,
-      human-readable, and always replaces entries with matching IDs.
+      {translateUi("Export a category to edit it, or import a category or complete bundle. Beholden JSON is portable, human-readable, and always replaces entries with matching IDs.")}
       <br />
-      Get the Compendiums from here: <a href="https://github.com/CompendiumCoder/jsoncompendium">JSON Compendium by ComepndiumCoder</a>
+      {translateUi("Get the Compendiums from here:")} <a href="https://github.com/CompendiumCoder/jsoncompendium">{translateUi("JSON Compendium by ComepndiumCoder")}</a>
     </div>
   );
 }
@@ -87,6 +88,7 @@ export function NativeCompendiumActions(props: {
   onGenerateSrd: () => void;
   onDelete: () => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   return (
     <div
       style={{
@@ -98,11 +100,11 @@ export function NativeCompendiumActions(props: {
     >
       <section style={cardStyle}>
         <div style={{ color: theme.colors.colorMagic, fontWeight: 900, letterSpacing: "0.08em", fontSize: "var(--fs-small)", textTransform: "uppercase" }}>
-          Export
+          {translateUi("Export")}
         </div>
-        <div style={{ marginTop: 4, color: theme.colors.text, fontWeight: 800 }}>Download an editable category</div>
+        <div style={{ marginTop: 4, color: theme.colors.text, fontWeight: 800 }}>{translateUi("Download an editable category")}</div>
         <div style={{ marginTop: 4, color: theme.colors.muted, fontSize: "var(--fs-small)", lineHeight: 1.45 }}>
-          Export one editable Beholden JSON file, or download every category in one ZIP.
+          {translateUi("Export one editable Beholden JSON file, or download every category in one ZIP.")}
         </div>
         <div style={{ marginTop: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <Select
@@ -110,7 +112,7 @@ export function NativeCompendiumActions(props: {
             onChange={(event) => props.onCategoryChange(event.target.value as NativeCompendiumCategory)}
             disabled={props.busy}
             style={{ width: 180 }}
-            aria-label="Compendium category to export"
+            aria-label={translateUi("Compendium category to export")}
           >
             {NATIVE_COMPENDIUM_CATEGORIES.map((category) => (
               <option key={category} value={category}>
@@ -119,21 +121,21 @@ export function NativeCompendiumActions(props: {
             ))}
           </Select>
           <Button onClick={props.onExport} disabled={props.busy}>
-            {props.busy ? "Working..." : "Export JSON"}
+            {props.busy ? translateUi("Working...") : translateUi("Export JSON")}
           </Button>
           <Button onClick={props.onExportAll} disabled={props.busy}>
-            {props.busy ? "Working..." : "Export All (.zip)"}
+            {props.busy ? translateUi("Working...") : translateUi("Export All (.zip)")}
           </Button>
         </div>
       </section>
 
       <section style={cardStyle}>
         <div style={{ color: theme.colors.accentPrimary, fontWeight: 900, letterSpacing: "0.08em", fontSize: "var(--fs-small)", textTransform: "uppercase" }}>
-          Import
+          {translateUi("Import")}
         </div>
-        <div style={{ marginTop: 4, color: theme.colors.text, fontWeight: 800 }}>Preview, then import safely</div>
+        <div style={{ marginTop: 4, color: theme.colors.text, fontWeight: 800 }}>{translateUi("Preview, then import safely")}</div>
         <div style={{ marginTop: 4, color: theme.colors.muted, fontSize: "var(--fs-small)", lineHeight: 1.45 }}>
-          Nothing changes until the selected file passes validation and you confirm the import.
+          {translateUi("Nothing changes until the selected file passes validation and you confirm the import.")}
         </div>
 
         <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
@@ -151,7 +153,7 @@ export function NativeCompendiumActions(props: {
               flexShrink: 0,
             }}
           >
-            Choose file
+            {translateUi("Choose file")}
             <input
               type="file"
               accept=".json,application/json"
@@ -161,7 +163,7 @@ export function NativeCompendiumActions(props: {
             />
           </label>
           <span
-            title={props.fileName ?? "No file selected"}
+            title={props.fileName ?? translateUi("No file selected")}
             style={{
               color: props.fileName ? theme.colors.text : theme.colors.muted,
               overflow: "hidden",
@@ -176,29 +178,29 @@ export function NativeCompendiumActions(props: {
 
         <div style={{ marginTop: 12, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <Button onClick={props.onPreview} disabled={!props.fileName || props.busy}>
-            {props.busy ? "Working..." : "Preview import"}
+            {props.busy ? translateUi("Working...") : translateUi("Preview import")}
           </Button>
           <Button
             onClick={props.onImport}
             disabled={!props.previewReady || props.busy}
             style={props.previewReady ? { background: theme.colors.green } : undefined}
           >
-            {props.busy ? "Working..." : "Import now"}
+            {props.busy ? translateUi("Working...") : translateUi("Import now")}
           </Button>
         </div>
       </section>
 
       <section style={cardStyle}>
         <div style={{ color: theme.colors.green, fontWeight: 900, letterSpacing: "0.08em", fontSize: "var(--fs-small)", textTransform: "uppercase" }}>
-          Included SRD
+          {translateUi("Included SRD")}
         </div>
-        <div style={{ marginTop: 4, color: theme.colors.text, fontWeight: 800 }}>Populate the 5.5e starter compendium</div>
+        <div style={{ marginTop: 4, color: theme.colors.text, fontWeight: 800 }}>{translateUi("Populate the 5.5e starter compendium")}</div>
         <div style={{ marginTop: 4, color: theme.colors.muted, fontSize: "var(--fs-small)", lineHeight: 1.45 }}>
-          Import the SRD bundled with Beholden. Existing entries and your edits are left untouched.
+          {translateUi("Import the SRD bundled with Beholden. Existing entries and your edits are left untouched.")}
         </div>
         <div style={{ marginTop: 14 }}>
           <Button onClick={props.onGenerateSrd} disabled={props.busy} style={{ background: theme.colors.green }}>
-            {props.busy ? "Working..." : "Generate SRD"}
+            {props.busy ? translateUi("Working...") : translateUi("Generate SRD")}
           </Button>
         </div>
       </section>
@@ -214,7 +216,7 @@ export function NativeCompendiumActions(props: {
         }}
       >
         <span style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
-          Need a clean slate? This removes every currently loaded compendium entry.
+          {translateUi("Need a clean slate? This removes every currently loaded compendium entry.")}
         </span>
         <Button
           variant="ghost"
@@ -222,7 +224,7 @@ export function NativeCompendiumActions(props: {
           disabled={props.busy}
           style={{ color: theme.colors.red, borderColor: "rgba(255,93,93,0.38)", marginLeft: 4 }}
         >
-          Delete compendium
+          {translateUi("Delete compendium")}
         </Button>
       </div>
     </div>
@@ -230,12 +232,13 @@ export function NativeCompendiumActions(props: {
 }
 
 export function NativeImportPreview({ preview }: { preview: NativePreviewResult }) {
+  const translateUi = useUiTranslation("dmUi");
   const number = new Intl.NumberFormat();
   const totals = [
-    { label: "Total entries", value: preview.entries, color: theme.colors.text },
-    { label: "New", value: preview.additions, color: theme.colors.green },
-    { label: "Changed", value: preview.changed, color: theme.colors.colorGold },
-    { label: "Unchanged (no-op)", value: preview.unchanged, color: theme.colors.muted },
+    { label: translateUi("Total entries"), value: preview.entries, color: theme.colors.text },
+    { label: translateUi("New"), value: preview.additions, color: theme.colors.green },
+    { label: translateUi("Changed"), value: preview.changed, color: theme.colors.colorGold },
+    { label: translateUi("Unchanged (no-op)"), value: preview.unchanged, color: theme.colors.muted },
   ];
 
   return (
@@ -250,7 +253,7 @@ export function NativeImportPreview({ preview }: { preview: NativePreviewResult 
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8, color: theme.colors.green, fontWeight: 900 }}>
         <span aria-hidden="true">✓</span>
-        Valid Grand Schema file — ready to import
+        {translateUi("Valid Grand Schema file — ready to import")}
       </div>
 
       <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 8 }}>
@@ -283,14 +286,14 @@ export function NativeImportPreview({ preview }: { preview: NativePreviewResult 
               {number.format(batch.entries)}
             </span>
             <span style={{ color: theme.colors.green, fontSize: "var(--fs-tiny)" }}>
-              {number.format(batch.additions)} new
+              {number.format(batch.additions)} {translateUi("new")}
             </span>
             <span style={{ color: theme.colors.colorGold, fontSize: "var(--fs-tiny)", textAlign: "right" }}>
-              {number.format(batch.changed)} changed
+              {number.format(batch.changed)} {translateUi("changed")}
             </span>
             {batch.unchanged > 0 ? (
               <span style={{ gridColumn: "1 / -1", color: theme.colors.muted, fontSize: "var(--fs-tiny)" }}>
-                {number.format(batch.unchanged)} unchanged (no-op)
+                {number.format(batch.unchanged)} {translateUi("unchanged (no-op)")}
               </span>
             ) : null}
           </div>

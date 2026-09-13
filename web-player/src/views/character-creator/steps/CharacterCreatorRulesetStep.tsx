@@ -1,3 +1,4 @@
+import { UiText } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { C, withAlpha } from "@/lib/theme";
 import { NavButtons } from "../shared/CharacterCreatorParts";
@@ -6,7 +7,7 @@ import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./Char
 
 const RULESET_OPTIONS: Array<{ value: "5e" | "5.5e"; label: string; description: string }> = [
   { value: "5.5e", label: "5.5e Rules", description: "The current Player's Handbook (2024)." },
-  { value: "5e", label: "5e Rules", description: "The original Plauer's Handbook (2014)." },
+  { value: "5e", label: "5e Rules", description: "The original Player's Handbook (2014)." },
 ];
 
 function renderRulesetStep({
@@ -22,11 +23,11 @@ function renderRulesetStep({
 }): { main: React.ReactNode; side: React.ReactNode } {
   const main = (
     <div>
-      <h2 style={headingStyle}>Choose a Ruleset</h2>
+      <h2 style={headingStyle}>{<UiText text={"Choose a Ruleset"} namespace="playerUi" />}</h2>
       <p style={{ color: C.muted, fontSize: "var(--fs-medium)", marginBottom: 16 }}>
         {locked
-          ? "This character's ruleset is locked and can't be changed after creation."
-          : "This determines which classes, species, backgrounds, and feats are available — pick carefully, it can't be changed later."}
+          ? <UiText text={"This character's ruleset is locked and can't be changed after creation."} namespace="playerUi" />
+          : <UiText text={"This determines which classes, species, backgrounds, and feats are available — pick carefully, it can't be changed later."} namespace="playerUi" />}
       </p>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         {RULESET_OPTIONS.map((option) => {
@@ -50,8 +51,8 @@ function renderRulesetStep({
                 opacity: locked && !selected ? 0.5 : 1,
               }}
             >
-              <div style={{ fontWeight: 700, fontSize: "var(--fs-subtitle)" }}>{option.label}</div>
-              <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginTop: 4 }}>{option.description}</div>
+              <div style={{ fontWeight: 700, fontSize: "var(--fs-subtitle)" }}><UiText text={option.label} namespace="playerUi" /></div>
+              <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginTop: 4 }}><UiText text={option.description} namespace="sharedUi" /></div>
             </button>
           );
         })}

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useState, useEffect } from "react";
 import { Modal } from "@/components/overlay/Modal";
 import { theme, withAlpha } from "@/theme/theme";
@@ -21,6 +22,7 @@ const GENDERS: { id: Gender; label: string }[] = [
 ];
 
 export function NameGeneratorModal(props: { isOpen: boolean; onClose: () => void }) {
+  const translateUi = useUiTranslation("dmUi");
   const [gender, setGender] = useState<Gender>("male");
   const [fullName, setFullName] = useState("");
   const [copied, setCopied] = useState(false);
@@ -60,7 +62,7 @@ export function NameGeneratorModal(props: { isOpen: boolean; onClose: () => void
   };
 
   return (
-    <Modal isOpen={props.isOpen} onClose={props.onClose} title="Name Generator" width={420} height={280}>
+    <Modal isOpen={props.isOpen} onClose={props.onClose} title={translateUi("Name Generator")} width={420} height={280}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 22, padding: 28 }}>
         {/* Gender toggle */}
         <div style={{ display: "flex", gap: 6 }}>
@@ -74,7 +76,7 @@ export function NameGeneratorModal(props: { isOpen: boolean; onClose: () => void
                 color: gender === id ? theme.colors.bg : theme.colors.text,
               }}
             >
-              {label}
+              {translateUi(label)}
             </button>
           ))}
         </div>
@@ -88,7 +90,7 @@ export function NameGeneratorModal(props: { isOpen: boolean; onClose: () => void
             <button
               type="button"
               onClick={handleCopy}
-              title="Copy name"
+              title={translateUi("Copy name")}
               style={{
                 ...ghostButtonStyle({
                   textColor: copied ? theme.colors.green : theme.colors.muted,
@@ -101,14 +103,14 @@ export function NameGeneratorModal(props: { isOpen: boolean; onClose: () => void
                 fontWeight: 700,
               }}
             >
-              {copied ? "Copied!" : "Copy"}
+              {copied ? translateUi("Copied!") : translateUi("Copy")}
             </button>
           )}
         </div>
 
         {/* Regenerate */}
         <Button type="button" variant="primary" onClick={() => generate(gender)} style={{ padding: "10px 32px" }}>
-          Regenerate
+          {translateUi("Regenerate")}
         </Button>
       </div>
     </Modal>

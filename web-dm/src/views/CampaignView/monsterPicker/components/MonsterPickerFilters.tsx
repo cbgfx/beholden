@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import { Input } from "@/ui/Input";
@@ -28,21 +29,22 @@ export function MonsterPickerFilters(props: {
   onChangeRulesetFilter?: (r: "5e" | "5.5e" | "") => void;
   showRulesetFilter?: boolean;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   return (
     <>
-      <Input value={props.compQ} onChange={(e) => props.onChangeCompQ(e.target.value)} placeholder="Search compendium…" />
+      <Input value={props.compQ} onChange={(e) => props.onChangeCompQ(e.target.value)} placeholder={translateUi("Search compendium…")} />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 6 }}>
         <Select style={{ width: "100%" }} value={props.sortMode} onChange={(e) => props.onChangeSortMode(e.target.value as SortMode)}>
           <option value="az">A-Z</option>
-          <option value="crAsc">CR (low→high)</option>
-          <option value="crDesc">CR (high→low)</option>
+          <option value="crAsc">{translateUi("CR (low→high)")}</option>
+          <option value="crDesc">{translateUi("CR (high→low)")}</option>
         </Select>
 
         <Select style={{ width: "100%" }} value={props.envFilter} onChange={(e) => props.onChangeEnvFilter(e.target.value)}>
           {props.envOptions.map((env) => (
             <option key={env} value={env}>
-              {env === "all" ? "All environments" : env}
+              {env === "all" ? translateUi("All environments") : env}
             </option>
           ))}
         </Select>
@@ -50,7 +52,7 @@ export function MonsterPickerFilters(props: {
         <Select style={{ width: "100%" }} value={props.sizeFilter} onChange={(e) => props.onChangeSizeFilter(e.target.value)}>
           {props.sizeOptions.map((s) => (
             <option key={s} value={s}>
-              {s === "all" ? "All sizes" : s}
+              {s === "all" ? translateUi("All sizes") : s}
             </option>
           ))}
         </Select>
@@ -58,7 +60,7 @@ export function MonsterPickerFilters(props: {
         <Select style={{ width: "100%" }} value={props.typeFilter} onChange={(e) => props.onChangeTypeFilter(e.target.value)}>
           {props.typeOptions.map((t) => (
             <option key={t} value={t}>
-              {t === "all" ? "All types" : t.charAt(0).toUpperCase() + t.slice(1)}
+              {t === "all" ? translateUi("All types") : t.charAt(0).toUpperCase() + t.slice(1)}
             </option>
           ))}
         </Select>
@@ -69,7 +71,7 @@ export function MonsterPickerFilters(props: {
             value={props.rulesetFilter ?? ""}
             onChange={(e) => props.onChangeRulesetFilter?.(e.target.value as "5e" | "5.5e" | "")}
           >
-            <option value="">All rulesets</option>
+            <option value="">{translateUi("All rulesets")}</option>
             <option value="5.5e">5.5e</option>
             <option value="5e">5e</option>
           </Select>
@@ -77,8 +79,8 @@ export function MonsterPickerFilters(props: {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-        <Input value={props.crMin} onChange={(e) => props.onChangeCrMin(e.target.value)} placeholder="CR min (e.g. 3 or 1/4)" />
-        <Input value={props.crMax} onChange={(e) => props.onChangeCrMax(e.target.value)} placeholder="CR max (e.g. 7)" />
+        <Input value={props.crMin} onChange={(e) => props.onChangeCrMin(e.target.value)} placeholder={translateUi("CR min (e.g. 3 or 1/4)")} />
+        <Input value={props.crMax} onChange={(e) => props.onChangeCrMax(e.target.value)} placeholder={translateUi("CR max (e.g. 7)")} />
       </div>
 
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -99,7 +101,7 @@ export function MonsterPickerFilters(props: {
           </button>
         ))}
         <button type="button" onClick={props.onClear} style={pillStyle()}>
-          Clear
+          {translateUi("Clear")}
         </button>
       </div>
     </>

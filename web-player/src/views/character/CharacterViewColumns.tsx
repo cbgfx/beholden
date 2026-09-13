@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { C } from "@/lib/theme";
 import { MonsterStatblock } from "@/views/CompendiumView/panels/MonsterStatblock";
@@ -51,6 +52,7 @@ export function PinnedVitalsBox(props: {
 export function PolymorphedFormPanel(props: {
   polymorphMonsterState: { monster: React.ComponentProps<typeof MonsterStatblock>["monster"] | null; busy: boolean; error: string | null };
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const { polymorphMonsterState } = props;
   if (polymorphMonsterState.monster) {
     return <MonsterStatblock monster={polymorphMonsterState.monster} hideSummaryBar />;
@@ -58,7 +60,7 @@ export function PolymorphedFormPanel(props: {
   if (polymorphMonsterState.busy) {
     return (
       <div style={{ padding: "14px 16px", borderRadius: 12, border: `1px solid ${C.panelBorder}`, background: C.panelBg, color: C.muted }}>
-        Loading transformed form...
+        {translateUi("Loading transformed form...")}
       </div>
     );
   }
@@ -71,7 +73,7 @@ export function PolymorphedFormPanel(props: {
   }
   return (
     <div style={{ padding: "14px 16px", borderRadius: 12, border: `1px solid ${C.panelBorder}`, background: C.panelBg, color: C.muted }}>
-      Transformed form details are unavailable right now.
+      {translateUi("Transformed form details are unavailable right now.")}
     </div>
   );
 }

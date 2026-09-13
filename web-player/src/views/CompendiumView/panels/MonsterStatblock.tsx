@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import { FormattedText } from "@beholden/shared/ui";
 import {
   buildMonsterInfoLines,
@@ -70,12 +71,14 @@ function asMonsterEntryArray(value: unknown): MonsterTextEntry[] {
 }
 
 function AbilityGroup({ keys, abilities, saves }: { keys: AbilityKey[]; abilities: Record<AbilityKey, number>; saves?: Partial<Record<AbilityKey, number>> }) {
+  const { t } = useTranslation();
   const cols = "48px 38px 1fr 1fr";
+  const headers = [t("compendiumMonsters.statblockScore"), t("compendiumMonsters.statblockMod"), t("compendiumMonsters.statblockSave")];
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ display: "grid", gridTemplateColumns: cols, gap: 6, marginBottom: 6 }}>
         <div />
-        {["Score", "Mod", "Save"].map((header) => (
+        {headers.map((header) => (
           <div key={header} style={{ fontSize: "var(--fs-tiny)", fontWeight: 900, letterSpacing: 1, textTransform: "uppercase", color: C.muted, textAlign: "center" }}>
             {header}
           </div>
@@ -130,10 +133,11 @@ function TextBlock({ items, title }: { items: MonsterTextEntry[]; title: string 
 }
 
 export function MonsterStatblock({ monster, hideSummaryBar = false }: { monster: MonsterRecord | null; hideSummaryBar?: boolean }) {
+  const { t } = useTranslation();
   const [infoOpen, setInfoOpen] = React.useState(true);
 
   if (!monster) {
-    return <div style={{ color: C.muted }}>Select a monster to view its stat block.</div>;
+    return <div style={{ color: C.muted }}>{t("compendiumMonsters.statblockSelectPrompt")}</div>;
   }
 
   const ac = readMonsterNumber(readNamedObjectValue(monster.ac, "value") ?? monster.ac ?? monster.armor_class);
@@ -174,7 +178,7 @@ export function MonsterStatblock({ monster, hideSummaryBar = false }: { monster:
   return (
     <div style={{ display: "grid", gap: 14 }}>
       <div>
-        <div style={{ fontWeight: 900, fontSize: "var(--fs-title)", color: C.text }}>{String(monster.name ?? "Monster")}</div>
+        <div style={{ fontWeight: 900, fontSize: "var(--fs-title)", color: C.text }}>{String(monster.name ?? t("compendiumMonsters.detailFallbackTitle"))}</div>
         <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>
           {[type, alignment, cr ? `CR ${cr}` : null].filter(Boolean).join(" · ")}
         </div>
@@ -182,11 +186,11 @@ export function MonsterStatblock({ monster, hideSummaryBar = false }: { monster:
 
       {!hideSummaryBar && (
         <div style={{ display: "flex", borderRadius: 12, border: `1px solid ${C.panelBorder}`, background: C.panelBg, overflow: "hidden" }}>
-          <StatBar icon={<IconShield />} label="Armor Class" value={ac != null ? ac : "—"} />
+          <StatBar icon={<IconShield />} label={t("compendiumMonsters.statblockArmorClass")} value={ac != null ? ac : "—"} />
           <div style={{ width: 1, background: C.panelBorder }} />
-          <StatBar icon={<IconHeart />} label="Hit Points" value={hpValue} flex={1.4} />
+          <StatBar icon={<IconHeart />} label={t("compendiumMonsters.statblockHitPoints")} value={hpValue} flex={1.4} />
           <div style={{ width: 1, background: C.panelBorder }} />
-          <StatBar icon={<IconSpeed />} label="Speed" value={speedDisplay} />
+          <StatBar icon={<IconSpeed />} label={t("compendiumMonsters.statblockSpeed")} value={speedDisplay} />
         </div>
       )}
 
@@ -201,7 +205,7 @@ export function MonsterStatblock({ monster, hideSummaryBar = false }: { monster:
             onClick={() => setInfoOpen((value) => !value)}
             style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "transparent", border: 0, cursor: "pointer", color: C.text, fontSize: "var(--fs-small)", fontWeight: 900, letterSpacing: 0.8, textTransform: "uppercase" }}
           >
-            <span>Details</span>
+            <span>{t("compendiumMonsters.statblockDetails")}</span>
             <span style={{ color: C.muted }}>{infoOpen ? "▲" : "▼"}</span>
           </button>
           {infoOpen && (
@@ -217,10 +221,10 @@ export function MonsterStatblock({ monster, hideSummaryBar = false }: { monster:
         </div>
       )}
 
-      <TextBlock items={nonSpellTraits} title="Traits" />
-      <TextBlock items={nonSpellActions} title="Actions" />
-      <TextBlock items={reactionArr} title="Reactions" />
-      <TextBlock items={legendary} title="Legendary Actions" />
+      <TextBlock items={nonSpellTraits} title={t("compendiumMonsters.statblockTraits")} />
+      <TextBlock items={nonSpellActions} title={t("compendiumMonsters.statblockActions")} />
+      <TextBlock items={reactionArr} title={t("compendiumMonsters.statblockReactions")} />
+      <TextBlock items={legendary} title={t("compendiumMonsters.statblockLegendaryActions")} />
     </div>
   );
 }

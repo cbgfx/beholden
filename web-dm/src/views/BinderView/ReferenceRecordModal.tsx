@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Drawer } from "@/components/overlay/Drawer";
 import { Modal } from "@/components/overlay/Modal";
@@ -35,6 +36,7 @@ export function ReferenceRecordModal(props: {
   onClose: () => void;
   onSave: (input: BinderReferenceInput) => Promise<void>;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [dmNotes, setDmNotes] = useState("");
@@ -88,7 +90,7 @@ export function ReferenceRecordModal(props: {
   const content = (
       <form onSubmit={(event) => void submit(event)} style={{ padding: 22, display: "grid", gap: 17 }}>
         <div style={{ display: "grid", gap: 7 }}>
-          <label htmlFor="binder-reference-name" style={labelStyle}>Name</label>
+          <label htmlFor="binder-reference-name" style={labelStyle}>{translateUi("Name")}</label>
           <Input
             id="binder-reference-name"
             value={name}
@@ -99,13 +101,13 @@ export function ReferenceRecordModal(props: {
           />
         </div>
 
-        {props.showIcon ? <IconPicker value={icon} onChange={setIcon} label="Icon" /> : null}
+        {props.showIcon ? <IconPicker value={icon} onChange={setIcon} label={translateUi("Icon")} /> : null}
 
         {props.showRank ? (
           <div style={{ display: "grid", gap: 7 }}>
-            <label htmlFor="binder-reference-rank" style={labelStyle}>Rank</label>
+            <label htmlFor="binder-reference-rank" style={labelStyle}>{translateUi("Rank")}</label>
             <select id="binder-reference-rank" value={rank ?? ""} onChange={(event) => setRank(event.target.value ? event.target.value as DeityRank : null)} disabled={saving} style={{ width: "100%", padding: "10px 11px", borderRadius: theme.radius.control, border: `1px solid ${theme.colors.panelBorder}`, background: theme.colors.inputBg, color: rank ? DEITY_RANK_COLORS[rank] : theme.colors.muted, font: "inherit", fontWeight: 800 }}>
-              <option value="">None</option>
+              <option value="">{translateUi("None")}</option>
               {DEITY_RANKS.map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
           </div>
@@ -113,22 +115,22 @@ export function ReferenceRecordModal(props: {
 
         {props.showDescription ? (
           <div style={{ display: "grid", gap: 7 }}>
-            <label htmlFor="binder-reference-description" style={labelStyle}>Description</label>
+            <label htmlFor="binder-reference-description" style={labelStyle}>{translateUi("Description")}</label>
             <TextArea
               id="binder-reference-description"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               rows={6}
               disabled={saving}
-              placeholder="Optional"
+              placeholder={translateUi("Optional")}
             />
           </div>
         ) : null}
 
         {props.showDmNotes ? (
           <div style={{ display: "grid", gap: 7 }}>
-            <label htmlFor="binder-reference-dm-notes" style={labelStyle}>DM Notes</label>
-            <TextArea id="binder-reference-dm-notes" value={dmNotes} onChange={(event) => setDmNotes(event.target.value)} rows={6} disabled={saving} placeholder="Always hidden from players" />
+            <label htmlFor="binder-reference-dm-notes" style={labelStyle}>{translateUi("DM Notes")}</label>
+            <TextArea id="binder-reference-dm-notes" value={dmNotes} onChange={(event) => setDmNotes(event.target.value)} rows={6} disabled={saving} placeholder={translateUi("Always hidden from players")} />
           </div>
         ) : null}
 
@@ -157,9 +159,9 @@ export function ReferenceRecordModal(props: {
         ) : null}
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <Button type="button" variant="ghost" onClick={props.onClose} disabled={saving}>Cancel</Button>
+          <Button type="button" variant="ghost" onClick={props.onClose} disabled={saving}>{translateUi("Cancel")}</Button>
           <Button type="submit" disabled={saving || !name.trim()}>
-            {saving ? "Saving…" : props.record ? "Save Changes" : `Create ${props.singularLabel}`}
+            {saving ? translateUi("Saving…") : props.record ? translateUi("Save Changes") : translateUi("Create {{value1}}", { value1: props.singularLabel })}
           </Button>
         </div>
       </form>

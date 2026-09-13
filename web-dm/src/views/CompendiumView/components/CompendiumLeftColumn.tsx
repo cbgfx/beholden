@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { theme } from "@/theme/theme";
 import { Panel } from "@/ui/Panel";
 import { CompendiumNavMenu } from "@/views/CompendiumView/components/CompendiumNavMenu";
@@ -8,12 +9,13 @@ export function CompendiumLeftColumn(props: {
   activeSection: CompendiumSection;
   onSetSection: (s: CompendiumSection) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const { user } = useAuth();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0, minHeight: 0 }}>
       <Panel
-        title="Reference"
+        title={translateUi("Reference")}
         style={{ display: "flex", flexDirection: "column" }}
       >
         <CompendiumNavMenu
@@ -31,7 +33,7 @@ export function CompendiumLeftColumn(props: {
             padding: "0 4px",
           }}
         >
-          Import or manage canonical Beholden compendium JSON under the Compendium section.
+          {translateUi("Import or manage canonical Beholden compendium JSON under the Compendium section.")}
         </div>
       )}
     </div>

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { FormattedText } from "@beholden/shared/ui";
 import { Panel } from "@/ui/Panel";
@@ -12,6 +13,7 @@ function rarityLabel(rarity: string | null): string {
 }
 
 export function ItemDetailPanel(props: { itemId: string }) {
+  const translateUi = useUiTranslation("dmUi");
   const [item, setItem] = React.useState<CompendiumItemDetail | null>(null);
   const [busy, setBusy] = React.useState(false);
 
@@ -37,19 +39,19 @@ export function ItemDetailPanel(props: { itemId: string }) {
 
   return (
     <Panel
-      title={item ? item.name : "Item"}
-      actions={<div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{busy ? "Loading…" : meta}</div>}
+      title={item ? item.name : translateUi("Item")}
+      actions={<div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{busy ? translateUi("Loading…") : meta}</div>}
       style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
       bodyStyle={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 10 }}
     >
       {!item ? (
-        <div style={{ color: theme.colors.muted, lineHeight: 1.4 }}>Pick an item on the left to view details.</div>
+        <div style={{ color: theme.colors.muted, lineHeight: 1.4 }}>{translateUi("Pick an item on the left to view details.")}</div>
       ) : (
         <>
           {/* Tags row */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {item.magic && <Tag label="Magic" color="#a335ee" />}
-            {item.attunement && <Tag label="Attunement" color={theme.colors.accentHighlight} />}
+            {item.magic && <Tag label={translateUi("Magic")} color="#a335ee" />}
+            {item.attunement && <Tag label={translateUi("Attunement")} color={theme.colors.accentHighlight} />}
             {item.rarity && <Tag label={rarityLabel(item.rarity)} color={rarityColor(item.rarity)} />}
           </div>
 
@@ -62,7 +64,7 @@ export function ItemDetailPanel(props: { itemId: string }) {
               whiteSpace: "pre-wrap", lineHeight: 1.5,
             }}
           >
-            {textParagraphs.length ? <FormattedText text={textParagraphs} /> : <span style={{ color: theme.colors.muted }}>No description.</span>}
+            {textParagraphs.length ? <FormattedText text={textParagraphs} /> : <span style={{ color: theme.colors.muted }}>{translateUi("No description.")}</span>}
           </div>
         </>
       )}

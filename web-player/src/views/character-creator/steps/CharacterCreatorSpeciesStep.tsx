@@ -1,3 +1,5 @@
+import { translateUi } from "@/i18n";
+import { UiText } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { C, withAlpha } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
@@ -167,7 +169,7 @@ function renderSpeciesStep({
 
   const main = (
     <div>
-      <h2 style={headingStyle}>Choose a Species</h2>
+      <h2 style={headingStyle}>{<UiText text={"Choose a Species"} namespace="playerUi" />}</h2>
 
       <CharacterCreatorCatalogPicker entries={availableRaces} filteredEntries={filteredRaces}
         search={raceSearch} setSearch={setRaceSearch} selectedId={selectedRaceId} select={selectRace}
@@ -182,7 +184,7 @@ function renderSpeciesStep({
               return (
                 <div>
                   <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
-                    <div style={{ ...labelStyle, margin: 0 }}>Ability Score Increase <SourceTag value={raceDetail.name} /></div>
+                    <div style={{ ...labelStyle, margin: 0 }}>{<UiText text={"Ability Score Increase"} namespace="playerUi" />} <SourceTag value={raceDetail.name} /></div>
                     <span style={{ fontSize: "var(--fs-small)", color: chosenRaceAbilityChoices.length >= abilityChoice.count ? C.accentHl : C.muted }}>
                       {chosenRaceAbilityChoices.length} / {abilityChoice.count}
                     </span>
@@ -238,7 +240,7 @@ function renderSpeciesStep({
             return (
               <div>
                 <div style={{ marginBottom: 8 }}>
-                  <span style={{ ...labelStyle, display: "inline", margin: 0 }}>Ability Score Increase </span>
+                  <span style={{ ...labelStyle, display: "inline", margin: 0 }}>{<UiText text={"Ability Score Increase"} namespace="playerUi" />} </span>
                   <SourceTag value={raceDetail.name} />
                 </div>
                 <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
@@ -264,8 +266,8 @@ function renderSpeciesStep({
                 </div>
                 <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 8 }}>
                   {mode === "split"
-                    ? splitDone ? "All bonuses assigned" : !Object.values(bonuses).includes(2) ? "Click to assign +2" : "Click another for +1"
-                    : evenDone ? "All bonuses assigned" : `Click abilities to assign +1 (${bonusCount}/${abilityEvenTarget})`}
+                    ? splitDone ? <UiText text={"All bonuses assigned"} namespace="playerUi" /> : !Object.values(bonuses).includes(2) ? <UiText text={"Click to assign +2"} namespace="playerUi" /> : <UiText text={"Click another for +1"} namespace="playerUi" />
+                    : evenDone ? <UiText text={"All bonuses assigned"} namespace="playerUi" /> : translateUi("Click abilities to assign +1 ({{value1}}/{{value2}})", { value1: bonusCount, value2: abilityEvenTarget })}
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {abilityPool.map(({ key, label }) => {
@@ -331,7 +333,7 @@ function renderSpeciesStep({
 
           {spellAbilityChoice && (
             <div>
-              <div style={{ ...labelStyle, marginBottom: 8 }}>Spellcasting Ability <SourceTag value={raceDetail.name} /></div>
+              <div style={{ ...labelStyle, marginBottom: 8 }}>{<UiText text={"Spellcasting Ability"} namespace="playerUi" />} <SourceTag value={raceDetail.name} /></div>
               <div style={{ display: "flex", gap: 8 }}>
                 {spellAbilityChoice.options.map((ability) => {
                   const sel = chosenRaceSpellAbility === ability;
@@ -362,7 +364,7 @@ function renderSpeciesStep({
 
           {raceChoices.hasChosenSize && (
             <div>
-              <div style={{ ...labelStyle, marginBottom: 8 }}>Size <SourceTag value={raceDetail.name} /></div>
+              <div style={{ ...labelStyle, marginBottom: 8 }}>{<UiText text={"Size"} namespace="playerUi" />} <SourceTag value={raceDetail.name} /></div>
               <div style={{ display: "flex", gap: 8 }}>
                 {["Medium", "Small"].map((sz) => {
                   const sel = chosenRaceSize === sz;
@@ -393,7 +395,7 @@ function renderSpeciesStep({
           {skillChoice && (
             <div>
               <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
-                <div style={{ ...labelStyle, margin: 0 }}>Skill Proficiency <SourceTag value={raceDetail.name} /></div>
+                <div style={{ ...labelStyle, margin: 0 }}>{<UiText text={"Skill Proficiency"} namespace="playerUi" />} <SourceTag value={raceDetail.name} /></div>
                 <span style={{ fontSize: "var(--fs-small)", color: chosenRaceSkills.length >= skillChoice.count ? C.accentHl : C.muted }}>
                   {chosenRaceSkills.length} / {skillChoice.count}
                 </span>
@@ -430,7 +432,7 @@ function renderSpeciesStep({
           {toolChoice && (
             <div>
               <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
-                <div style={{ ...labelStyle, margin: 0 }}>Tool Proficiency <SourceTag value={raceDetail.name} /></div>
+                <div style={{ ...labelStyle, margin: 0 }}>{<UiText text={"Tool Proficiency"} namespace="playerUi" />} <SourceTag value={raceDetail.name} /></div>
                 <span style={{ fontSize: "var(--fs-small)", color: chosenRaceTools.length >= toolChoice.count ? C.accentHl : C.muted }}>
                   {chosenRaceTools.length} / {toolChoice.count}
                 </span>
@@ -467,7 +469,7 @@ function renderSpeciesStep({
           {languageChoice && (
             <div>
               <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
-                <div style={{ ...labelStyle, margin: 0 }}>Language <SourceTag value={raceDetail.name} /></div>
+                <div style={{ ...labelStyle, margin: 0 }}>{<UiText text={"Language"} namespace="playerUi" />} <SourceTag value={raceDetail.name} /></div>
                 <span style={{ fontSize: "var(--fs-small)", color: chosenRaceLanguages.length >= languageChoice.count ? C.accentHl : C.muted }}>
                   {chosenRaceLanguages.length} / {languageChoice.count}
                 </span>
@@ -508,11 +510,11 @@ function renderSpeciesStep({
 
           {raceChoices.hasFeatChoice && (
             <div>
-              <div style={{ ...labelStyle, marginBottom: 8 }}>Origin Feat <SourceTag value={raceDetail.name} /></div>
+              <div style={{ ...labelStyle, marginBottom: 8 }}>{<UiText text={"Origin Feat"} namespace="playerUi" />} <SourceTag value={raceDetail.name} /></div>
               <input
                 value={raceFeatSearch}
                 onChange={(e) => setRaceFeatSearch(e.target.value)}
-                placeholder="Search feats..."
+                placeholder={translateUi("Search feats...")}
                 style={{ ...inputStyle, width: "100%", marginBottom: 8 }}
               />
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5, maxHeight: 240, overflowY: "auto", paddingRight: 4 }}>
@@ -556,7 +558,7 @@ function renderSpeciesStep({
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 10 }}>
         {raceDetail.abilityScoreIncrease && Object.keys(raceDetail.abilityScoreIncrease).length > 0 && (
           <div>
-            <div style={statLabelStyle}>Ability Bonus</div>
+            <div style={statLabelStyle}>{<UiText text={"Ability Bonus"} namespace="playerUi" />}</div>
             <div style={statValueStyle}>
               {Object.entries(raceDetail.abilityScoreIncrease)
                 .map(([key, amount]) => `${(ABILITY_LABELS[key as keyof typeof ABILITY_LABELS] ?? key.toUpperCase()).slice(0, 3).toUpperCase()} +${amount}`)
@@ -564,10 +566,10 @@ function renderSpeciesStep({
             </div>
           </div>
         )}
-        {raceDetail.speed != null && <div><div style={statLabelStyle}>Speed</div><div style={statValueStyle}>{raceDetail.speed} ft</div></div>}
-        {raceDetail.size && <div><div style={statLabelStyle}>Size</div><div style={statValueStyle}>{raceDetail.size}</div></div>}
-        {derivedSenses.length > 0 && <div><div style={statLabelStyle}>Vision</div><div style={statValueStyle}>{derivedSenses.map((s) => `${titleCase(s.kind)} ${s.range}ft`).join(", ")}</div></div>}
-        {derivedResistances.length > 0 && <div><div style={statLabelStyle}>Resist</div><div style={statValueStyle}>{derivedResistances.join(", ")}</div></div>}
+        {raceDetail.speed != null && <div><div style={statLabelStyle}>{<UiText text={"Speed"} namespace="playerUi" />}</div><div style={statValueStyle}>{raceDetail.speed} {<UiText text={"ft"} namespace="playerUi" />}</div></div>}
+        {raceDetail.size && <div><div style={statLabelStyle}>{<UiText text={"Size"} namespace="playerUi" />}</div><div style={statValueStyle}>{raceDetail.size}</div></div>}
+        {derivedSenses.length > 0 && <div><div style={statLabelStyle}>{<UiText text={"Vision"} namespace="playerUi" />}</div><div style={statValueStyle}>{derivedSenses.map((s) => `${titleCase(s.kind)} ${s.range}ft`).join(", ")}</div></div>}
+        {derivedResistances.length > 0 && <div><div style={statLabelStyle}>{<UiText text={"Resist"} namespace="playerUi" />}</div><div style={statValueStyle}>{derivedResistances.join(", ")}</div></div>}
       </div>
       {raceDetail.traits.filter((trait) => !trait.hidden).map((t) => (
         <div key={t.name} style={{ marginBottom: 8 }}>
@@ -592,7 +594,7 @@ function renderSpeciesStep({
       )}
     </div>
   ) : (
-    <div style={{ color: C.muted, fontSize: "var(--fs-subtitle)", padding: "12px 0" }}>Select a species to see its details.</div>
+    <div style={{ color: C.muted, fontSize: "var(--fs-subtitle)", padding: "12px 0" }}>{<UiText text={"Select a species to see its details."} namespace="playerUi" />}</div>
   );
 
   return { main, side };

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 // web-dm/src/components/BinderListTable.tsx
 //
 // Shared building blocks for the Binder's various record-list tables
@@ -46,7 +47,8 @@ export function BinderListHeader(props: {
  * or nothing matched. Kept as separate small components (rather than one combined status
  * component) since callers need to interleave them with their own `.map()` in a ternary. */
 export function BinderListLoading() {
-  return <div style={{ padding: 42, textAlign: "center", color: theme.colors.muted }}>Loading…</div>;
+  const translateUi = useUiTranslation("dmUi");
+  return <div style={{ padding: 42, textAlign: "center", color: theme.colors.muted }}>{translateUi("Loading…")}</div>;
 }
 
 export function BinderListError(props: { message: string }) {

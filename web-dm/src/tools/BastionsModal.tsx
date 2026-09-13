@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Modal } from "@/components/overlay/Modal";
 import { api, jsonInit } from "@/services/api";
@@ -14,6 +15,8 @@ import { BastionOverviewPanel } from "@/tools/bastions/BastionOverviewPanel";
 import { BastionFacilitiesPanel } from "@/tools/bastions/BastionFacilitiesPanel";
 
 export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
+  const translateMessage = useUiMessages("dmUi");
+  const translateUi = useUiTranslation("dmUi");
   const { state } = useStore();
   const campaignId = state.selectedCampaignId;
   const players = state.players;
@@ -75,11 +78,11 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
         return bastionData.bastions[0]?.id ?? null;
       });
     } catch (error) {
-      if (scopeRef.current === campaignId && sequence === readSequence.current) setMessage(error instanceof Error ? error.message : "Failed to load Bastions.");
+      if (scopeRef.current === campaignId && sequence === readSequence.current) setMessage(error instanceof Error ? error.message : translateMessage("Failed to load Bastions."));
     } finally {
       if (scopeRef.current === campaignId && sequence === readSequence.current) setLoading(false);
     }
-  }, [campaignId, props.isOpen, registerLoadedBastions, readVersion]);
+  }, [props.isOpen, campaignId, readVersion, registerLoadedBastions, translateMessage]);
 
   React.useEffect(() => {
     if (!props.isOpen) return;
@@ -140,7 +143,7 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
       }));
       setSelectedBastionId(result.id);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Failed to grant Bastion.");
+      setMessage(error instanceof Error ? error.message : translateMessage("Failed to grant Bastion."));
     } finally {
       setSaving(false);
     }
@@ -157,7 +160,7 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
       setBastions((prev) => prev.filter((entry) => entry.id !== selectedBastion.id));
       setSelectedBastionId((prev) => (prev === selectedBastion.id ? null : prev));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Failed to delete Bastion.");
+      setMessage(error instanceof Error ? error.message : translateMessage("Failed to delete Bastion."));
     } finally {
       setSaving(false);
     }
@@ -209,7 +212,7 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
   }
 
   return (
-    <Modal isOpen={props.isOpen} onClose={props.onClose} title="Bastions" width={1200} height={760}>
+    <Modal isOpen={props.isOpen} onClose={props.onClose} title={translateUi("Bastions")} width={1200} height={760}>
       <div style={{ height: "100%", display: "grid", gridTemplateColumns: "320px 1fr", background: "transparent" }}>
         <BastionsSidebar
           campaignId={campaignId}
@@ -221,7 +224,7 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
         />
 
         <div style={{ padding: 14, overflowY: "auto" }}>
-          {loading ? <div style={{ color: theme.colors.muted }}>Loading...</div> : null}
+          {loading ? <div style={{ color: theme.colors.muted }}>{translateUi("Loading...")}</div> : null}
           {!loading && selectedBastion ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 10, alignItems: "center" }}>
@@ -231,7 +234,7 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
                   style={chipButtonStyle(selectedBastion.active)}
                   onClick={() => updateSelectedDraft((bastion) => ({ ...bastion, active: !bastion.active }))}
                 >
-                  Active
+                  {translateUi("Active")}
                 </button>
                 <button
                   type="button"
@@ -249,7 +252,7 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
                     };
                   })}
                 >
-                  Maintain
+                  {translateUi("Maintain")}
                 </button>
               </div>
 
@@ -278,19 +281,19 @@ export function BastionsModal(props: { isOpen: boolean; onClose: () => void }) {
               />
 
               <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                <Button variant="ghost" onClick={() => void deleteSelectedBastion()} disabled={saving}>Delete Bastion</Button>
+                <Button variant="ghost" onClick={() => void deleteSelectedBastion()} disabled={saving}>{translateUi("Delete Bastion")}</Button>
                 <div />
               </div>
             </div>
           ) : null}
 
           {!loading && !selectedBastion && campaignId ? (
-            <div style={{ color: theme.colors.muted }}>Grant a Bastion to begin.</div>
+            <div style={{ color: theme.colors.muted }}>{translateUi("Grant a Bastion to begin.")}</div>
           ) : null}
 
           {message ? (
             <div role="alert" style={{ marginTop: 10, color: message.toLowerCase().includes("fail") || message.toLowerCase().includes("invalid") ? theme.colors.red : theme.colors.muted }}>
-              {message} <Button onClick={retry}>Retry saves</Button>
+              {message} <Button onClick={retry}>{translateUi("Retry saves")}</Button>
             </div>
           ) : null}
         </div>

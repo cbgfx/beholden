@@ -1,4 +1,6 @@
+import { useStableI18n } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { api, jsonInit } from "@/services/api";
@@ -16,6 +18,8 @@ import { BastionFacilityDetailPanel } from "./BastionFacilityDetailPanel";
 import { BastionOwnerFacilityGroup } from "./BastionOwnerFacilityGroup";
 
 export function BastionView() {
+  const { t } = useTranslation();
+  const i18n = useStableI18n();
   const { id: campaignId, bastionId } = useParams<{ id: string; bastionId: string }>();
 
   const [loading, setLoading] = React.useState(true);
@@ -53,19 +57,19 @@ export function BastionView() {
         setCompendium(compendiumData);
         setCurrentUserPlayerIds(bastionData.currentUserPlayerIds ?? []);
         if (!bastionData.bastion) {
-          setError("Bastion not found.");
+          setError(i18n.t("bastionView.bastionNotFound"));
           setBastion(null);
           return;
         }
         setBastion(bastionData.bastion);
       })
       .catch((e) => {
-        setError(e?.message ?? "Failed to load Bastion.");
+        setError(e?.message ?? i18n.t("bastionView.loadBastionError"));
       })
       .finally(() => {
         if (!background) setLoading(false);
       });
-  }, [campaignId, bastionId]);
+  }, [campaignId, bastionId, i18n]);
 
   React.useEffect(() => { load(); }, [load]);
 
@@ -77,7 +81,7 @@ export function BastionView() {
       const payload = (msg.payload as any) as { action?: "upsert" | "delete" | "refresh"; bastionId?: string };
       if (payload.action === "delete" && payload.bastionId === bastionId) {
         setBastion(null);
-        setError("Bastion not found.");
+        setError(i18n.t("bastionView.bastionNotFound"));
         return;
       }
       if (payload.action === "upsert" && payload.bastionId === bastionId) {
@@ -90,7 +94,7 @@ export function BastionView() {
       }
     }
 
-  }, [bastionId, campaignId, load]));
+  }, [bastionId, campaignId, i18n, load]));
 
   const scheduleAutoSave = React.useCallback(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -111,14 +115,14 @@ export function BastionView() {
             notes: facility.notes,
           })),
         }));
-        setSaveMessage({ text: "Saved.", ok: true });
+        setSaveMessage({ text: i18n.t("bastionView.saved"), ok: true });
       } catch (e) {
-        setSaveMessage({ text: e instanceof Error ? e.message : "Failed to save.", ok: false });
+        setSaveMessage({ text: e instanceof Error ? e.message : i18n.t("bastionView.saveFailed"), ok: false });
       } finally {
         setSaving(false);
       }
     }, 1200);
-  }, [campaignId]);
+  }, [campaignId, i18n]);
 
   function mutateBastionAndSave(updater: (prev: Bastion) => Bastion) {
     setBastion((prev) => {
@@ -255,7 +259,7 @@ export function BastionView() {
   if (loading) {
     return (
       <div style={{ height: "100%", background: C.bg, color: C.muted, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        Loading...
+        {t("bastionView.loading")}
       </div>
     );
   }
@@ -263,7 +267,7 @@ export function BastionView() {
   if (error || !bastion) {
     return (
       <div style={{ height: "100%", background: C.bg, color: C.colorPinkRed, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {error ?? "Not found."}
+        {error ?? t("bastionView.notFound")}
       </div>
     );
   }
@@ -302,7 +306,7 @@ export function BastionView() {
 
           {/* Player Facilities */}
           <Panel>
-            <SubsectionLabel>Your Facilities</SubsectionLabel>
+            <SubsectionLabel>{t("bastionView.yourFacilitiesHeading")}</SubsectionLabel>
             <div
               style={{
                 display: "grid",
@@ -340,7 +344,7 @@ export function BastionView() {
           {/* DM Extra Facilities */}
           {dmExtraFacilities.length > 0 && (
             <Panel>
-              <SubsectionLabel>DM Extra Facilities</SubsectionLabel>
+              <SubsectionLabel>{t("bastionView.dmExtraFacilitiesHeading")}</SubsectionLabel>
               <FacilityRows
                 rows={dmExtraFacilities}
                 facilitiesByKey={facilitiesByKey}
@@ -352,11 +356,11 @@ export function BastionView() {
 
           {/* Notes */}
           <Panel>
-            <SubsectionLabel>Notes</SubsectionLabel>
+            <SubsectionLabel>{t("bastionView.notesHeading")}</SubsectionLabel>
             <textarea
               value={bastion.notes}
               onChange={(e) => mutateBastionAndSave((b) => ({ ...b, notes: e.target.value }))}
-              placeholder="Bastion notes..."
+              placeholder={t("bastionView.notesPlaceholder")}
               style={{
                 ...inputStyle,
                 minHeight: 90,

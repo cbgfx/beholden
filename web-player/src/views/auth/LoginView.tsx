@@ -1,8 +1,12 @@
+import { LanguageSwitcher } from "@beholden/shared/ui/LanguageSwitcher";
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/ui/Button";
+import { Select } from "@/ui/Select";
 
 export function LoginView() {
+  const { t } = useTranslation();
   const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -16,7 +20,7 @@ export function LoginView() {
     try {
       await login(username, password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : t("loginView.loginFailed"));
     } finally {
       setLoading(false);
     }
@@ -27,11 +31,12 @@ export function LoginView() {
       <div style={styles.overlay} />
       <div style={styles.card}>
         <h1 style={styles.title}>Beholden</h1>
-        <p style={styles.subtitle}>Sign in to continue</p>
+        <p style={styles.subtitle}>{t("loginView.signInToContinue")}</p>
 
+        <LanguageSwitcher SelectComponent={Select} fieldStyle={{ marginBottom: 16 }} />
         <form onSubmit={handleSubmit}>
           <div style={styles.field}>
-            <label style={styles.label}>Username</label>
+            <label style={styles.label}>{t("loginView.username")}</label>
             <input
               type="text"
               value={username}
@@ -44,7 +49,7 @@ export function LoginView() {
           </div>
 
           <div style={{ ...styles.field, marginBottom: 24 }}>
-            <label style={styles.label}>Password</label>
+            <label style={styles.label}>{t("loginView.password")}</label>
             <input
               type="password"
               value={password}
@@ -63,7 +68,7 @@ export function LoginView() {
             disabled={loading || !username || !password}
             style={{ width: "100%", padding: "10px 0", fontSize: "var(--fs-body)" }}
           >
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? t("loginView.signingIn") : t("loginView.signIn")}
           </Button>
         </form>
       </div>

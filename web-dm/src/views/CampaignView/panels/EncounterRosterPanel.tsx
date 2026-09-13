@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
@@ -34,6 +35,7 @@ export function EncounterRosterPanel(props: {
   onEditCombatant: (combatantId: string) => void;
   onRemoveCombatant: (combatantId: string) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const [pickerOpen, setPickerOpen] = React.useState(false);
   const [worldActionOpen, setWorldActionOpen] = React.useState(false);
 
@@ -48,7 +50,7 @@ export function EncounterRosterPanel(props: {
   return (
     <Panel
       storageKey="campaign-roster"
-      title="Combat Roster"
+      title={translateUi("Combat Roster")}
       actions={
         encounter ? (
           <EncounterRosterHeaderActions
@@ -59,7 +61,7 @@ export function EncounterRosterPanel(props: {
       }
     >
       {!encounter ? (
-        <div style={{ color: theme.colors.muted }}>Select an encounter to build the roster.</div>
+        <div style={{ color: theme.colors.muted }}>{translateUi("Select an encounter to build the roster.")}</div>
       ) : (
         <div style={{ display: "grid", gap: 8 }}>
           <EncounterRosterList
@@ -71,10 +73,10 @@ export function EncounterRosterPanel(props: {
           {/* Add monsters */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, paddingTop: 8, borderTop: `1px solid ${theme.colors.panelBorder}` }}>
             <Button onClick={() => setWorldActionOpen(true)}>
-              + World Action
+              {translateUi("+ World Action")}
             </Button>
             <Button onClick={() => setPickerOpen(true)}>
-              + Monster
+              {translateUi("+ Monster")}
             </Button>
           </div>
 

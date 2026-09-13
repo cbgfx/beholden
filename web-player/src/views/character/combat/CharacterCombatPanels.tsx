@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import type { ClassFeatureEntry } from "@/views/character/CharacterSheetTypes";
 import { C } from "@/lib/theme";
@@ -90,13 +91,14 @@ function PassiveDamageRow({
   damage: string;
   typeLabel: string;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   return (
     <div className="character-hover-row" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", margin: "0 -8px", padding: "6px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
       <div>
         <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text }}>{name}</div>
         <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{subtitle}</div>
       </div>
-      <div style={{ fontSize: "var(--fs-small)", color: C.muted, textAlign: "center" }}>Weapon</div>
+      <div style={{ fontSize: "var(--fs-small)", color: C.muted, textAlign: "center" }}>{translateUi("Weapon")}</div>
       <div style={{ fontSize: "var(--fs-small)", color: C.muted, textAlign: "center" }}>-</div>
       <div>
         <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: C.text }}>+{damage}</div>
@@ -136,6 +138,8 @@ export function CharacterCombatPanels({
   onToggleReaction = null,
   incapacitated = false,
 }: CharacterCombatPanelsProps) {
+  const translateMessage = useUiMessages("playerUi");
+  const translateUi = useUiTranslation("playerUi");
   const exhaustionPenalty = getExhaustionD20Penalty(ruleset, exhaustion);
   const displaySpeed = getExhaustedSpeed(ruleset, speed, exhaustion);
   const exhaustionAttackDisadvantage = hasExhaustionAttackAndSaveDisadvantage(ruleset, exhaustion);
@@ -197,7 +201,7 @@ export function CharacterCombatPanels({
   return (
     <>
       {showStats && <CollapsiblePanel
-        title="Combat Stats"
+        title={translateUi("Combat Stats")}
         color={accentColor}
         storageKey={PANEL_IDS.combatStats}
         summary={`AC ${effectiveAc} · Init ${formatModifier(initiativeBonus)} · ${displaySpeed} ft${exhaustion > 0 ? " (exhausted)" : ""} · PP ${passivePerc}`}
@@ -205,11 +209,11 @@ export function CharacterCombatPanels({
       >
         <div style={{ display: "flex", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", overflow: "hidden" }}>
           {([
-            { label: "Armor Class", value: String(effectiveAc), icon: <IconShield size={13} />, accent: accentColor },
-            { label: "Speed",       value: `${displaySpeed} ft`,          icon: <IconSpeed size={13} />, accent: speedAccent },
-            { label: "Initiative",  value: formatModifier(initiativeBonus), icon: <IconInitiative size={13} />, accent: accentColor },
-            { label: "Proficiency", value: `+${pb}`,               accent: accentColor },
-            { label: "Passive Perc.", value: String(passivePerc) },
+            { label: translateUi("Armor Class"), value: String(effectiveAc), icon: <IconShield size={13} />, accent: accentColor },
+            { label: translateUi("Speed"),       value: `${displaySpeed} ft`,          icon: <IconSpeed size={13} />, accent: speedAccent },
+            { label: translateUi("Initiative"),  value: formatModifier(initiativeBonus), icon: <IconInitiative size={13} />, accent: accentColor },
+            { label: translateUi("Proficiency"), value: `+${pb}`,               accent: accentColor },
+            { label: translateUi("Passive Perc."), value: String(passivePerc) },
           ] as Array<{ label: string; value: string; icon?: React.ReactNode; accent?: string }>).map(({ label, value, icon, accent }, i, arr) => (
             <div key={i} style={{ flex: 1, textAlign: "center", padding: "8px 6px", borderRight: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.07)" : undefined }}>
               <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>{label}</div>
@@ -223,7 +227,7 @@ export function CharacterCombatPanels({
         {movementModes.length > 0 && (
           <div style={{ marginTop: 10 }}>
             <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
-              Special Movement
+              {translateUi("Special Movement")}
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {movementModes.map((entry) => (
@@ -242,7 +246,7 @@ export function CharacterCombatPanels({
                     padding: "3px 10px",
                   }}
                 >
-                  {entry.mode[0].toUpperCase() + entry.mode.slice(1)} {entry.speed != null ? `${entry.speed} ft` : ""}
+                  {entry.mode[0].toUpperCase() + entry.mode.slice(1)} {entry.speed != null ? translateUi("{{value1}} ft", { value1: entry.speed }) : ""}
                 </span>
               ))}
             </div>
@@ -251,7 +255,7 @@ export function CharacterCombatPanels({
         {rageActive && (
           <div style={{ marginTop: 10 }}>
             <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
-              Rage
+              {translateUi("Rage")}
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               <span
@@ -268,7 +272,7 @@ export function CharacterCombatPanels({
                   padding: "3px 10px",
                 }}
               >
-                Active
+                {translateUi("Active")}
               </span>
               {rageDamageBonus > 0 && (
                 <span
@@ -285,7 +289,7 @@ export function CharacterCombatPanels({
                     padding: "3px 10px",
                   }}
                 >
-                  Rage Damage +{rageDamageBonus}
+                  {translateUi("Rage Damage +")}{rageDamageBonus}
                 </span>
               )}
             </div>
@@ -294,7 +298,7 @@ export function CharacterCombatPanels({
       </CollapsiblePanel>}
 
       {showActions && <CollapsiblePanel
-        title="Actions"
+        title={translateUi("Actions")}
         color={accentColor}
         storageKey={PANEL_IDS.actions}
         summary={`${actionItems.length + 1} attack${actionItems.length === 0 ? "" : "s"}`}
@@ -305,7 +309,7 @@ export function CharacterCombatPanels({
               type="button"
               disabled={incapacitated}
               onClick={() => { if (!incapacitated) onToggleReaction(); }}
-              title={incapacitated ? "Reaction unavailable while incapacitated" : reactionUsed ? "Reaction used — click to restore" : "Reaction available — click to mark used"}
+              title={incapacitated ? translateUi("Reaction unavailable while incapacitated") : reactionUsed ? translateUi("Reaction used — click to restore") : translateUi("Reaction available — click to mark used")}
               style={{
                 all: "unset",
                 cursor: incapacitated ? "not-allowed" : "pointer",
@@ -326,7 +330,7 @@ export function CharacterCombatPanels({
         ) : null}
         {incapacitated ? (
           <div style={{ marginBottom: 10, color: C.colorPinkRed, fontSize: "var(--fs-small)", fontWeight: 800 }}>
-            Incapacitated — actions and reactions are unavailable.
+            {translateUi("Incapacitated — actions and reactions are unavailable.")}
           </div>
         ) : null}
         {nonProficientArmorItems.length > 0 && (
@@ -340,7 +344,7 @@ export function CharacterCombatPanels({
             fontSize: "var(--fs-small)",
             fontWeight: 700,
           }}>
-            Not proficient with equipped armor: disadvantage on STR/DEX attacks and you can't cast spells.
+            {translateUi("Not proficient with equipped armor: disadvantage on STR/DEX attacks and you can't cast spells.")}
           </div>
         )}
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", marginBottom: 6 }}>
@@ -404,8 +408,8 @@ export function CharacterCombatPanels({
                     <span style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.name}</span>
                     {modeLabel && <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: accentColor, border: `1px solid ${accentColor}44`, background: `${accentColor}18`, borderRadius: 999, padding: "1px 5px" }}>{modeLabel}</span>}
                     {masteryName && <Tooltip text={`Weapon Mastery: ${masteryName}`} multiline><span style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.colorGold, border: "1px solid rgba(251,191,36,0.35)", background: "rgba(251,191,36,0.12)", borderRadius: 999, padding: "1px 5px", cursor: "help" }}>{masteryName}</span></Tooltip>}
-                    {linkedAmmo && <span title={`Loaded ammunition: ${linkedAmmo.name}`} style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: "#34d399", border: "1px solid rgba(52,211,153,0.4)", background: "rgba(52,211,153,0.12)", borderRadius: 999, padding: "1px 5px" }}>{linkedAmmo.name}</span>}
-                    {!proficient && <span style={{ fontSize: "var(--fs-tiny)", color: C.red, fontWeight: 700 }}>No proficiency</span>}
+                    {linkedAmmo && <span title={translateUi("Loaded ammunition: {{value1}}", { value1: linkedAmmo.name })} style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: "#34d399", border: "1px solid rgba(52,211,153,0.4)", background: "rgba(52,211,153,0.12)", borderRadius: 999, padding: "1px 5px" }}>{linkedAmmo.name}</span>}
+                    {!proficient && <span style={{ fontSize: "var(--fs-tiny)", color: C.red, fontWeight: 700 }}>{translateUi("No proficiency")}</span>}
                     {attackDisadvantage && <span style={{ fontSize: "var(--fs-tiny)", color: C.colorPinkRed, fontWeight: 700 }}>D</span>}
                   </div>
                   <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{isWeaponItem(it) ? (isRangedWeapon(it) ? "Ranged Weapon" : "Melee Weapon") : it.type ?? ""}</div>
@@ -437,7 +441,7 @@ export function CharacterCombatPanels({
           {sneakAttackFeature && sneakAttackRoll ? (
             <PassiveDamageRow
               name="Sneak Attack"
-              subtitle="Once per turn, qualifying weapon hit"
+              subtitle={translateMessage("Once per turn, qualifying weapon hit")}
               damage={sneakAttackRoll.formula}
               typeLabel="Weapon damage type"
             />
@@ -446,7 +450,7 @@ export function CharacterCombatPanels({
           {divineFuryDamage ? (
             <PassiveDamageRow
               name="Divine Fury"
-              subtitle="First qualifying hit on each of your turns"
+              subtitle={translateMessage("First qualifying hit on each of your turns")}
               damage={divineFuryDamage}
               typeLabel="Necrotic or Radiant"
             />
@@ -454,16 +458,16 @@ export function CharacterCombatPanels({
 
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto minmax(0,1fr)", gap: "0 8px", alignItems: "center", padding: "6px 0" }}>
             <div>
-              <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text }}>Unarmed Strike</div>
-              <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>Melee Attack</div>
+              <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text }}>{translateUi("Unarmed Strike")}</div>
+              <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{translateUi("Melee Attack")}</div>
             </div>
-            <div style={{ fontSize: "var(--fs-small)", color: C.muted, textAlign: "center", whiteSpace: "nowrap" }}>5 ft.</div>
+            <div style={{ fontSize: "var(--fs-small)", color: C.muted, textAlign: "center", whiteSpace: "nowrap" }}>{translateUi("5 ft.")}</div>
             <div style={{ fontSize: "var(--fs-title)", fontWeight: 900, color: attackDisadvantage ? C.colorPinkRed : C.text, textAlign: "center", minWidth: 36, border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, padding: "3px 6px", background: "rgba(255,255,255,0.04)" }}>
               {formatModifier(unarmedToHit)}{attackDisadvantage ? " D" : ""}
             </div>
             <div>
               <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: C.text }}>{unarmedDmg}</div>
-              <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>Bludgeoning</div>
+              <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>{translateUi("Bludgeoning")}</div>
             </div>
           </div>
         </div>

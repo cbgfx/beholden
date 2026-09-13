@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
@@ -18,6 +19,7 @@ export function CombatantDrawer(props: {
   close: () => void;
   refreshEncounter: (eid: string | null) => Promise<void>;
 }): DrawerContent {
+  const translateUi = useUiTranslation("dmUi");
   const { state } = useStore();
   const [label, setLabel] = React.useState("");
   const [description, setDescription] = React.useState("");
@@ -69,34 +71,34 @@ export function CombatantDrawer(props: {
     body: (
       <div style={{ display: "grid", gap: 10 }}>
         <div>
-          <div style={{ color: theme.colors.muted, marginBottom: 8 }}>Label (instance only)</div>
+          <div style={{ color: theme.colors.muted, marginBottom: 8 }}>{translateUi("Label (instance only)")}</div>
           <Input value={label} onChange={(e) => setLabel(e.target.value)} />
         </div>
 
         {isWorld ? (
           <div>
-            <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Description or reminder</div>
+            <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("Description or reminder")}</div>
             <TextArea value={description} onChange={(event) => setDescription(event.target.value)} rows={8} />
           </div>
         ) : <><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <div>
-            <div style={{ color: theme.colors.muted, marginBottom: 6 }}>AC</div>
+            <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("AC")}</div>
             <Input value={ac} onChange={(e) => setAc(e.target.value)} placeholder="10" />
           </div>
           <div>
-            <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Max HP</div>
+            <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("Max HP")}</div>
             <Input value={hpMax} onChange={(e) => setHpMax(e.target.value)} placeholder="10" />
           </div>
         </div>
 
         <div>
-          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>Current HP</div>
+          <div style={{ color: theme.colors.muted, marginBottom: 6 }}>{translateUi("Current HP")}</div>
           <Input value={hpCur} onChange={(e) => setHpCur(e.target.value)} placeholder="10" />
         </div>
 
         <label style={{ color: theme.colors.text, display: "flex", gap: 10, alignItems: "center" }}>
           <input type="checkbox" checked={friendly} onChange={(e) => setFriendly(e.target.checked)} />
-          Friendly
+          {translateUi("Friendly")}
         </label>
 
         </>}
@@ -120,9 +122,9 @@ export function CombatantDrawer(props: {
     footer: (
       <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
         <Button variant="ghost" onClick={props.close}>
-          Cancel
+          {translateUi("Cancel")}
         </Button>
-        <Button onClick={submit}>Save</Button>
+        <Button onClick={submit}>{translateUi("Save")}</Button>
       </div>
     )
   };

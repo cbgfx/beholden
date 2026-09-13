@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useMemo, useRef, useState } from "react";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
@@ -75,6 +76,8 @@ export function HomeView({
   onEditBinder,
   onDeleteBinder,
 }: Props) {
+  const translateMessage = useUiMessages("dmUi");
+  const translateUi = useUiTranslation("dmUi");
   const [campaignTab, setCampaignTab] = useState<"active" | "archived">("active");
   const sortedCampaigns = useMemo(() => {
     return campaigns.filter((campaign) => campaign.isActive === (campaignTab === "active")).sort((a, b) => {
@@ -156,9 +159,9 @@ export function HomeView({
       <div style={{ width: "100%", maxWidth: 1040, display: "grid", gap: 14 }}>
         <SectionHeading
           icon={<IconCampaign size={34} />}
-          title="Campaigns"
+          title={translateUi("Campaigns")}
           count={campaigns.length}
-          subtitle="Jump back into an existing campaign, or start a new one."
+          subtitle={translateMessage("Jump back into an existing campaign, or start a new one.")}
         />
         <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "var(--fs-small)" }}>
           {(["active", "archived"] as const).map((tab) => {
@@ -178,17 +181,17 @@ export function HomeView({
                   cursor: "pointer",
                 }}
               >
-                {tab === "active" ? "Active" : "Archived"} ({count})
+                {tab === "active" ? translateUi("Active") : translateUi("Archived")} ({count})
               </a>
             );
           })}
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <Button onClick={onCreateCampaign} title="Create a new campaign">
+          <Button onClick={onCreateCampaign} title={translateUi("Create a new campaign")}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
               <IconPlus size={14} />
-              New Campaign
+              {translateUi("New Campaign")}
             </span>
           </Button>
 
@@ -209,7 +212,7 @@ export function HomeView({
               textOverflow: "ellipsis",
               display: "block",
             }}
-            title={importFile ? importFile.name : "Choose a campaign JSON file"}
+            title={importFile ? importFile.name : translateUi("Choose a campaign JSON file")}
           >
             <input
               ref={fileInputRef}
@@ -222,16 +225,16 @@ export function HomeView({
               }}
               style={{ display: "none" }}
             />
-            {importFile ? importFile.name : "Choose file…"}
+            {importFile ? importFile.name : translateUi("Choose file…")}
           </label>
 
           <Button
             variant="ghost"
             onClick={importCampaign}
             disabled={!importFile || importBusy}
-            title="Import selected campaign file"
+            title={translateUi("Import selected campaign file")}
           >
-            {importBusy ? "Importing…" : "Import"}
+            {importBusy ? translateUi("Importing…") : translateUi("Import")}
           </Button>
 
           {importMsg ? (
@@ -256,7 +259,7 @@ export function HomeView({
           </div>
         ) : (
           <div style={{ color: theme.colors.muted, fontSize: "var(--fs-body)", padding: "48px 0", textAlign: "center" }}>
-            {campaignTab === "active" ? "No active campaigns yet — create one above to get started." : "No archived campaigns."}
+            {campaignTab === "active" ? translateUi("No active campaigns yet — create one above to get started.") : translateUi("No archived campaigns.")}
           </div>
         )}
 
@@ -265,15 +268,15 @@ export function HomeView({
         <div style={{ display: "grid", justifyItems: "start", gap: 10 }}>
           <SectionHeading
             icon={<IconBinder size={34} />}
-            title="Binders"
+            title={translateUi("Binders")}
             count={binders.length}
-            subtitle="Build and organize the shared setting lore behind your campaigns."
+            subtitle={translateMessage("Build and organize the shared setting lore behind your campaigns.")}
           />
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <Button onClick={onCreateBinder} title="Create a new Binder">
+            <Button onClick={onCreateBinder} title={translateUi("Create a new Binder")}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
                 <IconPlus size={14} />
-                New Binder
+                {translateUi("New Binder")}
               </span>
             </Button>
             <div style={{ width: 1, height: 24, background: theme.colors.panelBorder, margin: "0 4px" }} />
@@ -291,7 +294,7 @@ export function HomeView({
                 maxWidth: 200,
                 textOverflow: "ellipsis",
               }}
-              title={binderImportFile?.name ?? "Choose a Binder JSON or ZIP file"}
+              title={binderImportFile?.name ?? translateUi("Choose a Binder JSON or ZIP file")}
             >
               <input
                 ref={binderFileInputRef}
@@ -322,16 +325,16 @@ export function HomeView({
               variant="ghost"
               onClick={handleBinderImport}
               disabled={!binderImportFile || !binderPreview || binderImportBusy}
-              title="Import selected Binder file"
+              title={translateUi("Import selected Binder file")}
             >
-              {binderImportBusy ? "Importing…" : "Import"}
+              {binderImportBusy ? translateUi("Importing…") : translateUi("Import")}
             </Button>
             {binderImportMsg ? (
               <span style={{ fontSize: "var(--fs-small)", color: binderImportFailed ? theme.colors.red : theme.colors.green }}>
                 {binderImportMsg}
               </span>
             ) : null}
-            {binderPreview?.warnings.length ? <span title={binderPreview.warnings.join("\n")} style={{ color: theme.colors.accentWarning, fontSize: "var(--fs-small)" }}>Review warnings</span> : null}
+            {binderPreview?.warnings.length ? <span title={binderPreview.warnings.join("\n")} style={{ color: theme.colors.accentWarning, fontSize: "var(--fs-small)" }}>{translateUi("Review warnings")}</span> : null}
           </div>
         </div>
 
@@ -350,7 +353,7 @@ export function HomeView({
           </div>
         ) : (
           <div style={{ color: theme.colors.muted, fontSize: "var(--fs-body)", padding: "38px 0", textAlign: "center" }}>
-            No Binders yet — create one above to start organizing your setting.
+            {translateUi("No Binders yet — create one above to start organizing your setting.")}
           </div>
         )}
       </div>

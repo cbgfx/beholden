@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
@@ -20,6 +21,7 @@ export function CampaignNameDrawer(props: {
   close: () => void;
   refreshAll: () => Promise<void>;
 }): DrawerContent {
+  const translateUi = useUiTranslation("dmUi");
   const { state } = useStore();
   const [name, setName] = React.useState("");
   const [color, setColor] = React.useState<string | null>("#f59e0b");
@@ -127,10 +129,10 @@ export function CampaignNameDrawer(props: {
     body: (
       <div style={{ display: "grid", gap: 18 }}>
         <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, letterSpacing: "0.08em", opacity: 0.55 }}>
-          CAMPAIGN
+          {translateUi("CAMPAIGN")}
         </div>
         <div style={{ display: "grid", gap: 10 }}>
-          <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>Name</div>
+          <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>{translateUi("Name")}</div>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -140,23 +142,23 @@ export function CampaignNameDrawer(props: {
                 submit();
               }
             }}
-            placeholder="Name"
+            placeholder={translateUi("Name")}
           />
         </div>
 
         <div style={{ display: "grid", gap: 10 }}>
-          <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>Ruleset</div>
+          <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>{translateUi("Ruleset")}</div>
           <Select value={ruleset} onChange={(event) => setRuleset(event.target.value as "5e" | "5.5e")}>
             <option value="5.5e">5.5e (2024)</option>
             <option value="5e">5e (2014)</option>
           </Select>
           <div style={{ fontSize: "var(--fs-small)", opacity: 0.6 }}>
-            Used to resolve Compendium entries when the same ID exists in both rulesets.
+            {translateUi("Used to resolve Compendium entries when the same ID exists in both rulesets.")}
           </div>
         </div>
 
         <div style={{ display: "grid", gap: 10 }}>
-          <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>Theme color</div>
+          <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>{translateUi("Theme color")}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
             {ENTITY_COLOR_PRESETS.map((c) => {
               const selected = color === c || (!color && c === "#f59e0b");
@@ -194,10 +196,10 @@ export function CampaignNameDrawer(props: {
             opacity: 0.55,
           }}
         >
-          SETTING
+          {translateUi("SETTING")}
         </div>
         <div style={{ display: "grid", gap: 10 }}>
-          <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>Binder</div>
+          <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>{translateUi("Binder")}</div>
           <Select
             style={{ width: "100%" }}
             value={creatingNewBinder ? NEW_BINDER_VALUE : binderId}
@@ -211,11 +213,11 @@ export function CampaignNameDrawer(props: {
               setBinderId(value);
             }}
           >
-            <option value="">No Binder</option>
+            <option value="">{translateUi("No Binder")}</option>
             {binders.map((binder) => (
               <option key={binder.id} value={binder.id}>{binder.name}</option>
             ))}
-            <option value={NEW_BINDER_VALUE}>+ New Binder…</option>
+            <option value={NEW_BINDER_VALUE}>{translateUi("+ New Binder…")}</option>
           </Select>
 
           {creatingNewBinder && (
@@ -232,13 +234,13 @@ export function CampaignNameDrawer(props: {
               <Input
                 value={newBinderName}
                 onChange={(event) => setNewBinderName(event.target.value)}
-                placeholder="Binder name"
+                placeholder={translateUi("Binder name")}
                 autoFocus
               />
               <Input
                 value={newBinderDate}
                 onChange={(event) => setNewBinderDate(event.target.value)}
-                placeholder="Current date (e.g. 2438)"
+                placeholder={translateUi("Current date (e.g. 2438)")}
               />
               {newBinderError ? (
                 <div style={{ fontSize: "var(--fs-small)", color: "#f87171" }}>{newBinderError}</div>
@@ -252,13 +254,13 @@ export function CampaignNameDrawer(props: {
                     setBinderId("");
                   }}
                 >
-                  Cancel
+                  {translateUi("Cancel")}
                 </Button>
                 <Button
                   onClick={handleCreateBinder}
                   disabled={newBinderBusy || !newBinderName.trim() || !newBinderDate.trim()}
                 >
-                  {newBinderBusy ? "Creating…" : "Create Binder"}
+                  {newBinderBusy ? translateUi("Creating…") : translateUi("Create Binder")}
                 </Button>
               </div>
             </div>
@@ -269,16 +271,16 @@ export function CampaignNameDrawer(props: {
           <>
             <div style={{ display: "grid", gap: 10 }}>
               <div style={{ display: "grid", gap: 8 }}>
-                <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>Current date</div>
+                <div style={{ fontSize: "var(--fs-medium)", opacity: 0.8 }}>{translateUi("Current date")}</div>
                 <Input
                   value={currentDateText}
                   onChange={(event) => setCurrentDateText(event.target.value)}
-                  placeholder="Uses Binder date"
+                  placeholder={translateUi("Uses Binder date")}
                 />
               </div>
             </div>
             <div style={{ marginTop: -8, fontSize: "var(--fs-small)", opacity: 0.6 }}>
-              This campaign date may differ from the Binder’s setting-level reference date.
+              {translateUi("This campaign date may differ from the Binder’s setting-level reference date.")}
             </div>
             <div
               style={{
@@ -289,14 +291,14 @@ export function CampaignNameDrawer(props: {
               }}
             >
               <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, letterSpacing: "0.08em", opacity: 0.55 }}>
-                STATUS
+                {translateUi("STATUS")}
               </div>
               <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
                 <input type="checkbox" checked={isActive} onChange={(event) => setIsActive(event.target.checked)} />
                 <span>
-                  <strong>Active</strong>
+                  <strong>{translateUi("Active")}</strong>
                   <span style={{ display: "block", fontSize: "var(--fs-small)", opacity: 0.55 }}>
-                    Inactive campaigns are kept in Archived.
+                    {translateUi("Inactive campaigns are kept in Archived.")}
                   </span>
                 </span>
               </label>
@@ -308,9 +310,9 @@ export function CampaignNameDrawer(props: {
     footer: (
       <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
         <Button variant="ghost" onClick={props.close}>
-          Cancel
+          {translateUi("Cancel")}
         </Button>
-        <Button onClick={submit}>Save</Button>
+        <Button onClick={submit}>{translateUi("Save")}</Button>
       </div>
     )
   };

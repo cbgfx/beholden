@@ -1,4 +1,9 @@
-import { beforeEach, expect, it, vi } from "vitest";
+// @vitest-environment jsdom
+import { act, createElement } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { I18nextProvider } from "react-i18next";
+import { i18n } from "@/i18n";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ transfer: vi.fn() }));
 vi.mock("@/services/inventoryApi", () => ({ transferPartyInventoryItem: mocks.transfer }));
 import { useCharacterInventoryContainers } from "./useCharacterInventoryContainers";
@@ -8,7 +13,7 @@ function useSetup() {
   const sync = { items: [], containers: [], partyStashItems: [], setItems: vi.fn(), setContainers: vi.fn(), setSaving: vi.fn(), setConflict: vi.fn() };
   const onSave = vi.fn().mockResolvedValue(undefined);
   const onReload = vi.fn().mockResolvedValue(undefined);
-  const actions = useCharacterInventoryContainers({ sync: sync as unknown as CharacterInventorySyncState, campaignId: "party", characterId: "hero", inventoryRev: "seen", onSave, onReload });
+  const actions = mountActions({ sync: sync as unknown as CharacterInventorySyncState, campaignId: "party", characterId: "hero", inventoryRev: "seen", onSave, onReload });
   return { actions, sync, onSave, onReload };
 }
 beforeEach(() => { mocks.transfer.mockReset().mockResolvedValue({ inventoryRev: "next" }); });
@@ -59,7 +64,7 @@ function useDepositSetup(item: Record<string, unknown>, partyStashItems: Array<R
     containers: [], partyStashItems,
     setItems: vi.fn(), setContainers: vi.fn(), setSaving: vi.fn(), setConflict: vi.fn(), setExpandedItemId: vi.fn(),
   };
-  const actions = useCharacterInventoryContainers({
+  const actions = mountActions({
     sync: sync as unknown as CharacterInventorySyncState,
     campaignId: "party", characterId: "hero", inventoryRev: "seen",
     onSave: vi.fn().mockResolvedValue(undefined), onReload: vi.fn().mockResolvedValue(undefined),
@@ -86,4 +91,21 @@ it("folds a plain stackable deposit into a matching plain stash stack", async ()
   await actions.moveItemToContainer("x", "party-stash");
   const op = mocks.transfer.mock.calls[0][1].stash;
   expect(op).toMatchObject({ action: "setQuantity", itemId: "s2", quantity: 40, expectedQuantity: 20 });
+});
+
+const mounted: Array<{ root: Root; host: HTMLDivElement }> = [];
+function mountActions(props: Parameters<typeof useCharacterInventoryContainers>[0]) {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  mounted.push({ root, host });
+  let actions!: ReturnType<typeof useCharacterInventoryContainers>;
+  function Harness() { actions = useCharacterInventoryContainers(props); return null; }
+  act(() => root.render(createElement(I18nextProvider, { i18n }, createElement(Harness))));
+  return actions;
+}
+beforeEach(() => { vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true); });
+afterEach(() => {
+  for (const { root, host } of mounted.splice(0)) { act(() => root.unmount()); host.remove(); }
+  vi.unstubAllGlobals();
 });

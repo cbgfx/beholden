@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { api, jsonInit } from "@/services/api";
@@ -13,6 +14,7 @@ export function CampaignCard({ campaign: c, characters, onOpen, onAssigned }: {
   onOpen: (id: string) => void;
   onAssigned: () => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
@@ -99,7 +101,7 @@ export function CampaignCard({ campaign: c, characters, onOpen, onAssigned }: {
         </div>
         <div style={{ fontSize: "var(--fs-subtitle)", color: C.muted, display: "flex", alignItems: "center", gap: 6 }}>
           <IconPlayers size={16} />
-          {c.playerCount} player{c.playerCount !== 1 ? "s" : ""}
+          {t("playerHomeView.playerCount", { count: c.playerCount })}
         </div>
 
         {/* Assigned characters */}
@@ -130,7 +132,7 @@ export function CampaignCard({ campaign: c, characters, onOpen, onAssigned }: {
                 style={{ width: "100%" }}
                 autoFocus
               >
-                <option value="">Choose a character…</option>
+                <option value="">{t("playerHomeView.chooseACharacter")}</option>
                 {unassignedChars.map((ch) => (
                   <option key={ch.id} value={ch.id}>{ch.name}</option>
                 ))}
@@ -142,34 +144,34 @@ export function CampaignCard({ campaign: c, characters, onOpen, onAssigned }: {
                   style={{ flex: 1 }}
                   onClick={() => void handleAssign()}
                 >
-                  {assigning ? "Assigning…" : "Assign"}
+                  {assigning ? t("playerHomeView.assigning") : t("playerHomeView.assign")}
                 </Button>
                 <Button
                   variant="ghost"
                   style={{ flexShrink: 0 }}
                   onClick={() => { setAssignOpen(false); setSelectedCharId(""); }}
                 >
-                  Cancel
+                  {t("playerHomeView.cancel")}
                 </Button>
               </div>
             </>
           ) : (
             <>
-              <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>All your characters are already in this campaign.</span>
+              <span style={{ fontSize: "var(--fs-small)", color: C.muted }}>{t("playerHomeView.allCharactersAssigned")}</span>
               <div style={{ display: "flex", gap: 6 }}>
                 <Button
                   variant="ghost"
                   style={{ flex: 1 }}
                   onClick={() => navigate(`/characters/new?campaign=${c.id}`)}
                 >
-                  Create new character
+                  {t("playerHomeView.createNewCharacter")}
                 </Button>
                 <Button
                   variant="ghost"
                   style={{ flexShrink: 0 }}
                   onClick={() => setAssignOpen(false)}
                 >
-                  Cancel
+                  {t("playerHomeView.cancel")}
                 </Button>
               </div>
             </>
@@ -182,14 +184,14 @@ export function CampaignCard({ campaign: c, characters, onOpen, onAssigned }: {
             style={{ flex: 1 }}
             onClick={() => onOpen(c.id)}
           >
-            Open
+            {t("playerHomeView.open")}
           </Button>
           <Button
             variant="ghost"
             style={{ flexShrink: 0 }}
             onClick={() => setAssignOpen(true)}
           >
-            + Assign
+            {"+ "}{t("playerHomeView.assign")}
           </Button>
         </div>
       )}

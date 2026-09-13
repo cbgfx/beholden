@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useNavigate } from "react-router-dom";
 import { theme } from "@/theme/theme";
 import { Panel } from "@/ui/Panel";
@@ -44,6 +45,7 @@ type Props = {
  * which caused a runtime crash when the CombatView passed header props.)
  */
 export function CombatantHeader(props: Props) {
+  const translateUi = useUiTranslation("dmUi");
   const { title, rollLabel } = props;
   const navigate = useNavigate();
   const isPhone = useIsNarrow("(max-width: 640px)");
@@ -54,9 +56,9 @@ export function CombatantHeader(props: Props) {
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", minWidth: 0 }}>
           <Button
             onClick={() => navigate(props.backTo)}
-            title={props.backTitle ?? "Back"}
+            title={props.backTitle ?? translateUi("Back")}
           >
-            Back
+            {translateUi("Back")}
           </Button>
           <span style={{ fontSize: "var(--fs-title)", fontWeight: 900, color: theme.colors.text, minWidth: 0 }}>{title}</span>
           {props.difficulty?.displayDifficulty ? (
@@ -72,16 +74,16 @@ export function CombatantHeader(props: Props) {
                 whiteSpace: "nowrap",
               }}
               title={
-                `Official difficulty: ${props.difficulty.officialDifficulty}\n` +
-                `Damage projection: ${props.difficulty.projectedThreat}\n` +
-                `Party HP: ${Math.round(props.difficulty.partyHpMax).toLocaleString()}\n` +
-                `Sustained DPR: ${Math.round(props.difficulty.hostileDpr).toLocaleString()}\n` +
-                `Projected DPR: ${Math.round(props.difficulty.projectedDpr).toLocaleString()}\n` +
-                (props.difficulty.burstFactor > 1 ? `Encounter pressure factor: ×${props.difficulty.burstFactor.toFixed(2)}\n` : "") +
-                (Number.isFinite(props.difficulty.monsterSurvivalRounds) ? `Estimated monster survival: ${props.difficulty.monsterSurvivalRounds.toFixed(1)} rounds\n` : "") +
-                (Number.isFinite(props.difficulty.roundsToFirstDown) ? `Estimated first character down: ${props.difficulty.roundsToFirstDown.toFixed(1)} rounds\n` : "") +
-                (Number.isFinite(props.difficulty.expectedPartyDamageRatio) ? `Expected party HP lost: ${Math.round(props.difficulty.expectedPartyDamageRatio * 100)}%\n` : "") +
-                (Number.isFinite(props.difficulty.roundsToTpk) ? `Rounds to party collapse: ${props.difficulty.roundsToTpk.toFixed(1)}` : "Rounds to party collapse: ∞")
+                translateUi("Official difficulty: {{value1}}\n", { value1: props.difficulty.officialDifficulty }) +
+                translateUi("Damage projection: {{value1}}\n", { value1: props.difficulty.projectedThreat }) +
+                translateUi("Party HP: {{value1}}\n", { value1: Math.round(props.difficulty.partyHpMax).toLocaleString() }) +
+                translateUi("Sustained DPR: {{value1}}\n", { value1: Math.round(props.difficulty.hostileDpr).toLocaleString() }) +
+                translateUi("Projected DPR: {{value1}}\n", { value1: Math.round(props.difficulty.projectedDpr).toLocaleString() }) +
+                (props.difficulty.burstFactor > 1 ? translateUi("Encounter pressure factor: ×{{value1}}\n", { value1: props.difficulty.burstFactor.toFixed(2) }) : "") +
+                (Number.isFinite(props.difficulty.monsterSurvivalRounds) ? translateUi("Estimated monster survival: {{value1}} rounds\n", { value1: props.difficulty.monsterSurvivalRounds.toFixed(1) }) : "") +
+                (Number.isFinite(props.difficulty.roundsToFirstDown) ? translateUi("Estimated first character down: {{value1}} rounds\n", { value1: props.difficulty.roundsToFirstDown.toFixed(1) }) : "") +
+                (Number.isFinite(props.difficulty.expectedPartyDamageRatio) ? translateUi("Expected party HP lost: {{value1}}%\n", { value1: Math.round(props.difficulty.expectedPartyDamageRatio * 100) }) : "") +
+                (Number.isFinite(props.difficulty.roundsToTpk) ? translateUi("Rounds to party collapse: {{value1}}", { value1: props.difficulty.roundsToTpk.toFixed(1) }) : translateUi("Rounds to party collapse: ∞"))
               }
             >
               {props.difficulty.displayDifficulty}
@@ -92,44 +94,44 @@ export function CombatantHeader(props: Props) {
       actions={
         <div style={{ display: "flex", gap: isPhone ? 4 : 8, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", minWidth: 0 }}>
           {props.started && props.onResetFight ? (
-            <Button variant="primary" onClick={props.onResetFight} title="Reset monsters HP and conditions to full">
-              Reset Fight
+            <Button variant="primary" onClick={props.onResetFight} title={translateUi("Reset monsters HP and conditions to full")}>
+              {translateUi("Reset Fight")}
             </Button>
           ) : (
             <Button variant="primary" onClick={props.onRollOrReset}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                <IconDice size={18} title="Roll Initiative" />
+                <IconDice size={18} title={translateUi("Roll Initiative")} />
                 {rollLabel}
               </span>
             </Button>
           )}
 
           {props.onOpenRewards && !isPhone && (
-            <Button variant="ghost" onClick={props.onOpenRewards} title="Encounter rewards: XP and loot">
+            <Button variant="ghost" onClick={props.onOpenRewards} title={translateUi("Encounter rewards: XP and loot")}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                <IconChest size={18} title="Rewards" />
-                Rewards
+                <IconChest size={18} title={translateUi("Rewards")} />
+                {translateUi("Rewards")}
               </span>
             </Button>
           )}
 
-          <Button variant="ghost" onClick={props.onOpenSpellBook} title="Spell Book">
+          <Button variant="ghost" onClick={props.onOpenSpellBook} title={translateUi("Spell Book")}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-              <IconSpells size={18} title="Spell Book" />
+              <IconSpells size={18} title={translateUi("Spell Book")} />
               {!isPhone && "Spell Book"}
             </span>
           </Button>
 
-          <Button variant="ghost" onClick={props.onOpenAdventureNotes} title="Adventure Notes">
+          <Button variant="ghost" onClick={props.onOpenAdventureNotes} title={translateUi("Adventure Notes")}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-              <IconNotes size={18} title="Adventure Notes" />
+              <IconNotes size={18} title={translateUi("Adventure Notes")} />
               {!isPhone && "Notes"}
             </span>
           </Button>
 
           {props.started ? (
             <Button variant="danger" onClick={props.onEndCombat}>
-              End
+              {translateUi("End")}
             </Button>
           ) : null}
         </div>

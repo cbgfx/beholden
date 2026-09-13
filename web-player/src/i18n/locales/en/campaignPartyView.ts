@@ -1,0 +1,18 @@
+export default {
+  back: "Back",
+  campaignFallbackTitle: "Campaign",
+  partySuffix: "Party",
+  loading: "Loading…",
+  loadPartyError: "Failed to load party",
+  emptyParty: "No players in this campaign yet.",
+  unnamedCharacter: "Unnamed",
+  levelLabel: "Level {{level}}",
+  acAbbreviation: "AC",
+  hpDown: "Down",
+  hpCritical: "Critical",
+  hpBloodied: "Bloodied",
+  hpBloody: "Bloody",
+  hpHealthy: "Healthy",
+  bastionsHeading: "Bastions",
+  bastionSummary: "Level {{level}} • Slots {{used}}/{{total}}",
+};

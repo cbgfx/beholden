@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 // web-dm/src/components/iconPicker/IconPicker.tsx
 //
 // A reusable, Notion-style icon picker. Knows nothing about Organizations,
@@ -25,6 +26,7 @@ export function IconPicker(props: {
   onChange: (icon: string | null) => void;
   label?: string;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const [open, setOpen] = useState(false);
   const currentName = props.value ? trimGameIconPrefix(props.value) : null;
 
@@ -38,7 +40,7 @@ export function IconPicker(props: {
           onDoubleClick={() => {
             if (props.value) props.onChange(null);
           }}
-          title={props.value ? "Double-click to clear" : undefined}
+          title={props.value ? translateUi("Double-click to clear") : undefined}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -57,7 +59,7 @@ export function IconPicker(props: {
           {currentName ?? "No icon"}
         </span>
         <Button variant="ghost" onClick={() => setOpen(true)} style={{ fontSize: "var(--fs-subtitle)", padding: "5px 10px" }}>
-          Change
+          {translateUi("Change")}
         </Button>
       </div>
       {open ? (
@@ -79,6 +81,7 @@ function IconPickerModal(props: {
   onSelect: (icon: string) => void;
   onClose: () => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const names = useGameIconNames();
   const [query, setQuery] = useState("");
   const [focusedIndex, setFocusedIndex] = useState(0);
@@ -137,22 +140,22 @@ function IconPickerModal(props: {
   }
 
   return (
-    <Modal isOpen title="Choose an icon" onClose={props.onClose} width={640} height={560}>
+    <Modal isOpen title={translateUi("Choose an icon")} onClose={props.onClose} width={640} height={560}>
       <div style={{ display: "grid", gridTemplateRows: "auto 1fr", height: "100%" }}>
         <div style={{ padding: 14, borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search icons…"
+            placeholder={translateUi("Search icons…")}
             autoFocus
           />
         </div>
         <div style={{ overflowY: "auto", padding: 14 }}>
           {!names ? (
-            <div style={{ textAlign: "center", color: theme.colors.muted, padding: 40 }}>Loading icons…</div>
+            <div style={{ textAlign: "center", color: theme.colors.muted, padding: 40 }}>{translateUi("Loading icons…")}</div>
           ) : !visible.length ? (
-            <div style={{ textAlign: "center", color: theme.colors.muted, padding: 40 }}>No icons match &ldquo;{query}&rdquo;.</div>
+            <div style={{ textAlign: "center", color: theme.colors.muted, padding: 40 }}>{translateUi("No icons match “")}{query}{translateUi("”.")}</div>
           ) : (
             <>
               <div
@@ -206,7 +209,7 @@ function IconPickerModal(props: {
               </div>
               {filtered.length > visible.length ? (
                 <div style={{ textAlign: "center", color: theme.colors.muted, fontSize: "var(--fs-small)", marginTop: 12 }}>
-                  Showing {visible.length} of {filtered.length} matches — refine your search to see more.
+                  {translateUi("Showing")} {visible.length} {translateUi("of")} {filtered.length} {translateUi("matches — refine your search to see more.")}
                 </div>
               ) : null}
             </>

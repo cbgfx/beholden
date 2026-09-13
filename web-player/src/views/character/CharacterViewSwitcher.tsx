@@ -1,3 +1,5 @@
+import { DEFAULT_SHEET_VIEWS } from "./layout/defaultSheetViews";
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import ReactDOM from "react-dom";
 import { C, withAlpha } from "@/lib/theme";
@@ -17,7 +19,9 @@ export function CharacterViewSwitcher(props: {
   onSelectView: (id: string) => void;
   onCreateView: () => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const { sheetViews, activeViewId, accentColor, onSelectView, onCreateView } = props;
+  const viewName = (view: SheetViewDef) => DEFAULT_SHEET_VIEWS.some((seed) => seed.id === view.id && seed.name === view.name) ? translateUi(view.name) : view.name;
   const activeView = sheetViews.find((view) => view.id === activeViewId) ?? sheetViews[0];
   const sortedViews = React.useMemo(
     () => [...sheetViews].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })),
@@ -103,7 +107,7 @@ export function CharacterViewSwitcher(props: {
               cursor: "pointer",
             }}
           >
-            {view.name}
+            {viewName(view)}
           </button>
         );
       })}
@@ -123,7 +127,7 @@ export function CharacterViewSwitcher(props: {
           cursor: "pointer",
         }}
       >
-        + Add View
+        {translateUi("+ Add View")}
       </button>
     </div>
   ) : null;
@@ -149,7 +153,7 @@ export function CharacterViewSwitcher(props: {
           cursor: "pointer",
         }}
       >
-        {activeView?.name ?? "View"}
+        {(activeView ? viewName(activeView) : undefined) ?? "View"}
         <span style={{ opacity: 0.7, fontWeight: 900 }}>▾</span>
       </button>
       {open ? ReactDOM.createPortal(menu, document.body) : null}

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { theme } from "@/theme/theme";
@@ -10,12 +11,13 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 export function BacklinksPanel(props: { binderId: string; recordId: string }) {
+  const translateUi = useUiTranslation("dmUi");
   const navigate = useNavigate();
   const [rows, setRows] = useState<BinderBacklink[]>([]);
   const reload = useCallback(async () => setRows(await fetchBinderBacklinks(props.binderId, props.recordId)), [props.binderId, props.recordId]);
   useEffect(() => { void reload(); }, [reload]);
   return <section style={{ borderTop: `1px solid ${theme.colors.panelBorder}`, paddingTop: 16, display: "grid", gap: 10 }}>
-    <strong>Mentioned in</strong>
+    <strong>{translateUi("Mentioned in")}</strong>
     <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
       {rows.map((row) => (
         <Button
@@ -31,7 +33,7 @@ export function BacklinksPanel(props: { binderId: string; recordId: string }) {
           </span>
         </Button>
       ))}
-      {!rows.length ? <span style={{ color: theme.colors.muted }}>None</span> : null}
+      {!rows.length ? <span style={{ color: theme.colors.muted }}>{translateUi("None")}</span> : null}
     </div>
   </section>;
 }

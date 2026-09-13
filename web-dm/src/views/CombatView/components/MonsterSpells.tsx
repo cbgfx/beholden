@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import { titleCase } from "@beholden/shared/domain/text/titleCase";
@@ -26,6 +27,7 @@ function SlotDots({
   used: number;
   onChange: (n: number) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
       {Array.from({ length: total }).map((_, i) => {
@@ -33,7 +35,7 @@ function SlotDots({
         return (
           <button
             key={i}
-            title={spent ? "Slot used - click to restore" : "Click to expend slot"}
+            title={spent ? translateUi("Slot used - click to restore") : translateUi("Click to expend slot")}
             onClick={(e) => {
               e.stopPropagation();
               onChange(spent ? used - 1 : used + 1);
@@ -64,6 +66,7 @@ export function MonsterSpells(props: {
   usedSpellSlots?: Record<string, number>;
   onChangeSpellSlots?: (level: number, used: number) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const slotCounts = React.useMemo(() => parseSlotCounts(props.slots), [props.slots]);
   const hasSlots = Object.keys(slotCounts).length > 0;
 
@@ -89,16 +92,16 @@ export function MonsterSpells(props: {
     }));
 
     if (unknown.length) {
-      sections.push({ level: 99, title: "Other", spells: [...unknown].sort((a, b) => a.localeCompare(b)) });
+      sections.push({ level: 99, title: translateUi("Other"), spells: [...unknown].sort((a, b) => a.localeCompare(b)) });
     }
 
     return sections;
-  }, [props.spellNames, props.spellLevels]);
+  }, [props.spellNames, props.spellLevels, translateUi]);
 
   if (!props.spellNames.length) return null;
 
   return (
-    <MonsterSectionPanel title="Spells">
+    <MonsterSectionPanel title={translateUi("Spells")}>
       <div style={{ display: "grid", gap: 10 }}>
         {grouped.map((sec) => {
           const totalSlots = slotCounts[sec.level] ?? 0;

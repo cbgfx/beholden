@@ -1,3 +1,5 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
+import { useTranslation } from "react-i18next";
 import { C, withAlpha } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
 import type { ClassFeatureEntry } from "@/views/character/CharacterSheetTypes";
@@ -9,6 +11,7 @@ export function PreparedSpellProgressionBlock(props: {
   compact?: boolean;
 }) {
   const { tables, accentColor = C.accentHl, compact = false } = props;
+  const { t } = useTranslation();
   if (!tables.length) return null;
 
   return (
@@ -32,7 +35,7 @@ export function PreparedSpellProgressionBlock(props: {
               fontWeight: 800,
             }}
           >
-            {table.label?.trim() || "Prepared Spells"}
+            {table.label?.trim() || t("classFeaturesPanel.preparedSpells")}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "minmax(82px, auto) minmax(0, 1fr)" }}>
             <div
@@ -91,12 +94,13 @@ export function ClassFeatureItem(props: {
    * CharacterSpellRow's "Granted by" tooltip for spells with no level tag. */
   acquisitionLevel?: number | null;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const { feature, expanded, accentColor, acquisitionLevel } = props;
   return (
     <ExpandableNoteItem
       title={(
         <>
-          <span title={acquisitionLevel != null ? `Chosen at level ${acquisitionLevel}` : undefined}>{feature.name}</span>
+          <span title={acquisitionLevel != null ? translateUi("Chosen at level {{value1}}", { value1: acquisitionLevel }) : undefined}>{feature.name}</span>
           {feature.resolution ? (
             <span
               title={feature.resolutionNotes?.join(" ") || undefined}
@@ -129,7 +133,7 @@ export function ClassFeatureItem(props: {
           {feature.scalingRolls.map((roll, index) => (
             <span
               key={`${roll.description ?? "roll"}:${roll.level ?? "all"}:${roll.formula}:${index}`}
-              title={roll.level ? `Available at level ${roll.level}` : undefined}
+              title={roll.level ? translateUi("Available at level {{value1}}", { value1: roll.level }) : undefined}
               style={{
                 padding: "3px 7px",
                 borderRadius: 6,
@@ -142,7 +146,7 @@ export function ClassFeatureItem(props: {
             >
               {roll.description ? `${roll.description}: ` : ""}
               {roll.formula}
-              {roll.level ? ` (L${roll.level})` : ""}
+              {roll.level ? translateUi(" (L{{value1}})", { value1: roll.level }) : ""}
             </span>
           ))}
         </div>

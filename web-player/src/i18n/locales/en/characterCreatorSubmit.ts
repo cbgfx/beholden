@@ -1,0 +1,15 @@
+export default {
+  chooseRulesetError: "Choose a ruleset before saving.",
+  invalidAgeError: "Enter a valid age before saving.",
+  chooseGenderError: "Choose a gender before saving.",
+  classDetailsLoadingError: "Class details are still loading — please wait a moment and try again.",
+  speciesDetailsLoadingError: "Species details are still loading — please wait a moment and try again.",
+  backgroundDetailsLoadingError: "Background details are still loading — please wait a moment and try again.",
+  chooseSubclassError: "Choose a subclass before saving.",
+  completeLevelUpChoiceError: "Complete the level {{level}} feat or Ability Score Improvement before saving.",
+  chooseWeaponMasteriesError: "Choose {{count}} weapon masteries before saving.",
+  completeFeatureChoiceError: "Complete the {{name}} choice before saving.",
+  characterNameRequiredError: "Character name is required.",
+  lowerLevelConfirm: "Lower this character from level {{from}} to {{to}}? Abilities acquired above the new level will be removed.",
+  saveCharacterError: "Failed to save character.",
+};

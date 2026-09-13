@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useState } from "react";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
@@ -19,6 +20,8 @@ interface Props {
 }
 
 export function UserModal({ title, initial, passwordRequired, onSave, onClose }: Props) {
+  const translateMessage = useUiMessages("dmUi");
+  const translateUi = useUiTranslation("dmUi");
   const [form, setForm] = useState<UserFormData>({
     username: initial.username ?? "",
     name: initial.name ?? "",
@@ -39,7 +42,7 @@ export function UserModal({ title, initial, passwordRequired, onSave, onClose }:
     try {
       await onSave(form);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(err instanceof Error ? err.message : translateMessage("Save failed"));
     } finally {
       setSaving(false);
     }
@@ -81,16 +84,16 @@ export function UserModal({ title, initial, passwordRequired, onSave, onClose }:
 
         <form onSubmit={handleSave}>
           <div style={fieldStyle}>
-            <label style={labelStyle}>Display Name</label>
+            <label style={labelStyle}>{translateUi("Display Name")}</label>
             <Input value={form.name} onChange={(e) => set("name", e.target.value)} autoFocus disabled={saving} />
           </div>
           <div style={fieldStyle}>
-            <label style={labelStyle}>Username</label>
+            <label style={labelStyle}>{translateUi("Username")}</label>
             <Input value={form.username} onChange={(e) => set("username", e.target.value)} disabled={saving} />
           </div>
           <div style={fieldStyle}>
             <label style={labelStyle}>
-              Password {!passwordRequired && <span style={{ fontWeight: 400 }}>(leave blank to keep current)</span>}
+              {translateUi("Password")} {!passwordRequired && <span style={{ fontWeight: 400 }}>{translateUi("(leave blank to keep current)")}</span>}
             </label>
             <Input
               type="password"
@@ -110,7 +113,7 @@ export function UserModal({ title, initial, passwordRequired, onSave, onClose }:
               style={{ width: 16, height: 16, cursor: "pointer" }}
             />
             <label htmlFor="isAdmin" style={{ fontSize: "var(--fs-medium)", cursor: "pointer" }}>
-              Admin (can access this panel and manage users)
+              {translateUi("Admin (can access this panel and manage users)")}
             </label>
           </div>
 
@@ -128,14 +131,14 @@ export function UserModal({ title, initial, passwordRequired, onSave, onClose }:
 
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
-              Cancel
+              {translateUi("Cancel")}
             </Button>
             <Button
               type="submit"
               variant="primary"
               disabled={saving || !form.name.trim() || !form.username.trim() || (passwordRequired && !form.password)}
             >
-              {saving ? "Saving…" : "Save"}
+              {saving ? translateUi("Saving…") : translateUi("Save")}
             </Button>
           </div>
         </form>

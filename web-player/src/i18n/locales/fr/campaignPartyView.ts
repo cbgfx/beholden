@@ -1,0 +1,18 @@
+export default {
+  back: "Retour",
+  campaignFallbackTitle: "Campagne",
+  partySuffix: "Groupe",
+  loading: "Chargement…",
+  loadPartyError: "Échec du chargement du groupe",
+  emptyParty: "Aucun joueur dans cette campagne pour le moment.",
+  unnamedCharacter: "Sans nom",
+  levelLabel: "Niveau {{level}}",
+  acAbbreviation: "CA",
+  hpDown: "À terre",
+  hpCritical: "Critique",
+  hpBloodied: "Ensanglanté",
+  hpBloody: "Amoché",
+  hpHealthy: "En forme",
+  bastionsHeading: "Bastions",
+  bastionSummary: "Niveau {{level}} • Emplacements {{used}}/{{total}}",
+};

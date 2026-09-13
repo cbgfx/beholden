@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C } from "@/lib/theme";
 import { ChoiceBtn, Section } from "@/views/level-up/LevelUpParts";
 import { cleanFeatureText } from "@/views/level-up/LevelUpHelpers";
@@ -15,11 +16,12 @@ export function LevelUpSubclassSection(props: {
   selectedSubclassFeatures: FeatureLike[];
   onSelectSubclass: (value: string) => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   if (!props.show) return null;
   return (
-    <Section title={`Subclass at Level ${props.nextLevel}`} accent={props.accentColor}>
+    <Section title={translateUi("Subclass at Level {{value1}}", { value1: props.nextLevel })} accent={props.accentColor}>
       <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginBottom: 12 }}>
-        {props.subclass.trim() ? "Subclass selected. You can change it before confirming level-up." : "Choose your subclass."}
+        {props.subclass.trim() ? translateUi("Subclass selected. You can change it before confirming level-up.") : translateUi("Choose your subclass.")}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14, alignItems: "start" }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 8 }}>
@@ -60,7 +62,7 @@ export function LevelUpSubclassSection(props: {
                       marginBottom: 8,
                     }}
                   >
-                    Features Gained Now
+                    {translateUi("Features Gained Now")}
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {props.selectedSubclassFeatures.map((feature) => (
@@ -79,7 +81,7 @@ export function LevelUpSubclassSection(props: {
             </div>
           ) : (
             <div style={{ fontSize: "var(--fs-small)", color: C.muted, lineHeight: 1.6 }}>
-              Pick a subclass to see its description and the features you gain at this level.
+              {translateUi("Pick a subclass to see its description and the features you gain at this level.")}
             </div>
           )}
         </div>

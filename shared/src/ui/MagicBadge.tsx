@@ -1,13 +1,15 @@
+import { useTranslation } from "react-i18next";
 
 export function MagicBadge({
   color,
   borderColor = "#6d28d966",
-  label = "Magic",
+  label,
 }: {
   color: string;
   borderColor?: string;
   label?: string;
 }) {
+  const { t } = useTranslation("shared");
   return (
     <span
       style={{
@@ -24,7 +26,7 @@ export function MagicBadge({
         whiteSpace: "nowrap",
       }}
     >
-      {label}
+      {label ?? t("magicBadge.label")}
     </span>
   );
 }

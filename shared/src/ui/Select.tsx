@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom";
+import { useTranslation } from "react-i18next";
 
 type OptionLike = { value: string; label: string; disabled?: boolean };
 
@@ -37,6 +38,7 @@ export function Select(
     theme: SharedSelectTheme;
   },
 ) {
+  const { t } = useTranslation("shared");
   const { children, value, defaultValue, onChange, disabled, style, theme, ...rest } = props;
 
   const options = React.useMemo(() => toOptionList(children), [children]);
@@ -205,6 +207,7 @@ export function Select(
       </select>
       <button
         type="button"
+        aria-label={rest["aria-label"]}
         aria-haspopup="listbox"
         aria-expanded={open}
         disabled={disabled}
@@ -223,7 +226,7 @@ export function Select(
         style={triggerStyle}
       >
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {selected?.label ?? "Select"}
+          {selected?.label ?? t("select.placeholder")}
         </span>
         <span style={{ opacity: 0.75, fontWeight: 900 }}>▾</span>
       </button>

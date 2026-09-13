@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 // web/src/views/CombatView/panels/CombatOrderPanel/components/CombatOrderRow.tsx
 
 import type { EncounterActor } from "@/domain/types/domain";
@@ -79,6 +80,7 @@ export function CombatOrderRow(props: {
   isBulkSelected?: boolean;
   onToggleBulkSelect?: (id: string) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const c = props.combatant;
   const isActive = c.id === props.activeId;
   const isTarget = c.id === props.targetId;
@@ -138,7 +140,7 @@ export function CombatOrderRow(props: {
       border: `1px solid ${statusAccent}`,
       background: withAlpha(statusAccent, 0.13),
     }}>
-      {isActive && isTarget ? "Self" : isActive ? "Active" : "Target"}
+      {isActive && isTarget ? translateUi("Self") : isActive ? translateUi("Active") : translateUi("Target")}
     </span>
   );
 
@@ -203,7 +205,7 @@ export function CombatOrderRow(props: {
               {!isWorld && <button
                 type="button"
                 disabled={isIncapacitated}
-                title={isIncapacitated ? "Reaction unavailable while incapacitated" : c.usedReaction ? "Reaction used — click to restore" : "Reaction available — click to mark used"}
+                title={isIncapacitated ? translateUi("Reaction unavailable while incapacitated") : c.usedReaction ? translateUi("Reaction used — click to restore") : translateUi("Reaction available — click to mark used")}
                 onClick={(e) => { e.stopPropagation(); if (!isIncapacitated) props.onToggleReaction(c.id); }}
                 style={{
                   ...togglePillStyle(!c.usedReaction, theme.colors.accentWarning, theme.colors.muted, theme.colors.muted),

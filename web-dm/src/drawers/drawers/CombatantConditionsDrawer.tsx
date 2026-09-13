@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { Button } from "@/ui/Button";
 import { theme, withAlpha } from "@/theme/theme";
 import type { DrawerContent } from "@/drawers/types";
@@ -19,6 +20,7 @@ export function CombatantConditionsDrawer(props: {
   close: () => void;
   refreshEncounter: (eid: string | null) => Promise<void>;
 }): DrawerContent {
+  const translateUi = useUiTranslation("dmUi");
   const { drawer } = props;
   const {
     combatants, conds, currentRound, selectedKeys, hexCount, conditionGroups,
@@ -32,7 +34,7 @@ export function CombatantConditionsDrawer(props: {
         {/* ── Toggle grid ─────────────────────────────────────────── */}
         <div>
           <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 10 }}>
-            Conditions
+            {translateUi("Conditions")}
           </div>
           <div style={{ display: "grid", gap: 14 }}>
             {conditionGroups.map((group, groupIndex) => (
@@ -59,9 +61,9 @@ export function CombatantConditionsDrawer(props: {
                   }}
                   title={
                     addDisabled
-                      ? "All six abilities are already assigned to Hex sources"
+                      ? translateUi("All six abilities are already assigned to Hex sources")
                       : isRepeatableCasterKey(c.key) && on
-                        ? `Add another ${c.name} source`
+                        ? translateUi("Add another {{value1}} source", { value1: c.name })
                         : undefined
                   }
                   style={{
@@ -100,7 +102,7 @@ export function CombatantConditionsDrawer(props: {
         {conds.length > 0 && (
           <div>
             <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 10 }}>
-              Applied
+              {translateUi("Applied")}
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {conds.map((c, idx) => {
@@ -160,10 +162,10 @@ export function CombatantConditionsDrawer(props: {
                         onClick={() => setExpiryForIndex(idx, cycleExpiry(c.expiresAtRound, currentRound))}
                         title={
                           !hasTimer
-                            ? "Set expiry timer"
+                            ? translateUi("Set expiry timer")
                             : isExpired
-                            ? "Expired — click to reset"
-                            : `Expires in ${remaining} round${remaining === 1 ? "" : "s"} — click to adjust`
+                            ? translateUi("Expired — click to reset")
+                            : translateUi("Expires in {{value1}} round{{value2}} — click to adjust", { value1: remaining, value2: remaining === 1 ? "" : "s" })
                         }
                         style={{
                           all: "unset",
@@ -192,12 +194,12 @@ export function CombatantConditionsDrawer(props: {
                           transition: "border-color 120ms, background 120ms, color 120ms",
                         }}
                       >
-                        {!hasTimer ? "⏱" : isExpired ? "exp" : `${remaining}R`}
+                        {!hasTimer ? "⏱" : isExpired ? translateUi("exp") : `${remaining}R`}
                       </button>
 
                       <button
                         onClick={() => removeAt(idx)}
-                        title="Remove"
+                        title={translateUi("Remove")}
                         style={{
                           all: "unset",
                           cursor: "pointer",
@@ -222,14 +224,14 @@ export function CombatantConditionsDrawer(props: {
                           onChange={(e) => setCasterForIndex(idx, (e.target as HTMLSelectElement).value || null)}
                           style={{ fontSize: "var(--fs-tiny)", padding: "2px 6px", width: "100%" }}
                         >
-                          <option value="">— source —</option>
+                          <option value="">{translateUi("— source —")}</option>
                           {combatants.map((r) => (
                             <option key={r.id} value={r.id}>{String(r.label || "Combatant")}</option>
                           ))}
                         </Select>
                         {c.key === "hexed" && (
                           <Select
-                            aria-label="Hexed ability"
+                            aria-label={translateUi("Hexed ability")}
                             value={c.hexAbility ?? ""}
                             onChange={(e) => setHexAbilityForIndex(
                               idx,
@@ -237,7 +239,7 @@ export function CombatantConditionsDrawer(props: {
                             )}
                             style={{ fontSize: "var(--fs-tiny)", padding: "2px 6px", width: "100%" }}
                           >
-                            <option value="">— hexed ability —</option>
+                            <option value="">{translateUi("— hexed ability —")}</option>
                             {availableHexAbilities.map((ability) => (
                               <option key={ability.key} value={ability.key}>{ability.label}</option>
                             ))}
@@ -256,7 +258,7 @@ export function CombatantConditionsDrawer(props: {
     ),
     footer: (
       <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-        <Button variant="ghost" onClick={props.close}>Close</Button>
+        <Button variant="ghost" onClick={props.close}>{translateUi("Close")}</Button>
       </div>
     ),
   };

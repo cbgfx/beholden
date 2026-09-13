@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { DragHandleGrip } from "@beholden/shared/ui";
 import { C } from "@/lib/theme";
 
@@ -11,11 +12,12 @@ export function PanelDragHandle(props: {
   dragging: boolean;
   onPointerDown: (e: React.PointerEvent) => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   return (
     <button
       type="button"
-      title={`Drag ${props.label}`}
-      aria-label={`Drag ${props.label}`}
+      title={translateUi("Drag {{value1}}", { value1: props.label })}
+      aria-label={translateUi("Drag {{value1}}", { value1: props.label })}
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
       onPointerDown={props.onPointerDown}
       style={{

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C } from "@/lib/theme";
 import { PANEL_TITLES, type PanelId } from "@/views/character/layout/panelRegistry";
 import { PanelDragHandle } from "@/views/character/layout/CharacterPanelDragHandle";
@@ -16,6 +17,7 @@ export function PanelCard(props: {
   rowRef: (el: HTMLDivElement | null) => void;
   onPointerDown: (e: React.PointerEvent) => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   if (props.dragging) {
     return (
       <div
@@ -43,12 +45,12 @@ export function PanelCard(props: {
       }}
     >
       <PanelDragHandle
-        label={PANEL_TITLES[props.id]}
+        label={translateUi(PANEL_TITLES[props.id])}
         dragging={props.dragging}
         onPointerDown={props.onPointerDown}
       />
       <span style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.text, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {PANEL_TITLES[props.id]}
+        {translateUi(PANEL_TITLES[props.id])}
       </span>
     </div>
   );

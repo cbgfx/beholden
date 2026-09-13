@@ -1,9 +1,10 @@
+import { translateUi } from "@/i18n";
 import React from "react";
 import type { AddMonsterOptions } from "@/domain/types/domain";
 import { deleteEncounterCombatant, postEncounterCombatants } from "@/services/encounterApi";
 
 function apiErr(e: unknown) {
-  alert(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+  alert(e instanceof Error ? e.message : translateUi("Something went wrong. Please try again."));
 }
 
 export function useEncounterActions(

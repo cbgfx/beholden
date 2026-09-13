@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { theme } from "@/theme/theme";
 import type { GroupedSpell } from "./useMonsterSpells";
 import { MonsterSectionPanel } from "@/components/MonsterDisplay/MonsterSectionPanel";
@@ -22,6 +23,7 @@ type Props = {
 };
 
 export function MonsterSpellPanel({ spells }: Props) {
+  const translateUi = useUiTranslation("dmUi");
   const spellNames = spells.spellNames ?? [];
   const groupedSpells = spells.groupedSpells ?? [];
   const spellOpen = spells.spellOpen;
@@ -37,7 +39,7 @@ export function MonsterSpellPanel({ spells }: Props) {
   ).sort((a, b) => a.localeCompare(b));
 
   return (
-    <MonsterSectionPanel title="Spells">
+    <MonsterSectionPanel title={translateUi("Spells")}>
 
       {groupedSpells.length ? (
         <div style={{ display: "grid", gap: 5 }}>
@@ -59,7 +61,7 @@ export function MonsterSpellPanel({ spells }: Props) {
                       borderRadius: 999,
                       fontWeight: 800,
                     }}
-                    title="Open spell"
+                    title={translateUi("Open spell")}
                   >
                     {s.display}
                   </Button>
@@ -82,7 +84,7 @@ export function MonsterSpellPanel({ spells }: Props) {
                 borderRadius: 999,
                 fontWeight: 800,
               }}
-              title="Open spell"
+              title={translateUi("Open spell")}
             >
               {name}
             </Button>
@@ -101,7 +103,7 @@ export function MonsterSpellPanel({ spells }: Props) {
           }}
         >
           {spellLoading ? (
-            <div style={{ color: theme.colors.muted }}>Loading spell…</div>
+            <div style={{ color: theme.colors.muted }}>{translateUi("Loading spell…")}</div>
           ) : spellError ? (
             <div style={{ color: theme.colors.red }}>{spellError}</div>
           ) : spellDetail ? (

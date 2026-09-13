@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C } from "@/lib/theme";
 import { Button } from "@/ui/Button";
 import { DMG_EMOJI, abbrevTime, type FetchedSpellDetail } from "@/views/character/spells/CharacterSpellShared";
@@ -59,6 +60,7 @@ export function CharacterSpellRow({
   onTogglePrepared: () => void;
   onSelect: () => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const d = detail;
   const isAlwaysPrepared = entry.forcedPrepared;
   const conc = d ? Boolean(d.concentration) : false;
@@ -89,19 +91,19 @@ export function CharacterSpellRow({
           title={
             !usesPreparedSpellSelection
               ? isCantrip
-                ? "Known cantrip"
+                ? translateUi("Known cantrip")
                 : usesFlexiblePreparedList
-                  ? "On your prepared spell list"
-                  : "Known spell"
+                  ? translateUi("On your prepared spell list")
+                  : translateUi("Known spell")
               : isCantrip
-                ? "Cantrip (always prepared)"
+                ? translateUi("Cantrip (always prepared)")
                 : isAlwaysPrepared
-                  ? "Always prepared"
+                  ? translateUi("Always prepared")
                 : isPrepared
-                  ? "Mark unprepared"
+                  ? translateUi("Mark unprepared")
                   : preparedLocked
-                    ? `Prepared limit reached (${preparedLimit})`
-                    : "Mark prepared"
+                    ? translateUi("Prepared limit reached ({{value1}})", { value1: preparedLimit })
+                    : translateUi("Mark prepared")
           }
           style={{
             width: 20, height: 20, borderRadius: "50%", padding: 0,
@@ -121,10 +123,10 @@ export function CharacterSpellRow({
       )}
 
       {/* Name + meta */}
-      <div style={{ minWidth: 0 }} title={entry.source ? `Granted by: ${entry.source}${entry.level != null ? ` (Level ${entry.level})` : ""}` : undefined}>
+      <div style={{ minWidth: 0 }} title={entry.source ? translateUi("Granted by: {{value1}}{{value2}}", { value1: entry.source, value2: entry.level != null ? ` (Level ${entry.level})` : "" }) : undefined}>
         <div style={{ fontWeight: 700, fontSize: "var(--fs-subtitle)", color: isPrepared ? C.text : C.muted }}>
           {entry.searchName}
-          {conc && <span title="Concentration" style={{ marginLeft: 5, fontSize: "var(--fs-tiny)", color: C.colorRitual }}>◆</span>}
+          {conc && <span title={translateUi("Concentration")} style={{ marginLeft: 5, fontSize: "var(--fs-tiny)", color: C.colorRitual }}>◆</span>}
         </div>
         <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>
           {[d ? `${d.level === 0 ? "Cantrip" : ORDINALS[d.level ?? 0]} ${d.school ?? ""}`.trim() : null, d?.components].filter(Boolean).join("  (") + (d?.components ? ")" : "")}
@@ -140,7 +142,7 @@ export function CharacterSpellRow({
       {d && (usesSave || usesAtk) ? (
         <div style={{ minWidth: 0, textAlign: "center" }}>
           <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700 }}>
-            {usesSave ? "SAVE" : "ATK"}
+            {usesSave ? translateUi("SAVE") : translateUi("ATK")}
           </div>
           <div style={{ fontWeight: 900, fontSize: "var(--fs-body)", color: spellcastingBlocked ? C.colorPinkRed : accentColor, lineHeight: 1.2 }}>
             {usesSave ? `${(d.check ?? "").toUpperCase()}${spellcastingBlocked ? " X" : ""}` : `+${entrySpellAtk}${spellcastingBlocked ? " X" : ""}`}
@@ -164,7 +166,7 @@ export function CharacterSpellRow({
           variant={castToggle.active ? "danger" : "primary"}
           disabled={castToggle.disabled}
           onClick={(event) => { event.stopPropagation(); castToggle.onToggle(); }}
-          title={castToggle.active ? "End this spell's effect" : castToggle.disabled ? "No spell slots remaining" : "Cast this spell"}
+          title={castToggle.active ? translateUi("End this spell's effect") : castToggle.disabled ? translateUi("No spell slots remaining") : translateUi("Cast this spell")}
           style={{
             minWidth: 0,
             padding: "4px 10px", borderRadius: 6,
@@ -174,7 +176,7 @@ export function CharacterSpellRow({
             ...(castToggle.active ? {} : { background: accentColor, color: "#fff" }),
           }}
         >
-          {castToggle.active ? "End" : "Cast"}
+          {castToggle.active ? translateUi("End") : translateUi("Cast")}
         </Button>
       ) : <div />}
     </div>

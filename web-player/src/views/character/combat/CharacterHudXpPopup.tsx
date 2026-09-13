@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useEffect, useRef, useState } from "react";
 import { C } from "@/lib/theme";
 import { Button } from "@/ui/Button";
@@ -13,6 +14,7 @@ export function CharacterHudXpPopup(props: {
   saveXp: (value: number) => Promise<void>;
   accentColor: string;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const { xpEarned, xpNeeded, xpLevelStart, xpInput, xpPopupOpen, setXpInput, setXpPopupOpen, saveXp, accentColor } = props;
   const xpPopupRef = useRef<HTMLDivElement | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -52,7 +54,7 @@ export function CharacterHudXpPopup(props: {
         }}
       >
         <span style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: "#fff" }}>
-          {xpEarned.toLocaleString()} / {xpNeeded.toLocaleString()} xp
+          {xpEarned.toLocaleString()} / {xpNeeded.toLocaleString()} {translateUi("xp")}
         </span>
         <div style={{ width: "100%", minWidth: 80, height: 3, borderRadius: 2, background: "rgba(255,255,255,0.10)", overflow: "hidden" }}>
           {/* Progress through the CURRENT level's XP band, not raw xpEarned/xpNeeded -- otherwise
@@ -79,7 +81,7 @@ export function CharacterHudXpPopup(props: {
             gap: 8,
           }}
         >
-          <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted, marginBottom: 2 }}>Edit XP</div>
+          <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted, marginBottom: 2 }}>{translateUi("Edit XP")}</div>
           <div style={{ display: "flex", gap: 6 }}>
             <input
               autoFocus
@@ -115,14 +117,14 @@ export function CharacterHudXpPopup(props: {
               }}
               style={{ padding: "6px 12px", fontSize: "var(--fs-small)" }}
             >
-              Save
+              {translateUi("Save")}
             </Button>
           </div>
           <div style={{ display: "flex", gap: 5 }}>
             {[
               { label: "+100", amount: 100 },
               { label: "+1000", amount: 1000 },
-              { label: "+Level", amount: Math.max(0, xpNeeded - xpEarned) },
+              { label: translateUi("+Level"), amount: Math.max(0, xpNeeded - xpEarned) },
             ].map((quick) => (
               <Button
                 key={quick.label}

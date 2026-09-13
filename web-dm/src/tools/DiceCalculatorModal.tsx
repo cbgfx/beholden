@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useState } from "react";
 import { rollDiceExpr } from "@beholden/shared/domain/dice";
 import { Modal } from "@/components/overlay/Modal";
@@ -58,6 +59,7 @@ function calcBtn(
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function DiceCalculatorModal(props: { isOpen: boolean; onClose: () => void }) {
+  const translateUi = useUiTranslation("dmUi");
   const [expr, setExpr] = useState("");
   const [result, setResult] = useState<number | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -99,7 +101,7 @@ export function DiceCalculatorModal(props: { isOpen: boolean; onClose: () => voi
   };
 
   return (
-    <Modal isOpen={props.isOpen} onClose={props.onClose} title="Dice Calculator" width={360} height={560}>
+    <Modal isOpen={props.isOpen} onClose={props.onClose} title={translateUi("Dice Calculator")} width={360} height={560}>
       {/* Display / Input */}
       <div
         style={{
@@ -113,7 +115,7 @@ export function DiceCalculatorModal(props: { isOpen: boolean; onClose: () => voi
           value={expr}
           onChange={(e) => { setResult(null); setExpr(e.target.value); }}
           onKeyDown={handleKeyDown}
-          placeholder="enter expression…"
+          placeholder={translateUi("enter expression…")}
           autoFocus
           style={{
             width: "100%",
@@ -179,7 +181,7 @@ export function DiceCalculatorModal(props: { isOpen: boolean; onClose: () => voi
             height: CELL_H * 2 + GAP,
             transition: "opacity 120ms",
           }}
-          title="Roll"
+          title={translateUi("Roll")}
         >
           {rollIcon}
         </button>

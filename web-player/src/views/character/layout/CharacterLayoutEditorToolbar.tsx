@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import type { CSSProperties } from "react";
 import { C, withAlpha } from "@/lib/theme";
 import { IconButton } from "@/ui/IconButton";
@@ -24,15 +25,16 @@ export function CharacterLayoutEditorToolbar(props: {
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const { activeView } = props;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
       <input
         key={activeView.id}
-        aria-label="View name"
+        aria-label={translateUi("View name")}
         defaultValue={activeView.name}
         disabled={props.protectedView}
-        title={props.protectedView ? "Combat and All can't be renamed" : undefined}
+        title={props.protectedView ? translateUi("Combat and All can't be renamed") : undefined}
         onBlur={(event) => {
           const name = event.currentTarget.value.trim();
           if (name && name !== activeView.name) props.onRename(name);
@@ -48,11 +50,11 @@ export function CharacterLayoutEditorToolbar(props: {
           minWidth: 140, opacity: props.protectedView ? 0.55 : 1, cursor: props.protectedView ? "not-allowed" : "text",
         }}
       />
-      <button type="button" onClick={props.onAddColumn} disabled={activeView.columns >= MAX_SHEET_COLUMNS} style={toolbarButtonStyle(activeView.columns >= MAX_SHEET_COLUMNS)}>+ Column</button>
-      <button type="button" onClick={props.onRemoveColumn} disabled={activeView.columns <= MIN_SHEET_COLUMNS} style={toolbarButtonStyle(activeView.columns <= MIN_SHEET_COLUMNS)}>− Column</button>
-      <button type="button" onClick={props.onReset} disabled={!props.canReset} title={props.canReset ? undefined : "Only built-in views have a default layout"} style={toolbarButtonStyle(!props.canReset)}>Reset this view</button>
-      <IconButton onClick={props.onDuplicate} title="Duplicate this view"><IconCopy /></IconButton>
-      <IconButton onClick={props.onDelete} disabled={!props.canDelete} title={props.canDelete ? "Delete this view" : "Combat and All can't be deleted, and at least one view must remain"} style={{ color: C.red, borderColor: withAlpha(C.red, 0.4), background: withAlpha(C.red, 0.08) }}><IconTrash /></IconButton>
+      <button type="button" onClick={props.onAddColumn} disabled={activeView.columns >= MAX_SHEET_COLUMNS} style={toolbarButtonStyle(activeView.columns >= MAX_SHEET_COLUMNS)}>{translateUi("+ Column")}</button>
+      <button type="button" onClick={props.onRemoveColumn} disabled={activeView.columns <= MIN_SHEET_COLUMNS} style={toolbarButtonStyle(activeView.columns <= MIN_SHEET_COLUMNS)}>{translateUi("− Column")}</button>
+      <button type="button" onClick={props.onReset} disabled={!props.canReset} title={props.canReset ? undefined : translateUi("Only built-in views have a default layout")} style={toolbarButtonStyle(!props.canReset)}>{translateUi("Reset this view")}</button>
+      <IconButton onClick={props.onDuplicate} title={translateUi("Duplicate this view")}><IconCopy /></IconButton>
+      <IconButton onClick={props.onDelete} disabled={!props.canDelete} title={props.canDelete ? translateUi("Delete this view") : translateUi("Combat and All can't be deleted, and at least one view must remain")} style={{ color: C.red, borderColor: withAlpha(C.red, 0.4), background: withAlpha(C.red, 0.08) }}><IconTrash /></IconButton>
     </div>
   );
 }

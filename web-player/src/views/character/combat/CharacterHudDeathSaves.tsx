@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C } from "@/lib/theme";
 
 export function CharacterHudDeathSaves(props: {
@@ -6,6 +7,7 @@ export function CharacterHudDeathSaves(props: {
   dsSaving: boolean;
   saveDeathSaves: (next: { success: number; fail: number }) => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const { hpCurrent, deathSaves, dsSaving, saveDeathSaves } = props;
 
   if (hpCurrent !== 0) return null;
@@ -13,12 +15,12 @@ export function CharacterHudDeathSaves(props: {
   return (
     <div style={{ margin: "4px 0 10px", padding: "10px 14px", borderRadius: 10, background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.35)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 900, color: C.red, textTransform: "uppercase", letterSpacing: "0.1em" }}>Death Saving Throws</span>
-        {dsSaving && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>saving...</span>}
+        <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 900, color: C.red, textTransform: "uppercase", letterSpacing: "0.1em" }}>{translateUi("Death Saving Throws")}</span>
+        {dsSaving && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{translateUi("saving...")}</span>}
       </div>
       <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-          <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: "#4ade80", textTransform: "uppercase", letterSpacing: "0.06em" }}>Success</span>
+          <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: "#4ade80", textTransform: "uppercase", letterSpacing: "0.06em" }}>{translateUi("Success")}</span>
           <div style={{ display: "flex", gap: 6 }}>
             {[0, 1, 2].map((i) => {
               const filled = i < (deathSaves?.success ?? 0);
@@ -51,7 +53,7 @@ export function CharacterHudDeathSaves(props: {
         <span style={{ fontSize: "var(--fs-title)", opacity: 0.4 }}>💀</span>
 
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-          <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: C.red, textTransform: "uppercase", letterSpacing: "0.06em" }}>Failure</span>
+          <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: C.red, textTransform: "uppercase", letterSpacing: "0.06em" }}>{translateUi("Failure")}</span>
           <div style={{ display: "flex", gap: 6 }}>
             {[0, 1, 2].map((i) => {
               const filled = i < (deathSaves?.fail ?? 0);
@@ -82,8 +84,8 @@ export function CharacterHudDeathSaves(props: {
         </div>
       </div>
 
-      {(deathSaves?.success ?? 0) >= 3 && <div style={{ marginTop: 8, fontSize: "var(--fs-small)", fontWeight: 700, color: "#4ade80", textAlign: "center" }}>✦ Stable - character has stabilised</div>}
-      {(deathSaves?.fail ?? 0) >= 3 && <div style={{ marginTop: 8, fontSize: "var(--fs-small)", fontWeight: 700, color: C.red, textAlign: "center" }}>✦ Dead</div>}
+      {(deathSaves?.success ?? 0) >= 3 && <div style={{ marginTop: 8, fontSize: "var(--fs-small)", fontWeight: 700, color: "#4ade80", textAlign: "center" }}>{translateUi("✦ Stable - character has stabilised")}</div>}
+      {(deathSaves?.fail ?? 0) >= 3 && <div style={{ marginTop: 8, fontSize: "var(--fs-small)", fontWeight: 700, color: C.red, textAlign: "center" }}>{translateUi("✦ Dead")}</div>}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { UiText } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { C } from "@/lib/theme";
 import { Button } from "@/ui/Button";
@@ -40,9 +41,9 @@ function renderCampaignsStep({
   const blockedByIdentity = requiresGenderAge && missingGenderOrAge;
   const main = (
     <div>
-      <h2 style={headingStyle}>Assign to Campaigns</h2>
-      <p style={{ color: C.muted, marginBottom: 16 }}>Optional - you can assign later from your home page.</p>
-      {campaigns.length === 0 && <p style={{ color: C.muted }}>You're not a member of any campaigns yet.</p>}
+      <h2 style={headingStyle}>{<UiText text={"Assign to Campaigns"} namespace="playerUi" />}</h2>
+      <p style={{ color: C.muted, marginBottom: 16 }}>{<UiText text={"Optional - you can assign later from your home page."} namespace="playerUi" />}</p>
+      {campaigns.length === 0 && <p style={{ color: C.muted }}>{<UiText text={"You're not a member of any campaigns yet."} namespace="playerUi" />}</p>}
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
         {campaigns.map((campaign) => {
           const checked = selectedCampaignIds.includes(campaign.id);
@@ -75,13 +76,13 @@ function renderCampaignsStep({
 
       {blockedByIdentity && (
         <div style={{ color: C.red, marginBottom: 10 }}>
-          A campaign you selected uses a Binder, which requires Gender and Age.{" "}
+          {<UiText text={"A campaign you selected uses a Binder, which requires Gender and Age."} namespace="playerUi" />}{" "}
           <button
             type="button"
             onClick={onEditIdentity}
             style={{ color: C.red, textDecoration: "underline", background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit" }}
           >
-            Go back and fill those in.
+            {<UiText text={"Go back and fill those in."} namespace="playerUi" />}
           </button>
         </div>
       )}
@@ -89,10 +90,10 @@ function renderCampaignsStep({
 
       <div style={{ display: "flex", gap: 10, justifyContent: "space-between" }}>
         <Button type="button" variant="ghost" onClick={onBack}>
-          ← Back
+          {<UiText text={"← Back"} namespace="playerUi" />}
         </Button>
         <Button type="button" variant="primary" onClick={onSubmit} disabled={busy || blockedByIdentity}>
-          {busy ? "Saving…" : isEditing ? "Save Changes ✓" : "Create Character ✓"}
+          {busy ? <UiText text={"Saving…"} namespace="playerUi" /> : isEditing ? <UiText text={"Save Changes ✓"} namespace="playerUi" /> : <UiText text={"Create Character ✓"} namespace="playerUi" />}
         </Button>
       </div>
     </div>

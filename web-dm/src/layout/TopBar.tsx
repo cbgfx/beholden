@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -44,6 +45,7 @@ function NavLink(props: { to: string; label: string }) {
 }
 
 export function TopBar() {
+  const translateUi = useUiTranslation("dmUi");
   const { state } = useStore();
   const { user, logout } = useAuth();
   const connected = useWsStatus();
@@ -91,7 +93,7 @@ export function TopBar() {
               textDecoration: "none",
               textShadow: "0 2px 16px rgba(56,182,255,0.15)",
             }}
-            title="Home"
+            title={translateUi("Home")}
           >
             Beholden
           </Link>
@@ -108,7 +110,7 @@ export function TopBar() {
             flexShrink: 0,
           }}
         >
-          DM
+          {translateUi("DM")}
         </span>
       </div>
 
@@ -128,41 +130,41 @@ export function TopBar() {
           fontSize: "var(--fs-medium)",
         }}
       >
-        <NavLink to="/" label="Home" />
+        <NavLink to="/" label={translateUi("Home")} />
         {selectedCampaignId && selectedName && (
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
             <NavLink to={`/campaign/${selectedCampaignId}`} label={selectedName} />
             <RulesetTag ruleset={selectedCampaign?.ruleset ?? "5.5e"} />
           </span>
         )}
-        <NavLink to="/compendium" label="Compendium" />
-        {user?.isAdmin && <NavLink to="/admin" label="Admin" />}
+        <NavLink to="/compendium" label={translateUi("Compendium")} />
+        {user?.isAdmin && <NavLink to="/admin" label={translateUi("Admin")} />}
         {saveStatus !== "idle" && (
           <span style={{
             fontSize: "var(--fs-medium)",
             color: saveStatus === "saved" ? theme.colors.green : theme.colors.muted,
             transition: "color 300ms ease",
           }}>
-            {saveStatus === "saving" ? "Saving…" : "Saved ✓"}
+            {saveStatus === "saving" ? translateUi("Saving…") : translateUi("Saved ✓")}
           </span>
         )}
         {user && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "var(--fs-medium)" }}>
             {!isPhone && (
-              <HeaderActionLink to="/profile" color={theme.colors.muted} title="Account settings">
+              <HeaderActionLink to="/profile" color={theme.colors.muted} title={translateUi("Account settings")}>
                 {user.name}
               </HeaderActionLink>
             )}
             <HeaderActionButton
               onClick={logout}
-              title={isPhone ? `Sign out (${user.name})` : undefined}
+              title={isPhone ? translateUi("Sign out ({{value1}})", { value1: user.name }) : undefined}
               color={theme.colors.muted}
               borderColor={theme.colors.panelBorder}
               padding="4px 8px"
               borderRadius={theme.radius.control}
               fontSize="inherit"
             >
-              Sign out
+              {translateUi("Sign out")}
             </HeaderActionButton>
           </div>
         )}
@@ -170,7 +172,7 @@ export function TopBar() {
           active={connected}
           activeColor={theme.colors.green}
           inactiveColor={theme.colors.red}
-          title={connected ? "Server connected" : "Server disconnected"}
+          title={connected ? translateUi("Server connected") : translateUi("Server disconnected")}
         />
       </div>
     </div>

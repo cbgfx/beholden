@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ExpandableNoteItem } from "./ExpandableNoteItem";
 import { withAlpha } from "./colors";
 
@@ -23,7 +24,7 @@ const deletedMentionStyle: React.CSSProperties = {
   whiteSpace: "nowrap",
 };
 
-function renderInlineRichText(text: string, validMentionIds?: Set<string>, binderId?: string): React.ReactNode[] {
+function renderInlineRichText(text: string, validMentionIds?: Set<string>, binderId?: string, deletedRecordLabel = "Deleted record"): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
   const pattern = /(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|__[^_]+__|\*[^*\n]+\*)/g;
   let lastIndex = 0;
@@ -48,7 +49,7 @@ function renderInlineRichText(text: string, validMentionIds?: Set<string>, binde
       const isDeletedMention = isMention && validMentionIds && !validMentionIds.has(mentionId!);
       nodes.push(href
         ? isDeletedMention
-          ? <span key={`d-${key++}`} title="Deleted record" style={deletedMentionStyle}>{link[1]}</span>
+          ? <span key={`d-${key++}`} title={deletedRecordLabel} style={deletedMentionStyle}>{link[1]}</span>
           : isMention
             ? <Link key={`m-${key++}`} to={href} style={mentionLinkStyle}>{link[1]}</Link>
             : <a key={`a-${key++}`} href={href} rel="noreferrer" style={{ color: "currentColor", textDecoration: "underline" }}>{link[1]}</a>
@@ -87,7 +88,7 @@ function isTableDivider(line: string): boolean {
   return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
 }
 
-function renderNoteRichText(text: string, validMentionIds?: Set<string>, binderId?: string): React.ReactNode {
+function renderNoteRichText(text: string, validMentionIds?: Set<string>, binderId?: string, deletedRecordLabel = "Deleted record"): React.ReactNode {
   const lines = text.replace(/\r/g, "").split("\n");
   const out: React.ReactNode[] = [];
   let i = 0;
@@ -124,9 +125,9 @@ function renderNoteRichText(text: string, validMentionIds?: Set<string>, binderI
       out.push(
         <details key={`toggle-${i}`} open style={{ margin: "8px 0 12px" }}>
           <summary style={{ cursor: "pointer", fontWeight: 800, fontSize: "calc(var(--fs-subtitle) + 2px)", marginBottom: 8 }}>
-            {renderInlineRichText(toggle[1], validMentionIds, binderId)}
+            {renderInlineRichText(toggle[1], validMentionIds, binderId, deletedRecordLabel)}
           </summary>
-          <div style={{ paddingLeft: 26 }}>{renderNoteRichText(lines.slice(i + 1, end).join("\n"), validMentionIds, binderId)}</div>
+          <div style={{ paddingLeft: 26 }}>{renderNoteRichText(lines.slice(i + 1, end).join("\n"), validMentionIds, binderId, deletedRecordLabel)}</div>
         </details>
       );
       i = end < lines.length ? end + 1 : end;
@@ -151,7 +152,7 @@ function renderNoteRichText(text: string, validMentionIds?: Set<string>, binderI
               <tr>
                 {headers.map((cell, index) => (
                   <th key={`th-${i}-${index}`} style={{ padding: "7px 9px", textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.22)", color: "currentColor", fontWeight: 800 }}>
-                    {renderInlineRichText(cell, validMentionIds, binderId)}
+                    {renderInlineRichText(cell, validMentionIds, binderId, deletedRecordLabel)}
                   </th>
                 ))}
               </tr>
@@ -161,7 +162,7 @@ function renderNoteRichText(text: string, validMentionIds?: Set<string>, binderI
                 <tr key={`tr-${i}-${rowIndex}`}>
                   {headers.map((_, cellIndex) => (
                     <td key={`td-${i}-${rowIndex}-${cellIndex}`} style={{ padding: "7px 9px", borderBottom: "1px solid rgba(255,255,255,0.09)", verticalAlign: "top" }}>
-                      {renderInlineRichText(row[cellIndex] ?? "", validMentionIds, binderId)}
+                      {renderInlineRichText(row[cellIndex] ?? "", validMentionIds, binderId, deletedRecordLabel)}
                     </td>
                   ))}
                 </tr>
@@ -179,7 +180,7 @@ function renderNoteRichText(text: string, validMentionIds?: Set<string>, binderI
       const level = Math.min(6, heading[1].length);
       out.push(
         <div key={`h-${i}`} style={headingStyleByLevel[level]}>
-          {renderInlineRichText(heading[2], validMentionIds, binderId)}
+          {renderInlineRichText(heading[2], validMentionIds, binderId, deletedRecordLabel)}
         </div>
       );
       i += 1;
@@ -193,7 +194,7 @@ function renderNoteRichText(text: string, validMentionIds?: Set<string>, binderI
         const raw = lines[j] ?? "";
         const t = raw.trim();
         if (!/^[-*]\s+/.test(t)) break;
-        items.push(<li key={`li-${j}`}>{renderInlineRichText(t.replace(/^[-*]\s+/, ""), validMentionIds, binderId)}</li>);
+        items.push(<li key={`li-${j}`}>{renderInlineRichText(t.replace(/^[-*]\s+/, ""), validMentionIds, binderId, deletedRecordLabel)}</li>);
         j += 1;
       }
       out.push(
@@ -207,7 +208,7 @@ function renderNoteRichText(text: string, validMentionIds?: Set<string>, binderI
 
     out.push(
       <div key={`p-${i}`} style={{ margin: "0 0 6px" }}>
-        {renderInlineRichText(line, validMentionIds, binderId)}
+        {renderInlineRichText(line, validMentionIds, binderId, deletedRecordLabel)}
       </div>
     );
     i += 1;
@@ -217,7 +218,8 @@ function renderNoteRichText(text: string, validMentionIds?: Set<string>, binderI
 }
 
 export function MarkdownRichText({ text, validMentionIds, binderId }: { text: string; validMentionIds?: Set<string>; binderId?: string }) {
-  return <>{renderNoteRichText(text, validMentionIds, binderId)}</>;
+  const { t } = useTranslation("shared");
+  return <>{renderNoteRichText(text, validMentionIds, binderId, t("noteRow.deletedRecord"))}</>;
 }
 
 export function NoteRow({
@@ -243,6 +245,7 @@ export function NoteRow({
   onEdit?: () => void;
   onDelete?: () => void;
 }) {
+  const { t } = useTranslation("shared");
   return (
     <ExpandableNoteItem
       title={title}
@@ -262,7 +265,7 @@ export function NoteRow({
                 }}
                 style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 5, color: mutedColor, cursor: "pointer", padding: "2px 7px", fontSize: "var(--fs-small)" }}
               >
-                Edit
+                {t("noteRow.edit")}
               </button>
             ) : null}
             {onDelete ? (
@@ -280,7 +283,7 @@ export function NoteRow({
           </div>
         ) : undefined}
     >
-      {text ? renderNoteRichText(text) : null}
+      {text ? renderNoteRichText(text, undefined, undefined, t("noteRow.deletedRecord")) : null}
     </ExpandableNoteItem>
   );
 }

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import type { AttackOverride, EncounterActor } from "@/domain/types/domain";
 import { theme } from "@/theme/theme";
@@ -81,6 +82,7 @@ function buildCreatureTypeLine(monster: MonsterDetail | null): string | null {
 }
 
 export function CombatantDetailsPanel(props: Props) {
+  const translateUi = useUiTranslation("dmUi");
   const { roleTitle, role, combatant, ctx } = props;
   const panelTitleColor = "var(--campaign-accent, #a78bfa)";
 
@@ -171,29 +173,29 @@ export function CombatantDetailsPanel(props: Props) {
       actions={
         !selected || isWorld ? null : (
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <IconButton title="Transform / Polymorph" onClick={ctx.onOpenPolymorph}>
-              <IconWerewolf size={18} title="Transform" />
+            <IconButton title={translateUi("Transform / Polymorph")} onClick={ctx.onOpenPolymorph}>
+              <IconWerewolf size={18} title={translateUi("Transform")} />
             </IconButton>
 
-            <IconButton title="Conditions" onClick={ctx.onOpenConditions}>
-              <IconConditions size={18} title="Conditions" />
+            <IconButton title={translateUi("Conditions")} onClick={ctx.onOpenConditions}>
+              <IconConditions size={18} title={translateUi("Conditions")} />
             </IconButton>
 
-            <IconButton title="Overrides" onClick={ctx.onOpenOverrides}>
-              <IconPencil size={18} title="Overrides" />
+            <IconButton title={translateUi("Overrides")} onClick={ctx.onOpenOverrides}>
+              <IconPencil size={18} title={translateUi("Overrides")} />
             </IconButton>
           </div>
         )
       }
     >
       {!selected ? (
-        <div style={{ color: theme.colors.muted }}>Select a combatant.</div>
+        <div style={{ color: theme.colors.muted }}>{translateUi("Select a combatant.")}</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {isWorld ? (
             <div style={{ display: "grid", gap: 10 }}>
               <div style={{ color: theme.colors.accentWarning, fontSize: "var(--fs-small)", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                World Action
+                {translateUi("World Action")}
               </div>
               <div
                 style={{
@@ -217,11 +219,11 @@ export function CombatantDetailsPanel(props: Props) {
               }}
             >
               <span style={{ fontSize: "var(--fs-small)", fontWeight: 900, color: "#c084fc", textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>
-                Transformed
+                {translateUi("Transformed")}
               </span>
               {polymorphFormName && (
                 <span style={{ color: "#e9d5ff", fontSize: "var(--fs-medium)", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  -&gt; {polymorphFormName}
+                  {translateUi("->")} {polymorphFormName}
                 </span>
               )}
               <button
@@ -239,7 +241,7 @@ export function CombatantDetailsPanel(props: Props) {
                   cursor: revertingPolymorph ? "default" : "pointer",
                 }}
               >
-                {revertingPolymorph ? "Reverting..." : "Revert >"}
+                {revertingPolymorph ? translateUi("Reverting...") : translateUi("Revert >")}
               </button>
             </div>
           ) : null}
@@ -256,7 +258,7 @@ export function CombatantDetailsPanel(props: Props) {
               }}
             >
               <div style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)", fontWeight: 900, marginBottom: 10 }}>
-                Death Saves
+                {translateUi("Death Saves")}
               </div>
               <PlayerDeathSaves
                 encounterId={String(selected.encounterId)}

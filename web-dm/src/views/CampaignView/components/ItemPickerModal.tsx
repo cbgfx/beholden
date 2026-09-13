@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Modal } from "@/components/overlay/Modal";
 import { useItemPicker } from "./useItemPicker";
@@ -23,6 +24,7 @@ export function ItemPickerModal(props: {
   onClose: () => void;
   onAdd: (payload: AddItemPayload) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const {
     rows,
     totalCount,
@@ -91,7 +93,7 @@ export function ItemPickerModal(props: {
   }
 
   return (
-    <Modal isOpen={props.isOpen} onClose={props.onClose} title="Add items" width={960}>
+    <Modal isOpen={props.isOpen} onClose={props.onClose} title={translateUi("Add items")} width={960}>
       <div style={{ display: "grid", gridTemplateColumns: "380px 1fr", gap: 12, height: 560 }}>
         <ItemPickerBrowsePanel
           createMode={createMode}

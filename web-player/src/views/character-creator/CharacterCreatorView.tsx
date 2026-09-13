@@ -1,3 +1,5 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
+import { useTranslation } from "react-i18next";
 import React from "react";
 import { getInvocationFeatChoices } from "@/domain/character/invocationFeatChoices";
 import { useInvocationGrantedFeatChoices } from "@/views/shared/useInvocationGrantedFeatChoices";
@@ -69,6 +71,9 @@ function displayNameFromCompendiumId(value: string | null | undefined): string {
 
 
 export function CharacterCreatorView() {
+  const translateMessage = useUiMessages("playerUi");
+  const translateUi = useUiTranslation("playerUi");
+  const { t } = useTranslation("player");
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -458,12 +463,12 @@ export function CharacterCreatorView() {
 
   const handleSubmitWithChecks = React.useCallback(async () => {
     if (selectedFeatSpellcastingAbilityChoices.some((entry) => entry.chosen.length < entry.max)) {
-      setError("Choose a spellcasting ability for each feat-granted spell before saving.");
+      setError(translateMessage("Choose a spellcasting ability for each feat-granted spell before saving."));
       setStep(8);
       return;
     }
     if (!invocationGrantedFeatChoices.valid) {
-      setError("Complete every choice for the Origin Feat granted by your Invocation before saving.");
+      setError(translateMessage("Complete every choice for the Origin Feat granted by your Invocation before saving."));
       setStep(8);
       return;
     }
@@ -476,12 +481,13 @@ export function CharacterCreatorView() {
       return;
     }
     await handleSubmit();
-  }, [form.chosenInvocations.length, handleSubmit, invocCount, invocationGrantedFeatChoices.valid, selectedFeatSpellcastingAbilityChoices]);
+  }, [form.chosenInvocations.length, handleSubmit, invocCount, invocationGrantedFeatChoices.valid, selectedFeatSpellcastingAbilityChoices, translateMessage]);
 
   // ── Step renderers ──────────────────────────────────────────────────────────
 
   function renderStep(): { main: React.ReactNode; side: React.ReactNode } {
     return renderCharacterCreatorStep({
+    t,
       step,
       form,
       setForm,
@@ -579,7 +585,7 @@ export function CharacterCreatorView() {
   if (editLoading) {
     return (
       <div style={{ height: "100%", overflowY: "auto", background: C.bg, color: C.text }}>
-        <div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 24px", color: C.muted }}>Loading…</div>
+        <div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 24px", color: C.muted }}>{translateUi("Loading…")}</div>
       </div>
     );
   }
@@ -590,10 +596,10 @@ export function CharacterCreatorView() {
     <div style={{ height: "100%", overflowY: "auto", background: C.bg, color: C.text }}>
       <div style={{ maxWidth: 1140, margin: "0 auto", padding: "36px 28px" }}>
         <h1 style={{ fontWeight: 900, fontSize: "var(--fs-hero)", margin: "0 0 8px", letterSpacing: -0.5 }}>
-          {isEditing ? "Edit Character" : "Create Character"}
+          {isEditing ? translateUi("Edit Character") : translateUi("Create Character")}
         </h1>
         <p style={{ margin: "0 0 24px", color: "rgba(160,180,220,0.55)", fontSize: "var(--fs-subtitle)" }}>
-          {isEditing ? "Update your character details below." : "Build your character step by step."}
+          {isEditing ? translateUi("Update your character details below.") : translateUi("Build your character step by step.")}
         </p>
         <StepHeader current={step} onStepClick={(s) => setStep(s as Step)} isEditing={isEditing} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 32, alignItems: "start" }}>

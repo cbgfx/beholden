@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";
@@ -16,6 +17,7 @@ export function PlayersPanel(props: {
   onAddPlayerToEncounter: (playerId: string) => void;
   onFullRest: () => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const players = React.useMemo(() => {
     return [...props.players].sort((a, b) => a.characterName.localeCompare(b.characterName)).map((p) => {
       const acBonus = Number(p.overrides?.acBonus ?? 0) || 0;
@@ -48,13 +50,13 @@ export function PlayersPanel(props: {
   return (
     <Panel
       storageKey="campaign-players"
-      title={`Players (${players.length})`}
+      title={translateUi("Players ({{value1}})", { value1: players.length })}
       actions={
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <IconButton title="Full Rest" onClick={props.onFullRest} variant="accent">
+          <IconButton title={translateUi("Full Rest")} onClick={props.onFullRest} variant="accent">
             <IconRest />
           </IconButton>
-          <IconButton onClick={props.onCreatePlayer} title="Add player" variant="accent">
+          <IconButton onClick={props.onCreatePlayer} title={translateUi("Add player")} variant="accent">
             <IconPlus />
           </IconButton>
         </div>
@@ -72,7 +74,7 @@ export function PlayersPanel(props: {
                 onEdit={() => props.onEditPlayer(p.id)}
                 primaryAction={props.selectedEncounterId ? (
                   <IconButton
-                    title={alreadyIn ? "Already in encounter" : "Add to encounter"}
+                    title={alreadyIn ? translateUi("Already in encounter") : translateUi("Add to encounter")}
                     onClick={(e) => (e.stopPropagation(), alreadyIn ? null : props.onAddPlayerToEncounter(p.id))}
                     disabled={alreadyIn}
                     variant="ghost"
@@ -92,7 +94,7 @@ export function PlayersPanel(props: {
           })}
         </div>
       ) : (
-        <div style={{ color: theme.colors.muted }}>No players yet.</div>
+        <div style={{ color: theme.colors.muted }}>{translateUi("No players yet.")}</div>
       )}
     </Panel>
   );

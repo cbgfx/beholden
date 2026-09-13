@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import type { EncounterActor } from "@/domain/types/domain";
 import { theme } from "@/theme/theme";
@@ -18,6 +19,7 @@ export function CombatantConditionsSection(props: {
   currentRound?: number;
   onCommit: (next: ConditionInstance[]) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const selectedConditions = React.useMemo(() => {
     const raw = props.selected.conditions ?? [];
     return raw.map((c) => ({
@@ -54,7 +56,7 @@ export function CombatantConditionsSection(props: {
     <div>
       <div style={{ marginBottom: 10 }}>
         <SectionTitle style={{ marginBottom: 0 }}>
-          Conditions
+          {translateUi("Conditions")}
         </SectionTitle>
       </div>
 
@@ -103,7 +105,7 @@ export function CombatantConditionsSection(props: {
                 {/* Expiry badge */}
                 {hasTimer && (
                   <span
-                    title={isExpired ? "Expired" : `Expires in ${remaining} round${remaining === 1 ? "" : "s"}`}
+                    title={isExpired ? translateUi("Expired") : translateUi("Expires in {{value1}} round{{value2}}", { value1: remaining, value2: remaining === 1 ? "" : "s" })}
                     style={{
                       fontSize: "var(--fs-tiny)",
                       fontWeight: 900,
@@ -115,7 +117,7 @@ export function CombatantConditionsSection(props: {
                       lineHeight: 1.4,
                     }}
                   >
-                    {isExpired ? "exp" : `${remaining}R`}
+                    {isExpired ? translateUi("exp") : `${remaining}R`}
                   </span>
                 )}
 
@@ -125,7 +127,7 @@ export function CombatantConditionsSection(props: {
                     e.stopPropagation();
                     removeConditionAt(idx);
                   }}
-                  title="Remove"
+                  title={translateUi("Remove")}
                   variant="ghost"
                   size="sm"
                 >
@@ -135,7 +137,7 @@ export function CombatantConditionsSection(props: {
             );
           })
         ) : (
-          <div style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)" }}>No conditions.</div>
+          <div style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)" }}>{translateUi("No conditions.")}</div>
         )}
       </div>
     </div>

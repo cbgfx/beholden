@@ -1,3 +1,4 @@
+import { UiText } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 import { theme, withAlpha } from "@/theme";
 import { Button } from "@/ui/Button";
@@ -67,17 +68,17 @@ export class ErrorBoundary extends React.Component<
           }}
         >
           <div style={{ fontWeight: 900, color: theme.colors.red, fontSize: "var(--fs-title)", marginBottom: 10 }}>
-            Something crashed.
+            {<UiText text={"Something crashed."} namespace="dmUi" />}
           </div>
           <div style={{ color: theme.colors.text, opacity: 0.9, marginBottom: 10 }}>
             {dynamicImportError
-              ? "The app could not load one of its JavaScript files. This usually means the page is from an older deploy."
-              : "Open DevTools -> Console for the full stack trace."}
+              ? <UiText text={"The app could not load one of its JavaScript files. This usually means the page is from an older deploy."} namespace="dmUi" />
+              : <UiText text={"Open DevTools -> Console for the full stack trace."} namespace="dmUi" />}
           </div>
           {dynamicImportError ? (
             <div style={{ marginBottom: 12 }}>
               <Button type="button" variant="danger" onClick={() => window.location.reload()}>
-                Reload app
+                {<UiText text={"Reload app"} namespace="dmUi" />}
               </Button>
             </div>
           ) : null}

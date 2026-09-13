@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Panel } from "@/ui/Panel";
 import { Select } from "@/ui/Select";
 import { C, withAlpha } from "@/lib/theme";
@@ -26,6 +27,7 @@ export function ItemsBrowserPanel(props: {
   selectedItemId?: string | null;
   onSelectItem?: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const {
     q, setQ,
     rarityFilter, setRarityFilter, rarityOptions,
@@ -48,13 +50,13 @@ export function ItemsBrowserPanel(props: {
 
   return (
     <Panel
-      title={<span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: "var(--fs-large)" }}><IconChest size={28} /><span>Items</span></span>}
-      actions={<div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{busy ? "Loading…" : rows.length}</div>}
+      title={<span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: "var(--fs-large)" }}><IconChest size={28} /><span>{t("compendiumItems.title")}</span></span>}
+      actions={<div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{busy ? t("compendiumItems.loading") : rows.length}</div>}
       style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}
       bodyStyle={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, gap: 8 }}
     >
       <input
-        value={q} placeholder="Search items…" onChange={(e) => setQ(e.target.value)}
+        value={q} placeholder={t("compendiumItems.searchPlaceholder")} onChange={(e) => setQ(e.target.value)}
         style={{
           background: C.panelBg, color: C.text, border: `1px solid ${C.panelBorder}`,
           borderRadius: 10, padding: "8px 10px", outline: "none",
@@ -63,17 +65,17 @@ export function ItemsBrowserPanel(props: {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
         <Select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} style={{ width: "100%" }}>
           {rarityOptions.map((r) => (
-            <option key={r} value={r}>{r === "all" ? "All Rarities" : titleCase(r)}</option>
+            <option key={r} value={r}>{r === "all" ? t("compendiumItems.allRarities") : titleCase(r)}</option>
           ))}
         </Select>
         <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ width: "100%" }}>
-          {typeOptions.map((t) => (
-            <option key={t} value={t}>{t === "all" ? "All Types" : t}</option>
+          {typeOptions.map((ty) => (
+            <option key={ty} value={ty}>{ty === "all" ? t("compendiumItems.allTypes") : ty}</option>
           ))}
         </Select>
         {showRulesetFilter && (
           <Select value={rulesetFilter} onChange={(e) => setRulesetFilter(e.target.value as "5e" | "5.5e" | "")} style={{ width: "100%" }}>
-            <option value="">All Rulesets</option>
+            <option value="">{t("compendiumItems.allRulesets")}</option>
             <option value="5.5e">5.5e</option>
             <option value="5e">5e</option>
           </Select>
@@ -81,13 +83,13 @@ export function ItemsBrowserPanel(props: {
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
         <button type="button" onClick={() => setFilterAttunement(!filterAttunement)} style={togglePillStyle(filterAttunement, C.accentHl, C.panelBorder, C.muted)}>
-          Attunement
+          {t("compendiumItems.attunement")}
         </button>
         <button type="button" onClick={() => setFilterMagic(!filterMagic)} style={togglePillStyle(filterMagic, C.accentHl, C.panelBorder, C.muted)}>
-          Magic
+          {t("compendiumItems.magic")}
         </button>
         {hasActiveFilters && (
-          <button type="button" onClick={clearFilters} style={togglePillStyle(false, C.accentHl, C.panelBorder, C.muted)}>Clear</button>
+          <button type="button" onClick={clearFilters} style={togglePillStyle(false, C.accentHl, C.panelBorder, C.muted)}>{t("compendiumItems.clear")}</button>
         )}
       </div>
 
@@ -103,7 +105,7 @@ export function ItemsBrowserPanel(props: {
         ))}
         <div style={{ height: padBottom }} />
         {!busy && rows.length === 0 && (
-          <EmptyState textColor={C.muted} style={{ padding: 10 }}>No items found.</EmptyState>
+          <EmptyState textColor={C.muted} style={{ padding: 10 }}>{t("compendiumItems.noItemsFound")}</EmptyState>
         )}
       </ListShell>
     </Panel>
@@ -111,10 +113,11 @@ export function ItemsBrowserPanel(props: {
 }
 
 function ItemRow({ item, active, onClick }: { item: ItemSearchRow; active: boolean; onClick: () => void }) {
+  const { t } = useTranslation();
   const subtitle = [
     item.rarity ? titleCase(item.rarity) : null,
     item.type ?? null,
-    item.attunement ? "Attunement" : null,
+    item.attunement ? t("compendiumItems.attunement") : null,
   ].filter(Boolean).join(" • ");
 
   return (

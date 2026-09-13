@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { C } from "@/lib/theme";
 import { titleCase } from "@beholden/shared/domain/text/titleCase";
 import { RightDrawer } from "@/ui/RightDrawer";
@@ -38,6 +39,7 @@ export function InventoryItemDrawer(props: {
   subtitle?: string;
   showContainerControl?: boolean;
 }) {
+  const { t } = useTranslation();
   const merged = React.useMemo(() => ({
     name: props.item.name,
     rarity: props.item.rarity ?? props.detail?.rarity ?? "",
@@ -82,12 +84,12 @@ export function InventoryItemDrawer(props: {
     try {
       await props.onSave(patch);
     } catch (cause) {
-      setMoveError(cause instanceof Error ? cause.message : "Unable to save item.");
+      setMoveError(cause instanceof Error ? cause.message : t("characterInventoryDrawer.unableToSaveItem"));
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
-  }, [props]);
+  }, [props, t]);
 
   const hasAnyDetails = Boolean(
     draft.rarity || draft.type || draft.description || draft.weight != null || draft.value != null ||
@@ -128,20 +130,20 @@ export function InventoryItemDrawer(props: {
       title={
         <>
           <div style={{ fontWeight: 900, fontSize: "var(--fs-title)", color: C.text }}>{props.item.name}</div>
-          <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginTop: 4 }}>{props.subtitle ?? "Player-owned copy. Edits here affect only this character."}</div>
+          <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginTop: 4 }}>{props.subtitle ?? t("characterInventoryDrawer.playerOwnedCopySubtitle")}</div>
         </>
       }
       footer={props.readOnly ? undefined :
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           {props.editMode ? (
             <>
-              <Button type="button" variant="ghost" disabled={saving} onClick={props.onCancelEdit}>Cancel</Button>
+              <Button type="button" variant="ghost" disabled={saving} onClick={props.onCancelEdit}>{t("characterInventoryDrawer.cancelButton")}</Button>
               <Button type="button" variant="primary" disabled={saving} onClick={() => { void handleSave(); }}>
-                {saving ? "Saving…" : "Save"}
+                {saving ? t("characterInventoryDrawer.savingButton") : t("characterInventoryDrawer.saveButton")}
               </Button>
             </>
           ) : (
-            <Button type="button" variant="primary" onClick={props.onStartEdit}>Edit</Button>
+            <Button type="button" variant="primary" onClick={props.onStartEdit}>{t("characterInventoryDrawer.editButton")}</Button>
           )}
         </div>
       }
@@ -150,13 +152,13 @@ export function InventoryItemDrawer(props: {
           {moveError ? <div role="alert" style={{ color: C.red, fontSize: "var(--fs-small)" }}>{moveError}</div> : null}
           {getEquipState(props.item) === "backpack" && props.showContainerControl !== false ? (
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 8, padding: "10px 12px", border: `1px solid ${C.panelBorder}`, borderRadius: 12, background: "rgba(255,255,255,0.03)" }}>
-              <div style={sectionLabel}>Container</div>
+              <div style={sectionLabel}>{t("characterInventoryDrawer.containerLabel")}</div>
               <Select
                 value={currentContainerId}
                 onChange={(e) => {
                   setMoveError(null);
                   void props.onMoveToContainer(e.target.value).catch((cause) =>
-                    setMoveError(cause instanceof Error ? cause.message : "Couldn't move this item. Try again."),
+                    setMoveError(cause instanceof Error ? cause.message : t("characterInventoryDrawer.moveItemError")),
                   );
                 }}
                 style={{ width: "100%" }}
@@ -184,11 +186,11 @@ export function InventoryItemDrawer(props: {
               />
             </fieldset>
           ) : props.busy ? (
-            <div style={{ color: C.muted, padding: "8px 2px" }}>Loading...</div>
+            <div style={{ color: C.muted, padding: "8px 2px" }}>{t("characterInventoryDrawer.loadingText")}</div>
           ) : hasAnyDetails ? (
             <ReadFields draft={draft} item={props.item} source={props.detail?.source} ruleset={props.detail?.ruleset} isWeaponLike={isWeaponLike} isArmorLike={isArmorLike} isMeleeWeaponLike={isMeleeWeaponLike} accentColor={props.accentColor} onChargesChange={(charges) => submit({ charges })} onSave={submit} />
           ) : (
-            <div style={{ border: `1px solid ${C.panelBorder}`, borderRadius: 12, padding: 14, color: C.muted, minHeight: 96, display: "flex", alignItems: "center" }}>No details yet. Use Edit to add player-specific notes or item data.</div>
+            <div style={{ border: `1px solid ${C.panelBorder}`, borderRadius: 12, padding: 14, color: C.muted, minHeight: 96, display: "flex", alignItems: "center" }}>{t("characterInventoryDrawer.noDetailsYet")}</div>
           )}
         </div>
     </RightDrawer>
@@ -229,33 +231,40 @@ type EditFieldsProps = {
 };
 
 function EditFields({ draft, setDraft, isWeaponLike, isArmorLike, isMeleeWeaponLike, canEnableAttuned, canDesignatePactWeapon, chargesMax, onSaveCharges, accentColor }: EditFieldsProps) {
+  const { t } = useTranslation();
   return (
     <>
-      <Field label="Title"><input value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} placeholder="Item name" style={fullInput} /></Field>
+      <Field label={t("characterInventoryDrawer.titleFieldLabel")}><input value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} placeholder={t("characterInventoryDrawer.itemNamePlaceholder")} style={fullInput} /></Field>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <Field label="Rarity">
+        <Field label={t("characterInventoryDrawer.rarityFieldLabel")}>
           <Select value={draft.rarity} onChange={(e) => setDraft((d) => ({ ...d, rarity: e.target.value }))} style={fullInput}>
-            <option value="">None</option><option value="common">Common</option><option value="uncommon">Uncommon</option><option value="rare">Rare</option><option value="very rare">Very Rare</option><option value="legendary">Legendary</option><option value="artifact">Artifact</option>
+            <option value="">{t("characterInventoryDrawer.rarityNone")}</option>
+            <option value="common">{t("characterInventoryDrawer.rarityCommon")}</option>
+            <option value="uncommon">{t("characterInventoryDrawer.rarityUncommon")}</option>
+            <option value="rare">{t("characterInventoryDrawer.rarityRare")}</option>
+            <option value="very rare">{t("characterInventoryDrawer.rarityVeryRare")}</option>
+            <option value="legendary">{t("characterInventoryDrawer.rarityLegendary")}</option>
+            <option value="artifact">{t("characterInventoryDrawer.rarityArtifact")}</option>
           </Select>
         </Field>
-        <Field label="Weight"><input type="number" value={draft.weight ?? ""} onChange={(e) => setDraft((d) => ({ ...d, weight: e.target.value === "" ? null : Number(e.target.value) }))} placeholder="Weight" style={fullInput} /></Field>
-        <Field label="Value"><input type="number" value={draft.value ?? ""} onChange={(e) => setDraft((d) => ({ ...d, value: e.target.value === "" ? null : Number(e.target.value) }))} placeholder="Value" style={fullInput} /></Field>
-        {isWeaponLike ? <Field label="Damage 1"><input value={draft.dmg1} onChange={(e) => setDraft((d) => ({ ...d, dmg1: e.target.value }))} style={fullInput} /></Field> : null}
-        {isWeaponLike ? <Field label="Damage 2"><input value={draft.dmg2} onChange={(e) => setDraft((d) => ({ ...d, dmg2: e.target.value }))} style={fullInput} /></Field> : null}
-        {isWeaponLike ? <Field label="Damage Type"><input value={draft.dmgType} onChange={(e) => setDraft((d) => ({ ...d, dmgType: e.target.value }))} style={fullInput} /></Field> : null}
-        {isWeaponLike ? <Field label="Properties"><input value={draft.properties.join(", ")} onChange={(e) => setDraft((d) => ({ ...d, properties: e.target.value.split(",").map((p: string) => p.trim()).filter(Boolean) }))} style={fullInput} /></Field> : null}
-        {isArmorLike ? <Field label="Armor Class"><input type="number" value={draft.ac ?? ""} onChange={(e) => setDraft((d) => ({ ...d, ac: e.target.value === "" ? null : Number(e.target.value) }))} style={fullInput} /></Field> : null}
-        {(chargesMax ?? 0) > 0 ? <Field label="Max Charges"><input type="number" min={0} value={chargesMax ?? ""} onChange={async (e) => { const v = e.target.value === "" ? null : Number(e.target.value); await onSaveCharges(v); }} placeholder="0" style={fullInput} /></Field> : null}
+        <Field label={t("characterInventoryDrawer.weightFieldLabel")}><input type="number" value={draft.weight ?? ""} onChange={(e) => setDraft((d) => ({ ...d, weight: e.target.value === "" ? null : Number(e.target.value) }))} placeholder={t("characterInventoryDrawer.weightPlaceholder")} style={fullInput} /></Field>
+        <Field label={t("characterInventoryDrawer.valueFieldLabel")}><input type="number" value={draft.value ?? ""} onChange={(e) => setDraft((d) => ({ ...d, value: e.target.value === "" ? null : Number(e.target.value) }))} placeholder={t("characterInventoryDrawer.valuePlaceholder")} style={fullInput} /></Field>
+        {isWeaponLike ? <Field label={t("characterInventoryDrawer.damage1FieldLabel")}><input value={draft.dmg1} onChange={(e) => setDraft((d) => ({ ...d, dmg1: e.target.value }))} style={fullInput} /></Field> : null}
+        {isWeaponLike ? <Field label={t("characterInventoryDrawer.damage2FieldLabel")}><input value={draft.dmg2} onChange={(e) => setDraft((d) => ({ ...d, dmg2: e.target.value }))} style={fullInput} /></Field> : null}
+        {isWeaponLike ? <Field label={t("characterInventoryDrawer.damageTypeFieldLabel")}><input value={draft.dmgType} onChange={(e) => setDraft((d) => ({ ...d, dmgType: e.target.value }))} style={fullInput} /></Field> : null}
+        {isWeaponLike ? <Field label={t("characterInventoryDrawer.propertiesFieldLabel")}><input value={draft.properties.join(", ")} onChange={(e) => setDraft((d) => ({ ...d, properties: e.target.value.split(",").map((p: string) => p.trim()).filter(Boolean) }))} style={fullInput} /></Field> : null}
+        {isArmorLike ? <Field label={t("characterInventoryDrawer.armorClassFieldLabel")}><input type="number" value={draft.ac ?? ""} onChange={(e) => setDraft((d) => ({ ...d, ac: e.target.value === "" ? null : Number(e.target.value) }))} style={fullInput} /></Field> : null}
+        {(chargesMax ?? 0) > 0 ? <Field label={t("characterInventoryDrawer.maxChargesFieldLabel")}><input type="number" min={0} value={chargesMax ?? ""} onChange={async (e) => { const v = e.target.value === "" ? null : Number(e.target.value); await onSaveCharges(v); }} placeholder="0" style={fullInput} /></Field> : null}
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <TogglePill active={draft.magic} label="Magic" color={C.colorMagic} onClick={() => setDraft((d) => ({ ...d, magic: !d.magic }))} />
-        {draft.attunement ? <TogglePill active={draft.attuned} label="Attuned" color={accentColor} disabled={!draft.attuned && !canEnableAttuned} onClick={() => setDraft((d) => ({ ...d, attuned: !d.attuned }))} /> : null}
-        {canDesignatePactWeapon ? <TogglePill active={draft.pactWeapon} label="Pact Weapon" color={C.colorPinkRed} onClick={() => setDraft((d) => ({ ...d, pactWeapon: !d.pactWeapon }))} /> : null}
-        {isMeleeWeaponLike ? <TogglePill active={draft.silvered} label="Silvered" color="#cbd5e1" onClick={() => setDraft((d) => ({ ...d, silvered: !d.silvered }))} /> : null}
-        {isArmorLike ? <TogglePill active={draft.stealthDisadvantage} label="Stealth Disadvantage" color={C.red} onClick={() => setDraft((d) => ({ ...d, stealthDisadvantage: !d.stealthDisadvantage }))} /> : null}
+        <TogglePill active={draft.magic} label={t("characterInventoryDrawer.magicToggleLabel")} color={C.colorMagic} onClick={() => setDraft((d) => ({ ...d, magic: !d.magic }))} />
+        {draft.attunement ? <TogglePill active={draft.attuned} label={t("characterInventoryDrawer.attunedToggleLabel")} color={accentColor} disabled={!draft.attuned && !canEnableAttuned} onClick={() => setDraft((d) => ({ ...d, attuned: !d.attuned }))} /> : null}
+        {canDesignatePactWeapon ? <TogglePill active={draft.pactWeapon} label={t("characterInventoryDrawer.pactWeaponToggleLabel")} color={C.colorPinkRed} onClick={() => setDraft((d) => ({ ...d, pactWeapon: !d.pactWeapon }))} /> : null}
+        {isMeleeWeaponLike ? <TogglePill active={draft.silvered} label={t("characterInventoryDrawer.silveredToggleLabel")} color="#cbd5e1" onClick={() => setDraft((d) => ({ ...d, silvered: !d.silvered }))} /> : null}
+        {isArmorLike ? <TogglePill active={draft.stealthDisadvantage} label={t("characterInventoryDrawer.stealthDisadvantageToggleLabel")} color={C.red} onClick={() => setDraft((d) => ({ ...d, stealthDisadvantage: !d.stealthDisadvantage }))} /> : null}
       </div>
-      {draft.attunement && !canEnableAttuned ? <div style={{ fontSize: "var(--fs-small)", color: C.red }}>You can have no more than 3 attuned items at a time.</div> : null}
-      <Field label="Text"><textarea value={draft.description} onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))} placeholder="Description" rows={12} style={{ ...fullInput, resize: "vertical", minHeight: 240, fontFamily: "inherit", lineHeight: 1.5 }} /></Field>
+      {draft.attunement && !canEnableAttuned ? <div style={{ fontSize: "var(--fs-small)", color: C.red }}>{t("characterInventoryDrawer.attunementLimitWarning")}</div> : null}
+      <Field label={t("characterInventoryDrawer.textFieldLabel")}><textarea value={draft.description} onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))} placeholder={t("characterInventoryDrawer.descriptionPlaceholder")} rows={12} style={{ ...fullInput, resize: "vertical", minHeight: 240, fontFamily: "inherit", lineHeight: 1.5 }} /></Field>
     </>
   );
 }
@@ -295,36 +304,37 @@ type ReadFieldsProps = {
 };
 
 function ReadFields({ draft, item, source, ruleset, isWeaponLike, isArmorLike, isMeleeWeaponLike, accentColor, onChargesChange, onSave }: ReadFieldsProps) {
+  const { t } = useTranslation();
   return (
     <>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {draft.magic ? <Tag label="Magic" color={C.colorMagic} /> : null}
-        {draft.attunement && !draft.attuned ? <Tag label="Requires Attunement" color={accentColor} /> : null}
-        {draft.attuned ? <Tag label="Attuned" color={accentColor} /> : null}
-        {draft.pactWeapon ? <Tag label="Pact Weapon" color={C.colorPinkRed} /> : null}
-        {isMeleeWeaponLike && draft.silvered ? <Tag label="Silvered" color="#cbd5e1" /> : null}
+        {draft.magic ? <Tag label={t("characterInventoryDrawer.magicToggleLabel")} color={C.colorMagic} /> : null}
+        {draft.attunement && !draft.attuned ? <Tag label={t("characterInventoryDrawer.requiresAttunementTag")} color={accentColor} /> : null}
+        {draft.attuned ? <Tag label={t("characterInventoryDrawer.attunedToggleLabel")} color={accentColor} /> : null}
+        {draft.pactWeapon ? <Tag label={t("characterInventoryDrawer.pactWeaponToggleLabel")} color={C.colorPinkRed} /> : null}
+        {isMeleeWeaponLike && draft.silvered ? <Tag label={t("characterInventoryDrawer.silveredToggleLabel")} color="#cbd5e1" /> : null}
         {draft.rarity ? <Tag label={titleCase(draft.rarity)} color={inventoryRarityColor(draft.rarity)} /> : null}
         {draft.type ? <Tag label={draft.type} color={C.muted} /> : null}
         {isArmorLike && draft.stealthDisadvantage ? <Tag label="D" color={C.colorPinkRed} /> : null}
       </div>
       {((isWeaponLike && (draft.dmg1 || draft.dmg2 || draft.dmgType || draft.properties.length > 0)) || draft.weight != null || draft.value != null || (isArmorLike && (draft.ac != null || draft.stealthDisadvantage))) ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
-          {isArmorLike && draft.ac != null ? <Stat label="Armor Class" value={String(draft.ac)} /> : null}
-          {isWeaponLike && draft.dmg1 ? <Stat label="One-Handed Damage" value={draft.dmg1} /> : null}
-          {isWeaponLike && draft.dmg2 ? <Stat label="Two-Handed Damage" value={draft.dmg2} /> : null}
-          {isWeaponLike && draft.dmgType ? <Stat label="Damage Type" value={formatItemDamageType(draft.dmgType) ?? draft.dmgType} /> : null}
-          {draft.weight != null ? <Stat label="Weight" value={`${draft.weight} lb`} /> : null}
-          {draft.value != null ? <Stat label="Value" value={`${draft.value} gp`} /> : null}
-          {isWeaponLike && draft.properties.length > 0 ? <Stat label="Properties" value={formatItemProperties(draft.properties)} /> : null}
-          {isArmorLike && draft.stealthDisadvantage ? <Stat label="Stealth" value="D" /> : null}
+          {isArmorLike && draft.ac != null ? <Stat label={t("characterInventoryDrawer.armorClassFieldLabel")} value={String(draft.ac)} /> : null}
+          {isWeaponLike && draft.dmg1 ? <Stat label={t("characterInventoryDrawer.oneHandedDamageStatLabel")} value={draft.dmg1} /> : null}
+          {isWeaponLike && draft.dmg2 ? <Stat label={t("characterInventoryDrawer.twoHandedDamageStatLabel")} value={draft.dmg2} /> : null}
+          {isWeaponLike && draft.dmgType ? <Stat label={t("characterInventoryDrawer.damageTypeFieldLabel")} value={formatItemDamageType(draft.dmgType) ?? draft.dmgType} /> : null}
+          {draft.weight != null ? <Stat label={t("characterInventoryDrawer.weightFieldLabel")} value={`${draft.weight} ${t("units.lb", { ns: "shared" })}`} /> : null}
+          {draft.value != null ? <Stat label={t("characterInventoryDrawer.valueFieldLabel")} value={`${draft.value} ${t("units.gp", { ns: "shared" })}`} /> : null}
+          {isWeaponLike && draft.properties.length > 0 ? <Stat label={t("characterInventoryDrawer.propertiesFieldLabel")} value={formatItemProperties(draft.properties)} /> : null}
+          {isArmorLike && draft.stealthDisadvantage ? <Stat label={t("characterInventoryDrawer.stealthStatLabel")} value="D" /> : null}
         </div>
       ) : null}
       {(item.chargesMax ?? 0) > 0 ? <ChargeBoxes item={item} accentColor={accentColor} onChargesChange={onChargesChange} /> : null}
       <CharacterStoredSpellManager item={item} ruleset={ruleset} accentColor={accentColor} onSave={onSave} />
-      <div style={{ ...inventoryPickerDetailStyle, minHeight: 60 }}>{draft.description || <span style={{ color: C.muted }}>No description.</span>}</div>
+      <div style={{ ...inventoryPickerDetailStyle, minHeight: 60 }}>{draft.description || <span style={{ color: C.muted }}>{t("characterInventoryDrawer.noDescription")}</span>}</div>
       {source ? (
         <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
-          Source: {source} · Ruleset: {ruleset ?? "Unknown"}
+          {t("characterInventoryDrawer.sourceRulesetLine", { source, ruleset: ruleset ?? t("characterInventoryDrawer.unknownRuleset") })}
         </div>
       ) : null}
     </>
@@ -332,9 +342,10 @@ function ReadFields({ draft, item, source, ruleset, isWeaponLike, isArmorLike, i
 }
 
 function ChargeBoxes({ item, accentColor, onChargesChange }: { item: InventoryItem; accentColor: string; onChargesChange: (charges: number) => void | Promise<void> }) {
+  const { t } = useTranslation();
   const max = item.chargesMax!;
   const cur = item.charges ?? max;
-  return <div><div style={sectionLabel}>Charges</div><div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>{Array.from({ length: max }).map((_, i) => { const filled = i < cur; return <button key={i} title={filled ? "Expend charge" : "Regain charge"} onClick={() => onChargesChange(filled ? cur - 1 : i + 1)} style={{ width: 24, height: 24, borderRadius: 4, border: `2px solid ${filled ? accentColor : "rgba(255,255,255,0.2)"}`, background: filled ? `${accentColor}33` : "transparent", cursor: "pointer", padding: 0 }} />; })}<span style={{ fontSize: "var(--fs-small)", color: C.muted, marginLeft: 4 }}>{cur} / {max}</span></div></div>;
+  return <div><div style={sectionLabel}>{t("characterInventoryDrawer.chargesLabel")}</div><div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>{Array.from({ length: max }).map((_, i) => { const filled = i < cur; return <button key={i} title={filled ? t("characterInventoryDrawer.expendChargeTitle") : t("characterInventoryDrawer.regainChargeTitle")} onClick={() => onChargesChange(filled ? cur - 1 : i + 1)} style={{ width: 24, height: 24, borderRadius: 4, border: `2px solid ${filled ? accentColor : "rgba(255,255,255,0.2)"}`, background: filled ? `${accentColor}33` : "transparent", cursor: "pointer", padding: 0 }} />; })}<span style={{ fontSize: "var(--fs-small)", color: C.muted, marginLeft: 4 }}>{cur} / {max}</span></div></div>;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

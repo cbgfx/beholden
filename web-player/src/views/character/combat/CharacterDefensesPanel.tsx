@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useState } from "react";
 import { C } from "@/lib/theme";
 import { CollapsiblePanel } from "@/views/character/CharacterViewParts";
@@ -23,6 +24,7 @@ interface DefenseRowProps {
 }
 
 function DefenseRow({ label, color, items, customItems, options, onAdd, onRemove, accentColor }: DefenseRowProps) {
+  const translateUi = useUiTranslation("playerUi");
   const [adding, setAdding] = useState(false);
   const allItems = Array.from(new Set([...items, ...customItems]));
 
@@ -38,7 +40,7 @@ function DefenseRow({ label, color, items, customItems, options, onAdd, onRemove
           <button
             onClick={() => setAdding(true)}
             style={{ all: "unset", cursor: "pointer", fontSize: "var(--fs-small)", color: accentColor, fontWeight: 800, lineHeight: 1 }}
-            title={`Add ${label.toLowerCase()}`}
+            title={translateUi("Add {{value1}}", { value1: label.toLowerCase() })}
           >
             +
           </button>
@@ -64,7 +66,7 @@ function DefenseRow({ label, color, items, customItems, options, onAdd, onRemove
             }}
             onBlur={() => setAdding(false)}
           >
-            <option value="" disabled>Select type…</option>
+            <option value="" disabled>{translateUi("Select type…")}</option>
             {remaining.map((opt) => (
               <option key={opt} value={opt}>{opt}</option>
             ))}
@@ -72,7 +74,7 @@ function DefenseRow({ label, color, items, customItems, options, onAdd, onRemove
         </div>
       )}
       {allItems.length === 0 ? (
-        <span style={{ fontSize: "var(--fs-small)", color: C.muted, fontStyle: "italic" }}>None</span>
+        <span style={{ fontSize: "var(--fs-small)", color: C.muted, fontStyle: "italic" }}>{translateUi("None")}</span>
       ) : (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
           {allItems.map((item) => {
@@ -95,7 +97,7 @@ function DefenseRow({ label, color, items, customItems, options, onAdd, onRemove
                   <button
                     onClick={() => onRemove(item)}
                     style={{ all: "unset", cursor: "pointer", fontSize: "var(--fs-tiny)", color: C.muted, lineHeight: 1, marginLeft: 2 }}
-                    title="Remove"
+                    title={translateUi("Remove")}
                   >
                     ×
                   </button>
@@ -116,13 +118,14 @@ interface ReadonlyTagRowProps {
 }
 
 function ReadonlyTagRow({ label, color, items }: ReadonlyTagRowProps) {
+  const translateUi = useUiTranslation("playerUi");
   return (
     <div>
       <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 900, letterSpacing: "0.07em", textTransform: "uppercase", color: C.muted, marginBottom: 5 }}>
         {label}
       </div>
       {items.length === 0 ? (
-        <span style={{ fontSize: "var(--fs-small)", color: C.muted, fontStyle: "italic" }}>None</span>
+        <span style={{ fontSize: "var(--fs-small)", color: C.muted, fontStyle: "italic" }}>{translateUi("None")}</span>
       ) : (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
           {items.map((item) => (
@@ -172,6 +175,7 @@ export function CharacterDefensesPanel({
   onCustomResistancesChange,
   onCustomImmunitiesChange,
 }: CharacterDefensesPanelProps) {
+  const translateUi = useUiTranslation("playerUi");
   const hasAnything = resistances.length > 0 || damageImmunities.length > 0 || conditionImmunities.length > 0 ||
     senses.length > 0 || customResistances.length > 0 || customImmunities.length > 0;
 
@@ -180,7 +184,7 @@ export function CharacterDefensesPanel({
 
   return (
     <CollapsiblePanel
-      title="Defenses"
+      title={translateUi("Defenses")}
       color={accentColor}
       storageKey={PANEL_IDS.defenses}
       defaultOpen={hasAnything}
@@ -190,7 +194,7 @@ export function CharacterDefensesPanel({
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <DefenseRow
-          label="Resistances"
+          label={translateUi("Resistances")}
           color="#34d399"
           items={resistances}
           customItems={customResistances}
@@ -200,7 +204,7 @@ export function CharacterDefensesPanel({
           onRemove={(v) => onCustomResistancesChange(customResistances.filter((x) => x !== v))}
         />
         <DefenseRow
-          label="Damage Immunities"
+          label={translateUi("Damage Immunities")}
           color={C.colorRitual}
           items={damageImmunities}
           customItems={customImmunities}
@@ -211,14 +215,14 @@ export function CharacterDefensesPanel({
         />
         {conditionImmunities.length > 0 && (
           <ReadonlyTagRow
-            label="Condition Immunities"
+            label={translateUi("Condition Immunities")}
             color={C.colorOrange}
             items={conditionImmunities}
           />
         )}
         {senses.length > 0 && (
           <ReadonlyTagRow
-            label="Senses"
+            label={translateUi("Senses")}
             color={C.colorGold}
             items={senses}
           />

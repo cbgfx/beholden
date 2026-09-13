@@ -1,4 +1,6 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { C, withAlpha } from "@/lib/theme";
 import { titleCase } from "@beholden/shared/domain/text/titleCase";
 import { api } from "@/services/api";
@@ -21,6 +23,8 @@ export function InventoryItemPickerModal(props: {
   onClose: () => void;
   onAdd: (payload?: InventoryPickerPayload) => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
+  const { t } = useTranslation();
   const { isOpen, onClose } = props;
   const {
     q, setQ,
@@ -137,36 +141,36 @@ export function InventoryItemPickerModal(props: {
       <div style={{ width: "min(980px, 100%)", height: "min(680px, calc(100vh - 40px))", background: C.bg, border: `1px solid ${C.panelBorder}`, borderRadius: 16, boxShadow: "0 30px 80px rgba(0,0,0,0.45)", display: "grid", gridTemplateColumns: "minmax(320px, 380px) minmax(0, 1fr)", gap: 12, padding: 12, overflow: "hidden" }}>
         <div style={inventoryPickerColumnStyle}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-            <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: C.colorGold }}>Browse Items</div>
-            <button type="button" onClick={() => { setCreateMode((v) => !v); setSelectedId(null); }} style={{ border: `1px solid ${createMode ? props.accentColor : C.panelBorder}`, background: createMode ? `${props.accentColor}22` : "transparent", color: createMode ? props.accentColor : C.muted, borderRadius: 8, padding: "6px 10px", fontSize: "var(--fs-small)", fontWeight: 700, cursor: "pointer" }}>{createMode ? "Browse" : "Create New"}</button>
+            <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: C.colorGold }}>{t("characterInventoryPickerModal.browseItemsTitle")}</div>
+            <button type="button" onClick={() => { setCreateMode((v) => !v); setSelectedId(null); }} style={{ border: `1px solid ${createMode ? props.accentColor : C.panelBorder}`, background: createMode ? `${props.accentColor}22` : "transparent", color: createMode ? props.accentColor : C.muted, borderRadius: 8, padding: "6px 10px", fontSize: "var(--fs-small)", fontWeight: 700, cursor: "pointer" }}>{createMode ? t("characterInventoryPickerModal.browseButtonLabel") : t("characterInventoryPickerModal.createNewButtonLabel")}</button>
           </div>
 
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search items..." style={{ ...inputStyle, flex: "0 0 auto", width: "100%" }} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("characterInventoryPickerModal.searchPlaceholder")} style={{ ...inputStyle, flex: "0 0 auto", width: "100%" }} />
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <Select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} style={{ width: "100%" }}>{rarityOptions.map((r) => <option key={r} value={r}>{r === "all" ? "All Rarities" : titleCase(r)}</option>)}</Select>
-            <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ width: "100%" }}>{typeOptions.map((t) => <option key={t} value={t}>{t === "all" ? "All Types" : t}</option>)}</Select>
+            <Select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} style={{ width: "100%" }}>{rarityOptions.map((r) => <option key={r} value={r}>{r === "all" ? t("characterInventoryPickerModal.allRaritiesOption") : titleCase(r)}</option>)}</Select>
+            <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ width: "100%" }}>{typeOptions.map((opt) => <option key={opt} value={opt}>{opt === "all" ? t("characterInventoryPickerModal.allTypesOption") : opt}</option>)}</Select>
           </div>
 
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <button type="button" onClick={() => setFilterAttunement(!filterAttunement)} style={togglePillStyle(filterAttunement, props.accentColor, C.panelBorder, C.muted)}>Attunement</button>
-            <button type="button" onClick={() => setFilterMagic(!filterMagic)} style={togglePillStyle(filterMagic, props.accentColor, C.panelBorder, C.muted)}>Magic</button>
-            {hasActiveFilters ? <button type="button" onClick={clearFilters} style={togglePillStyle(false, props.accentColor, C.panelBorder, C.muted)}>Clear</button> : null}
+            <button type="button" onClick={() => setFilterAttunement(!filterAttunement)} style={togglePillStyle(filterAttunement, props.accentColor, C.panelBorder, C.muted)}>{t("characterInventoryPickerModal.attunementFilterLabel")}</button>
+            <button type="button" onClick={() => setFilterMagic(!filterMagic)} style={togglePillStyle(filterMagic, props.accentColor, C.panelBorder, C.muted)}>{t("characterInventoryPickerModal.magicFilterLabel")}</button>
+            {hasActiveFilters ? <button type="button" onClick={clearFilters} style={togglePillStyle(false, props.accentColor, C.panelBorder, C.muted)}>{t("characterInventoryPickerModal.clearFilterLabel")}</button> : null}
           </div>
 
           <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
-            {busy ? "Loading..." : error ? error : totalCount === rows.length ? `${rows.length} items` : `${rows.length} of ${totalCount}`}
+            {busy ? t("characterInventoryPickerModal.loadingText") : error ? error : totalCount === rows.length ? t("characterInventoryPickerModal.itemsCount", { count: rows.length }) : t("characterInventoryPickerModal.itemsCountOfTotal", { count: rows.length, total: totalCount })}
           </div>
 
           <div ref={vl.scrollRef} onScroll={vl.onScroll} style={inventoryPickerListStyle}>
             <div style={{ height: padTop }} />
             {!busy && error ? <div style={{ padding: 12, color: C.red }}>{error}</div> : null}
-            {!busy && rows.length === 0 ? <div style={{ padding: 12, color: C.muted }}>No items found.</div> : null}
+            {!busy && rows.length === 0 ? <div style={{ padding: 12, color: C.muted }}>{t("characterInventoryPickerModal.noItemsFound")}</div> : null}
             {rows.slice(start, end).map((item) => (
               <ItemListRow
                 key={item.id}
                 name={item.name}
-                subtitle={[item.rarity ? titleCase(item.rarity) : null, item.type, item.attunement ? "Attunement" : null].filter(Boolean).join(" • ") || null}
+                subtitle={[item.rarity ? titleCase(item.rarity) : null, item.type, item.attunement ? t("characterInventoryPickerModal.attunementFilterLabel") : null].filter(Boolean).join(" • ") || null}
                 rarityColor={item.rarity ? inventoryRarityColor(item.rarity) : null}
                 magic={!!item.magic}
                 magicColor={C.colorMagic}
@@ -186,7 +190,7 @@ export function InventoryItemPickerModal(props: {
 
         <div style={inventoryPickerColumnStyle}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ fontSize: "var(--fs-medium)", fontWeight: 800, color: C.text }}>{createMode ? "Create Item" : detail?.name ?? "Select an item"}</div>
+            <div style={{ fontSize: "var(--fs-medium)", fontWeight: 800, color: C.text }}>{createMode ? translateUi("Create Item") : detail?.name ?? "Select an item"}</div>
             <div style={{ flex: 1 }} />
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <IconButton variant="ghost" size="sm" onClick={() => setQty((v) => Math.max(1, v - 1))}>-</IconButton>
@@ -208,34 +212,34 @@ export function InventoryItemPickerModal(props: {
               }}
               disabled={createMode ? !customName.trim() : !detail}
               style={{ padding: "6px 14px", fontSize: "var(--fs-subtitle)", borderRadius: 7 }}
-            >Add</Button>
-            <Button type="button" variant="ghost" onClick={props.onClose} style={{ padding: "6px 14px", fontSize: "var(--fs-subtitle)", borderRadius: 7 }}>Close</Button>
+            >{translateUi("Add")}</Button>
+            <Button type="button" variant="ghost" onClick={props.onClose} style={{ padding: "6px 14px", fontSize: "var(--fs-subtitle)", borderRadius: 7 }}>{translateUi("Close")}</Button>
           </div>
 
           {createMode ? (
             <>
-              <input value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder="Item name" style={{ ...inputStyle, flex: "0 0 auto", width: "100%" }} />
+              <input value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder={translateUi("Item name")} style={{ ...inputStyle, flex: "0 0 auto", width: "100%" }} />
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 <Select value={customRarity} onChange={(e) => setCustomRarity(e.target.value)} style={{ width: "100%" }}>
-                  <option value="">No rarity</option>
+                  <option value="">{translateUi("No rarity")}</option>
                   {rarityOptions.filter((r) => r !== "all").map((r) => <option key={r} value={r}>{titleCase(r)}</option>)}
                 </Select>
                 <Select value={customType} onChange={(e) => setCustomType(e.target.value)} style={{ width: "100%" }}>
-                  <option value="">No type</option>
+                  <option value="">{translateUi("No type")}</option>
                   {typeOptions.filter((t) => t !== "all").map((t) => <option key={t} value={t}>{t}</option>)}
                 </Select>
               </div>
               <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
-                <label style={inventoryCheckboxLabel}><input type="checkbox" checked={customAttunement} onChange={(e) => setCustomAttunement(e.target.checked)} />Requires Attunement</label>
-                <label style={inventoryCheckboxLabel}><input type="checkbox" checked={customMagic} onChange={(e) => setCustomMagic(e.target.checked)} />Magic Item</label>
+                <label style={inventoryCheckboxLabel}><input type="checkbox" checked={customAttunement} onChange={(e) => setCustomAttunement(e.target.checked)} />{translateUi("Requires Attunement")}</label>
+                <label style={inventoryCheckboxLabel}><input type="checkbox" checked={customMagic} onChange={(e) => setCustomMagic(e.target.checked)} />{translateUi("Magic Item")}</label>
               </div>
-              <textarea value={customDescription} onChange={(e) => setCustomDescription(e.target.value)} placeholder="Description or notes..." rows={12} style={{ ...inputStyle, flex: "0 0 auto", width: "100%", resize: "vertical", minHeight: 220, fontFamily: "inherit", lineHeight: 1.5 }} />
+              <textarea value={customDescription} onChange={(e) => setCustomDescription(e.target.value)} placeholder={translateUi("Description or notes...")} rows={12} style={{ ...inputStyle, flex: "0 0 auto", width: "100%", resize: "vertical", minHeight: 220, fontFamily: "inherit", lineHeight: 1.5 }} />
             </>
           ) : detail ? (
             <>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {detail.magic ? <Tag label="Magic" color={C.colorMagic} /> : null}
-                {detail.attunement ? <Tag label="Attunement" color={props.accentColor} /> : null}
+                {detail.magic ? <Tag label={translateUi("Magic")} color={C.colorMagic} /> : null}
+                {detail.attunement ? <Tag label={translateUi("Attunement")} color={props.accentColor} /> : null}
                 {detail.rarity ? <Tag label={titleCase(detail.rarity)} color={inventoryRarityColor(detail.rarity)} /> : null}
                 {detail.type ? <Tag label={detail.type} color={C.muted} /> : null}
                 {hasStealthDisadvantage(detail) ? <Tag label="D" color={C.colorPinkRed} /> : null}
@@ -247,19 +251,19 @@ export function InventoryItemPickerModal(props: {
               ) : null}
               {(detail.dmg1 || detail.dmg2 || detail.dmgType || detail.weight != null || detail.value != null || detail.properties.length > 0) ? (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
-                  {detail.dmg1 ? <InventoryStat label="One-Handed Damage" value={detail.dmg1} /> : null}
-                  {detail.dmg2 ? <InventoryStat label="Two-Handed Damage" value={detail.dmg2} /> : null}
-                  {detail.dmgType ? <InventoryStat label="Damage Type" value={formatItemDamageType(detail.dmgType) ?? detail.dmgType} /> : null}
-                  {detail.weight != null ? <InventoryStat label="Weight" value={`${detail.weight} lb`} /> : null}
-                  {detail.value != null ? <InventoryStat label="Value" value={`${detail.value} gp`} /> : null}
-                  {hasStealthDisadvantage(detail) ? <InventoryStat label="Stealth" value="D" /> : null}
-                  {detail.properties.length > 0 ? <InventoryStat label="Properties" value={formatItemProperties(detail.properties)} /> : null}
+                  {detail.dmg1 ? <InventoryStat label={translateUi("One-Handed Damage")} value={detail.dmg1} /> : null}
+                  {detail.dmg2 ? <InventoryStat label={translateUi("Two-Handed Damage")} value={detail.dmg2} /> : null}
+                  {detail.dmgType ? <InventoryStat label={translateUi("Damage Type")} value={formatItemDamageType(detail.dmgType) ?? detail.dmgType} /> : null}
+                  {detail.weight != null ? <InventoryStat label={translateUi("Weight")} value={`${detail.weight} lb`} /> : null}
+                  {detail.value != null ? <InventoryStat label={translateUi("Value")} value={`${detail.value} gp`} /> : null}
+                  {hasStealthDisadvantage(detail) ? <InventoryStat label={translateUi("Stealth")} value="D" /> : null}
+                  {detail.properties.length > 0 ? <InventoryStat label={translateUi("Properties")} value={formatItemProperties(detail.properties)} /> : null}
                 </div>
               ) : null}
-              <div style={inventoryPickerDetailStyle}>{detailText || <span style={{ color: C.muted }}>No description.</span>}</div>
+              <div style={inventoryPickerDetailStyle}>{detailText || <span style={{ color: C.muted }}>{translateUi("No description.")}</span>}</div>
             </>
           ) : (
-            <div style={{ color: C.muted, lineHeight: 1.5 }}>Pick a compendium item on the left, or switch to <strong>Create New</strong> to add a custom entry.</div>
+            <div style={{ color: C.muted, lineHeight: 1.5 }}>{translateUi("Pick a compendium item on the left, or switch to")} <strong>{translateUi("Create New")}</strong> {translateUi("to add a custom entry.")}</div>
           )}
         </div>
       </div>

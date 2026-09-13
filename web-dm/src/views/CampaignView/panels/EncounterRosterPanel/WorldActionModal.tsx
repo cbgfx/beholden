@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Modal } from "@/components/overlay/Modal";
 import { Button } from "@/ui/Button";
@@ -10,6 +11,7 @@ export function WorldActionModal(props: {
   onClose: () => void;
   onAdd: (name: string, description?: string) => Promise<void> | void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const [name, setName] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [saving, setSaving] = React.useState(false);
@@ -33,19 +35,19 @@ export function WorldActionModal(props: {
   };
 
   return (
-    <Modal isOpen={props.isOpen} onClose={props.onClose} title="Add World Action" width={520} height="auto">
+    <Modal isOpen={props.isOpen} onClose={props.onClose} title={translateUi("Add World Action")} width={520} height="auto">
       <div style={{ display: "grid", gap: 14, padding: 18 }}>
         <label style={{ display: "grid", gap: 6, color: theme.colors.muted }}>
-          Name
-          <Input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Falling Meteors" />
+          {translateUi("Name")}
+          <Input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder={translateUi("Falling Meteors")} />
         </label>
         <label style={{ display: "grid", gap: 6, color: theme.colors.muted }}>
-          Description or reminder (optional)
-          <TextArea value={description} onChange={(event) => setDescription(event.target.value)} rows={6} placeholder="At the start of this turn..." />
+          {translateUi("Description or reminder (optional)")}
+          <TextArea value={description} onChange={(event) => setDescription(event.target.value)} rows={6} placeholder={translateUi("At the start of this turn...")} />
         </label>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <Button variant="ghost" onClick={props.onClose}>Cancel</Button>
-          <Button disabled={!name.trim() || saving} onClick={() => void submit()}>{saving ? "Adding..." : "Add World Action"}</Button>
+          <Button variant="ghost" onClick={props.onClose}>{translateUi("Cancel")}</Button>
+          <Button disabled={!name.trim() || saving} onClick={() => void submit()}>{saving ? translateUi("Adding...") : translateUi("Add World Action")}</Button>
         </div>
       </div>
     </Modal>

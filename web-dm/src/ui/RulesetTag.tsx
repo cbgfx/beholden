@@ -1,9 +1,11 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 export function RulesetTag({ ruleset }: { ruleset: "5e" | "5.5e" }) {
+  const translateUi = useUiTranslation("dmUi");
   const legacy = ruleset === "5e";
   const color = legacy ? "#a78bfa" : "#38bdf8";
   return (
     <span
-      title={legacy ? "D&D 5e (2014 rules)" : "D&D 5.5e (2024 rules)"}
+      title={legacy ? translateUi("D&D 5e (2014 rules)") : translateUi("D&D 5.5e (2024 rules)")}
       style={{
         display: "inline-flex",
         alignItems: "center",

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { theme, withAlpha } from "@/theme/theme";
 import { togglePillStyle } from "@beholden/shared/ui";
 import { Input } from "@/ui/Input";
@@ -29,19 +30,20 @@ export function MonsterPickerDetailPane(props: {
   attackOverrides: AttackOverridesByMonsterId;
   onChangeAttack: (actionName: string, patch: { toHit?: number; damage?: string; damageType?: string }) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const id = props.selectedMonsterId;
   const disabled = !id;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
       <div style={{ paddingBottom: 10 }}>
-        <Input value={props.label ?? ""} onChange={(e) => props.onChangeLabel(e.target.value)} placeholder="Label" disabled={disabled} />
+        <Input value={props.label ?? ""} onChange={(e) => props.onChangeLabel(e.target.value)} placeholder={translateUi("Label")} disabled={disabled} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5, paddingBottom: 10 }}>
         <div style={{ color: theme.colors.text, display: "grid", gridTemplateColumns: "auto 1fr", gap: 6, alignItems: "center" }}>
           <span style={{ fontWeight: 700 }}>
-            Armor Class{cleanDetail(props.acDetail) ? ` (${cleanDetail(props.acDetail)})` : ""}:
+            {translateUi("Armor Class")}{cleanDetail(props.acDetail) ? ` (${cleanDetail(props.acDetail)})` : ""}:
           </span>
           <Input
             value={props.ac ?? ""}
@@ -49,14 +51,14 @@ export function MonsterPickerDetailPane(props: {
               const next = splitLeadingNumberAndDetail(e.target.value);
               props.onChangeAc(next.numText, next.detail);
             }}
-            placeholder="AC"
+            placeholder={translateUi("AC")}
             disabled={disabled}
           />
         </div>
 
         <div style={{ color: theme.colors.text, display: "grid", gridTemplateColumns: "auto 1fr", gap: 6, alignItems: "center" }}>
           <span style={{ fontWeight: 700 }}>
-            Hit Points{cleanDetail(props.hpDetail) ? ` (${cleanDetail(props.hpDetail)})` : ""}:
+            {translateUi("Hit Points")}{cleanDetail(props.hpDetail) ? ` (${cleanDetail(props.hpDetail)})` : ""}:
           </span>
           <Input
             value={props.hp ?? ""}
@@ -64,7 +66,7 @@ export function MonsterPickerDetailPane(props: {
               const next = splitLeadingNumberAndDetail(e.target.value);
               props.onChangeHp(next.numText, next.detail);
             }}
-            placeholder="HP"
+            placeholder={translateUi("HP")}
             disabled={disabled}
           />
         </div>
@@ -94,7 +96,7 @@ export function MonsterPickerDetailPane(props: {
               cursor: disabled ? "not-allowed" : "pointer",
             }}
           >
-            Hostile
+            {translateUi("Hostile")}
           </button>
           <button
             type="button"
@@ -107,7 +109,7 @@ export function MonsterPickerDetailPane(props: {
               cursor: disabled ? "not-allowed" : "pointer",
             }}
           >
-            Friendly
+            {translateUi("Friendly")}
           </button>
         </div>
       </div>

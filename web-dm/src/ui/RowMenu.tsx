@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import { IconButton } from "@/ui/IconButton";
@@ -10,6 +11,7 @@ export type RowMenuItem = {
 };
 
 export function RowMenu(props: { items: RowMenuItem[] }) {
+  const translateUi = useUiTranslation("dmUi");
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -25,7 +27,7 @@ export function RowMenu(props: { items: RowMenuItem[] }) {
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
-      <IconButton title="More actions" onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }} variant="ghost">
+      <IconButton title={translateUi("More actions")} onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }} variant="ghost">
         <span style={{ fontWeight: 900, letterSpacing: 1, lineHeight: 1 }}>···</span>
       </IconButton>
 

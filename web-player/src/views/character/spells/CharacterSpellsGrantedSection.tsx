@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C } from "@/lib/theme";
 import { IconButton } from "@/ui/IconButton";
 import type { GrantedSpellCast, ResourceCounter } from "@/views/character/CharacterSheetTypes";
@@ -39,6 +40,7 @@ export function CharacterSpellsGrantedSection({
   onSelectSpell: (detail: FetchedSpellDetail, source: string) => void;
   onResourceChange?: (key: string, delta: number) => Promise<void> | void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   if (entries.length === 0) return null;
   return (
     <div style={{ marginBottom: 18 }}>
@@ -50,7 +52,7 @@ export function CharacterSpellsGrantedSection({
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span aria-hidden="true" style={spellSectionArrow(collapsed, accentColor)}>▼</span>
           <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, color: accentColor, textTransform: "uppercase", letterSpacing: 1 }}>
-            Granted Spells
+            {translateUi("Granted Spells")}
           </div>
         </div>
       </button>

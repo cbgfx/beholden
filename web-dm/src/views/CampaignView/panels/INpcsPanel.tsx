@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Panel } from "@/ui/Panel";
@@ -28,6 +29,7 @@ type Props = {
 };
 
 export function INpcsPanel(props: Props) {
+  const translateUi = useUiTranslation("dmUi");
   const navigate = useNavigate();
   const [isPickerOpen, setIsPickerOpen] = React.useState(false);
   const [binderChoiceOpen, setBinderChoiceOpen] = React.useState(false);
@@ -96,10 +98,10 @@ export function INpcsPanel(props: Props) {
   return (
     <Panel
       storageKey="campaign-inpcs"
-      title={`Important NPCs (${props.inpcs.length})`}
+      title={translateUi("Important NPCs ({{value1}})", { value1: props.inpcs.length })}
       actions={
         <div ref={addMenuRef} style={{ position: "relative" }}>
-          <IconButton title="Add Important NPC" onClick={beginAdd} disabled={!props.selectedCampaignId} variant="accent">
+          <IconButton title={translateUi("Add Important NPC")} onClick={beginAdd} disabled={!props.selectedCampaignId} variant="accent">
             <IconPlus />
           </IconButton>
           {binderChoiceOpen ? <div style={{
@@ -115,10 +117,10 @@ export function INpcsPanel(props: Props) {
             boxShadow: "0 14px 32px rgba(0,0,0,.7)",
           }}>
             <button type="button" onClick={() => { setBinderChoiceOpen(false); setImportOpen(true); }} style={addMenuItemStyle}>
-              Import from Binder
+              {translateUi("Import from Binder")}
             </button>
             <button type="button" onClick={() => { setBinderChoiceOpen(false); setCreateOpen(true); }} style={addMenuItemStyle}>
-              Create new Mortal
+              {translateUi("Create new Mortal")}
             </button>
           </div> : null}
         </div>
@@ -160,7 +162,7 @@ export function INpcsPanel(props: Props) {
                 primaryAction={
                   props.selectedEncounterId ? (
                     <IconButton
-                      title="Add to Encounter"
+                      title={translateUi("Add to Encounter")}
                       onClick={(e) => (e.stopPropagation(), props.onAddINpcToEncounter(i.id))}
                       variant="ghost"
                       size="sm"
@@ -170,18 +172,18 @@ export function INpcsPanel(props: Props) {
                   ) : null
                 }
                 menuItems={[
-                  { label: "Edit iNPC", onClick: () => props.onEditINpc(i.id) },
+                  { label: translateUi("Edit iNPC"), onClick: () => props.onEditINpc(i.id) },
                   ...(i.binderMortalId && props.binderId
-                    ? [{ label: "Binder", onClick: () => navigate(`/binder/${props.binderId}/mortals/${i.binderMortalId}`) }]
+                    ? [{ label: translateUi("Binder"), onClick: () => navigate(`/binder/${props.binderId}/mortals/${i.binderMortalId}`) }]
                     : []),
-                  { label: "Delete iNPC", danger: true, onClick: () => props.onDeleteINpc(i.id) },
+                  { label: translateUi("Delete iNPC"), danger: true, onClick: () => props.onDeleteINpc(i.id) },
                 ]}
               />
             );
           })}
         </div>
       ) : (
-        <div style={{ color: theme.colors.muted }}>No iNPCs yet.</div>
+        <div style={{ color: theme.colors.muted }}>{translateUi("No iNPCs yet.")}</div>
       )}
 
       <MonsterPickerModal
@@ -192,16 +194,16 @@ export function INpcsPanel(props: Props) {
           setIsPickerOpen(false);
         }}
       />
-      <Modal isOpen={importOpen} onClose={() => setImportOpen(false)} title="Import from Binder" width={560} height="auto">
+      <Modal isOpen={importOpen} onClose={() => setImportOpen(false)} title={translateUi("Import from Binder")} width={560} height="auto">
         <div style={{ display: "grid", gap: 10 }}>
-          <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search Binder NPCs…" autoFocus />
+          <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={translateUi("Search Binder NPCs…")} autoFocus />
           <div style={{ display: "grid", gap: 6, maxHeight: 420, overflowY: "auto" }}>
             {mortals.filter((row) => row.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).map((row) => (
               <button key={row.id} type="button" onClick={() => void importMortal(row.id)} style={{ padding: "11px 13px", border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.control, background: theme.colors.inputBg, color: theme.colors.text, textAlign: "left", cursor: "pointer", font: "inherit", fontWeight: 700 }}>
                 {row.name}
               </button>
             ))}
-            {!mortals.length ? <div style={{ color: theme.colors.muted, padding: 8 }}>Every Binder NPC is already in this campaign, or the Binder has no NPCs yet.</div> : null}
+            {!mortals.length ? <div style={{ color: theme.colors.muted, padding: 8 }}>{translateUi("Every Binder NPC is already in this campaign, or the Binder has no NPCs yet.")}</div> : null}
           </div>
         </div>
       </Modal>

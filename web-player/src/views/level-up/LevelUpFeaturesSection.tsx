@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C } from "@/lib/theme";
 import { LEVEL_LABELS } from "@/views/character/spells/CharacterSpellShared";
 import { Section } from "@/views/level-up/LevelUpParts";
@@ -12,9 +13,10 @@ export function LevelUpFeaturesSection(props: {
   expandedFeatures: string[];
   onToggleFeature: (key: string) => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   if (props.newFeatures.length === 0) return null;
   return (
-    <Section title={`New Features at Level ${props.nextLevel}`} accent={props.accentColor}>
+    <Section title={translateUi("New Features at Level {{value1}}", { value1: props.nextLevel })} accent={props.accentColor}>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {props.newFeatures.map((feature) => {
           const key = feature.name;
@@ -75,9 +77,10 @@ export function LevelUpSpellSlotsSection(props: {
   accentColor: string;
   newSlots: number[] | null;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   if (!props.newSlots || !props.newSlots.some((s, i) => i > 0 && s > 0)) return null;
   return (
-    <Section title={`Spell Slots at Level ${props.nextLevel}`} accent={props.accentColor}>
+    <Section title={translateUi("Spell Slots at Level {{value1}}", { value1: props.nextLevel })} accent={props.accentColor}>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {props.newSlots.map((count, i) => {
           if (count === 0) return null;

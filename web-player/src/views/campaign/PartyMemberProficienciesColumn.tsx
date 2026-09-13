@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { C } from "@/lib/theme";
 import { NoteRow, Panel, SubsectionLabel, Tag } from "@beholden/shared/ui";
 import type { FeatureEntry, NoteEntry, Proficiencies } from "./PartyMemberView";
@@ -21,16 +22,17 @@ export function PartyMemberProficienciesColumn({
   expandedNoteIds: Record<string, boolean>;
   onToggleNote: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {(prof?.armor?.length || prof?.weapons?.length || prof?.tools?.length || prof?.languages?.length) ? (
         <Panel>
-          <SubsectionLabel>Proficiencies</SubsectionLabel>
+          <SubsectionLabel>{t("partyMemberView.proficienciesHeading")}</SubsectionLabel>
           {[
-            { label: "Armor", items: prof?.armor },
-            { label: "Weapons", items: prof?.weapons },
-            { label: "Tools", items: prof?.tools },
-            { label: "Languages", items: prof?.languages },
+            { label: t("partyMemberView.profArmor"), items: prof?.armor },
+            { label: t("partyMemberView.profWeapons"), items: prof?.weapons },
+            { label: t("partyMemberView.profTools"), items: prof?.tools },
+            { label: t("partyMemberView.profLanguages"), items: prof?.languages },
           ].map(({ label, items }) => (items && items.length > 0 ? (
             <div key={label} style={{ marginBottom: 12 }}>
               <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: "rgba(160,180,220,0.4)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>
@@ -46,7 +48,7 @@ export function PartyMemberProficienciesColumn({
 
       {classFeatures.length > 0 ? (
         <Panel>
-          <SubsectionLabel>Class Features</SubsectionLabel>
+          <SubsectionLabel>{t("partyMemberView.classFeaturesHeading")}</SubsectionLabel>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {classFeatures.map((feature, index) => {
               const id = `feature:${index}:${feature.name}`;
@@ -71,14 +73,14 @@ export function PartyMemberProficienciesColumn({
 
       {allNotes.length > 0 ? (
         <Panel>
-          <SubsectionLabel>Notes</SubsectionLabel>
+          <SubsectionLabel>{t("partyMemberView.notesHeading")}</SubsectionLabel>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {allNotes.map((note) => {
               const expanded = Boolean(expandedNoteIds[note.id]);
               return (
                 <NoteRow
                   key={note.id}
-                  title={note.title || "Untitled"}
+                  title={note.title || t("partyMemberView.untitledNote")}
                   text={note.text}
                   expanded={expanded}
                   accentColor={color}

@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { C } from "@/lib/theme";
 import { CollapsiblePanel, Tooltip } from "@/views/character/CharacterViewParts";
 import { PANEL_IDS } from "@/views/character/layout/panelRegistry";
@@ -21,6 +22,7 @@ export function CharacterProficienciesPanel({
   onCustomToolsChange: (values: string[]) => void;
   onCustomLanguagesChange: (values: string[]) => void;
 }) {
+  const { t } = useTranslation();
   const [addingTools, setAddingTools] = React.useState(false);
   const [addingLanguages, setAddingLanguages] = React.useState(false);
   if (!prof) return null;
@@ -33,51 +35,51 @@ export function CharacterProficienciesPanel({
   const availableTools = ALL_TOOLS.filter((name) => !hasEntry(allToolNames, name));
   const availableLanguages = ALL_LANGUAGES.filter((name) => !hasEntry(allLanguageNames, name));
   const sections = [
-    { label: "Armor", items: prof.armor, color: C.colorMagic },
-    { label: "Weapons", items: prof.weapons, color: C.colorPinkRed },
-    { label: "Maneuvers", items: prof.maneuvers, color: C.accentHl },
-    { label: "Metamagic", items: prof.metamagic, color: C.accentHl },
-    { label: "Infusions", items: prof.infusions, color: C.accentHl },
-    { label: "Magic Item Plans", items: prof.plans, color: C.colorRitual },
-    { label: "Tools", items: allToolNames.map((name) => ({ name, source: hasEntry(customTools, name) ? "Custom" : (prof.tools.find((entry) => normalize(entry.name) === normalize(name))?.source ?? "Class/Feature"), isCustom: hasEntry(customTools, name) })), color: C.colorOrange },
-    { label: "Expertise", items: prof.expertise, color: accentColor },
-    { label: "Languages", items: allLanguageNames.map((name) => ({ name, source: hasEntry(customLanguages, name) ? "Custom" : (prof.languages.find((entry) => normalize(entry.name) === normalize(name))?.source ?? "Class/Feature"), isCustom: hasEntry(customLanguages, name) })), color: C.colorRitual },
-  ].filter((s) => s.items.length > 0 || s.label === "Tools" || s.label === "Languages");
+    { key: "armor", label: t("proficienciesPanel.armor"), items: prof.armor, color: C.colorMagic },
+    { key: "weapons", label: t("proficienciesPanel.weapons"), items: prof.weapons, color: C.colorPinkRed },
+    { key: "maneuvers", label: t("proficienciesPanel.maneuvers"), items: prof.maneuvers, color: C.accentHl },
+    { key: "metamagic", label: t("proficienciesPanel.metamagic"), items: prof.metamagic, color: C.accentHl },
+    { key: "infusions", label: t("proficienciesPanel.infusions"), items: prof.infusions, color: C.accentHl },
+    { key: "plans", label: t("proficienciesPanel.magicItemPlans"), items: prof.plans, color: C.colorRitual },
+    { key: "tools", label: t("proficienciesPanel.tools"), items: allToolNames.map((name) => ({ name, source: hasEntry(customTools, name) ? t("proficienciesPanel.custom") : (prof.tools.find((entry) => normalize(entry.name) === normalize(name))?.source ?? t("proficienciesPanel.classFeature")), isCustom: hasEntry(customTools, name) })), color: C.colorOrange },
+    { key: "expertise", label: t("proficienciesPanel.expertise"), items: prof.expertise, color: accentColor },
+    { key: "languages", label: t("proficienciesPanel.languages"), items: allLanguageNames.map((name) => ({ name, source: hasEntry(customLanguages, name) ? t("proficienciesPanel.custom") : (prof.languages.find((entry) => normalize(entry.name) === normalize(name))?.source ?? t("proficienciesPanel.classFeature")), isCustom: hasEntry(customLanguages, name) })), color: C.colorRitual },
+  ].filter((s) => s.items.length > 0 || s.key === "tools" || s.key === "languages");
   if (!sections.length) return null;
   return (
     <CollapsiblePanel
-      title="Proficiencies &amp; Languages"
+      title={t("proficienciesPanel.title")}
       color={accentColor}
       storageKey={PANEL_IDS.proficiencies}
-      summary={`${allToolNames.length} tools · ${allLanguageNames.length} languages`}
+      summary={t("proficienciesPanel.summary", { toolCount: allToolNames.length, languageCount: allLanguageNames.length })}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {sections.map((s) => (
-          <div key={s.label}>
+          <div key={s.key}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
               <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>
                 {s.label}
               </div>
-              {s.label === "Tools" && !addingTools && availableTools.length > 0 ? (
+              {s.key === "tools" && !addingTools && availableTools.length > 0 ? (
                 <button
                   onClick={() => setAddingTools(true)}
                   style={{ all: "unset", cursor: "pointer", fontSize: "var(--fs-small)", color: accentColor, fontWeight: 800, lineHeight: 1 }}
-                  title="Add tool"
+                  title={t("proficienciesPanel.addTool")}
                 >
                   +
                 </button>
               ) : null}
-              {s.label === "Languages" && !addingLanguages && availableLanguages.length > 0 ? (
+              {s.key === "languages" && !addingLanguages && availableLanguages.length > 0 ? (
                 <button
                   onClick={() => setAddingLanguages(true)}
                   style={{ all: "unset", cursor: "pointer", fontSize: "var(--fs-small)", color: accentColor, fontWeight: 800, lineHeight: 1 }}
-                  title="Add language"
+                  title={t("proficienciesPanel.addLanguage")}
                 >
                   +
                 </button>
               ) : null}
             </div>
-            {s.label === "Tools" && addingTools ? (
+            {s.key === "tools" && addingTools ? (
               <div style={{ marginBottom: 6 }}>
                 <select
                   autoFocus
@@ -99,14 +101,14 @@ export function CharacterProficienciesPanel({
                   }}
                   onBlur={() => setAddingTools(false)}
                 >
-                  <option value="" disabled>Select tool...</option>
+                  <option value="" disabled>{t("proficienciesPanel.selectTool")}</option>
                   {availableTools.map((option) => (
                     <option key={option} value={option}>{option}</option>
                   ))}
                 </select>
               </div>
             ) : null}
-            {s.label === "Languages" && addingLanguages ? (
+            {s.key === "languages" && addingLanguages ? (
               <div style={{ marginBottom: 6 }}>
                 <select
                   autoFocus
@@ -128,7 +130,7 @@ export function CharacterProficienciesPanel({
                   }}
                   onBlur={() => setAddingLanguages(false)}
                 >
-                  <option value="" disabled>Select language...</option>
+                  <option value="" disabled>{t("proficienciesPanel.selectLanguage")}</option>
                   {availableLanguages.map((option) => (
                     <option key={option} value={option}>{option}</option>
                   ))}
@@ -153,17 +155,17 @@ export function CharacterProficienciesPanel({
                       fontWeight: 600,
                     }}
                   >
-                    {s.label === "Weapons" ? formatWeaponProficiencyName(item.name) : item.name}
+                    {s.key === "weapons" ? formatWeaponProficiencyName(item.name) : item.name}
                     {("isCustom" in item && item.isCustom) ? (
                       <button
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          if (s.label === "Tools") onCustomToolsChange(customTools.filter((entry) => normalize(entry) !== normalize(item.name)));
-                          if (s.label === "Languages") onCustomLanguagesChange(customLanguages.filter((entry) => normalize(entry) !== normalize(item.name)));
+                          if (s.key === "tools") onCustomToolsChange(customTools.filter((entry) => normalize(entry) !== normalize(item.name)));
+                          if (s.key === "languages") onCustomLanguagesChange(customLanguages.filter((entry) => normalize(entry) !== normalize(item.name)));
                         }}
                         style={{ all: "unset", cursor: "pointer", fontSize: "var(--fs-tiny)", color: C.muted, lineHeight: 1, marginLeft: 2 }}
-                        title="Remove"
+                        title={t("proficienciesPanel.remove")}
                       >
                         x
                       </button>

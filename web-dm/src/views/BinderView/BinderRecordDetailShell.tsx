@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 // web-dm/src/views/BinderView/BinderRecordDetailShell.tsx
 // Shared detail-view scaffold for a single Binder record: back link, accent-striped article,
 // header row (leading portrait/icon, name, visibility/edit/delete actions), and a body slot for
@@ -43,6 +44,7 @@ export function BinderRecordDetailShell(props: {
   bodyMaxWidth?: number;
   children: ReactNode;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const name = props.name;
   const size = props.actionButtonSize ?? { width: 38, height: 36 };
   const actionButtonStyle = {
@@ -62,7 +64,7 @@ export function BinderRecordDetailShell(props: {
         onClick={props.onBack}
         style={{ width: "fit-content", border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: 0, fontSize: "var(--fs-medium)" }}
       >
-        ← All {props.backLabel}
+        {translateUi("← All")} {props.backLabel}
       </button>
       <article style={{ border: `1px solid ${withAlpha(props.accent, 0.3)}`, borderRadius: theme.radius.panel, background: theme.colors.panelBg, overflow: "hidden" }}>
         <div style={{ height: 4, background: props.accent }} />
@@ -95,18 +97,18 @@ export function BinderRecordDetailShell(props: {
                 <Button
                   type="button"
                   variant="ghost"
-                  aria-label={props.visibilityPublic ? `Make ${props.recordLabel} private` : `Make ${props.recordLabel} public`}
-                  title={props.visibilityPublic ? "Public — click to make private" : "Private — click to make public"}
+                  aria-label={props.visibilityPublic ? translateUi("Make {{value1}} private", { value1: props.recordLabel }) : translateUi("Make {{value1}} public", { value1: props.recordLabel })}
+                  title={props.visibilityPublic ? translateUi("Public — click to make private") : translateUi("Private — click to make public")}
                   disabled={props.visibilityBusy}
                   onClick={props.onVisibilityChange}
                   style={{ ...actionButtonStyle, border: `1px solid ${props.visibilityPublic ? withAlpha(props.accent, 0.65) : theme.colors.panelBorder}`, background: props.visibilityPublic ? withAlpha(props.accent, 0.16) : "transparent", color: props.visibilityPublic ? props.accent : theme.colors.muted, cursor: props.visibilityBusy ? "default" : "pointer" }}
                 >
                   <VisibilityIcon visible={props.visibilityPublic} size={19} />
                 </Button>
-                <Button type="button" variant="ghost" aria-label={`Edit ${props.recordLabel}`} title="Edit" onClick={props.onEdit} style={{ ...actionButtonStyle, color: theme.colors.text }}>
+                <Button type="button" variant="ghost" aria-label={translateUi("Edit {{value1}}", { value1: props.recordLabel })} title={translateUi("Edit")} onClick={props.onEdit} style={{ ...actionButtonStyle, color: theme.colors.text }}>
                   <IconPencil size={17} />
                 </Button>
-                <Button type="button" variant="danger" aria-label={`Delete ${props.recordLabel}`} title="Delete" onClick={props.onDelete} style={actionButtonStyle}>
+                <Button type="button" variant="danger" aria-label={translateUi("Delete {{value1}}", { value1: props.recordLabel })} title={translateUi("Delete")} onClick={props.onDelete} style={actionButtonStyle}>
                   <IconTrash size={17} />
                 </Button>
               </div>

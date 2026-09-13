@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { titleCase } from "@beholden/shared/domain/text/titleCase";
 import { C } from "@/lib/theme";
@@ -121,6 +122,7 @@ export function LevelUpChoicesSection(props: {
   setChosenFeatOptions: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
   extraFeatSpellSelectionsValid: boolean;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   if (!props.show) return null;
 
   const renderResolvedSpellChoice = (
@@ -155,7 +157,7 @@ export function LevelUpChoicesSection(props: {
   };
 
   return (
-    <Section title={`Spell And Feature Choices at Level ${props.nextLevel}`} accent={props.accentColor}>
+    <Section title={translateUi("Spell And Feature Choices at Level {{value1}}", { value1: props.nextLevel })} accent={props.accentColor}>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {props.classChoiceGroups.map((group) => {
           const selected = props.chosenFeatureChoices[group.key]?.[0] ?? "";
@@ -269,7 +271,7 @@ export function LevelUpChoicesSection(props: {
 
         {props.cantripChoiceCount > 0 ? (
           <LevelUpSpellChoiceList
-            title="Cantrips"
+            title={translateUi("Cantrips")}
             caption={`Choose ${props.cantripChoiceCount}`}
             spells={props.availableCantripChoices}
             chosen={props.displayedChosenCantrips}
@@ -294,7 +296,7 @@ export function LevelUpChoicesSection(props: {
 
         {props.spellcaster && props.spellChoiceCount > 0 ? (
           <LevelUpSpellChoiceList
-            title={props.usesFlexiblePreparedSpellsModel ? "Additional Spells" : "Prepared Spells"}
+            title={props.usesFlexiblePreparedSpellsModel ? translateUi("Additional Spells") : translateUi("Prepared Spells")}
             caption={`Choose ${props.spellChoiceCount} (up to level ${props.maxSpellLevel})`}
             spells={props.availableSpellChoices}
             chosen={props.displayedChosenSpells}
@@ -326,17 +328,16 @@ export function LevelUpChoicesSection(props: {
               background: "rgba(255,255,255,0.03)",
             }}
           >
-            <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text, marginBottom: 6 }}>Prepared Spells</div>
+            <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 800, color: C.text, marginBottom: 6 }}>{translateUi("Prepared Spells")}</div>
             <div style={{ fontSize: "var(--fs-small)", color: C.muted, lineHeight: 1.6 }}>
-              Your preparation capacity at level {props.nextLevel} is {props.prepCount} spell{props.prepCount === 1 ? "" : "s"} of up to level {props.maxSpellLevel}.
-              Manage the actual prepared circles from the character sheet; level-up does not force you to rebuild that list.
+              {translateUi("Your preparation capacity at level")} {props.nextLevel} {translateUi("is")} {props.prepCount} {translateUi("spell")}{props.prepCount === 1 ? "" : "s"} {translateUi("of up to level")} {props.maxSpellLevel}{translateUi(". Manage the actual prepared circles from the character sheet; level-up does not force you to rebuild that list.")}
             </div>
           </div>
         ) : null}
 
         {props.invocCount > 0 && props.invocationChoiceCount > 0 ? (
           <LevelUpSpellChoiceList
-            title="Eldritch Invocations"
+            title={translateUi("Eldritch Invocations")}
             caption={`Choose ${props.invocationChoiceCount}`}
             spells={props.availableInvocationChoices}
             chosen={props.displayedChosenInvocations}
@@ -384,7 +385,7 @@ export function LevelUpChoicesSection(props: {
             {entry.definition.abilityChoice ? (
               <div>
                 <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginBottom: 8 }}>
-                  Choose the ability used for {entry.definition.title.toLowerCase()} save DCs from {entry.definition.sourceLabel}.
+                  {translateUi("Choose the ability used for")} {entry.definition.title.toLowerCase()} {translateUi("save DCs from")} {entry.definition.sourceLabel}.
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {entry.definition.abilityChoice.options.map((option) => {
@@ -504,7 +505,7 @@ export function LevelUpChoicesSection(props: {
                   }}>{option.name}</ChoiceBtn>;
                 })}
               </div>
-              {choice.options.length === 0 ? <div style={{ marginTop: 8, fontSize: "var(--fs-small)", color: C.muted }}>No eligible Origin Feats found.</div> : null}
+              {choice.options.length === 0 ? <div style={{ marginTop: 8, fontSize: "var(--fs-small)", color: C.muted }}>{translateUi("No eligible Origin Feats found.")}</div> : null}
             </div>
           );
         })}
@@ -541,14 +542,14 @@ export function LevelUpChoicesSection(props: {
           || props.invocationResolvedSpellChoices.some((choice) => (props.invocationSpellChoiceOptions[choice.key] ?? []).length === 0)) ? (
           <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
             {props.featResolvedSpellChoices.some((choice) => choice.linkedTo && (props.chosenFeatOptions[choice.linkedTo] ?? []).length === 0)
-              ? "Choose the spell list first."
-              : "No eligible spell options found."}
+              ? translateUi("Choose the spell list first.")
+              : translateUi("No eligible spell options found.")}
           </div>
         ) : null}
 
         {!props.extraFeatSpellSelectionsValid ? (
           <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
-            Some spell choices are incomplete.
+            {translateUi("Some spell choices are incomplete.")}
           </div>
         ) : null}
       </div>

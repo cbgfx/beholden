@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 
 import { api, jsonInit } from "@/services/api";
@@ -24,6 +25,8 @@ export function MonsterFormModal(props: {
   onClose: () => void;
   onSaved: (id: string) => void;
 }) {
+  const translateMessage = useUiMessages("dmUi");
+  const translateUi = useUiTranslation("dmUi");
   const onClose = props.onClose;
   const isDuplicate = props.isDuplicate ?? false;
   const isEdit = props.monster != null && !isDuplicate;
@@ -48,7 +51,7 @@ export function MonsterFormModal(props: {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!form.name.trim()) {
-      setError("Name is required");
+      setError(translateMessage("Name is required"));
       return;
     }
 
@@ -115,16 +118,16 @@ export function MonsterFormModal(props: {
           }}
         >
           <span style={{ fontWeight: 700, fontSize: "var(--fs-body)" }}>
-            {isEdit ? `Edit: ${monster!.name}` : isDuplicate ? `Duplicate: ${monster!.name}` : "New Monster"}
+            {isEdit ? translateUi("Edit: {{value1}}", { value1: monster!.name }) : isDuplicate ? translateUi("Duplicate: {{value1}}", { value1: monster!.name }) : translateUi("New Monster")}
           </span>
-          <IconButton onClick={props.onClose} title="Close" variant="ghost">
+          <IconButton onClick={props.onClose} title={translateUi("Close")} variant="ghost">
             <IconClose />
           </IconButton>
         </div>
 
         <div className="monster-form-workspace" style={{ display: "grid", gridTemplateColumns: "210px minmax(0, 1fr)", flex: 1, minHeight: 0 }}>
           <nav className="monster-form-nav" style={{ padding: "18px 14px", borderRight: `1px solid ${theme.colors.panelBorder}`, overflowY: "auto" }}>
-            <div style={{ color: theme.colors.muted, fontSize: "var(--fs-tiny)", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Monster sections</div>
+            <div style={{ color: theme.colors.muted, fontSize: "var(--fs-tiny)", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>{translateUi("Monster sections")}</div>
             {[
               ["identity", "Identity"], ["combat", "Combat Stats"], ["abilities", "Abilities"],
               ["proficiencies", "Proficiencies"], ["defenses", "Defenses"], ["blocks", "Traits & Actions"],
@@ -132,7 +135,7 @@ export function MonsterFormModal(props: {
               <a key={id} href={`#monster-form-${id}`} style={{ display: "block", padding: "8px 10px", borderRadius: 7, color: theme.colors.text, textDecoration: "none", fontSize: "var(--fs-small)", fontWeight: 650 }}>{label}</a>
             ))}
             <div style={{ marginTop: 18, color: theme.colors.muted, fontSize: "var(--fs-tiny)", lineHeight: 1.5 }}>
-              Fields are saved directly as Grand Monster data. Empty optional fields are omitted.
+              {translateUi("Fields are saved directly as Grand Monster data. Empty optional fields are omitted.")}
             </div>
           </nav>
           <div
@@ -168,10 +171,10 @@ export function MonsterFormModal(props: {
           }}
         >
           <Button type="button" variant="ghost" onClick={props.onClose}>
-            Cancel
+            {translateUi("Cancel")}
           </Button>
           <Button type="submit" variant="primary" disabled={busy}>
-            {busy ? "Saving..." : isEdit ? "Save Changes" : isDuplicate ? "Create Duplicate" : "Create Monster"}
+            {busy ? translateUi("Saving...") : isEdit ? translateUi("Save Changes") : isDuplicate ? translateUi("Create Duplicate") : translateUi("Create Monster")}
           </Button>
         </div>
       </form>

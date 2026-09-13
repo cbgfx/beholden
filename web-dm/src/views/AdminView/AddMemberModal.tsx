@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useEffect, useState } from "react";
 import type React from "react";
 import { api } from "@/services/api";
@@ -14,6 +15,8 @@ interface Props {
 }
 
 export function AddMemberModal({ campaignId: _campaignId, campaignName, existingUserIds, onAdd, onClose }: Props) {
+  const translateMessage = useUiMessages("dmUi");
+  const translateUi = useUiTranslation("dmUi");
   const [users, setUsers] = useState<User[]>([]);
   const [userId, setUserId] = useState("");
   const [role, setRole] = useState<"dm" | "player">("player");
@@ -26,10 +29,10 @@ export function AddMemberModal({ campaignId: _campaignId, campaignName, existing
     api<User[]>("/api/admin/users", { signal: controller.signal }).then((data) => {
       if (!controller.signal.aborted) setUsers(data.filter((u) => !existingUserIds.has(u.id)));
     }).catch((cause) => {
-      if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Unable to load users.");
+      if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : translateMessage("Unable to load users."));
     });
     return () => controller.abort();
-  }, [existingUserIds]);
+  }, [existingUserIds, translateMessage]);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -39,7 +42,7 @@ export function AddMemberModal({ campaignId: _campaignId, campaignName, existing
     try {
       await onAdd(userId, role);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add member");
+      setError(err instanceof Error ? err.message : translateMessage("Failed to add member"));
     } finally {
       setSaving(false);
     }
@@ -74,12 +77,12 @@ export function AddMemberModal({ campaignId: _campaignId, campaignName, existing
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 style={{ margin: "0 0 4px", fontSize: "var(--fs-title)", fontWeight: 700 }}>Add Member</h2>
+        <h2 style={{ margin: "0 0 4px", fontSize: "var(--fs-title)", fontWeight: 700 }}>{translateUi("Add Member")}</h2>
         <p style={{ margin: "0 0 20px", fontSize: "var(--fs-subtitle)", color: theme.colors.muted }}>{campaignName}</p>
 
         <form onSubmit={handleAdd}>
           <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle}>User</label>
+            <label style={labelStyle}>{translateUi("User")}</label>
             <select
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
@@ -93,7 +96,7 @@ export function AddMemberModal({ campaignId: _campaignId, campaignName, existing
                 outline: "none",
               }}
             >
-              <option value="">Select a user…</option>
+              <option value="">{translateUi("Select a user…")}</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name} (@{u.username})
@@ -103,7 +106,7 @@ export function AddMemberModal({ campaignId: _campaignId, campaignName, existing
           </div>
 
           <div style={{ marginBottom: 20 }}>
-            <label style={labelStyle}>Role</label>
+            <label style={labelStyle}>{translateUi("Role")}</label>
             <div style={{ display: "flex", gap: 8 }}>
               {(["dm", "player"] as const).map((r) => (
                 <button
@@ -120,7 +123,7 @@ export function AddMemberModal({ campaignId: _campaignId, campaignName, existing
                     textTransform: "uppercase", letterSpacing: "0.05em",
                   }}
                 >
-                  {r === "dm" ? "Dungeon Master" : "Player"}
+                  {r === "dm" ? translateUi("Dungeon Master") : translateUi("Player")}
                 </button>
               ))}
             </div>
@@ -139,9 +142,9 @@ export function AddMemberModal({ campaignId: _campaignId, campaignName, existing
           )}
 
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+            <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>{translateUi("Cancel")}</Button>
             <Button type="submit" variant="primary" disabled={saving || !userId}>
-              {saving ? "Adding…" : "Add"}
+              {saving ? translateUi("Adding…") : translateUi("Add")}
             </Button>
           </div>
         </form>

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 // web-dm/src/views/AdminView/AdminView.tsx
 
 import { useState } from "react";
@@ -17,6 +18,7 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export function AdminView() {
+  const translateUi = useUiTranslation("dmUi");
   const { user, logout } = useAuth();
   const [tab, setTab] = useState<Tab>("users");
 
@@ -45,18 +47,18 @@ export function AdminView() {
             Beholden
           </span>
           <span style={{ color: theme.colors.panelBorder }}>|</span>
-          <span style={{ fontWeight: 600, color: theme.colors.muted }}>Admin Panel</span>
+          <span style={{ fontWeight: 600, color: theme.colors.muted }}>{translateUi("Admin Panel")}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <a
             href="/"
             style={{ color: theme.colors.accentHighlight, fontSize: "var(--fs-medium)", textDecoration: "none" }}
           >
-            ← Back to App
+            {translateUi("← Back to App")}
           </a>
           <span style={{ fontSize: "var(--fs-medium)", color: theme.colors.muted }}>{user?.name}</span>
           <Button variant="ghost" style={{ fontSize: "var(--fs-subtitle)", padding: "5px 10px" }} onClick={logout}>
-            Sign out
+            {translateUi("Sign out")}
           </Button>
         </div>
       </div>
@@ -87,7 +89,7 @@ export function AdminView() {
               transition: "color 150ms, border-color 150ms",
             }}
           >
-            {t.label}
+            {translateUi(t.label)}
           </button>
         ))}
       </div>

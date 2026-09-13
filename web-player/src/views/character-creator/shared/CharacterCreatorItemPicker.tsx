@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { C, withAlpha } from "@/lib/theme";
 import { api } from "@/services/api";
@@ -26,6 +27,7 @@ export function ItemPicker<T extends { id: string; name: string; rarity?: string
   emptyMsg: string;
   onToggle: (id: string) => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const [q, setQ] = React.useState("");
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const [details, setDetails] = React.useState<Record<string, ItemDetailPreview>>({});
@@ -87,7 +89,7 @@ export function ItemPicker<T extends { id: string; name: string; rarity?: string
         <p style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{emptyMsg}</p>
       ) : (
         <>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" style={{ ...inputStyle, width: "100%", marginBottom: 8 }} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={translateUi("Search…")} style={{ ...inputStyle, width: "100%", marginBottom: 8 }} />
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 240, overflowY: "auto", padding: "2px 0" }}>
             {filtered.map((item) => {
               const sel = chosen.includes(item.id);
@@ -127,7 +129,7 @@ export function ItemPicker<T extends { id: string; name: string; rarity?: string
                   </div>
                   {takenElsewhere && (
                     <div style={{ marginTop: 3, fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700 }}>
-                      Already selected elsewhere
+                      {translateUi("Already selected elsewhere")}
                     </div>
                   )}
                 </button>

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import { Button } from "@/ui/Button";
@@ -141,6 +142,7 @@ export function BlockEditor({ label, help, blocks, onChange }: {
   blocks: MonsterBlock[];
   onChange: (b: MonsterBlock[]) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   function addBlock() { onChange([...blocks, { name: "", text: "" }]); }
   function removeBlock(i: number) { onChange(blocks.filter((_, idx) => idx !== i)); }
   function updateBlock(i: number, field: keyof MonsterBlock, val: unknown) {
@@ -158,7 +160,7 @@ export function BlockEditor({ label, help, blocks, onChange }: {
             fontWeight: 700,
           }}
         >
-          + Add
+          {translateUi("+ Add")}
         </button>
       </div>
       {help ? <div style={{ color: theme.colors.muted, fontSize: "var(--fs-tiny)", lineHeight: 1.45, margin: "-2px 0 8px" }}>{help}</div> : null}
@@ -172,12 +174,12 @@ export function BlockEditor({ label, help, blocks, onChange }: {
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <input
                 value={b.name} onChange={(e) => updateBlock(i, "name", e.target.value)}
-                placeholder="Name"
+                placeholder={translateUi("Name")}
                 style={{ ...baseInput, flex: 1, fontWeight: 600 }}
               />
               <Button
                 type="button" variant="danger" onClick={() => removeBlock(i)}
-                title="Remove"
+                title={translateUi("Remove")}
                 style={{
                   flexShrink: 0, width: 24, height: 24, padding: 0, borderRadius: 6,
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -188,7 +190,7 @@ export function BlockEditor({ label, help, blocks, onChange }: {
             </div>
             <textarea
               value={b.text} onChange={(e) => updateBlock(i, "text", e.target.value)}
-              placeholder="Description…"
+              placeholder={translateUi("Description…")}
               rows={3}
               style={{ ...baseInput, resize: "vertical", fontFamily: "inherit" }}
             />
@@ -196,7 +198,7 @@ export function BlockEditor({ label, help, blocks, onChange }: {
           </div>
         ))}
         {blocks.length === 0 && (
-          <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontStyle: "italic" }}>None</div>
+          <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontStyle: "italic" }}>{translateUi("None")}</div>
         )}
       </div>
     </div>

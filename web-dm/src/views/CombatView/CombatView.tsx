@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 import { useParams } from "react-router-dom";
 import { useStore } from "@/store";
@@ -32,6 +33,7 @@ import { getSecondsInRound } from "@/views/CombatView/utils/roundTime";
 import { useRosterMetrics } from "@/views/CombatRosterView/hooks/useRosterMetrics";
 
 export function CombatView() {
+  const translateUi = useUiTranslation("dmUi");
   const { campaignId, encounterId } = useParams();
   const { state, dispatch } = useStore();
 
@@ -254,7 +256,7 @@ export function CombatView() {
 
   return (
     <div style={{ padding: "var(--space-page)" }}>
-      {combatStateError && <div role="alert">{combatStateError} <button onClick={() => void retryCombatState()}>Retry</button></div>}
+      {combatStateError && <div role="alert">{combatStateError} <button onClick={() => void retryCombatState()}>{translateUi("Retry")}</button></div>}
       {concentrationAlert && (
         <div style={{
           marginBottom: 10, padding: "10px 14px", borderRadius: 10,
@@ -262,9 +264,9 @@ export function CombatView() {
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
         }}>
           <span style={{ color: theme.colors.text, fontWeight: 700 }}>
-            ⚠️ <strong>{concentrationAlert.name}</strong> is Concentrating — CON Save DC <strong>{concentrationAlert.dc}</strong>
+            ⚠️ <strong>{concentrationAlert.name}</strong> {translateUi("is Concentrating — CON Save DC")} <strong>{concentrationAlert.dc}</strong>
           </span>
-          <IconButton title="Dismiss" onClick={dismissConcentrationAlert} variant="ghost" size="sm">
+          <IconButton title={translateUi("Dismiss")} onClick={dismissConcentrationAlert} variant="ghost" size="sm">
             <span style={{ fontWeight: 900, fontSize: "var(--fs-title)", lineHeight: 1 }}>×</span>
           </IconButton>
         </div>
@@ -273,7 +275,7 @@ export function CombatView() {
       <CombatantHeader
         backTo={campaignId && encounterId ? `/campaign/${campaignId}/roster/${encounterId}` : (campaignId ? `/campaign/${campaignId}` : "/")}
         backTitle="Back to Roster"
-        title={encounter?.name ?? "Combat"}
+        title={encounter?.name ?? translateUi("Combat")}
         started={started}
         rollLabel="Roll Initiative"
         onRollOrReset={rollInitiativeForMonsters}
@@ -365,7 +367,7 @@ export function CombatView() {
 
       <SpellDetailModal
         isOpen={spellLoading || !!spellDetail || !!spellError}
-        title={<span>Spell</span>}
+        title={<span>{translateUi("Spell")}</span>}
         isLoading={spellLoading}
         error={spellError}
         spellDetail={spellDetail}

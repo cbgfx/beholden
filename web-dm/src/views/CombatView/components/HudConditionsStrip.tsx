@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 import { conditionLabel } from "@beholden/shared/domain";
 
@@ -20,6 +21,7 @@ type Props = {
  * - Any extra conditions display as a +n chip.
  */
 export function HudConditionsStrip(props: Props) {
+  const translateUi = useUiTranslation("dmUi");
   const rawConditions = Array.isArray(props.conditions) ? props.conditions : [];
   if (!rawConditions.length) return null;
 
@@ -31,7 +33,7 @@ export function HudConditionsStrip(props: Props) {
     <button
       type="button"
       onClick={props.onClick}
-      title="Edit conditions"
+      title={translateUi("Edit conditions")}
       className="cvCondStrip"
       style={
         {
@@ -66,7 +68,7 @@ export function HudConditionsStrip(props: Props) {
       {extra > 0 ? (
         <span
           className="cvCondMore"
-          title={`${extra} more condition${extra === 1 ? "" : "s"}`}
+          title={translateUi("{{value1}} more condition{{value2}}", { value1: extra, value2: extra === 1 ? "" : "s" })}
         >
           +{extra}
         </span>

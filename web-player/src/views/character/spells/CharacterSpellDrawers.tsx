@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { EmptyState, ListShell, SubsectionLabel, Tag } from "@beholden/shared/ui";
 import { C } from "@/lib/theme";
@@ -65,6 +66,7 @@ export function AddSpellDrawer({
   onRemoveSpell?: (name: string) => Promise<void> | void;
   onClose: () => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const query = spellSearch.trim();
   const removableEntries = React.useMemo(
     () =>
@@ -108,9 +110,9 @@ export function AddSpellDrawer({
       onClose={onClose}
       title={
         <>
-          <div style={{ fontWeight: 900, fontSize: "var(--fs-title)", color: C.text }}>Add Spell</div>
+          <div style={{ fontWeight: 900, fontSize: "var(--fs-title)", color: C.text }}>{translateUi("Add Spell")}</div>
           {addSpellSourceLabel && (
-            <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginTop: 3 }}>as {addSpellSourceLabel}</div>
+            <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginTop: 3 }}>{translateUi("as")} {addSpellSourceLabel}</div>
           )}
         </>
       }
@@ -118,13 +120,13 @@ export function AddSpellDrawer({
       <div style={{ display: "flex", flexDirection: "column", gap: 14, minHeight: 0 }}>
         {flexiblePreparedLimit && flexiblePreparedLimit > 0 && (
           <div style={{ fontSize: "var(--fs-small)", color: C.muted, lineHeight: 1.5 }}>
-            Prepared spell list: {Math.min(flexiblePreparedCount ?? 0, flexiblePreparedLimit)} / {flexiblePreparedLimit}
+            {translateUi("Prepared spell list:")} {Math.min(flexiblePreparedCount ?? 0, flexiblePreparedLimit)} / {flexiblePreparedLimit}
           </div>
         )}
 
         {removableEntries.length > 0 && onRemoveSpell && (
           <div>
-            <SubsectionLabel>Learned at:</SubsectionLabel>
+            <SubsectionLabel>{translateUi("Learned at:")}</SubsectionLabel>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
               {groupedRemovableEntries.map(({ level, spells }) => (
                 <div key={`current:${level}`}>
@@ -139,7 +141,7 @@ export function AddSpellDrawer({
                           variant="ghost"
                           size="sm"
                           onClick={() => void onRemoveSpell(entry.rawName)}
-                          title={`Remove ${entry.searchName}`}
+                          title={translateUi("Remove {{value1}}", { value1: entry.searchName })}
                         >
                           x
                         </IconButton>
@@ -153,13 +155,13 @@ export function AddSpellDrawer({
         )}
 
         <div style={{ display: "grid", gap: 8 }}>
-          <SubsectionLabel>Find Spells</SubsectionLabel>
+          <SubsectionLabel>{translateUi("Find Spells")}</SubsectionLabel>
           <input
             autoFocus
             type="search"
             value={spellSearch}
             onChange={(e) => onSpellSearchChange(e.target.value)}
-            placeholder="Search spells..."
+            placeholder={translateUi("Search spells...")}
             style={{
               width: "100%",
               boxSizing: "border-box",
@@ -183,11 +185,11 @@ export function AddSpellDrawer({
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: 10 }}>
             {query.length < 2 ? (
-              <EmptyState textColor={C.muted}>Type at least 2 characters to search.</EmptyState>
+              <EmptyState textColor={C.muted}>{translateUi("Type at least 2 characters to search.")}</EmptyState>
             ) : spellSearchLoading ? (
-              <EmptyState textColor={C.muted}>Searching...</EmptyState>
+              <EmptyState textColor={C.muted}>{translateUi("Searching...")}</EmptyState>
             ) : spellSearchResults.length === 0 ? (
-              <EmptyState textColor={C.muted}>No matching spells found.</EmptyState>
+              <EmptyState textColor={C.muted}>{translateUi("No matching spells found.")}</EmptyState>
             ) : (
               groupedResults.map(({ level, spells }) => (
                 <div key={level}>
@@ -230,7 +232,7 @@ export function AddSpellDrawer({
                               {spell.name}
                             </div>
                             <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginTop: 2 }}>
-                              {spell.level === 0 ? "Cantrip" : `Level ${spell.level ?? "-"}`}
+                              {spell.level === 0 ? translateUi("Cantrip") : translateUi("Level {{value1}}", { value1: spell.level ?? "-" })}
                               {spell.school ? ` - ${spell.school}` : ""}
                             </div>
                             {preview && (
@@ -240,8 +242,8 @@ export function AddSpellDrawer({
                             )}
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                            {alreadyKnown ? <Tag label="Added" color={C.muted} /> : null}
-                            {alreadyGranted ? <Tag label="Granted" color={accentColor} /> : null}
+                            {alreadyKnown ? <Tag label={translateUi("Added")} color={C.muted} /> : null}
+                            {alreadyGranted ? <Tag label={translateUi("Granted")} color={accentColor} /> : null}
                             {!disabled ? (
                               <div
                                 style={{
@@ -255,7 +257,7 @@ export function AddSpellDrawer({
                                   whiteSpace: "nowrap",
                                 }}
                               >
-                                Add
+                                {translateUi("Add")}
                               </div>
                             ) : null}
                           </div>

@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 // web-dm/src/views/AdminView/DatabaseAdminPanel.tsx
 // Admin panel for exporting and importing a full beholden.db snapshot.
 
@@ -28,6 +29,8 @@ const sectionStyle: CSSProperties = {
 };
 
 export function DatabaseAdminPanel() {
+  const translateMessage = useUiMessages("dmUi");
+  const translateUi = useUiTranslation("dmUi");
   const confirm = useConfirm();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -57,9 +60,9 @@ export function DatabaseAdminPanel() {
   async function handleImport() {
     if (!selectedFile || !acknowledged || importing) return;
     if (!(await confirm({
-      title: "Replace the entire database?",
+      title: translateUi("Replace the entire database?"),
       message: `This permanently replaces every user, campaign, character, and Binder in this Beholden install with the contents of "${selectedFile.name}". A backup of the current database is saved on the server first, but this cannot be undone from within the app. Continue?`,
-      confirmLabel: "Replace Database",
+      confirmLabel: translateMessage("Replace Database"),
       intent: "danger",
     }))) return;
 
@@ -84,36 +87,33 @@ export function DatabaseAdminPanel() {
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <h2 style={{ margin: "0 0 4px", fontSize: "var(--fs-title)", fontWeight: 700 }}>Database</h2>
+        <h2 style={{ margin: "0 0 4px", fontSize: "var(--fs-title)", fontWeight: 700 }}>{translateUi("Database")}</h2>
         <p style={{ margin: 0, fontSize: "var(--fs-subtitle)", color: theme.colors.muted }}>
-          Export a full snapshot of beholden.db, or restore one that was exported earlier.
+          {translateUi("Export a full snapshot of beholden.db, or restore one that was exported earlier.")}
         </p>
       </div>
 
       <div style={{ display: "grid", gap: 16 }}>
         <div style={sectionStyle}>
           <div>
-            <h3 style={{ margin: "0 0 4px", fontSize: "var(--fs-medium)", fontWeight: 700 }}>Export</h3>
+            <h3 style={{ margin: "0 0 4px", fontSize: "var(--fs-medium)", fontWeight: 700 }}>{translateUi("Export")}</h3>
             <p style={{ margin: 0, fontSize: "var(--fs-subtitle)", color: theme.colors.muted }}>
-              Downloads a consistent snapshot of the entire database — every user, campaign, Binder, and compendium row —
-              bundled as a zip together with every campaign, Binder, character, and player image on disk.
+              {translateUi("Downloads a consistent snapshot of the entire database — every user, campaign, Binder, and compendium row — bundled as a zip together with every campaign, Binder, character, and player image on disk.")}
             </p>
           </div>
           {exportError ? <div style={{ color: theme.colors.colorPinkRed, fontSize: "var(--fs-subtitle)" }}>{exportError}</div> : null}
           <div>
             <Button onClick={() => void handleExport()} disabled={exporting}>
-              {exporting ? "Exporting…" : "Export Database"}
+              {exporting ? translateUi("Exporting…") : translateUi("Export Database")}
             </Button>
           </div>
         </div>
 
         <div style={{ ...sectionStyle, borderColor: withAlpha(theme.colors.red, 0.35) }}>
           <div>
-            <h3 style={{ margin: "0 0 4px", fontSize: "var(--fs-medium)", fontWeight: 700 }}>Import</h3>
+            <h3 style={{ margin: "0 0 4px", fontSize: "var(--fs-medium)", fontWeight: 700 }}>{translateUi("Import")}</h3>
             <p style={{ margin: 0, fontSize: "var(--fs-subtitle)", color: theme.colors.muted }}>
-              Replaces every row in this database with the contents of an uploaded <code>.zip</code> export (images included)
-              or a plain <code>.db</code> file (an older export, database only). A backup of the current database is saved on
-              the server automatically before the swap. Every connected user will be reloaded once this completes.
+              {translateUi("Replaces every row in this database with the contents of an uploaded")} <code>.zip</code> {translateUi("export (images included) or a plain")} <code>.db</code> {translateUi("file (an older export, database only). A backup of the current database is saved on the server automatically before the swap. Every connected user will be reloaded once this completes.")}
             </p>
           </div>
 
@@ -138,20 +138,20 @@ export function DatabaseAdminPanel() {
                 disabled={importing}
                 style={{ marginTop: 3 }}
               />
-              <span>I understand this permanently replaces all data in this Beholden install with the contents of &ldquo;{selectedFile.name}&rdquo;.</span>
+              <span>{translateUi("I understand this permanently replaces all data in this Beholden install with the contents of “")}{selectedFile.name}{translateUi("”.")}</span>
             </label>
           ) : null}
 
           {importError ? <div style={{ color: theme.colors.colorPinkRed, fontSize: "var(--fs-subtitle)" }}>{importError}</div> : null}
           {importResult ? (
             <div style={{ color: theme.colors.text, fontSize: "var(--fs-subtitle)" }}>
-              Imported {importResult.rowsImported} rows across {importResult.tablesReplaced} tables. Reloading…
+              {translateUi("Imported")} {importResult.rowsImported} {translateUi("rows across")} {importResult.tablesReplaced} {translateUi("tables. Reloading…")}
             </div>
           ) : null}
 
           <div>
             <Button variant="danger" onClick={() => void handleImport()} disabled={!selectedFile || !acknowledged || importing}>
-              {importing ? "Importing…" : "Replace Database"}
+              {importing ? translateUi("Importing…") : translateUi("Replace Database")}
             </Button>
           </div>
         </div>

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import { Button } from "@/ui/Button";
@@ -22,6 +23,7 @@ export function MonsterRow(props: {
   onSetLabelBase: (s: string) => void;
   onAddMonster: (monsterId: string, qty: number, opts?: AddMonsterOptions) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const m = props.row;
   const [showAddedFeedback, setShowAddedFeedback] = React.useState(false);
   const feedbackTimerRef = React.useRef<number | null>(null);
@@ -65,7 +67,7 @@ export function MonsterRow(props: {
       <div style={{ minWidth: 0 }}>
         <div style={{ color: theme.colors.text, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div>
         <div style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {`CR ${formatCr(m.cr)}`}
+          {translateUi("CR {{value1}}", { value1: formatCr(m.cr) })}
           {m.type ? ` - ${m.type}` : ""}
           {m.environment ? ` - ${m.environment}` : ""}
         </div>
@@ -96,7 +98,7 @@ export function MonsterRow(props: {
             });
           }}
         >
-          {showAddedFeedback ? "Added" : "Add"}
+          {showAddedFeedback ? translateUi("Added") : translateUi("Add")}
         </Button>
       </div>
     </div>

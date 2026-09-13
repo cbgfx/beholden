@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C } from "@/lib/theme";
 import { RightDrawer } from "@/ui/RightDrawer";
 import { IconConditionByKey, IconConditions } from "@/icons";
@@ -20,6 +21,7 @@ export function CharacterHudConditionsDrawer(props: {
   toggleCondition: (key: string) => void;
   onClose: () => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const { condPickerOpen, availableConditions, accentColor, conditions, condSaving, toggleCondition, onClose } = props;
 
   if (!condPickerOpen) return null;
@@ -36,8 +38,8 @@ export function CharacterHudConditionsDrawer(props: {
       title={
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <IconConditions size={16} style={{ color: accentColor }} />
-          <span style={{ fontWeight: 900, fontSize: "var(--fs-subtitle)", letterSpacing: "0.08em", textTransform: "uppercase", color: accentColor }}>Conditions</span>
-          {condSaving && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>saving...</span>}
+          <span style={{ fontWeight: 900, fontSize: "var(--fs-subtitle)", letterSpacing: "0.08em", textTransform: "uppercase", color: accentColor }}>{translateUi("Conditions")}</span>
+          {condSaving && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{translateUi("saving...")}</span>}
         </div>
       }
     >
@@ -68,7 +70,7 @@ export function CharacterHudConditionsDrawer(props: {
                 >
                   <IconConditionByKey condKey={cd.key} size={22} style={{ opacity: active ? 1 : 0.5 }} />
                   <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, textAlign: "center", lineHeight: 1.2 }}>{cd.name}</span>
-                  {active && <span style={{ fontSize: "var(--fs-tiny)", color: accentColor, fontWeight: 900, letterSpacing: "0.04em" }}>ACTIVE</span>}
+                  {active && <span style={{ fontSize: "var(--fs-tiny)", color: accentColor, fontWeight: 900, letterSpacing: "0.04em" }}>{translateUi("ACTIVE")}</span>}
                 </button>
               );
             })}

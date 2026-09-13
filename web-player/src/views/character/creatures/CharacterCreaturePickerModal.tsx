@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { averageHpFromFormula } from "@beholden/shared/domain/monsters";
 import { useEffect, useState } from "react";
 import { api } from "@/services/api";
@@ -46,6 +47,8 @@ export function CharacterCreaturePickerModal(props: {
   onClose: () => void;
   onAdd: (creature: CharacterCreature) => void;
 }) {
+  const translateMessage = useUiMessages("playerUi");
+  const translateUi = useUiTranslation("playerUi");
   const [rows, setRows] = useState<CompendiumMonsterRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +79,7 @@ export function CharacterCreaturePickerModal(props: {
       } catch (e: any) {
         if (controller.signal.aborted) return;
         setRows([]);
-        setError(e?.message ?? "Failed to load monsters.");
+        setError(e?.message ?? translateMessage("Failed to load monsters."));
       } finally {
         if (!controller.signal.aborted) setBusy(false);
       }
@@ -85,7 +88,7 @@ export function CharacterCreaturePickerModal(props: {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [props.isOpen, query]);
+  }, [props.isOpen, query, translateMessage]);
 
   useEffect(() => {
     if (!props.isOpen) {
@@ -137,20 +140,20 @@ export function CharacterCreaturePickerModal(props: {
       <div style={{ width: "min(1100px, 100%)", height: "min(720px, calc(100vh - 40px))", background: C.bg, border: `1px solid ${C.panelBorder}`, borderRadius: 16, boxShadow: "0 30px 80px rgba(0,0,0,0.45)", display: "grid", gridTemplateColumns: "minmax(320px, 380px) minmax(0, 1fr)", gap: 12, padding: 12, overflow: "hidden" }}>
         <div style={inventoryPickerColumnStyle}>
           <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: C.colorGold }}>
-            Add Creature
+            {translateUi("Add Creature")}
           </div>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search monsters..."
+            placeholder={translateUi("Search monsters...")}
             style={{ ...inputStyle, flex: "0 0 auto", width: "100%" }}
           />
           <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
-            {busy ? "Loading..." : error ? error : `${filteredRows.length} creature${filteredRows.length === 1 ? "" : "s"}`}
+            {busy ? translateUi("Loading...") : error ? error : translateUi("{{value1}} creature{{value2}}", { value1: filteredRows.length, value2: filteredRows.length === 1 ? "" : "s" })}
           </div>
           <div style={inventoryPickerListStyle}>
             {!busy && error ? <div style={{ padding: 12, color: C.red }}>{error}</div> : null}
-            {!busy && !error && filteredRows.length === 0 ? <div style={{ padding: 12, color: C.muted }}>No creatures found.</div> : null}
+            {!busy && !error && filteredRows.length === 0 ? <div style={{ padding: 12, color: C.muted }}>{translateUi("No creatures found.")}</div> : null}
             {filteredRows.map((row) => (
               <ItemListRow
                 key={row.id}
@@ -196,18 +199,18 @@ export function CharacterCreaturePickerModal(props: {
               }}
               disabled={!selectedRow}
             >
-              Add
+              {translateUi("Add")}
             </Button>
-            <button type="button" onClick={props.onClose} style={cancelBtnStyle}>Close</button>
+            <button type="button" onClick={props.onClose} style={cancelBtnStyle}>{translateUi("Close")}</button>
           </div>
 
           {detailBusy ? (
-            <div style={{ color: C.muted }}>Loading creature details...</div>
+            <div style={{ color: C.muted }}>{translateUi("Loading creature details...")}</div>
           ) : detail ? (
             <MonsterStatblock monster={detail} />
           ) : (
             <div style={{ color: C.muted, lineHeight: 1.5 }}>
-              Pick a monster on the left to preview its stat block before adding it to the character.
+              {translateUi("Pick a monster on the left to preview its stat block before adding it to the character.")}
             </div>
           )}
         </div>

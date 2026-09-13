@@ -1,5 +1,8 @@
 // @vitest-environment jsdom
 import { act } from "react";
+import { I18nextProvider } from "react-i18next";
+import { i18n, loadLanguage } from "@/i18n";
+import { applyLanguage } from "@beholden/shared/i18n/config";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ get: vi.fn(), put: vi.fn(), api: vi.fn() }));
@@ -14,7 +17,8 @@ let host: HTMLDivElement;
 let combat: ReturnType<typeof useServerCombatState>;
 let autosave: ReturnType<typeof useBastionAutosave>;
 const deferred = <T,>() => { let resolve!: (value: T) => void; const promise = new Promise<T>(done => { resolve = done; }); return { promise, resolve }; };
-function Combat({ id }: { id: string }) { combat = useServerCombatState(id); return <div>{combat.round}:{combat.error}</div>; }
+function CombatState({ id }: { id: string }) { combat = useServerCombatState(id); return <div>{combat.round}:{combat.error}</div>; }
+function Combat({ id }: { id: string }) { return <I18nextProvider i18n={i18n}><CombatState id={id} /></I18nextProvider>; }
 const row = (id: string, notes = "old") => ({ id, name: id, notes, facilities: [], assignedPlayerIds: [], assignedCharacterIds: [] } as unknown as Bastion);
 const setSaving = vi.fn(); const setMessage = vi.fn();
 function Bastions({ campaign = "c", open = true, selected = "a" }: { campaign?: string; open?: boolean; selected?: string }) {
@@ -34,6 +38,17 @@ it("retires an old encounter read after navigation with real React effects", asy
   await act(async () => root.render(<Combat id="b" />));
   await act(async () => old.resolve({ round: 2, activeCombatantId: "a" }));
   expect(combat.round).toBe(7); expect(combat.activeId).toBe("b"); expect(combat.loaded).toBe(true);
+});
+
+it("changes language without fetching or writing combat state again", async () => {
+  mocks.get.mockResolvedValue({ round: 3, activeCombatantId: "hero" });
+  await act(async () => root.render(<Combat id="encounter" />));
+  expect(mocks.get).toHaveBeenCalledOnce();
+  await act(async () => applyLanguage(i18n, loadLanguage, "fr"));
+  expect(combat.round).toBe(3);
+  expect(mocks.get).toHaveBeenCalledOnce();
+  expect(mocks.put).not.toHaveBeenCalled();
+  await act(async () => applyLanguage(i18n, loadLanguage, "en"));
 });
 
 it("keeps newer reads and local writes ahead of older refresh responses", async () => {

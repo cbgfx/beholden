@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { C } from "@/lib/theme";
 import { Select } from "@/ui/Select";
 import type { BastionFacility, CompendiumFacility } from "./BastionViewShared";
@@ -11,8 +12,9 @@ export function FacilityRows(props: {
   selectedFacilityId?: string | null;
   onSelectFacility?: (facilityId: string) => void;
 }) {
+  const { t } = useTranslation();
   if (props.rows.length === 0) {
-    return <div style={{ fontSize: "var(--fs-small)", color: C.muted, opacity: 0.5 }}>None</div>;
+    return <div style={{ fontSize: "var(--fs-small)", color: C.muted, opacity: 0.5 }}>{t("bastionView.none")}</div>;
   }
 
   return (
@@ -39,8 +41,8 @@ export function FacilityRows(props: {
                   {definition?.name ?? facility.facilityKey}
                 </div>
                 <div style={{ marginTop: 2, fontSize: "var(--fs-tiny)", color: C.muted }}>
-                  {definition?.prerequisite ? `Prerequisite: ${definition.prerequisite}` : "No prerequisite"}
-                  {definition?.hirelings != null ? ` - Hirelings: ${definition.hirelings}` : ""}
+                  {definition?.prerequisite ? t("bastionView.prerequisiteLabel", { prerequisite: definition.prerequisite }) : t("bastionView.noPrerequisite")}
+                  {definition?.hirelings != null ? ` ${t("bastionView.hirelingsSuffix", { count: definition.hirelings })}` : ""}
                 </div>
               </div>
               {props.onRemove && (
@@ -51,7 +53,7 @@ export function FacilityRows(props: {
                   }}
                   style={ghostButtonStyle()}
                 >
-                  Remove
+                  {t("bastionView.removeButton")}
                 </button>
               )}
             </div>
@@ -74,7 +76,7 @@ export function FacilityRows(props: {
                 onChange={(e) => props.onUpdate?.(facility.id, { notes: e.target.value })}
                 onClick={(e) => e.stopPropagation()}
                 style={inputStyle}
-                placeholder="Facility notes..."
+                placeholder={t("bastionView.facilityNotesPlaceholder")}
                 disabled={!props.onUpdate}
               />
             </div>

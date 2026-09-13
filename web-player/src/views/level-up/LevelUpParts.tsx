@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { C, withAlpha } from "@/lib/theme";
 import { abilityMod, formatModifier } from "@/views/character/CharacterSheetUtils";
@@ -60,11 +61,12 @@ export function Wrap({ children }: { children: React.ReactNode }) {
 }
 
 export function BackBtn({ onClick }: { onClick: () => void }) {
+  const translateUi = useUiTranslation("playerUi");
   return (
     <button onClick={onClick} style={{
       background: "none", border: "none", cursor: "pointer", color: C.muted,
       fontSize: "var(--fs-subtitle)", padding: "6px 0",
-    }}>← Back</button>
+    }}>{translateUi("← Back")}</button>
   );
 }
 
@@ -123,23 +125,24 @@ export function LevelUpHpSection(props: {
   onChooseManual: () => void;
   onManualChange: (value: string) => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const { nextLevel, hd, conMod, hpChoice, hpAverage, rolledHp, manualHp, hpGain, featHpBonus, hpMax, accentColor, onChooseAverage, onChooseRoll, onChooseManual, onManualChange } = props;
   return (
-    <Section title={`HP at Level ${nextLevel}`} accent={accentColor}>
+    <Section title={translateUi("HP at Level {{value1}}", { value1: nextLevel })} accent={accentColor}>
       <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginBottom: 10 }}>
-        Hit Die: d{hd} · CON modifier: {formatModifier(conMod)}
+        {translateUi("Hit Die: d")}{hd} {translateUi("· CON modifier:")} {formatModifier(conMod)}
       </div>
       <div style={{ display: "flex", gap: 10 }}>
         <ChoiceBtn active={hpChoice === "average"} onClick={onChooseAverage}>
-          Take average — <strong>+{hpAverage}</strong>
+          {translateUi("Take average —")} <strong>+{hpAverage}</strong>
         </ChoiceBtn>
         <ChoiceBtn active={hpChoice === "roll"} onClick={onChooseRoll} accent={C.green}>
           {hpChoice === "roll" && rolledHp !== null
-            ? <>🎲 Rolled — <strong>+{rolledHp}</strong> <span style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>(click to re-roll)</span></>
-            : <>🎲 Roll 1d{hd}</>}
+            ? <>{translateUi("🎲 Rolled —")} <strong>+{rolledHp}</strong> <span style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{translateUi("(click to re-roll)")}</span></>
+            : <>{translateUi("🎲 Roll 1d")}{hd}</>}
         </ChoiceBtn>
         <ChoiceBtn active={hpChoice === "manual"} onClick={onChooseManual} accent="#f59e0b">
-          Manual HP
+          {translateUi("Manual HP")}
         </ChoiceBtn>
       </div>
       {hpChoice === "manual" && (
@@ -150,7 +153,7 @@ export function LevelUpHpSection(props: {
             inputMode="numeric"
             value={manualHp}
             onChange={(e) => onManualChange(e.target.value)}
-            placeholder={`Enter total gained (e.g. ${Math.max(1, 1 + conMod)}-${Math.max(1, hd + conMod)})`}
+            placeholder={translateUi("Enter total gained (e.g. {{value1}}-{{value2}})", { value1: Math.max(1, 1 + conMod), value2: Math.max(1, hd + conMod) })}
             style={{
               flex: "0 1 280px", padding: "10px 12px", borderRadius: 10,
               border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)",
@@ -158,13 +161,13 @@ export function LevelUpHpSection(props: {
             }}
           />
           <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
-            Enter the final HP gained after applying Constitution.
+            {translateUi("Enter the final HP gained after applying Constitution.")}
           </div>
         </div>
       )}
       {hpGain !== null && (
         <div style={{ marginTop: 10, fontSize: "var(--fs-subtitle)", color: C.muted }}>
-          New HP max: <span style={{ color: "#fff", fontWeight: 700 }}>{hpMax} + {hpGain}{featHpBonus > 0 ? ` + ${featHpBonus}` : ""} = {hpMax + hpGain + featHpBonus}</span>
+          {translateUi("New HP max:")} <span style={{ color: "#fff", fontWeight: 700 }}>{hpMax} + {hpGain}{featHpBonus > 0 ? ` + ${featHpBonus}` : ""} = {hpMax + hpGain + featHpBonus}</span>
         </div>
       )}
     </Section>
@@ -177,6 +180,7 @@ export function AsiAbilityGrid(props: {
   accentColor: string;
   onToggle: (key: string) => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const { baseScores, asiStats, accentColor, onToggle } = props;
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
@@ -203,7 +207,7 @@ export function AsiAbilityGrid(props: {
               {selected && <span style={{ fontSize: "var(--fs-small)", color: accentColor }}> +{delta}</span>}
             </div>
             <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{formatModifier(abilityMod(preview))}</div>
-            {maxed && <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>MAX</div>}
+            {maxed && <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{translateUi("MAX")}</div>}
           </button>
         );
       })}
@@ -275,6 +279,7 @@ export function ExpertiseReplacementSection(props: {
   existingExpertise: string[];
   onToggleExpertise: (choiceKey: string, skill: string, count: number) => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const { accentColor, replacementChoices, chosenExpertise, proficientSkills, existingExpertise, onToggleExpertise } = props;
 
   return (
@@ -295,7 +300,7 @@ export function ExpertiseReplacementSection(props: {
         return (
           <div key={choice.key}>
             <div style={{ fontSize: "var(--fs-body)", fontWeight: 800, color: "#fff", marginBottom: 8 }}>{choice.source}</div>
-            <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginBottom: 6 }}>Replace this Expertise:</div>
+            <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginBottom: 6 }}>{translateUi("Replace this Expertise:")}</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
               {existingExpertise.map((skill) => (
                 <ChoiceBtn
@@ -315,7 +320,7 @@ export function ExpertiseReplacementSection(props: {
             </div>
             {target ? (
               <>
-                <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginBottom: 6 }}>Replace with:</div>
+                <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginBottom: 6 }}>{translateUi("Replace with:")}</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {newSkillOptions.map((skill) => {
                     const isSelected = selected.some((entry) => normalizeChoiceKey(entry) === normalizeChoiceKey(skill));

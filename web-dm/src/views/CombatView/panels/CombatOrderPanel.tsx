@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import type { EncounterActor } from "@/domain/types/domain";
 import { theme } from "@/theme/theme";
 import { Panel } from "@/ui/Panel";
@@ -33,6 +34,7 @@ export function CombatOrderPanel(props: {
   bulkSelectedIds?: Set<string>;
   onToggleBulkSelect?: (id: string) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const panelTitleColor = "var(--campaign-accent, #a78bfa)";
   const targetAccent = theme.colors.accentPrimary;
   const { upcoming, wrapped } = useCombatOrderModel({ combatants: props.combatants, activeId: props.activeId });
@@ -42,8 +44,8 @@ export function CombatOrderPanel(props: {
       storageKey="combat-order"
       title={
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <IconInitiative size={18} title="Initiative" />
-          <span style={{ fontSize: "var(--fs-title)", color: panelTitleColor, fontWeight: 900 }}>INITIATIVE</span>
+          <IconInitiative size={18} title={translateUi("Initiative")} />
+          <span style={{ fontSize: "var(--fs-title)", color: panelTitleColor, fontWeight: 900 }}>{translateUi("INITIATIVE")}</span>
         </div>
       }
     >
@@ -75,7 +77,7 @@ export function CombatOrderPanel(props: {
 
         {wrapped.length ? (
           <div style={{ padding: "6px 2px 2px", color: panelTitleColor, fontSize: "var(--fs-title)", fontWeight: 900 }}>
-            NEXT ROUND
+            {translateUi("NEXT ROUND")}
           </div>
         ) : null}
 

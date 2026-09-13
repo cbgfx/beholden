@@ -13,6 +13,8 @@
       "@/*": ["./src/*"],
       "@beholden/shared/domain/*": ["../shared/src/domain/*"],
       "@beholden/shared/ui/*": ["../shared/src/ui/*"],
+      "@beholden/shared/i18n": ["../shared/src/i18n/index.ts"],
+      "@beholden/shared/i18n/*": ["../shared/src/i18n/*"],
       "@beholden/shared/api/*": ["../shared/src/api/*"],
       "@beholden/shared/icons/*": ["../shared/src/icons/*"]
     }

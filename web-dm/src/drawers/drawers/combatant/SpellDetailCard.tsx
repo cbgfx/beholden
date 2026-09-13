@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { Button } from "@/ui/Button";
 import { theme, withAlpha } from "@/theme/theme";
 
@@ -8,6 +9,7 @@ export function SpellDetailCard(props: {
   detail: any | null;
   onClose: () => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   if (!props.open) return null;
   return (
     <div
@@ -20,7 +22,7 @@ export function SpellDetailCard(props: {
       }}
     >
       {props.loading ? (
-        <div style={{ color: theme.colors.muted }}>Loading spell…</div>
+        <div style={{ color: theme.colors.muted }}>{translateUi("Loading spell…")}</div>
       ) : props.error ? (
         <div style={{ color: theme.colors.red, fontWeight: 800 }}>{props.error}</div>
       ) : props.detail ? (
@@ -28,7 +30,7 @@ export function SpellDetailCard(props: {
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
             <div style={{ color: theme.colors.text, fontWeight: 900, fontSize: "var(--fs-subtitle)" }}>{props.detail.name}</div>
             <div style={{ color: theme.colors.muted, fontWeight: 800 }}>
-              {Number(props.detail.level) === 0 ? "Cantrip" : `L${props.detail.level ?? "?"}`}
+              {Number(props.detail.level) === 0 ? translateUi("Cantrip") : translateUi("L{{value1}}", { value1: props.detail.level ?? "?" })}
               {props.detail.school ? ` • ${props.detail.school}` : ""}
             </div>
           </div>
@@ -37,7 +39,7 @@ export function SpellDetailCard(props: {
             {[props.detail.time, props.detail.range, props.detail.duration].filter(Boolean).join(" • ")}
           </div>
 
-          {props.detail.components ? <div style={{ color: theme.colors.muted }}>Components: {props.detail.components}</div> : null}
+          {props.detail.components ? <div style={{ color: theme.colors.muted }}>{translateUi("Components:")} {props.detail.components}</div> : null}
 
           <div style={{ color: theme.colors.text, whiteSpace: "pre-wrap" }}>
             {Array.isArray(props.detail.text) ? props.detail.text.filter(Boolean).join("\n") : String(props.detail.text ?? "")}
@@ -47,7 +49,7 @@ export function SpellDetailCard(props: {
 
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
         <Button variant="ghost" onClick={props.onClose}>
-          Close spell
+          {translateUi("Close spell")}
         </Button>
       </div>
     </div>

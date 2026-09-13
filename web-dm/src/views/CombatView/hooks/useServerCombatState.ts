@@ -1,3 +1,4 @@
+import { useUiMessages } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 import { useWs } from "@/services/ws";
 import { fetchEncounterCombatState, putEncounterCombatState } from "@/services/encounterApi";
@@ -5,6 +6,7 @@ import { fetchEncounterCombatState, putEncounterCombatState } from "@/services/e
 type CombatState = { round: number; activeCombatantId: string | null };
 
 export function useServerCombatState(encounterId: string | undefined) {
+  const translateMessage = useUiMessages("dmUi");
   const [loaded, setLoaded] = React.useState(false);
   const [round, setRound] = React.useState(1);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -26,9 +28,9 @@ export function useServerCombatState(encounterId: string | undefined) {
       const next = await fetchEncounterCombatState<CombatState>(encounterId);
       if (scope.current === current && current.revision === revision) { apply(next); if (retainError) setError(retainError); }
     } catch (cause) {
-      if (scope.current === current && current.revision === revision) setError(cause instanceof Error ? cause.message : "Failed to load combat state.");
+      if (scope.current === current && current.revision === revision) setError(cause instanceof Error ? cause.message : translateMessage("Failed to load combat state."));
     }
-  }, [encounterId, apply]);
+  }, [encounterId, apply, translateMessage]);
   React.useEffect(() => {
     scope.current = { id: encounterId, revision: 0, writes: 0 };
     setLoaded(false); setStarted(false); setRound(1); setActiveId(null); setError(null);

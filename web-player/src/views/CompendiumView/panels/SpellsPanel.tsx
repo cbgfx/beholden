@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Panel } from "@/ui/Panel";
 import { Select } from "@/ui/Select";
 import { C, withAlpha } from "@/lib/theme";
@@ -11,6 +12,7 @@ export function SpellsPanel(props: {
   selectedSpellRuleset?: "5e" | "5.5e" | null;
   onSelectSpell?: (id: string, ruleset?: "5e" | "5.5e" | null) => void;
 }) {
+  const { t } = useTranslation();
   const {
     q, setQ, level, setLevel,
     schoolFilter, setSchoolFilter, schoolOptions,
@@ -25,14 +27,14 @@ export function SpellsPanel(props: {
 
   return (
     <Panel
-      title={<span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: "var(--fs-large)" }}><IconSpells size={36} /><span>Spells</span></span>}
-      actions={<div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{busy ? "Loading…" : rows.length}</div>}
+      title={<span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: "var(--fs-large)" }}><IconSpells size={36} /><span>{t("compendiumSpells.title")}</span></span>}
+      actions={<div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{busy ? t("compendiumSpells.loading") : rows.length}</div>}
       style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}
       bodyStyle={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, gap: 8 }}
     >
       {/* Search */}
       <input
-        value={q} placeholder="Search…" onChange={(e) => setQ(e.target.value)}
+        value={q} placeholder={t("compendiumSpells.searchPlaceholder")} onChange={(e) => setQ(e.target.value)}
         style={{
           background: C.panelBg, color: C.text, border: `1px solid ${C.panelBorder}`,
           borderRadius: 10, padding: "8px 10px",
@@ -43,26 +45,26 @@ export function SpellsPanel(props: {
       {/* Level + School + Class */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
         <Select value={level} onChange={(e) => setLevel(e.target.value)} style={{ width: "100%" }}>
-          <option value="all">All Levels</option>
-          <option value="0">Cantrip</option>
+          <option value="all">{t("compendiumSpells.allLevels")}</option>
+          <option value="0">{t("compendiumSpells.cantrip")}</option>
           {Array.from({ length: 9 }).map((_, i) => {
             const n = i + 1;
-            return <option key={n} value={String(n)}>Level {n}</option>;
+            return <option key={n} value={String(n)}>{t("compendiumSpells.levelN", { level: n })}</option>;
           })}
         </Select>
         <Select value={schoolFilter} onChange={(e) => setSchoolFilter(e.target.value)} style={{ width: "100%" }}>
           {schoolOptions.map((s) => (
-            <option key={s} value={s}>{s === "all" ? "All Schools" : expandSchool(s)}</option>
+            <option key={s} value={s}>{s === "all" ? t("compendiumSpells.allSchools") : expandSchool(s)}</option>
           ))}
         </Select>
         <Select value={classFilter} onChange={(e) => setClassFilter(e.target.value)} style={{ width: "100%" }}>
           {classOptions.map((c) => (
-            <option key={c} value={c}>{c === "all" ? "All Classes" : c}</option>
+            <option key={c} value={c}>{c === "all" ? t("compendiumSpells.allClasses") : c}</option>
           ))}
         </Select>
         {availableRulesets.length > 1 && (
           <Select value={rulesetFilter} onChange={(e) => setRulesetFilter(e.target.value as "5e" | "5.5e" | "")} style={{ width: "100%" }}>
-            <option value="">All Rulesets</option>
+            <option value="">{t("compendiumSpells.allRulesets")}</option>
             <option value="5.5e">5.5e</option>
             <option value="5e">5e</option>
           </Select>
@@ -79,13 +81,13 @@ export function SpellsPanel(props: {
           )
         )}
         <button type="button" onClick={() => setFilterConcentration(!filterConcentration)} style={togglePillStyle(filterConcentration, C.accentHl, C.panelBorder, C.muted)}>
-          Concentration
+          {t("compendiumSpells.concentration")}
         </button>
         <button type="button" onClick={() => setFilterRitual(!filterRitual)} style={togglePillStyle(filterRitual, C.accentHl, C.panelBorder, C.muted)}>
-          Ritual
+          {t("compendiumSpells.ritual")}
         </button>
         {hasActiveFilters && (
-          <button type="button" onClick={clearFilters} style={togglePillStyle(false, C.accentHl, C.panelBorder, C.muted)}>Clear</button>
+          <button type="button" onClick={clearFilters} style={togglePillStyle(false, C.accentHl, C.panelBorder, C.muted)}>{t("compendiumSpells.clear")}</button>
         )}
       </div>
 
@@ -114,7 +116,7 @@ export function SpellsPanel(props: {
             </button>
           );
         })}
-        {!rows.length && <div style={{ padding: 10, color: C.muted }}>No spells found.</div>}
+        {!rows.length && <div style={{ padding: 10, color: C.muted }}>{t("compendiumSpells.noSpellsFound")}</div>}
       </div>
     </Panel>
   );

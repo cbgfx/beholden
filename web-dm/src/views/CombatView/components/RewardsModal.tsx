@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 import { api } from "@/services/api";
 import { theme } from "@/theme/theme";
@@ -16,6 +17,8 @@ function XpAwardSection(props: {
   totalXp: number;
   playerCount: number;
 }) {
+  const translateMessage = useUiMessages("dmUi");
+  const translateUi = useUiTranslation("dmUi");
   const { encounterId, totalXp, playerCount } = props;
   const defaultPerPlayer = playerCount > 0 ? Math.floor(totalXp / playerCount) : totalXp;
   const [xpInput, setXpInput] = React.useState(String(defaultPerPlayer));
@@ -48,7 +51,7 @@ function XpAwardSection(props: {
       // award instead of permanently swapping to a static "XP awarded!" message.
       awardedTimerRef.current = window.setTimeout(() => setAwarded(false), 1500);
     } catch {
-      setError("Failed to award XP. Try again.");
+      setError(translateMessage("Failed to award XP. Try again."));
       setAwarding(false);
     }
   };
@@ -57,24 +60,24 @@ function XpAwardSection(props: {
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       {awarded ? (
         <div style={{ textAlign: "center", color: theme.colors.green, fontWeight: 800, fontSize: "var(--fs-large)", padding: "20px 0" }}>
-          XP awarded!
+          {translateUi("XP awarded!")}
         </div>
       ) : (
         <>
           <div style={{ display: "flex", gap: 12 }}>
             <div style={{ flex: 1, padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", textAlign: "center" }}>
-              <div style={{ fontSize: "var(--fs-tiny)", color: theme.colors.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Total XP</div>
+              <div style={{ fontSize: "var(--fs-tiny)", color: theme.colors.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{translateUi("Total XP")}</div>
               <div style={{ fontSize: "var(--fs-large)", fontWeight: 900, color: theme.colors.text }}>{fmtXp(totalXp)}</div>
             </div>
             <div style={{ flex: 1, padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", textAlign: "center" }}>
-              <div style={{ fontSize: "var(--fs-tiny)", color: theme.colors.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Players</div>
+              <div style={{ fontSize: "var(--fs-tiny)", color: theme.colors.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{translateUi("Players")}</div>
               <div style={{ fontSize: "var(--fs-large)", fontWeight: 900, color: theme.colors.text }}>{playerCount}</div>
             </div>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: theme.colors.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              XP per player
+              {translateUi("XP per player")}
             </label>
             <input
               type="text"
@@ -96,7 +99,7 @@ function XpAwardSection(props: {
 
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <Button variant="primary" onClick={() => void award()} disabled={!valid || awarding}>
-              {awarding ? "Awarding…" : `Award ${valid ? fmtXp(xpValue) : ""} XP`}
+              {awarding ? translateUi("Awarding…") : translateUi("Award {{value1}} XP", { value1: valid ? fmtXp(xpValue) : "" })}
             </Button>
           </div>
         </>
@@ -116,8 +119,9 @@ export function RewardsModal(props: {
   players: CampaignCharacter[];
   onClose: () => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   return (
-    <Modal isOpen title="Rewards" onClose={props.onClose} width={520} height="auto">
+    <Modal isOpen title={translateUi("Rewards")} onClose={props.onClose} width={520} height="auto">
       <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 24, maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}>
         <XpAwardSection
           encounterId={props.encounterId}

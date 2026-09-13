@@ -24,6 +24,8 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           const normalizedId = id.replaceAll("\\", "/");
+          const locale = /\/src\/i18n\/locales\/([^/]+)\//.exec(normalizedId)?.[1];
+          if (locale && locale !== "en") return `locale-${locale}`;
           if (normalizedId.includes("/node_modules/react-router-dom/")) return "vendor-router";
           if (normalizedId.includes("/node_modules/react/") || normalizedId.includes("/node_modules/react-dom/")) {
             return "vendor-react";

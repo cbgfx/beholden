@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/services/api";
@@ -22,6 +23,7 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
   onRefresh: () => Promise<void>;
   onError: (message: string) => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -139,7 +141,7 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
         {/* Portrait */}
         <div
           onClick={() => fileRef.current?.click()}
-          title="Click to change portrait"
+          title={translateUi("Click to change portrait")}
           style={{
             width: 54, height: 54, borderRadius: 10, flexShrink: 0, cursor: "pointer",
             overflow: "hidden", position: "relative",
@@ -174,7 +176,7 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
               </span>
             )}
           </div>
-          <div style={{ fontSize: "var(--fs-small)", color, fontWeight: 700, marginTop: 1 }}>Level {ch.level}</div>
+          <div style={{ fontSize: "var(--fs-small)", color, fontWeight: 700, marginTop: 1 }}>{translateUi("Level")} {ch.level}</div>
         </div>
 
         {/* AC badge */}
@@ -183,7 +185,7 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
           background: "rgba(255,255,255,0.06)", borderRadius: 8, padding: "4px 10px", flexShrink: 0,
         }}>
           <span style={{ fontSize: "var(--fs-title)", fontWeight: 900, color: C.text }}>{ch.ac}</span>
-          <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 600 }}>AC</span>
+          <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 600 }}>{translateUi("AC")}</span>
         </div>
       </div>
 
@@ -221,23 +223,23 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
       {/* Actions */}
       {confirmDelete ? (
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <span style={{ fontSize: "var(--fs-small)", color: C.colorPinkRed, flex: 1 }}>Delete this character?</span>
+          <span style={{ fontSize: "var(--fs-small)", color: C.colorPinkRed, flex: 1 }}>{translateUi("Delete this character?")}</span>
           <Button variant="danger" disabled={deleting} onClick={handleDelete} style={{ flexShrink: 0 }}>
-            {deleting ? "…" : "Yes, delete"}
+            {deleting ? "…" : translateUi("Yes, delete")}
           </Button>
-          <Button variant="ghost" onClick={() => setConfirmDelete(false)} style={{ flexShrink: 0 }}>Cancel</Button>
+          <Button variant="ghost" onClick={() => setConfirmDelete(false)} style={{ flexShrink: 0 }}>{translateUi("Cancel")}</Button>
         </div>
       ) : (
         <div style={{ display: "flex", gap: 6 }}>
           <IconButton
-            title="Export character"
+            title={translateUi("Export character")}
             onClick={() => void handleExport()}
             disabled={exporting}
           >
             <IconDownload size={17} />
           </IconButton>
           <Button variant="ghost" style={{ flex: 1, flexShrink: 0 }} onClick={() => navigate(`/characters/${ch.id}/edit`)}>
-            Edit
+            {translateUi("Edit")}
           </Button>
 
           <Button
@@ -245,7 +247,7 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
             style={{ flexShrink: 0 }}
             onClick={() => void setActive(!ch.isActive)}
           >
-            {ch.isActive ? "Archive" : "Restore"}
+            {ch.isActive ? translateUi("Archive") : translateUi("Restore")}
           </Button>
 
           <Button
@@ -253,7 +255,7 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
             style={{ flex: 1, flexShrink: 0 }}
             onClick={() => setConfirmDelete(true)}
           >
-            Delete
+            {translateUi("Delete")}
           </Button>
         </div>
       )}

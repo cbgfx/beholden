@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useEffect, useState } from "react";
 import { C } from "@/lib/theme";
 import { RightDrawer } from "@/ui/RightDrawer";
@@ -12,6 +13,7 @@ export function NoteEditDrawer(props: {
   onDelete?: () => void;
   onClose: () => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const color = props.accentColor;
   const label = props.scope === "shared" ? "Shared Note" : "Player Note";
   const [title, setTitle] = useState(props.note?.title ?? "");
@@ -28,7 +30,7 @@ export function NoteEditDrawer(props: {
       width="min(400px, 90vw)"
       title={
         <span style={{ fontWeight: 900, fontSize: "var(--fs-subtitle)", letterSpacing: "0.08em", textTransform: "uppercase", color }}>
-          {props.note ? `Edit ${label}` : `New ${label}`}
+          {props.note ? translateUi("Edit {{value1}}", { value1: label }) : translateUi("New {{value1}}", { value1: label })}
         </span>
       }
       footer={
@@ -36,16 +38,16 @@ export function NoteEditDrawer(props: {
           <div>
             {props.note && props.onDelete && (
               <button onClick={props.onDelete} style={{ background: "rgba(255,93,93,0.12)", border: "1px solid rgba(255,93,93,0.3)", borderRadius: 8, color: C.red, cursor: "pointer", padding: "8px 16px", fontSize: "var(--fs-subtitle)", fontWeight: 700 }}>
-                Delete
+                {translateUi("Delete")}
               </button>
             )}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={props.onClose} style={ghostButtonStyle({ textColor: C.muted, borderColor: "rgba(255,255,255,0.16)", padding: "8px 16px", fontSize: "var(--fs-subtitle)" })}>
-              Cancel
+              {translateUi("Cancel")}
             </button>
             <button onClick={() => props.onSave(title.trim() || "Note", text)} style={accentButtonStyle(color, { padding: "8px 16px", fontSize: "var(--fs-subtitle)" })}>
-              Save
+              {translateUi("Save")}
             </button>
           </div>
         </div>

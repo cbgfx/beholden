@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C } from "@/lib/theme";
 import { Button } from "@/ui/Button";
 import { IconButton } from "@/ui/IconButton";
@@ -25,6 +26,7 @@ export function SpellDrawer({
   removable?: boolean;
   onRemove?: () => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const textArr = Array.isArray(spell.text) ? spell.text : [String(spell.text ?? "")];
   const isConc = Boolean(spell.concentration);
   const isRitual = Boolean(spell.ritual);
@@ -57,8 +59,8 @@ export function SpellDrawer({
               </h2>
               <div style={{ fontSize: "var(--fs-small)", color: C.muted, fontStyle: "italic" }}>
                 {levelLabel}{spell.school ? ` - ${spell.school}` : ""}
-                {isRitual && <span style={{ marginLeft: 6, color: C.colorRitual, fontStyle: "normal", fontWeight: 700 }}>ritual</span>}
-                {isConc && <span style={{ marginLeft: 6, color: C.colorRitual, fontStyle: "normal", fontWeight: 700 }}>concentration</span>}
+                {isRitual && <span style={{ marginLeft: 6, color: C.colorRitual, fontStyle: "normal", fontWeight: 700 }}>{translateUi("ritual")}</span>}
+                {isConc && <span style={{ marginLeft: 6, color: C.colorRitual, fontStyle: "normal", fontWeight: 700 }}>{translateUi("concentration")}</span>}
               </div>
             </div>
             <IconButton onClick={onClose}>x</IconButton>
@@ -71,9 +73,9 @@ export function SpellDrawer({
           borderBottom: "1px solid rgba(255,255,255,0.08)",
         }}>
           {[
-            { label: "Casting Time", value: spell.time ?? "-" },
-            { label: "Range", value: (spell.range ?? "-").replace(/ feet?/i, " ft.") },
-            { label: "Duration", value: spell.duration ?? "-" },
+            { label: translateUi("Casting Time"), value: spell.time ?? "-" },
+            { label: translateUi("Range"), value: (spell.range ?? "-").replace(/ feet?/i, " ft.") },
+            { label: translateUi("Duration"), value: spell.duration ?? "-" },
           ].map(({ label, value }) => (
             <div key={label} style={{ padding: "10px 12px", background: "#111827", textAlign: "center" }}>
               <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>{label}</div>
@@ -107,16 +109,16 @@ export function SpellDrawer({
           ))}
           {spell.classes && (
             <p style={{ margin: "8px 0 0", fontSize: "var(--fs-small)", color: C.muted, fontStyle: "italic" }}>
-              Classes: {spell.classes}
+              {translateUi("Classes:")} {spell.classes}
             </p>
           )}
           {spell.source && (
             <p style={{ margin: "8px 0 0", fontSize: "var(--fs-small)", color: C.muted }}>
-              Source: {spell.source} · Ruleset: {spell.ruleset ?? "Unknown"}
+              {translateUi("Source:")} {spell.source} {translateUi("· Ruleset:")} {spell.ruleset ?? "Unknown"}
             </p>
           )}
           {sourceLabel && sourceLabel !== spell.source ? (
-            <p style={{ margin: 0, fontSize: "var(--fs-small)", color: C.muted }}>Granted by: {sourceLabel}</p>
+            <p style={{ margin: 0, fontSize: "var(--fs-small)", color: C.muted }}>{translateUi("Granted by:")} {sourceLabel}</p>
           ) : null}
           {removable && onRemove ? (
             <Button
@@ -125,7 +127,7 @@ export function SpellDrawer({
               onClick={onRemove}
               style={{ marginTop: 10, alignSelf: "flex-start", padding: "8px 12px", borderRadius: 8, fontSize: "var(--fs-small)" }}
             >
-              Remove from spell list
+              {translateUi("Remove from spell list")}
             </Button>
           ) : null}
         </div>

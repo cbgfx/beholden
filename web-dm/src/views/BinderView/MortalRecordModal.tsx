@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Drawer } from "@/components/overlay/Drawer";
 import { Button } from "@/ui/Button";
@@ -56,6 +57,8 @@ export function MortalRecordModal(props: {
   onClose: () => void;
   onSave: (input: BinderMortalInput, image: File | null) => Promise<void>;
 }) {
+  const translateMessage = useUiMessages("dmUi");
+  const translateUi = useUiTranslation("dmUi");
   const grouped = useMemo(() => ({
     races: props.options.records.filter((item) => item.type === "race"),
     positions: props.options.records.filter((item) => item.type === "position"),
@@ -161,7 +164,7 @@ export function MortalRecordModal(props: {
     event.preventDefault();
     if (!name.trim() || !gender) return;
     if (props.requireNpcStatblock && mortalType === "npc" && !monsterId) {
-      setError("Choose a statblock before creating this Important NPC.");
+      setError(translateMessage("Choose a statblock before creating this Important NPC."));
       return;
     }
     setSaving(true);
@@ -202,7 +205,7 @@ export function MortalRecordModal(props: {
       }, image);
       props.onClose();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to save Mortal.");
+      setError(cause instanceof Error ? cause.message : translateMessage("Unable to save Mortal."));
     } finally {
       setSaving(false);
     }
@@ -260,12 +263,12 @@ export function MortalRecordModal(props: {
   const footer = <div style={{ display: "grid", gap: 8, width: "100%" }}>
     {error ? <div role="alert" style={{ color: theme.colors.red, fontSize: "var(--fs-small)", textAlign: "right" }}>{error}</div> : null}
     <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-      <Button type="button" variant="ghost" onClick={props.onClose} disabled={saving}>Cancel</Button>
-      <Button type="submit" form="binder-mortal-form" disabled={saving || !name.trim() || !gender || Boolean(props.requireNpcStatblock && mortalType === "npc" && !monsterId)}>{saving ? "Saving…" : props.record ? "Save Changes" : props.requireNpcStatblock ? "Create Important NPC" : "Create Mortal"}</Button>
+      <Button type="button" variant="ghost" onClick={props.onClose} disabled={saving}>{translateUi("Cancel")}</Button>
+      <Button type="submit" form="binder-mortal-form" disabled={saving || !name.trim() || !gender || Boolean(props.requireNpcStatblock && mortalType === "npc" && !monsterId)}>{saving ? translateUi("Saving…") : props.record ? translateUi("Save Changes") : props.requireNpcStatblock ? translateUi("Create Important NPC") : translateUi("Create Mortal")}</Button>
     </div>
   </div>;
 
-  return <Drawer isOpen={props.isOpen} onClose={props.onClose} title={props.record ? "Edit Mortal" : "New Mortal"} footer={footer} width="min(440px, 94vw)">
+  return <Drawer isOpen={props.isOpen} onClose={props.onClose} title={props.record ? translateUi("Edit Mortal") : translateUi("New Mortal")} footer={footer} width="min(440px, 94vw)">
     <form id="binder-mortal-form" onSubmit={(event) => void submit(event)} style={{ display: "grid", gap: 5 }}>
       <div style={{ display: "grid", gridTemplateColumns: "78px minmax(0, 1fr)", gap: 12, alignItems: "center", marginBottom: 8 }}>
         <input
@@ -283,70 +286,70 @@ export function MortalRecordModal(props: {
           type="button"
           onClick={() => imageInputRef.current?.click()}
           disabled={saving}
-          title={imagePreview ? "Change portrait" : "Add portrait"}
-          aria-label={imagePreview ? "Change portrait" : "Add portrait"}
+          title={imagePreview ? translateUi("Change portrait") : translateUi("Add portrait")}
+          aria-label={imagePreview ? translateUi("Change portrait") : translateUi("Add portrait")}
           style={{ width: 78, height: 78, padding: 0, borderRadius: 10, border: `2px dashed ${imagePreview ? theme.colors.accentHighlight : theme.colors.panelBorder}`, background: imagePreview ? "#000" : theme.colors.inputBg, color: theme.colors.muted, cursor: saving ? "default" : "pointer", overflow: "hidden" }}
         >
           {imagePreview
-            ? <img src={imagePreview} alt="Mortal portrait" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            : <span style={{ opacity: 0.55 }}>Portrait</span>}
+            ? <img src={imagePreview} alt={translateUi("Mortal portrait")} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : <span style={{ opacity: 0.55 }}>{translateUi("Portrait")}</span>}
         </button>
         <Input
-          aria-label="Name"
+          aria-label={translateUi("Name")}
           value={name}
           onChange={(event) => setName(event.target.value)}
           autoFocus
           maxLength={160}
           disabled={saving}
-          placeholder="Mortal name"
+          placeholder={translateUi("Mortal name")}
           style={{ fontSize: "var(--fs-title)", fontWeight: 850 }}
         />
       </div>
-      {property("Type", <Select style={{ width: "100%" }} value={mortalType} onChange={(event) => setMortalType(event.target.value as MortalType)} disabled={saving}><option value="npc">NPC</option><option value="player_character">Player Character</option></Select>)}
+      {property("Type", <Select style={{ width: "100%" }} value={mortalType} onChange={(event) => setMortalType(event.target.value as MortalType)} disabled={saving}><option value="npc">{translateUi("NPC")}</option><option value="player_character">{translateUi("Player Character")}</option></Select>)}
       {mortalType === "player_character"
         ? property("Existing player", <SearchableSelect value={playerId} onChange={linkPlayer} disabled={saving} options={availablePlayers.map((player) => ({ id: player.id, name: playerLabel(player) }))} />)
-        : <SearchableOption id="mortal-monster" label={`Statblock${props.requireNpcStatblock ? " *" : ""}`} selectedId={monsterId} options={props.options.monsters ?? []} onChange={selectStatblock} disabled={saving} />}
+        : <SearchableOption id="mortal-monster" label={translateUi("Statblock{{value1}}", { value1: props.requireNpcStatblock ? " *" : "" })} selectedId={monsterId} options={props.options.monsters ?? []} onChange={selectStatblock} disabled={saving} />}
       {mortalType === "npc" ? <details open={Boolean(props.record)} style={{ margin: "8px 0", borderTop: `1px solid ${theme.colors.panelBorder}`, paddingTop: 10 }}>
-        <summary style={{ color: theme.colors.muted, cursor: "pointer", fontWeight: 750 }}>Canonical mechanics</summary>
+        <summary style={{ color: theme.colors.muted, cursor: "pointer", fontWeight: 750 }}>{translateUi("Canonical mechanics")}</summary>
         <div style={{ display: "grid", gap: 5, marginTop: 8 }}>
           {property("Max HP", <Input type="number" min={1} value={hpMax} onChange={(event) => { setHpMax(event.target.value); setMechanicsDirty(true); }} disabled={saving} />)}
           {property("Current HP", <Input type="number" min={0} value={hpCurrent} onChange={(event) => { setHpCurrent(event.target.value); setMechanicsDirty(true); }} disabled={saving} />)}
           {property("AC", <Input type="number" min={0} value={ac} onChange={(event) => { setAc(event.target.value); setMechanicsDirty(true); }} disabled={saving} />)}
           <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}><div style={labelStyle}>Attack overrides</div><Button type="button" variant="ghost" disabled={saving} onClick={() => { setAttackOverrides((rows) => [...rows, { id: crypto.randomUUID(), name: "", toHit: "", damage: "", damageType: "" }]); setMechanicsDirty(true); }}>+ Attack</Button></div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}><div style={labelStyle}>{translateUi("Attack overrides")}</div><Button type="button" variant="ghost" disabled={saving} onClick={() => { setAttackOverrides((rows) => [...rows, { id: crypto.randomUUID(), name: "", toHit: "", damage: "", damageType: "" }]); setMechanicsDirty(true); }}>{translateUi("+ Attack")}</Button></div>
             {attackOverrides.length ? attackOverrides.map((attack) => {
               const update = (field: keyof Omit<AttackOverrideRow, "id">, value: string) => { setAttackOverrides((rows) => rows.map((row) => row.id === attack.id ? { ...row, [field]: value } : row)); setMechanicsDirty(true); };
               return <div key={attack.id} style={{ display: "grid", gap: 7, padding: 10, border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.control, background: "rgba(255,255,255,0.025)" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 72px 32px", gap: 7 }}>
-                  <Input aria-label="Attack name" value={attack.name} onChange={(event) => update("name", event.target.value)} placeholder="Attack name" disabled={saving} />
-                  <Input aria-label={`${attack.name || "Attack"} to hit`} type="number" value={attack.toHit} onChange={(event) => update("toHit", event.target.value)} placeholder="+Hit" disabled={saving} />
-                  <button type="button" aria-label={`Remove ${attack.name || "attack"}`} title="Remove attack" disabled={saving} onClick={() => { setAttackOverrides((rows) => rows.filter((row) => row.id !== attack.id)); setMechanicsDirty(true); }} style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: 7, background: "transparent", color: theme.colors.red, cursor: "pointer", fontSize: 18 }}>×</button>
+                  <Input aria-label={translateUi("Attack name")} value={attack.name} onChange={(event) => update("name", event.target.value)} placeholder={translateUi("Attack name")} disabled={saving} />
+                  <Input aria-label={translateUi("{{value1}} to hit", { value1: attack.name || "Attack" })} type="number" value={attack.toHit} onChange={(event) => update("toHit", event.target.value)} placeholder={translateUi("+Hit")} disabled={saving} />
+                  <button type="button" aria-label={translateUi("Remove {{value1}}", { value1: attack.name || "attack" })} title={translateUi("Remove attack")} disabled={saving} onClick={() => { setAttackOverrides((rows) => rows.filter((row) => row.id !== attack.id)); setMechanicsDirty(true); }} style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: 7, background: "transparent", color: theme.colors.red, cursor: "pointer", fontSize: 18 }}>×</button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 7 }}>
-                  <Input aria-label={`${attack.name || "Attack"} damage`} value={attack.damage} onChange={(event) => update("damage", event.target.value)} placeholder="Damage, e.g. 1d8+5" disabled={saving} />
-                  <Input aria-label={`${attack.name || "Attack"} damage type`} value={attack.damageType} onChange={(event) => update("damageType", event.target.value)} placeholder="Damage type" disabled={saving} />
+                  <Input aria-label={translateUi("{{value1}} damage", { value1: attack.name || "Attack" })} value={attack.damage} onChange={(event) => update("damage", event.target.value)} placeholder={translateUi("Damage, e.g. 1d8+5")} disabled={saving} />
+                  <Input aria-label={translateUi("{{value1}} damage type", { value1: attack.name || "Attack" })} value={attack.damageType} onChange={(event) => update("damageType", event.target.value)} placeholder={translateUi("Damage type")} disabled={saving} />
                 </div>
               </div>;
-            }) : <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", padding: "4px 0" }}>No attack overrides. The linked statblock attacks remain unchanged.</div>}
+            }) : <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", padding: "4px 0" }}>{translateUi("No attack overrides. The linked statblock attacks remain unchanged.")}</div>}
           </div>
-          <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>These values belong to the Binder NPC and update every linked iNPC and combatant.</div>
+          <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{translateUi("These values belong to the Binder NPC and update every linked iNPC and combatant.")}</div>
         </div>
       </details> : null}
       {mortalType === "player_character" && (() => {
         const linkedClassName = playerId ? props.options.players.find((player) => player.id === playerId)?.className : null;
         return property("Class", linkedClassName
-          ? <Input value={linkedClassName} disabled readOnly title="Derived from the linked player character" />
-          : <Input value={className} onChange={(event) => setClassName(event.target.value)} placeholder="e.g. Wizard" disabled={saving} />);
+          ? <Input value={linkedClassName} disabled readOnly title={translateUi("Derived from the linked player character")} />
+          : <Input value={className} onChange={(event) => setClassName(event.target.value)} placeholder={translateUi("e.g. Wizard")} disabled={saving} />);
       })()}
-      <SearchableOption id="mortal-race" label="Race" selectedId={raceId} options={grouped.races} onChange={setRaceId} disabled={saving} />
-      {property("Gender", <Select value={gender} onChange={(event) => setGender(event.target.value as typeof gender)} disabled={saving}><option value="" disabled>Select gender</option><option value="male">Male</option><option value="female">Female</option></Select>)}
+      <SearchableOption id="mortal-race" label={translateUi("Race")} selectedId={raceId} options={grouped.races} onChange={setRaceId} disabled={saving} />
+      {property("Gender", <Select value={gender} onChange={(event) => setGender(event.target.value as typeof gender)} disabled={saving}><option value="" disabled>{translateUi("Select gender")}</option><option value="male">{translateUi("Male")}</option><option value="female">{translateUi("Female")}</option></Select>)}
       {property("Age", <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-        <Input value={ageInput} onChange={(event) => setAgeAndBirth(event.target.value)} inputMode="numeric" placeholder={age === null ? "None" : String(age)} disabled={saving} style={{ width: 90 }} />
-        <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 5, fontSize: "var(--fs-small)", lineHeight: 1.35, fontWeight: 800, color: "#fff", background: dead ? theme.colors.red : theme.colors.green }}>{dead ? "Dead" : "Alive"}</span>
+        <Input value={ageInput} onChange={(event) => setAgeAndBirth(event.target.value)} inputMode="numeric" placeholder={age === null ? translateUi("None") : String(age)} disabled={saving} style={{ width: 90 }} />
+        <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 5, fontSize: "var(--fs-small)", lineHeight: 1.35, fontWeight: 800, color: "#fff", background: dead ? theme.colors.red : theme.colors.green }}>{dead ? translateUi("Dead") : translateUi("Alive")}</span>
       </div>)}
-      {property("Date of birth", <Input value={birthDate} onChange={(event) => setBirthDate(event.target.value)} placeholder="None" disabled={saving} />)}
-      {property("Date of death", <Input value={deathDate} onChange={(event) => setDeathDate(event.target.value)} placeholder="None" disabled={saving} />)}
-      <SearchableOption id="mortal-location" label="Location" selectedId={locationId} options={grouped.locations} onChange={setLocationId} disabled={saving} />
+      {property("Date of birth", <Input value={birthDate} onChange={(event) => setBirthDate(event.target.value)} placeholder={translateUi("None")} disabled={saving} />)}
+      {property("Date of death", <Input value={deathDate} onChange={(event) => setDeathDate(event.target.value)} placeholder={translateUi("None")} disabled={saving} />)}
+      <SearchableOption id="mortal-location" label={translateUi("Location")} selectedId={locationId} options={grouped.locations} onChange={setLocationId} disabled={saving} />
       {property("Organizations", <div style={{ display: "grid", gap: 7 }}>
         {organizationIds.length ? <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {organizationIds.map((organizationId) => {
@@ -354,14 +357,14 @@ export function MortalRecordModal(props: {
             if (!organization) return null;
             return <span key={organizationId} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 7px", border: `1px solid ${theme.colors.panelBorder}`, borderRadius: 999, color: theme.colors.text }}>
               {organization.name}
-              <button type="button" aria-label={`Remove ${organization.name}`} title={`Remove ${organization.name}`} disabled={saving} onClick={() => setOrganizationIds((ids) => ids.filter((id) => id !== organizationId))} style={{ padding: 0, border: 0, background: "none", color: theme.colors.muted, cursor: "pointer", font: "inherit", lineHeight: 1 }}>×</button>
+              <button type="button" aria-label={translateUi("Remove {{value1}}", { value1: organization.name })} title={translateUi("Remove {{value1}}", { value1: organization.name })} disabled={saving} onClick={() => setOrganizationIds((ids) => ids.filter((id) => id !== organizationId))} style={{ padding: 0, border: 0, background: "none", color: theme.colors.muted, cursor: "pointer", font: "inherit", lineHeight: 1 }}>×</button>
             </span>;
           })}
         </div> : null}
         <SearchableSelect
           id="mortal-organization"
           value={organizationPickerId}
-          placeholder="Add an organization…"
+          placeholder={translateUi("Add an organization…")}
           options={grouped.organizations.filter((organization) => !organizationIds.includes(organization.id))}
           disabled={saving}
           onChange={(organizationId) => {
@@ -370,13 +373,13 @@ export function MortalRecordModal(props: {
           }}
         />
       </div>)}
-      <SearchableOption id="mortal-position" label="Position" selectedId={positionId} options={grouped.positions} onChange={setPositionId} disabled={saving} />
-      {image ? <button type="button" onClick={resetPortraitSelection} disabled={saving} style={{ justifySelf: "start", padding: 0, border: 0, background: "none", color: theme.colors.muted, cursor: "pointer", font: "inherit", fontSize: "var(--fs-small)" }}>Undo portrait selection</button> : null}
+      <SearchableOption id="mortal-position" label={translateUi("Position")} selectedId={positionId} options={grouped.positions} onChange={setPositionId} disabled={saving} />
+      {image ? <button type="button" onClick={resetPortraitSelection} disabled={saving} style={{ justifySelf: "start", padding: 0, border: 0, background: "none", color: theme.colors.muted, cursor: "pointer", font: "inherit", fontSize: "var(--fs-small)" }}>{translateUi("Undo portrait selection")}</button> : null}
       <details open={Boolean(props.record?.notes || props.record?.dmNotes)} style={{ marginTop: 8, borderTop: `1px solid ${theme.colors.panelBorder}`, paddingTop: 10 }}>
-        <summary style={{ color: theme.colors.muted, cursor: "pointer", fontWeight: 750, padding: "4px 0 8px" }}>Notes</summary>
+        <summary style={{ color: theme.colors.muted, cursor: "pointer", fontWeight: 750, padding: "4px 0 8px" }}>{translateUi("Notes")}</summary>
         <div style={{ display: "grid", gap: 12 }}>
-          <div style={{ display: "grid", gap: 6 }}><div style={labelStyle}>Notes</div><TextArea value={notes} onChange={(event) => setNotes(event.target.value)} rows={4} placeholder="None" disabled={saving} /></div>
-          <div style={{ display: "grid", gap: 6 }}><div style={labelStyle}>DM Notes</div><TextArea value={dmNotes} onChange={(event) => setDmNotes(event.target.value)} rows={3} placeholder="None" disabled={saving} /></div>
+          <div style={{ display: "grid", gap: 6 }}><div style={labelStyle}>{translateUi("Notes")}</div><TextArea value={notes} onChange={(event) => setNotes(event.target.value)} rows={4} placeholder={translateUi("None")} disabled={saving} /></div>
+          <div style={{ display: "grid", gap: 6 }}><div style={labelStyle}>{translateUi("DM Notes")}</div><TextArea value={dmNotes} onChange={(event) => setDmNotes(event.target.value)} rows={3} placeholder={translateUi("None")} disabled={saving} /></div>
         </div>
       </details>
     </form>

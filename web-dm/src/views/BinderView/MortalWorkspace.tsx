@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useRichTextDraft } from "./useRichTextDraft";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -55,23 +56,24 @@ function InlineRichTextField(props: {
   validMentionIds?: Set<string>;
   binderId: string;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const { editing, draft, saving, error, setDraft, startEditing, cancel, save } = useRichTextDraft(props.value, props.onSave);
   return <section>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
       <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase" }}>{props.label}</div>
-      {props.canEdit && !editing ? <button type="button" onClick={startEditing} title={`Edit ${props.label.toLocaleLowerCase()}`} style={{ display: "inline-flex", alignItems: "center", gap: 5, border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}>
-        <IconPencil size={13} /> Edit
+      {props.canEdit && !editing ? <button type="button" onClick={startEditing} title={translateUi("Edit {{value1}}", { value1: props.label.toLocaleLowerCase() })} style={{ display: "inline-flex", alignItems: "center", gap: 5, border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}>
+        <IconPencil size={13} /> {translateUi("Edit")}
       </button> : null}
     </div>
     {editing ? <div style={{ display: "grid", gap: 9, marginTop: 7 }}>
-      <WysiwygNoteEditor value={draft} onChange={setDraft} mentions={props.mentions} placeholder={`Add ${props.label.toLocaleLowerCase()}…`} minHeight={220} theme={{ radius: theme.radius.control, panelBorder: theme.colors.panelBorder, inputBg: theme.colors.inputBg, text: theme.colors.text }} />
+      <WysiwygNoteEditor value={draft} onChange={setDraft} mentions={props.mentions} placeholder={translateUi("Add {{value1}}…", { value1: props.label.toLocaleLowerCase() })} minHeight={220} theme={{ radius: theme.radius.control, panelBorder: theme.colors.panelBorder, inputBg: theme.colors.inputBg, text: theme.colors.text }} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-        <Button variant="ghost" disabled={saving} onClick={cancel}>Cancel</Button>
-            <Button disabled={saving} onClick={save}>{saving ? "Saving…" : "Save"}</Button>
+        <Button variant="ghost" disabled={saving} onClick={cancel}>{translateUi("Cancel")}</Button>
+            <Button disabled={saving} onClick={save}>{saving ? translateUi("Saving…") : translateUi("Save")}</Button>
             {error ? <div role="alert">{error}</div> : null}
       </div>
     </div> : <div style={{ minHeight: 54, marginTop: 7, padding: "7px 8px", color: props.value ? theme.colors.text : theme.colors.muted, lineHeight: 1.55 }}>
-      {props.value ? <MarkdownRichText text={props.value} validMentionIds={props.validMentionIds} binderId={props.binderId} /> : `No ${props.label.toLocaleLowerCase()} yet.`}
+      {props.value ? <MarkdownRichText text={props.value} validMentionIds={props.validMentionIds} binderId={props.binderId} /> : translateUi("No {{value1}} yet.", { value1: props.label.toLocaleLowerCase() })}
     </div>}
   </section>;
 }
@@ -84,6 +86,8 @@ function mortalAge(record: BinderMortal, binderCurrentDate: number | null): numb
 }
 
 export function MortalWorkspace(props: { binderId: string; binderCurrentDate: number | null; recordId?: string; accent: string; canEdit: boolean; onRecordsChanged: () => Promise<void> }) {
+  const translateMessage = useUiMessages("dmUi");
+  const translateUi = useUiTranslation("dmUi");
   const navigate = useNavigate();
   const confirm = useConfirm();
   const [records, setRecords] = useState<BinderMortal[]>([]);
@@ -151,15 +155,15 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     species: options.records.filter((item) => item.type === "race"),
   }), [options.records]);
   const filterChoices = useMemo(() => ({
-    position: [{ value: NONE_FILTER, label: "None" }, ...filterOptions.positions.map((item) => ({ value: item.id, label: item.name }))],
-    organization: [{ value: NONE_FILTER, label: "None" }, ...filterOptions.organizations.map((item) => ({ value: item.id, label: item.name }))],
-    continent: [{ value: NONE_FILTER, label: "None" }, ...filterOptions.continents.map((item) => ({ value: item.id, label: item.name }))],
-    location: [{ value: NONE_FILTER, label: "None" }, ...filterOptions.locations.map((item) => ({ value: item.id, label: item.name }))],
-    species: [{ value: NONE_FILTER, label: "None" }, ...filterOptions.species.map((item) => ({ value: item.id, label: item.name }))],
-    status: [{ value: "alive", label: "Alive" }, { value: "dead", label: "Dead" }],
-    gender: [{ value: "male", label: "Male" }, { value: "female", label: "Female" }],
-    linked: [{ value: "true", label: "True" }, { value: "false", label: "False" }],
-  }), [filterOptions]);
+    position: [{ value: NONE_FILTER, label: translateUi("None") }, ...filterOptions.positions.map((item) => ({ value: item.id, label: item.name }))],
+    organization: [{ value: NONE_FILTER, label: translateUi("None") }, ...filterOptions.organizations.map((item) => ({ value: item.id, label: item.name }))],
+    continent: [{ value: NONE_FILTER, label: translateUi("None") }, ...filterOptions.continents.map((item) => ({ value: item.id, label: item.name }))],
+    location: [{ value: NONE_FILTER, label: translateUi("None") }, ...filterOptions.locations.map((item) => ({ value: item.id, label: item.name }))],
+    species: [{ value: NONE_FILTER, label: translateUi("None") }, ...filterOptions.species.map((item) => ({ value: item.id, label: item.name }))],
+    status: [{ value: "alive", label: translateUi("Alive") }, { value: "dead", label: translateUi("Dead") }],
+    gender: [{ value: "male", label: translateUi("Male") }, { value: "female", label: translateUi("Female") }],
+    linked: [{ value: "true", label: translateUi("True") }, { value: "false", label: translateUi("False") }],
+  }), [filterOptions.continents, filterOptions.locations, filterOptions.organizations, filterOptions.positions, filterOptions.species, translateUi]);
 
   const hasLoadedRef = useRef(false);
   const reload = useCallback(async () => {
@@ -180,11 +184,11 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
       setLoreRecords(allRecords);
       hasLoadedRef.current = true;
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to load Mortals.");
+      setError(cause instanceof Error ? cause.message : translateMessage("Unable to load Mortals."));
     } finally {
       setLoading(false);
     }
-  }, [props.binderId, query]);
+  }, [props.binderId, query, translateMessage]);
 
   useDebouncedEffect(reload, 180);
 
@@ -221,7 +225,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
   }
 
   async function remove(record: BinderMortal) {
-    if (!(await confirm({ title: "Delete Mortal", message: `Delete “${record.name}”? Related memberships and event associations will also be removed.`, confirmLabel: "Delete Mortal", intent: "danger" }))) return;
+    if (!(await confirm({ title: translateUi("Delete Mortal"), message: `Delete “${record.name}”? Related memberships and event associations will also be removed.`, confirmLabel: translateMessage("Delete Mortal"), intent: "danger" }))) return;
     await deleteBinderMortal(props.binderId, record.id);
     if (props.recordId === record.id) navigate(`/binder/${props.binderId}/mortals`);
     await reload();
@@ -231,7 +235,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
   const modal = <MortalRecordModal isOpen={modalRecord !== null} record={modalRecord === "new" ? null : modalRecord} binderCurrentDate={props.binderCurrentDate} options={options} onClose={() => setModalRecord(null)} onSave={save} />;
 
   if (props.recordId && !loading && !selected) {
-    return <div style={{ padding: 28, border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, color: theme.colors.muted }}>Mortal not found.</div>;
+    return <div style={{ padding: 28, border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, color: theme.colors.muted }}>{translateUi("Mortal not found.")}</div>;
   }
 
   if (selected) {
@@ -244,16 +248,16 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     const facts: Array<{ key: string; icon: React.ReactNode; label: string; node: React.ReactNode }> = [
       ...(() => {
         const displayClassName = selected.mortalType === "player_character" ? (linkedPlayer?.className || selected.className) : null;
-        return displayClassName ? [{ key: "class", icon: <EntityIcon icon="game-icons:doubled" size={16} />, label: "Class", node: displayClassName as React.ReactNode }] : [];
+        return displayClassName ? [{ key: "class", icon: <EntityIcon icon="game-icons:doubled" size={16} />, label: translateUi("Class"), node: displayClassName as React.ReactNode }] : [];
       })(),
-      ...(selected.position ? [{ key: "position", icon: selected.position.icon ? <EntityIcon icon={selected.position.icon} size={16}/> : <IconShield size={16} />, label: "Position", node: selected.position.name as React.ReactNode }] : []),
+      ...(selected.position ? [{ key: "position", icon: selected.position.icon ? <EntityIcon icon={selected.position.icon} size={16}/> : <IconShield size={16} />, label: translateUi("Position"), node: selected.position.name as React.ReactNode }] : []),
       ...(selected.organizations.length ? [{
-        key: "organizations", icon: <OrganizationIcon size={16} />, label: "Org",
+        key: "organizations", icon: <OrganizationIcon size={16} />, label: translateUi("Org"),
         node: <span style={{ display: "flex", flexWrap: "wrap", gap: "5px 14px" }}>{selected.organizations.map((organization) => (
           <button
             key={organization.id}
             type="button"
-            title={`Open ${organization.name}`}
+            title={translateUi("Open {{value1}}", { value1: organization.name })}
             onClick={() => navigate(`/binder/${props.binderId}/organizations/${organization.id}`)}
             style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: 0, border: 0, background: "transparent", color: theme.colors.text, cursor: "pointer", font: "inherit", textAlign: "left" }}
           >
@@ -262,25 +266,25 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
           </button>
         ))}</span>,
       }] : []),
-      ...(selected.location ? [{ key: "location", icon: <IconVillage size={16} />, label: "Location", node: selected.location.name as React.ReactNode }] : []),
-      ...(selected.race ? [{ key: "race", icon: <IconDna1 size={16} />, label: "Race", node: selected.race.name as React.ReactNode }] : []),
-      ...(age !== null ? [{ key: "age", icon: <IconCakeSlice size={16} />, label: "Age", node: String(age) as React.ReactNode }] : []),
-      ...(selected.personal?.height ? [{ key: "height", icon: null, label: "Height", node: selected.personal.height as React.ReactNode }] : []),
-      ...(selected.personal?.weight ? [{ key: "weight", icon: null, label: "Weight", node: selected.personal.weight as React.ReactNode }] : []),
-      ...(selected.personal?.hair ? [{ key: "hair", icon: null, label: "Hair", node: selected.personal.hair as React.ReactNode }] : []),
-      ...(selected.personal?.skin ? [{ key: "skin", icon: null, label: "Skin", node: selected.personal.skin as React.ReactNode }] : []),
+      ...(selected.location ? [{ key: "location", icon: <IconVillage size={16} />, label: translateUi("Location"), node: selected.location.name as React.ReactNode }] : []),
+      ...(selected.race ? [{ key: "race", icon: <IconDna1 size={16} />, label: translateUi("Race"), node: selected.race.name as React.ReactNode }] : []),
+      ...(age !== null ? [{ key: "age", icon: <IconCakeSlice size={16} />, label: translateUi("Age"), node: String(age) as React.ReactNode }] : []),
+      ...(selected.personal?.height ? [{ key: "height", icon: null, label: translateUi("Height"), node: selected.personal.height as React.ReactNode }] : []),
+      ...(selected.personal?.weight ? [{ key: "weight", icon: null, label: translateUi("Weight"), node: selected.personal.weight as React.ReactNode }] : []),
+      ...(selected.personal?.hair ? [{ key: "hair", icon: null, label: translateUi("Hair"), node: selected.personal.hair as React.ReactNode }] : []),
+      ...(selected.personal?.skin ? [{ key: "skin", icon: null, label: translateUi("Skin"), node: selected.personal.skin as React.ReactNode }] : []),
       {
-        key: "gender", icon: <IconGender size={16} />, label: "Gender",
+        key: "gender", icon: <IconGender size={16} />, label: translateUi("Gender"),
         node: genderColor
-          ? <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: genderColor, background: withAlpha(genderColor, 0.16), fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 750 }}>{selected.gender === "male" ? "Male" : "Female"}</span>
-          : <span style={{ color: theme.colors.red }}>Needs gender</span>,
+          ? <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: genderColor, background: withAlpha(genderColor, 0.16), fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 750 }}>{selected.gender === "male" ? translateUi("Male") : translateUi("Female")}</span>
+          : <span style={{ color: theme.colors.red }}>{translateUi("Needs gender")}</span>,
       },
       {
-        key: "status", icon: <EntityIcon icon="game-icons:half-dead" size={16} />, label: "Status",
-        node: <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 5, color: "#fff", background: selected.lifeStatus === "dead" ? theme.colors.red : theme.colors.green, fontSize: "var(--fs-small)", fontWeight: 800 }}>{selected.lifeStatus === "dead" ? "Dead" : "Alive"}</span>,
+        key: "status", icon: <EntityIcon icon="game-icons:half-dead" size={16} />, label: translateUi("Status"),
+        node: <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 5, color: "#fff", background: selected.lifeStatus === "dead" ? theme.colors.red : theme.colors.green, fontSize: "var(--fs-small)", fontWeight: 800 }}>{selected.lifeStatus === "dead" ? translateUi("Dead") : translateUi("Alive")}</span>,
       },
       ...(selected.mortalType === "player_character" && selected.player?.playerName
-        ? [{ key: "player", icon: <IconPlayer size={16} />, label: "Player", node: selected.player.playerName as React.ReactNode }]
+        ? [{ key: "player", icon: <IconPlayer size={16} />, label: translateUi("Player"), node: selected.player.playerName as React.ReactNode }]
         : []),
     ];
     const mentions = loreRecords.filter((row) => row.id !== selected.id).map((row) => ({
@@ -297,10 +301,10 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
         backLabel="Mortals"
         accent={props.accent}
         leading={
-          <button type="button" disabled={!selected.imageUrl} onClick={() => { if (selected.imageUrl) setLightboxSrc(`${resolveAssetUrl(selected.imageUrl)}${selected.imageUpdatedAt ? `?v=${selected.imageUpdatedAt}` : ""}`); }} title={selected.imageUrl ? "View full portrait" : undefined} style={{ width: 84, height: 84, padding: 0, border: `1px solid ${withAlpha(props.accent, 0.3)}`, borderRadius: theme.radius.control, overflow: "hidden", background: withAlpha(props.accent, 0.1), color: theme.colors.muted, cursor: selected.imageUrl ? "zoom-in" : "default", flex: "0 0 auto" }}>
+          <button type="button" disabled={!selected.imageUrl} onClick={() => { if (selected.imageUrl) setLightboxSrc(`${resolveAssetUrl(selected.imageUrl)}${selected.imageUpdatedAt ? `?v=${selected.imageUpdatedAt}` : ""}`); }} title={selected.imageUrl ? translateUi("View full portrait") : undefined} style={{ width: 84, height: 84, padding: 0, border: `1px solid ${withAlpha(props.accent, 0.3)}`, borderRadius: theme.radius.control, overflow: "hidden", background: withAlpha(props.accent, 0.1), color: theme.colors.muted, cursor: selected.imageUrl ? "zoom-in" : "default", flex: "0 0 auto" }}>
             {selected.imageUrl
               ? <img src={`${resolveAssetUrl(selected.imageUrl)}${selected.imageUpdatedAt ? `?v=${selected.imageUpdatedAt}` : ""}`} alt={`${selected.name} portrait`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : <span style={{ fontSize: "var(--fs-small)", opacity: 0.72 }}>Portrait</span>}
+              : <span style={{ fontSize: "var(--fs-small)", opacity: 0.72 }}>{translateUi("Portrait")}</span>}
           </button>
         }
         leadingAlign="center"
@@ -328,12 +332,12 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
                 </div>
               ))}
             </div>
-            <InlineRichTextField key={`${props.binderId}:${selected.id}:notes`} binderId={props.binderId} label="Notes" value={selected.notes} mentions={mentions} validMentionIds={validMentionIds} canEdit={props.canEdit} onSave={async (notes) => {
+            <InlineRichTextField key={`${props.binderId}:${selected.id}:notes`} binderId={props.binderId} label={translateUi("Notes")} value={selected.notes} mentions={mentions} validMentionIds={validMentionIds} canEdit={props.canEdit} onSave={async (notes) => {
               await updateBinderMortal(props.binderId, selected.id, { notes });
               await syncBinderMentions(props.binderId, selected.id, "description", notes);
               await reload();
             }} />
-            <InlineRichTextField key={`${props.binderId}:${selected.id}:dm-notes`} binderId={props.binderId} label="DM Notes" value={selected.dmNotes} mentions={mentions} validMentionIds={validMentionIds} canEdit={props.canEdit} onSave={async (dmNotes) => {
+            <InlineRichTextField key={`${props.binderId}:${selected.id}:dm-notes`} binderId={props.binderId} label={translateUi("DM Notes")} value={selected.dmNotes} mentions={mentions} validMentionIds={validMentionIds} canEdit={props.canEdit} onSave={async (dmNotes) => {
               await updateBinderMortal(props.binderId, selected.id, { dmNotes });
               await syncBinderMentions(props.binderId, selected.id, "dm_notes", dmNotes);
               await reload();
@@ -362,22 +366,22 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     <div style={{ display: "grid", gap: 8 }}>
       <div style={{ display: "flex", gap: 9, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", flex: "1 1 auto" }}>
-          <Input value={query} onChange={(event) => { setQuery(event.target.value); clearSelectedMortalView(); }} placeholder="Search mortals…" style={{ width: 280 }} />
+          <Input value={query} onChange={(event) => { setQuery(event.target.value); clearSelectedMortalView(); }} placeholder={translateUi("Search mortals…")} style={{ width: 280 }} />
           <div style={{ width: 170 }}>
             <SearchableSelect
               value={selectedViewId}
               onChange={applyView}
-              placeholder="View: Unsaved"
+              placeholder={translateUi("View: Unsaved")}
               noneLabel="View: Unsaved"
               maxResults={20}
               options={savedViews.map((view) => ({ id: view.id, name: `View: ${view.name}` }))}
             />
           </div>
-          {selectedViewId ? <Button variant="ghost" aria-label="Delete saved view" onClick={removeSelectedMortalView}><IconTrash size={14} /></Button> : null}
-          <Input value={viewName} onChange={(event) => setViewName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") saveMortalView(query, filters); }} placeholder="View name" style={{ width: 140 }} />
-          <Button variant="ghost" disabled={!viewName.trim()} onClick={() => saveMortalView(query, filters)}>Save view</Button>
+          {selectedViewId ? <Button variant="ghost" aria-label={translateUi("Delete saved view")} onClick={removeSelectedMortalView}><IconTrash size={14} /></Button> : null}
+          <Input value={viewName} onChange={(event) => setViewName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") saveMortalView(query, filters); }} placeholder={translateUi("View name")} style={{ width: 140 }} />
+          <Button variant="ghost" disabled={!viewName.trim()} onClick={() => saveMortalView(query, filters)}>{translateUi("Save view")}</Button>
         </div>
-        {props.canEdit ? <Button onClick={() => setModalRecord("new")}><span style={{ display: "inline-flex", gap: 7 }}><IconPlus size={14} /> New Mortal</span></Button> : null}
+        {props.canEdit ? <Button onClick={() => setModalRecord("new")}><span style={{ display: "inline-flex", gap: 7 }}><IconPlus size={14} /> {translateUi("New Mortal")}</span></Button> : null}
       </div>
       <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
         {([
@@ -399,7 +403,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
             onAdd={(value) => { setFilters(addFilterValue(filters, key, value)); clearSelectedMortalView(); }}
           />
         ))}
-        {Object.values(filters).some((values) => values.length) ? <Button variant="ghost" onClick={() => { setFilters(emptyFilters()); clearSelectedMortalView(); }}>Clear</Button> : null}
+        {Object.values(filters).some((values) => values.length) ? <Button variant="ghost" onClick={() => { setFilters(emptyFilters()); clearSelectedMortalView(); }}>{translateUi("Clear")}</Button> : null}
       </div>
       {Object.entries(filters).some(([, values]) => values.length) ? (
         <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
@@ -409,7 +413,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
             return <button
               key={`${key}:${value}`}
               type="button"
-              aria-label={`Remove ${label} ${choice?.label ?? value} filter`}
+              aria-label={translateUi("Remove {{value1}} {{value2}} filter", { value1: label, value2: choice?.label ?? value })}
               onClick={() => { setFilters(removeFilterValue(filters, key, value)); clearSelectedMortalView(); }}
               style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "2px 7px", border: `1px solid ${withAlpha(props.accent, 0.48)}`, borderRadius: 999, background: withAlpha(props.accent, 0.12), color: theme.colors.text, cursor: "pointer", font: "inherit", fontSize: "var(--fs-tiny)", lineHeight: 1.35, fontWeight: 900 }}
             >
@@ -423,14 +427,14 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
       <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflowX: "auto", overflowY: "hidden" }}>
         <BinderListHeader
           columns={[
-            { key: "name", label: "Name", sortable: true },
-            { key: "position", label: "Position", icon: <IconShield size={14} />, sortable: true },
-            { key: "organization", label: "Org", icon: <IconOrganigram size={14} />, sortable: true },
-            { key: "location", label: "Location", sortable: true },
-            { key: "species", label: "Species", sortable: true },
-            { key: "age", label: "Age", sortable: true },
-            { key: "gender", label: "Gender", sortable: true },
-            { key: "status", label: "Status", sortable: true },
+            { key: "name", label: translateUi("Name"), sortable: true },
+            { key: "position", label: translateUi("Position"), icon: <IconShield size={14} />, sortable: true },
+            { key: "organization", label: translateUi("Org"), icon: <IconOrganigram size={14} />, sortable: true },
+            { key: "location", label: translateUi("Location"), sortable: true },
+            { key: "species", label: translateUi("Species"), sortable: true },
+            { key: "age", label: translateUi("Age"), sortable: true },
+            { key: "gender", label: translateUi("Gender"), sortable: true },
+            { key: "status", label: translateUi("Status"), sortable: true },
             { key: "visibility", label: "" },
           ]}
           gridTemplateColumns={mortalTableColumns}
@@ -451,22 +455,22 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
                 <BinderRecordThumbnail imageUrl={record.imageUrl} imageUpdatedAt={record.imageUpdatedAt} accent={props.accent} />
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{record.name}</span>
               </span>
-              <span title={record.position?.name ?? "None"} style={{ ...cell, display: "flex", alignItems: "center", gap: 6 }}>
+              <span title={record.position?.name ?? translateUi("None")} style={{ ...cell, display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ display: "inline-flex", opacity: 0.65, flex: "0 0 auto" }}>{record.position?.icon ? <EntityIcon icon={record.position.icon} size={14}/> : <IconShield size={14} />}</span>
                 {record.position?.name ?? "None"}
               </span>
-              <span title={record.organizations.map((organization) => organization.name).join(", ") || "None"} style={{ ...cell, display: "flex", alignItems: "center", gap: 6 }}>
+              <span title={record.organizations.map((organization) => organization.name).join(", ") || translateUi("None")} style={{ ...cell, display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ display: "inline-flex", opacity: 0.65, flex: "0 0 auto" }}><OrganizationIcon icon={record.organizations[0]?.icon} size={14} /></span>
                 {record.organizations.map((organization) => organization.name).join(", ") || "None"}
               </span>
-              <span title={record.location?.name ?? "None"} style={cell}>{record.location?.name ?? "None"}</span>
-              <span title={record.race?.name ?? "None"} style={cell}>{record.race?.name ?? "None"}</span>
+              <span title={record.location?.name ?? translateUi("None")} style={cell}>{record.location?.name ?? "None"}</span>
+              <span title={record.race?.name ?? translateUi("None")} style={cell}>{record.race?.name ?? "None"}</span>
               <span style={cell}>{age ?? "None"}</span>
-              <span>{genderColor ? <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: genderColor, background: withAlpha(genderColor, 0.16), fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 750 }}>{record.gender === "male" ? "Male" : "Female"}</span> : <span style={{ ...cell, color: theme.colors.red }}>Needs gender</span>}</span>
-              <span style={{ justifySelf: "start", display: "inline-flex", padding: "2px 7px", borderRadius: 5, color: "#fff", background: record.lifeStatus === "dead" ? theme.colors.red : theme.colors.green, fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 800 }}>{record.lifeStatus === "dead" ? "Dead" : "Alive"}</span>
-              {props.canEdit ? <button type="button" aria-label={`${record.visibility === "public" ? "Make private" : "Make public"}: ${record.name}`} title={record.visibility === "public" ? "Public — click to make private" : "Private — click to make public"} onClick={async (event) => { event.stopPropagation(); await updateBinderMortal(props.binderId, record.id, { visibility: record.visibility === "public" ? "dm" : "public" }); await reload(); await props.onRecordsChanged(); }} style={{ width: 28, height: 26, display: "grid", placeItems: "center", padding: 0, borderRadius: 6, border: `1px solid ${record.visibility === "public" ? withAlpha(props.accent, 0.65) : theme.colors.panelBorder}`, background: record.visibility === "public" ? withAlpha(props.accent, 0.16) : "rgba(255,255,255,0.03)", color: record.visibility === "public" ? props.accent : theme.colors.muted, cursor: "pointer" }}><VisibilityIcon visible={record.visibility === "public"} size={16}/></button> : <span />}
+              <span>{genderColor ? <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: genderColor, background: withAlpha(genderColor, 0.16), fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 750 }}>{record.gender === "male" ? translateUi("Male") : translateUi("Female")}</span> : <span style={{ ...cell, color: theme.colors.red }}>{translateUi("Needs gender")}</span>}</span>
+              <span style={{ justifySelf: "start", display: "inline-flex", padding: "2px 7px", borderRadius: 5, color: "#fff", background: record.lifeStatus === "dead" ? theme.colors.red : theme.colors.green, fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 800 }}>{record.lifeStatus === "dead" ? translateUi("Dead") : translateUi("Alive")}</span>
+              {props.canEdit ? <button type="button" aria-label={translateUi("{{value1}}: {{value2}}", { value1: record.visibility === "public" ? "Make private" : "Make public", value2: record.name })} title={record.visibility === translateUi("public") ? translateUi("Public — click to make private") : translateUi("Private — click to make public")} onClick={async (event) => { event.stopPropagation(); await updateBinderMortal(props.binderId, record.id, { visibility: record.visibility === "public" ? "dm" : "public" }); await reload(); await props.onRecordsChanged(); }} style={{ width: 28, height: 26, display: "grid", placeItems: "center", padding: 0, borderRadius: 6, border: `1px solid ${record.visibility === "public" ? withAlpha(props.accent, 0.65) : theme.colors.panelBorder}`, background: record.visibility === "public" ? withAlpha(props.accent, 0.16) : "rgba(255,255,255,0.03)", color: record.visibility === "public" ? props.accent : theme.colors.muted, cursor: "pointer" }}><VisibilityIcon visible={record.visibility === "public"} size={16}/></button> : <span />}
             </BinderDataTableRow>;
-          }) : <BinderListEmpty>{records.length ? "No Mortals match the current filters." : query ? "No Mortals match your search." : "No Mortals yet."}</BinderListEmpty>}
+          }) : <BinderListEmpty>{records.length ? translateUi("No Mortals match the current filters.") : query ? translateUi("No Mortals match your search.") : translateUi("No Mortals yet.")}</BinderListEmpty>}
       </div>
     </div>
     {modal}

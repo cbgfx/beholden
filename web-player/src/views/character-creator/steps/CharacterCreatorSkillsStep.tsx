@@ -1,3 +1,5 @@
+import { translateUi } from "@/i18n";
+import { UiText } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { C, withAlpha } from "@/lib/theme";
 import { normalizeChoiceKey } from "../utils/CharacterCreatorUtils";
@@ -214,13 +216,13 @@ function renderSkillsStep<TForm extends CreatorFormLike>(args: {
 
   const main = (
     <div>
-      <h2 style={headingStyle}>Skills &amp; Proficiencies</h2>
+      <h2 style={headingStyle}>{<UiText text={"Skills & Proficiencies"} namespace="playerUi" />}</h2>
 
       {numSkills > 0 && skillList.length > 0 && (
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
             <div style={{ ...labelStyle, margin: 0 }}>
-              Skill Proficiencies {classDetailName ? <span style={sourceTagStyle}>from {classDetailName}</span> : null}
+              {<UiText text={"Skill Proficiencies"} namespace="playerUi" />} {classDetailName ? <span style={sourceTagStyle}>{<UiText text={"from"} namespace="playerUi" />} {classDetailName}</span> : null}
             </div>
             <span style={{ fontSize: "var(--fs-small)", color: form.chosenSkills.length >= numSkills ? C.accentHl : C.muted }}>
               {form.chosenSkills.length} / {numSkills}
@@ -245,7 +247,7 @@ function renderSkillsStep<TForm extends CreatorFormLike>(args: {
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
             <div style={{ ...labelStyle, margin: 0 }}>
-              Tool Proficiencies {classDetailName ? <span style={sourceTagStyle}>from {classDetailName}</span> : null}
+              {<UiText text={"Tool Proficiencies"} namespace="playerUi" />} {classDetailName ? <span style={sourceTagStyle}>{<UiText text={"from"} namespace="playerUi" />} {classDetailName}</span> : null}
             </div>
           </div>
           {classToolProficiency.fixed.length > 0 && (
@@ -262,7 +264,7 @@ function renderSkillsStep<TForm extends CreatorFormLike>(args: {
             return (
               <div key={idx} style={{ marginBottom: 8 }}>
                 <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 6 }}>
-                  Choose {choiceGroup.count} ({chosenInPool.length}/{choiceGroup.count})
+                  {<UiText text={"Choose"} namespace="playerUi" />} {choiceGroup.count} ({chosenInPool.length}/{choiceGroup.count})
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {choiceGroup.from.map((tool) => {
@@ -297,7 +299,7 @@ function renderSkillsStep<TForm extends CreatorFormLike>(args: {
       {(bgLangChoice.fixed.length > 0 || bgLangChoice.choose > 0) && (
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
-            <div style={{ ...labelStyle, margin: 0 }}>Languages {bgDetailName ? <span style={sourceTagStyle}>from {bgDetailName}</span> : null}</div>
+            <div style={{ ...labelStyle, margin: 0 }}>{<UiText text={"Languages"} namespace="playerUi" />} {bgDetailName ? <span style={sourceTagStyle}>{<UiText text={"from"} namespace="playerUi" />} {bgDetailName}</span> : null}</div>
             {bgLangChoice.choose > 0 && <span style={{ fontSize: "var(--fs-small)", color: form.chosenBgLanguages.length >= bgLangChoice.choose ? C.accentHl : C.muted }}>{form.chosenBgLanguages.length} / {bgLangChoice.choose}</span>}
           </div>
           {bgLangChoice.fixed.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: bgLangChoice.choose > 0 ? 10 : 0 }}>{bgLangChoice.fixed.map((language) => <span key={language} style={profChipStyle}>{language}</span>)}</div>}
@@ -314,7 +316,7 @@ function renderSkillsStep<TForm extends CreatorFormLike>(args: {
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
             <div style={{ ...labelStyle, margin: 0 }}>
-              Languages {String(coreLanguageChoice.source ?? "").trim() ? <span style={sourceTagStyle}>{coreLanguageChoice.source}</span> : null}
+              {<UiText text={"Languages"} namespace="playerUi" />} {String(coreLanguageChoice.source ?? "").trim() ? <span style={sourceTagStyle}>{coreLanguageChoice.source}</span> : null}
             </div>
             <span style={{ fontSize: "var(--fs-small)", color: form.chosenRaceLanguages.length >= coreLanguageChoice.choose ? C.accentHl : C.muted }}>{form.chosenRaceLanguages.length} / {coreLanguageChoice.choose}</span>
           </div>
@@ -332,7 +334,7 @@ function renderSkillsStep<TForm extends CreatorFormLike>(args: {
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
             <div style={{ ...labelStyle, margin: 0 }}>
-              Languages {String(classLanguageChoice.source ?? "").trim() ? <span style={sourceTagStyle}>{classLanguageChoice.source}</span> : null}
+              {<UiText text={"Languages"} namespace="playerUi" />} {String(classLanguageChoice.source ?? "").trim() ? <span style={sourceTagStyle}>{classLanguageChoice.source}</span> : null}
             </div>
             {classLanguageChoice.choose > 0 && <span style={{ fontSize: "var(--fs-small)", color: form.chosenClassLanguages.length >= classLanguageChoice.choose ? C.accentHl : C.muted }}>{form.chosenClassLanguages.length} / {classLanguageChoice.choose}</span>}
           </div>
@@ -361,7 +363,7 @@ function renderSkillsStep<TForm extends CreatorFormLike>(args: {
         const selected = form.chosenFeatOptions[choice.key] ?? [];
         const options = (choice.options ?? ALL_SKILLS.map((skill) => skill.name)).filter((skill) => takenSkillKeys.has(normalizeChoiceKey(skill)) || selected.includes(skill));
         return renderChoiceChipGroup({
-          title: "Expertise",
+          title: translateUi("Expertise"),
           sourceLabel: choice.source,
           selectedCount: selected.length,
           maxCount: choice.count,
@@ -412,7 +414,7 @@ function renderSkillsStep<TForm extends CreatorFormLike>(args: {
       })}
 
       {weaponMasteryChoice && renderChoiceChipGroup({
-        title: "Weapon Mastery",
+        title: translateUi("Weapon Mastery"),
         sourceLabel: weaponMasteryChoice.source,
         selectedCount: form.chosenWeaponMasteries.length,
         maxCount: weaponMasteryChoice.count,
@@ -422,7 +424,7 @@ function renderSkillsStep<TForm extends CreatorFormLike>(args: {
         onToggle: (weapon) => toggleList("chosenWeaponMasteries", weapon, weaponMasteryChoice.count),
       })}
 
-      {!hasAnything && classFeatureProficiencyChoices.length === 0 && <p style={{ color: C.muted, fontSize: "var(--fs-medium)" }}>There are no skill, language, mastery, or expertise choices at this level.</p>}
+      {!hasAnything && classFeatureProficiencyChoices.length === 0 && <p style={{ color: C.muted, fontSize: "var(--fs-medium)" }}>{<UiText text={"There are no skill, language, mastery, or expertise choices at this level."} namespace="playerUi" />}</p>}
       <NavButtons
         step={7}
         onBack={onBack}

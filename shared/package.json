@@ -26,6 +26,8 @@
     "./views/*": "./src/views/*",
     "./ui": "./src/ui/index.tsx",
     "./ui/*": "./src/ui/*",
+    "./i18n": "./src/i18n/index.ts",
+    "./i18n/*": "./src/i18n/*",
     "./styles/*": "./styles/*"
   },
   "typesVersions": {
@@ -35,6 +37,12 @@
       ],
       "ui/*": [
         "./src/ui/*"
+      ],
+      "i18n": [
+        "./src/i18n/index.ts"
+      ],
+      "i18n/*": [
+        "./src/i18n/*"
       ],
       "api/*": [
         "./src/api/*"
@@ -60,11 +68,14 @@
     }
   },
   "dependencies": {
+    "i18next": "^26.4.2",
+    "react-i18next": "^17.0.13",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3"
+    "@types/react-dom": "^19.2.3",
+    "vite": "^8.1.0"
   },
   "peerDependencies": {
     "react": "^19.2.7",

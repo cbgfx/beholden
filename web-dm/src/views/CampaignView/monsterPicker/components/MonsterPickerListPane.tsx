@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 import { EmptyState, ListShell } from "@beholden/shared/ui";
 import { theme } from "@/theme/theme";
@@ -52,6 +53,7 @@ export function MonsterPickerListPane(props: {
   onAddMonster: (monsterId: string, qty: number, opts?: AddMonsterOptions) => void;
   onProvideScrollToIndex?: (fn: (idx: number) => void) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   // Row is 86px tall + 8px bottom gap in MonsterRow.
   const ROW_HEIGHT = 94;
   const v = useVirtualList({ isEnabled: props.isOpen, rowHeight: ROW_HEIGHT, overscan: 6 });
@@ -151,13 +153,13 @@ export function MonsterPickerListPane(props: {
         {renderRows()}
 
         {props.loadingIndex ? (
-          <EmptyState textColor={theme.colors.muted}>Loading compendium...</EmptyState>
+          <EmptyState textColor={theme.colors.muted}>{translateUi("Loading compendium...")}</EmptyState>
         ) : props.indexError ? (
           <EmptyState textColor={theme.colors.red} style={{ fontWeight: 700 }}>
-            Failed to load compendium: {props.indexError}
+            {translateUi("Failed to load compendium:")} {props.indexError}
           </EmptyState>
         ) : !props.rows.length ? (
-          <EmptyState textColor={theme.colors.muted}>No results.</EmptyState>
+          <EmptyState textColor={theme.colors.muted}>{translateUi("No results.")}</EmptyState>
         ) : null}
 
         <LettersBar letters={props.lettersInList} onJump={props.onJumpToLetter} />

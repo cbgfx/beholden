@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { IconAC, IconHP, IconSpeed } from "@/icons";
 import { theme } from "@/theme/theme";
 import { StatBar } from "@/components/CharacterSheet/StatBar";
@@ -10,6 +11,7 @@ export function CharacterSheetVitals({
   stats: CharacterSheetStats;
   compact: boolean;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const speedText = (() => {
     const displayValue = (stats.speedDisplay ?? "").trim();
     if (displayValue) return displayValue;
@@ -34,11 +36,11 @@ export function CharacterSheetVitals({
         overflow: "hidden",
       }}
     >
-      <StatBar compact={compact} icon={<IconAC size={14} />} label="Armor Class" value={Number.isFinite(stats.ac) ? stats.ac : "--"} />
+      <StatBar compact={compact} icon={<IconAC size={14} />} label={translateUi("Armor Class")} value={Number.isFinite(stats.ac) ? stats.ac : "--"} />
       <StatBar
         compact={compact}
         icon={<IconHP size={14} />}
-        label="Hit Points"
+        label={translateUi("Hit Points")}
         value={
           <>
             {hpValue}
@@ -50,7 +52,7 @@ export function CharacterSheetVitals({
           </>
         }
       />
-      <StatBar compact={compact} icon={<IconSpeed size={14} />} label="Speed" value={speedText} />
+      <StatBar compact={compact} icon={<IconSpeed size={14} />} label={translateUi("Speed")} value={speedText} />
     </div>
   );
 }

@@ -1,0 +1,17 @@
+export default {
+  title: "Add Feat",
+  close: "Close",
+  searchPlaceholder: "Search feats...",
+  loading: "Loading...",
+  noFeatsFound: "No feats found.",
+  alreadyHaveIt: "Already have it",
+  noDescription: "No description available.",
+  selectFeatPrompt: "Select a feat on the left to preview and add it.",
+  chooseAbilityIncrease: "Choose ability increase",
+  addNamed: "Add {{name}}",
+  chooseAbility_one: "Choose {{count}} ability (+{{amount}} each).",
+  chooseAbility_other: "Choose {{count}} abilities (+{{amount}} each).",
+  abilityAtBonus_one: "{{count}} ability at +{{amount}}",
+  abilityAtBonus_other: "{{count}} abilities at +{{amount}}",
+  orSeparator: " or ",
+};

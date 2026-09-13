@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { useUpdateCheck } from "@beholden/shared/ui/useUpdateCheck";
 import { Link } from "react-router-dom";
@@ -10,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 
 export function ShellLayout(props: { children: React.ReactNode }) {
+  const translateUi = useUiTranslation("dmUi");
   const { state } = useStore();
   const { user } = useAuth();
 
@@ -63,9 +65,9 @@ export function ShellLayout(props: { children: React.ReactNode }) {
         color={theme.colors.muted}
         left={
           <>
-            <div>© {new Date().getFullYear()} Beholden. All rights reserved.</div>
+            <div>© {new Date().getFullYear()} {translateUi("Beholden. All rights reserved.")}</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-              <span>Icons made by</span>
+              <span>{translateUi("Icons made by")}</span>
               <a target="_blank" rel="noreferrer" href="https://game-icons.net" style={{ color: theme.colors.muted }}>
                 https://game-icons.net
               </a>
@@ -74,9 +76,9 @@ export function ShellLayout(props: { children: React.ReactNode }) {
         }
         centerLeft={
           <>
-            <Link to="/about" style={{ color: theme.colors.accentPrimary, textDecoration: "none" }}>About</Link>
-            <Link to="/faq" style={{ color: theme.colors.accentPrimary, textDecoration: "none" }}>FAQ</Link>
-            <Link to="/updates" style={{ color: theme.colors.accentPrimary, textDecoration: "none" }}>Future Updates</Link>
+            <Link to="/about" style={{ color: theme.colors.accentPrimary, textDecoration: "none" }}>{translateUi("About")}</Link>
+            <Link to="/faq" style={{ color: theme.colors.accentPrimary, textDecoration: "none" }}>{translateUi("FAQ")}</Link>
+            <Link to="/updates" style={{ color: theme.colors.accentPrimary, textDecoration: "none" }}>{translateUi("Future Updates")}</Link>
           </>
         }
         centerRight={showSupport ? (
@@ -84,7 +86,7 @@ export function ShellLayout(props: { children: React.ReactNode }) {
             href="https://www.buymeacoffee.com/beholden"
             target="_blank"
             rel="noreferrer"
-            title="Support Beholden"
+            title={translateUi("Support Beholden")}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -97,16 +99,16 @@ export function ShellLayout(props: { children: React.ReactNode }) {
               fontWeight: 800,
             }}
           >
-            Donate ❤️
+            {translateUi("Donate ❤️")}
           </a>
         ) : null}
         right={
           <>
             {update.updateAvailable && (user?.isAdmin ? (
               <button type="button" onClick={update.startUpdate} disabled={update.updating} style={{ border: 0, padding: 0, background: "none", cursor: "pointer", color: theme.colors.accentPrimary, fontWeight: 600 }}>
-                {update.updating ? "Starting update…" : "Update Available"}
+                {update.updating ? translateUi("Starting update…") : translateUi("Update Available")}
               </button>
-            ) : <span style={{ color: theme.colors.accentPrimary, fontWeight: 600 }}>Update Available</span>)}
+            ) : <span style={{ color: theme.colors.accentPrimary, fontWeight: 600 }}>{translateUi("Update Available")}</span>)}
             {update.message && <div>{update.message}</div>}
             {primaryIp && (
               <div style={{ display: "grid", gap: 6, justifyItems: "end" }}>
@@ -114,7 +116,7 @@ export function ShellLayout(props: { children: React.ReactNode }) {
                 <div style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "flex-end" }}>
                   {otherIps.length > 0 && (
                     <details>
-                      <summary style={{ cursor: "pointer", userSelect: "none" }}>more</summary>
+                      <summary style={{ cursor: "pointer", userSelect: "none" }}>{translateUi("more")}</summary>
                       <div style={{ marginTop: 6, display: "grid", gap: 4, justifyItems: "end" }}>
                         {otherIps.map((ip) => (
                           <code key={ip}>http://{ip}:{state.meta?.port}</code>

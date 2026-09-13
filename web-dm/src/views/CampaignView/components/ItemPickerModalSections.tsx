@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Panel } from "@/ui/Panel";
 import { Button } from "@/ui/Button";
@@ -68,13 +69,14 @@ export function ItemPickerBrowsePanel(props: {
   onMagicFilterChange: (value: "" | "magic" | "nonmagic") => void;
   onSelect: (id: string) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   return (
     <Panel
-      title="Browse"
+      title={translateUi("Browse")}
       actions={
         <button
           type="button"
-          title={props.createMode ? "Back to browse" : "Create new item"}
+          title={props.createMode ? translateUi("Back to browse") : translateUi("Create new item")}
           onClick={props.onToggleCreateMode}
           style={{
             display: "inline-flex", alignItems: "center", justifyContent: "center",
@@ -94,7 +96,7 @@ export function ItemPickerBrowsePanel(props: {
       <input
         value={props.q}
         onChange={(e) => props.onQChange(e.target.value)}
-        placeholder="Search items..."
+        placeholder={translateUi("Search items...")}
         spellCheck={false}
         autoCorrect="off"
         autoCapitalize="none"
@@ -103,30 +105,30 @@ export function ItemPickerBrowsePanel(props: {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
         <Select value={props.rarity} onChange={(e) => props.onRarityChange(e.target.value)} style={{ width: "100%" }}>
-          <option value="">All Rarities</option>
+          <option value="">{translateUi("All Rarities")}</option>
           {props.rarityOptions.map((rarity) => (
             <option key={rarity} value={rarity}>{titleCase(rarity)}</option>
           ))}
         </Select>
         <Select value={props.type} onChange={(e) => props.onTypeChange(e.target.value)} style={{ width: "100%" }}>
-          <option value="">All Types</option>
+          <option value="">{translateUi("All Types")}</option>
           {props.typeOptions.map((type) => (
             <option key={type} value={type}>{type}</option>
           ))}
         </Select>
         <Select value={props.magicFilter} onChange={(e) => props.onMagicFilterChange(e.target.value as "" | "magic" | "nonmagic")} style={{ width: "100%" }}>
-          <option value="">Any magic</option>
-          <option value="magic">Magic only</option>
-          <option value="nonmagic">Non-magic</option>
+          <option value="">{translateUi("Any magic")}</option>
+          <option value="magic">{translateUi("Magic only")}</option>
+          <option value="nonmagic">{translateUi("Non-magic")}</option>
         </Select>
       </div>
 
       <div style={{ fontSize: "var(--fs-small)", color: theme.colors.muted }}>
         {props.loading
-          ? "Loading..."
+          ? translateUi("Loading...")
           : props.totalCount > 0
-            ? `${props.filtered.length} of ${props.totalCount}`
-            : `${props.filtered.length} items`}
+            ? translateUi("{{value1}} of {{value2}}", { value1: props.filtered.length, value2: props.totalCount })
+            : translateUi("{{value1}} items", { value1: props.filtered.length })}
       </div>
 
       <div
@@ -141,7 +143,7 @@ export function ItemPickerBrowsePanel(props: {
         <div style={{ height: props.padTop }} />
 
         {!props.loading && props.filtered.length === 0 && (
-          <div style={{ padding: 12, color: theme.colors.muted }}>No items found.</div>
+          <div style={{ padding: 12, color: theme.colors.muted }}>{translateUi("No items found.")}</div>
         )}
 
         {props.filtered.slice(props.start, props.end).map((row) => {
@@ -212,13 +214,14 @@ export function ItemPickerDetailPanel(props: {
   onCustomMagicChange: (value: boolean) => void;
   onCustomTextChange: (value: string) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   return (
     <Panel
       title={
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span>{props.createMode ? "New Item" : props.detail?.name ?? "Select an item"}</span>
+          <span>{props.createMode ? translateUi("New Item") : props.detail?.name ?? "Select an item"}</span>
           <div style={{ flex: 1 }} />
-          <IconButton title="Close" variant="ghost" onClick={props.onClose}>
+          <IconButton title={translateUi("Close")} variant="ghost" onClick={props.onClose}>
             <IconClose />
           </IconButton>
         </div>
@@ -253,13 +256,13 @@ export function ItemPickerDetailPanel(props: {
           {props.createMode ? (
             <Button onClick={props.onAddCustom} disabled={!props.canAddCustom}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <IconPlus size={14} /> Add
+                <IconPlus size={14} /> {translateUi("Add")}
               </span>
             </Button>
           ) : (
             <Button onClick={props.onAddCompendium} disabled={!props.canAddCompendium}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <IconPlus size={14} /> Add
+                <IconPlus size={14} /> {translateUi("Add")}
               </span>
             </Button>
           )}
@@ -269,34 +272,34 @@ export function ItemPickerDetailPanel(props: {
     >
       {props.createMode ? (
         <>
-          <FormField label="Name *">
-            <input value={props.customName} onChange={(e) => props.onCustomNameChange(e.target.value)} placeholder="Item name" style={fieldInput()} />
+          <FormField label={translateUi("Name *")}>
+            <input value={props.customName} onChange={(e) => props.onCustomNameChange(e.target.value)} placeholder={translateUi("Item name")} style={fieldInput()} />
           </FormField>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <FormField label="Rarity">
+            <FormField label={translateUi("Rarity")}>
               <select value={props.customRarity} onChange={(e) => props.onCustomRarityChange(e.target.value)} style={fieldInput()}>
-                <option value="">- None -</option>
+                <option value="">{translateUi("- None -")}</option>
                 {RARITY_ORDER.map((rarity) => <option key={rarity} value={rarity}>{titleCase(rarity)}</option>)}
               </select>
             </FormField>
-            <FormField label="Type">
-              <input value={props.customType} onChange={(e) => props.onCustomTypeChange(e.target.value)} list="ipm-type-list" placeholder="e.g. Wondrous Item" style={fieldInput()} />
+            <FormField label={translateUi("Type")}>
+              <input value={props.customType} onChange={(e) => props.onCustomTypeChange(e.target.value)} list="ipm-type-list" placeholder={translateUi("e.g. Wondrous Item")} style={fieldInput()} />
               <datalist id="ipm-type-list">{KNOWN_TYPES.map((type) => <option key={type} value={type} />)}</datalist>
             </FormField>
           </div>
 
           <div style={{ display: "flex", gap: 20 }}>
-            <CheckRow label="Requires Attunement" checked={props.customAttune} onChange={props.onCustomAttuneChange} />
-            <CheckRow label="Magic Item" checked={props.customMagic} onChange={props.onCustomMagicChange} />
+            <CheckRow label={translateUi("Requires Attunement")} checked={props.customAttune} onChange={props.onCustomAttuneChange} />
+            <CheckRow label={translateUi("Magic Item")} checked={props.customMagic} onChange={props.onCustomMagicChange} />
           </div>
 
-          <FormField label="Description">
+          <FormField label={translateUi("Description")}>
             <textarea
               value={props.customText}
               onChange={(e) => props.onCustomTextChange(e.target.value)}
               rows={10}
-              placeholder="Notes / description..."
+              placeholder={translateUi("Notes / description...")}
               style={{ ...fieldInput(), resize: "vertical", fontFamily: "inherit", lineHeight: 1.5 }}
             />
           </FormField>
@@ -305,7 +308,7 @@ export function ItemPickerDetailPanel(props: {
         <ItemDetail detail={props.detail} />
       ) : (
         <div style={{ color: theme.colors.muted, lineHeight: 1.5 }}>
-          Select an item from the list on the left, or click <strong>Create New</strong> to add a custom item.
+          {translateUi("Select an item from the list on the left, or click")} <strong>{translateUi("Create New")}</strong> {translateUi("to add a custom item.")}
         </div>
       )}
     </Panel>
@@ -313,6 +316,7 @@ export function ItemPickerDetailPanel(props: {
 }
 
 function ItemDetail({ detail }: { detail: CompendiumItemDetail }) {
+  const translateUi = useUiTranslation("dmUi");
   const dmg1 = detail.dmg1 ?? null;
   const dmg2 = detail.dmg2 ?? null;
   const dmgTypeLabel = DMG_TYPE_LABELS[detail.dmgType ?? ""] ?? detail.dmgType ?? null;
@@ -329,19 +333,19 @@ function ItemDetail({ detail }: { detail: CompendiumItemDetail }) {
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
         {detail.magic && <MagicBadge />}
-        {detail.attunement && <Chip label="Requires Attunement" color={theme.colors.accentHighlight} />}
+        {detail.attunement && <Chip label={translateUi("Requires Attunement")} color={theme.colors.accentHighlight} />}
         {detail.rarity && <Chip label={titleCase(detail.rarity)} color={rarityChipColor(detail.rarity)} />}
         {(detail.modifiers ?? []).flatMap((modifier, index) => { const label = itemModifierLabel(modifier); return label ? [<Chip key={index} label={label} color={theme.colors.colorMagic} />] : []; })}
       </div>
       {hasStats && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8 }}>
-          {detail.ac != null && <Stat label="Armor Class" value={String(detail.ac)} />}
-          {dmg1 && <Stat label="One-Handed Damage" value={dmg1} />}
-          {dmg2 && <Stat label="Two-Handed Damage" value={dmg2} />}
-          {dmgTypeLabel && <Stat label="Damage Type" value={dmgTypeLabel} />}
-          {detail.weight != null && <Stat label="Weight" value={`${detail.weight} lb`} />}
-          {detail.value != null && <Stat label="Value" value={`${detail.value} gp`} />}
-          {propertyLabels.length > 0 && <Stat label="Properties" value={propertyLabels.join(", ")} />}
+          {detail.ac != null && <Stat label={translateUi("Armor Class")} value={String(detail.ac)} />}
+          {dmg1 && <Stat label={translateUi("One-Handed Damage")} value={dmg1} />}
+          {dmg2 && <Stat label={translateUi("Two-Handed Damage")} value={dmg2} />}
+          {dmgTypeLabel && <Stat label={translateUi("Damage Type")} value={dmgTypeLabel} />}
+          {detail.weight != null && <Stat label={translateUi("Weight")} value={`${detail.weight} lb`} />}
+          {detail.value != null && <Stat label={translateUi("Value")} value={`${detail.value} gp`} />}
+          {propertyLabels.length > 0 && <Stat label={translateUi("Properties")} value={propertyLabels.join(", ")} />}
         </div>
       )}
       <div
@@ -358,7 +362,7 @@ function ItemDetail({ detail }: { detail: CompendiumItemDetail }) {
           color: theme.colors.text,
         }}
       >
-        {detailText || <span style={{ color: theme.colors.muted }}>No description.</span>}
+        {detailText || <span style={{ color: theme.colors.muted }}>{translateUi("No description.")}</span>}
       </div>
     </>
   );

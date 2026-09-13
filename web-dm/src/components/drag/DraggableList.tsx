@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { usePointerDragReorder } from "@beholden/shared/ui/usePointerDragReorder";
 import { DragGhostCard, DragHandleGrip } from "@beholden/shared/ui";
@@ -14,6 +15,7 @@ export function DraggableList(props: {
   renderItem?: (item: DragItem) => React.ReactNode;
   getItemStyle?: (item: DragItem) => React.CSSProperties;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const drag = usePointerDragReorder({ items: props.items, onReorder: props.onReorder });
 
   return (
@@ -62,9 +64,9 @@ export function DraggableList(props: {
               }}
             >
               <div
-                title="Drag to reorder"
+                title={translateUi("Drag to reorder")}
                 role="button"
-                aria-label="Drag to reorder"
+                aria-label={translateUi("Drag to reorder")}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();

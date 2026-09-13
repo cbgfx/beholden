@@ -1,5 +1,7 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import type React from "react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { C } from "@/lib/theme";
 import { titleCase } from "@beholden/shared/domain/text/titleCase";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
@@ -46,6 +48,7 @@ export function PartyStashItemRow({ item, onOpen, onTake, onDelete, onQuantity }
   onDelete: () => void;
   onQuantity: (q: number) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="character-inventory-row">
       <CollectionRow
@@ -73,8 +76,8 @@ export function PartyStashItemRow({ item, onOpen, onTake, onDelete, onQuantity }
                 fontSize: 13,
               }}
             />
-            <Button className="character-row-action" variant="ghost" onClick={onTake} title="Take - moves item to your backpack" style={{ borderRadius: 6, fontSize: "var(--fs-tiny)", fontWeight: 700, padding: "3px 8px", flexShrink: 0 }}>Take</Button>
-            <button className="character-row-action" onClick={onDelete} title="Remove from stash" style={{ background: "none", border: "none", cursor: "pointer", color: "rgb(248,113,113)", fontSize: 16, padding: "0 2px", flexShrink: 0, lineHeight: 1 }}>×</button>
+            <Button className="character-row-action" variant="ghost" onClick={onTake} title={t("characterInventoryPanel.takeButtonTitle")} style={{ borderRadius: 6, fontSize: "var(--fs-tiny)", fontWeight: 700, padding: "3px 8px", flexShrink: 0 }}>{t("characterInventoryPanel.takeButtonLabel")}</Button>
+            <button className="character-row-action" onClick={onDelete} title={t("characterInventoryPanel.removeFromStashTitle")} style={{ background: "none", border: "none", cursor: "pointer", color: "rgb(248,113,113)", fontSize: 16, padding: "0 2px", flexShrink: 0, lineHeight: 1 }}>×</button>
           </div>
         )}
       />
@@ -98,6 +101,8 @@ export function ItemRow({ item, accentColor, proficiencies, parsedFeatureEffects
   ammoItems?: InventoryItem[];
   onLinkAmmo?: (weaponId: string, ammoId: string | null) => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
+  const { t } = useTranslation();
   const [ammoOpen, setAmmoOpen] = useState(false);
   const state = getEquipState(item);
   const isWeapon = isWeaponItem(item);
@@ -111,21 +116,21 @@ export function ItemRow({ item, accentColor, proficiencies, parsedFeatureEffects
   const lacksArmorProficiency = equipped && (isArmor || isShieldItem(item)) && !hasArmorProficiency(item, proficiencies);
   const mastered = isWeapon && hasWeaponMastery(item, proficiencies, ruleset);
   const masteryName = mastered ? getWeaponMasteryName(item) : null;
-  const meta = [item.type ?? null, item.attunement ? "Attunement" : null].filter(Boolean).join(" • ");
+  const meta = [item.type ?? null, item.attunement ? t("characterInventoryPanel.attunementMeta") : null].filter(Boolean).join(" • ");
   const compatibleAmmo = ammoItems.filter((entry) => isCompatibleAmmunition(item, entry));
   const showAmmoControl = isWeapon && equipped && item.weaponAmmo != null && Boolean(onLinkAmmo);
   const linkedAmmo = item.linkedAmmoId ? compatibleAmmo.find((entry) => entry.id === item.linkedAmmoId) ?? null : null;
 
   const equipControls = isWeapon ? (
     <>
-      <button onClick={() => onCycleMain(item.id)} title="Cycle main hand" style={inventoryEquipBtn(mainActive, accentColor)}>{mainLabel}</button>
-      {offhandAllowed ? <button onClick={() => onToggleOffhand(item.id)} title={state === "offhand" ? "Unequip offhand" : "Equip to offhand"} style={inventoryEquipBtn(state === "offhand", accentColor)}>OH</button> : null}
-      {showAmmoControl ? <button onClick={() => setAmmoOpen((prev) => !prev)} title="Choose ammunition" style={inventoryEquipBtn(ammoOpen || Boolean(linkedAmmo), accentColor)}>A</button> : null}
+      <button onClick={() => onCycleMain(item.id)} title={t("characterInventoryPanel.cycleMainHandTitle")} style={inventoryEquipBtn(mainActive, accentColor)}>{mainLabel}</button>
+      {offhandAllowed ? <button onClick={() => onToggleOffhand(item.id)} title={state === translateUi("offhand") ? t("characterInventoryPanel.unequipOffhandTitle") : t("characterInventoryPanel.equipOffhandTitle")} style={inventoryEquipBtn(state === "offhand", accentColor)}>{translateUi("OH")}</button> : null}
+      {showAmmoControl ? <button onClick={() => setAmmoOpen((prev) => !prev)} title={t("characterInventoryPanel.chooseAmmunitionTitle")} style={inventoryEquipBtn(ammoOpen || Boolean(linkedAmmo), accentColor)}>A</button> : null}
     </>
   ) : isArmor || isWearable ? (
-    <button onClick={() => onToggleWorn(item.id)} title={state === "worn" ? "Unequip" : "Equip"} style={inventoryEquipBtn(state === "worn", accentColor)}>EQ</button>
+    <button onClick={() => onToggleWorn(item.id)} title={state === translateUi("worn") ? t("characterInventoryPanel.unequipTitle") : t("characterInventoryPanel.equipTitle")} style={inventoryEquipBtn(state === "worn", accentColor)}>{translateUi("EQ")}</button>
   ) : offhandAllowed ? (
-    <button onClick={() => onToggleOffhand(item.id)} title={state === "offhand" ? "Unequip offhand" : "Equip to offhand"} style={inventoryEquipBtn(state === "offhand", accentColor)}>OH</button>
+    <button onClick={() => onToggleOffhand(item.id)} title={state === translateUi("offhand") ? t("characterInventoryPanel.unequipOffhandTitle") : t("characterInventoryPanel.equipOffhandTitle")} style={inventoryEquipBtn(state === "offhand", accentColor)}>{translateUi("OH")}</button>
   ) : null;
 
   return (
@@ -136,16 +141,16 @@ export function ItemRow({ item, accentColor, proficiencies, parsedFeatureEffects
           <div style={{ fontSize: "var(--fs-medium)", color: C.text, fontWeight: equipped ? 600 : 400, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             {item.rarity ? <RarityDot rarity={item.rarity} /> : null}
             {item.name}
-            {item.magic ? <Tag label="Magic" color={C.colorMagic} /> : null}
-            {item.attuned ? <StatusBadge title="Currently attuned" border="rgba(167,139,250,0.55)" bg="rgba(139,92,246,0.14)" color="#a78bfa">A</StatusBadge> : null}
-            {item.pactWeapon ? <StatusBadge title="Pact Weapon: uses Charisma for attacks and damage" border="rgba(244,114,182,0.55)" bg="rgba(244,114,182,0.14)" color={C.colorPinkRed}>Pact</StatusBadge> : null}
-            {linkedAmmo ? <StatusBadge title={`Loaded ammunition: ${linkedAmmo.name}`} border="rgba(52,211,153,0.45)" bg="rgba(52,211,153,0.14)" color="#34d399">{linkedAmmo.name}</StatusBadge> : null}
-            {masteryName ? <StatusBadge title={`Weapon Mastery: ${masteryName}`} border="rgba(251,191,36,0.45)" bg="rgba(251,191,36,0.14)" color={C.colorGold}>{masteryName}</StatusBadge> : null}
-            {hasStealthDisadvantage(item) ? <StatusBadge title="Disadvantage on Stealth checks" border="rgba(248,113,113,0.55)" bg="rgba(248,113,113,0.14)" color={C.colorPinkRed}>D</StatusBadge> : null}
-            {lacksArmorProficiency ? <StatusBadge title="Disadvantage from wearing armor or a shield without proficiency" border="rgba(248,113,113,0.55)" bg="rgba(248,113,113,0.14)" color={C.colorPinkRed}>D</StatusBadge> : null}
+            {item.magic ? <Tag label={t("characterInventoryPanel.magicTagLabel")} color={C.colorMagic} /> : null}
+            {item.attuned ? <StatusBadge title={t("characterInventoryPanel.attunedBadgeTitle")} border="rgba(167,139,250,0.55)" bg="rgba(139,92,246,0.14)" color="#a78bfa">A</StatusBadge> : null}
+            {item.pactWeapon ? <StatusBadge title={t("characterInventoryPanel.pactWeaponBadgeTitle")} border="rgba(244,114,182,0.55)" bg="rgba(244,114,182,0.14)" color={C.colorPinkRed}>{translateUi("Pact")}</StatusBadge> : null}
+            {linkedAmmo ? <StatusBadge title={t("characterInventoryPanel.loadedAmmunitionBadgeTitle", { name: linkedAmmo.name })} border="rgba(52,211,153,0.45)" bg="rgba(52,211,153,0.14)" color="#34d399">{linkedAmmo.name}</StatusBadge> : null}
+            {masteryName ? <StatusBadge title={t("characterInventoryPanel.weaponMasteryBadgeTitle", { name: masteryName })} border="rgba(251,191,36,0.45)" bg="rgba(251,191,36,0.14)" color={C.colorGold}>{masteryName}</StatusBadge> : null}
+            {hasStealthDisadvantage(item) ? <StatusBadge title={t("characterInventoryPanel.stealthDisadvantageBadgeTitle")} border="rgba(248,113,113,0.55)" bg="rgba(248,113,113,0.14)" color={C.colorPinkRed}>D</StatusBadge> : null}
+            {lacksArmorProficiency ? <StatusBadge title={t("characterInventoryPanel.armorProficiencyBadgeTitle")} border="rgba(248,113,113,0.55)" bg="rgba(248,113,113,0.14)" color={C.colorPinkRed}>D</StatusBadge> : null}
           </div>
           {meta ? <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginTop: 2 }}>{meta}</div> : null}
-          {lacksArmorProficiency ? <div style={{ fontSize: "var(--fs-tiny)", color: C.colorPinkRed, marginTop: 2, fontWeight: 700 }}>Not proficient: AC applies, but STR/DEX rolls have disadvantage and spellcasting is blocked.</div> : null}
+          {lacksArmorProficiency ? <div style={{ fontSize: "var(--fs-tiny)", color: C.colorPinkRed, marginTop: 2, fontWeight: 700 }}>{t("characterInventoryPanel.notProficientWarning")}</div> : null}
           {item.notes ? <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginTop: 4 }}>{item.notes}</div> : null}
         </button>
       )}
@@ -159,7 +164,7 @@ export function ItemRow({ item, accentColor, proficiencies, parsedFeatureEffects
             onIncrement={canEquipItem ? undefined : () => onQty(item.id, 1)}
             buttonClassName="character-row-action"
           />
-          <button className="character-row-action" onClick={() => onRemove(item.id)} title="Remove" style={{ background: "transparent", border: "none", color: "rgb(248,113,113)", cursor: "pointer", fontSize: "var(--fs-body)", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>×</button>
+          <button className="character-row-action" onClick={() => onRemove(item.id)} title={t("characterInventoryPanel.removeItemTitle")} style={{ background: "transparent", border: "none", color: "rgb(248,113,113)", cursor: "pointer", fontSize: "var(--fs-body)", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>×</button>
         </>
       )}
       padding="4px 2px"
@@ -167,7 +172,7 @@ export function ItemRow({ item, accentColor, proficiencies, parsedFeatureEffects
       {showAmmoControl && ammoOpen ? (
         <div style={{ marginLeft: 22, marginTop: 2, marginBottom: 4, display: "flex", flexDirection: "column", gap: 2, borderLeft: `2px solid ${accentColor}33`, paddingLeft: 8 }}>
           {compatibleAmmo.length === 0 ? (
-            <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, padding: "3px 0" }}>No ammunition in inventory</div>
+            <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, padding: "3px 0" }}>{t("characterInventoryPanel.noAmmunitionInInventory")}</div>
           ) : compatibleAmmo.map((ammo) => {
             const active = item.linkedAmmoId === ammo.id;
             const outOfStock = ammo.quantity <= 0;
@@ -195,10 +200,10 @@ export function ItemRow({ item, accentColor, proficiencies, parsedFeatureEffects
                   <button
                     onClick={() => { if (!disabled) onLinkAmmo?.(item.id, active ? null : ammo.id); }}
                     disabled={disabled}
-                    title={disabled ? "No ammunition remaining" : active ? "Unequip ammunition" : "Equip ammunition"}
+                    title={disabled ? t("characterInventoryPanel.noAmmunitionRemainingTitle") : active ? t("characterInventoryPanel.unequipAmmunitionTitle") : t("characterInventoryPanel.equipAmmunitionTitle")}
                     style={{ ...inventoryEquipBtn(active, accentColor), ...(disabled ? { opacity: 0.4, cursor: "not-allowed" } : null) }}
                   >
-                    EQ
+                    {translateUi("EQ")}
                   </button>
                 </div>
               </div>

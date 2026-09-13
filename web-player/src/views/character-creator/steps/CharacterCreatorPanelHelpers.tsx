@@ -1,3 +1,4 @@
+import { UiText } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { C, withAlpha } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
@@ -123,7 +124,7 @@ export function renderClassFeatSingleChoicePanel({
           {getChoiceLabel(choice.featGroup)} {trimmedFeatureName ? <span style={sourceTagStyle}>{trimmedFeatureName}</span> : null}
         </div>
         <span style={{ fontSize: "var(--fs-small)", color: selectedId ? C.accentHl : C.muted }}>
-          {selectedId ? "1 / 1" : "Required"}
+          {selectedId ? "1 / 1" : <UiText text={"Required"} namespace="playerUi" />}
         </span>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>

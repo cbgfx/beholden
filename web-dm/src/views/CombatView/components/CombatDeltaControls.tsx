@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 ﻿import * as React from "react";
 import { theme } from "@/theme/theme";
 import { IconAttack, IconHeal, IconConditions, IconBulkDamage } from "@/icons";
@@ -89,6 +90,7 @@ function HexButton({
 }
 
 export function CombatDeltaControls(props: Props) {
+  const translateUi = useUiTranslation("dmUi");
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const { onChange, value } = props;
 
@@ -171,13 +173,13 @@ export function CombatDeltaControls(props: Props) {
         {props.onToggleBulkMode ? (
           <div style={{ position: "relative" }}>
             <HexButton
-              title={bulkMode ? `Bulk mode active - ${bulkCount} selected. Click to cancel.` : "Bulk Damage - select multiple targets"}
+              title={bulkMode ? translateUi("Bulk mode active - {{value1}} selected. Click to cancel.", { value1: bulkCount }) : translateUi("Bulk Damage - select multiple targets")}
               disabled={false}
               onClick={props.onToggleBulkMode}
               variant="bulk"
             >
               <div style={{ opacity: bulkMode ? 1 : 0.65, transition: "opacity 150ms" }}>
-                <IconBulkDamage size={22} title="Bulk Damage" />
+                <IconBulkDamage size={22} title={translateUi("Bulk Damage")} />
               </div>
             </HexButton>
             {bulkMode && bulkCount > 0 && (
@@ -195,7 +197,7 @@ export function CombatDeltaControls(props: Props) {
         ) : null}
 
         <HexButton
-          title={bulkMode ? (bulkCount > 0 ? `Apply damage to ${bulkCount} selected` : "Select combatants to update") : (disabled ? tooltip : "Apply damage")}
+          title={bulkMode ? (bulkCount > 0 ? translateUi("Apply damage to {{value1}} selected", { value1: bulkCount }) : translateUi("Select combatants to update")) : (disabled ? tooltip : translateUi("Apply damage"))}
           disabled={bulkMode ? bulkCount === 0 : disabled}
           onClick={() => {
             props.onApplyDamage();
@@ -203,7 +205,7 @@ export function CombatDeltaControls(props: Props) {
           }}
           variant="damage"
         >
-          <IconAttack size={22} title="Damage" />
+          <IconAttack size={22} title={translateUi("Damage")} />
         </HexButton>
 
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
@@ -234,7 +236,7 @@ export function CombatDeltaControls(props: Props) {
               }
             }}
             disabled={disabled}
-            title={disabled ? tooltip : "Enter dice/math: 2d6+3, (8+4)/2, 4x5, +10, -2"}
+            title={disabled ? tooltip : translateUi("Enter dice/math: 2d6+3, (8+4)/2, 4x5, +10, -2")}
             style={{
               width: 140,
               textAlign: "center",
@@ -255,16 +257,16 @@ export function CombatDeltaControls(props: Props) {
             <button
               type="button"
               onClick={handleRollPreview}
-              title="Roll dice - preview result in field"
+              title={translateUi("Roll dice - preview result in field")}
               style={{ all: "unset", cursor: "pointer", fontSize: "var(--fs-tiny)", color: theme.colors.accentPrimary, fontWeight: 700 }}
             >
-              roll preview
+              {translateUi("roll preview")}
             </button>
           )}
         </div>
 
         <HexButton
-          title={bulkMode ? (bulkCount > 0 ? `Heal ${bulkCount} selected` : "Select combatants to update") : (disabled ? tooltip : "Apply heal")}
+          title={bulkMode ? (bulkCount > 0 ? translateUi("Heal {{value1}} selected", { value1: bulkCount }) : translateUi("Select combatants to update")) : (disabled ? tooltip : translateUi("Apply heal"))}
           disabled={bulkMode ? bulkCount === 0 : disabled}
           onClick={() => {
             props.onApplyHeal();
@@ -272,12 +274,12 @@ export function CombatDeltaControls(props: Props) {
           }}
           variant="heal"
         >
-          <IconHeal size={22} title="Heal" />
+          <IconHeal size={22} title={translateUi("Heal")} />
         </HexButton>
 
         {hasConditions ? (
           <HexButton
-            title={disabled ? tooltip : "Conditions"}
+            title={disabled ? tooltip : translateUi("Conditions")}
             disabled={disabled}
             onClick={() => {
               props.onOpenConditions?.();
@@ -285,7 +287,7 @@ export function CombatDeltaControls(props: Props) {
             }}
             variant="neutral"
           >
-            <IconConditions size={22} title="Conditions" />
+            <IconConditions size={22} title={translateUi("Conditions")} />
           </HexButton>
         ) : null}
       </div>

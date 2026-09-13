@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 // web-dm/src/views/AdminView/UsersAdminPanel.tsx
 // Admin panel for managing users: list, create, edit, delete.
 
@@ -18,6 +19,7 @@ function formatLastSeen(timestamp: number | null): string {
 }
 
 export function UsersAdminPanel() {
+  const translateUi = useUiTranslation("dmUi");
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,12 +78,12 @@ export function UsersAdminPanel() {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-        <h2 style={{ margin: 0, fontSize: "var(--fs-title)", fontWeight: 700 }}>Users</h2>
-        <Button variant="primary" onClick={() => setModal("create")}>+ New User</Button>
+        <h2 style={{ margin: 0, fontSize: "var(--fs-title)", fontWeight: 700 }}>{translateUi("Users")}</h2>
+        <Button variant="primary" onClick={() => setModal("create")}>{translateUi("+ New User")}</Button>
       </div>
 
       {loading ? (
-        <div style={{ color: theme.colors.muted, padding: 20 }}>Loading…</div>
+        <div style={{ color: theme.colors.muted, padding: 20 }}>{translateUi("Loading…")}</div>
       ) : (
         <div style={{
           background: theme.colors.panelBg,
@@ -92,18 +94,18 @@ export function UsersAdminPanel() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th style={thStyle}>Name</th>
-                <th style={thStyle}>Username</th>
-                <th style={thStyle}>Role</th>
-                <th style={thStyle}>Last Seen</th>
-                <th style={{ ...thStyle, textAlign: "right" }}>Actions</th>
+                <th style={thStyle}>{translateUi("Name")}</th>
+                <th style={thStyle}>{translateUi("Username")}</th>
+                <th style={thStyle}>{translateUi("Role")}</th>
+                <th style={thStyle}>{translateUi("Last Seen")}</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>{translateUi("Actions")}</th>
               </tr>
             </thead>
             <tbody>
               {users.length === 0 && (
                 <tr>
                   <td colSpan={5} style={{ ...tdStyle, color: theme.colors.muted, textAlign: "center" }}>
-                    No users found.
+                    {translateUi("No users found.")}
                   </td>
                 </tr>
               )}
@@ -113,7 +115,7 @@ export function UsersAdminPanel() {
                     <span style={{ fontWeight: 600 }}>{u.name}</span>
                     {u.id === currentUser?.id && (
                       <span style={{ marginLeft: 8, fontSize: "var(--fs-small)", color: theme.colors.accentHighlight, fontWeight: 600 }}>
-                        (you)
+                        {translateUi("(you)")}
                       </span>
                     )}
                   </td>
@@ -125,7 +127,7 @@ export function UsersAdminPanel() {
                       color: u.isAdmin ? theme.colors.accentPrimary : theme.colors.muted,
                       border: `1px solid ${u.isAdmin ? theme.colors.accentPrimary + "55" : theme.colors.panelBorder}`,
                     }}>
-                      {u.isAdmin ? "Admin" : "Player"}
+                      {u.isAdmin ? translateUi("Admin") : translateUi("Player")}
                     </span>
                   </td>
                   <td style={{ ...tdStyle, color: theme.colors.muted, whiteSpace: "nowrap" }}>
@@ -135,13 +137,13 @@ export function UsersAdminPanel() {
                     <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                       <Button variant="ghost" style={{ fontSize: "var(--fs-subtitle)", padding: "5px 10px" }}
                         onClick={() => setModal({ type: "edit", user: u })}>
-                        Edit
+                        {translateUi("Edit")}
                       </Button>
                       <Button variant="danger" style={{ fontSize: "var(--fs-subtitle)", padding: "5px 10px" }}
                         onClick={() => handleDelete(u)}
                         disabled={u.id === currentUser?.id}
-                        title={u.id === currentUser?.id ? "Cannot delete your own account" : undefined}>
-                        Delete
+                        title={u.id === currentUser?.id ? translateUi("Cannot delete your own account") : undefined}>
+                        {translateUi("Delete")}
                       </Button>
                     </div>
                   </td>
@@ -154,7 +156,7 @@ export function UsersAdminPanel() {
 
       {modal === "create" && (
         <UserModal
-          title="Create User"
+          title={translateUi("Create User")}
           initial={{}}
           passwordRequired
           onSave={handleCreate}
@@ -164,7 +166,7 @@ export function UsersAdminPanel() {
 
       {modal !== null && modal !== "create" && modal.type === "edit" && (
         <UserModal
-          title={`Edit User — ${modal.user.name}`}
+          title={translateUi("Edit User — {{value1}}", { value1: modal.user.name })}
           initial={{ username: modal.user.username, name: modal.user.name, isAdmin: modal.user.isAdmin }}
           passwordRequired={false}
           onSave={(form) => handleEdit(modal.user.id, form)}

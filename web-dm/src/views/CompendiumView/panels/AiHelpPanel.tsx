@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Panel } from "@/ui/Panel";
 import { Button } from "@/ui/Button";
@@ -17,6 +18,7 @@ function downloadMd() {
 }
 
 export function AiHelpPanel() {
+  const translateUi = useUiTranslation("dmUi");
   const [copied, setCopied] = React.useState(false);
   const [previewOpen, setPreviewOpen] = React.useState(false);
 
@@ -28,26 +30,26 @@ export function AiHelpPanel() {
 
   return (
     <Panel
-      title="AI Content Guide"
+      title={translateUi("AI Content Guide")}
       style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}
       bodyStyle={{ flex: 1, minHeight: 0, overflow: "auto" }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 20, paddingBottom: 8 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, lineHeight: 1.5 }}>
           <p style={{ margin: 0, color: theme.colors.text }}>
-            Give this guide to any AI assistant to generate valid Beholden import files — adventures, characters, monsters, items, spells, and more. The guide tells the AI exactly what fields, formats, and rules Beholden expects.
+            {translateUi("Give this guide to any AI assistant to generate valid Beholden import files — adventures, characters, monsters, items, spells, and more. The guide tells the AI exactly what fields, formats, and rules Beholden expects.")}
           </p>
           <p style={{ margin: 0, color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
-            Start a new AI conversation, paste the guide, then describe what you want to create. The AI will produce JSON you can import directly into Beholden.
+            {translateUi("Start a new AI conversation, paste the guide, then describe what you want to create. The AI will produce JSON you can import directly into Beholden.")}
           </p>
         </div>
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Button onClick={() => void handleCopy()} variant="primary">
-            {copied ? "Copied!" : "Copy to Clipboard"}
+            {copied ? translateUi("Copied!") : translateUi("Copy to Clipboard")}
           </Button>
           <Button onClick={downloadMd} variant="ghost">
-            Download .md
+            {translateUi("Download .md")}
           </Button>
         </div>
 
@@ -72,7 +74,7 @@ export function AiHelpPanel() {
               userSelect: "none",
             }}
           >
-            {previewOpen ? "Hide guide content" : "Preview guide content"}
+            {previewOpen ? translateUi("Hide guide content") : translateUi("Preview guide content")}
           </summary>
           <div style={{ padding: "10px 12px" }}>
             <pre

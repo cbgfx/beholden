@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 
 import { EmptyState, ItemListRow, ListShell } from "@beholden/shared/ui";
@@ -32,11 +33,12 @@ type ItemsBrowserFiltersProps = {
 };
 
 export function ItemsBrowserFilters(props: ItemsBrowserFiltersProps) {
+  const translateUi = useUiTranslation("dmUi");
   return (
     <>
       <input
         value={props.q}
-        placeholder="Search items..."
+        placeholder={translateUi("Search items...")}
         onChange={(e) => props.onChangeQ(e.target.value)}
         style={{
           background: theme.colors.panelBg,
@@ -49,17 +51,17 @@ export function ItemsBrowserFilters(props: ItemsBrowserFiltersProps) {
       />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
-        <Select value={props.rarityFilter} onChange={(e) => props.onChangeRarity(e.target.value)} style={{ width: "100%" }} title="Filter by rarity">
+        <Select value={props.rarityFilter} onChange={(e) => props.onChangeRarity(e.target.value)} style={{ width: "100%" }} title={translateUi("Filter by rarity")}>
           {props.rarityOptions.map((rarity) => (
             <option key={rarity} value={rarity}>
-              {rarity === "all" ? "All Rarities" : titleCase(rarity)}
+              {rarity === "all" ? translateUi("All Rarities") : titleCase(rarity)}
             </option>
           ))}
         </Select>
-        <Select value={props.typeFilter} onChange={(e) => props.onChangeType(e.target.value)} style={{ width: "100%" }} title="Filter by type">
+        <Select value={props.typeFilter} onChange={(e) => props.onChangeType(e.target.value)} style={{ width: "100%" }} title={translateUi("Filter by type")}>
           {props.typeOptions.map((type) => (
             <option key={type} value={type}>
-              {type === "all" ? "All Types" : type}
+              {type === "all" ? translateUi("All Types") : type}
             </option>
           ))}
         </Select>
@@ -68,9 +70,9 @@ export function ItemsBrowserFilters(props: ItemsBrowserFiltersProps) {
             value={props.rulesetFilter ?? ""}
             onChange={(e) => props.onChangeRuleset?.(e.target.value as "5e" | "5.5e" | "")}
             style={{ width: "100%" }}
-            title="Filter by ruleset"
+            title={translateUi("Filter by ruleset")}
           >
-            <option value="">All Rulesets</option>
+            <option value="">{translateUi("All Rulesets")}</option>
             <option value="5.5e">5.5e</option>
             <option value="5e">5e</option>
           </Select>
@@ -79,14 +81,14 @@ export function ItemsBrowserFilters(props: ItemsBrowserFiltersProps) {
 
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
         <button type="button" onClick={props.onToggleAttunement} style={togglePillStyle(props.filterAttunement)}>
-          Attunement
+          {translateUi("Attunement")}
         </button>
         <button type="button" onClick={props.onToggleMagic} style={togglePillStyle(props.filterMagic)}>
-          Magic
+          {translateUi("Magic")}
         </button>
         {props.hasActiveFilters ? (
           <button type="button" onClick={props.onClearFilters} style={togglePillStyle(false)}>
-            Clear
+            {translateUi("Clear")}
           </button>
         ) : null}
       </div>
@@ -111,6 +113,7 @@ type ItemRowProps = {
 };
 
 export function ItemsBrowserRow(props: ItemRowProps) {
+  const translateUi = useUiTranslation("dmUi");
   const subtitle = [
     props.item.rarity ? titleCase(props.item.rarity) : null,
     props.item.type ?? null,
@@ -167,20 +170,20 @@ export function ItemsBrowserRow(props: ItemRowProps) {
         >
           {props.confirmingDelete ? (
             <>
-              <span style={{ fontSize: "var(--fs-small)", color: theme.colors.muted, marginRight: 4 }}>Delete?</span>
-              <Button type="button" variant="danger" onClick={props.onDeleteConfirm} disabled={props.deleteBusy} title="Yes, delete">
-                Yes
+              <span style={{ fontSize: "var(--fs-small)", color: theme.colors.muted, marginRight: 4 }}>{translateUi("Delete?")}</span>
+              <Button type="button" variant="danger" onClick={props.onDeleteConfirm} disabled={props.deleteBusy} title={translateUi("Yes, delete")}>
+                {translateUi("Yes")}
               </Button>
-              <Button type="button" variant="ghost" onClick={props.onDeleteCancel} title="Cancel">
-                No
+              <Button type="button" variant="ghost" onClick={props.onDeleteCancel} title={translateUi("Cancel")}>
+                {translateUi("No")}
               </Button>
             </>
           ) : (
             <>
-              <IconButton onClick={props.onEdit} disabled={props.editLoading} variant="ghost" size="sm" title="Edit item">
+              <IconButton onClick={props.onEdit} disabled={props.editLoading} variant="ghost" size="sm" title={translateUi("Edit item")}>
                 {props.editLoading ? <span style={{ fontSize: "var(--fs-tiny)" }}>...</span> : <IconPencil size={13} />}
               </IconButton>
-              <IconButton onClick={props.onDeleteRequest} variant="ghost" size="sm" title="Delete item">
+              <IconButton onClick={props.onDeleteRequest} variant="ghost" size="sm" title={translateUi("Delete item")}>
                 <IconTrash size={13} />
               </IconButton>
             </>
@@ -202,6 +205,7 @@ type ItemsBrowserListProps = {
 };
 
 export function ItemsBrowserList(props: ItemsBrowserListProps) {
+  const translateUi = useUiTranslation("dmUi");
   return (
     <ListShell
       ref={props.scrollRef}
@@ -213,7 +217,7 @@ export function ItemsBrowserList(props: ItemsBrowserListProps) {
       <div style={{ height: props.padBottom }} />
       {!props.busy && props.rows.length === 0 ? (
         <EmptyState textColor={theme.colors.muted} style={{ padding: 10 }}>
-          No items found.
+          {translateUi("No items found.")}
         </EmptyState>
       ) : null}
     </ListShell>

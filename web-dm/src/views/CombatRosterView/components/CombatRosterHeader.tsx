@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useNavigate } from "react-router-dom";
 
 import { theme } from "@/theme/theme";
@@ -35,6 +36,7 @@ type Props = {
  * so the roster panel can stay purely roster-focused.
  */
 export function CombatRosterHeader(props: Props) {
+  const translateUi = useUiTranslation("dmUi");
   const nav = useNavigate();
 
   const xp = typeof props.totalXp === "number" && Number.isFinite(props.totalXp) ? Math.max(0, Math.round(props.totalXp)) : null;
@@ -50,10 +52,10 @@ export function CombatRosterHeader(props: Props) {
     <Panel
       title={
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Button variant="ghost" onClick={() => nav(props.backTo)} title="Back to Campaign">
-            ← Back
+          <Button variant="ghost" onClick={() => nav(props.backTo)} title={translateUi("Back to Campaign")}>
+            {translateUi("← Back")}
           </Button>
-          <IconEncounterRoster size={18} title="Combat Roster" />
+          <IconEncounterRoster size={18} title={translateUi("Combat Roster")} />
           <span style={{ fontSize: "var(--fs-title)", fontWeight: 900, color: theme.colors.text }}>
             {props.title}
           </span>
@@ -68,9 +70,9 @@ export function CombatRosterHeader(props: Props) {
                 padding: "2px 6px",
                 borderRadius: 999
               }}
-              title="Total raw XP (hostile monsters only)"
+              title={translateUi("Total raw XP (hostile monsters only)")}
             >
-              {xp.toLocaleString()} XP
+              {xp.toLocaleString()} {translateUi("XP")}
             </span>
           ) : null}
           {diffLabel != null ? (
@@ -85,16 +87,16 @@ export function CombatRosterHeader(props: Props) {
                 borderRadius: 999
               }}
               title={
-                `Official difficulty: ${diff?.officialDifficulty ?? "Unavailable"}\n` +
-                `Damage projection: ${diff?.projectedThreat ?? "Unavailable"}\n` +
-                (partyHpMax != null ? `Party HP: ${Math.round(partyHpMax).toLocaleString()}\n` : "") +
-                (hostileDpr != null ? `Sustained DPR: ${Math.round(hostileDpr).toLocaleString()}\n` : "") +
-                (diff && Number.isFinite(diff.projectedDpr) ? `Projected DPR: ${Math.round(diff.projectedDpr).toLocaleString()}\n` : "") +
-                (burst != null && burst > 1 ? `Encounter pressure factor: ×${burst.toFixed(2)}\n` : "") +
-                (diff && Number.isFinite(diff.monsterSurvivalRounds) ? `Estimated monster survival: ${diff.monsterSurvivalRounds.toFixed(1)} rounds\n` : "") +
-                (diff && Number.isFinite(diff.roundsToFirstDown) ? `Estimated first character down: ${diff.roundsToFirstDown.toFixed(1)} rounds\n` : "") +
-                (diff && Number.isFinite(diff.expectedPartyDamageRatio) ? `Expected party HP lost: ${Math.round(diff.expectedPartyDamageRatio * 100)}%\n` : "") +
-                (rtk != null && Number.isFinite(rtk) ? `Rounds to party collapse: ${rtk.toFixed(1)}` : "Rounds to party collapse: ∞")
+                translateUi("Official difficulty: {{value1}}\n", { value1: diff?.officialDifficulty ?? "Unavailable" }) +
+                translateUi("Damage projection: {{value1}}\n", { value1: diff?.projectedThreat ?? "Unavailable" }) +
+                (partyHpMax != null ? translateUi("Party HP: {{value1}}\n", { value1: Math.round(partyHpMax).toLocaleString() }) : "") +
+                (hostileDpr != null ? translateUi("Sustained DPR: {{value1}}\n", { value1: Math.round(hostileDpr).toLocaleString() }) : "") +
+                (diff && Number.isFinite(diff.projectedDpr) ? translateUi("Projected DPR: {{value1}}\n", { value1: Math.round(diff.projectedDpr).toLocaleString() }) : "") +
+                (burst != null && burst > 1 ? translateUi("Encounter pressure factor: ×{{value1}}\n", { value1: burst.toFixed(2) }) : "") +
+                (diff && Number.isFinite(diff.monsterSurvivalRounds) ? translateUi("Estimated monster survival: {{value1}} rounds\n", { value1: diff.monsterSurvivalRounds.toFixed(1) }) : "") +
+                (diff && Number.isFinite(diff.roundsToFirstDown) ? translateUi("Estimated first character down: {{value1}} rounds\n", { value1: diff.roundsToFirstDown.toFixed(1) }) : "") +
+                (diff && Number.isFinite(diff.expectedPartyDamageRatio) ? translateUi("Expected party HP lost: {{value1}}%\n", { value1: Math.round(diff.expectedPartyDamageRatio * 100) }) : "") +
+                (rtk != null && Number.isFinite(rtk) ? translateUi("Rounds to party collapse: {{value1}}", { value1: rtk.toFixed(1) }) : translateUi("Rounds to party collapse: ∞"))
               }
             >
               {diffLabel}

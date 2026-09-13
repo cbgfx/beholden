@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import type React from "react";
 import { C } from "@/lib/theme";
 import { Button } from "@/ui/Button";
@@ -14,6 +15,7 @@ export function CharacterConcentrationPickerModal(props: {
   onSelect: (spellName: string) => void;
   onClose: () => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   if (!props.open) return null;
 
   const search = props.search.trim();
@@ -65,7 +67,7 @@ export function CharacterConcentrationPickerModal(props: {
               marginBottom: 10,
             }}
           >
-            Concentrating on…
+            {translateUi("Concentrating on…")}
           </div>
           <input
             autoFocus
@@ -76,7 +78,7 @@ export function CharacterConcentrationPickerModal(props: {
               if (event.key === "Escape") props.onClose();
               if (event.key === "Enter" && search) props.onSelect(search);
             }}
-            placeholder="Search or type spell name…"
+            placeholder={translateUi("Search or type spell name…")}
             style={{
               width: "100%",
               boxSizing: "border-box",
@@ -95,19 +97,19 @@ export function CharacterConcentrationPickerModal(props: {
         <div style={{ overflowY: "auto", padding: "8px 0" }}>
           {props.loading && (
             <div style={{ padding: "10px 20px", color: C.muted, fontSize: "var(--fs-small)" }}>
-              Checking concentration spells…
+              {translateUi("Checking concentration spells…")}
             </div>
           )}
           {!props.loading && !search && filteredSpells.length === 0 && (
             <div style={{ padding: "10px 20px", color: C.muted, fontSize: "var(--fs-small)", lineHeight: 1.4 }}>
               {props.loadError
-                ? "Could not load concentration spells. You can still type a spell name."
-                : "No concentration spells found. You can still type a spell name."}
+                ? translateUi("Could not load concentration spells. You can still type a spell name.")
+                : translateUi("No concentration spells found. You can still type a spell name.")}
             </div>
           )}
           {filteredSpells.length === 0 && search && (
             <button type="button" onClick={() => props.onSelect(search)} style={spellButtonStyle(props.accentColor, true)}>
-              Set "{search}"
+              {translateUi("Set \"")}{search}"
             </button>
           )}
           {filteredSpells.map((name) => {
@@ -127,7 +129,7 @@ export function CharacterConcentrationPickerModal(props: {
 
         <div style={{ padding: "8px 20px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
           <Button type="button" variant="ghost" onClick={props.onClose} style={{ padding: "6px 14px", fontSize: "var(--fs-small)" }}>
-            Cancel
+            {translateUi("Cancel")}
           </Button>
         </div>
       </div>

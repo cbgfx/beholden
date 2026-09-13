@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { Fragment, useCallback, useEffect, useMemo, useRef } from "react";
 import { C } from "@/lib/theme";
 import {
@@ -32,6 +33,7 @@ import { appearanceCssVariables, backgroundPatternImage, normalizeAppearance } f
 const PROTECTED_VIEW_IDS = new Set(["play", "all"]);
 
 export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
+  const translateUi = useUiTranslation("playerUi");
   const {
     char, data, derived, ui, notes, runtime, hpActions, live,
     polymorphCondition, polymorphMonsterState, combatProps, handlePortraitSelected,
@@ -369,9 +371,9 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
       {ui.concentrationAlert && (
         <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: 10, background: "rgba(240, 165, 0, 0.15)", border: `1px solid ${C.accent}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <span style={{ color: C.text, fontWeight: 700 }}>
-            ⚠️ You are Concentrating — CON Save DC <strong>{ui.concentrationAlert.dc}</strong>
+            {translateUi("⚠️ You are Concentrating — CON Save DC")} <strong>{ui.concentrationAlert.dc}</strong>
           </span>
-          <button type="button" aria-label="Dismiss concentration reminder" onClick={() => ui.setConcentrationAlert(null)} style={{ all: "unset", cursor: "pointer", color: C.muted, fontWeight: 900, fontSize: "var(--fs-title)", lineHeight: 1 }}>×</button>
+          <button type="button" aria-label={translateUi("Dismiss concentration reminder")} onClick={() => ui.setConcentrationAlert(null)} style={{ all: "unset", cursor: "pointer", color: C.muted, fontWeight: 900, fontSize: "var(--fs-title)", lineHeight: 1 }}>×</button>
         </div>
       )}
       <CharacterSheetHeader
@@ -525,7 +527,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
           }}
         >
           <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: C.muted, marginBottom: 2 }}>
-            Not in this view
+            {translateUi("Not in this view")}
           </div>
           {(drag.displayZones[SIDEBAR_ZONE_ID] ?? []).map((id) => (
             <PanelCard
@@ -538,7 +540,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
           ))}
           {(drag.displayZones[SIDEBAR_ZONE_ID] ?? []).length === 0 && (
             <div style={{ fontSize: "var(--fs-small)", color: C.muted, fontStyle: "italic" }}>
-              Every panel is placed.
+              {translateUi("Every panel is placed.")}
             </div>
           )}
         </div>

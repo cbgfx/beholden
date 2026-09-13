@@ -1,3 +1,5 @@
+import { translateUi } from "@/i18n";
+import { UiText } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { C, withAlpha } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
@@ -80,16 +82,16 @@ function renderClassStep({
 
   const main = (
     <div>
-      <h2 style={headingStyle}>Choose a Class</h2>
+      <h2 style={headingStyle}>{<UiText text={"Choose a Class"} namespace="playerUi" />}</h2>
 
       {classes.length === 0 ? (
-        <p style={{ color: C.muted }}>No classes found. Ask your DM to upload a class compendium XML.</p>
+        <p style={{ color: C.muted }}>{<UiText text={"No classes found. Ask your DM to upload a class compendium XML."} namespace="playerUi" />}</p>
       ) : (
         <>
           <input
             value={classSearch}
             onChange={(e) => setClassSearch(e.target.value)}
-            placeholder="Search classes…"
+            placeholder={translateUi("Search classes…")}
             style={{ ...inputStyle, width: "100%", marginBottom: 12 }}
           />
           <div
@@ -103,7 +105,7 @@ function renderClassStep({
               marginBottom: 4,
             }}
           >
-            {filtered.length === 0 && <p style={{ color: C.muted, gridColumn: "1 / -1" }}>No matches.</p>}
+            {filtered.length === 0 && <p style={{ color: C.muted, gridColumn: "1 / -1" }}>{<UiText text={"No matches."} namespace="playerUi" />}</p>}
             {filtered.map((c) => {
               const sel = form.classId === c.id;
               return (
@@ -146,7 +148,7 @@ function renderClassStep({
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 12 }}>
         {classDetail.hd && (
           <div>
-            <div style={statLabelStyle}>Hit Die</div>
+            <div style={statLabelStyle}>{<UiText text={"Hit Die"} namespace="playerUi" />}</div>
             <div style={statValueStyle}>d{classDetail.hd}</div>
           </div>
         )}
@@ -154,36 +156,36 @@ function renderClassStep({
           const keys = getPrimaryAbilityKeys(classDetail);
           return keys.length > 0 ? (
             <div>
-              <div style={statLabelStyle}>Primary</div>
+              <div style={statLabelStyle}>{<UiText text={"Primary"} namespace="playerUi" />}</div>
               <div style={statValueStyle}>{keys.map((k) => abilityLabels[k]).join(" / ")}</div>
             </div>
           ) : null;
         })()}
         {classDetail.slotsReset && (
           <div>
-            <div style={statLabelStyle}>Spell Reset</div>
+            <div style={statLabelStyle}>{<UiText text={"Spell Reset"} namespace="playerUi" />}</div>
             <div style={statValueStyle}>
-              {classDetail.slotsReset === "L" ? "Long Rest" : classDetail.slotsReset === "S" ? "Short Rest" : classDetail.slotsReset}
+              {classDetail.slotsReset === "L" ? <UiText text={"Long Rest"} namespace="playerUi" /> : classDetail.slotsReset === "S" ? <UiText text={"Short Rest"} namespace="playerUi" /> : classDetail.slotsReset}
             </div>
           </div>
         )}
       </div>
       {classDetail.armor && (
         <div style={{ marginBottom: 6 }}>
-          <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>Armor </span>
+          <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>{<UiText text={"Armor"} namespace="playerUi" />} </span>
           <span style={{ fontSize: "var(--fs-small)" }}>{classDetail.armor}</span>
         </div>
       )}
       {classDetail.weapons && (
         <div style={{ marginBottom: 6 }}>
-          <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>Weapons </span>
+          <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>{<UiText text={"Weapons"} namespace="playerUi" />} </span>
           <span style={{ fontSize: "var(--fs-small)" }}>{classDetail.weapons}</span>
         </div>
       )}
       {classDetail.numSkills > 0 && (
         <div style={{ marginBottom: 10 }}>
-          <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>Skills </span>
-          <span style={{ fontSize: "var(--fs-small)" }}>Choose {classDetail.numSkills} from: {parseSkillList(classDetail.proficiency).join(", ")}</span>
+          <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>{<UiText text={"Skills"} namespace="playerUi" />} </span>
+          <span style={{ fontSize: "var(--fs-small)" }}>{<UiText text={"Choose"} namespace="playerUi" />} {classDetail.numSkills} {<UiText text={"from:"} namespace="playerUi" />} {parseSkillList(classDetail.proficiency).join(", ")}</span>
         </div>
       )}
       {classDetail.description && (
@@ -194,13 +196,13 @@ function renderClassStep({
       )}
       {classPreparedSpellProgression.length > 0 && (
         <div style={{ marginTop: 12, borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 10 }}>
-          <div style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 700, marginBottom: 8 }}>Prepared Spell Progression</div>
+          <div style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 700, marginBottom: 8 }}>{<UiText text={"Prepared Spell Progression"} namespace="playerUi" />}</div>
           <PreparedSpellProgressionBlock tables={classPreparedSpellProgression} compact accentColor={C.accentHl} />
         </div>
       )}
     </div>
   ) : (
-    <div style={{ color: C.muted, fontSize: "var(--fs-subtitle)", padding: "12px 0" }}>Select a class to see its details.</div>
+    <div style={{ color: C.muted, fontSize: "var(--fs-subtitle)", padding: "12px 0" }}>{<UiText text={"Select a class to see its details."} namespace="playerUi" />}</div>
   );
 
   return { main, side };

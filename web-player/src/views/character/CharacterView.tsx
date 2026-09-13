@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { C } from "@/lib/theme";
@@ -21,6 +22,7 @@ import { useCharacterViewNotes } from "@/views/character/notes/useCharacterViewN
 import { CharacterViewLayout } from "@/views/character/CharacterViewLayout";
 
 export function CharacterView() {
+  const translateUi = useUiTranslation("playerUi");
   const { id } = useParams<{ id: string }>();
   const ui = useCharacterViewUiState();
   const data = useCharacterData(id);
@@ -81,7 +83,7 @@ export function CharacterView() {
     ui,
   });
 
-  if (loading) return <Wrap><p style={{ color: C.muted }}>Loading…</p></Wrap>;
+  if (loading) return <Wrap><p style={{ color: C.muted }}>{translateUi("Loading…")}</p></Wrap>;
   if (error || !char || !derived) {
     return <Wrap><p style={{ color: C.red }}>{error ?? "Character not found."}</p></Wrap>;
   }

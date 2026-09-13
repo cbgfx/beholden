@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { useUpdateCheck } from "@beholden/shared/ui/useUpdateCheck";
 import { NavLink, Link } from "react-router-dom";
 import { C, withAlpha } from "@/lib/theme";
@@ -86,6 +87,7 @@ function topbarToolButtonStyle(active = false, accent = C.accentHl, muted = C.mu
 
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const meta = useServerMeta();
   const update = useUpdateCheck(api, "1.5.0");
@@ -147,7 +149,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 flexShrink: 0,
               }}
             >
-              Player
+              {t("appShell.playerBadge")}
             </span>
           </div>
 
@@ -164,8 +166,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <button
               type="button"
-              aria-label="Open dice calculator"
-              title="Dice Calculator"
+              aria-label={t("appShell.openDiceCalculator")}
+              title={t("appShell.diceCalculator")}
               onPointerDown={(e) => { e.preventDefault(); setDiceOpen(true); }}
               onClick={() => setDiceOpen(true)}
               style={topbarToolButtonStyle(diceOpen)}
@@ -187,7 +189,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <nav style={{ display: "flex", gap: 4 }}>
               <NavLink to="/" end style={({ isActive }) => navLinkStyle(isActive, C.accentHl, C.muted)}>
-                Home
+                {t("appShell.home")}
               </NavLink>
               {lastChar && (
                 <NavLink
@@ -198,20 +200,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </NavLink>
               )}
               <NavLink to="/compendium" style={({ isActive }) => navLinkStyle(isActive, C.accentHl, C.muted)}>
-                Compendium
+                {t("appShell.compendium")}
               </NavLink>
             </nav>
             <HeaderActionLink to="/profile" color={C.muted}>
               {user?.name || user?.username}
             </HeaderActionLink>
             <HeaderActionButton onClick={logout} color={C.muted} borderColor={C.panelBorder}>
-              Sign out
+              {t("appShell.signOut")}
             </HeaderActionButton>
             <StatusDot
               active={connected}
               activeColor={C.green}
               inactiveColor={C.red}
-              title={connected ? "Server connected" : "Server disconnected"}
+              title={connected ? t("appShell.serverConnected") : t("appShell.serverDisconnected")}
             />
           </div>
         </div>
@@ -232,9 +234,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         color={C.muted}
         left={
           <>
-            <div>© {new Date().getFullYear()} Beholden. All rights reserved.</div>
+            <div>{t("appShell.copyright", { year: new Date().getFullYear() })}</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-              <span>Icons made by</span>
+              <span>{t("appShell.iconsMadeBy")}</span>
               <a target="_blank" rel="noreferrer" href="https://game-icons.net" style={{ color: C.muted }}>
                 https://game-icons.net
               </a>
@@ -243,9 +245,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }
         centerLeft={
           <>
-            <Link to="/about" style={{ color: C.accent, textDecoration: "none" }}>About</Link>
-            <Link to="/faq" style={{ color: C.accent, textDecoration: "none" }}>FAQ</Link>
-            <Link to="/updates" style={{ color: C.accent, textDecoration: "none" }}>Future Updates</Link>
+            <Link to="/about" style={{ color: C.accent, textDecoration: "none" }}>{t("appShell.about")}</Link>
+            <Link to="/faq" style={{ color: C.accent, textDecoration: "none" }}>{t("appShell.faq")}</Link>
+            <Link to="/updates" style={{ color: C.accent, textDecoration: "none" }}>{t("appShell.futureUpdates")}</Link>
           </>
         }
         centerRight={showSupport ? (
@@ -253,7 +255,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             href="https://www.buymeacoffee.com/beholden"
             target="_blank"
             rel="noreferrer"
-            title="Support Beholden"
+            title={t("appShell.supportBeholden")}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -266,18 +268,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               fontWeight: 800,
             }}
           >
-            Donate ❤️
+            {t("appShell.donate")}
           </a>
         ) : null}
         right={
           <>
             {update.updateAvailable && (user?.isAdmin ? (
               <button type="button" onClick={update.startUpdate} disabled={update.updating} style={{ border: 0, padding: 0, background: "none", cursor: "pointer", color: C.accent, fontWeight: 600 }}>
-                {update.updating ? "Starting update…" : "Update Available"}
+                {update.updating ? t("appShell.startingUpdate") : t("appShell.updateAvailable")}
               </button>
-            ) : <span style={{ color: C.accent, fontWeight: 600 }}>Update Available</span>)}
+            ) : <span style={{ color: C.accent, fontWeight: 600 }}>{t("appShell.updateAvailable")}</span>)}
             {update.message && <div>{update.message}</div>}
-            <div>v{update.currentVersion}</div>
+            <div>{t("appShell.versionLabel", { version: update.currentVersion })}</div>
           </>
         }
       />

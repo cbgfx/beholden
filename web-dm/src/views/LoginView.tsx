@@ -1,3 +1,5 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
+import { LanguageSwitcher } from "@beholden/shared/ui/LanguageSwitcher";
 // web-dm/src/views/LoginView.tsx
 
 import React, { useState } from "react";
@@ -5,8 +7,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
+import { Select } from "@/ui/Select";
 
 export function LoginView() {
+  const translateMessage = useUiMessages("dmUi");
+  const translateUi = useUiTranslation("dmUi");
   const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +25,7 @@ export function LoginView() {
     try {
       await login(username, password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : translateMessage("Login failed"));
     } finally {
       setLoading(false);
     }
@@ -65,16 +70,17 @@ export function LoginView() {
             letterSpacing: "-0.5px",
           }}
         >
-          Beholden - DM
+          {translateUi("Beholden - DM")}
         </h1>
         <p style={{ margin: "0 0 28px", color: theme.colors.muted, fontSize: "var(--fs-medium)" }}>
-          Sign in to continue
+          {translateUi("Sign in to continue")}
         </p>
 
+        <LanguageSwitcher SelectComponent={Select} fieldStyle={{ marginBottom: 16 }} />
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: "block", marginBottom: 6, fontSize: "var(--fs-subtitle)", fontWeight: 600 }}>
-              Username
+              {translateUi("Username")}
             </label>
             <Input
               type="text"
@@ -88,7 +94,7 @@ export function LoginView() {
 
           <div style={{ marginBottom: 24 }}>
             <label style={{ display: "block", marginBottom: 6, fontSize: "var(--fs-subtitle)", fontWeight: 600 }}>
-              Password
+              {translateUi("Password")}
             </label>
             <Input
               type="password"
@@ -121,7 +127,7 @@ export function LoginView() {
             disabled={loading || !username || !password}
             style={{ width: "100%" }}
           >
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? translateUi("Signing in…") : translateUi("Sign in")}
           </Button>
         </form>
       </div>

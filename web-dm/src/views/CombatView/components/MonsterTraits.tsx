@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { theme, withAlpha } from "@/theme/theme";
 import type { MonsterDetail } from "@/views/CombatView/types";
 import { ActionRow } from "@/views/CombatView/components/ActionRow";
@@ -12,6 +13,7 @@ function ResistanceDots({
   used: number;
   onChange: (n: number) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
       {Array.from({ length: total }).map((_, i) => {
@@ -19,7 +21,7 @@ function ResistanceDots({
         return (
           <button
             key={i}
-            title={spent ? "Spent - click to restore one" : "Click to spend one legendary resistance"}
+            title={spent ? translateUi("Spent - click to restore one") : translateUi("Click to spend one legendary resistance")}
             onClick={() => onChange(spent ? used - 1 : used + 1)}
             style={{
               all: "unset",
@@ -44,6 +46,7 @@ export function MonsterTraits(props: {
   usedLegendaryResistances?: number;
   onChangeLegendaryResistancesUsed?: (n: number) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const allTraits = Array.isArray(props.monster.trait) ? props.monster.trait : [];
   const legendaryResistanceTrait = allTraits.find((t) => /legendary resistance/i.test(String(t?.name ?? "")));
   const otherTraits = allTraits.filter((t) => {
@@ -66,7 +69,7 @@ export function MonsterTraits(props: {
     <div style={{ display: "grid", gap: 10 }}>
       {legendaryResistanceTrait ? (
         <MonsterSectionPanel
-          title="Legendary Resistance"
+          title={translateUi("Legendary Resistance")}
           actions={
             props.onChangeLegendaryResistancesUsed && resistanceCount > 0 ? (
               <ResistanceDots
@@ -86,7 +89,7 @@ export function MonsterTraits(props: {
       ) : null}
 
       {otherTraits.length > 0 ? (
-        <MonsterSectionPanel title="Traits">
+        <MonsterSectionPanel title={translateUi("Traits")}>
           <div style={{ display: "grid", gap: 8, maxHeight: 260, overflow: "auto" }}>
             {[...otherTraits]
               .sort((a, b) => {

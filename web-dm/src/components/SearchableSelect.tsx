@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 // web-dm/src/components/SearchableSelect.tsx
 //
 // The one searchable-dropdown implementation for the Binder. Every relation
@@ -32,6 +33,7 @@ export function SearchableSelect(props: {
   maxResults?: number;
   autoFocus?: boolean;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const selected = props.options.find((option) => option.id === props.value);
   const [query, setQuery] = useState(selected?.name ?? "");
   const [open, setOpen] = useState(false);
@@ -58,7 +60,7 @@ export function SearchableSelect(props: {
           props.onChange("");
           setOpen(true);
         }}
-        placeholder={props.placeholder ?? "None"}
+        placeholder={props.placeholder ?? translateUi("None")}
         disabled={props.disabled}
         autoFocus={props.autoFocus}
         autoComplete="off"
@@ -100,7 +102,7 @@ export function SearchableSelect(props: {
               {option.meta ? <span style={{ color: theme.colors.muted }}> · {option.meta}</span> : null}
             </button>
           ))}
-          {!filtered.length ? <div style={{ padding: "10px 12px", color: theme.colors.muted }}>No matches</div> : null}
+          {!filtered.length ? <div style={{ padding: "10px 12px", color: theme.colors.muted }}>{translateUi("No matches")}</div> : null}
         </div>
       ) : null}
     </div>

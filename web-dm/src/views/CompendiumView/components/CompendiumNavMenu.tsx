@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import { IconCompendiumAlt, IconSpells, IconNotes, IconMonster, IconChest, IconInspiration, IconAI } from "@/icons";
@@ -18,6 +19,7 @@ export function CompendiumNavMenu(props: {
   activeSection: CompendiumSection;
   onSetSection: (s: CompendiumSection) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const { user } = useAuth();
   return (
     <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -54,7 +56,7 @@ export function CompendiumNavMenu(props: {
             }}
           >
             <Icon size={20} />
-            {label}
+            {translateUi(label)}
           </button>
         );
       })}

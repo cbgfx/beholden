@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { C } from "@/lib/theme";
 import { Button } from "@/ui/Button";
 
@@ -17,6 +18,7 @@ export function RightDrawer({
   children: React.ReactNode;
   footer?: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <>
       <div
@@ -46,7 +48,7 @@ export function RightDrawer({
           }}
         >
           <div style={{ minWidth: 0 }}>{title}</div>
-          <Button variant="ghost" onClick={onClose} style={{ padding: "4px 10px", fontSize: "var(--fs-small)" }}>Close</Button>
+          <Button variant="ghost" onClick={onClose} style={{ padding: "4px 10px", fontSize: "var(--fs-small)" }}>{t("rightDrawer.close")}</Button>
         </div>
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "16px 20px" }}>
           {children}

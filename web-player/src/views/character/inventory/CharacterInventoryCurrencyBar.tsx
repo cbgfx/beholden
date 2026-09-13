@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { C } from "@/lib/theme";
 import { formatWeight } from "@/views/character/inventory/CharacterInventory";
 import { evaluateCurrencyInput } from "@/views/character/inventory/currencyMath";
@@ -26,6 +27,7 @@ export function InventoryCurrencyBar({
   // per-character accentColor prop is no longer consumed here — kept in the props contract
   // since callers still pass it and other consumers of this pattern may want it later.
   void accentColor;
+  const { t } = useTranslation();
   const [currencyPopupCode, setCurrencyPopupCode] = useState<CurrencyCode | null>(null);
   const [currencyInput, setCurrencyInput] = useState("");
   const currencyPopupRef = useRef<HTMLDivElement | null>(null);
@@ -61,7 +63,7 @@ export function InventoryCurrencyBar({
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0 }}>
         <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>
-          Currency
+          {t("characterInventoryCurrencyBar.currencyLabel")}
         </div>
         {CURRENCY_CODES.map((code) => (
           <div
@@ -98,7 +100,7 @@ export function InventoryCurrencyBar({
                   gap: 8,
                 }}
               >
-                <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted, marginBottom: 2 }}>Edit {code}</div>
+                <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted, marginBottom: 2 }}>{t("characterInventoryCurrencyBar.editCurrencyTitle", { code })}</div>
                 <div style={{ display: "flex", gap: 6 }}>
                   <input
                     autoFocus
@@ -132,7 +134,7 @@ export function InventoryCurrencyBar({
                       saveCurrency(code);
                     }}
                   >
-                    Save
+                    {t("characterInventoryCurrencyBar.saveButtonLabel")}
                   </Button>
                 </div>
               </div>
@@ -141,7 +143,7 @@ export function InventoryCurrencyBar({
         ))}
       </div>
       <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: overCapacity ? C.red : C.muted }}>
-        {formatWeight(carriedWeight)} / {formatWeight(carryCapacity)} lb
+        {t("characterInventoryCurrencyBar.carriedWeightLine", { carried: formatWeight(carriedWeight), capacity: formatWeight(carryCapacity), unit: t("units.lb", { ns: "shared" }) })}
       </div>
     </div>
   );

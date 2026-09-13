@@ -29,6 +29,7 @@ type CreatorProficiencyChoices = ReturnType<typeof useCreatorProficiencyChoices>
 export type StepRenderResult = { main: React.ReactNode; side: React.ReactNode };
 
 export type CharacterCreatorStepRenderContext = {
+  t: import("i18next").TFunction;
   step: Step;
   form: FormState;
   setForm: React.Dispatch<React.SetStateAction<FormState>>;

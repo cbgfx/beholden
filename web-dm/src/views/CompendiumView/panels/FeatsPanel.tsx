@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { theme } from "@/theme/theme";
 import { IconDice } from "@/icons";
 import { Panel } from "@/ui/Panel";
@@ -11,7 +12,6 @@ const COLORS = {
   accentHighlight: theme.colors.accentHighlight,
   colorMagic: theme.colors.colorMagic, colorGold: theme.colors.colorGold, green: theme.colors.green,
 };
-const ICON = <IconDice size={28} title="Feats" />;
 const fetchRows = (ruleset?: "5e" | "5.5e") => {
   const params = new URLSearchParams({ fields: "id,name,category,prerequisite,repeatable,abilities" });
   if (ruleset) params.set("ruleset", ruleset);
@@ -19,10 +19,11 @@ const fetchRows = (ruleset?: "5e" | "5.5e") => {
 };
 
 export function FeatsPanel(props: { selectedFeatId?: string | null; onSelectFeat?: (id: string) => void }) {
+  const translateUi = useUiTranslation("sharedUi");
   return (
     <SharedFeatsPanel
       {...props}
-      icon={ICON}
+      icon={<IconDice size={28} title={translateUi("Feats")} />}
       colors={COLORS}
       fetchRows={fetchRows}
       api={api}

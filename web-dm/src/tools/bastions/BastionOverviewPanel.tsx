@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import type { CampaignCharacter } from "@/domain/types/domain";
 import { SectionTitle } from "@/ui/SectionTitle";
 import { theme } from "@/theme/theme";
@@ -14,6 +15,7 @@ export function BastionOverviewPanel(props: {
   onToggleAssignedPlayer: (playerId: string) => void;
   onUpdateSelectedDraft: (mutator: (bastion: Bastion) => Bastion) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const {
     selectedBastion,
     players,
@@ -31,13 +33,13 @@ export function BastionOverviewPanel(props: {
         collapsed={!overviewExpanded}
         onToggle={onToggleOverview}
       >
-        Overview
+        {translateUi("Overview")}
       </SectionTitle>
       {overviewExpanded ? (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: 12, alignItems: "start" }}>
           <div>
             <div style={{ fontSize: "var(--fs-small)", color: theme.colors.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
-              Assigned Players
+              {translateUi("Assigned Players")}
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
               {players.map((player) => {
@@ -48,27 +50,27 @@ export function BastionOverviewPanel(props: {
                     type="button"
                     onClick={() => onToggleAssignedPlayer(player.id)}
                     style={chipButtonStyle(selected)}
-                    title={`${player.characterName || "Unnamed"} Lv ${player.level}`}
+                    title={translateUi("{{value1}} Lv {{value2}}", { value1: player.characterName || "Unnamed", value2: player.level })}
                   >
                     <span>{player.characterName || "Unnamed"}</span>
-                    <span style={{ color: theme.colors.muted, fontWeight: 600 }}>Lv {player.level}</span>
+                    <span style={{ color: theme.colors.muted, fontWeight: 600 }}>{translateUi("Lv")} {player.level}</span>
                   </button>
                 );
               })}
             </div>
             <div style={{ fontSize: "var(--fs-small)", color: theme.colors.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
-              Slot Usage
+              {translateUi("Slot Usage")}
             </div>
             <div style={{ fontSize: "var(--fs-body)", color: theme.colors.text, fontWeight: 700 }}>
-              Special Slots: {selectedSpecialUsage(selectedBastion, facilitiesByKey)} / {selectedBastion.specialSlots}
+              {translateUi("Special Slots:")} {selectedSpecialUsage(selectedBastion, facilitiesByKey)} / {selectedBastion.specialSlots}
             </div>
             <div style={{ marginTop: 6, fontSize: "var(--fs-small)", color: theme.colors.muted }}>
-              Hirelings: {selectedHirelingsTotal(selectedBastion, facilitiesByKey)}
+              {translateUi("Hirelings:")} {selectedHirelingsTotal(selectedBastion, facilitiesByKey)}
             </div>
             <div style={{ marginTop: 4, fontSize: "var(--fs-small)", color: theme.colors.muted, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              Bastion Defenders: {Math.max(0, selectedBastion.defendersArmed + selectedBastion.defendersUnarmed)}
+              {translateUi("Bastion Defenders:")} {Math.max(0, selectedBastion.defendersArmed + selectedBastion.defendersUnarmed)}
               <label style={{ display: "inline-flex", alignItems: "center", gap: 6, color: theme.colors.muted, fontSize: "var(--fs-tiny)" }}>
-                Armed
+                {translateUi("Armed")}
                 <input
                   type="number"
                   min={0}
@@ -90,7 +92,7 @@ export function BastionOverviewPanel(props: {
                 />
               </label>
               <label style={{ display: "inline-flex", alignItems: "center", gap: 6, color: theme.colors.muted, fontSize: "var(--fs-tiny)" }}>
-                Unarmed
+                {translateUi("Unarmed")}
                 <input
                   type="number"
                   min={0}
@@ -118,18 +120,18 @@ export function BastionOverviewPanel(props: {
                 onClick={() => onUpdateSelectedDraft((bastion) => ({ ...bastion, walled: !bastion.walled }))}
                 style={chipButtonStyle(Boolean(selectedBastion.walled))}
               >
-                Walled
+                {translateUi("Walled")}
               </button>
             </div>
           </div>
           <div>
             <div style={{ fontSize: "var(--fs-small)", color: theme.colors.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
-              Bastion Notes
+              {translateUi("Bastion Notes")}
             </div>
             <textarea
               value={selectedBastion.notes}
               onChange={(e) => onUpdateSelectedDraft((bastion) => ({ ...bastion, notes: e.target.value }))}
-              placeholder="Bastion notes"
+              placeholder={translateUi("Bastion notes")}
               style={{
                 width: "100%",
                 minHeight: 112,

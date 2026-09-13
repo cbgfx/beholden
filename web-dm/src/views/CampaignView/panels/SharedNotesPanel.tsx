@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { theme } from "@/theme/theme";
 import { IconPlus } from "@/icons";
@@ -30,6 +31,7 @@ export function SharedNotesPanel(props: {
   campaignSharedNotes: string;
   players: CampaignCharacter[];
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const [expandedIds, setExpandedIds] = React.useState<string[]>([]);
   const [dmNotes, setDmNotes] = React.useState<SharedNote[]>(() => parseNotes(props.campaignSharedNotes));
   const [editTarget, setEditTarget] = React.useState<EditTarget | null>(null);
@@ -137,17 +139,17 @@ export function SharedNotesPanel(props: {
     <>
       <NotesPanel
         storageKey="campaign-shared-notes"
-        title={`Shared Notes (${totalCount})`}
+        title={translateUi("Shared Notes ({{value1}})", { value1: totalCount })}
         color={accent}
         borderColor="transparent"
         actions={
-          <IconButton onClick={openCreate} title="Add shared note" variant="accent">
+          <IconButton onClick={openCreate} title={translateUi("Add shared note")} variant="accent">
             <IconPlus />
           </IconButton>
         }
       >
         {totalCount === 0 ? (
-          <div style={{ color: theme.colors.muted }}>No shared notes yet.</div>
+          <div style={{ color: theme.colors.muted }}>{translateUi("No shared notes yet.")}</div>
         ) : (
           <div style={{ display: "grid", gap: 4 }}>
             {dmNotes.length > 0 ? (
@@ -226,7 +228,7 @@ export function SharedNotesPanel(props: {
           >
             <div style={{ padding: "14px 16px", borderBottom: `1px solid ${theme.colors.panelBorder}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: accent, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                {editTarget.noteId === null ? "New Shared Note" : "Edit Shared Note"}
+                {editTarget.noteId === null ? translateUi("New Shared Note") : translateUi("Edit Shared Note")}
               </span>
               <button onClick={() => setEditTarget(null)} style={{ all: "unset", cursor: "pointer", color: theme.colors.muted, fontSize: "var(--fs-title)", lineHeight: 1 }}>×</button>
             </div>
@@ -247,8 +249,8 @@ export function SharedNotesPanel(props: {
               />
             </div>
             <div style={{ padding: "12px 16px", borderTop: `1px solid ${theme.colors.panelBorder}`, display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button onClick={() => setEditTarget(null)} style={{ padding: "8px 14px", borderRadius: theme.radius.control, border: `1px solid ${theme.colors.panelBorder}`, background: "transparent", color: theme.colors.text, cursor: "pointer", fontSize: "var(--fs-medium)", fontWeight: 700 }}>Cancel</button>
-              <button onClick={handleSave} disabled={saving} style={{ padding: "8px 14px", borderRadius: theme.radius.control, border: "none", background: accent, color: theme.colors.textDark, cursor: saving ? "wait" : "pointer", fontSize: "var(--fs-medium)", fontWeight: 700, opacity: saving ? 0.7 : 1 }}>Save</button>
+              <button onClick={() => setEditTarget(null)} style={{ padding: "8px 14px", borderRadius: theme.radius.control, border: `1px solid ${theme.colors.panelBorder}`, background: "transparent", color: theme.colors.text, cursor: "pointer", fontSize: "var(--fs-medium)", fontWeight: 700 }}>{translateUi("Cancel")}</button>
+              <button onClick={handleSave} disabled={saving} style={{ padding: "8px 14px", borderRadius: theme.radius.control, border: "none", background: accent, color: theme.colors.textDark, cursor: saving ? "wait" : "pointer", fontSize: "var(--fs-medium)", fontWeight: 700, opacity: saving ? 0.7 : 1 }}>{translateUi("Save")}</button>
             </div>
           </div>
         </div>

@@ -1,4 +1,7 @@
+import { useStableI18n } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useParams } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { api } from "@/services/api";
@@ -91,6 +94,8 @@ function useViewportWidth() {
 }
 
 export function PartyMemberView() {
+  const { t } = useTranslation();
+  const i18n = useStableI18n();
   const { id: campaignId, playerId } = useParams<{ id: string; playerId: string }>();
   const [member, setMember] = React.useState<PartyMember | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -106,9 +111,9 @@ export function PartyMemberView() {
         setMember(found);
         setError(null);
       })
-      .catch((e) => setError(e?.message ?? "Failed to load."))
+      .catch((e) => setError(e?.message ?? i18n.t("partyMemberView.loadError")))
       .finally(() => setLoading(false));
-  }, [campaignId, playerId]);
+  }, [campaignId, i18n, playerId]);
 
   const enqueueFetchMember = useDebouncedSingleflight(fetchMember);
 
@@ -127,12 +132,12 @@ export function PartyMemberView() {
     if (payload.playerId && payload.playerId !== playerId) return;
     if (payload.action === "delete") {
       setMember(null);
-      setError("Member not found.");
+      setError(i18n.t("partyMemberView.memberNotFound"));
       setLoading(false);
       return;
     }
     enqueueFetchMember(80);
-  }, [campaignId, enqueueFetchMember, playerId]));
+  }, [campaignId, enqueueFetchMember, i18n, playerId]));
 
   const cd = asCharacterData(member?.characterData);
   const prof = (cd?.proficiencies ?? undefined) as Proficiencies | undefined;
@@ -191,7 +196,7 @@ export function PartyMemberView() {
   if (loading) {
     return (
       <div style={{ height: "100%", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", color: C.muted }}>
-        Loading...
+        {t("partyMemberView.loading")}
       </div>
     );
   }
@@ -199,7 +204,7 @@ export function PartyMemberView() {
   if (error || !member) {
     return (
       <div style={{ height: "100%", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", color: C.colorPinkRed }}>
-        {error ?? "Not found."}
+        {error ?? t("partyMemberView.notFound")}
       </div>
     );
   }
@@ -243,7 +248,7 @@ export function PartyMemberView() {
           borderRadius={0}
           fontSize="var(--fs-small)"
         >
-          {"<- Back to Party"}
+          {"<- "}{t("partyMemberView.backToParty")}
         </HeaderActionLink>
 
         <PartyMemberHeader
@@ -280,10 +285,10 @@ export function PartyMemberView() {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {(cantrips.length > 0 || spells.length > 0 || invocations.length > 0) ? (
               <Panel>
-                <SubsectionLabel>Spells</SubsectionLabel>
-                {cantrips.length > 0 ? <SpellGroup label="Cantrips" items={cantrips} color={color} lookup={spellNameLookup} levelLookup={spellLevelLookup} /> : null}
-                {spells.length > 0 ? <SpellGroup label="Spells" items={spells} color={color} lookup={spellNameLookup} levelLookup={spellLevelLookup} /> : null}
-                {invocations.length > 0 ? <SpellGroup label="Invocations" items={invocations} color={color} lookup={spellNameLookup} levelLookup={spellLevelLookup} /> : null}
+                <SubsectionLabel>{t("partyMemberView.spellsHeading")}</SubsectionLabel>
+                {cantrips.length > 0 ? <SpellGroup label={t("partyMemberView.cantripsLabel")} items={cantrips} color={color} lookup={spellNameLookup} levelLookup={spellLevelLookup} /> : null}
+                {spells.length > 0 ? <SpellGroup label={t("partyMemberView.spellsHeading")} items={spells} color={color} lookup={spellNameLookup} levelLookup={spellLevelLookup} /> : null}
+                {invocations.length > 0 ? <SpellGroup label={t("partyMemberView.invocationsLabel")} items={invocations} color={color} lookup={spellNameLookup} levelLookup={spellLevelLookup} /> : null}
               </Panel>
             ) : null}
           </div>
@@ -294,6 +299,7 @@ export function PartyMemberView() {
 }
 
 function SpellGroup({ label, items, color, lookup, levelLookup }: { label: string; items: string[]; color: string; lookup: Map<string, string>; levelLookup?: Map<string, number | null> }) {
+  const { t } = useTranslation();
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: "rgba(160,180,220,0.4)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>
@@ -310,10 +316,10 @@ function SpellGroup({ label, items, color, lookup, levelLookup }: { label: strin
               leading={<span style={{ width: 5, height: 5, borderRadius: "50%", background: color, flexShrink: 0, opacity: 0.65 }} />}
               main={
                 <span
-                  title={level != null ? `Learned at level ${level}` : undefined}
+                  title={level != null ? t("partyMemberView.learnedAtLevel", { level }) : undefined}
                   style={{ color: C.text, fontSize: "var(--fs-subtitle)", fontWeight: 700 }}
                 >
-                  {formatPartySpellName(spellId, lookup)}
+                  {formatPartySpellName(spellId, lookup, t)}
                 </span>
               }
             />
@@ -324,9 +330,9 @@ function SpellGroup({ label, items, color, lookup, levelLookup }: { label: strin
   );
 }
 
-function formatPartySpellName(raw: string, spellNameLookup: Map<string, string>): string {
+function formatPartySpellName(raw: string, spellNameLookup: Map<string, string>, t: TFunction): string {
   const normalized = String(raw ?? "").trim();
-  if (!normalized) return "Unknown";
+  if (!normalized) return t("partyMemberView.unknownSpellName");
 
   const fromLookup = spellNameLookup.get(normalizeSpellTrackingKey(normalized));
   if (fromLookup) return fromLookup;

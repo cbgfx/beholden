@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 // web-dm/src/views/AdminView/CampaignsAdminPanel.tsx
 // Admin panel for managing campaign memberships (who is DM / player per campaign).
 
@@ -8,6 +9,8 @@ import type { Campaign } from "./adminTypes";
 import { CampaignCard } from "./CampaignCard";
 
 export function CampaignsAdminPanel() {
+  const translateMessage = useUiMessages("dmUi");
+  const translateUi = useUiTranslation("dmUi");
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,25 +20,25 @@ export function CampaignsAdminPanel() {
     api<Campaign[]>("/api/campaigns", { signal: controller.signal })
       .then((rows) => { if (!controller.signal.aborted) setCampaigns(rows); })
       .catch((cause) => {
-        if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Unable to load campaigns.");
+        if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : translateMessage("Unable to load campaigns."));
       })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, []);
+  }, [translateMessage]);
 
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <h2 style={{ margin: "0 0 4px", fontSize: "var(--fs-title)", fontWeight: 700 }}>Campaign Memberships</h2>
+        <h2 style={{ margin: "0 0 4px", fontSize: "var(--fs-title)", fontWeight: 700 }}>{translateUi("Campaign Memberships")}</h2>
         <p style={{ margin: 0, fontSize: "var(--fs-subtitle)", color: theme.colors.muted }}>
-          Assign users to campaigns as Dungeon Master or Player.
+          {translateUi("Assign users to campaigns as Dungeon Master or Player.")}
         </p>
       </div>
 
       {error ? (
         <div role="alert" style={{ color: theme.colors.red, padding: 20 }}>{error}</div>
       ) : loading ? (
-        <div style={{ color: theme.colors.muted, padding: 20 }}>Loading…</div>
+        <div style={{ color: theme.colors.muted, padding: 20 }}>{translateUi("Loading…")}</div>
       ) : campaigns.length === 0 ? (
         <div style={{
           padding: "32px 20px", textAlign: "center",
@@ -44,7 +47,7 @@ export function CampaignsAdminPanel() {
           border: `1px solid ${theme.colors.panelBorder}`,
           borderRadius: theme.radius.panel,
         }}>
-          No campaigns yet. Create a campaign in the main app first.
+          {translateUi("No campaigns yet. Create a campaign in the main app first.")}
         </div>
       ) : (
         campaigns.map((c) => <CampaignCard key={c.id} campaign={c} />)

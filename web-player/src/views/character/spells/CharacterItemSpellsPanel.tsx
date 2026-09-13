@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { ordinal } from "@beholden/shared/domain";
 import { api } from "@/services/api";
@@ -51,6 +52,7 @@ export function ItemSpellsPanel({
   conditions?: ConditionInstance[];
   onToggleCondition?: (key: string) => Promise<void> | void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const [details, setDetails] = React.useState<Record<string, FetchedSpellDetail>>({});
   const [selectedSpell, setSelectedSpell] = React.useState<FetchedSpellDetail | null>(null);
   const failedKeysRef = React.useRef<Set<string>>(new Set());
@@ -142,13 +144,13 @@ export function ItemSpellsPanel({
             storageKey={`${PANEL_IDS.itemSpells}-${item.id}`}
             actions={chargesMax > 0 ? (
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginRight: 3 }}>charges {charges}/{chargesMax}</span>
+                <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginRight: 3 }}>{translateUi("charges")} {charges}/{chargesMax}</span>
                 {Array.from({ length: chargesMax }).map((_, i) => {
                   const filled = i < charges;
                   return (
                     <button
                       key={i}
-                      title={filled ? "Use charge" : "Recover charge"}
+                      title={filled ? translateUi("Use charge") : translateUi("Recover charge")}
                       onClick={() => onChargeChange(item.id, i < charges ? i : i + 1)}
                       style={{
                         width: 16, height: 16, borderRadius: "50%", padding: 0, cursor: "pointer",
@@ -162,7 +164,7 @@ export function ItemSpellsPanel({
             ) : undefined}
           >
             {spells.length === 0 ? (
-              <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>Track this item's use with the resource above. It recovers on a Long Rest.</div>
+              <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{translateUi("Track this item's use with the resource above. It recovers on a Long Rest.")}</div>
             ) : null}
             {spellcastingBlocked && spells.length > 0 && (
               <div style={{
@@ -170,7 +172,7 @@ export function ItemSpellsPanel({
                 border: "1px solid rgba(248,113,113,0.35)", background: "rgba(248,113,113,0.10)",
                 color: "#fca5a5", fontSize: "var(--fs-small)", fontWeight: 700,
               }}>
-                You can't cast spells while wearing armor or a shield without proficiency.
+                {translateUi("You can't cast spells while wearing armor or a shield without proficiency.")}
               </div>
             )}
 
@@ -181,15 +183,15 @@ export function ItemSpellsPanel({
                     fontSize: "var(--fs-small)", fontWeight: 800, color: accentColor, textTransform: "uppercase",
                     letterSpacing: 1, paddingBottom: 5, borderBottom: `1px solid ${accentColor}40`, marginBottom: 8,
                   }}>
-                    {level === -1 ? (groupSpells.every((spell) => failedKeysRef.current.has(spell.id)) ? "Unknown level" : "Loading...") : LEVEL_LABELS[level] ?? `Level ${level}`}
+                    {level === -1 ? (groupSpells.every((spell) => failedKeysRef.current.has(spell.id)) ? "Unknown level" : "Loading...") : LEVEL_LABELS[level] ?? translateUi("Level {{value1}}", { value1: level })}
                   </div>
 
                   <div style={{ display: "grid", gridTemplateColumns: SPELL_ROW_GRID_WITH_MARKER, gap: "0 8px", alignItems: "end", marginBottom: 4 }}>
-                    <div style={spellColumnHeaderStyle}>CST</div>
-                    <div style={spellColumnHeaderStyle}>NAME</div>
-                    <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>TIME</div>
-                    <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>HIT / DC</div>
-                    <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>EFFECT</div>
+                    <div style={spellColumnHeaderStyle}>{translateUi("CST")}</div>
+                    <div style={spellColumnHeaderStyle}>{translateUi("NAME")}</div>
+                    <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>{translateUi("TIME")}</div>
+                    <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>{translateUi("HIT / DC")}</div>
+                    <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>{translateUi("EFFECT")}</div>
                   </div>
 
                   {groupSpells.map((spell, i) => {
@@ -231,7 +233,7 @@ export function ItemSpellsPanel({
                         }}
                         onClick={() => { if (detail) setSelectedSpell(detail); }}
                       >
-                        <div title={spell.stored ? "Stored spell" : `${spell.cost === "level" ? "Spell level" : spell.cost} charge${spell.cost !== 1 ? "s" : ""}`} style={{
+                        <div title={spell.stored ? translateUi("Stored spell") : translateUi("{{value1}} charge{{value2}}", { value1: spell.cost === "level" ? "Spell level" : spell.cost, value2: spell.cost !== 1 ? "s" : "" })} style={{
                           width: 20, height: 20, borderRadius: "50%",
                           background: accentColor, display: "grid", placeItems: "center", flexShrink: 0,
                         }}>
@@ -241,7 +243,7 @@ export function ItemSpellsPanel({
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontWeight: 700, fontSize: "var(--fs-subtitle)", color: C.text }}>
                             {detail?.name ?? spell.id}
-                            {concentration && <span title="Concentration" style={{ marginLeft: 5, fontSize: "var(--fs-tiny)", color: C.colorRitual }}>◆</span>}
+                            {concentration && <span title={translateUi("Concentration")} style={{ marginLeft: 5, fontSize: "var(--fs-tiny)", color: C.colorRitual }}>◆</span>}
                           </div>
                           <div style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>
                             {detail ? `${detail.level === 0 ? "Cantrip" : ordinal(detail.level ?? 0)} ${detail.school ?? ""}`.trim() : ""}
@@ -255,7 +257,7 @@ export function ItemSpellsPanel({
 
                         {detail && (usesSave || usesAtk) ? (
                           <div style={{ minWidth: 0, textAlign: "center" }}>
-                            <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700 }}>{usesSave ? (detail.save ?? "SAVE") : "ATK"}</div>
+                            <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700 }}>{usesSave ? (detail.save ?? "SAVE") : translateUi("ATK")}</div>
                             <div style={{ fontWeight: 900, fontSize: "var(--fs-body)", color: spellcastingBlocked ? C.colorPinkRed : accentColor, lineHeight: 1.2 }}>
                               {usesSave ? `${spell.dc ?? itemSaveDc}${spellcastingBlocked ? " X" : ""}` : `${(spell.attack ?? itemSpellAtk) >= 0 ? "+" : ""}${spell.attack ?? itemSpellAtk}${spellcastingBlocked ? " X" : ""}`}
                             </div>
@@ -277,7 +279,7 @@ export function ItemSpellsPanel({
                             variant={castToggle.active ? "danger" : "primary"}
                             disabled={castToggle.disabled}
                             onClick={(event) => { event.stopPropagation(); castToggle.onToggle(); }}
-                            title={castToggle.active ? "End this spell's effect" : castToggle.disabled ? "Not enough charges remaining" : "Cast this spell"}
+                            title={castToggle.active ? translateUi("End this spell's effect") : castToggle.disabled ? translateUi("Not enough charges remaining") : translateUi("Cast this spell")}
                             style={{
                               minWidth: 0,
                               padding: "4px 10px", borderRadius: 6,
@@ -287,7 +289,7 @@ export function ItemSpellsPanel({
                               ...(castToggle.active ? {} : { background: accentColor, color: "#fff" }),
                             }}
                           >
-                            {castToggle.active ? "End" : "Cast"}
+                            {castToggle.active ? translateUi("End") : translateUi("Cast")}
                           </Button>
                         ) : <div />}
                       </div>

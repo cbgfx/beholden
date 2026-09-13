@@ -43,6 +43,7 @@ function renderSpellsStep<T extends { id: string; name: string; level: number | 
   onNext,
   nextDisabled = false,
   side,
+  t,
 }: {
   isCaster: boolean;
   cantripCount: number;
@@ -110,6 +111,7 @@ function renderSpellsStep<T extends { id: string; name: string; level: number | 
   onNext: () => void;
   nextDisabled?: boolean;
   side: React.ReactNode;
+  t: import("i18next").TFunction;
 }): { main: React.ReactNode; side: React.ReactNode } {
   const normalizeSpellId = (value: unknown) => String(value ?? "");
   const normalizeSpellName = (value: unknown) => String(value ?? "").trim().toLowerCase();
@@ -130,10 +132,10 @@ function renderSpellsStep<T extends { id: string; name: string; level: number | 
   ]);
   const main = (
     <div>
-      <h2 style={headingStyle}>Spells</h2>
+      <h2 style={headingStyle}>{t("characterCreatorSpellsStep.heading")}</h2>
       {isCaster && cantripCount > 0 && (
         <SpellPicker
-          title="Cantrips"
+          title={t("characterCreatorSpellsStep.cantripsTitle")}
           spells={classCantrips}
           chosen={chosenCantrips}
           disabledIds={Array.from(allChosenSpellIds).filter((id) => !chosenCantripIds.has(id))}
@@ -141,29 +143,29 @@ function renderSpellsStep<T extends { id: string; name: string; level: number | 
             (name) => !selectedClassCantrips.some((spell) => normalizeSpellName(spell.name) === name)
           )}
           max={cantripCount}
-          emptyMsg="No cantrips found in compendium for this class."
+          emptyMsg={t("characterCreatorSpellsStep.noCantripsFound")}
           onToggle={toggleCantrip}
         />
       )}
       {invocCount > 0 && chosenInvocations.length < invocCount && (
         <div style={{ marginTop: -12, marginBottom: 16, fontSize: "var(--fs-small)", color: C.colorPinkRed }}>
-          Choose {invocCount - chosenInvocations.length} more Eldritch Invocation{invocCount - chosenInvocations.length === 1 ? "" : "s"} to continue. (A slot can go empty on its own if a build change — Pact Boon, cantrips, etc. — makes a previously-chosen invocation ineligible.)
+          {t("characterCreatorSpellsStep.chooseMoreInvocations", { count: invocCount - chosenInvocations.length })}
         </div>
       )}
       {invocCount > 0 && (
         <SpellPicker
-          title="Eldritch Invocations"
+          title={t("characterCreatorSpellsStep.eldritchInvocationsTitle")}
           chosen={chosenInvocations}
           spells={classInvocations}
           max={invocCount}
-          emptyMsg="No invocations available at this level."
+          emptyMsg={t("characterCreatorSpellsStep.noInvocationsAvailable")}
           onToggle={toggleInvocation}
           isAllowed={invocationAllowed}
         />
       )}
       {isCaster && prepCount > 0 && maxSlotLevel > 0 && (
         <SpellPicker
-          title={`Prepared Spells (up to level ${maxSlotLevel})`}
+          title={t("characterCreatorSpellsStep.preparedSpellsTitle", { level: maxSlotLevel })}
           spells={classSpells.filter((s) => s.level != null && s.level <= maxSlotLevel)}
           chosen={chosenSpells}
           disabledIds={Array.from(allChosenSpellIds).filter((id) => !chosenPreparedSpellIds.has(id))}
@@ -171,7 +173,7 @@ function renderSpellsStep<T extends { id: string; name: string; level: number | 
             (name) => !selectedClassSpells.some((spell) => normalizeSpellName(spell.name) === name)
           )}
           max={prepCount}
-          emptyMsg="No spells found in compendium for this class."
+          emptyMsg={t("characterCreatorSpellsStep.noSpellsFound")}
           onToggle={toggleSpell}
         />
       )}
@@ -191,7 +193,7 @@ function renderSpellsStep<T extends { id: string; name: string; level: number | 
           })}
           {entry.options.length === 0 && (
             <div style={{ marginTop: -16, marginBottom: 16, fontSize: "var(--fs-small)", color: C.muted }}>
-              {entry.emptyMsg ?? "No eligible options found."}
+              {entry.emptyMsg ?? t("characterCreatorSpellsStep.noEligibleOptions")}
             </div>
           )}
         </div>
@@ -235,7 +237,7 @@ function renderSpellsStep<T extends { id: string; name: string; level: number | 
           })}
           {entry.options.length === 0 && (
             <div style={{ marginTop: -16, marginBottom: 16, fontSize: "var(--fs-small)", color: C.muted }}>
-              {entry.emptyMsg ?? "No eligible options found."}
+              {entry.emptyMsg ?? t("characterCreatorSpellsStep.noEligibleOptions")}
             </div>
           )}
         </div>
@@ -259,7 +261,7 @@ function renderSpellsStep<T extends { id: string; name: string; level: number | 
           )}
         </div>
       ))}
-      {!hasAnything && <p style={{ color: C.muted, fontSize: "var(--fs-medium)" }}>This class has no spellcasting choices at this level.</p>}
+      {!hasAnything && <p style={{ color: C.muted, fontSize: "var(--fs-medium)" }}>{t("characterCreatorSpellsStep.noSpellcastingChoices")}</p>}
       <NavButtons step={8} onBack={onBack} onNext={onNext} nextDisabled={nextDisabled} />
     </div>
   );
@@ -267,6 +269,7 @@ function renderSpellsStep<T extends { id: string; name: string; level: number | 
 }
 
 export function renderSpellsFromContext(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
+  const { t } = ctx;
   const cantripCount = ctx.classDetail ? getCantripCount(ctx.classDetail, ctx.form.level, ctx.form.subclass) : 0;
   const maxSlotLvl = ctx.classDetail ? getMaxSlotLevel(ctx.classDetail, ctx.form.level, ctx.form.subclass) : 0;
   const isCaster = ctx.classDetail ? isSpellcaster(ctx.classDetail, ctx.form.level, ctx.form.subclass) : false;
@@ -294,6 +297,7 @@ export function renderSpellsFromContext(ctx: CharacterCreatorStepRenderContext):
       growthOptionEntriesByKey: ctx.growthOptionEntriesByKey as Record<string, import("@/views/character-creator/utils/CharacterCreatorTypes").ItemSummary[]>,
     featSpellChoiceOptions: ctx.featSpellChoiceOptions,
     getGrowthChoiceSelectedAbility: ctx.getGrowthChoiceSelectedAbility,
+    t,
   });
 
   const featSpellcastingAbilityChoices = ctx.selectedFeatSpellcastingAbilityChoices.map((entry) => ({
@@ -324,7 +328,7 @@ export function renderSpellsFromContext(ctx: CharacterCreatorStepRenderContext):
       options: choice.options.map((option) => option.id),
       chosen: ctx.form.chosenFeatOptions[choice.key] ?? [],
       max: choice.count,
-      emptyMsg: "No eligible Origin Feats found.",
+      emptyMsg: t("characterCreatorSpellsStep.noEligibleOriginFeats"),
       getOptionLabel: (id: string) => choice.options.find((option) => option.id === id)?.name ?? id,
       onToggle: (id: string) => ctx.setForm((prev) => {
         const current = prev.chosenFeatOptions[choice.key] ?? [];
@@ -348,7 +352,7 @@ export function renderSpellsFromContext(ctx: CharacterCreatorStepRenderContext):
     key: choice.key, title: choice.title, sourceLabel: choice.sourceLabel,
     spells: (ctx.invocationGrantedFeatChoices.spellOptions[choice.key] ?? []).map((spell) => ({ ...spell, level: (spell as { level?: number | null }).level ?? null })),
     chosen: ctx.form.chosenFeatOptions[choice.key] ?? [], max: choice.count, note: choice.note,
-    emptyMsg: choice.linkedTo && (ctx.form.chosenFeatOptions[choice.linkedTo] ?? []).length === 0 ? "Choose the spell list first." : "No eligible spells found.",
+    emptyMsg: choice.linkedTo && (ctx.form.chosenFeatOptions[choice.linkedTo] ?? []).length === 0 ? t("characterCreatorSpellsStep.chooseSpellListFirst") : t("characterCreatorSpellsStep.noEligibleSpellsFound"),
     onToggle: (id: string) => ctx.setForm((prev) => {
       const current = prev.chosenFeatOptions[choice.key] ?? [];
       const next = current.includes(id) ? current.filter((selected) => selected !== id) : current.length < choice.count ? [...current, id] : current;
@@ -399,5 +403,6 @@ export function renderSpellsFromContext(ctx: CharacterCreatorStepRenderContext):
     onNext: () => ctx.setStep(9),
     nextDisabled: missingExtraSpellSelections || missingSpellcastingAbilitySelections || missingInvocationFeatSelections || !ctx.invocationGrantedFeatChoices.valid || (invocCount > 0 && ctx.form.chosenInvocations.length < invocCount),
     side: ctx.sideSummary,
+    t,
   });
 }

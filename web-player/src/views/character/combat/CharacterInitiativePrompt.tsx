@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useState } from "react";
 import { api } from "@/services/api";
 import { C } from "@/lib/theme";
@@ -24,6 +25,8 @@ export function CharacterInitiativePrompt(props: {
   onClose: () => void;
   onSubmitted?: () => void;
 }) {
+  const translateMessage = useUiMessages("playerUi");
+  const translateUi = useUiTranslation("playerUi");
   const [roll, setRoll] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +52,7 @@ export function CharacterInitiativePrompt(props: {
       props.onClose();
       props.onSubmitted?.();
     } catch {
-      setError("Could not submit. Try again.");
+      setError(translateMessage("Could not submit. Try again."));
       setSubmitting(false);
     }
   };
@@ -90,20 +93,20 @@ export function CharacterInitiativePrompt(props: {
             <IconSwordsPower size={58} />
           </div>
           <span id="initiative-prompt-title" style={{ fontWeight: 900, fontSize: "var(--fs-title)", color: "#fff", letterSpacing: "0.04em", textTransform: "uppercase" }}>
-            Roll Initiative
+            {translateUi("Roll Initiative")}
           </span>
         </div>
 
         {/* Body */}
         <div style={{ padding: "20px 24px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
           <div style={{ fontSize: "var(--fs-body)", color: C.muted }}>
-            Your modifier:{" "}
+            {translateUi("Your modifier:")}{" "}
             <span style={{ color: RED, fontWeight: 800 }}>d20 {bonusLabel}</span>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Enter the Initiative total (roll + mod):
+              {translateUi("Enter the Initiative total (roll + mod):")}
             </label>
             <input
               autoFocus
@@ -144,14 +147,14 @@ export function CharacterInitiativePrompt(props: {
               onClick={() => void submit()}
               style={{ flex: 1 }}
             >
-              {submitting ? "Submitting…" : total !== null ? `Submit ${total}` : "Enter the Fight!"}
+              {submitting ? translateUi("Submitting…") : total !== null ? translateUi("Submit {{value1}}", { value1: total }) : translateUi("Enter the Fight!")}
             </Button>
             <button
               type="button"
               onClick={props.onClose}
               style={{ ...cancelBtnStyle, flexShrink: 0 }}
             >
-              Dismiss
+              {translateUi("Dismiss")}
             </button>
           </div>
         </div>

@@ -1,4 +1,6 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { type NavigateFunction } from "react-router-dom";
 import { api, jsonInit } from "@/services/api";
 import { createMyCharacter } from "@/services/actorApi";
@@ -52,30 +54,31 @@ function findCreatorSubmissionProblem(args: {
   classDetail: ClassDetail | null;
   raceDetail: RaceDetail | null;
   bgDetail: BgDetail | null;
+  t: TFunction;
 }): string | null {
-  const { form, classDetail, raceDetail, bgDetail } = args;
-  if (!form.ruleset) return "Choose a ruleset before saving.";
+  const { form, classDetail, raceDetail, bgDetail, t } = args;
+  if (!form.ruleset) return t("characterCreatorSubmit.chooseRulesetError");
   const age = Number(String(form.age ?? "").trim());
-  if (!Number.isInteger(age) || age <= 0) return "Enter a valid age before saving.";
-  if (form.gender !== "male" && form.gender !== "female") return "Choose a gender before saving.";
+  if (!Number.isInteger(age) || age <= 0) return t("characterCreatorSubmit.invalidAgeError");
+  if (form.gender !== "male" && form.gender !== "female") return t("characterCreatorSubmit.chooseGenderError");
   // These details drive derived proficiencies (armor/weapons/skills/etc). They're fetched
   // asynchronously from `form.classId`/`raceId`/`bgId`, so submitting before they resolve
   // would silently save an incomplete proficiency map — block until they're ready.
-  if (form.classId && !classDetail) return "Class details are still loading — please wait a moment and try again.";
-  if (form.raceId && !raceDetail) return "Species details are still loading — please wait a moment and try again.";
-  if (form.bgId && !bgDetail) return "Background details are still loading — please wait a moment and try again.";
+  if (form.classId && !classDetail) return t("characterCreatorSubmit.classDetailsLoadingError");
+  if (form.raceId && !raceDetail) return t("characterCreatorSubmit.speciesDetailsLoadingError");
+  if (form.bgId && !bgDetail) return t("characterCreatorSubmit.backgroundDetailsLoadingError");
 
   const subclassLevel = getSubclassLevel(classDetail);
   if (classDetail && subclassLevel != null && form.level >= subclassLevel && getSubclassList(classDetail).length > 0 && !form.subclass) {
-    return "Choose a subclass before saving.";
+    return t("characterCreatorSubmit.chooseSubclassError");
   }
 
   const missingLevelUpLevel = levelUpFeatLevels(classDetail, form.level).find((level) => !hasCompleteLevelUpChoice(form, level));
-  if (missingLevelUpLevel != null) return `Complete the level ${missingLevelUpLevel} feat or Ability Score Improvement before saving.`;
+  if (missingLevelUpLevel != null) return t("characterCreatorSubmit.completeLevelUpChoiceError", { level: missingLevelUpLevel });
 
   const masteryChoice = getWeaponMasteryChoice(classDetail, form.level);
   if (masteryChoice && form.chosenWeaponMasteries.length < masteryChoice.count) {
-    return `Choose ${masteryChoice.count} weapon masteries before saving.`;
+    return t("characterCreatorSubmit.chooseWeaponMasteriesError", { count: masteryChoice.count });
   }
 
   const classFeatureEffects = parseAppliedClassFeatureEffects(classDetail, form.level, form.subclass, form.chosenOptionals);
@@ -86,7 +89,7 @@ function findCreatorSubmissionProblem(args: {
       && ["skill", "tool", "language", "selection"].includes(choice.choice?.optionCategory ?? "")
     )
     .find((choice) => (form.chosenFeatureChoices[`classfeature:${choice.choiceId ?? choice.id}`] ?? []).length < (choice.choice?.count.kind === "fixed" ? choice.choice.count.value : 0));
-  if (incompleteFeatureChoice) return `Complete the ${incompleteFeatureChoice.source.name} choice before saving.`;
+  if (incompleteFeatureChoice) return t("characterCreatorSubmit.completeFeatureChoiceError", { name: incompleteFeatureChoice.source.name });
 
   return null;
 }
@@ -130,6 +133,7 @@ export function useCharacterCreatorSubmit(args: {
   navigate: NavigateFunction;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
 }) {
+  const { t } = useTranslation();
   const [busy, setBusy] = React.useState(false);
 
   const handleSubmit = React.useCallback(async () => {
@@ -171,10 +175,10 @@ export function useCharacterCreatorSubmit(args: {
     } = args;
 
     if (!form.characterName.trim()) {
-      setError("Character name is required.");
+      setError(t("characterCreatorSubmit.characterNameRequiredError"));
       return false;
     }
-    const submissionProblem = findCreatorSubmissionProblem({ form, classDetail, raceDetail, bgDetail });
+    const submissionProblem = findCreatorSubmissionProblem({ form, classDetail, raceDetail, bgDetail, t });
     if (submissionProblem) {
       setError(submissionProblem);
       return false;
@@ -219,7 +223,7 @@ export function useCharacterCreatorSubmit(args: {
       const previousTotalLevel = existingClasses.reduce((sum, entry) => sum + Math.max(0, Number(entry.level) || 0), 0);
       if (isEditing && previousTotalLevel > 0 && Number(body.level) < previousTotalLevel) {
         const confirmed = window.confirm(
-          `Lower this character from level ${previousTotalLevel} to ${body.level}? Abilities acquired above the new level will be removed.`,
+          t("characterCreatorSubmit.lowerLevelConfirm", { from: previousTotalLevel, to: body.level }),
         );
         if (!confirmed) return false;
       }
@@ -255,12 +259,12 @@ export function useCharacterCreatorSubmit(args: {
       navigate(`/characters/${charId}`, { replace: true });
       return true;
     } catch (e: any) {
-      setError(e?.message ?? "Failed to save character.");
+      setError(e?.message ?? t("characterCreatorSubmit.saveCharacterError"));
       return false;
     } finally {
       setBusy(false);
     }
-  }, [args]);
+  }, [args, t]);
 
   return { busy, handleSubmit };
 }

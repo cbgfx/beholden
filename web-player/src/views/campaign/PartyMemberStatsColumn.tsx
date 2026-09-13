@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { C } from "@/lib/theme";
 import type { AbilKey } from "@/views/character/CharacterSheetTypes";
 import { ABILITY_LABELS, ALL_SKILLS } from "@/views/character/CharacterSheetConstants";
@@ -22,10 +23,11 @@ export function PartyMemberStatsColumn({
   passivePerc: number;
   hitDie: number | undefined;
 }) {
+  const { t } = useTranslation();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <Panel>
-        <SubsectionLabel>Ability Scores</SubsectionLabel>
+        <SubsectionLabel>{t("partyMemberView.abilityScoresHeading")}</SubsectionLabel>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
           {(Object.keys(ABILITY_LABELS) as AbilKey[]).map((ability) => {
             const score = scores[ability];
@@ -61,16 +63,16 @@ export function PartyMemberStatsColumn({
       </Panel>
 
       <Panel>
-        <SubsectionLabel>Stats</SubsectionLabel>
+        <SubsectionLabel>{t("partyMemberView.statsHeading")}</SubsectionLabel>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
-          <MiniStat label="Prof" value={`+${pb}`} accent={color} theme={MINI_STAT_THEME} />
-          <MiniStat label="Pass. Perc" value={String(passivePerc)} theme={MINI_STAT_THEME} />
-          <MiniStat label="Hit Die" value={hitDie ? `d${hitDie}` : "--"} theme={MINI_STAT_THEME} />
+          <MiniStat label={t("partyMemberView.statProf")} value={`+${pb}`} accent={color} theme={MINI_STAT_THEME} />
+          <MiniStat label={t("partyMemberView.statPassivePerc")} value={String(passivePerc)} theme={MINI_STAT_THEME} />
+          <MiniStat label={t("partyMemberView.statHitDie")} value={hitDie ? `d${hitDie}` : "--"} theme={MINI_STAT_THEME} />
         </div>
       </Panel>
 
       {prof?.skills && prof.skills.length > 0 ? (
-        <CollapsiblePanel title="Skills" color={color} storageKey="party-member-skills" defaultOpen>
+        <CollapsiblePanel title={t("partyMemberView.skillsHeading")} color={color} storageKey="party-member-skills" defaultOpen>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", columnGap: 18, rowGap: 2 }}>
             {ALL_SKILLS.map(({ name, abil }) => {
               const isProficient = hasNamedProficiency(prof.skills ?? [], name);

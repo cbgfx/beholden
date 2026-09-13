@@ -1,4 +1,5 @@
 import type React from "react";
+import { useTranslation } from "react-i18next";
 import { C } from "@/lib/theme";
 import { Button } from "@/ui/Button";
 import { RightDrawer } from "@/ui/RightDrawer";
@@ -27,6 +28,7 @@ export function CharacterPermanentBuffsDrawer(props: {
   onClose: () => void;
   onSave: () => void | Promise<void>;
 }) {
+  const { t } = useTranslation();
   if (!props.open) return null;
 
   const setNumeric = (key: "acBonus" | "hpMaxBonus", value: string) => {
@@ -53,17 +55,17 @@ export function CharacterPermanentBuffsDrawer(props: {
 
   return (
     <RightDrawer
-      title={<span style={{ color: props.accentColor, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" }}>Permanent Buffs</span>}
+      title={<span style={{ color: props.accentColor, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" }}>{t("permanentBuffsDrawer.title")}</span>}
       onClose={props.onClose}
-      footer={<div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}><Button variant="ghost" onClick={props.onClose}>Cancel</Button><Button variant="primary" disabled={props.saving} onClick={() => void props.onSave()}>{props.saving ? "Saving..." : "Save buffs"}</Button></div>}
+      footer={<div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}><Button variant="ghost" onClick={props.onClose}>{t("permanentBuffsDrawer.cancel")}</Button><Button variant="primary" disabled={props.saving} onClick={() => void props.onSave()}>{props.saving ? t("permanentBuffsDrawer.saving") : t("permanentBuffsDrawer.saveBuffs")}</Button></div>}
     >
-      <p style={{ margin: "0 0 18px", color: C.muted, lineHeight: 1.5 }}>These bonuses remain active after a long rest. Set a value to 0 or clear an ability to remove it.</p>
+      <p style={{ margin: "0 0 18px", color: C.muted, lineHeight: 1.5 }}>{t("permanentBuffsDrawer.description")}</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <label style={{ display: "grid", gap: 6 }}><span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 800 }}>AC BONUS</span><input type="number" value={props.overridesDraft.acBonus} onChange={(event) => setNumeric("acBonus", event.target.value)} style={inputStyle} /></label>
-        <label style={{ display: "grid", gap: 6 }}><span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 800 }}>MAX HP BONUS</span><input type="number" value={props.overridesDraft.hpMaxBonus} onChange={(event) => setNumeric("hpMaxBonus", event.target.value)} style={inputStyle} /></label>
+        <label style={{ display: "grid", gap: 6 }}><span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 800 }}>{t("permanentBuffsDrawer.acBonus")}</span><input type="number" value={props.overridesDraft.acBonus} onChange={(event) => setNumeric("acBonus", event.target.value)} style={inputStyle} /></label>
+        <label style={{ display: "grid", gap: 6 }}><span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 800 }}>{t("permanentBuffsDrawer.maxHpBonus")}</span><input type="number" value={props.overridesDraft.hpMaxBonus} onChange={(event) => setNumeric("hpMaxBonus", event.target.value)} style={inputStyle} /></label>
       </div>
       <div style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-        <div style={{ color: props.accentColor, fontSize: "var(--fs-small)", fontWeight: 900, letterSpacing: "0.08em", marginBottom: 12 }}>ABILITY SCORE BONUSES</div>
+        <div style={{ color: props.accentColor, fontSize: "var(--fs-small)", fontWeight: 900, letterSpacing: "0.08em", marginBottom: 12 }}>{t("permanentBuffsDrawer.abilityScoreBonuses")}</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
           {ABILITIES.map(([key, label]) => <label key={key} style={{ display: "grid", gap: 5 }}><span style={{ color: C.muted, fontSize: "var(--fs-tiny)", fontWeight: 800 }}>{label}</span><input type="number" placeholder="0" value={props.abilityOverridesDraft[key] ?? ""} onChange={(event) => setAbility(key, event.target.value)} style={inputStyle} /></label>)}
         </div>

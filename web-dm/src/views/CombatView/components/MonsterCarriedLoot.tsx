@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 import { TreasureRow } from "@/components/treasure/TreasureRow";
 import { theme } from "@/theme/theme";
@@ -19,6 +20,7 @@ export function MonsterCarriedLoot(props: {
   ensureMonster: (id: string) => Promise<void>;
   players: CampaignCharacter[];
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const { encounterId, orderedCombatants, monsterCache, resolveMonsterId, ensureMonster, players } = props;
 
   const monsterIds = React.useMemo(() => {
@@ -60,11 +62,11 @@ export function MonsterCarriedLoot(props: {
     <div style={{ display: "grid", gap: 16 }}>
       <div>
         <div style={{ fontWeight: 800, color: theme.colors.muted, fontSize: "var(--fs-tiny)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
-          Monster Carried Loot
+          {translateUi("Monster Carried Loot")}
         </div>
         {lootHints.length === 0 ? (
           <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
-            No treasure hints for the monsters in this encounter.
+            {translateUi("No treasure hints for the monsters in this encounter.")}
           </div>
         ) : (
           <div style={{ display: "grid", gap: 8, maxHeight: 160, overflowY: "auto" }}>
@@ -85,14 +87,14 @@ export function MonsterCarriedLoot(props: {
       <div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
           <span style={{ fontWeight: 800, color: theme.colors.muted, fontSize: "var(--fs-tiny)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            Encounter Treasure
+            {translateUi("Encounter Treasure")}
           </span>
-          <IconButton title="Add item" onClick={() => setPickerOpen(true)} variant="accent" size="sm">
+          <IconButton title={translateUi("Add item")} onClick={() => setPickerOpen(true)} variant="accent" size="sm">
             <IconPlus />
           </IconButton>
         </div>
         {treasure.length === 0 ? (
-          <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>No treasure yet.</div>
+          <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{translateUi("No treasure yet.")}</div>
         ) : (
           <div style={{ maxHeight: 220, overflowY: "auto" }}>
             {treasure.map((t) => (

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 // web-dm/src/views/BinderView/DeityDomainsSection.tsx
 import { useState } from "react";
 import { Button } from "@/ui/Button";
@@ -15,6 +16,7 @@ export function DeityDomainsSection(props: {
   canEdit: boolean;
   onChanged: () => Promise<void>;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const [addId, setAddId] = useState("");
   const [busy, setBusy] = useState(false);
   const assignedIds = new Set(props.domains.map((domain) => domain.id));
@@ -46,7 +48,7 @@ export function DeityDomainsSection(props: {
   return (
     <section>
       <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-        Domains
+        {translateUi("Domains")}
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 9 }}>
         {props.domains.length ? props.domains.map((domain) => (
@@ -69,15 +71,15 @@ export function DeityDomainsSection(props: {
                 type="button"
                 onClick={() => void remove(domain.id)}
                 disabled={busy}
-                aria-label={`Remove ${domain.name}`}
-                title={`Remove ${domain.name}`}
+                aria-label={translateUi("Remove {{value1}}", { value1: domain.name })}
+                title={translateUi("Remove {{value1}}", { value1: domain.name })}
                 style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 16, height: 16, border: 0, borderRadius: "50%", background: withAlpha("#ffffff", 0.12), color: theme.colors.text, cursor: busy ? "default" : "pointer", padding: 0, lineHeight: 1, fontSize: 12 }}
               >
                 ×
               </button>
             ) : null}
           </span>
-        )) : <span style={{ color: theme.colors.muted, fontSize: "var(--fs-body)" }}>None</span>}
+        )) : <span style={{ color: theme.colors.muted, fontSize: "var(--fs-body)" }}>{translateUi("None")}</span>}
       </div>
       {props.canEdit ? (
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
@@ -86,11 +88,11 @@ export function DeityDomainsSection(props: {
               value={addId}
               onChange={setAddId}
               disabled={busy || !available.length}
-              placeholder={available.length ? "Add a domain…" : "No more domains to add"}
+              placeholder={available.length ? translateUi("Add a domain…") : translateUi("No more domains to add")}
               options={available.map((option) => ({ id: option.id, name: option.name }))}
             />
           </div>
-          <Button onClick={() => void add()} disabled={!addId || busy}>Add</Button>
+          <Button onClick={() => void add()} disabled={!addId || busy}>{translateUi("Add")}</Button>
         </div>
       ) : null}
     </section>

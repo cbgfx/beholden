@@ -1,3 +1,5 @@
+import { translateUi } from "@/i18n";
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { Panel } from "@/ui/Panel";
 import { IconButton } from "@/ui/IconButton";
 import { DraggableList } from "@/components/drag/DraggableList";
@@ -7,9 +9,9 @@ import { RowMenu } from "@/ui/RowMenu";
 
 function getStatusStyle(meta?: string) {
   const status = meta?.split("•", 1)[0]?.trim().toLowerCase();
-  if (status === "complete") return { label: "Complete", color: theme.colors.muted, opacity: 0.55, rank: 2 };
-  if (status === "in progress") return { label: "In Progress", color: theme.colors.accentWarning, opacity: 1, rank: 0 };
-  return { label: "Open", color: theme.colors.muted, opacity: 1, rank: 1 };
+  if (status === "complete") return { label: translateUi("Complete"), color: theme.colors.muted, opacity: 0.55, rank: 2 };
+  if (status === "in progress") return { label: translateUi("In Progress"), color: theme.colors.accentWarning, opacity: 1, rank: 0 };
+  return { label: translateUi("Open"), color: theme.colors.muted, opacity: 1, rank: 1 };
 }
 
 export function EncountersPanel(props: {
@@ -26,6 +28,7 @@ export function EncountersPanel(props: {
   onDelete: (id: string) => void;
   onReorder: (ids: string[]) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const { encounters, selectedAdventureId, selectedEncounterId } = props;
   const orderedEncounters = [...encounters].sort((a, b) => {
     const rankDiff = getStatusStyle(a.status ?? undefined).rank - getStatusStyle(b.status ?? undefined).rank;
@@ -35,9 +38,9 @@ export function EncountersPanel(props: {
   return (
     <Panel
       storageKey="campaign-encounters"
-      title={`Encounters (${encounters.length})`}
+      title={translateUi("Encounters ({{value1}})", { value1: encounters.length })}
       actions={
-        <IconButton onClick={props.onCreate} disabled={!selectedAdventureId} title="Add encounter" variant="accent">
+        <IconButton onClick={props.onCreate} disabled={!selectedAdventureId} title={translateUi("Add encounter")} variant="accent">
           <IconPlus />
         </IconButton>
       }
@@ -130,7 +133,7 @@ export function EncountersPanel(props: {
                 <div style={{ display: "flex", gap: 6 }}>
                   <div className="campaignRowActions" style={{ display: "inline-flex" }}>
                     <IconButton
-                      title="Build roster"
+                      title={translateUi("Build roster")}
                       onClick={(e) => {
                         e.stopPropagation();
                         props.onBuild(it.id);
@@ -140,7 +143,7 @@ export function EncountersPanel(props: {
                     </IconButton>
                   </div>
                   <IconButton
-                    title="Play"
+                    title={translateUi("Play")}
                     onClick={(e) => {
                       e.stopPropagation();
                       props.onPlay(it.id);
@@ -151,9 +154,9 @@ export function EncountersPanel(props: {
                   <div className="campaignRowActions">
                     <RowMenu
                       items={[
-                        { label: "Edit", icon: <IconPencil size={14} />, onClick: () => props.onEdit(it.id) },
-                        { label: "Duplicate", icon: <IconCopy size={14} />, onClick: () => props.onDuplicate(it.id) },
-                        { label: "Delete", icon: <IconTrash size={14} />, danger: true, onClick: () => props.onDelete(it.id) },
+                        { label: translateUi("Edit"), icon: <IconPencil size={14} />, onClick: () => props.onEdit(it.id) },
+                        { label: translateUi("Duplicate"), icon: <IconCopy size={14} />, onClick: () => props.onDuplicate(it.id) },
+                        { label: translateUi("Delete"), icon: <IconTrash size={14} />, danger: true, onClick: () => props.onDelete(it.id) },
                       ]}
                     />
                   </div>
@@ -163,10 +166,10 @@ export function EncountersPanel(props: {
             }}
           />
         ) : (
-          <div style={{ color: theme.colors.muted }}>No encounters yet.</div>
+          <div style={{ color: theme.colors.muted }}>{translateUi("No encounters yet.")}</div>
         )
       ) : (
-        <div style={{ color: theme.colors.muted }}>Select an adventure.</div>
+        <div style={{ color: theme.colors.muted }}>{translateUi("Select an adventure.")}</div>
       )}
     </Panel>
   );

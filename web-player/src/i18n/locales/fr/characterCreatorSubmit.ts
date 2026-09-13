@@ -1,0 +1,15 @@
+export default {
+  chooseRulesetError: "Choisissez un ensemble de règles avant d'enregistrer.",
+  invalidAgeError: "Entrez un âge valide avant d'enregistrer.",
+  chooseGenderError: "Choisissez un genre avant d'enregistrer.",
+  classDetailsLoadingError: "Les détails de la classe sont en cours de chargement — veuillez patienter un instant et réessayer.",
+  speciesDetailsLoadingError: "Les détails de l'espèce sont en cours de chargement — veuillez patienter un instant et réessayer.",
+  backgroundDetailsLoadingError: "Les détails de l'historique sont en cours de chargement — veuillez patienter un instant et réessayer.",
+  chooseSubclassError: "Choisissez une sous-classe avant d'enregistrer.",
+  completeLevelUpChoiceError: "Complétez le don de niveau {{level}} ou l'amélioration de caractéristique avant d'enregistrer.",
+  chooseWeaponMasteriesError: "Choisissez {{count}} maîtrises d'armes avant d'enregistrer.",
+  completeFeatureChoiceError: "Complétez le choix de {{name}} avant d'enregistrer.",
+  characterNameRequiredError: "Le nom du personnage est requis.",
+  lowerLevelConfirm: "Réduire ce personnage du niveau {{from}} à {{to}} ? Les capacités acquises au-delà du nouveau niveau seront supprimées.",
+  saveCharacterError: "Échec de l'enregistrement du personnage.",
+};

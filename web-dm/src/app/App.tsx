@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 
 import React, { useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useMatch, useParams } from "react-router-dom";
@@ -42,6 +43,7 @@ function BinderRoute({ binders, campaigns, loaded, canEdit, onBinderChanged }: {
 }
 
 function AppInner() {
+  const translateUi = useUiTranslation("dmUi");
   const { state, dispatch } = useStore();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -154,7 +156,7 @@ function AppInner() {
       <DrawerHost refreshAll={refreshAll} refreshCampaign={refreshCampaign} refreshAdventure={refreshAdventure} refreshEncounter={refreshEncounter} />
       <BinderNameModal
         isOpen={binderModal !== null}
-        title={binderModal?.mode === "rename" ? "Edit Binder" : "Create Binder"}
+        title={binderModal?.mode === translateUi("rename") ? translateUi("Edit Binder") : translateUi("Create Binder")}
         initialName={binderModal?.mode === "rename" ? binderModal.binder.name : ""}
         initialColor={binderModal?.mode === "rename" ? binderModal.binder.color : "#38b6ff"}
         initialCurrentDate={binderModal?.mode === "rename" ? binderModal.binder.currentDate.sort : null}
@@ -271,6 +273,7 @@ function AppInner() {
 }
 
 function AuthGate() {
+  const translateUi = useUiTranslation("dmUi");
   const { user, isLoading, logout } = useAuth();
   React.useEffect(() => {
     document.documentElement.style.setProperty("--text-scale", String(user?.textScale ?? 1));
@@ -288,7 +291,7 @@ function AuthGate() {
           color: theme.colors.muted,
         }}
       >
-        Loading…
+        {translateUi("Loading…")}
       </div>
     );
   }
@@ -315,12 +318,12 @@ function AuthGate() {
         }}
       >
         <div style={{ color: theme.colors.text, fontSize: "var(--fs-title)", fontWeight: 700 }}>
-          You do not have access to the Dungeon Master app
+          {translateUi("You do not have access to the Dungeon Master app")}
         </div>
         <div style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)", maxWidth: 420 }}>
-          {user.name} isn't an admin or a DM on any campaign. If you're a player, use the Player app instead.
+          {user.name} {translateUi("isn't an admin or a DM on any campaign. If you're a player, use the Player app instead.")}
         </div>
-        <Button variant="primary" onClick={logout}>Sign out</Button>
+        <Button variant="primary" onClick={logout}>{translateUi("Sign out")}</Button>
       </div>
     );
   }

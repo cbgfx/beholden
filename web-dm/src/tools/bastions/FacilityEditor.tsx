@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
@@ -18,6 +19,7 @@ export function FacilityEditor(props: {
   showAddControls?: boolean;
   children?: React.ReactNode;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const [addKey, setAddKey] = React.useState("");
   const rows = props.rows;
   const showAddControls = props.showAddControls !== false;
@@ -35,10 +37,10 @@ export function FacilityEditor(props: {
               onChange={(e) => setAddKey(e.target.value)}
               style={{ minWidth: 260 }}
             >
-              <option value="">Add facility...</option>
+              <option value="">{translateUi("Add facility...")}</option>
               {props.options.map((facility) => (
                 <option key={facility.key} value={facility.key}>
-                  {facility.name} ({facility.type}, lvl {facility.minimumLevel})
+                  {facility.name} ({facility.type}{translateUi(", lvl")} {facility.minimumLevel})
                 </option>
               ))}
             </Select>
@@ -50,7 +52,7 @@ export function FacilityEditor(props: {
               }}
               disabled={!addKey}
             >
-              Add
+              {translateUi("Add")}
             </Button>
           </div>
         ) : null}
@@ -58,7 +60,7 @@ export function FacilityEditor(props: {
       {props.children ? <div style={{ marginTop: 8 }}>{props.children}</div> : null}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
-        {rows.length === 0 ? <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>None</div> : null}
+        {rows.length === 0 ? <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{translateUi("None")}</div> : null}
         {rows.map((facility) => {
           const definition = facility.definition;
           const orders = orderListWithMaintain(definition?.orders ?? []);
@@ -68,11 +70,11 @@ export function FacilityEditor(props: {
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 700, color: theme.colors.text, fontSize: "var(--fs-small)" }}>{definition?.name ?? facility.facilityKey}</div>
                   <div style={{ color: theme.colors.muted, fontSize: "var(--fs-tiny)" }}>
-                    {definition?.prerequisite ? `Prerequisite: ${definition.prerequisite}` : "No prerequisite"}
-                    {definition?.hirelings != null ? ` - Hirelings: ${definition.hirelings}` : ""}
+                    {definition?.prerequisite ? translateUi("Prerequisite: {{value1}}", { value1: definition.prerequisite }) : translateUi("No prerequisite")}
+                    {definition?.hirelings != null ? translateUi(" - Hirelings: {{value1}}", { value1: definition.hirelings }) : ""}
                   </div>
                 </div>
-                <Button variant="ghost" onClick={() => props.onRemove(facility.id)}>Remove</Button>
+                <Button variant="ghost" onClick={() => props.onRemove(facility.id)}>{translateUi("Remove")}</Button>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 8, marginTop: 8 }}>
                 <Select
@@ -86,7 +88,7 @@ export function FacilityEditor(props: {
                 <Input
                   value={facility.notes}
                   onChange={(e) => props.onUpdate(facility.id, { notes: e.target.value })}
-                  placeholder="Facility notes"
+                  placeholder={translateUi("Facility notes")}
                 />
               </div>
             </div>

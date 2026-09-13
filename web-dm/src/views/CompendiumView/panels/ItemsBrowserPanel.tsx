@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 
 import { IconChest } from "@/icons";
@@ -23,6 +24,7 @@ type FormTarget =
   | { mode: "edit"; item: ItemForEdit };
 
 export function ItemsBrowserPanel(props: Props) {
+  const translateUi = useUiTranslation("dmUi");
   const {
     q,
     setQ,
@@ -100,14 +102,14 @@ export function ItemsBrowserPanel(props: Props) {
         storageKey="compendium-items"
         title={
           <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: "var(--fs-large)" }}>
-            <IconChest size={28} title="Items" />
-            <span>Items</span>
+            <IconChest size={28} title={translateUi("Items")} />
+            <span>{translateUi("Items")}</span>
           </span>
         }
         actions={
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{busy ? "Loading..." : `${rows.length}`}</div>
-            {props.editable ? <BrowserAddButton title="New item" onClick={() => setFormTarget({ mode: "create" })} /> : null}
+            <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{busy ? translateUi("Loading...") : `${rows.length}`}</div>
+            {props.editable ? <BrowserAddButton title={translateUi("New item")} onClick={() => setFormTarget({ mode: "create" })} /> : null}
           </div>
         }
         style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { theme } from "@/theme/theme";
 import { Panel } from "@/ui/Panel";
 import { SpellDetailPanel } from "@/views/CompendiumView/panels/SpellDetailPanel";
@@ -14,6 +15,7 @@ export function CompendiumRightColumn(props: {
   selectedItemId: string | null;
   selectedFeatId: string | null;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   // --- Monsters ---
   if (props.activeSection === "monsters") {
     if (props.selectedMonsterId) {
@@ -26,12 +28,12 @@ export function CompendiumRightColumn(props: {
     return (
       <div style={{ minWidth: 0, minHeight: 0, height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <Panel
-          title="Stat Block"
+          title={translateUi("Stat Block")}
           style={{ flex: 1, display: "flex", flexDirection: "column" }}
           bodyStyle={{ flex: 1 }}
         >
           <div style={{ color: theme.colors.muted, lineHeight: 1.5 }}>
-            Select a monster from the list to view its full stat block here.
+            {translateUi("Select a monster from the list to view its full stat block here.")}
           </div>
         </Panel>
       </div>
@@ -50,12 +52,12 @@ export function CompendiumRightColumn(props: {
     return (
       <div style={{ minWidth: 0, minHeight: 0, height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <Panel
-          title="Spell Detail"
+          title={translateUi("Spell Detail")}
           style={{ flex: 1, display: "flex", flexDirection: "column" }}
           bodyStyle={{ flex: 1 }}
         >
           <div style={{ color: theme.colors.muted, lineHeight: 1.5 }}>
-            Select a spell from the list to view its full description here.
+            {translateUi("Select a spell from the list to view its full description here.")}
           </div>
         </Panel>
       </div>
@@ -74,12 +76,12 @@ export function CompendiumRightColumn(props: {
     return (
       <div style={{ minWidth: 0, minHeight: 0, height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <Panel
-          title="Item Detail"
+          title={translateUi("Item Detail")}
           style={{ flex: 1, display: "flex", flexDirection: "column" }}
           bodyStyle={{ flex: 1 }}
         >
           <div style={{ color: theme.colors.muted, lineHeight: 1.5 }}>
-            Select an item from the list to view its details here.
+            {translateUi("Select an item from the list to view its details here.")}
           </div>
         </Panel>
       </div>
@@ -98,12 +100,12 @@ export function CompendiumRightColumn(props: {
     return (
       <div style={{ minWidth: 0, minHeight: 0, height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <Panel
-          title="Feat Detail"
+          title={translateUi("Feat Detail")}
           style={{ flex: 1, display: "flex", flexDirection: "column" }}
           bodyStyle={{ flex: 1 }}
         >
           <div style={{ color: theme.colors.muted, lineHeight: 1.5 }}>
-            Select a feat from the list to view its details here.
+            {translateUi("Select a feat from the list to view its details here.")}
           </div>
         </Panel>
       </div>

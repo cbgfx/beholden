@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import type { CampaignCharacter } from "@/domain/types/domain";
 import { SectionTitle } from "@/ui/SectionTitle";
@@ -24,6 +25,7 @@ export function BastionFacilitiesPanel(props: {
   onUpdateFacility: (facilityId: string, patch: Partial<BastionFacility>) => void;
   onRemoveFacility: (facilityId: string) => void;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const {
     selectedBastion,
     players,
@@ -45,7 +47,7 @@ export function BastionFacilitiesPanel(props: {
         collapsed={!facilitiesExpanded}
         onToggle={onToggleFacilities}
       >
-        Facilities
+        {translateUi("Facilities")}
       </SectionTitle>
       {facilitiesExpanded ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -68,7 +70,7 @@ export function BastionFacilitiesPanel(props: {
                   facilitiesByKey,
                 })
             }
-            label="Facilities"
+            label={translateUi("Facilities")}
             source={activePlayerFacilityId ? "player" : "dm_extra"}
             ownerPlayerId={activePlayerFacilityId ?? undefined}
             rows={
@@ -88,7 +90,7 @@ export function BastionFacilitiesPanel(props: {
                 }}
                 style={chipButtonStyle(!activePlayerFacilityId)}
               >
-                Granted
+                {translateUi("Granted")}
               </button>
               {selectedBastion.assignedPlayerIds.map((playerId) => {
                 const player = players.find((entry) => entry.id === playerId);

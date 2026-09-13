@@ -1,3 +1,5 @@
+import { translateUi } from "@/i18n";
+import { useUiMessages } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { api, jsonInit } from "@/services/api";
 import type { AddMonsterOptions } from "@/domain/types/domain";
@@ -17,7 +19,7 @@ type RefreshFns = {
 };
 
 function apiErr(e: unknown) {
-  alert(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+  alert(e instanceof Error ? e.message : translateUi("Something went wrong. Please try again."));
 }
 
 export function useCampaignActions(
@@ -26,6 +28,7 @@ export function useCampaignActions(
   confirm: ConfirmFn,
   refreshFns: RefreshFns
 ) {
+  const translateMessage = useUiMessages("dmUi");
   const addAllPlayers = React.useCallback(async () => {
     if (!state.selectedEncounterId) return;
     try {
@@ -146,11 +149,11 @@ export function useCampaignActions(
 
   const deleteINpc = React.useCallback(async (inpcId: string) => {
     if (!state.selectedCampaignId) return;
-    if (!(await confirm({ title: "Delete iNPC", message: "Delete this iNPC?", intent: "danger" }))) return;
+    if (!(await confirm({ title: translateMessage("Delete iNPC"), message: translateMessage("Delete this iNPC?"), intent: "danger" }))) return;
     try {
       await api(`/api/inpcs/${inpcId}`, { method: "DELETE" });
     } catch (e) { apiErr(e); }
-  }, [state.selectedCampaignId, confirm]);
+  }, [state.selectedCampaignId, confirm, translateMessage]);
 
   const exportAdventure = React.useCallback(async (adventureId: string) => {
     try {
@@ -176,12 +179,12 @@ export function useCampaignActions(
     e.target.value = "";
     let data: unknown;
     try { data = JSON.parse(await file.text()); }
-    catch { alert("Invalid adventure file."); return; }
+    catch { alert(translateMessage("Invalid adventure file.")); return; }
     if (typeof data !== "object" || data === null || !("version" in data)) {
-      alert("Invalid adventure file."); return;
+      alert(translateMessage("Invalid adventure file.")); return;
     }
     if (![1, 2].includes(Number((data as { version: unknown }).version))) {
-      alert("Adventure file version not supported."); return;
+      alert(translateMessage("Adventure file version not supported.")); return;
     }
     try {
       await api(
@@ -189,7 +192,7 @@ export function useCampaignActions(
         jsonInit("POST", data)
       );
     } catch (e) { apiErr(e); }
-  }, [state.selectedCampaignId]);
+  }, [state.selectedCampaignId, translateMessage]);
 
   const addINpcToEncounter = React.useCallback(async (inpcId: string) => {
     if (!state.selectedEncounterId) return;
@@ -202,25 +205,25 @@ export function useCampaignActions(
   const deleteCampaign = React.useCallback(async (campaignId: string) => {
     if (!campaignId) return;
     if (!(await confirm({
-      title: "Delete campaign",
-      message: "Delete this campaign? This will delete ALL its adventures, encounters, players, notes, etc.",
+      title: translateMessage("Delete campaign"),
+      message: translateMessage("Delete this campaign? This will delete ALL its adventures, encounters, players, notes, etc."),
       intent: "danger"
     }))) return;
     try {
       await api(`/api/campaigns/${campaignId}`, { method: "DELETE" });
     } catch (e) { apiErr(e); }
-  }, [confirm]);
+  }, [confirm, translateMessage]);
 
   const deleteAdventure = React.useCallback(async (adventureId: string) => {
     if (!(await confirm({
-      title: "Delete adventure",
-      message: "Delete this adventure? This will also delete its encounters and notes.",
+      title: translateMessage("Delete adventure"),
+      message: translateMessage("Delete this adventure? This will also delete its encounters and notes."),
       intent: "danger"
     }))) return;
     try {
       await api(`/api/adventures/${adventureId}`, { method: "DELETE" });
     } catch (e) { apiErr(e); }
-  }, [confirm]);
+  }, [confirm, translateMessage]);
 
   const duplicateEncounter = React.useCallback(async (encounterId: string) => {
     try {
@@ -229,25 +232,25 @@ export function useCampaignActions(
   }, []);
 
   const deleteEncounter = React.useCallback(async (encounterId: string) => {
-    if (!(await confirm({ title: "Delete encounter", message: "Delete this encounter?", intent: "danger" }))) return;
+    if (!(await confirm({ title: translateMessage("Delete encounter"), message: translateMessage("Delete this encounter?"), intent: "danger" }))) return;
     try {
       await deleteEncounterById(encounterId);
     } catch (e) { apiErr(e); }
-  }, [confirm]);
+  }, [confirm, translateMessage]);
 
   const deleteCampaignNote = React.useCallback(async (noteId: string) => {
-    if (!(await confirm({ title: "Delete note", message: "Delete this note?", intent: "danger" }))) return;
+    if (!(await confirm({ title: translateMessage("Delete note"), message: translateMessage("Delete this note?"), intent: "danger" }))) return;
     try {
       await api(`/api/notes/${noteId}`, { method: "DELETE" });
     } catch (e) { apiErr(e); }
-  }, [confirm]);
+  }, [confirm, translateMessage]);
 
   const deleteAdventureNote = React.useCallback(async (noteId: string) => {
-    if (!(await confirm({ title: "Delete note", message: "Delete this note?", intent: "danger" }))) return;
+    if (!(await confirm({ title: translateMessage("Delete note"), message: translateMessage("Delete this note?"), intent: "danger" }))) return;
     try {
       await api(`/api/notes/${noteId}`, { method: "DELETE" });
     } catch (e) { apiErr(e); }
-  }, [confirm]);
+  }, [confirm, translateMessage]);
 
   return {
     addAllPlayers,

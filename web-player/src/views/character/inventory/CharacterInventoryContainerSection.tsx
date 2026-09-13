@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { C } from "@/lib/theme";
 import { IconWeight } from "@/icons";
 import { DraggableList } from "@/ui/DraggableList";
@@ -68,6 +69,7 @@ export function InventoryContainerSection({
   onQty,
   ammoItems,
 }: InventoryContainerSectionProps) {
+  const { t } = useTranslation();
   return (
     <div style={{ marginBottom: 12 }}>
       <div
@@ -130,7 +132,7 @@ export function InventoryContainerSection({
                 size="sm"
                 variant="ghost"
                 onClick={() => { void onToggleIgnoreWeight(); }}
-                title={container.ignoreWeight ? "Weight ignored" : "Ignore weight"}
+                title={container.ignoreWeight ? t("characterInventoryPanel.weightIgnoredTitle") : t("characterInventoryPanel.ignoreWeightTitle")}
               >
                 <IconWeight size={13} />
               </IconButton>
@@ -139,7 +141,7 @@ export function InventoryContainerSection({
                   size="sm"
                   variant="ghost"
                   onClick={() => { void onRemove(); }}
-                  title="Remove container"
+                  title={t("characterInventoryPanel.removeContainerTitle")}
                 >
                   ×
                 </IconButton>
@@ -175,7 +177,7 @@ export function InventoryContainerSection({
           }}
         />
       ) : (
-        <div style={emptyContainerStyle}>Empty.</div>
+        <div style={emptyContainerStyle}>{t("characterInventoryPanel.emptyContainer")}</div>
       ))}
     </div>
   );

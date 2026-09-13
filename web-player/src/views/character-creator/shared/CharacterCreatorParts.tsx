@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C, withAlpha } from "@/lib/theme";
 import { Button } from "@/ui/Button";
 
@@ -5,6 +6,7 @@ export { SpellPicker } from "./CharacterCreatorSpellPicker";
 export { ItemPicker } from "./CharacterCreatorItemPicker";
 
 export function StepHeader({ current, onStepClick, isEditing }: { current: number; onStepClick: (s: number) => void; isEditing?: boolean }) {
+  const translateUi = useUiTranslation("playerUi");
   const steps = ["Ruleset", "Class", "Species", "Background", "Ability Scores", "Class Details", "Skills", "Spells", "Stats", "Identity", "Assign"];
   return (
     <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 28 }}>
@@ -31,7 +33,7 @@ export function StepHeader({ current, onStepClick, isEditing }: { current: numbe
             }}
           >
             {done ? "✓ " : `${n}. `}
-            {label}
+            {translateUi(label)}
           </button>
         );
       })}
@@ -43,7 +45,7 @@ export function NavButtons({
   step,
   onBack,
   onNext,
-  nextLabel = "Next →",
+  nextLabel,
   nextDisabled = false,
 }: {
   step: number;
@@ -52,13 +54,14 @@ export function NavButtons({
   nextLabel?: string;
   nextDisabled?: boolean;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   return (
     <div style={{ display: "flex", gap: 10, marginTop: 24, justifyContent: "space-between" }}>
       <Button type="button" variant="ghost" onClick={onBack} disabled={step === 1}>
-        ← Back
+        {translateUi("← Back")}
       </Button>
       <Button type="button" variant="primary" onClick={onNext} disabled={nextDisabled}>
-        {nextLabel}
+        {nextLabel ?? translateUi("Next →")}
       </Button>
     </div>
   );

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 
 import { theme, withAlpha } from "@/theme/theme";
@@ -25,6 +26,7 @@ type Props = {
  * View orchestrates state; this component only renders.
  */
 export function HudFighterCard(props: Props) {
+  const translateUi = useUiTranslation("dmUi");
   const c = props.combatant;
   const names = React.useMemo(() => getHudNames(c, props.playersById), [c, props.playersById]);
   const { hpCurrent, hpMax, tempHp } = React.useMemo(() => getHudHp(c), [c]);
@@ -130,7 +132,7 @@ export function HudFighterCard(props: Props) {
           <div className="cvHudBadgeRow">
             <span
               className="cvHudBadge"
-              title={props.role === "active" ? "Active" : isSelfTarget ? "Self target" : "Target"}
+              title={props.role === translateUi("active") ? translateUi("Active") : isSelfTarget ? translateUi("Self target") : translateUi("Target")}
             >
               {roleLabel}
             </span>
@@ -154,11 +156,11 @@ export function HudFighterCard(props: Props) {
       </div>
 
       <div className="cvHudHpRow">
-        <div className="cvHudHpTrack" aria-label="HP">
+        <div className="cvHudHpTrack" aria-label={translateUi("HP")}>
           <div className="cvHudHpFill" />
 
           {tempWidth > 0 ? (
-            <div className="cvHudTempFill" aria-label="Temp HP" />
+            <div className="cvHudTempFill" aria-label={translateUi("Temp HP")} />
           ) : null}
         </div>
 
@@ -166,7 +168,7 @@ export function HudFighterCard(props: Props) {
           {/* AC chip */}
           {c ? (
             <span
-              title="Armor Class"
+              title={translateUi("Armor Class")}
               style={{
                 display: "inline-flex",
                 alignItems: "center",

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import {
   transferPartyInventoryItem,
   type PartyStashTransferOp,
@@ -22,9 +23,6 @@ import {
 import { hasCustomTransferState, toInventoryTransferPayload } from "@/views/character/inventory/inventoryTransferPayload";
 import type { InventoryPersistencePayload, CharacterInventorySyncState } from "@/views/character/inventory/useCharacterInventorySync";
 import { normalizePackLookupName, parsePackDescription } from "@/views/character/inventory/CharacterInventoryBundles";
-
-const INVENTORY_CONFLICT_MESSAGE =
-  "Your inventory changed on another device and has been reloaded. Please redo that last change.";
 
 // A rejected save whose stored *inventory* had moved on since we read it
 // (another device, a DM treasure award). Reloading the sheet is the fix.
@@ -55,14 +53,16 @@ export function useCharacterInventoryContainers({
   onReload: () => Promise<void>;
   onSave: (data: InventoryPersistencePayload, opts?: { expectedInventoryRev?: string }) => Promise<unknown>;
 }) {
+  const { t } = useTranslation();
+  const containerLabels = { backpack: t("characterInventoryPanel.defaultContainerName"), container: t("characterInventoryPanel.genericContainerName") };
   const { items, containers, partyStashItems } = sync;
   const recoverConflict = async () => {
-    sync.setConflict("Inventory changed. Reloading the latest sheet…");
+    sync.setConflict(t("characterInventoryPanel.reloadingLatestSheet"));
     try {
       await onReload();
-      sync.setConflict(INVENTORY_CONFLICT_MESSAGE);
+      sync.setConflict(t("characterInventoryPanel.inventoryReloadedRedo"));
     } catch {
-      sync.setConflict("Inventory changed, but reloading failed. Reload the page before retrying.");
+      sync.setConflict(t("characterInventoryPanel.inventoryReloadFailed"));
     }
   };
   const persist = async (
@@ -89,7 +89,7 @@ export function useCharacterInventoryContainers({
   // Transfer once, then reload authoritative state without another write.
   const transferItem = async (nextItems: InventoryItem[], stash: PartyStashTransferOp) => {
     if (!campaignId || !characterId) return;
-    if (!inventoryRev) throw new Error("Reload the character before transferring items.");
+    if (!inventoryRev) throw new Error(t("characterInventoryPanel.reloadBeforeTransfer"));
     sync.setSaving(true);
     try {
       await transferPartyInventoryItem(campaignId, {
@@ -106,11 +106,11 @@ export function useCharacterInventoryContainers({
       try {
         await onReload();
       } catch {
-        sync.setConflict("Transfer completed, but reloading failed. Reload the page before making another change; do not repeat the transfer.");
+        sync.setConflict(t("characterInventoryPanel.transferReloadFailed"));
       }
     } catch (error) {
       if (isStaleStash(error)) {
-        sync.setConflict("The party stash changed on another device. Refresh the stash and try again.");
+        sync.setConflict(t("characterInventoryPanel.stashChangedElsewhere"));
       } else if (isInventoryConflict(error)) {
         await recoverConflict();
       }
@@ -119,7 +119,7 @@ export function useCharacterInventoryContainers({
       sync.setSaving(false);
     }
   };
-  const createContainer = (name = "Backpack", ignoreWeight = false): InventoryContainer => ({
+  const createContainer = (name = containerLabels.backpack, ignoreWeight = false): InventoryContainer => ({
     id: uid(),
     name,
     ignoreWeight,
@@ -261,7 +261,7 @@ export function useCharacterInventoryContainers({
     }
   };
 
-  const addContainer = async (afterId?: string | null, name = "Backpack", ignoreWeight = false) => {
+  const addContainer = async (afterId?: string | null, name = containerLabels.backpack, ignoreWeight = false) => {
     const container = createContainer(name, ignoreWeight);
     const insertionIndex = afterId ? containers.findIndex((entry) => entry.id === afterId) : containers.length - 1;
     const next = [...containers];
@@ -270,7 +270,7 @@ export function useCharacterInventoryContainers({
   };
   const renameContainer = (id: string, name: string) => persist(items, containers.map((container) =>
     container.id === id
-      ? { ...container, name: name.trim() || (id === DEFAULT_CONTAINER_ID ? "Backpack" : "Container") }
+      ? { ...container, name: name.trim() || (id === DEFAULT_CONTAINER_ID ? containerLabels.backpack : containerLabels.container) }
       : container
   ));
   const toggleContainerIgnoreWeight = (id: string) => persist(items, containers.map((container) =>

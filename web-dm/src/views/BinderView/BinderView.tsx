@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -80,6 +81,7 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
 const ALL_ITEMS = NAV_GROUPS.flatMap((group) => group.items);
 
 function EmptyTable({ item, accent }: { item: NavItem; accent: string }) {
+  const translateUi = useUiTranslation("dmUi");
   return (
     <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
       <div
@@ -93,24 +95,25 @@ function EmptyTable({ item, accent }: { item: NavItem; accent: string }) {
         }}
       >
         {item.columns.map((column) => (
-          <div key={column} style={{ color: theme.colors.text, fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>{column}</div>
+          <div key={translateUi(column)} style={{ color: theme.colors.text, fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>{translateUi(column)}</div>
         ))}
       </div>
       <div style={{ padding: "48px 20px", color: theme.colors.muted, textAlign: "center", fontSize: "var(--fs-medium)" }}>
-        No {item.label.toLowerCase()} yet. Typed records are the next implementation slice.
+        {translateUi("No")} {translateUi(item.label)} {translateUi("yet. Typed records are the next implementation slice.")}
       </div>
     </div>
   );
 }
 
 function CampaignTable({ binderId, campaigns, accent }: { binderId: string; campaigns: Campaign[]; accent: string }) {
+  const translateUi = useUiTranslation("dmUi");
   const columns = "minmax(280px, 1.5fr) minmax(180px, 1fr) minmax(130px, 0.7fr) minmax(220px, 1.15fr)";
   const sortedCampaigns = [...campaigns].sort((a, b) => a.name.localeCompare(b.name));
   return (
     <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
       <div style={{ display: "grid", gridTemplateColumns: columns, gap: 18, padding: "12px 15px", background: withAlpha(accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
         {["Name", "Active", "Players", "Open Campaign"].map((column) => (
-          <div key={column} style={{ color: theme.colors.text, fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>{column}</div>
+          <div key={translateUi(column)} style={{ color: theme.colors.text, fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>{translateUi(column)}</div>
         ))}
       </div>
       {sortedCampaigns.length ? sortedCampaigns.map((campaign) => (
@@ -130,15 +133,15 @@ function CampaignTable({ binderId, campaigns, accent }: { binderId: string; camp
           <span style={{ fontWeight: 700 }}>{campaign.name}</span>
           <span>
             <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, color: campaign.isActive ? theme.colors.green : theme.colors.muted, background: withAlpha(campaign.isActive ? theme.colors.green : theme.colors.muted, 0.16), fontSize: "var(--fs-small)", lineHeight: 1.3, fontWeight: 750 }}>
-              {campaign.isActive ? "Active" : "Inactive"}
+              {campaign.isActive ? translateUi("Active") : translateUi("Inactive")}
             </span>
           </span>
           <span style={{ color: theme.colors.muted }}>{campaign.playerCount ?? 0}</span>
-          <span style={{ color: accent, fontWeight: 750, whiteSpace: "nowrap" }}>Open Campaign →</span>
+          <span style={{ color: accent, fontWeight: 750, whiteSpace: "nowrap" }}>{translateUi("Open Campaign →")}</span>
         </Link>
       )) : (
         <div style={{ padding: "48px 20px", color: theme.colors.muted, textAlign: "center" }}>
-          No campaigns are assigned to this Binder.
+          {translateUi("No campaigns are assigned to this Binder.")}
         </div>
       )}
     </div>
@@ -151,6 +154,7 @@ const REFERENCE_TYPES = new Set<BinderReferenceType>([
 ]);
 
 export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsChanged }: { binder: BinderSummary; campaigns: Campaign[]; canEdit: boolean; canManage: boolean; onRecordsChanged: () => Promise<void> }) {
+  const translateUi = useUiTranslation("dmUi");
   const location = useLocation();
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
   const routeSection = location.pathname.split("/")[3] ?? "overview";
@@ -162,7 +166,7 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
   const selectedCampaign = routeSection === "campaigns" && routeRecordId
     ? campaigns.find((campaign) => campaign.id === routeRecordId)
     : undefined;
-  const title = selectedCampaign?.name ?? activeItem?.label ?? binder.name;
+  const title = selectedCampaign?.name ?? (activeItem ? translateUi(activeItem.label) : binder.name);
   const accent = binder.color || theme.colors.accentHighlight;
 
   return (
@@ -192,10 +196,10 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
 
           <nav style={{ display: "grid", gap: 10, minHeight: 0, overflowY: "auto", scrollbarGutter: "stable", paddingRight: 3 }}>
             {NAV_GROUPS.filter((group) => group.label !== "Maintenance").map((group, groupIndex) => (
-              <div key={`${group.label}-${groupIndex}`} style={{ display: "grid", gap: 4 }}>
+              <div key={`${translateUi(group.label)}-${groupIndex}`} style={{ display: "grid", gap: 4 }}>
                 {group.label ? (
                   <div style={{ padding: "2px 10px 5px", color: "rgba(232,237,245,0.55)", fontSize: "var(--fs-small)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                    {group.label}
+                    {translateUi(group.label)}
                   </div>
                 ) : null}
                 {group.items.map((item) => {
@@ -238,7 +242,7 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
                       >
                         {item.icon}
                       </span>
-                      {item.label}
+                      {translateUi(item.label)}
                     </Link>
                   );
                 })}
@@ -247,12 +251,12 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
           </nav>
 
           <div style={{ display: "grid", gap: 4, paddingTop: 8, borderTop: `1px solid ${withAlpha(accent, 0.16)}`, background: "rgba(7,12,22,0.96)" }}>
-            <div style={{ padding: "2px 10px 5px", color: "rgba(232,237,245,0.55)", fontSize: "var(--fs-small)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em" }}>Maintenance</div>
+            <div style={{ padding: "2px 10px 5px", color: "rgba(232,237,245,0.55)", fontSize: "var(--fs-small)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em" }}>{translateUi("Maintenance")}</div>
             {NAV_GROUPS.find((group) => group.label === "Maintenance")!.items.map((item) => {
               const active = routeSection === item.id;
               const hovered = hoveredNav === item.id;
               return <Link key={item.id} to={`/binder/${binder.id}/${item.id}`} onMouseEnter={() => setHoveredNav(item.id)} onMouseLeave={() => setHoveredNav(null)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: theme.radius.control, color: active || hovered ? theme.colors.text : "rgba(232,237,245,0.76)", background: active ? `linear-gradient(90deg, ${withAlpha(accent, 0.12)}, ${withAlpha(accent, 0.025)} 30%, transparent 62%), ${withAlpha(theme.colors.shadowColor, 0.14)}` : hovered ? withAlpha(accent, 0.08) : "transparent", border: `1px solid ${hovered && !active ? withAlpha(accent, 0.2) : "transparent"}`, boxShadow: active ? `inset 3px 0 0 ${withAlpha(accent, 0.78)}` : "none", textDecoration: "none", fontSize: "var(--fs-body)", fontWeight: active ? 760 : 520, transition: "background 140ms ease, border-color 140ms ease, color 140ms ease" }}>
-                <span style={{ color: item.color, display: "grid", opacity: active || hovered ? 1 : 0.82 }}>{item.icon}</span>{item.label}
+                <span style={{ color: item.color, display: "grid", opacity: active || hovered ? 1 : 0.82 }}>{item.icon}</span>{translateUi(item.label)}
               </Link>;
             })}
           </div>
@@ -263,7 +267,7 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
             <div>
               <h1 style={{ margin: 0, color: theme.colors.text, fontSize: "calc(var(--fs-hero) * 1.08)", textShadow: `0 0 28px ${withAlpha(accent, 0.13)}` }}>{title}</h1>
               {!activeItem ? <div style={{ color: withAlpha(accent, 0.8), marginTop: 4, fontSize: "var(--fs-medium)" }}>
-                {binder.currentDate.text ? `Setting date: ${binder.currentDate.text}` : "No setting date set"}
+                {binder.currentDate.text ? translateUi("Setting date: {{value1}}", { value1: binder.currentDate.text }) : translateUi("No setting date set")}
               </div> : null}
             </div>
             <BinderGlobalSearch binderId={binder.id} />

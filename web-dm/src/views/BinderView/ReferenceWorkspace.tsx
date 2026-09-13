@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { resolveAssetUrl } from "@/services/api";
@@ -70,6 +71,7 @@ export function ReferenceWorkspace(props: {
   canEdit: boolean;
   onRecordsChanged: () => Promise<void>;
 }) {
+  const translateUi = useUiTranslation("dmUi");
   const labels = LABELS[props.type];
   const { isDeities, showDescription, showLeader, showIcon } = REFERENCE_VIEW_CONFIG[props.type];
   const showDescriptionColumn = showDescription && !isDeities && !showLeader;
@@ -243,7 +245,7 @@ export function ReferenceWorkspace(props: {
   if (props.recordId && !loading && !selected) {
     return (
       <div style={{ padding: 28, border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, color: theme.colors.muted }}>
-        {labels.singular} not found.
+        {labels.singular} {translateUi("not found.")}
       </div>
     );
   }
@@ -260,7 +262,7 @@ export function ReferenceWorkspace(props: {
           accent={props.accent}
           leading={props.type === "deities" ? (
             <>
-              <button type="button" onClick={() => { if (props.canEdit) portraitInputRef.current?.click(); }} title={props.canEdit ? "Change portrait" : undefined} style={{ width: 72, height: 72, padding: 0, border: `1px dashed ${theme.colors.panelBorder}`, borderRadius: theme.radius.control, overflow: "hidden", background: withAlpha(props.accent, 0.1), cursor: props.canEdit ? "pointer" : "default", flex: "0 0 auto" }}>
+              <button type="button" onClick={() => { if (props.canEdit) portraitInputRef.current?.click(); }} title={props.canEdit ? translateUi("Change portrait") : undefined} style={{ width: 72, height: 72, padding: 0, border: `1px dashed ${theme.colors.panelBorder}`, borderRadius: theme.radius.control, overflow: "hidden", background: withAlpha(props.accent, 0.1), cursor: props.canEdit ? "pointer" : "default", flex: "0 0 auto" }}>
                 {selected.imageUrl ? <img src={`${resolveAssetUrl(selected.imageUrl)}${selected.imageUpdatedAt ? `?v=${selected.imageUpdatedAt}` : ""}`} alt={`${selected.name} portrait`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
               </button>
               <input ref={portraitInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={async (event) => {
@@ -294,11 +296,11 @@ export function ReferenceWorkspace(props: {
                   <IconPicker
                     value={selected.icon}
                     onChange={(icon) => void saveInline({ icon })}
-                    label="Icon"
+                    label={translateUi("Icon")}
                   />
                 ) : (
                   <section>
-                    <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>Icon</div>
+                    <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>{translateUi("Icon")}</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 7 }}>
                       <EntityIcon icon={selected.icon ?? getDefaultEntityIcon(props.type)} size={22} />
                     </div>
@@ -307,15 +309,15 @@ export function ReferenceWorkspace(props: {
               ) : null}
               {isDeities ? (
                 <section>
-                  <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>Rank</div>
+                  <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>{translateUi("Rank")}</div>
                   {props.canEdit ? <select
-                    aria-label="Deity rank"
+                    aria-label={translateUi("Deity rank")}
                     value={selected.rank ?? ""}
                     disabled={inlineSaving}
                     onChange={(event) => void saveInline({ rank: event.target.value ? event.target.value as typeof selected.rank : null })}
                     style={{ width: "min(280px, 100%)", marginTop: 7, padding: "9px 11px", borderRadius: theme.radius.control, border: `1px solid ${theme.colors.panelBorder}`, background: theme.colors.inputBg, color: selected.rank ? DEITY_RANK_COLORS[selected.rank] : theme.colors.muted, font: "inherit", fontWeight: 800, cursor: inlineSaving ? "default" : "pointer" }}
                   >
-                    <option value="">None</option>
+                    <option value="">{translateUi("None")}</option>
                     {DEITY_RANKS.map((rank) => <option key={rank} value={rank}>{rank}</option>)}
                   </select> : <div style={{ marginTop: 7, fontWeight: 800, color: selected.rank ? DEITY_RANK_COLORS[selected.rank] : theme.colors.muted }}>{selected.rank ?? "None"}</div>}
                 </section>
@@ -323,9 +325,9 @@ export function ReferenceWorkspace(props: {
               {showDescription ? (
                 <section>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                    <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>Description</div>
-                    {props.canEdit && !editingDescription ? <button type="button" onClick={() => setEditingDescription(true)} title="Edit description" style={{ display: "inline-flex", alignItems: "center", gap: 5, border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}>
-                      <IconPencil size={13} /> Edit
+                    <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>{translateUi("Description")}</div>
+                    {props.canEdit && !editingDescription ? <button type="button" onClick={() => setEditingDescription(true)} title={translateUi("Edit description")} style={{ display: "inline-flex", alignItems: "center", gap: 5, border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}>
+                      <IconPencil size={13} /> {translateUi("Edit")}
                     </button> : null}
                   </div>
                   {editingDescription && props.canEdit ? <div style={{ display: "grid", gap: 9, marginTop: 7 }}>
@@ -333,29 +335,29 @@ export function ReferenceWorkspace(props: {
                       value={inlineDescription}
                       onChange={setInlineDescription}
                       mentions={mentions}
-                      placeholder="Add a description…"
+                      placeholder={translateUi("Add a description…")}
                       minHeight={240}
                       theme={{ radius: theme.radius.control, panelBorder: theme.colors.panelBorder, inputBg: theme.colors.inputBg, text: theme.colors.text }}
                     />
                     <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                      <Button variant="ghost" onClick={() => { setInlineDescription(selected.description ?? ""); setEditingDescription(false); }}>Cancel</Button>
-                      <Button disabled={inlineSaving} onClick={async () => { await saveInline({ description: inlineDescription }); setEditingDescription(false); }}>Save</Button>
+                      <Button variant="ghost" onClick={() => { setInlineDescription(selected.description ?? ""); setEditingDescription(false); }}>{translateUi("Cancel")}</Button>
+                      <Button disabled={inlineSaving} onClick={async () => { await saveInline({ description: inlineDescription }); setEditingDescription(false); }}>{translateUi("Save")}</Button>
                     </div>
                   </div> : <div style={{ minHeight: 72, marginTop: 7, padding: "8px 9px", color: selected.description ? theme.colors.text : theme.colors.muted, fontSize: "var(--fs-body)", lineHeight: 1.55 }}>
-                    {selected.description ? <MarkdownRichText text={selected.description} validMentionIds={validMentionIds} binderId={props.binderId} /> : "No description yet."}
+                    {selected.description ? <MarkdownRichText text={selected.description} validMentionIds={validMentionIds} binderId={props.binderId} /> : translateUi("No description yet.")}
                   </div>}
                 </section>
               ) : null}
               {isDeities ? (
                 <section>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                    <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>DM Notes</div>
-                    {props.canEdit && !editingDmNotes ? <button type="button" onClick={() => setEditingDmNotes(true)} title="Edit DM notes" style={{ display: "inline-flex", alignItems: "center", gap: 5, border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}><IconPencil size={13}/> Edit</button> : null}
+                    <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>{translateUi("DM Notes")}</div>
+                    {props.canEdit && !editingDmNotes ? <button type="button" onClick={() => setEditingDmNotes(true)} title={translateUi("Edit DM notes")} style={{ display: "inline-flex", alignItems: "center", gap: 5, border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer", padding: "2px 4px", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 750 }}><IconPencil size={13}/> {translateUi("Edit")}</button> : null}
                   </div>
                   {editingDmNotes && props.canEdit ? <div style={{ display: "grid", gap: 9, marginTop: 7 }}>
-                    <WysiwygNoteEditor value={inlineDmNotes} onChange={setInlineDmNotes} mentions={mentions} placeholder="Add notes that are always hidden from players…" minHeight={180} theme={{ radius: theme.radius.control, panelBorder: theme.colors.panelBorder, inputBg: theme.colors.inputBg, text: theme.colors.text }}/>
-                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><Button variant="ghost" onClick={() => { setInlineDmNotes(selected.dmNotes ?? ""); setEditingDmNotes(false); }}>Cancel</Button><Button disabled={inlineSaving} onClick={async () => { await saveInline({ dmNotes: inlineDmNotes }); setEditingDmNotes(false); }}>Save</Button></div>
-                  </div> : <div style={{ minHeight: 54, marginTop: 7, padding: "8px 9px", color: selected.dmNotes ? theme.colors.text : theme.colors.muted, lineHeight: 1.55 }}>{selected.dmNotes ? <MarkdownRichText text={selected.dmNotes} validMentionIds={validMentionIds} binderId={props.binderId}/> : "No DM notes yet."}</div>}
+                    <WysiwygNoteEditor value={inlineDmNotes} onChange={setInlineDmNotes} mentions={mentions} placeholder={translateUi("Add notes that are always hidden from players…")} minHeight={180} theme={{ radius: theme.radius.control, panelBorder: theme.colors.panelBorder, inputBg: theme.colors.inputBg, text: theme.colors.text }}/>
+                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><Button variant="ghost" onClick={() => { setInlineDmNotes(selected.dmNotes ?? ""); setEditingDmNotes(false); }}>{translateUi("Cancel")}</Button><Button disabled={inlineSaving} onClick={async () => { await saveInline({ dmNotes: inlineDmNotes }); setEditingDmNotes(false); }}>{translateUi("Save")}</Button></div>
+                  </div> : <div style={{ minHeight: 54, marginTop: 7, padding: "8px 9px", color: selected.dmNotes ? theme.colors.text : theme.colors.muted, lineHeight: 1.55 }}>{selected.dmNotes ? <MarkdownRichText text={selected.dmNotes} validMentionIds={validMentionIds} binderId={props.binderId}/> : translateUi("No DM notes yet.")}</div>}
                 </section>
               ) : null}
               {parentLabel ? (
@@ -405,10 +407,10 @@ export function ReferenceWorkspace(props: {
     <>
       <div style={{ display: "grid", gap: 13 }}>
         <div style={{ display: "flex", gap: 10, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-          <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${labels.plural.toLowerCase()}…`} style={{ width: "min(360px, 100%)" }} />
+          <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={translateUi("Search {{value1}}…", { value1: labels.plural.toLowerCase() })} style={{ width: "min(360px, 100%)" }} />
           {props.canEdit ? (
             <Button onClick={() => setModalRecord("new")}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><IconPlus size={14} /> New {labels.singular}</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><IconPlus size={14} /> {translateUi("New")} {labels.singular}</span>
             </Button>
           ) : null}
         </div>
@@ -416,10 +418,10 @@ export function ReferenceWorkspace(props: {
         <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
           <BinderListHeader
             columns={[
-              { key: "name", label: "Name", sortable: true },
-              ...(isDeities ? [{ key: "middle", label: "Domains", sortable: true }]
-                : showDescriptionColumn ? [{ key: "middle", label: "Description", sortable: true }]
-                : showLeader ? [{ key: "middle", label: "Leader", sortable: true }]
+              { key: "name", label: translateUi("Name"), sortable: true },
+              ...(isDeities ? [{ key: "middle", label: translateUi("Domains"), sortable: true }]
+                : showDescriptionColumn ? [{ key: "middle", label: translateUi("Description"), sortable: true }]
+                : showLeader ? [{ key: "middle", label: translateUi("Leader"), sortable: true }]
                 : []),
               { key: "usage", label: isDeities ? "Rank" : labels.usage, sortable: true },
             ]}
@@ -468,7 +470,7 @@ export function ReferenceWorkspace(props: {
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{record.name}</span>
                 </span>
                 {isDeities ? (
-                  <span title={record.domains?.map((domain) => domain.name).join(", ") || "None"} style={{ color: record.domains?.length ? theme.colors.muted : "rgba(160,180,220,0.48)", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                  <span title={record.domains?.map((domain) => domain.name).join(", ") || translateUi("None")} style={{ color: record.domains?.length ? theme.colors.muted : "rgba(160,180,220,0.48)", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
                     {record.domains?.map((domain) => domain.name).join(", ") || "None"}
                   </span>
                 ) : showDescriptionColumn ? (
@@ -481,7 +483,7 @@ export function ReferenceWorkspace(props: {
                     <span style={{ fontWeight: 800, color: DEITY_RANK_COLORS[record.rank] }}>
                       {record.rank}
                     </span>
-                  ) : <span style={{ color: "rgba(160,180,220,0.48)" }}>None</span>
+                  ) : <span style={{ color: "rgba(160,180,220,0.48)" }}>{translateUi("None")}</span>
                 ) : (
                   <span style={{ color: theme.colors.muted }}>{record.usageCount}</span>
                 )}
@@ -489,7 +491,7 @@ export function ReferenceWorkspace(props: {
             );
           }) : (
             <BinderListEmpty>
-              {query ? `No ${labels.plural.toLowerCase()} match your search.` : `No ${labels.plural.toLowerCase()} yet.`}
+              {query ? translateUi("No {{value1}} match your search.", { value1: labels.plural.toLowerCase() }) : translateUi("No {{value1}} yet.", { value1: labels.plural.toLowerCase() })}
             </BinderListEmpty>
           )}
         </div>

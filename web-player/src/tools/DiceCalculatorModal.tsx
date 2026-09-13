@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { rollDiceExpr } from "@beholden/shared/domain/dice";
 import { C, withAlpha } from "@/lib/theme";
 import { IconDice } from "@/icons";
@@ -29,6 +30,7 @@ function calculatorButtonStyle(variant: "dice" | "digit" | "op" | "danger" | "ro
 }
 
 export function DiceCalculatorModal(props: { isOpen: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
   const [expr, setExpr] = React.useState("");
   const [result, setResult] = React.useState<number | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -72,7 +74,7 @@ export function DiceCalculatorModal(props: { isOpen: boolean; onClose: () => voi
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Dice Calculator"
+      aria-label={t("diceCalculatorModal.title")}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) props.onClose();
       }}
@@ -99,9 +101,9 @@ export function DiceCalculatorModal(props: { isOpen: boolean; onClose: () => voi
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: `1px solid ${C.panelBorder}` }}>
           <IconDice size={24} />
-          <div style={{ flex: 1, fontWeight: 900, color: C.text }}>Dice Calculator</div>
+          <div style={{ flex: 1, fontWeight: 900, color: C.text }}>{t("diceCalculatorModal.title")}</div>
           <Button variant="ghost" onClick={props.onClose} style={{ padding: "0 12px", minHeight: 34 }}>
-            Close
+            {t("diceCalculatorModal.close")}
           </Button>
         </div>
 
@@ -114,7 +116,7 @@ export function DiceCalculatorModal(props: { isOpen: boolean; onClose: () => voi
               setExpr(e.target.value);
             }}
             onKeyDown={keyDown}
-            placeholder="enter expression..."
+            placeholder={t("diceCalculatorModal.expressionPlaceholder")}
             style={{
               width: "100%",
               boxSizing: "border-box",
@@ -134,7 +136,7 @@ export function DiceCalculatorModal(props: { isOpen: boolean; onClose: () => voi
           {button("d2", () => append("d2"), "dice")}
           {button("d4", () => append("d4"), "dice")}
           {button("d6", () => append("d6"), "dice")}
-          {button("Del", () => { setResult(null); setExpr((prev) => prev.slice(0, -1)); }, "danger")}
+          {button(t("diceCalculatorModal.delete"), () => { setResult(null); setExpr((prev) => prev.slice(0, -1)); }, "danger")}
           {button("d8", () => append("d8"), "dice")}
           {button("d10", () => append("d10"), "dice")}
           {button("d12", () => append("d12"), "dice")}
@@ -148,7 +150,7 @@ export function DiceCalculatorModal(props: { isOpen: boolean; onClose: () => voi
           {["4", "5", "6"].map((n) => button(n, () => append(n)))}
           {button("+", () => append("+"), "op")}
           {["1", "2", "3"].map((n) => button(n, () => append(n)))}
-          {button("Roll", roll, "roll", { gridRow: "6 / span 2", gridColumn: 4 })}
+          {button(t("diceCalculatorModal.roll"), roll, "roll", { gridRow: "6 / span 2", gridColumn: 4 })}
           {button("0", () => append("0"))}
           {button("(", () => append("("), "op")}
           {button(")", () => append(")"), "op")}

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { C, withAlpha } from "@/lib/theme";
 import { IconButton } from "@/ui/IconButton";
@@ -48,6 +49,7 @@ export function LevelUpSpellChoiceList({
   disabledIds?: string[];
   disabledNames?: string[];
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const visibleSpells = React.useMemo(() => spells, [spells]);
   const disabledIdSet = React.useMemo(() => new Set(disabledIds ?? []), [disabledIds]);
@@ -143,20 +145,20 @@ export function LevelUpSpellChoiceList({
                     ) : null}
                     {disabledElsewhere && (
                       <div style={{ marginTop: 4, fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700 }}>
-                        Already selected
+                        {translateUi("Already selected")}
                       </div>
                     )}
                     {prerequisite && (
                       <div style={{ marginTop: 4, fontSize: "var(--fs-tiny)", lineHeight: 1.25 }}>
                         <span style={{ color: allowed ? C.colorGold : C.colorPinkRed, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                          Prerequisite
+                          {translateUi("Prerequisite")}
                         </span>
                         <span style={{ color: allowed ? "rgba(251,191,36,0.92)" : "#fca5a5" }}> {prerequisite}</span>
                       </div>
                     )}
                     {!allowed && prerequisite && (
                       <div style={{ marginTop: 4, fontSize: "var(--fs-tiny)", color: C.colorPinkRed, fontWeight: 700 }}>
-                        Prerequisite not met
+                        {translateUi("Prerequisite not met")}
                       </div>
                     )}
                   </button>
@@ -189,7 +191,7 @@ export function LevelUpSpellChoiceList({
           {classTalentPrerequisiteLabel(activeSpell.prerequisite, (id) => talentNameById.get(id)) && (
             <div style={{ marginTop: 8, fontSize: "var(--fs-small)", lineHeight: 1.45 }}>
               <span style={{ color: C.colorGold, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                Prerequisite
+                {translateUi("Prerequisite")}
               </span>
               <span style={{ color: "rgba(251,191,36,0.92)" }}> {classTalentPrerequisiteLabel(activeSpell.prerequisite, (id) => talentNameById.get(id))}</span>
             </div>
@@ -210,7 +212,7 @@ export function LevelUpSpellChoiceList({
         </div>
       )}
       {visibleSpells.length === 0 && (
-        <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>No eligible options found in compendium.</div>
+        <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>{translateUi("No eligible options found in compendium.")}</div>
       )}
     </div>
   );

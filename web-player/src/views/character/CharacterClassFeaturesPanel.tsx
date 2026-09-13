@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { EmptyState } from "@beholden/shared/ui";
 import { C, withAlpha } from "@/lib/theme";
 import type { ClassFeatureEntry } from "@/views/character/CharacterSheetTypes";
@@ -27,6 +28,7 @@ export function ClassFeaturesPanel(props: {
     onOpenFeatPicker,
     onRemoveExtraFeat,
   } = props;
+  const { t } = useTranslation();
 
   const multiclass = classPresentation.length > 1;
   const classByEntryId = React.useMemo(
@@ -65,12 +67,12 @@ export function ClassFeaturesPanel(props: {
 
   return (
     <CollapsiblePanel
-      title="Features"
+      title={t("classFeaturesPanel.title")}
       color={accentColor}
       storageKey={PANEL_IDS.playerFeatures}
-      summary={`${totalFeatureCount} features`}
+      summary={t("classFeaturesPanel.featureCount", { count: totalFeatureCount })}
       actions={onOpenFeatPicker ? (
-        <PanelHeaderAddButton color={accentColor} onClick={onOpenFeatPicker} title="Add feat" />
+        <PanelHeaderAddButton color={accentColor} onClick={onOpenFeatPicker} title={t("classFeaturesPanel.addFeat")} />
       ) : undefined}
     >
       {totalFeatureCount > 0 ? (
@@ -78,7 +80,7 @@ export function ClassFeaturesPanel(props: {
           {(["class", "race", "background", "feats"] as const).map((group) => {
             const features = groupedFeatures[group];
             if (features.length === 0) return null;
-            const label = group === "class" ? "Class" : group === "race" ? "Race" : group === "background" ? "Background" : "Feats";
+            const label = group === "class" ? t("classFeaturesPanel.groupClass") : group === "race" ? t("classFeaturesPanel.groupRace") : group === "background" ? t("classFeaturesPanel.groupBackground") : t("classFeaturesPanel.groupFeats");
             return (
               <div key={group}>
                 <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5, opacity: 0.6 }}>{label}</div>
@@ -107,7 +109,7 @@ export function ClassFeaturesPanel(props: {
                         {extraFeatId && onRemoveExtraFeat && (
                           <button
                             type="button"
-                            title="Remove feat"
+                            title={t("classFeaturesPanel.removeFeat")}
                             onClick={() => { void onRemoveExtraFeat(extraFeatId); }}
                             style={{ position: "absolute", top: 8, right: 10, border: "none", background: "transparent", cursor: "pointer", color: withAlpha(C.red, 0.6), fontSize: "var(--fs-body)", lineHeight: 1, padding: 0, fontWeight: 700 }}
                           >×</button>
@@ -122,7 +124,7 @@ export function ClassFeaturesPanel(props: {
           })}
         </div>
       ) : (
-        <EmptyState textColor={C.muted}>No features yet. Add feats with the + button above.</EmptyState>
+        <EmptyState textColor={C.muted}>{t("classFeaturesPanel.emptyState")}</EmptyState>
       )}
     </CollapsiblePanel>
   );

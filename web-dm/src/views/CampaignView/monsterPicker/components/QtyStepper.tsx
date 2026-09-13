@@ -1,12 +1,14 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { theme } from "@/theme/theme";
 import { IconButton } from "@/ui/IconButton";
 
 export function QtyStepper(props: { value: number; onChange: (n: number) => void }) {
+  const translateUi = useUiTranslation("dmUi");
   const v = props.value ?? 1;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
       <IconButton
-        title="Decrease"
+        title={translateUi("Decrease")}
         variant="ghost"
         onClick={(e) => {
           e.preventDefault();
@@ -24,13 +26,13 @@ export function QtyStepper(props: { value: number; onChange: (n: number) => void
           color: theme.colors.text,
           fontWeight: 900
         }}
-        title="Quantity"
+        title={translateUi("Quantity")}
       >
         {v}
       </div>
 
       <IconButton
-        title="Increase"
+        title={translateUi("Increase")}
         variant="ghost"
         onClick={(e) => {
           e.preventDefault();

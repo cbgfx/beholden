@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 ﻿import React from "react";
 import { useStore, type DrawerState } from "@/store";
 import type { DrawerContent } from "@/drawers/types";
@@ -139,6 +140,7 @@ export function TreasureDrawer(props: {
   drawer: TreasureDrawerState;
   close: () => void;
 }): DrawerContent {
+  const translateUi = useUiTranslation("dmUi");
   const { state } = useStore();
   const [resolvedEntry, setResolvedEntry] = React.useState<TreasureEntry | null>(null);
   const [itemData, setItemData] = React.useState<CompendiumItem | null>(null);
@@ -191,7 +193,7 @@ export function TreasureDrawer(props: {
   }, [displayEntry?.itemId]);
 
   if (!displayEntry) {
-    return { body: <div style={{ color: theme.colors.muted }}>Item not found.</div> };
+    return { body: <div style={{ color: theme.colors.muted }}>{translateUi("Item not found.")}</div> };
   }
 
   const dmg = fmtDamage(itemData?.dmg1 ?? null, itemData?.dmg2 ?? null, itemData?.dmgType ?? null);
@@ -217,9 +219,9 @@ export function TreasureDrawer(props: {
         </div>
 
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {displayEntry.magic ? <Tag label="Magic" color={theme.colors.colorMagic} /> : null}
+          {displayEntry.magic ? <Tag label={translateUi("Magic")} color={theme.colors.colorMagic} /> : null}
           {displayEntry.attunement ? (
-            <Tag label="Requires Attunement" color={theme.colors.accentPrimary} />
+            <Tag label={translateUi("Requires Attunement")} color={theme.colors.accentPrimary} />
           ) : null}
           {displayEntry.rarity ? (
             <Tag
@@ -242,13 +244,13 @@ export function TreasureDrawer(props: {
               gap: 8,
             }}
           >
-            {dmg.one ? <Stat label="One-Handed Damage" value={dmg.one} /> : null}
-            {dmg.two ? <Stat label="Two-Handed Damage" value={dmg.two} /> : null}
-            {dmg.type ? <Stat label="Damage Type" value={dmg.type} /> : null}
-            {weight != null ? <Stat label="Weight" value={`${weight} lb`} /> : null}
-            {value != null ? <Stat label="Value" value={`${value} gp`} /> : null}
+            {dmg.one ? <Stat label={translateUi("One-Handed Damage")} value={dmg.one} /> : null}
+            {dmg.two ? <Stat label={translateUi("Two-Handed Damage")} value={dmg.two} /> : null}
+            {dmg.type ? <Stat label={translateUi("Damage Type")} value={dmg.type} /> : null}
+            {weight != null ? <Stat label={translateUi("Weight")} value={`${weight} lb`} /> : null}
+            {value != null ? <Stat label={translateUi("Value")} value={`${value} gp`} /> : null}
             {propertyLabels.length > 0 ? (
-              <Stat label="Properties" value={propertyLabels.join(", ")} />
+              <Stat label={translateUi("Properties")} value={propertyLabels.join(", ")} />
             ) : null}
           </div>
         )}

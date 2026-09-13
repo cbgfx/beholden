@@ -1,4 +1,6 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { FormattedText } from "@beholden/shared/ui";
 import { Panel } from "@/ui/Panel";
 import { C } from "@/lib/theme";
@@ -73,6 +75,8 @@ function StatChip({ label, color }: { label: string; color: string }) {
 // ---------------------------------------------------------------------------
 
 export function ItemDetailPanel(props: { itemId: string }) {
+  const translateUi = useUiTranslation("playerUi");
+  const { t } = useTranslation();
   const [item, setItem] = React.useState<CompendiumItemDetail | null>(null);
   const [busy, setBusy] = React.useState(false);
 
@@ -88,7 +92,7 @@ export function ItemDetailPanel(props: { itemId: string }) {
   }, [props.itemId]);
 
   const meta = item
-    ? [item.rarity ? titleCase(item.rarity) : null, item.type, item.attunement ? "Requires Attunement" : null]
+    ? [item.rarity ? titleCase(item.rarity) : null, item.type, item.attunement ? t("compendiumItems.requiresAttunement") : null]
         .filter(Boolean).join(" • ")
     : "";
 
@@ -103,19 +107,19 @@ export function ItemDetailPanel(props: { itemId: string }) {
 
   return (
     <Panel
-      title={item ? item.name : "Item"}
-      actions={<div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{busy ? "Loading…" : meta}</div>}
+      title={item ? item.name : t("compendiumItems.detailFallbackTitle")}
+      actions={<div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{busy ? t("compendiumItems.loading") : meta}</div>}
       style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
       bodyStyle={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 10 }}
     >
       {!item ? (
-        <div style={{ color: C.muted }}>Pick an item on the left to view details.</div>
+        <div style={{ color: C.muted }}>{t("compendiumItems.pickItemPrompt")}</div>
       ) : (
         <>
           {/* Rarity / magic / attunement tags */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {item.magic && <Tag label="Magic" color="#a335ee" />}
-            {item.attunement && <Tag label="Attunement" color={C.accentHl} />}
+            {item.magic && <Tag label={t("compendiumItems.magic")} color="#a335ee" />}
+            {item.attunement && <Tag label={t("compendiumItems.attunement")} color={C.accentHl} />}
             {item.rarity && <Tag label={titleCase(item.rarity)} color={rarityColor(item.rarity)} />}
             {hasStealthDisadvantage(item) && <Tag label="D" color={C.colorPinkRed} />}
           </div>
@@ -127,12 +131,12 @@ export function ItemDetailPanel(props: { itemId: string }) {
               {propertyLabels.map((p) => (
                 <StatChip key={p} label={p} color="#94a3b8" />
               ))}
-              {item.ac != null && <StatChip label={`AC ${item.ac}`} color={C.colorMagic} />}
-              {hasStealthDisadvantage(item) && <StatChip label="Stealth D" color={C.colorPinkRed} />}
+              {item.ac != null && <StatChip label={translateUi("AC {{value1}}", { value1: item.ac })} color={C.colorMagic} />}
+              {hasStealthDisadvantage(item) && <StatChip label={t("compendiumItems.stealthDisadvantage")} color={C.colorPinkRed} />}
               {item.weight != null && (
-                <StatChip label={`${item.weight} lb`} color="#64748b" />
+                <StatChip label={translateUi("{{value1}} lb", { value1: item.weight })} color="#64748b" />
               )}
-              {item.value != null && <StatChip label={`${item.value} gp`} color="#64748b" />}
+              {item.value != null && <StatChip label={translateUi("{{value1}} gp", { value1: item.value })} color="#64748b" />}
             </div>
           )}
 
@@ -152,11 +156,11 @@ export function ItemDetailPanel(props: { itemId: string }) {
             border: `1px solid ${C.panelBorder}`, borderRadius: 12,
             padding: 10, whiteSpace: "pre-wrap", lineHeight: 1.5, fontSize: "var(--fs-subtitle)",
           }}>
-            {textParagraphs.length ? <FormattedText text={textParagraphs} /> : <span style={{ color: C.muted }}>No description.</span>}
+            {textParagraphs.length ? <FormattedText text={textParagraphs} /> : <span style={{ color: C.muted }}>{t("compendiumItems.noDescription")}</span>}
           </div>
           {item.source ? (
             <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>
-              Source: {item.source} · Ruleset: {item.ruleset ?? "Unknown"}
+              {t("compendiumItems.sourceRuleset", { source: item.source, ruleset: item.ruleset ?? t("compendiumItems.unknownRuleset") })}
             </div>
           ) : null}
         </>

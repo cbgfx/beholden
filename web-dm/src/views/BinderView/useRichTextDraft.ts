@@ -1,7 +1,9 @@
+import { useUiMessages } from "@beholden/shared/i18n/useUiTranslation";
 import { useEffect, useRef, useState } from "react";
 
 /** Keep an inline draft independent of background refreshes and pending saves. */
 export function useRichTextDraft(value: string | null, onSave: (value: string | null) => Promise<void>) {
+  const translateMessage = useUiMessages("dmUi");
   const [editing, setEditing] = useState(false);
   const [draft, updateDraft] = useState(value ?? "");
   const [saving, setSaving] = useState(false);
@@ -44,7 +46,7 @@ export function useRichTextDraft(value: string | null, onSave: (value: string | 
       await onSave(submitted.trim() || null);
       if (active.current && currentDraft.current === submitted) setEditing(false);
     } catch (cause) {
-      if (active.current) setError(cause instanceof Error ? cause.message : "Unable to save. Please try again.");
+      if (active.current) setError(cause instanceof Error ? cause.message : translateMessage("Unable to save. Please try again."));
     } finally {
       pending.current = false;
       if (active.current) setSaving(false);

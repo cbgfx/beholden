@@ -141,7 +141,7 @@ export function useCharacterInventorySync({
           return { ...item, description: detail.description, uses, spells: item.spells ?? detail.spells, spellcasting: item.spellcasting ?? detail.spellcasting, spellTemplate: item.spellTemplate ?? detail.spellTemplate, ammo: item.ammo ?? detail.ammo, weaponAmmo: item.weaponAmmo ?? detail.weaponAmmo, usage: item.usage ?? detail.usage, chargesMax, charges: item.charges ?? chargesMax };
         });
         if (!updated.some((item, index) => item !== items[index])) return;
-        const normalized = normalizeContainers(containers);
+        const normalized = normalizeContainers(containers, undefined);
         if (!inventoryRev) return;
         await onSave({ inventory: updated, inventoryContainers: normalized }, { expectedInventoryRev: inventoryRev });
         if (active) setItems(updated);

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { C } from "@/lib/theme";
 import type { PartyCurrencyMap } from "@/services/inventoryApi";
 import { formatWeight } from "@/views/character/inventory/CharacterInventory";
@@ -35,6 +36,7 @@ function PartyCurrencyBar({ currency, onCurrencyChange, stashWeight, partyCapaci
   stashWeight: number;
   partyCapacityLbs: number | null;
 }) {
+  const { t } = useTranslation();
   const [popupCode, setPopupCode] = useState<typeof CURRENCY_CODES[number] | null>(null);
   const [input, setInput] = useState("");
   const [saving, setSaving] = useState(false);
@@ -64,7 +66,7 @@ function PartyCurrencyBar({ currency, onCurrencyChange, stashWeight, partyCapaci
     try {
       if (await onCurrencyChange(patch)) setPopupCode(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to save currency.");
+      setError(cause instanceof Error ? cause.message : t("characterInventoryCurrencyBar.unableToSaveCurrency"));
     } finally {
       pending.current = false;
       setSaving(false);
@@ -72,15 +74,16 @@ function PartyCurrencyBar({ currency, onCurrencyChange, stashWeight, partyCapaci
   };
 
   const overCapacity = partyCapacityLbs !== null && stashWeight > partyCapacityLbs;
+  const weightUnit = t("units.lb", { ns: "shared" });
   const weightLabel = partyCapacityLbs !== null
-    ? `${formatWeight(stashWeight)} / ${formatWeight(partyCapacityLbs)} lb`
-    : `${formatWeight(stashWeight)} lb`;
+    ? t("characterInventoryPanel.stashWeightWithCapacity", { weight: formatWeight(stashWeight), capacity: formatWeight(partyCapacityLbs), unit: weightUnit })
+    : t("characterInventoryPanel.stashWeightOnly", { weight: formatWeight(stashWeight), unit: weightUnit });
 
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "0 2px 10px", marginBottom: 2 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
         <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>
-          Currency
+          {t("characterInventoryCurrencyBar.currencyLabel")}
         </div>
       {CURRENCY_CODES.map((code) => (
         <div key={code} ref={popupCode === code ? popupRef : undefined} style={{ position: "relative" }}>
@@ -101,7 +104,7 @@ function PartyCurrencyBar({ currency, onCurrencyChange, stashWeight, partyCapaci
               boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
               display: "flex", flexDirection: "column", gap: 8,
             }}>
-              <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted, marginBottom: 2 }}>Edit {code}</div>
+              <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted, marginBottom: 2 }}>{t("characterInventoryCurrencyBar.editCurrencyTitle", { code })}</div>
               <div style={{ display: "flex", gap: 6 }}>
                 <input
                   autoFocus
@@ -123,7 +126,7 @@ function PartyCurrencyBar({ currency, onCurrencyChange, stashWeight, partyCapaci
                   }}
                 />
                 <Button type="button" variant="primary" disabled={saving} onClick={() => void save(code)} style={{ padding: "6px 14px", fontSize: "var(--fs-subtitle)", borderRadius: 7 }}>
-                  {saving ? "Saving…" : "Save"}
+                  {saving ? t("characterInventoryCurrencyBar.savingButtonLabel") : t("characterInventoryCurrencyBar.saveButtonLabel")}
                 </Button>
               </div>
               {error ? <div role="alert" style={{ color: C.red }}>{error}</div> : null}
@@ -151,6 +154,7 @@ export function InventoryPartyStashSection({
   onQuantity,
   onCurrencyChange,
 }: InventoryPartyStashSectionProps) {
+  const { t } = useTranslation();
   // Take/remove/quantity all hit the server. Surface a failure (a lost race, an
   // offline device) instead of letting the rejected promise vanish, and hold off
   // a second overlapping request while one is in flight.
@@ -163,7 +167,7 @@ export function InventoryPartyStashSection({
     try {
       await action();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Couldn't update the party stash. Try again.");
+      setError(cause instanceof Error ? cause.message : t("characterInventoryCurrencyBar.stashUpdateError"));
     } finally {
       pending.current = false;
     }
@@ -183,7 +187,7 @@ export function InventoryPartyStashSection({
       ) : null}
       {stashItems.length === 0 ? (
         <div style={emptyContainerStyle}>
-          Empty. Move an item here to share it with the party.
+          {t("characterInventoryCurrencyBar.emptyStash")}
         </div>
       ) : (
         stashItems.map((it) => (

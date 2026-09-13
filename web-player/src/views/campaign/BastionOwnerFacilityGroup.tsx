@@ -1,3 +1,5 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
+import { useTranslation } from "react-i18next";
 import { C } from "@/lib/theme";
 import { Select } from "@/ui/Select";
 import type { Bastion, BastionFacility, CompendiumFacility } from "./BastionViewShared";
@@ -31,11 +33,13 @@ export function BastionOwnerFacilityGroup({
   selectedFacilityId: string | null;
   onSelectFacility: (facilityId: string) => void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
+  const { t } = useTranslation();
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ marginBottom: 8, fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted }}>
-        {owner?.characterName || "Assigned Character"}
-        <span style={{ fontWeight: 400, marginLeft: 6 }}>Lv {owner?.level ?? 1}</span>
+        {owner?.characterName || t("bastionView.assignedCharacterFallback")}
+        <span style={{ fontWeight: 400, marginLeft: 6 }}>{t("bastionView.lvShort", { level: owner?.level ?? 1 })}</span>
       </div>
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
         <Select
@@ -43,10 +47,10 @@ export function BastionOwnerFacilityGroup({
           onChange={(e) => onAddKeyChange(e.target.value)}
           style={{ flex: 1 }}
         >
-          <option value="">Add facility...</option>
+          <option value="">{t("bastionView.addFacilityOption")}</option>
           {ownerOptions.map((f) => (
             <option key={`${ownerId}:${f.key}`} value={f.key}>
-              {f.name} ({f.type}, lvl {f.minimumLevel})
+              {f.name} ({f.type}{translateUi(", lvl")} {f.minimumLevel})
             </option>
           ))}
         </Select>
@@ -55,7 +59,7 @@ export function BastionOwnerFacilityGroup({
           disabled={!addKey}
           style={accentButtonStyle(Boolean(addKey))}
         >
-          Add
+          {t("bastionView.addButton")}
         </button>
       </div>
       <FacilityRows

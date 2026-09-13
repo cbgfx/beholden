@@ -1,3 +1,4 @@
+import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { getPolymorphCondition, type SharedPolymorphCondition } from "@beholden/shared/domain";
 import { Button } from "@/ui/Button";
@@ -27,6 +28,8 @@ export function PolymorphDrawer(props: {
   close: () => void;
   refreshEncounter: (eid: string | null) => Promise<void>;
 }): DrawerContent {
+  const translateMessage = useUiMessages("dmUi");
+  const translateUi = useUiTranslation("dmUi");
   const { state } = useStore();
 
   const combatant = React.useMemo(
@@ -117,7 +120,7 @@ export function PolymorphDrawer(props: {
       const ac = beastAc ?? Number(manualAc);
       const hp = beastHp ?? Number(manualHp);
       if (!Number.isFinite(ac) || !Number.isFinite(hp) || ac <= 0 || hp <= 0) {
-        alert("Enter valid AC and HP for the new form.");
+        alert(translateMessage("Enter valid AC and HP for the new form."));
         return;
       }
 
@@ -155,7 +158,7 @@ export function PolymorphDrawer(props: {
         setLoading(false);
       }
     },
-    [combatant, manualAc, manualHp, props, selectedBeast],
+    [combatant, manualAc, manualHp, props, selectedBeast?.id, selectedBeast?.name, translateMessage],
   );
 
   const revertPolymorph = React.useCallback(async () => {
@@ -184,8 +187,7 @@ export function PolymorphDrawer(props: {
   const body = (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <p style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)", lineHeight: 1.5, margin: 0 }}>
-        Transform the entity into another creature. You can use this for a druid's Wild Shape, or for the Polymorph spell.
-        Damage and healing is handled as normal while transformed.
+        {translateUi("Transform the entity into another creature. You can use this for a druid's Wild Shape, or for the Polymorph spell. Damage and healing is handled as normal while transformed.")}
       </p>
 
       {currentPolymorph && (
@@ -194,11 +196,11 @@ export function PolymorphDrawer(props: {
 
       <div>
         <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
-          Manual transform
+          {translateUi("Manual transform")}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           <div>
-            <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", marginBottom: 4 }}>Armor class</div>
+            <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", marginBottom: 4 }}>{translateUi("Armor class")}</div>
             <input
               value={manualAc}
               onChange={(event) => setManualAc(event.target.value.replace(/[^0-9]/g, ""))}
@@ -208,7 +210,7 @@ export function PolymorphDrawer(props: {
             />
           </div>
           <div>
-            <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", marginBottom: 4 }}>Hit points</div>
+            <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", marginBottom: 4 }}>{translateUi("Hit points")}</div>
             <input
               value={manualHp}
               onChange={(event) => setManualHp(event.target.value.replace(/[^0-9]/g, ""))}
@@ -247,9 +249,9 @@ export function PolymorphDrawer(props: {
 
   const footer = (
     <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-      <Button variant="ghost" onClick={props.close}>Cancel</Button>
+      <Button variant="ghost" onClick={props.close}>{translateUi("Cancel")}</Button>
       <Button onClick={() => applyPolymorph()} disabled={loading || !manualAc || !manualHp}>
-        Transform
+        {translateUi("Transform")}
       </Button>
     </div>
   );

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { api } from "@/services/api";
 import { C } from "@/lib/theme";
@@ -65,6 +66,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
   conditions?: ConditionInstance[];
   onToggleCondition?: (key: string) => Promise<void> | void;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   const [details, setDetails] = React.useState<Record<string, FetchedSpellDetail>>({});
   const [selectedSpell, setSelectedSpell] = React.useState<{ detail: FetchedSpellDetail; source?: string | null; rawName: string; removable: boolean } | null>(null);
   const [collapsedSections, setCollapsedSections] = React.useState<Record<string, boolean>>({});
@@ -300,26 +302,26 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
   }, [addSpellOpen, spellSearch, ruleset]);
 
   return (<>
-    <CollapsiblePanel title="Spells" color={accentColor} storageKey={PANEL_IDS.spells} actions={
-      onAddSpell ? <PanelHeaderAddButton color={accentColor} onClick={() => setAddSpellOpen(true)} title="Add spell" /> : undefined
+    <CollapsiblePanel title={translateUi("Spells")} color={accentColor} storageKey={PANEL_IDS.spells} actions={
+      onAddSpell ? <PanelHeaderAddButton color={accentColor} onClick={() => setAddSpellOpen(true)} title={translateUi("Add spell")} /> : undefined
     }>
       {classSpellcastingStates.length > 1 ? (
         <div style={{ display: "grid", gap: 6, marginBottom: 12 }}>
           {classSpellcastingStates.map((state) => (
             <div key={state.classEntryId} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) repeat(3, auto)", gap: 12, alignItems: "center", padding: "7px 10px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <span style={{ minWidth: 0, color: accentColor, fontWeight: 800 }}>{state.className} {state.classLevel}{state.pactMagic ? " · Pact Magic" : ""}</span>
+              <span style={{ minWidth: 0, color: accentColor, fontWeight: 800 }}>{state.className} {state.classLevel}{state.pactMagic ? translateUi(" · Pact Magic") : ""}</span>
               <span style={{ color: C.muted, fontSize: "var(--fs-tiny)", fontWeight: 800 }}>{state.ability?.toUpperCase() ?? "—"}</span>
-              <span style={{ color: spellcastingBlocked ? C.colorPinkRed : C.text, fontSize: "var(--fs-small)", fontWeight: 800 }}>DC {state.saveDc == null ? "—" : state.saveDc + spellSaveDcBonus}{spellcastingBlocked ? " X" : ""}</span>
-              <span style={{ color: spellcastingBlocked ? C.colorPinkRed : C.text, fontSize: "var(--fs-small)", fontWeight: 800 }}>ATK {state.attackBonus == null ? "—" : `${state.attackBonus >= 0 ? "+" : ""}${state.attackBonus}`}{spellcastingBlocked ? " X" : ""}</span>
-              {state.preparedLimit > 0 && <span style={{ gridColumn: "1 / -1", color: C.muted, fontSize: "var(--fs-tiny)" }}>Prepared: {Math.min(state.preparedSpells.length, state.preparedLimit)} / {state.preparedLimit}</span>}
+              <span style={{ color: spellcastingBlocked ? C.colorPinkRed : C.text, fontSize: "var(--fs-small)", fontWeight: 800 }}>{translateUi("DC")} {state.saveDc == null ? "—" : state.saveDc + spellSaveDcBonus}{spellcastingBlocked ? " X" : ""}</span>
+              <span style={{ color: spellcastingBlocked ? C.colorPinkRed : C.text, fontSize: "var(--fs-small)", fontWeight: 800 }}>{translateUi("ATK")} {state.attackBonus == null ? "—" : `${state.attackBonus >= 0 ? "+" : ""}${state.attackBonus}`}{spellcastingBlocked ? " X" : ""}</span>
+              {state.preparedLimit > 0 && <span style={{ gridColumn: "1 / -1", color: C.muted, fontSize: "var(--fs-tiny)" }}>{translateUi("Prepared:")} {Math.min(state.preparedSpells.length, state.preparedLimit)} / {state.preparedLimit}</span>}
             </div>
           ))}
         </div>
       ) : <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         {([
-          { label: "ABILITY", value: spellAbilLabel, highlight: true },
-          { label: "SAVE DC",  value: String(saveDc),     highlight: false },
-          { label: "ATK BONUS", value: `+${spellAtk}`,   highlight: false },
+          { label: translateUi("ABILITY"), value: spellAbilLabel, highlight: true },
+          { label: translateUi("SAVE DC"),  value: String(saveDc),     highlight: false },
+          { label: translateUi("ATK BONUS"), value: `+${spellAtk}`,   highlight: false },
         ] as const).map(({ label, value, highlight }) => (
           <div key={label} style={{
             display: "flex", flexDirection: "column", alignItems: "center",
@@ -344,12 +346,12 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
           fontSize: "var(--fs-small)",
           fontWeight: 700,
         }}>
-          You can't cast spells while wearing armor or a shield without proficiency.
+          {translateUi("You can't cast spells while wearing armor or a shield without proficiency.")}
         </div>
       )}
       {isPactMagic && maxSpellSlotLevel > 0 && (
         <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700, marginBottom: 12 }}>
-          Pact Magic: cast Warlock spells using level {maxSpellSlotLevel} slots.
+          {translateUi("Pact Magic: cast Warlock spells using level")} {maxSpellSlotLevel} {translateUi("slots.")}
         </div>
       )}
       {spellSlotState?.pactPools.map((pool) => {
@@ -359,16 +361,16 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
         const remaining = Math.max(0, max - (usedSpellSlots[key] ?? 0));
         return max > 0 ? (
           <div key={pool.key} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, color: C.muted, fontSize: "var(--fs-tiny)", fontWeight: 700 }}>
-            <span>{pool.className} Pact Magic · level {level} · {remaining}/{max}</span>
+            <span>{pool.className} {translateUi("Pact Magic · level")} {level} · {remaining}/{max}</span>
             {Array.from({ length: max }).map((_, index) => (
-              <button key={index} title={index < remaining ? "Expend Pact Magic slot" : "Regain Pact Magic slot"} onClick={() => togglePactSlot(pool.key, pool.slots, index)} style={{ width: 18, height: 18, borderRadius: "50%", padding: 0, cursor: "pointer", border: `2px solid ${index < remaining ? accentColor : "rgba(255,255,255,0.2)"}`, background: index < remaining ? accentColor : "transparent" }} />
+              <button key={index} title={index < remaining ? translateUi("Expend Pact Magic slot") : translateUi("Regain Pact Magic slot")} onClick={() => togglePactSlot(pool.key, pool.slots, index)} style={{ width: 18, height: 18, borderRadius: "50%", padding: 0, cursor: "pointer", border: `2px solid ${index < remaining ? accentColor : "rgba(255,255,255,0.2)"}`, background: index < remaining ? accentColor : "transparent" }} />
             ))}
           </div>
         ) : null;
       })}
       {usesFlexiblePreparedList && preparedLimit > 0 && (
         <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, fontWeight: 700, marginBottom: 12 }}>
-          Prepared spell list: {Math.min(preparedListCount, preparedLimit)} / {preparedLimit}. Always-prepared spells do not count against this limit.
+          {translateUi("Prepared spell list:")} {Math.min(preparedListCount, preparedLimit)} / {preparedLimit}{translateUi(". Always-prepared spells do not count against this limit.")}
         </div>
       )}
 
@@ -393,7 +395,7 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
           color: C.muted,
           lineHeight: 1.6,
         }}>
-          No spells on this character yet. Use <strong style={{ color: C.text }}>Add Spell</strong> to track spells found, learned, or granted at the table.
+          {translateUi("No spells on this character yet. Use")} <strong style={{ color: C.text }}>{translateUi("Add Spell")}</strong> {translateUi("to track spells found, learned, or granted at the table.")}
         </div>
       )}
       {[...groups.entries()].sort(([a], [b]) => a - b).map(([level, groupEntries]) => {
@@ -416,17 +418,17 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span aria-hidden="true" style={spellSectionArrow(isCollapsed, accentColor)}>▼</span>
                 <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, color: accentColor, textTransform: "uppercase", letterSpacing: 1 }}>
-                {level === -1 ? "Unresolved Spells" : level === 0 ? "Cantrips" : (LEVEL_LABELS[level] ?? `Level ${level}`)}
+                {level === -1 ? translateUi("Unresolved Spells") : level === 0 ? translateUi("Cantrips") : (LEVEL_LABELS[level] ?? translateUi("Level {{value1}}", { value1: level }))}
               </div>
               {maxSlots > 0 && (
                 <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginRight: 3 }}>slots {remaining}/{maxSlots}</span>
+                  <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginRight: 3 }}>{translateUi("slots")} {remaining}/{maxSlots}</span>
                   {Array.from({ length: maxSlots }).map((_, i) => {
                     const filled = i < remaining;
                     return (
                       <button
                         key={i}
-                        title={filled ? "Expend slot" : "Regain slot"}
+                        title={filled ? translateUi("Expend slot") : translateUi("Regain slot")}
                         onClick={(event) => {
                           event.stopPropagation();
                           toggleSlot(level, i);
@@ -449,12 +451,12 @@ export function RichSpellsPanel({ spells, grantedSpells = [], resources = [], pb
             {/* Column headers */}
             <div style={{ display: "grid", gridTemplateColumns: spellRowGrid, gap: "0 8px", alignItems: "end", marginBottom: 4 }}>
               {usesFlexiblePreparedList && <div style={spellColumnHeaderStyle}>
-                {usesPreparedSpellSelection ? "PREP" : usesFlexiblePreparedList ? "LIST" : "KNOWN"}
+                {usesPreparedSpellSelection ? translateUi("PREP") : usesFlexiblePreparedList ? translateUi("LIST") : translateUi("KNOWN")}
               </div>}
-              <div style={spellColumnHeaderStyle}>NAME</div>
-              <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>TIME</div>
-              <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>HIT / DC</div>
-              <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>EFFECT</div>
+              <div style={spellColumnHeaderStyle}>{translateUi("NAME")}</div>
+              <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>{translateUi("TIME")}</div>
+              <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>{translateUi("HIT / DC")}</div>
+              <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>{translateUi("EFFECT")}</div>
             </div>
 
             {groupEntries.map((e, i) => {

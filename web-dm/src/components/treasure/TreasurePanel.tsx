@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { TreasureRow } from "@/components/treasure/TreasureRow";
 import { IconPlus } from "@/icons";
@@ -21,6 +22,7 @@ function titleFromScope(opts: {
 }
 
 export function TreasurePanel(props: { encounterId?: string } = {}) {
+  const translateUi = useUiTranslation("dmUi");
   const { state, dispatch } = useStore();
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -57,13 +59,13 @@ export function TreasurePanel(props: { encounterId?: string } = {}) {
           adventureName: scopeAdventureName,
         })}
         actions={(
-          <IconButton title="Add item" onClick={() => setIsOpen(true)} variant="accent">
+          <IconButton title={translateUi("Add item")} onClick={() => setIsOpen(true)} variant="accent">
             <IconPlus />
           </IconButton>
         )}
       >
         {treasure.length === 0 ? (
-          <div style={{ color: theme.colors.muted }}>No treasure yet.</div>
+          <div style={{ color: theme.colors.muted }}>{translateUi("No treasure yet.")}</div>
         ) : (
           <div style={{ maxHeight: 340, overflowY: "auto" }}>
             {treasure.map((t) => (

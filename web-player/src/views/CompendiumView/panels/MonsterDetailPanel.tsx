@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import { Panel } from "@/ui/Panel";
 import { C } from "@/lib/theme";
 import { api } from "@/services/api";
@@ -6,6 +7,7 @@ import { formatCr } from "@/lib/monsterPicker/utils";
 import { MonsterStatblock, type MonsterRecord } from "./MonsterStatblock";
 
 export function MonsterDetailPanel(props: { monsterId: string }) {
+  const { t } = useTranslation();
   const [monster, setMonster] = React.useState<MonsterRecord | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -33,7 +35,7 @@ export function MonsterDetailPanel(props: { monsterId: string }) {
 
   return (
     <Panel
-      title={monster ? String(monster.name ?? "Monster") : busy ? "Loading..." : "Monster"}
+      title={monster ? String(monster.name ?? t("compendiumMonsters.detailFallbackTitle")) : busy ? t("compendiumMonsters.loading") : t("compendiumMonsters.detailFallbackTitle")}
       actions={
         monster ? (
           <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>
@@ -44,8 +46,8 @@ export function MonsterDetailPanel(props: { monsterId: string }) {
       style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
       bodyStyle={{ flex: 1, minHeight: 0, overflow: "auto" }}
     >
-      {busy && <div style={{ color: C.muted }}>Loading…</div>}
-      {error && <div style={{ color: C.red, fontSize: "var(--fs-subtitle)" }}>Error: {error}</div>}
+      {busy && <div style={{ color: C.muted }}>{t("compendiumMonsters.loadingEllipsis")}</div>}
+      {error && <div style={{ color: C.red, fontSize: "var(--fs-subtitle)" }}>{t("compendiumMonsters.errorPrefix", { error })}</div>}
       {!busy && !error && <MonsterStatblock monster={monster} />}
     </Panel>
   );

@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Drawer } from "@/components/overlay/Drawer";
 import { useStore } from "@/store";
@@ -12,9 +13,10 @@ type HostProps = {
 };
 
 function DrawerLoadingFallback(props: { title: string; close: () => void }) {
+  const translateUi = useUiTranslation("dmUi");
   return (
     <Drawer title={props.title} isOpen onClose={props.close}>
-      <div style={{ opacity: 0.7 }}>Loading…</div>
+      <div style={{ opacity: 0.7 }}>{translateUi("Loading…")}</div>
     </Drawer>
   );
 }

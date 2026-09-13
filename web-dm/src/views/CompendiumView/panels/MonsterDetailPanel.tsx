@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 import { Panel } from "@/ui/Panel";
 import { theme } from "@/theme/theme";
@@ -7,6 +8,7 @@ import { MonsterStatblock } from "@/views/CampaignView/monsterPicker/statblock/M
 import { formatCr } from "@/views/CampaignView/monsterPicker/utils";
 
 export function MonsterDetailPanel(props: { monsterId: string }) {
+  const translateUi = useUiTranslation("dmUi");
   const [monster, setMonster] = React.useState<MonsterDetail | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -28,7 +30,7 @@ export function MonsterDetailPanel(props: { monsterId: string }) {
 
   return (
     <Panel
-      title={monster ? monster.name : busy ? "Loading…" : "Monster"}
+      title={monster ? monster.name : busy ? translateUi("Loading…") : translateUi("Monster")}
       actions={
         monster ? (
           <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
@@ -39,10 +41,10 @@ export function MonsterDetailPanel(props: { monsterId: string }) {
       style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
       bodyStyle={{ flex: 1, minHeight: 0, overflow: "auto" }}
     >
-      {busy && <div style={{ color: theme.colors.muted }}>Loading…</div>}
+      {busy && <div style={{ color: theme.colors.muted }}>{translateUi("Loading…")}</div>}
 
       {error && (
-        <div style={{ color: theme.colors.red, fontSize: "var(--fs-subtitle)" }}>Error: {error}</div>
+        <div style={{ color: theme.colors.red, fontSize: "var(--fs-subtitle)" }}>{translateUi("Error:")} {error}</div>
       )}
 
       {!busy && !error && (

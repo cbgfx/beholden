@@ -1,3 +1,5 @@
+import { translateUi } from "@/i18n";
+import { UiText } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { C, withAlpha } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
@@ -177,7 +179,7 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
             {prof && prof.skills.choose > 0 && (
               <div>
                 <div style={{ marginBottom: 8 }}>
-                  <span style={{ ...labelStyle, display: "inline", margin: 0 }}>Skill Proficiencies </span>
+                  <span style={{ ...labelStyle, display: "inline", margin: 0 }}>{<UiText text={"Skill Proficiencies"} namespace="playerUi" />} </span>
                   <SourceTag value={bgDetail.name} />
                   <span style={{ marginLeft: 8, fontSize: "var(--fs-small)", color: form.chosenBgSkills.length >= prof.skills.choose ? C.accentHl : C.muted }}>
                     {form.chosenBgSkills.length} / {prof.skills.choose}
@@ -216,7 +218,7 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
             {prof && prof.feats.length > 0 && prof.featChoice === 0 && (
               <div>
                 <div style={{ marginBottom: 8 }}>
-                  <span style={{ ...labelStyle, display: "inline", margin: 0 }}>Feat </span>
+                  <span style={{ ...labelStyle, display: "inline", margin: 0 }}>{<UiText text={"Feat"} namespace="playerUi" />} </span>
                   <SourceTag value={bgDetail.name} />
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -230,14 +232,14 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
             {prof && prof.featChoice > 0 && (
               <div>
                 <div style={{ marginBottom: 8 }}>
-                  <span style={{ ...labelStyle, display: "inline", margin: 0 }}>Origin Feat </span>
+                  <span style={{ ...labelStyle, display: "inline", margin: 0 }}>{<UiText text={"Origin Feat"} namespace="playerUi" />} </span>
                   <SourceTag value={bgDetail.name} />
                 </div>
                 <input
                   type="text"
                   value={bgOriginFeatSearch}
                   onChange={(e) => setBgOriginFeatSearch(e.target.value)}
-                  placeholder="Search origin feats..."
+                  placeholder={translateUi("Search origin feats...")}
                   style={{ ...inputStyle, width: "100%", marginBottom: 8 }}
                 />
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 180, overflowY: "auto" }}>
@@ -277,7 +279,7 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
             {(tools.fixed.length > 0 || tools.choose > 0) && (
               <div>
                 <div style={{ marginBottom: 8 }}>
-                  <span style={{ ...labelStyle, display: "inline", margin: 0 }}>Tools </span>
+                  <span style={{ ...labelStyle, display: "inline", margin: 0 }}>{<UiText text={"Tools"} namespace="playerUi" />} </span>
                   <SourceTag value={bgDetail.name} />
                 </div>
                 {tools.fixed.length > 0 && (
@@ -290,7 +292,7 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                 {tools.choose > 0 && (
                   <>
                     <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 6 }}>
-                      Choose {tools.choose} ({form.chosenBgTools.length}/{tools.choose})
+                      {<UiText text={"Choose"} namespace="playerUi" />} {tools.choose} ({form.chosenBgTools.length}/{tools.choose})
                     </div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                       {(tools.from ?? ALL_TOOLS).map((tool) => {
@@ -317,7 +319,7 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
             {(languages.fixed.length > 0 || languages.choose > 0) && (
               <div>
                 <div style={{ marginBottom: 8 }}>
-                  <span style={{ ...labelStyle, display: "inline", margin: 0 }}>Languages </span>
+                  <span style={{ ...labelStyle, display: "inline", margin: 0 }}>{<UiText text={"Languages"} namespace="playerUi" />} </span>
                   <SourceTag value={bgDetail.name} />
                 </div>
                 {languages.fixed.length > 0 && (
@@ -330,7 +332,7 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                 {languages.choose > 0 && (
                   <>
                     <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 6 }}>
-                      Choose {languages.choose} ({form.chosenBgLanguages.length}/{languages.choose})
+                      {<UiText text={"Choose"} namespace="playerUi" />} {languages.choose} ({form.chosenBgLanguages.length}/{languages.choose})
                     </div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                       {(languages.from ?? ALL_LANGUAGES).map((language) => {
@@ -344,7 +346,7 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                             key={language}
                             type="button"
                             disabled={locked}
-                            title={alreadyKnown ? "Already known from species" : undefined}
+                            title={alreadyKnown ? translateUi("Already known from species") : undefined}
                             onClick={() => toggleBgChoice(language, "chosenBgLanguages", languages.choose)}
                             style={choiceButtonStyle(selected, locked)}
                           >
@@ -398,7 +400,7 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
               return (
                 <div>
                   <div style={{ marginBottom: 8 }}>
-                    <span style={{ ...labelStyle, display: "inline", margin: 0 }}>Ability Scores </span>
+                    <span style={{ ...labelStyle, display: "inline", margin: 0 }}>{<UiText text={"Ability Scores"} namespace="playerUi" />} </span>
                     <SourceTag value={bgDetail.name} />
                   </div>
                   <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
@@ -425,13 +427,13 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                   <div style={{ color: C.muted, fontSize: "var(--fs-small)", marginBottom: 8 }}>
                     {mode === "split"
                       ? splitDone
-                        ? "All bonuses assigned"
+                        ? <UiText text={"All bonuses assigned"} namespace="playerUi" />
                         : !Object.values(bonuses).includes(2)
-                          ? "Click to assign +2"
-                          : "Click another for +1"
+                          ? <UiText text={"Click to assign +2"} namespace="playerUi" />
+                          : <UiText text={"Click another for +1"} namespace="playerUi" />
                       : evenDone
-                        ? "All bonuses assigned"
-                        : `Click abilities to assign +1 (${Object.keys(bonuses).length}/${evenTarget})`}
+                        ? <UiText text={"All bonuses assigned"} namespace="playerUi" />
+                        : translateUi("Click abilities to assign +1 ({{value1}}/{{value2}})", { value1: Object.keys(bonuses).length, value2: evenTarget })}
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                     {prof.abilityScores.map((abilityName) => {
@@ -471,7 +473,7 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
             {bgDetail.equipment && equipOptions.length > 0 && (
               <div>
                 <div style={{ marginBottom: 8 }}>
-                  <span style={{ ...labelStyle, display: "inline", margin: 0 }}>Starting Equipment </span>
+                  <span style={{ ...labelStyle, display: "inline", margin: 0 }}>{<UiText text={"Starting Equipment"} namespace="playerUi" />} </span>
                   <SourceTag value={bgDetail.name} />
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -493,7 +495,7 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                           color: selected ? C.accentHl : C.text,
                         }}
                       >
-                        Option {option.id}
+                        {<UiText text={"Option"} namespace="playerUi" />} {option.id}
                       </button>
                     );
                   })}
@@ -512,7 +514,7 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                         }}
                       >
                         <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, color: selected ? C.accentHl : C.text, marginBottom: 4 }}>
-                          Option {option.id}
+                          {<UiText text={"Option"} namespace="playerUi" />} {option.id}
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                           {option.entries.map((entry, index) => (
@@ -524,7 +526,7 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                         {selected && option.structuredEntries?.filter((entry) => entry.kind === "itemChoice").map((entry) => (
                           <div key={entry.choiceKey} style={{ marginTop: 10 }}>
                             <div style={{ color: C.text, fontSize: "var(--fs-small)", fontWeight: 700, marginBottom: 6 }}>
-                              Choose {entry.sourceLabel}
+                              {<UiText text={"Choose"} namespace="playerUi" />} {entry.sourceLabel}
                             </div>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                               {entry.itemIds.map((itemId) => {
@@ -553,7 +555,7 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                 </div>
                 {form.chosenBgEquipmentOption && (
                   <div style={{ color: C.accentHl, fontSize: "var(--fs-small)", marginTop: 8 }}>
-                    Inventory will start with option {form.chosenBgEquipmentOption}.
+                    {<UiText text={"Inventory will start with option"} namespace="playerUi" />} {form.chosenBgEquipmentOption}.
                   </div>
                 )}
               </div>
@@ -578,13 +580,13 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
 
             {(skills.fixed.length > 0 || skills.choose > 0) && (
               <div style={{ marginBottom: 10 }}>
-                <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>Skills </span>
+                <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>{<UiText text={"Skills"} namespace="playerUi" />} </span>
                 <SourceTag value={bgDetail.name} />
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5 }}>
                   {skills.fixed.map((skill) => <span key={skill} style={profChipStyle}>{skill}</span>)}
                   {skills.choose > 0 && (
                     <span style={{ ...profChipStyle, fontStyle: "italic", opacity: 0.7 }}>
-                      Choose {skills.choose} skill{skills.choose > 1 ? "s" : ""}
+                      {<UiText text={"Choose"} namespace="playerUi" />} {skills.choose} {<UiText text={"skill"} namespace="playerUi" />}{skills.choose > 1 ? "s" : ""}
                     </span>
                   )}
                 </div>
@@ -593,7 +595,7 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
 
             {languages.fixed.length > 0 && (
               <div style={{ marginBottom: 10 }}>
-                <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>Languages </span>
+                <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>{<UiText text={"Languages"} namespace="playerUi" />} </span>
                 <SourceTag value={bgDetail.name} />
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5 }}>
                   {languages.fixed.map((language) => <span key={language} style={profChipStyle}>{language}</span>)}
@@ -603,7 +605,7 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
 
             {((prof?.feats && prof.feats.length > 0) || (prof?.featChoice ?? 0) > 0) && (
               <div style={{ marginBottom: 10 }}>
-                <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>Feat </span>
+                <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>{<UiText text={"Feat"} namespace="playerUi" />} </span>
                 <SourceTag value={bgDetail.name} />
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5 }}>
                   {prof?.feats.map((feat) => (
@@ -615,7 +617,7 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
                     </span>
                   ))}
                   {(prof?.featChoice ?? 0) > 0 && (
-                    <span style={{ ...profChipStyle, fontStyle: "italic", opacity: 0.7 }}>Choose 1 origin feat</span>
+                    <span style={{ ...profChipStyle, fontStyle: "italic", opacity: 0.7 }}>{<UiText text={"Choose 1 origin feat"} namespace="playerUi" />}</span>
                   )}
                 </div>
               </div>
@@ -623,12 +625,12 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
 
             {bgDetail.equipment && (
               <div style={{ marginBottom: 10 }}>
-                <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>Equipment </span>
+                <span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 600 }}>{<UiText text={"Equipment"} namespace="playerUi" />} </span>
                 {equipmentOptions.length > 0 ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 5 }}>
                     {equipmentOptions.map((option) => (
                       <div key={`bg-side-eq-${option.id}`} style={{ borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.03)", padding: "6px 8px" }}>
-                        <div style={{ color: C.text, fontSize: "var(--fs-small)", fontWeight: 700, marginBottom: 3 }}>Option {option.id}</div>
+                        <div style={{ color: C.text, fontSize: "var(--fs-small)", fontWeight: 700, marginBottom: 3 }}>{<UiText text={"Option"} namespace="playerUi" />} {option.id}</div>
                         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                           {option.entries.map((entry, index) => (
                             <div key={`bg-side-eq-${option.id}-${index}`} style={{ color: C.muted, fontSize: "var(--fs-small)", lineHeight: 1.4 }}>
@@ -660,12 +662,12 @@ function renderBackgroundStep<TForm extends BackgroundFormLike>(args: {
         );
       })()
     : (
-      <div style={{ color: C.muted, fontSize: "var(--fs-subtitle)", padding: "12px 0" }}>Select a background to see its details.</div>
+      <div style={{ color: C.muted, fontSize: "var(--fs-subtitle)", padding: "12px 0" }}>{<UiText text={"Select a background to see its details."} namespace="playerUi" />}</div>
     );
 
   const main = (
     <div>
-      <h2 style={headingStyle}>Choose a Background</h2>
+      <h2 style={headingStyle}>{<UiText text={"Choose a Background"} namespace="playerUi" />}</h2>
       <CharacterCreatorCatalogPicker entries={availableBackgrounds} filteredEntries={filteredBackgrounds}
         search={bgSearch} setSearch={setBgSearch} selectedId={form.bgId} select={selectBackground}
         emptyLabel="No backgrounds found in compendium." searchPlaceholder="Search backgrounds..." />

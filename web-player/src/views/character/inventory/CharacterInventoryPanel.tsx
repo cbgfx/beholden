@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
 import { C } from "@/lib/theme";
 import { IconKnapsack } from "@/icons";
@@ -70,6 +71,7 @@ export function InventoryPanel({
     opts?: { expectedInventoryRev?: string },
   ) => Promise<unknown>;
 }) {
+  const { t } = useTranslation();
   const [selectedStashItem, setSelectedStashItem] = useState<PartyStashItem | null>(null);
   const sync = useCharacterInventorySync({
     inventoryRev,
@@ -101,7 +103,7 @@ export function InventoryPanel({
   const runRow = <A extends unknown[]>(fn: (...args: A) => unknown) => (...args: A): Promise<void> => {
     setRowError(null);
     return Promise.resolve(fn(...args)).then(() => undefined).catch((cause) => {
-      setRowError(cause instanceof Error ? cause.message : "That inventory change didn't save. Try again.");
+      setRowError(cause instanceof Error ? cause.message : t("characterInventoryPanel.rowSaveError"));
     });
   };
   const rowActions = {
@@ -121,17 +123,18 @@ export function InventoryPanel({
   const hasPactBlade = resolvePactBoonFromChosenOptionals(charData?.chosenOptionals) === "blade";
 
   const stashWeight = sync.partyStashItems.reduce((sum, item) => sum + (item.weight ?? 0) * item.quantity, 0);
+  const weightUnit = t("units.lb", { ns: "shared" });
   const stashWeightLabel = partyCapacityLbs !== null
-    ? `${formatWeight(stashWeight)} / ${formatWeight(partyCapacityLbs)} lb`
-    : `${formatWeight(stashWeight)} lb`;
+    ? t("characterInventoryPanel.stashWeightWithCapacity", { weight: formatWeight(stashWeight), capacity: formatWeight(partyCapacityLbs), unit: weightUnit })
+    : t("characterInventoryPanel.stashWeightOnly", { weight: formatWeight(stashWeight), unit: weightUnit });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <CollapsiblePanel
-        title={<>Inventory{sync.saving && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginLeft: 6, fontWeight: 400, textTransform: "none" }}>saving…</span>}</>}
+        title={<>{t("characterInventoryPanel.title")}{sync.saving && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginLeft: 6, fontWeight: 400, textTransform: "none" }}>{t("characterInventoryPanel.saving")}</span>}</>}
         color={accentColor}
         storageKey={PANEL_IDS.inventory}
-        summary={`${sync.items.length} items · ${Math.round(derived.carriedWeight * 10) / 10} / ${derived.carryCapacity} lb`}
+        summary={t("characterInventoryPanel.summaryLine", { count: sync.items.length, carried: Math.round(derived.carriedWeight * 10) / 10, capacity: derived.carryCapacity, unit: weightUnit })}
       >
         {sync.conflict || rowError ? (
           <div role="alert" style={{ color: C.red, fontSize: "var(--fs-small)", padding: "0 2px 10px", marginBottom: 10, borderBottom: `1px solid ${C.panelBorder}` }}>
@@ -152,11 +155,11 @@ export function InventoryPanel({
             type="button"
             variant="primary"
             onClick={() => sync.setPickerOpen(true)}
-            title="Add item"
+            title={t("characterInventoryPanel.addItemTitle")}
             style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 30, padding: "0 10px", fontSize: "var(--fs-small)" }}
           >
             <span aria-hidden="true" style={{ fontSize: "var(--fs-title)" }}>+</span>
-            Item
+            {t("characterInventoryPanel.addItemButtonLabel")}
           </Button>
         </div>
 
@@ -171,7 +174,7 @@ export function InventoryPanel({
 
         {derived.equipped.length > 0 && (
           <div style={{ marginBottom: 10 }}>
-            <div style={subLabelStyle}>Equipped</div>
+            <div style={subLabelStyle}>{t("characterInventoryPanel.equippedLabel")}</div>
             <DraggableList
               items={derived.equipped.map((item) => ({ id: item.id }))}
               onReorder={(ids) => rowActions.reorderItemsByIds(ids, (item: InventoryItem) => getEquipState(item) !== "backpack")}
@@ -218,7 +221,7 @@ export function InventoryPanel({
               onToggleCollapsed={() => itemActions.toggleContainerCollapsed(container.id)}
               onNameChange={(name) => sync.setContainers((previous) => previous.map((entry) => entry.id === container.id ? { ...entry, name } : entry))}
               onRename={(name) => containerActions.renameContainer(container.id, name)}
-              onResetName={() => sync.setContainers(normalizeContainers(charData?.inventoryContainers ?? sync.containers))}
+              onResetName={() => sync.setContainers(normalizeContainers(charData?.inventoryContainers ?? sync.containers, undefined, { backpack: t("characterInventoryPanel.defaultContainerName"), container: t("characterInventoryPanel.genericContainerName") }))}
               onToggleIgnoreWeight={() => containerActions.toggleContainerIgnoreWeight(container.id)}
               onRemove={!isDefault ? () => containerActions.removeContainer(container.id) : undefined}
               onReorder={(ids) => rowActions.reorderItemsByIds(ids, (item: InventoryItem) => {
@@ -250,7 +253,7 @@ export function InventoryPanel({
           <InventoryItemDrawer
             item={derived.selectedItem}
             containers={campaignId
-              ? [...sync.containers, { id: PARTY_STASH_CONTAINER_ID, name: "Party Stash", ignoreWeight: true }]
+              ? [...sync.containers, { id: PARTY_STASH_CONTAINER_ID, name: t("characterInventoryPanel.partyStashTitle"), ignoreWeight: true }]
               : sync.containers}
             detail={sync.expandedDetail}
             busy={sync.expandedBusy}
@@ -273,7 +276,7 @@ export function InventoryPanel({
 
       {campaignId && (
         <CollapsiblePanel
-          title="Party Stash"
+          title={t("characterInventoryPanel.partyStashTitle")}
           color={accentColor}
           storageKey="party-stash"
           summary={stashWeightLabel}
@@ -314,7 +317,7 @@ export function InventoryPanel({
               editMode={false}
               canDesignatePactWeapon={false}
               readOnly
-              subtitle="Shared party item. Take it to move it into your character inventory."
+              subtitle={t("characterInventoryPanel.partyStashItemSubtitle")}
               showContainerControl={false}
               onStartEdit={() => {}}
               onCancelEdit={() => {}}

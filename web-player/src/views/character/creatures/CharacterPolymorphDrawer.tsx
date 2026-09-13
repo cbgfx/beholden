@@ -1,3 +1,4 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C } from "@/lib/theme";
 import { formatCr } from "@/lib/monsterPicker/utils";
 import type { CompendiumMonsterRow } from "@/lib/monsterPicker/types";
@@ -21,6 +22,7 @@ export function CharacterPolymorphDrawer(props: {
   onCrMaxChange: (value: string) => void;
   onApply: (row: CompendiumMonsterRow) => void | Promise<void>;
 }) {
+  const translateUi = useUiTranslation("playerUi");
   if (!props.open) return null;
   return (
     <RightDrawer
@@ -29,20 +31,20 @@ export function CharacterPolymorphDrawer(props: {
       title={(
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontWeight: 900, fontSize: "var(--fs-subtitle)", letterSpacing: "0.08em", textTransform: "uppercase", color: props.accentColor }}>
-            Transform Self
+            {translateUi("Transform Self")}
           </span>
         </div>
       )}
     >
       <div style={{ display: "grid", gap: 12 }}>
         <div style={{ color: C.muted, fontSize: "var(--fs-small)", lineHeight: 1.5 }}>
-          Choose a creature form to polymorph into. Your current HP and AC bonuses are snapshotted, the form HP becomes your active pool, and if the form drops to 0 HP any overflow carries back into your original HP.
+          {translateUi("Choose a creature form to polymorph into. Your current HP and AC bonuses are snapshotted, the form HP becomes your active pool, and if the form drops to 0 HP any overflow carries back into your original HP.")}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr", gap: 8 }}>
           <input
             value={props.polymorphQuery}
             onChange={(e) => props.onQueryChange(e.target.value)}
-            placeholder="Search creatures..."
+            placeholder={translateUi("Search creatures...")}
             style={{
               background: C.bg,
               color: C.text,
@@ -71,14 +73,14 @@ export function CharacterPolymorphDrawer(props: {
           >
             {props.polymorphTypeOptions.map((type) => (
               <option key={type} value={type}>
-                {type === "all" ? "All types" : formatMonsterTypeLabel(type)}
+                {type === "all" ? translateUi("All types") : formatMonsterTypeLabel(type)}
               </option>
             ))}
           </select>
           <input
             value={props.polymorphCrMax}
             onChange={(e) => props.onCrMaxChange(e.target.value)}
-            placeholder="CR max"
+            placeholder={translateUi("CR max")}
             style={{
               background: C.bg,
               color: C.text,
@@ -93,14 +95,14 @@ export function CharacterPolymorphDrawer(props: {
           />
         </div>
         <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>
-          {props.polymorphRowsBusy ? "Loading creatures..." : `${props.filteredPolymorphRows.length} creature${props.filteredPolymorphRows.length === 1 ? "" : "s"}`}
+          {props.polymorphRowsBusy ? translateUi("Loading creatures...") : translateUi("{{value1}} creature{{value2}}", { value1: props.filteredPolymorphRows.length, value2: props.filteredPolymorphRows.length === 1 ? "" : "s" })}
         </div>
         <div style={{ maxHeight: 420, overflowY: "auto", border: `1px solid ${C.panelBorder}`, borderRadius: 12 }}>
           {props.polymorphRowsError ? (
             <div style={{ padding: 12, color: C.red, fontSize: "var(--fs-small)" }}>{props.polymorphRowsError}</div>
           ) : null}
           {!props.polymorphRowsBusy && !props.polymorphRowsError && props.filteredPolymorphRows.length === 0 ? (
-            <div style={{ padding: 12, color: C.muted, fontSize: "var(--fs-small)" }}>No creatures match the current filters.</div>
+            <div style={{ padding: 12, color: C.muted, fontSize: "var(--fs-small)" }}>{translateUi("No creatures match the current filters.")}</div>
           ) : null}
           {props.filteredPolymorphRows.map((row) => (
             <button
@@ -131,10 +133,10 @@ export function CharacterPolymorphDrawer(props: {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
                 <span style={{ color: props.accentColor, fontSize: "var(--fs-small)", fontWeight: 800 }}>
-                  CR {formatCr(row.cr)}
+                  {translateUi("CR")} {formatCr(row.cr)}
                 </span>
                 <span style={{ color: props.polymorphApplyingId === row.id ? C.muted : props.accentColor, fontSize: "var(--fs-small)", fontWeight: 900, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                  {props.polymorphApplyingId === row.id ? "Applying..." : "Transform"}
+                  {props.polymorphApplyingId === row.id ? translateUi("Applying...") : translateUi("Transform")}
                 </span>
               </div>
             </button>
