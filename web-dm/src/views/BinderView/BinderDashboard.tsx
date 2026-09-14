@@ -1,3 +1,4 @@
+import { DmWorkspace } from "@/layout/workspace/DmWorkspace";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { Link } from "react-router-dom";
 import { fetchBinderDashboard, type BinderDashboard } from "@/services/binderApi";
@@ -8,7 +9,7 @@ const TYPE_LABELS: Record<string, string> = { mortal: "Mortals", deity: "Deities
 const SECTIONS: Record<string, string> = { mortal: "mortals", deity: "deities", organization: "organizations", continent: "continents", country: "countries", location: "locations", poi: "points-of-interest", item: "items", event: "events", race: "races", position: "positions", domain: "domains" };
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
-  return <section style={{ padding: 15, border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, background: theme.colors.panelBg }}><h2 style={{ margin: "0 0 11px", fontSize: "var(--fs-title)" }}>{title}</h2>{children}</section>;
+  return <section style={{ padding: 15, border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, background: theme.colors.panelBg }}><h2 style={{ margin: "0 0 11px", fontSize: "var(--fs-title)", color: "var(--dm-panel-accent, currentColor)" }}>{title}</h2>{children}</section>;
 }
 function RecordLinks({ rows }: { rows: Array<{ id: string; name: string; type?: string; route: string }> }) {
   const translateUi = useUiTranslation("dmUi");
@@ -25,11 +26,9 @@ export function BinderDashboardView({ binderId, accent, canEdit }: { binderId: s
       {data.counts.map((entry) => <Link key={entry.type} to={`/binder/${binderId}/${SECTIONS[entry.type] ?? entry.type}`} style={{ padding: 13, border: `1px solid ${withAlpha(accent,.25)}`, borderRadius: 10, background: withAlpha(accent,.06), color: theme.colors.text, textDecoration: "none" }}><div style={{ color: theme.colors.muted }}>{TYPE_LABELS[entry.type] ?? entry.type}</div><strong style={{ fontSize: 24 }}>{entry.count}</strong></Link>)}
     </div>
     {canEdit ? <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{["mortals","events","items","organizations"].map((section) => <Link key={section} to={`/binder/${binderId}/${section}`} style={{ padding: "8px 11px", borderRadius: 8, background: withAlpha(accent,.12), color: accent, textDecoration: "none", fontWeight: 750 }}>+ {section}</Link>)}</div> : null}
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 14 }}>
-      <Panel title={translateUi("Recent edits")}><RecordLinks rows={data.recent} /></Panel>
-      <Panel title={translateUi("Near the current date")}><RecordLinks rows={data.nearbyEvents.map((row) => ({ ...row, name: `${row.dateText ?? "Undated"} — ${row.name}` }))} /></Panel>
-      <Panel title={translateUi("Needs description ({{value1}})", { value1: data.incomplete.length })}><RecordLinks rows={data.incomplete} /></Panel>
-      <Panel title={translateUi("Review queue")}><div style={{ display: "grid", gap: 8 }}><Link to={`/binder/${binderId}/mortals`} style={{ color: theme.colors.text }}>{data.unlinkedNpcCount} {translateUi("Binder NPCs unused in campaigns")}</Link><Link to={`/binder/${binderId}/events`} style={{ color: theme.colors.text }}>{data.undatedEventCount} {translateUi("undated Events")}</Link></div></Panel>
-    </div>
+    <DmWorkspace workspace="binder-dashboard" defaultColumns={2} panels={[{id:"binder-0",title:"Recent edits",column:0,content:(<Panel title={translateUi("Recent edits")}><RecordLinks rows={data.recent} /></Panel>)},
+{id:"binder-1",title:"Near the current date",column:1,content:(<Panel title={translateUi("Near the current date")}><RecordLinks rows={data.nearbyEvents.map((row) => ({ ...row, name: `${row.dateText ?? "Undated"} — ${row.name}` }))} /></Panel>)},
+{id:"binder-2",title:"Needs description",column:0,content:(<Panel title={translateUi("Needs description ({{value1}})", { value1: data.incomplete.length })}><RecordLinks rows={data.incomplete} /></Panel>)},
+{id:"binder-3",title:"Review queue",column:1,content:(<Panel title={translateUi("Review queue")}><div style={{ display: "grid", gap: 8 }}><Link to={`/binder/${binderId}/mortals`} style={{ color: theme.colors.text }}>{data.unlinkedNpcCount} {translateUi("Binder NPCs unused in campaigns")}</Link><Link to={`/binder/${binderId}/events`} style={{ color: theme.colors.text }}>{data.undatedEventCount} {translateUi("undated Events")}</Link></div></Panel>)}]} />
   </div>;
 }

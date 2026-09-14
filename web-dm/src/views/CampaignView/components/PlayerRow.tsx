@@ -88,6 +88,9 @@ export function PlayerRow(props: {
       className={variant === "campaign" ? "campaignInteractiveRow" : undefined}
       style={{
         ...rowStyle,
+        minWidth: 0,
+        maxWidth: "100%",
+        boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
         gap: 6,
@@ -107,7 +110,7 @@ export function PlayerRow(props: {
     >
 
       {/* Top row: avatar · name/meta · stats · actions */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
 
         {/* Avatar */}
         <div style={{
@@ -124,7 +127,7 @@ export function PlayerRow(props: {
         </div>
 
         {/* Name + meta */}
-        <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+        <div title={`${p.characterName}${p.playerName ? ` (${p.playerName})` : ""}`} style={{ flex: "1 1 0", minWidth: 0 }}>
           <div style={{
             fontWeight: 900, fontSize: "var(--fs-large)",
             color: isDead ? theme.colors.muted : theme.colors.text,
@@ -147,7 +150,7 @@ export function PlayerRow(props: {
         </div>
 
         {/* AC + HP */}
-        <div style={{ flex: "0 1 auto", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginLeft: "auto" }}>
+        <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
             <IconShield size={12} style={{ opacity: 0.55, color: theme.colors.muted }} />
             <span style={{ fontWeight: 900, fontSize: "var(--fs-medium)", color: theme.colors.text, fontVariantNumeric: "tabular-nums" }}>

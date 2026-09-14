@@ -1,5 +1,5 @@
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
-import { Fragment, useCallback, useEffect, useMemo, useRef } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { C } from "@/lib/theme";
 import {
   PinnedVitalsBox,
@@ -10,7 +10,7 @@ import {
   buildSupportColumnPanels,
   type CharacterPanelRegistry,
 } from "@/views/character/CharacterViewColumns";
-import { MOVABLE_PANEL_IDS, PANEL_IDS, type PanelId, type SheetViewDef } from "@/views/character/layout/panelRegistry";
+import { MOVABLE_PANEL_IDS, PANEL_IDS, type PanelColorSettings, type PanelId, type SheetViewDef } from "@/views/character/layout/panelRegistry";
 import { DEFAULT_SHEET_VIEWS } from "@/views/character/layout/defaultSheetViews";
 import { CharacterSheetHeader } from "@/views/character/CharacterSheetHeader";
 import { abilityMod, formatModifier } from "@/views/character/CharacterSheetUtils";
@@ -26,7 +26,13 @@ import { cloneSheetView, MAX_SHEET_COLUMNS, MIN_SHEET_COLUMNS } from "@/views/ch
 import { useCharacterSheetViews } from "@/views/character/layout/useCharacterSheetViews";
 import type { CharacterViewModel } from "@/views/character/CharacterViewModel";
 import { CharacterLayoutEditorToolbar } from "@/views/character/layout/CharacterLayoutEditorToolbar";
-import { appearanceCssVariables, backgroundPatternImage, normalizeAppearance } from "@/views/character/characterAppearance";
+import {
+  appearanceCssVariables,
+  backgroundPatternImage,
+  DEFAULT_PANEL_BACKGROUND_COLOR,
+  DEFAULT_TEXT_COLOR,
+  normalizeAppearance,
+} from "@/views/character/characterAppearance";
 
 /** Combat (Play) and All can never be deleted, even when other views exist --
  * every other built-in or custom view can be. */
@@ -40,10 +46,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
     handleRemoveExtraFeat,
   } = model;
   const currentData = derived.currentCharacterData;
-  // While the Theme drawer is open, preview the unsaved draft directly on the
-  // sheet -- picking colors blind (no feedback until Save) made it impossible
-  // to tell whether a choice "took" at all.
-  const appearance = ui.themeDrawerOpen ? normalizeAppearance(ui.appearanceDraft) : normalizeAppearance(currentData.appearance);
+  const appearance = normalizeAppearance(ui.appearanceDraft);
   const exhaustionPenalty = getExhaustionD20Penalty(char.ruleset, currentData.exhaustion ?? 0);
   const identityLabels = [
     ...(derived.classPresentation.length
@@ -69,6 +72,8 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
   const isProtectedView = PROTECTED_VIEW_IDS.has(activeView.id);
   const canDeleteActiveView = sheetViews.length > 1 && !isProtectedView;
   const canResetActiveView = DEFAULT_SHEET_VIEWS.some((view) => view.id === activeView.id);
+  const [colorsOpen, setColorsOpen] = useState(false);
+  const [colorTarget, setColorTarget] = useState<PanelId | "all">("all");
 
   const inCombat = live.combatStatus !== null;
   const isMyTurn = live.combatStatus !== null && live.combatStatus.activeCombatantId === live.combatStatus.combatantId;
@@ -216,6 +221,8 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
   const supportPanels = buildSupportColumnPanels({
     recoveryProps: {
       accentColor: derived.accentColor,
+      inspirationActive: derived.overrides.inspiration ?? false,
+      onToggleInspiration: runtime.handleToggleInspiration,
       hitDiceCurrent: derived.hitDiceCurrent,
       hitDiceMax: derived.hitDiceMax,
       hitDieSize: derived.hitDieSize,
@@ -320,6 +327,53 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
   const persistActiveView = (updater: (view: SheetViewDef) => SheetViewDef) => {
     updateViews((views) => views.map((view) => (view.id === activeView.id ? updater(view) : view)));
   };
+  const panelStyle = (id: PanelId): React.CSSProperties => {
+    const colors = activeView.panelColors?.[id];
+    return {
+      ...(colors?.accent ? { "--character-panel-accent": colors.accent } : {}),
+      ...(colors?.background ? { "--character-panel-bg": colors.background } : {}),
+      ...(colors?.text ? { "--character-text-color": colors.text, color: colors.text } : {}),
+    } as React.CSSProperties;
+  };
+  const selectedPanelColors = colorTarget === "all" ? undefined : activeView.panelColors?.[colorTarget];
+  const displayedColors: Required<PanelColorSettings> = {
+    accent: selectedPanelColors?.accent ?? derived.accentColor,
+    background: selectedPanelColors?.background ?? appearance.panelBackgroundColor,
+    text: selectedPanelColors?.text ?? appearance.textColor,
+  };
+  const changeColor = (key: keyof PanelColorSettings, value: string) => {
+    if (colorTarget !== "all") {
+      persistActiveView((view) => ({ ...view, panelColors: { ...(view.panelColors ?? {}), [colorTarget]: { ...(view.panelColors?.[colorTarget] ?? {}), [key]: value } } }));
+      return;
+    }
+    if (key === "accent") {
+      ui.setColorDraft(value);
+      void notes.saveThemeColor(value);
+    } else {
+      const next = { ...ui.appearanceDraft, [key === "background" ? "panelBackgroundColor" : "textColor"]: value };
+      ui.setAppearanceDraft(next);
+      void notes.saveCharacterData({ appearance: next });
+    }
+  };
+  const resetColors = () => {
+    if (colorTarget === "all") {
+      const next = {
+        ...ui.appearanceDraft,
+        panelBackgroundColor: DEFAULT_PANEL_BACKGROUND_COLOR,
+        textColor: DEFAULT_TEXT_COLOR,
+      };
+      ui.setColorDraft(C.accentHl);
+      ui.setAppearanceDraft(next);
+      void notes.saveThemeColor(C.accentHl);
+      void notes.saveCharacterData({ appearance: next });
+      return;
+    }
+    persistActiveView((view) => {
+      const panelColors = { ...(view.panelColors ?? {}) };
+      delete panelColors[colorTarget];
+      return { ...view, panelColors };
+    });
+  };
 
   // A saved layout can reference an id that isn't currently buildable (e.g.
   // `shared-notes` when the character has no campaign) -- drop those rather
@@ -384,7 +438,6 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
         portraitUploading={ui.portraitUploading}
         onSelectPortrait={() => ui.portraitFileRef.current?.click()}
         onOpenInfo={() => ui.setInfoDrawerOpen(true)}
-        onOpenTheme={() => ui.setThemeDrawerOpen(true)}
         onOpenEngagedEnemies={() => ui.setEngagedEnemiesDrawerOpen(true)}
         showEngagedEnemies={inCombat}
         inCombat={inCombat}
@@ -418,6 +471,13 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
           onReset={handleResetView}
           onDuplicate={handleDuplicateActiveView}
           onDelete={handleDeleteActiveView}
+          colorsOpen={colorsOpen}
+          colorTarget={colorTarget}
+          globalColors={displayedColors}
+          onToggleColors={() => setColorsOpen((value) => !value)}
+          onColorTargetChange={setColorTarget}
+          onColorChange={changeColor}
+          onResetColors={resetColors}
         />
       )}
 
@@ -454,7 +514,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
             }}
           >
             {columnIndex === 0 && (
-              <PinnedVitalsBox
+              <div style={panelStyle(PANEL_IDS.combatStats)}><PinnedVitalsBox
                 combatProps={combatProps}
                 hudProps={{
                   char,
@@ -471,8 +531,6 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
                   setLastRoll: ui.setLastRoll,
                   setHpAmount: ui.setHpAmount,
                   handleApplyHp: hpActions.handleApplyHp,
-                  inspirationActive: derived.overrides.inspiration ?? false,
-                  handleToggleInspiration: runtime.handleToggleInspiration,
                   condPickerOpen: ui.condPickerOpen,
                   setCondPickerOpen: ui.setCondPickerOpen,
                   condSaving: ui.condSaving,
@@ -488,7 +546,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
                   ])).sort((a, b) => a.localeCompare(b)),
                   hasRageResource: derived.classResourcesWithSpellCasts.some((resource) => /^rage$/i.test(resource.name)),
                 }}
-              />
+              /></div>
             )}
             {columnIndex === 0 && showPinnedPolymorphForm && (
               <PolymorphedFormPanel polymorphMonsterState={polymorphMonsterState} />
@@ -501,8 +559,9 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
                     dragging={drag.dragId === id}
                     rowRef={drag.registerRow(zoneId, id)}
                     onPointerDown={(e) => drag.onHandlePointerDown(e, id)}
+                    onOpenColors={() => { setColorTarget(id); setColorsOpen(true); }}
                   />
-                ) : renderPanel(id)}
+                ) : <div style={panelStyle(id)}>{renderPanel(id)}</div>}
               </Fragment>
             ))}
           </div>
@@ -536,6 +595,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
               dragging={drag.dragId === id}
               rowRef={drag.registerRow(SIDEBAR_ZONE_ID, id)}
               onPointerDown={(e) => drag.onHandlePointerDown(e, id)}
+              onOpenColors={() => { setColorTarget(id); setColorsOpen(true); }}
             />
           ))}
           {(drag.displayZones[SIDEBAR_ZONE_ID] ?? []).length === 0 && (

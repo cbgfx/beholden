@@ -1,5 +1,5 @@
 import { DEFAULT_SHEET_VIEWS } from "@/views/character/layout/defaultSheetViews";
-import { MOVABLE_PANEL_IDS, type PanelId, type SheetViewDef } from "@/views/character/layout/panelRegistry";
+import { MOVABLE_PANEL_IDS, PANEL_IDS, type PanelColorSettings, type PanelId, type SheetViewDef } from "@/views/character/layout/panelRegistry";
 
 export const MIN_SHEET_COLUMNS = 2;
 export const MAX_SHEET_COLUMNS = 5;
@@ -7,7 +7,23 @@ export const MAX_SHEET_COLUMNS = 5;
 const PANEL_ID_SET = new Set<PanelId>(MOVABLE_PANEL_IDS);
 
 export function cloneSheetView(view: SheetViewDef): SheetViewDef {
-  return { ...view, layout: view.layout.map((column) => [...column]) };
+  return { ...view, layout: view.layout.map((column) => [...column]), panelColors: Object.fromEntries(Object.entries(view.panelColors ?? {}).map(([id, colors]) => [id, { ...colors }])) };
+}
+
+function normalizePanelColors(value: unknown): Partial<Record<PanelId, PanelColorSettings>> {
+  if (!value || typeof value !== "object") return {};
+  const allowed = new Set<PanelId>([...MOVABLE_PANEL_IDS, PANEL_IDS.combatStats]);
+  const result: Partial<Record<PanelId, PanelColorSettings>> = {};
+  for (const [id, raw] of Object.entries(value)) {
+    if (!allowed.has(id as PanelId) || !raw || typeof raw !== "object") continue;
+    const colors: PanelColorSettings = {};
+    for (const key of ["accent", "background", "text"] as const) {
+      const color = (raw as PanelColorSettings)[key];
+      if (typeof color === "string" && /^#[0-9a-f]{6}$/i.test(color)) colors[key] = color;
+    }
+    if (Object.keys(colors).length) result[id as PanelId] = colors;
+  }
+  return result;
 }
 
 export function createDefaultSheetViews(): SheetViewDef[] {
@@ -40,6 +56,7 @@ export function normalizeSheetView(view: SheetViewDef): SheetViewDef {
     name: String(view.name ?? "").trim() || "Untitled View",
     columns,
     layout,
+    panelColors: normalizePanelColors(view.panelColors),
   };
 }
 

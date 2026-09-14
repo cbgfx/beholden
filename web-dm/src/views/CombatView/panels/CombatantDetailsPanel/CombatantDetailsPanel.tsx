@@ -148,7 +148,7 @@ export function CombatantDetailsPanel(props: Props) {
         <div style={{ display: "flex", flexDirection: "column", gap: 2, width: "100%", minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
             <span style={{ fontSize: "var(--fs-title)", fontWeight: 900 }}>
-              {roleTitle ? <span style={{ color: panelTitleColor }}>{roleTitle}: </span> : null}
+              {roleTitle ? <span style={{ color: `var(--dm-panel-accent, ${panelTitleColor})` }}>{roleTitle}: </span> : null}
               <span style={{ color: theme.colors.text }}>{titleMain}</span>
             </span>
             {selected ? (

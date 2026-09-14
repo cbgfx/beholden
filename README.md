@@ -30,6 +30,8 @@ Everything runs on a single Node.js server with a local SQLite database. No clou
 - Native JSON monster, item, spell, and rules compendium
 - Treasure and notes per campaign and adventure
 - Real-time sync across all connected clients via WebSocket
+- Saved panel layouts for Campaign, Combat Roster, Combat, and the Binder dashboard
+- Move panels between 1–4 columns and customize their accent, background, and text colours through **Layout & colours**. Duplicate layouts for different tasks, preview changes, then save or cancel. Preferences are saved per account; resetting a layout restores its original arrangement and colours.
 
 **Player App**
 - Character creation and management

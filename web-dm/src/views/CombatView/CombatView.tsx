@@ -1,3 +1,4 @@
+import { DmWorkspace } from "@/layout/workspace/DmWorkspace";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 import { useParams } from "react-router-dom";
@@ -48,10 +49,18 @@ export function CombatView() {
   const [targetId, setTargetId] = React.useState<string | null>(null);
   const [rewardsOpen, setRewardsOpen] = React.useState(false);
 
-  const { encounter, combatants, orderedCombatants, canNavigate, target, playersById, inpcsById } = useCombatViewModel({
+  const {
+    encounter,
+    combatants,
+    orderedCombatants,
+    canNavigate,
+    target,
+    playersById,
+    inpcsById,
+  } = useCombatViewModel({
     encounterId,
     state: state as State,
-    targetId
+    targetId,
   });
 
   const { refresh } = useEncounterCombatants(encounterId, dispatch);
@@ -69,7 +78,10 @@ export function CombatView() {
   } = useServerCombatState(encounterId);
 
   // Stable callbacks so initiative rows can be memoized without thrashing.
-  const handleSelectTarget = React.useCallback((id: string) => setTargetId(id), []);
+  const handleSelectTarget = React.useCallback(
+    (id: string) => setTargetId(id),
+    [],
+  );
 
   const [delta, setDelta] = React.useState<string>("");
   const isNarrow = useIsNarrow();
@@ -109,11 +121,19 @@ export function CombatView() {
     });
   }, [combatants, setTargetId]);
 
-  const { monsterCache, setMonsterCache, monsterCrById, activeMonster, targetMonster, ensureMonster, resolveMonsterId } = useMonsterDetailsCache(
+  const {
+    monsterCache,
+    setMonsterCache,
+    monsterCrById,
+    activeMonster,
+    targetMonster,
+    ensureMonster,
+    resolveMonsterId,
+  } = useMonsterDetailsCache(
     combatants,
     (active as EncounterActor | null) ?? null,
     (target as EncounterActor | null) ?? null,
-    inpcsById
+    inpcsById,
   );
 
   const { difficulty } = useRosterMetrics({
@@ -121,18 +141,23 @@ export function CombatView() {
     inpcs: state.inpcs,
     monsterDetails: monsterCache,
     players: state.players,
-    ruleset: state.campaigns.find((campaign) => campaign.id === state.selectedCampaignId)?.ruleset,
+    ruleset: state.campaigns.find(
+      (campaign) => campaign.id === state.selectedCampaignId,
+    )?.ruleset,
   });
 
   const totalEncounterXp = React.useMemo(() => {
     return orderedCombatants
       .filter((c) => c.baseType === "monster" || c.baseType === "inpc")
-      .reduce((sum, c) => sum + (getMonsterXp(monsterCache[c.baseId] ?? null) ?? 0), 0);
+      .reduce(
+        (sum, c) => sum + (getMonsterXp(monsterCache[c.baseId] ?? null) ?? 0),
+        0,
+      );
   }, [orderedCombatants, monsterCache]);
 
   const playerCombatantCount = React.useMemo(
     () => orderedCombatants.filter((c) => c.baseType === "player").length,
-    [orderedCombatants]
+    [orderedCombatants],
   );
 
   const {
@@ -143,7 +168,7 @@ export function CombatView() {
     openSpellByName,
     closeSpell,
     sortedActiveSpellNames,
-    sortedTargetSpellNames
+    sortedTargetSpellNames,
   } = useSpellModal(activeMonster, targetMonster);
 
   const {
@@ -178,21 +203,23 @@ export function CombatView() {
 
   const handleSetInitiative = React.useCallback(
     (id: string, initiative: number) => updateCombatant(id, { initiative }),
-    [updateCombatant]
+    [updateCombatant],
   );
 
   const handleToggleReaction = React.useCallback(
     (id: string) => {
-      const c = orderedCombatants.find(x => x.id === id);
+      const c = orderedCombatants.find((x) => x.id === id);
       if (!c) return;
       void updateCombatant(id, { usedReaction: !c.usedReaction });
     },
-    [orderedCombatants, updateCombatant]
+    [orderedCombatants, updateCombatant],
   );
 
   const renderCombatantIcon = React.useCallback(
-    (combatant: EncounterActor | null) => <CombatantTypeIcon combatant={combatant ?? undefined} />,
-    []
+    (combatant: EncounterActor | null) => (
+      <CombatantTypeIcon combatant={combatant ?? undefined} />
+    ),
+    [],
   );
 
   const onOpenConditionsFromDelta = React.useCallback(() => {
@@ -201,13 +228,16 @@ export function CombatView() {
     onOpenConditions(target.id, role, active.id);
   }, [active?.id, target?.id, onOpenConditions]);
 
-  const handleApplyDamage = React.useCallback((resolvedValue?: string) => {
-    if (bulkMode) {
-      void applyBulkHpDelta("damage", resolvedValue);
-      return;
-    }
-    void applyHpDelta("damage", resolvedValue);
-  }, [applyBulkHpDelta, applyHpDelta, bulkMode]);
+  const handleApplyDamage = React.useCallback(
+    (resolvedValue?: string) => {
+      if (bulkMode) {
+        void applyBulkHpDelta("damage", resolvedValue);
+        return;
+      }
+      void applyHpDelta("damage", resolvedValue);
+    },
+    [applyBulkHpDelta, applyHpDelta, bulkMode],
+  );
 
   const handleApplyHeal = React.useCallback(() => {
     if (bulkMode) {
@@ -221,7 +251,10 @@ export function CombatView() {
     isNarrow,
     role: "active",
     combatant: (active as EncounterActor | null) ?? null,
-    selectedMonster: applyMonsterAttackOverrides(activeMonster ?? null, active ?? null),
+    selectedMonster: applyMonsterAttackOverrides(
+      activeMonster ?? null,
+      active ?? null,
+    ),
     playersById,
     spellNames: sortedActiveSpellNames,
     spellLevels: spellLevelCache,
@@ -232,14 +265,17 @@ export function CombatView() {
     onOpenOverrides,
     onOpenConditions,
     onOpenPolymorph,
-    openSpellByName
+    openSpellByName,
   });
 
   const targetCtx = useCombatantDetailsCtx({
     isNarrow,
     role: "target",
     combatant: (target as EncounterActor | null) ?? null,
-    selectedMonster: applyMonsterAttackOverrides(targetMonster ?? null, target ?? null),
+    selectedMonster: applyMonsterAttackOverrides(
+      targetMonster ?? null,
+      target ?? null,
+    ),
     playersById,
     spellNames: sortedTargetSpellNames,
     spellLevels: spellLevelCache,
@@ -251,29 +287,65 @@ export function CombatView() {
     onOpenConditions,
     onOpenPolymorph,
     openSpellByName,
-    casterIdForTarget: active?.id ?? null
+    casterIdForTarget: active?.id ?? null,
   });
 
   return (
     <div style={{ padding: "var(--space-page)" }}>
-      {combatStateError && <div role="alert">{combatStateError} <button onClick={() => void retryCombatState()}>{translateUi("Retry")}</button></div>}
+      {combatStateError && (
+        <div role="alert">
+          {combatStateError}{" "}
+          <button onClick={() => void retryCombatState()}>
+            {translateUi("Retry")}
+          </button>
+        </div>
+      )}
       {concentrationAlert && (
-        <div style={{
-          marginBottom: 10, padding: "10px 14px", borderRadius: 10,
-          background: "rgba(255, 140, 66, 0.15)", border: `1px solid ${theme.colors.accentWarning}`,
-          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-        }}>
+        <div
+          style={{
+            marginBottom: 10,
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "rgba(255, 140, 66, 0.15)",
+            border: `1px solid ${theme.colors.accentWarning}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
           <span style={{ color: theme.colors.text, fontWeight: 700 }}>
-            ⚠️ <strong>{concentrationAlert.name}</strong> {translateUi("is Concentrating — CON Save DC")} <strong>{concentrationAlert.dc}</strong>
+            ⚠️ <strong>{concentrationAlert.name}</strong>{" "}
+            {translateUi("is Concentrating — CON Save DC")}{" "}
+            <strong>{concentrationAlert.dc}</strong>
           </span>
-          <IconButton title={translateUi("Dismiss")} onClick={dismissConcentrationAlert} variant="ghost" size="sm">
-            <span style={{ fontWeight: 900, fontSize: "var(--fs-title)", lineHeight: 1 }}>×</span>
+          <IconButton
+            title={translateUi("Dismiss")}
+            onClick={dismissConcentrationAlert}
+            variant="ghost"
+            size="sm"
+          >
+            <span
+              style={{
+                fontWeight: 900,
+                fontSize: "var(--fs-title)",
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </span>
           </IconButton>
         </div>
       )}
 
       <CombatantHeader
-        backTo={campaignId && encounterId ? `/campaign/${campaignId}/roster/${encounterId}` : (campaignId ? `/campaign/${campaignId}` : "/")}
+        backTo={
+          campaignId && encounterId
+            ? `/campaign/${campaignId}/roster/${encounterId}`
+            : campaignId
+              ? `/campaign/${campaignId}`
+              : "/"
+        }
         backTitle="Back to Roster"
         title={encounter?.name ?? translateUi("Combat")}
         started={started}
@@ -287,83 +359,115 @@ export function CombatView() {
         difficulty={difficulty}
       />
 
-      <div
-        style={{
-          marginTop: 14,
-          display: "grid",
-          gridTemplateColumns: isNarrow ? "1fr" : "minmax(0, 6fr) minmax(0, 5fr) minmax(0, 6fr)",
-          gap: 14,
-          alignItems: "start"
-        }}
-      >
-        <CombatHudBar
-          isNarrow={isNarrow}
-          active={active ?? null}
-          target={target ?? null}
-          playersById={playersById}
-          renderCombatantIcon={renderCombatantIcon}
-          activeId={active?.id ?? null}
-          targetId={target?.id ?? null}
-          onOpenConditions={onOpenConditions}
-          delta={delta}
-          deltaDisabled={!bulkMode && (!target || target.baseType === "world")}
-          onChangeDelta={setDelta}
-          onApplyDamage={handleApplyDamage}
-          onApplyHeal={handleApplyHeal}
-          onOpenConditionsFromDelta={onOpenConditionsFromDelta}
-          bulkMode={bulkMode}
-          bulkCount={bulkSelectedIds.size}
-          onToggleBulkMode={handleToggleBulkMode}
-        />
-
-        <div>
-          <CombatantDetailsPanel roleTitle="Active" role="active" combatant={active ?? null} ctx={activeCtx} />
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {/* Center-stage turn controls: Round + Prev/Next live above delta controls */}
-          <TurnControls
-            round={round}
-            secondsInRound={typeof secondsInRound === "number" ? secondsInRound : null}
-            canNavigate={canNavigate}
-            onPrev={prevTurn}
-            onNext={nextTurn}
-          />
-
-          {isNarrow ? (
-            <CombatDeltaControls
-              value={delta}
-              targetId={target?.id ?? null}
-              disabled={!bulkMode && (!target || target.baseType === "world")}
-              onChange={setDelta}
-              onApplyDamage={handleApplyDamage}
-              onApplyHeal={handleApplyHeal}
-              onOpenConditions={onOpenConditionsFromDelta}
-              bulkMode={bulkMode}
-              bulkCount={bulkSelectedIds.size}
-              onToggleBulkMode={handleToggleBulkMode}
-            />
-          ) : null}
-
-          <CombatOrderPanel
-            combatants={orderedCombatants}
+      <DmWorkspace
+        workspace="combat"
+        header={
+          <CombatHudBar
+            isNarrow={isNarrow}
+            active={active ?? null}
+            target={target ?? null}
             playersById={playersById}
-            monsterCrById={monsterCrById}
-            activeId={activeId}
+            renderCombatantIcon={renderCombatantIcon}
+            activeId={active?.id ?? null}
             targetId={target?.id ?? null}
-            onSelectTarget={handleSelectTarget}
-            onSetInitiative={handleSetInitiative}
-            onToggleReaction={handleToggleReaction}
+            onOpenConditions={onOpenConditions}
+            delta={delta}
+            deltaDisabled={
+              !bulkMode && (!target || target.baseType === "world")
+            }
+            onChangeDelta={setDelta}
+            onApplyDamage={handleApplyDamage}
+            onApplyHeal={handleApplyHeal}
+            onOpenConditionsFromDelta={onOpenConditionsFromDelta}
             bulkMode={bulkMode}
-            bulkSelectedIds={bulkSelectedIds}
-            onToggleBulkSelect={handleToggleBulkSelect}
+            bulkCount={bulkSelectedIds.size}
+            onToggleBulkMode={handleToggleBulkMode}
           />
-        </div>
-
-        <div>
-          <CombatantDetailsPanel roleTitle="Target" role="target" combatant={target ?? null} ctx={targetCtx} />
-        </div>
-      </div>
+        }
+        panels={[
+          {
+            id: "active",
+            title: "Active",
+            column: 0,
+            content: (
+              <CombatantDetailsPanel
+                roleTitle="Active"
+                role="active"
+                combatant={active ?? null}
+                ctx={activeCtx}
+              />
+            ),
+          },
+          {
+            id: "turn-controls",
+            title: "Turn Controls",
+            column: 1,
+            content: (
+              <TurnControls
+                round={round}
+                secondsInRound={
+                  typeof secondsInRound === "number" ? secondsInRound : null
+                }
+                canNavigate={canNavigate}
+                onPrev={prevTurn}
+                onNext={nextTurn}
+              />
+            ),
+          },
+          {
+            id: "damage",
+            title: "Damage and Healing",
+            column: 1,
+            content: isNarrow ? (
+              <CombatDeltaControls
+                value={delta}
+                targetId={target?.id ?? null}
+                disabled={!bulkMode && (!target || target.baseType === "world")}
+                onChange={setDelta}
+                onApplyDamage={handleApplyDamage}
+                onApplyHeal={handleApplyHeal}
+                onOpenConditions={onOpenConditionsFromDelta}
+                bulkMode={bulkMode}
+                bulkCount={bulkSelectedIds.size}
+                onToggleBulkMode={handleToggleBulkMode}
+              />
+            ) : null,
+          },
+          {
+            id: "initiative",
+            title: "Initiative",
+            column: 1,
+            content: (
+              <CombatOrderPanel
+                combatants={orderedCombatants}
+                playersById={playersById}
+                monsterCrById={monsterCrById}
+                activeId={activeId}
+                targetId={target?.id ?? null}
+                onSelectTarget={handleSelectTarget}
+                onSetInitiative={handleSetInitiative}
+                onToggleReaction={handleToggleReaction}
+                bulkMode={bulkMode}
+                bulkSelectedIds={bulkSelectedIds}
+                onToggleBulkSelect={handleToggleBulkSelect}
+              />
+            ),
+          },
+          {
+            id: "target",
+            title: "Target",
+            column: 2,
+            content: (
+              <CombatantDetailsPanel
+                roleTitle="Target"
+                role="target"
+                combatant={target ?? null}
+                ctx={targetCtx}
+              />
+            ),
+          },
+        ]}
+      />
 
       <SpellDetailModal
         isOpen={spellLoading || !!spellDetail || !!spellError}

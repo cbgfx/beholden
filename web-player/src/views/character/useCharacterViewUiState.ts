@@ -21,8 +21,6 @@ export function useCharacterViewUiState() {
   const [expandedClassFeatureIds, setExpandedClassFeatureIds] = useState<string[]>([]);
   const [noteDrawer, setNoteDrawer] = useState<{ scope: "player" | "shared"; note: PlayerNote | null } | null>(null);
   const [infoDrawerOpen, setInfoDrawerOpen] = useState(false);
-  const [themeDrawerOpen, setThemeDrawerOpen] = useState(false);
-  const [themeSaving, setThemeSaving] = useState(false);
   const [permanentBuffsDrawerOpen, setPermanentBuffsDrawerOpen] = useState(false);
   const [engagedEnemiesDrawerOpen, setEngagedEnemiesDrawerOpen] = useState(false);
   const [overridesDraft, setOverridesDraft] = useState<SheetOverrides>({ tempHp: 0, acBonus: 0, hpMaxBonus: 0 });
@@ -54,7 +52,6 @@ export function useCharacterViewUiState() {
     xpPopupOpen, setXpPopupOpen, xpInput, setXpInput, dsSaving, setDsSaving,
     expandedNoteIds, setExpandedNoteIds, expandedClassFeatureIds, setExpandedClassFeatureIds,
     noteDrawer, setNoteDrawer, infoDrawerOpen, setInfoDrawerOpen,
-    themeDrawerOpen, setThemeDrawerOpen, themeSaving, setThemeSaving,
     permanentBuffsDrawerOpen, setPermanentBuffsDrawerOpen,
     engagedEnemiesDrawerOpen, setEngagedEnemiesDrawerOpen,
     overridesDraft, setOverridesDraft, abilityOverridesDraft, setAbilityOverridesDraft,

@@ -40,6 +40,20 @@ async function fixture() {
 }
 const put = (body: unknown): RequestInit => ({ method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
+it("DM workspace preferences persist per account and workspace and reject invalid colours", async () => {
+  const f = await fixture();
+  try {
+    const preferences = { activeId: "prep", views: [{ id: "prep", name: "Prep", columns: [["players"], ["notes"]], colors: { notes: { accent: "#abcdef" } }, appearance: {} }] };
+    const other = signToken({ userId: "other", username: "other", isAdmin: true, credentialVersion: credentialVersion((f.db.prepare("SELECT passhash FROM users WHERE id='other'").get() as { passhash: string }).passhash) });
+    assert.equal((await f.request("/api/me/workspaces/campaign", put(preferences))).status, 200);
+    assert.deepEqual(await (await f.request("/api/me/workspaces/campaign")).json(), preferences);
+    assert.equal(await (await f.request("/api/me/workspaces/combat")).json(), null);
+    assert.equal(await (await f.request("/api/me/workspaces/campaign", {}, other)).json(), null);
+    assert.equal((await f.request("/api/me/workspaces/campaign", put({ ...preferences, views: [{ ...preferences.views[0], appearance: { accent: "url(example)" } }] }))).status, 400);
+    assert.deepEqual(await (await f.request("/api/me/workspaces/campaign")).json(), preferences);
+  } finally { await f.close(); }
+});
+
 it("installation keys persist, differ across installations, and reject unsafe configuration", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "beholden-audit-key-"));
   try {

@@ -96,6 +96,7 @@ export function CollapsiblePanel({
   summary?: React.ReactNode;
   embedded?: boolean;
 }) {
+  const panelColor = `var(--character-panel-accent, ${color})`;
   const [open, setOpen] = useState(() => {
     try {
       const v = localStorage.getItem(`panel:${storageKey}`);
@@ -125,7 +126,7 @@ export function CollapsiblePanel({
           marginBottom: open ? 10 : 0,
         }}
       >
-        <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color, display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: panelColor, display: "flex", alignItems: "center", gap: 6 }}>
           {title}
         </span>
         {!open && summary && (
@@ -136,12 +137,12 @@ export function CollapsiblePanel({
             {summary}
           </span>
         )}
-        <div style={{ flex: 1, height: 1, background: `${color}30` }} />
+        <div style={{ flex: 1, height: 1, background: `color-mix(in srgb, ${panelColor} 19%, transparent)` }} />
         {actions && (
           <div className="character-panel__actions" style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>{actions}</div>
         )}
         <span style={{
-          color, fontSize: "var(--fs-tiny)", lineHeight: 1,
+          color: panelColor, fontSize: "var(--fs-tiny)", lineHeight: 1,
           transform: open ? "rotate(0deg)" : "rotate(-90deg)",
           transition: "transform 120ms ease",
           display: "inline-flex", alignItems: "center", justifyContent: "center",

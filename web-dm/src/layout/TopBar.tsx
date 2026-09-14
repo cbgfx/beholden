@@ -54,15 +54,7 @@ export function TopBar() {
   const { campaigns, selectedCampaignId } = state;
   const selectedCampaign = campaigns.find((c) => c.id === selectedCampaignId);
   const selectedName = selectedCampaign?.name ?? "";
-  const rootLayoutStyle = isPhone
-    ? { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const }
-    : {
-        display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
-        alignItems: "center",
-        columnGap: 10,
-        width: "100%",
-      };
+  const rootLayoutStyle = { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const, width: "100%" };
 
   return (
     <div style={rootLayoutStyle}>
@@ -114,7 +106,7 @@ export function TopBar() {
         </span>
       </div>
 
-      <div style={isPhone ? undefined : { justifySelf: "center" }}>
+      <div style={{ flexShrink: 0 }}>
         <ToolsBar />
       </div>
 
@@ -123,6 +115,9 @@ export function TopBar() {
           marginLeft: isPhone ? "auto" : 0,
           justifySelf: isPhone ? undefined : "end",
           display: "flex",
+          flexWrap: "wrap",
+          flex: "1 1 480px",
+          minWidth: 0,
           alignItems: "center",
           justifyContent: "flex-end",
           gap: 10,
@@ -132,7 +127,7 @@ export function TopBar() {
       >
         <NavLink to="/" label={translateUi("Home")} />
         {selectedCampaignId && selectedName && (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, maxWidth: "100%" }}>
             <NavLink to={`/campaign/${selectedCampaignId}`} label={selectedName} />
             <RulesetTag ruleset={selectedCampaign?.ruleset ?? "5.5e"} />
           </span>

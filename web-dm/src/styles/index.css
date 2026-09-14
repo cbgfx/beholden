@@ -90,15 +90,6 @@
   }
 }
 
-@media (max-width: 1024px) {
-  .playerRowCampaign {
-    grid-template-columns: 1fr !important;
-  }
-  .playerRowCampaign .playerRowHp {
-    justify-content: flex-start !important;
-  }
-}
-
 .compendiumGrid {
   margin-top: var(--gap-10);
   height: calc(100vh - 160px);
@@ -185,14 +176,22 @@
   }
 }
 /* Shared hover affordance for repeatable/reorderable DM rows. */
-.dm-interactive-row {
+.dm-interactive-row,
+.noteInteractiveRow {
+  border-radius: 7px;
   transition: background-color 120ms ease, filter 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
 }
 
+.noteInteractiveRow:focus-within {
+  background-color: rgba(255, 255, 255, 0.055) !important;
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--dm-panel-accent, var(--campaign-accent, #f0a500)) 55%, transparent);
+}
+
 @media (hover: hover) and (pointer: fine) {
-  .dm-interactive-row:hover {
+  .dm-interactive-row:hover,
+  .noteInteractiveRow:hover {
     background-color: rgba(255, 255, 255, 0.055) !important;
-    box-shadow: inset 2px 0 0 rgba(240, 165, 0, 0.55);
+    box-shadow: inset 2px 0 0 color-mix(in srgb, var(--dm-panel-accent, var(--campaign-accent, #f0a500)) 55%, transparent);
     filter: brightness(1.06);
   }
 }

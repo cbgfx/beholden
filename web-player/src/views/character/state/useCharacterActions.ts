@@ -166,9 +166,9 @@ export function useCharacterActions(args: {
     }
   }, [abilityOverridesDraft, char, overridesDraft, setChar, setInfoDrawerOpen, setOverridesSaving]);
 
-  const saveThemeColor = React.useCallback(async () => {
+  const saveThemeColor = React.useCallback(async (color?: string) => {
     if (!char) return;
-    const nextColor = colorDraft || C.accentHl;
+    const nextColor = color || colorDraft || C.accentHl;
     if ((char.color ?? C.accentHl) === nextColor) return;
     await updateMyCharacter(char.id, {
       name: char.name,

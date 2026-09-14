@@ -1,6 +1,5 @@
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
-import { EmptyState } from "@beholden/shared/ui";
 import { C } from "@/lib/theme";
 import { IconWerewolf } from "@/icons";
 import { Button } from "@/ui/Button";
@@ -11,6 +10,8 @@ import { PANEL_IDS } from "@/views/character/layout/panelRegistry";
 
 export function RecoveryPanel(props: {
   accentColor: string;
+  inspirationActive: boolean;
+  onToggleInspiration: () => Promise<void> | void;
   hitDiceCurrent: number;
   hitDiceMax: number;
   hitDieSize: number | null;
@@ -35,6 +36,8 @@ export function RecoveryPanel(props: {
   const translateUi = useUiTranslation("playerUi");
   const {
     accentColor,
+    inspirationActive,
+    onToggleInspiration,
     hitDiceCurrent,
     hitDiceMax,
     hitDieSize,
@@ -95,7 +98,7 @@ export function RecoveryPanel(props: {
         </PanelHeaderActionButton>
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {polymorphName && (
           <div
             style={{
@@ -130,19 +133,28 @@ export function RecoveryPanel(props: {
           </div>
         )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 0, borderRadius: 9, overflow: "hidden", background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(76px, auto) minmax(0, 1fr) auto", alignItems: "center", gap: 10, padding: "4px 8px" }}>
+            <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+              {translateUi("Inspiration")}
+            </div>
+            <span style={{ fontSize: "var(--fs-subtitle)", fontWeight: 900, color: C.text }}>
+              {inspirationActive ? 1 : 0} / 1
+            </span>
+            <div style={{ display: "flex", gap: 5 }}>
+              <button type="button" aria-label={translateUi("Spend Inspiration")} disabled={!inspirationActive} onClick={() => void onToggleInspiration()} style={miniPillBtn(inspirationActive)}>-</button>
+              <button type="button" aria-label={translateUi("Grant Inspiration")} disabled={inspirationActive} onClick={() => void onToggleInspiration()} style={miniPillBtn(!inspirationActive)}>+</button>
+            </div>
+          </div>
           <div style={{
-            borderRadius: 9,
-            overflow: "hidden",
-            background: "rgba(255,255,255,0.035)",
-            border: `1px solid ${exhaustion > 0 ? `${exhaustionColor}44` : "rgba(255,255,255,0.08)"}`,
+            borderTop: "1px solid rgba(255,255,255,0.07)",
           }}>
             <div style={{
               display: "grid",
               gridTemplateColumns: "minmax(76px, auto) minmax(0, 1fr) auto",
               alignItems: "center",
               gap: 10,
-              padding: "7px 10px",
+              padding: "4px 8px",
             }}>
               <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>
                 {translateUi("Hit Dice")}
@@ -192,7 +204,7 @@ export function RecoveryPanel(props: {
               gridTemplateColumns: "minmax(76px, auto) minmax(0, 1fr) auto",
               alignItems: "center",
               gap: 10,
-              padding: "7px 10px",
+              padding: "4px 8px",
               borderTop: "1px solid rgba(255,255,255,0.07)",
             }}>
               <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>
@@ -241,22 +253,18 @@ export function RecoveryPanel(props: {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 8 }}>
-            <button type="button" onClick={() => void onShortRest()} style={{ ...restBtnStyle(C.colorRitual), flex: 1, minWidth: 0, padding: "7px 10px", borderRadius: 8 }}>
+          <div style={{ display: "flex", gap: 6, padding: "4px 8px", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+            <button type="button" onClick={() => void onShortRest()} style={{ ...restBtnStyle(C.colorRitual), flex: 1, minWidth: 0, padding: "4px 8px", borderRadius: 6 }}>
               {translateUi("Short Rest")}
             </button>
-            <button type="button" onClick={() => void onLongRest()} style={{ ...restBtnStyle("#34d399"), flex: 1, minWidth: 0, padding: "7px 10px", borderRadius: 8 }}>
+            <button type="button" onClick={() => void onLongRest()} style={{ ...restBtnStyle("#34d399"), flex: 1, minWidth: 0, padding: "4px 8px", borderRadius: 6 }}>
               {translateUi("Long Rest")}
             </button>
           </div>
         </div>
 
-        <div>
-          <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
-            {translateUi("Resources")}
-          </div>
-          {classResources.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {classResources.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
               {classResources.map((resource) => {
                 const owner = classByEntryId.get(getClassEntryId(resource.key) ?? "");
                 // A resource typed `actionType: "reaction"` (Warding Flare, Cosmic Omen, ...)
@@ -273,16 +281,16 @@ export function RecoveryPanel(props: {
                   style={{
                     display: "grid",
                     gridTemplateColumns: "minmax(0,1fr) auto auto auto",
-                    gap: 8,
+                    gap: 6,
                     alignItems: "center",
-                    padding: "8px 10px",
+                    padding: "4px 8px",
                     borderRadius: 8,
                     background: "rgba(255,255,255,0.03)",
                     border: "1px solid rgba(255,255,255,0.06)",
                   }}
                 >
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: "var(--fs-subtitle)", fontWeight: 700, color: C.text }}>
+                    <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.text }}>
                       {resource.name}
                       {bardicInspirationDie && /^bardic inspiration$/i.test(resource.name.trim()) ? (
                         <span style={{ marginLeft: 7, color: accentColor, fontWeight: 900 }}>{bardicInspirationDie}</span>
@@ -317,10 +325,7 @@ export function RecoveryPanel(props: {
                 );
               })}
             </div>
-          ) : (
-            <EmptyState textColor={C.muted}>{translateUi("No tracked resources.")}</EmptyState>
-          )}
-        </div>
+        )}
       </div>
     </CollapsiblePanel>
   );

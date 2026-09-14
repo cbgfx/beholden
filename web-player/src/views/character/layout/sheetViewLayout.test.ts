@@ -29,4 +29,23 @@ describe("sheet view layout normalization", () => {
     const views = normalizeSheetViews(undefined);
     expect(resolveActiveSheetView(views, "deleted-view").id).toBe("play");
   });
+
+  it("keeps valid per-panel colours and drops invalid entries", () => {
+    const view = normalizeSheetView({
+      id: "custom",
+      name: "Custom",
+      columns: 2,
+      layout: [[], []],
+      panelColors: {
+        [PANEL_IDS.skills]: { accent: "#123abc", background: "invalid", text: "#ffffff" },
+        [PANEL_IDS.combatStats]: { background: "#202735" },
+        removedPanel: { accent: "#000000" },
+      },
+    } as never);
+
+    expect(view.panelColors).toEqual({
+      [PANEL_IDS.skills]: { accent: "#123abc", text: "#ffffff" },
+      [PANEL_IDS.combatStats]: { background: "#202735" },
+    });
+  });
 });

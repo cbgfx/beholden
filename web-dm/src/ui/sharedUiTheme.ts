@@ -31,7 +31,7 @@ export const dmSharedSelectTheme = {
 
 export const dmSharedPanelTheme = {
   borderColor: "rgba(255,255,255,0.09)",
-  background: "rgba(255,255,255,0.035)",
+  background: "var(--dm-panel-background, rgba(255,255,255,0.035))",
   radius: theme.radius.panel,
   padding: "12px 14px",
   titleFontSize: "var(--fs-tiny)",

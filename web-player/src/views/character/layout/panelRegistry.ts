@@ -22,6 +22,11 @@ export const PANEL_IDS = {
 } as const;
 
 export type PanelId = (typeof PANEL_IDS)[keyof typeof PANEL_IDS];
+export interface PanelColorSettings {
+  accent?: string;
+  background?: string;
+  text?: string;
+}
 export const MOVABLE_PANEL_IDS = Object.values(PANEL_IDS).filter((id) => id !== PANEL_IDS.combatStats) as PanelId[];
 
 export const PANEL_TITLES: Record<PanelId, string> = {
@@ -53,4 +58,5 @@ export interface SheetViewDef {
   columns: number;
   /** One array of panel ids per column, index = order within that column. */
   layout: PanelId[][];
+  panelColors?: Partial<Record<PanelId, PanelColorSettings>>;
 }

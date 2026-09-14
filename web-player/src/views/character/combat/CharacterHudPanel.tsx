@@ -3,7 +3,7 @@ import React from "react";
 import { SHARED_CONDITION_DEFS } from "@beholden/shared/domain";
 import { C } from "@/lib/theme";
 import { api } from "@/services/api";
-import { IconAttack, IconConditionByKey, IconConditions, IconHeal, IconHeart, IconInspiration } from "@/icons";
+import { IconAttack, IconConditionByKey, IconConditions, IconHeal, IconHeart } from "@/icons";
 import { HexBtn, Panel } from "@/views/character/CharacterViewParts";
 import { HealthBar } from "@beholden/shared/ui";
 import type { CharacterCampaign, ConditionInstance, CharacterData } from "@/views/character/CharacterSheetTypes";
@@ -69,8 +69,6 @@ export interface CharacterHudPanelProps {
   setLastRoll: (value: number | null) => void;
   setHpAmount: (value: string) => void;
   handleApplyHp: (kind: "damage" | "heal") => void;
-  inspirationActive: boolean;
-  handleToggleInspiration: () => void;
   condPickerOpen: boolean;
   setCondPickerOpen: React.Dispatch<React.SetStateAction<boolean>>;
   condSaving: boolean;
@@ -104,8 +102,6 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
     setLastRoll,
     setHpAmount,
     handleApplyHp,
-    inspirationActive,
-    handleToggleInspiration,
     condPickerOpen,
     setCondPickerOpen,
     condSaving,
@@ -214,9 +210,6 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
         `}</style>
         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "10px 8px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }}>
-            <HexBtn variant="inspiration" active={inspirationActive} title={translateUi("Toggle Heroic Inspiration")} disabled={false} onClick={handleToggleInspiration}>
-              <IconInspiration size={22} />
-            </HexBtn>
             <HexBtn variant="damage" title={translateUi("Apply damage (Enter)")} disabled={hpSaving} onClick={() => handleApplyHp("damage")}>
               <IconAttack size={22} />
             </HexBtn>
@@ -263,9 +256,6 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
             <HexBtn variant="heal" title={translateUi("Apply heal (Shift+Enter)")} disabled={hpSaving} onClick={() => handleApplyHp("heal")}>
               <IconHeal size={22} />
             </HexBtn>
-            <HexBtn variant="conditions" title={translateUi("Add / remove conditions")} disabled={false} onClick={() => setCondPickerOpen((o) => !o)}>
-              <IconConditions size={22} />
-            </HexBtn>
           </div>
           {(hpError || hpSaving) && <div style={{ textAlign: "center", fontSize: "var(--fs-small)", color: hpError ? C.red : C.muted }}>{hpError ?? "Saving..."}</div>}
         </div>
@@ -277,10 +267,19 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
           saveDeathSaves={saveDeathSaves}
         />
 
-        {(char.conditions ?? []).length > 0 && (
+        {(
           <div style={{ marginTop: 2 }}>
             <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: accentColor, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
               <IconConditions size={10} /> {translateUi("Conditions")}
+              <button
+                type="button"
+                aria-label={translateUi("Add condition")}
+                title={translateUi("Add condition")}
+                onClick={() => setCondPickerOpen(true)}
+                style={{ border: "none", background: "transparent", color: accentColor, padding: "2px 5px", cursor: "pointer", fontSize: "var(--fs-body)", fontWeight: 700, lineHeight: 1, letterSpacing: "normal" }}
+              >
+                +
+              </button>
               {condSaving && <span style={{ color: C.muted, fontWeight: 400, textTransform: "none", fontSize: "var(--fs-tiny)" }}>{translateUi("saving...")}</span>}
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>

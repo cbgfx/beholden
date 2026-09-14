@@ -63,7 +63,7 @@ export function PlayersPanel(props: {
       }
     >
       {players.length ? (
-        <div style={{ display: "grid", gap: 5, gridTemplateColumns: "1fr" }}>
+        <div style={{ display: "grid", gap: 5, minWidth: 0, gridTemplateColumns: "minmax(0, 1fr)" }}>
           {players.map((p) => {
             const alreadyIn = props.selectedEncounterId ? playerIdsInEncounter.has(p.id) : false;
             return (

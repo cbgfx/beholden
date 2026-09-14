@@ -36,9 +36,10 @@ export function PinnedVitalsBox(props: {
     <div style={{
       display: "flex", flexDirection: "column",
       overflow: "hidden",
-      border: "1px solid rgba(255,255,255,0.09)",
-      borderRadius: 12,
-      background: "rgba(255,255,255,0.035)",
+      border: "1px solid var(--character-panel-border, rgba(255,255,255,0.09))",
+      borderRadius: "var(--character-panel-radius, 12px)",
+      background: "var(--character-panel-bg, rgba(255,255,255,0.035))",
+      boxShadow: "var(--character-panel-shadow, none)",
     }}>
       <CharacterCombatPanels {...props.combatProps} showActions={false} embeddedStats />
       <CharacterHudPanel {...props.hudProps} embedded />

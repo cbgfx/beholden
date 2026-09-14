@@ -346,6 +346,13 @@ CREATE TABLE IF NOT EXISTS user_characters (
   updated_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS user_workspace_preferences (
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  workspace TEXT NOT NULL,
+  data_json TEXT NOT NULL,
+  PRIMARY KEY (user_id, workspace)
+);
+
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   username TEXT NOT NULL UNIQUE,

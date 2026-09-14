@@ -1,12 +1,13 @@
+import { DmWorkspace } from "@/layout/workspace/DmWorkspace";
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "@/store";
 import type { AddMonsterOptions } from "@/domain/types/domain";
 import { fetchNoteById } from "@/services/collectionApi";
 import { useOpenEncounterMetrics } from "@/views/CampaignView/hooks/useOpenEncounterMetrics";
-import { CampaignLeftSidebar } from "@/views/CampaignView/components/CampaignLeftSidebar";
-import { CampaignMainColumn } from "@/views/CampaignView/components/CampaignMainColumn";
-import { CampaignRightSidebar } from "@/views/CampaignView/components/CampaignRightSidebar";
+import { buildCampaignLeftPanels } from "@/views/CampaignView/components/CampaignLeftSidebar";
+import { buildCampaignMainPanels } from "@/views/CampaignView/components/CampaignMainColumn";
+import { buildCampaignRightPanels } from "@/views/CampaignView/components/CampaignRightSidebar";
 
 export function CampaignView(props: {
   onCreateAdventure: () => void;
@@ -31,7 +32,11 @@ export function CampaignView(props: {
   onDeletePlayer: (playerId: string) => void;
   onAddPlayerToEncounter: (playerId: string) => void;
 
-  onAddINpcFromMonster: (monsterId: string, qty: number, opts?: AddMonsterOptions) => void;
+  onAddINpcFromMonster: (
+    monsterId: string,
+    qty: number,
+    opts?: AddMonsterOptions,
+  ) => void;
   onEditINpc: (inpcId: string) => void;
   onDeleteINpc: (inpcId: string) => void;
   onAddINpcToEncounter: (inpcId: string) => void;
@@ -58,7 +63,9 @@ export function CampaignView(props: {
     expandedNoteIds,
   } = state;
 
-  const selectedCampaign = state.campaigns.find((c) => c.id === state.selectedCampaignId);
+  const selectedCampaign = state.campaigns.find(
+    (c) => c.id === state.selectedCampaignId,
+  );
   const campaignSharedNotes = selectedCampaign?.sharedNotes ?? "";
 
   const { encountersForPanel } = useOpenEncounterMetrics({
@@ -72,110 +79,131 @@ export function CampaignView(props: {
   });
   const selectedEncounterCounts = React.useMemo(() => {
     if (!selectedEncounterId) return null;
-    const roster = combatants.filter((combatant) => combatant.encounterId === selectedEncounterId);
+    const roster = combatants.filter(
+      (combatant) => combatant.encounterId === selectedEncounterId,
+    );
     return {
-      players: roster.filter((combatant) => combatant.baseType === "player").length,
-      friendlies: roster.filter((combatant) => combatant.baseType !== "player" && combatant.baseType !== "world" && combatant.friendly).length,
-      hostiles: roster.filter((combatant) => combatant.baseType !== "player" && combatant.baseType !== "world" && !combatant.friendly).length,
+      players: roster.filter((combatant) => combatant.baseType === "player")
+        .length,
+      friendlies: roster.filter(
+        (combatant) =>
+          combatant.baseType !== "player" &&
+          combatant.baseType !== "world" &&
+          combatant.friendly,
+      ).length,
+      hostiles: roster.filter(
+        (combatant) =>
+          combatant.baseType !== "player" &&
+          combatant.baseType !== "world" &&
+          !combatant.friendly,
+      ).length,
     };
   }, [combatants, selectedEncounterId]);
 
-  const handleToggleNote = React.useCallback((noteId: string) => {
-    dispatch({ type: "toggleNote", noteId });
-    const isExpanded = state.expandedNoteIds.includes(noteId);
-    if (isExpanded) return;
-    const note = [...state.campaignNotes, ...state.adventureNotes].find((entry) => entry.id === noteId);
-    if (!note || note.text) return;
-    void fetchNoteById(noteId)
-      .then((full) => {
-        if (full.scope === "adventure") {
-          dispatch({ type: "upsertAdventureNote", note: full });
-        } else {
-          dispatch({ type: "upsertCampaignNote", note: full });
-        }
-      })
-      .catch(() => {});
-  }, [dispatch, state.adventureNotes, state.campaignNotes, state.expandedNoteIds]);
+  const handleToggleNote = React.useCallback(
+    (noteId: string) => {
+      dispatch({ type: "toggleNote", noteId });
+      const isExpanded = state.expandedNoteIds.includes(noteId);
+      if (isExpanded) return;
+      const note = [...state.campaignNotes, ...state.adventureNotes].find(
+        (entry) => entry.id === noteId,
+      );
+      if (!note || note.text) return;
+      void fetchNoteById(noteId)
+        .then((full) => {
+          if (full.scope === "adventure") {
+            dispatch({ type: "upsertAdventureNote", note: full });
+          } else {
+            dispatch({ type: "upsertCampaignNote", note: full });
+          }
+        })
+        .catch(() => {});
+    },
+    [
+      dispatch,
+      state.adventureNotes,
+      state.campaignNotes,
+      state.expandedNoteIds,
+    ],
+  );
 
   return (
-    <div className="campaignGrid">
-      {/* LEFT SIDEBAR */}
-      <CampaignLeftSidebar
-        adventures={adventures}
-        selectedAdventureId={selectedAdventureId}
-        encounters={encountersForPanel}
-        selectedEncounterId={selectedEncounterId}
-        selectedEncounterCounts={selectedEncounterCounts}
-        onSelectAdventure={(id) =>
-          dispatch({
-            type: "selectAdventure",
-            adventureId: id === selectedAdventureId ? null : id,
-          })
-        }
-        onCreateAdventure={props.onCreateAdventure}
-        onEditAdventure={props.onEditAdventure}
-        onDeleteAdventure={props.onDeleteAdventure}
-        onReorderAdventures={props.onReorderAdventures}
-        onExportAdventure={props.onExportAdventure}
-        onImportAdventure={props.onImportAdventure}
-        onSelectEncounter={(id) =>
-          dispatch({
-            type: "selectEncounter",
-            encounterId: id === selectedEncounterId ? null : id,
-          })
-        }
-        onBuildEncounter={(id) =>
-          state.selectedCampaignId ? nav(`/campaign/${state.selectedCampaignId}/roster/${id}`) : nav(`/roster/${id}`)
-        }
-        onPlayEncounter={(id) =>
-          state.selectedCampaignId ? nav(`/campaign/${state.selectedCampaignId}/combat/${id}`) : nav(`/combat/${id}`)
-        }
-        onCreateEncounter={props.onCreateEncounter}
-        onEditEncounter={props.onEditEncounter}
-        onDuplicateEncounter={props.onDuplicateEncounter}
-        onDeleteEncounter={props.onDeleteEncounter}
-        onReorderEncounters={props.onReorderEncounters}
-      />
-
-      {/* MAIN COLUMN */}
-      <CampaignMainColumn
-        players={players}
-        combatants={combatants}
-        selectedEncounterId={selectedEncounterId}
-        onFullRest={props.onFullRest}
-        onCreatePlayer={props.onCreatePlayer}
-        onEditPlayer={props.onEditPlayer}
-        onDeletePlayer={props.onDeletePlayer}
-        onAddPlayerToEncounter={props.onAddPlayerToEncounter}
-        inpcs={inpcs}
-        selectedCampaignId={state.selectedCampaignId}
-        binderId={selectedCampaign?.binderId}
-        campaignCurrentDate={selectedCampaign?.currentDate?.sort}
-        onAddINpcFromMonster={props.onAddINpcFromMonster}
-        onEditINpc={props.onEditINpc}
-        onDeleteINpc={props.onDeleteINpc}
-        onAddINpcToEncounter={props.onAddINpcToEncounter}
-      />
-
-      {/* RIGHT SIDEBAR */}
-      <CampaignRightSidebar
-        selectedAdventureId={selectedAdventureId}
-        campaignNotes={campaignNotes}
-        adventureNotes={adventureNotes}
-        expandedNoteIds={expandedNoteIds}
-        onToggleNote={handleToggleNote}
-        players={players}
-        campaignId={state.selectedCampaignId}
-        campaignSharedNotes={campaignSharedNotes}
-        onAddCampaignNote={props.onAddCampaignNote}
-        onEditCampaignNote={props.onEditCampaignNote}
-        onDeleteCampaignNote={props.onDeleteCampaignNote}
-        onReorderCampaignNotes={props.onReorderCampaignNotes}
-        onAddAdventureNote={props.onAddAdventureNote}
-        onEditAdventureNote={props.onEditAdventureNote}
-        onDeleteAdventureNote={props.onDeleteAdventureNote}
-        onReorderAdventureNotes={props.onReorderAdventureNotes}
-      />
-    </div>
+    <DmWorkspace
+      workspace="campaign"
+      panels={[
+        ...buildCampaignLeftPanels({
+          adventures: adventures,
+          selectedAdventureId: selectedAdventureId,
+          encounters: encountersForPanel,
+          selectedEncounterId: selectedEncounterId,
+          selectedEncounterCounts: selectedEncounterCounts,
+          onSelectAdventure: (id) =>
+            dispatch({
+              type: "selectAdventure",
+              adventureId: id === selectedAdventureId ? null : id,
+            }),
+          onCreateAdventure: props.onCreateAdventure,
+          onEditAdventure: props.onEditAdventure,
+          onDeleteAdventure: props.onDeleteAdventure,
+          onReorderAdventures: props.onReorderAdventures,
+          onExportAdventure: props.onExportAdventure,
+          onImportAdventure: props.onImportAdventure,
+          onSelectEncounter: (id) =>
+            dispatch({
+              type: "selectEncounter",
+              encounterId: id === selectedEncounterId ? null : id,
+            }),
+          onBuildEncounter: (id) =>
+            state.selectedCampaignId
+              ? nav(`/campaign/${state.selectedCampaignId}/roster/${id}`)
+              : nav(`/roster/${id}`),
+          onPlayEncounter: (id) =>
+            state.selectedCampaignId
+              ? nav(`/campaign/${state.selectedCampaignId}/combat/${id}`)
+              : nav(`/combat/${id}`),
+          onCreateEncounter: props.onCreateEncounter,
+          onEditEncounter: props.onEditEncounter,
+          onDuplicateEncounter: props.onDuplicateEncounter,
+          onDeleteEncounter: props.onDeleteEncounter,
+          onReorderEncounters: props.onReorderEncounters,
+        }),
+        ...buildCampaignMainPanels({
+          players: players,
+          combatants: combatants,
+          selectedEncounterId: selectedEncounterId,
+          onFullRest: props.onFullRest,
+          onCreatePlayer: props.onCreatePlayer,
+          onEditPlayer: props.onEditPlayer,
+          onDeletePlayer: props.onDeletePlayer,
+          onAddPlayerToEncounter: props.onAddPlayerToEncounter,
+          inpcs: inpcs,
+          selectedCampaignId: state.selectedCampaignId,
+          binderId: selectedCampaign?.binderId,
+          campaignCurrentDate: selectedCampaign?.currentDate?.sort,
+          onAddINpcFromMonster: props.onAddINpcFromMonster,
+          onEditINpc: props.onEditINpc,
+          onDeleteINpc: props.onDeleteINpc,
+          onAddINpcToEncounter: props.onAddINpcToEncounter,
+        }),
+        ...buildCampaignRightPanels({
+          selectedAdventureId: selectedAdventureId,
+          campaignNotes: campaignNotes,
+          adventureNotes: adventureNotes,
+          expandedNoteIds: expandedNoteIds,
+          onToggleNote: handleToggleNote,
+          players: players,
+          campaignId: state.selectedCampaignId,
+          campaignSharedNotes: campaignSharedNotes,
+          onAddCampaignNote: props.onAddCampaignNote,
+          onEditCampaignNote: props.onEditCampaignNote,
+          onDeleteCampaignNote: props.onDeleteCampaignNote,
+          onReorderCampaignNotes: props.onReorderCampaignNotes,
+          onAddAdventureNote: props.onAddAdventureNote,
+          onEditAdventureNote: props.onEditAdventureNote,
+          onDeleteAdventureNote: props.onDeleteAdventureNote,
+          onReorderAdventureNotes: props.onReorderAdventureNotes,
+        }),
+      ]}
+    />
   );
 }

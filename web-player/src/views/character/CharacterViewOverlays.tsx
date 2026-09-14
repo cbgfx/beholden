@@ -1,8 +1,7 @@
 import { CharacterInitiativePrompt } from "@/views/character/combat/CharacterInitiativePrompt";
 import { CharacterFeatPickerModal } from "@/views/character/CharacterFeatPickerModal";
-import { CharacterInfoDrawer, CharacterPolymorphDrawer, CharacterThemeDrawer } from "@/views/character/CharacterViewDrawers";
+import { CharacterInfoDrawer, CharacterPolymorphDrawer } from "@/views/character/CharacterViewDrawers";
 import { NoteEditDrawer } from "@/views/character/CharacterViewParts";
-import { SHEET_COLOR_PRESETS } from "@/views/character/CharacterViewHelpers";
 import { getExhaustionD20Penalty } from "@/views/character/combat/CharacterExhaustion";
 import type { CharacterViewModel } from "@/views/character/CharacterViewModel";
 import { EngagedEnemiesDrawer } from "@/views/character/combat/EngagedEnemiesDrawer";
@@ -95,28 +94,6 @@ export function CharacterViewOverlays({ model }: { model: CharacterViewModel }) 
             return next;
           });
         }}
-      />
-
-      <CharacterThemeDrawer
-        open={ui.themeDrawerOpen}
-        accentColor={derived.accentColor}
-        colorDraft={ui.colorDraft}
-        colorPresets={SHEET_COLOR_PRESETS}
-        appearanceDraft={ui.appearanceDraft}
-        saving={ui.themeSaving}
-        onClose={() => ui.setThemeDrawerOpen(false)}
-        onSave={async () => {
-          ui.setThemeSaving(true);
-          try {
-            await notes.saveThemeColor();
-            await notes.saveCharacterData({ appearance: ui.appearanceDraft });
-          } finally {
-            ui.setThemeSaving(false);
-          }
-          ui.setThemeDrawerOpen(false);
-        }}
-        onColorChange={ui.setColorDraft}
-        onAppearanceChange={ui.setAppearanceDraft}
       />
 
       <CharacterPermanentBuffsDrawer

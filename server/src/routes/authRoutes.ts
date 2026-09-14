@@ -9,6 +9,7 @@ import { parseBody } from "../lib/validate.js";
 import { verifyPassword, hashPassword, signToken, credentialVersion } from "../lib/jwtAuth.js";
 import { requireAuth } from "../middleware/auth.js";
 import { syncOwnedPlayerName } from "../services/characters.js";
+import { registerWorkspacePreferences } from "./workspacePreferences.js";
 
 const LoginBody = z.object({
   username: z.string().trim().min(1),
@@ -25,6 +26,7 @@ const UpdateProfileBody = z.object({
 
 export function registerAuthRoutes(app: Express, ctx: ServerContext) {
   const { db } = ctx;
+  registerWorkspacePreferences(app, ctx);
 
   function hasDmAccess(userId: string): boolean {
     const row = db

@@ -1,3 +1,4 @@
+import { DmWorkspace } from "@/layout/workspace/DmWorkspace";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import * as React from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -8,9 +9,9 @@ import type { CampaignCharacter, Encounter, INpc } from "@/domain/types/domain";
 import { useConfirm } from "@/confirm/ConfirmContext";
 import { CombatRosterHeader } from "@/views/CombatRosterView/components/CombatRosterHeader";
 import { useEncounterCombatants } from "@/views/CombatView/hooks/useEncounterCombatants";
-import { CombatRosterLeftColumn } from "@/views/CombatRosterView/components/CombatRosterLeftColumn";
-import { CombatRosterCenterColumn } from "@/views/CombatRosterView/components/CombatRosterCenterColumn";
-import { CombatRosterRightColumn } from "@/views/CombatRosterView/components/CombatRosterRightColumn";
+import { buildRosterLeftPanels } from "@/views/CombatRosterView/components/CombatRosterLeftColumn";
+import { buildRosterCenterPanels } from "@/views/CombatRosterView/components/CombatRosterCenterColumn";
+import { buildRosterRightPanels } from "@/views/CombatRosterView/components/CombatRosterRightColumn";
 import { useEnsureRosterMonsterDetails } from "@/views/CombatRosterView/hooks/useEnsureRosterMonsterDetails";
 import { useRosterMetrics } from "@/views/CombatRosterView/hooks/useRosterMetrics";
 import { useEncounterActions } from "@/app/useEncounterActions";
@@ -24,7 +25,8 @@ export function CombatRosterView() {
   const { state, dispatch } = useStore();
   const confirm = useConfirm();
   const { refresh } = useEncounterCombatants(encounterId, dispatch);
-  const [loadedEncounter, setLoadedEncounter] = React.useState<Encounter | null>(null);
+  const [loadedEncounter, setLoadedEncounter] =
+    React.useState<Encounter | null>(null);
 
   React.useEffect(() => {
     if (!encounterId) return;
@@ -49,10 +51,17 @@ export function CombatRosterView() {
 
   const encounter = React.useMemo(() => {
     if (!encounterId) return null;
-    return state.encounters.find((e) => e.id === encounterId) ?? loadedEncounter;
+    return (
+      state.encounters.find((e) => e.id === encounterId) ?? loadedEncounter
+    );
   }, [encounterId, loadedEncounter, state.encounters]);
 
-  useEnsureRosterMonsterDetails({ combatants, inpcs: state.inpcs, monsterDetails: state.monsterDetails, dispatch });
+  useEnsureRosterMonsterDetails({
+    combatants,
+    inpcs: state.inpcs,
+    monsterDetails: state.monsterDetails,
+    dispatch,
+  });
 
   const playersById = React.useMemo(() => {
     const m: Record<string, { imageUrl?: string | null }> = {};
@@ -65,25 +74,32 @@ export function CombatRosterView() {
     inpcs: state.inpcs,
     monsterDetails: state.monsterDetails,
     players: state.players,
-    ruleset: state.campaigns.find((campaign) => campaign.id === campaignId)?.ruleset,
+    ruleset: state.campaigns.find((campaign) => campaign.id === campaignId)
+      ?.ruleset,
   });
 
   // Encounter-scoped actions — keyed to the explicit route encounterId.
   const encounterActions = useEncounterActions(encounterId, refresh);
 
   // Campaign-scoped refresh: players + inpcs only (sufficient for roster view).
-  const refreshCampaignForRoster = React.useCallback(async (cid: string) => {
-    const [players, inpcs] = await Promise.all([
-      fetchCampaignCharacters(cid, { includeSharedNotes: false }),
-      api<INpc[]>(`/api/campaigns/${cid}/inpcs`),
-    ]);
-    dispatch({ type: "setPlayers", players: players as CampaignCharacter[] });
-    dispatch({ type: "setINpcs", inpcs });
-  }, [dispatch]);
+  const refreshCampaignForRoster = React.useCallback(
+    async (cid: string) => {
+      const [players, inpcs] = await Promise.all([
+        fetchCampaignCharacters(cid, { includeSharedNotes: false }),
+        api<INpc[]>(`/api/campaigns/${cid}/inpcs`),
+      ]);
+      dispatch({ type: "setPlayers", players: players as CampaignCharacter[] });
+      dispatch({ type: "setINpcs", inpcs });
+    },
+    [dispatch],
+  );
 
-  const refreshEncounterForRoster = React.useCallback(async (_eid: string | null) => {
-    await refresh();
-  }, [refresh]);
+  const refreshEncounterForRoster = React.useCallback(
+    async (_eid: string | null) => {
+      await refresh();
+    },
+    [refresh],
+  );
 
   const noop = React.useCallback(async () => {}, []);
 
@@ -99,46 +115,80 @@ export function CombatRosterView() {
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <CombatRosterHeader
         backTo={campaignId ? `/campaign/${campaignId}` : "/"}
-        title={encounter ? translateUi("Combat Roster: {{value1}}", { value1: encounter.name }) : translateUi("Combat Roster")}
+        title={
+          encounter
+            ? translateUi("Combat Roster: {{value1}}", {
+                value1: encounter.name,
+              })
+            : translateUi("Combat Roster")
+        }
         totalXp={totalXp}
         difficulty={difficulty}
       />
 
-      <div className="campaignGrid">
-        <CombatRosterLeftColumn
-          players={state.players}
-          combatants={combatants}
-          inpcs={state.inpcs}
-          selectedCampaignId={state.selectedCampaignId ?? ""}
-          selectedEncounterId={encounterId ?? null}
-          onFullRest={campaignActions.fullRestPlayers}
-          onCreatePlayer={() => dispatch({ type: "openDrawer", drawer: { type: "createPlayer", campaignId: state.selectedCampaignId } })}
-          onEditPlayer={(playerId) => dispatch({ type: "openDrawer", drawer: { type: "editPlayer", playerId } })}
-          onDeletePlayer={campaignActions.deletePlayer}
-          onAddPlayerToEncounter={encounterActions.addPlayerToEncounter}
-          onAddINpcFromMonster={campaignActions.addINpcFromMonster}
-          onEditINpc={(inpcId) => dispatch({ type: "openDrawer", drawer: { type: "editINpc", inpcId } })}
-          onDeleteINpc={campaignActions.deleteINpc}
-          onAddINpcToEncounter={encounterActions.addINpcToEncounter}
-        />
-
-        <CombatRosterCenterColumn
-          selectedEncounter={encounter ? { id: encounter.id, name: encounter.name } : null}
-          combatants={combatants}
-          xpByCombatantId={xpByCombatantId}
-          playersById={playersById}
-          onAddMonster={encounterActions.addMonster}
-          onAddWorldAction={encounterActions.addWorldAction}
-          onAddAllPlayers={encounterActions.addAllPlayers}
-          onOpenCombat={() => encounterId && nav(campaignId ? `/campaign/${campaignId}/combat/${encounterId}` : `/combat/${encounterId}`)}
-          onEditCombatant={(combatantId) =>
-            encounterId ? dispatch({ type: "openDrawer", drawer: { type: "editCombatant", encounterId, combatantId } }) : undefined
-          }
-          onRemoveCombatant={encounterActions.removeCombatant}
-        />
-
-        <CombatRosterRightColumn encounterId={encounterId ?? null} />
-      </div>
+      <DmWorkspace
+        workspace="roster"
+        panels={[
+          ...buildRosterLeftPanels({
+            players: state.players,
+            combatants: combatants,
+            inpcs: state.inpcs,
+            selectedCampaignId: state.selectedCampaignId ?? "",
+            selectedEncounterId: encounterId ?? null,
+            onFullRest: campaignActions.fullRestPlayers,
+            onCreatePlayer: () =>
+              dispatch({
+                type: "openDrawer",
+                drawer: {
+                  type: "createPlayer",
+                  campaignId: state.selectedCampaignId,
+                },
+              }),
+            onEditPlayer: (playerId) =>
+              dispatch({
+                type: "openDrawer",
+                drawer: { type: "editPlayer", playerId },
+              }),
+            onDeletePlayer: campaignActions.deletePlayer,
+            onAddPlayerToEncounter: encounterActions.addPlayerToEncounter,
+            onAddINpcFromMonster: campaignActions.addINpcFromMonster,
+            onEditINpc: (inpcId) =>
+              dispatch({
+                type: "openDrawer",
+                drawer: { type: "editINpc", inpcId },
+              }),
+            onDeleteINpc: campaignActions.deleteINpc,
+            onAddINpcToEncounter: encounterActions.addINpcToEncounter,
+          }),
+          ...buildRosterCenterPanels({
+            selectedEncounter: encounter
+              ? { id: encounter.id, name: encounter.name }
+              : null,
+            combatants: combatants,
+            xpByCombatantId: xpByCombatantId,
+            playersById: playersById,
+            onAddMonster: encounterActions.addMonster,
+            onAddWorldAction: encounterActions.addWorldAction,
+            onAddAllPlayers: encounterActions.addAllPlayers,
+            onOpenCombat: () =>
+              encounterId &&
+              nav(
+                campaignId
+                  ? `/campaign/${campaignId}/combat/${encounterId}`
+                  : `/combat/${encounterId}`,
+              ),
+            onEditCombatant: (combatantId) =>
+              encounterId
+                ? dispatch({
+                    type: "openDrawer",
+                    drawer: { type: "editCombatant", encounterId, combatantId },
+                  })
+                : undefined,
+            onRemoveCombatant: encounterActions.removeCombatant,
+          }),
+          ...buildRosterRightPanels({ encounterId: encounterId ?? null }),
+        ]}
+      />
     </div>
   );
 }

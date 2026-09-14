@@ -6,14 +6,14 @@ export const theme = {
   colors: {
     // ── Base surfaces ──────────────────────────────────────────────
     bg:          PALETTE.bg,
-    panelBg:     PALETTE.panelBg,
+    panelBg:     `var(--dm-panel-background, ${PALETTE.panelBg})`,
     panelBorder: PALETTE.panelBorder,
     inputBg:     "rgba(0,0,0,0.30)",
 
     // ── Text ───────────────────────────────────────────────────────
-    text:     PALETTE.text,
+    text:     `var(--dm-text, ${PALETTE.text})`,
     textDark: PALETTE.textDark,
-    muted:    PALETTE.muted,
+    muted:    `var(--dm-muted, ${PALETTE.muted})`,
 
     // ── Accent ─────────────────────────────────────────────────────
     accentPrimary:   PALETTE.accentPrimary,   // amber — warm, high contrast on dark blue

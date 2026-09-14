@@ -1,13 +1,14 @@
+import type { WorkspacePanel } from "@/layout/workspace/DmWorkspace";
 import { CampaignNotesPanel } from "@/views/CampaignView/panels/CampaignNotesPanel";
 import { AdventureNotesPanel } from "@/views/CampaignView/panels/AdventureNotesPanel";
 import { SharedNotesPanel } from "@/views/CampaignView/panels/SharedNotesPanel";
 import type { Note, CampaignCharacter } from "@/domain/types/domain";
 
-export function CampaignRightSidebar(props: {
+export function buildCampaignRightPanels(props: {
   selectedAdventureId: string | null;
   campaignNotes: Note[];
   adventureNotes: Note[];
-  expandedNoteIds: string[]
+  expandedNoteIds: string[];
   onToggleNote: (noteId: string) => void;
   players: CampaignCharacter[];
   campaignId: string;
@@ -23,34 +24,51 @@ export function CampaignRightSidebar(props: {
   onDeleteAdventureNote: (noteId: string) => void;
   onReorderAdventureNotes: (ids: string[]) => void;
 }) {
-  return (
-    <div className="campaignCol campaignColRight">
-      <CampaignNotesPanel
-        notes={props.campaignNotes}
-        expandedNoteIds={props.expandedNoteIds}
-        onToggle={props.onToggleNote}
-        onAdd={props.onAddCampaignNote}
-        onEdit={props.onEditCampaignNote}
-        onDelete={props.onDeleteCampaignNote}
-        onReorder={props.onReorderCampaignNotes}
-      />
-
-      <AdventureNotesPanel
-        selectedAdventureId={props.selectedAdventureId}
-        notes={props.adventureNotes}
-        expandedNoteIds={props.expandedNoteIds}
-        onToggle={props.onToggleNote}
-        onAdd={props.onAddAdventureNote}
-        onEdit={props.onEditAdventureNote}
-        onDelete={props.onDeleteAdventureNote}
-        onReorder={props.onReorderAdventureNotes}
-      />
-
-      <SharedNotesPanel
-        campaignId={props.campaignId}
-        campaignSharedNotes={props.campaignSharedNotes}
-        players={props.players}
-      />
-    </div>
-  );
+  return [
+    {
+      id: "campaign-notes",
+      title: "Campaign Notes",
+      column: 2,
+      content: (
+        <CampaignNotesPanel
+          notes={props.campaignNotes}
+          expandedNoteIds={props.expandedNoteIds}
+          onToggle={props.onToggleNote}
+          onAdd={props.onAddCampaignNote}
+          onEdit={props.onEditCampaignNote}
+          onDelete={props.onDeleteCampaignNote}
+          onReorder={props.onReorderCampaignNotes}
+        />
+      ),
+    },
+    {
+      id: "adventure-notes",
+      title: "Adventure Notes",
+      column: 2,
+      content: (
+        <AdventureNotesPanel
+          selectedAdventureId={props.selectedAdventureId}
+          notes={props.adventureNotes}
+          expandedNoteIds={props.expandedNoteIds}
+          onToggle={props.onToggleNote}
+          onAdd={props.onAddAdventureNote}
+          onEdit={props.onEditAdventureNote}
+          onDelete={props.onDeleteAdventureNote}
+          onReorder={props.onReorderAdventureNotes}
+        />
+      ),
+    },
+    {
+      id: "shared-notes",
+      title: "Shared Notes",
+      column: 2,
+      content: (
+        <SharedNotesPanel
+          campaignId={props.campaignId}
+          campaignSharedNotes={props.campaignSharedNotes}
+          players={props.players}
+        />
+      ),
+    },
+  ] satisfies WorkspacePanel[];
 }

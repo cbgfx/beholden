@@ -2,8 +2,9 @@ import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import type { CSSProperties } from "react";
 import { C, withAlpha } from "@/lib/theme";
 import { IconButton } from "@/ui/IconButton";
-import type { SheetViewDef } from "@/views/character/layout/panelRegistry";
+import { MOVABLE_PANEL_IDS, PANEL_IDS, PANEL_TITLES, type PanelColorSettings, type PanelId, type SheetViewDef } from "@/views/character/layout/panelRegistry";
 import { MAX_SHEET_COLUMNS, MIN_SHEET_COLUMNS } from "@/views/character/layout/sheetViewLayout";
+import { IconPalette } from "@/views/character/CharacterSheetHeader";
 
 function IconCopy() {
   return <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" /></svg>;
@@ -11,6 +12,10 @@ function IconCopy() {
 
 function IconTrash() {
   return <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" /><path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /></svg>;
+}
+
+function IconReset() {
+  return <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 3v6h6" /></svg>;
 }
 
 export function CharacterLayoutEditorToolbar(props: {
@@ -24,11 +29,19 @@ export function CharacterLayoutEditorToolbar(props: {
   onReset: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  colorsOpen: boolean;
+  colorTarget: PanelId | "all";
+  globalColors: Required<PanelColorSettings>;
+  onToggleColors: () => void;
+  onColorTargetChange: (target: PanelId | "all") => void;
+  onColorChange: (key: keyof PanelColorSettings, value: string) => void;
+  onResetColors: () => void;
 }) {
   const translateUi = useUiTranslation("playerUi");
   const { activeView } = props;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+    <div style={{ display: "grid", justifyItems: "center", gap: 8, marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
       <input
         key={activeView.id}
         aria-label={translateUi("View name")}
@@ -52,9 +65,22 @@ export function CharacterLayoutEditorToolbar(props: {
       />
       <button type="button" onClick={props.onAddColumn} disabled={activeView.columns >= MAX_SHEET_COLUMNS} style={toolbarButtonStyle(activeView.columns >= MAX_SHEET_COLUMNS)}>{translateUi("+ Column")}</button>
       <button type="button" onClick={props.onRemoveColumn} disabled={activeView.columns <= MIN_SHEET_COLUMNS} style={toolbarButtonStyle(activeView.columns <= MIN_SHEET_COLUMNS)}>{translateUi("− Column")}</button>
-      <button type="button" onClick={props.onReset} disabled={!props.canReset} title={props.canReset ? undefined : translateUi("Only built-in views have a default layout")} style={toolbarButtonStyle(!props.canReset)}>{translateUi("Reset this view")}</button>
+      <IconButton onClick={props.onReset} disabled={!props.canReset} title={props.canReset ? translateUi("Reset this view") : translateUi("Only built-in views have a default layout")} aria-label={translateUi("Reset this view")}><IconReset /></IconButton>
+      <IconButton onClick={props.onToggleColors} title={translateUi("Colours")} aria-label={translateUi("Colours")}><IconPalette /></IconButton>
       <IconButton onClick={props.onDuplicate} title={translateUi("Duplicate this view")}><IconCopy /></IconButton>
       <IconButton onClick={props.onDelete} disabled={!props.canDelete} title={props.canDelete ? translateUi("Delete this view") : translateUi("Combat and All can't be deleted, and at least one view must remain")} style={{ color: C.red, borderColor: withAlpha(C.red, 0.4), background: withAlpha(C.red, 0.08) }}><IconTrash /></IconButton>
+      </div>
+      {props.colorsOpen && <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.025)" }}>
+        <select aria-label={translateUi("Colour target")} value={props.colorTarget} onChange={(event) => props.onColorTargetChange(event.target.value as PanelId | "all")} style={{ ...toolbarButtonStyle(false), background: C.bg }}>
+          <option value="all">{translateUi("All panels")}</option>
+          {[PANEL_IDS.combatStats, ...MOVABLE_PANEL_IDS].map((id) => <option key={id} value={id}>{translateUi(PANEL_TITLES[id])}</option>)}
+        </select>
+        {([['accent', 'Accent'], ['background', 'Panel background'], ['text', 'Text']] as const).map(([key, label]) => <label key={key} style={{ display: "inline-flex", alignItems: "center", gap: 6, color: C.muted, fontSize: "var(--fs-small)" }}>
+          {translateUi(label)}
+          <input type="color" aria-label={translateUi(label)} value={props.globalColors[key]} onChange={(event) => props.onColorChange(key, event.target.value)} style={{ width: 28, height: 28, padding: 0, border: 0, background: "transparent", cursor: "pointer" }} />
+        </label>)}
+        <button type="button" onClick={props.onResetColors} style={toolbarButtonStyle(false)}>{translateUi("Reset colours")}</button>
+      </div>}
     </div>
   );
 }

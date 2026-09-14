@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ExpandableNoteItem } from "./ExpandableNoteItem";
 import { withAlpha } from "./colors";
+import { IconPencil, IconTrash } from "../icons";
 
 const mentionLinkStyle: React.CSSProperties = {
   color: "#7dd3fc",
@@ -258,6 +259,9 @@ export function NoteRow({
           <div className="noteRowActions" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
             {onEdit ? (
               <button
+                type="button"
+                title={t("noteRow.edit")}
+                aria-label={t("noteRow.edit")}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -265,11 +269,14 @@ export function NoteRow({
                 }}
                 style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 5, color: mutedColor, cursor: "pointer", padding: "2px 7px", fontSize: "var(--fs-small)" }}
               >
-                {t("noteRow.edit")}
+                <IconPencil size={14} />
               </button>
             ) : null}
             {onDelete ? (
               <button
+                type="button"
+                title={t("noteRow.delete")}
+                aria-label={t("noteRow.delete")}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -277,7 +284,7 @@ export function NoteRow({
                 }}
                 style={{ background: withAlpha(deleteColor, 0.08), border: `1px solid ${withAlpha(deleteColor, 0.25)}`, borderRadius: 5, color: deleteColor, cursor: "pointer", padding: "2px 7px", fontSize: "var(--fs-small)" }}
               >
-                x
+                <IconTrash size={14} />
               </button>
             ) : null}
           </div>
