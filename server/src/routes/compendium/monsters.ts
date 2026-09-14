@@ -7,6 +7,7 @@ import { applySharedApiCacheHeaders } from "../../lib/cacheHeaders.js";
 import { parseStoredGrandEntry, parseStoredPresentationEntry } from "../../services/compendium/storedCompendium.js";
 import { grandEntryId, saveGrandEntry } from "../../services/compendium/grandEditor.js";
 import { parseRulesetFilter } from "./helpers.js";
+import { monsterSortLetter } from "@beholden/shared/domain/compendium/monsterSortName";
 
 function parseCrFilterValue(raw: unknown): number | null {
   const text = String(raw ?? "").trim();
@@ -58,6 +59,34 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
   });
 
   // MARK: - GET /api/compendium/monsters/:monsterId
+  // MARK: - GET /api/compendium/monsters/letters
+  // Registered above /:monsterId, which would otherwise match "letters" as a monster id.
+  // Row index of the first monster under each initial letter, for the browser's A-Z jump bar.
+  // The bar has to know where "M" starts within the whole filtered list, which the browser can no
+  // longer work out for itself now that it holds only the rows it has scrolled past.
+  app.get("/api/compendium/monsters/letters", (req, res) => {
+    applySharedApiCacheHeaders(res);
+    const { clauses, params } = buildMonsterFilters(req.query);
+    // Only the name column, in the same order the list is rendered in -- cheap enough to scan even
+    // for an unfiltered catalogue, and it keeps the indices exact.
+    const rows = db
+      .prepare(`SELECT name FROM compendium_monsters WHERE 1=1 ${clauses.join(" ")} ${monsterOrderBy(req.query.sort)}`)
+      .all(...params) as { name: string }[];
+
+    const firstIndex = new Map<string, number>();
+    for (let index = 0; index < rows.length; index += 1) {
+      const letter = monsterSortLetter(rows[index]?.name ?? "");
+      if (letter && !firstIndex.has(letter)) firstIndex.set(letter, index);
+    }
+
+    return res.json({
+      letters: Array.from(firstIndex.entries())
+        .map(([letter, index]) => ({ letter, index }))
+        .sort((a, b) => a.letter.localeCompare(b.letter)),
+      total: rows.length,
+    });
+  });
+
   app.get("/api/compendium/monsters/:monsterId", (req, res) => {
     applySharedApiCacheHeaders(res, { maxAgeSeconds: 60, staleWhileRevalidateSeconds: 300 });
     const monsterId = requireParam(req, res, "monsterId");
@@ -248,24 +277,93 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
 
   // Monster search
 
+  // MARK: - Monster search filters
+  type MonsterQuery = Record<string, unknown>;
+
+  /**
+   * Build the shared WHERE clauses for a monster search. /search and /monsters/letters both run
+   * through this, so the jump bar's row indices always refer to the list actually on screen.
+   */
+  function buildMonsterFilters(query: MonsterQuery): { clauses: string[]; params: unknown[] } {
+    const clauses: string[] = [];
+    const params: unknown[] = [];
+
+    const q = String(query.q ?? "").trim().toLowerCase();
+    if (q) {
+      clauses.push("AND (name LIKE ? OR name_key LIKE ?)");
+      const like = `%${q}%`;
+      params.push(like, like);
+    }
+
+    const crMin = parseCrFilterValue(query.crMin);
+    if (crMin != null && Number.isFinite(crMin)) {
+      clauses.push("AND cr_numeric >= ?");
+      params.push(crMin);
+    }
+    const crMax = parseCrFilterValue(query.crMax);
+    if (crMax != null && Number.isFinite(crMax)) {
+      clauses.push("AND cr_numeric <= ?");
+      params.push(crMax);
+    }
+
+    const types = query.types ? String(query.types).split(",").filter(Boolean) : null;
+    if (types?.length) {
+      clauses.push(`AND type_key IN (${types.map(() => "?").join(",")})`);
+      params.push(...types);
+    }
+
+    const sizes = query.sizes ? String(query.sizes).split(",").filter(Boolean) : null;
+    if (sizes?.length) {
+      clauses.push(`AND size IN (${sizes.map(() => "?").join(",")})`);
+      params.push(...sizes);
+    }
+
+    const environments = query.env ? String(query.env).split(",").filter(Boolean) : null;
+    if (environments?.length) {
+      const envClauses: string[] = [];
+      for (const envRaw of environments) {
+        const env = envRaw.trim().toLowerCase();
+        if (!env) continue;
+        envClauses.push("LOWER(environment) LIKE ?");
+        params.push(`%${env}%`);
+      }
+      if (envClauses.length > 0) clauses.push(`AND (${envClauses.join(" OR ")})`);
+    }
+
+    const ruleset = parseRulesetFilter(query.ruleset);
+    if (ruleset) {
+      clauses.push("AND ruleset = ?");
+      params.push(ruleset);
+    }
+
+    return { clauses, params };
+  }
+
+  // Alphabetical order ignores a leading "The", so "The Abbot" files under A rather than sitting
+  // among the Ts -- the ordinary index convention, and the same rule normalizeMonsterSortName
+  // applies for the A-Z jump bar. Without this the bar and the list disagree about where A starts.
+  //
+  // The underscore is escaped because LIKE reads a bare _ as a single-character wildcard, which
+  // would make 'the_%' also match "Theodore" and sort it under O. "!" is the escape character
+  // rather than the usual backslash simply because it needs no escaping of its own here.
+  const MONSTER_SORT_KEY =
+    "CASE WHEN name_key LIKE 'the!_%' ESCAPE '!' THEN substr(name_key, 5) ELSE name_key END";
+
+  function monsterOrderBy(rawSort: unknown): string {
+    const sort = String(rawSort ?? "az").trim();
+    if (sort === "crAsc") return `ORDER BY cr_numeric ASC, ${MONSTER_SORT_KEY} ASC`;
+    if (sort === "crDesc") return `ORDER BY cr_numeric DESC, ${MONSTER_SORT_KEY} ASC`;
+    return `ORDER BY ${MONSTER_SORT_KEY} ASC`;
+  }
+
   // MARK: - GET /api/compendium/search
   app.get("/api/compendium/search", (req, res) => {
     applySharedApiCacheHeaders(res);
-    const q = String(req.query.q ?? "").trim().toLowerCase();
     const limit = Math.min(
       Math.max(parseInt(String(req.query.limit ?? "50"), 10) || 50, 1),
       MAX_MONSTER_SEARCH_LIMIT,
     );
     const offset = Math.max(parseInt(String(req.query.offset ?? "0"), 10) || 0, 0);
-    const crMin = parseCrFilterValue(req.query.crMin);
-    const crMax = parseCrFilterValue(req.query.crMax);
-    const types = req.query.types ? String(req.query.types).split(",").filter(Boolean) : null;
-    const sizes = req.query.sizes ? String(req.query.sizes).split(",").filter(Boolean) : null;
-    const environments = req.query.env ? String(req.query.env).split(",").filter(Boolean) : null;
-    const ruleset = parseRulesetFilter(req.query.ruleset);
-    const sortRaw = String(req.query.sort ?? "az").trim();
-    const sort: "az" | "crAsc" | "crDesc" =
-      sortRaw === "crAsc" || sortRaw === "crDesc" ? sortRaw : "az";
     const withTotalRaw = String(req.query.withTotal ?? "").trim().toLowerCase();
     const withTotal = withTotalRaw === "1" || withTotalRaw === "true" || withTotalRaw === "yes";
     const fieldsParam = String(req.query.fields ?? "").trim();
@@ -278,65 +376,14 @@ export function registerMonsterRoutes(app: Express, ctx: ServerContext, anyDm: R
     const hasRequestedFields = requestedFields.size > 0;
     const includeField = (field: string) => !hasRequestedFields || requestedFields.has(field);
 
-    const parts: string[] = ["SELECT id, ruleset, name, cr, cr_numeric, type_key, size, environment FROM compendium_monsters WHERE 1=1"];
-    const countParts: string[] = ["SELECT count(*) AS n FROM compendium_monsters WHERE 1=1"];
-    const params: unknown[] = [];
-
-    if (q) {
-      parts.push("AND (name LIKE ? OR name_key LIKE ?)");
-      countParts.push("AND (name LIKE ? OR name_key LIKE ?)");
-      const like = `%${q}%`;
-      params.push(like, like);
-    }
-    if (crMin != null && Number.isFinite(crMin)) {
-      parts.push("AND cr_numeric >= ?");
-      countParts.push("AND cr_numeric >= ?");
-      params.push(crMin);
-    }
-    if (crMax != null && Number.isFinite(crMax)) {
-      parts.push("AND cr_numeric <= ?");
-      countParts.push("AND cr_numeric <= ?");
-      params.push(crMax);
-    }
-    if (types?.length) {
-      const clause = `AND type_key IN (${types.map(() => "?").join(",")})`;
-      parts.push(clause);
-      countParts.push(clause);
-      params.push(...types);
-    }
-    if (sizes?.length) {
-      const clause = `AND size IN (${sizes.map(() => "?").join(",")})`;
-      parts.push(clause);
-      countParts.push(clause);
-      params.push(...sizes);
-    }
-    if (environments?.length) {
-      const envClauses: string[] = [];
-      for (const envRaw of environments) {
-        const env = envRaw.trim().toLowerCase();
-        if (!env) continue;
-        envClauses.push("LOWER(environment) LIKE ?");
-        params.push(`%${env}%`);
-      }
-      if (envClauses.length > 0) {
-        const clause = `AND (${envClauses.join(" OR ")})`;
-        parts.push(clause);
-        countParts.push(clause);
-      }
-    }
-    if (ruleset) {
-      parts.push("AND ruleset = ?");
-      countParts.push("AND ruleset = ?");
-      params.push(ruleset);
-    }
-    if (sort === "crAsc") {
-      parts.push("ORDER BY cr_numeric ASC, name_key ASC");
-    } else if (sort === "crDesc") {
-      parts.push("ORDER BY cr_numeric DESC, name_key ASC");
-    } else {
-      parts.push("ORDER BY name_key ASC");
-    }
-    parts.push(`LIMIT ${limit} OFFSET ${offset}`);
+    const { clauses, params } = buildMonsterFilters(req.query);
+    const parts: string[] = [
+      "SELECT id, ruleset, name, cr, cr_numeric, type_key, size, environment FROM compendium_monsters WHERE 1=1",
+      ...clauses,
+      monsterOrderBy(req.query.sort),
+      `LIMIT ${limit} OFFSET ${offset}`,
+    ];
+    const countParts: string[] = ["SELECT count(*) AS n FROM compendium_monsters WHERE 1=1", ...clauses];
 
     const rows = db.prepare(parts.join(" ")).all(...params) as {
       id: string; ruleset: "5e" | "5.5e"; name: string; cr: string | null; cr_numeric: number | null;

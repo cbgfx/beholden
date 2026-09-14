@@ -1,3 +1,4 @@
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { Panel } from "@/ui/Panel";
 import { Select } from "@/ui/Select";
@@ -5,7 +6,7 @@ import { C, withAlpha } from "@/lib/theme";
 import { expandSchool } from "@beholden/shared/domain/compendium/expandSchool";
 import { useSpellSearch } from "@/views/CompendiumView/hooks/useSpellSearch";
 import { IconSpells } from "@/ui/Icons";
-import { togglePillStyle } from "@beholden/shared/ui";
+import { togglePillStyle, useInfiniteScroll } from "@beholden/shared/ui";
 
 export function SpellsPanel(props: {
   selectedSpellId?: string | null;
@@ -22,13 +23,22 @@ export function SpellsPanel(props: {
     filterRitual, setFilterRitual,
     rulesetFilter, setRulesetFilter, availableRulesets,
     hasActiveFilters, clearFilters,
-    rows, busy,
+    rows, busy, totalCount, loadingMore, hasMore, loadMore, error,
   } = useSpellSearch();
+
+  const { containerRef, onScroll } = useInfiniteScroll({ hasMore, loadingMore, loadMore });
+
+  // A new search starts from page one, so send the viewport back to the top with it -- otherwise a
+  // reader left halfway down the old list immediately pages the new one back to that depth.
+  React.useEffect(() => {
+    const element = containerRef.current;
+    if (element) element.scrollTop = 0;
+  }, [containerRef, q, level, schoolFilter, classFilter, filterV, filterS, filterM, filterConcentration, filterRitual, rulesetFilter]);
 
   return (
     <Panel
       title={<span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: "var(--fs-large)" }}><IconSpells size={36} /><span>{t("compendiumSpells.title")}</span></span>}
-      actions={<div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{busy ? t("compendiumSpells.loading") : rows.length}</div>}
+      actions={<div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{busy ? t("compendiumSpells.loading") : totalCount}</div>}
       style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}
       bodyStyle={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, gap: 8 }}
     >
@@ -92,7 +102,11 @@ export function SpellsPanel(props: {
       </div>
 
       {/* List */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", border: `1px solid ${C.panelBorder}`, borderRadius: 12 }}>
+      <div
+        ref={containerRef}
+        onScroll={onScroll}
+        style={{ flex: 1, minHeight: 0, overflowY: "auto", border: `1px solid ${C.panelBorder}`, borderRadius: 12 }}
+      >
         {rows.map((s) => {
           const active = s.id === (props.selectedSpellId ?? "") && s.ruleset === (props.selectedSpellRuleset ?? null);
           const lvl = s.level == null ? "?" : s.level === 0 ? "0" : String(s.level);
@@ -116,7 +130,11 @@ export function SpellsPanel(props: {
             </button>
           );
         })}
-        {!rows.length && <div style={{ padding: 10, color: C.muted }}>{t("compendiumSpells.noSpellsFound")}</div>}
+        {loadingMore && <div style={{ padding: 10, color: C.muted }}>{t("compendiumSpells.loadingMore")}</div>}
+        {/* A failed page has to say so: paging stops on error, so an empty list would otherwise
+            read as "no such spell" rather than "the request failed". */}
+        {error && <div style={{ padding: 10, color: C.red }}>{t("compendiumSpells.loadFailed")}</div>}
+        {!busy && !error && !rows.length && <div style={{ padding: 10, color: C.muted }}>{t("compendiumSpells.noSpellsFound")}</div>}
       </div>
     </Panel>
   );

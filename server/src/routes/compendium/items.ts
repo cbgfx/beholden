@@ -189,6 +189,10 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
       attunementOnlyRaw === "1" || attunementOnlyRaw === "true" || attunementOnlyRaw === "yes";
     const magicOnlyRaw = String(req.query.magic ?? "").trim().toLowerCase();
     const magicOnly = magicOnlyRaw === "1" || magicOnlyRaw === "true" || magicOnlyRaw === "yes";
+    // Separate from `magic` rather than making that param tri-state: callers already send magic=0
+    // to mean "don't filter on magic at all", so 0 can't be repurposed to mean "mundane only".
+    const nonMagicOnlyRaw = String(req.query.nonmagic ?? "").trim().toLowerCase();
+    const nonMagicOnly = nonMagicOnlyRaw === "1" || nonMagicOnlyRaw === "true" || nonMagicOnlyRaw === "yes";
     const limitRaw = Number.parseInt(String(req.query.limit ?? "0"), 10);
     const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, MAX_ITEMS_LIMIT) : null;
     const offsetRaw = Number.parseInt(String(req.query.offset ?? "0"), 10);
@@ -221,6 +225,7 @@ export function registerItemRoutes(app: Express, ctx: ServerContext, anyDm: Requ
     }
     if (attunementOnly) whereParts.push("attunement = 1");
     if (magicOnly) whereParts.push("magic = 1");
+    if (nonMagicOnly && !magicOnly) whereParts.push("magic = 0");
     const rulesetFilter = parseRulesetFilter(req.query.ruleset);
     if (rulesetFilter) {
       whereParts.push("ruleset = ?");

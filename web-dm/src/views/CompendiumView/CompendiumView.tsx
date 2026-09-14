@@ -15,27 +15,22 @@ export function CompendiumView() {
 
   const handleSetSection = React.useCallback((s: CompendiumSection) => {
     setActiveSection(s);
-    setSelectedSpellId(null);
-    setSelectedSpellRuleset(null);
-    setSelectedMonsterId(null);
-    setSelectedItemId(null);
-    setSelectedFeatId(null);
   }, []);
 
   const hasRightColumn = activeSection !== "rules" && activeSection !== "compendium" && activeSection !== "ai-help";
 
   return (
-    <div style={{ height: "100%", padding: 12, boxSizing: "border-box", overflow: "hidden" }}>
+    <div style={{ height: "100%", padding: 12, boxSizing: "border-box", overflowX: "auto" }}>
       <div
         style={{
           height: "100%",
           display: "grid",
-          gridTemplateColumns: hasRightColumn ? "200px 1fr 420px" : "200px 1fr",
+          gridTemplateColumns: hasRightColumn ? "180px minmax(360px, 1fr) 420px" : "180px minmax(360px, 1fr)",
           gridTemplateRows: "1fr",
           gap: 14,
           alignItems: "stretch",
           minHeight: 0,
-          overflow: "hidden",
+
         }}
       >
         <CompendiumLeftColumn

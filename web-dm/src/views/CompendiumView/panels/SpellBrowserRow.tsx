@@ -75,9 +75,9 @@ export function SpellBrowserRow(props: {
             gap: 4,
             padding: "0 8px",
             flexShrink: 0,
-            opacity: hovered || props.confirmingDelete ? 1 : 0,
+            opacity: hovered || props.confirmingDelete ? 1 : 0.65,
             transition: "opacity 0.1s",
-            pointerEvents: hovered || props.confirmingDelete ? "auto" : "none",
+            pointerEvents: "auto",
           }}
         >
           {props.confirmingDelete ? (

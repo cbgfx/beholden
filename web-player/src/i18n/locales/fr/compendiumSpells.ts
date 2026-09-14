@@ -1,6 +1,8 @@
 export default {
   title: "Sorts",
   loading: "Chargement…",
+  loadingMore: "Chargement de la suite…",
+  loadFailed: "Impossible de charger les sorts. Réessayez.",
   error: "Erreur",
   selectSpell: "Sélectionnez un sort",
   detailFallbackTitle: "Sort",

@@ -6,9 +6,7 @@ import type { UseCompendiumItemSearchOptions } from "@beholden/shared/domain/com
 export type { ItemSearchRow };
 
 export function useItemSearch(options?: UseCompendiumItemSearchOptions) {
-  const result = useCompendiumItemSearch(api, options);
-  return {
-    ...result,
-    error: undefined,
-  };
+  // Errors are surfaced rather than swallowed: paging stops after a failed page, so a silently
+  // dropped error would leave a half-loaded list looking like the complete set of results.
+  return useCompendiumItemSearch(api, { ...options, includeError: true });
 }

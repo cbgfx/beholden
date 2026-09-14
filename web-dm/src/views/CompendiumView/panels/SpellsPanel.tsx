@@ -1,6 +1,6 @@
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
-import { EmptyState, ListShell } from "@beholden/shared/ui";
+import { EmptyState, ListShell, useInfiniteScroll } from "@beholden/shared/ui";
 import { Panel } from "@/ui/Panel";
 import { Select } from "@/ui/Select";
 import { IconSpells } from "@/icons";
@@ -51,8 +51,22 @@ export function SpellsPanel(props: SpellsPanelProps) {
     hasActiveFilters, clearFilters,
     rows,
     busy,
+    totalCount,
+    loadingMore,
+    hasMore,
+    loadMore,
+    error,
     refresh,
   } = useSpellSearch();
+
+  const { containerRef, onScroll } = useInfiniteScroll({ hasMore, loadingMore, loadMore });
+
+  // A new search starts from page one, so send the viewport back to the top with it -- otherwise a
+  // reader left halfway down the old list immediately pages the new one back to that depth.
+  React.useEffect(() => {
+    const element = containerRef.current;
+    if (element) element.scrollTop = 0;
+  }, [containerRef, q, level, schoolFilter, classFilter, filterV, filterS, filterM, filterConcentration, filterRitual, rulesetFilter]);
 
   const [formTarget, setFormTarget] = React.useState<FormTarget | null>(null);
   const [editLoadingKey, setEditLoadingKey] = React.useState<string | null>(null);
@@ -109,7 +123,7 @@ export function SpellsPanel(props: SpellsPanelProps) {
         actions={(
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
-              {busy ? translateUi("Loading...") : `${rows.length}`}
+              {busy ? translateUi("Loading...") : `${totalCount}`}
             </div>
             {props.editable && <BrowserAddButton title={translateUi("New spell")} onClick={() => setFormTarget({ mode: "create" })} />}
           </div>
@@ -193,7 +207,7 @@ export function SpellsPanel(props: SpellsPanelProps) {
           )}
         </div>
 
-        <ListShell style={{ borderColor: theme.colors.panelBorder }}>
+        <ListShell ref={containerRef} onScroll={onScroll} style={{ borderColor: theme.colors.panelBorder }}>
           {rows.map((spell) => {
             const key = rowKey(spell.id, spell.ruleset);
             return (
@@ -228,7 +242,19 @@ export function SpellsPanel(props: SpellsPanelProps) {
             );
           })}
 
-          {!rows.length && (
+          {loadingMore && (
+            <EmptyState textColor={theme.colors.muted} style={{ padding: 10 }}>
+              {translateUi("Loading more...")}
+            </EmptyState>
+          )}
+          {/* Paging stops on a failed page, so say so -- an empty list would otherwise read as
+              "no such spell" rather than "the request failed". */}
+          {error && (
+            <EmptyState textColor={theme.colors.red} style={{ padding: 10 }}>
+              {translateUi("Could not load spells. Try again.")}
+            </EmptyState>
+          )}
+          {!busy && !error && !rows.length && (
             <EmptyState textColor={theme.colors.muted} style={{ padding: 10 }}>
               {translateUi("No spells found.")}
             </EmptyState>

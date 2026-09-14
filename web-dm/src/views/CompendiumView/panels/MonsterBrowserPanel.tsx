@@ -18,6 +18,24 @@ import { BrowserAddButton } from "./browserParts";
 
 const ROW_HEIGHT = 52;
 
+/** Stands in for a row whose window hasn't arrived yet, so the list keeps its geometry. */
+function MonsterRowPlaceholder() {
+  return (
+    <div
+      style={{
+        height: ROW_HEIGHT,
+        borderBottom: `1px solid ${theme.colors.panelBorder}`,
+        display: "flex",
+        alignItems: "center",
+        padding: "0 10px",
+        flexShrink: 0,
+      }}
+    >
+      <div style={{ height: 10, width: "40%", borderRadius: 5, background: withAlpha(theme.colors.muted, 0.18) }} />
+    </div>
+  );
+}
+
 function MonsterBrowserRow(props: {
   row: CompendiumMonsterRow;
   active: boolean;
@@ -83,9 +101,9 @@ function MonsterBrowserRow(props: {
             gap: 4,
             padding: "0 8px",
             flexShrink: 0,
-            opacity: hovered || props.confirmingDelete ? 1 : 0,
+            opacity: hovered || props.confirmingDelete ? 1 : 0.65,
             transition: "opacity 0.1s",
-            pointerEvents: hovered || props.confirmingDelete ? "auto" : "none",
+            pointerEvents: "auto",
           }}
         >
           {props.confirmingDelete ? (
@@ -120,10 +138,22 @@ export function MonsterBrowserPanel(props: {
   editable?: boolean;
 }) {
   const translateUi = useUiTranslation("dmUi");
-  const { filteredRows, loading, loadError, totalRows, envOptions, sizeOptions, typeOptions, refresh, compQ, setCompQ, sortMode, setSortMode, envFilter, setEnvFilter, sizeFilter, setSizeFilter, typeFilter, setTypeFilter, crMin, setCrMin, crMax, setCrMax, rulesetFilter, setRulesetFilter, showRulesetFilter, lettersInList, letterFirstIndex } = useMonsterBrowser();
+  const { rows, loading, loadError, totalRows, ensureRange, envOptions, sizeOptions, typeOptions, refresh, compQ, setCompQ, sortMode, setSortMode, envFilter, setEnvFilter, sizeFilter, setSizeFilter, typeFilter, setTypeFilter, crMin, setCrMin, crMax, setCrMax, rulesetFilter, setRulesetFilter, showRulesetFilter, lettersInList, letterFirstIndex } = useMonsterBrowser();
 
   const vl = useVirtualList({ isEnabled: true, rowHeight: ROW_HEIGHT, overscan: 8 });
-  const { start, end, padTop, padBottom } = vl.getRange(filteredRows.length);
+  // The list is sized by the server's total, not by how many rows have been fetched, so the
+  // scrollbar and the A-Z jump both address the whole result set.
+  const { start, end, padTop, padBottom } = vl.getRange(totalRows);
+
+  // The filtered total can't tell an empty catalogue from a filter that matched nothing, so lean on
+  // the facet lists: they come back empty only when there are no monsters at all.
+  const hasAnyMonsters = typeOptions.length > 1;
+
+  // Fetch whatever window the viewport is over. Scrolling changes `start`/`end`, so this covers
+  // both dragging the scrollbar and jumping straight to a letter.
+  React.useEffect(() => {
+    if (totalRows > 0) ensureRange(start, end);
+  }, [ensureRange, start, end, totalRows]);
 
   const [formTarget, setFormTarget] = React.useState<
     { mode: "create" } | { mode: "edit"; monster: MonsterForEdit } | { mode: "duplicate"; source: MonsterForEdit } | null
@@ -137,11 +167,29 @@ export function MonsterBrowserPanel(props: {
   const [dupSearchQ, setDupSearchQ] = React.useState("");
   const [dupLoading, setDupLoading] = React.useState<string | null>(null);
 
-  const dupFilteredRows = React.useMemo(() => {
-    const query = dupSearchQ.trim().toLowerCase();
-    const next = query ? filteredRows.filter((monster) => monster.name.toLowerCase().includes(query)) : filteredRows;
-    return next.slice(0, 200);
-  }, [filteredRows, dupSearchQ]);
+  // The duplicate picker runs its own search rather than filtering the browser's rows: those are
+  // now only the windows that have been scrolled past, so a name further down the list wouldn't
+  // be there to match.
+  const [dupRows, setDupRows] = React.useState<CompendiumMonsterRow[]>([]);
+  React.useEffect(() => {
+    if (!dupPickerOpen) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams({ q: dupSearchQ.trim(), limit: "200", sort: "az", fields: "id,name,cr,type,environment" });
+      api<CompendiumMonsterRow[] | { rows?: CompendiumMonsterRow[] }>(`/api/compendium/search?${params.toString()}`, { signal: controller.signal })
+        .then((result) => {
+          if (controller.signal.aborted) return;
+          setDupRows(Array.isArray(result) ? result : Array.isArray(result?.rows) ? result.rows : []);
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) setDupRows([]);
+        });
+    }, 220);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [dupPickerOpen, dupSearchQ]);
 
   async function handleEditClick(id: string) {
     setEditLoading(id);
@@ -191,7 +239,7 @@ export function MonsterBrowserPanel(props: {
         actions={
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
-              {loading ? translateUi("Loading...") : `${filteredRows.length.toLocaleString()} / ${totalRows.toLocaleString()}`}
+              {loading ? translateUi("Loading...") : totalRows.toLocaleString()}
             </div>
             {props.editable && <BrowserAddButton title={translateUi("New monster")} onClick={() => setShowCreateChoice(true)} />}
           </div>
@@ -270,27 +318,31 @@ export function MonsterBrowserPanel(props: {
               {translateUi("Failed to load:")} {loadError}
             </EmptyState>
           )}
-          {!loading && !loadError && filteredRows.length === 0 && (
+          {!loading && !loadError && totalRows === 0 && (
             <EmptyState textColor={theme.colors.muted} style={{ padding: 12 }}>
-              {totalRows === 0 ? translateUi("No compendium data loaded. Import canonical Beholden JSON in the Compendium section.") : translateUi("No monsters match the current filters.")}
+              {hasAnyMonsters ? translateUi("No monsters match the current filters.") : translateUi("No compendium data loaded. Import canonical Beholden JSON in the Compendium section.")}
             </EmptyState>
           )}
-          {filteredRows.length > 0 && (
+          {totalRows > 0 && (
             <div style={{ paddingTop: padTop, paddingBottom: padBottom }}>
-              {filteredRows.slice(start, end).map((monster) => (
-                <MonsterBrowserRow
-                  key={monster.id}
-                  row={monster}
-                  active={monster.id === props.selectedMonsterId}
-                  editable={!!props.editable}
-                  onClick={() => props.onSelectMonster(monster.id)}
-                  onEdit={() => handleEditClick(monster.id)}
-                  onDelete={() => setConfirmDeleteId(monster.id)}
-                  confirmingDelete={confirmDeleteId === monster.id}
-                  onConfirmDelete={() => handleDeleteConfirm(monster.id)}
-                  onCancelDelete={() => setConfirmDeleteId(null)}
-                  deleteBusy={deleteBusy && confirmDeleteId === monster.id}
-                />
+              {rows.slice(start, end).map((monster, offset) => (
+                monster ? (
+                  <MonsterBrowserRow
+                    key={monster.id}
+                    row={monster}
+                    active={monster.id === props.selectedMonsterId}
+                    editable={!!props.editable}
+                    onClick={() => props.onSelectMonster(monster.id)}
+                    onEdit={() => handleEditClick(monster.id)}
+                    onDelete={() => setConfirmDeleteId(monster.id)}
+                    confirmingDelete={confirmDeleteId === monster.id}
+                    onConfirmDelete={() => handleDeleteConfirm(monster.id)}
+                    onCancelDelete={() => setConfirmDeleteId(null)}
+                    deleteBusy={deleteBusy && confirmDeleteId === monster.id}
+                  />
+                ) : (
+                  <MonsterRowPlaceholder key={`pending-${start + offset}`} />
+                )
               ))}
             </div>
           )}
@@ -314,7 +366,7 @@ export function MonsterBrowserPanel(props: {
       {dupPickerOpen && (
         <MonsterDuplicatePickerModal
           searchQuery={dupSearchQ}
-          rows={dupFilteredRows}
+          rows={dupRows}
           loadingId={dupLoading}
           onClose={() => {
             setDupPickerOpen(false);

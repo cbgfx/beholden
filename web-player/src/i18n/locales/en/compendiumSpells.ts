@@ -1,6 +1,8 @@
 export default {
   title: "Spells",
   loading: "Loading…",
+  loadingMore: "Loading more…",
+  loadFailed: "Could not load spells. Try again.",
   error: "Error",
   selectSpell: "Select a spell",
   detailFallbackTitle: "Spell",

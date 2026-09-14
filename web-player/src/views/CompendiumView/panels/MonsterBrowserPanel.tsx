@@ -10,6 +10,23 @@ import type { SortMode } from "@/lib/monsterPicker/types";
 
 const ROW_HEIGHT = 52;
 
+/** Stands in for a row whose window hasn't arrived yet, so the list keeps its geometry. */
+function MonsterRowPlaceholder() {
+  return (
+    <div
+      style={{
+        height: ROW_HEIGHT,
+        borderBottom: `1px solid ${C.panelBorder}`,
+        display: "flex",
+        alignItems: "center",
+        padding: "0 12px",
+      }}
+    >
+      <div style={{ height: 10, width: "40%", borderRadius: 5, background: withAlpha(C.muted, 0.18) }} />
+    </div>
+  );
+}
+
 function inputStyle(): React.CSSProperties {
   return {
     background: C.bg, color: C.text,
@@ -36,10 +53,22 @@ export function MonsterBrowserPanel(props: {
   onSelectMonster: (id: string) => void;
 }) {
   const { t } = useTranslation();
-  const { filteredRows, loading, loadError, totalRows, envOptions, sizeOptions, typeOptions, compQ, setCompQ, sortMode, setSortMode, envFilter, setEnvFilter, sizeFilter, setSizeFilter, typeFilter, setTypeFilter, crMin, setCrMin, crMax, setCrMax, rulesetFilter, setRulesetFilter, showRulesetFilter, lettersInList, letterFirstIndex } = useMonsterBrowser();
+  const { rows, loading, loadError, totalRows, ensureRange, envOptions, sizeOptions, typeOptions, compQ, setCompQ, sortMode, setSortMode, envFilter, setEnvFilter, sizeFilter, setSizeFilter, typeFilter, setTypeFilter, crMin, setCrMin, crMax, setCrMax, rulesetFilter, setRulesetFilter, showRulesetFilter, lettersInList, letterFirstIndex } = useMonsterBrowser();
 
   const vl = useVirtualList({ isEnabled: true, rowHeight: ROW_HEIGHT, overscan: 8 });
-  const { start, end, padTop, padBottom } = vl.getRange(filteredRows.length);
+  // The list is sized by the server's total, not by how many rows have been fetched, so the
+  // scrollbar and the A-Z jump both address the whole result set.
+  const { start, end, padTop, padBottom } = vl.getRange(totalRows);
+
+  // Fetch whatever window the viewport is over. Scrolling changes `start`/`end`, so this covers
+  // both dragging the scrollbar and jumping straight to a letter.
+  React.useEffect(() => {
+    if (totalRows > 0) ensureRange(start, end);
+  }, [ensureRange, start, end, totalRows]);
+
+  // The filtered total can't tell an empty catalogue from a filter that matched nothing, so lean on
+  // the facet lists: they come back empty only when there are no monsters at all.
+  const hasAnyMonsters = typeOptions.length > 1;
 
   function handleClear() {
     setCompQ(""); setSortMode("az");
@@ -52,7 +81,7 @@ export function MonsterBrowserPanel(props: {
       title={t("compendiumMonsters.title")}
       actions={
         <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>
-          {loading ? t("compendiumMonsters.loading") : `${filteredRows.length.toLocaleString()} / ${totalRows.toLocaleString()}`}
+          {loading ? t("compendiumMonsters.loading") : totalRows.toLocaleString()}
         </div>
       }
       style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
@@ -132,14 +161,15 @@ export function MonsterBrowserPanel(props: {
         style={{ flex: 1, minHeight: 0, overflowY: "auto", border: `1px solid ${C.panelBorder}`, borderRadius: 12 }}
       >
         {loadError && <div style={{ padding: 12, color: C.red }}>{t("compendiumMonsters.failedToLoad", { error: loadError })}</div>}
-        {!loading && !loadError && filteredRows.length === 0 && (
+        {!loading && !loadError && totalRows === 0 && (
           <div style={{ padding: 12, color: C.muted }}>
-            {totalRows === 0 ? t("compendiumMonsters.noDataLoaded") : t("compendiumMonsters.noMonstersMatch")}
+            {hasAnyMonsters ? t("compendiumMonsters.noMonstersMatch") : t("compendiumMonsters.noDataLoaded")}
           </div>
         )}
-        {filteredRows.length > 0 && (
+        {totalRows > 0 && (
           <div style={{ paddingTop: padTop, paddingBottom: padBottom }}>
-            {filteredRows.slice(start, end).map((m) => {
+            {rows.slice(start, end).map((m, offset) => {
+              if (!m) return <MonsterRowPlaceholder key={`pending-${start + offset}`} />;
               const crLabel = m.cr != null ? `CR ${formatCr(m.cr)}` : t("compendiumMonsters.crUnknown");
               const type = m.type ? String(m.type).charAt(0).toUpperCase() + String(m.type).slice(1) : null;
               const active = m.id === props.selectedMonsterId;

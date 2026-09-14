@@ -78,94 +78,142 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     return contains ? toOut(contains) : null;
   }
 
+  // MARK: - Spell search filters
+  // The `components` column is written by projectGrandSpell with a fixed grammar: the parts "V",
+  // "S" and "M" / "M (materials)", joined by ", " in that exact order. Material text is always
+  // last, so a comma inside it can never be mistaken for a part separator -- which means each
+  // component can be tested with anchored comparisons instead of parsing the column.
+  // Every test runs against IFNULL(components, ''): a spell with no components at all must come
+  // back as "does not have V", not as NULL, or SQL's three-valued logic would drop it from the
+  // negated form these predicates are used in.
+  const COMPONENT_PRESENT_SQL: Record<string, string> = {
+    V: "(IFNULL(components, '') = 'V' OR IFNULL(components, '') LIKE 'V, %')",
+    S: "(IFNULL(components, '') IN ('S', 'V, S') OR IFNULL(components, '') LIKE 'S, %' OR IFNULL(components, '') LIKE 'V, S, %')",
+    // Any value that isn't empty or purely verbal and/or somatic carries a material component.
+    M: "(IFNULL(components, '') NOT IN ('', 'V', 'S', 'V, S'))",
+  };
+
+  // A caller may pass either the full school name or the legacy single-letter code, and the stored
+  // column holds one or the other depending on how the entry was imported. Index the alias table by
+  // every spelling so either input resolves to -- and is matched against -- both forms.
+  const schoolAliasesByValue = new Map<string, string[]>();
+  for (const aliases of Object.values(schoolAliases)) {
+    for (const alias of aliases) schoolAliasesByValue.set(alias.toLowerCase(), aliases);
+  }
+
+  const readFlag = (value: unknown): boolean => {
+    const raw = String(value ?? "").trim().toLowerCase();
+    return raw === "1" || raw === "true" || raw === "yes";
+  };
+
+  type SpellQuery = Record<string, unknown>;
+
+  /**
+   * Build the shared WHERE clauses for a spell search. Both /search and /facets run through this,
+   * so a facet list can never disagree with the result list it describes.
+   *
+   * `includeSchool` / `includeClasses` are switched off when computing the options for those very
+   * dropdowns: a school list narrowed by the currently selected school would collapse to one entry.
+   */
+  function buildSpellFilters(
+    query: SpellQuery,
+    options: { includeSchool?: boolean; includeClasses?: boolean } = {},
+  ): { clauses: string[]; params: unknown[] } {
+    const { includeSchool = true, includeClasses = true } = options;
+    const clauses: string[] = [];
+    const params: unknown[] = [];
+
+    const q = String(query.q ?? "").trim().toLowerCase();
+    if (q) {
+      clauses.push("AND (name LIKE ? OR name_key LIKE ?)");
+      const like = `%${q}%`;
+      params.push(like, like);
+    }
+
+    const numericFilter = (raw: unknown, sql: string) => {
+      const text = String(raw ?? "").trim();
+      if (text === "") return;
+      const value = Number(text);
+      if (!Number.isFinite(value)) return;
+      clauses.push(sql);
+      params.push(value);
+    };
+    numericFilter(query.level, "AND level = ?");
+    numericFilter(query.minLevel, "AND level >= ?");
+    numericFilter(query.maxLevel, "AND level <= ?");
+
+    const classesFilter = String(query.classes ?? "").trim();
+    if (includeClasses && classesFilter) {
+      const cls = resolveSpellAccessFilters(db, classesFilter.split(",").map((s) => s.trim()).filter(Boolean));
+      const orParts = cls.map(() => "classes LIKE ?");
+      clauses.push(`AND (${orParts.join(" OR ")})`);
+      params.push(...cls.map((c) => `%${c}%`));
+    }
+
+    const schoolFilter = String(query.school ?? "").trim();
+    if (includeSchool && schoolFilter) {
+      const schools = schoolFilter
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .flatMap((school) => schoolAliasesByValue.get(school.toLowerCase()) ?? [school]);
+      const uniqueSchools = Array.from(new Set(schools));
+      if (uniqueSchools.length > 0) {
+        // Exact (case-insensitive) rather than a substring match: schoolAliases already lists both
+        // the legacy single-letter code and the full name for each school, and a LIKE on a code
+        // such as "A" would otherwise also match Transmutation, Enchantment and the rest.
+        const orParts = uniqueSchools.map(() => "school = ? COLLATE NOCASE");
+        clauses.push(`AND (${orParts.join(" OR ")})`);
+        params.push(...uniqueSchools);
+      }
+    }
+
+    if (readFlag(query.ritual)) clauses.push("AND ritual = 1");
+    if (readFlag(query.concentration)) clauses.push("AND concentration = 1");
+
+    // excludeComponents=V,M hides every spell that requires those components, mirroring the
+    // browser's component toggles -- unchecking "V" there means "no verbal component".
+    const excluded = new Set(
+      String(query.excludeComponents ?? "")
+        .split(",")
+        .map((entry) => entry.trim().toUpperCase()),
+    );
+    for (const letter of excluded) {
+      const present = COMPONENT_PRESENT_SQL[letter];
+      // Unknown letters are ignored rather than rejected: a stale client shouldn't get an error.
+      if (present) clauses.push(`AND NOT ${present}`);
+    }
+
+    const ruleset = parseRulesetFilter(query.ruleset);
+    if (ruleset) {
+      clauses.push("AND ruleset = ?");
+      params.push(ruleset);
+    }
+
+    return { clauses, params };
+  }
+
   // MARK: - GET /api/spells/search
   app.get("/api/spells/search", requireAuth, (req, res) => {
     applySharedApiCacheHeaders(res);
-    const q = String(req.query.q ?? "").trim().toLowerCase();
     const limit = Math.min(
       Math.max(parseInt(String(req.query.limit ?? "50"), 10) || 50, 1),
       MAX_SPELL_SEARCH_LIMIT,
     );
     const offset = Math.max(parseInt(String(req.query.offset ?? "0"), 10) || 0, 0);
-    const withTotalRaw = String(req.query.withTotal ?? "").trim().toLowerCase();
-    const withTotal = withTotalRaw === "1" || withTotalRaw === "true" || withTotalRaw === "yes";
-    const includeTextRaw = String(req.query.includeText ?? "").trim().toLowerCase();
-    const includeText = includeTextRaw === "1" || includeTextRaw === "true" || includeTextRaw === "yes";
-    const liteRaw = String(req.query.lite ?? "").trim().toLowerCase();
-    const lite = liteRaw === "1" || liteRaw === "true" || liteRaw === "yes";
-    const compactRaw = String(req.query.compact ?? "").trim().toLowerCase();
-    const compact = compactRaw === "1" || compactRaw === "true" || compactRaw === "yes";
-    const levelRaw = String(req.query.level ?? "").trim();
-    const level = levelRaw === "" ? null : Number(levelRaw);
-    const maxLevelRaw = String(req.query.maxLevel ?? "").trim();
-    const maxLevel = maxLevelRaw === "" ? null : Number(maxLevelRaw);
-    const classesFilter = String(req.query.classes ?? "").trim();
-    const schoolFilter = String(req.query.school ?? "").trim();
-    const ritualRaw = String(req.query.ritual ?? "").trim().toLowerCase();
-    const ritualOnly = ritualRaw === "1" || ritualRaw === "true" || ritualRaw === "yes";
+    const withTotal = readFlag(req.query.withTotal);
+    const includeText = readFlag(req.query.includeText);
+    const lite = readFlag(req.query.lite);
+    const compact = readFlag(req.query.compact);
 
     const shouldSelectDataJson = includeText || (!compact && !lite);
     const baseSelect = shouldSelectDataJson
       ? "SELECT id, ruleset, name, level, school, ritual, concentration, components, classes, data_json FROM compendium_spells WHERE 1=1"
       : "SELECT id, ruleset, name, level, school, ritual, concentration, components, classes FROM compendium_spells WHERE 1=1";
-    const parts: string[] = [baseSelect];
-    const countParts: string[] = ["SELECT count(*) AS n FROM compendium_spells WHERE 1=1"];
-    const params: unknown[] = [];
 
-    if (q) {
-      parts.push("AND (name LIKE ? OR name_key LIKE ?)");
-      countParts.push("AND (name LIKE ? OR name_key LIKE ?)");
-      const like = `%${q}%`;
-      params.push(like, like);
-    }
-    if (level != null && Number.isFinite(level)) {
-      parts.push("AND level = ?");
-      countParts.push("AND level = ?");
-      params.push(level);
-    }
-    const minLevelRaw = String(req.query.minLevel ?? "").trim();
-    const minLevel = minLevelRaw === "" ? null : Number(minLevelRaw);
-    if (minLevel != null && Number.isFinite(minLevel)) {
-      parts.push("AND level >= ?");
-      countParts.push("AND level >= ?");
-      params.push(minLevel);
-    }
-    if (maxLevel != null && Number.isFinite(maxLevel)) {
-      parts.push("AND level <= ?");
-      countParts.push("AND level <= ?");
-      params.push(maxLevel);
-    }
-    if (classesFilter) {
-      const cls = resolveSpellAccessFilters(db, classesFilter.split(",").map(s => s.trim()).filter(Boolean));
-      const orParts = cls.map(() => "classes LIKE ?");
-      parts.push(`AND (${orParts.join(" OR ")})`);
-      countParts.push(`AND (${orParts.join(" OR ")})`);
-      params.push(...cls.map(c => `%${c}%`));
-    }
-    if (schoolFilter) {
-      const schools = schoolFilter
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .flatMap((school) => schoolAliases[school.toLowerCase()] ?? [school]);
-      const uniqueSchools = Array.from(new Set(schools));
-      if (uniqueSchools.length > 0) {
-        const orParts = uniqueSchools.map(() => "school LIKE ?");
-        parts.push(`AND (${orParts.join(" OR ")})`);
-        countParts.push(`AND (${orParts.join(" OR ")})`);
-        params.push(...uniqueSchools.map((school) => `%${school}%`));
-      }
-    }
-    if (ritualOnly) {
-      parts.push("AND ritual = 1");
-      countParts.push("AND ritual = 1");
-    }
-    const searchRuleset = parseRulesetFilter(req.query.ruleset);
-    if (searchRuleset) {
-      parts.push("AND ruleset = ?");
-      countParts.push("AND ruleset = ?");
-      params.push(searchRuleset);
-    }
+    const { clauses, params } = buildSpellFilters(req.query);
+    const parts: string[] = [baseSelect, ...clauses];
+    const countParts: string[] = ["SELECT count(*) AS n FROM compendium_spells WHERE 1=1", ...clauses];
     parts.push("ORDER BY level NULLS LAST, name COLLATE NOCASE");
     parts.push(`LIMIT ${limit} OFFSET ${offset}`);
 
@@ -218,6 +266,45 @@ export function registerSpellRoutes(app: Express, ctx: ServerContext, anyDm: Req
     if (!withTotal) return res.json(outRows);
     const total = (db.prepare(countParts.join(" ")).get(...params) as { n: number }).n;
     return res.json({ rows: outRows, total });
+  });
+
+  // MARK: - GET /api/spells/facets
+  // Lists every school and class-access value reachable under the current search. The browser used
+  // to derive these dropdown options from the rows it had already downloaded, which meant the
+  // options were only complete if the whole catalogue had been fetched first.
+  app.get("/api/spells/facets", requireAuth, (req, res) => {
+    applySharedApiCacheHeaders(res);
+
+    const schoolFilters = buildSpellFilters(req.query, { includeSchool: false });
+    const schoolRows = db
+      .prepare(`SELECT DISTINCT school FROM compendium_spells WHERE 1=1 ${schoolFilters.clauses.join(" ")}`)
+      .all(...schoolFilters.params) as { school: string | null }[];
+    const schools = Array.from(
+      new Set(schoolRows.map((row) => (row.school ?? "").trim()).filter(Boolean)),
+    ).sort((a, b) => a.localeCompare(b));
+
+    const classFilters = buildSpellFilters(req.query, { includeClasses: false });
+    const classRows = db
+      .prepare(`SELECT DISTINCT classes FROM compendium_spells WHERE 1=1 ${classFilters.clauses.join(" ")}`)
+      .all(...classFilters.params) as { classes: string | null }[];
+    const accessRegistry = readSpellAccessRegistry(db);
+    const classLabels = new Set<string>();
+    for (const row of classRows) {
+      for (const entry of String(row.classes ?? "").split(",")) {
+        const id = entry.trim();
+        if (!id) continue;
+        const label = accessRegistry.get(id) ?? id;
+        // "School: Evocation" entries are school spell lists rather than classes; the school
+        // dropdown already covers that axis, so they'd only duplicate it here.
+        if (/^School:/i.test(label)) continue;
+        classLabels.add(label);
+      }
+    }
+
+    return res.json({
+      schools,
+      classes: Array.from(classLabels).sort((a, b) => a.localeCompare(b)),
+    });
   });
 
   // MARK: - POST /api/spells/lookup

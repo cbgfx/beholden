@@ -3,9 +3,25 @@ import { api } from "../../api/browserClient";
 import { useAvailableRulesets } from "./useAvailableRulesets";
 import { SIZE_LABELS, type CompendiumMonsterRow, type SortMode } from "./monsterPicker";
 
-/** Shared read-only browser state; editing stays in the DM panel. */
+/** Rows fetched per request. Also the granularity at which loaded windows are tracked. */
+const PAGE_SIZE = 200;
+const DEBOUNCE_MS = 220;
+
+export type MonsterLetterIndex = { letters: string[]; firstIndex: Record<string, number> };
+
+type LettersResponse = { letters?: { letter?: unknown; index?: unknown }[] };
+type SearchResponse = { rows?: CompendiumMonsterRow[]; total?: number };
+
+/**
+ * Shared read-only browser state; editing stays in the DM panel.
+ *
+ * Unlike the spell and item browsers, this list can't simply append pages as you scroll: the A-Z
+ * jump bar needs to send you to row 1,500 of 3,000 directly. So the list is virtualised over the
+ * server's total and rows are fetched by window -- `rows` is a sparse array indexed by absolute
+ * position, and a slot that is still undefined renders as a placeholder.
+ */
 export function useMonsterBrowser() {
-  const [rows, setRows] = React.useState<CompendiumMonsterRow[]>([]);
+  const [rows, setRows] = React.useState<(CompendiumMonsterRow | undefined)[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [totalRows, setTotalRows] = React.useState(0);
@@ -13,6 +29,7 @@ export function useMonsterBrowser() {
   const [envOptions, setEnvOptions] = React.useState<string[]>(["all"]);
   const [sizeOptions, setSizeOptions] = React.useState<string[]>(["all"]);
   const [typeOptions, setTypeOptions] = React.useState<string[]>(["all"]);
+  const [letterIndex, setLetterIndex] = React.useState<MonsterLetterIndex>({ letters: [], firstIndex: {} });
 
   const refresh = React.useCallback(() => setRefreshKey((value) => value + 1), []);
 
@@ -57,105 +74,142 @@ export function useMonsterBrowser() {
     return () => controller.abort();
   }, [refreshKey]);
 
+  /** The filter half of the query, shared by the row, letter and count requests. */
+  const filterParams = React.useMemo(() => {
+    const params = new URLSearchParams({ q: compQ, sort: sortMode });
+    if (envFilter !== "all") params.set("env", envFilter);
+    if (sizeFilter !== "all") params.set("sizes", sizeFilter);
+    if (typeFilter !== "all") params.set("types", typeFilter);
+    if (crMin.trim()) params.set("crMin", crMin.trim());
+    if (crMax.trim()) params.set("crMax", crMax.trim());
+    if (rulesetFilter) params.set("ruleset", rulesetFilter);
+    return params.toString();
+  }, [compQ, crMax, crMin, envFilter, rulesetFilter, sizeFilter, sortMode, typeFilter]);
+
+  // Which search the loaded windows belong to. A window that resolves after the filters changed
+  // would otherwise drop rows from the old list into the new one's indices.
+  const searchRef = React.useRef({
+    generation: 0,
+    requestedPages: new Set<number>(),
+    controller: null as AbortController | null,
+    filterParams: "",
+  });
+
+  const fetchPage = React.useCallback(async (generation: number, page: number) => {
+    const search = searchRef.current;
+    const controller = search.controller;
+    if (!controller || search.requestedPages.has(page)) return;
+    search.requestedPages.add(page);
+
+    const offset = page * PAGE_SIZE;
+    const query = `${search.filterParams}&limit=${PAGE_SIZE}&offset=${offset}&withTotal=1&fields=id,name,cr,type,environment`;
+    try {
+      const result = await api<SearchResponse>(`/api/compendium/search?${query}`, { signal: controller.signal });
+      if (controller.signal.aborted || searchRef.current.generation !== generation) return;
+
+      const pageRows = Array.isArray(result?.rows) ? result.rows : [];
+      const total = Number.isFinite(result?.total as number) ? Number(result.total) : pageRows.length;
+      setTotalRows(total);
+      setRows((current) => {
+        const next = current.slice();
+        next.length = total;
+        for (let i = 0; i < pageRows.length; i += 1) next[offset + i] = pageRows[i];
+        return next;
+      });
+      setLoadError(null);
+    } catch (error) {
+      if (controller.signal.aborted || searchRef.current.generation !== generation) return;
+      // Let the window be retried: unlike an append-only list there is no "next page" to spin on,
+      // and a user scrolling back over a failed window should get another attempt.
+      search.requestedPages.delete(page);
+      setLoadError(String((error as { message?: unknown })?.message ?? error));
+    } finally {
+      if (searchRef.current.generation === generation && page === 0) setLoading(false);
+    }
+  }, []);
+
+  // A filter change starts a new search: drop every loaded window and fetch the first one.
   React.useEffect(() => {
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
+    const search = searchRef.current;
+    const generation = search.generation + 1;
+
+    const timer = window.setTimeout(() => {
+      const controller = new AbortController();
+      search.generation = generation;
+      search.requestedPages = new Set();
+      search.controller = controller;
+      search.filterParams = filterParams;
+
       setLoading(true);
       setLoadError(null);
-      try {
-        const limit =
-          compQ.trim().length >= 2
-          || envFilter !== "all"
-          || sizeFilter !== "all"
-          || typeFilter !== "all"
-          || Boolean(crMin.trim())
-          || Boolean(crMax.trim())
-            ? 200
-            : 120;
-        const merged: CompendiumMonsterRow[] = [];
-        let total = 0;
-        let offset = 0;
-        const maxRows = 10000;
+      setRows([]);
+      setTotalRows(0);
+      void fetchPage(generation, 0);
 
-        while (!controller.signal.aborted) {
-          const params = new URLSearchParams({
-            q: compQ,
-            limit: String(limit),
-            offset: String(offset),
-            withTotal: "1",
-            sort: sortMode,
-            fields: "id,name,cr,type,environment",
-          });
-          if (envFilter !== "all") params.set("env", envFilter);
-          if (sizeFilter !== "all") params.set("sizes", sizeFilter);
-          if (typeFilter !== "all") params.set("types", typeFilter);
-          if (crMin.trim()) params.set("crMin", crMin.trim());
-          if (crMax.trim()) params.set("crMax", crMax.trim());
-          if (rulesetFilter) params.set("ruleset", rulesetFilter);
-
-          const result = await api<{ rows: CompendiumMonsterRow[]; total: number }>(
-            `/api/compendium/search?${params.toString()}`,
-            { signal: controller.signal },
-          );
-          if (controller.signal.aborted) return;
-
-          const nextRows = Array.isArray(result?.rows) ? result.rows : [];
-          total = Number.isFinite(result?.total as number) ? Number(result.total) : nextRows.length;
-          merged.push(...nextRows);
-
-          if (nextRows.length === 0) break;
-          offset += nextRows.length;
-          if (offset >= total) break;
-          if (merged.length >= maxRows) break;
-        }
-
-        if (controller.signal.aborted) return;
-        setRows(merged);
-        setTotalRows(total || merged.length);
-      } catch (error) {
-        if (controller.signal.aborted) return;
-        setRows([]);
-        setTotalRows(0);
-        setLoadError(String((error as any)?.message ?? error));
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    }, 220);
+      api<LettersResponse>(`/api/compendium/monsters/letters?${filterParams}`, { signal: controller.signal })
+        .then((data) => {
+          if (controller.signal.aborted || searchRef.current.generation !== generation) return;
+          const entries = Array.isArray(data?.letters) ? data.letters : [];
+          const firstIndex: Record<string, number> = {};
+          for (const entry of entries) {
+            const letter = String(entry?.letter ?? "");
+            const index = Number(entry?.index);
+            if (letter && Number.isFinite(index)) firstIndex[letter] = index;
+          }
+          setLetterIndex({ letters: Object.keys(firstIndex).sort((a, b) => a.localeCompare(b)), firstIndex });
+        })
+        .catch(() => {
+          if (controller.signal.aborted || searchRef.current.generation !== generation) return;
+          // Without the index the bar can't jump anywhere, so hide it rather than show dead buttons.
+          setLetterIndex({ letters: [], firstIndex: {} });
+        });
+    }, DEBOUNCE_MS);
 
     return () => {
       window.clearTimeout(timer);
-      controller.abort();
+      if (search.generation === generation) search.controller?.abort();
     };
-  }, [compQ, sortMode, envFilter, sizeFilter, typeFilter, crMin, crMax, rulesetFilter, refreshKey]);
+  }, [fetchPage, filterParams, refreshKey]);
 
-  const filteredRows = rows;
-
-  const normalizeSortName = React.useCallback((name: string) => {
-    return name
-      .trim()
-      .replace(/^[^a-z0-9]+/i, "")
-      .replace(/^the\s+/i, "")
-      .trim();
-  }, []);
-
-  const lettersInList = React.useMemo(() => {
-    const set = new Set<string>();
-    for (const row of filteredRows) {
-      const first = normalizeSortName(String(row.name ?? "")).charAt(0).toUpperCase();
-      if (first >= "A" && first <= "Z") set.add(first);
+  /** Load whatever windows cover [start, end) -- called by the list as it scrolls or jumps. */
+  const ensureRange = React.useCallback((start: number, end: number) => {
+    const search = searchRef.current;
+    if (!search.controller) return;
+    const firstPage = Math.max(0, Math.floor(start / PAGE_SIZE));
+    const lastPage = Math.max(0, Math.floor((Math.max(end, start + 1) - 1) / PAGE_SIZE));
+    for (let page = firstPage; page <= lastPage; page += 1) {
+      void fetchPage(search.generation, page);
     }
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [filteredRows, normalizeSortName]);
+  }, [fetchPage]);
 
-  const letterFirstIndex = React.useMemo(() => {
-    const out: Record<string, number> = {};
-    for (let i = 0; i < filteredRows.length; i += 1) {
-      const first = normalizeSortName(String(filteredRows[i].name ?? "")).charAt(0).toUpperCase();
-      if (!(first >= "A" && first <= "Z")) continue;
-      if (out[first] == null) out[first] = i;
-    }
-    return out;
-  }, [filteredRows, normalizeSortName]);
-
-  return { filteredRows, loading, loadError, totalRows, envOptions, sizeOptions, typeOptions, refresh, compQ, setCompQ, sortMode, setSortMode, envFilter, setEnvFilter, sizeFilter, setSizeFilter, typeFilter, setTypeFilter, crMin, setCrMin, crMax, setCrMax, rulesetFilter, setRulesetFilter, showRulesetFilter, lettersInList, letterFirstIndex };
+  return {
+    rows,
+    loading,
+    loadError,
+    totalRows,
+    ensureRange,
+    envOptions,
+    sizeOptions,
+    typeOptions,
+    refresh,
+    compQ,
+    setCompQ,
+    sortMode,
+    setSortMode,
+    envFilter,
+    setEnvFilter,
+    sizeFilter,
+    setSizeFilter,
+    typeFilter,
+    setTypeFilter,
+    crMin,
+    setCrMin,
+    crMax,
+    setCrMax,
+    rulesetFilter,
+    setRulesetFilter,
+    showRulesetFilter,
+    lettersInList: letterIndex.letters,
+    letterFirstIndex: letterIndex.firstIndex,
+  };
 }

@@ -7,7 +7,7 @@ import { titleCase } from "@beholden/shared/domain/text/titleCase";
 import { useItemSearch, type ItemSearchRow } from "@/views/CompendiumView/hooks/useItemSearch";
 import { useVirtualList } from "@/lib/monsterPicker/useVirtualList";
 import { IconChest } from "@/ui/Icons";
-import { EmptyState, ItemListRow, ListShell, togglePillStyle } from "@beholden/shared/ui";
+import { EmptyState, ItemListRow, ListShell, togglePillStyle, useInfiniteScroll } from "@beholden/shared/ui";
 
 const ROW_HEIGHT = 52;
 
@@ -36,12 +36,20 @@ export function ItemsBrowserPanel(props: {
     filterMagic, setFilterMagic,
     rulesetFilter, setRulesetFilter, showRulesetFilter,
     hasActiveFilters, clearFilters,
-    rows, busy,
+    rows, busy, totalCount, loadingMore, hasMore, loadMore, error,
   } = useItemSearch();
 
   const vl = useVirtualList({ isEnabled: true, rowHeight: ROW_HEIGHT, overscan: 6 });
   const scrollRef = vl.scrollRef;
   const { start, end, padTop, padBottom } = vl.getRange(rows.length);
+
+  // The virtual list owns the scroll container, so paging watches that same element rather than
+  // creating one of its own.
+  const { onScroll: onScrollForPaging } = useInfiniteScroll({ hasMore, loadingMore, loadMore, containerRef: scrollRef });
+  const handleScroll = React.useCallback((event: React.UIEvent<HTMLDivElement>) => {
+    vl.onScroll(event);
+    onScrollForPaging(event);
+  }, [onScrollForPaging, vl]);
 
   React.useEffect(() => {
     const el = scrollRef.current;
@@ -51,7 +59,7 @@ export function ItemsBrowserPanel(props: {
   return (
     <Panel
       title={<span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: "var(--fs-large)" }}><IconChest size={28} /><span>{t("compendiumItems.title")}</span></span>}
-      actions={<div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{busy ? t("compendiumItems.loading") : rows.length}</div>}
+      actions={<div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{busy ? t("compendiumItems.loading") : totalCount}</div>}
       style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}
       bodyStyle={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, gap: 8 }}
     >
@@ -93,7 +101,7 @@ export function ItemsBrowserPanel(props: {
         )}
       </div>
 
-      <ListShell ref={vl.scrollRef} onScroll={vl.onScroll} borderColor={C.panelBorder}>
+      <ListShell ref={vl.scrollRef} onScroll={handleScroll} borderColor={C.panelBorder}>
         <div style={{ height: padTop }} />
         {rows.slice(start, end).map((item) => (
           <ItemRow
@@ -104,7 +112,15 @@ export function ItemsBrowserPanel(props: {
           />
         ))}
         <div style={{ height: padBottom }} />
-        {!busy && rows.length === 0 && (
+        {loadingMore && (
+          <div style={{ padding: 10, color: C.muted }}>{t("compendiumItems.loadingMore")}</div>
+        )}
+        {/* Paging stops on a failed page, so say so -- an empty list would otherwise read as
+            "no such item" rather than "the request failed". */}
+        {error && (
+          <div style={{ padding: 10, color: C.red }}>{t("compendiumItems.loadFailed")}</div>
+        )}
+        {!busy && !error && rows.length === 0 && (
           <EmptyState textColor={C.muted} style={{ padding: 10 }}>{t("compendiumItems.noItemsFound")}</EmptyState>
         )}
       </ListShell>

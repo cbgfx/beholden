@@ -9,6 +9,5 @@ export function useItemSearch(options?: UseCompendiumItemSearchOptions) {
   return useCompendiumItemSearch(api, {
     ...options,
     includeError: true,
-    nameSearchValue: (name) => name.replace(/\s*\[.*?\]\s*$/, ""),
   });
 }

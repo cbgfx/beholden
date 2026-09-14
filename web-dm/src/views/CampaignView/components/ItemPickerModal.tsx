@@ -44,6 +44,7 @@ export function ItemPickerModal(props: {
     detail,
     filtered,
     vl,
+    onScroll,
     ROW_HEIGHT,
   } = useItemPicker(props.isOpen);
 
@@ -114,7 +115,7 @@ export function ItemPickerModal(props: {
           start={start}
           end={end}
           scrollRef={vl.scrollRef}
-          onScroll={vl.onScroll}
+          onScroll={onScroll}
           onToggleCreateMode={() => {
             setCreateMode((value) => !value);
             setSelectedId(null);

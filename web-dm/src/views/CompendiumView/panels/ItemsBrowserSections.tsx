@@ -163,9 +163,9 @@ export function ItemsBrowserRow(props: ItemRowProps) {
             gap: 4,
             padding: "0 8px",
             flexShrink: 0,
-            opacity: showActions ? 1 : 0,
+            opacity: showActions ? 1 : 0.65,
             transition: "opacity 0.1s",
-            pointerEvents: showActions ? "auto" : "none",
+            pointerEvents: "auto",
           }}
         >
           {props.confirmingDelete ? (
@@ -201,6 +201,8 @@ type ItemsBrowserListProps = {
   padBottom: number;
   rows: ItemSearchRow[];
   busy: boolean;
+  loadingMore: boolean;
+  error: string | null;
   renderRow: (item: ItemSearchRow) => React.ReactNode;
 };
 
@@ -215,7 +217,19 @@ export function ItemsBrowserList(props: ItemsBrowserListProps) {
       <div style={{ height: props.padTop }} />
       {props.rows.map(props.renderRow)}
       <div style={{ height: props.padBottom }} />
-      {!props.busy && props.rows.length === 0 ? (
+      {props.loadingMore ? (
+        <EmptyState textColor={theme.colors.muted} style={{ padding: 10 }}>
+          {translateUi("Loading more...")}
+        </EmptyState>
+      ) : null}
+      {/* Paging stops on a failed page, so say so -- an empty list would otherwise read as
+          "no such item" rather than "the request failed". */}
+      {props.error ? (
+        <EmptyState textColor={theme.colors.red} style={{ padding: 10 }}>
+          {translateUi("Could not load items. Try again.")}
+        </EmptyState>
+      ) : null}
+      {!props.busy && !props.error && props.rows.length === 0 ? (
         <EmptyState textColor={theme.colors.muted} style={{ padding: 10 }}>
           {translateUi("No items found.")}
         </EmptyState>

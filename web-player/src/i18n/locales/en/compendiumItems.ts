@@ -1,6 +1,8 @@
 export default {
   title: "Items",
   loading: "Loading…",
+  loadingMore: "Loading more…",
+  loadFailed: "Could not load items. Try again.",
   searchPlaceholder: "Search items…",
   allRarities: "All Rarities",
   allTypes: "All Types",

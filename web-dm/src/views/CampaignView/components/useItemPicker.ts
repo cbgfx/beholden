@@ -3,6 +3,7 @@ import type { CompendiumItemDetail, CompendiumItemRow } from "@/domain/types/com
 import { useVirtualList } from "@/views/CampaignView/monsterPicker/hooks/useVirtualList";
 import { api } from "@/services/api";
 import { useItemSearch } from "@/views/CompendiumView/hooks/useItemSearch";
+import { useInfiniteScroll } from "@beholden/shared/ui";
 
 const ROW_HEIGHT = 52;
 
@@ -17,8 +18,12 @@ export function useItemPicker(isOpen: boolean) {
     setTypeFilter,
     typeOptions: rawTypeOptions,
     setFilterMagic,
+    setFilterNonMagic,
     rows: serverRows,
     busy,
+    loadingMore,
+    hasMore,
+    loadMore,
     totalCount,
     refresh,
   } = useItemSearch({ enabled: isOpen });
@@ -30,7 +35,8 @@ export function useItemPicker(isOpen: boolean) {
 
   React.useEffect(() => {
     setFilterMagic(magicFilter === "magic");
-  }, [magicFilter, setFilterMagic]);
+    setFilterNonMagic(magicFilter === "nonmagic");
+  }, [magicFilter, setFilterMagic, setFilterNonMagic]);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -73,10 +79,7 @@ export function useItemPicker(isOpen: boolean) {
     [rawTypeOptions],
   );
 
-  const filtered = React.useMemo(() => {
-    if (magicFilter === "nonmagic") return serverRows.filter((row) => !row.magic);
-    return serverRows;
-  }, [serverRows, magicFilter]);
+  const filtered = serverRows;
 
   React.useEffect(() => {
     setSelectedId((current) => (current && filtered.some((row) => row.id === current) ? current : null));
@@ -84,6 +87,13 @@ export function useItemPicker(isOpen: boolean) {
 
   const vl = useVirtualList({ isEnabled: true, rowHeight: ROW_HEIGHT, overscan: 6 });
   const scrollRef = vl.scrollRef;
+
+  // The virtual list owns the scroll container; paging watches that same element.
+  const { onScroll: onScrollForPaging } = useInfiniteScroll({ hasMore, loadingMore, loadMore, containerRef: scrollRef });
+  const onScroll = React.useCallback((event: React.UIEvent<HTMLDivElement>) => {
+    vl.onScroll(event);
+    onScrollForPaging(event);
+  }, [onScrollForPaging, vl]);
 
   // Scroll to top when filters change
   React.useEffect(() => {
@@ -107,6 +117,8 @@ export function useItemPicker(isOpen: boolean) {
     detail,
     filtered,
     vl,
+    onScroll,
+    loadingMore,
     ROW_HEIGHT,
   };
 }

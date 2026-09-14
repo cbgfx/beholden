@@ -45,6 +45,7 @@ export { ImageLightbox } from "./ImageLightbox";
 export { BINDER_MORTAL_COLUMNS, BinderDataTableHeader, BinderDataTableRow, BinderDataTableThumbnail, compareBinderTableValues, useBinderDataTableSort } from "./BinderDataTable";
 export type { BinderDataTableColumn, BinderDataTableTheme, BinderSortDir } from "./BinderDataTable";
 export { useDebouncedTaskQueue } from "./useDebouncedTaskQueue";
+export { useInfiniteScroll } from "./useInfiniteScroll";
 export { useDebouncedSingleflight } from "./useDebouncedSingleflight";
 export type { AbilityKey as CompactAbilityKey } from "./AbilityScoresCompact";
 export type { AbilityScoreCellContext } from "./AbilityScoresCompact";

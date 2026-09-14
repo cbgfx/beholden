@@ -1,5 +1,5 @@
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type UIEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { C, withAlpha } from "@/lib/theme";
 import { titleCase } from "@beholden/shared/domain/text/titleCase";
@@ -12,7 +12,7 @@ import { useItemSearch } from "@/views/CompendiumView/hooks/useItemSearch";
 import type { CompendiumItemDetail, InventoryPickerPayload } from "@/views/character/inventory/CharacterInventory";
 import { formatItemDamageType, formatItemProperties, hasStealthDisadvantage } from "@/views/character/inventory/CharacterInventory";
 import { INVENTORY_PICKER_ROW_HEIGHT, inputStyle } from "@/views/character/inventory/CharacterInventoryPanelHelpers";
-import { ItemListRow, Tag, togglePillStyle } from "@beholden/shared/ui";
+import { ItemListRow, Tag, togglePillStyle, useInfiniteScroll } from "@beholden/shared/ui";
 import { ItemFormModal } from "@beholden/shared/views/item-editor/ItemFormModal";
 import { InventoryStat } from "@/views/character/inventory/CharacterInventoryPanelRows";
 import { inventoryCheckboxLabel, inventoryPickerColumnStyle, inventoryPickerDetailStyle, inventoryPickerListStyle, inventoryRarityColor } from "@/views/character/CharacterViewParts";
@@ -33,10 +33,17 @@ export function InventoryItemPickerModal(props: {
     filterAttunement, setFilterAttunement,
     filterMagic, setFilterMagic,
     hasActiveFilters, clearFilters,
-    rows, busy, error, totalCount, refresh,
+    rows, busy, error, totalCount, loadingMore, hasMore, loadMore, refresh,
   } = useItemSearch({ enabled: props.isOpen });
   const vl = useVirtualList({ isEnabled: true, rowHeight: INVENTORY_PICKER_ROW_HEIGHT, overscan: 8 });
   const { start, end, padTop, padBottom } = vl.getRange(rows.length);
+
+  // The virtual list owns the scroll container; paging watches that same element.
+  const { onScroll: onScrollForPaging } = useInfiniteScroll({ hasMore, loadingMore, loadMore, containerRef: vl.scrollRef });
+  const handleScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
+    vl.onScroll(event);
+    onScrollForPaging(event);
+  }, [onScrollForPaging, vl]);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<CompendiumItemDetail | null>(null);
@@ -162,10 +169,10 @@ export function InventoryItemPickerModal(props: {
             {busy ? t("characterInventoryPickerModal.loadingText") : error ? error : totalCount === rows.length ? t("characterInventoryPickerModal.itemsCount", { count: rows.length }) : t("characterInventoryPickerModal.itemsCountOfTotal", { count: rows.length, total: totalCount })}
           </div>
 
-          <div ref={vl.scrollRef} onScroll={vl.onScroll} style={inventoryPickerListStyle}>
+          <div ref={vl.scrollRef} onScroll={handleScroll} style={inventoryPickerListStyle}>
             <div style={{ height: padTop }} />
             {!busy && error ? <div style={{ padding: 12, color: C.red }}>{error}</div> : null}
-            {!busy && rows.length === 0 ? <div style={{ padding: 12, color: C.muted }}>{t("characterInventoryPickerModal.noItemsFound")}</div> : null}
+            {!busy && !error && rows.length === 0 ? <div style={{ padding: 12, color: C.muted }}>{t("characterInventoryPickerModal.noItemsFound")}</div> : null}
             {rows.slice(start, end).map((item) => (
               <ItemListRow
                 key={item.id}

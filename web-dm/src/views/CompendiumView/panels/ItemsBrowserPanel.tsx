@@ -8,6 +8,7 @@ import { Panel } from "@/ui/Panel";
 import { useVirtualList } from "@/views/CampaignView/monsterPicker/hooks/useVirtualList";
 import { useItemSearch } from "@/views/CompendiumView/hooks/useItemSearch";
 import { ItemFormModal, type ItemForEdit } from "@beholden/shared/views/item-editor/ItemFormModal";
+import { useInfiniteScroll } from "@beholden/shared/ui";
 import { BrowserAddButton } from "./browserParts";
 import { ItemsBrowserFilters, ItemsBrowserList, ItemsBrowserRow } from "./ItemsBrowserSections";
 
@@ -45,6 +46,11 @@ export function ItemsBrowserPanel(props: Props) {
     clearFilters,
     rows,
     busy,
+    totalCount,
+    loadingMore,
+    hasMore,
+    loadMore,
+    error,
     refresh,
   } = useItemSearch();
 
@@ -57,6 +63,19 @@ export function ItemsBrowserPanel(props: Props) {
 
   const virtualList = useVirtualList({ isEnabled: true, rowHeight: ROW_HEIGHT, overscan: 6 });
   const { start, end, padTop, padBottom } = virtualList.getRange(rows.length);
+
+  // The virtual list owns the scroll container, so paging watches that same element rather than
+  // creating one of its own.
+  const { onScroll: onScrollForPaging } = useInfiniteScroll({
+    hasMore,
+    loadingMore,
+    loadMore,
+    containerRef: virtualList.scrollRef,
+  });
+  const handleScroll = React.useCallback((event: React.UIEvent<HTMLDivElement>) => {
+    virtualList.onScroll(event);
+    onScrollForPaging(event);
+  }, [onScrollForPaging, virtualList]);
 
   React.useEffect(() => {
     setActiveId(props.selectedItemId ?? "");
@@ -108,7 +127,7 @@ export function ItemsBrowserPanel(props: Props) {
         }
         actions={
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{busy ? translateUi("Loading...") : `${rows.length}`}</div>
+            <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{busy ? translateUi("Loading...") : `${totalCount}`}</div>
             {props.editable ? <BrowserAddButton title={translateUi("New item")} onClick={() => setFormTarget({ mode: "create" })} /> : null}
           </div>
         }
@@ -137,11 +156,13 @@ export function ItemsBrowserPanel(props: Props) {
 
         <ItemsBrowserList
           scrollRef={virtualList.scrollRef}
-          onScroll={virtualList.onScroll as React.UIEventHandler<HTMLDivElement>}
+          onScroll={handleScroll}
           padTop={padTop}
           padBottom={padBottom}
           rows={rows.slice(start, end)}
           busy={busy}
+          loadingMore={loadingMore}
+          error={error}
           renderRow={(item) => (
             <ItemsBrowserRow
               key={item.id}

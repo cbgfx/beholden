@@ -1,6 +1,8 @@
 export default {
   title: "Objets",
   loading: "Chargement…",
+  loadingMore: "Chargement de la suite…",
+  loadFailed: "Impossible de charger les objets. Réessayez.",
   searchPlaceholder: "Rechercher des objets…",
   allRarities: "Toutes les raretés",
   allTypes: "Tous les types",
