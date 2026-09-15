@@ -41,6 +41,16 @@ export interface PartyStashItem {
   payload?: Record<string, unknown> | null;
 }
 
+/**
+ * One-line preview of an item description for a list row. Item text arrives with hard line breaks
+ * and often a trailing "Source:" line, neither of which survives being squeezed into a single
+ * ellipsised row -- so take the first paragraph and flatten its internal wrapping.
+ */
+export function collapseToSingleLine(description: string | null | undefined): string {
+  const firstParagraph = String(description ?? "").split(/\n\s*\n/)[0] ?? "";
+  return firstParagraph.replace(/\s+/g, " ").trim();
+}
+
 export function PartyStashItemRow({ item, onOpen, onTake, onDelete, onQuantity }: {
   item: PartyStashItem;
   onOpen: () => void;
@@ -49,6 +59,11 @@ export function PartyStashItemRow({ item, onOpen, onTake, onDelete, onQuantity }
   onQuantity: (q: number) => void;
 }) {
   const { t } = useTranslation();
+  // Stash rows carry the same detail a character's own inventory row shows. Notes are almost always
+  // empty here -- an item deposited from the compendium brings its description, not a personal note
+  // -- so showing only notes left most rows as a bare name.
+  const meta = [item.type, item.rarity ? titleCase(item.rarity) : null].filter(Boolean).join(" • ");
+  const summary = collapseToSingleLine(item.description);
   return (
     <div className="character-inventory-row">
       <CollectionRow
@@ -56,8 +71,13 @@ export function PartyStashItemRow({ item, onOpen, onTake, onDelete, onQuantity }
         onClick={onOpen}
         main={(
           <>
-            <div style={{ fontSize: "var(--fs-medium)", fontWeight: 600, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
+            <div style={{ fontSize: "var(--fs-medium)", fontWeight: 600, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: 6 }}>
+              {item.rarity ? <RarityDot rarity={item.rarity} /> : null}
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</span>
+            </div>
+            {meta ? <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{meta}</div> : null}
             {item.notes ? <div style={{ fontSize: "var(--fs-small)", color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.notes}</div> : null}
+            {summary ? <div style={{ fontSize: "var(--fs-small)", color: C.muted, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{summary}</div> : null}
           </>
         )}
         trailing={(
