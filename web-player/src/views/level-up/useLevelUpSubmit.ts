@@ -60,6 +60,7 @@ export function useLevelUpSubmit(args: {
   featSourceLabel: string;
   featSpellChoiceOptions: Record<string, Array<{ id: string; name: string }>>;
   newFeatures: Array<{ name: string; text?: string }>;
+  usesFlexiblePreparedSpellsModel?: boolean;
   classDetailName?: string | null;
   classCantrips: SpellSummary[];
   classSpells: SpellSummary[];
@@ -81,6 +82,7 @@ export function useLevelUpSubmit(args: {
   featAbilityBonuses: Record<string, number>;
 }) {
   const [saving, setSaving] = React.useState(false);
+  const submitting = React.useRef(false);
 
   const confirm = React.useCallback(async () => {
     const {
@@ -133,8 +135,10 @@ export function useLevelUpSubmit(args: {
       setError,
     } = args;
 
-    if (!char || !canConfirm || !extraFeatSpellSelectionsValid) return;
+    if (!char || !canConfirm || !extraFeatSpellSelectionsValid || submitting.current) return;
 
+    submitting.current = true;
+    setError(null);
     setSaving(true);
     try {
       // Preserve each entry's original acquisition level across saves instead of re-stamping
@@ -281,6 +285,7 @@ export function useLevelUpSubmit(args: {
         featSourceLabel,
         featSpellChoiceOptions,
         newFeatures,
+        usesFlexiblePreparedSpellsModel: args.usesFlexiblePreparedSpellsModel,
         classDetailName,
         selectedCantripEntries,
         selectedSpellEntries,
@@ -303,6 +308,7 @@ export function useLevelUpSubmit(args: {
     } catch (e) {
       setError(String(e));
     } finally {
+      submitting.current = false;
       setSaving(false);
     }
   }, [args]);

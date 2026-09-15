@@ -82,6 +82,7 @@ export interface BuildLevelUpPayloadArgs {
   featSourceLabel: string;
   featSpellChoiceOptions?: Record<string, LevelUpSpellLike[]>;
   newFeatures: LevelUpFeature[];
+  usesFlexiblePreparedSpellsModel?: boolean;
   classDetailName?: string | null;
   selectedCantripEntries: LevelUpTaggedEntry[];
   selectedSpellEntries: LevelUpTaggedEntry[];
@@ -150,6 +151,7 @@ export interface DeriveLevelUpValidationArgs {
   cantripCount: number;
   chosenCantrips: string[];
   spellcaster: boolean;
+  usesFlexiblePreparedSpellsModel?: boolean;
   prepCount: number;
   chosenSpells: string[];
   invocCount: number;
@@ -244,14 +246,15 @@ export function deriveHpGain(hpChoice: "roll" | "average" | "manual" | null, hpA
   if (hpChoice === "average") return hpAverage;
   if (hpChoice === "roll") return rolledHp ?? null;
   if (hpChoice === "manual") {
-    const value = parseInt(manualHp, 10);
-    return Number.isFinite(value) && value > 0 ? value : null;
+    const value = Number(manualHp);
+    return Number.isSafeInteger(value) && value > 0 ? value : null;
   }
   return null;
 }
 
 /** Why the level-up can't be confirmed yet. Rendered next to the confirm button. */
 export type LevelUpBlockerKey =
+  | "optionsLoading"
   | "hp"
   | "asi"
   | "subclass"
@@ -299,16 +302,20 @@ export function deriveLevelUpValidation(args: DeriveLevelUpValidationArgs) {
     : false;
   const featRepeatableValid = !chosenFeatDetail
     || chosenFeatDetail.parsed?.repeatable
-    || !(existingLevelUpFeats ?? []).some((entry) => entry.featId === chosenFeatDetail.id);
+    || (!(existingLevelUpFeats ?? []).some((entry) => entry.featId === chosenFeatDetail.id)
+      && !(ownedFeatIds ?? []).includes(chosenFeatDetail.id));
 
   const asiTotal = Object.values(asiStats).reduce((sum, value) => sum + value, 0);
   const asiValid =
     !isAsiLevel ||
     asiMode === "feat" ||
-    (asiMode === "asi" && asiTotal === 2 && Object.values(asiStats).every((value) => value <= 2));
+    (asiMode === "asi" && asiTotal === 2 && Object.entries(asiStats).every(([key, value]) =>
+      ["str", "dex", "con", "int", "wis", "cha"].includes(key)
+      && Number.isInteger(value) && value >= 0 && value <= 2
+      && (value === 0 || (scores[key] ?? 10) + value <= 20)));
   const subclassValid = !needsSubclassChoice || Boolean(subclass.trim());
   const cantripsValid = cantripCount === 0 || chosenCantrips.length === cantripCount;
-  const spellsValid = !spellcaster || prepCount === 0 || chosenSpells.length <= prepCount;
+  const spellsValid = Boolean(args.usesFlexiblePreparedSpellsModel) || !spellcaster || prepCount === 0 || chosenSpells.length <= prepCount;
   const invocationsValid = invocCount === 0 || chosenInvocations.length === invocCount;
   const expertiseValid = expertiseChoices.every((choice) => (chosenExpertise[choice.key] ?? []).length === choice.count);
   const expertiseReplacementValid = expertiseReplacementChoices.every((choice) =>
@@ -329,7 +336,7 @@ export function deriveLevelUpValidation(args: DeriveLevelUpValidationArgs) {
       })
     );
   const canConfirm =
-    hpGain !== null &&
+    hpGain !== null && Number.isSafeInteger(hpGain) && hpGain > 0 &&
     asiValid &&
     subclassValid &&
     cantripsValid &&
@@ -343,7 +350,7 @@ export function deriveLevelUpValidation(args: DeriveLevelUpValidationArgs) {
   // split apart because "pick a feat", "you don't meet its prerequisite", "you already have it" and
   // "it still needs options chosen" send you to four different places on the page.
   const blockers: LevelUpBlockerKey[] = [];
-  if (hpGain === null) blockers.push("hp");
+  if (hpGain === null || !Number.isSafeInteger(hpGain) || hpGain <= 0) blockers.push("hp");
   if (!asiValid) blockers.push("asi");
   if (!subclassValid) blockers.push("subclass");
   if (!cantripsValid) blockers.push("cantrips");

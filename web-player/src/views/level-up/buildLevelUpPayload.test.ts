@@ -2,6 +2,28 @@ import { describe, expect, it } from "vitest";
 import { buildLevelUpPayload } from "./buildLevelUpPayload";
 
 describe("buildLevelUpPayload", () => {
+  it("preserves a Cleric's preparation choices instead of preparing every stored spell", () => {
+    const preparedSpells = ["bless"];
+    const chosenSpells = ["bless", "fireball", "misty-step"];
+    const payload = buildLevelUpPayload({
+      char: { hpMax: 50, hpCurrent: 50, className: "Cleric", characterData: {
+        preparedSpells,
+        classes: [{ id: "cleric", classId: "c_cleric", className: "Cleric", level: 7 }],
+        classSpellSelections: { cleric: { preparedSpells } },
+      } },
+      nextLevel: 8, nextClassLevel: 8, targetClassEntryId: "cleric", hpGain: 5, featHpBonus: 0,
+      subclass: "Light Domain", chosenCantrips: [], chosenSpells, chosenInvocations: [],
+      chosenExpertise: {}, chosenFeatOptions: {}, chosenFeatureChoices: {}, expertiseChoices: [],
+      featChoiceEntries: [], chosenFeatDetail: null, featSourceLabel: "", newFeatures: [],
+      usesFlexiblePreparedSpellsModel: true, classDetailName: "Cleric",
+      selectedCantripEntries: [], selectedSpellEntries: chosenSpells.map(name => ({ name, source: "Cleric" })),
+      selectedInvocationEntries: [], baseScores: {}, asiMode: null, asiStats: {}, featAbilityBonuses: {},
+    } as never) as { characterData: { chosenSpells: string[]; preparedSpells: string[]; classSpellSelections: Record<string, { preparedSpells: string[] }> } };
+    expect(payload.characterData.chosenSpells).toEqual(chosenSpells);
+    expect(payload.characterData.preparedSpells).toEqual(preparedSpells);
+    expect(payload.characterData.classSpellSelections.cleric.preparedSpells).toEqual(preparedSpells);
+  });
+
   it("increments the selected class level independently from total character level", () => {
     const payload = buildLevelUpPayload({
       char: {

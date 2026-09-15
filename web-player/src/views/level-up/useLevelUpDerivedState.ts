@@ -93,7 +93,7 @@ export function useLevelUpDerivedState(args: {
   const hd = classDetail?.hd ?? 8;
   const conScore = char?.conScore ?? 10;
   const conMod = abilityMod(conScore);
-  const hpAverage = Math.floor(hd / 2) + 1 + conMod;
+  const hpAverage = Math.max(1, Math.floor(hd / 2) + 1 + conMod);
 
   const autoLevel = React.useMemo(
     () => mergedAutolevels.find((al) => al.level === nextClassLevel) ?? null,
@@ -127,7 +127,7 @@ export function useLevelUpDerivedState(args: {
   const newSlots = classDetail ? getSpellSlotsAtLevel(classDetail, nextClassLevel, subclass) : null;
   const subclassLevel = classDetail ? getSubclassLevel(classDetail) : null;
   const subclassOptions = classDetail ? getSubclassList(classDetail) : [];
-  const showSubclassChoice = Boolean(subclassLevel && nextClassLevel === subclassLevel && subclassOptions.length > 0);
+  const showSubclassChoice = Boolean(subclassLevel && nextClassLevel >= subclassLevel && subclassOptions.length > 0 && (nextClassLevel === subclassLevel || !primaryClassEntry?.subclass));
   const needsSubclassChoice = Boolean(subclassLevel && nextClassLevel >= subclassLevel && subclassOptions.length > 0 && !subclass.trim());
   const subclassOverview = React.useMemo(() => {
     if (!subclass.trim()) return null;

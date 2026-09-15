@@ -32,6 +32,7 @@ export function LevelUpView() {
     loading,
     error,
     setError,
+    retryOptions,
     nextLevel,
     nextClassLevel,
     mergedAutolevels,
@@ -59,7 +60,7 @@ export function LevelUpView() {
     featSummaries,
     chosenFeatId,
     setChosenFeatId,
-    chosenFeatDetail,
+    chosenFeatDetail: loadedChosenFeatDetail,
     classCantrips,
     classSpells,
     classInvocations,
@@ -79,6 +80,12 @@ export function LevelUpView() {
   // ASI
   const [asiMode, setAsiMode] = useState<AsiMode>(null);
   const [asiStats, setAsiStats] = useState<Record<string, number>>({});
+  const chosenFeatDetail = asiMode === "feat" ? loadedChosenFeatDetail : null;
+  React.useEffect(() => {
+    setAsiMode(null);
+    setAsiStats({});
+    setChosenFeatId("");
+  }, [targetClassKey, setChosenFeatId]);
   const [chosenMulticlassSkills, setChosenMulticlassSkills] = useState<string[]>([]);
   const [chosenMulticlassTools, setChosenMulticlassTools] = useState<string[]>([]);
   React.useEffect(() => {
@@ -170,6 +177,7 @@ export function LevelUpView() {
     existingClassSpellNames,
     cantripCount,
     maxSpellLevel,
+    usesFlexiblePreparedSpellsModel,
     prepCount,
     allowedInvocationIds,
     invocCount,
@@ -256,6 +264,7 @@ export function LevelUpView() {
     cantripCount,
     cantripReplacementCount,
     maxSpellLevel,
+    usesFlexiblePreparedSpellsModel,
     prepCount,
     allowedInvocationIds,
     invocCount,
@@ -283,6 +292,7 @@ export function LevelUpView() {
         cantripCount,
         chosenCantrips: effectiveChosenCantrips,
         spellcaster,
+        usesFlexiblePreparedSpellsModel,
         prepCount,
         chosenSpells: effectiveChosenSpells,
         invocCount,
@@ -306,6 +316,7 @@ export function LevelUpView() {
           char?.characterData?.chosenRaceFeatId,
           char?.characterData?.chosenBgOriginFeatId,
           ...Object.values(char?.characterData?.chosenClassFeatIds ?? {}),
+          ...(char?.characterData?.extraFeatIds ?? []),
         ].map((value) => String(value ?? "")).filter(Boolean),
       }),
     [
@@ -317,6 +328,7 @@ export function LevelUpView() {
       cantripCount,
       effectiveChosenCantrips,
       spellcaster,
+      usesFlexiblePreparedSpellsModel,
       prepCount,
       effectiveChosenSpells,
       invocCount,
@@ -335,6 +347,7 @@ export function LevelUpView() {
       char?.characterData?.chosenRaceFeatId,
       char?.characterData?.chosenBgOriginFeatId,
       char?.characterData?.chosenClassFeatIds,
+      char?.characterData?.extraFeatIds,
       baseScores,
       charProficiencies,
       featSearch,
@@ -354,24 +367,27 @@ export function LevelUpView() {
       return [{ name, label: describeMulticlassRequirement(requirement.ability, requirement.minimum ?? 13), met: multiclassRequirementMet(requirement.ability, requirement.minimum, baseScores) }];
     });
   }, [baseScores, classDetail, classEntries, isAddingClass, ownedClassDetails]);
-  const multiclassEligible = multiclassRequirements.every((requirement) => requirement.met);
+  const multiclassEligible = (!isAddingClass || classEntries.every((entry) => Boolean(ownedClassDetails[entry.id])))
+    && multiclassRequirements.every((requirement) => requirement.met);
   const multiclassSkillCount = isAddingClass ? classDetail?.multiclass?.skills?.choose ?? 0 : 0;
   const multiclassToolCount = isAddingClass ? (classDetail?.multiclass?.tools?.choices ?? []).reduce((sum, choice) => sum + choice.count, 0) : 0;
   const multiclassChoicesComplete = chosenMulticlassSkills.length === multiclassSkillCount && chosenMulticlassTools.length === multiclassToolCount;
-  const classChoicesComplete = classChoiceGroups.every((group) => Boolean(chosenFeatureChoices[group.key]?.[0]));
-  const canConfirm = baseCanConfirm && multiclassEligible && multiclassChoicesComplete && classChoicesComplete;
+  const classChoicesComplete = classChoiceGroups.every((group) => group.options.some((option) => option.id === chosenFeatureChoices[group.key]?.[0]));
+  const canConfirm = Boolean(classDetail) && classSpellOptionsLoaded && baseCanConfirm && multiclassEligible && multiclassChoicesComplete && classChoicesComplete;
 
   // The gates the view owns, appended to the ones the validation helper found.
   const blockers = React.useMemo<LevelUpBlockerKey[]>(() => {
     const all = [...baseBlockers];
+    if (!classDetail || !classSpellOptionsLoaded) all.push("optionsLoading");
     if (!multiclassEligible) all.push("multiclassRequirements");
     if (!multiclassChoicesComplete) all.push("multiclassChoices");
     if (!classChoicesComplete) all.push("classChoices");
     if (!allExtraSelectionsValid) all.push("extraChoices");
     return all;
-  }, [allExtraSelectionsValid, baseBlockers, classChoicesComplete, multiclassChoicesComplete, multiclassEligible]);
+  }, [classDetail, classSpellOptionsLoaded, allExtraSelectionsValid, baseBlockers, classChoicesComplete, multiclassChoicesComplete, multiclassEligible]);
 
   const blockerMessages: Record<LevelUpBlockerKey, string> = {
+    optionsLoading: translateUi("Level-up options must finish loading before you can continue."),
     hp: translateUi("Choose how to gain hit points — roll, take the average, or enter a value."),
     asi: translateUi("Spend both ability score points, or choose a feat instead."),
     subclass: translateUi("Choose a subclass."),
@@ -402,6 +418,7 @@ export function LevelUpView() {
     chooseHpRoll,
     chooseHpManual,
   } = useLevelUpActions({
+    baseScores,
     hd,
     conMod,
     classCantrips,
@@ -457,6 +474,7 @@ export function LevelUpView() {
     featSourceLabel,
     featSpellChoiceOptions,
     newFeatures,
+    usesFlexiblePreparedSpellsModel,
     classDetailName: classDetail?.name,
     classCantrips,
     classSpells,
@@ -479,7 +497,7 @@ export function LevelUpView() {
   });
 
   if (loading) return <Wrap><p style={{ color: C.muted }}>{translateUi("Loading…")}</p></Wrap>;
-  if (error || !char) return <Wrap><p style={{ color: C.red }}>{error ?? "Character not found."}</p></Wrap>;
+  if (!char) return <Wrap><p style={{ color: C.red }}>{error ?? "Character not found."}</p></Wrap>;
   if (nextLevel > 20) {
     return (
       <Wrap>
@@ -494,6 +512,10 @@ export function LevelUpView() {
   return (
     <Wrap>
       {/* Header */}
+      {error && <div role="alert" style={{ color: C.red, marginBottom: 16 }}>
+        <p>{error}</p>
+        <Button variant="ghost" onClick={retryOptions}>{translateUi("Retry loading options")}</Button>
+      </div>}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
         <button
           onClick={() => navigate(`/characters/${char.id}`)}

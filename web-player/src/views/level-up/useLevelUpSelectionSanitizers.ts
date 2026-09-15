@@ -16,6 +16,7 @@ export function useLevelUpSelectionSanitizers(args: {
   existingClassSpellNames: string[];
   cantripCount: number;
   maxSpellLevel: number;
+  usesFlexiblePreparedSpellsModel?: boolean;
   prepCount: number;
   allowedInvocationIds: Set<string>;
   invocCount: number;
@@ -59,7 +60,7 @@ export function useLevelUpSelectionSanitizers(args: {
   }, [classCantrips, classSpellOptionsLoaded, cantripCount, existingClassSpellNames, setChosenCantrips]);
 
   React.useEffect(() => {
-    if (!classSpellOptionsLoaded || maxSpellLevel === 0) return;
+    if (args.usesFlexiblePreparedSpellsModel || !classSpellOptionsLoaded || maxSpellLevel === 0) return;
     setChosenSpells((prev) => {
       const next = reconcileSelectedSpellIds(prev, classSpells, existingClassSpellNames)
         .filter((id) => {
@@ -70,7 +71,7 @@ export function useLevelUpSelectionSanitizers(args: {
         .slice(0, prepCount);
       return next.length === prev.length && next.every((id, index) => id === prev[index]) ? prev : next;
     });
-  }, [classSpells, classSpellOptionsLoaded, existingClassSpellNames, maxSpellLevel, prepCount, setChosenSpells]);
+  }, [args.usesFlexiblePreparedSpellsModel, classSpells, classSpellOptionsLoaded, existingClassSpellNames, maxSpellLevel, prepCount, setChosenSpells]);
 
   React.useEffect(() => {
     if (!classSpellOptionsLoaded) return;

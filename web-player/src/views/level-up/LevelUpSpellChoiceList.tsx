@@ -114,7 +114,7 @@ export function LevelUpSpellChoiceList({
                 const focused = activeSpell?.id === spell.id;
                 const allowed = isAllowed ? isAllowed(spell) : true;
                 const disabledElsewhere = !active && (disabledIdSet.has(spell.id) || disabledNameSet.has(normalizeSpellName(spell.name)));
-                const blocked = (!active && chosen.length >= max) || !allowed || disabledElsewhere;
+                const blocked = !active && (chosen.length >= max || !allowed || disabledElsewhere);
                 const prerequisite = classTalentPrerequisiteLabel(spell.prerequisite, (id) => talentNameById.get(id));
                 const levelLabel = optionLevelLabel(spell.level);
                 const button = (

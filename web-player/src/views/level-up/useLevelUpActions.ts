@@ -6,6 +6,7 @@ import type { HpChoice } from "@/views/level-up/LevelUpTypes";
 type SpellEntry = { id: string; name: string; level?: number | null; repeatable?: boolean };
 
 export function useLevelUpActions(args: {
+  baseScores: Record<string, number>;
   hd: number;
   conMod: number;
   classCantrips: SpellEntry[];
@@ -83,7 +84,8 @@ export function useLevelUpActions(args: {
       const current = prev[key] ?? 0;
       const totalAssigned = Object.values(prev).reduce((sum, value) => sum + value, 0);
       const next = { ...prev };
-      if (current >= 2) {
+      if (current >= Math.min(2, Math.max(0, 20 - (args.baseScores[key] ?? 10)))) {
+        if (current === 0) return prev;
         next[key] = current - 1;
       } else if (current > 0 && totalAssigned >= 2) {
         if (current === 1) delete next[key];
@@ -93,7 +95,7 @@ export function useLevelUpActions(args: {
       }
       return next;
     });
-  }, [setAsiStats]);
+  }, [args.baseScores, setAsiStats]);
 
   const clearAsi = React.useCallback(() => {
     setAsiStats({});

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { api } from "@/services/api";
+import { fetchLevelUpSpellOptions } from "./fetchLevelUpSpellOptions";
 import { fetchMyCharacter } from "@/services/actorApi";
 import { fetchClassCatalog, fetchGrandClassDetail, fetchFeatCatalog, type ClassCatalogRow } from "@/services/compendiumApi";
 import { fetchSpellsByName, mergeSpellsById } from "@/services/spellLookup";
@@ -21,6 +22,8 @@ export function useLevelUpInitialData(id: string | undefined) {
   const [targetClassKey, setTargetClassKey] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
+  const retryOptions = () => { setError(null); setRetryKey((key) => key + 1); };
 
   const [subclass, setSubclass] = useState<string>("");
   const [chosenCantrips, setChosenCantrips] = useState<string[]>([]);
@@ -52,8 +55,11 @@ export function useLevelUpInitialData(id: string | undefined) {
 
   useEffect(() => {
     if (!id) return;
+    let alive = true;
+    setLoading(true);
     fetchMyCharacter(id)
       .then((c) => {
+        if (!alive) return;
         setChar(c as Character);
         const classEntry = Array.isArray(c.characterData?.classes) ? c.characterData.classes[0] ?? null : null;
         setTargetClassKey(String(classEntry?.id ?? ""));
@@ -69,14 +75,19 @@ export function useLevelUpInitialData(id: string | undefined) {
           ),
         );
       })
-      .catch((e) => setError(String(e)))
-      .finally(() => setLoading(false));
+      .catch((e) => { if (alive) setError(String(e)); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
   }, [id]);
 
   useEffect(() => {
     if (!char?.ruleset) return;
-    fetchClassCatalog(char.ruleset).then(setClassCatalog).catch(() => setClassCatalog([]));
-  }, [char?.ruleset]);
+    let alive = true;
+    fetchClassCatalog(char.ruleset)
+      .then((rows) => { if (alive) setClassCatalog(rows); })
+      .catch(() => { if (alive) setError("Could not load available classes. Retry loading options."); });
+    return () => { alive = false; };
+  }, [char?.ruleset, retryKey]);
 
   useEffect(() => {
     if (!targetClassId || !char?.ruleset) {
@@ -84,11 +95,13 @@ export function useLevelUpInitialData(id: string | undefined) {
       return;
     }
     let alive = true;
+    setClassDetail(null);
+    setClassSpellOptionsLoaded(false);
     fetchGrandClassDetail<ClassDetail>(targetClassId, char.ruleset)
       .then((detail) => { if (alive) setClassDetail(detail); })
-      .catch(() => { if (alive) setClassDetail(null); });
+      .catch(() => { if (alive) { setClassDetail(null); setError("Could not load class details. Retry loading options."); } });
     return () => { alive = false; };
-  }, [targetClassId, char?.ruleset]);
+  }, [targetClassId, char?.ruleset, retryKey]);
 
   useEffect(() => {
     if (!char?.ruleset) return;
@@ -96,13 +109,13 @@ export function useLevelUpInitialData(id: string | undefined) {
     let alive = true;
     Promise.all(classEntries.filter((entry) => entry.classId).map(async (entry) => ({
       id: entry.id,
-      detail: await fetchGrandClassDetail<ClassDetail>(entry.classId!, ruleset).catch(() => null),
+      detail: await fetchGrandClassDetail<ClassDetail>(entry.classId!, ruleset),
     }))).then((rows) => {
       if (!alive) return;
       setOwnedClassDetails(Object.fromEntries(rows.filter((row) => row.detail).map((row) => [row.id, row.detail!] as const)));
-    });
+    }).catch(() => { if (alive) setError("Could not check your existing classes. Retry loading options."); });
     return () => { alive = false; };
-  }, [classEntries, char?.ruleset]);
+  }, [classEntries, char?.ruleset, retryKey]);
 
   useEffect(() => {
     if (!char || !targetClassKey) return;
@@ -118,7 +131,7 @@ export function useLevelUpInitialData(id: string | undefined) {
       setClassCantrips([]);
       setClassSpells([]);
       setClassInvocations([]);
-      setClassSpellOptionsLoaded(true);
+      setClassSpellOptionsLoaded(false);
       return;
     }
     let alive = true;
@@ -128,39 +141,45 @@ export function useLevelUpInitialData(id: string | undefined) {
     const encodedClass = encodeURIComponent(spellAccessId ?? spellcastingClassName);
     const ruleset = char?.ruleset ?? "5.5e";
     const rulesetParam = `&ruleset=${encodeURIComponent(ruleset)}`;
-    const cantripsDone = api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&level=0&limit=120&includeText=1&lite=1&excludeSpecial=1${rulesetParam}`)
-      .then(setClassCantrips)
-      .catch(() => setClassCantrips([]));
+    const cantripsDone = fetchLevelUpSpellOptions(`classes=${encodedClass}&level=0&includeText=1&lite=1&excludeSpecial=1${rulesetParam}`)
+      .then((rows) => { if (alive) setClassCantrips(rows); });
     const expandedSpellNames = getExpandedSpellListNames(classDetail, nextClassLevel, subclass);
     const spellsDone = Promise.all([
-      api<SpellSummary[]>(`/api/spells/search?classes=${encodedClass}&minLevel=1&maxLevel=9&limit=220&includeText=1&lite=1&excludeSpecial=1${rulesetParam}`),
+      fetchLevelUpSpellOptions(`classes=${encodedClass}&minLevel=1&maxLevel=9&includeText=1&lite=1&excludeSpecial=1${rulesetParam}`),
       fetchSpellsByName(expandedSpellNames, ruleset),
     ])
-      .then(([baseSpells, expandedSpells]) => setClassSpells(mergeSpellsById(baseSpells, expandedSpells)))
-      .catch(() => setClassSpells([]));
+      .then(([baseSpells, expandedSpells]) => { if (alive) setClassSpells(mergeSpellsById(baseSpells, expandedSpells)); });
     const invocationsDone = /warlock/i.test(classDetail.name)
       ? api<SpellSummary[]>(`/api/class-talents/search?kind=invocation&limit=150&includeText=1${rulesetParam}`)
-        .then(setClassInvocations)
-        .catch(() => setClassInvocations([]))
+        .then((rows) => { if (alive) setClassInvocations(rows); })
       : Promise.resolve(setClassInvocations([]));
-    Promise.all([cantripsDone, spellsDone, invocationsDone]).then(() => { if (alive) setClassSpellOptionsLoaded(true); });
+    Promise.all([cantripsDone, spellsDone, invocationsDone])
+      .then(() => { if (alive) setClassSpellOptionsLoaded(true); })
+      .catch(() => { if (alive) setError("Could not load level-up options. Retry loading options before continuing."); });
     return () => { alive = false; };
-  }, [classDetail, nextClassLevel, subclass, char?.ruleset]);
+  }, [classDetail, nextClassLevel, subclass, char?.ruleset, retryKey]);
 
   useEffect(() => {
     if (!char?.ruleset) return;
-    fetchFeatCatalog(char.ruleset).then((rows) => setFeatSummaries(rows as FeatSummary[])).catch(() => setFeatSummaries([]));
-  }, [char?.ruleset]);
+    let alive = true;
+    fetchFeatCatalog(char.ruleset)
+      .then((rows) => { if (alive) setFeatSummaries(rows as FeatSummary[]); })
+      .catch(() => { if (alive) setError("Could not load available feats. Retry loading options."); });
+    return () => { alive = false; };
+  }, [char?.ruleset, retryKey]);
 
   useEffect(() => {
     if (!chosenFeatId || !char?.ruleset) {
       setChosenFeatDetail(null);
       return;
     }
+    let alive = true;
+    setChosenFeatDetail(null);
     api<FeatDetail>(`/api/compendium/feats/${encodeURIComponent(chosenFeatId)}?ruleset=${char.ruleset}`)
-      .then((feat) => setChosenFeatDetail(feat))
-      .catch(() => setChosenFeatDetail(null));
-  }, [chosenFeatId, char?.ruleset]);
+      .then((feat) => { if (alive) setChosenFeatDetail(feat); })
+      .catch(() => { if (alive) { setChosenFeatDetail(null); setError("Could not load the selected feat. Retry loading options."); } });
+    return () => { alive = false; };
+  }, [chosenFeatId, char?.ruleset, retryKey]);
 
   return {
     char,
@@ -168,6 +187,7 @@ export function useLevelUpInitialData(id: string | undefined) {
     loading,
     error,
     setError,
+    retryOptions,
     nextLevel,
     nextClassLevel,
     mergedAutolevels,

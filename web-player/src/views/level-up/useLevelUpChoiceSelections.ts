@@ -65,6 +65,7 @@ export function useLevelUpChoiceSelections(args: {
   cantripCount: number;
   cantripReplacementCount: number;
   maxSpellLevel: number;
+  usesFlexiblePreparedSpellsModel?: boolean;
   prepCount: number;
   allowedInvocationIds: Set<string>;
   invocCount: number;
@@ -333,7 +334,7 @@ export function useLevelUpChoiceSelections(args: {
   );
 
   const cantripChoiceCount = Math.max(0, cantripCount - lockedCantripIds.size);
-  const spellChoiceCount = Math.max(0, prepCount - lockedSpellIds.size);
+  const spellChoiceCount = args.usesFlexiblePreparedSpellsModel ? 0 : Math.max(0, prepCount - lockedSpellIds.size);
   const invocationChoiceCount = Math.max(0, invocCount - lockedInvocationSelectionIds.length);
 
   const displayedChosenCantrips = chosenCantrips.filter((id) => {
@@ -362,8 +363,8 @@ export function useLevelUpChoiceSelections(args: {
     [displayedChosenCantrips, lockedCantripSelectionIds]
   );
   const effectiveChosenSpells = React.useMemo(
-    () => [...lockedSpellSelectionIds, ...displayedChosenSpells],
-    [displayedChosenSpells, lockedSpellSelectionIds]
+    () => args.usesFlexiblePreparedSpellsModel ? chosenSpells : [...lockedSpellSelectionIds, ...displayedChosenSpells],
+    [args.usesFlexiblePreparedSpellsModel, chosenSpells, displayedChosenSpells, lockedSpellSelectionIds]
   );
   const effectiveChosenInvocations = React.useMemo(
     () => [...lockedInvocationSelectionIds, ...displayedChosenInvocations],

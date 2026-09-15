@@ -64,10 +64,37 @@ describe("deriveLevelUpValidation blockers", () => {
     };
   }
 
+  it("does not treat a flexible caster spell list as its preparation allowance", () => {
+    const args = { ...validArgs(), chosenSpells: Array.from({ length: 24 }, (_, i) => "spell-" + i) };
+    expect(deriveLevelUpValidation({ ...args, usesFlexiblePreparedSpellsModel: true }).canConfirm).toBe(true);
+    expect(deriveLevelUpValidation(args).canConfirm).toBe(false);
+  });
+
   it("reports nothing when every requirement is met", () => {
     const result = deriveLevelUpValidation(validArgs());
     expect(result.blockers).toEqual([]);
     expect(result.canConfirm).toBe(true);
+  });
+
+  it("rejects a non-repeatable feat already granted outside a previous level-up", () => {
+    expect(deriveLevelUpValidation({ ...validArgs(), ownedFeatIds: ["f_durable"] }).blockers).toContain("featRepeatable");
+    expect(deriveLevelUpValidation({ ...validArgs(), ownedFeatIds: ["f_durable"], chosenFeatDetail: { id: "f_durable", name: "Durable", parsed: { repeatable: true } } }).featRepeatableValid).toBe(true);
+  });
+
+  it("rejects ASI points over the cap and malformed allocations", () => {
+    for (const asiStats of [{ wis: 2 }, { str: -1, dex: 3 }, { str: 1.5, dex: 0.5 }, { bogus: 2 }] as Record<string, number>[]) {
+      const result = deriveLevelUpValidation({ ...validArgs(), asiMode: "asi", scores: { ...validArgs().scores, wis: 19 }, asiStats });
+      expect(result.blockers).toContain("asi");
+    }
+    expect(deriveLevelUpValidation({ ...validArgs(), asiMode: "asi", asiStats: { str: 1, dex: 1 } }).asiValid).toBe(true);
+  });
+
+  it("rejects invalid HP even when supplied directly to validation", () => {
+    for (const hpGain of [0, -1, 1.5, NaN, Infinity]) {
+      const result = deriveLevelUpValidation({ ...validArgs(), hpGain });
+      expect(result.canConfirm).toBe(false);
+      expect(result.blockers).toContain("hp");
+    }
   });
 
   it("reports the hit point choice, which sits far above the confirm button", () => {

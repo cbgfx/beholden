@@ -218,7 +218,7 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
     chosenCantrips,
     chosenSpells,
     preparedSpells:
-      classDetailName && chosenSpells.length > 0 && !String((char as { className?: string }).className ?? "").toLowerCase().includes("warlock")
+      !args.usesFlexiblePreparedSpellsModel && classDetailName && chosenSpells.length > 0 && !String((char as { className?: string }).className ?? "").toLowerCase().includes("warlock")
         ? selectedSpellEntries.map((entry) => normalizeSpellTrackingKey(entry.name))
         : char.characterData?.preparedSpells,
     chosenInvocations,
@@ -227,7 +227,7 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
       [targetClassEntryId]: {
         chosenCantrips,
         chosenSpells,
-        preparedSpells: classDetailName && chosenSpells.length > 0 && !String((char as { className?: string }).className ?? "").toLowerCase().includes("warlock")
+        preparedSpells: !args.usesFlexiblePreparedSpellsModel && classDetailName && chosenSpells.length > 0 && !String((char as { className?: string }).className ?? "").toLowerCase().includes("warlock")
           ? selectedSpellEntries.map((entry) => normalizeSpellTrackingKey(entry.name))
           : ((char.characterData?.classSpellSelections as Record<string, { preparedSpells?: string[] }> | undefined)?.[targetClassEntryId]?.preparedSpells ?? []),
         chosenInvocations,
@@ -333,6 +333,7 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
   };
 
   const payload: Record<string, unknown> = {
+    progressionClassEntryId: targetClassEntryId,
     level: nextLevel,
     hpMax: newHpMax,
     hpCurrent: char.hpCurrent + hpGain + featHpBonus,
@@ -342,12 +343,12 @@ export function buildLevelUpPayload(args: BuildLevelUpPayloadArgs): Record<strin
   if (asiMode === "asi") {
     for (const [k, v] of Object.entries(asiStats)) {
       const scoreKey = `${k}Score`;
-      payload[scoreKey] = Math.min(20, (baseScores[k] ?? 10) + v);
+      payload[scoreKey] = Math.max(baseScores[k] ?? 10, Math.min(20, (baseScores[k] ?? 10) + v));
     }
   } else if (asiMode === "feat") {
     for (const [k, v] of Object.entries(featAbilityBonuses)) {
       const scoreKey = `${k}Score`;
-      payload[scoreKey] = Math.min(20, (baseScores[k] ?? 10) + v);
+      payload[scoreKey] = Math.max(baseScores[k] ?? 10, Math.min(20, (baseScores[k] ?? 10) + v));
     }
   }
 
