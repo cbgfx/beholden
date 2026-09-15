@@ -1,3 +1,4 @@
+import { overridesAfterLongRest } from "@beholden/shared/domain/actors";
 import type { SheetOverrides } from "../CharacterViewTypes";
 
 export function getLongRestRecovery(hitDiceMax: number, exhaustion: number): {
@@ -15,13 +16,10 @@ export function getLongRestOverrides(
   grantsInspiration: boolean,
   current: SheetOverrides = { tempHp: 0, acBonus: 0, hpMaxBonus: 0 },
 ): SheetOverrides {
-  const permanent = current.permanent ?? {};
+  // Which bonuses survive the night is shared with the DM's party-wide rest; the inspiration grant
+  // is player-only, since it comes from a race feature the server doesn't resolve.
   return {
-    tempHp: 0,
-    acBonus: permanent.acBonus ? current.acBonus : 0,
-    hpMaxBonus: permanent.hpMaxBonus ? current.hpMaxBonus : 0,
+    ...overridesAfterLongRest(current),
     inspiration: inspiration || grantsInspiration,
-    abilityScores: permanent.abilityScores ? { ...(current.abilityScores ?? {}) } : {},
-    ...(Object.values(permanent).some(Boolean) ? { permanent } : {}),
-  };
+  } as SheetOverrides;
 }

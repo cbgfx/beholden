@@ -5,7 +5,8 @@ import type { ServerContext } from "../../server/context.js";
 import { parseBody } from "../../lib/validate.js";
 import { requireCampaignExists, requireParam } from "../../lib/routeHelpers.js";
 import { rowToCampaign, rowToCampaignCharacter, CAMPAIGN_CHARACTER_COLS } from "../../lib/db.js";
-import { DEFAULT_OVERRIDES } from "../../lib/defaults.js";
+import { overridesAfterLongRest, resolvePolymorphRevert } from "@beholden/shared/domain/actors";
+import { conditionsAfterRest } from "@beholden/shared/domain/conditions";
 import { updateCampaignCharacterLive } from "../../services/characters.js";
 import { rowToEncounterActor } from "../../lib/db.js";
 import { ENCOUNTER_ACTOR_COLS } from "../../lib/db.js";
@@ -177,7 +178,8 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     res.json({ ok: true });
   });
 
-  // Full rest: heal all players + clear player combatant conditions/temp HP.
+  // Long Rest for the whole party: full HP, temporary bonuses gone, and every condition a night
+  // outlasts ended. Deliberately runs the same rules as a player's own Long Rest button.
 
   // MARK: - POST /api/campaigns/:campaignId/fullRest
   app.post("/api/campaigns/:campaignId/fullRest", dmOrAdmin(db), (req, res) => {
@@ -206,14 +208,17 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
     db.transaction(() => {
       for (const row of playerRows) {
         const player = rowToCampaignCharacter(row);
+        // A polymorphed character reverts first: the condition holds the AC and HP maximum the form
+        // replaced, so it has to be unwound rather than wiped along with the rest.
+        const revert = resolvePolymorphRevert(player);
         updateCampaignCharacterLive(
           db,
           player.id,
           player,
           {
             hpCurrent: player.hpMax,
-            overrides: { ...DEFAULT_OVERRIDES },
-            conditions: [],
+            overrides: overridesAfterLongRest(revert?.overrides ?? player.overrides),
+            conditions: conditionsAfterRest(revert?.conditions ?? player.conditions, "long"),
           },
           t,
         );
@@ -221,14 +226,15 @@ export function registerCampaignRoutes(app: Express, ctx: ServerContext) {
 
       for (const row of combatantRows) {
         const combatant = rowToEncounterActor(row);
+        const revert = resolvePolymorphRevert(combatant);
         updateEncounterActor(
           db,
           {
             ...combatant,
             ...buildEncounterActorLive(combatant, {
               hpCurrent: playerHpMaxById.get(combatant.baseId) ?? combatant.hpMax,
-              overrides: { ...DEFAULT_OVERRIDES },
-              conditions: [],
+              overrides: overridesAfterLongRest(revert?.overrides ?? combatant.overrides),
+              conditions: conditionsAfterRest(revert?.conditions ?? combatant.conditions, "long"),
               usedReaction: false,
               usedLegendaryActions: 0,
               usedSpellSlots: {},

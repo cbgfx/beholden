@@ -1,6 +1,7 @@
 import type React from "react";
 import { api } from "@/services/api";
 import { patchMyCharacter, putMyCharacter } from "@/views/character/state/characterApi";
+import { conditionsAfterRest } from "@beholden/shared/domain/conditions";
 import {
   shouldResetOnRest,
   parseLeadingNumberLoose,
@@ -14,6 +15,7 @@ import type { CharacterData, ConditionInstance, ResourceCounter } from "@/views/
 import { toggleConditionInstance } from "@/views/character/combat/CharacterConditions";
 import type { CompendiumMonsterRow } from "@/lib/monsterPicker/types";
 import { getLongRestOverrides, getLongRestRecovery } from "@/views/character/combat/CharacterRestRecovery";
+import { resolvePolymorphRevert } from "@beholden/shared/domain/actors";
 import { recoverItemCharges } from "@/views/character/inventory/CharacterInventory";
 import { parseFeatureEffects } from "@/domain/character/parseFeatureEffects";
 import type { MulticlassSpellSlotState } from "@/domain/character/multiclassSpellcasting";
@@ -292,6 +294,13 @@ export function buildCharacterRuntimeActions(args: {
     } else {
       await saveResources(nextResources);
     }
+
+    // An hour outlasts anything measured in rounds, and nobody holds concentration through a rest.
+    const nextConditions = conditionsAfterRest(char.conditions ?? [], "short");
+    if (nextConditions.length !== (char.conditions ?? []).length) {
+      await patchMyCharacter(char.id, "conditions", { conditions: nextConditions });
+      setChar((prev) => prev ? { ...prev, conditions: nextConditions } : prev);
+    }
   };
 
   const handleLongRest = async () => {
@@ -310,12 +319,25 @@ export function buildCharacterRuntimeActions(args: {
     const nextUsedSpellSlots = {};
     const nextInventory = (inventory ?? []).map((item) => recoverItemCharges(item));
     const hasResourceful = hasHeroicInspirationGrant(raceDetail);
-    const nextOverrides = getLongRestOverrides(Boolean(overrides.inspiration), hasResourceful, overrides);
-    const restedHpMax = nextOverrides.permanent?.hpMaxBonus || nextOverrides.permanent?.abilityScores
-      ? effectiveHpMax
-      : effectiveHpMaxWithoutOverrides;
-    const nextConditions = (char.conditions ?? []).filter(
-      (condition) => condition.key !== "mage_armor" && condition.key !== "concentration",
+
+    // Polymorph isn't a duration a rest runs out: the condition holds the AC and HP maximum the
+    // form replaced, so reverting means putting those back before the overrides are recomputed.
+    // Dropping it with the other conditions would leave the character wearing the form's numbers.
+    const revert = resolvePolymorphRevert({ overrides, conditions: char.conditions });
+    const nextOverrides = getLongRestOverrides(
+      Boolean(overrides.inspiration),
+      hasResourceful,
+      (revert?.overrides ?? overrides) as SheetOverrides,
+    );
+    const restedHpMax = revert
+      // Back in their own body, so the true maximum plus whatever bonus outlived the rest.
+      ? effectiveHpMaxWithoutOverrides + Math.max(0, Number(nextOverrides.hpMaxBonus ?? 0) || 0)
+      : nextOverrides.permanent?.hpMaxBonus || nextOverrides.permanent?.abilityScores
+        ? effectiveHpMax
+        : effectiveHpMaxWithoutOverrides;
+    const nextConditions = conditionsAfterRest(
+      (revert?.conditions ?? char.conditions ?? []) as ConditionInstance[],
+      "long",
     );
 
     await putMyCharacter(char.id, {

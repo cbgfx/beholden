@@ -250,6 +250,25 @@ export function deriveHpGain(hpChoice: "roll" | "average" | "manual" | null, hpA
   return null;
 }
 
+/** Why the level-up can't be confirmed yet. Rendered next to the confirm button. */
+export type LevelUpBlockerKey =
+  | "hp"
+  | "asi"
+  | "subclass"
+  | "cantrips"
+  | "spells"
+  | "invocations"
+  | "expertise"
+  | "expertiseReplacement"
+  | "featMissing"
+  | "featPrereq"
+  | "featRepeatable"
+  | "featOptions"
+  | "multiclassRequirements"
+  | "multiclassChoices"
+  | "classChoices"
+  | "extraChoices";
+
 export function deriveLevelUpValidation(args: DeriveLevelUpValidationArgs) {
   const {
     isAsiLevel, asiMode, asiStats, needsSubclassChoice, subclass, cantripCount, chosenCantrips, spellcaster,
@@ -320,7 +339,27 @@ export function deriveLevelUpValidation(args: DeriveLevelUpValidationArgs) {
     expertiseReplacementValid &&
     featValid;
 
+  // Every unmet requirement, so the confirm button can say why it won't submit. The feat case is
+  // split apart because "pick a feat", "you don't meet its prerequisite", "you already have it" and
+  // "it still needs options chosen" send you to four different places on the page.
+  const blockers: LevelUpBlockerKey[] = [];
+  if (hpGain === null) blockers.push("hp");
+  if (!asiValid) blockers.push("asi");
+  if (!subclassValid) blockers.push("subclass");
+  if (!cantripsValid) blockers.push("cantrips");
+  if (!spellsValid) blockers.push("spells");
+  if (!invocationsValid) blockers.push("invocations");
+  if (!expertiseValid) blockers.push("expertise");
+  if (!expertiseReplacementValid) blockers.push("expertiseReplacement");
+  if (asiMode === "feat" && !featValid) {
+    if (!chosenFeatDetail) blockers.push("featMissing");
+    else if (!featPrereqsMet) blockers.push("featPrereq");
+    else if (!featRepeatableValid) blockers.push("featRepeatable");
+    else blockers.push("featOptions");
+  }
+
   return {
+    blockers,
     availableFeatSummaries,
     filteredFeatSummaries,
     featPrereqsMet,

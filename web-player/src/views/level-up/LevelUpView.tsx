@@ -2,7 +2,7 @@ import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useState } from "react";
 import { useInvocationGrantedFeatChoices } from "@/views/shared/useInvocationGrantedFeatChoices";
 import { useNavigate, useParams } from "react-router-dom";
-import { C } from "@/lib/theme";
+import { C, withAlpha } from "@/lib/theme";
 import { Button } from "@/ui/Button";
 import { normalizeSpellTrackingKey } from "@/views/character/CharacterSheetUtils";
 import type {
@@ -11,7 +11,7 @@ import type {
 } from "@/views/level-up/LevelUpTypes";
 import { AsiAbilityGrid, BackBtn, ChoiceBtn, ExclusiveChoiceReplacementSection, ExpertiseReplacementSection, ExpertiseSelectionSection, FeatSelectionSection, LevelUpHpSection, Section, Wrap } from "@/views/level-up/LevelUpParts";
 import { LevelUpChoicesSection, LevelUpFeaturesSection, LevelUpSpellSlotsSection, LevelUpSubclassSection } from "@/views/level-up/LevelUpSections";
-import { deriveFeatAbilityBonuses, deriveHpGain, deriveLevelUpValidation } from "@/views/level-up/LevelUpUtils";
+import { deriveFeatAbilityBonuses, deriveHpGain, deriveLevelUpValidation, type LevelUpBlockerKey } from "@/views/level-up/LevelUpUtils";
 import { deriveFeatHitPointMaxBonus } from "@/domain/character/featEffects";
 import { useLevelUpInitialData } from "@/views/level-up/useLevelUpInitialData";
 import { useLevelUpDerivedState } from "@/views/level-up/useLevelUpDerivedState";
@@ -271,7 +271,7 @@ export function LevelUpView() {
   );
   const allExtraSelectionsValid = extraFeatSpellSelectionsValid && invocationFeatSelectionsValid && invocationGrantedFeatChoices.valid;
 
-  const { filteredFeatSummaries, featPrereqsMet, featRepeatableValid, canConfirm: baseCanConfirm } = React.useMemo(
+  const { filteredFeatSummaries, featPrereqsMet, featRepeatableValid, canConfirm: baseCanConfirm, blockers: baseBlockers } = React.useMemo(
     () =>
       deriveLevelUpValidation({
         ruleset: char?.ruleset ?? "5.5e",
@@ -360,6 +360,35 @@ export function LevelUpView() {
   const multiclassChoicesComplete = chosenMulticlassSkills.length === multiclassSkillCount && chosenMulticlassTools.length === multiclassToolCount;
   const classChoicesComplete = classChoiceGroups.every((group) => Boolean(chosenFeatureChoices[group.key]?.[0]));
   const canConfirm = baseCanConfirm && multiclassEligible && multiclassChoicesComplete && classChoicesComplete;
+
+  // The gates the view owns, appended to the ones the validation helper found.
+  const blockers = React.useMemo<LevelUpBlockerKey[]>(() => {
+    const all = [...baseBlockers];
+    if (!multiclassEligible) all.push("multiclassRequirements");
+    if (!multiclassChoicesComplete) all.push("multiclassChoices");
+    if (!classChoicesComplete) all.push("classChoices");
+    if (!allExtraSelectionsValid) all.push("extraChoices");
+    return all;
+  }, [allExtraSelectionsValid, baseBlockers, classChoicesComplete, multiclassChoicesComplete, multiclassEligible]);
+
+  const blockerMessages: Record<LevelUpBlockerKey, string> = {
+    hp: translateUi("Choose how to gain hit points — roll, take the average, or enter a value."),
+    asi: translateUi("Spend both ability score points, or choose a feat instead."),
+    subclass: translateUi("Choose a subclass."),
+    cantrips: translateUi("Choose your new cantrips."),
+    spells: translateUi("You have more spells selected than you can prepare."),
+    invocations: translateUi("Choose your new invocations."),
+    expertise: translateUi("Choose your expertise skills."),
+    expertiseReplacement: translateUi("Finish choosing which expertise to replace."),
+    featMissing: translateUi("Choose a feat."),
+    featPrereq: translateUi("You don't meet the prerequisite for the selected feat."),
+    featRepeatable: translateUi("You already have that feat, and it can't be taken twice."),
+    featOptions: translateUi("The selected feat still needs its options chosen."),
+    multiclassRequirements: translateUi("You don't meet the ability score requirements to multiclass."),
+    multiclassChoices: translateUi("Choose your multiclass skills and tools."),
+    classChoices: translateUi("Choose your new class feature options."),
+    extraChoices: translateUi("Some spell, proficiency or feature choices are incomplete."),
+  };
 
   const {
     availableCantripChoices,
@@ -711,6 +740,28 @@ export function LevelUpView() {
       />
 
       {/* ── Confirm ── */}
+      {blockers.length > 0 ? (
+        <div
+          role="status"
+          style={{
+            marginTop: 8,
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: `1px solid ${withAlpha(C.colorGold, 0.35)}`,
+            background: withAlpha(C.colorGold, 0.08),
+            color: C.text,
+            fontSize: "var(--fs-small)",
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>
+            {translateUi("Before you can level up:")}
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 2 }}>
+            {blockers.map((blocker) => <li key={blocker}>{blockerMessages[blocker]}</li>)}
+          </ul>
+        </div>
+      ) : null}
+
       <div style={{ marginTop: 8, display: "flex", gap: 10 }}>
         <Button type="button" variant="ghost" onClick={() => navigate(`/characters/${char.id}`)}>
           {translateUi("Cancel")}

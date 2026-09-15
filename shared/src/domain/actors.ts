@@ -59,6 +59,64 @@ export function getPolymorphCondition(
   return condition ?? null;
 }
 
+export type SharedPolymorphRevert = {
+  /** Overrides with the form's AC and HP-maximum bonuses replaced by the ones it covered up. */
+  overrides: SharedCombatOverrides;
+  /** The remaining conditions, with "polymorphed" removed. */
+  conditions: SharedConditionInstance[];
+  /** Hit points the actor had when it assumed the form. */
+  originalHpCurrent: number;
+};
+
+/**
+ * Undo a polymorph.
+ *
+ * The condition carries the AC bonus, HP maximum bonus and hit points the form replaced, so ending
+ * it means putting those back and only then dropping the condition. Filtering the condition out on
+ * its own -- the tempting one-liner -- leaves the actor permanently wearing the form's numbers.
+ *
+ * Returns null when the actor isn't polymorphed.
+ */
+export function resolvePolymorphRevert(actor: {
+  overrides?: SharedCombatOverrides | null;
+  conditions?: readonly SharedConditionInstance[] | null;
+}): SharedPolymorphRevert | null {
+  const polymorph = getPolymorphCondition(actor.conditions);
+  if (!polymorph) return null;
+  const overrides = actor.overrides ?? { tempHp: 0, acBonus: 0, hpMaxBonus: 0 };
+  return {
+    overrides: {
+      ...overrides,
+      acBonus: Math.floor(Number(polymorph.originalAcBonus ?? 0) || 0),
+      hpMaxBonus: Math.floor(Number(polymorph.originalHpMaxBonus ?? 0) || 0),
+    },
+    conditions: (actor.conditions ?? []).filter((condition) => !isPolymorphCondition(condition)),
+    originalHpCurrent: Math.max(0, Number(polymorph.originalHpCurrent ?? 0) || 0),
+  };
+}
+
+/**
+ * Overrides after a Long Rest: temporary HP is gone, and a manual sheet bonus survives only when it
+ * was marked permanent. Shared so the player's own rest and the DM's party-wide one agree on which
+ * bonuses a night's sleep is allowed to erase.
+ */
+export function overridesAfterLongRest(
+  current: SharedCombatOverrides | null | undefined,
+): SharedCombatOverrides {
+  const overrides = current ?? { tempHp: 0, acBonus: 0, hpMaxBonus: 0 };
+  const permanent = overrides.permanent ?? {};
+  return {
+    tempHp: 0,
+    acBonus: permanent.acBonus ? overrides.acBonus : 0,
+    hpMaxBonus: permanent.hpMaxBonus ? overrides.hpMaxBonus : 0,
+    // Spread rather than assigned: under exactOptionalPropertyTypes an absent flag and one set to
+    // undefined are different things, and writing the key unconditionally would be the latter.
+    ...(overrides.inspiration === undefined ? {} : { inspiration: overrides.inspiration }),
+    abilityScores: permanent.abilityScores ? { ...(overrides.abilityScores ?? {}) } : {},
+    ...(Object.values(permanent).some(Boolean) ? { permanent } : {}),
+  };
+}
+
 export interface SharedDamageableActor {
   hpCurrent: number | null | undefined;
   overrides: SharedCombatOverrides | null | undefined;

@@ -72,6 +72,69 @@ export function hasZeroSpeedCondition(
 /** Speed reduction (in feet) applied by the Slow condition. */
 export const SLOW_SPEED_PENALTY = 10;
 
+export type RestType = "short" | "long";
+
+/**
+ * Conditions a Short Rest outlasts: the ones that run for a minute or less, end the moment someone
+ * lets go, or depend on concentration nobody keeps up through an hour of rest.
+ *
+ * Strictly by the book a rest ends no condition at all -- only Exhaustion is named. These lists are
+ * a table convenience built on duration: an hour outlasts anything measured in rounds, and eight
+ * hours outlasts nearly every poison, charm and blindness effect in print.
+ */
+export const SHORT_REST_CLEARED_CONDITION_KEYS = new Set([
+  "frightened",
+  "grappled",
+  "incapacitated",
+  "paralyzed",
+  "prone",
+  "restrained",
+  "slow",
+  "stunned",
+  "unconscious",
+  "rage",
+  "concentration",
+  "hexed",
+  "marked",
+]);
+
+/**
+ * A Long Rest additionally outlasts the hour-to-eight-hour effects.
+ *
+ * Two keys are deliberately absent. "petrified" has no duration to expire -- only Greater
+ * Restoration ends it, so no amount of sleep should. "polymorphed" is not a duration either: the
+ * condition carries the AC, HP maximum and hit points the form replaced, so callers must unwind it
+ * through resolvePolymorphRevert in ./actors rather than dropping it here, or the actor keeps the
+ * form's numbers.
+ */
+export const LONG_REST_CLEARED_CONDITION_KEYS = new Set([
+  ...SHORT_REST_CLEARED_CONDITION_KEYS,
+  "blinded",
+  "charmed",
+  "deafened",
+  "invisible",
+  "poisoned",
+  "disadvantage",
+  "mage_armor",
+]);
+
+export function clearsOnRest(key: string, rest: RestType): boolean {
+  const normalized = String(key ?? "").trim().toLowerCase();
+  const cleared = rest === "long" ? LONG_REST_CLEARED_CONDITION_KEYS : SHORT_REST_CLEARED_CONDITION_KEYS;
+  return cleared.has(normalized);
+}
+
+/**
+ * The conditions that survive a rest. Anything the rest doesn't outlast is kept, including
+ * "polymorphed" -- callers holding a polymorphed actor must revert it separately.
+ */
+export function conditionsAfterRest<T extends { key?: unknown }>(
+  conditions: readonly T[] | null | undefined,
+  rest: RestType,
+): T[] {
+  return (conditions ?? []).filter((condition) => !clearsOnRest(String(condition.key ?? ""), rest));
+}
+
 export function displayActorName(actor: { label?: unknown; name?: unknown; type?: unknown } | null | undefined): string {
   const label = String(actor?.label ?? "").trim();
   if (label) return label;
