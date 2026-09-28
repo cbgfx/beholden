@@ -1,0 +1,126 @@
+import { useTranslation } from "react-i18next";
+import { NoteRow } from "./NoteRow";
+import { usePointerDragReorder } from "./usePointerDragReorder";
+import { DragHandleGrip } from "./DragHandleGrip";
+import { DragGhostCard } from "./DragGhostCard";
+
+export type NoteListItem = {
+  id: string;
+  title: string;
+  text?: string;
+  /** A note this viewer may read but not change - the DM's campaign notes on a player's sheet. */
+  readOnly?: boolean;
+};
+
+export function NoteList(props: {
+  items: NoteListItem[];
+  expandedIds: string[];
+  accentColor: string;
+  textColor: string;
+  mutedColor: string;
+  deleteColor: string;
+  onToggle: (id: string) => void;
+  onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onReorder?: (ids: string[]) => void;
+  emptyText?: string;
+}) {
+  const { t } = useTranslation("shared");
+  const canReorder = Boolean(props.onReorder) && props.items.length > 1;
+  const drag = usePointerDragReorder({
+    items: props.items,
+    onReorder: (ids) => {
+      if (!canReorder || !props.onReorder) return;
+      // Read-only rows are not the viewer's to move, so they are left out of the new order.
+      props.onReorder(ids.filter((id) => !isLocked(id)));
+    },
+  });
+  const rows = canReorder ? drag.displayItems : props.items;
+  const isLocked = (id: string) => props.items.find((item) => item.id === id)?.readOnly === true;
+  const draggedItem = canReorder && drag.dragId ? props.items.find((item) => item.id === drag.dragId) : null;
+
+  if (!props.items.length) {
+    return <div style={{ color: props.mutedColor }}>{props.emptyText ?? t("noteList.emptyText")}</div>;
+  }
+
+  return (
+    <div style={{ display: "grid", gap: 4 }}>
+      {rows.map((item) => {
+        const expanded = props.expandedIds.includes(item.id);
+        const isDragging = drag.dragId === item.id;
+
+        return (
+          <div
+            key={item.id}
+            ref={(el) => {
+              if (canReorder) drag.rowRefs.current[item.id] = el;
+            }}
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 6,
+              opacity: isDragging ? 0.9 : 1,
+            }}
+          >
+            {canReorder && item.readOnly ? <div style={{ width: 24, flex: "0 0 auto" }} /> : null}
+            {canReorder && !item.readOnly ? (
+              <button
+                type="button"
+                title={t("noteList.dragToReorder")}
+                aria-label={t("noteList.dragToReorder")}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
+                onPointerDown={(event) => drag.onHandlePointerDown(event, item.id)}
+                onPointerMove={drag.onHandlePointerMove}
+                onPointerUp={() => drag.endDrag(true)}
+                onPointerCancel={() => drag.endDrag(false)}
+                style={{
+                  width: 24,
+                  height: 24,
+                  marginTop: 2,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 7,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "rgba(0,0,0,0.12)",
+                  cursor: isDragging ? "grabbing" : "grab",
+                  touchAction: "none",
+                  flex: "0 0 auto",
+                }}
+              >
+                <DragHandleGrip color={props.mutedColor} />
+              </button>
+            ) : null}
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <NoteRow
+                title={item.title || t("noteList.untitled")}
+                text={item.text}
+                expanded={expanded}
+                accentColor={props.accentColor}
+                textColor={props.textColor}
+                mutedColor={props.mutedColor}
+                deleteColor={props.deleteColor}
+                onToggle={() => props.onToggle(item.id)}
+                onEdit={props.onEdit && !item.readOnly ? () => props.onEdit?.(item.id) : undefined}
+                onDelete={props.onDelete && !item.readOnly ? () => props.onDelete?.(item.id) : undefined}
+              />
+            </div>
+          </div>
+        );
+      })}
+      {draggedItem && drag.pointerPos && (
+        <DragGhostCard
+          x={drag.pointerPos.x}
+          y={drag.pointerPos.y}
+          style={{ fontWeight: 700, color: props.textColor, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+        >
+          {draggedItem.title || t("noteList.untitled")}
+        </DragGhostCard>
+      )}
+    </div>
+  );
+}

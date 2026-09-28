@@ -1,0 +1,137 @@
+import { describe, expect, it } from "vitest";
+import {
+  featPrerequisitesMet,
+  getInitiativeBonus,
+  getSaveBonus,
+  hasNamedProficiency,
+  invocationPrerequisitesMet,
+  normalizeAbilityKey,
+  resolvePactBoonFromChosenOptionals,
+} from "@/views/character/CharacterSheetUtils";
+
+describe("invocationPrerequisitesMet canonical facts", () => {
+  it("requires levels, owned talents, and the exact cantrip capability", () => {
+    const prerequisite = { level: 5, talent: "ct_invocation_pact_of_blade", cantrip: "attack_damage" as const };
+    expect(invocationPrerequisitesMet(prerequisite, { level: 4, hasAttackDamageCantrip: true, chosenTalentIds: ["ct_invocation_pact_of_blade"] })).toBe(false);
+    expect(invocationPrerequisitesMet(prerequisite, { level: 5, hasDamageCantrip: true, chosenTalentIds: ["ct_invocation_pact_of_blade"] })).toBe(false);
+    expect(invocationPrerequisitesMet(prerequisite, { level: 5, hasAttackDamageCantrip: true, chosenTalentIds: [] })).toBe(false);
+    expect(invocationPrerequisitesMet(prerequisite, { level: 5, hasAttackDamageCantrip: true, chosenTalentIds: ["ct_invocation_pact_of_blade"] })).toBe(true);
+  });
+
+  it("never derives a prerequisite from display prose", () => {
+    expect(invocationPrerequisitesMet(null, { level: 1 })).toBe(true);
+  });
+
+  it("gates 2014's pactBoon prerequisite on the resolved Pact Boon fact, independent of chosenTalentIds", () => {
+    const prerequisite = { level: 12, pactBoon: "blade" as const };
+    expect(invocationPrerequisitesMet(prerequisite, { level: 12, chosenPactBoon: "chain" })).toBe(false);
+    expect(invocationPrerequisitesMet(prerequisite, { level: 12, chosenPactBoon: null })).toBe(false);
+    expect(invocationPrerequisitesMet(prerequisite, { level: 12, chosenPactBoon: "blade" })).toBe(true);
+    // A 5.5e invocation with no pactBoon prerequisite is unaffected by the fact being present or absent.
+    expect(invocationPrerequisitesMet({ talent: "ct_invocation_pact_of_the_blade" }, { level: 5, chosenTalentIds: ["ct_invocation_pact_of_the_blade"], chosenPactBoon: null })).toBe(true);
+  });
+
+  it("accepts legacy Pact invocation ids that omit the article", () => {
+    expect(invocationPrerequisitesMet(
+      { talent: "ct_invocation_pact_of_the_blade" },
+      { level: 5, chosenTalentIds: ["ct_invocation_pact_of_blade"] },
+    )).toBe(true);
+    expect(invocationPrerequisitesMet(
+      { talent: "ct_invocation_pact_of_blade" },
+      { level: 5, chosenTalentIds: ["ct_invocation_pact_of_the_blade"] },
+    )).toBe(true);
+  });
+});
+
+describe("resolvePactBoonFromChosenOptionals", () => {
+  it("extracts the chosen 2014 Pact Boon from a cf_ feature id", () => {
+    expect(resolvePactBoonFromChosenOptionals(["cf_warlock_3_pact_boon_pact_of_the_blade"])).toBe("blade");
+    expect(resolvePactBoonFromChosenOptionals(["cf_fighter_1_fighting_style_defense", "cf_warlock_3_pact_boon_pact_of_the_chain"])).toBe("chain");
+  });
+
+  it("extracts Pact Boons saved as character-creator display names", () => {
+    expect(resolvePactBoonFromChosenOptionals(["Pact Boon: Pact of the Blade"])).toBe("blade");
+    expect(resolvePactBoonFromChosenOptionals(["Pact of the Tome"])).toBe("tome");
+  });
+
+  it("returns null when no Pact Boon feature is present, including for 5.5e characters (which choose it as an invocation instead)", () => {
+    expect(resolvePactBoonFromChosenOptionals([])).toBeNull();
+    expect(resolvePactBoonFromChosenOptionals(undefined)).toBeNull();
+    expect(resolvePactBoonFromChosenOptionals(["cf_fighter_1_fighting_style_defense"])).toBeNull();
+  });
+});
+
+describe("featPrerequisitesMet ability requirements", () => {
+  it("accepts either ability in a shared-threshold alternative", () => {
+    const prerequisite = { ability: { any: ["str", "dex"] as const } };
+    expect(featPrerequisitesMet(prerequisite, { level: 4, scores: { str: 13, dex: 8 } })).toBe(true);
+    expect(featPrerequisitesMet(prerequisite, { level: 4, scores: { str: 8, dex: 13 } })).toBe(true);
+    expect(featPrerequisitesMet(prerequisite, { level: 4, scores: { str: 8, dex: 8 } })).toBe(false);
+  });
+
+  it("accepts alternatives with separately written thresholds", () => {
+    const prerequisite = { ability: { any: ["str", "dex"] as const } };
+    expect(featPrerequisitesMet(prerequisite, { level: 4, scores: { str: 13, dex: 8 } })).toBe(true);
+    expect(featPrerequisitesMet(prerequisite, { level: 4, scores: { str: 8, dex: 13 } })).toBe(true);
+  });
+
+  it("requires every ability joined by and", () => {
+    const prerequisite = { ability: [{ any: ["dex"] as const }, { any: ["wis"] as const }] };
+    expect(featPrerequisitesMet(prerequisite, { level: 4, scores: { dex: 13, wis: 13 } })).toBe(true);
+    expect(featPrerequisitesMet(prerequisite, { level: 4, scores: { dex: 13, wis: 12 } })).toBe(false);
+  });
+
+  it("understands the or-higher wording", () => {
+    const prerequisite = { ability: { any: ["str", "dex"] as const } };
+    expect(featPrerequisitesMet(prerequisite, { level: 4, scores: { str: 13, dex: 8 } })).toBe(true);
+  });
+});
+
+describe("normalizeAbilityKey", () => {
+  it("normalizes canonical and full spellcasting ability names", () => {
+    expect(normalizeAbilityKey("Charisma")).toBe("cha");
+    expect(normalizeAbilityKey("WIS")).toBe("wis");
+    expect(normalizeAbilityKey(" Intelligence ")).toBe("int");
+  });
+
+  it("does not guess unknown abilities", () => {
+    expect(normalizeAbilityKey("highest mental ability")).toBeNull();
+    expect(normalizeAbilityKey(null)).toBeNull();
+  });
+});
+
+describe("saving-throw proficiency names", () => {
+  const abilityNames = [
+    ["str", "Strength"],
+    ["dex", "Dexterity"],
+    ["con", "Constitution"],
+    ["int", "Intelligence"],
+    ["wis", "Wisdom"],
+    ["cha", "Charisma"],
+  ] as const;
+  const ironMindProficiencies = {
+    skills: [], expertise: [], saves: [{ name: "wis", source: "Level 7: Iron Mind (Gloom Stalker)" }],
+    armor: [], weapons: [], weaponMasteries: [], tools: [], languages: [], spells: [],
+    invocations: [], maneuvers: [], metamagic: [], infusions: [], plans: [],
+  };
+
+  it.each(abilityNames)("matches %s proficiency to the %s display name", (abbreviation, fullName) => {
+    expect(hasNamedProficiency([{ name: abbreviation }], fullName)).toBe(true);
+  });
+
+  it.each(abilityNames)("matches the %s abbreviation when stored as %s", (abbreviation, fullName) => {
+    expect(hasNamedProficiency([{ name: fullName }], abbreviation)).toBe(true);
+  });
+
+  it("includes Iron Mind in a level 7 Wisdom save", () => {
+    const scores = { str: 12, dex: 18, con: 14, int: 10, wis: 14, cha: 8 };
+    expect(getSaveBonus("Wisdom", "wis", scores, 7, ironMindProficiencies)).toBe(5);
+  });
+});
+
+describe("initiative", () => {
+  it("uses Dexterity and adds half proficiency only for Jack of All Trades", () => {
+    expect(getInitiativeBonus(16, 8)).toBe(3);
+    expect(getInitiativeBonus(16, 8, { jackOfAllTrades: true })).toBe(4);
+  });
+});

@@ -1,0 +1,296 @@
+import React from "react";
+import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { ExpandableNoteItem } from "./ExpandableNoteItem";
+import { withAlpha } from "./colors";
+import { IconPencil, IconTrash } from "../icons";
+
+const mentionLinkStyle: React.CSSProperties = {
+  color: "#7dd3fc",
+  background: "rgba(125,211,252,0.14)",
+  padding: "1px 6px",
+  borderRadius: 5,
+  fontWeight: 700,
+  textDecoration: "none",
+  whiteSpace: "nowrap",
+};
+
+const deletedMentionStyle: React.CSSProperties = {
+  color: "rgba(160,180,220,0.7)",
+  background: "rgba(255,255,255,0.06)",
+  padding: "1px 6px",
+  borderRadius: 5,
+  fontWeight: 700,
+  fontStyle: "italic",
+  whiteSpace: "nowrap",
+};
+
+function renderInlineRichText(text: string, validMentionIds?: Set<string>, binderId?: string, deletedRecordLabel = "Deleted record"): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  const pattern = /(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|__[^_]+__|\*[^*\n]+\*)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  while ((match = pattern.exec(text)) !== null) {
+    const token = match[0];
+    const index = match.index;
+    if (index > lastIndex) {
+      nodes.push(<React.Fragment key={`txt-${key++}`}>{text.slice(lastIndex, index)}</React.Fragment>);
+    }
+
+    const link = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    if (link) {
+      const rawHref = /^\s*javascript:/i.test(link[2]) ? undefined : link[2];
+      const href = rawHref && binderId && rawHref.startsWith("/binder/")
+        ? rawHref.replace(/^\/binder\/[^/]+/, `/binder/${binderId}`)
+        : rawHref;
+      const isMention = href?.startsWith("/binder/");
+      const mentionId = isMention ? href!.slice(href!.lastIndexOf("/") + 1) : undefined;
+      const isDeletedMention = isMention && validMentionIds && !validMentionIds.has(mentionId!);
+      nodes.push(href
+        ? isDeletedMention
+          ? <span key={`d-${key++}`} title={deletedRecordLabel} style={deletedMentionStyle}>{link[1]}</span>
+          : isMention
+            ? <Link key={`m-${key++}`} to={href} style={mentionLinkStyle}>{link[1]}</Link>
+            : <a key={`a-${key++}`} href={href} rel="noreferrer" style={{ color: "currentColor", textDecoration: "underline" }}>{link[1]}</a>
+        : <React.Fragment key={`raw-${key++}`}>{link[1]}</React.Fragment>);
+    } else if (token.startsWith("**") && token.endsWith("**")) {
+      nodes.push(<b key={`b-${key++}`}>{token.slice(2, -2)}</b>);
+    } else if (token.startsWith("__") && token.endsWith("__")) {
+      nodes.push(<u key={`u-${key++}`}>{token.slice(2, -2)}</u>);
+    } else if (token.startsWith("*") && token.endsWith("*")) {
+      nodes.push(<i key={`i-${key++}`}>{token.slice(1, -1)}</i>);
+    } else {
+      nodes.push(<React.Fragment key={`raw-${key++}`}>{token}</React.Fragment>);
+    }
+
+    lastIndex = index + token.length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(<React.Fragment key={`tail-${key++}`}>{text.slice(lastIndex)}</React.Fragment>);
+  }
+
+  return nodes;
+}
+
+function parseTableCells(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function isTableDivider(line: string): boolean {
+  const cells = parseTableCells(line);
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+
+function renderNoteRichText(text: string, validMentionIds?: Set<string>, binderId?: string, deletedRecordLabel = "Deleted record"): React.ReactNode {
+  const lines = text.replace(/\r/g, "").split("\n");
+  const out: React.ReactNode[] = [];
+  let i = 0;
+
+  const headingStyleByLevel: Record<number, React.CSSProperties> = {
+    1: { fontWeight: 800, fontSize: "calc(var(--fs-subtitle) + 4px)", margin: "8px 0 4px" },
+    2: { fontWeight: 800, fontSize: "calc(var(--fs-subtitle) + 2px)", margin: "8px 0 4px" },
+    3: { fontWeight: 700, fontSize: "var(--fs-subtitle)", margin: "8px 0 4px" },
+    4: { fontWeight: 700, fontSize: "var(--fs-medium)", margin: "8px 0 4px" },
+    5: { fontWeight: 700, fontSize: "var(--fs-medium)", margin: "8px 0 4px" },
+    6: { fontWeight: 700, fontSize: "var(--fs-medium)", margin: "8px 0 4px" },
+  };
+
+  while (i < lines.length) {
+    const line = lines[i] ?? "";
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      out.push(<div key={`space-${i}`} style={{ height: 8 }} />);
+      i += 1;
+      continue;
+    }
+
+    if (/^---+$/.test(trimmed)) {
+      out.push(<hr key={`hr-${i}`} style={{ border: 0, borderTop: "1px solid rgba(255,255,255,0.2)", margin: "10px 0" }} />);
+      i += 1;
+      continue;
+    }
+
+    const toggle = trimmed.match(/^:::toggle\s+(.+)$/);
+    if (toggle) {
+      let end = i + 1;
+      while (end < lines.length && lines[end]?.trim() !== ":::") end += 1;
+      out.push(
+        <details key={`toggle-${i}`} open style={{ margin: "8px 0 12px" }}>
+          <summary style={{ cursor: "pointer", fontWeight: 800, fontSize: "calc(var(--fs-subtitle) + 2px)", marginBottom: 8 }}>
+            {renderInlineRichText(toggle[1], validMentionIds, binderId, deletedRecordLabel)}
+          </summary>
+          <div style={{ paddingLeft: 26 }}>{renderNoteRichText(lines.slice(i + 1, end).join("\n"), validMentionIds, binderId, deletedRecordLabel)}</div>
+        </details>
+      );
+      i = end < lines.length ? end + 1 : end;
+      continue;
+    }
+
+    const nextLine = lines[i + 1] ?? "";
+    if (trimmed.includes("|") && isTableDivider(nextLine)) {
+      const headers = parseTableCells(line);
+      const rows: string[][] = [];
+      let j = i + 2;
+      while (j < lines.length) {
+        const candidate = lines[j] ?? "";
+        if (!candidate.trim() || !candidate.includes("|")) break;
+        rows.push(parseTableCells(candidate));
+        j += 1;
+      }
+      out.push(
+        <div key={`table-${i}`} style={{ overflowX: "auto", margin: "8px 0 12px" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "inherit" }}>
+            <thead>
+              <tr>
+                {headers.map((cell, index) => (
+                  <th key={`th-${i}-${index}`} style={{ padding: "7px 9px", textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.22)", color: "currentColor", fontWeight: 800 }}>
+                    {renderInlineRichText(cell, validMentionIds, binderId, deletedRecordLabel)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, rowIndex) => (
+                <tr key={`tr-${i}-${rowIndex}`}>
+                  {headers.map((_, cellIndex) => (
+                    <td key={`td-${i}-${rowIndex}-${cellIndex}`} style={{ padding: "7px 9px", borderBottom: "1px solid rgba(255,255,255,0.09)", verticalAlign: "top" }}>
+                      {renderInlineRichText(row[cellIndex] ?? "", validMentionIds, binderId, deletedRecordLabel)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      i = j;
+      continue;
+    }
+
+    const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
+      const level = Math.min(6, heading[1].length);
+      out.push(
+        <div key={`h-${i}`} style={headingStyleByLevel[level]}>
+          {renderInlineRichText(heading[2], validMentionIds, binderId, deletedRecordLabel)}
+        </div>
+      );
+      i += 1;
+      continue;
+    }
+
+    if (/^[-*]\s+/.test(trimmed)) {
+      const items: React.ReactNode[] = [];
+      let j = i;
+      while (j < lines.length) {
+        const raw = lines[j] ?? "";
+        const t = raw.trim();
+        if (!/^[-*]\s+/.test(t)) break;
+        items.push(<li key={`li-${j}`}>{renderInlineRichText(t.replace(/^[-*]\s+/, ""), validMentionIds, binderId, deletedRecordLabel)}</li>);
+        j += 1;
+      }
+      out.push(
+        <ul key={`ul-${i}`} style={{ margin: "4px 0 8px", paddingLeft: 20 }}>
+          {items}
+        </ul>
+      );
+      i = j;
+      continue;
+    }
+
+    out.push(
+      <div key={`p-${i}`} style={{ margin: "0 0 6px" }}>
+        {renderInlineRichText(line, validMentionIds, binderId, deletedRecordLabel)}
+      </div>
+    );
+    i += 1;
+  }
+
+  return out;
+}
+
+export function MarkdownRichText({ text, validMentionIds, binderId }: { text: string; validMentionIds?: Set<string>; binderId?: string }) {
+  const { t } = useTranslation("shared");
+  return <>{renderNoteRichText(text, validMentionIds, binderId, t("noteRow.deletedRecord"))}</>;
+}
+
+export function NoteRow({
+  title,
+  text,
+  expanded,
+  accentColor,
+  textColor,
+  mutedColor,
+  deleteColor,
+  onToggle,
+  onEdit,
+  onDelete,
+}: {
+  title: string;
+  text?: string;
+  expanded: boolean;
+  accentColor: string;
+  textColor: string;
+  mutedColor: string;
+  deleteColor: string;
+  onToggle: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}) {
+  const { t } = useTranslation("shared");
+  return (
+    <ExpandableNoteItem
+      title={title}
+      expanded={expanded}
+      accentColor={accentColor}
+      textColor={textColor}
+      mutedColor={mutedColor}
+      onToggle={onToggle}
+      trailing={onEdit || onDelete ? (
+          <div className="noteRowActions" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+            {onEdit ? (
+              <button
+                type="button"
+                title={t("noteRow.edit")}
+                aria-label={t("noteRow.edit")}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 5, color: mutedColor, cursor: "pointer", padding: "2px 7px", fontSize: "var(--fs-small)" }}
+              >
+                <IconPencil size={14} />
+              </button>
+            ) : null}
+            {onDelete ? (
+              <button
+                type="button"
+                title={t("noteRow.delete")}
+                aria-label={t("noteRow.delete")}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                style={{ background: withAlpha(deleteColor, 0.08), border: `1px solid ${withAlpha(deleteColor, 0.25)}`, borderRadius: 5, color: deleteColor, cursor: "pointer", padding: "2px 7px", fontSize: "var(--fs-small)" }}
+              >
+                <IconTrash size={14} />
+              </button>
+            ) : null}
+          </div>
+        ) : undefined}
+    >
+      {text ? renderNoteRichText(text, undefined, undefined, t("noteRow.deletedRecord")) : null}
+    </ExpandableNoteItem>
+  );
+}

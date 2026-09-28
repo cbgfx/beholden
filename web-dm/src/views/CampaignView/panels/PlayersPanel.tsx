@@ -1,0 +1,101 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
+import React from "react";
+import { Panel } from "@/ui/Panel";
+import { IconButton } from "@/ui/IconButton";
+import { theme } from "@/theme/theme";
+import { IconPlayer, IconPlus, IconSkull, IconRest, IconTrash } from "@/icons";
+import { PlayerRow } from "@/views/CampaignView/components/PlayerRow";
+import type { EncounterActor, CampaignCharacter } from "@/domain/types/domain";
+
+export function PlayersPanel(props: {
+  players: CampaignCharacter[];
+  combatants: EncounterActor[];
+  selectedEncounterId: string | null;
+  onCreatePlayer: () => void;
+  onEditPlayer: (playerId: string) => void;
+  onDeletePlayer: (playerId: string) => void;
+  onAddPlayerToEncounter: (playerId: string) => void;
+  onFullRest: () => void;
+}) {
+  const translateUi = useUiTranslation("dmUi");
+  const players = React.useMemo(() => {
+    return [...props.players].sort((a, b) => a.characterName.localeCompare(b.characterName)).map((p) => {
+      const acBonus = Number(p.overrides?.acBonus ?? 0) || 0;
+      const baseAc = p.ac;
+      const hpMod = (() => {
+        const n = Number(p.overrides?.hpMaxBonus ?? 0);
+        return Number.isFinite(n) ? n : 0;
+      })();
+      return {
+        ...p,
+        playerId: p.id,
+        ac: Math.max(0, baseAc + acBonus),
+        acBonus: 0,
+        hpMax: Math.max(1, p.hpMax + hpMod),
+        tempHp: Math.max(0, Number(p.overrides?.tempHp ?? 0) || 0),
+        conditions: p.conditions ?? [],
+      };
+    });
+  }, [props.players]);
+
+  const playerIdsInEncounter = React.useMemo(() => {
+    if (!props.selectedEncounterId) return new Set<string>();
+    return new Set(
+      props.combatants
+        .filter((c) => c.encounterId === props.selectedEncounterId && c.baseType === "player")
+        .map((c) => c.baseId)
+    );
+  }, [props.combatants, props.selectedEncounterId]);
+
+  return (
+    <Panel
+      storageKey="campaign-players"
+      title={translateUi("Players ({{value1}})", { value1: players.length })}
+      actions={
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <IconButton title={translateUi("Full Rest")} onClick={props.onFullRest} variant="accent">
+            <IconRest />
+          </IconButton>
+          <IconButton onClick={props.onCreatePlayer} title={translateUi("Add player")} variant="accent">
+            <IconPlus />
+          </IconButton>
+        </div>
+      }
+    >
+      {players.length ? (
+        <div style={{ display: "grid", gap: 5, minWidth: 0, gridTemplateColumns: "minmax(0, 1fr)" }}>
+          {players.map((p) => {
+            const alreadyIn = props.selectedEncounterId ? playerIdsInEncounter.has(p.id) : false;
+            return (
+              <PlayerRow
+                key={p.id}
+                p={p}
+                icon={p.hpCurrent > 0 ? <IconPlayer /> : <IconSkull />}
+                onEdit={() => props.onEditPlayer(p.id)}
+                primaryAction={props.selectedEncounterId ? (
+                  <IconButton
+                    title={alreadyIn ? translateUi("Already in encounter") : translateUi("Add to encounter")}
+                    onClick={(e) => (e.stopPropagation(), alreadyIn ? null : props.onAddPlayerToEncounter(p.id))}
+                    disabled={alreadyIn}
+                    variant="ghost"
+                    size="sm"
+                  >
+                    <IconPlus />
+                  </IconButton>
+                ) : null}
+                menuItems={!props.selectedEncounterId ? [{
+                  label: p.userId ? "Remove from Campaign" : "Delete Character",
+                  icon: <IconTrash size={14} />,
+                  danger: true,
+                  onClick: () => props.onDeletePlayer(p.id),
+                }] : undefined}
+              />
+            );
+          })}
+        </div>
+      ) : (
+        <div style={{ color: theme.colors.muted }}>{translateUi("No players yet.")}</div>
+      )}
+    </Panel>
+  );
+}

@@ -1,0 +1,259 @@
+# Beholden
+
+### A TTRPG Campaign Tracker for DMs and Players
+
+![TypeScript](https://img.shields.io/badge/Built%20With-TypeScript-3178C6?logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/Frontend-React-61DAFB?logo=react&logoColor=black)
+![Node](https://img.shields.io/badge/Backend-Node.js-339933?logo=node.js&logoColor=white)
+![SQLite](https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite&logoColor=white)
+
+---
+
+## What Is Beholden?
+
+Beholden is a fast, self-hosted campaign tracker for tabletop RPGs. It has two distinct interfaces that share a single backend:
+
+- **DM App** (`web-dm`) - for Dungeon Masters to manage campaigns, encounters, combat, NPCs, treasure, notes, and the compendium
+- **Player App** (`web-player`) - for players to manage their characters, view shared campaign info, and follow along in real time
+
+Everything runs on a single Node.js server with a local SQLite database. No cloud account required.
+
+---
+
+## Features
+
+**DM App**
+- Campaign, adventure, and encounter management
+- Live combat tracker with initiative, HP, conditions, spell slots, and legendary actions
+- Player roster with HP, AC, conditions, and death saves
+- INPCs (in-party NPCs) with full stat tracking
+- Native JSON monster, item, spell, and rules compendium
+- Treasure and notes per campaign and adventure
+- Real-time sync across all connected clients via WebSocket
+- Saved panel layouts for Campaign, Combat Roster, Combat, and the Binder dashboard
+- Move panels between 1–4 columns and customize their accent, background, and text colours through **Layout & colours**. Duplicate layouts for different tasks, preview changes, then save or cancel. Preferences are saved per account; resetting a layout restores its original arrangement and colours.
+
+**Player App**
+- Character creation and management
+- Character sheet with stats, HP, AC, speed, and abilities
+- Campaign dashboard showing your assigned campaigns
+- Real-time updates from the DM
+
+**Auth & Multi-user**
+- JWT-based login with per-user accounts
+- Role-based access: Admin, DM, Player
+- Admins manage users and campaign memberships
+- Players are redirected to the player app automatically; DMs access the full DM interface
+- During active combat, players can open an Engaged Enemies drawer showing damaged hostile combatants as Damaged, Bloodied, or Down without exposing exact HP.
+
+---
+
+## Project Structure
+
+```text
+beholden/
+|-- docs/
+|   |-- guides/       # Content-authoring and user reference
+|   `-- plans/        # Working plans (local only, not tracked)
+|-- scripts/checks/  # Repository-wide payload and bundle checks
+|-- server/          # Express API, SQLite, WebSocket
+|   `-- src/tests/integration/  # Tests spanning routes and services
+|-- web-dm/          # DM React app
+|   `-- src/tests/integration/  # Cross-feature UI/client tests
+|-- web-player/      # Player React app
+|-- shared/          # Shared API types, domain logic, UI, and styles
+|-- package.json     # Workspace commands
+|-- start.bat        # Windows quick-start entry point
+`-- update-beholden.bat  # Windows updater entry point
+```
+
+The Player character sheet lives in `web-player/src/views/character/`.
+Its entry view and composition files stay at that level; related implementation
+files are grouped in `combat/`, `creatures/`, `inventory/`, `layout/`, `notes/`,
+`spells/`, and `state/`. Unit tests stay beside the code they cover. Tests spanning
+multiple features belong in the app's `src/tests/integration/` folder.
+
+Reference documents: [AI content guide](docs/guides/ai-content.md). Working
+technical plans live in `docs/plans/`, which is kept local (not tracked) and
+cleared once a plan is finished.
+
+Workspace manifests, tool configuration, local environment configuration, and
+Windows launchers remain at their expected root locations. Runtime data and
+compendium source files are separate from application source.
+
+
+---
+
+## Getting Started (Local)
+
+### 1. Install
+
+Requires Node.js 18+.
+
+```bash
+git clone https://github.com/cbgfx/beholden.git
+cd beholden
+npm install
+```
+
+### 2. Configure
+
+Copy `.env.example` to `.env` in the repo root. `.env` files are ignored by Git;
+keep deployment-specific values there or in Railway service variables:
+
+```env
+BEHOLDEN_SUPPORT=true
+BEHOLDEN_RATE_LIMIT_WINDOW_MS=900000
+BEHOLDEN_RATE_LIMIT_MAX=5000
+WEB_PORT=5173
+SERVER_PORT=5174
+```
+
+Both Vite apps read configuration from the root `.env` (and `.env.local` for local
+changes); existing process environment variables take precedence. Set
+`WEB_DM_ALLOWED_HOSTS` and `WEB_PLAYER_ALLOWED_HOSTS` to your deployment hostnames
+(without schemes or ports). Localhost and loopback access remain enabled. These
+allowlists apply to Vite dev/preview, not the production static servers or API CORS.
+Restart Vite after changing them.
+
+### 3. Dev mode
+
+```bash
+npm run dev
+```
+
+- DM app: `http://localhost:5173`
+- Player app: `http://localhost:5175`
+- API: `http://localhost:5174`
+
+### 4. Production build
+
+```bash
+npm run build
+npm start
+```
+
+The server serves both apps and the API from a single port (default `5174`):
+
+- DM app: `http://localhost:5174/`
+- Player app: `http://localhost:5174/player/`
+- API: `http://localhost:5174/api/`
+
+Both app footers display the running server version. Beholden checks the version on the
+repository's `main` branch once per day. When a newer version is available, an
+administrator can select **Update Available** to launch `update-beholden.bat`, which performs
+a fast-forward-only pull, installs dependencies, and rebuilds the applications. Restart the
+running server after the batch file finishes. Local tracked changes that conflict with an
+update are left untouched and cause the pull to stop instead of being overwritten.
+
+### 5. First login
+
+On first run a default admin account is created:
+
+```
+Username: admin
+Password: admin
+```
+
+Change the password immediately via Admin -> Users, or set `BEHOLDEN_ADMIN_USER` / `BEHOLDEN_ADMIN_PASS` in `.env` before the first run.
+
+---
+
+## Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | `5174` | Server port (Railway injects this automatically) |
+| `SERVER_PORT` | `5174` | Dev-mode server port |
+| `WEB_PORT` | `5173` | Dev-mode DM app port |
+| `WEB_PLAYER_PORT` | `5175` | Dev-mode player app port |
+| `WEB_DM_ALLOWED_HOSTS` | Empty | Comma-separated additional hostnames allowed by the DM Vite dev/preview server |
+| `WEB_PLAYER_ALLOWED_HOSTS` | Empty | Comma-separated additional hostnames allowed by the player Vite dev/preview server |
+| `BEHOLDEN_DATA_DIR` | Platform default | Directory for the SQLite database and uploaded images |
+| `BEHOLDEN_DB_PATH` | `<data_dir>/beholden.db` | Override the database file path |
+| `BEHOLDEN_ADMIN_USER` | `admin` | Initial admin username (used only on first run) |
+| `BEHOLDEN_ADMIN_PASS` | `admin` | Initial admin password (used only on first run) |
+| `BEHOLDEN_JWT_SECRET` | Generated per installation | Optional private JWT signing secret. Without it, a durable key is stored as `jwt-secret` in the data directory. Empty values and the old public default are rejected. |
+| `BEHOLDEN_SUPPORT` | `false` | Show a support link in the UI |
+| `BEHOLDEN_RATE_LIMIT_WINDOW_MS` | `900000` | Rate limit window in ms |
+| `BEHOLDEN_RATE_LIMIT_MAX` | `5000` | Max requests per window |
+| `BEHOLDEN_UPLOAD_RATE_LIMIT_WINDOW_MS` | `900000` | Window for the separate, tighter image-upload limit |
+| `BEHOLDEN_UPLOAD_RATE_LIMIT_MAX` | `60` | Max image uploads per window, per client |
+| `BEHOLDEN_IMAGE_MAX_UPLOAD_MB` | `12` | Largest portrait accepted before it is downscaled (1-100) |
+| `BEHOLDEN_IMAGE_MAX_PX` | `360` | Longest side an uploaded image is resized to (128-1024) |
+| `BEHOLDEN_IMAGE_WEBP_QUALITY` | `76` | WebP quality for stored images (40-95) |
+| `BEHOLDEN_STARTUP_MAINTENANCE` | `on` | Set to `off` to skip the boot-time image sweep and database compaction |
+| `BEHOLDEN_STARTUP_VACUUM_MIN_MB` | `8` | Free space the database must have before boot-time VACUUM rewrites it |
+| `BEHOLDEN_LOG_EGRESS` | `-` | Set to `true` to log large per-request wire egress after compression |
+| `BEHOLDEN_LOG_EGRESS_MIN_BYTES` | `1048576` | Minimum compressed response bytes logged when egress logging is enabled; use `0` temporarily to log every response |
+| `BEHOLDEN_DEBUG` | - | Set to `true` for verbose server logs |
+
+---
+
+## Deployment (Railway)
+
+Beholden is designed to deploy to [Railway](https://railway.app) as three services from the same repo:
+
+| Service | Start command | Domain |
+|---|---|---|
+| `server` | `npm start` | `api.yourapp.com` |
+| `web-dm` | `npm -w web-dm start` | `dm.yourapp.com` |
+| `web-player` | `npm -w web-player start` | `player.yourapp.com` |
+
+Set `BEHOLDEN_DATA_DIR=/data` and mount a Railway volume at `/data` to persist the database across deploys.
+
+Set `VITE_API_ORIGIN` on both web services to point at your server's public URL (e.g. `https://api.yourapp.com`) so the frontend knows where to connect.
+
+In Railway, select the target environment and service, open **Variables**, and add
+configuration there, then review and deploy the staged changes. No `.env` upload is
+needed. `WEB_DM_ALLOWED_HOSTS` and `WEB_PLAYER_ALLOWED_HOSTS` are only needed if
+running Vite dev/preview; the production start commands above do not use them.
+Keep actual deployment hostnames out of tracked files. Ignoring `.env` does not
+remove values from earlier Git commits.
+
+### Housekeeping
+
+The server maintains itself at startup — no extra start command or cron job is needed. On every boot it:
+
+- deletes image files no database row points at any more (portraits left behind by a deleted character, say);
+- compacts the database with a WAL checkpoint and `VACUUM`, but only once at least 8MB is actually free, so an ordinary restart stays fast.
+
+Boot is the one moment the server is guaranteed to be the only connection to the database, which is
+why it happens there. `npm run db:maintenance` still reports the same numbers on demand (add
+`--execute` to act on them, with the server stopped), and `BEHOLDEN_STARTUP_MAINTENANCE=off` turns
+the automatic pass off.
+
+---
+
+## Compendium
+
+Beholden Grand Schema JSON is the strict, portable native format. Editable exports contain one independently manageable category:
+
+- monsters, items, spells, classes, species, backgrounds, and feats;
+- deck cards;
+- bastion spaces, orders, and facilities.
+
+From **Compendium -> Admin**, export any loaded category to a Grand Schema JSON file, export all ten categories as one ZIP, or import a single-category document or flat multi-category document. Matching IDs are always replaced.
+
+Legacy XML and conversion-oriented source shapes are not product inputs. Grand Schema entries use explicit structured fields, reject legacy-shaped fields, and never depend on parsing descriptive prose to discover mechanics.
+
+Adventure version 2 files can embed native compendium batches. Their entries are installed before the adventure, allowing a portable adventure to bring its own monsters, items, spells, and other rules content. The compendium is shared across all campaigns.
+
+---
+
+## Tech Stack
+
+- **Backend:** Node.js, Express, better-sqlite3, WebSocket (ws), JWT auth, sharp
+- **DM Frontend:** React, TypeScript, Vite, React Router
+- **Player Frontend:** React, TypeScript, Vite, React Router
+- **Database:** SQLite (single file, no external server)
+
+---
+
+## License
+
+MIT - free to use, modify, and self-host.
+
+Campaign JSON exports (version 2) include story, private notes, party currency, and portable stash items and require DM/admin access. Replacing a campaign preserves its local memberships; importing into a different installation does not grant memberships from the file. Legacy documents preserve existing narrative/currency fields they omit.
+
+The authentication update requires signing in again. Password resets/changes and administrator role changes invalidate existing sessions. Keep the generated `jwt-secret` private and persistent alongside the data directory; installations sharing a database must share their signing configuration.

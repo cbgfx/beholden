@@ -1,0 +1,392 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
+
+import React, { useEffect, useRef } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useMatch, useParams } from "react-router-dom";
+import { ShellLayout } from "@/layout/ShellLayout";
+import { theme } from "@/theme/theme";
+import { StoreProvider, useStore } from "@/store";
+import { api } from "@/services/api";
+import { useAppWebSocket } from "@/app/useAppWebSocket";
+import { DrawerHost } from "@/drawers/DrawerHost";
+import { ConfirmProvider, useConfirm } from "@/confirm/ConfirmContext";
+import { useCampaignActions } from "@/app/useCampaignActions";
+import { useCampaignDataRefresh } from "@/app/useCampaignDataRefresh";
+import { useBinderActions } from "@/app/useBinderActions";
+import type { State } from "@/store/state";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { WsProvider, useWsScope } from "@/services/ws";
+import { LoginView } from "@/views/LoginView";
+import { Button } from "@/ui/Button";
+import type { BinderSummary } from "@/services/binderApi";
+import type { Campaign } from "@/domain/types/domain";
+import { BinderNameModal } from "@/views/HomeView/BinderNameModal";
+
+const HomeView = React.lazy(() => import("@/views/HomeView").then(m => ({ default: m.HomeView })));
+const CompendiumView = React.lazy(() => import("@/views/CompendiumView/CompendiumView").then(m => ({ default: m.CompendiumView })));
+const CampaignView = React.lazy(() => import("@/views/CampaignView/CampaignView").then(m => ({ default: m.CampaignView })));
+const CombatView = React.lazy(() => import("@/views/CombatView/CombatView").then(m => ({ default: m.CombatView })));
+const CombatRosterView = React.lazy(() => import("@/views/CombatRosterView/CombatRosterView").then(m => ({ default: m.CombatRosterView })));
+const AboutView = React.lazy(() => import("@/views/Info/AboutView").then(m => ({ default: m.AboutView })));
+const FaqView = React.lazy(() => import("@/views/Info/FaqView").then(m => ({ default: m.FaqView })));
+const UpdatesView = React.lazy(() => import("@/views/Info/UpdatesView").then(m => ({ default: m.UpdatesView })));
+const AdminView = React.lazy(() => import("@/views/AdminView/AdminView").then(m => ({ default: m.AdminView })));
+const ProfileView = React.lazy(() => import("@/views/ProfileView").then(m => ({ default: m.ProfileView })));
+const BinderView = React.lazy(() => import("@/views/BinderView/BinderView").then(m => ({ default: m.BinderView })));
+
+function BinderRoute({ binders, campaigns, loaded, canEdit, onBinderChanged }: { binders: BinderSummary[]; campaigns: Campaign[]; loaded: boolean; canEdit: (binder: BinderSummary) => boolean; onBinderChanged: () => Promise<void> }) {
+  const { binderId } = useParams<{ binderId: string }>();
+  if (!loaded) return null;
+  const binder = binders.find((item) => item.id === binderId);
+  return binder
+    ? <BinderView binder={binder} campaigns={campaigns.filter((campaign) => campaign.binderId === binder.id)} canEdit={canEdit(binder)} canManage={binder.accessRole === "owner"} onRecordsChanged={onBinderChanged} />
+    : <Navigate to="/" replace />;
+}
+
+function AppInner() {
+  const translateUi = useUiTranslation("dmUi");
+  const { state, dispatch } = useStore();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const confirm = useConfirm();
+  const importAdventureFileRef = useRef<HTMLInputElement>(null);
+  const restoredAdventureCampaignRef = useRef<string | null>(null);
+  const {
+    binders, bindersLoaded, binderModal, setBinderModal,
+    refreshAll, handleCreateBinder, handleEditBinder, handleDeleteBinder,
+  } = useBinderActions(dispatch, confirm);
+  const { refreshCampaign, refreshAdventure, refreshEncounter } = useCampaignDataRefresh(dispatch);
+
+  useEffect(() => { refreshAll(); }, [refreshAll]);
+
+  // Sync the :campaignId route param into the store.
+  // Covers direct links, refreshes, and back/forward navigation to any
+  // /campaign/:campaignId, /campaign/:campaignId/roster/:encounterId, or
+  // /campaign/:campaignId/combat/:encounterId URL.
+  const matchCampaignExact = useMatch("/campaign/:campaignId");
+  const matchCampaignSub   = useMatch("/campaign/:campaignId/*");
+  const routeCampaignId = matchCampaignExact?.params.campaignId ?? matchCampaignSub?.params.campaignId ?? null;
+  const onCampaignRoute = Boolean(matchCampaignExact || matchCampaignSub);
+  useEffect(() => {
+    if (!routeCampaignId) return;
+    if (routeCampaignId === state.selectedCampaignId) return;
+    dispatch({ type: "selectCampaign", campaignId: routeCampaignId });
+  }, [routeCampaignId, state.selectedCampaignId, dispatch]);
+
+  // autoSelectFirstCampaign (in refreshAll) picks a selectedCampaignId as soon as campaigns
+  // load so Home/TopBar can show a campaign link, but that pick shouldn't itself trigger a
+  // fetch of that campaign's data — only actually opening a campaign route should.
+  useEffect(() => {
+    if (!onCampaignRoute) return;
+    if (state.selectedCampaignId) refreshCampaign(state.selectedCampaignId);
+  }, [state.selectedCampaignId, onCampaignRoute, refreshCampaign]);
+  useEffect(() => {
+    if (!onCampaignRoute || !state.selectedCampaignId || state.adventures.length === 0) return;
+    if (restoredAdventureCampaignRef.current === state.selectedCampaignId) return;
+    restoredAdventureCampaignRef.current = state.selectedCampaignId;
+    try {
+      const savedId = localStorage.getItem(`beholden:selectedAdventure:${state.selectedCampaignId}`);
+      if (savedId && state.adventures.some((adventure) => adventure.id === savedId)) {
+        dispatch({ type: "selectAdventure", adventureId: savedId });
+      }
+    } catch {
+      // Storage can be unavailable in privacy modes; selection still works for this session.
+    }
+  }, [onCampaignRoute, state.selectedCampaignId, state.adventures, dispatch]);
+  useEffect(() => {
+    if (!state.selectedCampaignId || !state.selectedAdventureId) return;
+    try {
+      localStorage.setItem(
+        `beholden:selectedAdventure:${state.selectedCampaignId}`,
+        state.selectedAdventureId,
+      );
+    } catch {
+      // Storage can be unavailable in privacy modes; selection still works for this session.
+    }
+  }, [state.selectedCampaignId, state.selectedAdventureId]);
+  useEffect(() => {
+    if (!onCampaignRoute) return;
+    refreshAdventure(state.selectedAdventureId);
+  }, [state.selectedAdventureId, onCampaignRoute, refreshAdventure]);
+  const matchCombatRoute = useMatch("/campaign/:campaignId/combat/:encounterId");
+  useEffect(() => {
+    if (!onCampaignRoute) return;
+    // CombatView hydrates combatants via its own live hook; skip duplicate App-level fetches there.
+    if (matchCombatRoute) return;
+    refreshEncounter(state.selectedEncounterId);
+  }, [state.selectedEncounterId, onCampaignRoute, matchCombatRoute, refreshEncounter]);
+
+  // The :encounterId route param on the roster/combat screens, used ONLY to tell the websocket
+  // handler which encounter is currently being viewed there (for treasure delta gating below).
+  // Deliberately NOT written into state.selectedEncounterId — that field already has an existing,
+  // different meaning (the encounter explicitly highlighted/selected in EncountersPanel on the
+  // main campaign page, which also controls whether PlayersPanel shows its delete button); syncing
+  // it from these routes as well left it stuck on the last-viewed encounter after navigating away,
+  // corrupting that unrelated UI state.
+  const matchRosterRoute = useMatch("/campaign/:campaignId/roster/:encounterId");
+  const viewedEncounterId = matchRosterRoute?.params.encounterId ?? matchCombatRoute?.params.encounterId ?? null;
+
+  useAppWebSocket({
+    selectedCampaignId: state.selectedCampaignId,
+    selectedAdventureId: state.selectedAdventureId,
+    selectedEncounterId: state.selectedEncounterId,
+    viewedEncounterId,
+    dispatch,
+    refreshAll,
+    refreshCampaign,
+    refreshAdventure,
+    refreshEncounter,
+  });
+
+  useWsScope({
+    campaignId: state.selectedCampaignId,
+    adventureId: state.selectedAdventureId,
+    encounterId: state.selectedEncounterId,
+  });
+
+  const {
+    addPlayerToEncounter,
+    fullRestPlayers,
+    reorderAdventures,
+    reorderEncounters,
+    reorderCampaignNotes,
+    reorderAdventureNotes,
+    addINpcFromMonster,
+    deletePlayer,
+    deleteINpc,
+    exportAdventure,
+    handleImportAdventureFile,
+    addINpcToEncounter,
+    deleteCampaign,
+    deleteAdventure,
+    duplicateEncounter,
+    deleteEncounter,
+    deleteCampaignNote,
+    deleteAdventureNote,
+  } = useCampaignActions(
+    state as State,
+    dispatch,
+    confirm,
+    { refreshAll, refreshCampaign, refreshAdventure, refreshEncounter }
+  );
+
+  const hasCampaigns = state.campaigns.length > 0;
+
+  // Apply campaign accent color as a CSS variable on the document root.
+  const selectedCampaignColor = state.campaigns.find((c) => c.id === state.selectedCampaignId)?.color ?? null;
+  useEffect(() => {
+    const accent = selectedCampaignColor ?? "#a78bfa";
+    document.documentElement.style.setProperty("--campaign-accent", accent);
+  }, [selectedCampaignColor]);
+
+  return (
+    <ShellLayout>
+      <DrawerHost refreshAll={refreshAll} refreshCampaign={refreshCampaign} refreshAdventure={refreshAdventure} refreshEncounter={refreshEncounter} />
+      <BinderNameModal
+        isOpen={binderModal !== null}
+        title={binderModal?.mode === translateUi("rename") ? translateUi("Edit Binder") : translateUi("Create Binder")}
+        initialName={binderModal?.mode === "rename" ? binderModal.binder.name : ""}
+        initialColor={binderModal?.mode === "rename" ? binderModal.binder.color : "#38b6ff"}
+        initialCurrentDate={binderModal?.mode === "rename" ? binderModal.binder.currentDate.sort : null}
+        submitLabel={binderModal?.mode === "rename" ? "Save Changes" : "Create Binder"}
+        onClose={() => setBinderModal(null)}
+        onSubmit={(name, color, currentDate) => binderModal?.mode === "rename"
+          ? handleEditBinder(binderModal.binder.id, name, color, currentDate)
+          : handleCreateBinder(name, color, currentDate)}
+      />
+      <input
+        ref={importAdventureFileRef}
+        type="file"
+        accept=".json,application/json"
+        style={{ display: "none" }}
+        onChange={handleImportAdventureFile}
+      />
+
+      <React.Suspense fallback={null}>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <HomeView
+              campaigns={state.campaigns.map((c) => ({ id: c.id, name: c.name, ruleset: c.ruleset, updatedAt: c.updatedAt, playerCount: c.playerCount, imageUrl: c.imageUrl, isActive: c.isActive }))}
+              binders={binders.map((binder) => ({
+                ...binder,
+                canEdit: user?.isAdmin === true || binder.accessRole === "owner" || binder.accessRole === "collaborator",
+              }))}
+              onCreateCampaign={() => dispatch({ type: "openDrawer", drawer: { type: "createCampaign" } })}
+              onOpenCampaign={(campaignId) => {
+                dispatch({ type: "selectCampaign", campaignId });
+                navigate(`/campaign/${campaignId}`);
+                api(`/api/campaigns/${campaignId}/touch`, { method: "POST" }).catch(() => {});
+              }}
+              onEditCampaign={(campaignId) => dispatch({ type: "openDrawer", drawer: { type: "editCampaign", campaignId } })}
+              onDeleteCampaign={deleteCampaign}
+              onRefresh={refreshAll}
+              onCreateBinder={() => setBinderModal({ mode: "create" })}
+              onOpenBinder={(binderId) => navigate(`/binder/${binderId}`)}
+              onEditBinder={(binderId) => {
+                const binder = binders.find((item) => item.id === binderId);
+                if (binder) setBinderModal({ mode: "rename", binder });
+              }}
+              onDeleteBinder={handleDeleteBinder}
+            />}
+        />
+
+        <Route
+          path="/binder/:binderId/*"
+          element={
+            <BinderRoute
+              binders={binders}
+              campaigns={state.campaigns}
+              loaded={bindersLoaded}
+              canEdit={(binder) => user?.isAdmin === true || binder.accessRole === "owner" || binder.accessRole === "collaborator"}
+              onBinderChanged={refreshAll}
+            />
+          }
+        />
+
+        <Route
+          path="/campaign/:campaignId"
+          element={
+            !hasCampaigns ? (
+              <Navigate to="/" replace />
+            ) : (
+              <CampaignView
+                onCreateAdventure={() => dispatch({ type: "openDrawer", drawer: { type: "createAdventure", campaignId: state.selectedCampaignId } })}
+                onCreateEncounter={() => {
+                  if (!state.selectedAdventureId) return;
+                  dispatch({ type: "openDrawer", drawer: { type: "createEncounter", adventureId: state.selectedAdventureId } });
+                }}
+                onEditAdventure={(adventureId) => dispatch({ type: "openDrawer", drawer: { type: "editAdventure", adventureId } })}
+                onDeleteAdventure={deleteAdventure}
+                onEditEncounter={(encounterId) => dispatch({ type: "openDrawer", drawer: { type: "editEncounter", encounterId } })}
+                onDuplicateEncounter={duplicateEncounter}
+                onDeleteEncounter={deleteEncounter}
+                onAddCampaignNote={() => dispatch({ type: "openDrawer", drawer: { type: "note", scope: "campaign", campaignId: state.selectedCampaignId } })}
+                onEditCampaignNote={(noteId) => dispatch({ type: "openDrawer", drawer: { type: "editNote", noteId } })}
+                onDeleteCampaignNote={deleteCampaignNote}
+                onAddAdventureNote={() => state.selectedAdventureId ? dispatch({ type: "openDrawer", drawer: { type: "note", scope: "adventure", campaignId: state.selectedCampaignId, adventureId: state.selectedAdventureId } }) : undefined}
+                onEditAdventureNote={(noteId) => dispatch({ type: "openDrawer", drawer: { type: "editNote", noteId } })}
+                onDeleteAdventureNote={deleteAdventureNote}
+                onFullRest={fullRestPlayers}
+                onCreatePlayer={() => dispatch({ type: "openDrawer", drawer: { type: "createPlayer", campaignId: state.selectedCampaignId } })}
+                onEditPlayer={(playerId) => dispatch({ type: "openDrawer", drawer: { type: "editPlayer", playerId } })}
+                onDeletePlayer={deletePlayer}
+                onAddPlayerToEncounter={addPlayerToEncounter}
+                onAddINpcFromMonster={addINpcFromMonster}
+                onEditINpc={(inpcId) => dispatch({ type: "openDrawer", drawer: { type: "editINpc", inpcId } })}
+                onDeleteINpc={deleteINpc}
+                onAddINpcToEncounter={addINpcToEncounter}
+                onExportAdventure={exportAdventure}
+                onImportAdventure={() => importAdventureFileRef.current?.click()}
+                onReorderAdventures={reorderAdventures}
+                onReorderEncounters={reorderEncounters}
+                onReorderCampaignNotes={reorderCampaignNotes}
+                onReorderAdventureNotes={reorderAdventureNotes}
+              />
+  )}
+          />
+          <Route path="/campaign/:campaignId/roster/:encounterId" element={<CombatRosterView />} />
+          <Route path="/campaign/:campaignId/combat/:encounterId" element={<CombatView />} />
+          <Route path="/compendium" element={<CompendiumView />} />
+          <Route path="/profile" element={<ProfileView />} />
+          <Route path="/about" element={<AboutView />} />
+          <Route path="/faq" element={<FaqView />} />
+          <Route path="/updates" element={<UpdatesView />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      </React.Suspense>
+    </ShellLayout>
+  );
+}
+
+function AuthGate() {
+  const translateUi = useUiTranslation("dmUi");
+  const { user, isLoading, logout } = useAuth();
+  React.useEffect(() => {
+    document.documentElement.style.setProperty("--text-scale", String(user?.textScale ?? 1));
+  }, [user?.textScale]);
+
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: theme.colors.bg,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: theme.colors.muted,
+        }}
+      >
+        {translateUi("Loading…")}
+      </div>
+    );
+  }
+
+  if (!user) return <LoginView />;
+
+  // Pure players (no admin, no DM role) belong in the player app. In production both apps
+  // share one origin so "/player/" is a real path; in local dev they're separate dev servers,
+  // so redirecting there just bounces back through this same app's catch-all route forever.
+  // Show a clear message instead of silently navigating somewhere that may not exist.
+  if (!user.hasDmAccess) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: theme.colors.bg,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 16,
+          textAlign: "center",
+          padding: 24,
+        }}
+      >
+        <div style={{ color: theme.colors.text, fontSize: "var(--fs-title)", fontWeight: 700 }}>
+          {translateUi("You do not have access to the Dungeon Master app")}
+        </div>
+        <div style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)", maxWidth: 420 }}>
+          {user.name} {translateUi("isn't an admin or a DM on any campaign. If you're a player, use the Player app instead.")}
+        </div>
+        <Button variant="primary" onClick={logout}>{translateUi("Sign out")}</Button>
+      </div>
+    );
+  }
+
+  return (
+    <WsProvider>
+      <React.Suspense fallback={null}>
+      <Routes>
+      {/* Admin panel — admins only */}
+      <Route
+        path="/admin/*"
+        element={user.isAdmin ? <AdminView /> : <Navigate to="/" replace />}
+      />
+      {/* Main DM app */}
+      <Route
+        path="/*"
+        element={
+          <StoreProvider>
+            <ConfirmProvider>
+              <AppInner />
+            </ConfirmProvider>
+          </StoreProvider>
+        }
+      />
+      </Routes>
+      </React.Suspense>
+    </WsProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <AuthGate />
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}

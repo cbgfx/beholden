@@ -1,0 +1,329 @@
+import { readClassSpellSelection } from "@/domain/character/classSpellSelections";
+import type { ClassSpellSelection } from "@/domain/character/classSpellSelections";
+import React from "react";
+import { fetchMyCharacter } from "@/services/actorApi";
+import { C } from "@/lib/theme";
+import type { CharacterCampaignAssignmentDto } from "@beholden/shared/api";
+import { resolveStoredCompendiumClassId } from "@/domain/character/classIds";
+import {
+  inferAbilityMethodFromScores,
+  inferStandardAssignFromScores,
+  type FormState,
+} from "@/views/character-creator/utils/CharacterCreatorFormUtils";
+import type { LevelUpFeatSelection } from "@/views/character-creator/utils/CharacterCreatorTypes";
+import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
+import type { ProgressionReplacementEvent, ProgressionSelectionOccurrence } from "@beholden/shared/domain/progressionOwnership";
+import { resetAmbiguousProgressionBaseline } from "@beholden/shared/domain/progressionRepair";
+
+type CreatorCharacterData = Record<string, unknown> & {
+  classes?: Array<{ id?: string; classId?: string | null; className?: string | null; level?: number; subclass?: string | null }>;
+  selectedFeatureNames?: string[];
+  bgAbilityBonuses?: Record<string, number>;
+  chosenLevelUpFeats?: Array<{ level?: number; classEntryId?: string; classLevel?: number; characterLevel?: number; sourceFeatureId?: string | null; featId?: string; type?: string; abilityBonuses?: Record<string, number>; hitPointMaxBonusPerLevel?: number }>;
+  abilityMethod?: "pointbuy" | "standard" | "rolled" | string;
+  raceId?: string;
+  bgId?: string;
+  chosenOptionals?: string[];
+  chosenClassFeatIds?: Record<string, string>;
+  chosenRaceSkills?: string[];
+  chosenRaceLanguages?: string[];
+  chosenRaceTools?: string[];
+  chosenRaceFeatId?: string | null;
+  chosenRaceSize?: string | null;
+  chosenRaceSpellAbility?: string | null;
+  chosenRaceAbilityChoices?: string[];
+  raceAbilityMode?: "split" | "even";
+  raceAbilityBonuses?: Record<string, number>;
+  chosenSkills?: string[];
+  chosenBgOriginFeatId?: string | null;
+  chosenClassLanguages?: string[];
+  chosenClassTools?: string[];
+  chosenClassEquipmentOption?: string | null;
+  chosenBgEquipmentOption?: string | null;
+  chosenFeatOptions?: Record<string, string[]>;
+  chosenFeatureChoices?: Record<string, string[]>;
+  chosenWeaponMasteries?: string[];
+  chosenCantrips?: string[];
+  chosenSpells?: string[];
+  classSpellSelections?: Record<string, ClassSpellSelection>;
+  chosenInvocations?: string[];
+  extraFeatIds?: string[];
+  proficiencies?: Partial<ProficiencyMap>;
+  acquisitionLevels?: Record<string, number | null>;
+  hd?: number | null;
+  bgAbilityMode?: "split" | "even";
+  standardAssign?: Record<string, number>;
+  pbScores?: Record<string, number>;
+  rolledScores?: Record<string, number>;
+  alignment?: string;
+  hair?: string;
+  skin?: string;
+  height?: string;
+  age?: string | number;
+  weight?: string;
+  gender?: string;
+  hpProgressionHistory?: unknown[];
+  progressionRepairIssues?: Array<{ code?: string; message?: string }>;
+  progressionSelectionOccurrences?: ProgressionSelectionOccurrence[];
+  progressionReplacementEvents?: ProgressionReplacementEvent[];
+  progressionHpEffects?: Array<{ sourceKey: string; multiplier: number; classEntryId?: string; classLevel?: number }>;
+};
+
+export function useCreatorEditHydration(args: {
+  editId: string | undefined;
+  setForm: React.Dispatch<React.SetStateAction<FormState>>;
+  setEditLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  initialCampaignIdsRef: React.MutableRefObject<string[]>;
+  onHydrated?: (summary: {
+    className: string;
+    species: string;
+    hitDie: number | null;
+    hpCurrent: number | null;
+    hpMax: number | null;
+    hpProgressionHistory: unknown[];
+    progressionRepairIssues: Array<{ code: string; message: string }>;
+    hpBuildKey: string;
+    characterRevision: number | null;
+    existingClassSpellSelections: Record<string, ClassSpellSelection>;
+    extraFeatIds: string[];
+    invocationFeatIds: string[];
+    existingSpells: Array<{ id?: string; name?: string; level?: number | null; classEntryId?: string | null; prepared?: boolean }>;
+    existingInvocations: Array<{ id?: string; level?: number | null }>;
+    existingAcquisitionLevels: Record<string, number | null>;
+    preservedLevelUpFeats: LevelUpFeatSelection[];
+    preservedLevelUpFeatOptions: Record<string, string[]>;
+    /** Every class entry the character had, including any beyond the primary one this editor
+     * exposes (FormState only tracks a single classId/level -- there's no UI for a second class
+     * here). Submission needs this to put untouched classes back rather than silently dropping
+     * them when it rebuilds characterData.classes from the form. */
+    existingClasses: Array<{ id?: string; classId?: string | null; className?: string | null; level?: number; subclass?: string | null }>;
+    existingSelectedFeatureNames: string[];
+    existingProficiencies: Partial<ProficiencyMap>;
+    progressionSelectionOccurrences: ProgressionSelectionOccurrence[];
+    progressionReplacementEvents: ProgressionReplacementEvent[];
+    progressionRepairData: Record<string, unknown>;
+    progressionHpEffects: Array<{ sourceKey: string; multiplier: number; classEntryId?: string; classLevel?: number }>;
+  }) => void;
+}) {
+  const { editId, setForm, setEditLoading, initialCampaignIdsRef, onHydrated } = args;
+
+  React.useEffect(() => {
+    if (!editId) return;
+    fetchMyCharacter(editId)
+      .then((ch) => {
+        const cd: CreatorCharacterData = (ch.characterData ?? {}) as CreatorCharacterData;
+        const primaryClassEntry = Array.isArray(cd.classes) ? cd.classes[0] : null;
+        const classId = resolveStoredCompendiumClassId(primaryClassEntry, ch.className);
+        const primarySpells = readClassSpellSelection(cd, primaryClassEntry?.id ?? `class_${classId}`);
+        const hydratedClassName = typeof primaryClassEntry?.className === "string" && primaryClassEntry.className.trim()
+          ? primaryClassEntry.className.trim()
+          : ch.className ?? "";
+        const hydratedHitDie = Number.isFinite(Number(cd.hd)) ? Number(cd.hd) : null;
+        const hydratedHpCurrent = Number.isFinite(Number(ch.hpCurrent)) ? Number(ch.hpCurrent) : null;
+        const invocationFeatIds = Object.entries(cd.chosenFeatOptions ?? {})
+          .filter(([key]) => key.startsWith("invocation:"))
+          .flatMap(([, ids]) => Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string") : []);
+        const storedLevelUpFeats = Array.isArray(cd.chosenLevelUpFeats) ? cd.chosenLevelUpFeats : [];
+        const primaryEntryId = primaryClassEntry?.id;
+        const legacyOwnershipIsUnambiguous = (cd.classes?.length ?? 0) <= 1;
+        const belongsToPrimary = (entry: (typeof storedLevelUpFeats)[number]) =>
+          entry.classEntryId ? entry.classEntryId === primaryEntryId : legacyOwnershipIsUnambiguous;
+        const toFeatSelection = (entry: (typeof storedLevelUpFeats)[number]): LevelUpFeatSelection => ({
+          level: Number(entry.classLevel ?? entry.level) || 0,
+          classEntryId: entry.classEntryId,
+          classLevel: Number(entry.classLevel ?? entry.level) || undefined,
+          characterLevel: Number(entry.characterLevel) || undefined,
+          sourceFeatureId: entry.sourceFeatureId ?? null,
+          featId: typeof entry.featId === "string" ? entry.featId : null,
+          type: entry.type === "asi" ? "asi" : typeof entry.featId === "string" ? "feat" : undefined,
+          abilityBonuses: entry.abilityBonuses && typeof entry.abilityBonuses === "object" ? entry.abilityBonuses : {},
+          hitPointMaxBonusPerLevel: Number(entry.hitPointMaxBonusPerLevel) || 0,
+        });
+        const primaryProgressionEntries = storedLevelUpFeats.filter(belongsToPrimary);
+        const preservedProgressionEntries = storedLevelUpFeats.filter((entry) => !belongsToPrimary(entry));
+        const preservedOptionPrefixes = preservedProgressionEntries.flatMap((entry) => {
+          const featId = typeof entry.featId === "string" ? entry.featId : "";
+          const choiceLevel = Number(entry.characterLevel ?? entry.level) || 0;
+          return featId && choiceLevel ? [`levelupfeat:${choiceLevel}:${featId}:`] : [];
+        });
+        const preservedLevelUpFeatOptions = Object.fromEntries(Object.entries(cd.chosenFeatOptions ?? {}).filter(([key]) =>
+          preservedOptionPrefixes.some((prefix) => key.startsWith(prefix))
+        ));
+        const editableChosenFeatOptions = Object.fromEntries(Object.entries(cd.chosenFeatOptions ?? {}).flatMap(([key, value]) => {
+          if (preservedOptionPrefixes.some((prefix) => key.startsWith(prefix))) return [];
+          for (const entry of primaryProgressionEntries) {
+            const featId = typeof entry.featId === "string" ? entry.featId : "";
+            const characterLevel = Number(entry.characterLevel) || 0;
+            const classLevel = Number(entry.classLevel ?? entry.level) || 0;
+            const oldPrefix = `levelupfeat:${characterLevel}:${featId}:`;
+            if (featId && characterLevel && classLevel && key.startsWith(oldPrefix)) {
+              return [[`levelupfeat:${classLevel}:${featId}:${key.slice(oldPrefix.length)}`, value]];
+            }
+          }
+          return [[key, value]];
+        }));
+        onHydrated?.({
+          className: hydratedClassName,
+          species: ch.species ?? "",
+          hitDie: hydratedHitDie,
+          hpCurrent: hydratedHpCurrent,
+          hpMax: Number.isFinite(Number(ch.hpMax)) ? Number(ch.hpMax) : null,
+          hpProgressionHistory: Array.isArray(cd.hpProgressionHistory) ? cd.hpProgressionHistory : [],
+          progressionRepairIssues: Array.isArray(cd.progressionRepairIssues) ? cd.progressionRepairIssues.flatMap((issue) => issue?.code && issue?.message ? [{ code: issue.code, message: issue.message }] : []) : [],
+          hpBuildKey: JSON.stringify([classId, Number(primaryClassEntry?.level) || ch.level || 1, ch.conScore ?? 10]),
+          characterRevision: Number.isFinite(Number(ch.updatedAt)) ? Number(ch.updatedAt) : null,
+          existingClassSpellSelections: cd.classSpellSelections ?? {},
+          extraFeatIds: Array.isArray(cd.extraFeatIds) ? cd.extraFeatIds.filter((id): id is string => typeof id === "string") : [],
+          invocationFeatIds,
+          existingSpells: cd.proficiencies?.spells ?? [],
+          existingInvocations: cd.proficiencies?.invocations ?? [],
+          existingAcquisitionLevels: cd.acquisitionLevels ?? {},
+          preservedLevelUpFeats: preservedProgressionEntries.map(toFeatSelection).filter((entry) => entry.level > 0 && entry.type),
+          preservedLevelUpFeatOptions,
+          existingClasses: Array.isArray(cd.classes) ? cd.classes : [],
+          existingSelectedFeatureNames: Array.isArray(cd.selectedFeatureNames) ? cd.selectedFeatureNames : [],
+          existingProficiencies: cd.proficiencies ?? {},
+          progressionSelectionOccurrences: Array.isArray(cd.progressionSelectionOccurrences) ? cd.progressionSelectionOccurrences : [],
+          progressionReplacementEvents: Array.isArray(cd.progressionReplacementEvents) ? cd.progressionReplacementEvents : [],
+          progressionRepairData: resetAmbiguousProgressionBaseline({ characterData: cd, level: ch.level, hpMax: ch.hpMax, constitution: ch.conScore ?? 10 }),
+          progressionHpEffects: Array.isArray(cd.progressionHpEffects) ? cd.progressionHpEffects : [],
+        });
+        const recordedBgBonuses =
+          cd.bgAbilityBonuses && typeof cd.bgAbilityBonuses === "object" ? cd.bgAbilityBonuses : {};
+        const recordedRaceAbilityBonuses =
+          cd.raceAbilityBonuses && typeof cd.raceAbilityBonuses === "object" ? cd.raceAbilityBonuses : {};
+        const recordedAsiBonuses = Array.isArray(cd.chosenLevelUpFeats)
+          ? cd.chosenLevelUpFeats.reduce((acc: Record<string, number>, entry) => {
+              if (!entry?.abilityBonuses || typeof entry.abilityBonuses !== "object") return acc;
+              Object.entries(entry.abilityBonuses).forEach(([key, value]) => {
+                acc[key] = (acc[key] ?? 0) + (Number(value) || 0);
+              });
+              return acc;
+            }, {})
+          : {};
+        const fallbackBaseScores = {
+          str: Math.max(
+            8,
+            (ch.strScore ?? 10) -
+              (Number(recordedBgBonuses.str ?? 0) || 0) -
+              (Number(recordedAsiBonuses.str ?? 0) || 0),
+          ),
+          dex: Math.max(
+            8,
+            (ch.dexScore ?? 10) -
+              (Number(recordedBgBonuses.dex ?? 0) || 0) -
+              (Number(recordedAsiBonuses.dex ?? 0) || 0),
+          ),
+          con: Math.max(
+            8,
+            (ch.conScore ?? 10) -
+              (Number(recordedBgBonuses.con ?? 0) || 0) -
+              (Number(recordedAsiBonuses.con ?? 0) || 0),
+          ),
+          int: Math.max(
+            8,
+            (ch.intScore ?? 10) -
+              (Number(recordedBgBonuses.int ?? 0) || 0) -
+              (Number(recordedAsiBonuses.int ?? 0) || 0),
+          ),
+          wis: Math.max(
+            8,
+            (ch.wisScore ?? 10) -
+              (Number(recordedBgBonuses.wis ?? 0) || 0) -
+              (Number(recordedAsiBonuses.wis ?? 0) || 0),
+          ),
+          cha: Math.max(
+            8,
+            (ch.chaScore ?? 10) -
+              (Number(recordedBgBonuses.cha ?? 0) || 0) -
+              (Number(recordedAsiBonuses.cha ?? 0) || 0),
+          ),
+        };
+        const savedAbilityMethod =
+          cd.abilityMethod === "pointbuy" || cd.abilityMethod === "standard" || cd.abilityMethod === "rolled"
+            ? cd.abilityMethod
+            : inferAbilityMethodFromScores(fallbackBaseScores);
+        const inferredStandardAssign = inferStandardAssignFromScores(fallbackBaseScores);
+        setForm((f) => ({
+          ...f,
+          ruleset: ch.ruleset,
+          classId,
+          raceId: cd.raceId ?? "",
+          bgId: cd.bgId ?? "",
+          // This editor operates on the primary class. Total character level is reconstructed at
+          // submission by adding untouched secondary class entries.
+          level: Number(primaryClassEntry?.level) || ch.level || 1,
+          subclass: typeof primaryClassEntry?.subclass === "string" ? primaryClassEntry.subclass : "",
+          chosenOptionals: cd.chosenOptionals ?? [],
+          chosenClassFeatIds: cd.chosenClassFeatIds ?? {},
+          chosenLevelUpFeats: Array.isArray(cd.chosenLevelUpFeats)
+            ? storedLevelUpFeats.filter(belongsToPrimary).map(toFeatSelection)
+                .filter((entry) => entry.level > 0 && entry.type) as LevelUpFeatSelection[]
+            : [],
+          chosenRaceSkills: cd.chosenRaceSkills ?? [],
+          chosenRaceLanguages: cd.chosenRaceLanguages ?? [],
+          chosenRaceTools: cd.chosenRaceTools ?? [],
+          chosenRaceFeatId: cd.chosenRaceFeatId ?? null,
+          chosenRaceSize: cd.chosenRaceSize ?? null,
+          chosenRaceSpellAbility: cd.chosenRaceSpellAbility ?? null,
+          chosenRaceAbilityChoices: Array.isArray(cd.chosenRaceAbilityChoices)
+            ? cd.chosenRaceAbilityChoices.filter((v): v is string => typeof v === "string")
+            : [],
+          raceAbilityMode: cd.raceAbilityMode === "even" ? "even" : "split",
+          raceAbilityBonuses: recordedRaceAbilityBonuses,
+          chosenSkills: cd.chosenSkills ?? [],
+          chosenBgOriginFeatId: cd.chosenBgOriginFeatId ?? null,
+          chosenClassLanguages: cd.chosenClassLanguages ?? [],
+          chosenClassTools: Array.isArray(cd.chosenClassTools)
+            ? cd.chosenClassTools.filter((v): v is string => typeof v === "string")
+            : [],
+          chosenClassEquipmentOption: cd.chosenClassEquipmentOption ?? null,
+          chosenBgEquipmentOption: cd.chosenBgEquipmentOption ?? null,
+          chosenFeatOptions: editableChosenFeatOptions,
+          chosenFeatureChoices: cd.chosenFeatureChoices ?? {},
+          chosenWeaponMasteries: cd.chosenWeaponMasteries ?? [],
+          chosenCantrips: primarySpells.chosenCantrips,
+          chosenSpells: primarySpells.chosenSpells,
+          chosenInvocations: primarySpells.chosenInvocations,
+          bgAbilityMode: cd.bgAbilityMode === "even" ? "even" : "split",
+          bgAbilityBonuses: recordedBgBonuses,
+          abilityMethod: savedAbilityMethod,
+          standardAssign:
+            savedAbilityMethod === "standard"
+              ? cd.standardAssign && typeof cd.standardAssign === "object"
+                ? cd.standardAssign
+                : inferredStandardAssign ?? f.standardAssign
+              : f.standardAssign,
+          pbScores:
+            savedAbilityMethod === "pointbuy"
+              ? cd.pbScores && typeof cd.pbScores === "object"
+                ? cd.pbScores
+                : fallbackBaseScores
+              : f.pbScores,
+          rolledScores:
+            savedAbilityMethod === "rolled"
+              ? cd.rolledScores && typeof cd.rolledScores === "object"
+                ? cd.rolledScores
+                : fallbackBaseScores
+              : f.rolledScores,
+          hpMax: String(ch.hpMax ?? 0),
+          ac: String(ch.ac ?? 10),
+          speed: String(ch.speed ?? 30),
+          characterName: ch.name ?? "",
+          playerName: ch.playerName ?? f.playerName,
+          alignment: typeof cd.alignment === "string" ? cd.alignment : "",
+          hair: typeof cd.hair === "string" ? cd.hair : "",
+          skin: typeof cd.skin === "string" ? cd.skin : "",
+          heightText: typeof cd.height === "string" ? cd.height : "",
+          age: typeof cd.age === "string" || typeof cd.age === "number" ? String(cd.age) : "",
+          weight: typeof cd.weight === "string" ? cd.weight : "",
+          gender: typeof cd.gender === "string" ? cd.gender : "",
+          color: ch.color ?? C.accentHl,
+          campaignIds: (ch.campaigns ?? []).map((campaign: CharacterCampaignAssignmentDto) => campaign.campaignId),
+        }));
+        initialCampaignIdsRef.current = (ch.campaigns ?? []).map((campaign: CharacterCampaignAssignmentDto) => campaign.campaignId);
+      })
+      .catch(() => {})
+      .finally(() => setEditLoading(false));
+  }, [editId, initialCampaignIdsRef, onHydrated, setEditLoading, setForm]);
+}

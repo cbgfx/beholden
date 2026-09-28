@@ -1,0 +1,787 @@
+import type { ClassSpellSelection } from "@/domain/character/classSpellSelections";
+import type { ProgressionReplacementEvent, ProgressionSelectionOccurrence } from "@beholden/shared/domain/progressionOwnership";
+import { reconcileCreatorHp } from "@beholden/shared/domain/progressionHp";
+import { evaluateChoiceRequirement, requirementBlocks, retainPendingRequirements, type ProgressionRequirement } from "@beholden/shared/domain/progressionRequirements";
+import { creatorRequirements } from "./creatorRequirements";
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
+import { useTranslation } from "react-i18next";
+import React from "react";
+import { getInvocationFeatChoices } from "@/domain/character/invocationFeatChoices";
+import { useInvocationGrantedFeatChoices } from "@/views/shared/useInvocationGrantedFeatChoices";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { C } from "@/lib/theme";
+import { Button } from "@/ui/Button";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  abilityMod,
+  calcHpMax,
+  classifyFeatSelection,
+  getCantripCount,
+  getClassFeatureTable,
+  getMaxSlotLevel,
+  getPreparedSpellCount,
+  usesFlexiblePreparedSpells,
+  getSubclassLevel,
+  parseStartingEquipmentOptions,
+  tableValueAtLevel,
+} from "@/views/character-creator/utils/CharacterCreatorUtils";
+import { trimAcquiredIdsForLevel } from "@/domain/character/spellAcquisition";
+import {
+  getGrowthChoiceSelectedAbility,
+} from "@/views/character-creator/utils/GrowthChoiceUtils";
+import { deriveCreatorSheetFacts } from "@/views/character-creator/utils/CharacterCreatorDerivedStats";
+import { parseAppliedClassFeatureEffects, parseAppliedSpeciesTraitEffects } from "@/views/character-creator/utils/CharacterCreatorClassFeatureUtils";
+import type {
+  ParsedFeatDetailLike as BackgroundFeat,
+} from "@/views/character-creator/utils/FeatChoiceTypes";
+import type {
+  LevelUpFeatDetail,
+  LevelUpFeatSelection,
+} from "@/views/character-creator/utils/CharacterCreatorTypes";
+import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
+import { StepHeader } from "@/views/character-creator/shared/CharacterCreatorParts";
+import { CharacterCreatorSideSummary } from "@/views/character-creator/shared/CharacterCreatorSideSummary";
+import { getStep5ChoiceState } from "@/views/character-creator/utils/CharacterCreatorStep5Utils";
+import {
+  deriveRaceAbilityBonuses,
+  getClassFeatChoiceLabel,
+  getClassFeatOptionLabel,
+  getOptionalGroups,
+  initForm,
+  resolvedScores,
+  type FormState,
+  type Step,
+} from "@/views/character-creator/utils/CharacterCreatorFormUtils";
+import { renderCharacterCreatorStep, type CharacterCreatorStepRenderContext } from "@/views/character-creator/CharacterCreatorStepViews";
+import { useCreatorCompendiumCatalogs } from "@/views/character-creator/useCreatorCompendiumCatalogs";
+import { useCreatorEditHydration } from "@/views/character-creator/useCreatorEditHydration";
+import { useCharacterCreatorDerivedState } from "@/views/character-creator/useCharacterCreatorDerivedState";
+import { useCharacterCreatorSanitizers } from "@/views/character-creator/useCharacterCreatorSanitizers";
+import { useCharacterCreatorFeatDetails } from "@/views/character-creator/useCharacterCreatorFeatDetails";
+import { useCharacterCreatorSubmit } from "@/views/character-creator/useCharacterCreatorSubmit";
+import { useCreatorSelectedCompendium } from "@/views/character-creator/useCreatorSelectedCompendium";
+import { api, jsonInit } from "@/services/api";
+
+
+// ---------------------------------------------------------------------------
+// Main view
+// ---------------------------------------------------------------------------
+
+function displayNameFromCompendiumId(value: string | null | undefined): string {
+  const normalized = String(value ?? "")
+    .replace(/^c_/, "")
+    .replace(/^race_/, "")
+    .replace(/^bg_/, "")
+    .replace(/^background_/, "")
+    .replace(/_/g, " ")
+    .trim();
+  return normalized.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+
+export function CharacterCreatorView() {
+  const translateUi = useUiTranslation("playerUi");
+  const { t } = useTranslation("player");
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { id: editId } = useParams<{ id: string }>();
+  const isEditing = Boolean(editId);
+
+  const [step, setStep] = React.useState<Step>(isEditing ? 2 : 1);
+  const [form, setForm] = React.useState<FormState>(() => initForm(user, searchParams));
+  const [editLoading, setEditLoading] = React.useState(isEditing);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // A submission error describes the form state at the moment it was thrown; once the user
+  // changes anything, that description is stale (e.g. "choose 2 weapon masteries" after they
+  // just did) and must not linger until the next submit attempt re-evaluates it.
+  React.useEffect(() => {
+    setError(null);
+  }, [form]);
+
+  // Compendium data
+  const [raceFeatDetail, setRaceFeatDetail] = React.useState<BackgroundFeat | null>(null);
+  const [bgOriginFeatDetail, setBgOriginFeatDetail] = React.useState<BackgroundFeat | null>(null);
+  const [featDetailCache, setFeatDetailCache] = React.useState<Record<string, BackgroundFeat>>({});
+  const [levelUpFeatDetails, setLevelUpFeatDetails] = React.useState<LevelUpFeatDetail[]>([]);
+  const [classFeatDetails, setClassFeatDetails] = React.useState<Record<string, BackgroundFeat>>({});
+  const [raceFeatSearch, setRaceFeatSearch] = React.useState("");
+  const [bgOriginFeatSearch, setBgOriginFeatSearch] = React.useState("");
+  const { classDetail, raceDetail, bgDetail, classCantrips, classSpells, classInvocations, loadRequirements, classSpellOptionsLoaded, retryOptions: retrySelectedOptions, retryKey } = useCreatorSelectedCompendium({ form, setForm, isEditing });
+
+  // Track initially-assigned campaigns so we can diff on save in edit mode
+  const initialCampaignIdsRef = React.useRef<string[]>([]);
+
+  // Portrait selection (not part of form schema — uploaded separately after save)
+  const [portraitFile, setPortraitFile] = React.useState<File | null>(null);
+  const [portraitPreview, setPortraitPreview] = React.useState<string | null>(null);
+  const portraitInputRef = React.useRef<HTMLInputElement>(null);
+  const [editSummaryFallback, setEditSummaryFallback] = React.useState<{
+    className: string;
+    species: string;
+    hitDie: number | null;
+    hpCurrent: number | null;
+    hpMax: number | null;
+    hpProgressionHistory: unknown[];
+    progressionRepairIssues: Array<{ code: string; message: string }>;
+    hpBuildKey: string;
+    characterRevision: number | null;
+    existingClassSpellSelections: Record<string, ClassSpellSelection>;
+    extraFeatIds: string[];
+    invocationFeatIds: string[];
+    existingSpells: Array<{ id?: string; name?: string; level?: number | null; classEntryId?: string | null; prepared?: boolean }>;
+    existingInvocations: Array<{ id?: string; level?: number | null }>;
+    existingAcquisitionLevels: Record<string, number | null>;
+    preservedLevelUpFeats: LevelUpFeatSelection[];
+    preservedLevelUpFeatOptions: Record<string, string[]>;
+    existingClasses: Array<{ id?: string; classId?: string | null; className?: string | null; level?: number; subclass?: string | null }>;
+    existingSelectedFeatureNames: string[];
+    existingProficiencies: Partial<ProficiencyMap>;
+    progressionSelectionOccurrences: ProgressionSelectionOccurrence[];
+    progressionReplacementEvents: ProgressionReplacementEvent[];
+    progressionRepairData: Record<string, unknown>;
+    progressionHpEffects: Array<{ sourceKey: string; multiplier: number; classEntryId?: string; classLevel?: number }>;
+  } | null>(null);
+  const [repairingProgression, setRepairingProgression] = React.useState(false);
+
+  // Search states for long lists (hoisted to avoid Rules-of-Hooks violations in inner fns)
+  const [classSearch, setClassSearch] = React.useState("");
+  const [raceSearch, setRaceSearch] = React.useState("");
+  const [bgSearch, setBgSearch] = React.useState("");
+  const catalogs = useCreatorCompendiumCatalogs(form.ruleset ?? undefined);
+  const classes = catalogs.classes;
+  const races = catalogs.races;
+  const bgs = catalogs.bgs;
+  const featSummaries = catalogs.featSummaries;
+  const campaigns = catalogs.campaigns;
+  const retryCatalogs = catalogs.retryCatalogs;
+  const retryOptions = () => {
+    retryCatalogs();
+    retrySelectedOptions();
+  };
+  const resolvedRaceFeatDetail = form.chosenRaceFeatId
+    ? (raceFeatDetail?.id === form.chosenRaceFeatId ? raceFeatDetail : featDetailCache[form.chosenRaceFeatId] ?? null)
+    : null;
+  const resolvedBgOriginFeatDetail = form.chosenBgOriginFeatId
+    ? (bgOriginFeatDetail?.id === form.chosenBgOriginFeatId ? bgOriginFeatDetail : featDetailCache[form.chosenBgOriginFeatId] ?? null)
+    : null;
+  const {
+    selectedClassSummary,
+    selectedClassFeatureProficiencyChoices,
+    selectedFeatGrantedAbilityBonuses,
+    selectedFeatAbilityBonuses,
+    step5SkillList,
+    step5NumSkills,
+    step5BgLangChoice,
+    step5CoreLanguageChoice,
+    step5ClassFeatChoices,
+    step5ClassLanguageChoice,
+    step5ClassExpertiseChoices,
+    step5ClassToolProficiency,
+    step5WeaponMasteryChoice,
+    step5WeaponOptions,
+    step5ChoiceState,
+    step6SpellListChoices,
+    step6ResolvedSpellChoices,
+    selectedFeatSpellcastingAbilityChoices,
+    growthChoiceDefinitions,
+    featSpellChoiceOptions,
+    featSpellChoiceLoadState,
+    growthChoiceLoadState,
+    growthOptionEntriesByKey,
+    items,
+    preparedSpellProgressionChoiceDefinitions,
+    levelUpFeatLevels,
+    availableLevelUpFeats,
+    levelUpFeatConflict,
+    eligibleInvocationIds,
+  } = useCharacterCreatorDerivedState({
+    retryKey,
+    classes,
+    featSummaries,
+    form,
+    classDetail,
+    raceDetail,
+    bgDetail,
+    resolvedRaceFeatDetail,
+    resolvedBgOriginFeatDetail,
+    classFeatDetails,
+    levelUpFeatDetails,
+    classCantrips,
+    classInvocations,
+  });
+  const invocationFeatChoices = React.useMemo(
+    () => getInvocationFeatChoices(classInvocations, form.chosenInvocations, featSummaries),
+    [classInvocations, featSummaries, form.chosenInvocations],
+  );
+  const invocationGrantedFeatChoices = useInvocationGrantedFeatChoices({
+    ruleset: form.ruleset ?? "5.5e",
+    choices: invocationFeatChoices,
+    selectedOptions: form.chosenFeatOptions,
+    level: form.level,
+  });
+  const allFeatSpellChoiceOptions = React.useMemo(
+    () => ({ ...featSpellChoiceOptions, ...invocationGrantedFeatChoices.spellOptions }),
+    [featSpellChoiceOptions, invocationGrantedFeatChoices.spellOptions],
+  );
+  const effectiveClassName = selectedClassSummary?.name ?? editSummaryFallback?.className ?? displayNameFromCompendiumId(form.classId);
+  const effectiveRaceName = raceDetail?.name ?? races.find((r) => r.id === form.raceId)?.name ?? editSummaryFallback?.species ?? displayNameFromCompendiumId(form.raceId);
+  const effectiveHitDie =
+    classDetail?.hd ??
+    selectedClassSummary?.hd ??
+    editSummaryFallback?.hitDie ??
+    8;
+
+  // Load compendium lists on mount
+
+  useCreatorEditHydration({
+    editId,
+    setForm,
+    setEditLoading,
+    initialCampaignIdsRef,
+    onHydrated: setEditSummaryFallback,
+  });
+
+  const resetProgressionBaseline = React.useCallback(async () => {
+    if (!editId || !editSummaryFallback || repairingProgression) return;
+    const issueCount = editSummaryFallback.progressionRepairIssues.length;
+    if (!window.confirm(`Reset ${issueCount} ambiguous progression record${issueCount === 1 ? "" : "s"}?\n\nYour current ability scores, HP, spells, and visible choices will be preserved as the new baseline. Ambiguous historical ownership will be discarded rather than guessed.`)) return;
+    setRepairingProgression(true);
+    setError(null);
+    try {
+      await api(`/api/me/characters/${editId}`, jsonInit("PUT", {
+        progressionClassEntryId: editSummaryFallback.existingClasses[0]?.id ?? `class_${form.classId}`,
+        expectedCharacterRevision: editSummaryFallback.characterRevision,
+        characterData: editSummaryFallback.progressionRepairData,
+      }));
+      window.location.reload();
+    } catch (repairError) {
+      setError(String(repairError));
+      setRepairingProgression(false);
+    }
+  }, [editId, editSummaryFallback, form.classId, repairingProgression]);
+
+  // Load class detail when selected
+  React.useEffect(() => { setClassFeatDetails({}); }, [form.classId]);
+
+  // Load spell lists once classDetail is known
+  // Load race detail when selected — also reset race choices
+  React.useEffect(() => { setRaceFeatDetail(null); }, [form.raceId]);
+
+  const featLoad = useCharacterCreatorFeatDetails({
+    retryKey,
+    ruleset: form.ruleset,
+    chosenRaceFeatId: form.chosenRaceFeatId,
+    chosenBgOriginFeatId: form.chosenBgOriginFeatId,
+    chosenClassFeatIds: form.chosenClassFeatIds,
+    chosenLevelUpFeats: form.chosenLevelUpFeats,
+    setRaceFeatDetail,
+    setBgOriginFeatDetail,
+    setClassFeatDetails,
+    setLevelUpFeatDetails,
+    setFeatDetailCache,
+  });
+
+  useCharacterCreatorSanitizers({
+    setForm,
+    canSanitizeLevelUpFeats: !editLoading && Boolean(classDetail),
+    levelUpFeatLevels,
+    step6SpellListChoices,
+    step6ResolvedSpellChoices,
+    featSpellChoiceOptions: allFeatSpellChoiceOptions,
+    growthChoiceDefinitions,
+    growthOptionEntriesByKey,
+    preparedSpellProgressionChoiceDefinitions,
+    classInvocations,
+    eligibleInvocationIds,
+  });
+
+  // Load bg detail when selected
+  React.useEffect(() => { setBgOriginFeatDetail(null); }, [form.bgId]);
+
+  // Auto-select directly-granted background feats (e.g. Charlatan → Skilled)
+  React.useEffect(() => {
+    if (!bgDetail) return;
+    const prof = bgDetail.proficiencies;
+    if (!prof || prof.featChoice > 0 || prof.feats.length === 0) {
+      return;
+    }
+    const fixedFeatId = prof.feats[0]?.id;
+    if (!fixedFeatId) return;
+    setForm((f) => (f.chosenBgOriginFeatId === fixedFeatId ? f : { ...f, chosenBgOriginFeatId: fixedFeatId }));
+  }, [bgDetail]);
+
+  // Auto-select the first feat for backgrounds that explicitly grant a feat choice.
+  React.useEffect(() => {
+    if (!bgDetail) return;
+    const prof = bgDetail.proficiencies;
+    if (!prof || prof.featChoice <= 0 || prof.feats.length === 0) return;
+    const grantedName = prof.feats[0]?.name;
+    if (!grantedName) return;
+    const match = featSummaries.find((f) =>
+      f.name.toLowerCase().startsWith(grantedName.toLowerCase())
+    );
+    if (match) {
+      setForm((f) => f.chosenBgOriginFeatId === match.id ? f : { ...f, chosenBgOriginFeatId: match.id });
+    }
+  }, [bgDetail, featSummaries]);
+
+  // Auto-select the first equipment option when bgDetail loads
+  React.useEffect(() => {
+    if (!bgDetail?.equipment) return;
+    const options = parseStartingEquipmentOptions(bgDetail.equipmentOptions);
+    if (options.length > 0) {
+      setForm(f => f.chosenBgEquipmentOption ? f : { ...f, chosenBgEquipmentOption: options[0].id });
+    }
+  }, [bgDetail]);
+
+  // Auto-select the first equipment option when classDetail loads
+  React.useEffect(() => {
+    if (!classDetail) return;
+    const options = parseStartingEquipmentOptions(classDetail.equipmentOptions);
+    if (options.length > 0) {
+      setForm(f => f.chosenClassEquipmentOption ? f : { ...f, chosenClassEquipmentOption: options[0].id });
+    }
+  }, [classDetail]);
+
+  const creatorResolvedScores = React.useMemo(() => {
+    const raceAbilityBonuses = deriveRaceAbilityBonuses(
+      raceDetail,
+      raceDetail?.parsedChoices?.abilityScoreChoice,
+      form,
+    );
+    return resolvedScores(form, selectedFeatAbilityBonuses, raceAbilityBonuses);
+  }, [form, raceDetail, selectedFeatAbilityBonuses]);
+
+  const [hpReviewedBuild, setHpReviewedBuild] = React.useState<string | null>(null);
+  const hpBuildKey = JSON.stringify([form.classId, form.level, creatorResolvedScores.con ?? 10]);
+  const hpReviewRequired = Boolean(isEditing && editSummaryFallback && editSummaryFallback.hpBuildKey !== hpBuildKey);
+  const hpReview = { required: hpReviewRequired, reviewed: hpReviewedBuild === hpBuildKey, onReview: (reviewed: boolean) => setHpReviewedBuild(reviewed ? hpBuildKey : null) };
+  const previousComputedHp = React.useRef<string | null>(null);
+
+  // Auto-calculate HP, AC, speed when class/race/scores change
+  React.useEffect(() => {
+    const hd = effectiveHitDie;
+    const scores = creatorResolvedScores;
+    const conMod = abilityMod(scores.con ?? 10);
+    const physicalRolls = Array.from({ length: Math.max(0, form.level - 1) }, (_, index) => Number(form.creationHpRolls[String(index + 2)]));
+    const physicalRollsComplete = physicalRolls.every((roll) => Number.isInteger(roll) && roll >= 1 && roll <= hd);
+    const hp = form.creationHpMethod === "physical" && physicalRollsComplete
+      ? Math.max(1, hd + conMod) + physicalRolls.reduce((sum, roll) => sum + Math.max(1, roll + conMod), 0)
+      : calcHpMax(hd, form.level, conMod);
+    const baseSpeed = raceDetail?.speed ?? races.find((race) => race.id === form.raceId)?.speed ?? 30;
+    const classFeatureEffects = parseAppliedClassFeatureEffects(classDetail, form.level, form.subclass, form.chosenOptionals);
+    const speciesTraitEffects = parseAppliedSpeciesTraitEffects(raceDetail);
+    const { ac, speed } = deriveCreatorSheetFacts({
+      baseSpeed,
+      level: form.level,
+      scores,
+      classFeatureEffects,
+      speciesTraitEffects,
+    });
+    const hpStr = String(hp);
+    const lastHp = previousComputedHp.current;
+    previousComputedHp.current = hpStr;
+    const acStr = String(ac);
+    const speedStr = String(speed);
+    setForm((f) => {
+      const nextHp = !isEditing && f.creationHpMethod === "manual"
+        ? f.hpMax
+        : !isEditing && f.creationHpMethod === "physical" && !physicalRollsComplete
+          ? f.hpMax
+          : reconcileCreatorHp(f.hpMax, hpStr, lastHp, isEditing);
+      return f.hpMax === nextHp && f.ac === acStr && f.speed === speedStr ? f : { ...f, hpMax: nextHp, ac: acStr, speed: speedStr };
+    });
+  }, [isEditing, effectiveHitDie, effectiveClassName, classDetail, raceDetail, races, form, creatorResolvedScores, resolvedRaceFeatDetail?.name, resolvedBgOriginFeatDetail?.name, featSummaries, levelUpFeatDetails, bgDetail?.proficiencies?.feats, bgDetail?.traits]);
+
+  // Trim cantrips/spells that no longer fit once the level field (creation or edit-time) drops --
+  // unlike invocations and level-up feats, nothing else caps these against the *current* count/max
+  // spell level, so a lowered level otherwise leaves the character over-provisioned.
+  React.useEffect(() => {
+    if (!classDetail || !classSpellOptionsLoaded) return;
+    const cantripCount = getCantripCount(classDetail, form.level, form.subclass);
+    const scores = creatorResolvedScores;
+    const spellAbility = String(classDetail.spellAbility ?? "").toLowerCase();
+    const prepCount = getPreparedSpellCount(classDetail, form.level, form.subclass, scores[spellAbility as keyof typeof scores]);
+    const maxSpellLevel = getMaxSlotLevel(classDetail, form.level, form.subclass);
+    const usesSpellbook = classDetail.autolevels.some((autolevel) =>
+      (autolevel.level ?? 0) <= form.level && autolevel.features.some((feature) =>
+        (feature.choices ?? []).some((choice) => choice.kind === "spell" && choice.mode === "spellbook"),
+      ),
+    );
+    const classCantripIds = new Set(classCantrips.map((spell) => spell.id));
+    const classSpellById = new Map(classSpells.map((spell) => [spell.id, spell]));
+    // When there's more to trim than fits, drop the most-recently-acquired first instead of
+    // whatever happens to be last in the array -- uses the *original* loaded character's tags
+    // (editSummaryFallback, set once at hydration, not live-updated), so this reflects real
+    // acquisition history rather than incidental array order. Anything not in that history (added
+    // this editing session) sorts as form.level, i.e. "just learned" -- trimmed first if over cap.
+    const existingSpellLevelById = new Map((editSummaryFallback?.existingSpells ?? []).map((entry) => [entry.id, entry.level ?? form.level]));
+    const levelOf = (id: string) => existingSpellLevelById.get(id) ?? form.level;
+    setForm((f) => {
+      // Only drop entries for not-currently-available ids once classCantrips/classSpells have
+      // actually loaded -- both start empty while their async fetch is in flight (kicked off by
+      // a separate effect keyed on the same classDetail change), so filtering against them before
+      // they resolve would misread "not loaded yet" as "not available" and wipe every real
+      // cantrip/spell the character already has. Count-based trimming below doesn't have this
+      // problem since it doesn't depend on the lists having loaded.
+      const filteredCantrips = classCantrips.length > 0
+        ? f.chosenCantrips.filter((id) => classCantripIds.has(id))
+        : f.chosenCantrips;
+      const nextCantrips = filteredCantrips.length > cantripCount
+        ? [...filteredCantrips].sort((a, b) => levelOf(a) - levelOf(b)).slice(0, cantripCount)
+        : filteredCantrips;
+      const filteredSpells = classSpells.length > 0
+        ? f.chosenSpells.filter((id) => {
+            const spell = classSpellById.get(id);
+            const level = Number(spell?.level ?? 0);
+            return Boolean(spell) && level > 0 && level <= maxSpellLevel;
+          })
+        : f.chosenSpells;
+      // A spellbook is accumulated knowledge, not the currently prepared list. Down-leveling may
+      // remove spells learned above the target level, but must never truncate the remaining book
+      // to the prepared-spell allowance.
+      const nextSpells = usesFlexiblePreparedSpells(classDetail)
+        ? f.chosenSpells
+        : trimAcquiredIdsForLevel(filteredSpells, levelOf, form.level, usesSpellbook ? null : prepCount);
+      const sameArray = (a: string[], b: string[]) => a.length === b.length && a.every((id, index) => id === b[index]);
+      if (sameArray(nextCantrips, f.chosenCantrips) && sameArray(nextSpells, f.chosenSpells)) return f;
+      return { ...f, chosenCantrips: nextCantrips, chosenSpells: nextSpells };
+    });
+  }, [classDetail, classSpellOptionsLoaded, classCantrips, classSpells, form, creatorResolvedScores, editSummaryFallback]);
+
+  // Trim invocations down to the current level's count when it exceeds the allowance -- the
+  // eligibility sanitizer (useCharacterCreatorSanitizers.ts) only drops entries that no longer
+  // individually qualify, it doesn't cap by count, so a level-down could otherwise leave more
+  // invocations selected than the new level allows even though each one still qualifies. Same
+  // level-aware drop-most-recent-first logic as the cantrip/spell trim above.
+  React.useEffect(() => {
+    if (!classDetail) return;
+    const invocTableForTrim = getClassFeatureTable(classDetail, "Invocation", form.level, form.subclass);
+    const invocCountForTrim = invocTableForTrim.length > 0 ? tableValueAtLevel(invocTableForTrim, form.level) : 0;
+    const existingInvocationLevelById = new Map((editSummaryFallback?.existingInvocations ?? []).map((entry) => [entry.id, entry.level ?? form.level]));
+    const invocationLevelOf = (id: string) => existingInvocationLevelById.get(id) ?? form.level;
+    setForm((f) => {
+      if (f.chosenInvocations.length <= invocCountForTrim) return f;
+      const nextInvocations = [...f.chosenInvocations].sort((a, b) => invocationLevelOf(a) - invocationLevelOf(b)).slice(0, invocCountForTrim);
+      return { ...f, chosenInvocations: nextInvocations };
+    });
+  }, [classDetail, form, editSummaryFallback]);
+
+  // Clear subclass / optional-group picks (Pact Boon, Fighting Style, etc.) once level drops below
+  // the level that grants them -- mirrors the invocation-eligibility sanitizer above, so a
+  // level-down can't leave subclass features active past what the level actually qualifies for.
+  React.useEffect(() => {
+    if (!classDetail) return;
+    const subclassLevel = getSubclassLevel(classDetail);
+    const needsSubclassClear = Boolean(form.subclass) && subclassLevel != null && form.level < subclassLevel;
+    const validOptionalNames = new Set(
+      getOptionalGroups(classDetail, form.level).flatMap((group) => group.features.flatMap((feature) => feature.selectionNames))
+    );
+    setForm((f) => {
+      const nextSubclass = needsSubclassClear ? "" : f.subclass;
+      const nextOptionals = f.chosenOptionals.filter((name) => validOptionalNames.has(name));
+      if (nextSubclass === f.subclass && nextOptionals.length === f.chosenOptionals.length) return f;
+      return { ...f, subclass: nextSubclass, chosenOptionals: nextOptionals };
+    });
+  }, [classDetail, form.level, form.subclass]);
+
+  function set<K extends keyof FormState>(key: K, val: FormState[K]) {
+    setForm((f) => ({ ...f, [key]: val }));
+  }
+
+  const invocTable = classDetail ? getClassFeatureTable(classDetail, "Invocation", form.level, form.subclass) : [];
+  const invocCount = invocTable.length > 0 ? tableValueAtLevel(invocTable, form.level) : 0;
+  const currentRequirements = creatorRequirements({
+    existingClasses: editSummaryFallback?.existingClasses,
+    form, classDetail, scores: creatorResolvedScores, levelUpFeatLevels,
+    scoresBeforeAsi: resolvedScores(form, selectedFeatGrantedAbilityBonuses, deriveRaceAbilityBonuses(raceDetail, raceDetail?.parsedChoices?.abilityScoreChoice, form)),
+    levelUpFeatConflict: Boolean(levelUpFeatConflict), loads: [
+      ...loadRequirements,
+      ...Object.entries(catalogs.loadStates).map(([name, state]) => ({
+        id: `load:catalog:${name}`, step: name === "classes" ? 2 : name === "species" ? 3 : name === "backgrounds" ? 4 : 6,
+        state,
+        message: state === "failed" ? `Could not load the ${name} catalog. Retry loading options.` : state === "loading" ? `Loading the ${name} catalog...` : `Loaded the ${name} catalog.`,
+      })),
+    ],
+    optionsLoaded: classSpellOptionsLoaded, step5: step5ChoiceState,
+    skillsCount: step5NumSkills, skillOptions: step5SkillList,
+    invocCount, invocationIds: [...eligibleInvocationIds],
+    spellLists: step6SpellListChoices, spellChoices: step6ResolvedSpellChoices,
+    spellOptions: allFeatSpellChoiceOptions,
+  });
+  const selectedFeatIds = [
+    form.chosenRaceFeatId, form.chosenBgOriginFeatId,
+    ...Object.values(form.chosenClassFeatIds),
+    ...form.chosenLevelUpFeats.filter((entry) => entry.type === "feat").map((entry) => entry.featId),
+  ].filter((id): id is string => Boolean(id));
+  for (const id of new Set(selectedFeatIds)) {
+    const detail = featDetailCache[id];
+    currentRequirements.push({
+      id: "feat:" + id, step: 7,
+      state: featLoad.failed ? "failed" : !featLoad.loading && detail ? "complete" : "loading",
+      message: featLoad.failed ? "Could not load selected feats. Retry loading options." : !featLoad.loading && detail ? detail.name : "Loading selected feat choices...",
+    });
+  }
+  for (const entry of growthChoiceDefinitions) {
+    const selected = form.chosenFeatureChoices[entry.key] ?? [];
+    currentRequirements.push({
+      ...evaluateChoiceRequirement({ id: entry.key, step: 8, loading: growthChoiceLoadState === "loading" || growthOptionEntriesByKey[entry.key] === undefined, selected, count: entry.totalCount, options: growthOptionEntriesByKey[entry.key]?.map((option) => option.id), message: "Complete " + entry.title + "." }),
+      ...(growthChoiceLoadState === "failed" ? { state: "failed" as const, message: "Could not load options for " + entry.title + ". Retry loading options." } : {}),
+    });
+  }
+  if (step6ResolvedSpellChoices.length > 0 && featSpellChoiceLoadState !== "complete") currentRequirements.push({
+    id: "load:feat-spell-choices", step: 8, state: featSpellChoiceLoadState,
+    message: featSpellChoiceLoadState === "failed" ? "Could not load feat spell choices. Retry loading options." : "Loading feat spell choices...",
+  });
+  for (const entry of selectedFeatSpellcastingAbilityChoices) {
+    currentRequirements.push(evaluateChoiceRequirement({ id: entry.key, selected: entry.chosen, count: entry.max, step: 8, message: "Choose the spellcasting ability for " + entry.title + "." }));
+  }
+  if (invocationFeatChoices.length > 0) currentRequirements.push({
+    id: "invocation-feat-options", step: 8, state: invocationGrantedFeatChoices.valid ? "complete" : "incomplete",
+    message: "Complete the feat choices granted by your invocations.",
+  });
+  for (const entry of preparedSpellProgressionChoiceDefinitions) {
+    currentRequirements.push(evaluateChoiceRequirement({ id: entry.key, selected: form.chosenFeatureChoices[entry.key] ?? [], count: 1, options: entry.options, step: 8, message: entry.prompt }));
+  }
+  for (const entry of growthChoiceDefinitions) {
+    if (!entry.abilityChoice) continue;
+    currentRequirements.push(evaluateChoiceRequirement({ id: entry.abilityChoice.key, selected: form.chosenFeatureChoices[entry.abilityChoice.key] ?? [], count: 1, options: entry.abilityChoice.options, step: 8, message: "Choose an ability for " + entry.title + "." }));
+  }
+  for (const entry of selectedClassFeatureProficiencyChoices) {
+    if (entry.choice?.count.kind !== "fixed") continue;
+    const id = "classfeature:" + (entry.choiceId ?? entry.id);
+    currentRequirements.push(evaluateChoiceRequirement({ id, selected: form.chosenFeatureChoices[id] ?? [], count: entry.choice.count.value, step: 7, message: "Complete " + entry.source.name + "." }));
+  }
+  if (hpReviewRequired) currentRequirements.push({
+    id: "hp-review", step: 9, state: hpReview.reviewed ? "complete" : "incomplete",
+    message: "Review HP Max after changing class, level, or Constitution.",
+  });
+  for (const issue of editSummaryFallback?.progressionRepairIssues ?? []) currentRequirements.push({
+    id: `migration:${issue.code}`, step: 6, state: "failed", message: `This beta character needs progression repair: ${issue.message}`,
+  });
+  const previousRequirements = React.useRef<ProgressionRequirement[]>([]);
+  const requirements = retainPendingRequirements(previousRequirements.current, currentRequirements);
+  React.useEffect(() => { previousRequirements.current = requirements; }, [requirements]);
+  const blockedRequirements = requirements.filter(requirementBlocks);
+
+  const { busy, handleSubmit } = useCharacterCreatorSubmit({
+    requirements,
+    form,
+    classDetail,
+    selectedClassSummary,
+    raceDetail,
+    bgDetail,
+    featDetailCache,
+    resolvedRaceFeatDetail,
+    resolvedBgOriginFeatDetail,
+    classFeatDetails,
+    levelUpFeatDetails,
+    featSpellChoiceOptions: allFeatSpellChoiceOptions,
+    growthOptionEntriesByKey,
+    classCantrips,
+    classSpells,
+    classInvocations,
+    isEditing,
+    fallbackClassName: effectiveClassName || null,
+    fallbackHitDie: effectiveHitDie,
+    fallbackSpecies: effectiveRaceName || null,
+    existingHpCurrent: editSummaryFallback?.hpCurrent ?? null,
+    existingHpMax: editSummaryFallback?.hpMax ?? null,
+    existingHpProgressionHistory: editSummaryFallback?.hpProgressionHistory,
+    existingCharacterRevision: editSummaryFallback?.characterRevision ?? null,
+    existingClassSpellSelections: editSummaryFallback?.existingClassSpellSelections,
+    existingExtraFeatIds: editSummaryFallback?.extraFeatIds ?? [],
+    existingInvocationFeatIds: editSummaryFallback?.invocationFeatIds ?? [],
+    existingSpells: editSummaryFallback?.existingSpells ?? [],
+    existingInvocations: editSummaryFallback?.existingInvocations ?? [],
+    existingAcquisitionLevels: editSummaryFallback?.existingAcquisitionLevels ?? {},
+    preservedLevelUpFeats: editSummaryFallback?.preservedLevelUpFeats ?? [],
+    preservedLevelUpFeatOptions: editSummaryFallback?.preservedLevelUpFeatOptions ?? {},
+    existingClasses: editSummaryFallback?.existingClasses ?? [],
+    existingSelectedFeatureNames: editSummaryFallback?.existingSelectedFeatureNames ?? [],
+    existingProficiencies: editSummaryFallback?.existingProficiencies ?? {},
+    existingProgressionSelectionOccurrences: editSummaryFallback?.progressionSelectionOccurrences ?? [],
+    existingProgressionReplacementEvents: editSummaryFallback?.progressionReplacementEvents ?? [],
+    existingProgressionHpEffects: editSummaryFallback?.progressionHpEffects ?? [],
+    editId,
+    portraitFile,
+    initialCampaignIdsRef,
+    classifyFeatSelection,
+    navigate,
+    setError,
+  });
+
+  const handleSubmitWithChecks = React.useCallback(async () => {
+    const blocker = requirements.find(requirementBlocks);
+    if (blocker) { setError(blocker.message); setStep((blocker.step ?? 8) as Step); return; }
+    await handleSubmit();
+  }, [requirements, handleSubmit]);
+
+  // ── Step renderers ──────────────────────────────────────────────────────────
+
+  function renderStep(): { main: React.ReactNode; side: React.ReactNode } {
+    return renderCharacterCreatorStep({
+    hpReview,
+    t,
+      step,
+      form,
+      setForm,
+      setStep,
+      setField: set,
+      setLevel: (value) => setForm((current) => ({ ...current, level: Math.max(isEditing ? Number(editSummaryFallback?.existingClasses[0]?.level) || 1 : 1, value) })),
+      minimumClassLevel: isEditing ? Number(editSummaryFallback?.existingClasses[0]?.level) || 1 : 1,
+      onReduceClassLevel: isEditing && editId ? () => navigate(`/characters/${editId}/level-up`) : undefined,
+      handleSubmit: handleSubmitWithChecks,
+      sideSummary,
+      classDetail,
+      effectiveHitDie,
+      classes,
+      classSearch,
+      setClassSearch,
+      races,
+      raceSearch,
+      setRaceSearch,
+      raceDetail,
+      featSummaries,
+      raceFeatSearch,
+      setRaceFeatSearch,
+      raceFeatDetail: resolvedRaceFeatDetail,
+      bgs,
+      bgSearch,
+      setBgSearch,
+      bgDetail,
+      bgOriginFeatSearch,
+      setBgOriginFeatSearch,
+      bgOriginFeatDetail: resolvedBgOriginFeatDetail,
+      levelUpFeatDetails,
+      classFeatDetails,
+      classCantrips,
+      classSpells,
+      classInvocations,
+      invocationFeatChoices,
+      invocationGrantedFeatChoices,
+      featSpellChoiceOptions: allFeatSpellChoiceOptions,
+      growthOptionEntriesByKey,
+      items,
+      campaigns,
+      error,
+      busy,
+      isEditing,
+      getStep5ChoiceState,
+      step5SkillList,
+      step5NumSkills,
+      step5BgLangChoice,
+      step5CoreLanguageChoice,
+      step5ClassFeatChoices,
+      step5ClassLanguageChoice,
+      step5ClassExpertiseChoices,
+      step5ClassToolProficiency,
+      step5WeaponMasteryChoice,
+      step5WeaponOptions,
+      step5ChoiceState,
+      step6SpellListChoices,
+      step6ResolvedSpellChoices,
+      selectedFeatSpellcastingAbilityChoices,
+      selectedClassFeatureProficiencyChoices: selectedClassFeatureProficiencyChoices as CharacterCreatorStepRenderContext["selectedClassFeatureProficiencyChoices"],
+      selectedFeatGrantedAbilityBonuses,
+      selectedFeatAbilityBonuses,
+      levelUpFeatLevels,
+      availableLevelUpFeats,
+      levelUpFeatConflict,
+      getClassFeatChoiceLabel,
+      getClassFeatOptionLabel,
+      eligibleInvocationIds,
+      growthChoiceDefinitions,
+      preparedSpellProgressionChoiceDefinitions,
+      getGrowthChoiceSelectedAbility,
+      portraitInputRef,
+      portraitPreview,
+      setPortraitFile,
+      setPortraitPreview,
+    });
+  }
+
+  const sideSummary = (
+    <CharacterCreatorSideSummary
+      form={form}
+      classDetail={classDetail}
+      raceDetail={raceDetail}
+      bgDetail={bgDetail}
+      featAbilityBonuses={selectedFeatAbilityBonuses}
+      fallbackClassName={classDetail ? undefined : effectiveClassName}
+      fallbackClassHd={classDetail ? undefined : effectiveHitDie}
+      fallbackRaceName={raceDetail ? undefined : effectiveRaceName}
+      fallbackRaceSpeed={raceDetail ? undefined : races.find((r) => r.id === form.raceId)?.speed}
+      fallbackBgName={bgDetail ? undefined : bgs.find((b) => b.id === form.bgId)?.name}
+    />
+  );
+
+  // Step 10: Campaigns
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+
+  if (editLoading) {
+    return (
+      <div style={{ height: "100%", overflowY: "auto", background: C.bg, color: C.text }}>
+        <div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 24px", color: C.muted }}>{translateUi("Loading…")}</div>
+      </div>
+    );
+  }
+
+  const { main, side } = renderStep();
+
+  return (
+    <div style={{ height: "100%", overflowY: "auto", background: C.bg, color: C.text }}>
+      <div className="character-creator-page">
+        <h1 style={{ fontWeight: 900, fontSize: "var(--fs-hero)", margin: "0 0 8px", letterSpacing: -0.5 }}>
+          {isEditing ? translateUi("Edit Character") : translateUi("Create Character")}
+        </h1>
+        <p style={{ margin: "0 0 24px", color: "rgba(160,180,220,0.55)", fontSize: "var(--fs-subtitle)" }}>
+          {isEditing ? translateUi("Update your character details below.") : translateUi("Build your character step by step.")}
+        </p>
+        {(editSummaryFallback?.progressionRepairIssues.length ?? 0) > 0 && <div role="alert" style={{ marginBottom: 18, padding: 16, border: `1px solid ${C.red}`, borderRadius: 12, background: "rgba(239,68,68,0.08)" }}>
+          <div style={{ fontWeight: 800, marginBottom: 6 }}>Progression history needs review</div>
+          <div style={{ color: C.muted, marginBottom: 12 }}>This beta character has records whose original class ownership cannot be recovered safely. Resetting keeps the current sheet totals and choices as a baseline, then records future changes exactly.</div>
+          <button type="button" disabled={repairingProgression} onClick={resetProgressionBaseline} style={{ padding: "9px 14px", borderRadius: 9, border: `1px solid ${C.red}`, background: "rgba(239,68,68,0.14)", color: C.text, cursor: repairingProgression ? "wait" : "pointer", fontWeight: 750 }}>
+            {repairingProgression ? "Resetting…" : "Review and reset progression baseline"}
+          </button>
+        </div>}
+        <details open={blockedRequirements.length > 0} style={{ marginBottom: 16, color: C.text }}>
+          <summary>{blockedRequirements.length > 0 ? `${blockedRequirements.length} requirements remaining` : "Build requirements complete"}</summary>
+          <ul style={{ margin: "8px 0", paddingLeft: 22 }}>
+            {requirements.filter((entry) => entry.state !== "not_applicable").map((entry) => (
+              <li key={entry.id}>
+                <button type="button" onClick={() => setStep((entry.step ?? 8) as Step)}
+                  style={{ background: "none", border: 0, color: requirementBlocks(entry) ? C.accentHl : C.muted, cursor: "pointer", textAlign: "left", padding: "4px 0" }}>
+                  {entry.state === "complete" ? "Complete: " : ""}{entry.message}
+                </button>
+              </li>
+            ))}
+          </ul>
+          {blockedRequirements.some((entry) => entry.state === "failed" || entry.state === "loading") && (
+            <button type="button" onClick={retryOptions}>Retry loading options</button>
+          )}
+        </details>
+        <StepHeader
+          current={step}
+          onStepClick={(s) => setStep(s as Step)}
+          isEditing={isEditing}
+          action={isEditing ? (
+            <Button type="button" variant="primary" onClick={() => { void handleSubmitWithChecks(); }} disabled={busy}>
+              {busy ? translateUi("Saving…") : translateUi("Save Changes")}
+            </Button>
+          ) : undefined}
+        />
+        {isEditing && error ? (
+          <div role="alert" style={{ color: C.red, margin: "-16px 0 20px", fontWeight: 650 }}>{error}</div>
+        ) : null}
+        <div className="character-creator-layout">
+          <main className="character-creator-main" tabIndex={-1}>{main}</main>
+          <aside className="character-creator-summary">{side}</aside>
+        </div>
+      </div>
+    </div>
+  );
+}

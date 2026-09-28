@@ -1,0 +1,203 @@
+export interface NoteScopeDto {
+  campaignId: string;
+  adventureId: string | null;
+}
+
+export interface NoteContentDto {
+  /** What to show. For a note with no title of its own this is its first line of text. */
+  title: string;
+  text: string;
+  /**
+   * True when `title` was worked out from the text rather than typed by anyone.
+   *
+   * An editor needs to know: showing a derived title in the title box and saving it back is how a
+   * note quietly stops following its own first line.
+   */
+  titleIsDerived: boolean;
+}
+
+export interface NoteMetaDto {
+  sort: number;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+export interface NoteDto {
+  id: string;
+  scope: NoteScopeDto;
+  content: NoteContentDto;
+  meta: NoteMetaDto;
+}
+
+export interface FlatNoteDto {
+  id: string;
+  scope: "campaign" | "adventure";
+  scopeId: string;
+  title: string;
+  titleIsDerived: boolean;
+  text: string;
+  order: number;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+export interface TreasureScopeDto {
+  campaignId: string;
+  adventureId: string | null;
+  encounterId: string | null;
+}
+
+export interface TreasureEntryDto {
+  source: "compendium" | "custom";
+  itemId: string | null;
+  name: string;
+  rarity: string | null;
+  type: string | null;
+  typeKey: string | null;
+  attunement: boolean;
+  magic: boolean;
+  text: string;
+  qty: number;
+}
+
+export interface TreasureMetaDto {
+  sort: number;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+export interface TreasureDto {
+  id: string;
+  scope: TreasureScopeDto;
+  entry: TreasureEntryDto;
+  meta: TreasureMetaDto;
+}
+
+export interface FlatTreasureDto {
+  id: string;
+  scope: "campaign" | "adventure" | "encounter";
+  scopeId: string;
+  name: string;
+  qty: number;
+  order: number;
+  rarity?: string;
+  type?: string;
+  attunement?: boolean;
+  magic?: boolean;
+  text?: string;
+  itemId?: string | null;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+export interface PartyInventoryItemContentDto {
+  name: string;
+  quantity: number;
+  weight: number | null;
+  notes: string;
+  source: string | null;
+  itemId: string | null;
+  rarity: string | null;
+  type: string | null;
+  description: string | null;
+  /** Full portable item state carried through a character <-> stash transfer; absent on plain/legacy rows. */
+  payload?: Record<string, unknown> | null;
+}
+
+export interface PartyInventoryMetaDto {
+  revision?: string;
+  sort: number;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+export interface PartyInventoryItemDto {
+  id: string;
+  campaignId: string;
+  item: PartyInventoryItemContentDto;
+  meta: PartyInventoryMetaDto;
+}
+
+export interface PartyInventoryListDto {
+  items: PartyInventoryItemDto[];
+  /** Combined remaining carry capacity of all OTHER party members (lbs). Null when no STR data is available. */
+  partyCapacityLbs: number | null;
+}
+
+export interface FlatPartyInventoryItemDto {
+  revision?: string;
+  id: string;
+  campaignId: string;
+  name: string;
+  quantity: number;
+  weight: number | null;
+  notes: string;
+  source: string | null;
+  itemId: string | null;
+  rarity: string | null;
+  type: string | null;
+  description: string | null;
+  payload?: Record<string, unknown> | null;
+  sort: number;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+export function flattenNoteDto(dto: NoteDto): FlatNoteDto {
+  const flat: FlatNoteDto = {
+    id: dto.id,
+    scope: dto.scope.adventureId ? "adventure" : "campaign",
+    scopeId: dto.scope.adventureId ?? dto.scope.campaignId,
+    title: dto.content.title,
+    titleIsDerived: dto.content.titleIsDerived,
+    text: dto.content.text,
+    order: dto.meta.sort,
+  };
+  if (dto.meta.createdAt !== undefined) flat.createdAt = dto.meta.createdAt;
+  if (dto.meta.updatedAt !== undefined) flat.updatedAt = dto.meta.updatedAt;
+  return flat;
+}
+
+export function flattenTreasureDto(dto: TreasureDto): FlatTreasureDto {
+  const flat: FlatTreasureDto = {
+    id: dto.id,
+    scope: dto.scope.encounterId ? "encounter" : dto.scope.adventureId ? "adventure" : "campaign",
+    scopeId: dto.scope.encounterId ?? dto.scope.adventureId ?? dto.scope.campaignId,
+    name: dto.entry.name,
+    qty: dto.entry.qty,
+    order: dto.meta.sort,
+  };
+  if (dto.entry.rarity) flat.rarity = dto.entry.rarity;
+  if (dto.entry.type) flat.type = dto.entry.type;
+  if (dto.entry.attunement) flat.attunement = dto.entry.attunement;
+  if (dto.entry.magic) flat.magic = dto.entry.magic;
+  if (dto.entry.text) flat.text = dto.entry.text;
+  if (dto.entry.itemId !== undefined) flat.itemId = dto.entry.itemId;
+  if (dto.meta.createdAt !== undefined) flat.createdAt = dto.meta.createdAt;
+  if (dto.meta.updatedAt !== undefined) flat.updatedAt = dto.meta.updatedAt;
+  return flat;
+}
+
+export function flattenPartyInventoryItemDto(
+  dto: PartyInventoryItemDto,
+): FlatPartyInventoryItemDto {
+  const flat: FlatPartyInventoryItemDto = {
+    id: dto.id,
+    campaignId: dto.campaignId,
+    ...(dto.meta.revision ? { revision: dto.meta.revision } : {}),
+    name: dto.item.name,
+    quantity: dto.item.quantity,
+    weight: dto.item.weight,
+    notes: dto.item.notes,
+    source: dto.item.source,
+    itemId: dto.item.itemId,
+    rarity: dto.item.rarity,
+    type: dto.item.type,
+    description: dto.item.description,
+    sort: dto.meta.sort,
+  };
+  if (dto.item.payload != null) flat.payload = dto.item.payload;
+  if (dto.meta.createdAt !== undefined) flat.createdAt = dto.meta.createdAt;
+  if (dto.meta.updatedAt !== undefined) flat.updatedAt = dto.meta.updatedAt;
+  return flat;
+}

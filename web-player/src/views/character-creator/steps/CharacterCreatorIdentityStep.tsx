@@ -1,0 +1,210 @@
+import { translateUi } from "@/i18n";
+import { UiText } from "@beholden/shared/i18n/useUiTranslation";
+import React from "react";
+import { Select } from "@/ui/Select";
+import { C } from "@/lib/theme";
+import { NavButtons } from "../shared/CharacterCreatorParts";
+import { headingStyle, inputStyle, labelStyle } from "../shared/CharacterCreatorStyles";
+import { campaignSelectionHasBinder, type FormState } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
+import type { CharacterCreatorStepRenderContext, StepRenderResult } from "./CharacterCreatorStepContext";
+
+function renderIdentityStep({
+  form,
+  requiresGenderAge,
+  setField,
+  portraitInputRef,
+  portraitPreview,
+  setPortraitFile,
+  setPortraitPreview,
+  onBack,
+  onNext,
+  side,
+}: {
+  form: Record<string, unknown> & { [key: string]: unknown };
+  requiresGenderAge: boolean;
+  setField: (key: string, value: string) => void;
+  portraitInputRef: React.RefObject<HTMLInputElement | null>;
+  portraitPreview: string | null;
+  setPortraitFile: (file: File | null) => void;
+  setPortraitPreview: (value: string | null) => void;
+  onBack: () => void;
+  onNext: () => void;
+  side: React.ReactNode;
+}): { main: React.ReactNode; side: React.ReactNode } {
+  const colors = [C.accentHl, C.green, C.accent, C.red, C.colorMagic, C.colorOrange, "#e879f9", "#94a3b8"];
+  const ALIGNMENTS = [
+    "", "Lawful Good", "Neutral Good", "Chaotic Good",
+    "Lawful Neutral", "True Neutral", "Chaotic Neutral",
+    "Lawful Evil", "Neutral Evil", "Chaotic Evil",
+  ];
+  const detailFields: Array<{ key: string; label: string; placeholder: string; required?: boolean; type?: string }> = [
+    { key: "hair", label: translateUi("Hair"), placeholder: translateUi("Black, braided") },
+    { key: "skin", label: translateUi("Skin"), placeholder: translateUi("Tan, scarred") },
+    { key: "heightText", label: translateUi("Height"), placeholder: "6'2\"" },
+    { key: "age", label: requiresGenderAge ? "Age *" : "Age", placeholder: "32", required: requiresGenderAge, type: "number" },
+    { key: "weight", label: translateUi("Weight"), placeholder: translateUi("190 lb") },
+  ];
+
+  function handlePortraitChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setPortraitFile(file);
+    const url = URL.createObjectURL(file);
+    setPortraitPreview(url);
+  }
+
+  const main = (
+    <div>
+      <h2 style={headingStyle}>{<UiText text={"Character Identity"} namespace="playerUi" />}</h2>
+      <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "flex-start" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+          <input ref={portraitInputRef as React.RefObject<HTMLInputElement>} type="file" accept="image/*" onChange={handlePortraitChange} style={{ display: "none" }} />
+          <div
+            onClick={() => portraitInputRef.current?.click()}
+            style={{
+              width: 110,
+              height: 110,
+              borderRadius: 12,
+              cursor: "pointer",
+              border: `2px dashed ${portraitPreview ? C.accentHl : "rgba(255,255,255,0.25)"}`,
+              background: portraitPreview ? "#000" : "rgba(255,255,255,0.04)",
+              overflow: "hidden",
+              position: "relative",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            title={translateUi("Click to set portrait")}
+          >
+            {portraitPreview ? (
+              <img src={portraitPreview} alt={translateUi("Portrait")} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              <div style={{ opacity: 0.3 }}>{<UiText text={"Portrait"} namespace="playerUi" />}</div>
+            )}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "rgba(0,0,0,0)",
+                display: "flex",
+                alignItems: "flex-end",
+                justifyContent: "center",
+                paddingBottom: 6,
+              }}
+            >
+              <span style={{ fontSize: "var(--fs-tiny)", color: "rgba(255,255,255,0.55)", background: "rgba(0,0,0,0.55)", padding: "2px 6px", borderRadius: 4 }}>
+                {portraitPreview ? <UiText text={"Change"} namespace="playerUi" /> : <UiText text={"Add photo"} namespace="playerUi" />}
+              </span>
+            </div>
+          </div>
+          {portraitPreview && (
+            <button type="button" onClick={() => { setPortraitFile(null); setPortraitPreview(null); }} style={{ fontSize: "var(--fs-small)", color: C.muted, background: "none", border: "none", cursor: "pointer" }}>
+              {<UiText text={"Remove"} namespace="playerUi" />}
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1, minWidth: 220 }}>
+          <div>
+            <label style={labelStyle}>{<UiText text={"Character Name *"} namespace="playerUi" />}</label>
+            <input
+              value={String(form.characterName ?? "")}
+              onChange={(e) => setField("characterName", e.target.value)}
+              placeholder={translateUi("Thraxil the Destroyer")}
+              style={{ ...inputStyle, width: "100%" }}
+            />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+            <div>
+              <label style={labelStyle}>{<UiText text={"Alignment"} namespace="playerUi" />}</label>
+              <Select
+                value={String(form.alignment ?? "")}
+                onChange={(e) => setField("alignment", e.target.value)}
+                style={{ width: "100%" }}
+              >
+                {ALIGNMENTS.map((a) => (
+                  <option key={a} value={a}>{a || "— select —"}</option>
+                ))}
+              </Select>
+            </div>
+            {detailFields.map(({ key, label, placeholder, required, type }) => (
+              <div key={key}>
+                <label style={labelStyle}>{label}</label>
+                <input
+                  type={type}
+                  required={required}
+                  value={String(form[key] ?? "")}
+                  onChange={(e) => setField(key, e.target.value)}
+                  placeholder={placeholder}
+                  style={{ ...inputStyle, width: "100%" }}
+                />
+              </div>
+            ))}
+            <div>
+              <label style={labelStyle}>{requiresGenderAge ? <UiText text={"Gender *"} namespace="playerUi" /> : <UiText text={"Gender"} namespace="playerUi" />}</label>
+              <Select
+                required={requiresGenderAge}
+                value={String(form.gender ?? "")}
+                onChange={(e) => setField("gender", e.target.value)}
+                style={{ width: "100%" }}
+              >
+                <option value="" disabled>{<UiText text={"— select —"} namespace="playerUi" />}</option>
+                <option value="male">{<UiText text={"Male"} namespace="playerUi" />}</option>
+                <option value="female">{<UiText text={"Female"} namespace="playerUi" />}</option>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <label style={labelStyle}>{<UiText text={"Color"} namespace="playerUi" />}</label>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {colors.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setField("color", c)}
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: "50%",
+                    background: c,
+                    border: `3px solid ${form.color === c ? C.text : "transparent"}`,
+                    cursor: "pointer",
+                    padding: 0,
+                    boxShadow: form.color === c ? `0 0 0 1px ${c}` : "none",
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      <NavButtons
+        step={10}
+        onBack={onBack}
+        onNext={onNext}
+        nextDisabled={
+          !String(form.characterName ?? "").trim()
+          || (requiresGenderAge && (!String(form.gender ?? "") || !Number.isInteger(Number(form.age)) || Number(form.age) <= 0))
+        }
+      />
+    </div>
+  );
+
+  return { main, side };
+}
+
+export function renderIdentityFromContext(ctx: CharacterCreatorStepRenderContext): StepRenderResult {
+  return renderIdentityStep({
+    form: ctx.form as unknown as Record<string, unknown> & { [key: string]: unknown },
+    requiresGenderAge: campaignSelectionHasBinder(ctx.form.campaignIds, ctx.campaigns),
+    setField: (key, value) => ctx.setField(key as keyof FormState, value as never),
+    portraitInputRef: ctx.portraitInputRef,
+    portraitPreview: ctx.portraitPreview,
+    setPortraitFile: ctx.setPortraitFile,
+    setPortraitPreview: ctx.setPortraitPreview,
+    onBack: () => ctx.setStep(9),
+    onNext: () => ctx.setStep(11),
+    side: ctx.sideSummary,
+  });
+}

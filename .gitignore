@@ -1,0 +1,54 @@
+# ===== Node =====
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ===== Build =====
+dist/
+build/
+.vite/
+.cache/
+.tmp/
+*.tsbuildinfo
+
+# ===== Env =====
+.env.*
+!.env.example
+.env.local
+.env.*.local
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== IDE =====
+.vscode/
+.idea/
+
+# ===== Logs =====
+*.log
+
+# ===== Coverage =====
+coverage/
+
+# ===== Data =====
+/data/
+/compendium/
+
+# ===== Working plans (local only) =====
+/docs/plans/
+
+# ===== Misc =====
+*.zip
+.eslintcache
+
+# ===== Local Transpile Artifacts =====
+web-player/src/**/*.js
+web-player/src/**/*.js.map
+
+# ===== Claude -------
+.claude/
+claude/
+.playwright-mcp/

@@ -1,0 +1,211 @@
+import type {
+  SharedConditionInstance,
+  SharedDeathSaves,
+} from "@beholden/shared/domain";
+import type { InventoryContainer, InventoryItem } from "@/views/character/inventory/CharacterInventory";
+import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
+import type { CharacterClassEntry as SharedCharacterClassEntry } from "@beholden/shared/domain/characterClasses";
+import type { SheetViewDef } from "@/views/character/layout/panelRegistry";
+
+export type AbilKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
+
+export interface CharacterCounter {
+  id: string;
+  title: string;
+  numCount: number;
+}
+
+export interface TaggedItem {
+  name: string;
+  source: string;
+  id?: string;
+  /** Character (spells) or class (invocations, via level-up) level this was acquired at, when
+   * known. `null`/absent means either genuinely untracked (legacy data) or not level-relevant
+   * (e.g. skills). Never guess a value here -- an honest gap beats a fabricated one. */
+  level?: number | null;
+  ability?: AbilKey | null;
+  sourceKey?: string | null;
+  classEntryId?: string | null;
+  /** Spells only: prepared. The one place preparation is stored (shared/domain/spellPreparation). */
+  prepared?: boolean;
+  weaponFilter?: {
+    melee?: true;
+    martial?: true;
+    excludeProperties?: Array<"heavy" | "two_handed">;
+  };
+}
+
+export interface ProficiencyMap {
+  skills: TaggedItem[];
+  expertise: TaggedItem[];
+  saves: TaggedItem[];
+  armor: TaggedItem[];
+  weapons: TaggedItem[];
+  /** Weapon names (2024 rules) the character has actually chosen Weapon Mastery for — distinct
+   * from `weapons`, which also contains broad category proficiencies (e.g. "Martial Weapons"). */
+  weaponMasteries: string[];
+  tools: TaggedItem[];
+  languages: TaggedItem[];
+  spells: TaggedItem[];
+  invocations: TaggedItem[];
+  maneuvers: TaggedItem[];
+  metamagic: TaggedItem[];
+  infusions: TaggedItem[];
+  plans: TaggedItem[];
+}
+
+export interface PlayerNote {
+  id: string;
+  title: string;
+  text: string;
+}
+
+export interface ClassFeatureEntry {
+  id: string;
+  name: string;
+  text: string;
+  progressionLevel?: number;
+  scalingRolls?: Array<{
+    description: string | null;
+    level: number | null;
+    formula: string;
+  }>;
+  preparedSpellProgression?: PreparedSpellProgressionTable[];
+  resolution?: "automatic" | "manual" | "mixed";
+  resolutionNotes?: string[];
+  hidden?: boolean;
+}
+
+export interface ResourceCounter {
+  key: string;
+  name: string;
+  current: number;
+  max: number;
+  reset: string;
+  restoreAmount?: "all" | "one" | number;
+  /** Set when spending a use of this resource is itself a Reaction (e.g. Warding Flare) -- lets
+   * the UI mark a tracked encounter's Reaction spent automatically. See the source
+   * `ResourceGrantEffect.actionType` doc for why this is only set for single-action resources. */
+  actionType?: "reaction";
+}
+
+export interface CharacterCreature {
+  id: string;
+  monsterId: string;
+  name: string;
+  label?: string | null;
+  friendly?: boolean;
+  hpMax: number;
+  hpCurrent: number;
+  hpDetails?: string | null;
+  ac: number;
+  acDetails?: string | null;
+  notes?: string | null;
+}
+
+export interface GrantedSpellCast {
+  key: string;
+  spellName: string;
+  sourceName: string;
+  mode: "at_will" | "limited" | "known" | "always_prepared";
+  note: string;
+  spellId?: string;
+  ability?: AbilKey | null;
+  resourceKey?: string;
+  reset?: string;
+}
+
+export interface ConditionInstance extends SharedConditionInstance {
+  casterName?: string | null;
+  sourceName?: string | null;
+}
+
+export interface CharacterCampaign {
+  id: string;
+  campaignId: string;
+  campaignName: string;
+  playerId: string | null;
+}
+
+export type CharacterClassEntry = SharedCharacterClassEntry;
+
+export interface CharacterData {
+  classes?: CharacterClassEntry[];
+  raceId?: string;
+  bgId?: string;
+  alignment?: string | null;
+  hair?: string | null;
+  skin?: string | null;
+  height?: string | null;
+  age?: string | null;
+  weight?: string | null;
+  gender?: string | null;
+
+  chosenRaceFeatId?: string | null;
+  /** Player's choice among a species trait's several possible spellcasting abilities (e.g. elf lineages: Int/Wis/Cha). Absent when the species has a single fixed ability or none. */
+  chosenRaceSpellAbility?: string | null;
+  chosenBgOriginFeatId?: string | null;
+  abilityMethod?: string;
+  hd?: number | null;
+  /** Only on an imported character: the app-worked stats an export carried. The server stores them
+   * in their own columns (lib/sheetLiveColumns.ts) and does not keep them here. */
+  derivedAc?: number;
+  derivedHpMax?: number;
+  derivedSpeed?: number;
+  /** Hit dice spent, by die size ("10": 2). Absent means none spent; the only stored hit-dice fact
+   * (shared/domain/hitDice). */
+  hitDiceSpent?: Record<string, number>;
+  xp?: number;
+  chosenOptionals?: string[];
+  selectedFeatureNames?: string[];
+  chosenClassFeatIds?: Record<string, string>;
+  chosenLevelUpFeats?: Array<{ level: number; featId?: string | null; type?: "asi" | "feat"; abilityBonuses?: Record<string, number> }>;
+  chosenSkills?: string[];
+  chosenClassLanguages?: string[];
+  chosenWeaponMasteries?: string[];
+  chosenFeatOptions?: Record<string, string[]>;
+  chosenFeatureChoices?: Record<string, string[]>;
+  chosenCantrips?: string[];
+  chosenSpells?: string[];
+  chosenInvocations?: string[];
+  classSpellSelections?: Record<string, {
+    chosenCantrips?: string[];
+    chosenSpells?: string[];
+    chosenInvocations?: string[];
+  }>;
+  resources?: ResourceCounter[];
+  proficiencies?: ProficiencyMap;
+  inventory?: InventoryItem[];
+  inventoryContainers?: InventoryContainer[];
+  creatures?: CharacterCreature[];
+  playerNotesList?: PlayerNote[];
+  counters?: CharacterCounter[];
+  usedSpellSlots?: Record<string, number>;
+  customResistances?: string[];
+  customImmunities?: string[];
+  customTools?: string[];
+  customLanguages?: string[];
+  deathSaves?: SharedDeathSaves;
+  extraFeatIds?: string[];
+  extraFeatAbilityChoices?: Record<string, string[]>;
+  /** id->level map for chosenOptionals (`optional:<name>`) and extraFeatIds (`extraFeat:<id>`)
+   * entries -- see spellAcquisition.ts's tagAcquisitionLevelMap. */
+  acquisitionLevels?: Record<string, number | null>;
+  exhaustion?: number;
+  concentrationSpell?: string | null;
+  /** The character's customizable sheet views (Combat/Gear/Reference/All by
+   * default, plus any the player creates). See panelRegistry.ts. */
+  sheetViews?: SheetViewDef[];
+  /** Character-owned visual treatment. Exported with the character. */
+  appearance?: CharacterAppearance;
+}
+
+export type CharacterBackgroundPattern = "none" | "runes" | "grid" | "stars" | "grain";
+export interface CharacterAppearance {
+  backgroundColor?: string;
+  panelBackgroundColor?: string;
+  textColor?: string;
+  backgroundPattern?: CharacterBackgroundPattern;
+  backgroundIntensity?: number;
+}
+

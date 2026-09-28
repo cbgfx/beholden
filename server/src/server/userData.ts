@@ -1,0 +1,370 @@
+// server/src/server/userData.ts
+// Canonical server-side domain types for persisted data.
+// These are richer than the client domain types — they include internal fields
+// like sort, createdAt, updatedAt, and server-only state.
+
+type Id = string;
+
+interface Timestamps {
+  createdAt: number;
+  updatedAt: number;
+}
+
+interface StoredOptionalAbilities {
+  str?: number;
+  dex?: number;
+  con?: number;
+  int?: number;
+  wis?: number;
+  cha?: number;
+}
+
+interface StoredSheetAbilities {
+  strScore: number | null;
+  dexScore: number | null;
+  conScore: number | null;
+  intScore: number | null;
+  wisScore: number | null;
+  chaScore: number | null;
+}
+
+interface StoredActorVitals {
+  hpMax: number;
+  hpCurrent: number;
+  ac: number;
+}
+
+export interface StoredCharacterSheetState
+  extends StoredActorVitals,
+    StoredSheetAbilities {
+  name: string;
+  playerName: string;
+  ruleset: "5e" | "5.5e";
+  className: string;
+  species: string;
+  level: number;
+  speed: number;
+  color: string | null;
+  deathSaves?: StoredDeathSaves;
+}
+
+export interface StoredCampaignCharacterSheetState
+  extends Omit<StoredActorVitals, "hpCurrent">,
+    StoredOptionalAbilities {
+  playerName: string;
+  characterName: string;
+  class: string;
+  species: string;
+  level: number;
+  speed?: number;
+  color?: string | null;
+  /** Effective AC computed client-side by the player (armor + features + shield, without DM acBonus override).
+   *  Never used by the player's own formula — only surfaced to the DM. */
+  syncedAc?: number;
+}
+
+export interface StoredCampaignCharacterLiveState {
+  hpCurrent: number;
+  overrides?: StoredOverrides;
+  conditions?: StoredConditionInstance[];
+  deathSaves?: StoredDeathSaves;
+}
+
+export interface StoredEncounterActorSnapshot {
+  baseRuleset?: "5e" | "5.5e";
+  name: string;
+  label: string;
+  friendly: boolean;
+  color: string;
+  hpMax: number | null;
+  hpDetails: string | null;
+  ac: number | null;
+  acDetails: string | null;
+  attackOverrides: unknown | null;
+  description?: string;
+}
+
+export interface StoredEncounterActorLiveState {
+  initiative: number | null;
+  hpCurrent: number | null;
+  overrides: StoredOverrides;
+  conditions: StoredConditionInstance[];
+  deathSaves?: StoredDeathSaves;
+  usedReaction?: boolean;
+  usedLegendaryActions?: number;
+  usedLegendaryResistances?: number;
+  usedSpellSlots?: Record<string, number>;
+  /** Latched after a hostile combatant first takes damage; cleared with the encounter. */
+  engagedWithPlayers?: boolean;
+}
+
+export interface StoredNoteState {
+  title: string;
+  text: string;
+  /** The title came from the note's first line, because the note has none of its own. */
+  titleIsDerived: boolean;
+}
+
+export interface StoredTreasureState {
+  source: "compendium" | "custom";
+  itemId: string | null;
+  name: string;
+  rarity: string | null;
+  type: string | null;
+  type_key: string | null;
+  attunement: boolean;
+  magic: boolean;
+  text: string;
+  qty: number;
+}
+
+export interface StoredPartyInventoryItemState {
+  name: string;
+  quantity: number;
+  weight: number | null;
+  notes: string;
+  source: string | null;
+  itemId: string | null;
+  rarity: string | null;
+  type: string | null;
+  description: string | null;
+  /** Full portable item state for transfers; null for plain/legacy rows. */
+  payload: Record<string, unknown> | null;
+}
+
+// ---------------------------------------------------------------------------
+// Overrides & sub-types
+// ---------------------------------------------------------------------------
+
+export interface StoredOverrides {
+  tempHp: number;
+  acBonus: number;
+  hpMaxBonus: number;
+  inspiration?: boolean;
+  abilityScores?: {
+    str?: number | undefined;
+    dex?: number | undefined;
+    con?: number | undefined;
+    int?: number | undefined;
+    wis?: number | undefined;
+    cha?: number | undefined;
+  } | undefined;
+  /** Which manual bonuses survive a long rest (see overridesAfterLongRest). */
+  permanent?: {
+    acBonus?: boolean | undefined;
+    hpMaxBonus?: boolean | undefined;
+    abilityScores?: boolean | undefined;
+  } | undefined;
+}
+
+export interface StoredConditionInstance {
+  key: string;
+  casterId?: string | null;
+  hexAbility?: "str" | "dex" | "con" | "int" | "wis" | "cha";
+  /** Identifies a specific concentration session for ownership matching — see combatTransitions.ts. */
+  concentrationId?: string | null;
+  [k: string]: unknown;
+}
+
+export interface StoredDeathSaves {
+  success: number;
+  fail: number;
+}
+
+// ---------------------------------------------------------------------------
+// Collections
+// ---------------------------------------------------------------------------
+
+export interface StoredCampaign extends Timestamps {
+  id: Id;
+  name: string;
+  ruleset: "5e" | "5.5e";
+  color: string | null;
+  imageUrl?: string | null;
+  sharedNotes: string;
+  campaignStory: string | null;
+  campaignNotes: string | null;
+  isActive: boolean;
+  binderId: string | null;
+  currentDate: {
+    text: string | null;
+    sort: number | null;
+  };
+}
+
+export interface StoredAdventure extends Timestamps {
+  id: Id;
+  campaignId: Id;
+  name: string;
+  status: string;
+  sort: number;
+}
+
+export interface StoredCombatState {
+  round: number;
+  activeCombatantId: string | null;
+}
+
+export interface StoredEncounter extends Timestamps {
+  /** When XP for this fight was handed out, or null if it has not been. */
+  xpAwardedAt?: number | null;
+  id: Id;
+  campaignId: Id;
+  adventureId: Id;
+  name: string;
+  status: string;
+  sort?: number;
+  /** Active combat state for this encounter. Absent when no combat has started. */
+  combat?: StoredCombatState;
+}
+
+export interface StoredNote extends Timestamps {
+  id: Id;
+  campaignId: Id;
+  adventureId?: Id | null;
+  title: string;
+  text: string;
+  titleIsDerived: boolean;
+  sort: number;
+}
+
+export interface StoredTreasure extends Timestamps {
+  id: Id;
+  campaignId: Id;
+  adventureId: string | null;
+  encounterId: string | null;
+  source: "compendium" | "custom";
+  itemId: string | null;
+  name: string;
+  rarity: string | null;
+  type: string | null;
+  type_key: string | null;
+  attunement: boolean;
+  magic: boolean;
+  text: string;
+  qty: number;
+  sort: number;
+}
+
+export interface StoredPartyInventoryItem extends Timestamps {
+  id: Id;
+  campaignId: Id;
+  name: string;
+  quantity: number;
+  weight: number | null;
+  notes: string;
+  source: string | null;
+  itemId: string | null;
+  rarity: string | null;
+  type: string | null;
+  description: string | null;
+  payload: Record<string, unknown> | null;
+  sort: number;
+}
+
+export interface StoredCampaignCharacter extends Timestamps, StoredActorVitals, StoredOptionalAbilities {
+  id: Id;
+  campaignId: Id;
+  userId?: string | null;
+  characterId?: string | null;
+  playerName: string;
+  characterName: string;
+  class: string;
+  species: string;
+  level: number;
+  /** Speed with conditions applied (derived when read; never stored). */
+  speed?: number;
+  /** Speed as stored on the row, before conditions. */
+  baseSpeed?: number;
+  syncedAc?: number;
+  overrides?: StoredOverrides;
+  conditions?: StoredConditionInstance[];
+  deathSaves?: StoredDeathSaves;
+  color?: string;
+  imageUrl?: string | null;
+  sharedNotes?: string;
+}
+
+export interface StoredCharacterSheet extends Timestamps, StoredActorVitals, StoredSheetAbilities {
+  id: Id;
+  userId: Id;
+  name: string;
+  playerName: string;
+  ruleset: "5e" | "5.5e";
+  className: string;
+  species: string;
+  level: number;
+  speed: number;
+  color: string | null;
+  imageUrl: string | null;
+  characterData: Record<string, unknown> | null;
+  deathSaves?: StoredDeathSaves;
+  /** Live state from the `live_json` column (lib/sheetLiveColumns.ts): bonuses with inspiration, conditions. */
+  live?: { overrides?: StoredOverrides; conditions?: StoredConditionInstance[] };
+  /** HP maximum and speed as the player's app works them out (columns derived_hp_max, derived_speed). */
+  derivedHpMax?: number | null;
+  derivedSpeed?: number | null;
+  sharedNotes: string;
+  isActive?: boolean;
+}
+
+export interface StoredINpc extends Timestamps {
+  id: Id;
+  campaignId: Id;
+    monsterId: string | null;
+    binderMortalId: string | null;
+  name: string;
+  label: string | null;
+  friendly: boolean;
+  hpMax: number;
+  hpCurrent: number;
+  hpDetails: string | null;
+  ac: number;
+  acDetails: string | null;
+  sort?: number;
+}
+
+export interface StoredCondition extends Timestamps {
+  id: Id;
+  campaignId: Id;
+  key: string;
+  name: string;
+  description?: string;
+  sort?: number;
+}
+
+export type StoredEncounterActorBaseType = "player" | "monster" | "inpc" | "world";
+
+export interface StoredEncounterActor extends Timestamps {
+  id: Id;
+  encounterId: Id;
+  baseType: StoredEncounterActorBaseType;
+  baseId: string;
+  baseRuleset?: "5e" | "5.5e";
+  name: string;
+  label: string;
+  initiative: number | null;
+  friendly: boolean;
+  color: string;
+  overrides: StoredOverrides;
+  hpCurrent: number | null;
+  hpMax: number | null;
+  hpDetails: string | null;
+  ac: number | null;
+  acDetails: string | null;
+  attackOverrides: unknown | null;
+  description?: string;
+  conditions: StoredConditionInstance[];
+  /** Encounter-scoped death save tracking for player combatants (success/fail). */
+  deathSaves?: StoredDeathSaves;
+  /** Whether this combatant has used their reaction this turn. Resets at the start of their next turn. */
+  usedReaction?: boolean;
+  /** How many legendary actions have been spent this round. Resets at the start of this combatant's turn. */
+  usedLegendaryActions?: number;
+  /** How many legendary resistance uses have been spent this fight. */
+  usedLegendaryResistances?: number;
+  /** Spell slots spent per level. Keys are spell level as string ("1"–"9"), values are count of used slots. */
+  usedSpellSlots?: Record<string, number>;
+  engagedWithPlayers?: boolean;
+  sort?: number;
+}

@@ -1,0 +1,417 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
+import { useCallback, useEffect, useState, type UIEvent } from "react";
+import { C, withAlpha } from "@/lib/theme";
+import { titleCase } from "@beholden/shared/domain/text/titleCase";
+import { api } from "@/services/api";
+import { Select } from "@/ui/Select";
+import { Button } from "@/ui/Button";
+import { IconButton } from "@/ui/IconButton";
+import { useVirtualList } from "@/lib/monsterPicker/useVirtualList";
+import { useItemSearch } from "@/views/CompendiumView/hooks/useItemSearch";
+import type { CompendiumItemDetail, InventoryPickerPayload } from "@/views/character/inventory/CharacterInventory";
+import { formatItemDamageType, formatItemProperties, hasStealthDisadvantage } from "@/views/character/inventory/CharacterInventory";
+import { INVENTORY_PICKER_ROW_HEIGHT, inputStyle } from "@/views/character/inventory/CharacterInventoryPanelHelpers";
+import { ItemListRow, Tag, togglePillStyle, useInfiniteScroll } from "@beholden/shared/ui";
+import { ItemFormModal } from "@beholden/shared/views/item-editor/ItemFormModal";
+import { InventoryStat } from "@/views/character/inventory/CharacterInventoryPanelRows";
+import { inventoryPickerColumnStyle, inventoryPickerDetailStyle, inventoryPickerListStyle, inventoryRarityColor } from "@/views/character/CharacterViewParts";
+
+export function InventoryItemPickerModal(props: {
+  isOpen: boolean;
+  accentColor: string;
+  onClose: () => void;
+  onAdd: (payload?: InventoryPickerPayload) => void;
+}) {
+  const translateUi = useUiTranslation("playerUi");
+  const t = useUiTranslation("playerUi");
+  const { isOpen, onClose } = props;
+  const {
+    q, setQ,
+    rarityFilter, setRarityFilter, rarityOptions,
+    typeFilter, setTypeFilter, typeOptions,
+    filterAttunement, setFilterAttunement,
+    filterMagic, setFilterMagic,
+    hasActiveFilters, clearFilters,
+    rows, busy, error, totalCount, loadingMore, hasMore, loadMore, refresh,
+  } = useItemSearch({ enabled: props.isOpen });
+  const vl = useVirtualList({ isEnabled: true, rowHeight: INVENTORY_PICKER_ROW_HEIGHT, overscan: 8 });
+  const { start, end, padTop, padBottom } = vl.getRange(rows.length);
+
+  // The virtual list owns the scroll container; paging watches that same element.
+  const { onScroll: onScrollForPaging } = useInfiniteScroll({ hasMore, loadingMore, loadMore, containerRef: vl.scrollRef });
+  const handleScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
+    vl.onScroll(event);
+    onScrollForPaging(event);
+  }, [onScrollForPaging, vl]);
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<CompendiumItemDetail | null>(null);
+  const [detailCache, setDetailCache] = useState<Record<string, CompendiumItemDetail>>({});
+  const [qty, setQty] = useState(1);
+  const [createMode, setCreateMode] = useState(false);
+
+  useEffect(() => {
+    if (props.isOpen) refresh();
+  }, [props.isOpen, refresh]);
+
+  useEffect(() => {
+    const el = vl.scrollRef.current;
+    if (el) el.scrollTop = 0;
+  }, [q, rarityFilter, typeFilter, filterAttunement, filterMagic, createMode, props.isOpen, vl.scrollRef]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!props.isOpen) {
+      setSelectedId(null);
+      setDetail(null);
+      setDetailCache({});
+      setQty(1);
+      setCreateMode(false);
+    }
+  }, [props.isOpen]);
+
+  useEffect(() => {
+    if (!props.isOpen || createMode || !selectedId) {
+      setDetail(null);
+      return;
+    }
+    const cached = detailCache[selectedId];
+    if (cached) {
+      setDetail(cached);
+      const parenQty = cached.name?.match(/\((\d+)\)$/);
+      if (parenQty) setQty(parseInt(parenQty[1], 10));
+      else setQty(1);
+      return;
+    }
+    let alive = true;
+    api<CompendiumItemDetail>(`/api/compendium/items/${selectedId}`)
+      .then((data) => {
+        if (!alive) return;
+        setDetail(data);
+        setDetailCache((prev) => ({ ...prev, [selectedId]: data }));
+        const parenQty = data.name?.match(/\((\d+)\)$/);
+        if (parenQty) setQty(parseInt(parenQty[1], 10));
+        else setQty(1);
+      })
+      .catch(() => { if (alive) setDetail(null); });
+    return () => { alive = false; };
+  }, [props.isOpen, createMode, selectedId, detailCache]);
+
+  if (!props.isOpen) return null;
+
+  if (createMode) {
+    return (
+      <ItemFormModal
+        item={null}
+        createOnly
+        request={api}
+        onClose={() => setCreateMode(false)}
+        onSaved={() => setCreateMode(false)}
+        // A player's item goes on their sheet, not into the compendium everyone browses (which only a
+        // DM may write). The server builds it exactly as a compendium item would be built, and keeps
+        // nothing; the sheet gets every field - damage, properties, modifiers, spells.
+        onSubmit={async (payload) => {
+          const built = await api<Omit<CompendiumItemDetail, "id">>("/api/compendium/items/preview", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const description = Array.isArray(built.text) ? built.text.join("\n\n") : built.text ?? "";
+          props.onAdd({
+            source: "custom",
+            name: built.name.trim(),
+            quantity: 1,
+            rarity: built.rarity,
+            type: built.type,
+            attunement: built.attunement,
+            magic: built.magic,
+            equippable: built.equippable,
+            weight: built.weight,
+            value: built.value,
+            proficiency: built.proficiency,
+            ac: built.ac,
+            stealthDisadvantage: built.stealthDisadvantage,
+            dmg1: built.dmg1,
+            dmg2: built.dmg2,
+            dmgType: built.dmgType,
+            properties: built.properties,
+            mastery: built.mastery,
+            modifiers: built.modifiers,
+            uses: built.uses,
+            spells: built.spells,
+            spellcasting: built.spellcasting,
+            spellTemplate: built.spellTemplate,
+            ammo: built.ammo,
+            weaponAmmo: built.weaponAmmo,
+            usage: built.usage,
+            bundle: built.bundle,
+            container: built.container,
+            ignoreWeight: built.ignoreWeight,
+            effects: built.effects,
+            description,
+          });
+          setCreateMode(false);
+        }}
+      />
+    );
+  }
+
+  const detailText = detail
+    ? (Array.isArray(detail.text) ? detail.text.join("\n\n") : detail.text ?? "")
+    : "";
+
+  return (
+    <div
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) props.onClose();
+      }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
+        background: "rgba(4, 8, 18, 0.72)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+      }}
+    >
+      <div
+        style={{
+          width: "min(980px, 100%)",
+          height: "min(680px, calc(100vh - 40px))",
+          background: C.bg,
+          border: `1px solid ${C.panelBorder}`,
+          borderRadius: 16,
+          boxShadow: "0 30px 80px rgba(0,0,0,0.45)",
+          display: "grid",
+          gridTemplateColumns: "minmax(320px, 380px) minmax(0, 1fr)",
+          gap: 12,
+          padding: 12,
+          overflow: "hidden",
+        }}
+      >
+        <div style={inventoryPickerColumnStyle}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: C.colorGold }}>
+              {t("Browse Items")}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setCreateMode((v) => !v);
+                setSelectedId(null);
+              }}
+              style={{
+                border: `1px solid ${createMode ? props.accentColor : C.panelBorder}`,
+                background: createMode ? `${props.accentColor}22` : "transparent",
+                color: createMode ? props.accentColor : C.muted,
+                borderRadius: 8,
+                padding: "6px 10px",
+                fontSize: "var(--fs-small)",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {createMode ? t("Browse") : t("Create New")}
+            </button>
+          </div>
+
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={t("Search items...")}
+            style={{ ...inputStyle, flex: "0 0 auto", width: "100%" }}
+          />
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <Select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} style={{ width: "100%" }}>
+              {rarityOptions.map((r) => (
+                <option key={r} value={r}>
+                  {r === "all" ? t("All Rarities") : titleCase(r)}
+                </option>
+              ))}
+            </Select>
+            <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ width: "100%" }}>
+              {typeOptions.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt === "all" ? t("All Types") : opt}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => setFilterAttunement(!filterAttunement)}
+              style={togglePillStyle(filterAttunement, props.accentColor, C.panelBorder, C.muted)}
+            >
+              {t("Attunement")}
+            </button>
+            <button type="button" onClick={() => setFilterMagic(!filterMagic)} style={togglePillStyle(filterMagic, props.accentColor, C.panelBorder, C.muted)}>
+              {t("Magic")}
+            </button>
+            {hasActiveFilters ? (
+              <button type="button" onClick={clearFilters} style={togglePillStyle(false, props.accentColor, C.panelBorder, C.muted)}>
+                {t("Clear")}
+              </button>
+            ) : null}
+          </div>
+
+          <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>
+            {busy
+              ? t("Loading...")
+              : error
+                ? error
+                : totalCount === rows.length
+                  ? t(rows.length === 1 ? "{{count}} item" : "{{count}} items", { count: rows.length })
+                  : t("{{count}} / {{total}} items", { count: rows.length, total: totalCount })}
+          </div>
+
+          <div ref={vl.scrollRef} onScroll={handleScroll} style={inventoryPickerListStyle}>
+            <div style={{ height: padTop }} />
+            {!busy && error ? <div style={{ padding: 12, color: C.red }}>{error}</div> : null}
+            {!busy && !error && rows.length === 0 ? <div style={{ padding: 12, color: C.muted }}>{t("No items found.")}</div> : null}
+            {rows.slice(start, end).map((item) => (
+              <ItemListRow
+                key={item.id}
+                name={item.name}
+                subtitle={
+                  [item.rarity ? titleCase(item.rarity) : null, item.type, item.attunement ? t("Attunement") : null]
+                    .filter(Boolean)
+                    .join(" • ") || null
+                }
+                rarityColor={item.rarity ? inventoryRarityColor(item.rarity) : null}
+                magic={!!item.magic}
+                magicColor={C.colorMagic}
+                active={item.id === selectedId}
+                onClick={() => {
+                  setSelectedId(item.id);
+                  setCreateMode(false);
+                }}
+                height={INVENTORY_PICKER_ROW_HEIGHT}
+                padding="0 16px"
+                textColor={C.text}
+                mutedColor={C.muted}
+                borderColor={C.panelBorder}
+                activeBackground={withAlpha(C.accentHl, 0.15)}
+              />
+            ))}
+            <div style={{ height: padBottom }} />
+          </div>
+        </div>
+
+        <div style={inventoryPickerColumnStyle}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ fontSize: "var(--fs-medium)", fontWeight: 800, color: C.text }}>{detail?.name ?? "Select an item"}</div>
+            <div style={{ flex: 1 }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <IconButton variant="ghost" size="sm" onClick={() => setQty((v) => Math.max(1, v - 1))}>
+                -
+              </IconButton>
+              <input
+                type="number"
+                min={1}
+                value={qty}
+                onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
+                style={{ ...inputStyle, width: 64, textAlign: "center", flex: "0 0 auto" }}
+              />
+              <IconButton variant="ghost" size="sm" onClick={() => setQty((v) => v + 1)}>
+                +
+              </IconButton>
+            </div>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => {
+                if (!detail) return;
+                props.onAdd({
+                  source: "compendium",
+                  name: detail.name.replace(/\s*\(\d+\)$/, "").trim(),
+                  quantity: qty,
+                  itemId: detail.id,
+                  rarity: detail.rarity,
+                  type: detail.type,
+                  attunement: detail.attunement,
+                  magic: detail.magic,
+                  equippable: detail.equippable,
+                  weight: detail.weight,
+                  value: detail.value,
+                  proficiency: detail.proficiency,
+                  ac: detail.ac,
+                  stealthDisadvantage: detail.stealthDisadvantage,
+                  dmg1: detail.dmg1,
+                  dmg2: detail.dmg2,
+                  dmgType: detail.dmgType,
+                  properties: detail.properties,
+                  mastery: detail.mastery,
+                  modifiers: detail.modifiers,
+                  uses: detail.uses,
+                  spells: detail.spells,
+                  spellcasting: detail.spellcasting,
+                  spellTemplate: detail.spellTemplate,
+                  ammo: detail.ammo,
+                  weaponAmmo: detail.weaponAmmo,
+                  usage: detail.usage,
+                  bundle: detail.bundle,
+                  container: detail.container,
+                  ignoreWeight: detail.ignoreWeight,
+                  effects: detail.effects,
+                  description: detailText,
+                });
+              }}
+              disabled={!detail}
+              style={{ padding: "6px 14px", fontSize: "var(--fs-subtitle)", borderRadius: 7 }}
+            >
+              {translateUi("Add")}
+            </Button>
+            <Button type="button" variant="ghost" onClick={props.onClose} style={{ padding: "6px 14px", fontSize: "var(--fs-subtitle)", borderRadius: 7 }}>
+              {translateUi("Close")}
+            </Button>
+          </div>
+
+          {detail ? (
+            <>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {detail.magic ? <Tag label={translateUi("Magic")} color={C.colorMagic} /> : null}
+                {detail.attunement ? <Tag label={translateUi("Attunement")} color={props.accentColor} /> : null}
+                {detail.rarity ? <Tag label={titleCase(detail.rarity)} color={inventoryRarityColor(detail.rarity)} /> : null}
+                {detail.type ? <Tag label={detail.type} color={C.muted} /> : null}
+                {hasStealthDisadvantage(detail) ? <Tag label="D" color={C.colorPinkRed} /> : null}
+              </div>
+              {detail.source || detail.ruleset ? (
+                <div style={{ fontSize: "var(--fs-small)", color: C.muted }}>{[detail.source, detail.ruleset].filter(Boolean).join(" · ")}</div>
+              ) : null}
+              {detail.dmg1 || detail.dmg2 || detail.dmgType || detail.weight != null || detail.value != null || detail.properties.length > 0 ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
+                  {detail.dmg1 ? <InventoryStat label={translateUi("One-Handed Damage")} value={detail.dmg1} /> : null}
+                  {detail.dmg2 ? <InventoryStat label={translateUi("Two-Handed Damage")} value={detail.dmg2} /> : null}
+                  {detail.dmgType ? <InventoryStat label={translateUi("Damage Type")} value={formatItemDamageType(detail.dmgType) ?? detail.dmgType} /> : null}
+                  {detail.weight != null ? <InventoryStat label={translateUi("Weight")} value={`${detail.weight} lb`} /> : null}
+                  {detail.value != null ? <InventoryStat label={translateUi("Value")} value={`${detail.value} gp`} /> : null}
+                  {hasStealthDisadvantage(detail) ? <InventoryStat label={translateUi("Stealth")} value="D" /> : null}
+                  {detail.properties.length > 0 ? <InventoryStat label={translateUi("Properties")} value={formatItemProperties(detail.properties)} /> : null}
+                </div>
+              ) : null}
+              <div style={inventoryPickerDetailStyle}>{detailText || <span style={{ color: C.muted }}>{translateUi("No description.")}</span>}</div>
+            </>
+          ) : (
+            <div style={{ color: C.muted, lineHeight: 1.5 }}>
+              {translateUi("Pick a compendium item on the left, or switch to")} <strong>{translateUi("Create New")}</strong>{" "}
+              {translateUi("to add a custom entry.")}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

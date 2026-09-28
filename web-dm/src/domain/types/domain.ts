@@ -1,0 +1,209 @@
+import type {
+  SharedCombatOverrides,
+  SharedConditionInstance,
+  SharedDeathSaves,
+} from "@beholden/shared/domain";
+
+type Id = string;
+
+export interface Meta {
+  ok: true;
+  host: string;
+  port: number;
+  ips: string[];
+  hasCompendium: boolean;
+  support?: boolean;
+}
+
+export interface Campaign {
+  id: Id;
+  name: string;
+  ruleset: "5e" | "5.5e";
+  color?: string | null;
+  binderId?: Id | null;
+  currentDate?: {
+    text: string | null;
+    sort: number | null;
+  };
+  updatedAt?: number;
+  playerCount?: number;
+  imageUrl?: string | null;
+  sharedNotes?: string;
+  campaignStory?: string | null;
+  campaignNotes?: string | null;
+  isActive: boolean;
+}
+
+export interface Adventure {
+  id: Id;
+  campaignId: Id;
+  name: string;
+  order: number;
+}
+
+type EncounterStatus = "open" | "closed";
+
+export interface Encounter {
+  id: Id;
+  campaignId: Id;
+  adventureId?: Id | null;
+  name: string;
+  status: EncounterStatus;
+  order: number;
+}
+
+export interface CampaignCharacter {
+  id: Id;
+  campaignId: Id;
+  userId?: string | null;
+  characterId?: string | null;
+  playerName: string;
+  characterName: string;
+  class: string;
+  species: string;
+  level: number;
+  hpMax: number;
+  hpCurrent: number;
+  ac: number;
+  syncedAc?: number;
+  /** With conditions applied (what to show). */
+  speed?: number;
+  /** As stored, before conditions (what to edit). */
+  baseSpeed?: number;
+  str?: number;
+  dex?: number;
+  con?: number;
+  int?: number;
+  wis?: number;
+  cha?: number;
+  // Runtime fields synced from server
+  overrides?: CombatantOverrides;
+  conditions?: ConditionInstance[];
+  deathSaves?: DeathSaves;
+  concentrationSpell?: string | null;
+  color?: string;
+  imageUrl?: string | null;
+  sharedNotes?: string;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+// Combatants are encounter-scoped instances used by the combat tracker.
+// The server returns a merged view (player combatants hydrate name/hp/ac from the Player record).
+type CombatantBaseType = "player" | "monster" | "inpc" | "world";
+
+type CombatantOverrides = SharedCombatOverrides;
+type ConditionInstance = SharedConditionInstance;
+type DeathSaves = SharedDeathSaves;
+
+export interface EncounterActor {
+  id: Id;
+  encounterId: Id;
+
+  // Source identity
+  baseType: CombatantBaseType;
+  baseId: Id;
+  baseRuleset?: "5e" | "5.5e";
+
+  // Display
+  name: string;
+  playerName?: string;
+  label: string;
+  color: string;
+
+  // Combat
+  initiative: number | null;
+  friendly: boolean;
+  overrides: CombatantOverrides;
+  hpCurrent: number | null;
+  hpMax: number | null;
+  hpDetails: string | null;
+  ac: number | null;
+  acDetails: string | null;
+  attackOverrides: unknown | null;
+  description?: string;
+  conditions: ConditionInstance[];
+  deathSaves?: DeathSaves | null;
+  usedReaction?: boolean;
+  /** How many legendary actions have been spent this round. */
+  usedLegendaryActions?: number;
+  /** How many legendary resistance uses have been spent this fight. */
+  usedLegendaryResistances?: number;
+  /** Spell slots spent per level. Keys are spell level ("1"–"9"), values are count of used slots. */
+  usedSpellSlots?: Record<string, number>;
+
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+export interface INpc {
+  id: Id;
+  campaignId: Id;
+  monsterId: Id | null;
+  binderMortalId?: Id | null;
+  name: string;
+  label?: string | null;
+  friendly: boolean;
+  hpMax: number;
+  hpCurrent: number;
+  hpDetails?: string | null;
+  ac: number;
+  acDetails?: string | null;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+export interface Note {
+  id: Id;
+  scope: "campaign" | "adventure";
+  scopeId: Id;
+  /** What the list shows: the note's own title, or its first line when it has none. */
+  title: string;
+  /** True when `title` came from the text, so the editor knows not to write it back as a title. */
+  titleIsDerived: boolean;
+  text: string;
+  order: number;
+}
+
+export interface TreasureEntry {
+  id: Id;
+  scope: "campaign" | "adventure" | "encounter";
+  scopeId: Id;
+  name: string;
+  qty: number;
+  notes?: string;
+  order: number;
+  rarity?: string;
+  type?: string;
+  attunement?: boolean;
+  magic?: boolean;
+  text?: string;
+  /** Set when the entry was sourced from the compendium — used to fetch full weapon stats on demand. */
+  itemId?: string | null;
+}
+
+export type AttackOverride = {
+  toHit?: number;
+  damage?: string;
+  damageType?: string;
+};
+
+export interface AddMonsterOptions {
+  ruleset?: "5e" | "5.5e";
+  /**
+   * Optional base label used when creating combatants.
+   * The server/UI may suffix this to keep labels unique (e.g. "[2024] 2").
+   */
+  labelBase?: string;
+
+  /** Optional stat overrides to apply to the created combatant */
+  friendly?: boolean;
+  hpMax?: number;
+  hpCurrent?: number;
+  hpDetails?: string | null;
+  ac?: number;
+  acDetails?: string | null;
+
+  /** Optional attack overrides to apply */
+  attackOverrides?: Record<string, AttackOverride>;
+}

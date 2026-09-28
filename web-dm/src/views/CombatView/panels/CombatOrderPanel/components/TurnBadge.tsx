@@ -1,0 +1,35 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
+import { theme } from "@/theme/theme";
+import { IconTargeted } from "@/icons";
+
+export function TurnBadge(props: { active: boolean; targeted: boolean; activeColor?: string }) {
+  const translateUi = useUiTranslation("dmUi");
+  const size = 22;
+  const activeColor = props.activeColor ?? theme.colors.accentHighlight;
+  const targetColor = theme.colors.accentPrimary;
+  const border = props.targeted ? targetColor : props.active ? activeColor : theme.colors.panelBorder;
+  const bg = props.active ? activeColor : "transparent";
+  const shadow = props.active ? `0 0 0 2px ${activeColor}40` : "none";
+  const iconColor = props.targeted ? targetColor : props.active ? theme.colors.panelBg : theme.colors.accentHighlight;
+
+  return (
+    <div
+      title={props.active ? translateUi("Active") : props.targeted ? translateUi("Target") : ""}
+      style={{
+        width: size,
+        height: size,
+        clipPath: "polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%)",
+        border: `2px solid ${border}`,
+        background: bg,
+        boxShadow: shadow,
+        flex: "0 0 auto",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: iconColor
+      }}
+    >
+      {props.targeted ? <IconTargeted size={22} /> : null}
+    </div>
+  );
+}

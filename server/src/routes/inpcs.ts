@@ -1,0 +1,312 @@
+import { z } from "zod";
+import type { Express } from "express";
+import type { ServerContext } from "../server/context.js";
+import { requireParam } from "../lib/routeHelpers.js";
+import { parseBody } from "../lib/validate.js";
+import { rowToINpc, INPC_COLS } from "../lib/db.js";
+import { dmOrAdmin } from "../middleware/campaignAuth.js";
+import { removeInpcCombatants } from "../services/combat.removal.js";
+import { extractLeadingNumber, extractDetails } from "../lib/text.js";
+
+const InpcCreateBody = z.object({
+  monsterId: z.string().trim().min(1).max(128),
+  qty: z.number().int().min(1).max(20).default(1),
+  name: z.string().trim().min(1).max(200).nullable().optional(),
+  label: z.string().trim().max(200).nullable().optional(),
+  friendly: z.boolean().optional(),
+  hpMax: z.number().int().min(1).max(10_000_000).nullable().optional(),
+  hpCurrent: z.number().int().min(0).max(10_000_000).nullable().optional(),
+  hpDetails: z.string().trim().max(2_000).nullable().optional(),
+  ac: z.number().int().min(0).max(1_000).nullable().optional(),
+  acDetails: z.string().trim().max(2_000).nullable().optional(),
+});
+
+const BinderMortalInpcBody = z.object({
+  mortalId: z.string().min(1),
+});
+
+const InpcUpdateBody = z.object({
+  expectedUpdatedAt: z.number().int().nonnegative(),
+  name: z.string().trim().min(1).max(200).optional(),
+  label: z.string().trim().max(200).nullable().optional(),
+  friendly: z.boolean().optional(),
+  hpMax: z.number().int().min(1).max(10_000_000).optional(),
+  hpCurrent: z.number().int().min(0).max(10_000_000).optional(),
+  hpDetails: z.string().trim().max(2_000).nullable().optional(),
+  ac: z.number().int().min(0).max(1_000).optional(),
+  acDetails: z.string().trim().max(2_000).nullable().optional(),
+});
+
+export function registerInpcRoutes(app: Express, ctx: ServerContext) {
+  const { db } = ctx;
+  const { uid, now } = ctx.helpers;
+  const emitInpcChange = (args: {
+    campaignId: string;
+    action: "upsert" | "delete" | "refresh";
+    inpcId?: string;
+  }) => {
+    ctx.broadcast("inpcs:delta", {
+      campaignId: args.campaignId,
+      action: args.action,
+      ...(args.inpcId ? { inpcId: args.inpcId } : {}),
+    });
+  };
+
+  // MARK: - GET /api/campaigns/:campaignId/inpcs
+  app.get("/api/campaigns/:campaignId/inpcs", dmOrAdmin(db), (req, res) => {
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
+    const rows = db
+      .prepare(`SELECT ${INPC_COLS} FROM inpcs WHERE campaign_id = ?`)
+      .all(campaignId) as Record<string, unknown>[];
+    res.json(rows.map(rowToINpc));
+  });
+
+  // MARK: - GET /api/campaigns/:campaignId/inpcs/:inpcId
+  app.get("/api/campaigns/:campaignId/inpcs/:inpcId", dmOrAdmin(db), (req, res) => {
+    const campaignId = requireParam(req, res, "campaignId");
+    const inpcId = requireParam(req, res, "inpcId");
+    if (!campaignId || !inpcId) return;
+    const row = db
+      .prepare(`SELECT ${INPC_COLS} FROM inpcs WHERE campaign_id = ? AND id = ?`)
+      .get(campaignId, inpcId) as Record<string, unknown> | undefined;
+    if (!row) return res.status(404).json({ ok: false, message: "Not found" });
+    res.json(rowToINpc(row));
+  });
+
+  // MARK: - POST /api/campaigns/:campaignId/inpcs
+  app.post("/api/campaigns/:campaignId/inpcs", dmOrAdmin(db), (req, res) => {
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
+    const b = parseBody(InpcCreateBody, req);
+    const { monsterId, qty = 1 } = b;
+
+    const monRow = db
+      .prepare("SELECT data_json FROM compendium_monsters WHERE id = ?")
+      .get(monsterId) as { data_json: string } | undefined;
+    if (!monRow)
+      return res
+        .status(404)
+        .json({ ok: false, message: "Monster not found in compendium" });
+
+    const m = JSON.parse(monRow.data_json);
+    const mAc: unknown = m?.ac ?? null;
+    const mHp: unknown = m?.hp ?? null;
+
+    const defaultAc = extractLeadingNumber(mAc);
+    const defaultHp = extractLeadingNumber(mHp);
+    const defaultAcDetail = extractDetails(mAc);
+    const defaultHpDetail = extractDetails(mHp);
+
+    const t = now();
+    const created: ReturnType<typeof rowToINpc>[] = [];
+
+    for (let i = 0; i < qty; i++) {
+      const id = uid();
+      const name = b.name?.trim() || m.name;
+      const hpMax = b.hpMax != null && Number.isFinite(b.hpMax) ? b.hpMax : (defaultHp ?? 1);
+      const ac = b.ac != null && Number.isFinite(b.ac) ? b.ac : (defaultAc ?? 10);
+      const hpDetails = b.hpDetails ?? (defaultHpDetail != null ? String(defaultHpDetail) : null);
+      const acDetails = b.acDetails ?? (defaultAcDetail != null ? String(defaultAcDetail) : null);
+      const label = b.label ?? null;
+      const friendly = b.friendly ?? true;
+      const hpCurrent = b.hpCurrent ?? hpMax;
+      if (hpCurrent > hpMax) return res.status(400).json({ ok: false, code: "invalid-inpc-hp", message: "Current HP cannot exceed maximum HP." });
+
+      db.prepare(`
+        INSERT INTO inpcs
+          (id, campaign_id, monster_id, name, label, friendly, hp_max, hp_current, hp_details, ac, ac_details, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        id, campaignId, monsterId, name, label,
+        friendly ? 1 : 0,
+        hpMax, hpCurrent, hpDetails, ac, acDetails, t, t
+      );
+
+      created.push({
+        id, campaignId, monsterId, binderMortalId: null, name, label, friendly,
+        hpMax, hpCurrent, hpDetails,
+        ac, acDetails,
+        createdAt: t, updatedAt: t,
+      });
+    }
+
+    const singleCreated = created.length === 1 ? created[0] : null;
+    if (singleCreated) {
+      emitInpcChange({ campaignId, action: "upsert", inpcId: singleCreated.id });
+    } else {
+      emitInpcChange({ campaignId, action: "refresh" });
+    }
+    res.json(created.length === 1 ? created[0] : { ok: true, created });
+  });
+
+  // MARK: - POST /api/campaigns/:campaignId/inpcs/from-binder
+  app.post("/api/campaigns/:campaignId/inpcs/from-binder", dmOrAdmin(db), (req, res) => {
+    const campaignId = requireParam(req, res, "campaignId");
+    if (!campaignId) return;
+    const { mortalId } = parseBody(BinderMortalInpcBody, req);
+    const source = db.prepare(`
+      SELECT m.id, br.name, npc.monster_id, npc.hp_max, npc.hp_current,
+             npc.hp_details, npc.ac, npc.ac_details
+      FROM campaigns c
+      JOIN binder_records br ON br.binder_id = c.binder_id AND br.id = ?
+      JOIN mortals m ON m.id = br.id
+      JOIN binder_npcs npc ON npc.mortal_id = m.id
+      WHERE c.id = ? AND c.binder_id IS NOT NULL
+    `).get(mortalId, campaignId) as {
+      id: string; name: string; monster_id: string | null;
+      hp_max: number | null; hp_current: number | null; hp_details: string | null;
+      ac: number | null; ac_details: string | null;
+    } | undefined;
+    if (!source) return res.status(400).json({ ok: false, message: "That NPC does not belong to this campaign's Binder." });
+    if (!source.monster_id) return res.status(400).json({ ok: false, message: "Important NPCs require a linked statblock." });
+    const duplicate = db.prepare("SELECT id FROM inpcs WHERE campaign_id = ? AND binder_mortal_id = ?").get(campaignId, mortalId);
+    if (duplicate) return res.status(409).json({ ok: false, message: "That Binder NPC is already an Important NPC in this campaign." });
+
+    let ac = 10;
+    let hpMax = 10;
+    let acDetails: string | null = null;
+    let hpDetails: string | null = null;
+    if (source.monster_id) {
+      const row = db.prepare("SELECT data_json FROM compendium_monsters WHERE id = ?").get(source.monster_id) as { data_json: string } | undefined;
+      if (row) {
+        const monster = JSON.parse(row.data_json);
+        ac = extractLeadingNumber(monster?.ac) ?? ac;
+        hpMax = extractLeadingNumber(monster?.hp) ?? hpMax;
+        acDetails = extractDetails(monster?.ac);
+        hpDetails = extractDetails(monster?.hp);
+      }
+    }
+    ac = source.ac ?? ac;
+    hpMax = source.hp_max ?? hpMax;
+    acDetails = source.ac_details ?? acDetails;
+    hpDetails = source.hp_details ?? hpDetails;
+    const hpCurrent = source.hp_current ?? hpMax;
+    const id = uid();
+    const t = now();
+    db.transaction(() => {
+      db.prepare(`
+        UPDATE binder_npcs SET
+          hp_max = ?, hp_current = ?, hp_details = ?, ac = ?, ac_details = ?, updated_at = ?
+        WHERE mortal_id = ?
+      `).run(hpMax, hpCurrent, hpDetails, ac, acDetails, t, mortalId);
+      db.prepare(`
+        INSERT INTO inpcs
+          (id, campaign_id, monster_id, binder_mortal_id, name, label, friendly, hp_max, hp_current, hp_details, ac, ac_details, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, NULL, 1, ?, ?, ?, ?, ?, ?, ?)
+      `).run(id, campaignId, source.monster_id, mortalId, source.name, hpMax, hpCurrent, hpDetails, ac, acDetails, t, t);
+    })();
+    emitInpcChange({ campaignId, action: "upsert", inpcId: id });
+    const created = db.prepare(`SELECT ${INPC_COLS} FROM inpcs WHERE id = ?`).get(id) as Record<string, unknown>;
+    res.status(201).json(rowToINpc(created));
+  });
+
+  // MARK: - PUT /api/inpcs/:inpcId
+  app.put("/api/inpcs/:inpcId", dmOrAdmin(db), (req, res) => {
+    const inpcId = requireParam(req, res, "inpcId");
+    if (!inpcId) return;
+    const existingRow = db
+      .prepare(`SELECT ${INPC_COLS} FROM inpcs WHERE id = ?`)
+      .get(inpcId) as Record<string, unknown> | undefined;
+    if (!existingRow)
+      return res.status(404).json({ ok: false, message: "Not found" });
+    const existing = rowToINpc(existingRow);
+    const b = parseBody(InpcUpdateBody, req);
+    if (b.expectedUpdatedAt !== existing.updatedAt) {
+      return res.status(409).json({ ok: false, code: "stale-inpc", message: "This Important NPC changed elsewhere. Reload it and try again." });
+    }
+    const t = now();
+
+    const name = b.name ?? existing.name;
+    const label = b.label !== undefined ? b.label : existing.label;
+    const friendly = b.friendly ?? existing.friendly;
+    const hpMax = b.hpMax ?? existing.hpMax;
+    const hpCurrent = b.hpCurrent ?? existing.hpCurrent;
+    const hpDetails = b.hpDetails !== undefined ? b.hpDetails : existing.hpDetails;
+    const ac = b.ac ?? existing.ac;
+    const acDetails = b.acDetails !== undefined ? b.acDetails : existing.acDetails;
+    if (hpCurrent > hpMax) return res.status(400).json({ ok: false, code: "invalid-inpc-hp", message: "Current HP cannot exceed maximum HP." });
+
+    if (existing.binderMortalId) {
+      db.transaction(() => {
+        db.prepare("UPDATE binder_records SET name = ?, name_key = ?, updated_at = ? WHERE id = ?")
+          .run(name, ctx.helpers.normalizeKey(name), t, existing.binderMortalId);
+        db.prepare(`
+          UPDATE binder_npcs SET
+            hp_max=?, hp_current=?, hp_details=?, ac=?, ac_details=?, updated_at=?
+          WHERE mortal_id=?
+        `).run(hpMax, hpCurrent, hpDetails, ac, acDetails, t, existing.binderMortalId);
+        db.prepare(`
+          UPDATE inpcs SET
+            name=?, monster_id=(SELECT monster_id FROM binder_npcs WHERE mortal_id=?),
+            hp_max=?, hp_current=?, hp_details=?, ac=?, ac_details=?, updated_at=?
+          WHERE binder_mortal_id=?
+        `).run(name, existing.binderMortalId, hpMax, hpCurrent, hpDetails, ac, acDetails, t, existing.binderMortalId);
+        db.prepare(`
+          UPDATE combatants SET
+            snapshot_json=json_set(snapshot_json, '$.name', ?, '$.hpMax', ?, '$.hpDetails', ?, '$.ac', ?, '$.acDetails', ?),
+            live_json=json_set(live_json, '$.hpCurrent', ?), updated_at=?
+          WHERE base_type='inpc' AND base_id IN (
+            SELECT id FROM inpcs WHERE binder_mortal_id=?
+          )
+        `).run(name, hpMax, hpDetails, ac, acDetails, hpCurrent, t, existing.binderMortalId);
+        db.prepare("UPDATE inpcs SET label=?, friendly=?, updated_at=? WHERE id=?")
+          .run(label, friendly ? 1 : 0, t, inpcId);
+      })();
+    } else {
+      db.transaction(() => {
+        db.prepare(`
+          UPDATE inpcs SET
+            name=?, label=?, friendly=?, hp_max=?, hp_current=?, hp_details=?, ac=?, ac_details=?, updated_at=?
+          WHERE id=?
+        `).run(name, label, friendly ? 1 : 0, hpMax, hpCurrent, hpDetails, ac, acDetails, t, inpcId);
+        db.prepare(`
+          UPDATE combatants SET
+            snapshot_json=json_set(snapshot_json, '$.name', ?, '$.label', ?, '$.friendly', ?, '$.hpMax', ?, '$.hpDetails', ?, '$.ac', ?, '$.acDetails', ?),
+            live_json=json_set(live_json, '$.hpCurrent', ?), updated_at=?
+          WHERE base_type='inpc' AND base_id=?
+        `).run(name, label ?? name, friendly ? 1 : 0, hpMax, hpDetails, ac, acDetails, hpCurrent, t, inpcId);
+      })();
+    }
+
+    if (existing.binderMortalId) {
+      const campaignIds = db.prepare("SELECT DISTINCT campaign_id FROM inpcs WHERE binder_mortal_id = ?")
+        .all(existing.binderMortalId) as Array<{ campaign_id: string }>;
+      for (const row of campaignIds) emitInpcChange({ campaignId: row.campaign_id, action: "refresh" });
+      const encounterIds = db.prepare(`
+        SELECT DISTINCT c.encounter_id
+        FROM combatants c JOIN inpcs i ON c.base_type='inpc' AND c.base_id=i.id
+        WHERE i.binder_mortal_id=?
+      `).all(existing.binderMortalId) as Array<{ encounter_id: string }>;
+      for (const row of encounterIds) {
+        ctx.broadcast("encounter:combatantsDelta", { encounterId: row.encounter_id, action: "refresh" });
+      }
+    } else {
+      emitInpcChange({ campaignId: existing.campaignId, action: "upsert", inpcId });
+      const encounterIds = db.prepare("SELECT DISTINCT encounter_id FROM combatants WHERE base_type='inpc' AND base_id=?")
+        .all(inpcId) as Array<{ encounter_id: string }>;
+      for (const row of encounterIds) ctx.broadcast("encounter:combatantsDelta", { encounterId: row.encounter_id, action: "refresh" });
+    }
+    const updated = db.prepare(`SELECT ${INPC_COLS} FROM inpcs WHERE id = ?`).get(inpcId) as Record<string, unknown>;
+    res.json(rowToINpc(updated));
+  });
+
+  // MARK: - DELETE /api/inpcs/:inpcId
+  app.delete("/api/inpcs/:inpcId", dmOrAdmin(db), (req, res) => {
+    const inpcId = requireParam(req, res, "inpcId");
+    if (!inpcId) return;
+    const existingRow = db
+      .prepare(`SELECT ${INPC_COLS} FROM inpcs WHERE id = ?`)
+      .get(inpcId) as Record<string, unknown> | undefined;
+    if (!existingRow)
+      return res.status(404).json({ ok: false, message: "Not found" });
+    const existing = rowToINpc(existingRow);
+
+    // Out of every encounter they were in: turn handed on, anything they sustained ended.
+    removeInpcCombatants(db, ctx.broadcast, inpcId);
+
+    db.prepare("DELETE FROM inpcs WHERE id = ?").run(inpcId);
+    emitInpcChange({ campaignId: existing.campaignId, action: "delete", inpcId });
+    res.json({ ok: true });
+  });
+}

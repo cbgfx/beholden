@@ -1,0 +1,203 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
+import React, { useEffect, useState, useCallback } from "react";
+import { api, jsonInit } from "@/services/api";
+import { theme } from "@/theme/theme";
+import { Button } from "@/ui/Button";
+import type { Campaign, Member } from "./adminTypes";
+import { AddMemberModal } from "./AddMemberModal";
+
+const ROLE_COLORS: Record<string, string> = { dm: theme.colors.accentPrimary, player: theme.colors.accentHighlight };
+
+function MemberRow({ member, onChangeRole, onRemove }: {
+  member: Member;
+  onChangeRole: (id: string, role: "dm" | "player") => void;
+  onRemove: (id: string, name: string) => void;
+}) {
+  const translateUi = useUiTranslation("dmUi");
+  const tdStyle: React.CSSProperties = {
+    padding: "10px 14px", fontSize: "var(--fs-medium)",
+    borderBottom: `1px solid ${theme.colors.panelBorder}`,
+    verticalAlign: "middle",
+  };
+
+  return (
+    <tr>
+      <td style={tdStyle}>
+        <span style={{ fontWeight: 600 }}>{member.user.name}</span>
+        <span style={{ marginLeft: 6, color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
+          @{member.user.username}
+        </span>
+      </td>
+      <td style={tdStyle}>
+        <select
+          value={member.role}
+          onChange={(e) => onChangeRole(member.id, e.target.value as "dm" | "player")}
+          style={{
+            padding: "4px 8px",
+            borderRadius: theme.radius.control,
+            border: `1px solid ${ROLE_COLORS[member.role]}55`,
+            background: `${ROLE_COLORS[member.role]}18`,
+            color: ROLE_COLORS[member.role],
+            fontWeight: 700, fontSize: "var(--fs-small)",
+            cursor: "pointer", outline: "none",
+          }}
+        >
+          <option value="dm">{translateUi("Dungeon Master")}</option>
+          <option value="player">{translateUi("Player")}</option>
+        </select>
+      </td>
+      <td style={{ ...tdStyle, textAlign: "right" }}>
+        <Button
+          variant="danger"
+          style={{ fontSize: "var(--fs-small)", padding: "4px 10px" }}
+          onClick={() => onRemove(member.id, member.user.name)}
+        >
+          {translateUi("Remove")}
+        </Button>
+      </td>
+    </tr>
+  );
+}
+
+export function CampaignCard({ campaign }: { campaign: Campaign }) {
+  const translateUi = useUiTranslation("dmUi");
+  const [members, setMembers] = useState<Member[]>([]);
+  const [expanded, setExpanded] = useState(false);
+  const [addModal, setAddModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Role changes and removals report a refusal instead of failing silently; the list is reloaded
+  // either way so it always shows what the server actually holds.
+  async function attempt(action: () => Promise<unknown>) {
+    setError(null);
+    try {
+      await action();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+    fetchMembers();
+  }
+
+  const fetchMembers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await api<Member[]>(`/api/admin/campaigns/${campaign.id}/members`);
+      setMembers(data);
+    } finally {
+      setLoading(false);
+    }
+  }, [campaign.id]);
+
+  useEffect(() => { fetchMembers(); }, [fetchMembers]);
+  useEffect(() => { if (expanded) fetchMembers(); }, [expanded, fetchMembers]);
+
+  async function handleChangeRole(membershipId: string, role: "dm" | "player") {
+    await attempt(() => api(`/api/admin/campaigns/${campaign.id}/members/${membershipId}`, jsonInit("PUT", { role })));
+  }
+
+  async function handleRemove(membershipId: string, name: string) {
+    if (!confirm(`Remove ${name} from "${campaign.name}"? Their player leaves the campaign and its encounters; their character stays on their account.`)) return;
+    await attempt(() => api(`/api/admin/campaigns/${campaign.id}/members/${membershipId}`, { method: "DELETE" }));
+  }
+
+  async function handleAdd(userId: string, role: "dm" | "player") {
+    await api(`/api/admin/campaigns/${campaign.id}/members`, jsonInit("POST", { userId, role }));
+    setAddModal(false);
+    fetchMembers();
+  }
+
+  const existingUserIds = new Set(members.map((m) => m.user.id));
+  const dmCount = members.filter((m) => m.role === "dm").length;
+  const playerCount = members.filter((m) => m.role === "player").length;
+
+  return (
+    <div style={{
+      background: theme.colors.panelBg,
+      border: `1px solid ${theme.colors.panelBorder}`,
+      borderRadius: theme.radius.panel,
+      overflow: "hidden",
+      marginBottom: 12,
+    }}>
+      <div
+        style={{
+          padding: "14px 18px", display: "flex", alignItems: "center",
+          justifyContent: "space-between", cursor: "pointer", userSelect: "none",
+        }}
+        onClick={() => setExpanded((x) => !x)}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <span style={{ fontWeight: 700, fontSize: "var(--fs-body)" }}>{campaign.name}</span>
+          <span style={{ fontSize: "var(--fs-small)", color: theme.colors.muted }}>
+            {dmCount > 0 && translateUi("{{value1}} DM{{value2}}", { value1: dmCount, value2: dmCount > 1 ? "s" : "" })}
+            {dmCount > 0 && playerCount > 0 && "  ·  "}
+            {playerCount > 0 && translateUi("{{value1}} player{{value2}}", { value1: playerCount, value2: playerCount > 1 ? "s" : "" })}
+            {dmCount === 0 && playerCount === 0 && "No members yet"}
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {expanded && (
+            <Button
+              variant="primary"
+              style={{ fontSize: "var(--fs-small)", padding: "5px 10px" }}
+              onClick={(e) => { e.stopPropagation(); setAddModal(true); }}
+            >
+              {translateUi("+ Add Member")}
+            </Button>
+          )}
+          <span style={{ color: theme.colors.muted, fontSize: "var(--fs-title)" }}>{expanded ? "▲" : "▼"}</span>
+        </div>
+      </div>
+
+      {expanded && (
+        <div style={{ borderTop: `1px solid ${theme.colors.panelBorder}` }}>
+          {error && (
+            <div role="alert" style={{ padding: "10px 18px", color: theme.colors.red, fontSize: "var(--fs-subtitle)" }}>{error}</div>
+          )}
+          {loading ? (
+            <div style={{ padding: "16px 18px", color: theme.colors.muted, fontSize: "var(--fs-subtitle)" }}>{translateUi("Loading…")}</div>
+          ) : members.length === 0 ? (
+            <div style={{ padding: "16px 18px", color: theme.colors.muted, fontSize: "var(--fs-subtitle)" }}>
+              {translateUi("No members assigned. Click \"+ Add Member\" to add someone.")}
+            </div>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  {["Member", "Role", ""].map((h, i) => (
+                    <th key={i} style={{
+                      padding: "8px 14px", textAlign: i === 2 ? "right" : "left",
+                      fontSize: "var(--fs-small)", fontWeight: 700, color: theme.colors.muted,
+                      textTransform: "uppercase", letterSpacing: "0.06em",
+                      borderBottom: `1px solid ${theme.colors.panelBorder}`,
+                    }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {members.map((m) => (
+                  <MemberRow
+                    key={m.id}
+                    member={m}
+                    onChangeRole={handleChangeRole}
+                    onRemove={handleRemove}
+                  />
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {addModal && (
+        <AddMemberModal
+          campaignId={campaign.id}
+          campaignName={campaign.name}
+          existingUserIds={existingUserIds}
+          onAdd={handleAdd}
+          onClose={() => setAddModal(false)}
+        />
+      )}
+    </div>
+  );
+}

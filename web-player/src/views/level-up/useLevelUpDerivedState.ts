@@ -1,0 +1,538 @@
+import React from "react";
+import { getInvocationFeatChoices } from "@/domain/character/invocationFeatChoices";
+import { abilityMod } from "@/views/character/CharacterSheetUtils";
+import {
+  featureMatchesSubclass,
+  getCantripCount,
+  getClassFeatureTable,
+  getFeatChoiceOptions,
+  getFeatureSubclassName,
+  getGrowthChoiceDefinitions,
+  getMaxSlotLevel,
+  getPreparedSpellCount,
+  getSpellSlotsAtLevel,
+  getSlotLevelTriggeredSpellChoices,
+  getSubclassLevel,
+  getSubclassList,
+  isSpellcaster,
+  normalizeChoiceKey,
+  tableValueAtLevel,
+  usesFlexiblePreparedSpells,
+} from "@/views/character-creator/utils/CharacterCreatorUtils";
+import { parseFeatureEffects, collectSpellChoicesFromEffects, collectProficiencyChoiceEffectsFromEffects } from "@/domain/character/parseFeatureEffects";
+import { buildResolvedSpellChoiceEntry, buildSpellListChoiceEntry } from "@/views/character-creator/utils/SpellChoiceUtils";
+import { getFeatSpellcastingAbilityChoice } from "@/views/character-creator/utils/FeatSpellcastingUtils";
+import { deriveAllowedInvocationIds } from "@/views/level-up/LevelUpUtils";
+import { getExclusiveGroupReplacementChoice } from "@/views/level-up/LevelUpExclusiveChoiceUtils";
+import { getMysticArcanumRevisitChoices } from "@/views/level-up/MysticArcanumRevisitUtils";
+import type {
+  LevelUpCharacter as Character,
+  LevelUpClassDetail as ClassDetail,
+  LevelUpFeatDetail as FeatDetail,
+  LevelUpResolvedSpellChoiceEntry,
+  LevelUpSpellListChoiceEntry,
+} from "@/views/level-up/LevelUpTypes";
+import { useLevelUpChoiceData } from "@/views/level-up/useLevelUpChoiceData";
+import { useLevelUpProficiencyChoices } from "@/views/level-up/useLevelUpProficiencyChoices";
+import { readClassSpellSelection } from "@/domain/character/classSpellSelections";
+
+type PrimaryClassLike = {
+  id?: string;
+  classId?: string | null;
+  subclass?: string | null;
+};
+
+export function buildProficiencyKeySet(
+  category: "skill" | "tool" | "language" | "saving_throw",
+  proficientBase: string[],
+  classFeatureProficiencyChoices: Array<{ key: string; category: string }>,
+  chosenFeatureChoices: Record<string, string[]>,
+): Set<string> {
+  return new Set([
+    ...proficientBase.map(normalizeChoiceKey),
+    ...classFeatureProficiencyChoices
+      .filter((choice) => choice.category === category)
+      .flatMap((choice) => chosenFeatureChoices[choice.key] ?? [])
+      .map(normalizeChoiceKey),
+  ]);
+}
+
+export function useLevelUpDerivedState(args: {
+  char: Character | null;
+  classDetail: ClassDetail | null;
+  mergedAutolevels: ClassDetail["autolevels"];
+  nextLevel: number;
+  nextClassLevel: number;
+  primaryClassEntry: PrimaryClassLike | null;
+  subclass: string;
+  chosenCantrips: string[];
+  chosenInvocations: string[];
+  chosenFeatOptions: Record<string, string[]>;
+  chosenFeatureChoices: Record<string, string[]>;
+  chosenFeatDetail: FeatDetail | null;
+  featSummaries: Array<{ id: string; name: string; category?: string | null }>;
+  classCantrips: Array<{ id: string; name: string; level?: number | null; text?: string | null }>;
+  classInvocations: Array<{ id: string; name: string; level?: number | null; text?: string | null; effects?: unknown[] }>;
+}) {
+  const {
+    char,
+    classDetail,
+    mergedAutolevels,
+    nextLevel,
+    nextClassLevel,
+    primaryClassEntry,
+    subclass,
+    chosenCantrips,
+    chosenInvocations,
+    chosenFeatOptions,
+    chosenFeatureChoices,
+    chosenFeatDetail,
+    featSummaries,
+    classCantrips,
+    classInvocations,
+  } = args;
+  const targetClassEntryId = primaryClassEntry?.id ?? "";
+
+  const hd = classDetail?.hd ?? 8;
+  const conScore = char?.conScore ?? 10;
+  const conMod = abilityMod(conScore);
+  const hpAverage = Math.max(1, Math.floor(hd / 2) + 1 + conMod);
+
+  const autoLevel = React.useMemo(
+    () => mergedAutolevels.find((al) => al.level === nextClassLevel) ?? null,
+    [mergedAutolevels, nextClassLevel]
+  );
+  const hasAsiFeature = Boolean(
+    autoLevel?.features?.some((feature) => /ability score improvement/i.test(feature.name))
+  );
+  const usesFlexiblePreparedSpellsModel = usesFlexiblePreparedSpells(classDetail);
+  const classChoiceGroups = React.useMemo(() => {
+    if (!classDetail || !autoLevel) return [];
+    const featureIds = new Set(autoLevel.features.map((feature) => feature.id).filter(Boolean));
+    return (classDetail.choices ?? []).flatMap((choice) => {
+      const options = choice.options.filter((option) => option.features.some((featureId) => featureIds.has(featureId)));
+      return options.length >= 2 ? [{ key: `classchoice:${classDetail.id}:${choice.id}`, name: choice.name, options }] : [];
+    });
+  }, [autoLevel, classDetail]);
+  const selectedClassChoiceFeatureIds = React.useMemo(() => new Set(classChoiceGroups.flatMap((group) => {
+    const selectedOptionId = chosenFeatureChoices[group.key]?.[0];
+    return group.options.find((option) => option.id === selectedOptionId)?.features ?? [];
+  })), [classChoiceGroups, chosenFeatureChoices]);
+  const newFeatures = React.useMemo(
+    () => autoLevel?.features.filter((f) =>
+      getFeatureSubclassName(f)
+        ? featureMatchesSubclass(f, subclass || null)
+        : !f.optional || (Boolean(f.id) && selectedClassChoiceFeatureIds.has(String(f.id)))
+    ) ?? [],
+    [autoLevel, selectedClassChoiceFeatureIds, subclass]
+  );
+  const isAsiLevel = Boolean(autoLevel?.scoreImprovement ?? hasAsiFeature);
+  const newSlots = classDetail ? getSpellSlotsAtLevel(classDetail, nextClassLevel, subclass) : null;
+  const subclassLevel = classDetail ? getSubclassLevel(classDetail) : null;
+  const subclassOptions = classDetail ? getSubclassList(classDetail) : [];
+  const showSubclassChoice = Boolean(subclassLevel && nextClassLevel >= subclassLevel && subclassOptions.length > 0 && (nextClassLevel === subclassLevel || !primaryClassEntry?.subclass));
+  const needsSubclassChoice = Boolean(subclassLevel && nextClassLevel >= subclassLevel && subclassOptions.length > 0 && !subclass.trim());
+  const subclassOverview = React.useMemo(() => {
+    if (!subclass.trim()) return null;
+    for (const autolevel of mergedAutolevels) {
+      const feature = autolevel.features.find((entry) => entry.subclass === subclass);
+      if (feature) return feature;
+    }
+    return null;
+  }, [mergedAutolevels, subclass]);
+  const selectedSubclassFeatures = React.useMemo(() => {
+    if (!autoLevel || !subclass.trim()) return [];
+    return autoLevel.features.filter((feature) => feature.subclass === subclass);
+  }, [autoLevel, subclass]);
+  const cantripCount = classDetail ? getCantripCount(classDetail, nextClassLevel, subclass) : 0;
+  const invocTable = classDetail ? getClassFeatureTable(classDetail, "Invocation", nextClassLevel, subclass) : [];
+  const invocCount = invocTable.length > 0 ? tableValueAtLevel(invocTable, nextClassLevel) : 0;
+  const spellAbilityScore = classDetail?.spellAbility
+    ? char?.[`${classDetail.spellAbility.toLowerCase()}Score` as "strScore" | "dexScore" | "conScore" | "intScore" | "wisScore" | "chaScore"]
+    : null;
+  const prepCount = classDetail ? getPreparedSpellCount(classDetail, nextClassLevel, subclass, spellAbilityScore) : 0;
+  const maxSpellLevel = classDetail ? getMaxSlotLevel(classDetail, nextClassLevel, subclass) : 0;
+  const spellcaster = classDetail ? isSpellcaster(classDetail, nextClassLevel, subclass) : false;
+  const {
+    expertiseChoices,
+    expertiseReplacementChoices,
+    charProficiencies,
+    proficientSkills,
+    proficientTools,
+    proficientLanguages,
+    proficientSaves,
+    existingExpertise,
+    preparedSpellProgressionChoiceDefinitions,
+    preparedSpellProgressionGrantedKeys,
+  } = useLevelUpProficiencyChoices({
+    char,
+    classDetail,
+    nextClassLevel,
+    subclass,
+    primaryClassEntry,
+    chosenFeatureChoices,
+  });
+  const existingClassSpellNames = React.useMemo(
+    () => Array.isArray(char?.characterData?.proficiencies?.spells)
+      ? char.characterData.proficiencies.spells
+        .filter((entry) => entry.source === (classDetail?.name ?? char.className))
+        .map((entry) => entry.name)
+      : [],
+    [char?.characterData?.proficiencies?.spells, char?.className, classDetail?.name]
+  );
+  const featChoiceEntries = React.useMemo(
+    () => {
+      if (!chosenFeatDetail) return [];
+      const baseChoices = (chosenFeatDetail.parsed.choices ?? []).filter((choice) => choice.type !== "damage_type");
+      const abilityChoice = getFeatSpellcastingAbilityChoice(chosenFeatDetail);
+      if (!abilityChoice || baseChoices.some((choice) => choice.id === abilityChoice.id)) return baseChoices;
+      return [...baseChoices, abilityChoice];
+    },
+    [chosenFeatDetail]
+  );
+  const featSourceLabel = chosenFeatDetail ? `${chosenFeatDetail.name} (Level ${nextLevel})` : "";
+  const featSpellListChoices = React.useMemo<LevelUpSpellListChoiceEntry[]>(
+    () => {
+      if (!chosenFeatDetail) return [];
+      return featChoiceEntries
+        .filter((choice) => choice.type === "spell_list")
+        .map((choice) => {
+          const entry = buildSpellListChoiceEntry({
+            key: `levelupfeat:${nextLevel}:${chosenFeatDetail.id}:${choice.id}`,
+            choice: { ...choice, options: getFeatChoiceOptions(choice) },
+            level: nextLevel,
+            sourceLabel: featSourceLabel,
+          });
+          return {
+            ...entry,
+            title: "Spell List",
+            note: entry.options.length === 1
+              ? (choice.note ?? "Spell list fixed by this feat.")
+              : choice.note,
+          };
+        });
+    },
+    [chosenFeatDetail, featChoiceEntries, featSourceLabel, nextLevel]
+  );
+  const featResolvedSpellChoices = React.useMemo<LevelUpResolvedSpellChoiceEntry[]>(
+    () => {
+      if (!chosenFeatDetail) return [];
+      return featChoiceEntries
+        .filter((choice) => choice.type === "spell")
+        .map((choice) => {
+          const key = `levelupfeat:${nextLevel}:${chosenFeatDetail.id}:${choice.id}`;
+          const linkedChoiceKey = choice.linkedTo ? `levelupfeat:${nextLevel}:${chosenFeatDetail.id}:${choice.linkedTo}` : null;
+          return {
+            ...buildResolvedSpellChoiceEntry({
+              key,
+              choice,
+              level: nextLevel,
+              sourceLabel: chosenFeatDetail.name,
+              chosenOptions: chosenFeatOptions,
+              linkedChoiceKey,
+            }),
+          };
+        });
+    },
+    [chosenFeatDetail, chosenFeatOptions, featChoiceEntries, nextLevel]
+  );
+  const parsedNewFeatureEffects = React.useMemo(
+    () => newFeatures.map((feature, index) =>
+      parseFeatureEffects({
+        source: {
+          id: `levelup:${nextLevel}:${index}:${feature.name}`,
+          kind: feature.subclass ? "subclass" : "class",
+          name: feature.name,
+          text: feature.text,
+          level: nextClassLevel,
+          rawFeatureId: feature.id,
+        },
+        text: feature.text,
+        classEffects: feature.effects,
+        classChoices: feature.choices,
+      })
+    ),
+    [newFeatures, nextClassLevel, nextLevel]
+  );
+  const slotLevelTriggeredSpellChoices = React.useMemo<LevelUpResolvedSpellChoiceEntry[]>(
+    () =>
+      getSlotLevelTriggeredSpellChoices(
+        classDetail,
+        Math.max(0, nextClassLevel - 1),
+        nextClassLevel,
+        subclass || primaryClassEntry?.subclass || null,
+      ).map((choice) => ({
+        key: `levelupslotgrowth:${nextLevel}:${choice.key}`,
+        title: choice.title,
+        sourceLabel: choice.sourceLabel,
+        count: choice.count,
+        level: choice.level,
+        note: choice.note ?? null,
+        linkedTo: null,
+        listNames: choice.listNames,
+        schools: choice.schools,
+        ritualOnly: false,
+      })),
+    [classDetail, nextClassLevel, nextLevel, primaryClassEntry?.subclass, subclass]
+  );
+  const mysticArcanumRevisitChoices = React.useMemo(
+    () => getMysticArcanumRevisitChoices({
+      ruleset: char?.ruleset ?? "5.5e",
+      className: classDetail?.name ?? null,
+      newFeatureNames: newFeatures.map((f) => f.name),
+      autolevels: mergedAutolevels,
+      nextClassLevel,
+    }),
+    [char?.ruleset, classDetail?.name, mergedAutolevels, newFeatures, nextClassLevel]
+  );
+  const newFeatureSpellChoiceEffects = React.useMemo(
+    () => collectSpellChoicesFromEffects(parsedNewFeatureEffects),
+    [parsedNewFeatureEffects]
+  );
+  const classFeatureResolvedSpellChoices = React.useMemo<LevelUpResolvedSpellChoiceEntry[]>(
+    () => [
+      ...newFeatureSpellChoiceEffects
+        // Replacement cantrips are handled by unlocking one existing choice in the main
+        // class cantrip picker; rendering them here would incorrectly add another cantrip.
+        .filter((choice) => !(choice.canReplace && choice.level === 0 && choice.mode === "learn"))
+        .filter((choice) => !/^(level\s+\d+:\s+)?(spellcasting|pact magic)\b/i.test(choice.source.name))
+        .filter((choice) => !choice.ifKnown || existingClassSpellNames.some((name) => name.trim().toLowerCase() === choice.ifKnown!.trim().toLowerCase()))
+        .map((choice) => ({
+          // Canonical key: `classfeature:<compendium choice id>`, the same scheme the creator/
+          // editor and MysticArcanumRevisitUtils use for this exact choice. The compendium's raw
+          // choiceId is already unique per feature occurrence (e.g. distinct ids per level for a
+          // repeatable feature like Eldritch Versatility), so no level number needs to be baked
+          // into the key -- doing so previously produced a different key per entry point for what
+          // is conceptually the same pick, causing edits made in one flow to be invisible to the
+          // other. Never key class-feature spell choices any other way.
+          key: `classfeature:${choice.choiceId ?? choice.id}`,
+          title: choice.source.name,
+          sourceLabel: choice.source.name,
+          count: choice.count.kind === "fixed" ? choice.count.value : 0,
+          level: choice.level,
+          // Cap "any level" choices (level===null) to the character's highest spell slot so
+          // e.g. a L6 Bard picking Magical Discoveries only sees up to 3rd-level spells.
+          maxLevel: choice.level === null && maxSpellLevel > 0 ? maxSpellLevel : null,
+          note: choice.note ?? null,
+          linkedTo: null,
+          listNames: choice.spellLists,
+          schools: choice.schools,
+          ritualOnly: false,
+        })),
+      ...slotLevelTriggeredSpellChoices,
+      ...mysticArcanumRevisitChoices,
+    ],
+    [existingClassSpellNames, maxSpellLevel, newFeatureSpellChoiceEffects, slotLevelTriggeredSpellChoices, mysticArcanumRevisitChoices]
+  );
+  const cantripReplacementCount = React.useMemo(
+    () => newFeatureSpellChoiceEffects
+      .filter((choice) => choice.canReplace && choice.level === 0 && choice.mode === "learn")
+      .reduce((total, choice) => total + (choice.count.kind === "fixed" ? choice.count.value : 0), 0),
+    [newFeatureSpellChoiceEffects],
+  );
+  const classFeatureProficiencyChoices = React.useMemo(
+    () => collectProficiencyChoiceEffectsFromEffects(parsedNewFeatureEffects)
+      .filter((choice) =>
+        !choice.expertise
+        && choice.choice?.count.kind === "fixed"
+        && ["skill", "tool", "language", "saving_throw", "selection"].includes(choice.choice?.optionCategory ?? "")
+        && (!choice.choice?.ifProficient || proficientSaves.map(normalizeChoiceKey).includes(normalizeChoiceKey(choice.choice.ifProficient)))
+      )
+      .map((choice) => ({
+        key: `classfeature:${choice.choiceId ?? choice.id}`,
+        sourceLabel: choice.source.name,
+        category: choice.choice?.optionCategory as "skill" | "tool" | "language" | "saving_throw" | "selection",
+        count: choice.choice?.count.kind === "fixed" ? choice.choice.count.value : 0,
+        options: choice.choice?.options,
+      }))
+      .filter((choice) => choice.count > 0),
+    [parsedNewFeatureEffects, proficientSaves]
+  );
+  const classFeatureSkillKeys = React.useMemo(
+    () => buildProficiencyKeySet("skill", proficientSkills, classFeatureProficiencyChoices, chosenFeatureChoices),
+    [chosenFeatureChoices, classFeatureProficiencyChoices, proficientSkills]
+  );
+  const classFeatureToolKeys = React.useMemo(
+    () => buildProficiencyKeySet("tool", proficientTools, classFeatureProficiencyChoices, chosenFeatureChoices),
+    [chosenFeatureChoices, classFeatureProficiencyChoices, proficientTools]
+  );
+  const classFeatureLanguageKeys = React.useMemo(
+    () => buildProficiencyKeySet("language", proficientLanguages, classFeatureProficiencyChoices, chosenFeatureChoices),
+    [chosenFeatureChoices, classFeatureProficiencyChoices, proficientLanguages]
+  );
+  const classFeatureSaveKeys = React.useMemo(
+    () => buildProficiencyKeySet("saving_throw", proficientSaves, classFeatureProficiencyChoices, chosenFeatureChoices),
+    [chosenFeatureChoices, classFeatureProficiencyChoices, proficientSaves]
+  );
+  const growthChoiceDefinitions = React.useMemo(
+    () => {
+      const replacementEffects = parsedNewFeatureEffects.flatMap((parsed) => parsed.effects)
+        .filter((effect) => effect.type === "selection_replacement");
+      const replacementLimitFor = (target: "maneuver" | "metamagic") => replacementEffects
+        .filter((effect) => effect.target === target)
+        .reduce((total, effect) => total + (effect.count.kind === "fixed" ? effect.count.value : 0), 0);
+      // Infuse Item text: "Whenever you gain a level in this class, you can replace one of the
+      // artificer infusions you learned with a new one" -- an ongoing per-level-up ability, not a
+      // one-off grant tracked via a selection_replacement effect like maneuvers/metamagic.
+      const infusionTalentActive = (classDetail?.autolevels ?? []).some(
+        (row) => row.level != null && row.level <= nextClassLevel && (row.features ?? []).some((feature) => feature.talent?.kind === "infusion"),
+      );
+      return getGrowthChoiceDefinitions({
+      classId: String(primaryClassEntry?.classId ?? ""),
+      className: classDetail?.name ?? char?.className ?? null,
+      classDetail,
+      level: nextClassLevel,
+      selectedSubclass: subclass || primaryClassEntry?.subclass || null,
+      maneuverReplacementLimit: replacementLimitFor("maneuver"),
+      metamagicReplacementLimit: replacementLimitFor("metamagic"),
+      infusionReplacementLimit: infusionTalentActive ? 1 : 0,
+    });
+    },
+    [char?.className, classDetail, nextClassLevel, parsedNewFeatureEffects, primaryClassEntry?.classId, primaryClassEntry?.subclass, subclass]
+  );
+  const chosenOptionals = React.useMemo(
+    () => Array.isArray(char?.characterData?.chosenOptionals) ? char.characterData.chosenOptionals : [],
+    [char?.characterData?.chosenOptionals]
+  );
+  const fightingStyleReplacementAvailable = React.useMemo(
+    () => parsedNewFeatureEffects.flatMap((parsed) => parsed.effects)
+      .some((effect) => effect.type === "selection_replacement" && effect.target === "fighting_style"),
+    [parsedNewFeatureEffects]
+  );
+  const pactBoonReplacementAvailable = React.useMemo(
+    () => parsedNewFeatureEffects.flatMap((parsed) => parsed.effects)
+      .some((effect) => effect.type === "selection_replacement" && effect.target === "pact_boon"),
+    [parsedNewFeatureEffects]
+  );
+  const fightingStyleReplacementChoice = React.useMemo(
+    () => fightingStyleReplacementAvailable && classDetail
+      ? getExclusiveGroupReplacementChoice({ choices: classDetail.choices, autolevels: mergedAutolevels, groupName: "Fighting Style", level: nextClassLevel, chosenOptionals })
+      : null,
+    [chosenOptionals, classDetail, fightingStyleReplacementAvailable, mergedAutolevels, nextClassLevel]
+  );
+  const pactBoonReplacementChoice = React.useMemo(
+    () => pactBoonReplacementAvailable && classDetail
+      ? getExclusiveGroupReplacementChoice({ choices: classDetail.choices, autolevels: mergedAutolevels, groupName: "Pact Boon", level: nextClassLevel, chosenOptionals })
+      : null,
+    [chosenOptionals, classDetail, mergedAutolevels, nextClassLevel, pactBoonReplacementAvailable]
+  );
+  const selectedInvocationEffects = React.useMemo(
+    () => classInvocations
+      .filter((invocation) => chosenInvocations.includes(invocation.id) && String(invocation.text ?? "").trim())
+      .map((invocation) => parseFeatureEffects({
+        source: {
+          id: `levelupinvocation:${nextLevel}:${invocation.id}`,
+          kind: "invocation",
+          name: invocation.name,
+          parentName: classDetail?.name ?? char?.className ?? null,
+          text: invocation.text ?? "",
+        },
+        text: invocation.text ?? "",
+        classEffects: invocation.effects,
+      })),
+    [char?.className, chosenInvocations, classDetail?.name, classInvocations, nextLevel]
+  );
+  const invocationResolvedSpellChoices = React.useMemo<LevelUpResolvedSpellChoiceEntry[]>(
+    () => collectSpellChoicesFromEffects(selectedInvocationEffects).flatMap((rawChoice) => {
+      const invocationId = rawChoice.source.id.replace(/^levelupinvocation:\d+:/, "");
+      const copies = Math.max(1, chosenInvocations.filter((id) => id === invocationId).length);
+      const choice = rawChoice.count.kind === "fixed" ? { ...rawChoice, count: { ...rawChoice.count, value: rawChoice.count.value * copies } } : rawChoice;
+      if (choice.count.kind !== "fixed") return [];
+      return [{
+        key: `invocation:${choice.choiceId ?? choice.id}`,
+        title: choice.source.name,
+        sourceLabel: choice.source.name,
+        count: choice.count.value,
+        level: choice.level,
+        note: choice.note ?? choice.summary ?? null,
+        linkedTo: null,
+        listNames: choice.spellLists,
+        schools: choice.schools,
+        ritualOnly: choice.filters?.ritual === true,
+        damageOnly: choice.filters?.damage === true,
+        attackOnly: choice.filters?.attack === true,
+        allowedSpellIds: choice.filters?.known === true
+          ? [...readClassSpellSelection(char?.characterData, targetClassEntryId).chosenCantrips, ...chosenCantrips]
+          : undefined,
+        grantsSpell: choice.mode !== "select",
+      }];
+    }),
+    [char?.characterData, targetClassEntryId, chosenCantrips, chosenInvocations, selectedInvocationEffects]
+  );
+  const invocationFeatChoices = React.useMemo(
+    () => getInvocationFeatChoices(classInvocations, chosenInvocations, featSummaries),
+    [classInvocations, chosenInvocations, featSummaries],
+  );
+  const allInvocationFeatChoices = React.useMemo(
+    () => getInvocationFeatChoices(classInvocations, classInvocations.map((invocation) => invocation.id), featSummaries),
+    [classInvocations, featSummaries],
+  );
+  const allowedInvocationIds = React.useMemo(
+    () => deriveAllowedInvocationIds({ classCantrips, classInvocations, chosenCantrips, chosenInvocations, nextLevel: nextClassLevel, chosenOptionals }),
+    [chosenCantrips, chosenInvocations, classCantrips, classInvocations, nextClassLevel, chosenOptionals]
+  );
+  const {
+    featSpellChoiceOptions,
+    classFeatureSpellChoiceOptions,
+    invocationSpellChoiceOptions,
+    growthOptionEntriesByKey,
+  } = useLevelUpChoiceData({
+    chosenFeatDetail,
+    featResolvedSpellChoices,
+    classFeatureResolvedSpellChoices,
+    invocationResolvedSpellChoices,
+    growthChoiceDefinitions,
+    ruleset: char?.ruleset,
+  });
+
+  return {
+    hd,
+    conMod,
+    hpAverage,
+    usesFlexiblePreparedSpellsModel,
+    classChoiceGroups,
+    newFeatures,
+    isAsiLevel,
+    newSlots,
+    subclassOptions,
+    showSubclassChoice,
+    needsSubclassChoice,
+    subclassOverview,
+    selectedSubclassFeatures,
+    cantripCount,
+    invocCount,
+    prepCount,
+    maxSpellLevel,
+    spellcaster,
+    expertiseChoices,
+    expertiseReplacementChoices,
+    fightingStyleReplacementChoice,
+    pactBoonReplacementChoice,
+    charProficiencies,
+    proficientSkills,
+    existingExpertise,
+    existingClassSpellNames,
+    featChoiceEntries,
+    featSourceLabel,
+    featSpellListChoices,
+    featResolvedSpellChoices,
+    classFeatureResolvedSpellChoices,
+    cantripReplacementCount,
+    classFeatureProficiencyChoices,
+    classFeatureSkillKeys,
+    classFeatureToolKeys,
+    classFeatureLanguageKeys,
+    classFeatureSaveKeys,
+    growthChoiceDefinitions,
+    preparedSpellProgressionChoiceDefinitions,
+    preparedSpellProgressionGrantedKeys,
+    invocationResolvedSpellChoices,
+    invocationFeatChoices,
+    allInvocationFeatChoices,
+    allowedInvocationIds,
+    featSpellChoiceOptions,
+    classFeatureSpellChoiceOptions,
+    invocationSpellChoiceOptions,
+    growthOptionEntriesByKey,
+  };
+}

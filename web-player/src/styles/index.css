@@ -1,0 +1,119 @@
+/* web-player app-specific styles */
+/* All tokens and base resets come from @beholden/shared via main.tsx */
+
+.character-panel__actions {
+  opacity: 0.62;
+  transition: opacity 120ms ease;
+}
+
+.character-panel:hover > div .character-panel__actions,
+.character-panel:focus-within > div .character-panel__actions {
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .character-panel__actions {
+    opacity: 0.38;
+  }
+}
+
+.character-row-action,
+.counter-row-action,
+.noteRowActions {
+  opacity: 1;
+  transition: opacity 140ms ease;
+}
+
+/* A common, quiet hover affordance for repeatable character-sheet rows. */
+.character-hover-row,
+.collectionInteractiveRow,
+.character-counter-row,
+.noteInteractiveRow {
+  border-radius: 7px;
+  transition: background-color 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .character-hover-row:hover,
+  .collectionInteractiveRow:hover,
+  .character-counter-row:hover,
+  .noteInteractiveRow:hover {
+    background-color: rgba(255, 255, 255, 0.045) !important;
+    box-shadow: inset 2px 0 0 rgba(167, 139, 250, 0.42);
+    filter: brightness(1.06);
+  }
+}
+
+.character-creator-page {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 36px 28px;
+}
+
+.character-creator-stepbar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 28px;
+}
+
+.character-creator-steps {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.character-creator-step-action {
+  flex: none;
+  margin-left: auto;
+}
+
+.character-creator-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 32px;
+  align-items: start;
+}
+
+.character-creator-main { min-width: 0; }
+.character-creator-summary { position: sticky; top: 36px; min-width: 0; }
+
+@media (max-width: 960px) {
+  .character-creator-page { padding: 24px 18px; }
+  .character-creator-stepbar { align-items: center; }
+  .character-creator-steps {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    padding: 2px 0 8px;
+  }
+  .character-creator-steps > button { flex: none; }
+  .character-creator-step-action { position: sticky; right: 0; }
+  .character-creator-layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .character-creator-summary { position: static; }
+}
+
+@media (max-width: 560px) {
+  .character-creator-page { padding: 20px 12px; }
+  .character-creator-stepbar { gap: 8px; }
+  .character-creator-step-action button { padding-inline: 12px; white-space: nowrap; }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .character-inventory-row .character-row-action,
+  .character-counter-row .counter-row-action,
+  .noteInteractiveRow .noteRowActions {
+    opacity: 0.42;
+  }
+
+  .character-inventory-row:hover .character-row-action,
+  .character-inventory-row:focus-within .character-row-action,
+  .character-counter-row:hover .counter-row-action,
+  .character-counter-row:focus-within .counter-row-action,
+  .noteInteractiveRow:hover .noteRowActions,
+  .noteInteractiveRow:focus-within .noteRowActions {
+    opacity: 1;
+  }
+}

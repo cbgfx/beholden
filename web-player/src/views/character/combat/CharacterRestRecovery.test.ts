@@ -1,0 +1,47 @@
+import { describe, expect, it } from "vitest";
+
+import { getLongRestOverrides, getLongRestRecovery } from "./CharacterRestRecovery";
+
+describe("getLongRestRecovery", () => {
+  it("reduces Exhaustion by one", () => {
+    expect(getLongRestRecovery(3)).toEqual({ exhaustion: 2 });
+  });
+
+  it("does not reduce Exhaustion below zero", () => {
+    expect(getLongRestRecovery(0)).toEqual({ exhaustion: 0 });
+  });
+});
+
+describe("getLongRestOverrides", () => {
+  it("clears temporary, stat, and ability-score overrides", () => {
+    expect(getLongRestOverrides(false, false)).toEqual({
+      tempHp: 0,
+      acBonus: 0,
+      hpMaxBonus: 0,
+      inspiration: false,
+      abilityScores: {},
+    });
+  });
+
+  it("preserves existing inspiration and grants it for Resourceful", () => {
+    expect(getLongRestOverrides(true, false).inspiration).toBe(true);
+    expect(getLongRestOverrides(false, true).inspiration).toBe(true);
+  });
+
+  it("keeps only overrides explicitly marked permanent", () => {
+    expect(getLongRestOverrides(false, false, {
+      tempHp: 8,
+      acBonus: 2,
+      hpMaxBonus: 5,
+      abilityScores: { str: 19 },
+      permanent: { acBonus: true, abilityScores: true },
+    })).toEqual({
+      tempHp: 0,
+      acBonus: 2,
+      hpMaxBonus: 0,
+      inspiration: false,
+      abilityScores: { str: 19 },
+      permanent: { acBonus: true, abilityScores: true },
+    });
+  });
+});

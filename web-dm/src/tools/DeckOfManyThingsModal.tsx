@@ -1,0 +1,206 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
+import { useEffect, useMemo, useState } from "react";
+import { Modal } from "@/components/overlay/Modal";
+import { api } from "@/services/api";
+import { theme, withAlpha } from "@/theme/theme";
+import { Button } from "@/ui/Button";
+
+const SUITS = [
+  { symbol: "\u2660", name: "Spades", color: "#e8edf5" },
+  { symbol: "\u2665", name: "Hearts", color: "#ff5d5d" },
+  { symbol: "\u2666", name: "Diamonds", color: "#ff5d5d" },
+  { symbol: "\u2663", name: "Clubs", color: "#e8edf5" },
+] as const;
+
+const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+
+type Suit = typeof SUITS[number];
+type Card = {
+  id: string;
+  name: string;
+  text?: string;
+  rank?: string;
+  suit?: Suit;
+};
+
+function buildStandardDeck(): Card[] {
+  const deck: Card[] = [];
+  for (const suit of SUITS) {
+    for (const rank of RANKS) {
+      deck.push({
+        id: `standard:${rank}:${suit.name}`,
+        name: `${rank} of ${suit.name}`,
+        rank,
+        suit,
+      });
+    }
+  }
+  return deck;
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+export function DeckOfManyThingsModal(props: { isOpen: boolean; onClose: () => void }) {
+  const translateUi = useUiTranslation("dmUi");
+  const [sourceDeck, setSourceDeck] = useState<Card[]>(() => buildStandardDeck());
+  const [deck, setDeck] = useState<Card[]>(() => shuffle(buildStandardDeck()));
+  const [drawn, setDrawn] = useState<Card[]>([]);
+  const [current, setCurrent] = useState<Card | null>(null);
+  const [loadingDeck, setLoadingDeck] = useState(false);
+  // True when no Deck was imported and the plain 52-card deck stands in (said once, translated).
+  const [usingFallbackDeck, setUsingFallbackDeck] = useState(false);
+
+  useEffect(() => {
+    if (!props.isOpen) return;
+    let alive = true;
+
+    setLoadingDeck(true);
+    setUsingFallbackDeck(false);
+
+    api<{ ok: boolean; count: number; cards: Array<{ id: string; name: string; text?: string }> }>("/api/compendium/decks/deck")
+      .then((res) => {
+        if (!alive) return;
+        const imported: Card[] = (res.cards ?? [])
+          .map((card) => ({
+            id: String(card.id ?? "").trim(),
+            name: String(card.name ?? "").trim(),
+            text: String(card.text ?? "").trim(),
+          }))
+          .filter((card) => card.id.length > 0 && card.name.length > 0);
+
+        const next = imported.length > 0 ? imported : buildStandardDeck();
+        setSourceDeck(next);
+        setDeck(shuffle(next));
+        setDrawn([]);
+        setCurrent(null);
+      })
+      .catch(() => {
+        if (!alive) return;
+        const fallback = buildStandardDeck();
+        setSourceDeck(fallback);
+        setDeck(shuffle(fallback));
+        setDrawn([]);
+        setCurrent(null);
+        setUsingFallbackDeck(true);
+      })
+      .finally(() => {
+        if (alive) setLoadingDeck(false);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [props.isOpen]);
+
+  function draw() {
+    if (deck.length === 0) return;
+    const [card, ...rest] = deck;
+    if (!card) return;
+    setDeck(rest);
+    setDrawn((d) => [...d, card]);
+    setCurrent(card);
+  }
+
+  function reshuffle() {
+    setDeck(shuffle(sourceDeck));
+    setDrawn([]);
+    setCurrent(null);
+  }
+
+  const empty = deck.length === 0;
+  const isStandardCard = Boolean(current?.rank && current?.suit);
+  const currentColor = useMemo(() => (current?.suit?.color ? current.suit.color : theme.colors.accentPrimary), [current]);
+
+  return (
+    <Modal isOpen={props.isOpen} onClose={props.onClose} title={translateUi("Deck of Many Things")} width={460} height={440}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, padding: 24 }}>
+        <div
+          style={{
+            width: 140,
+            height: 196,
+            borderRadius: 14,
+            border: `2px solid ${theme.colors.panelBorder}`,
+            background: current ? "#1a2438" : withAlpha(theme.colors.panelBg, 0.4),
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: current ? `0 8px 32px ${withAlpha(theme.colors.shadowColor ?? "#000", 0.5)}` : "none",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          {current ? (
+            isStandardCard ? (
+              <>
+                <div style={{ position: "absolute", top: 10, left: 12, color: current.suit!.color, fontWeight: 900, fontSize: 16, lineHeight: 1 }}>
+                  <div>{current.rank}</div>
+                  <div>{current.suit!.symbol}</div>
+                </div>
+                <div style={{ fontSize: 52, color: current.suit!.color }}>{current.suit!.symbol}</div>
+                <div style={{ position: "absolute", bottom: 10, right: 12, color: current.suit!.color, fontWeight: 900, fontSize: 16, lineHeight: 1, transform: "rotate(180deg)" }}>
+                  <div>{current.rank}</div>
+                  <div>{current.suit!.symbol}</div>
+                </div>
+              </>
+            ) : (
+              <div style={{ padding: 14, textAlign: "center", height: "100%", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
+                <div style={{ fontSize: 20, fontWeight: 900, color: theme.colors.text, marginBottom: 8 }}>{current.name}</div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: theme.colors.muted,
+                    lineHeight: 1.35,
+                    textAlign: "left",
+                    overflowY: "auto",
+                    paddingRight: 2,
+                    flex: 1,
+                  }}
+                >
+                  {current.text ? current.text : translateUi("No description.")}
+                </div>
+              </div>
+            )
+          ) : (
+            <div style={{ color: theme.colors.muted, fontSize: 13, textAlign: "center", padding: 12 }}>
+              {loadingDeck ? translateUi("Loading deck...") : (empty ? translateUi("Deck empty") : translateUi("Draw a card"))}
+            </div>
+          )}
+        </div>
+
+        {current && (
+          <div style={{ fontWeight: 700, fontSize: 18, color: currentColor, textAlign: "center" }}>
+            {current.name}
+          </div>
+        )}
+
+        {usingFallbackDeck && (
+          <div style={{ fontSize: 12, color: theme.colors.muted, textAlign: "center" }}>
+            {translateUi("Using standard 52-card deck (no imported Deck found).")}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 20, fontSize: 13, color: theme.colors.muted }}>
+          <span>{deck.length} {translateUi("remaining")}</span>
+          <span>{drawn.length} {translateUi("drawn")}</span>
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <Button type="button" variant="primary" onClick={draw} disabled={empty || loadingDeck}>
+            {translateUi("Draw Card")}
+          </Button>
+          <Button type="button" variant="ghost" onClick={reshuffle} disabled={loadingDeck}>
+            {translateUi("Reshuffle")}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}

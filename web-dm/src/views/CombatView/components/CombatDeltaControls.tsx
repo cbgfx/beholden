@@ -1,0 +1,289 @@
+import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
+﻿import * as React from "react";
+import { theme } from "@/theme/theme";
+import { IconAttack, IconHeal, IconConditions, IconBulkDamage } from "@/icons";
+import { rollDiceExpr, hasDiceTerm, sanitizeDiceInput } from "@/views/CombatView/utils/dice";
+
+type Props = {
+  value: string;
+  targetId?: string | null;
+  disabled?: boolean;
+  onChange: (v: string) => void;
+  onApplyDamage: (resolvedValue?: string) => void;
+  onApplyHeal: () => void;
+  onOpenConditions?: () => void;
+  bulkMode?: boolean;
+  bulkCount?: number;
+  onToggleBulkMode?: () => void;
+};
+
+// Input keeps what the shared evaluator understands; the player's HP box uses the same list.
+const normalizeDeltaInput = sanitizeDiceInput;
+
+function HexButton({
+  title,
+  disabled,
+  onClick,
+  variant,
+  children
+}: {
+  title: string;
+  disabled?: boolean;
+  onClick: () => void;
+  variant: "damage" | "heal" | "neutral" | "dice" | "bulk";
+  children: React.ReactNode;
+}) {
+  const bg =
+    variant === "damage"   ? theme.colors.red
+    : variant === "heal"   ? theme.colors.green
+    : variant === "dice"   ? theme.colors.accentPrimary
+    : variant === "bulk"   ? theme.colors.accentWarning
+    : theme.colors.accentPrimary;
+  const fg = theme.colors.text;
+
+  return (
+    <button
+      type="button"
+      title={title}
+      disabled={disabled}
+      onClick={onClick}
+      style={{
+        width: 56,
+        height: 52,
+        display: "grid",
+        placeItems: "center",
+        cursor: disabled ? "not-allowed" : "pointer",
+        border: `2px solid ${theme.colors.panelBorder}`,
+        background: bg,
+        color: fg,
+        clipPath:
+          "polygon(25% 4%, 75% 4%, 98% 50%, 75% 96%, 25% 96%, 2% 50%)",
+        boxShadow: disabled
+          ? "none"
+          : `0 2px 0 0 ${theme.colors.panelBorder}, 0 0 0 2px rgba(0,0,0,0.08) inset`,
+        animation: disabled ? "none" : "beholdenHexPulse 2.2s ease-in-out infinite",
+        opacity: disabled ? 0.5 : 1,
+        transition: "transform 80ms ease, filter 120ms ease",
+        userSelect: "none"
+      }}
+      onMouseDown={(e) => {
+        if (disabled) return;
+        (e.currentTarget as HTMLButtonElement).style.transform = "translateY(1px)";
+      }}
+      onMouseUp={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0px)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0px)";
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+export function CombatDeltaControls(props: Props) {
+  const translateUi = useUiTranslation("dmUi");
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const { onChange, value } = props;
+
+  const disabled = Boolean(props.disabled);
+  const tooltip = disabled ? "Select a target" : "";
+  const hasConditions = Boolean(props.onOpenConditions);
+  const bulkMode = Boolean(props.bulkMode);
+  const bulkCount = props.bulkCount ?? 0;
+
+  // Show dice roll flash briefly after a preview roll.
+  const [lastRoll, setLastRoll] = React.useState<number | null>(null);
+  const flashRef = React.useRef<number | null>(null);
+  React.useEffect(() => () => {
+    if (flashRef.current != null) window.clearTimeout(flashRef.current);
+  }, []);
+
+  const isDiceExpr = hasDiceTerm(props.value);
+
+  // Roll the current expression and put the result back in the field.
+  const handleRollPreview = React.useCallback((): string | null => {
+    if (!value.trim()) return null;
+    const raw = value.trim();
+    const sign = raw[0] === "+" || raw[0] === "-" ? raw[0] : "";
+    const expr = sign ? raw.slice(1) : raw;
+    const result = rollDiceExpr(expr);
+    if (result <= 0) return null;
+    const resolvedValue = `${sign}${result}`;
+    onChange(resolvedValue);
+    setLastRoll(result);
+    if (flashRef.current) window.clearTimeout(flashRef.current);
+    flashRef.current = window.setTimeout(() => setLastRoll(null), 1600);
+    inputRef.current?.focus();
+    return resolvedValue;
+  }, [value, onChange]);
+
+  // When a new target is selected, snap focus back to the input for fast table flow.
+  React.useEffect(() => {
+    if (disabled) return;
+    if (!props.targetId) return;
+    const raf = requestAnimationFrame(() => {
+      const el = document.activeElement as HTMLElement | null;
+      if (el && el !== inputRef.current) {
+        const tag = (el.tagName || "").toUpperCase();
+        const isTextField = tag === "INPUT" || tag === "TEXTAREA" || (el as any).isContentEditable;
+        if (isTextField) return;
+      }
+      inputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [props.targetId, disabled]);
+
+  return (
+    <>
+      <style>
+        {`@keyframes beholdenHexPulse {
+            0% { filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
+            50% { filter: drop-shadow(0 0 10px rgba(255,255,255,0.10)); }
+            100% { filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
+          }
+          @keyframes beholdenRollFlash {
+            0%   { color: ${theme.colors.accentHighlight}; transform: scale(1.08); }
+            60%  { color: ${theme.colors.accentHighlight}; transform: scale(1.08); }
+            100% { color: inherit; transform: scale(1); }
+          }`}
+      </style>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+          padding: "10px 8px",
+          borderRadius: 14,
+          border: `1px solid ${theme.colors.panelBorder}`,
+          background: theme.colors.panelBg
+        }}
+      >
+        {/* Bulk Damage toggle */}
+        {props.onToggleBulkMode ? (
+          <div style={{ position: "relative" }}>
+            <HexButton
+              title={bulkMode ? translateUi("Bulk mode active - {{value1}} selected. Click to cancel.", { value1: bulkCount }) : translateUi("Bulk Damage - select multiple targets")}
+              disabled={false}
+              onClick={props.onToggleBulkMode}
+              variant="bulk"
+            >
+              <div style={{ opacity: bulkMode ? 1 : 0.65, transition: "opacity 150ms" }}>
+                <IconBulkDamage size={22} title={translateUi("Bulk Damage")} />
+              </div>
+            </HexButton>
+            {bulkMode && bulkCount > 0 && (
+              <div style={{
+                position: "absolute", top: 2, right: 2,
+                width: 16, height: 16, borderRadius: "50%",
+                background: theme.colors.red, color: theme.colors.text,
+                fontSize: "var(--fs-tiny)", fontWeight: 900, display: "grid", placeItems: "center",
+                pointerEvents: "none",
+              }}>
+                {bulkCount}
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        <HexButton
+          title={bulkMode ? (bulkCount > 0 ? translateUi("Apply damage to {{value1}} selected", { value1: bulkCount }) : translateUi("Select combatants to update")) : (disabled ? tooltip : translateUi("Apply damage"))}
+          disabled={bulkMode ? bulkCount === 0 : disabled}
+          onClick={() => {
+            props.onApplyDamage();
+            inputRef.current?.focus();
+          }}
+          variant="damage"
+        >
+          <IconAttack size={22} title={translateUi("Damage")} />
+        </HexButton>
+
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+          <input
+            ref={inputRef}
+            data-allow-combat-nav="true"
+            value={props.value}
+            inputMode="text"
+            placeholder="2d6+3, (8+4)/2, 4x5"
+            onChange={(e) => props.onChange(normalizeDeltaInput(e.target.value))}
+            onKeyDown={(e) => {
+              const k = String(e.key || "").toLowerCase();
+              const allowHotkey = !e.altKey && !e.ctrlKey && !e.metaKey && (k === "n" || k === "p");
+              if (!allowHotkey) e.stopPropagation();
+              if (e.key === "Enter") {
+                e.preventDefault();
+                // If it's a dice expression, roll first then apply damage.
+                if (hasDiceTerm(props.value)) {
+                  const resolvedValue = handleRollPreview();
+                  if (resolvedValue) props.onApplyDamage(resolvedValue);
+                } else {
+                  props.onApplyDamage();
+                }
+              }
+              if (e.key === "Escape") {
+                e.preventDefault();
+                props.onChange("");
+              }
+            }}
+            disabled={disabled}
+            title={disabled ? tooltip : translateUi("Enter dice/math: 2d6+3, (8+4)/2, 4x5, +10, -2")}
+            style={{
+              width: 140,
+              textAlign: "center",
+              padding: "10px 12px",
+              borderRadius: 12,
+              border: `1px solid ${theme.colors.panelBorder}`,
+              background: theme.colors.panelBg,
+              color: lastRoll !== null ? theme.colors.accentHighlight : theme.colors.text,
+              fontWeight: 900,
+              fontSize: "var(--fs-title)",
+              outline: "none",
+              transition: "color 200ms ease",
+              animation: lastRoll !== null ? "beholdenRollFlash 1.6s ease forwards" : "none",
+            }}
+          />
+          {/* Inline roll button when a dice expression is typed */}
+          {isDiceExpr && !disabled && (
+            <button
+              type="button"
+              onClick={handleRollPreview}
+              title={translateUi("Roll dice - preview result in field")}
+              style={{ all: "unset", cursor: "pointer", fontSize: "var(--fs-tiny)", color: theme.colors.accentPrimary, fontWeight: 700 }}
+            >
+              {translateUi("roll preview")}
+            </button>
+          )}
+        </div>
+
+        <HexButton
+          title={bulkMode ? (bulkCount > 0 ? translateUi("Heal {{value1}} selected", { value1: bulkCount }) : translateUi("Select combatants to update")) : (disabled ? tooltip : translateUi("Apply heal"))}
+          disabled={bulkMode ? bulkCount === 0 : disabled}
+          onClick={() => {
+            props.onApplyHeal();
+            inputRef.current?.focus();
+          }}
+          variant="heal"
+        >
+          <IconHeal size={22} title={translateUi("Heal")} />
+        </HexButton>
+
+        {hasConditions ? (
+          <HexButton
+            title={disabled ? tooltip : translateUi("Conditions")}
+            disabled={disabled}
+            onClick={() => {
+              props.onOpenConditions?.();
+              inputRef.current?.focus();
+            }}
+            variant="neutral"
+          >
+            <IconConditions size={22} title={translateUi("Conditions")} />
+          </HexButton>
+        ) : null}
+      </div>
+    </>
+  );
+}

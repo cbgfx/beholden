@@ -1,0 +1,196 @@
+import type { AbilKey, CharacterCampaign, CharacterData, ConditionInstance } from "@/views/character/CharacterSheetTypes";
+import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
+import type { CreatorFeatureLike } from "@/views/character-creator/utils/CharacterCreatorClassCoreUtils";
+import type { StructuredFeatMechanicsLike } from "@/domain/character/structuredFeatureEffects";
+import type { SharedPolymorphCondition } from "@beholden/shared/domain";
+import type { CharacterClassEntry } from "@beholden/shared/domain";
+
+/** Total XP required to reach each level (index = level). Index 0 unused. */
+export const XP_TO_LEVEL = [0, 0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 260000, 300000, 355000];
+
+export interface Character {
+  id: string;
+  name: string;
+  playerName: string;
+  ruleset: "5e" | "5.5e";
+  className: string;
+  species: string;
+  level: number;
+  hpMax: number;
+  hpCurrent: number;
+  ac: number;
+  syncedAc?: number;
+  speed: number;
+  strScore: number | null;
+  dexScore: number | null;
+  conScore: number | null;
+  intScore: number | null;
+  wisScore: number | null;
+  chaScore: number | null;
+  color: string | null;
+  imageUrl: string | null;
+  characterData: CharacterData | null;
+  campaigns: CharacterCampaign[];
+  conditions?: ConditionInstance[];
+  overrides?: {
+    tempHp: number;
+    acBonus: number;
+    hpMaxBonus: number;
+    inspiration?: boolean;
+    abilityScores?: Partial<Record<AbilKey, number>>;
+    permanent?: SheetOverrides["permanent"];
+  };
+  deathSaves?: { success: number; fail: number };
+  sharedNotes?: string;
+  campaignSharedNotes?: string;
+  /** Server-issued revision of the stored inventory; sent back on inventory PUTs to detect concurrent edits. */
+  inventoryRev?: string;
+  /** Server-issued revision for concurrent spell-state edits. */
+  spellStateRev?: string;
+}
+
+interface ClassCounterDef {
+  name: string;
+  value: number;
+  reset: string;
+  subclass?: string | null;
+}
+
+export interface ClassRestDetail {
+  id: string;
+  name: string;
+  hd: number | null;
+  armor?: string | null;
+  weapons?: string | null;
+  proficiencies?: {
+    savingThrows?: string[];
+    armor?: string[];
+    weapons?: string[];
+  } | null;
+  multiclass?: {
+    skills?: { choose: number; from?: string[] } | null;
+    armor?: string[];
+    weapons?: string[];
+    tools?: { fixed?: string[]; choices?: Array<{ count: number; from: string[] }>; notes?: string[] } | null;
+    spellcasting?: {
+      progression: "full" | "half" | "third" | "pact";
+      rounding?: "down" | "up";
+    } | null;
+  } | null;
+  subclassDetails?: Record<string, string | {
+    name: string;
+    spellcasting?: {
+      ability: string;
+      list: string;
+      contribution?: "third";
+      progression?: Array<{ level: number; cantrips?: number; prepared?: number; slots?: number[] }>;
+    };
+  }>;
+  spellAbility?: string | null;
+  slotsReset?: string | null;
+  preparedSpellFormula?: { classLevelDivisor?: 1 | 2; rounding?: "down" | "up"; minimum?: number } | null;
+  autolevels: Array<{
+    level: number;
+    slots: number[] | null;
+    counters: ClassCounterDef[];
+    features?: Array<{
+      id?: string;
+      name: string;
+      text: string;
+      optional?: boolean;
+      effects?: unknown[];
+      choices?: CreatorFeatureLike["choices"];
+      resolution?: "automatic" | "manual" | "mixed";
+      resolutionNotes?: string[];
+      scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>;
+      preparedSpellProgression?: PreparedSpellProgressionTable[];
+    }>;
+  }>;
+}
+
+interface LoreTraitDetail {
+  name: string;
+  text: string;
+  scalingRolls?: Array<{ description: string | null; level: number | null; formula: string }>;
+  preparedSpellProgression?: PreparedSpellProgressionTable[];
+  /** Verbatim FeatureEffect-shaped facts from the compendium's own `effects` field — consumed directly, no parsing. */
+  effects?: unknown[];
+  resolution?: "automatic" | "manual" | "mixed";
+  resolutionNotes?: string[];
+  hidden?: boolean;
+}
+
+export interface RaceFeatureDetail {
+  id: string;
+  name: string;
+  size?: string | null;
+  speed?: number | null;
+  creatureType?: string | null;
+  spellAbility?: string | null;
+  traits: LoreTraitDetail[];
+}
+
+export interface BackgroundFeatureDetail {
+  id: string;
+  name: string;
+  traits: LoreTraitDetail[];
+  /** Fixed (non-choice) origin feat grant, e.g. Criminal → Alert. */
+  proficiencies?: {
+    feats?: Array<{ id: string; name: string }>;
+    featChoice?: number;
+  };
+}
+
+export interface FeatFeatureDetail {
+  id: string;
+  name: string;
+  text?: string | null;
+  parsed?: StructuredFeatMechanicsLike;
+  preparedSpellProgression?: PreparedSpellProgressionTable[];
+}
+
+export interface LevelUpFeatDetail {
+  level: number;
+  featId: string;
+  feat: FeatFeatureDetail;
+}
+
+export interface InvocationFeatureDetail {
+  id: string;
+  name: string;
+  text: string;
+  effects?: unknown[];
+}
+
+export interface CharacterClassDetailSelection {
+  entry: CharacterClassEntry;
+  detail: ClassRestDetail;
+}
+
+export interface ClassFeatFeatureDetail {
+  featureName: string;
+  feat: FeatFeatureDetail;
+}
+
+export interface SheetOverrides {
+  tempHp: number;
+  acBonus: number;
+  hpMaxBonus: number;
+  inspiration?: boolean;
+  abilityScores?: Partial<Record<AbilKey, number>>;
+  permanent?: {
+    acBonus?: boolean;
+    hpMaxBonus?: boolean;
+    abilityScores?: boolean;
+  };
+}
+
+export type PolymorphConditionData = SharedPolymorphCondition & ConditionInstance;
+
+type EditableSheetOverrideKey = "tempHp" | "acBonus" | "hpMaxBonus";
+
+export interface EditableSheetOverrideField {
+  key: EditableSheetOverrideKey;
+  label: string;
+  help: string;
+}
