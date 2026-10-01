@@ -93,8 +93,14 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
   const [records, setRecords] = useState<BinderMortal[]>([]);
   const [options, setOptions] = useState<MortalOptions>({ records: [], players: [], monsters: [] });
   const [loreRecords, setLoreRecords] = useState<BinderRecordOption[]>([]);
-  const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState<MortalFilters>(emptyFilters);
+  const persisted = useMemo(() => {
+    try {
+      const value = JSON.parse(localStorage.getItem(`binder:${props.binderId}:mortals-filters`) ?? "null") as { query?: unknown; filters?: MortalFilters } | null;
+      return { query: typeof value?.query === "string" ? value.query : "", filters: value?.filters ?? emptyFilters() };
+    } catch { return { query: "", filters: emptyFilters() }; }
+  }, [props.binderId]);
+  const [query, setQuery] = useState(persisted.query);
+  const [filters, setFilters] = useState<MortalFilters>(persisted.filters);
   const { savedViews, selectedViewId, viewName, setViewName, save: saveMortalView, apply: applyMortalView, removeSelected: removeSelectedMortalView, clearSelection: clearSelectedMortalView } = useMortalSavedViews(props.binderId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -104,8 +110,8 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
   const { sortKey, sortDir, toggleSort } = useBinderListSort<MortalSortKey>("name");
 
   useEffect(() => {
-    setFilters(emptyFilters());
-  }, [props.binderId]);
+    localStorage.setItem(`binder:${props.binderId}:mortals-filters`, JSON.stringify({ query, filters }));
+  }, [filters, props.binderId, query]);
 
   function applyView(viewId: string) {
     const view = applyMortalView(viewId);

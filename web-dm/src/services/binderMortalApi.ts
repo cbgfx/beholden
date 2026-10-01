@@ -80,6 +80,7 @@ export type MortalOptions = {
     imageUrl: string | null;
     characterId: string | null;
     campaignName: string;
+    campaignNames: string[];
     campaignCurrentDate: number | null;
     linkedMortalId: string | null;
   }>;

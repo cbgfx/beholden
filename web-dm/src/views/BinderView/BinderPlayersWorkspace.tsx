@@ -14,6 +14,20 @@ type Filters = Record<FilterKey, string[]>;
 type SortKey = "name" | "class" | "race" | "age" | "status" | "campaign" | "player";
 const emptyFilters = (): Filters => ({ className: [], race: [], status: [], campaign: [], player: [] });
 
+function storedState(binderId: string): { query: string; filters: Filters } {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(`binder:${binderId}:players-filters`) ?? "null") as Partial<{ query: unknown; filters: Partial<Record<FilterKey, unknown>> }> | null;
+    const filters = emptyFilters();
+    for (const key of Object.keys(filters) as FilterKey[]) {
+      const values = parsed?.filters?.[key];
+      if (Array.isArray(values)) filters[key] = values.filter((value): value is string => typeof value === "string");
+    }
+    return { query: typeof parsed?.query === "string" ? parsed.query : "", filters };
+  } catch {
+    return { query: "", filters: emptyFilters() };
+  }
+}
+
 function ageOf(mortal: BinderMortal, currentDate: number | null) {
   const born = Number(mortal.birthDate?.replaceAll(",", ""));
   const end = mortal.deathDate ? Number(mortal.deathDate.replaceAll(",", "")) : currentDate;
@@ -26,17 +40,26 @@ function matches(value: string | null | undefined, selected: string[]) {
   return !selected.length || selected.some((item) => item === NONE ? !value : item === value);
 }
 
+function matchesAny(values: string[], selected: string[]) {
+  return !selected.length || selected.some((item) => item === NONE ? !values.length : values.includes(item));
+}
+
 export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: { binderId: string; binderCurrentDate: number | null; accent: string }) {
   const translateMessage = useUiMessages("dmUi");
   const translateUi = useUiTranslation("dmUi");
   const navigate = useNavigate();
   const [players, setPlayers] = useState<MortalOptions["players"]>([]);
   const [mortals, setMortals] = useState<BinderMortal[]>([]);
-  const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const initialState = useMemo(() => storedState(binderId), [binderId]);
+  const [query, setQuery] = useState(initialState.query);
+  const [filters, setFilters] = useState<Filters>(initialState.filters);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { sortKey, sortDir, toggleSort } = useBinderListSort<SortKey>("name");
+
+  useEffect(() => {
+    localStorage.setItem(`binder:${binderId}:players-filters`, JSON.stringify({ query, filters }));
+  }, [binderId, filters, query]);
 
   useEffect(() => {
     setLoading(true);
@@ -60,7 +83,7 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
       className: [{ value: NONE, label: translateUi("None") }, ...unique(players.filter((p) => p.className).map((p) => [p.className!, p.className!]))],
       race: [{ value: NONE, label: translateUi("None") }, ...unique(pcs.filter((p) => p.race).map((p) => [p.race!.id, p.race!.name]))],
       status: [{ value: "alive", label: translateUi("Alive") }, { value: "dead", label: translateUi("Dead") }],
-      campaign: [{ value: NONE, label: translateUi("None") }, ...unique(players.filter((p) => p.campaignName).map((p) => [p.campaignName!, p.campaignName!]))],
+      campaign: [{ value: NONE, label: translateUi("None") }, ...unique(players.flatMap((p) => p.campaignNames.map((name) => [name, name] as [string, string])))],
       player: [{ value: NONE, label: translateUi("None") }, ...unique(players.filter((p) => p.playerName).map((p) => [p.playerName!, p.playerName!]))],
     } satisfies Record<FilterKey, Array<{ value: string; label: string }>>;
   }, [pcs, players, translateUi]);
@@ -71,7 +94,7 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
       && matches(linked?.className, filters.className)
       && matches(mortal.race?.id, filters.race)
       && matches(mortal.lifeStatus ?? "alive", filters.status)
-      && matches(linked?.campaignName, filters.campaign)
+      && matchesAny(linked?.campaignNames ?? [], filters.campaign)
       && matches(linked?.playerName, filters.player);
   }), [filters, pcs, playersById, query]);
 
@@ -210,8 +233,10 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
               >
                 {dead ? translateUi("Dead") : translateUi("Alive")}
               </span>
-              <span title={player?.campaignName || translateUi("None")} style={cell}>
-                {player?.campaignName || "None"}
+              <span title={player?.campaignName || translateUi("None")} style={{ ...cell, whiteSpace: "normal" }}>
+                {player?.campaignNames.length
+                  ? player.campaignNames.map((name) => <span key={name} style={{ display: "block" }}>{name}</span>)
+                  : "None"}
               </span>
               <span title={player?.playerName || translateUi("None")} style={cell}>
                 {player?.playerName || "None"}

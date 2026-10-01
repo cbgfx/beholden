@@ -141,7 +141,7 @@ export function registerBinderMortalRoutes(app: Express, ctx: ServerContext) {
       return {
         ...player,
         campaignName: player.campaignNames.join(", "),
-        campaignNames: undefined,
+        campaignNames: player.campaignNames,
         characterDataJson: undefined,
         age: typeof characterData.age === "string" || typeof characterData.age === "number" ? String(characterData.age) : null,
         gender: typeof characterData.gender === "string" ? characterData.gender.toLocaleLowerCase() : null,

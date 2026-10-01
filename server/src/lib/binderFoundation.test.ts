@@ -505,11 +505,12 @@ describe("Binder routes", () => {
       headers: { "x-test-user": "owner" },
     });
     assert.equal(mortalOptionsResponse.status, 200);
-    const mortalOptions = await mortalOptionsResponse.json() as { players: Array<{ playerName: string; characterName: string; campaignName: string }> };
+    const mortalOptions = await mortalOptionsResponse.json() as { players: Array<{ playerName: string; characterName: string; campaignName: string; campaignNames: string[] }> };
     const brotherDiegoOptions = mortalOptions.players.filter((player) => player.playerName === "Jean-Marc" && player.characterName === "Brother Diego");
     assert.equal(brotherDiegoOptions.length, 1);
     assert.match(brotherDiegoOptions[0]!.campaignName, /Frozen Assets/);
     assert.match(brotherDiegoOptions[0]!.campaignName, /Real Drama Club/);
+    assert.deepEqual(brotherDiegoOptions[0]!.campaignNames, ["Frozen Assets", "Real Drama Club"]);
 
     const createdMortalResponse = await fetch(`${base}/api/binders/${binder.id}/mortals`, {
       method: "POST",

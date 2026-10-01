@@ -19,7 +19,7 @@ import {
   serializeSharedNotes,
   type SharedNoteOperation,
 } from "../lib/sharedNotes.js";
-import { readSharedNotes, writeSharedNotes, type SharedNotesOwner, type SharedNotesWrite } from "../services/sharedNotes/store.js";
+import { editableSharedNoteOwner, readSharedNotes, writeSharedNotes, type SharedNotesOwner, type SharedNotesWrite } from "../services/sharedNotes/store.js";
 import { dmOrAdmin } from "../middleware/campaignAuth.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireOwnedCharacter, makeEmitPlayerChange } from "./characters/helpers.js";
@@ -98,9 +98,11 @@ export function registerSharedNotesRoutes(app: Express, ctx: ServerContext) {
       req: import("express").Request,
       res: import("express").Response,
       build: (currentIds: string[]) => SharedNoteOperation | null,
+      resolveOwner?: (owner: SharedNotesOwner) => SharedNotesOwner,
     ) => {
-      const owner = entry.owner(req, res, ctx);
-      if (!owner) return;
+      const requestedOwner = entry.owner(req, res, ctx);
+      if (!requestedOwner) return;
+      const owner = resolveOwner?.(requestedOwner) ?? requestedOwner;
       const current = readSharedNotes(db, owner);
       if (current === null) return res.status(404).json({ ok: false, message: "Not found" });
 
@@ -124,7 +126,7 @@ export function registerSharedNotesRoutes(app: Express, ctx: ServerContext) {
         id: noteId,
         title: body.title ?? "",
         text: body.text ?? "",
-      }));
+      }), (owner) => owner.kind === "character" ? editableSharedNoteOwner(db, owner.characterId, noteId) : owner);
     });
 
     // MARK: - DELETE <owner>/sharedNotes/:noteId

@@ -26,7 +26,7 @@ export function useItemPicker(isOpen: boolean) {
     loadMore,
     totalCount,
     refresh,
-  } = useItemSearch({ enabled: isOpen });
+  } = useItemSearch({ enabled: isOpen, persistFilters: false });
   const [magicFilter, setMagicFilter] = React.useState<"" | "magic" | "nonmagic">("");
 
   const [selectedId, setSelectedId] = React.useState<string | null>(null);

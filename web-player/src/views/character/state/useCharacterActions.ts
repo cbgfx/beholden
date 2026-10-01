@@ -106,8 +106,8 @@ export function useCharacterActions(args: {
   // it looked when they started. These say what changed and let the server apply it to what it has.
   //
   // The list is still updated locally first so the panel responds at once, and rolled back if the
-  // request fails. The notes the DM wrote on the campaign are not the player's to change, so they
-  // never take part in a write from this side.
+  // request fails. Notes originating elsewhere remain in campaignSharedNotes locally; the server
+  // resolves their actual owner so editing one never creates a duplicate on this character.
   const applySharedNotesLocally = React.useCallback((
     change: (list: PlayerNote[]) => PlayerNote[],
     send: (characterId: string) => Promise<unknown>,
@@ -124,13 +124,22 @@ export function useCharacterActions(args: {
   }, [allSharedNotes, campaignNotesList, char, setChar]);
 
   const upsertSharedNote = React.useCallback((note: PlayerNote) => {
+    if (char && campaignNotesList.some((entry) => entry.id === note.id)) {
+      const previous = char.campaignSharedNotes;
+      const next = JSON.stringify(campaignNotesList.map((entry) => entry.id === note.id ? note : entry));
+      setChar((current) => current ? { ...current, campaignSharedNotes: next } : current);
+      upsertMySharedNote(char.id, note.id, { title: note.title, text: note.text }).catch(() => {
+        setChar((current) => current?.campaignSharedNotes === next ? { ...current, campaignSharedNotes: previous } : current);
+      });
+      return;
+    }
     applySharedNotesLocally(
       (list) => (list.some((entry) => entry.id === note.id)
         ? list.map((entry) => (entry.id === note.id ? note : entry))
         : [...list, note]),
       (characterId) => upsertMySharedNote(characterId, note.id, { title: note.title, text: note.text }),
     );
-  }, [applySharedNotesLocally]);
+  }, [applySharedNotesLocally, campaignNotesList, char, setChar]);
 
   const deleteSharedNote = React.useCallback((id: string) => {
     applySharedNotesLocally(

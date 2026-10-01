@@ -2,6 +2,7 @@ import * as React from "react";
 import { api } from "../../api/browserClient";
 import { useAvailableRulesets } from "./useAvailableRulesets";
 import { SIZE_LABELS, type CompendiumMonsterRow, type SortMode } from "./monsterPicker";
+import { readPersistentFilters, writePersistentFilters } from "./persistentFilters";
 
 /** Rows fetched per request. Also the granularity at which loaded windows are tracked. */
 const PAGE_SIZE = 200;
@@ -26,8 +27,10 @@ export function useMonsterBrowser(options: {
    * closed modal has no business asking the server for anything.
    */
   enabled?: boolean;
+  persistFilters?: boolean;
 } = {}) {
   const enabled = options.enabled !== false;
+  const persistFilters = options.persistFilters !== false;
   const [rows, setRows] = React.useState<(CompendiumMonsterRow | undefined)[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
@@ -40,14 +43,21 @@ export function useMonsterBrowser(options: {
 
   const refresh = React.useCallback(() => setRefreshKey((value) => value + 1), []);
 
-  const [compQ, setCompQ] = React.useState("");
-  const [sortMode, setSortMode] = React.useState<SortMode>("az");
-  const [envFilter, setEnvFilter] = React.useState("all");
-  const [sizeFilter, setSizeFilter] = React.useState("all");
-  const [typeFilter, setTypeFilter] = React.useState("all");
-  const [crMin, setCrMin] = React.useState("");
-  const [crMax, setCrMax] = React.useState("");
+  const initial = React.useMemo(() => persistFilters
+    ? readPersistentFilters("compendium:monsters:filters", { compQ: "", sortMode: "az" as SortMode, envFilter: "all", sizeFilter: "all", typeFilter: "all", crMin: "", crMax: "" })
+    : { compQ: "", sortMode: "az" as SortMode, envFilter: "all", sizeFilter: "all", typeFilter: "all", crMin: "", crMax: "" }, [persistFilters]);
+  const [compQ, setCompQ] = React.useState(initial.compQ);
+  const [sortMode, setSortMode] = React.useState<SortMode>(initial.sortMode);
+  const [envFilter, setEnvFilter] = React.useState(initial.envFilter);
+  const [sizeFilter, setSizeFilter] = React.useState(initial.sizeFilter);
+  const [typeFilter, setTypeFilter] = React.useState(initial.typeFilter);
+  const [crMin, setCrMin] = React.useState(initial.crMin);
+  const [crMax, setCrMax] = React.useState(initial.crMax);
   const { rulesetFilter, setRulesetFilter, showRulesetFilter } = useAvailableRulesets(api, "monsters", enabled);
+
+  React.useEffect(() => {
+    if (enabled && persistFilters) writePersistentFilters("compendium:monsters:filters", { compQ, sortMode, envFilter, sizeFilter, typeFilter, crMin, crMax });
+  }, [compQ, crMax, crMin, enabled, envFilter, persistFilters, sizeFilter, sortMode, typeFilter]);
 
   React.useEffect(() => {
     if (!enabled) return;

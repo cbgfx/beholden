@@ -101,6 +101,9 @@ export function resolveConditionTransition(args: {
   if (shouldBreakConcentration({ hpCurrent: args.hpCurrent, conditions })) {
     conditions = conditions.filter((condition) => condition.key !== "concentration");
   }
+  if (Number(args.hpCurrent) <= 0) {
+    conditions = conditions.filter((condition) => condition.key !== "rage");
+  }
   const hasUnstamped = conditions.some((condition) => condition.key === "concentration" && !conditionConcentrationId(condition));
   const isNew = args.previousConditions !== undefined
     && !args.previousConditions.some((condition) => condition.key === "concentration");

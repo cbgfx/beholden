@@ -361,6 +361,8 @@ export function CombatView() {
 
       <DmWorkspace
         workspace="combat"
+        allowLayoutEditing={false}
+        fixedLayout
         header={
           <CombatHudBar
             isNarrow={isNarrow}

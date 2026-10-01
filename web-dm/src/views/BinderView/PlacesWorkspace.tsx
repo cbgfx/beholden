@@ -32,8 +32,12 @@ export function PlacesWorkspace(props: { binderId: string; accent: string; canEd
   const translateUi = useUiTranslation("dmUi");
   const navigate = useNavigate();
   const [rows, setRows] = useState<PlaceRow[]>([]);
-  const [query, setQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | PlaceType>("all");
+  const stored = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem(`binder:${props.binderId}:places-filters`) ?? "null") as { query?: string; typeFilter?: "all" | PlaceType } | null; }
+    catch { return null; }
+  }, [props.binderId]);
+  const [query, setQuery] = useState(stored?.query ?? "");
+  const [typeFilter, setTypeFilter] = useState<"all" | PlaceType>(stored?.typeFilter ?? "all");
   const [newType, setNewType] = useState<PlaceType>("locations");
   const [creating, setCreating] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -48,6 +52,9 @@ export function PlacesWorkspace(props: { binderId: string; accent: string; canEd
     finally { setLoading(false); }
   }, [props.binderId, translateMessage]);
   useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => {
+    localStorage.setItem(`binder:${props.binderId}:places-filters`, JSON.stringify({ query, typeFilter }));
+  }, [props.binderId, query, typeFilter]);
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();

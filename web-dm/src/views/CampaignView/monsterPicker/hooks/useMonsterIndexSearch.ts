@@ -15,7 +15,7 @@ import type { SortMode } from "@/views/CampaignView/monsterPicker/types";
  */
 export function useMonsterIndexSearch(args: { isOpen: boolean; query: string }) {
   const { isOpen, query } = args;
-  const browser = useMonsterBrowser({ enabled: isOpen });
+  const browser = useMonsterBrowser({ enabled: isOpen, persistFilters: false });
   const { setCompQ } = browser;
 
   // The picker owns its search box; the browser owns the query the fetches are built from.

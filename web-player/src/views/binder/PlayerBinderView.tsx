@@ -102,10 +102,17 @@ export function PlayerBinderView() {
       return updated;
     });
   };
-  const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState<MortalFilters>(emptyFilters);
-  const [sortKey, setSortKey] = useState<MortalSortKey>("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const storedListState = useMemo(() => {
+    try {
+      const value = JSON.parse(localStorage.getItem(`player-binder:${id}:mortal-filters`) ?? "null") as Partial<{ query: string; filters: MortalFilters; sortKey: MortalSortKey; sortDir: "asc" | "desc" }> | null;
+      return { query: value?.query ?? "", filters: value?.filters ?? emptyFilters(), sortKey: value?.sortKey ?? "name", sortDir: value?.sortDir ?? "asc" };
+    } catch { return { query: "", filters: emptyFilters(), sortKey: "name" as MortalSortKey, sortDir: "asc" as const }; }
+  }, [id]);
+  const [query, setQuery] = useState(storedListState.query);
+  const [filters, setFilters] = useState<MortalFilters>(storedListState.filters);
+  const [sortKey, setSortKey] = useState<MortalSortKey>(storedListState.sortKey);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">(storedListState.sortDir);
+  const [hydratedBinderId, setHydratedBinderId] = useState(id);
   const [error, setError] = useState<string | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
@@ -120,6 +127,18 @@ export function PlayerBinderView() {
     });
     return () => { cancelled = true; };
   }, [id, t]);
+  useEffect(() => {
+    if (hydratedBinderId === id) return;
+    setQuery(storedListState.query);
+    setFilters(storedListState.filters);
+    setSortKey(storedListState.sortKey);
+    setSortDir(storedListState.sortDir);
+    setHydratedBinderId(id);
+  }, [hydratedBinderId, id, storedListState]);
+  useEffect(() => {
+    if (hydratedBinderId !== id) return;
+    localStorage.setItem(`player-binder:${id}:mortal-filters`, JSON.stringify({ query, filters, sortKey, sortDir }));
+  }, [filters, hydratedBinderId, id, query, sortDir, sortKey]);
   const selected = data?.mortals.find((mortal) => mortal.id === selectedId) ?? null;
   const selectedPublicRecord = (section === "deities" ? data?.deities : data?.places)?.find((record) => record.id === selectedId) ?? null;
   const selectedCampaign = data?.campaigns.find((campaign) => campaign.id === selectedId) ?? null;

@@ -81,13 +81,15 @@ export function ReferenceWorkspace(props: {
   const [records, setRecords] = useState<BinderReferenceRecord[]>([]);
   const [loreRecords, setLoreRecords] = useState<BinderRecordOption[]>([]);
   const [parentOptions, setParentOptions] = useState<Array<{ id: string; name: string; type: string; icon: string | null }>>([]);
-  const [query, setQuery] = useState("");
+  const storageKey = `binder:${props.binderId}:reference:${props.type}:query`;
+  const [query, setQuery] = useState(() => localStorage.getItem(storageKey) ?? "");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalRecord, setModalRecord] = useState<BinderReferenceRecord | "new" | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const { sortKey, sortDir, toggleSort } = useBinderListSort<ReferenceSortKey>("name");
   const rankOrder = useMemo(() => new Map(DEITY_RANKS.map((rank, index) => [rank, index])), []);
+  useEffect(() => { localStorage.setItem(storageKey, query); }, [query, storageKey]);
   const sortedRecords = useMemo(() => {
     const sortValue = (record: BinderReferenceRecord): string | number | null => {
       if (sortKey === "name") return record.name;

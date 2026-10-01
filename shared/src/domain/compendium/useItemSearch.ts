@@ -9,12 +9,14 @@ import {
   usePaginatedCompendiumSearch,
   type CompendiumApi,
 } from "./usePaginatedCompendiumSearch";
+import { readPersistentFilters, writePersistentFilters } from "./persistentFilters";
 
 type ApiFn = CompendiumApi;
 
 export type UseCompendiumItemSearchOptions = {
   includeError?: boolean;
   enabled?: boolean;
+  persistFilters?: boolean;
 };
 
 type ItemFacetOption = { value: string; count: number };
@@ -30,20 +32,28 @@ export function useCompendiumItemSearch(
 ) {
   const { includeError = false } = options;
   const enabled = options.enabled ?? true;
+  const persistFilters = options.persistFilters !== false;
   const [error, setError] = React.useState<string | null>(null);
   const [refreshKey, setRefreshKey] = React.useState(0);
   const [facets, setFacets] = React.useState<ItemFacetsResponse>({ rarity: [], type: [] });
 
-  const [q, setQ] = React.useState("");
-  const [rarityFilter, setRarityFilter] = React.useState("all");
-  const [typeFilter, setTypeFilter] = React.useState("all");
-  const [filterAttunement, setFilterAttunement] = React.useState(false);
-  const [filterMagic, setFilterMagic] = React.useState(false);
+  const initial = React.useMemo(() => persistFilters
+    ? readPersistentFilters("compendium:items:filters", { q: "", rarityFilter: "all", typeFilter: "all", filterAttunement: false, filterMagic: false, filterNonMagic: false })
+    : { q: "", rarityFilter: "all", typeFilter: "all", filterAttunement: false, filterMagic: false, filterNonMagic: false }, [persistFilters]);
+  const [q, setQ] = React.useState(initial.q);
+  const [rarityFilter, setRarityFilter] = React.useState(initial.rarityFilter);
+  const [typeFilter, setTypeFilter] = React.useState(initial.typeFilter);
+  const [filterAttunement, setFilterAttunement] = React.useState(initial.filterAttunement);
+  const [filterMagic, setFilterMagic] = React.useState(initial.filterMagic);
   // "Mundane only" is the complement of the Magic toggle, not its off state -- off means
   // "don't filter on magic at all".
-  const [filterNonMagic, setFilterNonMagic] = React.useState(false);
+  const [filterNonMagic, setFilterNonMagic] = React.useState(initial.filterNonMagic);
   const { availableRulesets, rulesetFilter, setRulesetFilter, showRulesetFilter } =
     useAvailableCompendiumRulesets(api, "items", enabled);
+
+  React.useEffect(() => {
+    if (enabled && persistFilters) writePersistentFilters("compendium:items:filters", { q, rarityFilter, typeFilter, filterAttunement, filterMagic, filterNonMagic });
+  }, [enabled, filterAttunement, filterMagic, filterNonMagic, persistFilters, q, rarityFilter, typeFilter]);
 
   React.useEffect(() => {
     if (!enabled) return;

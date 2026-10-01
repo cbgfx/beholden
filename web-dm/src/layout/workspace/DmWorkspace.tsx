@@ -70,6 +70,8 @@ type Props = {
   panels: WorkspacePanel[];
   defaultColumns?: number;
   header?: React.ReactNode;
+  allowLayoutEditing?: boolean;
+  fixedLayout?: boolean;
 };
 
 function appearanceStyle(value: PanelAppearance): React.CSSProperties {
@@ -97,6 +99,8 @@ function WorkspaceEditor({
   panels,
   defaultColumns = 3,
   header,
+  allowLayoutEditing = true,
+  fixedLayout = false,
 }: Props) {
   const t = useUiTranslation("dmUi");
   const defaults = Array.from({ length: defaultColumns }, (_, i) =>
@@ -145,6 +149,12 @@ function WorkspaceEditor({
   const viewRef = React.useRef(view);
   viewRef.current = view;
   React.useEffect(() => {
+    if (fixedLayout) {
+      setPreferences(defaultPreferences(defaultsRef.current));
+      setLoaded(true);
+      setError(null);
+      return;
+    }
     let active = true;
     api<unknown>(endpoint)
       .then((value) => {
@@ -161,7 +171,7 @@ function WorkspaceEditor({
     return () => {
       active = false;
     };
-  }, [endpoint, retry]);
+  }, [endpoint, fixedLayout, retry]);
 
   function updateView(update: (current: WorkspaceView) => WorkspaceView) {
     setPreferences((current) => ({
@@ -303,7 +313,7 @@ function WorkspaceEditor({
           : undefined,
       }}
     >
-      <div className={`dm-workspace-toolbar${editing ? " is-editing" : ""}`}>
+      {!fixedLayout && <div className={`dm-workspace-toolbar${editing ? " is-editing" : ""}`}>
         {!editing && (
           <select
             aria-label={t("Layout")}
@@ -322,7 +332,7 @@ function WorkspaceEditor({
             ))}
           </select>
         )}
-        {!editing ? (
+        {!editing && allowLayoutEditing ? (
           <>
             <button
               className="dm-workspace-icon-button"
@@ -335,7 +345,7 @@ function WorkspaceEditor({
               <IconEditCrayon />
             </button>
           </>
-        ) : (
+        ) : editing ? (
           <>
             <input
               aria-label={t("Layout name")}
@@ -448,8 +458,8 @@ function WorkspaceEditor({
               {saving ? t("Saving...") : t("Done")}
             </Button>
           </>
-        )}
-      </div>
+        ) : null}
+      </div>}
       {error && (
         <div role="alert" style={{ color: "#ff5d5d" }}>
           {t(error)}{" "}

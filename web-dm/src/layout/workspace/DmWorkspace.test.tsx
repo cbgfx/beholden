@@ -72,6 +72,29 @@ it("keeps a failed save editable and retries without discarding the layout", asy
   await click("Done");
   expect(host.querySelector('[role="alert"]')).toBeNull();
 });
+it("can render a workspace without layout editing controls", async () => {
+  await act(async () =>
+    root.render(
+      <DmWorkspace workspace="combat" panels={panels} defaultColumns={2} allowLayoutEditing={false} />,
+    ),
+  );
+  expect(host.querySelector('[aria-label="Customize layout"]')).toBeNull();
+  expect(host.querySelector('[aria-label="Layout"]')).toBeTruthy();
+});
+it("uses only the default layout when the workspace is fixed", async () => {
+  mocks.api.mockResolvedValue({
+    activeId: "custom",
+    views: [{ id: "custom", name: "Custom", columns: [["notes"], ["players"]] }],
+  });
+  await act(async () =>
+    root.render(
+      <DmWorkspace workspace="combat" panels={panels} defaultColumns={2} fixedLayout />,
+    ),
+  );
+  expect(mocks.api).not.toHaveBeenCalled();
+  expect(host.querySelector('[aria-label="Layout"]')).toBeNull();
+  expect(columnOf("players")).toBe("0");
+});
 it("does not allow a late read from another workspace to replace the active layout", async () => {
   let resolve!: (value: unknown) => void;
   mocks.api.mockReturnValueOnce(

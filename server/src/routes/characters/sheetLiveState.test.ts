@@ -344,6 +344,22 @@ test("a character in no campaign keeps its conditions and inspiration", async ()
   });
 });
 
+test("dropping to zero HP ends rage and every tracked form of concentration", async () => {
+  await withServer(async (call, db) => {
+    seedCharacter(db, { concentrationSpell: "Bless" });
+    const set = await call("PATCH", "/api/me/characters/char-ash/conditions", {
+      conditions: [{ key: "rage" }, { key: "concentration" }, { key: "poisoned" }],
+      previousConditions: [],
+    });
+    assert.equal(set.status, 200, JSON.stringify(set.body));
+
+    const dropped = await call("PUT", "/api/me/characters/char-ash", { hpCurrent: 0 });
+    assert.equal(dropped.status, 200, JSON.stringify(dropped.body));
+    assert.deepEqual(storedLive(db).conditions.map((condition: { key: string }) => condition.key), ["poisoned"]);
+    assert.equal(storedData(db).concentrationSpell, null);
+  });
+});
+
 test("one home: the sheet's live state is what every campaign shows, and leaving a campaign loses nothing", async () => {
   await withServer(async (call, db) => {
     seedCharacter(db, {});

@@ -44,6 +44,50 @@ export function readSharedNotes(db: Db, owner: SharedNotesOwner): string | null 
   return row.shared_notes ?? "";
 }
 
+function containsNote(value: string | null | undefined, noteId: string): boolean {
+  try {
+    const notes = JSON.parse(value ?? "[]") as Array<{ id?: unknown }>;
+    return Array.isArray(notes) && notes.some((note) => note?.id === noteId);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Finds the actual owner of a note visible in a character's Shared Notes panel. Collaborators may
+ * edit a shared note through their own character route, but deletion still targets only their own
+ * character list.
+ */
+export function editableSharedNoteOwner(db: Db, characterId: string, noteId: string): SharedNotesOwner {
+  const own = db.prepare("SELECT shared_notes FROM user_characters WHERE id = ?").get(characterId) as { shared_notes: string | null } | undefined;
+  if (containsNote(own?.shared_notes, noteId)) return { kind: "character", characterId };
+
+  const campaigns = db.prepare(`
+    SELECT c.id, c.shared_notes
+    FROM campaigns c
+    JOIN player_rows p ON p.campaign_id = c.id
+    WHERE p.character_id = ?
+  `).all(characterId) as Array<{ id: string; shared_notes: string | null }>;
+  for (const campaign of campaigns) {
+    if (containsNote(campaign.shared_notes, noteId)) return { kind: "campaign", campaignId: campaign.id };
+  }
+
+  const campaignIds = campaigns.map((campaign) => campaign.id);
+  if (campaignIds.length) {
+    const placeholders = campaignIds.map(() => "?").join(", ");
+    const players = db.prepare(`
+      SELECT id, shared_notes
+      FROM player_rows
+      WHERE campaign_id IN (${placeholders}) AND (character_id IS NULL OR character_id != ?)
+    `).all(...campaignIds, characterId) as Array<{ id: string; shared_notes: string | null }>;
+    for (const player of players) {
+      if (containsNote(player.shared_notes, noteId)) return { kind: "player", playerId: player.id };
+    }
+  }
+
+  return { kind: "character", characterId };
+}
+
 /**
  * Stores a new list for an owner and keeps every copy of it in step.
  *

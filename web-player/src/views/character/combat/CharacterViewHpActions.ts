@@ -64,10 +64,11 @@ export function buildCharacterHpActions(args: {
     try {
       if (resolvedKind === "heal") {
         const newHp = Math.min(char.hpCurrent + amt, effectiveHpMax);
-        await putMyCharacter(char.id, { hpCurrent: newHp });
+        const updated = await putMyCharacter<Character>(char.id, { hpCurrent: newHp });
         setChar((prev) => prev ? {
           ...prev,
           hpCurrent: newHp,
+          conditions: updated.conditions ?? prev.conditions,
           ...(prev.hpCurrent <= 0 && newHp > 0 ? { deathSaves: { success: 0, fail: 0 } } : {}),
         } : prev);
       } else {
@@ -82,21 +83,26 @@ export function buildCharacterHpActions(args: {
           const nextOverrides = nextTemp === currentTemp
             ? null
             : { ...overrides, tempHp: nextTemp };
-          await putMyCharacter(char.id, { hpCurrent: newHp });
+          const updated = await putMyCharacter<Character>(char.id, { hpCurrent: newHp });
           if (nextOverrides) {
             await patchMyCharacter(char.id, "overrides", nextOverrides);
           }
           setChar((prev) => prev ? {
             ...prev,
             hpCurrent: newHp,
+            conditions: updated.conditions ?? prev.conditions,
+            characterData: updated.characterData ?? prev.characterData,
             overrides: nextOverrides ? { ...(prev.overrides ?? {}), ...nextOverrides } : prev.overrides,
           } : prev);
         }
       }
       setHpAmount("");
       setLastRoll(null);
-      if (resolvedKind === "damage" && amt > 0 && (char.conditions ?? []).some((condition) => condition.key === "concentration")) {
+      const hpAfterDamage = Math.max(0, char.hpCurrent - Math.max(0, amt - Math.max(0, Number(overrides.tempHp ?? 0) || 0)));
+      if (resolvedKind === "damage" && amt > 0 && hpAfterDamage > 0 && (char.conditions ?? []).some((condition) => condition.key === "concentration")) {
         setConcentrationAlert({ dc: concentrationSaveDc(amt) });
+      } else if (resolvedKind === "damage" && hpAfterDamage <= 0) {
+        setConcentrationAlert(null);
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);

@@ -140,6 +140,27 @@ test("the DM's edit reaches the character, not just the campaign's copy of it", 
   db.close();
 });
 
+test("a player can edit a note shared by someone else, but cannot delete its owner's copy", async () => {
+  const db = seedDb();
+  db.prepare("UPDATE campaigns SET shared_notes = ? WHERE id = 'camp-1'")
+    .run(JSON.stringify([{ id: "campaign-note", title: "Plan", text: "Meet at dawn" }]));
+  await withServer(db, async (call) => {
+    const player = call(PLAYER);
+    const edited = await player("PUT", "/api/me/characters/char-1/sharedNotes/campaign-note", {
+      title: "Plan",
+      text: "Meet at dusk",
+    });
+    assert.equal(edited.status, 200);
+    const campaignNotes = JSON.parse((db.prepare("SELECT shared_notes FROM campaigns WHERE id = 'camp-1'").pluck().get() as string));
+    assert.equal(campaignNotes[0].text, "Meet at dusk", "the source note is edited instead of copied onto the character");
+
+    assert.equal((await player("DELETE", "/api/me/characters/char-1/sharedNotes/campaign-note")).status, 200);
+    const afterDelete = JSON.parse((db.prepare("SELECT shared_notes FROM campaigns WHERE id = 'camp-1'").pluck().get() as string));
+    assert.equal(afterDelete.length, 1, "deletion remains at the ownership boundary");
+  });
+  db.close();
+});
+
 test("a malformed write is refused, and cannot take the list with it", async () => {
   const db = seedDb();
   await withServer(db, async (call) => {

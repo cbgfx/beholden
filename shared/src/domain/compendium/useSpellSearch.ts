@@ -6,6 +6,7 @@ import {
   usePaginatedCompendiumSearch,
   type CompendiumApi,
 } from "./usePaginatedCompendiumSearch";
+import { readPersistentFilters, writePersistentFilters } from "./persistentFilters";
 
 type ApiFn = CompendiumApi;
 type SpellSearchApiResponse = { rows?: unknown[]; total?: number } | unknown[];
@@ -19,18 +20,26 @@ function toStringList(value: unknown): string[] {
   return value.map((entry) => String(entry ?? "").trim()).filter(Boolean);
 }
 
-export function useCompendiumSpellSearch(api: ApiFn) {
-  const [q, setQ] = React.useState("");
-  const [level, setLevel] = React.useState<string>("all");
+export function useCompendiumSpellSearch(api: ApiFn, options: { persistFilters?: boolean } = {}) {
+  const persistFilters = options.persistFilters !== false;
+  const initial = React.useMemo(() => persistFilters
+    ? readPersistentFilters("compendium:spells:filters", { q: "", level: "all", schoolFilter: "all", classFilter: "all", filterV: true, filterS: true, filterM: true, filterConcentration: false, filterRitual: false })
+    : { q: "", level: "all", schoolFilter: "all", classFilter: "all", filterV: true, filterS: true, filterM: true, filterConcentration: false, filterRitual: false }, [persistFilters]);
+  const [q, setQ] = React.useState(initial.q);
+  const [level, setLevel] = React.useState<string>(initial.level);
   const [refreshKey, setRefreshKey] = React.useState(0);
 
-  const [schoolFilter, setSchoolFilter] = React.useState("all");
-  const [classFilter, setClassFilter] = React.useState("all");
-  const [filterV, setFilterV] = React.useState(true);
-  const [filterS, setFilterS] = React.useState(true);
-  const [filterM, setFilterM] = React.useState(true);
-  const [filterConcentration, setFilterConcentration] = React.useState(false);
-  const [filterRitual, setFilterRitual] = React.useState(false);
+  const [schoolFilter, setSchoolFilter] = React.useState(initial.schoolFilter);
+  const [classFilter, setClassFilter] = React.useState(initial.classFilter);
+  const [filterV, setFilterV] = React.useState(initial.filterV);
+  const [filterS, setFilterS] = React.useState(initial.filterS);
+  const [filterM, setFilterM] = React.useState(initial.filterM);
+  const [filterConcentration, setFilterConcentration] = React.useState(initial.filterConcentration);
+  const [filterRitual, setFilterRitual] = React.useState(initial.filterRitual);
+
+  React.useEffect(() => {
+    if (persistFilters) writePersistentFilters("compendium:spells:filters", { q, level, schoolFilter, classFilter, filterV, filterS, filterM, filterConcentration, filterRitual });
+  }, [classFilter, filterConcentration, filterM, filterRitual, filterS, filterV, level, persistFilters, q, schoolFilter]);
 
   const { availableRulesets, rulesetFilter, setRulesetFilter, showRulesetFilter } =
     useAvailableCompendiumRulesets(api, "spells");

@@ -41,6 +41,14 @@ test("zero HP removes concentration while preserving unrelated conditions", () =
   assert.deepEqual(next.conditions, [{ key: "prone" }]);
 });
 
+test("zero HP ends rage as well as concentration", () => {
+  const next = applyCombatantTransition(actor({
+    hpCurrent: 0,
+    conditions: [{ key: "rage" }, { key: "concentration" }, { key: "poisoned" }],
+  }));
+  assert.deepEqual(next.conditions, [{ key: "poisoned" }]);
+});
+
 test("dropping to 0 HP preserves effects whose own rules have not ended them", () => {
   const next = applyCombatantTransition(actor({
     hpCurrent: 0,

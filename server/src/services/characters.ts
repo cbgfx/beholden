@@ -445,7 +445,11 @@ export function syncAssignedPlayerRows(
       const current = sheetOwnLiveState({ live: parseLive(row.live_json) }).conditions;
       const effective = applyConditionConsequences({ previousHpCurrent: hpChange.previousHp, hpCurrent: hpChange.hpCurrent, conditions: current });
       const losesConcentration = shouldBreakConcentration({ hpCurrent: hpChange.hpCurrent, conditions: effective });
-      const next = losesConcentration ? effective.filter((condition) => condition.key !== "concentration") : effective;
+      const next = effective.filter((condition) => {
+        if (losesConcentration && condition.key === "concentration") return false;
+        if (hpChange.hpCurrent <= 0 && condition.key === "rage") return false;
+        return true;
+      });
       if (JSON.stringify(next) !== JSON.stringify(current) || losesConcentration) {
         db.prepare("UPDATE user_characters SET live_json = json_set(live_json, '$.conditions', json(?)) WHERE id = ?")
           .run(JSON.stringify(next), charId);

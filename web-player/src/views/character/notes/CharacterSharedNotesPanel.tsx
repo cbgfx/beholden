@@ -55,13 +55,17 @@ export function SharedNotesPanel(props: {
               {translateUi("From the DM")}
             </div>
             <NoteList
-              items={fromDm.map((note) => ({ ...toItem(note), readOnly: true }))}
+              items={fromDm.map(toItem)}
               expandedIds={expandedNoteIds}
               accentColor={accentColor}
               textColor={C.text}
               mutedColor={C.muted}
               deleteColor={C.red}
               onToggle={onToggleNoteExpanded}
+              onEdit={(id) => {
+                const note = fromDm.find((entry) => entry.id === id);
+                if (note) onOpenSharedNoteEdit(note);
+              }}
             />
           </div>
         ) : null}

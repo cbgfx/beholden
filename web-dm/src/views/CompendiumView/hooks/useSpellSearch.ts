@@ -2,5 +2,5 @@ import { useCompendiumSpellSearch } from "@beholden/shared/domain/compendium/use
 import { api } from "@/services/api";
 
 export function useSpellSearch() {
-  return useCompendiumSpellSearch(api);
+  return useCompendiumSpellSearch(api, { persistFilters: false });
 }

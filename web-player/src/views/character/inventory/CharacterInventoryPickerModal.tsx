@@ -33,7 +33,7 @@ export function InventoryItemPickerModal(props: {
     filterMagic, setFilterMagic,
     hasActiveFilters, clearFilters,
     rows, busy, error, totalCount, loadingMore, hasMore, loadMore, refresh,
-  } = useItemSearch({ enabled: props.isOpen });
+  } = useItemSearch({ enabled: props.isOpen, persistFilters: false });
   const vl = useVirtualList({ isEnabled: true, rowHeight: INVENTORY_PICKER_ROW_HEIGHT, overscan: 8 });
   const { start, end, padTop, padBottom } = vl.getRange(rows.length);
 

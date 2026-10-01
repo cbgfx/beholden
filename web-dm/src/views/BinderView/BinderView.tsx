@@ -311,17 +311,18 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
               ? <BinderCampaignWorkspace binderId={binder.id} campaign={selectedCampaign} binderCurrentDate={binder.currentDate.text} accent={activeItem.color} />
               : <CampaignTable binderId={binder.id} campaigns={campaigns} accent={accent} />
           ) : activeItem.id === "mortals" ? (
-            <MortalWorkspace binderId={binder.id} binderCurrentDate={binder.currentDate.sort} recordId={routeRecordId} accent={activeItem.color} canEdit={canEdit} onRecordsChanged={onRecordsChanged} />
+            <MortalWorkspace key={binder.id} binderId={binder.id} binderCurrentDate={binder.currentDate.sort} recordId={routeRecordId} accent={activeItem.color} canEdit={canEdit} onRecordsChanged={onRecordsChanged} />
           ) : activeItem.id === "players" ? (
-            <BinderPlayersWorkspace binderId={binder.id} binderCurrentDate={binder.currentDate.sort} accent={activeItem.color} />
+            <BinderPlayersWorkspace key={binder.id} binderId={binder.id} binderCurrentDate={binder.currentDate.sort} accent={activeItem.color} />
           ) : activeItem.id === "health" ? (
             <BinderHealthWorkspace binderId={binder.id} accent={activeItem.color} />
           ) : activeItem.id === "places" && !routedPlaceType ? (
-            <PlacesWorkspace binderId={binder.id} accent={activeItem.color} canEdit={canEdit} onRecordsChanged={onRecordsChanged} />
+            <PlacesWorkspace key={binder.id} binderId={binder.id} accent={activeItem.color} canEdit={canEdit} onRecordsChanged={onRecordsChanged} />
           ) : activeItem.id === "places" && routedPlaceType ? (
-            <ReferenceWorkspace binderId={binder.id} type={routedPlaceType} recordId={routeRecordId} accent={activeItem.color} canEdit={canEdit} onRecordsChanged={onRecordsChanged} />
+            <ReferenceWorkspace key={`${binder.id}:${routedPlaceType}`} binderId={binder.id} type={routedPlaceType} recordId={routeRecordId} accent={activeItem.color} canEdit={canEdit} onRecordsChanged={onRecordsChanged} />
           ) : REFERENCE_TYPES.has(activeItem.id as BinderReferenceType) ? (
             <ReferenceWorkspace
+              key={`${binder.id}:${activeItem.id}`}
               binderId={binder.id}
               type={activeItem.id as BinderReferenceType}
               recordId={routeRecordId}
