@@ -7,6 +7,7 @@ import { randomBytes, createHmac, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import type { Db } from "./db.js";
+import { runPasswordTask } from "./passwordWorker.js";
 
 // Isolated module consumers (tests) get an ephemeral private key. The server
 // configures a durable installation key before accepting any requests.
@@ -48,11 +49,11 @@ export function hashPassword(password: string): string {
 
 /** Request-path variants keep bcrypt work off the Node event loop. */
 export function hashPasswordAsync(password: string): Promise<string> {
-  return bcrypt.hash(password, 10);
+  return runPasswordTask("hash", password);
 }
 
 export function verifyPasswordAsync(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
+  return runPasswordTask("verify", password, hash);
 }
 
 export interface JwtPayload {

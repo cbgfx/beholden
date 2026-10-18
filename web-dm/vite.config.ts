@@ -5,10 +5,10 @@ import fs from "node:fs";
 
 export default defineConfig(({ mode }) => {
   // Read root .env files; deployment environment variables take precedence.
-  const env = loadEnv(mode, path.resolve(__dirname, ".."), "");
+  const env = loadEnv(mode, path.resolve(import.meta.dirname, ".."), "");
   const WEB_PORT = Number(env.WEB_PORT ?? 5173);
   const SERVER_PORT = Number(env.SERVER_PORT ?? 5174);
-  const APP_VERSION = (JSON.parse(fs.readFileSync(path.resolve(__dirname, "../server/package.json"), "utf8")) as { version: string }).version;
+  const APP_VERSION = (JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, "../server/package.json"), "utf8")) as { version: string }).version;
   const allowedHosts = [
     "localhost",
     "127.0.0.1",
@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
-    resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
+    resolve: { alias: { "@": path.resolve(import.meta.dirname, "./src") } },
     define: {
       __SERVER_PORT__: SERVER_PORT,
       __APP_VERSION__: JSON.stringify(APP_VERSION),
@@ -42,7 +42,7 @@ export default defineConfig(({ mode }) => {
             // into one forced chunk name pulls in everything that reaches ANY of them,
             // including the glue that App.tsx imports eagerly. Left to Rollup's automatic
             // splitting, each drawer implementation gets its own small on-demand chunk.
-            if (normalizedId.includes("/src/domain/")) return "dm-domain";
+            // Keep view-specific domain helpers in their lazy view chunks.
             if (normalizedId.includes("/src/services/")) return "dm-services";
             return undefined;
           },

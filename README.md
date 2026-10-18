@@ -88,7 +88,33 @@ compendium source files are separate from application source.
 
 ### 1. Install
 
-Requires Node.js 18+.
+Requires Node.js 26.12.0+ within the Node 26 release line, and npm 12.2.0+.
+Development, CI, and releases target Node 26, the next LTS release line.
+Node 27 prereleases are not supported.
+
+Windows launchers prefer a local runtime matching `.nvmrc` under
+`%LOCALAPPDATA%\Beholden\runtimes\node-v26.12.0-win-x64` when present;
+otherwise they use Node.js from `PATH`. After switching Node major versions,
+run `npm rebuild better-sqlite3 esbuild` to refresh native dependencies.
+
+Environment files use Node's built-in parser. Request-time password hashing runs
+in a reusable worker so it does not block HTTP requests or WebSocket updates;
+existing bcrypt passwords remain compatible. Startup seeding still uses synchronous
+hashing before the server accepts connections.
+
+Run `npm run profile:runtime` to compare module compile caching, password hashing,
+and synthetic ZIP/CSV/JSON workloads. It uses temporary caches and synthetic data,
+without starting the server or opening application databases. Run it separately
+from builds/tests for useful timings. Compile caching stays opt-in through Node's
+`NODE_COMPILE_CACHE` setting because local measurements did not show a consistent
+startup improvement. Import-stage timings exclude database writes and validation.
+
+For an application-level Node 24/26 comparison, run
+`npm run benchmark:runtimes -- <path-to-node24> <path-to-node26>`.
+This installs the locked dependencies into disposable snapshots, runs real server
+services and the spell-search HTTP route against generated data, and writes
+[the comparison report](docs/benchmarks/node24-vs26.md). It never opens the live
+database. Run it without concurrent tests/builds; timings are specific to the host.
 
 ```bash
 git clone https://github.com/cbgfx/beholden.git

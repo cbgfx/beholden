@@ -5,10 +5,10 @@ import fs from "node:fs";
 
 export default defineConfig(({ mode }) => {
   // Read root .env files; deployment environment variables take precedence.
-  const env = loadEnv(mode, path.resolve(__dirname, ".."), "");
+  const env = loadEnv(mode, path.resolve(import.meta.dirname, ".."), "");
   const WEB_PORT = Number(env.WEB_PLAYER_PORT ?? 5175);
   const SERVER_PORT = Number(env.SERVER_PORT ?? 5174);
-  const APP_VERSION = (JSON.parse(fs.readFileSync(path.resolve(__dirname, "../server/package.json"), "utf8")) as { version: string }).version;
+  const APP_VERSION = (JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, "../server/package.json"), "utf8")) as { version: string }).version;
   const allowedHosts = [
     "localhost",
     "127.0.0.1",
@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
-    resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
+    resolve: { alias: { "@": path.resolve(import.meta.dirname, "./src") } },
     define: {
       __SERVER_PORT__: SERVER_PORT,
       __APP_VERSION__: JSON.stringify(APP_VERSION),
@@ -41,7 +41,7 @@ export default defineConfig(({ mode }) => {
             if (normalizedId.includes("/shared/src/domain/") || normalizedId.includes("/shared/src/api/")) {
               return "shared-domain";
             }
-            if (normalizedId.includes("/src/domain/character/")) return "player-character-domain";
+            // Keep character helpers with the lazy views that use them.
 
             // Keep heavy character rules in a dedicated async chunk that can be cached across
             // CharacterView, CharacterCreatorView, and LevelUpView.
@@ -66,7 +66,7 @@ export default defineConfig(({ mode }) => {
         // shared/ sits outside this app's root, and its icons load their SVGs through an
         // import.meta.glob. Without this, Vite (and Vitest, which uses the same config) refuses to
         // read them: "Denied ID .../shared/src/icons/svg/....svg?raw".
-        allow: [path.resolve(__dirname, "..")],
+        allow: [path.resolve(import.meta.dirname, "..")],
       },
       proxy: {
         "/api": {

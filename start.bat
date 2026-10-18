@@ -1,5 +1,8 @@
 @echo off
 setlocal
+cd /d "%~dp0"
+call scripts\use-node.bat
+if errorlevel 1 goto :fail
 
 :: ── Check Node.js ─────────────────────────────────────────────────────────
 where node >nul 2>&1

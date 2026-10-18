@@ -1,17 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import dotenv from "dotenv";
+import { loadEnvironment } from "../config/environment.js";
 import { getRuntimeConfig } from "../config/runtime.js";
 import { getPaths } from "../config/paths.js";
 import { openDb } from "../lib/db.js";
 import { importNotionZip } from "../services/binders/notionImport.js";
 
-for (const candidate of [path.resolve(".env"), path.resolve("..", ".env"), path.resolve("..", "..", ".env")]) {
-  if (fs.existsSync(candidate)) {
-    dotenv.config({ path: candidate });
-    break;
-  }
-}
+loadEnvironment();
 
 const valueAfter = (flag: string) => {
   const index = process.argv.indexOf(flag);

@@ -1,29 +1,18 @@
 import fs from "node:fs";
-import path from "node:path";
 import Database from "better-sqlite3";
 import { deleteOrphanImages, findOrphanImages } from "../services/images/orphanImages.js";
 import { checkCombatIntegrity } from "../services/combat.removal.js";
 import { scanJsonReferences } from "../services/maintenance/jsonReferences.js";
 import { compactDatabase, formatMiB, reclaimableBytes } from "../services/maintenance/startupMaintenance.js";
-import dotenv from "dotenv";
+import { loadEnvironment } from "../config/environment.js";
 import { getRuntimeConfig } from "../config/runtime.js";
 import { getPaths } from "../config/paths.js";
-
-function loadEnv(): void {
-  const candidates = [
-    path.resolve(process.cwd(), ".env"),
-    path.resolve(process.cwd(), "..", ".env"),
-    path.resolve(process.cwd(), "..", "..", ".env"),
-  ];
-  const found = candidates.find((candidate) => fs.existsSync(candidate));
-  if (found) dotenv.config({ path: found });
-}
 
 function fileSize(file: string): number {
   return fs.existsSync(file) ? fs.statSync(file).size : 0;
 }
 
-loadEnv();
+loadEnvironment();
 const runtime = getRuntimeConfig();
 const paths = getPaths({
   dataDir: runtime.dataDir,

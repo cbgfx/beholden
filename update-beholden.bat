@@ -1,6 +1,8 @@
 @echo off
 setlocal
 cd /d "%~dp0"
+call scripts\use-node.bat
+if errorlevel 1 goto :failed
 
 echo Updating Beholden...
 git pull --ff-only origin main
