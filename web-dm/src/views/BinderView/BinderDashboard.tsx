@@ -106,9 +106,6 @@ export function BinderDashboardView({ binderId, accent, canEdit }: { binderId: s
             content: (
               <Panel title={translateUi("Review queue")}>
                 <div style={{ display: "grid", gap: 8 }}>
-                  <Link to={`/binder/${binderId}/mortals`} style={{ color: theme.colors.text }}>
-                    {data.unlinkedNpcCount} {translateUi("Binder NPCs unused in campaigns")}
-                  </Link>
                   <Link to={`/binder/${binderId}/events`} style={{ color: theme.colors.text }}>
                     {data.undatedEventCount} {translateUi("undated Events")}
                   </Link>

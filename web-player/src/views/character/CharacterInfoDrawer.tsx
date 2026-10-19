@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { MarkdownRichText } from "@beholden/shared/ui";
+import { GameIcon } from "@/icons/GameIcon";
+import { fetchMyCharacter } from "@/services/actorApi";
 import { C } from "@/lib/theme";
 import { api, jsonInit } from "@/services/api";
 import type { EditableSheetOverrideField, SheetOverrides } from "@/views/character/CharacterViewHelpers";
@@ -26,22 +29,32 @@ export function CharacterInfoDrawer(props: {
   onAbilityOverrideChange: (key: AbilKey, value: number | null) => void;
 }) {
   const t = useUiTranslation("playerUi");
-  type LinkedIdentity = { id: string; name: string; gender: string | null; age: number | null; backstory: string | null };
+  type LinkedIdentity = { binderId: string; id: string; name: string; gender: string | null; age: number | null; backstory: string | null };
+  const [biographyOpen, setBiographyOpen] = useState(false);
+  const [biography, setBiography] = useState("");
   const [linked, setLinked] = useState<LinkedIdentity | null>(null);
   const [linkedError, setLinkedError] = useState<string | null>(null);
   const [linkedOpen, setLinkedOpen] = useState(false);
   const [linkedSaving, setLinkedSaving] = useState(false);
-  const [linkedDraft, setLinkedDraft] = useState({ gender: "", age: "", backstory: "" });
+  const [linkedDraft, setLinkedDraft] = useState({ gender: "", age: "" });
   useEffect(() => {
     if (!props.open) return;
     const controller = new AbortController();
     setLinked(null);
+    setBiography("");
+    setBiographyOpen(false);
     setLinkedError(null);
     api<LinkedIdentity>(`/api/me/characters/${props.characterId}/binder-identity`, { signal: controller.signal }).then((value) => {
       if (controller.signal.aborted) return;
       setLinked(value);
-      setLinkedDraft({ gender: value.gender ?? "", age: value.age == null ? "" : String(value.age), backstory: value.backstory ?? "" });
-    }).catch(() => { if (!controller.signal.aborted) setLinked(null); });
+      setBiography(value.backstory ?? "");
+      setLinkedDraft({ gender: value.gender ?? "", age: value.age == null ? "" : String(value.age) });
+    }).catch(async () => {
+      if (controller.signal.aborted) return;
+      setLinked(null);
+      const character = await fetchMyCharacter(props.characterId).catch(() => null);
+      if (!controller.signal.aborted && typeof character?.characterData?.biography === "string") setBiography(character.characterData.biography);
+    });
     return () => controller.abort();
   }, [props.characterId, props.open]);
   const displayedIdentityFields = useMemo(() => {
@@ -120,6 +133,17 @@ export function CharacterInfoDrawer(props: {
                   </svg>
                 </button>
               ) : null}
+              <button
+                type="button"
+                aria-expanded={biographyOpen}
+                aria-controls="character-biography"
+                onClick={() => setBiographyOpen((value) => !value)}
+                style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 0 5px 10px", border: 0, background: "transparent", color: biographyOpen ? props.accentColor : C.muted, cursor: "pointer", font: "inherit", fontSize: "var(--fs-small)", fontWeight: 600 }}
+              >
+                <GameIcon icon="game-icons:book-cover" size={16} />
+                {t("Biography")}
+                <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: biographyOpen ? "rotate(180deg)" : undefined }}><path d="m6 9 6 6 6-6" /></svg>
+              </button>
             </div>
             {displayedIdentityFields.length > 0 ? (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
@@ -148,6 +172,9 @@ export function CharacterInfoDrawer(props: {
                 {t("No character information filled in yet.")}
               </div>
             )}
+            {biographyOpen ? <section id="character-biography" style={{ marginTop: 16, lineHeight: 1.65 }}>
+              {biography ? <MarkdownRichText text={biography} binderId={linked?.binderId} /> : <div style={{ color: C.muted }}>{t("No biography yet.")}</div>}
+            </section> : null}
             {linked && linkedOpen ? (
               <div
                 style={{
@@ -185,15 +212,6 @@ export function CharacterInfoDrawer(props: {
                     />
                   </label>
                 </div>
-                <label style={{ display: "grid", gap: 5, color: C.muted }}>
-                  {t("Backstory")}
-                  <textarea
-                    rows={5}
-                    value={linkedDraft.backstory}
-                    onChange={(event) => setLinkedDraft((value) => ({ ...value, backstory: event.target.value }))}
-                    style={identityInputStyle}
-                  />
-                </label>
                 <Button
                   type="button"
                   variant="primary"
@@ -207,7 +225,6 @@ export function CharacterInfoDrawer(props: {
                         jsonInit("PATCH", {
                           gender: linkedDraft.gender.trim() || null,
                           age: linkedDraft.age.trim() ? Number(linkedDraft.age) : null,
-                          backstory: linkedDraft.backstory || null,
                         }),
                       );
                       setLinked((value) =>
@@ -216,8 +233,7 @@ export function CharacterInfoDrawer(props: {
                               ...value,
                               gender: linkedDraft.gender || null,
                               age: linkedDraft.age ? Number(linkedDraft.age) : null,
-                              backstory: linkedDraft.backstory || null,
-                            }
+                                }
                           : value,
                       );
                     } catch (error) {

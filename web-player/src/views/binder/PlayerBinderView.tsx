@@ -1,3 +1,4 @@
+import { CharacterRequirementsBadge } from "@/ui/CharacterRequirementsBadge";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -614,6 +615,7 @@ export function PlayerBinderView() {
                       )}
                     </button>
                     <h2 style={{ margin: 0, fontSize: "calc(var(--fs-hero) * .9)" }}>{selected.name}</h2>
+                    {selected.id === data.linkedMortalId ? <Button onClick={() => navigate(`/characters/${id}/edit`)}>{t("Edit Character")}<CharacterRequirementsBadge characterId={id} /></Button> : null}
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", columnGap: 30, rowGap: 0 }}>
                     {[
@@ -679,7 +681,7 @@ export function PlayerBinderView() {
                   </div>
                   {selected.description || selected.backstory ? (
                     <section style={{ marginTop: 24 }}>
-                      <h3>{t("Notes")}</h3>
+                      <h3>{t(selected.mortalType === "player_character" ? "Biography" : "Notes")}</h3>
                       <div style={{ lineHeight: 1.65 }}>
                         <MarkdownRichText text={selected.description || selected.backstory || ""} binderId={data.binder.id} />
                       </div>

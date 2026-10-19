@@ -1,3 +1,4 @@
+import { CharacterRequirementsBadge } from "@/ui/CharacterRequirementsBadge";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -251,7 +252,7 @@ export function CharacterSheetHeader(props: {
           onClick={() => navigate(`/characters/${character.id}/edit`)}
           style={{ height: 32, padding: "0 16px", fontSize: "var(--fs-medium)", flexShrink: 0 }}
         >
-          {t("Edit")}
+          {t("Edit")}<CharacterRequirementsBadge characterId={character.id} />
         </Button>
         {inCombat && (
           <span

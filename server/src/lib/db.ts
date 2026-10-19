@@ -84,6 +84,9 @@ export function openDb(dbPath: string): Db {
   // Binder tables must exist before SQLite can add campaigns.binder_id with
   // its foreign-key reference on upgraded databases.
   ensureBinderLocationNaming(db);
+  // Upgrade legacy Item links before Binder indexes reference the ruleset column.
+  ensureCompendiumRulesetColumns(db);
+  ensureCompendiumCompositePrimaryKey(db);
   db.exec(BINDER_SCHEMA_SQL);
   ensureInpcBinderMortalLink(db);
   ensureBinderColumns(db);
@@ -98,9 +101,7 @@ export function openDb(dbPath: string): Db {
   // Every column the player view reads now exists; everything below reads players through it.
   ensurePlayerRowsView(db);
   reconcileLinkedCharacterIdentities(db);
-  ensureCompendiumRulesetColumns(db);
   removeLegacyBinderNpcMonsterForeignKey(db);
-  ensureCompendiumCompositePrimaryKey(db);
   db.exec(BINDER_SCHEMA_SQL);
   ensureCharacterRulesetColumn(db);
   ensureCharacterCreationTokenColumn(db);

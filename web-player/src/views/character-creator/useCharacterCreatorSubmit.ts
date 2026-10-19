@@ -304,6 +304,14 @@ export function useCharacterCreatorSubmit(args: {
         completedFollowUpsRef.current.assigned = true;
       }
 
+      const linkedIdentity = await api(`/api/me/characters/${charId}/binder-identity`).catch((error) => {
+        if (error?.status === 404) return null;
+        throw error;
+      });
+      if (linkedIdentity) {
+        await api(`/api/me/characters/${charId}/binder-identity`, jsonInit("PATCH", { backstory: form.biography || null }));
+      }
+
       if (portraitFile && !completedFollowUpsRef.current.portrait) {
         const fd = new FormData();
         fd.append("image", portraitFile);

@@ -17,6 +17,8 @@ import {
 } from "@/services/binderReferenceApi";
 
 const PARENT_TYPE_LABELS: Record<string, string> = {
+  continent: "Continent",
+  country: "Country",
   location: "Location",
   poi: "Point of Interest",
 };
@@ -175,7 +177,7 @@ export function ReferenceRecordModal(props: {
               id: option.id,
               name: option.name,
               icon: option.icon,
-              meta: props.parentLabel === "Parent" ? (PARENT_TYPE_LABELS[option.type] ?? option.type) : undefined,
+              meta: props.parentLabel === "Parent" ? translateUi(PARENT_TYPE_LABELS[option.type] ?? option.type) : undefined,
             }))}
           />
         </div>

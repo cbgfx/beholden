@@ -18,7 +18,7 @@ import type {
 } from "@/views/character-creator/utils/FeatChoiceTypes";
 
 export type AbilityMethod = "standard" | "pointbuy" | "rolled";
-export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
 /** A Binder-linked campaign expects a Mortal record for every PC, which needs Gender and Age to
  * be meaningful -- so those fields are only required when at least one selected campaign has a
@@ -80,6 +80,7 @@ export interface FormState {
   characterName: string;
   playerName: string;
   alignment: string;
+  biography: string;
   hair: string;
   skin: string;
   heightText: string;
@@ -247,7 +248,7 @@ export function initForm(user: { name?: string } | null, params: URLSearchParams
     creationHpRolls: {},
     hpMax: "", ac: "10", speed: "30",
     characterName: "", playerName: user?.name ?? "",
-    alignment: "", hair: "", skin: "", heightText: "",
+    biography: "", alignment: "", hair: "", skin: "", heightText: "",
     age: "", weight: "", gender: "",
     color: C.accentHl,
     campaignIds: preselectedCampaign ? [preselectedCampaign] : [],

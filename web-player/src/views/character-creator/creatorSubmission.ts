@@ -497,6 +497,7 @@ export async function buildCreatorSubmissionBody(args: {
       bgAbilityMode: form.bgAbilityMode,
       bgAbilityBonuses: form.bgAbilityBonuses,
       alignment: optionalText(form.alignment),
+      biography: form.biography,
       hair: optionalText(form.hair),
       skin: optionalText(form.skin),
       height: optionalText(form.heightText),

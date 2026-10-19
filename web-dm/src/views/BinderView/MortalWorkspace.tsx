@@ -276,9 +276,9 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
       ...(selected.race ? [{ key: "race", icon: <IconDna1 size={16} />, label: translateUi("Race"), node: selected.race.name as React.ReactNode }] : []),
       ...(age !== null ? [{ key: "age", icon: <IconCakeSlice size={16} />, label: translateUi("Age"), node: String(age) as React.ReactNode }] : []),
       ...(selected.personal?.height ? [{ key: "height", icon: null, label: translateUi("Height"), node: selected.personal.height as React.ReactNode }] : []),
-      ...(selected.personal?.weight ? [{ key: "weight", icon: null, label: translateUi("Weight"), node: selected.personal.weight as React.ReactNode }] : []),
-      ...(selected.personal?.hair ? [{ key: "hair", icon: null, label: translateUi("Hair"), node: selected.personal.hair as React.ReactNode }] : []),
-      ...(selected.personal?.skin ? [{ key: "skin", icon: null, label: translateUi("Skin"), node: selected.personal.skin as React.ReactNode }] : []),
+      ...(selected.personal?.weight ? [{ key: "weight", icon: <EntityIcon icon="game-icons:weight" size={16} />, label: translateUi("Weight"), node: selected.personal.weight as React.ReactNode }] : []),
+      ...(selected.personal?.hair ? [{ key: "hair", icon: <EntityIcon icon="game-icons:comb" size={16} />, label: translateUi("Hair"), node: selected.personal.hair as React.ReactNode }] : []),
+      ...(selected.personal?.skin ? [{ key: "skin", icon: <EntityIcon icon="game-icons:animal-hide" size={16} />, label: translateUi("Skin"), node: selected.personal.skin as React.ReactNode }] : []),
       {
         key: "gender", icon: <IconGender size={16} />, label: translateUi("Gender"),
         node: genderColor

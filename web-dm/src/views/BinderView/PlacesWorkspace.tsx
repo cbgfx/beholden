@@ -5,6 +5,8 @@ import { IconPlus, IconTargeted } from "@/icons";
 import { IconAntarctica, IconFlyingFlag, IconVillage } from "@/views/BinderView/binderIcons";
 import { EntityIcon } from "@/components/iconPicker";
 import { Button } from "@/ui/Button";
+import { filterPlaces, placeFilterOptions, reconcilePlaceFilters, emptyPlaceFilters, PLACE_FILTER_FIELDS, type PlaceFilters } from "./placeFilters";
+import { SearchableMultiFilter } from "@/components/SearchableSelect";
 import { Input } from "@/ui/Input";
 import { theme, withAlpha } from "@/theme/theme";
 import { createBinderReference, fetchBinderReferences, type BinderReferenceInput, type BinderReferenceRecord, type BinderReferenceType } from "@/services/binderReferenceApi";
@@ -33,11 +35,18 @@ export function PlacesWorkspace(props: { binderId: string; accent: string; canEd
   const navigate = useNavigate();
   const [rows, setRows] = useState<PlaceRow[]>([]);
   const stored = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem(`binder:${props.binderId}:places-filters`) ?? "null") as { query?: string; typeFilter?: "all" | PlaceType } | null; }
+    try { return JSON.parse(localStorage.getItem(`binder:${props.binderId}:places-filters`) ?? "null") as { query?: string; filters?: PlaceFilters } | null; }
     catch { return null; }
   }, [props.binderId]);
   const [query, setQuery] = useState(stored?.query ?? "");
-  const [typeFilter, setTypeFilter] = useState<"all" | PlaceType>(stored?.typeFilter ?? "all");
+  const [filters, setFilters] = useState<PlaceFilters>(stored?.filters ?? emptyPlaceFilters());
+  const [hydratedBinderId, setHydratedBinderId] = useState(props.binderId);
+  useEffect(() => {
+    if (hydratedBinderId === props.binderId) return;
+    setQuery(stored?.query ?? "");
+    setFilters(stored?.filters ?? emptyPlaceFilters());
+    setHydratedBinderId(props.binderId);
+  }, [props.binderId, hydratedBinderId, stored]);
   const [newType, setNewType] = useState<PlaceType>("locations");
   const [creating, setCreating] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -53,14 +62,25 @@ export function PlacesWorkspace(props: { binderId: string; accent: string; canEd
   }, [props.binderId, translateMessage]);
   useEffect(() => { void reload(); }, [reload]);
   useEffect(() => {
-    localStorage.setItem(`binder:${props.binderId}:places-filters`, JSON.stringify({ query, typeFilter }));
-  }, [props.binderId, query, typeFilter]);
+    if (hydratedBinderId !== props.binderId) return;
+    localStorage.setItem(`binder:${props.binderId}:places-filters`, JSON.stringify({ query, filters }));
+  }, [props.binderId, query, filters, hydratedBinderId]);
 
-  const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return rows.filter((row) => (typeFilter === "all" || row.referenceType === typeFilter)
-      && (!needle || row.name.toLowerCase().includes(needle) || row.parent?.name.toLowerCase().includes(needle)));
-  }, [query, rows, typeFilter]);
+  const visible = useMemo(() => filterPlaces(rows, query, filters), [query, rows, filters]);
+  const filterChoices = useMemo(() => Object.fromEntries(PLACE_FILTER_FIELDS.map((key) => [key, [
+    { value: "__none__", label: translateUi("None") },
+    ...placeFilterOptions(rows, filters, key).map((row) => ({ value: row.id, label: row.name })),
+  ]])) as Record<PlaceType, Array<{ value: string; label: string }>>, [rows, filters, translateUi]);
+  useEffect(() => {
+    if (!loading && hydratedBinderId === props.binderId) setFilters((current) => reconcilePlaceFilters(rows, current));
+  }, [rows, loading, hydratedBinderId, props.binderId]);
+  function addFilter(key: PlaceType, value: string) {
+    setFilters((current) => reconcilePlaceFilters(rows, { ...current, [key]: [...new Set([...current[key], value])] }));
+  }
+  function showWithin(id: string) {
+    const place = rows.find((row) => row.id === id);
+    if (place) addFilter(place.referenceType, id);
+  }
   const parentLabel = newType === "countries" ? "Continent" : newType === "locations" ? "Country" : newType === "points-of-interest" ? "Parent" : undefined;
   const allowedParents = newType === "countries" ? ["continents"] : newType === "locations" ? ["countries"] : newType === "points-of-interest" ? ["countries", "locations", "points-of-interest"] : [];
   const parentOptions = rows.filter((row) => allowedParents.includes(row.referenceType)).map((row) => ({ id: row.id, name: row.name, type: LABELS[row.referenceType].recordType, icon: row.icon }));
@@ -75,33 +95,14 @@ export function PlacesWorkspace(props: { binderId: string; accent: string; canEd
     <>
       <div style={{ display: "grid", gap: 8 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ display: "flex", gap: 8, flex: "1 1 520px" }}>
+          <div style={{ display: "flex", gap: 8, flex: "1 1 520px", flexWrap: "wrap", alignItems: "end" }}>
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={translateUi("Search places…")}
               style={{ width: "min(360px,100%)" }}
             />
-            <select
-              value={typeFilter}
-              onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)}
-              style={{
-                minWidth: 170,
-                padding: "9px 11px",
-                borderRadius: theme.radius.control,
-                border: `1px solid ${theme.colors.panelBorder}`,
-                background: theme.colors.inputBg,
-                color: theme.colors.text,
-                font: "inherit",
-              }}
-            >
-              <option value="all">{translateUi("All place types")}</option>
-              {PLACE_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {LABELS[type].plural}
-                </option>
-              ))}
-            </select>
+
           </div>
           {props.canEdit ? (
             <div style={{ display: "flex", gap: 8 }}>
@@ -132,6 +133,21 @@ export function PlacesWorkspace(props: { binderId: string; accent: string; canEd
             </div>
           ) : null}
         </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          {PLACE_FILTER_FIELDS.map((key) => <SearchableMultiFilter key={key} label={translateUi(LABELS[key].singular)} width={key === "points-of-interest" ? 200 : 165} selected={filters[key]} options={filterChoices[key]} onAdd={(value) => addFilter(key, value)} />)}
+          {Object.values(filters).some((values) => values.length) ? <Button variant="ghost" onClick={() => setFilters(emptyPlaceFilters())}>{translateUi("Clear")}</Button> : null}
+        </div>
+        {Object.values(filters).some((values) => values.length) ? <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
+          {PLACE_FILTER_FIELDS.flatMap((key) => filters[key].map((value) => {
+            const label = translateUi(LABELS[key].singular);
+            const choice = filterChoices[key].find((item) => item.value === value);
+            return <button key={`${key}:${value}`} type="button" aria-label={translateUi("Remove {{value1}} {{value2}} filter", { value1: label, value2: choice?.label ?? value })}
+              onClick={() => setFilters((current) => reconcilePlaceFilters(rows, { ...current, [key]: current[key].filter((item) => item !== value) }))}
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "2px 7px", border: `1px solid ${withAlpha(props.accent, 0.48)}`, borderRadius: 999, background: withAlpha(props.accent, 0.12), color: theme.colors.text, cursor: "pointer", font: "inherit", fontSize: "var(--fs-tiny)", lineHeight: 1.35, fontWeight: 900 }}>
+              <span style={{ color: props.accent }}>{label}</span>{choice?.label ?? value}<span aria-hidden style={{ color: theme.colors.red, fontSize: 14, lineHeight: 1 }}>{"\u00d7"}</span>
+            </button>;
+          }))}
+        </div> : null}
         <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
           <div
             style={{
@@ -156,9 +172,11 @@ export function PlacesWorkspace(props: { binderId: string; accent: string; canEd
             <div style={{ padding: 42, textAlign: "center", color: theme.colors.red }}>{error}</div>
           ) : visible.length ? (
             visible.map((row) => (
-              <button
+              <div
                 key={row.id}
-                type="button"
+                role="link"
+                tabIndex={0}
+                onKeyDown={(event) => { if (event.target === event.currentTarget && event.key === "Enter") navigate(`/binder/${props.binderId}/${row.referenceType}/${row.id}`); }}
                 onClick={() => navigate(`/binder/${props.binderId}/${row.referenceType}/${row.id}`)}
                 style={{
                   width: "100%",
@@ -192,10 +210,10 @@ export function PlacesWorkspace(props: { binderId: string; accent: string; canEd
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {row.parent?.name ?? "None"}
+                  {row.parent ? <button type="button" onClick={(event) => { event.stopPropagation(); showWithin(row.parent!.id); }} title={`${translateUi("Within")}: ${row.parent.name}`} style={{ padding: 0, border: 0, background: "transparent", color: "inherit", font: "inherit", textDecoration: "underline", textUnderlineOffset: 3, cursor: "pointer" }}>{row.parent.name}</button> : translateUi("None")}
                 </span>
                 <span style={{ color: theme.colors.muted }}>{row.usageCount}</span>
-              </button>
+              </div>
             ))
           ) : (
             <div style={{ padding: 48, textAlign: "center", color: theme.colors.muted }}>{translateUi("No Places match the current search.")}</div>

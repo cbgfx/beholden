@@ -2,7 +2,7 @@ import type { ClassSpellSelection } from "@/domain/character/classSpellSelection
 import type { ProgressionReplacementEvent, ProgressionSelectionOccurrence } from "@beholden/shared/domain/progressionOwnership";
 import { reconcileCreatorHp } from "@beholden/shared/domain/progressionHp";
 import { evaluateChoiceRequirement, requirementBlocks, retainPendingRequirements, type ProgressionRequirement } from "@beholden/shared/domain/progressionRequirements";
-import { creatorRequirements } from "./creatorRequirements";
+import { creatorRequirements, requirementNotification } from "./creatorRequirements";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useTranslation } from "react-i18next";
 import React from "react";
@@ -79,13 +79,14 @@ function displayNameFromCompendiumId(value: string | null | undefined): string {
 }
 
 
-export function CharacterCreatorView() {
+export function CharacterCreatorView(props: { requirementBadgeFor?: string } = {}) {
   const translateUi = useUiTranslation("playerUi");
   const { t } = useTranslation("player");
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { id: editId } = useParams<{ id: string }>();
+  const { id: routeEditId } = useParams<{ id: string }>();
+  const editId = props.requirementBadgeFor ?? routeEditId;
   const isEditing = Boolean(editId);
 
   const [step, setStep] = React.useState<Step>(isEditing ? 2 : 1);
@@ -722,6 +723,16 @@ export function CharacterCreatorView() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
+  if (props.requirementBadgeFor) {
+    const incomplete = requirementNotification(requirements, editLoading || !editSummaryFallback);
+    return incomplete.length > 0 ? <span
+      role="status"
+      aria-label={`${incomplete.length} incomplete requirements`}
+      title={incomplete.map((entry) => entry.message).join("\n")}
+      style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", marginLeft: 6, minWidth: 19, height: 19, padding: "0 5px", borderRadius: 10, background: C.red, color: "#fff", fontSize: "var(--fs-tiny)", fontWeight: 900 }}
+    >{incomplete.length}</span> : null;
+  }
+
   if (editLoading) {
     return (
       <div style={{ height: "100%", overflowY: "auto", background: C.bg, color: C.text }}>
@@ -748,14 +759,14 @@ export function CharacterCreatorView() {
             {repairingProgression ? "Resetting…" : "Review and reset progression baseline"}
           </button>
         </div>}
-        <details open={blockedRequirements.length > 0} style={{ marginBottom: 16, color: C.text }}>
+        {blockedRequirements.length > 0 && <details open style={{ marginBottom: 16, color: C.text }}>
           <summary>{blockedRequirements.length > 0 ? `${blockedRequirements.length} requirements remaining` : "Build requirements complete"}</summary>
           <ul style={{ margin: "8px 0", paddingLeft: 22 }}>
-            {requirements.filter((entry) => entry.state !== "not_applicable").map((entry) => (
+            {blockedRequirements.map((entry) => (
               <li key={entry.id}>
                 <button type="button" onClick={() => setStep((entry.step ?? 8) as Step)}
                   style={{ background: "none", border: 0, color: requirementBlocks(entry) ? C.accentHl : C.muted, cursor: "pointer", textAlign: "left", padding: "4px 0" }}>
-                  {entry.state === "complete" ? "Complete: " : ""}{entry.message}
+                  {entry.message}
                 </button>
               </li>
             ))}
@@ -763,7 +774,7 @@ export function CharacterCreatorView() {
           {blockedRequirements.some((entry) => entry.state === "failed" || entry.state === "loading") && (
             <button type="button" onClick={retryOptions}>Retry loading options</button>
           )}
-        </details>
+        </details>}
         <StepHeader
           current={step}
           onStepClick={(s) => setStep(s as Step)}

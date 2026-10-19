@@ -2,6 +2,7 @@ import { readClassSpellSelection } from "@/domain/character/classSpellSelections
 import type { ClassSpellSelection } from "@/domain/character/classSpellSelections";
 import React from "react";
 import { fetchMyCharacter } from "@/services/actorApi";
+import { api } from "@/services/api";
 import { C } from "@/lib/theme";
 import type { CharacterCampaignAssignmentDto } from "@beholden/shared/api";
 import { resolveStoredCompendiumClassId } from "@/domain/character/classIds";
@@ -110,7 +111,8 @@ export function useCreatorEditHydration(args: {
   React.useEffect(() => {
     if (!editId) return;
     fetchMyCharacter(editId)
-      .then((ch) => {
+      .then(async (ch) => {
+        const identity = await api<{ backstory: string | null }>(`/api/me/characters/${editId}/binder-identity`).catch((error) => { if (error?.status === 404) return null; throw error; });
         const cd: CreatorCharacterData = (ch.characterData ?? {}) as CreatorCharacterData;
         const primaryClassEntry = Array.isArray(cd.classes) ? cd.classes[0] : null;
         const classId = resolveStoredCompendiumClassId(primaryClassEntry, ch.className);
@@ -312,6 +314,7 @@ export function useCreatorEditHydration(args: {
           characterName: ch.name ?? "",
           playerName: ch.playerName ?? f.playerName,
           alignment: typeof cd.alignment === "string" ? cd.alignment : "",
+          biography: identity ? identity.backstory ?? "" : typeof cd.biography === "string" ? cd.biography : "",
           hair: typeof cd.hair === "string" ? cd.hair : "",
           skin: typeof cd.skin === "string" ? cd.skin : "",
           heightText: typeof cd.height === "string" ? cd.height : "",

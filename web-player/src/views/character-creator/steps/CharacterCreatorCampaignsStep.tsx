@@ -114,7 +114,7 @@ export function renderCampaignsFromContext(ctx: CharacterCreatorStepRenderContex
     error: ctx.error,
     busy: ctx.busy,
     isEditing: ctx.isEditing,
-    onBack: () => ctx.setStep(10),
+    onBack: () => ctx.setStep(11),
     onEditIdentity: () => ctx.setStep(10),
     onSubmit: ctx.handleSubmit,
     side: ctx.sideSummary,

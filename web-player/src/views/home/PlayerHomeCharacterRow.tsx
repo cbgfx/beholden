@@ -1,3 +1,4 @@
+import { CharacterRequirementsBadge } from "@/ui/CharacterRequirementsBadge";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -235,7 +236,7 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
             <IconDownload size={17} />
           </IconButton>
           <Button variant="ghost" style={{ flex: 1, flexShrink: 0 }} onClick={() => navigate(`/characters/${ch.id}/edit`)}>
-            {translateUi("Edit")}
+            {translateUi("Edit")}<CharacterRequirementsBadge characterId={ch.id} />
           </Button>
 
           <Button

@@ -7,7 +7,7 @@ export { ItemPicker } from "./CharacterCreatorItemPicker";
 
 export function StepHeader({ current, onStepClick, isEditing, action }: { current: number; onStepClick: (s: number) => void; isEditing?: boolean; action?: React.ReactNode }) {
   const translateUi = useUiTranslation("playerUi");
-  const steps = ["Ruleset", "Class", "Species", "Background", "Ability Scores", "Class Details", "Skills", "Spells", "Stats", "Identity", "Assign"];
+  const steps = ["Ruleset", "Class", "Species", "Background", "Ability Scores", "Class Details", "Skills", "Spells", "Stats", "Identity", "Biography", "Assign"];
   return (
     <div className="character-creator-stepbar">
       <div className="character-creator-steps">

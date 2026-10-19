@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 
-type OptionLike = { value: string; label: string; disabled?: boolean };
+type OptionLike = { value: string; label: React.ReactNode; disabled?: boolean };
 
 type SharedSelectTheme = {
   radius: string | number;
@@ -22,10 +22,7 @@ function toOptionList(children: React.ReactNode): OptionLike[] {
     if (child.type === "option") {
       const optionProps = child.props as { value?: unknown; children?: React.ReactNode; disabled?: unknown };
       const value = String(optionProps.value ?? "");
-      const raw = optionProps.children;
-      const label = Array.isArray(raw)
-        ? raw.map((c: unknown) => String(c ?? "")).join("")
-        : String(raw ?? "");
+      const label = optionProps.children;
       const disabled = Boolean(optionProps.disabled ?? false);
       out.push({ value, label, disabled });
     }

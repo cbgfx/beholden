@@ -6,10 +6,10 @@ import { useCharacterCreatorSubmit } from "./useCharacterCreatorSubmit";
 import { initForm } from "./utils/CharacterCreatorFormUtils";
 import type { ProgressionRequirement } from "@beholden/shared/domain/progressionRequirements";
 
-const mocks = vi.hoisted(() => ({ create: vi.fn(), build: vi.fn(), api: vi.fn() }));
+const mocks = vi.hoisted(() => ({ create: vi.fn(), build: vi.fn(), api: vi.fn(), identity: vi.fn() }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("@/services/actorApi", () => ({ createMyCharacter: mocks.create }));
-vi.mock("@/services/api", () => ({ api: mocks.api, jsonInit: (method: string, body: unknown) => ({ method, body }) }));
+vi.mock("@/services/api", () => ({ api: (path: string, ...args: unknown[]) => path.endsWith("/binder-identity") ? mocks.identity(path, ...args) : mocks.api(path, ...args), jsonInit: (method: string, body: unknown) => ({ method, body }) }));
 vi.mock("./creatorSubmission", () => ({ buildCreatorSubmissionBody: mocks.build }));
 
 beforeEach(() => {
@@ -17,6 +17,7 @@ beforeEach(() => {
   mocks.create.mockReset();
   mocks.build.mockReset();
   mocks.api.mockReset();
+  mocks.identity.mockReset().mockResolvedValue(null);
 });
 
 it("keeps the creation token in the URL so a refreshed draft retries idempotently", async () => {
@@ -135,6 +136,30 @@ it("does not repeat a completed campaign assignment when portrait upload is retr
     expect(mocks.create).toHaveBeenCalledTimes(1);
     expect(mocks.api.mock.calls.filter(([path]) => String(path).endsWith("/assign"))).toHaveLength(1);
     expect(mocks.api.mock.calls.filter(([path]) => String(path).endsWith("/image"))).toHaveLength(2);
+  } finally {
+    await act(async () => root.unmount());
+    vi.unstubAllGlobals();
+  }
+});
+
+it.each([false, true])("saves Biography to the owned Binder identity (editing: %s)", async (isEditing) => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const root = createRoot(document.createElement("div"));
+  const form = { ...initForm(null, new URLSearchParams()), characterName: "Diego", ruleset: "5.5e" as const, age: "30", gender: "male", biography: "Raised among the stars." };
+  mocks.build.mockResolvedValue({ body: { level: 1 } });
+  mocks.create.mockResolvedValue({ id: "diego" });
+  mocks.api.mockResolvedValue({});
+  mocks.identity.mockResolvedValue({ id: "mortal" });
+  let submit!: () => Promise<boolean>;
+  function Harness() {
+    ({ handleSubmit: submit } = useCharacterCreatorSubmit({ requirements: [], form, classDetail: null, raceDetail: null, bgDetail: null, isEditing, editId: isEditing ? "diego" : undefined,
+      existingClasses: [], initialCampaignIdsRef: { current: [] }, navigate: vi.fn(), setError: vi.fn() } as unknown as Parameters<typeof useCharacterCreatorSubmit>[0]));
+    return null;
+  }
+  try {
+    await act(async () => root.render(<Harness />));
+    await act(async () => { expect(await submit()).toBe(true); });
+    expect(mocks.identity).toHaveBeenLastCalledWith("/api/me/characters/diego/binder-identity", { method: "PATCH", body: { backstory: form.biography } });
   } finally {
     await act(async () => root.unmount());
     vi.unstubAllGlobals();

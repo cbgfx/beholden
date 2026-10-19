@@ -158,7 +158,7 @@ export function ReferenceWorkspace(props: {
     }
     void Promise.all(sourceTypes.map(async (type) => {
       const values = await fetchBinderReferences(props.binderId, type);
-      const recordType = type === "locations" ? "location" : type === "points-of-interest" ? "poi" : type.slice(0, -1);
+      const recordType = type === "countries" ? "country" : type === "locations" ? "location" : type === "points-of-interest" ? "poi" : type.slice(0, -1);
       return values.map((record) => ({ id: record.id, name: record.name, type: recordType, icon: recordType === "poi" ? record.icon : null }));
     })).then((groups) => setParentOptions(groups.flat().filter((option) => option.id !== props.recordId)));
   }, [props.binderId, props.type, props.recordId, records.length]);

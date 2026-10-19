@@ -81,3 +81,9 @@ export function creatorRequirements(args: {
   }
   return result;
 }
+
+/** Do not show draft or network-loading requirements as character problems. */
+export function requirementNotification(requirements: ProgressionRequirement[], hydrating = false): ProgressionRequirement[] {
+  if (hydrating || requirements.some((entry) => entry.state === "loading" || entry.state === "failed" && !entry.id.startsWith("migration:"))) return [];
+  return requirements.filter((entry) => entry.state === "incomplete" || entry.id.startsWith("migration:") && entry.state === "failed");
+}

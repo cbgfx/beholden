@@ -1,4 +1,5 @@
 import React from "react";
+import { editToggleParagraph } from "./toggleEditing";
 import { useTranslation } from "react-i18next";
 import { markdownToHtml, htmlToMarkdown } from "./markdownHtml";
 import {
@@ -211,6 +212,7 @@ export function WysiwygNoteEditor(props: {
           </option>)}
         </select> : null}
       </div>
+      <style>{`.beholden-note-editor details > :not(summary) { margin-left: 26px; } .beholden-note-editor summary { cursor: pointer; }`}</style>
       <div style={{ position: "relative" }}>
         {isEmpty && !isFocused ? (
           <div
@@ -231,6 +233,7 @@ export function WysiwygNoteEditor(props: {
         ) : null}
         <div
           ref={editorRef}
+          className="beholden-note-editor"
           contentEditable
           suppressContentEditableWarning
           role="textbox"
@@ -255,6 +258,10 @@ export function WysiwygNoteEditor(props: {
           }}
           onKeyDown={(event) => {
             mention.handleMentionKeyDown(event);
+            if (!event.defaultPrevented && !event.nativeEvent.isComposing && !event.ctrlKey && !event.metaKey && !event.altKey && editorRef.current && editToggleParagraph(editorRef.current, event.key, event.shiftKey)) {
+              event.preventDefault();
+              emitChange();
+            }
           }}
           onKeyUp={(event) => {
             mention.saveSelection();

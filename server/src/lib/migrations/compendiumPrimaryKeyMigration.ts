@@ -85,12 +85,18 @@ export function ensureCompendiumCompositePrimaryKey(db: Db): void {
   };
 
   const pending = tables.filter((t) => needsMigration(t.name));
-  if (pending.length === 0) return;
+  const binderItemColumns = db.prepare("PRAGMA table_info(binder_items)").all() as Array<{ name: string }>;
+  const binderItemKeys = db.prepare("PRAGMA foreign_key_list(binder_items)").all() as Array<{ table: string; from: string; to: string }>;
+  // Binder Items may still use the old single-column link even when the
+  // Compendium itself was upgraded on an earlier startup.
+  const rebuildBinderItems = binderItemColumns.length > 0 && (
+    pending.some((table) => table.name === "compendium_items")
+    || !binderItemColumns.some((column) => column.name === "compendium_item_ruleset")
+    || !binderItemKeys.some((key) => key.table === "compendium_items" && key.from === "compendium_item_ruleset" && key.to === "ruleset")
+  );
+  if (pending.length === 0 && !rebuildBinderItems) return;
 
   db.transaction(() => {
-    const migratesItems = pending.some((table) => table.name === "compendium_items");
-    const binderItemColumns = db.prepare("PRAGMA table_info(binder_items)").all() as Array<{ name: string }>;
-    const rebuildBinderItems = migratesItems && binderItemColumns.length > 0;
     if (rebuildBinderItems) {
       const hasRuleset = binderItemColumns.some((column) => column.name === "compendium_item_ruleset");
       db.exec(`
@@ -98,7 +104,7 @@ export function ensureCompendiumCompositePrimaryKey(db: Db): void {
         SELECT id, description, dm_notes, compendium_item_id,
           ${hasRuleset
             ? "compendium_item_ruleset"
-            : "CASE WHEN compendium_item_id IS NULL THEN NULL ELSE (SELECT ruleset FROM compendium_items WHERE id = compendium_item_id) END"}
+            : "CASE WHEN compendium_item_id IS NULL THEN NULL ELSE (SELECT ruleset FROM compendium_items WHERE id = compendium_item_id ORDER BY ruleset DESC LIMIT 1) END"}
             AS compendium_item_ruleset,
           holder_mortal_id, location_record_id, created_at, updated_at
         FROM binder_items;
