@@ -47,5 +47,7 @@
   "allowScripts": {
     "better-sqlite3@13.0.3": true,
     "esbuild@0.28.1": true
-  }
+  },
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "author": "cbgfx (https://github.com/cbgfx)"
 }

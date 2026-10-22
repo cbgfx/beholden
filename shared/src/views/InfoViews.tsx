@@ -116,6 +116,26 @@ export function AboutView(props: InfoViewProps) {
           )}
         </div>
       </PanelComponent>
+      <PanelComponent title={translateUi("License and attribution")} style={{ marginTop: 12 }}>
+        <div style={{ lineHeight: 1.6 }}>
+          <p>
+            {"Copyright (c) 2026 "}
+            <a href="https://github.com/cbgfx/beholden" target="_blank" rel="noreferrer">cbgfx</a>
+            {". Beholden."}
+          </p>
+          <p>
+            <a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noreferrer">
+              PolyForm Noncommercial License 1.0.0
+            </a>
+            {". "}{translateUi("Preserve the original author attribution when sharing copies or modified versions. Uses outside the license's permitted purposes require separate permission.")}
+          </p>
+          <p>
+            <a href="https://github.com/cbgfx/beholden/blob/main/THIRD_PARTY_NOTICES.md" target="_blank" rel="noreferrer">
+              {translateUi("Third-party licenses and SRD attribution")}
+            </a>
+          </p>
+        </div>
+      </PanelComponent>
     </InfoPageLayout>
   );
 }

@@ -3,6 +3,7 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
 import fs from "node:fs";
+import { licenseNoticePlugin } from "../scripts/licensing/licenseBanner.mjs";
 
 export default defineConfig(({ mode }) => {
   // Read root .env files; deployment environment variables take precedence.
@@ -20,7 +21,7 @@ export default defineConfig(({ mode }) => {
     test: {
       setupFiles: [path.resolve(import.meta.dirname, "../shared/src/tests/setupReact.ts")],
     },
-    plugins: [react()],
+    plugins: [react(), licenseNoticePlugin],
     resolve: { alias: { "@": path.resolve(import.meta.dirname, "./src") } },
     define: {
       __SERVER_PORT__: SERVER_PORT,

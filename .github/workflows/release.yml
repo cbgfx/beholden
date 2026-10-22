@@ -43,7 +43,7 @@ jobs:
           done
 
           # Include root entry points and configuration used by workspace commands.
-          for f in README.md LICENSE .nvmrc package.json package-lock.json eslint.config.cjs knip.json start.bat update-beholden.bat; do
+          for f in README.md LICENSE NOTICE THIRD_PARTY_NOTICES.md .nvmrc package.json package-lock.json eslint.config.cjs knip.json start.bat update-beholden.bat; do
             if [ -f "$f" ]; then cp "$f" release_package/; fi
           done
 

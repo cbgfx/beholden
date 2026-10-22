@@ -42,5 +42,7 @@
     "esbuild": "0.28.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
-  }
+  },
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "author": "cbgfx (https://github.com/cbgfx)"
 }

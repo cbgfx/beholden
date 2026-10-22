@@ -1,5 +1,8 @@
 // Interface copy only; saved content and canonical rule values remain unchanged.
 export default {
+  "License and attribution": "Licence et attribution",
+  "Preserve the original author attribution when sharing copies or modified versions. Uses outside the license's permitted purposes require separate permission.": "Conservez l’attribution à l’auteur d’origine lorsque vous partagez des copies ou des versions modifiées. Les utilisations non autorisées par la licence nécessitent une permission distincte.",
+  "Third-party licenses and SRD attribution": "Licences tierces et attribution du SRD",
   "Loading...": "Chargement...",
   "Select a feat to view its details.": "Sélectionnez un don pour afficher ses détails.",
   "Repeatable": "Répétable",

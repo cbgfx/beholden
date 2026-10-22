@@ -1,6 +1,7 @@
 import { build } from "esbuild";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { licenseBanner } from "../../scripts/licensing/licenseBanner.mjs";
 
 const require = createRequire(import.meta.url);
 await build({
@@ -11,6 +12,7 @@ await build({
   platform: "node",
   target: "node26",
   format: "esm",
+  banner: { js: licenseBanner },
   packages: "external",
   // Compile workspace TypeScript into the bundle. Installed packages, including
   // native SQLite/Sharp bindings, continue to load through Node normally.

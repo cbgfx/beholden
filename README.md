@@ -330,7 +330,23 @@ Adventure version 2 files can embed native compendium batches. Their entries are
 
 ## License
 
-MIT - free to use, modify, and self-host.
+Copyright (c) 2026 [cbgfx](https://github.com/cbgfx).
+
+Beholden's original software is licensed under the
+[PolyForm Noncommercial License 1.0.0](LICENSE). You may use, self-host, modify,
+and share it for the purposes permitted by that license, including personal,
+noncommercial games. Commercial use outside those permitted purposes requires
+a separate license from cbgfx; contact cbgfx through the
+[project repository](https://github.com/cbgfx/beholden).
+
+Distributions and permitted modified versions must preserve the attribution in
+[NOTICE](NOTICE) and provide the license terms or their URL. This is
+source-available software with a noncommercial license, rather than
+OSI-approved open-source software. The license text controls over this summary.
+
+Third-party dependencies and bundled SRD material retain their own licenses;
+see [third-party notices](THIRD_PARTY_NOTICES.md). This change does not revoke
+rights previously granted in copies distributed under an earlier license.
 
 Campaign JSON exports (version 2) include story, private notes, party currency, and portable stash items and require DM/admin access. Replacing a campaign preserves its local memberships; importing into a different installation does not grant memberships from the file. Legacy documents preserve existing narrative/currency fields they omit.
 
