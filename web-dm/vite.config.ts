@@ -1,4 +1,5 @@
-import { defineConfig, loadEnv } from "vite";
+import { loadEnv } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
 import fs from "node:fs";
@@ -16,6 +17,9 @@ export default defineConfig(({ mode }) => {
   ];
 
   return {
+    test: {
+      setupFiles: [path.resolve(import.meta.dirname, "../shared/src/tests/setupReact.ts")],
+    },
     plugins: [react()],
     resolve: { alias: { "@": path.resolve(import.meta.dirname, "./src") } },
     define: {

@@ -5,17 +5,26 @@ import { expect, it, vi } from "vitest";
 import { useCreatorEditHydration } from "./useCreatorEditHydration";
 import { initForm, type FormState } from "./utils/CharacterCreatorFormUtils";
 
-const mocks = vi.hoisted(() => ({ fetch: vi.fn() }));
+const mocks = vi.hoisted(() => ({ fetch: vi.fn(), identity: vi.fn() }));
 vi.mock("@/services/actorApi", () => ({ fetchMyCharacter: mocks.fetch }));
+vi.mock("@/services/api", () => ({ api: mocks.identity }));
 
-it("hydrates scoped primary choices without adopting secondary legacy choices", async () => {
+it.each([
+  { label: "linked biography", identity: { backstory: "Binder biography" }, biography: "Binder biography" },
+  { label: "empty linked biography", identity: { backstory: null }, biography: "" },
+  { label: "no linked identity", identity: null, biography: "Legacy biography" },
+])("hydrates scoped primary choices without adopting secondary legacy choices ($label)", async ({ identity, biography }) => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  mocks.identity.mockReset();
+  if (identity) mocks.identity.mockResolvedValue(identity);
+  else mocks.identity.mockRejectedValue({ status: 404 });
   const scoped = {
     imported: { chosenSpells: ["bless"], chosenCantrips: [], chosenInvocations: [] },
     secondary: { chosenSpells: ["shield"] },
   };
   mocks.fetch.mockResolvedValue({ id: "hero", name: "Hero", className: "Cleric", level: 10,
     characterData: { classes: [{ id: "imported", classId: "cleric", level: 8 }, { id: "secondary", classId: "wizard", level: 2 }],
+      biography: "Legacy biography",
       chosenSpells: ["shield"], chosenCantrips: ["wizard-cantrip"], classSpellSelections: scoped,
       chosenLevelUpFeats: [
         { level: 8, classEntryId: "imported", classLevel: 8, characterLevel: 10, type: "asi", abilityBonuses: { wis: 2 } },
@@ -41,6 +50,8 @@ it("hydrates scoped primary choices without adopting secondary legacy choices", 
   }
   try {
     await act(async () => root.render(<Harness />));
+    expect(mocks.identity).toHaveBeenCalledWith("/api/me/characters/hero/binder-identity");
+    expect(form.biography).toBe(biography);
     expect(form.chosenSpells).toEqual(["bless"]);
     expect(form.chosenCantrips).toEqual([]);
     expect(form.chosenLevelUpFeats).toEqual([expect.objectContaining({ level: 8, classEntryId: "imported", characterLevel: 10 })]);

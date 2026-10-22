@@ -13,8 +13,29 @@ import express from "express";
  */
 const FILE_REQUEST = /\.(?:webp|png|jpe?g|gif|svg|ico|css|js|mjs|map|json|txt|xml|woff2?|ttf|otf|eot|zip|pdf|csv|wasm)$/i;
 
+/**
+ * Hostnames that should open the player app at "/" (e.g. "player.example.com").
+ * Lets one deployment answer on separate DM and player domains: the DM domain keeps the DM app
+ * at "/", while these hosts are internally mapped onto the "/player" routes below.
+ */
+function playerHostsFromEnv(): Set<string> {
+  const raw = String(process.env.BEHOLDEN_PLAYER_HOSTS ?? "");
+  return new Set(raw.split(",").map((host) => host.trim().toLowerCase()).filter(Boolean));
+}
+
 export function registerWebUiRoutes(app: Express, ctx: ServerContext) {
   const { paths } = ctx;
+  const playerHosts = playerHostsFromEnv();
+  if (paths.hasWebPlayerDist && playerHosts.size > 0) {
+    app.use((req, _res, next) => {
+      // API calls are left alone; only page and asset requests are re-pointed at the player app.
+      // Existing "/player/..." links keep working on these hosts because they already match.
+      const isPlayerHost = playerHosts.has(req.hostname.toLowerCase());
+      if (isPlayerHost && !/^\/(?:api|player)(?:\/|$)/.test(req.path)) req.url = `/player${req.url}`;
+      next();
+    });
+  }
+
   const webPlayerSpaRoute = /^\/player(?:\/.*)?$/;
   const webDmSpaRoute = /^(?!\/api(?:\/|$)|\/player(?:\/|$)).*/;
 

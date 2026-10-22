@@ -236,6 +236,9 @@ repository root. The backend already serves both compiled web apps:
 - Set `NODE_ENV=production`, `BEHOLDEN_DATA_DIR=/data`, and mount the persistent volume at `/data`.
 - Leave `VITE_API_ORIGIN` and `VITE_WS_ORIGIN` unset when building so API requests and live updates use the same origin.
 - Open the DM app at `/` and the Player app at `/player/` on the service domain.
+- Optional separate domains: attach both custom domains (e.g. `dm.example.com` and
+  `player.example.com`) to this one service and set `BEHOLDEN_PLAYER_HOSTS=player.example.com`.
+  That host then serves the Player app at `/`; every other host keeps the DM app at `/`.
 
 The default build (also available as `npm run build:single-service`) sets the Player
 app's asset and router base to `/player/`.

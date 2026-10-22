@@ -1,5 +1,6 @@
 // Interface copy only; saved content and canonical rule values remain unchanged.
 export default {
+  "Within": "Dans",
   "Customize layout": "Personnaliser la disposition",
   "Layout": "Disposition",
   "Layout & colours": "Disposition et couleurs",

@@ -119,11 +119,16 @@ function AuthGate() {
   );
 }
 
+// The build lives under /player/, but a dedicated player domain (BEHOLDEN_PLAYER_HOSTS) serves
+// it at "/". Only use the /player basename when the browser address actually starts with it.
+const BUILD_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const ROUTER_BASENAME = window.location.pathname.startsWith(BUILD_BASE) ? import.meta.env.BASE_URL : "/";
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter
-        basename={import.meta.env.BASE_URL}
+        basename={ROUTER_BASENAME}
       >
         <AuthGate />
       </BrowserRouter>
