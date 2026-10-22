@@ -101,6 +101,9 @@ Environment files use Node's built-in parser. Request-time password hashing runs
 in a reusable worker so it does not block HTTP requests or WebSocket updates;
 existing bcrypt passwords remain compatible. Startup seeding still uses synchronous
 hashing before the server accepts connections.
+The worker is released after 30 seconds without password work and recreated on
+demand. The native image processor loads on the first upload, and its operation
+cache is disabled so uploads do not keep an extra cache in memory.
 
 Run `npm run profile:runtime` to compare module compile caching, password hashing,
 and synthetic ZIP/CSV/JSON workloads. It uses temporary caches and synthetic data,
@@ -158,6 +161,12 @@ npm run dev
 npm run build
 npm start
 ```
+
+Production startup runs the compiled JavaScript bundle directly, without `tsx` or
+a TypeScript loader. Run `npm run build` before starting after source changes.
+The default build serves the Player app under `/player/`. Run
+`npm run smoke:production` after building to check both web apps, login, WebSocket
+authentication, and fresh-database SRD seeding using disposable data.
 
 The server serves both apps and the API from a single port (default `5174`):
 
@@ -218,7 +227,45 @@ Change the password immediately via Admin -> Users, or set `BEHOLDEN_ADMIN_USER`
 
 ## Deployment (Railway)
 
-Beholden is designed to deploy to [Railway](https://railway.app) as three services from the same repo:
+For the lowest always-on memory overhead, deploy one Railway service from the
+repository root. The backend already serves both compiled web apps:
+
+- Build command: `npm run build`
+- Start command: `node server/dist/runtime/main.js` (avoids npm wrapper processes)
+- Healthcheck path: `/api/health`
+- Set `NODE_ENV=production`, `BEHOLDEN_DATA_DIR=/data`, and mount the persistent volume at `/data`.
+- Leave `VITE_API_ORIGIN` and `VITE_WS_ORIGIN` unset when building so API requests and live updates use the same origin.
+- Open the DM app at `/` and the Player app at `/player/` on the service domain.
+
+The default build (also available as `npm run build:single-service`) sets the Player
+app's asset and router base to `/player/`.
+
+To consolidate an existing deployment, keep the existing backend service and its
+volume; no database transfer is needed. Set its root directory to the repository
+root and apply the commands above. Clear frontend-only watch filters, or include
+`server/**`, `shared/**`, `web-dm/**`, `web-player/**`, `package.json`, and
+`package-lock.json` so changes to either app rebuild the consolidated deployment.
+Keep existing database-path settings and the JWT signing key. Use one replica with
+the existing SQLite volume. If `BEHOLDEN_ALLOWED_ORIGINS` is configured, include the
+consolidated public origin (and any custom domain) in that allowlist. Deploy,
+verify `/api/health`, `/`, `/player/`, login,
+portraits, and live updates, then retire the two old frontend services and update
+bookmarks to the consolidated domain. The backend public domain can be used
+immediately; custom domains can be moved afterward.
+
+For deployments with long gaps between game sessions, enable **Settings > Deploy
+> Serverless** on the consolidated service and deploy again so the setting takes
+effect. Railway can then stop compute billing while it sleeps, waking it on the
+next request. Persistent volume storage still costs money. Allow for a cold-start
+delay and a possible first-request 502; reload if necessary. Leave Serverless off
+if immediate first-request responses are required. Close unused app tabs and
+avoid external uptime pings: browser traffic, WebSockets, and monitoring requests
+can prevent sleep. This app uses local SQLite and has no periodic external
+server polling, so there is no remote database pool to keep alive.
+See [Railway Serverless](https://docs.railway.com/deployments/serverless).
+
+The alternative three-service layout adds two static-server processes and is
+useful when separate frontend domains are required:
 
 | Service | Start command | Domain |
 |---|---|---|
@@ -229,6 +276,8 @@ Beholden is designed to deploy to [Railway](https://railway.app) as three servic
 Set `BEHOLDEN_DATA_DIR=/data` and mount a Railway volume at `/data` to persist the database across deploys.
 
 Set `VITE_API_ORIGIN` on both web services to point at your server's public URL (e.g. `https://api.yourapp.com`) so the frontend knows where to connect.
+For this separate-domain layout, build the frontends with `npm run build:web-dm`
+and `npm run build:web-player` respectively; the latter retains a `/` base.
 
 In Railway, select the target environment and service, open **Variables**, and add
 configuration there, then review and deploy the staged changes. No `.env` upload is

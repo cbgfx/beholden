@@ -123,6 +123,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter
+        basename={import.meta.env.BASE_URL}
       >
         <AuthGate />
       </BrowserRouter>

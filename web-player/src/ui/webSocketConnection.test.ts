@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createWebSocketConnection } from "@beholden/shared/ui/webSocketConnection";
 
@@ -104,6 +105,46 @@ it("stops reconnecting when authorization rejects the socket", () => {
   (socket.onclose as (event: CloseEvent) => void)({ code: 1008 } as CloseEvent);
   vi.advanceTimersByTime(60_000);
   expect(rejected).toHaveBeenCalledWith(expect.objectContaining({ code: 1008 }));
+  expect(FakeSocket.all).toHaveLength(1);
+  stop();
+});
+
+function setVisibility(state: "visible" | "hidden") {
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+  document.dispatchEvent(new Event("visibilitychange"));
+}
+
+it("parks after staying hidden and reconnects when shown", () => {
+  const onOpen = vi.fn();
+  const stop = createWebSocketConnection({
+    url: () => "ws://primary", onSocket() {}, onOpen, onMessage() {}, parkWhenHiddenMs: 600_000,
+  });
+  const first = FakeSocket.all[0];
+  first.onopen!();
+  setVisibility("hidden");
+  vi.advanceTimersByTime(600_000);
+  expect(first.close).toHaveBeenCalledTimes(1);
+  // No reconnect attempts while parked.
+  vi.advanceTimersByTime(3_600_000);
+  expect(FakeSocket.all).toHaveLength(1);
+  setVisibility("visible");
+  expect(FakeSocket.all).toHaveLength(2);
+  FakeSocket.all[1].onopen!();
+  expect(onOpen).toHaveBeenCalledTimes(2);
+  stop();
+});
+
+it("keeps the socket when the tab is shown again before the cutoff", () => {
+  const stop = createWebSocketConnection({
+    url: () => "ws://primary", onSocket() {}, onOpen() {}, onMessage() {}, parkWhenHiddenMs: 600_000,
+  });
+  const first = FakeSocket.all[0];
+  first.onopen!();
+  setVisibility("hidden");
+  vi.advanceTimersByTime(599_000);
+  setVisibility("visible");
+  vi.advanceTimersByTime(600_000);
+  expect(first.close).not.toHaveBeenCalled();
   expect(FakeSocket.all).toHaveLength(1);
   stop();
 });

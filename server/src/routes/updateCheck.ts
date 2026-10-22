@@ -2,7 +2,7 @@ import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { serverRootDir } from "../config/installation.js";
 import { spawn } from "node:child_process";
 import { requireAdmin } from "../middleware/auth.js";
 
@@ -23,8 +23,7 @@ let cache: CacheEntry | null = null;
 let inFlight: Promise<string | null> | null = null;
 
 const CURRENT_VERSION = (() => {
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const pkgPath = path.resolve(__dirname, "../../package.json");
+  const pkgPath = path.join(serverRootDir, "package.json");
   const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as { version: string };
   return pkg.version;
 })();

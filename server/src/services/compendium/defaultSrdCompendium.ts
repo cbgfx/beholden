@@ -1,4 +1,6 @@
 import fs from "node:fs";
+import path from "node:path";
+import { repoRootDir } from "../../config/installation.js";
 import type Database from "better-sqlite3";
 import { nativeEntryKey } from "@beholden/shared/domain/compendium/nativeCompendiumKey";
 import { importValidatedNativeCompendiumBatches } from "./nativeCompendiumImport.js";
@@ -8,7 +10,7 @@ import { parseNativeCompendiumDocument } from "./nativeCompendiumParsing.js";
 import type { NativeCompendiumDocumentImportResult } from "./nativeCompendiumShared.js";
 import { computeContentHashSync } from "@beholden/shared/domain/compendium/computeContentHashSync";
 
-const DEFAULT_SRD_URL = new URL("../../../../shared/src/srd/default_compendium_5.5e.json", import.meta.url);
+const DEFAULT_SRD_URL = path.join(repoRootDir, "shared/src/srd/default_compendium_5.5e.json");
 const DEFAULT_SRD_IMPORT_KEY = "default_srd_5_2_1_imported";
 const DEFAULT_SRD_MODIFIER_SCOPES_KEY = "default_srd_modifier_metadata_v2";
 const RETIRED_DEFAULT_SRD_MODIFIERS = new Map([

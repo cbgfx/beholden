@@ -53,6 +53,9 @@ function configuredWsOrigin() {
 
 const WS_ORIGIN = configuredWsOrigin();
 
+// A tab hidden this long drops its socket so the server can idle; showing it reconnects.
+const PARK_WHEN_HIDDEN_MS = 10 * 60 * 1000;
+
 function wsUrlSameOrigin() {
   return `${wsProto()}://${location.host}/ws`;
 }
@@ -157,6 +160,7 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
       fallbackUrl: !WS_ORIGIN && canUseDirectPortFallback()
         ? () => wsUrlDirect()
         : undefined,
+      parkWhenHiddenMs: PARK_WHEN_HIDDEN_MS,
       onSocket: (socket) => {
         socketRef.current = socket;
         if (!socket) setConnected(false);

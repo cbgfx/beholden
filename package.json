@@ -20,16 +20,18 @@
     "db:maintenance": "npm -w server run db:maintenance --",
     "typecheck": "npm -w server run typecheck && npm -w web-dm run typecheck && npm -w web-player run typecheck",
     "lint": "eslint \"{server,shared,web-dm,web-player}/src/**/*.{ts,tsx}\" --cache --cache-location .eslintcache",
-    "build": "npm -w server run build && npm -w web-dm run build && npm -w web-player run build",
+    "build": "npm run build:single-service",
     "build:web-dm": "npm -w web-dm run build",
     "build:web-player": "npm -w web-player run build",
+    "build:single-service": "npm -w server run build && npm -w web-dm run build && npm -w web-player run build -- --base=/player/",
     "start": "npm -w server run start",
     "test": "npm -w server run test && npm -w web-player run test && npm -w web-dm run test",
     "check:payload-budgets": "node scripts/checks/check-payload-budgets.mjs",
     "check:bundle-budgets": "node scripts/checks/check-bundle-budgets.mjs",
     "profile:runtime": "node --import tsx scripts/checks/profile-node-runtime.mjs",
+    "smoke:production": "node scripts/checks/smoke-production.mjs",
     "benchmark:runtimes": "node scripts/checks/benchmark-node-versions.mjs",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run build && npm run check:payload-budgets && npm run check:bundle-budgets"
+    "verify": "npm run typecheck && npm run lint && npm test && npm run build && npm run check:payload-budgets && npm run check:bundle-budgets && npm run smoke:production"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.71.2",

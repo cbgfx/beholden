@@ -6,12 +6,18 @@ export function createWebSocketConnection(options: {
   onOpen: (socket: WebSocket) => void;
   onMessage: (event: MessageEvent) => void;
   onClose?: (event: CloseEvent) => boolean | void;
+  /** Close the socket once the tab has stayed hidden this long, and reconnect when it is shown
+   * again. A parked tab sends no traffic, so an idle host can sleep instead of billing compute. */
+  parkWhenHiddenMs?: number;
 }) {
   let stopped = false;
   let current: WebSocket | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let attempt = 0;
   let useFallback = false;
+  // True while the socket is closed on purpose because the tab is hidden.
+  let parked = false;
+  let hiddenTimer: ReturnType<typeof setTimeout> | undefined;
 
   function retire() {
     clearTimeout(timer);
@@ -72,6 +78,37 @@ export function createWebSocketConnection(options: {
     };
   }
 
+  function park() {
+    hiddenTimer = undefined;
+    if (stopped) return;
+    parked = true;
+    retire();
+  }
+
+  function onVisibilityChange() {
+    if (document.visibilityState === "hidden") {
+      clearTimeout(hiddenTimer);
+      hiddenTimer = setTimeout(park, options.parkWhenHiddenMs);
+      return;
+    }
+    // Shown again: cancel a pending park, or reconnect right away if already parked.
+    // The normal onOpen path then lets the app refresh anything it missed.
+    clearTimeout(hiddenTimer);
+    hiddenTimer = undefined;
+    if (!parked || stopped) return;
+    parked = false;
+    attempt = 0;
+    connect();
+  }
+
+  const watchVisibility = options.parkWhenHiddenMs !== undefined && typeof document !== "undefined";
+  if (watchVisibility) document.addEventListener("visibilitychange", onVisibilityChange);
+
   connect();
-  return () => { stopped = true; retire(); };
+  return () => {
+    stopped = true;
+    clearTimeout(hiddenTimer);
+    if (watchVisibility) document.removeEventListener("visibilitychange", onVisibilityChange);
+    retire();
+  };
 }

@@ -1,6 +1,5 @@
 // server/src/lib/imageHelpers.ts
 // Shared image upload utilities used by campaigns and players routes.
-import sharp from "sharp";
 import type { ServerContext } from "../server/context.js";
 
 const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
@@ -22,6 +21,12 @@ const IMAGE_WEBP_QUALITY = readIntEnv("BEHOLDEN_IMAGE_WEBP_QUALITY", 76, 40, 95)
  * cost far more memory and disk than a moving portrait is worth.
  */
 async function resizeToWebP(buffer: Buffer): Promise<Buffer> {
+  // Keep the native image engine out of idle instances until an image actually
+  // needs processing. Node caches the module after the first upload.
+  const { default: sharp } = await import("sharp");
+  // Portraits are stored on disk; caching operations between uploads adds RAM
+  // without making subsequent reads of those saved portraits faster.
+  sharp.cache(false);
   return sharp(buffer, { animated: false })
     .resize({ width: IMAGE_MAX_PX, height: IMAGE_MAX_PX, fit: "inside", withoutEnlargement: true })
     .webp({ quality: IMAGE_WEBP_QUALITY })
