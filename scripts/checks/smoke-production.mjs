@@ -17,12 +17,15 @@ await once(listener, "listening");
 const port = listener.address().port;
 await new Promise((resolve) => listener.close(resolve));
 const origin = `http://127.0.0.1:${port}`;
+const inheritedEnv = { ...process.env };
+delete inheritedEnv.BEHOLDEN_WEB_DIST;
+delete inheritedEnv.BEHOLDEN_WEB_PLAYER_DIST;
 // Use an isolated working directory as well as a temporary database, so local
 // .env files and real campaign data cannot affect this check.
 const child = spawn(process.execPath, [path.join(repo, "server/dist/runtime/main.js")], {
   cwd: directory,
   env: {
-    ...process.env,
+    ...inheritedEnv,
     NODE_ENV: "production",
     HOST: "127.0.0.1",
     PORT: String(port),
@@ -31,8 +34,6 @@ const child = spawn(process.execPath, [path.join(repo, "server/dist/runtime/main
     BEHOLDEN_ADMIN_USER: "smoke-admin",
     BEHOLDEN_ADMIN_PASS: "smoke-test-password",
     BEHOLDEN_JWT_SECRET: "isolated-production-smoke-test-signing-key",
-    BEHOLDEN_WEB_DIST: path.join(repo, "web-dm/dist"),
-    BEHOLDEN_WEB_PLAYER_DIST: path.join(repo, "web-player/dist"),
   },
   stdio: ["ignore", "pipe", "pipe"],
 });
