@@ -37,3 +37,11 @@ it("retries safe reads on proxy failure but never retries aborts", async () => {
   await expect(api("/api/test")).rejects.toMatchObject({ name: "AbortError" });
   expect(fetch).toHaveBeenCalledTimes(1);
 });
+
+ it("resolves uploaded images against the consolidated service, preserving external pictures", async () => {
+  const { resolveAssetUrl } = await import("@beholden/shared/api/browserClient");
+  for (const mount of ["campaign", "player", "character", "binder-mortal", "binder-deity"]) {
+    expect(resolveAssetUrl(`https://retired.example/${mount}-images/id.webp?v=42`)).toBe(`/${mount}-images/id.webp?v=42`);
+  }
+  expect(resolveAssetUrl("https://images.example/portrait.webp")).toBe("https://images.example/portrait.webp");
+});

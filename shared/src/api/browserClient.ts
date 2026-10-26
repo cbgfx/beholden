@@ -28,7 +28,16 @@ function resolveApiPath(path: string) {
 
 export function resolveAssetUrl(pathOrUrl: string | null | undefined): string | null {
   if (!pathOrUrl) return null;
-  if (/^(?:https?:)?\/\//i.test(pathOrUrl)) return pathOrUrl;
+  if (/^(?:https?:)?\/\//i.test(pathOrUrl)) {
+    // Uploaded assets belong to this installation, even when a saved URL names a retired service.
+    try {
+      const parsed = new URL(pathOrUrl, window.location.href);
+      if (/^\/(?:campaign|player|character|binder-mortal|binder-deity)-images\//.test(parsed.pathname)) {
+        return resolveAssetUrl(`${parsed.pathname}${parsed.search}${parsed.hash}`);
+      }
+    } catch { /* Preserve unrelated external URLs. */ }
+    return pathOrUrl;
+  }
   if (/^(?:data|blob):/i.test(pathOrUrl)) return pathOrUrl;
   if (API_ORIGIN && pathOrUrl.startsWith("/")) return `${API_ORIGIN}${pathOrUrl}`;
   return pathOrUrl;

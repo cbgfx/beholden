@@ -4,6 +4,7 @@ import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { api, jsonInit } from "@/services/api";
 import { useStore, type DrawerState } from "@/store";
+import type { Adventure } from "@/domain/types/domain";
 import type { DrawerContent } from "@/drawers/types";
 import { putEncounter } from "@/services/encounterApi";
 
@@ -25,7 +26,9 @@ export function RenameDrawer(props: {
   close: () => void;
 }): DrawerContent {
   const translateUi = useUiTranslation("dmUi");
-  const { state } = useStore();
+  const { state, dispatch } = useStore();
+  const scopeRef = React.useRef(state.selectedCampaignId);
+  scopeRef.current = state.selectedCampaignId;
   const [name, setName] = React.useState("");
 
   React.useEffect(() => {
@@ -55,10 +58,12 @@ export function RenameDrawer(props: {
     };
 
     switch (d.type) {
-      case "createAdventure":
-        await api(`/api/campaigns/${d.campaignId}/adventures`, jsonInit("POST", { name: safeName("New Adventure") }));
+      case "createAdventure": {
+        const adventure = await api<Adventure>(`/api/campaigns/${d.campaignId}/adventures`, jsonInit("POST", { name: safeName("New Adventure") }));
+        if (scopeRef.current === d.campaignId) dispatch({ type: "upsertAdventure", adventure });
         props.close();
         return;
+      }
       case "editAdventure":
         await api(`/api/adventures/${d.adventureId}`, jsonInit("PUT", { name: safeName("Adventure") }));
         props.close();
@@ -74,7 +79,7 @@ export function RenameDrawer(props: {
       default:
         props.close();
     }
-  }, [name, props]);
+  }, [name, props, dispatch]);
 
   return {
     body: (

@@ -13,6 +13,7 @@ import { Modal } from "@/components/overlay/Modal";
 import { Input } from "@/ui/Input";
 import { api, jsonInit } from "@/services/api";
 import { createBinderMortal, fetchBinderMortals, fetchMortalOptions, uploadBinderMortalImage, type BinderMortal, type BinderMortalInput, type MortalOptions } from "@/services/binderMortalApi";
+import { fetchBinders } from "@/services/binderApi";
 import { MortalRecordModal } from "@/views/BinderView/MortalRecordModal";
 
 type Props = {
@@ -36,6 +37,7 @@ export function INpcsPanel(props: Props) {
   const [importOpen, setImportOpen] = React.useState(false);
   const [createOpen, setCreateOpen] = React.useState(false);
   const [mortals, setMortals] = React.useState<BinderMortal[]>([]);
+  const [binderDate, setBinderDate] = React.useState<{ id: string; year: number | null } | null>(null);
   const [mortalOptions, setMortalOptions] = React.useState<MortalOptions>({ records: [], players: [], monsters: [] });
   const [query, setQuery] = React.useState("");
   const [importingMortalId, setImportingMortalId] = React.useState<string | null>(null);
@@ -53,12 +55,15 @@ export function INpcsPanel(props: Props) {
 
   const loadBinderNpcData = React.useCallback(async () => {
     if (!props.binderId) return;
-    const [rows, options] = await Promise.all([
+    const binderId = props.binderId;
+    const [rows, options, binders] = await Promise.all([
       fetchBinderMortals(props.binderId),
       fetchMortalOptions(props.binderId),
+      fetchBinders(),
     ]);
     setMortals(rows.filter((row) => row.mortalType === "npc" && Boolean(row.monsterId) && !props.inpcs.some((inpc) => inpc.binderMortalId === row.id)));
     setMortalOptions(options);
+    setBinderDate({ id: binderId, year: binders.find((binder) => binder.id === binderId)?.currentDate.sort ?? null });
   }, [props.binderId, props.inpcs]);
 
   async function importMortal(mortalId: string) {
@@ -276,7 +281,7 @@ export function INpcsPanel(props: Props) {
       <MortalRecordModal
         isOpen={createOpen}
         record={null}
-        binderCurrentDate={props.currentDate ?? null}
+        binderCurrentDate={props.currentDate ?? (binderDate && binderDate.id === props.binderId ? binderDate.year : null)}
         options={mortalOptions}
         requireNpcStatblock
         onClose={() => setCreateOpen(false)}

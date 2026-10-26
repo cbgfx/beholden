@@ -206,6 +206,8 @@ export function createServer() {
       etag: true,
       lastModified: true,
       setHeaders: (res) => {
+        // Public images are embedded by both apps, including deployments on separate sites.
+        res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
         if (res.req.url?.includes("?v=")) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
       },
     }));

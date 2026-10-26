@@ -14,8 +14,19 @@ const PUBLIC_API_ORIGIN = (() => {
   }
 })();
 
+function installationImagePath(value: string): string {
+  try {
+    const parsed = new URL(value);
+    if (/^\/(?:campaign|player|character|binder-mortal|binder-deity)-images\//.test(parsed.pathname)) {
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    }
+  } catch { /* Relative paths already identify this installation. */ }
+  return value;
+}
+
 export function absolutizePublicUrl(pathOrUrl: string | null | undefined): string | null {
   if (!pathOrUrl) return null;
+  pathOrUrl = installationImagePath(pathOrUrl);
   if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
   if (!PUBLIC_API_ORIGIN || !pathOrUrl.startsWith("/")) return pathOrUrl;
   return `${PUBLIC_API_ORIGIN}${pathOrUrl}`;
@@ -39,6 +50,7 @@ export function absolutizePublicUrlForRequest(
   pathOrUrl: string | null | undefined,
 ): string | null {
   if (!pathOrUrl) return null;
+  pathOrUrl = installationImagePath(pathOrUrl);
   if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
   if (!pathOrUrl.startsWith("/")) return pathOrUrl;
   if (PUBLIC_API_ORIGIN) return `${PUBLIC_API_ORIGIN}${pathOrUrl}`;

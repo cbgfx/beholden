@@ -234,6 +234,7 @@ repository root. The backend already serves both compiled web apps:
 - Start command: `node server/dist/runtime/main.js` (avoids npm wrapper processes)
 - Healthcheck path: `/api/health`
 - Set `NODE_ENV=production`, `BEHOLDEN_DATA_DIR=/data`, and mount the persistent volume at `/data`.
+- Leave `BEHOLDEN_PUBLIC_API_ORIGIN` unset at runtime for this same-origin deployment.
 - Leave `VITE_API_ORIGIN` and `VITE_WS_ORIGIN` unset when building so API requests and live updates use the same origin.
 - Open the DM app at `/` and the Player app at `/player/` on the service domain.
 - Optional separate domains: attach both custom domains (e.g. `dm.example.com` and

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -53,6 +53,14 @@ try {
     await delay(100);
   }
   assert.ok(ready, `Production server did not become healthy: ${logs}`);
+  // Public uploads must remain embeddable across the DM and Player domains.
+  await writeFile(path.join(directory, "campaign-images", "smoke.webp"), Buffer.from("image-fixture"));
+  const portrait = await fetch(`${origin}/campaign-images/smoke.webp?v=1`);
+  assert.equal(portrait.status, 200);
+  assert.match(portrait.headers.get("content-type"), /image\/webp/);
+  assert.equal(portrait.headers.get("cross-origin-resource-policy"), "cross-origin");
+  assert.equal(await portrait.text(), "image-fixture");
+
   for (const route of ["/", "/campaigns/smoke", "/player/", "/player/characters/smoke"]) {
     const response = await fetch(`${origin}${route}`);
     assert.equal(response.status, 200, route);

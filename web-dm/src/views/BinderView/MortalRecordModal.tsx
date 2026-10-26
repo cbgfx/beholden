@@ -7,6 +7,7 @@ import { Select } from "@/ui/Select";
 import { TextArea } from "@/ui/TextArea";
 import { theme } from "@/theme/theme";
 import { SearchableSelect, type SearchableSelectOption } from "@/components/SearchableSelect";
+import { resolveAssetUrl } from "@/services/api";
 import type { BinderMortal, BinderMortalInput, MortalOptions, MortalType } from "@/services/binderMortalApi";
 
 type Option = SearchableSelectOption;
@@ -229,11 +230,20 @@ export function MortalRecordModal(props: {
     const numericAge = Number(value.replaceAll(",", "").trim());
     if (!value.trim()) return;
     const selectedPlayer = props.options.players.find((player) => player.id === selectedPlayerId);
-    const currentYear = selectedPlayer?.campaignCurrentDate ?? props.binderCurrentDate;
+    const currentYear = deathDate.trim() ? Number(deathDate.replaceAll(",", "")) : selectedPlayer?.campaignCurrentDate ?? props.binderCurrentDate;
     if (Number.isFinite(numericAge) && numericAge >= 0 && currentYear !== null && Number.isFinite(currentYear)) {
       setBirthDate(String(currentYear - numericAge));
     }
   }
+
+  useEffect(() => {
+    if (!props.isOpen || birthDate.trim() || !ageInput.trim()) return;
+    const year = props.binderCurrentDate;
+    const numericAge = Number(ageInput.replaceAll(",", ""));
+    if (year !== null && Number.isFinite(year) && Number.isFinite(numericAge) && numericAge >= 0) {
+      setBirthDate(String(year - numericAge));
+    }
+  }, [props.isOpen, props.binderCurrentDate, ageInput, birthDate]);
 
   function linkPlayer(nextPlayerId: string) {
     setPlayerId(nextPlayerId);
@@ -308,7 +318,7 @@ export function MortalRecordModal(props: {
             }}
           >
             {imagePreview ? (
-              <img src={imagePreview} alt={translateUi("Mortal portrait")} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <img src={resolveAssetUrl(imagePreview) ?? undefined} alt={translateUi("Mortal portrait")} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
               <span style={{ opacity: 0.55 }}>{translateUi("Portrait")}</span>
             )}
@@ -522,6 +532,7 @@ export function MortalRecordModal(props: {
           "Age",
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             <Input
+              aria-label="Age"
               value={ageInput}
               onChange={(event) => setAgeAndBirth(event.target.value)}
               inputMode="numeric"
@@ -529,6 +540,7 @@ export function MortalRecordModal(props: {
               disabled={saving}
               style={{ width: 90 }}
             />
+            {props.binderCurrentDate === null && !deathDate.trim() ? <span style={{ color: theme.colors.muted }}>Set the current date to calculate a birth year.</span> : null}
             <span
               style={{
                 display: "inline-flex",
@@ -547,7 +559,7 @@ export function MortalRecordModal(props: {
         )}
         {property(
           "Date of birth",
-          <Input value={birthDate} onChange={(event) => setBirthDate(event.target.value)} placeholder={translateUi("None")} disabled={saving} />,
+          <Input aria-label="Date of birth" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} placeholder={translateUi("None")} disabled={saving} />,
         )}
         {property(
           "Date of death",
