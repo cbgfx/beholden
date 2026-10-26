@@ -1,56 +1,25 @@
+// @vitest-environment jsdom
+import { act } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
-const harness = vi.hoisted(() => ({
-  slots: [] as unknown[], cursor: 0,
-  effects: [] as Array<() => void | (() => void)>,
-  catalog: vi.fn(),
-}));
-vi.mock("react", () => ({ default: {
-  useState(initial: unknown) {
-    const index = harness.cursor++;
-    if (!(index in harness.slots)) harness.slots[index] = initial;
-    return [harness.slots[index], (value: unknown) => { harness.slots[index] = value; }];
-  },
-  useEffect: (effect: () => void | (() => void)) => { harness.effects.push(effect); },
-} }));
+import { renderHook, deferred } from "@beholden/shared/tests/renderHook";
+const h = vi.hoisted(() => ({ catalog: vi.fn() }));
 vi.mock("@/services/api", () => ({ api: () => Promise.resolve([]) }));
-vi.mock("@/services/compendiumApi", () => ({
-  fetchClassCatalog: harness.catalog, fetchRaceCatalog: harness.catalog,
-  fetchBackgroundCatalog: harness.catalog, fetchFeatCatalog: harness.catalog,
-}));
+vi.mock("@/services/compendiumApi", () => ({ fetchClassCatalog: h.catalog, fetchRaceCatalog: h.catalog, fetchBackgroundCatalog: h.catalog, fetchFeatCatalog: h.catalog }));
 import { useCreatorCompendiumCatalogs } from "./useCreatorCompendiumCatalogs";
-
-beforeEach(() => { harness.slots = []; harness.cursor = 0; harness.effects = []; harness.catalog.mockReset(); });
-
-function Render(ruleset: "5e" | "5.5e" | undefined) {
-  harness.cursor = 0;
-  harness.effects = [];
-  return useCreatorCompendiumCatalogs(ruleset);
-}
-
+beforeEach(() => h.catalog.mockReset());
 it("ignores all four old catalogs after switching rulesets", async () => {
-  const oldResolvers: Array<(value: unknown) => void> = [];
-  harness.catalog.mockImplementation((ruleset: string) => ruleset === "5e"
-    ? new Promise((resolve) => oldResolvers.push(resolve))
-    : Promise.resolve([{ id: "2024", name: "New rules" }]));
-  Render("5e");
-  const cleanups = harness.effects.map((effect) => effect());
-  cleanups.forEach((cleanup) => cleanup?.());
-  Render("5.5e");
-  harness.effects.forEach((effect) => effect());
-  await Promise.resolve();
-  oldResolvers.forEach((resolve) => resolve([{ id: "2014", name: "Old rules" }]));
-  await Promise.resolve();
-  const result = Render("5.5e");
-  for (const rows of [result.classes, result.races, result.bgs, result.featSummaries]) {
-    expect(rows).toEqual([{ id: "2024", name: "New rules" }]);
-  }
+  const old = deferred<unknown[]>();
+  h.catalog.mockImplementation((ruleset: string) => ruleset === "5e" ? old.promise : Promise.resolve([{ id: "2024", name: "New rules" }]));
+  const hook = await renderHook(useCreatorCompendiumCatalogs, "5e" as "5e" | "5.5e" | undefined);
+  await hook.rerender("5.5e");
+  await act(async () => old.resolve([{ id: "2014", name: "Old rules" }]));
+  for (const rows of [hook.result.classes, hook.result.races, hook.result.bgs, hook.result.featSummaries]) expect(rows).toEqual([{ id: "2024", name: "New rules" }]);
 });
-
-it("clears old catalog choices when no ruleset is selected", () => {
-  harness.slots = [[{ id: "old" }], [{ id: "old" }], [{ id: "old" }], [{ id: "old" }], []];
-  Render(undefined);
-  harness.effects[0]();
-  const result = Render(undefined);
-  expect([result.classes, result.races, result.bgs, result.featSummaries]).toEqual([[], [], [], []]);
-  expect(harness.catalog).not.toHaveBeenCalled();
+it("clears old catalog choices when no ruleset is selected", async () => {
+  h.catalog.mockResolvedValue([{ id: "old" }]);
+  const hook = await renderHook(useCreatorCompendiumCatalogs, "5e" as "5e" | undefined);
+  expect(hook.result.classes).toHaveLength(1);
+  h.catalog.mockClear(); await hook.rerender(undefined);
+  expect([hook.result.classes, hook.result.races, hook.result.bgs, hook.result.featSummaries]).toEqual([[], [], [], []]);
+  expect(h.catalog).not.toHaveBeenCalled();
 });

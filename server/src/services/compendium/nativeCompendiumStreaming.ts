@@ -1,11 +1,10 @@
 import { Readable } from "node:stream";
 import type Database from "better-sqlite3";
-import type { NativeCompendiumBundle, NativeCompendiumCategory } from "./nativeCompendium.js";
+import type { NativeCompendiumCategory } from "./nativeCompendium.js";
 import {
   BEHOLDEN_COMPENDIUM_FORMAT,
   BEHOLDEN_COMPENDIUM_SCHEMA,
   iterateNativeCompendiumEntries,
-  NATIVE_COMPENDIUM_CATEGORIES,
 } from "./nativeCompendium.js";
 import type { JsonRecord } from "../../lib/jsonRecord.js";
 import { GRAND_COMPENDIUM_SCHEMA_VERSION } from "@beholden/shared/domain/compendium/grandCompendiumSchemas";
@@ -29,17 +28,6 @@ function* serializeEntries(category: NativeCompendiumCategory, entries: Iterable
   yield "]";
 }
 
-function* serializeNativeCompendiumBundle(document: NativeCompendiumBundle): Generator<string> {
-  yield* serializeDocumentHeader(document.exportedAt);
-
-  for (const category of NATIVE_COMPENDIUM_CATEGORIES) {
-    const entries = document[category];
-    if (!entries) continue;
-    yield* serializeEntries(category, entries);
-  }
-  yield "\n}\n";
-}
-
 function* serializeNativeCompendiumCategory(
   db: Database.Database,
   category: NativeCompendiumCategory,
@@ -47,11 +35,6 @@ function* serializeNativeCompendiumCategory(
   yield* serializeDocumentHeader(new Date().toISOString());
   yield* serializeEntries(category, iterateNativeCompendiumEntries(db, category));
   yield "\n}\n";
-}
-
-/** Serializes entries incrementally, avoiding one category-sized JSON string allocation. */
-export function streamNativeCompendiumBundle(document: NativeCompendiumBundle): Readable {
-  return Readable.from(serializeNativeCompendiumBundle(document), { encoding: "utf8" });
 }
 
 /** Reads and serializes one category row-by-row from SQLite. */

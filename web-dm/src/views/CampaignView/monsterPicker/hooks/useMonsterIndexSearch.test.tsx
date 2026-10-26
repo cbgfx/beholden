@@ -42,11 +42,12 @@ const offsetsRequested = () =>
 /** Let the hook's debounce fire and any resolved promises settle. */
 async function flush() {
   await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await vi.advanceTimersByTimeAsync(300);
   });
 }
 
 beforeEach(() => {
+  vi.useFakeTimers();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   host = document.createElement("div");
   document.body.appendChild(host);
@@ -69,6 +70,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   host.remove();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 

@@ -4,7 +4,7 @@
 import { z } from "zod";
 import type { Express } from "express";
 import { ZipArchive } from "archiver";
-import { unzipSync } from "fflate";
+import { extractDatabaseArchive } from "../services/databaseArchive.js";
 import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../lib/validate.js";
 import { hashPasswordAsync } from "../lib/jwtAuth.js";
@@ -13,7 +13,7 @@ import { deleteCharacterWithPlayers, removeUserPlayersFromCampaign } from "../se
 import { requireAuth, requireAdmin } from "../middleware/auth.js";
 import { rowToUser } from "../lib/db.js";
 import { importDatabaseFile } from "../services/databaseTransfer.js";
-import { existingImageDirectories, isDatabaseZipUpload, selectImageEntries, writeImageEntries } from "../services/databaseImageArchive.js";
+import { existingImageDirectories, isDatabaseZipUpload, prepareImageRestore } from "../services/databaseImageArchive.js";
 import { requireCampaignExists } from "../lib/routeHelpers.js";
 import { revokeUserSessions } from "../lib/sessionAuth.js";
 import { recordAuthAudit } from "../lib/authAudit.js";
@@ -79,33 +79,32 @@ export function registerAdminRoutes(app: Express, ctx: ServerContext) {
   // before images were bundled) is still accepted, unchanged.
 
   // MARK: - POST /api/admin/database/import
-  app.post("/api/admin/database/import", requireAuth, requireAdmin, ctx.dbImportUpload.single("file"), (req, res) => {
+  app.post("/api/admin/database/import", requireAuth, requireAdmin, ctx.dbImportUpload.single("file"), async (req, res) => {
     if (!req.file) return res.status(400).json({ ok: false, message: "No file uploaded" });
     const uploadedPath = req.file.path;
     let dbPathToImport = uploadedPath;
-    let extractedDbPath: string | null = null;
-    let images: ReturnType<typeof selectImageEntries> = [];
+    let archive: Awaited<ReturnType<typeof extractDatabaseArchive>> | undefined;
+    let imageRestore: ReturnType<typeof prepareImageRestore> | undefined;
+    const controller = new AbortController();
+    const cancel = () => { if (!res.writableEnded) controller.abort(); };
+    res.once("close", cancel);
     try {
       if (isDatabaseZipUpload({ mimetype: req.file.mimetype, originalname: req.file.originalname })) {
-        const entries = unzipSync(ctx.fs.readFileSync(uploadedPath));
-        const dbEntry = entries["beholden.db"];
-        if (!dbEntry) return res.status(400).json({ ok: false, message: "Uploaded zip does not contain beholden.db" });
-        extractedDbPath = ctx.path.join(ctx.os.tmpdir(), `beholden-import-${uid()}.db`);
-        ctx.fs.writeFileSync(extractedDbPath, dbEntry);
-        dbPathToImport = extractedDbPath;
-        images = selectImageEntries(entries);
+        archive = await extractDatabaseArchive(uploadedPath, undefined, controller.signal);
+        dbPathToImport = archive.databasePath;
+        imageRestore = prepareImageRestore(ctx.paths.dataDir, archive.images);
       }
-      const result = importDatabaseFile(ctx, dbPathToImport);
-      // Images only once the database itself was accepted: a refused upload changes nothing.
-      writeImageEntries(ctx.paths.dataDir, images);
+      const result = importDatabaseFile(ctx, dbPathToImport, imageRestore);
       ctx.broadcast("database:imported", { at: now() });
       res.json({ ok: true, ...result });
     } catch (cause) {
       const status = typeof (cause as { status?: unknown })?.status === "number" ? (cause as { status: number }).status : 500;
       res.status(status).json({ ok: false, message: cause instanceof Error ? cause.message : String(cause) });
     } finally {
+      res.off("close", cancel);
       ctx.fs.unlink(uploadedPath, () => {});
-      if (extractedDbPath) ctx.fs.unlink(extractedDbPath, () => {});
+      imageRestore?.dispose();
+      archive?.dispose();
     }
   });
 

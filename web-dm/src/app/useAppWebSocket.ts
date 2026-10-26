@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useWs } from "@/services/ws";
 import { api, apiCoalesced } from "@/services/api";
 import { fetchCampaignCharacter, fetchCampaignCharacters, fetchEncounterActor } from "@/services/actorApi";
@@ -38,15 +39,26 @@ export function useAppWebSocket({
   selectedAdventureId,
   selectedEncounterId,
   viewedEncounterId,
-  dispatch,
+  dispatch: rawDispatch,
   refreshAll,
   refreshCampaign,
   refreshAdventure,
   refreshEncounter,
 }: Deps) {
-  const enqueue = useDebouncedTaskQueue();
+  const enqueueTask = useDebouncedTaskQueue();
+  const scopeKey = JSON.stringify([selectedCampaignId, selectedAdventureId, selectedEncounterId, viewedEncounterId]);
+  const scope = useRef({ key: scopeKey, generation: 0 });
+  if (scope.current.key !== scopeKey) scope.current = { key: scopeKey, generation: scope.current.generation + 1 };
+  const active = useRef(true);
+  useEffect(() => { active.current = true; return () => { active.current = false; scope.current.generation++; }; }, []);
 
   useWs((msg) => {
+    const generation = scope.current.generation;
+    const isCurrent = () => active.current && generation === scope.current.generation;
+    const dispatch: Dispatch = (action) => { if (isCurrent()) rawDispatch(action); };
+    const enqueue: typeof enqueueTask = (key, run, delay) => enqueueTask(key, () => {
+      if (isCurrent()) return run();
+    }, delay);
     // Mount already performs the first load. Only a real reconnect needs to reconcile data that
     // may have changed while the socket was away; refreshing on the initial `hello` caused a
     // duplicate whole-page replacement and visible flicker.

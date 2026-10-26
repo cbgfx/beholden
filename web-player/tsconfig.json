@@ -11,6 +11,7 @@
     "skipLibCheck": true,
     "paths": {
       "@/*": ["./src/*"],
+      "@beholden/shared/tests/*": ["../shared/src/tests/*"],
       "@beholden/shared/domain/*": ["../shared/src/domain/*"],
       "@beholden/shared/ui/*": ["../shared/src/ui/*"],
       "@beholden/shared/i18n": ["../shared/src/i18n/index.ts"],

@@ -11,7 +11,9 @@ import { fetchAdventureNotesList, fetchAdventureTreasureList } from "@/services/
 import type { Encounter, EncounterActor, Note, TreasureEntry } from "@/domain/types/domain";
 import type { Action } from "@/store/actions";
 
-export function useCampaignDataRefresh(dispatch: Dispatch<Action>) {
+export function useCampaignDataRefresh(dispatch: Dispatch<Action>, scopeKey?: string) {
+  const scopeRef = useRef(scopeKey);
+  scopeRef.current = scopeKey;
   const campaignRequestRef = useRef<AbortController | null>(null);
   const adventureRequestRef = useRef<AbortController | null>(null);
   const encounterRequestRef = useRef<AbortController | null>(null);
@@ -19,6 +21,7 @@ export function useCampaignDataRefresh(dispatch: Dispatch<Action>) {
   const refreshCampaign = useCallback(async (cid: string) => {
     if (!cid) return;
     campaignRequestRef.current?.abort();
+    const startedScope = scopeRef.current;
     const controller = new AbortController();
     campaignRequestRef.current = controller;
     let data: Awaited<ReturnType<typeof fetchCampaignBootstrap>>;
@@ -30,7 +33,7 @@ export function useCampaignDataRefresh(dispatch: Dispatch<Action>) {
     } finally {
       if (campaignRequestRef.current === controller) campaignRequestRef.current = null;
     }
-    if (controller.signal.aborted) return;
+    if (controller.signal.aborted || startedScope !== scopeRef.current) return;
     dispatch({ type: "setAdventures", adventures: data.adventures });
     dispatch({ type: "setPlayers", players: data.players });
     dispatch({ type: "setINpcs", inpcs: data.inpcs });
@@ -46,6 +49,7 @@ export function useCampaignDataRefresh(dispatch: Dispatch<Action>) {
       dispatch({ type: "setAdventureTreasure", treasure: [] });
       return;
     }
+    const startedScope = scopeRef.current;
     const controller = new AbortController();
     adventureRequestRef.current = controller;
     let result: [Encounter[], Note[], TreasureEntry[]];
@@ -61,7 +65,7 @@ export function useCampaignDataRefresh(dispatch: Dispatch<Action>) {
     } finally {
       if (adventureRequestRef.current === controller) adventureRequestRef.current = null;
     }
-    if (controller.signal.aborted) return;
+    if (controller.signal.aborted || startedScope !== scopeRef.current) return;
     const [enc, notes, treasure] = result;
     dispatch({ type: "setEncounters", encounters: enc });
     dispatch({ type: "setAdventureNotes", notes });
@@ -71,11 +75,12 @@ export function useCampaignDataRefresh(dispatch: Dispatch<Action>) {
   const refreshEncounter = useCallback(async (encounterId: string | null) => {
     encounterRequestRef.current?.abort();
     if (!encounterId) { dispatch({ type: "setCombatants", combatants: [] }); return; }
+    const startedScope = scopeRef.current;
     const controller = new AbortController();
     encounterRequestRef.current = controller;
     try {
       const combatants = await fetchEncounterActors(encounterId, controller.signal) as EncounterActor[];
-      if (!controller.signal.aborted) dispatch({ type: "setCombatants", combatants });
+      if (!controller.signal.aborted && startedScope === scopeRef.current) dispatch({ type: "setCombatants", combatants });
     } catch (error) {
       if (!(error instanceof DOMException && error.name === "AbortError")) throw error;
     } finally {
@@ -87,7 +92,7 @@ export function useCampaignDataRefresh(dispatch: Dispatch<Action>) {
     campaignRequestRef.current?.abort();
     adventureRequestRef.current?.abort();
     encounterRequestRef.current?.abort();
-  }, []);
+  }, [scopeKey]);
 
   return { refreshCampaign, refreshAdventure, refreshEncounter };
 }

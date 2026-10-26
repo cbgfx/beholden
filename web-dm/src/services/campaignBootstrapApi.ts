@@ -26,7 +26,7 @@ export async function fetchCampaignBootstrap(campaignId: string, signal?: AbortS
     adventures: response.adventures,
     players: response.players.map(flattenCampaignCharacterDto) as CampaignCharacter[],
     inpcs: response.inpcs,
-    notes: response.notes.map(flattenNoteDto) as Note[],
+    notes: response.notes.map((row) => ({ ...flattenNoteDto(row), bodyLoaded: false })) as Note[],
     treasure: response.treasure.map(treasureListRowToFlat) as TreasureEntry[],
   };
 }

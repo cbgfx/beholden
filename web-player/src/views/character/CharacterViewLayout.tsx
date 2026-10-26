@@ -62,7 +62,8 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
     setSheetView(id);
     try { localStorage.setItem("character-sheet:view", id); } catch { /* ignore */ }
   }, [setSheetView]);
-  const { views: sheetViews, activeView, updateViews } = useCharacterSheetViews({
+  const { views: sheetViews, activeView, updateViews, persistence: layoutPersistence } = useCharacterSheetViews({
+    revision: char.updatedAt,
     storedViews: currentData.sheetViews,
     activeViewId: ui.sheetView,
     onActiveViewChange: selectView,
@@ -291,6 +292,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
     },
     countersProps: {
       counters: currentData.counters ?? [],
+      revision: char.updatedAt,
       accentColor: derived.accentColor,
       onSave: (counters) => notes.saveCharacterData({ counters }),
     },
@@ -432,6 +434,9 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
       backgroundImage={backgroundPatternImage(appearance.backgroundPattern, derived.accentColor, appearance.backgroundIntensity)}
       backgroundSize={appearance.backgroundPattern === "grid" ? "44px 44px" : appearance.backgroundPattern === "stars" ? "130px 110px" : undefined}
     >
+      {layoutPersistence.error && <div role="alert" style={{ color: C.red }}>
+        {layoutPersistence.error} <button type="button" onClick={layoutPersistence.retry}>{translateUi("Retry")}</button>
+      </div>}
       <input ref={ui.portraitFileRef} type="file" accept="image/*" hidden onChange={handlePortraitSelected} />
       {ui.concentrationAlert && (
         <div

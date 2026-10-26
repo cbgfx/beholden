@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { evaluateDiceExpr } from "@beholden/shared/domain/dice";
 import { sanitizeDiceInput } from "@/lib/dice";
 import { parseCharacterHpDelta } from "@/views/character/combat/CharacterHpDelta";
@@ -7,6 +7,8 @@ import { parseCharacterHpDelta } from "@/views/character/combat/CharacterHpDelta
 // shared by the player's HUD and the DM's combat box), then the HP parse or the calculator.
 // The player's HUD used to strip "/" and "*" as they were typed, so 12/2 applied 122.
 const typed = (text: string) => sanitizeDiceInput(text);
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("every operator survives typing and evaluates", () => {
   const cases: Array<[string, number]> = [
@@ -38,11 +40,11 @@ describe("every operator survives typing and evaluates", () => {
   });
 
   it("dice mix with every operator", () => {
+    vi.stubGlobal("crypto", { getRandomValues: (buffer: Uint32Array) => { buffer[0] = 5; return buffer; } });
     const halved = parseCharacterHpDelta(typed("2d6/2"), "damage").amount;
-    expect(halved).toBeGreaterThanOrEqual(1);
-    expect(halved).toBeLessThanOrEqual(6);
+    expect(halved).toBe(6);
     const doubled = evaluateDiceExpr(typed("1d4x2"), { calculator: true })!;
-    expect([2, 4, 6, 8]).toContain(doubled);
+    expect(doubled).toBe(4);
   });
 
   it("strips only what the evaluator cannot use", () => {

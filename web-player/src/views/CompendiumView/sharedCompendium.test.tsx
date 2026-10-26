@@ -29,6 +29,7 @@ let root: Root;
 let host: HTMLDivElement;
 
 beforeEach(() => {
+  vi.useFakeTimers();
   mocks.api.mockImplementation(async (path: string) => {
     if (path.startsWith("/api/spells/search")) return { rows: SPELLS, total: SPELLS.length };
     if (path.startsWith("/api/spells/facets")) return { schools: ["EV"], classes: ["Wizard"] };
@@ -43,6 +44,7 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount());
   host.remove();
+  vi.useRealTimers();
   mocks.api.mockReset();
 });
 
@@ -56,7 +58,7 @@ async function render(editing?: CompendiumEntryEditing) {
   });
   // Let the debounced search fire and its response settle.
   await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await vi.advanceTimersByTimeAsync(400);
   });
 }
 

@@ -9,7 +9,7 @@ import { hashPassword, hashPasswordAsync, verifyPasswordAsync } from "../lib/jwt
 import { requireAuth } from "../middleware/auth.js";
 import { syncOwnedPlayerName } from "../services/characters.js";
 import { registerWorkspacePreferences } from "./workspacePreferences.js";
-import { clearSessionCookie, createSession, revokeSession, revokeUserSessions, rotateSessionCsrf, setSessionCookie } from "../lib/sessionAuth.js";
+import { clearSessionCookie, createSession, revokeSession, revokeUserSessions, sessionCsrfToken, setSessionCookie } from "../lib/sessionAuth.js";
 import { recordAuthAudit } from "../lib/authAudit.js";
 
 const LoginBody = z.object({
@@ -198,7 +198,7 @@ export function registerAuthRoutes(app: Express, ctx: ServerContext) {
       .get(req.user!.userId) as Record<string, unknown> | undefined;
     if (!row) return res.status(404).json({ ok: false, message: "User not found" });
     const isAdmin = Boolean(row.is_admin);
-    const csrfToken = req.authSessionId ? rotateSessionCsrf(db, req.authSessionId) : undefined;
+    const csrfToken = sessionCsrfToken(db, req);
     res.setHeader("Cache-Control", "no-store");
     res.json({
       id: row.id,

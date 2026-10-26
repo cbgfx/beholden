@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { expect, it } from "vitest";
 import { i18n, loadLanguage } from "./index";
 import { applyLanguage } from "@beholden/shared/i18n/config";

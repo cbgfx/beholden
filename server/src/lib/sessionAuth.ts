@@ -1,4 +1,4 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 import type { Request, Response } from "express";
 import type { Db } from "./db.js";
@@ -10,6 +10,7 @@ export const CSRF_HEADER = "x-beholden-csrf";
 const SESSION_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
+const csrfForToken = (token: string) => createHmac("sha256", token).update("beholden-session-csrf-v1").digest("base64url");
 const randomToken = () => randomBytes(32).toString("base64url");
 
 function cookieValue(header: string | undefined, name: string): string | null {
@@ -46,7 +47,7 @@ export function createSession(db: Db, userId: string, now = Date.now()): { id: s
   }
   const id = randomToken();
   const token = randomToken();
-  const csrfToken = randomToken();
+  const csrfToken = csrfForToken(token);
   const expiresAt = now + SESSION_LIFETIME_MS;
   db.prepare("INSERT INTO auth_sessions (id,user_id,token_hash,csrf_hash,created_at,last_seen_at,expires_at) VALUES (?,?,?,?,?,?,?)")
     .run(id, userId, hash(token), hash(csrfToken), now, now, expiresAt);
@@ -81,8 +82,14 @@ export function revokeUserSessions(db: Db, userId: string, now = Date.now(), exc
   else db.prepare("UPDATE auth_sessions SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL").run(now, userId);
 }
 
-export function rotateSessionCsrf(db: Db, sessionId: string): string {
-  const csrfToken = randomToken();
-  db.prepare("UPDATE auth_sessions SET csrf_hash=? WHERE id=?").run(hash(csrfToken), sessionId);
+/** A stable proof per HttpOnly session, so parallel tabs and /me reads cannot invalidate writes.
+ * Existing random-proof sessions migrate once to the same deterministic proof in every tab. */
+export function sessionCsrfToken(db: Db, req: Request): string | undefined {
+  if (!req.authSessionId) return undefined;
+  const token = cookieValue(req.headers.cookie, SESSION_COOKIE);
+  if (!token) return undefined;
+  const csrfToken = csrfForToken(token);
+  db.prepare("UPDATE auth_sessions SET csrf_hash=? WHERE id=? AND token_hash=? AND csrf_hash!=?")
+    .run(hash(csrfToken), req.authSessionId, hash(token), hash(csrfToken));
   return csrfToken;
 }

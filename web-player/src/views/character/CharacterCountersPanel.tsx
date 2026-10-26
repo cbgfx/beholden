@@ -41,11 +41,12 @@ function CounterTitle(props: { value: string; onSave: (value: string) => void })
 
 export function CharacterCountersPanel(props: {
   counters: CharacterCounter[];
+  revision?: number;
   accentColor: string;
   onSave: (counters: CharacterCounter[]) => void | Promise<unknown>;
 }) {
   const t = useUiTranslation("playerUi");
-  const [counters, update] = useQueuedPersistedState(props.counters, async (next) => props.onSave(next));
+  const [counters, update, persistence] = useQueuedPersistedState(props.counters, async (next) => props.onSave(next), props.revision);
   const saveCounter = (id: string, patch: Partial<CharacterCounter>) => {
     update((current) => current.map((counter) => counter.id === id ? { ...counter, ...patch } : counter));
   };
@@ -61,6 +62,9 @@ export function CharacterCountersPanel(props: {
       summary={counters.map((counter) => `${counter.title} ${counter.numCount}`).join(" · ") || t("No counters")}
       actions={<PanelHeaderAddButton color={props.accentColor} title={t("Add counter")} onClick={addCounter} />}
     >
+      {persistence.error && <div role="alert" style={{ color: C.red }}>
+        {persistence.error} <button type="button" onClick={persistence.retry}>{t("Retry")}</button>
+      </div>}
       {counters.length === 0 ? (
         <div style={{ color: C.muted, fontSize: "var(--fs-small)", lineHeight: 1.6 }}>{t("No counters yet.")}</div>
       ) : (

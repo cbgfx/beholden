@@ -10,7 +10,7 @@ import Database from "better-sqlite3";
 import type WebSocket from "ws";
 import type { WebSocketServer } from "ws";
 import { SCHEMA_SQL } from "../lib/dbSchema.js";
-import { canDeliverEvent } from "./eventVisibility.js";
+import { canDeliverEvent, eventPayloadForUser } from "./eventVisibility.js";
 import { createBroadcaster, type WsUser } from "./ws.js";
 
 const DM: WsUser = { userId: "dm", isAdmin: false };
@@ -82,6 +82,7 @@ test("the broadcaster sends a note delta to the DM's socket and not the player's
   const clients = new Set([socket("dm", DM), socket("player", PLAYER), socket("anonymous", null)]);
   const broadcast = createBroadcaster({ clients } as unknown as WebSocketServer, {
     canDeliver: (user, type, payload) => canDeliverEvent(db, user, type, payload),
+    projectPayload: (user, type, payload) => eventPayloadForUser(db, user, type, payload),
   });
 
   broadcast("notes:delta", noteDelta as never);
@@ -112,8 +113,8 @@ test("INPCs are the DM's too, even though the event carries only ids", () => {
 
 test("events the party is allowed to read still reach the party", () => {
   const db = seedDb();
-  // Treasure and combatants are readable by any member over HTTP, so holding the broadcast back
-  // would only make the app feel broken. This pins the decision, so a later change is deliberate.
+  // Ordinary party events remain readable. Combatant notifications are projected separately
+  // so players can refresh their safe status endpoint without receiving the DM roster.
   const open: Array<[string, unknown]> = [
     ["treasure:delta", { campaignId: "camp-1", action: "upsert", treasureId: "t1" }],
     ["encounter:combatantsDelta", { encounterId: "e1", action: "upsert", combatantId: "c1" }],
@@ -129,4 +130,25 @@ test("events the party is allowed to read still reach the party", () => {
     assert.equal(canDeliverEvent(db, PLAYER, type as never, payload as never), true, `${type} reaches a player`);
   }
   db.close();
+});
+
+
+test("combatant broadcasts contain full DTOs only for DMs and keep player refreshes sanitized", () => {
+  const db = seedDb();
+  try {
+    const sent = new Map<string, string>();
+    const socket = (name: string, user: WsUser | null, authorized = true) => ({
+      readyState: 1, OPEN: 1, __beholdenUser: user, __beholdenScope: {},
+      __authorize: () => authorized, send: (message: string) => sent.set(name, message),
+    }) as unknown as WebSocket;
+    const clients = new Set([socket("dm", DM), socket("admin", ADMIN), socket("player", PLAYER), socket("outsider", OTHER_DM), socket("revoked", ADMIN, false), socket("anonymous", null)]);
+    const broadcast = createBroadcaster({ clients } as unknown as WebSocketServer, {
+      canDeliver: (user, type, payload) => canDeliverEvent(db, user, type, payload),
+      projectPayload: (user, type, payload) => eventPayloadForUser(db, user, type, payload),
+    });
+    broadcast("encounter:combatantsDelta", { encounterId: "e1", action: "upsert", combatantId: "secret-boss", combatant: { id: "secret-boss", live: { hpCurrent: 367 }, snapshot: { hpMax: 400, ac: 22 } } } as never);
+    assert.match(sent.get("dm")!, /367/); assert.match(sent.get("admin")!, /secret-boss/);
+    assert.deepEqual(JSON.parse(sent.get("player")!), { type: "encounter:combatantsDelta", payload: { encounterId: "e1", action: "refresh" } });
+    for (const name of ["outsider", "revoked", "anonymous"]) assert.equal(sent.has(name), false);
+  } finally { db.close(); }
 });

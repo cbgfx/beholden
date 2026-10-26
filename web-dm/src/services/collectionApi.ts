@@ -46,18 +46,18 @@ export function treasureListRowToFlat(row: TreasureListRow): FlatTreasureDto {
 // The list view sends the same note shape as everything else, with the text left out.
 export function fetchCampaignNotesList(campaignId: string): Promise<FlatNoteDto[]> {
   return api<NoteDto[]>(`/api/campaigns/${campaignId}/notes?view=list`).then((rows) =>
-    rows.map(flattenNoteDto),
+    rows.map((row) => ({ ...flattenNoteDto(row), bodyLoaded: false })),
   );
 }
 
 export function fetchAdventureNotesList(adventureId: string, signal?: AbortSignal): Promise<FlatNoteDto[]> {
   return api<NoteDto[]>(`/api/adventures/${adventureId}/notes?view=list`, { signal }).then((rows) =>
-    rows.map(flattenNoteDto),
+    rows.map((row) => ({ ...flattenNoteDto(row), bodyLoaded: false })),
   );
 }
 
 export function fetchNoteById(noteId: string): Promise<FlatNoteDto> {
-  return api<NoteDto>(`/api/notes/${noteId}`).then(flattenNoteDto);
+  return api<NoteDto>(`/api/notes/${noteId}`).then((row) => ({ ...flattenNoteDto(row), bodyLoaded: true }));
 }
 
 export function fetchCampaignTreasureList(

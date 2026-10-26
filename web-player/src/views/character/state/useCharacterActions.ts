@@ -69,6 +69,7 @@ export function useCharacterActions(args: {
         ? {
             ...prev,
             characterData: { ...(prev.characterData ?? {}), ...normalizedPatch },
+            updatedAt: Math.max(prev.updatedAt ?? 0, updated.updatedAt ?? 0),
             inventoryRev: (Object.hasOwn(normalizedPatch, "inventory") || Object.hasOwn(normalizedPatch, "inventoryContainers"))
               ? updated.inventoryRev ?? prev.inventoryRev
               : prev.inventoryRev,
@@ -108,7 +109,7 @@ export function useCharacterActions(args: {
   // The list is still updated locally first so the panel responds at once, and rolled back if the
   // request fails. Notes originating elsewhere remain in campaignSharedNotes locally; the server
   // resolves their actual owner so editing one never creates a duplicate on this character.
-  const applySharedNotesLocally = React.useCallback((
+  const applySharedNotesLocally = React.useCallback(async (
     change: (list: PlayerNote[]) => PlayerNote[],
     send: (characterId: string) => Promise<unknown>,
   ) => {
@@ -118,22 +119,26 @@ export function useCharacterActions(args: {
     const val = JSON.stringify(change(ownNotes));
     const prevSharedNotes = char.sharedNotes;
     setChar((prev) => (prev ? { ...prev, sharedNotes: val } : prev));
-    send(char.id).catch(() => {
-      setChar((prev) => (prev?.sharedNotes === val ? { ...prev, sharedNotes: prevSharedNotes } : prev));
-    });
+    try { await send(char.id); }
+    catch (cause) {
+      setChar((prev) => (prev?.id === char.id && prev.sharedNotes === val ? { ...prev, sharedNotes: prevSharedNotes } : prev));
+      throw cause;
+    }
   }, [allSharedNotes, campaignNotesList, char, setChar]);
 
-  const upsertSharedNote = React.useCallback((note: PlayerNote) => {
+  const upsertSharedNote = React.useCallback(async (note: PlayerNote) => {
     if (char && campaignNotesList.some((entry) => entry.id === note.id)) {
       const previous = char.campaignSharedNotes;
       const next = JSON.stringify(campaignNotesList.map((entry) => entry.id === note.id ? note : entry));
       setChar((current) => current ? { ...current, campaignSharedNotes: next } : current);
-      upsertMySharedNote(char.id, note.id, { title: note.title, text: note.text }).catch(() => {
-        setChar((current) => current?.campaignSharedNotes === next ? { ...current, campaignSharedNotes: previous } : current);
-      });
+      try { await upsertMySharedNote(char.id, note.id, { title: note.title, text: note.text }); }
+      catch (cause) {
+        setChar((current) => current?.id === char.id && current.campaignSharedNotes === next ? { ...current, campaignSharedNotes: previous } : current);
+        throw cause;
+      }
       return;
     }
-    applySharedNotesLocally(
+    return applySharedNotesLocally(
       (list) => (list.some((entry) => entry.id === note.id)
         ? list.map((entry) => (entry.id === note.id ? note : entry))
         : [...list, note]),
@@ -142,15 +147,15 @@ export function useCharacterActions(args: {
   }, [applySharedNotesLocally, campaignNotesList, char, setChar]);
 
   const deleteSharedNote = React.useCallback((id: string) => {
-    applySharedNotesLocally(
+    void applySharedNotesLocally(
       (list) => list.filter((entry) => entry.id !== id),
       (characterId) => deleteMySharedNote(characterId, id),
-    );
+    ).catch(() => {});
   }, [applySharedNotesLocally]);
 
   const reorderSharedNotes = React.useCallback((list: PlayerNote[]) => {
     const ids = list.map((note) => note.id);
-    applySharedNotesLocally(
+    void applySharedNotesLocally(
       (own) => {
         const byId = new Map(own.map((note) => [note.id, note] as const));
         const named = ids.map((id) => byId.get(id)).filter((note): note is PlayerNote => Boolean(note));
@@ -158,22 +163,24 @@ export function useCharacterActions(args: {
         return [...named, ...own.filter((note) => !namedIds.has(note.id))];
       },
       (characterId) => reorderMySharedNotes(characterId, ids),
-    );
+    ).catch(() => {});
   }, [applySharedNotesLocally]);
 
-  const handleNoteSave = React.useCallback((title: string, text: string) => {
+  const newNoteIdentity = React.useRef<{ drawer: typeof noteDrawer; id: string } | null>(null);
+  const handleNoteSave = React.useCallback(async (title: string, text: string) => {
     if (!noteDrawer) return;
     const { scope, note } = noteDrawer;
+    if (!note && newNoteIdentity.current?.drawer !== noteDrawer) newNoteIdentity.current = { drawer: noteDrawer, id: uid() };
+    const noteId = note?.id ?? newNoteIdentity.current!.id;
     if (scope === "shared") {
-      upsertSharedNote({ id: note?.id ?? uid(), title, text });
-      setNoteDrawer(null);
-      return;
+      await upsertSharedNote({ id: noteId, title, text });
+    } else {
+      const updated = note
+        ? playerNotesList.map((entry) => (entry.id === note.id ? { ...entry, title, text } : entry))
+        : [...playerNotesList, { id: noteId, title, text }];
+      await savePlayerNotesList(updated);
     }
-    const updated = note
-      ? playerNotesList.map((entry) => (entry.id === note.id ? { ...entry, title, text } : entry))
-      : [...playerNotesList, { id: uid(), title, text }];
-    void savePlayerNotesList(updated);
-    setNoteDrawer(null);
+    setNoteDrawer((current) => current === noteDrawer ? null : current);
   }, [noteDrawer, playerNotesList, savePlayerNotesList, setNoteDrawer, upsertSharedNote]);
 
   const handleNoteDelete = React.useCallback((scope: "player" | "shared", id: string) => {

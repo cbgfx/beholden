@@ -54,7 +54,7 @@ function AppInner() {
     binders, bindersLoaded, binderModal, setBinderModal,
     refreshAll, handleCreateBinder, handleEditBinder, handleDeleteBinder,
   } = useBinderActions(dispatch, confirm);
-  const { refreshCampaign, refreshAdventure, refreshEncounter } = useCampaignDataRefresh(dispatch);
+  const { refreshCampaign, refreshAdventure, refreshEncounter } = useCampaignDataRefresh(dispatch, JSON.stringify([state.selectedCampaignId, state.selectedAdventureId, state.selectedEncounterId]));
 
   useEffect(() => { refreshAll(); }, [refreshAll]);
 

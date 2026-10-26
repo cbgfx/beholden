@@ -1,5 +1,18 @@
 import type { Action } from "@/store/actions";
+import type { Note } from "@/domain/types/domain";
 import type { State } from "@/store/state";
+
+// Summary refreshes must not erase a body already fetched for an open note.
+function reconcileNotes(previous: Note[], incoming: Note[]): Note[] {
+  const byId = new Map(previous.map((note) => [note.id, note]));
+  return incoming.map((note) => {
+    const cached = byId.get(note.id);
+    return note.bodyLoaded === false && cached && cached.bodyLoaded !== false
+      && note.updatedAt !== undefined && note.updatedAt === cached.updatedAt
+      ? { ...note, text: cached.text, bodyLoaded: true }
+      : note;
+  });
+}
 
 export function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -158,10 +171,10 @@ export function reducer(state: State, action: Action): State {
       return { ...state, monsterDetails: { ...state.monsterDetails, ...action.patch } };
 
     case "setCampaignNotes":
-      return { ...state, campaignNotes: action.notes };
+      return { ...state, campaignNotes: reconcileNotes(state.campaignNotes, action.notes) };
 
     case "setAdventureNotes":
-      return { ...state, adventureNotes: action.notes };
+      return { ...state, adventureNotes: reconcileNotes(state.adventureNotes, action.notes) };
 
     case "upsertCampaignNote": {
       const idx = state.campaignNotes.findIndex((n) => n.id === action.note.id);

@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "exports": {
+    "./tests/*": "./src/tests/*",
     "./api": "./src/api/index.ts",
     "./api/*": "./src/api/*",
     "./domain": "./src/domain/index.ts",

@@ -53,3 +53,73 @@ export function writeImageEntries(dataDir: string, images: Array<{ relativePath:
     fs.writeFileSync(absolute, bytes);
   }
 }
+
+
+export type RestoreImage = { relativePath: string } & ({ bytes: Uint8Array } | { stagedPath: string });
+
+export function isDatabaseImagePath(relativePath: string): boolean {
+  if (!DATABASE_IMAGE_DIRECTORIES.some(name => relativePath.startsWith(`${name}/`))) return false;
+  return !relativePath.endsWith("/") && !/[\\:\x00]/u.test(relativePath)
+    && relativePath.split("/").every(part => part !== "" && part !== "." && part !== "..");
+}
+
+/** Stage replacements and originals on the destination volume before touching live files.
+ * apply runs inside the database transaction; rollback restores every moved original on failure. */
+export function prepareImageRestore(dataDir: string, images: RestoreImage[], io: typeof fs = fs) {
+  const parent = path.join(dataDir, "tmp"); io.mkdirSync(parent, { recursive: true });
+  const staging = io.mkdtempSync(path.join(parent, "image-restore-"));
+  const plans: Array<{ target: string; next: string; previous: string; moved: boolean; installed: boolean }> = [];
+  let recoveryFailed = false;
+  const dispose = () => {
+    if (recoveryFailed) return; // Keep recovery originals if the filesystem itself refuses rollback.
+    try { io.rmSync(staging, { recursive: true, force: true }); } catch { /* cleanup must not turn a committed restore into a failed response */ }
+  };
+  try {
+    for (const [index, image] of images.entries()) {
+      if (!isDatabaseImagePath(image.relativePath)) continue;
+      const target = path.resolve(dataDir, image.relativePath);
+      if (!target.startsWith(path.resolve(dataDir) + path.sep)) throw new Error("Invalid image restore path.");
+      // Never follow a pre-existing symlink outside the installation while staging or swapping.
+      const pieces = image.relativePath.split("/");
+      let cursor = path.resolve(dataDir);
+      for (const piece of pieces) {
+        cursor = path.join(cursor, piece);
+        if (io.existsSync(cursor)) {
+          const stat = io.lstatSync(cursor);
+          if (stat.isSymbolicLink()) throw new Error("Image restore paths must not contain symbolic links.");
+          if (cursor === target && !stat.isFile()) throw new Error("Image restore target must be a regular file.");
+        }
+      }
+      const next = path.join(staging, `${index}.new`);
+      const previous = path.join(staging, `${index}.previous`);
+      if ("bytes" in image) io.writeFileSync(next, image.bytes);
+      else io.copyFileSync(image.stagedPath, next);
+      plans.push({ target, next, previous, moved: false, installed: false });
+    }
+  } catch (cause) { dispose(); throw cause; }
+  try { io.writeFileSync(path.join(staging, "recovery.json"), JSON.stringify(plans.map(plan => ({ target: plan.target, previous: plan.previous, next: plan.next })))); }
+  catch (cause) { dispose(); throw cause; }
+  return {
+    apply() {
+      for (const plan of plans) {
+        io.mkdirSync(path.dirname(plan.target), { recursive: true });
+        if (io.existsSync(plan.target)) { io.renameSync(plan.target, plan.previous); plan.moved = true; }
+        io.renameSync(plan.next, plan.target); plan.installed = true;
+      }
+    },
+    rollback() {
+      const failures: unknown[] = [];
+      for (const plan of [...plans].reverse()) {
+        try {
+          if (plan.installed) { io.unlinkSync(plan.target); plan.installed = false; }
+          if (plan.moved) { io.renameSync(plan.previous, plan.target); plan.moved = false; }
+        } catch (cause) { failures.push(cause); }
+      }
+      if (failures.length) {
+        recoveryFailed = true;
+        throw new Error(`Image rollback was incomplete. Recovery files are retained in ${staging}.`);
+      }
+    },
+    dispose,
+  };
+}

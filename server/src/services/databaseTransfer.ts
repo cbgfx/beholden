@@ -5,6 +5,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import type { ServerContext } from "../server/context.js";
 import { openDb } from "../lib/db.js";
 import { inventoryValidationProblem } from "./inventoryValidation.js";
@@ -61,6 +62,9 @@ function validateAndPrepareUpload(uploadedFilePath: string): void {
     if (integrity !== "ok") {
       throw httpError(400, `Uploaded database failed an integrity check: ${integrity}`);
     }
+    if ((staged.pragma("foreign_key_check") as unknown[]).length) {
+      throw httpError(400, "Uploaded database contains broken foreign-key relationships.");
+    }
     const adminCount = staged.prepare("SELECT COUNT(*) AS n FROM users WHERE is_admin = 1").get() as { n: number };
     if (!adminCount || adminCount.n < 1) {
       throw httpError(400, "Uploaded database has no admin user — refusing to import.");
@@ -95,14 +99,14 @@ function validateAndPrepareUpload(uploadedFilePath: string): void {
  * `uploadedFilePath`, inside one transaction. A pre-import snapshot of the
  * live database is written first as a safety net.
  */
-export function importDatabaseFile(ctx: ServerContext, uploadedFilePath: string): DatabaseImportResult {
+export function importDatabaseFile(ctx: ServerContext, uploadedFilePath: string, images?: { apply: () => void; rollback: () => void }): DatabaseImportResult {
   const { db } = ctx;
 
   validateAndPrepareUpload(uploadedFilePath);
 
   const backupDir = path.join(ctx.paths.dataDir, "backups");
   fs.mkdirSync(backupDir, { recursive: true });
-  const backupPath = path.join(backupDir, `beholden-pre-import-${ctx.helpers.now()}.db`);
+  const backupPath = path.join(backupDir, `beholden-pre-import-${ctx.helpers.now()}-${randomUUID()}.db`);
   db.exec(`VACUUM INTO '${backupPath.replace(/'/g, "''")}'`);
 
   const tables = listUserTables(db);
@@ -122,8 +126,16 @@ export function importDatabaseFile(ctx: ServerContext, uploadedFilePath: string)
         const info = db.prepare(`INSERT INTO main.${table} (${columns}) SELECT ${columns} FROM imported.${table}`).run();
         rowsImported += info.changes;
       }
+      if ((db.pragma("main.foreign_key_check") as unknown[]).length) {
+        throw httpError(400, "Restored database contains broken foreign-key relationships.");
+      }
+      images?.apply();
     });
-    runImport();
+    try { runImport(); }
+    catch (cause) {
+      images?.rollback();
+      throw cause;
+    }
   } finally {
     db.pragma("foreign_keys = ON");
     db.exec("DETACH DATABASE imported");

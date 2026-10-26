@@ -1,26 +1,21 @@
+// @vitest-environment jsdom
+import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-vi.mock("react", () => ({ default: {
-  useState: (value: unknown) => [value, vi.fn()],
-  useRef: (value: unknown) => ({ current: value }),
-  useEffect: () => {},
-  useCallback: (fn: unknown) => fn,
-} }));
+import { renderHook, deferred } from "@beholden/shared/tests/renderHook";
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 import { useUpdateCheck } from "@beholden/shared/ui/useUpdateCheck";
-
-afterEach(() => vi.unstubAllGlobals());
-
+afterEach(() => vi.restoreAllMocks());
 it("prevents a second update before React rerenders and permits retry after failure", async () => {
-  vi.stubGlobal("window", { confirm: vi.fn(() => true) });
-  let reject!: (reason: Error) => void;
-  const api = vi.fn().mockImplementation(() => new Promise((_, no) => { reject = no; }));
-  const { startUpdate } = useUpdateCheck(api, "test");
-  const first = startUpdate();
-  await startUpdate();
-  expect(api).toHaveBeenCalledTimes(1);
-  reject(new Error("unavailable"));
-  await first;
+  vi.spyOn(window, "confirm").mockReturnValue(true);
+  const pending = deferred<unknown>();
+  const api = vi.fn().mockReturnValueOnce(pending.promise);
+  const hook = await renderHook(() => useUpdateCheck(api, "test"));
+  let first!: Promise<void>;
+  act(() => { first = hook.result.startUpdate(); void hook.result.startUpdate(); });
+  expect(api).toHaveBeenCalledTimes(1); expect(hook.result.updating).toBe(true);
+  await act(async () => { pending.reject(new Error("unavailable")); await first; });
+  expect(hook.result.message).toBe("unavailable"); expect(hook.result.updating).toBe(false);
   api.mockResolvedValue({ message: "started" });
-  await startUpdate();
-  expect(api).toHaveBeenCalledTimes(2);
+  await act(async () => { await hook.result.startUpdate(); });
+  expect(api).toHaveBeenCalledTimes(2); expect(hook.result.message).toBe("started");
 });

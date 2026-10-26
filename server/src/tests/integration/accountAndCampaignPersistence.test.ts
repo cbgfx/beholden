@@ -245,3 +245,22 @@ it("an established WebSocket closes after account revocation", async () => {
     db.close();
   }
 });
+
+
+it("parallel session reads retain one stable CSRF proof and do not break either tab's writes", async () => {
+  const f = await fixture();
+  try {
+    const login = await f.request("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: "admin", password: "initial-password" }) }, "");
+    const cookie = login.headers.get("set-cookie")!.split(";")[0]!;
+    const initial = await login.json() as { csrfToken: string };
+    const read = () => f.request("/api/auth/me", { headers: { Cookie: cookie } }, "").then(response => response.json()) as Promise<{ csrfToken: string }>;
+    const [first, second] = await Promise.all([read(), read()]);
+    assert.equal(first.csrfToken, initial.csrfToken); assert.equal(second.csrfToken, initial.csrfToken);
+    for (const token of [second.csrfToken, first.csrfToken]) {
+      const response = await f.request("/api/me/profile", { ...put({ textScale: 1.1 }), headers: { "Content-Type": "application/json", Cookie: cookie, "X-Beholden-CSRF": token } }, "");
+      assert.equal(response.status, 200);
+    }
+    const rejected = await f.request("/api/me/profile", { ...put({ textScale: 1.1 }), headers: { "Content-Type": "application/json", Cookie: cookie, "X-Beholden-CSRF": "wrong-proof" } }, "");
+    assert.equal(rejected.status, 403);
+  } finally { await f.close(); }
+});

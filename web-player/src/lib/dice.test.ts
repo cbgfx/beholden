@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { rollDiceExpr, hasDiceTerm } from "@beholden/shared/domain";
 import { evaluateDiceExpr } from "@beholden/shared/domain/dice";
+
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("rollDiceExpr", () => {
   it("rejects dice sizes outside the 32-bit sampler and excessive roll counts", () => {
@@ -27,28 +29,25 @@ describe("rollDiceExpr", () => {
     expect(rollDiceExpr("8")).toBe(8);
   });
 
-  it("rolls a single die within its range", () => {
-    for (let i = 0; i < 50; i++) {
-      const n = rollDiceExpr("d6");
-      expect(n).toBeGreaterThanOrEqual(1);
-      expect(n).toBeLessThanOrEqual(6);
-    }
+  it.each([
+    ["d6", [0], 1], ["d6", [5], 6], ["3d6", [0, 1, 2], 6],
+    ["1d4+6d8+3d4+2", [3, 7, 7, 7, 7, 7, 7, 3, 3, 3], 66],
+  ] as const)("evaluates %s exactly with controlled random values", (formula, values, expected) => {
+    let index = 0;
+    vi.stubGlobal("crypto", { getRandomValues: (buffer: Uint32Array) => { buffer[0] = values[index++]; return buffer; } });
+    expect(rollDiceExpr(formula)).toBe(expected); expect(index).toBe(values.length);
   });
 
-  it("sums multiple dice of the same size within range", () => {
-    for (let i = 0; i < 50; i++) {
-      const n = rollDiceExpr("3d6");
-      expect(n).toBeGreaterThanOrEqual(3);
-      expect(n).toBeLessThanOrEqual(18);
-    }
+  it("rejects biased samples before selecting a die face", () => {
+    const values = [0xffff_ffff, 5]; let index = 0;
+    vi.stubGlobal("crypto", { getRandomValues: (buffer: Uint32Array) => { buffer[0] = values[index++]; return buffer; } });
+    expect(rollDiceExpr("d6")).toBe(6); expect(index).toBe(2);
   });
 
-  it("sums additive dice groups of different sizes plus a constant", () => {
-    for (let i = 0; i < 50; i++) {
-      const n = rollDiceExpr("1d4+6d8+3d4+2");
-      expect(n).toBeGreaterThanOrEqual(1 + 6 + 3 + 2);
-      expect(n).toBeLessThanOrEqual(4 + 48 + 12 + 2);
-    }
+  it("supports both endpoints of the non-crypto fallback", () => {
+    vi.stubGlobal("crypto", undefined);
+    vi.spyOn(Math, "random").mockReturnValueOnce(0).mockReturnValueOnce(1 - Number.EPSILON);
+    expect(rollDiceExpr("d6")).toBe(1); expect(rollDiceExpr("d6")).toBe(6);
   });
 
   it("supports parentheses and multiplication/division", () => {

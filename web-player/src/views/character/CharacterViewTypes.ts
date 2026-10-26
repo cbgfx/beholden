@@ -9,6 +9,7 @@ import type { CharacterClassEntry } from "@beholden/shared/domain";
 export const XP_TO_LEVEL = [0, 0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 260000, 300000, 355000];
 
 export interface Character {
+  updatedAt?: number;
   id: string;
   name: string;
   playerName: string;

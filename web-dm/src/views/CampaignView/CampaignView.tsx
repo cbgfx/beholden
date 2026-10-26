@@ -100,6 +100,19 @@ export function CampaignView(props: {
     };
   }, [combatants, selectedEncounterId]);
 
+  // A reconnect can replace note bodies with summaries while they remain expanded.
+  React.useEffect(() => {
+    let active = true;
+    for (const note of [...campaignNotes, ...adventureNotes]) {
+      if (note.bodyLoaded !== false || !expandedNoteIds.includes(note.id)) continue;
+      void fetchNoteById(note.id).then((full) => {
+        if (!active) return;
+        dispatch({ type: full.scope === "adventure" ? "upsertAdventureNote" : "upsertCampaignNote", note: full });
+      }).catch(() => {});
+    }
+    return () => { active = false; };
+  }, [campaignNotes, adventureNotes, expandedNoteIds, dispatch]);
+
   const handleToggleNote = React.useCallback(
     (noteId: string) => {
       dispatch({ type: "toggleNote", noteId });
@@ -108,7 +121,7 @@ export function CampaignView(props: {
       const note = [...state.campaignNotes, ...state.adventureNotes].find(
         (entry) => entry.id === noteId,
       );
-      if (!note || note.text) return;
+      if (!note || note.text || note.bodyLoaded === false) return;
       void fetchNoteById(noteId)
         .then((full) => {
           if (full.scope === "adventure") {

@@ -253,11 +253,6 @@ export function resolveItemUses(itemId: string | null | undefined, uses: ItemUse
     : null;
 }
 
-export function fixedItemUsesMaximum(uses: ItemUses | null | undefined): number | null {
-  const maximum = uses && typeof uses === "object" ? uses.max : uses;
-  return typeof maximum === "number" && Number.isInteger(maximum) && maximum > 0 ? maximum : null;
-}
-
 // Charge rules are shared with the DM's party-wide Full Rest, which recovers charges on the server.
 export function initializeItemUsesMaximum(
   uses: ItemUses | null | undefined,

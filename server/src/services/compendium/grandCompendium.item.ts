@@ -1,5 +1,5 @@
 import { type JsonRecord, record, list } from "./grandCompendium.helpers.js";
-import { itemTypeKey } from "./itemCompaction.js";
+import { itemTypeKey } from "./itemTypeKey.js";
 
 export function projectGrandItem(entry: JsonRecord): JsonRecord {
   const compact = entry;

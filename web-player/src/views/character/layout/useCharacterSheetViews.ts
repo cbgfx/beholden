@@ -8,6 +8,7 @@ import { useQueuedPersistedState } from "@/views/character/state/useQueuedPersis
  * `sheetViews` array; overlapping requests could otherwise finish out of
  * order and resurrect an older layout. */
 export function useCharacterSheetViews(options: {
+  revision?: number;
   storedViews: SheetViewDef[] | null | undefined;
   activeViewId: string;
   onActiveViewChange: (id: string) => void;
@@ -18,7 +19,7 @@ export function useCharacterSheetViews(options: {
     () => normalizeSheetViews(options.storedViews),
     [options.storedViews],
   );
-  const [views, updatePersistedViews] = useQueuedPersistedState(normalizedStoredViews, options.onSave);
+  const [views, updatePersistedViews, persistence] = useQueuedPersistedState(normalizedStoredViews, options.onSave, options.revision);
   const updateViews = React.useCallback(
     (updater: (current: SheetViewDef[]) => SheetViewDef[]) => {
       updatePersistedViews((current) => normalizeSheetViews(updater(current)));
@@ -31,5 +32,5 @@ export function useCharacterSheetViews(options: {
     if (activeView.id !== activeViewId) onActiveViewChange(activeView.id);
   }, [activeView.id, activeViewId, onActiveViewChange]);
 
-  return { views, activeView, updateViews };
+  return { views, activeView, updateViews, persistence };
 }

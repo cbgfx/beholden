@@ -36,6 +36,10 @@ export function useCharacterSyncEffects(args: {
     // Any inbound frame proves the socket is live — retry a stat push that a
     // transient failure left pending.
     statSyncRef.current?.poke();
+    if (msg.type === "ws:reconnected") {
+      enqueueFetchChar(80);
+      return;
+    }
     if (msg.type === "players:delta") {
       const payload = (msg.payload ?? {}) as { campaignId?: string; characterId?: string | null };
       const campaignId = payload.campaignId;

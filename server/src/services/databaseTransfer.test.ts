@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { openDb } from "../lib/db.js";
+import { prepareImageRestore } from "./databaseImageArchive.js";
 import { importDatabaseFile } from "./databaseTransfer.js";
 import type { ServerContext } from "../server/context.js";
 
@@ -143,4 +144,77 @@ test("importDatabaseFile rejects invalid character inventory before touching the
     liveDb.close();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
+});
+
+
+test("restore rejects a foreign-key violation without touching live rows", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "beholden-invalid-fk-"));
+  const liveDb = openDb(":memory:");
+  try {
+    seedUserAndCampaign(liveDb, "old-user", "Old Admin", "old-campaign", "Old Campaign");
+    const file = path.join(tmpDir, "uploaded.db"); const staged = openDb(file);
+    seedUserAndCampaign(staged, "new-user", "New Admin", "new-campaign", "New Campaign");
+    staged.pragma("foreign_keys=OFF");
+    staged.prepare("INSERT INTO campaign_membership(id,campaign_id,user_id,role,created_at,updated_at) VALUES('orphan','missing-campaign','new-user','dm',1,1)").run();
+    staged.close();
+    assert.throws(() => importDatabaseFile(makeCtx(liveDb, tmpDir), file), /foreign-key/);
+    assert.deepEqual(liveDb.prepare("SELECT id FROM users").all(), [{ id: "old-user" }]);
+    assert.deepEqual(liveDb.pragma("foreign_key_check"), []);
+  } finally { liveDb.close(); fs.rmSync(tmpDir, { recursive: true, force: true }); }
+});
+
+test("failed image installation rolls back the database, replaced images and newly installed images", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "beholden-restore-rollback-"));
+  const liveDb = openDb(":memory:");
+  let restore: ReturnType<typeof prepareImageRestore> | undefined;
+  try {
+    seedUserAndCampaign(liveDb, "old-user", "Old Admin", "old-campaign", "Old Campaign");
+    const file = path.join(tmpDir, "uploaded.db"); const staged = openDb(file);
+    seedUserAndCampaign(staged, "new-user", "New Admin", "new-campaign", "New Campaign"); staged.close();
+    const directory = path.join(tmpDir, "campaign-images"); fs.mkdirSync(directory);
+    fs.writeFileSync(path.join(directory, "old.webp"), "original"); fs.writeFileSync(path.join(directory, "last.webp"), "last original");
+    const io = { ...fs, renameSync: ((from, to) => {
+      if (String(from).endsWith("2.new")) throw new Error("simulated disk failure");
+      fs.renameSync(from, to);
+    }) as typeof fs.renameSync };
+    restore = prepareImageRestore(tmpDir, [
+      { relativePath: "campaign-images/old.webp", bytes: Buffer.from("replacement") },
+      { relativePath: "campaign-images/new.webp", bytes: Buffer.from("new") },
+      { relativePath: "campaign-images/last.webp", bytes: Buffer.from("last replacement") },
+    ], io);
+    assert.throws(() => importDatabaseFile(makeCtx(liveDb, tmpDir), file, restore), /simulated disk/);
+    assert.deepEqual(liveDb.prepare("SELECT id FROM users").all(), [{ id: "old-user" }]);
+    assert.equal(fs.readFileSync(path.join(directory, "old.webp"), "utf8"), "original");
+    assert.equal(fs.readFileSync(path.join(directory, "last.webp"), "utf8"), "last original");
+    assert.equal(fs.existsSync(path.join(directory, "new.webp")), false);
+    assert.equal(liveDb.pragma("foreign_keys", { simple: true }), 1);
+  } finally { restore?.dispose(); liveDb.close(); fs.rmSync(tmpDir, { recursive: true, force: true }); }
+});
+
+
+test("failed filesystem recovery retains original files with an explicit recovery manifest", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "beholden-restore-recovery-"));
+  const liveDb = openDb(":memory:"); let restore: ReturnType<typeof prepareImageRestore> | undefined;
+  try {
+    seedUserAndCampaign(liveDb, "old-user", "Old Admin", "old-campaign", "Old Campaign");
+    const file = path.join(tmpDir, "uploaded.db"); const staged = openDb(file);
+    seedUserAndCampaign(staged, "new-user", "New Admin", "new-campaign", "New Campaign"); staged.close();
+    const imageDir = path.join(tmpDir, "campaign-images"); fs.mkdirSync(imageDir);
+    fs.writeFileSync(path.join(imageDir, "original.webp"), "retained original");
+    const io = { ...fs, renameSync: ((from, to) => {
+      if (String(from).endsWith("1.new") || String(from).endsWith("0.previous")) throw new Error("filesystem unavailable");
+      fs.renameSync(from, to);
+    }) as typeof fs.renameSync };
+    restore = prepareImageRestore(tmpDir, [
+      { relativePath: "campaign-images/original.webp", bytes: Buffer.from("replacement") },
+      { relativePath: "campaign-images/new.webp", bytes: Buffer.from("new") },
+    ], io);
+    assert.throws(() => importDatabaseFile(makeCtx(liveDb, tmpDir), file, restore), /Recovery files are retained/);
+    restore.dispose();
+    const recoveryDir = fs.readdirSync(path.join(tmpDir, "tmp")).find(name => name.startsWith("image-restore-"))!;
+    const manifest = JSON.parse(fs.readFileSync(path.join(tmpDir, "tmp", recoveryDir, "recovery.json"), "utf8")) as Array<{ target: string; previous: string }>;
+    assert.equal(fs.readFileSync(manifest[0]!.previous, "utf8"), "retained original");
+    assert.equal(manifest[0]!.target, path.join(imageDir, "original.webp"));
+    assert.deepEqual(liveDb.prepare("SELECT id FROM users").all(), [{ id: "old-user" }]);
+  } finally { restore?.dispose(); liveDb.close(); fs.rmSync(tmpDir, { recursive: true, force: true }); }
 });

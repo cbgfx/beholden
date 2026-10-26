@@ -9,6 +9,7 @@
 
 import express from "express";
 import compression from "compression";
+import { createJsonBodyParser } from "./jsonBody.js";
 import os from "node:os";
 import fs from "node:fs";
 import path from "node:path";
@@ -48,7 +49,7 @@ import { hashPassword, configureSigningSecret } from "../lib/jwtAuth.js";
 import { currentSessionUser } from "../lib/sessionAuth.js";
 import { recordAuthAudit } from "../lib/authAudit.js";
 import { requireCurrentAccount } from "../middleware/auth.js";
-import { canDeliverEvent } from "./eventVisibility.js";
+import { canDeliverEvent, eventPayloadForUser } from "./eventVisibility.js";
 import { registerAuthRoutes } from "../routes/authRoutes.js";
 import { registerAdminRoutes } from "../routes/adminRoutes.js";
 import { registerHealthRoutes } from "../routes/health.js";
@@ -125,7 +126,7 @@ export function createServer() {
   // Compress API/static responses to cut egress for large JSON payloads.
   app.use(compression({ threshold: 1024 }));
 
-  app.use(express.json({ limit: process.env.BEHOLDEN_JSON_LIMIT ?? "2mb" }));
+  app.use(createJsonBodyParser());
 
   // CORS — must be before basic auth so preflight and 401s carry the header
   app.use(corsMiddleware(getAllowedOriginHosts()));
@@ -291,6 +292,7 @@ export function createServer() {
   realBroadcast = createBroadcaster(wss, {
     // Scope filtering only asks which campaign a socket is looking at; this also asks who is on it.
     canDeliver: (user, type, payload) => canDeliverEvent(db, user, type, payload),
+    projectPayload: (user, type, payload) => eventPayloadForUser(db, user, type, payload),
   });
 
   let closed = false;

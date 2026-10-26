@@ -4,7 +4,6 @@ import {
   getEquipState,
   getItemSpells,
   getStoredItemSpells,
-  fixedItemUsesMaximum,
   initializeItemUsesMaximum,
   mergeCatalogItem,
   recoverItemCharges,
@@ -135,13 +134,6 @@ describe("character inventory calculations", () => {
     expect(isAmmunitionItem(arrow)).toBe(true);
     expect(isCompatibleAmmunition(bow, arrow)).toBe(true);
     expect(isCompatibleAmmunition(bow, bolt)).toBe(false);
-  });
-
-  it("initializes charge tracking only from a fixed canonical use maximum", () => {
-    expect(fixedItemUsesMaximum(7)).toBe(7);
-    expect(fixedItemUsesMaximum({ max: 10, recover: "1d6+4" })).toBe(10);
-    expect(fixedItemUsesMaximum({ max: "1d8+1", recover: false })).toBeNull();
-    expect(fixedItemUsesMaximum(undefined)).toBeNull();
   });
 
   it("rolls initial variable pools and applies canonical long-rest recovery", () => {

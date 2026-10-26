@@ -24,9 +24,9 @@ import type { WsUser } from "./ws.js";
  * - `inpcs:delta` - DM-only. Carries ids rather than content, but all six INPC routes are
  *   `dmOrAdmin`, so a player cannot fetch what changed; the event only tells them it exists, and
  *   a client that reacted to it would get a 403. Neither player app listens for it.
- * - `treasure:delta` (carries a full entry) and `encounter:combatantsDelta` (carries a combatant)
- *   stay open: their `GET` routes are `memberOrAdmin`, so a player can already read exactly this.
- *   Whether they *should* be able to is a question for those systems, not for delivery.
+ * - `treasure:delta` stays readable by campaign members.
+ * - `encounter:combatantsDelta` reaches players only as an id-free refresh signal;
+ *   full combatant DTOs are projected to DMs/admins below, matching the HTTP guard.
  * - `players:delta`, `partyInventory:delta`, `partyCurrency:delta`, `bastions:delta`,
  *   `initiative:*`, `concentration:check`, `xp:awarded` - the party's own state, addressed to them.
  * - `adventures:delta`, `encounters:delta`, `campaigns:changed`, `compendium:changed`,
@@ -76,4 +76,15 @@ export function canDeliverEvent(
   if (DM_ONLY_EVENTS.has(type)) return canSeeDmContent(db, user, campaignId);
   if (CAMPAIGN_EVENTS.has(type)) return canSeeCampaignContent(db, user, campaignId);
   return Boolean(user);
+}
+
+/** Keep player invalidations useful without disclosing DM-only roster facts. */
+export function eventPayloadForUser(
+  db: Db, user: WsUser | null, type: ServerEventType, payload: ServerEventMap[ServerEventType],
+): ServerEventMap[ServerEventType] {
+  if (type === "encounter:combatantsDelta" && !canSeeDmContent(db, user, eventCampaignId(db, type, payload))) {
+    const combat = payload as ServerEventMap["encounter:combatantsDelta"];
+    return { encounterId: combat.encounterId, action: "refresh" };
+  }
+  return payload;
 }

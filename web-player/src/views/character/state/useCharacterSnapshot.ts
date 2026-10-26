@@ -50,7 +50,9 @@ export function useCharacterSnapshot(id: string | undefined) {
     } catch (cause) {
       const failure = cause instanceof Error ? cause : new Error("Failed to load character");
       if (active.current && request === revision.current) {
-        setError(failure.message);
+        // Keep the mounted sheet (including open notes and editor drafts) during
+        // a failed background refresh. Initial loads and explicit recovery still report errors.
+        if (propagate || !snapshot.current) setError(failure.message);
         if (propagate) throw failure;
       }
     } finally {

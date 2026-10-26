@@ -36,10 +36,6 @@ export const CATEGORY_SCHEMAS: Record<NativeCompendiumCategory, z.ZodTypeAny> = 
   bastions: BastionSchema,
 };
 
-export function parseGrandCompendiumEntry(category: NativeCompendiumCategory, value: unknown): unknown {
-  return CATEGORY_SCHEMAS[category].parse(value);
-}
-
 export function isGrandCompendiumEntry(category: string, value: unknown): boolean {
   return category in CATEGORY_SCHEMAS
     && CATEGORY_SCHEMAS[category as NativeCompendiumCategory].safeParse(value).success;

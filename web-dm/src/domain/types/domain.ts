@@ -154,6 +154,8 @@ export interface INpc {
 }
 
 export interface Note {
+  bodyLoaded?: boolean;
+  updatedAt?: number;
   id: Id;
   scope: "campaign" | "adventure";
   scopeId: Id;

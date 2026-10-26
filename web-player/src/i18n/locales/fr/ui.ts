@@ -1,5 +1,7 @@
 // Interface copy only; saved content and canonical rule values remain unchanged.
 export default {
+  "Retry": "R?essayer",
+  "Unable to save note. Please try again.": "Impossible d?enregistrer la note. Veuillez r?essayer.",
   " - Disadvantage from armor": " - Désavantage à cause de l'armure",
   " · Pact Magic": " · Magie de pacte",
   " · Reaction used": " · Réaction utilisée",

@@ -1,95 +1,111 @@
+// @vitest-environment jsdom
+import { act } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
-const h = vi.hoisted(() => ({ slots: [] as unknown[], cursor: 0, effects: [] as Array<() => unknown>, fetch: vi.fn() }));
-vi.mock("react", () => ({ default: {
-  useState(initial: unknown) {
-    const i = h.cursor++; h.slots[i] = initial;
-    return [initial, (value: unknown) => { h.slots[i] = typeof value === "function" ? value(h.slots[i]) : value; }];
-  },
-  useRef: (current: unknown) => ({ current }),
-  useCallback: (fn: unknown) => fn,
-  useEffect: (effect: () => unknown) => { h.effects.push(effect); },
-} }));
+import { renderHook, deferred } from "@beholden/shared/tests/renderHook";
+const h = vi.hoisted(() => ({ fetch: vi.fn() }));
 vi.mock("@/services/actorApi", () => ({ fetchMyCharacter: h.fetch }));
 import { useCharacterSnapshot } from "./useCharacterSnapshot";
 import type { Character } from "../CharacterViewHelpers";
 const character = (name: string) => ({ id: "hero", name } as Character);
-function deferred() {
-  let resolve!: (value: Character) => void;
-  const promise = new Promise<Character>((yes) => { resolve = yes; });
-  return { resolve, promise };
-}
-beforeEach(() => { h.slots = []; h.cursor = 0; h.effects = []; h.fetch.mockReset(); });
+beforeEach(() => { h.fetch.mockReset(); });
 
 it("ignores an older response after a newer refresh", async () => {
-  const first = deferred(); h.fetch.mockReturnValueOnce(first.promise).mockResolvedValueOnce(character("new"));
-  const { fetchChar } = useCharacterSnapshot("hero");
-  const pending = fetchChar(); await fetchChar(); first.resolve(character("old")); await pending;
-  expect(h.slots[0]).toEqual(character("new"));
+  const first = deferred<Character>();
+  h.fetch.mockReturnValueOnce(first.promise).mockResolvedValueOnce(character("new"));
+  const hook = await renderHook(() => useCharacterSnapshot("hero"));
+  await act(async () => { await hook.result.fetchChar(); first.resolve(character("old")); });
+  expect(hook.result.char).toEqual(character("new"));
 });
 it("does not overwrite a local save with an earlier snapshot", async () => {
-  const first = deferred(); h.fetch.mockReturnValue(first.promise);
-  const { fetchChar, setChar } = useCharacterSnapshot("hero");
-  const pending = fetchChar(); setChar(character("saved")); first.resolve(character("old")); await pending;
-  expect(h.slots[0]).toEqual(character("saved"));
+  const first = deferred<Character>(); h.fetch.mockReturnValue(first.promise);
+  const hook = await renderHook(() => useCharacterSnapshot("hero"));
+  await act(async () => { hook.result.setChar(character("saved")); first.resolve(character("old")); });
+  expect(hook.result.char).toEqual(character("saved"));
 });
 it("a no-op state updater does not retire the initial request", async () => {
-  h.fetch.mockResolvedValue(character("loaded"));
-  const { fetchChar, setChar } = useCharacterSnapshot("hero");
-  const pending = fetchChar(); setChar((previous) => previous); await pending;
-  expect(h.slots[0]).toEqual(character("loaded")); expect(h.slots[1]).toBe(false);
+  const first = deferred<Character>(); h.fetch.mockReturnValue(first.promise);
+  const hook = await renderHook(() => useCharacterSnapshot("hero"));
+  await act(async () => { hook.result.setChar(previous => previous); first.resolve(character("loaded")); });
+  expect(hook.result.char).toEqual(character("loaded")); expect(hook.result.loading).toBe(false);
 });
 it("clears an earlier load error after successful recovery", async () => {
   h.fetch.mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce(character("loaded"));
-  const { fetchChar } = useCharacterSnapshot("hero");
-  await fetchChar(); expect(h.slots[2]).toBe("offline");
-  await fetchChar(); expect(h.slots[2]).toBeNull();
+  const hook = await renderHook(() => useCharacterSnapshot("hero"));
+  expect(hook.result.error).toBe("offline");
+  await act(async () => { await hook.result.fetchChar(); });
+  expect(hook.result.error).toBeNull();
 });
 it("ignores responses after unmount", async () => {
-  h.fetch.mockResolvedValue(character("old"));
-  const { fetchChar } = useCharacterSnapshot("hero");
-  const cleanup = h.effects[0]() as () => void;
-  const pending = fetchChar(); cleanup(); await pending;
-  expect(h.slots[0]).toBeNull();
+  const first = deferred<Character>(); h.fetch.mockReturnValue(first.promise);
+  const hook = await renderHook(() => useCharacterSnapshot("hero"));
+  await hook.unmount();
+  await act(async () => { first.resolve(character("old")); });
+  expect(hook.result.char).toBeNull();
 });
-
 it("propagates a read failure to an explicit recovery reload", async () => {
-  h.fetch.mockRejectedValueOnce(new Error("offline"));
-  const { reloadChar } = useCharacterSnapshot("hero");
-  await expect(reloadChar()).rejects.toThrow("offline");
-  expect(h.slots[2]).toBe("offline");
+  h.fetch.mockResolvedValueOnce(character("loaded")).mockRejectedValueOnce(new Error("offline"));
+  const hook = await renderHook(() => useCharacterSnapshot("hero"));
+  await act(async () => { await expect(hook.result.reloadChar()).rejects.toThrow("offline"); });
+  expect(hook.result.error).toBe("offline");
 });
-
 it("a reload superseded by a newer refresh neither overwrites state nor throws", async () => {
-  const slow = deferred();
-  h.fetch.mockReturnValueOnce(slow.promise).mockResolvedValueOnce(character("fresh"));
-  const { reloadChar, fetchChar } = useCharacterSnapshot("hero");
-  const stale = reloadChar();
-  await fetchChar();
-  slow.resolve(character("stale"));
-  await expect(stale).resolves.toBeUndefined();
-  expect(h.slots[0]).toEqual(character("fresh"));
+  const slow = deferred<Character>();
+  h.fetch.mockResolvedValueOnce(character("loaded")).mockReturnValueOnce(slow.promise).mockResolvedValueOnce(character("fresh"));
+  const hook = await renderHook(() => useCharacterSnapshot("hero"));
+  await act(async () => {
+    const stale = hook.result.reloadChar(); await hook.result.fetchChar();
+    slow.resolve(character("stale")); await expect(stale).resolves.toBeUndefined();
+  });
+  expect(hook.result.char).toEqual(character("fresh"));
 });
-
 it("a superseded reload swallows its own read failure", async () => {
-  let rejectSlow!: (cause: Error) => void;
-  const slow = new Promise<Character>((_resolve, reject) => { rejectSlow = reject; });
-  h.fetch.mockReturnValueOnce(slow).mockResolvedValueOnce(character("fresh"));
-  const { reloadChar, fetchChar } = useCharacterSnapshot("hero");
-  const stale = reloadChar();
-  await fetchChar();
-  rejectSlow(new Error("late offline"));
-  await expect(stale).resolves.toBeUndefined();
-  expect(h.slots[0]).toEqual(character("fresh"));
-  expect(h.slots[2]).toBeNull();
+  const slow = deferred<Character>();
+  h.fetch.mockResolvedValueOnce(character("loaded")).mockReturnValueOnce(slow.promise).mockResolvedValueOnce(character("fresh"));
+  const hook = await renderHook(() => useCharacterSnapshot("hero"));
+  await act(async () => {
+    const stale = hook.result.reloadChar(); await hook.result.fetchChar();
+    slow.reject(new Error("late offline")); await expect(stale).resolves.toBeUndefined();
+  });
+  expect(hook.result.char).toEqual(character("fresh")); expect(hook.result.error).toBeNull();
 });
-
 it("keeps the newer of two recovery reloads resolved in reverse order", async () => {
-  const a = deferred(); const b = deferred();
-  h.fetch.mockReturnValueOnce(a.promise).mockReturnValueOnce(b.promise);
-  const { reloadChar } = useCharacterSnapshot("hero");
-  const first = reloadChar();
-  const second = reloadChar();
-  b.resolve(character("B")); await second;
-  a.resolve(character("A")); await first;
-  expect(h.slots[0]).toEqual(character("B"));
+  const a = deferred<Character>(); const b = deferred<Character>();
+  h.fetch.mockResolvedValueOnce(character("loaded")).mockReturnValueOnce(a.promise).mockReturnValueOnce(b.promise);
+  const hook = await renderHook(() => useCharacterSnapshot("hero"));
+  await act(async () => {
+    const first = hook.result.reloadChar(); const second = hook.result.reloadChar();
+    b.resolve(character("B")); await second; a.resolve(character("A")); await first;
+  });
+  expect(hook.result.char).toEqual(character("B"));
+});
+it("keeps loaded note bodies visible while a background refresh is pending or fails", async () => {
+  const refresh = deferred<Character>();
+  const loaded = { ...character("loaded"), sharedNotes: '[{"id":"n1","text":"Shared body"}]', campaignSharedNotes: '[{"id":"n2","text":"Campaign body"}]', characterData: { playerNotesList: [{ id: "n3", text: "Private body" }] } } as Character;
+  h.fetch.mockResolvedValueOnce(loaded).mockReturnValueOnce(refresh.promise);
+  const hook = await renderHook(() => useCharacterSnapshot("hero"));
+  let pending!: Promise<void>;
+  await act(async () => { pending = hook.result.fetchChar(); });
+  expect(hook.result.char).toBe(loaded); expect(hook.result.loading).toBe(false);
+  await act(async () => { refresh.reject(new Error("temporarily offline")); await pending; });
+  expect(hook.result.char).toBe(loaded); expect(hook.result.error).toBeNull();
+});
+it("refreshes note bodies without clearing the loaded sheet", async () => {
+  const loaded = { ...character("loaded"), sharedNotes: '[{"id":"n1","text":"Old body"}]' } as Character;
+  const refreshed = { ...loaded, sharedNotes: '[{"id":"n1","text":"Updated body"}]' };
+  const refresh = deferred<Character>();
+  h.fetch.mockResolvedValueOnce(loaded).mockReturnValueOnce(refresh.promise);
+  const hook = await renderHook(() => useCharacterSnapshot("hero"));
+  let pending!: Promise<void>;
+  await act(async () => { pending = hook.result.fetchChar(); });
+  expect(hook.result.char).toBe(loaded); expect(hook.result.loading).toBe(false);
+  await act(async () => { refresh.resolve(refreshed); await pending; });
+  expect(hook.result.char).toBe(refreshed); expect(hook.result.error).toBeNull();
+});
+it("retires an old character read when navigating to another character", async () => {
+  const old = deferred<Character>();
+  h.fetch.mockReturnValueOnce(old.promise).mockResolvedValueOnce({ ...character("Other"), id: "other" });
+  const hook = await renderHook(useCharacterSnapshot, "hero");
+  await hook.rerender("other");
+  await act(async () => { old.resolve(character("Old")); });
+  expect(hook.result.char?.id).toBe("other");
 });

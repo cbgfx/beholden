@@ -108,6 +108,7 @@ export function createBroadcaster(
      * Last word on whether one socket may receive one event. Scope filtering happens first; this
      * is where events that are not for everyone in the campaign (the DM's notes, say) are held back.
      */
+    projectPayload?: (user: WsUser | null, type: ServerEventType, payload: ServerEventMap[ServerEventType]) => ServerEventMap[ServerEventType];
     canDeliver?: (user: WsUser | null, type: ServerEventType, payload: ServerEventMap[ServerEventType]) => boolean;
   } = {},
 ): BroadcastFn {
@@ -137,7 +138,7 @@ export function createBroadcaster(
       for (const pending of messages) {
         if (!shouldDeliverToScope(ws, pending.type, pending.payload)) continue;
         if (!allowed(ws, pending.type, pending.payload)) continue;
-        ws.send(pending.msg);
+        ws.send(messageFor(ws, pending.type, pending.payload, pending.msg));
       }
     }
   };
@@ -153,6 +154,13 @@ export function createBroadcaster(
     if (!opts.canDeliver) return true;
     const user = (ws as WebSocket & { __beholdenUser?: WsUser | null }).__beholdenUser ?? null;
     return opts.canDeliver(user, type, payload);
+  };
+
+  const messageFor = (ws: WebSocket, type: ServerEventType, payload: ServerEventMap[ServerEventType], original: string) => {
+    if (!opts.projectPayload) return original;
+    const user = (ws as WebSocket & { __beholdenUser?: WsUser | null }).__beholdenUser ?? null;
+    const projected = opts.projectPayload(user, type, payload);
+    return projected === payload ? original : JSON.stringify({ type, payload: projected });
   };
 
   const broadcast = (<K extends ServerEventType>(type: K, payload: ServerEventMap[K]) => {
@@ -173,7 +181,7 @@ export function createBroadcaster(
       if (ws.readyState !== ws.OPEN) continue;
       if (!shouldDeliverToScope(ws, type, payload)) continue;
       if (!allowed(ws, type, payload as ServerEventMap[ServerEventType])) continue;
-      ws.send(msg);
+      ws.send(messageFor(ws, type, payload, msg));
     }
   }) as BroadcastFn;
 
