@@ -1,3 +1,4 @@
+import { resolveAssetUrl } from "@/services/api";
 import { C } from "@/lib/theme";
 import { IconPlayer, IconShield, IconSpeed, IconInitiative, IconHeart, IconConditionByKey } from "@/icons";
 import { abilityMod, formatModifier, hpColor } from "@/views/character/CharacterSheetUtils";
@@ -55,7 +56,7 @@ export function PartyMemberHeader({
           }}
         >
           {m.imageUrl
-            ? <img src={m.imageUrl} alt={m.characterName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ? <img src={resolveAssetUrl(m.imageUrl) ?? undefined} alt={m.characterName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             : <IconPlayer size={36} style={{ opacity: 0.3 }} />}
         </div>
 

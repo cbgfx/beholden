@@ -2,7 +2,7 @@ import { CharacterRequirementsBadge } from "@/ui/CharacterRequirementsBadge";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "@/services/api";
+import { api, resolveAssetUrl } from "@/services/api";
 import { fetchMyCharacter } from "@/services/actorApi";
 import { C } from "@/lib/theme";
 import { IconDownload, IconPlayer } from "@/icons";
@@ -146,7 +146,7 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
           {ch.imageUrl
-            ? <img src={ch.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ? <img src={resolveAssetUrl(ch.imageUrl) ?? undefined} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             : <IconPlayer size={28} style={{ opacity: 0.4 }} />}
           {uploading && (
             <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "var(--fs-tiny)", color: "#fff" }}>…</div>

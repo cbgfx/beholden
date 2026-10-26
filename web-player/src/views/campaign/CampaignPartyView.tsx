@@ -5,7 +5,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import type { SharedConditionInstance } from "@beholden/shared/domain";
 import { EmptyState } from "@beholden/shared/ui";
 import { C } from "@/lib/theme";
-import { api } from "@/services/api";
+import { api, resolveAssetUrl } from "@/services/api";
 import { IconPlayer, IconConditionByKey } from "@/icons";
 import { useWs } from "@/services/ws";
 import { useDebouncedTaskQueue } from "@beholden/shared/ui";
@@ -106,7 +106,7 @@ function MemberCard({ m, campaignId }: { m: PartyMember; campaignId: string }) {
           }}
         >
           {m.imageUrl ? (
-            <img src={m.imageUrl} alt={m.characterName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img src={resolveAssetUrl(m.imageUrl) ?? undefined} alt={m.characterName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           ) : (
             <IconPlayer size={28} style={{ opacity: 0.4 }} />
           )}

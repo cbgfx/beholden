@@ -6,7 +6,7 @@ import { C, withAlpha } from "@/lib/theme";
 import { IconBastions, IconBinder, IconPlayer } from "@/icons";
 import { Button } from "@/ui/Button";
 import { IconButton } from "@/ui/IconButton";
-import { api } from "@/services/api";
+import { api, resolveAssetUrl } from "@/services/api";
 import { CharacterHudXpPopup } from "@/views/character/combat/CharacterHudXpPopup";
 import { stripEditionTag } from "@/views/character/CharacterViewHelpers";
 import { CharacterViewSwitcher } from "@/views/character/CharacterViewSwitcher";
@@ -171,7 +171,7 @@ export function CharacterSheetHeader(props: {
           }}
         >
           {character.imageUrl ? (
-            <img src={character.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img src={resolveAssetUrl(character.imageUrl) ?? undefined} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           ) : (
             <IconPlayer size={28} style={{ opacity: 0.35 }} />
           )}

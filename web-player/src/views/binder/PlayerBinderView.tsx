@@ -5,7 +5,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { IconBinder, IconCampaign, IconGender, IconPlayers, IconShield } from "@/icons";
 import { GameIcon } from "@/icons/GameIcon";
 import { C } from "@/lib/theme";
-import { api } from "@/services/api";
+import { api, resolveAssetUrl } from "@/services/api";
 import { Button } from "@/ui/Button";
 import { BINDER_MORTAL_COLUMNS, BinderDataTableHeader, BinderDataTableRow, BinderDataTableThumbnail, ImageLightbox, MarkdownRichText, SearchableMultiFilter } from "@beholden/shared/ui";
 
@@ -38,9 +38,14 @@ function ageOf(mortal: Mortal, currentDate: number | null) {
   return Number.isFinite(birth) && currentDate !== null ? String(Math.max(0, currentDate - birth)) : null;
 }
 
+function versionedPortraitUrl(imageUrl: string, updatedAt: number | null) {
+  const base = resolveAssetUrl(imageUrl) ?? imageUrl;
+  return `${base}${updatedAt ? `${base.includes("?") ? "&" : "?"}v=${updatedAt}` : ""}`;
+}
+
 function portraitSrc(mortal: Mortal) {
   if (!mortal.imageUrl) return null;
-  return `${mortal.imageUrl}${mortal.imageUpdatedAt ? `${mortal.imageUrl.includes("?") ? "&" : "?"}v=${mortal.imageUpdatedAt}` : ""}`;
+  return versionedPortraitUrl(mortal.imageUrl, mortal.imageUpdatedAt);
 }
 
 function StatusPill({ status }: { status: string | null }) {
@@ -356,7 +361,7 @@ export function PlayerBinderView() {
                         >
                           {selectedPublicRecord.imageUrl ? (
                             <img
-                              src={`${selectedPublicRecord.imageUrl}${selectedPublicRecord.imageUpdatedAt ? `?v=${selectedPublicRecord.imageUpdatedAt}` : ""}`}
+                              src={versionedPortraitUrl(selectedPublicRecord.imageUrl, selectedPublicRecord.imageUpdatedAt)}
                               alt={`${selectedPublicRecord.name} portrait`}
                               style={{ width: "100%", height: "100%", objectFit: "cover" }}
                             />
@@ -522,7 +527,7 @@ export function PlayerBinderView() {
                       <span style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 10, fontWeight: 750 }}>
                         {record.imageUrl ? (
                           <img
-                            src={`${record.imageUrl}${record.imageUpdatedAt ? `?v=${record.imageUpdatedAt}` : ""}`}
+                            src={versionedPortraitUrl(record.imageUrl, record.imageUpdatedAt)}
                             alt=""
                             style={{ width: 38, height: 38, borderRadius: 6, objectFit: "cover", flex: "0 0 auto" }}
                           />
@@ -797,7 +802,7 @@ export function PlayerBinderView() {
                         theme={{ text: C.text, muted: C.muted, border: "rgba(255,255,255,.08)" }}
                       >
                         <span style={{ ...cell, color: C.text, display: "flex", alignItems: "center", gap: 9, fontWeight: 750 }}>
-                          <BinderDataTableThumbnail imageUrl={mortal.imageUrl} imageUpdatedAt={mortal.imageUpdatedAt} accent={accent} />
+                          <BinderDataTableThumbnail imageUrl={mortal.imageUrl} resolveUrl={(url) => resolveAssetUrl(url) ?? url} imageUpdatedAt={mortal.imageUpdatedAt} accent={accent} />
                           <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{mortal.name}</span>
                           {mortal.id === data.linkedMortalId ? <small style={{ color: accent }}>{t("(You)")}</small> : null}
                         </span>

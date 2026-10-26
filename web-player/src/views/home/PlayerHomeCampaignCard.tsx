@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { C } from "@/lib/theme";
-import { api, jsonInit } from "@/services/api";
+import { api, jsonInit, resolveAssetUrl } from "@/services/api";
 import { IconPlayers } from "@/icons";
 import { Select } from "@/ui/Select";
 import { Button } from "@/ui/Button";
@@ -78,7 +78,7 @@ export function CampaignCard({ campaign: c, characters, onOpen, onAssigned }: {
         }}
       >
         {c.imageUrl
-          ? <img src={c.imageUrl} alt="" style={{
+          ? <img src={resolveAssetUrl(c.imageUrl) ?? undefined} alt="" style={{
               position: "absolute", top: 0, left: 0,
               width: "100%", height: "100%", objectFit: "cover", display: "block",
               opacity: isHovered ? 0.9 : 1,
