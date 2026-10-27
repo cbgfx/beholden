@@ -10,9 +10,10 @@ type Props = {
   variant: "campaign" | "combatList";
   persisted?: { success: number; fail: number };
   hpCurrent: number;
+  failureAction?: React.ReactNode;
 };
 
-export function PlayerDeathSaves({ playerId, encounterId, combatantId, variant, persisted, hpCurrent }: Props) {
+export function PlayerDeathSaves({ playerId, encounterId, combatantId, variant, persisted, hpCurrent, failureAction }: Props) {
   const cur = Math.max(0, Number(hpCurrent) || 0);
   const [deathSaves, setDeathSaves] = React.useState(() => ({
     s: Math.max(0, Math.min(3, Number(persisted?.success ?? 0) || 0)),
@@ -81,6 +82,7 @@ export function PlayerDeathSaves({ playerId, encounterId, combatantId, variant, 
         })}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {failureAction}
         <span style={{ fontSize: "var(--fs-small)", fontWeight: 900, color: theme.colors.red }}>F</span>
         {dots(deathSaves.f, theme.colors.red, (i, on) => {
           const next = { ...deathSaves, f: Math.max(0, Math.min(3, on ? i : i + 1)) };

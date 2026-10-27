@@ -1,3 +1,4 @@
+import { changePlayerLifeStatus } from "../services/characterLifeStatus.js";
 // server/src/routes/players.ts
 import { z } from "zod";
 import type { Express, Request } from "express";
@@ -198,6 +199,20 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
     ) dto.live.concentrationSpell = cs;
   }
 
+  app.post("/api/players/:playerId/life-status", dmOrAdmin(db), (req, res) => {
+    const playerId = requireParam(req, res, "playerId");
+    if (!playerId) return;
+    const { action } = parseBody(z.object({ action: z.enum(["markDead", "revive"]) }).strict(), req);
+    try {
+      const player = changePlayerLifeStatus(ctx, playerId, action === "markDead");
+      if (!player) return res.status(404).json({ ok: false, message: "Player not found" });
+      res.json(withAbsoluteImageUrl(req, toCampaignCharacterDto(player)));
+    } catch (error) {
+      if (error instanceof Error && "status" in error && error.status === 409) return res.status(409).json({ ok: false, message: error.message });
+      throw error;
+    }
+  });
+
   // MARK: - GET /api/campaigns/:campaignId/players
   app.get("/api/campaigns/:campaignId/players", memberOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
@@ -212,6 +227,26 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
       if (!includeSharedNotes) delete dto.sharedNotes;
       return withAbsoluteImageUrl(req, dto);
     }));
+  });
+
+  // Load biography only when the DM expands it, rather than on every roster refresh.
+  app.get("/api/campaigns/:campaignId/players/:playerId/background", dmOrAdmin(db), (req, res) => {
+    const campaignId = requireParam(req, res, "campaignId");
+    const playerId = requireParam(req, res, "playerId");
+    if (!campaignId || !playerId) return;
+    const row = db.prepare(`SELECT p.character_id, uc.character_data_json, c.binder_id
+      FROM player_rows p JOIN campaigns c ON c.id=p.campaign_id
+      LEFT JOIN user_characters uc ON uc.id=p.character_id
+      WHERE p.campaign_id=? AND p.id=?`).get(campaignId, playerId) as { character_id: string | null; character_data_json: string | null; binder_id: string | null } | undefined;
+    if (!row) return res.status(404).json({ ok: false, message: "Player not found" });
+    const linked = row.binder_id ? db.prepare(`SELECT COALESCE(m.description,m.backstory) AS biography
+      FROM binder_player_characters bpc JOIN binder_records br ON br.id=bpc.mortal_id
+      JOIN mortals m ON m.id=bpc.mortal_id
+      WHERE br.binder_id=? AND (bpc.player_id=? OR (bpc.character_id IS NOT NULL AND bpc.character_id=?)) LIMIT 1`)
+      .get(row.binder_id, playerId, row.character_id) as { biography: string | null } | undefined : undefined;
+    const data = parseJson<Record<string, unknown> | null>(row.character_data_json, null);
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ text: linked ? linked.biography ?? "" : typeof data?.biography === "string" ? data.biography : "" });
   });
 
   // MARK: - GET /api/campaigns/:campaignId/players/:playerId

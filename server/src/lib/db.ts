@@ -1,3 +1,4 @@
+import { ensureCharacterDeathState } from "./characterDeathState.js";
 import Database from "better-sqlite3";
 import { SCHEMA_SQL } from "./dbSchema.js";
 import { syncCharacterDerivedColumns } from "./dbCharacterSync.js";
@@ -80,6 +81,7 @@ export function openDb(dbPath: string): Db {
   db.exec("DROP VIEW IF EXISTS player_rows");
   ensureImageVersionColumns(db);
   ensureSheetLiveColumns(db);
+  ensureCharacterDeathState(db);
   ensureActivityColumns(db);
   // Binder tables must exist before SQLite can add campaigns.binder_id with
   // its foreign-key reference on upgraded databases.

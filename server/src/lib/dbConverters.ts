@@ -74,10 +74,10 @@ export function cleanStoredImageUrl(value: unknown): string | null {
 
 function readCharacterSheetState(row: Record<string, unknown>): StoredCharacterSheetState {
   const deathSaves =
-    typeof row.death_saves_success === "number" && typeof row.death_saves_fail === "number"
+    typeof row.death_saves_success === "number" || typeof row.death_saves_fail === "number"
       ? {
-          success: Math.max(0, Math.min(3, Math.floor(row.death_saves_success))),
-          fail: Math.max(0, Math.min(3, Math.floor(row.death_saves_fail))),
+          success: Math.max(0, Math.min(3, Math.floor(Number(row.death_saves_success) || 0))),
+          fail: Math.max(0, Math.min(3, Math.floor(Number(row.death_saves_fail) || 0))),
         }
       : undefined;
   return {
@@ -130,10 +130,10 @@ function readCampaignCharacterLiveState(
 ): StoredCampaignCharacterLiveState {
   const live = parseJson<Partial<StoredCampaignCharacterLiveState>>(row.live_json, {});
   const deathSavesFromCols =
-    typeof row.death_saves_success === "number" && typeof row.death_saves_fail === "number"
+    typeof row.death_saves_success === "number" || typeof row.death_saves_fail === "number"
       ? {
-          success: Math.max(0, Math.min(3, Math.floor(row.death_saves_success))),
-          fail: Math.max(0, Math.min(3, Math.floor(row.death_saves_fail))),
+          success: Math.max(0, Math.min(3, Math.floor(Number(row.death_saves_success) || 0))),
+          fail: Math.max(0, Math.min(3, Math.floor(Number(row.death_saves_fail) || 0))),
         }
       : undefined;
   return {
@@ -356,7 +356,8 @@ export function rowToCampaignCharacter(row: Record<string, unknown>): StoredCamp
     species: sheet.species,
     level: sheet.level,
     hpMax: sheet.hpMax,
-    hpCurrent: live.hpCurrent,
+    hpCurrent: row.is_dead === 1 ? 0 : live.hpCurrent,
+    isDead: row.is_dead === 1,
     ac: sheet.ac,
     ...(speed != null ? { speed, baseSpeed: sheet.speed! } : {}),
     ...(sheet.str != null ? { str: sheet.str } : {}),
@@ -392,7 +393,8 @@ export function rowToCharacterSheet(row: Record<string, unknown>): StoredCharact
     species: sheet.species,
     level: sheet.level,
     hpMax: sheet.hpMax,
-    hpCurrent: sheet.hpCurrent,
+    hpCurrent: row.is_dead === 1 ? 0 : sheet.hpCurrent,
+    isDead: row.is_dead === 1,
     ac: sheet.ac,
     speed: sheet.speed,
     strScore: sheet.strScore,
@@ -521,7 +523,8 @@ export function rowToEncounterActor(row: Record<string, unknown>): StoredEncount
     initiative: live.initiative,
     friendly: snapshot.friendly,
     color: snapshot.color,
-    hpCurrent: live.hpCurrent,
+    hpCurrent: row.is_dead === 1 ? 0 : live.hpCurrent,
+    isDead: row.is_dead === 1,
     hpMax: snapshot.hpMax,
     hpDetails: snapshot.hpDetails,
     ac: snapshot.ac,

@@ -25,6 +25,7 @@ export const PLAYER_ROWS_VIEW_SQL = `
 CREATE VIEW player_rows AS
 SELECT
   p.id, p.campaign_id, p.user_id, p.character_id,
+  ${fromSheet("uc.is_dead", "p.is_dead", "is_dead")},
   ${fromSheet("uc.player_name", "p.player_name", "player_name")},
   ${fromSheet("uc.name", "p.character_name", "character_name")},
   ${fromSheet("uc.class_name", "p.class_name", "class_name")},

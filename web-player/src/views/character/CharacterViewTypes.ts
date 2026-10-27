@@ -41,6 +41,7 @@ export interface Character {
     abilityScores?: Partial<Record<AbilKey, number>>;
     permanent?: SheetOverrides["permanent"];
   };
+  isDead?: boolean;
   deathSaves?: { success: number; fail: number };
   sharedNotes?: string;
   campaignSharedNotes?: string;

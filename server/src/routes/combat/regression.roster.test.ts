@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { broadcasts, encounterId, dmRequest } from './regression.fixtures.js';
+import { broadcasts, encounterId, dmRequest, db, campaignId } from './regression.fixtures.js';
 
 describe("add-combatant encounter resolution and broadcast (shared helpers)", () => {
     it("returns 404 for an unknown encounter before doing any work", async () => {
@@ -64,3 +64,16 @@ describe("add-combatant encounter resolution and broadcast (shared helpers)", ()
       assert.equal(updatedLive.initiative, 17);
     });
   });
+
+describe("dead characters cannot enter an encounter", () => {
+  it("blocks individual adds and excludes dead and failed-save characters from Add All", async () => {
+    for (const [id, dead, fails] of [["dead-player",1,0],["failed-player",0,3]] as const) {
+      db.prepare(`INSERT INTO players(id,campaign_id,character_name,hp_max,hp_current,is_dead,death_saves_fail,live_json,created_at,updated_at) VALUES (?,?,?,10,0,?,?, '{}',1,1)`).run(id,campaignId,id,dead,fails);
+      const response = await dmRequest("POST", `/api/encounters/${encounterId}/combatants/addPlayer`, {playerId:id});
+      assert.equal(response.status,409);
+    }
+    const response = await dmRequest("POST", `/api/encounters/${encounterId}/combatants/addPlayers`, {});
+    assert.equal(response.status,200);
+    assert.equal((db.prepare("SELECT COUNT(*) AS n FROM combatants WHERE base_id IN ('dead-player','failed-player')").get() as {n:number}).n,0);
+  });
+});

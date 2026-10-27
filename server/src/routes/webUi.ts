@@ -26,6 +26,12 @@ function playerHostsFromEnv(): Set<string> {
 export function registerWebUiRoutes(app: Express, ctx: ServerContext) {
   const { paths } = ctx;
   const playerHosts = playerHostsFromEnv();
+  // Never retain an app shell across deployments: it names build-specific JS chunks.
+  const htmlOptions = { headers: { "Cache-Control": "no-store" } };
+  const staticOptions = { setHeaders: (res: express.Response, file: string) => {
+    if (file.endsWith(".html")) res.setHeader("Cache-Control", "no-store");
+  } };
+
   if (paths.hasWebPlayerDist && playerHosts.size > 0) {
     app.use((req, _res, next) => {
       // API calls are left alone; only page and asset requests are re-pointed at the player app.
@@ -45,18 +51,19 @@ export function registerWebUiRoutes(app: Express, ctx: ServerContext) {
       maxAge: "1y",
       immutable: true,
     }));
-    app.use("/player", express.static(paths.webPlayerDistDir));
+    app.use("/player", express.static(paths.webPlayerDistDir, staticOptions));
     app.get(/^\/player\/assets\/.*$/, (_req, res) => {
+      res.setHeader("Cache-Control", "no-store");
       res.status(404).type("text/plain").send("Asset not found.");
     });
     app.get("/player", (_req, res) => {
-      res.sendFile(path.join(paths.webPlayerDistDir, "index.html"));
+      res.sendFile(path.join(paths.webPlayerDistDir, "index.html"), htmlOptions);
     });
     app.get(webPlayerSpaRoute, (req, res, next) => {
       if (req.path.startsWith("/api")) return next();
       if (req.path.includes("/assets/")) return next();
       if (FILE_REQUEST.test(req.path)) return res.status(404).type("text/plain").send("Not found.");
-      res.sendFile(path.join(paths.webPlayerDistDir, "index.html"));
+      res.sendFile(path.join(paths.webPlayerDistDir, "index.html"), htmlOptions);
     });
   }
 
@@ -67,8 +74,9 @@ export function registerWebUiRoutes(app: Express, ctx: ServerContext) {
     maxAge: "1y",
     immutable: true,
   }));
-  app.use(express.static(paths.webDistDir));
+  app.use(express.static(paths.webDistDir, staticOptions));
   app.get(/^\/assets\/.*$/, (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
     res.status(404).type("text/plain").send("Asset not found.");
   });
 
@@ -78,6 +86,6 @@ export function registerWebUiRoutes(app: Express, ctx: ServerContext) {
     if (req.path.startsWith("/player")) return next();
     if (req.path.includes("/assets/")) return next();
     if (FILE_REQUEST.test(req.path)) return res.status(404).type("text/plain").send("Not found.");
-    res.sendFile(path.join(paths.webDistDir, "index.html"));
+    res.sendFile(path.join(paths.webDistDir, "index.html"), htmlOptions);
   });
 }

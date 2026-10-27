@@ -337,6 +337,7 @@ export function buildCharacterRuntimeActions(args: {
   };
 
   const handleLongRest = async () => {
+    if (char.isDead) return;
     const nextResources = classResourcesWithSpellCasts.map((resource) =>
       shouldResetOnRest(resource.reset, "long")
         ? { ...resource, current: resource.max }
@@ -401,7 +402,8 @@ export function buildCharacterRuntimeActions(args: {
 
     setChar((prev) => prev ? {
       ...prev,
-      hpCurrent: restedHpMax,
+      hpCurrent: restedCharacter.hpCurrent,
+      isDead: restedCharacter.isDead === true,
       inventoryRev: restedCharacter.inventoryRev ?? prev.inventoryRev,
       spellStateRev: restedCharacter.spellStateRev ?? prev.spellStateRev,
       deathSaves: nextDeathSaves,
@@ -426,10 +428,11 @@ export function buildCharacterRuntimeActions(args: {
   };
 
   const saveDeathSaves = async (next: { success: number; fail: number }) => {
+    if (char.isDead || char.hpCurrent > 0) return;
     setDsSaving(true);
     try {
-      await patchMyCharacter(char.id, "deathSaves", next);
-      setChar((prev) => prev ? { ...prev, deathSaves: next } : prev);
+      const response = await patchMyCharacter<{ deathSaves: { success: number; fail: number } }>(char.id, "deathSaves", next);
+      setChar((prev) => prev ? { ...prev, deathSaves: prev.hpCurrent > 0 ? { success: 0, fail: 0 } : response.deathSaves } : prev);
     } catch (error) {
       console.error("Death saves update failed:", error);
     } finally {

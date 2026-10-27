@@ -247,6 +247,11 @@ export function NoteRow({
   onDelete?: () => void;
 }) {
   const { t } = useTranslation("shared");
+  const deletedRecordLabel = t("noteRow.deletedRecord");
+  const body = React.useMemo(
+    () => expanded && text ? renderNoteRichText(text, undefined, undefined, deletedRecordLabel) : null,
+    [expanded, text, deletedRecordLabel],
+  );
   return (
     <ExpandableNoteItem
       title={title}
@@ -290,7 +295,7 @@ export function NoteRow({
           </div>
         ) : undefined}
     >
-      {text ? renderNoteRichText(text, undefined, undefined, t("noteRow.deletedRecord")) : null}
+      {body}
     </ExpandableNoteItem>
   );
 }

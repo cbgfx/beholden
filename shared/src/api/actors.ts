@@ -61,6 +61,7 @@ export interface CharacterSheetLiveDto {
   hpCurrent: number;
   conditions: ActorConditionInstanceDto[];
   overrides?: ActorOverridesDto;
+  isDead?: boolean;
   deathSaves?: ActorDeathSavesDto;
 }
 
@@ -115,6 +116,7 @@ export interface CampaignCharacterLiveDto {
   hpCurrent: number;
   conditions: ActorConditionInstanceDto[];
   overrides?: ActorOverridesDto;
+  isDead?: boolean;
   deathSaves?: ActorDeathSavesDto;
   concentrationSpell?: string | null;
 }
@@ -153,6 +155,7 @@ export interface EncounterActorLiveDto {
   hpCurrent: number | null;
   conditions: ActorConditionInstanceDto[];
   overrides?: ActorOverridesDto;
+  isDead?: boolean;
   deathSaves?: ActorDeathSavesDto | null;
   usedReaction?: boolean;
   usedLegendaryActions?: number;
@@ -201,6 +204,7 @@ export interface FlatCharacterSheetDto {
   campaignSharedNotes?: string;
   conditions?: ActorConditionInstanceDto[];
   overrides?: ActorOverridesDto;
+  isDead?: boolean;
   deathSaves?: ActorDeathSavesDto;
   sharedNotes?: string;
   /** See {@link CharacterSheetDto.inventoryRev}. */
@@ -234,6 +238,7 @@ export interface FlatCampaignCharacterDto {
   cha?: number;
   overrides?: ActorOverridesDto;
   conditions?: ActorConditionInstanceDto[];
+  isDead?: boolean;
   deathSaves?: ActorDeathSavesDto;
   color?: string | null;
   imageUrl?: string | null;
@@ -264,6 +269,7 @@ export interface FlatEncounterActorDto {
   attackOverrides: unknown | null;
   description?: string;
   conditions: ActorConditionInstanceDto[];
+  isDead?: boolean;
   deathSaves?: ActorDeathSavesDto | null;
   usedReaction?: boolean;
   usedLegendaryActions?: number;
@@ -305,6 +311,7 @@ export function flattenCharacterSheetDto(dto: CharacterSheetDto): FlatCharacterS
   };
   if (dto.campaignSharedNotes !== undefined) flat.campaignSharedNotes = dto.campaignSharedNotes;
   if (dto.live.overrides !== undefined) flat.overrides = dto.live.overrides;
+  if (dto.live.isDead !== undefined) flat.isDead = dto.live.isDead;
   if (dto.live.deathSaves !== undefined) flat.deathSaves = dto.live.deathSaves;
   if (dto.inventoryRev !== undefined) flat.inventoryRev = dto.inventoryRev;
   if (dto.spellStateRev !== undefined) flat.spellStateRev = dto.spellStateRev;
@@ -339,6 +346,7 @@ export function flattenCampaignCharacterDto(dto: CampaignCharacterDto): FlatCamp
   if (dto.userId !== undefined) flat.userId = dto.userId;
   if (dto.characterId !== undefined) flat.characterId = dto.characterId;
   if (dto.live.overrides !== undefined) flat.overrides = dto.live.overrides;
+  if (dto.live.isDead !== undefined) flat.isDead = dto.live.isDead;
   if (dto.live.deathSaves !== undefined) flat.deathSaves = dto.live.deathSaves;
   if (dto.sheet.color !== undefined) flat.color = dto.sheet.color;
   if (dto.imageUrl !== undefined) flat.imageUrl = dto.imageUrl;
@@ -372,6 +380,7 @@ export function flattenEncounterActorDto(dto: EncounterActorDto): FlatEncounterA
   if (dto.snapshot.description !== undefined) flat.description = dto.snapshot.description;
   if (dto.snapshot.playerName !== undefined) flat.playerName = dto.snapshot.playerName;
   if (dto.live.overrides !== undefined) flat.overrides = dto.live.overrides;
+  if (dto.live.isDead !== undefined) flat.isDead = dto.live.isDead;
   if (dto.live.deathSaves !== undefined) flat.deathSaves = dto.live.deathSaves;
   if (dto.live.usedReaction !== undefined) flat.usedReaction = dto.live.usedReaction;
   if (dto.live.usedLegendaryActions !== undefined) flat.usedLegendaryActions = dto.live.usedLegendaryActions;

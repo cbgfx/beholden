@@ -45,6 +45,7 @@ interface CharacterSheetDtoInput {
   campaignSharedNotes?: string;
   conditions?: Array<Record<string, unknown>>;
   overrides?: StoredOverrides;
+  isDead?: boolean;
   deathSaves?: ActorDeathSavesDto | { success: number; fail: number };
   createdAt?: number;
   updatedAt?: number;
@@ -104,6 +105,7 @@ export function toCharacterSheetDto(
 ): CharacterSheetDto {
   const live: CharacterSheetDto["live"] = {
     hpCurrent: character.hpCurrent,
+    ...(character.isDead ? { isDead: true } : {}),
     conditions: toConditionsDto(character.conditions),
   };
   const overrides = toOverridesDto(character.overrides);
@@ -150,6 +152,7 @@ export function toCharacterSheetDto(
 export function toCampaignCharacterDto(character: StoredCampaignCharacter): CampaignCharacterDto {
   const live: CampaignCharacterDto["live"] = {
     hpCurrent: character.hpCurrent,
+    ...(character.isDead ? { isDead: true } : {}),
     conditions: toConditionsDto(character.conditions),
   };
   const overrides = toOverridesDto(character.overrides);
@@ -195,6 +198,7 @@ export function toEncounterActorDto(
   const live: EncounterActorDto["live"] = {
     initiative: actor.initiative,
     hpCurrent: actor.hpCurrent,
+    ...(actor.isDead ? { isDead: true } : {}),
     conditions: toConditionsDto(actor.conditions),
   };
   const overrides = toOverridesDto(actor.overrides);

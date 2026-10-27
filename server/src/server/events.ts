@@ -32,6 +32,7 @@ type NotesDeltaPayload = {
 };
 
 type PlayersDeltaPayload = {
+  lifeStatusChanged?: boolean;
   campaignId: Id;
   action: "upsert" | "delete" | "refresh";
   playerId?: Id;

@@ -45,6 +45,7 @@ export interface StoredCharacterSheetState
   level: number;
   speed: number;
   color: string | null;
+  isDead?: boolean;
   deathSaves?: StoredDeathSaves;
 }
 
@@ -67,6 +68,7 @@ export interface StoredCampaignCharacterLiveState {
   hpCurrent: number;
   overrides?: StoredOverrides;
   conditions?: StoredConditionInstance[];
+  isDead?: boolean;
   deathSaves?: StoredDeathSaves;
 }
 
@@ -89,6 +91,7 @@ export interface StoredEncounterActorLiveState {
   hpCurrent: number | null;
   overrides: StoredOverrides;
   conditions: StoredConditionInstance[];
+  isDead?: boolean;
   deathSaves?: StoredDeathSaves;
   usedReaction?: boolean;
   usedLegendaryActions?: number;
@@ -279,6 +282,7 @@ export interface StoredCampaignCharacter extends Timestamps, StoredActorVitals, 
   syncedAc?: number;
   overrides?: StoredOverrides;
   conditions?: StoredConditionInstance[];
+  isDead?: boolean;
   deathSaves?: StoredDeathSaves;
   color?: string;
   imageUrl?: string | null;
@@ -298,6 +302,7 @@ export interface StoredCharacterSheet extends Timestamps, StoredActorVitals, Sto
   color: string | null;
   imageUrl: string | null;
   characterData: Record<string, unknown> | null;
+  isDead?: boolean;
   deathSaves?: StoredDeathSaves;
   /** Live state from the `live_json` column (lib/sheetLiveColumns.ts): bonuses with inspiration, conditions. */
   live?: { overrides?: StoredOverrides; conditions?: StoredConditionInstance[] };
@@ -356,6 +361,7 @@ export interface StoredEncounterActor extends Timestamps {
   description?: string;
   conditions: StoredConditionInstance[];
   /** Encounter-scoped death save tracking for player combatants (success/fail). */
+  isDead?: boolean;
   deathSaves?: StoredDeathSaves;
   /** Whether this combatant has used their reaction this turn. Resets at the start of their next turn. */
   usedReaction?: boolean;

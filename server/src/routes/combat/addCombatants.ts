@@ -59,7 +59,7 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
       db.prepare(`
         SELECT ${CAMPAIGN_CHARACTER_COLS}
         FROM player_rows
-        WHERE campaign_id = ?
+        WHERE campaign_id = ? AND is_dead=0 AND COALESCE(death_saves_fail,0)<3
           AND id NOT IN (
             SELECT base_id FROM combatants
             WHERE encounter_id = ? AND base_type = 'player'
@@ -95,6 +95,8 @@ export function registerCombatAddCombatantRoutes(app: Express, ctx: ServerContex
     const p = rowToCampaignCharacter(pRow);
     if (p.campaignId !== enc.campaignId)
       return res.status(400).json({ ok: false, message: "Player not in campaign" });
+
+    if (p.isDead || (p.deathSaves?.fail ?? 0) >= 3) return res.status(409).json({ ok: false, message: "Dead characters cannot be added to combat." });
 
     ensureCombat(db, encounterId);
 

@@ -52,6 +52,7 @@ export function buildCharacterHpActions(args: {
   };
 
   const applyHp = async (kind: "damage" | "heal", resolvedAmt?: number) => {
+    if (char.isDead) { setHpError("This character is dead. Ask the DM to use Revive."); return; }
     const delta = parseCharacterHpDelta(hpAmount, kind);
     const amt = resolvedAmt ?? delta.amount;
     const resolvedKind = delta.kind;
@@ -67,9 +68,10 @@ export function buildCharacterHpActions(args: {
         const updated = await putMyCharacter<Character>(char.id, { hpCurrent: newHp });
         setChar((prev) => prev ? {
           ...prev,
-          hpCurrent: newHp,
+          hpCurrent: updated.hpCurrent,
+          isDead: updated.isDead === true,
           conditions: updated.conditions ?? prev.conditions,
-          ...(prev.hpCurrent <= 0 && newHp > 0 ? { deathSaves: { success: 0, fail: 0 } } : {}),
+          ...(updated.hpCurrent > 0 ? { deathSaves: { success: 0, fail: 0 } } : {}),
         } : prev);
       } else {
         const currentTemp = Math.max(0, Number(overrides.tempHp ?? 0) || 0);
@@ -89,7 +91,8 @@ export function buildCharacterHpActions(args: {
           }
           setChar((prev) => prev ? {
             ...prev,
-            hpCurrent: newHp,
+            hpCurrent: updated.hpCurrent,
+            isDead: updated.isDead === true,
             conditions: updated.conditions ?? prev.conditions,
             characterData: updated.characterData ?? prev.characterData,
             overrides: nextOverrides ? { ...(prev.overrides ?? {}), ...nextOverrides } : prev.overrides,

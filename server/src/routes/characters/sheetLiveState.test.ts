@@ -386,3 +386,15 @@ test("one home: the sheet's live state is what every campaign shows, and leaving
     assert.equal(sheet.live.overrides?.inspiration, true);
   });
 });
+
+for (const data of ["null", "{not json"]) test(`Full Rest clears failed death saves even with ${data} character data`, async () => {
+  await withServer(async (call, db) => {
+    seedCharacter(db, {}, {hpCurrent:0,deathSaves:[0,3]});
+    assert.equal((await call("POST","/api/me/characters/char-ash/assign",{campaignIds:["camp-1"]})).status,200);
+    db.prepare("UPDATE user_characters SET character_data_json=? WHERE id='char-ash'").run(data);
+    assert.equal((await call("POST","/api/campaigns/camp-1/fullRest",undefined,"dm")).status,200);
+    const state = db.prepare("SELECT hp_current AS hp,death_saves_success AS success,death_saves_fail AS fail,is_dead AS dead,character_data_json AS data FROM user_characters WHERE id='char-ash'").get() as {hp:number;success:number;fail:number;dead:number;data:string};
+    assert.equal(state.hp,20); assert.equal(state.success,0); assert.equal(state.fail,0); assert.equal(state.dead,0);
+    if(data !== "null") assert.equal(state.data,data);
+  });
+});

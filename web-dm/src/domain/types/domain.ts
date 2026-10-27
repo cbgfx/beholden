@@ -79,6 +79,7 @@ export interface CampaignCharacter {
   // Runtime fields synced from server
   overrides?: CombatantOverrides;
   conditions?: ConditionInstance[];
+  isDead?: boolean;
   deathSaves?: DeathSaves;
   concentrationSpell?: string | null;
   color?: string;
@@ -123,6 +124,7 @@ export interface EncounterActor {
   attackOverrides: unknown | null;
   description?: string;
   conditions: ConditionInstance[];
+  isDead?: boolean;
   deathSaves?: DeathSaves | null;
   usedReaction?: boolean;
   /** How many legendary actions have been spent this round. */

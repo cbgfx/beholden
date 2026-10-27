@@ -231,3 +231,37 @@ test("players read the roster; only the DM changes it; outsiders see none of it"
   });
   db.close();
 });
+
+test("DM can expand a player's biography; other players cannot use the DM endpoint", async () => {
+  const db = seedDb();
+  try {
+    db.exec(`ALTER TABLE campaigns ADD COLUMN binder_id TEXT;
+      CREATE TABLE binder_records(id TEXT PRIMARY KEY,binder_id TEXT);
+      CREATE TABLE binder_player_characters(mortal_id TEXT,player_id TEXT,character_id TEXT);
+      CREATE TABLE mortals(id TEXT PRIMARY KEY,description TEXT,backstory TEXT);`);
+    db.prepare("UPDATE user_characters SET character_data_json=? WHERE id='char-1'").run(JSON.stringify({ biography: "Raised in the northern woods." }));
+    await withServer(db, async (call) => {
+      const url = "/api/campaigns/camp-1/players/p-linked/background";
+      assert.deepEqual((await call(DM)("GET", url)).body, { text: "Raised in the northern woods." });
+      db.exec(`UPDATE campaigns SET binder_id='binder-1' WHERE id='camp-1';
+        INSERT INTO binder_records VALUES ('mortal-1','binder-1');
+        INSERT INTO binder_player_characters VALUES ('mortal-1','p-linked','char-1');
+        INSERT INTO mortals VALUES ('mortal-1','Updated Binder biography','Old biography');`);
+      assert.deepEqual((await call(DM)("GET", url)).body, { text: "Updated Binder biography" });
+      db.prepare("UPDATE mortals SET description='',backstory=NULL").run();
+      assert.deepEqual((await call(DM)("GET", url)).body, { text: "" });
+      assert.equal((await call(PLAYER)("GET", url)).status, 403);
+      assert.equal((await call(OUTSIDER)("GET", url)).status, 403);
+      assert.equal((await call(DM)("GET", "/api/campaigns/camp-1/players/missing/background")).status, 404);
+    });
+  } finally { db.close(); }
+});
+
+test("only a campaign DM may mark a character dead or revive them", async () => {
+  const db=seedDb();
+  try { await withServer(db,async call=>{
+    for(const action of ["markDead","revive"]) for(const user of [PLAYER,OUTSIDER]) {
+      assert.equal((await call(user)("POST","/api/players/p-linked/life-status",{action})).status,403);
+    }
+  }); } finally { db.close(); }
+});

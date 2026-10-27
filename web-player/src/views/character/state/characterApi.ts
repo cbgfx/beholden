@@ -1,10 +1,11 @@
+import { updateMyCharacter } from "@/services/actorApi";
 import { api, jsonInit } from "@/services/api";
 
 const myCharacterPath = (id: string, resource?: string): string =>
   resource ? `/api/me/characters/${id}/${resource}` : `/api/me/characters/${id}`;
 
 export function putMyCharacter<T = unknown>(id: string, payload: unknown): Promise<T> {
-  return api<T>(myCharacterPath(id), jsonInit("PUT", payload));
+  return updateMyCharacter(id, payload) as Promise<T>;
 }
 
 export function patchMyCharacter<T = unknown>(id: string, resource: string, payload: unknown): Promise<T> {

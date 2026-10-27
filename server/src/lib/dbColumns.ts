@@ -12,12 +12,12 @@ export const ENCOUNTER_COLS =
 export const CAMPAIGN_CHARACTER_COLS =
   "id, campaign_id, user_id, character_id, player_name, character_name, class_name, species, level, " +
   "hp_max, hp_current, ac, speed, str, dex, con, int, wis, cha, color, synced_ac, " +
-  "death_saves_success, death_saves_fail, live_json, image_url, image_updated_at, " +
+  "death_saves_success, death_saves_fail, is_dead, live_json, image_url, image_updated_at, " +
   "shared_notes, created_at, updated_at";
 
 export const CHARACTER_SHEET_COLS =
   "id, user_id, name, player_name, ruleset, class_name, species, level, hp_max, hp_current, ac, speed, " +
-  "str_score, dex_score, con_score, int_score, wis_score, cha_score, color, death_saves_success, death_saves_fail, " +
+  "str_score, dex_score, con_score, int_score, wis_score, cha_score, color, death_saves_success, death_saves_fail, is_dead, " +
   "image_url, image_updated_at, character_data_json, live_json, derived_hp_max, derived_speed, shared_notes, " +
   "is_active, created_at, updated_at";
 

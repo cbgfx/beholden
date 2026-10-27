@@ -28,6 +28,7 @@ interface CharacterHudLike {
   characterData: CharacterData | null;
   campaigns: CharacterCampaign[];
   conditions?: ConditionInstance[];
+  isDead?: boolean;
   deathSaves?: { success: number; fail: number };
 }
 
@@ -261,7 +262,7 @@ export function CharacterHudPanel(props: CharacterHudPanelProps) {
           {(hpError || hpSaving) && <div style={{ textAlign: "center", fontSize: "var(--fs-small)", color: hpError ? C.red : C.muted }}>{hpError ?? "Saving..."}</div>}
         </div>
 
-        <CharacterHudDeathSaves
+        <CharacterHudDeathSaves isDead={char.isDead === true}
           hpCurrent={char.hpCurrent}
           deathSaves={char.deathSaves}
           dsSaving={dsSaving}

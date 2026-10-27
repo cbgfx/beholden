@@ -25,6 +25,7 @@ export type PlayerVM = {
   acBonus?: number;
   conditions?: { key: string; casterId?: string | null; hexAbility?: string }[];
   concentrationSpell?: string | null;
+  isDead?: boolean;
   deathSaves?: { success: number; fail: number };
   imageUrl?: string | null;
 };
@@ -34,6 +35,7 @@ export function PlayerRow(props: {
   // Primary inline action(s) — keep to 1-2 max
   // null = suppress action area entirely (combat list: clicking the row IS the action)
   primaryAction?: React.ReactNode | null;
+  deathSaveAction?: React.ReactNode;
   // Items for the … overflow menu. Hidden if empty/undefined.
   menuItems?: RowMenuItem[];
   subtitle?: React.ReactNode;
@@ -51,7 +53,8 @@ export function PlayerRow(props: {
   const cur = Math.max(0, Number(p.hpCurrent) || 0);
   const pct = cur / max;
   const isDead = cur <= 0;
-  const showDeathSaves = isDead && Boolean(p.playerName);
+  const showDeathSaves = isDead && !p.isDead && (Boolean(p.playerName) || Boolean(props.deathSaveAction));
+  const deathConfirmedOrFailed = p.isDead || (p.deathSaves?.fail ?? 0) >= 3;
   const [imgError, setImgError] = React.useState(false);
   const imageUrl = resolveAssetUrl(p.imageUrl);
   React.useEffect(() => { setImgError(false); }, [imageUrl]);
@@ -135,7 +138,7 @@ export function PlayerRow(props: {
             lineHeight: 1.25,
             textDecoration: isDead ? "line-through" : "none",
           }}>
-            {p.characterName}
+            {p.characterName}{deathConfirmedOrFailed ? <span style={{ color: theme.colors.red, marginLeft: 8, fontSize: "var(--fs-small)" }}>{translateUi("Dead")}</span> : null}
             {p.playerName ? (
               <span style={{ fontWeight: 600, fontSize: "var(--fs-small)", color: theme.colors.muted, marginLeft: 6 }}>
                 ({p.playerName})
@@ -188,6 +191,7 @@ export function PlayerRow(props: {
             encounterId={p.encounterId}
             combatantId={p.id}
             variant={variant}
+            failureAction={props.deathSaveAction}
             persisted={p.deathSaves}
             hpCurrent={cur}
           />

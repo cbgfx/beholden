@@ -154,7 +154,8 @@ export function registerCharacterFieldPatchRoutes(app: Express, ctx: ServerConte
       .run(sheetCols.deathSavesSuccess, sheetCols.deathSavesFail, t, charId);
     announceLiveChange(charId);
 
-    res.json({ ok: true, deathSaves });
+    const actual = db.prepare("SELECT death_saves_success AS success,death_saves_fail AS fail FROM user_characters WHERE id=?").get(charId);
+    res.json({ ok: true, deathSaves: actual });
   });
 
   // Player self-updates character sheet overrides.

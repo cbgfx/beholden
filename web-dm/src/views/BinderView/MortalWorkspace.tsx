@@ -1,3 +1,4 @@
+import { useWs } from "@/services/ws";
 import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useRichTextDraft } from "./useRichTextDraft";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -197,6 +198,9 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
   }, [props.binderId, query, translateMessage]);
 
   useDebouncedEffect(reload, 180);
+  useWs((message) => {
+    if (message.type === "players:delta" && (message.payload as { lifeStatusChanged?: boolean } | undefined)?.lifeStatusChanged) void reload();
+  });
 
   // Binder has no live websocket layer yet, so a linked Player's portrait (or any other
   // field) changed elsewhere — e.g. the player uploading it from their own device — never

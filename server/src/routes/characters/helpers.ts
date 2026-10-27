@@ -171,6 +171,7 @@ export function toCharacterSheetDtoInput(
     isActive?: boolean;
     createdAt: number;
     updatedAt: number;
+    isDead?: boolean;
     deathSaves?: { success: number; fail: number } | undefined;
     conditions?: Array<Record<string, unknown>> | undefined;
     overrides?: {
@@ -202,6 +203,7 @@ export function toCharacterSheetDtoInput(
     level: character.level,
     hpMax: character.hpMax,
     hpCurrent: character.hpCurrent,
+    isDead: character.isDead === true,
     ac: character.ac,
     speed: character.speed,
     strScore: character.strScore,

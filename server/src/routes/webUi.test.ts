@@ -48,10 +48,10 @@ test("hashed SPA assets are immutable while HTML remains revalidated", async (t)
     assert.match(response.headers.get("cache-control") ?? "", /immutable/);
   }
 
-  for (const htmlPath of ["/", "/player"]) {
+  for (const htmlPath of ["/", "/index.html", "/player", "/player/", "/player/index.html"]) {
     const response = await fetch(`${baseUrl}${htmlPath}`);
     assert.equal(response.status, 200);
-    assert.doesNotMatch(response.headers.get("cache-control") ?? "", /immutable/);
+    assert.equal(response.headers.get("cache-control"), "no-store");
   }
 
   // Client-side routes still get the app shell...
@@ -59,6 +59,14 @@ test("hashed SPA assets are immutable while HTML remains revalidated", async (t)
     const response = await fetch(`${baseUrl}${routePath}`);
     assert.equal(response.status, 200);
     assert.match(response.headers.get("content-type") ?? "", /html/);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+  }
+
+  for (const filePath of ["/assets/retired-build.js", "/player/assets/retired-build.js"]) {
+    const response = await fetch(`${baseUrl}${filePath}`);
+    assert.equal(response.status, 404);
+    assert.match(response.headers.get("content-type") ?? "", /text\/plain/);
+    assert.equal(response.headers.get("cache-control"), "no-store");
   }
 
   // ...but a request for a file that does not exist is a 404, not a page of HTML.

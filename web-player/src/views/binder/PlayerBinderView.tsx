@@ -1,3 +1,4 @@
+import { useWs } from "@/services/ws";
 import { CharacterRequirementsBadge } from "@/ui/CharacterRequirementsBadge";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useEffect, useMemo, useState } from "react";
@@ -85,6 +86,10 @@ export function PlayerBinderView() {
     return labels[key];
   };
   const [data, setData] = useState<PlayerBinder | null>(null);
+  const [lifeRevision, setLifeRevision] = useState(0);
+  useWs((message) => {
+    if (message.type === "players:delta" && (message.payload as { lifeStatusChanged?: boolean } | undefined)?.lifeStatusChanged) setLifeRevision(value => value + 1);
+  });
   // `section`/`selectedId` live in the URL, not plain useState -- drilling
   // into a mortal/campaign/deity/place is a real navigation (pushes a
   // history entry), so the browser's own Back button steps out of a record
@@ -124,7 +129,6 @@ export function PlayerBinderView() {
 
   useEffect(() => {
     let cancelled = false;
-    setData(null);
     setError(null);
     api<PlayerBinder>(`/api/me/characters/${id}/binder`).then((value) => {
       if (!cancelled) setData(value);
@@ -132,7 +136,8 @@ export function PlayerBinderView() {
       if (!cancelled) setError(t("This character is not attached to a Binder."));
     });
     return () => { cancelled = true; };
-  }, [id, t]);
+  }, [id, t, lifeRevision]);
+  useEffect(() => { setData(null); }, [id]);
   useEffect(() => {
     if (hydratedBinderId === id) return;
     setQuery(storedListState.query);

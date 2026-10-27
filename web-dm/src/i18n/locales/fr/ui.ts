@@ -1,5 +1,14 @@
 // Interface copy only; saved content and canonical rule values remain unchanged.
 export default {
+  "Dead Players": "Personnages morts",
+  "Mark as Dead": "Marquer comme mort",
+  "Revive": "Ressusciter",
+  "Unable to update life status.": "Impossible de modifier le statut de vie.",
+
+  "Background": "Histoire",
+  "Could not load background.": "Impossible de charger l?histoire du personnage.",
+  "No background provided yet.": "Aucune histoire fournie pour le moment.",
+
   "Within": "Dans",
   "Customize layout": "Personnaliser la disposition",
   "Layout": "Disposition",

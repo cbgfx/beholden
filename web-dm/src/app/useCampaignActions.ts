@@ -49,8 +49,9 @@ export function useCampaignActions(
     if (!state.selectedCampaignId) return;
     try {
       await api(`/api/campaigns/${state.selectedCampaignId}/fullRest`, { method: "POST" });
+      await refreshFns.refreshCampaign(state.selectedCampaignId);
     } catch (e) { apiErr(e); }
-  }, [state.selectedCampaignId]);
+  }, [state.selectedCampaignId, refreshFns]);
 
   const reorder = React.useCallback(async (url: string, ids: string[]) => {
     try {

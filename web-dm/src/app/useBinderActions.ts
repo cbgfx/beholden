@@ -24,16 +24,20 @@ export function useBinderActions(dispatch: Dispatch<Action>, confirm: ConfirmFn)
   const refreshAll = useCallback(() => {
     if (refreshAllInFlight.current) return refreshAllInFlight.current;
     const request = (async () => {
-      const [m, c, binderRows] = await Promise.all([
-        api<Meta>("/api/meta"),
-        api<Campaign[]>("/api/campaigns"),
-        fetchBinders(),
+      // Each section can render independently; a slow Binder request must not hide campaigns.
+      const results = await Promise.allSettled([
+        api<Meta>("/api/meta").then((meta) => dispatch({ type: "setMeta", meta })),
+        api<Campaign[]>("/api/campaigns").then((campaigns) => {
+          dispatch({ type: "setCampaigns", campaigns });
+          dispatch({ type: "autoSelectFirstCampaign", campaigns });
+        }),
+        fetchBinders().then((rows) => {
+          setBinders(rows);
+          setBindersLoaded(true);
+        }),
       ]);
-      dispatch({ type: "setMeta", meta: m });
-      dispatch({ type: "setCampaigns", campaigns: c });
-      dispatch({ type: "autoSelectFirstCampaign", campaigns: c });
-      setBinders(binderRows);
-      setBindersLoaded(true);
+      const failure = results.find((result) => result.status === "rejected");
+      if (failure?.status === "rejected") throw failure.reason;
     })();
     refreshAllInFlight.current = request;
     const clear = () => {

@@ -44,29 +44,27 @@ export function longRestCharacterSheet(
   const row = db.prepare("SELECT character_data_json AS json, live_json AS live, ruleset FROM user_characters WHERE id = ?")
     .get(characterId) as { json: string | null; live: string | null; ruleset: string } | undefined;
   if (!row) return;
-  let data: Record<string, unknown>;
+  let data: Record<string, unknown> | null = null;
   try {
-    const parsed = JSON.parse(row.json ?? "{}") as unknown;
-    // Never write a rest over data that could not be read: that would replace the whole sheet.
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
-    data = parsed as Record<string, unknown>;
-  } catch {
-    return;
-  }
+    const parsed = JSON.parse(row.json ?? "{}");
+    if (parsed === null) data = {};
+    else if (typeof parsed === "object" && !Array.isArray(parsed)) data = parsed as Record<string, unknown>;
+  } catch { /* Preserve unreadable sheet data, but still restore HP and clear death saves. */ }
 
   // Everything a long rest restores in the data, and the rested live state in its column
   // (lib/sheetLiveColumns.ts), preserving inspiration or granting it when the character's species
   // has the structured heroic-inspiration resource (Human's Resourceful).
   let inspiration = false;
   try { inspiration = (JSON.parse(row.live ?? "{}") as { overrides?: { inspiration?: unknown } }).overrides?.inspiration === true; } catch { /* none */ }
-  inspiration ||= speciesGrantsHeroicInspiration(db, data, row.ruleset);
+  inspiration ||= data !== null && speciesGrantsHeroicInspiration(db, data, row.ruleset);
   const { inspiration: _ignored, ...bonuses } = rested.overrides;
   db.prepare(`
     UPDATE user_characters
-    SET character_data_json = ?, live_json = ?, hp_current = ?, death_saves_success = 0, death_saves_fail = 0, updated_at = ?
+    SET character_data_json = CASE WHEN ? THEN ? ELSE character_data_json END, live_json = ?, hp_current = ?, death_saves_success = 0, death_saves_fail = 0, updated_at = ?
     WHERE id = ?
   `).run(
-    JSON.stringify(characterDataAfterLongRest(data)),
+    data === null ? 0 : 1,
+    data === null ? null : JSON.stringify(characterDataAfterLongRest(data)),
     JSON.stringify({ overrides: { ...bonuses, inspiration }, conditions: rested.conditions }),
     rested.hpCurrent, t, characterId,
   );

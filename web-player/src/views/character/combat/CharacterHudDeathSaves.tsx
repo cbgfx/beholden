@@ -3,6 +3,7 @@ import { C } from "@/lib/theme";
 
 export function CharacterHudDeathSaves(props: {
   hpCurrent: number;
+  isDead?: boolean;
   deathSaves?: { success: number; fail: number };
   dsSaving: boolean;
   saveDeathSaves: (next: { success: number; fail: number }) => void;
@@ -10,6 +11,7 @@ export function CharacterHudDeathSaves(props: {
   const translateUi = useUiTranslation("playerUi");
   const { hpCurrent, deathSaves, dsSaving, saveDeathSaves } = props;
 
+  if (props.isDead) return <div style={{ color: C.red, fontWeight: 800 }}>{translateUi("Dead")}</div>;
   if (hpCurrent !== 0) return null;
 
   return (

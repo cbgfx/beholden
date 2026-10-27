@@ -1,3 +1,6 @@
+import { changePlayerLifeStatus } from "./characterLifeStatus.js";
+import { longRestCharacterSheet } from "./longRest.js";
+import type { ServerContext } from "../server/context.js";
 /**
  * One source of truth for a player's live state: HP, death saves, temporary HP and bonuses,
  * conditions, inspiration. A linked character's is its sheet; a hand-made player's is its row;
@@ -207,4 +210,62 @@ test("live state and app-worked stats move out of the data blob into their colum
   migrateSheetLiveColumns(db);
   assert.equal(JSON.stringify(db.prepare("SELECT character_data_json AS data, live_json AS live, derived_hp_max AS hp, derived_speed AS speed, ac FROM user_characters WHERE id = 'ash'").get()), before, "a second run changes nothing");
   db.close();
+});
+
+test("confirmed death and revival preserve every campaign and Binder link", () => {
+  const db = seed(); const events: Array<{type:string;payload:unknown}> = [];
+  const ctx = { db, helpers: { now: () => 100 }, broadcast: (type: string, payload: unknown) => events.push({type,payload}) } as unknown as ServerContext;
+  try {
+    db.exec(`INSERT INTO binders(id,owner_user_id,name,name_key,current_date_text,current_date_sort,created_at,updated_at) VALUES ('b','u','World','world','1500',1500,1,1);
+      UPDATE campaigns SET binder_id='b',current_date_sort=1501 WHERE id='camp-a';
+      INSERT INTO binder_records(id,binder_id,record_type,name,name_key,created_at,updated_at) VALUES ('m','b','mortal','Ash','ash',1,1);
+      INSERT INTO mortals(id,mortal_type,life_status,created_at,updated_at) VALUES ('m','player_character','alive',1,1);
+      INSERT INTO binder_player_characters(mortal_id,character_id,player_id,created_at,updated_at) VALUES ('m','ash','p-a',1,1);`);
+    db.prepare("UPDATE campaigns SET current_date_sort=NULL WHERE id='camp-a'").run();
+    db.prepare("UPDATE binders SET current_date_sort=NULL WHERE id='b'").run();
+    assert.throws(()=>changePlayerLifeStatus(ctx,'p-a',true),/current year/);
+    assert.equal(player(db,'p-a').isDead,false);
+    db.prepare("UPDATE campaigns SET current_date_sort=1501 WHERE id='camp-a'").run();
+    db.prepare("UPDATE user_characters SET live_json=?,character_data_json=? WHERE id='ash'").run(JSON.stringify({conditions:[{key:'poisoned'},{key:'concentration'}]}),JSON.stringify({concentrationSpell:'Bless'}));
+    db.exec("INSERT INTO adventures(id,campaign_id,name,created_at,updated_at) VALUES ('adv','camp-a','Adventure',1,1); INSERT INTO encounters(id,campaign_id,adventure_id,name,created_at,updated_at) VALUES ('enc','camp-a','adv','Encounter',1,1)");
+    const caster = createPlayerCombatant({encounterId:'enc',player:player(db,'p-a'),t:100});
+    insertCombatant(db,caster);
+    insertCombatant(db,{...caster,id:'dependent-target',baseType:'monster',baseId:'fixture-monster',conditions:[{key:'blessed',casterId:caster.id},{key:'poisoned'}]});
+    changePlayerLifeStatus(ctx,'p-a',true);
+    const target = rowToEncounterActor(db.prepare(`SELECT ${ENCOUNTER_ACTOR_COLS} FROM combatants WHERE id='dependent-target'`).get() as Record<string,unknown>);
+    assert.deepEqual(target.conditions.map(condition=>condition.key),['poisoned']);
+    assert.deepEqual(player(db,'p-b').conditions,[]);
+    assert.equal((db.prepare("SELECT json_extract(character_data_json,'$.concentrationSpell') AS spell FROM user_characters WHERE id='ash'").get() as {spell:unknown}).spell,null);
+    // An old tab cannot reapply conditions after the death action.
+    db.prepare("UPDATE user_characters SET live_json=? WHERE id='ash'").run(JSON.stringify({conditions:[{key:'poisoned'}]}));
+    assert.deepEqual(player(db,'p-a').conditions,[]);
+    for (const id of ['p-a','p-b']) { assert.equal(player(db,id).isDead,true); assert.equal(player(db,id).hpCurrent,0); }
+    assert.deepEqual(db.prepare("SELECT life_status,death_date_text,death_date_sort FROM mortals WHERE id='m'").get(),{life_status:'dead',death_date_text:'1501',death_date_sort:1501});
+    // Ordinary healing and Full Rest never revive a confirmed-dead character.
+    writePlayerLiveState(db,'p-b',{hpCurrent:20,conditions:[],deathSaves:{success:2,fail:1}},101);
+    assert.equal(player(db,'p-a').hpCurrent,0);
+    longRestCharacterSheet(db,'ash',{hpCurrent:30,overrides:{tempHp:0,acBonus:0,hpMaxBonus:0},conditions:[]},102);
+    assert.equal(player(db,'p-a').hpCurrent,0);
+    changePlayerLifeStatus(ctx,'p-b',false);
+    for (const id of ['p-a','p-b']) { assert.equal(player(db,id).isDead,false); assert.equal(player(db,id).hpCurrent,1); assert.deepEqual(player(db,id).conditions,[]); assert.deepEqual(player(db,id).deathSaves,{success:0,fail:0}); }
+    assert.deepEqual(db.prepare("SELECT life_status,death_date_text,death_date_sort FROM mortals WHERE id='m'").get(),{life_status:'alive',death_date_text:null,death_date_sort:null});
+    assert.equal((db.prepare("SELECT COUNT(*) AS n FROM players WHERE character_id='ash'").get() as {n:number}).n,2);
+    assert.equal((db.prepare("SELECT COUNT(*) AS n FROM binder_player_characters WHERE character_id='ash'").get() as {n:number}).n,1);
+    assert.equal(events.filter(event=>event.type==='players:delta').length,4);
+  } finally { db.close(); }
+});
+test("every positive-HP write clears both death-save counters, including stale delayed writes", () => {
+  const db = seed();
+  try {
+    db.prepare("UPDATE user_characters SET hp_current=0,death_saves_success=2,death_saves_fail=1 WHERE id='ash'").run();
+    db.prepare("UPDATE user_characters SET hp_current=4 WHERE id='ash'").run();
+    assert.deepEqual(player(db,'p-a').deathSaves,{success:0,fail:0});
+    db.prepare("UPDATE user_characters SET death_saves_success=3,death_saves_fail=2 WHERE id='ash'").run();
+    assert.deepEqual(player(db,'p-b').deathSaves,{success:0,fail:0});
+    db.prepare("INSERT INTO players(id,campaign_id,character_name,hp_current,death_saves_success,death_saves_fail,live_json,created_at,updated_at) VALUES ('manual-reset','camp-a','Manual',8,2,1,'{}',1,1)").run();
+    assert.deepEqual(player(db,'manual-reset').deathSaves,{success:0,fail:0});
+    db.prepare("UPDATE players SET hp_current=0,death_saves_fail=3 WHERE id='manual-reset'").run();
+    db.prepare("UPDATE players SET hp_current=1 WHERE id='manual-reset'").run();
+    assert.deepEqual(player(db,'manual-reset').deathSaves,{success:0,fail:0});
+  } finally { db.close(); }
 });
