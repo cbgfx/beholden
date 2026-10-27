@@ -1,6 +1,7 @@
 // web-dm/src/views/BinderView/useMortalSavedViews.ts
 // Named Mortal-list filter presets (query + filters), persisted to localStorage per Binder.
 import { useEffect, useState } from "react";
+import { uid } from "@beholden/shared/domain/localId";
 
 export type MortalFilters = {
   position: string[];
@@ -62,7 +63,7 @@ export function useMortalSavedViews(binderId: string) {
     const name = viewName.trim();
     if (!name) return;
     const existing = savedViews.find((view) => view.name.toLocaleLowerCase() === name.toLocaleLowerCase());
-    const view: SavedMortalView = { id: existing?.id ?? crypto.randomUUID(), name, query, filters };
+    const view: SavedMortalView = { id: existing?.id ?? uid(), name, query, filters };
     const next = existing
       ? savedViews.map((item) => item.id === existing.id ? view : item)
       : [...savedViews, view];

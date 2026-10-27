@@ -4,7 +4,7 @@ import { useRichTextDraft } from "./useRichTextDraft";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { resolveAssetUrl } from "@/services/api";
-import { IconGender, IconPencil, IconPlayer, IconPlus, IconShield, IconTrash } from "@/icons";
+import { IconCamera, IconGender, IconPencil, IconPlayer, IconPlus, IconShield, IconTrash } from "@/icons";
 import { IconCakeSlice, IconDna1, IconOrganigram, IconVillage } from "@/views/BinderView/binderIcons";
 import { EntityIcon } from "@/components/iconPicker/EntityIcon";
 import { Button } from "@/ui/Button";
@@ -21,6 +21,7 @@ import { fetchBinderRecordOptions, syncBinderMentions, type BinderRecordOption }
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
 import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
+import { useIsNarrow } from "@/hooks/useIsNarrow";
 import { VisibilityIcon } from "./VisibilityIcon";
 import { BinderRecordDetailShell } from "./BinderRecordDetailShell";
 import { emptyMortalFilters as emptyFilters, useMortalSavedViews, type MortalFilters } from "./useMortalSavedViews";
@@ -79,6 +80,55 @@ function InlineRichTextField(props: {
   </section>;
 }
 
+/**
+ * The phone version of a Mortal list row: portrait, name, a one-line summary of who they are and
+ * where, and their alive/dead status. The full table needs ~1000px, so it only shows on wide screens.
+ */
+function MortalCardRow(props: { record: BinderMortal; accent: string; onOpen: () => void }) {
+  const translateUi = useUiTranslation("dmUi");
+  const { record } = props;
+  const summary = [record.position?.name, record.race?.name, record.location?.name].filter(Boolean).join(" · ");
+  return (
+    <button
+      type="button"
+      onClick={props.onOpen}
+      style={{
+        width: "100%",
+        display: "grid",
+        gridTemplateColumns: "auto minmax(0, 1fr) auto",
+        gap: 10,
+        alignItems: "center",
+        padding: "9px 11px",
+        border: 0,
+        borderBottom: `1px solid ${theme.colors.panelBorder}`,
+        background: "transparent",
+        color: theme.colors.text,
+        font: "inherit",
+        textAlign: "left",
+        cursor: "pointer",
+      }}
+    >
+      <BinderRecordThumbnail imageUrl={record.imageUrl} imageUpdatedAt={record.imageUpdatedAt} accent={props.accent} size={40} />
+      <span style={{ minWidth: 0, display: "grid", gap: 2 }}>
+        <span style={{ fontWeight: 750, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{record.name}</span>
+        {summary ? <span style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{summary}</span> : null}
+      </span>
+      <span
+        style={{
+          padding: "2px 7px",
+          borderRadius: 5,
+          color: "#fff",
+          background: record.lifeStatus === "dead" ? theme.colors.red : theme.colors.green,
+          fontSize: "var(--fs-small)",
+          fontWeight: 800,
+        }}
+      >
+        {record.lifeStatus === "dead" ? translateUi("Dead") : translateUi("Alive")}
+      </span>
+    </button>
+  );
+}
+
 function mortalAge(record: BinderMortal, binderCurrentDate: number | null): number | null {
   const birth = Number(record.birthDate?.replaceAll(",", ""));
   const end = record.deathDate ? Number(record.deathDate.replaceAll(",", "")) : binderCurrentDate;
@@ -109,6 +159,14 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const { sortKey, sortDir, toggleSort } = useBinderListSort<MortalSortKey>("name");
+  // Phones get a card list instead of the wide table, and the filter row tucked behind a toggle.
+  const isNarrow = useIsNarrow("(max-width: 760px)");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  // Lets the portrait on a Mortal's page take a new photo straight away, without going through
+  // the edit drawer. On a phone the file picker offers both the camera and the photo library.
+  const portraitInputRef = useRef<HTMLInputElement>(null);
+  const [portraitUploading, setPortraitUploading] = useState(false);
+  const [portraitError, setPortraitError] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem(`binder:${props.binderId}:mortals-filters`, JSON.stringify({ query, filters }));
@@ -234,6 +292,19 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     if (modalRecord === "new") await props.onRecordsChanged();
   }
 
+  async function uploadPortrait(record: BinderMortal, file: File) {
+    setPortraitUploading(true);
+    setPortraitError(null);
+    try {
+      await uploadBinderMortalImage(props.binderId, record.id, file);
+      await reload();
+    } catch (cause) {
+      setPortraitError(cause instanceof Error ? cause.message : translateMessage("Unable to upload portrait."));
+    } finally {
+      setPortraitUploading(false);
+    }
+  }
+
   async function remove(record: BinderMortal) {
     if (!(await confirm({ title: translateUi("Delete Mortal"), message: `Delete “${record.name}”? Related memberships and event associations will also be removed.`, confirmLabel: translateMessage("Delete Mortal"), intent: "danger" }))) return;
     await deleteBinderMortal(props.binderId, record.id);
@@ -312,11 +383,25 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
           backLabel="Mortals"
           accent={props.accent}
           leading={
+            <div style={{ position: "relative", flex: "0 0 auto" }}>
+            <input
+              ref={portraitInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              hidden
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file) void uploadPortrait(selected, file);
+              }}
+            />
             <button
               type="button"
-              disabled={!selected.imageUrl}
+              // With no portrait yet there's nothing to enlarge, so a tap goes straight to picking one.
+              disabled={portraitUploading || (!selected.imageUrl && !props.canEdit)}
               onClick={() => {
                 if (selected.imageUrl) setLightboxSrc(`${resolveAssetUrl(selected.imageUrl)}${selected.imageUpdatedAt ? `?v=${selected.imageUpdatedAt}` : ""}`);
+                else if (props.canEdit) portraitInputRef.current?.click();
               }}
               title={selected.imageUrl ? translateUi("View full portrait") : undefined}
               style={{
@@ -328,8 +413,8 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
                 overflow: "hidden",
                 background: withAlpha(props.accent, 0.1),
                 color: theme.colors.muted,
-                cursor: selected.imageUrl ? "zoom-in" : "default",
-                flex: "0 0 auto",
+                cursor: selected.imageUrl ? "zoom-in" : props.canEdit ? "pointer" : "default",
+                opacity: portraitUploading ? 0.5 : 1,
               }}
             >
               {selected.imageUrl ? (
@@ -339,9 +424,37 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
               ) : (
-                <span style={{ fontSize: "var(--fs-small)", opacity: 0.72 }}>{translateUi("Portrait")}</span>
+                <span style={{ fontSize: "var(--fs-small)", opacity: 0.72 }}>{props.canEdit ? translateUi("Add portrait") : translateUi("Portrait")}</span>
               )}
             </button>
+            {props.canEdit && selected.imageUrl ? (
+              <button
+                type="button"
+                aria-label={translateUi("Change portrait")}
+                title={translateUi("Change portrait")}
+                disabled={portraitUploading}
+                onClick={() => portraitInputRef.current?.click()}
+                style={{
+                  position: "absolute",
+                  right: -8,
+                  bottom: -8,
+                  width: 32,
+                  height: 32,
+                  display: "grid",
+                  placeItems: "center",
+                  padding: 0,
+                  borderRadius: 999,
+                  border: `1px solid ${withAlpha(props.accent, 0.6)}`,
+                  background: theme.colors.panelBg,
+                  color: props.accent,
+                  cursor: "pointer",
+                }}
+              >
+                <IconCamera size={16} />
+              </button>
+            ) : null}
+            {portraitError ? <div role="alert" style={{ position: "absolute", top: "100%", left: 0, marginTop: 12, width: 220, color: theme.colors.red, fontSize: "var(--fs-small)" }}>{portraitError}</div> : null}
+            </div>
           }
           leadingAlign="center"
           name={{ editable: false, value: selected.name }}
@@ -435,7 +548,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
     <div style={{ display: "grid", gap: 8 }}>
       <div style={{ display: "flex", gap: 9, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", flex: "1 1 auto" }}>
-          <Input value={query} onChange={(event) => { setQuery(event.target.value); clearSelectedMortalView(); }} placeholder={translateUi("Search mortals…")} style={{ width: 280 }} />
+          <Input value={query} onChange={(event) => { setQuery(event.target.value); clearSelectedMortalView(); }} placeholder={translateUi("Search mortals…")} style={{ width: isNarrow ? "100%" : 280 }} />
           <div style={{ width: 170 }}>
             <SearchableSelect
               value={selectedViewId}
@@ -448,11 +561,16 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
           </div>
           {selectedViewId ? <Button variant="ghost" aria-label={translateUi("Delete saved view")} onClick={removeSelectedMortalView}><IconTrash size={14} /></Button> : null}
           <Input value={viewName} onChange={(event) => setViewName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") saveMortalView(query, filters); }} placeholder={translateUi("View name")} style={{ width: 140 }} />
-          <Button variant="ghost" disabled={!viewName.trim()} onClick={() => saveMortalView(query, filters)}>{translateUi("Save view")}</Button>
+          <Button variant="ghost" disabled={!viewName.trim()} onClick={() => saveMortalView(query, filters)}>{translateUi("Save View")}</Button>
         </div>
         {props.canEdit ? <Button onClick={() => setModalRecord("new")}><span style={{ display: "inline-flex", gap: 7 }}><IconPlus size={14} /> {translateUi("New Mortal")}</span></Button> : null}
       </div>
-      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+      {isNarrow ? (
+        <Button variant="ghost" aria-expanded={filtersOpen} onClick={() => setFiltersOpen((open) => !open)} style={{ justifySelf: "start" }}>
+          {filtersOpen ? translateUi("Hide filters") : translateUi("Filters")}
+        </Button>
+      ) : null}
+      {!isNarrow || filtersOpen ? <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
         {([
           ["position", "Position", 150],
           ["organization", "Organization", 175],
@@ -473,7 +591,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
           />
         ))}
         {Object.values(filters).some((values) => values.length) ? <Button variant="ghost" onClick={() => { setFilters(emptyFilters()); clearSelectedMortalView(); }}>{translateUi("Clear")}</Button> : null}
-      </div>
+      </div> : null}
       {Object.entries(filters).some(([, values]) => values.length) ? (
         <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
           {(Object.entries(filters) as Array<[keyof MortalFilters, string[]]>).flatMap(([key, values]) => values.map((value) => {
@@ -494,7 +612,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
         </div>
       ) : null}
       <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflowX: "auto", overflowY: "hidden" }}>
-        <BinderListHeader
+        {isNarrow ? null : <BinderListHeader
           columns={[
             { key: "name", label: translateUi("Name"), sortable: true },
             { key: "position", label: translateUi("Position"), icon: <IconShield size={14} />, sortable: true },
@@ -511,7 +629,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
           sortKey={sortKey}
           sortDir={sortDir}
           onSort={(key) => toggleSort(key as MortalSortKey)}
-        />
+        />}
         {loading ? <BinderListLoading />
           : error ? <BinderListError message={error} />
           : sortedRecords.length ? sortedRecords.map((record) => {
@@ -519,6 +637,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
             const genderColor = record.gender === "male" ? "#7dd3fc" : record.gender === "female" ? "#f9a8d4" : null;
             const cell = { color: theme.colors.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
             const open = () => navigate(`/binder/${props.binderId}/mortals/${record.id}`);
+            if (isNarrow) return <MortalCardRow key={record.id} record={record} accent={props.accent} onOpen={open} />;
             return (
               <BinderDataTableRow
                 key={record.id}

@@ -3,6 +3,7 @@ import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, resolveAssetUrl } from "@/services/api";
+import { imageUploadForm } from "@beholden/shared/api/imageUpload";
 import { fetchMyCharacter } from "@/services/actorApi";
 import { C } from "@/lib/theme";
 import { IconDownload, IconPlayer } from "@/icons";
@@ -49,8 +50,7 @@ export function CharacterRow({ ch, onOpen, onRefresh, onError }: {
     if (!file) return;
     setUploading(true);
     try {
-      const fd = new FormData();
-      fd.append("image", file);
+      const fd = await imageUploadForm(file);
       await api(`/api/me/characters/${ch.id}/image`, { method: "POST", body: fd });
       await onRefresh();
     } catch (err) { console.error(err); }

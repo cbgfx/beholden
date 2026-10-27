@@ -147,9 +147,10 @@ export function UpdatesView(props: InfoViewProps) {
     <InfoPageLayout title={translateUi("Future Updates")}>
       <PanelComponent title={translateUi("Roadmap")} style={{ marginBottom: 12 }}>
         <ul className={styles.updateList}>
-          <li><b>{translateUi("Ongoing:")}</b> {translateUi("Bug fixes")}</li>
-          <li><b>{translateUi("Binder:")}</b>{translateUi("Timeline and Relationships")}</li>
-          <li><b>{translateUi("Plumbing:")}</b>{translateUi("Always fixing the plumbing")}</li>
+          <li><b>{translateUi("Ongoing: ")}</b> {translateUi("Bug fixes")}</li>
+          <li><b>{translateUi("Binder: ")}</b>{translateUi("Timeline and Relationships")}</li>
+          <li><b>{translateUi("Mobile: ")}</b>{translateUi("Making the app Mobile Friendly")}</li>
+          <li><b>{translateUi("Plumbing: ")}</b>{translateUi("Always fixing the plumbing")}</li>
         </ul>
       </PanelComponent>
     </InfoPageLayout>

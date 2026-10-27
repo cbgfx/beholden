@@ -119,7 +119,7 @@ export function InventoryItemDrawer(props: {
     dmg2: isWeaponLike ? (draft.dmg2.trim() || null) : null,
     dmgType: isWeaponLike ? (draft.dmgType.trim() || null) : null,
     properties: isWeaponLike ? draft.properties.map((p) => p.trim()).filter(Boolean) : [],
-    description: draft.description.trim() || undefined,
+    description: draft.description.trim(),
     source: "custom",
     chargesMax: props.item.chargesMax ?? null,
   });

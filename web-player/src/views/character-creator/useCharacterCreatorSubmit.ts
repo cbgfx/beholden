@@ -4,6 +4,7 @@ import React from "react";
 import type { UiTranslator } from "@beholden/shared/i18n";
 import { type NavigateFunction } from "react-router-dom";
 import { api, jsonInit } from "@/services/api";
+import { imageUploadForm } from "@beholden/shared/api/imageUpload";
 import { createMyCharacter } from "@/services/actorApi";
 import { buildCreatorSubmissionBody } from "@/views/character-creator/creatorSubmission";
 import { collectProficiencyChoiceEffectsFromEffects } from "@/domain/character/parseFeatureEffects";
@@ -313,8 +314,7 @@ export function useCharacterCreatorSubmit(args: {
       }
 
       if (portraitFile && !completedFollowUpsRef.current.portrait) {
-        const fd = new FormData();
-        fd.append("image", portraitFile);
+        const fd = await imageUploadForm(portraitFile);
         await api(`/api/me/characters/${charId}/image`, { method: "POST", body: fd });
         completedFollowUpsRef.current.portrait = true;
       }

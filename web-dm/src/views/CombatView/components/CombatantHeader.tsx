@@ -4,7 +4,7 @@ import { theme } from "@/theme/theme";
 import { Panel } from "@/ui/Panel";
 import { Button } from "@/ui/Button";
 import { IconChest, IconDice, IconNotes, IconSpells } from "@/icons";
-import { useIsNarrow } from "@/views/CombatView/hooks/useIsNarrow";
+import { useIsNarrow } from "@/hooks/useIsNarrow";
 
 type Props = {
   backTo: string;

@@ -1,4 +1,5 @@
 import { api, jsonInit } from "@/services/api";
+import { imageUploadForm } from "@beholden/shared/api/imageUpload";
 
 export type MortalType = "npc" | "player_character";
 
@@ -113,8 +114,7 @@ export function deleteBinderMortal(binderId: string, mortalId: string): Promise<
   return api(`${base(binderId)}/${mortalId}`, { method: "DELETE" });
 }
 
-export function uploadBinderMortalImage(binderId: string, mortalId: string, file: File): Promise<{ ok: true; imageUrl: string }> {
-  const form = new FormData();
-  form.append("image", file);
+export async function uploadBinderMortalImage(binderId: string, mortalId: string, file: File): Promise<{ ok: true; imageUrl: string }> {
+  const form = await imageUploadForm(file);
   return api(`${base(binderId)}/${mortalId}/image`, { method: "POST", body: form });
 }

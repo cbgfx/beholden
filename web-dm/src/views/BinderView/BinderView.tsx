@@ -13,6 +13,7 @@ import {
 } from "@/icons";
 import { IconGreekTemple, IconOrganigram, IconVillage, IconDna1 } from "@/views/BinderView/binderIcons";
 import { theme, withAlpha } from "@/theme/theme";
+import { useIsNarrow } from "@/hooks/useIsNarrow";
 import type { Campaign } from "@/domain/types/domain";
 import type { BinderSummary } from "@/services/binderApi";
 import type { BinderReferenceType } from "@/services/binderReferenceApi";
@@ -168,19 +169,53 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
     : undefined;
   const title = selectedCampaign?.name ?? (activeItem ? translateUi(activeItem.label) : binder.name);
   const accent = binder.color || theme.colors.accentHighlight;
+  // On phones the section sidebar would eat most of the screen, so it collapses into a menu
+  // button above the content and opens on demand.
+  const isNarrow = useIsNarrow("(max-width: 760px)");
+  const [navOpen, setNavOpen] = useState(false);
+  const showNav = !isNarrow || navOpen;
 
   return (
-    <div style={{ height: "100%", overflow: "auto", padding: "14px 14px 28px" }}>
-      <div style={{ width: "100%", display: "grid", gridTemplateColumns: "246px minmax(0, 1fr)", gap: 20 }}>
-        <aside
+    <div style={{ height: "100%", overflow: "auto", padding: isNarrow ? "10px 10px 24px" : "14px 14px 28px" }}>
+      <div style={{ width: "100%", display: "grid", gridTemplateColumns: isNarrow ? "minmax(0, 1fr)" : "246px minmax(0, 1fr)", gap: isNarrow ? 10 : 20 }}>
+        {isNarrow ? (
+          <button
+            type="button"
+            aria-expanded={navOpen}
+            onClick={() => setNavOpen((open) => !open)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "9px 12px",
+              borderRadius: theme.radius.control,
+              border: `1px solid ${withAlpha(accent, 0.24)}`,
+              background: "rgba(0,0,0,0.13)",
+              color: theme.colors.text,
+              font: "inherit",
+              fontWeight: 750,
+              cursor: "pointer",
+              textAlign: "left",
+            }}
+          >
+            <span style={{ color: accent, display: "grid" }}><IconBinder size={22} /></span>
+            <span style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {binder.name}{activeItem ? ` · ${translateUi(activeItem.label)}` : ""}
+            </span>
+            <span aria-hidden style={{ color: theme.colors.muted }}>{navOpen ? "▲" : "▼"}</span>
+          </button>
+        ) : null}
+        {showNav ? <aside
+          // Tapping any section link in the phone menu navigates away, so fold the menu back up.
+          onClick={isNarrow ? (event) => { if ((event.target as HTMLElement).closest("a")) setNavOpen(false); } : undefined}
           style={{
-            position: "sticky",
+            position: isNarrow ? "static" : "sticky",
             top: 20,
             alignSelf: "start",
             display: "grid",
             gridTemplateRows: "auto minmax(0, 1fr) auto",
             gap: 10,
-            maxHeight: "calc(100dvh - 190px)",
+            maxHeight: isNarrow ? "none" : "calc(100dvh - 190px)",
             minHeight: 0,
             padding: 10,
             borderRadius: theme.radius.panel,
@@ -287,10 +322,10 @@ export function BinderView({ binder, campaigns, canEdit, canManage, onRecordsCha
               );
             })}
           </div>
-        </aside>
+        </aside> : null}
 
         <main style={{ minWidth: 0, display: "grid", alignContent: "start", gap: 11 }}>
-          <header style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "end", minHeight: 44 }}>
+          <header style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "end", flexWrap: "wrap", minHeight: 44 }}>
             <div>
               <h1 style={{ margin: 0, color: theme.colors.text, fontSize: "calc(var(--fs-hero) * 1.08)", textShadow: `0 0 28px ${withAlpha(accent, 0.13)}` }}>{title}</h1>
               {!activeItem ? <div style={{ color: withAlpha(accent, 0.8), marginTop: 4, fontSize: "var(--fs-medium)" }}>

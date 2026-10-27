@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/services/api";
+import { imageUploadForm } from "@beholden/shared/api/imageUpload";
 import { C } from "@/lib/theme";
 import type { AbilKey, CharacterAppearance, CharacterData, PlayerNote } from "@/views/character/CharacterSheetTypes";
 import { normalizeAppearance } from "@/views/character/characterAppearance";
@@ -115,8 +116,7 @@ export function useCharacterViewUiSync({
     if (!file || !id) return;
     setPortraitUploading(true);
     try {
-      const body = new FormData();
-      body.append("image", file);
+      const body = await imageUploadForm(file);
       const result = await api<{ ok: boolean; imageUrl: string }>(`/api/me/characters/${id}/image`, { method: "POST", body });
       const sep = result.imageUrl.includes("?") ? "&" : "?";
       const bustedUrl = `${result.imageUrl}${sep}v=${Date.now()}`;

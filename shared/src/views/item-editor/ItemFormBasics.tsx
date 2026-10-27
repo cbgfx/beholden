@@ -21,7 +21,7 @@ export function ItemBasicsView({ form, set }: { form: ItemFormData; set: ItemFor
     set("type", type); set("isWeapon", mechanics.isWeapon); set("isArmor", mechanics.isArmor); set("isAmmo", mechanics.isAmmo);
   };
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12, alignItems: "start" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))", gap: 12, alignItems: "start" }}>
       <ItemColumn>
         <section style={itemSectionStyle}>
           <h3 style={itemSectionTitle}>{translateUi("Item")}</h3>
@@ -102,7 +102,7 @@ export function ItemBasicsView({ form, set }: { form: ItemFormData; set: ItemFor
         <section style={itemSectionStyle}>
           <h3 style={itemSectionTitle}>{translateUi("Description *")}</h3>
           <div style={{ color: "#8190aa", fontSize: "var(--fs-tiny)", marginBottom: 7 }}>{translateUi("Separate paragraphs with a blank line.")}</div>
-          <TextArea value={form.description} onChange={(e) => set("description", e.target.value)} style={{ minHeight: 390 }} />
+          <TextArea aria-label={translateUi("Description")} value={form.description} onChange={(e) => set("description", e.target.value)} style={{ minHeight: 390 }} />
         </section>
       </ItemColumn>
     </div>

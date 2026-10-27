@@ -3,6 +3,7 @@ import { theme } from "@/theme/theme";
 import React from "react";
 import { Button } from "@/ui/Button";
 import { api, jsonInit } from "@/services/api";
+import { imageUploadForm } from "@beholden/shared/api/imageUpload";
 import { useStore, type DrawerState } from "@/store";
 import type { DrawerContent } from "@/drawers/types";
 import { PlayerForm, type PlayerFormHandlers, type PlayerFormState } from "@/drawers/drawers/player/PlayerForm";
@@ -88,8 +89,7 @@ export function PlayerDrawer(props: {
     if (!file) return;
     if (props.drawer.type === "editPlayer") {
       // Immediate upload in edit mode.
-      const fd = new FormData();
-      fd.append("image", file);
+      const fd = await imageUploadForm(file);
       await api<unknown>(`/api/players/${props.drawer.playerId}/image`, { method: "POST", body: fd });
     } else {
       // Hold the file until the player is created.
@@ -151,8 +151,7 @@ export function PlayerDrawer(props: {
         })
       );
       if (pendingImage) {
-        const fd = new FormData();
-        fd.append("image", pendingImage.file);
+        const fd = await imageUploadForm(pendingImage.file);
         await api<unknown>(`/api/players/${newPlayer.id}/image`, { method: "POST", body: fd });
         URL.revokeObjectURL(pendingImage.previewUrl);
       }

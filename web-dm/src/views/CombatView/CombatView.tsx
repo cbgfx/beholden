@@ -19,7 +19,7 @@ import { TurnControls } from "@/views/CombatView/components/TurnControls";
 import { CombatOrderPanel } from "@/views/CombatView/panels/CombatOrderPanel";
 import { CombatantDetailsPanel } from "@/views/CombatView/panels/CombatantDetailsPanel/CombatantDetailsPanel";
 
-import { useIsNarrow } from "@/views/CombatView/hooks/useIsNarrow";
+import { useIsNarrow } from "@/hooks/useIsNarrow";
 import { useServerCombatState } from "@/views/CombatView/hooks/useServerCombatState";
 import { useMonsterDetailsCache } from "@/views/CombatView/hooks/useMonsterDetailsCache";
 import { useSpellModal } from "@/views/CombatView/hooks/useSpellModal";

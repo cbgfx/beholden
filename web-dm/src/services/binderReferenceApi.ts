@@ -1,4 +1,5 @@
 import { api, jsonInit } from "@/services/api";
+import { imageUploadForm } from "@beholden/shared/api/imageUpload";
 
 export type BinderReferenceType =
   | "races" | "positions" | "domains" | "organizations" | "deities"
@@ -136,7 +137,6 @@ export async function uploadBinderReferenceImage(
   recordId: string,
   image: File,
 ): Promise<{ ok: true; imageUrl: string }> {
-  const form = new FormData();
-  form.append("image", image);
+  const form = await imageUploadForm(image);
   return api(`${base(binderId, type)}/${recordId}/image`, { method: "POST", body: form });
 }

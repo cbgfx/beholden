@@ -6,7 +6,7 @@ import { useStore } from "@/store";
 import { useWs, useWsStatus } from "@/services/ws";
 import { theme, withAlpha } from "@/theme/theme";
 import { useAuth } from "@/contexts/AuthContext";
-import { useIsNarrow } from "@/views/CombatView/hooks/useIsNarrow";
+import { useIsNarrow } from "@/hooks/useIsNarrow";
 import { HeaderActionButton, HeaderActionLink, StatusDot, navLinkStyle } from "@beholden/shared/ui";
 import { ToolsBar } from "@/layout/ToolsBar";
 import { RulesetTag } from "@/ui/RulesetTag";

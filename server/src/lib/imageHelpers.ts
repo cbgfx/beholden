@@ -28,6 +28,9 @@ async function resizeToWebP(buffer: Buffer): Promise<Buffer> {
   // without making subsequent reads of those saved portraits faster.
   sharp.cache(false);
   return sharp(buffer, { animated: false })
+    // Phones save portrait photos as sideways pixels plus an EXIF "rotate me" flag. WebP output
+    // drops that flag, so apply the rotation to the pixels first or the portrait ends up sideways.
+    .autoOrient()
     .resize({ width: IMAGE_MAX_PX, height: IMAGE_MAX_PX, fit: "inside", withoutEnlargement: true })
     .webp({ quality: IMAGE_WEBP_QUALITY })
     .toBuffer();

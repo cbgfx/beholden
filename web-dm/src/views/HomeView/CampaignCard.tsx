@@ -4,6 +4,7 @@ import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
 import { IconPencil, IconTrash, IconDownload, IconCamera, IconPlayers } from "@/icons";
 import { api, resolveAssetUrl } from "@/services/api";
+import { imageUploadForm } from "@beholden/shared/api/imageUpload";
 import { RulesetTag } from "@/ui/RulesetTag";
 
 export type CampaignSummary = {
@@ -89,8 +90,7 @@ export function CampaignCard({ campaign: c, onOpen, onEdit, onDelete, onRefresh 
     e.target.value = "";
     if (!file) return;
     try {
-      const fd = new FormData();
-      fd.append("image", file);
+      const fd = await imageUploadForm(file);
       await api<unknown>(`/api/campaigns/${c.id}/image`, { method: "POST", body: fd });
       await onRefresh();
     } catch (err) {

@@ -69,8 +69,9 @@ export function BinderRecordDetailShell(props: {
       <article style={{ border: `1px solid ${withAlpha(props.accent, 0.3)}`, borderRadius: theme.radius.panel, background: theme.colors.panelBg, overflow: "hidden" }}>
         <div style={{ height: 4, background: props.accent }} />
         <div style={{ padding: props.bodyPadding ?? 24, display: "grid", gap: props.bodyGap ?? 18, maxWidth: props.bodyMaxWidth }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "start" }}>
-            <div style={{ display: "flex", gap: 16, alignItems: props.leadingAlign ?? "start", flex: "1 1 auto" }}>
+          {/* Wraps so on a phone the action buttons drop below the portrait and name instead of squeezing them. */}
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "start", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 16, alignItems: props.leadingAlign ?? "start", flex: "1 1 auto", minWidth: 0 }}>
               {props.leading}
               {name.editable ? (
                 <Input
