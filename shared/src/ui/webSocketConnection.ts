@@ -33,7 +33,7 @@ export function createWebSocketConnection(options: {
 
   function retry(opened: boolean) {
     retire();
-    if (stopped) return;
+    if (stopped || parked) return;
     if (!opened && !useFallback && options.fallbackUrl) {
       useFallback = true;
       connect();
@@ -44,7 +44,7 @@ export function createWebSocketConnection(options: {
   }
 
   function connect() {
-    if (stopped) return;
+    if (stopped || parked) return;
     let socket: WebSocket;
     try {
       socket = new WebSocket(useFallback && options.fallbackUrl ? options.fallbackUrl() : options.url());
@@ -56,7 +56,7 @@ export function createWebSocketConnection(options: {
     options.onSocket(socket);
     let opened = false;
     const isCurrent = () => !stopped && current === socket;
-    timer = setTimeout(() => { if (isCurrent()) retry(false); }, 800);
+    timer = setTimeout(() => { if (isCurrent()) retry(false); }, 30_000);
     socket.onopen = () => {
       if (!isCurrent()) return;
       opened = true;
@@ -80,12 +80,13 @@ export function createWebSocketConnection(options: {
 
   function park() {
     hiddenTimer = undefined;
-    if (stopped) return;
+    if (stopped || document.visibilityState !== "hidden") return;
     parked = true;
     retire();
   }
 
   function onVisibilityChange() {
+    if (stopped) return;
     if (document.visibilityState === "hidden") {
       clearTimeout(hiddenTimer);
       hiddenTimer = setTimeout(park, options.parkWhenHiddenMs);
@@ -95,9 +96,11 @@ export function createWebSocketConnection(options: {
     // The normal onOpen path then lets the app refresh anything it missed.
     clearTimeout(hiddenTimer);
     hiddenTimer = undefined;
-    if (!parked || stopped) return;
+    // Recover immediately when returning to a disconnected tab, including during backoff.
+    if (!parked && current) return;
     parked = false;
     attempt = 0;
+    retire();
     connect();
   }
 
@@ -105,6 +108,8 @@ export function createWebSocketConnection(options: {
   if (watchVisibility) document.addEventListener("visibilitychange", onVisibilityChange);
 
   connect();
+  // Tabs may mount already hidden; they still need the same idle cutoff.
+  if (watchVisibility && document.visibilityState === "hidden") onVisibilityChange();
   return () => {
     stopped = true;
     clearTimeout(hiddenTimer);

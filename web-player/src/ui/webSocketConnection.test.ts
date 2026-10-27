@@ -15,6 +15,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.stubGlobal("WebSocket", FakeSocket);
   FakeSocket.all = [];
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
 });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
@@ -35,7 +36,7 @@ it("timeout starts one fallback and ignores queued events from the old socket", 
   const staleClose = old.onclose!;
   const staleOpen = old.onopen!;
   const staleMessage = old.onmessage!;
-  vi.advanceTimersByTime(800);
+  vi.advanceTimersByTime(30_000);
   const replacement = FakeSocket.all[1];
   expect(replacement.url).toBe("ws://fallback");
   replacement.onopen!();
@@ -146,5 +147,49 @@ it("keeps the socket when the tab is shown again before the cutoff", () => {
   vi.advanceTimersByTime(600_000);
   expect(first.close).not.toHaveBeenCalled();
   expect(FakeSocket.all).toHaveLength(1);
+  stop();
+});
+
+it("allows a slow host to wake without killing the connection attempt", () => {
+  const { stop, onOpen } = setup(false);
+  const first = FakeSocket.all[0];
+  vi.advanceTimersByTime(15_000);
+  expect(first.close).not.toHaveBeenCalled();
+  first.onopen!();
+  vi.advanceTimersByTime(60_000);
+  expect(FakeSocket.all).toHaveLength(1);
+  expect(onOpen).toHaveBeenCalledOnce();
+  stop();
+});
+it("keeps visible sessions connected beyond the idle cutoff", () => {
+  const stop = createWebSocketConnection({ url: () => "ws://primary", onSocket() {}, onOpen() {}, onMessage() {}, parkWhenHiddenMs: 600_000 });
+  const first = FakeSocket.all[0]; first.onopen!();
+  vi.advanceTimersByTime(3_600_000);
+  expect(first.close).not.toHaveBeenCalled();
+  expect(FakeSocket.all).toHaveLength(1);
+  stop();
+});
+it("parks a tab that mounted hidden and resumes exactly once", () => {
+  setVisibility("hidden");
+  const stop = createWebSocketConnection({ url: () => "ws://primary", onSocket() {}, onOpen() {}, onMessage() {}, parkWhenHiddenMs: 600_000 });
+  const first = FakeSocket.all[0]; first.onopen!();
+  vi.advanceTimersByTime(600_000);
+  expect(first.close).toHaveBeenCalledOnce();
+  vi.advanceTimersByTime(3_600_000);
+  expect(FakeSocket.all).toHaveLength(1);
+  setVisibility("visible");
+  expect(FakeSocket.all).toHaveLength(2);
+  stop();
+});
+it("returning to a disconnected tab bypasses reconnect backoff without duplicate attempts", () => {
+  const stop = createWebSocketConnection({ url: () => "ws://primary", onSocket() {}, onOpen() {}, onMessage() {}, parkWhenHiddenMs: 600_000 });
+  const first = FakeSocket.all[0]; first.onopen!();
+  setVisibility("hidden"); first.onerror!();
+  setVisibility("visible");
+  expect(FakeSocket.all).toHaveLength(2);
+  FakeSocket.all[1].onopen!();
+  vi.advanceTimersByTime(600_000);
+  expect(FakeSocket.all).toHaveLength(2);
+  expect(FakeSocket.all[1].close).not.toHaveBeenCalled();
   stop();
 });
