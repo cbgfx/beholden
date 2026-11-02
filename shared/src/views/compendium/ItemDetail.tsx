@@ -1,27 +1,18 @@
 import { useUiTranslation } from "../../i18n/useUiTranslation";
 import { formatItemDamageType, formatItemProperty, itemModifierLabel, type CompendiumItemDetail } from "../../domain/items";
 import { titleCase } from "../../domain/text/titleCase";
-import { FormattedText } from "../../ui/FormattedText";
 import { rarityColor } from "../../ui/RarityDot";
 import { useCompendiumHost, type Ruleset } from "./CompendiumHost";
 import { COMPENDIUM_COLORS as C, CompendiumTag } from "./compendiumStyle";
+import { DetailBody, DetailFacts, DetailFooter, DetailHeader, DetailProse, splitDescription, type DetailFact } from "./DetailLayout";
 import { entryPath, useCompendiumEntry } from "./useCompendiumEntry";
 
-/** "1d8 Slashing" from the item's damage dice (two-handed dice preferred) and type code. */
+/** "1d8 / 1d10 Slashing" from the one- and two-handed dice and the damage type code. */
 function damageLabel(dmg1: string | null, dmg2: string | null, dmgType: string | null): string | null {
-  const dice = dmg2 || dmg1 || null;
+  const dice = [dmg1, dmg2 && dmg2 !== dmg1 ? dmg2 : null].filter(Boolean).join(" / ") || null;
   const type = formatItemDamageType(dmgType);
   if (!dice) return type;
   return type ? `${dice} ${type}` : dice;
-}
-
-/** A square-cornered chip for a number or rule (damage, AC, weight...). */
-function StatChip({ label, color }: { label: string; color: string }) {
-  return (
-    <span style={{ padding: "3px 10px", borderRadius: 6, border: `1px solid ${color}44`, background: `${color}18`, color, fontSize: "var(--fs-small)", fontWeight: 700 }}>
-      {label}
-    </span>
-  );
 }
 
 export function ItemDetail(props: { itemId: string; ruleset?: Ruleset | null }) {
@@ -29,62 +20,55 @@ export function ItemDetail(props: { itemId: string; ruleset?: Ruleset | null }) 
   const { Panel, revision } = useCompendiumHost();
   const { data: item, busy, error } = useCompendiumEntry<CompendiumItemDetail>(entryPath("/api/compendium/items", props.itemId, props.ruleset), revision);
 
-  const meta = item
-    ? [item.rarity ? titleCase(item.rarity) : null, item.type, item.attunement ? translateUi("Requires Attunement") : null].filter(Boolean).join(" • ")
-    : "";
-  const paragraphs = item ? (Array.isArray(item.text) ? item.text : [item.text ?? ""]).filter((text) => text.trim()) : [];
-  const damage = item ? damageLabel(item.dmg1, item.dmg2, item.dmgType) : null;
-  const properties = item ? (item.properties ?? []).map(formatItemProperty).filter(Boolean) : [];
-  const stealthDisadvantage = item?.stealthDisadvantage === true;
-  const hasStats = Boolean(damage || properties.length || item?.ac != null || item?.weight != null || item?.value != null || stealthDisadvantage);
-  const modifiers = (item?.modifiers ?? []).map(itemModifierLabel).filter((label): label is string => Boolean(label));
+  const facts: DetailFact[] = [];
+  if (item) {
+    const damage = damageLabel(item.dmg1, item.dmg2, item.dmgType);
+    const properties = (item.properties ?? []).map(formatItemProperty).filter(Boolean);
+    const modifiers = (item.modifiers ?? []).map(itemModifierLabel).filter((label): label is string => Boolean(label));
+    if (damage) facts.push({ label: translateUi("Damage"), value: damage });
+    if (properties.length) facts.push({ label: translateUi("Properties"), value: properties.join(", ") });
+    if (item.ac != null) {
+      facts.push({ label: translateUi("Armor Class"), value: item.ac, note: item.stealthDisadvantage ? translateUi("Stealth Disadvantage") : null });
+    } else if (item.stealthDisadvantage) {
+      facts.push({ label: translateUi("Stealth"), value: translateUi("Disadvantage") });
+    }
+    if (modifiers.length) facts.push({ label: translateUi("Bonuses"), value: modifiers.join(", ") });
+    if (item.attunement) facts.push({ label: translateUi("Attunement"), value: translateUi("Required") });
+    if (item.weight != null) facts.push({ label: translateUi("Weight"), value: translateUi("{{value1}} lb", { value1: item.weight }) });
+    if (item.value != null) facts.push({ label: translateUi("Value"), value: translateUi("{{value1}} gp", { value1: item.value }) });
+  }
+  const description = splitDescription(item?.text);
+  const source = item?.source ?? description.source;
+  const subtitle = item ? (
+    <>
+      {item.rarity ? <span style={{ color: rarityColor(item.rarity, C.muted) }}>{titleCase(item.rarity)}</span> : null}
+      {item.rarity && item.type ? " • " : null}
+      {item.type}
+    </>
+  ) : null;
 
   return (
     <Panel
-      title={item ? item.name : translateUi("Item")}
-      actions={<div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{busy ? translateUi("Loading...") : meta}</div>}
+      title={translateUi("Item")}
+      actions={busy ? <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>{translateUi("Loading...")}</div> : null}
       style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
-      bodyStyle={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+      bodyStyle={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", touchAction: "pan-y", overscrollBehavior: "contain" }}
     >
       {error ? (
         <div style={{ color: C.red }}>{translateUi("Could not load this item: {{value1}}", { value1: error })}</div>
       ) : !item ? (
         <div style={{ color: C.muted, lineHeight: 1.4 }}>{busy ? translateUi("Loading...") : translateUi("Pick an item on the left to view details.")}</div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, minHeight: 0, flex: 1 }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {item.magic && <CompendiumTag label={translateUi("Magic")} color={C.colorMagic} />}
-            {item.attunement && <CompendiumTag label={translateUi("Attunement")} color={C.highlight} />}
-            {item.rarity && <CompendiumTag label={titleCase(item.rarity)} color={rarityColor(item.rarity, C.muted)} />}
-          </div>
-
-          {hasStats && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-              {damage && <StatChip label={damage} color={C.colorPinkRed} />}
-              {properties.map((property) => <StatChip key={property} label={property} color="#94a3b8" />)}
-              {item.ac != null && <StatChip label={translateUi("AC {{value1}}", { value1: item.ac })} color={C.colorMagic} />}
-              {stealthDisadvantage && <StatChip label={translateUi("Stealth Disadvantage")} color={C.colorPinkRed} />}
-              {item.weight != null && <StatChip label={translateUi("{{value1}} lb", { value1: item.weight })} color="#64748b" />}
-              {item.value != null && <StatChip label={translateUi("{{value1}} gp", { value1: item.value })} color="#64748b" />}
-            </div>
-          )}
-
-          {modifiers.length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-              {modifiers.map((label, index) => <StatChip key={index} label={label} color={C.colorMagic} />)}
-            </div>
-          )}
-
-          <div style={{ flex: 1, minHeight: 0, overflow: "auto", border: `1px solid ${C.panelBorder}`, borderRadius: 12, padding: 10, whiteSpace: "pre-wrap", lineHeight: 1.5, fontSize: "var(--fs-subtitle)" }}>
-            {paragraphs.length ? <FormattedText text={paragraphs} /> : <span style={{ color: C.muted }}>{translateUi("No description.")}</span>}
-          </div>
-
-          {item.source ? (
-            <div style={{ color: C.muted, fontSize: "var(--fs-small)" }}>
-              {translateUi("Source: {{value1}} · Ruleset: {{value2}}", { value1: item.source, value2: item.ruleset ?? translateUi("Unknown") })}
-            </div>
-          ) : null}
-        </div>
+        <DetailBody>
+          <DetailHeader
+            name={item.name}
+            subtitle={item.rarity || item.type ? subtitle : null}
+            aside={item.magic ? <CompendiumTag label={translateUi("Magic")} color={C.colorMagic} /> : null}
+          />
+          <DetailFacts facts={facts} />
+          <DetailProse label={translateUi("Description")} paragraphs={description.paragraphs} empty={translateUi("No description.")} />
+          <DetailFooter>{[source, item.ruleset].filter(Boolean).join(" · ")}</DetailFooter>
+        </DetailBody>
       )}
     </Panel>
   );

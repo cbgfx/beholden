@@ -94,7 +94,7 @@ export function CompendiumView(props: {
   navFooter?: React.ReactNode;
 }) {
   const translateUi = useUiTranslation("sharedUi");
-  // The three desktop columns need 1012px including gaps and padding.
+  // The three desktop columns need 972px at their minimums, including gaps and padding.
   const compact = useIsNarrow("(max-width: 1024px)");
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
@@ -163,7 +163,9 @@ export function CompendiumView(props: {
           style={{
             height: "100%",
             display: "grid",
-            gridTemplateColumns: compact ? "minmax(0, 1fr)" : hasDetail ? "180px minmax(360px, 1fr) 420px" : "180px minmax(360px, 1fr)",
+            // The entry's text is what people come here to read, so the detail column takes the spare
+            // width; the list caps out once its name/meta rows fit comfortably.
+            gridTemplateColumns: compact ? "minmax(0, 1fr)" : hasDetail ? "180px minmax(320px, 400px) minmax(420px, 1fr)" : "180px minmax(360px, 1fr)",
             gridTemplateRows: compact ? "auto minmax(0, 1fr)" : "1fr",
             gap: 14,
             alignItems: "stretch",

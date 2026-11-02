@@ -83,7 +83,7 @@ it("preserves selection when resizing and restores the original desktop columns"
   await resize(false);
   expect(host.querySelector<HTMLElement>("[data-list]")!.parentElement!.style.display).toBe("flex");
   expect(host.textContent).toContain("Monster detail duplicate-id 5e");
-  expect(host.innerHTML).toContain("180px minmax(360px, 1fr) 420px");
+  expect(host.innerHTML).toContain("180px minmax(320px, 400px) minmax(420px, 1fr)");
   await resize(true);
   expect(host.querySelector<HTMLElement>("[data-list]")!.parentElement!.style.display).toBe("none");
   expect(host.querySelector('button[aria-label="Reference"]')!.textContent).toContain("Monsters");
